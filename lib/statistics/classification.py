@@ -1,4 +1,4 @@
-import Model
+from model import Model
 
 class Classifier(Model):
 

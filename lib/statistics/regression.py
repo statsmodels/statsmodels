@@ -1,7 +1,7 @@
 import numpy as N
 import numpy.linalg as NL
 import enthought.traits as traits
-import Model
+from model import Model
 
 class RegressionModelResults:
     def __init__(self):
