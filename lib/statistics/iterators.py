@@ -37,7 +37,6 @@ class LinearModelIterator(traits.HasTraits):
                 else:
                     out.shape = shape
                 output.next(data=out)
-                del(out); gc.collect()
 
             del(results); gc.collect()
-            del(data); gc.collect()
+
