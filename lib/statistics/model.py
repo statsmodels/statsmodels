@@ -2,10 +2,7 @@ import numpy as N
 import numpy.linalg as NL
 import enthought.traits as traits
 
-class Model:
-
-    def __init__(self):
-        pass
+class Model(traits.HasTraits):
 
     def initialize(self, **keywords):
         pass

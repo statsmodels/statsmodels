@@ -217,11 +217,13 @@ class Formula(traits.HasTraits):
             names += [var.varname]
         return names
 
-    def design(self, namespace=globals()):
+    def design(self, namespace=None, **keywords):
         """
         Given a namespace, return the design matrix (and the column mapping) for a given formula.
         """
-        return N.transpose(self(namespace))
+        if namespace is None:
+            namespace = globals()
+        return N.transpose(self(namespace=namespace, **keywords))
 
     def __mul__(self, other, nested=False):
         """

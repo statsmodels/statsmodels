@@ -1,13 +1,14 @@
 import gc
-from LinearModel import LinearModel
-import enthought.traits as TR
+import enthought.traits as traits
 from numarray import product
 
-class LinearModelIterator(TR.HasTraits):
+class LinearModelIterator(traits.HasTraits):
 
-    def __init__(self, iterator, design, outputs=[], **keywords):
+    iterator = traits.Any()
+    outputs = traits.Any()
+
+    def __init__(self, iterator, outputs=[], **keywords):
         self.iterator = iter(iterator)
-        self.design = design
         self.outputs = [iter(output) for output in outputs]
 
     def model(self, **keywords):
@@ -15,7 +16,7 @@ class LinearModelIterator(TR.HasTraits):
         This method should take the iterator at its current state and
         return a LinearModel object.
         """
-        return self.design.model(**keywords)
+        return None
 
     def fit(self, **keywords):
         """
@@ -25,17 +26,17 @@ class LinearModelIterator(TR.HasTraits):
 
         for data in self.iterator:
             shape = data.shape[1:]
-            data.setshape((data.shape[0], product(shape)))
+            data.shape = (data.shape[0], product(shape))
             model = self.model()
 
             results = model.fit(data, **keywords)
             for output in self.outputs:
                 out = output.extract(results)
-                if output.ndim > 1:
-                    out.setshape((output.ndim,) + shape)
+                if output.nout > 1:
+                    out.shape = (output.nout,) + shape
                 else:
-                    out.setshape(shape)
-                output.next(data=out, iterator=self.iterator)
+                    out.shape = shape
+                output.next(data=out)
 
             del(results); gc.collect()
             del(data); gc.collect()
