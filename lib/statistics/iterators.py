@@ -1,11 +1,11 @@
 import gc
 import enthought.traits as traits
-from numarray import product
+import numpy as N
 
 class LinearModelIterator(traits.HasTraits):
 
     iterator = traits.Any()
-    outputs = traits.Any()
+    outputs = traits.List()
 
     def __init__(self, iterator, outputs=[], **keywords):
         self.iterator = iter(iterator)
@@ -26,7 +26,7 @@ class LinearModelIterator(traits.HasTraits):
 
         for data in self.iterator:
             shape = data.shape[1:]
-            data.shape = (data.shape[0], product(shape))
+            data.shape = (data.shape[0], N.product(shape))
             model = self.model()
 
             results = model.fit(data, **keywords)
@@ -37,6 +37,7 @@ class LinearModelIterator(traits.HasTraits):
                 else:
                     out.shape = shape
                 output.next(data=out)
+                del(out); gc.collect()
 
             del(results); gc.collect()
             del(data); gc.collect()

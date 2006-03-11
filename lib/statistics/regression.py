@@ -51,6 +51,7 @@ class RegressionModelResults:
         """
         Return the R^2 value for each row of the response Y.
         """
+        self.Ssq = N.std(Y)**2
         Rsq = self.scale / self.Ssq
         return Rsq
 
@@ -118,7 +119,7 @@ class OLSModel(Model):
 
         lfit.scale = N.add.reduce(lfit.resid**2) / lfit.df_resid()
 
-        lfit.Ssq = N.std(Y)**2
+        lfit.Z = Z # just in case
 
         return lfit
 
