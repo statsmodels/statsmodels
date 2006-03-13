@@ -45,9 +45,9 @@ class Output(traits.HasTraits):
     def __init__(self, labels=None, **keywords):
         traits.HasTraits.__init__(self, **keywords)
         if labels is not None:
-            self.image = iter(LabelledVImage(zeros(inimage.spatial_warp.shape, Float), labels, warp=inimage.spatial_warp))
+            self.image = iter(LabelledVImage(zeros(inimage.spatial_mapping.shape, Float), labels, mapping=inimage.spatial_mapping))
         else:
-            self.image = iter(VImage(zeros(inimage.spatial_warp.shape, Float), labels, warp=inimage.spatial_warp))
+            self.image = iter(VImage(zeros(inimage.spatial_mapping.shape, Float), labels, mapping=inimage.spatial_mapping))
 
     def __iter__(self):
         return self
