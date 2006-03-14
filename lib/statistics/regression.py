@@ -223,15 +223,17 @@ class ARModel(OLSModel):
 
 def getcontrast(T, D, pinv=None):
     """
-    From an n x p design matrix D and a matrix T, determine a p x q
-    contrast matrix C where q determines a contrast of full rank, i.e. the
+    From an n x p design matrix D and a matrix T, tries
+    to determine a p x q contrast matrix C which
+    determines a contrast of full rank, i.e. the
     n x q matrix
 
-    dot(D, C)
+    dot(transpose(C), pinv(D))
 
     is full rank.
 
     T must satisfy either T.shape[0] == n or T.shape[1] == p.
+
     """
 
     n, p = D.shape
@@ -257,5 +259,12 @@ def getcontrast(T, D, pinv=None):
 
         Tp = utils.fullrank(Tp)
         C = N.transpose(N.dot(pinv, Tp))
+
+
+    covC = N.dot(C, N.dot(N.dot(pinv, N.transpose(pinv)), N.transpose(C)))
+
+    print utils.rank(covC), covC.shape
+    if utils.rank(covC) != covC.shape[0]:
+        raise ValueError, 'contrast not estimable'
 
     return N.squeeze(C)
