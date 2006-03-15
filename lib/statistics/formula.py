@@ -2,7 +2,7 @@ import sets, types, re, string, csv, copy
 import numpy as N
 import enthought.traits as traits
 
-class NamedTerm:
+class Term:
 
     """
     This class is very simple: it is just a named term in a model formula.
@@ -66,7 +66,7 @@ class NamedTerm:
             val.shape = (1,) + val.shape
         return val
 
-class Factor(NamedTerm):
+class Factor(Term):
 
     ordinal = traits.false
 
@@ -74,7 +74,7 @@ class Factor(NamedTerm):
         self.keys = list(sets.Set(keys))
         self.keys.sort()
         self._name = name
-        self.name = name
+        self.termname = name
         self.ordinal = ordinal
 
         if self.ordinal:
@@ -84,7 +84,7 @@ class Factor(NamedTerm):
                 v = namespace[self._name]
                 col = [float(self.keys.index(v[i])) for i in range(n)]
                 return N.array(col)
-            NamedTerm.__init__(self, self.name, _fn=_fn)
+            Term.__init__(self, self.name, _fn=_fn)
 
         else:
             def _fn(namespace=None):
@@ -94,15 +94,15 @@ class Factor(NamedTerm):
                     col = [float((v[i] == key)) for i in range(len(v))]
                     value.append(col)
                 return N.array(value)
-            NamedTerm.__init__(self, ['(%s==%s)' % (self.name, str(key)) for key in self.keys], _fn=_fn, termname=self.name)
+            Term.__init__(self, ['(%s==%s)' % (self.termname, str(key)) for key in self.keys], _fn=_fn, termname=self.termname)
 
     def __call__(self, namespace=None, values=False, **extra):
         if namespace is None:
             namespace = globals()
         if not values:
-            return NamedTerm.__call__(self, namespace=namespace, usefn=True, **extra)
+            return Term.__call__(self, namespace=namespace, usefn=True, **extra)
         else:
-            return NamedTerm.__call__(self, namespace=namespace, usefn=False, **extra)
+            return Term.__call__(self, namespace=namespace, usefn=False, **extra)
 
     def _ordinal_changed(self):
         if self.ordinal:
@@ -127,11 +127,11 @@ class Factor(NamedTerm):
         if other.name is 'intercept':
             return self
         else:
-            return NamedTerm.__add__(self, other)
+            return Term.__add__(self, other)
 
     def main_effect(self, formula, reference=None, term=True):
         """
-        Return the 'main effect' contrast matrix, or a NamedTerm
+        Return the 'main effect' contrast matrix, or a Term
         that corresponds to the columns in formula.
         """
 
@@ -159,9 +159,9 @@ class Factor(NamedTerm):
                 value = formula(namespace=namespace, **keywords)
                 return N.dot(contrast, value)
             _names = ['%s-%s' % (names[other[i]], names[reference]) for i in range(m-1)]
-            return NamedTerm(_names, _fn=_fn, termname='%s-main' % self.termname)
+            return Term(_names, _fn=_fn, termname='%s-main' % self.termname)
 
-class Quantitative(NamedTerm):
+class Quantitative(Term):
 
     def __pow__(self, power):
         if type(power) is not types.IntType:
@@ -172,7 +172,7 @@ class Quantitative(NamedTerm):
         def _fn(namespace=None, power=power):
             x = N.array(namespace[self.name])
             return pow(x, power)
-        return NamedTerm(name, _fn=_fn)
+        return Term(name, _fn=_fn)
 
 class FuncQuant(Quantitative):
 
@@ -189,12 +189,12 @@ class FuncQuant(Quantitative):
         except:
             termname = 'f%d(%s)' % (FuncQuant.counter, quant.name)
             FuncQuant.counter += 1
-        NamedTerm.__init__(self, termname, _fn=_fn)
+        Term.__init__(self, termname, _fn=_fn)
 
 class Formula(traits.HasTraits):
 
     """
-    This class is meant to emulate something like R's formula object. Formulas can be added, subtracted and multiplied using python's standard order of operations. Essentially it is a list of NamedTerms, as defined above.
+    This class is meant to emulate something like R's formula object. Formulas can be added, subtracted and multiplied using python's standard order of operations. Essentially it is a list of Terms, as defined above.
     A Formula is callable, again with an optional 'namespace' dictionary argument which a matrix rows whose values are the corresponding values of the terms in the formula.
     """
 
@@ -210,7 +210,7 @@ class Formula(traits.HasTraits):
             self.terms = copy.copy(list(terms.terms))
         elif type(terms) is types.ListType:
             self.terms = terms
-        elif isinstance(terms, NamedTerm):
+        elif isinstance(terms, Term):
             self.terms = [terms]
         else:
             raise ValueError
@@ -355,7 +355,7 @@ class Formula(traits.HasTraits):
                             for s in range(otherval.shape[0]):
                                 value.append(selfval[r] * otherval[s])
                         return N.array(value)
-                    term = NamedTerm(names, _fn=_fn, termname=termname)
+                    term = Term(names, _fn=_fn, termname=termname)
                 terms.append(term)
 
         return Formula(terms)
@@ -424,4 +424,4 @@ def isnested(A, B, namespace=globals()):
     else:
         return (False, None)
 
-I = NamedTerm('intercept', _fn=lambda x: 1)
+I = Term('intercept', _fn=lambda x: 1)
