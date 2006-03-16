@@ -1,5 +1,5 @@
-from distutils.core import setup
 import os, glob, string, shutil
+from distutils.core import setup
 
 # Packages
 
