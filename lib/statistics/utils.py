@@ -43,7 +43,7 @@ def rank(X, cond=1.0e-06):
     not the SVD.
     """
     pX = L.pinv(X)
-    V, D, U = L.svd(N.transpose(X))
+    V, D, U = L.svd(N.transpose(X), full_matrices=0)
     return int(N.add.reduce(N.greater(D / D[0], cond).astype(N.Int)))
 
 def fullrank(X, r=None):
@@ -58,7 +58,7 @@ def fullrank(X, r=None):
     if r is None:
         r = rank(X)
 
-    V, D, U = L.svd(X)
+    V, D, U = L.svd(X, full_matrices=0)
     order = N.argsort(D)
     order = order[::-1]
     value = []
