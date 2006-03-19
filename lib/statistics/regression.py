@@ -74,7 +74,7 @@ class RegressionModelResults(traits.HasTraits):
         Rsq = self.scale / self.Ssq
         return Rsq
 
-    def cov_beta(self, matrix=None, column=None, scale=None):
+    def cov_beta(self, matrix=None, column=None, scale=None, other=None):
         """
         Returns the variance/covariance matrix of a linear contrast
         of the estimates of beta, multiplied by scale which
@@ -88,7 +88,9 @@ class RegressionModelResults(traits.HasTraits):
             return self.normalized_cov_beta[column, column] * scale
 
         elif matrix is not None:
-            tmp = N.dot(matrix, N.dot(self.normalized_cov_beta, N.transpose(matrix)))
+            if other is None:
+                other = matrix
+            tmp = N.dot(matrix, N.dot(self.normalized_cov_beta, N.transpose(other)))
             return tmp * scale
 
     def Tcontrast(self, matrix, t=True, sd=True, scale=None):

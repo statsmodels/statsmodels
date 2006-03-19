@@ -40,6 +40,7 @@ class Contrast(traits.HasTraits):
             self.name = str(term)
         else:
             self.name = name
+
     def __str__(self):
         return '<contrast:%s>' % `{'term':str(self.term), 'formula':str(self.formula)}`
 
