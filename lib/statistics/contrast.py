@@ -58,7 +58,7 @@ class Contrast(traits.HasTraits):
 
         if evaldesign:
             self.D = self.formula.design(**keywords)
-            self.pinv = L.generalized_inverse(self.D)
+            self.pinv = L.pinv(self.D)
 
         self.matrix = regression.contrastfromcols(T, self.D)
         try:

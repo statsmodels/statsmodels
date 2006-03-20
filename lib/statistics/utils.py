@@ -42,8 +42,8 @@ def rank(X, cond=1.0e-06):
     Return the rank of a matrix X based on its generalized inverse,
     not the SVD.
     """
-    pX = L.generalized_inverse(X)
-    V, D, U = L.singular_value_decomposition(N.transpose(X))
+    pX = L.pinv(X)
+    V, D, U = L.svd(N.transpose(X))
     return int(N.add.reduce(N.greater(D / D[0], cond).astype(N.Int)))
 
 def fullrank(X, r=None):
@@ -58,7 +58,7 @@ def fullrank(X, r=None):
     if r is None:
         r = rank(X)
 
-    V, D, U = L.singular_value_decomposition(X)
+    V, D, U = L.svd(X)
     order = N.argsort(D)
     order = order[::-1]
     value = []
