@@ -1,6 +1,6 @@
 import model
 import numpy as N
-import numpy.linalg as NL
+import numpy.linalg as L
 import enthought.traits as traits
 
 class NLSModel(model.Model,traits.HasTraits):
@@ -74,7 +74,7 @@ class NLSModel(model.Model,traits.HasTraits):
         if self._iter < self.niter:
             self.getZ()
             self.getomega()
-            Zpinv = NL.generalized_inverse(self._Z)
+            Zpinv = L.pinv(self._Z)
             self.theta = N.dot(Zpinv, self.Y - self._omega)
         else:
             raise StopIteration

@@ -133,7 +133,7 @@ class RegressionModelResults(traits.HasTraits):
 
         q = matrix.shape[0]
         if invcov is None:
-            invcov = L.inverse(self.cov_beta(matrix=matrix, scale=1.0))
+            invcov = L.inv(self.cov_beta(matrix=matrix, scale=1.0))
         results.F = N.add.reduce(N.dot(invcov, cbeta) * cbeta, 0) / (q * self.scale)
         return results
 
@@ -167,7 +167,7 @@ class OLSModel(Model):
         self.setup()
 
     def setup(self):
-        self.calc_beta = L.generalized_inverse(self.wdesign)
+        self.calc_beta = L.pinv(self.wdesign)
         self.normalized_cov_beta = N.dot(self.calc_beta, N.transpose(self.calc_beta))
         self._df_resid = int(N.around(self.wdesign.shape[0] - N.add.reduce(N.diagonal(N.dot(self.calc_beta, self.wdesign)))))
 
@@ -249,7 +249,7 @@ def contrastfromcols(T, D, pinv=None, warn=True):
         raise ValueError, 'shape of T and D mismatched'
 
     if pinv is None:
-        pinv = L.generalized_inverse(D)
+        pinv = L.pinv(D)
 
     if T.shape[0] == n:
         C = N.transpose(N.dot(pinv, T))
