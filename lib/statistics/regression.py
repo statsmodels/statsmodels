@@ -221,7 +221,7 @@ class ARModel(OLSModel):
         factor = 1. / N.sqrt(1 - self.rho**2)
         return N.concatenate([[X[0]], (X[1:] - self.rho * X[0:-1]) * factor])
 
-def getcontrast(T, D, pinv=None):
+def contrastfromcols(T, D, pinv=None, warn=True):
     """
     From an n x p design matrix D and a matrix T, tries
     to determine a p x q contrast matrix C which
@@ -234,6 +234,11 @@ def getcontrast(T, D, pinv=None):
 
     T must satisfy either T.shape[0] == n or T.shape[1] == p.
 
+    Note that this always produces a meaningful contrast, not always
+    with the intended properties because q is always non-zero unless
+    T is identically 0. That is, it produces a contrast that spans
+    the column space of T (after projection onto the column space of D).
+
     """
 
     n, p = D.shape
@@ -244,27 +249,26 @@ def getcontrast(T, D, pinv=None):
     if pinv is None:
         pinv = L.generalized_inverse(D)
 
-    Tp = N.dot(D, N.dot(pinv, T))
+    C = N.transpose(N.dot(pinv, T))
 
-    if N.allclose(Tp, T):
-        # fullrank case -- i.e. each
-        # column is in the column space of self.design
-        # to get exactly the linear combinations in T
-
-        C = N.transpose(N.dot(pinv, T))
-    else:
-        # non-fullrank
-        # get a fullrank version of T and
-        # return a smaller contrast matrix
-
+    Tp = N.dot(D, N.transpose(C))
+    if utils.rank(Tp) != Tp.shape[1]:
         Tp = utils.fullrank(Tp)
         C = N.transpose(N.dot(pinv, Tp))
 
-
-    covC = N.dot(C, N.dot(N.dot(pinv, N.transpose(pinv)), N.transpose(C)))
-
-    print utils.rank(covC), covC.shape
-    if utils.rank(covC) != covC.shape[0]:
-        raise ValueError, 'contrast not estimable'
-
     return N.squeeze(C)
+
+def isestimable(C, D, pinv=None, warn=True):
+    """
+    From an q x p contrast matrix C and an n x p design matrix T, tries
+    if the contrast C is estimable by looking at the rank of [D,C] and
+    verifying it is the same as the rank of D.
+    """
+
+    print C.shape, D.shape
+
+    new = N.concatenate([C, D])
+    print utils.rank(new), utils.rank(D)
+    if utils.rank(new) != utils.rank(D):
+        return False
+    return True
