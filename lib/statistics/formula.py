@@ -121,7 +121,7 @@ class Factor(Term):
     def __add__(self, other):
         """
         Return a Formula object that has the columns self and the columns
-        of other. When adding "intercept" to a Factor, this just returns self.
+        of other. When adding \'intercept\' to a Factor, this just returns self.
         """
 
         if other.name is 'intercept':
@@ -129,37 +129,29 @@ class Factor(Term):
         else:
             return Term.__add__(self, other)
 
-    def main_effect(self, formula, reference=None, term=True):
+    def main_effect(self, reference=None):
         """
-        Return the 'main effect' contrast matrix, or a Term
+        Return the 'main effect' a Term
         that corresponds to the columns in formula.
         """
 
         if reference is None:
             reference = 0
-        n = len(formula._names)
 
-        cols = formula.termcolumns(self, dict=True)
-        names = self.names()
+        def _fn(namespace=None, reference=reference, names=self.names(), **keywords):
+            value = N.asarray(self(namespace=namespace, **keywords))
+            rvalue = []
+            keep = range(value.shape[0])
+            keep.pop(reference)
+            for i in range(len(keep)):
+                rvalue.append(value[keep[i]] - value[reference])
+            return rvalue
 
-        m = len(names)
-        contrast = N.zeros((m-1,n), N.Float)
-
-        other = range(m)
-        other.pop(reference)
-
-        for i in range(m-1):
-            contrast[i,cols[names[reference]]] = -1.
-            contrast[i,cols[names[other[i]]]] = 1.
-
-        if not term:
-            return N.squeeze(contrast)
-        if term:
-            def _fn(namespace=None, formula=formula, contrast=contrast, **keywords):
-                value = formula(namespace=namespace, **keywords)
-                return N.dot(contrast, value)
-            _names = ['%s-%s' % (names[other[i]], names[reference]) for i in range(m-1)]
-            return Term(_names, _fn=_fn, termname='%s-main' % self.termname)
+        keep = range(len(self.names()))
+        keep.pop(reference)
+        __names = self.names()
+        _names = ['%s-%s' % (__names[keep[i]], __names[reference]) for i in range(len(keep))]
+        return Term(_names, _fn=_fn, termname='%s:maineffect' % self.termname)
 
 class Quantitative(Term):
 

@@ -26,7 +26,7 @@ class LinearModelIterator(traits.HasTraits):
 
         for data in self.iterator:
             shape = data.shape[1:]
-            data.shape = (data.shape[0], N.product(shape))
+            data = data.reshape(data.shape[0], N.product(shape))
             model = self.model()
 
             results = model.fit(data, **keywords)
