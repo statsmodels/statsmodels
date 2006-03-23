@@ -169,7 +169,7 @@ class OLSModel(Model):
     def setup(self):
         self.calc_beta = L.generalized_inverse(self.wdesign)
         self.normalized_cov_beta = N.dot(self.calc_beta, N.transpose(self.calc_beta))
-        self._df_resid = self.wdesign.shape[0] - N.add.reduce(N.diagonal(N.dot(self.calc_beta, self.wdesign)))
+        self._df_resid = int(N.around(self.wdesign.shape[0] - N.add.reduce(N.diagonal(N.dot(self.calc_beta, self.wdesign)))))
 
     def initialize(self, design, **keywords):
         self.design = design

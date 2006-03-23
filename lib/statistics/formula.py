@@ -215,22 +215,29 @@ class Formula(traits.HasTraits):
             value += [term.termname]
         return '<formula: %s>' % string.join(value, ' + ')
 
-    def __call__(self, namespace=None, **extra):
+    def __call__(self, namespace=None, n=-1, **extra):
         if namespace is None:
             namespace = globals()
         allvals = []
         intercept = False
         for term in self.terms:
             val = term(namespace=namespace, **extra)
-            if len(val.shape) > 1:
-                allvals.append(val)
-            else:
+            if val.shape == ():
                 intercept = True
+            elif val.ndim == 1:
+                val.shape = (1, val.shape[0])
+            allvals.append(val)
 
-        if intercept:
-            allvals.append(N.ones((1,n), N.Float))
+        if not intercept:
+            allvals = N.concatenate(allvals)
+        else:
+            if allvals != []:
+                n = allvals.shape[1]
+                allvals = N.concatenate([N.ones((1,n), N.Float), allvals])
+            elif n <= 1:
+                raise ValueError, 'with no columns in model, keyword n argument needed for intercept'
 
-        return N.concatenate(allvals)
+        return allvals
 
     def hasterm(self, term):
         """
@@ -292,7 +299,10 @@ class Formula(traits.HasTraits):
         """
         if namespace is None:
             namespace = globals()
-        return N.transpose(self(namespace=namespace, **keywords))
+
+        D = N.transpose(self(namespace=namespace, **keywords))
+
+        return D
 
     def __mul__(self, other, nested=False):
         """
@@ -341,11 +351,16 @@ class Formula(traits.HasTraits):
                     def _fn(namespace=None, selfterm=self.terms[i], otherterm=other.terms[j], **extra):
                         value = []
                         selfval = N.array(selfterm(namespace=namespace, **extra))
+                        if len(selfval.shape) == 1:
+                            selfval.shape = (1, selfval.shape[0])
                         otherval = N.array(otherterm(namespace=namespace, **extra))
+                        if len(otherval.shape) == 1:
+                            otherval.shape = (1, otherval.shape[0])
 
                         for r in range(selfval.shape[0]):
                             for s in range(otherval.shape[0]):
                                 value.append(selfval[r] * otherval[s])
+
                         return N.array(value)
                     term = Term(names, _fn=_fn, termname=termname)
                 terms.append(term)
@@ -416,4 +431,4 @@ def isnested(A, B, namespace=globals()):
     else:
         return (False, None)
 
-I = Term('intercept', _fn=lambda x: 1)
+I = Term('intercept', _fn=lambda x: N.array(1))

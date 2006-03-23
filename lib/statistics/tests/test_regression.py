@@ -3,6 +3,7 @@ import unittest
 import numpy.random as R
 import numpy as N
 
+
 W = R.standard_normal
 
 class RegressionTest(unittest.TestCase):
@@ -37,6 +38,9 @@ class RegressionTest(unittest.TestCase):
         results = model.fit(Y)
         self.assertEquals(results.df_resid(), 31)
 
+def suite():
+    suite = unittest.makeSuite(RegressionTest)
+    return suite
 
 
 if __name__ == '__main__':

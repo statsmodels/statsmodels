@@ -3,7 +3,24 @@ from distutils.core import setup
 
 # Packages
 
-packages = ['neuroimaging', 'neuroimaging.statistics', 'neuroimaging.image', 'neuroimaging.reference', 'neuroimaging.data', 'neuroimaging.image.formats', 'neuroimaging.image.formats.analyze', 'neuroimaging.fmri', 'neuroimaging.fmri.fmristat', 'neuroimaging.visualization', 'neuroimaging.visualization.cmap']
+packages = ['neuroimaging',
+            'neuroimaging.statistics',
+            'neuroimaging.statistics.tests',
+            'neuroimaging.image',
+            'neuroimaging.image.tests',
+            'neuroimaging.reference',
+            'neuroimaging.reference.tests',
+            'neuroimaging.data',
+            'neuroimaging.data.tests',
+            'neuroimaging.image.formats',
+            'neuroimaging.image.formats.tests',
+            'neuroimaging.image.formats.analyze',
+            'neuroimaging.fmri',
+            'neuroimaging.fmri.tests',
+            'neuroimaging.fmri.fmristat',
+            'neuroimaging.fmri.fmristat.tests',
+            'neuroimaging.visualization',
+            'neuroimaging.visualization.cmap']
 
 
 def main():

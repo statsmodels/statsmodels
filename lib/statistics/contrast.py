@@ -49,7 +49,7 @@ class Contrast(traits.HasTraits):
         Construct a contrast matrix to test self.term in self.formula.
         """
 
-        T = N.transpose(self.term(**keywords))
+        T = N.transpose(N.array(self.term(**keywords)))
 
         if T.ndim == 1:
             T.shape = (T.shape[0], 1)

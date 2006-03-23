@@ -30,6 +30,13 @@ def clean0(matrix):
     val = [matrix[:,i] for i in N.nonzero(colsum)]
     return N.array(N.transpose(val))
 
+def norm(X, p=2, axis=0):
+    """
+    Return the l^p norm of X, for 0 < p < infty.
+    """
+    return N.pow(N.add.reduce(X**p,axis=axis),1.0/p)
+
+
 def rank(X, cond=1.0e-06):
     """
     Return the rank of a matrix X based on its generalized inverse,
@@ -115,4 +122,20 @@ def ECDF(values):
     n = x.shape[0]
     y = (N.arange(n) + 1.) / n
     return StepFunction(x, y)
+
+def monotone_fn_inverter(fn, x, vectorized=True, **keywords):
+    """
+    Given a monotone function x (no checking is done to verify montonocity)
+    and a set of x values, return an linearly
+    interpolated approximation to its inverse from its values on x.
+    """
+
+    if vectorized:
+        y = fn(x, **keywords)
+    else:
+        y = []
+        for _x in x:
+            y.append(fn(_x, **keywords))
+        y = N.array(y)
+    return LinearInterpolant(y, x, sorted=False)
 
