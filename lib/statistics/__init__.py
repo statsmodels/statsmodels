@@ -2,4 +2,7 @@ import model
 import regression
 import classification
 import iterators
-import utils
+
+# Is this import now redundant?  The utils referred to seems to now be
+# in fmri/utils
+# import utils

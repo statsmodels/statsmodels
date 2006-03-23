@@ -2,7 +2,7 @@ import numpy as N
 import numpy.linalg as L
 import enthought.traits as traits
 from model import Model
-import utils
+from neuroimaging.fmri import utils
 
 class RegressionOutput(traits.HasTraits):
 
