@@ -7,9 +7,9 @@ from neuroimaging.statistics import utils
 
 class UtilsTest(unittest.TestCase):
 
-    def test_inv(self):
+    def test_recipr(self):
         X = N.array([[2,1],[-1,0]])
-        Y = utils.inv(X)
+        Y = utils.recipr(X)
         scipy.testing.assert_almost_equal(Y, N.array([[0.5,1],[0,0]]))
 
     def test_rank(self):

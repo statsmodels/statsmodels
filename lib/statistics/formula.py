@@ -159,11 +159,11 @@ class Quantitative(Term):
         if type(power) is not types.IntType:
             raise ValueError, 'expecting an integer'
 
-        name = '%s**%d' % (self.name, power)
+        name = '%s^%d' % (self.name, power)
 
         def _fn(namespace=None, power=power):
             x = N.array(namespace[self.name])
-            return pow(x, power)
+            return N.power(x, power)
         return Term(name, _fn=_fn)
 
 class FuncQuant(Quantitative):

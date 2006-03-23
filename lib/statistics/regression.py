@@ -59,7 +59,7 @@ class RegressionModelResults(traits.HasTraits):
         if not hasattr(self, '_sd'):
             self.sd()
         test = N.greater(_sd, 0)
-        sdd = utils.inv(self._sd) / N.sqrt(self.df)
+        sdd = utils.recipr(self._sd) / N.sqrt(self.df)
         norm_resid = self.resid * N.multiply.outer(N.ones(Y.shape[0]), sdd)
         return norm_resid
 
@@ -106,7 +106,7 @@ class RegressionModelResults(traits.HasTraits):
         if sd:
             results.sd = N.sqrt(self.cov_beta(matrix=matrix)) * self._sd
         if t:
-            results.t = results.effect * utils.inv(results.sd)
+            results.t = results.effect * utils.recipr(results.sd)
         return results
 
     def Fcontrast(self, matrix, eff=True, t=True, sd=True, scale=None, invcov=None):

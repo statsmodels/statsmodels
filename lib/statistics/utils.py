@@ -2,7 +2,7 @@ import numpy as N
 import numpy.linalg as L
 import scipy
 
-def inv(X):
+def recipr(X):
     """
     Return the reciprocal of an array, setting all entries less than or
     equal to 0 to 0. Therefore, it presumes that X should be positive in
@@ -11,7 +11,7 @@ def inv(X):
     x = N.maximum(N.array(X).astype(N.Float), 0)
     return N.greater(x, 0.) / (x + N.less_equal(x, 0.))
 
-def inv0(X):
+def recipr0(X):
     """
     Return the reciprocal of an array, setting all entries equal to 0
     as 0. It does not assume that X should be positive in
@@ -34,7 +34,7 @@ def norm(X, p=2, axis=0):
     """
     Return the l^p norm of X, for 0 < p < infty.
     """
-    return N.pow(N.add.reduce(X**p,axis=axis),1.0/p)
+    return N.pow(N.add.reduce(N.fabs(X)**p,axis=axis),1.0/p)
 
 
 def rank(X, cond=1.0e-06):
