@@ -36,7 +36,7 @@ def rank(X, cond=1.0e-06):
     not the SVD.
     """
     pX = L.generalized_inverse(X)
-    V, D, U = L.singular_value_decomposition(N.transpose(pX))
+    V, D, U = L.singular_value_decomposition(N.transpose(X))
     return int(N.add.reduce(N.greater(D / D[0], cond).astype(N.Int)))
 
 def fullrank(X, r=None):
@@ -50,6 +50,7 @@ def fullrank(X, r=None):
 
     if r is None:
         r = rank(X)
+
     V, D, U = L.singular_value_decomposition(X)
     order = N.argsort(D)
     order = order[::-1]

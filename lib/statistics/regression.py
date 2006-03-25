@@ -251,9 +251,13 @@ def contrastfromcols(T, D, pinv=None, warn=True):
     if pinv is None:
         pinv = L.generalized_inverse(D)
 
-    C = N.transpose(N.dot(pinv, T))
+    if T.shape[0] == n:
+        C = N.transpose(N.dot(pinv, T))
+    else:
+        C = T
 
     Tp = N.dot(D, N.transpose(C))
+
     if utils.rank(Tp) != Tp.shape[1]:
         Tp = utils.fullrank(Tp)
         C = N.transpose(N.dot(pinv, Tp))

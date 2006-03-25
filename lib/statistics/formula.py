@@ -64,7 +64,7 @@ class Term:
         val = N.array(val)
         if len(val.shape) == 1:
             val.shape = (1,) + val.shape
-        return val
+        return N.squeeze(val)
 
 class Factor(Term):
 
