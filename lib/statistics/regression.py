@@ -223,6 +223,30 @@ class ARModel(OLSModel):
         factor = 1. / N.sqrt(1 - self.rho**2)
         return N.concatenate([[X[0]], (X[1:] - self.rho * X[0:-1]) * factor])
 
+
+class WLSModel(ARModel):
+    """
+
+    A regression model with diagonal but non-identity covariance
+    structure. The weights are proportional to the inverse of the
+
+    """
+
+    weights = traits.Any()
+
+    def _weights_changed(self):
+        self._design_changed()
+
+    def whiten(self, X):
+        if X.ndim == 1:
+            return X / N.sqrt(self.weights)
+        elif X.ndim == 2:
+            c = N.sqrt(self.weights)
+            v = N.zeros(X.shape, N.Float)
+            for i in range(X.shape[1]):
+                v[:,i] = X[:,i] / c
+            return v
+
 def contrastfromcols(T, D, pinv=None, warn=True):
     """
     From an n x p design matrix D and a matrix T, tries
