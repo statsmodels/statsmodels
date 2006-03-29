@@ -30,6 +30,7 @@ class LinearModelIterator(traits.HasTraits):
             model = self.model()
 
             results = model.fit(data, **keywords)
+
             for output in self.outputs:
                 out = output.extract(results)
                 if output.nout > 1:
