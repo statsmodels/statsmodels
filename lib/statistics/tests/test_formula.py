@@ -61,7 +61,7 @@ class FormulaTest(unittest.TestCase):
     def test_contrast3(self):
 
         X = self.formula.design(namespace=self.namespace)
-        P = N.dot(X, L.generalized_inverse(X))
+        P = N.dot(X, L.pinv(X))
 
         dummy = formula.Term('noise')
         resid = N.identity(40) - P
