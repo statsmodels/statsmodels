@@ -3,6 +3,47 @@ import numpy.linalg as L
 import enthought.traits as traits
 from model import Model
 import utils
+import gc
+
+class LinearModelIterator(traits.HasTraits):
+
+    iterator = traits.Any()
+    outputs = traits.List()
+
+    def __init__(self, iterator, outputs=[], **keywords):
+        self.iterator = iter(iterator)
+        self.outputs = [iter(output) for output in outputs]
+
+    def model(self, **keywords):
+        """
+        This method should take the iterator at its current state and
+        return a LinearModel object.
+        """
+        return None
+
+    def fit(self, **keywords):
+        """
+        Go through an iterator, instantiating model and passing data,
+        going through outputs.
+        """
+
+        for data in self.iterator:
+            shape = data.shape[1:]
+            data = data.reshape(data.shape[0], N.product(shape))
+            model = self.model()
+
+            results = model.fit(data, **keywords)
+
+            for output in self.outputs:
+                out = output.extract(results)
+                if output.nout > 1:
+                    out.shape = (output.nout,) + shape
+                else:
+                    out.shape = shape
+                output.next(data=out)
+
+            del(results); gc.collect()
+
 
 class RegressionOutput(traits.HasTraits):
 
@@ -42,10 +83,10 @@ class RegressionModelResults(traits.HasTraits):
         if column is None:
             _t = N.zeros(_beta.shape, N.Float)
             for i in range(self.beta.shape[0]):
-                _t[i] = _beta[i] / (self._sd * self.sqrt(self.normalized_cov_beta[i,i]))
+                _t[i] = _beta[i] * utils.recipr((self._sd * self.sqrt(self.normalized_cov_beta[i,i])))
         else:
             i = column
-            _t = _beta[i] / (self._sd * self.sqrt(self.normalized_cov_beta[i,i]))
+            _t = _beta[i] * utils.recipr((self._sd * self.sqrt(self.normalized_cov_beta[i,i])))
         return _t
 
     def sd(self):
@@ -134,7 +175,7 @@ class RegressionModelResults(traits.HasTraits):
         q = matrix.shape[0]
         if invcov is None:
             invcov = L.inv(self.cov_beta(matrix=matrix, scale=1.0))
-        results.F = N.add.reduce(N.dot(invcov, cbeta) * cbeta, 0) / (q * self.scale)
+        results.F = N.add.reduce(N.dot(invcov, cbeta) * cbeta, 0) * utils.recipr((q * self.scale))
         return results
 
 class ContrastResults:
