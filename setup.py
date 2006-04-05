@@ -4,6 +4,7 @@ from distutils.core import setup
 # Packages
 
 packages = ['neuroimaging',
+            'neuroimaging.tests',
             'neuroimaging.statistics',
             'neuroimaging.statistics.tests',
             'neuroimaging.image',
@@ -20,7 +21,8 @@ packages = ['neuroimaging',
             'neuroimaging.fmri.fmristat',
             'neuroimaging.fmri.fmristat.tests',
             'neuroimaging.visualization',
-            'neuroimaging.visualization.cmap']
+            'neuroimaging.visualization.cmap',
+            'neuroimaging.visualization.tests']
 
 
 def main():
