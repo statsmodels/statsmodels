@@ -39,9 +39,9 @@ class Term:
     def __mul__(self, other):
 
         if other.name is 'intercept':
-            return self
+            return Formula(self)
         elif self.name is 'intercept':
-            return other
+            return Formula(other)
 
         other = Formula(other)
         return other * self
@@ -125,7 +125,7 @@ class Factor(Term):
         """
 
         if other.name is 'intercept':
-            return self
+            return Formula(self)
         else:
             return Term.__add__(self, other)
 
