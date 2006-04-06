@@ -15,4 +15,4 @@ rm -rf $(find . -name ".*.sw")
 rm -rf $(find . -name "*.pyc")
 
 # test install dir
-rm -rf .scratchlib
+rm -rf test-install
