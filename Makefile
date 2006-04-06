@@ -7,7 +7,7 @@ install: FORCE
 	$(python) setup.py install
 
 test: test-install FORCE
-	PYTHONPATH=.scratchlib && $(python) .scratchlib/neuroimaging/tests/test_all.py
+	PYTHONPATH=.scratchlib && $(python) ./test
 
 test-install: FORCE
 	$(python) setup.py install --install-lib=.scratchlib
