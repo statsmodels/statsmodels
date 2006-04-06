@@ -10,7 +10,7 @@ class NLSModel(model.Model,traits.HasTraits):
     theta = traits.Any()
     f = traits.Any()
     theta = traits.Any()
-    niter = traits.Int(5)
+    niter = traits.Int(10)
     initial = traits.Any()
 
     '''
@@ -55,7 +55,7 @@ class NLSModel(model.Model,traits.HasTraits):
         return self.f(design, self.theta)
 
     def SSE(self):
-        return sum((self.Y - self.fitted())**2)
+        return sum((self.Y - self.predict())**2)
 
     def __iter__(self):
 
