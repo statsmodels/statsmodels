@@ -1,34 +1,13 @@
 import os, glob, string, shutil
+import sys
+sys.path.insert(0,"lib")
 from distutils.core import setup
-
-# Packages
-
-packages = ['neuroimaging',
-            'neuroimaging.tests',
-            'neuroimaging.statistics',
-            'neuroimaging.statistics.tests',
-            'neuroimaging.image',
-            'neuroimaging.image.tests',
-            'neuroimaging.reference',
-            'neuroimaging.reference.tests',
-            'neuroimaging.data',
-            'neuroimaging.data.tests',
-            'neuroimaging.image.formats',
-            'neuroimaging.image.formats.tests',
-            'neuroimaging.image.formats.analyze',
-            'neuroimaging.fmri',
-            'neuroimaging.fmri.tests',
-            'neuroimaging.fmri.fmristat',
-            'neuroimaging.fmri.fmristat.tests',
-            'neuroimaging.visualization',
-            'neuroimaging.visualization.cmap',
-            'neuroimaging.visualization.tests']
-
+from neuroimaging import packages, __version__
 
 def main():
 
-    setup (name = 'neuroimaging',
-           version = '0.01a',
+    setup( name = 'neuroimaging',
+           version = __version__,
            description = 'This is a neuroimaging python package',
            author = 'Various, one of whom is Jonathan Taylor',
            author_email = 'jonathan.taylor@stanford.edu',
@@ -41,9 +20,4 @@ def main():
            ''')
 
 
-
-if __name__ == "__main__":
-    main()
-
-
-
+if __name__ == "__main__": main()
