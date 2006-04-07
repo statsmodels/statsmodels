@@ -6,8 +6,8 @@ build: FORCE
 install: FORCE
 	$(python) setup.py install
 
-test: test-install FORCE
-	PYTHONPATH=test-install && $(python) ./test
+test: FORCE
+	$(python) ./test
 
 test-install: FORCE
 	$(python) setup.py install --install-lib=test-install

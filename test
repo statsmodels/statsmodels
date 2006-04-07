@@ -1,14 +1,11 @@
 #!/usr/bin/env python
 import os
 import sys
-if not os.path.exists("test-install"):
-    print "Please run 'make test-install' first."
-    sys.exit(0)
-sys.path = ["test-install"]+sys.path
+sys.path.insert(0,"lib")
 from optparse import OptionParser, Option
 
-from neuroimaging.tests import test_all, test_package, packages, \
-     get_package_tests
+from neuroimaging import packages
+from neuroimaging.tests import test_all, test_package, get_package_tests
 
 
 ##############################################################################
