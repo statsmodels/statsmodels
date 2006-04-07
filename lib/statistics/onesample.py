@@ -86,6 +86,7 @@ class OneSample(traits.HasTraits):
 
         if self.weight_type == 'sd':
             W = 1. / N.power(W, 2)
+            print 'here'
         elif self.weight_type == 'var':
             W = 1. / W
         return N.asarray(W)
@@ -97,7 +98,6 @@ class OneSample(traits.HasTraits):
         W = self.get_weights(W)
         if W.shape in [(),(1,)]:
             W = N.ones(Y.shape) * W
-            print 'here'
 
         nsubject = Y.shape[0]
 
@@ -111,7 +111,6 @@ class OneSample(traits.HasTraits):
             W = recipr(S)
 
 
-        print W
         mu = N.add.reduce(Y * W, 0) / N.add.reduce(W, 0)
 
         value = OneSampleResults()
