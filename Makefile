@@ -7,10 +7,10 @@ install: FORCE
 	$(python) setup.py install
 
 test: test-install FORCE
-	PYTHONPATH=.scratchlib && $(python) ./test
+	PYTHONPATH=test-install && $(python) ./test
 
 test-install: FORCE
-	$(python) setup.py install --install-lib=.scratchlib
+	$(python) setup.py install --install-lib=test-install
 
 clean: FORCE
 	./clean
