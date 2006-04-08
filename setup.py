@@ -34,7 +34,7 @@ def main():
            author_email = 'jonathan.taylor@stanford.edu',
            ext_package = 'neuroimaging',
            packages=packages,
-           package_dir = {'neuroimaging': 'lib'},
+           package_dir = {'': 'lib'},
            url = 'http://neuroimaging.scipy.org',
            long_description =
            '''

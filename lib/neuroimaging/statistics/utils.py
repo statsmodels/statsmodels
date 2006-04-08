@@ -9,7 +9,7 @@ def recipr(X):
     equal to 0 to 0. Therefore, it presumes that X should be positive in
     general.
     """
-    x = N.maximum(N.asarray(X).astype(N.Float), 0)
+    x = N.maximum(N.array(X).astype(N.Float), 0)
     return N.greater(x, 0.) / (x + N.less_equal(x, 0.))
 
 def recipr0(X):
@@ -18,7 +18,7 @@ def recipr0(X):
     as 0. It does not assume that X should be positive in
     general.
     """
-    test = N.equal(N.asarray(X), 0)
+    test = N.equal(N.array(X), 0)
     return N.where(test, 0, 1. / X)
 
 def clean0(matrix):
