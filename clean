@@ -1,0 +1,15 @@
+#!/bin/sh
+# remove generated files from the project tree
+
+# distribution files
+rm -rf dist build MANIFEST
+
+# svn droppings
+rm -rf $(find . -name "svn-commit*.tmp")
+
+# editor leftovers
+rm -rf $(find . -name "*~")
+rm -rf $(find . -name ".*.sw")
+
+# python bytecode
+rm -rf $(find . -name "*.pyc")
