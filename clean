@@ -13,3 +13,6 @@ rm -rf $(find . -name ".*.sw")
 
 # python bytecode
 rm -rf $(find . -name "*.pyc")
+
+# test install dir
+rm -rf .scratchlib
