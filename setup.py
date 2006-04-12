@@ -2,7 +2,7 @@ import os, glob, string, shutil
 import sys
 sys.path.insert(0,"lib")
 from distutils.core import setup
-from neuroimaging import packages, __version__
+from neuroimaging import packages, __version__, __doc__
 
 def main():
 
@@ -15,9 +15,7 @@ def main():
            packages=['']+list(packages),
            package_dir = {'': 'lib'},
            url = 'http://neuroimaging.scipy.org',
-           long_description =
-           '''
-           ''')
+           long_description = __doc__)
 
 
 if __name__ == "__main__": main()
