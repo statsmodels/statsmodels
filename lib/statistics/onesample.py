@@ -23,6 +23,7 @@ class OneSample(traits.HasTraits):
     varatio = traits.Trait(traits.Any())
     varfix = traits.Trait(traits.Any())
     niter = traits.Int(10)
+    use_scale = traits.true
 
     def df_resid(self, **keywords):
         return self._df_resid
@@ -81,21 +82,25 @@ class OneSample(traits.HasTraits):
             if W.ndim == 1:
                 W.shape = (W.shape[0], 1)
         except:
-            W = N.ones(Y.shape, N.Float)
+            pass
 
         if self.weight_type == 'sd':
             W = 1. / N.power(W, 2)
         elif self.weight_type == 'var':
             W = 1. / W
-        return W
+        return N.asarray(W)
 
     def estimate_mean(self, Y, W, **keywords):
 
         if Y.ndim == 1:
             Y.shape = (Y.shape[0], 1)
         W = self.get_weights(W)
+        if W.shape in [(),(1,)]:
+            W = N.ones(Y.shape) * W
+            print 'here'
 
         nsubject = Y.shape[0]
+
         if self.varfix is not None:
             sigma2 = N.asarray(self.varfix * self.varatio)
 
@@ -105,17 +110,22 @@ class OneSample(traits.HasTraits):
                 S = recipr(W) + sigma2
             W = recipr(S)
 
+
+        print W
         mu = N.add.reduce(Y * W, 0) / N.add.reduce(W, 0)
 
         value = OneSampleResults()
         value.df_resid = Y.shape[0] - 1
         value.resid = (Y - N.multiply.outer(N.ones(Y.shape[0], N.Float), mu)) * N.sqrt(W)
 
-        scale = N.add.reduce(N.power(value.resid, 2), 0) / value.df_resid
-        Wtotal = scale * recipr(N.add.reduce(W, 0))
+        if self.use_scale:
+            scale = N.add.reduce(N.power(value.resid, 2), 0) / value.df_resid
+        else:
+            scale = 1.
+        var_total = scale * recipr(N.add.reduce(W, 0))
 
         value.mu = mu
-        value.sd = N.squeeze(N.sqrt(Wtotal))
+        value.sd = N.squeeze(N.sqrt(var_total))
         value.t = N.squeeze(value.mu * recipr(value.sd))
         value.scale = N.sqrt(scale)
 

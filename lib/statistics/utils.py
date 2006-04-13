@@ -1,6 +1,7 @@
 import numpy as N
 import numpy.linalg as L
 import scipy
+import scipy.interpolate
 
 def recipr(X):
     """
@@ -37,14 +38,14 @@ def norm(X, p=2, axis=0):
     return N.pow(N.add.reduce(N.fabs(X)**p,axis=axis),1.0/p)
 
 
-def rank(X, cond=1.0e-06):
+def rank(X, cond=1.0e-6):
     """
     Return the rank of a matrix X based on its generalized inverse,
     not the SVD.
     """
     pX = L.pinv(X)
     V, D, U = L.svd(N.transpose(X), full_matrices=0)
-    return int(N.add.reduce(N.greater(D / D[0], cond).astype(N.Int)))
+    return int(N.add.reduce(N.greater(D / D.max(), cond).astype(N.Int)))
 
 def fullrank(X, r=None):
     """
@@ -137,5 +138,8 @@ def monotone_fn_inverter(fn, x, vectorized=True, **keywords):
         for _x in x:
             y.append(fn(_x, **keywords))
         y = N.array(y)
-    return LinearInterpolant(y, x, sorted=False)
+
+    a = N.argsort(y)
+
+    return scipy.interpolate.interp1d(y[a], x[a])
 
