@@ -86,7 +86,6 @@ class OneSample(traits.HasTraits):
 
         if self.weight_type == 'sd':
             W = 1. / N.power(W, 2)
-            print 'here'
         elif self.weight_type == 'var':
             W = 1. / W
         return N.asarray(W)
