@@ -1,7 +1,7 @@
 import numpy as N
 import numpy.linalg as L
 import enthought.traits as traits
-from model import Model
+from neuroimaging.statistics import Model
 import utils
 import gc
 

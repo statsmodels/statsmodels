@@ -1,9 +1,9 @@
-import model
 import numpy as N
 import numpy.linalg as L
 import enthought.traits as traits
+from neuroimaging.statistics import Model
 
-class NLSModel(model.Model,traits.HasTraits):
+class NLSModel(Model,traits.HasTraits):
 
     Y = traits.Any()
     design = traits.Any()

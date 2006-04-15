@@ -1,18 +1,12 @@
-import model
-#import regression
-#import classification
-#import iterators
-#import contrast
+import enthought.traits as traits
 
-# Is this import now redundant?  The utils referred to seems to now be
-# in fmri/utils
-
-# not necessarily -- there are some differences. i suppose most utils
-# should be moved to here.. this is the natural place for a lot of them
-# i would like to release statistics as a separate package, too
-# under a BSD license rather than GPL
-
-#import utils
+class Model(traits.HasTraits):
+    def initialize(self, **keywords): pass
+    def fit(self, **keywords): pass
+    def predict(self, **keywords):
+        # results of fit are stored in self.results
+        self.results.predict(**keywords)
+    def view(self, **keywords): pass
 
 import unittest
 def suite():
