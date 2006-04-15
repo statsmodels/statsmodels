@@ -12,7 +12,7 @@ def main():
            author = 'Various, one of whom is Jonathan Taylor',
            author_email = 'jonathan.taylor@stanford.edu',
            ext_package = 'neuroimaging',
-           packages=packages,
+           packages=['']+list(packages),
            package_dir = {'': 'lib'},
            url = 'http://neuroimaging.scipy.org',
            long_description =
