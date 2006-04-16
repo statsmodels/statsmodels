@@ -143,6 +143,7 @@ class RegressionModelResults(traits.HasTraits):
         if not hasattr(self, '_sd'):
             self.sd()
         results = ContrastResults()
+
         results.effect = N.dot(matrix, self.beta)
         if sd:
             results.sd = N.sqrt(self.cov_beta(matrix=matrix)) * self._sd
