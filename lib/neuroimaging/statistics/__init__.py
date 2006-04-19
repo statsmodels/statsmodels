@@ -1,8 +1,8 @@
 import model
-import regression
-import classification
-import iterators
-import contrast
+#import regression
+#import classification
+#import iterators
+#import contrast
 
 # Is this import now redundant?  The utils referred to seems to now be
 # in fmri/utils
@@ -12,7 +12,7 @@ import contrast
 # i would like to release statistics as a separate package, too
 # under a BSD license rather than GPL
 
-import utils
+#import utils
 
 import unittest
 def suite():
