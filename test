@@ -5,7 +5,7 @@ sys.path.insert(0,"lib")
 from optparse import OptionParser, Option
 
 from neuroimaging import packages
-from neuroimaging.tests import test_all, test_package, get_package_tests
+from neuroimaging.testutils import test_all, test_package, get_package_tests
 
 
 ##############################################################################
