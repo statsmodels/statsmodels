@@ -23,7 +23,7 @@ def recipr0(X):
 
 def clean0(matrix):
     """
-    Erase columns of zeros: saves some time in pseudoinverse.
+    Erase columns of zeros: can save some time in pseudoinverse.
     """
 
     colsum = N.add.reduce(matrix**2, 0)
@@ -31,20 +31,12 @@ def clean0(matrix):
     val = [matrix[:,i] for i in N.nonzero(colsum)]
     return N.array(N.transpose(val))
 
-def norm(X, p=2, axis=0):
-    """
-    Return the l^p norm of X, for 0 < p < infty.
-    """
-    return N.pow(N.add.reduce(N.fabs(X)**p,axis=axis),1.0/p)
-
-
 def rank(X, cond=1.0e-6):
     """
     Return the rank of a matrix X based on its generalized inverse,
     not the SVD.
     """
-    pX = L.pinv(X)
-    V, D, U = L.svd(N.transpose(X), full_matrices=0)
+    V, D, U = L.svd(X, full_matrices=0)
     return int(N.add.reduce(N.greater(D / D.max(), cond).astype(N.Int)))
 
 def fullrank(X, r=None):
@@ -65,7 +57,7 @@ def fullrank(X, r=None):
     value = []
     for i in range(r):
         value.append(V[:,order[i]])
-    return N.array(N.transpose(value)).astype(N.Float)
+    return N.asarray(N.transpose(value)).astype(N.Float)
 
 class StepFunction:
     '''A basic step function: values at the ends are handled in the simplest way possible: everything to the left of x[0] is set to ival; everything to the right of x[-1] is set to y[-1].
@@ -112,7 +104,6 @@ class StepFunction:
         _shape = tind.shape
         return self.y[tind]
 
-
 def ECDF(values):
     """
     Return the ECDF of an array as a step function.
@@ -126,9 +117,9 @@ def ECDF(values):
 
 def monotone_fn_inverter(fn, x, vectorized=True, **keywords):
     """
-    Given a monotone function x (no checking is done to verify montonocity)
-    and a set of x values, return an linearly
-    interpolated approximation to its inverse from its values on x.
+    Given a monotone function x (no checking is done to verify monotonicity)
+    and a set of x values, return an linearly interpolated approximation
+    to its inverse from its values on x.
     """
 
     if vectorized:

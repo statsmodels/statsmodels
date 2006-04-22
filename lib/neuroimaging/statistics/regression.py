@@ -161,12 +161,12 @@ class RegressionModelResults(traits.HasTraits):
         M pX pX' M'
 
         is assumed invertible. Here, pX is the generalized inverse of the
-        design matrix of the model. There can be problems in non-OLS models where
-        the rank of the covariance of the noise is not full.
+        design matrix of the model. There can be problems in non-OLS models
+        where the rank of the covariance of the noise is not full.
 
         See the statistics.contrast module to see how to specify contrasts.
-        In particular, the matrices from these contrasts will always be non-singular
-        in the sense above.
+        In particular, the matrices from these contrasts will always be
+        non-singular in the sense above.
 
         """
 
@@ -271,6 +271,7 @@ class WLSModel(ARModel):
 
     A regression model with diagonal but non-identity covariance
     structure. The weights are proportional to the inverse of the
+    variance of the observations.
 
     """
 
