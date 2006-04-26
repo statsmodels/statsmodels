@@ -4,7 +4,7 @@ import sys
 sys.path.insert(0,"lib")
 from optparse import OptionParser, Option
 
-from neuroimaging import packages
+from neuroimaging import packages, nontest_packages
 from neuroimaging.testutils import test_all, test_package, get_package_tests
 
 
@@ -33,7 +33,7 @@ class TestTool (OptionParser):
         if package:
             packs = [package]
         else:
-            packs = list(packages)
+            packs = list(nontest_packages)
             packs.sort()
         for package in packs:
             tests = get_package_tests(package).keys()
