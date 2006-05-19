@@ -14,7 +14,7 @@ class FormulaTest(unittest.TestCase):
         self.namespace = {}
         self.terms = []
         for i in range(10):
-            name = '%s' % i.uppercase()
+            name = '%s' % str(i).upper()
             self.namespace[name] = self.X[:,i]
             self.terms.append(formula.Term(name))
 
