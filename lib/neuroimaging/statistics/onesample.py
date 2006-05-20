@@ -1,5 +1,5 @@
 import numpy as N
-import enthought.traits as traits
+from enthought import traits
 from regression import RegressionOutput
 from utils import recipr
 import gc

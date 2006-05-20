@@ -1,7 +1,7 @@
 
 ## test
 
-import enthought.traits as traits
+from enthought import traits
 
 class Model(traits.HasTraits):
 
