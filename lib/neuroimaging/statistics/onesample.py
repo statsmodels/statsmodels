@@ -1,8 +1,10 @@
+import gc
+
 import numpy as N
 from enthought import traits
-from regression import RegressionOutput
-from utils import recipr
-import gc
+
+from neuroimaging.statistics.regression import RegressionOutput
+from neuroimaging.statistics.utils import recipr
 
 class OneSampleResults(traits.HasTraits):
     """
