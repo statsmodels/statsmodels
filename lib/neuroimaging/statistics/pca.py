@@ -31,7 +31,7 @@ class PCA(traits.HasTraits):
     design_resid = traits.Any()
     design_keep = traits.Any()
     tol = traits.Float(1.0e-05)
-    pcatype = traits.Trait('cor','cov')
+    pcatype = traits.Trait('cov','cor')
     mask = traits.Any()
     ext = traits.String('.img')
 
@@ -68,6 +68,12 @@ class PCA(traits.HasTraits):
     def fit(self):
         """
         Perform the computations needed for the PCA.
+        This stores the covariance/correlation matrix of the data in
+        the attribute 'C'.
+        The components are stored as the attributes 'components',
+        for an fMRI image these are the time series explaining the most
+        variance.
+
         """
         # Compute projection matrices
 
@@ -86,7 +92,7 @@ class PCA(traits.HasTraits):
 
         first_slice = slice(0,self.image.shape[0])
         _shape = self.image.grid.shape
-        A = N.zeros((rank,)*2, N.Float)
+        self.C = N.zeros((rank,)*2, N.Float)
 
         for i in range(self.image.shape[1]):
             _slice = [first_slice, slice(i,i+1)]
@@ -102,31 +108,32 @@ class PCA(traits.HasTraits):
             if self.mask is not None:
                 YX = YX * self.mask
 
-            A += N.dot(YX, N.transpose(YX))
+            self.C += N.dot(YX, N.transpose(YX))
 
-        self.D, self.Vs = L.eigh(A)
+        self.D, self.Vs = L.eigh(self.C)
         order = N.argsort(-self.D)
         self.D = self.D[order]
         self.pcntvar = self.D * 100 / self.D.sum()
 
-        self.VX = N.transpose(N.dot(N.transpose(UX), N.transpose(self.Vs[:,order])))
+        self.components = N.transpose(N.dot(N.transpose(UX), N.transpose(self.Vs[:,order])))
 
-    def components(self, which=[0], output_base=None):
+    def images(self, which=[0], output_base=None):
         """
         Output the component images -- by default, only output the first
         principal component.
         """
 
         ncomp = len(which)
-        subVX = self.VX[which]
+        subVX = self.components[which]
 
-        outgrid = self.image.grid.subgrid(0)
+        outgrid = iter(self.image.grid.subgrid(0))
+
         if output_base is not None:
-            outimages = [Image('%s_comp%d.%d' % (output_base, i, self.ext),
-                               grid=outgrid)
-                        for i in which]
+            outimages = [iter(Image('%s_comp%d%s' % (output_base, i, self.ext),
+                                    grid=outgrid, mode='w')) for i in which]
         else:
-            outimages = [Image(N.zeros(outgrid.shape, N.Float), grid=outgrid)]
+            outimages = [iter(Image(N.zeros(outgrid.shape, N.Float),
+                                    grid=outgrid)) for i in which]
 
         first_slice = slice(0,self.image.shape[0])
         _shape = self.image.grid.shape
@@ -147,43 +154,25 @@ class PCA(traits.HasTraits):
 
             del(Y); gc.collect()
 
-            U.shape = (U.shape[0],) + outgrid.shape
+            U.shape = (U.shape[0],) + outgrid.shape[1:]
+            itervalue = outgrid.next()
             for k in range(len(which)):
-                outimages[k].next(data=U[k])
+                outimages[k].next(data=U[k], value=itervalue)
 
-            del(U); gc.collect()
+        for i in range(len(which)):
+            if output_base:
+                outimage = iter(Image('%s_comp%d%s' % (output_base, which[i], self.ext),
+                                      grid=outgrid, mode='r+'))
+            else:
+                outimage = outimages[i]
+            d = outimage.readall()
+            dabs = N.fabs(d); di = dabs.argmax()
+            d = d / d.flat[di]
+            outslice = [slice(0,j) for j in outgrid.shape]
+            outimage.writeslice(outslice, d)
+            del(d); gc.collect()
 
         return outimages
-
-
-## def normalize_max(image, nvector=None, **keywords):
-##     input_image = BrainSTAT.VImage(image, **keywords)
-##     input_data = input_image.toarray(warp=input_image.warp).image.data
-
-##     if nvector is None:
-##         curmin = min(input_data.flat)
-##         curmax = max(input_data.flat)
-##         ok = (curmax > -curmin)
-##         absmax = max(abs(curmax), abs(curmin))
-##         if ok:
-##             input_data = input_data / absmax
-##         else:
-##             input_data = -input_data / absmax
-##         output_image = BrainSTAT.VImage(input_data, warp=input_image.warp)
-##         return output_image
-
-##     else:
-##         for i in range(nvector):
-##             curmin = min(input_data[:,:,:,i].flat)
-##             curmax = max(input_data[:,:,:,i].flat)
-##             ok = (curmax > -curmin)
-##             absmax = max(abs(curmax), abs(curmin))
-##             if ok:
-##                 input_data[:,:,:,i] = input_data[:,:,:,i] / absmax
-##             else:
-##                 input_data[:,:,:,i] = -input_data[:,:,:,i] / absmax
-##         output_image = BrainSTAT.VImage(input_data, warp=input_image.warp)
-##     return output_image
 
 if __name__ == "__main__":
 
@@ -191,4 +180,10 @@ if __name__ == "__main__":
     image = fMRIImage('http://kff.stanford.edu/BrainSTAT/testdata/test_fmri.img')
     p = PCA(image)
     p.fit()
-    a = p.components(which=[0,2,3])
+    a = p.images(which=[0,2,3])
+    b = p.images(which=[0,2,3], output_base='testpca')
+
+    print [N.allclose(a[i].readall(), b[i].readall()) for i in range(3)]
+
+    import os, glob
+    [os.remove(f) for f in glob.glob('testpca_comp*')]
