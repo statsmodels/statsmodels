@@ -114,6 +114,9 @@ class PCA(traits.HasTraits):
         else:
             outimages = [Image(N.zeros(outgrid.shape, N.Float), grid=outgrid)]
 
+        first_slice = slice(0,self.image.shape[0])
+        _shape = self.image.grid.shape
+
         for i in range(self.image.shape[1]):
             _slice = [first_slice, slice(i,i+1)]
             Y = self.image.getslice(_slice).reshape((_shape[0], N.product(_shape[2:])))
