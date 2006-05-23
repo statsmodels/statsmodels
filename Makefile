@@ -13,7 +13,7 @@ install: FORCE
 	$(python) setup.py install
 
 test: FORCE
-	$(python) ./test
+	export PYTHONPATH=lib;./test
 
 test-install: FORCE
 	$(python) setup.py install --install-lib=test-install
