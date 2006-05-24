@@ -1,4 +1,4 @@
-import sets, types, re, string, csv, copy
+import types, re, string, csv, copy
 import numpy as N
 
 class Term:
@@ -94,7 +94,7 @@ class Factor(Term):
         levels of the factor.
         """
 
-        self.keys = list(sets.Set(keys))
+        self.keys = list(set(keys))
         self.keys.sort()
         self._name = termname
         self.termname = termname
@@ -136,7 +136,7 @@ class Factor(Term):
         """
         Verify that all values correspond to valid keys in self.
         """
-        s = sets.Set(values)
+        s = set(values)
         if not s.issubset(self.keys):
             raise ValueError, 'unknown keys in values'
 
@@ -477,12 +477,12 @@ def isnested(A, B, namespace=globals()):
     if len(a) != len(b):
         raise ValueError, 'A() and B() should be sequences of the same length'
 
-    nA = len(sets.Set(a))
-    nB = len(sets.Set(b))
+    nA = len(set(a))
+    nB = len(set(b))
     n = max(nA, nB)
 
     AB = [(a[i],b[i]) for i in range(len(a))]
-    nAB = len(sets.Set(AB))
+    nAB = len(set(AB))
 
     if nAB == n:
         if nA > nB:
