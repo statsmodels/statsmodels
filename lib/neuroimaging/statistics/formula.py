@@ -1,4 +1,5 @@
-import types, re, string, csv, copy
+import types, string, copy
+
 import numpy as N
 
 class Term:

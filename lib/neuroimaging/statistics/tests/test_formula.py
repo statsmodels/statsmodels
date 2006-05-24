@@ -1,10 +1,10 @@
-import unittest, csv, os
+import unittest
 import numpy as N
 import numpy.random as R
 import numpy.linalg as L
 import scipy, string
 
-from neuroimaging.statistics import utils, formula, contrast
+from neuroimaging.statistics import formula, contrast
 
 class FormulaTest(unittest.TestCase):
 
@@ -82,11 +82,6 @@ class FormulaTest(unittest.TestCase):
         c.getmatrix(namespace=self.namespace)
 
         self.assertEquals(estimable, False)
-
-def suite():
-    suite = unittest.makeSuite(FormulaTest)
-    return suite
-
 
 if __name__ == '__main__':
     unittest.main()

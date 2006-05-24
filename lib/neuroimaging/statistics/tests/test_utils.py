@@ -1,4 +1,4 @@
-import unittest, csv, os
+import unittest
 import numpy as N
 import numpy.random as R
 import scipy
@@ -31,10 +31,6 @@ class UtilsTest(unittest.TestCase):
         Y = utils.fullrank(X)
         self.assertEquals(Y.shape, (40,8))
         self.assertEquals(utils.rank(Y), 8)
-
-def suite():
-    suite = unittest.makeSuite(UtilsTest)
-    return suite
 
 if __name__ == '__main__':
     unittest.main()

@@ -1,8 +1,8 @@
 import numpy as N
 import numpy.linalg as L
-import scipy
 from enthought import traits
-import utils, regression
+
+from neuroimaging.statistics import utils, regression
 
 class Contrast(traits.HasTraits):
     """
