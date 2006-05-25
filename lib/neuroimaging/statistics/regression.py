@@ -1,3 +1,8 @@
+"""
+This module provides various regression analysis techniques to model the
+relationship between the dependent and independent variables.
+"""
+
 import numpy as N
 import numpy.linalg as L
 from enthought import traits
@@ -268,9 +273,8 @@ class ARModel(OLSModel):
 
 class WLSModel(ARModel):
     """
-
-    A regression model with diagonal but non-identity covariance
-    structure. The weights are proportional to the inverse of the
+    A (weighted least square) regression model with diagonal but non-identity
+    covariance structure. The weights are proportional to the inverse of the
     variance of the observations.
 
     """
