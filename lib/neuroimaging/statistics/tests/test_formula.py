@@ -1,8 +1,9 @@
 import unittest
+
 import numpy as N
 import numpy.random as R
 import numpy.linalg as L
-import scipy, string
+import scipy
 
 from neuroimaging.statistics import formula, contrast
 
@@ -13,7 +14,7 @@ class FormulaTest(unittest.TestCase):
         self.namespace = {}
         self.terms = []
         for i in range(10):
-            name = '%s' % string.uppercase[i]
+            name = '%s' % i.uppercase()
             self.namespace[name] = self.X[:,i]
             self.terms.append(formula.Term(name))
 

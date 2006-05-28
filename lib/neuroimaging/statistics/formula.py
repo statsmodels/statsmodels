@@ -1,4 +1,4 @@
-import types, string, copy
+import types, copy
 
 import numpy as N
 
@@ -271,7 +271,7 @@ class Formula:
         value = []
         for term in self.terms:
             value += [term.termname]
-        return '<formula: %s>' % string.join(value, ' + ')
+        return '<formula: %s>' % value.join(' + ')
 
     def __call__(self, namespace=None, n=-1, **extra):
         """
@@ -388,7 +388,7 @@ class Formula:
                 termname = '%s*%s' % (str(selftermnames[i]), str(othertermnames[j]))
                 pieces = termname.split('*')
                 pieces.sort()
-                termname = string.join(pieces, '*')
+                termname = pieces.join('*')
                 termnames.append(termname)
 
                 selfnames = self.terms[i].names()
@@ -406,7 +406,7 @@ class Formula:
                             name = '%s*%s' % (str(selfnames[r]), str(othernames[s]))
                             pieces = name.split('*')
                             pieces.sort()
-                            name = string.join(pieces, '*')
+                            name = pieces.join('*')
                             names.append(name)
 
                     def _fn(namespace=None, selfterm=self.terms[i], otherterm=other.terms[j], **extra):
