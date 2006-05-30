@@ -181,9 +181,24 @@ if __name__ == "__main__":
     p = PCA(image)
     p.fit()
     a = p.images(which=[0,2,3])
-    b = p.images(which=[0,2,3], output_base='testpca')
+##     b = p.images(which=[0,2,3], output_base='testpca')
 
-    print [N.allclose(a[i].readall(), b[i].readall()) for i in range(3)]
+##     print [N.allclose(a[i].readall(), b[i].readall()) for i in range(3)]
 
-    import os, glob
-    [os.remove(f) for f in glob.glob('testpca_comp*')]
+##     import os, glob
+##     [os.remove(f) for f in glob.glob('testpca_comp*')]
+
+    interpolator = ImageInterpolator(a[0])
+    vmin = float(a[0].readall().min())
+
+    print a[0].grid.mapping.transform
+    from neuroimaging.visualization import slices
+    _slice = slices.transversal(self.img, z=0.,
+                                xlim=[-20,20.], ylim=[0,40.])
+    x = slices.DataSlicePlot(interpolator, _slice, vmax=vmax, vmin=vmin,
+                             colormap='spectral', interpolation='nearest')
+    x.width = 0.8; x.height = 0.8
+    pylab.figure(figsize=(3,3))
+    x.getaxes()
+    pylab.imshow(x.RGBA(), origin=x.origin)
+    pylab.show()
