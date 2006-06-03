@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.4
+#!/usr/bin/env python
 import sys, os
 print sys.version
 sys.path.insert(0,os.path.join(os.getcwd(),"lib"))
