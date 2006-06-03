@@ -16,7 +16,6 @@ import time, gc
 
 import numpy as N
 import numpy.linalg as L
-#import numpy.random as R
 from enthought import traits
 
 from neuroimaging.image import Image
@@ -28,11 +27,11 @@ class PCA(traits.HasTraits):
     have a subgrid method.
     """
 
-    design_resid = traits.Any()
-    design_keep = traits.Any()
+    design_keep = traits.Array(shape=(None,None), desc='Data is projected onto the column span of design_keep.')
+    design_resid = traits.Array(shape=(None,None), desc='After projecting onto the column span of design_keep, data is projected off of the column span of this matrix.')
     tol = traits.Float(1.0e-05)
-    pcatype = traits.Trait('cov','cor')
-    mask = traits.Any()
+    pcatype = traits.Trait('cor','cov')
+    mask = traits.Instance(Image)
     ext = traits.String('.img')
 
     def __init__(self, image, **keywords):
@@ -40,8 +39,8 @@ class PCA(traits.HasTraits):
         self.image = image
 
         if self.mask is not None:
-            self.mask = self.mask.readall()
-            self.nvoxel = self.mask.sum()
+            self._mask = N.array(self.mask.readall())
+            self.nvoxel = self._mask.sum()
         else:
             self.nvoxel = N.product(self.image.grid.shape[1:])
 
@@ -73,14 +72,14 @@ class PCA(traits.HasTraits):
         The components are stored as the attributes 'components',
         for an fMRI image these are the time series explaining the most
         variance.
-
         """
+
         # Compute projection matrices
 
-        if self.design_resid is None: # always remove the mean
+        if N.allclose(self.design_keep, [[0]]):
             self.design_resid = N.ones((self.nimages, 1), N.Float)
 
-        if self.design_keep is None:
+        if N.allclose(self.design_keep, [[0]]):
             self.design_keep = N.identity(self.nimages)
 
         X = N.dot(self.design_keep, L.pinv(self.design_keep))
@@ -106,7 +105,9 @@ class PCA(traits.HasTraits):
                 YX = YX * Smhalf
 
             if self.mask is not None:
-                YX = YX * self.mask
+                mask = self._mask[i]
+                mask.shape = N.product(mask.shape)
+                YX = YX * mask
 
             self.C += N.dot(YX, N.transpose(YX))
 
@@ -115,7 +116,7 @@ class PCA(traits.HasTraits):
         self.D = self.D[order]
         self.pcntvar = self.D * 100 / self.D.sum()
 
-        self.components = N.transpose(N.dot(N.transpose(UX), N.transpose(self.Vs[:,order])))
+        self.components = N.transpose(N.dot(N.transpose(UX), self.Vs))[order]
 
     def images(self, which=[0], output_base=None):
         """
@@ -144,7 +145,9 @@ class PCA(traits.HasTraits):
             U = N.dot(subVX, Y)
 
             if self.mask is not None:
-                U = U * self.mask
+                mask = self._mask[i]
+                mask.shape = N.product(mask.shape)
+                U = U * mask
 
             if self.pcatype == 'cor':
                 S2 = N.add.reduce(self.project(Y, which='resid')**2, axis=0)
@@ -174,45 +177,163 @@ class PCA(traits.HasTraits):
 
         return outimages
 
-if __name__ == "__main__":
-
-    from neuroimaging.fmri import fMRIImage
-    image = fMRIImage('http://kff.stanford.edu/BrainSTAT/testdata/test_fmri.img')
-    p = PCA(image)
-    p.fit()
-    a = p.images(which=range(4))
-
-    from neuroimaging.image.interpolation import ImageInterpolator
-    interpolator = ImageInterpolator(a[2])
-
-    r = a[0].grid.range()
-    z = N.unique(r[0].flat); y = N.unique(r[1].flat); z = N.unique(r[2].flat)
-
-    from neuroimaging.visualization import slices
-    _slices = {}
-    vmax = a[0].readall().max(); vmin = a[0].readall().min()
-    for i in range(5):
-        for j in range(6):
-
-            _slice = slices.transversal(a[2], z=z[i],
-                                        xlim=[-150,150.],
-                                        ylim=[-150.,150.])
-            _slices[i,j] = slices.DataSlicePlot(interpolator, _slice,
-                                                vmax=vmax, vmin=vmin,
-                                                colormap='spectral',
-                                                interpolation='nearest')
-
-    from neuroimaging.visualization.montage import Montage
-    m = Montage(slices=_slices, vmax=vmax, vmin=vmin)
-    m.draw()
-##
-
-##     x =
-
-##     x.width = 0.8; x.height = 0.8
-##     pylab.figure(figsize=(5,5))
-##     x.getaxes()
-##     pylab.imshow(x.RGBA(), origin=x.origin)
+try:
     import pylab
-    pylab.show()
+    from neuroimaging.visualization.montage import Montage
+    from neuroimaging.image.interpolation import ImageInterpolator
+    from neuroimaging.visualization import slices
+    from neuroimaging.fmri.plotting import MultiPlot
+
+    class PCAmontage(PCA):
+
+        """
+        Same as PCA but with a montage method to view the resulting images
+        and a time_series image to view the time components.
+
+        Note that the results of calling images are stored for this class,
+        therefore to free the memory of the output of images, the
+        image_results attribute of this instance will also have to be deleted.
+        """
+
+        image_results = traits.Any()
+
+        def images(self, which=[0], output_base=None):
+            PCA.images.__doc__
+            self.image_results = PCA.images(self, which=which, output_base=output_base)
+            self.image_which = which
+            return self.image_results
+
+        def time_series(self, title='Principal components in time'):
+            """
+            Plot the time components from the last call to 'images' method.
+            """
+
+            pylab.clf()
+
+            if self.image_results is None:
+                raise ValueError, 'run "images" before time_series'
+            try:
+                t = self.image.frametimes
+            except:
+                t = N.arange(self.image.grid.shape[0])
+            self.time_plot = MultiPlot(self.components[self.image_which],
+                                       time=t,
+                                       title=title)
+            self.time_plot.draw()
+
+        def montage(self, z=None, nslice=None, xlim=[-120,120], ylim=[-120,120],
+                    colormap='spectral', width=10):
+            """
+            Plot a montage of transversal slices from last call to
+            'images' method.
+
+            If z is not specified, a range of nslice equally spaced slices
+            along the range of the first axis of image_results[0].grid is used,
+            where nslice defaults to image_results[0].grid.shape[0].
+
+            """
+
+            pylab.clf()
+
+            if nslice is None:
+                nslice = self.image_results[0].grid.shape[0]
+            if self.image_results is None:
+                raise ValueError, 'run "images" before montage'
+            images = self.image_results
+            nrow = len(images)
+
+            if z is None:
+                r = images[0].grid.range()
+                zmin = r[0].min(); zmax = r[0].max()
+                z = N.linspace(zmin, zmax, nslice)
+
+            z = list(N.asarray(z).flat)
+            z.sort()
+            ncol = len(z)
+
+            basegrid = images[0].grid
+            if self.mask is not None:
+                mask_interp = ImageInterpolator(mask)
+            else:
+                mask_interp = None
+
+            montage_slices = {}
+
+            image_interps = [ImageInterpolator(images[i]) for i in range(nrow)]
+            interp_slices = [slices.transversal(basegrid,
+                                                z=zval,
+                                                xlim=xlim,
+                                                ylim=ylim) for zval in z]
+
+            vmax = N.array([images[i].readall().max() for i in range(nrow)]).max()
+            vmin = N.array([images[i].readall().min() for i in range(nrow)]).min()
+
+            for i in range(nrow):
+
+                for j in range(ncol):
+
+                    montage_slices[(nrow-1-i,ncol-1-j)] = \
+                       slices.DataSlicePlot(image_interps[i],
+                                            interp_slices[j],
+                                            vmax=vmax,
+                                            vmin=vmin,
+                                            colormap=colormap,
+                                            interpolation='nearest',
+                                            mask=mask_interp,
+                                            transpose=True)
+
+            m = Montage(slices=montage_slices, vmax=vmax, vmin=vmin)
+            m.draw()
+
+    class MultiPlot(traits.HasTraits):
+        """
+        Class to plot multi-valued time series simultaneously.
+
+        Should be moved somewhere better.
+        """
+
+        figure = traits.Any()
+        title = traits.Str()
+        time = traits.Array(shape=(None,))
+
+        def __init__(self, series, **keywords):
+            self.series = series
+            traits.HasTraits.__init__(self, **keywords)
+            self.figure = pylab.gcf()
+
+        def draw(self, **keywords):
+            pylab.figure(num=self.figure.number)
+
+            self.lines = []
+
+            v = self.series
+            if v.ndim == 1:
+                v.shape = (1, v.shape[0])
+            v = v[::-1]
+
+            if N.allclose(self.time, N.array([0])):
+                self.time = N.arange(v.shape[1])
+            n = v.shape[0]
+            dy = 0.9 / n
+            for i in range(n):
+                a = pylab.axes([0.05,0.05+i*dy,0.9,dy])
+                a.set_xticklabels([])
+                a.set_yticks([])
+                a.set_yticklabels([])
+                m = N.nanmin(v[i])
+                M = N.nanmax(v[i])
+                pylab.plot(self.time, v[i])
+                r = M - m
+                l = m - 0.2 * r
+                u = M + 0.2 * r
+                if l == u:
+                    u += 1.
+                    l -= 1.
+                a.set_ylim([l, u])
+
+            pylab.title(self.title)
+
+
+except:
+    pass
 
