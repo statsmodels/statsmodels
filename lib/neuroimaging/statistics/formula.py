@@ -239,6 +239,13 @@ class Formula:
     of the columns of the two Formulas.
     """
 
+    def __getitem__(self, name):
+        t = self.termnames()
+        if name in t:
+            return self.terms[t.index(name)]
+        else:
+            raise KeyError, 'formula has no such term: %s' % repr(name)
+
     def _terms_changed(self):
         self._names = self.names()
         self._termnames = self.termnames()

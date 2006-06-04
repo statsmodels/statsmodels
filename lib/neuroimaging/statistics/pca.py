@@ -180,25 +180,39 @@ if __name__ == "__main__":
     image = fMRIImage('http://kff.stanford.edu/BrainSTAT/testdata/test_fmri.img')
     p = PCA(image)
     p.fit()
-    a = p.images(which=[0,2,3])
-##     b = p.images(which=[0,2,3], output_base='testpca')
+    a = p.images(which=range(4))
 
-##     print [N.allclose(a[i].readall(), b[i].readall()) for i in range(3)]
+    from neuroimaging.image.interpolation import ImageInterpolator
+    interpolator = ImageInterpolator(a[2])
 
-##     import os, glob
-##     [os.remove(f) for f in glob.glob('testpca_comp*')]
+    r = a[0].grid.range()
+    z = N.unique(r[0].flat); y = N.unique(r[1].flat); z = N.unique(r[2].flat)
 
-    interpolator = ImageInterpolator(a[0])
-    vmin = float(a[0].readall().min())
-
-    print a[0].grid.mapping.transform
     from neuroimaging.visualization import slices
-    _slice = slices.transversal(self.img, z=0.,
-                                xlim=[-20,20.], ylim=[0,40.])
-    x = slices.DataSlicePlot(interpolator, _slice, vmax=vmax, vmin=vmin,
-                             colormap='spectral', interpolation='nearest')
-    x.width = 0.8; x.height = 0.8
-    pylab.figure(figsize=(3,3))
-    x.getaxes()
-    pylab.imshow(x.RGBA(), origin=x.origin)
+    _slices = {}
+    vmax = a[0].readall().max(); vmin = a[0].readall().min()
+    for i in range(5):
+        for j in range(6):
+
+            _slice = slices.transversal(a[2], z=z[i],
+                                        xlim=[-150,150.],
+                                        ylim=[-150.,150.])
+            _slices[i,j] = slices.DataSlicePlot(interpolator, _slice,
+                                                vmax=vmax, vmin=vmin,
+                                                colormap='spectral',
+                                                interpolation='nearest')
+
+    from neuroimaging.visualization.montage import Montage
+    m = Montage(slices=_slices, vmax=vmax, vmin=vmin)
+    m.draw()
+##
+
+##     x =
+
+##     x.width = 0.8; x.height = 0.8
+##     pylab.figure(figsize=(5,5))
+##     x.getaxes()
+##     pylab.imshow(x.RGBA(), origin=x.origin)
+    import pylab
     pylab.show()
+

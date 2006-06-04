@@ -342,10 +342,7 @@ def isestimable(C, D, pinv=None, warn=True):
     verifying it is the same as the rank of D.
     """
 
-    print C.shape, D.shape
-
     new = N.concatenate([C, D])
-    print utils.rank(new), utils.rank(D)
     if utils.rank(new) != utils.rank(D):
         return False
     return True
