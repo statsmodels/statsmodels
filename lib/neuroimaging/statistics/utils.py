@@ -97,12 +97,13 @@ class StepFunction:
             self.x = N.take(self.x, asort)
             self.y = N.take(self.y, asort)
         self.n = self.x.shape[0]
+        self._x = -self.x[::-1]
+        self._y = self.y[::-1]
 
     def __call__(self, time):
 
-        tind = scipy.searchsorted(self.x, time) - 1
-        _shape = tind.shape
-        return self.y[tind]
+        tind = scipy.searchsorted(self._x, -time)
+        return self._y[tind]
 
 def ECDF(values):
     """

@@ -197,8 +197,8 @@ class Quantitative(Term):
 
         name = '%s^%d' % (self.name, power)
 
-        def _fn(namespace=None, power=power):
-            x = N.array(namespace[self.name])
+        def _fn(namespace=None, power=power, obj=self, **extra):
+            x = N.array(obj(namespace=namespace, **extra))
             return N.power(x, power)
         return Term(name, _fn=_fn)
 
