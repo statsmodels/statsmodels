@@ -1,10 +1,10 @@
 import gc
 
 import numpy as N
+from scipy.sandbox.models.utils import recipr
 from enthought import traits
 
 from neuroimaging.statistics.regression import RegressionOutput
-from neuroimaging.statistics.utils import recipr
 
 class OneSampleResults(traits.HasTraits):
     """

@@ -3,13 +3,12 @@ This module provides various regression analysis techniques to model the
 relationship between the dependent and independent variables.
 """
 
-import gc, utils
+import gc
 
 import numpy as N
 import numpy.linalg as L
 from enthought import traits
 from scipy.sandbox.models.regression import OLSModel, WLSModel, ARModel, Results
-
 
 class LinearModelIterator(traits.HasTraits):
 
