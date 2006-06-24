@@ -1,6 +1,7 @@
 
 ## test
 
+from scipy.sandbox.models import formula
 from enthought import traits
 
 class Model(traits.HasTraits):
