@@ -1,7 +1,8 @@
 
 ## test
 
-from scipy.sandbox.models import formula
+from scipy.sandbox.models import formula, contrast
+
 from enthought import traits
 
 class Model(traits.HasTraits):
