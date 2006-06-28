@@ -9,7 +9,7 @@ def recipr(X):
     equal to 0 to 0. Therefore, it presumes that X should be positive in
     general.
     """
-    x = N.maximum(N.asarray(X).astype(N.Float), 0)
+    x = N.maximum(N.asarray(X).astype(N.float64), 0)
     return N.greater(x, 0.) / (x + N.less_equal(x, 0.))
 
 def recipr0(X):
@@ -37,7 +37,7 @@ def rank(X, cond=1.0e-6):
     not the SVD.
     """
     V, D, U = L.svd(X, full_matrices=0)
-    return int(N.add.reduce(N.greater(D / D.max(), cond).astype(N.Int)))
+    return int(N.add.reduce(N.greater(D / D.max(), cond).astype(N.int32)))
 
 def fullrank(X, r=None):
     """
@@ -57,10 +57,12 @@ def fullrank(X, r=None):
     value = []
     for i in range(r):
         value.append(V[:,order[i]])
-    return N.asarray(N.transpose(value)).astype(N.Float)
+    return N.asarray(N.transpose(value)).astype(N.float64)
 
 class StepFunction:
-    '''A basic step function: values at the ends are handled in the simplest way possible: everything to the left of x[0] is set to ival; everything to the right of x[-1] is set to y[-1].
+    '''A basic step function: values at the ends are handled in the simplest
+    way possible: everything to the left of x[0] is set to ival; everything to
+    the right of x[-1] is set to y[-1].
 
     >>>
     >>> from numpy import *
@@ -102,6 +104,7 @@ class StepFunction:
 
     def __call__(self, time):
 
+        time = N.asarray(time)
         tind = scipy.searchsorted(self._x, -time)
         return self._y[tind]
 

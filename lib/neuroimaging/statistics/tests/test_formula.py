@@ -7,6 +7,41 @@ import scipy
 
 from neuroimaging.statistics import formula, contrast
 
+class TermTest(unittest.TestCase):
+
+    def test_init(self):
+        t1 = formula.Term("trivial")
+        sqr = lambda x: x*x
+
+        t2 = formula.Term("not_so_trivial", sqr, "sqr")
+
+        self.assertRaises(ValueError, formula.Term, "name", termname=0)
+
+    def test_str(self):
+        t = formula.Term("name")
+        s = str(t)
+
+    def test_add(self):
+        t1 = formula.Term("t1")
+        t2 = formula.Term("t2")
+        f = t1 + t2
+        self.assert_(isinstance(f, formula.Formula))
+        self.assert_(f.hasterm(t1))
+        self.assert_(f.hasterm(t2))
+
+    def test_mul(self):
+        t1 = formula.Term("t1")
+        t2 = formula.Term("t2")
+        f = t1 * t2
+        self.assert_(isinstance(f, formula.Formula))
+
+        intercept = formula.Term("intercept")
+        f = t1 * intercept
+        self.assertEqual(str(f), str(formula.Formula(t1)))
+
+        f = intercept * t1
+        self.assertEqual(str(f), str(formula.Formula(t1)))
+
 class FormulaTest(unittest.TestCase):
 
     def setUp(self):
@@ -52,7 +87,7 @@ class FormulaTest(unittest.TestCase):
     def test_contrast2(self):
 
         dummy = formula.Term('zero')
-        self.namespace['zero'] = N.zeros((40,), N.Float)
+        self.namespace['zero'] = N.zeros((40,), N.float64)
         term = dummy + self.terms[2]
         c = contrast.Contrast(term, self.formula)
         c.getmatrix(namespace=self.namespace)

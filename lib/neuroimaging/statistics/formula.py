@@ -74,11 +74,11 @@ class Term:
 
         if namespace is None:
             namespace = globals()
-	if not hasattr(self, '_fn') or not usefn:
+        if not hasattr(self, '_fn') or not usefn:
             val = namespace[self.termname]
             if isinstance(val, Formula):
                 val = val(namespace, **extra)
-	else:
+        else:
             val = self._fn(namespace=namespace, **extra)
         val = N.asarray(val)
         return N.squeeze(val)
@@ -305,7 +305,7 @@ class Formula:
         else:
             if allvals != []:
                 n = allvals.shape[1]
-                allvals = N.concatenate([N.ones((1,n), N.Float), allvals])
+                allvals = N.concatenate([N.ones((1,n), N.float64), allvals])
             elif n <= 1:
                 raise ValueError, 'with no columns in model, keyword n argument needed for intercept'
 

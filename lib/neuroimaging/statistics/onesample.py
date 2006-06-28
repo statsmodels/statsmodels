@@ -43,10 +43,10 @@ class OneSample(traits.HasTraits):
 
         minS = N.minimum.reduce(S, 0) * Sreduction
 
-        Sm = S - N.multiply.outer(N.ones((nsubject,), N.Float), minS)
+        Sm = S - N.multiply.outer(N.ones((nsubject,), N.float64), minS)
 
         for i in range(self.niter):
-            Sms = Sm + N.multiply.outer(N.ones((nsubject,), N.Float), sigma2)
+            Sms = Sm + N.multiply.outer(N.ones((nsubject,), N.float64), sigma2)
             W = recipr(Sms)
             Winv = 1. / N.add.reduce(W, axis=0)
             mu = Winv * N.add.reduce(W * Y, axis=0)
@@ -58,7 +58,7 @@ class OneSample(traits.HasTraits):
         sigma2 = sigma2 - minS
 
         if df is None:
-            df = N.ones((nsubject,), N.Float)
+            df = N.ones((nsubject,), N.float64)
 
         df.shape = (1, nsubject)
 
@@ -106,7 +106,7 @@ class OneSample(traits.HasTraits):
             sigma2 = N.asarray(self.varfix * self.varatio)
 
             if sigma2.shape != ():
-                S = recipr(W) + N.multiply.outer(N.ones((nsubject,), N.Float), sigma2)
+                S = recipr(W) + N.multiply.outer(N.ones((nsubject,), N.float64), sigma2)
             else:
                 S = recipr(W) + sigma2
             W = recipr(S)
@@ -116,7 +116,7 @@ class OneSample(traits.HasTraits):
 
         value = OneSampleResults()
         value.df_resid = Y.shape[0] - 1
-        value.resid = (Y - N.multiply.outer(N.ones(Y.shape[0], N.Float), mu)) * N.sqrt(W)
+        value.resid = (Y - N.multiply.outer(N.ones(Y.shape[0], N.float64), mu)) * N.sqrt(W)
 
         if self.use_scale:
             scale = N.add.reduce(N.power(value.resid, 2), 0) / value.df_resid

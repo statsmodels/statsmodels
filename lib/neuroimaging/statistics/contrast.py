@@ -60,8 +60,8 @@ class Contrast(traits.HasTraits):
             self.D = self.formula.design(**keywords)
             self.pinv = L.pinv(self.D)
 
-        self.matrix = regression.contrastfromcols(T, self.D)
+        self.matrix = N.squeeze(regression.contrastfromcols(T, self.D))
         try:
-            self.rank = self.matrix.shape[1]
+            self.rank = utils.rank(self.matrix)
         except:
             self.rank = 1

@@ -64,7 +64,7 @@ class RegressionOutput(traits.HasTraits):
 
     def __init__(self, iterator, **keywords):
         self.iterator = iter(iterator)
-        traits.HasTraits(**keywords)
+        traits.HasTraits.__init__(**keywords)
 
     def __iter__(self):
         return self
@@ -86,7 +86,7 @@ class RegressionModelResults(traits.HasTraits):
         if not hasattr(self, '_sd'):
             self.sd()
         if column is None:
-            _t = N.zeros(_beta.shape, N.Float)
+            _t = N.zeros(_beta.shape, N.float64)
             for i in range(self.beta.shape[0]):
                 _t[i] = _beta[i] * utils.recipr((self._sd * self.sqrt(self.normalized_cov_beta[i,i])))
         else:
@@ -224,15 +224,15 @@ class OLSModel(Model):
     def df_resid(self, **keywords):
         return self._df_resid
 
+    def whiten(self, Y):
+        return Y
+
     def fit(self, Y, **keywords):
 
         if not hasattr(self, 'calc_beta'):
             self.setup()
 
-        if hasattr(self, 'whiten'):
-            Z = self.whiten(Y)
-        else:
-            Z = Y
+        Z = self.whiten(Y)
 
         lfit = RegressionModelResults()
 
@@ -289,7 +289,7 @@ class WLSModel(ARModel):
             return X / N.sqrt(self.weights)
         elif X.ndim == 2:
             c = N.sqrt(self.weights)
-            v = N.zeros(X.shape, N.Float)
+            v = N.zeros(X.shape, N.float64)
             for i in range(X.shape[1]):
                 v[:,i] = X[:,i] / c
             return v
