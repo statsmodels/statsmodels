@@ -4,8 +4,7 @@ import numpy as N
 import numpy.random as R
 import numpy.linalg as L
 import scipy
-
-from neuroimaging.statistics import formula, contrast
+from scipy.sandbox.models import formula, contrast
 
 class TermTest(unittest.TestCase):
 
