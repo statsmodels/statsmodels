@@ -39,7 +39,4 @@ class Model(traits.HasTraits):
         """
         raise NotImplementedError
 
-import unittest
-def suite():
-    return unittest.TestSuite([tests.suite()])
 
