@@ -1,9 +1,8 @@
 import unittest
-import numpy.random as R
-import numpy as N
+from numpy.random import standard_normal
 from scipy.sandbox.models.regression import OLSModel, ARModel
 
-W = R.standard_normal
+W = standard_normal
 
 class RegressionTest(unittest.TestCase):
 
