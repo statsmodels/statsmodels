@@ -192,10 +192,12 @@ class Quantitative(Term):
         Raise the quantitative Term's values to an integer power, i.e.
         polynomial.
         """
-        if type(power) is not types.IntType:
+        try:
+            power = float(power)
+        except:
             raise ValueError, 'expecting an integer'
 
-        name = '%s^%d' % (self.name, power)
+        name = '%s^%0.2f' % (self.name, power)
 
         def _fn(namespace=None, power=power, obj=self, **extra):
             x = N.array(obj(namespace=namespace, **extra))

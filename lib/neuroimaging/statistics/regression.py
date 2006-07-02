@@ -128,10 +128,10 @@ class RegressionModelResults(traits.HasTraits):
         interest is either specified as a (set of) column(s) or a matrix.
         """
         if scale is None:
-            scale = 1.
+            scale = self.scale
 
         if column is not None:
-            return self.normalized_cov_beta[column, column] * scale
+            return self.normalized_cov_beta[column][column] * scale
 
         elif matrix is not None:
             if other is None:
