@@ -13,8 +13,8 @@ def main(packages):
 
     if 'neuroimaging.extra.enthought' in packages:
         ext_modules += [Extension('extra.enthought.traits.ctraits',
-                                  ['lib/neuroimaging/extra/enthought/lib/traits/ctraits.c'])]
-        package_dir['neuroimaging.extra.enthought'] = 'lib/neuroimaging/extra/enthought/lib'
+                                  ['lib/neuroimaging/extra/enthought/traits/ctraits.c'])]
+        package_dir['neuroimaging.extra.enthought'] = 'lib/neuroimaging/extra/enthought/'
 
     setup( name = 'neuroimaging',
            version = __version__,
