@@ -3,7 +3,7 @@
 
 from scipy.sandbox.models import formula, contrast
 
-from neuroimaging import traits
+from enthought import traits
 
 class Model(traits.HasTraits):
 

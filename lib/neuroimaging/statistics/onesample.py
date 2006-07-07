@@ -2,7 +2,7 @@ import gc
 
 import numpy as N
 from scipy.sandbox.models.utils import recipr
-from neuroimaging import traits
+from enthought import traits
 
 from neuroimaging.statistics.regression import RegressionOutput
 
