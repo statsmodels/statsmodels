@@ -231,7 +231,7 @@ class Roy(FStat):
 
     def __init__(self, n=1, m=4, k=1, **extra):
         FStat.__init__(m=m, n=n, **extra)
-        self.sphere = LKSet([LKsphere(k,i) for i in range(self.k)])
+        self.sphere = LKSet([LKsphere(k,i) for i in range(k)])
         self.k = k
 
     def __call__(self, x, search=None):
@@ -250,7 +250,7 @@ class Hotelling(FStat):
 
     def __init__(self, m=4, k=1, **extra):
         FStat.__init__(m=m, n=1, **extra)
-        self.sphere = LKSet([LKsphere(k,i) for i in range(self.k)])
+        self.sphere = LKSet([LKsphere(k,i) for i in range(k)])
         self.k = k
 
     def __call__(self, x, search=None):
