@@ -9,6 +9,8 @@ class Simulator(traits.HasTraits):
     intermediate = traits.true
     search = traits.Instance(roi.ROI)
     verbose = traits.false
+    parallel = traits.false
+    total_iterations = traits.Trait(50, desc='How many iterations?')
 
     def __init__(self, search=None, verbose=False):
 
@@ -19,6 +21,12 @@ class Simulator(traits.HasTraits):
         else:
             self.search = search
         self.verbose = verbose
+        try:
+            import mpi
+
+            self.parallel = True
+        except ImportError:
+            self.parallel = False
 
     def generate(self, **keywords):
         """
@@ -41,26 +49,26 @@ class Simulator(traits.HasTraits):
         """
         return
 
-    def simulate(self, n=50, psplit=True, **keywords):
+    def simulate(self, n=None, psplit=True, **keywords):
         """
         Run a batch of simulations. If psplit is True and things are running parallel, split the n simulations over
         the processors.
         """
 
+        n = n or self.total_iterations
+
         values = []
-        if Options.parallel:
+        if self.parallel:
             import mpi
 
             if psplit:
-                nmin = pmin_n(n)
+                nmin = _pmin(n)
 
-                a, b = prange(n)
+                a, b = _prange(n)
                 n = b - a
-
-            elif hasattr(self, 'itotal'):
-                nmin = pmin_n(self.itotal)
             else:
-                nmin = pmin_n(n)
+                nmin = _pmin(n)
+
         #
         # slightly silly way to synchronize output,
         # by resending values each time. if values are large
@@ -75,7 +83,7 @@ class Simulator(traits.HasTraits):
         for i in range(n):
             field = self.generate(**keywords)
             values.append(self.feature(field, **keywords))
-            if Options.parallel:
+            if self.parallel:
                 if self.intermediate and i < nmin:
                     allvalues = mpi.gather(values)
                     if mpi.rank == 0:
@@ -84,7 +92,7 @@ class Simulator(traits.HasTraits):
                 if self.intermediate:
                     self.process(values)
 
-        if Options.parallel:
+        if self.parallel:
             if mpi.rank != 0:
                 mpi.finalized()
 
@@ -95,6 +103,37 @@ class Simulator(traits.HasTraits):
         else:
             return self.process(values)
 
+def _prange(n, rank=None):
+    """Parallelize range(n) over mpi.rank processors."""
+    t = n / mpi.size
 
-from RFT import *
-from Resampling import *
+    if t == 0:
+        raise ValueError, 'num processors > num in loop -- try fewer processors'
+    t = t + 1
+
+    if rank is None:
+        rank = mpi.rank
+
+    a = rank * t
+    if rank == mpi.size - 1:
+        b = n
+    else:
+        b = a + t
+    return a, b
+
+def _pmin(n):
+    """
+    Determine minimum number of iterations for
+    any of the processors.
+    """
+
+    a1, b1 = prange(n, rank=0)
+    n1 = b1 - a1
+
+    a2, b2 = prange(n, rank=mpi.size-1)
+    n2 = b2 - a2
+
+    return min(n1, n2)
+
+import rft, resampling
+

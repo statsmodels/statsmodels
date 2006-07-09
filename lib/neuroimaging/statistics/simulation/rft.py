@@ -1,18 +1,21 @@
 """
 This module has a collection of functions for the simulation of random fields.
-Can be easily used for numerical validation of RFT.
+Can be used for numerical validation of RFT.
 """
 
-from BrainSTAT import *
-from BrainSTAT.Modules.UGRF import UGRF
-import enthought.traits as TR
-from BrainSTAT.RFT.EC import *
 import gc
+
 from BrainSTAT.RFT.FWHM import *
 from BrainSTAT.Simulation import Simulator
-import numpy as N
+from BrainSTAT import *
+from BrainSTAT.Modules.UGRF import UGRF
+from BrainSTAT.RFT.EC import *
 
-class GaussianField(UGRF, Simulator, TR.HasTraits):
+from neuroimaging import traits
+
+from neuroimaging.statistics.simulation import ugrf, Simulator
+
+class GaussianField(Simulator):
 
     """
     A class to simulate smooth Gaussian fields based on a UGRF.
@@ -20,34 +23,29 @@ class GaussianField(UGRF, Simulator, TR.HasTraits):
     Note: fwhm argument is only used when image is a VImage instance, and is ignored if image is a UGRF instance.
     """
 
-    estimate_resels = TR.false
+    estimate_resels = traits.false(desc='Produce a resel estimate?')
+    ugrf = traits.Instance(ugrf.UGRF, desc='Simulator.')
 
-    def __init__(self, image, search=None, resels=None, fwhm=10., verbose=False, **keywords):
-
-        TR.HasTraits.__init__(self, **keywords)
+    def __init__(self, grid, search=None, verbose=False, **keywords):
+        self.ugrf = ugrf.UGRF(grid, **keywords)
         Simulator.__init__(self, search=search, verbose=verbose)
-        if isinstance(image, VImage):
-            self.ugrf = UGRF(image, **keywords)
-        elif isinstance(image, UGRF):
-            self.ugrf = image
-        else:
-            raise ValueError, 'expecting a VImage or UGRF object'
+
         if resels is None and self.estimate_resels:
             self.resels = self.resel_estimator(**keywords)
         else:
             self.resels = None
-        self.stat = Gaussian
-        self.getpvalue()
+        self.ec_density = ec_densities.Gaussian
+        self._get_pvalue()
 
     def feature(self, image, **keywords):
         """
         Default feature: return maximum over search region.
         To change, subclass and write over this method.
         """
-        data = N.compress(self.search.toVImage(image.warp).readall(**keywords), image.readall(**keywords)).flat
+        data = compress(self.search.toVImage(image.warp).readall(**keywords), image.readall(**keywords)).flat
         return maximum.reduce(data)
 
-    def getpvalue(self, **keywords):
+    def _get_pvalue(self, **keywords):
         """
         Default pvalue: if resels present, return the EC approximation
         based on which random field model is being used.
@@ -61,13 +59,7 @@ class GaussianField(UGRF, Simulator, TR.HasTraits):
             volume = 1.
             search = volume2ball(1,d=0)
 
-        self.pvalue = self.stat(search=search, **keywords)
-
-    def generate(self, **keywords):
-        """
-        Generate one Gaussian field.
-        """
-        return self.ugrf.generate(**keywords)
+        self.pvalue = self.ec_density(search=search, **keywords)
 
     def resel_estimator(self, n=30, **keywords):
         """
@@ -82,7 +74,7 @@ class GaussianField(UGRF, Simulator, TR.HasTraits):
         outdim = [time] + warp.output_coords.dimensions
         outcoords = Dimension.Coordinates('world', outdim)
 
-        transform = N.zeros((d+2,)*2, N.float64)
+        transform = zeros((d+2,)*2, Float)
         transform[0,0] = 1.0
         transform[1:(d+2),1:(d+2)] = warp.transform
 
@@ -145,7 +137,7 @@ class TField(ChiSquaredField):
         """
         den = ChiSquaredField.generate(self, **keywords)
         num = GaussianField.generate(self, **keywords)
-        value = num.image.data / N.sqrt(den.image.data / self.df)
+        value = num.image.data / sqrt(den.image.data / self.df)
         return VImage(value, warp=self.ugrf.input.warp)
 
 class FField(ChiSquaredField):
@@ -187,7 +179,7 @@ class ChiBarSquaredField(ChiSquaredField):
 
         for i in range(self.df):
             tmp = self.ugrf.generate(**keywords).image.data
-            tmp = N.greater(tmp, 0) * tmp**2
+            tmp = greater(tmp, 0) * tmp**2
             value += tmp
             del(tmp) ; gc.collect()
         return VImage(value, warp=self.ugrf.input.warp)
