@@ -10,10 +10,15 @@ rm -rf $(find . -name "svn-commit*.tmp")
 # editor leftovers
 rm -rf $(find . -name "*~")
 rm -rf $(find . -name ".*.sw")
+
+# egg leftovers
 rm -rf $(find . -name "*egg-info")
 
 # python bytecode
 rm -rf $(find . -name "*.pyc")
+
+# extension leftovers
+rm -rf $(find . -name "*.so")
 
 # test install dir
 rm -rf test-install

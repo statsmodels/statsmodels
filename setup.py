@@ -13,6 +13,7 @@ def main(packages):
                                   [apply(os.path.join, 'lib/neuroimaging/image/formats/minc/_mincutils.c'.split('/'))],
                              extra_link_args=["-lminc"],
                             include_dirs=get_numpy_include_dirs())]
+
     package_dir = {'': 'lib'}
 
     if not ENTHOUGHT_TRAITS_DEF:
