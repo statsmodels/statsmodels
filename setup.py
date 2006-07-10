@@ -8,7 +8,9 @@ from neuroimaging import packages, __version__, __doc__, ENTHOUGHT_TRAITS_DEF
 def main(packages):
 
     packages = ['']+list(packages)
-    ext_modules = []
+    ext_modules = [Extension('image.formats.minc._mincutils',
+                                  [apply(os.path.join, 'lib/neuroimaging/image/formats/minc/_mincutils.c'.split('/'))],
+                             extra_link_args=["-lminc"])]
     package_dir = {'': 'lib'}
 
     if not ENTHOUGHT_TRAITS_DEF:
