@@ -10,6 +10,7 @@ from BrainSTAT.RFT.EC import *
 import gc
 from BrainSTAT.RFT.FWHM import *
 from BrainSTAT.Simulation import Simulator
+import numpy as N
 
 class GaussianField(UGRF, Simulator, TR.HasTraits):
 
@@ -43,7 +44,7 @@ class GaussianField(UGRF, Simulator, TR.HasTraits):
         Default feature: return maximum over search region.
         To change, subclass and write over this method.
         """
-        data = compress(self.search.toVImage(image.warp).readall(**keywords), image.readall(**keywords)).flat
+        data = N.compress(self.search.toVImage(image.warp).readall(**keywords), image.readall(**keywords)).flat
         return maximum.reduce(data)
 
     def getpvalue(self, **keywords):
@@ -81,7 +82,7 @@ class GaussianField(UGRF, Simulator, TR.HasTraits):
         outdim = [time] + warp.output_coords.dimensions
         outcoords = Dimension.Coordinates('world', outdim)
 
-        transform = zeros((d+2,)*2, Float)
+        transform = N.zeros((d+2,)*2, N.float64)
         transform[0,0] = 1.0
         transform[1:(d+2),1:(d+2)] = warp.transform
 
@@ -144,7 +145,7 @@ class TField(ChiSquaredField):
         """
         den = ChiSquaredField.generate(self, **keywords)
         num = GaussianField.generate(self, **keywords)
-        value = num.image.data / sqrt(den.image.data / self.df)
+        value = num.image.data / N.sqrt(den.image.data / self.df)
         return VImage(value, warp=self.ugrf.input.warp)
 
 class FField(ChiSquaredField):
@@ -186,7 +187,7 @@ class ChiBarSquaredField(ChiSquaredField):
 
         for i in range(self.df):
             tmp = self.ugrf.generate(**keywords).image.data
-            tmp = greater(tmp, 0) * tmp**2
+            tmp = N.greater(tmp, 0) * tmp**2
             value += tmp
             del(tmp) ; gc.collect()
         return VImage(value, warp=self.ugrf.input.warp)

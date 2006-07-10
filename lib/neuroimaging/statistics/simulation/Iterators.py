@@ -1,5 +1,5 @@
 import probstat, whrandom
-from numarray import *
+import numpy as N
 
 from BrainSTAT.Base.Options import parallel
 if parallel:
@@ -58,7 +58,7 @@ class probstat_iter_list:
 
     def __len__(self):
 
-        return add.reduce(self.sizes)
+        return N.add.reduce(self.sizes)
 
     def __iter__(self):
         return self
@@ -239,13 +239,13 @@ class SignIterator:
         return subset2signs(subset, self.n)
 
 def signs2subset(signs):
-    signs = array(signs)
+    signs = N.array(signs)
     if len(signs.shape) != 1:
         raise ValueError, 'signs2subset expecting one sign at a time.'
-    return compress(greater(signs, 0), arange(signs.shape[0]))
+    return N.compress(N.greater(signs, 0), N.arange(signs.shape[0]))
 
 def subset2signs(subset, n):
-    values = ones((n,), Float)
+    values = N.ones((n,), N.float64)
     for i in subset:
         values[i] = -1.0
     return values
