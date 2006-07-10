@@ -3,13 +3,15 @@ This module has a collection of functions for the simulation of random fields.
 Can be used for numerical validation of RFT.
 """
 
+import numpy as N
+
 import gc
 
-from BrainSTAT.RFT.FWHM import *
-from BrainSTAT.Simulation import Simulator
-from BrainSTAT import *
-from BrainSTAT.Modules.UGRF import UGRF
-from BrainSTAT.RFT.EC import *
+from neuroimaging.image.fwhm import fastFWHM
+#from BrainSTAT.Simulation import Simulator
+#from BrainSTAT import *
+#from BrainSTAT.Modules.UGRF import UGRF
+#from BrainSTAT.RFT.EC import *
 
 from neuroimaging import traits
 
@@ -42,8 +44,8 @@ class GaussianField(Simulator):
         Default feature: return maximum over search region.
         To change, subclass and write over this method.
         """
-        data = compress(self.search.toVImage(image.warp).readall(**keywords), image.readall(**keywords)).flat
-        return maximum.reduce(data)
+        data = N.compress(self.search.toVImage(image.warp).readall(**keywords), image.readall(**keywords)).flat
+        return N.maximum.reduce(data)
 
     def _get_pvalue(self, **keywords):
         """
@@ -74,7 +76,7 @@ class GaussianField(Simulator):
         outdim = [time] + warp.output_coords.dimensions
         outcoords = Dimension.Coordinates('world', outdim)
 
-        transform = zeros((d+2,)*2, Float)
+        transform = N.zeros((d+2,)*2, N.Float)
         transform[0,0] = 1.0
         transform[1:(d+2),1:(d+2)] = warp.transform
 
