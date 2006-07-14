@@ -4,62 +4,89 @@ import numpy.random as R
 from neuroimaging.statistics import rft
 from scipy.special import gammaln
 
-def K(D=4, df_num=7, df_denom=20):
-    """
-    Determine coefficients of polynomial in Worsley (1994).
-    """
-    rhoF=N.zeros((D,D), N.float64)
-    rhoCT=N.zeros((D,D), N.float64)
-    a = N.arange(D)
+class keithT:
 
-    for dim in range(1, D+1):
-        s1 = 0
+    def __init__(self, m):
+        self.m = m
 
-        for j in range(int(N.floor((dim-1)/2.)+1)):
-            t = (gammaln(dim) +
-                 gammaln((df_denom+df_num-dim)/2.+j) -
-                 gammaln(j+1) -
-                 gammaln((df_denom+df_num-dim)/2.) +
-                 gammaln(df_denom) -
-                 gammaln(a-j+1) -
-                 gammaln(df_denom-a+j) +
-                 gammaln(df_num) -
-                 gammaln(dim-a-j) -
-                 gammaln(df_num-dim+j+a+1))
-            s1 += N.exp(t) * N.power(-1., a+dim-1.)
-        rhoF[dim-1] = s1
+    def __call__(self, x, j=0):
+        x = N.asarray(x, N.float64)
+        _j = j - 1
+        if _j >= 0:
+            c = pow(1. + x**2/m, -0.5*(m-1.))
+            c *= pow(2*N.pi, -0.5*(j+1))
 
-        s2=0
-        for i in range(int(N.floor((df_num-1)/2.)+1)):
-            k = df_num-1-2.*i
-            mu = (N.log(2) * (k+1.) + N.log(N.pi) * k/2. +
-                   gammaln((df_num+1)/2.) - gammaln(k+1.) - gammaln(i+1.))
-            for j in range(int(N.floor((dim+k-1)/2.)+1)):
+            q = 0
+            for i in range(int(N.floor((_j/2.))+1)):
 
-                t = (gammaln(dim+k) -
-                     gammaln(j+1) -
-                     gammaln(dim+k-2.*j) +
-                     N.log(2) * ((dim+k-1)/2.-2*j) +
-                     gammaln((df_denom+1)/2.) -
-                     gammaln((df_denom+2-dim-k)/2.+j) -
-                     N.log(2*N.pi)*(dim+k+1)/2. +
-                     gammaln(i+1) -
-                     gammaln(a-dim+i+j+2) -
-                     gammaln(dim-a-j))
+                tmp = pow(x, _j-2*i) / (factorial(_j-2*i) * factorial(i) * pow(-2.0, i))
+                tmp *= N.exp(gammaln((m+1.)/2) - gammaln((m+1.-_j+2*i)/2.)) * pow(2./m, (_j-2*i)/2.)
+                tmp *= factorial(_j)
+                q += tmp
 
-                s2 += N.exp(mu+t)* N.power(-1.,j)
+            return q * c
+        else:
+            return scipy.stats.t.sf(x, self.m)
 
-        rhoCT[dim-1] = s2 / N.exp(gammaln((df_denom+df_num-dim)/2.) -
-                                  gammaln(df_denom/2.) -
-                                  gammaln(df_num/2.) - N.log(2)*(dim-1) -
-                                  N.log(N.pi)*dim/2.)
+class keithF:
 
-    return rhoF
+    def __init__(self, m, n):
+        self.m = m
+        self.n = n
 
-##     if N.allclose(rhoCT, rhoF):
-##         return rhoF
-##     else:
-##         raise ValueError, 'cone T and F result don\'t agree!'
+    def __call__(self, x, j=0):
+        x = N.asarray(x, N.float64)
+        m = self.m
+        n = self.n
+        if j >= 1:
+            c = pow(n*x/m, 0.5*(n-j))
+            c *= pow(2*N.pi, -0.5*j)
+            c *= pow(2, -0.5*(j-2))
+            c *= N.exp(gammaln((m+n-j)/2.) - gammaln(m/2.) - gammaln(n/2.))
+            c *= pow(1. + n*x/m, -0.5*(m+n-2.))
+            c *= pow(-1., j-1) * N.exp(gammaln(j))
+
+            q = 0
+
+            for i in range(int(N.floor(((j-1)/2.))+1)):
+                cc = N.exp(gammaln((m+n-j)/2. + i) - gammaln((m+n-j)/2.) - gammaln(i+1))
+                for k in range(j - 2*i):
+                    tmp = rft.binomial(m-1,k) * rft.binomial(n-1, j-1-2*i-k)
+                    tmp *= pow(-1., i+k) * pow(n*x/m, i+k)
+                q += tmp * cc
+
+            return q * c
+        else:
+            return scipy.stats.f.sf(x,self.n, self.m)
+
+class keithChi:
+
+    def __init__(self, n):
+        self.n = n
+
+    def __call__(self, x, j=0):
+        x = N.array(x, N.float64)
+        n = self.n
+        if j >= 1:
+            c = N.power(x, 0.5*(n-j))
+            c *= N.power(2*N.pi, -0.5*j)
+            c *= N.power(2, -0.5*(n-2))
+            c *= N.exp(-gammaln(n/2.))
+            c *= N.exp(-x/2.)
+
+            q = 0
+
+            for i in range(int(N.floor(((j-1)/2.))+1)):
+                for k in range(j - 2*i):
+                    tmp = rft.binomial(n-1, j-1-2*i-k)
+                    tmp *= N.power(-1., j-1+i+k) * N.power(x, i+k)
+                    tmp *= N.exp(gammaln(j) - gammaln(i+1) - gammaln(k+1))
+                    tmp *= N.power(2., -i)
+                    q += tmp
+
+            return q * c
+        else:
+            return scipy.stats.chisqprob(x, self.n)
 
 class FDensity:
     """
@@ -79,6 +106,7 @@ class FDensity:
                                 gammaln(df_denom/2.) -
                                 N.log(2) * (dim - 2) / 2. -
                                 N.log(2*N.pi) * dim / 2.)
+
     def __call__(self, x):
 
         if self.dim > 0:
@@ -96,6 +124,21 @@ class FDensity:
             return p
         else:
             return scipy.stats.f.sf(x, self.df_num, self.df_denom)
+
+class KQTest(unittest.TestCase):
+
+    """
+    Verify Q and K agree
+    """
+
+    def test_QK(self):
+        from neuroimaging.statistics.rft import Q, K
+        df_denom=30
+        dim = 3
+        x = N.fabs(R.standard_normal((10,)))
+        q = Q(dim, df_denom=df_denom)(x)
+        k = K(dim=dim, df_denom=df_denom, df_num=1)(x**2/df_denom)
+        N.testing.assert_almost_equal(q, k)
 
 class FDensityTest(unittest.TestCase):
 
