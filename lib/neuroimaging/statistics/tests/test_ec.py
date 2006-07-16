@@ -1,6 +1,6 @@
 ## import unittest
 import numpy as N
-## from neuroimaging.statistics import ec_densities
+from neuroimaging.statistics import rft
 from scipy.special import gammaln
 
 ## class ECDensityTest(unittest.TestCase):
