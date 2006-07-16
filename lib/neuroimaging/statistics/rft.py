@@ -510,7 +510,6 @@ class ECcone(IntrinsicVolumes):
 
         _rho = q_even(x) + q_odd(x)
 
-        print `q_even`, `q_odd`
         if N.isfinite(self.dfd):
             _rho *= N.power(1 + x**2/self.dfd, -(self.dfd-1)/2.)
         else:

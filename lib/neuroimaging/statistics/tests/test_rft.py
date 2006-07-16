@@ -220,8 +220,8 @@ class RFTTest(unittest.TestCase):
         x = N.linspace(0.1,10,100)
         for dim in range(1,7):
             for dfn in range(5,10):
-                h = rft.Hotelling(k=dfn)(dfn*x, dim=dim)
-                f = rft.FStat(dfn=dfn)(x, dim=dim)
+                h = rft.Hotelling(k=dfn).density(x, dim)
+                f = rft.FStat(dfn=dfn).density(x, dim)
                 N.testing.assert_almost_equal(h, f)
 
     def test_hotelling2(self):
@@ -239,22 +239,6 @@ class RFTTest(unittest.TestCase):
             h = rft.Hotelling(k=dfn)(x)
             chi2 = scipy.stats.chi2.sf(x, dfn, dfd)
             N.testing.assert_almost_equal(h, chi2)
-
-    def test_hotelling3(self):
-        """
-        Quasi-polynomials of Hotelling are the same as
-        those of F, up to the exponent.
-        """
-
-        x = N.linspace(0.1,10,100)
-        for dim in range(1,7):
-            for dfn in range(5, 10):
-                for dfd in [40,50]:
-                    q = rft.FStat(dfd=dfd, dfn=dfn)._quasi_polynomials(dim)
-                    sumq = rft.fnsum(q)
-                    for i in range(len(q)):
-                        sumq.items[i].exponent += i/2.
-
 
 
 
@@ -361,8 +345,6 @@ class RFTTest(unittest.TestCase):
                 import pylab
 
 
-class RFTTest2(unittest.TestCase):
-
     def test_search4(self):
         """
         Test that the search/product work well together
@@ -412,12 +394,7 @@ class RFTTest2(unittest.TestCase):
         for dim in range(1,7):
             for k in range(5, 10):
                 p = rft.spherical_search(k)
-                print p
                 for dfd in [N.inf,40,50]:
                     t = rft.FStat(dfd=dfd, dfn=1)(x, search=p)
-                    print 'blah'
                     h = rft.Hotelling(k=k, dfd=dfd).density(x, dim)
-#                    N.testing.assert_almost_equal(h, t)
-                    import pylab
-                    pylab.plot(h,t)
-                    pylab.show()
+                    N.testing.assert_almost_equal(h, t)
