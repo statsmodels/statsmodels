@@ -127,10 +127,10 @@ def _pmin(n):
     any of the processors.
     """
 
-    a1, b1 = prange(n, rank=0)
+    a1, b1 = _prange(n, rank=0)
     n1 = b1 - a1
 
-    a2, b2 = prange(n, rank=mpi.size-1)
+    a2, b2 = _prange(n, rank=mpi.size-1)
     n2 = b2 - a2
 
     return min(n1, n2)
