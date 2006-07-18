@@ -86,7 +86,7 @@ class FDensity:
             f = N.array(x, copy=True)
 
             p = self.coef[0]
-            for i in range(1, self.coef.ndim):
+            for i in range(1, self.coef.shape[0]):
                 p += self.coef[i] * x
                 x *= x
 
@@ -97,7 +97,7 @@ class FDensity:
         else:
             return scipy.stats.f.sf(x, self.df_num, self.df_denom)
 
-class ECDensityTest(unittest.TestCase):
+class FDensityTest(unittest.TestCase):
 
     def setUp(self):
         df_denom = range(10,60,10)
@@ -117,10 +117,54 @@ class ECDensityTest(unittest.TestCase):
 
 
     def test_F(self):
-        df_denom, df_num, dim = (10, 5, 3)
+        df_denom, df_num, dim = (N.inf, 5, 3)
         x = N.fabs(R.standard_normal((10,)))
         N.testing.assert_almost_equal(self.F[df_denom][df_num].density(x, dim),
                                       self.kF[df_denom][df_num][dim](x))
+
+class FHermiteDensityTest(unittest.TestCase):
+
+    def setUp(self):
+        df_denom = N.inf
+        df_num = 1
+        dim = range(5)
+        self.kF = {}
+        self.F = rft.FStat(m=N.inf,n=1)
+
+        for k in dim:
+            self.kF[k] = FDensity(k, df_denom, df_num)
+
+    def test_ratio(self):
+        dim = 4
+
+        x = N.fabs(R.standard_normal((10,))) * 3
+        a = self.kF[dim](x**2)
+        b = (x**3 - 3 * x) * N.exp(-x**2/2) / N.power(N.pi, (dim+1)/2.)
+        N.testing.assert_almost_equal(a, b)
+
+
+class TDensityTest(unittest.TestCase):
+
+    def setUp(self):
+        df_denom = range(10,60,10)
+        dim = range(4)
+        self.kT = {}
+        self.T = {}
+
+        for m in df_denom:
+            self.kT[m] = {}
+            self.T[m] = rft.TStat(m=m)
+            for k in dim:
+                self.kT[m][k] = FDensity(k, m, 1)
+
+
+    def test_T(self):
+        df_denom, df_num, dim = (10, 5, 3)
+        x = N.fabs(R.standard_normal((10,)))
+        a = self.T[df_denom].density(x, dim),
+        b = 0.5 * self.kT[df_denom][dim](N.sqrt(x))
+        print a/b
+        N.testing.assert_almost_equal(a, b)
 
 if __name__ == '__main__':
     unittest.main()
