@@ -4,6 +4,102 @@ import numpy.random as R
 from neuroimaging.statistics import rft
 from scipy.special import gammaln, hermitenorm
 import scipy.stats
+from scipy import factorial
+
+def rho(x, dim, df=N.inf):
+    """
+    EC densities for T and Gaussian (df=inf) random fields.
+    """
+
+    m = df
+
+    if dim > 0:
+        x = N.asarray(x, N.float64)
+        q = Q(dim, dfd=df)(x)
+
+        if N.isfinite(m):
+            q *= N.power(1 + x**2/m, -(m-1)/2.)
+        else:
+            q *= N.exp(-x**2/2)
+
+        return q * N.power(2*N.pi, -(dim+1)/2.)
+    else:
+        if N.isfinite(m):
+            return scipy.stats.t.sf(x, df)
+        else:
+            return scipy.stats.norm.sf(x)
+
+def K(dim=4, dfn=7, dfd=N.inf):
+    """
+    Determine the polynomial K in
+
+    Worsley, K.J. (1994). 'Local maxima and the expected Euler
+    characteristic of excursion sets of \chi^2, F and t fields.'
+    Advances in Applied Probability, 26:13-42.
+
+    If dfd=inf, return the limiting polynomial.
+
+    """
+
+    def lbinom(n, j):
+        return gammaln(n+1) - gammaln(j+1) - gammaln(n-j+1)
+
+    m = dfd
+    n = dfn
+    D = dim
+
+    k = N.arange(D)
+
+    coef = 0
+
+    for j in range(int(N.floor((D-1)/2.)+1)):
+        if N.isfinite(m):
+            t = (gammaln((m+n-D)/2.+j) -
+                 gammaln(j+1) -
+                 gammaln((m+n-D)/2.))
+            t += lbinom(m-1, k-j) - k * N.log(m)
+        else:
+            _t = N.power(2., -j) / (factorial(k-j) * factorial(j))
+            t = N.log(_t)
+            t[N.isinf(_t)] = -N.inf
+        t += lbinom(n-1, D-1-j-k)
+        coef += (-1)**(D-1) * factorial(D-1) * N.exp(t) * N.power(-1.*n, k)
+
+    return N.poly1d(coef[::-1])
+
+
+def F(x, dim, dfd=N.inf, dfn=1):
+    """
+    EC densities for F and Chi^2 (dfd=inf) random fields.
+    """
+
+    m = float(dfd)
+    n = float(dfn)
+    D = float(dim)
+
+    if dim > 0:
+        x = N.asarray(x, N.float64)
+        k = K(dim=dim, dfd=dfd, dfn=dfn)(x)
+
+        if N.isfinite(m):
+            f = x*n/m
+            t = -N.log(1 + f) * (m+n-2.) / 2.
+            t += N.log(f) * (n-D) / 2.
+            t += gammaln((m+n-D)/2.) - gammaln(m/2.)
+        else:
+            f = x*n
+            t = N.log(f/2.) * (n-D) / 2. - f/2.
+
+        t -= N.log(2*N.pi) * D / 2. + N.log(2) * (D-2)/2. + gammaln(n/2.)
+        k *= N.exp(t)
+
+        return k
+    else:
+        if N.isfinite(m):
+            return scipy.stats.f.sf(x, dfn, dfd)
+        else:
+            return scipy.stats.chi.sf(x, dfn)
+
 
 def polyF(dim, dfd=N.inf, dfn=1):
     """
@@ -20,7 +116,7 @@ def polyF(dim, dfd=N.inf, dfn=1):
     m = float(dfd)
     D = float(dim)
 
-    p = rft.K(dim=D, dfd=m, dfn=n)
+    p = K(dim=D, dfd=m, dfn=n)
     c = p.c
 
     # Take care of the powers of n (i.e. we want polynomial K evaluated
@@ -78,7 +174,6 @@ def F_alternative(x, dim, dfd=N.inf, dfn=1):
 
 
 class RFTTest(unittest.TestCase):
-
 
     def test_polynomial1(self):
         """
@@ -157,33 +252,6 @@ class RFTTest(unittest.TestCase):
             N.testing.assert_almost_equal(2*ec1, ec2)
 
 
-
-    def test_F1(self):
-        x = N.linspace(0.1,10,100)
-        for dim in range(1,10):
-            for dfn in range(5,10):
-                for dfd in [40,50,N.inf]:
-                    f1 = rft.F(x, dim, dfn=dfn, dfd=dfd)
-                    f2 = F_alternative(x, dim, dfn=dfn, dfd=dfd)
-                    N.testing.assert_almost_equal(f1, f2)
-
-    def test_F2(self):
-        x = N.linspace(0.1,10,100)
-        for dim in range(3,7):
-            for dfn in range(5,10):
-                for dfd in [40,50,N.inf]:
-                    f1 = rft.FStat(dfn=dfn, dfd=dfd).density(x, dim)
-                    f2 = F_alternative(x, dim, dfn=dfn, dfd=dfd)
-                    N.testing.assert_almost_equal(f1, f2)
-
-    def test_F3(self):
-        x = N.linspace(0.1,10,100)
-        for dim in range(3,7):
-            for dfn in range(5,10):
-                for dfd in [40,50,N.inf]:
-                    f1 = rft.FStat(dfn=dfn, dfd=dfd).density(x, dim)
-                    f2 = rft.F(x, dim, dfn=dfn, dfd=dfd)
-                    N.testing.assert_almost_equal(f1, f2)
 
     def test_T1(self):
         """
@@ -493,3 +561,44 @@ class RFTTest(unittest.TestCase):
     def test_scale(self):
         a = rft.IntrinsicVolumes([2,3,4])
         b = rft.scale_space(a, [3,4], kappa=0.5)
+
+
+    def test_F1(self):
+        x = N.linspace(0.1,10,100)
+        for dim in range(1,10):
+            for dfn in range(5,10):
+                for dfd in [40,50,N.inf]:
+                    f1 = F(x, dim, dfn=dfn, dfd=dfd)
+                    f2 = F_alternative(x, dim, dfn=dfn, dfd=dfd)
+                    N.testing.assert_almost_equal(f1, f2)
+
+    def test_F2(self):
+        x = N.linspace(0.1,10,100)
+        for dim in range(3,7):
+            for dfn in range(5,10):
+                for dfd in [40,50,N.inf]:
+                    f1 = rft.FStat(dfn=dfn, dfd=dfd).density(x, dim)
+                    f2 = F_alternative(x, dim, dfn=dfn, dfd=dfd)
+                    N.testing.assert_almost_equal(f1, f2)
+
+    def test_F3(self):
+        x = N.linspace(0.1,10,100)
+        for dim in range(3,7):
+            for dfn in range(5,10):
+                for dfd in [40,50,N.inf]:
+                    f1 = rft.FStat(dfn=dfn, dfd=dfd).density(x, dim)
+                    f2 = F(x, dim, dfn=dfn, dfd=dfd)
+                    N.testing.assert_almost_equal(f1, f2)
+
+    def test_chi2(self):
+        """
+        Quasi-polynomial part of the chi^2 EC density should
+        be the limiting polyF.
+        """
+        x = N.linspace(0.1,10,100)
+        for dim in range(1,10):
+            for dfn in range(5,10):
+                c = rft.ChiSquared(dfn=dfn)
+                p1 = c.quasi(dim=dim)
+                p2 = polyF(dim=dim, dfn=dfn)
+                N.testing.assert_almost_equal(p1.c, p2.c)
