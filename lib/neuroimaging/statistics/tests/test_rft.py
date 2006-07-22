@@ -2,269 +2,422 @@ import unittest
 import numpy as N
 import numpy.random as R
 from neuroimaging.statistics import rft
-from scipy.special import gammaln
+from scipy.special import gammaln, hermitenorm
+import scipy.stats
 
-class keithT:
-
-    def __init__(self, m):
-        self.m = m
-
-    def __call__(self, x, j=0):
-        x = N.asarray(x, N.float64)
-        _j = j - 1
-        if _j >= 0:
-            c = pow(1. + x**2/m, -0.5*(m-1.))
-            c *= pow(2*N.pi, -0.5*(j+1))
-
-            q = 0
-            for i in range(int(N.floor((_j/2.))+1)):
-
-                tmp = pow(x, _j-2*i) / (factorial(_j-2*i) * factorial(i) * pow(-2.0, i))
-                tmp *= N.exp(gammaln((m+1.)/2) - gammaln((m+1.-_j+2*i)/2.)) * pow(2./m, (_j-2*i)/2.)
-                tmp *= factorial(_j)
-                q += tmp
-
-            return q * c
-        else:
-            return scipy.stats.t.sf(x, self.m)
-
-class keithF:
-
-    def __init__(self, m, n):
-        self.m = m
-        self.n = n
-
-    def __call__(self, x, j=0):
-        x = N.asarray(x, N.float64)
-        m = self.m
-        n = self.n
-        if j >= 1:
-            c = pow(n*x/m, 0.5*(n-j))
-            c *= pow(2*N.pi, -0.5*j)
-            c *= pow(2, -0.5*(j-2))
-            c *= N.exp(gammaln((m+n-j)/2.) - gammaln(m/2.) - gammaln(n/2.))
-            c *= pow(1. + n*x/m, -0.5*(m+n-2.))
-            c *= pow(-1., j-1) * N.exp(gammaln(j))
-
-            q = 0
-
-            for i in range(int(N.floor(((j-1)/2.))+1)):
-                cc = N.exp(gammaln((m+n-j)/2. + i) - gammaln((m+n-j)/2.) - gammaln(i+1))
-                for k in range(j - 2*i):
-                    tmp = rft.binomial(m-1,k) * rft.binomial(n-1, j-1-2*i-k)
-                    tmp *= pow(-1., i+k) * pow(n*x/m, i+k)
-                q += tmp * cc
-
-            return q * c
-        else:
-            return scipy.stats.f.sf(x,self.n, self.m)
-
-class keithChi:
-
-    def __init__(self, n):
-        self.n = n
-
-    def __call__(self, x, j=0):
-        x = N.array(x, N.float64)
-        n = self.n
-        if j >= 1:
-            c = N.power(x, 0.5*(n-j))
-            c *= N.power(2*N.pi, -0.5*j)
-            c *= N.power(2, -0.5*(n-2))
-            c *= N.exp(-gammaln(n/2.))
-            c *= N.exp(-x/2.)
-
-            q = 0
-
-            for i in range(int(N.floor(((j-1)/2.))+1)):
-                for k in range(j - 2*i):
-                    tmp = rft.binomial(n-1, j-1-2*i-k)
-                    tmp *= N.power(-1., j-1+i+k) * N.power(x, i+k)
-                    tmp *= N.exp(gammaln(j) - gammaln(i+1) - gammaln(k+1))
-                    tmp *= N.power(2., -i)
-                    q += tmp
-
-            return q * c
-        else:
-            return scipy.stats.chisqprob(x, self.n)
-
-class FDensity:
+def polyF(dim, dfd=N.inf, dfn=1):
     """
-    F EC density from Worsley(1994).
+    Return the polynomial part of the EC density when
+    evaluating the polynomial on the sqrt(F) scale (or sqrt(chi^2)=chi scale).
+
+    The polynomial is such that, if dfd=inf, the F EC density in is just
+
+    polyF(dim,dfn=dfn)(sqrt(dfn*x)) * exp(-dfn*x/2) * (2\pi)^{-(dim+1)/2}
+
     """
 
-    def __init__(self, dim, df_denom, df_num):
-        self.dim = dim
-        self.df_denom = df_denom
-        self.df_num = df_num
+    n = float(dfn)
+    m = float(dfd)
+    D = float(dim)
 
-        if dim > 1:
-            self.coef = K(D=dim, df_denom=df_denom, df_num=df_num)[dim-1]
+    p = rft.K(dim=D, dfd=m, dfn=n)
+    c = p.c
 
-        self.multiplier = N.exp(gammaln((df_denom+df_num-dim)/2.) -
-                                gammaln(df_num/2.) -
-                                gammaln(df_denom/2.) -
-                                N.log(2) * (dim - 2) / 2. -
-                                N.log(2*N.pi) * dim / 2.)
+    # Take care of the powers of n (i.e. we want polynomial K evaluated
+    # at */n).
 
-    def __call__(self, x):
+    for i in range(p.order+1):
+        c[i] /= N.power(n, p.order-i)
 
-        if self.dim > 0:
-            x *= self.df_num * 1. / self.df_denom
-            f = N.array(x, copy=True)
+    # Now, turn it into a polynomial of x when evaluated at x**2
 
-            p = self.coef[0]
-            for i in range(1, self.coef.shape[0]):
-                p += self.coef[i] * x
-                x *= x
+    C = N.zeros((2*c.shape[0]-1,), N.float64)
 
-            p *= (N.power(f, (self.df_num - self.dim) / 2.) *
-                  N.power(1 + f, -(self.df_denom + self.df_num - 2.) / 2.) *
-                  self.multiplier)
-            return p
-        else:
-            return scipy.stats.f.sf(x, self.df_num, self.df_denom)
+    for i in range(c.shape[0]):
+        C[2*i] = c[i]
 
-class KQTest(unittest.TestCase):
+    # Multiply by the factor x^(dfn-dim) in front (see Theorem 4.6 of
+    # Worsley (1994), cited above.
 
+    if dim > dfn: # divide by x^(dim-dfn)
+        C = C[0:(C.shape[0] - (dim-dfn))]
+    else: # multiply by x^(dim-dfn)
+        C = N.hstack([C, N.zeros((dfn-dim,))])
+
+    # Fix up constant in front
+
+    if N.isfinite(m):
+        C *= N.exp(gammaln((m+n-D)/2.) - gammaln(m/2.)) * N.power(m, -(n-D)/2.)
+    else:
+        C *= N.power(2, -(n-D)/2.)
+
+    C /= N.power(2, (dim-2)/2.) * N.exp(gammaln(n/2.))
+    C *= N.sqrt(2*N.pi)
+    return N.poly1d(C)
+
+def F_alternative(x, dim, dfd=N.inf, dfn=1):
     """
-    Verify Q and K agree
+    Another way to compute F EC density as a product of a
+    polynomial and a power of (1+x^2/m).
     """
 
-    def test_QK(self):
-        from neuroimaging.statistics.rft import Q, K
-        df_denom=30
-        dim = 3
-        x = N.fabs(R.standard_normal((10,)))
-        q = Q(dim, df_denom=df_denom)(x)
-        k = K(dim=dim, df_denom=df_denom, df_num=1)(x**2/df_denom)
-        N.testing.assert_almost_equal(q, k)
+    n = float(dfn)
+    m = float(dfd)
+    D = float(dim)
 
-class FDensityTest(unittest.TestCase):
+    x = N.asarray(x, N.float64)
+    p = polyF(dim=dim, dfd=dfd, dfn=dfn)
+    v = p(N.sqrt(n*x))
 
-    def setUp(self):
-        df_denom = range(10,60,10)
-        df_num = range(4,15)
-        dim = range(4)
-        self.kF = {}
-        self.F = {}
-
-        for m in df_denom:
-            self.kF[m] = {}
-            self.F[m] = {}
-            for n in df_num:
-                self.kF[m][n] = {}
-                self.F[m][n] = rft.FStat(n=n, m=m)
-                for k in dim:
-                    self.kF[m][n][k] = FDensity(k, m, n)
+    if N.isfinite(m):
+        v *= N.power(1 + n*x/m, -(m+n-2.) / 2.)
+    else:
+        v *= N.exp(-n*x/2)
+    v *= N.power(2*N.pi, -(dim+1)/2.)
+    return v
 
 
-    def test_F(self):
-        df_denom, df_num, dim = (N.inf, 5, 3)
-        x = N.fabs(R.standard_normal((10,)))
-        N.testing.assert_almost_equal(self.F[df_denom][df_num].density(x, dim),
-                                      self.kF[df_denom][df_num][dim](x))
-
-class FHermiteDensityTest(unittest.TestCase):
-
-    def setUp(self):
-        df_denom = N.inf
-        df_num = 1
-        dim = range(5)
-        self.kF = {}
-        self.F = rft.FStat(m=N.inf,n=1)
-
-        for k in dim:
-            self.kF[k] = FDensity(k, df_denom, df_num)
-
-    def test_ratio(self):
-        dim = 4
-
-        x = N.fabs(R.standard_normal((10,))) * 3
-        a = self.kF[dim](x**2)
-        b = (x**3 - 3 * x) * N.exp(-x**2/2) / N.power(N.pi, (dim+1)/2.)
-        N.testing.assert_almost_equal(a, b)
+class RFTTest(unittest.TestCase):
 
 
-class TDensityTest(unittest.TestCase):
+    def test_polynomial1(self):
+        """
+        Polynomial part of Gaussian densities are Hermite polynomials.
+        """
+        for dim in range(1,10):
+            q = rft.Gaussian().quasi(dim)
+            h = hermitenorm(dim-1)
+            N.testing.assert_almost_equal(q.c, h.c)
 
-    def setUp(self):
-        df_denom = range(10,60,10)
-        dim = range(4)
-        self.kT = {}
-        self.T = {}
-
-        for m in df_denom:
-            self.kT[m] = {}
-            self.T[m] = rft.TStat(m=m)
-            for k in dim:
-                self.kT[m][k] = FDensity(k, m, 1)
-
-
-    def test_T(self):
-        df_denom, df_num, dim = (10, 5, 3)
-        x = N.fabs(R.standard_normal((10,)))
-        a = self.T[df_denom].density(x, dim),
-        b = 0.5 * self.kT[df_denom][dim](N.sqrt(x))
-        print a/b
-        N.testing.assert_almost_equal(a, b)
-
-if __name__ == '__main__':
-    unittest.main()
+    def test_polynomial2(self):
+        """
+        EC density of chi^2(1) is 2 * EC density of Gaussian so
+        polynomial part is a factor of 2 as well.
+        """
+        for dim in range(1,10):
+            q = rft.ChiSquared(dfn=1).quasi(dim)
+            h = hermitenorm(dim-1)
+            N.testing.assert_almost_equal(q.c, 2*h.c)
 
 
-## p = K()
-## print p[1](4.5)
-## c = ChiBarSquared(4)
-## c = ChiBarSquared(5)
-## f = FStat(n=7, m=20)
-## g = Gaussian()
-## import pylab
-## x = N.linspace(0,10,100)
-## print f.polynomial(x, 3)
 
-## pylab.plot(x, f.polynomial(x, 3))
-
-## from scipy.sandbox.models.regression import OLSModel
-## from scipy.sandbox.models.formula import Formula, Quantitative, I
-
-## namespace = {'x':x}
-## X = Quantitative('x')
-## formula = I + X
-## order = 8
-## for i in range(2, order+1):
-##     formula += X**i
-## design = formula.design(namespace=namespace)
-## model = OLSModel(design)
-## results = model.fit(f.polynomial(x, 3))
-## print results.beta, formula.names()
+    def test_polynomial3(self):
+        """
+        EC density of F with infinite dfd is the same as chi^2 --
+        polynomials should be the same.
+        """
+        for dim in range(1,10):
+            for dfn in range(5,10):
+                q1 = rft.FStat(dfn=dfn, dfd=N.inf).quasi(dim)
+                q2 = rft.ChiSquared(dfn=dfn).quasi(dim)
+                N.testing.assert_almost_equal(q1.c, q2.c)
 
 
-## def _f(x):
-##     t = results.beta[0]
-##     names = formula.names()
-##     for term in formula.terms:
-##         if hasattr(term, 'power'):
-##             i = names.index(term.termname)
-##             t += results.beta[i] * x**i
-##         elif term.termname == 'x':
-##             i = names.index(term.termname)
-##             t += results.beta[i] * x
+    def test_chi1(self):
+        """
+        EC density of F with infinite dfd is the same as chi^2 --
+        EC should be the same.
+        """
 
-##     return t
-## print dir(results)
-## pylab.plot(x, _f(x))
+        x = N.linspace(0.1,10,100)
+        for dim in range(1,10):
+            for dfn in range(5,10):
+                c = rft.ChiSquared(dfn=dfn)
+                f = rft.FStat(dfn=dfn, dfd=N.inf)
+                chi1 = c.density(dfn*x, dim)
+                chi2 = f.density(x, dim)
+                N.testing.assert_almost_equal(chi1, chi2)
 
-## ## pylab.plot(x, (x**2 - 1) / N.power(2*N.pi, 2))
-## ## pylab.figure()
-## ## a = g.polynomial(x, 3) / (rho(x, 3) * N.exp(x**2/2) * N.power(2*N.pi, -2))
-## ## print N.log(a.mean()) / N.log(N.sqrt(2*N.pi))
-## ## pylab.plot(x, a)
-## pylab.show()
+    def test_chi2(self):
+        """
+        Quasi-polynomial part of the chi^2 EC density should
+        be the limiting polyF.
+        """
+        x = N.linspace(0.1,10,100)
+        for dim in range(1,10):
+            for dfn in range(5,10):
+                c = rft.ChiSquared(dfn=dfn)
+                p1 = c.quasi(dim=dim)
+                p2 = polyF(dim=dim, dfn=dfn)
+                N.testing.assert_almost_equal(p1.c, p2.c)
 
-## ## m=1000
-## ## f = Fstat(3,m, search=[3,4])
-## ## x = ChiSquared(3, search=[3,4])
-## ## r = Roy(3,m,1, search=[3,4])
+    def test_chi3(self):
+        """
+        EC density of chi^2(1) is 2 * EC density of Gaussian squared so
+        EC densities factor of 2 as well.
 
-## ## print f(2, j=2), x(2*3, j=2), r(2, j=2), r.LK, f.LK
+        """
+
+        x = N.linspace(0.1,10,100)
+        for dim in range(1,10):
+            g = rft.Gaussian()
+            c = rft.ChiSquared(dfn=1)
+            ec1 = g.density(N.sqrt(x), dim)
+            ec2 = c.density(x, dim)
+            N.testing.assert_almost_equal(2*ec1, ec2)
+
+
+
+    def test_F1(self):
+        x = N.linspace(0.1,10,100)
+        for dim in range(1,10):
+            for dfn in range(5,10):
+                for dfd in [40,50,N.inf]:
+                    f1 = rft.F(x, dim, dfn=dfn, dfd=dfd)
+                    f2 = F_alternative(x, dim, dfn=dfn, dfd=dfd)
+                    N.testing.assert_almost_equal(f1, f2)
+
+    def test_F2(self):
+        x = N.linspace(0.1,10,100)
+        for dim in range(3,7):
+            for dfn in range(5,10):
+                for dfd in [40,50,N.inf]:
+                    f1 = rft.FStat(dfn=dfn, dfd=dfd).density(x, dim)
+                    f2 = F_alternative(x, dim, dfn=dfn, dfd=dfd)
+                    N.testing.assert_almost_equal(f1, f2)
+
+    def test_F3(self):
+        x = N.linspace(0.1,10,100)
+        for dim in range(3,7):
+            for dfn in range(5,10):
+                for dfd in [40,50,N.inf]:
+                    f1 = rft.FStat(dfn=dfn, dfd=dfd).density(x, dim)
+                    f2 = rft.F(x, dim, dfn=dfn, dfd=dfd)
+                    N.testing.assert_almost_equal(f1, f2)
+
+    def test_T1(self):
+        """
+        O-dim EC density should be tail probality.
+        """
+
+        x = N.linspace(0.1,10,100)
+
+        for dfd in [40,50]:
+            t = rft.TStat(dfd=dfd)
+            N.testing.assert_almost_equal(t(x), scipy.stats.t.sf(x, dfd))
+
+        t = rft.TStat(dfd=N.inf)
+        N.testing.assert_almost_equal(t(x), scipy.stats.norm.sf(x))
+
+    def test_T2(self):
+        """
+        T is an F with dfn=1
+        """
+
+        x = N.linspace(0.1,10,100)
+
+        for dfd in [40,50,N.inf]:
+            t = rft.TStat(dfd=dfd)
+            f = rft.FStat(dfd=dfd, dfn=1)
+            for dim in range(7):
+                N.testing.assert_almost_equal(t.density(x, dim), f.density(x**2, dim))
+
+    def test_hotelling1(self):
+        """
+        Asymptotically, Hotelling is the same as F which is the same
+        as chi^2.
+        """
+        x = N.linspace(0.1,10,100)
+        for dim in range(1,7):
+            for dfn in range(5,10):
+                h = rft.Hotelling(k=dfn)(dfn*x, dim=dim)
+                f = rft.FStat(dfn=dfn)(x, dim=dim)
+                N.testing.assert_almost_equal(h, f)
+
+    def test_hotelling2(self):
+        """
+        Marginally, Hotelling is an F field.
+        """
+
+        x = N.linspace(0.1,10,100)
+        for dfn in range(5, 10):
+            for dfd in [40,50]:
+                h = rft.Hotelling(dfd=dfd,k=dfn)(x*dfn)
+                f = scipy.stats.f.sf(x, dfn, dfd)
+                N.testing.assert_almost_equal(h, f)
+
+            h = rft.Hotelling(k=dfn)(x)
+            chi2 = scipy.stats.chi2.sf(x, dfn, dfd)
+            N.testing.assert_almost_equal(h, chi2)
+
+    def test_hotelling3(self):
+        """
+        Quasi-polynomials of Hotelling are the same as
+        those of F, up to the exponent.
+        """
+
+        x = N.linspace(0.1,10,100)
+        for dim in range(1,7):
+            for dfn in range(5, 10):
+                for dfd in [40,50]:
+                    q = rft.FStat(dfd=dfd, dfn=dfn)._quasi_polynomials(dim)
+                    sumq = rft.fnsum(q)
+                    for i in range(len(q)):
+                        sumq.items[i].exponent += i/2.
+
+
+
+
+    def test_search3(self):
+        """
+        In the Gaussian case, test that search and product give same results.
+
+        """
+        search = rft.IntrinsicVolumes([3,4,5,7])
+        g1 = rft.Gaussian(search=search)
+        g2 = rft.Gaussian(product=search)
+        x = N.linspace(0.1,10,100)
+        y1 = g1(x)
+        y2 = g2(x)
+        N.testing.assert_almost_equal(y1, y2)
+
+
+
+    def test_search(self):
+        """
+        Test that the search region works.
+        """
+
+        search = rft.IntrinsicVolumes([3,4,5])
+        x = N.linspace(0.1,10,100)
+
+        stat = rft.Gaussian(search=search)
+
+        v1 = stat(x)
+        v2 = ((5*x + 4*N.sqrt(2*N.pi)) *
+              N.exp(-x**2/2.) / N.power(2*N.pi, 1.5) +
+              3 * scipy.stats.norm.sf(x))
+        N.testing.assert_almost_equal(v1, v2)
+
+    def test_search2(self):
+        """
+        Test that the search region works.
+        """
+
+        search = rft.IntrinsicVolumes([3,4,5])
+        x = N.linspace(0.1,10,100)
+
+        stats = [rft.Gaussian(search=search)]
+        ostats = [rft.Gaussian()]
+
+        for dfn in range(5,10):
+            for dfd in [40,50,N.inf]:
+                stats.append(rft.FStat(dfn=dfn, dfd=dfd, search=search))
+                ostats.append(rft.FStat(dfn=dfn, dfd=dfd))
+                stats.append(rft.TStat(dfd=dfd, search=search))
+                ostats.append(rft.TStat(dfd=dfd))
+            stats.append(rft.ChiSquared(dfn=dfn, search=search))
+            ostats.append(rft.ChiSquared(dfn=dfn))
+
+        for i in range(len(stats)):
+            stat = stats[i]
+            ostat = ostats[i]
+            v1 = stat(x)
+            v2 = 0
+
+            for j in range(search.mu.shape[0]):
+                v2 += ostat.density(x, j) * search.mu[j]
+            N.testing.assert_almost_equal(v1, v2)
+
+    def test_T2(self):
+        """
+        T is an F with dfn=1
+        """
+
+        x = N.linspace(0,5,101)
+
+        for dfd in [40,50,N.inf]:
+            t = rft.TStat(dfd=dfd)
+            f = rft.FStat(dfd=dfd, dfn=1)
+            for dim in range(7):
+                y = 2*t.density(x, dim)
+                z = f.density(x**2, dim)
+                N.testing.assert_almost_equal(y, z)
+
+
+
+    def test_search1(self):
+        """
+        Test that the search region works.
+        """
+
+        search = rft.IntrinsicVolumes([3,4,5])
+        x = N.linspace(0.1,10,100)
+
+        stats = [rft.Gaussian()]
+
+        for dfn in range(5,10):
+            for dfd in [40,50,N.inf]:
+                stats.append(rft.FStat(dfn=dfn, dfd=dfd))
+                stats.append(rft.TStat(dfd=dfd))
+            stats.append(rft.ChiSquared(dfn=dfn))
+
+        for dim in range(7):
+            for stat in stats:
+                v1 = stat(x, search=search)
+                v2 = 0
+                for i in range(search.mu.shape[0]):
+                    v2 += stat.density(x, i) * search.mu[i]
+                import pylab
+
+
+class RFTTest2(unittest.TestCase):
+
+    def test_search4(self):
+        """
+        Test that the search/product work well together
+        """
+
+        search = rft.IntrinsicVolumes([3,4,5])
+        product = rft.IntrinsicVolumes([1,2])
+        x = N.linspace(0.1,10,100)
+
+        g1 = rft.Gaussian()
+        g2 = rft.Gaussian(product=product)
+
+        y = g2(x, search=search)
+        z = g1(x, search=search*product)
+        N.testing.assert_almost_equal(y, z)
+
+
+    def test_search5(self):
+        """
+        Test that the search/product work well together
+        """
+
+        search = rft.IntrinsicVolumes([3,4,5])
+        product = rft.IntrinsicVolumes([1,2])
+        prodsearch = product * search
+        x = N.linspace(0,5,101)
+
+        g1 = rft.Gaussian()
+        g2 = rft.Gaussian(product=product)
+
+        z = 0
+
+        for i in range(prodsearch.mu.shape[0]):
+            z += g1.density(x, i) * prodsearch.mu[i]
+        y = g2(x, search=search)
+        N.testing.assert_almost_equal(y, z)
+
+
+
+    def test_hotelling4(self):
+        """
+        Hotelling T^2 should just be like taking product with sphere.
+
+        """
+
+        x = N.linspace(0.1,10,100)
+        for dim in range(1,7):
+            for k in range(5, 10):
+                p = rft.spherical_search(k)
+                print p
+                for dfd in [N.inf,40,50]:
+                    t = rft.FStat(dfd=dfd, dfn=1)(x, search=p)
+                    print 'blah'
+                    h = rft.Hotelling(k=k, dfd=dfd).density(x, dim)
+#                    N.testing.assert_almost_equal(h, t)
+                    import pylab
+                    pylab.plot(h,t)
+                    pylab.show()
