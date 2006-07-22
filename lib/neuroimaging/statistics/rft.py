@@ -685,7 +685,7 @@ class FStat(ECcone):
 
 class Roy(ECcone):
     """
-    Roy's maximum root: maximize an F_{n,m} statistic over a sphere
+    Roy's maximum root: maximize an F_{dfd,dfn} statistic over a sphere
     of dimension k.
     """
 
@@ -726,7 +726,7 @@ class MultilinearForm(ECcone):
 
 class Hotelling(ECcone):
     """
-    Hotelling's T^2: maximize an F_{1,m}=T_m^2 statistic over a sphere
+    Hotelling's T^2: maximize an F_{1,dfd}=T_dfd^2 statistic over a sphere
     of dimension k.
     """
 
