@@ -493,9 +493,9 @@ class RFTTest(unittest.TestCase):
             p = rft.spherical_search(dfn)
             for dfd in [40,50]:
                 fac = (dfd-dfn+1.)/(dfd*dfn)
-                h = rft.Hotelling(dfd=dfd,k=dfn)(x/fac)
-                f = scipy.stats.f.sf(x, dfn, dfd-dfn+1)
-                f2 = rft.FStat(dfd=dfd-dfn+1,dfn=dfn)(x)
+                h = rft.Hotelling(dfd=dfd,k=dfn)(x)
+                f = scipy.stats.f.sf(x*fac, dfn, dfd-dfn+1)
+                f2 = rft.FStat(dfd=dfd-dfn+1,dfn=dfn)(x*fac)
                 N.testing.assert_almost_equal(f2, f)
                 N.testing.assert_almost_equal(h, f)
 
