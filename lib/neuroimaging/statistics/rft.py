@@ -480,7 +480,8 @@ class ECcone(IntrinsicVolumes):
 
     def __call__(self, x, search=None):
         """
-        If search=[1], raising dim gives the EC densities.
+        Get expected EC for a search region (default is self.search which
+        itself defaults to [1] giving the survival function.
         """
 
         x = N.asarray(x, N.float64)
@@ -491,6 +492,7 @@ class ECcone(IntrinsicVolumes):
             search = IntrinsicVolumes(search)
 
         search *= self.product
+
         if N.isfinite(self.dfd):
             q_even = ECquasi([0], m=self.dfd, exponent=0)
             q_odd = ECquasi([0], m=self.dfd, exponent=0.5)
@@ -499,14 +501,13 @@ class ECcone(IntrinsicVolumes):
             q_odd = N.poly1d([0])
 
         for k in range(search.mu.shape[0]):
-            if k > 0:
-                q = self.quasi(k)
-                c = float(search.mu[k]) * N.power(2*N.pi, -(k+1)/2.)
-                if N.isfinite(self.dfd):
-                    q_even += q[0] * c
-                    q_odd += q[1] * c
-                else:
-                    q_even += q * c
+            q = self.quasi(k)
+            c = float(search.mu[k]) * N.power(2*N.pi, -(k+1)/2.)
+            if N.isfinite(self.dfd):
+                q_even += q[0] * c
+                q_odd += q[1] * c
+            else:
+                q_even += q * c
 
         _rho = q_even(x) + q_odd(x)
 
@@ -514,7 +515,6 @@ class ECcone(IntrinsicVolumes):
             _rho *= N.power(1 + x**2/self.dfd, -(self.dfd-1)/2.)
         else:
             _rho *= N.exp(-x**2/2.)
-
 
         if search.mu[0] * self.mu[0] != 0.:
             # tail probability is not "quasi-polynomial"
@@ -536,7 +536,6 @@ class ECcone(IntrinsicVolumes):
         """
         The EC density in dimension dim.
         """
-
         return self(x, search=[0]*dim+[1])
 
 
@@ -573,7 +572,7 @@ class ECcone(IntrinsicVolumes):
         quasi_polynomials = self._quasi_polynomials(dim)
         for k in range(len(quasi_polynomials)):
             _q = quasi_polynomials[k]
-            if k % 2 == 0:
+            if _q.exponent % 1 == 0:
                 q_even += _q
             else:
                 q_odd += _q
@@ -660,7 +659,6 @@ class ChiSquared(ECcone):
         ECcone.__init__(self, mu=spherical_search(self.dfn), search=search, dfd=dfd)
 
     def __call__(self, x, search=None):
-
         return ECcone.__call__(self, N.sqrt(x), search=search)
 
 class TStat(ECcone):
@@ -671,33 +669,60 @@ class TStat(ECcone):
     def __init__(self, dfd=N.inf, search=[1]):
         ECcone.__init__(self, mu=[1], dfd=dfd, search=search)
 
-class FStat(ChiSquared):
+class FStat(ECcone):
 
     """
     EC densities for a F random field.
     """
 
+    def __init__(self, dfn, dfd=N.inf, search=[1]):
+        self.dfn = dfn
+        ECcone.__init__(self, mu=spherical_search(self.dfn), search=search, dfd=dfd)
+
     def __call__(self, x, search=None):
         return ECcone.__call__(self, N.sqrt(x * self.dfn), search=search)
 
-class Roy(FStat):
+
+class Roy(ECcone):
     """
     Roy's maximum root: maximize an F_{n,m} statistic over a sphere
     of dimension k.
     """
 
     def __init__(self, dfn=1, dfd=N.inf, k=1, search=[1]):
-        FStat.__init__(dfd=dfd, dfn=dfn, search=search)
-        self.sphere = IntrinsicVolumes([mu_sphere(k,i) for i in range(k)])
+        product = spherical_search(k)
         self.k = k
+        self.dfn = dfn
+        ECcone.__init__(self, mu=spherical_search(self.dfn),
+                        search=search, dfd=dfd, product=product)
 
     def __call__(self, x, search=None):
+        return ECcone.__call__(self, N.sqrt(x * self.dfn), search=search)
 
-        if search is None:
-            search = self.sphere
+class MultilinearForm(ECcone):
+    """
+    Maximize a multivariate Gaussian form, maximized over spheres
+    of dimension *dims. See
+
+    Kuriki, S. & Takemura, A. (2001). '
+    Tail probabilities of the maxima of multilinear forms and
+    their applications.' Ann. Statist. 29(2): 328­371.
+
+    """
+
+    def __init__(self, *dims, **keywords):
+        product = IntrinsicVolumes([1])
+
+        if keywords.has_key('search'):
+            search = keywords['search']
         else:
-            search = IntrinsicVolumes(search) * self.sphere
-        return FStat.__call__(self, x, search=search)
+            search = [1]
+
+        for d in dims:
+            product *= spherical_search(d)
+        product.mu /= 2.**(len(dims)-1)
+
+        ECcone.__init__(self, search=search, product=product)
 
 class Hotelling(ECcone):
     """
@@ -706,22 +731,38 @@ class Hotelling(ECcone):
     """
 
     def __init__(self, dfd=N.inf, k=1, search=[1]):
-        product = spherical_search(k).mu / 2
+        product = spherical_search(k)
         self.k = k
-        ECcone.__init__(self, mu=spherical_search(1), search=search, dfd=dfd, product=product)
+        ECcone.__init__(self, mu=[1], search=search, dfd=dfd, product=product)
 
     def __call__(self, x, search=None):
         return ECcone.__call__(self, N.sqrt(x), search=search)
 
 
-class OneSidedF(FStat):
+class OneSidedF(ECcone):
 
-    def __call__(self, x, dim=0, search=[1]):
-        d1 = FStat.__call__(self, x, dim=dim, search=search)
-        self.dfd -= 1
-        d2 = FStat.__call__(self, x, dim=dim, search=search)
-        self.dfd += 1
-        return (d1 - d2) / 2.
+    """
+
+    EC densities for one-sided F statistic in
+
+    Worsley, K.J. & Taylor, J.E. (2005). 'Detecting fMRI activation
+    allowing for unknown latency of the hemodynamic response.'
+    Neuroimage, 29,649-654.
+
+    """
+
+    def __init__(self, dfn, dfd=N.inf, search=[1]):
+        self.dfn = dfn
+        self.regions = [spherical_search(dfn), spherical_search(dfn-1)]
+        ECcone.__init__(self, mu=spherical_search(self.dfn), search=search, dfd=dfd)
+
+    def __call__(self, x, search=None):
+        IntrinsicVolumes.__init__(self, self.regions[0])
+        d1 = ECcone.__call__(self, N.sqrt(x * self.dfn), search=search)
+        IntrinsicVolumes.__init__(self, self.regions[1])
+        d2 = ECcone.__call__(self, N.sqrt(x * (self.dfn-1)), search=search)
+        self.mu = self.regions[0].mu
+        return (d1 - d2) * 0.5
 
 class ChiBarSquared(ChiSquared):
 
@@ -748,4 +789,39 @@ class ChiBarSquared(ChiSquared):
         else:
             search = IntrinsicVolumes(search) * self.stat
         return FStat.__call__(self, x, dim=dim, search=search)
+
+def scale_space(region, interval, kappa=1.):
+    """
+    Work out intrinsic volumes of region x interval in the
+    scale space model. See
+
+    Siegmund, D.O and Worsley, K.J. (1995). 'Testing for a signal
+    with unknown location and scale in a stationary Gaussian random
+    field.'  Annals of Statistics, 23:608-639.
+
+    and
+
+    Taylor, J.E. & Worsley, K.J. (2005). 'Random fields of multivariate
+    test statistics, with applications to shape analysis and fMRI.'
+
+    (available on http://www.math.mcgill.ca/keith
+
+
+    """
+
+    w1, w2 = interval
+    region = IntrinsicVolumes(region)
+
+    D = region.order
+    out = N.zeros((D+2,), N.float64)
+
+    out[0] = region.mu[0]
+    for i in range(1, D+2):
+        out[i] = (1./w1 + 1./w2) * region.mu[i] * 0.5
+        for j in range(int(N.floor((D-i+1)/2.)+1)):
+            f = (w1**(-i-2*j+1) - w2**(-i-2*j+1)) / (i + 2*j - 1.)
+            f *= kappa**((1-2*j)/2.) * (-1)**j * factorial(i+2*j-1)
+            f /= (1 - 2*j) * (4*N.pi)**j * factorial(j) * factorial(i-1)
+            out[i] += region.mu[i+2*j-1] * f
+    return IntrinsicVolumes(out)
 

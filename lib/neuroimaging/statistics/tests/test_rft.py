@@ -106,7 +106,7 @@ class RFTTest(unittest.TestCase):
         EC density of F with infinite dfd is the same as chi^2 --
         polynomials should be the same.
         """
-        for dim in range(1,10):
+        for dim in range(10):
             for dfn in range(5,10):
                 q1 = rft.FStat(dfn=dfn, dfd=N.inf).quasi(dim)
                 q2 = rft.ChiSquared(dfn=dfn).quasi(dim)
@@ -120,7 +120,7 @@ class RFTTest(unittest.TestCase):
         """
 
         x = N.linspace(0.1,10,100)
-        for dim in range(1,10):
+        for dim in range(10):
             for dfn in range(5,10):
                 c = rft.ChiSquared(dfn=dfn)
                 f = rft.FStat(dfn=dfn, dfd=N.inf)
@@ -149,7 +149,7 @@ class RFTTest(unittest.TestCase):
         """
 
         x = N.linspace(0.1,10,100)
-        for dim in range(1,10):
+        for dim in range(10):
             g = rft.Gaussian()
             c = rft.ChiSquared(dfn=1)
             ec1 = g.density(N.sqrt(x), dim)
@@ -211,35 +211,6 @@ class RFTTest(unittest.TestCase):
             f = rft.FStat(dfd=dfd, dfn=1)
             for dim in range(7):
                 N.testing.assert_almost_equal(t.density(x, dim), f.density(x**2, dim))
-
-    def test_hotelling1(self):
-        """
-        Asymptotically, Hotelling is the same as F which is the same
-        as chi^2.
-        """
-        x = N.linspace(0.1,10,100)
-        for dim in range(1,7):
-            for dfn in range(5,10):
-                h = rft.Hotelling(k=dfn).density(x, dim)
-                f = rft.FStat(dfn=dfn).density(x, dim)
-                N.testing.assert_almost_equal(h, f)
-
-    def test_hotelling2(self):
-        """
-        Marginally, Hotelling is an F field.
-        """
-
-        x = N.linspace(0.1,10,100)
-        for dfn in range(5, 10):
-            for dfd in [40,50]:
-                h = rft.Hotelling(dfd=dfd,k=dfn)(x*dfn)
-                f = scipy.stats.f.sf(x, dfn, dfd)
-                N.testing.assert_almost_equal(h, f)
-
-            h = rft.Hotelling(k=dfn)(x)
-            chi2 = scipy.stats.chi2.sf(x, dfn, dfd)
-            N.testing.assert_almost_equal(h, chi2)
-
 
 
     def test_search3(self):
@@ -384,6 +355,20 @@ class RFTTest(unittest.TestCase):
 
 
 
+    def test_hotelling1(self):
+        """
+        Asymptotically, Hotelling is the same as F which is the same
+        as chi^2.
+        """
+        x = N.linspace(0.1,10,100)
+        for dim in range(7):
+            for dfn in range(5,10):
+                h = rft.Hotelling(k=dfn).density(x*dfn, dim)
+                f = rft.FStat(dfn=dfn).density(x, dim)
+                N.testing.assert_almost_equal(h, f)
+
+
+
     def test_hotelling4(self):
         """
         Hotelling T^2 should just be like taking product with sphere.
@@ -391,10 +376,120 @@ class RFTTest(unittest.TestCase):
         """
 
         x = N.linspace(0.1,10,100)
-        for dim in range(1,7):
+
+        for dim in range(7):
+            search = rft.IntrinsicVolumes([0]*(dim) + [1])
             for k in range(5, 10):
                 p = rft.spherical_search(k)
                 for dfd in [N.inf,40,50]:
-                    t = rft.FStat(dfd=dfd, dfn=1)(x, search=p)
-                    h = rft.Hotelling(k=k, dfd=dfd).density(x, dim)
+                    f = rft.FStat(dfd=dfd, dfn=1)(x, search=p*search)
+                    t = 2*rft.TStat(dfd=dfd)(N.sqrt(x), search=p*search)
+                    h2 = 2*rft.Hotelling(k=k, dfd=dfd).density(x, dim)
+                    h = 2*rft.Hotelling(k=k, dfd=dfd)(x, search=search)
+
                     N.testing.assert_almost_equal(h, t)
+                    N.testing.assert_almost_equal(h, f)
+                    N.testing.assert_almost_equal(h, h2)
+
+        search = rft.IntrinsicVolumes([3,4,5])
+        for k in range(5, 10):
+            p = rft.spherical_search(k)
+            for dfd in [N.inf,40,50]:
+                f = rft.FStat(dfd=dfd, dfn=1)(x, search=p*search)
+                h = 2*rft.Hotelling(k=k, dfd=dfd)(x, search=search)
+
+                h2 = 0
+                for i in range(search.mu.shape[0]):
+                    h2 += 2*rft.Hotelling(k=k, dfd=dfd).density(x, i) * search.mu[i]
+                N.testing.assert_almost_equal(h, f)
+                N.testing.assert_almost_equal(h, h2)
+
+
+    def test_hotelling2(self):
+        """
+        Marginally, Hotelling's T^2(k) with m degrees of freedom
+        in the denominator satisfies
+
+        (m-k+1)/(mk) T^2 \sim  F_{k,m-k+1}.
+        """
+
+        x = N.linspace(0.1,10,100)
+        for dfn in range(6, 10):
+
+            h = rft.Hotelling(k=dfn)(x)
+            chi = rft.ChiSquared(dfn=dfn)(x)
+            N.testing.assert_almost_equal(h, chi)
+            chi2 = scipy.stats.chi2.sf(x, dfn)
+            N.testing.assert_almost_equal(h, chi2)
+
+            p = rft.spherical_search(dfn)
+            for dfd in [40,50]:
+                fac = (dfd-dfn+1.)/(dfd*dfn)
+                h = rft.Hotelling(dfd=dfd,k=dfn)(x/fac)
+                f = scipy.stats.f.sf(x, dfn, dfd-dfn+1)
+                f2 = rft.FStat(dfd=dfd-dfn+1,dfn=dfn)(x)
+                N.testing.assert_almost_equal(f2, f)
+                N.testing.assert_almost_equal(h, f)
+
+
+    def test_roy1(self):
+        """
+        EC densities of Roy with dfn=1 should be twice EC densities
+        of Hotelling T^2's.
+
+        """
+
+        x = N.linspace(0.1,10,100)
+
+        for dfd in [40,50,N.inf]:
+            for k in [1,4,6]:
+                for dim in range(7):
+                    h = 2*rft.Hotelling(dfd=dfd,k=k).density(x, dim)
+                    r = rft.Roy(dfd=dfd,k=k,dfn=1).density(x, dim)
+                    N.testing.assert_almost_equal(h, r)
+
+    def test_onesidedF(self):
+        """
+        EC densities of one sided F should be a difference of
+        F EC densities
+
+        """
+
+        x = N.linspace(0.1,10,100)
+
+        for dfd in [40,50,N.inf]:
+            for dfn in range(2,10):
+                for dim in range(7):
+                    f1 = rft.FStat(dfd=dfd,dfn=dfn).density(x, dim)
+                    f2 = rft.FStat(dfd=dfd,dfn=dfn-1).density(x, dim)
+                    onesided = rft.OneSidedF(dfd=dfd,dfn=dfn).density(x, dim)
+                    N.testing.assert_almost_equal(onesided, 0.5*(f1-f2))
+
+
+    def test_multivariate_forms(self):
+        """
+        MVform with one sphere is sqrt(chi^2), two spheres is sqrt(Roy) with infinite
+        degrees of freedom.
+        """
+
+        x = N.linspace(0.1,10,100)
+        for k1 in range(5,10):
+            m = rft.MultilinearForm(k1)
+            c = rft.ChiSquared(k1)
+
+            for dim in range(7):
+                mx = m.density(x, dim)
+                cx = c.density(x**2, dim)
+                N.testing.assert_almost_equal(mx, cx)
+
+            for k2 in range(5,10):
+                m = rft.MultilinearForm(k1,k2)
+                r = rft.Roy(k=k1, dfn=k2, dfd=N.inf)
+                for dim in range(7):
+                    mx = 2*m.density(x, dim)
+                    rx = r.density(x**2/k2, dim)
+                    N.testing.assert_almost_equal(mx, rx)
+
+    def test_scale(self):
+        a = rft.IntrinsicVolumes([2,3,4])
+        b = rft.scale_space(a, [3,4], kappa=0.5)
