@@ -1,7 +1,6 @@
 import numpy as N
 from numpy.linalg import pinv
 
-from neuroimaging import traits
 import scipy.stats
 from scipy.special import gamma, gammaln, beta, hermitenorm
 from scipy import factorial
@@ -423,13 +422,11 @@ class fnsum:
             v += q(x)
         return v
 
-class IntrinsicVolumes(traits.HasTraits):
+class IntrinsicVolumes:
     """
     A simple class that exists only to compute the intrinsic volumes of
     products of sets (that themselves have intrinsic volumes, of course).
     """
-
-    order = traits.Int(0, desc="Dimension of cone's parameter set, i.e. order of largest non-zero intrinsic volume.")
 
     def __init__(self, mu=[1]):
 
