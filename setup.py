@@ -10,7 +10,7 @@ def main(packages):
 
     packages = ['']+list(packages)
     ext_modules = [Extension('core.image.formats.minc._mincutils',
-                                  [apply(os.path.join, 'lib/neuroimaging/core/image/formats/minc/_mincutils.c'.split('/'))],
+                                  [apply(os.path.join, 'lib/neuroimaging/data_io/formats/minc/_mincutils.c'.split('/'))],
                              extra_link_args=["-lminc"],
                             include_dirs=get_numpy_include_dirs())]
 
