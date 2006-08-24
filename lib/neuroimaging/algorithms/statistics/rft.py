@@ -1,10 +1,8 @@
 import numpy as N
 from numpy.linalg import pinv
 
-import scipy.stats
+from scipy import factorial, stats
 from scipy.special import gamma, gammaln, beta, hermitenorm
-from scipy import factorial
-
 
 def binomial(n, j):
     """
@@ -421,9 +419,9 @@ class ECcone(IntrinsicVolumes):
         if search.mu[0] * self.mu[0] != 0.:
             # tail probability is not "quasi-polynomial"
             if not N.isfinite(self.dfd):
-                P = scipy.stats.norm.sf
+                P = stats.norm.sf
             else:
-                P = lambda x: scipy.stats.t.sf(x, self.dfd)
+                P = lambda x: stats.t.sf(x, self.dfd)
             _rho += P(x) * search.mu[0] * self.mu[0]
         return _rho
 
@@ -431,7 +429,7 @@ class ECcone(IntrinsicVolumes):
         return self(x, search=search)
 
     def integ(self, m=None, k=None):
-        raise NotImplementedError # this could be done with scipy.stats.t,
+        raise NotImplementedError # this could be done with stats.t,
                                   # at least m=1
 
     def density(self, x, dim):
@@ -606,10 +604,9 @@ class MultilinearForm(ECcone):
     Maximize a multivariate Gaussian form, maximized over spheres
     of dimension *dims. See
 
-    Kuriki, S. & Takemura, A. (2001). '
-    Tail probabilities of the maxima of multilinear forms and
-    their applications.' Ann. Statist. 29(2): 328­371.
-
+    Kuri, S. & Takemura, A. (2001).
+    'Tail probabilities of the maxima of multilinear forms and
+    their applications.' Ann, Statist. 29(2): 328-371.
     """
 
     def __init__(self, *dims, **keywords):
@@ -673,7 +670,7 @@ class ChiBarSquared(ChiSquared):
         sf = 0.
         g = Gaussian()
         for i in range(1, self.dfn+1):
-            sf += binomial(self.dfn, i) * scipy.stats.chi.sf(x, i) / N.power(2., self.dfn)
+            sf += binomial(self.dfn, i) * stats.chi.sf(x, i) / N.power(2., self.dfn)
 
         d = N.transpose(N.array([g.density(N.sqrt(x), j) for j in range(self.dfn)]))
         c = N.dot(pinv(d), sf)
@@ -726,4 +723,3 @@ def scale_space(region, interval, kappa=1.):
             f /= (1 - 2*j) * (4*N.pi)**j * factorial(j) * factorial(i-1)
             out[i] += region.mu[i+2*j-1] * f
     return IntrinsicVolumes(out)
-
