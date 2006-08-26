@@ -1,7 +1,6 @@
 
 ## test
 
-from scipy.sandbox.models import formula, contrast
 
 from neuroimaging import traits
 
