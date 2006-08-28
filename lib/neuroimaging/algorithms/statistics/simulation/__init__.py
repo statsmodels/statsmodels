@@ -2,7 +2,7 @@ import gc
 
 from neuroimaging import traits
 
-from neuroimaging.image import Image, roi
+from neuroimaging.core.image import Image, roi
 
 class Simulator(traits.HasTraits):
 

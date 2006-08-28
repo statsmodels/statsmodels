@@ -7,7 +7,7 @@ import numpy as N
 
 import gc
 
-from neuroimaging.image.fwhm import fastFWHM
+from neuroimaging.core.image.fwhm import fastFWHM
 #from BrainSTAT.Simulation import Simulator
 #from BrainSTAT import *
 #from BrainSTAT.Modules.UGRF import UGRF
