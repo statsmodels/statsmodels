@@ -2,5 +2,5 @@
 import sys, os
 print sys.version
 sys.path.insert(0,os.path.join(os.getcwd(),"lib"))
-from neuroimaging.tools.TestTool import TestTool
+from neuroimaging.ui.tools.TestTool import TestTool
 TestTool().run()
