@@ -4,7 +4,7 @@ import numpy as N
 from scipy.sandbox.models.utils import recipr
 from neuroimaging import traits
 
-from neuroimaging.statistics.regression import RegressionOutput
+from neuroimaging.algorithms.statistics.regression import RegressionOutput
 
 class OneSampleResults(traits.HasTraits):
     """

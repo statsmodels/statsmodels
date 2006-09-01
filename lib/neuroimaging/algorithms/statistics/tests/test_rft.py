@@ -1,7 +1,7 @@
 import unittest
 import numpy as N
 import numpy.random as R
-from neuroimaging.statistics import rft
+from neuroimaging.algorithms.statistics import rft
 from scipy.special import gammaln, hermitenorm
 import scipy.stats
 from scipy import factorial

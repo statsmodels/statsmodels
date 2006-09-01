@@ -15,7 +15,7 @@ from neuroimaging.image.fwhm import fastFWHM
 
 from neuroimaging import traits
 
-from neuroimaging.statistics.simulation import ugrf, Simulator
+from neuroimaging.algorithms.statistics.simulation import ugrf, Simulator
 
 class GaussianField(Simulator):
 

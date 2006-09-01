@@ -1,7 +1,7 @@
 import numpy as N
 import numpy.linalg as L
 from neuroimaging import traits
-from neuroimaging.statistics import Model
+from neuroimaging.algorithms.statistics import Model
 
 class NLSModel(Model,traits.HasTraits):
 
