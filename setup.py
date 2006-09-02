@@ -18,8 +18,8 @@ def main(packages):
 
     if not ENTHOUGHT_TRAITS_DEF:
         ext_modules += [Extension('extra.enthought.traits.ctraits',
-                                  [apply(os.path.join, 'lib/neuroimaging/extra/enthought/traits/ctraits.c'.split('/'))])]
-        package_dir['neuroimaging.extra.enthought'] = apply(os.path.join, 'lib/neuroimaging/extra/enthought/'.split('/'))
+                                  [apply(os.path.join, 'lib/neuroimaging.utils/enthought/traits/ctraits.c'.split('/'))])]
+        package_dir['neuroimaging.utils.enthought'] = apply(os.path.join, 'lib/neuroimaging.utils/enthought/'.split('/'))
 
     setup( name = 'neuroimaging',
            version = __version__,
