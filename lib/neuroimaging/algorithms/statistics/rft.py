@@ -1,7 +1,8 @@
 import numpy as N
 from numpy.linalg import pinv
 
-from scipy import factorial, stats
+from scipy import stats
+from scipy.misc import factorial
 from scipy.special import gamma, gammaln, beta, hermitenorm
 
 def binomial(n, j):
@@ -139,10 +140,10 @@ class ECquasi(N.poly1d):
                 self.__dict__[key] = float(val)
             else: raise ValueError, 'expecting multiple of a half, got %f' % val
         elif key == 'm':
-            if float(val) > 0 or val == inf:
+            if float(val) > 0 or val == N.inf:
                 self.__dict__[key] = val
             else: raise ValueError, 'expecting positive float or inf'
-        else: poly1d.__setattr__(self, key, val)
+        else: N.poly1d.__setattr__(self, key, val)
 
     def compatible(self, other):
         """
@@ -311,7 +312,7 @@ class ECquasi(N.poly1d):
                                m=N.inf,
                                exponent=0)
         else:
-            d = selfy.deriv(m=1)
+            d = self.deriv(m=1)
             return d.deriv(m=m-1)
 
 class fnsum:

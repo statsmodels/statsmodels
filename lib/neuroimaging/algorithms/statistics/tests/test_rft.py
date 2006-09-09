@@ -1,33 +1,36 @@
 import unittest
+
 import numpy as N
 import numpy.random as R
-from neuroimaging.algorithms.statistics import rft
 from scipy.special import gammaln, hermitenorm
 import scipy.stats
-from scipy import factorial
+from scipy.misc import factorial
 
-def rho(x, dim, df=N.inf):
-    """
-    EC densities for T and Gaussian (df=inf) random fields.
-    """
+from neuroimaging.algorithms.statistics import rft
 
-    m = df
-
-    if dim > 0:
-        x = N.asarray(x, N.float64)
-        q = Q(dim, dfd=df)(x)
-
-        if N.isfinite(m):
-            q *= N.power(1 + x**2/m, -(m-1)/2.)
-        else:
-            q *= N.exp(-x**2/2)
-
-        return q * N.power(2*N.pi, -(dim+1)/2.)
-    else:
-        if N.isfinite(m):
-            return scipy.stats.t.sf(x, df)
-        else:
-            return scipy.stats.norm.sf(x)
+#def rho(x, dim, df=N.inf):
+#    """
+#    EC densities for T and Gaussian (df=inf) random fields.
+#    """
+#
+#    m = df
+#
+#    if dim > 0:
+#        x = N.asarray(x, N.float64)
+#--jarrod: shouldn't Q be rft.Q??
+#        q = Q(dim, dfd=df)(x)
+#
+#        if N.isfinite(m):
+#            q *= N.power(1 + x**2/m, -(m-1)/2.)
+#        else:
+#            q *= N.exp(-x**2/2)
+#
+#        return q * N.power(2*N.pi, -(dim+1)/2.)
+#    else:
+#        if N.isfinite(m):
+#            return scipy.stats.t.sf(x, df)
+#        else:
+#            return scipy.stats.norm.sf(x)
 
 def K(dim=4, dfn=7, dfd=N.inf):
     """
