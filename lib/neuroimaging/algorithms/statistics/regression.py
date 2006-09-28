@@ -18,6 +18,7 @@ class LinearModelIterator(traits.HasTraits):
     def __init__(self, iterator, outputs=[], **keywords):
         self.iterator = iter(iterator)
         self.outputs = [iter(output) for output in outputs]
+        traits.HasTraits.__init__(self, **keywords)
 
     def model(self, **keywords):
         """
@@ -31,24 +32,25 @@ class LinearModelIterator(traits.HasTraits):
         Go through an iterator, instantiating model and passing data,
         going through outputs.
         """
-
+        tmp = []
         for data in self.iterator:
+            tmp.append(data)
+        for data in tmp: #self.iterator:
             shape = data.shape[1:]
             data = data.reshape(data.shape[0], N.product(shape))
             model = self.model()
 
             results = model.fit(data, **keywords)
-
             for output in self.outputs:
                 out = output.extract(results)
                 if output.nout > 1:
                     out.shape = (output.nout,) + shape
                 else:
                     out.shape = shape
+                iter(output)
                 output.next(data=out)
 
             del(results); gc.collect()
-
 
 class RegressionOutput(traits.HasTraits):
 
