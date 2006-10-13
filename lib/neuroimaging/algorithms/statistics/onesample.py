@@ -170,5 +170,3 @@ class OneSampleIterator(OneSample):
 
             del(results); gc.collect()
 
-class OneSampleOutput(RegressionOutput):
-    pass
