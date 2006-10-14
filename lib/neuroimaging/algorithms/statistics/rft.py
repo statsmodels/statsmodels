@@ -727,9 +727,9 @@ def scale_space(region, interval, kappa=1.):
         for j in range(int(N.floor((D-i+1)/2.)+1)):
             denom = (i + 2*j - 1.)
             if denom == 0:
-              f = N.log(w2/w1) / (w1*w2)
+                f = N.log(w2/w1) / (w1*w2)
             else:
-              f = (w1**(-i-2*j+1) - w2**(-i-2*j+1)) / denom
+                f = (w1**(-i-2*j+1) - w2**(-i-2*j+1)) / denom
             f *= kappa**((1-2*j)/2.) * (-1)**j * factorial(int(denom))
             f /= (1 - 2*j) * (4*N.pi)**j * factorial(j) * factorial(i-1)
             out[i] += region.mu[int(denom)] * f
