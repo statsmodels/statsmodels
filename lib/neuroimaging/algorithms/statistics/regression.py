@@ -62,9 +62,8 @@ class RegressionOutput(traits.HasTraits):
     Tmin = traits.Float(-100.)
     Fmax = traits.Float(100.)
 
-    def __init__(self, iterator, **keywords):
-        self.iterator = iter(iterator)
-        traits.HasTraits.__init__(**keywords)
+    def __init__(self, **keywords):
+        traits.HasTraits.__init__(self, **keywords)
 
     def __iter__(self):
         return self
