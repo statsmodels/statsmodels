@@ -1,5 +1,6 @@
-from neuroimaging.algorithms.statistics import Model
+from scipy.sandbox.models.model import Model
 
 class Classifier(Model):
-    def learn(self, **keywords): self.fit(**keywords)
+    def learn(self, **keywords):
+        self.fit(**keywords)
 
