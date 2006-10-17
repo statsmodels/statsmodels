@@ -118,7 +118,7 @@ class OneSample(traits.HasTraits):
 
         value = OneSampleResults()
         value['mean']['df_resid'] = Y.shape[0] - 1
-        value['mean'['resid'] = (Y - N.multiply.outer(N.ones(Y.shape[0], N.float64), mu)) * N.sqrt(W)
+        value['mean']['resid'] = (Y - N.multiply.outer(N.ones(Y.shape[0], N.float64), mu)) * N.sqrt(W)
 
         if self.use_scale:
             scale = N.add.reduce(N.power(value.resid, 2), 0) / value.df_resid
