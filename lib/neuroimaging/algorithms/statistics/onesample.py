@@ -4,8 +4,6 @@ import numpy as N
 from scipy.sandbox.models.utils import recipr
 from neuroimaging import traits
 
-from neuroimaging.algorithms.statistics.regression import RegressionOutput
-
 class OneSampleResults(traits.HasTraits):
     """
     A container for results from fitting a (weighted) one sample T.
@@ -19,6 +17,9 @@ class OneSampleResults(traits.HasTraits):
     varatio = traits.Any()
     varfix = traits.Any()
 
+    def __init__(self, **keywords):
+        traits.HasTraits.__init__(self, **keywords)
+
 class OneSample(traits.HasTraits):
 
     weight_type = traits.Trait('sd', 'var', 'weight')
@@ -27,8 +28,8 @@ class OneSample(traits.HasTraits):
     niter = traits.Int(10)
     use_scale = traits.true
 
-    def df_resid(self, **keywords):
-        return self._df_resid
+    def __init__(self, **keywords):
+        traits.HasTraits.__init__(self, **keywords)
 
     def estimate_varatio(self, Y, W, df=None):
 
@@ -45,13 +46,14 @@ class OneSample(traits.HasTraits):
 
         Sm = S - N.multiply.outer(N.ones((nsubject,), N.float64), minS)
 
-        for i in range(self.niter):
+        for _ in range(self.niter):
             Sms = Sm + N.multiply.outer(N.ones((nsubject,), N.float64), sigma2)
             W = recipr(Sms)
             Winv = 1. / N.add.reduce(W, axis=0)
             mu = Winv * N.add.reduce(W * Y, axis=0)
             R = W * (Y - N.multiply.outer(N.ones(nsubject), mu))
-            ptrS = 1 + N.add.reduce(Sm * W, 0) - N.add.reduce(Sm * N.power(W, 2), axis=0) * Winv
+            ptrS = 1 + N.add.reduce(Sm * W, 0) - \
+                   N.add.reduce(Sm * N.power(W, 2), axis=0) * Winv
             sigma2 = N.squeeze((sigma2 * ptrS + N.power(sigma2, 2) *
                                 N.add.reduce(N.power(R,2), 0)) / nsubject)
 
@@ -92,7 +94,7 @@ class OneSample(traits.HasTraits):
             W = 1. / W
         return N.asarray(W)
 
-    def estimate_mean(self, Y, W, **keywords):
+    def estimate_mean(self, Y, W):
 
         if Y.ndim == 1:
             Y.shape = (Y.shape[0], 1)
@@ -106,9 +108,8 @@ class OneSample(traits.HasTraits):
             sigma2 = N.asarray(self.varfix * self.varatio)
 
             if sigma2.shape != ():
-                S = recipr(W) + N.multiply.outer(N.ones((nsubject,), N.float64), sigma2)
-            else:
-                S = recipr(W) + sigma2
+                sigma2 = N.multiply.outer(N.ones((nsubject,), N.float64), sigma2)
+            S = recipr(W) + sigma2
             W = recipr(S)
 
 
@@ -168,5 +169,6 @@ class OneSampleIterator(OneSample):
 
                 output.next(data=out)
 
-            del(results); gc.collect()
+            del(results);
+            gc.collect()
 

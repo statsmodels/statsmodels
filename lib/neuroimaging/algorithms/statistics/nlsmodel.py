@@ -1,17 +1,10 @@
 import numpy as N
 import numpy.linalg as L
 from neuroimaging import traits
-from neuroimaging.algorithms.statistics import Model
+#from neuroimaging.algorithms.statistics import Model
+from scipy.sandbox.models.model import Model
 
-class NLSModel(Model,traits.HasTraits):
-
-    Y = traits.Any()
-    design = traits.Any()
-    theta = traits.Any()
-    f = traits.Any()
-    theta = traits.Any()
-    niter = traits.Int(10)
-    initial = traits.Any()
+class NLSModel(Model, traits.HasTraits):
 
     '''
     Class representing a simple nonlinear least squares model.
@@ -21,16 +14,27 @@ class NLSModel(Model,traits.HasTraits):
         design : the design matrix, X
         f : the map between the linear parameters (in the design matrix) and
             the nonlinear parameters (theta)
-        grad : the gradient of f, this should be a function of an nxp design matrix X
-               and qx1 vector theta that returns an nxq matrix df_i/dtheta_j where
+        grad : the gradient of f, this should be a function of an nxp design
+               matrix X and qx1 vector theta that returns an nxq matrix
+               df_i/dtheta_j where
 
                f_i(theta)=f(X[i],theta)
 
-               is the nonlinear response function for the i-th instance in the model.
+               is the nonlinear response function for the i-th instance in
+               the model.
 
     '''
 
+    Y = traits.Any()
+    design = traits.Any()
+    theta = traits.Any()
+    f = traits.Any()
+    theta = traits.Any()
+    niter = traits.Int(10)
+    initial = traits.Any()
+
     def __init__(self, **keywords):
+        Model.__init__(self, **keywords)
         traits.HasTraits.__init__(self, **keywords)
 
     def _Y_changed(self):
