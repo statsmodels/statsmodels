@@ -4,21 +4,22 @@ import numpy as N
 from scipy.sandbox.models.utils import recipr
 from neuroimaging import traits
 
-class OneSampleResults(traits.HasTraits):
+class OneSampleResults(object):
     """
     A container for results from fitting a (weighted) one sample T.
 
     """
-    mu = traits.Any()
-    sd = traits.Any()
-    t = traits.Any()
-    resid = traits.Any()
-    df_resid = traits.Float()
-    varatio = traits.Any()
-    varfix = traits.Any()
 
-    def __init__(self, **keywords):
-        traits.HasTraits.__init__(self, **keywords)
+    def __init__(self):
+        raise NotImplementedError
+        self.values = {'mean': {'mu': None
+                                'sd': None
+                                't': None
+                                'resid': None
+                                'df_resid': None,
+                                'scale': None},
+                       'varatio': {'varatio': None
+                                   'varfix': None}}
 
 class OneSample(traits.HasTraits):
 
@@ -68,18 +69,18 @@ class OneSample(traits.HasTraits):
         S.shape = (S.shape[0], N.product(S.shape[1:]))
 
         value = OneSampleResults()
-        value.varfix = N.dot(df, S) / df.sum()
+        value['varatio']['varfix'] = N.dot(df, S) / df.sum()
 
         S.shape = _Sshape
-        value.varfix.shape = _Sshape[1:]
-        value.varatio = N.nan_to_num(sigma2 / value.varfix)
+        value['varatio']['varfix'].shape = _Sshape[1:]
+        value['varatio']['varatio'] = N.nan_to_num(sigma2 / value.varfix)
         return value
 
-    def fit(self, Y, W, which='mean', **extra):
+    def fit(self, Y, W, which='mean', df=None):
         if which == 'mean':
-            return self.estimate_mean(Y, W, **extra)
+            return self.estimate_mean(Y, W)
         else:
-            return self.estimate_varatio(Y, W, **extra)
+            return self.estimate_varatio(Y, W, df=df)
 
     def get_weights(self, W):
         try:
@@ -116,8 +117,8 @@ class OneSample(traits.HasTraits):
         mu = N.add.reduce(Y * W, 0) / N.add.reduce(W, 0)
 
         value = OneSampleResults()
-        value.df_resid = Y.shape[0] - 1
-        value.resid = (Y - N.multiply.outer(N.ones(Y.shape[0], N.float64), mu)) * N.sqrt(W)
+        value['mean']['df_resid'] = Y.shape[0] - 1
+        value['mean'['resid'] = (Y - N.multiply.outer(N.ones(Y.shape[0], N.float64), mu)) * N.sqrt(W)
 
         if self.use_scale:
             scale = N.add.reduce(N.power(value.resid, 2), 0) / value.df_resid
@@ -125,19 +126,16 @@ class OneSample(traits.HasTraits):
             scale = 1.
         var_total = scale * recipr(N.add.reduce(W, 0))
 
-        value.mu = mu
-        value.sd = N.squeeze(N.sqrt(var_total))
-        value.t = N.squeeze(value.mu * recipr(value.sd))
-        value.scale = N.sqrt(scale)
+        value['mean']['mu'] = mu
+        value['mean']['sd'] = N.squeeze(N.sqrt(var_total))
+        value['mean']['t'] = N.squeeze(value.mu * recipr(value.sd))
+        value['mean']['scale'] = N.sqrt(scale)
 
         return value
 
-class OneSampleIterator(OneSample):
+class OneSampleIterator(object):
 
-    iterator = traits.Any()
-    outputs = traits.List()
-
-    def __init__(self, iterator, outputs=[], **keywords):
+    def __init__(self, iterator, outputs=[]):
         self.iterator = iter(iterator)
         self.outputs = [iter(output) for output in outputs]
 
