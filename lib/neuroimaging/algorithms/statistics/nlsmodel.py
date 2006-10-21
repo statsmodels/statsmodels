@@ -1,10 +1,8 @@
 import numpy as N
 import numpy.linalg as L
-from neuroimaging import traits
-#from neuroimaging.algorithms.statistics import Model
 from scipy.sandbox.models.model import Model
 
-class NLSModel(Model, traits.HasTraits):
+class NLSModel(Model):
 
     '''
     Class representing a simple nonlinear least squares model.
@@ -25,17 +23,18 @@ class NLSModel(Model, traits.HasTraits):
 
     '''
 
-    Y = traits.Any()
-    design = traits.Any()
-    theta = traits.Any()
-    f = traits.Any()
-    theta = traits.Any()
-    niter = traits.Int(10)
-    initial = traits.Any()
+    def __init__(self, Y, design, f, grad, theta, niter=10):
+        Model.__init__(self)
+        self.Y = Y
+        self.design = design
+        self.f = f
+        self.grad = grad
+        self.theta = theta
+        self.niter = niter
+        if self.design is not None and self.Y != None:
+            if self.Y.shape[0] != self.design.shape[0]:
+                raise ValueError, 'Y should be same shape as design'
 
-    def __init__(self, **keywords):
-        Model.__init__(self, **keywords)
-        traits.HasTraits.__init__(self, **keywords)
 
     def _Y_changed(self):
         if self.design is not None:
