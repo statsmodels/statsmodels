@@ -66,8 +66,12 @@ class RegressionOutput(traits.HasTraits):
         traits.HasTraits.__init__(self, **keywords)
 
     def __iter__(self):
-        return self
+        raise NotImplementedError
+
+    def next(self):
+        raise NotImplementedError
 
     def extract(self, results):
-        return 0.
+        raise NotImplementedError
+
 
