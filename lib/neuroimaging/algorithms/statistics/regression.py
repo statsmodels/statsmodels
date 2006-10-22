@@ -46,7 +46,7 @@ class LinearModelIterator(object):
 
             del(results); gc.collect()
 
-class RegressionOutput(traits.HasTraits):
+class RegressionOutput(object):
 
     """
     A generic output for regression. Key feature is that it has
@@ -54,12 +54,11 @@ class RegressionOutput(traits.HasTraits):
     Results.
     """
 
-    Tmax = traits.Float(100.)
-    Tmin = traits.Float(-100.)
-    Fmax = traits.Float(100.)
+    def __init__(self, Tmax=100.0, Tmin=-100.0, Fmax=100.):
+        self.Tmax = Tmax
+        self.Tmin = Tmin
+        self.Fmax = Fmax
 
-    def __init__(self, **keywords):
-        traits.HasTraits.__init__(self, **keywords)
 
     def __iter__(self):
         raise NotImplementedError
