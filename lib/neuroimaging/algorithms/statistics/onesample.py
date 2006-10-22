@@ -12,13 +12,13 @@ class OneSampleResults(object):
 
     def __init__(self):
         raise NotImplementedError
-        self.values = {'mean': {'mu': None
-                                'sd': None
-                                't': None
-                                'resid': None
+        self.values = {'mean': {'mu': None,
+                                'sd': None,
+                                't': None,
+                                'resid': None,
                                 'df_resid': None,
                                 'scale': None},
-                       'varatio': {'varatio': None
+                       'varatio': {'varatio': None,
                                    'varfix': None}}
 
 class OneSample(traits.HasTraits):
