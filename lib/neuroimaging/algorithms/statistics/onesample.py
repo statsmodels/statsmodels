@@ -11,7 +11,6 @@ class OneSampleResults(object):
     """
 
     def __init__(self):
-        raise NotImplementedError
         self.values = {'mean': {'mu': None,
                                 'sd': None,
                                 't': None,
@@ -20,6 +19,12 @@ class OneSampleResults(object):
                                 'scale': None},
                        'varatio': {'varatio': None,
                                    'varfix': None}}
+
+    def __getitem__(self, key):
+        return self.values[key]
+
+    def __setitem__(self, key, val):
+        self.values[key] = val
 
 class OneSample(traits.HasTraits):
 
@@ -121,14 +126,14 @@ class OneSample(traits.HasTraits):
         value['mean']['resid'] = (Y - N.multiply.outer(N.ones(Y.shape[0], N.float64), mu)) * N.sqrt(W)
 
         if self.use_scale:
-            scale = N.add.reduce(N.power(value.resid, 2), 0) / value.df_resid
+            scale = N.add.reduce(N.power(value['mean']['resid'], 2), 0) / value['mean']['df_resid']
         else:
             scale = 1.
         var_total = scale * recipr(N.add.reduce(W, 0))
 
         value['mean']['mu'] = mu
         value['mean']['sd'] = N.squeeze(N.sqrt(var_total))
-        value['mean']['t'] = N.squeeze(value.mu * recipr(value.sd))
+        value['mean']['t'] = N.squeeze(value['mean']['mu'] * recipr(value['mean']['sd']))
         value['mean']['scale'] = N.sqrt(scale)
 
         return value
@@ -156,7 +161,9 @@ class OneSampleIterator(object):
             W = self.weights()
             shape = data.shape[1:]
 
-            results = OneSample.fit(self, data, W, **keywords)
+            os = OneSample()
+            #results = OneSample.fit(self, data, W, **keywords)
+            results = os.fit(data, W, **keywords)
 
             for output in self.outputs:
                 out = output.extract(results)
