@@ -161,9 +161,7 @@ class OneSampleIterator(object):
             W = self.weights()
             shape = data.shape[1:]
 
-            os = OneSample()
-            #results = OneSample.fit(self, data, W, **keywords)
-            results = os.fit(data, W, **keywords)
+            results = OneSample().fit(data, W, **keywords)
 
             for output in self.outputs:
                 out = output.extract(results)
