@@ -8,15 +8,11 @@ import gc
 import numpy as N
 from neuroimaging import traits
 
-class LinearModelIterator(traits.HasTraits):
+class LinearModelIterator(object):
 
-    iterator = traits.Any()
-    outputs = traits.List()
-
-    def __init__(self, iterator, outputs=[], **keywords):
+    def __init__(self, iterator, outputs=[]):
         self.iterator = iter(iterator)
         self.outputs = [iter(output) for output in outputs]
-        traits.HasTraits.__init__(self, **keywords)
 
     def model(self, **keywords):
         """
