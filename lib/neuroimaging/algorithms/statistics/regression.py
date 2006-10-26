@@ -3,8 +3,6 @@ This module provides various regression analysis techniques to model the
 relationship between the dependent and independent variables.
 """
 
-import gc
-
 import numpy as N
 
 class LinearModelIterator(object):
@@ -25,9 +23,7 @@ class LinearModelIterator(object):
         Go through an iterator, instantiating model and passing data,
         going through outputs.
         """
-        tmp = []
-        for data in self.iterator:
-            tmp.append(data)
+        tmp = [data for data in self.iterator]
         for data in tmp:
             shape = data.shape[1:]
             data = data.reshape(data.shape[0], N.product(shape))
@@ -40,10 +36,10 @@ class LinearModelIterator(object):
                     out.shape = (output.nout,) + shape
                 else:
                     out.shape = shape
-                iter(output)
-                output.next(data=out)
 
-            del(results); gc.collect()
+                iter(output)
+                output.set_next(data=out)
+
 
 class RegressionOutput(object):
 

@@ -174,7 +174,7 @@ class OneSampleIterator(object):
                 else:
                     out.shape = shape
 
-                output.next(data=out)
+                output.set_next(data=out)
 
             del(results);
             gc.collect()
