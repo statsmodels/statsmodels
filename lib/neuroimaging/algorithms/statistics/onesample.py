@@ -2,7 +2,6 @@ import gc
 
 import numpy as N
 from scipy.sandbox.models.utils import recipr
-from neuroimaging import traits
 
 class OneSampleResults(object):
     """
@@ -26,16 +25,17 @@ class OneSampleResults(object):
     def __setitem__(self, key, val):
         self.values[key] = val
 
-class OneSample(traits.HasTraits):
+class OneSample(object):
 
-    weight_type = traits.Trait('sd', 'var', 'weight')
-    varatio = traits.Trait(traits.Any())
-    varfix = traits.Trait(traits.Any())
-    niter = traits.Int(10)
-    use_scale = traits.true
 
-    def __init__(self, **keywords):
-        traits.HasTraits.__init__(self, **keywords)
+    def __init__(self, use_scale=True, niter=10, weight_type='sd', **keywords):
+        if weight_type in ['sd', 'var', 'weight']:
+            self.weight_type = weight_type
+        else:
+            raise ValueError, "Weight type must be one of ['sd', 'var', 'weight']"
+        self.use_scale = use_scale
+        self.niter = niter
+        self.value = OneSampleResults()
 
     def estimate_varatio(self, Y, W, df=None):
 
@@ -73,13 +73,13 @@ class OneSample(traits.HasTraits):
         _Sshape = S.shape
         S.shape = (S.shape[0], N.product(S.shape[1:]))
 
-        value = OneSampleResults()
-        value['varatio']['varfix'] = N.dot(df, S) / df.sum()
+
+        self.value['varatio']['varfix'] = N.dot(df, S) / df.sum()
 
         S.shape = _Sshape
-        value['varatio']['varfix'].shape = _Sshape[1:]
-        value['varatio']['varatio'] = N.nan_to_num(sigma2 / value.varfix)
-        return value
+        self.value['varatio']['varfix'].shape = _Sshape[1:]
+        self.value['varatio']['varatio'] = N.nan_to_num(sigma2 / value.varfix)
+        return self.value
 
     def fit(self, Y, W, which='mean', df=None):
         if which == 'mean':
@@ -110,8 +110,8 @@ class OneSample(traits.HasTraits):
 
         nsubject = Y.shape[0]
 
-        if self.varfix is not None:
-            sigma2 = N.asarray(self.varfix * self.varatio)
+        if self.value['varatio']['varfix'] is not None:
+            sigma2 = N.asarray(self['varatio']['varfix'] * self['varatio']['varatio'])
 
             if sigma2.shape != ():
                 sigma2 = N.multiply.outer(N.ones((nsubject,), N.float64), sigma2)
@@ -121,22 +121,21 @@ class OneSample(traits.HasTraits):
 
         mu = N.add.reduce(Y * W, 0) / N.add.reduce(W, 0)
 
-        value = OneSampleResults()
-        value['mean']['df_resid'] = Y.shape[0] - 1
-        value['mean']['resid'] = (Y - N.multiply.outer(N.ones(Y.shape[0], N.float64), mu)) * N.sqrt(W)
+        self.value['mean']['df_resid'] = Y.shape[0] - 1
+        self.value['mean']['resid'] = (Y - N.multiply.outer(N.ones(Y.shape[0], N.float64), mu)) * N.sqrt(W)
 
         if self.use_scale:
-            scale = N.add.reduce(N.power(value['mean']['resid'], 2), 0) / value['mean']['df_resid']
+            scale = N.add.reduce(N.power(self.value['mean']['resid'], 2), 0) / self.value['mean']['df_resid']
         else:
             scale = 1.
         var_total = scale * recipr(N.add.reduce(W, 0))
 
-        value['mean']['mu'] = mu
-        value['mean']['sd'] = N.squeeze(N.sqrt(var_total))
-        value['mean']['t'] = N.squeeze(value['mean']['mu'] * recipr(value['mean']['sd']))
-        value['mean']['scale'] = N.sqrt(scale)
+        self.value['mean']['mu'] = mu
+        self.value['mean']['sd'] = N.squeeze(N.sqrt(var_total))
+        self.value['mean']['t'] = N.squeeze(self.value['mean']['mu'] * recipr(self.value['mean']['sd']))
+        self.value['mean']['scale'] = N.sqrt(scale)
 
-        return value
+        return self.value
 
 class OneSampleIterator(object):
 
