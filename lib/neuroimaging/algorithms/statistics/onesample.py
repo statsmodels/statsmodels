@@ -27,12 +27,12 @@ class OneSampleResults(object):
 
 class OneSample(object):
 
-
-    def __init__(self, use_scale=True, niter=10, weight_type='sd', **keywords):
+    def __init__(self, use_scale=True, niter=10, weight_type='sd'):
         if weight_type in ['sd', 'var', 'weight']:
             self.weight_type = weight_type
         else:
-            raise ValueError, "Weight type must be one of ['sd', 'var', 'weight']"
+            raise ValueError, "Weight type must be one of " \
+                  "['sd', 'var', 'weight']"
         self.use_scale = use_scale
         self.niter = niter
         self.value = OneSampleResults()
@@ -78,7 +78,8 @@ class OneSample(object):
 
         S.shape = _Sshape
         self.value['varatio']['varfix'].shape = _Sshape[1:]
-        self.value['varatio']['varatio'] = N.nan_to_num(sigma2 / value.varfix)
+        self.value['varatio']['varatio'] = \
+                         N.nan_to_num(sigma2 / self.value['varatio']['varfix'])
         return self.value
 
     def fit(self, Y, W, which='mean', df=None):
@@ -111,7 +112,8 @@ class OneSample(object):
         nsubject = Y.shape[0]
 
         if self.value['varatio']['varfix'] is not None:
-            sigma2 = N.asarray(self['varatio']['varfix'] * self['varatio']['varatio'])
+            sigma2 = N.asarray(self['varatio']['varfix'] *
+                               self['varatio']['varatio'])
 
             if sigma2.shape != ():
                 sigma2 = N.multiply.outer(N.ones((nsubject,), N.float64), sigma2)
@@ -122,17 +124,20 @@ class OneSample(object):
         mu = N.add.reduce(Y * W, 0) / N.add.reduce(W, 0)
 
         self.value['mean']['df_resid'] = Y.shape[0] - 1
-        self.value['mean']['resid'] = (Y - N.multiply.outer(N.ones(Y.shape[0], N.float64), mu)) * N.sqrt(W)
+        self.value['mean']['resid'] = \
+          (Y - N.multiply.outer(N.ones(Y.shape[0], N.float64), mu)) * N.sqrt(W)
 
         if self.use_scale:
-            scale = N.add.reduce(N.power(self.value['mean']['resid'], 2), 0) / self.value['mean']['df_resid']
+            scale = N.add.reduce(N.power(self.value['mean']['resid'], 2), 0) / \
+                    self.value['mean']['df_resid']
         else:
             scale = 1.
         var_total = scale * recipr(N.add.reduce(W, 0))
 
         self.value['mean']['mu'] = mu
         self.value['mean']['sd'] = N.squeeze(N.sqrt(var_total))
-        self.value['mean']['t'] = N.squeeze(self.value['mean']['mu'] * recipr(self.value['mean']['sd']))
+        self.value['mean']['t'] = N.squeeze(self.value['mean']['mu'] *
+                                            recipr(self.value['mean']['sd']))
         self.value['mean']['scale'] = N.sqrt(scale)
 
         return self.value
