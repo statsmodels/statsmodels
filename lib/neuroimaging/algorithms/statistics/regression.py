@@ -28,7 +28,7 @@ class LinearModelIterator(object):
         tmp = []
         for data in self.iterator:
             tmp.append(data)
-        for data in tmp: #self.iterator:
+        for data in tmp:
             shape = data.shape[1:]
             data = data.reshape(data.shape[0], N.product(shape))
             model = self.model()
