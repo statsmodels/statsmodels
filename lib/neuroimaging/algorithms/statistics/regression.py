@@ -6,7 +6,6 @@ relationship between the dependent and independent variables.
 import gc
 
 import numpy as N
-from neuroimaging import traits
 
 class LinearModelIterator(object):
 
@@ -54,11 +53,8 @@ class RegressionOutput(object):
     Results.
     """
 
-    def __init__(self, Tmax=100.0, Tmin=-100.0, Fmax=100.):
-        self.Tmax = Tmax
-        self.Tmin = Tmin
-        self.Fmax = Fmax
-
+    def __init__(self):
+        pass
 
     def __iter__(self):
         raise NotImplementedError
