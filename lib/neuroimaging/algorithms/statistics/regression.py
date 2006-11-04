@@ -49,16 +49,29 @@ class RegressionOutput(object):
     Results.
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, grid, nout=1):
+        self.grid = grid
+        self.nout = nout
+        self.img = NotImplemented
+
+    def sync_grid(self, img=None):
+        """
+        Synchronize an image's grid iterator to self.grid's iterator.
+        """
+        if img is None:
+            img = self.img
+        img.grid._iterguy = self.grid._iterguy
+        iter(img)
 
     def __iter__(self):
-        raise NotImplementedError
+        iter(self.img)
+        return self
 
     def next(self):
-        raise NotImplementedError
+        return self.img.next()
+
+    def set_next(self, data):
+        self.img.set_next(data)
 
     def extract(self, results):
         raise NotImplementedError
-
-
