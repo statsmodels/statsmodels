@@ -60,7 +60,7 @@ class RegressionOutput(object):
         """
         if img is None:
             img = self.img
-        img.grid._iterguy = self.grid._iterguy
+        img.grid.copy_iter(self.grid)
         iter(img)
 
     def __iter__(self):
