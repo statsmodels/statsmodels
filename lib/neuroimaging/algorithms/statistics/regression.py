@@ -2,8 +2,11 @@
 This module provides various regression analysis techniques to model the
 relationship between the dependent and independent variables.
 """
+import os
 
 import numpy as N
+
+from neuroimaging.core.image.image import Image
 
 class LinearModelIterator(object):
 
@@ -49,9 +52,13 @@ class RegressionOutput(object):
     Results.
     """
 
-    def __init__(self, grid, nout=1):
+    def __init__(self, grid, nout=1, outgrid=None):
         self.grid = grid
         self.nout = nout
+        if outgrid is not None:
+            self.outgrid = outgrid
+        else:
+            self.outgrid = grid
         self.img = NotImplemented
 
     def sync_grid(self, img=None):
@@ -75,3 +82,12 @@ class RegressionOutput(object):
 
     def extract(self, results):
         raise NotImplementedError
+
+    def _setup_img(self, clobber, outdir, ext, basename):
+        if not os.path.exists(outdir):
+            os.makedirs(outdir)
+
+        outname = os.path.join(outdir, '%s%s' % (basename, ext))
+        img = Image(outname, mode='w', grid=self.outgrid, clobber=clobber)
+        self.sync_grid(img=img)
+        return img
