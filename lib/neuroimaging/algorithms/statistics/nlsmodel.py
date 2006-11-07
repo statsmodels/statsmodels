@@ -4,26 +4,29 @@ from scipy.sandbox.models.model import Model
 
 class NLSModel(Model):
 
-    '''
+    """
     Class representing a simple nonlinear least squares model.
-    Its arguments are:
-
-        Y : the data in the NLS model
-        design : the design matrix, X
-        f : the map between the linear parameters (in the design matrix) and
-            the nonlinear parameters (theta)
-        grad : the gradient of f, this should be a function of an nxp design
-               matrix X and qx1 vector theta that returns an nxq matrix
-               df_i/dtheta_j where
-
-               f_i(theta)=f(X[i],theta)
-
-               is the nonlinear response function for the i-th instance in
-               the model.
-
-    '''
+    """
 
     def __init__(self, Y, design, f, grad, theta, niter=10):
+        """
+        @param Y: the data in the NLS model
+        @param design: the design matrix, X
+        @param f: the map between the linear parameters (in the design matrix) and
+            the nonlinear parameters (theta)
+        @param grad: the gradient of f, this should be a function of an nxp design
+            matrix X and qx1 vector theta that returns an nxq matrix
+            df_i/dtheta_j where
+
+            f_i(theta)=f(X[i],theta)
+
+            is the nonlinear response function for the i-th instance in
+            the model.
+
+        """
+
+
+
         Model.__init__(self)
         self.Y = Y
         self.design = design
