@@ -9,10 +9,11 @@ from neuroimaging import packages, __version__, __doc__, ENTHOUGHT_TRAITS_DEF
 def main(packages):
 
     packages = ['']+list(packages)
-    ext_modules = [Extension('data_io.formats.minc._mincutils',
-      [join(*('lib/neuroimaging/data_io/formats/minc/_mincutils.c'.split('/')))],
-      extra_link_args=["-lminc"],
-      include_dirs=get_numpy_include_dirs())]
+#    ext_modules = [Extension('data_io.formats.minc._mincutils',
+#      [join(*('lib/neuroimaging/data_io/formats/minc/_mincutils.c'.split('/')))],
+#      extra_link_args=["-lminc"],
+#     include_dirs=get_numpy_include_dirs())]
+    ext_modules = []
 
     package_dir = {'': 'lib'}
 
