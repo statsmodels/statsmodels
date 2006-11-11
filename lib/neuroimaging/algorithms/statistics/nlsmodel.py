@@ -81,5 +81,5 @@ class NLSModel(Model):
             self.theta = N.dot(Zpinv, self.Y - self._omega)
         else:
             raise StopIteration
-        self._iter = self._iter + 1
+        self._iter += 1
 
