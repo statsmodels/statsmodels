@@ -55,7 +55,7 @@ class NLSModel(Model):
     def getomega(self):
         self._omega = self.predict() - N.dot(self._Z, self.theta)
 
-    def predict(self, design=None, **keywords):
+    def predict(self, design=None):
         if design is None:
             design = self.design
         return self.f(design, self.theta)

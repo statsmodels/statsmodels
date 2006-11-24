@@ -31,8 +31,7 @@ class LinearModelIterator(object):
             shape = data.shape[1:]
             data = data.reshape(data.shape[0], N.product(shape))
             model = self.model()
-
-            results = model.fit(data, **keywords)
+            results = model.fit(data)
             for output in self.outputs:
                 out = output.extract(results)
                 if output.nout > 1:
