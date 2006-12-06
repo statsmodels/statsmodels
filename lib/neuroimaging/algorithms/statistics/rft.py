@@ -59,7 +59,7 @@ class ECquasi(N.poly1d):
 
     (1 + x^2/m)^-exponent
 
-    where m is a non-negative float (possibly infinity, in which the
+    where m is a non-negative float (possibly infinity, in which case the
     function is a polynomial) and exponent is a non-negative multiple of 1/2.
 
     These arise often in the EC densities.
@@ -714,30 +714,19 @@ def scale_space(region, interval, kappa=1.):
 
     D = region.order
 
-# Jonathan -- please check that this makes sense,
-# since, self.order = self.mu.shape[0]-1, I am changing
-# D+2 to D+1 below
-#    out = N.zeros((D+2,), N.float64)
-    out = N.zeros((D+1,), N.float64)
+    out = N.zeros((D+2,), N.float64)
 
     out[0] = region.mu[0]
-    #for i in range(1, D+2):
-    for i in range(1, D+1):
-        out[i] = (1./w1 + 1./w2) * region.mu[i] * 0.5
+    for i in range(1, D+2):
+	if i < D+1:
+	    out[i] = (1./w1 + 1./w2) * region.mu[i] * 0.5
         for j in range(int(N.floor((D-i+1)/2.)+1)):
             denom = (i + 2*j - 1.)
             if denom == 0:
-                f = N.log(w2/w1) / (w1*w2)
+                f = N.log(w2/w1)
             else:
                 f = (w1**(-i-2*j+1) - w2**(-i-2*j+1)) / denom
             f *= kappa**((1-2*j)/2.) * (-1)**j * factorial(int(denom))
             f /= (1 - 2*j) * (4*N.pi)**j * factorial(j) * factorial(i-1)
             out[i] += region.mu[int(denom)] * f
-#   Jonathan -- please check that the above is OK.  Jarrod basically modified it
-#   to handle the case where denom is 0 according to the Taylor paper
-#   cited above.
-#            f = (w1**(-i-2*j+1) - w2**(-i-2*j+1)) / (i + 2*j - 1.)
-#            f *= kappa**((1-2*j)/2.) * (-1)**j * factorial(i+2*j-1)
-#            f /= (1 - 2*j) * (4*N.pi)**j * factorial(j) * factorial(i-1)
-#            out[i] += region.mu[i+2*j-1] * f
     return IntrinsicVolumes(out)
