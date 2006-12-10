@@ -64,7 +64,7 @@ class RegressionOutput(object):
         Synchronize an image's grid iterator to self.grid's iterator.
         """
         if self.it is None:
-            return img.slices('w')
+            return img.slice_iterator('w')
         else:
             return self.it.copy(img)
 
