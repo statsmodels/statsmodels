@@ -65,19 +65,19 @@ class ECquasi(N.poly1d):
     These arise often in the EC densities.
 
     >>> import numpy
+    >>> from neuroimaging.algorithms.statistics.rft import ECquasi
     >>> x = numpy.linspace(0,1,101)
 
     >>> a = ECquasi([3,4,5])
     >>> a
     ECquasi([3, 4, 5],m=inf, exponent=0.000000)
-    >>> a(3) == 3**2+1
+    >>> a(3) == 3*3**2 + 4*3 + 5
     True
 
     >>> b = ECquasi(a.coeffs, m=30, exponent=4)
     >>> numpy.allclose(b(x), a(x) * numpy.power(1+x**2/30, -4))
     True
-
-
+    >>>
     """
 
 
@@ -121,6 +121,7 @@ class ECquasi(N.poly1d):
         1.10000000e+00,   0.00000000e+00,   1.00000000e+00],m=30.000000, exponent=7.000000)
         >>> numpy.allclose(c(x), b(x))
         True
+        >>>
         """
 
         if N.isfinite(self.m):
@@ -158,10 +159,12 @@ class ECquasi(N.poly1d):
         >>> d = ECquasi([3,4,20])
         >>> b.compatible(d)
         False
+        >>>
         """
 
         if self.m != other.m:
-            raise ValueError, 'quasi polynomials are not compatible, m disagrees'
+            #raise ValueError, 'quasi polynomials are not compatible, m disagrees'
+            return False
         return True
 
     def __add__(self, other):
@@ -176,6 +179,7 @@ class ECquasi(N.poly1d):
         >>> d = ECquasi([1], m=30, exponent=3)
         >>> b+d
         ECquasi([  3.03333333,   4.        ,  21.        ],m=30.000000, exponent=4.000000)
+        >>>
         """
 
         other = ECquasi(other)
@@ -202,6 +206,7 @@ class ECquasi(N.poly1d):
         >>> c=ECquasi([1,2], m=30, exponent=4.5)
         >>> b*c
         ECquasi([ 3, 10, 28, 40],m=30.000000, exponent=8.500000)
+        >>>
         """
 
         if N.isscalar(other):
@@ -225,12 +230,13 @@ class ECquasi(N.poly1d):
         >>> a = ECquasi([3,4,5])
         >>> a
         ECquasi([3, 4, 5],m=inf, exponent=0.000000)
-        >>> a(3) == 3**2+1
+        >>> a(3) == 3*3**2 + 4*3 + 5
         True
 
         >>> b = ECquasi(a.coeffs, m=30, exponent=4)
         >>> numpy.allclose(b(x), a(x) * numpy.power(1+x**2/30, -4))
         True
+        >>>
         """
 
         n = N.poly1d.__call__(self, val)
@@ -267,10 +273,11 @@ class ECquasi(N.poly1d):
 
         >>> b = ECquasi([3,4,20], m=30, exponent=4)
         >>> c = ECquasi([1,2], m=30, exponent=4)
-        >>> b-c
+        >>> print b-c
         ECquasi([ 3,  3, 18],m=30.000000, exponent=4.000000)
-
+        >>>
         """
+        return self + (other * -1)
 
     def __repr__(self):
         vals = repr(self.coeffs)
@@ -296,6 +303,7 @@ class ECquasi(N.poly1d):
         >>> b = ECquasi([3,4,5],m=10, exponent=3)
         >>> b.deriv()
         ECquasi([-1.2, -2. ,  3. ,  4. ],m=10.000000, exponent=4.000000)
+        >>>
         """
 
         if m == 1:
