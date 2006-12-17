@@ -730,6 +730,8 @@ def scale_space(region, interval, kappa=1.):
 	    out[i] = (1./w1 + 1./w2) * region.mu[i] * 0.5
         for j in range(int(N.floor((D-i+1)/2.)+1)):
             denom = (i + 2*j - 1.)
+            # w^-i/i when i=0
+            # according to Keith Worsley the 2005 paper has a typo
             if denom == 0:
                 f = N.log(w2/w1)
             else:
