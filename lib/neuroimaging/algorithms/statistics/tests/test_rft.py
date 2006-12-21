@@ -1,5 +1,7 @@
 import unittest
 
+from neuroimaging.utils.test_decorators import slow
+
 import numpy as N
 import numpy.random as R
 from scipy.special import gammaln, hermitenorm
@@ -211,6 +213,7 @@ class RFTTest(unittest.TestCase):
                 N.testing.assert_almost_equal(q1.c, q2.c)
 
 
+    @slow
     def test_chi1(self):
         """
         EC density of F with infinite dfd is the same as chi^2 --
@@ -361,7 +364,7 @@ class RFTTest(unittest.TestCase):
                 N.testing.assert_almost_equal(y, z)
 
 
-
+    @slow
     def test_search1(self):
         """
         Test that the search region works.
@@ -440,6 +443,7 @@ class RFTTest(unittest.TestCase):
 
 
 
+    @slow
     def test_hotelling4(self):
         """
         Hotelling T^2 should just be like taking product with sphere.
@@ -503,6 +507,7 @@ class RFTTest(unittest.TestCase):
                 N.testing.assert_almost_equal(h, f)
 
 
+    @slow
     def test_roy1(self):
         """
         EC densities of Roy with dfn=1 should be twice EC densities
@@ -519,6 +524,7 @@ class RFTTest(unittest.TestCase):
                     r = rft.Roy(dfd=dfd,k=k,dfn=1).density(x, dim)
                     N.testing.assert_almost_equal(h, r)
 
+    @slow
     def test_onesidedF(self):
         """
         EC densities of one sided F should be a difference of
@@ -537,6 +543,7 @@ class RFTTest(unittest.TestCase):
                     N.testing.assert_almost_equal(onesided, 0.5*(f1-f2))
 
 
+    @slow
     def test_multivariate_forms(self):
         """
         MVform with one sphere is sqrt(chi^2), two spheres is sqrt(Roy) with infinite
@@ -575,6 +582,7 @@ class RFTTest(unittest.TestCase):
                     f2 = F_alternative(x, dim, dfn=dfn, dfd=dfd)
                     N.testing.assert_almost_equal(f1, f2)
 
+    @slow
     def test_F2(self):
         x = N.linspace(0.1,10,100)
         for dim in range(3,7):
@@ -584,6 +592,7 @@ class RFTTest(unittest.TestCase):
                     f2 = F_alternative(x, dim, dfn=dfn, dfd=dfd)
                     N.testing.assert_almost_equal(f1, f2)
 
+    @slow
     def test_F3(self):
         x = N.linspace(0.1,10,100)
         for dim in range(3,7):
