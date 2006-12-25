@@ -681,8 +681,8 @@ class ChiBarSquared(ChiSquared):
         for i in range(1, self.dfn+1):
             sf += binomial(self.dfn, i) * stats.chi.sf(x, i) / N.power(2., self.dfn)
 
-        d = N.transpose(N.array([g.density(N.sqrt(x), j) for j in range(self.dfn)]))
-        c = N.dot(pinv(d), sf)
+        d = N.array([g.density(N.sqrt(x), j) for j in range(self.dfn)])
+        c = N.dot(pinv(d.T), sf)
         sf += 1. / N.power(2, self.dfn)
         self.mu = IntrinsicVolumes(c)
 
