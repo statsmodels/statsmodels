@@ -49,8 +49,8 @@ class RegressionOutput(object):
     Results.
     """
 
-    def __init__(self, it, grid, nout=1, outgrid=None):
-        self.it = it
+    def __init__(self, grid, nout=1, outgrid=None):
+        self.it = None
         self.grid = grid
         self.nout = nout
         if outgrid is not None:
