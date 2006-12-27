@@ -50,10 +50,10 @@ class OneSample(object):
 
         minS = N.minimum.reduce(S, 0) * Sreduction
 
-        Sm = S - N.multiply.outer(N.ones((nsubject,), N.float64), minS)
+        Sm = S - N.multiply.outer(N.ones((nsubject,)), minS)
 
         for _ in range(self.niter):
-            Sms = Sm + N.multiply.outer(N.ones((nsubject,), N.float64), sigma2)
+            Sms = Sm + N.multiply.outer(N.ones((nsubject,)), sigma2)
             W = recipr(Sms)
             Winv = 1. / N.add.reduce(W, axis=0)
             mu = Winv * N.add.reduce(W * Y, axis=0)
@@ -66,7 +66,7 @@ class OneSample(object):
         sigma2 = sigma2 - minS
 
         if df is None:
-            df = N.ones((nsubject,), N.float64)
+            df = N.ones((nsubject,))
 
         df.shape = (1, nsubject)
 
@@ -116,7 +116,7 @@ class OneSample(object):
                                self['varatio']['varatio'])
 
             if sigma2.shape != ():
-                sigma2 = N.multiply.outer(N.ones((nsubject,), N.float64), sigma2)
+                sigma2 = N.multiply.outer(N.ones((nsubject,)), sigma2)
             S = recipr(W) + sigma2
             W = recipr(S)
 
@@ -125,7 +125,7 @@ class OneSample(object):
 
         self.value['mean']['df_resid'] = Y.shape[0] - 1
         self.value['mean']['resid'] = \
-          (Y - N.multiply.outer(N.ones(Y.shape[0], N.float64), mu)) * N.sqrt(W)
+          (Y - N.multiply.outer(N.ones(Y.shape[0]), mu)) * N.sqrt(W)
 
         if self.use_scale:
             scale = N.add.reduce(N.power(self.value['mean']['resid'], 2), 0) / \

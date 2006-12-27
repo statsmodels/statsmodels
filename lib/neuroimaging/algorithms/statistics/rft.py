@@ -355,7 +355,7 @@ class IntrinsicVolumes:
         if not isinstance(other, IntrinsicVolumes):
             raise ValueError, 'expecting an IntrinsicVolumes instance'
         order = self.order + other.order + 1
-        mu = N.zeros(order, N.float64)
+        mu = N.zeros(order)
 
         for i in range(order):
             for j in range(i+1):
@@ -551,7 +551,7 @@ def volume2ball(vol, d=3):
     """
 
     if d > 0:
-        mu = N.zeros((d+1,), N.float64)
+        mu = N.zeros((d+1,))
         r = N.power(vol * 1. / mu_ball(d, d), 1./d)
         return ball_search(d, r=r)
     else:
@@ -722,7 +722,7 @@ def scale_space(region, interval, kappa=1.):
 
     D = region.order
 
-    out = N.zeros((D+2,), N.float64)
+    out = N.zeros((D+2,))
 
     out[0] = region.mu[0]
     for i in range(1, D+2):

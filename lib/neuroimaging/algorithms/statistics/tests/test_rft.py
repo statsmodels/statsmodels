@@ -132,7 +132,7 @@ def polyF(dim, dfd=N.inf, dfn=1):
 
     # Now, turn it into a polynomial of x when evaluated at x**2
 
-    C = N.zeros((2*c.shape[0]-1,), N.float64)
+    C = N.zeros((2*c.shape[0]-1,))
 
     for i in range(c.shape[0]):
         C[2*i] = c[i]
