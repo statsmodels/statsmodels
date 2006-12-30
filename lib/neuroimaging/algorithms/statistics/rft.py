@@ -181,8 +181,6 @@ class ECquasi(N.poly1d):
         ECquasi([  3.03333333,   4.        ,  21.        ],m=30.000000, exponent=4.000000)
         >>>
         """
-
-        other = ECquasi(other)
         if self.compatible(other):
             if N.isfinite(self.m):
                 M = max(self.exponent, other.exponent)
