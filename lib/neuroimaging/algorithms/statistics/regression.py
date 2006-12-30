@@ -50,7 +50,6 @@ class RegressionOutput(object):
     """
 
     def __init__(self, grid, nout=1, outgrid=None):
-        self.it = None
         self.grid = grid
         self.nout = nout
         if outgrid is not None:
@@ -58,15 +57,7 @@ class RegressionOutput(object):
         else:
             self.outgrid = grid
         self.img = NotImplemented
-
-    def sync_grid(self, img):
-        """
-        Synchronize an image's grid iterator to self.grid's iterator.
-        """
-        if self.it is None:
-            return img.slice_iterator('w')
-        else:
-            return self.it.copy(img)
+        self.it = NotImplemented
 
     def __iter__(self):
         iter(self.it)
@@ -87,5 +78,5 @@ class RegressionOutput(object):
 
         outname = os.path.join(outdir, '%s%s' % (basename, ext))
         img = Image(outname, mode='w', grid=self.outgrid, clobber=clobber)
-        it = self.sync_grid(img)
+        it = img.slice_iterator('w')
         return img, it
