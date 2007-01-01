@@ -37,51 +37,6 @@ class OneSample(object):
         self.niter = niter
         self.value = OneSampleResults()
 
-    def estimate_varatio(self, Y, W, df=None):
-
-        Sreduction = 0.99
-        S = 1. / W
-
-        nsubject = Y.shape[0]
-        df_resid = nsubject - 1
-
-        R = Y - N.multiply.outer(N.ones(Y.shape[0]), N.mean(Y, axis=0))
-        sigma2 = N.squeeze(N.add.reduce(N.power(R, 2), axis=0) / df_resid)
-
-        minS = N.minimum.reduce(S, 0) * Sreduction
-
-        Sm = S - N.multiply.outer(N.ones((nsubject,)), minS)
-
-        for _ in range(self.niter):
-            Sms = Sm + N.multiply.outer(N.ones((nsubject,)), sigma2)
-            W = recipr(Sms)
-            Winv = 1. / N.add.reduce(W, axis=0)
-            mu = Winv * N.add.reduce(W * Y, axis=0)
-            R = W * (Y - N.multiply.outer(N.ones(nsubject), mu))
-            ptrS = 1 + N.add.reduce(Sm * W, 0) - \
-                   N.add.reduce(Sm * N.power(W, 2), axis=0) * Winv
-            sigma2 = N.squeeze((sigma2 * ptrS + N.power(sigma2, 2) *
-                                N.add.reduce(N.power(R,2), 0)) / nsubject)
-
-        sigma2 = sigma2 - minS
-
-        if df is None:
-            df = N.ones((nsubject,))
-
-        df.shape = (1, nsubject)
-
-        _Sshape = S.shape
-        S.shape = (S.shape[0], N.product(S.shape[1:]))
-
-
-        self.value['varatio']['varfix'] = N.dot(df, S) / df.sum()
-
-        S.shape = _Sshape
-        self.value['varatio']['varfix'].shape = _Sshape[1:]
-        self.value['varatio']['varatio'] = \
-                         N.nan_to_num(sigma2 / self.value['varatio']['varfix'])
-        return self.value
-
     def fit(self, Y, W, which='mean', df=None):
         if which == 'mean':
             return self.estimate_mean(Y, W)
@@ -142,11 +97,62 @@ class OneSample(object):
 
         return self.value
 
+    def estimate_varatio(self, Y, W, df=None):
+
+        Sreduction = 0.99
+        S = 1. / W
+
+        nsubject = Y.shape[0]
+        df_resid = nsubject - 1
+
+        R = Y - N.multiply.outer(N.ones(Y.shape[0]), N.mean(Y, axis=0))
+        sigma2 = N.squeeze(N.add.reduce(N.power(R, 2), axis=0) / df_resid)
+
+        minS = N.minimum.reduce(S, 0) * Sreduction
+
+        Sm = S - N.multiply.outer(N.ones(nsubject), minS)
+
+        for _ in range(self.niter):
+            Sms = Sm + N.multiply.outer(N.ones(nsubject), sigma2)
+            W = recipr(Sms)
+            Winv = 1. / N.add.reduce(W, axis=0)
+            mu = Winv * N.add.reduce(W * Y, axis=0)
+            R = W * (Y - N.multiply.outer(N.ones(nsubject), mu))
+            ptrS = 1 + N.add.reduce(Sm * W, 0) - \
+                   N.add.reduce(Sm * N.power(W, 2), axis=0) * Winv
+            sigma2 = N.squeeze((sigma2 * ptrS + N.power(sigma2, 2) *
+                                N.add.reduce(N.power(R,2), 0)) / nsubject)
+
+        sigma2 = sigma2 - minS
+
+        if df is None:
+            df = N.ones(nsubject)
+
+        df.shape = (1, nsubject)
+
+        _Sshape = S.shape
+        S.shape = (S.shape[0], N.product(S.shape[1:]))
+
+
+        self.value['varatio']['varfix'] = N.dot(df, S) / df.sum()
+
+        S.shape = _Sshape
+        self.value['varatio']['varfix'].shape = _Sshape[1:]
+        self.value['varatio']['varatio'] = \
+                         N.nan_to_num(sigma2 / self.value['varatio']['varfix'])
+        return self.value
+
+
+
 class OneSampleIterator(object):
 
     def __init__(self, iterator, outputs=[]):
         self.iterator = iter(iterator)
+        # fixme: I'm pretty sure that outputs is a list of images to be output
+        # to, so we should probably be calling a specific iterator here, perhaps
+        # output.slices() -- timl
         self.outputs = [iter(output) for output in outputs]
+
 
     def weights(self):
         """
