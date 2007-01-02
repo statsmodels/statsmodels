@@ -6,7 +6,6 @@ from scipy.sandbox.models.utils import recipr
 class OneSampleResults(object):
     """
     A container for results from fitting a (weighted) one sample T.
-
     """
 
     def __init__(self):
@@ -77,18 +76,17 @@ class OneSample(object):
 
 
         mu = N.add.reduce(Y * W, 0) / N.add.reduce(W, 0)
-
-        self.value['mean']['df_resid'] = Y.shape[0] - 1
-        self.value['mean']['resid'] = \
-          (Y - N.multiply.outer(N.ones(Y.shape[0]), mu)) * N.sqrt(W)
+        df_resid = nsubject - 1
+        resid = (Y - N.multiply.outer(N.ones(Y.shape[0]), mu)) * N.sqrt(W)
 
         if self.use_scale:
-            scale = N.add.reduce(N.power(self.value['mean']['resid'], 2), 0) / \
-                    self.value['mean']['df_resid']
+            scale = N.add.reduce(N.power(resid, 2), 0) / df_resid
         else:
             scale = 1.
         var_total = scale * recipr(N.add.reduce(W, 0))
 
+        self.value['mean']['df_resid'] = df_resid
+        self.value['mean']['resid'] = resid
         self.value['mean']['mu'] = mu
         self.value['mean']['sd'] = N.squeeze(N.sqrt(var_total))
         self.value['mean']['t'] = N.squeeze(self.value['mean']['mu'] *
@@ -148,9 +146,6 @@ class OneSampleIterator(object):
 
     def __init__(self, iterator, outputs=[]):
         self.iterator = iter(iterator)
-        # fixme: I'm pretty sure that outputs is a list of images to be output
-        # to, so we should probably be calling a specific iterator here, perhaps
-        # output.slices() -- timl
         self.outputs = [iter(output) for output in outputs]
 
 
