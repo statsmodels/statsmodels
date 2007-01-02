@@ -217,7 +217,6 @@ class ECquasi(N.poly1d):
                            m=self.m,
                            exponent=self.exponent)
         elif self.compatible(other):
-            other = ECquasi(other)
             p = N.poly1d.__mul__(self, other)
             return ECquasi(p.coeffs,
                            exponent=self.exponent+other.exponent,
