@@ -84,14 +84,19 @@ class ECquasi(N.poly1d):
     def __init__(self, c_or_r, r=0, exponent=None, m=None):
         N.poly1d.__init__(self, c_or_r, r=r, variable='x')
 
-        if exponent is None and not hasattr(self, 'exponent'): self.exponent = 0
-        elif not hasattr(self, 'exponent'): self.exponent = exponent
+        if exponent is None and not hasattr(self, 'exponent'):
+            self.exponent = 0
+        elif not hasattr(self, 'exponent'):
+            self.exponent = exponent
 
 
-        if m is None and not hasattr(self, 'm'): self.m = N.inf
-        elif not hasattr(self, 'm'): self.m = m
+        if m is None and not hasattr(self, 'm'):
+            self.m = N.inf
+        elif not hasattr(self, 'm'):
+            self.m = m
 
-        if not N.isfinite(self.m): self.exponent = 0.
+        if not N.isfinite(self.m):
+            self.exponent = 0.
 
     def denom_poly(self):
         """
