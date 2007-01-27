@@ -16,7 +16,8 @@ def main(packages):
     ext_modules = []
     from neuroimaging.data_io.formats.nifti1_ext import extension
     name, source, d = extension
-    print d
+    name = "data_io.formats.%s" % name
+    print name, source, d
     ext_modules = [Extension(name, source, **d)]
 
     package_dir = {'': 'lib'}
