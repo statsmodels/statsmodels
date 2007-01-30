@@ -18,7 +18,7 @@ def binomial(n, j):
         return 0.
     elif j == 0:
         return 1.
-    return 1./(beta(n-j+1,j+1)*(n+1))
+    return 1./(beta(n-j+1, j+1)*(n+1))
 
 def Q(dim, dfd=N.inf):
     """
@@ -457,7 +457,6 @@ class ECcone(IntrinsicVolumes):
         """
 
         c = self.mu / N.power(2*N.pi, N.arange(self.order+1.)/2.)
-        p = self.product.mu
 
         quasi_polynomials = []
 
@@ -553,7 +552,6 @@ def volume2ball(vol, d=3):
     """
 
     if d > 0:
-        mu = N.zeros((d+1,))
         r = N.power(vol * 1. / mu_ball(d, d), 1./d)
         return ball_search(d, r=r)
     else:
