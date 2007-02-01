@@ -60,7 +60,7 @@ class OneSample(object):
         if Y.ndim == 1:
             Y.shape = (Y.shape[0], 1)
         W = self.get_weights(W)
-        if W.shape in [(),(1,)]:
+        if W.shape in [(), (1,)]:
             W = N.ones(Y.shape) * W
 
         nsubject = Y.shape[0]
@@ -144,7 +144,7 @@ class OneSample(object):
 
 class OneSampleIterator(object):
 
-    def __init__(self, iterator, outputs=[]):
+    def __init__(self, iterator, outputs=()):
         self.iterator = iter(iterator)
         self.outputs = [iter(output) for output in outputs]
 

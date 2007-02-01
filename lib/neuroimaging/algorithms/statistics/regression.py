@@ -10,7 +10,7 @@ from neuroimaging.core.image.image import Image
 
 class LinearModelIterator(object):
 
-    def __init__(self, iterator, outputs=[]):
+    def __init__(self, iterator, outputs=()):
         self.iterator = iter(iterator)
         self.outputs = [iter(output) for output in outputs]
 
