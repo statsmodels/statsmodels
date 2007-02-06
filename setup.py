@@ -13,11 +13,11 @@ def main(packages):
 #      [join(*('lib/neuroimaging/data_io/formats/minc/_mincutils.c'.split('/')))],
 #      extra_link_args=["-lminc"],
 #     include_dirs=get_numpy_include_dirs())]
+
     ext_modules = []
     from neuroimaging.data_io.formats.nifti1_ext import extension
     name, source, d = extension
     name = "data_io.formats.%s" % name
-    print name, source, d
     ext_modules = [Extension(name, source, **d)]
 
     package_dir = {'': 'lib'}
