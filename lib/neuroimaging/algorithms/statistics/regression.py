@@ -27,9 +27,11 @@ class LinearModelIterator(object):
         Go through an iterator, instantiating model and passing data,
         going through outputs.
         """
+
         for data in self.iterator:
             shape = data.shape[1:]
             data = data.reshape(data.shape[0], N.product(shape))
+
             results = self.model().fit(data)
             for output in self.outputs:
                 out = output.extract(results)
