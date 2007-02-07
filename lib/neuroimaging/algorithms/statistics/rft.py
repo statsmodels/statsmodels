@@ -728,8 +728,8 @@ def scale_space(region, interval, kappa=1.):
 
     out[0] = region.mu[0]
     for i in range(1, D+2):
-	if i < D+1:
-	    out[i] = (1./w1 + 1./w2) * region.mu[i] * 0.5
+        if i < D+1:
+            out[i] = (1./w1 + 1./w2) * region.mu[i] * 0.5
         for j in range(int(N.floor((D-i+1)/2.)+1)):
             denom = (i + 2*j - 1.)
             # w^-i/i when i=0
