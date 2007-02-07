@@ -61,6 +61,7 @@ class NLSModel(Model):
         return self.f(design, self.theta)
 
     def SSE(self):
+        """ Sum of squares error. """
         return sum((self.Y - self.predict())**2)
 
     def __iter__(self):
