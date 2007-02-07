@@ -78,5 +78,5 @@ class RegressionOutput(object):
 
         outname = os.path.join(outdir, '%s%s' % (basename, ext))
         img = Image(outname, mode='w', grid=self.outgrid, clobber=clobber)
-        it = img.slice_iterator('w')
+        it = iter(self.it.copy(img))
         return img, it
