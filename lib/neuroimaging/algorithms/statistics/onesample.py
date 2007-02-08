@@ -155,6 +155,9 @@ class OneSampleIterator(object):
         """
         return 1.
 
+    def _getinputs(self):
+        pass
+
     def fit(self, which='mean', df=None):
         """
         Go through an iterator, instantiating model and passing data,
@@ -164,6 +167,7 @@ class OneSampleIterator(object):
         for data in self.iterator:
 
             W = self.weights()
+            self._getinputs()
             shape = data.shape[1:]
 
             results = OneSample().fit(data, W, which, df)
