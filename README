@@ -76,8 +76,7 @@ Currently NIPY consists of the following files and directories:
 Documentation
 -------------
 
-All documentation is provided online.  In particular, you will find
-the API here
+The current API documentation is here
     http://neuroimaging.scipy.org/api/
 
 
