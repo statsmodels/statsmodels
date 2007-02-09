@@ -1,3 +1,5 @@
+__docformat__ = 'restructuredtext'
+
 from scipy.sandbox.models.model import Model
 
 class Classifier(Model):

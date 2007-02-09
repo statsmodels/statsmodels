@@ -2,6 +2,9 @@
 This module provides various regression analysis techniques to model the
 relationship between the dependent and independent variables.
 """
+
+__docformat__ = 'restructuredtext'
+
 import os
 
 import numpy as N

@@ -1,3 +1,5 @@
+__docformat__ = 'restructuredtext'
+
 import numpy as N
 import numpy.linalg as L
 from scipy.sandbox.models.model import Model
