@@ -61,7 +61,7 @@ class OneSample(object):
 
         if Y.ndim == 1:
             Y.shape = (Y.shape[0], 1)
-        W = self.get_weights(W)
+        W = N.asarray(self.get_weights(W))
         if W.shape in [(), (1,)]:
             W = N.ones(Y.shape) * W
 
@@ -75,7 +75,6 @@ class OneSample(object):
                 sigma2 = N.multiply.outer(N.ones((nsubject,)), sigma2)
             S = recipr(W) + sigma2
             W = recipr(S)
-
 
         mu = N.add.reduce(Y * W, 0) / N.add.reduce(W, 0)
         df_resid = nsubject - 1
@@ -143,13 +142,11 @@ class OneSample(object):
         return self.value
 
 
-
 class OneSampleIterator(object):
 
     def __init__(self, iterator, outputs=()):
         self.iterator = iter(iterator)
         self.outputs = [iter(output) for output in outputs]
-
 
     def weights(self):
         """
@@ -181,8 +178,8 @@ class OneSampleIterator(object):
                 else:
                     out.shape = shape
 
-                output.set_next(data=out)
+                output.next().set(out)
 
-            del(results);
+            del(results)
             gc.collect()
 
