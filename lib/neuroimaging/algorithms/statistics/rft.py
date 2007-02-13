@@ -613,7 +613,7 @@ class Roy(ECcone):
 class MultilinearForm(ECcone):
     """
     Maximize a multivariate Gaussian form, maximized over spheres
-    of dimension *dims. See
+    of dimension dims. See
 
     Kuri, S. & Takemura, A. (2001).
     'Tail probabilities of the maxima of multilinear forms and
