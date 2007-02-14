@@ -1,5 +1,3 @@
-import unittest
-
 from neuroimaging.utils.test_decorators import slow
 
 import numpy as N
@@ -8,7 +6,7 @@ from scipy.special import gammaln, hermitenorm
 import scipy.stats
 from scipy.misc import factorial
 
-from numpy.testing import NumpyTestCase
+from numpy.testing import NumpyTest, NumpyTestCase
 
 from neuroimaging.algorithms.statistics import rft
 
@@ -616,3 +614,6 @@ class test_RFT(NumpyTestCase):
                 p1 = c.quasi(dim=dim)
                 p2 = polyF(dim=dim, dfn=dfn)
                 N.testing.assert_almost_equal(p1.c, p2.c)
+
+if __name__ == '__main__':
+    NumpyTest.run()
