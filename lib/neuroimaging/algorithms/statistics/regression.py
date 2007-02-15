@@ -9,7 +9,7 @@ import os
 
 import numpy as N
 
-from neuroimaging.core.image.image import Image
+from neuroimaging.core.api import Image
 
 class LinearModelIterator(object):
 
