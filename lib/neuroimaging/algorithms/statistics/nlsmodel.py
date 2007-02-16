@@ -13,14 +13,14 @@ class NLSModel(Model):
     def __init__(self, Y, design, f, grad, theta, niter=10):
         """
         :Parameters:
-            `Y` :
+            `Y` : TODO
                 the data in the NLS model
-            `design` :
+            `design` : TODO
                 the deisng matrix, X
-            `f` :
+            `f` : TODO
                 the map between the linear parameters (in the design matrix) and
                 the nonlinear parameters (theta)
-            `grad` :
+            `grad` :  TODO
                 the gradient of f, this should be a function of an nxp design
                 matrix X and qx1 vector theta that returns an nxq matrix
                 df_i/dtheta_j where
