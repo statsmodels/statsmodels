@@ -9,7 +9,7 @@ from scipy.special import gamma, gammaln, beta, hermitenorm
 
 def binomial(n, j):
     """
-    Binomial coefficient:
+    Binomial coefficient::
 
            n!
        ---------
