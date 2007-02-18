@@ -1,32 +1,39 @@
 from os.path import join
 import sys
 sys.path.insert(0,"lib")
-from distutils.core import setup, Extension
+
 from numpy.distutils.misc_util import get_numpy_include_dirs
 
 from neuroimaging import packages, __version__, __doc__, ENTHOUGHT_TRAITS_DEF
 
+
+def configuration(parent_package='',top_path=None):
+    from numpy.distutils.misc_util import Configuration
+
+    config = Configuration(None, parent_package, top_path)
+    config.set_options(ignore_setup_xxx_py=True,
+                       assume_default_configuration=True,
+                       delegate_options_to_subpackages=True,
+                       quiet=True)
+
+    config.add_subpackage('algorithms', 'lib/neuroimaging/core')
+    config.add_subpackage('core', 'lib/neuroimaging/core')
+    config.add_subpackage('data_io', 'lib/neuroimaging/data_io')
+    config.add_subpackage('modalities', 'lib/neuroimaging/modalities')
+    config.add_subpackage('ui', 'lib/neuroimaging/ui')
+    config.add_subpackage('utils', 'lib/neuroimaging/utils')
+
+    return config
+
+
+
 def main(packages):
+    from numpy.distutils.core import setup
 
     packages = ['']+list(packages)
-#    ext_modules = [Extension('data_io.formats.minc._mincutils',
-#      [join(*('lib/neuroimaging/data_io/formats/minc/_mincutils.c'.split('/')))],
-#      extra_link_args=["-lminc"],
-#     include_dirs=get_numpy_include_dirs())]
-
-    ext_modules = []
-    from neuroimaging.data_io.formats.nifti1_ext import extension
-    name, source, d = extension
-    name = "data_io.formats.%s" % name
-    ext_modules = [Extension(name, source, **d)]
 
     package_dir = {'': 'lib'}
 
-    if not ENTHOUGHT_TRAITS_DEF:
-        ext_modules += [Extension('utils.enthought.traits.ctraits',
-          [join(*('lib/neuroimaging/utils/enthought/traits/ctraits.c'.split('/')))])]
-        package_dir['neuroimaging.utils.enthought'] = \
-          join(*('lib/neuroimaging/utils/enthought/'.split('/')))
 
     setup( name = 'neuroimaging',
            version = __version__,
@@ -35,10 +42,10 @@ def main(packages):
            author_email = 'nipy-devel@neuroimaging.scipy.org',
            ext_package = 'neuroimaging',
            packages=packages,
-           ext_modules=ext_modules,
            package_dir = package_dir,
            url = 'http://neuroimaging.scipy.org',
-           long_description = __doc__)
+           long_description = __doc__,
+           configuration = configuration)
 
 
 if __name__ == "__main__":
