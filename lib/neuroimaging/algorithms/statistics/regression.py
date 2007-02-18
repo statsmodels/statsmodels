@@ -12,8 +12,18 @@ import numpy as N
 from neuroimaging.core.api import Image
 
 class LinearModelIterator(object):
+    """
+    TODO
+    """
 
     def __init__(self, iterator, outputs=()):
+        """
+        :Parameters:
+            iterator : TODO
+                TODO
+            outputs : TODO
+                TODO
+        """
         self.iterator = iter(iterator)
         self.outputs = [iter(output) for output in outputs]
 
@@ -22,6 +32,8 @@ class LinearModelIterator(object):
         """
         This method should take the iterator at its current state and
         return a LinearModel object.
+
+        :Returns: ``None``
         """
         return None
 
@@ -29,6 +41,8 @@ class LinearModelIterator(object):
         """
         Go through an iterator, instantiating model and passing data,
         going through outputs.
+
+        :Returns: ``None``
         """
 
         for data in self.iterator:
@@ -55,6 +69,15 @@ class RegressionOutput(object):
     """
 
     def __init__(self, grid, nout=1, outgrid=None):
+        """
+        :Parameters:
+            grid : TODO
+                TODO
+            nout : ``int``
+                TODO
+            outgrid : TODO
+                TODO
+        """
         self.grid = grid
         self.nout = nout
         if outgrid is not None:
@@ -65,16 +88,38 @@ class RegressionOutput(object):
         self.it = NotImplemented
 
     def __iter__(self):
+        """
+        :Returns: ``self``
+        """
         iter(self.it)
         return self
 
     def next(self):
+        """
+        :Returns: TODO
+        """
         return self.it.next()
 
     def set_next(self, data):
+        """
+        :Parameters:
+            data : TODO
+                TODO
+
+        :Returns: ``None``
+        """
         self.it.next().set(data)
 
     def extract(self, results):
+        """
+        :Parameters:
+            results : TODO
+                TODO
+
+        :Returns: ``None``
+
+        :Raises: NotImplementedError
+        """
         raise NotImplementedError
 
     def _setup_img(self, clobber, outdir, ext, basename):

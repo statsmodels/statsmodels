@@ -1,3 +1,6 @@
+"""
+TODO
+"""
 __docformat__ = 'restructuredtext'
 
 import numpy as N
@@ -13,14 +16,14 @@ class NLSModel(Model):
     def __init__(self, Y, design, f, grad, theta, niter=10):
         """
         :Parameters:
-            `Y` : TODO
+            Y : TODO
                 the data in the NLS model
-            `design` : TODO
+            design : TODO
                 the deisng matrix, X
-            `f` : TODO
+            f : TODO
                 the map between the linear parameters (in the design matrix) and
                 the nonlinear parameters (theta)
-            `grad` :  TODO
+            grad :  TODO
                 the gradient of f, this should be a function of an nxp design
                 matrix X and qx1 vector theta that returns an nxq matrix
                 df_i/dtheta_j where
@@ -56,22 +59,40 @@ class NLSModel(Model):
                 raise ValueError, 'Y should be same shape as design'
 
     def getZ(self):
+        """
+        :Returns: ``None``
+        """
         self._Z = self.grad(self.design, self.theta)
 
     def getomega(self):
+        """
+        :Returns: ``None``
+        """
         self._omega = self.predict() - N.dot(self._Z, self.theta)
 
     def predict(self, design=None):
+        """
+        :Parameters:
+            design : TODO
+                TODO
+
+        :Returns: TODO
+        """
         if design is None:
             design = self.design
         return self.f(design, self.theta)
 
     def SSE(self):
-        """ Sum of squares error. """
+        """ Sum of squares error.
+
+        :Returns; TODO
+        """
         return sum((self.Y - self.predict())**2)
 
     def __iter__(self):
-
+        """
+        :Returns: ``self``
+        """
         if self.theta is not None:
             self.initial = self.theta
         elif self.initial is not None:
@@ -84,6 +105,9 @@ class NLSModel(Model):
         return self
 
     def next(self):
+        """
+        :Returns: ``None``
+        """
         if self._iter < self.niter:
             self.getZ()
             self.getomega()

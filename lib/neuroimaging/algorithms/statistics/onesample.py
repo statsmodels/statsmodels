@@ -1,3 +1,6 @@
+"""
+TODO
+"""
 __docformat__ = 'restructuredtext'
 
 import gc
@@ -11,6 +14,9 @@ class OneSampleResults(object):
     """
 
     def __init__(self):
+        """
+        TODO
+        """
         self.values = {'mean': {'mu': None,
                                 'sd': None,
                                 't': None,
@@ -21,14 +27,42 @@ class OneSampleResults(object):
                                    'varfix': None}}
 
     def __getitem__(self, key):
+        """
+        :Parameters:
+            key : TODO
+                TODO
+
+        :Returns: TODO
+        """
         return self.values[key]
 
     def __setitem__(self, key, val):
+        """
+        :Parameters:
+            key : TODO
+                TODO
+            val : TODO
+                TODO
+
+        :Returns: ``None``
+        """
         self.values[key] = val
 
 class OneSample(object):
+    """
+    TODO
+    """
 
     def __init__(self, use_scale=True, niter=10, weight_type='sd'):
+        """
+        :Parameters:
+            use_scale : ``bool``
+                TODO
+            niter : ``int``
+                TODO
+            weight_type : ``string``
+                TODO
+        """
         if weight_type in ['sd', 'var', 'weight']:
             self.weight_type = weight_type
         else:
@@ -39,12 +73,32 @@ class OneSample(object):
         self.value = OneSampleResults()
 
     def fit(self, Y, W, which='mean', df=None):
+        """
+        :Parameters:
+            Y : TODO
+                TODO
+            W : TODO
+                TODO
+            which : ``string``
+                TODO
+            df : TODO
+                TODO
+
+        :Returns: TODO
+        """
         if which == 'mean':
             return self.estimate_mean(Y, W)
         else:
             return self.estimate_varatio(Y, W, df=df)
 
     def get_weights(self, W):
+        """
+        :Parameters:
+            W : TODO
+                TODO
+
+        :Returns: ``numpy.ndarray``
+        """
         try:
             if W.ndim == 1:
                 W.shape = (W.shape[0], 1)
@@ -58,6 +112,15 @@ class OneSample(object):
         return N.asarray(W)
 
     def estimate_mean(self, Y, W):
+        """
+        :Parameters:
+            Y : TODO
+                TODO
+            W : TODO
+                TODO
+
+        :Returns: TODO
+        """
 
         if Y.ndim == 1:
             Y.shape = (Y.shape[0], 1)
@@ -97,7 +160,17 @@ class OneSample(object):
         return self.value
 
     def estimate_varatio(self, Y, W, df=None):
+        """
+        :Parameters:
+            Y : TODO
+                TODO
+            W : TODO
+                TODO
+            df : TODO
+                TODO
 
+        :Returns; TODO
+        """
         Sreduction = 0.99
         S = 1. / W
 
@@ -143,14 +216,26 @@ class OneSample(object):
 
 
 class OneSampleIterator(object):
+    """
+    TODO
+    """
 
     def __init__(self, iterator, outputs=()):
+        """
+        :Parameters:
+            iterator : TODO
+                TODO
+            outputs : TODO
+                TODO
+        """
         self.iterator = iter(iterator)
         self.outputs = [iter(output) for output in outputs]
 
     def weights(self):
         """
         This method should get the weights from self.iterator.
+
+        :Returns: ``float``
         """
         return 1.
 
@@ -161,6 +246,14 @@ class OneSampleIterator(object):
         """
         Go through an iterator, instantiating model and passing data,
         going through outputs.
+
+        :Parameters:
+            which : ``string``
+                TODO
+            df : TODO
+                TODO
+
+        :Returns: ``None``
         """
 
         for data in self.iterator:
