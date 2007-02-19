@@ -8,6 +8,8 @@ from scipy.special import gammaln, hermitenorm
 import scipy.stats
 from scipy.misc import factorial
 
+from numpy.testing import NumpyTestCase
+
 from neuroimaging.algorithms.statistics import rft
 
 #def rho(x, dim, df=N.inf):
@@ -178,7 +180,7 @@ def F_alternative(x, dim, dfd=N.inf, dfn=1):
     return v
 
 
-class RFTTest(unittest.TestCase):
+class test_RFT(NumpyTestCase):
 
     def test_polynomial1(self):
         """

@@ -66,6 +66,10 @@ class ECquasi(N.poly1d):
 
     These arise often in the EC densities.
 
+    Example
+    -------
+
+
     >>> import numpy
     >>> from neuroimaging.algorithms.statistics.rft import ECquasi
     >>> x = numpy.linspace(0,1,101)
@@ -104,6 +108,9 @@ class ECquasi(N.poly1d):
         """
         This is the base of the premultiplier: (1+x^2/m).
 
+        Example
+        -------
+
         >>> b = ECquasi([3,4,20], m=30, exponent=4)
         >>> d = b.denom_poly()
         >>> d
@@ -118,6 +125,9 @@ class ECquasi(N.poly1d):
         """
         Multiply top and bottom by an integer multiple of the
         self.denom_poly.
+
+        Example
+        -------
 
         >>> b = ECquasi([3,4,20], m=30, exponent=4)
         >>> x = numpy.linspace(0,1,101)
@@ -157,6 +167,9 @@ class ECquasi(N.poly1d):
         """
         Check whether the degrees of freedom of two instances are equal
         so that they can be multiplied together.
+
+        Example
+        -------
 
         >>> b = ECquasi([3,4,20], m=30, exponent=4)
         >>> x = numpy.linspace(0,1,101)
@@ -207,6 +220,9 @@ class ECquasi(N.poly1d):
         """
         Multiply two compatible ECquasi instances together.
 
+        Example
+        -------
+
         >>> b=ECquasi([3,4,20], m=30, exponent=4)
         >>> c=ECquasi([1,2], m=30, exponent=4.5)
         >>> b*c
@@ -227,6 +243,9 @@ class ECquasi(N.poly1d):
     def __call__(self, val):
         """
         Evaluate the ECquasi instance.
+
+        Example
+        -------
 
         >>> import numpy
         >>> x = numpy.linspace(0,1,101)
@@ -261,6 +280,9 @@ class ECquasi(N.poly1d):
     def __pow__(self, _pow):
         """
         Power of a ECquasi instance.
+
+        Example
+        -------
 
         >>> b = ECquasi([3,4,5],m=10, exponent=3)
         >>> b**2
@@ -299,6 +321,9 @@ class ECquasi(N.poly1d):
     def deriv(self, m=1):
         """
         Evaluate derivative of ECquasi.
+
+        Example
+        -------
 
         >>> a = ECquasi([3,4,5])
         >>> a.deriv(m=2)
