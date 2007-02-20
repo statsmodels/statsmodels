@@ -16,24 +16,22 @@ def configuration(parent_package='',top_path=None):
                        delegate_options_to_subpackages=True,
                        quiet=True)
 
-    config.add_subpackage('algorithms', 'lib/neuroimaging/core')
-    config.add_subpackage('core', 'lib/neuroimaging/core')
-    config.add_subpackage('data_io', 'lib/neuroimaging/data_io')
-    config.add_subpackage('modalities', 'lib/neuroimaging/modalities')
-    config.add_subpackage('ui', 'lib/neuroimaging/ui')
-    config.add_subpackage('utils', 'lib/neuroimaging/utils')
+    config.add_subpackage('neuroimaging', 'lib/neuroimaging')
+
+
+    config.set_options(ignore_setup_xxx_py=True,
+                       assume_default_configuration=True,
+                       delegate_options_to_subpackages=True,
+                       quiet=True)
 
     return config
-
 
 
 def main(packages):
     from numpy.distutils.core import setup
 
-    packages = ['']+list(packages)
-
-    package_dir = {'': 'lib'}
-
+    #packages = ['']+list(packages)
+    #package_dir = {'': 'lib'}
 
     setup( name = 'neuroimaging',
            version = __version__,
@@ -41,8 +39,8 @@ def main(packages):
            author = 'Various',
            author_email = 'nipy-devel@neuroimaging.scipy.org',
            ext_package = 'neuroimaging',
-           packages=packages,
-           package_dir = package_dir,
+           #packages=packages,
+           #package_dir = package_dir,
            url = 'http://neuroimaging.scipy.org',
            long_description = __doc__,
            configuration = configuration)
