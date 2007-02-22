@@ -13,17 +13,10 @@ def configuration(parent_package='',top_path=None):
     config = Configuration(None, parent_package, top_path)
     config.set_options(ignore_setup_xxx_py=True,
                        assume_default_configuration=True,
-                       delegate_options_to_subpackages=True,
-                       quiet=True)
+                       delegate_options_to_subpackages=True)
+#                       quiet=True)
 
     config.add_subpackage('neuroimaging', 'lib/neuroimaging')
-
-
-    config.set_options(ignore_setup_xxx_py=True,
-                       assume_default_configuration=True,
-                       delegate_options_to_subpackages=True,
-                       quiet=True)
-
     return config
 
 
@@ -38,7 +31,7 @@ def main(packages):
            description = 'This is a neuroimaging python package',
            author = 'Various',
            author_email = 'nipy-devel@neuroimaging.scipy.org',
-           ext_package = 'neuroimaging',
+           #ext_package = 'neuroimaging',
            #packages=packages,
            #package_dir = package_dir,
            url = 'http://neuroimaging.scipy.org',
