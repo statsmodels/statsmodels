@@ -111,6 +111,7 @@ class ECquasi(N.poly1d):
         Example
         -------
 
+        >>> import numpy
         >>> b = ECquasi([3,4,20], m=30, exponent=4)
         >>> d = b.denom_poly()
         >>> d
@@ -129,6 +130,7 @@ class ECquasi(N.poly1d):
         Example
         -------
 
+        >>> import numpy
         >>> b = ECquasi([3,4,20], m=30, exponent=4)
         >>> x = numpy.linspace(0,1,101)
         >>> c = b.change_exponent(3)
@@ -171,6 +173,7 @@ class ECquasi(N.poly1d):
         Example
         -------
 
+        >>> import numpy
         >>> b = ECquasi([3,4,20], m=30, exponent=4)
         >>> x = numpy.linspace(0,1,101)
         >>> c = b.change_exponent(3)
