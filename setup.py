@@ -16,18 +16,21 @@ def configuration(parent_package='',top_path=None):
                        delegate_options_to_subpackages=True)
 #                       quiet=True)
 
+
+    config.get_version('lib/neuroimaging/version.py') # sets config.version
+
     config.add_subpackage('neuroimaging', 'lib/neuroimaging')
     return config
 
 
 def main(packages):
     from numpy.distutils.core import setup
-
+    from neuroimaging.version import version
     #packages = ['']+list(packages)
     #package_dir = {'': 'lib'}
 
     setup( name = 'neuroimaging',
-           version = __version__,
+           version = version, # will be overwritten by configuration version
            description = 'This is a neuroimaging python package',
            author = 'Various',
            author_email = 'nipy-devel@neuroimaging.scipy.org',
