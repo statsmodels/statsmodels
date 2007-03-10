@@ -1,5 +1,3 @@
-from neuroimaging.utils.test_decorators import slow
-
 import numpy as N
 import numpy.random as R
 from scipy.special import gammaln, hermitenorm
@@ -9,6 +7,7 @@ from scipy.misc import factorial
 from numpy.testing import NumpyTest, NumpyTestCase
 
 from neuroimaging.algorithms.statistics import rft
+from neuroimaging.utils.test_decorators import slow
 
 #def rho(x, dim, df=N.inf):
 #    """
@@ -201,6 +200,7 @@ class test_RFT(NumpyTestCase):
 
 
 
+    @slow
     def test_polynomial3(self):
         """
         EC density of F with infinite dfd is the same as chi^2 --
@@ -273,6 +273,7 @@ class test_RFT(NumpyTestCase):
         t = rft.TStat(dfd=N.inf)
         N.testing.assert_almost_equal(t(x), scipy.stats.norm.sf(x))
 
+    @slow
     def test_T2(self):
         """
         T is an F with dfn=1
@@ -318,6 +319,7 @@ class test_RFT(NumpyTestCase):
               3 * scipy.stats.norm.sf(x))
         N.testing.assert_almost_equal(v1, v2)
 
+    @slow
     def test_search2(self):
         """
         Test that the search region works.
@@ -348,6 +350,7 @@ class test_RFT(NumpyTestCase):
                 v2 += ostat.density(x, j) * search.mu[j]
             N.testing.assert_almost_equal(v1, v2)
 
+    @slow
     def test_T2(self):
         """
         T is an F with dfn=1
@@ -428,7 +431,7 @@ class test_RFT(NumpyTestCase):
         N.testing.assert_almost_equal(y, z)
 
 
-
+    @slow
     def test_hotelling1(self):
         """
         Asymptotically, Hotelling is the same as F which is the same
@@ -602,6 +605,7 @@ class test_RFT(NumpyTestCase):
                     f2 = F(x, dim, dfn=dfn, dfd=dfd)
                     N.testing.assert_almost_equal(f1, f2)
 
+    @slow
     def test_chi2(self):
         """
         Quasi-polynomial part of the chi^2 EC density should
