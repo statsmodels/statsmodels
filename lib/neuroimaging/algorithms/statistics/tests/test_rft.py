@@ -615,5 +615,9 @@ class test_RFT(NumpyTestCase):
                 p2 = polyF(dim=dim, dfn=dfn)
                 N.testing.assert_almost_equal(p1.c, p2.c)
 
+from neuroimaging.utils.testutils import make_doctest_suite
+test_suite = make_doctest_suite('neuroimaging.algorithms.statistics.rft')
+
+
 if __name__ == '__main__':
     NumpyTest.run()
