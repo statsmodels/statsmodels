@@ -1,0 +1,22 @@
+#!/bin/env python
+import os
+os.system("python -c 'from neuroimaging import test; test()' &> ntest.pre")
+os.system('grep test_ ntest.pre | grep " ok" > ntest.final')
+os.system("python -c 'from neuroimaging import testall; testall()' &> testall.pre")
+os.system('grep test_ testall.pre | grep " ok" > testall.final')
+test = set(open('ntest.final').readlines())
+testall = set(open('testall.final').readlines())
+
+def print_test_set(tset):
+    tlist= list(tset)
+    tlist.sort()
+    for i,t in enumerate(tlist): print "%d %s"%(i,t),
+
+print "%d total tests"%len(test.union(testall))
+print "%d test tests"%len(test)
+print "%d testall tests"%len(testall)
+print "%d found by test but not by testall"%len(test-testall)
+print_test_set(test-testall)
+print "%d found by testall but not by test"%len(testall-test)
+print_test_set(testall-test)
+print "%d found by both"%len(test.intersection(testall))

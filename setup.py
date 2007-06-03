@@ -1,6 +1,5 @@
 from os.path import join
 import sys
-sys.path.insert(0,"lib")
 
 from numpy.distutils.misc_util import get_numpy_include_dirs
 
@@ -17,9 +16,9 @@ def configuration(parent_package='',top_path=None):
 #                       quiet=True)
 
 
-    config.get_version('lib/neuroimaging/version.py') # sets config.version
+    config.get_version('neuroimaging/version.py') # sets config.version
 
-    config.add_subpackage('neuroimaging', 'lib/neuroimaging')
+    config.add_subpackage('neuroimaging', 'neuroimaging')
     return config
 
 
@@ -27,7 +26,6 @@ def main(packages):
     from numpy.distutils.core import setup
     from neuroimaging.version import version
     #packages = ['']+list(packages)
-    #package_dir = {'': 'lib'}
 
     setup( name = 'neuroimaging',
            version = version, # will be overwritten by configuration version
