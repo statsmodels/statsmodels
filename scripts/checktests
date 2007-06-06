@@ -4,13 +4,18 @@ os.system("python -c 'from neuroimaging import test; test()' &> ntest.pre")
 os.system('grep test_ ntest.pre | grep " ok" > ntest.final')
 os.system("python -c 'from neuroimaging import testall; testall()' &> testall.pre")
 os.system('grep test_ testall.pre | grep " ok" > testall.final')
-test = set(open('ntest.final').readlines())
-testall = set(open('testall.final').readlines())
+
+def open_test_set(filename):
+    return set([l.split(' ',1)[0]+"::"+(l.split()[1]).split('.')[-3] \
+      for l in open(filename).readlines()])
 
 def print_test_set(tset):
     tlist= list(tset)
     tlist.sort()
-    for i,t in enumerate(tlist): print "%d %s"%(i,t),
+    for i,t in enumerate(tlist): print "%d %s"%(i,t)
+
+test = open_test_set('ntest.final')
+testall = open_test_set('testall.final')
 
 print "%d total tests"%len(test.union(testall))
 print "%d test tests"%len(test)
