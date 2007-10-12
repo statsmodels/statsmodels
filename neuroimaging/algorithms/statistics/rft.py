@@ -1,5 +1,19 @@
 __docformat__ = 'restructuredtext'
 
+"""
+The theoretical results for  the EC densities appearing in this module
+were partially supported by NSF grant DMS-0405970.
+
+Taylor, J.E. & Worsley, K.J. (2007).  "Detecting sparse cone alternatives
+   for Gaussian random fields, with an application to fMRI".
+   Annals of Statistics, submitted.
+
+Taylor, J.E. & Worsley, K.J. (2007). "Random fields of multivariate
+   test statistics, with applications to shape analysis."
+   Annals of Statistics, accepted.
+
+"""
+
 import numpy as N
 from numpy.linalg import pinv
 
