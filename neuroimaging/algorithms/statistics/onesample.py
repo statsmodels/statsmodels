@@ -6,7 +6,7 @@ __docformat__ = 'restructuredtext'
 import gc
 
 import numpy as N
-from scipy.sandbox.models.utils import recipr
+from scipy.stats.models.utils import recipr
 
 class OneSampleResults(object):
     """
