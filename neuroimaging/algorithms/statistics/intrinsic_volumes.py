@@ -721,7 +721,9 @@ def LK(X, thresh, coords=None, lk=0):
     except KeyError:
         raise KeyError, 'cannot compute this intrinsic volume'
     if lk > 0:
-        return f(m, coords)
+        if coords is None:
+            raise ValueError, "need coords to compute intrinsic volumes"
+        return f(m, coords.astype(N.float))
     else:
         return f(m)
 
