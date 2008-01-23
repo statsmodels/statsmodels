@@ -692,8 +692,8 @@ except:
     s = d['sources']; del(d['sources'])
     d['include_dirs'].append(N.get_include())
     extension = n, s, d
-    mod.compile()
-    import _intrinsic_volumes
+##     mod.compile()
+##     import _intrinsic_volumes
 
 def EC(X, thresh=0):
     m = N.greater(X, thresh).astype(N.int)

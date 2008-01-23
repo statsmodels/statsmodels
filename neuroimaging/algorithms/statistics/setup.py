@@ -4,6 +4,12 @@ def configuration(parent_package='',top_path=None):
 
     config.add_data_dir('tests')
 
+    from intrinsic_volumes import extension
+    name, source, d = extension
+
+    config.add_extension(name, source, **d)
+    config.add_data_files(source[0])
+
     return config
 
 if __name__ == '__main__':
