@@ -38,7 +38,8 @@ Currently NIPY consists of the following files and directories:
     The roadmap file, to be read first (this document).
 
   INSTALL
-    NIPY prerequisites, installation, testing, and troubleshooting.
+    NIPY prerequisites, installation, development, testing, and 
+    troubleshooting.
 
   THANKS
     NIPY developers and contributors. Please keep it up to date!!
