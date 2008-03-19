@@ -1,3 +1,4 @@
+<<<<<<< TREE
 
 Building
 =========
@@ -86,3 +87,6 @@ Going further
 
 The bzr documentation can be found on http://bazaar-vcs.org/Documentation
 and is excellent.
+=======
+raise NotImplementedError 
+>>>>>>> MERGE-SOURCE
