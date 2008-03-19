@@ -1,1 +1,88 @@
-raise NotImplementedError
+
+Building
+=========
+
+You can build the neuroimaging package using::
+
+    python setup.py build
+
+
+Installing
+===========
+
+To install a non developpement version of the neuroimaging package use::
+
+    sudo python setup.py install
+
+Beware: this copies the source files in you Python site-packages
+directory. Modifying these files will not modify what Python imports.
+
+To install a development version of the neuroimaging, which follows all
+the modifications made to your source tree use::
+
+    sudo python setup.py develop --prefix /usr/local
+
+
+Developing
+===========
+
+Checking out the latest version
+--------------------------------
+
+To check out the latest version of nipy you need bzr version greater than
+0.92::
+
+    bzr branch lp:nipy
+
+Getting commit rights to nipy
+------------------------------
+
+To be able to commit directly changes in nipy, you need to create a
+launchpad account, on https://launchpad.net/+login . Once you have done
+that, you need to ask to be added to the nipy-developers team, on
+https://launchpad.net/~nipy-developers . In addition, to be able to
+commit using ssh, you need to add ssh keys to your launchpad account:
+https://launchpad.net/~gael-varoquaux/+editsshkeys .
+
+Working as with SVN
+--------------------
+
+If you modify local files and want to work directly in the launchpad
+trunk, as you do with SVN, you need to do bind your local checkout to the
+launchpad trunk::
+
+    bzr bind bzr+ssh://gael-varoquaux@bazaar.launchpad.net/%7Enipy-developers/nipy/trunk 
+
+You can then work as with SVN using "bzr add", "bzr commit", "bzr up".
+
+Working in distributed version control mode
+--------------------------------------------
+
+If you have binded your local checkout, you can unbind it using::
+
+    bzr unbind
+
+Once you have done this, you can commit to your local checkout (which is
+now a full standalone branch) using::
+
+    bzr commit
+
+This does not get pushed on the launchpad trunk, but only on your local
+branch. When you want to push your changes to the launchpad trunk you
+can do::
+
+    bzr push bzr+ssh://gael-varoquaux@bazaar.launchpad.net/%7Enipy-developers/nipy/trunk 
+
+using your launchpad account instead of gael-varoquaux. You need to
+specify the destination only for the first push. To update you local
+branch with the modifications in the launchpad trunk, you use::
+
+    bzr pull lp:nipy
+
+Once again, the pull location is necessary only the first time you pull.
+
+Going further
+---------------
+
+The bzr documentation can be found on http://bazaar-vcs.org/Documentation
+and is excellent.
