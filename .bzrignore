@@ -1,0 +1,25 @@
+*.py[oc]
+# setup.py working directory
+build
+# setup.py dist directory
+./dist
+# Editor temporary/working/backup files
+*$
+.*.sw[nop]
+.sw[nop]
+*~
+[#]*#
+.#*
+*.bak
+*.tmp
+*.tgz
+*.rej
+*.org
+.project
+*.diff
+.settings/
+*.svn/
+# The shelf plugin uses this dir
+./.shelf
+# Mac droppings
+.DS_Store
