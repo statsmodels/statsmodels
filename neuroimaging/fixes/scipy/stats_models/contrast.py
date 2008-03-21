@@ -74,7 +74,7 @@ class Contrast(object):
         return '<contrast:%s>' % \
                `{'term':str(self.term), 'formula':str(self.formula)}`
 
-    def _compute_matrix(self, *args, **kw):
+    def compute_matrix(self, *args, **kw):
         """
         Construct a contrast matrix C so that
 
@@ -97,19 +97,20 @@ class Contrast(object):
 
         self.D = self.formula.design(*args, **kw)
 
-        matrix = contrastfromcols(self.T, self.D)
+        self._matrix = contrastfromcols(self.T, self.D)
         try:
             self.rank = self.matrix.shape[1]
         except:
             self.rank = 1
-        return matrix
 
-    def _compute_matrix(self):
-        if hasattr(self, "_matrix"):
-            return self._matrix
-        else:
-            self._matrix = self._compute_matrix()
-            return self._matrix
+    def _get_matrix(self):
+        """
+        This will fail if the formula needs arguments to construct
+        the design.
+        """
+        if not hasattr(self, "_matrix"):
+            self.compute_matrix()
+        return self._matrix
     matrix = property(_getmatrix)
 
 def contrastfromcols(L, D, pseudo=None):
