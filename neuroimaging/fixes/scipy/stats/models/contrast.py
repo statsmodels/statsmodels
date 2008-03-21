@@ -2,7 +2,7 @@ import copy
 
 import numpy as N
 from numpy.linalg import pinv
-from neuroimaging.fixes.scipy.stats_models import utils
+from neuroimaging.fixes.scipy.stats.models import utils
 
 class ContrastResults:
     """

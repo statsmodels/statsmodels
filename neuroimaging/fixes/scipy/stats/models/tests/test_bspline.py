@@ -5,8 +5,8 @@ Test functions for models.bspline
 import numpy as N
 from neuroimaging.externals.scipy.testing import *
 
-import neuroimaging.fixes.scipy.stats_models as S
-import neuroimaging.fixes.scipy.stats_models.bspline as B
+import neuroimaging.fixes.scipy.stats.models as S
+import neuroimaging.fixes.scipy.stats.models.bspline as B
 
 
 class TestBSpline(TestCase):

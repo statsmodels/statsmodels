@@ -86,7 +86,7 @@ class StepFunction:
     Examples
     --------
     >>> from numpy import arange
-    >>> from neuroimaging.fixes.scipy.stats_models.utils import StepFunction
+    >>> from neuroimaging.fixes.scipy.stats.models.utils import StepFunction
     >>>
     >>> x = arange(20)
     >>> y = arange(20)

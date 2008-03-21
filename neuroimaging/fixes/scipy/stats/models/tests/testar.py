@@ -1,5 +1,5 @@
 from exampledata import x, y
-import neuroimaging.fixes.scipy.stats_models as SSM
+import neuroimaging.fixes.scipy.stats.models as SSM
 
 for i in range(1,4):
     model = SSM.regression.ARModel(x, i)

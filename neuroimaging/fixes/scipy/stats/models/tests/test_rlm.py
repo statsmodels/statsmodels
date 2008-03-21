@@ -5,7 +5,7 @@ Test functions for models.rlm
 import numpy.random as R
 from neuroimaging.externals.scipy.testing import *
 
-import neuroimaging.fixes.scipy.stats_models.rlm as models
+import neuroimaging.fixes.scipy.stats.models.rlm as models
 
 W = R.standard_normal
 

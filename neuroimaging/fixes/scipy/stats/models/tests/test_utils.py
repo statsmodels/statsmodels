@@ -6,7 +6,7 @@ import numpy as N
 import numpy.random as R
 from neuroimaging.externals.scipy.testing import *
 
-from neuroimaging.fixes.scipy.stats_models import utils
+from neuroimaging.fixes.scipy.stats.models import utils
 
 class TestUtils(TestCase):
 

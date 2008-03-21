@@ -5,7 +5,7 @@ import numpy as N
 
 from rpy import r
 
-import neuroimaging.fixes.scipy.stats_models as SSM
+import neuroimaging.fixes.scipy.stats.models as SSM
 
 from rmodelwrap import RModel
 

@@ -1,6 +1,6 @@
 import numpy as N
-from neuroimaging.fixes.scipy.stats_models.family import links as L
-from neuroimaging.fixes.scipy.stats_models.family import varfuncs as V
+from neuroimaging.fixes.scipy.stats.models.family import links as L
+from neuroimaging.fixes.scipy.stats.models.family import varfuncs as V
 
 class Family(object):
 

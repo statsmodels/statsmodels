@@ -3,7 +3,7 @@ import tempfile
 
 import numpy as N
 
-from neuroimaging.fixes.scipy.stats_models import survival, model
+from neuroimaging.fixes.scipy.stats.models import survival, model
 
 class Discrete:
 
@@ -200,7 +200,7 @@ if __name__ == '__main__':
     for i in range(2*n):
         subjects[i].X = X[i]
 
-    import neuroimaging.fixes.scipy.stats_models.formula as F
+    import neuroimaging.fixes.scipy.stats.models.formula as F
     x = F.quantitative('X')
     f = F.formula(x)
 

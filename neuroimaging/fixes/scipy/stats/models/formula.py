@@ -316,7 +316,7 @@ class Quantitative(Term):
     of another term, i.e. to take powers:
 
     >>> import numpy as N
-    >>> from neuroimaging.fixes.scipy.stats_models import formula
+    >>> from neuroimaging.fixes.scipy.stats.models import formula
     >>> X = N.linspace(0,10,101)
     >>> x = formula.Term('X')
     >>> x.namespace={'X':X}
@@ -684,7 +684,7 @@ Intercept term in a formula. If intercept is the
 only term in the formula, then a keyword argument
 \'nrow\' is needed.
 
->>> from neuroimaging.fixes.scipy.stats_models.formula import Formula, I
+>>> from neuroimaging.fixes.scipy.stats.models.formula import Formula, I
 >>> I()
 array(1.0)
 >>> I(nrow=5)

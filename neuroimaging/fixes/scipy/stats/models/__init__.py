@@ -4,15 +4,15 @@
 
 __docformat__ = 'restructuredtext'
 
-from neuroimaging.fixes.scipy.stats_models.info import __doc__
+from neuroimaging.fixes.scipy.stats.models.info import __doc__
 
-import neuroimaging.fixes.scipy.stats_models.model
-import neuroimaging.fixes.scipy.stats_models.formula
-import neuroimaging.fixes.scipy.stats_models.regression
-import neuroimaging.fixes.scipy.stats_models.robust
-import neuroimaging.fixes.scipy.stats_models.family
-from neuroimaging.fixes.scipy.stats_models.glm import Model as glm
-from neuroimaging.fixes.scipy.stats_models.rlm import Model as rlm
+import neuroimaging.fixes.scipy.stats.models.model
+import neuroimaging.fixes.scipy.stats.models.formula
+import neuroimaging.fixes.scipy.stats.models.regression
+import neuroimaging.fixes.scipy.stats.models.robust
+import neuroimaging.fixes.scipy.stats.models.family
+from neuroimaging.fixes.scipy.stats.models.glm import Model as glm
+from neuroimaging.fixes.scipy.stats.models.rlm import Model as rlm
 
 __all__ = filter(lambda s:not s.startswith('_'),dir())
 

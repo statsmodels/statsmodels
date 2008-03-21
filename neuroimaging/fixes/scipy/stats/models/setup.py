@@ -52,7 +52,7 @@ if __name__ == '__main__':
 
     from numpy.distutils.core import setup
 
-    #package_name = 'neuroimaging.fixes.scipy.stats_models'
+    #package_name = 'neuroimaging.fixes.scipy.stats.models'
     package_name = 'scipy.stats.models'
 
     setup(**configuration(top_path='',

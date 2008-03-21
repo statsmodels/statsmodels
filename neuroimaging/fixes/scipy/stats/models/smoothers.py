@@ -9,8 +9,8 @@ import numpy.linalg as L
 from scipy.linalg import solveh_banded
 from scipy.optimize import golden
 
-from neuroimaging.fixes.stats_models import _bspline
-from neuroimaging.fixes.scipy.stats_models.bspline import bspline, _band2array
+from neuroimaging.fixes.stats.models import _bspline
+from neuroimaging.fixes.scipy.stats.models.bspline import bspline, _band2array
 
 
 class PolySmoother:
