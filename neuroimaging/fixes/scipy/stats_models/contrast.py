@@ -23,6 +23,12 @@ class ContrastResults:
             self.effect = effect
             self.df_denom = df_denom
 
+    def __array__(self):
+        if hasattr(self, "F"):
+            return self.F
+        else:
+            return self.t
+
     def __str__(self):
         if hasattr(self, 'F'):
             return '<F contrast: F=%s, df_denom=%d, df_num=%d>' % \
