@@ -38,13 +38,13 @@ class ContrastResults:
                    (`self.effect`, `self.sd`, `self.t`, self.df_denom)
 
 
-class Contrast:
+class Contrast(object):
     """
     This class is used to construct contrast matrices in regression models.
     They are specified by a (term, formula) pair.
 
     The term, T,  is a linear combination of columns of the design
-    matrix D=formula(). The getmatrix method constructs
+    matrix D=formula(). The matrix attribute is
     a contrast matrix C so that
 
     colspan(dot(D, C)) = colspan(dot(D, dot(pinv(D), T)))
@@ -74,7 +74,7 @@ class Contrast:
         return '<contrast:%s>' % \
                `{'term':str(self.term), 'formula':str(self.formula)}`
 
-    def getmatrix(self, *args, **kw):
+    def _compute_matrix(self, *args, **kw):
         """
         Construct a contrast matrix C so that
 
@@ -97,12 +97,20 @@ class Contrast:
 
         self.D = self.formula.design(*args, **kw)
 
-        self.matrix = contrastfromcols(self.T, self.D)
+        matrix = contrastfromcols(self.T, self.D)
         try:
             self.rank = self.matrix.shape[1]
         except:
             self.rank = 1
+        return matrix
 
+    def _compute_matrix(self):
+        if hasattr(self, "_matrix"):
+            return self._matrix
+        else:
+            self._matrix = self._compute_matrix()
+            return self._matrix
+    matrix = property(_getmatrix)
 
 def contrastfromcols(L, D, pseudo=None):
     """
