@@ -218,7 +218,7 @@ def setup_bspline_module():
             for (kk=0; kk<nq; kk++) {
                 partial += y[kk] * qw[kk];
             }
-            free(y); /* bspline_prod malloc's memory, but does not free it */
+            free(y); /* bspline_prod malloc's memory, but does not free it '*/
 
             result += (b - a) * partial / 2.;
 
@@ -348,34 +348,3 @@ mod = setup_bspline_module()
 def build_bspline_module():
     mod.compile()
 
-# try:
-#     import _bspline
-# except ImportError:
-#     build_bspline_module()
-#     import _bspline
-
-## if __name__ == '__main__':
-##     knots = N.hstack([[0]*3, N.linspace(0,1,11).astype(N.float64), [1]*3])
-##     x = N.array([0.4,0.5])
-##     print bspline_ext.bspline_eval(x, knots, 4, 2, 0, 13)
-
-##     knots = N.hstack([[0]*3, N.linspace(0,1,501).astype(N.float64), [1]*3])
-##     nknots = knots.shape[0]
-##     x = N.linspace(0,1,1000)
-##     m = 4
-##     d = 0
-
-
-##     import time, gc
-##     t = 0
-##     for i in range(100):
-##         lower = i
-##         toc = time.time()
-##         gc.collect()
-##         y = bspline_ext.bspline_eval(x, knots, m, 2, 0, 503)
-##         z = bspline_ext.bspline_prod(x, knots, m, 2, 1, 0, 0)
-##         tic = time.time()
-##         t += tic-toc
-##         del(y); del(z)
-
-##     print t / 100
