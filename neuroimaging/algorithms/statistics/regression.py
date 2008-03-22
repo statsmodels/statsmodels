@@ -2,23 +2,23 @@
 This module provides various convenience functions for extracting
 statistics from regression analysis techniques to model the
 relationship between the dependent and independent variables.
+
+As well as a convenience class to output the result, RegressionOutput
+
 """
 
 __docformat__ = 'restructuredtext'
 
-import os
-
 import numpy as np
-
-from neuroimaging.core.api import Image, save_image
+import numpy.linalg as L
+from scipy.linalg import toeplitz
+from neuroimaging.fixes.scipy.stats_models.utils import recipr
 
 def output_T(results, contrast, effect=None, sd=None, t=None):
     """
     This convenience function outputs the results of a Tcontrast
     from a regression
     """
-    if not hasattr(self, "contrast"):
-        contrast.getmatrix()
     r = results.Tcontrast(self.contrast.matrix, sd=sd,
                           t=t)
     # this may not always be an array..
@@ -33,8 +33,6 @@ def output_F(results, contrast):
     This convenience function outputs the results of an Fcontrast
     from a regression
     """
-    if not hasattr(self, "contrast"):
-        contrast.getmatrix()
     return results.Fcontrast(contrast.matrix).F
 
 def output_resid(results):
@@ -44,3 +42,98 @@ def output_resid(results):
     """
     return results.resid
 
+class RegressionOutput:
+    """
+    A class to output things in GLM passes through arrays of data.
+    """
+
+    def __init__(self, img, fn):
+        """
+        :Parameters:
+            `img` : the output Image
+            `fn` : a function that is applied to a scipy.stats.models.model.LikelihoodModelResults instance
+
+        """
+        self.img = img
+        self.fn = fn
+
+    def write(self, index, results):
+        """
+        self.img[index] = self.fn(results)
+        Q: is it reasonable to use the __setitem__ for this?
+        it would look funny because we call a function on results...
+        """
+        self.img[index] = self.fn(results)
+
+def output_AR1(results):
+    """
+    Compute the usual AR(1) parameter on
+    the residuals from a regression.
+    """
+    resid = results.resid
+    rho = np.add.reduce(resid[0:-1]*resid[1:] / np.add.reduce(resid[1:-1]**2))
+    return rho
+
+class AREstimator:
+    """
+    A class that whose instances can estimate
+    AR(p) coefficients from residuals
+    """
+
+    def __init__(self, model, p=1):
+        """
+        :Parameters:
+            `grid` : TODO
+                TODO
+            `model` : TODO
+                A scipy.stats.models.regression.OLSmodel instance
+            `p` : int
+                Order of AR(p) noise
+        """
+        self.p = p
+        self._setup_bias_correct(model)
+
+    def _setup_bias_correct(self, model):
+
+        R = np.identity(model.design.shape[0]) - np.dot(model.design, model.calc_beta)
+        M = np.zeros((self.p+1,)*2)
+        I = np.identity(R.shape[0])
+
+        for i in range(self.p+1):
+            Di = np.dot(R, toeplitz(I[i]))
+            for j in range(self.p+1):
+                Dj = np.dot(R, toeplitz(I[j]))
+                M[i,j] = np.diagonal((np.dot(Di, Dj))/(1.+(i>0))).sum()
+
+        self.invM = L.inv(M)
+        return
+
+    def __call__(self, results):
+        """
+        :Parameters:
+            `results` : a scipy.stats.models.model.LikelihoodModelResults instance
+        :Returns: ``numpy.ndarray``
+        """
+        resid = results.resid.reshape((results.resid.shape[0],
+                                       np.product(results.resid.shape[1:])))
+
+        sum_sq = results.scale.reshape(resid.shape[1:]) * results.df_resid
+
+        cov = np.zeros((self.p + 1,) + sum_sq.shape)
+        cov[0] = sum_sq
+        for i in range(1, self.p+1):
+            cov[i] = np.add.reduce(resid[i:] * resid[0:-i], 0)
+        cov = np.dot(self.invM, cov)
+        output = cov[1:] * recipr(cov[0])
+        return np.squeeze(output)
+
+def generate_output(outputs, iterable):
+    """
+    Write out results of a given output.
+
+    In the regression setting, results is generally
+    going to be a scipy.stats.models.model.LikelihoodModelResults instance.
+    """
+    for i, results in iterable:
+        for output in outputs:
+            output.write(i, results)
