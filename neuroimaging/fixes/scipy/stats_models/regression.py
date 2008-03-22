@@ -265,7 +265,8 @@ class ARModel(OLSModel):
         for i in range(niter):
             self.initialize(self.design)
             results = self.fit(Y)
-            self.rho, _ = self.yule_walker(Y - results.predict)
+            self.rho, _ = yule_walker(Y - results.predict,
+                                      order=self.order, df=self.df)
 
     def whiten(self, X):
         """
@@ -282,28 +283,28 @@ class ARModel(OLSModel):
             _X[(i+1):] = _X[(i+1):] - self.rho[i] * X[0:-(i+1)]
         return _X
 
-    def yule_walker(self, X, method="unbiased", df=None):
-        """
-        Estimate AR(p) parameters from a sequence X using Yule-Walker equation.
 
-        unbiased or maximum-likelihood estimator (mle)
+def yule_walker(self, X, order=1, method="unbiased", df=None, inv=False):
+    """
+    Estimate AR(p) parameters from a sequence X using Yule-Walker equation.
 
-        See, for example:
+    unbiased or maximum-likelihood estimator (mle)
 
-        http://en.wikipedia.org/wiki/Autoregressive_moving_average_model
+    See, for example:
 
-        :Parameters:
-            X : TODO
-                TODO
-            method : ``string``
-                Method can be "unbiased" or "mle" and this determines
-                denominator in estimate of autocorrelation function (ACF)
-                at lag k. If "mle", the denominator is n=r.shape[0], if
-                "unbiased" the denominator is n-k.
-            df : ``integer``
-                Specifies the degrees of freedom. If df is supplied,
-                then it is assumed the X has df degrees of
-                freedom rather than n.
+    http://en.wikipedia.org/wiki/Autoregressive_moving_average_model
+
+    :Parameters:
+        X : a 1d ndarray
+        method : ``string``
+               Method can be "unbiased" or "mle" and this determines
+               denominator in estimate of autocorrelation function (ACF)
+               at lag k. If "mle", the denominator is n=r.shape[0], if
+               "unbiased" the denominator is n-k.
+        df : ``integer``
+               Specifies the degrees of freedom. If df is supplied,
+               then it is assumed the X has df degrees of
+               freedom rather than n.
         """
 
         method = str(method).lower()
@@ -321,15 +322,18 @@ class ARModel(OLSModel):
 
         if len(X.shape) != 1:
             raise ValueError, "expecting a vector to estimate AR parameters"
-        r = N.zeros(self.order+1, N.float64)
+        r = N.zeros(order+1, N.float64)
         r[0] = (X**2).sum() / denom(0)
-        for k in range(1,self.order+1):
+        for k in range(1,order+1):
             r[k] = (X[0:-k]*X[k:]).sum() / denom(k)
         R = toeplitz(r[:-1])
 
         rho = L.solve(R, r[1:])
         sigmasq = r[0] - (r[1:]*rho).sum()
-        return rho, N.sqrt(sigmasq)
+        if inv == True:
+            return rho, N.sqrt(sigmasq), L.inv(R)
+        else:
+            return rho, N.sqrt(sigmasq)
 
 class WLSModel(OLSModel):
     """
