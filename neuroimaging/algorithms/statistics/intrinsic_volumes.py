@@ -686,14 +686,14 @@ def setup_extension():
 try:
     import _intrinsic_volumes
 except:
-    mod = setup_extension()
-    d = mod.setup_extension(location=os.path.dirname(__file__)).__dict__
-    n = d['name']; del(d['name'])
-    s = d['sources']; del(d['sources'])
-    d['include_dirs'].append(N.get_include())
-    extension = n, s, d
-##     mod.compile()
-##     import _intrinsic_volumes
+    pass
+
+mod = setup_extension()
+d = mod.setup_extension(location=os.path.dirname(__file__)).__dict__
+n = d['name']; del(d['name'])
+s = d['sources']; del(d['sources'])
+d['include_dirs'].append(N.get_include())
+extension = n, s, d
 
 def EC(X, thresh=0):
     m = N.greater(X, thresh).astype(N.int)
@@ -716,8 +716,9 @@ def LK(X, thresh, coords=None, lk=0):
              (1,0):_intrinsic_volumes.ECdim1,
              (2,0):_intrinsic_volumes.ECdim2,
              (3,0):_intrinsic_volumes.ECdim3,
-             (4,0):_intrinsic_volumes.ECdim4,
-             (5,0):_intrinsic_volumes.ECdim5}[(len(X.shape), lk)]
+##              (4,0):_intrinsic_volumes.ECdim4,
+##              (5,0):_intrinsic_volumes.ECdim5
+             }[(len(X.shape), lk)]
     except KeyError:
         raise KeyError, 'cannot compute this intrinsic volume'
     if lk > 0:

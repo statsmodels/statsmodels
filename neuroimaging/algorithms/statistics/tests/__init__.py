@@ -1,1 +1,2 @@
 import neuroimaging.algorithms.statistics.tests.test_rft
+import neuroimaging.algorithms.statistics.tests.test_intrinsic_volumes
