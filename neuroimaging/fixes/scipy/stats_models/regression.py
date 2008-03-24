@@ -305,35 +305,35 @@ def yule_walker(self, X, order=1, method="unbiased", df=None, inv=False):
                Specifies the degrees of freedom. If df is supplied,
                then it is assumed the X has df degrees of
                freedom rather than n.
-        """
+    """
 
-        method = str(method).lower()
-        if method not in ["unbiased", "mle"]:
-            raise ValueError, "ACF estimation method must be 'unbiased' \
-            or 'MLE'"
-        X = N.asarray(X, N.float64)
-        X -= X.mean()
-        n = df or X.shape[0]
+    method = str(method).lower()
+    if method not in ["unbiased", "mle"]:
+        raise ValueError, "ACF estimation method must be 'unbiased' \
+        or 'MLE'"
+    X = N.asarray(X, N.float64)
+    X -= X.mean()
+    n = df or X.shape[0]
 
-        if method == "unbiased":
-            denom = lambda k: n - k
-        else:
-            denom = lambda k: n
+    if method == "unbiased":
+        denom = lambda k: n - k
+    else:
+        denom = lambda k: n
 
-        if len(X.shape) != 1:
-            raise ValueError, "expecting a vector to estimate AR parameters"
-        r = N.zeros(order+1, N.float64)
-        r[0] = (X**2).sum() / denom(0)
-        for k in range(1,order+1):
-            r[k] = (X[0:-k]*X[k:]).sum() / denom(k)
-        R = toeplitz(r[:-1])
+    if len(X.shape) != 1:
+        raise ValueError, "expecting a vector to estimate AR parameters"
+    r = N.zeros(order+1, N.float64)
+    r[0] = (X**2).sum() / denom(0)
+    for k in range(1,order+1):
+        r[k] = (X[0:-k]*X[k:]).sum() / denom(k)
+    R = toeplitz(r[:-1])
 
-        rho = L.solve(R, r[1:])
-        sigmasq = r[0] - (r[1:]*rho).sum()
-        if inv == True:
-            return rho, N.sqrt(sigmasq), L.inv(R)
-        else:
-            return rho, N.sqrt(sigmasq)
+    rho = L.solve(R, r[1:])
+    sigmasq = r[0] - (r[1:]*rho).sum()
+    if inv == True:
+        return rho, N.sqrt(sigmasq), L.inv(R)
+    else:
+        return rho, N.sqrt(sigmasq)
 
 class WLSModel(OLSModel):
     """

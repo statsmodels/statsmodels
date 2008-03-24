@@ -111,7 +111,7 @@ class Contrast(object):
         if not hasattr(self, "_matrix"):
             self.compute_matrix()
         return self._matrix
-    matrix = property(_getmatrix)
+    matrix = property(_get_matrix)
 
 def contrastfromcols(L, D, pseudo=None):
     """
