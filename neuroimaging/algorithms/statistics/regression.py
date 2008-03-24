@@ -22,11 +22,15 @@ def output_T(results, contrast, effect=None, sd=None, t=None):
     r = results.Tcontrast(self.contrast.matrix, sd=sd,
                           t=t)
     # this may not always be an array..
-    return [r.effect,
-            r.sd,
-            r.t]
 
-    r = results.Tcontrast(contrast.matrix)
+    v = []
+    if effect is not None:
+        v.append(effect)
+    if sd is not None:
+        v.append(sd)
+    if t is not None:
+        v.append(t)
+    return v
 
 def output_F(results, contrast):
     """
@@ -64,6 +68,70 @@ class RegressionOutput:
         it would look funny because we call a function on results...
         """
         self.img[index] = self.fn(results)
+
+class RegressionOutputList:
+    """
+    A class to output more than one thing
+    from a GLM pass through arrays of data.
+    """
+
+    def __init__(self, imgs, fn):
+        """
+        :Parameters:
+            `imgs` : the list of output images
+            `fn` : a function that is applied to a scipy.stats.models.model.LikelihoodModelResults instance
+
+        """
+        self.imgs = imgs
+        self.fn = fn
+
+    def write(self, index, results):
+        """
+        for i in range(len(self.imgs)):
+            self.imgs[i][index] = self.fn(results)[i]
+        Q: is it reasonable to use the __setitem__ for this?
+        it would look funny because we call a function on results...
+        """
+        r = self.fn(results)
+        for i in range(len(self.list)):
+            self.imgs[i][index] = r[i]
+
+class TOutput(RegressionOutputList):
+
+    """
+    Output contrast related to a T contrast
+    from a GLM pass through data.
+    """
+    def __init__(self, contrast, effect=None,
+                 sd=None, t=None):
+        self.fn = lambda x: output_T(contrast,
+                                     x,
+                                     effect=effect,
+                                     sd=sd,
+                                     t=t)
+        self.imgs = []
+        if effect is not None:
+            self.imgs.append(effect)
+        if sd is not None:
+            self.imgs.append(sd)
+        if t is not None:
+            self.imgs.append(t)
+
+def ArrayOutput(RegressionOutput):
+    """
+    Output an array from a GLM pass through data.
+
+    By default, the function called is output_resid, so residuals
+    are output.
+
+    """
+
+    def __init__(self, img, fn=output_resid):
+        RegressionOutput.__init__(self, img, fn)
+
+    def write(self, index, results):
+        self.img[:,index] = self.fn(results)
+
 
 def output_AR1(results):
     """
