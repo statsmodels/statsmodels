@@ -1,9 +1,7 @@
 from os.path import join
 import sys
 
-from numpy.distutils.misc_util import get_numpy_include_dirs
-
-from neuroimaging import packages, __version__, __doc__, ENTHOUGHT_TRAITS_DEF
+from neuroimaging import packages, __version__, __doc__
 
 
 def configuration(parent_package='',top_path=None):

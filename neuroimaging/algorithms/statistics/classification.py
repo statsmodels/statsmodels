@@ -3,7 +3,7 @@ TODO
 """
 __docformat__ = 'restructuredtext'
 
-from neuroimaging.fixes.scipy.stats_models.model import Model
+from neuroimaging.fixes.scipy.stats.models.model import Model
 
 class Classifier(Model):
     """

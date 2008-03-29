@@ -6,7 +6,7 @@ __docformat__ = 'restructuredtext'
 import gc
 
 import numpy as N
-from neuroimaging.fixes.scipy.stats_models.utils import recipr
+from neuroimaging.fixes.scipy.stats.models.utils import recipr
 
 class OneSampleResults(object):
     """

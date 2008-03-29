@@ -20,7 +20,7 @@ directory. Modifying these files will not modify what Python imports.
 To install a development version of the neuroimaging, which follows all
 the modifications made to your source tree use::
 
-    sudo python setup.py develop --prefix /usr/local
+    sudo python setup_egg.py develop --prefix /usr/local
 
 
 Developing
