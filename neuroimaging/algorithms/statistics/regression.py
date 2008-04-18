@@ -14,22 +14,21 @@ import numpy.linalg as L
 from scipy.linalg import toeplitz
 from neuroimaging.fixes.scipy.stats_models.utils import recipr
 
-def output_T(results, contrast, effect=None, sd=None, t=None):
+def output_T(contrast, results, effect=None, sd=None, t=None):
     """
     This convenience function outputs the results of a Tcontrast
     from a regression
     """
-    r = results.Tcontrast(self.contrast.matrix, sd=sd,
+    r = results.Tcontrast(contrast.matrix, sd=sd,
                           t=t)
-    # this may not always be an array..
 
     v = []
     if effect is not None:
-        v.append(effect)
+        v.append(r.effect)
     if sd is not None:
-        v.append(sd)
+        v.append(r.sd)
     if t is not None:
-        v.append(t)
+        v.append(r.t)
     return v
 
 def output_F(results, contrast):
@@ -51,7 +50,7 @@ class RegressionOutput:
     A class to output things in GLM passes through arrays of data.
     """
 
-    def __init__(self, img, fn):
+    def __init__(self, img, fn, output_shape=None):
         """
         :Parameters:
             `img` : the output Image
@@ -60,20 +59,23 @@ class RegressionOutput:
         """
         self.img = img
         self.fn = fn
+        self.output_shape = output_shape
 
-    def write(self, index, results):
-        """
-        self.img[index] = self.fn(results)
-        Q: is it reasonable to use the __setitem__ for this?
-        it would look funny because we call a function on results...
-        """
-        self.img[index] = self.fn(results)
+    def __call__(self, x):
+        return self.fn(x)
+
+    def __setitem__(self, index, value):
+        self.img[index] = value
+
 
 class RegressionOutputList:
     """
     A class to output more than one thing
     from a GLM pass through arrays of data.
     """
+
+    def __call__(self, x):
+        return self.fn(x)
 
     def __init__(self, imgs, fn):
         """
@@ -82,19 +84,12 @@ class RegressionOutputList:
             `fn` : a function that is applied to a scipy.stats.models.model.LikelihoodModelResults instance
 
         """
-        self.imgs = imgs
+        self.list = imgs
         self.fn = fn
 
-    def write(self, index, results):
-        """
-        for i in range(len(self.imgs)):
-            self.imgs[i][index] = self.fn(results)[i]
-        Q: is it reasonable to use the __setitem__ for this?
-        it would look funny because we call a function on results...
-        """
-        r = self.fn(results)
-        for i in range(len(self.list)):
-            self.imgs[i][index] = r[i]
+    def __setitem__(self, index, value):
+        self.list[index[0]][index[1:]] = value
+
 
 class TOutput(RegressionOutputList):
 
@@ -109,15 +104,15 @@ class TOutput(RegressionOutputList):
                                      effect=effect,
                                      sd=sd,
                                      t=t)
-        self.imgs = []
+        self.list = []
         if effect is not None:
-            self.imgs.append(effect)
+            self.list.append(effect)
         if sd is not None:
-            self.imgs.append(sd)
+            self.list.append(sd)
         if t is not None:
-            self.imgs.append(t)
+            self.list.append(t)
 
-def ArrayOutput(RegressionOutput):
+class ArrayOutput(RegressionOutput):
     """
     Output an array from a GLM pass through data.
 
@@ -126,12 +121,8 @@ def ArrayOutput(RegressionOutput):
 
     """
 
-    def __init__(self, img, fn=output_resid):
+    def __init__(self, img, fn):
         RegressionOutput.__init__(self, img, fn)
-
-    def write(self, index, results):
-        self.img[:,index] = self.fn(results)
-
 
 def output_AR1(results):
     """
@@ -195,13 +186,3 @@ class AREstimator:
         output = cov[1:] * recipr(cov[0])
         return np.squeeze(output)
 
-def generate_output(outputs, iterable):
-    """
-    Write out results of a given output.
-
-    In the regression setting, results is generally
-    going to be a scipy.stats.models.model.LikelihoodModelResults instance.
-    """
-    for i, results in iterable:
-        for output in outputs:
-            output.write(i, results)
