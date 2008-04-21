@@ -1,355 +1,188 @@
 """
-This module provides various regression analysis techniques to model the
+This module provides various convenience functions for extracting
+statistics from regression analysis techniques to model the
 relationship between the dependent and independent variables.
+
+As well as a convenience class to output the result, RegressionOutput
+
 """
 
 __docformat__ = 'restructuredtext'
 
-import os
-
 import numpy as np
+import numpy.linalg as L
+from scipy.linalg import toeplitz
+from neuroimaging.fixes.scipy.stats_models.utils import recipr
 
-from neuroimaging.core.api import Image, save_image, slice_iterator
-
-class LinearModelIterator(object):
+def output_T(contrast, results, effect=None, sd=None, t=None):
     """
-    TODO
+    This convenience function outputs the results of a Tcontrast
+    from a regression
     """
+    r = results.Tcontrast(contrast.matrix, sd=sd,
+                          t=t)
 
-    def __init__(self, iterator, outputs=()):
-        """
-        :Parameters:
-            iterator : TODO
-                TODO
-            outputs : TODO
-                TODO
-        """
-        self.iterator = iter(iterator)
-        self.outputs = [iter(output) for output in outputs]
+    v = []
+    if effect is not None:
+        v.append(r.effect)
+    if sd is not None:
+        v.append(r.sd)
+    if t is not None:
+        v.append(r.t)
+    return v
 
-
-    def model(self):
-        """
-        This method should take the iterator at its current state and
-        return a LinearModel object.
-
-        :Returns: ``None``
-        """
-        raise NotImplementedError
-
-    def fit(self):
-        """
-        Go through an iterator, instantiating model and passing data,
-        going through outputs.
-
-        :Returns: ``None``
-        """
-
-        for data in self.iterator:
-            shape = data.shape[1:]
-            data.shape = (data.shape[0], np.product(shape))
-
-            results = self.model().fit(data)
-            for output in self.outputs:
-                out = output.extract(results)
-                if output.nout > 1:
-                    out.shape = (output.nout,) + shape
-                else:
-                    out.shape = shape
-
-                output.set_next(data=out)
-
-
-class RegressionOutput(object):
-
+def output_F(results, contrast):
     """
-    A generic output for regression. Key feature is that it has
-    an \'extract\' method which is called on an instance of
-    Results.
+    This convenience function outputs the results of an Fcontrast
+    from a regression
+    """
+    return results.Fcontrast(contrast.matrix).F
+
+def output_resid(results):
+    """
+    This convenience function outputs the residuals
+    from a regression
+    """
+    return results.resid
+
+class RegressionOutput:
+    """
+    A class to output things in GLM passes through arrays of data.
     """
 
-    def __init__(self, grid, nout=1, outgrid=None):
+    def __init__(self, img, fn, output_shape=None):
         """
         :Parameters:
-            grid : TODO
-                TODO
-            nout : ``int``
-                TODO
-            outgrid : TODO
-                TODO
+            `img` : the output Image
+            `fn` : a function that is applied to a scipy.stats.models.model.LikelihoodModelResults instance
+
         """
-        self.grid = grid
-        self.nout = nout
-        if outgrid is not None:
-            self.outgrid = outgrid
-        else:
-            self.outgrid = grid
-        self.img = NotImplemented
-        self.it = NotImplemented
+        self.img = img
+        self.fn = fn
+        self.output_shape = output_shape
 
-    def __iter__(self):
-        """
-        :Returns: ``self``
-        """
-        iter(self.it)
-        return self
+    def __call__(self, x):
+        return self.fn(x)
 
-    def next(self):
-        """
-        :Returns: TODO
-        """
-        return self.it.next()
+    def __setitem__(self, index, value):
+        self.img[index] = value
 
-    def set_next(self, data):
-        """
-        :Parameters:
-            data : TODO
-                TODO
 
-        :Returns: ``None``
-        """
-        self.it.next().set(data)
-
-    def extract(self, results):
-        """
-        :Parameters:
-            results : TODO
-                TODO
-
-        :Returns: ``None``
-
-        :Raises: NotImplementedError
-        """
-        raise NotImplementedError
-
-    def _setup_img(self, clobber, outdir, ext, basename):
-        if not os.path.exists(outdir):
-            os.makedirs(outdir)
-
-        outname = os.path.join(outdir, '%s%s' % (basename, ext))
-        empty = Image(np.zeros(self.outgrid.shape), self.outgrid)
-        save_image(outname, clobber=clobber)
-        if self.it is NotImplemented:
-            it = slice_iterator(img, mode='w')
-        else:
-            it = iter(self.it.copy(img))
-        return img, it
-
-class ImageRegressionOutput(RegressionOutput):
+class RegressionOutputList:
     """
-    A class to output things in GLM passes through Image data. It
-    uses the image's iterator values to output to an image.
+    A class to output more than one thing
+    from a GLM pass through arrays of data.
     """
 
-    def __init__(self, grid, nout=1, outgrid=None, it=None):
+    def __call__(self, x):
+        return self.fn(x)
+
+    def __init__(self, imgs, fn):
         """
         :Parameters:
-            grid : TODO
-                TODO
-            nout : int
-                TODO
-            outgrid : TODO
-                TODO
-            it : TODO
-                TODO
+            `imgs` : the list of output images
+            `fn` : a function that is applied to a scipy.stats.models.model.LikelihoodModelResults instance
+
         """
-        RegressionOutput.__init__(self, grid, nout, outgrid)
+        self.list = imgs
+        self.fn = fn
 
-        if self.nout > 1:
-            self.grid = self.grid.replicate(self.nout)
-
-        self.img = Image(N.zeros(outgrid.shape), grid=outgrid)
-        if it is None:
-            self.it = self.img.slice_iterator(mode='w')
-        else:
-            self.it = it
+    def __setitem__(self, index, value):
+        self.list[index[0]][index[1:]] = value
 
 
-class TContrastOutput(ImageRegressionOutput):
+class TOutput(RegressionOutputList):
+
     """
-    TODO
+    Output contrast related to a T contrast
+    from a GLM pass through data.
     """
+    def __init__(self, contrast, effect=None,
+                 sd=None, t=None):
+        self.fn = lambda x: output_T(contrast,
+                                     x,
+                                     effect=effect,
+                                     sd=sd,
+                                     t=t)
+        self.list = []
+        if effect is not None:
+            self.list.append(effect)
+        if sd is not None:
+            self.list.append(sd)
+        if t is not None:
+            self.list.append(t)
 
-    def __init__(self, grid, contrast, path='.', subpath='contrasts', ext=".nii",
-                 effect=True, sd=True, t=True, nout=1, outgrid=None,
-                 clobber=False):
-        """
-        :Parameters:
-            grid : TODO
-                TODO
-            contrast : TODO
-                TODO
-            path : ``string``
-                TODO
-            subpath : ``string``
-                TODO
-            ext : ``string``
-                TODO
-            effect : ``bool``
-                TODO
-            sd : ``bool``
-                TODO
-            t : ``bool``
-                TODO
-            nout : ``int``
-                TODO
-            outgrid : TODO
-                TODO
-            clobber : ``bool``
-                TODO
-        """
-        ImageRegressionOutput.__init__(self, grid, nout, outgrid)
-        self.contrast = contrast
-        self.effect = effect
-        self.sd = sd
-        self.t = t
-        self._setup_contrast()
-        self._setup_output(clobber, path, subpath, ext)
-
-    def _setup_contrast(self, **extra):
-        self.contrast.getmatrix(**extra)
-
-    def _setup_output(self, clobber, path, subpath, ext):
-        outdir = os.path.join(path, subpath, self.contrast.name)
-        self.timg, self.timg_it = self._setup_img(clobber, outdir, ext, 't')
-
-        if self.effect:
-            self.effectimg, self.effectimg_it = self._setup_img(clobber, outdir, ext, 'effect')
-        if self.sd:
-            self.sdimg, self.sdimg_it = self._setup_img(clobber, outdir, ext, 'sd')
-
-        outname = os.path.join(outdir, 'matrix.csv')
-        outfile = file(outname, 'w')
-        outfile.write(','.join(fpformat.fix(x,4) for x in self.contrast.matrix) + '\n')
-        outfile.close()
-
-        outname = os.path.join(outdir, 'matrix.bin')
-        outfile = file(outname, 'w')
-        self.contrast.matrix = self.contrast.matrix.astype('<f8')
-        self.contrast.matrix.tofile(outfile)
-        outfile.close()
-
-    def extract(self, results):
-        """
-        :Parameters:
-            results : TODO
-                TODO
-
-        :Returns: TODO
-        """
-        return results.Tcontrast(self.contrast.matrix, sd=self.sd, t=self.t)
-
-    def set_next(self, data):
-        """
-        :Parameters:
-            data : TODO
-                TODO
-
-        :Returns: ``None``
-        """
-        self.timg_it.next().set(data.t)
-        if self.effect:
-            self.effectimg_it.next().set(data.effect)
-        if self.sd:
-            self.sdimg_it.next().set(data.sd)
-
-
-class FContrastOutput(ImageRegressionOutput):
+class ArrayOutput(RegressionOutput):
     """
-    TODO
+    Output an array from a GLM pass through data.
+
+    By default, the function called is output_resid, so residuals
+    are output.
+
     """
 
-    def __init__(self, grid, contrast, path='.', clobber=False,
-                 subpath='contrasts', ext='.nii', nout=1, outgrid=None):
-        """
-        :Parameters:
-            grid : TODO
-                TODO
-            contrast : TODO
-                TODO
-            path : ``string``
-                TODO
-            clobber : ``bool``
-                TODO
-            subpath : ``string``
-                TODO
-            ext : ``string``
-                TODO
-            nout : ``int``
-                TODO
-            outgrid : TODO
-                TODO
-        """
-        ImageRegressionOutput.__init__(self, grid, nout, outgrid)
-        self.contrast = contrast
-        self._setup_contrast()
-        self._setup_output(clobber, path, subpath, ext)
+    def __init__(self, img, fn):
+        RegressionOutput.__init__(self, img, fn)
 
-    def _setup_contrast(self, **extra):
-        self.contrast.getmatrix(**extra)
-
-    def _setup_output(self, clobber, path, subpath, ext):
-        outdir = os.path.join(path, subpath, self.contrast.name)
-        self.img, self.it = self._setup_img(clobber, outdir, ext, 'F')
-
-        outname = os.path.join(outdir, 'matrix.csv')
-        outfile = file(outname, 'w')
-        writer = csv.writer(outfile)
-        for row in self.contrast.matrix:
-            writer.writerow([fpformat.fix(x, 4) for x in row])
-        outfile.close()
-
-        outname = os.path.join(outdir, 'matrix.bin')
-        outfile = file(outname, 'w')
-        self.contrast.matrix = self.contrast.matrix.astype('<f8')
-        self.contrast.matrix.tofile(outfile)
-        outfile.close()
-
-    def extract(self, results):
-        """
-        :Parameters:
-            results : TODO
-                TODO
-        """
-        return results.Fcontrast(self.contrast.matrix).F
-
-
-class ResidOutput(ImageRegressionOutput):
+def output_AR1(results):
     """
-    TODO
+    Compute the usual AR(1) parameter on
+    the residuals from a regression.
+    """
+    resid = results.resid
+    rho = np.add.reduce(resid[0:-1]*resid[1:] / np.add.reduce(resid[1:-1]**2))
+    return rho
+
+class AREstimator:
+    """
+    A class that whose instances can estimate
+    AR(p) coefficients from residuals
     """
 
-    def __init__(self, grid, path='.', nout=1, clobber=False, basename='resid',
-                 ext='.nii', outgrid=None):
+    def __init__(self, model, p=1):
         """
         :Parameters:
-            grid : TODO
+            `grid` : TODO
                 TODO
-            path : ``string``
-                TODO
-            nout : ``int``
-                TODO
-            clobber : ``bool``
-                TODO
-            basename : ``string``
-                TODO
-            ext : ``string``
-                TODO
-            outgrid : TODO
-                TODO
+            `model` : TODO
+                A scipy.stats.models.regression.OLSmodel instance
+            `p` : int
+                Order of AR(p) noise
         """
-        ImageRegressionOutput.__init__(self, grid, nout, outgrid)
-        outdir = os.path.join(path)
+        self.p = p
+        self._setup_bias_correct(model)
 
-        self.img, self.it = self._setup_img(clobber, outdir, ext, basename)
-        self.nout = self.grid.shape[0]
+    def _setup_bias_correct(self, model):
 
-    def extract(self, results):
+        R = np.identity(model.design.shape[0]) - np.dot(model.design, model.calc_beta)
+        M = np.zeros((self.p+1,)*2)
+        I = np.identity(R.shape[0])
+
+        for i in range(self.p+1):
+            Di = np.dot(R, toeplitz(I[i]))
+            for j in range(self.p+1):
+                Dj = np.dot(R, toeplitz(I[j]))
+                M[i,j] = np.diagonal((np.dot(Di, Dj))/(1.+(i>0))).sum()
+
+        self.invM = L.inv(M)
+        return
+
+    def __call__(self, results):
         """
         :Parameters:
-            results : TODO
-                TODO
-
-        :Returns: TODO
+            `results` : a scipy.stats.models.model.LikelihoodModelResults instance
+        :Returns: ``numpy.ndarray``
         """
-        return results.resid
+        resid = results.resid.reshape((results.resid.shape[0],
+                                       np.product(results.resid.shape[1:])))
+
+        sum_sq = results.scale.reshape(resid.shape[1:]) * results.df_resid
+
+        cov = np.zeros((self.p + 1,) + sum_sq.shape)
+        cov[0] = sum_sq
+        for i in range(1, self.p+1):
+            cov[i] = np.add.reduce(resid[i:] * resid[0:-i], 0)
+        cov = np.dot(self.invM, cov)
+        output = cov[1:] * recipr(cov[0])
+        return np.squeeze(output)
+
