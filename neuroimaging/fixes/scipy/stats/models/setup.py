@@ -30,7 +30,7 @@ def configuration(parent_package='',top_path=None, package_name='models'):
     weave_dir = split(weave.__file__)[0]
 
     config.add_extension('_bspline',
-                         sources = bspline_src,
+                         sources = bspline_src + [join(weave_dir,'scxx', 'weave_imp.cpp')],
                          include_dirs = [weave_dir,join(weave_dir,'scxx')],
                          )
 
