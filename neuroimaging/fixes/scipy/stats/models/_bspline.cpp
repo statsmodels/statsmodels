@@ -721,7 +721,7 @@ PyObject* catchall_to_py(PyObject* obj)
         double *result, *bl, *br;
         int k;
 
-        if (fabs(r - l) <= m) {
+        if (std::abs(r - l) <= m) {
             result = (double *) malloc(sizeof(*result) * nx);
             bl = (double *) malloc(sizeof(*bl) * nx);
             br = (double *) malloc(sizeof(*br) * nx);
