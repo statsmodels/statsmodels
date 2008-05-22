@@ -27,8 +27,9 @@ def _band2array(a, lower=0, symmetric=False, hermitian=False):
     Take an upper or lower triangular banded matrix and return a
     numpy array.
 
-    INPUTS:
-       a         -- a matrix in upper or lower triangular banded matrix
+    Parameters
+    ----------
+       a : a matrix in upper or lower triangular banded matrix
        lower     -- is the matrix upper or lower triangular?
        symmetric -- if True, return the original result plus its transpose
        hermitian -- if True (and symmetric False), return the original
@@ -277,7 +278,7 @@ class BSpline(object):
         x.shape = (N.product(_shape,axis=0),)
         if i < self.tau.shape[0] - 1:
            ## TODO: OWNDATA flags...
-            v = _bspline.evaluate(x, self.tau, self.m, d, i, i+1)
+            v = _bspline.basis(x, self.tau, self.m, d, i, i+1)
         else:
             return N.zeros(x.shape, N.float64)
 
@@ -321,7 +322,7 @@ class BSpline(object):
 
         d = N.asarray(d)
         if d.shape == ():
-            v = _bspline.evaluate(x, self.tau, self.m, int(d), lower, upper)
+            v = _bspline.basis(x, self.tau, self.m, int(d), lower, upper)
         else:
             if d.shape[0] != 2:
                 raise ValueError, "if d is not an integer, expecting a jx2 \
@@ -330,7 +331,7 @@ class BSpline(object):
 
             v = 0
             for i in range(d.shape[1]):
-                v += d[1,i] * _bspline.evaluate(x, self.tau, self.m, d[0,i], lower, upper)
+                v += d[1,i] * _bspline.basis(x, self.tau, self.m, d[0,i], lower, upper)
 
         v.shape = (upper-lower,) + _shape
         if upper == self.tau.shape[0] - self.m:

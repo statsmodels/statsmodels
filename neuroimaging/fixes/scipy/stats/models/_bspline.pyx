@@ -158,89 +158,7 @@ def basis(c_numpy.ndarray x,
 
     return numpy.squeeze(B)
 
-def inner_product(c_numpy.ndarray knots,
-                   int m, int l, int r, int dl=2, int dr=2,
-                   double delta=1.0e-06):
-    """
-
-    Parameters
-    ----------
-    knots : array, internal knots of the B-spline (see below for the
-            boundary knots), assumed to be sorted
-    m : integer, order of the B-spline, m=4 corresponds to cubic B-spline
-    l : which of the basis functions to compute, (left hand side)
-    r : which of the basis functions to compute, (right hand side)
-    dl : order of derivative of left hand side to compute
-    dr : order of derivative of right hand side to compute
-    delta : float, offset to define boundary knots at right hand endpoint
-
-    Returns
-    -------
-
-    result : float, the bilinear functional given by
-        integral_knots[0]^knots[1] D(m,l+m-1,dl)(x) D(m,r+m-1,dr)(x) dx
-
-    See Also
-    --------
-    basis : function defining the B-spline basis functions, the functions
-            D(m,i,j) are defined in its docstring
-    gram : compute the entire (banded) matrix of inner products,
-           it has shape (m, knots.shape[0]+m-2)
-
-    Notes
-    -----
-
-    The integral is computed using Gaussian quadrature on the
-    intervals determined by the interior knots. On these intervals,
-    the integrand is a polynomial of order j=(m-1-dl)+(m-1-dr),
-    hence Gaussian quadrature can be used with the number of points
-    given by ceil(j+1/2.)
-
-    It seems efficient to compute the whole (banded) inner product
-    matrix at once here, see the function gram, but this would require
-    a little more careful bookkeeping. Currently, gram just calls this function.
-
-    """
-
-    j = (m-1-dl) + (m-1-dr) # order of polynomials
-    nq = numpy.ceil((j+1)/2.) # number of points for Gaussian quadrature to be exact
-
-    qx, qw = p_roots(nq)
-
-    cdef c_numpy.ndarray bl, br, nknots
-    cdef int lower, upper, k
-    cdef a, b, partial
-
-    x = numpy.zeros((nq,))
-    result = 0
-
-    nknots = numpy.hstack([[knots[0]]*(m-1), knots, [knots[-1]+delta]*(m-1)])
-
-    lower = l - m - 1
-    lower *= (lower >= 0)
-    upper = (lower + 2 * m + 4)
-    upper = (upper * (upper <= nknots.dimensions[0] - 1) +
-             (upper > nknots.dimensions[0] - 1) * (nknots.dimensions[0] - 1))
-
-    for k from lower <= k < upper:
-        a = nknots[k]
-        b = nknots[k+1]
-
-        for kk from 0 <= kk < nq:
-            x[kk] = (b - a) * (qx[kk] + 1) / 2. + a
-
-        bl = basis(x, nknots, m, l, l, deriv=dl, add_knots=False)
-        br = basis(x, nknots, m, r, r, deriv=dr, add_knots=False)
-
-        partial = 0.
-        for kk from 0 <= kk < nq:
-            partial += (<double *>bl.data)[kk] * (<double *>br.data)[kk] * qw[kk]
-
-        result += (b - a) * partial / 2
-
-    return result
-
-def gram2(c_numpy.ndarray knots,
+def gram(c_numpy.ndarray knots,
           int m, int dl=2, int dr=2,
           double delta=1.0e-06):
     """
@@ -250,8 +168,6 @@ def gram2(c_numpy.ndarray knots,
     knots : array, internal knots of the B-spline (see below for the
             boundary knots), assumed to be sorted
     m : integer, order of the B-spline, m=4 corresponds to cubic B-spline
-    l : which of the basis functions to compute, (left hand side)
-    r : which of the basis functions to compute, (right hand side)
     dl : order of derivative of left hand side to compute
     dr : order of derivative of right hand side to compute
     delta : float, offset to define boundary knots at right hand endpoint
@@ -266,8 +182,6 @@ def gram2(c_numpy.ndarray knots,
     --------
     basis : function defining the B-spline basis functions, the functions
             D(m,i,j) are defined in its docstring
-    gram : compute the entire (banded) matrix of inner products,
-           it has shape (m, knots.shape[0]+m-2)
 
     Notes
     -----
@@ -277,10 +191,6 @@ def gram2(c_numpy.ndarray knots,
     the integrand is a polynomial of order j=(m-1-dl)+(m-1-dr),
     hence Gaussian quadrature can be used with the number of points
     given by ceil(j+1/2.)
-
-    It seems efficient to compute the whole (banded) inner product
-    matrix at once here, see the function gram, but this would require
-    a little more careful bookkeeping. Currently, gram just calls this function.
 
     """
 
@@ -326,43 +236,6 @@ def gram2(c_numpy.ndarray knots,
 
     return gram
 
-def gram(c_numpy.ndarray knots,
-         int m, int dl=2, int dr=2,
-         double delta=1.0e-06):
-    """
-
-    Parameters
-    ----------
-    knots : array, internal knots of the B-spline (see below for the
-            boundary knots), assumed to be sorted
-    m : integer, order of the B-spline, m=4 corresponds to cubic B-spline
-    dl : order of derivative of left hand side to compute
-    dr : order of derivative of right hand side to compute
-    delta : float, offset to define boundary knots at right hand endpoint
-
-    Returns
-    -------
-
-    g : array, shape (m, knots.shape[0]+m-2) whose (i,j) entry is
-        the bilinear functional given by
-        integral_knots[0]^knots[1] D(m,i,dl)(x) D(m,i+j,dr)(x) dx
-
-    See Also
-    --------
-    basis : function defining the B-spline basis functions, the functions
-            D(m,i,j) are defined in its docstring
-    inner_product : computes the actual entries of this matrix
-
-
-    """
-
-    gram = numpy.zeros((m, knots.shape[0]+m-2))
-
-    for i in range(m):
-        for j in range(knots.shape[0]+m-2):
-            if j+i < knots.shape[0]+m-2:
-                gram[i,j] = inner_product(knots, m, j, j+i, dl=dl, dr=dr, delta=delta)
-    return gram
 
 def invband(c_numpy.ndarray M):
     '''
