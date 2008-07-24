@@ -1,0 +1,88 @@
+=========================
+TODO for NIPY development
+=========================
+
+This list is currently not prioritized.
+
+Testing framework
+-----------------
+
+- Fix the testing framework.  Remove the old test framework,
+  neuroimaging.utils.testutils, make_doctest_suite.  Switch to using
+  numpy's nost testing for numpy v1.2.
+
+- Update all test modules to use the new test framework.
+
+Tests
+-----
+
+Some issues specific to tests to cleanup.
+
+- Remove creation of named temporary files "\*.nii", use NamedTemporaryFile
+  instead in test modules:
+
+  * modalities/fmri/tests/test_regression.py
+  * modalities/fmri/fmristat/tests/test_model.py
+
+- Affine is wrong in test_image.  Formats.Analyze reported 4x4 with
+  MNI translation in 4th column.  PyniftiIO reports 5x5 with only one
+  pixdim translation.
+
+- NumpyTest.run() in __main__ blocks... doesn't instantiate NumpyTest.
+  Tests cannot be run from command line.  Update to nose.
+
+Trac Wiki
+---------
+
+- Update the README and INSTALL on the Trac Wiki.  These should
+  reference a reST formatted version committed to the repository.
+  Include information on downloading the fmri data and running the
+  tests.
+
+Nipy code base
+--------------
+
+- Remove PYLAB_DEF and ENTHOUGHT_TRAITS_DEF from
+  neuroimaging.__init__.py, and any occurence of them in the code.
+  Need to update code using this to import modules as they are needed.
+
+- Delete unused formats code.  Most code in neuroimaging.data_io.formats should be deleted.  Keep pyniftiio, and some of the struct utils.
+
+- Move data_io to io package.
+
+- Delete externals/enthought/traits.  We're not using traits for now.
+
+- Delete neuroimaging/utils/path.py.  This custom path module does not
+  provide any benefit over os.path.  Using a non-standard path module
+  adds confusion to the code.  This will require going through the
+  code base and updating all references to the path module.  Perhaps a
+  good use of grin for a global search and replace.
+
+- Delete the sandbox.
+
+- Remove visualization.  May move this to a separate repos for future use?
+
+- Convert from nipy datasource to numpy datasource.  Then remove
+  nipy's datasource.py
+
+
+Code Design Thoughts
+--------------------
+
+Perhaps there's a better place for this, but I wanted a central
+location to dump thoughts that could be shared by the developers and
+tracked easily.  I also don't like having to switch from my code
+editor to a browser just to jot down an idea like this.
+
+Image Class
+-----------
+
+- save function should accept filename or file-like object.  If I have
+  an open file I would like to be able to pass that in also, instead
+  of fp.name.  Happens in test code a lot.
+
+- Add dtype options when saving. When saving images it uses the native
+  dtype for the system.  Should be able to specify this.  in the
+  test_file_roundtrip, self.img is a uint8, but is saved to tmpfile as
+  float64.  Adding this would allow us to save images without the
+  scaling being applied.
