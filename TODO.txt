@@ -42,6 +42,8 @@ Trac Wiki
 Nipy code base
 --------------
 
+- Update INSTALL and README so they are current.
+
 - Remove PYLAB_DEF and ENTHOUGHT_TRAITS_DEF from
   neuroimaging.__init__.py, and any occurence of them in the code.
   Need to update code using this to import modules as they are needed.
@@ -86,3 +88,19 @@ Image Class
   test_file_roundtrip, self.img is a uint8, but is saved to tmpfile as
   float64.  Adding this would allow us to save images without the
   scaling being applied.
+
+- In image._open(url, ...), should we test if the "url" is a PyNiftiIO
+  object already? This was in the tests from 'old code' and passed::
+
+    new = Image(self.img._data, self.img.grid)
+
+  img._data is a PyNIftiIO object.  It works, but we should verify
+  it's harmless otherwise prevent it from happening.
+
+Image Iterators
+---------------
+
+- Cleanup the image iterators/generators.  I believe Jonathan was in
+  the process of converting the code from using iterators to
+  generators after the Paris Sprint.  This code transition is not
+  complete.
