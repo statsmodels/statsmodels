@@ -44,11 +44,13 @@ Nipy code base
 
 - Update INSTALL and README so they are current.
 
-- Remove PYLAB_DEF and ENTHOUGHT_TRAITS_DEF from
-  neuroimaging.__init__.py, and any occurence of them in the code.
-  Need to update code using this to import modules as they are needed.
+- Remove ENTHOUGHT_TRAITS_DEF from neuroimaging.__init__.py, and any
+  occurence of them in the code.  Need to update code using this to
+  import modules as they are needed.
 
-- Delete unused formats code.  Most code in neuroimaging.data_io.formats should be deleted.  Keep pyniftiio, and some of the struct utils.
+- Delete unused formats code.  Most code in
+  neuroimaging.data_io.formats should be deleted.  Keep pyniftiio, and
+  some of the struct utils.
 
 - Move data_io to io package.
 
