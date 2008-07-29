@@ -37,6 +37,7 @@ Trac Wiki
 - Update the README and INSTALL on the Trac Wiki.  These should
   reference a reST formatted version committed to the repository.
   Include information on downloading the fmri data and running the
+
   tests.
 
 Nipy code base
@@ -117,4 +118,10 @@ Future Features
 
 Egg support.  Look to revno 1642, a setup_egg.py that Gael had added.
 This was removed as it did not work.
+
+Add Fernando's nose fix for running doctests in extension code.
+
+Place nipy-io-overhaul up on lp/cburns for matthew reference.
+
+Place sandbox, visualization up to lp/cburns.
 
