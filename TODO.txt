@@ -49,11 +49,9 @@ Nipy code base
   occurence of them in the code.  Need to update code using this to
   import modules as they are needed.
 
-- Delete unused formats code.  Most code in
-  neuroimaging.data_io.formats should be deleted.  Keep pyniftiio, and
-  some of the struct utils.
+- Update references to data_io package to io.  (data_io has been removed.)
 
-- Move data_io to io package.
+- Move examples to sandbox.
 
 - Delete externals/enthought/traits.  We're not using traits for now.
 
@@ -63,10 +61,10 @@ Nipy code base
   code base and updating all references to the path module.  Perhaps a
   good use of grin for a global search and replace.
 
-- Remove visualization.  May move this to a separate repos for future use?
-
 - Convert from nipy datasource to numpy datasource.  Then remove
   nipy's datasource.py
+
+- Move header_utils, utils, analyze_to_nifti and sliceplot to sandbox/tools.
 
 - Delete any *weave* code.
 
