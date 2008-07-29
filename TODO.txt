@@ -69,6 +69,9 @@ Nipy code base
 - Convert from nipy datasource to numpy datasource.  Then remove
   nipy's datasource.py
 
+- Delete any *weave* code.
+
+- Remove configobj.
 
 Code Design Thoughts
 --------------------
@@ -99,6 +102,8 @@ Image Class
   img._data is a PyNIftiIO object.  It works, but we should verify
   it's harmless otherwise prevent it from happening.
 
+- Rename SamplingGrid to CoordinateMap.  Image.grid to Image.coordmap?
+
 Image Iterators
 ---------------
 
@@ -106,3 +111,10 @@ Image Iterators
   the process of converting the code from using iterators to
   generators after the Paris Sprint.  This code transition is not
   complete.
+
+Future Features
+---------------
+
+Egg support.  Look to revno 1642, a setup_egg.py that Gael had added.
+This was removed as it did not work.
+
