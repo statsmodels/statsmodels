@@ -63,8 +63,6 @@ Nipy code base
   code base and updating all references to the path module.  Perhaps a
   good use of grin for a global search and replace.
 
-- Delete the sandbox.
-
 - Remove visualization.  May move this to a separate repos for future use?
 
 - Convert from nipy datasource to numpy datasource.  Then remove
