@@ -49,11 +49,7 @@ Nipy code base
   occurence of them in the code.  Need to update code using this to
   import modules as they are needed.
 
-- Update references to data_io package to io.  (data_io has been removed.)
-
 - Move examples to sandbox.
-
-- Delete externals/enthought/traits.  We're not using traits for now.
 
 - Delete neuroimaging/utils/path.py.  This custom path module does not
   provide any benefit over os.path.  Using a non-standard path module
@@ -69,6 +65,8 @@ Nipy code base
 - Delete any *weave* code.
 
 - Remove configobj.
+
+- What to do with nipy/doc?
 
 Code Design Thoughts
 --------------------
