@@ -54,8 +54,6 @@ Nipy code base
 - Convert from nipy datasource to numpy datasource.  Then remove
   nipy's datasource.py
 
-- Move header_utils, utils, analyze_to_nifti and sliceplot to sandbox/tools.
-
 - Delete any *weave* code.
 
 - Remove configobj.
@@ -112,4 +110,9 @@ Add Fernando's nose fix for running doctests in extension code.
 Place nipy-io-overhaul up on lp/cburns for matthew reference.
 
 Place sandbox, visualization up to lp/cburns.
+
+Move header_utils, utils, analyze_to_nifti and sliceplot to
+sandbox/tools.  Files are currently in
+nipy-sandbox/neuroimaging/data_io/formats.
+
 
