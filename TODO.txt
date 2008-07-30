@@ -56,9 +56,12 @@ Nipy code base
 
 - Delete any *weave* code.
 
-- Remove configobj.
-
 - What to do with nipy/doc?
+
+- Do something with nipy/clean script.  Should be cleaned up (remove
+  svn refs) and be in a scripts directory?
+
+- Makefile.  Make sure it works.
 
 Code Design Thoughts
 --------------------
