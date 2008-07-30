@@ -45,12 +45,6 @@ Nipy code base
 
 - Update INSTALL and README so they are current.
 
-- Remove ENTHOUGHT_TRAITS_DEF from neuroimaging.__init__.py, and any
-  occurence of them in the code.  Need to update code using this to
-  import modules as they are needed.
-
-- Move examples to sandbox.
-
 - Delete neuroimaging/utils/path.py.  This custom path module does not
   provide any benefit over os.path.  Using a non-standard path module
   adds confusion to the code.  This will require going through the
