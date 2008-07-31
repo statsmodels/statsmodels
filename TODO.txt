@@ -13,6 +13,12 @@ Testing framework
 
 - Update all test modules to use the new test framework.
 
+- Remove __main__ boilerplate from all test modules.
+
+- Remove empty test modules?
+
+- Remove whitespace created by perl-pie
+
 Tests
 -----
 
@@ -37,7 +43,6 @@ Trac Wiki
 - Update the README and INSTALL on the Trac Wiki.  These should
   reference a reST formatted version committed to the repository.
   Include information on downloading the fmri data and running the
-
   tests.
 
 Nipy code base
@@ -118,4 +123,4 @@ Move header_utils, utils, analyze_to_nifti and sliceplot to
 sandbox/tools.  Files are currently in
 nipy-sandbox/neuroimaging/data_io/formats.
 
-
+import neuroimaging.algorithms is very slow!  Find and fix.
