@@ -45,16 +45,6 @@ Nipy code base
 
 - Update INSTALL and README so they are current.
 
-- Remove ENTHOUGHT_TRAITS_DEF from neuroimaging.__init__.py, and any
-  occurence of them in the code.  Need to update code using this to
-  import modules as they are needed.
-
-- Update references to data_io package to io.  (data_io has been removed.)
-
-- Move examples to sandbox.
-
-- Delete externals/enthought/traits.  We're not using traits for now.
-
 - Delete neuroimaging/utils/path.py.  This custom path module does not
   provide any benefit over os.path.  Using a non-standard path module
   adds confusion to the code.  This will require going through the
@@ -64,11 +54,14 @@ Nipy code base
 - Convert from nipy datasource to numpy datasource.  Then remove
   nipy's datasource.py
 
-- Move header_utils, utils, analyze_to_nifti and sliceplot to sandbox/tools.
-
 - Delete any *weave* code.
 
-- Remove configobj.
+- What to do with nipy/doc?
+
+- Do something with nipy/clean script.  Should be cleaned up (remove
+  svn refs) and be in a scripts directory?
+
+- Makefile.  Make sure it works.
 
 Code Design Thoughts
 --------------------
@@ -120,4 +113,9 @@ Add Fernando's nose fix for running doctests in extension code.
 Place nipy-io-overhaul up on lp/cburns for matthew reference.
 
 Place sandbox, visualization up to lp/cburns.
+
+Move header_utils, utils, analyze_to_nifti and sliceplot to
+sandbox/tools.  Files are currently in
+nipy-sandbox/neuroimaging/data_io/formats.
+
 
