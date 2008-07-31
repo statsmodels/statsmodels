@@ -200,7 +200,7 @@ class test_RFT(TestCase):
 
 
 
-    @slow
+    @dec.slow
     def test_polynomial3(self):
         """
         EC density of F with infinite dfd is the same as chi^2 --
@@ -213,7 +213,7 @@ class test_RFT(TestCase):
                 assert_almost_equal(q1.c, q2.c)
 
 
-    @slow
+    @dec.slow
     def test_chi1(self):
         """
         EC density of F with infinite dfd is the same as chi^2 --
@@ -273,7 +273,7 @@ class test_RFT(TestCase):
         t = rft.TStat(dfd=N.inf)
         assert_almost_equal(t(x), scipy.stats.norm.sf(x))
 
-    @slow
+    @dec.slow
     def test_T2(self):
         """
         T is an F with dfn=1
@@ -319,7 +319,7 @@ class test_RFT(TestCase):
               3 * scipy.stats.norm.sf(x))
         assert_almost_equal(v1, v2)
 
-    @slow
+    @dec.slow
     def test_search2(self):
         """
         Test that the search region works.
@@ -350,7 +350,7 @@ class test_RFT(TestCase):
                 v2 += ostat.density(x, j) * search.mu[j]
             assert_almost_equal(v1, v2)
 
-    @slow
+    @dec.slow
     def test_T2(self):
         """
         T is an F with dfn=1
@@ -367,7 +367,7 @@ class test_RFT(TestCase):
                 assert_almost_equal(y, z)
 
 
-    @slow
+    @dec.slow
     def test_search1(self):
         """
         Test that the search region works.
@@ -431,7 +431,7 @@ class test_RFT(TestCase):
         assert_almost_equal(y, z)
 
 
-    @slow
+    @dec.slow
     def test_hotelling1(self):
         """
         Asymptotically, Hotelling is the same as F which is the same
@@ -446,7 +446,7 @@ class test_RFT(TestCase):
 
 
 
-    @slow
+    @dec.slow
     def test_hotelling4(self):
         """
         Hotelling T^2 should just be like taking product with sphere.
@@ -510,7 +510,7 @@ class test_RFT(TestCase):
                 assert_almost_equal(h, f)
 
 
-    @slow
+    @dec.slow
     def test_roy1(self):
         """
         EC densities of Roy with dfn=1 should be twice EC densities
@@ -527,7 +527,7 @@ class test_RFT(TestCase):
                     r = rft.Roy(dfd=dfd,k=k,dfn=1).density(x, dim)
                     assert_almost_equal(h, r)
 
-    @slow
+    @dec.slow
     def test_onesidedF(self):
         """
         EC densities of one sided F should be a difference of
@@ -546,7 +546,7 @@ class test_RFT(TestCase):
                     assert_almost_equal(onesided, 0.5*(f1-f2))
 
 
-    @slow
+    @dec.slow
     def test_multivariate_forms(self):
         """
         MVform with one sphere is sqrt(chi^2), two spheres is sqrt(Roy) with infinite
@@ -585,7 +585,7 @@ class test_RFT(TestCase):
                     f2 = F_alternative(x, dim, dfn=dfn, dfd=dfd)
                     assert_almost_equal(f1, f2)
 
-    @slow
+    @dec.slow
     def test_F2(self):
         x = N.linspace(0.1,10,100)
         for dim in range(3,7):
@@ -595,7 +595,7 @@ class test_RFT(TestCase):
                     f2 = F_alternative(x, dim, dfn=dfn, dfd=dfd)
                     assert_almost_equal(f1, f2)
 
-    @slow
+    @dec.slow
     def test_F3(self):
         x = N.linspace(0.1,10,100)
         for dim in range(3,7):
@@ -605,7 +605,7 @@ class test_RFT(TestCase):
                     f2 = F(x, dim, dfn=dfn, dfd=dfd)
                     assert_almost_equal(f1, f2)
 
-    @slow
+    @dec.slow
     def test_chi2(self):
         """
         Quasi-polynomial part of the chi^2 EC density should
