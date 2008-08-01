@@ -4,15 +4,6 @@ TODO for NIPY development
 
 This list is currently not prioritized.
 
-Testing framework
------------------
-
-- Remove __main__ boilerplate from all test modules.
-
-- Remove empty test modules?
-
-- Remove whitespace created by perl-pie
-
 Tests
 -----
 
