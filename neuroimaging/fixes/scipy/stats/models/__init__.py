@@ -16,5 +16,5 @@ from neuroimaging.fixes.scipy.stats.models.rlm import Model as rlm
 
 __all__ = filter(lambda s:not s.startswith('_'),dir())
 
-from neuroimaging.externals.scipy.testing.pkgtester import Tester
+from numpy.testing import Tester
 test = Tester().test

@@ -3,7 +3,7 @@ Test functions for models.bspline
 """
 
 import numpy as N
-from neuroimaging.externals.scipy.testing import *
+from numpy.testing import *
 
 import neuroimaging.fixes.scipy.stats.models as S
 import neuroimaging.fixes.scipy.stats.models.bspline as B

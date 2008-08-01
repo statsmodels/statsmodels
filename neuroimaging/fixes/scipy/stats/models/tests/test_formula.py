@@ -7,7 +7,7 @@ import string
 import numpy as N
 import numpy.random as R
 import numpy.linalg as L
-from neuroimaging.externals.scipy.testing import *
+from numpy.testing import *
 
 from neuroimaging.fixes.scipy.stats.models import utils, formula, contrast
 

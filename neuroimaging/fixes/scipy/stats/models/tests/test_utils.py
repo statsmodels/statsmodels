@@ -4,7 +4,7 @@ Test functions for models.utils
 
 import numpy as N
 import numpy.random as R
-from neuroimaging.externals.scipy.testing import *
+from numpy.testing import *
 
 from neuroimaging.fixes.scipy.stats.models import utils
 
