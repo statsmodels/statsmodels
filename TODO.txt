@@ -7,12 +7,6 @@ This list is currently not prioritized.
 Testing framework
 -----------------
 
-- Fix the testing framework.  Remove the old test framework,
-  neuroimaging.utils.testutils, make_doctest_suite.  Switch to using
-  numpy's nost testing for numpy v1.2.
-
-- Update all test modules to use the new test framework.
-
 - Remove __main__ boilerplate from all test modules.
 
 - Remove empty test modules?
@@ -33,9 +27,6 @@ Some issues specific to tests to cleanup.
 - Affine is wrong in test_image.  Formats.Analyze reported 4x4 with
   MNI translation in 4th column.  PyniftiIO reports 5x5 with only one
   pixdim translation.
-
-- NumpyTest.run() in __main__ blocks... doesn't instantiate NumpyTest.
-  Tests cannot be run from command line.  Update to nose.
 
 Trac Wiki
 ---------
