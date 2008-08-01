@@ -26,5 +26,5 @@ class TestRegression(TestCase):
         results = model.fit(Y)
         self.assertEquals(results.df_resid, 31)
 
-if __name__ == "__main__":
-    nose.run(argv=['', __file__])
+
+

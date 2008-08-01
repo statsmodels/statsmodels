@@ -19,5 +19,5 @@ class TestBSpline(TestCase):
         self.assertEqual((old[0], 51), new)
 
 
-if __name__ == "__main__":
-    nose.run(argv=['', __file__])
+
+

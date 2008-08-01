@@ -313,5 +313,5 @@ class TestFormula(TestCase):
         ff = f - (f['a*b'] + f['a*c'])
         assert_equal(set(ff.termnames()), set(['a', 'b', 'c', 'b*c']))
 
-if __name__ == "__main__":
-    nose.run(argv=['', __file__])
+
+

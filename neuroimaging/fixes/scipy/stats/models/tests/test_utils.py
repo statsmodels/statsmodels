@@ -54,5 +54,5 @@ class TestUtils(TestCase):
         y = N.zeros((2, 2))
         self.assertRaises(ValueError, utils.StepFunction, x, y)
 
-if __name__ == "__main__":
-    nose.run(argv=['', __file__])
+
+

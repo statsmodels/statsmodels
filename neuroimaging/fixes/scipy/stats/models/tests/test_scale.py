@@ -49,5 +49,5 @@ class TestScale(TestCase):
         m = scale.huber(X, axis=-1)
         self.assertEquals(m.shape, (40,10))
 
-if __name__ == "__main__":
-    nose.run(argv=['', __file__])
+
+
