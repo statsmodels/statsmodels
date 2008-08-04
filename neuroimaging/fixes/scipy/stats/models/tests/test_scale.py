@@ -3,7 +3,7 @@ Test functions for models.robust.scale
 """
 
 import numpy.random as R
-from neuroimaging.externals.scipy.testing import *
+from numpy.testing import *
 
 import neuroimaging.fixes.scipy.stats.models.robust.scale as scale
 
@@ -49,5 +49,5 @@ class TestScale(TestCase):
         m = scale.huber(X, axis=-1)
         self.assertEquals(m.shape, (40,10))
 
-if __name__ == "__main__":
-    nose.run(argv=['', __file__])
+
+

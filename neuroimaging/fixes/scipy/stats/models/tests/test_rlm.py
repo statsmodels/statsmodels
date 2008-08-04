@@ -3,7 +3,7 @@ Test functions for models.rlm
 """
 
 import numpy.random as R
-from neuroimaging.externals.scipy.testing import *
+from numpy.testing import *
 
 import neuroimaging.fixes.scipy.stats.models.rlm as models
 
@@ -26,5 +26,5 @@ class TestRegression(TestCase):
         results = model.fit(Y)
         self.assertEquals(results.df_resid, 31)
 
-if __name__ == "__main__":
-    nose.run(argv=['', __file__])
+
+

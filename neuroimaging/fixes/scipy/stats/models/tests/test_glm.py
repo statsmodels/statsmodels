@@ -4,7 +4,7 @@ Test functions for models.GLM
 
 import numpy as N
 import numpy.random as R
-from neuroimaging.externals.scipy.testing import *
+from numpy.testing import *
 
 import neuroimaging.fixes.scipy.stats.models as S
 import neuroimaging.fixes.scipy.stats.models.glm as models
@@ -30,5 +30,5 @@ class TestRegression(TestCase):
         results = cmodel.fit(Y)
         self.assertEquals(results.df_resid, 31)
 
-if __name__ == "__main__":
-    nose.run(argv=['', __file__])
+
+

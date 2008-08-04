@@ -4,15 +4,6 @@ TODO for NIPY development
 
 This list is currently not prioritized.
 
-Testing framework
------------------
-
-- Fix the testing framework.  Remove the old test framework,
-  neuroimaging.utils.testutils, make_doctest_suite.  Switch to using
-  numpy's nost testing for numpy v1.2.
-
-- Update all test modules to use the new test framework.
-
 Tests
 -----
 
@@ -28,9 +19,6 @@ Some issues specific to tests to cleanup.
   MNI translation in 4th column.  PyniftiIO reports 5x5 with only one
   pixdim translation.
 
-- NumpyTest.run() in __main__ blocks... doesn't instantiate NumpyTest.
-  Tests cannot be run from command line.  Update to nose.
-
 Trac Wiki
 ---------
 
@@ -44,31 +32,23 @@ Nipy code base
 
 - Update INSTALL and README so they are current.
 
-- Remove ENTHOUGHT_TRAITS_DEF from neuroimaging.__init__.py, and any
-  occurence of them in the code.  Need to update code using this to
-  import modules as they are needed.
-
-- Delete unused formats code.  Most code in
-  neuroimaging.data_io.formats should be deleted.  Keep pyniftiio, and
-  some of the struct utils.
-
-- Move data_io to io package.
-
-- Delete externals/enthought/traits.  We're not using traits for now.
-
 - Delete neuroimaging/utils/path.py.  This custom path module does not
   provide any benefit over os.path.  Using a non-standard path module
   adds confusion to the code.  This will require going through the
   code base and updating all references to the path module.  Perhaps a
   good use of grin for a global search and replace.
 
-- Delete the sandbox.
-
-- Remove visualization.  May move this to a separate repos for future use?
-
 - Convert from nipy datasource to numpy datasource.  Then remove
   nipy's datasource.py
 
+- Delete any *weave* code.
+
+- What to do with nipy/doc?
+
+- Do something with nipy/clean script.  Should be cleaned up (remove
+  svn refs) and be in a scripts directory?
+
+- Makefile.  Make sure it works.
 
 Code Design Thoughts
 --------------------
@@ -99,6 +79,8 @@ Image Class
   img._data is a PyNIftiIO object.  It works, but we should verify
   it's harmless otherwise prevent it from happening.
 
+- Rename SamplingGrid to CoordinateMap.  Image.grid to Image.coordmap?
+
 Image Iterators
 ---------------
 
@@ -106,3 +88,21 @@ Image Iterators
   the process of converting the code from using iterators to
   generators after the Paris Sprint.  This code transition is not
   complete.
+
+Future Features
+---------------
+
+Egg support.  Look to revno 1642, a setup_egg.py that Gael had added.
+This was removed as it did not work.
+
+Add Fernando's nose fix for running doctests in extension code.
+
+Place nipy-io-overhaul up on lp/cburns for matthew reference.
+
+Place sandbox, visualization up to lp/cburns.
+
+Move header_utils, utils, analyze_to_nifti and sliceplot to
+sandbox/tools.  Files are currently in
+nipy-sandbox/neuroimaging/data_io/formats.
+
+import neuroimaging.algorithms is very slow!  Find and fix.

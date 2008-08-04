@@ -7,7 +7,7 @@ import string
 import numpy as N
 import numpy.random as R
 import numpy.linalg as L
-from neuroimaging.externals.scipy.testing import *
+from numpy.testing import *
 
 from neuroimaging.fixes.scipy.stats.models import utils, formula, contrast
 
@@ -313,5 +313,5 @@ class TestFormula(TestCase):
         ff = f - (f['a*b'] + f['a*c'])
         assert_equal(set(ff.termnames()), set(['a', 'b', 'c', 'b*c']))
 
-if __name__ == "__main__":
-    nose.run(argv=['', __file__])
+
+

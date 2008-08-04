@@ -4,10 +4,10 @@ from scipy.special import gammaln, hermitenorm
 import scipy.stats
 from scipy.misc import factorial
 
-from numpy.testing import NumpyTest, NumpyTestCase
+from neuroimaging.testing import *
 
 from neuroimaging.algorithms.statistics import rft
-from neuroimaging.utils.test_decorators import slow
+
 
 #def rho(x, dim, df=N.inf):
 #    """
@@ -177,7 +177,7 @@ def F_alternative(x, dim, dfd=N.inf, dfn=1):
     return v
 
 
-class test_RFT(NumpyTestCase):
+class test_RFT(TestCase):
 
     def test_polynomial1(self):
         """
@@ -186,7 +186,7 @@ class test_RFT(NumpyTestCase):
         for dim in range(1,10):
             q = rft.Gaussian().quasi(dim)
             h = hermitenorm(dim-1)
-            N.testing.assert_almost_equal(q.c, h.c)
+            assert_almost_equal(q.c, h.c)
 
     def test_polynomial2(self):
         """
@@ -196,11 +196,11 @@ class test_RFT(NumpyTestCase):
         for dim in range(1,10):
             q = rft.ChiSquared(dfn=1).quasi(dim)
             h = hermitenorm(dim-1)
-            N.testing.assert_almost_equal(q.c, 2*h.c)
+            assert_almost_equal(q.c, 2*h.c)
 
 
 
-    @slow
+    @dec.slow
     def test_polynomial3(self):
         """
         EC density of F with infinite dfd is the same as chi^2 --
@@ -210,10 +210,10 @@ class test_RFT(NumpyTestCase):
             for dfn in range(5,10):
                 q1 = rft.FStat(dfn=dfn, dfd=N.inf).quasi(dim)
                 q2 = rft.ChiSquared(dfn=dfn).quasi(dim)
-                N.testing.assert_almost_equal(q1.c, q2.c)
+                assert_almost_equal(q1.c, q2.c)
 
 
-    @slow
+    @dec.slow
     def test_chi1(self):
         """
         EC density of F with infinite dfd is the same as chi^2 --
@@ -227,7 +227,7 @@ class test_RFT(NumpyTestCase):
                 f = rft.FStat(dfn=dfn, dfd=N.inf)
                 chi1 = c.density(dfn*x, dim)
                 chi2 = f.density(x, dim)
-                N.testing.assert_almost_equal(chi1, chi2)
+                assert_almost_equal(chi1, chi2)
 
     def test_chi2(self):
         """
@@ -240,7 +240,7 @@ class test_RFT(NumpyTestCase):
                 c = rft.ChiSquared(dfn=dfn)
                 p1 = c.quasi(dim=dim)
                 p2 = polyF(dim=dim, dfn=dfn)
-                N.testing.assert_almost_equal(p1.c, p2.c)
+                assert_almost_equal(p1.c, p2.c)
 
     def test_chi3(self):
         """
@@ -255,7 +255,7 @@ class test_RFT(NumpyTestCase):
             c = rft.ChiSquared(dfn=1)
             ec1 = g.density(N.sqrt(x), dim)
             ec2 = c.density(x, dim)
-            N.testing.assert_almost_equal(2*ec1, ec2)
+            assert_almost_equal(2*ec1, ec2)
 
 
 
@@ -268,12 +268,12 @@ class test_RFT(NumpyTestCase):
 
         for dfd in [40,50]:
             t = rft.TStat(dfd=dfd)
-            N.testing.assert_almost_equal(t(x), scipy.stats.t.sf(x, dfd))
+            assert_almost_equal(t(x), scipy.stats.t.sf(x, dfd))
 
         t = rft.TStat(dfd=N.inf)
-        N.testing.assert_almost_equal(t(x), scipy.stats.norm.sf(x))
+        assert_almost_equal(t(x), scipy.stats.norm.sf(x))
 
-    @slow
+    @dec.slow
     def test_T2(self):
         """
         T is an F with dfn=1
@@ -285,7 +285,7 @@ class test_RFT(NumpyTestCase):
             t = rft.TStat(dfd=dfd)
             f = rft.FStat(dfd=dfd, dfn=1)
             for dim in range(7):
-                N.testing.assert_almost_equal(t.density(x, dim), f.density(x**2, dim))
+                assert_almost_equal(t.density(x, dim), f.density(x**2, dim))
 
 
     def test_search3(self):
@@ -299,7 +299,7 @@ class test_RFT(NumpyTestCase):
         x = N.linspace(0.1,10,100)
         y1 = g1(x)
         y2 = g2(x)
-        N.testing.assert_almost_equal(y1, y2)
+        assert_almost_equal(y1, y2)
 
 
 
@@ -317,9 +317,9 @@ class test_RFT(NumpyTestCase):
         v2 = ((5*x + 4*N.sqrt(2*N.pi)) *
               N.exp(-x**2/2.) / N.power(2*N.pi, 1.5) +
               3 * scipy.stats.norm.sf(x))
-        N.testing.assert_almost_equal(v1, v2)
+        assert_almost_equal(v1, v2)
 
-    @slow
+    @dec.slow
     def test_search2(self):
         """
         Test that the search region works.
@@ -348,9 +348,9 @@ class test_RFT(NumpyTestCase):
 
             for j in range(search.mu.shape[0]):
                 v2 += ostat.density(x, j) * search.mu[j]
-            N.testing.assert_almost_equal(v1, v2)
+            assert_almost_equal(v1, v2)
 
-    @slow
+    @dec.slow
     def test_T2(self):
         """
         T is an F with dfn=1
@@ -364,10 +364,10 @@ class test_RFT(NumpyTestCase):
             for dim in range(7):
                 y = 2*t.density(x, dim)
                 z = f.density(x**2, dim)
-                N.testing.assert_almost_equal(y, z)
+                assert_almost_equal(y, z)
 
 
-    @slow
+    @dec.slow
     def test_search1(self):
         """
         Test that the search region works.
@@ -407,7 +407,7 @@ class test_RFT(NumpyTestCase):
 
         y = g2(x, search=search)
         z = g1(x, search=search*product)
-        N.testing.assert_almost_equal(y, z)
+        assert_almost_equal(y, z)
 
 
     def test_search5(self):
@@ -428,10 +428,10 @@ class test_RFT(NumpyTestCase):
         for i in range(prodsearch.mu.shape[0]):
             z += g1.density(x, i) * prodsearch.mu[i]
         y = g2(x, search=search)
-        N.testing.assert_almost_equal(y, z)
+        assert_almost_equal(y, z)
 
 
-    @slow
+    @dec.slow
     def test_hotelling1(self):
         """
         Asymptotically, Hotelling is the same as F which is the same
@@ -442,11 +442,11 @@ class test_RFT(NumpyTestCase):
             for dfn in range(5,10):
                 h = rft.Hotelling(k=dfn).density(x*dfn, dim)
                 f = rft.FStat(dfn=dfn).density(x, dim)
-                N.testing.assert_almost_equal(h, f)
+                assert_almost_equal(h, f)
 
 
 
-    @slow
+    @dec.slow
     def test_hotelling4(self):
         """
         Hotelling T^2 should just be like taking product with sphere.
@@ -465,9 +465,9 @@ class test_RFT(NumpyTestCase):
                     h2 = 2*rft.Hotelling(k=k, dfd=dfd).density(x, dim)
                     h = 2*rft.Hotelling(k=k, dfd=dfd)(x, search=search)
 
-                    N.testing.assert_almost_equal(h, t)
-                    N.testing.assert_almost_equal(h, f)
-                    N.testing.assert_almost_equal(h, h2)
+                    assert_almost_equal(h, t)
+                    assert_almost_equal(h, f)
+                    assert_almost_equal(h, h2)
 
         search = rft.IntrinsicVolumes([3,4,5])
         for k in range(5, 10):
@@ -479,8 +479,8 @@ class test_RFT(NumpyTestCase):
                 h2 = 0
                 for i in range(search.mu.shape[0]):
                     h2 += 2*rft.Hotelling(k=k, dfd=dfd).density(x, i) * search.mu[i]
-                N.testing.assert_almost_equal(h, f)
-                N.testing.assert_almost_equal(h, h2)
+                assert_almost_equal(h, f)
+                assert_almost_equal(h, h2)
 
 
     def test_hotelling2(self):
@@ -496,9 +496,9 @@ class test_RFT(NumpyTestCase):
 
             h = rft.Hotelling(k=dfn)(x)
             chi = rft.ChiSquared(dfn=dfn)(x)
-            N.testing.assert_almost_equal(h, chi)
+            assert_almost_equal(h, chi)
             chi2 = scipy.stats.chi2.sf(x, dfn)
-            N.testing.assert_almost_equal(h, chi2)
+            assert_almost_equal(h, chi2)
 
             p = rft.spherical_search(dfn)
             for dfd in [40,50]:
@@ -506,11 +506,11 @@ class test_RFT(NumpyTestCase):
                 h = rft.Hotelling(dfd=dfd,k=dfn)(x)
                 f = scipy.stats.f.sf(x*fac, dfn, dfd-dfn+1)
                 f2 = rft.FStat(dfd=dfd-dfn+1,dfn=dfn)(x*fac)
-                N.testing.assert_almost_equal(f2, f)
-                N.testing.assert_almost_equal(h, f)
+                assert_almost_equal(f2, f)
+                assert_almost_equal(h, f)
 
 
-    @slow
+    @dec.slow
     def test_roy1(self):
         """
         EC densities of Roy with dfn=1 should be twice EC densities
@@ -525,9 +525,9 @@ class test_RFT(NumpyTestCase):
                 for dim in range(7):
                     h = 2*rft.Hotelling(dfd=dfd,k=k).density(x, dim)
                     r = rft.Roy(dfd=dfd,k=k,dfn=1).density(x, dim)
-                    N.testing.assert_almost_equal(h, r)
+                    assert_almost_equal(h, r)
 
-    @slow
+    @dec.slow
     def test_onesidedF(self):
         """
         EC densities of one sided F should be a difference of
@@ -543,10 +543,10 @@ class test_RFT(NumpyTestCase):
                     f1 = rft.FStat(dfd=dfd,dfn=dfn).density(x, dim)
                     f2 = rft.FStat(dfd=dfd,dfn=dfn-1).density(x, dim)
                     onesided = rft.OneSidedF(dfd=dfd,dfn=dfn).density(x, dim)
-                    N.testing.assert_almost_equal(onesided, 0.5*(f1-f2))
+                    assert_almost_equal(onesided, 0.5*(f1-f2))
 
 
-    @slow
+    @dec.slow
     def test_multivariate_forms(self):
         """
         MVform with one sphere is sqrt(chi^2), two spheres is sqrt(Roy) with infinite
@@ -561,7 +561,7 @@ class test_RFT(NumpyTestCase):
             for dim in range(7):
                 mx = m.density(x, dim)
                 cx = c.density(x**2, dim)
-                N.testing.assert_almost_equal(mx, cx)
+                assert_almost_equal(mx, cx)
 
             for k2 in range(5,10):
                 m = rft.MultilinearForm(k1,k2)
@@ -569,7 +569,7 @@ class test_RFT(NumpyTestCase):
                 for dim in range(7):
                     mx = 2*m.density(x, dim)
                     rx = r.density(x**2/k2, dim)
-                    N.testing.assert_almost_equal(mx, rx)
+                    assert_almost_equal(mx, rx)
 
     def test_scale(self):
         a = rft.IntrinsicVolumes([2,3,4])
@@ -583,9 +583,9 @@ class test_RFT(NumpyTestCase):
                 for dfd in [40,50,N.inf]:
                     f1 = F(x, dim, dfn=dfn, dfd=dfd)
                     f2 = F_alternative(x, dim, dfn=dfn, dfd=dfd)
-                    N.testing.assert_almost_equal(f1, f2)
+                    assert_almost_equal(f1, f2)
 
-    @slow
+    @dec.slow
     def test_F2(self):
         x = N.linspace(0.1,10,100)
         for dim in range(3,7):
@@ -593,9 +593,9 @@ class test_RFT(NumpyTestCase):
                 for dfd in [40,50,N.inf]:
                     f1 = rft.FStat(dfn=dfn, dfd=dfd).density(x, dim)
                     f2 = F_alternative(x, dim, dfn=dfn, dfd=dfd)
-                    N.testing.assert_almost_equal(f1, f2)
+                    assert_almost_equal(f1, f2)
 
-    @slow
+    @dec.slow
     def test_F3(self):
         x = N.linspace(0.1,10,100)
         for dim in range(3,7):
@@ -603,9 +603,9 @@ class test_RFT(NumpyTestCase):
                 for dfd in [40,50,N.inf]:
                     f1 = rft.FStat(dfn=dfn, dfd=dfd).density(x, dim)
                     f2 = F(x, dim, dfn=dfn, dfd=dfd)
-                    N.testing.assert_almost_equal(f1, f2)
+                    assert_almost_equal(f1, f2)
 
-    @slow
+    @dec.slow
     def test_chi2(self):
         """
         Quasi-polynomial part of the chi^2 EC density should
@@ -617,11 +617,11 @@ class test_RFT(NumpyTestCase):
                 c = rft.ChiSquared(dfn=dfn)
                 p1 = c.quasi(dim=dim)
                 p2 = polyF(dim=dim, dfn=dfn)
-                N.testing.assert_almost_equal(p1.c, p2.c)
-
-from neuroimaging.utils.testutils import make_doctest_suite
-test_suite = make_doctest_suite('neuroimaging.algorithms.statistics.rft')
+                assert_almost_equal(p1.c, p2.c)
 
 
-if __name__ == '__main__':
-    NumpyTest.run()
+
+
+
+
+

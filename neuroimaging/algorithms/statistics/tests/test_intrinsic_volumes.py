@@ -2,7 +2,7 @@ import numpy as N
 import numpy.linalg as L
 import numpy.random as R
 
-from numpy.testing import NumpyTest, NumpyTestCase
+from neuroimaging.testing import *
 
 from neuroimaging.algorithms.statistics import intrinsic_volumes
 
@@ -30,41 +30,20 @@ def randombox(shape):
             edges[j][0] = 0; edges[j][1] = shape[j]/2+1
     return edges, box(shape, edges)
 
-def test3(self):
-    e = intrinsic_volumes.EC
-    for i in range(1, 4):
-        e1, box1 = randombox((30,)*i)
-        e2, box2 = randombox((30,)*i)
-        e3, box3 = randombox((30,)*i)
-        a = e(box1 + box2 + box3)
-        b = (e(box1) + e(box2) + e(box3) -
-             e(box1*box2) - e(box2*box3) - e(box1*box3) +
-             e(box1*box2*box3))
-        if a != b:
-            print a, b
-            print e1, e2, e3
-            print e(box1), e(box2), e(box3)
-            print e(box1*box2), e(box1*box3), e(box2*box3)
-            print e(box1*box2*box3)
-        N.testing.assert_almost_equal(e(box1 + box2 + box3),
-                                      (e(box1) + e(box2) + e(box3) -
-                                       e(box1*box2) - e(box2*box3) - e(box1*box3) +
-                                       e(box1*box2*box3)))
 
-
-class test_iv(NumpyTestCase):
+class test_iv(TestCase):
 
     def test1(self):
         for i in range(1, 4):
             _, box1 = randombox((30,)*i)
-            N.testing.assert_almost_equal(intrinsic_volumes.EC(box1), 1)
+            assert_almost_equal(intrinsic_volumes.EC(box1), 1)
 
     def test2(self):
         e = intrinsic_volumes.EC
         for i in range(1, 4):
             _, box1 = randombox((30,)*i)
             _, box2 = randombox((30,)*i)
-            N.testing.assert_almost_equal(e(box1 + box2),
+            assert_almost_equal(e(box1 + box2),
                                           e(box1) + e(box2) - e(box1*box2))
 
     def test3(self):
@@ -83,7 +62,7 @@ class test_iv(NumpyTestCase):
                 print e(box1), e(box2), e(box3)
                 print e(box1*box2), e(box1*box3), e(box2*box3)
                 print e(box1*box2*box3)
-            N.testing.assert_almost_equal(e(box1 + box2 + box3),
+            assert_almost_equal(e(box1 + box2 + box3),
                                           (e(box1) + e(box2) + e(box3) -
                                            e(box1*box2) - e(box2*box3) - e(box1*box3) +
                                            e(box1*box2*box3)))
@@ -99,16 +78,16 @@ class test_iv(NumpyTestCase):
 
         m = N.zeros((40,)*3)
         m[10,10,10] = 1
-        N.testing.assert_almost_equal(e(m), 1)
+        assert_almost_equal(e(m), 1)
 
         m = N.zeros((40,)*3)
         m[10,10:12,10] = 1
-        N.testing.assert_almost_equal(e(m), 1)
+        assert_almost_equal(e(m), 1)
 
         m[10,10:12,10:12] = 1
         m = N.zeros((40,)*3)
         m[10,10:12,10:12] = 1
-        N.testing.assert_almost_equal(e(m), 1)
+        assert_almost_equal(e(m), 1)
 
 
 ##     for i in range(1, 6):
@@ -137,8 +116,8 @@ class test_iv(NumpyTestCase):
 ## ##                     file("LK%ddim%d.c" % (l, i), 'w').write(code(i, lk=l, explorer=True))
 
 
-from neuroimaging.utils.testutils import make_doctest_suite
-test_suite = make_doctest_suite('neuroimaging.algorithms.statistics.intrinsic_volumes')
 
-if __name__ == '__main__':
-    NumpyTest.main()
+
+
+
+

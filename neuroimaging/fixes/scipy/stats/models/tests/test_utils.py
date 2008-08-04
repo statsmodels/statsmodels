@@ -4,7 +4,7 @@ Test functions for models.utils
 
 import numpy as N
 import numpy.random as R
-from neuroimaging.externals.scipy.testing import *
+from numpy.testing import *
 
 from neuroimaging.fixes.scipy.stats.models import utils
 
@@ -54,5 +54,5 @@ class TestUtils(TestCase):
         y = N.zeros((2, 2))
         self.assertRaises(ValueError, utils.StepFunction, x, y)
 
-if __name__ == "__main__":
-    nose.run(argv=['', __file__])
+
+

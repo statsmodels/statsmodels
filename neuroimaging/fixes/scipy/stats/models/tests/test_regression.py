@@ -3,7 +3,7 @@ Test functions for models.regression
 """
 
 from numpy.random import standard_normal
-from neuroimaging.externals.scipy.testing import *
+from numpy.testing import *
 
 from neuroimaging.fixes.scipy.stats.models.regression import OLSModel, ARModel
 
@@ -41,5 +41,5 @@ class TestRegression(TestCase):
         results = model.fit(Y)
         self.assertEquals(results.df_resid, 31)
 
-if __name__ == "__main__":
-    nose.run(argv=['', __file__])
+
+
