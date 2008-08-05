@@ -19,6 +19,8 @@ Some issues specific to tests to cleanup.
   MNI translation in 4th column.  PyniftiIO reports 5x5 with only one
   pixdim translation.
 
+- Pass all tests.
+
 Trac Wiki
 ---------
 
@@ -30,7 +32,8 @@ Trac Wiki
 Nipy code base
 --------------
 
-- Update INSTALL and README so they are current.
+- Update INSTALL and README so they are current.  Add list of
+  dependencies in the INSTALL.
 
 - Delete neuroimaging/utils/path.py.  This custom path module does not
   provide any benefit over os.path.  Using a non-standard path module
@@ -43,12 +46,9 @@ Nipy code base
 
 - Delete any *weave* code.
 
-- What to do with nipy/doc?
+- What to do with nipy/doc?  Switch from epydoc to sphinx.  Update api
+  on neuroimaging.scipy.org/api.
 
-- Do something with nipy/clean script.  Should be cleaned up (remove
-  svn refs) and be in a scripts directory?
-
-- Makefile.  Make sure it works.
 
 Code Design Thoughts
 --------------------
@@ -93,16 +93,26 @@ Future Features
 ---------------
 
 Egg support.  Look to revno 1642, a setup_egg.py that Gael had added.
-This was removed as it did not work.
+This was removed as it did not work.  It did appear to allow this
+development install option, which we should restore when eggs are working::
+
+    sudo python setup_egg.py develop --prefix /usr/local
 
 Add Fernando's nose fix for running doctests in extension code.
 
 Place nipy-io-overhaul up on lp/cburns for matthew reference.
-
-Place sandbox, visualization up to lp/cburns.
 
 Move header_utils, utils, analyze_to_nifti and sliceplot to
 sandbox/tools.  Files are currently in
 nipy-sandbox/neuroimaging/data_io/formats.
 
 import neuroimaging.algorithms is very slow!  Find and fix.
+
+Auto backup script for nipy repos to run as weekly cron job.  Chris
+will run this on his machine.
+
+Update import statements to match scipy/numpy standards::
+
+  import numpy as np
+
+Make the neuroimaging.__version__ work with bzr to report revno.
