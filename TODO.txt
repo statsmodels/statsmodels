@@ -32,22 +32,32 @@ Trac Wiki
 Nipy code base
 --------------
 
-- Update INSTALL and README so they are current.  Add list of
-  dependencies in the INSTALL.
+Update INSTALL and README so they are current.  Add list of
+dependencies in the INSTALL.
 
-- Delete neuroimaging/utils/path.py.  This custom path module does not
-  provide any benefit over os.path.  Using a non-standard path module
-  adds confusion to the code.  This will require going through the
-  code base and updating all references to the path module.  Perhaps a
-  good use of grin for a global search and replace.
+Delete neuroimaging/utils/path.py.  This custom path module does not
+provide any benefit over os.path.  Using a non-standard path module
+adds confusion to the code.  This will require going through the code
+base and updating all references to the path module.  Perhaps a good
+use of grin for a global search and replace.
 
-- Convert from nipy datasource to numpy datasource.  Then remove
+Convert from nipy datasource to numpy datasource.  Then remove
   nipy's datasource.py
 
-- Delete any *weave* code.
+Delete any *weave* code.
 
-- What to do with nipy/doc?  Switch from epydoc to sphinx.  Update api
-  on neuroimaging.scipy.org/api.
+Use scipy.stats.models instead of fixes.
+
+Use sphinx to generate docs and update neuroimaging.scipy.org/api.
+
+Determine need for odict.py.  Verify origin and license if we
+determine we need it.
+
+Cleanup neuroimaging.testing directory.  Possibly rename 'testing' to
+'tests'.  Move utils.tests.data.__init__.py to tests and update import
+statements in all test modules.
+
+Remove neuroimaging.utils dir. (path.py and odict.py should be in externals)
 
 
 Code Design Thoughts
@@ -80,6 +90,8 @@ Image Class
   it's harmless otherwise prevent it from happening.
 
 - Rename SamplingGrid to CoordinateMap.  Image.grid to Image.coordmap?
+
+Functions should only require filename/url, not a (filename, repository) pair.
 
 Image Iterators
 ---------------
@@ -115,4 +127,5 @@ Update import statements to match scipy/numpy standards::
 
   import numpy as np
 
-Make the neuroimaging.__version__ work with bzr to report revno.
+Get nifticlib to support bz2.
+
