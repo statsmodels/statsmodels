@@ -20,7 +20,7 @@ import numpy.linalg as L
 
 from scipy.linalg import solveh_banded
 from scipy.optimize import golden
-from neuroimaging.fixed.neuroimaging.fixes.scipy.stats.models import _bspline
+from neuroimaging.fixed.neuroimaging.fixes.scipy.stats.models import _hbspline
 
 def _band2array(a, lower=0, symmetric=False, hermitian=False):
     """
@@ -278,7 +278,7 @@ class BSpline(object):
         x.shape = (N.product(_shape,axis=0),)
         if i < self.tau.shape[0] - 1:
            ## TODO: OWNDATA flags...
-            v = _bspline.basis(x, self.tau, self.m, d, i, i+1)
+            v = _hbspline.basis(x, self.tau, self.m, d, i, i+1)
         else:
             return N.zeros(x.shape, N.float64)
 
@@ -322,7 +322,7 @@ class BSpline(object):
 
         d = N.asarray(d)
         if d.shape == ():
-            v = _bspline.basis(x, self.tau, self.m, int(d), lower, upper)
+            v = _hbspline.basis(x, self.tau, self.m, int(d), lower, upper)
         else:
             if d.shape[0] != 2:
                 raise ValueError, "if d is not an integer, expecting a jx2 \
@@ -331,7 +331,7 @@ class BSpline(object):
 
             v = 0
             for i in range(d.shape[1]):
-                v += d[1,i] * _bspline.basis(x, self.tau, self.m, d[0,i], lower, upper)
+                v += d[1,i] * _hbspline.basis(x, self.tau, self.m, d[0,i], lower, upper)
 
         v.shape = (upper-lower,) + _shape
         if upper == self.tau.shape[0] - self.m:
@@ -374,7 +374,7 @@ class BSpline(object):
 
         d = N.squeeze(d)
         if N.asarray(d).shape == ():
-            self.g = _bspline.gram(self.tau, self.m, int(d), int(d))
+            self.g = _hbspline.gram(self.tau, self.m, int(d), int(d))
         else:
             d = N.asarray(d)
             if d.shape[0] != 2:
@@ -386,7 +386,7 @@ class BSpline(object):
             self.g = 0
             for i in range(d.shape[1]):
                 for j in range(d.shape[1]):
-                    self.g += d[1,i]* d[1,j] * _bspline.gram(self.tau, self.m, int(d[0,i]), int(d[0,j]))
+                    self.g += d[1,i]* d[1,j] * _hbspline.gram(self.tau, self.m, int(d[0,i]), int(d[0,j]))
         self.g = self.g.T
         self.d = d
         return N.nan_to_num(self.g)
@@ -554,7 +554,7 @@ class SmoothingSpline(BSpline):
         """
 
         if self.pen > 0:
-            _invband = _bspline.invband(self.chol.copy())
+            _invband = _hbspline.invband(self.chol.copy())
             tr = _trace_symbanded(_invband, self.btb, lower=1)
             return tr
         else:
