@@ -10,17 +10,12 @@ You can build the neuroimaging package using::
 Installing
 ===========
 
-To install a non developpement version of the neuroimaging package use::
+To install a non development version of the neuroimaging package use::
 
     sudo python setup.py install
 
 Beware: this copies the source files in you Python site-packages
 directory. Modifying these files will not modify what Python imports.
-
-To install a development version of the neuroimaging, which follows all
-the modifications made to your source tree use::
-
-    sudo python setup_egg.py develop --prefix /usr/local
 
 
 Developing
@@ -33,6 +28,34 @@ To check out the latest version of nipy you need bzr version greater than
 0.92::
 
     bzr branch lp:nipy
+
+
+To install a development version of the neuroimaging, build the
+extensions in place.  If you have the source directory in your
+PYTHONPATH, all the modifications made to your source tree will work::
+
+    python setup.py build_ext --inplace
+
+Running tests
+-------------
+
+Nipy uses numpy's test framework, which is based on nose, and a set of
+fmri data.  The data must be downloaded separately and installed in
+your home directory ``$HOME/.nipy/tests/data``.  From your home
+directory::
+
+    mkdir -p .nipy/tests/data
+    svn co http://neuroimaging.scipy.org/svn/ni/data/trunk/fmri .nipy/tests/data
+
+Tests can be run on the package::
+
+    import neuroimaging as ni
+    ni.test()
+
+Or on individual modules and functions from the command line::
+
+    nosetests test_image.py
+
 
 Getting commit rights to nipy
 ------------------------------

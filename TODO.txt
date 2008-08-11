@@ -19,6 +19,8 @@ Some issues specific to tests to cleanup.
   MNI translation in 4th column.  PyniftiIO reports 5x5 with only one
   pixdim translation.
 
+- Pass all tests.
+
 Trac Wiki
 ---------
 
@@ -30,25 +32,33 @@ Trac Wiki
 Nipy code base
 --------------
 
-- Update INSTALL and README so they are current.
+Update INSTALL and README so they are current.  Add list of
+dependencies in the INSTALL.
 
-- Delete neuroimaging/utils/path.py.  This custom path module does not
-  provide any benefit over os.path.  Using a non-standard path module
-  adds confusion to the code.  This will require going through the
-  code base and updating all references to the path module.  Perhaps a
-  good use of grin for a global search and replace.
+Delete neuroimaging/utils/path.py.  This custom path module does not
+provide any benefit over os.path.  Using a non-standard path module
+adds confusion to the code.  This will require going through the code
+base and updating all references to the path module.  Perhaps a good
+use of grin for a global search and replace.
 
-- Convert from nipy datasource to numpy datasource.  Then remove
+Convert from nipy datasource to numpy datasource.  Then remove
   nipy's datasource.py
 
-- Delete any *weave* code.
+Delete any *weave* code.
 
-- What to do with nipy/doc?
+Use scipy.stats.models instead of fixes.
 
-- Do something with nipy/clean script.  Should be cleaned up (remove
-  svn refs) and be in a scripts directory?
+Use sphinx to generate docs and update neuroimaging.scipy.org/api.
 
-- Makefile.  Make sure it works.
+Determine need for odict.py.  Verify origin and license if we
+determine we need it.
+
+Cleanup neuroimaging.testing directory.  Possibly rename 'testing' to
+'tests'.  Move utils.tests.data.__init__.py to tests and update import
+statements in all test modules.
+
+Remove neuroimaging.utils dir. (path.py and odict.py should be in externals)
+
 
 Code Design Thoughts
 --------------------
@@ -81,6 +91,8 @@ Image Class
 
 - Rename SamplingGrid to CoordinateMap.  Image.grid to Image.coordmap?
 
+Functions should only require filename/url, not a (filename, repository) pair.
+
 Image Iterators
 ---------------
 
@@ -93,16 +105,27 @@ Future Features
 ---------------
 
 Egg support.  Look to revno 1642, a setup_egg.py that Gael had added.
-This was removed as it did not work.
+This was removed as it did not work.  It did appear to allow this
+development install option, which we should restore when eggs are working::
+
+    sudo python setup_egg.py develop --prefix /usr/local
 
 Add Fernando's nose fix for running doctests in extension code.
 
 Place nipy-io-overhaul up on lp/cburns for matthew reference.
-
-Place sandbox, visualization up to lp/cburns.
 
 Move header_utils, utils, analyze_to_nifti and sliceplot to
 sandbox/tools.  Files are currently in
 nipy-sandbox/neuroimaging/data_io/formats.
 
 import neuroimaging.algorithms is very slow!  Find and fix.
+
+Auto backup script for nipy repos to run as weekly cron job.  Chris
+will run this on his machine.
+
+Update import statements to match scipy/numpy standards::
+
+  import numpy as np
+
+Get nifticlib to support bz2.
+
