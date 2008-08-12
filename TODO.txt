@@ -128,6 +128,13 @@ Fix deprecation error in pynifti's swig generated extension code::
   nifticlib.mat442array(self.__nimg.sto_xyz)
 
 
+Modalities
+----------
+
+Fix fmri.pca module.  Internally it's referencing old image api that
+no longer exists like Image.slice_iterator.  Currently all tests are
+skipped or commented out.
+
 Future Features
 ---------------
 
