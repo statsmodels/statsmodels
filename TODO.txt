@@ -101,6 +101,15 @@ Image Iterators
   generators after the Paris Sprint.  This code transition is not
   complete.
 
+Core Reference
+--------------
+
+Cleanup and standardize the axis names and pynifti orientation codes.
+See failing test in test_axis:test_Axis.test_init, presumably the Axis
+initializer use to check for a valid name before assigning.  It now
+blindly assigns the name.
+
+
 Future Features
 ---------------
 
