@@ -3,7 +3,7 @@ Generalized additive models
 
 """
 
-import numpy as N
+import numpy as np
 
 from neuroimaging.fixes.scipy.stats.models import family
 from neuroimaging.fixes.scipy.stats.models.bspline import SmoothingSpline
@@ -18,10 +18,10 @@ def default_smoother(x):
     if n < 50:
         nknots = n
     else:
-        a1 = N.log(50) / N.log(2)
-        a2 = N.log(100) / N.log(2)
-        a3 = N.log(140) / N.log(2)
-        a4 = N.log(200) / N.log(2)
+        a1 = np.log(50) / np.log(2)
+        a2 = np.log(100) / np.log(2)
+        a3 = np.log(140) / np.log(2)
+        a4 = np.log(200) / np.log(2)
         if n < 200:
             nknots = 2**(a1 + (a2 - a1) * (n - 50)/150.)
         elif n < 800:
@@ -30,7 +30,7 @@ def default_smoother(x):
             nknots = 2**(a3 + (a4 - a3) * (n - 800)/2400.)
         else:
             nknots = 200 + (n - 3200.)**0.2
-        knots = _x[N.linspace(0, n-1, nknots).astype(N.int32)]
+        knots = _x[np.linspace(0, n-1, nknots).astype(np.int32)]
 
     s = SmoothingSpline(knots, x=x.copy())
     s.gram(d=2)
@@ -62,10 +62,10 @@ class Results:
         return self.family.link.inverse(self.predict(design))
 
     def predict(self, design):
-        return N.sum(self.smoothed(design), axis=0) + self.alpha
+        return np.sum(self.smoothed(design), axis=0) + self.alpha
 
     def smoothed(self, design):
-        return N.array([self.smoothers[i]() + self.offset[i] for i in range(design.shape[1])])
+        return np.array([self.smoothers[i]() + self.offset[i] for i in range(design.shape[1])])
 
 class AdditiveModel:
 
@@ -74,7 +74,7 @@ class AdditiveModel:
         if weights is not None:
             self.weights = weights
         else:
-            self.weights = N.ones(self.design.shape[0])
+            self.weights = np.ones(self.design.shape[0])
 
         self.smoothers = smoothers or [default_smoother(design[:,i]) for i in range(design.shape[1])]
         for i in range(design.shape[1]):
@@ -83,13 +83,13 @@ class AdditiveModel:
 
     def __iter__(self):
         self.iter = 0
-        self.dev = N.inf
+        self.dev = np.inf
         return self
 
     def next(self):
         _results = self.results; Y = self.results.Y
         mu = _results.predict(self.design)
-        offset = N.zeros(self.design.shape[1], N.float64)
+        offset = np.zeros(self.design.shape[1], np.float64)
         alpha = (Y * self.weights).sum() / self.weights.sum()
         for i in range(self.design.shape[1]):
             tmp = self.smoothers[i]()
@@ -105,7 +105,7 @@ class AdditiveModel:
 
         curdev = (((self.results.Y - self.results.predict(self.design))**2) * self.weights).sum()
 
-        if N.fabs((self.dev - curdev) / curdev) < tol:
+        if np.fabs((self.dev - curdev) / curdev) < tol:
             self.dev = curdev
             return False
 
@@ -114,7 +114,7 @@ class AdditiveModel:
         return True
 
     def df_resid(self):
-        return self.results.Y.shape[0] - N.array([self.smoothers[i].df_fit() for i in range(self.design.shape[1])]).sum()
+        return self.results.Y.shape[0] - np.array([self.smoothers[i].df_fit() for i in range(self.design.shape[1])]).sum()
 
     def estimate_scale(self):
         return ((self.results.Y - self.results(self.design))**2).sum() / self.df_resid()
@@ -124,7 +124,7 @@ class AdditiveModel:
         mu = 0
         alpha = (Y * self.weights).sum() / self.weights.sum()
 
-        offset = N.zeros(self.design.shape[1], N.float64)
+        offset = np.zeros(self.design.shape[1], np.float64)
 
         for i in range(self.design.shape[1]):
             self.smoothers[i].smooth(Y - alpha - mu,
@@ -172,10 +172,10 @@ class Model(GLM, AdditiveModel):
         if Y is None:
             Y = self.Y
         resid = Y - self.results.mu
-        return (N.power(resid, 2) / self.family.variance(self.results.mu)).sum() / AdditiveModel.df_resid(self)
+        return (np.power(resid, 2) / self.family.variance(self.results.mu)).sum() / AdditiveModel.df_resid(self)
 
     def fit(self, Y):
-        self.Y = N.asarray(Y, N.float64)
+        self.Y = np.asarray(Y, np.float64)
 
         iter(self)
         alpha = self.Y.mean()
@@ -202,21 +202,21 @@ def _run():
     x2 = R.standard_normal(500)
     x2.sort()
     y = R.standard_normal((500,))
-    f1 = lambda x1: (x1 + x1**2 - 3 - 1.5 * x1**3 + N.exp(-x1))
-    f2 = lambda x2: (x2 + x2**2 - N.exp(x2))
+    f1 = lambda x1: (x1 + x1**2 - 3 - 1.5 * x1**3 + np.exp(-x1))
+    f2 = lambda x2: (x2 + x2**2 - np.exp(x2))
     z = n(f1(x1)) + n(f2(x2))
     z = n(z) * 0.1
 
     y += z
-    d = N.array([x1,x2]).T
+    d = np.array([x1,x2]).T
     m = AdditiveModel(d)
     m.fit(y)
-    x = N.linspace(-2,2,50)
+    x = np.linspace(-2,2,50)
 
     import scipy.stats, time
 
     f = family.Binomial()
-    b = N.asarray([scipy.stats.bernoulli.rvs(p) for p in f.link.inverse(y)])
+    b = np.asarray([scipy.stats.bernoulli.rvs(p) for p in f.link.inverse(y)])
     b.shape = y.shape
     m = model(d, family=f)
     toc = time.time()
@@ -230,7 +230,7 @@ def _run():
     print tic-toc
 
     f = family.Poisson()
-    p = N.asarray([scipy.stats.poisson.rvs(p) for p in f.link.inverse(y)])
+    p = np.asarray([scipy.stats.poisson.rvs(p) for p in f.link.inverse(y)])
     p.shape = y.shape
     m = model(d, family=f)
     toc = time.time()

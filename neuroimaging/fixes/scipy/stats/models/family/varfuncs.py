@@ -1,6 +1,6 @@
 __docformat__ = 'restructuredtext'
 
-import numpy as N
+import numpy as np
 
 class VarianceFunction:
     """
@@ -19,7 +19,7 @@ class VarianceFunction:
            v   -- ones(mu.shape)
         """
 
-        return N.ones(mu.shape, N.float64)
+        return np.ones(mu.shape, np.float64)
 
 constant = VarianceFunction()
 
@@ -48,7 +48,7 @@ class Power:
         OUTPUTS: v
            v   -- fabs(mu)**self.power
         """
-        return N.power(N.fabs(mu), self.power)
+        return np.power(np.fabs(mu), self.power)
 
 class Binomial:
     """
@@ -66,7 +66,7 @@ class Binomial:
         self.n = n
 
     def clean(self, p):
-        return N.clip(p, Binomial.tol, 1 - Binomial.tol)
+        return np.clip(p, Binomial.tol, 1 - Binomial.tol)
 
     def __call__(self, mu):
         """

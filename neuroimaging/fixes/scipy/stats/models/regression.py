@@ -21,7 +21,7 @@ __docformat__ = 'restructuredtext en'
 from string import join as sjoin
 from csv import reader
 
-import numpy as N
+import numpy as np
 import numpy.linalg as L
 from scipy.linalg import norm, toeplitz
 
@@ -35,7 +35,7 @@ class OLSModel(LikelihoodModel):
 
     Examples
     --------
-    >>> import numpy as N
+    >>> import numpy as np
     >>>
     >>> from neuroimaging.fixes.scipy.stats.models.formula import Term, I
     >>> from neuroimaging.fixes.scipy.stats.models.regression import OLSModel
@@ -54,12 +54,12 @@ class OLSModel(LikelihoodModel):
     array([ 0.98019606,  1.87867287])
     >>> print results.Tcontrast([0,1])
     <T contrast: effect=2.14285714286, sd=1.14062281591, t=1.87867287326, df_denom=5>
-    >>> print results.Fcontrast(N.identity(2))
+    >>> print results.Fcontrast(np.identity(2))
     <F contrast: F=19.4607843137, df_denom=5, df_num=2>
     """
 
     def logL(self, b, Y):
-        return -norm(self.whiten(Y) - N.dot(self.wdesign, b))**2 / 2.
+        return -norm(self.whiten(Y) - np.dot(self.wdesign, b))**2 / 2.
 
     def __init__(self, design):
         """
@@ -85,8 +85,8 @@ class OLSModel(LikelihoodModel):
         self.design = design
         self.wdesign = self.whiten(design)
         self.calc_beta = L.pinv(self.wdesign)
-        self.normalized_cov_beta = N.dot(self.calc_beta,
-                                         N.transpose(self.calc_beta))
+        self.normalized_cov_beta = np.dot(self.calc_beta,
+                                         np.transpose(self.calc_beta))
         self.df_resid = self.wdesign.shape[0] - utils.rank(self.design)
 
     def whiten(self, Y):
@@ -104,7 +104,7 @@ class OLSModel(LikelihoodModel):
         Z = self.whiten(Y)
 
         lfit = RegressionResults(L.lstsq(self.wdesign, Z)[0], Y)
-        lfit.predict = N.dot(self.design, lfit.beta)
+        lfit.predict = np.dot(self.design, lfit.beta)
 
 
     def fit(self, Y):
@@ -115,13 +115,13 @@ class OLSModel(LikelihoodModel):
         """
         Z = self.whiten(Y)
 
-        lfit = RegressionResults(N.dot(self.calc_beta, Z), Y,
+        lfit = RegressionResults(np.dot(self.calc_beta, Z), Y,
                        normalized_cov_beta=self.normalized_cov_beta)
 
         lfit.df_resid = self.df_resid
-        lfit.predict = N.dot(self.design, lfit.beta)
-        lfit.resid = Z - N.dot(self.wdesign, lfit.beta)
-        lfit.scale = N.add.reduce(lfit.resid**2) / lfit.df_resid
+        lfit.predict = np.dot(self.design, lfit.beta)
+        lfit.resid = Z - np.dot(self.wdesign, lfit.beta)
+        lfit.scale = np.add.reduce(lfit.resid**2) / lfit.df_resid
 
         lfit.Z = Z
 
@@ -161,7 +161,7 @@ def read_design(desfile, delimiter=',', try_integer=True):
         _reader = iter(desfile)
     colnames = _reader.next()
 
-    predesign = N.rec.fromrecords([row for row in _reader], names=colnames)
+    predesign = np.rec.fromrecords([row for row in _reader], names=colnames)
 
     # Try to typecast each column to float, then int
 
@@ -171,11 +171,11 @@ def read_design(desfile, delimiter=',', try_integer=True):
     for name, descr in dtypes:
         x = predesign[name]
         try:
-            y = N.asarray(x.copy(), N.float) # cast as float
-            if N.alltrue(N.equal(x, y)):
+            y = np.asarray(x.copy(), np.float) # cast as float
+            if np.alltrue(np.equal(x, y)):
                 if try_integer:
-                    z = y.astype(N.int) # cast as int
-                    if N.alltrue(N.equal(y, z)):
+                    z = y.astype(np.int) # cast as int
+                    if np.alltrue(np.equal(y, z)):
                         newdata.append(z)
                         newdescr.append(z.dtype.descr[0][1])
                     else:
@@ -188,7 +188,7 @@ def read_design(desfile, delimiter=',', try_integer=True):
             newdata.append(x)
             newdescr.append(descr)
 
-    return N.rec.fromarrays(newdata, formats=sjoin(newdescr, ','), names=colnames)
+    return np.rec.fromarrays(newdata, formats=sjoin(newdescr, ','), names=colnames)
 
 
 class ARModel(OLSModel):
@@ -200,7 +200,7 @@ class ARModel(OLSModel):
 
     Examples
     --------
-    >>> import numpy as N
+    >>> import numpy as np
     >>> import numpy.random as R
     >>>
     >>> from neuroimaging.fixes.scipy.stats.models.formula import Term, I
@@ -230,10 +230,10 @@ class ARModel(OLSModel):
     array([ 30.796394  ,  -2.66543144])
     >>> print results.Tcontrast([0,1])
     <T contrast: effect=-0.561454972239, sd=0.210643186553, t=-2.66543144085, df_denom=5>
-    >>> print results.Fcontrast(N.identity(2))
+    >>> print results.Fcontrast(np.identity(2))
     <F contrast: F=2762.42812716, df_denom=5, df_num=2>
     >>>
-    >>> model.rho = N.array([0,0])
+    >>> model.rho = np.array([0,0])
     >>> model.iterative_fit(data['Y'], niter=3)
     >>> print model.rho
     [-0.61887622 -0.88137957]
@@ -241,9 +241,9 @@ class ARModel(OLSModel):
     def __init__(self, design, rho):
         if type(rho) is type(1):
             self.order = rho
-            self.rho = N.zeros(self.order, N.float64)
+            self.rho = np.zeros(self.order, np.float64)
         else:
-            self.rho = N.squeeze(N.asarray(rho))
+            self.rho = np.squeeze(np.asarray(rho))
             if len(self.rho.shape) not in [0,1]:
                 raise ValueError, "AR parameters must be a scalar or a vector"
             if self.rho.shape == ():
@@ -277,7 +277,7 @@ class ARModel(OLSModel):
             X : TODO
                 TODO
         """
-        X = N.asarray(X, N.float64)
+        X = np.asarray(X, np.float64)
         _X = X.copy()
         for i in range(self.order):
             _X[(i+1):] = _X[(i+1):] - self.rho[i] * X[0:-(i+1)]
@@ -311,7 +311,7 @@ def yule_walker(self, X, order=1, method="unbiased", df=None, inv=False):
     if method not in ["unbiased", "mle"]:
         raise ValueError, "ACF estimation method must be 'unbiased' \
         or 'MLE'"
-    X = N.asarray(X, N.float64)
+    X = np.asarray(X, np.float64)
     X -= X.mean()
     n = df or X.shape[0]
 
@@ -322,7 +322,7 @@ def yule_walker(self, X, order=1, method="unbiased", df=None, inv=False):
 
     if len(X.shape) != 1:
         raise ValueError, "expecting a vector to estimate AR parameters"
-    r = N.zeros(order+1, N.float64)
+    r = np.zeros(order+1, np.float64)
     r[0] = (X**2).sum() / denom(0)
     for k in range(1,order+1):
         r[k] = (X[0:-k]*X[k:]).sum() / denom(k)
@@ -331,9 +331,9 @@ def yule_walker(self, X, order=1, method="unbiased", df=None, inv=False):
     rho = L.solve(R, r[1:])
     sigmasq = r[0] - (r[1:]*rho).sum()
     if inv == True:
-        return rho, N.sqrt(sigmasq), L.inv(R)
+        return rho, np.sqrt(sigmasq), L.inv(R)
     else:
-        return rho, N.sqrt(sigmasq)
+        return rho, np.sqrt(sigmasq)
 
 class WLSModel(OLSModel):
     """
@@ -342,7 +342,7 @@ class WLSModel(OLSModel):
     (proportional to the) inverse of the
     variance of the observations.
 
-    >>> import numpy as N
+    >>> import numpy as np
     >>>
     >>> from neuroimaging.fixes.scipy.stats.models.formula import Term, I
     >>> from neuroimaging.fixes.scipy.stats.models.regression import WLSModel
@@ -361,11 +361,11 @@ class WLSModel(OLSModel):
     array([ 0.35684428,  2.0652652 ])
     >>> print results.Tcontrast([0,1])
     <T contrast: effect=2.91666666667, sd=1.41224801095, t=2.06526519708, df_denom=5>
-    >>> print results.Fcontrast(N.identity(2))
+    >>> print results.Fcontrast(np.identity(2))
     <F contrast: F=26.9986072423, df_denom=5, df_num=2>
     """
     def __init__(self, design, weights=1):
-        weights = N.array(weights)
+        weights = np.array(weights)
         if weights.shape == (): # scalar
             self.weights = weights
         else:
@@ -381,13 +381,13 @@ class WLSModel(OLSModel):
         """
         Whitener for WLS model, multiplies by sqrt(self.weights)
         """
-        X = N.asarray(X, N.float64)
+        X = np.asarray(X, np.float64)
 
         if X.ndim == 1:
-            return X * N.sqrt(self.weights)
+            return X * np.sqrt(self.weights)
         elif X.ndim == 2:
-            c = N.sqrt(self.weights)
-            v = N.zeros(X.shape, N.float64)
+            c = np.sqrt(self.weights)
+            v = np.zeros(X.shape, np.float64)
             for i in range(X.shape[1]):
                 v[:,i] = X[:,i] * c
             return v
@@ -414,21 +414,21 @@ class RegressionResults(LikelihoodModelResults):
         if not hasattr(self, 'resid'):
             raise ValueError, 'need normalized residuals to estimate standard deviation'
 
-        sdd = utils.recipr(self.sd) / N.sqrt(self.df)
-        return  self.resid * N.multiply.outer(N.ones(self.Y.shape[0]), sdd)
+        sdd = utils.recipr(self.sd) / np.sqrt(self.df)
+        return  self.resid * np.multiply.outer(np.ones(self.Y.shape[0]), sdd)
 
 
     def predictors(self, design):
         """
         Return linear predictor values from a design matrix.
         """
-        return N.dot(design, self.beta)
+        return np.dot(design, self.beta)
 
     def Rsq(self, adjusted=False):
         """
         Return the R^2 value for each row of the response Y.
         """
-        self.Ssq = N.std(self.Z,axis=0)**2
+        self.Ssq = np.std(self.Z,axis=0)**2
         ratio = self.scale / self.Ssq
         if not adjusted: ratio *= ((self.Y.shape[0] - 1) / self.df_resid)
         return 1 - ratio
@@ -441,7 +441,7 @@ def isestimable(C, D):
     """
     if C.ndim == 1:
         C.shape = (C.shape[0], 1)
-    new = N.vstack([C, D])
+    new = np.vstack([C, D])
     if utils.rank(new) != utils.rank(D):
         return False
     return True

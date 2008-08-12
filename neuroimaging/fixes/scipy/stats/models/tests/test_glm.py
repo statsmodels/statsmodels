@@ -2,7 +2,7 @@
 Test functions for models.GLM
 """
 
-import numpy as N
+import numpy as np
 import numpy.random as R
 from numpy.testing import *
 
@@ -15,7 +15,7 @@ class TestRegression(TestCase):
 
     def test_Logistic(self):
         X = W((40,10))
-        Y = N.greater(W((40,)), 0)
+        Y = np.greater(W((40,)), 0)
         family = S.family.Binomial()
         cmodel = models(design=X, family=S.family.Binomial())
         results = cmodel.fit(Y)
@@ -24,7 +24,7 @@ class TestRegression(TestCase):
     def test_Logisticdegenerate(self):
         X = W((40,10))
         X[:,0] = X[:,1] + X[:,2]
-        Y = N.greater(W((40,)), 0)
+        Y = np.greater(W((40,)), 0)
         family = S.family.Binomial()
         cmodel = models(design=X, family=S.family.Binomial())
         results = cmodel.fit(Y)

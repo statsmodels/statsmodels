@@ -3,7 +3,7 @@ Provides the basic classes needed to specify statistical models.
 """
 import copy
 import types
-import numpy as N
+import numpy as np
 
 try:
     set
@@ -65,7 +65,7 @@ class Term(object):
         else:
             name = '%s^%0.2f' % (self.name, power)
 
-        value = Quantitative(name, func=self, transform=lambda x: N.power(x, power))
+        value = Quantitative(name, func=self, transform=lambda x: np.power(x, power))
         value.power = power
         value.namespace = self.namespace
         return value
@@ -87,7 +87,7 @@ class Term(object):
     # Namespace in which self.name will be looked up in, if needed
 
     def _get_namespace(self):
-        if isinstance(self.__namespace, N.ndarray):
+        if isinstance(self.__namespace, np.ndarray):
             return self.__namespace
         else: return self.__namespace or default_namespace
 
@@ -156,8 +156,8 @@ class Term(object):
                 val.namespace = self.namespace
             val = val(*args, **kw)
 
-        val = N.asarray(val)
-        return N.squeeze(val)
+        val = np.asarray(val)
+        return np.squeeze(val)
 
 class Factor(Term):
     """A categorical factor."""
@@ -210,14 +210,14 @@ class Factor(Term):
 
         if self.ordinal:
             col = [float(self.keys.index(v[i])) for i in range(n)]
-            return N.array(col)
+            return np.array(col)
 
         else:
             value = []
             for key in self.keys:
                 col = [float((v[i] == key)) for i in range(n)]
                 value.append(col)
-            return N.array(value)
+            return np.array(value)
 
     def values(self, *args, **kw):
         """
@@ -280,7 +280,7 @@ class Factor(Term):
             keep.pop(reference)
             for i in range(len(keep)):
                 rvalue.append(value[keep[i]] - value[reference])
-            return N.array(rvalue)
+            return np.array(rvalue)
 
         keep = range(len(self.names()))
         keep.pop(reference)
@@ -307,7 +307,7 @@ class Factor(Term):
             return self()[i]
         else:
             v = self.namespace[self._name]
-            return N.array([(vv == key) for vv in v]).astype(N.float)
+            return np.array([(vv == key) for vv in v]).astype(np.float)
 
 
 class Quantitative(Term):
@@ -315,17 +315,17 @@ class Quantitative(Term):
     A subclass of term that can be used to apply point transformations
     of another term, i.e. to take powers:
 
-    >>> import numpy as N
+    >>> import numpy as np
     >>> from neuroimaging.fixes.scipy.stats.models import formula
-    >>> X = N.linspace(0,10,101)
+    >>> X = np.linspace(0,10,101)
     >>> x = formula.Term('X')
     >>> x.namespace={'X':X}
     >>> x2 = x**2
-    >>> print N.allclose(x()**2, x2())
+    >>> print np.allclose(x()**2, x2())
     True
     >>> x3 = formula.Quantitative('x2', func=x, transform=lambda x: x**2)
     >>> x3.namespace = x.namespace
-    >>> print N.allclose(x()**2, x3())
+    >>> print np.allclose(x()**2, x3())
     True
 
     """
@@ -354,7 +354,7 @@ class Formula(object):
     """
 
     def _get_namespace(self):
-        if isinstance(self.__namespace, N.ndarray):
+        if isinstance(self.__namespace, np.ndarray):
             return self.__namespace
         else: return self.__namespace or default_namespace
 
@@ -436,7 +436,7 @@ class Formula(object):
 
         if not intercept:
             try:
-                allvals = N.concatenate(allvals)
+                allvals = np.concatenate(allvals)
             except:
                 pass
         else:
@@ -446,14 +446,14 @@ class Formula(object):
                     n = allvals[0].shape[1]
                 else:
                     n = allvals[1].shape[1]
-                allvals[interceptindex] = N.ones((1,n), N.float64)
-                allvals = N.concatenate(allvals)
+                allvals[interceptindex] = np.ones((1,n), np.float64)
+                allvals = np.concatenate(allvals)
             elif nrow <= 1:
                 raise ValueError, 'with only intercept in formula, keyword \'nrow\' argument needed'
             else:
                 allvals = I(nrow=nrow)
                 allvals.shape = (1,) + allvals.shape
-        return N.squeeze(allvals)
+        return np.squeeze(allvals)
 
     def hasterm(self, query_term):
         """
@@ -582,7 +582,7 @@ class Formula(object):
                         for r in range(d1):
                             for s in range(d2):
                                 out.append(value[r] * value[d1+s])
-                        return N.array(out)
+                        return np.array(out)
 
                     cself = copy.copy(self.terms[i])
                     cother = copy.copy(other.terms[j])
@@ -676,7 +676,7 @@ def isnested(A, B, namespace=None):
         return (False, None)
 
 def _intercept_fn(nrow=1, **extra):
-    return N.ones((1,nrow))
+    return np.ones((1,nrow))
 
 I = Term('intercept', func=_intercept_fn)
 I.__doc__ = """
@@ -722,20 +722,20 @@ def interactions(terms, order=[1,2]):
 
     values = {}
 
-    if N.asarray(order).shape == ():
+    if np.asarray(order).shape == ():
         order = range(1, int(order)+1)
 
     # First order
 
     for o in order:
-        I = N.indices((l,)*(o))
-        I.shape = (I.shape[0], N.product(I.shape[1:]))
+        I = np.indices((l,)*(o))
+        I.shape = (I.shape[0], np.product(I.shape[1:]))
         for m in range(I.shape[1]):
 
             # only keep combinations that have unique entries
 
-            if (N.unique(I[:,m]).shape == I[:,m].shape and
-                N.alltrue(N.equal(N.sort(I[:,m]), I[:,m]))):
+            if (np.unique(I[:,m]).shape == I[:,m].shape and
+                np.alltrue(np.equal(np.sort(I[:,m]), I[:,m]))):
                 ll = [terms[j] for j in I[:,m]]
                 v = ll[0]
                 for ii in range(len(ll)-1):

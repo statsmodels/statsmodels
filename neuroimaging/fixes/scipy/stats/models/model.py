@@ -1,4 +1,4 @@
-import numpy as N
+import numpy as np
 from numpy.linalg import inv
 #from scipy import optimize
 
@@ -105,12 +105,12 @@ class LikelihoodModelResults(object):
         if column is None:
             column = range(self.beta.shape[0])
 
-        column = N.asarray(column)
+        column = np.asarray(column)
         _beta = self.beta[column]
         _cov = self.cov_beta(column=column)
         if _cov.ndim == 2:
-            _cov = N.diag(_cov)
-        _t = _beta * recipr(N.sqrt(_cov))
+            _cov = np.diag(_cov)
+        _t = _beta * recipr(np.sqrt(_cov))
         return _t
 
     def cov_beta(self, matrix=None, column=None, scale=None, other=None):
@@ -129,7 +129,7 @@ class LikelihoodModelResults(object):
             scale = self.scale
 
         if column is not None:
-            column = N.asarray(column)
+            column = np.asarray(column)
             if column.shape == ():
                 return self.normalized_cov_beta[column, column] * scale
             else:
@@ -138,7 +138,7 @@ class LikelihoodModelResults(object):
         elif matrix is not None:
             if other is None:
                 other = matrix
-            tmp = N.dot(matrix, N.dot(self.normalized_cov_beta, N.transpose(other)))
+            tmp = np.dot(matrix, np.dot(self.normalized_cov_beta, np.transpose(other)))
             return tmp * scale
 
         if matrix is None and column is None:
@@ -155,9 +155,9 @@ class LikelihoodModelResults(object):
 
         _t = _sd = None
 
-        _effect = N.dot(matrix, self.beta)
+        _effect = np.dot(matrix, self.beta)
         if sd:
-            _sd = N.sqrt(self.cov_beta(matrix=matrix))
+            _sd = np.sqrt(self.cov_beta(matrix=matrix))
         if t:
             _t = _effect * recipr(_sd)
         return ContrastResults(effect=_effect, t=_t, sd=_sd, df_denom=self.df_resid)
@@ -183,10 +183,10 @@ class LikelihoodModelResults(object):
         if self.normalized_cov_beta is None:
             raise ValueError, 'need covariance of parameters for computing F statistics'
 
-        cbeta = N.dot(matrix, self.beta)
+        cbeta = np.dot(matrix, self.beta)
 
         q = matrix.shape[0]
         if invcov is None:
             invcov = inv(self.cov_beta(matrix=matrix, scale=1.0))
-        F = N.add.reduce(N.dot(invcov, cbeta) * cbeta, 0) * recipr((q * self.scale))
+        F = np.add.reduce(np.dot(invcov, cbeta) * cbeta, 0) * recipr((q * self.scale))
         return ContrastResults(F=F, df_denom=self.df_resid, df_num=invcov.shape[0])

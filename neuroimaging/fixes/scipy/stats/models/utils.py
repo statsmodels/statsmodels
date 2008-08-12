@@ -1,4 +1,4 @@
-import numpy as N
+import numpy as np
 import numpy.linalg as L
 import scipy.interpolate
 import scipy.linalg
@@ -11,8 +11,8 @@ def recipr(X):
     equal to 0 to 0. Therefore, it presumes that X should be positive in
     general.
     """
-    x = N.maximum(N.asarray(X).astype(N.float64), 0)
-    return N.greater(x, 0.) / (x + N.less_equal(x, 0.))
+    x = np.maximum(np.asarray(X).astype(np.float64), 0)
+    return np.greater(x, 0.) / (x + np.less_equal(x, 0.))
 
 def mad(a, c=0.6745, axis=0):
     """
@@ -23,8 +23,8 @@ def mad(a, c=0.6745, axis=0):
     """
 
     _shape = a.shape
-    a.shape = N.product(a.shape,axis=0)
-    m = N.median(N.fabs(a - N.median(a))) / c
+    a.shape = np.product(a.shape,axis=0)
+    m = np.median(np.fabs(a - np.median(a))) / c
     a.shape = _shape
     return m
 
@@ -34,28 +34,28 @@ def recipr0(X):
     as 0. It does not assume that X should be positive in
     general.
     """
-    test = N.equal(N.asarray(X), 0)
-    return N.where(test, 0, 1. / X)
+    test = np.equal(np.asarray(X), 0)
+    return np.where(test, 0, 1. / X)
 
 def clean0(matrix):
     """
     Erase columns of zeros: can save some time in pseudoinverse.
     """
-    colsum = N.add.reduce(matrix**2, 0)
-    val = [matrix[:,i] for i in N.flatnonzero(colsum)]
-    return N.array(N.transpose(val))
+    colsum = np.add.reduce(matrix**2, 0)
+    val = [matrix[:,i] for i in np.flatnonzero(colsum)]
+    return np.array(np.transpose(val))
 
 def rank(X, cond=1.0e-12):
     """
     Return the rank of a matrix X based on its generalized inverse,
     not the SVD.
     """
-    X = N.asarray(X)
+    X = np.asarray(X)
     if len(X.shape) == 2:
         D = scipy.linalg.svdvals(X)
-        return int(N.add.reduce(N.greater(D / D.max(), cond).astype(N.int32)))
+        return int(np.add.reduce(np.greater(D / D.max(), cond).astype(np.int32)))
     else:
-        return int(not N.alltrue(N.equal(X, 0.)))
+        return int(not np.alltrue(np.equal(X, 0.)))
 
 def fullrank(X, r=None):
     """
@@ -70,12 +70,12 @@ def fullrank(X, r=None):
         r = rank(X)
 
     V, D, U = L.svd(X, full_matrices=0)
-    order = N.argsort(D)
+    order = np.argsort(D)
     order = order[::-1]
     value = []
     for i in range(r):
         value.append(V[:,order[i]])
-    return N.asarray(N.transpose(value)).astype(N.float64)
+    return np.asarray(np.transpose(value)).astype(np.float64)
 
 class StepFunction:
     """
@@ -101,26 +101,26 @@ class StepFunction:
 
     def __init__(self, x, y, ival=0., sorted=False):
 
-        _x = N.asarray(x)
-        _y = N.asarray(y)
+        _x = np.asarray(x)
+        _y = np.asarray(y)
 
         if _x.shape != _y.shape:
             raise ValueError, 'in StepFunction: x and y do not have the same shape'
         if len(_x.shape) != 1:
             raise ValueError, 'in StepFunction: x and y must be 1-dimensional'
 
-        self.x = N.hstack([[-N.inf], _x])
-        self.y = N.hstack([[ival], _y])
+        self.x = np.hstack([[-np.inf], _x])
+        self.y = np.hstack([[ival], _y])
 
         if not sorted:
-            asort = N.argsort(self.x)
-            self.x = N.take(self.x, asort, 0)
-            self.y = N.take(self.y, asort, 0)
+            asort = np.argsort(self.x)
+            self.x = np.take(self.x, asort, 0)
+            self.y = np.take(self.y, asort, 0)
         self.n = self.x.shape[0]
 
     def __call__(self, time):
 
-        tind = N.searchsorted(self.x, time) - 1
+        tind = np.searchsorted(self.x, time) - 1
         _shape = tind.shape
         return self.y[tind]
 
@@ -128,11 +128,11 @@ def ECDF(values):
     """
     Return the ECDF of an array as a step function.
     """
-    x = N.array(values, copy=True)
+    x = np.array(values, copy=True)
     x.sort()
-    x.shape = N.product(x.shape,axis=0)
+    x.shape = np.product(x.shape,axis=0)
     n = x.shape[0]
-    y = (N.arange(n) + 1.) / n
+    y = (np.arange(n) + 1.) / n
     return StepFunction(x, y)
 
 def monotone_fn_inverter(fn, x, vectorized=True, **keywords):
@@ -148,8 +148,8 @@ def monotone_fn_inverter(fn, x, vectorized=True, **keywords):
         y = []
         for _x in x:
             y.append(fn(_x, **keywords))
-        y = N.array(y)
+        y = np.array(y)
 
-    a = N.argsort(y)
+    a = np.argsort(y)
 
     return scipy.interpolate.interp1d(y[a], x[a])

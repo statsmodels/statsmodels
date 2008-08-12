@@ -1,4 +1,4 @@
-import numpy as N
+import numpy as np
 from neuroimaging.fixes.scipy.stats.models.family import links as L
 from neuroimaging.fixes.scipy.stats.models.family import varfuncs as V
 
@@ -15,7 +15,7 @@ class Family(object):
 
     """
 
-    valid = [-N.inf, N.inf]
+    valid = [-np.inf, np.inf]
 
     tol = 1.0e-05
     links = []
@@ -70,7 +70,7 @@ class Family(object):
 
         """
 
-        return N.power(self.devresid(Y, mu), 2).sum() / scale
+        return np.power(self.devresid(Y, mu), 2).sum() / scale
 
     def devresid(self, Y, mu):
         """
@@ -89,7 +89,7 @@ class Family(object):
            resid -- deviance residuals
         """
 
-        return (Y - mu) * N.sqrt(self.weights(mu))
+        return (Y - mu) * np.sqrt(self.weights(mu))
 
     def fitted(self, eta):
         """
@@ -131,7 +131,7 @@ class Poisson(Family):
 
     links = [L.log, L.identity, L.sqrt]
     variance = V.mu
-    valid = [0, N.inf]
+    valid = [0, np.inf]
 
     def __init__(self, link=L.log):
         self.variance = Poisson.variance
@@ -149,7 +149,7 @@ class Poisson(Family):
            resid -- deviance residuals
 
         """
-        return N.sign(Y - mu) * N.sqrt(2 * Y * N.log(Y / mu) - 2 * (Y - mu))
+        return np.sign(Y - mu) * np.sqrt(2 * Y * np.log(Y / mu) - 2 * (Y - mu))
 
 class Gaussian(Family):
 
@@ -181,7 +181,7 @@ class Gaussian(Family):
            resid -- deviance residuals
         """
 
-        return (Y - mu) / N.sqrt(self.variance(mu) * scale)
+        return (Y - mu) / np.sqrt(self.variance(mu) * scale)
 
 class Gamma(Family):
 
@@ -236,7 +236,7 @@ class Binomial(Family):
         """
 
         mu = self.link.clean(mu)
-        return N.sign(Y - mu) * N.sqrt(-2 * (Y * N.log(mu / self.n) + (self.n - Y) * N.log(1 - mu / self.n)))
+        return np.sign(Y - mu) * np.sqrt(-2 * (Y * np.log(mu / self.n) + (self.n - Y) * np.log(1 - mu / self.n)))
 
 class InverseGaussian(Family):
 

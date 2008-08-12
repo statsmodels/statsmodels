@@ -1,7 +1,7 @@
 import shutil
 import tempfile
 
-import numpy as N
+import numpy as np
 
 from neuroimaging.fixes.scipy.stats.models import survival, model
 
@@ -12,16 +12,16 @@ class Discrete:
     """
 
     def __init__(self, x, w=None):
-        self.x = N.squeeze(x)
+        self.x = np.squeeze(x)
         if self.x.shape == ():
-            self.x = N.array([self.x])
+            self.x = np.array([self.x])
         self.n = self.x.shape[0]
         if w is None:
-            w = N.ones(self.n, N.float64)
+            w = np.ones(self.n, np.float64)
         else:
             if w.shape[0] != self.n:
                 raise ValueError, 'incompatible shape for weights w'
-            if N.any(N.less(w, 0)):
+            if np.any(np.less(w, 0)):
                 raise ValueError, 'weights should be non-negative'
         self.w = w / w.sum()
 
@@ -34,8 +34,8 @@ class Discrete:
 
     def cov(self):
         mu = self.mean()
-        dx = self.x - N.multiply.outer(mu, self.x.shape[1])
-        return N.dot(dx, N.transpose(dx))
+        dx = self.x - np.multiply.outer(mu, self.x.shape[1])
+        return np.dot(dx, np.transpose(dx))
 
 class Observation(survival.RightCensored):
 
@@ -84,24 +84,24 @@ class CoxPH(model.LikelihoodModel):
 
         for t in self.failures.keys():
             if self.time_dependent:
-                d = N.array([s(self.formula, time=t)
+                d = np.array([s(self.formula, time=t)
                              for s in self.subjects]).astype('<f8')
                 dshape = d.shape
                 dfile = file(tempfile.mkstemp(dir=self.cachedir)[1], 'w')
                 d.tofile(dfile)
                 dfile.close()
                 del(d)
-                self.design[t] = N.memmap(dfile.name,
-                                          dtype=N.dtype('<f8'),
+                self.design[t] = np.memmap(dfile.name,
+                                          dtype=np.dtype('<f8'),
                                           shape=dshape)
             elif first:
-                d = N.array([s(self.formula, time=t)
-                             for s in self.subjects]).astype(N.float64)
+                d = np.array([s(self.formula, time=t)
+                             for s in self.subjects]).astype(np.float64)
                 self.design[t] = d
             else:
                 self.design[t] = d
-            self.risk[t] = N.compress([s.atrisk(t) for s in self.subjects],
-                                      N.arange(self.design[t].shape[0]),axis=-1)
+            self.risk[t] = np.compress([s.atrisk(t) for s in self.subjects],
+                                      np.arange(self.design[t].shape[0]),axis=-1)
     def __del__(self):
         shutil.rmtree(self.cachedir, ignore_errors=True)
 
@@ -112,18 +112,18 @@ class CoxPH(model.LikelihoodModel):
             fail = self.failures[t]
             d = len(fail)
             risk = self.risk[t]
-            Zb = N.dot(self.design[t], b)
+            Zb = np.dot(self.design[t], b)
 
             logL += Zb[fail].sum()
 
             if ties == 'breslow':
-                s = N.exp(Zb[risk]).sum()
-                logL -= N.log(N.exp(Zb[risk]).sum()) * d
+                s = np.exp(Zb[risk]).sum()
+                logL -= np.log(np.exp(Zb[risk]).sum()) * d
             elif ties == 'efron':
-                s = N.exp(Zb[risk]).sum()
-                r = N.exp(Zb[fail]).sum()
+                s = np.exp(Zb[risk]).sum()
+                r = np.exp(Zb[fail]).sum()
                 for j in range(d):
-                    logL -= N.log(s - j * r / d)
+                    logL -= np.log(s - j * r / d)
             elif ties == 'cox':
                 raise NotImplementedError, 'Cox tie breaking method not implemented'
             else:
@@ -142,11 +142,11 @@ class CoxPH(model.LikelihoodModel):
             score += Z[fail].sum()
 
             if ties == 'breslow':
-                w = N.exp(N.dot(Z, b))
+                w = np.exp(np.dot(Z, b))
                 rv = discrete(Z[risk], w=w[risk])
                 score -= rv.mean() * d
             elif ties == 'efron':
-                w = N.exp(N.dot(Z, b))
+                w = np.exp(np.dot(Z, b))
                 score += Z[fail].sum()
                 for j in range(d):
                     efron_w = w
@@ -157,7 +157,7 @@ class CoxPH(model.LikelihoodModel):
                 raise NotImplementedError, 'Cox tie breaking method not implemented'
             else:
                 raise NotImplementedError, 'tie breaking method not recognized'
-        return N.array([score])
+        return np.array([score])
 
     def information(self, b, ties='breslow'):
 
@@ -170,11 +170,11 @@ class CoxPH(model.LikelihoodModel):
             Z = self.design[t]
 
             if ties == 'breslow':
-                w = N.exp(N.dot(Z, b))
+                w = np.exp(np.dot(Z, b))
                 rv = discrete(Z[risk], w=w[risk])
                 info += rv.cov()
             elif ties == 'efron':
-                w = N.exp(N.dot(Z, b))
+                w = np.exp(np.dot(Z, b))
                 score += Z[fail].sum()
                 for j in range(d):
                     efron_w = w
@@ -190,7 +190,7 @@ class CoxPH(model.LikelihoodModel):
 if __name__ == '__main__':
     import numpy.random as R
     n = 100
-    X = N.array([0]*n + [1]*n)
+    X = np.array([0]*n + [1]*n)
     b = 0.4
     lin = 1 + b*X
     Y = R.standard_exponential((2*n,)) / lin

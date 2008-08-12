@@ -1,4 +1,4 @@
-import numpy as N
+import numpy as np
 import scipy.stats
 
 class Link:
@@ -10,7 +10,7 @@ class Link:
     """
 
     def initialize(self, Y):
-        return N.asarray(Y).mean() * N.ones(Y.shape)
+        return np.asarray(Y).mean() * np.ones(Y.shape)
 
     def __call__(self, p):
         return NotImplementedError
@@ -45,7 +45,7 @@ class Logit(Link):
            pclip -- clipped probabilities
         """
 
-        return N.clip(p, Logit.tol, 1. - Logit.tol)
+        return np.clip(p, Logit.tol, 1. - Logit.tol)
 
     def __call__(self, p):
         """
@@ -62,7 +62,7 @@ class Logit(Link):
         """
 
         p = self.clean(p)
-        return N.log(p / (1. - p))
+        return np.log(p / (1. - p))
 
     def inverse(self, z):
         """
@@ -77,7 +77,7 @@ class Logit(Link):
            p   -- probabilities
 
         """
-        t = N.exp(z)
+        t = np.exp(z)
         return t / (1. + t)
 
     def deriv(self, p):
@@ -125,7 +125,7 @@ class Power(Link):
 
         """
 
-        return N.power(x, self.power)
+        return np.power(x, self.power)
 
     def inverse(self, z):
         """
@@ -140,7 +140,7 @@ class Power(Link):
            x   -- mean parameters
 
         """
-        return N.power(z, 1. / self.power)
+        return np.power(z, 1. / self.power)
 
     def deriv(self, x):
         """
@@ -156,7 +156,7 @@ class Power(Link):
 
         """
 
-        return self.power * N.power(x, self.power - 1)
+        return self.power * np.power(x, self.power - 1)
 
 inverse = Power(power=-1.)
 inverse.__doc__ = """
@@ -202,7 +202,7 @@ class Log(Link):
     tol = 1.0e-10
 
     def clean(self, x):
-        return N.clip(x, Logit.tol, N.inf)
+        return np.clip(x, Logit.tol, np.inf)
 
     def __call__(self, x, **extra):
         """
@@ -218,7 +218,7 @@ class Log(Link):
 
         """
         x = self.clean(x)
-        return N.log(x)
+        return np.log(x)
 
     def inverse(self, z):
         """
@@ -233,7 +233,7 @@ class Log(Link):
            x   -- exp(z)
 
         """
-        return N.exp(z)
+        return np.exp(z)
 
     def deriv(self, x):
         """
@@ -354,7 +354,7 @@ class CLogLog(Logit):
 
         """
         p = self.clean(p)
-        return N.log(-N.log(p))
+        return np.log(-np.log(p))
 
     def inverse(self, z):
         """
@@ -369,7 +369,7 @@ class CLogLog(Logit):
            p   -- mean parameters
 
         """
-        return N.exp(-N.exp(z))
+        return np.exp(-np.exp(z))
 
     def deriv(self, p):
         """
@@ -385,6 +385,6 @@ class CLogLog(Logit):
 
         """
         p = self.clean(p)
-        return -1. / (N.log(p) * p)
+        return -1. / (np.log(p) * p)
 
 cloglog = CLogLog()

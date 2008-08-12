@@ -1,9 +1,9 @@
-import numpy as N
+import numpy as np
 import os
 
 
 filename = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_data.bin")
-data = N.fromfile(filename, "<f8")
+data = np.fromfile(filename, "<f8")
 data.shape = (126,15)
 
 y = data[:,0]

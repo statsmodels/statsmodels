@@ -1,4 +1,4 @@
-import numpy as N
+import numpy as np
 from scipy.stats import norm, median
 
 def unsqueeze(data, axis, oldshape):
@@ -30,11 +30,11 @@ def MAD(a, c=0.6745, axis=0):
 
     """
 
-    a = N.asarray(a, N.float64)
+    a = np.asarray(a, np.float64)
     d = median(a, axis=axis)
     d = unsqueeze(d, axis, a.shape)
 
-    return median(N.fabs(a - d) / c, axis=axis)
+    return median(np.fabs(a - d) / c, axis=axis)
 
 class Huber:
     """
@@ -61,7 +61,7 @@ class Huber:
         """
 
         self.axis = axis
-        self.a = N.asarray(a, N.float64)
+        self.a = np.asarray(a, np.float64)
         if mu is None:
             self.n = self.a.shape[0] - 1
             self.mu = median(self.a, axis=axis)
@@ -82,7 +82,7 @@ class Huber:
         for donothing in self:
             pass
 
-        self.s = N.squeeze(N.sqrt(self.scale))
+        self.s = np.squeeze(np.sqrt(self.scale))
         del(self.scale); del(self.mu); del(self.a)
         return self.s
 
@@ -94,16 +94,16 @@ class Huber:
         a = self.a
         subset = self.subset(a)
         if self.est_mu:
-            mu = N.sum(subset * a + (1 - Huber.c) * subset, axis=self.axis) / a.shape[self.axis]
+            mu = np.sum(subset * a + (1 - Huber.c) * subset, axis=self.axis) / a.shape[self.axis]
         else:
             mu = self.mu
         self.axis = unsqueeze(mu, self.axis, self.a.shape)
 
-        scale = N.sum(subset * (a - mu)**2, axis=self.axis) / (self.n * Huber.gamma - N.sum(1. - subset, axis=self.axis) * Huber.c**2)
+        scale = np.sum(subset * (a - mu)**2, axis=self.axis) / (self.n * Huber.gamma - np.sum(1. - subset, axis=self.axis) * Huber.c**2)
 
         self.iter += 1
 
-        if N.alltrue(N.less_equal(N.fabs(N.sqrt(scale) - N.sqrt(self.scale)), N.sqrt(self.scale) * Huber.tol)) and N.alltrue(N.less_equal(N.fabs(mu - self.mu), N.sqrt(self.scale) * Huber.tol)):
+        if np.alltrue(np.less_equal(np.fabs(np.sqrt(scale) - np.sqrt(self.scale)), np.sqrt(self.scale) * Huber.tol)) and np.alltrue(np.less_equal(np.fabs(mu - self.mu), np.sqrt(self.scale) * Huber.tol)):
             self.scale = scale
             self.mu = mu
             raise StopIteration
@@ -117,7 +117,7 @@ class Huber:
             raise StopIteration
 
     def subset(self, a):
-        tmp = (a - self.mu) / N.sqrt(self.scale)
-        return N.greater(tmp, -Huber.c) * N.less(tmp, Huber.c)
+        tmp = (a - self.mu) / np.sqrt(self.scale)
+        return np.greater(tmp, -Huber.c) * np.less(tmp, Huber.c)
 
 huber = Huber()

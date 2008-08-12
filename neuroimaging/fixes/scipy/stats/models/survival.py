@@ -1,4 +1,4 @@
-import numpy as N
+import numpy as np
 
 class SurvivalTime:
     def __init__(self, time, delta):
@@ -10,9 +10,9 @@ class SurvivalTime:
 class RightCensored(SurvivalTime):
 
     def atrisk(self, time):
-        return N.less_equal.outer(time, self.time)
+        return np.less_equal.outer(time, self.time)
 
 class LeftCensored(SurvivalTime):
 
     def atrisk(self, time):
-        return N.greater_equal.outer(time, self.time)
+        return np.greater_equal.outer(time, self.time)

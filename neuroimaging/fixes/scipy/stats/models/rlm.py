@@ -1,7 +1,7 @@
 """
 Robust linear models
 """
-import numpy as N
+import numpy as np
 
 from neuroimaging.fixes.scipy.stats.models.regression import WLSModel
 from neuroimaging.fixes.scipy.stats.models.robust import norms, scale
@@ -18,7 +18,7 @@ class Model(WLSModel):
 
     def __iter__(self):
         self.iter = 0
-        self.dev = N.inf
+        self.dev = np.inf
         return self
 
     def deviance(self, results=None):
@@ -30,11 +30,11 @@ class Model(WLSModel):
         """
         if results is None:
             results = self.results
-        return self.M((results.Y - results.predict) / N.sqrt(results.scale)).sum()
+        return self.M((results.Y - results.predict) / np.sqrt(results.scale)).sum()
 
     def next(self):
         results = self.results
-        self.weights = self.M.weights((results.Y - results.predict) / N.sqrt(results.scale))
+        self.weights = self.M.weights((results.Y - results.predict) / np.sqrt(results.scale))
         self.initialize(self.design)
         results = WLSModel.fit(self, results.Y)
         self.scale = results.scale = self.estimate_scale(results)
@@ -49,7 +49,7 @@ class Model(WLSModel):
             return False
 
         curdev = self.deviance(results)
-        if N.fabs((self.dev - curdev) / curdev) < tol:
+        if np.fabs((self.dev - curdev) / curdev) < tol:
             return False
         self.dev = curdev
 

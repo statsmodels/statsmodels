@@ -1,6 +1,6 @@
 import copy
 
-import numpy as N
+import numpy as np
 from numpy.linalg import pinv
 from neuroimaging.fixes.scipy.stats.models import utils
 
@@ -88,7 +88,7 @@ class Contrast(object):
 
         t = copy.copy(self.term)
         t.namespace = self.formula.namespace
-        T = N.transpose(N.array(t(*args, **kw)))
+        T = np.transpose(np.array(t(*args, **kw)))
 
         if T.ndim == 1:
             T.shape = (T.shape[0], 1)
@@ -140,8 +140,8 @@ def contrastfromcols(L, D, pseudo=None):
 
     """
 
-    L = N.asarray(L)
-    D = N.asarray(D)
+    L = np.asarray(L)
+    D = np.asarray(D)
 
     n, p = D.shape
 
@@ -152,18 +152,18 @@ def contrastfromcols(L, D, pseudo=None):
         pseudo = pinv(D)
 
     if L.shape[0] == n:
-        C = N.dot(pseudo, L).T
+        C = np.dot(pseudo, L).T
     else:
         C = L
-        C = N.dot(pseudo, N.dot(D, C.T)).T
+        C = np.dot(pseudo, np.dot(D, C.T)).T
 
-    Lp = N.dot(D, C.T)
+    Lp = np.dot(D, C.T)
 
     if len(Lp.shape) == 1:
         Lp.shape = (n, 1)
 
     if utils.rank(Lp) != Lp.shape[1]:
         Lp = utils.fullrank(Lp)
-        C = N.dot(pseudo, Lp).T
+        C = np.dot(pseudo, Lp).T
 
-    return N.squeeze(C)
+    return np.squeeze(C)

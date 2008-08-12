@@ -2,7 +2,7 @@
 Mixed effects models
 """
 
-import numpy as N
+import numpy as np
 import numpy.linalg as L
 from neuroimaging.fixes.scipy.stats.models.formula import formula, I
 
@@ -41,7 +41,7 @@ class Unit:
         return formula(namespace=self.dict, **extra)
 
     def design(self, formula, **extra):
-        v = N.transpose(self(formula, **extra))
+        v = np.transpose(self(formula, **extra))
         self.n = v.shape[0]
         return v
 
@@ -49,8 +49,8 @@ class Unit:
         """
         Display (3.3) from Laird, Lange, Stram (see help(Unit))
         """
-        self.S = (N.identity(self.n) * sigma**2 +
-                  N.dot(self.Z, N.dot(D, self.Z.T)))
+        self.S = (np.identity(self.n) * sigma**2 +
+                  np.dot(self.Z, np.dot(D, self.Z.T)))
 
     def _compute_W(self):
         """
@@ -62,20 +62,20 @@ class Unit:
         """
         Display (3.10) from Laird, Lange, Stram (see help(Unit))
         """
-        t = N.dot(self.W, self.X)
-        self.P = self.W - N.dot(N.dot(t, Sinv), t.T)
+        t = np.dot(self.W, self.X)
+        self.P = self.W - np.dot(np.dot(t, Sinv), t.T)
 
     def _compute_r(self, alpha):
         """
         Display (3.5) from Laird, Lange, Stram (see help(Unit))
         """
-        self.r = self.Y - N.dot(self.X, alpha)
+        self.r = self.Y - np.dot(self.X, alpha)
 
     def _compute_b(self, D):
         """
         Display (3.4) from Laird, Lange, Stram (see help(Unit))
         """
-        self.b = N.dot(D, N.dot(N.dot(self.Z.T, self.W), self.r))
+        self.b = np.dot(D, np.dot(np.dot(self.Z.T, self.W), self.r))
 
     def fit(self, a, D, sigma):
         """
@@ -94,13 +94,13 @@ class Unit:
         """
         Utility function to compute X^tWY for Unit instance.
         """
-        return N.dot(N.dot(self.W, self.Y), self.X)
+        return np.dot(np.dot(self.W, self.Y), self.X)
 
     def compute_xtwx(self):
         """
         Utility function to compute X^tWX for Unit instance.
         """
-        return N.dot(N.dot(self.X.T, self.W), self.X)
+        return np.dot(np.dot(self.X.T, self.W), self.X)
 
     def cov_random(self, D, Sinv=None):
         """
@@ -109,8 +109,8 @@ class Unit:
         """
         if Sinv is not None:
             self.compute_P(Sinv)
-        t = N.dot(self.Z, D)
-        return D - N.dot(N.dot(t.T, self.P), t)
+        t = np.dot(self.Z, D)
+        return D - np.dot(np.dot(t.T, self.P), t)
 
     def logL(self, a, ML=False):
         """
@@ -120,12 +120,12 @@ class Unit:
         """
 
         if ML:
-            return (N.log(L.det(self.W)) - (self.r * N.dot(self.W, self.r)).sum()) / 2.
+            return (np.log(L.det(self.W)) - (self.r * np.dot(self.W, self.r)).sum()) / 2.
         else:
             if a is None:
                 raise ValueError, 'need fixed effect a for REML contribution to log-likelihood'
-            r = self.Y - N.dot(self.X, a)
-            return (N.log(L.det(self.W)) - (r * N.dot(self.W, r)).sum()) / 2.
+            r = self.Y - np.dot(self.X, a)
+            return (np.log(L.det(self.W)) - (r * np.dot(self.W, r)).sum()) / 2.
 
     def deviance(self, ML=False):
         return - 2 * self.logL(ML=ML)
@@ -156,7 +156,7 @@ class Mixed:
 
         self.N = 0
         for unit in self.units:
-            unit.Y = N.squeeze(unit.design(self.response))
+            unit.Y = np.squeeze(unit.design(self.response))
             unit.X = unit.design(self.fixed)
             unit.Z = unit.design(self.random)
             self.N += unit.X.shape[0]
@@ -165,17 +165,17 @@ class Mixed:
 
         d = self.units[0].design(self.fixed)
         self.p = d.shape[1]  # d.shape = p
-        self.a = N.zeros(self.p, N.float64)
+        self.a = np.zeros(self.p, np.float64)
 
         # Determine size of D, and sensible initial estimates
         # of sigma and D
         d = self.units[0].design(self.random)
         self.q = d.shape[1]  # d.shape = q
 
-        self.D = N.zeros((self.q,)*2, N.float64)
+        self.D = np.zeros((self.q,)*2, np.float64)
         self.sigma = 1.
 
-        self.dev = N.inf
+        self.dev = np.inf
 
     def _compute_a(self):
         """
@@ -191,7 +191,7 @@ class Mixed:
         Y = sum([unit.compute_xtwy() for unit in self.units])
 
         self.Sinv = L.pinv(S)
-        self.a = N.dot(self.Sinv, Y)
+        self.a = np.dot(self.Sinv, Y)
 
     def _compute_sigma(self, ML=False):
         """
@@ -209,11 +209,11 @@ class Mixed:
             else:
                 unit.compute_P(self.Sinv)
                 W = unit.P
-            t = unit.r - N.dot(unit.Z, unit.b)
-            sigmasq += N.power(t, 2).sum()
-            sigmasq += self.sigma**2 * N.trace(N.identity(unit.n) -
+            t = unit.r - np.dot(unit.Z, unit.b)
+            sigmasq += np.power(t, 2).sum()
+            sigmasq += self.sigma**2 * np.trace(np.identity(unit.n) -
                                                self.sigma**2 * W)
-        self.sigma = N.sqrt(sigmasq / self.N)
+        self.sigma = np.sqrt(sigmasq / self.N)
 
     def _compute_D(self, ML=False):
         """
@@ -232,9 +232,9 @@ class Mixed:
             else:
                 unit.compute_P(self.Sinv)
                 W = unit.P
-            D += N.multiply.outer(unit.b, unit.b)
-            t = N.dot(unit.Z, self.D)
-            D += self.D - N.dot(N.dot(t.T, W), t)
+            D += np.multiply.outer(unit.b, unit.b)
+            t = np.dot(unit.Z, self.D)
+            D += self.D - np.dot(np.dot(t.T, W), t)
 
         self.D = D / self.m
 
@@ -257,39 +257,39 @@ class Mixed:
         for unit in self.units:
             logL += unit.logL(a=self.a, ML=ML)
         if not ML:
-            logL += N.log(L.det(self.Sinv)) / 2
+            logL += np.log(L.det(self.Sinv)) / 2
         return logL
 
     def initialize(self):
-        S = sum([N.dot(unit.X.T, unit.X) for unit in self.units])
-        Y = sum([N.dot(unit.X.T, unit.Y) for unit in self.units])
+        S = sum([np.dot(unit.X.T, unit.X) for unit in self.units])
+        Y = sum([np.dot(unit.X.T, unit.Y) for unit in self.units])
         self.a = L.lstsq(S, Y)[0]
 
         D = 0
         t = 0
         sigmasq = 0
         for unit in self.units:
-            unit.r = unit.Y - N.dot(unit.X, self.a)
+            unit.r = unit.Y - np.dot(unit.X, self.a)
             if self.q > 1:
                 unit.b = L.lstsq(unit.Z, unit.r)[0]
             else:
                 Z = unit.Z.reshape((unit.Z.shape[0], 1))
                 unit.b = L.lstsq(Z, unit.r)[0]
 
-            sigmasq += (N.power(unit.Y, 2).sum() -
-                        (self.a * N.dot(unit.X.T, unit.Y)).sum() -
-                        (unit.b * N.dot(unit.Z.T, unit.r)).sum())
-            D += N.multiply.outer(unit.b, unit.b)
-            t += L.pinv(N.dot(unit.Z.T, unit.Z))
+            sigmasq += (np.power(unit.Y, 2).sum() -
+                        (self.a * np.dot(unit.X.T, unit.Y)).sum() -
+                        (unit.b * np.dot(unit.Z.T, unit.r)).sum())
+            D += np.multiply.outer(unit.b, unit.b)
+            t += L.pinv(np.dot(unit.Z.T, unit.Z))
 
         sigmasq /= (self.N - (self.m - 1) * self.q - self.p)
-        self.sigma = N.sqrt(sigmasq)
+        self.sigma = np.sqrt(sigmasq)
         self.D = (D - sigmasq * t) / self.m
 
     def cont(self, ML=False, tol=1.0e-05):
 
         self.dev, old = self.deviance(ML=ML), self.dev
-        if N.fabs((self.dev - old)) * self.dev < tol:
+        if np.fabs((self.dev - old)) * self.dev < tol:
             return False
         return True
 
@@ -331,8 +331,8 @@ if __name__ == '__main__':
 
 
 ## a = Unit()
-## a['x'] = N.array([2,3])
-## a['y'] = N.array([3,4])
+## a['x'] = np.array([2,3])
+## a['y'] = np.array([3,4])
 
 ## x = Term('x')
 ## y = Term('y')

@@ -2,7 +2,7 @@
 Test functions for models.utils
 """
 
-import numpy as N
+import numpy as np
 import numpy.random as R
 from numpy.testing import *
 
@@ -11,14 +11,14 @@ from neuroimaging.fixes.scipy.stats.models import utils
 class TestUtils(TestCase):
 
     def test_recipr(self):
-        X = N.array([[2,1],[-1,0]])
+        X = np.array([[2,1],[-1,0]])
         Y = utils.recipr(X)
-        assert_almost_equal(Y, N.array([[0.5,1],[0,0]]))
+        assert_almost_equal(Y, np.array([[0.5,1],[0,0]]))
 
     def test_recipr0(self):
-        X = N.array([[2,1],[-4,0]])
+        X = np.array([[2,1],[-4,0]])
         Y = utils.recipr0(X)
-        assert_almost_equal(Y, N.array([[0.5,1],[-0.25,0]]))
+        assert_almost_equal(Y, np.array([[0.5,1],[-0.25,0]]))
 
     def test_rank(self):
         X = R.standard_normal((40,10))
@@ -41,17 +41,17 @@ class TestUtils(TestCase):
         self.assertEquals(utils.rank(Y), 8)
 
     def test_StepFunction(self):
-        x = N.arange(20)
-        y = N.arange(20)
+        x = np.arange(20)
+        y = np.arange(20)
         f = utils.StepFunction(x, y)
-        assert_almost_equal(f( N.array([[3.2,4.5],[24,-3.1]]) ), [[ 3, 4], [19, 0]])
+        assert_almost_equal(f( np.array([[3.2,4.5],[24,-3.1]]) ), [[ 3, 4], [19, 0]])
 
     def test_StepFunctionBadShape(self):
-        x = N.arange(20)
-        y = N.arange(21)
+        x = np.arange(20)
+        y = np.arange(21)
         self.assertRaises(ValueError, utils.StepFunction, x, y)
-        x = N.zeros((2, 2))
-        y = N.zeros((2, 2))
+        x = np.zeros((2, 2))
+        y = np.zeros((2, 2))
         self.assertRaises(ValueError, utils.StepFunction, x, y)
 
 

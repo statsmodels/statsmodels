@@ -4,7 +4,7 @@ General linear models
 
 """
 
-import numpy as N
+import numpy as np
 from neuroimaging.fixes.scipy.stats.models import family
 from neuroimaging.fixes.scipy.stats.models.regression import WLSModel
 
@@ -18,7 +18,7 @@ class Model(WLSModel):
 
     def __iter__(self):
         self.iter = 0
-        self.dev = N.inf
+        self.dev = np.inf
         return self
 
     def deviance(self, Y=None, results=None, scale = 1.):
@@ -55,7 +55,7 @@ class Model(WLSModel):
 
         curdev = self.deviance(results=self.results)
 
-        if N.fabs((self.dev - curdev) / curdev) < tol:
+        if np.fabs((self.dev - curdev) / curdev) < tol:
             return False
         self.dev = curdev
 
@@ -71,11 +71,11 @@ class Model(WLSModel):
         if Y is None:
             Y = self.Y
         resid = Y - results.mu
-        return ((N.power(resid, 2) / self.family.variance(results.mu)).sum()
+        return ((np.power(resid, 2) / self.family.variance(results.mu)).sum()
                 / results.df_resid)
 
     def fit(self, Y):
-        self.Y = N.asarray(Y, N.float64)
+        self.Y = np.asarray(Y, np.float64)
         iter(self)
         self.results = super(Model, self).fit(
             self.family.link.initialize(Y))

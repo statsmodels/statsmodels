@@ -1,4 +1,4 @@
-import numpy as N
+import numpy as np
 
 class RobustNorm:
     def __call__(self, z):
@@ -15,13 +15,13 @@ class LeastSquares(RobustNorm):
     """
 
     def rho(self, z):
-        return N.power(z, 2) * 0.5
+        return np.power(z, 2) * 0.5
 
     def psi(self, z):
-        return N.asarray(z)
+        return np.asarray(z)
 
     def weights(self, z):
-        return N.ones(z.shape, N.float64)
+        return np.ones(z.shape, np.float64)
 
 class HuberT(RobustNorm):
 
@@ -39,24 +39,24 @@ class HuberT(RobustNorm):
     t = 1.345
 
     def subset(self, z):
-        z = N.asarray(z)
-        return N.less_equal(N.fabs(z), HuberT.t)
+        z = np.asarray(z)
+        return np.less_equal(np.fabs(z), HuberT.t)
 
     def rho(self, z):
-        z = N.asarray(z)
+        z = np.asarray(z)
         test = self.subset(z)
-        return (test * 0.5 * N.power(z, 2) +
-                (1 - test) * (N.fabs(z) * HuberT.t - 0.5 * HuberT.t**2))
+        return (test * 0.5 * np.power(z, 2) +
+                (1 - test) * (np.fabs(z) * HuberT.t - 0.5 * HuberT.t**2))
 
     def psi(self, z):
-        z = N.asarray(z)
+        z = np.asarray(z)
         test = self.subset(z)
-        return test * z + (1 - test) * HuberT.t * N.sign(z)
+        return test * z + (1 - test) * HuberT.t * np.sign(z)
 
     def weights(self, z):
-        z = N.asarray(z)
+        z = np.asarray(z)
         test = self.subset(z)
-        return test + (1 - test) * HuberT.t / N.fabs(z)
+        return test + (1 - test) * HuberT.t / np.fabs(z)
 
 class RamsayE(RobustNorm):
 
@@ -70,17 +70,17 @@ class RamsayE(RobustNorm):
     a = 0.3
 
     def rho(self, z):
-        z = N.asarray(z)
-        return (1 - N.exp(-RamsayE.a * N.fabs(z)) *
-                (1 + RamsayE.a * N.fabs(z))) / RamsayE.a**2
+        z = np.asarray(z)
+        return (1 - np.exp(-RamsayE.a * np.fabs(z)) *
+                (1 + RamsayE.a * np.fabs(z))) / RamsayE.a**2
 
     def psi(self, z):
-        z = N.asarray(z)
-        return z * N.exp(-RamsayE.a * N.fabs(z))
+        z = np.asarray(z)
+        return z * np.exp(-RamsayE.a * np.fabs(z))
 
     def weights(self, z):
-        z = N.asarray(z)
-        return N.exp(-RamsayE.a * N.fabs(z))
+        z = np.asarray(z)
+        return np.exp(-RamsayE.a * np.fabs(z))
 
 class AndrewWave(RobustNorm):
 
@@ -94,27 +94,27 @@ class AndrewWave(RobustNorm):
     a = 1.339
 
     def subset(self, z):
-        z = N.asarray(z)
-        return N.less_equal(N.fabs(z), RamsayE.a * N.pi)
+        z = np.asarray(z)
+        return np.less_equal(np.fabs(z), RamsayE.a * np.pi)
 
     def rho(self, z):
         a = AndrewWave.a
-        z = N.asarray(z)
+        z = np.asarray(z)
         test = self.subset(z)
-        return (test * a * (1 - N.cos(z / a)) +
+        return (test * a * (1 - np.cos(z / a)) +
                 (1 - test) * 2 * a)
 
     def psi(self, z):
         a = AndrewWave.a
-        z = N.asarray(z)
+        z = np.asarray(z)
         test = self.subset(z)
-        return test * N.sin(z / a)
+        return test * np.sin(z / a)
 
     def weights(self, z):
         a = AndrewWave.a
-        z = N.asarray(z)
+        z = np.asarray(z)
         test = self.subset(z)
-        return test * N.sin(z / a) / (z / a)
+        return test * np.sin(z / a) / (z / a)
 
 class TrimmedMean(RobustNorm):
     """
@@ -128,21 +128,21 @@ class TrimmedMean(RobustNorm):
     c = 2
 
     def subset(self, z):
-        z = N.asarray(z)
-        return N.less_equal(N.fabs(z), TrimmedMean.c)
+        z = np.asarray(z)
+        return np.less_equal(np.fabs(z), TrimmedMean.c)
 
     def rho(self, z):
-        z = N.asarray(z)
+        z = np.asarray(z)
         test = self.subset(z)
-        return test * N.power(z, 2) * 0.5
+        return test * np.power(z, 2) * 0.5
 
     def psi(self, z):
-        z = N.asarray(z)
+        z = np.asarray(z)
         test = self.subset(z)
         return test * z
 
     def weights(self, z):
-        z = N.asarray(z)
+        z = np.asarray(z)
         test = self.subset(z)
         return test
 
@@ -160,24 +160,24 @@ class Hampel(RobustNorm):
     c = 8
 
     def subset(self, z):
-        z = N.fabs(N.asarray(z))
-        t1 = N.less_equal(z, Hampel.a)
-        t2 = N.less_equal(z, Hampel.b) * N.greater(z, Hampel.a)
-        t3 = N.less_equal(z, Hampel.c) * N.greater(z, Hampel.b)
+        z = np.fabs(np.asarray(z))
+        t1 = np.less_equal(z, Hampel.a)
+        t2 = np.less_equal(z, Hampel.b) * np.greater(z, Hampel.a)
+        t3 = np.less_equal(z, Hampel.c) * np.greater(z, Hampel.b)
         return t1, t2, t3
 
     def psi(self, z):
-        z = N.asarray(z)
+        z = np.asarray(z)
         a = Hampel.a; b = Hampel.b; c = Hampel.c
         t1, t2, t3 = self.subset(z)
-        s = N.sign(z); z = N.fabs(z)
+        s = np.sign(z); z = np.fabs(z)
         v = s * (t1 * z +
                  t2 * a +
                  t3 * a * (c - z) / (c - b))
         return v
 
     def rho(self, z):
-        z = N.fabs(z)
+        z = np.fabs(z)
         a = Hampel.a; b = Hampel.b; c = Hampel.c
         t1, t2, t3 = self.subset(z)
         v = (t1 * z**2 * 0.5 +
@@ -187,8 +187,8 @@ class Hampel(RobustNorm):
         return v
 
     def weights(self, z):
-        z = N.asarray(z)
-        test = N.not_equal(z, 0)
+        z = np.asarray(z)
+        test = np.not_equal(z, 0)
         return self.psi(z) * test / z + (1 - test)
 
 class TukeyBiweight(RobustNorm):
@@ -204,11 +204,11 @@ class TukeyBiweight(RobustNorm):
     R = 4.685
 
     def subset(self, z):
-        z = N.fabs(N.asarray(z))
-        return N.less_equal(z, self.R)
+        z = np.fabs(np.asarray(z))
+        return np.less_equal(z, self.R)
 
     def psi(self, z):
-        z = N.asarray(z)
+        z = np.asarray(z)
         subset = self.subset(z)
         return z * (1 - (z / self.R)**2)**2 * subset
 
