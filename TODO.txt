@@ -46,9 +46,7 @@ use of grin for a global search and replace.
 Convert from nipy datasource to numpy datasource.  Then remove
   nipy's datasource.py
 
-Delete any *weave* code.
-
-Use scipy.stats.models instead of fixes.
+Rewrite weave code in algorithms/statistics/intrinsic_volumes.py as C extension.
 
 Use sphinx to generate docs and update neuroimaging.scipy.org/api.
 
@@ -120,7 +118,8 @@ Move header_utils, utils, analyze_to_nifti and sliceplot to
 sandbox/tools.  Files are currently in
 nipy-sandbox/neuroimaging/data_io/formats.
 
-import neuroimaging.algorithms is very slow!  Find and fix.
+import neuroimaging.algorithms is very slow!  Find and fix.  The
+shared library is slow.
 
 Auto backup script for nipy repos to run as weekly cron job.  Chris
 will run this on his machine.
