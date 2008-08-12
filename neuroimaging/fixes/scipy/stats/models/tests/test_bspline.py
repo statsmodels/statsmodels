@@ -2,19 +2,16 @@
 Test functions for models.bspline
 """
 
-import numpy as N
+import numpy as np
 from numpy.testing import *
-
-import neuroimaging.fixes.scipy.stats.models as S
-import neuroimaging.fixes.scipy.stats.models.bspline as B
-
+import neuroimaging.fixes.scipy.stats.models.bspline as bsp
 
 class TestBSpline(TestCase):
 
     def test1(self):
-        b = B.BSpline(N.linspace(0,10,11), x=N.linspace(0,10,101))
+        b = bsp.BSpline(np.linspace(0,10,11), x=np.linspace(0,10,101))
         old = b._basisx.shape
-        b.x = N.linspace(0,10,51)
+        b.x = np.linspace(0,10,51)
         new = b._basisx.shape
         self.assertEqual((old[0], 51), new)
 
@@ -45,9 +42,3 @@ class TestBSpline(TestCase):
         b = bsp.BSpline(np.linspace(0,1,11))
         grm = b.gram()
         assert grm.shape == (4, 13)
-
-if __name__ == "__main__":
-    run_module_suite()
-
-
-
