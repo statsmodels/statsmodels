@@ -23,8 +23,8 @@ double *bspline(double **output, double *x, int nx,
        nbasis = upper - lower;
 
        result = *((double **) output);
-       f0 = (double *) malloc(sizeof(*f0) * nx);
-       f1 = (double *) malloc(sizeof(*f1) * nx);
+       f0 = (double *) malloc(sizeof(double) * nx);
+       f1 = (double *) malloc(sizeof(double) * nx);
 
        if (m == 1) {
            for(i=0; i<nbasis; i++) {
@@ -54,7 +54,7 @@ double *bspline(double **output, double *x, int nx,
             }
         }
         else {
-            b = (double *) malloc(sizeof(*b) * (nbasis+1) * nx);
+	  b = (double *) malloc(sizeof(double) * (nbasis+1) * nx);
             bspline(&b, x, nx, knots, nknots, m-1, d-1, lower, upper+1);
 
             for(i=0; i<nbasis; i++) {
@@ -183,9 +183,9 @@ double *bspline_prod(double *x, int nx, double *knots, int nknots,
         int k;
 
         if (abs(r - l) <= m) {
-            result = (double *) malloc(sizeof(*result) * nx);
-            bl = (double *) malloc(sizeof(*bl) * nx);
-            br = (double *) malloc(sizeof(*br) * nx);
+            result = (double *) malloc(sizeof(double) * nx);
+            bl = (double *) malloc(sizeof(double) * nx);
+            br = (double *) malloc(sizeof(double) * nx);
 
             bl = bspline(&bl, x, nx, knots, nknots, m, dl, l, l+1);
             br = bspline(&br, x, nx, knots, nknots, m, dr, r, r+1);
