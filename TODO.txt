@@ -135,6 +135,9 @@ Fix fmri.pca module.  Internally it's referencing old image api that
 no longer exists like Image.slice_iterator.  Currently all tests are
 skipped or commented out.
 
+FmriStat has undefined objects, FmriStatOLS and FmriStatAR.  Look into
+modalities.fmri.fmristat.tests.test_utils.py
+
 Future Features
 ---------------
 
