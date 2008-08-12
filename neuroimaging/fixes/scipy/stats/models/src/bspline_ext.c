@@ -3,9 +3,9 @@
 
 /*  function prototypes */
 
-double *bspline(double**, double*, int, double *, int, int, int, int, int);
-void bspline_gram(double **, double *, int, int, int, int);
-void invband_compute(double **, double *, int, int);
+double *bspline(double*, double*, int, double *, int, int, int, int, int);
+void bspline_gram(double*, double *, int, int, int, int);
+void invband_compute(double*, double *, int, int);
 
 
 static PyObject *BSpline_Invband(PyObject *self, PyObject *args)
@@ -32,7 +32,7 @@ static PyObject *BSpline_Invband(PyObject *self, PyObject *args)
     data    = (double *)PyArray_DATA(invband);
     free(dims_invband);
 
-    invband_compute(&data, L_data, (int)dims_L[0], (int)dims_L[1]);
+    invband_compute(data, L_data, (int)dims_L[0], (int)dims_L[1]);
 
 exit:
 
@@ -69,7 +69,7 @@ static PyObject *BSpline_Gram(PyObject *self, PyObject *args)
     data        = (double *)PyArray_DATA(gram_array);
     free(dims_gram);
 
-    bspline_gram(&data, knots, (int)nknots[0], m, dl, dr);
+    bspline_gram(data, knots, (int)nknots[0], m, dl, dr);
 
 exit:
 
@@ -110,7 +110,7 @@ static PyObject *BSpline_Evaluate(PyObject *self, PyObject *args)
     basis_array   = (PyArrayObject*)PyArray_SimpleNew(2, dims_basis, PyArray_DOUBLE);
     data          = (double *)PyArray_DATA(basis_array);
 
-    bspline(&data, x, (int)nx[0], knots, (int)nknots[0], m, d, lower, upper);
+    bspline(data, x, (int)nx[0], knots, (int)nknots[0], m, d, lower, upper);
 
 exit:
 
@@ -132,4 +132,3 @@ PyMODINIT_FUNC init_hbspline(void)
     Py_InitModule("_hbspline", BSplineMethods);
     import_array();
 }
-

@@ -3,14 +3,14 @@
 
 /*  function prototypes */
 
-double *bspline(double **, double *, int, double *, int, int, int, int, int);
+double *bspline(double *, double *, int, double *, int, int, int, int, int);
 double bspline_quad(double *, int, int, int, int, int, int);
 double *bspline_prod(double *, int, double *, int, int, int, int, int, int);
-void bspline_gram(double **, double *, int, int, int, int);
-void invband_compute(double **, double *, int, int);
+void bspline_gram(double *, double *, int, int, int, int);
+void invband_compute(double *, double *, int, int);
 
 
-double *bspline(double **output, double *x, int nx,
+double *bspline(double *output, double *x, int nx,
                 double *knots, int nknots,
                 int m, int d, int lower, int upper){
 
@@ -22,7 +22,7 @@ double *bspline(double **output, double *x, int nx,
 
        nbasis = upper - lower;
 
-       result = *((double **) output);
+       result = output;
        f0 = (double *) malloc(sizeof(double) * nx);
        f1 = (double *) malloc(sizeof(double) * nx);
 
@@ -55,7 +55,7 @@ double *bspline(double **output, double *x, int nx,
         }
         else {
 	  b = (double *) malloc(sizeof(double) * (nbasis+1) * nx);
-            bspline(&b, x, nx, knots, nknots, m-1, d-1, lower, upper+1);
+            bspline(b, x, nx, knots, nknots, m-1, d-1, lower, upper+1);
 
             for(i=0; i<nbasis; i++) {
                 b0 = b + nx*i;
@@ -187,8 +187,8 @@ double *bspline_prod(double *x, int nx, double *knots, int nknots,
             bl = (double *) malloc(sizeof(double) * nx);
             br = (double *) malloc(sizeof(double) * nx);
 
-            bl = bspline(&bl, x, nx, knots, nknots, m, dl, l, l+1);
-            br = bspline(&br, x, nx, knots, nknots, m, dr, r, r+1);
+            bl = bspline(bl, x, nx, knots, nknots, m, dl, l, l+1);
+            br = bspline(br, x, nx, knots, nknots, m, dr, r, r+1);
 
             for (k=0; k<nx; k++) {
                 result[k] = bl[k] * br[k];
@@ -204,7 +204,7 @@ double *bspline_prod(double *x, int nx, double *knots, int nknots,
         return(result);
 }
 
-void bspline_gram(double **output, double *knots, int nknots,
+void bspline_gram(double *output, double *knots, int nknots,
                   int m, int dl, int dr){
 
     /* Presumes that the first m and last m knots are to be ignored, i.e.
@@ -219,7 +219,7 @@ void bspline_gram(double **output, double *knots, int nknots,
 
         nbasis = nknots - m;
 
-        result = *((double **) output);
+        result = output;
         for (i=0; i<nbasis; i++) {
             for (j=0; j<m; j++) {
                 l = i;
@@ -232,7 +232,7 @@ void bspline_gram(double **output, double *knots, int nknots,
 }
 
 
-void invband_compute(double **dataptr, double *L, int n, int m) {
+void invband_compute(double *dataptr, double *L, int n, int m) {
 
         /* Note: m is number of bands not including the diagonal so L is of size (m+1)xn */
 
@@ -241,7 +241,7 @@ void invband_compute(double **dataptr, double *L, int n, int m) {
         double *data, *odata;
         double diag;
 
-        data = *((double **) dataptr);
+        data = dataptr;
 
         for (i=0; i<n; i++) {
              diag = L[i];
@@ -269,6 +269,3 @@ void invband_compute(double **dataptr, double *L, int n, int m) {
     return;
 
 }
-
-
-
