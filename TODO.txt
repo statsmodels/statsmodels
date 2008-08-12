@@ -2,7 +2,9 @@
 TODO for NIPY development
 =========================
 
-This list is currently not prioritized.
+
+Create NIPY sidebar with links to all project related websites.
+
 
 Tests
 -----
