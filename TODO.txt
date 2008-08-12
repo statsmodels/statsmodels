@@ -109,6 +109,24 @@ See failing test in test_axis:test_Axis.test_init, presumably the Axis
 initializer use to check for a valid name before assigning.  It now
 blindly assigns the name.
 
+Fix test errors for concatenation and replication of sampling grids.
+See test_grid.py.
+
+Fix .mat file IO.  See test_mapping.py
+
+Pynifti IO
+----------
+
+Fix deprecation error in pynifti's swig generated extension code::
+
+  /Users/cburns/src/nipy-trunk/neuroimaging/externals/pynifti/nifti/niftiformat.py:458:
+  DeprecationWarning: PyArray_FromDims: use PyArray_SimpleNew.  return
+  nifticlib.mat442array(self.__nimg.sto_xyz)
+  /Users/cburns/src/nipy-trunk/neuroimaging/externals/pynifti/nifti/niftiformat.py:458:
+  DeprecationWarning: PyArray_FromDimsAndDataAndDescr: use
+  PyArray_NewFromDescr.  return
+  nifticlib.mat442array(self.__nimg.sto_xyz)
+
 
 Future Features
 ---------------
