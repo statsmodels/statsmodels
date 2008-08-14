@@ -6,7 +6,9 @@ Organize this document better.
 
 Create NIPY sidebar with links to all project related websites.
 
-Create a Best Practices document.
+Create a Best Practices document.  As rst doc on wiki.
+
+Post virtualenv tutorial on numpy wiki as rst doc.  Include utility scripts.
 
 Tests
 -----
@@ -56,13 +58,16 @@ Nipy code base
 Update INSTALL and README so they are current.  Add list of
 dependencies in the INSTALL.
 
-Delete neuroimaging/utils/path.py.  This custom path module does not
-provide any benefit over os.path.  Using a non-standard path module
-adds confusion to the code.  This will require going through the code
-base and updating all references to the path module.  Perhaps a good
-use of grin for a global search and replace.
+datasource and path.py cleanup should be done together as nipy's
+datasource is one of the main users of path.py:
 
-Convert from nipy datasource to numpy datasource.  Then remove
+* Delete neuroimaging/utils/path.py.  This custom path module does not
+  provide any benefit over os.path.  Using a non-standard path module
+  adds confusion to the code.  This will require going through the
+  code base and updating all references to the path module.  Perhaps a
+  good use of grin for a global search and replace.
+
+* Convert from nipy datasource to numpy datasource.  Then remove
   nipy's datasource.py
 
 Rewrite weave code in algorithms/statistics/intrinsic_volumes.py as C extension.
@@ -173,7 +178,8 @@ development install option, which we should restore when eggs are working::
 
     sudo python setup_egg.py develop --prefix /usr/local
 
-Add Fernando's nose fix for running doctests in extension code.
+Add Fernando's nose fix for running doctests in extension code.  May
+get this through numpy?  Fernando was considering adding this there.
 
 Place nipy-io-overhaul up on lp/cburns for matthew reference.
 
