@@ -2,12 +2,31 @@
 TODO for NIPY development
 =========================
 
+Organize this document better.
 
 Create NIPY sidebar with links to all project related websites.
 
+Create a Best Practices document.
 
 Tests
 -----
+
+Resolve differences between running tests via nose on command line and
+ni.test().
+
+  cburns@nipy 11:32:32 $ nosetests -sv
+  Ran 216 tests in 135.606s
+  FAILED (SKIP=35, errors=3)
+
+  In [2]: ni.test()
+  Ran 146 tests in 10.874s
+  FAILED (SKIP=18, errors=12)
+  Out[2]: <nose.result.TextTestResult run=146 errors=12 failures=0>
+
+Replace fmri test file `funcfile` with a reasonable fmri file.  It's
+shape is odd, (20,20,2,20).  Many tests have been updated to this file
+and will need to me modified.  `funcfile` is located in
+neuroimaging/testing/functinal.nii.gz
 
 Some issues specific to tests to cleanup.
 
@@ -137,6 +156,13 @@ skipped or commented out.
 
 FmriStat has undefined objects, FmriStatOLS and FmriStatAR.  Look into
 modalities.fmri.fmristat.tests.test_utils.py
+
+Automated test for pca, check for covariance diagonal structure, post pca.
+
+Create working example out of this TRAC pca page.  Should also be a
+rest document.
+http://neuroimaging.scipy.org/neuroimaging/ni/wiki/PrincipalComponents
+
 
 Future Features
 ---------------
