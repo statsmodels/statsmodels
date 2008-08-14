@@ -1,6 +1,6 @@
 import os
 from scipy.weave import ext_tools
-import numpy as N
+import numpy as np
 import string
 
 """
@@ -22,7 +22,7 @@ def _intrep(x):
     Return integer value based on a binary representation
     """
 
-    return (N.array([2**i for i in range(N.asarray(x).shape[0])][::-1]) * x).sum()
+    return (np.array([2**i for i in range(np.asarray(x).shape[0])][::-1]) * x).sum()
 
 def _binrep(x, dim=3):
     """
@@ -56,11 +56,11 @@ def subsets(n, k=None, fixed=None, empty=False):
     if not empty:
         keep = keep[1:]
     if fixed is not None:
-        keep = filter(lambda v: N.product([v[i] == 0 for i in fixed]), keep)
+        keep = filter(lambda v: np.product([v[i] == 0 for i in fixed]), keep)
     if k is None:
         return keep
     else:
-        return filter(lambda x: N.sum(x) == k, keep)
+        return filter(lambda x: np.sum(x) == k, keep)
 
 
 class Complex:
@@ -81,7 +81,7 @@ class Complex:
         self.faces = {}
 
         l = [len(list(x)) for x in maximal]
-        for i in range(N.max(l)):
+        for i in range(np.max(l)):
             self.faces[i+1] = set([])
 
         for simplex in maximal:
@@ -90,7 +90,7 @@ class Complex:
             for k in range(1,len(simplex)+1):
                 ss = subsets(len(simplex), k=k)
                 for s in ss:
-                    v = tuple([simplex[i] for i in N.nonzero(s)[0]])
+                    v = tuple([simplex[i] for i in np.nonzero(s)[0]])
                     if len(v) == 1:
                         v = v[0]
                     self.faces[k].add(v)
@@ -103,13 +103,13 @@ class Vertex:
 
     def __init__(self, ivector):
         self.vector = ivector
-        self.dim = N.array(self.vector).shape[0]
+        self.dim = np.array(self.vector).shape[0]
 
     def nonzero(self):
         """
         [1,0,1] -> [0,2]
         """
-        return list(N.nonzero(self.vector)[0])
+        return list(np.nonzero(self.vector)[0])
 
     def zero(self):
         """
@@ -164,15 +164,15 @@ class Face(Vertex):
 
     def __init__(self, vector):
         Vertex.__init__(self, vector)
-        self.dimface = N.array(self.vector).sum()
+        self.dimface = np.array(self.vector).sum()
         if self.dim in [1,2,3]:
             self._get_cube()
 
     def _get_cube(self):
         nz = self.nonzero()
         if nz:
-            self.dimface = N.array(nz).shape[0]
-            vectors = N.zeros((self.dimface, self.dim), N.int)
+            self.dimface = np.array(nz).shape[0]
+            vectors = np.zeros((self.dimface, self.dim), np.int)
             for i in range(self.dimface):
                 vectors[i][nz[i]] = 1
             ivector = [_intrep(v) for v in vectors] + [-1] * (3-self.dimface)
@@ -240,7 +240,7 @@ class Face(Vertex):
         return tab*K + space + '}\n'
 
     def intvolcode(self, lk=1):
-        dimface = N.array(self.vector).sum()
+        dimface = np.array(self.vector).sum()
         value = space + 'lk%s = 0;\n' % self.tostring()
         nz = self.nonzero()
         for i in range(lk+1, len(nz)+2):
@@ -665,13 +665,13 @@ def setup_extension():
     mod.customize.add_support_code(support_code)
     EC = {}
     for i in range(1,6):
-        mask = N.zeros((5,)*i, N.int)
+        mask = np.zeros((5,)*i, np.int)
         _code = code(i, lk=0)
         _code += space + 'return_val = LK;\n'
         EC = ext_tools.ext_function("ECdim%d" % i, _code, ['mask'])
         mod.add_function(EC)
         if i in range(1,4):
-            resid = N.zeros((10,)+(5,)*i)
+            resid = np.zeros((10,)+(5,)*i)
             for lk in range(1,4):
                 if lk <= i:
                     _code = code(i, lk=lk)
@@ -692,11 +692,11 @@ mod = setup_extension()
 d = mod.setup_extension(location=os.path.dirname(__file__)).__dict__
 n = d['name']; del(d['name'])
 s = d['sources']; del(d['sources'])
-d['include_dirs'].append(N.get_include())
+d['include_dirs'].append(np.get_include())
 extension = n, s, d
 
 def EC(X, thresh=0):
-    m = N.greater(X, thresh).astype(N.int)
+    m = np.greater(X, thresh).astype(np.int)
     f = {1: _intrinsic_volumes.ECdim1,
          2: _intrinsic_volumes.ECdim2,
          3: _intrinsic_volumes.ECdim3,
@@ -705,7 +705,7 @@ def EC(X, thresh=0):
     return f(m)
 
 def LK(X, thresh, coords=None, lk=0):
-    m = N.greater(X, thresh).astype(N.int)
+    m = np.greater(X, thresh).astype(np.int)
     try:
         f = {(1,1):_intrinsic_volumes.LK1dim1,
              (2,1):_intrinsic_volumes.LK1dim2,
@@ -724,7 +724,7 @@ def LK(X, thresh, coords=None, lk=0):
     if lk > 0:
         if coords is None:
             raise ValueError, "need coords to compute intrinsic volumes"
-        return f(m, coords.astype(N.float))
+        return f(m, coords.astype(np.float))
     else:
         return f(m)
 

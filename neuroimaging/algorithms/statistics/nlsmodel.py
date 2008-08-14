@@ -3,7 +3,7 @@ TODO
 """
 __docformat__ = 'restructuredtext'
 
-import numpy as N
+import numpy as np
 import numpy.linalg as L
 from neuroimaging.fixes.scipy.stats.models.model import Model
 
@@ -68,7 +68,7 @@ class NLSModel(Model):
         """
         :Returns: ``None``
         """
-        self._omega = self.predict() - N.dot(self._Z, self.theta)
+        self._omega = self.predict() - np.dot(self._Z, self.theta)
 
     def predict(self, design=None):
         """
@@ -112,7 +112,7 @@ class NLSModel(Model):
             self.getZ()
             self.getomega()
             Zpinv = L.pinv(self._Z)
-            self.theta = N.dot(Zpinv, self.Y - self._omega)
+            self.theta = np.dot(Zpinv, self.Y - self._omega)
         else:
             raise StopIteration
         self._iter += 1

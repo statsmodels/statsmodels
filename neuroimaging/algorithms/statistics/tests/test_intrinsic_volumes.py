@@ -1,4 +1,4 @@
-import numpy as N
+import numpy as np
 import numpy.linalg as L
 import numpy.random as R
 
@@ -8,14 +8,14 @@ from neuroimaging.algorithms.statistics import intrinsic_volumes
 
 def symnormal(p=10):
     M = R.standard_normal((p,p))
-    return (M + M.T) / N.sqrt(2)
+    return (M + M.T) / np.sqrt(2)
 
 def randorth(p=10):
     A = symnormal(p)
     return L.eig(A)[1]
 
 def box(shape, edges):
-    data = N.zeros(shape)
+    data = np.zeros(shape)
     sl = []
     for i in range(len(shape)):
         sl.append(slice(edges[i][0], edges[i][1],1))
@@ -86,22 +86,22 @@ class test_iv(TestCase):
     def test4(self):
         e = intrinsic_volumes.EC
 
-        m = N.zeros((40,)*3)
+        m = np.zeros((40,)*3)
         m[10,10,10] = 1
         assert_almost_equal(e(m), 1)
 
-        m = N.zeros((40,)*3)
+        m = np.zeros((40,)*3)
         m[10,10:12,10] = 1
         assert_almost_equal(e(m), 1)
 
         m[10,10:12,10:12] = 1
-        m = N.zeros((40,)*3)
+        m = np.zeros((40,)*3)
         m[10,10:12,10:12] = 1
         assert_almost_equal(e(m), 1)
 
 
 ##     for i in range(1, 6):
-##         X = N.zeros((10,)*i)
+##         X = np.zeros((10,)*i)
 ##         if i in range(1,4):
 
 ##             for l in range(i+1):
@@ -116,10 +116,10 @@ class test_iv(TestCase):
 ##                     X[4:6] = 1
 ##                     answer = {0:1, 1:1}[l]
 
-##                 Y = N.indices(X.shape).astype(N.float)
+##                 Y = np.indices(X.shape).astype(np.float)
 ##                 Y.shape = (i, 10**i)
 ##                 U = randorth()[0:i]
-##                 Y = N.dot(U.T, Y)
+##                 Y = np.dot(U.T, Y)
 ##                 Y.shape = (p,) + (10,)*i
 ##                 print i, l, LK(X, 0.5, coords=Y, lk=l), answer
 ## ##                 if i == 3:

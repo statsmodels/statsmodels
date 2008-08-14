@@ -5,7 +5,7 @@ __docformat__ = 'restructuredtext'
 
 import gc
 
-import numpy as N
+import numpy as np
 from neuroimaging.fixes.scipy.stats.models.utils import recipr
 
 class OneSampleResults(object):
@@ -106,10 +106,10 @@ class OneSample(object):
             pass
 
         if self.weight_type == 'sd':
-            W = 1. / N.power(W, 2)
+            W = 1. / np.power(W, 2)
         elif self.weight_type == 'var':
             W = 1. / W
-        return N.asarray(W)
+        return np.asarray(W)
 
     def estimate_mean(self, Y, W):
         """
@@ -124,38 +124,38 @@ class OneSample(object):
 
         if Y.ndim == 1:
             Y.shape = (Y.shape[0], 1)
-        W = N.asarray(self.get_weights(W))
+        W = np.asarray(self.get_weights(W))
         if W.shape in [(), (1,)]:
-            W = N.ones(Y.shape) * W
+            W = np.ones(Y.shape) * W
 
         nsubject = Y.shape[0]
 
         if self.value['varatio']['varfix'] is not None:
-            sigma2 = N.asarray(self['varatio']['varfix'] *
+            sigma2 = np.asarray(self['varatio']['varfix'] *
                                self['varatio']['varatio'])
 
             if sigma2.shape != ():
-                sigma2 = N.multiply.outer(N.ones((nsubject,)), sigma2)
+                sigma2 = np.multiply.outer(np.ones((nsubject,)), sigma2)
             S = recipr(W) + sigma2
             W = recipr(S)
 
-        mu = N.add.reduce(Y * W, 0) / N.add.reduce(W, 0)
+        mu = np.add.reduce(Y * W, 0) / np.add.reduce(W, 0)
         df_resid = nsubject - 1
-        resid = (Y - N.multiply.outer(N.ones(Y.shape[0]), mu)) * N.sqrt(W)
+        resid = (Y - np.multiply.outer(np.ones(Y.shape[0]), mu)) * np.sqrt(W)
 
         if self.use_scale:
-            scale = N.add.reduce(N.power(resid, 2), 0) / df_resid
+            scale = np.add.reduce(np.power(resid, 2), 0) / df_resid
         else:
             scale = 1.
-        var_total = scale * recipr(N.add.reduce(W, 0))
+        var_total = scale * recipr(np.add.reduce(W, 0))
 
         self.value['mean']['df_resid'] = df_resid
         self.value['mean']['resid'] = resid
         self.value['mean']['mu'] = mu
-        self.value['mean']['sd'] = N.squeeze(N.sqrt(var_total))
-        self.value['mean']['t'] = N.squeeze(self.value['mean']['mu'] *
+        self.value['mean']['sd'] = np.squeeze(np.sqrt(var_total))
+        self.value['mean']['t'] = np.squeeze(self.value['mean']['mu'] *
                                             recipr(self.value['mean']['sd']))
-        self.value['mean']['scale'] = N.sqrt(scale)
+        self.value['mean']['scale'] = np.sqrt(scale)
 
         return self.value
 
@@ -177,41 +177,41 @@ class OneSample(object):
         nsubject = Y.shape[0]
         df_resid = nsubject - 1
 
-        R = Y - N.multiply.outer(N.ones(Y.shape[0]), N.mean(Y, axis=0))
-        sigma2 = N.squeeze(N.add.reduce(N.power(R, 2), axis=0) / df_resid)
+        R = Y - np.multiply.outer(np.ones(Y.shape[0]), np.mean(Y, axis=0))
+        sigma2 = np.squeeze(np.add.reduce(np.power(R, 2), axis=0) / df_resid)
 
-        minS = N.minimum.reduce(S, 0) * Sreduction
+        minS = np.minimum.reduce(S, 0) * Sreduction
 
-        Sm = S - N.multiply.outer(N.ones(nsubject), minS)
+        Sm = S - np.multiply.outer(np.ones(nsubject), minS)
 
         for _ in range(self.niter):
-            Sms = Sm + N.multiply.outer(N.ones(nsubject), sigma2)
+            Sms = Sm + np.multiply.outer(np.ones(nsubject), sigma2)
             W = recipr(Sms)
-            Winv = 1. / N.add.reduce(W, axis=0)
-            mu = Winv * N.add.reduce(W * Y, axis=0)
-            R = W * (Y - N.multiply.outer(N.ones(nsubject), mu))
-            ptrS = 1 + N.add.reduce(Sm * W, 0) - \
-                   N.add.reduce(Sm * N.power(W, 2), axis=0) * Winv
-            sigma2 = N.squeeze((sigma2 * ptrS + N.power(sigma2, 2) *
-                                N.add.reduce(N.power(R,2), 0)) / nsubject)
+            Winv = 1. / np.add.reduce(W, axis=0)
+            mu = Winv * np.add.reduce(W * Y, axis=0)
+            R = W * (Y - np.multiply.outer(np.ones(nsubject), mu))
+            ptrS = 1 + np.add.reduce(Sm * W, 0) - \
+                   np.add.reduce(Sm * np.power(W, 2), axis=0) * Winv
+            sigma2 = np.squeeze((sigma2 * ptrS + np.power(sigma2, 2) *
+                                np.add.reduce(np.power(R,2), 0)) / nsubject)
 
         sigma2 = sigma2 - minS
 
         if df is None:
-            df = N.ones(nsubject)
+            df = np.ones(nsubject)
 
         df.shape = (1, nsubject)
 
         _Sshape = S.shape
-        S.shape = (S.shape[0], N.product(S.shape[1:]))
+        S.shape = (S.shape[0], np.product(S.shape[1:]))
 
 
-        self.value['varatio']['varfix'] = N.dot(df, S) / df.sum()
+        self.value['varatio']['varfix'] = np.dot(df, S) / df.sum()
 
         S.shape = _Sshape
         self.value['varatio']['varfix'].shape = _Sshape[1:]
         self.value['varatio']['varatio'] = \
-                         N.nan_to_num(sigma2 / self.value['varatio']['varfix'])
+                         np.nan_to_num(sigma2 / self.value['varatio']['varfix'])
         return self.value
 
 
