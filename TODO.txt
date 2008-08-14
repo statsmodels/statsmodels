@@ -166,8 +166,15 @@ Automated test for pca, check for covariance diagonal structure, post pca.
 
 Create working example out of this TRAC pca page.  Should also be a
 rest document.
-http://neuroimaging.scipy.org/neuroimaging/ni/wiki/PrincipalComponents
+  http://neuroimaging.scipy.org/neuroimaging/ni/wiki/PrincipalComponents
 
+fixes.scipy.ndimage
+-------------------
+
+Fix possible precision error in test_registration function
+test_autoalign_nmi_value_2.  See FIXME.
+
+Fix error in test_segment test_texture2 function.  See FIXME.
 
 Future Features
 ---------------
