@@ -390,8 +390,6 @@ class test_RFT(TestCase):
                 v2 = 0
                 for i in range(search.mu.shape[0]):
                     v2 += stat.density(x, i) * search.mu[i]
-                import pylab
-
 
     def test_search4(self):
         """
