@@ -42,7 +42,6 @@ class test_iv(TestCase):
     #    Items are not equal:
     #    ACTUAL: 1.0
     #    DESIRED: 2.0
-    @dec.skipknownfailure
     def test2(self):
         e = intrinsic_volumes.EC
         for i in range(1, 4):
@@ -55,7 +54,6 @@ class test_iv(TestCase):
     #    Items are not equal:
     #    ACTUAL: 1.0
     #    DESIRED: 2.0
-    @dec.skipknownfailure
     def test3(self):
         e = intrinsic_volumes.EC
         for i in range(1, 4):
@@ -76,12 +74,6 @@ class test_iv(TestCase):
                                           (e(box1) + e(box2) + e(box3) -
                                            e(box1*box2) - e(box2*box3) - e(box1*box3) +
                                            e(box1*box2*box3)))
-            print """
-            This test is failing.
-            This is probably due to a bad test case. This needs to be
-            addressed by someone that understand this (Jonathan ?).
-            """
-
 
     def test4(self):
         e = intrinsic_volumes.EC
