@@ -99,6 +99,11 @@ Image Class
   an open file I would like to be able to pass that in also, instead
   of fp.name.  Happens in test code a lot.
 
+- image._open function should accept Image objects in addition to
+  ndarrays and filenames.  Currently the save function has to call
+  np.asarray(img) to get the data array out of the image and pass them
+  to _open in order to create the output image.
+
 - Add dtype options when saving. When saving images it uses the native
   dtype for the system.  Should be able to specify this.  in the
   test_file_roundtrip, self.img is a uint8, but is saved to tmpfile as
