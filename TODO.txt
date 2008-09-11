@@ -95,6 +95,19 @@ editor to a browser just to jot down an idea like this.
 Image Class
 -----------
 
+- **CRITICAL** A one voxel offset in the affine transform matrix.
+    Should that be there?
+
+- **CRITICAL** Slicing a time-series yields an 5x4 affine with the
+    top-row == [0, 0, 0, time-of-this-slice].  This causes errors in
+    resampling in the ImageInterpolator.
+
+- **QUESTION** Should millimeter coordinates be expressed in xyz or zyx order?
+
+- ImageInterpolator should have a default spline order of 3.  In
+  prefilter method and in evaluate method.  Ask Jonathan if there is a
+  problem with this?
+
 - save function should accept filename or file-like object.  If I have
   an open file I would like to be able to pass that in also, instead
   of fp.name.  Happens in test code a lot.
