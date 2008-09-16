@@ -142,7 +142,7 @@ class AREstimator:
     def __init__(self, model, p=1):
         """
         :Parameters:
-            `comap` : TODO
+            `coordmap` : TODO
                 TODO
             `model` : TODO
                 A scipy.stats.models.regression.OLSmodel instance
