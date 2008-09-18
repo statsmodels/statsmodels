@@ -63,7 +63,7 @@ class TestFormula(TestCase):
             self.formula += self.terms[i]
         self.formula.namespace = self.namespace
 
-    @dec.skipknownfailure
+    @dec.knownfailureif(True)
     def test_namespace(self):
         space1 = {'X':np.arange(50), 'Y':np.arange(50)*2}
         space2 = {'X':np.arange(20), 'Y':np.arange(20)*2}
@@ -168,7 +168,7 @@ class TestFormula(TestCase):
         assert_almost_equal(np.squeeze(prod()), t())
 
     # FIXME: AttributeError: 'Contrast' object has no attribute 'getmatrix'
-    @dec.skipknownfailure
+    @dec.knownfailureif(True)
     def test_contrast1(self):
         term = self.terms[0] + self.terms[2]
         c = contrast.Contrast(term, self.formula)
@@ -179,7 +179,7 @@ class TestFormula(TestCase):
         assert_almost_equal(c.matrix, test)
 
     # FIXME: AttributeError: 'Contrast' object has no attribute 'getmatrix'
-    @dec.skipknownfailure
+    @dec.knownfailureif(True)
     def test_contrast2(self):
         dummy = formula.Term('zero')
         self.namespace['zero'] = np.zeros((40,), np.float64)
@@ -190,7 +190,7 @@ class TestFormula(TestCase):
         assert_almost_equal(c.matrix, test)
 
     # FIXME: AttributeError: 'Contrast' object has no attribute 'getmatrix'
-    @dec.skipknownfailure
+    @dec.knownfailureif(True)
     def test_contrast3(self):
         X = self.formula.design()
         P = np.dot(X, L.pinv(X))
@@ -283,7 +283,7 @@ class TestFormula(TestCase):
         assert_equal(fac['c'], [0,1,0]*3)
 
     # FIXME: AttributeError: 'Contrast' object has no attribute 'getmatrix'
-    @dec.skipknownfailure
+    @dec.knownfailureif(True)
     def test_contrast4(self):
 
         f = self.formula + self.terms[5] + self.terms[5]
