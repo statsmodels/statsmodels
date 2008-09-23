@@ -5,7 +5,7 @@ from exampledata import x, y
 import neuroimaging.fixes.scipy.stats.models as SSM
 
 # FIXME: AttributeError: 'ARModel' object has no attribute 'yule_walker'
-@dec.skipknownfailure
+@dec.knownfailureif(True)
 def test_armodel():
     for i in range(1,4):
         model = SSM.regression.ARModel(x, i)
