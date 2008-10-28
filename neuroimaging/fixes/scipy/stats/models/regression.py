@@ -22,7 +22,6 @@ from string import join as sjoin
 from csv import reader
 
 import numpy as np
-import numpy.linalg as L
 from scipy.linalg import norm, toeplitz
 
 from neuroimaging.fixes.scipy.stats.models.model import LikelihoodModel, \
@@ -35,7 +34,7 @@ class OLSModel(LikelihoodModel):
 
     Examples
     --------
-    >>> import numpy as np
+    >>> import numpy as N
     >>>
     >>> from neuroimaging.fixes.scipy.stats.models.formula import Term, I
     >>> from neuroimaging.fixes.scipy.stats.models.regression import OLSModel
@@ -84,7 +83,7 @@ class OLSModel(LikelihoodModel):
 
         self.design = design
         self.wdesign = self.whiten(design)
-        self.calc_beta = L.pinv(self.wdesign)
+        self.calc_beta = np.linalg.pinv(self.wdesign)
         self.normalized_cov_beta = np.dot(self.calc_beta,
                                          np.transpose(self.calc_beta))
         self.df_resid = self.wdesign.shape[0] - utils.rank(self.design)
@@ -103,7 +102,7 @@ class OLSModel(LikelihoodModel):
         """
         Z = self.whiten(Y)
 
-        lfit = RegressionResults(L.lstsq(self.wdesign, Z)[0], Y)
+        lfit = RegressionResults(np.linalg.lstsq(self.wdesign, Z)[0], Y)
         lfit.predict = np.dot(self.design, lfit.beta)
 
 
@@ -200,7 +199,7 @@ class ARModel(OLSModel):
 
     Examples
     --------
-    >>> import numpy as np
+    >>> import numpy as N
     >>> import numpy.random as R
     >>>
     >>> from neuroimaging.fixes.scipy.stats.models.formula import Term, I
@@ -328,10 +327,10 @@ def yule_walker(self, X, order=1, method="unbiased", df=None, inv=False):
         r[k] = (X[0:-k]*X[k:]).sum() / denom(k)
     R = toeplitz(r[:-1])
 
-    rho = L.solve(R, r[1:])
+    rho = np.linalg.solve(R, r[1:])
     sigmasq = r[0] - (r[1:]*rho).sum()
     if inv == True:
-        return rho, np.sqrt(sigmasq), L.inv(R)
+        return rho, np.sqrt(sigmasq), np.linalg.inv(R)
     else:
         return rho, np.sqrt(sigmasq)
 
@@ -342,7 +341,7 @@ class WLSModel(OLSModel):
     (proportional to the) inverse of the
     variance of the observations.
 
-    >>> import numpy as np
+    >>> import numpy as N
     >>>
     >>> from neuroimaging.fixes.scipy.stats.models.formula import Term, I
     >>> from neuroimaging.fixes.scipy.stats.models.regression import WLSModel
@@ -432,6 +431,24 @@ class RegressionResults(LikelihoodModelResults):
         ratio = self.scale / self.Ssq
         if not adjusted: ratio *= ((self.Y.shape[0] - 1) / self.df_resid)
         return 1 - ratio
+
+
+class GLSModel(OLSModel):
+
+    """
+    Generalized least squares model with a general covariance structure
+
+    This should probably go into neuroimaging.fixes.scipy.stats.models.regression
+
+    """
+
+    def __init__(self, design, sigma):
+        self.cholsigmainv = np.linalg.cholesky(np.linalg.pinv(sigma)).T
+        super(GLSModel, self).__init__(design)
+
+    def whiten(self, Y):
+        return np.dot(self.cholsigmainv, Y)
+
 
 def isestimable(C, D):
     """
