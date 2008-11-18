@@ -16,14 +16,14 @@ def assert_model_similar(res1, res2):
     assert np.allclose(res1.df_resid, res2.df_resid)
 
 # FIXME: TypeError: test_model_class() takes exactly 2 arguments (0 given)
-@dec.skipknownfailure
+@dec.knownfailureif(True)
 def test_model_class(model_class, r_model_type):
     results = model_class(x).fit(y)
     r_results = WrappedRModel(y, x, r_model_type)
     r_results.assert_similar(results)
 
 # FIXME: ImportError: No module named rpy
-@dec.skipknownfailure
+@dec.knownfailureif(True)
 def test_using_rpy():
     from rpy import r
     from rmodelwrap import RModel
@@ -33,7 +33,7 @@ def test_using_rpy():
     assert_model_similar(ols_res, rlm_res)
 
 # FIXME: NameError: global name 'rlm_res' is not defined
-@dec.skipknownfailure
+@dec.knownfailureif(True)
 def test1():
     # Standard GLM
     glm_res = SSM.glm(x).fit(y)
