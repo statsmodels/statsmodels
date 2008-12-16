@@ -78,7 +78,7 @@ class Model(WLSModel):
         self.Y = np.asarray(Y, np.float64)
         iter(self)
         self.results = super(Model, self).fit(
-            self.family.link.initialize(Y))
+            self.family.link(Y))   #.initialize(Y))
         self.results.mu = self.family.link.inverse(self.results.predict)
         self.scale = self.results.scale = self.estimate_scale()
 

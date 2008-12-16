@@ -36,7 +36,7 @@ def MAD(a, c=0.6745, axis=0):
 
     return median(np.fabs(a - d) / c, axis=axis)
 
-class Huber:
+class Huber(object):
     """
     Huber's proposal 2 for estimating scale.
 
@@ -80,6 +80,8 @@ class Huber:
         self.mu = unsqueeze(self.mu, self.axis, self.a.shape)
 
         for donothing in self:
+            #JP: this uses __iter__ and next, Note: next or iter cannot be called from outside of class
+            #  this is a weird, confusing construction for a for loop
             pass
 
         self.s = np.squeeze(np.sqrt(self.scale))
@@ -96,12 +98,17 @@ class Huber:
         if self.est_mu:
             mu = np.sum(subset * a + (1 - Huber.c) * subset, axis=self.axis) / a.shape[self.axis]
         else:
-            mu = self.mu
-        self.axis = unsqueeze(mu, self.axis, self.a.shape)
+            mu = np.squeeze(self.mu)
+
+        #self.axis = unsqueeze(mu, self.axis, self.a.shape)
+        mu = unsqueeze(mu, self.axis, self.a.shape)  #JP: just guessing
 
         scale = np.sum(subset * (a - mu)**2, axis=self.axis) / (self.n * Huber.gamma - np.sum(1. - subset, axis=self.axis) * Huber.c**2)
+        #scale = np.sum(subset * (a - self.mu)**2, axis=self.axis) / (self.n * Huber.gamma - np.sum(1. - subset, axis=self.axis) * Huber.c**2)
+        scale = unsqueeze(self.scale, self.axis, self.a.shape)
 
         self.iter += 1
+
 
         if np.alltrue(np.less_equal(np.fabs(np.sqrt(scale) - np.sqrt(self.scale)), np.sqrt(self.scale) * Huber.tol)) and np.alltrue(np.less_equal(np.fabs(mu - self.mu), np.sqrt(self.scale) * Huber.tol)):
             self.scale = scale
@@ -111,7 +118,8 @@ class Huber:
             self.scale = scale
             self.mu = mu
 
-        self.scale = unsqueeze(self.scale, self.axis, self.a.shape)
+        #self.mu = unsqueeze(self.mu, self.axis, self.a.shape)  #JP: just guessing
+        #self.scale = unsqueeze(self.scale, self.axis, self.a.shape)
 
         if self.iter >= self.niter:
             raise StopIteration
