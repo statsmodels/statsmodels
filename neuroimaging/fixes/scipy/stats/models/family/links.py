@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.stats
 
-class Link:
+class Link(object):
 
     """
     A generic link function for one-parameter exponential
@@ -10,7 +10,7 @@ class Link:
     """
 
     def initialize(self, Y):
-        return np.asarray(Y).mean() * np.ones(Y.shape)
+        return self(np.asarray(Y).mean() * np.ones(Y.shape))
 
     def __call__(self, p):
         return NotImplementedError

@@ -4,7 +4,7 @@ import numpy as np
 from numpy.linalg import pinv
 from neuroimaging.fixes.scipy.stats.models import utils
 
-class ContrastResults:
+class ContrastResults(object):
     """
     Results from looking at a particular contrast of coefficients in
     a parametric model. The class does nothing, it is a container

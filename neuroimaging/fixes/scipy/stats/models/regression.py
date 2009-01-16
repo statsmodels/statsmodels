@@ -284,7 +284,6 @@ class ARModel(OLSModel):
         return _X
 
 
-#def yule_walker(self, X, order=1, method="unbiased", df=None, inv=False):
 def yule_walker(X, order=1, method="unbiased", df=None, inv=False):
     """
     Estimate AR(p) parameters from a sequence X using Yule-Walker equation.

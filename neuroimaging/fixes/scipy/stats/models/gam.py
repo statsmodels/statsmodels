@@ -37,7 +37,7 @@ def default_smoother(x):
     s.target_df = 5
     return s
 
-class Offset:
+class Offset(object):
 
     def __init__(self, fn, offset):
         self.fn = fn
@@ -46,7 +46,7 @@ class Offset:
     def __call__(self, *args, **kw):
         return self.fn(*args, **kw) + self.offset
 
-class Results:
+class Results(object):
 
     def __init__(self, Y, alpha, design, smoothers, family, offset):
         self.Y = Y
@@ -67,7 +67,7 @@ class Results:
     def smoothed(self, design):
         return np.array([self.smoothers[i]() + self.offset[i] for i in range(design.shape[1])])
 
-class AdditiveModel:
+class AdditiveModel(object):
 
     def __init__(self, design, smoothers=None, weights=None):
         self.design = design

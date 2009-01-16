@@ -1,6 +1,6 @@
 import numpy as np
 
-class SurvivalTime:
+class SurvivalTime(object):
     def __init__(self, time, delta):
         self.time, self.delta = time, delta
 
