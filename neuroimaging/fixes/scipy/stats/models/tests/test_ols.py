@@ -21,7 +21,6 @@ def check_model_class(model_class, r_model_type):
     r_results = WrappedRModel(y, x, r_model_type)
     r_results.assert_similar(results)
 
-@nptest.dec.knownfailureif(True)
 def test_using_rpy():
     """
     this test fails because the glm results don't agree with the ols and rlm
