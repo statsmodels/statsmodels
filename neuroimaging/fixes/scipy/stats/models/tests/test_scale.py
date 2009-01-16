@@ -66,20 +66,21 @@ def test_MADaxes():
 #@dec.knownfailureif(True)
 def test_huber():
     X = W((40,10))
-    m = scale.huber(X)
+    h = scale.Huber(niter=50)
+    m, s = h(X)
     yield nose.tools.assert_equals, m.shape, (10,)
 
 def test_huberaxes():
     X = W((40,10,30))
-    h = scale.Huber(niter=50, tol=1.0e-03)
-    m = h(X, axis=0)
+    h = scale.Huber(niter=500, tol=1.0e-05)
+    m, s = h(X, axis=0)
     yield nose.tools.assert_equals, m.shape, (10,30)
 
-    m = h(X, axis=1)
+    m, s = h(X, axis=1)
     yield nose.tools.assert_equals, m.shape, (40,30)
 
-    m = h(X, axis=2)
+    m, s = h(X, axis=2)
     yield nose.tools.assert_equals, m.shape, (40,10)
 
-    m = h(X, axis=-1)
+    m, s = h(X, axis=-1)
     yield nose.tools.assert_equals, m.shape, (40,10)

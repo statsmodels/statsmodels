@@ -286,7 +286,7 @@ def estimate_location(a, scale, norm=HuberT(), axis=0, initial=None,
     for iter in range(niter):
         W = norm.weights((a-mu)/scale)
         nmu = np.sum(W*a, axis) / np.sum(W, axis)
-        if np.alltrue(np.less(np.fabs(mu - nmu), nmu * tol)):
+        if np.alltrue(np.less(np.fabs(mu - nmu), scale * tol)):
             return nmu
         else:
             mu = nmu

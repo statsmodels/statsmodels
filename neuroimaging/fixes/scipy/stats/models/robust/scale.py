@@ -150,11 +150,11 @@ class Huber(object):
 
             test1 = np.alltrue(le(fabs(scale - nscale), nscale * self.tol))
             print fabs(scale/nscale - 1.).max()
-            test2 = np.alltrue(le(fabs(mu - nmu), nmu * self.tol))
+            test2 = np.alltrue(le(fabs(mu - nmu), nscale * self.tol))
             if not (test1 and test2):
                 mu = nmu; scale = nscale
             else:
-                return mu, scale
+                return nmu.squeeze(), nscale.squeeze()
         raise ValueError('joint estimation of location and scale failed to converge in %d iterations' % self.niter)
 
 huber = Huber()
