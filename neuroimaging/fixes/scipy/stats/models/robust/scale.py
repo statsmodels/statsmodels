@@ -1,5 +1,6 @@
 import numpy as np
-from scipy.stats import norm, median
+from scipy.stats import norm as Gaussian
+import norms
 
 def unsqueeze(data, axis, oldshape):
     """
@@ -31,12 +32,12 @@ def MAD(a, c=0.6745, axis=0):
     """
 
     a = np.asarray(a, np.float64)
-    d = median(a, axis=axis)
+    d = np.median(a, axis=axis)
     d = unsqueeze(d, axis, a.shape)
 
-    return median(np.fabs(a - d) / c, axis=axis)
+    return np.median(np.fabs(a - d) / c, axis=axis)
 
-class Huber:
+class Huber(object):
     """
     Huber's proposal 2 for estimating scale.
 
@@ -44,80 +45,116 @@ class Huber:
     Springer, New York, 2002.
     """
 
-    c = 1.5
-    tol = 1.0e-06
+    def __init__(self, c=1.5, tol=1.0e-06, niter=30, norm=None):
+        """
+        Instance of Huber's proposal 2 for estimating
+        (location, scale) jointly.
 
-    tmp = 2 * norm.cdf(c) - 1
-    gamma = tmp + c**2 * (1 - tmp) - 2 * c * norm.pdf(c)
-    del tmp
+        Inputs:
+        -------
+        c : float
+            Threshold used in threshold for chi=psi**2
+        tol : float
+            Tolerance for convergence
+        niter : int
+            Maximum number of iterations
+        norm : ``norms.RobustNorm``
+            A robust norm used in M estimator of location. If None,
+            the location estimator defaults to a one-step
+            fixed point version of the M-estimator using norms.HuberT
+        """
+        self.c = c
+        self.niter = niter
+        self.tol = tol
+        self.norm = norm
+        tmp = 2 * Gaussian.cdf(c) - 1
+        self.gamma = tmp + c**2 * (1 - tmp) - 2 * c * Gaussian.pdf(c)
 
-    niter = 30
 
     def __call__(self, a, mu=None, scale=None, axis=0):
         """
         Compute Huber\'s proposal 2 estimate of scale, using an optional
         initial value of scale and an optional estimate of mu. If mu
         is supplied, it is not reestimated.
-        """
 
-        self.axis = axis
-        self.a = np.asarray(a, np.float64)
+        Given a one-dimensional array a,
+        this function minimises the quantity
+
+        sum(psi((a[i]-mu)/scale)**2)
+
+        as a function of (mu, scale), where
+
+        psi(x) = np.clip(x, -self.c, self.c)
+
+        """
+        a = np.asarray(a)
         if mu is None:
-            self.n = self.a.shape[0] - 1
-            self.mu = median(self.a, axis=axis)
-            self.est_mu = True
+            n = a.shape[0] - 1
+            mu = np.median(a, axis=axis)
+            est_mu = True
         else:
-            self.n = self.a.shape[0]
-            self.mu = mu
-            self.est_mu = False
+            n = a.shape[0]
+            mu = mu
+            est_mu = False
 
         if scale is None:
-            self.scale = MAD(self.a, axis=self.axis)**2
+            scale = MAD(a, axis=axis)
         else:
-            self.scale = scale
+            scale = scale
 
-        self.scale = unsqueeze(self.scale, self.axis, self.a.shape)
-        self.mu = unsqueeze(self.mu, self.axis, self.a.shape)
+        scale = unsqueeze(scale, axis, a.shape)
+        mu = unsqueeze(mu, axis, a.shape)
 
-        for donothing in self:
-            pass
+        return self._estimate_both(a, scale, mu, axis, est_mu, n)
 
-        self.s = np.squeeze(np.sqrt(self.scale))
-        del(self.scale); del(self.mu); del(self.a)
-        return self.s
+    def _estimate_both(self, a, scale, mu, axis, est_mu, n):
+        """
+        Estimate scale and location simultaneously with the following
+        pseudo_loop:
 
-    def __iter__(self):
-        self.iter = 0
-        return self
+        while not_converged:
+            mu, scale = estimate_location(a, scale, mu), estimate_scale(a, scale, mu)
 
-    def next(self):
-        a = self.a
-        subset = self.subset(a)
-        if self.est_mu:
-            mu = np.sum(subset * a + (1 - Huber.c) * subset, axis=self.axis) / a.shape[self.axis]
-        else:
-            mu = self.mu
-        self.axis = unsqueeze(mu, self.axis, self.a.shape)
+        where estimate_location is an M-estimator and estimate_scale implements
+        the check used in Section 5.5 of Venables & Ripley
 
-        scale = np.sum(subset * (a - mu)**2, axis=self.axis) / (self.n * Huber.gamma - np.sum(1. - subset, axis=self.axis) * Huber.c**2)
+        """
 
-        self.iter += 1
+        # local shorthands
+        sqrt = np.sqrt
+        le = np.less_equal
+        fabs = np.fabs
 
-        if np.alltrue(np.less_equal(np.fabs(np.sqrt(scale) - np.sqrt(self.scale)), np.sqrt(self.scale) * Huber.tol)) and np.alltrue(np.less_equal(np.fabs(mu - self.mu), np.sqrt(self.scale) * Huber.tol)):
-            self.scale = scale
-            self.mu = mu
-            raise StopIteration
-        else:
-            self.scale = scale
-            self.mu = mu
+        for _ in range(self.niter):
 
-        self.scale = unsqueeze(self.scale, self.axis, self.a.shape)
+            # Estimate the mean along a given axis
 
-        if self.iter >= self.niter:
-            raise StopIteration
+            if est_mu:
+                if self.norm is None:
+                    # This is a one-step fixed-point estimator
+                    # if self.norm == norms.HuberT
+                    # It should be faster than using norms.HuberT
+                    nmu = np.clip(a, mu-self.c*scale, mu+self.c*scale).sum(axis) / a.shape[axis]
+                else:
+                    nmu = norms.estimate_location(a, scale, self.norm, axis, mu, self.niter, self.tol)
+            else:
+                # Effectively, do nothing
+                nmu = mu.squeeze()
+            nmu = unsqueeze(nmu, axis, a.shape)
 
-    def subset(self, a):
-        tmp = (a - self.mu) / np.sqrt(self.scale)
-        return np.greater(tmp, -Huber.c) * np.less(tmp, Huber.c)
+            subset = le(fabs((a - mu)/scale), self.c)
+            card = subset.sum(axis)
+
+            nscale = sqrt(np.sum(subset * (a - nmu)**2, axis) / (n * self.gamma - (a.shape[axis] - card) * self.c**2))
+            nscale = unsqueeze(nscale, axis, a.shape)
+
+            test1 = np.alltrue(le(fabs(scale - nscale), nscale * self.tol))
+            print fabs(scale/nscale - 1.).max()
+            test2 = np.alltrue(le(fabs(mu - nmu), nmu * self.tol))
+            if not (test1 and test2):
+                mu = nmu; scale = nscale
+            else:
+                return mu, scale
+        raise ValueError('joint estimation of location and scale failed to converge in %d iterations' % self.niter)
 
 huber = Huber()

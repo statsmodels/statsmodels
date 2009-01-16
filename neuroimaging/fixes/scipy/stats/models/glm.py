@@ -40,7 +40,10 @@ class Model(WLSModel):
         self.weights = self.family.weights(results.mu)
         self.initialize(self.design)
         Z = results.predict + self.family.link.deriv(results.mu) * (Y - results.mu)
-        newresults = super(Model, self).fit(self, Z)
+        # TODO: this had to changed to execute properly
+        # is this correct? Why? I don't understand super.... -- JT
+
+        newresults = super(Model, self).fit(Z)
         newresults.Y = Y
         newresults.mu = self.family.link.inverse(newresults.predict)
         self.iter += 1
@@ -57,8 +60,8 @@ class Model(WLSModel):
 
         if np.fabs((self.dev - curdev) / curdev) < tol:
             return False
-        self.dev = curdev
 
+        self.dev = curdev
         return True
 
     def estimate_scale(self, Y=None, results=None):
@@ -82,7 +85,7 @@ class Model(WLSModel):
         self.results.mu = self.family.link.inverse(self.results.predict)
         self.scale = self.results.scale = self.estimate_scale()
 
-        while self.cont(self.results):
+        while self.cont():
             self.results = self.next()
             self.scale = self.results.scale = self.estimate_scale()
 
