@@ -65,14 +65,21 @@ def test_MADaxes():
 #     Then resolve ticket #587
 #@dec.knownfailureif(True)
 def test_huber():
+    """
+    this test occasionally fails because it is based on Gaussian noise, could try to empirically tweak it so it has a prespecified failure rate...
+    """
+
     X = W((40,10))
-    h = scale.Huber(niter=50)
+    h = scale.Huber(niter=100)
     m, s = h(X)
     yield nose.tools.assert_equals, m.shape, (10,)
 
 def test_huberaxes():
+    """
+    this test occasionally fails because it is based on Gaussian noise, could try to empirically tweak it so it has a prespecified failure rate...
+    """
     X = W((40,10,30))
-    h = scale.Huber(niter=500, tol=1.0e-05)
+    h = scale.Huber(niter=1000, tol=1.0e-05)
     m, s = h(X, axis=0)
     yield nose.tools.assert_equals, m.shape, (10,30)
 
