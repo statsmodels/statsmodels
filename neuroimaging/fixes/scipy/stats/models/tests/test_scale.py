@@ -28,12 +28,13 @@ def test_chem():
     yield nptest.assert_almost_equal, scale.huber(chem)[1], 0.67365, 5
 
     # the default Huber uses a one-step version of
-    # the 'full' version using HuberT
-    # but it only agrees up to 3 decimal places
+    # the 'full' version using HuberT with t=1.5
 
-    h = scale.Huber(norm=scale.norms.HuberT())
-    yield nptest.assert_almost_equal, scale.huber(chem)[0], h(chem)[0], 3
-    yield nptest.assert_almost_equal, scale.huber(chem)[1], h(chem)[1], 3
+    n = scale.norms.HuberT()
+    n.t = 1.5
+    h = scale.Huber(norm=n)
+    yield nptest.assert_almost_equal, scale.huber(chem)[0], h(chem)[0], 5
+    yield nptest.assert_almost_equal, scale.huber(chem)[1], h(chem)[1], 5
 
     hh = scale.Huber(norm=scale.norms.Hampel())
     yield nptest.assert_almost_equal, hh(chem)[0], 3.17434, 5
