@@ -1,111 +1,56 @@
-=================================================
-This is Neuroimaging in Python (NIPY) version 0.1
-=================================================
+===============================
+ Neuroimaging in Python (NIPY)
+===============================
 
-.. contents::
+Documentation
+-------------
 
-What is NIPY?
-----------------------
+Please see the ``doc/README.txt`` document for information on our
+documentation.
 
-The aim of NIPY is to produce a platform-independent Python environment for
-the analysis of brain imaging data using an open development model. 
-  
-While the project is still in its initial stages, packages for file I/O,
-script support as well as single subject fMRI and random effects group
-comparisons model are currently available.
+Website
+-------
 
-Specifically, we aim to: 
+Current information can always be found at the NIPY website is located
+here::
 
-    1. Provide an open source, mixed language scientific programming 
-       environment suitable for rapid development.
+    http://neuroimaging.scipy.org/
 
-    2. Create sofware components in this environment to make it easy 
-       to develop tools for MRI, EEG, PET and other modalities.
+Mailing Lists
+-------------
 
-    3. Create and maintain a wide base of developers to contribute to
-       this platform.
-
-    4. To maintain and develop this framework as a single, easily 
-       installable bundle.
+Please see the developer's list here::
+       
+       http://projects.scipy.org/mailman/listinfo/nipy-devel
 
 NIPY structure
 ---------------
 
 Currently NIPY consists of the following files and directories:
 
-  README
-    The roadmap file, to be read first (this document).
-
   INSTALL
     NIPY prerequisites, installation, development, testing, and 
     troubleshooting.
 
+  README
+    This document.
+
   THANKS
     NIPY developers and contributors. Please keep it up to date!!
-
-  HISTORY
-    Project history.
-
-  CHANGES
-    What's new in this release.
 
   LICENSE
     NIPY license terms.
 
   doc/
+    Sphinx/reST documentation
 
   examples/
 
-  lib/
-    Contains NIPY __init__.py and the directories of NIPY modules.
-
-  scripts/
-
-  clean
-
-  Makefile
+  neuroimaging/
+    Contains the source code.
 
   setup.py
     Script for building and installing NIPY.
-
-  setup_egg.py
-
-  test
-
-
-Documentation
--------------
-
-The current API documentation is here
-    http://neuroimaging.scipy.org/api/
-
-
-Web sites
----------
-
-The user's site is here
-    http://neuroimaging.scipy.org/
-
-The developer's site is here
-    http://projects.scipy.org/neuroimaging/ni/wiki
-
-
-Mailing Lists
--------------
-
-Please see the developer's list here
-    http://projects.scipy.org/mailman/listinfo/nipy-devel
-
-
-Bug reports
------------
-
-To search for bugs, please use the NIPY Bug Tracker at
-    http://projects.scipy.org/neuroimaging/ni/query
-
-To report a bug, please use the NIPY Bug Tracker at
-    http://projects.scipy.org/neuroimaging/ni/newticket
-
 
 License information
 -------------------
