@@ -32,6 +32,8 @@ to follow these guidelines ourselves:
 
 * :ref:`testing` : We've adopted a rigorous testing framework.
 
+* :ref:`optimization`: "premature optimization is the root of all evil."
+
 Checking out the latest version
 ===============================
 
