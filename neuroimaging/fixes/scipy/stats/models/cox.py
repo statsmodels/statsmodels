@@ -5,7 +5,7 @@ import numpy as np
 
 from neuroimaging.fixes.scipy.stats.models import survival, model
 
-class Discrete:
+class Discrete(object):
 
     """
     A simple little class for working with discrete random vectors.

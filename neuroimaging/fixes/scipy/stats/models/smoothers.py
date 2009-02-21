@@ -12,7 +12,7 @@ from scipy.optimize import golden
 from neuroimaging.fixes.scipy.stats.models import _hbspline
 from neuroimaging.fixes.scipy.stats.models.bspline import BSpline, _band2array
 
-class PolySmoother:
+class PolySmoother(object):
     """
     Polynomial smoother up to a given order.
     Fit based on weighted least squares.
