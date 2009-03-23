@@ -8,46 +8,6 @@ import gc
 import numpy as np
 from neuroimaging.fixes.scipy.stats.models.utils import recipr
 
-class OneSampleResults(object):
-    """
-    A container for results from fitting a (weighted) one sample T.
-    """
-
-    def __init__(self):
-        """
-        TODO
-        """
-        self.values = {'mean': {'mu': None,
-                                'sd': None,
-                                't': None,
-                                'resid': None,
-                                'df_resid': None,
-                                'scale': None},
-                       'varatio': {'varatio': None,
-                                   'varfix': None}}
-
-    def __getitem__(self, key):
-        """
-        :Parameters:
-            key : TODO
-                TODO
-
-        :Returns: TODO
-        """
-        return self.values[key]
-
-    def __setitem__(self, key, val):
-        """
-        :Parameters:
-            key : TODO
-                TODO
-            val : TODO
-                TODO
-
-        :Returns: ``None``
-        """
-        self.values[key] = val
-
 class OneSample(object):
     """
     TODO
@@ -66,8 +26,8 @@ class OneSample(object):
         if weight_type in ['sd', 'var', 'weight']:
             self.weight_type = weight_type
         else:
-            raise ValueError, "Weight type must be one of " \
-                  "['sd', 'var', 'weight']"
+            raise ValueError("weight type must be one of " \
+                  "['sd', 'var', 'weight']")
         self.use_scale = use_scale
         self.niter = niter
         self.value = OneSampleResults()
@@ -111,7 +71,7 @@ class OneSample(object):
             W = 1. / W
         return np.asarray(W)
 
-    def estimate_mean(self, Y, W):
+    def estimate_mean(self, Y, preW):
         """
         :Parameters:
             Y : TODO
@@ -124,7 +84,7 @@ class OneSample(object):
 
         if Y.ndim == 1:
             Y.shape = (Y.shape[0], 1)
-        W = np.asarray(self.get_weights(W))
+        W = np.asarray(self.get_weights(preW))
         if W.shape in [(), (1,)]:
             W = np.ones(Y.shape) * W
 
@@ -215,64 +175,127 @@ class OneSample(object):
         return self.value
 
 
-class OneSampleIterator(object):
+
+class TOutput(ImageOneSampleOutput):
     """
     TODO
     """
 
-    def __init__(self, iterator, outputs=()):
+    def __init__(self, coordmap, Tmax=100, Tmin=-100, **keywords):
         """
         :Parameters:
-            iterator : TODO
+            coordmap : TODO
                 TODO
-            outputs : TODO
+            Tmax : TODO
                 TODO
+            Tmin : TODO
+                TODO
+            keywords : ``dict``
+                Keyword arguments passed to `ImageOneSampleOutput.__init__`
         """
-        self.iterator = iter(iterator)
-        self.outputs = [iter(output) for output in outputs]
+        ImageOneSampleOutput.__init__(self, coordmap, basename='t', **keywords)
+        self.Tmax = Tmax
+        self.Tmin = Tmin
 
-    def weights(self):
+    def extract(self, results):
+        return np.clip(results['mean']['t'], self.Tmin, self.Tmax)
+
+class SdOutput(ImageOneSampleOutput):
+    """
+    TODO
+    """
+
+    def __init__(self, coordmap, **keywords):
         """
-        This method should get the weights from self.iterator.
-
-        :Returns: ``float``
-        """
-        return 1.
-
-    def _getinputs(self):
-        pass
-
-    def fit(self, which='mean', df=None):
-        """
-        Go through an iterator, instantiating model and passing data,
-        going through outputs.
-
         :Parameters:
-            which : ``string``
+            coordmap : TODO
                 TODO
-            df : TODO
-                TODO
-
-        :Returns: ``None``
+            keywords : ``dict``
+                Keyword arguments passed to `ImageOneSampleOutput.__init__`
         """
+        ImageOneSampleOutput.__init__(self, coordmap, basename='sd', **keywords)
 
-        for data in self.iterator:
+    def extract(self, results):
+        """
+        :Parameters:
+            results : TODO
+                TODO
 
-            W = self.weights()
-            self._getinputs()
-            shape = data.shape[1:]
+        :Returns: TODO
+        """
+        return results['mean']['sd']
 
-            results = OneSample().fit(data, W, which, df)
+class MeanOutput(ImageOneSampleOutput):
+    """
+    TODO
+    """
 
-            for output in self.outputs:
-                out = output.extract(results)
-                if output.nout > 1:
-                    out.shape = (output.nout,) + shape
-                else:
-                    out.shape = shape
+    def __init__(self, coordmap, **keywords):
+        """
+        :Parameters:
+            coordmap : TODO
+                TODO
+            keywords : ``dict``
+                Keyword arguments passed to `ImageOneSampleOutput.__init__`
+        """
+        ImageOneSampleOutput.__init__(self, coordmap, basename='effect', **keywords)
 
-                output.next().set(out)
+    def extract(self, results):
+        """
+        :Parameters:
+            results : TODO
+                TODO
 
-            del(results)
-            gc.collect()
+        :Returns: TODO
+        """
+        return results['mean']['mu']
 
+class VaratioOutput(ImageOneSampleOutput):
+    """
+    TODO
+    """
+
+    def __init__(self, coordmap, **keywords):
+        """
+        :Parameters:
+            coordmap : TODO
+                TODO
+            keywords : ``dict``
+                Keyword arguments passed to `ImageOneSampleOutput.__init__`
+        """
+        ImageOneSampleOutput.__init__(self, coordmap, basename='varatio', **keywords)
+
+    def extract(self, results):
+        """
+        :Parameters:
+            results : TODO
+                TODO
+
+        :Returns: TODO
+        """
+        return results['varatio']['varatio']
+
+class VarfixOutput(ImageOneSampleOutput):
+    """
+    TODO
+    """
+
+    def __init__(self, coordmap, **keywords):
+        """
+        :Parameters:
+            coordmap : TODO
+                TODO
+            keywords : ``dict``
+                Keyword arguments passed to `ImageOneSampleOutput.__init__`
+        """
+        ImageOneSampleOutput.__init__(self, coordmap, basename='varfix', **keywords)
+
+    def extract(self, results):
+        """
+        :Parameters:
+            results : TODO
+                TODO
+
+        :Returns: TODO
+        """
+        return results['varatio']['varfix']
