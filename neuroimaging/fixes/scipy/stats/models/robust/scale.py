@@ -1,5 +1,6 @@
 import numpy as np
-from scipy.stats import norm, median
+from scipy.stats import norm
+from numpy import median
 
 def unsqueeze(data, axis, oldshape):
     """
