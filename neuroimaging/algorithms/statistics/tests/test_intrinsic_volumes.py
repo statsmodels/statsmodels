@@ -64,12 +64,14 @@ class test_iv(TestCase):
             b = (e(box1) + e(box2) + e(box3) -
                  e(box1*box2) - e(box2*box3) - e(box1*box3) +
                  e(box1*box2*box3))
+            """
             if a != b:
                 print a, b
                 print e1, e2, e3
                 print e(box1), e(box2), e(box3)
                 print e(box1*box2), e(box1*box3), e(box2*box3)
                 print e(box1*box2*box3)
+            """
             assert_almost_equal(e(box1 + box2 + box3),
                                           (e(box1) + e(box2) + e(box3) -
                                            e(box1*box2) - e(box2*box3) - e(box1*box3) +
