@@ -2,8 +2,7 @@ import numpy as np
 import numpy.linalg as L
 import numpy.random as R
 
-import nose.tools
-import numpy.testing as nptest
+from neuroimaging.testing import *
 
 from neuroimaging.algorithms.statistics import intvol, utils
 
@@ -30,7 +29,9 @@ def randombox(shape):
     """
     Generate a random box, returning the box and the edge lengths
     """
-    edges = [R.random_integers(0, shape[j], size=(2,)) for j in range(len(shape))]
+    edges = [R.random_integers(0, shape[j], size=(2,))
+             for j in range(len(shape))]
+
     for j in range(len(shape)):
         edges[j].sort()
         if edges[j][0] == edges[j][1]:
@@ -77,7 +78,9 @@ def nonintersecting_boxes(shape):
         edge1, box1 = randombox(shape)
         edge2, box2 = randombox(shape)
 
-        diledge1 = [[max(ed[0]-1, 0), min(ed[1]+1, sh)] for ed, sh in zip(edge1, box1.shape)]
+        diledge1 = [[max(ed[0]-1, 0), min(ed[1]+1, sh)]
+                    for ed, sh in zip(edge1, box1.shape)]
+
         dilbox1 = box(box1.shape, diledge1)
 
         if set(np.unique(dilbox1 + box2)).issubset([0,1]):
@@ -90,7 +93,7 @@ def test_ec():
         f = {3:intvol.Lips0_3d,
              2:intvol.Lips0_2d,
              1:intvol.Lips0_1d}[i]
-        nptest.assert_almost_equal(f(box1), 1)
+        yield assert_almost_equal, f(box1), 1
 
 def test_ec_disjoint():
     for i in range(1, 4):
@@ -98,7 +101,8 @@ def test_ec_disjoint():
              2:intvol.Lips0_2d,
              1:intvol.Lips0_1d}[i]
         box1, box2, _, _ = nonintersecting_boxes((40,)*i)
-        yield nptest.assert_almost_equal, e(box1 + box2), e(box1) + e(box2)
+        yield assert_almost_equal, e(box1 + box2), e(box1) + e(box2)
+
 
 def test_lips1_disjoint():
     for i in range(1, 4):
@@ -114,11 +118,17 @@ def test_lips1_disjoint():
         e = np.dot(U.T, c.reshape((c.shape[0], np.product(c.shape[1:]))))
         e.shape = (e.shape[0],) +  c.shape[1:]
 
-        yield nptest.assert_almost_equal, phi(c, box1 + box2), phi(c, box1) + phi(c, box2)
-        yield nptest.assert_almost_equal, phi(d, box1 + box2), phi(d, box1) + phi(d, box2)
-        yield nptest.assert_almost_equal, phi(e, box1 + box2), phi(e, box1) + phi(e, box2)
-        yield nptest.assert_almost_equal, phi(e, box1 + box2), phi(c, box1 + box2)
-        yield nptest.assert_almost_equal, phi(e, box1 + box2), elsym([e[1]-e[0]-1 for e in edge1], 1) + elsym([e[1]-e[0]-1 for e in edge2], 1)
+        yield assert_almost_equal, phi(c, box1 + box2), \
+            phi(c, box1) + phi(c, box2)
+        yield assert_almost_equal, phi(d, box1 + box2), \
+            phi(d, box1) + phi(d, box2)
+        yield assert_almost_equal, phi(e, box1 + box2), \
+            phi(e, box1) + phi(e, box2)
+        yield assert_almost_equal, phi(e, box1 + box2), phi(c, box1 + box2)
+        yield assert_almost_equal, phi(e, box1 + box2), \
+            elsym([e[1]-e[0]-1 for e in edge1], 1) + \
+            elsym([e[1]-e[0]-1 for e in edge2], 1)
+
 
 def test_lips2_disjoint():
     for i in range(2, 4):
@@ -133,11 +143,17 @@ def test_lips2_disjoint():
         e = np.dot(U.T, c.reshape((c.shape[0], np.product(c.shape[1:]))))
         e.shape = (e.shape[0],) +  c.shape[1:]
 
-        yield nptest.assert_almost_equal, phi(c, box1 + box2), phi(c, box1) + phi(c, box2)
-        yield nptest.assert_almost_equal, phi(d, box1 + box2), phi(d, box1) + phi(d, box2)
-        yield nptest.assert_almost_equal, phi(e, box1 + box2), phi(e, box1) + phi(e, box2)
-        yield nptest.assert_almost_equal, phi(e, box1 + box2), phi(c, box1 + box2)
-        yield nptest.assert_almost_equal, phi(e, box1 + box2), elsym([e[1]-e[0]-1 for e in edge1], 2) + elsym([e[1]-e[0]-1 for e in edge2], 2)
+        yield assert_almost_equal, phi(c, box1 + box2), phi(c, box1) + \
+            phi(c, box2)
+        yield assert_almost_equal, phi(d, box1 + box2), phi(d, box1) + \
+            phi(d, box2)
+        yield assert_almost_equal, phi(e, box1 + box2), phi(e, box1) + \
+            phi(e, box2)
+        yield assert_almost_equal, phi(e, box1 + box2), phi(c, box1 + box2)
+        yield assert_almost_equal, phi(e, box1 + box2), \
+            elsym([e[1]-e[0]-1 for e in edge1], 2) + \
+            elsym([e[1]-e[0]-1 for e in edge2], 2)
+
 
 def test_lips3_disjoint():
     phi = intvol.Lips3_3d
@@ -149,29 +165,31 @@ def test_lips3_disjoint():
     e = np.dot(U.T, c.reshape((c.shape[0], np.product(c.shape[1:]))))
     e.shape = (e.shape[0],) +  c.shape[1:]
 
-    yield nptest.assert_almost_equal, phi(c, box1 + box2), phi(c, box1) + phi(c, box2)
-    yield nptest.assert_almost_equal, phi(d, box1 + box2), phi(d, box1) + phi(d, box2)
-    yield nptest.assert_almost_equal, phi(e, box1 + box2), phi(e, box1) + phi(e, box2)
-    yield nptest.assert_almost_equal, phi(e, box1 + box2), phi(c, box1 + box2)
-    yield nptest.assert_almost_equal, phi(e, box1 + box2), elsym([e[1]-e[0]-1 for e in edge1], 3) + elsym([e[1]-e[0]-1 for e in edge2], 3)
+    yield assert_almost_equal, phi(c, box1 + box2), phi(c, box1) + phi(c, box2)
+    yield assert_almost_equal, phi(d, box1 + box2), phi(d, box1) + phi(d, box2)
+    yield assert_almost_equal, phi(e, box1 + box2), phi(e, box1) + phi(e, box2)
+    yield assert_almost_equal, phi(e, box1 + box2), phi(c, box1 + box2)
+    yield assert_almost_equal, phi(e, box1 + box2), \
+        elsym([e[1]-e[0]-1 for e in edge1], 3) + \
+        elsym([e[1]-e[0]-1 for e in edge2], 3)
+
 
 def test_slices():
-    """
-    Slices have EC 1...
-    """
+    # Slices have EC 1...
+
     e = intvol.Lips0_3d
 
     m = np.zeros((40,)*3, np.int)
     m[10,10,10] = 1
-    nptest.assert_almost_equal(e(m), 1)
+    yield assert_almost_equal, e(m), 1
 
     m = np.zeros((40,)*3, np.int)
     m[10,10:12,10] = 1
-    nptest.assert_almost_equal(e(m), 1)
+    yield assert_almost_equal, e(m), 1
 
     m = np.zeros((40,)*3, np.int)
     m[10,10:12,10:12] = 1
-    nptest.assert_almost_equal(e(m), 1)
+    yield assert_almost_equal, e(m), 1
 
 
 
