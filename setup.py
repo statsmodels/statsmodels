@@ -1,9 +1,8 @@
+#!/usr/bin/env python
 from os.path import join
 import sys
 
 from neuroimaging import packages, __version__, __doc__
-
-py_modules = ['fff2']
 
 def configuration(parent_package='',top_path=None):
     from numpy.distutils.misc_util import Configuration
@@ -39,7 +38,6 @@ def main(packages):
            #ext_package = 'neuroimaging',
            #packages=packages,
            #package_dir = package_dir,
-           py_modules = py_modules,
            url = 'http://neuroimaging.scipy.org',
            long_description = __doc__,
            configuration = configuration)
