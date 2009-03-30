@@ -3,7 +3,7 @@ TODO
 """
 __docformat__ = 'restructuredtext'
 
-import intrinsic_volumes, rft
+import intvol, rft
 
 from neuroimaging.testing import Tester
 test = Tester().test

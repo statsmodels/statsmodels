@@ -1,8 +1,8 @@
+#!/usr/bin/env python
 from os.path import join
 import sys
 
 from neuroimaging import packages, __version__, __doc__
-
 
 def configuration(parent_package='',top_path=None):
     from numpy.distutils.misc_util import Configuration
