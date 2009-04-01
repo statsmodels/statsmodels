@@ -38,18 +38,17 @@ def estimate_mean(Y, sd):
     """
 
     nsubject = Y.shape[0]
+    squeeze = False
+    if Y.ndim == 1:
+        Y = Y.reshape(Y.shape[0], 1)
+        squeeze = True
+
     _stretch = lambda x: np.multiply.outer(nsubject, x)
 
-    if Y.ndim == 1:
-        Y.shape = (Y.shape[0], 1)
-
     W = recipr(sd**2)
-
     if W.shape in [(), (1,)]:
         W = np.ones(Y.shape) * W
-
-    if random is not None:
-        W = recipr(recipr(W) + random)
+    W.shape = Y.shape
 
     # Compute the mean using the optimal weights
 
@@ -62,10 +61,13 @@ def estimate_mean(Y, sd):
     value = {}
     value['resid'] = resid
     value['mu'] = mu
-    value['sd'] = np.squeeze(np.sqrt(var_total))
-    value['t'] = np.squeeze(value['mu'] *
-                            recipr(value['sd']))
+    value['sd'] = np.sqrt(var_total)
+    value['t'] = value['mu'] * recipr(value['sd'])
     value['scale'] = np.sqrt(scale)
+
+    if squeeze:
+        for key in value.keys():
+            value[key] = np.squeeze(value[key])
     return value
 
 def estimate_varatio(Y, sd, df=None, niter=10):
@@ -108,6 +110,8 @@ def estimate_varatio(Y, sd, df=None, niter=10):
     """
 
     nsubject = Y.shape[0]
+    if Y.ndim == 1:
+        Y = Y.reshape(Y.shape[0], 1)
     _stretch = lambda x: np.multiply.outer(nsubject, x)
 
     W = recipr(sd**2)
@@ -116,19 +120,22 @@ def estimate_varatio(Y, sd, df=None, niter=10):
     R = Y - np.multiply.outer(np.ones(Y.shape[0]), Y.mean(0))
     sigma2 = np.squeeze((R**2).sum(0)) / (nsubject - 1)
 
-    Sreduction = 0.99
+    Sreduction = 0.9
     minS = S.min(0) * Sreduction
 
     Sm = S - _stretch(minS)
 
-    for _ in range(self.niter):
+    for _ in range(niter):
+        print sigma2
         Sms = Sm + _stretch(sigma2)
         W = recipr(Sms)
         Winv = 1. / W.sum(0)
         mu = Winv * (W*Y).sum(0)
         R = W * (Y - np.multiply.outer(np.ones(nsubject), mu))
         ptrS = 1 + (Sm * W).sum(0) - (Sm * W**2).sum(0) * Winv
+        print ptrS, 'ptr'
         sigma2 = np.squeeze((sigma2 * ptrS + sigma2**2 * (R**2).sum(0)) / nsubject)
+        print sigma2, mu
         sigma2 = sigma2 - minS
 
     if df is None:
