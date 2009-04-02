@@ -150,6 +150,7 @@ def estimate_varatio(Y, sd, df=None, niter=10):
     value = {}
     value['fix'] = (np.dot(df, S) / df.sum()).reshape(_Sshape[1:])
     value['ratio'] = np.nan_to_num(sigma2 / value['fix'])
+    value['random'] = sigma2
 
     if squeeze:
         for key in value.keys():
