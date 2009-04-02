@@ -43,7 +43,7 @@ def estimate_mean(Y, sd):
         Y = Y.reshape(Y.shape[0], 1)
         squeeze = True
 
-    _stretch = lambda x: np.multiply.outer(nsubject, x)
+    _stretch = lambda x: np.multiply.outer(np.ones(nsubject), x)
 
     W = recipr(sd**2)
     if W.shape in [(), (1,)]:
@@ -110,33 +110,34 @@ def estimate_varatio(Y, sd, df=None, niter=10):
     """
 
     nsubject = Y.shape[0]
+    squeeze = False
     if Y.ndim == 1:
         Y = Y.reshape(Y.shape[0], 1)
-    _stretch = lambda x: np.multiply.outer(nsubject, x)
+        squeeze = True
+    _stretch = lambda x: np.multiply.outer(np.ones(nsubject), x)
 
     W = recipr(sd**2)
-    S = 1. / W
+    if W.shape in [(), (1,)]:
+        W = np.ones(Y.shape) * W
+    W.shape = Y.shape
 
+    S = 1. / W
     R = Y - np.multiply.outer(np.ones(Y.shape[0]), Y.mean(0))
     sigma2 = np.squeeze((R**2).sum(0)) / (nsubject - 1)
 
-    Sreduction = 0.9
+    Sreduction = 0.99
     minS = S.min(0) * Sreduction
-
     Sm = S - _stretch(minS)
 
     for _ in range(niter):
-        print sigma2
         Sms = Sm + _stretch(sigma2)
         W = recipr(Sms)
-        Winv = 1. / W.sum(0)
+        Winv = recipr(W.sum(0))
         mu = Winv * (W*Y).sum(0)
-        R = W * (Y - np.multiply.outer(np.ones(nsubject), mu))
+        R = W * (Y - _stretch(mu))
         ptrS = 1 + (Sm * W).sum(0) - (Sm * W**2).sum(0) * Winv
-        print ptrS, 'ptr'
-        sigma2 = np.squeeze((sigma2 * ptrS + sigma2**2 * (R**2).sum(0)) / nsubject)
-        print sigma2, mu
-        sigma2 = sigma2 - minS
+        sigma2 = np.squeeze((sigma2 * ptrS + (sigma2**2) * (R**2).sum(0)) / nsubject)
+    sigma2 = sigma2 - minS
 
     if df is None:
         df = np.ones(nsubject)
@@ -150,5 +151,8 @@ def estimate_varatio(Y, sd, df=None, niter=10):
     value['fix'] = (np.dot(df, S) / df.sum()).reshape(_Sshape[1:])
     value['ratio'] = np.nan_to_num(sigma2 / value['fix'])
 
+    if squeeze:
+        for key in value.keys():
+            value[key] = np.squeeze(value[key])
     return value
 
