@@ -12,9 +12,7 @@ def estimate_mean(Y, sd):
     """
 
     Estimate the mean of a sample given information about
-    the standard deviations of each entry. The data
-    may have some random effects variance
-
+    the standard deviations of each entry.
 
     Parameters
     ----------
@@ -102,10 +100,11 @@ def estimate_varatio(Y, sd, df=None, niter=10):
 
     value : dict
 
-        This dictionary has keys ['fix', 'ratio'], where
+        This dictionary has keys ['fix', 'ratio', 'random'], where
         'fix' is the fixed effects variance implied by the
-        input parameter 'sd' and 'ratio' is the estimated
-        ratio of variances: 'random'/'fixed'.
+        input parameter 'sd'; 'random' is the random effects variance
+        and 'ratio' is the estimated ratio of variances:
+        'random'/'fixed'.
 
     """
 
