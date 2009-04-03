@@ -8,9 +8,6 @@ from neuroimaging.testing import *
 
 from neuroimaging.algorithms.statistics import rft
 
-# FIXME: Cleanup these tests.  Move docstrings so function names are
-# printed to the console during testing.
-
 #def rho(x, dim, df=np.inf):
 #    """
 #    EC densities for T and Gaussian (df=inf) random fields.

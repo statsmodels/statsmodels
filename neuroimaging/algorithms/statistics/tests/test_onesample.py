@@ -20,6 +20,12 @@ def test_estimate_varatio(p=1.0e-04, sigma2=1):
         random[i] = results['random'].mean()
         rsd[i] = results['random'].std()
 
+    # Compute the mean just to be sure it works
+
+    W = 1. / (sd**2 + results['random'])
+    mu = onesample.estimate_mean(Y, np.sqrt(sd**2 + results['random']))['mu']
+    assert_almost_equal(mu, (W*Y).sum(0) / W.sum(0))
+
     rsd = np.sqrt((rsd**2).mean() / ntrial)
     T = np.fabs((random.mean() - sigma2) / (rsd / np.sqrt(n)))
 
