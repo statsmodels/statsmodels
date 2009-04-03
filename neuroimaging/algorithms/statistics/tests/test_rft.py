@@ -273,7 +273,7 @@ def test_T2():
         t = rft.TStat(dfd=dfd)
         f = rft.FStat(dfd=dfd, dfn=1)
         for dim in range(7):
-            assert_almost_equal(t.density(x, dim), f.density(x**2, dim))
+            yield assert_almost_equal, t.density(x, dim), f.density(x**2, dim)
 
 
 def test_search3():
@@ -342,13 +342,12 @@ def test_T2():
         for dim in range(7):
             y = 2*t.density(x, dim)
             z = f.density(x**2, dim)
-            assert_almost_equal(y, z)
+            yield assert_almost_equal, y, z
 
 
 @dec.slow
 def test_search1():
 #    Test that the search region works.
-
 
     search = rft.IntrinsicVolumes([3,4,5])
     x = np.linspace(0.1,10,100)
@@ -386,7 +385,6 @@ def test_search4():
 def test_search5():
 #    Test that the search/product work well together
 
-
     search = rft.IntrinsicVolumes([3,4,5])
     product = rft.IntrinsicVolumes([1,2])
     prodsearch = product * search
@@ -402,7 +400,6 @@ def test_search5():
     y = g2(x, search=search)
     assert_almost_equal(y, z)
 
-
 @dec.slow
 def test_hotelling1():
 #     Asymptotically, Hotelling is the same as F which is the same
@@ -413,14 +410,13 @@ def test_hotelling1():
         for dfn in range(5,10):
             h = rft.Hotelling(k=dfn).density(x*dfn, dim)
             f = rft.FStat(dfn=dfn).density(x, dim)
-            assert_almost_equal(h, f)
+            yield assert_almost_equal, h, f
 
 
 
 @dec.slow
 def test_hotelling4():
 #    Hotelling T^2 should just be like taking product with sphere.
-
 
     x = np.linspace(0.1,10,100)
 
@@ -434,10 +430,9 @@ def test_hotelling4():
                 h2 = 2*rft.Hotelling(k=k, dfd=dfd).density(x, dim)
                 h = 2*rft.Hotelling(k=k, dfd=dfd)(x, search=search)
 
-                assert_almost_equal(h, t)
-                assert_almost_equal(h, f)
-                assert_almost_equal(h, h2)
-
+                yield assert_almost_equal, h, t
+                yield assert_almost_equal, h, f
+                yield assert_almost_equal, h, h2
     search = rft.IntrinsicVolumes([3,4,5])
     for k in range(5, 10):
         p = rft.spherical_search(k)
@@ -448,8 +443,8 @@ def test_hotelling4():
             h2 = 0
             for i in range(search.mu.shape[0]):
                 h2 += 2*rft.Hotelling(k=k, dfd=dfd).density(x, i) * search.mu[i]
-            assert_almost_equal(h, f)
-            assert_almost_equal(h, h2)
+            yield assert_almost_equal, h, f
+            yield assert_almost_equal, h, h2
 
 
 def test_hotelling2():
@@ -466,7 +461,7 @@ def test_hotelling2():
         chi = rft.ChiSquared(dfn=dfn)(x)
         assert_almost_equal(h, chi)
         chi2 = scipy.stats.chi2.sf(x, dfn)
-        assert_almost_equal(h, chi2)
+        yield assert_almost_equal, h, chi2
 
         p = rft.spherical_search(dfn)
         for dfd in [40,50]:
@@ -474,8 +469,8 @@ def test_hotelling2():
             h = rft.Hotelling(dfd=dfd,k=dfn)(x)
             f = scipy.stats.f.sf(x*fac, dfn, dfd-dfn+1)
             f2 = rft.FStat(dfd=dfd-dfn+1,dfn=dfn)(x*fac)
-            assert_almost_equal(f2, f)
-            assert_almost_equal(h, f)
+            yield assert_almost_equal, f2, f
+            yield assert_almost_equal, h, f
 
 
 @dec.slow
@@ -492,7 +487,7 @@ def test_roy1():
             for dim in range(7):
                 h = 2*rft.Hotelling(dfd=dfd,k=k).density(x, dim)
                 r = rft.Roy(dfd=dfd,k=k,dfn=1).density(x, dim)
-                assert_almost_equal(h, r)
+                yield assert_almost_equal, h, r
 
 @dec.slow
 def test_onesidedF():
@@ -508,7 +503,7 @@ def test_onesidedF():
                 f1 = rft.FStat(dfd=dfd,dfn=dfn).density(x, dim)
                 f2 = rft.FStat(dfd=dfd,dfn=dfn-1).density(x, dim)
                 onesided = rft.OneSidedF(dfd=dfd,dfn=dfn).density(x, dim)
-                assert_almost_equal(onesided, 0.5*(f1-f2))
+                yield assert_almost_equal, onesided, 0.5*(f1-f2)
 
 
 @dec.slow
@@ -525,7 +520,7 @@ def test_multivariate_forms():
         for dim in range(7):
             mx = m.density(x, dim)
             cx = c.density(x**2, dim)
-            assert_almost_equal(mx, cx)
+            yield assert_almost_equal, mx, cx
 
         for k2 in range(5,10):
             m = rft.MultilinearForm(k1,k2)
@@ -533,12 +528,11 @@ def test_multivariate_forms():
             for dim in range(7):
                 mx = 2*m.density(x, dim)
                 rx = r.density(x**2/k2, dim)
-                assert_almost_equal(mx, rx)
+                yield assert_almost_equal, mx, rx
 
 def test_scale():
     a = rft.IntrinsicVolumes([2,3,4])
     b = rft.scale_space(a, [3,4], kappa=0.5)
-
 
 def test_F1():
     x = np.linspace(0.1,10,100)
@@ -547,7 +541,7 @@ def test_F1():
             for dfd in [40,50,np.inf]:
                 f1 = F(x, dim, dfn=dfn, dfd=dfd)
                 f2 = F_alternative(x, dim, dfn=dfn, dfd=dfd)
-                assert_almost_equal(f1, f2)
+                yield assert_almost_equal, f1, f2
 
 @dec.slow
 def test_F2():
@@ -557,7 +551,7 @@ def test_F2():
             for dfd in [40,50,np.inf]:
                 f1 = rft.FStat(dfn=dfn, dfd=dfd).density(x, dim)
                 f2 = F_alternative(x, dim, dfn=dfn, dfd=dfd)
-                assert_almost_equal(f1, f2)
+                yield assert_almost_equal, f1, f2
 
 @dec.slow
 def test_F3():
@@ -567,7 +561,7 @@ def test_F3():
             for dfd in [40,50,np.inf]:
                 f1 = rft.FStat(dfn=dfn, dfd=dfd).density(x, dim)
                 f2 = F(x, dim, dfn=dfn, dfd=dfd)
-                assert_almost_equal(f1, f2)
+                yield assert_almost_equal, f1, f2
 
 @dec.slow
 def test_chi2():
@@ -580,7 +574,7 @@ def test_chi2():
             c = rft.ChiSquared(dfn=dfn)
             p1 = c.quasi(dim=dim)
             p2 = polyF(dim=dim, dfn=dfn)
-            assert_almost_equal(p1.c, p2.c)
+            yield assert_almost_equal, p1.c, p2.c
 
 
 
