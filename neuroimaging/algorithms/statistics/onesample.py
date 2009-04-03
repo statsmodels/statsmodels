@@ -8,271 +8,151 @@ import gc
 import numpy as np
 from neuroimaging.fixes.scipy.stats.models.utils import recipr
 
-class OneSampleResults(object):
-    """
-    A container for results from fitting a (weighted) one sample T.
+def estimate_mean(Y, sd):
     """
 
-    def __init__(self):
-        """
-        TODO
-        """
-        self.values = {'mean': {'mu': None,
-                                'sd': None,
-                                't': None,
-                                'resid': None,
-                                'df_resid': None,
-                                'scale': None},
-                       'varatio': {'varatio': None,
-                                   'varfix': None}}
+    Estimate the mean of a sample given information about
+    the standard deviations of each entry.
 
-    def __getitem__(self, key):
-        """
-        :Parameters:
-            key : TODO
-                TODO
+    Parameters
+    ----------
 
-        :Returns: TODO
-        """
-        return self.values[key]
+    Y : np.ndarray
+        Data for which mean is to be estimated.
+        Should have shape (nsubj, nvox).
 
-    def __setitem__(self, key, val):
-        """
-        :Parameters:
-            key : TODO
-                TODO
-            val : TODO
-                TODO
+    sd : np.ndarray
+        Standard deviation (subject specific)
+        of the data for which the mean is to be estimated.
+        Should have shape (nsubj, nvox).
 
-        :Returns: ``None``
-        """
-        self.values[key] = val
+    Returns
+    -------
 
-class OneSample(object):
-    """
-    TODO
+    value : dict
+
+        This dictionary has keys ['mu', 'scale', 't', 'resid', 'sd']
+
     """
 
-    def __init__(self, use_scale=True, niter=10, weight_type='sd'):
-        """
-        :Parameters:
-            use_scale : ``bool``
-                TODO
-            niter : ``int``
-                TODO
-            weight_type : ``string``
-                TODO
-        """
-        if weight_type in ['sd', 'var', 'weight']:
-            self.weight_type = weight_type
-        else:
-            raise ValueError, "Weight type must be one of " \
-                  "['sd', 'var', 'weight']"
-        self.use_scale = use_scale
-        self.niter = niter
-        self.value = OneSampleResults()
+    nsubject = Y.shape[0]
+    squeeze = False
+    if Y.ndim == 1:
+        Y = Y.reshape(Y.shape[0], 1)
+        squeeze = True
 
-    def fit(self, Y, W, which='mean', df=None):
-        """
-        :Parameters:
-            Y : TODO
-                TODO
-            W : TODO
-                TODO
-            which : ``string``
-                TODO
-            df : TODO
-                TODO
+    _stretch = lambda x: np.multiply.outer(np.ones(nsubject), x)
 
-        :Returns: TODO
-        """
-        if which == 'mean':
-            return self.estimate_mean(Y, W)
-        else:
-            return self.estimate_varatio(Y, W, df=df)
+    W = recipr(sd**2)
+    if W.shape in [(), (1,)]:
+        W = np.ones(Y.shape) * W
+    W.shape = Y.shape
 
-    def get_weights(self, W):
-        """
-        :Parameters:
-            W : TODO
-                TODO
+    # Compute the mean using the optimal weights
 
-        :Returns: ``numpy.ndarray``
-        """
-        try:
-            if W.ndim == 1:
-                W.shape = (W.shape[0], 1)
-        except:
-            pass
+    mu = (Y * W).sum(0) / W.sum(0)
+    resid = (Y - _stretch(mu)) * np.sqrt(W)
 
-        if self.weight_type == 'sd':
-            W = 1. / np.power(W, 2)
-        elif self.weight_type == 'var':
-            W = 1. / W
-        return np.asarray(W)
+    scale = np.add.reduce(np.power(resid, 2), 0) / (nsubject - 1)
+    var_total = scale * recipr(W.sum(0))
 
-    def estimate_mean(self, Y, W):
-        """
-        :Parameters:
-            Y : TODO
-                TODO
-            W : TODO
-                TODO
+    value = {}
+    value['resid'] = resid
+    value['mu'] = mu
+    value['sd'] = np.sqrt(var_total)
+    value['t'] = value['mu'] * recipr(value['sd'])
+    value['scale'] = np.sqrt(scale)
 
-        :Returns: TODO
-        """
+    if squeeze:
+        for key in value.keys():
+            value[key] = np.squeeze(value[key])
+    return value
 
-        if Y.ndim == 1:
-            Y.shape = (Y.shape[0], 1)
-        W = np.asarray(self.get_weights(W))
-        if W.shape in [(), (1,)]:
-            W = np.ones(Y.shape) * W
-
-        nsubject = Y.shape[0]
-
-        if self.value['varatio']['varfix'] is not None:
-            sigma2 = np.asarray(self['varatio']['varfix'] *
-                               self['varatio']['varatio'])
-
-            if sigma2.shape != ():
-                sigma2 = np.multiply.outer(np.ones((nsubject,)), sigma2)
-            S = recipr(W) + sigma2
-            W = recipr(S)
-
-        mu = np.add.reduce(Y * W, 0) / np.add.reduce(W, 0)
-        df_resid = nsubject - 1
-        resid = (Y - np.multiply.outer(np.ones(Y.shape[0]), mu)) * np.sqrt(W)
-
-        if self.use_scale:
-            scale = np.add.reduce(np.power(resid, 2), 0) / df_resid
-        else:
-            scale = 1.
-        var_total = scale * recipr(np.add.reduce(W, 0))
-
-        self.value['mean']['df_resid'] = df_resid
-        self.value['mean']['resid'] = resid
-        self.value['mean']['mu'] = mu
-        self.value['mean']['sd'] = np.squeeze(np.sqrt(var_total))
-        self.value['mean']['t'] = np.squeeze(self.value['mean']['mu'] *
-                                            recipr(self.value['mean']['sd']))
-        self.value['mean']['scale'] = np.sqrt(scale)
-
-        return self.value
-
-    def estimate_varatio(self, Y, W, df=None):
-        """
-        :Parameters:
-            Y : TODO
-                TODO
-            W : TODO
-                TODO
-            df : TODO
-                TODO
-
-        :Returns; TODO
-        """
-        Sreduction = 0.99
-        S = 1. / W
-
-        nsubject = Y.shape[0]
-        df_resid = nsubject - 1
-
-        R = Y - np.multiply.outer(np.ones(Y.shape[0]), np.mean(Y, axis=0))
-        sigma2 = np.squeeze(np.add.reduce(np.power(R, 2), axis=0) / df_resid)
-
-        minS = np.minimum.reduce(S, 0) * Sreduction
-
-        Sm = S - np.multiply.outer(np.ones(nsubject), minS)
-
-        for _ in range(self.niter):
-            Sms = Sm + np.multiply.outer(np.ones(nsubject), sigma2)
-            W = recipr(Sms)
-            Winv = 1. / np.add.reduce(W, axis=0)
-            mu = Winv * np.add.reduce(W * Y, axis=0)
-            R = W * (Y - np.multiply.outer(np.ones(nsubject), mu))
-            ptrS = 1 + np.add.reduce(Sm * W, 0) - \
-                   np.add.reduce(Sm * np.power(W, 2), axis=0) * Winv
-            sigma2 = np.squeeze((sigma2 * ptrS + np.power(sigma2, 2) *
-                                np.add.reduce(np.power(R,2), 0)) / nsubject)
-
-        sigma2 = sigma2 - minS
-
-        if df is None:
-            df = np.ones(nsubject)
-
-        df.shape = (1, nsubject)
-
-        _Sshape = S.shape
-        S.shape = (S.shape[0], np.product(S.shape[1:]))
-
-
-        self.value['varatio']['varfix'] = np.dot(df, S) / df.sum()
-
-        S.shape = _Sshape
-        self.value['varatio']['varfix'].shape = _Sshape[1:]
-        self.value['varatio']['varatio'] = \
-                         np.nan_to_num(sigma2 / self.value['varatio']['varfix'])
-        return self.value
-
-
-class OneSampleIterator(object):
-    """
-    TODO
+def estimate_varatio(Y, sd, df=None, niter=10):
     """
 
-    def __init__(self, iterator, outputs=()):
-        """
-        :Parameters:
-            iterator : TODO
-                TODO
-            outputs : TODO
-                TODO
-        """
-        self.iterator = iter(iterator)
-        self.outputs = [iter(output) for output in outputs]
+    In a one-sample random effects problem, estimate
+    the ratio between the fixed effects variance and
+    the random effects variance.
 
-    def weights(self):
-        """
-        This method should get the weights from self.iterator.
+    Parameters
+    ----------
 
-        :Returns: ``float``
-        """
-        return 1.
+    Y : np.ndarray
+        Data for which mean is to be estimated.
+        Should have shape (nsubj, nvox).
 
-    def _getinputs(self):
-        pass
+    sd : np.ndarray
+        Standard deviation (subject specific)
+        of the data for which the mean is to be estimated.
+        Should have shape (nsubj, nvox).
 
-    def fit(self, which='mean', df=None):
-        """
-        Go through an iterator, instantiating model and passing data,
-        going through outputs.
+    df : [int]
+        If supplied, these are used as weights when
+        deriving the fixed effects variance. Should have
+        length [nsubj].
 
-        :Parameters:
-            which : ``string``
-                TODO
-            df : TODO
-                TODO
+    niter : int
+        Number of EM iterations to perform.
 
-        :Returns: ``None``
-        """
+    Returns
+    -------
 
-        for data in self.iterator:
+    value : dict
 
-            W = self.weights()
-            self._getinputs()
-            shape = data.shape[1:]
+        This dictionary has keys ['fix', 'ratio', 'random'], where
+        'fix' is the fixed effects variance implied by the
+        input parameter 'sd'; 'random' is the random effects variance
+        and 'ratio' is the estimated ratio of variances:
+        'random'/'fixed'.
 
-            results = OneSample().fit(data, W, which, df)
+    """
 
-            for output in self.outputs:
-                out = output.extract(results)
-                if output.nout > 1:
-                    out.shape = (output.nout,) + shape
-                else:
-                    out.shape = shape
+    nsubject = Y.shape[0]
+    squeeze = False
+    if Y.ndim == 1:
+        Y = Y.reshape(Y.shape[0], 1)
+        squeeze = True
+    _stretch = lambda x: np.multiply.outer(np.ones(nsubject), x)
 
-                output.next().set(out)
+    W = recipr(sd**2)
+    if W.shape in [(), (1,)]:
+        W = np.ones(Y.shape) * W
+    W.shape = Y.shape
 
-            del(results)
-            gc.collect()
+    S = 1. / W
+    R = Y - np.multiply.outer(np.ones(Y.shape[0]), Y.mean(0))
+    sigma2 = np.squeeze((R**2).sum(0)) / (nsubject - 1)
+
+    Sreduction = 0.99
+    minS = S.min(0) * Sreduction
+    Sm = S - _stretch(minS)
+
+    for _ in range(niter):
+        Sms = Sm + _stretch(sigma2)
+        W = recipr(Sms)
+        Winv = recipr(W.sum(0))
+        mu = Winv * (W*Y).sum(0)
+        R = W * (Y - _stretch(mu))
+        ptrS = 1 + (Sm * W).sum(0) - (Sm * W**2).sum(0) * Winv
+        sigma2 = np.squeeze((sigma2 * ptrS + (sigma2**2) * (R**2).sum(0)) / nsubject)
+    sigma2 = sigma2 - minS
+
+    if df is None:
+        df = np.ones(nsubject)
+
+    df.shape = (1, nsubject)
+
+    _Sshape = S.shape
+    S.shape = (S.shape[0], np.product(S.shape[1:]))
+
+    value = {}
+    value['fix'] = (np.dot(df, S) / df.sum()).reshape(_Sshape[1:])
+    value['ratio'] = np.nan_to_num(sigma2 / value['fix'])
+    value['random'] = sigma2
+
+    if squeeze:
+        for key in value.keys():
+            value[key] = np.squeeze(value[key])
+    return value
 
