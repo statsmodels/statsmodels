@@ -438,7 +438,7 @@ class GLSModel(OLSModel):
     """
     Generalized least squares model with a general covariance structure
 
-    This should probably go into neuroimaging.fixes.scipy.stats.models.regression
+    This should probably go into nipy.fixes.scipy.stats.models.regression
 
     """
 
