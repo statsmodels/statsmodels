@@ -85,7 +85,7 @@ class ECquasi(np.poly1d):
 
 
     >>> import numpy
-    >>> from neuroimaging.algorithms.statistics.rft import ECquasi
+    >>> from nipy.algorithms.statistics.rft import ECquasi
     >>> x = numpy.linspace(0,1,101)
 
     >>> a = ECquasi([3,4,5])

@@ -5,7 +5,7 @@ __docformat__ = 'restructuredtext'
 
 import numpy as np
 import numpy.linalg as L
-from neuroimaging.fixes.scipy.stats.models.model import Model
+from nipy.fixes.scipy.stats.models.model import Model
 
 class NLSModel(Model):
 

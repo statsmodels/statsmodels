@@ -9,7 +9,7 @@ import numpy.random as R
 import numpy.linalg as L
 from numpy.testing import *
 
-from neuroimaging.fixes.scipy.stats.models import utils, formula, contrast
+from nipy.fixes.scipy.stats.models import utils, formula, contrast
 
 class TestTerm(TestCase):
 

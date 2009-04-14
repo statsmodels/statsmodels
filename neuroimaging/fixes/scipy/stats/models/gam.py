@@ -5,9 +5,9 @@ Generalized additive models
 
 import numpy as np
 
-from neuroimaging.fixes.scipy.stats.models import family
-from neuroimaging.fixes.scipy.stats.models.bspline import SmoothingSpline
-from neuroimaging.fixes.scipy.stats.models.glm import Model as GLM
+from nipy.fixes.scipy.stats.models import family
+from nipy.fixes.scipy.stats.models.bspline import SmoothingSpline
+from nipy.fixes.scipy.stats.models.glm import Model as GLM
 
 def default_smoother(x):
     _x = x.copy()

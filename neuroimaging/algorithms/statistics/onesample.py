@@ -6,7 +6,7 @@ __docformat__ = 'restructuredtext'
 import gc
 
 import numpy as np
-from neuroimaging.fixes.scipy.stats.models.utils import recipr
+from nipy.fixes.scipy.stats.models.utils import recipr
 
 def estimate_mean(Y, sd):
     """

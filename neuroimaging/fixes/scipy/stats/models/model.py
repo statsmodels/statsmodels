@@ -2,8 +2,8 @@ import numpy as np
 from numpy.linalg import inv
 #from scipy import optimize
 
-from neuroimaging.fixes.scipy.stats.models.contrast import ContrastResults
-from neuroimaging.fixes.scipy.stats.models.utils import recipr
+from nipy.fixes.scipy.stats.models.contrast import ContrastResults
+from nipy.fixes.scipy.stats.models.utils import recipr
 
 class Model(object):
     """

@@ -4,7 +4,7 @@ Mixed effects models
 
 import numpy as np
 import numpy.linalg as L
-from neuroimaging.fixes.scipy.stats.models.formula import formula, I
+from nipy.fixes.scipy.stats.models.formula import formula, I
 
 class Unit:
     """
@@ -311,7 +311,7 @@ if __name__ == '__main__':
 
     n = 3
 
-    from neuroimaging.fixes.scipy.stats.models.formula import term
+    from nipy.fixes.scipy.stats.models.formula import term
     fixed = term('f')
     random = term('r')
     response = term('y')

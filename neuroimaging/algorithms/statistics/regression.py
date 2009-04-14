@@ -12,7 +12,7 @@ __docformat__ = 'restructuredtext'
 import numpy as np
 import numpy.linalg as L
 from scipy.linalg import toeplitz
-from neuroimaging.fixes.scipy.stats.models.utils import recipr
+from nipy.fixes.scipy.stats.models.utils import recipr
 
 def output_T(contrast, results, effect=None, sd=None, t=None):
     """

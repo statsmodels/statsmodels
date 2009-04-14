@@ -4,9 +4,9 @@ from scipy.special import gammaln, hermitenorm
 import scipy.stats
 from scipy.misc import factorial
 
-from neuroimaging.testing import *
+from nipy.testing import *
 
-from neuroimaging.algorithms.statistics import rft
+from nipy.algorithms.statistics import rft
 
 #def rho(x, dim, df=np.inf):
 #    """

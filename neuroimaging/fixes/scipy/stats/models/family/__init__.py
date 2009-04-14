@@ -10,5 +10,5 @@ These families are described in
 
 '''
 
-from neuroimaging.fixes.scipy.stats.models.family.family import Gaussian, Family, \
+from nipy.fixes.scipy.stats.models.family.family import Gaussian, Family, \
      Poisson, Gamma, InverseGaussian, Binomial

@@ -24,9 +24,9 @@ from csv import reader
 import numpy as np
 from scipy.linalg import norm, toeplitz
 
-from neuroimaging.fixes.scipy.stats.models.model import LikelihoodModel, \
+from nipy.fixes.scipy.stats.models.model import LikelihoodModel, \
      LikelihoodModelResults
-from neuroimaging.fixes.scipy.stats.models import utils
+from nipy.fixes.scipy.stats.models import utils
 
 class OLSModel(LikelihoodModel):
     """
@@ -36,8 +36,8 @@ class OLSModel(LikelihoodModel):
     --------
     >>> import numpy as N
     >>>
-    >>> from neuroimaging.fixes.scipy.stats.models.formula import Term, I
-    >>> from neuroimaging.fixes.scipy.stats.models.regression import OLSModel
+    >>> from nipy.fixes.scipy.stats.models.formula import Term, I
+    >>> from nipy.fixes.scipy.stats.models.regression import OLSModel
     >>>
     >>> data={'Y':[1,3,4,5,2,3,4],
     ...       'X':range(1,8)}
@@ -202,8 +202,8 @@ class ARModel(OLSModel):
     >>> import numpy as N
     >>> import numpy.random as R
     >>>
-    >>> from neuroimaging.fixes.scipy.stats.models.formula import Term, I
-    >>> from neuroimaging.fixes.scipy.stats.models.regression import ARModel
+    >>> from nipy.fixes.scipy.stats.models.formula import Term, I
+    >>> from nipy.fixes.scipy.stats.models.regression import ARModel
     >>>
     >>> data={'Y':[1,3,4,5,8,10,9],
     ...       'X':range(1,8)}
@@ -343,8 +343,8 @@ class WLSModel(OLSModel):
 
     >>> import numpy as N
     >>>
-    >>> from neuroimaging.fixes.scipy.stats.models.formula import Term, I
-    >>> from neuroimaging.fixes.scipy.stats.models.regression import WLSModel
+    >>> from nipy.fixes.scipy.stats.models.formula import Term, I
+    >>> from nipy.fixes.scipy.stats.models.regression import WLSModel
     >>>
     >>> data={'Y':[1,3,4,5,2,3,4],
     ...       'X':range(1,8)}

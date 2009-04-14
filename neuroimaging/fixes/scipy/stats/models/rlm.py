@@ -3,8 +3,8 @@ Robust linear models
 """
 import numpy as np
 
-from neuroimaging.fixes.scipy.stats.models.regression import WLSModel
-from neuroimaging.fixes.scipy.stats.models.robust import norms, scale
+from nipy.fixes.scipy.stats.models.regression import WLSModel
+from nipy.fixes.scipy.stats.models.robust import norms, scale
 
 class Model(WLSModel):
 

@@ -3,7 +3,7 @@ import tempfile
 
 import numpy as np
 
-from neuroimaging.fixes.scipy.stats.models import survival, model
+from nipy.fixes.scipy.stats.models import survival, model
 
 class Discrete:
 

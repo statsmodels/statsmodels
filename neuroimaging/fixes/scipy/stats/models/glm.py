@@ -5,8 +5,8 @@ General linear models
 """
 
 import numpy as np
-from neuroimaging.fixes.scipy.stats.models import family
-from neuroimaging.fixes.scipy.stats.models.regression import WLSModel
+from nipy.fixes.scipy.stats.models import family
+from nipy.fixes.scipy.stats.models.regression import WLSModel
 
 class Model(WLSModel):
 

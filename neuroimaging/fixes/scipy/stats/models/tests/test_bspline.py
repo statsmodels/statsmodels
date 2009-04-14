@@ -1,7 +1,7 @@
 import warnings
 
 import numpy as np
-from neuroimaging.testing import *
+from nipy.testing import *
 
 bsp = None
 

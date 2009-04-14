@@ -5,7 +5,7 @@ Test functions for models.regression
 from numpy.random import standard_normal
 from numpy.testing import *
 
-from neuroimaging.fixes.scipy.stats.models.regression import OLSModel, ARModel
+from nipy.fixes.scipy.stats.models.regression import OLSModel, ARModel
 
 W = standard_normal
 

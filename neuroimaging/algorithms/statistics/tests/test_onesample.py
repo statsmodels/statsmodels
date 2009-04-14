@@ -3,7 +3,7 @@ import numpy as np
 from  neuroimaging.algorithms.statistics import onesample
 from scipy.stats import norm
 
-from neuroimaging.testing import *
+from nipy.testing import *
 
 def test_estimate_varatio(p=1.0e-04, sigma2=1):
 # This is a random test, but is design to fail only rarely....

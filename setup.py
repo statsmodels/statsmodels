@@ -2,7 +2,7 @@
 from os.path import join
 import sys
 
-from neuroimaging import  __version__, __doc__
+from nipy import  __version__, __doc__
 
 def configuration(parent_package='',top_path=None):
     from numpy.distutils.misc_util import Configuration

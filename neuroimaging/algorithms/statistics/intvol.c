@@ -543,7 +543,7 @@ typedef __pyx_t_5numpy_int_t __pyx_t_12neuroimaging_10algorithms_10statistics_6i
 static PyTypeObject *__pyx_ptype_5numpy_dtype = 0;
 static PyTypeObject *__pyx_ptype_5numpy_ndarray = 0;
 static INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *, char *, char *); /*proto*/
-/* Module declarations from neuroimaging.algorithms.statistics.intvol */
+/* Module declarations from nipy.algorithms.statistics.intvol */
 
 static double __pyx_f_12neuroimaging_10algorithms_10statistics_6intvol__mu1_tetface(double, double, double, double, double, double, double, double, double, double); /*proto*/
 

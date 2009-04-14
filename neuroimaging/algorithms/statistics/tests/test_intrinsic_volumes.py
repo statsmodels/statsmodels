@@ -2,9 +2,9 @@ import numpy as np
 import numpy.linalg as L
 import numpy.random as R
 
-from neuroimaging.testing import *
+from nipy.testing import *
 
-from neuroimaging.algorithms.statistics import intvol, utils
+from nipy.algorithms.statistics import intvol, utils
 
 def symnormal(p=10):
     M = R.standard_normal((p,p))
