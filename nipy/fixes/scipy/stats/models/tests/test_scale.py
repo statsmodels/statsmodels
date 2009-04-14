@@ -5,7 +5,7 @@ Test functions for models.robust.scale
 import numpy.random as R
 from numpy.testing import *
 
-import neuroimaging.fixes.scipy.stats.models.robust.scale as scale
+import nipy.fixes.scipy.stats.models.robust.scale as scale
 
 W = R.standard_normal
 

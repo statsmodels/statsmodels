@@ -200,7 +200,7 @@ if __name__ == '__main__':
     for i in range(2*n):
         subjects[i].X = X[i]
 
-    import neuroimaging.fixes.scipy.stats.models.formula as F
+    import nipy.fixes.scipy.stats.models.formula as F
     x = F.quantitative('X')
     f = F.formula(x)
 

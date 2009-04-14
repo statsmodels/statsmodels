@@ -10,7 +10,7 @@ def setup():
     warnings.simplefilter("ignore")
     # import bspline module after suppressing UserWarnings
     global bsp
-    import neuroimaging.fixes.scipy.stats.models.bspline as bsp
+    import nipy.fixes.scipy.stats.models.bspline as bsp
 
 def teardown():
     # Clear list of warning filters

@@ -6,8 +6,8 @@ import numpy as np
 import numpy.random as R
 from numpy.testing import *
 
-import neuroimaging.fixes.scipy.stats.models as S
-import neuroimaging.fixes.scipy.stats.models.glm as models
+import nipy.fixes.scipy.stats.models as S
+import nipy.fixes.scipy.stats.models.glm as models
 
 W = R.standard_normal
 

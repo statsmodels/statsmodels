@@ -4,7 +4,7 @@ from numpy.testing import *
 
 import numpy as np
 
-import neuroimaging.fixes.scipy.stats.models as SSM
+import nipy.fixes.scipy.stats.models as SSM
 
 from exampledata import y, x
 

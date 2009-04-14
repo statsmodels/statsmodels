@@ -2,7 +2,7 @@
 from numpy.testing import *
 
 from exampledata import x, y
-import neuroimaging.fixes.scipy.stats.models as SSM
+import nipy.fixes.scipy.stats.models as SSM
 
 # FIXME: AttributeError: 'ARModel' object has no attribute 'yule_walker'
 @dec.knownfailureif(True)
