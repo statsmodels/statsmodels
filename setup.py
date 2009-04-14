@@ -13,14 +13,14 @@ def configuration(parent_package='',top_path=None):
                        delegate_options_to_subpackages=True,
                        quiet=True)
     # The quiet=True option will silence all of the name setting warnings:
-    # Ignoring attempt to set 'name' (from 'neuroimaging.core' to
-    #    'neuroimaging.core.image')
+    # Ignoring attempt to set 'name' (from 'nipy.core' to
+    #    'nipy.core.image')
     # Robert Kern recommends setting quiet=True on the numpy list, stating
     # these messages are probably only used in debugging numpy distutils.
 
-    config.get_version('neuroimaging/version.py') # sets config.version
+    config.get_version('nipy/version.py') # sets config.version
 
-    config.add_subpackage('neuroimaging', 'neuroimaging')
+    config.add_subpackage('nipy', 'nipy')
 
     return config
 
@@ -28,7 +28,7 @@ def configuration(parent_package='',top_path=None):
 def main():
     from numpy.distutils.core import setup
 
-    setup( name = 'neuroimaging',
+    setup( name = 'nipy',
            description = 'This is a neuroimaging python package',
            author = 'Various',
            author_email = 'nipy-devel@neuroimaging.scipy.org',
