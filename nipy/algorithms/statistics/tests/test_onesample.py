@@ -1,6 +1,6 @@
 
 import numpy as np
-from  neuroimaging.algorithms.statistics import onesample
+from nipy.algorithms.statistics import onesample
 from scipy.stats import norm
 
 from nipy.testing import *
