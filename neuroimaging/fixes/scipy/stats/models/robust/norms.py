@@ -1,6 +1,32 @@
 import numpy as np
 
-class RobustNorm:
+class RobustNorm(object):
+
+    def rho(self, z):
+        """
+        Abstract method:
+
+        -2 log L used in M-estimator
+        """
+        raise NotImplementedError
+
+    def psi(self, z):
+        """
+        Abstract method:
+
+        psi = rho'
+        """
+        raise NotImplementedError
+
+    def weights(self, z):
+        """
+        Abstract method:
+        psi(z) / z
+
+        TODO: is the above correct... need to look at V&R
+        """
+        raise NotImplementedError
+
     def __call__(self, z):
         return self.rho(z)
 
@@ -40,23 +66,23 @@ class HuberT(RobustNorm):
 
     def subset(self, z):
         z = np.asarray(z)
-        return np.less_equal(np.fabs(z), HuberT.t)
+        return np.less_equal(np.fabs(z), self.t)
 
     def rho(self, z):
         z = np.asarray(z)
         test = self.subset(z)
         return (test * 0.5 * np.power(z, 2) +
-                (1 - test) * (np.fabs(z) * HuberT.t - 0.5 * HuberT.t**2))
+                (1 - test) * (np.fabs(z) * self.t - 0.5 * self.t**2))
 
     def psi(self, z):
         z = np.asarray(z)
         test = self.subset(z)
-        return test * z + (1 - test) * HuberT.t * np.sign(z)
+        return test * z + (1 - test) * self.t * np.sign(z)
 
     def weights(self, z):
         z = np.asarray(z)
         test = self.subset(z)
-        return test + (1 - test) * HuberT.t / np.fabs(z)
+        return test + (1 - test) * self.t / np.fabs(z)
 
 class RamsayE(RobustNorm):
 
@@ -71,16 +97,16 @@ class RamsayE(RobustNorm):
 
     def rho(self, z):
         z = np.asarray(z)
-        return (1 - np.exp(-RamsayE.a * np.fabs(z)) *
-                (1 + RamsayE.a * np.fabs(z))) / RamsayE.a**2
+        return (1 - np.exp(-self.a * np.fabs(z)) *
+                (1 + self.a * np.fabs(z))) / self.a**2
 
     def psi(self, z):
         z = np.asarray(z)
-        return z * np.exp(-RamsayE.a * np.fabs(z))
+        return z * np.exp(-self.a * np.fabs(z))
 
     def weights(self, z):
         z = np.asarray(z)
-        return np.exp(-RamsayE.a * np.fabs(z))
+        return np.exp(-self.a * np.fabs(z))
 
 class AndrewWave(RobustNorm):
 
@@ -95,7 +121,7 @@ class AndrewWave(RobustNorm):
 
     def subset(self, z):
         z = np.asarray(z)
-        return np.less_equal(np.fabs(z), RamsayE.a * np.pi)
+        return np.less_equal(np.fabs(z), self.a * np.pi)
 
     def rho(self, z):
         a = AndrewWave.a
@@ -105,13 +131,13 @@ class AndrewWave(RobustNorm):
                 (1 - test) * 2 * a)
 
     def psi(self, z):
-        a = AndrewWave.a
+        a = self.a
         z = np.asarray(z)
         test = self.subset(z)
         return test * np.sin(z / a)
 
     def weights(self, z):
-        a = AndrewWave.a
+        a = self.a
         z = np.asarray(z)
         test = self.subset(z)
         return test * np.sin(z / a) / (z / a)
@@ -129,7 +155,7 @@ class TrimmedMean(RobustNorm):
 
     def subset(self, z):
         z = np.asarray(z)
-        return np.less_equal(np.fabs(z), TrimmedMean.c)
+        return np.less_equal(np.fabs(z), self.c)
 
     def rho(self, z):
         z = np.asarray(z)
@@ -161,14 +187,14 @@ class Hampel(RobustNorm):
 
     def subset(self, z):
         z = np.fabs(np.asarray(z))
-        t1 = np.less_equal(z, Hampel.a)
-        t2 = np.less_equal(z, Hampel.b) * np.greater(z, Hampel.a)
-        t3 = np.less_equal(z, Hampel.c) * np.greater(z, Hampel.b)
+        t1 = np.less_equal(z, self.a)
+        t2 = np.less_equal(z, self.b) * np.greater(z, self.a)
+        t3 = np.less_equal(z, self.c) * np.greater(z, self.b)
         return t1, t2, t3
 
     def psi(self, z):
         z = np.asarray(z)
-        a = Hampel.a; b = Hampel.b; c = Hampel.c
+        a = self.a; b = self.b; c = self.c
         t1, t2, t3 = self.subset(z)
         s = np.sign(z); z = np.fabs(z)
         v = s * (t1 * z +
@@ -178,7 +204,7 @@ class Hampel(RobustNorm):
 
     def rho(self, z):
         z = np.fabs(z)
-        a = Hampel.a; b = Hampel.b; c = Hampel.c
+        a = self.a; b = self.b; c = self.c
         t1, t2, t3 = self.subset(z)
         v = (t1 * z**2 * 0.5 +
              t2 * (a * z - a**2 * 0.5) +
@@ -219,3 +245,50 @@ class TukeyBiweight(RobustNorm):
     def weights(self, z):
         subset = self.subset(z)
         return (1 - (z / self.R)**2)**2 * subset
+
+def estimate_location(a, scale, norm=HuberT(), axis=0, initial=None,
+                      niter=30, tol=1.0e-06):
+    """
+    M-estimator of location using self.norm and a current
+    estimator of scale.
+
+    This iteratively finds a solution to
+
+    norm.psi((a-mu)/scale).sum() == 0
+
+    Inputs:
+    -------
+    a : ndarray
+        Array over which the location parameter is to be estimated
+    scale : ndarray
+        Scale parameter to be used in M-estimator
+    norm : RobustNorm
+        Robust norm used in the M-estimator.
+    axis : int
+        Axis along which to estimate the location parameter.
+    initial : ndarray
+        Optional initial condition for the location parameter
+    niter : int
+        Maximum number of iterations
+    tol : float
+        Toleration for convergence
+    Outputs:
+    --------
+    mu : ndarray
+        Estimate of location
+    """
+
+    if initial is None:
+        mu = np.median(a, axis)
+    else:
+        mu = initial
+
+    for iter in range(niter):
+        W = norm.weights((a-mu)/scale)
+        nmu = np.sum(W*a, axis) / np.sum(W, axis)
+        if np.alltrue(np.less(np.fabs(mu - nmu), scale * tol)):
+            return nmu
+        else:
+            mu = nmu
+    raise ValueError("location estimator failed to converge in %d iterations" % niter)
+

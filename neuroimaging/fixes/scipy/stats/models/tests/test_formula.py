@@ -63,7 +63,6 @@ class TestFormula(TestCase):
             self.formula += self.terms[i]
         self.formula.namespace = self.namespace
 
-    #@dec.knownfailureif(True)
     def test_namespace(self):
         space1 = {'X':np.arange(50), 'Y':np.arange(50)*2}
         space2 = {'X':np.arange(20), 'Y':np.arange(20)*2}
@@ -167,30 +166,22 @@ class TestFormula(TestCase):
         prod.namespace = self.formula.namespace
         assert_almost_equal(np.squeeze(prod()), t())
 
-    # FIXME: AttributeError: 'Contrast' object has no attribute 'getmatrix'
-    #@dec.knownfailureif(True)
     def test_contrast1(self):
         term = self.terms[0] + self.terms[2]
         c = contrast.Contrast(term, self.formula)
-        c.matrix
         col1 = self.formula.termcolumns(self.terms[0], dict=False)
         col2 = self.formula.termcolumns(self.terms[1], dict=False)
         test = [[1] + [0]*9, [0]*2 + [1] + [0]*7]
         assert_almost_equal(c.matrix, test)
 
-    # FIXME: AttributeError: 'Contrast' object has no attribute 'getmatrix'
-    #@dec.knownfailureif(True)
     def test_contrast2(self):
         dummy = formula.Term('zero')
         self.namespace['zero'] = np.zeros((40,), np.float64)
         term = dummy + self.terms[2]
         c = contrast.Contrast(term, self.formula)
-        c.matrix
         test = [0]*2 + [1] + [0]*7
         assert_almost_equal(c.matrix, test)
 
-    # FIXME: AttributeError: 'Contrast' object has no attribute 'getmatrix'
-    #@dec.knownfailureif(True)
     def test_contrast3(self):
         X = self.formula.design()
         P = np.dot(X, L.pinv(X))
@@ -201,7 +192,6 @@ class TestFormula(TestCase):
         terms = dummy + self.terms[2]
         terms.namespace = self.formula.namespace
         c = contrast.Contrast(terms, self.formula)
-        c.matrix
         self.assertEquals(c.matrix.shape, (10,))
 
     def test_power(self):
@@ -282,8 +272,6 @@ class TestFormula(TestCase):
         assert_equal(fac['b'], [1,0,0]*3)
         assert_equal(fac['c'], [0,1,0]*3)
 
-    # FIXME: AttributeError: 'Contrast' object has no attribute 'getmatrix'
-    #@dec.knownfailureif(True)
     def test_contrast4(self):
 
         f = self.formula + self.terms[5] + self.terms[5]
@@ -291,7 +279,6 @@ class TestFormula(TestCase):
         estimable = False
 
         c = contrast.Contrast(self.terms[5], f)
-        c.matrix
 
         self.assertEquals(estimable, False)
 
