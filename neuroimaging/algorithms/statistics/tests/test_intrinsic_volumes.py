@@ -4,13 +4,16 @@ import numpy.random as R
 
 from neuroimaging.testing import *
 
-from neuroimaging.algorithms.statistics import intrinsic_volumes
+from neuroimaging.algorithms.statistics import intvol, utils
 
 def symnormal(p=10):
     M = R.standard_normal((p,p))
     return (M + M.T) / np.sqrt(2)
 
 def randorth(p=10):
+    """
+    A random orthogonal matrix.
+    """
     A = symnormal(p)
     return L.eig(A)[1]
 
@@ -20,105 +23,173 @@ def box(shape, edges):
     for i in range(len(shape)):
         sl.append(slice(edges[i][0], edges[i][1],1))
     data[sl] = 1
-    return data
+    return data.astype(np.int)
 
 def randombox(shape):
-    edges = [R.random_integers(0, shape[j], size=(2,)) for j in range(len(shape))]
+    """
+    Generate a random box, returning the box and the edge lengths
+    """
+    edges = [R.random_integers(0, shape[j], size=(2,))
+             for j in range(len(shape))]
+
     for j in range(len(shape)):
         edges[j].sort()
         if edges[j][0] == edges[j][1]:
             edges[j][0] = 0; edges[j][1] = shape[j]/2+1
     return edges, box(shape, edges)
 
+def elsym(edgelen, order=1):
+    """
+    Elementary symmetric polynoimal of a given order
+    """
 
-class test_iv(TestCase):
+    l = len(edgelen)
+    r = 0
+    for v in utils.combinations(range(l), order):
+        r += np.product([edgelen[vv] for vv in v])
+    return r
 
-    def test1(self):
-        for i in range(1, 4):
-            _, box1 = randombox((30,)*i)
-            assert_almost_equal(intrinsic_volumes.EC(box1), 1)
+def nonintersecting_boxes(shape):
+    """
+    The Lips's are supposed to be additive, so disjoint things
+    should be additive. But, if they ALMOST intersect, different
+    things get added to the triangulation.
 
-    # FIXME: AssertionError:
-    #    Items are not equal:
-    #    ACTUAL: 1.0
-    #    DESIRED: 2.0
-    def test2(self):
-        e = intrinsic_volumes.EC
-        for i in range(1, 4):
-            _, box1 = randombox((30,)*i)
-            _, box2 = randombox((30,)*i)
-            assert_almost_equal(e(box1 + box2),
-                                          e(box1) + e(box2) - e(box1*box2))
+    >>> b1 = np.zeros(40, np.int)
+    >>> b1[:11] = 1
+    >>> b2 = np.zeros(40, np.int)
+    >>> b2[11:] = 1
+    >>> (b1*b2).sum()
+    0
+    >>> c = np.indices((40,)).astype(np.float)
+    >>> intvol.Lips1_1d(c, b1)
+    10.0
+    >>> intvol.Lips1_1d(c, b2)
+    28.0
+    >>> intvol.Lips1_1d(c, b1+b2)
+    39.0
 
-    # FIXME: AssertionError:
-    #    Items are not equal:
-    #    ACTUAL: 1.0
-    #    DESIRED: 2.0
-    def test3(self):
-        e = intrinsic_volumes.EC
-        for i in range(1, 4):
-            e1, box1 = randombox((30,)*i)
-            e2, box2 = randombox((30,)*i)
-            e3, box3 = randombox((30,)*i)
-            a = e(box1 + box2 + box3)
-            b = (e(box1) + e(box2) + e(box3) -
-                 e(box1*box2) - e(box2*box3) - e(box1*box3) +
-                 e(box1*box2*box3))
-            if a != b:
-                print a, b
-                print e1, e2, e3
-                print e(box1), e(box2), e(box3)
-                print e(box1*box2), e(box1*box3), e(box2*box3)
-                print e(box1*box2*box3)
-            assert_almost_equal(e(box1 + box2 + box3),
-                                          (e(box1) + e(box2) + e(box3) -
-                                           e(box1*box2) - e(box2*box3) - e(box1*box3) +
-                                           e(box1*box2*box3)))
+    The function creates two boxes such that
+    the 'dilated' box1 does not intersect with box2.
+    Additivity works in this case.
+    """
 
-    def test4(self):
-        e = intrinsic_volumes.EC
+    while True:
+        edge1, box1 = randombox(shape)
+        edge2, box2 = randombox(shape)
 
-        m = np.zeros((40,)*3)
-        m[10,10,10] = 1
-        assert_almost_equal(e(m), 1)
+        diledge1 = [[max(ed[0]-1, 0), min(ed[1]+1, sh)]
+                    for ed, sh in zip(edge1, box1.shape)]
 
-        m = np.zeros((40,)*3)
-        m[10,10:12,10] = 1
-        assert_almost_equal(e(m), 1)
+        dilbox1 = box(box1.shape, diledge1)
 
-        m[10,10:12,10:12] = 1
-        m = np.zeros((40,)*3)
-        m[10,10:12,10:12] = 1
-        assert_almost_equal(e(m), 1)
+        if set(np.unique(dilbox1 + box2)).issubset([0,1]):
+            break
+    return box1, box2, edge1, edge2
 
+def test_ec():
+    for i in range(1, 4):
+        _, box1 = randombox((40,)*i)
+        f = {3:intvol.Lips0_3d,
+             2:intvol.Lips0_2d,
+             1:intvol.Lips0_1d}[i]
+        yield assert_almost_equal, f(box1), 1
 
-##     for i in range(1, 6):
-##         X = np.zeros((10,)*i)
-##         if i in range(1,4):
-
-##             for l in range(i+1):
-
-##                 if i == 3:
-##                     X[0:2,0:4,0:6] = 1
-##                     answer = {0:1, 1:9, 2:23, 3:15}[l]
-##                 elif i == 2:
-##                     X[1:6,1:4] = 1
-##                     answer = {0:1, 1:6, 2:8}[l]
-##                 elif i == 1:
-##                     X[4:6] = 1
-##                     answer = {0:1, 1:1}[l]
-
-##                 Y = np.indices(X.shape).astype(np.float)
-##                 Y.shape = (i, 10**i)
-##                 U = randorth()[0:i]
-##                 Y = np.dot(U.T, Y)
-##                 Y.shape = (p,) + (10,)*i
-##                 print i, l, LK(X, 0.5, coords=Y, lk=l), answer
-## ##                 if i == 3:
-## ##                     file("LK%ddim%d.c" % (l, i), 'w').write(code(i, lk=l, explorer=True))
+def test_ec_disjoint():
+    for i in range(1, 4):
+        e = {3:intvol.Lips0_3d,
+             2:intvol.Lips0_2d,
+             1:intvol.Lips0_1d}[i]
+        box1, box2, _, _ = nonintersecting_boxes((40,)*i)
+        yield assert_almost_equal, e(box1 + box2), e(box1) + e(box2)
 
 
+def test_lips1_disjoint():
+    for i in range(1, 4):
+        phi = {3:intvol.Lips1_3d,
+             2:intvol.Lips1_2d,
+             1:intvol.Lips1_1d}[i]
 
+        box1, box2, edge1, edge2 = nonintersecting_boxes((30,)*i)
+        c = np.indices((30,)*i).astype(np.float)
+        d = np.random.standard_normal((10,)+(30,)*i)
+
+        U = randorth(p=6)[0:i]
+        e = np.dot(U.T, c.reshape((c.shape[0], np.product(c.shape[1:]))))
+        e.shape = (e.shape[0],) +  c.shape[1:]
+
+        yield assert_almost_equal, phi(c, box1 + box2), \
+            phi(c, box1) + phi(c, box2)
+        yield assert_almost_equal, phi(d, box1 + box2), \
+            phi(d, box1) + phi(d, box2)
+        yield assert_almost_equal, phi(e, box1 + box2), \
+            phi(e, box1) + phi(e, box2)
+        yield assert_almost_equal, phi(e, box1 + box2), phi(c, box1 + box2)
+        yield assert_almost_equal, phi(e, box1 + box2), \
+            elsym([e[1]-e[0]-1 for e in edge1], 1) + \
+            elsym([e[1]-e[0]-1 for e in edge2], 1)
+
+
+def test_lips2_disjoint():
+    for i in range(2, 4):
+        phi = {3:intvol.Lips2_3d,
+               2:intvol.Lips2_2d}[i]
+
+        box1, box2, edge1, edge2 = nonintersecting_boxes((40,)*i)
+        c = np.indices((40,)*i).astype(np.float)
+        d = np.random.standard_normal((40,)+(40,)*i)
+
+        U = randorth(p=6)[0:i]
+        e = np.dot(U.T, c.reshape((c.shape[0], np.product(c.shape[1:]))))
+        e.shape = (e.shape[0],) +  c.shape[1:]
+
+        yield assert_almost_equal, phi(c, box1 + box2), phi(c, box1) + \
+            phi(c, box2)
+        yield assert_almost_equal, phi(d, box1 + box2), phi(d, box1) + \
+            phi(d, box2)
+        yield assert_almost_equal, phi(e, box1 + box2), phi(e, box1) + \
+            phi(e, box2)
+        yield assert_almost_equal, phi(e, box1 + box2), phi(c, box1 + box2)
+        yield assert_almost_equal, phi(e, box1 + box2), \
+            elsym([e[1]-e[0]-1 for e in edge1], 2) + \
+            elsym([e[1]-e[0]-1 for e in edge2], 2)
+
+
+def test_lips3_disjoint():
+    phi = intvol.Lips3_3d
+    box1, box2, edge1, edge2 = nonintersecting_boxes((40,)*3)
+    c = np.indices((40,)*3).astype(np.float)
+    d = np.random.standard_normal((40,40,40,40))
+
+    U = randorth(p=6)[0:3]
+    e = np.dot(U.T, c.reshape((c.shape[0], np.product(c.shape[1:]))))
+    e.shape = (e.shape[0],) +  c.shape[1:]
+
+    yield assert_almost_equal, phi(c, box1 + box2), phi(c, box1) + phi(c, box2)
+    yield assert_almost_equal, phi(d, box1 + box2), phi(d, box1) + phi(d, box2)
+    yield assert_almost_equal, phi(e, box1 + box2), phi(e, box1) + phi(e, box2)
+    yield assert_almost_equal, phi(e, box1 + box2), phi(c, box1 + box2)
+    yield assert_almost_equal, phi(e, box1 + box2), \
+        elsym([e[1]-e[0]-1 for e in edge1], 3) + \
+        elsym([e[1]-e[0]-1 for e in edge2], 3)
+
+
+def test_slices():
+    # Slices have EC 1...
+
+    e = intvol.Lips0_3d
+
+    m = np.zeros((40,)*3, np.int)
+    m[10,10,10] = 1
+    yield assert_almost_equal, e(m), 1
+
+    m = np.zeros((40,)*3, np.int)
+    m[10,10:12,10] = 1
+    yield assert_almost_equal, e(m), 1
+
+    m = np.zeros((40,)*3, np.int)
+    m[10,10:12,10:12] = 1
+    yield assert_almost_equal, e(m), 1
 
 
 

@@ -1,10 +1,21 @@
-"""
-Test functions for models.bspline
-"""
+import warnings
 
 import numpy as np
-from numpy.testing import *
-import neuroimaging.fixes.scipy.stats.models.bspline as bsp
+from neuroimaging.testing import *
+
+bsp = None
+
+def setup():
+    # Suppress warnings during tests to reduce noise
+    warnings.simplefilter("ignore")
+    # import bspline module after suppressing UserWarnings
+    global bsp
+    import neuroimaging.fixes.scipy.stats.models.bspline as bsp
+
+def teardown():
+    # Clear list of warning filters
+    warnings.resetwarnings()
+
 
 class TestBSpline(TestCase):
 

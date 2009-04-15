@@ -2,6 +2,7 @@ import numpy as np
 from scipy.stats import norm as Gaussian
 import norms
 
+
 def unsqueeze(data, axis, oldshape):
     """
     unsqueeze a collapsed array

@@ -1,8 +1,8 @@
+#!/usr/bin/env python
 from os.path import join
 import sys
 
-from neuroimaging import packages, __version__, __doc__
-
+from neuroimaging import  __version__, __doc__
 
 def configuration(parent_package='',top_path=None):
     from numpy.distutils.misc_util import Configuration
@@ -25,23 +25,17 @@ def configuration(parent_package='',top_path=None):
     return config
 
 
-def main(packages):
+def main():
     from numpy.distutils.core import setup
-    from neuroimaging.version import version
-    #packages = ['']+list(packages)
 
     setup( name = 'neuroimaging',
-           version = version, # will be overwritten by configuration version
            description = 'This is a neuroimaging python package',
            author = 'Various',
            author_email = 'nipy-devel@neuroimaging.scipy.org',
-           #ext_package = 'neuroimaging',
-           #packages=packages,
-           #package_dir = package_dir,
            url = 'http://neuroimaging.scipy.org',
            long_description = __doc__,
            configuration = configuration)
 
 
 if __name__ == "__main__":
-    main(packages)
+    main()
