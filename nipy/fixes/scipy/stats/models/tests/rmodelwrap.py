@@ -1,4 +1,3 @@
-#!/bin/env python
 ''' Wrapper for R models to allow comparison to scipy models '''
 
 import numpy as np
