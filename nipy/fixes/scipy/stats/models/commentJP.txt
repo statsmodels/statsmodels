@@ -1,0 +1,53 @@
+
+
+Design Questions
+----------------
+
+
+naming:
+  * unique class names: `Model`
+  * `getsomething`: indicates a return
+  * fit: use consistently as verb, not also as noun
+
+public classes that are iterators have non public methods
+  * proposal convert iterator to loop
+
+are all one linear methods necessary?
+
+interface:
+  * leave open to allow extension to arrays, masked, structured, record arrays
+	and formula
+  * need extra information, such as variable names for `print` (string return)
+	and plots
+
+formula:
+  *	design?
+	It's not clear to me what the benefits of current formula framework are.
+	It's pretty verbose. short hand notation?
+
+How to return results?
+  * result classes with largely common interface, or attached to estimator
+    class as properties, or a mixture of the two?
+  * residual analysis, separate or attached to estimator class
+    How much does residual analysis depend on specific properties of the
+    estimator? Check how much commonality.
+    example sandwich estimators
+  * test statistics in separate functions, so that they can also be used
+    without using the estimator class?
+  * presentation: return string for printing summary, plots. What is the best
+    pattern?
+
+Terminology (applies also to pymvpa)
+  * some is not familiar to me
+  * need glossary, translation to other commonly used statistical/econometrics
+    terms
+  * examples:
+    - contrast: is this just a test of linear restriction, tcontrast, fcontrast
+    - features: in pymvpa, are these always discrete random variables (ordinal
+      or categorical)?
+
+Use cases
+  * look at some introductory usage explanations in R, SAS, ..., text books
+    for example: "Econometrics with R" author?
+    This is obvious for basic results, but not for additional test statistics
+
