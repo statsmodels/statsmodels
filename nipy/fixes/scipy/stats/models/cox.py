@@ -102,8 +102,9 @@ class CoxPH(model.LikelihoodModel):
                 self.design[t] = d
             self.risk[t] = np.compress([s.atrisk(t) for s in self.subjects],
                                       np.arange(self.design[t].shape[0]),axis=-1)
-    def __del__(self):
-        shutil.rmtree(self.cachedir, ignore_errors=True)
+# this raises exception on exit
+#    def __del__(self):
+#        shutil.rmtree(self.cachedir, ignore_errors=True)
 
     def logL(self, b, ties='breslow'):
 
@@ -196,15 +197,16 @@ if __name__ == '__main__':
     Y = R.standard_exponential((2*n,)) / lin
     delta = R.binomial(1, 0.9, size=(2*n,))
 
-    subjects = [observation(Y[i], delta[i]) for i in range(2*n)]
+    subjects = [Observation(Y[i], delta[i]) for i in range(2*n)]
     for i in range(2*n):
         subjects[i].X = X[i]
 
     import nipy.fixes.scipy.stats.models.formula as F
-    x = F.quantitative('X')
-    f = F.formula(x)
+    x = F.Quantitative('X')
+    f = F.Formula(x)
 
-    c = coxph(subjects, f)
+    c = CoxPH(subjects, f)
 
     c.cache()
 #    c.newton([0.4])
+    #print dir(c)
