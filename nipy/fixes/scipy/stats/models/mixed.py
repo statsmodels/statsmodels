@@ -4,7 +4,9 @@ Mixed effects models
 
 import numpy as np
 import numpy.linalg as L
-from nipy.fixes.scipy.stats.models.formula import formula, I
+import nipy
+
+from nipy.fixes.scipy.stats.models.formula import Formula, I
 
 class Unit:
     """
@@ -150,9 +152,9 @@ class Mixed:
         self.units = units
         self.m = len(self.units)
 
-        self.fixed = formula(fixed)
-        self.random = formula(random)
-        self.response = formula(response)
+        self.fixed = Formula(fixed)
+        self.random = Formula(random)
+        self.response = Formula(response)
 
         self.N = 0
         for unit in self.units:
@@ -311,10 +313,10 @@ if __name__ == '__main__':
 
     n = 3
 
-    from nipy.fixes.scipy.stats.models.formula import term
-    fixed = term('f')
-    random = term('r')
-    response = term('y')
+    from nipy.fixes.scipy.stats.models.formula import Term
+    fixed = Term('f')
+    random = Term('r')
+    response = Term('y')
 
     for i in range(nsubj):
         d = R.standard_normal()
@@ -327,6 +329,9 @@ if __name__ == '__main__':
     m = Mixed(units, response, fixed, random)
     m.initialize()
     m.fit()
+    #print dir(m)
+    #print vars(m)
+
 
 
 
