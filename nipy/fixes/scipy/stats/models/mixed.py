@@ -8,7 +8,7 @@ import nipy
 
 from nipy.fixes.scipy.stats.models.formula import Formula, I
 
-class Unit:
+class Unit(object):
     """
     Individual experimental unit for
     EM implementation of (repeated measures)
@@ -132,7 +132,7 @@ class Unit:
     def deviance(self, ML=False):
         return - 2 * self.logL(ML=ML)
 
-class Mixed:
+class Mixed(object):
 
     """
     Model for
