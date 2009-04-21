@@ -91,11 +91,23 @@ cox
 * no tests, fixed capitalization, now runs
 * not used anywhere in nipy
 * uses tempfile in cache, needs testing whether it works correctly on Windows,
-  __del__ method has problems on shutdown
+  - currently not used, only build if method is directly called
+  - it works but it doesn't clean up on windows
+  - __del__ method has problems on shutdown, added try except
 * uses formula, can it be used without
+* survival.py has thin classes, used for Observation
+* cox is similar to mixed with heavy use of classes for each observation
 
 
+gam
+^^^
+ * no tests
+ * use _hbspline, running gam.py crashed before, is this fixed?
 
+smoother
+^^^^^^^^
+  * no tests, no examples to run
+  * uses _hbspline, need example to see if it crashes
 
 
 random notes
@@ -104,3 +116,6 @@ random notes
   * need ddof as keyword parameters for preprocessed data to get correct
     test statistics, e.g. if mean or group means are already removed.
     relevant eg. for ols, panel data, fixed effects
+  * tempfiles for cache: I just saw that django (BSD license) has a windows
+    compatible named temporary file class, that looks useful
+    http://code.djangoproject.com/browser/django/trunk/django/core/files/temp.py
