@@ -102,9 +102,13 @@ class CoxPH(model.LikelihoodModel):
                 self.design[t] = d
             self.risk[t] = np.compress([s.atrisk(t) for s in self.subjects],
                                       np.arange(self.design[t].shape[0]),axis=-1)
-# this raises exception on exit
-#    def __del__(self):
-#        shutil.rmtree(self.cachedir, ignore_errors=True)
+# this raised exception on exit,
+    def __del__(self):
+        try:
+            shutil.rmtree(self.cachedir, ignore_errors=True)
+        except AttributeError:
+            print "AttributeError: 'CoxPH' object has no attribute 'cachedir'"
+            pass
 
     def logL(self, b, ties='breslow'):
 
@@ -207,6 +211,12 @@ if __name__ == '__main__':
 
     c = CoxPH(subjects, f)
 
-    c.cache()
+    #c.cache()
+    # temp file cleanup doesn't work on windows
+    c = CoxPH(subjects, f, time_dependent=True)
+    #c.cache() #this creates  tempfile cache,
+    # no tempfile cache is created in normal use of CoxPH
+
+
 #    c.newton([0.4])
-    #print dir(c)
+    print dir(c)
