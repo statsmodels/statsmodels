@@ -37,12 +37,27 @@ How to return results?
   * presentation: return string for printing summary, plots. What is the best
     pattern?
 
+Algorithm
+  * treatment of unidentified models: singularity, multicollinearity,
+    user needs at least a warning
+    - linear: use of pinv for covariance matrix of parameter estimates
+      by default?
+    - non-linear: singular Hessian
+  * rescaling: optional, or is it done by linalg.leastsq?
+  * estimator classes: for later, least squares, iterative, maximum
+    likelihood, EM, generalized method of moments, robust
+    often equivalent, but also often there are differences in assumptions
+    and performance. How do we select which ones to use and how to give
+    user the option, different classes, optional keywords?
+
+
 Terminology (applies also to pymvpa)
   * some is not familiar to me
   * need glossary, translation to other commonly used statistical/econometrics
     terms
   * examples:
-    - contrast: is this just a test of linear restriction, tcontrast, fcontrast
+    - contrast: is this just a test of linear restriction, tcontrast, fcontrast;
+      relationship to dummy variables in linear regression
     - features: in pymvpa, are these always discrete random variables (ordinal
       or categorical)?
 
@@ -51,3 +66,41 @@ Use cases
     for example: "Econometrics with R" author?
     This is obvious for basic results, but not for additional test statistics
 
+
+Specific Models
+---------------
+
+mixed
+^^^^^
+* no tests, capitalization was wrong, fixed
+* uses formula, can it be used without
+* does repeated measures just mean: panel data with random effects and maybe
+  missing data?
+* not used in nipy
+* competing implementation in neurospin
+* it's pretty slow, creating a class for each unit is pretty "heavy",
+  can this be rewritten using arrays of numbers?
+* lower priority since it's not used and I'm not familiar with this
+* to cover a similar case, I would like a panel data model class with
+  fixed and random effects and OLS or (reduced?) Maximum Likelihood
+  estimators. What's the difference to EM algorithm, generality, correlation
+  structure and so on?
+
+cox
+^^^
+* no tests, fixed capitalization, now runs
+* not used anywhere in nipy
+* uses tempfile in cache, needs testing whether it works correctly on Windows,
+  __del__ method has problems on shutdown
+* uses formula, can it be used without
+
+
+
+
+
+random notes
+------------
+
+  * need ddof as keyword parameters for preprocessed data to get correct
+    test statistics, e.g. if mean or group means are already removed.
+    relevant eg. for ols, panel data, fixed effects
