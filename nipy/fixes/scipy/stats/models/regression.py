@@ -155,7 +155,7 @@ def read_design(desfile, delimiter=',', try_integer=True):
 
     if type(desfile) == type("string"):
         desfile = file(desfile)
-	_reader = reader(desfile, delimiter=delimiter)
+        _reader = reader(desfile, delimiter=delimiter)
     else:
         _reader = iter(desfile)
     colnames = _reader.next()
