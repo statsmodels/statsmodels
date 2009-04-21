@@ -102,13 +102,18 @@ cox
 gam
 ^^^
  * no tests
- * use _hbspline, running gam.py crashed before, is this fixed?
+ * use _hbspline, running gam.py crashed before, is this fixed? No
 
 smoother
 ^^^^^^^^
   * no tests, no examples to run
   * uses _hbspline, need example to see if it crashes
 
+
+bspline
+^^^^^^^
+  * still segfaults, e.g.
+    >>> execfile(r'C:\pathto\nipy\fixes\scipy\stats\models\gam.py')
 
 random notes
 ------------
