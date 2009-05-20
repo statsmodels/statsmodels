@@ -8,6 +8,10 @@ Generalized additive models
 # TODO: check/catalogue required interface of a smoother
 # TODO: replace default smoother by corresponding function to initialize
 #       other smoothers
+# TODO: fix iteration, don't define class with iterator methods, use looping;
+#       add maximum iteration and other optional stop criteria
+# fixed some of the dimension problems in PolySmoother,
+#       now graph for example looks good
 
 import numpy as np
 
@@ -106,16 +110,16 @@ class AdditiveModel(object):
             offset[i] = -(tmp2*self.weights).sum() / self.weights.sum()
             mu += tmp2 - tmp
 
-        print self.iter
+        #print self.iter
         #self.iter += 1 #missing incrementing of iter counter NOT
         return Results(Y, alpha, self.design, self.smoothers, self.family, offset)
 
     def cont(self, tol=1.0e-04):
-        self.iter += 1 #moved here to always count
-        print self.iter
+        self.iter += 1 #moved here to always count, not necessary
+        print self.iter,
         curdev = (((self.results.Y - self.results.predict(self.design))**2) * self.weights).sum()
 
-        if self.iter > 2: #kill it, no max iterationoption
+        if self.iter > 30: #kill it, no max iterationoption
             return False
         if np.fabs((self.dev - curdev) / curdev) < tol:
             self.dev = curdev
@@ -132,7 +136,7 @@ class AdditiveModel(object):
         return ((self.results.Y - self.results(self.design))**2).sum() / self.df_resid()
 
     def fit(self, Y):
-        iter(self)
+        iter(self)  # what does this do? anything?
         mu = 0
         alpha = (Y * self.weights).sum() / self.weights.sum()
 
@@ -211,10 +215,11 @@ class Model(GLM, AdditiveModel):
 
 #def _run():
 if __name__ == "__main__":
-    example = 1
+    # convert to script for testing, so we get interactive variable access
+    example = 1  # 1,2 or 3
     import numpy.random as R
 
-
+    # n is not a good name for a function, use normalize or something
     n = lambda x: (x - x.mean()) / x.std()
     n_ = lambda x: (x - x.mean())
     x1 = R.standard_normal(500)
@@ -231,7 +236,7 @@ if __name__ == "__main__":
     y += z
     d = np.array([x1,x2]).T
     if example == 1:
-        print "norma"
+        print "normal"
         m = AdditiveModel(d)
         m.fit(y)
         x = np.linspace(-2,2,50)
@@ -251,13 +256,9 @@ if __name__ == "__main__":
         tic = time.time()
         print tic-toc
 
-    import pylab
-    pylab.figure(num=1)
-    pylab.plot(x1, n(m.smoothers[0](x1)), 'r'); pylab.plot(x1, n(f1(x1)), linewidth=2)
-    pylab.figure(num=2)
-    pylab.plot(x2, n(m.smoothers[1](x2)), 'r'); pylab.plot(x2, n(f2(x2)), linewidth=2);
 
     if example == 3:
+        print "Poisson"
         f = family.Poisson()
         p = np.asarray([scipy.stats.poisson.rvs(p) for p in f.link.inverse(y)])
         p.shape = y.shape
@@ -267,6 +268,14 @@ if __name__ == "__main__":
         tic = time.time()
         print tic-toc
 
+    import matplotlib.pyplot as plt
+    plt.figure(num=1)
+    plt.plot(x1, n(m.smoothers[0](x1)), 'r')
+    plt.plot(x1, n(f1(x1)), linewidth=2)
+    plt.figure(num=2)
+    plt.plot(x2, n(m.smoothers[1](x2)), 'r')
+    plt.plot(x2, n(f2(x2)), linewidth=2);
+    plt.show()
 ##     pylab.figure(num=1)
 ##     pylab.plot(x1, n(m.smoothers[0](x1)), 'b'); pylab.plot(x1, n(f1(x1)), linewidth=2)
 ##     pylab.figure(num=2)

@@ -64,13 +64,16 @@ class PolySmoother(object):
             X = np.array([(x**i) for i in range(self.order+1)])
         else: X = self.X
         #return np.squeeze(np.dot(X.T, self.coef))
+        #need to check what dimension this is supposed to be
         if X.shape[1] == self.coef.shape[0]:
-            return np.squeeze(np.dot(X, self.coef))
+            return np.squeeze(np.dot(X, self.coef))#[0]
         else:
-            return np.squeeze(np.dot(X.T, self.coef))
+            return np.squeeze(np.dot(X.T, self.coef))#[0]
 
     def fit(self, y, x=None, weights=None):
         self.N = y.shape[0]
+        if y.ndim == 1:
+            y = y[:,None]
         if weights is None or np.isnan(weights).all():
             weights = 1
             _w = 1
@@ -81,14 +84,15 @@ class PolySmoother(object):
                 raise ValueError, "x needed to fit PolySmoother"
         else:
             if x.ndim > 1: x=x[0,:]
-            self.X = np.array([(x**i) for i in range(self.order+1)])
+            self.X = np.array([(x**i) for i in range(self.order+1)]).T
         #print _w.shape
 
         X = self.X * _w
 
         _y = y * _w#[:,None]
         #self.coef = np.dot(L.pinv(X).T, _y[:,None])
-        self.coef = np.dot(L.pinv(X), _y)
+        #self.coef = np.dot(L.pinv(X), _y)
+        self.coef = L.lstsq(X, _y)[0]
 
 class SmoothingSpline(BSpline):
 
