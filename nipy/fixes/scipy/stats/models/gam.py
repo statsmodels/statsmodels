@@ -3,10 +3,17 @@ Generalized additive models
 
 """
 
+# JP:
+# changes: use PolySmoother instead of crashing bspline
+# TODO: check/catalogue required interface of a smoother
+# TODO: replace default smoother by corresponding function to initialize
+#       other smoothers
+
 import numpy as np
 
 from nipy.fixes.scipy.stats.models import family
-from nipy.fixes.scipy.stats.models.bspline import SmoothingSpline
+#from nipy.fixes.scipy.stats.models.bspline import SmoothingSpline
+from nipy.fixes.scipy.stats.models.smoothers import PolySmoother as SmoothingSpline
 from nipy.fixes.scipy.stats.models.glm import Model as GLM
 
 def default_smoother(x):
@@ -71,7 +78,7 @@ class AdditiveModel(object):
 
     def __init__(self, design, smoothers=None, weights=None):
         self.design = design
-        if weights is not None:
+        if not weights is None:
             self.weights = weights
         else:
             self.weights = np.ones(self.design.shape[0])
@@ -99,17 +106,22 @@ class AdditiveModel(object):
             offset[i] = -(tmp2*self.weights).sum() / self.weights.sum()
             mu += tmp2 - tmp
 
-        return results(Y, alpha, self.design, self.smoothers, self.family, offset)
+        print self.iter
+        #self.iter += 1 #missing incrementing of iter counter NOT
+        return Results(Y, alpha, self.design, self.smoothers, self.family, offset)
 
     def cont(self, tol=1.0e-04):
-
+        self.iter += 1 #moved here to always count
+        print self.iter
         curdev = (((self.results.Y - self.results.predict(self.design))**2) * self.weights).sum()
 
+        if self.iter > 2: #kill it, no max iterationoption
+            return False
         if np.fabs((self.dev - curdev) / curdev) < tol:
             self.dev = curdev
             return False
 
-        self.iter += 1
+        #self.iter += 1
         self.dev = curdev
         return True
 
@@ -134,7 +146,7 @@ class AdditiveModel(object):
             tmp -= tmp.sum()
             mu += tmp
 
-        self.results = results(Y, alpha, self.design, self.smoothers, self.family, offset)
+        self.results = Results(Y, alpha, self.design, self.smoothers, self.family, offset)
 
         while self.cont():
             self.results = self.next()
@@ -143,7 +155,7 @@ class AdditiveModel(object):
 
 class Model(GLM, AdditiveModel):
 
-    niter = 10
+    niter = 2
 
     def __init__(self, design, smoothers=None, family=family.Gaussian()):
         GLM.__init__(self, design, family=family)
@@ -152,8 +164,12 @@ class Model(GLM, AdditiveModel):
 
     def next(self):
         _results = self.results; Y = _results.Y
+        if np.isnan(self.weights).all(): print "nanweights1"
         _results.mu = self.family.link.inverse(_results.predict(self.design))
-        self.weights = self.family.weights(_results.mu)
+        weights = self.family.weights(_results.mu)
+        if np.isnan(weights).all():
+            self.weights = weights
+            print "nanweights2"
         Z = _results.predict(self.design) + self.family.link.deriv(_results.mu) * (Y - _results.mu)
         m = AdditiveModel(self.design, smoothers=self.smoothers, weights=self.weights)
         _results = m.fit(Z)
@@ -193,8 +209,12 @@ class Model(GLM, AdditiveModel):
         return self.results
 
 
-def _run():
+#def _run():
+if __name__ == "__main__":
+    example = 1
     import numpy.random as R
+
+
     n = lambda x: (x - x.mean()) / x.std()
     n_ = lambda x: (x - x.mean())
     x1 = R.standard_normal(500)
@@ -202,6 +222,7 @@ def _run():
     x2 = R.standard_normal(500)
     x2.sort()
     y = R.standard_normal((500,))
+
     f1 = lambda x1: (x1 + x1**2 - 3 - 1.5 * x1**3 + np.exp(-x1))
     f2 = lambda x2: (x2 + x2**2 - np.exp(x2))
     z = n(f1(x1)) + n(f2(x2))
@@ -209,34 +230,43 @@ def _run():
 
     y += z
     d = np.array([x1,x2]).T
-    m = AdditiveModel(d)
-    m.fit(y)
-    x = np.linspace(-2,2,50)
+    if example == 1:
+        print "norma"
+        m = AdditiveModel(d)
+        m.fit(y)
+        x = np.linspace(-2,2,50)
+
+        print m
 
     import scipy.stats, time
 
-    f = family.Binomial()
-    b = np.asarray([scipy.stats.bernoulli.rvs(p) for p in f.link.inverse(y)])
-    b.shape = y.shape
-    m = model(d, family=f)
-    toc = time.time()
-    m.fit(b)
-    tic = time.time()
-##     import pylab
-##     pylab.figure(num=1)
-##     pylab.plot(x1, n(m.smoothers[0](x1)), 'r'); pylab.plot(x1, n(f1(x1)), linewidth=2)
-##     pylab.figure(num=2)
-##     pylab.plot(x2, n(m.smoothers[1](x2)), 'r'); pylab.plot(x2, n(f2(x2)), linewidth=2);
-    print tic-toc
+    if example == 2:
+        print "binomial"
+        f = family.Binomial()
+        b = np.asarray([scipy.stats.bernoulli.rvs(p) for p in f.link.inverse(y)])
+        b.shape = y.shape
+        m = Model(d, family=f)
+        toc = time.time()
+        m.fit(b)
+        tic = time.time()
+        print tic-toc
 
-    f = family.Poisson()
-    p = np.asarray([scipy.stats.poisson.rvs(p) for p in f.link.inverse(y)])
-    p.shape = y.shape
-    m = model(d, family=f)
-    toc = time.time()
-    m.fit(p)
-    tic = time.time()
-    print tic-toc
+    import pylab
+    pylab.figure(num=1)
+    pylab.plot(x1, n(m.smoothers[0](x1)), 'r'); pylab.plot(x1, n(f1(x1)), linewidth=2)
+    pylab.figure(num=2)
+    pylab.plot(x2, n(m.smoothers[1](x2)), 'r'); pylab.plot(x2, n(f2(x2)), linewidth=2);
+
+    if example == 3:
+        f = family.Poisson()
+        p = np.asarray([scipy.stats.poisson.rvs(p) for p in f.link.inverse(y)])
+        p.shape = y.shape
+        m = Model(d, family=f)
+        toc = time.time()
+        m.fit(p)
+        tic = time.time()
+        print tic-toc
+
 ##     pylab.figure(num=1)
 ##     pylab.plot(x1, n(m.smoothers[0](x1)), 'b'); pylab.plot(x1, n(f1(x1)), linewidth=2)
 ##     pylab.figure(num=2)
@@ -244,5 +274,5 @@ def _run():
 ##     pylab.show()
 
 
-if __name__ == "__main__":
-    _run()
+#if __name__ == "__main__":
+#    _run()

@@ -102,7 +102,21 @@ cox
 gam
 ^^^
  * no tests
- * use _hbspline, running gam.py crashed before, is this fixed? No
+ * use _hbspline, running gam.py crashed before, is this fixed? No.
+ * make it more general (if it is not yet), to work with any non parametric
+   regression not just splines, see notes on bspline
+ * references: Hastie, Tibshirani (1986), Friedman, Hastie, Tibshirani (2001)
+   Oliver Linton (with Haerdle?), Horowitz?,
+      David Ruppert, M. P.Wand, R. J. Carroll (2003)?
+      Rasmussen, Williams (2006): Gaussian Processes for Machine Learning
+ * quickfix to see if gam can be run with other smoothers
+   - replace call to smoothingspline with call to polysmoother, currently
+     messed up but it runs without exception and crash.
+   - needs a lot of bugfixing, now that gam itself is running without the
+     crashing bsplines
+
+
+
 
 smoother
 ^^^^^^^^
@@ -114,6 +128,16 @@ bspline
 ^^^^^^^
   * still segfaults, e.g.
     >>> execfile(r'C:\pathto\nipy\fixes\scipy\stats\models\gam.py')
+  * bspline is too hard to fix and maintain,
+    can bspline_ext.c be replaced by a cython wrapper to bspline_impl.c?
+    or rewrite everything in cython?
+  * What's the reference? Searching for b-spline regression doesn't yield
+    much. I found some references in GAM models
+    Is this a popular and useful method compared for example to using
+    kernel trick as in kernel (ridge) regression or gaussian processes.
+  * What are the alternatives for use in generalized additive models?
+    can scipy.interpolate (fitpack) be used instead?
+
 
 random notes
 ------------

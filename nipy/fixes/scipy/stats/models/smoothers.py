@@ -19,12 +19,27 @@ class PolySmoother(object):
 
     The x values can be specified at instantiation or when called.
     """
+    #JP: heavily adjusted to work as plugin replacement for bspline
+    #   smoother in gam.py  initalized by function default_smoother
+    #   Only fixed exceptions, I didn't check whether it is statistically
+    #   correctand I think it is not, there are still be some dimension
+    #   problems, and there were some dimension problems initially.
+    # TODO: undo adjustments and fix dimensions correctly
+    # comment: this is just like polyfit with initialization options
+    #          and additional results (OLS on polynomial of x (x is 1d?))
+
 
     def df_fit(self):
         """
         Degrees of freedom used in the fit.
         """
         return self.order + 1
+
+    def gram(self, d=None):
+        #fake for spline imitation
+        pass
+    def smooth(self,*args, **kwds):
+        return self.fit(*args, **kwds)
 
     def df_resid(self):
         """
@@ -33,32 +48,47 @@ class PolySmoother(object):
         return self.N - self.order - 1
 
     def __init__(self, order, x=None):
+        order = 3 # set this because we get knots instead of order
         self.order = order
+
+        #print order, x.shape
         self.coef = np.zeros((order+1,), np.float64)
         if x is not None:
+            if x.ndim > 1: x=x[0,:]
             self.X = np.array([x**i for i in range(order+1)]).T
 
     def __call__(self, x=None):
+
         if x is not None:
+            if x.ndim > 1: x=x[0,:]
             X = np.array([(x**i) for i in range(self.order+1)])
         else: X = self.X
-        return np.squeeze(np.dot(X.T, self.coef))
+        #return np.squeeze(np.dot(X.T, self.coef))
+        if X.shape[1] == self.coef.shape[0]:
+            return np.squeeze(np.dot(X, self.coef))
+        else:
+            return np.squeeze(np.dot(X.T, self.coef))
 
     def fit(self, y, x=None, weights=None):
         self.N = y.shape[0]
-        if weights is None:
+        if weights is None or np.isnan(weights).all():
             weights = 1
-        _w = np.sqrt(weights)
+            _w = 1
+        else:
+            _w = np.sqrt(weights)[:,None]
         if x is None:
             if not hasattr(self, "X"):
                 raise ValueError, "x needed to fit PolySmoother"
         else:
+            if x.ndim > 1: x=x[0,:]
             self.X = np.array([(x**i) for i in range(self.order+1)])
+        #print _w.shape
 
         X = self.X * _w
 
-        _y = y * _w
-        self.coef = np.dot(L.pinv(X).T, _y)
+        _y = y * _w#[:,None]
+        #self.coef = np.dot(L.pinv(X).T, _y[:,None])
+        self.coef = np.dot(L.pinv(X), _y)
 
 class SmoothingSpline(BSpline):
 
