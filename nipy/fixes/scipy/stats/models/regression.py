@@ -409,12 +409,26 @@ class RegressionResults(LikelihoodModelResults):
         Residuals, normalized to have unit length.
 
         Note: residuals are whitened residuals.
+
+        Notes
+        -----
+        Is this supposed to return "stanardized residuals," residuals standardized
+        to have mean zero and approximately unit variance?
+
+        d_i = e_i/sqrt(MS_E)
+
+        Where MS_E = SSE/(n - k)
+
+        See: Montgomery and Peck 3.2.1 p. 68
+             Davidson and MacKinnon 15.2 p 662
+
         """
         if not hasattr(self, 'resid'):
             raise ValueError, 'need normalized residuals to estimate standard deviation'
 
-        sdd = utils.recipr(self.sd) / np.sqrt(self.df)
-        return  self.resid * np.multiply.outer(np.ones(self.Y.shape[0]), sdd)
+#        sdd = utils.recipr(self.sd) / np.sqrt(self.df)
+#        return  self.resid * np.multiply.outer(np.ones(self.Y.shape[0]), sdd)
+        return self.resid * utils.recipr(np.sqrt(self.scale))
 
 
     def predictors(self, design):
@@ -426,11 +440,18 @@ class RegressionResults(LikelihoodModelResults):
     def Rsq(self, adjusted=False):
         """
         Return the R^2 value for each row of the response Y.
+
+        Notes
+        -----
+        Changed to the textbook definition of R^2.
+
+        See: Davidson and MacKinnon p 74
         """
         self.Ssq = np.std(self.Z,axis=0)**2
         ratio = self.scale / self.Ssq
         if not adjusted: ratio *= ((self.Y.shape[0] - 1) / self.df_resid)
-        return 1 - ratio
+#        return 1 - ratio
+        return 1 - np.add.reduce(self.resid**2)/np.add.reduce((self.Z-self.Z.mean())**2)
 
 
 class GLSModel(OLSModel):
