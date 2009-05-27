@@ -57,10 +57,27 @@ def test_longley():
                    455.478499142212)
     x = np.hstack((np.ones((len(x), 1)), x))  # A constant is not added by default
     res = SSM.regression.OLSModel(x).fit(y)
-    nptest.assert_almost_equal(res.beta, nist_long, 5)
+    nptest.assert_almost_equal(res.beta, nist_long, 4)
     nptest.assert_almost_equal(np.diag(np.sqrt(res.cov_beta())),nist_long_bse)
-    nptest.assert_almost_equal(res.scale, 92936.0061673238, 9)
-    nptest.assert_almost_equal(res.Rsq(), 0.995479004577296, 15)
+    nptest.assert_almost_equal(res.scale, 92936.0061673238, 6)
+    nptest.assert_almost_equal(res.Rsq(), 0.995479004577296, 12)
+
+def test_wampler():
+    nist_wamp1=(1.00000000000000,1.00000000000000,1.00000000000000,
+                1.00000000000000,1.00000000000000,1.00000000000000)
+    x=np.arange(21,dtype=float)[:,np.newaxis]
+    p=np.poly1d([1,1,1,1,1,1])
+    y=np.polyval(p,x).reshape(len(x))
+    x=np.hstack((np.ones((len(x), 1)), x, x**2, x**3, x**4, x**5))
+    res = SSM.regression.OLSModel(x).fit(y)
+    nptest.assert_almost_equal(res.beta,nist_wamp1)
+##  include next three wampler sets
+
+##  the precision appears to be machine specific,
+##      so default to 4 decimal places
+##  check scipy test suite
+
+
 
 if __name__=="__main__":
     nptest.run_module_suite()
