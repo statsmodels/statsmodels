@@ -88,22 +88,27 @@ class OLSModel(LikelihoodModel):
                                          np.transpose(self.calc_beta))
         self.df_resid = self.wdesign.shape[0] - utils.rank(self.design)
 
+#   Note: why have a function that doesn't do anything?
+#   Could this be replaced with the sandwich estimator?
     def whiten(self, Y):
         """
         OLS model whitener does nothing: returns Y.
         """
         return Y
 
-    def est_coef(self, Y):
-        """
-        Estimate coefficients using lstsq, returning fitted values, Y
-        and coefficients, but initialize is not called so no
-        psuedo-inverse is calculated.
-        """
-        Z = self.whiten(Y)
-
-        lfit = RegressionResults(np.linalg.lstsq(self.wdesign, Z)[0], Y)
-        lfit.predict = np.dot(self.design, lfit.beta)
+#   Note: doesn't look to be finished or currently usablei
+#         unless I am missing something (eg., *how* to use it)
+#         is this needed?
+#    def est_coef(self, Y):
+#        """
+#        Estimate coefficients using lstsq, returning fitted values, Y
+#        and coefficients, but initialize is not called so no
+#        psuedo-inverse is calculated.
+#        """
+#        Z = self.whiten(Y)
+#
+#        lfit = RegressionResults(np.linalg.lstsq(self.wdesign, Z)[0], Y)
+#        lfit.predict = np.dot(self.design, lfit.beta)
 
 
     def fit(self, Y):
@@ -397,12 +402,31 @@ class RegressionResults(LikelihoodModelResults):
 
     It handles the output of contrasts, estimates of covariance, etc.
     """
-
+# the init should contain all results needed in the other methods here
+# and the expected "results" from running a fit
     def __init__(self, beta, Y, normalized_cov_beta=None, scale=1.):
         super(RegressionResults, self).__init__(beta,
                                                  normalized_cov_beta,
                                                  scale)
+#Note: are the supers absolutely necessary? ping the tutors list?
         self.Y = Y
+# should these go in the Model.py to be reused?
+        self.ESS = np.add.reduce((self.predict-self.Y.mean())**2)
+        self.uTSS = np.add.reduce(self.Z**2)
+        self.SSR = np.add.reduce(self.resid**2)
+        self.cTSS = np.add.reduce(self.Z-self.Z.mean())**2)
+        self.cSSR = np.add.reduce((self.resid-self.Z.resid())**2)
+# Centered R2 for models with intercepts (as R does)
+#        if hascons = True
+        self.rsq = 1 - self.SSR/self.cTSS
+#        else:
+# Uncentered R2 for models without intercepts.
+#        self.rsq = 1 - self.SSR/self.uTSS
+# R2 is uncentered like this, consider centered R2
+        self.adjrsq = None
+        self.MSM = None # model mean squared?
+        self.MSE = None # mean squared error
+
 
     def norm_resid(self):
         """
@@ -430,28 +454,30 @@ class RegressionResults(LikelihoodModelResults):
 #        return  self.resid * np.multiply.outer(np.ones(self.Y.shape[0]), sdd)
         return self.resid * utils.recipr(np.sqrt(self.scale))
 
-
+# predict is a verb
+# do the predicted values need to be done automatically, then?
+# or should you give a predict method similar to STATA
     def predictors(self, design):
         """
         Return linear predictor values from a design matrix.
         """
         return np.dot(design, self.beta)
 
-    def Rsq(self, adjusted=False):
-        """
-        Return the R^2 value for each row of the response Y.
-
-        Notes
-        -----
-        Changed to the textbook definition of R^2.
-
-        See: Davidson and MacKinnon p 74
-        """
-        self.Ssq = np.std(self.Z,axis=0)**2
-        ratio = self.scale / self.Ssq
-        if not adjusted: ratio *= ((self.Y.shape[0] - 1) / self.df_resid)
+#    def Rsq(self, adjusted=False):
+#        """
+#        Return the R^2 value for each row of the response Y.
+#
+#        Notes
+#        -----
+#        Changed to the textbook definition of R^2.
+#
+#        See: Davidson and MacKinnon p 74
+#        """
+#        self.Ssq = np.std(self.Z,axis=0)**2
+#        ratio = self.scale / self.Ssq
+#        if not adjusted: ratio *= ((self.Y.shape[0] - 1) / self.df_resid)
 #        return 1 - ratio
-        return 1 - np.add.reduce(self.resid**2)/np.add.reduce((self.Z-self.Z.mean())**2)
+#        return 1 - np.add.reduce(self.resid**2)/np.add.reduce((self.Z-self.Z.mean())**2)
 
 
 class GLSModel(OLSModel):
@@ -476,6 +502,7 @@ def isestimable(C, D):
     From an q x p contrast matrix C and an n x p design matrix D, checks
     if the contrast C is estimable by looking at the rank of vstack([C,D]) and
     verifying it is the same as the rank of D.
+
     """
     if C.ndim == 1:
         C.shape = (C.shape[0], 1)
