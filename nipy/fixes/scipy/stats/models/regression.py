@@ -28,6 +28,8 @@ from nipy.fixes.scipy.stats.models.model import LikelihoodModel, \
      LikelihoodModelResults
 from nipy.fixes.scipy.stats.models import utils
 
+from scipy import stats
+
 class OLSModel(LikelihoodModel):
     """
     A simple ordinary least squares model.
@@ -68,7 +70,8 @@ class OLSModel(LikelihoodModel):
             design : TODO
                 TODO
         """
-        super(OLSModel, self).__init__()
+#        super(OLSModel, self).__init__()
+# why not just put the initialized attributes here?
         self.initialize(design)
 
     def initialize(self, design):
@@ -87,16 +90,20 @@ class OLSModel(LikelihoodModel):
         self.normalized_cov_beta = np.dot(self.calc_beta,
                                          np.transpose(self.calc_beta))
         self.df_resid = self.wdesign.shape[0] - utils.rank(self.design)
+        #        if hascons = True:
+        self.df_model = utils.rank(self.design)-1
+#        else:
+#            self.df_model = utils.rank(self.design)
 
 #   Note: why have a function that doesn't do anything?
-#   Could this be replaced with the sandwich estimator?
+#   Could this be replaced with the sandwich estimators?
     def whiten(self, Y):
         """
         OLS model whitener does nothing: returns Y.
         """
         return Y
 
-#   Note: doesn't look to be finished or currently usablei
+#   Note: doesn't look to be finished or currently usable
 #         unless I am missing something (eg., *how* to use it)
 #         is this needed?
 #    def est_coef(self, Y):
@@ -121,13 +128,35 @@ class OLSModel(LikelihoodModel):
 
         lfit = RegressionResults(np.dot(self.calc_beta, Z), Y,
                        normalized_cov_beta=self.normalized_cov_beta)
-
-        lfit.df_resid = self.df_resid
         lfit.predict = np.dot(self.design, lfit.beta)
         lfit.resid = Z - np.dot(self.wdesign, lfit.beta)
-        lfit.scale = np.add.reduce(lfit.resid**2) / lfit.df_resid
+        lfit.scale = np.add.reduce(lfit.resid**2) / self.df_resid
+        lfit.df_resid = self.df_resid
+        lfit.df_model = self.df_model
 
         lfit.Z = Z
+# presumably these will be reused somewhere, so this might not be the right place for them
+
+        lfit.ESS = np.add.reduce((lfit.predict - lfit.Z.mean())**2)
+#        lfit.ESS = stats.sum_of_square(self.predict-self.Y.mean())
+        lfit.uTSS = np.add.reduce(lfit.Z**2)
+        lfit.uSSR = np.add.reduce(lfit.resid**2)
+        lfit.cTSS = np.add.reduce((lfit.Z-lfit.Z.mean())**2)
+        lfit.SSR = np.add.reduce((lfit.resid)**2)
+
+# Centered R2 for models with intercepts (as R does)
+#        if hascons = True
+        lfit.Rsq = 1 - lfit.SSR/lfit.cTSS                       # tested
+#        else:
+# Uncentered R2 for models without intercepts.
+#        self.Rsq = 1 - self.SSR/self.uTSS
+# R2 is uncentered like this, consider centered R2
+        lfit.adjrsq = None
+        lfit.MSE_model = lfit.ESS/lfit.df_model                 # tested
+        lfit.MSE_resid = lfit.uSSR/lfit.df_resid                # tested
+        lfit.MSE_total = lfit.uTSS/(lfit.df_model+lfit.df_resid)
+        lfit.F = lfit.MSE_model/lfit.MSE_resid                  # tested
+        lfit.F_p = stats.f.pdf(lfit.F, lfit.df_model, lfit.df_resid)
 
         return lfit
 
@@ -410,22 +439,6 @@ class RegressionResults(LikelihoodModelResults):
                                                  scale)
 #Note: are the supers absolutely necessary? ping the tutors list?
         self.Y = Y
-# should these go in the Model.py to be reused?
-        self.ESS = np.add.reduce((self.predict-self.Y.mean())**2)
-        self.uTSS = np.add.reduce(self.Z**2)
-        self.SSR = np.add.reduce(self.resid**2)
-        self.cTSS = np.add.reduce(self.Z-self.Z.mean())**2)
-        self.cSSR = np.add.reduce((self.resid-self.Z.resid())**2)
-# Centered R2 for models with intercepts (as R does)
-#        if hascons = True
-        self.rsq = 1 - self.SSR/self.cTSS
-#        else:
-# Uncentered R2 for models without intercepts.
-#        self.rsq = 1 - self.SSR/self.uTSS
-# R2 is uncentered like this, consider centered R2
-        self.adjrsq = None
-        self.MSM = None # model mean squared?
-        self.MSE = None # mean squared error
 
 
     def norm_resid(self):
