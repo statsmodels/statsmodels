@@ -2,6 +2,8 @@ import numpy as np
 from numpy.linalg import inv
 #from scipy import optimize
 
+from scipy.stats import t
+
 from nipy.fixes.scipy.stats.models.contrast import ContrastResults
 from nipy.fixes.scipy.stats.models.utils import recipr
 
@@ -190,3 +192,46 @@ class LikelihoodModelResults(object):
             invcov = inv(self.cov_beta(matrix=matrix, scale=1.0))
         F = np.add.reduce(np.dot(invcov, cbeta) * cbeta, 0) * recipr((q * self.scale))
         return ContrastResults(F=F, df_denom=self.df_resid, df_num=invcov.shape[0])
+
+    def conf_int(self, alpha=.05, columns="all"):
+        '''
+        Returns the confidence interval of the specified beta estimates.
+
+        Parameters
+        ----------
+        alpha : float, optional
+            The `alpha` level for the confidence interval.
+            ie., `alpha` = .05 returns a 95% confidence interval.
+        columns : string or array-like, optional
+            `columns` specifies which confidence intervals to return
+
+        Returns : array
+            Each item contains [lower, upper]
+
+
+        Notes
+        -----
+        TODO:
+        tails : string, optional
+            `tails` can be "two", "upper", or "lower"
+        '''
+        if columns == "all":
+            lower = self.beta - t.ppf(1-alpha/2,self.df_resid) *\
+                    np.diag(np.sqrt(self.cov_beta()))
+            upper = self.beta + t.ppf(1-alpha/2,self.df_resid) *\
+                    np.diag(np.sqrt(self.cov_beta()))
+        elif ':' in str(columns):
+            lower = self.beta[columns] - t.ppf(1-alpha/2,self.df_resid) *\
+                    np.diag(np.sqrt(self.cov_beta()))
+            upper = self.beta[columns] + t.ppf(1-alpha/2,self.df_resid) *\
+                    np.diag(np.sqrt(self.cov_beta()))
+        elif ',' in str(columns):
+            lower=[]
+            upper=[]
+            for i in columns.split(','):
+                lower.append(self.beta[i] - t.ppf(1-alpha/2,self.df_resid) *\
+                    np.diag(np.sqrt(self.cov_beta())))
+                upper.append(self.beta[i] + t.ppf(1-alpha/2,self.df_resid) *\
+                    np.diag(np.sqrt(self.cov_beta())))
+        return np.asarray(zip(lower,upper))
+

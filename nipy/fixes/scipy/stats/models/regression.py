@@ -31,194 +31,6 @@ from nipy.fixes.scipy.stats.models import utils
 from scipy import stats
 from scipy.stats.stats import ss
 
-#How to document a class?
-#Docs are a little vague and there are no good examples
-#Some of these attributes are most likely intended to be private I imagine
-class OLSModel(LikelihoodModel):
-    """
-    A simple ordinary least squares model.
-
-    Parameters
-    ----------
-
-        `design`: array-like
-            This is your design matrix.  Data are assumed to be column ordered
-            with observations in rows.
-
-        `hascons`: boolean
-            A  whether or not your data already contains a constant.
-            By default hascons = True (this is so not to break the current
-            behavior with the Formula framework).
-
-    Methods
-    -------
-
-    model.logL(b=self.beta, Y)
-        Returns the log-likelihood of the parameter estimates
-
-        Parameters
-        ----------
-
-        b : array-like
-            `b` is an array of parameter estimates the log-likelihood of which
-            is to be tested.
-
-        Y : array-like
-            `Y` is the vector of dependent variables.
-
-    model.__init___(design, hascons=True)
-        Creates a `OLSModel` from a design.
-
-    Attributes
-    ----------
-
-    design : ndarray
-        This is the design, or X, matrix.
-
-    wdesign : ndarray
-        This is the whitened design matrix.
-        design = wdesign by default for the OLSModel, though models that
-        inherit from the OLSModel will whiten the design.
-
-    calc_beta : ndarray
-        This is the Moore-Penrose pseudoinverse of the whitened design matrix.
-
-    nomralized_cov_beta : ndarray
-        np.dot(calc_beta, calc_beta.T)
-
-    df_resid : integer
-        Degrees of freedom of the residuals.
-        Number of observations less the rank of the design.
-
-    df_model : integer
-        Degres of freedome of the model.
-        The rank of the design.
-
-    Examples
-    --------
-    >>> import numpy as N
-    >>>
-    >>> from nipy.fixes.scipy.stats.models.formula import Term, I
-    >>> from nipy.fixes.scipy.stats.models.regression import OLSModel
-    >>>
-    >>> data={'Y':[1,3,4,5,2,3,4],
-    ...       'X':range(1,8)}
-    >>> f = term("X") + I
-    >>> f.namespace = data
-    >>>
-    >>> model = OLSModel(f.design())
-    >>> results = model.fit(data['Y'])
-    >>>
-    >>> results.beta
-    array([ 0.25      ,  2.14285714])
-    >>> results.t()
-    array([ 0.98019606,  1.87867287])
-    >>> print results.Tcontrast([0,1])
-    <T contrast: effect=2.14285714286, sd=1.14062281591, t=1.87867287326, df_denom=5>
-    >>> print results.Fcontrast(np.identity(2))
-    <F contrast: F=19.4607843137, df_denom=5, df_num=2>
-    """
-
-    def logL(self, b, Y):
-# Note this doesn't look right.
-        return -norm(self.whiten(Y) - np.dot(self.wdesign, b))**2 / 2.
-
-    def __init__(self, design, hascons=True):
-        """
-        Create an `OLSModel` from a design.
-
-        :Parameters:
-            design : TODO
-                TODO
-        """
-#        super(OLSModel, self).__init__()
-# why not just put the initialized attributes here?
-# is it a docstrings issue?
-        self.initialize(design, hascons)
-
-    def initialize(self, design, hascons):
-        """
-        Set design for model, prewhitening design matrix and precomputing
-        covariance of coefficients (up to scale factor in front).
-        """
-        if hascons==True:
-            self.design = design
-        else:
-            self.design = np.hstack((np.ones((design.shape[0], 1)), design))
-        self.wdesign = self.whiten(self.design)
-        self.calc_beta = np.linalg.pinv(self.wdesign)
-        self.normalized_cov_beta = np.dot(self.calc_beta,
-                                         np.transpose(self.calc_beta))
-        self.df_resid = self.wdesign.shape[0] - utils.rank(self.design)
-        #        if hascons = True:
-        self.df_model = utils.rank(self.design)-1
-#        else:
-#            self.df_model = utils.rank(self.design)
-
-#   Note: why have a function that doesn't do anything?
-#   Could this be replaced with the sandwich estimators?
-    def whiten(self, Y):
-        """
-        OLS model whitener does nothing: returns Y.
-        """
-        return Y
-
-#   Fixed, needed to return lfit
-#   Is this lightweight function needed?
-    def est_coef(self, Y):
-        """
-        Estimate coefficients using lstsq, returning fitted values, Y
-        and coefficients, but initialize is not called so no
-        psuedo-inverse is calculated.
-        """
-        Z = self.whiten(Y)
-
-        lfit = RegressionResults(np.linalg.lstsq(self.wdesign, Z)[0], Y)
-        lfit.predict = np.dot(self.design, lfit.beta)
-
-        return lfit
-
-    def fit(self, Y):
-        """
-        Full fit of the model including estimate of covariance matrix,
-        (whitened) residuals and scale.
-
-        """
-        Z = self.whiten(Y)
-
-        lfit = RegressionResults(np.dot(self.calc_beta, Z), Y,
-                       normalized_cov_beta=self.normalized_cov_beta)
-        lfit.predict = np.dot(self.design, lfit.beta)
-        lfit.resid = Z - np.dot(self.wdesign, lfit.beta)
-        lfit.scale = np.add.reduce(lfit.resid**2) / self.df_resid
-        lfit.df_resid = self.df_resid
-        lfit.df_model = self.df_model
-
-        lfit.Z = Z
-# presumably these will be reused somewhere, so this might not be the right place for them
-
-        lfit.ESS = ss(lfit.predict - lfit.Z.mean())
-        lfit.uTSS = ss(lfit.Z)
-        lfit.uSSR = ss(lfit.resid)
-        lfit.cTSS = ss(lfit.Z-lfit.Z.mean())
-        lfit.SSR = ss(lfit.resid)
-
-# Centered R2 for models with intercepts (as R does)
-#        if hascons = True
-        lfit.Rsq = 1 - lfit.SSR/lfit.cTSS                       # tested
-#        else:
-# Uncentered R2 for models without intercepts.
-#        self.Rsq = 1 - self.SSR/self.uTSS
-# R2 is uncentered like this, consider centered R2
-        lfit.adjrsq = None
-        lfit.MSE_model = lfit.ESS/lfit.df_model                 # tested
-        lfit.MSE_resid = lfit.uSSR/lfit.df_resid                # tested
-        lfit.MSE_total = lfit.uTSS/(lfit.df_model+lfit.df_resid)
-        lfit.F = lfit.MSE_model/lfit.MSE_resid                  # tested
-        lfit.F_p = stats.f.pdf(lfit.F, lfit.df_model, lfit.df_resid)
-
-        return lfit
-
 def read_design(desfile, delimiter=',', try_integer=True):
     """
     Return a record array with the design.
@@ -282,6 +94,167 @@ def read_design(desfile, delimiter=',', try_integer=True):
 
     return np.rec.fromarrays(newdata, formats=sjoin(newdescr, ','), names=colnames)
 
+#How to document a class?
+#Docs are a little vague and there are no good examples
+#Some of these attributes are most likely intended to be private I imagine
+class OLSModel(LikelihoodModel):
+    """
+    A simple ordinary least squares model.
+
+    Parameters
+    ----------
+        `design`: array-like
+            This is your design matrix.  Data are assumed to be column ordered
+            with observations in rows.
+        `hascons`: boolean
+            A  whether or not your data already contains a constant.
+            By default hascons = True (this is so not to break the current
+            behavior with the Formula framework).
+
+    Methods
+    -------
+    model.logL(b=self.beta, Y)
+        Returns the log-likelihood of the parameter estimates
+
+        Parameters
+        ----------
+        b : array-like
+            `b` is an array of parameter estimates the log-likelihood of which
+            is to be tested.
+        Y : array-like
+            `Y` is the vector of dependent variables.
+    model.__init___(design, hascons=True)
+        Creates a `OLSModel` from a design.
+
+    Attributes
+    ----------
+    design : ndarray
+        This is the design, or X, matrix.
+    wdesign : ndarray
+        This is the whitened design matrix.
+        design = wdesign by default for the OLSModel, though models that
+        inherit from the OLSModel will whiten the design.
+    calc_beta : ndarray
+        This is the Moore-Penrose pseudoinverse of the whitened design matrix.
+    normalized_cov_beta : ndarray
+        np.dot(calc_beta, calc_beta.T)
+    df_resid : integer
+        Degrees of freedom of the residuals.
+        Number of observations less the rank of the design.
+    df_model : integer
+        Degres of freedome of the model.
+        The rank of the design.
+
+    Examples
+    --------
+    >>> import numpy as N
+    >>>
+    >>> from nipy.fixes.scipy.stats.models.formula import Term, I
+    >>> from nipy.fixes.scipy.stats.models.regression import OLSModel
+    >>>
+    >>> data={'Y':[1,3,4,5,2,3,4],
+    ...       'X':range(1,8)}
+    >>> f = term("X") + I
+    >>> f.namespace = data
+    >>>
+    >>> model = OLSModel(f.design())
+    >>> results = model.fit(data['Y'])
+    >>>
+    >>> results.beta
+    array([ 0.25      ,  2.14285714])
+    >>> results.t()
+    array([ 0.98019606,  1.87867287])
+    >>> print results.Tcontrast([0,1])
+    <T contrast: effect=2.14285714286, sd=1.14062281591, t=1.87867287326, df_denom=5>
+    >>> print results.Fcontrast(np.identity(2))
+    <F contrast: F=19.4607843137, df_denom=5, df_num=2>
+    """
+
+    def logL(self, b, Y):
+# Note this doesn't look right.
+        return -norm(self.whiten(Y) - np.dot(self.wdesign, b))**2 / 2.
+
+    def __init__(self, design, hascons=True):
+#        super(OLSModel, self).__init__()
+#       is the code usable without super?
+#       the MRO should handle everything unless inheritance gets
+#       more complicated
+# TODO: handle case for noconstant regression
+        if hascons==True:
+            self.design = design
+        else:
+            self.design = np.hstack((np.ones((design.shape[0], 1)), design))
+        self.wdesign = self.whiten(self.design)
+        self.calc_beta = np.linalg.pinv(self.wdesign)
+        self.normalized_cov_beta = np.dot(self.calc_beta,
+                                         np.transpose(self.calc_beta))
+        self.df_resid = self.wdesign.shape[0] - utils.rank(self.design)
+#       Below assumes that we will always have a constant for now
+        self.df_model = utils.rank(self.design)-1
+
+#   Note: why have a function that doesn't do anything?
+#   Could this be replaced with the sandwich estimators?
+    def whiten(self, Y):
+        """
+        OLS model whitener does nothing: returns Y.
+        """
+        return Y
+
+#   Fixed, needed to return lfit
+#   Is this lightweight function needed?
+    def est_coef(self, Y):
+        """
+        Estimate coefficients using lstsq, returning fitted values, Y
+        and coefficients, but initialize is not called so no
+        psuedo-inverse is calculated.
+        """
+        Z = self.whiten(Y)
+
+        lfit = RegressionResults(np.linalg.lstsq(self.wdesign, Z)[0], Y)
+        lfit.predict = np.dot(self.design, lfit.beta)
+
+        return lfit
+
+    def fit(self, Y):
+        """
+        Full fit of the model including estimate of covariance matrix,
+        (whitened) residuals and scale.
+
+        """
+        Z = self.whiten(Y)
+
+        lfit = RegressionResults(np.dot(self.calc_beta, Z), Y,
+                       normalized_cov_beta=self.normalized_cov_beta)
+        lfit.predict = np.dot(self.design, lfit.beta)
+        lfit.resid = Z - np.dot(self.wdesign, lfit.beta)
+        lfit.scale = np.add.reduce(lfit.resid**2) / self.df_resid
+        lfit.df_resid = self.df_resid
+        lfit.df_model = self.df_model
+
+        lfit.Z = Z
+# presumably these will be reused somewhere, so this might not be the right place for them
+
+        lfit.ESS = ss(lfit.predict - lfit.Z.mean())
+        lfit.uTSS = ss(lfit.Z)
+        lfit.uSSR = ss(lfit.resid)
+        lfit.cTSS = ss(lfit.Z-lfit.Z.mean())
+        lfit.SSR = ss(lfit.resid)
+
+# Centered R2 for models with intercepts (as R does)
+#        if hascons = True
+        lfit.Rsq = 1 - lfit.SSR/lfit.cTSS                       # tested
+#        else:
+# Uncentered R2 for models without intercepts.
+#        self.Rsq = 1 - self.SSR/self.uTSS
+# R2 is uncentered like this, consider centered R2
+        lfit.adjrsq = None
+        lfit.MSE_model = lfit.ESS/lfit.df_model                 # tested
+        lfit.MSE_resid = lfit.uSSR/lfit.df_resid                # tested
+        lfit.MSE_total = lfit.uTSS/(lfit.df_model+lfit.df_resid)
+        lfit.F = lfit.MSE_model/lfit.MSE_resid                  # tested
+        lfit.F_p = stats.f.pdf(lfit.F, lfit.df_model, lfit.df_resid)
+        lfit.bse = np.diag(np.sqrt(lfit.cov_beta()))
+        return lfit
 
 class ARModel(OLSModel):
     """
