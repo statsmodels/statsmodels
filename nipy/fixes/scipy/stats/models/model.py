@@ -193,7 +193,7 @@ class LikelihoodModelResults(object):
         F = np.add.reduce(np.dot(invcov, cbeta) * cbeta, 0) * recipr((q * self.scale))
         return ContrastResults(F=F, df_denom=self.df_resid, df_num=invcov.shape[0])
 
-    def conf_int(self, alpha=.05, columns="all"):
+    def conf_int(self, alpha=.05, cols=None):
         '''
         Returns the confidence interval of the specified beta estimates.
 
@@ -202,12 +202,22 @@ class LikelihoodModelResults(object):
         alpha : float, optional
             The `alpha` level for the confidence interval.
             ie., `alpha` = .05 returns a 95% confidence interval.
-        columns : string or array-like, optional
-            `columns` specifies which confidence intervals to return
+        cols : tuple, optional
+            `cols` specifies which confidence intervals to return
 
         Returns : array
             Each item contains [lower, upper]
 
+        Example
+        -------
+        >>>import numpy as np
+        >>>from numpy.random import standard_normal as stan
+        >>>import nipy.fixes.scipy.stats.models as SSM
+        >>>x = np.hstack((stan((30,1)),stan((30,1)),stan((30,1))))
+        >>>beta=np.array([3.25, 1.5, 7.0])
+        >>>y = np.dot(x,beta) + stan((30))
+        >>>model = SSM.regression.OLSModel(x, hascons=False).fit(y)
+        >>>model.conf_int(cols=(1,2))
 
         Notes
         -----
@@ -215,23 +225,18 @@ class LikelihoodModelResults(object):
         tails : string, optional
             `tails` can be "two", "upper", or "lower"
         '''
-        if columns == "all":
+        if cols is None:
             lower = self.beta - t.ppf(1-alpha/2,self.df_resid) *\
                     np.diag(np.sqrt(self.cov_beta()))
             upper = self.beta + t.ppf(1-alpha/2,self.df_resid) *\
                     np.diag(np.sqrt(self.cov_beta()))
-        elif ':' in str(columns):
-            lower = self.beta[columns] - t.ppf(1-alpha/2,self.df_resid) *\
-                    np.diag(np.sqrt(self.cov_beta()))
-            upper = self.beta[columns] + t.ppf(1-alpha/2,self.df_resid) *\
-                    np.diag(np.sqrt(self.cov_beta()))
-        elif ',' in str(columns):
+        else:
             lower=[]
             upper=[]
-            for i in columns.split(','):
+            for i in cols:
                 lower.append(self.beta[i] - t.ppf(1-alpha/2,self.df_resid) *\
-                    np.diag(np.sqrt(self.cov_beta())))
+                    np.diag(np.sqrt(self.cov_beta()))[i])
                 upper.append(self.beta[i] + t.ppf(1-alpha/2,self.df_resid) *\
-                    np.diag(np.sqrt(self.cov_beta())))
+                    np.diag(np.sqrt(self.cov_beta()))[i])
         return np.asarray(zip(lower,upper))
 

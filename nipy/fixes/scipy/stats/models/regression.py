@@ -170,15 +170,11 @@ class OLSModel(LikelihoodModel):
     <F contrast: F=19.4607843137, df_denom=5, df_num=2>
     """
 
-    def logL(self, b, Y):
-# Note this doesn't look right.
-        return -norm(self.whiten(Y) - np.dot(self.wdesign, b))**2 / 2.
-
     def __init__(self, design, hascons=True):
-#        super(OLSModel, self).__init__()
-#       is the code usable without super?
-#       the MRO should handle everything unless inheritance gets
-#       more complicated
+        super(OLSModel, self).__init__()
+        self.initialize(design, hascons)
+
+    def initialize(self, design, hascons):
 # TODO: handle case for noconstant regression
         if hascons==True:
             self.design = design
@@ -192,8 +188,37 @@ class OLSModel(LikelihoodModel):
 #       Below assumes that we will always have a constant for now
         self.df_model = utils.rank(self.design)-1
 
-#   Note: why have a function that doesn't do anything?
-#   Could this be replaced with the sandwich estimators?
+    def logL(self, b, Y):
+        '''
+        Returns the value of the loglikelihood function at b.
+
+        Given the whitened design matrix, the loglikelihood is evaluated
+        at the parameter vector `b` for the dependent variable `Y`.
+
+        Parameters
+        ----------
+        `b` : array-like
+            The parameter estimates.  Must be of length df_model.
+        `Y` : ndarray
+            The dependent variable.
+
+        Returns
+        -------
+        The value of the loglikelihood function for an OLS Model.
+
+        .. math:: \ell(\boldsymbol{y},\hat{\beta},\hat{\sigma})=
+        -\frac{n}{2}(1+\log2\pi-\log n)-\frac{n}{2}\log\text{SSR}(\hat{\beta})
+        '''
+        n = self.wdesign.shape[0]
+        return -n/2.*(1 + np.log(2*np.pi) - np.log*n) - \
+                n/2.*np.log(ss(whiten(Y)-np.dot(self.wdesign,b)))
+
+#   Note: why have a function that doesn't do anything? does it have to be here to be
+#   overwritten?
+#   Could this be replaced with the sandwich estimators
+#   without writing a subclass?
+
+
     def whiten(self, Y):
         """
         OLS model whitener does nothing: returns Y.

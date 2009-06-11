@@ -78,6 +78,7 @@ def test_longley():
     nptest.assert_almost_equal(res.F, 330.285339234588, 8)
 # This fails, but it's just a precision issue in Stata
     nptest.assert_almost_equal(res.conf_int(),conf_int)
+# Need to get test values for the loglikelihood function from a stats package
 
 
 def test_wampler():
