@@ -76,9 +76,12 @@ def test_longley():
     nptest.assert_almost_equal(res.MSE_model, 30695400.3240823, 4)
     nptest.assert_almost_equal(res.MSE_resid, 92936.0061673238, 6)
     nptest.assert_almost_equal(res.F, 330.285339234588, 8)
-# This fails, but it's just a precision issue in Stata
+# This fails, but it's just a precision issue in Stata, try STATA
+# how to compare arrays with floats and ints?
     nptest.assert_almost_equal(res.conf_int(),conf_int)
-# Need to get test values for the loglikelihood function from a stats package
+# Need to get test values for the llf,aic,bic from a stats package
+# Need to test adjRsq
+# Need to test robust errors, write a SAS routine to compare values
 
 
 def test_wampler():

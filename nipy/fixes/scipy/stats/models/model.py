@@ -144,7 +144,11 @@ class LikelihoodModelResults(object):
             return tmp * scale
 
         if matrix is None and column is None:
-            return self.normalized_cov_beta * scale
+# need to generalize for the case when scale is not a scalar
+# and we have robust estimates of \Omega the error covariance matrix
+            if scale.size==1:
+                scale=np.eye(len(self.resid))*scale
+            return np.dot(np.dot(self.calc_beta, scale), self.calc_beta.T)
 
     def Tcontrast(self, matrix, t=True, sd=True, scale=None):
         """

@@ -188,7 +188,7 @@ class OLSModel(LikelihoodModel):
 #       Below assumes that we will always have a constant for now
         self.df_model = utils.rank(self.design)-1
 
-    def logL(self, b, Y):
+    def llf(self, b, Y):
         '''
         Returns the value of the loglikelihood function at b.
 
@@ -206,12 +206,30 @@ class OLSModel(LikelihoodModel):
         -------
         The value of the loglikelihood function for an OLS Model.
 
+        Notes
+        -----
+        The Likelihood Function is defined as
         .. math:: \ell(\boldsymbol{y},\hat{\beta},\hat{\sigma})=
         -\frac{n}{2}(1+\log2\pi-\log n)-\frac{n}{2}\log\text{SSR}(\hat{\beta})
+
+        The AIC is defined as
+        .. math:: \text{AIC}=\log\frac{SSR}{n}+\frac{2K}{n}
+
+        The BIC (or Schwartz Criterion) is defined as
+        .. math:: \text{BIC}=\log\frac{SSR}{n}+\frac{K}{n}\log n
+        ..
+
+        References
+        ----------
+        .. [1] W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
         '''
         n = self.wdesign.shape[0]
-        return -n/2.*(1 + np.log(2*np.pi) - np.log*n) - \
-                n/2.*np.log(ss(whiten(Y)-np.dot(self.wdesign,b)))
+        SSR = ss(Y - np.dot(self.wdesign,b))
+        loglf = -n/2.*(1 + np.log(2*np.pi) - np.log(n)) - \
+                n/2.*np.log(SSR)
+        aic = np.log(SSR/n) + 2 * self.df_model/n
+        bic = np.log(SSR/n) + self.df_model * np.log(n)/n
+        return loglf,aic,bic
 
 #   Note: why have a function that doesn't do anything? does it have to be here to be
 #   overwritten?
@@ -240,31 +258,103 @@ class OLSModel(LikelihoodModel):
 
         return lfit
 
-    def fit(self, Y):
+    def fit(self, Y, robust=None):
         """
         Full fit of the model including estimate of covariance matrix,
         (whitened) residuals and scale.
 
+        Parameters
+        ----------
+        Y : array-like
+            The dependent variable for the Least Squares problem.
+        robust : string, optional
+            Estimation of the heteroskedasticity robust covariance matrix
+            Values can be "HC0", "HC1", "HC2", or "HC3"
+
+
+NOTE: Should these be defined here?
+        Returns (does it actually "return" or is there a better term for this behavior?)
+        --------
+        adjRsq
+            Adjusted R-squared
+        AIC
+            Akaike information criterion
+        BIC
+            Bayes information criterion
+        bse
+            The standard errors of the parameter estimates
+        cTSS
+            The centered total sum of squares
+        df_resid
+            Residual degrees of freedom
+        df_model
+            Model degress of freedom
+        ESS
+            Explained sum of squares
+        F
+            F-statistic
+        F_p
+            F-statistic p-value
+        MSE_model
+            Mean squared error the model
+        MSE_resid
+            Mean squared error of the residuals
+        MSE_total
+            Total mean squared error
+        predict
+            A postestimation function to predict the values for a given design
+            model.predict(design)
+        resid
+            The residuals of the model.
+        Rsq (need to be explicit about constant/noconstant)
+            R-squared
+*        scale
+            A scale factor for the covariance matrix.
+            Default value is SSR/(n-k)
+            Otherwise, determined by the `robust` keyword
+        SSR
+            Sum of squared residuals
+        uTSS
+            Uncentered sum of squares
+        Z
+            The whitened dependent variable
         """
         Z = self.whiten(Y)
-
         lfit = RegressionResults(np.dot(self.calc_beta, Z), Y,
                        normalized_cov_beta=self.normalized_cov_beta)
         lfit.predict = np.dot(self.design, lfit.beta)
         lfit.resid = Z - np.dot(self.wdesign, lfit.beta)
-        lfit.scale = np.add.reduce(lfit.resid**2) / self.df_resid
+        lfit.n = self.wdesign.shape[0]
         lfit.df_resid = self.df_resid
         lfit.df_model = self.df_model
-
         lfit.Z = Z
-# presumably these will be reused somewhere, so this might not be the right place for them
+        lfit.calc_beta = self.calc_beta # needed for cov_beta()
 
+        if robust is None: # usual estimate of omega (it's a scalar)npp
+            lfit.scale = ss(lfit.resid) / self.df_resid
+        elif robust=="HC0": # HC0 (White 1980)
+            lfit.scale = np.diag(lfit.resid**2)
+        elif robust=="HC1": # HC1-3 MacKinnon and White (1985)
+            lfit.scale = lfit.n/(lfit.n-lfit.df_model)*(np.diag(lfit.resid**2))
+        elif robust=="HC2":
+            h=np.diag(np.dot(np.dot(self.wdesign,self.normalized_cov_beta),
+                    self.wdesign.T))
+            lfit.scale=np.diag(lfit.resid**2/(1-h))
+# still unsure about wdesign vs design, would a weighted design be appropriate
+# for het robust errors?
+        elif robust=="HC3":
+             h=np.diag(np.dot(np.dot(self.wdesign,self.normalized_cov_beta),
+                    self.wdesign.T))
+             lfit.scale=np.diag((lfit.resid/(1-h))**2)
+        else:
+            raise ValueError, "Robust option %s not understood" % robust
+
+# presumably these will be reused somewhere, so this might not be the right place for them
+# or they could just be overwritten by any OLSModel subclass
         lfit.ESS = ss(lfit.predict - lfit.Z.mean())
         lfit.uTSS = ss(lfit.Z)
-        lfit.uSSR = ss(lfit.resid)
         lfit.cTSS = ss(lfit.Z-lfit.Z.mean())
         lfit.SSR = ss(lfit.resid)
-
 # Centered R2 for models with intercepts (as R does)
 #        if hascons = True
         lfit.Rsq = 1 - lfit.SSR/lfit.cTSS                       # tested
@@ -272,13 +362,15 @@ class OLSModel(LikelihoodModel):
 # Uncentered R2 for models without intercepts.
 #        self.Rsq = 1 - self.SSR/self.uTSS
 # R2 is uncentered like this, consider centered R2
-        lfit.adjrsq = None
+# What about adjRsq for no constant regression?
+        lfit.adjRsq = 1 - (lfit.n -1)/(lfit.n - lfit.df_model)*(1 - lfit.Rsq)
         lfit.MSE_model = lfit.ESS/lfit.df_model                 # tested
-        lfit.MSE_resid = lfit.uSSR/lfit.df_resid                # tested
+        lfit.MSE_resid = lfit.SSR/lfit.df_resid                # tested
         lfit.MSE_total = lfit.uTSS/(lfit.df_model+lfit.df_resid)
         lfit.F = lfit.MSE_model/lfit.MSE_resid                  # tested
         lfit.F_p = stats.f.pdf(lfit.F, lfit.df_model, lfit.df_resid)
         lfit.bse = np.diag(np.sqrt(lfit.cov_beta()))
+        lfit.llf, lfit.aic, lfit.bic = self.llf(lfit.beta, Z)
         return lfit
 
 class ARModel(OLSModel):
@@ -517,7 +609,7 @@ class RegressionResults(LikelihoodModelResults):
              Davidson and MacKinnon 15.2 p 662
 
         """
-        if not hasattr(self, 'resid'):
+        if not hasattr(secalf, 'resid'):
             raise ValueError, 'need normalized residuals to estimate standard deviation'
 
 #        sdd = utils.recipr(self.sd) / np.sqrt(self.df)
