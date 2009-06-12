@@ -31,68 +31,107 @@ from nipy.fixes.scipy.stats.models import utils
 from scipy import stats
 from scipy.stats.stats import ss
 
-def read_design(desfile, delimiter=',', try_integer=True):
-    """
-    Return a record array with the design.
-    The columns are first cast as numpy.float, if this fails, its
-    dtype is unchanged.
+import numpy.lib.recfunctions as nprf
 
-    If try_integer is True and a given column can be cast as float,
-    it is then tested to see if it can be cast as numpy.int.
+def categorical(data):
+    '''
+    Returns an array changing categorical variables to dummy variables.
 
-    >>> design = [["id","age","gender"],[1,23.5,"male"],[2,24.1,"female"],[3,24.5,"male"]]
-    >>> read_design(design)
-    recarray([(1, 23.5, 'male'), (2, 24.100000000000001, 'female'),
-    (3, 24.5, 'male')],
-    dtype=[('id', '<i4'), ('age', '<f8'), ('gender', '|S6')])
-    >>> design = [["id","age","gender"],[1,23.5,"male"],[2,24.1,"female"],[3.,24.5,"male"]]
-    >>> read_design(design)
-    recarray([(1, 23.5, 'male'), (2, 24.100000000000001, 'female'),
-    (3, 24.5, 'male')],
-    dtype=[('id', '<i4'), ('age', '<f8'), ('gender', '|S6')])
-    >>> read_design(design, try_integer=False)
-    recarray([(1.0, 23.5, 'male'), (2.0, 24.100000000000001, 'female'),
-    (3.0, 24.5, 'male')],
-    dtype=[('id', '<f8'), ('age', '<f8'), ('gender', '|S6')])
-    >>>
+    Take a structured or record array and returns an array with categorical variables.
 
-    """
+    Notes
+    -----
+    This returns a dummy variable for EVERY distinct string.  If noconsant
+    then this is okay.  Otherwise, a "intercept" needs to be designated in regression.
 
-    if type(desfile) == type("string"):
-        desfile = file(desfile)
-        _reader = reader(desfile, delimiter=delimiter)
-    else:
-        _reader = iter(desfile)
-    colnames = _reader.next()
+    Returns the same array as it's given right now, consider returning a structured
+    and plain ndarray (with names stripped, etc.)
+    '''
+    if not data.dtype.names and not data.mask.any():
+        print data.dtype
+        print "There is not a categorical variable?"
+        return data
+    #if data.mask.any():
+    #    print "Masked arrays are not handled yet."
+    #    return data
 
-    predesign = np.rec.fromrecords([row for row in _reader], names=colnames)
+    elif data.dtype.names:  # this will catch both structured and record
+                            # arrays, no other array could have string data!
+                            # not sure about masked arrays yet
+        for i in range(len(data.dtype)):
+            if data.dtype[i].type is np.string_:
+                tmp_arr = np.unique(data.field(i))
+                tmp_dummy = (tmp_arr[:,np.newaxis]==data.field(i)).astype(float)
+# .field only works for record arrays
+# tmp_dummy is a number of dummies x number of observations array
+                data=nprf.drop_fields(data,data.dtype.names[i],usemask=False,
+                                asrecarray=True)
+                data=nprf.append_fields(data,tmp_arr.strip("\""), data=tmp_dummy,
+                                    usemask=False, asrecarray=True)
+        return data
+
+#def read_design(desfile, delimiter=',', try_integer=True):
+#    """
+#    Return a record array with the design.
+#    The columns are first cast as numpy.float, if this fails, its
+#    dtype is unchanged.
+
+#    If try_integer is True and a given column can be cast as float,
+#    it is then tested to see if it can be cast as numpy.int.
+
+#    >>> design = [["id","age","gender"],[1,23.5,"male"],[2,24.1,"female"],[3,24.5,"male"]]
+#    >>> read_design(design)
+#    recarray([(1, 23.5, 'male'), (2, 24.100000000000001, 'female'),
+#    (3, 24.5, 'male')],
+#    dtype=[('id', '<i4'), ('age', '<f8'), ('gender', '|S6')])
+#    >>> design = [["id","age","gender"],[1,23.5,"male"],[2,24.1,"female"],[3.,24.5,"male"]]
+#    >>> read_design(design)
+#    recarray([(1, 23.5, 'male'), (2, 24.100000000000001, 'female'),
+#    (3, 24.5, 'male')],
+#    dtype=[('id', '<i4'), ('age', '<f8'), ('gender', '|S6')])
+#    >>> read_design(design, try_integer=False)
+#    recarray([(1.0, 23.5, 'male'), (2.0, 24.100000000000001, 'female'),
+#    (3.0, 24.5, 'male')],
+#    dtype=[('id', '<f8'), ('age', '<f8'), ('gender', '|S6')])
+#    >>>
+
+#    """
+
+#    if type(desfile) == type("string"):
+#        desfile = file(desfile)
+#        _reader = reader(desfile, delimiter=delimiter)
+#    else:
+#        _reader = iter(desfile)
+#    colnames = _reader.next()
+
+#    predesign = np.rec.fromrecords([row for row in _reader], names=colnames)
 
     # Try to typecast each column to float, then int
 
-    dtypes = predesign.dtype.descr
-    newdescr = []
-    newdata = []
-    for name, descr in dtypes:
-        x = predesign[name]
-        try:
-            y = np.asarray(x.copy(), np.float) # cast as float
-            if np.alltrue(np.equal(x, y)):
-                if try_integer:
-                    z = y.astype(np.int) # cast as int
-                    if np.alltrue(np.equal(y, z)):
-                        newdata.append(z)
-                        newdescr.append(z.dtype.descr[0][1])
-                    else:
-                        newdata.append(y)
-                        newdescr.append(y.dtype.descr[0][1])
-                else:
-                    newdata.append(y)
-                    newdescr.append(y.dtype.descr[0][1])
-        except:
-            newdata.append(x)
-            newdescr.append(descr)
+#    dtypes = predesign.dtype.descr
+#    newdescr = []
+#    newdata = []
+   # for name, descr in dtypes:
+#        x = predesign[name]
+#        try:
+#            y = np.asarray(x.copy(), np.float) # cast as float
+#            if np.alltrue(np.equal(x, y)):
+#                if try_integer:
+#                    z = y.astype(np.int) # cast as int
+#                    if np.alltrue(np.equal(y, z)):
+#                        newdata.append(z)
+#                        newdescr.append(z.dtype.descr[0][1])
+#                    else:
+#                        newdata.append(y)
+#                        newdescr.append(y.dtype.descr[0][1])
+#                else:
+#                    newdata.append(y)
+#                    newdescr.append(y.dtype.descr[0][1])
+#        except:
+#            newdata.append(x)
+#            newdescr.append(descr)
 
-    return np.rec.fromarrays(newdata, formats=sjoin(newdescr, ','), names=colnames)
+#    return np.rec.fromarrays(newdata, formats=sjoin(newdescr, ','), names=colnames)
 
 #How to document a class?
 #Docs are a little vague and there are no good examples
@@ -174,7 +213,7 @@ class OLSModel(LikelihoodModel):
         super(OLSModel, self).__init__()
         self.initialize(design, hascons)
 
-    def initialize(self, design, hascons):
+    def initialize(self, design, hascons=True):
 # TODO: handle case for noconstant regression
         if hascons==True:
             self.design = design

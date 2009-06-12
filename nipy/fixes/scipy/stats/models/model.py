@@ -6,6 +6,7 @@ from scipy.stats import t
 
 from nipy.fixes.scipy.stats.models.contrast import ContrastResults
 from nipy.fixes.scipy.stats.models.utils import recipr
+import numpy.lib.recfunctions as nprf
 
 class Model(object):
     """
@@ -243,4 +244,7 @@ class LikelihoodModelResults(object):
                 upper.append(self.beta[i] + t.ppf(1-alpha/2,self.df_resid) *\
                     np.diag(np.sqrt(self.cov_beta()))[i])
         return np.asarray(zip(lower,upper))
+
+
+
 
