@@ -33,7 +33,7 @@ from scipy.stats.stats import ss
 
 import numpy.lib.recfunctions as nprf
 
-def categorical(data):
+def categorical(data, _column=None, _time=None):
     '''
     Returns an array changing categorical variables to dummy variables.
 
@@ -46,29 +46,40 @@ def categorical(data):
 
     Returns the same array as it's given right now, consider returning a structured
     and plain ndarray (with names stripped, etc.)
-    '''
-    if not data.dtype.names and not data.mask.any():
-        print data.dtype
-        print "There is not a categorical variable?"
-        return data
-    #if data.mask.any():
-    #    print "Masked arrays are not handled yet."
-    #    return data
 
-    elif data.dtype.names:  # this will catch both structured and record
-                            # arrays, no other array could have string data!
-                            # not sure about masked arrays yet
-        for i in range(len(data.dtype)):
-            if data.dtype[i].type is np.string_:
-                tmp_arr = np.unique(data.field(i))
-                tmp_dummy = (tmp_arr[:,np.newaxis]==data.field(i)).astype(float)
-# .field only works for record arrays
-# tmp_dummy is a number of dummies x number of observations array
-                data=nprf.drop_fields(data,data.dtype.names[i],usemask=False,
-                                asrecarray=True)
-                data=nprf.append_fields(data,tmp_arr.strip("\""), data=tmp_dummy,
-                                    usemask=False, asrecarray=True)
-        return data
+    Where should categoricals home be?
+    '''
+    if _column==None:
+    # this is the general case for when it's called and you just want to convert strings
+    # which represent NOMINAL DATA only to dummies
+        if not data.dtype.names and not data.mask.any():
+# TODO: clean this up
+            print data.dtype
+            raise "There is not a categorical variable?"
+            return data
+        #if data.mask.any():            # this causes an error, and maybe should be a try?
+        #    print "Masked arrays are not handled yet."
+        #    return data
+
+        elif data.dtype.names:  # this will catch both structured and record
+                                # arrays, no other array could have string data!
+                                # not sure about masked arrays yet
+            for i in range(len(data.dtype)):
+                if data.dtype[i].type is np.string_:
+                    tmp_arr = np.unique(data[data.dtype.names[i]])
+# changing the above line, makes it so strip doesn't work
+                    tmp_dummy = (tmp_arr[:,np.newaxis]==data.field(i)).astype(float)
+    # tmp_dummy is a number of dummies x number of observations array
+                    data=nprf.drop_fields(data,data.dtype.names[i],usemask=False,
+                                    asrecarray=True)
+                    data=nprf.append_fields(data,tmp_arr.strip("\""), data=tmp_dummy,
+                                        usemask=False, asrecarray=True)
+            return data
+    elif column and time:
+        tmp_arr=np.unique(data[column])
+# not finished
+
+
 
 #def read_design(desfile, delimiter=',', try_integer=True):
 #    """
@@ -136,6 +147,7 @@ def categorical(data):
 #How to document a class?
 #Docs are a little vague and there are no good examples
 #Some of these attributes are most likely intended to be private I imagine
+
 class OLSModel(LikelihoodModel):
     """
     A simple ordinary least squares model.
@@ -209,16 +221,27 @@ class OLSModel(LikelihoodModel):
     <F contrast: F=19.4607843137, df_denom=5, df_num=2>
     """
 
-    def __init__(self, design, hascons=True):
+    def __init__(self, design, hascons=True, designtype=None):
+# As options become longer will need to use *args or **kwargs
+# **kwargs might make more sense if we're going to be mapping
+# option to a function call
         super(OLSModel, self).__init__()
         self.initialize(design, hascons)
 
-    def initialize(self, design, hascons=True):
+    def initialize(self, design, hascons=True, designtype=None):
 # TODO: handle case for noconstant regression
         if hascons==True:
             self.design = design
         else:
             self.design = np.hstack((np.ones((design.shape[0], 1)), design))
+        if designtype==None:
+            pass
+        elif designtype.lower()=="panel":
+            categorical(design)
+# TODO: this will handle nominal data
+# TODO" need to handle ordinal data as well
+        else:
+            raise "designtype %s not understood." % datatype
         self.wdesign = self.whiten(self.design)
         self.calc_beta = np.linalg.pinv(self.wdesign)
         self.normalized_cov_beta = np.dot(self.calc_beta,
@@ -226,6 +249,17 @@ class OLSModel(LikelihoodModel):
         self.df_resid = self.wdesign.shape[0] - utils.rank(self.design)
 #       Below assumes that we will always have a constant for now
         self.df_model = utils.rank(self.design)-1
+
+    def set_time(self, col):
+        '''
+        This allows you to set which column has the time variable
+        for time fixed effects.
+        '''
+        self.design = categorical(self.design, col)
+
+# resolve the wdesign vs design issue...consider changing the name
+# design as well (!) no one in my program has ever heard of a
+# design matrix
 
     def llf(self, b, Y):
         '''
@@ -270,20 +304,12 @@ class OLSModel(LikelihoodModel):
         bic = np.log(SSR/n) + self.df_model * np.log(n)/n
         return loglf,aic,bic
 
-#   Note: why have a function that doesn't do anything? does it have to be here to be
-#   overwritten?
-#   Could this be replaced with the sandwich estimators
-#   without writing a subclass?
-
-
     def whiten(self, Y):
         """
         OLS model whitener does nothing: returns Y.
         """
         return Y
 
-#   Fixed, needed to return lfit
-#   Is this lightweight function needed?
     def est_coef(self, Y):
         """
         Estimate coefficients using lstsq, returning fitted values, Y
@@ -298,6 +324,9 @@ class OLSModel(LikelihoodModel):
         return lfit
 
     def fit(self, Y, robust=None):
+# I think it would also make sense (pracitcally if not from a programming standpoint!)
+# to have an instance of OLSModel created when
+# OLSModel(x).fit(y) is called.  What's the best way to do this?
         """
         Full fit of the model including estimate of covariance matrix,
         (whitened) residuals and scale.
