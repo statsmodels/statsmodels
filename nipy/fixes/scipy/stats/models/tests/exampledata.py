@@ -29,3 +29,15 @@ def longley():
     y=data[:,0]
     x=data[:,1:]    # no constant, this is added in the design
     return y,x
+
+def lbw():
+    '''
+    Returns X for the LBW data found here
+
+    http://www.stata-press.com/data/r9/rmain.html
+
+    X is the entire data as a record array.
+    '''
+    filename=os.path.join(os.path.dirname(os.path.abspath(__file__)), "stata_lbw_glm.csv")
+    data=np.recfromcsv(filename)
+    return data
