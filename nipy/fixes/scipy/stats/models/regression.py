@@ -37,44 +37,54 @@ def categorical(data, _column=None, _time=None):
     '''
     Returns an array changing categorical variables to dummy variables.
 
-    Take a structured or record array and returns an array with categorical variables.
+    Take a structured or record array and returns an array with categorical
+    variables.
 
     Notes
     -----
     This returns a dummy variable for EVERY distinct string.  If noconsant
-    then this is okay.  Otherwise, a "intercept" needs to be designated in regression.
+    then this is okay.  Otherwise, a "intercept" needs to be designated in
+    regression.  Note that STATA returns which variable is omitted when this
+    is called. And it is called at runtime of fit...
 
-    Returns the same array as it's given right now, consider returning a structured
-    and plain ndarray (with names stripped, etc.)
+    Returns the same array as it's given right now (recarray and structured
+    array only).
 
     Where should categoricals home be?
+    It is used by every (?) model.
     '''
     if _column==None:
-    # this is the general case for when it's called and you just want to convert strings
+    # this is the general case for when it's called and you just want to
+    # convert strings
     # which represent NOMINAL DATA only to dummies
         if not data.dtype.names and not data.mask.any():
 # TODO: clean this up, find it a good home
-#       is this generally useful?
+#       used in GLM as well
+
             print data.dtype
             raise "There is not a categorical variable?"
             return data
-        #if data.mask.any():            # this causes an error, and maybe should be a try?
+        #if data.mask.any():            # this causes an error, and maybe
+        #should be a try?
         #    print "Masked arrays are not handled yet."
         #    return data
 
         elif data.dtype.names:  # this will catch both structured and record
-                                # arrays, no other array could have string data!
+                                # arrays, no other array could have
+                                # string data!
                                 # not sure about masked arrays yet
             for i in range(len(data.dtype)):
                 if data.dtype[i].type is np.string_:
                     tmp_arr = np.unique(data[data.dtype.names[i]])
 # changing the above line to not use fields makes it so strip doesn't work
-                    tmp_dummy = (tmp_arr[:,np.newaxis]==data.field(i)).astype(float)
+                    tmp_dummy = (tmp_arr[:,np.newaxis]==data.field(i)).\
+                    astype(float)
 # tmp_dummy is a number of dummies x number of observations array
-                    data=nprf.drop_fields(data,data.dtype.names[i],usemask=False,
+                    data=nprf.drop_fields(data,data.dtype.names[i],
+                                usemask=False, asrecarray=True)
+                    data=nprf.append_fields(data,tmp_arr.strip("\""),
+                                    data=tmp_dummy, usemask=False,
                                     asrecarray=True)
-                    data=nprf.append_fields(data,tmp_arr.strip("\""), data=tmp_dummy,
-                                        usemask=False, asrecarray=True)
             return data
     elif column and time:
         tmp_arr=np.unique(data[column])

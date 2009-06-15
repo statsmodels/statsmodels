@@ -8,6 +8,23 @@ import numpy as np
 from nipy.fixes.scipy.stats.models import family
 from nipy.fixes.scipy.stats.models.regression import WLSModel
 
+# Note: STATA uses either iterated reweighted least squares optimization
+#       of the deviation
+# or the default mle using Newton-Raphson
+
+# Note: only these combos make sense for family and link
+#              + ident log logit probit cloglog pow opow nbinom loglog logc
+# Gaussian     |   x    x                        x
+# inv Gaussian |   x    x                        x
+# binomial     |   x    x    x     x       x     x    x           x      x
+# Poission     |   x    x                        x
+# neg binomial |   x    x                        x          x
+# gamma        |   x    x                        x
+#
+#
+
+
+# Would GLM or GeneralLinearModel be a better class name?
 class Model(WLSModel):
 
     niter = 10
