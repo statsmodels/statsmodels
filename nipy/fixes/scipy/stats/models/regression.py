@@ -53,7 +53,8 @@ def categorical(data, _column=None, _time=None):
     # this is the general case for when it's called and you just want to convert strings
     # which represent NOMINAL DATA only to dummies
         if not data.dtype.names and not data.mask.any():
-# TODO: clean this up
+# TODO: clean this up, find it a good home
+#       is this generally useful?
             print data.dtype
             raise "There is not a categorical variable?"
             return data
@@ -67,9 +68,9 @@ def categorical(data, _column=None, _time=None):
             for i in range(len(data.dtype)):
                 if data.dtype[i].type is np.string_:
                     tmp_arr = np.unique(data[data.dtype.names[i]])
-# changing the above line, makes it so strip doesn't work
+# changing the above line to not use fields makes it so strip doesn't work
                     tmp_dummy = (tmp_arr[:,np.newaxis]==data.field(i)).astype(float)
-    # tmp_dummy is a number of dummies x number of observations array
+# tmp_dummy is a number of dummies x number of observations array
                     data=nprf.drop_fields(data,data.dtype.names[i],usemask=False,
                                     asrecarray=True)
                     data=nprf.append_fields(data,tmp_arr.strip("\""), data=tmp_dummy,
@@ -77,7 +78,8 @@ def categorical(data, _column=None, _time=None):
             return data
     elif column and time:
         tmp_arr=np.unique(data[column])
-# not finished
+# not finished, needs to except and return structured and record arrays
+# needs to work in the general case for defining a "time" variable
 
 
 
@@ -221,27 +223,21 @@ class OLSModel(LikelihoodModel):
     <F contrast: F=19.4607843137, df_denom=5, df_num=2>
     """
 
-    def __init__(self, design, hascons=True, designtype=None):
+    def __init__(self, design, hascons=True):
 # As options become longer will need to use *args or **kwargs
 # **kwargs might make more sense if we're going to be mapping
 # option to a function call
         super(OLSModel, self).__init__()
         self.initialize(design, hascons)
 
-    def initialize(self, design, hascons=True, designtype=None):
+    def initialize(self, design, hascons=True):
 # TODO: handle case for noconstant regression
         if hascons==True:
             self.design = design
         else:
             self.design = np.hstack((np.ones((design.shape[0], 1)), design))
-        if designtype==None:
-            pass
-        elif designtype.lower()=="panel":
-            categorical(design)
 # TODO: this will handle nominal data
 # TODO" need to handle ordinal data as well
-        else:
-            raise "designtype %s not understood." % datatype
         self.wdesign = self.whiten(self.design)
         self.calc_beta = np.linalg.pinv(self.wdesign)
         self.normalized_cov_beta = np.dot(self.calc_beta,
@@ -250,16 +246,8 @@ class OLSModel(LikelihoodModel):
 #       Below assumes that we will always have a constant for now
         self.df_model = utils.rank(self.design)-1
 
-    def set_time(self, col):
-        '''
-        This allows you to set which column has the time variable
-        for time fixed effects.
-        '''
-        self.design = categorical(self.design, col)
-
 # resolve the wdesign vs design issue...consider changing the name
-# design as well (!) no one in my program has ever heard of a
-# design matrix
+# design as well (!) no one in my program use the term design
 
     def llf(self, b, Y):
         '''
@@ -296,12 +284,15 @@ class OLSModel(LikelihoodModel):
         ----------
         .. [1] W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
         '''
-        n = self.wdesign.shape[0]
+        n = float(self.wdesign.shape[0])
         SSR = ss(Y - np.dot(self.wdesign,b))
         loglf = -n/2.*(1 + np.log(2*np.pi) - np.log(n)) - \
                 n/2.*np.log(SSR)
-        aic = np.log(SSR/n) + 2 * self.df_model/n
-        bic = np.log(SSR/n) + self.df_model * np.log(n)/n
+#        aic = np.log(SSR/n) + 2 * self.df_model/n
+#        bic = np.log(SSR/n) + self.df_model * np.log(n)/n
+        # the above conform to Green, the below conform to STATA...
+        aic = -2 * loglf + 2 * (self.df_model + 1)
+        bic = -2 * loglf + np.log(n) * (self.df_model + 1)
         return loglf,aic,bic
 
     def whiten(self, Y):
@@ -392,7 +383,7 @@ NOTE: Should these be defined here?
                        normalized_cov_beta=self.normalized_cov_beta)
         lfit.predict = np.dot(self.design, lfit.beta)
         lfit.resid = Z - np.dot(self.wdesign, lfit.beta)
-        lfit.n = self.wdesign.shape[0]
+        lfit.n = float(self.wdesign.shape[0])
         lfit.df_resid = self.df_resid
         lfit.df_model = self.df_model
         lfit.Z = Z
@@ -403,7 +394,7 @@ NOTE: Should these be defined here?
         elif robust=="HC0": # HC0 (White 1980)
             lfit.scale = np.diag(lfit.resid**2)
         elif robust=="HC1": # HC1-3 MacKinnon and White (1985)
-            lfit.scale = lfit.n/(lfit.n-lfit.df_model)*(np.diag(lfit.resid**2))
+            lfit.scale = lfit.n/(lfit.n-lfit.df_model-1)*(np.diag(lfit.resid**2)) # -1 to include intercept
         elif robust=="HC2":
             h=np.diag(np.dot(np.dot(self.wdesign,self.normalized_cov_beta),
                     self.wdesign.T))
@@ -714,9 +705,6 @@ class GLSModel(OLSModel):
 
     """
     Generalized least squares model with a general covariance structure
-
-    This should probably go into nipy.fixes.scipy.stats.models.regression
-
     """
 
     def __init__(self, design, sigma):
@@ -726,6 +714,28 @@ class GLSModel(OLSModel):
     def whiten(self, Y):
         return np.dot(self.cholsigmainv, Y)
 
+class PanelModel(OLSModel):
+    '''
+    Estimator for panel data including (time) fixed effects and random effects.
+    '''
+    def __init__(self, design):
+        super(PanelModel, self).__init__()
+        self.initialize(design, hascons)
+
+    def initialize(self, design, hascon=True):
+        if hascons==True:
+            self.design = categorical(design)
+        else:
+            self.design = np.hstack((np.ones((design.shape[0], 1)), design))
+            self.design = categorical(design)
+    # UNFINISHED: RETURN AFTER THE REST IS CLEANED UP
+
+    def set_time(self, col):
+        '''
+        This allows you to set which column has the time variable
+        for time fixed effects.
+        '''
+        self.design = categorical(self.design, col)
 
 def isestimable(C, D):
     """
