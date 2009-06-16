@@ -33,12 +33,15 @@ from scipy.stats.stats import ss
 
 import numpy.lib.recfunctions as nprf
 
-def categorical(data, _column=None, _time=None):
+def xi(data, col=None, time=None, drop=False):
     '''
     Returns an array changing categorical variables to dummy variables.
 
+    Returns an interaction expansion on the specified variable.
+
     Take a structured or record array and returns an array with categorical
     variables.
+
 
     Notes
     -----
@@ -52,46 +55,32 @@ def categorical(data, _column=None, _time=None):
 
     Where should categoricals home be?
     It is used by every (?) model.
+
+    In STATA, you use xi -- interaction expansion for turning categorical
+    into indicator variables, perhaps this is a better name.
+
+    Should also be able to handle numeric data in addition to strings.
+
+    Default drops the "first" group (how to define? -- have an attribute
+    "dropped"?)
+
+    Also allows to define dropped as "prevalent" for most prevalent
+    or to define which variable -- the latter may be our best option for now.
     '''
-    if _column==None:
-    # this is the general case for when it's called and you just want to
-    # convert strings
-    # which represent NOMINAL DATA only to dummies
-        if not data.dtype.names and not data.mask.any():
-# TODO: clean this up, find it a good home
-#       used in GLM as well
 
-            print data.dtype
-            raise "There is not a categorical variable?"
-            return data
-        #if data.mask.any():            # this causes an error, and maybe
-        #should be a try?
-        #    print "Masked arrays are not handled yet."
-        #    return data
-
-        elif data.dtype.names:  # this will catch both structured and record
-                                # arrays, no other array could have
-                                # string data!
-                                # not sure about masked arrays yet
-            for i in range(len(data.dtype)):
-                if data.dtype[i].type is np.string_:
-                    tmp_arr = np.unique(data[data.dtype.names[i]])
-# changing the above line to not use fields makes it so strip doesn't work
-                    tmp_dummy = (tmp_arr[:,np.newaxis]==data.field(i)).\
-                    astype(float)
-# tmp_dummy is a number of dummies x number of observations array
-                    data=nprf.drop_fields(data,data.dtype.names[i],
-                                usemask=False, asrecarray=True)
-                    data=nprf.append_fields(data,tmp_arr.strip("\""),
-                                    data=tmp_dummy, usemask=False,
-                                    asrecarray=True)
-            return data
-    elif column and time:
-        tmp_arr=np.unique(data[column])
-# not finished, needs to except and return structured and record arrays
-# needs to work in the general case for defining a "time" variable
-
-
+#needs error checking
+    if isinstance(col, int):
+        col = data.dtype.names[col]
+    if data.dtype.names and isinstance(col,str):
+        tmp_arr = np.unique(data[col])
+        tmp_dummy = (tmp_arr[:,np.newaxis]==data[col]).astype(float)
+        if drop is True:
+            data=nprf.drop_fields(data, data[col], usemask=False,
+            asrecarray=type(data) is np.recarray)
+        data=nprf.append_fields(data, tmp_arr, data=tmp_dummy, usemask=False,
+                            asrecarray=type(data) is np.recarray)
+# TODO: need better column names for numerical indicators
+        return data
 
 #def read_design(desfile, delimiter=',', try_integer=True):
 #    """
@@ -240,7 +229,7 @@ class OLSModel(LikelihoodModel):
         super(OLSModel, self).__init__()
         self.initialize(design, hascons)
 
-    def initialize(self, design, hascons=True):
+    def initialize(self, design, hascons):
 # TODO: handle case for noconstant regression
         if hascons==True:
             self.design = design
@@ -615,7 +604,7 @@ class WLSModel(OLSModel):
     >>> print results.Fcontrast(np.identity(2))
     <F contrast: F=26.9986072423, df_denom=5, df_num=2>
     """
-    def __init__(self, design, weights=1):
+    def __init__(self, design, hascons=True, weights=1):
         weights = np.array(weights)
         if weights.shape == (): # scalar
             self.weights = weights
@@ -626,7 +615,7 @@ class WLSModel(OLSModel):
                 raise ValueError(
                     'Weights must be scalar or same length as design')
             self.weights = weights.reshape(design_rows)
-        super(WLSModel, self).__init__(design)
+        super(WLSModel, self).__init__(design, hascons)
 
     def whiten(self, X):
         """
@@ -734,10 +723,10 @@ class PanelModel(OLSModel):
 
     def initialize(self, design, hascon=True):
         if hascons==True:
-            self.design = categorical(design)
+            self.design = xi(design)
         else:
             self.design = np.hstack((np.ones((design.shape[0], 1)), design))
-            self.design = categorical(design)
+            self.design = xi(design)
     # UNFINISHED: RETURN AFTER THE REST IS CLEANED UP
 
     def set_time(self, col):
@@ -745,7 +734,7 @@ class PanelModel(OLSModel):
         This allows you to set which column has the time variable
         for time fixed effects.
         '''
-        self.design = categorical(self.design, col)
+        self.design = xi(self.design, col)
 
 def isestimable(C, D):
     """

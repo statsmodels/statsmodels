@@ -29,9 +29,10 @@ class Model(WLSModel):
 
     niter = 10
 
-    def __init__(self, design, family=family.Gaussian()):
+    def __init__(self, design, hascons=True, family=family.Gaussian()):
         self.family = family
-        super(Model, self).__init__(design, weights=1)
+        self.hascons = hascons
+        super(Model, self).__init__(design, hascons, weights=1)
 
     def __iter__(self):
         self.iter = 0
@@ -55,7 +56,7 @@ class Model(WLSModel):
         results = self.results
         Y = self.Y
         self.weights = self.family.weights(results.mu)
-        self.initialize(self.design)
+        self.initialize(self.design, self.hascons)
         Z = results.predict + self.family.link.deriv(results.mu) * (Y - results.mu)
         # TODO: this had to changed to execute properly
         # is this correct? Why? I don't understand super.... -- JT
