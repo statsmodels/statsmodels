@@ -50,16 +50,33 @@ class TestRegression(TestCase):
         '''
         from exampledata import lbw
         from nipy.fixes.scipy.stats.models.regression import xi
-        stata_lbw_beta=(.4612239, -.0271003, -.0151508, 1.262647,
+        stata_lbw_beta = (.4612239, -.0271003, -.0151508, 1.262647,
                         .8620792, .9233448, .5418366, 1.832518,
                         .7585135)
+        stata_lbw_bse = (1.20459, .0364504, .0069259, .5264101, .4391532,
+                        .4008266, .346249, .6916292, .4593768)
+        stata_ll = -100.7239956
+        stata_pearson = 182.0233425
+        stata_deviance = 201.4479911
+        stata_1_div_df_pearson = 1.011241
+        stata_1_div_df_deviance = 1.119156
+        stata_AIC = 1.1611 # based on llf, so only available for
+                           # Newton-Raphson optimization...
+        stata_BIC = -742.0655 # based on deviance
+        stata_conf_int = ((-1.899729,2.822176), (-.0985418,.0443412),
+                        (-.0287253,-.0015763), (.2309024,2.294392),
+                        (.0013548,1.722804), (.137739,1.708951),
+                        (-.136799,1.220472), (.4769494,3.188086),
+                        (-.1418484,1.658875))
+
         X = lbw()
         X = xi(X, col='race', drop=True)
-        des = np.vstack((np.ones((len(X))), X['age'], X['lwt'],
+        des = np.vstack(X['age'], X['lwt'],
                     X['black'], X['other'], X['smoke'], X['ptl'],
                     X['ht'], X['ui'])).T
             # add axes so we can hstack?
-        model = glm(design=des, family=SSM.family.Binomial())
+        model = glm(design=des, hascons=False,
+                family=SSM.family.Binomial())
 # is there currently no choice for a link function in GLM?
 # choices in family.py but then one is chosen for you?
         results = model.fit(X['low'])
@@ -70,20 +87,11 @@ class TestRegression(TestCase):
         assert_almost_equal(results.beta, stata_lbw_beta, 4)
 
 
-#*********************************
-# hascons is causing a lot of problems, since glm has
-# multiple calls to initialize
-# perhaps the best thing to do is to make adding a constant
-# a utility function for right now...and leave it out of initialize
-# altogether
-# can overload initialize for GLM, but this solution is going to be
-# an ugly hack however it's done
-# why does GLM have to reinitialize on each loop.  Isn't this heavy
-# anyway?
-
 # confidence intervals pull from the wrong distribution for this example
-# bse appears to be the same
-
+# Standard Errors are the Observed Information (OIM) standard errors
+# gives Z score for these...
+# STATA gives log-likelihood of each iterations, keep a log to check
+# in case of no convergence?
 
 
 
