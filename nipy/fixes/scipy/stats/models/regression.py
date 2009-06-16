@@ -165,7 +165,7 @@ class OLSModel(LikelihoodModel):
 
     Methods
     -------
-    model.logL(b=self.beta, Y)
+    model.llf(b=self.beta, Y)
         Returns the log-likelihood of the parameter estimates
 
         Parameters
@@ -314,9 +314,7 @@ class OLSModel(LikelihoodModel):
         return lfit
 
     def fit(self, Y, robust=None):
-# I think it would also make sense (pracitcally if not from a programming standpoint!)
-# to have an instance of OLSModel created when
-# OLSModel(x).fit(y) is called.  What's the best way to do this?
+# most of this should go into a summary() function and use the intermediate results of fit so that subclasses don't get all this overload
         """
         Full fit of the model including estimate of covariance matrix,
         (whitened) residuals and scale.

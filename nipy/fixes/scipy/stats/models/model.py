@@ -46,7 +46,7 @@ class Model(object):
 
 class LikelihoodModel(Model):
 
-    def logL(self, theta):
+    def llf(self, theta):
         """
         Log-likelihood of model.
         """

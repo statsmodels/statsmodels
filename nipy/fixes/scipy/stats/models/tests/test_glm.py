@@ -37,6 +37,16 @@ class TestRegression(TestCase):
         http://www.stata-press.com/data/r9/rmain.html
 
         See STATA manual or http://www.stata.com/help.cgi?glm
+
+        Notes
+        ------
+        If the STATA examples are not public domain, perhaps
+        Jeff Gill's are.
+
+        They can be found here: http://jgill.wustl.edu/research/books.html
+
+        His monograph is Generalized Linear Models: A Unified Approach,
+        2000, SAGE QASS series.
         '''
         from exampledata import lbw
         from nipy.fixes.scipy.stats.models.regression import xi
@@ -58,12 +68,21 @@ class TestRegression(TestCase):
         # but GLM shouldn't inherit these from OLS
         # so...GLM should overload them
         assert_almost_equal(results.beta, stata_lbw_beta, 4)
+
+
 #*********************************
 # hascons is causing a lot of problems, since glm has
 # multiple calls to initialize
 # perhaps the best thing to do is to make adding a constant
 # a utility function for right now...and leave it out of initialize
 # altogether
+# can overload initialize for GLM, but this solution is going to be
+# an ugly hack however it's done
+# why does GLM have to reinitialize on each loop.  Isn't this heavy
+# anyway?
+
+# confidence intervals pull from the wrong distribution for this example
+# bse appears to be the same
 
 
 

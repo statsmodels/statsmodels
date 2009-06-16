@@ -26,6 +26,15 @@ from nipy.fixes.scipy.stats.models.regression import WLSModel
 
 # Would GLM or GeneralLinearModel be a better class name?
 class Model(WLSModel):
+    '''
+
+    References
+    ----------
+
+    Gill, Jeff. 2000. Generalized Linear Models: A Unified Approach.
+        SAGE QASS Series.
+
+    '''
 
     niter = 10
 
@@ -38,6 +47,9 @@ class Model(WLSModel):
         self.iter = 0
         self.dev = np.inf
         return self
+
+#    def llf(self, b, Y):
+#        pass
 
     def deviance(self, Y=None, results=None, scale = 1.):
         """
@@ -56,6 +68,7 @@ class Model(WLSModel):
         results = self.results
         Y = self.Y
         self.weights = self.family.weights(results.mu)
+        self.hascons = True # so it doesn't keep adding a constant
         self.initialize(self.design, self.hascons)
         Z = results.predict + self.family.link.deriv(results.mu) * (Y - results.mu)
         # TODO: this had to changed to execute properly
@@ -79,7 +92,7 @@ class Model(WLSModel):
         if np.fabs((self.dev - curdev) / curdev) < tol:
             return False
 
-        self.dev = curdev
+        self.dev = curdev # this is Deviance in STATA
         return True
 
     def estimate_scale(self, Y=None, results=None):
@@ -92,6 +105,7 @@ class Model(WLSModel):
         if Y is None:
             Y = self.Y
         resid = Y - results.mu
+# This is the (1/df) Pearson in STATA
         return ((np.power(resid, 2) / self.family.variance(results.mu)).sum()
                 / results.df_resid)
 
@@ -99,9 +113,16 @@ class Model(WLSModel):
         self.Y = np.asarray(Y, np.float64)
         iter(self)
         self.results = super(Model, self).fit(
-            self.family.link.initialize(Y))
+            self.family.link.initialize(Y)) # calls WLS.fit with
+                                            # Y, where Y is the result
+                                            # of the link function on the mean
+                                            # of Y
         self.results.mu = self.family.link.inverse(self.results.predict)
+                                            # returns inverse of link
+                                            # on the predicted values
         self.scale = self.results.scale = self.estimate_scale()
+                                            # uses Pearson's X2 as
+                                            # as default scaling
 
         while self.cont():
             self.results = self.next()
