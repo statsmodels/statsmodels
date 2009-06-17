@@ -27,12 +27,18 @@ from nipy.fixes.scipy.stats.models.regression import WLSModel
 # Would GLM or GeneralLinearModel be a better class name?
 class Model(WLSModel):
     '''
+    Notes
+    -----
+    This uses iterative reweighted least squares.
 
     References
     ----------
-
     Gill, Jeff. 2000. Generalized Linear Models: A Unified Approach.
         SAGE QASS Series.
+
+    Green, PJ. 1984.  "Iteratively reweighted least squares for maximum
+        likelihood estimation, and some robust and resistant alternatives."
+        Journal of the Royal Statistical Society, Series B, 46, 149-192.
 
     '''
 
@@ -104,7 +110,7 @@ class Model(WLSModel):
             results = self.results
         if Y is None:
             Y = self.Y
-        resid = Y - results.mu
+        resid = Y - results.mu          # This gives the response residual
 # This is the (1/df) Pearson in STATA
         return ((np.power(resid, 2) / self.family.variance(results.mu)).sum()
                 / results.df_resid)

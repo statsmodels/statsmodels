@@ -375,12 +375,14 @@ NOTE: Should these be defined here?
         Z
             The whitened dependent variable
         """
+#TODO: Decide what stays and what goes into a "summary()" function
+# GLM for instance, doesn't need most of this (or it doesn't make sense)
         Z = self.whiten(Y)
         lfit = RegressionResults(np.dot(self.calc_beta, Z), Y,
                        normalized_cov_beta=self.normalized_cov_beta)
         lfit.predict = np.dot(self.design, lfit.beta)
         lfit.resid = Z - np.dot(self.wdesign, lfit.beta)
-        lfit.n = float(self.wdesign.shape[0])
+#        lfit.n = float(self.wdesign.shape[0])
         lfit.df_resid = self.df_resid
         lfit.df_model = self.df_model
         lfit.Z = Z
@@ -407,27 +409,36 @@ NOTE: Should these be defined here?
 
 # presumably these will be reused somewhere, so this might not be the right place for them
 # or they could just be overwritten by any OLSModel subclass
-        lfit.ESS = ss(lfit.predict - lfit.Z.mean())
-        lfit.uTSS = ss(lfit.Z)
-        lfit.cTSS = ss(lfit.Z-lfit.Z.mean())
-        lfit.SSR = ss(lfit.resid)
+#        lfit.ESS = ss(lfit.predict - lfit.Z.mean())
+#        lfit.uTSS = ss(lfit.Z)
+#        lfit.cTSS = ss(lfit.Z-lfit.Z.mean())
+#        lfit.SSR = ss(lfit.resid)
 # Centered R2 for models with intercepts (as R does)
 #        if hascons = True
-        lfit.Rsq = 1 - lfit.SSR/lfit.cTSS                       # tested
+#        lfit.Rsq = 1 - lfit.SSR/lfit.cTSS                       # tested
 #        else:
 # Uncentered R2 for models without intercepts.
-#        self.Rsq = 1 - self.SSR/self.uTSS
+#        self.Rsq = 1 - lfit.SSR/lfit.uTSS
 # R2 is uncentered like this, consider centered R2
 # What about adjRsq for no constant regression?
-        lfit.adjRsq = 1 - (lfit.n -1)/(lfit.n - lfit.df_model)*(1 - lfit.Rsq)
-        lfit.MSE_model = lfit.ESS/lfit.df_model                 # tested
-        lfit.MSE_resid = lfit.SSR/lfit.df_resid                # tested
-        lfit.MSE_total = lfit.uTSS/(lfit.df_model+lfit.df_resid)
-        lfit.F = lfit.MSE_model/lfit.MSE_resid                  # tested
-        lfit.F_p = stats.f.pdf(lfit.F, lfit.df_model, lfit.df_resid)
-        lfit.bse = np.diag(np.sqrt(lfit.cov_beta()))
-        lfit.llf, lfit.aic, lfit.bic = self.llf(lfit.beta, Z)
+#        lfit.adjRsq = 1 - (lfit.n -1)/(lfit.n - lfit.df_model)*(1 - lfit.Rsq)
+#        lfit.MSE_model = lfit.ESS/lfit.df_model                 # tested
+#        lfit.MSE_resid = lfit.SSR/lfit.df_resid                # tested
+#        lfit.MSE_total = lfit.uTSS/(lfit.df_model+lfit.df_resid)
+#        lfit.F = lfit.MSE_model/lfit.MSE_resid                  # tested
+#        lfit.F_p = stats.f.pdf(lfit.F, lfit.df_model, lfit.df_resid)
+#        lfit.bse = np.diag(np.sqrt(lfit.cov_beta()))
+#        lfit.llf, lfit.aic, lfit.bic = self.llf(lfit.beta, Z)
         return lfit
+
+    def summary(self, lfit):
+        '''
+        Must be called after fit.
+        '''
+        lfit.SSR = ss(lfit.resid)
+        lfit.cTSS = ss(lfit.Z-lfit.Z.mean())
+        lfit.Rsq = 1 - lfit.SSR/lfit.cTSS
+
 
 class ARModel(OLSModel):
     """
@@ -642,7 +653,6 @@ class RegressionResults(LikelihoodModelResults):
         super(RegressionResults, self).__init__(beta,
                                                  normalized_cov_beta,
                                                  scale)
-#Note: are the supers absolutely necessary? ping the tutors list?
         self.Y = Y
 
 

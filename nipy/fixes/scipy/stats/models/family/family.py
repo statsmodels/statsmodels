@@ -21,8 +21,6 @@ class Family(object):
     links = []
 
     def _setlink(self, link):
-                lower = res.bse - t.ppf(1-alpha/2,self.df_resid) *\
-                        np.diag(np.sqrt(self.cov_beta()))
         self._link = link
         if hasattr(self, "links"):
             if link not in self.links:
