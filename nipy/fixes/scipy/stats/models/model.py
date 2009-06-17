@@ -2,7 +2,7 @@ import numpy as np
 from numpy.linalg import inv
 #from scipy import optimize
 
-from scipy.stats import t
+from scipy.stats import t, z
 
 from nipy.fixes.scipy.stats.models.contrast import ContrastResults
 from nipy.fixes.scipy.stats.models.utils import recipr
@@ -128,6 +128,7 @@ class LikelihoodModelResults(object):
         if self.normalized_cov_beta is None:
             raise ValueError, 'need covariance of parameters for computing (unnormalized) covariances'
 
+
         if scale is None:
             scale = self.scale
 
@@ -230,18 +231,25 @@ class LikelihoodModelResults(object):
         tails : string, optional
             `tails` can be "two", "upper", or "lower"
         '''
+        if self.__class__.__name__ is 'OLSModel':
+            dist = t
+        if self.__class__.__name__ is 'Model': # is this always appropriate
+                                               # for GLM?
+            dist = z
+        else:
+            dist = t
         if cols is None:
-            lower = self.beta - t.ppf(1-alpha/2,self.df_resid) *\
+            lower = self.beta - dist.ppf(1-alpha/2,self.df_resid) *\
                     np.diag(np.sqrt(self.cov_beta()))
-            upper = self.beta + t.ppf(1-alpha/2,self.df_resid) *\
+            upper = self.beta + dist.ppf(1-alpha/2,self.df_resid) *\
                     np.diag(np.sqrt(self.cov_beta()))
         else:
             lower=[]
             upper=[]
             for i in cols:
-                lower.append(self.beta[i] - t.ppf(1-alpha/2,self.df_resid) *\
+                lower.append(self.beta[i] - dist.ppf(1-alpha/2,self.df_resid) *\
                     np.diag(np.sqrt(self.cov_beta()))[i])
-                upper.append(self.beta[i] + t.ppf(1-alpha/2,self.df_resid) *\
+                upper.append(self.beta[i] + dist.ppf(1-alpha/2,self.df_resid) *\
                     np.diag(np.sqrt(self.cov_beta()))[i])
         return np.asarray(zip(lower,upper))
 

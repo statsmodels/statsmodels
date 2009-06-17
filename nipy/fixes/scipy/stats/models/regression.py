@@ -103,7 +103,7 @@ def xi(data, col=None, time=None, drop=False):
 #    dtype=[('id', '<i4'), ('age', '<f8'), ('gender', '|S6')])
 #    >>> read_design(design, try_integer=False)
 #    recarray([(1.0, 23.5, 'male'), (2.0, 24.100000000000001, 'female'),
-#    (3.0, 24.5, 'male')],
+#    (3.0, 24.5, 'male')],http://soccernet.espn.go.com/news/story?id=655585&sec=global&cc=5901
 #    dtype=[('id', '<f8'), ('age', '<f8'), ('gender', '|S6')])
 #    >>>
 
@@ -231,7 +231,8 @@ class OLSModel(LikelihoodModel):
 
     def initialize(self, design, hascons):
 # TODO: handle case for noconstant regression
-        if hascons==True:
+        self.hascons = hascons
+        if self.hascons==True:
             self.design = design
         else:
             self.design = np.hstack((np.ones((design.shape[0], 1)), design))
@@ -382,7 +383,6 @@ NOTE: Should these be defined here?
                        normalized_cov_beta=self.normalized_cov_beta)
         lfit.predict = np.dot(self.design, lfit.beta)
         lfit.resid = Z - np.dot(self.wdesign, lfit.beta)
-#        lfit.n = float(self.wdesign.shape[0])
         lfit.df_resid = self.df_resid
         lfit.df_model = self.df_model
         lfit.Z = Z
@@ -399,45 +399,41 @@ NOTE: Should these be defined here?
                     self.wdesign.T))
             lfit.scale=np.diag(lfit.resid**2/(1-h))
 # still unsure about wdesign vs design, would a weighted design be appropriate
-# for het robust errors?
+# for the robust errors?
         elif robust=="HC3":
              h=np.diag(np.dot(np.dot(self.wdesign,self.normalized_cov_beta),
                     self.wdesign.T))
              lfit.scale=np.diag((lfit.resid/(1-h))**2)
         else:
             raise ValueError, "Robust option %s not understood" % robust
-
-# presumably these will be reused somewhere, so this might not be the right place for them
-# or they could just be overwritten by any OLSModel subclass
-#        lfit.ESS = ss(lfit.predict - lfit.Z.mean())
-#        lfit.uTSS = ss(lfit.Z)
-#        lfit.cTSS = ss(lfit.Z-lfit.Z.mean())
-#        lfit.SSR = ss(lfit.resid)
-# Centered R2 for models with intercepts (as R does)
-#        if hascons = True
-#        lfit.Rsq = 1 - lfit.SSR/lfit.cTSS                       # tested
-#        else:
-# Uncentered R2 for models without intercepts.
-#        self.Rsq = 1 - lfit.SSR/lfit.uTSS
-# R2 is uncentered like this, consider centered R2
-# What about adjRsq for no constant regression?
-#        lfit.adjRsq = 1 - (lfit.n -1)/(lfit.n - lfit.df_model)*(1 - lfit.Rsq)
-#        lfit.MSE_model = lfit.ESS/lfit.df_model                 # tested
-#        lfit.MSE_resid = lfit.SSR/lfit.df_resid                # tested
-#        lfit.MSE_total = lfit.uTSS/(lfit.df_model+lfit.df_resid)
-#        lfit.F = lfit.MSE_model/lfit.MSE_resid                  # tested
-#        lfit.F_p = stats.f.pdf(lfit.F, lfit.df_model, lfit.df_resid)
-#        lfit.bse = np.diag(np.sqrt(lfit.cov_beta()))
-#        lfit.llf, lfit.aic, lfit.bic = self.llf(lfit.beta, Z)
         return lfit
 
     def summary(self, lfit):
         '''
         Must be called after fit.
         '''
+        lfit.nobs = float(self.wdesign.shape[0])
         lfit.SSR = ss(lfit.resid)
         lfit.cTSS = ss(lfit.Z-lfit.Z.mean())
-        lfit.Rsq = 1 - lfit.SSR/lfit.cTSS
+# Centered R2 for models with intercepts
+        if self.hascons is True:
+            lfit.Rsq = 1 - lfit.SSR/lfit.cTSS
+#        else:
+#           self.Rsq = 1 - lfit.SSR/lfit.uTSS
+        lfit.ESS = ss(lfit.predict - lfit.Z.mean())
+        lfit.uTSS = ss(lfit.Z)
+        lfit.cTSS = ss(lfit.Z-lfit.Z.mean())
+        lfit.SSR = ss(lfit.resid)
+        lfit.adjRsq = 1 - (lfit.n -1)/(lfit.n - lfit.df_model)*(1 - lfit.Rsq)
+        lfit.MSE_model = lfit.ESS/lfit.df_model
+        lfit.MSE_resid = lfit.SSR/lfit.df_resid
+        lfit.MSE_total = lfit.uTSS/(lfit.df_model+lfit.df_resid)
+        lfit.F = lfit.MSE_model/lfit.MSE_resid
+        lfit.F_p = stats.f.pdf(lfit.F, lfit.df_model, lfit.df_resid)
+#       Consider putting the standard errors in the call to fit(), make
+#       sure that this makes sense for GLM, etc.
+        lfit.bse = np.diag(np.sqrt(lfit.cov_beta()))
+        lfit.llf, lfit.aic, lfit.bic = self.llf(lfit.beta, Z)
 
 
 class ARModel(OLSModel):
@@ -579,7 +575,7 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False):
 
     rho = np.linalg.solve(R, r[1:])
     sigmasq = r[0] - (r[1:]*rho).sum()
-    if inv == True:
+    if inv == True:http://soccernet.espn.go.com/news/story?id=655585&sec=global&cc=5901
         return rho, np.sqrt(sigmasq), np.linalg.inv(R)
     else:
         return rho, np.sqrt(sigmasq)
