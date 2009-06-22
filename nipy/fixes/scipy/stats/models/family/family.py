@@ -50,7 +50,6 @@ class Family(object):
            w   -- weights used in WLS step of GLM/GAM fit
 
         """
-
         return 1. / (self.link.deriv(mu)**2 * self.variance(mu))
 
     def deviance(self, Y, mu, scale=1.):

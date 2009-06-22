@@ -15,6 +15,7 @@ class Model(object):
     """
 
     def __init__(self):
+        self._results = None
         pass
 
     def initialize(self):
@@ -38,14 +39,14 @@ class Model(object):
         """
         self.results.predict(design)
 
-    def view(self):
+#    def view(self):
 # TODO: Is summary a better name for this?
 # Note that it must also accept an instance of the results class to
 # do its job
-        """
-        View results of a model.
-        """
-        raise NotImplementedError
+#        """
+#        View results of a model.
+#        """
+#        raise NotImplementedError
 
 class LikelihoodModel(Model):
 
@@ -149,8 +150,6 @@ class LikelihoodModelResults(object):
             return tmp * scale
 
         if matrix is None and column is None:
-# need to generalize for the case when scale is not a scalar
-# and we have robust estimates of \Omega the error covariance matrix
             if scale.size==1:
                 scale=np.eye(len(self.resid))*scale
             return np.dot(np.dot(self.calc_beta, scale), self.calc_beta.T)

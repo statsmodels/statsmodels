@@ -82,69 +82,6 @@ def xi(data, col=None, time=None, drop=False):
 # TODO: need better column names for numerical indicators
         return data
 
-#def read_design(desfile, delimiter=',', try_integer=True):
-#    """
-#    Return a record array with the design.
-#    The columns are first cast as numpy.float, if this fails, its
-#    dtype is unchanged.
-
-#    If try_integer is True and a given column can be cast as float,
-#    it is then tested to see if it can be cast as numpy.int.
-
-#    >>> design = [["id","age","gender"],[1,23.5,"male"],[2,24.1,"female"],[3,24.5,"male"]]
-#    >>> read_design(design)
-#    recarray([(1, 23.5, 'male'), (2, 24.100000000000001, 'female'),
-#    (3, 24.5, 'male')],
-#    dtype=[('id', '<i4'), ('age', '<f8'), ('gender', '|S6')])
-#    >>> design = [["id","age","gender"],[1,23.5,"male"],[2,24.1,"female"],[3.,24.5,"male"]]
-#    >>> read_design(design)
-#    recarray([(1, 23.5, 'male'), (2, 24.100000000000001, 'female'),
-#    (3, 24.5, 'male')],
-#    dtype=[('id', '<i4'), ('age', '<f8'), ('gender', '|S6')])
-#    >>> read_design(design, try_integer=False)
-#    recarray([(1.0, 23.5, 'male'), (2.0, 24.100000000000001, 'female'),
-#    (3.0, 24.5, 'male')],http://soccernet.espn.go.com/news/story?id=655585&sec=global&cc=5901
-#    dtype=[('id', '<f8'), ('age', '<f8'), ('gender', '|S6')])
-#    >>>
-
-#    """
-
-#    if type(desfile) == type("string"):
-#        desfile = file(desfile)
-#        _reader = reader(desfile, delimiter=delimiter)
-#    else:
-#        _reader = iter(desfile)
-#    colnames = _reader.next()
-
-#    predesign = np.rec.fromrecords([row for row in _reader], names=colnames)
-
-    # Try to typecast each column to float, then int
-
-#    dtypes = predesign.dtype.descr
-#    newdescr = []
-#    newdata = []
-   # for name, descr in dtypes:
-#        x = predesign[name]
-#        try:
-#            y = np.asarray(x.copy(), np.float) # cast as float
-#            if np.alltrue(np.equal(x, y)):
-#                if try_integer:
-#                    z = y.astype(np.int) # cast as int
-#                    if np.alltrue(np.equal(y, z)):
-#                        newdata.append(z)
-#                        newdescr.append(z.dtype.descr[0][1])
-#                    else:
-#                        newdata.append(y)
-#                        newdescr.append(y.dtype.descr[0][1])
-#                else:
-#                    newdata.append(y)
-#                    newdescr.append(y.dtype.descr[0][1])
-#        except:
-#            newdata.append(x)
-#            newdescr.append(descr)
-
-#    return np.rec.fromarrays(newdata, formats=sjoin(newdescr, ','), names=colnames)
-
 #How to document a class?
 #Docs are a little vague and there are no good examples
 #Some of these attributes are most likely intended to be private I imagine
@@ -408,6 +345,14 @@ NOTE: Should these be defined here?
             raise ValueError, "Robust option %s not understood" % robust
         return lfit
 
+
+#    @property
+#    def results(self, Y):
+#        if self._results is None:
+#            #self.fit(self.Y)
+#            print Y
+#        return self._results
+
     def summary(self, lfit):
         '''
         Must be called after fit.
@@ -621,18 +566,12 @@ class WLSModel(OLSModel):
                     'Weights must be scalar or same length as design')
             self.weights = weights.reshape(design_rows)
         super(WLSModel, self).__init__(design, hascons)
-# NOTE: Calling super after the weights check means that the design has to have a constant
-# or the weights won't be equal...
-# can be fixed with a simple if test.
-# NOTE: It appears as though it can only accept weighting vectors
-# ie., where \Omega is diagnoal
 
     def whiten(self, X):
         """
         Whitener for WLS model, multiplies by sqrt(self.weights)
         """
         X = np.asarray(X, np.float64)
-
         if X.ndim == 1:
             return X * np.sqrt(self.weights)
         elif X.ndim == 2:
@@ -711,9 +650,7 @@ class RegressionResults(LikelihoodModelResults):
 #        return 1 - ratio
 #        return 1 - np.add.reduce(self.resid**2)/np.add.reduce((self.Z-self.Z.mean())**2)
 
-
 class GLSModel(OLSModel):
-
     """
     Generalized least squares model with a general covariance structure
     """
@@ -761,3 +698,70 @@ def isestimable(C, D):
     if utils.rank(new) != utils.rank(D):
         return False
     return True
+
+def read_design(desfile, delimiter=',', try_integer=True):
+    """
+    Return a record array with the design.
+    The columns are first cast as numpy.float, if this fails, its
+    dtype is unchanged.
+
+    If try_integer is True and a given column can be cast as float,
+    it is then tested to see if it can be cast as numpy.int.
+
+    >>> design = [["id","age","gender"],[1,23.5,"male"],[2,24.1,"female"],[3,24.5,"male"]]
+    >>> read_design(design)
+    recarray([(1, 23.5, 'male'), (2, 24.100000000000001, 'female'),
+    (3, 24.5, 'male')],
+    dtype=[('id', '<i4'), ('age', '<f8'), ('gender', '|S6')])
+    >>> design = [["id","age","gender"],[1,23.5,"male"],[2,24.1,"female"],[3.,24.5,"male"]]
+    >>> read_design(design)
+    recarray([(1, 23.5, 'male'), (2, 24.100000000000001, 'female'),
+    (3, 24.5, 'male')],
+    dtype=[('id', '<i4'), ('age', '<f8'), ('gender', '|S6')])
+    >>> read_design(design, try_integer=False)
+    recarray([(1.0, 23.5, 'male'), (2.0, 24.100000000000001, 'female'),
+    (3.0, 24.5, 'male')],http://soccernet.espn.go.com/news/story?id=655585&sec=global&cc=5901
+    dtype=[('id', '<f8'), ('age', '<f8'), ('gender', '|S6')])
+    >>>
+
+    Notes
+    -----
+    This replicates np.recfromcsv pretty closely.  The only difference I can
+    can see is the try_integer will cast integers to floats.  np.io should
+    be preferred.
+    """
+
+    if type(desfile) == type("string"):
+        desfile = file(desfile)
+        _reader = reader(desfile, delimiter=delimiter)
+    else:
+        _reader = iter(desfile)
+    colnames = _reader.next()
+    predesign = np.rec.fromrecords([row for row in _reader], names=colnames)
+
+    # Try to typecast each column to float, then int
+
+    dtypes = predesign.dtype.descr
+    newdescr = []
+    newdata = []
+    for name, descr in dtypes:
+        x = predesign[name]
+        try:
+            y = np.asarray(x.copy(), np.float) # cast as float
+            if np.alltrue(np.equal(x, y)):
+                if try_integer:
+                    z = y.astype(np.int) # cast as int
+                    if np.alltrue(np.equal(y, z)):
+                        newdata.append(z)
+                        newdescr.append(z.dtype.descr[0][1])
+                    else:
+                        newdata.append(y)
+                        newdescr.append(y.dtype.descr[0][1])
+                else:
+                    newdata.append(y)
+                    newdescr.append(y.dtype.descr[0][1])
+        except:
+            newdata.append(x)
+            newdescr.append(descr)
+
+    return np.rec.fromarrays(newdata, formats=sjoin(newdescr, ','), names=colnames)

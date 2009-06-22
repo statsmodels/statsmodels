@@ -85,6 +85,12 @@ class TestRegression(TestCase):
         # but GLM shouldn't inherit these from OLS
         # so...GLM should overload them
         assert_almost_equal(results.beta, stata_lbw_beta, 4)
+        bse = np.sqrt(np.diag(results.cov_beta()))
+        assert_almost_equal(bse, stata_lbw_bse, 4)
+# where is this loss of precision coming from?
+# must be the scale, though beta is correct
+# is it the default use of Pearson's X2 for scaling?
+# play with algorithm
 
 
 # confidence intervals pull from the wrong distribution for this example

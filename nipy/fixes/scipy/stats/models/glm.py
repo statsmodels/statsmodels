@@ -42,7 +42,7 @@ class Model(WLSModel):
 
     '''
 
-    niter = 10
+    maxiter = 10
 
     def __init__(self, design, hascons=True, family=family.Gaussian()):
         self.family = family
@@ -93,7 +93,7 @@ class Model(WLSModel):
         """
         Continue iterating, or has convergence been obtained?
         """
-        if self.iter >= Model.niter:
+        if self.iter >= Model.maxiter:
             return False
 
         curdev = self.deviance(results=self.results)
@@ -129,12 +129,16 @@ class Model(WLSModel):
         self.results.mu = self.family.link.inverse(self.results.predict)
                                             # returns inverse of link
                                             # on the predicted values
+                                            # predict has been overwritten
+                                            # and holds self.link(mu)
+                                            # which is just the mean vector!?
         self.scale = self.results.scale = self.estimate_scale()
                                             # uses Pearson's X2 as
                                             # as default scaling
-
+        self.iterations = 0
         while self.cont():
             self.results = self.next()
             self.scale = self.results.scale = self.estimate_scale()
+            self.iterations += 1
 
         return self.results

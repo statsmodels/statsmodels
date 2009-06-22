@@ -27,7 +27,7 @@ def longley():
     filename=os.path.join(os.path.dirname(os.path.abspath(__file__)), "longley_data")
     data=np.loadtxt(filename, dtype=np.float, skiprows=1, usecols=(1,2,3,4,5,6,7))
     y=data[:,0]
-    x=data[:,1:]    # no constant, this is added in the design
+    x=data[:,1:]
     return y,x
 
 def lbw():
@@ -38,6 +38,6 @@ def lbw():
 
     X is the entire data as a record array.
     '''
-    filename="/home/skipper/nipy/skipper-workiing/nipy/fixes/scipy/stats/models/tests/stata_lbw_glm.csv"
+    filename="/home/skipper/nipy/skipper-working/nipy/fixes/scipy/stats/models/tests/stata_lbw_glm.csv"
     data=np.recfromcsv(filename, converters={4: lambda s: s.strip("\"")})
     return data

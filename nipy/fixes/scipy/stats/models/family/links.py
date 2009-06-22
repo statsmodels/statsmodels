@@ -85,7 +85,7 @@ class Logit(Link):
         """
         Derivative of logit transform
 
-        g(p) = 1 / (p * (1 - p))
+        g'(p) = 1 / (p * (1 - p))
 
         INPUTS:
            p   -- probabilities
