@@ -64,6 +64,7 @@ class Model(WLSModel):
         Note that self.scale is interpreted as a variance in old_model, so
         we divide the residuals by its sqrt.
         """
+# NOTE: Is old_model just WLSModel.whiten?
         if results is None:
             results = self.results
         if Y is None:
@@ -74,7 +75,9 @@ class Model(WLSModel):
         results = self.results
         Y = self.Y
         self.weights = self.family.weights(results.mu)
-        self.hascons = True # so it doesn't keep adding a constant
+        self.hascons = True # so it doesn't keep adding a constant, maybe
+        # this could just be set in the initialize after it's done the first
+        # time
         self.initialize(self.design, self.hascons)
         Z = results.predict + self.family.link.deriv(results.mu) * (Y - results.mu)
         # TODO: this had to changed to execute properly

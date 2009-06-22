@@ -71,7 +71,7 @@ class TestRegression(TestCase):
 
         X = lbw()
         X = xi(X, col='race', drop=True)
-        des = np.vstack(X['age'], X['lwt'],
+        des = np.vstack((X['age'], X['lwt'],
                     X['black'], X['other'], X['smoke'], X['ptl'],
                     X['ht'], X['ui'])).T
             # add axes so we can hstack?

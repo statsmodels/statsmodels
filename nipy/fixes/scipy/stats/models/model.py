@@ -39,6 +39,9 @@ class Model(object):
         self.results.predict(design)
 
     def view(self):
+# TODO: Is summary a better name for this?
+# Note that it must also accept an instance of the results class to
+# do its job
         """
         View results of a model.
         """

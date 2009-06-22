@@ -575,7 +575,7 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False):
 
     rho = np.linalg.solve(R, r[1:])
     sigmasq = r[0] - (r[1:]*rho).sum()
-    if inv == True:http://soccernet.espn.go.com/news/story?id=655585&sec=global&cc=5901
+    if inv == True:
         return rho, np.sqrt(sigmasq), np.linalg.inv(R)
     else:
         return rho, np.sqrt(sigmasq)
@@ -621,6 +621,11 @@ class WLSModel(OLSModel):
                     'Weights must be scalar or same length as design')
             self.weights = weights.reshape(design_rows)
         super(WLSModel, self).__init__(design, hascons)
+# NOTE: Calling super after the weights check means that the design has to have a constant
+# or the weights won't be equal...
+# can be fixed with a simple if test.
+# NOTE: It appears as though it can only accept weighting vectors
+# ie., where \Omega is diagnoal
 
     def whiten(self, X):
         """
@@ -636,6 +641,9 @@ class WLSModel(OLSModel):
             for i in range(X.shape[1]):
                 v[:,i] = X[:,i] * c
             return v
+        # this could be done with broadcasting?
+        # whitened = np.sqrt(self.weights)[:,np.newaxis]*X
+        # return whitened
 
 class RegressionResults(LikelihoodModelResults):
     """

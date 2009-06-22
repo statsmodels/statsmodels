@@ -38,6 +38,6 @@ def lbw():
 
     X is the entire data as a record array.
     '''
-    filename=os.path.join(os.path.dirname(os.path.abspath(__file__)), "stata_lbw_glm.csv")
+    filename="/home/skipper/nipy/skipper-workiing/nipy/fixes/scipy/stats/models/tests/stata_lbw_glm.csv"
     data=np.recfromcsv(filename, converters={4: lambda s: s.strip("\"")})
     return data
