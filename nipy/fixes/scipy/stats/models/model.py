@@ -129,26 +129,23 @@ class LikelihoodModelResults(object):
         The covariance of
         interest is either specified as a (set of) column(s) or a matrix.
         """
+
         if self.normalized_cov_beta is None:
-            raise ValueError, 'need covariance of parameters for computing (unnormalized) covariances'
-
-
+            raise ValueError, 'need covariance of parameters for computing \
+(unnormalized) covariances'
         if scale is None:
             scale = self.scale
-
         if column is not None:
             column = np.asarray(column)
             if column.shape == ():
                 return self.normalized_cov_beta[column, column] * scale
             else:
                 return self.normalized_cov_beta[column][:,column] * scale
-
         elif matrix is not None:
             if other is None:
                 other = matrix
             tmp = np.dot(matrix, np.dot(self.normalized_cov_beta, np.transpose(other)))
             return tmp * scale
-
         if matrix is None and column is None:
             if scale.size==1:
                 scale=np.eye(len(self.resid))*scale

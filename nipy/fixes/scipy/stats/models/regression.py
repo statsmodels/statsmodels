@@ -160,21 +160,16 @@ class OLSModel(LikelihoodModel):
     """
 
     def __init__(self, design, hascons=True):
-# As options become longer will need to use *args or **kwargs
-# **kwargs might make more sense if we're going to be mapping
-# option to a function call
         super(OLSModel, self).__init__()
         self.initialize(design, hascons)
 
     def initialize(self, design, hascons):
-# TODO: handle case for noconstant regression
         self.hascons = hascons
         if self.hascons==True:
             self.design = design
         else:
             self.design = np.hstack((np.ones((design.shape[0], 1)), design))
-# TODO: this will handle nominal data
-# TODO" need to handle ordinal data as well
+            self.hascon = True
         self.wdesign = self.whiten(self.design)
         self.calc_beta = np.linalg.pinv(self.wdesign)
         self.normalized_cov_beta = np.dot(self.calc_beta,
@@ -182,9 +177,6 @@ class OLSModel(LikelihoodModel):
         self.df_resid = self.wdesign.shape[0] - utils.rank(self.design)
 #       Below assumes that we will always have a constant for now
         self.df_model = utils.rank(self.design)-1
-
-# resolve the wdesign vs design issue...consider changing the name
-# design as well (!) no one in my program use the term design
 
     def llf(self, b, Y):
         '''
@@ -206,14 +198,14 @@ class OLSModel(LikelihoodModel):
 
         Notes
         -----
-        The Likelihood Function is defined as
+        The Likelihood Function is
         .. math:: \ell(\boldsymbol{y},\hat{\beta},\hat{\sigma})=
         -\frac{n}{2}(1+\log2\pi-\log n)-\frac{n}{2}\log\text{SSR}(\hat{\beta})
 
-        The AIC is defined as
+        The AIC is
         .. math:: \text{AIC}=\log\frac{SSR}{n}+\frac{2K}{n}
 
-        The BIC (or Schwartz Criterion) is defined as
+        The BIC (or Schwartz Criterion) is
         .. math:: \text{BIC}=\log\frac{SSR}{n}+\frac{K}{n}\log n
         ..
 
@@ -261,12 +253,8 @@ class OLSModel(LikelihoodModel):
         ----------
         Y : array-like
             The dependent variable for the Least Squares problem.
-        robust : string, optional
-            Estimation of the heteroskedasticity robust covariance matrix
-            Values can be "HC0", "HC1", "HC2", or "HC3"
 
 
-NOTE: Should these be defined here?
         Returns (does it actually "return" or is there a better term for this behavior?)
         --------
         adjRsq
@@ -313,72 +301,50 @@ NOTE: Should these be defined here?
         Z
             The whitened dependent variable
         """
-#TODO: Decide what stays and what goes into a "summary()" function
-# GLM for instance, doesn't need most of this (or it doesn't make sense)
         Z = self.whiten(Y)
         lfit = RegressionResults(np.dot(self.calc_beta, Z), Y,
                        normalized_cov_beta=self.normalized_cov_beta)
         lfit.predict = np.dot(self.design, lfit.beta)
         lfit.resid = Z - np.dot(self.wdesign, lfit.beta)
+        lfit.scale = ss(lfit.resid) / self.df_resid
         lfit.df_resid = self.df_resid
         lfit.df_model = self.df_model
         lfit.Z = Z
         lfit.calc_beta = self.calc_beta # needed for cov_beta()
-
-        if robust is None: # usual estimate of omega (it's a scalar)npp
-            lfit.scale = ss(lfit.resid) / self.df_resid
-        elif robust=="HC0": # HC0 (White 1980)
-            lfit.scale = np.diag(lfit.resid**2)
-        elif robust=="HC1": # HC1-3 MacKinnon and White (1985)
-            lfit.scale = lfit.n/(lfit.n-lfit.df_model-1)*(np.diag(lfit.resid**2)) # -1 to include intercept
-        elif robust=="HC2":
-            h=np.diag(np.dot(np.dot(self.wdesign,self.normalized_cov_beta),
-                    self.wdesign.T))
-            lfit.scale=np.diag(lfit.resid**2/(1-h))
-# still unsure about wdesign vs design, would a weighted design be appropriate
-# for the robust errors?
-        elif robust=="HC3":
-             h=np.diag(np.dot(np.dot(self.wdesign,self.normalized_cov_beta),
-                    self.wdesign.T))
-             lfit.scale=np.diag((lfit.resid/(1-h))**2)
-        else:
-            raise ValueError, "Robust option %s not understood" % robust
+        self._summary(lfit)      # this will define model specific results
         return lfit
-
 
 #    @property
 #    def results(self, Y):
 #        if self._results is None:
-#            #self.fit(self.Y)
-#            print Y
+#            self.fit()
 #        return self._results
 
-    def summary(self, lfit):
+    def _summary(self, lfit):
         '''
-        Must be called after fit.
+        Private method to call additional statistics for OLSModel.
+        Meant to be overwritten by subclass as needed.
         '''
         lfit.nobs = float(self.wdesign.shape[0])
         lfit.SSR = ss(lfit.resid)
         lfit.cTSS = ss(lfit.Z-lfit.Z.mean())
-# Centered R2 for models with intercepts
-        if self.hascons is True:
-            lfit.Rsq = 1 - lfit.SSR/lfit.cTSS
-#        else:
-#           self.Rsq = 1 - lfit.SSR/lfit.uTSS
-        lfit.ESS = ss(lfit.predict - lfit.Z.mean())
         lfit.uTSS = ss(lfit.Z)
+        # Centered R2 for models with intercepts
+#        if self.hascons is True:
+        lfit.Rsq = 1 - lfit.SSR/lfit.cTSS
+#        else:
+#            lfit.Rsq = 1 - lfit.SSR/lfit.uTSS
+        lfit.ESS = ss(lfit.predict - lfit.Z.mean())
         lfit.cTSS = ss(lfit.Z-lfit.Z.mean())
         lfit.SSR = ss(lfit.resid)
-        lfit.adjRsq = 1 - (lfit.n -1)/(lfit.n - lfit.df_model)*(1 - lfit.Rsq)
+        lfit.adjRsq = 1 - (lfit.nobs - 1)/(lfit.nobs - lfit.df_model - 1)*(1 - lfit.Rsq)
         lfit.MSE_model = lfit.ESS/lfit.df_model
         lfit.MSE_resid = lfit.SSR/lfit.df_resid
         lfit.MSE_total = lfit.uTSS/(lfit.df_model+lfit.df_resid)
         lfit.F = lfit.MSE_model/lfit.MSE_resid
         lfit.F_p = stats.f.pdf(lfit.F, lfit.df_model, lfit.df_resid)
-#       Consider putting the standard errors in the call to fit(), make
-#       sure that this makes sense for GLM, etc.
         lfit.bse = np.diag(np.sqrt(lfit.cov_beta()))
-        lfit.llf, lfit.aic, lfit.bic = self.llf(lfit.beta, Z)
+        lfit.llf, lfit.aic, lfit.bic = self.llf(lfit.beta, lfit.Z)
 
 
 class ARModel(OLSModel):
@@ -625,9 +591,6 @@ class RegressionResults(LikelihoodModelResults):
 #        return  self.resid * np.multiply.outer(np.ones(self.Y.shape[0]), sdd)
         return self.resid * utils.recipr(np.sqrt(self.scale))
 
-# predict is a verb
-# do the predicted values need to be done automatically, then?
-# or should you give a predict method similar to STATA
     def predictors(self, design):
         """
         Return linear predictor values from a design matrix.
@@ -685,6 +648,67 @@ class PanelModel(OLSModel):
         '''
         self.design = xi(self.design, col)
 
+class HCCM(OLSModel):
+    """
+    Heteroskedasticity-Corrected Covariance Matrix estimation
+
+    Parameters
+    ----------
+    design : array-like
+
+    hascons : bool, optional
+        Whether or not there is a constant included in the design matrix.
+        Default is True
+
+    Methods
+    -------
+    Same as OLSModel except that fit accepts an additional argument
+    to define the type of correction.
+
+    """
+
+    def __init__(self, design, hascons=True):
+        super(HCCM, self).__init__(design, hascons)
+
+    def fit(self, Y, robust='HC0'):
+        '''
+        Parameters
+        -----------
+        Y : array-like
+            Response variable
+
+        robust : string, optional
+            Estimation of the heteroskedasticity robust covariance matrix
+            Values can be "HC0", "HC1", "HC2", or "HC3"
+            Default is HC0
+
+        '''
+
+        Z = self.whiten(Y)
+        lfit = RegressionResults(np.dot(self.calc_beta, Z), Y,
+                       normalized_cov_beta=self.normalized_cov_beta)
+        lfit.predict = np.dot(self.design, lfit.beta)
+        lfit.resid = Z - np.dot(self.wdesign, lfit.beta)
+        if robust is "HC0": # HC0 (White 1980)
+            lfit.scale = np.diag(lfit.resid**2)
+        elif robust is "HC1": # HC1-3 MacKinnon and White (1985)
+            lfit.scale = lfit.n/(lfit.n-lfit.df_model-1)*(np.diag(lfit.resid**2))
+        elif robust is "HC2":
+            h=np.diag(np.dot(np.dot(self.wdesign,self.normalized_cov_beta),
+                    self.wdesign.T))
+            lfit.scale=np.diag(lfit.resid**2/(1-h))
+        elif robust is "HC3":
+             h=np.diag(np.dot(np.dot(self.wdesign,self.normalized_cov_beta),
+                    self.wdesign.T))
+             lfit.scale=np.diag((lfit.resid/(1-h))**2)
+        else:
+            raise ValueError, "Robust option %s not understood" % robust
+        lfit.df_resid = self.df_resid
+        lfit.df_model = self.df_model
+        lfit.Z = Z
+        lfit.calc_beta = self.calc_beta # needed for cov_beta()
+        return lfit
+
 def isestimable(C, D):
     """
     From an q x p contrast matrix C and an n x p design matrix D, checks
@@ -728,7 +752,7 @@ def read_design(desfile, delimiter=',', try_integer=True):
     -----
     This replicates np.recfromcsv pretty closely.  The only difference I can
     can see is the try_integer will cast integers to floats.  np.io should
-    be preferred.
+    be preferred especially if we import division from __future__.
     """
 
     if type(desfile) == type("string"):

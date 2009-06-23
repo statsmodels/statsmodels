@@ -43,7 +43,6 @@ class Model(WLSModel):
     '''
 
     maxiter = 10
-
     def __init__(self, design, hascons=True, family=family.Gaussian()):
         self.family = family
         self.hascons = hascons
