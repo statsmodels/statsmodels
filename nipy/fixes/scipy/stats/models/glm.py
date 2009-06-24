@@ -21,7 +21,6 @@ from nipy.fixes.scipy.stats.models.regression import WLSModel
 # neg binomial |   x    x                        x          x
 # gamma        |   x    x                        x
 #
-#
 
 
 # Would GLM or GeneralLinearModel be a better class name?
@@ -43,10 +42,13 @@ class Model(WLSModel):
     '''
 
     maxiter = 10
-    def __init__(self, design, hascons=True, family=family.Gaussian()):
+    @property
+    def scale(self):
+        return self.results.scale
+
+    def __init__(self, design, family=family.Gaussian()):
         self.family = family
-        self.hascons = hascons
-        super(Model, self).__init__(design, hascons, weights=1)
+        super(Model, self).__init__(design, weights=1)
 
     def __iter__(self):
         self.iter = 0
@@ -63,6 +65,7 @@ class Model(WLSModel):
         Note that self.scale is interpreted as a variance in old_model, so
         we divide the residuals by its sqrt.
         """
+
 # NOTE: Is old_model just WLSModel.whiten?
         if results is None:
             results = self.results
@@ -74,10 +77,7 @@ class Model(WLSModel):
         results = self.results
         Y = self.Y
         self.weights = self.family.weights(results.mu)
-        self.hascons = True # so it doesn't keep adding a constant, maybe
-        # this could just be set in the initialize after it's done the first
-        # time
-        self.initialize(self.design, self.hascons)
+        self.initialize(self.design)
         Z = results.predict + self.family.link.deriv(results.mu) * (Y - results.mu)
         # TODO: this had to changed to execute properly
         # is this correct? Why? I don't understand super.... -- JT
@@ -131,7 +131,7 @@ class Model(WLSModel):
                                             # predict has been overwritten
                                             # and holds self.link(mu)
                                             # which is just the mean vector!?
-        self.scale = self.results.scale = self.estimate_scale()
+        self.results.scale = self.estimate_scale()
                                             # uses Pearson's X2 as
                                             # as default scaling
         self.iterations = 0

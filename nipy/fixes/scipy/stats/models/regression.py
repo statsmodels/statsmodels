@@ -23,68 +23,12 @@ from csv import reader
 
 import numpy as np
 from scipy.linalg import norm, toeplitz
-
 from nipy.fixes.scipy.stats.models.model import LikelihoodModel, \
      LikelihoodModelResults
 from nipy.fixes.scipy.stats.models import utils
-
-from scipy import stats
+from scipy import stats, derivative
 from scipy.stats.stats import ss
-
 import numpy.lib.recfunctions as nprf
-
-def xi(data, col=None, time=None, drop=False):
-    '''
-    Returns an array changing categorical variables to dummy variables.
-
-    Returns an interaction expansion on the specified variable.
-
-    Take a structured or record array and returns an array with categorical
-    variables.
-
-
-    Notes
-    -----
-    This returns a dummy variable for EVERY distinct string.  If noconsant
-    then this is okay.  Otherwise, a "intercept" needs to be designated in
-    regression.  Note that STATA returns which variable is omitted when this
-    is called. And it is called at runtime of fit...
-
-    Returns the same array as it's given right now (recarray and structured
-    array only).
-
-    Where should categoricals home be?
-    It is used by every (?) model.
-
-    In STATA, you use xi -- interaction expansion for turning categorical
-    into indicator variables, perhaps this is a better name.
-
-    Should also be able to handle numeric data in addition to strings.
-
-    Default drops the "first" group (how to define? -- have an attribute
-    "dropped"?)
-
-    Also allows to define dropped as "prevalent" for most prevalent
-    or to define which variable -- the latter may be our best option for now.
-    '''
-
-#needs error checking
-    if isinstance(col, int):
-        col = data.dtype.names[col]
-    if data.dtype.names and isinstance(col,str):
-        tmp_arr = np.unique(data[col])
-        tmp_dummy = (tmp_arr[:,np.newaxis]==data[col]).astype(float)
-        if drop is True:
-            data=nprf.drop_fields(data, data[col], usemask=False,
-            asrecarray=type(data) is np.recarray)
-        data=nprf.append_fields(data, tmp_arr, data=tmp_dummy, usemask=False,
-                            asrecarray=type(data) is np.recarray)
-# TODO: need better column names for numerical indicators
-        return data
-
-#How to document a class?
-#Docs are a little vague and there are no good examples
-#Some of these attributes are most likely intended to be private I imagine
 
 class OLSModel(LikelihoodModel):
     """
@@ -95,10 +39,6 @@ class OLSModel(LikelihoodModel):
         `design`: array-like
             This is your design matrix.  Data are assumed to be column ordered
             with observations in rows.
-        `hascons`: boolean
-            A  whether or not your data already contains a constant.
-            By default hascons = True (this is so not to break the current
-            behavior with the Formula framework).
 
     Methods
     -------
@@ -112,7 +52,7 @@ class OLSModel(LikelihoodModel):
             is to be tested.
         Y : array-like
             `Y` is the vector of dependent variables.
-    model.__init___(design, hascons=True)
+    model.__init___(design)
         Creates a `OLSModel` from a design.
 
     Attributes
@@ -123,10 +63,10 @@ class OLSModel(LikelihoodModel):
         This is the whitened design matrix.
         design = wdesign by default for the OLSModel, though models that
         inherit from the OLSModel will whiten the design.
-    calc_beta : ndarray
+    calc_theta : ndarray
         This is the Moore-Penrose pseudoinverse of the whitened design matrix.
     normalized_cov_beta : ndarray
-        np.dot(calc_beta, calc_beta.T)
+        np.dot(calc_theta, calc_theta.T)
     df_resid : integer
         Degrees of freedom of the residuals.
         Number of observations less the rank of the design.
@@ -159,70 +99,18 @@ class OLSModel(LikelihoodModel):
     <F contrast: F=19.4607843137, df_denom=5, df_num=2>
     """
 
-    def __init__(self, design, hascons=True):
-        super(OLSModel, self).__init__()
-        self.initialize(design, hascons)
+    def __init__(self, endog, exog=None):
+        super(OLSModel, self).__init__(endog, exog)
+        self.initialize()
 
-    def initialize(self, design, hascons):
-        self.hascons = hascons
-        if self.hascons==True:
-            self.design = design
-        else:
-            self.design = np.hstack((np.ones((design.shape[0], 1)), design))
-            self.hascon = True
-        self.wdesign = self.whiten(self.design)
-        self.calc_beta = np.linalg.pinv(self.wdesign)
-        self.normalized_cov_beta = np.dot(self.calc_beta,
-                                         np.transpose(self.calc_beta))
-        self.df_resid = self.wdesign.shape[0] - utils.rank(self.design)
-#       Below assumes that we will always have a constant for now
-        self.df_model = utils.rank(self.design)-1
-
-    def llf(self, b, Y):
-        '''
-        Returns the value of the loglikelihood function at b.
-
-        Given the whitened design matrix, the loglikelihood is evaluated
-        at the parameter vector `b` for the dependent variable `Y`.
-
-        Parameters
-        ----------
-        `b` : array-like
-            The parameter estimates.  Must be of length df_model.
-        `Y` : ndarray
-            The dependent variable.
-
-        Returns
-        -------
-        The value of the loglikelihood function for an OLS Model.
-
-        Notes
-        -----
-        The Likelihood Function is
-        .. math:: \ell(\boldsymbol{y},\hat{\beta},\hat{\sigma})=
-        -\frac{n}{2}(1+\log2\pi-\log n)-\frac{n}{2}\log\text{SSR}(\hat{\beta})
-
-        The AIC is
-        .. math:: \text{AIC}=\log\frac{SSR}{n}+\frac{2K}{n}
-
-        The BIC (or Schwartz Criterion) is
-        .. math:: \text{BIC}=\log\frac{SSR}{n}+\frac{K}{n}\log n
-        ..
-
-        References
-        ----------
-        .. [1] W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
-        '''
-        n = float(self.wdesign.shape[0])
-        SSR = ss(Y - np.dot(self.wdesign,b))
-        loglf = -n/2.*(1 + np.log(2*np.pi) - np.log(n)) - \
-                n/2.*np.log(SSR)
-#        aic = np.log(SSR/n) + 2 * self.df_model/n
-#        bic = np.log(SSR/n) + self.df_model * np.log(n)/n
-        # the above conform to Green, the below conform to STATA...
-        aic = -2 * loglf + 2 * (self.df_model + 1)
-        bic = -2 * loglf + np.log(n) * (self.df_model + 1)
-        return loglf,aic,bic
+    def initialize(self):
+        self.wdesign = self.whiten(self._exog)
+        self.calc_theta = np.linalg.pinv(self.wdesign)
+        self.normalized_cov_beta = np.dot(self.calc_theta,
+                                         np.transpose(self.calc_theta))
+        self.df_resid = self.wdesign.shape[0] - utils.rank(self._exog)
+#       Below assumes that we will always have a constant
+        self.df_model = utils.rank(self._exog)-1
 
     def whiten(self, Y):
         """
@@ -230,33 +118,13 @@ class OLSModel(LikelihoodModel):
         """
         return Y
 
-    def est_coef(self, Y):
-        """
-        Estimate coefficients using lstsq, returning fitted values, Y
-        and coefficients, but initialize is not called so no
-        psuedo-inverse is calculated.
-        """
-        Z = self.whiten(Y)
-
-        lfit = RegressionResults(np.linalg.lstsq(self.wdesign, Z)[0], Y)
-        lfit.predict = np.dot(self.design, lfit.beta)
-
-        return lfit
-
-    def fit(self, Y, robust=None):
-# most of this should go into a summary() function and use the intermediate results of fit so that subclasses don't get all this overload
+    def fit(self):
         """
         Full fit of the model including estimate of covariance matrix,
         (whitened) residuals and scale.
 
-        Parameters
-        ----------
-        Y : array-like
-            The dependent variable for the Least Squares problem.
-
-
-        Returns (does it actually "return" or is there a better term for this behavior?)
-        --------
+        Returns
+        -------
         adjRsq
             Adjusted R-squared
         AIC
@@ -301,24 +169,26 @@ class OLSModel(LikelihoodModel):
         Z
             The whitened dependent variable
         """
+        Y = self._endog
         Z = self.whiten(Y)
-        lfit = RegressionResults(np.dot(self.calc_beta, Z), Y,
+        lfit = RegressionResults(np.dot(self.calc_theta, Z), Y,
                        normalized_cov_beta=self.normalized_cov_beta)
-        lfit.predict = np.dot(self.design, lfit.beta)
-        lfit.resid = Z - np.dot(self.wdesign, lfit.beta)
+        lfit.predict = np.dot(self._exog, lfit.theta)
+        lfit.resid = Z - np.dot(self.wdesign, lfit.theta)
         lfit.scale = ss(lfit.resid) / self.df_resid
         lfit.df_resid = self.df_resid
         lfit.df_model = self.df_model
         lfit.Z = Z
-        lfit.calc_beta = self.calc_beta # needed for cov_beta()
+        lfit.calc_theta = self.calc_theta # needed for cov_beta()
         self._summary(lfit)      # this will define model specific results
         return lfit
 
-#    @property
-#    def results(self, Y):
-#        if self._results is None:
-#            self.fit()
-#        return self._results
+# won't work until the data isn't split
+    @property
+    def results(self):
+        if self._results is None:
+            self._results = self.fit()
+        return self._results
 
     def _summary(self, lfit):
         '''
@@ -330,6 +200,8 @@ class OLSModel(LikelihoodModel):
         lfit.cTSS = ss(lfit.Z-lfit.Z.mean())
         lfit.uTSS = ss(lfit.Z)
         # Centered R2 for models with intercepts
+# no longer has hascons, but this should be different for
+# no constant regression...
 #        if self.hascons is True:
         lfit.Rsq = 1 - lfit.SSR/lfit.cTSS
 #        else:
@@ -343,9 +215,78 @@ class OLSModel(LikelihoodModel):
         lfit.MSE_total = lfit.uTSS/(lfit.df_model+lfit.df_resid)
         lfit.F = lfit.MSE_model/lfit.MSE_resid
         lfit.F_p = stats.f.pdf(lfit.F, lfit.df_model, lfit.df_resid)
-        lfit.bse = np.diag(np.sqrt(lfit.cov_beta()))
-        lfit.llf, lfit.aic, lfit.bic = self.llf(lfit.beta, lfit.Z)
+        lfit.bse = np.diag(np.sqrt(lfit.cov_theta()))
+        lfit.llf, lfit.aic, lfit.bic = self.llf(lfit.theta, lfit.Z)
 
+    def llf(self, b, Y):
+        '''
+        Returns the value of the loglikelihood function at b.
+
+        Given the whitened design matrix, the loglikelihood is evaluated
+        at the parameter vector `b` for the dependent variable `Y`.
+
+        Parameters
+        ----------
+        `b` : array-like
+            The parameter estimates.  Must be of length df_model.
+        `Y` : ndarray
+            The dependent variable.
+
+        Returns
+        -------
+        The value of the loglikelihood function for an OLS Model.
+
+        Notes
+        -----
+        The Likelihood Function is
+        .. math:: \ell(\boldsymbol{y},\hat{\beta},\hat{\sigma})=
+        -\frac{n}{2}(1+\log2\pi-\log n)-\frac{n}{2}\log\text{SSR}(\hat{\beta})
+
+        The AIC is
+        .. math:: \text{AIC}=\log\frac{SSR}{n}+\frac{2K}{n}
+
+        The BIC (or Schwartz Criterion) is
+        .. math:: \text{BIC}=\log\frac{SSR}{n}+\frac{K}{n}\log n
+        ..
+
+        References
+        ----------
+        .. [1] W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
+        '''
+
+        n = float(self.wdesign.shape[0])
+        SSR = ss(Y - np.dot(self.wdesign,b))
+        loglf = -n/2.*(1 + np.log(2*np.pi) - np.log(n)) - \
+                n/2.*np.log(SSR)
+        aic = -2 * loglf + 2 * (self.df_model + 1)
+        bic = -2 * loglf + np.log(n) * (self.df_model + 1)
+        return loglf,aic,bic
+
+    def score(self, theta):
+        '''
+        Score function of the classical OLS Model.
+
+        The gradient of logL with respect to theta
+
+        Parameters
+        ----------
+        theta : array-like
+
+        '''
+        # Should this be analytic or a numerical approximation?
+        return derivative(self.llf[0], theta, dx=1e-04, n=1, order=3)
+
+    def information(self, theta):
+        '''
+        Fisher information matrix of model
+        '''
+        raise NotImplementedError
+
+
+    def newton(self, theta):
+        '''
+        '''
+        raise NotImplementedError
 
 class ARModel(OLSModel):
     """
@@ -520,7 +461,7 @@ class WLSModel(OLSModel):
     >>> print results.Fcontrast(np.identity(2))
     <F contrast: F=26.9986072423, df_denom=5, df_num=2>
     """
-    def __init__(self, design, hascons=True, weights=1):
+    def __init__(self, design, weights=1):
         weights = np.array(weights)
         if weights.shape == (): # scalar
             self.weights = weights
@@ -531,7 +472,7 @@ class WLSModel(OLSModel):
                 raise ValueError(
                     'Weights must be scalar or same length as design')
             self.weights = weights.reshape(design_rows)
-        super(WLSModel, self).__init__(design, hascons)
+        super(WLSModel, self).__init__(design)
 
     def whiten(self, X):
         """
@@ -631,14 +572,10 @@ class PanelModel(OLSModel):
     '''
     def __init__(self, design):
         super(PanelModel, self).__init__()
-        self.initialize(design, hascons)
+        self.initialize(design)
 
-    def initialize(self, design, hascon=True):
-        if hascons==True:
-            self.design = xi(design)
-        else:
-            self.design = np.hstack((np.ones((design.shape[0], 1)), design))
-            self.design = xi(design)
+    def initialize(self, design):
+        self.design = xi(design)
     # UNFINISHED: RETURN AFTER THE REST IS CLEANED UP
 
     def set_time(self, col):
@@ -647,67 +584,6 @@ class PanelModel(OLSModel):
         for time fixed effects.
         '''
         self.design = xi(self.design, col)
-
-class HCCM(OLSModel):
-    """
-    Heteroskedasticity-Corrected Covariance Matrix estimation
-
-    Parameters
-    ----------
-    design : array-like
-
-    hascons : bool, optional
-        Whether or not there is a constant included in the design matrix.
-        Default is True
-
-    Methods
-    -------
-    Same as OLSModel except that fit accepts an additional argument
-    to define the type of correction.
-
-    """
-
-    def __init__(self, design, hascons=True):
-        super(HCCM, self).__init__(design, hascons)
-
-    def fit(self, Y, robust='HC0'):
-        '''
-        Parameters
-        -----------
-        Y : array-like
-            Response variable
-
-        robust : string, optional
-            Estimation of the heteroskedasticity robust covariance matrix
-            Values can be "HC0", "HC1", "HC2", or "HC3"
-            Default is HC0
-
-        '''
-
-        Z = self.whiten(Y)
-        lfit = RegressionResults(np.dot(self.calc_beta, Z), Y,
-                       normalized_cov_beta=self.normalized_cov_beta)
-        lfit.predict = np.dot(self.design, lfit.beta)
-        lfit.resid = Z - np.dot(self.wdesign, lfit.beta)
-        if robust is "HC0": # HC0 (White 1980)
-            lfit.scale = np.diag(lfit.resid**2)
-        elif robust is "HC1": # HC1-3 MacKinnon and White (1985)
-            lfit.scale = lfit.n/(lfit.n-lfit.df_model-1)*(np.diag(lfit.resid**2))
-        elif robust is "HC2":
-            h=np.diag(np.dot(np.dot(self.wdesign,self.normalized_cov_beta),
-                    self.wdesign.T))
-            lfit.scale=np.diag(lfit.resid**2/(1-h))
-        elif robust is "HC3":
-             h=np.diag(np.dot(np.dot(self.wdesign,self.normalized_cov_beta),
-                    self.wdesign.T))
-             lfit.scale=np.diag((lfit.resid/(1-h))**2)
-        else:
-            raise ValueError, "Robust option %s not understood" % robust
-        lfit.df_resid = self.df_resid
-        lfit.df_model = self.df_model
-        lfit.Z = Z
-        lfit.calc_beta = self.calc_beta # needed for cov_beta()
-        return lfit
 
 def isestimable(C, D):
     """

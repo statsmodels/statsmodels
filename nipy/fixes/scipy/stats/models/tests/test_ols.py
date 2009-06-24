@@ -7,6 +7,7 @@ import nose.tools
 
 
 import nipy.fixes.scipy.stats.models as SSM
+from nipy.fixes.scipy.stats.models.functions import add_constant
 #from nipy.fixes.scipy.stats.models.formula import Term, I
 
 
@@ -14,7 +15,7 @@ from exampledata import y, x
 
 def assert_model_similar(res1, res2):
     ''' Test if models have similar parameters '''
-    nptest.assert_almost_equal(res1.beta, res2.beta, 4)
+    nptest.assert_almost_equal(res1.theta, res2.theta, 4)
     nptest.assert_almost_equal(res1.resid, res2.resid, 4)
     nptest.assert_almost_equal(res1.predict, res2.predict, 4)
     nptest.assert_almost_equal(res1.df_resid, res2.df_resid, 4)
@@ -51,28 +52,28 @@ def test_longley():
 
     from exampledata import longley
     y,x = longley()
-    nist_long = (-3482258.63459582, 15.0618722713733, -0.358191792925910E-01,
+    x = add_constant(x)
+    nist_long = ( 15.0618722713733, -0.358191792925910E-01,
                  -2.02022980381683, -1.03322686717359, -0.511041056535807E-01,
-                 1829.15146461355)
-    nist_long_bse=(890420.383607373, 84.9149257747669, 0.334910077722432E-01,
+                 1829.15146461355, -3482258.63459582)
+    nist_long_bse=(84.9149257747669, 0.334910077722432E-01,
                    0.488399681651699, 0.214274163161675, 0.226073200069370,
-                   455.478499142212)
-# Move to HCCM test if it's going to be separate
-#    sas_bse_HC0=(832212, 51.22035, 0.02458, 0.38324, 0.14625, 0.15821,
-#                428.38438)
-#    sas_bse_HC1=(1109615, 68.29380, 0.03277, 0.51099, 0.19499, 0.21094,
-#                571.17917)
-#    sas_bse_HC2=(1202370, 67.49208, 0.03653, 0.55334, 0.20522, 0.22324,
-#                617.59295)
-#    sas_bse_HC3=(1799477, 91.11939, 0.05562, 0.82213, 0.29879, 0.32491,
-#                922.80784)
+                   455.478499142212, 890420.383607373)
+#    sas_bse_HC0=(51.22035, 0.02458, 0.38324, 0.14625, 0.15821,
+#                428.38438, 832212,)
+#    sas_bse_HC1=(68.29380, 0.03277, 0.51099, 0.19499, 0.21094,
+#                571.17917, 1109615)
+#    sas_bse_HC2=(67.49208, 0.03653, 0.55334, 0.20522, 0.22324,
+#                617.59295, 1202370)
+#    sas_bse_HC3=(91.11939, 0.05562, 0.82213, 0.29879, 0.32491,
+#                922.80784, 1799477)
 #   From STATA
-    conf_int=[(-5496529,-1467987),(-177.0291,207.1524),
+    conf_int=[(-177.0291,207.1524),
                    (-.111581,.0399428),(-3.125065,-.9153928),
                    (-1.517948,-.5485049),(-.5625173,.4603083),
-                   (798.7873,2859.515)]
-    res = SSM.regression.OLSModel(x, hascons=False).fit(y)
-    nptest.assert_almost_equal(res.beta, nist_long, 4)
+                   (798.7873,2859.515),(-5496529,-1467987)]
+    res = SSM.regression.OLSModel(y,x).fit()
+    nptest.assert_almost_equal(res.theta, nist_long, 4)
     nptest.assert_almost_equal(res.bse,nist_long_bse, 4)
     nptest.assert_almost_equal(res.scale, 92936.0061673238, 6)
     nptest.assert_almost_equal(res.Rsq, 0.995479004577296, 12)
@@ -94,13 +95,13 @@ def test_longley():
 # check that the below was copied correctly
     nptest.assert_almost_equal(res.adjRsq, .9955, 4)
 #  Robust error tests.  Compare values computed with SAS
-#    res0 = SSM.regression.OLSModel(x, hascons=False).fit(y, HCC='HC0')
+#    res0 = SSM.regression.OLSModel(x).fit(y, HCC='HC0')
 #    nptest.assert_almost_equal(res0.bse, sas_bse_HC0, 4)
-#    res1 = SSM.regression.OLSModel(x, hascons=False).fit(y, HCC='HC1')
+#    res1 = SSM.regression.OLSModel(x).fit(y, HCC='HC1')
 #    nptest.assert_almost_equal(res1.bse, sas_bse_HC1, 4)
-#    res2 = SSM.regression.OLSModel(x, hascons=False).fit(y, HCC='HC2')
+#    res2 = SSM.regression.OLSModel(x).fit(y, HCC='HC2')
 #    nptest.assert_almost_equal(res2.bse, sas_bse_HC2, 4)
-#    res3 = SSM.regression.OLSModel(x, hascons=False).fit(y, HCC='HC3')
+#    res3 = SSM.regression.OLSModel(x).fit(y, HCC='HC3')
 #    nptest.assert_almost_equal(res3.bse, sas_bse_HC3, 4)
 
 
@@ -111,8 +112,8 @@ def test_wampler():
     p=np.poly1d([1,1,1,1,1,1])
     y=np.polyval(p,x).reshape(len(x))
     x=np.hstack((np.ones((len(x), 1)), x, x**2, x**3, x**4, x**5))
-    res = SSM.regression.OLSModel(x).fit(y)
-    nptest.assert_almost_equal(res.beta,nist_wamp1)
+    res = SSM.regression.OLSModel(y,x).fit()
+    nptest.assert_almost_equal(res.theta,nist_wamp1)
 ##  include next three wampler sets
 
 ##  the precision appears to be machine specific,

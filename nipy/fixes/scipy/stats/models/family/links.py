@@ -276,7 +276,7 @@ class CDFLink(Logit):
            p   -- mean parameters
 
         OUTPUTS: z
-           z   -- derivative of CDF transform of p
+           z   -- (ppf) inverse of CDF transform of p
 
         """
         p = self.clean(p)
@@ -312,6 +312,7 @@ class CDFLink(Logit):
         """
         p = self.clean(p)
         return 1. / self.dbn.pdf(self(p))
+# is this correct?
 
 probit = CDFLink()
 probit.__doc__ = """
@@ -360,7 +361,7 @@ class CLogLog(Logit):
         """
         Inverse of C-Log-Log transform
 
-        g(z) = exp(-exp(z))
+        g^-1(z) = exp(-exp(z))
 
         INPUTS:
            z   -- linear predictor scale
@@ -386,5 +387,6 @@ class CLogLog(Logit):
         """
         p = self.clean(p)
         return -1. / (np.log(p) * p)
+# shouldn't the negatives cancel out? for just 1/(plog(p))
 
 cloglog = CLogLog()

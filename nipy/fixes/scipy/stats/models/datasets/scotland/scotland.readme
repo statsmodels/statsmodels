@@ -1,0 +1,27 @@
+#########################################################################################################
+#													#
+#	This archive is part of the free distribution of data and statistical software code for		#
+#	"Generalized Linear Models: A Unified Approach", Jeff Gill, Sage QASS Series.  You are		#
+#	free to use, modify, distribute, publish, etc. provided attribution.  Please forward 		#
+#	bugs, complaints, comments, and useful changes to: jgill@latte.harvard.edu.  			#
+#													#
+#########################################################################################################
+
+Electoral Politics in Scotland.  These data are from the 1997 vote that established a Scottish
+Parliament with taxing powers.  The data are culled from several different official UK documents
+provided by the Office for National Statistics, the General Register Office for Scotland, the
+Scottish Office: Education and Industry Department, the Scottish Department for Education
+and Employment, The Scottish Office Office: Development Department, and David Boothroyd (thank you).
+The files in this zip archive are:
+
+scotland.readme			this file
+scotvote.dat			the data file with a header indicating 
+
+scotland_births.html
+scotland_changes.html
+scotland_devolution.html
+scotland_econ_summary.html
+scotland_economics.html
+scotland_education.html
+scotland_housing.html
+scotland_population.html	these are html files with various details on the variables included.

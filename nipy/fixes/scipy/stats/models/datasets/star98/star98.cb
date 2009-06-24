@@ -1,0 +1,205 @@
+
+18 variables and 303 cases 
+
+Variable: CDS_CODE   Type: Numeric 
+          County District Code
+
+Variable: COUNTY     Type: String 
+
+Variable: DISTRICT   Type: String 
+
+Variable: LOWINC     Type: Numeric   
+          Percent Low Income Students
+            This variable is the sum of students
+            eligible for free or reduced lunch
+            programs divided by the sum of
+            students multiplied by 100.  The
+            district level percentages were
+            aggregated from school level data
+            Source: The National Center for 
+            Educational Statistics (NECS)
+            Common Core of Data site,
+            "http://nces.ed.gov/ccd/index.html"
+
+Variable: PERASIAN   Type: Numeric   
+          Percent Asian Students
+            This variable is the number of
+            Asian Students divided by the 
+            the total number of students, 
+            multiplied by 100.
+            Source: The California Department
+            of Education Educational Demographics
+            Unit site, file "ethdst97.exe" at
+            "http://www.cde.ca.gov/ftpbranch/retdiv/demo/newcbeds/"
+
+Variable: PERBLACK   Type: Numeric   
+          Percent Black Students
+            This variable is the number of
+            Black Students divided by the 
+            the total number of students, 
+            multiplied by 100.
+            Source: The California Department
+            of Education Educational Demographics
+            Unit site, file "ethdst97.exe" at
+            "http://www.cde.ca.gov/ftpbranch/retdiv/demo/newcbeds/"
+
+Variable: PERHISP    Type: Numeric   
+          Percent Hispanic Students
+            This variable is the number of
+            Hispanic Students divided by the 
+            the total number of students, 
+            multiplied by 100.
+            Source: The California Department
+            of Education Educational Demographics
+            Unit site, file "ethdst97.exe" at
+            "http://www.cde.ca.gov/ftpbranch/retdiv/demo/newcbeds/"
+
+Variable: PERMINTE   Type: Numeric   
+          Percent Minority Teachers
+            This variable is the number of
+            minority (American Indians, Asians,
+            Pacific Islanders, Filipinos, Hispanics
+            And Blacks) teachers divided by the
+            total number of teachers, then
+            multiplied by 100.
+            Source: The California Department
+            of Education Educational Demographics
+            Unit site, file "teaeth96.exe" at
+            "http://www.cde.ca.gov/ftpbranch/retdiv/demo/newcbeds/"
+
+Variable: AVYRSEXP   Type: Numeric   
+          Teachers' Experience
+            This variable is the sum of years in 
+            educational service divided by the 
+            sum of teachers.  The district level 
+            averages were aggregated from school 
+            level data.
+            Source: The California Department
+            of Education Educational Demographics
+            Unit site, file "prcert96.exe" at
+            "http://www.cde.ca.gov/ftpbranch/retdiv/demo/newcbeds/"
+
+Variable: PTRATIO    Type: Numeric   
+          Class Size 
+            This variable is enrollment divided
+            By full-time equivalent teachers.
+            Source: The California Department
+            of Education Educational Demographics
+            Unit site, file "cbeds96.exe" at
+            "http://www.cde.ca.gov/ftpbranch/retdiv/demo/newcbeds/"
+
+Variable: AVSAL      Type: Numeric   
+          Teacher Salary
+            This variable is the total salary budget,
+            including benefits, divided the number of
+            full-time teachers.  
+            Source:  School Business Services Division
+            http://www.cde.ca.gov/ftpbranch/sbsdiv/
+Variable: PERPSPEN   Type: Numeric   
+          Per-pupil Spending
+            This variable is the total spending
+            divided by total number of students.
+            Source: School Business Services Division
+            "http://www.cde.ca.gov/ftpbranch/sbsdiv/"
+
+Variable: PCT_AF     Type: Numeric   
+          Percent Students Taking UC/CSU Prep Courses
+            This variable is the percentage
+            of students taking courses that
+            meet University of California and
+            California State University entry
+            requirements.
+            Source: The California Department
+            of Education Educational Demographics
+            Unit site, file "cbeds96.exe" at
+            "http://www.cde.ca.gov/ftpbranch/retdiv/demo/newcbeds/"
+
+Variable: PCTCHRT    Type: Numeric   
+          Percent Charter Schools
+            Source: The California Department
+            of Education Educational Demographics
+            Unit site, file "schlname.exe" at
+            "http://www.cde.ca.gov/ftpbranch/retdiv/demo/newcbeds/"
+
+Variable: PCTYRRND   Type: Numeric   
+          Percent Year-round Schools 
+            Source: The California Department
+            of Education Educational Demographics
+            Unit site, file "schlname.exe" at
+            "http://www.cde.ca.gov/ftpbranch/retdiv/demo/newcbeds/"
+
+Variable: LANGUAGE   Type: Numeric   
+          Mean Language Score, Grades 2-11
+            This variable is the sum score for
+            each grade(mean * test takers) 
+            divided by the sum of test takers
+            for all grades. 
+            Source: The State of California
+            Standardized Testing and Reporting
+            site, "http://star.cde.ca.gov/index_index.html"
+
+Variable: MATH       Type: Numeric   
+          Mean Math Score, Grades 2-11
+            This variable is the sum score for
+            each grade(mean * test takers) 
+            divided by the sum of test takers
+            for all grades. 
+            Source: The State of California
+            Standardized Testing and Reporting
+            site, "http://star.cde.ca.gov/index_index.html"
+
+Variable: READ       Type: Numeric   
+          Mean Reading Score, Grades 2-11
+            This variable is the sum score for
+            each grade(mean * test takers) 
+            divided by the sum of test takers
+            for all grades. 
+            Source: The State of California
+            Standardized Testing and Reporting
+            site, "http://star.cde.ca.gov/index_index.html"
+
+Variable: LANGNCE    Type: Numeric 
+         National Percentile Rank, Language
+            National Percentile Rank is based on the mean 
+            NCE score for each district.
+
+Variable: MATHNCE    Type: Numeric 
+         National Percentile Rank, Language
+            National Percentile Rank is based on the mean 
+            NCE score for each district.
+ 
+Variable: READNCE    Type: Numeric  
+         National Percentile Rank, Language
+            National Percentile Rank is based on the mean 
+            NCE score for each district.
+
+Variables: READM(2-11)
+         Mean reading score for individual grades.
+		The grades are the number at the end
+		of each variable name.
+
+Variables: MATHM(2-11)
+         Mean math score for individual grades.
+		The grades are the number at the end
+		of each variable name.
+
+Variables: LANGM(2-11)
+         Mean language score for individual grades.
+		The grades are the number at the end
+		of each variable name.
+
+Variables: READNCE(2-11)
+         NCE percentile ranking for individual grades.
+		The grades are the number at the end
+		of each variable name.
+
+Variables: MATHCE(2-11)
+         NCE percentile ranking for individual grades.
+		The grades are the number at the end
+		of each variable name.
+
+Variables: LANGNCE(2-11)
+         NCE percentile ranking for individual grades.
+		The grades are the number at the end
+		of each variable name.
+

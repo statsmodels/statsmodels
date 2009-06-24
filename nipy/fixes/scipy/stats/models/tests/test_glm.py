@@ -8,6 +8,7 @@ from numpy.testing import *
 
 import nipy.fixes.scipy.stats.models as SSM
 import nipy.fixes.scipy.stats.models.glm as glm
+from nipy.fixes.scipy.stats.models.functions import add_constant, xi
 
 W = R.standard_normal
 
@@ -49,12 +50,13 @@ class TestRegression(TestCase):
         2000, SAGE QASS series.
         '''
         from exampledata import lbw
-        from nipy.fixes.scipy.stats.models.regression import xi
-        stata_lbw_beta = (.4612239, -.0271003, -.0151508, 1.262647,
+        stata_lbw_beta = (-.0271003, -.0151508, 1.262647,
                         .8620792, .9233448, .5418366, 1.832518,
-                        .7585135)
-        stata_lbw_bse = (1.20459, .0364504, .0069259, .5264101, .4391532,
-                        .4008266, .346249, .6916292, .4593768)
+                        .7585135, .4612239)
+        stata_lbw_bse = (.0364504, .0069259, .5264101, .4391532,
+                        .4008266, .346249, .6916292, .4593768, 1.20459)
+# NOTE that these are the same standard errors obtained with R
+# to the at least 1e-4
         stata_ll = -100.7239956
         stata_pearson = 182.0233425
         stata_deviance = 201.4479911
@@ -63,22 +65,20 @@ class TestRegression(TestCase):
         stata_AIC = 1.1611 # based on llf, so only available for
                            # Newton-Raphson optimization...
         stata_BIC = -742.0655 # based on deviance
-        stata_conf_int = ((-1.899729,2.822176), (-.0985418,.0443412),
+        stata_conf_int = ((-.0985418,.0443412),
                         (-.0287253,-.0015763), (.2309024,2.294392),
                         (.0013548,1.722804), (.137739,1.708951),
                         (-.136799,1.220472), (.4769494,3.188086),
-                        (-.1418484,1.658875))
+                        (-.1418484,1.658875), (-1.899729,2.822176))
 
         X = lbw()
         X = xi(X, col='race', drop=True)
         des = np.vstack((X['age'], X['lwt'],
                     X['black'], X['other'], X['smoke'], X['ptl'],
                     X['ht'], X['ui'])).T
-            # add axes so we can hstack?
-        model = glm(design=des, hascons=False,
+        des = add_constant(des)
+        model = glm(design=des,
                 family=SSM.family.Binomial())
-# is there currently no choice for a link function in GLM?
-# choices in family.py but then one is chosen for you?
         results = model.fit(X['low'])
         # returning of all the OLS results is feeling like overload.
         # Maybe we should have to call summary for each
@@ -98,6 +98,21 @@ class TestRegression(TestCase):
 # gives Z score for these...
 # STATA gives log-likelihood of each iterations, keep a log to check
 # in case of no convergence?
+
+        try:
+            from rpy import r
+            descols = ['x.%d' % (i+1) for i in range(des1.shape[1])]
+            formula = r('y ~ %s-1' % '+'.join(descols)) # -1 bc constant is appended
+            frame = r.data_frame(y=X.low, x=des1)
+            rglm_res = r.glm(formula, data=frame, family='binomial')
+# everything looks good up to this point, but I can't figure out
+# how to get a covariance matrix from the results in rpy.
+        except ImportError:
+            yield nose.tools.assert_true, True
+
+
+
+
 
 
 
