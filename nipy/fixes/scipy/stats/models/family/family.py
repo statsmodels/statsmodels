@@ -34,7 +34,7 @@ class Family(object):
 
     def __init__(self, link, variance):
 
-        self.link = link
+        self.link = link()
         self.variance = variance
 
     def weights(self, mu):

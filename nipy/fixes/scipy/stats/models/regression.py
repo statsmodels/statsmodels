@@ -118,7 +118,7 @@ class OLSModel(LikelihoodModel):
         """
         return Y
 
-    def fit(self):
+    def fit(self, Y=None):
         """
         Full fit of the model including estimate of covariance matrix,
         (whitened) residuals and scale.
@@ -169,7 +169,8 @@ class OLSModel(LikelihoodModel):
         Z
             The whitened dependent variable
         """
-        Y = self._endog
+        if Y is None:
+            Y = self._endog
         Z = self.whiten(Y)
         lfit = RegressionResults(np.dot(self.calc_theta, Z), Y,
                        normalized_cov_beta=self.normalized_cov_beta)
@@ -184,11 +185,12 @@ class OLSModel(LikelihoodModel):
         return lfit
 
 # won't work until the data isn't split
-    @property
-    def results(self):
-        if self._results is None:
-            self._results = self.fit()
-        return self._results
+# also gives an error for GLM...can't set attribute
+#    @property
+#    def results(self):
+#        if self._results is None:
+#            self._results = self.fit()
+#        return self._results
 
     def _summary(self, lfit):
         '''
@@ -461,18 +463,18 @@ class WLSModel(OLSModel):
     >>> print results.Fcontrast(np.identity(2))
     <F contrast: F=26.9986072423, df_denom=5, df_num=2>
     """
-    def __init__(self, design, weights=1):
+    def __init__(self, endog, exog, weights=1):
         weights = np.array(weights)
         if weights.shape == (): # scalar
             self.weights = weights
         else:
-            design_rows = design.shape[0]
+            design_rows = exog.shape[0]
             if not(weights.shape[0] == design_rows and
                    weights.size == design_rows) :
                 raise ValueError(
                     'Weights must be scalar or same length as design')
             self.weights = weights.reshape(design_rows)
-        super(WLSModel, self).__init__(design)
+        super(WLSModel, self).__init__(endog, exog)
 
     def whiten(self, X):
         """

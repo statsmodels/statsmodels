@@ -46,9 +46,9 @@ class Model(WLSModel):
     def scale(self):
         return self.results.scale
 
-    def __init__(self, design, family=family.Gaussian()):
+    def __init__(self, endog, exog, family=family.Gaussian()):
         self.family = family
-        super(Model, self).__init__(design, weights=1)
+        super(Model, self).__init__(endog, exog, weights=1)
 
     def __iter__(self):
         self.iter = 0
@@ -77,7 +77,7 @@ class Model(WLSModel):
         results = self.results
         Y = self.Y
         self.weights = self.family.weights(results.mu)
-        self.initialize(self.design)
+        self.initialize()
         Z = results.predict + self.family.link.deriv(results.mu) * (Y - results.mu)
         # TODO: this had to changed to execute properly
         # is this correct? Why? I don't understand super.... -- JT
@@ -137,7 +137,7 @@ class Model(WLSModel):
         self.iterations = 0
         while self.cont():
             self.results = self.next()
-            self.scale = self.results.scale = self.estimate_scale()
+            self.results.scale = self.estimate_scale()
             self.iterations += 1
 
         return self.results

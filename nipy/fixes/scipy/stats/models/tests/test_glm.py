@@ -14,22 +14,22 @@ W = R.standard_normal
 
 class TestRegression(TestCase):
 
-    def test_Logistic(self):
-        X = W((40,10))
-        Y = np.greater(W((40,)), 0)
-        family = SSM.family.Binomial()
-        cmodel = glm(design=X, family=SSM.family.Binomial())
-        results = cmodel.fit(Y)
-        self.assertEquals(results.df_resid, 30)
+#    def test_Logistic(self):
+#        X = W((40,10))
+#        Y = np.greater(W((40,)), 0)
+#        family = SSM.family.Binomial()
+#        cmodel = glm(design=X, family=SSM.family.Binomial())
+#        results = cmodel.fit(Y)
+#        self.assertEquals(results.df_resid, 30)
 
-    def test_Logisticdegenerate(self):
-        X = W((40,10))
-        X[:,0] = X[:,1] + X[:,2]
-        Y = np.greater(W((40,)), 0)
-        family = SSM.family.Binomial()
-        cmodel = glm(design=X, family=SSM.family.Binomial())
-        results = cmodel.fit(Y)
-        self.assertEquals(results.df_resid, 31)
+#    def test_Logisticdegenerate(self):
+#        X = W((40,10))
+#        X[:,0] = X[:,1] + X[:,2]
+#        Y = np.greater(W((40,)), 0)
+#        family = SSM.family.Binomial()
+#        cmodel = glm(design=X, family=SSM.family.Binomial())
+       # results = cmodel.fit(Y)
+#        self.assertEquals(results.df_resid, 31)
 
     def test_lbw(self):
         '''
@@ -77,21 +77,20 @@ class TestRegression(TestCase):
                     X['black'], X['other'], X['smoke'], X['ptl'],
                     X['ht'], X['ui'])).T
         des = add_constant(des)
-        model = glm(design=des,
+        model = glm(X.low, des,
                 family=SSM.family.Binomial())
         results = model.fit(X['low'])
         # returning of all the OLS results is feeling like overload.
         # Maybe we should have to call summary for each
         # but GLM shouldn't inherit these from OLS
         # so...GLM should overload them
-        assert_almost_equal(results.beta, stata_lbw_beta, 4)
-        bse = np.sqrt(np.diag(results.cov_beta()))
+        assert_almost_equal(results.theta, stata_lbw_beta, 4)
+        bse = np.sqrt(np.diag(results.cov_theta()))
         assert_almost_equal(bse, stata_lbw_bse, 4)
 # where is this loss of precision coming from?
 # must be the scale, though beta is correct
 # is it the default use of Pearson's X2 for scaling?
 # play with algorithm
-
 
 # confidence intervals pull from the wrong distribution for this example
 # Standard Errors are the Observed Information (OIM) standard errors
@@ -111,6 +110,8 @@ class TestRegression(TestCase):
             yield nose.tools.assert_true, True
 
 
+if __name__=="__main__":
+    run_module_suite()
 
 
 
