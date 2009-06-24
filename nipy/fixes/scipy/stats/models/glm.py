@@ -117,11 +117,11 @@ class Model(WLSModel):
         return ((np.power(resid, 2) / self.family.variance(results.mu)).sum()
                 / results.df_resid)
 
-    def fit(self, Y):
-        self.Y = np.asarray(Y, np.float64)
+    def fit(self):
+        self.Y = np.asarray(self._endog, np.float64)
         iter(self)
         self.results = super(Model, self).fit(
-            self.family.link.initialize(Y)) # calls WLS.fit with
+            self.family.link.initialize(self.Y)) # calls WLS.fit with
                                             # Y, where Y is the result
                                             # of the link function on the mean
                                             # of Y
