@@ -7,6 +7,9 @@ General linear models
 import numpy as np
 from nipy.fixes.scipy.stats.models import family
 from nipy.fixes.scipy.stats.models.regression import WLSModel
+from nipy.fixes.scipy.stats.models.model import LikelihoodModel
+from scipy import derivative, comb
+from nipy.fixes.scipy.stats.models import utils
 
 # Note: STATA uses either iterated reweighted least squares optimization
 #       of the deviation
@@ -70,12 +73,12 @@ class Model(WLSModel):
         if results is None:
             results = self.results
         if Y is None:
-            Y = self.Y
+            Y = self._endog
         return self.family.deviance(Y, results.mu) / scale
 
     def next(self):
         results = self.results
-        Y = self.Y
+        Y = self._endog
         self.weights = self.family.weights(results.mu)
         self.initialize()
         Z = results.predict + self.family.link.deriv(results.mu) * (Y - results.mu)
@@ -111,17 +114,16 @@ class Model(WLSModel):
         if results is None:
             results = self.results
         if Y is None:
-            Y = self.Y
+            Y = self._endog
         resid = Y - results.mu          # This gives the response residual
 # This is the (1/df) Pearson in STATA
         return ((np.power(resid, 2) / self.family.variance(results.mu)).sum()
                 / results.df_resid)
 
     def fit(self):
-        self.Y = np.asarray(self._endog, np.float64)
         iter(self)
         self.results = super(Model, self).fit(
-            self.family.link.initialize(self.Y)) # calls WLS.fit with
+            self.family.link.initialize(self._endog)) # calls WLS.fit with
                                             # Y, where Y is the result
                                             # of the link function on the mean
                                             # of Y
@@ -134,10 +136,139 @@ class Model(WLSModel):
         self.results.scale = self.estimate_scale()
                                             # uses Pearson's X2 as
                                             # as default scaling
-        self.iterations = 0
         while self.cont():
             self.results = self.next()
             self.results.scale = self.estimate_scale()
-            self.iterations += 1
 
         return self.results
+
+class GLMBinomial(LikelihoodModel):
+    '''
+    Notes
+    -----
+    This uses iterative reweighted least squares.
+
+    References
+    ----------
+    Gill, Jeff. 2000. Generalized Linear Models: A Unified Approach.
+        SAGE QASS Series.
+
+    Green, PJ. 1984.  "Iteratively reweighted least squares for maximum
+        likelihood estimation, and some robust and resistant alternatives."
+        Journal of the Royal Statistical Society, Series B, 46, 149-192.
+
+    Hardin, J.W. and Hilbe, J. 2007.  Generalized Linear Models and Extensions.
+        Stata Corp.
+
+    '''
+#1. Do not override  __init__  (use the new signature!)
+#2. Make the family a class variable for now. E.g.,
+#       class GLMgaussian(models.Model):
+#           family=family.Gaussian()
+#  Once it works, we can generalize.
+#3. Iteration involves creating a sequence of WLS models
+#  and calling their fit methods.  (Note: maxiter should
+#  be a keyword argument of the GLM fit method.)
+#4. Note that intermediate results now belong to the intermediate
+#  WLS models, instead of repeatedly changing the GLM
+#  results attributed (Much Clearer!), which in turn remains
+#  None until the final results are obtained
+#5. Assuming the WLSModel constructor is fixed, the fit
+#  method would loop over code resembling
+#       wls_endog = ...
+#       wls_exog = self.exog
+#       weights = ...
+#       wls_results = regression.WLSModel(wls_endog, wls_exog, weights).fit()
+
+    def initialize(self):
+        self.family = family.Binomial()
+        self.history = { 'predict' : [], 'theta' : [np.inf], 'logL' : []}
+        self.iteration = 0
+        self.last_result = np.inf
+        self.nobs = self._endog.shape[0]
+
+        ### copied from OLS initialize()?? ###
+#        self.wdesign = self.whiten(self._exog)
+        self.calc_theta = np.linalg.pinv(self._exog)
+        self.normalized_cov_beta = np.dot(self.calc_theta,
+                                        np.transpose(self.calc_theta))
+        self.df_resid = self._exog.shape[0]
+        self.df_model = utils.rank(self._exog)-1
+
+    def llf(self, results):
+        n = self.nobs
+        y = np.sum(self._endog)   # number of "successes"
+        p = self.inverse(results.predict)
+        llf = y * np.log(p/(1-p)) - (-n*np.log(1-p)) + np.log(comb(n,y))
+        return self._endog * np.log(theta/(1-theta))
+
+    def score(self, theta):
+        pass
+
+    def information(self, theta):
+        pass
+
+    def update_history(self, tmp_result):
+        self.history['theta'].append(tmp_result.theta)
+        self.history['predict'].append(tmp_result.predict)
+
+    def inverse(self, z):      # temporary
+        return np.exp(z)/(1+np.exp(z))
+
+    def link(self, mu):
+        return np.log(mu/(1-mu))
+
+    def next(self, wls_results):
+# or is mu below always the link on the mean response?
+        mu = self.inverse(wls_results.predict)
+        var = mu * (1 - mu/self.nobs)
+        weights = 1/var * derivative(self.inverse, wls_results.predict, dx=1e-04, n=1, order=3)**2
+        wls_exog = self._exog    # this is redundant
+        wls_endog = (self._endog - mu)*derivative(self.link, mu, dx=1e-05,
+                n=1, order=3) + self.history['predict'][self.iteration - 1]
+                # - offset? cf. Hardin p 29
+        wls_results = WLSModel(wls_endog, wls_exog, weights).fit()
+        self.iteration +=1
+        return wls_results
+
+
+    def fit(self, maxiter=100, method='IRLS', tol=1e-15):
+#TODO: method='newton'
+# for IRLS
+# initial value can be inverse of link of the mean of the response
+# note that this is NOT what our initial values are, so it's probably pretty
+# robust to any choice that's in the support
+# OR for Binomial(n_i,p_i) it can be n_i(y_i + .5)/(n_i + 1)
+# note that for non binomial it's
+# (y_i + y_bar)/2
+# cf Hardin page 31
+# initial value for Newton method (which is a value of the coefs!)
+# can often just  be the Theta for the constant only model
+# (probably analytically derived)
+# cf Hardin 27
+#        wls_endog =  self.nobs * (self._endog + .5)/(self.nobs + 1)
+# OR
+        wls_endog = self.inverse(self._endog.mean()) * np.ones((self.nobs))
+        wls_exog = self._exog
+        weights = 1.
+        wls_results = WLSModel(wls_endog, wls_exog, weights).fit()
+        self.update_history(wls_results)
+        eta = wls_results.predict
+        self.iteration+=1
+        while ((self.history['theta'][self.iteration-1]-\
+                self.history['theta'][self.iteration]).all()>tol\
+                and self.iteration < maxiter):
+            wls_results=self.next(wls_results)
+            self.update_history(wls_results)
+        self.results = wls_results
+        return self.results
+
+
+
+
+
+
+
+
+
+

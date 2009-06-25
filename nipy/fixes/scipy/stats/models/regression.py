@@ -101,7 +101,7 @@ class OLSModel(LikelihoodModel):
 
     def __init__(self, endog, exog=None):
         super(OLSModel, self).__init__(endog, exog)
-        self.initialize()
+        self.initialize()       # does this call still need to be here?
 
     def initialize(self):
         self.wdesign = self.whiten(self._exog)
