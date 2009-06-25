@@ -200,7 +200,7 @@ class GLMBinomial(LikelihoodModel):
         y = np.sum(self._endog)   # number of "successes"
         p = self.inverse(results.predict)
         llf = y * np.log(p/(1-p)) - (-n*np.log(1-p)) + np.log(comb(n,y))
-        return self._endog * np.log(theta/(1-theta))
+        return llf
 
     def score(self, theta):
         pass
@@ -222,9 +222,9 @@ class GLMBinomial(LikelihoodModel):
 # or is mu below always the link on the mean response?
         mu = self.inverse(wls_results.predict)
         var = mu * (1 - mu/self.nobs)
-        weights = 1/var * derivative(self.inverse, wls_results.predict, dx=1e-04, n=1, order=3)**2
+        weights = 1/var * derivative(self.inverse, wls_results.predict, dx=1e-02, n=1, order=3)**2
         wls_exog = self._exog    # this is redundant
-        wls_endog = (self._endog - mu)*derivative(self.link, mu, dx=1e-05,
+        wls_endog = (self._endog - mu)*derivative(self.link, mu, dx=1e-02,
                 n=1, order=3) + self.history['predict'][self.iteration - 1]
                 # - offset? cf. Hardin p 29
         wls_results = WLSModel(wls_endog, wls_exog, weights).fit()
@@ -232,7 +232,7 @@ class GLMBinomial(LikelihoodModel):
         return wls_results
 
 
-    def fit(self, maxiter=100, method='IRLS', tol=1e-15):
+    def fit(self, maxiter=100, method='IRLS', tol=1e-10):
 #TODO: method='newton'
 # for IRLS
 # initial value can be inverse of link of the mean of the response
