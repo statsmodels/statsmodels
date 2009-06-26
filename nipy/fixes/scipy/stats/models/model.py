@@ -49,57 +49,57 @@ class LikelihoodModel(Model):
         """
         pass
 
-    def llf(self, theta):
+    def llf(self, params):
         """
         Log-likelihood of model.
         """
         raise NotImplementedError
 
-    def score(self, theta):
+    def score(self, params):
         """
         Score function of model = gradient of logL with respect to
-        theta.
+        params.
         """
         raise NotImplementedError
 
-    def information(self, theta):
+    def information(self, params):
         """
         Fisher information function of model = - Hessian of logL with respect
-        to theta.
+        to params.
         """
         raise NotImplementedError
 
-    def fit(self, theta, method='newton'):
+    def fit(self, params, method='newton'):
         if method is 'newton':
-            results = self.newton(theta)
+            results = self.newton(params)
         else:
             raise ValueError("Unknown fit method.")
         self._results = results
 
-    def newton(self, theta):
-        def f(theta): return -self.llf(theta)
+    def newton(self, params):
+        def f(params): return -self.llf(params)
         xopt, fopt, iter, funcalls, warnflag =\
-          optimize.fmin(f, theta, full_output=True)
+          optimize.fmin(f, params, full_output=True)
         converge = not warnflag
         extras = dict(iter=iter, evaluations=funcalls, converge=converge)
-        return LikelihoodModelResults(self, theta, llf=fopt, **extras)
+        return LikelihoodModelResults(self, params, llf=fopt, **extras)
 
 
 class Results(object):
-    def __init__(self, model, theta, **kwd):
+    def __init__(self, model, params, **kwd):
         """
         Parameters
         ----------
         model : the estimated model
-        theta : parameter estimates from estimated model
+        params : parameter estimates from estimated model
         """
         self._model = model
-        self._theta = theta
+        self._params = params
         self.__dict__.update(kwd)
         self.initialize()
     @property
-    def theta(self):
-        return self._theta
+    def params(self):
+        return self._params
     @property
     def model(self):
         return self._model
@@ -108,15 +108,15 @@ class Results(object):
 
 class LikelihoodModelResults(Results):
     """ Class to contain results from likelihood models """
-    def __init__(self, model, theta, normalized_cov_theta=None, scale=1.):
+    def __init__(self, model, params, normalized_cov_params=None, scale=1.):
         """
         Parameters
         -----------
-        theta : 1d array_like
+        params : 1d array_like
             parameter estimates from estimated model
-        normalized_cov_theta : 2d array
-           Normalized (before scaling) covariance of thetas
-            normalized_cov_thetas is also known as the hat matrix or H
+        normalized_cov_params : 2d array
+           Normalized (before scaling) covariance of paramss
+            normalized_cov_paramss is also known as the hat matrix or H
             (Semiparametric regression, Ruppert, Wand, Carroll; CUP 2003)
         scale : float
             For (some subset of models) scale will typically be the
@@ -125,15 +125,15 @@ class LikelihoodModelResults(Results):
         Comments
         --------
 
-        The covariance of thetas is given by scale times
-        normalized_cov_theta
+        The covariance of paramss is given by scale times
+        normalized_cov_params
         """
 
-        super(LikelihoodModelResults, self).__init__(model, theta)
-        self.normalized_cov_theta = normalized_cov_theta
+        super(LikelihoodModelResults, self).__init__(model, params)
+        self.normalized_cov_params = normalized_cov_params
         self.scale = scale
 
-    def normalized_cov_theta(self):
+    def normalized_cov_params(self):
         raise NotImplementedError
 
     def scale(self):
@@ -147,31 +147,31 @@ class LikelihoodModelResults(Results):
 
         """
 
-        if self.normalized_cov_theta is None:
+        if self.normalized_cov_params is None:
             raise ValueError, 'need covariance of parameters for computing T statistics'
 
         if column is None:
-            column = range(self.theta.shape[0])
+            column = range(self.params.shape[0])
 
         column = np.asarray(column)
-        _theta = self.theta[column]
-        _cov = self.cov_theta(column=column)
+        _params = self.params[column]
+        _cov = self.cov_params(column=column)
         if _cov.ndim == 2:
             _cov = np.diag(_cov)
-        _t = _theta * recipr(np.sqrt(_cov))
+        _t = _params * recipr(np.sqrt(_cov))
         return _t
 
-    def cov_theta(self, matrix=None, column=None, scale=None, other=None):
+    def cov_params(self, matrix=None, column=None, scale=None, other=None):
         """
         Returns the variance/covariance matrix of a linear contrast
-        of the estimates of theta, multiplied by scale which
+        of the estimates of params, multiplied by scale which
         will usually be an estimate of sigma^2.
 
         The covariance of
         interest is either specified as a (set of) column(s) or a matrix.
         """
 
-        if self.normalized_cov_theta is None:
+        if self.normalized_cov_params is None:
             raise ValueError, 'need covariance of parameters for computing \
 (unnormalized) covariances'
         if scale is None:
@@ -179,18 +179,18 @@ class LikelihoodModelResults(Results):
         if column is not None:
             column = np.asarray(column)
             if column.shape == ():
-                return self.normalized_cov_theta[column, column] * scale
+                return self.normalized_cov_params[column, column] * scale
             else:
-                return self.normalized_cov_theta[column][:,column] * scale
+                return self.normalized_cov_params[column][:,column] * scale
         elif matrix is not None:
             if other is None:
                 other = matrix
-            tmp = np.dot(matrix, np.dot(self.normalized_cov_theta, np.transpose(other)))
+            tmp = np.dot(matrix, np.dot(self.normalized_cov_params, np.transpose(other)))
             return tmp * scale
         if matrix is None and column is None:
             if scale.size==1:
                 scale=np.eye(len(self.resid))*scale
-            return np.dot(np.dot(self.calc_theta, scale), self.calc_theta.T)
+            return np.dot(np.dot(self.calc_params, scale), self.calc_params.T)
 
     def Tcontrast(self, matrix, t=True, sd=True, scale=None):
         """
@@ -198,14 +198,14 @@ class LikelihoodModelResults(Results):
         for a single column, use the 't' method.
         """
 
-        if self.normalized_cov_theta is None:
+        if self.normalized_cov_params is None:
             raise ValueError, 'need covariance of parameters for computing T statistics'
 
         _t = _sd = None
 
-        _effect = np.dot(matrix, self.theta)
+        _effect = np.dot(matrix, self.params)
         if sd:
-            _sd = np.sqrt(self.cov_theta(matrix=matrix))
+            _sd = np.sqrt(self.cov_params(matrix=matrix))
         if t:
             _t = _effect * recipr(_sd)
         return ContrastResults(effect=_effect, t=_t, sd=_sd, df_denom=self.df_resid)
@@ -228,20 +228,20 @@ class LikelihoodModelResults(Results):
 
         """
 
-        if self.normalized_cov_theta is None:
+        if self.normalized_cov_params is None:
             raise ValueError, 'need covariance of parameters for computing F statistics'
 
-        ctheta = np.dot(matrix, self.theta)
+        cparams = np.dot(matrix, self.params)
 
         q = matrix.shape[0]
         if invcov is None:
-            invcov = inv(self.cov_theta(matrix=matrix, scale=1.0))
-        F = np.add.reduce(np.dot(invcov, ctheta) * ctheta, 0) * recipr((q * self.scale))
+            invcov = inv(self.cov_params(matrix=matrix, scale=1.0))
+        F = np.add.reduce(np.dot(invcov, cparams) * cparams, 0) * recipr((q * self.scale))
         return ContrastResults(F=F, df_denom=self.df_resid, df_num=invcov.shape[0])
 
     def conf_int(self, alpha=.05, cols=None):
         """
-        Returns the confidence interval of the specified theta estimates.
+        Returns the confidence interval of the specified params estimates.
 
         Parameters
         ----------
@@ -260,8 +260,8 @@ class LikelihoodModelResults(Results):
         >>>from numpy.random import standard_normal as stan
         >>>import nipy.fixes.scipy.stats.models as SSM
         >>>x = np.hstack((stan((30,1)),stan((30,1)),stan((30,1))))
-        >>>theta=np.array([3.25, 1.5, 7.0])
-        >>>y = np.dot(x,theta) + stan((30))
+        >>>params=np.array([3.25, 1.5, 7.0])
+        >>>y = np.dot(x,params) + stan((30))
         >>>model = SSM.regression.OLSModel(x, hascons=False).fit(y)
         >>>model.conf_int(cols=(1,2))
 
@@ -279,18 +279,18 @@ class LikelihoodModelResults(Results):
         else:
             dist = t
         if cols is None:
-            lower = self.theta - dist.ppf(1-alpha/2,self.df_resid) *\
-                    np.diag(np.sqrt(self.cov_theta()))
-            upper = self.theta + dist.ppf(1-alpha/2,self.df_resid) *\
-                    np.diag(np.sqrt(self.cov_theta()))
+            lower = self.params - dist.ppf(1-alpha/2,self.df_resid) *\
+                    np.diag(np.sqrt(self.cov_params()))
+            upper = self.params + dist.ppf(1-alpha/2,self.df_resid) *\
+                    np.diag(np.sqrt(self.cov_params()))
         else:
             lower=[]
             upper=[]
             for i in cols:
-                lower.append(self.theta[i] - dist.ppf(1-alpha/2,self.df_resid) *\
-                    np.diag(np.sqrt(self.cov_theta()))[i])
-                upper.append(self.theta[i] + dist.ppf(1-alpha/2,self.df_resid) *\
-                    np.diag(np.sqrt(self.cov_theta()))[i])
+                lower.append(self.params[i] - dist.ppf(1-alpha/2,self.df_resid) *\
+                    np.diag(np.sqrt(self.cov_params()))[i])
+                upper.append(self.params[i] + dist.ppf(1-alpha/2,self.df_resid) *\
+                    np.diag(np.sqrt(self.cov_params()))[i])
         return np.asarray(zip(lower,upper))
 
 

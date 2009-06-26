@@ -13,37 +13,36 @@ from nipy.fixes.scipy.stats.models.functions import add_constant
 
 from exampledata import y, x
 
-#def assert_model_similar(res1, res2):
-#    ''' Test if models have similar parameters '''
-#    nptest.assert_almost_equal(res1.theta, res2.theta, 4)
-#    nptest.assert_almost_equal(res1.resid, res2.resid, 4)
-#    nptest.assert_almost_equal(res1.predict, res2.predict, 4)
-#    nptest.assert_almost_equal(res1.df_resid, res2.df_resid, 4)
+def assert_model_similar(res1, res2):
+    ''' Test if models have similar parameters '''
+    nptest.assert_almost_equal(res1.params, res2.beta, 4)
+    nptest.assert_almost_equal(res1.resid, res2.resid, 4)
+    nptest.assert_almost_equal(res1.predict, res2.predict, 4)
+    nptest.assert_almost_equal(res1.df_resid, res2.df_resid, 4)
 
-#def check_model_class(model_class, r_model_type):
-#    results = model_class(y,x).fit()
-#    r_results = WrappedRModel(y, x, r_model_type)
-#    r_results.assert_similar(results)
+def check_model_class(model_class, r_model_type):
+    results = model_class(y,x).fit()
+    r_results = WrappedRModel(y, x, r_model_type)
+    r_results.assert_similar(results)
 
-#def test_using_rpy():
-#    """
-#    this test fails because the glm results don't agree with the ols and rlm
-#    results
-#    """
-#    try:
-#        from rpy import r
-#        from rmodelwrap import RModel
-#
+def test_using_rpy():
+    """
+    this test fails because the glm results don't agree with the ols and rlm
+    results
+    """
+    try:
+        from rpy import r
+        from rmodelwrap import RModel
+
         # Test OLS
-#        ols_res = SSM.regression.OLSModel(y,x).fit()
-#        rlm_res = RModel(y, x, r.lm)
-#        yield assert_model_similar, ols_res, rlm_res
-#       this is failing with an error right now
-#       segfaults on my other machine (don't know if it's here exactly though)
-#        glm_res = SSM.glm(x).fit(y)
+        ols_res = SSM.regression.OLS(y,x).fit()
+        rlm_res = RModel(y, x, r.lm)
+        yield assert_model_similar, ols_res, rlm_res
+# this still segfaults/ gives can't set attribute error and hangs...
+#        glm_res = SSM.glm(y,x).fit()
 #        yield assert_model_similar, glm_res, rlm_res
-#    except ImportError:
-#        yield nose.tools.assert_true, True
+    except ImportError:
+        yield nose.tools.assert_true, True
 
 def test_longley():
     '''
@@ -72,8 +71,8 @@ def test_longley():
                    (-.111581,.0399428),(-3.125065,-.9153928),
                    (-1.517948,-.5485049),(-.5625173,.4603083),
                    (798.7873,2859.515),(-5496529,-1467987)]
-    res = SSM.regression.OLSModel(y,x).fit()
-    nptest.assert_almost_equal(res.theta, nist_long, 4)
+    res = SSM.regression.OLS(y,x).fit()
+    nptest.assert_almost_equal(res.params, nist_long, 4)
     nptest.assert_almost_equal(res.bse,nist_long_bse, 4)
     nptest.assert_almost_equal(res.scale, 92936.0061673238, 6)
     nptest.assert_almost_equal(res.Rsq, 0.995479004577296, 12)
@@ -96,13 +95,13 @@ def test_longley():
 # check that the below was copied correctly
     nptest.assert_almost_equal(res.adjRsq, .9955, 4)
 #  Robust error tests.  Compare values computed with SAS
-#    res0 = SSM.regression.OLSModel(x).fit(y, HCC='HC0')
+#    res0 = SSM.regression.OLS(x).fit(y, HCC='HC0')
 #    nptest.assert_almost_equal(res0.bse, sas_bse_HC0, 4)
-#    res1 = SSM.regression.OLSModel(x).fit(y, HCC='HC1')
+#    res1 = SSM.regression.OLS(x).fit(y, HCC='HC1')
 #    nptest.assert_almost_equal(res1.bse, sas_bse_HC1, 4)
-#    res2 = SSM.regression.OLSModel(x).fit(y, HCC='HC2')
+#    res2 = SSM.regression.OLS(x).fit(y, HCC='HC2')
 #    nptest.assert_almost_equal(res2.bse, sas_bse_HC2, 4)
-#    res3 = SSM.regression.OLSModel(x).fit(y, HCC='HC3')
+#    res3 = SSM.regression.OLS(x).fit(y, HCC='HC3')
 #    nptest.assert_almost_equal(res3.bse, sas_bse_HC3, 4)
 
 
@@ -113,8 +112,8 @@ def test_wampler():
     p=np.poly1d([1,1,1,1,1,1])
     y=np.polyval(p,x).reshape(len(x))
     x=np.hstack((np.ones((len(x), 1)), x, x**2, x**3, x**4, x**5))
-    res = SSM.regression.OLSModel(y,x).fit()
-    nptest.assert_almost_equal(res.theta,nist_wamp1)
+    res = SSM.regression.OLS(y,x).fit()
+    nptest.assert_almost_equal(res.params,nist_wamp1)
 ##  include next three wampler sets
 
 ##  the precision appears to be machine specific,

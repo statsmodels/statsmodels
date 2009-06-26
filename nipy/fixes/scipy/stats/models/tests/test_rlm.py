@@ -14,16 +14,16 @@ class TestRegression(TestCase):
     def test_Robust(self):
         X = W((40,10))
         Y = W((40,))
-        model = models(design=X)
-        results = model.fit(Y)
+        model = models(Y, X)
+        results = model.fit()
         self.assertEquals(results.df_resid, 30)
 
     def test_Robustdegenerate(self):
         X = W((40,10))
         X[:,0] = X[:,1] + X[:,2]
         Y = W((40,))
-        model = models(design=X)
-        results = model.fit(Y)
+        model = models(Y, X)
+        results = model.fit()
         self.assertEquals(results.df_resid, 31)
 
 

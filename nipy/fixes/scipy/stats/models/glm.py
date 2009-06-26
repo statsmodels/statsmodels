@@ -6,7 +6,7 @@ General linear models
 
 import numpy as np
 from nipy.fixes.scipy.stats.models import family
-from nipy.fixes.scipy.stats.models.regression import WLSModel
+from nipy.fixes.scipy.stats.models.regression import WLS
 from nipy.fixes.scipy.stats.models.model import LikelihoodModel
 from scipy import derivative, comb
 from nipy.fixes.scipy.stats.models import utils
@@ -27,7 +27,7 @@ from nipy.fixes.scipy.stats.models import utils
 
 
 # Would GLM or GeneralLinearModel be a better class name?
-class Model(WLSModel):
+class Model(WLS):
     '''
     Notes
     -----
@@ -163,15 +163,15 @@ class GLMBinomial(LikelihoodModel):
     '''
     def initialize(self):
         self.family = family.Binomial()
-        self.history = { 'predict' : [], 'theta' : [np.inf], 'logL' : []}
+        self.history = { 'predict' : [], 'params' : [np.inf], 'logL' : []}
         self.iteration = 0
         self.last_result = np.inf
         self.nobs = self._endog.shape[0]
 
         ### copied from OLS initialize()?? ###
-        self.calc_theta = np.linalg.pinv(self._exog)
-        self.normalized_cov_beta = np.dot(self.calc_theta,
-                                        np.transpose(self.calc_theta))
+        self.calc_params = np.linalg.pinv(self._exog)
+        self.normalized_cov_params = np.dot(self.calc_params,
+                                        np.transpose(self.calc_params))
         self.df_resid = self._exog.shape[0]
         self.df_model = utils.rank(self._exog)-1
 
@@ -182,14 +182,14 @@ class GLMBinomial(LikelihoodModel):
         llf = y * np.log(p/(1-p)) - (-n*np.log(1-p)) + np.log(comb(n,y))
         return llf
 
-    def score(self, theta):
+    def score(self, params):
         pass
 
-    def information(self, theta):
+    def information(self, params):
         pass
 
     def update_history(self, tmp_result):
-        self.history['theta'].append(tmp_result.theta)
+        self.history['params'].append(tmp_result.params)
         self.history['predict'].append(tmp_result.predict)
 
     def inverse(self, z):      # temporary
@@ -207,7 +207,7 @@ class GLMBinomial(LikelihoodModel):
         wls_endog = (self._endog - mu)*derivative(self.link, mu, dx=1e-02,
                 n=1, order=3) + self.history['predict'][self.iteration - 1]
                 # - offset? cf. Hardin p 29
-        wls_results = WLSModel(wls_endog, wls_exog, weights).fit()
+        wls_results = WLS(wls_endog, wls_exog, weights).fit()
         self.iteration +=1
         return wls_results
 
@@ -231,12 +231,12 @@ class GLMBinomial(LikelihoodModel):
         wls_endog = self.inverse(self._endog.mean()) * np.ones((self.nobs))
         wls_exog = self._exog
         weights = 1.
-        wls_results = WLSModel(wls_endog, wls_exog, weights).fit()
+        wls_results = WLS(wls_endog, wls_exog, weights).fit()
         self.update_history(wls_results)
         eta = wls_results.predict
         self.iteration+=1
-        while ((self.history['theta'][self.iteration-1]-\
-                self.history['theta'][self.iteration]).all()>tol\
+        while ((self.history['params'][self.iteration-1]-\
+                self.history['params'][self.iteration]).all()>tol\
                 and self.iteration < maxiter):
             wls_results=self.next(wls_results)
             self.update_history(wls_results)

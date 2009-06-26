@@ -3,18 +3,18 @@ Robust linear models
 """
 import numpy as np
 
-from nipy.fixes.scipy.stats.models.regression import WLSModel
+from nipy.fixes.scipy.stats.models.regression import WLS
 from nipy.fixes.scipy.stats.models.robust import norms, scale
 
-class Model(WLSModel):
+class Model(WLS):
 
     niter = 20
     scale_est = 'MAD'
 
-    def __init__(self, design, M=norms.Hampel()):
+    def __init__(self, endog, exog, M=norms.Hampel()):
         self.M = M
         self.weights = 1
-        self.initialize(design)
+        self.initialize()   # is this still needed
 
     def __iter__(self):
         self.iter = 0
@@ -36,7 +36,7 @@ class Model(WLSModel):
         results = self.results
         self.weights = self.M.weights((results.Y - results.predict) / np.sqrt(results.scale))
         self.initialize(self.design)
-        results = WLSModel.fit(self, results.Y)
+        results = WLS.fit(self, results.Y)
         self.scale = results.scale = self.estimate_scale(results)
         self.iter += 1
         return results
@@ -71,7 +71,7 @@ class Model(WLSModel):
     def fit(self, Y):
 
         iter(self)
-        self.results = WLSModel.fit(self, Y)
+        self.results = WLS.fit(self, Y)
         self.scale = self.results.scale = self.estimate_scale(self.results)
 
         while self.cont(self.results):

@@ -30,75 +30,29 @@ from scipy import stats, derivative
 from scipy.stats.stats import ss
 import numpy.lib.recfunctions as nprf
 
-class WLSModel(LikelihoodModel):
-    """
-    A regression model with diagonal but non-identity covariance
-    structure. The weights are presumed to be
-    (proportional to the) inverse of the
-    variance of the observations.
 
-    >>> import numpy as N
-    >>>
-    >>> from nipy.fixes.scipy.stats.models.formula import Term, I
-    >>> from nipy.fixes.scipy.stats.models.regression import WLSModel
-    >>>
-    >>> data={'Y':[1,3,4,5,2,3,4],
-    ...       'X':range(1,8)}
-    >>> f = term("X") + I
-    >>> f.namespace = data
-    >>>
-    >>> model = WLSModel(f.design(), weights=range(1,8))
-    >>> results = model.fit(data['Y'])
-    >>>
-    >>> results.beta
-    array([ 0.0952381 ,  2.91666667])
-    >>> results.t()
-    array([ 0.35684428,  2.0652652 ])
-    >>> print results.Tcontrast([0,1])
-    <T contrast: effect=2.91666666667, sd=1.41224801095, t=2.06526519708, df_denom=5>
-    >>> print results.Fcontrast(np.identity(2))
-    <F contrast: F=26.9986072423, df_denom=5, df_num=2>
+class GLS(LikelihoodModel):
+    """
+    Generalized least squares model with a general covariance structure
     """
 
-    def __init__(self, endog, exog, weights=1):
-        weights = np.array(weights)
-        if weights.shape == (): # scalar
-            self.weights = weights
-        else:
-            design_rows = exog.shape[0]
-            if not(weights.shape[0] == design_rows and
-                   weights.size == design_rows) :
-                raise ValueError(
-                    'Weights must be scalar or same length as design')
-            self.weights = weights.reshape(design_rows)
-        super(WLSModel, self).__init__(endog, exog)
+    def __init__(self, endog, exog, sigma=None):
+        # what is the best __init__ sig? and default for sigma?
+        if sigma:
+            self.cholsigmainv = np.linalg.cholesky(np.linalg.pinv(sigma)).T
+        super(GLS, self).__init__(endog, exog)
 
     def initialize(self):
         self.wdesign = self.whiten(self._exog)
-        self.calc_theta = np.linalg.pinv(self.wdesign)
-        self.normalized_cov_beta = np.dot(self.calc_theta,
-                                         np.transpose(self.calc_theta))
+        self.calc_params = np.linalg.pinv(self.wdesign)
+        self.normalized_cov_params = np.dot(self.calc_params,
+                                         np.transpose(self.calc_params))
         self.df_resid = self.wdesign.shape[0] - utils.rank(self._exog)
 #       Below assumes that we will always have a constant
         self.df_model = utils.rank(self._exog)-1
 
-
-    def whiten(self, X):
-        """
-        Whitener for WLS model, multiplies by sqrt(self.weights)
-        """
-        X = np.asarray(X, np.float64)
-        if X.ndim == 1:
-            return X * np.sqrt(self.weights)
-        elif X.ndim == 2:
-            c = np.sqrt(self.weights)
-            v = np.zeros(X.shape, np.float64)
-            for i in range(X.shape[1]):
-                v[:,i] = X[:,i] * c
-            return v
-        # this could be done with broadcasting?
-        # whitened = np.sqrt(self.weights)[:,np.newaxis]*X
-        # return whitened
+    def whiten(self, Y):
+        return np.dot(self.cholsigmainv, Y)
 
     def fit(self, Y=None):
         """
@@ -151,39 +105,37 @@ class WLSModel(LikelihoodModel):
         Z
             The whitened dependent variable
         """
-        if Y is None:
+        if Y is None:           # this is needed for old GLM algorithm
             Y = self._endog
         Z = self.whiten(Y)
-        lfit = RegressionResults(self, np.dot(self.calc_theta, Z), Y,
-                       normalized_cov_beta=self.normalized_cov_beta)
-        lfit.predict = np.dot(self._exog, lfit.theta)
-        lfit.resid = Z - np.dot(self.wdesign, lfit.theta)
+        lfit = RegressionResults(self, np.dot(self.calc_params, Z),
+                       normalized_cov_params=self.normalized_cov_params)
+        lfit.predict = np.dot(self._exog, lfit.params)
+        lfit.resid = Z - np.dot(self.wdesign, lfit.params)
         lfit.scale = ss(lfit.resid) / self.df_resid
         lfit.df_resid = self.df_resid
         lfit.df_model = self.df_model
         lfit.Z = Z
-        lfit.calc_theta = self.calc_theta # needed for cov_beta()
+        lfit.calc_params = self.calc_params # needed for cov_params()
         self._summary(lfit)      # this will define model specific results
         return lfit
 
-# won't work until the data isn't split
-# also gives an error for GLM...can't set attribute
-#    @property
-#    def results(self):
-#        if self._results is None:
-#            self._results = self.fit()
-#        return self._results
+    @property
+    def results(self):
+        if self._results is None:
+            self._results = self.fit()
+        return self._results
 
     def _summary(self, lfit):
         '''
-        Private method to call additional statistics for OLSModel.
+        Private method to call additional statistics for OLS.
         Meant to be overwritten by subclass as needed.
         '''
         lfit.nobs = float(self.wdesign.shape[0])
         lfit.SSR = ss(lfit.resid)
         lfit.cTSS = ss(lfit.Z-lfit.Z.mean())
         lfit.uTSS = ss(lfit.Z)
-        # Centered R2 for models with intercepts
+# Centered R2 for models with intercepts
 # no longer has hascons, but this should be different for
 # no constant regression...
 #        if self.hascons is True:
@@ -199,10 +151,9 @@ class WLSModel(LikelihoodModel):
         lfit.MSE_total = lfit.uTSS/(lfit.df_model+lfit.df_resid)
         lfit.F = lfit.MSE_model/lfit.MSE_resid
         lfit.F_p = stats.f.pdf(lfit.F, lfit.df_model, lfit.df_resid)
-        lfit.bse = np.diag(np.sqrt(lfit.cov_theta()))
-#        lfit.llf = self.llf(lfit.theta)
+        lfit.bse = np.diag(np.sqrt(lfit.cov_params()))
 
-    def llf(self, theta):
+    def llf(self, params):
         '''
         Returns the value of the loglikelihood function at b.
 
@@ -211,7 +162,7 @@ class WLSModel(LikelihoodModel):
 
         Parameters
         ----------
-        `theta` : array-like
+        `params` : array-like
             The parameter estimates.  Must be of length df_model.
 
         Returns
@@ -238,44 +189,102 @@ class WLSModel(LikelihoodModel):
 
         nobs = float(self._exog.shape[0])
         nobs2 = nobs / 2.0
-        SSR = ss(self._endog - np.dot(self._exog,theta))
+        SSR = ss(self._endog - np.dot(self._exog,params))
 # reuse SSR from results?
-        llf = -nobs2*(1 + np.log(2*np.pi) - np.log(nobs)) - \
-                nobs2*np.log(SSR)
-        llf2 = -np.log(SSR) * nobs2
-        llf3 = -(1+np.log(np.pi/nobs2))*nobs2
-#        print llf
-#        print llf2
-#        print llf3
+#        llf = -nobs2*(1 + np.log(2*np.pi) - np.log(nobs)) - \
+#                nobs2*np.log(SSR)
+        llf = -np.log(SSR) * nobs2      # concentrated likelihood
+        llf -= (1+np.log(np.pi/nobs2))*nobs2  # with constant
         return llf
 
-    def score(self, theta):
+    def score(self, params):
         '''
         Score function of the classical OLS Model.
 
-        The gradient of logL with respect to theta
+        The gradient of logL with respect to params
 
         Parameters
         ----------
-        theta : array-like
+        params : array-like
 
         '''
         # Should this be analytic or a numerical approximation?
-        return derivative(self.llf[0], theta, dx=1e-04, n=1, order=3)
+        return derivative(self.llf[0], params, dx=1e-04, n=1, order=3)
 
-    def information(self, theta):
+    def information(self, params):
         '''
         Fisher information matrix of model
         '''
         raise NotImplementedError
 
 
-    def newton(self, theta):
+    def newton(self, params):
         '''
         '''
         raise NotImplementedError
 
-class OLSModel(WLSModel):
+
+class WLS(GLS):
+    """
+    A regression model with diagonal but non-identity covariance
+    structure. The weights are presumed to be
+    (proportional to the) inverse of the
+    variance of the observations.
+
+    >>> import numpy as N
+    >>>
+    >>> from nipy.fixes.scipy.stats.models.formula import Term, I
+    >>> from nipy.fixes.scipy.stats.models.regression import WLS
+    >>>
+    >>> data={'Y':[1,3,4,5,2,3,4],
+    ...       'X':range(1,8)}
+    >>> f = term("X") + I
+    >>> f.namespace = data
+    >>>
+    >>> model = WLS(f.design(), weights=range(1,8))
+    >>> results = model.fit(data['Y'])
+    >>>
+    >>> results.params
+    array([ 0.0952381 ,  2.91666667])
+    >>> results.t()
+    array([ 0.35684428,  2.0652652 ])
+    >>> print results.Tcontrast([0,1])
+    <T contrast: effect=2.91666666667, sd=1.41224801095, t=2.06526519708, df_denom=5>
+    >>> print results.Fcontrast(np.identity(2))
+    <F contrast: F=26.9986072423, df_denom=5, df_num=2>
+    """
+
+    def __init__(self, endog, exog, weights=1):
+        weights = np.array(weights)
+        if weights.shape == (): # scalar
+            self.weights = weights
+        else:
+            design_rows = exog.shape[0]
+            if not(weights.shape[0] == design_rows and
+                   weights.size == design_rows) :
+                raise ValueError(
+                    'Weights must be scalar or same length as design')
+            self.weights = weights.reshape(design_rows)
+        super(WLS, self).__init__(endog, exog)
+
+    def whiten(self, X):
+        """
+        Whitener for WLS model, multiplies by sqrt(self.weights)
+        """
+        X = np.asarray(X, np.float64)
+        if X.ndim == 1:
+            return X * np.sqrt(self.weights)
+        elif X.ndim == 2:
+            c = np.sqrt(self.weights)
+            v = np.zeros(X.shape, np.float64)
+            for i in range(X.shape[1]):
+                v[:,i] = X[:,i] * c
+            return v
+        # this could be done with broadcasting?
+        # whitened = np.sqrt(self.weights)[:,np.newaxis]*X
+        # return whitened
+
+class OLS(WLS):
     """
     A simple ordinary least squares model.
 
@@ -287,7 +296,7 @@ class OLSModel(WLSModel):
 
     Methods
     -------
-    model.llf(b=self.beta, Y)
+    model.llf(b=self.params, Y)
         Returns the log-likelihood of the parameter estimates
 
         Parameters
@@ -298,7 +307,7 @@ class OLSModel(WLSModel):
         Y : array-like
             `Y` is the vector of dependent variables.
     model.__init___(design)
-        Creates a `OLSModel` from a design.
+        Creates a `OLS` from a design.
 
     Attributes
     ----------
@@ -306,12 +315,12 @@ class OLSModel(WLSModel):
         This is the design, or X, matrix.
     wdesign : ndarray
         This is the whitened design matrix.
-        design = wdesign by default for the OLSModel, though models that
-        inherit from the OLSModel will whiten the design.
-    calc_theta : ndarray
+        design = wdesign by default for the OLS, though models that
+        inherit from the OLS will whiten the design.
+    calc_params : ndarray
         This is the Moore-Penrose pseudoinverse of the whitened design matrix.
-    normalized_cov_beta : ndarray
-        np.dot(calc_theta, calc_theta.T)
+    normalized_cov_params : ndarray
+        np.dot(calc_params, calc_params.T)
     df_resid : integer
         Degrees of freedom of the residuals.
         Number of observations less the rank of the design.
@@ -324,17 +333,17 @@ class OLSModel(WLSModel):
     >>> import numpy as N
     >>>
     >>> from nipy.fixes.scipy.stats.models.formula import Term, I
-    >>> from nipy.fixes.scipy.stats.models.regression import OLSModel
+    >>> from nipy.fixes.scipy.stats.models.regression import OLS
     >>>
     >>> data={'Y':[1,3,4,5,2,3,4],
     ...       'X':range(1,8)}
     >>> f = term("X") + I
     >>> f.namespace = data
     >>>
-    >>> model = OLSModel(f.design())
+    >>> model = OLS(f.design())
     >>> results = model.fit(data['Y'])
     >>>
-    >>> results.beta
+    >>> results.params
     array([ 0.25      ,  2.14285714])
     >>> results.t()
     array([ 0.98019606,  1.87867287])
@@ -345,7 +354,7 @@ class OLSModel(WLSModel):
     """
 
     def __init__(self, endog, exog=None):
-        super(OLSModel, self).__init__(endog, exog)
+        super(OLS, self).__init__(endog, exog)
         self.initialize()       # does this call still need to be here?
 
     def whiten(self, Y):
@@ -354,8 +363,8 @@ class OLSModel(WLSModel):
         """
         return Y
 
-
-class ARModel(OLSModel):
+#TODO: Needs to be cleaned up with new design and tested
+class AR(OLS):
     """
     A regression model with an AR(p) covariance structure.
 
@@ -368,19 +377,19 @@ class ARModel(OLSModel):
     >>> import numpy.random as R
     >>>
     >>> from nipy.fixes.scipy.stats.models.formula import Term, I
-    >>> from nipy.fixes.scipy.stats.models.regression import ARModel
+    >>> from nipy.fixes.scipy.stats.models.regression import AR
     >>>
     >>> data={'Y':[1,3,4,5,8,10,9],
     ...       'X':range(1,8)}
     >>> f = term("X") + I
     >>> f.namespace = data
     >>>
-    >>> model = ARModel(f.design(), 2)
+    >>> model = AR(f.design(), 2)
     >>> for i in range(6):
     ...     results = model.fit(data['Y'])
     ...     print "AR coefficients:", model.rho
     ...     rho, sigma = model.yule_walker(data["Y"] - results.predict)
-    ...     model = ARModel(model.design, rho)
+    ...     model = AR(model.design, rho)
     ...
     AR coefficients: [ 0.  0.]
     AR coefficients: [-0.52571491 -0.84496178]
@@ -388,7 +397,7 @@ class ARModel(OLSModel):
     AR coefficients: [-0.61887622 -0.88137957]
     AR coefficients: [-0.61894058 -0.88152761]
     AR coefficients: [-0.61893842 -0.88152263]
-    >>> results.beta
+    >>> results.params
     array([ 1.58747943, -0.56145497])
     >>> results.t()
     array([ 30.796394  ,  -2.66543144])
@@ -413,7 +422,7 @@ class ARModel(OLSModel):
             if self.rho.shape == ():
                 self.rho.shape = (1,)
             self.order = self.rho.shape[0]
-        super(ARModel, self).__init__(design)
+        super(AR, self).__init__(design)
 
     def iterative_fit(self, Y, niter=3):
         """
@@ -509,16 +518,15 @@ class RegressionResults(LikelihoodModelResults):
 # and the expected "results" from running a fit
     _llf = None
 
-    def __init__(self, model, beta, Y, normalized_cov_beta=None, scale=1.):
-        super(RegressionResults, self).__init__(model, beta,
-                                                 normalized_cov_beta,
+    def __init__(self, model, params, normalized_cov_params=None, scale=1.):
+        super(RegressionResults, self).__init__(model, params,
+                                                 normalized_cov_params,
                                                  scale)
-        self.Y = Y
 
     @property
     def llf(self):
         if self._llf is None:
-            self._llf = self.model.llf(self.theta)
+            self._llf = self.model.llf(self.params)
         return self._llf
 
     def information_criteria(self):
@@ -558,37 +566,9 @@ class RegressionResults(LikelihoodModelResults):
         """
         Return linear predictor values from a design matrix.
         """
-        return np.dot(design, self.beta)
+        return np.dot(design, self.params)
 
-#    def Rsq(self, adjusted=False):
-#        """
-#        Return the R^2 value for each row of the response Y.
-#
-#        Notes
-#        -----
-#        Changed to the textbook definition of R^2.
-#
-#        See: Davidson and MacKinnon p 74
-#        """
-#        self.Ssq = np.std(self.Z,axis=0)**2
-#        ratio = self.scale / self.Ssq
-#        if not adjusted: ratio *= ((self.Y.shape[0] - 1) / self.df_resid)
-#        return 1 - ratio
-#        return 1 - np.add.reduce(self.resid**2)/np.add.reduce((self.Z-self.Z.mean())**2)
-
-class GLSModel(OLSModel):
-    """
-    Generalized least squares model with a general covariance structure
-    """
-
-    def __init__(self, design, sigma):
-        self.cholsigmainv = np.linalg.cholesky(np.linalg.pinv(sigma)).T
-        super(GLSModel, self).__init__(design)
-
-    def whiten(self, Y):
-        return np.dot(self.cholsigmainv, Y)
-
-class PanelModel(OLSModel):
+class PanelModel(OLS):
     '''
     Estimator for panel data including (time) fixed effects and random effects.
     '''
