@@ -36,9 +36,9 @@ class GLS(LikelihoodModel):
     Generalized least squares model with a general covariance structure
     """
 
-    def __init__(self, endog, exog, sigma=None):
+    def __init__(self, endog, exog, sigma=1.):
         # what is the best __init__ sig? and default for sigma?
-        if sigma:
+        if not np.shape(sigma) == ():   # check for scalar
             self.cholsigmainv = np.linalg.cholesky(np.linalg.pinv(sigma)).T
         super(GLS, self).__init__(endog, exog)
 
@@ -52,7 +52,10 @@ class GLS(LikelihoodModel):
         self.df_model = utils.rank(self._exog)-1
 
     def whiten(self, Y):
-        return np.dot(self.cholsigmainv, Y)
+        if not np.shape(sigma) == ():
+            return np.dot(self.cholsigmainv, Y)
+        else:
+            return Y
 
     def fit(self, Y=None):
         """
@@ -120,11 +123,12 @@ class GLS(LikelihoodModel):
         self._summary(lfit)      # this will define model specific results
         return lfit
 
-    @property
-    def results(self):
-        if self._results is None:
-            self._results = self.fit()
-        return self._results
+# this throws up a set attribute error when running old glm
+#    @property
+#    def results(self):
+#        if self._results is None:
+#            self._results = self.fit()
+#        return self._results
 
     def _summary(self, lfit):
         '''
@@ -209,7 +213,7 @@ class GLS(LikelihoodModel):
 
         '''
         # Should this be analytic or a numerical approximation?
-        return derivative(self.llf[0], params, dx=1e-04, n=1, order=3)
+        return derivative(self.llf, params, dx=1e-04, n=1, order=3)
 
     def information(self, params):
         '''

@@ -203,6 +203,7 @@ class GLMBinomial(LikelihoodModel):
         mu = self.inverse(wls_results.predict)
         var = mu * (1 - mu/self.nobs)
         weights = 1/var * derivative(self.inverse, wls_results.predict, dx=1e-02, n=1, order=3)**2
+        raw_input('pause')
         wls_exog = self._exog    # this is redundant
         wls_endog = (self._endog - mu)*derivative(self.link, mu, dx=1e-02,
                 n=1, order=3) + self.history['predict'][self.iteration - 1]
