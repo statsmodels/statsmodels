@@ -30,7 +30,252 @@ from scipy import stats, derivative
 from scipy.stats.stats import ss
 import numpy.lib.recfunctions as nprf
 
-class OLSModel(LikelihoodModel):
+class WLSModel(LikelihoodModel):
+    """
+    A regression model with diagonal but non-identity covariance
+    structure. The weights are presumed to be
+    (proportional to the) inverse of the
+    variance of the observations.
+
+    >>> import numpy as N
+    >>>
+    >>> from nipy.fixes.scipy.stats.models.formula import Term, I
+    >>> from nipy.fixes.scipy.stats.models.regression import WLSModel
+    >>>
+    >>> data={'Y':[1,3,4,5,2,3,4],
+    ...       'X':range(1,8)}
+    >>> f = term("X") + I
+    >>> f.namespace = data
+    >>>
+    >>> model = WLSModel(f.design(), weights=range(1,8))
+    >>> results = model.fit(data['Y'])
+    >>>
+    >>> results.beta
+    array([ 0.0952381 ,  2.91666667])
+    >>> results.t()
+    array([ 0.35684428,  2.0652652 ])
+    >>> print results.Tcontrast([0,1])
+    <T contrast: effect=2.91666666667, sd=1.41224801095, t=2.06526519708, df_denom=5>
+    >>> print results.Fcontrast(np.identity(2))
+    <F contrast: F=26.9986072423, df_denom=5, df_num=2>
+    """
+
+    def __init__(self, endog, exog, weights=1):
+        weights = np.array(weights)
+        if weights.shape == (): # scalar
+            self.weights = weights
+        else:
+            design_rows = exog.shape[0]
+            if not(weights.shape[0] == design_rows and
+                   weights.size == design_rows) :
+                raise ValueError(
+                    'Weights must be scalar or same length as design')
+            self.weights = weights.reshape(design_rows)
+        super(WLSModel, self).__init__(endog, exog)
+
+    def initialize(self):
+        self.wdesign = self.whiten(self._exog)
+        self.calc_theta = np.linalg.pinv(self.wdesign)
+        self.normalized_cov_beta = np.dot(self.calc_theta,
+                                         np.transpose(self.calc_theta))
+        self.df_resid = self.wdesign.shape[0] - utils.rank(self._exog)
+#       Below assumes that we will always have a constant
+        self.df_model = utils.rank(self._exog)-1
+
+
+    def whiten(self, X):
+        """
+        Whitener for WLS model, multiplies by sqrt(self.weights)
+        """
+        X = np.asarray(X, np.float64)
+        if X.ndim == 1:
+            return X * np.sqrt(self.weights)
+        elif X.ndim == 2:
+            c = np.sqrt(self.weights)
+            v = np.zeros(X.shape, np.float64)
+            for i in range(X.shape[1]):
+                v[:,i] = X[:,i] * c
+            return v
+        # this could be done with broadcasting?
+        # whitened = np.sqrt(self.weights)[:,np.newaxis]*X
+        # return whitened
+
+    def fit(self, Y=None):
+        """
+        Full fit of the model including estimate of covariance matrix,
+        (whitened) residuals and scale.
+
+        Returns
+        -------
+        adjRsq
+            Adjusted R-squared
+        AIC
+            Akaike information criterion
+        BIC
+            Bayes information criterion
+        bse
+            The standard errors of the parameter estimates
+        cTSS
+            The centered total sum of squares
+        df_resid
+            Residual degrees of freedom
+        df_model
+            Model degress of freedom
+        ESS
+            Explained sum of squares
+        F
+            F-statistic
+        F_p
+            F-statistic p-value
+        MSE_model
+            Mean squared error the model
+        MSE_resid
+            Mean squared error of the residuals
+        MSE_total
+            Total mean squared error
+        predict
+            A postestimation function to predict the values for a given design
+            model.predict(design)
+        resid
+            The residuals of the model.
+        Rsq (need to be explicit about constant/noconstant)
+            R-squared
+*        scale
+            A scale factor for the covariance matrix.
+            Default value is SSR/(n-k)
+            Otherwise, determined by the `robust` keyword
+        SSR
+            Sum of squared residuals
+        uTSS
+            Uncentered sum of squares
+        Z
+            The whitened dependent variable
+        """
+        if Y is None:
+            Y = self._endog
+        Z = self.whiten(Y)
+        lfit = RegressionResults(self, np.dot(self.calc_theta, Z), Y,
+                       normalized_cov_beta=self.normalized_cov_beta)
+        lfit.predict = np.dot(self._exog, lfit.theta)
+        lfit.resid = Z - np.dot(self.wdesign, lfit.theta)
+        lfit.scale = ss(lfit.resid) / self.df_resid
+        lfit.df_resid = self.df_resid
+        lfit.df_model = self.df_model
+        lfit.Z = Z
+        lfit.calc_theta = self.calc_theta # needed for cov_beta()
+        self._summary(lfit)      # this will define model specific results
+        return lfit
+
+# won't work until the data isn't split
+# also gives an error for GLM...can't set attribute
+#    @property
+#    def results(self):
+#        if self._results is None:
+#            self._results = self.fit()
+#        return self._results
+
+    def _summary(self, lfit):
+        '''
+        Private method to call additional statistics for OLSModel.
+        Meant to be overwritten by subclass as needed.
+        '''
+        lfit.nobs = float(self.wdesign.shape[0])
+        lfit.SSR = ss(lfit.resid)
+        lfit.cTSS = ss(lfit.Z-lfit.Z.mean())
+        lfit.uTSS = ss(lfit.Z)
+        # Centered R2 for models with intercepts
+# no longer has hascons, but this should be different for
+# no constant regression...
+#        if self.hascons is True:
+        lfit.Rsq = 1 - lfit.SSR/lfit.cTSS
+#        else:
+#            lfit.Rsq = 1 - lfit.SSR/lfit.uTSS
+        lfit.ESS = ss(lfit.predict - lfit.Z.mean())
+        lfit.cTSS = ss(lfit.Z-lfit.Z.mean())
+        lfit.SSR = ss(lfit.resid)
+        lfit.adjRsq = 1 - (lfit.nobs - 1)/(lfit.nobs - lfit.df_model - 1)*(1 - lfit.Rsq)
+        lfit.MSE_model = lfit.ESS/lfit.df_model
+        lfit.MSE_resid = lfit.SSR/lfit.df_resid
+        lfit.MSE_total = lfit.uTSS/(lfit.df_model+lfit.df_resid)
+        lfit.F = lfit.MSE_model/lfit.MSE_resid
+        lfit.F_p = stats.f.pdf(lfit.F, lfit.df_model, lfit.df_resid)
+        lfit.bse = np.diag(np.sqrt(lfit.cov_theta()))
+#        lfit.llf = self.llf(lfit.theta)
+
+    def llf(self, theta):
+        '''
+        Returns the value of the loglikelihood function at b.
+
+        Given the whitened design matrix, the loglikelihood is evaluated
+        at the parameter vector `b` for the dependent variable `Y`.
+
+        Parameters
+        ----------
+        `theta` : array-like
+            The parameter estimates.  Must be of length df_model.
+
+        Returns
+        -------
+        The value of the loglikelihood function for an OLS Model.
+
+        Notes
+        -----
+        The Likelihood Function is
+        .. math:: \ell(\boldsymbol{y},\hat{\beta},\hat{\sigma})=
+        -\frac{n}{2}(1+\log2\pi-\log n)-\frac{n}{2}\log\text{SSR}(\hat{\beta})
+
+        The AIC is
+        .. math:: \text{AIC}=\log\frac{SSR}{n}+\frac{2K}{n}
+
+        The BIC (or Schwartz Criterion) is
+        .. math:: \text{BIC}=\log\frac{SSR}{n}+\frac{K}{n}\log n
+        ..
+
+        References
+        ----------
+        .. [1] W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
+        '''
+
+        nobs = float(self._exog.shape[0])
+        nobs2 = nobs / 2.0
+        SSR = ss(self._endog - np.dot(self._exog,theta))
+# reuse SSR from results?
+        llf = -nobs2*(1 + np.log(2*np.pi) - np.log(nobs)) - \
+                nobs2*np.log(SSR)
+        llf2 = -np.log(SSR) * nobs2
+        llf3 = -(1+np.log(np.pi/nobs2))*nobs2
+#        print llf
+#        print llf2
+#        print llf3
+        return llf
+
+    def score(self, theta):
+        '''
+        Score function of the classical OLS Model.
+
+        The gradient of logL with respect to theta
+
+        Parameters
+        ----------
+        theta : array-like
+
+        '''
+        # Should this be analytic or a numerical approximation?
+        return derivative(self.llf[0], theta, dx=1e-04, n=1, order=3)
+
+    def information(self, theta):
+        '''
+        Fisher information matrix of model
+        '''
+        raise NotImplementedError
+
+
+    def newton(self, theta):
+        '''
+        '''
+        raise NotImplementedError
+
+class OLSModel(WLSModel):
     """
     A simple ordinary least squares model.
 
@@ -103,192 +348,12 @@ class OLSModel(LikelihoodModel):
         super(OLSModel, self).__init__(endog, exog)
         self.initialize()       # does this call still need to be here?
 
-    def initialize(self):
-        self.wdesign = self.whiten(self._exog)
-        self.calc_theta = np.linalg.pinv(self.wdesign)
-        self.normalized_cov_beta = np.dot(self.calc_theta,
-                                         np.transpose(self.calc_theta))
-        self.df_resid = self.wdesign.shape[0] - utils.rank(self._exog)
-#       Below assumes that we will always have a constant
-        self.df_model = utils.rank(self._exog)-1
-
     def whiten(self, Y):
         """
         OLS model whitener does nothing: returns Y.
         """
         return Y
 
-    def fit(self, Y=None):
-        """
-        Full fit of the model including estimate of covariance matrix,
-        (whitened) residuals and scale.
-
-        Returns
-        -------
-        adjRsq
-            Adjusted R-squared
-        AIC
-            Akaike information criterion
-        BIC
-            Bayes information criterion
-        bse
-            The standard errors of the parameter estimates
-        cTSS
-            The centered total sum of squares
-        df_resid
-            Residual degrees of freedom
-        df_model
-            Model degress of freedom
-        ESS
-            Explained sum of squares
-        F
-            F-statistic
-        F_p
-            F-statistic p-value
-        MSE_model
-            Mean squared error the model
-        MSE_resid
-            Mean squared error of the residuals
-        MSE_total
-            Total mean squared error
-        predict
-            A postestimation function to predict the values for a given design
-            model.predict(design)
-        resid
-            The residuals of the model.
-        Rsq (need to be explicit about constant/noconstant)
-            R-squared
-*        scale
-            A scale factor for the covariance matrix.
-            Default value is SSR/(n-k)
-            Otherwise, determined by the `robust` keyword
-        SSR
-            Sum of squared residuals
-        uTSS
-            Uncentered sum of squares
-        Z
-            The whitened dependent variable
-        """
-        if Y is None:
-            Y = self._endog
-        Z = self.whiten(Y)
-        lfit = RegressionResults(np.dot(self.calc_theta, Z), Y,
-                       normalized_cov_beta=self.normalized_cov_beta)
-        lfit.predict = np.dot(self._exog, lfit.theta)
-        lfit.resid = Z - np.dot(self.wdesign, lfit.theta)
-        lfit.scale = ss(lfit.resid) / self.df_resid
-        lfit.df_resid = self.df_resid
-        lfit.df_model = self.df_model
-        lfit.Z = Z
-        lfit.calc_theta = self.calc_theta # needed for cov_beta()
-        self._summary(lfit)      # this will define model specific results
-        return lfit
-
-# won't work until the data isn't split
-# also gives an error for GLM...can't set attribute
-#    @property
-#    def results(self):
-#        if self._results is None:
-#            self._results = self.fit()
-#        return self._results
-
-    def _summary(self, lfit):
-        '''
-        Private method to call additional statistics for OLSModel.
-        Meant to be overwritten by subclass as needed.
-        '''
-        lfit.nobs = float(self.wdesign.shape[0])
-        lfit.SSR = ss(lfit.resid)
-        lfit.cTSS = ss(lfit.Z-lfit.Z.mean())
-        lfit.uTSS = ss(lfit.Z)
-        # Centered R2 for models with intercepts
-# no longer has hascons, but this should be different for
-# no constant regression...
-#        if self.hascons is True:
-        lfit.Rsq = 1 - lfit.SSR/lfit.cTSS
-#        else:
-#            lfit.Rsq = 1 - lfit.SSR/lfit.uTSS
-        lfit.ESS = ss(lfit.predict - lfit.Z.mean())
-        lfit.cTSS = ss(lfit.Z-lfit.Z.mean())
-        lfit.SSR = ss(lfit.resid)
-        lfit.adjRsq = 1 - (lfit.nobs - 1)/(lfit.nobs - lfit.df_model - 1)*(1 - lfit.Rsq)
-        lfit.MSE_model = lfit.ESS/lfit.df_model
-        lfit.MSE_resid = lfit.SSR/lfit.df_resid
-        lfit.MSE_total = lfit.uTSS/(lfit.df_model+lfit.df_resid)
-        lfit.F = lfit.MSE_model/lfit.MSE_resid
-        lfit.F_p = stats.f.pdf(lfit.F, lfit.df_model, lfit.df_resid)
-        lfit.bse = np.diag(np.sqrt(lfit.cov_theta()))
-        lfit.llf, lfit.aic, lfit.bic = self.llf(lfit.theta, lfit.Z)
-
-    def llf(self, b, Y):
-        '''
-        Returns the value of the loglikelihood function at b.
-
-        Given the whitened design matrix, the loglikelihood is evaluated
-        at the parameter vector `b` for the dependent variable `Y`.
-
-        Parameters
-        ----------
-        `b` : array-like
-            The parameter estimates.  Must be of length df_model.
-        `Y` : ndarray
-            The dependent variable.
-
-        Returns
-        -------
-        The value of the loglikelihood function for an OLS Model.
-
-        Notes
-        -----
-        The Likelihood Function is
-        .. math:: \ell(\boldsymbol{y},\hat{\beta},\hat{\sigma})=
-        -\frac{n}{2}(1+\log2\pi-\log n)-\frac{n}{2}\log\text{SSR}(\hat{\beta})
-
-        The AIC is
-        .. math:: \text{AIC}=\log\frac{SSR}{n}+\frac{2K}{n}
-
-        The BIC (or Schwartz Criterion) is
-        .. math:: \text{BIC}=\log\frac{SSR}{n}+\frac{K}{n}\log n
-        ..
-
-        References
-        ----------
-        .. [1] W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
-        '''
-
-        n = float(self.wdesign.shape[0])
-        SSR = ss(Y - np.dot(self.wdesign,b))
-        loglf = -n/2.*(1 + np.log(2*np.pi) - np.log(n)) - \
-                n/2.*np.log(SSR)
-        aic = -2 * loglf + 2 * (self.df_model + 1)
-        bic = -2 * loglf + np.log(n) * (self.df_model + 1)
-        return loglf,aic,bic
-
-    def score(self, theta):
-        '''
-        Score function of the classical OLS Model.
-
-        The gradient of logL with respect to theta
-
-        Parameters
-        ----------
-        theta : array-like
-
-        '''
-        # Should this be analytic or a numerical approximation?
-        return derivative(self.llf[0], theta, dx=1e-04, n=1, order=3)
-
-    def information(self, theta):
-        '''
-        Fisher information matrix of model
-        '''
-        raise NotImplementedError
-
-
-    def newton(self, theta):
-        '''
-        '''
-        raise NotImplementedError
 
 class ARModel(OLSModel):
     """
@@ -434,65 +499,6 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False):
     else:
         return rho, np.sqrt(sigmasq)
 
-class WLSModel(OLSModel):
-    """
-    A regression model with diagonal but non-identity covariance
-    structure. The weights are presumed to be
-    (proportional to the) inverse of the
-    variance of the observations.
-
-    >>> import numpy as N
-    >>>
-    >>> from nipy.fixes.scipy.stats.models.formula import Term, I
-    >>> from nipy.fixes.scipy.stats.models.regression import WLSModel
-    >>>
-    >>> data={'Y':[1,3,4,5,2,3,4],
-    ...       'X':range(1,8)}
-    >>> f = term("X") + I
-    >>> f.namespace = data
-    >>>
-    >>> model = WLSModel(f.design(), weights=range(1,8))
-    >>> results = model.fit(data['Y'])
-    >>>
-    >>> results.beta
-    array([ 0.0952381 ,  2.91666667])
-    >>> results.t()
-    array([ 0.35684428,  2.0652652 ])
-    >>> print results.Tcontrast([0,1])
-    <T contrast: effect=2.91666666667, sd=1.41224801095, t=2.06526519708, df_denom=5>
-    >>> print results.Fcontrast(np.identity(2))
-    <F contrast: F=26.9986072423, df_denom=5, df_num=2>
-    """
-    def __init__(self, endog, exog, weights=1):
-        weights = np.array(weights)
-        if weights.shape == (): # scalar
-            self.weights = weights
-        else:
-            design_rows = exog.shape[0]
-            if not(weights.shape[0] == design_rows and
-                   weights.size == design_rows) :
-                raise ValueError(
-                    'Weights must be scalar or same length as design')
-            self.weights = weights.reshape(design_rows)
-        super(WLSModel, self).__init__(endog, exog)
-
-    def whiten(self, X):
-        """
-        Whitener for WLS model, multiplies by sqrt(self.weights)
-        """
-        X = np.asarray(X, np.float64)
-        if X.ndim == 1:
-            return X * np.sqrt(self.weights)
-        elif X.ndim == 2:
-            c = np.sqrt(self.weights)
-            v = np.zeros(X.shape, np.float64)
-            for i in range(X.shape[1]):
-                v[:,i] = X[:,i] * c
-            return v
-        # this could be done with broadcasting?
-        # whitened = np.sqrt(self.weights)[:,np.newaxis]*X
-        # return whitened
-
 class RegressionResults(LikelihoodModelResults):
     """
     This class summarizes the fit of a linear regression model.
@@ -501,12 +507,26 @@ class RegressionResults(LikelihoodModelResults):
     """
 # the init should contain all results needed in the other methods here
 # and the expected "results" from running a fit
-    def __init__(self, beta, Y, normalized_cov_beta=None, scale=1.):
-        super(RegressionResults, self).__init__(beta,
+    _llf = None
+
+    def __init__(self, model, beta, Y, normalized_cov_beta=None, scale=1.):
+        super(RegressionResults, self).__init__(model, beta,
                                                  normalized_cov_beta,
                                                  scale)
         self.Y = Y
 
+    @property
+    def llf(self):
+        if self._llf is None:
+            self._llf = self.model.llf(self.theta)
+        return self._llf
+
+    def information_criteria(self):
+        llf = self.llf
+        aic = -2 * llf + 2*(self.df_model + 1)
+        bic = -2 * llf + np.log(self.nobs) * (self.df_model + 1)
+        return dict(aic=aic, bic=bic)
+# could be added as properties to results class.
 
     def norm_resid(self):
         """

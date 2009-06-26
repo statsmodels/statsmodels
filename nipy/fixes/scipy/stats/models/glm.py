@@ -161,25 +161,6 @@ class GLMBinomial(LikelihoodModel):
         Stata Corp.
 
     '''
-#1. Do not override  __init__  (use the new signature!)
-#2. Make the family a class variable for now. E.g.,
-#       class GLMgaussian(models.Model):
-#           family=family.Gaussian()
-#  Once it works, we can generalize.
-#3. Iteration involves creating a sequence of WLS models
-#  and calling their fit methods.  (Note: maxiter should
-#  be a keyword argument of the GLM fit method.)
-#4. Note that intermediate results now belong to the intermediate
-#  WLS models, instead of repeatedly changing the GLM
-#  results attributed (Much Clearer!), which in turn remains
-#  None until the final results are obtained
-#5. Assuming the WLSModel constructor is fixed, the fit
-#  method would loop over code resembling
-#       wls_endog = ...
-#       wls_exog = self.exog
-#       weights = ...
-#       wls_results = regression.WLSModel(wls_endog, wls_exog, weights).fit()
-
     def initialize(self):
         self.family = family.Binomial()
         self.history = { 'predict' : [], 'theta' : [np.inf], 'logL' : []}
@@ -188,7 +169,6 @@ class GLMBinomial(LikelihoodModel):
         self.nobs = self._endog.shape[0]
 
         ### copied from OLS initialize()?? ###
-#        self.wdesign = self.whiten(self._exog)
         self.calc_theta = np.linalg.pinv(self._exog)
         self.normalized_cov_beta = np.dot(self.calc_theta,
                                         np.transpose(self.calc_theta))

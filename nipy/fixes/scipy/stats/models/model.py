@@ -40,7 +40,6 @@ class LikelihoodModel(Model):
         self._endog = endog
         self._exog = exog
         self.initialize()
-# note see original for easier
 
     def initialize(self):
         """
@@ -87,29 +86,29 @@ class LikelihoodModel(Model):
 
 
 class Results(object):
-    def __init__(self, theta, **kwd):
+    def __init__(self, model, theta, **kwd):
         """
         Parameters
         ----------
         model : the estimated model
         theta : parameter estimates from estimated model
         """
-#        self._model = model
+        self._model = model
         self._theta = theta
         self.__dict__.update(kwd)
         self.initialize()
     @property
     def theta(self):
         return self._theta
-#    @property
-#    def model(self):
-#        return self._model
+    @property
+    def model(self):
+        return self._model
     def initialize(self):
         pass
 
 class LikelihoodModelResults(Results):
     """ Class to contain results from likelihood models """
-    def __init__(self, theta, normalized_cov_theta=None, scale=1.):
+    def __init__(self, model, theta, normalized_cov_theta=None, scale=1.):
         """
         Parameters
         -----------
@@ -129,8 +128,8 @@ class LikelihoodModelResults(Results):
         The covariance of thetas is given by scale times
         normalized_cov_theta
         """
-#        print self.__class__
-        super(LikelihoodModelResults, self).__init__(theta)
+
+        super(LikelihoodModelResults, self).__init__(model, theta)
         self.normalized_cov_theta = normalized_cov_theta
         self.scale = scale
 
