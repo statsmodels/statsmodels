@@ -80,6 +80,9 @@ class Model(WLS):
         results = self.results
         Y = self._endog
         self.weights = self.family.weights(results.mu)
+        if self.weights.ndim == 2:
+            print 'family weights are not 1d'   # to be taken out
+            self.weights = self.weights.ravel()
         self.initialize()
         Z = results.predict + self.family.link.deriv(results.mu) * (Y - results.mu)
         # TODO: this had to changed to execute properly

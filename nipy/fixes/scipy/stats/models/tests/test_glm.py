@@ -7,29 +7,27 @@ import numpy.random as R
 from numpy.testing import *
 
 import nipy.fixes.scipy.stats.models as SSM
-import nipy.fixes.scipy.stats.models.glm as glm
+from nipy.fixes.scipy.stats.models.glm import Model as GLM
 from nipy.fixes.scipy.stats.models.functions import add_constant, xi
 
 W = R.standard_normal
 
 class TestRegression(TestCase):
 
-#    def test_Logistic(self):
-#        X = W((40,10))
-#        Y = np.greater(W((40,)), 0)
-#        family = SSM.family.Binomial()
-#        cmodel = glm(design=X, family=SSM.family.Binomial())
-#        results = cmodel.fit(Y)
-#        self.assertEquals(results.df_resid, 30)
+    def test_Logistic(self):
+        X = W((40,10))
+        Y = np.greater(W((40,)), 0)
+        cmodel = GLM(Y,X, family=SSM.family.Binomial())
+        results = cmodel.fit()
+        self.assertEquals(results.df_resid, 30)
 
-#    def test_Logisticdegenerate(self):
-#        X = W((40,10))
-#        X[:,0] = X[:,1] + X[:,2]
-#        Y = np.greater(W((40,)), 0)
-#        family = SSM.family.Binomial()
-#        cmodel = glm(design=X, family=SSM.family.Binomial())
-       # results = cmodel.fit(Y)
-#        self.assertEquals(results.df_resid, 31)
+    def test_Logisticdegenerate(self):
+        X = W((40,10))
+        X[:,0] = X[:,1] + X[:,2]
+        Y = np.greater(W((40,)), 0)
+        cmodel = GLM(Y, X, family=SSM.family.Binomial())
+        results = cmodel.fit()
+        self.assertEquals(results.df_resid, 31)
 
     def test_lbw(self):
         '''
@@ -77,9 +75,9 @@ class TestRegression(TestCase):
                     X['black'], X['other'], X['smoke'], X['ptl'],
                     X['ht'], X['ui'])).T
         des = add_constant(des)
-        model = glm(X.low, des,
+        model = GLM(X.low, des,
                 family=SSM.family.Binomial())
-        results = model.fit(X['low'])
+        results = model.fit()
         # returning of all the OLS results is feeling like overload.
         # Maybe we should have to call summary for each
         # but GLM shouldn't inherit these from OLS

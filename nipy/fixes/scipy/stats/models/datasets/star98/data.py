@@ -89,35 +89,15 @@ class load():
         data instance:
             a class of the data with array attrbutes 'endog' and 'exog'
     """
-#    from star98 import outcome, lowinc, perblack, perhisp, avyrsexp, avsal,\
-#        ptratio, pctaf, pctchrt, pctyrrnd, perminte_avyrsexp, perminte_avsal, \
-#        avyrsexp_avsal, perspen_ptratio, perspen_pctaf, ptratio_pctaf, \
-#        perminte_avyrsexp_avsal, perspen_ptratio_pctaf
-
-#    names = [outcome, lowinc, perblack, perhisp, avyrsexp, avsal,
-#        ptratio, pctaf, pctchrt, pctyrrnd, perminte_avyrsexp, perminte_avsal,
-#        avyrsexp_avsal, perspen_ptratio, perspen_pctaf, ptratio_pctaf,
-#        perminte_avyrsexp_avsal, perspen_ptratio_pctaf]
 
     _endog = None
     _exog = None
+
     def __init__(self):
         import numpy as np
         from star98 import __dict__, names
         self._names = names
         self._d = __dict__
-
-#    def __call__(self):
-#        self.regressor = 'outcome'      # define the model above and scrape
-                                            # for this so it's reusable
-                                        # or just order the data correctly...
-#        self._d = __dict__
-#        names = d.keys()
-#        names.sort
-#        while names[0].startswith('_'): names.remove(names[0])
-#        self._names = names
- #       endog = np.array(d[names['outcome'])
- #       for i in range(len):
 
     @property
     def endog(self):
@@ -131,31 +111,3 @@ class load():
             self.exog = np.column_stack(self._d[i] \
                     for i in self._names[1:]).astype(np.float)
         return self.exog
-#    for i in range(len(names)):
-#        names[i] = np.array(names[i]).astype(np.float)[:,None]
-
-#    outcome = np.array(outcome).astype(np.float)
-#    lowinc = np.array(lowinc).astype(np.float)
-#    perblack = np.array(perblack).astype(np.float)
-#    perhisp = np.array(perhisp).astype(np.float)
-#    avrysexp = np.array(avrysexp).astype(np.float)
-#    avsal = np.array(avsal).astype(np.float)
-#    ptratio = np.array(ptratio).astype(np.float)
-#    pctaf = np.array(pctaf).astype(np.float)
-#    pctyrrnd = np.array(pctyrrnd).astype(np.float)
-#    perminte_avrysexp = np.array(perminte).astype(np.float)
-#    avrysexp_avsal = np.array(avrysexp_avsal).astype(np.float)
-#    perspen_ptratio = np.array(perspen_ptratio).astype(np.float)
-#    perspen_pctaf = np.array(perspen_pctaf).astype(np.float)
-#    ptratio_pctaf = np.array(ptratio_pctaf).astpye(np.float)
-#    perminte_avyrsexp_avsal = np.array(perminte_avrysexp_avsal).\
-#            astype(np.float)
-#    perspen_ptratio_pctaf = np.array(perspen_ptratio_pctaf)
-
-#    exog = zip((names[i][1:))
-#    d = zip(names[0],exog)
-#    data = np.array((names[0],exog))
-#    dt = np.dtype([('endog',np.float),('exog', np.array, (1, 5))])
-#    data = data.view(np.recarray, dtype=dt)
-# this could return y,x or endog, exog...
-#    return data

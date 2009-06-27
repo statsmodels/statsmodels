@@ -44,8 +44,6 @@ __docformat__ = 'restructuredtext'
 COPYRIGHT   = """This is public domain. """
 TITLE       = ""
 SOURCE      = """
-Example Source:<- Remove this line
-
 http://www.liacc.up.pt/ML/old/statlog/datasets.html
 
 Professor Dr. Hans Hofmann
@@ -79,31 +77,36 @@ Number of Attributes: 24.
 label: 0 for good credit, +1 for bad credit
 """
 
-def load():
-    """load the german data and returns them.
+import numpy as np
+
+class load():
+    """load the committee data and returns a data class.
 
     :returns:
-        data: dict
-            Contains the following values:
-                'data' : the actual data
-                'label' : label[i] is the label index of data[i]
-                'class' : class[label[i]] is the label name of data[i]
+        data instance:
+            a class of the data with array attrbutes 'endog' and 'exog'
     """
-    import numpy
-    from german import feat, label
-    data = {}
-    # Create the data
-    descr = [('feat' + str(i), numpy.int) for i in range(1, 25)]
-    data['data'] = numpy.empty(len(feat['feat1']), dtype = descr)
-    for i in feat.keys():
-        data['data'][i] = numpy.array(numpy.round([float(j) for j in feat[i]]))
-    # Create the label
-    data['label'] = numpy.array([numpy.int(i) for i in label], numpy.int)
-	    data['label'][data['label'] == -1] = 0
-	    # Create the class
-	    classes = ['good credit', 'bad credit']
-	    data['class'] = numpy.empty(2, 'S%d' % numpy.max([len(i) for i in classes]))
-	    data['class'][0] = 'good credit'
-	    data['class'][1] = 'bad credit'
 
-	    return data
+    _endog = None
+    _exog = None
+
+    def __init__(self):
+##### EDIT THE FOLLOWING LINE TO INCLUDE THE DatasetName.py #####
+        from DatasetName import __dict__, names
+        self._names = names
+        self._d = __dict__
+
+    @property
+    def endog(self):
+##### DO NOT FORGET TO CHANGE THE INDEX IF IT IS DIFFERENT #####
+        if self._endog is None:
+            self.endog = np.array(self._d[self._names[1]], dtype=np.float)
+        return self.endog
+
+    @property
+    def exog(self):
+##### DO NOT FORGET TO CHANGE THE INDEX IF IT IS DIFFERENT #####
+        if self._exog is None:
+            self.exog = np.column_stack(self._d[i] \
+                    for i in self._names[2:]).astype(np.float)
+        return self.exog
