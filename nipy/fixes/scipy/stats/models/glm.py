@@ -45,9 +45,9 @@ class Model(WLS):
     '''
 
     maxiter = 10
-    @property
-    def scale(self):
-        return self.results.scale
+#    @property
+#    def scale(self):
+#        return self.results.scale
 
     def __init__(self, endog, exog, family=family.Gaussian()):
         self.family = family
@@ -103,7 +103,7 @@ class Model(WLS):
         if np.fabs((self.dev - curdev) / curdev) < tol:
             return False
 
-        self.dev = curdev # this is Deviance in STATA
+        self.dev = curdev # this ie Deviance in STATA
         return True
 
     def estimate_scale(self, Y=None, results=None):
@@ -133,13 +133,13 @@ class Model(WLS):
                                             # predict has been overwritten
                                             # and holds self.link(mu)
                                             # which is just the mean vector!?
-        self.results.scale = self.estimate_scale()
+#        self.results.scale = self.estimate_scale()
                                             # uses Pearson's X2 as
                                             # as default scaling
         while self.cont():
             self.results = self.next()
-            self.results.scale = self.estimate_scale()
-
+#            self.results.scale = self.estimate_scale()
+#        self.results.scale = 1.
         return self.results
 
 class GLMBinomial(LikelihoodModel):
