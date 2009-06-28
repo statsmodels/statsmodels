@@ -89,23 +89,13 @@ class load():
         data instance:
             a class of the data with array attrbutes 'endog' and 'exog'
     """
-    _endog = None
-    _exog = None
+
     def __init__(self):
         from committee import __dict__, names
         self._names = names
         self._d = __dict__
-
-    @property
-    def endog(self):
-        if self._endog is None:
-            self.endog = np.array(self._d[self._names[1]], dtype=np.float)
-        return self.endog
-
-    @property
-    def exog(self):
-        if self._exog is None:
-            self.exog = np.column_stack(self._d[i] \
+        self.endog = np.array(self._d[self._names[1]], dtype=np.float)
+        self.exog = np.column_stack(self._d[i] \
                     for i in self._names[2:]).astype(np.float)
-        return self.exog
+
 
