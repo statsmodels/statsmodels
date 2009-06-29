@@ -1,5 +1,6 @@
+#! /usr/bin/env python
 # -*- coding: utf-8 -*-
-# Last Change: Wed Jun 24 06:00 PM 2009 J
+# Last Change: Tue Jul 17 05:00 PM 2007 J
 
 # The code and descriptive text is copyrighted and offered under the terms of
 # the BSD License from the authors; see below. However, the actual dataset may
@@ -36,69 +37,41 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Star98 Educational Testing dataset."""
+"""Longley dataset."""
 
 __docformat__ = 'restructuredtext'
 
-COPYRIGHT   = """Permission granted by the author"""
-TITLE       = "Star98 Educational Dataset"
+COPYRIGHT   = """This is public domain. """
+TITLE       = ""
 SOURCE      = """
-http://jgill.wustl.edu/research/books.html
+Longley Data
 
-Dr. Jeff Gill
-Department of Political Science
-One Brookings Drive, Seigle L079
-Washington University
-St. Louis, MO 63130-4899
 """
 
-DESCRSHORT  = """Math scores for 303 student with 10 explanatory factors"""
+DESCRSHORT  = """"""
 
-DESCRLONG   = """
-This data is on the California education policy and outcomes (STAR program
-results for 1998.  The data measured standardized testing by the California
-Department of Education that required evaluation of 2nd - 11th grade students
-by the the Stanford 9 test on a variety of subjects.  This dataset is at
-the level of the unified school district and consists of 303 cases.  The
-binary response variable represents the number of 9th graders scoring
-over the national median value on the mathematics exam.
-
-The original source files and information are included in /star98/src/
-
-The data used in this example is only a subset of the original source.
-
-/star98/star98.csv contains this subset and interaction variables
-in a comma-delimited file
-"""
+DESCRLONG   = """"""
 
 NOTE        = """
-Number of Instances: 303. 145 for MATHNCE9 > 50 (above national median)
-and 158 for MATHNCE9 < 50 (below median).
+Number of Instances: 16
 
-Number of Attributes: 12 and 8 interaction terms.
+Number of Attributes: 6
 
-label: 0 for below median, 1 for above median
-
-Missing Attribute Values: None
 """
 
+import numpy as np
+
 class load():
-    """load the star98 data and returns them.
+    """load the longley data and returns a data class.
 
     :returns:
         data instance:
             a class of the data with array attrbutes 'endog' and 'exog'
     """
-
     def __init__(self):
-        import numpy as np
-        from star98 import __dict__, names
+        from longley import __dict__, names
         self._names = names
         self._d = __dict__
-        # engog = (successes, failures)
-        y = np.array(self._d[names[1]]).astype(np.float) # successes
-        k = np.array(self._d[names[0]]).astype(np.float) \
-                - np.array(self._d[names[1]]).astype(np.float) # failures
-        self.endog = np.column_stack((y,k))
+        self.endog = np.array(self._d[self._names[1]], dtype=np.float)
         self.exog = np.column_stack(self._d[i] \
                     for i in self._names[2:]).astype(np.float)

@@ -5,15 +5,14 @@ General linear models
 """
 
 import numpy as np
-from nipy.fixes.scipy.stats.models import family
-from nipy.fixes.scipy.stats.models.regression import WLS
-from nipy.fixes.scipy.stats.models.model import LikelihoodModel
+from models import family, utils
+from models.regression import WLS
+from models.model import LikelihoodModel
 from scipy import derivative, comb
-from nipy.fixes.scipy.stats.models import utils
 
 # Note: STATA uses either iterated reweighted least squares optimization
 #       of the deviation
-# or the default mle using Newton-Raphson
+# or the default mle using Newton-Raphson - which one is "quasi"likelihood?
 
 # Note: only these combos make sense for family and link
 #              + ident log logit probit cloglog pow opow nbinom loglog logc
@@ -25,6 +24,7 @@ from nipy.fixes.scipy.stats.models import utils
 # gamma        |   x    x                        x
 #
 
+# Note need to correct for "dispersion"?
 
 # Would GLM or GeneralLinearModel be a better class name?
 class Model(WLS):
@@ -163,10 +163,28 @@ class GLMBinomial(LikelihoodModel):
     Hardin, J.W. and Hilbe, J. 2007.  Generalized Linear Models and Extensions.
         Stata Corp.
 
+
+
     '''
     def initialize(self):
+# BIG NOTE: Is the data binary or proportional?  Need to check this
+# need to check overdispersion defaults
         self.family = family.Binomial()
-        self.history = { 'predict' : [], 'params' : [np.inf], 'logL' : []}
+        self.endog = self._endog
+        self.exog = self._exog
+#        if self.family is family.Binomial()    # need to check this...string property, isinstance?
+        if (self.endog.ndim > 1 and self.endog.shape[1] > 1): # greedy logic
+            self.y = self.endog[:,0]    # successes
+            self.k = self.endog[:,0] + self.endog[:,1]    # total trials
+#            self.deviance = self.binom_dev
+            self.deviance = lambda mu: 2*np.sum(self.y*np.log(self.y/mu)/
+                + (self.k - self.y)*np.log((self.k-self.y)/(self.k-mu)))    # - or +?
+# Gill p.58 and Hardin 9.21 say +
+        else:
+            self.k = 1.
+            self.y = self.endog # then self.endog is binary
+            self.deviance = lambda mu: 2 * np.sum(np.log(1/mu)) # always assumes# that reponse variable of interest == 1(?), or do I need to code the two conditions and then reduce?
+        self.history = { 'predict' : [], 'params' : [np.inf], 'logL' : [], 'deviance' : [np.inf]}
         self.iteration = 0
         self.last_result = np.inf
         self.nobs = self._endog.shape[0]
@@ -178,9 +196,13 @@ class GLMBinomial(LikelihoodModel):
         self.df_resid = self._exog.shape[0]
         self.df_model = utils.rank(self._exog)-1
 
+#    def binom_dev(mu):
+#        conditions = [(),(),()]
+#        dev = np.piecewise(self.y,
+
     def llf(self, results):
         n = self.nobs
-        y = np.sum(self._endog)   # number of "successes"
+# TODO        y = np.sum(self._endog)   # number of "successes" UPDATE FOR PROPORTIONAL
         p = self.inverse(results.predict)
         llf = y * np.log(p/(1-p)) - (-n*np.log(1-p)) + np.log(comb(n,y))
         return llf
@@ -191,9 +213,12 @@ class GLMBinomial(LikelihoodModel):
     def information(self, params):
         pass
 
-    def update_history(self, tmp_result):
+    def update_history(self, tmp_result, mu):
         self.history['params'].append(tmp_result.params)
         self.history['predict'].append(tmp_result.predict)
+#        deviance = 2*np.sum(self.y*np.log(self.y/mu)/
+#            - (self.k - self.y)*np.log((self.k-self.y))/(self.k-mu))
+        self.history['deviance'].append(self.deviance(mu))
 
     def inverse(self, z):      # temporary
         return np.exp(z)/(1+np.exp(z))
@@ -201,49 +226,40 @@ class GLMBinomial(LikelihoodModel):
     def link(self, mu):
         return np.log(mu/(1-mu))
 
-    def next(self, wls_results):
-# or is mu below always the link on the mean response?
-        mu = self.inverse(wls_results.predict)
-        var = mu * (1 - mu/self.nobs)
-        weights = 1/var * derivative(self.inverse, wls_results.predict, dx=1e-02, n=1, order=3)**2
-        raw_input('pause')
-        wls_exog = self._exog    # this is redundant
-        wls_endog = (self._endog - mu)*derivative(self.link, mu, dx=1e-02,
-                n=1, order=3) + self.history['predict'][self.iteration - 1]
-                # - offset? cf. Hardin p 29
-        wls_results = WLS(wls_endog, wls_exog, weights).fit()
-        self.iteration +=1
-        return wls_results
-
-
-    def fit(self, maxiter=100, method='IRLS', tol=1e-10):
+    def fit(self, maxiter=100, method='IRLS', tol=1e-5):
 #TODO: method='newton'
 # for IRLS
-# initial value can be inverse of link of the mean of the response
-# note that this is NOT what our initial values are, so it's probably pretty
-# robust to any choice that's in the support
-# OR for Binomial(n_i,p_i) it can be n_i(y_i + .5)/(n_i + 1)
-# note that for non binomial it's
-# (y_i + y_bar)/2
-# cf Hardin page 31
 # initial value for Newton method (which is a value of the coefs!)
 # can often just  be the Theta for the constant only model
 # (probably analytically derived)
-# cf Hardin 27
-#        wls_endog =  self.nobs * (self._endog + .5)/(self.nobs + 1)
+# cf Hardin 27, 125
+        mu =  (self.y + 0.5)/(self.k + 1)   # continuity correction
 # OR
-        wls_endog = self.inverse(self._endog.mean()) * np.ones((self.nobs))
-        wls_exog = self._exog
-        weights = 1.
-        wls_results = WLS(wls_endog, wls_exog, weights).fit()
-        self.update_history(wls_results)
-        eta = wls_results.predict
+#        wls_endog = self.inverse(self._endog.mean()) * np.ones((self.nobs))
+        wls_exog = self.exog
+        eta = np.log(mu/(self.k - mu))
         self.iteration+=1
-        while ((self.history['params'][self.iteration-1]-\
-                self.history['params'][self.iteration]).all()>tol\
-                and self.iteration < maxiter):
-            wls_results=self.next(wls_results)
-            self.update_history(wls_results)
+#        while ((self.history['params'][self.iteration-1]-\
+#                self.history['params'][self.iteration]).all()>tol\
+#                and self.iteration < maxiter):
+        self.history['deviance'].append(self.deviance(mu))
+        while ((np.fabs(self.history['deviance'][self.iteration]-\
+                    self.history['deviance'][self.iteration-1])) > tol):
+# which one for binomial?  same of bernoulli...
+#            w = mu*(self.k - mu) # weeights based on variance
+            w = mu*(1-mu/self.k) # if it's on the variance, then it's this!
+            wls_endog = eta + self.k*(self.y - mu)/(mu*(self.k - mu))
+            wls_results = WLS(wls_endog, wls_exog, weights=w).fit()
+            eta = np.dot(self.exog, wls_results.params)
+            mu = self.k/(1+np.exp(-eta))
+            # ugly clip
+            mu = np.clip(mu, np.finfo(np.float).eps, mu-1e-05)
+#            mu = np.where(mu < np.finfo(np.float).eps, np.finfo(np.float).eps, mu)
+#            mu = np.where(mu == self.k, mu-np.finfo
+            # clip all zeros to 0+eps, else leave
+            # mu is bounded by [0,k)
+            self.update_history(wls_results, mu)    # pass mu or make it an attr?
+            self.iteration += 1
         self.results = wls_results
         return self.results
 

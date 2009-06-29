@@ -4,7 +4,7 @@
 
 __docformat__ = 'restructuredtext'
 
-from nipy.fixes.scipy.stats.models.info import __doc__
+from models.info import __doc__
 
 import nipy.fixes.scipy.stats.models.model
 import nipy.fixes.scipy.stats.models.formula

@@ -1,15 +1,10 @@
 import numpy as np
 from numpy.linalg import inv
-#from scipy import optimize
 
 from scipy.stats import t, z
-
-from nipy.fixes.scipy.stats.models.contrast import ContrastResults
-from nipy.fixes.scipy.stats.models.utils import recipr
-#from .models.contrast import ContrastResults
-#from .modles.utils import recipr
-# having trouble with relative imports
-# because I often run tests from inside the directory?
+from scipy import optimize
+from models.contrast import ContrastResults
+from models.utils import recipr
 
 import numpy.lib.recfunctions as nprf
 
@@ -276,6 +271,8 @@ class LikelihoodModelResults(Results):
             dist = t
         if self.__class__.__name__ is 'Model': # is this always appropriate
                                                # for GLM?
+# Answer ^^^ See Hardin p. 127; depends on the software...some do t.
+# how do we expect errors to enter?
             dist = z
         else:
             dist = t

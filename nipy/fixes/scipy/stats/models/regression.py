@@ -18,14 +18,13 @@ General reference for regression models:
 
 __docformat__ = 'restructuredtext en'
 
-from string import join as sjoin
-from csv import reader
+from string import join as sjoin    #
+from csv import reader              # These are for read_array
 
 import numpy as np
 from scipy.linalg import norm, toeplitz
-from nipy.fixes.scipy.stats.models.model import LikelihoodModel, \
-     LikelihoodModelResults
-from nipy.fixes.scipy.stats.models import utils
+from models.model import LikelihoodModel, LikelihoodModelResults
+from models import utils
 from scipy import stats, derivative
 from scipy.stats.stats import ss
 import numpy.lib.recfunctions as nprf
