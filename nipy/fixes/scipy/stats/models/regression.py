@@ -37,7 +37,8 @@ class GLS(LikelihoodModel):
 
     def __init__(self, endog, exog, sigma=1.):
         # what is the best __init__ sig? and default for sigma?
-        if not np.shape(sigma) == ():   # check for scalar
+        self.sigma = sigma
+        if not np.shape(self.sigma) == ():   # check for scalar
             self.cholsigmainv = np.linalg.cholesky(np.linalg.pinv(sigma)).T
         super(GLS, self).__init__(endog, exog)
 
@@ -51,7 +52,7 @@ class GLS(LikelihoodModel):
         self.df_model = utils.rank(self._exog)-1
 
     def whiten(self, Y):
-        if not np.shape(sigma) == ():
+        if not np.shape(self.sigma) == ():
             return np.dot(self.cholsigmainv, Y)
         else:
             return Y
