@@ -237,17 +237,17 @@ class GLMBinomial(LikelihoodModel):
 # OR
 #        wls_endog = self.inverse(self._endog.mean()) * np.ones((self.nobs))
         wls_exog = self.exog
-        eta = np.log(mu/(self.k - mu))
+        eta = np.log(mu/(self.k - mu)) # First guess at linear predictor
         self.iteration+=1
 #        while ((self.history['params'][self.iteration-1]-\
 #                self.history['params'][self.iteration]).all()>tol\
 #                and self.iteration < maxiter):
         self.history['deviance'].append(self.deviance(mu))
         while ((np.fabs(self.history['deviance'][self.iteration]-\
-                    self.history['deviance'][self.iteration-1])) > tol):
-# which one for binomial?  same of bernoulli...
-#            w = mu*(self.k - mu) # weeights based on variance
-            w = mu*(1-mu/self.k) # if it's on the variance, then it's this!
+                    self.history['deviance'][self.itermation-1])) > tol):
+# which one for binomial?  same for bernoulli...
+#            w = mu*(self.k - mu) # weights based on variance
+            w = mu*(1-mu/self.k) # if it's on the variance, then it's this!?
             wls_endog = eta + self.k*(self.y - mu)/(mu*(self.k - mu))
             wls_results = WLS(wls_endog, wls_exog, weights=w).fit()
             eta = np.dot(self.exog, wls_results.params)

@@ -114,13 +114,24 @@ class GLS(LikelihoodModel):
         lfit = RegressionResults(self, np.dot(self.calc_params, Z),
                        normalized_cov_params=self.normalized_cov_params)
         lfit.predict = np.dot(self._exog, lfit.params)
-        lfit.resid = Z - np.dot(self.wdesign, lfit.params)
-        lfit.scale = ss(lfit.resid) / self.df_resid
+# Note on the below: the parameters are calculated with Z and wdesign, but it doesn't
+# make sense for the residuals to be calculated like this does it?
+# led to wrong resids in GLS (I THINK...)
+        lfit.resid = Z - np.dot(self.wdesign, lfit.params) # what is correct for this one.
+                                                            # need to add resids checks to tests
+# the below is right for GLS, but the above is right for GLM (aside from the dispersion problem)
+# moved to _summary for now, GLM will handle its own residuals
+# I don't think we care about the residuals for the whitened/transformed problem in
+# any case except GLM.
+#        lfit.resid = Y - np.dot(self._exog, lfit.params)
+        lfit.Z = Z
         lfit.df_resid = self.df_resid
         lfit.df_model = self.df_model
-        lfit.Z = Z
         lfit.calc_params = self.calc_params # needed for cov_params()
-        self._summary(lfit)      # this will define model specific results
+        self._summary(lfit)
+         # since this uses resids, is it model specific
+                                                    # what is the point of scale aside from
+                                                    # GLM?
         return lfit
 
 # this throws up a set attribute error when running old glm
@@ -135,6 +146,10 @@ class GLS(LikelihoodModel):
         Private method to call additional statistics for OLS.
         Meant to be overwritten by subclass as needed.
         '''
+
+        lfit.resid = self._endog - lfit.predict
+#        lfit.resid = lfit.Z - np.dot(self.wdesign,lfit.params)
+        lfit.scale = ss(lfit.resid) / self.df_resid
         lfit.nobs = float(self.wdesign.shape[0])
         lfit.SSR = ss(lfit.resid)
         lfit.cTSS = ss(lfit.Z-lfit.Z.mean())

@@ -114,6 +114,9 @@ class TestRegression(TestCase):
         Slightly different than published results, but should be correct
         Probably due to rounding in cleaning?
         '''
+
+        from models.datasets.cpunish.data import load
+
         R_params = (0.0002611, 0.0778180, -0.0949311, 0.2969349, 2.3011833,
                 -18.7220680, -6.8014799)
         R_bse = (5.1871e-05, 7.9402e-02, 2.2919e-02, 4.3752e-01, 4.2838e-01,
@@ -125,10 +128,10 @@ class TestRegression(TestCase):
         R_resid_dev = 18.592
         R_df_resid = 10
         R_AIC = 77.85
-        from models.datasets.punish.data import load
+
         data = load()
         data.exog[3] = np.log(data.exog[3])
-        data.exog = add_constant(data.exog[3])
+        data.exog = add_constant(data.exog)
         results = GLM(data.endog, data.exog).fit()
 # Estimates are wrong...
 # Confirm R findings with stata
@@ -137,6 +140,9 @@ class TestRegression(TestCase):
         '''
         The following are from the R script in models.datasets.cpunish
         '''
+
+        from models.datasets.scotland.data import load
+
         R_params = (4.961768e-05, 2.034423e-05, 2.034423e-05, -7.181429e-05,
             1.118520e-04, -1.467515e-07, -5.186831e-04, -1.776527e-02)
 # IT LOOKS LIKE THE DATA IN THE EXAMPLE HAS BEEN SCALED THOUGH THE NUMBERS
@@ -149,7 +155,7 @@ class TestRegression(TestCase):
         R_df_resid = 24
         R_AIC = 182.95
         R_dispersion = 0.003584283
-        from models.datasets.scotland.data import load
+
         data = load()
         data.exog = add_constant(data.exog)
         results = GLM(data.endog, data.exog, family = models.family.Gamma()).fit()

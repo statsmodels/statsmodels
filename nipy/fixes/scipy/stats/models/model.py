@@ -170,8 +170,7 @@ class LikelihoodModelResults(Results):
             raise ValueError, 'need covariance of parameters for computing \
 (unnormalized) covariances'
         if scale is None:
-#            scale = self.scale
-            scale = np.array(1.)
+            scale = self.scale
         if column is not None:
             column = np.asarray(column)
             if column.shape == ():
