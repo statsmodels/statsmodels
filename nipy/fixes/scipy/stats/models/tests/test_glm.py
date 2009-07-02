@@ -132,7 +132,7 @@ class TestRegression(TestCase):
         data = load()
         data.exog[3] = np.log(data.exog[3])
         data.exog = add_constant(data.exog)
-        results = GLM(data.endog, data.exog).fit()
+        results = GLM(data.endog, data.exog, family=models.family.Poisson()).fit()
 # Estimates are wrong...
 # Confirm R findings with stata
 
@@ -145,8 +145,6 @@ class TestRegression(TestCase):
 
         R_params = (4.961768e-05, 2.034423e-05, 2.034423e-05, -7.181429e-05,
             1.118520e-04, -1.467515e-07, -5.186831e-04, -1.776527e-02)
-# IT LOOKS LIKE THE DATA IN THE EXAMPLE HAS BEEN SCALED THOUGH THE NUMBERS
-# ARE STILL CORRECT, THE ORDER OF MAGNITUDE ISN'T, SHOULDN'T BE A BIG DEAL
         R_bse = (1.621577e-05, 5.320802e-04, 2.711664e-05, 4.057691e-05,
             1.236569e-07, 2.402534e-04, 7.460253e-07, 1.147922e-02)
         R_null_dev = 0.536072
@@ -159,8 +157,8 @@ class TestRegression(TestCase):
         data = load()
         data.exog = add_constant(data.exog)
         results = GLM(data.endog, data.exog, family = models.family.Gamma()).fit()
-# results aren't correct...
-# tested this on an older NIPY and those results are WILDLY incorrect...hmm
+        assert_almost_equal(R_params, results.params)
+#        assert_almost_equal(R_bse, results.bse)
 
     def test_binomial(self):
         '''
@@ -186,6 +184,9 @@ class TestRegression(TestCase):
         R_resid_dev = 4078.8
         R_df_resid = 282
         R_AIC = 6039.2
+        from models.datasets.star98.data import load
+        data = load()
+
         # Binomial algorithm not working yet...
 
 if __name__=="__main__":

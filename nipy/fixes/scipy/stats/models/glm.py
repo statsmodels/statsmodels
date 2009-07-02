@@ -6,7 +6,7 @@ General linear models
 
 import numpy as np
 from models import family, utils
-from models.regression import WLS
+from models.regression import WLS,GLS
 from models.model import LikelihoodModel
 from scipy import derivative, comb
 
@@ -167,16 +167,13 @@ class GLMBinomial(LikelihoodModel):
 
     '''
     def initialize(self):
-# BIG NOTE: Is the data binary or proportional?  Need to check this
-# need to check overdispersion defaults
         self.family = family.Binomial()
         self.endog = self._endog
         self.exog = self._exog
-#        if self.family is family.Binomial()    # need to check this...string property, isinstance?
+#        if self.family is family.Binomial()    # need to check for this...string property, isinstance?
         if (self.endog.ndim > 1 and self.endog.shape[1] > 1): # greedy logic
             self.y = self.endog[:,0]    # successes
             self.k = self.endog[:,0] + self.endog[:,1]    # total trials
-#            self.deviance = self.binom_dev
             self.deviance = lambda mu: 2*np.sum(self.y*np.log(self.y/mu)/
                 + (self.k - self.y)*np.log((self.k-self.y)/(self.k-mu)))    # - or +?
 # Gill p.58 and Hardin 9.21 say +
@@ -195,10 +192,6 @@ class GLMBinomial(LikelihoodModel):
                                         np.transpose(self.calc_params))
         self.df_resid = self._exog.shape[0]
         self.df_model = utils.rank(self._exog)-1
-
-#    def binom_dev(mu):
-#        conditions = [(),(),()]
-#        dev = np.piecewise(self.y,
 
     def llf(self, results):
         n = self.nobs
@@ -244,21 +237,30 @@ class GLMBinomial(LikelihoodModel):
 #                and self.iteration < maxiter):
         self.history['deviance'].append(self.deviance(mu))
         while ((np.fabs(self.history['deviance'][self.iteration]-\
-                    self.history['deviance'][self.itermation-1])) > tol):
-# which one for binomial?  same for bernoulli...
-#            w = mu*(self.k - mu) # weights based on variance
-            w = mu*(1-mu/self.k) # if it's on the variance, then it's this!?
-            wls_endog = eta + self.k*(self.y - mu)/(mu*(self.k - mu))
-            wls_results = WLS(wls_endog, wls_exog, weights=w).fit()
+                    self.history['deviance'][self.iteration-1])) > tol and self.iteration<100):
+# which one for binomial?  same for bernoulli = w = mu*(1-mu)
+#            w = mu*(self.k - mu) # weights based on variance from HH algorithm
+#            w = mu*(1-mu/self.k) # if it's on the variance np(1-p) and mu = kp
+#           the variance is u(1-mu) BUT the dispersion parameter for the binomial
+# is not 1 it's 1/k (?), so that makes the variance always
+#            w = mu/self.k*(1-mu)
+#            w = mu * (1-mu)
+# Okay, after 4 pages of calculus this should be...
+            w = self.k*mu*(1-mu)
+
+#            wls_endog = eta + self.k*(self.y - mu)/(mu*(self.k - mu)) from HH
+            wls_endog = eta + (self.y/self.k-mu) * self.k/(mu*(self.k-mu))
+# above equation derived from update z = eta_r-1 + (y - mu)*(deta/dmu)|mu=mu_r-1
+#            wls_results = WLS(wls_endog, wls_exog, weights=w).fit()
+            wls_results = GLS(wls_endog, wls_exog, sigma=np.diag(w)).fit()
             eta = np.dot(self.exog, wls_results.params)
             mu = self.k/(1+np.exp(-eta))
             # ugly clip
             mu = np.clip(mu, np.finfo(np.float).eps, mu-1e-05)
 #            mu = np.where(mu < np.finfo(np.float).eps, np.finfo(np.float).eps, mu)
-#            mu = np.where(mu == self.k, mu-np.finfo
-            # clip all zeros to 0+eps, else leave
-            # mu is bounded by [0,k)
-            self.update_history(wls_results, mu)    # pass mu or make it an attr?
+#            mu = np.where(mu == self.k, mu-1e-10, mu)
+# mu is bounded by [0,k)
+            self.update_history(wls_results, mu)
             self.iteration += 1
         self.results = wls_results
         return self.results

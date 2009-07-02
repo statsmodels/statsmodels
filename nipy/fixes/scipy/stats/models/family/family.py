@@ -1,6 +1,71 @@
+'''
+Family provides the distributions used by GLM.
+
+Usage example (specifies defaults)
+-------------
+import models
+from models.family import links
+
+models.family.Family
+    general base class
+
+    Methods
+    --------
+    weights
+    deviance
+    devresid
+
+    fitted :
+        fitted values based on linear predictor eta
+
+        Parameters
+        ---------
+        eta : array-like
+            XBeta in a classic linear model
+
+        outputs
+        -------
+        mu : array-like
+            mean parameter based on linear predictor eta
+            link.inverse(eta) where the link is either the default link
+            or specified
+
+    predict : array-like
+        Returns the linear predictors based on given mu values.
+
+        Parameters
+        -----------
+            mu : array-like
+
+        Outputs
+        -------
+            eta -- link(mu)
+
+
+
+
+models.family.Binomial(link = links.logit)
+    available links are logit, probit, log, cauchy, cloglog
+
+
+
+models.family.Gamma(link = links.inverse)
+    available links are log, identity, inverse
+models.family.Gaussian(link = links.identity)
+    available links are log, identity, inverse
+models.family.InverseGaussian(link = links.inverse_squared)
+    available links are inverse_squared, inverse, identity, log
+models.family.Poisson(link = links.logit)
+    available links are log, identity, sqrt
+
+'''
+#TODO: quasi, quasibinomial, quasipoisson
+#see http://www.biostat.jhsph.edu/~qli/biostatistics_r_doc/library/stats/html/family.html
+# for comparison to R, and McCullagh and Nelder
+
 import numpy as np
-from nipy.fixes.scipy.stats.models.family import links as L
-from nipy.fixes.scipy.stats.models.family import varfuncs as V
+from models.family import links as L
+from models.family import varfuncs as V
 
 class Family(object):
 
@@ -23,14 +88,14 @@ class Family(object):
     @property
     def link(self):
         return self._link
+
     @link.setter
     def link(self, link):
         self._link = link
         if hasattr(self, "link"):
             if link not in self.links:
-                raise ValueError, 'invalid link for family, should in %s' \
+                raise ValueError, 'invalid link for family, should be in %s'\
                 % `self.links`
-
 
     def __init__(self, link, variance):
 
@@ -150,6 +215,9 @@ class Poisson(Family):
 
         """
         return np.sign(Y - mu) * np.sqrt(2 * Y * np.log(Y / mu) - 2 * (Y - mu))
+# shouldn't it be
+#        return np.sign(Y - mu) * np.sqrt(2 *np.sum(Y*np.log(Y/mu) - Y + mu))
+# Gill p 58
 
 class Gaussian(Family):
 
@@ -199,7 +267,7 @@ class Gamma(Family):
     links = [L.log, L.identity, L.inverse]
     variance = V.mu_squared
 
-    def __init__(self, link=L.identity):
+    def __init__(self, link=L.inverse):
         self.variance = Gamma.variance
         self.link = link
 
@@ -252,7 +320,7 @@ class InverseGaussian(Family):
     links = [L.inverse_squared, L.inverse, L.identity, L.log]
     variance = V.mu_cubed
 
-    def __init__(self, link=L.identity):
+    def __init__(self, link=L.inverse_squared):
         self.n = n
         self.variance = InverseGaussian.variance
         self.link = link

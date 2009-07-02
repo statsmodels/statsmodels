@@ -1,3 +1,8 @@
+'''
+Defines the link functions to be used with GLM.
+
+'''
+
 import numpy as np
 import scipy.stats
 
