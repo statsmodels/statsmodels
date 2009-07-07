@@ -7,7 +7,8 @@ import numpy.random as R
 from numpy.testing import *
 
 import models
-from models.glm import Model as GLM
+#from models.glm import Model as GLM
+from models.glm import GLMtwo as GLM
 from models.functions import add_constant, xi
 
 W = R.standard_normal
@@ -53,8 +54,6 @@ class TestRegression(TestCase):
                         .7585135, .4612239)
         stata_lbw_bse = (.0364504, .0069259, .5264101, .4391532,
                         .4008266, .346249, .6916292, .4593768, 1.20459)
-# NOTE that these are the same standard errors obtained with R
-# to the at least 1e-4
         stata_ll = -100.7239956
         stata_pearson = 182.0233425
         stata_deviance = 201.4479911
@@ -68,6 +67,13 @@ class TestRegression(TestCase):
                         (.0013548,1.722804), (.137739,1.708951),
                         (-.136799,1.220472), (.4769494,3.188086),
                         (-.1418484,1.658875), (-1.899729,2.822176))
+# STATA Standard Errors are different than R's! Our algorithm gives the below
+        R_lbw_bse = (0.036449917, 0.006925765, 0.526405169, 0.439146744,
+            0.400820976, 0.346246857, 0.691623875, 0.459373871, 1.204574885)
+        R_aic = 219.45
+        R_resid_deviance = 201.45
+        R_df_model = 188
+        R_null_deviance = 234.67
 
         X = lbw()
         X = xi(X, col='race', drop=True)
@@ -82,19 +88,10 @@ class TestRegression(TestCase):
         # Maybe we should have to call summary for each
         # but GLM shouldn't inherit these from OLS
         # so...GLM should overload them
-        assert_almost_equal(results.theta, stata_lbw_beta, 4)
-        bse = np.sqrt(np.diag(results.cov_theta()))
-        assert_almost_equal(bse, stata_lbw_bse, 4)
-# where is this loss of precision coming from?
-# must be the scale, though beta is correct
-# is it the default use of Pearson's X2 for scaling?
-# play with algorithm
-
-# confidence intervals pull from the wrong distribution for this example
+        assert_almost_equal(results.params, stata_lbw_beta, 4)
+        assert_almost_equal(results.bse, R_lbw_bse, 4)
 # Standard Errors are the Observed Information (OIM) standard errors
 # gives Z score for these...
-# STATA gives log-likelihood of each iterations, keep a log to check
-# in case of no convergence?
 
         try:
             from rpy import r
@@ -107,7 +104,7 @@ class TestRegression(TestCase):
         except ImportError:
             yield nose.tools.assert_true, True
 
-    ### Poission Link ###
+    ### Poission Family ###
     def test_poisson(self):
         '''
         The following are from the R script in models.datasets.cpunish
@@ -134,17 +131,17 @@ class TestRegression(TestCase):
         data.exog = add_constant(data.exog)
         results = GLM(data.endog, data.exog, family=models.family.Poisson()).fit()
 # Estimates are wrong...
-# Confirm R findings with stata
+# Something is wrong in the Poisson family or the offset...
 
     def test_gamma(self):
         '''
-        The following are from the R script in models.datasets.cpunish
+        The following are from the R script in models.datasets.scotland
         '''
 
         from models.datasets.scotland.data import load
 
-        R_params = (4.961768e-05, 2.034423e-05, 2.034423e-05, -7.181429e-05,
-            1.118520e-04, -1.467515e-07, -5.186831e-04, -1.776527e-02)
+        R_params = (4.961768e-05, 2.034423e-03, -7.181429e-05, 1.118520e-04,
+                -1.467515e-07, -5.186831e-04, -2.42717498e-06, -1.776527e-02)
         R_bse = (1.621577e-05, 5.320802e-04, 2.711664e-05, 4.057691e-05,
             1.236569e-07, 2.402534e-04, 7.460253e-07, 1.147922e-02)
         R_null_dev = 0.536072
@@ -157,8 +154,8 @@ class TestRegression(TestCase):
         data = load()
         data.exog = add_constant(data.exog)
         results = GLM(data.endog, data.exog, family = models.family.Gamma()).fit()
-        assert_almost_equal(R_params, results.params)
-#        assert_almost_equal(R_bse, results.bse)
+        assert_almost_equal(results.params, R_params, 5)
+        assert_almost_equal(results.bse, R_bse, 5)
 
     def test_binomial(self):
         '''

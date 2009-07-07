@@ -46,9 +46,9 @@ def test_longley():
     Test OLS accuracy with Longley (1967) data
     '''
 
-    from models.datasets.longley import data
+    from models.datasets.longley.data import load
 
-    data = data.load()
+    data = load()
     data.exog = add_constant(data.exog)
     nist_long = ( 15.0618722713733, -0.358191792925910E-01,
                  -2.02022980381683, -1.03322686717359, -0.511041056535807E-01,

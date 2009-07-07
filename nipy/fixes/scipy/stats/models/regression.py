@@ -170,7 +170,7 @@ class GLS(LikelihoodModel):
         lfit.MSE_total = lfit.uTSS/(lfit.df_model+lfit.df_resid)
         lfit.F = lfit.MSE_model/lfit.MSE_resid
         lfit.F_p = stats.f.pdf(lfit.F, lfit.df_model, lfit.df_resid)
-        lfit.bse = np.diag(np.sqrt(lfit.cov_params()))
+        lfit.bse = np.sqrt(np.diag(lfit.cov_params()))
 
     def llf(self, params):
         '''
@@ -290,7 +290,7 @@ class WLS(GLS):
         """
         Whitener for WLS model, multiplies by sqrt(self.weights)
         """
-        X = np.asarray(X, np.float64)
+        X = np.asarray(X)
         if X.ndim == 1:
             return X * np.sqrt(self.weights)
         elif X.ndim == 2:

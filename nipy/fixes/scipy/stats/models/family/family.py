@@ -41,14 +41,8 @@ models.family.Family
         -------
             eta -- link(mu)
 
-
-
-
 models.family.Binomial(link = links.logit)
     available links are logit, probit, log, cauchy, cloglog
-
-
-
 models.family.Gamma(link = links.inverse)
     available links are log, identity, inverse
 models.family.Gaussian(link = links.identity)
@@ -84,21 +78,20 @@ class Family(object):
 
     tol = 1.0e-05
     links = []
+    fixedscale = None
 
-    @property
-    def link(self):
+    def _setlink(self, link):
+        self._link = link
+        if hasattr(self, "links"):
+            if link not in self.links:
+                raise ValueError, 'invalid link for family, should be in %s' % `self.links`
+
+    def _getlink(self):
         return self._link
 
-    @link.setter
-    def link(self, link):
-        self._link = link
-        if hasattr(self, "link"):
-            if link not in self.links:
-                raise ValueError, 'invalid link for family, should be in %s'\
-                % `self.links`
+    link = property(_getlink, _setlink)
 
     def __init__(self, link, variance):
-
         self.link = link()
         self.variance = variance
 
@@ -197,6 +190,7 @@ class Poisson(Family):
     links = [L.log, L.identity, L.sqrt]
     variance = V.mu
     valid = [0, np.inf]
+    fixedscale = np.array(1.)
 
     def __init__(self, link=L.log):
         self.variance = Poisson.variance
@@ -218,6 +212,16 @@ class Poisson(Family):
 # shouldn't it be
 #        return np.sign(Y - mu) * np.sqrt(2 *np.sum(Y*np.log(Y/mu) - Y + mu))
 # Gill p 58
+
+    def deviance(self, Y, mu, scale=1.):
+        '''
+        Poisson deviance
+
+        If a constant term is included it is
+
+        2 * sum_i{y_i*log*y_i/mu_i)}
+        '''
+        return 2*np.sum(Y*np.log(Y/mu))
 
 class Gaussian(Family):
 
@@ -284,6 +288,7 @@ class Binomial(Family):
 
     links = [L.logit, L.probit, L.cauchy, L.log, L.cloglog]
     variance = V.binary
+    fixedscale = np.array(1.) # actually should be 1/k
 
     def __init__(self, link=L.logit, n=1):
         self.n = n

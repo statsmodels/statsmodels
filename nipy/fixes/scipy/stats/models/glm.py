@@ -221,20 +221,11 @@ class GLMBinomial(LikelihoodModel):
 
     def fit(self, maxiter=100, method='IRLS', tol=1e-5):
 #TODO: method='newton'
-# for IRLS
-# initial value for Newton method (which is a value of the coefs!)
-# can often just  be the Theta for the constant only model
-# (probably analytically derived)
 # cf Hardin 27, 125
         mu =  (self.y + 0.5)/(self.k + 1)   # continuity correction
-# OR
-#        wls_endog = self.inverse(self._endog.mean()) * np.ones((self.nobs))
         wls_exog = self.exog
         eta = np.log(mu/(self.k - mu)) # First guess at linear predictor
         self.iteration+=1
-#        while ((self.history['params'][self.iteration-1]-\
-#                self.history['params'][self.iteration]).all()>tol\
-#                and self.iteration < maxiter):
         self.history['deviance'].append(self.deviance(mu))
         while ((np.fabs(self.history['deviance'][self.iteration]-\
                     self.history['deviance'][self.iteration-1])) > tol and self.iteration<100):
@@ -266,11 +257,109 @@ class GLMBinomial(LikelihoodModel):
         return self.results
 
 
+# Would GLM or GeneralLinearModel be a better class name?
+#class glzm(WLSModel):
+class GLMtwo(LikelihoodModel):
+    '''
+    Notes
+    -----
+    This uses iterative reweighted least squares.
 
+    References
+    ----------
+    Gill, Jeff. 2000. Generalized Linear Models: A Unified Approach.
+        SAGE QASS Series.
 
+    Green, PJ. 1984.  "Iteratively reweighted least squares for maximum
+        likelihood estimation, and some robust and resistant alternatives."
+        Journal of the Royal Statistical Society, Series B, 46, 149-192.
 
+    '''
+#    @property
+#    def scale(self):
+#        return self.results.scale
 
+    def __init__(self, endog, exog, family=family.Gaussian()):
+        self.family = family
+        self._endog = endog
+        self._exog = exog
+        self.initialize()
+#        super(glzm, self).__init__(design, hascons, weights=1)
 
+    def initialize(self):
+        self.history = { 'predict' : [], 'params' : [np.inf], 'logL' : [], 'deviance' : [np.inf]}
+        self.iteration = 0
+        self.y = self._endog
 
+         ### copied from OLS initialize()?? ###
+        self.calc_params = np.linalg.pinv(self._exog)
+        self.normalized_cov_params = np.dot(self.calc_params,
+                                        np.transpose(self.calc_params))
+        self.df_resid = self._exog.shape[0]
+        self.df_model = utils.rank(self._exog)-1
 
+    def llf(self, params):
+        #return self.family.llf(mu)
+        pass
 
+    def score(self, params):
+        pass
+
+    def information(self, params):
+        pass
+
+    def update_history(self, tmp_result, mu):
+        self.history['params'].append(tmp_result.params)
+        self.history['predict'].append(tmp_result.predict)
+        self.history['deviance'].append(self.family.deviance(self.y, mu)/ tmp_result.scale)
+# or / np.sqrt(tmp_results.scale)...how it was?
+
+    def estimate_scale(self, mu):
+        """
+        Return Pearson\'s X^2 estimate of scale.
+        """
+
+        if self.family.fixedscale:
+            return self.family.fixedscale
+        resid = self.y - mu          # This gives the response residual
+                                     # This is the (1/df) Pearson in STATA
+        return ((np.power(resid, 2) / self.family.variance(mu)).sum()
+                / (self.df_resid-self.df_model - 1))  # 1 for the intercept
+
+    def fit(self, maxiter=100, method='IRLS', tol=1e-5):
+        if self._endog.size != self._exog.shape[0]:
+            raise ValueError, 'size of Y does not match shape of design'
+        # Why have these checks here and not in the base class?
+        if isinstance(self.family, family.Binomial):
+            self.k = 1
+            mu = (self.y + 0.5)/(self.k + 1)    # starting mu for binomial
+        else: mu = (self.y + self.y.mean())/2. # starting mu for nonbinomial
+        wls_exog = self._exog
+        eta = self.family.link(mu)
+        self.iteration += 1
+        self.history['deviance'].append(self.family.deviance(self.y, mu) / 1.)
+# scale is assumed to be 1. for the initial predictor
+        while ((np.fabs(self.history['deviance'][self.iteration]-\
+                    self.history['deviance'][self.iteration-1])) > tol and \
+                    self.iteration<100):
+            self.weights = self.family.weights(mu)
+            self.weights = self.family.weights(results.mu)
+            if self.weights.ndim == 2:
+                if not self.weights.size == self.Y.shape[0]:
+                    print 'weights too large', self.weights.shape
+                else:
+                    print 'familiy weights are not 1d', self.weights.shape
+                    self.weights = self.weights.ravel()
+            wls_endog = eta + self.family.link.deriv(mu) * (self.y-mu)
+            wls_results = WLS(wls_endog, wls_exog, self.weights).fit()
+            eta = np.dot(self._exog, wls_results.params) # don't think we can reuse results.predict
+                                                        # unless we rewrite WLS to have a predict
+                                                        # based on transformed variables
+                                                        # maybe the fitted and predicted methods in family
+            mu = self.family.link.inverse(eta)
+            self.update_history(wls_results, mu)
+            self.scale = self.estimate_scale(mu)
+            self.iteration += 1
+        self.results = wls_results
+        self.results.bse = np.sqrt(np.diag(self.results.cov_params(scale=self.scale)))
+        return self.results
