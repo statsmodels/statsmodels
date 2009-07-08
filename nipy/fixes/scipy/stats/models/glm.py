@@ -7,7 +7,7 @@ General linear models
 import numpy as np
 from models import family, utils
 from models.regression import WLS,GLS
-from models.model import LikelihoodModel
+from models.model import LikelihoodModel, LikelihoodModelResults
 from scipy import derivative, comb
 
 # Note: STATA uses either iterated reweighted least squares optimization
@@ -136,126 +136,13 @@ class Model(WLS):
                                             # predict has been overwritten
                                             # and holds self.link(mu)
                                             # which is just the mean vector!?
-#        self.results.scale = self.estimate_scale()
+        self.results.scale = self.estimate_scale()
                                             # uses Pearson's X2 as
                                             # as default scaling
         while self.cont():
             self.results = self.next()
-#            self.results.scale = self.estimate_scale()
-#        self.results.scale = 1.
+            self.results.scale = self.estimate_scale()
         return self.results
-
-class GLMBinomial(LikelihoodModel):
-    '''
-    Notes
-    -----
-    This uses iterative reweighted least squares.
-
-    References
-    ----------
-    Gill, Jeff. 2000. Generalized Linear Models: A Unified Approach.
-        SAGE QASS Series.
-
-    Green, PJ. 1984.  "Iteratively reweighted least squares for maximum
-        likelihood estimation, and some robust and resistant alternatives."
-        Journal of the Royal Statistical Society, Series B, 46, 149-192.
-
-    Hardin, J.W. and Hilbe, J. 2007.  Generalized Linear Models and Extensions.
-        Stata Corp.
-
-
-
-    '''
-    def initialize(self):
-        self.family = family.Binomial()
-        self.endog = self._endog
-        self.exog = self._exog
-#        if self.family is family.Binomial()    # need to check for this...string property, isinstance?
-        if (self.endog.ndim > 1 and self.endog.shape[1] > 1): # greedy logic
-            self.y = self.endog[:,0]    # successes
-            self.k = self.endog[:,0] + self.endog[:,1]    # total trials
-            self.deviance = lambda mu: 2*np.sum(self.y*np.log(self.y/mu)/
-                + (self.k - self.y)*np.log((self.k-self.y)/(self.k-mu)))    # - or +?
-# Gill p.58 and Hardin 9.21 say +
-        else:
-            self.k = 1.
-            self.y = self.endog # then self.endog is binary
-            self.deviance = lambda mu: 2 * np.sum(np.log(1/mu)) # always assumes# that reponse variable of interest == 1(?), or do I need to code the two conditions and then reduce?
-        self.history = { 'predict' : [], 'params' : [np.inf], 'logL' : [], 'deviance' : [np.inf]}
-        self.iteration = 0
-        self.last_result = np.inf
-        self.nobs = self._endog.shape[0]
-
-        ### copied from OLS initialize()?? ###
-        self.calc_params = np.linalg.pinv(self._exog)
-        self.normalized_cov_params = np.dot(self.calc_params,
-                                        np.transpose(self.calc_params))
-        self.df_resid = self._exog.shape[0]
-        self.df_model = utils.rank(self._exog)-1
-
-    def llf(self, results):
-        n = self.nobs
-# TODO        y = np.sum(self._endog)   # number of "successes" UPDATE FOR PROPORTIONAL
-        p = self.inverse(results.predict)
-        llf = y * np.log(p/(1-p)) - (-n*np.log(1-p)) + np.log(comb(n,y))
-        return llf
-
-    def score(self, params):
-        pass
-
-    def information(self, params):
-        pass
-
-    def update_history(self, tmp_result, mu):
-        self.history['params'].append(tmp_result.params)
-        self.history['predict'].append(tmp_result.predict)
-#        deviance = 2*np.sum(self.y*np.log(self.y/mu)/
-#            - (self.k - self.y)*np.log((self.k-self.y))/(self.k-mu))
-        self.history['deviance'].append(self.deviance(mu))
-
-    def inverse(self, z):      # temporary
-        return np.exp(z)/(1+np.exp(z))
-
-    def link(self, mu):
-        return np.log(mu/(1-mu))
-
-    def fit(self, maxiter=100, method='IRLS', tol=1e-5):
-#TODO: method='newton'
-# cf Hardin 27, 125
-        mu =  (self.y + 0.5)/(self.k + 1)   # continuity correction
-        wls_exog = self.exog
-        eta = np.log(mu/(self.k - mu)) # First guess at linear predictor
-        self.iteration+=1
-        self.history['deviance'].append(self.deviance(mu))
-        while ((np.fabs(self.history['deviance'][self.iteration]-\
-                    self.history['deviance'][self.iteration-1])) > tol and self.iteration<100):
-# which one for binomial?  same for bernoulli = w = mu*(1-mu)
-#            w = mu*(self.k - mu) # weights based on variance from HH algorithm
-#            w = mu*(1-mu/self.k) # if it's on the variance np(1-p) and mu = kp
-#           the variance is u(1-mu) BUT the dispersion parameter for the binomial
-# is not 1 it's 1/k (?), so that makes the variance always
-#            w = mu/self.k*(1-mu)
-#            w = mu * (1-mu)
-# Okay, after 4 pages of calculus this should be...
-            w = self.k*mu*(1-mu)
-
-#            wls_endog = eta + self.k*(self.y - mu)/(mu*(self.k - mu)) from HH
-            wls_endog = eta + (self.y/self.k-mu) * self.k/(mu*(self.k-mu))
-# above equation derived from update z = eta_r-1 + (y - mu)*(deta/dmu)|mu=mu_r-1
-#            wls_results = WLS(wls_endog, wls_exog, weights=w).fit()
-            wls_results = GLS(wls_endog, wls_exog, sigma=np.diag(w)).fit()
-            eta = np.dot(self.exog, wls_results.params)
-            mu = self.k/(1+np.exp(-eta))
-            # ugly clip
-            mu = np.clip(mu, np.finfo(np.float).eps, mu-1e-05)
-#            mu = np.where(mu < np.finfo(np.float).eps, np.finfo(np.float).eps, mu)
-#            mu = np.where(mu == self.k, mu-1e-10, mu)
-# mu is bounded by [0,k)
-            self.update_history(wls_results, mu)
-            self.iteration += 1
-        self.results = wls_results
-        return self.results
-
 
 # Would GLM or GeneralLinearModel be a better class name?
 #class glzm(WLSModel):
@@ -284,18 +171,17 @@ class GLMtwo(LikelihoodModel):
         self._endog = endog
         self._exog = exog
         self.initialize()
-#        super(glzm, self).__init__(design, hascons, weights=1)
 
     def initialize(self):
         self.history = { 'predict' : [], 'params' : [np.inf], 'logL' : [], 'deviance' : [np.inf]}
         self.iteration = 0
         self.y = self._endog
 
-         ### copied from OLS initialize()?? ###
+         ### copied from OLS initialize() All needed?? ###
         self.calc_params = np.linalg.pinv(self._exog)
         self.normalized_cov_params = np.dot(self.calc_params,
                                         np.transpose(self.calc_params))
-        self.df_resid = self._exog.shape[0]
+        self.df_resid = self._exog.shape[0] - utils.rank(self._exog)
         self.df_model = utils.rank(self._exog)-1
 
     def llf(self, params):
@@ -316,50 +202,119 @@ class GLMtwo(LikelihoodModel):
 
     def estimate_scale(self, mu):
         """
-        Return Pearson\'s X^2 estimate of scale.
+        Return scale.
+
+        Pearson\'s X^2 estimate of scale.
+        Residual Deviance estimate of scale
+        1.
+        Float
         """
+#TODO: Fix docstring
 
-        if self.family.fixedscale:
-            return self.family.fixedscale
-        resid = self.y - mu          # This gives the response residual
-                                     # This is the (1/df) Pearson in STATA
-        return ((np.power(resid, 2) / self.family.variance(mu)).sum()
-                / (self.df_resid-self.df_model - 1))  # 1 for the intercept
+        if not self.scaletype:
+            if isinstance(self.family, (family.Binomial, family.Poisson)):
+                return np.array(1.)
+            else:
+                resid = self.y - mu
+                return ((np.power(resid, 2) / self.family.variance(mu)).sum() \
+                    / self.df_resid)
 
-    def fit(self, maxiter=100, method='IRLS', tol=1e-5):
-        if self._endog.size != self._exog.shape[0]:
+        if isinstance(self.scaletype, float):
+            return np.array(self.scaletype)
+
+        if isinstance(self.scaletype, str):
+            if self.scaletype.lower() == 'x2':
+                resid = self.y - mu
+                return ((np.power(resid, 2) / self.family.variance(mu)).sum() \
+                    / self.df_resid)
+            elif self.scaletype.lower() == 'dev':
+                return self.family.deviance(self.y, mu)/self.df_resid
+            else:
+                raise ValueError, "Scale %s with type %s not understood" %\
+                    (self.scaletype,type(self.scaletype))
+
+        else:
+            raise ValueError, "Scale %s with type %s not understood" %\
+                (self.scaletype, type(self.scaletype))
+
+    def fit(self, maxiter=100, method='IRLS', tol=1e-5, data_weights=1.,
+            scale=None):
+        '''
+        Fits a glm model based
+
+        parameters
+        ----------
+        scale : string or float, optional
+            `scale` can be 'X2', 'dev', or a float
+            The default is `X2` for Gamma, Gaussian, and Inverse Gaussian
+                `X2` is Pearson's chi-squared divided by the residual
+                degrees of freedom
+            The default is 1 for Binomial and Poisson
+            `dev` scales by the deviance divided by the residual
+                    degrees of freedome
+
+        data_weights : array-like
+            Number of trials for each observation. Used for binomial data.
+        '''
+        self.scaletype = scale
+        if self._endog.shape[0] != self._exog.shape[0]:
             raise ValueError, 'size of Y does not match shape of design'
-        # Why have these checks here and not in the base class?
+        # Why have these checks here and not in the base class or model?
         if isinstance(self.family, family.Binomial):
-            self.k = 1
-            mu = (self.y + 0.5)/(self.k + 1)    # starting mu for binomial
+            self.y = self.family.initialize(self.y)
+            mu = (self.y + 0.5)/2    # starting mu for binomial
         else: mu = (self.y + self.y.mean())/2. # starting mu for nonbinomial
         wls_exog = self._exog
-        eta = self.family.link(mu)
+        eta = self.family.predict(mu)
         self.iteration += 1
         self.history['deviance'].append(self.family.deviance(self.y, mu) / 1.)
 # scale is assumed to be 1. for the initial predictor
         while ((np.fabs(self.history['deviance'][self.iteration]-\
                     self.history['deviance'][self.iteration-1])) > tol and \
                     self.iteration<100):
-            self.weights = self.family.weights(mu)
-            self.weights = self.family.weights(results.mu)
-            if self.weights.ndim == 2:
-                if not self.weights.size == self.Y.shape[0]:
-                    print 'weights too large', self.weights.shape
-                else:
-                    print 'familiy weights are not 1d', self.weights.shape
-                    self.weights = self.weights.ravel()
+            self.weights = data_weights*self.family.weights(mu)
+#            if self.weights.ndim == 2:  # not sure what this corrected for?
+#                if not self.weights.size == self.Y.shape[0]:
+#                    print 'weights too large', self.weights.shape
+#                else:
+#                    print 'familiy weights are not 1d', self.weights.shape
+#                    self.weights = self.weights.ravel()
             wls_endog = eta + self.family.link.deriv(mu) * (self.y-mu)
             wls_results = WLS(wls_endog, wls_exog, self.weights).fit()
-            eta = np.dot(self._exog, wls_results.params) # don't think we can reuse results.predict
-                                                        # unless we rewrite WLS to have a predict
-                                                        # based on transformed variables
-                                                        # maybe the fitted and predicted methods in family
-            mu = self.family.link.inverse(eta)
+            eta = np.dot(self._exog, wls_results.params)
+            mu = self.family.fitted(eta)
             self.update_history(wls_results, mu)
             self.scale = self.estimate_scale(mu)
             self.iteration += 1
-        self.results = wls_results
-        self.results.bse = np.sqrt(np.diag(self.results.cov_params(scale=self.scale)))
+        self.mu = mu
+        self.results = GLMResults(self, wls_results.params, self.scale,
+                    wls_results)
         return self.results
+
+class GLMResults(LikelihoodModelResults):
+    '''
+    Class to contain GLM results
+    '''
+
+    def __init__(self, model, params, scale, tmp_results):
+#TODO: need to streamline init sig
+        super(GLMResults, self).__init__(model, params,
+                normalized_cov_params=None, scale=scale)
+        self._get_results(model, tmp_results)
+
+    def _get_results(self, model, tmp_results):
+        self.df_resid = model.df_resid
+        self.df_model = model.df_model
+        self.bse = np.sqrt(np.diag(tmp_results.cov_params(scale=model.scale)))
+        self.resid_response = model.y - model.mu
+#        self.resid_pearson = model.family.pearson_resid(model.y, model.mu)
+        self.resid_working = None
+        self.resid_anscombe = None
+        self.resid_deviance = model.family.devresid(model.y, model.mu)
+        self.pearson_X2 = np.sum(np.power((model.y,model.mu),2))
+
+    def information_criteria(self):
+        self.aic = None
+        self.bic = None
+
+

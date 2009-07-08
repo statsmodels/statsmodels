@@ -7,7 +7,6 @@ import numpy.random as R
 from numpy.testing import *
 
 import models
-#from models.glm import Model as GLM
 from models.glm import GLMtwo as GLM
 from models.functions import add_constant, xi
 
@@ -68,6 +67,7 @@ class TestRegression(TestCase):
                         (-.136799,1.220472), (.4769494,3.188086),
                         (-.1418484,1.658875), (-1.899729,2.822176))
 # STATA Standard Errors are different than R's! Our algorithm gives the below
+# well it did give the below last night, now it looks the same as STATA's?!?
         R_lbw_bse = (0.036449917, 0.006925765, 0.526405169, 0.439146744,
             0.400820976, 0.346246857, 0.691623875, 0.459373871, 1.204574885)
         R_aic = 219.45
@@ -183,8 +183,12 @@ class TestRegression(TestCase):
         R_AIC = 6039.2
         from models.datasets.star98.data import load
         data = load()
-
-        # Binomial algorithm not working yet...
+        data.exog = add_constant(data.exog)
+        trials = data.endog[:,0]+data.endog[:,1]
+        results = GLM(data.endog, data.exog, family=models.family.Binomial()).\
+                    fit(data_weights = trials)
+        assert_almost_equal(results.params, R_params, 4)
+        assert_almost_equal(results.bse, R_bse, 4)
 
 if __name__=="__main__":
     run_module_suite()

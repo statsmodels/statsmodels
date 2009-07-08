@@ -78,7 +78,6 @@ class Family(object):
 
     tol = 1.0e-05
     links = []
-    fixedscale = None
 
     def _setlink(self, link):
         self._link = link
@@ -116,7 +115,7 @@ class Family(object):
         Deviance of (Y,mu) pair. Deviance is usually defined
         as the difference
 
-        DEV = (SUM_i -2 log Likelihood(Y_i,mu_i) + 2 log Likelihood(mu_i,mu_i)) / scale
+        DEV = (SUM_i 2 log Likelihood(Y_i,Y_i) - 2 log Likelihood(Y_i,mu_i)) / scale
 
         INPUTS:
            Y     -- response variable
@@ -190,7 +189,6 @@ class Poisson(Family):
     links = [L.log, L.identity, L.sqrt]
     variance = V.mu
     valid = [0, np.inf]
-    fixedscale = np.array(1.)
 
     def __init__(self, link=L.log):
         self.variance = Poisson.variance
@@ -219,7 +217,7 @@ class Poisson(Family):
 
         If a constant term is included it is
 
-        2 * sum_i{y_i*log*y_i/mu_i)}
+        2 * sum_i{y_i*log(y_i/mu_i)}
         '''
         return 2*np.sum(Y*np.log(Y/mu))
 
@@ -288,12 +286,51 @@ class Binomial(Family):
 
     links = [L.logit, L.probit, L.cauchy, L.log, L.cloglog]
     variance = V.binary
-    fixedscale = np.array(1.) # actually should be 1/k
 
-    def __init__(self, link=L.logit, n=1):
-        self.n = n
+    def __init__(self, link=L.logit, n=1.):
+        self.n = n              # no good reason to have this now...
         self.variance = V.Binomial(n=self.n)
         self.link = link
+
+    def initialize(self, Y):
+        '''
+        Checks the response variable to see if it is Bernouilli (ie., a vector
+        of 1s and 0s) or if it is Binomial (ie., a 2-d vector of
+        (successes, failures))
+        '''
+        if (Y.ndim > 1 and Y.shape[1] > 1):
+            y = Y[:,0]
+            self.n = Y[:,0] + Y[:,1] # overwrite self.n for deviance below
+            return y/self.n
+        else:
+            return Y
+
+    def deviance(self, Y, mu, scale=1.):
+        '''
+        If the model is Bernouilli then the Family class deviance is used.
+        If the model is Binomial then
+
+        DEV = 2*SUM_i (log(Y_i/mu_i) + (n_i - y_i)*log((n_i-y_i)/(n_i-mu_i)))
+        Paramters
+        ---------
+            Y : array-like
+                response variable
+            mu : array-like
+                mean parameter
+            scale : float
+                optional scale parameter in denominator of deviance
+
+        Returns
+        -------
+            dev : float
+                deviance as described above
+
+        '''
+        if np.shape(self.n) == ():
+            return super(Binomial, self).deviance(Y, mu, scale)
+        else:
+            return 2*np.sum(Y*np.log(Y/mu)+(self.n-Y)*np.log((self.n-Y)/\
+                (self.n-mu)))
 
     def devresid(self, Y, mu):
         """

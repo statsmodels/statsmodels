@@ -110,7 +110,7 @@ class LikelihoodModelResults(Results):
         params : 1d array_like
             parameter estimates from estimated model
         normalized_cov_params : 2d array
-           Normalized (before scaling) covariance of paramss
+           Normalized (before scaling) covariance of params
             normalized_cov_paramss is also known as the hat matrix or H
             (Semiparametric regression, Ruppert, Wand, Carroll; CUP 2003)
         scale : float

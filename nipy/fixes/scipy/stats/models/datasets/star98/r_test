@@ -1,15 +1,15 @@
 ### SETUP
-star.data <- as.matrix(read.csv("./star98.csv",header=T))
-star.factors3 <- data.frame( LOWINC=star.data[,3], PERASIAN=star.data[,4], PERBLACK=star.data[,5],
-	PERHISP=star.data[,6], PERMINTE=star.data[,7], AVYRSEXP=star.data[,8], AVSAL=star.data[,9],
-	PERSPEN=star.data[,10], PTRATIO=star.data[,11], PCTAF=star.data[,12], PCTCHRT=star.data[,13],
-	PCTYRRND=star.data[,14], PERMINTE.AVYRSEXP=star.data[,15], PERMINTE.AVSAL=star.data[,16],
-    AVYRSEXP.AVSAL=star.data[,17], PERSPEN.PTRATIO=star.data[,18], PERSPEN.PCTAF=star.data[,19],
-    PTRATIO.PCTAF=star.data[,20], PERMINTE.AVYRSEXP.AVSAL=star.data[,21],
-    PERSPEN.PTRATIO.PCTAF=star.data[,22], MATHTOT=star.data[,1], PR50M=star.data[,2] )
-#d <- read.table("./star98.csv", sep=",", header=T)
-#attach(d)
-attach(star.factors3)
+#star.data <- as.matrix(read.csv("./star98.csv",header=T))
+#star.factors3 <- data.frame( LOWINC=star.data[,3], PERASIAN=star.data[,4], PERBLACK=star.data[,5],
+#	PERHISP=star.data[,6], PERMINTE=star.data[,7], AVYRSEXP=star.data[,8], AVSAL=star.data[,9],
+#	PERSPEN=star.data[,10], PTRATIO=star.data[,11], PCTAF=star.data[,12], PCTCHRT=star.data[,13],
+#	PCTYRRND=star.data[,14], PERMINTE.AVYRSEXP=star.data[,15], PERMINTE.AVSAL=star.data[,16],
+#    AVYRSEXP.AVSAL=star.data[,17], PERSPEN.PTRATIO=star.data[,18], PERSPEN.PCTAF=star.data[,19],
+#    PTRATIO.PCTAF=star.data[,20], PERMINTE.AVYRSEXP.AVSAL=star.data[,21],
+#    PERSPEN.PTRATIO.PCTAF=star.data[,22], MATHTOT=star.data[,1], PR50M=star.data[,2] )
+d <- read.table("./star98.csv", sep=",", header=T)
+attach(d)
+#attach(star.factors3)
 
 
 ### MATH MODEL
