@@ -122,12 +122,12 @@ class TestRegression(TestCase):
 # Dispersion parameter = 1
         R_null_dev = 136.573
         R_df_model = 16
-        R_resid_dev = 18.592
+        R_resid_dev = 18.59164
         R_df_resid = 10
         R_AIC = 77.85
 
         data = load()
-        data.exog[3] = np.log(data.exog[3])
+        data.exog[:,3] = np.log(data.exog[:,3])
         data.exog = add_constant(data.exog)
         results = GLM(data.endog, data.exog, family=models.family.Poisson()).fit()
 # Estimates are wrong...

@@ -83,7 +83,8 @@ class Family(object):
         self._link = link
         if hasattr(self, "links"):
             if link not in self.links:
-                raise ValueError, 'invalid link for family, should be in %s' % `self.links`
+                raise ValueError, 'invalid link for family, should be in %s' \
+                % `self.links`
 
     def _getlink(self):
         return self._link
@@ -207,9 +208,6 @@ class Poisson(Family):
 
         """
         return np.sign(Y - mu) * np.sqrt(2 * Y * np.log(Y / mu) - 2 * (Y - mu))
-# shouldn't it be
-#        return np.sign(Y - mu) * np.sqrt(2 *np.sum(Y*np.log(Y/mu) - Y + mu))
-# Gill p 58
 
     def deviance(self, Y, mu, scale=1.):
         '''
@@ -220,6 +218,7 @@ class Poisson(Family):
         2 * sum_i{y_i*log(y_i/mu_i)}
         '''
         return 2*np.sum(Y*np.log(Y/mu))
+#        return 2*np.sum(Y*np.log(Y/mu) - (Y-mu))
 
 class Gaussian(Family):
 

@@ -279,9 +279,9 @@ class GLMtwo(LikelihoodModel):
 #                else:
 #                    print 'familiy weights are not 1d', self.weights.shape
 #                    self.weights = self.weights.ravel()
-            wls_endog = eta + self.family.link.deriv(mu) * (self.y-mu)
+            wls_endog = eta + self.family.link.deriv(mu) * (self.y-mu)  # - offset
             wls_results = WLS(wls_endog, wls_exog, self.weights).fit()
-            eta = np.dot(self._exog, wls_results.params)
+            eta = np.dot(self._exog, wls_results.params) # + offset
             mu = self.family.fitted(eta)
             self.update_history(wls_results, mu)
             self.scale = self.estimate_scale(mu)
