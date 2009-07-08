@@ -207,7 +207,7 @@ class Poisson(Family):
            resid -- deviance residuals
 
         """
-        return np.sign(Y - mu) * np.sqrt(2 * Y * np.log(Y / mu) - 2 * (Y - mu))
+        return np.sign(Y-mu) * np.sqrt(2*Y*np.log(Y/mu)-2*(Y-mu))
 
     def deviance(self, Y, mu, scale=1.):
         '''
@@ -218,7 +218,6 @@ class Poisson(Family):
         2 * sum_i{y_i*log(y_i/mu_i)}
         '''
         return 2*np.sum(Y*np.log(Y/mu))
-#        return 2*np.sum(Y*np.log(Y/mu) - (Y-mu))
 
 class Gaussian(Family):
 
@@ -271,6 +270,12 @@ class Gamma(Family):
     def __init__(self, link=L.inverse):
         self.variance = Gamma.variance
         self.link = link
+
+    def deviance(self, Y, mu, scale=1.):
+        return 2 * np.sum((Y - mu)/mu - np.log(Y/mu))/scale
+
+    def devresid(self, Y, mu, scale=1.):
+        return np.sign(Y-mu) * np.sqrt(-2*(-(Y-mu)/mu + np.log(Y/mu)))
 
 
 class Binomial(Family):
@@ -328,8 +333,7 @@ class Binomial(Family):
         if np.shape(self.n) == ():
             return super(Binomial, self).deviance(Y, mu, scale)
         else:
-            return 2*np.sum(Y*np.log(Y/mu)+(self.n-Y)*np.log((self.n-Y)/\
-                (self.n-mu)))
+            return 2*np.sum(self.n*(Y*np.log(Y/mu)+(1-Y)*np.log((1-Y)/(1-mu))))
 
     def devresid(self, Y, mu):
         """
@@ -345,8 +349,11 @@ class Binomial(Family):
         """
 
         mu = self.link.clean(mu)
-        return np.sign(Y - mu) * np.sqrt(-2 * (Y * np.log(mu / self.n) + (self.n - Y) * np.log(1 - mu / self.n)))
-
+        if np.shape(self.n) == ():
+            return super(Binomial, self).devresid(Y, mu)
+        else:
+            return np.sign(Y-mu) * np.sqrt(2*self.n*(Y*np.log(Y/mu)+(1-Y)*\
+                        np.log((1-Y)/(1-mu))))
 class InverseGaussian(Family):
 
     """

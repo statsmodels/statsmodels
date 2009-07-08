@@ -197,7 +197,7 @@ class GLMtwo(LikelihoodModel):
     def update_history(self, tmp_result, mu):
         self.history['params'].append(tmp_result.params)
         self.history['predict'].append(tmp_result.predict)
-        self.history['deviance'].append(self.family.deviance(self.y, mu)/ tmp_result.scale)
+        self.history['deviance'].append(self.family.deviance(self.y, mu))#/ tmp_result.scale)
 # or / np.sqrt(tmp_results.scale)...how it was?
 
     def estimate_scale(self, mu):
@@ -256,10 +256,14 @@ class GLMtwo(LikelihoodModel):
         data_weights : array-like
             Number of trials for each observation. Used for binomial data.
         '''
-        self.scaletype = scale
         if self._endog.shape[0] != self._exog.shape[0]:
             raise ValueError, 'size of Y does not match shape of design'
         # Why have these checks here and not in the base class or model?
+        self.data_weights = data_weights
+        if np.shape(self.data_weights) == () and self.data_weights>1:
+            self.data_weights = self.data_weights * np.ones((self._exog.shape[0]))
+        self.scaletype = scale
+
         if isinstance(self.family, family.Binomial):
             self.y = self.family.initialize(self.y)
             mu = (self.y + 0.5)/2    # starting mu for binomial
@@ -291,27 +295,32 @@ class GLMtwo(LikelihoodModel):
                     wls_results)
         return self.results
 
-class GLMResults(LikelihoodModelResults):
+class GLMResults(LikelihoodModelResults):   # could inherit from RegressionResults
     '''
     Class to contain GLM results
     '''
 
     def __init__(self, model, params, scale, tmp_results):
-#TODO: need to streamline init sig
+#TODO: need to streamline init sig...
         super(GLMResults, self).__init__(model, params,
                 normalized_cov_params=None, scale=scale)
         self._get_results(model, tmp_results)
 
     def _get_results(self, model, tmp_results):
+        self.tmp_results = tmp_results # temporarily here
         self.df_resid = model.df_resid
         self.df_model = model.df_model
         self.bse = np.sqrt(np.diag(tmp_results.cov_params(scale=model.scale)))
         self.resid_response = model.y - model.mu
-#        self.resid_pearson = model.family.pearson_resid(model.y, model.mu)
-        self.resid_working = None
-        self.resid_anscombe = None
-        self.resid_deviance = model.family.devresid(model.y, model.mu)
-        self.pearson_X2 = np.sum(np.power((model.y,model.mu),2))
+        self.resid_pearson = (model.y-model.mu)/np.sqrt(model.family.variance(model.mu))
+        self.resid_working = self.resid_response * model.family.link.deriv(model.mu)
+        self.resid_anscombe = None  # must be defined per family
+        self.resid_dev = model.family.devresid(model.y, model.mu)
+        self.pearson_X2 = np.sum(np.power((model.y,model.mu),2)/model.mu)
+        null = WLS(model.y,np.ones((len(model.y),1)),weights=model.data_weights).\
+                fit().predict # predicted values of constant only fit
+        self.null_deviance = model.family.deviance(model.y,null)
+        self.deviance = model.family.deviance(model.y,model.mu)
 
     def information_criteria(self):
         self.aic = None
