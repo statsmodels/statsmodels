@@ -300,6 +300,8 @@ class GLMResults(LikelihoodModelResults):   # could inherit from RegressionResul
     Class to contain GLM results
     '''
 
+    _llf = None
+
     def __init__(self, model, params, scale, tmp_results):
 #TODO: need to streamline init sig...
         super(GLMResults, self).__init__(model, params,
@@ -308,6 +310,7 @@ class GLMResults(LikelihoodModelResults):   # could inherit from RegressionResul
 
     def _get_results(self, model, tmp_results):
         self.tmp_results = tmp_results # temporarily here
+        self.nobs = model.y.shape[0]
         self.df_resid = model.df_resid
         self.df_model = model.df_model
         self.bse = np.sqrt(np.diag(tmp_results.cov_params(scale=model.scale)))
@@ -317,13 +320,23 @@ class GLMResults(LikelihoodModelResults):   # could inherit from RegressionResul
         self.resid_anscombe = None  # must be defined per family
         self.resid_dev = model.family.devresid(model.y, model.mu)
         self.pearson_X2 = np.sum(np.power((model.y,model.mu),2)/model.mu)
+        self.predict = np.dot(model._exog,self.params)
         null = WLS(model.y,np.ones((len(model.y),1)),weights=model.data_weights).\
                 fit().predict # predicted values of constant only fit
         self.null_deviance = model.family.deviance(model.y,null)
         self.deviance = model.family.deviance(model.y,model.mu)
 
+    @property
+    def llf(self):
+        if self._llf is None:
+            self._llf = self.model.family.logL(self.model.y,self.model.mu, scale=self.scale)
+        return self._llf
+
     def information_criteria(self):
-        self.aic = None
-        self.bic = None
+        llf = self.llf
+        aic = -2 * llf + 2*(self.df_model+1)
+        bic = self.model.family.deviance(self.model.y,self.model.mu) - \
+                (self.df_model+1)*np.log(self.nobs)
+        return dict(aic=aic, bic=bic)
 
 

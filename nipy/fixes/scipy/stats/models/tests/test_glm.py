@@ -100,7 +100,8 @@ class TestRegression(TestCase):
         assert_equal(results.df_model,R_df_null-R_df_resid)
         assert_equal(results.df_resid,R_df_resid)
         assert_equal(results.scale,R_dispersion)
-#        assert_almost_equal(results.aic, R_AIC, 5)
+        aic=results.information_criteria()['aic']
+        assert_almost_equal(aic, R_AIC, 5)
         assert_almost_equal(results.deviance, R_deviance, 5)
         assert_almost_equal(results.null_deviance,R_null_deviance)
 
@@ -156,7 +157,8 @@ class TestRegression(TestCase):
         assert_almost_equal(results.params, R_params, 5)
         assert_almost_equal(results.bse, R_bse, 4) # loss of precision here?
         assert_almost_equal(results.deviance, R_deviance, 5)
-#        assert_almost_equal(results.aic, R_AIC, 5)
+        aic=results.information_criteria()['aic']
+        assert_almost_equal(aic, R_AIC, 5)
 
 
     def test_gamma(self):
@@ -197,7 +199,10 @@ class TestRegression(TestCase):
         assert_almost_equal(results.null_deviance, R_null_dev, 5)
         assert_almost_equal(results.resid_dev, R_resid_dev, 5)
         assert_almost_equal(results.deviance, R_deviance, 5)
-#        assert_almost_equal(results.aic, R_AIC, 5)
+        aic=results.information_criteria()['aic']
+#        assert_almost_equal(aic, R_AIC, 4)  # this is weird, check with stata
+                                            # alternative definition for small
+                                            # sample?
 
     def test_binomial(self):
         '''
@@ -289,18 +294,25 @@ class TestRegression(TestCase):
         from models.datasets.star98.data import load
         data = load()
         data.exog = add_constant(data.exog)
-        trials = data.endog[:,0]+data.endog[:,1]
+        trials = data.endog[:,:2].sum(1)
         results = GLM(data.endog, data.exog, family=models.family.Binomial()).\
                     fit(data_weights = trials)
         assert_almost_equal(results.params, R_params, 4)
         assert_almost_equal(results.bse, R_bse, 4)
         assert_almost_equal(results.resid_dev,R_dev_resid)
         assert_almost_equal(results.deviance, R_deviance, 5)
-#        assert_almost_equal(results.aic, R_AIC)
+        aic=results.information_criteria()['aic']
+        assert_almost_equal(aic, R_AIC)
         assert_almost_equal(results.null_deviance, R_null_dev, 5)
         assert_equal(results.df_model, R_df_null-R_df_resid)
         assert_equal(results.df_resid, R_df_resid)
         assert_almost_equal(results.scale, R_dispersion)
+
+        def test_gaussian(self):
+            pass
+
+        def test_inverse_gaussian(self):
+            pass
 
 if __name__=="__main__":
     run_module_suite()

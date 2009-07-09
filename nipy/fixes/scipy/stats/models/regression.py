@@ -541,7 +541,7 @@ class RegressionResults(LikelihoodModelResults):
         super(RegressionResults, self).__init__(model, params,
                                                  normalized_cov_params,
                                                  scale)
-
+# should this go up to likelihood model results?
     @property
     def llf(self):
         if self._llf is None:

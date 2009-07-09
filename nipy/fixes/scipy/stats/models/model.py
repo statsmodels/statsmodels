@@ -22,12 +22,15 @@ class Model(object):
         """
         raise NotImplementedError
 
-    def predict(self, exogs):
+    def predict(self):
         """
         After a model has been fit, results are (assumed to be) stored
         in self.results, which itself should have a predict method.
+
+        Changed the way that this works.  It's now a predict attribute.
+        Does this make sense? -SS
         """
-        self.results.predict(exogs)
+        return self.results.predict
 
 class LikelihoodModel(Model):
 

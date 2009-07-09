@@ -58,6 +58,7 @@ models.family.Poisson(link = links.logit)
 # for comparison to R, and McCullagh and Nelder
 
 import numpy as np
+from scipy import special
 from models.family import links as L
 from models.family import varfuncs as V
 
@@ -177,6 +178,9 @@ class Family(object):
         """
         return self.link(mu)
 
+    def logL(self, Y, mu, scale=1.):
+        raise NotImplementedError
+
 class Poisson(Family):
 
     """
@@ -219,6 +223,9 @@ class Poisson(Family):
         '''
         return 2*np.sum(Y*np.log(Y/mu))
 
+    def logL(self, Y, mu, scale=1.):
+        return scale * np.sum(-mu + Y*np.log(mu)-special.gammaln(Y+1))
+
 class Gaussian(Family):
 
     """
@@ -251,6 +258,10 @@ class Gaussian(Family):
 
         return (Y - mu) / np.sqrt(self.variance(mu) * scale)
 
+    def logL(self, Y, mu, scale=1.):
+#        return -.5*np.sum(np.power((Y-mu),2)/scale + np.log(2*np.pi*scale))
+        return np.sum((Y*mu-mu**2/2)/scale-Y**2/(2*scale)-.5*np.log(2*np.pi*scale))
+
 class Gamma(Family):
 
     """
@@ -276,6 +287,11 @@ class Gamma(Family):
 
     def devresid(self, Y, mu, scale=1.):
         return np.sign(Y-mu) * np.sqrt(-2*(-(Y-mu)/mu + np.log(Y/mu)))
+
+    def logL(self, Y, mu, scale=1.):
+        return - 1/scale * np.sum(Y/mu+np.log(mu)+(scale-1)*np.log(Y)\
+                +np.log(scale)+scale*special.gammaln(1/scale))
+
 
 
 class Binomial(Family):
@@ -354,6 +370,15 @@ class Binomial(Family):
         else:
             return np.sign(Y-mu) * np.sqrt(2*self.n*(Y*np.log(Y/mu)+(1-Y)*\
                         np.log((1-Y)/(1-mu))))
+
+    def logL(self, Y, mu, scale=1.):
+        if np.shape(self.n) == ():
+            return scale*np.sum(Y*np.log(mu/(1-mu))+np.log(1-mu))
+        else:
+            y=Y*self.n  #convert back to successes
+            return scale * np.sum(special.gammaln(self.n+1)-special.gammaln(y+1)\
+                -special.gammaln(self.n-y+1)+y*np.log(mu/(1-mu))+self.n*np.log(1-mu))
+
 class InverseGaussian(Family):
 
     """
@@ -372,3 +397,7 @@ class InverseGaussian(Family):
         self.n = n
         self.variance = InverseGaussian.variance
         self.link = link
+
+    def logL(self, Y, mu, scale=1.):
+        return -.5 * np.sum(np.power((Y-mu),2)/(Y*np.power((mu),2)*scale)\
+                + np.log(scale*np.power((Y),3)) + np.log(2*np.pi))

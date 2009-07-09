@@ -60,8 +60,8 @@ class TestRegression(TestCase):
         data.exog = add_constant(data.exog)
         ols_res = models.regression.OLS(data.endog, data.exog).fit()
         gls_res = models.regression.GLS(data.endog, data.exog).fit()
-        assert_equal(ols_res.params,gls_res.params)
-        assert_equal(ols_res.bse,gls_res.bse)
+        assert_almost_equal(ols_res.params,gls_res.params, 8)
+        assert_almost_equal(ols_res.bse,gls_res.bse, 8)
 
 if __name__=="__main__":
     run_module_suite()
