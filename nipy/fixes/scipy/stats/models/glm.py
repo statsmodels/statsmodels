@@ -317,7 +317,7 @@ class GLMResults(LikelihoodModelResults):   # could inherit from RegressionResul
         self.resid_response = model.y - model.mu
         self.resid_pearson = (model.y-model.mu)/np.sqrt(model.family.variance(model.mu))
         self.resid_working = self.resid_response * model.family.link.deriv(model.mu)
-        self.resid_anscombe = None  # must be defined per family
+        self.resid_anscombe = model.family.resid_anscombe(model.y,model.mu)
         self.resid_dev = model.family.devresid(model.y, model.mu)
         self.pearson_X2 = np.sum(np.power((model.y,model.mu),2)/model.mu)
         self.predict = np.dot(model._exog,self.params)
@@ -329,7 +329,8 @@ class GLMResults(LikelihoodModelResults):   # could inherit from RegressionResul
     @property
     def llf(self):
         if self._llf is None:
-            self._llf = self.model.family.logL(self.model.y,self.model.mu, scale=self.scale)
+            self._llf = self.model.family.logL(self.model.y,
+                    self.model.mu, scale=self.scale)
         return self._llf
 
     def information_criteria(self):
@@ -337,6 +338,5 @@ class GLMResults(LikelihoodModelResults):   # could inherit from RegressionResul
         aic = -2 * llf + 2*(self.df_model+1)
         bic = self.model.family.deviance(self.model.y,self.model.mu) - \
                 (self.df_model+1)*np.log(self.nobs)
+        # this doesn't appear to be correct?
         return dict(aic=aic, bic=bic)
-
-

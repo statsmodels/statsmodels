@@ -181,6 +181,9 @@ class Family(object):
     def logL(self, Y, mu, scale=1.):
         raise NotImplementedError
 
+    def resid_anscombe(self, Y, mu):
+        raise NotImplementedError
+
 class Poisson(Family):
 
     """
@@ -226,6 +229,9 @@ class Poisson(Family):
     def logL(self, Y, mu, scale=1.):
         return scale * np.sum(-mu + Y*np.log(mu)-special.gammaln(Y+1))
 
+    def resid_anscombe(self, Y, mu):
+        return (3/2.)*(Y**(2/3.)-mu**(2/3.))/mu**(1/6.)
+
 class Gaussian(Family):
 
     """
@@ -258,9 +264,15 @@ class Gaussian(Family):
 
         return (Y - mu) / np.sqrt(self.variance(mu) * scale)
 
+    def deviance(self, Y, mu, scale=1.):
+        return np.sum(np.power((Y-mu),2))
+
     def logL(self, Y, mu, scale=1.):
 #        return -.5*np.sum(np.power((Y-mu),2)/scale + np.log(2*np.pi*scale))
         return np.sum((Y*mu-mu**2/2)/scale-Y**2/(2*scale)-.5*np.log(2*np.pi*scale))
+
+    def resid_anscombe(self, Y, mu):
+        return Y-mu
 
 class Gamma(Family):
 
@@ -292,7 +304,8 @@ class Gamma(Family):
         return - 1/scale * np.sum(Y/mu+np.log(mu)+(scale-1)*np.log(Y)\
                 +np.log(scale)+scale*special.gammaln(1/scale))
 
-
+    def resid_anscombe(self, Y, mu):
+        return 3*(Y**(1/3.)-mu**(1/3.))/mu**(1/3.)
 
 class Binomial(Family):
 
@@ -376,8 +389,25 @@ class Binomial(Family):
             return scale*np.sum(Y*np.log(mu/(1-mu))+np.log(1-mu))
         else:
             y=Y*self.n  #convert back to successes
-            return scale * np.sum(special.gammaln(self.n+1)-special.gammaln(y+1)\
-                -special.gammaln(self.n-y+1)+y*np.log(mu/(1-mu))+self.n*np.log(1-mu))
+            return scale * np.sum(special.gammaln(self.n+1)-\
+                special.gammaln(y+1)-special.gammaln(self.n-y+1)\
+                +y*np.log(mu/(1-mu))+self.n*np.log(1-mu))
+
+    def resid_anscombe(self, Y, mu):
+        '''
+        References
+        ----------
+        Anscombe, FJ. (1953) "Contribution to the discussion of H. Hotelling's
+            paper." Journal of the Royal Statistical Society B. 15, 229-30.
+
+        Cox, DR and Snell, EJ. (1968) "A General Definition of Residuals."
+            Journal of the Royal Statistical Society B. 30, 248-75.
+
+        '''
+        cox_snell = lambda x: special.betainc(2/3., 2/3., x)\
+                            *special.beta(2/3.,2/3.)
+        return np.sqrt(self.n)*(cox_snell(Y)-cox_snell(mu))/\
+                        (mu**(1/6.)*(1-mu)**(1/6.))
 
 class InverseGaussian(Family):
 
@@ -401,3 +431,6 @@ class InverseGaussian(Family):
     def logL(self, Y, mu, scale=1.):
         return -.5 * np.sum(np.power((Y-mu),2)/(Y*np.power((mu),2)*scale)\
                 + np.log(scale*np.power((Y),3)) + np.log(2*np.pi))
+
+    def resid_anscombe(self, Y, mu):
+        return (np.log(Y) - np.log(mu))/np.sqrt(mu)
