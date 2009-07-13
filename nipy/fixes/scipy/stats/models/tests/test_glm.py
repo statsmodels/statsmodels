@@ -9,6 +9,7 @@ from numpy.testing import *
 import models
 from models.glm import GLMtwo as GLM
 from models.functions import add_constant, xi
+from scipy import stats
 
 W = R.standard_normal
 
@@ -308,11 +309,37 @@ class TestRegression(TestCase):
         assert_equal(results.df_resid, R_df_resid)
         assert_almost_equal(results.scale, R_dispersion)
 
-        def test_gaussian(self):
-            pass
+    def test_gaussian(self):
+        from exampledata import y,x
+        ols_res = models.regression.OLS(y,x).fit()
+        glm_res = GLM(y,x, family=models.family.Gaussian())
+        assert_equal(ols_res.params,glm_res.params)
+        assert_equal(ols_res.llf,glm_res.llf)
+        ols_aic = ols_res.information_criteria()['aic']
+        glm_aic = glm_res.information_criteria()['aic']
+        assert_equal(ols_aic,glm_aic)
+        assert_equal(ols_res.bse,glm_res.bse)
+        assert_equal(ols_res.scale, glm_res.scale)
+        assert_equal(ols_res.resid,glm_res.resid_dev) # deviance residuals are
+                                                      # are the same for
+                                                      # Gaussian with ident link
 
-        def test_inverse_gaussian(self):
-            pass
+
+    def test_inverse_guassian_identity(self):
+        np.random.seed(54321)
+        x1 = np.abs(stats.norm.ppf((np.random.random(1000))))
+        x2 = np.abs(stats.norm.ppf((np.random.random(1000))))
+        X = np.column_stack((x1,x2))
+        X = add_constant(X)
+        params = np.array([.5, -.25, 1])
+        eta = 1 + .5 * x1 + -.25 * x2
+        mu = 1/np.sqrt(eta)
+        sigma = .5
+#        Y = 1/np.power((np.dot(X,params),2)
+#        Y_star = Y + np.random.wald(
+        Y = np.dot(X,params) + np.random.wald(mu, sigma, 1000)
+        model = GLM(Y, X, family=models.family.InverseGaussian(link=\
+            models.family.links.identity))
 
 if __name__=="__main__":
     run_module_suite()

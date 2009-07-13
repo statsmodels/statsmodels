@@ -59,6 +59,7 @@ models.family.Poisson(link = links.logit)
 
 import numpy as np
 from scipy import special
+from scipy.stats import ss
 from models.family import links as L
 from models.family import varfuncs as V
 
@@ -267,9 +268,16 @@ class Gaussian(Family):
     def deviance(self, Y, mu, scale=1.):
         return np.sum(np.power((Y-mu),2))
 
+#    def logL(self, Y, mu, scale=1.):
+#        return np.sum((Y*mu-mu**2/2)/scale-Y**2/(2*scale)-.5*np.log(2*np.pi*scale))
+# ?? This is the log likelihood for MLE only ??
     def logL(self, Y, mu, scale=1.):
-#        return -.5*np.sum(np.power((Y-mu),2)/scale + np.log(2*np.pi*scale))
-        return np.sum((Y*mu-mu**2/2)/scale-Y**2/(2*scale)-.5*np.log(2*np.pi*scale))
+# this won't use the scale then...
+        nobs2 = Y.shape[0]/2.
+        SSR = ss(Y-self.fitted(mu))
+        llf = -np.log(SSR) * nobs2
+        llf -= (1+np.log(np.pi/nobs2))*nobs2
+        return llf
 
     def resid_anscombe(self, Y, mu):
         return Y-mu
@@ -379,7 +387,12 @@ class Binomial(Family):
 
         mu = self.link.clean(mu)
         if np.shape(self.n) == ():
-            return super(Binomial, self).devresid(Y, mu)
+            ind_one = np.where(Y==1)
+            ind_zero = np.where(Y==0)
+            tmp = np.zeros(len(Y))
+            tmp[ind_zero] = -2 * np.log(1-mu[ind_zero])
+            tmp[ind_one] = -2 * np.log(mu[ind_one])
+            return np.sign(Y - mu) * np.sqrt(tmp)
         else:
             return np.sign(Y-mu) * np.sqrt(2*self.n*(Y*np.log(Y/mu)+(1-Y)*\
                         np.log((1-Y)/(1-mu))))
@@ -416,7 +429,6 @@ class InverseGaussian(Family):
 
     INPUTS:
        link      -- a Link instance
-       n         -- number of trials for Binomial
 
     """
 
@@ -424,7 +436,6 @@ class InverseGaussian(Family):
     variance = V.mu_cubed
 
     def __init__(self, link=L.inverse_squared):
-        self.n = n
         self.variance = InverseGaussian.variance
         self.link = link
 
@@ -434,3 +445,6 @@ class InverseGaussian(Family):
 
     def resid_anscombe(self, Y, mu):
         return (np.log(Y) - np.log(mu))/np.sqrt(mu)
+
+#Wald = InverseGaussian()
+

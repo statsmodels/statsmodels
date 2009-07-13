@@ -9,8 +9,9 @@ import numpy.linalg as L
 from scipy.linalg import solveh_banded
 from scipy.optimize import golden
 
-from nipy.fixes.scipy.stats.models import _hbspline
-from nipy.fixes.scipy.stats.models.bspline import BSpline, _band2array
+from models import _hbspline        # Need to alter setup to be able to import
+                                    # extension from models or drop for scipy
+from models.bspline import BSpline, _band2array
 
 class PolySmoother(object):
     """
@@ -38,6 +39,7 @@ class PolySmoother(object):
     def gram(self, d=None):
         #fake for spline imitation
         pass
+
     def smooth(self,*args, **kwds):
         return self.fit(*args, **kwds)
 

@@ -50,7 +50,7 @@ class Check_Glm_R(object):
 #        nptest.assert_array_almost_equal(self.res1.bcov, self.res2.results.cov_params(), DECIMAL)
 #   need to sort out cov_params and normalized_cov_params
     def test_deviance(self):
-        nptest.assert_array_almost_equal(self.res1.deviance, self.res2.deviance, DECIMAL)
+        nptest.assert_array_almost_equal(self.res1.deviance, self.res2.results.deviance, DECIMAL)
     def test_fitted(self):
         nptest.assert_array_almost_equal(self.res1.predictedy, self.res2.results.mu, DECIMAL)
     def test_fitted(self):
@@ -59,6 +59,7 @@ class Check_Glm_R(object):
         nptest.assert_array_almost_equal(self.res1.predict, self.res2.results.predict, DECIMAL)
     def test_scale(self):
         nptest.assert_array_almost_equal(self.res1.scale, self.res2.results.scale, DECIMAL)
+#    @nptest.decorators.knownfailureif(True)
     def test_aic(self):
         nptest.assert_almost_equal(self.res1.aic,
                 self.res2.results.information_criteria()['aic'], DECIMAL)
