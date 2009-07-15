@@ -187,6 +187,8 @@ class LikelihoodModelResults(Results):
             return tmp * scale
         if matrix is None and column is None:
             if scale.size==1:
+# TODO: np.eye fails for big arrays.  Failed for np.eye(25,000) in the lab
+# needs to be optimized.
                 scale=np.eye(len(self.resid))*scale
             return np.dot(np.dot(self.calc_params, scale), self.calc_params.T)
 

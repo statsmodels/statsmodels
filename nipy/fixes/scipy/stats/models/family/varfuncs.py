@@ -85,3 +85,28 @@ mu = Power()
 mu_squared = Power(power=2)
 mu_cubed = Power(power=3)
 binary = Binomial()
+
+class NegativeBinomial(object):
+    '''
+    Negative Binomial variance function
+
+    V(mu) = mu + alpha*mu**2
+
+    Parameters
+    ----------
+        alpha --
+    '''
+
+    tol = 1.0e-10
+
+    def __init__(self, alpha=1):
+        self.alpha = alpha
+
+    def clean(self, p):
+        return np.clip(p, NegativeBinomial.tol, 1-NegativeBinomial.tol)
+
+    def __call__(self, mu):
+        p = self.clean(mu)
+        return mu + self.alpha*mu**2
+
+negbin = NegativeBinomial()

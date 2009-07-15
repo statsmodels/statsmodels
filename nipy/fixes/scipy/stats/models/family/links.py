@@ -65,6 +65,7 @@ class Logit(Link):
            z   -- logit transform of p
 
         """
+    variance = V.binary
 
         p = self.clean(p)
         return np.log(p / (1. - p))
@@ -395,3 +396,8 @@ class CLogLog(Logit):
 # shouldn't the negatives cancel out? for just 1/(plog(p))
 
 cloglog = CLogLog()
+
+class NegativeBinomial(object):
+    pass
+
+nbinom = NegativeBinomial()

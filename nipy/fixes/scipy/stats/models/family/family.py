@@ -311,6 +311,9 @@ class Gamma(Family):
     def logL(self, Y, mu, scale=1.):
         return - 1/scale * np.sum(Y/mu+np.log(mu)+(scale-1)*np.log(Y)\
                 +np.log(scale)+scale*special.gammaln(1/scale))
+# in Stata scale is set to equal 1.
+# in R it's the dispersion, though there is a loss of precision, the
+# answer is equivalent.
 
     def resid_anscombe(self, Y, mu):
         return 3*(Y**(1/3.)-mu**(1/3.))/mu**(1/3.)
@@ -348,7 +351,7 @@ class Binomial(Family):
 
     def deviance(self, Y, mu, scale=1.):
         '''
-        If the model is Bernouilli then the Family class deviance is used.
+        If the model is Bernoulli then the Family class deviance is used.
         If the model is Binomial then
 
         DEV = 2*SUM_i (log(Y_i/mu_i) + (n_i - y_i)*log((n_i-y_i)/(n_i-mu_i)))
@@ -439,6 +442,12 @@ class InverseGaussian(Family):
         self.variance = InverseGaussian.variance
         self.link = link
 
+    def devresid(self, Y, mu):
+        return np.sign(Y-mu) * np.sqrt((Y-mu)**2/(Y*mu**2))
+
+    def deviance(self, Y, mu, scale=1.):
+        return np.sum((Y-mu)**2/(Y*mu**2))/scale
+
     def logL(self, Y, mu, scale=1.):
         return -.5 * np.sum(np.power((Y-mu),2)/(Y*np.power((mu),2)*scale)\
                 + np.log(scale*np.power((Y),3)) + np.log(2*np.pi))
@@ -447,4 +456,40 @@ class InverseGaussian(Family):
         return (np.log(Y) - np.log(mu))/np.sqrt(mu)
 
 #Wald = InverseGaussian()
+# how to alias?
+
+class NegativeBinomial(Family):
+    '''
+    Negative Binomial exponential family.
+
+    Inputs:
+        alpha
+        link
+    '''
+    links = [L.log, L.cloglog, L.identity, L.power, L.nbinom]
+    variance = V.negbin
+
+    def __init__(self, alpha=1., link=L.log):
+        self.alpha = alpha
+        self.variance = V.NegativeBinomial(alpha=self.alpha)
+        self.link = link
+
+    def deviance(self, Y, mu, scale=1.):
+        indzero = np.where(Y==0)
+        indelse = np.where(Y!=0)
+        tmp=np.zeros(len(Y))
+        tmp[indzero]=2*np.log(1+self.alpha*mu)/self.alpha
+        tmp[indelse]=2*Y*np.log(Y/mu)-2/self.alpha*(1+self.alpha*Y)*\
+                np.log((1+self.alpha*Y)/(1+self.alpha*mu)
+        return np.sum(tmp)
+
+
+
+
+
+
+
+
+
+
 

@@ -293,6 +293,7 @@ class GLMtwo(LikelihoodModel):
         self.mu = mu
         self.results = GLMResults(self, wls_results.params, self.scale,
                     wls_results)
+        self.results.mu = mu
         return self.results
 
 class GLMResults(LikelihoodModelResults):   # could inherit from RegressionResults
@@ -310,16 +311,20 @@ class GLMResults(LikelihoodModelResults):   # could inherit from RegressionResul
 
     def _get_results(self, model, tmp_results):
         self.tmp_results = tmp_results # temporarily here
-        self.nobs = model.y.shape[0]
+        self.nobs = model.y.shape[0]    # this should be a model attribute
         self.df_resid = model.df_resid
         self.df_model = model.df_model
+        self.mu = model.mu
         self.bse = np.sqrt(np.diag(tmp_results.cov_params(scale=model.scale)))
-        self.resid_response = model.y - model.mu
-        self.resid_pearson = (model.y-model.mu)/np.sqrt(model.family.variance(model.mu))
-        self.resid_working = self.resid_response * model.family.link.deriv(model.mu)
+        self.resid_response = model.data_weights*(model.y - model.mu)
+            # data_weights needed for binomial(n)
+        self.resid_pearson = np.sqrt(model.data_weights)*(model.y-model.mu)/\
+                np.sqrt(model.family.variance(model.mu))
+        self.resid_working = model.data_weights * (self.resid_response/\
+                    model.family.link.deriv(model.mu))
         self.resid_anscombe = model.family.resid_anscombe(model.y,model.mu)
         self.resid_dev = model.family.devresid(model.y, model.mu)
-        self.pearson_X2 = np.sum(np.power((model.y,model.mu),2)/model.mu)
+        self.pearsonX2 = model.data_weights*np.sum(self.resid_pearson**2)
         self.predict = np.dot(model._exog,self.params)
         null = WLS(model.y,np.ones((len(model.y),1)),weights=model.data_weights).\
                 fit().predict # predicted values of constant only fit
@@ -337,6 +342,6 @@ class GLMResults(LikelihoodModelResults):   # could inherit from RegressionResul
         llf = self.llf
         aic = -2 * llf + 2*(self.df_model+1)
         bic = self.model.family.deviance(self.model.y,self.model.mu) - \
-                (self.df_model+1)*np.log(self.nobs)
+                (self.df_resid)*np.log(self.nobs)
         # this doesn't appear to be correct?
         return dict(aic=aic, bic=bic)

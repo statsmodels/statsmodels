@@ -10,3 +10,7 @@ m1 <- glm(low ~ age + lwt + race.f + smoke + ptl + ht + ui,
 results <- summary.glm(m1)
 results
 results['coefficients']
+
+library(boot)
+m1.diag <- glm.diag(m1)
+# note that this returns standardized residuals for diagnostics)
