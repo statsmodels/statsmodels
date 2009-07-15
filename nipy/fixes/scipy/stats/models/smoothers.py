@@ -9,7 +9,7 @@ import numpy.linalg as L
 from scipy.linalg import solveh_banded
 from scipy.optimize import golden
 
-from models import _hbspline        # Need to alter setup to be able to import
+#from models import _hbspline        # Need to alter setup to be able to import
                                     # extension from models or drop for scipy
 from models.bspline import BSpline, _band2array
 

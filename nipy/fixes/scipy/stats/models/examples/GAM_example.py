@@ -2,7 +2,7 @@
 example = 1  # 1,2 or 3
 import numpy as np
 import numpy.random as R
-from models.gam import AdditiveModel
+#from models.gam import AdditiveModel
 
 # n is not a good name for a function, use normalize or something
 n = lambda x: (x - x.mean()) / x.std()

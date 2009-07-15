@@ -11,4 +11,4 @@ These families are described in
 '''
 
 from models.family.family import Gaussian, Family, Poisson, Gamma, \
-    InverseGaussian, Binomial
+    InverseGaussian, Binomial, NegativeBinomial

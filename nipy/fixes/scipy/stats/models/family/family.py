@@ -463,16 +463,21 @@ class NegativeBinomial(Family):
     Negative Binomial exponential family.
 
     Inputs:
-        alpha
         link
+        alpha
     '''
-    links = [L.log, L.cloglog, L.identity, L.power, L.nbinom]
+    links = [L.log, L.cloglog, L.identity, L.nbinom, L.Power]
+#TODO: add the ability to use the power the links with an if test
+# similar to below
     variance = V.negbin
 
-    def __init__(self, alpha=1., link=L.log):
+    def __init__(self, link=L.log, alpha=1.):
         self.alpha = alpha
         self.variance = V.NegativeBinomial(alpha=self.alpha)
-        self.link = link
+        if isinstance(link, L.NegativeBinomial):
+            self.link = link(alpha=self.alpha)
+        else:
+            self.link = link
 
     def deviance(self, Y, mu, scale=1.):
         indzero = np.where(Y==0)
@@ -480,8 +485,45 @@ class NegativeBinomial(Family):
         tmp=np.zeros(len(Y))
         tmp[indzero]=2*np.log(1+self.alpha*mu)/self.alpha
         tmp[indelse]=2*Y*np.log(Y/mu)-2/self.alpha*(1+self.alpha*Y)*\
-                np.log((1+self.alpha*Y)/(1+self.alpha*mu)
+                np.log((1+self.alpha*Y)/(1+self.alpha*mu))
         return np.sum(tmp)
+
+    def devresid(self, Y, mu):
+        '''
+        Negative Binomial Deviance Residual
+
+        Parameters
+        ----------
+        Y : array-like
+            `Y` is the response variable
+        mu : array-like
+            `mu` is the fitted value of the model
+
+        Returns
+        --------
+        resid_dev : array
+            The array of deviance residuals
+
+        Formula
+        --------
+        '''
+        indzero = np.where(Y==0)
+        indelse = np.where(Y!=0)
+        tmp=np.zeros(len(Y))
+        tmp[indzero]=2*np.log(1+self.alpha*mu)/self.alpha
+        tmp[indelse]=2*Y*np.log(Y/mu)-2/self.alpha*(1+self.alpha*Y)*\
+                np.log((1+self.alpha*Y)/(1+self.alpha*mu))
+        return np.sign(Y-mu)*np.sqrt(tmp)
+
+    def logL(self, Y, mu, scale=1.):
+        return scale*np.sum(special.gammaln(1/self.alpha + Y) - special.gammaln(Y+1) -\
+                special.gammaln(1/self.alpha) - 1/special.gammaln(1+self.alpha*mu) +\
+                Y*np.log(self.alpha*mu/(self.alpha*mu+1)))
+
+    def resid_anscombe(self, Y, mu):
+        return
+
+
 
 
 

@@ -65,8 +65,6 @@ class Logit(Link):
            z   -- logit transform of p
 
         """
-    variance = V.binary
-
         p = self.clean(p)
         return np.log(p / (1. - p))
 
@@ -152,7 +150,7 @@ class Power(Link):
         """
         Derivative of power transform
 
-        g(x) = self.power * x**(self.power - 1)
+        g'(x) = self.power * x**(self.power - 1)
 
         INPUTS:
            x   -- mean parameters
@@ -230,7 +228,7 @@ class Log(Link):
         """
         Inverse of log transform
 
-        g(x) = exp(x)
+        g^{-1}(x) = exp(x)
 
         INPUTS:
            z   -- linear predictors in GLM
@@ -398,6 +396,62 @@ class CLogLog(Logit):
 cloglog = CLogLog()
 
 class NegativeBinomial(object):
-    pass
+    '''
+    The negative binomial link function
+
+    g(x) = log(x/(x+1/alpha))
+    '''
+
+    tol = 1.0e-10
+
+    def __init__(self, alpha=1.):
+        self.alpha = alpha
+
+    def clean(self, x):
+        return np.clip(x, NegativeBinomial.tol, np.inf)
+
+    def __call__(self, x):
+        '''
+        Negative Binomial transform
+
+        g(x) = log(x/(x+1/alpha))
+
+        Parameters
+        ----------
+        x : array-like
+            Fitted values
+        alpha : scalar, optional
+            `alpha` is the scale parameter of the negative binomial distribution
+            The default is 1, though permissible values are usually between .01 and 2
+        '''
+        x = self.clean(x)
+        return np.log(x/(x+1/self.alpha))
+
+    def inverse(self, z):
+        '''
+        Inverse of the negative binomial transform
+
+        g^{-1}(z) = exp(z)/(alpha*(1-exp(z)))
+
+
+        Parameters
+        -----------
+        z : array-like
+            `z` is the linear predictor
+
+        Returns
+        -------
+        x : array-like
+            `x` is the fitted values given the linear predictor `z`
+        '''
+        return np.exp(z)/(self.alpha*(1-np.exp(z)))
+
+    def deriv(self, x):
+        '''
+        Derivative of the negative binomial transform
+
+        g'(x) = 1/(x+alpha*x^2)
+        '''
+        return 1/(x+self.alpha*x**2)
 
 nbinom = NegativeBinomial()

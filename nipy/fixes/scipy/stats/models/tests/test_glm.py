@@ -405,7 +405,7 @@ class TestRegression(object):
         data = load()
         data.exog[:,2] = np.log(data.exog[:,2])
         interaction = data.exog[:,2]*data.exog[:,1]
-        data.exog = np.column_stack(data.exog,interaction)
+        data.exog = np.column_stack((data.exog,interaction))
         data.exog = add_constant(data.exog)
 
 # Stata

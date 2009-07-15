@@ -211,10 +211,10 @@ if __name__ == '__main__':
 
     c = CoxPH(subjects, f)
 
-    #c.cache()
+#    c.cache()
     # temp file cleanup doesn't work on windows
     c = CoxPH(subjects, f, time_dependent=True)
-    #c.cache() #this creates  tempfile cache,
+#    c.cache() #this creates  tempfile cache,
     # no tempfile cache is created in normal use of CoxPH
 
 

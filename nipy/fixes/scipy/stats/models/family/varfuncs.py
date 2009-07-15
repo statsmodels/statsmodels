@@ -103,7 +103,7 @@ class NegativeBinomial(object):
         self.alpha = alpha
 
     def clean(self, p):
-        return np.clip(p, NegativeBinomial.tol, 1-NegativeBinomial.tol)
+        return np.clip(p, NegativeBinomial.tol, np.inf)
 
     def __call__(self, mu):
         p = self.clean(mu)
