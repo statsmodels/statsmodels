@@ -22,7 +22,6 @@ class RModel(object):
         self.frame = r.data_frame(y=y, x=self.design)
         results = self.model_type(self.formula,
                                     data = self.frame, **kwds)
-
         rpy.set_default_mode(rpy.BASIC_CONVERSION)
         rsum = r.summary(results)
         self.rsum = rsum
@@ -37,7 +36,7 @@ class RModel(object):
         #self.resid = [self.results['residuals'][str(k)] for k in range(1, 1+self.nobs)]
         #self.predict = [self.results['fitted.values'][str(k)] for k in range(1, 1+self.nobs)]
         self.df_resid = self.results['df.residual']
-        self.beta = rsum['coefficients'][:,0]
+        self.params = rsum['coefficients'][:,0]
         self.bse = rsum['coefficients'][:,1]
         self.bt = rsum['coefficients'][:,2]
         self.bpval = rsum['coefficients'][:,3]
@@ -45,7 +44,7 @@ class RModel(object):
         #self.adjR2 = rsum['adj.r.squared']
         self.R2 = rsum.setdefault('r.squared', None)
         self.adjR2 = rsum.setdefault('adj.r.squared', None)
-        self.aic = rsum.setdefault('aic', None)
+        self.aic_R = rsum.setdefault('aic', None)
 
         #self.fstatistic = rsum['fstatistic']
         self.fstatistic = rsum.setdefault('fstatistic', None)
@@ -59,13 +58,18 @@ class RModel(object):
         else:
             self.scale = None
         #TODO: add more glm results
+        self.llf = r.logLik(results)
 
         if model_type == r.glm:
             self.getglm()
 
     def getglm(self):
         self.deviance = self.rsum['deviance']
-        self.resid = [self.results['residuals'][str(k)] for k in range(1, 1+self.nobs)]
-        self.predict = [self.results['linear.predictors'][str(k)] for k in range(1, 1+self.nobs)]
-        self.predictedy = [self.results['fitted.values'][str(k)] for k in range(1, 1+self.nobs)]
-        self.weights = [self.results['weights'][str(k)] for k in range(1, 1+self.nobs)]
+        self.resid = [self.results['residuals'][str(k)] \
+                for k in range(1, 1+self.nobs)]
+        self.predict = [self.results['linear.predictors'][str(k)] \
+                for k in range(1, 1+self.nobs)]
+        self.predictedy = [self.results['fitted.values'][str(k)] \
+                for k in range(1, 1+self.nobs)]
+        self.weights = [self.results['weights'][str(k)] \
+                for k in range(1, 1+self.nobs)]

@@ -341,7 +341,7 @@ class CLogLog(Logit):
     """
     The complementary log-log transform as a link function:
 
-    g(x) = log(-log(x))
+    g(x) = log(-log(1-x))
 
     """
 
@@ -349,23 +349,23 @@ class CLogLog(Logit):
         """
         C-Log-Log transform
 
-        g(p) = log(-log(p))
+        g(p) = log(-log(1-p))
 
         INPUTS:
            p   -- mean parameters
 
         OUTPUTS: z
-           z   -- log(-log(p))
+           z   -- log(-log(1-p))
 
         """
         p = self.clean(p)
-        return np.log(-np.log(p))
+        return np.log(-np.log(1-p))
 
     def inverse(self, z):
         """
         Inverse of C-Log-Log transform
 
-        g^-1(z) = exp(-exp(z))
+        g^{-1}(z) = 1-exp(-exp(z))
 
         INPUTS:
            z   -- linear predictor scale
@@ -374,7 +374,7 @@ class CLogLog(Logit):
            p   -- mean parameters
 
         """
-        return np.exp(-np.exp(z))
+        return 1-np.exp(-np.exp(z))
 
     def deriv(self, p):
         """
@@ -390,8 +390,7 @@ class CLogLog(Logit):
 
         """
         p = self.clean(p)
-        return -1. / (np.log(p) * p)
-# shouldn't the negatives cancel out? for just 1/(plog(p))
+        return 1. / ((p-1)*(np.log(1-p)))
 
 cloglog = CLogLog()
 

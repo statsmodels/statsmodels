@@ -10,18 +10,230 @@ import models
 from models.glm import GLMtwo as GLM
 from models.functions import add_constant, xi
 from scipy import stats
+from rmodelwrap import RModel
 
 W = R.standard_normal
 
-#TODO: This all neds to be refactored.  Use setup and teardown methods
-# to load data and test each one differently?
-# decide on the best way
+DECIMAL = 4
 
-tests = {'lbw'=models.family.Binomial(), 'cpunish'=models.family.Poisson(), 'scotland'=models.family.Gamma()}
-# finish design on this
-# dictionary mapping dataset to family, results, residuals
-# move all results to an external file and have them ordered the same way
-# or in a dictionary
+class check_model_results(object):
+    '''
+    res2 should be either the results from RModelWrap
+    or the results as defined in model_results_data
+    '''
+    def test_params(self):
+        assert_almost_equal(self.res1.params, self.res2.params, DECIMAL)
+
+    def test_standard_errors(self):
+        assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL)
+
+# can't figure out how to have this evaluated on a case by case basis
+# it appears as though the decorator is evaluated as soon
+# as the class is inherited
+#    @dec.skipif(R_model, "Skipped because results are from Rmodelwrap")
+    def test_residuals(self):
+        resids = np.column_stack((self.res1.resid_pearson, self.res1.resid_dev,
+                    self.res1.resid_working, self.res1.resid_anscombe,
+                    self.res1.resid_response))
+        assert_almost_equal(resids, self.res2.resids, DECIMAL)
+
+    def test_aic_R(self):
+        assert_almost_equal(self.res1.information_criteria()['aic'],
+                self.res2.aic_R, DECIMAL)
+
+    # R does not provide good diagnostic residuals in any library
+    # that I know of, though this could be added to Rmodelwrap
+#    @dec.skipif(R_model, "Skipped because results are from Rmodelwrap")
+    def test_aic_Stata(self):
+        aic = self.res1.information_criteria()['aic']/self.res1.nobs
+        assert_almost_equal(aic, self.res2.aic_Stata, DECIMAL)
+
+    def test_deviance(self):
+        assert_almost_equal(self.res1.deviance, self.res2.deviance, DECIMAL)
+
+    def test_scale(self):
+        assert_almost_equal(self.res1.scale, self.res2.scale, DECIMAL)
+
+    def test_loglike(self):
+        assert_almost_equal(self.res1.llf, self.res2.llf, DECIMAL)
+
+    def test_null_deviance(self):
+        assert_almost_equal(self.res1.null_deviance, self.res2.null_deviance,
+                    DECIMAL)
+
+    def test_bic(self):
+        assert_almost_equal(self.res1.information_criteria()['aic'],
+                    self.res2.bic, DECIMAL)
+
+    def test_degrees(self):
+        assert_almost_equal(self.res1.df_model,self.res2.df_model, DECIMAL)
+        assert_almost_equal(self.res1.df_resid,self.res2.df_resid, DECIMAL)
+
+    def test_pearsonX2(self):
+        assert_almost_equal(self.res1.pearsonX2,self.res2.pearsonX2, DECIMAL)
+
+
+class test_glm_gaussian(test_model_results, initialize):
+    def __init__(self):
+        '''
+        Test Gaussian family with canonical identity link
+        '''
+        pass
+
+    def test_log(self):
+        pass
+
+    def test_power(self):
+        pass
+
+class test_glm_binomial(test_model_results, initialize):
+    def __init__(self):
+        '''
+        Test Binomial family with canonical logit link
+        '''
+        from models.datasets.star98.data import load
+        data = load()
+        data.exog = add_constant(data.exog)
+        trials = data.endog[:,:2].sum(axis=1)
+        self.res1 = GLM(data.endog, data.exog, \
+        family=models.family.Binomial()).fit(data_weights = trials)
+
+    def test_log(self):
+        pass
+
+    def test_logit(self):
+        pass
+
+    def test_probit(self):
+        pass
+
+    def test_cloglog(self):
+        pass
+
+    def test_power(self):
+        pass
+
+    def test_loglog(self):
+        pass
+
+    def test_logc(self):
+        pass
+
+class test_glm_bernoulli(check_model_results):
+    def __init__(self):
+        from model_results import lbw
+        self.res2 = lbw()
+        self.res1 = GLM(self.res2.endog, self.res2.exog,
+                family=models.family.Binomial()).fit()
+
+    def test_identity(self):
+        pass
+
+    def test_log(self):
+        pass
+
+    def test_probit(self):
+        pass
+
+    def test_cloglog(self):
+        pass
+
+    def test_power(self):
+        pass
+
+    def test_loglog(self):
+        pass
+
+    def test_logc(self):
+        pass
+
+class test_glm_gamma(test_model_results, initialize):
+    def __init__(self):
+        '''
+        Tests Gamma family with canonical inverse link (power -1)
+        '''
+        from models.datasets.scotland.data import load
+        from model_results import scotvote
+        data = load()
+        data.exog = add_constant(data.exog)
+        self.res1 = GLM(data.endog, data.exog, \
+                    family=models.family.Gamma()).fit()
+        self.res2 = scotvote()
+
+    def test_log(self):
+        pass
+
+    def test_power(self):
+        pass
+
+class test_glm_poisson(test_model_results, initialize):
+    def __init__(self):
+        '''
+        Tests Poisson family with canonical log link.
+
+        Test results were obtained by R.
+        '''
+        from model_results import cpunish
+        from models.datasets.cpunish.data import load
+        data = load()
+        data.exog[:,3] = np.log(data.exog[:,3])
+        data.exog = add_constant(data.exog)
+        self.res1 = GLM(data.endog, data.exog,
+                    family=models.family.Poisson()).fit()
+        self.res2 = cpunish()
+
+    def test_identity(self):
+        pass
+
+    def test_power(self):
+        pass
+
+class test_glm_invgauss(test_model_results, initialize):
+    def __init__(self):
+        '''
+        Test Inverse Gaussian family with canonical power -2 link
+        '''
+        pass
+
+    def test_log(self):
+        pass
+
+    def test_power(self):
+        pass
+
+class test_glm_negbinomial(test_model_results, initialize):
+    def __init__(self):
+        '''
+        Test Negative Binomial family with canonical log link
+        '''
+        pass
+
+    def test_log(self):
+        pass
+
+    def test_power(self):
+        pass
+
+    def test_nbinom(self):
+        pass
+
+class test_glm_gausslog(Check_Glm_R):
+    def __init__(self):
+        nobs = 100
+        x = np.arange(nobs)
+        y = 1.0 + 2.0*x + x**2 + 0.1 * np.random.randn(nobs)
+        X = np.c_[np.ones((nobs,1)),x,x**2]
+        lny = np.exp(-(-1.0 + 0.02*x + 0.0001*x**2)) +\
+                        0.001 * np.random.randn(nobs)
+
+        GaussLog_Model = GLM(lny, X, \
+                family=models.family.Gaussian(models.family.links.log))
+        GaussLog_Res = GaussLog_Model.fit()
+        GaussLogLink = r.gaussian(link = "log")
+        GaussLog_Res_R = RModel(lny, X, r.glm, family=GaussLogLink)
+        self.res1 = GaussLog_res
+        self.res2 = GaussLog_res_R
+
 
 #class TestRegression(TestCase):
 class TestRegression(object):
@@ -45,271 +257,7 @@ class TestRegression(object):
 #        self.assertEquals(results.df_resid, 31)
         assert_equal(results.df_resid, 31)
 
-    def test_bernouilli(self):
-        '''
-        These tests use the stata lbw data found here:
-
-        http://www.stata-press.com/data/r9/rmain.html
-
-        The tests results were obtained with R
-        '''
-        from exampledata import lbw
-        from glm_test_resids import lbw_resids
-
-        R_params = (-.02710031, -.01515082, 1.26264728,
-                        .86207916, .92334482, .54183656, 1.83251780,
-                        .75851348, .46122388)
-#        stata_lbw_bse = (.0364504, .0069259, .5264101, .4391532,
-#                        .4008266, .346249, .6916292, .4593768, 1.20459)
-# NOTE: Stata's standard errors are different for MLE (based OIM)
-# Their irls standard errors are the same (based on EIM) and no
-# likelihood estimate is calculated
-# this means that covariance matrix is different for Newton method
-# ? this may also be where the discrepancy for LLF comes from
-# if the LLF is calculated similar to
-# http://www.mathworks.com/access/helpdesk/help/toolbox/ident/index.html?/access/helpdesk/help/toolbox/ident/ref/aic.html
-
-        R_bse = (0.036449917, 0.006925765, 0.526405169, 0.439146744,
-            0.400820976, 0.346246857, 0.691623875, 0.459373871, 1.204574885)
-        R_AIC = 219.447991133
-        R_deviance = 201.447991133
-        R_df_null = 188
-        R_null_deviance = 234.671996193219
-        R_df_resid = 180
-        R_dispersion = 1
-        R_logLik = -100.7239955662511
-
-        X = lbw()
-        X = xi(X, col='race', drop=True)
-        des = np.vstack((X['age'], X['lwt'],
-                    X['black'], X['other'], X['smoke'], X['ptl'],
-                    X['ht'], X['ui'])).T
-        des = add_constant(des)
-        model = GLM(X.low, des,
-                family=models.family.Binomial())
-        results = model.fit()
-        resids = np.column_stack((results.resid_pearson, results.resid_dev,
-                    results.resid_working, results.resid_anscombe,
-                    results.resid_response))
-        assert_almost_equal(resids, lbw_resids, 5)
-        assert_almost_equal(results.params, R_params, 4)
-        assert_almost_equal(results.bse, R_bse, 4)
-        assert_equal(results.df_model,R_df_null-R_df_resid)
-        assert_equal(results.df_resid,R_df_resid)
-        assert_equal(results.scale,R_dispersion)
-        aic=results.information_criteria()['aic']
-        assert_almost_equal(aic, R_AIC, 5)
-        assert_almost_equal(results.deviance, R_deviance, 5)
-        assert_almost_equal(results.null_deviance, R_null_deviance)
-        assert_almost_equal(results.llf, R_logLik, 5)
-
-# STATA
-        Stata_PearsonX2 = 182.0233425
-        Stata_AIC = 1.1611  # scaled by nobs
-        Stata_BIC = -742.0665
-        Stata_estat_AIC = 219.448   # the same as R
-        Stata_estat_BIC = 248.6237  # no idea
-
-        assert_almost_equal(results.pearsonX2, Stata_PearsonX2, 5)
-        bic = results.information_criteria()['bic']
-        assert_almost_equal(bic, Stata_BIC, 4)
-        assert_almost_equal(aic/results.nobs, Stata_AIC, 4)
-
-        try:
-            from rpy import r
-            descols = ['x.%d' % (i+1) for i in range(des.shape[1])]
-            formula = r('y ~ %s-1' % '+'.join(descols))
-            frame = r.data_frame(y=X.low, x=des)
-            rglm_res = r.glm(formula, data=frame, family='binomial')
-        except ImportError:
-            yield nose.tools.assert_true, True
-
-    ### Poission Family ###
-    def test_poisson(self):
-        '''
-        The following are from the R script in models.datasets.cpunish
-        Slightly different than published results, but should be correct
-        Probably due to rounding in cleaning?
-        '''
-
-        from models.datasets.cpunish.data import load
-        from glm_test_resids import cpunish_resids
-
-        R_params = (2.611017e-04, 7.781801e-02, -9.493111e-02, 2.969349e-01,
-                2.301183e+00, -1.872207e+01, -6.801480e+00)
-        R_bse = (5.187132e-05, 7.940193e-02, 2.291926e-02, 4.375164e-01,
-                4.283826e-01, 4.283961e+00, 4.146850e+00)
-        R_null_dev = 136.57281747225
-        R_df_null = 16
-        R_deviance = 18.59164
-        R_df_resid = 10
-        R_AIC = 77.85466
-        dispersion = 1
-
-        data = load()
-        data.exog[:,3] = np.log(data.exog[:,3])
-        data.exog = add_constant(data.exog)
-        results = GLM(data.endog, data.exog,
-                    family=models.family.Poisson()).fit()
-        resids = np.column_stack((results.resid_pearson, results.resid_dev,
-                    results.resid_working, results.resid_anscombe,
-                    results.resid_response))
-
-        assert_almost_equal(resids, cpunish_resids, 5)
-        assert_equal(results.df_model, R_df_null-R_df_resid)
-        assert_equal(results.df_resid, R_df_resid)
-        assert_almost_equal(results.null_deviance, R_null_dev, 5)
-        assert_equal(results.scale, dispersion)
-        assert_almost_equal(results.params, R_params, 5)
-        assert_almost_equal(results.bse, R_bse, 4)
-        assert_almost_equal(results.deviance, R_deviance, 5)
-        aic=results.information_criteria()['aic']
-        assert_almost_equal(aic, R_AIC, 5)
-
-# Stata
-
-        Stata_AIC = 4.579686 # scaled by nobs
-        Stata_BIC = -9.740492
-        Stata_PearsonX2 = 24.75374835
-        Stata_llf = -31.92732831
-        Stata_estat_AIC = 77.85466 # same as R
-        Stata_estat_BIC = 83.68715
-
-        assert_almost_equal(results.llf, Stata_llf, 5)
-        assert_almost_equal(results.pearsonX2, Stata_PearsonX2, 5)
-        bic = results.information_criteria()['bic']
-        assert_almost_equal(bic, Stata_BIC, 5)
-        assert_almost_equal(aic/results.nobs, Stata_AIC, 5)
-
-    def test_gamma(self):
-        '''
-        The following are from the R script in models.datasets.scotland
-        '''
-
-        from models.datasets.scotland.data import load
-        from glm_test_resids import scotland_resids
-
-        R_params = (4.961768e-05, 2.034423e-03, -7.181429e-05, 1.118520e-04,
-                -1.467515e-07, -5.186831e-04, -2.42717498e-06, -1.776527e-02)
-        R_bse = (1.621577e-05, 5.320802e-04, 2.711664e-05, 4.057691e-05,
-            1.236569e-07, 2.402534e-04, 7.460253e-07, 1.147922e-02)
-        R_null_dev = 0.536072
-        R_df_null = 31
-        R_deviance = 0.087388516417
-        R_df_resid = 24
-        R_AIC = 182.95
-        R_dispersion = 0.003584283
-
-        data = load()
-        data.exog = add_constant(data.exog)
-        results = GLM(data.endog, data.exog, family=models.family.Gamma()).fit()
-        resids = np.column_stack((results.resid_pearson, results.resid_dev,
-                    results.resid_working, results.resid_anscombe,
-                    results.resid_response))
-        assert_almost_equal(resids, scotvote_resids, 3)
-        assert_almost_equal(results.params, R_params, 5)
-        assert_almost_equal(results.bse, R_bse, 5)
-        assert_almost_equal(results.scale, R_dispersion, 5)
-        assert_equal(results.df_resid, R_df_resid)
-        assert_equal(results.df_model, R_df_null-R_df_resid)
-        assert_almost_equal(results.null_deviance, R_null_dev, 5)
-        assert_almost_equal(results.deviance, R_deviance, 5)
-        aic=results.information_criteria()['aic']
-
-        @dec.knownfailureif(True)
-        def test_aic():
-            assert_almost_equal(aic, R_AIC, 4)  # Waiting for R ML help
-        test_aic()
-
-# why does this skip all the tests in here if this is added?
-
-# Stata
-        Stata_AIC = 10.72212
-        Stata_BIC = -83.09027
-        Stata_estat_AIC = 343.1079
-        Stata_estat_BIC = 354.8338
-        Stata_PearsonX2 = .0860228056
-        Stata_llf = -163.5539382 # this is given by the formula with phi=1
-        R_llf = -82.47352   # this is ever so close the answer given
-                            # by the formula with phi=dispersion
-
-        @dec.knownfailureif(True)
-        def test_llf():
-            assert_almost_equal(results.llf, Stata_llf, 5)
-        test_llf()
-
-        assert_almost_equal(results.PearsonX2, Stata_PearsonX2, 5)
-        bic = results.information_criteria()['bic']
-        assert_almost_equal(bic, Stata_BIC, 5)
-
-        print 'Some insight into LLF failure in comments'
-
-    def test_binomial(self):
-        '''
-        Test the Binomial distribution with binomial data from repeated trials
-        data.endog is (# of successes, # of failures)
-        '''
-        R_params =  (-0.0168150366,  0.0099254766, -0.0187242148,
-            -0.0142385609, 0.2544871730,  0.2406936644,  0.0804086739,
-            -1.9521605027, -0.3340864748, -0.1690221685,  0.0049167021,
-            -0.0035799644, -0.0140765648, -0.0040049918, -0.0039063958,
-            0.0917143006,  0.0489898381,  0.0080407389,  0.0002220095,
-            -0.0022492486, 2.9588779262)
-        R_bse = (4.339467e-04, 6.013714e-04, 7.435499e-04, 4.338655e-04,
-            2.994576e-02, 5.713824e-02, 1.392359e-02, 3.168109e-01,
-            6.126411e-02, 3.270139e-02, 1.253877e-03, 2.254633e-04,
-            1.904573e-03, 4.739838e-04, 9.623650e-04, 1.450923e-02,
-            7.451666e-03, 1.499497e-03, 2.988794e-05, 3.489838e-04,
-            1.546712e+00)
-        R_null_dev = 34345.3688931
-        R_df_null = 302
-        R_deviance = 4078.76541772
-        R_df_resid = 282
-        R_AIC = 6039.22511799
-        R_dispersion = 1.0
-
-        from models.datasets.star98.data import load
-        from glm_test_resids import star98_resids
-
-        data = load()
-        data.exog = add_constant(data.exog)
-        trials = data.endog[:,:2].sum(axis=1)
-        results = GLM(data.endog, data.exog, family=models.family.Binomial()).\
-                    fit(data_weights = trials)
-        resids = np.column_stack((results.resid_pearson, results.resid_dev,
-                    results.resid_working, results.resid_anscombe,
-                    results.resid_response))
-
-        assert_almost_equal(resids, star98_resids, 2) # need to see which
-                                                    # resids are so
-                                                    #   imprecise
-        assert_almost_equal(results.params, R_params, 4)
-        assert_almost_equal(results.bse, R_bse, 4)
-#        assert_almost_equal(results.resid_dev,R_dev_resid)
-        assert_almost_equal(results.deviance, R_deviance, 5)
-        aic=results.information_criteria()['aic']
-        assert_almost_equal(aic, R_AIC)
-        assert_almost_equal(results.null_deviance, R_null_dev, 5)
-        assert_equal(results.df_model, R_df_null-R_df_resid)
-        assert_equal(results.df_resid, R_df_resid)
-        assert_almost_equal(results.scale, R_dispersion)
-
-# Stata
-
-        Stata_AIC = 19.93144
-        Stata_BIC = 2467.494
-        Stata_PearsonX2 = 4051.921614
-        Stata_estat_AIC = 6039.226  # same as R
-        Stata_estat_BIC = 6117.214
-        Stata_llf = -2998.612928    # same as R
-
-        bic = results.information_criteria()['bic']
-        assert_almost_equal(results.pearsonX2, Stata_PearsonX2, 5)
-        assert_almost_equal(bic, Stata_BIC, 5)
-        assert_almost_equal(results.llf, Stata_llf, 5)
-
-# why do these fail when the exact same thing doesn't
-# fail at the interpreter
+### Refactoring Incomplete ###
     @dec.knownfailureif(True)
     def test_gaussian(self):
         from models.datasets.longley.data import load
@@ -341,10 +289,8 @@ class TestRegression(object):
         Used the rndivgx.ado file provided by Hardin and Hilbe to
         generate the data.
         '''
-        from exampledata import inv_gauss
-        Y,X = inv_gauss()
-        X = add_constant(X)
-# This is SLOW...but so is Stata...R isn't particularly slow
+        from model_results import inv_gauss
+        self.res2 = inv_gauss()
         results = GLM(Y, X, family=models.family.InverseGaussian()).fit()
 
 #        np.random.seed(54321)
@@ -382,10 +328,7 @@ class TestRegression(object):
         assert_almost_equal(results.deviance, R_deviance,5)
         assert_almost_equal(results.df_resid, R_df_resid,5)
         aic = results.information_criteria()['aic']
-        @dec.knownfailureif(True)   # why doesn't this work?
-        def test_aic(self):
-            assert_almost_equal(aic, R_AIC, 5)
-        test_aic()  # is this bad form?
+        assert_almost_equal(aic, R_AIC, 5)
         assert_almost_equal(results.scale, R_dispersion, 5)
 
 # Stata

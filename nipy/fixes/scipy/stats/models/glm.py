@@ -173,7 +173,8 @@ class GLMtwo(LikelihoodModel):
         self.initialize()
 
     def initialize(self):
-        self.history = { 'predict' : [], 'params' : [np.inf], 'logL' : [], 'deviance' : [np.inf]}
+        self.history = { 'predict' : [], 'params' : [np.inf],
+                         'logL' : [], 'deviance' : [np.inf]}
         self.iteration = 0
         self.y = self._endog
 
@@ -183,10 +184,6 @@ class GLMtwo(LikelihoodModel):
                                         np.transpose(self.calc_params))
         self.df_resid = self._exog.shape[0] - utils.rank(self._exog)
         self.df_model = utils.rank(self._exog)-1
-
-    def llf(self, params):
-        #return self.family.llf(mu)
-        pass
 
     def score(self, params):
         pass
