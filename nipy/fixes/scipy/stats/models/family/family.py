@@ -449,8 +449,8 @@ class InverseGaussian(Family):
         return np.sum((Y-mu)**2/(Y*mu**2))/scale
 
     def logL(self, Y, mu, scale=1.):
-        return -.5 * np.sum(np.power((Y-mu),2)/(Y*np.power((mu),2)*scale)\
-                + np.log(scale*np.power((Y),3)) + np.log(2*np.pi))
+        return -.5 * np.sum((Y-mu)**2/(Y*mu**2*scale)\
+                + np.log(scale*Y**3) + np.log(2*np.pi))
 
     def resid_anscombe(self, Y, mu):
         return (np.log(Y) - np.log(mu))/np.sqrt(mu)

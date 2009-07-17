@@ -290,7 +290,6 @@ class GLMtwo(LikelihoodModel):
         self.mu = mu
         self.results = GLMResults(self, wls_results.params, self.scale,
                     wls_results)
-        self.results.mu = mu
         return self.results
 
 class GLMResults(LikelihoodModelResults):   # could inherit from RegressionResults
@@ -321,7 +320,7 @@ class GLMResults(LikelihoodModelResults):   # could inherit from RegressionResul
                     model.family.link.deriv(model.mu))
         self.resid_anscombe = model.family.resid_anscombe(model.y,model.mu)
         self.resid_dev = model.family.devresid(model.y, model.mu)
-        self.pearsonX2 = model.data_weights*np.sum(self.resid_pearson**2)
+        self.pearsonX2 = np.sum(self.resid_pearson**2)
         self.predict = np.dot(model._exog,self.params)
         null = WLS(model.y,np.ones((len(model.y),1)),weights=model.data_weights).\
                 fit().predict # predicted values of constant only fit

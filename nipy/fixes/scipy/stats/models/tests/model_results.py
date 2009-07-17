@@ -138,6 +138,26 @@ class inv_gauss():
     Note only the first 5000 observations are used because
     the models code currently uses np.eye.
     '''
+#        np.random.seed(54321)
+#        x1 = np.abs(stats.norm.ppf((np.random.random(5000))))
+#        x2 = np.abs(stats.norm.ppf((np.random.random(5000))))
+#        X = np.column_stack((x1,x2))
+#        X = add_constant(X)
+#        params = np.array([.5, -.25, 1])
+#        eta = np.dot(X, params)
+#        mu = 1/np.sqrt(eta)
+#        sigma = .5
+#       This isn't correct.  Errors need to be normally distributed
+#       But Y needs to be Inverse Gaussian, so we could build it up
+#       by throwing out data?
+#       Refs: Lai (2009) Generating inverse Gaussian random variates by
+#        approximation
+# Atkinson (1982) The simulation of generalized inverse gaussian and
+#        hyperbolic random variables seems to be the canonical ref
+#        Y = np.dot(X,params) + np.random.wald(mu, sigma, 1000)
+#        model = GLM(Y, X, family=models.family.InverseGaussian(link=\
+#            models.family.links.identity))
+
     def __init__(self):
         # set up data #
         filename="inv_gaussian.csv"
@@ -145,5 +165,25 @@ class inv_gauss():
         self.endog = data[:5000,0]
         self.exog = data[:5000,1:]
         self.exog = models.functions.add_constant(self.exog)
+        # Results
+#NOTE: loglikelihood difference in R vs. Stata vs. Models
+# is the same as gamma
+        self.params = (0.4519770, -0.2508288, 1.0359574)
+        self.bse = (0.03148291, 0.02237211, 0.03429943)
+        self.null_deviance = 1520.673165475461
+        self.df_null = 4999
+        self.deviance = 1423.943980407997
+        self.df_resid = 4997
+        self.df_model = 2
+        self.aic_R = 5059.41911646446
+        self.aic_Stata = 1.55228
+        self.bic = -41136.47
+        self.llf = -3877.700354 # same as ours with scale set to 1
+        self.llf_R = -2525.70955823223  # this is close to our defintion
+        self.scale = 0.2867266359127567
+        self.pearsonX2 = 1432.771536
+        self.resids = glm_test_resids.invgauss_resids
+
+
 
 

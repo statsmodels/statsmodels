@@ -20,6 +20,8 @@ class RModel(object):
         # Note the '-1' for no intercept - this is included in the design
         self.formula = r('y ~ %s-1' % '+'.join(self._design_cols))
         self.frame = r.data_frame(y=y, x=self.design)
+        r.library('MASS')   # should enable negative binomial support
+# but doesn't for some reason, needs to be done in interpreter?
         results = self.model_type(self.formula,
                                     data = self.frame, **kwds)
         rpy.set_default_mode(rpy.BASIC_CONVERSION)
@@ -73,3 +75,5 @@ class RModel(object):
                 for k in range(1, 1+self.nobs)]
         self.weights = [self.results['weights'][str(k)] \
                 for k in range(1, 1+self.nobs)]
+        self.resid_dev = self.rsum['deviance.resid']
+        self.null_deviance = self.rsum['null.deviance']
