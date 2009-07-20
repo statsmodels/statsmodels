@@ -9,6 +9,13 @@ import nipy.fixes.scipy.stats.models.rlm as models
 
 W = R.standard_normal
 
+class check_rlm_results(self):
+    pass
+
+class test_rlm(check_rlm_results):
+    pass
+
+
 class TestRegression(TestCase):
 
     def test_Robust(self):

@@ -272,7 +272,7 @@ class GLMtwo(LikelihoodModel):
 # scale is assumed to be 1. for the initial predictor
         while ((np.fabs(self.history['deviance'][self.iteration]-\
                     self.history['deviance'][self.iteration-1])) > tol and \
-                    self.iteration<100):
+                    self.iteration < maxiter):
             self.weights = data_weights*self.family.weights(mu)
 #            if self.weights.ndim == 2:  # not sure what this corrected for?
 #                if not self.weights.size == self.Y.shape[0]:

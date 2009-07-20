@@ -32,9 +32,11 @@ def MAD(a, c=0.6745, axis=0):
 
     """
 
-    a = np.asarray(a, np.float64)
+#    a = np.asarray(a, np.float64)
+    a = np.asarray(a) # don't touch data
     d = np.median(a, axis=axis)
     d = unsqueeze(d, axis, a.shape)
+    c = Gaussian.ppf(3/4.)  # more accurate than .6745...
 
     return np.median(np.fabs(a - d) / c, axis=axis)
 

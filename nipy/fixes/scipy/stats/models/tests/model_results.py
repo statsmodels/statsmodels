@@ -23,7 +23,7 @@ def generated_data():
     x = data[:,1:]
     return y,x
 
-### GLM MODELS ###
+### GLM MODEL RESULTS ###
 
 class lbw(object):
     '''
@@ -187,7 +187,7 @@ class inv_gauss():
         self.resids = glm_test_resids.invgauss_resids
 
 
-### REGRESSION TESTS ###
+### REGRESSION MODEL RESULTS : OLS, GLS, WLS, AR###
 
 class longley(object):
     '''
@@ -254,6 +254,20 @@ class longley_gls(object):
         self.resids = None
 
 
+### RLM MODEL RESULTS ###
+
+class stackloss_defaults(object):
+    def __init__(self):
+        self.params =
+        self.
+
+class stackloss_hampel(object):
+    def __init__(self):
+        pass
+
+class stackloss_bisquared(object):
+    def __init__(self):
+        pass
 
 
 

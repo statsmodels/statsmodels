@@ -41,7 +41,7 @@ class LeastSquares(RobustNorm):
     """
 
     def rho(self, z):
-        return np.power(z, 2) * 0.5
+        return z**2 * 0.5
 
     def psi(self, z):
         return np.asarray(z)
@@ -62,7 +62,8 @@ class HuberT(RobustNorm):
 
     """
 
-    t = 1.345
+    def __init__(self, t=1.345):
+        self.t = t
 
     def subset(self, z):
         z = np.asarray(z)
@@ -71,7 +72,7 @@ class HuberT(RobustNorm):
     def rho(self, z):
         z = np.asarray(z)
         test = self.subset(z)
-        return (test * 0.5 * np.power(z, 2) +
+        return (test * 0.5 * z**2 +
                 (1 - test) * (np.fabs(z) * self.t - 0.5 * self.t**2))
 
     def psi(self, z):
@@ -124,7 +125,7 @@ class AndrewWave(RobustNorm):
         return np.less_equal(np.fabs(z), self.a * np.pi)
 
     def rho(self, z):
-        a = AndrewWave.a
+        a = self.a
         z = np.asarray(z)
         test = self.subset(z)
         return (test * a * (1 - np.cos(z / a)) +
@@ -181,26 +182,21 @@ class Hampel(RobustNorm):
     Springer, New York, 2002.
     """
 
-    a = 2
-    b = 4
-    c = 8
+#   Default values from Montgomery and Peck
+#    a = 1.7
+#    b = 3.4
+#    c = 8.5
+    def __init__(self, a = 2., b = 4., c = 8.):
+        self.a = a
+        self.b = b
+        self.c = c
 
     def subset(self, z):
-        z = np.fabs(np.asarray(z))
+        z = np.fabs(np.asarray(z)
         t1 = np.less_equal(z, self.a)
         t2 = np.less_equal(z, self.b) * np.greater(z, self.a)
         t3 = np.less_equal(z, self.c) * np.greater(z, self.b)
         return t1, t2, t3
-
-    def psi(self, z):
-        z = np.asarray(z)
-        a = self.a; b = self.b; c = self.c
-        t1, t2, t3 = self.subset(z)
-        s = np.sign(z); z = np.fabs(z)
-        v = s * (t1 * z +
-                 t2 * a +
-                 t3 * a * (c - z) / (c - b))
-        return v
 
     def rho(self, z):
         z = np.fabs(z)
@@ -208,14 +204,34 @@ class Hampel(RobustNorm):
         t1, t2, t3 = self.subset(z)
         v = (t1 * z**2 * 0.5 +
              t2 * (a * z - a**2 * 0.5) +
-             t3 * (a * (c * z - z**2 * 0.5) / (c - b) - 7 * a**2 / 2.) +
+             t3 * (a * (c * z - z**2 * 0.5) / (c - b) - 7 * a**2 / 6.) +     #(7/6) not (7/2) from M&P
              (1 - t1 + t2 + t3) * a * (b + c - a))
+        return v
+
+    def psi(self, z):
+        z = np.asarray(z)
+        a = self.a; b = self.b; c = self.c
+        t1, t2, t3 = self.subset(z)
+        s = np.sign(z)
+        z = np.fabs(z)
+        v = s * (t1 * z +
+                 t2 * a +
+                 t3 * a * (c - z) / (c - b))
         return v
 
     def weights(self, z):
         z = np.asarray(z)
-        test = np.not_equal(z, 0)
-        return self.psi(z) * test / z + (1 - test)
+#        test = np.not_equal(z, 0)
+#        return self.psi(z) * test / z + (1 - test)     # check Venables, this is different than M&P
+# don't think the above handles the signs correctly, need to check
+        a = self.a; b = self.b; c = self.c
+        t1, t2, t3 = self.subset(z)
+        v = (t1 +
+            t2 * a/np.fabs(z) +
+            t3 * a*(c-np.fabs(z))/(np.fabs(z)*(c-b)))
+        return v
+
+
 
 class TukeyBiweight(RobustNorm):
     """
