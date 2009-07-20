@@ -64,6 +64,10 @@ class check_regression_results(object):
         bic = self.res1.information_criteria()['bic']
         assert_almost_equal(bic, self.res2.BIC, DECIMAL)
 
+    @dec.skipif(True, "Results not included yet")
+    def test_resids(self):
+        pass
+
 class test_ols(check_regression_results):
     def __init__(self):
         from models.datasets.longley.data import load
@@ -74,6 +78,53 @@ class test_ols(check_regression_results):
         results = OLS(data.endog, data.exog).fit()
         self.res1 = results
         self.res2 = longley()
+
+class test_gls(check_regression_results):
+    '''
+    These test results were obtained by replication with R.
+    '''
+    def __init__(self):
+        from models.datasets.longley.data import load
+        from model_results import longley_gls
+
+        data = load()
+        exog = models.functions.add_constant(np.column_stack(\
+                (data.exog[:,1],data.exog[:,4])))
+        tmp_results = OLS(data.endog, exog).fit()
+        rho = np.corrcoef(tmp_results.resid[1:],
+                tmp_results.resid[:-1])[0][1] # by assumption
+        rows = np.arange(1,17).reshape(16,1)*np.ones((16,16))
+        cols = np.arange(1,17)*np.ones((16,16))
+        sigma = rho**np.fabs((rows-cols))   # matrix of exponents for
+                                            # correlation structure
+        GLS_results = GLS(data.endog, exog, sigma=sigma).fit()
+        self.res1 = GLS_results
+        self.res2 = longley_gls()
+
+class test_gls_scalar(self):
+    '''
+    Test that GLS with no argument is equivalent to OLS.
+    '''
+    from models.datasets.longley.data import load
+    data = load()
+    data.exog = models.functions.add_constant(data.exog)
+    ols_res = OLS(data.endog, data.exog).fit()
+    gls_res = GLS(data.endog, data.exog).fit()
+    self.res1 = gls_res
+    self.res2 = ols_res
+
+class test_wls(self):
+    '''
+    GLM results are an implicit test of WLS
+    '''
+#TODO: Make sure no argument given is the same as OLS
+
+
+class test_ar(self):
+    pass
+#TODO: Come back to this
+
+
 
 class TestRegression(TestCase):
 

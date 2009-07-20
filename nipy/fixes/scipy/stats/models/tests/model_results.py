@@ -230,6 +230,31 @@ class longley(object):
 #    sas_bse_HC3=(91.11939, 0.05562, 0.82213, 0.29879, 0.32491,
 #                922.80784, 1799477)
 
+class longley_gls(object):
+    '''
+    The following results were obtained from running the test script with R.
+    '''
+    def __init__(self):
+        self.params = (6.738948e-02, -4.742739e-01, 9.489888e+04)
+        self.bse = (1.086675e-02, 1.557265e-01, 1.415760e+04)
+        self.conf_int = None
+        self.scale = None
+        self.Rsq = None
+        self.adjRsq = None
+        self.df_model = None
+        self.df_resid =  None
+        self.ESS = None
+        self.SSR = None
+        self.MSE_model = None
+        self.MSE_resid = None
+        self.F = None
+        self.llf = None
+        self.AIC = None
+        self.BIC = None
+        self.resids = None
+
+
+
 
 
 
