@@ -23,6 +23,8 @@ def generated_data():
     x = data[:,1:]
     return y,x
 
+### GLM MODELS ###
+
 class lbw(object):
     '''
     The LBW data can be found here
@@ -183,6 +185,51 @@ class inv_gauss():
         self.scale = 0.2867266359127567
         self.pearsonX2 = 1432.771536
         self.resids = glm_test_resids.invgauss_resids
+
+
+### REGRESSION TESTS ###
+
+class longley(object):
+    '''
+    The results for the Longley dataset were obtained from NIST
+
+    http://www.itl.nist.gov/div898/strd/general/dataarchive.html
+
+    Other results were obtained from Stata
+    '''
+    def __init__(self):
+        self.params = ( 15.0618722713733, -0.358191792925910E-01,
+                 -2.02022980381683, -1.03322686717359, -0.511041056535807E-01,
+                 1829.15146461355, -3482258.63459582)
+        self.bse = (84.9149257747669, 0.334910077722432E-01,
+                   0.488399681651699, 0.214274163161675, 0.226073200069370,
+                   455.478499142212, 890420.383607373)
+        self.conf_int = [(-177.0291,207.1524),
+                   (-.111581,.0399428),(-3.125065,-.9153928),
+                   (-1.517948,-.5485049),(-.5625173,.4603083),
+                   (798.7873,2859.515),(-5496529,-1467987)]
+        self.scale = 92936.0061673238
+        self.Rsq = 0.995479004577296
+        self.adjRsq = 0
+        self.df_model = 6
+        self.df_resid = 9
+        self.ESS = 184172401.944494
+        self.SSR = 836424.055505915
+        self.MSE_model = 30695400.3240823
+        self.MSE_resid = 92936.0061673238
+        self.F = 330.285339234588
+        self.llf = -109.6174
+        self.AIC = 233.2349
+        self.BIC = 238.643
+#    sas_bse_HC0=(51.22035, 0.02458, 0.38324, 0.14625, 0.15821,
+#                428.38438, 832212,)
+#    sas_bse_HC1=(68.29380, 0.03277, 0.51099, 0.19499, 0.21094,
+#                571.17917, 1109615)
+#    sas_bse_HC2=(67.49208, 0.03653, 0.55334, 0.20522, 0.22324,
+#                617.59295, 1202370)
+#    sas_bse_HC3=(91.11939, 0.05562, 0.82213, 0.29879, 0.32491,
+#                922.80784, 1799477)
+
 
 
 

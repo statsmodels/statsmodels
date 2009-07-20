@@ -5,8 +5,6 @@ import numpy as np
 import rpy
 from rpy import r
 
-from exampledata import x, y
-
 class RModel(object):
     ''' Class gives R models scipy.models -like interface '''
     def __init__(self, y, design, model_type=r.lm, **kwds):
@@ -76,4 +74,4 @@ class RModel(object):
         self.weights = [self.results['weights'][str(k)] \
                 for k in range(1, 1+self.nobs)]
         self.resid_dev = self.rsum['deviance.resid']
-        self.null_deviance = self.rsum['null.deviance']
+#        self.null_deviance = self.rsum['null.deviance']

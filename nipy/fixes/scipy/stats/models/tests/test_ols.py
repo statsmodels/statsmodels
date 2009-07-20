@@ -56,14 +56,7 @@ def test_longley():
     nist_long_bse=(84.9149257747669, 0.334910077722432E-01,
                    0.488399681651699, 0.214274163161675, 0.226073200069370,
                    455.478499142212, 890420.383607373)
-#    sas_bse_HC0=(51.22035, 0.02458, 0.38324, 0.14625, 0.15821,
-#                428.38438, 832212,)
-#    sas_bse_HC1=(68.29380, 0.03277, 0.51099, 0.19499, 0.21094,
-#                571.17917, 1109615)
-#    sas_bse_HC2=(67.49208, 0.03653, 0.55334, 0.20522, 0.22324,
-#                617.59295, 1202370)
-#    sas_bse_HC3=(91.11939, 0.05562, 0.82213, 0.29879, 0.32491,
-#                922.80784, 1799477)
+
 #   From STATA
     conf_int=[(-177.0291,207.1524),
                    (-.111581,.0399428),(-3.125065,-.9153928),
@@ -93,15 +86,7 @@ def test_longley():
 # check that the below was copied correctly
 #    nptest.assert_almost_equal(res.adjRsq, .9955, 4)
 
-#  Robust error tests.  Compare values computed with SAS
-#    res0 = SSM.regression.OLS(x).fit(y, HCC='HC0')
-#    nptest.assert_almost_equal(res0.bse, sas_bse_HC0, 4)
-#    res1 = SSM.regression.OLS(x).fit(y, HCC='HC1')
-#    nptest.assert_almost_equal(res1.bse, sas_bse_HC1, 4)
-#    res2 = SSM.regression.OLS(x).fit(y, HCC='HC2')
-#    nptest.assert_almost_equal(res2.bse, sas_bse_HC2, 4)
-#    res3 = SSM.regression.OLS(x).fit(y, HCC='HC3')
-#    nptest.assert_almost_equal(res3.bse, sas_bse_HC3, 4)
+
 
 
 def test_wampler():

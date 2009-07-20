@@ -59,11 +59,32 @@ def xi(data, col=None, time=None, drop=False):
 
 def add_constant(data):
     '''
-    This appends a constant to the design matrix
+    This appends a constant to the design matrix.
+
+    It checks to make sure a constant is not already included.  If there is
+    at least one column of ones then an array of the original design is
+    returned.
+
+    Parameters
+    ----------
+    data : array-like
+        `data` is the column-ordered design matrix
+
+    Returns
+    -------
+    data : array
+        The original design matrix with a constant (column of ones)
+        as the last column.
     '''
     data = np.asarray(data)
-    data = np.hstack((data, np.ones((data.shape[0], 1))))
-    return data
+    if (data[0]==1).any():
+        ind = np.squeeze(np.where(data[0]==1))
+        for col in ind:
+            if data[:,col].all() == 1:
+                return data
+    else:
+        data = np.hstack((data, np.ones((data.shape[0], 1))))
+        return data
 
 #class HCCM(OLSModel):
 #    """
