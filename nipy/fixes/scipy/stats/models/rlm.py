@@ -87,7 +87,9 @@ class Model(WLS):
         return self.results
 
 class RLM(LikelihoodModel):
-    def __init__(self, endog, exog, M=norms.Hampel()):
+    def __init__(self, endog, exog, M=norms.HuberT()):
+        '''
+        '''
         self.M = M
         self._endog = endog
         self._exog = exog
@@ -137,15 +139,15 @@ class RLM(LikelihoodModel):
         '''
 # Figure out why this ^ is.
         resid = self._endog - results.predict
-#        if self.scale_est == 'MAD':
-##            return scale.MAD(resid)**2
-#            return scale.MAD(resid)
+        if self.scale_est == 'MAD':
+#            return scale.MAD(resid)**2
+            return scale.MAD(resid)
 #        elif self.scale_est == "Huber":
 ##            return scale.huber(resid)**2
 #            return scale.huber(resid)
 #        else:
 #            return scale.scale_est(self, resid)**2
-        return np.median(np.fabs(resid))/Gaussian.ppf(3/4.)
+#        return np.median(np.fabs(resid))/Gaussian.ppf(3/4.)
 
     def fit(self, maxiter=100, tol=1e-5, scale_est='MAD'):
         self.scale_est = scale_est  # is this the best place to put this

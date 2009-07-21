@@ -22,23 +22,22 @@ def unsqueeze(data, axis, oldshape):
     newshape = list(oldshape)
     newshape[axis] = 1
     return data.reshape(newshape)
+# what would this be used for?
 
-
-def MAD(a, c=0.6745, axis=0):
+def MAD(a, c=Gaussian.ppf(3/4.), axis=0):  # c \approx .6745
     """
     Median Absolute Deviation along given axis of an array:
 
     median(abs(a - median(a))) / c
 
+    Lu (2004) Reference ... Huber (1981)?
+
     """
-
-#    a = np.asarray(a, np.float64)
-    a = np.asarray(a) # don't touch data
-    d = np.median(a, axis=axis)
-    d = unsqueeze(d, axis, a.shape)
-    c = Gaussian.ppf(3/4.)  # more accurate than .6745...
-
-    return np.median(np.fabs(a - d) / c, axis=axis)
+    a = np.asarray(a)
+#    d = np.median(a, axis=axis)
+#    d = unsqueeze(d, axis, a.shape)
+#    return np.median(np.fabs(a - d) / c, axis=axis)
+    return np.median(np.fabs(a))/c
 
 class Huber(object):
     """
