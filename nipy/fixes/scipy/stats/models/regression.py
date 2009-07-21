@@ -117,6 +117,7 @@ class GLS(LikelihoodModel):
 # Note on the below: the parameters are calculated with Z and wdesign, but it doesn't
 # make sense for the residuals to be calculated like this does it?
 # led to wrong resids in GLS (I THINK...)
+# also leads to wrong results in RLM
         lfit.resid = Z - np.dot(self.wdesign, lfit.params) # what is correct for this one.
                                                             # need to add resids checks to tests
 # the below is right for GLS, but the above is right for GLM (aside from the dispersion problem)
@@ -164,7 +165,8 @@ class GLS(LikelihoodModel):
         lfit.ESS = ss(lfit.predict - lfit.Z.mean())
         lfit.cTSS = ss(lfit.Z-lfit.Z.mean())
         lfit.SSR = ss(lfit.resid)
-        lfit.adjRsq = 1 - (lfit.nobs - 1)/(lfit.nobs - lfit.df_model - 1)*(1 - lfit.Rsq)
+        lfit.adjRsq = 1 - (lfit.nobs - 1)/(lfit.nobs - lfit.df_model - 1)\
+                *(1 - lfit.Rsq)
         lfit.MSE_model = lfit.ESS/lfit.df_model
         lfit.MSE_resid = lfit.SSR/lfit.df_resid
         lfit.MSE_total = lfit.uTSS/(lfit.df_model+lfit.df_resid)
@@ -294,14 +296,11 @@ class WLS(GLS):
         if X.ndim == 1:
             return X * np.sqrt(self.weights)
         elif X.ndim == 2:
-            c = np.sqrt(self.weights)
-            v = np.zeros(X.shape, np.float64)
-            for i in range(X.shape[1]):
-                v[:,i] = X[:,i] * c
-            return v
-        # this could be done with broadcasting?
-        # whitened = np.sqrt(self.weights)[:,np.newaxis]*X
-        # return whitened
+            if np.shape(self.weights) == ():    # 0-d weights
+                whitened = np.sqrt(self.weights)*X
+            else:
+                whitened = np.sqrt(self.weights)[:,None]*X
+            return whitened
 
 class OLS(WLS):
     """

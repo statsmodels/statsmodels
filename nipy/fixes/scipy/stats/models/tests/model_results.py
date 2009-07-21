@@ -260,11 +260,11 @@ class stackloss_default(object):
     def __init__(self):
 # import weights, residuals,
 # going to R_model_wrap it
-        self.params = None
-        self.k2 = 1.345
-        self.resids = None
-        self.weights = None
-        self.scale = 2.44071379481485
+#        self.params = None
+#        self.k2 = 1.345
+#        self.resids = None
+#        self.weights = None
+#        self.scale = 2.44071379481485
 
 class stackloss_hampel(object):
     def __init__(self):

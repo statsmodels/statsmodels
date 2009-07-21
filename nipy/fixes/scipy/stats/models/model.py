@@ -47,6 +47,7 @@ class LikelihoodModel(Model):
         """
         pass
 
+#Note this is a property now, so this shouldn't be here?
     def llf(self, params):
         """
         Log-likelihood of model.
@@ -186,9 +187,12 @@ class LikelihoodModelResults(Results):
             tmp = np.dot(matrix, np.dot(self.normalized_cov_params, np.transpose(other)))
             return tmp * scale
         if matrix is None and column is None:
-            if scale.size==1:
+            if np.shape(scale) == ():   # can be a scalar or array
+#           if scale.size = 1   has to be array
 # TODO: np.eye fails for big arrays.  Failed for np.eye(25,000) in the lab
 # needs to be optimized.
+# on the other hand, it is only necessary for when scale isn't a scalar
+# so it doesn't need to default to this every time
                 scale=np.eye(len(self.resid))*scale
             return np.dot(np.dot(self.calc_params, scale), self.calc_params.T)
 

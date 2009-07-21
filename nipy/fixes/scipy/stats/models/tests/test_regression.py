@@ -15,7 +15,7 @@ DECIMAL = 4
 class check_regression_results(object):
     '''
     res2 contains results from Rmodelwrap or were obtained from a statistical
-    packages such as R or Stata
+    packages such as R or Stata and written to model_results
     '''
 
     def test_params(self):

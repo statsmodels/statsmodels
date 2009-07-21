@@ -182,8 +182,9 @@ class GLMtwo(LikelihoodModel):
         self.calc_params = np.linalg.pinv(self._exog)
         self.normalized_cov_params = np.dot(self.calc_params,
                                         np.transpose(self.calc_params))
-        self.df_resid = self._exog.shape[0] - utils.rank(self._exog)
         self.df_model = utils.rank(self._exog)-1
+        self.df_resid = self._exog.shape[0] - utils.rank(self._exog)
+
 
     def score(self, params):
         pass
@@ -292,7 +293,7 @@ class GLMtwo(LikelihoodModel):
                     wls_results)
         return self.results
 
-class GLMResults(LikelihoodModelResults):   # could inherit from RegressionResults
+class GLMResults(LikelihoodModelResults):   # could inherit from RegressionResults?
     '''
     Class to contain GLM results
     '''

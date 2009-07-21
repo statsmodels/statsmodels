@@ -28,10 +28,15 @@ def MAD(a, c=Gaussian.ppf(3/4.), axis=0):  # c \approx .6745
     """
     Median Absolute Deviation along given axis of an array:
 
+    Not at the normal
     median(abs(a - median(a))) / c
 
-    Lu (2004) Reference ... Huber (1981)?
+    At the normal       # used by R,SAS
+    median(abs(a))/c
 
+    Reference
+    ---------
+    Venables and Ripley
     """
     a = np.asarray(a)
 #    d = np.median(a, axis=axis)

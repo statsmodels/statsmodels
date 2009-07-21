@@ -23,7 +23,7 @@ class RModel(object):
         # Note the '-1' for no intercept - this is included in the design
         self.formula = r('y ~ %s-1' % '+'.join(self._design_cols))
         self.frame = r.data_frame(y=y, x=self.design)
-        r.library('MASS')
+#          r.library('MASS') # has to be loaded in the tests
         results = self.model_type(self.formula,
                                     data = self.frame, **kwds)
         rpy.set_default_mode(rpy.BASIC_CONVERSION)
@@ -36,23 +36,23 @@ class RModel(object):
         self.nobs = len(self.results['residuals'])
         self.resid = self.results['residuals']
         self.predict = self.results['fitted.values']
-        #hasattr(rglmtestpoiss_res.resid, 'keys')
-        #self.resid = [self.results['residuals'][str(k)] for k in range(1, 1+self.nobs)]
-        #self.predict = [self.results['fitted.values'][str(k)] for k in range(1, 1+self.nobs)]
         self.df_resid = self.results['df.residual']
         self.params = rsum['coefficients'][:,0]
         self.bse = rsum['coefficients'][:,1]
         self.bt = rsum['coefficients'][:,2]
-        self.bpval = rsum['coefficients'][:,3]
+        try:
+            self.bpval = rsum['coefficients'][:,3]
+        except: pass
         self.R2 = rsum.setdefault('r.squared', None)
         self.adjR2 = rsum.setdefault('adj.r.squared', None)
         self.aic_R = rsum.setdefault('aic', None)
         self.F = rsum.setdefault('fstatistic', None)
-        self.df = rsum['df']     # which df is this?
-        self.bcov_unscaled = rsum['cov.unscaled']
+        df = rsum.setdefault('df', None)
+        if df:  # for RLM, works for other models?
+            self.df_model = df[0]-1 # R counts intercept
+            self.df_resid = df[1]
+        self.bcov_unscaled = rsum.setdefault('cov.unscaled', None)
         self.bcov = rsum.setdefault('cov.scaled', None)
-#        self.df_resid = self.results['df.residual']    #RLM
-
         if rsum.has_key('sigma'):
             self.scale = rsum['sigma']
         elif rsum.has_key('dispersion'):
@@ -80,14 +80,16 @@ class RModel(object):
         self.null_deviance = self.rsum['null.deviance']
 
     def getrlm(self):
-        self.k2 = None
-        self.weights = None
-        self.stddev = None # is this SER?
+        self.k2 = self.results['k2']
+        self.weights = self.results['w']
+        self.stddev = self.rsum['stddev'] # Don't know what this is yet
+        self.wresid = None # these equal resids always?
+# get bse from cov.unscaled?
 
 
 #TODO:
 # function to write Rresults to results file, so this is a developers tool
-# and not a test dependency
+# and not a test dependency?
 def RModelConvert(model, sec_title=None, results_title=None):
     import os
     if not results_title:

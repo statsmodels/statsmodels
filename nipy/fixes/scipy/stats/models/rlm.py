@@ -8,7 +8,7 @@ from models.regression import WLS, GLS
 from models.robust import norms, scale
 from scipy.stats import norm as Gaussian # can get rid of this once scale is sorted out
 
-from models.model import LikelihoodModel
+from models.model import LikelihoodModel, LikelihoodModelResults
 
 class Model(WLS):
 
@@ -103,12 +103,8 @@ class RLM(LikelihoodModel):
         self.normalized_cov_params = np.dot(self.calc_params,
                                         np.transpose(self.calc_params))
 #        self.df_resid = self._exog.shape[0] - utils.rank(self._exog)
-        self.df_resid = np.nan  # to avoid estimating residuals in GLS
+        self.df_resid = np.nan  # to avoid estimating residuals in WLS?
         self.df_model = utils.rank(self._exog)-1
-
-#    @property
-#    def scale(self):
-#        return self.results.scale   # does this pull from here or GLS?
 
     def score(self, params):
         pass
@@ -138,6 +134,7 @@ class RLM(LikelihoodModel):
         we return MAD(resid)**2 by default.
         '''
 # Figure out why this ^ is.
+# update: I think it's a mistake
         resid = self._endog - results.predict
         if self.scale_est == 'MAD':
 #            return scale.MAD(resid)**2
@@ -149,28 +146,53 @@ class RLM(LikelihoodModel):
 #            return scale.scale_est(self, resid)**2
 #        return np.median(np.fabs(resid))/Gaussian.ppf(3/4.)
 
-    def fit(self, maxiter=100, tol=1e-5, scale_est='MAD'):
+    def fit(self, maxiter=100, tol=1e-5, scale_est='MAD', init=None):
         self.scale_est = scale_est  # is this the best place to put this
                                     # are the other scales implemented?
-        self.results = WLS(self._endog, self._exog).fit()   # initial guess is just OLS
-        self.results.scale = self.estimate_scale(self.results)  # overwrite scale estimate
-        self.update_history(self.results)
+        if not init:
+            wls_results = WLS(self._endog, self._exog).fit()
+            # initial guess is just OLS by default
+        self.scale = self.estimate_scale(wls_results)  # overwrite scale estimate
+        self.update_history(wls_results)
         self.iteration += 1
         while ((np.fabs(self.history['deviance'][self.iteration]-\
                 self.history['deviance'][self.iteration-1])) > tol and \
                 self.iteration < maxiter):
-            self.weights = self.M.weights((self._endog - self.results.predict) \
+            self.weights = self.M.weights((self._endog - wls_results.predict) \
 #                        /np.sqrt(self.results.scale))
-                        /self.results.scale)    # why all the squaring and roots?
+                        /self.scale)    # why all the squaring and roots?
 #                        /scale)
-            self.results = WLS(self._endog, self._exog, weights=self.weights).fit()
-            self.results.scale = self.estimate_scale(self.results)  # iteratively update scale
+            wls_results = WLS(self._endog, self._exog,
+                                    weights=self.weights).fit()
+            self.scale = self.estimate_scale(wls_results)  # iteratively update scale
 # M&P suggests to use a constant weight, can be iterative or constant of a "resistant" fit
-            self.update_history(self.results)
+            self.update_history(wls_results)
             self.iteration += 1
+        self.results = RLMResults(self, wls_results.params,
+                            self.normalized_cov_params, self.scale)
         return self.results
 
-# needs its own results class, so it doesn't have all the cruft from GLS/WLS
+class RLMResults(LikelihoodModelResults):
+    '''
+    Class to contain RLM results
+    '''
+    def __init__(self, model, params, normalized_cov_params, scale):
+        super(RLMResults, self).__init__(model, params,
+                normalized_cov_params, scale)
+        self._get_results(model)
+
+    def _get_results(self, model):
+        self.fitted_values = np.dot(model._exog, self.params)
+        self.resid = model._endog - self.fitted_values   # before bcov
+        self.calc_params = model.calc_params    # for bvoc,
+                                                # this is getting sloppy
+        self.bcov_unscaled = self.cov_params(scale=1)
+        self.bse = np.sqrt(np.diag(self.bcov_unscaled))
+        self.nobs = model._exog.shape[0]
+        self.stddev = 0 # TODO: Discussion in Huber (1981) Ch. 7
+        self.weights = model.weights
+        self.df_model = model.df_model
+        self.df_resid = model._exog.shape[0] - utils.rank(model._exog)
 
 if __name__=="__main__":
 #NOTE: This is to be removed
@@ -211,10 +233,6 @@ if __name__=="__main__":
     from models.datasets.stackloss.data import load
     data = load()
     data.exog = models.functions.add_constant(data.exog)
-
-# First guess from L1-norm
-    Z = lambda x,y: np.sum(x+y)
-
 
     m1 = RLM(data.endog, data.exog, M=norms.HuberT())
     results1 = m1.fit()

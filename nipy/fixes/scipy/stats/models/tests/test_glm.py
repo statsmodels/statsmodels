@@ -89,12 +89,12 @@ class test_glm_gaussian(check_model_results):
         Test Gaussian family with canonical identity link
         '''
         from models.datasets.longley.data import load
-        data = load()
-        data.exog = add_constant(data.exog)
-        self.res1 = GLM(data.endog,data.exog,
+        self.data = load()
+        self.data.exog = add_constant(self.data.exog)
+        self.res1 = GLM(self.data.endog, self.data.exog,
                         family=models.family.Gaussian()).fit()
         Gauss = r.gaussian
-        self.res2 = RModel(data.endog, data.exog, r.glm, family=Gauss)
+        self.res2 = RModel(self.data.endog, self.data.exog, r.glm, family=Gauss)
         self.res2.resids = np.array(self.res2.resid)[:,None]*np.ones((1,5))
         self.res2.null_deviance = 185008826 # taken from R.
                                             # I think this is a bug in Rpy
@@ -143,14 +143,12 @@ class test_glm_binomial(check_model_results):
         '''
         from models.datasets.star98.data import load
         from model_results import star98
-        data = load()
-        data.exog = add_constant(data.exog)
-        trials = data.endog[:,:2].sum(axis=1)
-        self.res1 = GLM(data.endog, data.exog, \
+        self.data = load()
+        self.data.exog = add_constant(self.data.exog)
+        trials = self.data.endog[:,:2].sum(axis=1)
+        self.res1 = GLM(self.data.endog, self.data.exog, \
         family=models.family.Binomial()).fit(data_weights = trials)
         self.res2 = star98()
-        self.KnownFailPrec = True # Stata rounds big residuals to zero decimals
-                                  # So PearsonX2 fails
 
     @dec.knownfailureif(True, "Fails due to a rounding convention in Stata")
     def check_resids(self, resids1, resids2):
@@ -248,9 +246,9 @@ class test_glm_gamma(check_model_results):
         '''
         from models.datasets.scotland.data import load
         from model_results import scotvote
-        data = load()
-        data.exog = add_constant(data.exog)
-        self.res1 = GLM(data.endog, data.exog, \
+        self.data = load()
+        self.data.exog = add_constant(self.data.exog)
+        self.res1 = GLM(self.data.endog, self.data.exog, \
                     family=models.family.Gamma()).fit()
         self.res2 = scotvote()
         self.KnownFailPrec = True   # precision issue in AIC_R
@@ -298,10 +296,10 @@ class test_glm_poisson(check_model_results):
         '''
         from model_results import cpunish
         from models.datasets.cpunish.data import load
-        data = load()
-        data.exog[:,3] = np.log(data.exog[:,3])
-        data.exog = add_constant(data.exog)
-        self.res1 = GLM(data.endog, data.exog,
+        self.data = load()
+        self.data.exog[:,3] = np.log(self.data.exog[:,3])
+        self.data.exog = add_constant(self.data.exog)
+        self.res1 = GLM(self.data.endog, self.data.exog,
                     family=models.family.Poisson()).fit()
         self.res2 = cpunish()
 
@@ -378,16 +376,16 @@ class test_glm_negbinomial(check_model_results):
         Test Negative Binomial family with canonical log link
         '''
         from models.datasets.committee.data import load
-        data = load()
-        data.exog[:,2] = np.log(data.exog[:,2])
-        interaction = data.exog[:,2]*data.exog[:,1]
-        data.exog = np.column_stack((data.exog,interaction))
-        data.exog = add_constant(data.exog)
-        results = GLM(data.endog, data.exog,
+        self.data = load()
+        self.data.exog[:,2] = np.log(self.data.exog[:,2])
+        interaction = self.data.exog[:,2]*self.data.exog[:,1]
+        self.data.exog = np.column_stack((self.data.exog,interaction))
+        self.data.exog = add_constant(self.data.exog)
+        results = GLM(self.data.endog, self.data.exog,
                 family=models.family.NegativeBinomial()).fit()
         self.res1 = results
 #        r.library('MASS')  # this doesn't work when done in rmodelwrap?
-        self.res2 = RModel(data.endog, data.exog, r.glm,
+        self.res2 = RModel(self.data.endog, self.data.exog, r.glm,
                 family=r.negative_binomial(1))
 
     def check_resids(self, resids1, resids2):
