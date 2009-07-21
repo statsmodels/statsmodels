@@ -192,7 +192,7 @@ class Hampel(RobustNorm):
         self.c = c
 
     def subset(self, z):
-        z = np.fabs(np.asarray(z)
+        z = np.fabs(np.asarray(z))
         t1 = np.less_equal(z, self.a)
         t2 = np.less_equal(z, self.b) * np.greater(z, self.a)
         t3 = np.less_equal(z, self.c) * np.greater(z, self.b)

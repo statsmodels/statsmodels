@@ -6,6 +6,7 @@ import numpy as np
 from models import utils
 from models.regression import WLS, GLS
 from models.robust import norms, scale
+from scipy.stats import norm as Gaussian # can get rid of this once scale is sorted out
 
 from models.model import LikelihoodModel
 
@@ -136,14 +137,15 @@ class RLM(LikelihoodModel):
         '''
 # Figure out why this ^ is.
         resid = self._endog - results.predict
-        if self.scale_est == 'MAD':
-#            return scale.MAD(resid)**2
-            return scale.MAD(resid)
-        elif self.scale_est == "Huber":
-#            return scale.huber(resid)**2
-            return scale.huber(resid)
-        else:
-            return scale.scale_est(self, resid)**2
+#        if self.scale_est == 'MAD':
+##            return scale.MAD(resid)**2
+#            return scale.MAD(resid)
+#        elif self.scale_est == "Huber":
+##            return scale.huber(resid)**2
+#            return scale.huber(resid)
+#        else:
+#            return scale.scale_est(self, resid)**2
+        return np.median(np.fabs(resid))/Gaussian.ppf(3/4.)
 
     def fit(self, maxiter=100, tol=1e-5, scale_est='MAD'):
         self.scale_est = scale_est  # is this the best place to put this
@@ -200,8 +202,8 @@ if __name__=="__main__":
     model_andrewWave = RLM(endog, exog, M=norms.AndrewWave())
     results_andrewWave = model_andrewWave.fit()
 
-    model_hampel = RLM(endog, exog, M=norms.Hampel(a=1.7,b=3.4,c=8.5))
-    results_hampel = model_hampel.fit()
+#    model_hampel = RLM(endog, exog, M=norms.Hampel(a=1.7,b=3.4,c=8.5)) # convergence problems with scale changed, not with 2,4,8 though?
+#    results_hampel = model_hampel.fit()
 
 ### Stack Loss Data ###
     from models.datasets.stackloss.data import load
@@ -214,7 +216,7 @@ if __name__=="__main__":
 
     m1 = RLM(data.endog, data.exog, M=norms.HuberT())
     results1 = m1.fit()
-    m2 = RLM(data.endog, data.exog, M=norms.Hampel())
+    m2 = RLM(data.endog, data.exog, M=norms.Hampel())  # has convergence problems with scale changed
     results2 = m2.fit()
     m3 = RLM(data.endog, data.exog, M=norms.TukeyBiweight())
     results3 = m3.fit()
