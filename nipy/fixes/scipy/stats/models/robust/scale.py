@@ -26,13 +26,9 @@ def unsqueeze(data, axis, oldshape):
 
 def MAD(a, c=Gaussian.ppf(3/4.), axis=0):  # c \approx .6745
     """
-    Median Absolute Deviation along given axis of an array:
+    The Median Absolute Deviation along given axis of an array:
 
-    Not at the normal
-    median(abs(a - median(a))) / c
-
-    At the normal       # used by R,SAS
-    median(abs(a))/c
+    median(abs(a)) / c
 
     Reference
     ---------
@@ -43,6 +39,16 @@ def MAD(a, c=Gaussian.ppf(3/4.), axis=0):  # c \approx .6745
 #    d = unsqueeze(d, axis, a.shape)
 #    return np.median(np.fabs(a - d) / c, axis=axis)
     return np.median(np.fabs(a))/c
+
+def stanardized_MAD(a, c=Gaussian.ppf(3/4.), axis=0):
+    '''
+
+    The standardized Median Absolute Deviation along given axis of an array:
+
+    MAD = median(abs(a - median(a))) / c
+    '''
+    a = np.assarray(a)
+    return np.median(np.fabs(a - np.median(a)))/c
 
 class Huber(object):
     """

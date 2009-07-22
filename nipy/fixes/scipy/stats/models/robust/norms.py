@@ -23,8 +23,15 @@ class RobustNorm(object):
         Abstract method:
         psi(z) / z
 
-        TODO: is the above correct... need to look at V&R
         """
+        raise NotImplementedError
+
+    def psi_deriv(self, z):
+        '''
+        Abstract method:
+
+        psi_derive = psi'
+        '''
         raise NotImplementedError
 
     def __call__(self, z):
@@ -48,6 +55,9 @@ class LeastSquares(RobustNorm):
 
     def weights(self, z):
         return np.ones(z.shape, np.float64)
+
+    def psi_deriv(self, z):
+        return np.ones(z,shape, np.float64)
 
 class HuberT(RobustNorm):
 
@@ -85,6 +95,10 @@ class HuberT(RobustNorm):
         test = self.subset(z)
         return test + (1 - test) * self.t / np.fabs(z)
 
+    def psi_deriv(self, z):
+        return np.less_equal(np.fabs(z), self.t)
+
+
 class RamsayE(RobustNorm):
 
     """
@@ -108,6 +122,11 @@ class RamsayE(RobustNorm):
     def weights(self, z):
         z = np.asarray(z)
         return np.exp(-self.a * np.fabs(z))
+
+    def psi_deriv(self, z):
+        return np.exp(-self.a * np.fabs(z)) + z**2*\
+                np.exp(-self.a*np.fabs(z))*-self.a/np.fabs(z)
+# I think this is correct.
 
 class AndrewWave(RobustNorm):
 
@@ -143,6 +162,10 @@ class AndrewWave(RobustNorm):
         test = self.subset(z)
         return test * np.sin(z / a) / (z / a)
 
+    def psi_deriv(self, z):
+        test = self.subset(z)
+        return test*np.cos(z / self.a)/self.a
+
 class TrimmedMean(RobustNorm):
     """
 
@@ -171,6 +194,11 @@ class TrimmedMean(RobustNorm):
     def weights(self, z):
         z = np.asarray(z)
         test = self.subset(z)
+        return test
+
+    def psi_derive(self, z):
+#NOTE I'm not sure if the robust covariance matrix is defined the same for Least Trimmed Mean
+        test = self.subzet(z)
         return test
 
 class Hampel(RobustNorm):
@@ -231,6 +259,9 @@ class Hampel(RobustNorm):
             t3 * a*(c-np.fabs(z))/(np.fabs(z)*(c-b)))
         return v
 
+    def psi_deriv(self, z):
+        t1, t2, t3 = self.subset(z)
+        return t1 + t3 * (self.a*np.sign(z)*z)/(np.fabs(z)*(self.c-self.b))
 
 
 class TukeyBiweight(RobustNorm):
@@ -243,7 +274,8 @@ class TukeyBiweight(RobustNorm):
     """
 
 
-    R = 4.685
+    def __init__(self, R = 4.685):
+        self.R = R
 
     def subset(self, z):
         z = np.fabs(np.asarray(z))
@@ -261,6 +293,10 @@ class TukeyBiweight(RobustNorm):
     def weights(self, z):
         subset = self.subset(z)
         return (1 - (z / self.R)**2)**2 * subset
+
+    def psi_deriv(self, z):
+        return (self.R - z)*(self.R + z)*(self.R**2 - 5*z**2)/self.R**4
+
 
 def estimate_location(a, scale, norm=HuberT(), axis=0, initial=None,
                       niter=30, tol=1.0e-06):

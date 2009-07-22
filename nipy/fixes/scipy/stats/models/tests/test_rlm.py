@@ -7,6 +7,8 @@ from numpy.testing import *
 import models
 from rmodelwrap import RModel
 from rpy import r
+import rpy # for hampel test...ugh
+import numpy as np # ditto
 from models.rlm import RLM
 
 DECIMAL = 4
@@ -68,14 +70,20 @@ class test_rlm(check_rlm_results):
         self.res2 = RModel(self.data.endog, self.data.exog,
                         r.rlm, psi="psi.huber")
 
-# This doesn't work because of what appears to be a bug in Rpy
-# though the results agree with R by eyeballing
-#    def test_hampel(self):
-#        results = RLM(self.data.endog, self.data.exog,
-#                    M=models.robust.norms.Hampel()).fit()
-#        self.res1 = results
-#        self.res2 = RModel(self.data.endog, self.data.exog,
-#                        r.rlm, psi="psi.hampel")
+    def test_hampel(self):
+        d = rpy.as_list(r('stackloss'))
+        y = d[0]['stack.loss']
+        x = np.column_stack(np.array(d[0][name]) for name in d[0].keys()[0:-1])
+        x = np.column_stack((x,np.ones((len(x),1))))
+        x = np.column_stack((x[:,2],x[:,1],x[:,0],x[:,3]))
+# why in the world the above works and just passing data.endog and data.exog does not is
+# completely beyond me
+        results = RLM(self.data.endog, self.data.exog,
+                    M=models.robust.norms.Hampel()).fit()
+
+        self.res1 = results
+        self.res2 = RModel(y, x,
+                        r.rlm, psi="psi.hampel")
 
 class test_rlm_bisquare(test_rlm):
     def __init__(self):

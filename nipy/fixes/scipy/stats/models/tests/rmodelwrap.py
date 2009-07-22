@@ -14,16 +14,16 @@ class RModel(object):
     ''' Class gives R models scipy.models -like interface '''
     def __init__(self, y, design, model_type=r.lm, **kwds):
         ''' Set up and estimate R model with data and design '''
-        rpy.set_default_mode(rpy.NO_CONVERSION)
-        self.y = y
-        self.design = design
+        self.y = np.array(y)
+        self.design = np.array(design)
         self.model_type = model_type
         self._design_cols = ['x.%d' % (i+1) for i in range(
             self.design.shape[1])]
         # Note the '-1' for no intercept - this is included in the design
         self.formula = r('y ~ %s-1' % '+'.join(self._design_cols))
         self.frame = r.data_frame(y=y, x=self.design)
-#          r.library('MASS') # has to be loaded in the tests
+        rpy.set_default_mode(rpy.NO_CONVERSION)
+
         results = self.model_type(self.formula,
                                     data = self.frame, **kwds)
         rpy.set_default_mode(rpy.BASIC_CONVERSION)
