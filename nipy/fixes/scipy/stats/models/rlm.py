@@ -189,27 +189,30 @@ class RLMResults(LikelihoodModelResults):
         self.df_resid = np.float(model._exog.shape[0] - utils.rank(model._exog))
         self.fitted_values = np.dot(model._exog, self.params)
         self.resid = model._endog - self.fitted_values   # before bcov
+        self.sresid = self.resid/self.scale
         self.calc_params = model.calc_params    # for bvoc,
                                                 # this is getting sloppy
         self.bcov_unscaled = self.cov_params(scale=1)
 
         self.nobs = np.float(model._exog.shape[0])
         m = np.mean(model.M.psi_deriv(self.resid))
-        self.m = m
+        self.m = m # for debugging
         var_psiprime = np.var(model.M.psi_deriv(self.resid))
-        self.var_psiprime = var_psiprime
+        self.var_psiprime = var_psiprime # for debugging
         k = 1 + (self.df_model+1)/self.nobs * var_psiprime/m**2
-        self.k = k
+        self.k = k  # for debugging
         self.weights = model.weights
         if model.cov == "H1":
-            self.bcov_scaled = k**2 * (1/self.df_resid)*np.sum(model.M.psi(self.resid)**2)\
+            self.bcov_scaled = k**2 * (1/self.df_resid)*\
+                    np.sum(model.M.psi(self.resid)**2)\
                     /(((1/self.nobs)*np.sum(model.M.psi_deriv(self.resid)))**2)\
                     *model.normalized_cov_params    # last term is dot(X.T,X)^-1
         else:
-            W_inv = np.dot(np.dot(model.calc_params,model.M.psi_deriv(self.resid)),\
-                    model.calc_params.T)
+# needs to be optimized...
+            W = np.dot(model.M.psi_deriv(self.resid)*model._exog.T,model._exog)
+            W_inv = np.linalg.inv(W)
 # should be
-# [W_jk]^-1 = [SUM(psi_deriv(r_i)*x_ij*x_jk)]^-1, but we'll see...
+# [W_jk]^-1 = [SUM(psi_deriv(r_i)*x_ij*x_jk)]^-1
             if model.cov == "H2":
                 self.bcov_scaled = k*(1/self.df_resid)*np.sum(\
                         model.M.psi(self.resid)**2)/((1/self.nobs)*np.sum(\
@@ -242,9 +245,7 @@ if __name__=="__main__":
     results_ols = model_ols.fit()
 
     model_huber = RLM(endog, exog, M=norms.HuberT(t=2.))
-    # default norm is Hampel, but R uses Huber
-    results_huber = model_huber.fit(scale_est="MAD")
-    # this is default. just being explicit
+    results_huber = model_huber.fit(scale_est="MAD") # explicit default
 
     model_ramsaysE = RLM(endog, exog, M=norms.RamsayE())
     results_ramsaysE = model_ramsaysE.fit()
@@ -255,17 +256,40 @@ if __name__=="__main__":
     model_hampel = RLM(endog, exog, M=norms.Hampel(a=1.7,b=3.4,c=8.5)) # convergence problems with scale changed, not with 2,4,8 though?
     results_hampel = model_hampel.fit()
 
+#######################
 ### Stack Loss Data ###
+#######################
     from models.datasets.stackloss.data import load
     data = load()
     data.exog = models.functions.add_constant(data.exog)
+#############
+### Huber ###
+#############
+    m1_Huber = RLM(data.endog, data.exog, M=norms.HuberT())
+    results_Huber1 = m1_Huber.fit()
+    m2_Huber = RLM(data.endog, data.exog, M=norms.HuberT())
+    results_Huber2 = m2_Huber.fit(cov="H2")
+    m3_Huber = RLM(data.endog, data.exog, M=norms.HuberT())
+    results_Huber3 = m3_Huber.fit(cov="H3")
+##############
+### Hampel ###
+##############
+    m1_Hampel = RLM(data.endog, data.exog, M=norms.Hampel())
+    results_Hampel1 = m1_Hampel.fit()
+    m2_Hampel = RLM(data.endog, data.exog, M=norms.Hampel())
+    results_Hampel2 = m2_Hampel.fit(cov="H2")
+    m3_Hampel = RLM(data.endog, data.exog, M=norms.Hampel())
+    results_Hampel3 = m3_Hampel.fit(cov="H3")
+################
+### Bisquare ###
+################
+    m1_Bisquare = RLM(data.endog, data.exog, M=norms.TukeyBiweight())
+    results_Bisquare1 = m1_Bisquare.fit()
+    m2_Bisquare = RLM(data.endog, data.exog, M=norms.TukeyBiweight())
+    results_Bisquare2 = m2_Bisquare.fit(cov="H2")
+    m3_Bisquare = RLM(data.endog, data.exog, M=norms.TukeyBiweight())
+    results_Bisquare3 = m3_Bisquare.fit(cov="H3")
 
-    m1 = RLM(data.endog, data.exog, M=norms.HuberT())
-    results1 = m1.fit()
-    m2 = RLM(data.endog, data.exog, M=norms.Hampel())  # has convergence problems with scale changed
-    results2 = m2.fit()
-    m3 = RLM(data.endog, data.exog, M=norms.TukeyBiweight())   #R=2.5 by default is SAS ?
-    results3 = m3.fit()
 # Huber scale estimate do not currently work
 #    m4 = RLM(data.endog, data.exog, M=norms.HuberT())
 #    results4 = m1.fit(scale_est="Huber")

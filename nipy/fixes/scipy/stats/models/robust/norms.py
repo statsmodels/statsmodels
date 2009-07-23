@@ -279,7 +279,7 @@ class TukeyBiweight(RobustNorm):
 
     def subset(self, z):
         z = np.fabs(np.asarray(z))
-        return np.less_equal(z, self.R)
+        return np.less_equal(z, self.R) # have also seen just less()
 
     def psi(self, z):
         z = np.asarray(z)
@@ -295,7 +295,10 @@ class TukeyBiweight(RobustNorm):
         return (1 - (z / self.R)**2)**2 * subset
 
     def psi_deriv(self, z):
-        return (self.R - z)*(self.R + z)*(self.R**2 - 5*z**2)/self.R**4
+        subset = self.subset(z)
+        return subset*((1 - (z/self.R)**2)**2 - (4*z**2/self.R**2) *\
+                    (1-(z/self.R)**2))
+#        return (self.R - z)*(self.R + z)*(self.R**2 - 5*z**2)/self.R**4
 
 
 def estimate_location(a, scale, norm=HuberT(), axis=0, initial=None,
