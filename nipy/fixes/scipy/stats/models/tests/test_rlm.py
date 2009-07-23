@@ -71,17 +71,19 @@ class test_rlm(check_rlm_results):
                         r.rlm, psi="psi.huber")
 
     def test_hampel(self):
-        d = rpy.as_list(r('stackloss'))
-        y = d[0]['stack.loss']
-        x = np.column_stack(np.array(d[0][name]) for name in d[0].keys()[0:-1])
-        x = np.column_stack((x,np.ones((len(x),1))))
-        x = np.column_stack((x[:,2],x[:,1],x[:,0],x[:,3]))
+#        d = rpy.as_list(r('stackloss'))
+#        y = d[0]['stack.loss']
+#        x = np.column_stack(np.array(d[0][name]) for name in d[0].keys()[0:-1])
+#        x = np.column_stack((x,np.ones((len(x),1))))
+#        x = np.column_stack((x[:,2],x[:,1],x[:,0],x[:,3]))
 # why in the world the above works and just passing data.endog and data.exog does not is
 # completely beyond me
         results = RLM(self.data.endog, self.data.exog,
                     M=models.robust.norms.Hampel()).fit()
 
         self.res1 = results
+        y = self.data.endog
+        x = self.data.exog.copy()
         self.res2 = RModel(y, x,
                         r.rlm, psi="psi.hampel")
 

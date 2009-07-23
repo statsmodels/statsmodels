@@ -194,17 +194,16 @@ class RLMResults(LikelihoodModelResults):
         self.bcov_unscaled = self.cov_params(scale=1)
 
         self.nobs = np.float(model._exog.shape[0])
-        m = 1./self.nobs * np.sum(model.M.psi_deriv(self.resid))
+        m = np.mean(model.M.psi_deriv(self.resid))
         self.m = m
-        var_psiprime = 1./self.nobs * np.sum((model.M.psi_deriv(self.resid) - m)**2)
-# could be np.var(model.M.psi_deriv(self.resid))
+        var_psiprime = np.var(model.M.psi_deriv(self.resid))
         self.var_psiprime = var_psiprime
         k = 1 + (self.df_model+1)/self.nobs * var_psiprime/m**2
         self.k = k
         self.weights = model.weights
         if model.cov == "H1":
             self.bcov_scaled = k**2 * (1/self.df_resid)*np.sum(model.M.psi(self.resid)**2)\
-                    /((1/self.nobs)*np.sum(model.M.psi_deriv(self.resid)))**2\
+                    /(((1/self.nobs)*np.sum(model.M.psi_deriv(self.resid)))**2)\
                     *model.normalized_cov_params    # last term is dot(X.T,X)^-1
         else:
             W_inv = np.dot(np.dot(model.calc_params,model.M.psi_deriv(self.resid)),\
