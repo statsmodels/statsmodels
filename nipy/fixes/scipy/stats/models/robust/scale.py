@@ -40,14 +40,13 @@ def MAD(a, c=Gaussian.ppf(3/4.), axis=0):  # c \approx .6745
 #    return np.median(np.fabs(a - d) / c, axis=axis)
     return np.median(np.fabs(a))/c
 
-def stanardized_MAD(a, c=Gaussian.ppf(3/4.), axis=0):
-    '''
-
+def stand_MAD(a, c=Gaussian.ppf(3/4.), axis=0):
+    """
     The standardized Median Absolute Deviation along given axis of an array:
 
     MAD = median(abs(a - median(a))) / c
-    '''
-    a = np.assarray(a)
+    """
+    a = np.asarray(a)
     return np.median(np.fabs(a - np.median(a)))/c
 
 class Huber(object):

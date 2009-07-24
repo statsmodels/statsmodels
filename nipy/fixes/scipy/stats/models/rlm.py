@@ -20,7 +20,7 @@ class Model(WLS):
         self.weights = 1
         self._endog = endog
         self._exog = exog
-        self.initialize()   # is this still needed
+        self.initialize()
 
     def __iter__(self):
         self.iter = 0
@@ -88,8 +88,8 @@ class Model(WLS):
 
 class RLM(LikelihoodModel):
     def __init__(self, endog, exog, M=norms.HuberT()):
-        '''
-        '''
+        """
+        """
         self.M = M
         self._endog = endog
         self._exog = exog
@@ -112,12 +112,12 @@ class RLM(LikelihoodModel):
         pass
 
     def deviance(self, tmp_results):
-        '''
+        """
         Returns the (unnormalized) log-likelihood from the M estimator.
 
         Note that self.scale is interpreted as a variance, so we divide
         the residuals by its sqrt.
-        '''
+        """
         return self.M((self._endog - tmp_results.predict)/\
 #                    np.sqrt(tmp_results.scale)).sum()
                     tmp_results.scale).sum()
@@ -127,17 +127,16 @@ class RLM(LikelihoodModel):
         self.history['params'].append(tmp_results.params)
         self.history['scale'].append(tmp_results.scale)
 
-    def estimate_scale(self, results):
-        '''
+    def estimate_scale(self, resid):
+        """
         Note that self.scale is interpreted as a variance in OLSModel, so
         we return MAD(resid)**2 by default.
-        '''
-# Figure out why this ^ is.
-# update: I think it's a mistake
-        resid = self._endog - results.predict
+        """
         if self.scale_est == 'MAD':
 #            return scale.MAD(resid)**2
             return scale.MAD(resid)
+        if self.scale_est == 'stand_MAD':
+            return scale.stand_MAD(resid)
 #        elif self.scale_est == "Huber":
 ##            return scale.huber(resid)**2
 #            return scale.huber(resid)
@@ -145,40 +144,85 @@ class RLM(LikelihoodModel):
 #            return scale.scale_est(self, resid)**2
 #        return np.median(np.fabs(resid))/Gaussian.ppf(3/4.)
 
-    def fit(self, maxiter=100, tol=1e-5, scale_est='MAD', init=None, cov='H1'):
-        self.scale_est = scale_est  # is this the best place to put this
-                                    # are the other scales implemented?
+    def fit(self, maxiter=100, tol=1e-5, scale_est='MAD', init=None, cov='H1',
+            update_scale=True):
+        """
+        Iterated reweighted least squares for robust regression.
+
+        The IRLS routine runs until the deviance function as converged to `tol`
+        or `maxiter` has been reached.
+
+        Parameters
+        ----------
+
+        maxiter : scalar
+            The maximum number of iterations to try. Default is 100.
+
+        tol : float
+            The convergence tolerance of the estimate.
+            Defaults is 1e1-5
+
+        scale_est : string
+            'MAD', 'stand_MAD', or 'Huber'
+            Indicates the estimate to use for scaling the weights in the IRLS.
+            The default is 'MAD' (median absolute deviation.  Other options are
+            use 'stand_MAD' for the median absolute deviation standardized
+            around zero and 'Huber' for Huber's Proposal 2.  See
+            models.robust.scale for
+            more information.
+
+        init : string
+            Allows initial estimates for the parameters.
+            Default is None, which means that the least squares estimate
+            is used.  Currently it is the only available choice.
+
+        cov : string
+            'H1', 'H2', or 'H3'
+            Indicates how the covariance matrix is estimated.  Default is 'H1'
+            See Huber (1981) p 173 for more information.
+
+        update_scale : Bool
+            If `update_scale` is False then the scale estimate for the
+            weights is held constant over the iteration.  Otherwise, it
+            is updated for each fit in the iteration.  Defaults is True.
+
+        Returns
+        -------
+        results : object
+            The RLM results class
+        """
+        self.scale_est = scale_est
         if not cov.upper() in ["H1","H2","H3"]:
             raise AttributeError, "Covariance matrix %s not understood" % cov
         else:
             self.cov = cov.upper()
         if not init:
             wls_results = WLS(self._endog, self._exog).fit()
-            # initial guess is just OLS by default
-        self.scale = self.estimate_scale(wls_results)  # overwrite scale estimate
+            # initial guess is OLS by default, ie., weights = 1
+        self.scale = self.estimate_scale(wls_results.resid) # overwrite scale estimate
         self.update_history(wls_results)
         self.iteration += 1
         while ((np.fabs(self.history['deviance'][self.iteration]-\
                 self.history['deviance'][self.iteration-1])) > tol and \
                 self.iteration < maxiter):
             self.weights = self.M.weights((self._endog - wls_results.predict) \
-#                        /np.sqrt(self.results.scale))
-                        /self.scale)    # why all the squaring and roots?
-#                        /scale)
+                        /self.scale)
             wls_results = WLS(self._endog, self._exog,
                                     weights=self.weights).fit()
-            self.scale = self.estimate_scale(wls_results)  # iteratively update scale
+            if update_scale is True:
 # M&P suggests to use a constant weight, can be iterative or constant of a "resistant" fit
+                self.scale = self.estimate_scale(wls_results.resid)
             self.update_history(wls_results)
             self.iteration += 1
         self.results = RLMResults(self, wls_results.params,
                             self.normalized_cov_params, self.scale)
+        self.results.wls_results = wls_results  # for debugging
         return self.results
 
 class RLMResults(LikelihoodModelResults):
-    '''
+    """
     Class to contain RLM results
-    '''
+    """
     def __init__(self, model, params, normalized_cov_params, scale):
         super(RLMResults, self).__init__(model, params,
                 normalized_cov_params, scale)
@@ -188,39 +232,45 @@ class RLMResults(LikelihoodModelResults):
         self.df_model = model.df_model
         self.df_resid = np.float(model._exog.shape[0] - utils.rank(model._exog))
         self.fitted_values = np.dot(model._exog, self.params)
+        self.hat = np.dot(model._exog,model.calc_params)
         self.resid = model._endog - self.fitted_values   # before bcov
         self.sresid = self.resid/self.scale
-        self.calc_params = model.calc_params    # for bvoc,
+        self.calc_params = model.calc_params    # for bcov,
                                                 # this is getting sloppy
         self.bcov_unscaled = self.cov_params(scale=1)
-
         self.nobs = np.float(model._exog.shape[0])
-        m = np.mean(model.M.psi_deriv(self.resid))
-        self.m = m # for debugging
-        var_psiprime = np.var(model.M.psi_deriv(self.resid))
-        self.var_psiprime = var_psiprime # for debugging
-        k = 1 + (self.df_model+1)/self.nobs * var_psiprime/m**2
-        self.k = k  # for debugging
         self.weights = model.weights
+        m = np.mean(model.M.psi_deriv(self.resid/self.scale))
+        var_psiprime = np.var(model.M.psi_deriv(self.resid/self.scale))
+        k = 1 + (self.df_model+1)/self.nobs * var_psiprime/m**2
+# these might better be called unbiased rather than scaled
         if model.cov == "H1":
-            self.bcov_scaled = k**2 * (1/self.df_resid)*\
-                    np.sum(model.M.psi(self.resid)**2)\
-                    /(((1/self.nobs)*np.sum(model.M.psi_deriv(self.resid)))**2)\
-                    *model.normalized_cov_params    # last term is dot(X.T,X)^-1
+# THE BELOW IS CORRECT!!! # Based on Huber (1973) 8.14
+# SAS documentation and Huber 1981 is misleading...
+            self.bcov_scaled = k**2 * (1/self.df_resid*\
+                np.sum(model.M.psi(self.sresid)**2)*self.scale**2)\
+                /((1/self.nobs*np.sum(model.M.psi_deriv(self.sresid)))**2)\
+                *model.normalized_cov_params
         else:
-# needs to be optimized...
-            W = np.dot(model.M.psi_deriv(self.resid)*model._exog.T,model._exog)
+# needs to be optimized
+# Correctly based on Huber 1973
+            W = np.dot(model.M.psi_deriv(self.sresid)*model._exog.T,model._exog)
             W_inv = np.linalg.inv(W)
 # should be
-# [W_jk]^-1 = [SUM(psi_deriv(r_i)*x_ij*x_jk)]^-1
+# [W_jk]^-1 = [SUM(psi_deriv(Sr_i)*x_ij*x_jk)]^-1
+# where Sr are the STANDARDIZED (!) residuals
             if model.cov == "H2":
+# This is correct, based on Huber (1973) 8.13
                 self.bcov_scaled = k*(1/self.df_resid)*np.sum(\
-                        model.M.psi(self.resid)**2)/((1/self.nobs)*np.sum(\
-                        model.M.psi_deriv(self.resid)))*W_inv
+                        model.M.psi(self.sresid)**2)*self.scale**2\
+                        /((1/self.nobs)*np.sum(\
+                        model.M.psi_deriv(self.sresid)))*W_inv
+# This is correct vis-a-vis the SAS results
             elif model.cov == "H3":
                 self.bcov_scaled = k**-1*1/self.df_resid*np.sum(\
-                    model.M.psi(self.resid)**2)*np.dot(np.dot(W_inv,
-                    np.dot(model._exog.T,model._exog)),W_inv)
+                    model.M.psi(self.sresid)**2)*self.scale**2\
+                    *np.dot(np.dot(W_inv, np.dot(model._exog.T,model._exog)),\
+                    W_inv)
         self.bse = np.sqrt(np.diag(self.bcov_scaled))
 
 if __name__=="__main__":
@@ -245,16 +295,16 @@ if __name__=="__main__":
     results_ols = model_ols.fit()
 
     model_huber = RLM(endog, exog, M=norms.HuberT(t=2.))
-    results_huber = model_huber.fit(scale_est="MAD") # explicit default
+    results_huber = model_huber.fit(scale_est="stand_MAD", update_scale=False)
 
     model_ramsaysE = RLM(endog, exog, M=norms.RamsayE())
-    results_ramsaysE = model_ramsaysE.fit()
+    results_ramsaysE = model_ramsaysE.fit(update_scale=False)
 
     model_andrewWave = RLM(endog, exog, M=norms.AndrewWave())
-    results_andrewWave = model_andrewWave.fit()
+    results_andrewWave = model_andrewWave.fit(update_scale=False)
 
     model_hampel = RLM(endog, exog, M=norms.Hampel(a=1.7,b=3.4,c=8.5)) # convergence problems with scale changed, not with 2,4,8 though?
-    results_hampel = model_hampel.fit()
+    results_hampel = model_hampel.fit(update_scale=False)
 
 #######################
 ### Stack Loss Data ###
@@ -301,7 +351,7 @@ if __name__=="__main__":
 
 
 
-    print '''Least squares fit
+    print """Least squares fit
 %s
 Huber Params, t = 2.
 %s
@@ -311,6 +361,6 @@ Andrew's Wave Params
 %s
 Hampel's 17A Function
 %s
-''' % (results_ols.params, results_huber.params, results_ramsaysE.params,
+""" % (results_ols.params, results_huber.params, results_ramsaysE.params,
             results_andrewWave.params, results_hampel.params)
 

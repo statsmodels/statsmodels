@@ -143,10 +143,10 @@ class GLS(LikelihoodModel):
 #        return self._results
 
     def _summary(self, lfit):
-        '''
+        """
         Private method to call additional statistics for OLS.
         Meant to be overwritten by subclass as needed.
-        '''
+        """
 
         lfit.resid = self._endog - lfit.predict
 #        lfit.resid = lfit.Z - np.dot(self.wdesign,lfit.params)
@@ -175,7 +175,7 @@ class GLS(LikelihoodModel):
         lfit.bse = np.sqrt(np.diag(lfit.cov_params()))
 
     def llf(self, params):
-        '''
+        """
         Returns the value of the loglikelihood function at b.
 
         Given the whitened design matrix, the loglikelihood is evaluated
@@ -206,7 +206,7 @@ class GLS(LikelihoodModel):
         References
         ----------
         .. [1] W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
-        '''
+        """
 
         nobs = float(self._exog.shape[0])
         nobs2 = nobs / 2.0
@@ -219,7 +219,7 @@ class GLS(LikelihoodModel):
         return llf
 
     def score(self, params):
-        '''
+        """
         Score function of the classical OLS Model.
 
         The gradient of logL with respect to params
@@ -228,20 +228,20 @@ class GLS(LikelihoodModel):
         ----------
         params : array-like
 
-        '''
+        """
         # Should this be analytic or a numerical approximation?
         return derivative(self.llf, params, dx=1e-04, n=1, order=3)
 
     def information(self, params):
-        '''
+        """
         Fisher information matrix of model
-        '''
+        """
         raise NotImplementedError
 
 
     def newton(self, params):
-        '''
-        '''
+        """
+        """
         raise NotImplementedError
 
 
@@ -587,9 +587,9 @@ class RegressionResults(LikelihoodModelResults):
         return np.dot(design, self.params)
 
 class PanelModel(OLS):
-    '''
+    """
     Estimator for panel data including (time) fixed effects and random effects.
-    '''
+    """
     def __init__(self, design):
         super(PanelModel, self).__init__()
         self.initialize(design)
@@ -599,10 +599,10 @@ class PanelModel(OLS):
     # UNFINISHED: RETURN AFTER THE REST IS CLEANED UP
 
     def set_time(self, col):
-        '''
+        """
         This allows you to set which column has the time variable
         for time fixed effects.
-        '''
+        """
         self.design = xi(self.design, col)
 
 def isestimable(C, D):
