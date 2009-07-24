@@ -96,7 +96,8 @@ class RLM(LikelihoodModel):
         self.initialize()
 
     def initialize(self):
-        self.history = {'deviance' : [np.inf], 'params' : [], 'scale' : []}
+        self.history = {'deviance' : [np.inf], 'params' : [np.inf],
+            'weights' : [np.inf], 'sresid' : [np.inf], 'scale' : []}
         self.iteration = 0
         self.calc_params = np.linalg.pinv(self._exog)
         self.normalized_cov_params = np.dot(self.calc_params,
@@ -123,9 +124,12 @@ class RLM(LikelihoodModel):
                     tmp_results.scale).sum()
 
     def update_history(self, tmp_results):
+# TODO: Figure out why the first estimate gets copied to the end of these
         self.history['deviance'].append(self.deviance(tmp_results))
         self.history['params'].append(tmp_results.params)
         self.history['scale'].append(tmp_results.scale)
+        self.history['sresid'].append(tmp_results.resid/tmp_results.scale)
+        self.history['weights'].append(tmp_results._model.weights)
 
     def estimate_scale(self, resid):
         """
@@ -144,8 +148,8 @@ class RLM(LikelihoodModel):
 #            return scale.scale_est(self, resid)**2
 #        return np.median(np.fabs(resid))/Gaussian.ppf(3/4.)
 
-    def fit(self, maxiter=100, tol=1e-5, scale_est='MAD', init=None, cov='H1',
-            update_scale=True):
+    def fit(self, maxiter=100, tol=1e-8, scale_est='MAD', init=None, cov='H1',
+            update_scale=True, conv='dev'):
         """
         Iterated reweighted least squares for robust regression.
 
@@ -160,7 +164,7 @@ class RLM(LikelihoodModel):
 
         tol : float
             The convergence tolerance of the estimate.
-            Defaults is 1e1-5
+            Defaults is 1e1-8
 
         scale_est : string
             'MAD', 'stand_MAD', or 'Huber'
@@ -186,6 +190,15 @@ class RLM(LikelihoodModel):
             weights is held constant over the iteration.  Otherwise, it
             is updated for each fit in the iteration.  Defaults is True.
 
+        conv : string
+            Indicates the convergence criteria.
+            Available options are "coefs" (the coefficients), "weights" (the
+            weights in the iteration), "resids" (the standardized residuals),
+            and "dev" (the un-normalized log-likelihood for the M
+            estimator).
+            The default is "dev".
+
+
         Returns
         -------
         results : object
@@ -196,21 +209,33 @@ class RLM(LikelihoodModel):
             raise AttributeError, "Covariance matrix %s not understood" % cov
         else:
             self.cov = cov.upper()
+        conv = conv.lower()
+        if not conv in ["weights","coefs","dev","resid"]:
+            raise AttributeError, "Convergence argument %s not understood" \
+                % conv
         if not init:
-            wls_results = WLS(self._endog, self._exog).fit()
             # initial guess is OLS by default, ie., weights = 1
-        self.scale = self.estimate_scale(wls_results.resid) # overwrite scale estimate
+            wls_results = WLS(self._endog, self._exog).fit()
+            self.scale = self.estimate_scale(wls_results.resid) #overwrite scale
         self.update_history(wls_results)
+        self.iteration = 0  # so these don't accumulate across fits
         self.iteration += 1
-        while ((np.fabs(self.history['deviance'][self.iteration]-\
-                self.history['deviance'][self.iteration-1])) > tol and \
+        if conv == 'coefs':
+            criterion = self.history['params']
+        elif conv == 'dev':
+            criterion = self.history['deviance']
+        elif conv == 'resid':
+            criterion = self.history['sresid']
+        elif conv == 'weights':
+            criterion = self.history['weights']
+        while ((np.fabs(criterion[self.iteration]-\
+                criterion[self.iteration-1])).all() > tol and \
                 self.iteration < maxiter):
             self.weights = self.M.weights((self._endog - wls_results.predict) \
                         /self.scale)
             wls_results = WLS(self._endog, self._exog,
                                     weights=self.weights).fit()
             if update_scale is True:
-# M&P suggests to use a constant weight, can be iterative or constant of a "resistant" fit
                 self.scale = self.estimate_scale(wls_results.resid)
             self.update_history(wls_results)
             self.iteration += 1
