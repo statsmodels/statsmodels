@@ -302,7 +302,7 @@ class TukeyBiweight(RobustNorm):
 
 
 def estimate_location(a, scale, norm=HuberT(), axis=0, initial=None,
-                      niter=30, tol=1.0e-06):
+                      maxiter=30, tol=1.0e-06):
     """
     M-estimator of location using self.norm and a current
     estimator of scale.
@@ -338,12 +338,13 @@ def estimate_location(a, scale, norm=HuberT(), axis=0, initial=None,
     else:
         mu = initial
 
-    for iter in range(niter):
+    for iter in range(maxiter):
         W = norm.weights((a-mu)/scale)
         nmu = np.sum(W*a, axis) / np.sum(W, axis)
         if np.alltrue(np.less(np.fabs(mu - nmu), scale * tol)):
             return nmu
         else:
             mu = nmu
-    raise ValueError("location estimator failed to converge in %d iterations" % niter)
+    raise ValueError("location estimator failed to converge in %d iterations"\
+            % maxiter)
 

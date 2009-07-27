@@ -258,6 +258,7 @@ class longley_gls(object):
 
 class stackloss_default(object):
     def __init__(self):
+        pass
 # import weights, residuals,
 # going to R_model_wrap it
 #        self.params = None

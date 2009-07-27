@@ -14,6 +14,8 @@ class RModel(object):
     ''' Class gives R models scipy.models -like interface '''
     def __init__(self, y, design, model_type=r.lm, **kwds):
         ''' Set up and estimate R model with data and design '''
+        r.library('MASS') # still has to be loaded in tests but needed for
+                          # if test below
         self.y = np.array(y)
         self.design = np.array(design)
         self.model_type = model_type

@@ -103,8 +103,9 @@ class RLM(LikelihoodModel):
         self.normalized_cov_params = np.dot(self.calc_params,
                                         np.transpose(self.calc_params))
 #        self.df_resid = self._exog.shape[0] - utils.rank(self._exog)
-        self.df_resid = np.nan  # to avoid estimating residuals in WLS? needed?
+        self.df_resid = np.float(self._exog.shape[0] - utils.rank(self._exog))
         self.df_model = np.float(utils.rank(self._exog)-1)
+        self.nobs = float(self._endog.shape[0])
 
     def score(self, params):
         pass
@@ -141,9 +142,27 @@ class RLM(LikelihoodModel):
             return scale.MAD(resid)
         if self.scale_est == 'stand_MAD':
             return scale.stand_MAD(resid)
-#        elif self.scale_est == "Huber":
+        elif self.scale_est == "Huber":
 ##            return scale.huber(resid)**2
-#            return scale.huber(resid)
+            #must initialize an instance to specify norm, etc.
+#            s = scale.Huber(norm=self.M)
+#            return scale.huber(resid)[1]    # what do you do with loc?
+            # why are we iterating within the iterator, it should be
+# alternating?
+            if self.scale == None:
+# what to use for first guess?
+#                self.scale = 1. #?
+#                self.scale = (1/self.df_resid)*np.sum(resid**2) # sigma**2
+                self.scale = models.robust.scale.MAD(resid)
+                # OLS estimate
+            d = 1.5
+            h = self.df_resid/self.nobs * (d**2 + (1-d**2)*Gaussian.cdf(d)-.5\
+                -d*np.sqrt(2*np.pi)*np.exp(-.5*d**2))
+#            test = np.less_equal(np.fabs(resid/self.scale), d)
+            rw = np.clip(resid, -d*self.scale, d*self.scale
+            chi = test * ((resid/self.scale)**2)/2 + (1-test)*(d**2)/2
+            return np.sqrt(1/(self.nobs*h) * np.sum(chi)*self.scale**2)
+
 #        else:
 #            return scale.scale_est(self, resid)**2
 #        return np.median(np.fabs(resid))/Gaussian.ppf(3/4.)
@@ -216,10 +235,10 @@ class RLM(LikelihoodModel):
         if not init:
             # initial guess is OLS by default, ie., weights = 1
             wls_results = WLS(self._endog, self._exog).fit()
-            self.scale = self.estimate_scale(wls_results.resid) #overwrite scale
+            self.scale = None # only necessary for Huber proposal 2
+            self.scale = self.estimate_scale(wls_results.resid)
         self.update_history(wls_results)
-        self.iteration = 0  # so these don't accumulate across fits
-        self.iteration += 1
+        self.iteration = 1  # so these don't accumulate across fits
         if conv == 'coefs':
             criterion = self.history['params']
         elif conv == 'dev':
@@ -228,9 +247,10 @@ class RLM(LikelihoodModel):
             criterion = self.history['sresid']
         elif conv == 'weights':
             criterion = self.history['weights']
-        while ((np.fabs(criterion[self.iteration]-\
-                criterion[self.iteration-1])).all() > tol and \
+        while (np.all(np.fabs(criterion[self.iteration]-\
+                criterion[self.iteration-1]) > tol) and \
                 self.iteration < maxiter):
+            print self.scale
             self.weights = self.M.weights((self._endog - wls_results.predict) \
                         /self.scale)
             wls_results = WLS(self._endog, self._exog,
@@ -255,7 +275,7 @@ class RLMResults(LikelihoodModelResults):
 
     def _get_results(self, model):
         self.df_model = model.df_model
-        self.df_resid = np.float(model._exog.shape[0] - utils.rank(model._exog))
+        self.df_resid = model.df_resid
         self.fitted_values = np.dot(model._exog, self.params)
         self.hat = np.dot(model._exog,model.calc_params)
         self.resid = model._endog - self.fitted_values   # before bcov
@@ -263,7 +283,7 @@ class RLMResults(LikelihoodModelResults):
         self.calc_params = model.calc_params    # for bcov,
                                                 # this is getting sloppy
         self.bcov_unscaled = self.cov_params(scale=1)
-        self.nobs = np.float(model._exog.shape[0])
+        self.nobs = model.nobs
         self.weights = model.weights
         m = np.mean(model.M.psi_deriv(self.resid/self.scale))
         var_psiprime = np.var(model.M.psi_deriv(self.resid/self.scale))
@@ -316,20 +336,20 @@ if __name__=="__main__":
     exog = exog.T
     exog = models.functions.add_constant(exog)
 
-    model_ols = models.regression.OLS(endog, exog)
-    results_ols = model_ols.fit()
+#    model_ols = models.regression.OLS(endog, exog)
+#    results_ols = model_ols.fit()
 
-    model_huber = RLM(endog, exog, M=norms.HuberT(t=2.))
-    results_huber = model_huber.fit(scale_est="stand_MAD", update_scale=False)
+#    model_huber = RLM(endog, exog, M=norms.HuberT(t=2.))
+#    results_huber = model_huber.fit(scale_est="stand_MAD", update_scale=False)
 
-    model_ramsaysE = RLM(endog, exog, M=norms.RamsayE())
-    results_ramsaysE = model_ramsaysE.fit(update_scale=False)
+#    model_ramsaysE = RLM(endog, exog, M=norms.RamsayE())
+#    results_ramsaysE = model_ramsaysE.fit(update_scale=False)
 
-    model_andrewWave = RLM(endog, exog, M=norms.AndrewWave())
-    results_andrewWave = model_andrewWave.fit(update_scale=False)
+#    model_andrewWave = RLM(endog, exog, M=norms.AndrewWave())
+#    results_andrewWave = model_andrewWave.fit(update_scale=False)
 
-    model_hampel = RLM(endog, exog, M=norms.Hampel(a=1.7,b=3.4,c=8.5)) # convergence problems with scale changed, not with 2,4,8 though?
-    results_hampel = model_hampel.fit(update_scale=False)
+#    model_hampel = RLM(endog, exog, M=norms.Hampel(a=1.7,b=3.4,c=8.5)) # convergence problems with scale changed, not with 2,4,8 though?
+#    results_hampel = model_hampel.fit(update_scale=False)
 
 #######################
 ### Stack Loss Data ###
@@ -340,31 +360,43 @@ if __name__=="__main__":
 #############
 ### Huber ###
 #############
-    m1_Huber = RLM(data.endog, data.exog, M=norms.HuberT())
-    results_Huber1 = m1_Huber.fit()
-    m2_Huber = RLM(data.endog, data.exog, M=norms.HuberT())
-    results_Huber2 = m2_Huber.fit(cov="H2")
-    m3_Huber = RLM(data.endog, data.exog, M=norms.HuberT())
-    results_Huber3 = m3_Huber.fit(cov="H3")
+#    m1_Huber = RLM(data.endog, data.exog, M=norms.HuberT())
+#    results_Huber1 = m1_Huber.fit()
+#    m2_Huber = RLM(data.endog, data.exog, M=norms.HuberT())
+#    results_Huber2 = m2_Huber.fit(cov="H2")
+#    m3_Huber = RLM(data.endog, data.exog, M=norms.HuberT())
+#    results_Huber3 = m3_Huber.fit(cov="H3")
 ##############
 ### Hampel ###
 ##############
-    m1_Hampel = RLM(data.endog, data.exog, M=norms.Hampel())
-    results_Hampel1 = m1_Hampel.fit()
-    m2_Hampel = RLM(data.endog, data.exog, M=norms.Hampel())
-    results_Hampel2 = m2_Hampel.fit(cov="H2")
-    m3_Hampel = RLM(data.endog, data.exog, M=norms.Hampel())
-    results_Hampel3 = m3_Hampel.fit(cov="H3")
+#    m1_Hampel = RLM(data.endog, data.exog, M=norms.Hampel())
+#    results_Hampel1 = m1_Hampel.fit()
+#    m2_Hampel = RLM(data.endog, data.exog, M=norms.Hampel())
+#    results_Hampel2 = m2_Hampel.fit(cov="H2")
+#    m3_Hampel = RLM(data.endog, data.exog, M=norms.Hampel())
+#    results_Hampel3 = m3_Hampel.fit(cov="H3")
 ################
 ### Bisquare ###
 ################
-    m1_Bisquare = RLM(data.endog, data.exog, M=norms.TukeyBiweight())
-    results_Bisquare1 = m1_Bisquare.fit()
-    m2_Bisquare = RLM(data.endog, data.exog, M=norms.TukeyBiweight())
-    results_Bisquare2 = m2_Bisquare.fit(cov="H2")
-    m3_Bisquare = RLM(data.endog, data.exog, M=norms.TukeyBiweight())
-    results_Bisquare3 = m3_Bisquare.fit(cov="H3")
+#    m1_Bisquare = RLM(data.endog, data.exog, M=norms.TukeyBiweight())
+#    results_Bisquare1 = m1_Bisquare.fit()
+#    m2_Bisquare = RLM(data.endog, data.exog, M=norms.TukeyBiweight())
+#    results_Bisquare2 = m2_Bisquare.fit(cov="H2")
+#    m3_Bisquare = RLM(data.endog, data.exog, M=norms.TukeyBiweight())
+#    results_Bisquare3 = m3_Bisquare.fit(cov="H3")
 
+
+##############################################
+# Huber's Proposal 2 scaling                 #
+##############################################
+
+################
+### Huber'sT ###
+################
+    m1_Huber_H = RLM(data.endog, data.exog, M=norms.HuberT())
+    results_Huber1_H = m1_Huber_H.fit(scale_est = 'Huber')
+#    m2_Huber_H
+#    m3_Huber_H
 # Huber scale estimate do not currently work
 #    m4 = RLM(data.endog, data.exog, M=norms.HuberT())
 #    results4 = m1.fit(scale_est="Huber")
@@ -376,16 +408,16 @@ if __name__=="__main__":
 
 
 
-    print """Least squares fit
-%s
-Huber Params, t = 2.
-%s
-Ramsay's E Params
-%s
-Andrew's Wave Params
-%s
-Hampel's 17A Function
-%s
-""" % (results_ols.params, results_huber.params, results_ramsaysE.params,
-            results_andrewWave.params, results_hampel.params)
+#    print """Least squares fit
+#%s
+#Huber Params, t = 2.
+#%s
+#Ramsay's E Params
+#%s
+#Andrew's Wave Params
+#%s
+#Hampel's 17A Function
+#%s
+#""" % (results_ols.params, results_huber.params, results_ramsaysE.params,
+#            results_andrewWave.params, results_hampel.params)
 

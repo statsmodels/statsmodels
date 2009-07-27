@@ -57,7 +57,7 @@ class Huber(object):
     Springer, New York, 2002.
     """
 
-    def __init__(self, c=1.5, tol=1.0e-06, niter=30, norm=None):
+    def __init__(self, c=1.5, tol=1.0e-08, maxiter=30, norm=None):
         """
         Instance of Huber's proposal 2 for estimating
         (location, scale) jointly.
@@ -68,7 +68,7 @@ class Huber(object):
             Threshold used in threshold for chi=psi**2
         tol : float
             Tolerance for convergence
-        niter : int
+        maxiter : int
             Maximum number of iterations
         norm : ``norms.RobustNorm``
             A robust norm used in M estimator of location. If None,
@@ -76,7 +76,7 @@ class Huber(object):
             fixed point version of the M-estimator using norms.HuberT
         """
         self.c = c
-        self.niter = niter
+        self.maxiter = maxiter
         self.tol = tol
         self.norm = norm
         tmp = 2 * Gaussian.cdf(c) - 1
@@ -110,11 +110,11 @@ class Huber(object):
             est_mu = False
 
         if scale is None:
-            scale = MAD(a, axis=axis)
+            scale = MAD(a, axis=axis)   # note that MAD got changed
         else:
             scale = scale
 
-        scale = unsqueeze(scale, axis, a.shape)
+        scale = unsqueeze(scale, axis, a.shape) # why??
         mu = unsqueeze(mu, axis, a.shape)
 
         return self._estimate_both(a, scale, mu, axis, est_mu, n)
@@ -133,40 +133,44 @@ class Huber(object):
         """
 
         # local shorthands
-        sqrt = np.sqrt
-        le = np.less_equal
-        fabs = np.fabs
+#        sqrt = np.sqrt
+#        le = np.less_equal
+#        fabs = np.fabs
 
-        for _ in range(self.niter):
-
+        for _ in range(self.maxiter):
             # Estimate the mean along a given axis
-
             if est_mu:
-                if self.norm is None:
+                if self.norm is None:   # it will always be None as written
+                                        # allowing to specify norm
+                                        # resulted in nonconvergence for
+                                        # HuberT()
                     # This is a one-step fixed-point estimator
                     # if self.norm == norms.HuberT
                     # It should be faster than using norms.HuberT
-                    nmu = np.clip(a, mu-self.c*scale, mu+self.c*scale).sum(axis) / a.shape[axis]
+                    nmu = np.clip(a, mu-self.c*scale,
+                        mu+self.c*scale).sum(axis) / a.shape[axis]
                 else:
-                    nmu = norms.estimate_location(a, scale, self.norm, axis, mu, self.niter, self.tol)
+                    nmu = norms.estimate_location(a, scale, self.norm, axis, mu,                        self.maxiter, self.tol)
             else:
                 # Effectively, do nothing
                 nmu = mu.squeeze()
             nmu = unsqueeze(nmu, axis, a.shape)
 
-            subset = le(fabs((a - mu)/scale), self.c)
+            subset = np.less_equal(fabs((a - mu)/scale), self.c)
             card = subset.sum(axis)
 
-            nscale = sqrt(np.sum(subset * (a - nmu)**2, axis) / (n * self.gamma - (a.shape[axis] - card) * self.c**2))
+            nscale = np.sqrt(np.sum(subset * (a - nmu)**2, axis) \
+                    / (n * self.gamma - (a.shape[axis] - card) * self.c**2))
             nscale = unsqueeze(nscale, axis, a.shape)
 
-            test1 = np.alltrue(le(fabs(scale - nscale), nscale * self.tol))
-            print fabs(scale/nscale - 1.).max()
-            test2 = np.alltrue(le(fabs(mu - nmu), nscale * self.tol))
+            test1 = np.all(np.less_equal(np.fabs(scale - nscale),
+                        nscale * self.tol))
+            print np.fabs(scale/nscale - 1.).max()
+            test2 = np.all(np.less_equal(np.fabs(mu - nmu), nscale * self.tol))
             if not (test1 and test2):
                 mu = nmu; scale = nscale
             else:
                 return nmu.squeeze(), nscale.squeeze()
-        raise ValueError('joint estimation of location and scale failed to converge in %d iterations' % self.niter)
+        raise ValueError('joint estimation of location and scale failed to converge in %d iterations' % self.maxiter)
 
 huber = Huber()
