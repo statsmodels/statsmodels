@@ -332,7 +332,7 @@ class Binomial(Family):
     variance = V.binary
 
     def __init__(self, link=L.logit, n=1.):
-        self.n = n              # no good reason to have this now...
+        self.n = n
         self.variance = V.Binomial(n=self.n)
         self.link = link
 
@@ -370,8 +370,10 @@ class Binomial(Family):
                 deviance as described above
 
         '''
-        if np.shape(self.n) == ():
-            return super(Binomial, self).deviance(Y, mu, scale)
+        if np.shape(self.n) == () and self.n == 1:
+            one = np.equal(Y,1)
+            return -2 * np.sum(one * np.log(mu) + (1-one) * np.log(1-mu))
+
         else:
             return 2*np.sum(self.n*(Y*np.log(Y/mu)+(1-Y)*np.log((1-Y)/(1-mu))))
 

@@ -46,7 +46,6 @@ class LeastSquares(RobustNorm):
     John Wiley and Sons, Inc., New York, 2001.
 
     """
-
     def rho(self, z):
         return z**2 * 0.5
 
@@ -60,7 +59,6 @@ class LeastSquares(RobustNorm):
         return np.ones(z,shape, np.float64)
 
 class HuberT(RobustNorm):
-
     """
     Huber\'s T for M estimation.
 
@@ -69,7 +67,6 @@ class HuberT(RobustNorm):
 
     R Venables, B Ripley. \'Modern Applied Statistics in S\'
     Springer, New York, 2002.
-
     """
 
     def __init__(self, t=1.345):
@@ -98,15 +95,12 @@ class HuberT(RobustNorm):
     def psi_deriv(self, z):
         return np.less_equal(np.fabs(z), self.t)
 
-
 class RamsayE(RobustNorm):
-
     """
     Ramsay\'s Ea for M estimation.
 
     DC Montgomery, EA Peck. \'Introduction to Linear Regression Analysis\',
     John Wiley and Sons, Inc., New York, 2001.
-
     """
     a = 0.3
 

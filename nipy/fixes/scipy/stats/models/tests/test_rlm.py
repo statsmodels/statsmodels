@@ -25,9 +25,12 @@ class check_rlm_results(object):
     def test_params(self):
         assert_almost_equal(self.res1.params, self.res2.params, DECIMAL)
 
-    @dec.knownfailureif(True, "Needs to be switched to SAS standard errors")
-    def test_standarderrors(self):
-        assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL)
+# testing covariance matrices takes care of this
+# as long as the correct distribution is used for errors
+#    @dec.knownfailureif(True, "Needs to be switched to SAS standard errors")
+#    def test_standarderrors(self):
+#        assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL)
+
 
     @dec.knownfailureif(True, "Not given by RModelwrap")
     def test_confidenceintervals(self):
@@ -65,6 +68,7 @@ class test_rlm(check_rlm_results):
     from models.datasets.stackloss.data import load
     data = load()
     data.exog = models.functions.add_constant(data.exog)
+    r.library('MASS')
     def __init__(self):
         results = RLM(self.data.endog, self.data.exog,\
                     M=models.robust.norms.HuberT()).fit()   # default M
@@ -75,14 +79,18 @@ class test_rlm(check_rlm_results):
         self.res1 = results
         self.res1.h2 = h2
         self.res1.h3 = h3
-        r.library('MASS')
         self.res2 = RModel(self.data.endog, self.data.exog,
                         r.rlm, psi="psi.huber")
         self.res2.h1 = rlm_results.huber_h1
         self.res2.h2 = rlm_results.huber_h2
         self.res2.h3 = rlm_results.huber_h3
 
-    def test_hampel(self):
+# have no idea why rpy doesn't want to work for this one
+# raises an exception if you use data.endog, data.exog
+# if not it doesn't convert the results and returns
+# dicts
+class test_hampel(test_rlm):
+    def __init__(self):
         d = rpy.as_list(r('stackloss'))
         y = d[0]['stack.loss']
         x = np.column_stack(np.array(d[0][name]) for name in d[0].keys()[0:-1])
@@ -99,8 +107,7 @@ class test_rlm(check_rlm_results):
         self.res1 = results
         self.res1.h2 = h2
         self.res1.h3 = h3
-        self.res2 = RModel(y, x,
-                        r.rlm, psi="psi.hampel")
+        self.res2 = RModel(y, x, r.rlm, psi="psi.hampel")
         self.res2.h1 = rlm_results.hampel_h1
         self.res2.h2 = rlm_results.hampel_h2
         self.res2.h3 = rlm_results.hampel_h3
@@ -110,17 +117,35 @@ class test_rlm_bisquare(test_rlm):
         results = RLM(self.data.endog, self.data.exog,
                     M=models.robust.norms.TukeyBiweight()).fit()
         h2 = RLM(self.data.endog, self.data.exog,\
-                    M=models.robust.norms.Hampel()).fit(cov="H2").bcov_scaled
+                    M=models.robust.norms.TukeyBiweight()).fit(cov=\
+                    "H2").bcov_scaled
         h3 = RLM(self.data.endog, self.data.exog,\
-                    M=models.robust.norms.Hampel()).fit(cov="H3").bcov_scaled
+                    M=models.robust.norms.TukeyBiweight()).fit(cov=\
+                    "H3").bcov_scaled
         self.res1 = results
         self.res1.h2 = h2
         self.res1.h3 = h3
         self.res2 = RModel(self.data.endog, self.data.exog,
                         r.rlm, psi="psi.bisquare")
         self.res2.h1 = rlm_results.bisquare_h1
-        self.res2.h2 = 0#rlm_results.bisquare_h2
-        self.res2.h3 = 0#rlm_results.bisquare_h3
+        self.res2.h2 = rlm_results.bisquare_h2
+        self.res2.h3 = rlm_results.bisquare_h3
+
+class test_rlm_andrews(test_rlm):
+    def __init__(self):
+        results = RLM(self.data.endog, self.data.exog,
+                    M=models.robust.norms.AndrewWave()).fit()
+        h2 = RLM(self.data.endog, self.data.exog,
+                    M=models.robust.norms.AndrewWave()).fit(cov=\
+                    "H2").bcov_scaled
+        h3 = RLM(self.data.endog, self.data.exog,
+                    M=models.robust.norms.AndrewWave()).fit(cov=\
+                    "H3").bcov_scaled
+        self.res1 = results
+        self.res1.h2 = h2
+        self.res1.h3 = h3
+        self.res2 = rlm_results.andrews()
+
 
 if __name__=="__main__":
     run_module_suite()

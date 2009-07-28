@@ -79,11 +79,11 @@ def add_constant(data):
     data = np.asarray(data)
     if np.any(data[0]==1):
         ind = np.squeeze(np.where(data[0]==1))
-        if ind.size == 1 and np.all(data[:,ind]==1):
+        if ind.size == 1 and np.all(data[:,ind] == 1):
             return data
         elif ind.size > 1:
             for col in ind:
-                if np.all(data[:,col]) == 1:
+                if np.all(data[:,col] == 1):
                     return data
     data = np.hstack((data, np.ones((data.shape[0], 1))))
     return data

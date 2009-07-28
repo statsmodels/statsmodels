@@ -113,10 +113,8 @@ class Huber(object):
             scale = MAD(a, axis=axis)   # note that MAD got changed
         else:
             scale = scale
-
         scale = unsqueeze(scale, axis, a.shape) # why??
         mu = unsqueeze(mu, axis, a.shape)
-
         return self._estimate_both(a, scale, mu, axis, est_mu, n)
 
     def _estimate_both(self, a, scale, mu, axis, est_mu, n):
@@ -131,12 +129,6 @@ class Huber(object):
         the check used in Section 5.5 of Venables & Ripley
 
         """
-
-        # local shorthands
-#        sqrt = np.sqrt
-#        le = np.less_equal
-#        fabs = np.fabs
-
         for _ in range(self.maxiter):
             # Estimate the mean along a given axis
             if est_mu:
@@ -156,7 +148,7 @@ class Huber(object):
                 nmu = mu.squeeze()
             nmu = unsqueeze(nmu, axis, a.shape)
 
-            subset = np.less_equal(fabs((a - mu)/scale), self.c)
+            subset = np.less_equal(np.fabs((a - mu)/scale), self.c)
             card = subset.sum(axis)
 
             nscale = np.sqrt(np.sum(subset * (a - nmu)**2, axis) \
@@ -165,7 +157,7 @@ class Huber(object):
 
             test1 = np.all(np.less_equal(np.fabs(scale - nscale),
                         nscale * self.tol))
-            print np.fabs(scale/nscale - 1.).max()
+#            print np.fabs(scale/nscale - 1.).max()
             test2 = np.all(np.less_equal(np.fabs(mu - nmu), nscale * self.tol))
             if not (test1 and test2):
                 mu = nmu; scale = nscale

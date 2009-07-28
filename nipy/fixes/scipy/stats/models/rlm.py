@@ -146,28 +146,28 @@ class RLM(LikelihoodModel):
 ##            return scale.huber(resid)**2
             #must initialize an instance to specify norm, etc.
 #            s = scale.Huber(norm=self.M)
-#            return scale.huber(resid)[1]    # what do you do with loc?
+            return scale.huber(resid)   # what do you do with loc?
             # why are we iterating within the iterator, it should be
 # alternating?
-            if self.scale == None:
+#            if self.scale == None:
 # what to use for first guess?
 #                self.scale = 1. #?
 #                self.scale = (1/self.df_resid)*np.sum(resid**2) # sigma**2
-                self.scale = models.robust.scale.MAD(resid)
-                # OLS estimate
-            d = 1.5
-            h = self.df_resid/self.nobs * (d**2 + (1-d**2)*Gaussian.cdf(d)-.5\
-                -d*np.sqrt(2*np.pi)*np.exp(-.5*d**2))
+#                self.scale = models.robust.scale.MAD(resid)
+#                # OLS estimate
+#            d = 1.5
+#            h = self.df_resid/self.nobs * (d**2 + (1-d**2)*Gaussian.cdf(d)-.5\
+#                -d*np.sqrt(2*np.pi)*np.exp(-.5*d**2))
 #            test = np.less_equal(np.fabs(resid/self.scale), d)
-            rw = np.clip(resid, -d*self.scale, d*self.scale
-            chi = test * ((resid/self.scale)**2)/2 + (1-test)*(d**2)/2
-            return np.sqrt(1/(self.nobs*h) * np.sum(chi)*self.scale**2)
+#            rw = np.clip(resid, -d*self.scale, d*self.scale)
+#            chi = test * ((resid/self.scale)**2)/2 + (1-test)*(d**2)/2
+#            return np.sqrt(1/(self.nobs*h) * np.sum(chi)*self.scale**2)
 
 #        else:
 #            return scale.scale_est(self, resid)**2
 #        return np.median(np.fabs(resid))/Gaussian.ppf(3/4.)
 
-    def fit(self, maxiter=100, tol=1e-8, scale_est='MAD', init=None, cov='H1',
+    def fit(self, maxiter=1000, tol=1e-8, scale_est='MAD', init=None, cov='H1',
             update_scale=True, conv='dev'):
         """
         Iterated reweighted least squares for robust regression.
@@ -232,11 +232,12 @@ class RLM(LikelihoodModel):
         if not conv in ["weights","coefs","dev","resid"]:
             raise AttributeError, "Convergence argument %s not understood" \
                 % conv
-        if not init:
-            # initial guess is OLS by default, ie., weights = 1
-            wls_results = WLS(self._endog, self._exog).fit()
-            self.scale = None # only necessary for Huber proposal 2
+        wls_results = WLS(self._endog, self._exog).fit()
+        if not init and not self.scale_est.lower() == "huber":
             self.scale = self.estimate_scale(wls_results.resid)
+        elif not init and self.scale_est.lower() == "huber":
+            self.scale = scale.MAD(wls_results.resid)   # huber needs a first guess
+            self.loc, self.scale = self.estimate_scale(wls_results.resid)
         self.update_history(wls_results)
         self.iteration = 1  # so these don't accumulate across fits
         if conv == 'coefs':
@@ -251,12 +252,22 @@ class RLM(LikelihoodModel):
                 criterion[self.iteration-1]) > tol) and \
                 self.iteration < maxiter):
             print self.scale
-            self.weights = self.M.weights((self._endog - wls_results.predict) \
+            if not self.scale_est.lower() == "huber":
+                self.weights = self.M.weights((self._endog - wls_results.predict) \
                         /self.scale)
+            elif self.scale_est.lower() == "huber":
+                print self.loc
+                raw_input('pause')
+                print self.scale
+                raw_input('pause')
+                self.weights = self.M.weights((self._endog - self.loc)/self.scale)
+
             wls_results = WLS(self._endog, self._exog,
                                     weights=self.weights).fit()
-            if update_scale is True:
+            if update_scale is True and not self.scale_est.lower()=="huber":
                 self.scale = self.estimate_scale(wls_results.resid)
+            elif update_scale is True and self.scale_est.lower() == "huber":
+                self.loc, self.scale = self.estimate_scale(wls_results.resid)
             self.update_history(wls_results)
             self.iteration += 1
         self.results = RLMResults(self, wls_results.params,
@@ -288,7 +299,6 @@ class RLMResults(LikelihoodModelResults):
         m = np.mean(model.M.psi_deriv(self.resid/self.scale))
         var_psiprime = np.var(model.M.psi_deriv(self.resid/self.scale))
         k = 1 + (self.df_model+1)/self.nobs * var_psiprime/m**2
-# these might better be called unbiased rather than scaled
         if model.cov == "H1":
 # THE BELOW IS CORRECT!!! # Based on Huber (1973) 8.14
 # SAS documentation and Huber 1981 is misleading...

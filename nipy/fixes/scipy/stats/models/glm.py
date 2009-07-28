@@ -195,8 +195,7 @@ class GLMtwo(LikelihoodModel):
     def update_history(self, tmp_result, mu):
         self.history['params'].append(tmp_result.params)
         self.history['predict'].append(tmp_result.predict)
-        self.history['deviance'].append(self.family.deviance(self.y, mu))#/ tmp_result.scale)
-# or / np.sqrt(tmp_results.scale)...how it was?
+        self.history['deviance'].append(self.family.deviance(self.y, mu))
 
     def estimate_scale(self, mu):
         """
@@ -235,7 +234,7 @@ class GLMtwo(LikelihoodModel):
             raise ValueError, "Scale %s with type %s not understood" %\
                 (self.scaletype, type(self.scaletype))
 
-    def fit(self, maxiter=100, method='IRLS', tol=1e-5, data_weights=1.,
+    def fit(self, maxiter=100, method='IRLS', tol=1e-8, data_weights=1.,
             scale=None):
         '''
         Fits a glm model based
@@ -261,7 +260,6 @@ class GLMtwo(LikelihoodModel):
         if np.shape(self.data_weights) == () and self.data_weights>1:
             self.data_weights = self.data_weights * np.ones((self._exog.shape[0]))
         self.scaletype = scale
-
         if isinstance(self.family, family.Binomial):
             self.y = self.family.initialize(self.y)
             mu = (self.y + 0.5)/2    # starting mu for binomial
