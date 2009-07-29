@@ -12,12 +12,7 @@ import nose.tools
 chem = np.array([2.20, 2.20, 2.4, 2.4, 2.5, 2.7, 2.8, 2.9, 3.03, 3.03, 3.10, 3.37, \
                      3.4, 3.4, 3.4, 3.5, 3.6, 3.7, 3.7, 3.7,3.7, 3.77, 5.28, 28.95])
 
-#<<<<<<< TREE
-#import neuroimaging.fixes.scipy.stats.models.robust.scale as scale
-#reload(scale)
-#=======
 import models.robust.scale as scale
-
 
 W = R.standard_normal
 
@@ -27,7 +22,7 @@ def test_chem():
     """
     yield nptest.assert_almost_equal, np.mean(chem), 4.2804, 4
     yield nptest.assert_almost_equal, np.median(chem), 3.385, 4
-    yield nptest.assert_almost_equal, scale.MAD(chem), 0.52632, 5
+    yield nptest.assert_almost_equal, scale.stand_MAD(chem), 0.52632, 5
     yield nptest.assert_almost_equal, scale.huber(chem)[0], 3.20549, 5
     yield nptest.assert_almost_equal, scale.huber(chem)[1], 0.67365, 5
 
@@ -51,30 +46,32 @@ def test_MAD():
 
 def test_MADaxes():
     X = W((40,10,30))
-    m = scale.MAD(X, axis=0)
+    m = scale.stand_MAD(X, axis=0)
     yield nose.tools.assert_equals, m.shape, (10,30)
 
-    m = scale.MAD(X, axis=1)
+    m = scale.stand_MAD(X, axis=1)
     yield nose.tools.assert_equals, m.shape, (40,30)
 
-    m = scale.MAD(X, axis=2)
+    m = scale.stand_MAD(X, axis=2)
     yield nose.tools.assert_equals, m.shape, (40,10)
 
-    m = scale.MAD(X, axis=-1)
+    m = scale.stand_MAD(X, axis=-1)
     yield nose.tools.assert_equals, m.shape, (40,10)
 
 
 
-# FIXME: Fix the axis length bug in stats.models.robust.scale.huber
+#FIXME: Fix the axis length bug in stats.models.robust.scale.huber
 #     Then resolve ticket #587
-#@dec.knownfailureif(True)
+
 def test_huber():
     """
     this test occasionally fails because it is based on Gaussian noise, could try to empirically tweak it so it has a prespecified failure rate...
     """
+#TODO: What do the above fix and these failures mean?
+    # can just run this example with a seed value for the rng?
 
     X = W((40,10))
-    h = scale.Huber(niter=100)
+    h = scale.Huber(maxiter=100)
     m, s = h(X)
     yield nose.tools.assert_equals, m.shape, (10,)
 
@@ -82,8 +79,9 @@ def test_huberaxes():
     """
     this test occasionally fails because it is based on Gaussian noise, could try to empirically tweak it so it has a prespecified failure rate...
     """
+    np.random.seed(54321)
     X = W((40,10,30))
-    h = scale.Huber(niter=1000, tol=1.0e-05)
+    h = scale.Huber(maxiter=1000, tol=1.0e-05)
     m, s = h(X, axis=0)
     yield nose.tools.assert_equals, m.shape, (10,30)
 

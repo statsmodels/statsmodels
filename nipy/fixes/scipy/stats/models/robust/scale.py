@@ -35,10 +35,7 @@ def MAD(a, c=Gaussian.ppf(3/4.), axis=0):  # c \approx .6745
     Venables and Ripley
     """
     a = np.asarray(a)
-#    d = np.median(a, axis=axis)
-#    d = unsqueeze(d, axis, a.shape)
-#    return np.median(np.fabs(a - d) / c, axis=axis)
-    return np.median(np.fabs(a))/c
+    return np.median((np.fabs(a))/c, axis=axis)
 
 def stand_MAD(a, c=Gaussian.ppf(3/4.), axis=0):
     """
@@ -47,7 +44,9 @@ def stand_MAD(a, c=Gaussian.ppf(3/4.), axis=0):
     MAD = median(abs(a - median(a))) / c
     """
     a = np.asarray(a)
-    return np.median(np.fabs(a - np.median(a)))/c
+    d = np.median(a, axis = axis)
+    d = unsqueeze(d, axis, a.shape)
+    return np.median(np.fabs(a - d)/c, axis = axis)
 
 class Huber(object):
     """

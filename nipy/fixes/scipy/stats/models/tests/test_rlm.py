@@ -11,6 +11,7 @@ import rpy # for hampel test...ugh
 import numpy as np # ditto
 from models.rlm import RLM
 import rlm_results
+import nose
 
 DECIMAL = 4
 
@@ -27,13 +28,12 @@ class check_rlm_results(object):
 
 # testing covariance matrices takes care of this
 # as long as the correct distribution is used for errors
-#    @dec.knownfailureif(True, "Needs to be switched to SAS standard errors")
 #    def test_standarderrors(self):
 #        assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL)
 
-
-    @dec.knownfailureif(True, "Not given by RModelwrap")
     def test_confidenceintervals(self):
+        if isinstance(self.res2, RModel):
+            raise nose.SkipTest("Results from RModel wrapper")
         assert_almost_equal(self.res1.conf_int(), self.res2.conf_int, DECIMAL)
 
     def test_scale(self):
@@ -43,9 +43,9 @@ class check_rlm_results(object):
     def test_weights(self):
         assert_almost_equal(self.res1.weights, self.res2.weights, DECIMAL)
 
-#    @dec.knownfailureif(True, "Not implemented")
 #    def test_stddev(self):
 #        assert_almost_equal(self.res1.stddev, self.res2.stddev, DECIMAL)
+#   don't know how R calculates this
 
     def test_residuals(self):
         assert_almost_equal(self.res1.resid, self.res2.resid, DECIMAL)
