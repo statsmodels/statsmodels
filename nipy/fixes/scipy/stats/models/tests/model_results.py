@@ -35,7 +35,9 @@ class lbw(object):
     '''
     def __init__(self):
         # data set up for data not in datasets
-        filename="stata_lbw_glm.csv"
+        filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+            "stata_lbw_glm.csv")
+
         data=np.recfromcsv(filename, converters={4: lambda s: s.strip("\"")})
         data = models.functions.xi(data, col='race', drop=True)
         self.endog = data.low
@@ -162,14 +164,15 @@ class inv_gauss():
 
     def __init__(self):
         # set up data #
-        filename="inv_gaussian.csv"
+        filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+            "inv_gaussian.csv")
         data=np.genfromtxt(filename, delimiter=",", skiprows=1)
         self.endog = data[:5000,0]
         self.exog = data[:5000,1:]
         self.exog = models.functions.add_constant(self.exog)
         # Results
 #NOTE: loglikelihood difference in R vs. Stata vs. Models
-# is the same as gamma
+# is the same situation as gamma
         self.params = (0.4519770, -0.2508288, 1.0359574)
         self.bse = (0.03148291, 0.02237211, 0.03429943)
         self.null_deviance = 1520.673165475461

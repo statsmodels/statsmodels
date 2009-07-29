@@ -20,7 +20,7 @@ import numpy.linalg as L
 
 from scipy.linalg import solveh_banded
 from scipy.optimize import golden
-from nipy.fixes.scipy.stats.models import _hbspline
+from models import _hbspline
 
 # Issue warning regarding heavy development status of this module
 import warnings

@@ -24,10 +24,11 @@ from csv import reader              # These are for read_array
 import numpy as np
 from scipy.linalg import norm, toeplitz
 from models.model import LikelihoodModel, LikelihoodModelResults
-from models import utils
-from scipy import stats, derivative
-from scipy.stats.stats import ss
-import numpy.lib.recfunctions as nprf
+from models import utils                # rank utils in np?
+from models.functions import add_constant
+from scipy import stats, derivative     # used?
+from scipy.stats.stats import ss        # could be avoided to eliminate overhead
+import numpy.lib.recfunctions as nprf   # can be removed
 
 
 class GLS(LikelihoodModel):
@@ -56,7 +57,7 @@ class GLS(LikelihoodModel):
             return np.dot(self.cholsigmainv, Y)
         else:
             return Y
-
+#TODO: I think we can remove Y now, was there for old GLM compatibility
     def fit(self, Y=None):
         """
         Full fit of the model including estimate of covariance matrix,
@@ -117,8 +118,9 @@ class GLS(LikelihoodModel):
 # Note on the below: the parameters are calculated with Z and wdesign, but it doesn't
 # make sense for the residuals to be calculated like this does it?
 # led to wrong resids in GLS (I THINK...)
-# also leads to wrong results in RLM
-        lfit.resid = Z - np.dot(self.wdesign, lfit.params) # what is correct for this one.
+# also lead to wrong results in RLM
+        lfit.resid = Z - np.dot(self.wdesign, lfit.params)
+        # what is correct for the above.
                                                             # need to add resids checks to tests
 # the below is right for GLS, but the above is right for GLM (aside from the dispersion problem)
 # moved to _summary for now, GLM will handle its own residuals
@@ -382,7 +384,7 @@ class OLS(WLS):
         return Y
 
 #TODO: Needs to be cleaned up with new design and tested
-class AR(OLS):
+class AR(GLS):
     """
     A regression model with an AR(p) covariance structure.
 
@@ -409,6 +411,7 @@ class AR(OLS):
     ...     rho, sigma = model.yule_walker(data["Y"] - results.predict)
     ...     model = AR(model.design, rho)
     ...
+### NOTE ### the above call to yule_walker needs an order = model.order
     AR coefficients: [ 0.  0.]
     AR coefficients: [-0.52571491 -0.84496178]
     AR coefficients: [-0.620642   -0.88654567]
@@ -428,9 +431,31 @@ class AR(OLS):
     >>> model.iterative_fit(data['Y'], niter=3)
     >>> print model.rho
     [-0.61887622 -0.88137957]
+
+    New Example
+    --------
+    import numpy as np
+    from models.functions import add_constant
+    from models.regression import AR, yule_walker
+
+    X = np.arange(1,8)
+    X = add_constant(X)
+    Y = np.array((1, 3, 4, 5, 8, 10, 9))
+    rho = 2
+    model = AR(Y, X, rho=2)
+    for i in range(6):
+        results = model.fit()
+        print "AR coefficients:", model.rho
+        rho, sigma = yule_walker(results.resid, order = model.order)
+        model = AR(Y, X, rho)
+    results.params
+    results.t() # is this correct? it does equal params/bse
+    # but isn't the same as the AR example (which was wrong in the first place..)
+    print results.Tcontrast([0,1])  # are sd and t correct? vs
+    print results.Fcontrast(np.eye(2))
     """
-    def __init__(self, design, rho):
-        if type(rho) is type(1):
+    def __init__(self, endog, exog=None, rho=1):
+        if isinstance(rho, np.int):
             self.order = rho
             self.rho = np.zeros(self.order, np.float64)
         else:
@@ -440,9 +465,16 @@ class AR(OLS):
             if self.rho.shape == ():
                 self.rho.shape = (1,)
             self.order = self.rho.shape[0]
-        super(AR, self).__init__(design)
+        if exog is None:
+#            cut = rho
+#            exog = add_constant(endog[:-cut])
+#            endog = endog[cut:]
+# Note that the above is closer to the R results, than the below
+            super(AR, self).__init__(endog, add_constant(endog))
+        else:
+            super(AR, self).__init__(endog, exog)
 
-    def iterative_fit(self, Y, niter=3):
+    def iterative_fit(self, maxiter=3):
         """
         Perform an iterative two-stage procedure to estimate AR(p)
         parameters and regression coefficients simultaneously.
@@ -453,12 +485,13 @@ class AR(OLS):
             niter : ``integer``
                 the number of iterations
         """
-        for i in range(niter):
-            self.initialize(self.design)
-            results = self.fit(Y)
-            self.rho, _ = yule_walker(Y - results.predict,
-                                      order=self.order, df=self.df)
-
+        for i in range(maxiter):
+            self.initialize()
+            results = self.fit()
+            self.rho, _ = yule_walker(self._endog - results.predict,
+                                      order=self.order, df=None)
+                                        #note that the X passed is different for
+                                        #univariate.  Why this X anyway?
     def whiten(self, X):
         """
         Whiten a series of columns according to an AR(p)
@@ -474,7 +507,7 @@ class AR(OLS):
             _X[(i+1):] = _X[(i+1):] - self.rho[i] * X[0:-(i+1)]
         return _X
 
-
+# is this supposed to be a function or a method of the AR class as the above example?
 def yule_walker(X, order=1, method="unbiased", df=None, inv=False):
     """
     Estimate AR(p) parameters from a sequence X using Yule-Walker equation.
@@ -502,15 +535,14 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False):
     if method not in ["unbiased", "mle"]:
         raise ValueError, "ACF estimation method must be 'unbiased' \
         or 'MLE'"
-    X = np.asarray(X, np.float64)
-    X -= X.mean()
-    n = df or X.shape[0]
+    X = np.asarray(X, np.float64)  # don't touch the data again?
+    X -= X.mean()                  # automaticall demean's X
+    n = df or X.shape[0]    # is df_resid the degrees of freedom? no it's n I think or n-1
 
-    if method == "unbiased":
+    if method == "unbiased":        # this is df_resid ie., n - p
         denom = lambda k: n - k
     else:
         denom = lambda k: n
-
     if len(X.shape) != 1:
         raise ValueError, "expecting a vector to estimate AR parameters"
     r = np.zeros(order+1, np.float64)
@@ -618,6 +650,8 @@ def isestimable(C, D):
     if utils.rank(new) != utils.rank(D):
         return False
     return True
+
+### The below is replicated by np.io
 
 def read_design(desfile, delimiter=',', try_integer=True):
     """

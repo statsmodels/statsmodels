@@ -9,7 +9,7 @@ import numpy.random as R
 import numpy.linalg as L
 from numpy.testing import *
 
-from nipy.fixes.scipy.stats.models import utils, formula, contrast
+from models import utils, formula, contrast
 
 class TestTerm(TestCase):
 

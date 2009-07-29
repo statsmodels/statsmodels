@@ -1,11 +1,12 @@
 """
 Test functions for models.regression
 """
-
+import numpy as np
 from numpy.random import standard_normal
 from numpy.testing import *
-
-from models.regression import OLS, AR, WLS, GLS
+from scipy.linalg import toeplitz
+from models.functions import add_constant
+from models.regression import OLS, AR, WLS, GLS, yule_walker
 import models
 
 W = standard_normal
@@ -34,7 +35,7 @@ class check_regression_results(object):
         assert_almost_equal(self.res1.Rsq, self.res2.Rsq,DECIMAL)
 
     def test_AdjRSquared(self):
-        assert_almost_equal(self.res1.adjRsq, self.res2.adjRSq, DECIMAL)
+        assert_almost_equal(self.res1.adjRsq, self.res2.adjRsq, DECIMAL)
 
     def test_degrees(self):
         assert_almost_equal(self.res1.df_model, self.res2.df_model, DECIMAL)
@@ -72,14 +73,18 @@ class test_ols(check_regression_results):
     def __init__(self):
         from models.datasets.longley.data import load
         from model_results import longley
-
         data = load()
-        data.exog = models.functions.add_constant(data.exog)
+        data.exog = add_constant(data.exog)
         results = OLS(data.endog, data.exog).fit()
         self.res1 = results
         self.res2 = longley()
 
-class test_gls(check_regression_results):
+    @dec.knownfailureif(True, """This is a precision issue due to a rounding convention
+for large numbers in Stata""")
+    def test_confidenceintervals(self):
+        assert_almost_equal(self.res1.conf_int(), self.res2.conf_int, DECIMAL)
+
+class test_gls(object):
     '''
     These test results were obtained by replication with R.
     '''
@@ -88,69 +93,73 @@ class test_gls(check_regression_results):
         from model_results import longley_gls
 
         data = load()
-        exog = models.functions.add_constant(np.column_stack(\
+        exog = add_constant(np.column_stack(\
                 (data.exog[:,1],data.exog[:,4])))
         tmp_results = OLS(data.endog, exog).fit()
         rho = np.corrcoef(tmp_results.resid[1:],
                 tmp_results.resid[:-1])[0][1] # by assumption
-        rows = np.arange(1,17).reshape(16,1)*np.ones((16,16))
-        cols = np.arange(1,17)*np.ones((16,16))
-        sigma = rho**np.fabs((rows-cols))   # matrix of exponents for
+        order = toeplitz(np.arange(16))
+        sigma = rho**order   # matrix of exponents for
                                             # correlation structure
         GLS_results = GLS(data.endog, exog, sigma=sigma).fit()
         self.res1 = GLS_results
         self.res2 = longley_gls()
 
-class test_gls_scalar(self):
+    def test_params(self):
+        assert_almost_equal(self.res1.params, self.res2.params, DECIMAL)
+
+    def test_standarderrors(self):
+        assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL)
+
+class test_gls_scalar(check_regression_results):
     '''
     Test that GLS with no argument is equivalent to OLS.
     '''
-    from models.datasets.longley.data import load
-    data = load()
-    data.exog = models.functions.add_constant(data.exog)
-    ols_res = OLS(data.endog, data.exog).fit()
-    gls_res = GLS(data.endog, data.exog).fit()
-    self.res1 = gls_res
-    self.res2 = ols_res
+    def __init__(self):
+        from models.datasets.longley.data import load
+        data = load()
+        data.exog = add_constant(data.exog)
+        ols_res = OLS(data.endog, data.exog).fit()
+        gls_res = GLS(data.endog, data.exog).fit()
+        self.res1 = gls_res
+        self.res2 = ols_res
+        self.res2.conf_int = self.res2.conf_int()
+        self.res2.BIC = self.res2.information_criteria()['bic']
+        self.res2.AIC = self.res2.information_criteria()['aic']
 
-class test_wls(self):
-    '''
-    GLM results are an implicit test of WLS
-    '''
+#class test_wls(object):
+#    '''
+#    GLM results are an implicit test of WLS
+#    '''
 #TODO: Make sure no argument given is the same as OLS
+#    pass
 
+#class test_ar(object):
+#    from models.datasets.sunspots.data import load
+#    data = load()
+#    model = AR(data.endog, rho=4).fit()
+#    R_res = RModel(data.endog, aic="FALSE", order_max=4)
 
-class test_ar(self):
-    pass
-#TODO: Come back to this
+#    def test_params(self):
+#        assert_almost_equal(self.model.rho,
+#        pass
 
+#    def test_order(self):
+# In R this can be defined or chosen by minimizing the AIC if aic=True
+#        pass
 
+class test_yule_walker(object):
+    def __init__(self):
+        from models.datasets.sunspots.data import load
+        from rpy import r
+        data = load()
+        self.rho, self.sigma = yule_walker(data.endog, order=4, method="mle")
+        R_results = r.ar(data.endog, aic="FALSE", order_max=4)
+        self.R_params = R_results['ar']
 
-class TestRegression(TestCase):
-
-    def testAR(self):
-        X = W((40,10))
-        Y = W((40,))
-        model = AR(design=X, rho=0.4)
-        results = model.fit(Y)
-        self.assertEquals(results.df_resid, 30)
-
-    def testOLSdegenerate(self):
-        X = W((40,10))
-        X[:,0] = X[:,1] + X[:,2]
-        Y = W((40,))
-        model = OLS(Y,X)
-        results = model.fit()
-        self.assertEquals(results.df_resid, 31)
-
-    def testARdegenerate(self):
-        X = W((40,10))
-        X[:,0] = X[:,1] + X[:,2]
-        Y = W((40,))
-        model = AR(design=X, rho=0.9)
-        results = model.fit(Y)
-        self.assertEquals(results.df_resid, 31)
-
+    def test_params(self):
+        R_params = np.array([ 1.28310031, -0.45240924, -0.20770299,  0.04794365])
+        assert_almost_equal(self.rho, self.R_params, DECIMAL)
 
 if __name__=="__main__":
     run_module_suite()

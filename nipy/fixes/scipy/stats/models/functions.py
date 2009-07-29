@@ -85,7 +85,7 @@ def add_constant(data):
             for col in ind:
                 if np.all(data[:,col] == 1):
                     return data
-    data = np.hstack((data, np.ones((data.shape[0], 1))))
+    data = np.column_stack((data, np.ones((data.shape[0], 1))))
     return data
 
 #class HCCM(OLSModel):

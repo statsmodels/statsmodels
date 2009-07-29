@@ -6,7 +6,7 @@ import numpy as np
 import numpy.random as R
 from numpy.testing import *
 
-from nipy.fixes.scipy.stats.models import utils
+from models import utils
 
 class TestUtils(TestCase):
 

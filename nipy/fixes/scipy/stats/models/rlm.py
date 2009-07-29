@@ -251,15 +251,11 @@ class RLM(LikelihoodModel):
         while (np.all(np.fabs(criterion[self.iteration]-\
                 criterion[self.iteration-1]) > tol) and \
                 self.iteration < maxiter):
-            print self.scale
+#            print self.scale
             if not self.scale_est.lower() == "huber":
                 self.weights = self.M.weights((self._endog - wls_results.predict) \
                         /self.scale)
             elif self.scale_est.lower() == "huber":
-                print self.loc
-                raw_input('pause')
-                print self.scale
-                raw_input('pause')
                 self.weights = self.M.weights((self._endog - self.loc)/self.scale)
 
             wls_results = WLS(self._endog, self._exog,

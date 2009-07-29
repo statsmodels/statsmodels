@@ -16,7 +16,7 @@ chem = np.array([2.20, 2.20, 2.4, 2.4, 2.5, 2.7, 2.8, 2.9, 3.03, 3.03, 3.10, 3.3
 #import neuroimaging.fixes.scipy.stats.models.robust.scale as scale
 #reload(scale)
 #=======
-import nipy.fixes.scipy.stats.models.robust.scale as scale
+import models.robust.scale as scale
 
 
 W = R.standard_normal
