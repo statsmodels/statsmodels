@@ -428,6 +428,7 @@ class test_glm_negbinomial(check_model_results):
         assert_almost_equal(aic1, aic2, DECIMAL)
 
     def check_loglike(self, llf1, llf2):
+
         assert_almost_equal(llf1, llf2, DECIMAL)
 
     def check_bic(self, bic1, bic2):

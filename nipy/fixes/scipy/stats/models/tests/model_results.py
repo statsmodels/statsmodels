@@ -213,7 +213,7 @@ class longley(object):
                    (798.7873,2859.515),(-5496529,-1467987)]
         self.scale = 92936.0061673238
         self.Rsq = 0.995479004577296
-        self.adjRsq = 0
+        self.adjRsq = 0.99246501
         self.df_model = 6
         self.df_resid = 9
         self.ESS = 184172401.944494
