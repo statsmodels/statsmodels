@@ -328,9 +328,16 @@ class GLMResults(LikelihoodModelResults):   # could inherit from RegressionResul
 
     @property
     def llf(self):
-        if self._llf is None:
+#TODO: Go through the math and see if it makes sense in all cases
+# to pass the scale.  Stata seems to use it sometimes and sometimes set it to 1
+        if self._llf is None and not isinstance(self.model.family,
+                        family.NegativeBinomial):
             self._llf = self.model.family.logL(self.model.y,
                     self.model.mu, scale=self.scale)
+        elif self._llf is None and isinstance(self.model.family,
+                        family.NegativeBinomial):
+            self._llf = self.model.family.logL(self.model.y,
+                    predicted=self.predict)
         return self._llf
 
     def information_criteria(self):

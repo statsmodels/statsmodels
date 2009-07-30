@@ -14,6 +14,9 @@ import rlm_results
 import nose
 
 DECIMAL = 4
+DECIMAL_less = 3
+DECIMAL_lesser = 2
+DECIMAL_least = 1
 
 class check_rlm_results(object):
     '''
@@ -39,8 +42,8 @@ class check_rlm_results(object):
 #FIXME: Confidence intervals should be taken from the asymptotic cov matrix
 
     def test_scale(self):
-        assert_almost_equal(self.res1.scale, self.res2.scale, DECIMAL-1)
-# off by ~2e-04
+        assert_almost_equal(self.res1.scale, self.res2.scale, DECIMAL_less)
+        # off by ~2e-04
 
     def test_weights(self):
         assert_almost_equal(self.res1.weights, self.res2.weights, DECIMAL)
@@ -60,13 +63,13 @@ class check_rlm_results(object):
         if isinstance(self.res1.model.M, models.robust.norms.AndrewWave):
             raise nose.SkipTest("Do not have an unscaled cov matrix for Andrew's")
         else:
-            assert_almost_equal(self.res1.bcov_unscaled, self.res2.bcov_unscaled,
-                    DECIMAL)
+            assert_almost_equal(self.res1.bcov_unscaled,
+                    self.res2.bcov_unscaled, DECIMAL)
 
     def test_bcov_scaled(self):
-        assert_almost_equal(self.res1.bcov_scaled, self.res2.h1, DECIMAL-2)
-        assert_almost_equal(self.res1.h2, self.res2.h2, DECIMAL-2)
-        assert_almost_equal(self.res1.h3, self.res2.h3, DECIMAL-2)
+        assert_almost_equal(self.res1.bcov_scaled, self.res2.h1, DECIMAL_lesser)
+        assert_almost_equal(self.res1.h2, self.res2.h2, DECIMAL_lesser)
+        assert_almost_equal(self.res1.h3, self.res2.h3, DECIMAL_lesser)
 
 
 class test_rlm(check_rlm_results):
@@ -90,19 +93,8 @@ class test_rlm(check_rlm_results):
         self.res2.h2 = rlm_results.huber_h2
         self.res2.h3 = rlm_results.huber_h3
 
-# have no idea why rpy doesn't want to work for this one
-# raises an exception if you use data.endog, data.exog
-# if not it doesn't convert the results and returns
-# dicts
 class test_hampel(test_rlm):
     def __init__(self):
-#        d = rpy.as_list(r('stackloss'))
-#        y = d[0]['stack.loss']
-#        x = np.column_stack(np.array(d[0][name]) for name in d[0].keys()[0:-1])
-#        x = np.column_stack((x,np.ones((len(x),1))))
-#        x = np.column_stack((x[:,2],x[:,1],x[:,0],x[:,3]))
-# I don't know why the above works and passing data.endog and data.exog
-# does not
         results = RLM(self.data.endog, self.data.exog,
                     M=models.robust.norms.Hampel()).fit()
         h2 = RLM(self.data.endog, self.data.exog,\

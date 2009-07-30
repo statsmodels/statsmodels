@@ -123,7 +123,8 @@ class test_glm_gaussian(check_model_results):
     def check_pearsonX2(self, pearsonX21, pearsonX22):
         assert_almost_equal(pearsonX21, pearsonX22, DECIMAL)
 
-    def test_log(self):
+class test_gaussian_log(check_model_results):
+    def __init__(self):
         nobs = 100
         x = np.arange(nobs)
         y = 1.0 + 2.0*x + x**2 + 0.1 * np.random.randn(nobs)
@@ -139,8 +140,8 @@ class test_glm_gaussian(check_model_results):
         self.res1 = GaussLog_Res
         self.res2 = GaussLog_Res_R
 
-    def test_power(self):
-        pass
+class test_gaussian_power(check_model_results):
+    pass
 
 class test_glm_binomial(check_model_results):
     def __init__(self):
@@ -181,26 +182,27 @@ class test_glm_binomial(check_model_results):
         assert_almost_equal(pearsonX21, pearsonX22, DECIMAL_lesser)
         # Pearson's X2 sums residuals that are rounded differently in Stata
 
-    def test_log(self):
-        pass
+class test_glm_binomial_log(check_model_results):
+    pass
 
-    def test_logit(self):
-        pass
+class test_glm_binomial_logit(check_model_results):
+    pass
 
-    def test_probit(self):
-        pass
+class test_glm_binomial_probit(check_model_results):
+    pass
 
-    def test_cloglog(self):
-        pass
+class test_glm_binomial_cloglog(check_model_results):
+    pass
 
-    def test_power(self):
-        pass
+class test_glm_binomial_power(check_model_results):
+    pass
 
-    def test_loglog(self):
-        pass
+class test_glm_binomial_loglog(check_model_results):
+    pass
 
-    def test_logc(self):
-        pass
+class test_glm_binomial_logc(check_model_results):
+#TODO: need include logc link?
+    pass
 
 class test_glm_bernoulli(check_model_results):
     def __init__(self):
@@ -230,26 +232,26 @@ class test_glm_bernoulli(check_model_results):
     def check_pearsonX2(self, pearsonX21, pearsonX22):
         assert_almost_equal(pearsonX21, pearsonX22, DECIMAL)
 
-    def test_identity(self):
-        pass
+class test_glm_bernoulli_identity(check_model_results):
+    pass
 
-    def test_log(self):
-        pass
+class test_glm_bernoulli_log(check_model_results):
+    pass
 
-    def test_probit(self):
-        pass
+class test_glm_bernoulli_probit(check_model_results):
+    pass
 
-    def test_cloglog(self):
-        pass
+class test_glm_bernoulli_cloglog(check_model_results):
+    pass
 
-    def test_power(self):
-        pass
+class test_glm_bernoulli_power(check_model_results):
+    pass
 
-    def test_loglog(self):
-        pass
+class test_glm_bernoulli_loglog(check_model_results):
+    pass
 
-    def test_logc(self):
-        pass
+class test_glm_bernoulli_logc(check_model_results):
+    pass
 
 class test_glm_gamma(check_model_results):
 
@@ -297,11 +299,11 @@ class test_glm_gamma(check_model_results):
     def check_pearsonX2(self, pearsonX21, pearsonX22):
         assert_almost_equal(pearsonX21, pearsonX22, DECIMAL)
 
-    def test_log(self):
-        pass
+class test_glm_gamma_log(check_model_results):
+    pass
 
-    def test_power(self):
-        pass
+class test_glm_gamma_power(check_model_results):
+    pass
 
 class test_glm_poisson(check_model_results):
     def __init__(self):
@@ -340,11 +342,11 @@ class test_glm_poisson(check_model_results):
     def check_pearsonX2(self, pearsonX21, pearsonX22):
         assert_almost_equal(pearsonX21, pearsonX22, DECIMAL)
 
-    def test_identity(self):
-        pass
+class test_glm_poisson_identity(check_model_results):
+    pass
 
-    def test_power(self):
-        pass
+class test_glm_poisson_power(check_model_results):
+    pass
 
 class test_glm_invgauss(check_model_results):
 #    @dec.slow
@@ -391,13 +393,15 @@ class test_glm_invgauss(check_model_results):
     def check_pearsonX2(self, pearsonX21, pearsonX22):
         assert_almost_equal(pearsonX21, pearsonX22, DECIMAL-1)  # summed resids
 
-    def test_log(self):
-        pass
+class test_glm_invgauss_log(check_model_results):
+    pass
 
-    def test_power(self):
-        pass
+class test_glm_invgauss_power(check_model_results):
+    pass
 
 class test_glm_negbinomial(check_model_results):
+#TODO: Include all residuals from Stata
+# Implement Anscombe residuals for negative binomial
     def __init__(self):
         '''
         Test Negative Binomial family with canonical log link
@@ -414,6 +418,8 @@ class test_glm_negbinomial(check_model_results):
         r.library('MASS')  # this doesn't work when done in rmodelwrap?
         self.res2 = RModel(self.data.endog, self.data.exog, r.glm,
                 family=r.negative_binomial(1))
+        self.res2.null_deviance = 27.8110469364343
+        # Rpy does not return the same null deviance as R for some reason
 
     def check_params(self, params1, params2):
         assert_almost_equal(params1, params2, DECIMAL-1)    # precision issue
@@ -422,13 +428,15 @@ class test_glm_negbinomial(check_model_results):
         assert_almost_equal(resids1, resids2, DECIMAL)
 
     def check_aic_R(self, aic1, aic2):
-        assert_almost_equal(aic1, aic2, DECIMAL)
+        assert_almost_equal(aic1-2, aic2, DECIMAL)
+        # note that R subtracts an extra degree of freedom for estimating
+        # the scale
 
     def check_aic_Stata(self, aic1, aic2):
+        aic1 = aci1/self.res1.nobs
         assert_almost_equal(aic1, aic2, DECIMAL)
 
     def check_loglike(self, llf1, llf2):
-
         assert_almost_equal(llf1, llf2, DECIMAL)
 
     def check_bic(self, bic1, bic2):
@@ -437,14 +445,14 @@ class test_glm_negbinomial(check_model_results):
     def check_pearsonX2(self, pearsonX21, pearsonX22):
         assert_almost_equal(pearsonX21, pearsonX22, DECIMAL)
 
-    def test_log(self):
-        pass
+class test_glm_negbinomial_log(check_model_results):
+    pass
 
-    def test_power(self):
-        pass
+class test_glm_negbinomial_power(check_model_results):
+    pass
 
-    def test_nbinom(self):
-        pass
+class test_glm_negbinomial_nbinom(check_model_results):
+    pass
 
 if __name__=="__main__":
     run_module_suite()

@@ -517,14 +517,21 @@ class NegativeBinomial(Family):
                 np.log((1+self.alpha*Y)/(1+self.alpha*mu))
         return np.sign(Y-mu)*np.sqrt(tmp)
 
-    def logL(self, Y, mu, scale=1.):
-        return scale*np.sum(special.gammaln(1/self.alpha + Y) - special.gammaln(Y+1) -\
-                special.gammaln(1/self.alpha) - 1/special.gammaln(1+self.alpha*mu) +\
-                Y*np.log(self.alpha*mu/(self.alpha*mu+1)))
+    def logL(self, Y, mu=None, scale=1., predicted=None):
+        # don't need to specify mu
+        if predicted is None:
+            raise AttributeError, '''The loglikelihood for the negative binomial requires that the predicted values of the fit be provided via the `predicted` keyword argument.'''
+        constant = special.gammaln(Y + 1/self.alpha) - special.gammaln(Y+1)\
+                    -special.gammaln(1/self.alpha)
+        return np.sum(Y*np.log(self.alpha*np.exp(predicted)/\
+            (1 + self.alpha*np.exp(predicted))) - \
+            np.log(1+self.alpha*np.exp(predicted))/self.alpha\
+            + constant)
 
     def resid_anscombe(self, Y, mu):
+#FIXME: Needs to be included.  Can't remember the relation between
+# special.betainc and special.hyp2f1.  Should be in notes though.
         return
-
 
 
 

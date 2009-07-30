@@ -284,7 +284,6 @@ class RLMResults(LikelihoodModelResults):
         self.df_model = model.df_model
         self.df_resid = model.df_resid
         self.fitted_values = np.dot(model._exog, self.params)
-        self.hat = np.dot(model._exog,model.calc_params)
         self.resid = model._endog - self.fitted_values   # before bcov
         self.sresid = self.resid/self.scale
         self.calc_params = model.calc_params    # for bcov,
@@ -296,27 +295,22 @@ class RLMResults(LikelihoodModelResults):
         var_psiprime = np.var(model.M.psi_deriv(self.resid/self.scale))
         k = 1 + (self.df_model+1)/self.nobs * var_psiprime/m**2
         if model.cov == "H1":
-# THE BELOW IS CORRECT!!! # Based on Huber (1973) 8.14
-# SAS documentation and Huber 1981 is misleading...
             self.bcov_scaled = k**2 * (1/self.df_resid*\
                 np.sum(model.M.psi(self.sresid)**2)*self.scale**2)\
                 /((1/self.nobs*np.sum(model.M.psi_deriv(self.sresid)))**2)\
                 *model.normalized_cov_params
         else:
-# needs to be optimized
-# Correctly based on Huber 1973
+#FIXME: could be optimized to not take the inverse?  Document for now.
             W = np.dot(model.M.psi_deriv(self.sresid)*model._exog.T,model._exog)
             W_inv = np.linalg.inv(W)
-# should be
 # [W_jk]^-1 = [SUM(psi_deriv(Sr_i)*x_ij*x_jk)]^-1
-# where Sr are the STANDARDIZED (!) residuals
+# where Sr are the standardized residuals
             if model.cov == "H2":
-# This is correct, based on Huber (1973) 8.13
+# These are correct, based on Huber (1973) 8.13
                 self.bcov_scaled = k*(1/self.df_resid)*np.sum(\
                         model.M.psi(self.sresid)**2)*self.scale**2\
                         /((1/self.nobs)*np.sum(\
                         model.M.psi_deriv(self.sresid)))*W_inv
-# This is correct vis-a-vis the SAS results
             elif model.cov == "H3":
                 self.bcov_scaled = k**-1*1/self.df_resid*np.sum(\
                     model.M.psi(self.sresid)**2)*self.scale**2\
