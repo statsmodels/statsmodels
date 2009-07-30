@@ -125,7 +125,6 @@ class RLM(LikelihoodModel):
                     tmp_results.scale).sum()
 
     def update_history(self, tmp_results):
-# TODO: Figure out why the first estimate gets copied to the end of these
         self.history['deviance'].append(self.deviance(tmp_results))
         self.history['params'].append(tmp_results.params)
         self.history['scale'].append(tmp_results.scale)
@@ -137,35 +136,18 @@ class RLM(LikelihoodModel):
         Note that self.scale is interpreted as a variance in OLSModel, so
         we return MAD(resid)**2 by default.
         """
-        if self.scale_est == 'MAD':
-#            return scale.MAD(resid)**2
+        if self.scale_est.lower() == 'mad':
             return scale.MAD(resid)
-        if self.scale_est == 'stand_MAD':
+        if self.scale_est.lower() == 'stand_mad':
             return scale.stand_MAD(resid)
-        elif self.scale_est == "Huber":
+        elif self.scale_est.lower() == "huber":
 ##            return scale.huber(resid)**2
             #must initialize an instance to specify norm, etc.
 #            s = scale.Huber(norm=self.M)
+            print "I'm the one alright"
             return scale.huber(resid)   # what do you do with loc?
-            # why are we iterating within the iterator, it should be
-# alternating?
-#            if self.scale == None:
-# what to use for first guess?
-#                self.scale = 1. #?
-#                self.scale = (1/self.df_resid)*np.sum(resid**2) # sigma**2
-#                self.scale = models.robust.scale.MAD(resid)
-#                # OLS estimate
-#            d = 1.5
-#            h = self.df_resid/self.nobs * (d**2 + (1-d**2)*Gaussian.cdf(d)-.5\
-#                -d*np.sqrt(2*np.pi)*np.exp(-.5*d**2))
-#            test = np.less_equal(np.fabs(resid/self.scale), d)
-#            rw = np.clip(resid, -d*self.scale, d*self.scale)
-#            chi = test * ((resid/self.scale)**2)/2 + (1-test)*(d**2)/2
-#            return np.sqrt(1/(self.nobs*h) * np.sum(chi)*self.scale**2)
-
-#        else:
-#            return scale.scale_est(self, resid)**2
-#        return np.median(np.fabs(resid))/Gaussian.ppf(3/4.)
+        else:
+            return scale.scale_est(self, resid)**2
 
     def fit(self, maxiter=1000, tol=1e-8, scale_est='MAD', init=None, cov='H1',
             update_scale=True, conv='dev'):
@@ -236,7 +218,6 @@ class RLM(LikelihoodModel):
         if not init and not self.scale_est.lower() == "huber":
             self.scale = self.estimate_scale(wls_results.resid)
         elif not init and self.scale_est.lower() == "huber":
-            self.scale = scale.MAD(wls_results.resid)   # huber needs a first guess
             self.loc, self.scale = self.estimate_scale(wls_results.resid)
         self.update_history(wls_results)
         self.iteration = 1  # so these don't accumulate across fits
@@ -251,7 +232,6 @@ class RLM(LikelihoodModel):
         while (np.all(np.fabs(criterion[self.iteration]-\
                 criterion[self.iteration-1]) > tol) and \
                 self.iteration < maxiter):
-#            print self.scale
             if not self.scale_est.lower() == "huber":
                 self.weights = self.M.weights((self._endog - wls_results.predict) \
                         /self.scale)

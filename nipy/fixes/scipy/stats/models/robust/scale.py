@@ -109,7 +109,7 @@ class Huber(object):
             est_mu = False
 
         if scale is None:
-            scale = MAD(a, axis=axis)   # note that MAD got changed
+            scale = stand_MAD(a, axis=axis)   # note that MAD got changed
         else:
             scale = scale
         scale = unsqueeze(scale, axis, a.shape) # why??
@@ -132,7 +132,7 @@ class Huber(object):
             # Estimate the mean along a given axis
             if est_mu:
                 if self.norm is None:   # it will always be None as written
-                                        # allowing to specify norm
+                                        # allowing to specify norm in IRLS
                                         # resulted in nonconvergence for
                                         # HuberT()
                     # This is a one-step fixed-point estimator
@@ -152,12 +152,13 @@ class Huber(object):
 
             nscale = np.sqrt(np.sum(subset * (a - nmu)**2, axis) \
                     / (n * self.gamma - (a.shape[axis] - card) * self.c**2))
+
             nscale = unsqueeze(nscale, axis, a.shape)
 
-            test1 = np.all(np.less_equal(np.fabs(scale - nscale),
+            test1 = np.alltrue(np.less_equal(np.fabs(scale - nscale),
                         nscale * self.tol))
 #            print np.fabs(scale/nscale - 1.).max()
-            test2 = np.all(np.less_equal(np.fabs(mu - nmu), nscale * self.tol))
+            test2 = np.alltrue(np.less_equal(np.fabs(mu - nmu), nscale*self.tol))
             if not (test1 and test2):
                 mu = nmu; scale = nscale
             else:

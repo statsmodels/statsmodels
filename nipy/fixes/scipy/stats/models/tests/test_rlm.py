@@ -41,7 +41,6 @@ class check_rlm_results(object):
         else:
             assert_almost_equal(self.res1.conf_int(), self.res2.conf_int,
             DECIMAL)
-#FIXME: Confidence intervals should be taken from the asymptotic cov matrix
 
     def test_scale(self):
         assert_almost_equal(self.res1.scale, self.res2.scale, DECIMAL_less)
