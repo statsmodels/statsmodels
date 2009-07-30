@@ -57,7 +57,10 @@ class check_rlm_results(object):
         assert_almost_equal(self.res1.df_resid, self.res2.df_resid, DECIMAL)
 
     def test_bcov_unscaled(self):
-        assert_almost_equal(self.res1.bcov_unscaled, self.res2.bcov_unscaled,
+        if isinstance(self.res1.model.M, models.robust.norms.AndrewWave):
+            raise nose.SkipTest("Do not have an unscaled cov matrix for Andrew's")
+        else:
+            assert_almost_equal(self.res1.bcov_unscaled, self.res2.bcov_unscaled,
                     DECIMAL)
 
     def test_bcov_scaled(self):
@@ -110,7 +113,7 @@ class test_hampel(test_rlm):
         self.res1.h2 = h2
         self.res1.h3 = h3
         self.res2 = RModel(self.data.endog[:,None], self.data.exog,
-                    r.rlm, psi="psi.hampel")
+                    r.rlm, psi="psi.hampel") #, init="lts")
         self.res2.h1 = rlm_results.hampel_h1
         self.res2.h2 = rlm_results.hampel_h2
         self.res2.h3 = rlm_results.hampel_h3

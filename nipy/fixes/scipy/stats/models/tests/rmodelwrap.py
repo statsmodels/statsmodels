@@ -35,7 +35,12 @@ class RModel(object):
 #        coeffs = self.results['coefficients']
 #        self.beta0 = np.array([coeffs[c] for c in self._design_cols])
         self.nobs = len(self.results['residuals'])
-        self.resid = self.results['residuals']
+        if isinstance(self.results['residuals'], dict):
+            self.resid = np.zeros((len(self.results['residuals'].keys())))
+            for i in self.results['residuals'].keys():
+                self.resid[int(i)-1] = self.results['residuals'][i]
+        else:
+            self.resid = self.results['residuals']
         self.predict = self.results['fitted.values']
         self.df_resid = self.results['df.residual']
         self.params = rsum['coefficients'][:,0]
@@ -71,6 +76,11 @@ class RModel(object):
         self.deviance = self.rsum['deviance']
         self.resid = [self.results['residuals'][str(k)] \
                 for k in range(1, 1+self.nobs)]
+        if isinstance(self.resid, dict):
+            tmp = np.zeros(len(self.resid))
+            for i in self.resid.keys():
+                tmp[int(i)-1] = self.resid[i]
+            self.resid = tmp
         self.predict = [self.results['linear.predictors'][str(k)] \
                 for k in range(1, 1+self.nobs)]
         self.predictedy = [self.results['fitted.values'][str(k)] \
@@ -78,15 +88,23 @@ class RModel(object):
         self.weights = [self.results['weights'][str(k)] \
                 for k in range(1, 1+self.nobs)]
         self.resid_dev = self.rsum['deviance.resid']
+        if isinstance(self.resid_dev, dict):
+            tmp = np.zeros(len(self.resid_dev))
+            for i in self.resid_dev.keys():
+                tmp[int(i)-1] = self.resid_dev[i]
+            self.resid_dev = tmp
         self.null_deviance = self.rsum['null.deviance']
 
     def getrlm(self):
         self.k2 = self.results['k2']
-        self.weights = self.results['w']
+        if isinstance(self.results['w'], dict):
+            tmp = np.zeros((len(self.results['w'].keys())))
+            for i in self.results['w'].keys():
+                tmp[int(i)-1] = self.results['w'][i]
+            self.weights = tmp
+        else: self.weights = self.results['w']
         self.stddev = self.rsum['stddev'] # Don't know what this is yet
         self.wresid = None # these equal resids always?
-# get bse from cov.unscaled?
-
 
 #TODO:
 # function to write Rresults to results file, so this is a developers tool
