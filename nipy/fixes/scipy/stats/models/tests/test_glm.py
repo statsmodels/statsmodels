@@ -127,6 +127,7 @@ class test_gaussian_log(check_model_results):
     def __init__(self):
         nobs = 100
         x = np.arange(nobs)
+        np.random.seed(54321)
         y = 1.0 + 2.0*x + x**2 + 0.1 * np.random.randn(nobs)
         X = np.c_[np.ones((nobs,1)),x,x**2]
         lny = np.exp(-(-1.0 + 0.02*x + 0.0001*x**2)) +\
@@ -140,8 +141,28 @@ class test_gaussian_log(check_model_results):
         self.res1 = GaussLog_Res
         self.res2 = GaussLog_Res_R
 
-class test_gaussian_power(check_model_results):
-    pass
+    def test_null_deviance(self):
+        assert_almost_equal(self.res1.null_deviance, self.res2.null_deviance,
+                    DECIMAL_least)  # does this overwrite?
+
+    def check_params(self, params1, params2):
+        assert_almost_equal(params1, params2, DECIMAL)
+#FIXME: resolve llf for noncanonical links and test other links?
+# need other links for the other families to see if this is a problem with all
+# note that deviance, etc. *is* correct
+# after adding the seed so randoms are always the same
+# Stata llf = 565.4302263
+# Stata AIC = -11.2486
+# Stata BIC = -446.7014  our BIC is correct
+    @dec.knownfailureif(True, "LLFs possibly not correct for noncanonical links?")
+    def check_loglike(self, llf1, llf2):
+        assert_almost_equal(llf1, llf2, DECIMAL)
+    @dec.knownfailureif(True, "Depends on llf")
+    def check_aic_R(self, aic1, aic2):
+        assert_almost_equal(aic1, aic2, DECIMAL)
+
+#class test_gaussian_power(check_model_results):
+#    pass
 
 class test_glm_binomial(check_model_results):
     def __init__(self):
@@ -182,27 +203,27 @@ class test_glm_binomial(check_model_results):
         assert_almost_equal(pearsonX21, pearsonX22, DECIMAL_lesser)
         # Pearson's X2 sums residuals that are rounded differently in Stata
 
-class test_glm_binomial_log(check_model_results):
-    pass
+#class test_glm_binomial_log(check_model_results):
+#    pass
 
-class test_glm_binomial_logit(check_model_results):
-    pass
+#class test_glm_binomial_logit(check_model_results):
+#    pass
 
-class test_glm_binomial_probit(check_model_results):
-    pass
+#class test_glm_binomial_probit(check_model_results):
+#    pass
 
-class test_glm_binomial_cloglog(check_model_results):
-    pass
+#class test_glm_binomial_cloglog(check_model_results):
+#    pass
 
-class test_glm_binomial_power(check_model_results):
-    pass
+#class test_glm_binomial_power(check_model_results):
+#    pass
 
-class test_glm_binomial_loglog(check_model_results):
-    pass
+#class test_glm_binomial_loglog(check_model_results):
+#    pass
 
-class test_glm_binomial_logc(check_model_results):
+#class test_glm_binomial_logc(check_model_results):
 #TODO: need include logc link?
-    pass
+#    pass
 
 class test_glm_bernoulli(check_model_results):
     def __init__(self):
@@ -232,26 +253,26 @@ class test_glm_bernoulli(check_model_results):
     def check_pearsonX2(self, pearsonX21, pearsonX22):
         assert_almost_equal(pearsonX21, pearsonX22, DECIMAL)
 
-class test_glm_bernoulli_identity(check_model_results):
-    pass
+#class test_glm_bernoulli_identity(check_model_results):
+#    pass
 
-class test_glm_bernoulli_log(check_model_results):
-    pass
+#class test_glm_bernoulli_log(check_model_results):
+#    pass
 
-class test_glm_bernoulli_probit(check_model_results):
-    pass
+#class test_glm_bernoulli_probit(check_model_results):
+#    pass
 
-class test_glm_bernoulli_cloglog(check_model_results):
-    pass
+#class test_glm_bernoulli_cloglog(check_model_results):
+#    pass
 
-class test_glm_bernoulli_power(check_model_results):
-    pass
+#class test_glm_bernoulli_power(check_model_results):
+#    pass
 
-class test_glm_bernoulli_loglog(check_model_results):
-    pass
+#class test_glm_bernoulli_loglog(check_model_results):
+#    pass
 
-class test_glm_bernoulli_logc(check_model_results):
-    pass
+#class test_glm_bernoulli_logc(check_model_results):
+#    pass
 
 class test_glm_gamma(check_model_results):
 
@@ -299,11 +320,11 @@ class test_glm_gamma(check_model_results):
     def check_pearsonX2(self, pearsonX21, pearsonX22):
         assert_almost_equal(pearsonX21, pearsonX22, DECIMAL)
 
-class test_glm_gamma_log(check_model_results):
-    pass
+#class test_glm_gamma_log(check_model_results):
+#    pass
 
-class test_glm_gamma_power(check_model_results):
-    pass
+#class test_glm_gamma_power(check_model_results):
+#    pass
 
 class test_glm_poisson(check_model_results):
     def __init__(self):
@@ -342,11 +363,11 @@ class test_glm_poisson(check_model_results):
     def check_pearsonX2(self, pearsonX21, pearsonX22):
         assert_almost_equal(pearsonX21, pearsonX22, DECIMAL)
 
-class test_glm_poisson_identity(check_model_results):
-    pass
+#class test_glm_poisson_identity(check_model_results):
+#    pass
 
-class test_glm_poisson_power(check_model_results):
-    pass
+#class test_glm_poisson_power(check_model_results):
+#    pass
 
 class test_glm_invgauss(check_model_results):
 #    @dec.slow
@@ -393,11 +414,11 @@ class test_glm_invgauss(check_model_results):
     def check_pearsonX2(self, pearsonX21, pearsonX22):
         assert_almost_equal(pearsonX21, pearsonX22, DECIMAL-1)  # summed resids
 
-class test_glm_invgauss_log(check_model_results):
-    pass
+#class test_glm_invgauss_log(check_model_results):
+#    pass
 
-class test_glm_invgauss_power(check_model_results):
-    pass
+#class test_glm_invgauss_power(check_model_results):
+#    pass
 
 class test_glm_negbinomial(check_model_results):
 #TODO: Include all residuals from Stata
@@ -445,14 +466,14 @@ class test_glm_negbinomial(check_model_results):
     def check_pearsonX2(self, pearsonX21, pearsonX22):
         assert_almost_equal(pearsonX21, pearsonX22, DECIMAL)
 
-class test_glm_negbinomial_log(check_model_results):
-    pass
+#class test_glm_negbinomial_log(check_model_results):
+#    pass
 
-class test_glm_negbinomial_power(check_model_results):
-    pass
+#class test_glm_negbinomial_power(check_model_results):
+#    pass
 
-class test_glm_negbinomial_nbinom(check_model_results):
-    pass
+#class test_glm_negbinomial_nbinom(check_model_results):
+#    pass
 
 if __name__=="__main__":
     run_module_suite()

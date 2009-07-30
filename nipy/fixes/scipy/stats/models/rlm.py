@@ -318,6 +318,9 @@ class RLMResults(LikelihoodModelResults):
                     W_inv)
         self.bse = np.sqrt(np.diag(self.bcov_scaled))
 
+#    def conf_int(self, alpha=.05, cols=None):
+
+
 if __name__=="__main__":
 #NOTE: This is to be removed
 #Delivery Time Data is taken from Montgomery and Peck

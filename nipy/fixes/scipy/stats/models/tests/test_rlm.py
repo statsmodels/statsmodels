@@ -29,16 +29,18 @@ class check_rlm_results(object):
     def test_params(self):
         assert_almost_equal(self.res1.params, self.res2.params, DECIMAL)
 
-# testing covariance matrices takes care of this
-# as long as the correct distribution is used for errors
-#    def test_standarderrors(self):
-#        assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL)
+    def test_standarderrors(self):
+        if isinstance(self.res2, RModel):
+            raise nose.SkipTest("R bse from different cov matrix")
+        else:
+            assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL)
 
     def test_confidenceintervals(self):
         if isinstance(self.res2, RModel):
             raise nose.SkipTest("Results from RModel wrapper")
-        else: pass
-#        assert_almost_equal(self.res1.conf_int(), self.res2.conf_int, DECIMAL)
+        else:
+            assert_almost_equal(self.res1.conf_int(), self.res2.conf_int,
+            DECIMAL)
 #FIXME: Confidence intervals should be taken from the asymptotic cov matrix
 
     def test_scale(self):
@@ -61,7 +63,7 @@ class check_rlm_results(object):
 
     def test_bcov_unscaled(self):
         if isinstance(self.res1.model.M, models.robust.norms.AndrewWave):
-            raise nose.SkipTest("Do not have an unscaled cov matrix for Andrew's")
+            raise nose.SkipTest("No unscaled cov matrix for Andrew's")
         else:
             assert_almost_equal(self.res1.bcov_unscaled,
                     self.res2.bcov_unscaled, DECIMAL)

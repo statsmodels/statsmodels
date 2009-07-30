@@ -1,10 +1,13 @@
 import numpy as np
 from numpy.linalg import inv
 
-from scipy.stats import t, z
+from scipy.stats import t, norm
 from scipy import optimize
 from models.contrast import ContrastResults
 from models.utils import recipr
+#from models.rlm import RLM    # for confidence interval class checks with
+#from models.glm import GLMtwo # imports in models.__init__.py...
+#FIXME: we've got to figure out the (circular) imports all over the place
 
 import numpy.lib.recfunctions as nprf
 
@@ -47,7 +50,7 @@ class LikelihoodModel(Model):
         """
         pass
 
-#Note this is a property now, so this shouldn't be here?
+#Note this is a property now, so this shouldn't peoplebe here?
     def llf(self, params):
         """
         Log-likelihood of model.
@@ -275,28 +278,36 @@ class LikelihoodModelResults(Results):
         tails : string, optional
             `tails` can be "two", "upper", or "lower"
         """
-        if self.__class__.__name__ is 'OLSModel':
+        if self.__class__.__name__ in ['RLMResults','GLMResults']:
+#TODO: get rid of the above once imports are setteld
+#        if isinstance(self._model, (RLM, GLMtwo)):
+            dist = norm
+        else:
             dist = t
-        if self.__class__.__name__ is 'Model': # is this always appropriate
-                                               # for GLM?
 # Answer ^^^ See Hardin p. 127; depends on the software...some do t.
-# how do we expect errors to enter?
-            dist = z
-        else:
-            dist = t
-        if cols is None:
+#            dist = norm
+#FIXME: make sure norm is correct for the standard normal in GLM/RLM
+#        else:
+#            dist = t
+        if cols is None and dist == t:
             lower = self.params - dist.ppf(1-alpha/2,self.df_resid) *\
-                    np.diag(np.sqrt(self.cov_params()))
+                    self.bse #np.diag(np.sqrt(self.cov_params()))
             upper = self.params + dist.ppf(1-alpha/2,self.df_resid) *\
-                    np.diag(np.sqrt(self.cov_params()))
-        else:
+                    self.bse #np.diag(np.sqrt(self.cov_params()))
+        elif cols is None and dist == norm:
+            lower = self.params - dist.ppf(1-alpha/2)*self.bse
+            upper = self.params + dist.ppf(1-alpha/2)*self.bse
+        elif cols is not None and dist == t:
             lower=[]
             upper=[]
             for i in cols:
                 lower.append(self.params[i] - dist.ppf(1-alpha/2,self.df_resid) *\
-                    np.diag(np.sqrt(self.cov_params()))[i])
+                    self.bse) #np.diag(np.sqrt(self.cov_params()))[i])
                 upper.append(self.params[i] + dist.ppf(1-alpha/2,self.df_resid) *\
-                    np.diag(np.sqrt(self.cov_params()))[i])
+                    self.bse) #np.diag(np.sqrt(self.cov_params()))[i])
+        elif cols is not None and dist == norm:
+            lower = self.params - dist.ppf(1-alpha/2)*self.bse
+            upper = self.params + dist.ppf(1-alpha/2)*self.bse
         return np.asarray(zip(lower,upper))
 
 
