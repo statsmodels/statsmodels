@@ -61,8 +61,8 @@ class check_rlm_results(object):
         assert_almost_equal(self.res1.df_resid, self.res2.df_resid, DECIMAL)
 
     def test_bcov_unscaled(self):
-        if isinstance(self.res1.model.M, models.robust.norms.AndrewWave):
-            raise nose.SkipTest("No unscaled cov matrix for Andrew's")
+        if self.res2.__module__ == 'rlm_results'
+            raise nose.SkipTest("No unscaled cov matrix from SAS")
         else:
             assert_almost_equal(self.res1.bcov_unscaled,
                     self.res2.bcov_unscaled, DECIMAL)
@@ -145,6 +145,67 @@ class test_rlm_andrews(test_rlm):
         self.res1.h3 = h3
         self.res2 = rlm_results.andrews()
 
+### tests with Huber scaling
+
+class test_rlm_huber(check_rlm_results):
+    from models.datasets.stackloss.data import load
+    data = load()
+    data.exog = models.functions.add_constant(data.exog)
+    r.library('MASS')
+    def __init__(self):
+        results = RLM(self.data.endog, self.data.exog,\
+                    M=models.robust.norms.HuberT()).fit(scale_est="Huber")   # default M
+        h2 = RLM(self.data.endog, self.data.exog,\
+                    M=models.robust.norms.HuberT()).fit(cov="H2").bcov_scaled
+        h3 = RLM(self.data.endog, self.data.exog,\
+                    M=models.robust.norms.HuberT()).fit(cov="H3").bcov_scaled
+        self.res1 = results
+        self.res1.h2 = h2
+        self.res1.h3 = h3
+        self.res2 = rlm_results.huber_huber()
+
+class test_hampel_huber(test_rlm):
+    def __init__(self):
+        results = RLM(self.data.endog, self.data.exog,
+                    M=models.robust.norms.Hampel()).fit()
+        h2 = RLM(self.data.endog, self.data.exog,\
+                    M=models.robust.norms.Hampel()).fit(cov="H2").bcov_scaled
+        h3 = RLM(self.data.endog, self.data.exog,\
+                    M=models.robust.norms.Hampel()).fit(cov="H3").bcov_scaled
+        self.res1 = results
+        self.res1.h2 = h2
+        self.res1.h3 = h3
+        self.res2 = rlm_results.hampel_huber()
+
+class test_rlm_bisquare_huber(test_rlm):
+    def __init__(self):
+        results = RLM(self.data.endog, self.data.exog,
+                    M=models.robust.norms.TukeyBiweight()).fit()
+        h2 = RLM(self.data.endog, self.data.exog,\
+                    M=models.robust.norms.TukeyBiweight()).fit(cov=\
+                    "H2").bcov_scaled
+        h3 = RLM(self.data.endog, self.data.exog,\
+                    M=models.robust.norms.TukeyBiweight()).fit(cov=\
+                    "H3").bcov_scaled
+        self.res1 = results
+        self.res1.h2 = h2
+        self.res1.h3 = h3
+        self.res2 = rlm_results.bisquare_huber()
+
+class test_rlm_andrews_huber(test_rlm):
+    def __init__(self):
+        results = RLM(self.data.endog, self.data.exog,
+                    M=models.robust.norms.AndrewWave()).fit()
+        h2 = RLM(self.data.endog, self.data.exog,
+                    M=models.robust.norms.AndrewWave()).fit(cov=\
+                    "H2").bcov_scaled
+        h3 = RLM(self.data.endog, self.data.exog,
+                    M=models.robust.norms.AndrewWave()).fit(cov=\
+                    "H3").bcov_scaled
+        self.res1 = results
+        self.res1.h2 = h2
+        self.res1.h3 = h3
+        self.res2 = rlm_results.andrews_huber()
 
 if __name__=="__main__":
     run_module_suite()

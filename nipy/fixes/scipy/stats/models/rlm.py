@@ -102,7 +102,6 @@ class RLM(LikelihoodModel):
         self.calc_params = np.linalg.pinv(self._exog)
         self.normalized_cov_params = np.dot(self.calc_params,
                                         np.transpose(self.calc_params))
-#        self.df_resid = self._exog.shape[0] - utils.rank(self._exog)
         self.df_resid = np.float(self._exog.shape[0] - utils.rank(self._exog))
         self.df_model = np.float(utils.rank(self._exog)-1)
         self.nobs = float(self._endog.shape[0])
@@ -141,13 +140,12 @@ class RLM(LikelihoodModel):
         if self.scale_est.lower() == 'stand_mad':
             return scale.stand_MAD(resid)
         elif self.scale_est.lower() == "huber":
-##            return scale.huber(resid)**2
-            #must initialize an instance to specify norm, etc.
-#            s = scale.Huber(norm=self.M)
-#            return scale.huber(resid)   # what do you do with loc?
+#TODO: Pull out into function and allow d to be set by user
+#      Note that if this is used for univariate data then
+#      the results is different than scale.huber
             d = 2.5
-            h = (self.nobs-self.df_model)/self.nobs*(d**2 + (1-d**2)*\
-                    Gaussian.cdf(d)-.5 - d*np.sqrt(2*np.pi)*np.exp(-.5*d**2))
+            h = (self.df_resid)/self.nobs*(d**2 + (1-d**2)*\
+                    Gaussian.cdf(d)-.5 - d/(np.sqrt(2*np.pi))*np.exp(-.5*d**2))
             s = scale.stand_MAD(resid)
             subset = lambda x: np.less(np.fabs(resid/x),d)
             chi = lambda s: subset(s)*(resid/s)**2/2+(1-subset(s))*(d**2/2)
@@ -159,7 +157,6 @@ class RLM(LikelihoodModel):
                         scalehist[-1]**2)
                 scalehist.append(nscale)
                 niter += 1
-                print nscale
             return scalehist[-1]
         else:
             return scale.scale_est(self, resid)**2
@@ -278,6 +275,7 @@ class RLMResults(LikelihoodModelResults):
         self._get_results(model)
 
     def _get_results(self, model):
+        #TODO: "pvals" should come from chisq on bse
         self.df_model = model.df_model
         self.df_resid = model.df_resid
         self.fitted_values = np.dot(model._exog, self.params)

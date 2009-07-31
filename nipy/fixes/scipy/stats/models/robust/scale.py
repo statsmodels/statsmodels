@@ -80,13 +80,6 @@ class Huber(object):
         self.norm = norm
         tmp = 2 * Gaussian.cdf(c) - 1
         self.gamma = tmp + c**2 * (1 - tmp) - 2 * c * Gaussian.pdf(c)
-#TODO: figure out where gamma comes from
-#should be chosen for consistency so that gamme = E_{chi}(N)
-# where chi is Huber's function min(|x|,c)**2
-# so chi is bounded by -(c**2) and (c**2)
-# so gamma should give the location of a normally distributed function
-# that is bounded at +-c**2?
-
 
     def __call__(self, a, mu=None, scale=None, axis=0):
         """
@@ -115,10 +108,10 @@ class Huber(object):
             est_mu = False
 
         if scale is None:
-            scale = stand_MAD(a, axis=axis)   # note that MAD got changed
+            scale = stand_MAD(a, axis=axis)
         else:
             scale = scale
-        scale = unsqueeze(scale, axis, a.shape) # why??
+        scale = unsqueeze(scale, axis, a.shape)
         mu = unsqueeze(mu, axis, a.shape)
         return self._estimate_both(a, scale, mu, axis, est_mu, n)
 
@@ -159,15 +152,10 @@ class Huber(object):
 
             nscale = np.sqrt(np.sum(subset * (a - nmu)**2, axis) \
                     / ((n-1) * self.gamma - (a.shape[axis] - card) * self.c**2))
-#TODO: instead of (n-1), the bias correction should be n-p for multivariate
-# this gives results that are very close to SAS or R depending on if the
-# constant is included as using up a dof
-#FIXME: ok, so update this with the SAS definition for iteration in the morning
             nscale = unsqueeze(nscale, axis, a.shape)
 
             test1 = np.alltrue(np.less_equal(np.fabs(scale - nscale),
                         nscale * self.tol))
-#            print np.fabs(scale/nscale - 1.).max()
             test2 = np.alltrue(np.less_equal(np.fabs(mu - nmu), nscale*self.tol))
             if not (test1 and test2):
                 mu = nmu; scale = nscale
