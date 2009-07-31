@@ -80,6 +80,12 @@ class Huber(object):
         self.norm = norm
         tmp = 2 * Gaussian.cdf(c) - 1
         self.gamma = tmp + c**2 * (1 - tmp) - 2 * c * Gaussian.pdf(c)
+#TODO: figure out where gamma comes from
+#should be chosen for consistency so that gamme = E_{chi}(N)
+# where chi is Huber's function min(|x|,c)**2
+# so chi is bounded by -(c**2) and (c**2)
+# so gamma should give the location of a normally distributed function
+# that is bounded at +-c**2?
 
 
     def __call__(self, a, mu=None, scale=None, axis=0):
@@ -141,7 +147,8 @@ class Huber(object):
                     nmu = np.clip(a, mu-self.c*scale,
                         mu+self.c*scale).sum(axis) / a.shape[axis]
                 else:
-                    nmu = norms.estimate_location(a, scale, self.norm, axis, mu,                        self.maxiter, self.tol)
+                    nmu = norms.estimate_location(a, scale, self.norm, axis, mu,
+                            self.maxiter, self.tol)
             else:
                 # Effectively, do nothing
                 nmu = mu.squeeze()
@@ -151,8 +158,11 @@ class Huber(object):
             card = subset.sum(axis)
 
             nscale = np.sqrt(np.sum(subset * (a - nmu)**2, axis) \
-                    / (n * self.gamma - (a.shape[axis] - card) * self.c**2))
-
+                    / ((n-1) * self.gamma - (a.shape[axis] - card) * self.c**2))
+#TODO: instead of (n-1), the bias correction should be n-p for multivariate
+# this gives results that are very close to SAS or R depending on if the
+# constant is included as using up a dof
+#FIXME: ok, so update this with the SAS definition for iteration in the morning
             nscale = unsqueeze(nscale, axis, a.shape)
 
             test1 = np.alltrue(np.less_equal(np.fabs(scale - nscale),

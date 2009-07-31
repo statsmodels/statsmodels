@@ -144,8 +144,23 @@ class RLM(LikelihoodModel):
 ##            return scale.huber(resid)**2
             #must initialize an instance to specify norm, etc.
 #            s = scale.Huber(norm=self.M)
-            print "I'm the one alright"
-            return scale.huber(resid)   # what do you do with loc?
+#            return scale.huber(resid)   # what do you do with loc?
+            d = 2.5
+            h = (self.nobs-self.df_model)/self.nobs*(d**2 + (1-d**2)*\
+                    Gaussian.cdf(d)-.5 - d*np.sqrt(2*np.pi)*np.exp(-.5*d**2))
+            s = scale.stand_MAD(resid)
+            subset = lambda x: np.less(np.fabs(resid/x),d)
+            chi = lambda s: subset(s)*(resid/s)**2/2+(1-subset(s))*(d**2/2)
+            scalehist = [np.inf,s]
+            niter = 1
+            while (np.abs(scalehist[niter-1] - scalehist[niter])>1e-08 \
+                    and niter < 100):
+                nscale = np.sqrt(1/(self.nobs*h)*np.sum(chi(scalehist[-1]))*\
+                        scalehist[-1]**2)
+                scalehist.append(nscale)
+                niter += 1
+                print nscale
+            return scalehist[-1]
         else:
             return scale.scale_est(self, resid)**2
 
@@ -218,7 +233,8 @@ class RLM(LikelihoodModel):
         if not init and not self.scale_est.lower() == "huber":
             self.scale = self.estimate_scale(wls_results.resid)
         elif not init and self.scale_est.lower() == "huber":
-            self.loc, self.scale = self.estimate_scale(wls_results.resid)
+#            self.loc, self.scale = self.estimate_scale(wls_results.resid)
+            self.scale = self.estimate_scale(wls_results.resid)
         self.update_history(wls_results)
         self.iteration = 1  # so these don't accumulate across fits
         if conv == 'coefs':
@@ -236,14 +252,15 @@ class RLM(LikelihoodModel):
                 self.weights = self.M.weights((self._endog - wls_results.predict) \
                         /self.scale)
             elif self.scale_est.lower() == "huber":
-                self.weights = self.M.weights((self._endog - self.loc)/self.scale)
+                self.weights = self.M.weights((self._endog - wls_results.predict)/self.scale)
 
             wls_results = WLS(self._endog, self._exog,
                                     weights=self.weights).fit()
             if update_scale is True and not self.scale_est.lower()=="huber":
                 self.scale = self.estimate_scale(wls_results.resid)
             elif update_scale is True and self.scale_est.lower() == "huber":
-                self.loc, self.scale = self.estimate_scale(wls_results.resid)
+#                self.loc, self.scale = self.estimate_scale(wls_results.resid)
+                self.scale = self.estimate_scale(wls_results.resid)
             self.update_history(wls_results)
             self.iteration += 1
         self.results = RLMResults(self, wls_results.params,
