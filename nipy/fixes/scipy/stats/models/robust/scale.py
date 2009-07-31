@@ -151,7 +151,7 @@ class Huber(object):
             card = subset.sum(axis)
 
             nscale = np.sqrt(np.sum(subset * (a - nmu)**2, axis) \
-                    / ((n-1) * self.gamma - (a.shape[axis] - card) * self.c**2))
+                    / (n * self.gamma - (a.shape[axis] - card) * self.c**2))
             nscale = unsqueeze(nscale, axis, a.shape)
 
             test1 = np.alltrue(np.less_equal(np.fabs(scale - nscale),
