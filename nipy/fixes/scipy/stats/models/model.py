@@ -6,7 +6,7 @@ from scipy import optimize
 from models.contrast import ContrastResults
 from models.utils import recipr
 #from models.rlm import RLM    # for confidence interval class checks with
-#from models.glm import GLMtwo # imports in models.__init__.py...
+#from models.glm import GLM # imports in models.__init__.py...
 #FIXME: we've got to figure out the (circular) imports all over the place
 
 import numpy.lib.recfunctions as nprf
@@ -50,7 +50,7 @@ class LikelihoodModel(Model):
         """
         pass
 
-#Note this is a property now, so this shouldn't peoplebe here?
+#Note this is a property now, so this shouldn't be here?
     def llf(self, params):
         """
         Log-likelihood of model.
@@ -198,7 +198,7 @@ class LikelihoodModelResults(Results):
 # needs to be optimized.
 # on the other hand, it is only necessary for when scale isn't a scalar
 # so it doesn't need to default to this every time
-                scale=np.eye(len(self.resid))*scale
+                scale=np.eye(len(self._model._endog))*scale
             return np.dot(np.dot(self.calc_params, scale), self.calc_params.T)
 
     def Tcontrast(self, matrix, t=True, sd=True, scale=None):
@@ -282,7 +282,7 @@ class LikelihoodModelResults(Results):
         """
         if self.__class__.__name__ in ['RLMResults','GLMResults']:
 #TODO: get rid of the above once imports are setteld
-#        if isinstance(self._model, (RLM, GLMtwo)):
+#        if isinstance(self._model, (RLM, GLM)):
             dist = norm
         else:
             dist = t

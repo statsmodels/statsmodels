@@ -49,10 +49,6 @@ class check_rlm_results(object):
     def test_weights(self):
         assert_almost_equal(self.res1.weights, self.res2.weights, DECIMAL)
 
-#    def test_stddev(self):
-#        assert_almost_equal(self.res1.stddev, self.res2.stddev, DECIMAL)
-#   don't know how R calculates this
-
     def test_residuals(self):
         assert_almost_equal(self.res1.resid, self.res2.resid, DECIMAL)
 

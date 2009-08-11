@@ -6,85 +6,9 @@ import numpy as np
 from models import utils
 from models.regression import WLS, GLS
 from models.robust import norms, scale
-from scipy.stats import norm as Gaussian # can get rid of this once scale is sorted out
+from scipy.stats import norm as Gaussian # can get rid of once scale is sorted
 
 from models.model import LikelihoodModel, LikelihoodModelResults
-
-class Model(WLS):
-
-    niter = 20
-    scale_est = 'MAD'
-
-    def __init__(self, endog, exog, M=norms.Hampel()):
-        self.M = M
-        self.weights = 1
-        self._endog = endog
-        self._exog = exog
-        self.initialize()
-
-    def __iter__(self):
-        self.iter = 0
-        self.dev = np.inf
-        return self
-
-    def deviance(self, results=None):
-        """
-        Return (unnormalized) log-likelihood from M estimator.
-
-        Note that self.scale is interpreted as a variance in OLSModel, so
-        we divide the residuals by its sqrt.
-        """
-        if results is None:
-            results = self.results
-        return self.M((self._endog - results.predict) / np.sqrt(results.scale)).sum()
-
-    def next(self):
-        results = self.results
-        self.weights = self.M.weights((self._endog - results.predict) / np.sqrt(results.scale))
-#        self.initialize(self.design)
-        self.initialize()
-        results = WLS.fit(self, self._endog)
-        self.scale = results.scale = self.estimate_scale(results)
-        self.iter += 1
-        return results
-
-    def cont(self, results, tol=1.0e-5):
-        """
-        Continue iterating, or has convergence been obtained?
-        """
-        if self.iter >= Model.niter:
-            return False
-
-        curdev = self.deviance(results)
-        if np.fabs((self.dev - curdev) / curdev) < tol:
-            return False
-        self.dev = curdev
-
-        return True
-
-    def estimate_scale(self, results):
-        """
-        Note that self.scale is interpreted as a variance in OLSModel, so
-        we return MAD(resid)**2 by default.
-        """
-        resid = self._endog - results.predict
-        if self.scale_est == 'MAD':
-            return scale.MAD(resid)**2
-        elif self.scale_est == 'Huber2':
-            return scale.huber(resid)**2
-        else:
-            return scale.scale_est(self, resid)**2
-
-    def fit(self):
-
-        iter(self)
-        self.results = WLS(self._endog, self._exog).fit()   # does it know the weights?
-        self.scale = self.results.scale = self.estimate_scale(self.results)
-
-        while self.cont(self.results):
-            self.results = self.next()
-
-        return self.results
 
 class RLM(LikelihoodModel):
     def __init__(self, endog, exog, M=norms.HuberT()):

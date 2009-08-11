@@ -307,7 +307,7 @@ class Mixed(object):
 
 if __name__ == '__main__':
     import numpy.random as R
-
+    R.seed(54321)
     nsubj = 400
     units  = []
 

@@ -26,10 +26,8 @@ from scipy.linalg import norm, toeplitz
 from models.model import LikelihoodModel, LikelihoodModelResults
 from models import utils                # rank utils in np?
 from models.tools import add_constant
-from scipy import stats, derivative     # used?
+from scipy import stats, derivative
 from scipy.stats.stats import ss        # could be avoided to eliminate overhead
-import numpy.lib.recfunctions as nprf   # can be removed
-
 
 class GLS(LikelihoodModel):
     """
@@ -46,7 +44,6 @@ class GLS(LikelihoodModel):
     sigma : scalar or array
        `sigma` is the weighting matrix of the covariance.
        The default is 1 for no scaling.
-#TODO: better description of sigma
 
     Attributes
     ----------
@@ -67,9 +64,8 @@ class GLS(LikelihoodModel):
         as a regressor when calculating the degrees of freedom of the
         residuals.
 
-    llf : real scalar
+    llf : float
         `llf` is the value of the maximum likelihood function of the model.
-#llf is actually a property?
 #TODO: clarify between results llf and model llf.
 #model llf requires the parameters, and results llf, evaluates the llf
 #at the calculated parameters
@@ -120,10 +116,9 @@ class GLS(LikelihoodModel):
     ..math :: X^{+}\approx(X^{T}X)^{-1}X^{T}
 
     """
-    def __init__(self, endog, exog, sigma=1.):
-        # what is the best __init__ sig? and default for sigma?
+    def __init__(self, endog, exog, sigma=None):
         self.sigma = sigma
-        if not np.shape(self.sigma) == ():   # check for scalar
+        if np.any(self.sigma) and not np.shape(self.sigma)==():
             self.cholsigmainv = np.linalg.cholesky(np.linalg.pinv(sigma)).T
         super(GLS, self).__init__(endog, exog)
 
@@ -137,13 +132,13 @@ class GLS(LikelihoodModel):
         self.df_model = utils.rank(self._exog)-1
 
     def whiten(self, Y):
-        if not np.shape(self.sigma) == ():
+        if np.any(self.sigma) and not self.sigma==() :
             return np.dot(self.cholsigmainv, Y)
         else:
             return Y
 #TODO: I think we can remove Y now, was there for old GLM compatibility
 #TODO: Do we need df_model and df_resid defined twice?
-    def fit(self, Y=None):
+    def fit(self):
         """
         Full fit of the model including estimate of covariance matrix,
         (whitened) residuals and scale.
@@ -197,32 +192,22 @@ class GLS(LikelihoodModel):
         R-squared for models with an intercept
         .. math :: 1-\frac{\sum e_{i}^{2}}{\sum(y_{i}-\overline{y})^{2}}
         """
-        if Y is None:           # this is needed for old GLM algorithm
-            Y = self._endog
-        Z = self.whiten(Y)
+#        if Y is None:           # this is needed for old GLM algorithm
+#            Y = self._endog
+        Z = self.whiten(self._endog)
         lfit = RegressionResults(self, np.dot(self.calc_params, Z),
                        normalized_cov_params=self.normalized_cov_params)
         lfit.predict = np.dot(self._exog, lfit.params)
-#TODO: decide on the below
-# the parameters are calculated with Z and wdesign, but it doesn't
-# make sense for the residuals to be calculated like this does it?
-# led to wrong resids in GLS (I THINK...)
-# also lead to wrong results in RLM
-        lfit.resid = Z - np.dot(self.wdesign, lfit.params)
-        # what is correct for the above.
-#TODO: need to add resids checks to tests
-# the below is right for GLS, but the above is right for GLM (aside from the dispersion problem)
-# moved to _summary for now, GLM will handle its own residuals
-# I don't think we care about the residuals for the whitened/transformed problem in
-# any case except GLM.
+#        lfit.resid = Z - np.dot(self.wdesign, lfit.params)
+#TODO: why was the above in the original?  do we care about whitened resids?
 #        lfit.resid = Y - np.dot(self._exog, lfit.params)
         lfit.Z = Z
         lfit.df_resid = self.df_resid
         lfit.df_model = self.df_model
         lfit.calc_params = self.calc_params # needed for cov_params()
         self._summary(lfit)
-         # since this uses resids, is it model specific
         return lfit
+
 #TODO: make results a property
 # this throws up a set attribute error when running old glm
 #    @property
@@ -237,7 +222,6 @@ class GLS(LikelihoodModel):
         Meant to be overwritten by subclass as needed(?).
         """
         lfit.resid = self._endog - lfit.predict
-#        lfit.resid = lfit.Z - np.dot(self.wdesign,lfit.params)
         lfit.scale = ss(lfit.resid) / self.df_resid
         lfit.nobs = float(self.wdesign.shape[0])
         lfit.SSR = ss(lfit.resid)
@@ -245,8 +229,7 @@ class GLS(LikelihoodModel):
 #TODO: Z or Y here?  Need to have tests in GLS.
         lfit.uTSS = ss(lfit.Z)
 # Centered R2 for models with intercepts
-# no longer has hascons, but this should be different for
-# no constant regression...
+# would be different for no constant regression...
 #        if self.hascons is True:
         lfit.Rsq = 1 - lfit.SSR/lfit.cTSS
 #        else:
@@ -295,7 +278,6 @@ class GLS(LikelihoodModel):
         ----------
         .. [1] W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
         """
-
         nobs = float(self._exog.shape[0])
         nobs2 = nobs / 2.0
         SSR = ss(self._endog - np.dot(self._exog,params))
@@ -314,7 +296,6 @@ class GLS(LikelihoodModel):
         params : array-like
 
         """
-        # Should this be analytic or a numerical approximation?
         return derivative(self.llf, params, dx=1e-04, n=1, order=3)
 
     def information(self, params):
@@ -339,7 +320,7 @@ class WLS(GLS):
     variance of the observations.
 
     >>> import numpy as np
-    >>>
+    >>>1
     >>> from models.tools import add_constant
     >>> from models.regression import WLS
     >>>
@@ -454,10 +435,9 @@ class OLS(WLS):
     >>> print results.Fcontrast(np.identity(2))
     <F contrast: F=19.4607843137, df_denom=5, df_num=2>
     """
-#FIXME:
     def __init__(self, endog, exog=None):
         super(OLS, self).__init__(endog, exog)
-        self.initialize()       #FIXME: does this still need to be here?
+#1        self.initialize()
 
     def whiten(self, Y):
         """
@@ -522,7 +502,6 @@ class AR(GLS):
     X = np.arange(1,8)
     X = add_constant(X)
     Y = np.array((1, 3, 4, 5, 8, 10, 9))
-    rho = 2
     model = AR(Y, X, rho=2)
     for i in range(6):
         results = model.fit()
@@ -531,9 +510,13 @@ class AR(GLS):
         model = AR(Y, X, rho)
     results.params
     results.t() # is this correct? it does equal params/bse
-    # but isn't the same as the AR example (which was wrong in the first place..)
     print results.Tcontrast([0,1])  # are sd and t correct? vs
     print results.Fcontrast(np.eye(2))
+
+    #equivalently
+    model2 = AR(Y, X, rho=2)
+    model2.iterative_fit(maxiter=6)
+    model2.rho
     """
     def __init__(self, endog, exog=None, rho=1):
         if isinstance(rho, np.int):
@@ -547,10 +530,6 @@ class AR(GLS):
                 self.rho.shape = (1,)
             self.order = self.rho.shape[0]
         if exog is None:
-#            cut = rho
-#            exog = add_constant(endog[:-cut])
-#            endog = endog[cut:]
-# Note that the above is closer to the R results, than the below
             super(AR, self).__init__(endog, add_constant(endog))
         else:
             super(AR, self).__init__(endog, exog)
@@ -569,7 +548,7 @@ class AR(GLS):
         for i in range(maxiter):
             self.initialize()
             results = self.fit()
-            self.rho, _ = yule_walker(self._endog - results.predict,
+            self.rho, _ = yule_walker(results.resid,
                                       order=self.order, df=None)
                                         #note that the X passed is different for
                                         #univariate.  Why this X anyway?
@@ -588,7 +567,6 @@ class AR(GLS):
             _X[(i+1):] = _X[(i+1):] - self.rho[i] * X[0:-(i+1)]
         return _X
 
-# is this supposed to be a function or a method of the AR class as the above example?
 def yule_walker(X, order=1, method="unbiased", df=None, inv=False):
     """
     Estimate AR(p) parameters from a sequence X using Yule-Walker equation.
@@ -616,9 +594,10 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False):
     if method not in ["unbiased", "mle"]:
         raise ValueError, "ACF estimation method must be 'unbiased' \
         or 'MLE'"
-    X = np.asarray(X, np.float64)  # don't touch the data again?
-    X -= X.mean()                  # automaticall demean's X
-    n = df or X.shape[0]    # is df_resid the degrees of freedom? no it's n I think or n-1
+    X = np.asarray(X, np.float64)  # don't touch the data?
+    X -= X.mean()                  # automatically demean's X
+    n = df or X.shape[0]    # is df_resid the degrees of freedom?
+                            # no it's n I think or n-1
 
     if method == "unbiased":        # this is df_resid ie., n - p
         denom = lambda k: n - k
@@ -645,8 +624,6 @@ class RegressionResults(LikelihoodModelResults):
 
     It handles the output of contrasts, estimates of covariance, etc.
     """
-# the init should contain all results needed in the other methods here
-# and the expected "results" from running a fit
     _llf = None
 
     def __init__(self, model, params, normalized_cov_params=None, scale=1.):
@@ -688,9 +665,6 @@ class RegressionResults(LikelihoodModelResults):
         """
         if not hasattr(secalf, 'resid'):
             raise ValueError, 'need normalized residuals to estimate standard deviation'
-
-#        sdd = utils.recipr(self.sd) / np.sqrt(self.df)
-#        return  self.resid * np.multiply.outer(np.ones(self.Y.shape[0]), sdd)
         return self.resid * utils.recipr(np.sqrt(self.scale))
 
     def predictors(self, design):
@@ -698,25 +672,6 @@ class RegressionResults(LikelihoodModelResults):
         Return linear predictor values from a design matrix.
         """
         return np.dot(design, self.params)
-
-class PanelModel(OLS):
-    """
-    Estimator for panel data including (time) fixed effects and random effects.
-    """
-    def __init__(self, design):
-        super(PanelModel, self).__init__()
-        self.initialize(design)
-
-    def initialize(self, design):
-        self.design = xi(design)
-    # UNFINISHED: RETURN AFTER THE REST IS CLEANED UP
-
-    def set_time(self, col):
-        """
-        This allows you to set which column has the time variable
-        for time fixed effects.
-        """
-        self.design = xi(self.design, col)
 
 def isestimable(C, D):
     """

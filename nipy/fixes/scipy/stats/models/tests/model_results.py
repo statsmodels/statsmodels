@@ -2,7 +2,6 @@ import numpy as np
 import os
 import models
 import glm_test_resids
-#TODO: Streamline this with RModelwrap
 
 def generated_data():
     '''
