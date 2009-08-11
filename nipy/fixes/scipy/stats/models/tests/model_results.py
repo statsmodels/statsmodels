@@ -39,12 +39,12 @@ class lbw(object):
             "stata_lbw_glm.csv")
 
         data=np.recfromcsv(filename, converters={4: lambda s: s.strip("\"")})
-        data = models.functions.xi(data, col='race', drop=True)
+        data = models.tools.xi(data, col='race', drop=True)
         self.endog = data.low
         design = np.column_stack((data['age'], data['lwt'],
                     data['black'], data['other'], data['smoke'], data['ptl'],
                     data['ht'], data['ui']))
-        self.exog = models.functions.add_constant(design)
+        self.exog = models.tools.add_constant(design)
         # Results for Canonical Logit Link
         self.params = (-.02710031, -.01515082, 1.26264728,
                         .86207916, .92334482, .54183656, 1.83251780,
@@ -169,7 +169,7 @@ class inv_gauss():
         data=np.genfromtxt(filename, delimiter=",", skiprows=1)
         self.endog = data[:5000,0]
         self.exog = data[:5000,1:]
-        self.exog = models.functions.add_constant(self.exog)
+        self.exog = models.tools.add_constant(self.exog)
         # Results
 #NOTE: loglikelihood difference in R vs. Stata vs. Models
 # is the same situation as gamma
@@ -351,9 +351,9 @@ class andrews(object):
         self.df_model = 3.
         self.df_resid = 17.
         self.bcov_unscaled = []
-        self.h1 = self.andrews_h1
-        self.h2 = self.andrews_h2
-        self.h3 = self.andrews_h3
+        self.h1 = self.h1
+        self.h2 = self.h2
+        self.h3 = self.h3
 
 
 ### RLM Results with Huber's Proposal 2 ###

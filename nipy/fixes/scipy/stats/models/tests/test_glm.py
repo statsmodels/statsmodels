@@ -8,7 +8,7 @@ from numpy.testing import *
 
 import models
 from models.glm import GLMtwo as GLM
-from models.functions import add_constant, xi
+from models.tools import add_constant, xi
 from scipy import stats
 from rmodelwrap import RModel
 from rpy import r
@@ -370,7 +370,7 @@ class test_glm_poisson(check_model_results):
 #    pass
 
 class test_glm_invgauss(check_model_results):
-#    @dec.slow
+    @dec.slow
 #FIXME: Is this how to mark as slow?
     def __init__(self):
         '''

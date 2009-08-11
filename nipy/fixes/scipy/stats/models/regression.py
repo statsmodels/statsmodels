@@ -25,7 +25,7 @@ import numpy as np
 from scipy.linalg import norm, toeplitz
 from models.model import LikelihoodModel, LikelihoodModelResults
 from models import utils                # rank utils in np?
-from models.functions import add_constant
+from models.tools import add_constant
 from scipy import stats, derivative     # used?
 from scipy.stats.stats import ss        # could be avoided to eliminate overhead
 import numpy.lib.recfunctions as nprf   # can be removed
@@ -34,8 +34,92 @@ import numpy.lib.recfunctions as nprf   # can be removed
 class GLS(LikelihoodModel):
     """
     Generalized least squares model with a general covariance structure
-    """
 
+    Parameters
+    ----------
+    endog : array-like
+        `endog` is a 1-d vector that contains the response variable
+
+    exog : array-like
+        `exog` is a nobs x p vector where nobs is the number of observations
+
+    sigma : scalar or array
+       `sigma` is the weighting matrix of the covariance.
+       The default is 1 for no scaling.
+#TODO: better description of sigma
+
+    Attributes
+    ----------
+    calc_params : array
+        `calc_params` is a p x n array that is the Moore-Penrose pseudoinverse
+        of the design matrix where p is the number of regressors including the
+        intercept and n is the number of observations. It is approximately
+        equal to (X^(T)X)^(-1)X^(T) in matrix notation.
+
+    df_model : scalar
+        The model degrees of freedom is equal to p - 1, where p is the number
+        of regressors.  Note that the intercept is not included in the reported
+        degrees of freedom.
+
+    df_resid : scalar
+        The residual degrees of freedom is equal to the number of observations
+        less the number of parameters.  Note that the intercept is counted
+        as a regressor when calculating the degrees of freedom of the
+        residuals.
+
+    llf : real scalar
+        `llf` is the value of the maximum likelihood function of the model.
+#llf is actually a property?
+#TODO: clarify between results llf and model llf.
+#model llf requires the parameters, and results llf, evaluates the llf
+#at the calculated parameters
+
+    normalized_cov_params : array
+        `normalized_cov_params` is a p x p array that is the inverse of ...
+#TODO: clarify
+        In matrix notation this can be written (X^(T)X)^(-1)
+
+    sigma :
+
+    wdesign : array
+        `wdesign` is the whitened design matrix.  If sigma is not a scalar
+        this is np.dot(cholsigmainv,Y).  Where cholsigmainv is the lower-
+        triangular Cholesky factor of the transpose of the pseudoinverse of
+        sigma.  In matrix notation this can be written L^(T)X where LL^(T)
+        is approximately Sigma^(+), the pseudoinverse of Sigma.
+#FIXME: Check explanation, try to write in terms of matrices and inverses
+#        only rather than pseudoinverses and factors.
+
+    Methods
+    -------
+    fit
+       Solves the least squares minimization.
+
+    information
+        Returns the Fisher information matrix.
+
+    initialize
+#TODO: initialize as a public method?
+
+    newton
+        Used to solve the maximum likelihood problem.
+
+    predict
+        Returns the fitted values given the parameters and exogenous design.
+
+    score
+        Score function.
+
+    whiten
+        TODO
+
+
+    Formulas
+    --------
+    calc_params attribute:
+    ..math :: X^{+}\approx(X^{T}X)^{-1}X^{T}
+
+    """
     def __init__(self, endog, exog, sigma=1.):
         # what is the best __init__ sig? and default for sigma?
         self.sigma = sigma
@@ -58,6 +142,7 @@ class GLS(LikelihoodModel):
         else:
             return Y
 #TODO: I think we can remove Y now, was there for old GLM compatibility
+#TODO: Do we need df_model and df_resid defined twice?
     def fit(self, Y=None):
         """
         Full fit of the model including estimate of covariance matrix,
@@ -67,14 +152,10 @@ class GLS(LikelihoodModel):
         -------
         adjRsq
             Adjusted R-squared
-        AIC
-            Akaike information criterion
-        BIC
-            Bayes information criterion
         bse
             The standard errors of the parameter estimates
         cTSS
-            The centered total sum of squares
+            The total sum of squares centered about the mean
         df_resid
             Residual degrees of freedom
         df_model
@@ -92,22 +173,29 @@ class GLS(LikelihoodModel):
         MSE_total
             Total mean squared error
         predict
-            A postestimation function to predict the values for a given design
-            model.predict(design)
+            The predict the values for a given design
         resid
             The residuals of the model.
-        Rsq (need to be explicit about constant/noconstant)
-            R-squared
-*        scale
+        Rsq
+            R-squared of a model with an intercept
+        scale
             A scale factor for the covariance matrix.
             Default value is SSR/(n-k)
-            Otherwise, determined by the `robust` keyword
+            Otherwise, determined by the `robust` keyword argument
         SSR
             Sum of squared residuals
         uTSS
             Uncentered sum of squares
         Z
-            The whitened dependent variable
+            The whitened response variable
+
+        Formulas
+        --------
+        Adjusted R-squared for models with an intercept
+        .. math :: 1-\frac{\left(n-1\right)}{\left(n-p\right)}\left(1-R^{2}\right)
+
+        R-squared for models with an intercept
+        .. math :: 1-\frac{\sum e_{i}^{2}}{\sum(y_{i}-\overline{y})^{2}}
         """
         if Y is None:           # this is needed for old GLM algorithm
             Y = self._endog
@@ -115,13 +203,14 @@ class GLS(LikelihoodModel):
         lfit = RegressionResults(self, np.dot(self.calc_params, Z),
                        normalized_cov_params=self.normalized_cov_params)
         lfit.predict = np.dot(self._exog, lfit.params)
-# Note on the below: the parameters are calculated with Z and wdesign, but it doesn't
+#TODO: decide on the below
+# the parameters are calculated with Z and wdesign, but it doesn't
 # make sense for the residuals to be calculated like this does it?
 # led to wrong resids in GLS (I THINK...)
 # also lead to wrong results in RLM
         lfit.resid = Z - np.dot(self.wdesign, lfit.params)
         # what is correct for the above.
-                                                            # need to add resids checks to tests
+#TODO: need to add resids checks to tests
 # the below is right for GLS, but the above is right for GLM (aside from the dispersion problem)
 # moved to _summary for now, GLM will handle its own residuals
 # I don't think we care about the residuals for the whitened/transformed problem in
@@ -133,10 +222,8 @@ class GLS(LikelihoodModel):
         lfit.calc_params = self.calc_params # needed for cov_params()
         self._summary(lfit)
          # since this uses resids, is it model specific
-                                                    # what is the point of scale aside from
-                                                    # GLM?
         return lfit
-
+#TODO: make results a property
 # this throws up a set attribute error when running old glm
 #    @property
 #    def results(self):
@@ -146,16 +233,16 @@ class GLS(LikelihoodModel):
 
     def _summary(self, lfit):
         """
-        Private method to call additional statistics for OLS.
-        Meant to be overwritten by subclass as needed.
+        Private method to call additional statistics for GLS.
+        Meant to be overwritten by subclass as needed(?).
         """
-
         lfit.resid = self._endog - lfit.predict
 #        lfit.resid = lfit.Z - np.dot(self.wdesign,lfit.params)
         lfit.scale = ss(lfit.resid) / self.df_resid
         lfit.nobs = float(self.wdesign.shape[0])
         lfit.SSR = ss(lfit.resid)
-        lfit.cTSS = ss(lfit.Z-lfit.Z.mean())
+        lfit.cTSS = ss(lfit.Z-np.mean(lfit.Z))
+#TODO: Z or Y here?  Need to have tests in GLS.
         lfit.uTSS = ss(lfit.Z)
 # Centered R2 for models with intercepts
 # no longer has hascons, but this should be different for
@@ -164,10 +251,9 @@ class GLS(LikelihoodModel):
         lfit.Rsq = 1 - lfit.SSR/lfit.cTSS
 #        else:
 #            lfit.Rsq = 1 - lfit.SSR/lfit.uTSS
-        lfit.ESS = ss(lfit.predict - lfit.Z.mean())
-        lfit.cTSS = ss(lfit.Z-lfit.Z.mean())
+        lfit.ESS = ss(lfit.predict - np.mean(lfit.Z))
         lfit.SSR = ss(lfit.resid)
-        lfit.adjRsq = 1 - (lfit.nobs - 1)/(lfit.nobs - lfit.df_model - 1)\
+        lfit.adjRsq = 1 - (lfit.nobs - 1)/(lfit.nobs - (lfit.df_model+1))\
                 *(1 - lfit.Rsq)
         lfit.MSE_model = lfit.ESS/lfit.df_model
         lfit.MSE_resid = lfit.SSR/lfit.df_resid
@@ -213,9 +299,6 @@ class GLS(LikelihoodModel):
         nobs = float(self._exog.shape[0])
         nobs2 = nobs / 2.0
         SSR = ss(self._endog - np.dot(self._exog,params))
-# reuse SSR from results?
-#        llf = -nobs2*(1 + np.log(2*np.pi) - np.log(nobs)) - \
-#                nobs2*np.log(SSR)
         llf = -np.log(SSR) * nobs2      # concentrated likelihood
         llf -= (1+np.log(np.pi/nobs2))*nobs2  # with constant
         return llf
@@ -248,24 +331,24 @@ class GLS(LikelihoodModel):
 
 
 class WLS(GLS):
+    #FIXME: update the example to the correct values returned once tested
     """
     A regression model with diagonal but non-identity covariance
     structure. The weights are presumed to be
     (proportional to the) inverse of the
     variance of the observations.
 
-    >>> import numpy as N
+    >>> import numpy as np
     >>>
-    >>> from nipy.fixes.scipy.stats.models.formula import Term, I
-    >>> from nipy.fixes.scipy.stats.models.regression import WLS
+    >>> from models.tools import add_constant
+    >>> from models.regression import WLS
     >>>
-    >>> data={'Y':[1,3,4,5,2,3,4],
-    ...       'X':range(1,8)}
-    >>> f = term("X") + I
-    >>> f.namespace = data
+    >>> Y = [1,3,4,5,2,3,4]
+    >>> X = range(1,8)
+    >>> X = add_constant(X)
     >>>
-    >>> model = WLS(f.design(), weights=range(1,8))
-    >>> results = model.fit(data['Y'])
+    >>> model = WLS(Y,X, weights=range(1,8))
+    >>> results = model.fit()
     >>>
     >>> results.params
     array([ 0.0952381 ,  2.91666667])
@@ -350,18 +433,17 @@ class OLS(WLS):
 
     Examples
     --------
-    >>> import numpy as N
+    >>> import numpy as np
     >>>
-    >>> from nipy.fixes.scipy.stats.models.formula import Term, I
-    >>> from nipy.fixes.scipy.stats.models.regression import OLS
+    >>> from models.tools import add_constant
+    >>> from models.regression import OLS
     >>>
-    >>> data={'Y':[1,3,4,5,2,3,4],
-    ...       'X':range(1,8)}
-    >>> f = term("X") + I
-    >>> f.namespace = data
+    >>> Y = [1,3,4,5,2,3,4],
+    >>> X = range(1,8)
+    >>> X = add_constant(X)
     >>>
-    >>> model = OLS(f.design())
-    >>> results = model.fit(data['Y'])
+    >>> model = OLS(Y,X)
+    >>> results = model.fit()
     >>>
     >>> results.params
     array([ 0.25      ,  2.14285714])
@@ -372,10 +454,10 @@ class OLS(WLS):
     >>> print results.Fcontrast(np.identity(2))
     <F contrast: F=19.4607843137, df_denom=5, df_num=2>
     """
-
+#FIXME:
     def __init__(self, endog, exog=None):
         super(OLS, self).__init__(endog, exog)
-        self.initialize()       # does this call still need to be here?
+        self.initialize()       #FIXME: does this still need to be here?
 
     def whiten(self, Y):
         """
@@ -383,7 +465,6 @@ class OLS(WLS):
         """
         return Y
 
-#TODO: Needs to be cleaned up with new design and tested
 class AR(GLS):
     """
     A regression model with an AR(p) covariance structure.
@@ -435,7 +516,7 @@ class AR(GLS):
     New Example
     --------
     import numpy as np
-    from models.functions import add_constant
+    from models.tools import add_constant
     from models.regression import AR, yule_walker
 
     X = np.arange(1,8)

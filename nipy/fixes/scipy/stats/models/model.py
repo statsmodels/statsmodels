@@ -161,7 +161,9 @@ class LikelihoodModelResults(Results):
         if _cov.ndim == 2:
             _cov = np.diag(_cov)
         _t = _params * recipr(np.sqrt(_cov))
+#FIXME: This could be extended to return z() values for GLM and RLM
         return _t
+
 
     def cov_params(self, matrix=None, column=None, scale=None, other=None):
         """
@@ -206,7 +208,7 @@ class LikelihoodModelResults(Results):
         """
 
         if self.normalized_cov_params is None:
-            raise ValueError, 'need covariance of parameters for computing T statistics'
+            raise ValueError, 'Need covariance of parameters for computing T statistics'
 
         _t = _sd = None
 

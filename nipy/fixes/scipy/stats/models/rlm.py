@@ -332,7 +332,7 @@ if __name__=="__main__":
     605, 688, 215, 255, 462, 448, 776, 200, 132, 36, 770, 140, 810, 450, 635,
     150]])
     exog = exog.T
-    exog = models.functions.add_constant(exog)
+    exog = models.tools.add_constant(exog)
 
 #    model_ols = models.regression.OLS(endog, exog)
 #    results_ols = model_ols.fit()
@@ -354,7 +354,7 @@ if __name__=="__main__":
 #######################
     from models.datasets.stackloss.data import load
     data = load()
-    data.exog = models.functions.add_constant(data.exog)
+    data.exog = models.tools.add_constant(data.exog)
 #############
 ### Huber ###
 #############

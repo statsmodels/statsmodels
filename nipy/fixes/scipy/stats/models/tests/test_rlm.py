@@ -76,7 +76,7 @@ class check_rlm_results(object):
 class test_rlm(check_rlm_results):
     from models.datasets.stackloss.data import load
     data = load()
-    data.exog = models.functions.add_constant(data.exog)
+    data.exog = models.tools.add_constant(data.exog)
     r.library('MASS')
     def __init__(self):
         results = RLM(self.data.endog, self.data.exog,\
@@ -150,7 +150,7 @@ class test_rlm_andrews(test_rlm):
 class test_rlm_huber(check_rlm_results):
     from models.datasets.stackloss.data import load
     data = load()
-    data.exog = models.functions.add_constant(data.exog)
+    data.exog = models.tools.add_constant(data.exog)
     def __init__(self):
         results = RLM(self.data.endog, self.data.exog,\
                     M=models.robust.norms.HuberT()).fit(scale_est="Huber")

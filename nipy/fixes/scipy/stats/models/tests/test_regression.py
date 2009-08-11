@@ -5,7 +5,7 @@ import numpy as np
 from numpy.random import standard_normal
 from numpy.testing import *
 from scipy.linalg import toeplitz
-from models.functions import add_constant
+from models.tools import add_constant
 from models.regression import OLS, AR, WLS, GLS, yule_walker
 import models
 
