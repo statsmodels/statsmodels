@@ -9,6 +9,8 @@ class Discrete(object):
 
     """
     A simple little class for working with discrete random vectors.
+
+    Note: assumes x is 2-d and observations are in 0 axis, variables in 1 axis
     """
 
     def __init__(self, x, w=None):
@@ -33,7 +35,7 @@ class Discrete(object):
         return (fx * self.w).sum()
 
     def cov(self):
-        mu = self.mean()
+        mu = self.mean()  #JP: this looks fishy, should it be with axis=0, i.e. mu = self.mean(0)
         dx = self.x - np.multiply.outer(mu, self.x.shape[1])
         return np.dot(dx, np.transpose(dx))
 
