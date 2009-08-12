@@ -1,36 +1,31 @@
-TODO for scipy.stats.models
-===========================
+Tests
+----------
+Tests for Contrast (doing now)
+Tests for other methods in Model.py
+Tests for other links in GLM
+Test I/O of models wrt array types, dimensions
+Check that rpy is installed
 
-In converting the bspline.so from a weave build to a C extension, we
-found several things that should be fixed or looked into more
-thoroughly.  Hopefully we can dedicate some time to this effort at the
-Scipy Conf 2008.  However, many of these items should be addressed
-before stats.models goes into a release of scipy.
+Issues
+----------
+GLS residuals - whitened or not? (ie., Z - dot(wdesign, params) or
+endog - dot(exog,params))
+   -I think not...
+AR - I need to check my references, but right now AR is done through a
+two-stage iterative fit.  Does this always make sense?
+   -test for this (only univariate yule-walker is tested right now)
+Make sure all results are computed where they should be
 
-Items
------
+Other cleanup
+--------------------
+Combine tools and utils?
+   -move isestimable to tools/utils and use it?
+Move cox/survival, mixed, and GAM to "sandbox"?
+Put formulas in docstring? (this could become "heavy"...)
 
-* Run pychecker on the stats.models and fix numerous errors.  There
-  are import errors, undefined globals, undefined attrs,
-  etc... Running the command below in stats/models produced 140+
-  errors.::
+Update all examples/docstrings
+Run lint
+Technical docs (theory, references, formulas)
+Install for standalone package
 
-    # Run pychecker on all python modules except __init__.py
-    $ grind "[a-z|_][a-z]*.py" | xargs pychecker
-
-* Address the FIXME issues in the code.
-
-* Determine and cleanup the public API.  Functions/classes used
-  internally should be private (leading underscore).  Public functions
-  should be obvious and documented.  Packaging should be reviewed and
-  cleaned up.
-
-* Update documentation to scipy standards.  Especially adding example
-  sections showing how to use the public functions.
-
-* Tests!  Robust tests are needed!  Of the subset of tests we looked
-  at, most only checked attribute setting, not the results of applying
-  the function to data.
-
-* Remove code duplication.  smoothers.py and bspline.py define
-  SmoothingSpline class.
+Remove formula dependency
