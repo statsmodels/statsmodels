@@ -21,7 +21,7 @@ print results.Fcontrast(np.eye(2))
 
 
 rhotrue = 0.99
-beta = np.array([1, 2])
+beta = np.array([0.1, 2])
 noiseratio = 1.
 nsample = 20
 x = np.arange(nsample)
@@ -45,6 +45,8 @@ print 'with AR(0)', par0
 parold = par0
 mod0 = AR(Y, X, 1)
 for i in range(10):
+    print mod0.wdesign.sum()
+    print mod0.calc_params.sum()
     mod0.iterative_fit(1)
     print mod0.rho
     parnew = mod0.results.params
