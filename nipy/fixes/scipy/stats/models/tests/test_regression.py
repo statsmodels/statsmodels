@@ -148,6 +148,8 @@ class test_gls_scalar(check_regression_results):
 #TODO: Make sure no argument given is the same as OLS
 #    pass
 
+#TODO: test AR
+# why the two-stage in AR?
 #class test_ar(object):
 #    from models.datasets.sunspots.data import load
 #    data = load()
@@ -172,7 +174,8 @@ class test_yule_walker(object):
         self.R_params = R_results['ar']
 
     def test_params(self):
-        R_params = np.array([ 1.28310031, -0.45240924, -0.20770299,  0.04794365])
+        R_params = np.array([ 1.28310031, -0.45240924, -0.20770299,
+                    0.04794365])
         assert_almost_equal(self.rho, self.R_params, DECIMAL)
 
 if __name__=="__main__":

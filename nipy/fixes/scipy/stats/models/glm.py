@@ -6,7 +6,7 @@ General linear models
 
 import numpy as np
 from models import family, utils
-from models.regression import WLS,GLS
+from models.regression import WLS,GLS   #don't need gls, might for mlogit
 from models.model import LikelihoodModel, LikelihoodModelResults
 from scipy import derivative, comb
 
@@ -24,10 +24,7 @@ from scipy import derivative, comb
 # gamma        |   x    x                        x
 #
 
-# Note need to correct for "dispersion"?
-
-# Would GLM or GeneralLinearModel be a better class name?
-class Model(WLS):
+class GLM(LikelihoodModel):
     '''
     Notes
     -----
@@ -43,129 +40,6 @@ class Model(WLS):
         Journal of the Royal Statistical Society, Series B, 46, 149-192.
 
     '''
-
-    maxiter = 10
-#    @property
-#    def scale(self):
-#        return self.results.scale
-
-    def __init__(self, endog, exog, family=family.Gaussian()):
-        self.family = family
-        super(Model, self).__init__(endog, exog, weights=1)
-
-    def __iter__(self):
-        self.iter = 0
-        self.dev = np.inf
-        return self
-
-#    def llf(self, b, Y):
-#        pass
-
-    def deviance(self, Y=None, results=None, scale = 1.):
-        """
-        Return (unnormalized) log-likelihood for GLM.
-
-        Note that self.scale is interpreted as a variance in old_model, so
-        we divide the residuals by its sqrt.
-        """
-
-# NOTE: Is old_model just WLSModel.whiten?
-        if results is None:
-            results = self.results
-        if Y is None:
-            Y = self._endog
-        return self.family.deviance(Y, results.mu) / scale
-
-    def next(self):
-        results = self.results
-        Y = self._endog
-        self.weights = self.family.weights(results.mu)
-        if self.weights.ndim == 2:
-            print 'family weights are not 1d'   # to be taken out
-            self.weights = self.weights.ravel()
-        self.initialize()
-        Z = results.predict + self.family.link.deriv(results.mu) * (Y - results.mu)
-        # TODO: this had to changed to execute properly
-        # is this correct? Why? I don't understand super.... -- JT
-
-        newresults = super(Model, self).fit(Z)
-        newresults.Y = Y
-        newresults.mu = self.family.link.inverse(newresults.predict)
-        self.iter += 1
-        return newresults
-
-    def cont(self, tol=1.0e-05):
-        """
-        Continue iterating, or has convergence been obtained?
-        """
-        if self.iter >= Model.maxiter:
-            return False
-
-        curdev = self.deviance(results=self.results)
-
-        if np.fabs((self.dev - curdev) / curdev) < tol:
-            return False
-
-        self.dev = curdev # this ie Deviance in STATA
-        return True
-
-    def estimate_scale(self, Y=None, results=None):
-        """
-        Return Pearson\'s X^2 estimate of scale.
-        """
-
-        if results is None:
-            results = self.results
-        if Y is None:
-            Y = self._endog
-        resid = Y - results.mu          # This gives the response residual
-# This is the (1/df) Pearson in STATA
-        return ((np.power(resid, 2) / self.family.variance(results.mu)).sum()
-                / results.df_resid)
-
-    def fit(self):
-        iter(self)
-        self.results = super(Model, self).fit(
-            self.family.link.initialize(self._endog)) # calls WLS.fit with
-                                            # Y, where Y is the result
-                                            # of the link function on the mean
-                                            # of Y
-        self.results.mu = self.family.link.inverse(self.results.predict)
-                                            # returns inverse of link
-                                            # on the predicted values
-                                            # predict has been overwritten
-                                            # and holds self.link(mu)
-                                            # which is just the mean vector!?
-        self.results.scale = self.estimate_scale()
-                                            # uses Pearson's X2 as
-                                            # as default scaling
-        while self.cont():
-            self.results = self.next()
-            self.results.scale = self.estimate_scale()
-        return self.results
-
-# Would GLM or GeneralLinearModel be a better class name?
-#class glzm(WLSModel):
-class GLMtwo(LikelihoodModel):
-    '''
-    Notes
-    -----
-    This uses iterative reweighted least squares.
-
-    References
-    ----------
-    Gill, Jeff. 2000. Generalized Linear Models: A Unified Approach.
-        SAGE QASS Series.
-
-    Green, PJ. 1984.  "Iteratively reweighted least squares for maximum
-        likelihood estimation, and some robust and resistant alternatives."
-        Journal of the Royal Statistical Society, Series B, 46, 149-192.
-
-    '''
-#    @property
-#    def scale(self):
-#        return self.results.scale
-
     def __init__(self, endog, exog, family=family.Gaussian()):
         self.family = family
         self._endog = endog
@@ -174,17 +48,14 @@ class GLMtwo(LikelihoodModel):
 
     def initialize(self):
         self.history = { 'predict' : [], 'params' : [np.inf],
-                         'logL' : [], 'deviance' : [np.inf]}
+                         'deviance' : [np.inf]}
         self.iteration = 0
         self.y = self._endog
-
-         ### copied from OLS initialize() All needed?? ###
         self.calc_params = np.linalg.pinv(self._exog)
         self.normalized_cov_params = np.dot(self.calc_params,
                                         np.transpose(self.calc_params))
         self.df_model = utils.rank(self._exog)-1
         self.df_resid = self._exog.shape[0] - utils.rank(self._exog)
-
 
     def score(self, params):
         pass
@@ -199,15 +70,25 @@ class GLMtwo(LikelihoodModel):
 
     def estimate_scale(self, mu):
         """
-        Return scale.
+        Estimates the dispersion/scale.
 
-        Pearson\'s X^2 estimate of scale.
-        Residual Deviance estimate of scale
-        1.
-        Float
+        Depends on the specification of scale in the fit method.
+
+        Default for Binomial and Poisson families is 1.
+
+        Default for the other families is Pearson's Chi-Square estimate.
+
+        See fit() for other options.
+
+        Parameters
+        ----------
+        mu : array
+            mu is the mean response estimate
+
+        Returns
+        ----------
+        Estimate of scale
         """
-#TODO: Fix docstring
-
         if not self.scaletype:
             if isinstance(self.family, (family.Binomial, family.Poisson)):
                 return np.array(1.)
@@ -237,7 +118,7 @@ class GLMtwo(LikelihoodModel):
     def fit(self, maxiter=100, method='IRLS', tol=1e-8, data_weights=1.,
             scale=None):
         '''
-        Fits a glm model based
+        Fits a glm model
 
         parameters
         ----------
@@ -248,32 +129,36 @@ class GLMtwo(LikelihoodModel):
                 degrees of freedom
             The default is 1 for Binomial and Poisson
             `dev` scales by the deviance divided by the residual
-                    degrees of freedome
+                    degrees of freedom
 
         data_weights : array-like
-            Number of trials for each observation. Used for binomial data.
+            Number of trials for each observation. Used for only for
+            binomial data.
         '''
         if self._endog.shape[0] != self._exog.shape[0]:
             raise ValueError, 'size of Y does not match shape of design'
-        # Why have these checks here and not in the base class or model?
+#FIXME: Why have these checks here and not in the base class or model?
+        if np.shape(data_weights) != () and not isinstance(self.family,
+                family.Binomial):
+            raise AttributeError, "Data weights are only to be supplied for\
+the Binomial family"
         self.data_weights = data_weights
         if np.shape(self.data_weights) == () and self.data_weights>1:
             self.data_weights = self.data_weights * np.ones((self._exog.shape[0]))
         self.scaletype = scale
         if isinstance(self.family, family.Binomial):
             self.y = self.family.initialize(self.y)
-            mu = (self.y + 0.5)/2    # starting mu for binomial
-        else: mu = (self.y + self.y.mean())/2. # starting mu for nonbinomial
+        mu = self.family.starting_mu(self.y)
         wls_exog = self._exog
         eta = self.family.predict(mu)
         self.iteration += 1
         self.history['deviance'].append(self.family.deviance(self.y, mu) / 1.)
-# scale is assumed to be 1. for the initial predictor
         while ((np.fabs(self.history['deviance'][self.iteration]-\
                     self.history['deviance'][self.iteration-1])) > tol and \
                     self.iteration < maxiter):
             self.weights = data_weights*self.family.weights(mu)
-#            if self.weights.ndim == 2:  # not sure what this corrected for?
+#FIXME: What were these added to correct?
+#            if self.weights.ndim == 2:
 #                if not self.weights.size == self.Y.shape[0]:
 #                    print 'weights too large', self.weights.shape
 #                else:
@@ -287,32 +172,32 @@ class GLMtwo(LikelihoodModel):
             self.scale = self.estimate_scale(mu)
             self.iteration += 1
         self.mu = mu
-        self.results = GLMResults(self, wls_results.params, self.scale,
-                    wls_results)
+        self.results = GLMResults(self, wls_results.params,
+                wls_results.normalized_cov_params, self.scale)
+        self.results.bse = np.sqrt(np.diag(wls_results.cov_params(\
+                scale=self.scale)))
         return self.results
 
-class GLMResults(LikelihoodModelResults):   # could inherit from RegressionResults?
+class GLMResults(LikelihoodModelResults):
     '''
     Class to contain GLM results
     '''
 
     _llf = None
 
-    def __init__(self, model, params, scale, tmp_results):
-#TODO: need to streamline init sig...
+    def __init__(self, model, params, normalized_cov_params, scale):
         super(GLMResults, self).__init__(model, params,
-                normalized_cov_params=None, scale=scale)
-        self._get_results(model, tmp_results)
+                normalized_cov_params=normalized_cov_params, scale=scale)
+        self._get_results(model)
 
-    def _get_results(self, model, tmp_results):
-        self.tmp_results = tmp_results # temporarily here
-        self.nobs = model.y.shape[0]    # this should be a model attribute
+    def _get_results(self, model):
+        self.nobs = model.y.shape[0]
         self.df_resid = model.df_resid
         self.df_model = model.df_model
         self.mu = model.mu
-        self.bse = np.sqrt(np.diag(tmp_results.cov_params(scale=model.scale)))
+        self.calc_params = model.calc_params
+#        self.bse = np.sqrt(np.diag(tmp_results.cov_params(scale=model.scale)))
         self.resid_response = model.data_weights*(model.y - model.mu)
-            # data_weights needed for binomial(n)
         self.resid_pearson = np.sqrt(model.data_weights)*(model.y-model.mu)/\
                 np.sqrt(model.family.variance(model.mu))
         self.resid_working = model.data_weights * (self.resid_response/\
@@ -321,15 +206,14 @@ class GLMResults(LikelihoodModelResults):   # could inherit from RegressionResul
         self.resid_dev = model.family.devresid(model.y, model.mu)
         self.pearsonX2 = np.sum(self.resid_pearson**2)
         self.predict = np.dot(model._exog,self.params)
-        null = WLS(model.y,np.ones((len(model.y),1)),weights=model.data_weights).\
-                fit().predict # predicted values of constant only fit
+        null = WLS(model.y,np.ones((len(model.y),1)),
+            weights=model.data_weights).fit().predict
+        # null is the predicted values of constant only fit
         self.null_deviance = model.family.deviance(model.y,null)
         self.deviance = model.family.deviance(model.y,model.mu)
 
     @property
     def llf(self):
-#TODO: Go through the math and see if it makes sense in all cases
-# to pass the scale.  Stata seems to use it sometimes and sometimes set it to 1
         if self._llf is None and not isinstance(self.model.family,
                         family.NegativeBinomial):
             self._llf = self.model.family.logL(self.model.y,
@@ -345,5 +229,4 @@ class GLMResults(LikelihoodModelResults):   # could inherit from RegressionResul
         aic = -2 * llf + 2*(self.df_model+1)
         bic = self.model.family.deviance(self.model.y,self.model.mu) - \
                 (self.df_resid)*np.log(self.nobs)
-        # this doesn't appear to be correct?
         return dict(aic=aic, bic=bic)

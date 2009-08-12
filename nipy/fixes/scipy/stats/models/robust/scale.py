@@ -164,3 +164,39 @@ class Huber(object):
         raise ValueError('joint estimation of location and scale failed to converge in %d iterations' % self.maxiter)
 
 huber = Huber()
+
+class Hubers_scale(object):
+    '''
+    Huber's scaling for fitting robust linear models
+
+    Params
+    ------
+    d : float
+        d is the tuning constant for Huber's scale
+        Default is 2.5
+    '''
+    def __init__(self, d=2.5, tol=1e-08, maxiter=100):
+        self.d = d
+        self.tol = tol
+        self.maxiter = maxiter
+
+    def __call__(self, df_resid, nobs, resid):
+        h = (df_resid)/nobs*(self.d**2 + (1-self.d**2)*\
+                    Gaussian.cdf(self.d)-.5 - self.d/(np.sqrt(2*np.pi))*\
+                    np.exp(-.5*self.d**2))
+        s = stand_MAD(resid)
+        subset = lambda x: np.less(np.fabs(resid/x),self.d)
+        chi = lambda s: subset(s)*(resid/s)**2/2+(1-subset(s))*(self.d**2/2)
+        scalehist = [np.inf,s]
+        niter = 1
+        while (np.abs(scalehist[niter-1] - scalehist[niter])>self.tol \
+                and niter < self.maxiter):
+            nscale = np.sqrt(1/(nobs*h)*np.sum(chi(scalehist[-1]))*\
+                    scalehist[-1]**2)
+            scalehist.append(nscale)
+            niter += 1
+            if niter == self.maxiter:
+                raise ValueError, "Huber's scale failed to converge"
+        return scalehist[-1]
+
+hubers_scale = Hubers_scale()

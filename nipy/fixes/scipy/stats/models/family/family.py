@@ -97,6 +97,9 @@ class Family(object):
         self.link = link()
         self.variance = variance
 
+    def starting_mu(self, y):
+        return (y + y.mean())/2.
+
     def weights(self, mu):
 
         """
@@ -336,6 +339,9 @@ class Binomial(Family):
         self.variance = V.Binomial(n=self.n)
         self.link = link
 
+    def starting_mu(self, y):
+        return (y + .5)/2
+
     def initialize(self, Y):
         '''
         Checks the response variable to see if it is Bernouilli (ie., a vector
@@ -529,10 +535,9 @@ class NegativeBinomial(Family):
             + constant)
 
     def resid_anscombe(self, Y, mu):
-#FIXME: Needs to be included.  Can't remember the relation between
-# special.betainc and special.hyp2f1.  Should be in notes though.
-        return
-
+        hyp2f1 = lambda x : special.hyp2f1(2/3.,1/3.,5/3.,x)
+        return (hyp2f1(-self.alpha*Y)-hyp2f1(-self.alpha*mu)+1.5*(Y**(2/3.)-\
+                mu**(2/3.)))/(mu+self.alpha*mu**2)**(1/6.)
 
 
 
