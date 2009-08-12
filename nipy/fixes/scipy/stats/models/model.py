@@ -76,6 +76,9 @@ class LikelihoodModel(Model):
         self._results = results
 
     def newton(self, params):
+        #JP this is not newton, it's fmin
+        # is this used anywhere
+        # results should be attached to self
         def f(params): return -self.llf(params)
         xopt, fopt, iter, funcalls, warnflag =\
           optimize.fmin(f, params, full_output=True)

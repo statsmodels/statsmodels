@@ -247,7 +247,7 @@ class GLS(LikelihoodModel):
 
     def llf(self, params):
         """
-        Returns the value of the loglikelihood function at b.
+        Returns the value of the gaussian loglikelihood function at b.
 
         Given the whitened design matrix, the loglikelihood is evaluated
         at the parameter vector `b` for the dependent variable `Y`.
@@ -296,6 +296,7 @@ class GLS(LikelihoodModel):
         params : array-like
 
         """
+        #JP: this is generic and should go into LikeliHoodModel
         return derivative(self.llf, params, dx=1e-04, n=1, order=3)
 
     def information(self, params):
