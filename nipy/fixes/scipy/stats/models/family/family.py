@@ -535,17 +535,9 @@ class NegativeBinomial(Family):
             + constant)
 
     def resid_anscombe(self, Y, mu):
-#        cox_snell = lambda x: special.betainc(2/3., 2/3., x)\
-#                            *special.beta(2/3.,2/3.)
-#        return (cox_snell((Y-mu)/Y)-cox_snell(mu))/\
-#                    (mu**(1/6.)*(1-mu)**(1/6.))
-        pass
-# note that relation between hyp2f1 and cox_snell is
-#In [75]: cox_snell(.35)
-#Out[75]: 0.78611357682326299
-#In [77]: .35**(2/3.)/(2/3.)*special.hyp2f1(2/3.,1/3.,5/3.,.35)
-#Out[77]: 0.7861135768232631
-
+        hyp2f1 = lambda x : special.hyp2f1(2/3.,1/3.,5/3.,x)
+        return (hyp2f1(-self.alpha*Y)-hyp2f1(-self.alpha*mu)+1.5*(Y**(2/3.)-\
+                mu**(2/3.)))/(mu+self.alpha*mu**2)**(1/6.)
 
 
 
