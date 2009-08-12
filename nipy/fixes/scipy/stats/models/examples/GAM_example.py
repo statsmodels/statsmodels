@@ -1,8 +1,16 @@
+
+#FIXME this uses a call to _hbspline, check version of gam  DONE
+#FIXME problems calling GLM, 3rd parameter missing
+
+
 # convert to script for testing, so we get interactive variable access
 example = 1  # 1,2 or 3
+
 import numpy as np
 import numpy.random as R
-#from models.gam import AdditiveModel
+from models.gam import AdditiveModel
+from models.family import family
+from models.glm import GLM
 
 # n is not a good name for a function, use normalize or something
 n = lambda x: (x - x.mean()) / x.std()
@@ -20,6 +28,8 @@ z = n(z) * 0.1
 
 y += z
 d = np.array([x1,x2]).T
+
+
 if example == 1:
     print "normal"
     m = AdditiveModel(d)
@@ -35,7 +45,7 @@ if example == 2:
     f = family.Binomial()
     b = np.asarray([scipy.stats.bernoulli.rvs(p) for p in f.link.inverse(y)])
     b.shape = y.shape
-    m = Model(d, family=f)
+    m = GLM(d, family=f)
     toc = time.time()
     m.fit(b)
     tic = time.time()
@@ -47,7 +57,7 @@ if example == 3:
     f = family.Poisson()
     p = np.asarray([scipy.stats.poisson.rvs(p) for p in f.link.inverse(y)])
     p.shape = y.shape
-    m = Model(d, family=f)
+    m = GLM(d, family=f)
     toc = time.time()
     m.fit(p)
     tic = time.time()
@@ -60,7 +70,7 @@ plt.plot(x1, n(f1(x1)), linewidth=2)
 plt.figure(num=2)
 plt.plot(x2, n(m.smoothers[1](x2)), 'r')
 plt.plot(x2, n(f2(x2)), linewidth=2);
-plt.show()
+#plt.show()
 ##     pylab.figure(num=1)
 ##     pylab.plot(x1, n(m.smoothers[0](x1)), 'b'); pylab.plot(x1, n(f1(x1)), linewidth=2)
 ##     pylab.figure(num=2)

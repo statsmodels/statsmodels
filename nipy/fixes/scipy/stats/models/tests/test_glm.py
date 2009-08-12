@@ -143,20 +143,12 @@ class test_gaussian_log(check_model_results):
         self.res2 = GaussLog_Res_R
 
     def test_null_deviance(self):
-#        assert_equal(1,0)
-#FIXME: do I overwrite?
         assert_almost_equal(self.res1.null_deviance, self.res2.null_deviance,
                     DECIMAL_least)
 
     def check_params(self, params1, params2):
         assert_almost_equal(params1, params2, DECIMAL)
-#FIXME: resolve llf for noncanonical links and test other links?
-# need other links for the other families to see if this is a problem with all
-# note that deviance, etc. *is* correct
-# after adding the seed so randoms are always the same
-# Stata llf = 565.4302263
-# Stata AIC = -11.2486
-# Stata BIC = -446.7014  our BIC is correct
+
     def check_loglike(self, llf1, llf2):
         assert_almost_equal(llf1, llf2, DECIMAL_none)
 
@@ -233,7 +225,9 @@ class test_glm_binomial(check_model_results):
     def check_pearsonX2(self, pearsonX21, pearsonX22):
         assert_almost_equal(pearsonX21, pearsonX22, DECIMAL_lesser)
         # Pearson's X2 sums residuals that are rounded differently in Stata
-
+#TODO:
+#Non-Canonical Links for the Binomial family require the algorithm to be
+#slightly changed
 #class test_glm_binomial_log(check_model_results):
 #    pass
 

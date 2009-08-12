@@ -1,5 +1,5 @@
 import numpy as np
-from models.functions import add_constant
+from models.tools import add_constant
 from models.regression import AR, yule_walker
 
 X = np.arange(1,8)
