@@ -1,13 +1,14 @@
 
-#FIXME this uses a call to _hbspline, check version of gam
+#FIXME this uses a call to _hbspline, check version of gam  DONE
 #FIXME problems calling GLM, 3rd parameter missing
 
 
 # convert to script for testing, so we get interactive variable access
 example = 1  # 1,2 or 3
+
 import numpy as np
 import numpy.random as R
-#from models.gam import AdditiveModel
+from models.gam import AdditiveModel
 from models.family import family
 from models.glm import GLM
 
@@ -28,7 +29,6 @@ z = n(z) * 0.1
 y += z
 d = np.array([x1,x2]).T
 
-example = 2
 
 if example == 1:
     print "normal"
@@ -70,7 +70,7 @@ plt.plot(x1, n(f1(x1)), linewidth=2)
 plt.figure(num=2)
 plt.plot(x2, n(m.smoothers[1](x2)), 'r')
 plt.plot(x2, n(f2(x2)), linewidth=2);
-plt.show()
+#plt.show()
 ##     pylab.figure(num=1)
 ##     pylab.plot(x1, n(m.smoothers[0](x1)), 'b'); pylab.plot(x1, n(f1(x1)), linewidth=2)
 ##     pylab.figure(num=2)

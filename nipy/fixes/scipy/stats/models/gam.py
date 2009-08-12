@@ -19,7 +19,7 @@ from models import family
 #from nipy.fixes.scipy.stats.models.bspline import SmoothingSpline
 from models.smoothers import PolySmoother as SmoothingSpline
 #from models.glm import Model as GLM
-from models.glm import GLMtwo as GLM
+from models.glm import GLM
 
 def default_smoother(x):
     _x = x.copy()
