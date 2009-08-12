@@ -47,7 +47,6 @@ class LikelihoodModel(Model):
         """
         pass
 
-#Note this is a property now, so this shouldn't be here?
     def llf(self, params):
         """
         Log-likelihood of model.
@@ -69,12 +68,16 @@ class LikelihoodModel(Model):
         raise NotImplementedError
 
     def fit(self, params, method='newton'):
+#TODO: newton's method is not correctly implemented yet
         if method is 'newton':
             results = self.newton(params)
         else:
             raise ValueError("Unknown fit method.")
         self._results = results
 
+#FIXME: This does not work as implemented
+#FIXME: Params should be a first guess on the params
+#       so supplied or default guess?
     def newton(self, params):
         #JP this is not newton, it's fmin
         # is this used anywhere
@@ -84,7 +87,8 @@ class LikelihoodModel(Model):
           optimize.fmin(f, params, full_output=True)
         converge = not warnflag
         extras = dict(iter=iter, evaluations=funcalls, converge=converge)
-        return LikelihoodModelResults(self, params, llf=fopt, **extras)
+#        return LikelihoodModelResults(self, params, llf=fopt, **extras)
+        return LikelihoodModelResults(self, xopt)
 
 
 class Results(object):

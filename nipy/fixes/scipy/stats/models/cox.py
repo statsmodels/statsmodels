@@ -3,7 +3,7 @@ import tempfile
 
 import numpy as np
 
-from nipy.fixes.scipy.stats.models import survival, model
+from models import survival, model
 
 class Discrete(object):
 

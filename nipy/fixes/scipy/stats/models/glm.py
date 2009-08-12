@@ -214,14 +214,13 @@ class GLMResults(LikelihoodModelResults):
 
     @property
     def llf(self):
-        if self._llf is None and not isinstance(self.model.family,
-                        family.NegativeBinomial):
-            self._llf = self.model.family.logL(self.model.y,
-                    self.model.mu, scale=self.scale)
-        elif self._llf is None and isinstance(self.model.family,
-                        family.NegativeBinomial):
-            self._llf = self.model.family.logL(self.model.y,
+        if self._llf is None:
+            if isinstance(self.model.family, family.NegativeBinomial):
+                self._llf = self.model.family.logL(self.model.y,
                     predicted=self.predict)
+            else:
+                self._llf = self.model.family.logL(self.model.y,
+                    self.model.mu, scale=self.scale)
         return self._llf
 
     def information_criteria(self):

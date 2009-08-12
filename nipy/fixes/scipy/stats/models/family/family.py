@@ -271,16 +271,21 @@ class Gaussian(Family):
     def deviance(self, Y, mu, scale=1.):
         return np.sum(np.power((Y-mu),2))
 
-#    def logL(self, Y, mu, scale=1.):
-#        return np.sum((Y*mu-mu**2/2)/scale-Y**2/(2*scale)-.5*np.log(2*np.pi*scale))
-# ?? This is the log likelihood for MLE only ??
     def logL(self, Y, mu, scale=1.):
-# this won't use the scale then...
-        nobs2 = Y.shape[0]/2.
-        SSR = ss(Y-self.fitted(mu))
-        llf = -np.log(SSR) * nobs2
-        llf -= (1+np.log(np.pi/nobs2))*nobs2
-        return llf
+        #Implementation for R differs.  For identity link, same result
+        #For non-identity link, there is a rounding error
+        if isinstance(self.link, L.Power) and self.link.power == 1:
+        # This is just the loglikelihood for OLS
+            nobs2 = Y.shape[0]/2.
+            SSR = ss(Y-self.fitted(mu))
+            llf = -np.log(SSR) * nobs2
+            llf -= (1+np.log(np.pi/nobs2))*nobs2
+            return llf
+        else:
+        # Return the loglikelihood for Gaussian GLM
+            return np.sum((Y*mu-mu**2/2)/scale-Y**2/(2*scale)-\
+                    .5*np.log(2*np.pi*scale))
+
 
     def resid_anscombe(self, Y, mu):
         return Y-mu
