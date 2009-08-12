@@ -552,7 +552,10 @@ class AR(GLS):
             self.rho, _ = yule_walker(results.resid,
                                       order=self.order, df=None)
                                         #note that the X passed is different for
-                                        #univariate.  Why this X anyway?
+                                      #univariate.  Why this X anyway?
+        self._results = self.fit() #final estimate
+        return self._results # add missing return
+
     def whiten(self, X):
         """
         Whiten a series of columns according to an AR(p)

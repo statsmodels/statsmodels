@@ -14,6 +14,8 @@ for i in range(6):
     model = AR(Y, X, rho)
 par0 = results.params
 print par0
+model0if = AR(Y, X, 2)
+model0if.iterative_fit(6)
 results.t() # is this correct? it does equal params/bse
 # but isn't the same as the AR example (which was wrong in the first place..)
 print results.Tcontrast([0,1])  # are sd and t correct? vs
