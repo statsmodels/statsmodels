@@ -40,10 +40,6 @@ class GLM(LikelihoodModel):
         Journal of the Royal Statistical Society, Series B, 46, 149-192.
 
     '''
-#    @property
-#    def scale(self):
-#        return self.results.scale
-
     def __init__(self, endog, exog, family=family.Gaussian()):
         self.family = family
         self._endog = endog
@@ -52,7 +48,7 @@ class GLM(LikelihoodModel):
 
     def initialize(self):
         self.history = { 'predict' : [], 'params' : [np.inf],
-                         'logL' : [], 'deviance' : [np.inf]}
+                         'deviance' : [np.inf]}
         self.iteration = 0
         self.y = self._endog
         self.calc_params = np.linalg.pinv(self._exog)
@@ -122,7 +118,7 @@ class GLM(LikelihoodModel):
     def fit(self, maxiter=100, method='IRLS', tol=1e-8, data_weights=1.,
             scale=None):
         '''
-        Fits a glm model based
+        Fits a glm model
 
         parameters
         ----------
@@ -141,7 +137,7 @@ class GLM(LikelihoodModel):
         '''
         if self._endog.shape[0] != self._exog.shape[0]:
             raise ValueError, 'size of Y does not match shape of design'
-        # Why have these checks here and not in the base class or model?
+#FIXME: Why have these checks here and not in the base class or model?
         if np.shape(data_weights) != () and not isinstance(self.family,
                 family.Binomial):
             raise AttributeError, "Data weights are only to be supplied for\
@@ -152,10 +148,7 @@ the Binomial family"
         self.scaletype = scale
         if isinstance(self.family, family.Binomial):
             self.y = self.family.initialize(self.y)
-#            mu = (self.y + 0.5)/2    # starting mu for binomial
-#        else: mu = (self.y + self.y.mean())/2. # starting mu for nonbinomial
         mu = self.family.starting_mu(self.y)
-#TODO: move these to family
         wls_exog = self._exog
         eta = self.family.predict(mu)
         self.iteration += 1
@@ -164,7 +157,8 @@ the Binomial family"
                     self.history['deviance'][self.iteration-1])) > tol and \
                     self.iteration < maxiter):
             self.weights = data_weights*self.family.weights(mu)
-#            if self.weights.ndim == 2:  # not sure what this corrected for?
+#FIXME: What were these added to correct?
+#            if self.weights.ndim == 2:
 #                if not self.weights.size == self.Y.shape[0]:
 #                    print 'weights too large', self.weights.shape
 #                else:

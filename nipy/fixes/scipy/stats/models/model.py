@@ -5,9 +5,6 @@ from scipy.stats import t, norm
 from scipy import optimize
 from models.contrast import ContrastResults
 from models.utils import recipr
-#from models.rlm import RLM    # for confidence interval class checks with
-#from models.glm import GLM # imports in models.__init__.py...
-#FIXME: we've got to figure out the (circular) imports all over the place
 
 import numpy.lib.recfunctions as nprf
 
@@ -161,7 +158,7 @@ class LikelihoodModelResults(Results):
         if _cov.ndim == 2:
             _cov = np.diag(_cov)
         _t = _params * recipr(np.sqrt(_cov))
-#FIXME: This could be extended to return z() values for GLM and RLM
+#FIXME: This should be extended to return z() values for GLM and RLM
         return _t
 
 
@@ -193,7 +190,6 @@ class LikelihoodModelResults(Results):
             return tmp * scale
         if matrix is None and column is None:
             if np.shape(scale) == ():   # can be a scalar or array
-#           if scale.size = 1   has to be array
 # TODO: np.eye fails for big arrays.  Failed for np.eye(25,000) in the lab
 # needs to be optimized.
 # on the other hand, it is only necessary for when scale isn't a scalar
@@ -245,8 +241,10 @@ class LikelihoodModelResults(Results):
         q = matrix.shape[0]
         if invcov is None:
             invcov = inv(self.cov_params(matrix=matrix, scale=1.0))
-        F = np.add.reduce(np.dot(invcov, cparams) * cparams, 0) * recipr((q * self.scale))
-        return ContrastResults(F=F, df_denom=self.df_resid, df_num=invcov.shape[0])
+        F = np.add.reduce(np.dot(invcov, cparams) * cparams, 0) * \
+                recipr((q * self.scale))
+        return ContrastResults(F=F, df_denom=self.df_resid,
+                    df_num=invcov.shape[0])
 
     def conf_int(self, alpha=.05, cols=None):
         """
@@ -281,21 +279,14 @@ class LikelihoodModelResults(Results):
             `tails` can be "two", "upper", or "lower"
         """
         if self.__class__.__name__ in ['RLMResults','GLMResults']:
-#TODO: get rid of the above once imports are setteld
-#        if isinstance(self._model, (RLM, GLM)):
             dist = norm
         else:
             dist = t
-# Answer ^^^ See Hardin p. 127; depends on the software...some do t.
-#            dist = norm
-#FIXME: make sure norm is correct for the standard normal in GLM/RLM
-#        else:
-#            dist = t
         if cols is None and dist == t:
             lower = self.params - dist.ppf(1-alpha/2,self.df_resid) *\
-                    self.bse #np.diag(np.sqrt(self.cov_params()))
+                    self.bse
             upper = self.params + dist.ppf(1-alpha/2,self.df_resid) *\
-                    self.bse #np.diag(np.sqrt(self.cov_params()))
+                    self.bse
         elif cols is None and dist == norm:
             lower = self.params - dist.ppf(1-alpha/2)*self.bse
             upper = self.params + dist.ppf(1-alpha/2)*self.bse
@@ -303,10 +294,10 @@ class LikelihoodModelResults(Results):
             lower=[]
             upper=[]
             for i in cols:
-                lower.append(self.params[i] - dist.ppf(1-alpha/2,self.df_resid) *\
-                    self.bse) #np.diag(np.sqrt(self.cov_params()))[i])
-                upper.append(self.params[i] + dist.ppf(1-alpha/2,self.df_resid) *\
-                    self.bse) #np.diag(np.sqrt(self.cov_params()))[i])
+                lower.append(self.params[i] - dist.ppf(1-\
+                        alpha/2,self.df_resid) *self.bse)
+                upper.append(self.params[i] + dist.ppf(1-\
+                        alpha/2,self.df_resid) *self.bse)
         elif cols is not None and dist == norm:
             lower = self.params - dist.ppf(1-alpha/2)*self.bse
             upper = self.params + dist.ppf(1-alpha/2)*self.bse

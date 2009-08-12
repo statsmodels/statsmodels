@@ -210,11 +210,11 @@ class GLS(LikelihoodModel):
 
 #TODO: make results a property
 # this throws up a set attribute error when running old glm
-#    @property
-#    def results(self):
-#        if self._results is None:
-#            self._results = self.fit()
-#        return self._results
+    @property
+    def results(self):
+        if self._results is None:
+            self._results = self.fit()
+        return self._results
 
     def _summary(self, lfit):
         """
