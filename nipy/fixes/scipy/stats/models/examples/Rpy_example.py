@@ -1,26 +1,36 @@
 from rpy import r
 import numpy as np
 
-OLS Example using LM
+# OLS Example using LM
 
-y,x = longley()
-des = np.hstack((np.ones((x.shape[0],1)),x))
-des_cols = ['x.%d' % (i+1) for i in range(x.shape[1])]
-formula = r('y~%s-1' % '+'.join(des_cols))
-frame = r.data_frame(y=y, x=des)
-results = r.lm(formula, data=frame)
-print results.keys()
+#FIXME: longley(), lbw() are not defined, copied exampledata.py and datafiles
+#FIXME: still errors in loading lbw data: field named black not found.
 
-# How to get Standard Errors for COV Matrix?
+from exampledata import longley, lbw
+
+example = 1
+
+if example == 1:
+    y,x = longley()
+    des = np.hstack((np.ones((x.shape[0],1)),x))
+    des_cols = ['x.%d' % (i+1) for i in range(x.shape[1])]
+    formula = r('y~%s-1' % '+'.join(des_cols))
+    frame = r.data_frame(y=y, x=des)
+    results = r.lm(formula, data=frame)
+    print results.keys()
+    print results['coefficients']
+
+    # How to get Standard Errors for COV Matrix?
 
 
-X = lbw()
-des = np.vstack((X['age'],X['lwt'],X['black'],X['other'],X['smoke'],X['ptl'],X['ht'],X['ui'])).T
-des = np.hstack((np.ones((des.shape[0],1)),des))
-des_cols = ['x.%d' % (i+1) for i in range(des.shape[1])]
-formula = r('y~%s-1' % '+'.join(des_cols))
-frame = r.data_frame(y=X.low, x=des)
-results = r.glm(formula, data=frame, family='binomial')
+if example == 2:
+    X = lbw()
+    des = np.vstack((X['age'],X['lwt'],X['black'],X['other'],X['smoke'],X['ptl'],X['ht'],X['ui'])).T
+    des = np.hstack((np.ones((des.shape[0],1)),des))
+    des_cols = ['x.%d' % (i+1) for i in range(des.shape[1])]
+    formula = r('y~%s-1' % '+'.join(des_cols))
+    frame = r.data_frame(y=X.low, x=des)
+    results = r.glm(formula, data=frame, family='binomial')
 
 # HOW TO DO THIS IN R
 # data <- read.csv("./lwb_for_R.csv",headers=FALSE)

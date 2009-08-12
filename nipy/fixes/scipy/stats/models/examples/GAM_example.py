@@ -1,8 +1,15 @@
+
+#FIXME this uses a call to _hbspline, check version of gam
+#FIXME problems calling GLM, 3rd parameter missing
+
+
 # convert to script for testing, so we get interactive variable access
 example = 1  # 1,2 or 3
 import numpy as np
 import numpy.random as R
 #from models.gam import AdditiveModel
+from models.family import family
+from models.glm import GLM
 
 # n is not a good name for a function, use normalize or something
 n = lambda x: (x - x.mean()) / x.std()
@@ -20,6 +27,9 @@ z = n(z) * 0.1
 
 y += z
 d = np.array([x1,x2]).T
+
+example = 2
+
 if example == 1:
     print "normal"
     m = AdditiveModel(d)
@@ -35,7 +45,7 @@ if example == 2:
     f = family.Binomial()
     b = np.asarray([scipy.stats.bernoulli.rvs(p) for p in f.link.inverse(y)])
     b.shape = y.shape
-    m = Model(d, family=f)
+    m = GLM(d, family=f)
     toc = time.time()
     m.fit(b)
     tic = time.time()
@@ -47,7 +57,7 @@ if example == 3:
     f = family.Poisson()
     p = np.asarray([scipy.stats.poisson.rvs(p) for p in f.link.inverse(y)])
     p.shape = y.shape
-    m = Model(d, family=f)
+    m = GLM(d, family=f)
     toc = time.time()
     m.fit(p)
     tic = time.time()
