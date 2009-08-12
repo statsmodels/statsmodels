@@ -149,13 +149,14 @@ class test_rlm_huber(check_rlm_results):
     data.exog = models.tools.add_constant(data.exog)
     def __init__(self):
         results = RLM(self.data.endog, self.data.exog,\
-                    M=models.robust.norms.HuberT()).fit(scale_est="Huber")
+                    M=models.robust.norms.HuberT()).fit(scale_est=\
+                    models.robust.scale.Hubers_scale())
         h2 = RLM(self.data.endog, self.data.exog,\
                     M=models.robust.norms.HuberT()).fit(cov="H2",
-                    scale_est="Huber").bcov_scaled
+                    scale_est=models.robust.scale.Hubers_scale()).bcov_scaled
         h3 = RLM(self.data.endog, self.data.exog,\
                     M=models.robust.norms.HuberT()).fit(cov="H3",
-                    scale_est="Huber").bcov_scaled
+                    scale_est=models.robust.scale.Hubers_scale()).bcov_scaled
         self.res1 = results
         self.res1.h2 = h2
         self.res1.h3 = h3
@@ -164,13 +165,16 @@ class test_rlm_huber(check_rlm_results):
 class test_hampel_huber(test_rlm):
     def __init__(self):
         results = RLM(self.data.endog, self.data.exog,
-                    M=models.robust.norms.Hampel()).fit(scale_est="Huber")
+                    M=models.robust.norms.Hampel()).fit(scale_est=\
+                    models.robust.scale.Hubers_scale())
         h2 = RLM(self.data.endog, self.data.exog,\
                     M=models.robust.norms.Hampel()).fit(cov="H2",
-                    scale_est="Huber").bcov_scaled
+                    scale_est=\
+                    models.robust.scale.Hubers_scale()).bcov_scaled
         h3 = RLM(self.data.endog, self.data.exog,\
                     M=models.robust.norms.Hampel()).fit(cov="H3",
-                    scale_est="Huber").bcov_scaled
+                    scale_est=\
+                    models.robust.scale.Hubers_scale()).bcov_scaled
         self.res1 = results
         self.res1.h2 = h2
         self.res1.h3 = h3
@@ -180,13 +184,16 @@ class test_rlm_bisquare_huber(test_rlm):
     def __init__(self):
         results = RLM(self.data.endog, self.data.exog,
                     M=models.robust.norms.TukeyBiweight()).fit(\
-                    scale_est="Huber")
+                    scale_est=\
+                    models.robust.scale.Hubers_scale())
         h2 = RLM(self.data.endog, self.data.exog,\
                     M=models.robust.norms.TukeyBiweight()).fit(cov=\
-                    "H2", scale_est="Huber").bcov_scaled
+                    "H2", scale_est=\
+                    models.robust.scale.Hubers_scale()).bcov_scaled
         h3 = RLM(self.data.endog, self.data.exog,\
                     M=models.robust.norms.TukeyBiweight()).fit(cov=\
-                    "H3", scale_est="Huber").bcov_scaled
+                    "H3", scale_est=\
+                    models.robust.scale.Hubers_scale()).bcov_scaled
         self.res1 = results
         self.res1.h2 = h2
         self.res1.h3 = h3
@@ -195,13 +202,16 @@ class test_rlm_bisquare_huber(test_rlm):
 class test_rlm_andrews_huber(test_rlm):
     def __init__(self):
         results = RLM(self.data.endog, self.data.exog,
-                    M=models.robust.norms.AndrewWave()).fit(scale_est="Huber")
+                    M=models.robust.norms.AndrewWave()).fit(scale_est=\
+                    models.robust.scale.Hubers_scale())
         h2 = RLM(self.data.endog, self.data.exog,
                     M=models.robust.norms.AndrewWave()).fit(cov=\
-                    "H2", scale_est="Huber").bcov_scaled
+                    "H2", scale_est=\
+                    models.robust.scale.Hubers_scale()).bcov_scaled
         h3 = RLM(self.data.endog, self.data.exog,
                     M=models.robust.norms.AndrewWave()).fit(cov=\
-                    "H3", scale_est="Huber").bcov_scaled
+                    "H3", scale_est=\
+                    models.robust.scale.Hubers_scale()).bcov_scaled
         self.res1 = results
         self.res1.h2 = h2
         self.res1.h3 = h3

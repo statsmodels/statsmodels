@@ -10,6 +10,11 @@ from scipy.stats import norm as Gaussian # can get rid of once scale is sorted
 
 from models.model import LikelihoodModel, LikelihoodModelResults
 
+class hubers_scale(object):
+    def __init__(self, d=2.5):
+        self.d = d
+
+
 class RLM(LikelihoodModel):
     def __init__(self, endog, exog, M=norms.HuberT()):
         """
@@ -44,7 +49,6 @@ class RLM(LikelihoodModel):
         the residuals by its sqrt.
         """
         return self.M((self._endog - tmp_results.predict)/\
-#                    np.sqrt(tmp_results.scale)).sum()
                     tmp_results.scale).sum()
 
     def update_history(self, tmp_results):
@@ -59,29 +63,13 @@ class RLM(LikelihoodModel):
         Note that self.scale is interpreted as a variance in OLSModel, so
         we return MAD(resid)**2 by default.
         """
-        if self.scale_est.lower() == 'mad':
-            return scale.MAD(resid)
-        if self.scale_est.lower() == 'stand_mad':
-            return scale.stand_MAD(resid)
-        elif self.scale_est.lower() == "huber":
-#TODO: Pull out into function and allow d to be set by user
-#      Note that if this is used for univariate data then
-#      the results is different than scale.huber
-            d = 2.5
-            h = (self.df_resid)/self.nobs*(d**2 + (1-d**2)*\
-                    Gaussian.cdf(d)-.5 - d/(np.sqrt(2*np.pi))*np.exp(-.5*d**2))
-            s = scale.stand_MAD(resid)
-            subset = lambda x: np.less(np.fabs(resid/x),d)
-            chi = lambda s: subset(s)*(resid/s)**2/2+(1-subset(s))*(d**2/2)
-            scalehist = [np.inf,s]
-            niter = 1
-            while (np.abs(scalehist[niter-1] - scalehist[niter])>1e-08 \
-                    and niter < 100):
-                nscale = np.sqrt(1/(self.nobs*h)*np.sum(chi(scalehist[-1]))*\
-                        scalehist[-1]**2)
-                scalehist.append(nscale)
-                niter += 1
-            return scalehist[-1]
+        if isinstance(self.scale_est, str):
+            if self.scale_est.lower() == 'mad':
+                return scale.MAD(resid)
+            if self.scale_est.lower() == 'stand_mad':
+                return scale.stand_MAD(resid)
+        elif isinstance(self.scale_est, scale.Hubers_scale):
+            return scale.hubers_scale(self.df_resid, self.nobs, resid)
         else:
             return scale.scale_est(self, resid)**2
 
@@ -103,14 +91,17 @@ class RLM(LikelihoodModel):
             The convergence tolerance of the estimate.
             Defaults is 1e1-8
 
-        scale_est : string
-            'MAD', 'stand_MAD', or 'Huber'
+        scale_est : string or Hubers_scale()
+            'MAD', 'stand_MAD', or Hubers_scale()
             Indicates the estimate to use for scaling the weights in the IRLS.
             The default is 'MAD' (median absolute deviation.  Other options are
             use 'stand_MAD' for the median absolute deviation standardized
-            around zero and 'Huber' for Huber's Proposal 2.  See
-            models.robust.scale for
-            more information.
+            around zero and 'Hubers_scale' for Huber's proposal 2.  Huber's
+            proposal 2 has optional keyword arguments d, tol, and maxiter
+            for specifying the tuning constant, the convergence tolerance,
+            and the maximum number of iteration.
+
+            See models.robust.scale for more information.
 
         init : string
             Allows initial estimates for the parameters.
@@ -141,7 +132,6 @@ class RLM(LikelihoodModel):
         results : object
             The RLM results class
         """
-        self.scale_est = scale_est
         if not cov.upper() in ["H1","H2","H3"]:
             raise AttributeError, "Covariance matrix %s not understood" % cov
         else:
@@ -150,14 +140,12 @@ class RLM(LikelihoodModel):
         if not conv in ["weights","coefs","dev","resid"]:
             raise AttributeError, "Convergence argument %s not understood" \
                 % conv
+        self.scale_est = scale_est
         wls_results = WLS(self._endog, self._exog).fit()
-        if not init and not self.scale_est.lower() == "huber":
-            self.scale = self.estimate_scale(wls_results.resid)
-        elif not init and self.scale_est.lower() == "huber":
-#            self.loc, self.scale = self.estimate_scale(wls_results.resid)
+        if not init:
             self.scale = self.estimate_scale(wls_results.resid)
         self.update_history(wls_results)
-        self.iteration = 1  # so these don't accumulate across fits
+        self.iteration = 1
         if conv == 'coefs':
             criterion = self.history['params']
         elif conv == 'dev':
@@ -169,24 +157,16 @@ class RLM(LikelihoodModel):
         while (np.all(np.fabs(criterion[self.iteration]-\
                 criterion[self.iteration-1]) > tol) and \
                 self.iteration < maxiter):
-            if not self.scale_est.lower() == "huber":
-                self.weights = self.M.weights((self._endog - wls_results.predict) \
+            self.weights = self.M.weights((self._endog - wls_results.predict)\
                         /self.scale)
-            elif self.scale_est.lower() == "huber":
-                self.weights = self.M.weights((self._endog - wls_results.predict)/self.scale)
-
             wls_results = WLS(self._endog, self._exog,
                                     weights=self.weights).fit()
-            if update_scale is True and not self.scale_est.lower()=="huber":
-                self.scale = self.estimate_scale(wls_results.resid)
-            elif update_scale is True and self.scale_est.lower() == "huber":
-#                self.loc, self.scale = self.estimate_scale(wls_results.resid)
+            if update_scale is True:
                 self.scale = self.estimate_scale(wls_results.resid)
             self.update_history(wls_results)
             self.iteration += 1
         self.results = RLMResults(self, wls_results.params,
                             self.normalized_cov_params, self.scale)
-        self.results.wls_results = wls_results  # for debugging
         return self.results
 
 class RLMResults(LikelihoodModelResults):
@@ -199,7 +179,7 @@ class RLMResults(LikelihoodModelResults):
         self._get_results(model)
 
     def _get_results(self, model):
-        #TODO: "pvals" should come from chisq on bse
+        #TODO: "pvals" should come from chisq on bse?
         self.df_model = model.df_model
         self.df_resid = model.df_resid
         self.fitted_values = np.dot(model._exog, self.params)
@@ -236,9 +216,6 @@ class RLMResults(LikelihoodModelResults):
                     *np.dot(np.dot(W_inv, np.dot(model._exog.T,model._exog)),\
                     W_inv)
         self.bse = np.sqrt(np.diag(self.bcov_scaled))
-
-#    def conf_int(self, alpha=.05, cols=None):
-
 
 if __name__=="__main__":
 #NOTE: This is to be removed
