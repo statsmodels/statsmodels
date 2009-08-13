@@ -1,9 +1,6 @@
-def check_rpy_installation():
+def skip_rpy():
     try:
         import rpy
         return False
     except:
         return True
-
-def skip_rpy():
-    return check_rpy_installation()

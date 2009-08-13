@@ -18,8 +18,8 @@ DECIMAL_less = 3
 DECIMAL_lesser = 2
 DECIMAL_least = 1
 
-skip = skip_rpy()
-if not skip:
+skipR = skip_rpy()
+if not skipR:
     from rpy import r
 
 class check_rlm_results(object):
@@ -95,7 +95,7 @@ class test_rlm(check_rlm_results):
         self.res2.h3 = model_results.huber.h3
 
     def setup(self):
-        if skip:
+        if skipR:
             raise SkipTest, "Rpy not installed"
 
 class test_hampel(test_rlm):
@@ -116,7 +116,7 @@ class test_hampel(test_rlm):
         self.res2.h3 = model_results.hampel.h3
 
     def setup(self):
-        if skip:
+        if skipR:
             raise SkipTest, "Rpy not installed"
 
 
@@ -140,7 +140,7 @@ class test_rlm_bisquare(test_rlm):
         self.res2.h3 = model_results.bisquare.h3
 
     def setup(self):
-        if skip:
+        if skipR:
             raise SkipTest, "Rpy not installed"
 
 class test_rlm_andrews(test_rlm):
@@ -159,7 +159,7 @@ class test_rlm_andrews(test_rlm):
         self.res2 = model_results.andrews()
 
     def setup(self):
-        if skip:
+        if skipR:
             raise SkipTest, "Rpy not installed"
 
 ### tests with Huber scaling
@@ -184,7 +184,7 @@ class test_rlm_huber(check_rlm_results):
         self.res2 = model_results.huber_huber()
 
     def setup(self):
-        if skip:
+        if skipR:
             raise SkipTest, "Rpy not installed"
 
 class test_hampel_huber(test_rlm):
@@ -206,7 +206,7 @@ class test_hampel_huber(test_rlm):
         self.res2 = model_results.hampel_huber()
 
     def setup(self):
-        if skip:
+        if skipR:
             raise SkipTest, "Rpy not installed"
 
 class test_rlm_bisquare_huber(test_rlm):
@@ -229,7 +229,7 @@ class test_rlm_bisquare_huber(test_rlm):
         self.res2 = model_results.bisquare_huber()
 
     def setup(self):
-        if skip:
+        if skipR:
             raise SkipTest, "Rpy not installed"
 
 class test_rlm_andrews_huber(test_rlm):
@@ -251,7 +251,7 @@ class test_rlm_andrews_huber(test_rlm):
         self.res2 = model_results.andrews_huber()
 
     def setup(self):
-        if skip:
+        if skipR:
             raise SkipTest, "Rpy not installed"
 
 if __name__=="__main__":
