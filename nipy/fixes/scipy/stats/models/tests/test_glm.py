@@ -21,8 +21,8 @@ DECIMAL_less = 3
 DECIMAL_lesser = 2
 DECIMAL_least = 1
 DECIMAL_none = 0
-skip = skip_rpy()
-if not skip:
+skipR = skip_rpy()
+if not skipR:
     from rpy import r
 
 class check_model_results(object):
@@ -107,7 +107,7 @@ class test_glm_gaussian(check_model_results):
                                             # I think this is a bug in Rpy
 
     def setup(self):
-        if skip:
+        if skipR:
             raise SkipTest, "Rpy not installed."
 
     def check_params(self, params1, params2):
@@ -150,7 +150,7 @@ class test_gaussian_log(check_model_results):
         self.res2 = GaussLog_Res_R
 
     def setup(self):
-        if skip:
+        if skipR:
             raise SkipTest, "Rpy not installed"
 
     def test_null_deviance(self):
@@ -184,7 +184,7 @@ class test_gaussian_inverse(check_model_results):
         self.res2 = InverseLink_Res_R
 
     def setup(self):
-        if skip:
+        if skipR:
             raise SkipTest, "Rpy not installed."
 
     def check_params(self, params1, params2):
@@ -486,7 +486,7 @@ class test_glm_negbinomial(check_model_results):
         # Rpy does not return the same null deviance as R for some reason
 
     def setup(self):
-        if skip:
+        if skipR:
             raise SkipTest, "Rpy not installed"
 
     def check_params(self, params1, params2):

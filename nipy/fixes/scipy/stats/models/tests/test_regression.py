@@ -17,8 +17,8 @@ DECIMAL_less = 3
 DECIMAL_lesser = 2
 DECIMAL_least = 1
 DECIMAL_sig = 7
-skip = skip_rpy()
-if not skip:
+skipR = skip_rpy()
+if not skipR:
     from rpy import r
 
 
@@ -179,7 +179,7 @@ class test_yule_walker(object):
         self.R_params = R_results['ar']
 
     def setup(self):
-        if skip:
+        if skipR:
             raise SkipTest, "Rpy not installed."
 
     def test_params(self):
