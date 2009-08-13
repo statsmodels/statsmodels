@@ -27,6 +27,8 @@ Combine tools and utils?
    -move isestimable to tools/utils and use it?
 Move cox/survival, mixed, and GAM to "sandbox"?
 Put formulas in docstring? (this could become "heavy"...)
+Decide on where to put HCCM robust estimators.
+
 
 Update all examples/docstrings
 Run lint
