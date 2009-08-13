@@ -526,5 +526,6 @@ class test_glm_negbinomial(check_model_results):
 
 if __name__=="__main__":
     #run_module_suite()
+    #taken from Fernando Perez:
     nose.runmodule(argv=[__file__,'-vvs','-x','--pdb'],
                        exit=False)
