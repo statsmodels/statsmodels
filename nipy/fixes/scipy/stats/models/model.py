@@ -196,13 +196,14 @@ class LikelihoodModelResults(Results):
             tmp = np.dot(matrix, np.dot(self.normalized_cov_params, np.transpose(other)))
             return tmp * scale
         if matrix is None and column is None:
-            if np.shape(scale) == ():   # can be a scalar or array
+#            if np.shape(scale) == ():   # can be a scalar or array
 # TODO: np.eye fails for big arrays.  Failed for np.eye(25,000) in the lab
 # needs to be optimized.
 # on the other hand, it is only necessary for when scale isn't a scalar
 # so it doesn't need to default to this every time
-                scale=np.eye(len(self._model._endog))*scale
-            return np.dot(np.dot(self.calc_params, scale), self.calc_params.T)
+#                scale=np.eye(len(self._model._endog))*scale
+            return np.dot(np.dot(self.calc_params, np.array(scale)),
+                self.calc_params.T)
 
     def Tcontrast(self, matrix, t=True, sd=True, scale=None):
         """
