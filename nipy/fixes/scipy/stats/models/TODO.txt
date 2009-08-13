@@ -1,20 +1,25 @@
 Tests
 ----------
-Tests for Contrast (doing now)
+Tests for Contrast (doing now) (no idea, needs refactoring?)
+    -check reference out from library
+    -seems simple enough, though I just don't have an example for the usage
+    -need to find data that's appropriate for contrast analysis
 Tests for other methods in Model.py
 Tests for other links in GLM
+    -get data from Stata/remaining residuals from Stata
 Test I/O of models wrt array types, dimensions
-Check that rpy is installed
+Check that rpy is installed (done)
 
 Issues
 ----------
 GLS residuals - whitened or not? (ie., Z - dot(wdesign, params) or
 endog - dot(exog,params))
-   -I think not...
+   -I think not... (leaving as not)
 AR - I need to check my references, but right now AR is done through a
 two-stage iterative fit.  Does this always make sense?
    -test for this (only univariate yule-walker is tested right now)
 Make sure all results are computed where they should be
+
 
 Other cleanup
 --------------------
@@ -22,6 +27,8 @@ Combine tools and utils?
    -move isestimable to tools/utils and use it?
 Move cox/survival, mixed, and GAM to "sandbox"?
 Put formulas in docstring? (this could become "heavy"...)
+Decide on where to put HCCM robust estimators.
+
 
 Update all examples/docstrings
 Run lint

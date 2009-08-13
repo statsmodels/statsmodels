@@ -11,8 +11,8 @@ from models.glm import GLM
 from models.tools import add_constant, xi
 from scipy import stats
 from rmodelwrap import RModel
-from rpy import r
-import nose
+from nose import SkipTest
+from check_for_rpy import skip_rpy
 
 W = R.standard_normal
 
@@ -21,6 +21,9 @@ DECIMAL_less = 3
 DECIMAL_lesser = 2
 DECIMAL_least = 1
 DECIMAL_none = 0
+skip = skip_rpy()
+if not skip:
+    from rpy import r
 
 class check_model_results(object):
     '''
@@ -54,7 +57,7 @@ class check_model_results(object):
 
     def test_aic_Stata(self):
         if isinstance(self.res2, RModel):
-            raise nose.SkipTest("Results are from RModel wrapper")
+            raise SkipTest("Results are from RModel wrapper")
         aic = self.res1.information_criteria()['aic']/self.res1.nobs
         self.check_aic_Stata(aic, self.res2.aic_Stata)
 
@@ -73,7 +76,7 @@ class check_model_results(object):
 
     def test_bic(self):
         if isinstance(self.res2, RModel):
-            raise nose.SkipTest("Results are from RModel wrapper")
+            raise SkipTest("Results are from RModel wrapper")
         self.check_bic(self.res1.information_criteria()['bic'],
             self.res2.bic)
 
@@ -84,7 +87,7 @@ class check_model_results(object):
 
     def test_pearsonX2(self):
         if isinstance(self.res2, RModel):
-            raise nose.SkipTest("Results are from RModel wrapper")
+            raise SkipTest("Results are from RModel wrapper")
         self.check_pearsonX2(self.res1.pearsonX2, self.res2.pearsonX2)
 
 class test_glm_gaussian(check_model_results):
@@ -103,6 +106,10 @@ class test_glm_gaussian(check_model_results):
         self.res2.resids = np.array(self.res2.resid)[:,None]*np.ones((1,5))
         self.res2.null_deviance = 185008826 # taken from R.
                                             # I think this is a bug in Rpy
+
+    def setup(self):
+        if skip:
+            raise SkipTest, "Rpy not installed."
 
     def check_params(self, params1, params2):
         assert_almost_equal(params1, params2, DECIMAL)
@@ -143,6 +150,10 @@ class test_gaussian_log(check_model_results):
         self.res1 = GaussLog_Res
         self.res2 = GaussLog_Res_R
 
+    def setup(self):
+        if skip:
+            raise SkipTest, "Rpy not installed"
+
     def test_null_deviance(self):
         assert_almost_equal(self.res1.null_deviance, self.res2.null_deviance,
                     DECIMAL_least)
@@ -172,6 +183,10 @@ class test_gaussian_inverse(check_model_results):
         InverseLink_Res_R = RModel(y_inv, X, r.glm, family=InverseLink)
         self.res1 = InverseLink_Res
         self.res2 = InverseLink_Res_R
+
+    def setup(self):
+        if skip:
+            raise SkipTest, "Rpy not installed."
 
     def check_params(self, params1, params2):
         assert_almost_equal(params1, params2, DECIMAL)
@@ -248,7 +263,7 @@ class test_glm_binomial(check_model_results):
 #    pass
 
 #class test_glm_binomial_logc(check_model_results):
-#TODO: need include logc link?
+#TODO: need include logc link
 #    pass
 
 class test_glm_bernoulli(check_model_results):
@@ -346,10 +361,12 @@ class test_glm_gamma(check_model_results):
     def check_pearsonX2(self, pearsonX21, pearsonX22):
         assert_almost_equal(pearsonX21, pearsonX22, DECIMAL)
 
+#TODO: add cancer.dta from stata for gamma tests
 #class test_glm_gamma_log(check_model_results):
 #    pass
 
-#class test_glm_gamma_power(check_model_results):
+
+#class test_glm_gamma_identity(check_model_results):
 #    pass
 
 class test_glm_poisson(check_model_results):
@@ -395,9 +412,9 @@ class test_glm_poisson(check_model_results):
 #class test_glm_poisson_power(check_model_results):
 #    pass
 
+#FIXME: remove comment when finished
+#@dec.slow
 class test_glm_invgauss(check_model_results):
-    @dec.slow
-#FIXME: Is this how to mark as slow?
     def __init__(self):
         '''
         Tests the Inverse Gaussian family in GLM.
@@ -447,10 +464,11 @@ class test_glm_invgauss(check_model_results):
     def check_pearsonX2(self, pearsonX21, pearsonX22):
         assert_almost_equal(pearsonX21, pearsonX22, DECIMAL-1)  # summed resids
 
+#TODO: get madpar data for noncanonical links, H&H 110
 #class test_glm_invgauss_log(check_model_results):
 #    pass
 
-#class test_glm_invgauss_power(check_model_results):
+#class test_glm_invgauss_identity(check_model_results):
 #    pass
 
 class test_glm_negbinomial(check_model_results):
@@ -474,6 +492,10 @@ class test_glm_negbinomial(check_model_results):
                 family=r.negative_binomial(1))
         self.res2.null_deviance = 27.8110469364343
         # Rpy does not return the same null deviance as R for some reason
+
+    def setup(self):
+        if skip:
+            raise SkipTest, "Rpy not installed"
 
     def check_params(self, params1, params2):
         assert_almost_equal(params1, params2, DECIMAL-1)    # precision issue

@@ -6,17 +6,21 @@ import numpy.random as R
 from numpy.testing import *
 import models
 from rmodelwrap import RModel
-from rpy import r
 import rpy # for hampel test...ugh
 import numpy as np # ditto
 from models.rlm import RLM
 import model_results
-import nose
+from nose import SkipTest
+from check_for_rpy import skip_rpy
 
 DECIMAL = 4
 DECIMAL_less = 3
 DECIMAL_lesser = 2
 DECIMAL_least = 1
+
+skip = skip_rpy()
+if not skip:
+    from rpy import r
 
 class check_rlm_results(object):
     '''
@@ -31,13 +35,13 @@ class check_rlm_results(object):
 
     def test_standarderrors(self):
         if isinstance(self.res2, RModel):
-            raise nose.SkipTest("R bse from different cov matrix")
+            raise SkipTest("R bse from different cov matrix")
         else:
             assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL)
 
     def test_confidenceintervals(self):
         if isinstance(self.res2, RModel):
-            raise nose.SkipTest("Results from RModel wrapper")
+            raise SkipTest("Results from RModel wrapper")
         else:
             assert_almost_equal(self.res1.conf_int(), self.res2.conf_int,
             DECIMAL)
@@ -58,15 +62,15 @@ class check_rlm_results(object):
 
     def test_bcov_unscaled(self):
         if self.res2.__module__ == 'model_results':
-            raise nose.SkipTest("No unscaled cov matrix from SAS")
+            raise SkipTest("No unscaled cov matrix from SAS")
         else:
             assert_almost_equal(self.res1.bcov_unscaled,
                     self.res2.bcov_unscaled, DECIMAL)
 
     def test_bcov_scaled(self):
-        assert_almost_equal(self.res1.bcov_scaled, self.res2.h1, DECIMAL_least)
-        assert_almost_equal(self.res1.h2, self.res2.h2, DECIMAL_least)
-        assert_almost_equal(self.res1.h3, self.res2.h3, DECIMAL_least)
+        assert_almost_equal(self.res1.bcov_scaled, self.res2.h1, DECIMAL_lesser)
+        assert_almost_equal(self.res1.h2, self.res2.h2, DECIMAL_lesser)
+        assert_almost_equal(self.res1.h3, self.res2.h3, DECIMAL_lesser)
         # rounding errors in Andrew's make it necessary to use least vs. lesser
 
 class test_rlm(check_rlm_results):
@@ -90,6 +94,10 @@ class test_rlm(check_rlm_results):
         self.res2.h2 = model_results.huber.h2
         self.res2.h3 = model_results.huber.h3
 
+    def setup(self):
+        if skip:
+            raise SkipTest, "Rpy not installed"
+
 class test_hampel(test_rlm):
     def __init__(self):
         results = RLM(self.data.endog, self.data.exog,
@@ -106,6 +114,11 @@ class test_hampel(test_rlm):
         self.res2.h1 = model_results.hampel.h1
         self.res2.h2 = model_results.hampel.h2
         self.res2.h3 = model_results.hampel.h3
+
+    def setup(self):
+        if skip:
+            raise SkipTest, "Rpy not installed"
+
 
 class test_rlm_bisquare(test_rlm):
     def __init__(self):
@@ -126,6 +139,10 @@ class test_rlm_bisquare(test_rlm):
         self.res2.h2 = model_results.bisquare.h2
         self.res2.h3 = model_results.bisquare.h3
 
+    def setup(self):
+        if skip:
+            raise SkipTest, "Rpy not installed"
+
 class test_rlm_andrews(test_rlm):
     def __init__(self):
         results = RLM(self.data.endog, self.data.exog,
@@ -140,6 +157,10 @@ class test_rlm_andrews(test_rlm):
         self.res1.h2 = h2
         self.res1.h3 = h3
         self.res2 = model_results.andrews()
+
+    def setup(self):
+        if skip:
+            raise SkipTest, "Rpy not installed"
 
 ### tests with Huber scaling
 
@@ -162,6 +183,10 @@ class test_rlm_huber(check_rlm_results):
         self.res1.h3 = h3
         self.res2 = model_results.huber_huber()
 
+    def setup(self):
+        if skip:
+            raise SkipTest, "Rpy not installed"
+
 class test_hampel_huber(test_rlm):
     def __init__(self):
         results = RLM(self.data.endog, self.data.exog,
@@ -179,6 +204,10 @@ class test_hampel_huber(test_rlm):
         self.res1.h2 = h2
         self.res1.h3 = h3
         self.res2 = model_results.hampel_huber()
+
+    def setup(self):
+        if skip:
+            raise SkipTest, "Rpy not installed"
 
 class test_rlm_bisquare_huber(test_rlm):
     def __init__(self):
@@ -199,6 +228,10 @@ class test_rlm_bisquare_huber(test_rlm):
         self.res1.h3 = h3
         self.res2 = model_results.bisquare_huber()
 
+    def setup(self):
+        if skip:
+            raise SkipTest, "Rpy not installed"
+
 class test_rlm_andrews_huber(test_rlm):
     def __init__(self):
         results = RLM(self.data.endog, self.data.exog,
@@ -216,6 +249,10 @@ class test_rlm_andrews_huber(test_rlm):
         self.res1.h2 = h2
         self.res1.h3 = h3
         self.res2 = model_results.andrews_huber()
+
+    def setup(self):
+        if skip:
+            raise SkipTest, "Rpy not installed"
 
 if __name__=="__main__":
     run_module_suite()
