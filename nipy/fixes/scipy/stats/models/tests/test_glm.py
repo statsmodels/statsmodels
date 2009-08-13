@@ -92,6 +92,7 @@ class test_glm_gaussian(check_model_results):
         '''
         Test Gaussian family with canonical identity link
         '''
+
         from models.datasets.longley.data import load
         self.data = load()
         self.data.exog = add_constant(self.data.exog)
@@ -406,10 +407,17 @@ class test_glm_invgauss(check_model_results):
         Used the rndivgx.ado file provided by Hardin and Hilbe to
         generate the data.
         '''
+
+
         from model_results import inv_gauss
         self.res2 = inv_gauss()
         self.res1 = GLM(self.res2.endog, self.res2.exog, \
                 family=models.family.InverseGaussian()).fit()
+
+    def setup(self):
+        if 1:  #replace by if not haverpy: this is just a test example
+            #import nose
+            raise nose.SkipTest('requires rpy')
 
     def check_params(self, params1, params2):
         assert_almost_equal(params1, params2, DECIMAL)
@@ -501,4 +509,6 @@ class test_glm_negbinomial(check_model_results):
 #    pass
 
 if __name__=="__main__":
-    run_module_suite()
+    #run_module_suite()
+    nose.runmodule(argv=[__file__,'-vvs','-x','--pdb'],
+                       exit=False)
