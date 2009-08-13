@@ -1,0 +1,19 @@
+Contrasts
+---------
+Remove formula dependency and reimplement
+
+Regression
+-----------
+Newton's method for MLE.  Currently doesn't work.  What should starting values be for llf minimization?
+
+GLM
+---
+Add support for using offset.
+Estimate alpha concurrently with negative binomial.
+Give example for using GLM with power link to approximate Box-Cox transform.
+Add support for noncanonical links with the Binomial
+
+RLM
+---
+Allow init fitting method to be user-defined as well as intial scale.
+

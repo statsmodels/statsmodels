@@ -8,6 +8,8 @@ from scipy.linalg import toeplitz
 from models.tools import add_constant
 from models.regression import OLS, AR, WLS, GLS, yule_walker
 import models
+from check_for_rpy import skip_rpy
+from nose import SkipTest
 
 W = standard_normal
 DECIMAL = 4
@@ -15,6 +17,9 @@ DECIMAL_less = 3
 DECIMAL_lesser = 2
 DECIMAL_least = 1
 DECIMAL_sig = 7
+skip = skip_rpy()
+if not skip:
+    from rpy import r
 
 
 class check_regression_results(object):
@@ -164,18 +169,20 @@ class test_gls_scalar(check_regression_results):
 # In R this can be defined or chosen by minimizing the AIC if aic=True
 #        pass
 
+
 class test_yule_walker(object):
     def __init__(self):
         from models.datasets.sunspots.data import load
-        from rpy import r
         data = load()
         self.rho, self.sigma = yule_walker(data.endog, order=4, method="mle")
         R_results = r.ar(data.endog, aic="FALSE", order_max=4)
         self.R_params = R_results['ar']
 
+    def setup(self):
+        if skip:
+            raise SkipTest, "Rpy not installed."
+
     def test_params(self):
-        R_params = np.array([ 1.28310031, -0.45240924, -0.20770299,
-                    0.04794365])
         assert_almost_equal(self.rho, self.R_params, DECIMAL)
 
 if __name__=="__main__":

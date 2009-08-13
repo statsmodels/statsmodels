@@ -1,0 +1,12 @@
+GLM
+----
+Gamma family use of different links, etc.
+
+http://www.stata.com/help.cgi?glm
+
+Use of noncanonical links with IRLS means that the standard errors for IRLS will differ from using modified ML.
+
+Should convert to observed rather than expected information matrix
+where appropriate (make sure this is done).
+
+
