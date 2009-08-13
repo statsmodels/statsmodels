@@ -505,16 +505,69 @@ class test_glm_invgauss(check_model_results):
     def check_pearsonX2(self, pearsonX21, pearsonX22):
         assert_almost_equal(pearsonX21, pearsonX22, DECIMAL_less)# summed resids
 
-#TODO: get madpar data for noncanonical links, H&H 110
-#class test_glm_invgauss_log(check_model_results):
-#    pass
+class test_glm_invgauss_log(check_model_results):
+    def __init__(self):
+        from model_results import medpar1
+        data = medpar1()
+        self.res1 = GLM(data.endog, data.exog,
+            family=models.family.InverseGaussian(link=\
+            models.family.links.log)).fit()
+        self.res2 = RModel(data.endog, data.exog, r.glm,
+            family=r.inverse_gaussian(link="log"))
+        self.res2.null_deviance = 335.1539777981053 # from R, Rpy bug
 
-#class test_glm_invgauss_identity(check_model_results):
-#    pass
+    def setup(self):
+#        if skipR:
+        if True:
+            raise SkipTest, "Rpy not installed."
+
+    def check_params(self, params1, params2):
+        assert_almost_equal(params1, params2, DECIMAL)
+
+    def check_resids(self, resids1, resids2):
+        assert_almost_equal(resids1, resids2, DECIMAL)
+
+    def check_aic_R(self, aic1, aic2):
+        assert_almost_equal(aic1, aic2, DECIMAL)
+
+    def check_loglike(self, llf1, llf2):
+        assert_almost_equal(llf1, llf2, DECIMAL)
+
+    def check_bic(self, bic1, bic2):
+        assert_almost_equal(bic1, bic2, DECIMAL)
+
+class test_glm_invgauss_identity(check_model_results):
+    def __init__(self):
+        from model_results import medpar1
+        data = medpar1()
+        self.res1 = GLM(data.endog, data.exog,
+            family=models.family.InverseGaussian(link=\
+            models.family.links.identity)).fit()
+        self.res2 = RModel(data.endog, data.exog, r.glm,
+            family=r.inverse_gaussian(link="identity"))
+        self.res2.null_deviance = 335.1539777981053 # from R, Rpy bug
+
+    def setup(self):
+#        if skipR:
+        if True:
+            raise SkipTest, "Rpy not installed."
+
+    def check_params(self, params1, params2):
+        assert_almost_equal(params1, params2, DECIMAL_less)
+
+    def check_resids(self, resids1, resids2):
+        assert_almost_equal(resids1, resids2, DECIMAL)
+
+    def check_aic_R(self, aic1, aic2):
+        assert_almost_equal(aic1, aic2, DECIMAL)
+
+    def check_loglike(self, llf1, llf2):
+        assert_almost_equal(llf1, llf2, DECIMAL)
+
+    def check_bic(self, bic1, bic2):
+        assert_almost_equal(bic1, bic2, DECIMAL)
 
 class test_glm_negbinomial(check_model_results):
-#TODO: Include all residuals from Stata
-# Implement Anscombe residuals for negative binomial
     def __init__(self):
         '''
         Test Negative Binomial family with canonical log link

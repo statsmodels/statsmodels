@@ -6,8 +6,11 @@ import numpy as np
 import numpy.lib.recfunctions as nprf
 
 #FIXME: make this more robust
-# needs to not return a dummy for every variable...
+# needs to not return a dummy for *every* variable...
 #TODO: update docstring to show handling of ndarrays
+#TODO: needs to better preserve dtype and be more flexible
+# ie., if you still have a string variable in your array you don't
+# want to cast it to float
 def xi(data, col=None, time=None, drop=False):
     '''
     Returns an array changing categorical variables to dummy variables.
@@ -63,7 +66,7 @@ def xi(data, col=None, time=None, drop=False):
             tmp_dummy = (tmp_arr[:,np.newaxis]==data[:,col]).astype(float)
             tmp_dummy = np.rollaxis(tmp_dummy, 1, 0)
             if drop is True:
-                data = np.delete(data, col, axis=1)
+                data = np.delete(data, col, axis=1).astype(float)
             data = np.column_stack((data,tmp_dummy))
             return data
         else:

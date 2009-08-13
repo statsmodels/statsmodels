@@ -70,11 +70,27 @@ class cancer(object):
     '''
     def __init__(self):
         filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-        "stata_cancer_glm.csv")
+            "stata_cancer_glm.csv")
         data = np.recfromcsv(filename)
         self.endog = data.studytime
         design = np.column_stack((data.age,data.drug))
         design = tools.xi(design, col=1, drop=True)
+        design = np.delete(design, 1, axis=1) # drop first dummy
+        self.exog = tools.add_constant(design)
+
+class medpar1(object):
+    '''
+    The medpar1 data can be found here
+
+    http://www.stata-press.com/data/hh2/medpar1
+    '''
+    def __init__(self):
+        filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+            "stata_medpar1_glm.csv")
+        data = np.recfromcsv(filename, converters ={1: lambda s: s.strip("\"")})
+        self.endog = data.los
+        design = np.column_stack((data.admitype, data.codes))
+        design = tools.xi(design, col=0, drop=True)
         design = np.delete(design, 1, axis=1) # drop first dummy
         self.exog = tools.add_constant(design)
 
