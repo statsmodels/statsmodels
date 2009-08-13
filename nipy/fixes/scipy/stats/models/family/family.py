@@ -310,11 +310,16 @@ class Gamma(Family):
         self.variance = Gamma.variance
         self.link = link
 
+    def clean(self, x):
+        return np.clip(x, 1.0e-10, np.inf)
+
     def deviance(self, Y, mu, scale=1.):
-        return 2 * np.sum((Y - mu)/mu - np.log(Y/mu))/scale
+        Y_mu = self.clean(Y/mu)
+        return 2 * np.sum((Y - mu)/mu - np.log(Y_mu))/scale
 
     def devresid(self, Y, mu, scale=1.):
-        return np.sign(Y-mu) * np.sqrt(-2*(-(Y-mu)/mu + np.log(Y/mu)))
+        Y_mu = self.clean(Y/mu)
+        return np.sign(Y-mu) * np.sqrt(-2*(-(Y-mu)/mu + np.log(Y_mu)))
 
     def logL(self, Y, mu, scale=1.):
         return - 1/scale * np.sum(Y/mu+np.log(mu)+(scale-1)*np.log(Y)\

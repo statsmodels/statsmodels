@@ -5,6 +5,9 @@ Utility functions for data manipulation
 import numpy as np
 import numpy.lib.recfunctions as nprf
 
+#FIXME: make this more robust
+# needs to not return a dummy for every variable...
+#TODO: update docstring to show handling of ndarrays
 def xi(data, col=None, time=None, drop=False):
     '''
     Returns an array changing categorical variables to dummy variables.
@@ -41,21 +44,30 @@ def xi(data, col=None, time=None, drop=False):
     '''
 
 #needs error checking
-    if isinstance(col, int):
-        col = data.dtype.names[col]
-    if data.dtype.names and isinstance(col,str):
-        tmp_arr = np.unique(data[col])
-        tmp_dummy = (tmp_arr[:,np.newaxis]==data[col]).astype(float)
-        if drop is True:
-            data=nprf.drop_fields(data, col, usemask=False,
-            asrecarray=type(data) is np.recarray)
-        data=nprf.append_fields(data, tmp_arr, data=tmp_dummy, usemask=False,
-                            asrecarray=type(data) is np.recarray)
+    if data.__class__ is np.recarray:
+        if isinstance(col, int):
+            col = data.dtype.names[col]
+        if data.dtype.names and isinstance(col,str):
+            tmp_arr = np.unique(data[col])
+            tmp_dummy = (tmp_arr[:,np.newaxis]==data[col]).astype(float)
+            if drop is True:
+                data=nprf.drop_fields(data, col, usemask=False,
+                asrecarray=type(data) is np.recarray)
+            data=nprf.append_fields(data, tmp_arr, data=tmp_dummy,
+                usemask=False, asrecarray=type(data) is np.recarray)
 # TODO: need better column names for numerical indicators
-        return data
-    else:
-# issue a warning?
-        return data
+            return data
+    elif data.__class__ is np.ndarray:
+        if isinstance(col, int):
+            tmp_arr = np.unique(data[:,col])
+            tmp_dummy = (tmp_arr[:,np.newaxis]==data[:,col]).astype(float)
+            tmp_dummy = np.rollaxis(tmp_dummy, 1, 0)
+            if drop is True:
+                data = np.delete(data, col, axis=1)
+            data = np.column_stack((data,tmp_dummy))
+            return data
+        else:
+            raise IndexError, "The index %s is not understood" % col
 
 def add_constant(data):
     '''

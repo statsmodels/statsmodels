@@ -9,6 +9,8 @@ Tests for other links in GLM
     -get data from Stata/remaining residuals from Stata
 Test I/O of models wrt array types, dimensions
 Check that rpy is installed (done)
+Make sure all tests actually run...
+    -some problems with removing imports from __init__ have been hidden
 
 Issues
 ----------
@@ -19,6 +21,7 @@ AR - I need to check my references, but right now AR is done through a
 two-stage iterative fit.  Does this always make sense?
    -test for this (only univariate yule-walker is tested right now)
 Make sure all results are computed where they should be
+Need to clip mu's in GLM to avoid np.log(0), etc.
 
 
 Other cleanup

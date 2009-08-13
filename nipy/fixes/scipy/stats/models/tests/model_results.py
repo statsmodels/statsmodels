@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import models
+from models import tools
 import glm_test_resids
 
 def generated_data():
@@ -29,21 +30,18 @@ class lbw(object):
     The LBW data can be found here
 
     http://www.stata-press.com/data/r9/rmain.html
-
-    X is the entire data as a record array.
     '''
     def __init__(self):
         # data set up for data not in datasets
         filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
             "stata_lbw_glm.csv")
-
         data=np.recfromcsv(filename, converters={4: lambda s: s.strip("\"")})
-        data = models.tools.xi(data, col='race', drop=True)
+        data = tools.xi(data, col='race', drop=True)
         self.endog = data.low
         design = np.column_stack((data['age'], data['lwt'],
                     data['black'], data['other'], data['smoke'], data['ptl'],
                     data['ht'], data['ui']))
-        self.exog = models.tools.add_constant(design)
+        self.exog = tools.add_constant(design)
         # Results for Canonical Logit Link
         self.params = (-.02710031, -.01515082, 1.26264728,
                         .86207916, .92334482, .54183656, 1.83251780,
@@ -63,6 +61,23 @@ class lbw(object):
         self.df_null = 188
         self.pearsonX2 = 182.0233425
         self.resids = glm_test_resids.lbw_resids
+
+class cancer(object):
+    '''
+    The Cancer data can be found here
+
+    http://www.stata-press.com/data/r10/rmain.html
+    '''
+    def __init__(self):
+        filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+        "stata_cancer_glm.csv")
+        data = np.recfromcsv(filename)
+        self.endog = data.studytime
+        design = np.column_stack((data.age,data.drug))
+        design = tools.xi(design, col=1, drop=True)
+        design = np.delete(design, 1, axis=1) # drop first dummy
+        self.exog = tools.add_constant(design)
+
 
 class cpunish(object):
     '''
@@ -168,7 +183,7 @@ class inv_gauss():
         data=np.genfromtxt(filename, delimiter=",", skiprows=1)
         self.endog = data[:5000,0]
         self.exog = data[:5000,1:]
-        self.exog = models.tools.add_constant(self.exog)
+        self.exog = tools.add_constant(self.exog)
         # Results
 #NOTE: loglikelihood difference in R vs. Stata vs. Models
 # is the same situation as gamma

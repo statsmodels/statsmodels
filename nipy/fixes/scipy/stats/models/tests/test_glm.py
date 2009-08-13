@@ -75,7 +75,7 @@ class check_model_results(object):
                     DECIMAL)
 
     def test_bic(self):
-        if isinstance(self.res2, RModel):
+        if isinstance(self.res2, RModel) and not hasattr(self.res2, 'bic'):
             raise SkipTest("Results are from RModel wrapper")
         self.check_bic(self.res1.information_criteria()['bic'],
             self.res2.bic)
@@ -93,7 +93,7 @@ class check_model_results(object):
 class test_glm_gaussian(check_model_results):
     def __init__(self):
         '''
-        Test Gaussian family with canonical identity link
+        Test Gaussian family with canonical identity link(tmp_arr[:,np.newaxis]==data[col]).astype(float)
         '''
         from models.datasets.longley.data import load
         self.data = load()
@@ -327,9 +327,6 @@ class test_glm_gamma(check_model_results):
         self.res1 = GLM(self.data.endog, self.data.exog, \
                     family=models.family.Gamma()).fit()
         self.res2 = scotvote()
-        self.KnownFailPrec = True   # precision issue in AIC_R
-        self.SkipDef = True # different loglike definition used
-                            # so LLF and AIC fail
 
     def check_params(self, params1, params2):
         assert_almost_equal(params1, params2, DECIMAL)
@@ -360,13 +357,65 @@ class test_glm_gamma(check_model_results):
     def check_pearsonX2(self, pearsonX21, pearsonX22):
         assert_almost_equal(pearsonX21, pearsonX22, DECIMAL)
 
-#TODO: add cancer.dta from stata for gamma tests
-#class test_glm_gamma_log(check_model_results):
-#    pass
+class test_glm_gamma_log(check_model_results):
+    def __init__(self):
+        from model_results import cancer
+        data = cancer()
+        self.res1 = GLM(data.endog, data.exog,
+            family=models.family.Gamma(link=models.family.links.log)).fit()
+        self.res2 = RModel(data.endog, data.exog, r.glm,
+            family=r.Gamma(link="log"))
+        self.res2.null_deviance = 27.92207137420696 # From R (bug in rpy)
+        self.res2.bic = -154.1582
 
+    def setup(self):
+        if skipR:
+            raise SkipTest, "Rpy not installed."
 
-#class test_glm_gamma_identity(check_model_results):
-#    pass
+    def check_params(self, params1, params2):
+        assert_almost_equal(params1, params2, DECIMAL)
+
+    def check_resids(self, resids1, resids2):
+        assert_almost_equal(resids1, resids2, DECIMAL)
+
+    def check_aic_R(self, aic1, aic2):
+        assert_almost_equal(aic1, aic2, DECIMAL_none)
+
+    def check_loglike(self, llf1, llf2):
+        assert_almost_equal(llf1, llf2, DECIMAL_least)
+
+    def check_bic(self, bic1, bic2):
+        assert_almost_equal(bic1, bic2, DECIMAL)
+
+class test_glm_gamma_identity(check_model_results):
+    def __init__(self):
+        from model_results import cancer
+        data = cancer()
+        self.res1 = GLM(data.endog, data.exog,
+            family=models.family.Gamma(link=models.family.links.identity)).fit()
+        self.res2 = RModel(data.endog, data.exog, r.glm,
+            family=r.Gamma(link="identity"))
+        self.res2.null_deviance = 27.92207137420696 # from R, Rpy bug
+
+    def setup(self):
+        if skipR:
+            raise SkipTest, "Rpy not installed."
+
+    def check_params(self, params1, params2):
+        assert_almost_equal(params1, params2, DECIMAL_lesser)
+
+    def check_resids(self, resids1, resids2):
+        assert_almost_equal(resids1, resids2, DECIMAL)
+
+    def check_aic_R(self, aic1, aic2):
+        assert_almost_equal(aic1, aic2, DECIMAL_none)
+
+    def check_loglike(self, llf1, llf2):
+        assert_almost_equal(llf1, llf2, DECIMAL_least)
+
+    def check_bic(self, bic1, bic2):
+        assert_almost_equal(bic1, bic2, DECIMAL)
+
 
 class test_glm_poisson(check_model_results):
     def __init__(self):
@@ -447,14 +496,14 @@ class test_glm_invgauss(check_model_results):
     def check_loglike(self, llf1, llf2):
         llf1 = self.res1.model.family.logL(self.res1.model.y, self.res1.mu,
                 scale=1)    # Stata assumes scale = 1 in calc,
-                            # which shouldn't be right
+                            # which shouldn't be right...
         assert_almost_equal(llf1, llf2, DECIMAL_less)
 
     def check_bic(self, bic1, bic2):
-        assert_almost_equal(bic1, bic2, DECIMAL-2)  # precision in STATA
+        assert_almost_equal(bic1, bic2, DECIMAL_lesser) # precision in STATA
 
     def check_pearsonX2(self, pearsonX21, pearsonX22):
-        assert_almost_equal(pearsonX21, pearsonX22, DECIMAL-1)  # summed resids
+        assert_almost_equal(pearsonX21, pearsonX22, DECIMAL_less)# summed resids
 
 #TODO: get madpar data for noncanonical links, H&H 110
 #class test_glm_invgauss_log(check_model_results):
