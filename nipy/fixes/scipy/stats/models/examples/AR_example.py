@@ -1,4 +1,5 @@
 import numpy as np
+import numpy.testing as npt
 from models.tools import add_constant
 from models.regression import AR, yule_walker
 
@@ -23,15 +24,34 @@ print results.Tcontrast([0,1])  # are sd and t correct? vs
 print results.Fcontrast(np.eye(2))
 
 
-rhotrue = 0.99
+rhotrue = [0.5, 0.2]
+rhotrue = np.asarray(rhotrue)
+nlags = np.size(rhotrue)
 beta = np.array([0.1, 2])
-noiseratio = 1.
-nsample = 20
+noiseratio = 0.01
+nsample = 2000
 x = np.arange(nsample)
 X1 = add_constant(x)
 
-noise = noiseratio * np.random.randn(nsample+1)
-noise = noise[1:] + rhotrue*noise[:-1]
+wnoise = noiseratio * np.random.randn(nsample+nlags)
+#noise = noise[1:] + rhotrue*noise[:-1] # wrong this is not AR
+
+#find my drafts for univariate ARMA functions
+
+from scipy import signal
+
+if np.size(rhotrue) == 1:
+    # replace with scipy.signal.lfilter ?
+    arnoise = np.zeros(nsample+1)
+    for i in range(1,nsample+1):
+        arnoise[i] = rhotrue*arnoise[i-1] + wnoise[i]
+    noise = arnoise[1:]
+    an = signal.lfilter([1], np.hstack((1,-rhotrue)), wnoise[1:])
+    print 'simulate AR(1) difference', np.max(np.abs(noise-an))
+else:
+    noise = signal.lfilter([1], np.hstack((1,-rhotrue)), wnoise)[nlags:]
+
+
 y = np.dot(X1,beta) + noise
 
 mod1 = AR(y, X1, 1)
@@ -57,9 +77,10 @@ for i in range(10):
     print parnew - parold
     parold = parnew
 
+Y = noise
 
-
-#example with no regressor, results incorrect, params=0 ?
+#example with no regressor,
+#results now have same estimated rho as yule-walker directly
 model3 = AR(Y, rho=2)
 for i in range(10):
     results = model3.fit()
@@ -86,3 +107,11 @@ for i in range(10):
     print "AR coefficients:", model3.rho, results.params
     rho, sigma = yule_walker(results.resid, order = model4.order)
     model4 = AR(Ydemeaned, rho=rho)
+
+model3a = AR(Y, rho=1)
+res3a = model3a.iterative_fit(5)
+print res3a.params
+print model3a.rho
+rhoyw, sigmayw = yule_walker(Y, order = 1)
+print rhoyw, sigmayw
+npt.assert_array_almost_equal(model3a.rho, rhoyw, 15)

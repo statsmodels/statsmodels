@@ -119,11 +119,13 @@ class GLS(LikelihoodModel):
     def __init__(self, endog, exog, sigma=None):
         self.sigma = sigma
         if np.any(self.sigma) and not np.shape(self.sigma)==():
+            #JP whats required dimension of sigma, needs checking
             self.cholsigmainv = np.linalg.cholesky(np.linalg.pinv(sigma)).T
         super(GLS, self).__init__(endog, exog)
 
     def initialize(self):
         self.wdesign = self.whiten(self._exog)
+        #JP: calc_params is not an informative name, but anything better?
         self.calc_params = np.linalg.pinv(self.wdesign)
         self.normalized_cov_params = np.dot(self.calc_params,
                                          np.transpose(self.calc_params))
@@ -195,13 +197,16 @@ class GLS(LikelihoodModel):
 #        if Y is None:           # this is needed for old GLM algorithm
 #            Y = self._endog
         Z = self.whiten(self._endog)
+        #JP put beta=np.dot(self.calc_params, Z) on separate line with temp variable
+        # for better readability
+        # should this use lstsq instead?
         lfit = RegressionResults(self, np.dot(self.calc_params, Z),
                        normalized_cov_params=self.normalized_cov_params)
         lfit.predict = np.dot(self._exog, lfit.params)
 #        lfit.resid = Z - np.dot(self.wdesign, lfit.params)
 #TODO: why was the above in the original?  do we care about whitened resids?
 #        lfit.resid = Y - np.dot(self._exog, lfit.params)
-        lfit.Z = Z
+        lfit.Z = Z   # not a good name wendog analogy to wdesign
         lfit.df_resid = self.df_resid
         lfit.df_model = self.df_model
         lfit.calc_params = self.calc_params # needed for cov_params()
@@ -631,13 +636,14 @@ class RegressionResults(LikelihoodModelResults):
 
     It handles the output of contrasts, estimates of covariance, etc.
     """
-    _llf = None
+    _llf = None  #this makes it a class attribute - bad, move to init
 
     def __init__(self, model, params, normalized_cov_params=None, scale=1.):
         super(RegressionResults, self).__init__(model, params,
                                                  normalized_cov_params,
                                                  scale)
 # should this go up to likelihood model results?
+
     @property
     def llf(self):
         if self._llf is None:
@@ -678,6 +684,7 @@ class RegressionResults(LikelihoodModelResults):
         """
         Return linear predictor values from a design matrix.
         """
+        #JP: this doesn't look correct for GLMAR
         return np.dot(design, self.params)
 
 def isestimable(C, D):

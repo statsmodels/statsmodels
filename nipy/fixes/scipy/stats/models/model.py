@@ -103,6 +103,8 @@ class Results(object):
         self._params = params
         self.__dict__.update(kwd)
         self.initialize()
+
+    #don't turn attributes into properties (this  is python not java)
     @property
     def params(self):
         return self._params
@@ -131,9 +133,13 @@ class LikelihoodModelResults(Results):
         Comments
         --------
 
-        The covariance of paramss is given by scale times
+        The covariance of params is given by scale times
         normalized_cov_params
         """
+
+        #JP what are the minimum attributes and methods that are used of model
+        # i.e. can this be called with an almost empty model
+        # what's the smallest duck that quacks like a model - list
 
         super(LikelihoodModelResults, self).__init__(model, params)
         self.normalized_cov_params = normalized_cov_params
@@ -142,7 +148,7 @@ class LikelihoodModelResults(Results):
     def normalized_cov_params(self):
         raise NotImplementedError
 
-    def scale(self):
+    def scale(self):    #JP very bad, first scale is an attribute, now a method
         raise NotImplementedError
 
     def t(self, column=None):
@@ -204,7 +210,6 @@ class LikelihoodModelResults(Results):
 #                scale=np.eye(len(self._model._endog))*scale
             return np.dot(np.dot(self.calc_params, np.array(scale)),
                 self.calc_params.T)
-
     def Tcontrast(self, matrix, t=True, sd=True, scale=None):
         """
         Compute a Tcontrast for a row vector matrix. To get the t-statistic

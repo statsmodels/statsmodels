@@ -472,7 +472,6 @@ class test_glm_invgauss(check_model_results):
         generate the data.
         '''
 
-
         from model_results import inv_gauss
         self.res2 = inv_gauss()
         self.res1 = GLM(self.res2.endog, self.res2.exog, \
@@ -632,5 +631,6 @@ class test_glm_negbinomial(check_model_results):
 
 if __name__=="__main__":
     #run_module_suite()
+    #taken from Fernando Perez:
     nose.runmodule(argv=[__file__,'-vvs','-x','--pdb'],
                        exit=False)
