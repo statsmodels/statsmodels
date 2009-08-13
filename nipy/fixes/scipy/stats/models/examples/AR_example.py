@@ -25,8 +25,8 @@ print results.Fcontrast(np.eye(2))
 
 rhotrue = 0.99
 beta = np.array([0.1, 2])
-noiseratio = 1.
-nsample = 20
+noiseratio = 0.1
+nsample = 100
 x = np.arange(nsample)
 X1 = add_constant(x)
 
@@ -57,9 +57,10 @@ for i in range(10):
     print parnew - parold
     parold = parnew
 
+Y = noise
 
-
-#example with no regressor, results incorrect, params=0 ?
+#example with no regressor,
+#results now have same estimated rho as yule-walker directly
 model3 = AR(Y, rho=2)
 for i in range(10):
     results = model3.fit()
@@ -86,3 +87,8 @@ for i in range(10):
     print "AR coefficients:", model3.rho, results.params
     rho, sigma = yule_walker(results.resid, order = model4.order)
     model4 = AR(Ydemeaned, rho=rho)
+
+model3a = AR(Y, rho=1)
+res3a = model3.iterative_fit(5)
+print res3a.params
+print model3a.rho
