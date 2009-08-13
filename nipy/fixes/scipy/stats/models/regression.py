@@ -531,7 +531,10 @@ class AR(GLS):
                 self.rho.shape = (1,)
             self.order = self.rho.shape[0]
         if exog is None:
-            super(AR, self).__init__(endog, add_constant(endog))
+            #JP this looks wrong, should be a regression on constant
+            #results for rho estimate now identical to yule-walker on y
+            #super(AR, self).__init__(endog, add_constant(endog))
+            super(AR, self).__init__(endog, np.ones((endog.shape[0],1)))
         else:
             super(AR, self).__init__(endog, exog)
 
@@ -546,13 +549,16 @@ class AR(GLS):
             niter : ``integer``
                 the number of iterations
         """
-        for i in range(maxiter):
+        for i in range(maxiter-1):
             self.initialize()
             results = self.fit()
             self.rho, _ = yule_walker(results.resid,
                                       order=self.order, df=None)
                                         #note that the X passed is different for
-                                        #univariate.  Why this X anyway?
+                                      #univariate.  Why this X anyway?
+        self._results = self.fit() #final estimate
+        return self._results # add missing return
+
     def whiten(self, X):
         """
         Whiten a series of columns according to an AR(p)
@@ -595,7 +601,7 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False):
     if method not in ["unbiased", "mle"]:
         raise ValueError, "ACF estimation method must be 'unbiased' \
         or 'MLE'"
-    X = np.asarray(X, np.float64)  # don't touch the data?
+    X = np.array(X, np.float64)  # don't touch the data? JP fixed, this modified data
     X -= X.mean()                  # automatically demean's X
     n = df or X.shape[0]    # is df_resid the degrees of freedom?
                             # no it's n I think or n-1
