@@ -5,6 +5,20 @@ import scipy.linalg
 
 __docformat__ = 'restructuredtext'
 
+def isestimable(C, D):
+    """
+    From an q x p contrast matrix C and an n x p design matrix D, checks
+    if the contrast C is estimable by looking at the rank of vstack([C,D]) and
+    verifying it is the same as the rank of D.
+
+    """
+    if C.ndim == 1:
+        C.shape = (C.shape[0], 1)
+    new = np.vstack([C, D])
+    if rank(new) != rank(D):
+        return False
+    return True
+
 def recipr(X):
     """
     Return the reciprocal of an array, setting all entries less than or

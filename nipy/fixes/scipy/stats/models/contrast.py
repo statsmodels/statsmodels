@@ -206,6 +206,12 @@ if __name__=="__main__":
     c2 = Contrast(new_term2, X)
 # Is this correct?  0 0 .156 0 0 0 0 0 0 0 ?
 
+## YAC ##
+    zero = np.zeros((40,))
+    new_term3 = np.column_stack((zero,X[:,2]))
+    c3 = Contrast(new_term3, X)
+    test2 = [0]*2 + [1] + [0]*7
+
 
 
 
