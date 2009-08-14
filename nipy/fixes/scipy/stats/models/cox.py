@@ -150,7 +150,7 @@ class CoxPH(model.LikelihoodModel):
 
             if ties == 'breslow':
                 w = np.exp(np.dot(Z, b))
-                rv = discrete(Z[risk], w=w[risk])
+                rv = Discrete(Z[risk], w=w[risk])
                 score -= rv.mean() * d
             elif ties == 'efron':
                 w = np.exp(np.dot(Z, b))
@@ -158,7 +158,7 @@ class CoxPH(model.LikelihoodModel):
                 for j in range(d):
                     efron_w = w
                     efron_w[fail] -= i * w[fail] / d
-                    rv = discrete(Z[risk], w=efron_w[risk])
+                    rv = Discrete(Z[risk], w=efron_w[risk])
                     score -= rv.mean()
             elif ties == 'cox':
                 raise NotImplementedError, 'Cox tie breaking method not implemented'
@@ -178,7 +178,7 @@ class CoxPH(model.LikelihoodModel):
 
             if ties == 'breslow':
                 w = np.exp(np.dot(Z, b))
-                rv = discrete(Z[risk], w=w[risk])
+                rv = Discrete(Z[risk], w=w[risk])
                 info += rv.cov()
             elif ties == 'efron':
                 w = np.exp(np.dot(Z, b))
@@ -186,7 +186,7 @@ class CoxPH(model.LikelihoodModel):
                 for j in range(d):
                     efron_w = w
                     efron_w[fail] -= i * w[fail] / d
-                    rv = discrete(Z[risk], w=efron_w[risk])
+                    rv = Discrete(Z[risk], w=efron_w[risk])
                     info += rv.cov()
             elif ties == 'cox':
                 raise NotImplementedError, 'Cox tie breaking method not implemented'

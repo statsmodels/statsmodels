@@ -56,7 +56,7 @@ class LeastSquares(RobustNorm):
         return np.ones(z.shape, np.float64)
 
     def psi_deriv(self, z):
-        return np.ones(z,shape, np.float64)
+        return np.ones(z.shape, np.float64)
 
 class HuberT(RobustNorm):
     """
