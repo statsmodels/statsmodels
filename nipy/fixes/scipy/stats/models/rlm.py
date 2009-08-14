@@ -293,10 +293,9 @@ if __name__=="__main__":
 ### Huber'sT ###
 ################
     m1_Huber_H = RLM(data.endog, data.exog, M=norms.HuberT())
-    results_Huber1_H = m1_Huber_H.fit(scale_est = 'Huber')
+    results_Huber1_H = m1_Huber_H.fit(scale_est=scale.Hubers_scale())
 #    m2_Huber_H
 #    m3_Huber_H
-# Huber scale estimate do not currently work
 #    m4 = RLM(data.endog, data.exog, M=norms.HuberT())
 #    results4 = m1.fit(scale_est="Huber")
 #    m5 = RLM(data.endog, data.exog, M=norms.Hampel())

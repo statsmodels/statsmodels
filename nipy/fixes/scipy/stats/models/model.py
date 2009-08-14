@@ -150,6 +150,7 @@ class LikelihoodModelResults(Results):
 
     def scale(self):    #JP very bad, first scale is an attribute, now a method
         raise NotImplementedError
+                        # SS It's not used I don't think and can be removed
 
     def t(self, column=None):
         """
@@ -183,6 +184,21 @@ class LikelihoodModelResults(Results):
 
         The covariance of
         interest is either specified as a (set of) column(s) or a matrix.
+
+        Without call specified
+
+        If matrix is specified returns
+        m(X.T X)^(-1)m.T
+
+        If matrix and other are specified returns
+        m(X.T X)^(-1)other.T
+
+        If column is specified returns
+        (X.T X)^(-1)[column,column] if column is 0d OR
+        (X.T X)^(-1)[column][:,column]
+
+        If called without arguments
+
         """
 
         if self.normalized_cov_params is None:
@@ -202,15 +218,14 @@ class LikelihoodModelResults(Results):
             tmp = np.dot(matrix, np.dot(self.normalized_cov_params, np.transpose(other)))
             return tmp * scale
         if matrix is None and column is None:
-            if np.shape(scale) == ():   # can be a scalar or array
+#            if np.shape(scale) == ():   # can be a scalar or array
 # TODO: np.eye fails for big arrays.  Failed for np.eye(25,000) in the lab
 # needs to be optimized.
 # on the other hand, it is only necessary for when scale isn't a scalar
 # so it doesn't need to default to this every time
-#JP: I think this should work with scale a scalar without creating eye - broadcasting
-                scale=np.eye(len(self._model._endog))*scale
-            return np.dot(np.dot(self.calc_params, scale), self.calc_params.T)
-
+#                scale=np.eye(len(self._model._endog))*scale
+            return np.dot(np.dot(self.calc_params, np.array(scale)),
+                self.calc_params.T)
     def Tcontrast(self, matrix, t=True, sd=True, scale=None):
         """
         Compute a Tcontrast for a row vector matrix. To get the t-statistic

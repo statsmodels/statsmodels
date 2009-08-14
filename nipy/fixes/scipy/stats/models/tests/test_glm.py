@@ -87,7 +87,7 @@ class check_model_results(object):
 
     def test_pearsonX2(self):
         if isinstance(self.res2, RModel):
-            raise SkipTest("Results are from RModel wrapper")
+            raise SkipTest("Results ar(tmp_arr[:,np.newaxis]==data[col]).astype(float)e from RModel wrapper")
         self.check_pearsonX2(self.res1.pearsonX2, self.res2.pearsonX2)
 
 class test_glm_gaussian(check_model_results):
@@ -367,7 +367,7 @@ class test_glm_gamma_log(check_model_results):
         self.res2 = RModel(data.endog, data.exog, r.glm,
             family=r.Gamma(link="log"))
         self.res2.null_deviance = 27.92207137420696 # From R (bug in rpy)
-        self.res2.bic = -154.1582
+        self.res2.bic = -154.1582 # from Stata
 
     def setup(self):
         if skipR:
@@ -417,7 +417,6 @@ class test_glm_gamma_identity(check_model_results):
     def check_bic(self, bic1, bic2):
         assert_almost_equal(bic1, bic2, DECIMAL)
 
-
 class test_glm_poisson(check_model_results):
     def __init__(self):
         '''
@@ -461,7 +460,6 @@ class test_glm_poisson(check_model_results):
 #class test_glm_poisson_power(check_model_results):
 #    pass
 
-#FIXME: remove comment when finished
 #@dec.slow
 class test_glm_invgauss(check_model_results):
     def __init__(self):
@@ -478,6 +476,10 @@ class test_glm_invgauss(check_model_results):
         self.res2 = inv_gauss()
         self.res1 = GLM(self.res2.endog, self.res2.exog, \
                 family=models.family.InverseGaussian()).fit()
+
+    def setup(self):
+        if skipR:
+            raise nose.SkipTest('requires rpy')
 
     def check_params(self, params1, params2):
         assert_almost_equal(params1, params2, DECIMAL)
@@ -517,10 +519,11 @@ class test_glm_invgauss_log(check_model_results):
         self.res2 = RModel(data.endog, data.exog, r.glm,
             family=r.inverse_gaussian(link="log"))
         self.res2.null_deviance = 335.1539777981053 # from R, Rpy bug
+        self.res2.llf = -12162.72308 # from Stata, R's has big rounding diff
+                                     # common across Gamma implementation
 
     def setup(self):
-#        if skipR:
-        if True:
+        if skipR:
             raise SkipTest, "Rpy not installed."
 
     def check_params(self, params1, params2):
@@ -529,14 +532,14 @@ class test_glm_invgauss_log(check_model_results):
     def check_resids(self, resids1, resids2):
         assert_almost_equal(resids1, resids2, DECIMAL)
 
+    @dec.knownfailureif(True, "Big rounding difference vs. R")
     def check_aic_R(self, aic1, aic2):
         assert_almost_equal(aic1, aic2, DECIMAL)
 
     def check_loglike(self, llf1, llf2):
+        llf1 = self.res1.model.family.logL(self.res1.model.y,
+                self.res1.mu, scale=1)
         assert_almost_equal(llf1, llf2, DECIMAL)
-
-    def check_bic(self, bic1, bic2):
-        assert_almost_equal(bic1, bic2, DECIMAL)
 
 class test_glm_invgauss_identity(check_model_results):
     def __init__(self):
@@ -548,10 +551,10 @@ class test_glm_invgauss_identity(check_model_results):
         self.res2 = RModel(data.endog, data.exog, r.glm,
             family=r.inverse_gaussian(link="identity"))
         self.res2.null_deviance = 335.1539777981053 # from R, Rpy bug
+        self.res2.llf = -12163.25545    # from Stata, big diff with R
 
     def setup(self):
-#        if skipR:
-        if True:
+        if skipR:
             raise SkipTest, "Rpy not installed."
 
     def check_params(self, params1, params2):
@@ -560,14 +563,14 @@ class test_glm_invgauss_identity(check_model_results):
     def check_resids(self, resids1, resids2):
         assert_almost_equal(resids1, resids2, DECIMAL)
 
+    @dec.knownfailureif(True, "Big rounding difference vs R")
     def check_aic_R(self, aic1, aic2):
         assert_almost_equal(aic1, aic2, DECIMAL)
 
     def check_loglike(self, llf1, llf2):
+        llf1 = self.res1.model.family.logL(self.res1.model.y,
+                self.res1.mu, scale=1)
         assert_almost_equal(llf1, llf2, DECIMAL)
-
-    def check_bic(self, bic1, bic2):
-        assert_almost_equal(bic1, bic2, DECIMAL)
 
 class test_glm_negbinomial(check_model_results):
     def __init__(self):

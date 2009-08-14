@@ -5,26 +5,26 @@ Tests for Contrast (doing now) (no idea, needs refactoring?)
     -seems simple enough, though I just don't have an example for the usage
     -need to find data that's appropriate for contrast analysis
 Tests for other methods in Model.py
-Tests for other links in GLM
-    -get data from Stata/remaining residuals from Stata
+xTests for other links in GLM (done except discrete distributions)
+    -get data from Stata/remaining residuals from Stata (done)
 Test I/O of models wrt array types, dimensions
-Check that rpy is installed (done)
+xCheck that rpy is installed (done)
 Make sure all tests actually run...
     -some problems with removing imports from __init__ have been hidden
 
 Issues
 ----------
-GLS residuals - whitened or not? (ie., Z - dot(wdesign, params) or
+xGLS residuals - whitened or not? (ie., Z - dot(wdesign, params) or
 endog - dot(exog,params))
    -I think not... (leaving as not)
 AR - I need to check my references, but right now AR is done through a
 two-stage iterative fit.  Does this always make sense?
    -test for this (only univariate yule-walker is tested right now)
 Make sure all results are computed where they should be
-Need to clip mu's in GLM to avoid np.log(0), etc.
-GLM is very slow for many data points (see Inverse Gaussian)
+Need to clip mu's in GLM to avoid np.log(0), etc. (done for gamma)
+xGLM is very slow for many data points (see Inverse Gaussian)
     -I suspect this is from np.eye in cov_params being calculated for
-        each iteration of WLS, with large data...
+        each iteration of WLS, with large data... (removed np.eye)
 
 
 Other cleanup
