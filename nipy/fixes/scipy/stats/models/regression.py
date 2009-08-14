@@ -139,6 +139,7 @@ class GLS(LikelihoodModel):
         else:
             return Y
 #TODO: I think we can remove Y now, was there for old GLM compatibility
+       #JP return Y cannot be removed ?
 #TODO: Do we need df_model and df_resid defined twice?
     def fit(self):
         """
@@ -232,6 +233,9 @@ class GLS(LikelihoodModel):
         lfit.SSR = ss(lfit.resid)
         lfit.cTSS = ss(lfit.Z-np.mean(lfit.Z))
 #TODO: Z or Y here?  Need to have tests in GLS.
+#JP what does c and u in front of TSS stand for?
+#JP I think, it should be Y instead of Z, are the following results correct, with Z?
+
         lfit.uTSS = ss(lfit.Z)
 # Centered R2 for models with intercepts
 # would be different for no constant regression...
@@ -676,7 +680,7 @@ class RegressionResults(LikelihoodModelResults):
              Davidson and MacKinnon 15.2 p 662
 
         """
-        if not hasattr(secalf, 'resid'):
+        if not hasattr(self, 'resid'):
             raise ValueError, 'need normalized residuals to estimate standard deviation'
         return self.resid * utils.recipr(np.sqrt(self.scale))
 
