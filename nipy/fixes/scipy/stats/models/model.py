@@ -150,6 +150,7 @@ class LikelihoodModelResults(Results):
 
     def scale(self):    #JP very bad, first scale is an attribute, now a method
         raise NotImplementedError
+                        # SS It's not used I don't think and can be removed
 
     def t(self, column=None):
         """
@@ -183,6 +184,21 @@ class LikelihoodModelResults(Results):
 
         The covariance of
         interest is either specified as a (set of) column(s) or a matrix.
+
+        Without call specified
+
+        If matrix is specified returns
+        m(X.T X)^(-1)m.T
+
+        If matrix and other are specified returns
+        m(X.T X)^(-1)other.T
+
+        If column is specified returns
+        (X.T X)^(-1)[column,column] if column is 0d OR
+        (X.T X)^(-1)[column][:,column]
+
+        If called without arguments
+
         """
 
         if self.normalized_cov_params is None:

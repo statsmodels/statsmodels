@@ -138,7 +138,6 @@ class GLS(LikelihoodModel):
             return np.dot(self.cholsigmainv, Y)
         else:
             return Y
-#TODO: I think we can remove Y now, was there for old GLM compatibility
 #TODO: Do we need df_model and df_resid defined twice?
     def fit(self):
         """
@@ -194,8 +193,6 @@ class GLS(LikelihoodModel):
         R-squared for models with an intercept
         .. math :: 1-\frac{\sum e_{i}^{2}}{\sum(y_{i}-\overline{y})^{2}}
         """
-#        if Y is None:           # this is needed for old GLM algorithm
-#            Y = self._endog
         Z = self.whiten(self._endog)
         #JP put beta=np.dot(self.calc_params, Z) on separate line with temp variable
         # for better readability
@@ -247,7 +244,7 @@ class GLS(LikelihoodModel):
         lfit.MSE_resid = lfit.SSR/lfit.df_resid
         lfit.MSE_total = lfit.uTSS/(lfit.df_model+lfit.df_resid)
         lfit.F = lfit.MSE_model/lfit.MSE_resid
-        lfit.F_p = stats.f.pdf(lfit.F, lfit.df_model, lfit.df_resid)
+        lfit.F_p = 1 - stats.f.cdf(lfit.F, lfit.df_model, lfit.df_resid)
         lfit.bse = np.sqrt(np.diag(lfit.cov_params()))
 
     def llf(self, params):
@@ -443,7 +440,6 @@ class OLS(WLS):
     """
     def __init__(self, endog, exog=None):
         super(OLS, self).__init__(endog, exog)
-#1        self.initialize()
 
     def whiten(self, Y):
         """
