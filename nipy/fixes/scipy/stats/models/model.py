@@ -267,7 +267,7 @@ class LikelihoodModelResults(Results):
 
         cparams = np.dot(matrix, self.params)
 
-        q = matrix.shape[0]
+        q = np.shape(matrix)[0]
         if invcov is None:
             invcov = inv(self.cov_params(matrix=matrix, scale=1.0))
         F = np.add.reduce(np.dot(invcov, cparams) * cparams, 0) * \

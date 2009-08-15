@@ -2,6 +2,8 @@ import copy
 
 import numpy as np
 from models import utils
+from scipy.stats import f
+from scipy.stats import t as student_t
 
 class ContrastResults(object):
     """
@@ -18,11 +20,13 @@ class ContrastResults(object):
             self.F = F
             self.df_denom = df_denom
             self.df_num = df_num
+            self.p_val = 1 - f.cdf(F, df_num, df_denom)
         else:
             self.t = t
             self.sd = sd
             self.effect = effect
             self.df_denom = df_denom
+            self.p_val = 1 - student_t.cdf(t, df_denom)
 
     def __array__(self):
         if hasattr(self, "F"):
@@ -32,11 +36,11 @@ class ContrastResults(object):
 
     def __str__(self):
         if hasattr(self, 'F'):
-            return '<F contrast: F=%s, df_denom=%d, df_num=%d>' % \
-                   (`self.F`, self.df_denom, self.df_num)
+            return '<F contrast: F=%s, p=%s, df_denom=%d, df_num=%d>' % \
+                   (`self.F`, self.p_val, self.df_denom, self.df_num)
         else:
-            return '<T contrast: effect=%s, sd=%s, t=%s, df_denom=%d>' % \
-                   (`self.effect`, `self.sd`, `self.t`, self.df_denom)
+            return '<T contrast: effect=%s, sd=%s, t=%s, p=%s, df_denom=%d>' % \
+                   (`self.effect`, `self.sd`, `self.t`, `self.p_val`, self.df_denom)
 
 #TODO: fix docstring
 class Contrast(object):
