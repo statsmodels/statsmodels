@@ -52,13 +52,13 @@ class check_model_results(object):
         if self.res1.scale != 1:
             dof = 2
         else: dof = 0
-        self.check_aic_R(self.res1.information_criteria()['aic']+dof,
+        self.check_aic_R(self.res1.aic+dof,
                 self.res2.aic_R)
 
     def test_aic_Stata(self):
         if isinstance(self.res2, RModel):
             raise SkipTest("Results are from RModel wrapper")
-        aic = self.res1.information_criteria()['aic']/self.res1.nobs
+        aic = self.res1.aic/self.res1.nobs
         self.check_aic_Stata(aic, self.res2.aic_Stata)
 
     def test_deviance(self):
@@ -77,7 +77,7 @@ class check_model_results(object):
     def test_bic(self):
         if isinstance(self.res2, RModel) and not hasattr(self.res2, 'bic'):
             raise SkipTest("Results are from RModel wrapper")
-        self.check_bic(self.res1.information_criteria()['bic'],
+        self.check_bic(self.res1.bic,
             self.res2.bic)
 
     def test_degrees(self):

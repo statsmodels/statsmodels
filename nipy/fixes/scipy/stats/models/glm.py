@@ -211,6 +211,9 @@ class GLMResults(LikelihoodModelResults):
         # null is the predicted values of constant only fit
         self.null_deviance = model.family.deviance(model.y,null)
         self.deviance = model.family.deviance(model.y,model.mu)
+        self.aic = -2 * self.llf + 2*(self.df_model+1)
+        self.bic = self.model.family.deviance(self.model.y,self.model.mu) -\
+                (self.df_resid)*np.log(self.nobs)
 
     @property
     def llf(self):
@@ -222,10 +225,3 @@ class GLMResults(LikelihoodModelResults):
                 self._llf = self.model.family.logL(self.model.y,
                     self.model.mu, scale=self.scale)
         return self._llf
-
-    def information_criteria(self):
-        llf = self.llf
-        aic = -2 * llf + 2*(self.df_model+1)
-        bic = self.model.family.deviance(self.model.y,self.model.mu) - \
-                (self.df_resid)*np.log(self.nobs)
-        return dict(aic=aic, bic=bic)

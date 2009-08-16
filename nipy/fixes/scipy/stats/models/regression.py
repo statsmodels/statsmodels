@@ -207,7 +207,7 @@ class GLS(LikelihoodModel):
         lfit.Z = Z   # not a good name wendog analogy to wdesign
         lfit.df_resid = self.df_resid
         lfit.df_model = self.df_model
-        lfit.calc_params = self.calc_params # needed for cov_params()
+        lfit.calc_params = self.calc_params
         self._summary(lfit)
         return lfit
 
@@ -250,8 +250,11 @@ class GLS(LikelihoodModel):
         lfit.F = lfit.MSE_model/lfit.MSE_resid
         lfit.F_p = 1 - stats.f.cdf(lfit.F, lfit.df_model, lfit.df_resid)
         lfit.bse = np.sqrt(np.diag(lfit.cov_params()))
+        lfit.llf = self.logLike(lfit.params)
+        lfit.aic = -2 * lfit.llf + 2*(self.df_model+1)
+        lfit.bic = -2 * lfit.llf + np.log(lfit.nobs)*(self.df_model+1)
 
-    def llf(self, params):
+    def logLike(self, params):
         """
         Returns the value of the gaussian loglikelihood function at b.
 
@@ -642,19 +645,17 @@ class RegressionResults(LikelihoodModelResults):
         super(RegressionResults, self).__init__(model, params,
                                                  normalized_cov_params,
                                                  scale)
-# should this go up to likelihood model results?
+#    @property
+#    def llf(self):
+#        if self._llf is None:
+#            self._llf = self.model.llf(self.params)
+#        return self._llf
 
-    @property
-    def llf(self):
-        if self._llf is None:
-            self._llf = self.model.llf(self.params)
-        return self._llf
-
-    def information_criteria(self):
-        llf = self.llf
-        aic = -2 * llf + 2*(self.df_model + 1)
-        bic = -2 * llf + np.log(self.nobs) * (self.df_model + 1)
-        return dict(aic=aic, bic=bic)
+#    def information_criteria(self):
+#        llf = self.llf
+#        aic = -2 * llf + 2*(self.df_model + 1)
+#        bic = -2 * llf + np.log(self.nobs) * (self.df_model + 1)
+#        return dict(aic=aic, bic=bic)
 # could be added as properties to results class.
 
     def norm_resid(self):
