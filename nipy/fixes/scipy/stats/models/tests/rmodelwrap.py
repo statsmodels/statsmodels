@@ -27,11 +27,14 @@ class RModel(object):
         rpy.set_default_mode(rpy.NO_CONVERSION)
         results = self.model_type(self.formula,
                                     data = self.frame, **kwds)
+        self.robj = results # keep the Robj model so it can be
+                            # used in the tests
         rpy.set_default_mode(rpy.BASIC_CONVERSION)
         rsum = r.summary(results)
         self.rsum = rsum
         # Provide compatible interface with scipy models
         self.results = results.as_py()
+
 #        coeffs = self.results['coefficients']
 #        self.beta0 = np.array([coeffs[c] for c in self._design_cols])
         self.nobs = len(self.results['residuals'])

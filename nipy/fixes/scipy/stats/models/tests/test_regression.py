@@ -8,8 +8,10 @@ from scipy.linalg import toeplitz
 from models.tools import add_constant
 from models.regression import OLS, AR, WLS, GLS, yule_walker
 import models
+from models import utils
 from check_for_rpy import skip_rpy
 from nose import SkipTest
+from scipy.stats import t
 
 W = standard_normal
 DECIMAL = 4
@@ -20,6 +22,7 @@ DECIMAL_sig = 7
 skipR = skip_rpy()
 if not skipR:
     from rpy import r
+    from rmodelwrap import RModel
 
 
 class check_regression_results(object):
@@ -75,9 +78,9 @@ class check_regression_results(object):
         bic = self.res1.information_criteria()['bic']
         assert_almost_equal(bic, self.res2.BIC, DECIMAL)
 
-    @dec.skipif(True, "Results not included yet")
-    def test_resids(self):
-        pass
+#TODO: add residuals from another package or R
+#    def test_resids(self):
+#        assert_almost_equal(self.res1.resid, self.res2.resid, DECIMAL)
 
 class test_ols(check_regression_results):
     def __init__(self):
@@ -97,6 +100,138 @@ class test_ols(check_regression_results):
 
     def check_params(self, params1, params2):
         assert_almost_equal(params1, params2, DECIMAL)
+
+class TestFtest(object):
+    def __init__(self):
+        from models.datasets.longley.data import load
+        data = load()
+        self.data = data
+        self.data.exog = add_constant(self.data.exog)
+        self.res1 = OLS(data.endog, data.exog).fit()
+        self.R = np.identity(7)[:-1,:]
+        self.Ftest = self.res1.Ftest(self.R)
+
+    def test_F(self):
+        assert_almost_equal(self.Ftest.F, self.res1.F, DECIMAL)
+
+    def test_p(self):
+        assert_almost_equal(self.Ftest.p_val, self.res1.F_p, DECIMAL)
+
+    def test_Df_denom(self):
+        assert_equal(self.Ftest.df_denom, self.res1.df_resid)
+
+    def test_Df_num(self):
+        assert_equal(self.Ftest.df_num, utils.rank(self.R))
+
+class TestFTest2(TestFtest):
+    '''
+    The first set of tests is a test of the fully specified model.
+    The second set of tests is a joint test that the coefficient on
+    GNP = the coefficient on UNEMP  and that the coefficient on
+    POP = the coefficient on YEAR for the Longley dataset.
+    '''
+
+    def setup(self):
+        if skipR:
+            raise SkipTest, "Rpy not installed"
+        try:
+            r.library('car')
+            self.R2 = [[0,1,-1,0,0,0,0],[0, 0, 0, 0, 1, -1, 0]]
+            self.Ftest2 = self.res1.Ftest(self.R2)
+            self.R_Results = RModel(self.data.endog, self.data.exog, r.lm).robj
+            self.F = r.linear_hypothesis(self.R_Results,
+                    r.c('x.2 = x.3', 'x.5 = x.6'))
+        except:
+            raise SkipTest, "car library not installed for R"
+
+    def test_F(self):
+        assert_almost_equal(self.Ftest2.F, self.F['F'][1], DECIMAL)
+
+    def test_p(self):
+        assert_almost_equal(self.Ftest2.p_val, self.F['Pr(>F)'][1], DECIMAL)
+
+    def test_Df_denom(self):
+        assert_equal(self.Ftest2.df_denom, self.F['Res.Df'][0])
+
+    def test_Df_num(self):
+        self.F['Res.Df'].reverse()
+        assert_equal(self.Ftest2.df_num, np.subtract.reduce(self.F['Res.Df']))
+
+class TestTtest(object):
+    '''
+    Test individual t-tests.  Ie., are the coefficients significantly
+    different than zero.
+    '''
+    def __init__(self):
+        from models.datasets.longley.data import load
+        data = load()
+        data.exog = add_constant(data.exog)
+        self.res1 = OLS(data.endog, data.exog).fit()
+
+    def setup(self):
+        if skipR:
+            raise SkipTest, "Rpy not installed"
+        else:
+            self.R = np.identity(len(self.res1.params))
+            self.Ttest = self.res1.Ttest(self.R)
+
+    def test_T(self):
+        assert_almost_equal(np.diag(self.Ttest.t), self.res1.t(), DECIMAL)
+
+    def test_sd(self):
+        assert_almost_equal(np.diag(self.Ttest.sd), self.res1.bse, DECIMAL)
+
+    def test_p_val(self):
+        assert_almost_equal(np.diag(self.Ttest.p_val),
+                t.sf(np.abs(self.res1.t()),self.res1.df_resid), DECIMAL)
+
+    def test_Df_denom(self):
+        assert_equal(self.Ttest.df_denom, self.res1.df_resid)
+
+    def test_effect(self):
+        assert_almost_equal(self.Ttest.effect, self.res1.params)
+
+
+class TestTtest2(TestTtest):
+    '''
+    Tests the hypothesis that the coefficients on POP and YEAR
+    are equal.
+    '''
+    def setup(self):
+        if skipR:
+            raise SkipTest, "Rpy not installed"
+        try:
+            r.library('car')
+            R = np.zeros(len(self.res1.params))
+            R[4:6] = [1,-1]
+            self.R = R
+            self.Ttest1 = self.res1.Ttest(self.R)
+            self.Ttest2 = r.linear_hypothesis(self.R_Results['F'], 'x.5 = x.6')
+            t = np.inner(self.R, self.res1.params)/\
+                (np.sign(np.inner(self.R, self.res1.params))*\
+                np.sqrt(self.Ttest2['F'][1]))
+            self.t = t
+            effect = np.inner(self.R, self.res1.params)
+            self.effect = effect
+        except:
+            raise SkipTest, "car library not installed for R"
+
+    def test_T(self):
+        assert_equal(self.Ttest1.t, self.t, DECIMAL)
+
+    def test_sd(self):
+        assert_almost_equal(self.Ttest1.sd, effect/t, DECIMAL)
+
+    def test_p_val(self):
+        assert_almost_equal(self.Ftest2.p_val, t.sf(self.t, self.F['Res.Df'][0]),
+            DECIMAL)
+
+    def test_Df_denom(self):
+        assert_equal(self.Ftest2.df_denom, self.F['Res.Df'][0])
+
+    def test_effect(self):
+        assert_equal(self.Ttest1.effect, self.effect, DECIMAL)
+
 
 class test_gls(object):
     '''

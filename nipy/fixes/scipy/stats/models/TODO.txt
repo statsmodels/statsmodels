@@ -1,10 +1,10 @@
 Tests
 ----------
-Tests for Contrast (doing now) (no idea, needs refactoring?)
+xTests for Contrast (doing now) (no idea, needs refactoring?)
     -check reference out from library
     -seems simple enough, though I just don't have an example for the usage
     -need to find data that's appropriate for contrast analysis
-Tests for other methods in Model.py
+xTests for other methods in Model.py
 xTests for other links in GLM (done except discrete distributions)
     -get data from Stata/remaining residuals from Stata (done)
 Test I/O of models wrt array types, dimensions

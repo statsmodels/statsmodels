@@ -20,13 +20,13 @@ class ContrastResults(object):
             self.F = F
             self.df_denom = df_denom
             self.df_num = df_num
-            self.p_val = 1 - f.cdf(F, df_num, df_denom)
+            self.p_val = f.sf(F, df_num, df_denom)
         else:
             self.t = t
             self.sd = sd
             self.effect = effect
             self.df_denom = df_denom
-            self.p_val = 1 - student_t.cdf(t, df_denom)
+            self.p_val = student_t.sf(np.abs(t), df_denom)
 
     def __array__(self):
         if hasattr(self, "F"):

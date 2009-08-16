@@ -156,7 +156,7 @@ class LikelihoodModelResults(Results):
         """
         Return the t-statistic for a given parameter estimate.
 
-        Use Tcontrast for more complicated t-statistics.
+        Use Ttest for more complicated t-statistics.
 
         """
 
@@ -226,25 +226,32 @@ class LikelihoodModelResults(Results):
 #                scale=np.eye(len(self._model._endog))*scale
             return np.dot(np.dot(self.calc_params, np.array(scale)),
                 self.calc_params.T)
-    def Tcontrast(self, matrix, t=True, sd=True, scale=None):
+
+    def Ttest(self, r_matrix, t=True, sd=True, scale=None):
         """
         Compute a Tcontrast for a row vector matrix. To get the t-statistic
         for a single column, use the 't' method.
+
+        Parameters
+        ----------
+        R is a matrix of linear restrictions.
         """
+
+        r_matrix = np.asarray(r_matrix)
 
         if self.normalized_cov_params is None:
             raise ValueError, 'Need covariance of parameters for computing T statistics'
 
         _t = _sd = None
 
-        _effect = np.dot(matrix, self.params)
+        _effect = np.dot(r_matrix, self.params)
         if sd:
-            _sd = np.sqrt(self.cov_params(matrix=matrix))
+            _sd = np.sqrt(self.cov_params(matrix=r_matrix))
         if t:
             _t = _effect * recipr(_sd)
         return ContrastResults(effect=_effect, t=_t, sd=_sd, df_denom=self.df_resid)
 
-    def Fcontrast(self, matrix, eff=True, t=True, sd=True, scale=None, invcov=None):
+    def Ftest(self, r_matrix, eff=True, t=True, sd=True, scale=None, invcov=None):
         """
         Compute an Fcontrast for a contrast matrix.
 
@@ -261,15 +268,16 @@ class LikelihoodModelResults(Results):
         non-singular in the sense above.
 
         """
+        r_matrix = np.asarray(r_matrix)
 
         if self.normalized_cov_params is None:
             raise ValueError, 'need covariance of parameters for computing F statistics'
 
-        cparams = np.dot(matrix, self.params)
+        cparams = np.dot(r_matrix, self.params)
 
-        q = np.shape(matrix)[0]
+        q = r_matrix.shape[0]
         if invcov is None:
-            invcov = inv(self.cov_params(matrix=matrix, scale=1.0))
+            invcov = inv(self.cov_params(matrix=r_matrix, scale=1.0))
         F = np.add.reduce(np.dot(invcov, cparams) * cparams, 0) * \
                 recipr((q * self.scale))
         return ContrastResults(F=F, df_denom=self.df_resid,
