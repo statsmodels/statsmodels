@@ -1,7 +1,7 @@
 import copy
 
 import numpy as np
-from models import utils
+from models import tools
 from scipy.stats import f
 from scipy.stats import t as student_t
 
@@ -99,7 +99,7 @@ class Contrast(object):
         if T.ndim == 1:
             T = T[:,None]
 
-        self.T = utils.clean0(T)
+        self.T = tools.clean0(T)
 
         self.D = self.design   # D is the whole design
                                # groups in columns
@@ -158,8 +158,8 @@ def contrastfromcols(L, D, pseudo=None):
     if len(Lp.shape) == 1:
         Lp.shape = (n, 1)
 
-    if utils.rank(Lp) != Lp.shape[1]:
-        Lp = utils.fullrank(Lp)
+    if tools.rank(Lp) != Lp.shape[1]:
+        Lp = tools.fullrank(Lp)
         C = np.dot(pseudo, Lp).T
 
     return np.squeeze(C)

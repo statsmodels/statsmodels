@@ -24,7 +24,7 @@ from csv import reader              # These are for read_array
 import numpy as np
 from scipy.linalg import norm, toeplitz
 from models.model import LikelihoodModel, LikelihoodModelResults
-from models import utils                # rank utils in np?
+from models import tools
 from models.tools import add_constant
 from scipy import stats, derivative
 from scipy.stats.stats import ss        # could be avoided to eliminate overhead
@@ -129,9 +129,9 @@ class GLS(LikelihoodModel):
         self.calc_params = np.linalg.pinv(self.wdesign)
         self.normalized_cov_params = np.dot(self.calc_params,
                                          np.transpose(self.calc_params))
-        self.df_resid = self.wdesign.shape[0] - utils.rank(self._exog)
+        self.df_resid = self.wdesign.shape[0] - tools.rank(self._exog)
 #       Below assumes that we will always have a constant
-        self.df_model = utils.rank(self._exog)-1
+        self.df_model = tools.rank(self._exog)-1
 
     def whiten(self, Y):
         if np.any(self.sigma) and not self.sigma==() :
@@ -679,7 +679,7 @@ class RegressionResults(LikelihoodModelResults):
         """
         if not hasattr(self, 'resid'):
             raise ValueError, 'need normalized residuals to estimate standard deviation'
-        return self.resid * utils.recipr(np.sqrt(self.scale))
+        return self.resid * tools.recipr(np.sqrt(self.scale))
 
     def predictors(self, design):
         """

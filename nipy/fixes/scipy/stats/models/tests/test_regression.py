@@ -8,7 +8,7 @@ from scipy.linalg import toeplitz
 from models.tools import add_constant
 from models.regression import OLS, AR, WLS, GLS, yule_walker
 import models
-from models import utils
+from models import tools
 from check_for_rpy import skip_rpy
 from nose import SkipTest
 from scipy.stats import t
@@ -119,7 +119,7 @@ class TestFtest(object):
         assert_equal(self.Ftest.df_denom, self.res1.df_resid)
 
     def test_Df_num(self):
-        assert_equal(self.Ftest.df_num, utils.rank(self.R))
+        assert_equal(self.Ftest.df_num, tools.rank(self.R))
 
 class TestFTest2(TestFtest):
     '''

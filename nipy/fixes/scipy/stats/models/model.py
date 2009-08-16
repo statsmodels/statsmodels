@@ -4,7 +4,7 @@ from numpy.linalg import inv
 from scipy.stats import t, norm
 from scipy import optimize
 from models.contrast import ContrastResults
-from models.utils import recipr
+from models.tools import recipr
 
 import numpy.lib.recfunctions as nprf
 
@@ -47,7 +47,7 @@ class LikelihoodModel(Model):
         """
         pass
 
-    def llf(self, params):
+    def logLike(self, params):
         """
         Log-likelihood of model.
         """

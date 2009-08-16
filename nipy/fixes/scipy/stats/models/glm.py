@@ -5,7 +5,7 @@ General linear models
 """
 
 import numpy as np
-from models import family, utils
+from models import family, tools
 from models.regression import WLS,GLS   #don't need gls, might for mlogit
 from models.model import LikelihoodModel, LikelihoodModelResults
 from scipy import derivative, comb
@@ -54,8 +54,8 @@ class GLM(LikelihoodModel):
         self.calc_params = np.linalg.pinv(self._exog)
         self.normalized_cov_params = np.dot(self.calc_params,
                                         np.transpose(self.calc_params))
-        self.df_model = utils.rank(self._exog)-1
-        self.df_resid = self._exog.shape[0] - utils.rank(self._exog)
+        self.df_model = tools.rank(self._exog)-1
+        self.df_resid = self._exog.shape[0] - tools.rank(self._exog)
 
     def score(self, params):
         pass
