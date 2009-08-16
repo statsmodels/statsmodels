@@ -1,8 +1,9 @@
 import copy
 
 import numpy as np
-from numpy.linalg import pinv
 from models import utils
+from scipy.stats import f
+from scipy.stats import t as student_t
 
 class ContrastResults(object):
     """
@@ -19,11 +20,13 @@ class ContrastResults(object):
             self.F = F
             self.df_denom = df_denom
             self.df_num = df_num
+            self.p_val = 1 - f.cdf(F, df_num, df_denom)
         else:
             self.t = t
             self.sd = sd
             self.effect = effect
             self.df_denom = df_denom
+            self.p_val = 1 - student_t.cdf(t, df_denom)
 
     def __array__(self):
         if hasattr(self, "F"):
@@ -33,13 +36,13 @@ class ContrastResults(object):
 
     def __str__(self):
         if hasattr(self, 'F'):
-            return '<F contrast: F=%s, df_denom=%d, df_num=%d>' % \
-                   (`self.F`, self.df_denom, self.df_num)
+            return '<F contrast: F=%s, p=%s, df_denom=%d, df_num=%d>' % \
+                   (`self.F`, self.p_val, self.df_denom, self.df_num)
         else:
-            return '<T contrast: effect=%s, sd=%s, t=%s, df_denom=%d>' % \
-                   (`self.effect`, `self.sd`, `self.t`, self.df_denom)
+            return '<T contrast: effect=%s, sd=%s, t=%s, p=%s, df_denom=%d>' % \
+                   (`self.effect`, `self.sd`, `self.t`, `self.p_val`, self.df_denom)
 
-
+#TODO: fix docstring
 class Contrast(object):
     """
     This class is used to construct contrast matrices in regression models.
@@ -63,20 +66,23 @@ class Contrast(object):
     for each column of Tnew.
 
     """
+    def _get_matrix(self):
+        """
+        This will fail if the formula needs arguments to construct
+        the design.
+        """
+        if not hasattr(self, "_matrix"):
+            self.compute_matrix()
+        return self._matrix
 
-    def __init__(self, term, formula, name=''):
+
+    matrix = property(_get_matrix)
+
+    def __init__(self, term, design, name=''):
         self.term = term
-        self.formula = formula
-        if name is '':
-            self.name = str(term)
-        else:
-            self.name = name
+        self.design = design
 
-    def __str__(self):
-        return '<contrast:%s>' % \
-               `{'term':str(self.term), 'formula':str(self.formula)}`
-
-    def compute_matrix(self, *args, **kw):
+    def compute_matrix(self):
         """
         Construct a contrast matrix C so that
 
@@ -88,34 +94,21 @@ class Contrast(object):
         then evaldesign can be set to False.
         """
 
-        t = copy.copy(self.term)
-        t.namespace = self.formula.namespace
-        T = np.transpose(np.array(t(*args, **kw)))  # T is column ordered
-                                                    # groups from a design
-
+        T = copy.copy(self.term)    # is it necessary to use copy
+                                    # isn't assignment a shallow copy anyway?
         if T.ndim == 1:
-            T.shape = (T.shape[0], 1)
+            T = T[:,None]
 
         self.T = utils.clean0(T)
 
-        self.D = self.formula.design(*args, **kw)   # D is the whole design
-                                                    # groups in columns
+        self.D = self.design   # D is the whole design
+                               # groups in columns
 
         self._matrix = contrastfromcols(self.T, self.D)
         try:
             self.rank = self.matrix.shape[1]
         except:
             self.rank = 1
-
-    def _get_matrix(self):
-        """
-        This will fail if the formula needs arguments to construct
-        the design.
-        """
-        if not hasattr(self, "_matrix"):
-            self.compute_matrix()
-        return self._matrix
-    matrix = property(_get_matrix)
 
 def contrastfromcols(L, D, pseudo=None):
     """
@@ -143,7 +136,6 @@ def contrastfromcols(L, D, pseudo=None):
     the column space of L (after projection onto the column space of D).
 
     """
-
     L = np.asarray(L)
     D = np.asarray(D)
 
@@ -153,7 +145,7 @@ def contrastfromcols(L, D, pseudo=None):
         raise ValueError, 'shape of L and D mismatched'
 
     if pseudo is None:
-        pseudo = pinv(D)    # D^+ \approx= ((dot(D.T,D))^(-1),D.T)
+        pseudo = np.linalg.pinv(D)    # D^+ \approx= ((dot(D.T,D))^(-1),D.T)
 
     if L.shape[0] == n:
         C = np.dot(pseudo, L).T
@@ -161,7 +153,7 @@ def contrastfromcols(L, D, pseudo=None):
         C = L
         C = np.dot(pseudo, np.dot(D, C.T)).T
 
-    Lp = np.dot(D, C.T) # why compute this here if only used in if below?
+    Lp = np.dot(D, C.T)
 
     if len(Lp.shape) == 1:
         Lp.shape = (n, 1)
@@ -192,8 +184,6 @@ if __name__=="__main__":
     treatment_ss = np.sum(data.shape[1]*(data.mean(1)-data.mean())**2)
 # if all samples have the same size you can use shape
 
-#    c_hat =
-
 ########
 # Contrast class
 ## Set Up ##
@@ -202,37 +192,29 @@ if __name__=="__main__":
     import string
     R.seed(54321)
     X = R.standard_normal((40,10))
-    namespace = {}
-    terms = []
-    for i in range(10):
-        name = "%s" % string.uppercase[i]
-        namespace[name] = X[:,i]
-        terms.append(formula.Term(name))
-
-    form = terms[0]
-    for i in range(1, 10):
-        form += terms[i]
-    form.namespace = namespace
 
 ## Get a contrast ##
 
-    new_term = terms[0] + terms[2]
-    c = Contrast(new_term, form)
+    new_term = np.column_stack((X[:,0], X[:,2]))
+    c = Contrast(new_term, X)
     test = [[1] + [0]*9, [0]*2 + [1] + [0]*7]
 # this is c, the contrast
 #    1 0 0 0 0 0 0 0 0 0
 #    0 0 1 0 0 0 0 0 0 0
 
-
-    X2 = form.design()
-    P = np.dot(X2, np.linalg.pinv(X2))
-    dummy = formula.Term('noise')
+## Get another contrast ##
+    P = np.dot(X, np.linalg.pinv(X))
     resid = np.identity(40) - P
-    namespace['noise'] = np.transpose(np.dot(resid,R.standard_normal((40,5))))
-    new_term2 = dummy + terms[2]
-    new_term2.namespace = form.namespace
-    c2 = Contrast(new_term2, form)
+    noise = np.dot(resid,R.standard_normal((40,5)))
+    new_term2 = np.column_stack((noise,X[:,2]))
+    c2 = Contrast(new_term2, X)
 # Is this correct?  0 0 .156 0 0 0 0 0 0 0 ?
+
+## YAC ##
+    zero = np.zeros((40,))
+    new_term3 = np.column_stack((zero,X[:,2]))
+    c3 = Contrast(new_term3, X)
+    test2 = [0]*2 + [1] + [0]*7
 
 
 
