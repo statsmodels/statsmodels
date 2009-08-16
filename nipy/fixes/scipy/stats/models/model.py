@@ -261,6 +261,7 @@ class LikelihoodModelResults(Results):
         non-singular in the sense above.
 
         """
+        #JP: needs asarray and atleast_2d (exception), (potential) problems if not
 
         if self.normalized_cov_params is None:
             raise ValueError, 'need covariance of parameters for computing F statistics'
