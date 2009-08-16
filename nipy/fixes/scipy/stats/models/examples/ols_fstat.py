@@ -43,7 +43,7 @@ Ftest0 = res.Fcontrast(R)
 print repr((Ftest0.F, Ftest0.p_val))
 print '%r' % res.F
 npt.assert_almost_equal(res.F, Ftest0.F, decimal=9)
-# values differ in 11th decimal, or 10th ?
+# values differ in 11th decimal, or 10th
 
 ttest0 = res.Tcontrast(R[0,:])
 print repr((ttest0.t, ttest0.p_val))
@@ -99,7 +99,11 @@ Ftest2a = res.Fcontrast(np.asarray(R2)[:1,:])
 print repr((Ftest2a.F, Ftest2a.p_val))
 Ftest2b = res.Fcontrast(np.asarray(R2)[1:2,:])
 print repr((Ftest2b.F, Ftest2b.p_val))
+# equality of ttest and Ftest
+print t2a**2 - np.array((Ftest2a.F, Ftest2b.F))
+npt.assert_almost_equal(t2a**2, np.array((Ftest2a.F, Ftest2b.F)))
 
 # Why is there a huge difference in the pvalue comparing
 # ttest and Ftest with a single row
 # shouldn't this be the same ---> verify
+# error in pvalue of Ftest, statistics are correct
