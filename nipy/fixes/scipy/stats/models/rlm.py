@@ -56,7 +56,7 @@ class RLM(LikelihoodModel):
         self.history['params'].append(tmp_results.params)
         self.history['scale'].append(tmp_results.scale)
         self.history['sresid'].append(tmp_results.resid/tmp_results.scale)
-        self.history['weights'].append(tmp_results._model.weights)
+        self.history['weights'].append(tmp_results.model.weights)
 
     def estimate_scale(self, resid):
         """

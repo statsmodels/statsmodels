@@ -211,8 +211,6 @@ class GLS(LikelihoodModel):
         self._summary(lfit)
         return lfit
 
-#TODO: make results a property
-# this throws up a set attribute error when running old glm
     @property
     def results(self):
         if self._results is None:
@@ -231,7 +229,10 @@ class GLS(LikelihoodModel):
         lfit.cTSS = ss(lfit.Z-np.mean(lfit.Z))
 #TODO: Z or Y here?  Need to have tests in GLS.
 #JP what does c and u in front of TSS stand for?
+#c is centered and u is uncentered
 #JP I think, it should be Y instead of Z, are the following results correct, with Z?
+#TODO: more robust tests for WLS or GLS, to see if Y or Z is used.
+# I think Y as well, but Z = Y for OLS
 
         lfit.uTSS = ss(lfit.Z)
 # Centered R2 for models with intercepts
@@ -639,25 +640,11 @@ class RegressionResults(LikelihoodModelResults):
 
     It handles the output of contrasts, estimates of covariance, etc.
     """
-    _llf = None  #this makes it a class attribute - bad, move to init
-
     def __init__(self, model, params, normalized_cov_params=None, scale=1.):
         super(RegressionResults, self).__init__(model, params,
                                                  normalized_cov_params,
                                                  scale)
-#    @property
-#    def llf(self):
-#        if self._llf is None:
-#            self._llf = self.model.llf(self.params)
-#        return self._llf
-
-#    def information_criteria(self):
-#        llf = self.llf
-#        aic = -2 * llf + 2*(self.df_model + 1)
-#        bic = -2 * llf + np.log(self.nobs) * (self.df_model + 1)
-#        return dict(aic=aic, bic=bic)
-# could be added as properties to results class.
-
+#TODO: this needs a test
     def norm_resid(self):
         """
         Residuals, normalized to have unit length.

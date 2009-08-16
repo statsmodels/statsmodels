@@ -99,20 +99,12 @@ class Results(object):
         model : the estimated model
         params : parameter estimates from estimated model
         """
-        self._model = model
-        self._params = params
         self.__dict__.update(kwd)
-        self.initialize()
+        self.initialize(model, params, **kwd)
 
-    #don't turn attributes into properties (this  is python not java)
-    @property
-    def params(self):
-        return self._params
-    @property
-    def model(self):
-        return self._model
-    def initialize(self):
-        pass
+    def initialize(self, model, params, **kwd):
+        self.params = params
+        self.model = model
 
 class LikelihoodModelResults(Results):
     """ Class to contain results from likelihood models """

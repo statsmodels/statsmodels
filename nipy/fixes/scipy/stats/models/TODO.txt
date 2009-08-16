@@ -8,6 +8,7 @@ Test I/O of models wrt array types, dimensions
 xCheck that rpy is installed (done)
 Make sure all tests actually run...
     -some problems with removing imports from __init__ have been hidden
+Test residuals, stats for weighted least squares
 
 Issues
 ----------

@@ -342,13 +342,13 @@ class test_glm_gamma(check_model_results):
         # There is also a precision issue due to a different implementation
 
     def check_aic_Stata(self, aic1, aic2):
-        llf1 = self.res1.model.family.logL(self.res1.model.y,
+        llf1 = self.res1.model.family.logLike(self.res1.model.y,
                 self.res1.mu, scale=1)
         aic1 = 2 *(self.res1.df_model + 1 - llf1)/self.res1.nobs
         assert_almost_equal(aic1, aic2, DECIMAL)
 
     def check_loglike(self, llf1, llf2):
-        llf1 = self.res1.model.family.logL(self.res1.model.y,
+        llf1 = self.res1.model.family.logLike(self.res1.model.y,
                 self.res1.mu, scale=1)
         assert_almost_equal(llf1, llf2, DECIMAL)
 
@@ -492,13 +492,13 @@ class test_glm_invgauss(check_model_results):
         # Off by 2e-1 due to implementation difference
 
     def check_aic_Stata(self, aic1, aic2):
-        llf1 = self.res1.model.family.logL(self.res1.model.y, self.res1.mu,
+        llf1 = self.res1.model.family.logLike(self.res1.model.y, self.res1.mu,
                 scale=1)
         aic1 = 2 * (self.res1.df_model + 1 - llf1)/self.res1.nobs
         assert_almost_equal(aic1, aic2, DECIMAL)
 
     def check_loglike(self, llf1, llf2):
-        llf1 = self.res1.model.family.logL(self.res1.model.y, self.res1.mu,
+        llf1 = self.res1.model.family.logLike(self.res1.model.y, self.res1.mu,
                 scale=1)    # Stata assumes scale = 1 in calc,
                             # which shouldn't be right...
         assert_almost_equal(llf1, llf2, DECIMAL_less)
@@ -537,7 +537,7 @@ class test_glm_invgauss_log(check_model_results):
         assert_almost_equal(aic1, aic2, DECIMAL)
 
     def check_loglike(self, llf1, llf2):
-        llf1 = self.res1.model.family.logL(self.res1.model.y,
+        llf1 = self.res1.model.family.logLike(self.res1.model.y,
                 self.res1.mu, scale=1)
         assert_almost_equal(llf1, llf2, DECIMAL)
 
@@ -568,7 +568,7 @@ class test_glm_invgauss_identity(check_model_results):
         assert_almost_equal(aic1, aic2, DECIMAL)
 
     def check_loglike(self, llf1, llf2):
-        llf1 = self.res1.model.family.logL(self.res1.model.y,
+        llf1 = self.res1.model.family.logLike(self.res1.model.y,
                 self.res1.mu, scale=1)
         assert_almost_equal(llf1, llf2, DECIMAL)
 
