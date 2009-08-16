@@ -219,9 +219,9 @@ class GLMResults(LikelihoodModelResults):
     def llf(self):
         if self._llf is None:
             if isinstance(self.model.family, family.NegativeBinomial):
-                self._llf = self.model.family.logL(self.model.y,
+                self._llf = self.model.family.logLike(self.model.y,
                     predicted=self.predict)
             else:
-                self._llf = self.model.family.logL(self.model.y,
+                self._llf = self.model.family.logLike(self.model.y,
                     self.model.mu, scale=self.scale)
         return self._llf
