@@ -27,9 +27,9 @@ xGLM is very slow for many data points (see Inverse Gaussian)
 
 Other cleanup
 --------------------
-Combine tools and utils?
+xCombine tools and utils?
    -move isestimable to tools/utils and use it?
-Move cox/survival, mixed, and GAM to "sandbox"?
+xMove cox/survival, mixed, and GAM to "sandbox"?
 Put formulas in docstring? (this could become "heavy"...)
     -no make a /docs/ folder for technical documentation in .rst format
 Decide on where to put HCCM robust estimators.
