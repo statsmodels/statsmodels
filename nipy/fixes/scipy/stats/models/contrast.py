@@ -18,16 +18,13 @@ class ContrastResults(object):
             self.F = F
             self.df_denom = df_denom
             self.df_num = df_num
-            #JP: rename to pval, (or 2nd choice p_value)
-            #appreviation plus underline is difficult to remember
-            self.p = f.sf(F, df_num, df_denom)
+            self.pvalue = f.sf(F, df_num, df_denom)
         else:
             self.t = t
             self.sd = sd
             self.effect = effect
             self.df_denom = df_denom
-            #JP: rename p_val
-            self.p = student_t.sf(np.abs(t), df_denom)
+            self.pvalue = student_t.sf(np.abs(t), df_denom)
 
     def __array__(self):
         if hasattr(self, "F"):
@@ -38,10 +35,10 @@ class ContrastResults(object):
     def __str__(self):
         if hasattr(self, 'F'):
             return '<F contrast: F=%s, p=%s, df_denom=%d, df_num=%d>' % \
-                   (`self.F`, self.p_val, self.df_denom, self.df_num)
+                   (`self.F`, self.pvalue, self.df_denom, self.df_num)
         else:
             return '<T contrast: effect=%s, sd=%s, t=%s, p=%s, df_denom=%d>' % \
-                   (`self.effect`, `self.sd`, `self.t`, `self.p_val`, self.df_denom)
+                   (`self.effect`, `self.sd`, `self.t`, `self.pvalue`, self.df_denom)
 
 #TODO: fix docstring
 class Contrast(object):

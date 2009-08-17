@@ -1,6 +1,6 @@
 Contrasts
 ---------
-Remove formula dependency and reimplement
+Allow t_test to accept an array of 1d linear restrictions
 
 Regression
 -----------
