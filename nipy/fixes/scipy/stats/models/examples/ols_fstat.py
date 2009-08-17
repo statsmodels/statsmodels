@@ -6,6 +6,7 @@ R is (nr,nk), beta is (nk,1) (in matrix notation)
 
 import numpy as np
 import numpy.testing as npt
+import models
 from models.datasets.longley.data import load
 from models.regression import OLS
 from models import tools
@@ -131,3 +132,45 @@ print repr((Ftest.F, Ftest.p_val))
 R = np.eye(ncat)[:-1,:]
 ttest = res.Tcontrast(R)
 print repr((np.diag(ttest.t), np.diag(ttest.p_val)))
+
+
+R = np.atleast_2d([0, 1, 1, 2])
+np.dot(R,res.params)
+Ftest = res.Fcontrast(R)
+print repr((Ftest.F, Ftest.p_val))
+ttest = res.Tcontrast(R)
+print repr((np.diag(ttest.t), np.diag(ttest.p_val)))
+print repr((ttest.t, ttest.p_val))
+
+R = np.atleast_2d([1, -1, 0, 0])
+np.dot(R,res.params)
+Ftest = res.Fcontrast(R)
+print repr((Ftest.F, Ftest.p_val))
+ttest = res.Tcontrast(R)
+print repr((np.diag(ttest.t), np.diag(ttest.p_val)))
+print repr((ttest.t, ttest.p_val))
+
+R = np.atleast_2d([1, 0, 0, 0])
+np.dot(R,res.params)
+Ftest = res.Fcontrast(R)
+print repr((Ftest.F, Ftest.p_val))
+ttest = res.Tcontrast(R)
+print repr((np.diag(ttest.t), np.diag(ttest.p_val)))
+print repr((ttest.t, ttest.p_val))
+
+
+# Example: 2 categories: replicate stats.glm and stats.ttest_ind
+
+mod2 = OLS(y[xcat.flat<2][:,0], X[xcat.flat<2,:][:,(0,-1)])
+res2 = mod2.fit()
+
+R = np.atleast_2d([1, 0])
+np.dot(R,res2.params)
+Ftest = res2.Fcontrast(R)
+print repr((Ftest.F, Ftest.p_val))
+ttest = res2.Tcontrast(R)
+print repr((np.diag(ttest.t), np.diag(ttest.p_val)))
+print repr((ttest.t, ttest.p_val))
+
+stats.glm(y[xcat<2].ravel(), xcat[xcat<2].ravel())
+stats.ttest_ind(y[xcat==0], y[xcat==1])
