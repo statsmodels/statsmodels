@@ -102,8 +102,32 @@ print repr((Ftest2b.F, Ftest2b.p_val))
 # equality of ttest and Ftest
 print t2a**2 - np.array((Ftest2a.F, Ftest2b.F))
 npt.assert_almost_equal(t2a**2, np.array((Ftest2a.F, Ftest2b.F)))
+#npt.assert_almost_equal(t2pval, np.array((Ftest2a.p_val, Ftest2b.p_val)))
 
 # Why is there a huge difference in the pvalue comparing
 # ttest and Ftest with a single row
 # shouldn't this be the same ---> verify
 # error in pvalue of Ftest, statistics are correct
+
+nsample = 100
+ncat = 4
+sigma = 2
+xcat = np.linspace(0,ncat-1, nsample).round()[:,np.newaxis]
+dummyvar = (xcat == np.arange(ncat)).astype(float)
+
+beta = np.array([0., 2, -2, 1])[:,np.newaxis]
+ytrue = np.dot(dummyvar, beta)
+X = tools.add_constant(dummyvar[:,:-1])
+y = ytrue + sigma * np.random.randn(nsample,1)
+mod = OLS(y[:,0], X)
+res = mod.fit()
+R = np.eye(ncat)[:-1,:]
+Ftest = res.Fcontrast(R)
+print repr((Ftest.F, Ftest.p_val))
+R = np.atleast_2d([0, 1, -1, 2])
+Ftest = res.Fcontrast(R)
+print repr((Ftest.F, Ftest.p_val))
+
+R = np.eye(ncat)[:-1,:]
+ttest = res.Tcontrast(R)
+print repr((np.diag(ttest.t), np.diag(ttest.p_val)))
