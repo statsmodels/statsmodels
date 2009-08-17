@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.stats import t, norm
-from scipy import optimize
+from scipy import optimize, derivative
 from models.contrast import ContrastResults
 from models.tools import recipr
 
@@ -59,10 +59,11 @@ class LikelihoodModel(Model):
 
     def score(self, params):
         """
-        Score function of model = gradient of logL with respect to
-        params.
+        Score function of model.
+
+        The gradient of logL with respect to params.
         """
-        raise NotImplementedError
+        return derivative(self.loglike, params, dx=1e-04, n=1, order=3)
 
     def information(self, params):
         """
@@ -84,17 +85,21 @@ class LikelihoodModel(Model):
 #       so supplied or default guess?
     def newton(self, params):
         #JP this is not newton, it's fmin
-# optimize.newton is only for singlevariate?
-# fmin can take multivariate
-# probably called newton bc it's the well known
-# root finding for MLE
+# it also doesn't work
+# tried fmin, fmin_ncg, fmin_powell
+# converges to wrong estimates
+# will probably need to write own root-finding routine
+#FIXME: should we call it MLE for Maximum Likelihood Estimator?
 # SS no this isn't used anywhere right now, but needs attention for
 # MLE
         # is this used anywhere
         # results should be attached to self
         f = lambda params: -self.loglike(params)
-        xopt, fopt, iter, funcalls, warnflag =\
-          optimize.fmin(f, params, full_output=True)
+        score = lambda params: -self.score(params)
+#        xopt, fopt, iter, funcalls, warnflag =\
+#          optimize.fmin(f, params, full_output=True)
+#        xopt, fopt, fcalls, gcalls, hcalls, warnflag = \
+#                optimize.fmin_ncg(f, params, score)
         converge = not warnflag
         extras = dict(iter=iter, evaluations=funcalls, converge=converge)
 #        return LikelihoodModelResults(self, params, llf=fopt, **extras)

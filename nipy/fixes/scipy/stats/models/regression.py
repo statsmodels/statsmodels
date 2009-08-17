@@ -33,7 +33,7 @@ from models.model import LikelihoodModel, LikelihoodModelResults
 from models import tools
 from models.tools import add_constant
 from scipy import stats, derivative
-from scipy.stats.stats import ss        # could be avoided to eliminate overhead
+from scipy.stats.stats import ss
 
 class GLS(LikelihoodModel):
     """
@@ -301,20 +301,6 @@ class GLS(LikelihoodModel):
         llf -= (1+np.log(np.pi/nobs2))*nobs2  # with constant
         return llf
 
-    def score(self, params):
-        """
-        Score function of the classical OLS Model.
-
-        The gradient of logL with respect to params
-
-        Parameters
-        ----------
-        params : array-like
-
-        """
-        #JP: this is generic and should go into LikeliHoodModel
-        return derivative(self.llf, params, dx=1e-04, n=1, order=3)
-
     def information(self, params):
         """
         Fisher information matrix of model
@@ -454,6 +440,26 @@ class OLS(WLS):
     """
     def __init__(self, endog, exog=None):
         super(OLS, self).__init__(endog, exog)
+
+    def loglike(self, params):
+        '''
+        The likelihood function for the clasical OLS model.
+
+        Parameters
+        ----------
+        params : array-like
+            The coefficients with which to estimate the loglikelihood.
+
+        Returns
+        -------
+        The concentrated likelihood function evaluated at params.
+        '''
+        nobs2 = self._endog.shape[0]/2.
+        return -nobs2*np.log(2*np.pi)-nobs2*np.log(1/(2*nobs2) *\
+                np.dot(np.transpose(self._endog -
+                    np.dot(self._exog, params)),
+                    (self._endog - np.dot(self._exog,params)))) -\
+                    nobs2
 
     def whiten(self, Y):
         """
