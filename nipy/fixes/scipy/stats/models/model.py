@@ -292,12 +292,12 @@ arguments.'
 
     def t_test(self, r_matrix, t=True, sd=True, scale=None):
         """
-        Compute a Tcontrast for a row vector matrix.
-
+        Compute a tcontrast/t-test for a row vector array.
 
         Parameters
         ----------
-        R is a matrix of linear restrictions.
+        r_matrix : array-like
+            Linear restrictions.
 
         See also
         ---------

@@ -7,13 +7,9 @@ from models import tools
 from models.regression import WLS, GLS
 from models.robust import norms, scale
 from scipy.stats import norm as Gaussian # can get rid of once scale is sorted
-
 from models.model import LikelihoodModel, LikelihoodModelResults
 
-class hubers_scale(object):
-    def __init__(self, d=2.5):
-        self.d = d
-
+__all__ = ['RLM']
 
 class RLM(LikelihoodModel):
     def __init__(self, endog, exog, M=norms.HuberT()):

@@ -18,6 +18,8 @@ General reference for regression models:
 
 __docformat__ = 'restructuredtext en'
 
+__all__ = ['GLS', 'WLS', 'OLS', 'AR']
+
 from string import join as sjoin    #
 from csv import reader              # These are for read_array
 

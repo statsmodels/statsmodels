@@ -10,6 +10,8 @@ from models.regression import WLS,GLS   #don't need gls, might for mlogit
 from models.model import LikelihoodModel, LikelihoodModelResults
 from scipy import derivative, comb
 
+__all__ = ['GLM']
+
 # Note: STATA uses either iterated reweighted least squares optimization
 #       of the deviation
 # or the default mle using Newton-Raphson - which one is "quasi"likelihood?

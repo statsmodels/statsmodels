@@ -33,6 +33,7 @@ xMove cox/survival, mixed, and GAM to "sandbox"?
 Put formulas in docstring? (this could become "heavy"...)
     -no make a /docs/ folder for technical documentation in .rst format
 Decide on where to put HCCM robust estimators.
+Check all imports, cut out what's not needed
 
 
 Update all examples/docstrings
