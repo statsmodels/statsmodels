@@ -290,7 +290,7 @@ arguments.'
 #                self.calc_params.T)
             return self.normalized_cov_params * scale
 
-    def Ttest(self, r_matrix, t=True, sd=True, scale=None):
+    def t_test(self, r_matrix, t=True, sd=True, scale=None):
         """
         Compute a Tcontrast for a row vector matrix.
 
@@ -319,7 +319,7 @@ arguments.'
             _t = _effect * recipr(_sd)
         return ContrastResults(effect=_effect, t=_t, sd=_sd, df_denom=self.df_resid)
 
-    def Ftest(self, r_matrix, eff=True, t=True, sd=True, scale=None,
+    def f_test(self, r_matrix, eff=True, t=True, sd=True, scale=None,
             invcov=None):
         """
         Compute an Fcontrast for a contrast matrix.
