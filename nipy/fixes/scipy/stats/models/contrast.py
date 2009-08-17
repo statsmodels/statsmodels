@@ -1,6 +1,5 @@
-import copy
-
 import numpy as np
+from models import tools
 from scipy.stats import f as fdist
 from scipy.stats import t as student_t
 

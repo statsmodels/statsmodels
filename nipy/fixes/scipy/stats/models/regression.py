@@ -1,9 +1,13 @@
 """
-This module implements some standard regression models: OLS and WLS
-models, as well as an AR(p) regression model.
+This module implements some standard regression models:
 
-Models are specified with a design matrix and are fit using their
-'fit' method.
+Generalized Least Squares (GLS),
+Ordinary Least Squares (OLS),
+and Weighted Least Squares (WLS),
+as well as an GLS model with autoregressive error terms GLSAR(p)
+
+Models are specified with an endogenous response variable and an
+exogenous design matrix and are fit using their `fit` method.
 
 Subclasses that have more complicated covariance matrices
 should write over the 'whiten' method as the fit method
