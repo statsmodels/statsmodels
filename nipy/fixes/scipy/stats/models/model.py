@@ -221,12 +221,12 @@ class LikelihoodModelResults(Results):
         -----------
         r_matrix : array-like
             Can be 1d, or 2d.  Can be used alone or with other.
-        column :  array-like
+        column :  array-like, optional
             Must be used on its own.  Can be 0d or 1d see below.
-        scale : float
+        scale : float, optional
             Can be specified or not.  Default is None, which means that
             the scale argument is taken from the model.
-        other : array-like
+        other : array-like, optional
             Can be used when r_matrix is specified.
 
         Returns
@@ -239,10 +239,10 @@ class LikelihoodModelResults(Results):
         (scale)*(X.T X)^(-1)
 
         If contrast is specified it pre and post-multiplies as follows
-        (scale) * contrast (X.T X)^(-1) contrast.T
+        (scale) * r_matrix (X.T X)^(-1) r_matrix.T
 
         If contrast and other are specified returns
-        (scale) * contrast (X.T X)^(-1) other.T
+        (scale) * r_matrix (X.T X)^(-1) other.T
 
         If column is specified returns
         (scale) * (X.T X)^(-1)[column,column] if column is 0d
@@ -296,6 +296,9 @@ arguments.'
         ----------
         r_matrix : array-like
             A length p row vector specifying the linear restrictions.
+        scale : float, optional
+            An optional `scale` to use.  Default is the scale specified
+            by the model fit.
 
         scale : scalar
 
@@ -344,7 +347,7 @@ T statistics'
         _t = _sd = None
 
         _effect = np.dot(r_matrix, self.params)
-        _sd = np.sqrt(self.cov_params(contrast=r_matrix))
+        _sd = np.sqrt(self.cov_params(r_matrix=r_matrix))
         _t = _effect * recipr(_sd)
         return ContrastResults(effect=_effect, t=_t, sd=_sd,
                 df_denom=self.df_resid)
@@ -367,10 +370,10 @@ T statistics'
             q x p array where q is the number of restrictions to test and
             p is the number of regressors in the full model fit.
             If q is 1 then f_test is equivalent to the square of t_test.
-        scale : float
+        scale : float, optional
             Default is 1.0 for no scaling.
-        invcov : array-like
-            Optional, a qxq matrix to specify an inverse covariance
+        invcov : array-like, optional
+            A qxq matrix to specify an inverse covariance
             matrix based on a restrictions matrix.
 
         Examples
@@ -430,35 +433,45 @@ T statistics'
 
     def conf_int(self, alpha=.05, cols=None):
         """
-        Returns the confidence interval of the specified params estimates.
+        Returns the confidence interval of the fitted parameters.
 
         Parameters
         ----------
         alpha : float, optional
             The `alpha` level for the confidence interval.
-            ie., `alpha` = .05 returns a 95% confidence interval.
-        cols : tuple, optional
+            ie., The default `alpha` = .05 returns a 95% confidence interval.
+        cols : array-like, optional
             `cols` specifies which confidence intervals to return
 
-        Returns : array
-            Each item contains [lower, upper]
+        Returns
+        --------
+        conf_int : array
+            Each row contains [lower, upper] confidence interval
 
         Example
         -------
-        >>>import numpy as np
-        >>>from numpy.random import standard_normal as stan
-        >>>import nipy.fixes.scipy.stats.models as SSM
-        >>>x = np.hstack((stan((30,1)),stan((30,1)),stan((30,1))))
-        >>>params=np.array([3.25, 1.5, 7.0])
-        >>>y = np.dot(x,params) + stan((30))
-        >>>model = SSM.regression.OLSModel(x, hascons=False).fit(y)
-        >>>model.conf_int(cols=(1,2))
+        >>>import models
+        >>>from models.datasets.longley.data import load
+        >>>data = load()
+        >>>data.exog = models.tools.add_constant(data.exog)
+        >>>results = models.OLS(data.endog, data.exog).fit()
+        >>>results.conf_int()
+        array([[ -1.77029035e+02,   2.07152780e+02],
+       [ -1.11581102e-01,   3.99427438e-02],
+       [ -3.12506664e+00,  -9.15392966e-01],
+       [ -1.51794870e+00,  -5.48505034e-01],
+       [ -5.62517214e-01,   4.60309003e-01],
+       [  7.98787515e+02,   2.85951541e+03],
+       [ -5.49652948e+06,  -1.46798779e+06]])
+
+        >>>results.conf_int(cols=(1,2))
+        array([[-0.1115811 ,  0.03994274],
+       [-3.12506664, -0.91539297]])
 
         Notes
         -----
-        TODO:
-        tails : string, optional
-            `tails` can be "two", "upper", or "lower"
+        The confidence interval is based on Student's t distribution for all
+        models except RLM and GLM, which uses the standard normal distribution.
         """
         if self.__class__.__name__ in ['RLMResults','GLMResults']:
             dist = norm
@@ -473,16 +486,15 @@ T statistics'
             lower = self.params - dist.ppf(1-alpha/2)*self.bse
             upper = self.params + dist.ppf(1-alpha/2)*self.bse
         elif cols is not None and dist == t:
-            lower=[]
-            upper=[]
-            for i in cols:
-                lower.append(self.params[i] - dist.ppf(1-\
-                        alpha/2,self.df_resid) *self.bse)
-                upper.append(self.params[i] + dist.ppf(1-\
-                        alpha/2,self.df_resid) *self.bse)
+            cols = np.asarray(cols)
+            lower = self.params[cols] - dist.ppf(1-\
+                        alpha/2,self.df_resid) *self.bse[cols]
+            upper = self.params[cols] + dist.ppf(1-\
+                        alpha/2,self.df_resid) *self.bse[cols]
         elif cols is not None and dist == norm:
-            lower = self.params - dist.ppf(1-alpha/2)*self.bse
-            upper = self.params + dist.ppf(1-alpha/2)*self.bse
+            cols = np.asarray(cols)
+            lower = self.params[cols] - dist.ppf(1-alpha/2)*self.bse[cols]
+            upper = self.params[cols] + dist.ppf(1-alpha/2)*self.bse[cols]
         return np.asarray(zip(lower,upper))
 
 

@@ -41,6 +41,11 @@ class check_regression_results(object):
         self.check_confidenceintervals(self.res1.conf_int(),
                 self.res2.conf_int)
 
+    def test_conf_int_subset(self):
+        ci1 = self.res1.conf_int(cols=(1,2))
+        ci2 = self.res1.conf_int()[1:3]
+        assert_almost_equal(ci1, ci2, DECIMAL)
+
     def test_scale(self):
         assert_almost_equal(self.res1.scale, self.res2.scale, DECIMAL)
 
