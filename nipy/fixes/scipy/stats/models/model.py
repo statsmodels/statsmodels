@@ -4,7 +4,7 @@ from numpy.linalg import inv
 from scipy.stats import t, norm
 from scipy import optimize
 from models.contrast import ContrastResults
-from models.utils import recipr
+from models.tools import recipr
 
 import numpy.lib.recfunctions as nprf
 
@@ -47,7 +47,7 @@ class LikelihoodModel(Model):
         """
         pass
 
-    def llf(self, params):
+    def logLike(self, params):
         """
         Log-likelihood of model.
         """
@@ -99,20 +99,12 @@ class Results(object):
         model : the estimated model
         params : parameter estimates from estimated model
         """
-        self._model = model
-        self._params = params
         self.__dict__.update(kwd)
-        self.initialize()
+        self.initialize(model, params, **kwd)
 
-    #don't turn attributes into properties (this  is python not java)
-    @property
-    def params(self):
-        return self._params
-    @property
-    def model(self):
-        return self._model
-    def initialize(self):
-        pass
+    def initialize(self, model, params, **kwd):
+        self.params = params
+        self.model = model
 
 class LikelihoodModelResults(Results):
     """ Class to contain results from likelihood models """

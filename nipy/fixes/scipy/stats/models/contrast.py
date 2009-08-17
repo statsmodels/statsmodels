@@ -1,7 +1,7 @@
 import copy
 
 import numpy as np
-from models import utils
+from models import tools
 from scipy.stats import f
 from scipy.stats import t as student_t
 
@@ -12,20 +12,21 @@ class ContrastResults(object):
     for the results from T and F contrasts.
     """
 
-    #JP: what is this class supposed to be, just a container for a few numbers?
-
     def __init__(self, t=None, F=None, sd=None, effect=None, df_denom=None,
                  df_num=None):
         if F is not None:
             self.F = F
             self.df_denom = df_denom
             self.df_num = df_num
+            #JP: rename to pval, (or 2nd choice p_value)
+            #appreviation plus underline is difficult to remember
             self.p_val = f.sf(F, df_num, df_denom)
         else:
             self.t = t
             self.sd = sd
             self.effect = effect
             self.df_denom = df_denom
+            #JP: rename p_val
             self.p_val = student_t.sf(np.abs(t), df_denom)
 
     def __array__(self):
@@ -99,7 +100,7 @@ class Contrast(object):
         if T.ndim == 1:
             T = T[:,None]
 
-        self.T = utils.clean0(T)
+        self.T = tools.clean0(T)
 
         self.D = self.design   # D is the whole design
                                # groups in columns
@@ -158,8 +159,8 @@ def contrastfromcols(L, D, pseudo=None):
     if len(Lp.shape) == 1:
         Lp.shape = (n, 1)
 
-    if utils.rank(Lp) != Lp.shape[1]:
-        Lp = utils.fullrank(Lp)
+    if tools.rank(Lp) != Lp.shape[1]:
+        Lp = tools.fullrank(Lp)
         C = np.dot(pseudo, Lp).T
 
     return np.squeeze(C)

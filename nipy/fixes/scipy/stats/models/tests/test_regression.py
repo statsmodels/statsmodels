@@ -8,7 +8,7 @@ from scipy.linalg import toeplitz
 from models.tools import add_constant
 from models.regression import OLS, AR, WLS, GLS, yule_walker
 import models
-from models import utils
+from models import tools
 from check_for_rpy import skip_rpy
 from nose import SkipTest
 from scipy.stats import t
@@ -71,12 +71,10 @@ class check_regression_results(object):
         assert_almost_equal(self.res1.llf, self.res2.llf, DECIMAL)
 
     def test_AIC(self):
-        aic = self.res1.information_criteria()['aic']
-        assert_almost_equal(aic, self.res2.AIC, DECIMAL)
+        assert_almost_equal(self.res1.aic, self.res2.AIC, DECIMAL)
 
     def test_BIC(self):
-        bic = self.res1.information_criteria()['bic']
-        assert_almost_equal(bic, self.res2.BIC, DECIMAL)
+        assert_almost_equal(self.res1.bic, self.res2.BIC, DECIMAL)
 
 #TODO: add residuals from another package or R
 #    def test_resids(self):
@@ -121,7 +119,7 @@ class TestFtest(object):
         assert_equal(self.Ftest.df_denom, self.res1.df_resid)
 
     def test_Df_num(self):
-        assert_equal(self.Ftest.df_num, utils.rank(self.R))
+        assert_equal(self.Ftest.df_num, tools.rank(self.R))
 
 class TestFTest2(TestFtest):
     '''
@@ -274,8 +272,8 @@ class test_gls_scalar(check_regression_results):
         self.res1 = gls_res
         self.res2 = ols_res
         self.res2.conf_int = self.res2.conf_int()
-        self.res2.BIC = self.res2.information_criteria()['bic']
-        self.res2.AIC = self.res2.information_criteria()['aic']
+        self.res2.BIC = self.res2.bic
+        self.res2.AIC = self.res2.aic
 
     def check_confidenceintervals(self, conf1, conf2):
         assert_almost_equal(conf1, conf2, DECIMAL)

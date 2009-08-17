@@ -3,7 +3,7 @@ Robust linear models
 """
 import numpy as np
 
-from models import utils
+from models import tools
 from models.regression import WLS, GLS
 from models.robust import norms, scale
 from scipy.stats import norm as Gaussian # can get rid of once scale is sorted
@@ -31,8 +31,8 @@ class RLM(LikelihoodModel):
         self.calc_params = np.linalg.pinv(self._exog)
         self.normalized_cov_params = np.dot(self.calc_params,
                                         np.transpose(self.calc_params))
-        self.df_resid = np.float(self._exog.shape[0] - utils.rank(self._exog))
-        self.df_model = np.float(utils.rank(self._exog)-1)
+        self.df_resid = np.float(self._exog.shape[0] - tools.rank(self._exog))
+        self.df_model = np.float(tools.rank(self._exog)-1)
         self.nobs = float(self._endog.shape[0])
 
     def score(self, params):
@@ -56,7 +56,7 @@ class RLM(LikelihoodModel):
         self.history['params'].append(tmp_results.params)
         self.history['scale'].append(tmp_results.scale)
         self.history['sresid'].append(tmp_results.resid/tmp_results.scale)
-        self.history['weights'].append(tmp_results._model.weights)
+        self.history['weights'].append(tmp_results.model.weights)
 
     def estimate_scale(self, resid):
         """

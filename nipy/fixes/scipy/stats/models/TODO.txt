@@ -1,16 +1,14 @@
 Tests
 ----------
-xTests for Contrast (doing now) (no idea, needs refactoring?)
-    -check reference out from library
-    -seems simple enough, though I just don't have an example for the usage
-    -need to find data that's appropriate for contrast analysis
+xTests for Contrast
 xTests for other methods in Model.py
 xTests for other links in GLM (done except discrete distributions)
-    -get data from Stata/remaining residuals from Stata (done)
 Test I/O of models wrt array types, dimensions
+    - add checks in all top class for data
 xCheck that rpy is installed (done)
 Make sure all tests actually run...
     -some problems with removing imports from __init__ have been hidden
+Test residuals, stats for weighted least squares
 
 Issues
 ----------
@@ -33,6 +31,7 @@ Combine tools and utils?
    -move isestimable to tools/utils and use it?
 Move cox/survival, mixed, and GAM to "sandbox"?
 Put formulas in docstring? (this could become "heavy"...)
+    -no make a /docs/ folder for technical documentation in .rst format
 Decide on where to put HCCM robust estimators.
 
 
@@ -41,4 +40,4 @@ Run lint
 Technical docs (theory, references, formulas)
 Install for standalone package
 
-Remove formula dependency
+xRemove formula dependency

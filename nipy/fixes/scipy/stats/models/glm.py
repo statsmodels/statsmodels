@@ -5,7 +5,7 @@ General linear models
 """
 
 import numpy as np
-from models import family, utils
+from models import family, tools
 from models.regression import WLS,GLS   #don't need gls, might for mlogit
 from models.model import LikelihoodModel, LikelihoodModelResults
 from scipy import derivative, comb
@@ -54,8 +54,8 @@ class GLM(LikelihoodModel):
         self.calc_params = np.linalg.pinv(self._exog)
         self.normalized_cov_params = np.dot(self.calc_params,
                                         np.transpose(self.calc_params))
-        self.df_model = utils.rank(self._exog)-1
-        self.df_resid = self._exog.shape[0] - utils.rank(self._exog)
+        self.df_model = tools.rank(self._exog)-1
+        self.df_resid = self._exog.shape[0] - tools.rank(self._exog)
 
     def score(self, params):
         pass
@@ -211,21 +211,17 @@ class GLMResults(LikelihoodModelResults):
         # null is the predicted values of constant only fit
         self.null_deviance = model.family.deviance(model.y,null)
         self.deviance = model.family.deviance(model.y,model.mu)
+        self.aic = -2 * self.llf + 2*(self.df_model+1)
+        self.bic = self.model.family.deviance(self.model.y,self.model.mu) -\
+                (self.df_resid)*np.log(self.nobs)
 
     @property
     def llf(self):
         if self._llf is None:
             if isinstance(self.model.family, family.NegativeBinomial):
-                self._llf = self.model.family.logL(self.model.y,
+                self._llf = self.model.family.logLike(self.model.y,
                     predicted=self.predict)
             else:
-                self._llf = self.model.family.logL(self.model.y,
+                self._llf = self.model.family.logLike(self.model.y,
                     self.model.mu, scale=self.scale)
         return self._llf
-
-    def information_criteria(self):
-        llf = self.llf
-        aic = -2 * llf + 2*(self.df_model+1)
-        bic = self.model.family.deviance(self.model.y,self.model.mu) - \
-                (self.df_resid)*np.log(self.nobs)
-        return dict(aic=aic, bic=bic)
