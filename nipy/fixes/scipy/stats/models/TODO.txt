@@ -1,38 +1,24 @@
 Tests
 ----------
-xTests for Contrast
-xTests for other methods in Model.py
-xTests for other links in GLM (done except discrete distributions)
 Test I/O of models wrt array types, dimensions
     - add checks in all top class for data
-xCheck that rpy is installed (done)
 Make sure all tests actually run...
     -some problems with removing imports from __init__ have been hidden
 Test residuals, stats for weighted least squares
 
 Issues
 ----------
-xGLS residuals - whitened or not? (ie., Z - dot(wdesign, params) or
+GLS residuals - whitened or not? (ie., Z - dot(wdesign, params) or
 endog - dot(exog,params))
    -I think not... (leaving as not)
-AR - I need to check my references, but right now AR is done through a
-two-stage iterative fit.  Does this always make sense?
-   -test for this (only univariate yule-walker is tested right now)
+AR - test for this (only univariate yule-walker is tested right now)
 Make sure all results are computed where they should be
 Need to clip mu's in GLM to avoid np.log(0), etc. (done for gamma)
-xGLM is very slow for many data points (see Inverse Gaussian)
-    -I suspect this is from np.eye in cov_params being calculated for
-        each iteration of WLS, with large data... (removed np.eye)
-
 
 Other cleanup
 --------------------
-xCombine tools and utils?
-   -move isestimable to tools/utils and use it?
-xMove cox/survival, mixed, and GAM to "sandbox"?
 Put formulas in docstring? (this could become "heavy"...)
     -no make a /docs/ folder for technical documentation in .rst format
-Decide on where to put HCCM robust estimators.
 Check all imports, cut out what's not needed
 
 
@@ -41,4 +27,3 @@ Run lint
 Technical docs (theory, references, formulas)
 Install for standalone package
 
-xRemove formula dependency

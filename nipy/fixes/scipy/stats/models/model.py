@@ -1,6 +1,4 @@
 import numpy as np
-from numpy.linalg import inv
-
 from scipy.stats import t, norm
 from scipy import optimize
 from models.contrast import ContrastResults
@@ -210,7 +208,7 @@ class LikelihoodModelResults(Results):
         return _t
 
 
-    def cov_params(self, contrast=None, column=None, scale=None, other=None):
+    def cov_params(self, r_matrix=None, column=None, scale=None, other=None):
         """
         Returns the variance/covariance matrix.
 
@@ -221,7 +219,7 @@ class LikelihoodModelResults(Results):
 
         Parameters
         -----------
-        contrast : array-like
+        r_matrix : array-like
             Can be 1d, or 2d.  Can be used alone or with other.
         column :  array-like
             Must be used on its own.  Can be 0d or 1d see below.
@@ -229,7 +227,7 @@ class LikelihoodModelResults(Results):
             Can be specified or not.  Default is None, which means that
             the scale argument is taken from the model.
         other : array-like
-            Can be used when contrast is specified.
+            Can be used when r_matrix is specified.
 
         Returns
         -------
@@ -257,11 +255,11 @@ class LikelihoodModelResults(Results):
         if self.normalized_cov_params is None:
             raise ValueError, 'need covariance of parameters for computing \
 (unnormalized) covariances'
-        if column is not None and (contrast is not None or other is not None):
+        if column is not None and (r_matrix is not None or other is not None):
             raise ValueError, 'Column should be specified without other \
 arguments.'
-        if other is not None and contrast is None:
-            raise ValueError, 'other can only be specified with contrast'
+        if other is not None and r_matrix is None:
+            raise ValueError, 'other can only be specified with r_matrix'
         if scale is None:
             scale = self.scale
         if column is not None:
@@ -270,18 +268,18 @@ arguments.'
                 return self.normalized_cov_params[column, column] * scale
             else:
                 return self.normalized_cov_params[column][:,column] * scale
-        elif contrast is not None:
-            contrast = np.asarray(contrast)
-            if contrast.shape == ():
-                raise ValueError, "contrast should be 1d or 2d"
+        elif r_matrix is not None:
+            r_matrix = np.asarray(r_matrix)
+            if r_matrix.shape == ():
+                raise ValueError, "r_matrix should be 1d or 2d"
             if other is None:
-                other = contrast
+                other = r_matrix
             else:
                 other = np.asarray(other)
-            tmp = np.dot(contrast, np.dot(self.normalized_cov_params,
+            tmp = np.dot(r_matrix, np.dot(self.normalized_cov_params,
                 np.transpose(other)))
             return tmp * scale
-        if contrast is None and column is None:
+        if r_matrix is None and column is None:
 #            if np.shape(scale) == ():   # can be a scalar or array
 # TODO: Algorithm for HCCM
 # the first return is needed if scale is not a scalar
@@ -290,18 +288,16 @@ arguments.'
 #                self.calc_params.T)
             return self.normalized_cov_params * scale
 
-    def t_test(self, r_matrix, t=True, sd=True, scale=None):
+    def t_test(self, r_matrix, scale=None):
         """
         Compute a tcontrast/t-test for a row vector array.
 
         Parameters
         ----------
         r_matrix : array-like
-            A row vector specifying the linear restrictions.
+            A length p row vector specifying the linear restrictions.
 
-        See also
-        ---------
-        To get the t-statistic for a single column, use the 't' method.
+        scale : scalar
 
         Examples
         -------
@@ -331,42 +327,92 @@ arguments.'
         -4.0167754636411717
         >>> T_test.p
         0.0015163772380899498
-        """
 
-        r_matrix = np.asarray(r_matrix)
+        See also
+        ---------
+        `t` method to get simpler t values
+        `f_test` method for f tests
+        """
+        r_matrix = np.squeeze(np.asarray(r_matrix))
 
         if self.normalized_cov_params is None:
-            raise ValueError, 'Need covariance of parameters for computing T statistics'
+            raise ValueError, 'Need covariance of parameters for computing \
+T statistics'
+        if r_matrix.shape[0] != self.params.shape[0]:
+            raise ValueError, 'r_matrix and params are not aligned'
 
         _t = _sd = None
 
         _effect = np.dot(r_matrix, self.params)
-        if sd:
-            _sd = np.sqrt(self.cov_params(contrast=r_matrix))
-        if t:
-            _t = _effect * recipr(_sd)
-        return ContrastResults(effect=_effect, t=_t, sd=_sd, df_denom=self.df_resid)
+        _sd = np.sqrt(self.cov_params(contrast=r_matrix))
+        _t = _effect * recipr(_sd)
+        return ContrastResults(effect=_effect, t=_t, sd=_sd,
+                df_denom=self.df_resid)
 
-    def f_test(self, r_matrix, eff=True, t=True, sd=True, scale=None,
-            invcov=None):
+    def f_test(self, r_matrix, scale=1.0, invcov=None):
         """
-        Compute an Fcontrast for a contrast matrix.
+        Compute an Fcontrast/F-test for a contrast matrix.
 
-        Here, matrix M is assumed to be non-singular. More precisely,
+        Here, matrix `r_matrix` is assumed to be non-singular. More precisely,
 
-        M pX pX' M'
+        r_matrix (pX pX.T) r_matrix.T
 
         is assumed invertible. Here, pX is the generalized inverse of the
         design matrix of the model. There can be problems in non-OLS models
         where the rank of the covariance of the noise is not full.
 
-        See the contrast module to see how to specify contrasts.
-        In particular, the matrices from these contrasts will always be
-        non-singular in the sense above.
+        Parameters
+        -----------
+        r_matrix : array-like
+            q x p array where q is the number of restrictions to test and
+            p is the number of regressors in the full model fit.
+            If q is 1 then f_test is equivalent to the square of t_test.
+        scale : float
+            Default is 1.0 for no scaling.
+        invcov : array-like
+            Optional, a qxq matrix to specify an inverse covariance
+            matrix based on a restrictions matrix.
+
+        Examples
+        ---------
+        >>>import numpy as np
+        >>>import models
+        >>>from models.datasets.longley.data import load
+        >>>data = load()
+        >>>data.exog = models.tools.add_constant(data.exog)
+        >>>results = models.OLS(data.endog, data.exog).fit()
+        >>>A = np.identity(len(results.params))
+        >>>A = A[:-1,:]
+
+        This tests that each coefficient is jointly statistically
+        significantly different from zero.
+
+        >>>print results.f_test(A)
+        <F contrast: F=330.28533923463488, p=4.98403052872e-10, df_denom=9, df_num=6>
+
+        Compare this to
+        >>>results.F
+        330.2853392346658
+        >>>results.F_p
+        4.98403096572e-10
+
+        >>>B = np.array(([0,1,-1,0,0,0,0],[0,0,0,0,1,-1,0]))
+
+        This tests that the coefficient on the 2nd and 3rd regressors are
+        equal and jointly that the coefficient on the 5th and 6th regressors
+        are equal.
+
+        >>>print results.f_test(B)
+        <F contrast: F=9.740461873303655, p=0.00560528853174, df_denom=9, df_num=2>
+
+        See also
+        --------
+        models.contrasts
+        models.model.t_test
 
         """
         r_matrix = np.asarray(r_matrix)
-        #JP: needs asarray and atleast_2d (exception), (potential) problems if not
+        r_matrix = np.atleast_2d(r_matrix)
 
         if self.normalized_cov_params is None:
             raise ValueError, 'need covariance of parameters for computing F statistics'
@@ -375,7 +421,8 @@ arguments.'
 
         q = r_matrix.shape[0]
         if invcov is None:
-            invcov = inv(self.cov_params(contrast=r_matrix, scale=1.0))
+            invcov = np.linalg.inv(self.cov_params(r_matrix=r_matrix,
+                scale=scale))
         F = np.add.reduce(np.dot(invcov, cparams) * cparams, 0) * \
                 recipr((q * self.scale))
         return ContrastResults(F=F, df_denom=self.df_resid,

@@ -113,7 +113,7 @@ class TestFtest(object):
         assert_almost_equal(self.Ftest.F, self.res1.F, DECIMAL)
 
     def test_p(self):
-        assert_almost_equal(self.Ftest.p, self.res1.F_p, DECIMAL)
+        assert_almost_equal(self.Ftest.pvalue, self.res1.F_p, DECIMAL)
 
     def test_Df_denom(self):
         assert_equal(self.Ftest.df_denom, self.res1.df_resid)
@@ -123,8 +123,7 @@ class TestFtest(object):
 
 class TestFTest2(TestFtest):
     '''
-    The first set of tests is a test of the fully specified model.
-    The second set of tests is a joint test that the coefficient on
+    A joint test that the coefficient on
     GNP = the coefficient on UNEMP  and that the coefficient on
     POP = the coefficient on YEAR for the Longley dataset.
     '''
@@ -146,7 +145,7 @@ class TestFTest2(TestFtest):
         assert_almost_equal(self.Ftest2.F, self.F['F'][1], DECIMAL)
 
     def test_p(self):
-        assert_almost_equal(self.Ftest2.p, self.F['Pr(>F)'][1], DECIMAL)
+        assert_almost_equal(self.Ftest2.pvalue, self.F['Pr(>F)'][1], DECIMAL)
 
     def test_Df_denom(self):
         assert_equal(self.Ftest2.df_denom, self.F['Res.Df'][0])
@@ -180,7 +179,7 @@ class TestTtest(object):
         assert_almost_equal(np.diag(self.Ttest.sd), self.res1.bse, DECIMAL)
 
     def test_p(self):
-        assert_almost_equal(np.diag(self.Ttest.p),
+        assert_almost_equal(np.diag(self.Ttest.pvalue),
                 t.sf(np.abs(self.res1.t()),self.res1.df_resid), DECIMAL)
 
     def test_Df_denom(self):
@@ -221,7 +220,7 @@ class TestTtest2(TestTtest):
         assert_almost_equal(self.Ttest1.sd, effect/t, DECIMAL)
 
     def test_p(self):
-        assert_almost_equal(self.Ftest2.p, t.sf(self.t, self.F['Res.Df'][0]),
+        assert_almost_equal(self.Ftest2.pvalue, t.sf(self.t, self.F['Res.Df'][0]),
             DECIMAL)
 
     def test_Df_denom(self):
