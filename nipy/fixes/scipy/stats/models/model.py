@@ -22,17 +22,23 @@ class Model(object):
         """
         raise NotImplementedError
 
+#TODO: decide on this.
+#Changed the way that this works.  It's now a predict attribute.
+#        Does this make sense?
+# but predict for AR, should be it's own method, etc.
+# always make this take a params argument as it was?
     def predict(self):
         """
         After a model has been fit, results are (assumed to be) stored
         in self.results, which itself should have a predict method.
 
-        Changed the way that this works.  It's now a predict attribute.
-        Does this make sense? -SS
         """
         return self.results.predict
 
 class LikelihoodModel(Model):
+    """
+    Likelihood model is a subclass of Model.
+    """
 
     def __init__(self, endog, exog=None):
         self._endog = endog
@@ -47,7 +53,7 @@ class LikelihoodModel(Model):
         """
         pass
 
-    def logLike(self, params):
+    def loglike(self, params):
         """
         Log-likelihood of model.
         """
@@ -67,8 +73,8 @@ class LikelihoodModel(Model):
         """
         raise NotImplementedError
 
-    def fit(self, params, method='newton'):
 #TODO: newton's method is not correctly implemented yet
+    def fit(self, params, method='newton'):
         if method is 'newton':
             results = self.newton(params)
         else:
@@ -80,9 +86,15 @@ class LikelihoodModel(Model):
 #       so supplied or default guess?
     def newton(self, params):
         #JP this is not newton, it's fmin
+# optimize.newton is only for singlevariate?
+# fmin can take multivariate
+# probably called newton bc it's the well known
+# root finding for MLE
+# SS no this isn't used anywhere right now, but needs attention for
+# MLE
         # is this used anywhere
         # results should be attached to self
-        def f(params): return -self.llf(params)
+        f = lambda params: -self.loglike(params)
         xopt, fopt, iter, funcalls, warnflag =\
           optimize.fmin(f, params, full_output=True)
         converge = not warnflag
@@ -92,12 +104,17 @@ class LikelihoodModel(Model):
 
 
 class Results(object):
+    """
+    Class to contain model results
+    """
     def __init__(self, model, params, **kwd):
         """
         Parameters
         ----------
-        model : the estimated model
-        params : parameter estimates from estimated model
+        model : class instance
+            the previously specified model instance
+        params : array
+            parameter estimates from the fit model
         """
         self.__dict__.update(kwd)
         self.initialize(model, params, **kwd)
@@ -132,7 +149,9 @@ class LikelihoodModelResults(Results):
         #JP what are the minimum attributes and methods that are used of model
         # i.e. can this be called with an almost empty model
         # what's the smallest duck that quacks like a model - list
-
+# SS the minimum is data.endog, data.exog (except for AR)
+# some models take more kwd arguments
+# the minimum needed for results are the inits here
         super(LikelihoodModelResults, self).__init__(model, params)
         self.normalized_cov_params = normalized_cov_params
         self.scale = scale
@@ -140,16 +159,40 @@ class LikelihoodModelResults(Results):
     def normalized_cov_params(self):
         raise NotImplementedError
 
-    def scale(self):    #JP very bad, first scale is an attribute, now a method
-        raise NotImplementedError
+#    def scale(self):    #JP very bad, first scale is an attribute, now a method
+#        raise NotImplementedError
                         # SS It's not used I don't think and can be removed
 
     def t(self, column=None):
         """
         Return the t-statistic for a given parameter estimate.
 
-        Use Ttest for more complicated t-statistics.
+        Parameters
+        ----------
+        column : array-like
+            The columns for which you would like the t-value.
+            Note that this uses Python's indexing conventions.
 
+        See also
+        ---------
+        Use t_test for more complicated t-statistics.
+
+        Examples
+        --------
+        >>>from models.datasets.longley.data import load
+        >>>from models.tools import add_constant
+        >>>from models.regression import OLS
+        >>>data = load()
+        >>>data.exog = add_constant(data.exog)
+        >>>results = OLS(data.endog, data.exog).fit()
+        >>>results.t()
+        array([ 0.17737603, -1.06951632, -4.13642736, -4.82198531, -0.22605114,
+        4.01588981, -3.91080292])
+        >>>results.t([1,2,4])
+        array([-1.06951632, -4.13642736, -0.22605114])
+        >>>import numpy as np
+        >>>results.t(np.array([1,2,4]))
+        array([-1.06951632, -4.13642736, -0.22605114])
         """
 
         if self.normalized_cov_params is None:
@@ -164,38 +207,61 @@ class LikelihoodModelResults(Results):
         if _cov.ndim == 2:
             _cov = np.diag(_cov)
         _t = _params * recipr(np.sqrt(_cov))
-#FIXME: This should be extended to return z() values for GLM and RLM
         return _t
 
 
-    def cov_params(self, matrix=None, column=None, scale=None, other=None):
+    def cov_params(self, contrast=None, column=None, scale=None, other=None):
         """
-        Returns the variance/covariance matrix of a linear contrast
-        of the estimates of params, multiplied by scale which
-        will usually be an estimate of sigma^2.
+        Returns the variance/covariance matrix.
 
-        The covariance of
-        interest is either specified as a (set of) column(s) or a matrix.
+        The variance/covariance matrix can be of a linear contrast
+        of the estimates of params or all params multiplied by scale which
+        will usually be an estimate of sigma^2.  Scale is assumed to be
+        a scalar.
 
-        Without call specified
+        Parameters
+        -----------
+        contrast : array-like
+            Can be 1d, or 2d.  Can be used alone or with other.
+        column :  array-like
+            Must be used on its own.  Can be 0d or 1d see below.
+        scale : float
+            Can be specified or not.  Default is None, which means that
+            the scale argument is taken from the model.
+        other : array-like
+            Can be used when contrast is specified.
 
-        If matrix is specified returns
-        m(X.T X)^(-1)m.T
+        Returns
+        -------
+        (The below are assumed to be in matrix notation.)
 
-        If matrix and other are specified returns
-        m(X.T X)^(-1)other.T
+        cov : ndarray
+
+        If no argument is specified returns the covariance matrix of a model
+        (scale)*(X.T X)^(-1)
+
+        If contrast is specified it pre and post-multiplies as follows
+        (scale) * contrast (X.T X)^(-1) contrast.T
+
+        If contrast and other are specified returns
+        (scale) * contrast (X.T X)^(-1) other.T
 
         If column is specified returns
-        (X.T X)^(-1)[column,column] if column is 0d OR
-        (X.T X)^(-1)[column][:,column]
+        (scale) * (X.T X)^(-1)[column,column] if column is 0d
 
-        If called without arguments
+        OR
+
+        (scale) * (X.T X)^(-1)[column][:,column] if column is 1d
 
         """
-
         if self.normalized_cov_params is None:
             raise ValueError, 'need covariance of parameters for computing \
 (unnormalized) covariances'
+        if column is not None and (contrast is not None or other is not None):
+            raise ValueError, 'Column should be specified without other \
+arguments.'
+        if other is not None and contrast is None:
+            raise ValueError, 'other can only be specified with contrast'
         if scale is None:
             scale = self.scale
         if column is not None:
@@ -204,29 +270,39 @@ class LikelihoodModelResults(Results):
                 return self.normalized_cov_params[column, column] * scale
             else:
                 return self.normalized_cov_params[column][:,column] * scale
-        elif matrix is not None:
+        elif contrast is not None:
+            contrast = np.asarray(contrast)
+            if contrast.shape == ():
+                raise ValueError, "contrast should be 1d or 2d"
             if other is None:
-                other = matrix
-            tmp = np.dot(matrix, np.dot(self.normalized_cov_params, np.transpose(other)))
+                other = contrast
+            else:
+                other = np.asarray(other)
+            tmp = np.dot(contrast, np.dot(self.normalized_cov_params,
+                np.transpose(other)))
             return tmp * scale
-        if matrix is None and column is None:
+        if contrast is None and column is None:
 #            if np.shape(scale) == ():   # can be a scalar or array
-# TODO: np.eye fails for big arrays.  Failed for np.eye(25,000) in the lab
-# needs to be optimized.
-# on the other hand, it is only necessary for when scale isn't a scalar
-# so it doesn't need to default to this every time
+# TODO: Algorithm for HCCM
+# the first return is needed if scale is not a scalar
 #                scale=np.eye(len(self._model._endog))*scale
-            return np.dot(np.dot(self.calc_params, np.array(scale)),
-                self.calc_params.T)
+#            return np.dot(np.dot(self.calc_params, np.array(scale)),
+#                self.calc_params.T)
+            return self.normalized_cov_params * scale
 
     def Ttest(self, r_matrix, t=True, sd=True, scale=None):
         """
-        Compute a Tcontrast for a row vector matrix. To get the t-statistic
-        for a single column, use the 't' method.
+        Compute a Tcontrast for a row vector matrix.
+
 
         Parameters
         ----------
         R is a matrix of linear restrictions.
+
+        See also
+        ---------
+        To get the t-statistic for a single column, use the 't' method.
+
         """
 
         r_matrix = np.asarray(r_matrix)
@@ -238,12 +314,13 @@ class LikelihoodModelResults(Results):
 
         _effect = np.dot(r_matrix, self.params)
         if sd:
-            _sd = np.sqrt(self.cov_params(matrix=r_matrix))
+            _sd = np.sqrt(self.cov_params(contrast=r_matrix))
         if t:
             _t = _effect * recipr(_sd)
         return ContrastResults(effect=_effect, t=_t, sd=_sd, df_denom=self.df_resid)
 
-    def Ftest(self, r_matrix, eff=True, t=True, sd=True, scale=None, invcov=None):
+    def Ftest(self, r_matrix, eff=True, t=True, sd=True, scale=None,
+            invcov=None):
         """
         Compute an Fcontrast for a contrast matrix.
 
@@ -270,7 +347,7 @@ class LikelihoodModelResults(Results):
 
         q = r_matrix.shape[0]
         if invcov is None:
-            invcov = inv(self.cov_params(matrix=r_matrix, scale=1.0))
+            invcov = inv(self.cov_params(contrast=r_matrix, scale=1.0))
         F = np.add.reduce(np.dot(invcov, cparams) * cparams, 0) * \
                 recipr((q * self.scale))
         return ContrastResults(F=F, df_denom=self.df_resid,
