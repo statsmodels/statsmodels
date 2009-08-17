@@ -39,8 +39,8 @@ class LikelihoodModel(Model):
     """
 
     def __init__(self, endog, exog=None):
-        self._endog = endog
-        self._exog = exog
+        self._endog = np.asarray(endog)
+        self._exog = np.asarray(exog)
         self.initialize()
 
     def initialize(self):

@@ -28,3 +28,12 @@ Run lint
 Technical docs (theory, references, formulas)
 Install for standalone package
 
+Docs
+-----
+contrasts (done)
+model (done)
+regression (started)
+glm / family / links
+rlm / robust / scales
+tools
+
