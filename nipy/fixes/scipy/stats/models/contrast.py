@@ -20,14 +20,14 @@ class ContrastResults(object):
             self.df_num = df_num
             #JP: rename to pval, (or 2nd choice p_value)
             #appreviation plus underline is difficult to remember
-            self.p_val = f.sf(F, df_num, df_denom)
+            self.p = f.sf(F, df_num, df_denom)
         else:
             self.t = t
             self.sd = sd
             self.effect = effect
             self.df_denom = df_denom
             #JP: rename p_val
-            self.p_val = student_t.sf(np.abs(t), df_denom)
+            self.p = student_t.sf(np.abs(t), df_denom)
 
     def __array__(self):
         if hasattr(self, "F"):

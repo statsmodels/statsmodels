@@ -107,13 +107,13 @@ class TestFtest(object):
         self.data.exog = add_constant(self.data.exog)
         self.res1 = OLS(data.endog, data.exog).fit()
         self.R = np.identity(7)[:-1,:]
-        self.Ftest = self.res1.Ftest(self.R)
+        self.Ftest = self.res1.f_test(self.R)
 
     def test_F(self):
         assert_almost_equal(self.Ftest.F, self.res1.F, DECIMAL)
 
     def test_p(self):
-        assert_almost_equal(self.Ftest.p_val, self.res1.F_p, DECIMAL)
+        assert_almost_equal(self.Ftest.p, self.res1.F_p, DECIMAL)
 
     def test_Df_denom(self):
         assert_equal(self.Ftest.df_denom, self.res1.df_resid)
@@ -135,7 +135,7 @@ class TestFTest2(TestFtest):
         try:
             r.library('car')
             self.R2 = [[0,1,-1,0,0,0,0],[0, 0, 0, 0, 1, -1, 0]]
-            self.Ftest2 = self.res1.Ftest(self.R2)
+            self.Ftest2 = self.res1.f_test(self.R2)
             self.R_Results = RModel(self.data.endog, self.data.exog, r.lm).robj
             self.F = r.linear_hypothesis(self.R_Results,
                     r.c('x.2 = x.3', 'x.5 = x.6'))
@@ -146,7 +146,7 @@ class TestFTest2(TestFtest):
         assert_almost_equal(self.Ftest2.F, self.F['F'][1], DECIMAL)
 
     def test_p(self):
-        assert_almost_equal(self.Ftest2.p_val, self.F['Pr(>F)'][1], DECIMAL)
+        assert_almost_equal(self.Ftest2.p, self.F['Pr(>F)'][1], DECIMAL)
 
     def test_Df_denom(self):
         assert_equal(self.Ftest2.df_denom, self.F['Res.Df'][0])
@@ -171,7 +171,7 @@ class TestTtest(object):
             raise SkipTest, "Rpy not installed"
         else:
             self.R = np.identity(len(self.res1.params))
-            self.Ttest = self.res1.Ttest(self.R)
+            self.Ttest = self.res1.t_test(self.R)
 
     def test_T(self):
         assert_almost_equal(np.diag(self.Ttest.t), self.res1.t(), DECIMAL)
@@ -179,8 +179,8 @@ class TestTtest(object):
     def test_sd(self):
         assert_almost_equal(np.diag(self.Ttest.sd), self.res1.bse, DECIMAL)
 
-    def test_p_val(self):
-        assert_almost_equal(np.diag(self.Ttest.p_val),
+    def test_p(self):
+        assert_almost_equal(np.diag(self.Ttest.p),
                 t.sf(np.abs(self.res1.t()),self.res1.df_resid), DECIMAL)
 
     def test_Df_denom(self):
@@ -203,7 +203,7 @@ class TestTtest2(TestTtest):
             R = np.zeros(len(self.res1.params))
             R[4:6] = [1,-1]
             self.R = R
-            self.Ttest1 = self.res1.Ttest(self.R)
+            self.Ttest1 = self.res1.t_test(self.R)
             self.Ttest2 = r.linear_hypothesis(self.R_Results['F'], 'x.5 = x.6')
             t = np.inner(self.R, self.res1.params)/\
                 (np.sign(np.inner(self.R, self.res1.params))*\
@@ -220,8 +220,8 @@ class TestTtest2(TestTtest):
     def test_sd(self):
         assert_almost_equal(self.Ttest1.sd, effect/t, DECIMAL)
 
-    def test_p_val(self):
-        assert_almost_equal(self.Ftest2.p_val, t.sf(self.t, self.F['Res.Df'][0]),
+    def test_p(self):
+        assert_almost_equal(self.Ftest2.p, t.sf(self.t, self.F['Res.Df'][0]),
             DECIMAL)
 
     def test_Df_denom(self):
