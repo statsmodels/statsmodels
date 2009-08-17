@@ -104,8 +104,9 @@ print repr((Ftest2b.F, Ftest2b.pvalue))
 print t2a**2 - np.array((Ftest2a.F, Ftest2b.F))
 npt.assert_almost_equal(t2a**2, np.array((Ftest2a.F, Ftest2b.F)))
 #npt.assert_almost_equal(t2pval, np.array((Ftest2a.pvalue, Ftest2b.pvalue)))
+npt.assert_almost_equal(t2pval*2, np.array((Ftest2a.pvalue, Ftest2b.pvalue)))
 
-# Why is there a huge difference in the pvalue comparing
+#print "Why is there a huge difference in the pvalue comparing"
 # ttest and Ftest with a single row
 # shouldn't this be the same ---> verify
 # error in pvalue of Ftest, statistics are correct

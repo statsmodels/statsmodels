@@ -373,7 +373,7 @@ T statistics'
         r_matrix : array-like
             q x p array where q is the number of restrictions to test and
             p is the number of regressors in the full model fit.
-            If q is 1 then f_test(r_matrix).F is equivalent to the square of
+            If q is 1 then f_test(r_matrix).fvalue is equivalent to the square of
             t_test(r_matrix).t
         scale : float, optional
             Default is 1.0 for no scaling.

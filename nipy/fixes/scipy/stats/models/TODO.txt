@@ -23,6 +23,7 @@ Check all imports, cut out what's not needed
 
 
 Update all examples/docstrings
+Make sure docs examples run
 Run lint
 Technical docs (theory, references, formulas)
 Install for standalone package
