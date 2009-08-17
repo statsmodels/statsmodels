@@ -341,8 +341,12 @@ arguments.'
         if self.normalized_cov_params is None:
             raise ValueError, 'Need covariance of parameters for computing \
 T statistics'
-        if r_matrix.shape[0] != self.params.shape[0]:
-            raise ValueError, 'r_matrix and params are not aligned'
+        if r_matrix.ndim == 1:
+            if r_matrix.shape[0] != self.params.shape[0]:
+                raise ValueError, 'r_matrix and params are not aligned'
+        elif r_matrix.ndim >1:
+            if r_matrix.shape[1] != self.params.shape[0]:
+                raise ValueError, 'r_matrix and params are not aligned'
 
         _t = _sd = None
 
@@ -369,7 +373,8 @@ T statistics'
         r_matrix : array-like
             q x p array where q is the number of restrictions to test and
             p is the number of regressors in the full model fit.
-            If q is 1 then f_test is equivalent to the square of t_test.
+            If q is 1 then f_test(r_matrix).F is equivalent to the square of
+            t_test(r_matrix).t
         scale : float, optional
             Default is 1.0 for no scaling.
         invcov : array-like, optional
