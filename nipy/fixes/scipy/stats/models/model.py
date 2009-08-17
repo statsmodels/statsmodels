@@ -338,13 +338,13 @@ arguments.'
         if self.normalized_cov_params is None:
             raise ValueError, 'Need covariance of parameters for computing \
 T statistics'
-        if r_matrix.shape[0] != self.params.shape[0]:
+        if r_matrix.shape[-1] != self.params.shape[0]:
             raise ValueError, 'r_matrix and params are not aligned'
 
         _t = _sd = None
 
         _effect = np.dot(r_matrix, self.params)
-        _sd = np.sqrt(self.cov_params(contrast=r_matrix))
+        _sd = np.sqrt(self.cov_params(r_matrix=r_matrix))
         _t = _effect * recipr(_sd)
         return ContrastResults(effect=_effect, t=_t, sd=_sd,
                 df_denom=self.df_resid)
