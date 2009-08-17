@@ -181,10 +181,10 @@ class LikelihoodModelResults(Results):
         --------
         >>>from models.datasets.longley.data import load
         >>>from models.tools import add_constant
-        >>>from models.regression import OLS
+        >>>import models
         >>>data = load()
         >>>data.exog = add_constant(data.exog)
-        >>>results = OLS(data.endog, data.exog).fit()
+        >>>results = models.OLS(data.endog, data.exog).fit()
         >>>results.t()
         array([ 0.17737603, -1.06951632, -4.13642736, -4.82198531, -0.22605114,
         4.01588981, -3.91080292])
@@ -297,12 +297,40 @@ arguments.'
         Parameters
         ----------
         r_matrix : array-like
-            Linear restrictions.
+            A row vector specifying the linear restrictions.
 
         See also
         ---------
         To get the t-statistic for a single column, use the 't' method.
 
+        Examples
+        -------
+        >>>import numpy as np
+        >>>import models
+        >>>from models.datasets.longley.data import load
+        >>>from models.tools import add_constant
+        >>>data = load()
+        >>>data.exog = add_constant(data.exog)
+        >>>results = models.OLS(data.endog, data.exog).fit()
+        >>>r = np.zeros(len(results.params))
+        >>>r[4:6] = [1,-1]
+        >>>print r
+        [ 0.  0.  0.  0.  1. -1.  0.]
+
+        r tests that the coefficients on the 5th and 6th independent
+        variable are the same.
+
+        >>>T_Test = results.t_test(r)
+        >>>print T_test
+        <T contrast: effect=-1829.2025687192481, sd=455.39079425193762, t=-4.0167754636411717, p=0.0015163772380899498, df_denom=9>
+        >>> T_test.effect
+        -1829.2025687192481
+        >>> T_test.sd
+        455.39079425193762
+        >>> T_test.t
+        -4.0167754636411717
+        >>> T_test.p
+        0.0015163772380899498
         """
 
         r_matrix = np.asarray(r_matrix)

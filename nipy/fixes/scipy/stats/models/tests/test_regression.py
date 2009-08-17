@@ -113,7 +113,7 @@ class TestFtest(object):
         assert_almost_equal(self.Ftest.F, self.res1.F, DECIMAL)
 
     def test_p(self):
-        assert_almost_equal(self.Ftest.p_val, self.res1.F_p, DECIMAL)
+        assert_almost_equal(self.Ftest.p, self.res1.F_p, DECIMAL)
 
     def test_Df_denom(self):
         assert_equal(self.Ftest.df_denom, self.res1.df_resid)
@@ -146,7 +146,7 @@ class TestFTest2(TestFtest):
         assert_almost_equal(self.Ftest2.F, self.F['F'][1], DECIMAL)
 
     def test_p(self):
-        assert_almost_equal(self.Ftest2.p_val, self.F['Pr(>F)'][1], DECIMAL)
+        assert_almost_equal(self.Ftest2.p, self.F['Pr(>F)'][1], DECIMAL)
 
     def test_Df_denom(self):
         assert_equal(self.Ftest2.df_denom, self.F['Res.Df'][0])
@@ -179,8 +179,8 @@ class TestTtest(object):
     def test_sd(self):
         assert_almost_equal(np.diag(self.Ttest.sd), self.res1.bse, DECIMAL)
 
-    def test_p_val(self):
-        assert_almost_equal(np.diag(self.Ttest.p_val),
+    def test_p(self):
+        assert_almost_equal(np.diag(self.Ttest.p),
                 t.sf(np.abs(self.res1.t()),self.res1.df_resid), DECIMAL)
 
     def test_Df_denom(self):
@@ -220,8 +220,8 @@ class TestTtest2(TestTtest):
     def test_sd(self):
         assert_almost_equal(self.Ttest1.sd, effect/t, DECIMAL)
 
-    def test_p_val(self):
-        assert_almost_equal(self.Ftest2.p_val, t.sf(self.t, self.F['Res.Df'][0]),
+    def test_p(self):
+        assert_almost_equal(self.Ftest2.p, t.sf(self.t, self.F['Res.Df'][0]),
             DECIMAL)
 
     def test_Df_denom(self):
