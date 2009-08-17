@@ -24,7 +24,7 @@ from csv import reader              # These are for read_array
 import numpy as np
 from scipy.linalg import norm, toeplitz
 from models.model import LikelihoodModel, LikelihoodModelResults
-from models import utils                # rank utils in np?
+from models import tools
 from models.tools import add_constant
 from scipy import stats, derivative
 from scipy.stats.stats import ss        # could be avoided to eliminate overhead
@@ -129,9 +129,9 @@ class GLS(LikelihoodModel):
         self.calc_params = np.linalg.pinv(self.wdesign)
         self.normalized_cov_params = np.dot(self.calc_params,
                                          np.transpose(self.calc_params))
-        self.df_resid = self.wdesign.shape[0] - utils.rank(self._exog)
+        self.df_resid = self.wdesign.shape[0] - tools.rank(self._exog)
 #       Below assumes that we will always have a constant
-        self.df_model = utils.rank(self._exog)-1
+        self.df_model = tools.rank(self._exog)-1
 
     def whiten(self, Y):
         if np.any(self.sigma) and not self.sigma==() :
@@ -207,12 +207,10 @@ class GLS(LikelihoodModel):
         lfit.Z = Z   # not a good name wendog analogy to wdesign
         lfit.df_resid = self.df_resid
         lfit.df_model = self.df_model
-        lfit.calc_params = self.calc_params # needed for cov_params()
+        lfit.calc_params = self.calc_params
         self._summary(lfit)
         return lfit
 
-#TODO: make results a property
-# this throws up a set attribute error when running old glm
     @property
     def results(self):
         if self._results is None:
@@ -231,7 +229,10 @@ class GLS(LikelihoodModel):
         lfit.cTSS = ss(lfit.Z-np.mean(lfit.Z))
 #TODO: Z or Y here?  Need to have tests in GLS.
 #JP what does c and u in front of TSS stand for?
+#c is centered and u is uncentered
 #JP I think, it should be Y instead of Z, are the following results correct, with Z?
+#TODO: more robust tests for WLS or GLS, to see if Y or Z is used.
+# I think Y as well, but Z = Y for OLS
 
         lfit.uTSS = ss(lfit.Z)
 # Centered R2 for models with intercepts
@@ -250,8 +251,11 @@ class GLS(LikelihoodModel):
         lfit.F = lfit.MSE_model/lfit.MSE_resid
         lfit.F_p = 1 - stats.f.cdf(lfit.F, lfit.df_model, lfit.df_resid)
         lfit.bse = np.sqrt(np.diag(lfit.cov_params()))
+        lfit.llf = self.logLike(lfit.params)
+        lfit.aic = -2 * lfit.llf + 2*(self.df_model+1)
+        lfit.bic = -2 * lfit.llf + np.log(lfit.nobs)*(self.df_model+1)
 
-    def llf(self, params):
+    def logLike(self, params):
         """
         Returns the value of the gaussian loglikelihood function at b.
 
@@ -636,27 +640,11 @@ class RegressionResults(LikelihoodModelResults):
 
     It handles the output of contrasts, estimates of covariance, etc.
     """
-    _llf = None  #this makes it a class attribute - bad, move to init
-
     def __init__(self, model, params, normalized_cov_params=None, scale=1.):
         super(RegressionResults, self).__init__(model, params,
                                                  normalized_cov_params,
                                                  scale)
-# should this go up to likelihood model results?
-
-    @property
-    def llf(self):
-        if self._llf is None:
-            self._llf = self.model.llf(self.params)
-        return self._llf
-
-    def information_criteria(self):
-        llf = self.llf
-        aic = -2 * llf + 2*(self.df_model + 1)
-        bic = -2 * llf + np.log(self.nobs) * (self.df_model + 1)
-        return dict(aic=aic, bic=bic)
-# could be added as properties to results class.
-
+#TODO: this needs a test
     def norm_resid(self):
         """
         Residuals, normalized to have unit length.
@@ -678,7 +666,7 @@ class RegressionResults(LikelihoodModelResults):
         """
         if not hasattr(self, 'resid'):
             raise ValueError, 'need normalized residuals to estimate standard deviation'
-        return self.resid * utils.recipr(np.sqrt(self.scale))
+        return self.resid * tools.recipr(np.sqrt(self.scale))
 
     def predictors(self, design):
         """
