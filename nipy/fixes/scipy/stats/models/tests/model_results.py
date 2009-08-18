@@ -242,15 +242,15 @@ class longley(object):
                    (-1.517948,-.5485049),(-.5625173,.4603083),
                    (798.7873,2859.515),(-5496529,-1467987)]
         self.scale = 92936.0061673238
-        self.Rsq = 0.995479004577296
-        self.adjRsq = 0.99246501
+        self.rsquared = 0.995479004577296
+        self.rsquared_adj = 0.99246501
         self.df_model = 6
         self.df_resid = 9
-        self.ESS = 184172401.944494
-        self.SSR = 836424.055505915
-        self.MSE_model = 30695400.3240823
-        self.MSE_resid = 92936.0061673238
-        self.F = 330.285339234588
+        self.ess = 184172401.944494
+        self.ssr = 836424.055505915
+        self.mse_model = 30695400.3240823
+        self.mse_resid = 92936.0061673238
+        self.fvalue = 330.285339234588
         self.llf = -109.6174
         self.AIC = 233.2349
         self.BIC = 238.643

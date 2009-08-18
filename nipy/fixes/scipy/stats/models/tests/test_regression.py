@@ -50,27 +50,28 @@ class check_regression_results(object):
         assert_almost_equal(self.res1.scale, self.res2.scale, DECIMAL)
 
     def test_RSquared(self):
-        assert_almost_equal(self.res1.Rsq, self.res2.Rsq,DECIMAL)
+        assert_almost_equal(self.res1.rsquared, self.res2.rsquared,DECIMAL)
 
     def test_AdjRSquared(self):
-        assert_almost_equal(self.res1.adjRsq, self.res2.adjRsq, DECIMAL)
+        assert_almost_equal(self.res1.rsquared_adj, self.res2.rsquared_adj,
+                DECIMAL)
 
     def test_degrees(self):
         assert_almost_equal(self.res1.model.df_model, self.res2.df_model, DECIMAL)
         assert_almost_equal(self.res1.model.df_resid, self.res2.df_resid, DECIMAL)
 
     def test_ExplainedSumofSquares(self):
-        assert_almost_equal(self.res1.ESS, self.res2.ESS, DECIMAL)
+        assert_almost_equal(self.res1.ess, self.res2.ess, DECIMAL)
 
     def test_SumofSquaredResiduals(self):
-        assert_almost_equal(self.res1.SSR, self.res2.SSR,DECIMAL)
+        assert_almost_equal(self.res1.ssr, self.res2.ssr,DECIMAL)
 
     def test_MeanSquaredError(self):
-        assert_almost_equal(self.res1.MSE_model, self.res2.MSE_model, DECIMAL)
-        assert_almost_equal(self.res1.MSE_resid, self.res2.MSE_resid, DECIMAL)
+        assert_almost_equal(self.res1.mse_model, self.res2.mse_model, DECIMAL)
+        assert_almost_equal(self.res1.mse_resid, self.res2.mse_resid, DECIMAL)
 
     def test_FStatistic(self):
-        assert_almost_equal(self.res1.fvalue, self.res2.F, DECIMAL)
+        assert_almost_equal(self.res1.fvalue, self.res2.fvalue, DECIMAL)
 
     def test_loglike(self):
         assert_almost_equal(self.res1.llf, self.res2.llf, DECIMAL)
@@ -278,7 +279,6 @@ class test_gls_nosigma(check_regression_results):
         self.res2.conf_int = self.res2.conf_int()
         self.res2.BIC = self.res2.bic
         self.res2.AIC = self.res2.aic
-        self.res2.F = self.res2.fvalue
 
     def check_confidenceintervals(self, conf1, conf2):
         assert_almost_equal(conf1, conf2, DECIMAL)

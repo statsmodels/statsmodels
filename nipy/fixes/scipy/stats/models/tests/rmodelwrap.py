@@ -52,10 +52,10 @@ class RModel(object):
         try:
             self.bpval = rsum['coefficients'][:,3]
         except: pass
-        self.R2 = rsum.setdefault('r.squared', None)
-        self.adjR2 = rsum.setdefault('adj.r.squared', None)
+        self.rsquared = rsum.setdefault('r.squared', None)
+        self.rsquared_adj = rsum.setdefault('adj.r.squared', None)
         self.aic_R = rsum.setdefault('aic', None)
-        self.F = rsum.setdefault('fstatistic', None)
+        self.fvalue = rsum.setdefault('fstatistic', None)
         df = rsum.setdefault('df', None)
         if df:  # for RLM, works for other models?
             self.df_model = df[0]-1 # R counts intercept
