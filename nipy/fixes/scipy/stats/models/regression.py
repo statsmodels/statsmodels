@@ -64,69 +64,84 @@ class GLS(LikelihoodModel):
        assumed that `sigma` is an n x n diagonal matrix with the given sclar,
        `sigma` as the value of each diagonal element.  If `sigma` is an
        n-length vector, then `sigma` is assumed to be a diagonal matrix
-       with the given `sigma` on the diagonal.  This should be the same as WLS
+       with the given `sigma` on the diagonal.  This should be the same as WLS.
 ??? is it the same was WLS?
-
-       See the docs/gls.rst for more info.
 
     Attributes
     ----------
     calc_params : array
         `calc_params` is the p x n Moore-Penrose pseudoinverse
-        of the design matrix. In matrix notation it is approximately
-        (X^(T)X)^(-1)X^(T)
+        of the whitened design matrix. In matrix notation it is approximately
+        [X^(T)(sigma)^(-1)X]^(-1)X^(T)psi
+
+        where psi is cholsigmainv.T
+
+    cholsimgainv : array
+        n x n upper triangular matrix such that in matrix notation
+        (cholsigmainv^(T) cholsigmainv) = (sigma)^(-1).
+        It is the transpose of the Cholesky decomposition of the pseudoinverse
+        of sigma.
 
     df_model : scalar
         The model degrees of freedom is equal to p - 1, where p is the number
-        of regressors.  Note that the intercept is not included.
+        of regressors.  Note that the intercept is not reported as a degree
+        of freedom.
 
     df_resid : scalar
         The residual degrees of freedom is equal to the number of observations
-        less the number of parameters.  Note that the intercept is counted
-        as a regressor when calculating the degrees of freedom of the
+        n less the number of parameters p.  Note that the intercept is counted as
+        using a degree of freedom for the degrees of freedom of the
         residuals.
 
     llf : float
-        `llf` is the value of the maximum likelihood function of the model.
+        The value of the likelihood function of the fitted model.
+
+    nobs : float
+        The number of observations n
 
     normalized_cov_params : array
-        `normalized_cov_params` is a p x p array that is the inverse of ...
-        In matrix notation this can be written (X^(T)X)^(-1)
+        `normalized_cov_params` is a p x p array
+        In matrix notation this can be written (X^(T) sigma^(-1) X)^(-1)
 
-    sigma :
+    sigma : array
+        `sigma` is the n x n covariance matrix of the error terms or
+
+        E(resid resid.T)
+
+        where E is the expectations operator.
 
     wdesign : array
-        `wdesign` is the whitened design matrix.  If sigma is not a scalar
-        this is np.dot(cholsigmainv,Y).  Where cholsigmainv is the lower-
-        triangular Cholesky factor of the transpose of the pseudoinverse of
-        sigma.  In matrix notation this can be written L^(T)X where LL^(T)
-        is approximately Sigma^(+), the pseudoinverse of Sigma.
-#FIXME: Check explanation, try to write in terms of matrices and inverses
-#        only rather than pseudoinverses and factors.
+        `wdesign` is the whitened design matrix.  In matrix notation
+        (cholsigmainv exog)
 
     Methods
     -------
     fit
        Solves the least squares minimization.
+       Note that using the model's results property is equivalent to
+       calling fit.
 
     information
-        Returns the Fisher information matrix.
+        Returns the Fisher information matrix for a given set of parameters.
 
     initialize
         (Re)-initialize a model.
+#TODO: should this be a public method?
+
+    loglike
+        Obtain the loglikelihood for a given set of parameters.
 
     newton
         Used to solve the maximum likelihood problem.
-        Not currently implemented.
 
-    fittedvalues
+    predict
         Returns the fitted values given the parameters and exogenous design.
 
     score
         Score function.
 
     whiten
-        TODO
+        Returns the input premultiplied by cholsigmainv
 
     Examples
     --------
@@ -156,9 +171,13 @@ class GLS(LikelihoodModel):
     *Assume* that the error terms in the OLS fit above are uncorrelated.
     Then sigma will be a diagonal matrix.
 
-    >>>s = np.var(ols_tmp
-
+    >>>s = np.var(ols_tmp.resid)
+#TODO: Unfinished, compare to WLS.
     >>>
+
+    See Also
+    --------
+    See the docs/gls.rst for more info.
 
     """
     def __init__(self, endog, exog, sigma=None):
@@ -197,7 +216,6 @@ Should be of length %s, if sigma is a 1d array" % nobs
         self.wdesign = self.whiten(self._exog)
         #JP: calc_params is not an informative name, but anything better?
         #SS: gen_inv?  it's the generalized inverse
-        # ie., beta = calc_params dot y
         self.calc_params = np.linalg.pinv(self.wdesign)
         self.normalized_cov_params = np.dot(self.calc_params,
                                          np.transpose(self.calc_params))
@@ -218,6 +236,9 @@ Should be of length %s, if sigma is a 1d array" % nobs
 
         Returns
         -------
+
+        A results class that has the following attributes.
+
         adjRsq
             Adjusted R-squared
         bse
@@ -256,26 +277,33 @@ Should be of length %s, if sigma is a 1d array" % nobs
             Uncentered sum of squares
         Z
             The whitened response variable
+
+        Notes
+        -----
+        Currently it is assumed that all models will have an intercept /
+        constant in the design matrix for postestimation statistics.
         """
-        wendog = self.whiten(self._endog)
+        self.wendog = self.whiten(self._endog)
 # shouldn't actual whitened endog be
 #       wendog = np.dot(np.linalg.inv(self.sigma),self._endog)
 # or equivalently
 #       wendog = np.dot(np.dot(self.cholsigmainv.T,self.cholsigmainv),self._endog)
-        beta = np.dot(self.calc_params, wendog)
+        beta = np.dot(self.calc_params, self.wendog)
         # should this use lstsq instead?
+        # worth a comparison at least...though this is readable
         lfit = RegressionResults(self, beta,
                        normalized_cov_params=self.normalized_cov_params)
-        lfit.fittedvalues = self.predict(self._exog, beta)
+#        lfit.fittedvalues = self.predict(self._exog, beta)
 # D&M says that WLS and GLS postestimation stats should be
-# on transformed data, but this screws up RLM for now?
-        lfit.wresid = wendog - self.predict(self.wdesign, lfit.params)
-        lfit.resid = self._endog - lfit.fittedvalues
-        lfit.wendog = wendog   # not a good name wendog analogy to wdesign
-        lfit.df_resid = self.df_resid
-        lfit.df_model = self.df_model
-        lfit.calc_params = self.calc_params
-        self._summary(lfit)
+# on transformed data
+# TODO: need WLS/GLS tests!!!
+#        lfit.wresid = wendog - self.predict(self.wdesign, lfit.params)
+#        lfit.resid = self._endog - lfit.fittedvalues
+#        lfit.wendog = wendog   # not a good name wendog analogy to wdesign
+#        lfit.df_resid = self.df_resid
+#        lfit.df_model = self.df_model
+#        lfit.calc_params = self.calc_params
+#        self._summary(lfit)
         return lfit
 
     @property
@@ -284,40 +312,39 @@ Should be of length %s, if sigma is a 1d array" % nobs
             self._results = self.fit()
         return self._results
 
-    def _summary(self, lfit):
-        """
-        Private method to call additional statistics for GLS.
-        Meant to be overwritten by subclass as needed(?).
-        """
-        lfit.scale = ss(lfit.wresid) / self.df_resid
-        lfit.nobs = float(self.wdesign.shape[0])
-        lfit.SSR = ss(lfit.wresid)
-        lfit.cTSS = ss(lfit.wendog-np.mean(lfit.wendog))
-#TODO: Z or Y here?  Need to have tests in GLS.
+#    def _summary(self, lfit):
+#        """
+#        Private method to call additional statistics for GLS.
+#        Meant to be overwritten by subclass as needed(?).
+#        """
+#        lfit.scale = ss(lfit.wresid) / self.df_resid
+#        lfit.nobs = float(self.wdesign.shape[0])
+#        lfit.SSR = ss(lfit.wresid)
+#        lfit.cTSS = ss(lfit.wendog - np.mean(lfit.wendog))
 #JP what does c and u in front of TSS stand for?
 #c is centered and u is uncentered
-#JP I think, it should be Y instead of Z, are the following results correct, with Z?
-#TODO: more robust tests for WLS or GLS, to see if Y or Z is used.
-# I think Y as well, but Z = Y for OLS
+#JP I think, it should be Y instead of wendog, are the following results correct, with wendog?
+#TODO: more robust tests for WLS or GLS, to see if Y or wendog is used.
+# I think Y as well, but wendog = Y for OLS
 
-        lfit.uTSS = ss(lfit.wendog)
+#        lfit.uTSS = ss(lfit.wendog)
 # Centered R2 for models with intercepts
-        lfit.Rsq = 1 - lfit.SSR/lfit.cTSS
-        lfit.ESS = ss(lfit.fittedvalues - np.mean(lfit.wendog))
-        lfit.SSR = ss(lfit.resid)
-        lfit.adjRsq = 1 - (lfit.nobs - 1)/(lfit.nobs - (lfit.df_model+1))\
-                *(1 - lfit.Rsq)
-        lfit.MSE_model = lfit.ESS/lfit.df_model
-        lfit.MSE_resid = lfit.SSR/lfit.df_resid
-        lfit.MSE_total = lfit.uTSS/(lfit.df_model+lfit.df_resid)
-        lfit.F = lfit.MSE_model/lfit.MSE_resid
-        lfit.F_p = 1 - stats.f.cdf(lfit.F, lfit.df_model, lfit.df_resid)
-        lfit.bse = np.sqrt(np.diag(lfit.cov_params()))
-        lfit.llf = self.loglike(lfit.params)
-        lfit.aic = -2 * lfit.llf + 2*(self.df_model+1)
-        lfit.bic = -2 * lfit.llf + np.log(lfit.nobs)*(self.df_model+1)
-        lfit.pvalues = stats.t.sf(np.abs(lfit.t()), lfit.df_resid)
-        lfit.PostEstimation = PostRegression(lfit)
+#        lfit.Rsq = 1 - lfit.SSR/lfit.cTSS
+#        lfit.ESS = ss(lfit.fittedvalues - np.mean(lfit.wendog))
+#        lfit.SSR = ss(lfit.resid)
+#        lfit.adjRsq = 1 - (lfit.nobs - 1)/(lfit.nobs - (lfit.df_model+1))\
+#                *(1 - lfit.Rsq)
+#        lfit.MSE_model = lfit.ESS/lfit.df_model
+#        lfit.MSE_resid = lfit.SSR/lfit.df_resid
+#        lfit.MSE_total = lfit.uTSS/(lfit.df_model+lfit.df_resid)
+#        lfit.F = lfit.MSE_model/lfit.MSE_resid
+#        lfit.F_p = 1 - stats.f.cdf(lfit.F, lfit.df_model, lfit.df_resid)
+#        lfit.bse = np.sqrt(np.diag(lfit.cov_params()))
+#        lfit.llf = self.loglike(lfit.params)
+#        lfit.aic = -2 * lfit.llf + 2*(self.df_model+1)
+#        lfit.bic = -2 * lfit.llf + np.log(lfit.nobs)*(self.df_model+1)
+#        lfit.pvalues = stats.t.sf(np.abs(lfit.t()), lfit.df_resid)
+#        lfit.PostEstimation = PostRegression(lfit)
 
     def predict(self, design, params=None):
         """
@@ -704,6 +731,51 @@ class RegressionResults(LikelihoodModelResults):
         super(RegressionResults, self).__init__(model, params,
                                                  normalized_cov_params,
                                                  scale)
+        self._get_results()
+
+    def _get_results(self):
+        self.fittedvalues = self.model.predict(self.model._exog, self.params)
+# D&M says that WLS and GLS postestimation stats should be
+# on transformed data
+# TODO: need WLS/GLS tests!!!
+        self.wresid = self.model.wendog - \
+                self.model.predict(self.model.wdesign,self.params)
+        self.resid = self.model._endog - self.fittedvalues
+        self.calc_params = self.model.calc_params # needed?
+#        self._summary(lfit)
+        self.scale = ss(self.wresid) / self.model.df_resid
+        self.nobs = float(self.model.wdesign.shape[0])
+        self.SSR = ss(self.wresid)
+        self.cTSS = ss(self.model.wendog - np.mean(self.model.wendog))
+#JP what does c and u in front of TSS stand for?
+#c is centered and u is uncentered
+#JP I think, it should be Y instead of wendog, are the following results correct, with wendog?
+#TODO: more robust tests for WLS or GLS, to see if Y or wendog is used.
+# I think Y as well, but wendog = Y for OLS
+        self.df_resid = self.model.df_resid
+        self.df_model = self.model.df_model
+        self.uTSS = ss(self.model.wendog)
+# Centered R2 for models with intercepts
+        self.Rsq = 1 - self.SSR/self.cTSS
+        self.ESS = ss(self.fittedvalues - np.mean(self.model.wendog))
+        self.SSR = ss(self.resid)
+        self.adjRsq = 1 - (self.model.nobs - 1)/(self.model.nobs - \
+                (self.model.df_model+1))*(1 - self.Rsq)
+        self.MSE_model = self.ESS/self.model.df_model
+        self.MSE_resid = self.SSR/self.model.df_resid
+        self.MSE_total = self.uTSS/(self.model.df_model+self.model.df_resid)
+        self.fvalue = self.MSE_model/self.MSE_resid
+        self.f_pvalue = stats.f.sf(self.fvalue, self.model.df_model,
+                self.model.df_resid)
+        self.bse = np.sqrt(np.diag(self.cov_params()))
+        self.llf = self.model.loglike(self.params)
+        self.aic = -2 * self.llf + 2*(self.model.df_model+1)
+        self.bic = -2 * self.llf + np.log(self.model.nobs)*\
+                (self.model.df_model+1)
+        self.pvalues = stats.t.sf(np.abs(self.t()), self.model.df_resid)
+        self.PostEstimation = PostRegression(self)
+
+
 #TODO: this needs a test
     def norm_resid(self):
         """

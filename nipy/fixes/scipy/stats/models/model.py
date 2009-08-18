@@ -360,7 +360,7 @@ T statistics'
         _sd = np.sqrt(self.cov_params(r_matrix=r_matrix))
         _t = _effect * recipr(_sd)
         return ContrastResults(effect=_effect, t=_t, sd=_sd,
-                df_denom=self.df_resid)
+                df_denom=self.model.df_resid)
 
     def f_test(self, r_matrix, scale=1.0, invcov=None):
         """
@@ -439,7 +439,7 @@ T statistics'
                 scale=scale))
         F = np.add.reduce(np.dot(invcov, cparams) * cparams, 0) * \
                 recipr((q * self.scale))
-        return ContrastResults(F=F, df_denom=self.df_resid,
+        return ContrastResults(F=F, df_denom=self.model.df_resid,
                     df_num=invcov.shape[0])
 
     def conf_int(self, alpha=.05, cols=None):
@@ -489,9 +489,9 @@ T statistics'
         else:
             dist = t
         if cols is None and dist == t:
-            lower = self.params - dist.ppf(1-alpha/2,self.df_resid) *\
+            lower = self.params - dist.ppf(1-alpha/2,self.model.df_resid) *\
                     self.bse
-            upper = self.params + dist.ppf(1-alpha/2,self.df_resid) *\
+            upper = self.params + dist.ppf(1-alpha/2,self.model.df_resid) *\
                     self.bse
         elif cols is None and dist == norm:
             lower = self.params - dist.ppf(1-alpha/2)*self.bse
@@ -499,9 +499,9 @@ T statistics'
         elif cols is not None and dist == t:
             cols = np.asarray(cols)
             lower = self.params[cols] - dist.ppf(1-\
-                        alpha/2,self.df_resid) *self.bse[cols]
+                        alpha/2,self.model.df_resid) *self.bse[cols]
             upper = self.params[cols] + dist.ppf(1-\
-                        alpha/2,self.df_resid) *self.bse[cols]
+                        alpha/2,self.model.df_resid) *self.bse[cols]
         elif cols is not None and dist == norm:
             cols = np.asarray(cols)
             lower = self.params[cols] - dist.ppf(1-alpha/2)*self.bse[cols]

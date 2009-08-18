@@ -56,8 +56,8 @@ class check_regression_results(object):
         assert_almost_equal(self.res1.adjRsq, self.res2.adjRsq, DECIMAL)
 
     def test_degrees(self):
-        assert_almost_equal(self.res1.df_model, self.res2.df_model, DECIMAL)
-        assert_almost_equal(self.res1.df_resid, self.res2.df_resid, DECIMAL)
+        assert_almost_equal(self.res1.model.df_model, self.res2.df_model, DECIMAL)
+        assert_almost_equal(self.res1.model.df_resid, self.res2.df_resid, DECIMAL)
 
     def test_ExplainedSumofSquares(self):
         assert_almost_equal(self.res1.ESS, self.res2.ESS, DECIMAL)
@@ -70,7 +70,7 @@ class check_regression_results(object):
         assert_almost_equal(self.res1.MSE_resid, self.res2.MSE_resid, DECIMAL)
 
     def test_FStatistic(self):
-        assert_almost_equal(self.res1.F, self.res2.F, DECIMAL)
+        assert_almost_equal(self.res1.fvalue, self.res2.F, DECIMAL)
 
     def test_loglike(self):
         assert_almost_equal(self.res1.llf, self.res2.llf, DECIMAL)
@@ -115,13 +115,13 @@ class TestFtest(object):
         self.Ftest = self.res1.f_test(self.R)
 
     def test_F(self):
-        assert_almost_equal(self.Ftest.fvalue, self.res1.F, DECIMAL)
+        assert_almost_equal(self.Ftest.fvalue, self.res1.fvalue, DECIMAL)
 
     def test_p(self):
-        assert_almost_equal(self.Ftest.pvalue, self.res1.F_p, DECIMAL)
+        assert_almost_equal(self.Ftest.pvalue, self.res1.f_pvalue, DECIMAL)
 
     def test_Df_denom(self):
-        assert_equal(self.Ftest.df_denom, self.res1.df_resid)
+        assert_equal(self.Ftest.df_denom, self.res1.model.df_resid)
 
     def test_Df_num(self):
         assert_equal(self.Ftest.df_num, tools.rank(self.R))
@@ -185,10 +185,10 @@ class TestTtest(object):
 
     def test_p(self):
         assert_almost_equal(np.diag(self.Ttest.pvalue),
-                t.sf(np.abs(self.res1.t()),self.res1.df_resid), DECIMAL)
+                t.sf(np.abs(self.res1.t()),self.res1.model.df_resid), DECIMAL)
 
     def test_Df_denom(self):
-        assert_equal(self.Ttest.df_denom, self.res1.df_resid)
+        assert_equal(self.Ttest.df_denom, self.res1.model.df_resid)
 
     def test_effect(self):
         assert_almost_equal(self.Ttest.effect, self.res1.params)
@@ -263,7 +263,7 @@ class test_gls(object):
     def test_standarderrors(self):
         assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL_lesser)
 
-class test_gls_scalar(check_regression_results):
+class test_gls_nosigma(check_regression_results):
     '''
     Test that GLS with no argument is equivalent to OLS.
     '''
@@ -278,6 +278,7 @@ class test_gls_scalar(check_regression_results):
         self.res2.conf_int = self.res2.conf_int()
         self.res2.BIC = self.res2.bic
         self.res2.AIC = self.res2.aic
+        self.res2.F = self.res2.fvalue
 
     def check_confidenceintervals(self, conf1, conf2):
         assert_almost_equal(conf1, conf2, DECIMAL)
