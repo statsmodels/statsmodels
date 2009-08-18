@@ -60,7 +60,14 @@ class GLS(LikelihoodModel):
 
     sigma : scalar or array
        `sigma` is the weighting matrix of the covariance.
-       The default is None for no scaling.  See the docs/gls.rst for more info.
+       The default is None for no scaling.  If `sigma` is a scalar, it is
+       assumed that `sigma` is an n x n diagonal matrix with the given sclar,
+       `sigma` as the value of each diagonal element.  If `sigma` is an
+       n-length vector, then `sigma` is assumed to be a diagonal matrix
+       with the given `sigma` on the diagonal.  This should be the same as WLS
+??? is it the same was WLS?
+
+       See the docs/gls.rst for more info.
 
     Attributes
     ----------
@@ -120,12 +127,70 @@ class GLS(LikelihoodModel):
 
     whiten
         TODO
+
+    Examples
+    --------
+    >>>import numpy as np
+    >>>import models
+    >>>from models.tools import add_constant
+    >>>from models.datasets.longley.data import load
+    >>>data = load()
+    >>>data.exog = add_constant(data.exog)
+    >>>ols_tmp = models.OLS(data.endog, data.exog).results
+    >>>rho = np.corrcoef(ols_tmp.resid[1:],ols_model.resid[:-1])[0][1]
+
+    `rho` is the correlation of the residuals from an OLS fit of the longley
+    data.  It is assumed that this is the true rho of the data, and it
+    will be used to estimate the structure of heteroskedasticity.
+
+    >>>from scipy.linalg import toeplitz
+    >>>order = toeplitz(np.arange(16))
+    >>>sigma = rho**order
+
+    `sigma` is an n x n matrix of the autocorrelation structure of the
+    data.
+
+    >>>gls_model = models.GLS(data.endog, data.exog, sigma=sigma)
+    >>>gls_results = gls_model.results
+
+    *Assume* that the error terms in the OLS fit above are uncorrelated.
+    Then sigma will be a diagonal matrix.
+
+    >>>s = np.var(ols_tmp
+
+    >>>
+
     """
     def __init__(self, endog, exog, sigma=None):
-        self.sigma = sigma
-        if np.any(self.sigma) and not np.shape(self.sigma)==():
-            #JP whats required dimension of sigma, needs checking
-            self.cholsigmainv = np.linalg.cholesky(np.linalg.pinv(sigma)).T
+#TODO: make sure checks work
+#TODO: are these assumptions about what to do with sigma correct
+# they results in difference from WLS
+# ie., wresid, etc. when they should be the same?
+# why should they be the same is the whitener is different?
+# do the math...
+# wresid should be the same between GLS and WLS with the same weights?
+        if sigma is not None:
+            self.sigma = np.asarray(sigma)
+        else:
+            self.sigma = sigma
+        if self.sigma is not None and not self.sigma.shape == (): #greedy logic
+            nobs = int(endog.shape[0])
+            if self.sigma.ndim == 1 or np.squeeze(self.sigma).ndim == 1:
+                if self.sigma.shape[0] != nobs:
+                    raise ValueError, "sigma is not the correct dimension.  \
+Should be of length %s, if sigma is a 1d array" % nobs
+            elif self.sigma.shape[0] != nobs and \
+                    self.sigma.shape[1] != nobs:
+                raise ValueError, "expected an %s x %s array for sigma" % \
+                        (nobs, nobs)
+        if self.sigma is not None:
+            nobs = int(endog.shape[0])
+            if self.sigma.shape == ():
+                self.sigma = np.diag(np.ones(nobs)*self.sigma)
+            if np.squeeze(self.sigma).ndim == 1:
+                self.sigma = np.diag(np.squeeze(self.sigma))
+            self.cholsigmainv = np.linalg.cholesky(np.linalg.pinv(\
+                    self.sigma)).T
         super(GLS, self).__init__(endog, exog)
 
     def initialize(self):
@@ -141,7 +206,7 @@ class GLS(LikelihoodModel):
         self.df_model = tools.rank(self._exog)-1
 
     def whiten(self, Y):
-        if np.any(self.sigma) and not self.sigma==() :
+        if np.any(self.sigma) and not self.sigma==():
             return np.dot(self.cholsigmainv, Y)
         else:
             return Y
@@ -266,7 +331,6 @@ class GLS(LikelihoodModel):
             return np.dot(design, self.results.params)
         else:
             return np.dot(design, params)
-
 
     def loglike(self, params):
         """
