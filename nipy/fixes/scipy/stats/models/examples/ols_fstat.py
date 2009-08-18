@@ -2,6 +2,9 @@
 
 linear restriction is R \beta = 0
 R is (nr,nk), beta is (nk,1) (in matrix notation)
+
+
+TODO: check to get simultaneous t-tests back
 """
 
 import numpy as np
@@ -130,6 +133,7 @@ R = np.atleast_2d([0, 1, -1, 2])
 Ftest = res.f_test(R)
 print repr((Ftest.F, Ftest.pvalue))
 
+print 'simultaneous ttest for zero effects'
 R = np.eye(ncat)[:-1,:]
 ttest = res.t_test(R)
 print repr((np.diag(ttest.t), np.diag(ttest.pvalue)))
@@ -172,6 +176,7 @@ print repr((Ftest.F, Ftest.pvalue))
 ttest = res2.t_test(R)
 #print repr((np.diag(ttest.t), np.diag(ttest.pvalue)))
 print repr((ttest.t, ttest.pvalue))
+
 
 from scipy import stats
 stats.glm(y[xcat<2].ravel(), xcat[xcat<2].ravel())
