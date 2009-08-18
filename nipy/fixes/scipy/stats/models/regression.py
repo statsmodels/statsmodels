@@ -1,9 +1,13 @@
 """
-This module implements some standard regression models: OLS and WLS
-models, as well as an AR(p) regression model.
+This module implements some standard regression models:
 
-Models are specified with a design matrix and are fit using their
-'fit' method.
+Generalized Least Squares (GLS),
+Ordinary Least Squares (OLS),
+and Weighted Least Squares (WLS),
+as well as an GLS model with autoregressive error terms GLSAR(p)
+
+Models are specified with an endogenous response variable and an
+exogenous design matrix and are fit using their `fit` method.
 
 Subclasses that have more complicated covariance matrices
 should write over the 'whiten' method as the fit method
@@ -13,6 +17,15 @@ General reference for regression models:
 
 'Introduction to Linear Regression Analysis', Douglas C. Montgomery,
     Elizabeth A. Peck, G. Geoffrey Vining. Wiley, 2006.
+
+Econometrics references for regression models:
+
+R. Davidson and J.G. MacKinnon.  "Econometric Theory and Methods," Oxford,
+    2004.
+
+W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
+
+
 
 """
 
@@ -28,12 +41,12 @@ from scipy.linalg import norm, toeplitz
 from models.model import LikelihoodModel, LikelihoodModelResults
 from models import tools
 from models.tools import add_constant
-from scipy import stats, derivative
-from scipy.stats.stats import ss        # could be avoided to eliminate overhead
+from scipy import stats
+from scipy.stats.stats import ss
 
 class GLS(LikelihoodModel):
     """
-    Generalized least squares model with a general covariance structure
+    Generalized least squares model with a general covariance structure.
 
     Parameters
     ----------
@@ -68,13 +81,9 @@ class GLS(LikelihoodModel):
 
     llf : float
         `llf` is the value of the maximum likelihood function of the model.
-#TODO: clarify between results llf and model llf.
-#model llf requires the parameters, and results llf, evaluates the llf
-#at the calculated parameters
 
     normalized_cov_params : array
         `normalized_cov_params` is a p x p array that is the inverse of ...
-#TODO: clarify
         In matrix notation this can be written (X^(T)X)^(-1)
 
     sigma :
@@ -97,10 +106,11 @@ class GLS(LikelihoodModel):
         Returns the Fisher information matrix.
 
     initialize
-#TODO: initialize as a public method?
+        (Re)-initialize a model.
 
     newton
         Used to solve the maximum likelihood problem.
+        Not currently implemented.
 
     predict
         Returns the fitted values given the parameters and exogenous design.
@@ -110,13 +120,6 @@ class GLS(LikelihoodModel):
 
     whiten
         TODO
-
-
-    Formulas
-    --------
-    calc_params attribute:
-    ..math :: X^{+}\approx(X^{T}X)^{-1}X^{T}
-
     """
     def __init__(self, endog, exog, sigma=None):
         self.sigma = sigma
@@ -128,6 +131,8 @@ class GLS(LikelihoodModel):
     def initialize(self):
         self.wdesign = self.whiten(self._exog)
         #JP: calc_params is not an informative name, but anything better?
+        #SS: gen_inv?  it's the generalized inverse
+        # ie., beta = calc_params dot y
         self.calc_params = np.linalg.pinv(self.wdesign)
         self.normalized_cov_params = np.dot(self.calc_params,
                                          np.transpose(self.calc_params))
@@ -141,7 +146,6 @@ class GLS(LikelihoodModel):
         else:
             return Y
 
-#TODO: Do we need df_model and df_resid defined twice?
     def fit(self):
         """
         Full fit of the model including estimate of covariance matrix,
@@ -187,25 +191,17 @@ class GLS(LikelihoodModel):
             Uncentered sum of squares
         Z
             The whitened response variable
-
-        Formulas
-        --------
-        Adjusted R-squared for models with an intercept
-        .. math :: 1-\frac{\left(n-1\right)}{\left(n-p\right)}\left(1-R^{2}\right)
-
-        R-squared for models with an intercept
-        .. math :: 1-\frac{\sum e_{i}^{2}}{\sum(y_{i}-\overline{y})^{2}}
         """
         Z = self.whiten(self._endog)
-        #JP put beta=np.dot(self.calc_params, Z) on separate line with temp variable
-        # for better readability
+        beta = np.dot(self.calc_params, Z)
         # should this use lstsq instead?
-        lfit = RegressionResults(self, np.dot(self.calc_params, Z),
+        lfit = RegressionResults(self, beta,
                        normalized_cov_params=self.normalized_cov_params)
         lfit.predict = np.dot(self._exog, lfit.params)
 #        lfit.resid = Z - np.dot(self.wdesign, lfit.params)
 #TODO: why was the above in the original?  do we care about whitened resids?
 #        lfit.resid = Y - np.dot(self._exog, lfit.params)
+#TODO: check discussion in D&M
         lfit.Z = Z   # not a good name wendog analogy to wdesign
         lfit.df_resid = self.df_resid
         lfit.df_model = self.df_model
@@ -238,11 +234,7 @@ class GLS(LikelihoodModel):
 
         lfit.uTSS = ss(lfit.Z)
 # Centered R2 for models with intercepts
-# would be different for no constant regression...
-#        if self.hascons is True:
         lfit.Rsq = 1 - lfit.SSR/lfit.cTSS
-#        else:
-#            lfit.Rsq = 1 - lfit.SSR/lfit.uTSS
         lfit.ESS = ss(lfit.predict - np.mean(lfit.Z))
         lfit.SSR = ss(lfit.resid)
         lfit.adjRsq = 1 - (lfit.nobs - 1)/(lfit.nobs - (lfit.df_model+1))\
@@ -253,21 +245,21 @@ class GLS(LikelihoodModel):
         lfit.F = lfit.MSE_model/lfit.MSE_resid
         lfit.F_p = 1 - stats.f.cdf(lfit.F, lfit.df_model, lfit.df_resid)
         lfit.bse = np.sqrt(np.diag(lfit.cov_params()))
-        lfit.llf = self.logLike(lfit.params)
+        lfit.llf = self.loglike(lfit.params)
         lfit.aic = -2 * lfit.llf + 2*(self.df_model+1)
         lfit.bic = -2 * lfit.llf + np.log(lfit.nobs)*(self.df_model+1)
 
-    def logLike(self, params):
+    def loglike(self, params):
         """
         Returns the value of the gaussian loglikelihood function at b.
 
         Given the whitened design matrix, the loglikelihood is evaluated
-        at the parameter vector `b` for the dependent variable `Y`.
+        at the parameter vector `params` for the dependent variable `Y`.
 
         Parameters
         ----------
         `params` : array-like
-            The parameter estimates.  Must be of length df_model.
+            The parameter estimates.
 
         Returns
         -------
@@ -284,11 +276,7 @@ class GLS(LikelihoodModel):
 
         The BIC (or Schwartz Criterion) is
         .. math:: \text{BIC}=\log\frac{SSR}{n}+\frac{K}{n}\log n
-        ..
 
-        References
-        ----------
-        .. [1] W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
         """
         nobs = float(self._exog.shape[0])
         nobs2 = nobs / 2.0
@@ -297,66 +285,44 @@ class GLS(LikelihoodModel):
         llf -= (1+np.log(np.pi/nobs2))*nobs2  # with constant
         return llf
 
-    def score(self, params):
-        """
-        Score function of the classical OLS Model.
-
-        The gradient of logL with respect to params
-
-        Parameters
-        ----------
-        params : array-like
-
-        """
-        #JP: this is generic and should go into LikeliHoodModel
-        return derivative(self.llf, params, dx=1e-04, n=1, order=3)
-
-    def information(self, params):
-        """
-        Fisher information matrix of model
-        """
-        raise NotImplementedError
-
-
-    def newton(self, params):
-        """
-        """
-        raise NotImplementedError
-
 
 class WLS(GLS):
-    #FIXME: update the example to the correct values returned once tested
     """
-    A regression model with diagonal but non-identity covariance
-    structure. The weights are presumed to be
-    (proportional to the) inverse of the
+    A regression model with diagonal but non-identity covariance structure.
+    The weights are presumed to be (proportional to the) inverse of the
     variance of the observations.
 
-    >>> import numpy as np
-    >>>1
-    >>> from models.tools import add_constant
-    >>> from models.regression import WLS
-    >>>
+    Parameters
+    ----------
+
+    Methods
+    -------
+
+    Attributes
+    ----------
+
+    Examples
+    ---------
+    >>>import numpy as np
+    >>>import models
+    >>>import numpy as np
     >>> Y = [1,3,4,5,2,3,4]
     >>> X = range(1,8)
-    >>> X = add_constant(X)
-    >>>
-    >>> model = WLS(Y,X, weights=range(1,8))
-    >>> results = model.fit()
-    >>>
+    >>> X = models.tools.add_constant(X)
+    >>> model1 = models.WLS(Y,X, weights=range(1,8))
+    >>> results = model1.fit()
     >>> results.params
     array([ 0.0952381 ,  2.91666667])
     >>> results.t()
-    array([ 0.35684428,  2.0652652 ])
+    array([ 0.61890419,  3.58195812])
     >>> print results.Tcontrast([0,1])
-    <T contrast: effect=2.91666666667, sd=1.41224801095, t=2.06526519708, df_denom=5>
+    <T contrast: effect=2.9166666666666674, sd=0.81426598880777334, t=3.5819581153538946, p=0.0079210215745977308, df_denom=5>
     >>> print results.Fcontrast(np.identity(2))
-    <F contrast: F=26.9986072423, df_denom=5, df_num=2>
-    """
+    <F contrast: F=81.213965087281849, p=0.00015411866558, df_denom=5, df_num=2>    """
 
     def __init__(self, endog, exog, weights=1):
         weights = np.array(weights)
-        if weights.shape == (): # scalar
+        if weights.shape == ():
             self.weights = weights
         else:
             design_rows = exog.shape[0]
@@ -375,7 +341,7 @@ class WLS(GLS):
         if X.ndim == 1:
             return X * np.sqrt(self.weights)
         elif X.ndim == 2:
-            if np.shape(self.weights) == ():    # 0-d weights
+            if np.shape(self.weights) == ():
                 whitened = np.sqrt(self.weights)*X
             else:
                 whitened = np.sqrt(self.weights)[:,None]*X
@@ -387,24 +353,14 @@ class OLS(WLS):
 
     Parameters
     ----------
-        `design`: array-like
-            This is your design matrix.  Data are assumed to be column ordered
-            with observations in rows.
+        `endog` : array-like
+            1d vector of response/dependent variable
+
+        `exog`: array-like
+            Column ordered (observations in rows) design matrix.
 
     Methods
     -------
-    model.llf(b=self.params, Y)
-        Returns the log-likelihood of the parameter estimates
-
-        Parameters
-        ----------
-        b : array-like
-            `b` is an array of parameter estimates the log-likelihood of which
-            is to be tested.
-        Y : array-like
-            `Y` is the vector of dependent variables.
-    model.__init___(design)
-        Creates a `OLS` from a design.
 
     Attributes
     ----------
@@ -450,6 +406,26 @@ class OLS(WLS):
     """
     def __init__(self, endog, exog=None):
         super(OLS, self).__init__(endog, exog)
+
+    def loglike(self, params):
+        '''
+        The likelihood function for the clasical OLS model.
+
+        Parameters
+        ----------
+        params : array-like
+            The coefficients with which to estimate the loglikelihood.
+
+        Returns
+        -------
+        The concentrated likelihood function evaluated at params.
+        '''
+        nobs2 = self._endog.shape[0]/2.
+        return -nobs2*np.log(2*np.pi)-nobs2*np.log(1/(2*nobs2) *\
+                np.dot(np.transpose(self._endog -
+                    np.dot(self._exog, params)),
+                    (self._endog - np.dot(self._exog,params)))) -\
+                    nobs2
 
     def whiten(self, Y):
         """

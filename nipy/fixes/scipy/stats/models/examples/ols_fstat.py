@@ -107,8 +107,9 @@ print repr((Ftest2b.F, Ftest2b.pvalue))
 print t2a**2 - np.array((Ftest2a.F, Ftest2b.F))
 npt.assert_almost_equal(t2a**2, np.array((Ftest2a.F, Ftest2b.F)))
 #npt.assert_almost_equal(t2pval, np.array((Ftest2a.pvalue, Ftest2b.pvalue)))
+npt.assert_almost_equal(t2pval*2, np.array((Ftest2a.pvalue, Ftest2b.pvalue)))
 
-# Why is there a huge difference in the pvalue comparing
+#print "Why is there a huge difference in the pvalue comparing"
 # ttest and Ftest with a single row
 # shouldn't this be the same ---> verify
 # error in pvalue of Ftest, statistics are correct
@@ -142,7 +143,6 @@ R = np.atleast_2d([0, 1, 1, 2])
 np.dot(R,res.params)
 Ftest = res.f_test(R)
 print repr((Ftest.F, Ftest.pvalue))
-print 'here'
 ttest = res.t_test(R)
 #print repr((np.diag(ttest.t), np.diag(ttest.pvalue)))
 print repr((ttest.t, ttest.pvalue))
@@ -160,7 +160,7 @@ np.dot(R,res.params)
 Ftest = res.f_test(R)
 print repr((Ftest.F, Ftest.pvalue))
 ttest = res.t_test(R)
-print repr((np.diag(ttest.t), np.diag(ttest.pvalue)))
+#print repr((np.diag(ttest.t), np.diag(ttest.pvalue)))
 print repr((ttest.t, ttest.pvalue))
 
 
@@ -174,8 +174,10 @@ np.dot(R,res2.params)
 Ftest = res2.f_test(R)
 print repr((Ftest.F, Ftest.pvalue))
 ttest = res2.t_test(R)
-print repr((np.diag(ttest.t), np.diag(ttest.pvalue)))
+#print repr((np.diag(ttest.t), np.diag(ttest.pvalue)))
 print repr((ttest.t, ttest.pvalue))
 
+
+from scipy import stats
 stats.glm(y[xcat<2].ravel(), xcat[xcat<2].ravel())
 stats.ttest_ind(y[xcat==0], y[xcat==1])

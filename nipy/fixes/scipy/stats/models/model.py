@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.stats import t, norm
-from scipy import optimize
+from scipy import optimize, derivative
 from models.contrast import ContrastResults
 from models.tools import recipr
 
@@ -39,8 +39,8 @@ class LikelihoodModel(Model):
     """
 
     def __init__(self, endog, exog=None):
-        self._endog = endog
-        self._exog = exog
+        self._endog = np.asarray(endog)
+        self._exog = np.asarray(exog)
         self.initialize()
 
     def initialize(self):
@@ -59,10 +59,11 @@ class LikelihoodModel(Model):
 
     def score(self, params):
         """
-        Score function of model = gradient of logL with respect to
-        params.
+        Score function of model.
+
+        The gradient of logL with respect to params.
         """
-        raise NotImplementedError
+        return derivative(self.loglike, params, dx=1e-04, n=1, order=3)
 
     def information(self, params):
         """
@@ -84,17 +85,21 @@ class LikelihoodModel(Model):
 #       so supplied or default guess?
     def newton(self, params):
         #JP this is not newton, it's fmin
-# optimize.newton is only for singlevariate?
-# fmin can take multivariate
-# probably called newton bc it's the well known
-# root finding for MLE
+# it also doesn't work
+# tried fmin, fmin_ncg, fmin_powell
+# converges to wrong estimates
+# will probably need to write own root-finding routine
+#FIXME: should we call it MLE for Maximum Likelihood Estimator?
 # SS no this isn't used anywhere right now, but needs attention for
 # MLE
         # is this used anywhere
         # results should be attached to self
         f = lambda params: -self.loglike(params)
-        xopt, fopt, iter, funcalls, warnflag =\
-          optimize.fmin(f, params, full_output=True)
+        score = lambda params: -self.score(params)
+#        xopt, fopt, iter, funcalls, warnflag =\
+#          optimize.fmin(f, params, full_output=True)
+#        xopt, fopt, fcalls, gcalls, hcalls, warnflag = \
+#                optimize.fmin_ncg(f, params, score)
         converge = not warnflag
         extras = dict(iter=iter, evaluations=funcalls, converge=converge)
 #        return LikelihoodModelResults(self, params, llf=fopt, **extras)
@@ -221,12 +226,12 @@ class LikelihoodModelResults(Results):
         -----------
         r_matrix : array-like
             Can be 1d, or 2d.  Can be used alone or with other.
-        column :  array-like
+        column :  array-like, optional
             Must be used on its own.  Can be 0d or 1d see below.
-        scale : float
+        scale : float, optional
             Can be specified or not.  Default is None, which means that
             the scale argument is taken from the model.
-        other : array-like
+        other : array-like, optional
             Can be used when r_matrix is specified.
 
         Returns
@@ -239,10 +244,10 @@ class LikelihoodModelResults(Results):
         (scale)*(X.T X)^(-1)
 
         If contrast is specified it pre and post-multiplies as follows
-        (scale) * contrast (X.T X)^(-1) contrast.T
+        (scale) * r_matrix (X.T X)^(-1) r_matrix.T
 
         If contrast and other are specified returns
-        (scale) * contrast (X.T X)^(-1) other.T
+        (scale) * r_matrix (X.T X)^(-1) other.T
 
         If column is specified returns
         (scale) * (X.T X)^(-1)[column,column] if column is 0d
@@ -296,6 +301,9 @@ arguments.'
         ----------
         r_matrix : array-like
             A length p row vector specifying the linear restrictions.
+        scale : float, optional
+            An optional `scale` to use.  Default is the scale specified
+            by the model fit.
 
         scale : scalar
 
@@ -338,8 +346,12 @@ arguments.'
         if self.normalized_cov_params is None:
             raise ValueError, 'Need covariance of parameters for computing \
 T statistics'
-        if r_matrix.shape[-1] != self.params.shape[0]:
-            raise ValueError, 'r_matrix and params are not aligned'
+        if r_matrix.ndim == 1:
+            if r_matrix.shape[0] != self.params.shape[0]:
+                raise ValueError, 'r_matrix and params are not aligned'
+        elif r_matrix.ndim >1:
+            if r_matrix.shape[1] != self.params.shape[0]:
+                raise ValueError, 'r_matrix and params are not aligned'
 
         _t = _sd = None
 
@@ -366,11 +378,12 @@ T statistics'
         r_matrix : array-like
             q x p array where q is the number of restrictions to test and
             p is the number of regressors in the full model fit.
-            If q is 1 then f_test is equivalent to the square of t_test.
-        scale : float
+            If q is 1 then f_test(r_matrix).fvalue is equivalent to the square of
+            t_test(r_matrix).t
+        scale : float, optional
             Default is 1.0 for no scaling.
-        invcov : array-like
-            Optional, a qxq matrix to specify an inverse covariance
+        invcov : array-like, optional
+            A qxq matrix to specify an inverse covariance
             matrix based on a restrictions matrix.
 
         Examples
@@ -430,35 +443,45 @@ T statistics'
 
     def conf_int(self, alpha=.05, cols=None):
         """
-        Returns the confidence interval of the specified params estimates.
+        Returns the confidence interval of the fitted parameters.
 
         Parameters
         ----------
         alpha : float, optional
             The `alpha` level for the confidence interval.
-            ie., `alpha` = .05 returns a 95% confidence interval.
-        cols : tuple, optional
+            ie., The default `alpha` = .05 returns a 95% confidence interval.
+        cols : array-like, optional
             `cols` specifies which confidence intervals to return
 
-        Returns : array
-            Each item contains [lower, upper]
+        Returns
+        --------
+        conf_int : array
+            Each row contains [lower, upper] confidence interval
 
         Example
         -------
-        >>>import numpy as np
-        >>>from numpy.random import standard_normal as stan
-        >>>import nipy.fixes.scipy.stats.models as SSM
-        >>>x = np.hstack((stan((30,1)),stan((30,1)),stan((30,1))))
-        >>>params=np.array([3.25, 1.5, 7.0])
-        >>>y = np.dot(x,params) + stan((30))
-        >>>model = SSM.regression.OLSModel(x, hascons=False).fit(y)
-        >>>model.conf_int(cols=(1,2))
+        >>>import models
+        >>>from models.datasets.longley.data import load
+        >>>data = load()
+        >>>data.exog = models.tools.add_constant(data.exog)
+        >>>results = models.OLS(data.endog, data.exog).fit()
+        >>>results.conf_int()
+        array([[ -1.77029035e+02,   2.07152780e+02],
+       [ -1.11581102e-01,   3.99427438e-02],
+       [ -3.12506664e+00,  -9.15392966e-01],
+       [ -1.51794870e+00,  -5.48505034e-01],
+       [ -5.62517214e-01,   4.60309003e-01],
+       [  7.98787515e+02,   2.85951541e+03],
+       [ -5.49652948e+06,  -1.46798779e+06]])
+
+        >>>results.conf_int(cols=(1,2))
+        array([[-0.1115811 ,  0.03994274],
+       [-3.12506664, -0.91539297]])
 
         Notes
         -----
-        TODO:
-        tails : string, optional
-            `tails` can be "two", "upper", or "lower"
+        The confidence interval is based on Student's t distribution for all
+        models except RLM and GLM, which uses the standard normal distribution.
         """
         if self.__class__.__name__ in ['RLMResults','GLMResults']:
             dist = norm
@@ -473,16 +496,15 @@ T statistics'
             lower = self.params - dist.ppf(1-alpha/2)*self.bse
             upper = self.params + dist.ppf(1-alpha/2)*self.bse
         elif cols is not None and dist == t:
-            lower=[]
-            upper=[]
-            for i in cols:
-                lower.append(self.params[i] - dist.ppf(1-\
-                        alpha/2,self.df_resid) *self.bse)
-                upper.append(self.params[i] + dist.ppf(1-\
-                        alpha/2,self.df_resid) *self.bse)
+            cols = np.asarray(cols)
+            lower = self.params[cols] - dist.ppf(1-\
+                        alpha/2,self.df_resid) *self.bse[cols]
+            upper = self.params[cols] + dist.ppf(1-\
+                        alpha/2,self.df_resid) *self.bse[cols]
         elif cols is not None and dist == norm:
-            lower = self.params - dist.ppf(1-alpha/2)*self.bse
-            upper = self.params + dist.ppf(1-alpha/2)*self.bse
+            cols = np.asarray(cols)
+            lower = self.params[cols] - dist.ppf(1-alpha/2)*self.bse[cols]
+            upper = self.params[cols] + dist.ppf(1-alpha/2)*self.bse[cols]
         return np.asarray(zip(lower,upper))
 
 

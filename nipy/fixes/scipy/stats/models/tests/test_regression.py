@@ -41,6 +41,11 @@ class check_regression_results(object):
         self.check_confidenceintervals(self.res1.conf_int(),
                 self.res2.conf_int)
 
+    def test_conf_int_subset(self):
+        ci1 = self.res1.conf_int(cols=(1,2))
+        ci2 = self.res1.conf_int()[1:3]
+        assert_almost_equal(ci1, ci2, DECIMAL)
+
     def test_scale(self):
         assert_almost_equal(self.res1.scale, self.res2.scale, DECIMAL)
 
@@ -110,7 +115,7 @@ class TestFtest(object):
         self.Ftest = self.res1.f_test(self.R)
 
     def test_F(self):
-        assert_almost_equal(self.Ftest.F, self.res1.F, DECIMAL)
+        assert_almost_equal(self.Ftest.fvalue, self.res1.F, DECIMAL)
 
     def test_p(self):
         assert_almost_equal(self.Ftest.pvalue, self.res1.F_p, DECIMAL)
@@ -142,7 +147,7 @@ class TestFTest2(TestFtest):
             raise SkipTest, "car library not installed for R"
 
     def test_F(self):
-        assert_almost_equal(self.Ftest2.F, self.F['F'][1], DECIMAL)
+        assert_almost_equal(self.Ftest2.fvalue, self.F['F'][1], DECIMAL)
 
     def test_p(self):
         assert_almost_equal(self.Ftest2.pvalue, self.F['Pr(>F)'][1], DECIMAL)
@@ -173,7 +178,7 @@ class TestTtest(object):
             self.Ttest = self.res1.t_test(self.R)
 
     def test_T(self):
-        assert_almost_equal(np.diag(self.Ttest.t), self.res1.t(), DECIMAL)
+        assert_almost_equal(np.diag(self.Ttest.tvalue), self.res1.t(), DECIMAL)
 
     def test_sd(self):
         assert_almost_equal(np.diag(self.Ttest.sd), self.res1.bse, DECIMAL)
