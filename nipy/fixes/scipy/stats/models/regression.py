@@ -248,6 +248,8 @@ class GLS(LikelihoodModel):
         lfit.llf = self.loglike(lfit.params)
         lfit.aic = -2 * lfit.llf + 2*(self.df_model+1)
         lfit.bic = -2 * lfit.llf + np.log(lfit.nobs)*(self.df_model+1)
+        lfit.pvalues = stats.t.sf(np.abs(lfit.t()), lfit.df_resid)
+        lfit.PostEstimation = PostRegression(lfit)
 
     def loglike(self, params):
         """
@@ -652,6 +654,92 @@ class RegressionResults(LikelihoodModelResults):
         """
         #JP: this doesn't look correct for GLMAR
         return np.dot(design, self.params)
+
+#TODO: these need to be tested
+class PostRegression(object):
+    def __init__(self, results):
+        self.results = results
+        self.y_varnm = 'Y'
+        self.x_varnm = ['X.%d' %
+                (i) for i in range(self.results.model._exog.shape[1])]
+        self.modeltype = \
+                str(self.results.model.__class__).split(' ')[1].strip('\'>')
+
+    def durbin_watson(self):
+        """
+        Calculates the Durbin-Waston statistic
+        """
+        diff_resids = np.diff(self.results.resid,1)
+        dw = np.dot(diff_resids,diff_resids) / \
+                np.dot(self.results.resid,self.results.resid);
+        return dw
+
+    def omni_norm_test(self):
+        """
+        Omnibus test for normality
+        """
+        return stats.normaltest(self.results.resid)
+
+    def jarque_bera(self):
+        """
+        Calculate residual skewness, kurtosis, and do the JB test for normality
+        """
+
+        # Calculate residual skewness and kurtosis
+        skew = stats.skew(self.results.resid)
+        kurtosis = 3 + stats.kurtosis(self.results.resid)
+
+        # Calculate the Jarque-Bera test for normality
+        JB = (self.results.nobs/6) * (np.square(skew) + (1/4)*np.square(kurtosis-3))
+        JBpv = 1-stats.chi2.cdf(JB,2);
+
+        return JB, JBpv, skew, kurtosis
+
+#FIXME: print sig digits for better alignment
+    def summary(self):
+        """
+        Printing model output to screen
+        """
+
+        import time # delay import until here?
+        import os
+
+        # local time & date
+        t = time.localtime()
+
+        # extra stats
+        llf, aic, bic = self.results.llf, self.results.aic, self.results.bic
+        JB, JBpv, skew, kurtosis = self.jarque_bera()
+        omni, omnipv = self.omni_norm_test()
+
+
+        fit_sum = os.linesep+'=============================================================================='+os.linesep
+        fit_sum += "Dependent Variable: " + self.y_varnm + os.linesep
+        fit_sum += "Model: " + self.modeltype + os.linesep
+        fit_sum += "Method: Least Squares" + os.linesep
+        fit_sum += "Date: " + time.strftime("%a, %d %b %Y",t) + os.linesep
+        fit_sum += "Time: " + time.strftime("%H:%M:%S",t) + os.linesep
+        fit_sum += '# obs:        %5.0f' % self.results.nobs + os.linesep
+        fit_sum += 'Df residuals: %5.0f' % self.results.df_resid + os.linesep
+        fit_sum += 'Df model:     %5.0f' % self.results.df_model + os.linesep
+        fit_sum += '=============================================================================='+os.linesep
+        fit_sum += 'variable     coefficient     std. Error      t-statistic     prob.'+\
+                os.linesep
+        fit_sum += '==============================================================================' + os.linesep
+        for i in range(len(self.x_varnm)):
+            fit_sum += '''% -5s          % -5.6f     % -5.6f     % -5.6f     % -5.6f''' % tuple([self.x_varnm[i],self.results.params[i],self.results.bse[i],self.results.t()[i],self.results.pvalues[i]]) + os.linesep
+        fit_sum += '==============================================================================' + os.linesep
+        fit_sum += 'Models stats                         Residual stats' + os.linesep
+        fit_sum += '==============================================================================' + os.linesep
+        fit_sum += 'R-squared            % -5.6f         Durbin-Watson stat  % -5.6f' % tuple([self.results.Rsq, self.durbin_watson()]) + os.linesep
+        fit_sum += 'Adjusted R-squared   % -5.6f         Omnibus stat        % -5.6f' % tuple([self.results.adjRsq, omni]) + os.linesep
+        fit_sum += 'F-statistic          % -5.6f         Prob(Omnibus stat)  % -5.6f' % tuple([self.results.F, omnipv]) + os.linesep
+        fit_sum += 'Prob (F-statistic)   % -5.6f         JB stat             % -5.6f' % tuple([self.results.F_p, JB]) + os.linesep
+        fit_sum += 'Log likelihood       % -5.6f         Prob(JB)            % -5.6f' % tuple([llf, JBpv]) + os.linesep
+        fit_sum += 'AIC criterion        % -5.6f         Skew                % -5.6f' % tuple([aic, skew]) + os.linesep
+        fit_sum += 'BIC criterion        % -5.6f         Kurtosis            % -5.6f' % tuple([bic, kurtosis]) + os.linesep
+        fit_sum += '==============================================================================' + os.linesep
+        return fit_sum
 
 ### The below is replicated by np.io
 
