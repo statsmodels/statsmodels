@@ -14,24 +14,26 @@ class Model(object):
 
     _results = None
 
+    def __init__(self, endog, exog=None):
+        self._endog = np.asarray(endog)
+        self._exog = np.asarray(exog)
+        self.nobs = float(endog.shape[0])
+
     def fit(self):
         """
         Fit a model to data.
         """
         raise NotImplementedError
 
-#TODO: decide on this.
-#Changed the way that this works.  It's now a predict attribute.
-#        Does this make sense?
-# but predict for AR, should be it's own method, etc.
-# always make this take a params argument as it was?
-    def predict(self):
+#FIXME:  Why not have it as a model method if we're going to put it here anyway?
+#        Putting it in results gives infinite recursion with results property
+    def predict(self, design):
         """
         After a model has been fit, results are (assumed to be) stored
         in self.results, which itself should have a predict method.
-
         """
-        return self.results.predict
+        raise NotImplementedErrror
+#        return self.results.predict(design)
 
 class LikelihoodModel(Model):
     """
@@ -39,8 +41,7 @@ class LikelihoodModel(Model):
     """
 
     def __init__(self, endog, exog=None):
-        self._endog = np.asarray(endog)
-        self._exog = np.asarray(exog)
+        super(LikelihoodModel, self).__init__(endog, exog)
         self.initialize()
 
     def initialize(self):

@@ -51,27 +51,27 @@ class GLS(LikelihoodModel):
     Parameters
     ----------
     endog : array-like
-        `endog` is a 1-d vector that contains the response variable
+        `endog` is a 1-d vector that contains the response/independent variable
 
     exog : array-like
-        `exog` is a nobs x p vector where nobs is the number of observations
+        `exog` is a nobs x p vector where nobs is the number of observations and
+        p is the number of regressors/dependent variables including the intercept
+        if one is included in the data.
 
     sigma : scalar or array
        `sigma` is the weighting matrix of the covariance.
-       The default is 1 for no scaling.
+       The default is None for no scaling.  See the docs/gls.rst for more info.
 
     Attributes
     ----------
     calc_params : array
-        `calc_params` is a p x n array that is the Moore-Penrose pseudoinverse
-        of the design matrix where p is the number of regressors including the
-        intercept and n is the number of observations. It is approximately
-        equal to (X^(T)X)^(-1)X^(T) in matrix notation.
+        `calc_params` is the p x n Moore-Penrose pseudoinverse
+        of the design matrix. In matrix notation it is approximately
+        (X^(T)X)^(-1)X^(T)
 
     df_model : scalar
         The model degrees of freedom is equal to p - 1, where p is the number
-        of regressors.  Note that the intercept is not included in the reported
-        degrees of freedom.
+        of regressors.  Note that the intercept is not included.
 
     df_resid : scalar
         The residual degrees of freedom is equal to the number of observations
@@ -112,7 +112,7 @@ class GLS(LikelihoodModel):
         Used to solve the maximum likelihood problem.
         Not currently implemented.
 
-    predict
+    fittedvalues
         Returns the fitted values given the parameters and exogenous design.
 
     score
@@ -136,7 +136,7 @@ class GLS(LikelihoodModel):
         self.calc_params = np.linalg.pinv(self.wdesign)
         self.normalized_cov_params = np.dot(self.calc_params,
                                          np.transpose(self.calc_params))
-        self.df_resid = self.wdesign.shape[0] - tools.rank(self._exog)
+        self.df_resid = self.nobs - tools.rank(self._exog)
 #       Below assumes that we will always have a constant
         self.df_model = tools.rank(self._exog)-1
 
@@ -175,7 +175,7 @@ class GLS(LikelihoodModel):
             Mean squared error of the residuals
         MSE_total
             Total mean squared error
-        predict
+        fittedvalues
             The predict the values for a given design
         resid
             The residuals of the model.
@@ -192,17 +192,21 @@ class GLS(LikelihoodModel):
         Z
             The whitened response variable
         """
-        Z = self.whiten(self._endog)
-        beta = np.dot(self.calc_params, Z)
+        wendog = self.whiten(self._endog)
+# shouldn't actual whitened endog be
+#       wendog = np.dot(np.linalg.inv(self.sigma),self._endog)
+# or equivalently
+#       wendog = np.dot(np.dot(self.cholsigmainv.T,self.cholsigmainv),self._endog)
+        beta = np.dot(self.calc_params, wendog)
         # should this use lstsq instead?
         lfit = RegressionResults(self, beta,
                        normalized_cov_params=self.normalized_cov_params)
-        lfit.predict = np.dot(self._exog, lfit.params)
-#        lfit.resid = Z - np.dot(self.wdesign, lfit.params)
-#TODO: why was the above in the original?  do we care about whitened resids?
-#        lfit.resid = Y - np.dot(self._exog, lfit.params)
-#TODO: check discussion in D&M
-        lfit.Z = Z   # not a good name wendog analogy to wdesign
+        lfit.fittedvalues = self.predict(self._exog, beta)
+# D&M says that WLS and GLS postestimation stats should be
+# on transformed data, but this screws up RLM for now?
+        lfit.wresid = wendog - self.predict(self.wdesign, lfit.params)
+        lfit.resid = self._endog - lfit.fittedvalues
+        lfit.wendog = wendog   # not a good name wendog analogy to wdesign
         lfit.df_resid = self.df_resid
         lfit.df_model = self.df_model
         lfit.calc_params = self.calc_params
@@ -220,11 +224,10 @@ class GLS(LikelihoodModel):
         Private method to call additional statistics for GLS.
         Meant to be overwritten by subclass as needed(?).
         """
-        lfit.resid = self._endog - lfit.predict
-        lfit.scale = ss(lfit.resid) / self.df_resid
+        lfit.scale = ss(lfit.wresid) / self.df_resid
         lfit.nobs = float(self.wdesign.shape[0])
-        lfit.SSR = ss(lfit.resid)
-        lfit.cTSS = ss(lfit.Z-np.mean(lfit.Z))
+        lfit.SSR = ss(lfit.wresid)
+        lfit.cTSS = ss(lfit.wendog-np.mean(lfit.wendog))
 #TODO: Z or Y here?  Need to have tests in GLS.
 #JP what does c and u in front of TSS stand for?
 #c is centered and u is uncentered
@@ -232,10 +235,10 @@ class GLS(LikelihoodModel):
 #TODO: more robust tests for WLS or GLS, to see if Y or Z is used.
 # I think Y as well, but Z = Y for OLS
 
-        lfit.uTSS = ss(lfit.Z)
+        lfit.uTSS = ss(lfit.wendog)
 # Centered R2 for models with intercepts
         lfit.Rsq = 1 - lfit.SSR/lfit.cTSS
-        lfit.ESS = ss(lfit.predict - np.mean(lfit.Z))
+        lfit.ESS = ss(lfit.fittedvalues - np.mean(lfit.wendog))
         lfit.SSR = ss(lfit.resid)
         lfit.adjRsq = 1 - (lfit.nobs - 1)/(lfit.nobs - (lfit.df_model+1))\
                 *(1 - lfit.Rsq)
@@ -250,6 +253,20 @@ class GLS(LikelihoodModel):
         lfit.bic = -2 * lfit.llf + np.log(lfit.nobs)*(self.df_model+1)
         lfit.pvalues = stats.t.sf(np.abs(lfit.t()), lfit.df_resid)
         lfit.PostEstimation = PostRegression(lfit)
+
+    def predict(self, design, params=None):
+        """
+        Return linear predicted values from a design matrix.
+        """
+        #JP: this doesn't look correct for GLMAR
+        #SS: it needs its own predict method
+        if self._results is None and params is None:
+            raise ValueError, "If the model has not been fit, then you must specify the params argument."
+        if self._results is not None:
+            return np.dot(design, self.results.params)
+        else:
+            return np.dot(design, params)
+
 
     def loglike(self, params):
         """
@@ -280,8 +297,7 @@ class GLS(LikelihoodModel):
         .. math:: \text{BIC}=\log\frac{SSR}{n}+\frac{K}{n}\log n
 
         """
-        nobs = float(self._exog.shape[0])
-        nobs2 = nobs / 2.0
+        nobs2 = self.nobs / 2.0
         SSR = ss(self._endog - np.dot(self._exog,params))
         llf = -np.log(SSR) * nobs2      # concentrated likelihood
         llf -= (1+np.log(np.pi/nobs2))*nobs2  # with constant
@@ -422,7 +438,7 @@ class OLS(WLS):
         -------
         The concentrated likelihood function evaluated at params.
         '''
-        nobs2 = self._endog.shape[0]/2.
+        nobs2 = self.nobs/2.
         return -nobs2*np.log(2*np.pi)-nobs2*np.log(1/(2*nobs2) *\
                 np.dot(np.transpose(self._endog -
                     np.dot(self._exog, params)),
@@ -459,7 +475,7 @@ class AR(GLS):
     >>> for i in range(6):
     ...     results = model.fit(data['Y'])
     ...     print "AR coefficients:", model.rho
-    ...     rho, sigma = model.yule_walker(data["Y"] - results.predict)
+    ...     rho, sigma = model.yule_walker(data["Y"] - results.fittedvalues)
     ...     model = AR(model.design, rho)
     ...
 ### NOTE ### the above call to yule_walker needs an order = model.order
@@ -647,13 +663,6 @@ class RegressionResults(LikelihoodModelResults):
         if not hasattr(self, 'resid'):
             raise ValueError, 'need normalized residuals to estimate standard deviation'
         return self.resid * tools.recipr(np.sqrt(self.scale))
-
-    def predictors(self, design):
-        """
-        Return linear predictor values from a design matrix.
-        """
-        #JP: this doesn't look correct for GLMAR
-        return np.dot(design, self.params)
 
 #TODO: these need to be tested
 class PostRegression(object):

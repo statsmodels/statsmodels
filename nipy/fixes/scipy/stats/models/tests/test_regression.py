@@ -257,11 +257,11 @@ class test_gls(object):
 
     def test_params(self):
         assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_least)
-        # rounding vs. stata
 
+#FIXME: I know this fails.  Need to get results from a GLS regression
+# or WLS that allows n x n weights
     def test_standarderrors(self):
         assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL_lesser)
-        # rounding vs. stata
 
 class test_gls_scalar(check_regression_results):
     '''

@@ -270,6 +270,9 @@ class longley_gls(object):
     def __init__(self):
         self.params = (6.738948e-02, -4.742739e-01, 9.489888e+04)
         self.bse = (1.086675e-02, 1.557265e-01, 1.415760e+04)
+#FIXME: I don't think the standard errors are taken from the correct
+# covariance matrix.  Decide how to get whitened residuals and
+# fix
 
 ### RLM MODEL RESULTS ###
 

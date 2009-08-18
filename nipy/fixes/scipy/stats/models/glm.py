@@ -67,7 +67,7 @@ class GLM(LikelihoodModel):
 
     def update_history(self, tmp_result, mu):
         self.history['params'].append(tmp_result.params)
-        self.history['predict'].append(tmp_result.predict)
+        self.history['predict'].append(tmp_result.fittedvalues)
         self.history['deviance'].append(self.family.deviance(self.y, mu))
 
     def estimate_scale(self, mu):
@@ -207,9 +207,9 @@ class GLMResults(LikelihoodModelResults):
         self.resid_anscombe = model.family.resid_anscombe(model.y,model.mu)
         self.resid_dev = model.family.devresid(model.y, model.mu)
         self.pearsonX2 = np.sum(self.resid_pearson**2)
-        self.predict = np.dot(model._exog,self.params)
+        self.fittedvalues = np.dot(model._exog,self.params)
         null = WLS(model.y,np.ones((len(model.y),1)),
-            weights=model.data_weights).fit().predict
+            weights=model.data_weights).fit().fittedvalues
         # null is the predicted values of constant only fit
         self.null_deviance = model.family.deviance(model.y,null)
         self.deviance = model.family.deviance(model.y,model.mu)
@@ -222,7 +222,7 @@ class GLMResults(LikelihoodModelResults):
         if self._llf is None:
             if isinstance(self.model.family, family.NegativeBinomial):
                 self._llf = self.model.family.logLike(self.model.y,
-                    predicted=self.predict)
+                    predicted=self.fittedvalues)
             else:
                 self._llf = self.model.family.logLike(self.model.y,
                     self.model.mu, scale=self.scale)
