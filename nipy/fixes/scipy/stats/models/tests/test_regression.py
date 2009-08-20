@@ -147,13 +147,14 @@ class TestFTest2(TestFtest):
             raise SkipTest, "Rpy not installed"
         try:
             r.library('car')
-            self.R2 = [[0,1,-1,0,0,0,0],[0, 0, 0, 0, 1, -1, 0]]
-            self.Ftest2 = self.res1.f_test(self.R2)
-            self.R_Results = RModel(self.data.endog, self.data.exog, r.lm).robj
-            self.F = r.linear_hypothesis(self.R_Results,
-                    r.c('x.2 = x.3', 'x.5 = x.6'))
-        except:
+        except RPy_RException:
             raise SkipTest, "car library not installed for R"
+        self.R2 = [[0,1,-1,0,0,0,0],[0, 0, 0, 0, 1, -1, 0]]
+        self.Ftest2 = self.res1.f_test(self.R2)
+        self.R_Results = RModel(self.data.endog, self.data.exog, r.lm).robj
+        self.F = r.linear_hypothesis(self.R_Results,
+                r.c('x.2 = x.3', 'x.5 = x.6'))
+
 
     def test_F(self):
         assert_almost_equal(self.Ftest2.fvalue, self.F['F'][1], DECIMAL)
@@ -176,6 +177,7 @@ class TestTtest(object):
     def __init__(self):
         from models.datasets.longley.data import load
         data = load()
+        self.data = data
         data.exog = add_constant(data.exog)
         self.res1 = OLS(data.endog, data.exog).fit()
 
@@ -185,6 +187,7 @@ class TestTtest(object):
         else:
             self.R = np.identity(len(self.res1.params))
             self.Ttest = self.res1.t_test(self.R)
+            self.R_Results = RModel(self.data.endog, self.data.exog, r.lm).robj
 
     def test_T(self):
         assert_almost_equal(np.diag(self.Ttest.tvalue), self.res1.t(), DECIMAL)
@@ -202,7 +205,7 @@ class TestTtest(object):
     def test_effect(self):
         assert_almost_equal(self.Ttest.effect, self.res1.params)
 
-
+#this test is broken wrong arguments in linear hypothesis
 class TestTtest2(TestTtest):
     '''
     Tests the hypothesis that the coefficients on POP and YEAR
@@ -213,19 +216,21 @@ class TestTtest2(TestTtest):
             raise SkipTest, "Rpy not installed"
         try:
             r.library('car')
-            R = np.zeros(len(self.res1.params))
-            R[4:6] = [1,-1]
-            self.R = R
-            self.Ttest1 = self.res1.t_test(self.R)
-            self.Ttest2 = r.linear_hypothesis(self.R_Results['F'], 'x.5 = x.6')
-            t = np.inner(self.R, self.res1.params)/\
-                (np.sign(np.inner(self.R, self.res1.params))*\
-                np.sqrt(self.Ttest2['F'][1]))
-            self.t = t
-            effect = np.inner(self.R, self.res1.params)
-            self.effect = effect
-        except:
+        except RPy_RException:
             raise SkipTest, "car library not installed for R"
+        R = np.zeros(len(self.res1.params))
+        R[4:6] = [1,-1]
+        self.R = R
+        self.Ttest1 = self.res1.t_test(self.R)
+        self.R_Results = RModel(self.data.endog, self.data.exog, r.lm).robj
+        self.Ttest2 = r.linear_hypothesis(self.R_Results['F'], r.c('x.5 = x.6',))
+        t = np.inner(self.R, self.res1.params)/\
+            (np.sign(np.inner(self.R, self.res1.params))*\
+            np.sqrt(self.Ttest2['F'][1]))
+        self.t = t
+        effect = np.inner(self.R, self.res1.params)
+        self.effect = effect
+
 
     def test_T(self):
         assert_equal(self.Ttest1.t, self.t, DECIMAL)
@@ -357,7 +362,9 @@ class test_yule_walker(object):
         assert_almost_equal(self.rho, self.R_params, DECIMAL)
 
 if __name__=="__main__":
-    run_module_suite()
+    #run_module_suite()
+    import nose
+    nose.runmodule(argv=[__file__,'-vvs','-x'], exit=False) #, '--pdb'
 
 #  Robust error tests.  Compare values computed with SAS
 #    res0 = SSM.regression.OLS(x).fit(y, HCC='HC0')
