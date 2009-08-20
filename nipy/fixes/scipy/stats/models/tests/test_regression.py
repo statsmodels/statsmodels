@@ -77,14 +77,22 @@ class check_regression_results(object):
         assert_almost_equal(self.res1.llf, self.res2.llf, DECIMAL)
 
     def test_AIC(self):
-        assert_almost_equal(self.res1.aic, self.res2.AIC, DECIMAL)
+        assert_almost_equal(self.res1.aic, self.res2.aic, DECIMAL)
 
     def test_BIC(self):
-        assert_almost_equal(self.res1.bic, self.res2.BIC, DECIMAL)
+        assert_almost_equal(self.res1.bic, self.res2.bic, DECIMAL)
 
-#TODO: add residuals from another package or R
-#    def test_resids(self):
-#        assert_almost_equal(self.res1.resid, self.res2.resid, DECIMAL)
+    def test_pvalues(self):
+        assert_almost_equal(self.res1.pvalues, self.res2.pvalues, DECIMAL)
+
+    def test_wresid(self):
+        if not hasattr(self.res2, 'wresid'):
+            raise SkipTest('Comparison results (res2) has no wresid')
+        else:
+            assert_almost_equal(self.res1.wresid, self.res2.wresid, DECIMAL)
+
+    def test_resids(self):
+        assert_almost_equal(self.res1.resid, self.res2.resid, DECIMAL)
 
 class test_ols(check_regression_results):
     def __init__(self):
@@ -277,17 +285,42 @@ class test_gls_nosigma(check_regression_results):
         self.res1 = gls_res
         self.res2 = ols_res
         self.res2.conf_int = self.res2.conf_int()
-        self.res2.BIC = self.res2.bic
-        self.res2.AIC = self.res2.aic
 
     def check_confidenceintervals(self, conf1, conf2):
         assert_almost_equal(conf1, conf2, DECIMAL)
 
 
-#class test_wls(object):
-#    '''
-#    GLM results are an implicit test of WLS
-#    '''
+class test_wls(check_regression_results):
+    '''
+    GLM results are an implicit test of WLS
+    '''
+    def __init__(self):
+        from models.datasets.ccard.data import load
+        data = load()
+        self.res1 = WLS(data.endog, data.exog, weights=1/data.exog[:,2]).fit()
+        self.res2 = RModel(data.endog, data.exog, r.lm,
+                weights=1/data.exog[:,2])
+        self.res2.wresid = self.res2.rsum['residuals']
+        self.res2.scale = self.res2.scale**2 # R has sigma not sigma**2
+#FIXME: triaged results
+        self.res1.ess = self.res1.uncentered_tss - self.res1.ssr
+        self.res1.rsquared = self.res1.ess/self.res1.uncentered_tss
+        self.res1.mse_model = self.res1.ess/(self.res1.df_model + 1)
+        self.res1.fvalue = self.res1.mse_model/self.res1.mse_resid
+        self.res1.rsquared_adj = 1 -(self.res1.nobs)/(self.res1.df_resid)*\
+                (1-self.res1.rsquared)
+
+
+    def setup(self):
+        if skipR:
+            raise SkipTest, "Rpy not installed"
+
+    def check_confidenceintervals(self, conf1, conf2):
+        assert_almost_equal(conf1, conf2, DECIMAL)
+
+#NOTE: R reports the whitened residuals
+
+
 #TODO: Make sure no argument given is the same as OLS
 #    pass
 

@@ -50,12 +50,14 @@ class RModel(object):
         self.bse = rsum['coefficients'][:,1]
         self.bt = rsum['coefficients'][:,2]
         try:
-            self.bpval = rsum['coefficients'][:,3]
+            self.pvalues = rsum['coefficients'][:,3]
         except: pass
         self.rsquared = rsum.setdefault('r.squared', None)
         self.rsquared_adj = rsum.setdefault('adj.r.squared', None)
         self.aic_R = rsum.setdefault('aic', None)
         self.fvalue = rsum.setdefault('fstatistic', None)
+        if self.fvalue and isinstance(self.fvalue, dict):
+            self.fvalue = self.fvalue.setdefault('value', None) # for wls
         df = rsum.setdefault('df', None)
         if df:  # for RLM, works for other models?
             self.df_model = df[0]-1 # R counts intercept

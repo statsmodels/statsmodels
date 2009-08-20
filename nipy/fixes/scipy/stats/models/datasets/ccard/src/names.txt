@@ -1,0 +1,14 @@
+MDR = Number of derogator reports
+
+Acc = Credit card application accpeted (1=yes)
+
+Age = Age in years + 12ths of a year
+
+Income = Income divided by 10,000
+
+Avgexp = Avg. monthly credit card expenditure
+
+Ownrent = Indiviual owns(1) or rents(0) home
+
+Selfempl = (1=yes, 0=no)
+

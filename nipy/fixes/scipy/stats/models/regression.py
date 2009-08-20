@@ -214,7 +214,7 @@ Should be of length %s, if sigma is a 1d array" % nobs
                                          np.transpose(self.calc_params))
         self.df_resid = self.nobs - tools.rank(self._exog)
 #       Below assumes that we will always have a constant
-        self.df_model = tools.rank(self._exog)-1
+        self.df_model = float(tools.rank(self._exog)-1)
 
     def whiten(self, Y):
         if np.any(self.sigma) and not self.sigma==():
@@ -333,14 +333,14 @@ class WLS(GLS):
             design_rows = exog.shape[0]
             if not(weights.shape[0] == design_rows and
                    weights.size == design_rows) :
-                raise ValueError(
+                raise ValueError(\
                     'Weights must be scalar or same length as design')
             self.weights = weights.reshape(design_rows)
         super(WLS, self).__init__(endog, exog)
 
     def whiten(self, X):
         """
-        Whitener for WLS model, multiplies by sqrt(self.weights)
+        Whitener for WLS model, multiplies each column by sqrt(self.weights)
         """
         X = np.asarray(X)
         if X.ndim == 1:
@@ -662,7 +662,7 @@ class RegressionResults(LikelihoodModelResults):
     params
         The fitted coefficients that minimize the least squares criterion
     pvalues
-        The p values for the t-stats of the params
+        The two-tailed p values for the t-stats of the params
     resid
         The residuals of the model.
     rsquared
@@ -702,36 +702,53 @@ class RegressionResults(LikelihoodModelResults):
         self._get_results()
 
     def _get_results(self):
+        '''
+        This contains the results that are the same across models
+
+        It in turn calls 'model_type'._ls_results() to compute model-
+        specific results
+        '''
         self.fittedvalues = self.model.predict(self.model._exog, self.params)
-# D&M says that WLS and GLS postestimation stats should be
-# on transformed data
-# TODO: need WLS/GLS tests!!!
         self.wresid = self.model.wendog - \
                 self.model.predict(self.model.wdesign,self.params)
         self.resid = self.model._endog - self.fittedvalues
         self.calc_params = self.model.calc_params # needed?
-#        self._summary(lfit)
         self.scale = ss(self.wresid) / self.model.df_resid
         self.nobs = float(self.model.wdesign.shape[0])
-        self.ssr = ss(self.wresid)
-        self.centered_tss = ss(self.model.wendog - np.mean(self.model.wendog))
-#JP what does c and u in front of TSS stand for?
-#c is centered and u is uncentered
-#JP I think, it should be Y instead of wendog, are the following results correct, with wendog?
-#TODO: more robust tests for WLS or GLS, to see if Y or wendog is used.
-# I think Y as well, but wendog = Y for OLS
         self.df_resid = self.model.df_resid
         self.df_model = self.model.df_model
+
+#        if isinstance(self.model, GLS) and \
+#            (if hasattr(self.model, 'weights') and self.model.weights!=1) or\
+               # (if hasattr(self.model, 'sigma') and self.model.sigma!=1):
+                    # anything derived directly from GLS that isn't just
+                    # a model without an argument ergo OLS.  Ugly I know...
+#            self.ess = np.dot(self.params,(np.dot(self.model.wdesign.T,
+#                self.model.wendog)))
+#            self.uncentered_tss =
+#            self.centered_tss = ssr + ess
+#            self.ssr = ss(self.model.wendog)- self.ess
+#            self.rsquared
+#            self.rsquared_adj
+#        else:
+
+# This ess isn't right for weighted by ssr and tss are so...
+#        self.ess = ss(self.fittedvalues - np.mean(self.model.wendog))
+        self.ssr = ss(self.wresid)
+        self.centered_tss = ss(self.model.wendog - \
+                np.mean(self.model.wendog))
         self.uncentered_tss = ss(self.model.wendog)
+        self.ess = self.centered_tss - self.ssr
 # Centered R2 for models with intercepts
+#FIXME: have a look in the tests for wls to see
+# how to compute these stats for a model without intercept,
+# where the weights are a (linear?) function of the data...
         self.rsquared = 1 - self.ssr/self.centered_tss
-        self.ess = ss(self.fittedvalues - np.mean(self.model.wendog))
-        self.ssr = ss(self.resid)
-        self.rsquared_adj = 1 - (self.model.nobs - 1)/(self.model.nobs - \
-                (self.model.df_model+1))*(1 - self.rsquared)
+        self.rsquared_adj = 1 - (self.model.nobs - 1)/(self.df_resid)*\
+                (1 - self.rsquared)
         self.mse_model = self.ess/self.model.df_model
         self.mse_resid = self.ssr/self.model.df_resid
-        self.mse_total = self.uncentered_tss/(self.model.df_model+self.model.df_resid)
+        self.mse_total = self.uncentered_tss/(self.df_model+self.df_resid+1)
         self.fvalue = self.mse_model/self.mse_resid
         self.f_pvalue = stats.f.sf(self.fvalue, self.model.df_model,
                 self.model.df_resid)
@@ -740,9 +757,8 @@ class RegressionResults(LikelihoodModelResults):
         self.aic = -2 * self.llf + 2*(self.model.df_model+1)
         self.bic = -2 * self.llf + np.log(self.model.nobs)*\
                 (self.model.df_model+1)
-        self.pvalues = stats.t.sf(np.abs(self.t()), self.model.df_resid)
+        self.pvalues = stats.t.sf(np.abs(self.t()), self.model.df_resid)*2
         self.PostEstimation = PostRegression(self)
-
 
 #TODO: this needs a test
     def norm_resid(self):
@@ -769,6 +785,7 @@ class RegressionResults(LikelihoodModelResults):
         return self.resid * tools.recipr(np.sqrt(self.scale))
 
 #TODO: these need to be tested
+#TODO: also allow tests to take an input, so more general
 class PostRegression(object):
     def __init__(self, results):
         self.results = results
@@ -782,16 +799,16 @@ class PostRegression(object):
         """
         Calculates the Durbin-Waston statistic
         """
-        diff_resids = np.diff(self.results.resid,1)
+        diff_resids = np.diff(self.results.wresid,1)
         dw = np.dot(diff_resids,diff_resids) / \
-                np.dot(self.results.resid,self.results.resid);
+                np.dot(self.results.wresid,self.results.wresid);
         return dw
 
     def omni_norm_test(self):
         """
         Omnibus test for normality
         """
-        return stats.normaltest(self.results.resid)
+        return stats.normaltest(self.results.wresid)
 
     def jarque_bera(self):
         """
@@ -799,8 +816,8 @@ class PostRegression(object):
         """
 
         # Calculate residual skewness and kurtosis
-        skew = stats.skew(self.results.resid)
-        kurtosis = 3 + stats.kurtosis(self.results.resid)
+        skew = stats.skew(self.results.wresid)
+        kurtosis = 3 + stats.kurtosis(self.results.wresid)
 
         # Calculate the Jarque-Bera test for normality
         JB = (self.results.nobs/6) * (np.square(skew) + (1/4)*np.square(kurtosis-3))
@@ -844,10 +861,10 @@ class PostRegression(object):
         fit_sum += '==============================================================================' + os.linesep
         fit_sum += 'Models stats                         Residual stats' + os.linesep
         fit_sum += '==============================================================================' + os.linesep
-        fit_sum += 'R-squared            % -5.6f         Durbin-Watson stat  % -5.6f' % tuple([self.results.Rsq, self.durbin_watson()]) + os.linesep
-        fit_sum += 'Adjusted R-squared   % -5.6f         Omnibus stat        % -5.6f' % tuple([self.results.adjRsq, omni]) + os.linesep
-        fit_sum += 'F-statistic          % -5.6f         Prob(Omnibus stat)  % -5.6f' % tuple([self.results.F, omnipv]) + os.linesep
-        fit_sum += 'Prob (F-statistic)   % -5.6f         JB stat             % -5.6f' % tuple([self.results.F_p, JB]) + os.linesep
+        fit_sum += 'R-squared            % -5.6f         Durbin-Watson stat  % -5.6f' % tuple([self.results.rsquared, self.durbin_watson()]) + os.linesep
+        fit_sum += 'Adjusted R-squared   % -5.6f         Omnibus stat        % -5.6f' % tuple([self.results.rsquared_adj, omni]) + os.linesep
+        fit_sum += 'F-statistic          % -5.6f         Prob(Omnibus stat)  % -5.6f' % tuple([self.results.fvalue, omnipv]) + os.linesep
+        fit_sum += 'Prob (F-statistic)   % -5.6f         JB stat             % -5.6f' % tuple([self.results.f_pvalue, JB]) + os.linesep
         fit_sum += 'Log likelihood       % -5.6f         Prob(JB)            % -5.6f' % tuple([llf, JBpv]) + os.linesep
         fit_sum += 'AIC criterion        % -5.6f         Skew                % -5.6f' % tuple([aic, skew]) + os.linesep
         fit_sum += 'BIC criterion        % -5.6f         Kurtosis            % -5.6f' % tuple([bic, kurtosis]) + os.linesep
