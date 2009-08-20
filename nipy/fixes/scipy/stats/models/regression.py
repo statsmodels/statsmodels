@@ -283,13 +283,15 @@ Should be of length %s, if sigma is a 1d array" % nobs
 
         Returns
         -------
-        The value of the loglikelihood function for an OLS Model.
+        The value of the loglikelihood function for an GLS Model.
         """
         nobs2 = self.nobs / 2.0
         SSR = ss(self.wendog - np.dot(self.wdesign,params))
         #SSR = ss(self._endog - np.dot(self._exog,params))
         llf = -np.log(SSR) * nobs2      # concentrated likelihood
-        llf -= (1+np.log(np.pi/nobs2))*nobs2  # with constant
+        llf -= (1+np.log(np.pi/nobs2))*nobs2  # with likelihood constant
+        if np.any(self.sigma) and self.sigma.ndim == 2: #FIXME: robust-enough check?
+            llf -= .5*np.log(np.linalg.det(self.sigma)) # with error covariance matrix
         return llf
 
 class WLS(GLS):
@@ -359,6 +361,31 @@ class WLS(GLS):
             else:
                 whitened = np.sqrt(self.weights)[:,None]*X
             return whitened
+
+    def loglike(self, params):
+        """
+        Returns the value of the gaussian loglikelihood function at b.
+
+        Given the whitened design matrix, the loglikelihood is evaluated
+        at the parameter vector `params` for the dependent variable `Y`.
+
+        Parameters
+        ----------
+        `params` : array-like
+            The parameter estimates.
+
+        Returns
+        -------
+        The value of the loglikelihood function for a WLS Model.
+        """
+        nobs2 = self.nobs / 2.0
+        SSR = ss(self.wendog - np.dot(self.wdesign,params))
+        #SSR = ss(self._endog - np.dot(self._exog,params))
+        llf = -np.log(SSR) * nobs2      # concentrated likelihood
+        llf -= (1+np.log(np.pi/nobs2))*nobs2  # with constant
+        if np.all(self.weights != 1):    #FIXME: is this a robust-enough check?
+            llf -= .5*np.log(np.multiply.reduce(1/self.weights)) # with weights
+        return llf
 
 class OLS(WLS):
     """
