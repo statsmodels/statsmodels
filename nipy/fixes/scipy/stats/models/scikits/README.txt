@@ -8,6 +8,8 @@ In the directory example (the same as the file you are reading now), just do:
 
 python setup.py install
 
+See INSTALL.txt for requirements.
+
 Distribution
 ============
 
