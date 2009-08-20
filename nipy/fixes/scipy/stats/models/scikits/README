@@ -1,0 +1,64 @@
+This is a simple scikits. The main intent is to serve as a template for new
+scikits.
+
+Installation from sources
+=========================
+
+In the directory example (the same as the file you are reading now), just do:
+
+python setup.py install
+
+Distribution
+============
+
+A scikit can be distributed by different means:
+
+Source distribution
+-------------------
+
+To prepare a source distribution of the package:
+
+        python setup.py sdist
+
+Eggs
+----
+
+Eggs are a format for easy distribution of packages. It is cross platform for
+packages without any C code, and platform specific otherwise. To build an egg:
+
+Binary installers
+-----------------
+
+Binary installers are platform specific. On Windows, you can do:
+
+        python setup.py bdist_wininst
+
+On Mac OS X (this requires an extension, bdist_mpkg, available on Pypi)
+
+        python setup.py bdist_mpkg
+
+Pypi
+====
+
+Any scikits can also be registered to pypi, for source and eventually binary
+installer hosting. To register a package, and upload the sources at the same time:
+
+        python setup.py register sdist upload
+
+This will register the package to pypi, prepare a tarball of the package, and
+upload it to pypi. You can also upload the files manually to pypi webpage.
+
+Other distributions can be uploaded to pypi. For example:
+
+        python setup.py bdist_egg upload
+
+Once an egge is uploaded to scipy, people can simply install it with easy_install:
+
+        easy_install scikits.example
+
+If you don't want to install as an egg, but from the sources:
+
+        easy_install -eNb example scikits.example
+
+Will download the most recent sources, and extract them into the example
+directory.

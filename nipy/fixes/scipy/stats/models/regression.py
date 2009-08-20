@@ -300,6 +300,13 @@ class WLS(GLS):
     Parameters
     ----------
 
+    endog : array-like
+        n length array containing the input vector.
+
+    exog : array-like
+
+    weights
+
     Methods
     -------
 
@@ -593,10 +600,9 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False):
     if method not in ["unbiased", "mle"]:
         raise ValueError, "ACF estimation method must be 'unbiased' \
         or 'MLE'"
-    X = np.array(X, np.float64)  # don't touch the data? JP fixed, this modified data
+    X = np.array(X)
     X -= X.mean()                  # automatically demean's X
-    n = df or X.shape[0]    # is df_resid the degrees of freedom?
-                            # no it's n I think or n-1
+    n = df or X.shape[0]
 
     if method == "unbiased":        # this is df_resid ie., n - p
         denom = lambda k: n - k
@@ -692,8 +698,6 @@ class RegressionResults(LikelihoodModelResults):
     t
 
     t_test
-
-
     """
     def __init__(self, model, params, normalized_cov_params=None, scale=1.):
         super(RegressionResults, self).__init__(model, params,
@@ -718,11 +722,7 @@ class RegressionResults(LikelihoodModelResults):
         self.df_resid = self.model.df_resid
         self.df_model = self.model.df_model
 
-#        if isinstance(self.model, GLS) and \
-#            (if hasattr(self.model, 'weights') and self.model.weights!=1) or\
-               # (if hasattr(self.model, 'sigma') and self.model.sigma!=1):
-                    # anything derived directly from GLS that isn't just
-                    # a model without an argument ergo OLS.  Ugly I know...
+# if not hascons?
 #            self.ess = np.dot(self.params,(np.dot(self.model.wdesign.T,
 #                self.model.wendog)))
 #            self.uncentered_tss =
@@ -732,7 +732,6 @@ class RegressionResults(LikelihoodModelResults):
 #            self.rsquared_adj
 #        else:
 
-# This ess isn't right for weighted by ssr and tss are so...
 #        self.ess = ss(self.fittedvalues - np.mean(self.model.wendog))
         self.ssr = ss(self.wresid)
         self.centered_tss = ss(self.model.wendog - \
