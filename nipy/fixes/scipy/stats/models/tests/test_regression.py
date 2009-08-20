@@ -143,6 +143,31 @@ class test_ols(check_regression_results):
     def check_params(self, params1, params2):
         assert_almost_equal(params1, params2, DECIMAL)
 
+#  Robust error tests.  Compare values computed with SAS
+    def test_HC0_errors(self):
+        '''
+        They are split up because the copied results do not have any decimal
+        places for the last place.
+        '''
+        assert_almost_equal(self.res1.HC0_se[:-1],
+                self.res2.HC0_se[:-1], DECIMAL)
+        assert_approx_equal(np.round(self.res1.HC0_se[-1]), self.res2.HC0_se[-1])
+
+    def test_HC1_errors(self):
+        assert_almost_equal(self.res1.HC1_se[:-1],
+                self.res2.HC1_se[:-1], DECIMAL)
+        assert_approx_equal(self.res1.HC1_se[-1], self.res2.HC1_se[-1])
+
+    def test_HC2_errors(self):
+        assert_almost_equal(self.res1.HC2_se[:-1],
+                self.res2.HC2_se[:-1], DECIMAL)
+        assert_approx_equal(self.res1.HC2_se[-1], self.res2.HC2_se[-1])
+
+    def test_HC3_errors(self):
+        assert_almost_equal(self.res1.HC3_se[:-1],
+                self.res2.HC3_se[:-1], DECIMAL)
+        assert_approx_equal(self.res1.HC3_se[-1], self.res2.HC3_se[-1])
+
 class TestFtest(object):
     def __init__(self):
         from models.datasets.longley.data import load
@@ -442,14 +467,6 @@ if __name__=="__main__":
     import nose
     nose.runmodule(argv=[__file__,'-vvs','-x'], exit=False) #, '--pdb'
 
-#  Robust error tests.  Compare values computed with SAS
-#    res0 = SSM.regression.OLS(x).fit(y, HCC='HC0')
-#    nptest.assert_almost_equal(res0.bse, sas_bse_HC0, 4)
-#    res1 = SSM.regression.OLS(x).fit(y, HCC='HC1')
-#    nptest.assert_almost_equal(res1.bse, sas_bse_HC1, 4)
-#    res2 = SSM.regression.OLS(x).fit(y, HCC='HC2')
-#    nptest.assert_almost_equal(res2.bse, sas_bse_HC2, 4)
-#    res3 = SSM.regression.OLS(x).fit(y, HCC='HC3')
-#    nptest.assert_almost_equal(res3.bse, sas_bse_HC3, 4)
+
 
 

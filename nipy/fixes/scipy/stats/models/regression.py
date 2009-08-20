@@ -167,14 +167,8 @@ class GLS(LikelihoodModel):
     See the docs/gls.rst for more info.
 
     """
+
     def __init__(self, endog, exog, sigma=None):
-#TODO: make sure checks work
-#TODO: are these assumptions about what to do with sigma correct
-# they results in difference from WLS
-# ie., wresid, etc. when they should be the same?
-# why should they be the same is the whitener is different?
-# do the math...
-# wresid should be the same between GLS and WLS with the same weights?
         if sigma is not None:
             self.sigma = np.asarray(sigma)
         else:
@@ -720,6 +714,13 @@ class RegressionResults(LikelihoodModelResults):
 
     t_test
     """
+
+    # For robust covariance matrix properties
+    _HC0_se = None
+    _HC1_se = None
+    _HC2_se = None
+    _HC3_se = None
+
     def __init__(self, model, params, normalized_cov_params=None, scale=1.):
         super(RegressionResults, self).__init__(model, params,
                                                  normalized_cov_params,
@@ -779,6 +780,53 @@ class RegressionResults(LikelihoodModelResults):
                 (self.model.df_model+1)
         self.pvalues = stats.t.sf(np.abs(self.t()), self.model.df_resid)*2
         self.PostEstimation = PostRegression(self)
+
+    def _HCCM(self, scale):
+#        scale=np.diag(scale)
+#        return np.dot(np.dot(self.pinv_wexog, scale), self.pinv_wexog.T)
+#   This can be done with broadcasting!
+        H = np.dot(self.model.pinv_wexog,
+            scale[:,None]*self.model.pinv_wexog.T)
+#        self.robust_se = np.sqrt(np.diag(H))
+        return H
+
+    @property
+    def HC0_se(self):
+        if self._HC0_se is None:
+            self.het_scale = self.resid**2 # or whitened residuals? only OLS?
+            self.cov_HC0 = self._HCCM(self.het_scale)
+            self._HC0_se = np.sqrt(np.diag(self.cov_HC0))
+        return self._HC0_se
+
+ # HC1-3 MacKinnon and White (1985)
+
+    @property
+    def HC1_se(self):
+        if self._HC1_se is None:
+            self.het_scale = self.nobs/(self.df_resid)*(self.resid**2)
+            self.cov_HC1 = self._HCCM(self.het_scale)
+            self._HC1_se = np.sqrt(np.diag(self.cov_HC1))
+        return self._HC1_se
+
+    @property
+    def HC2_se(self):
+        if self._HC2_se is None:
+            h=np.diag(np.dot(np.dot(self.model._exog, self.normalized_cov_params),
+                    self.model._exog.T)) # probably could be optimized
+            self.het_scale= self.resid**2/(1-h)
+            self.cov_HC2 = self._HCCM(self.het_scale)
+            self._HC2_se = np.sqrt(np.diag(self.cov_HC2))
+        return self._HC2_se
+
+    @property
+    def HC3_se(self):
+        if self._HC3_se is None:
+            h=np.diag(np.dot(np.dot(self.model._exog,self.normalized_cov_params),
+                    self.model._exog.T)) # probably could be optimized
+            self.het_scale=(self.resid/(1-h))**2
+            self.cov_HC3 = self._HCCM(self.het_scale)
+            self._HC3_se = np.sqrt(np.diag(self.cov_HC3))
+        return self._HC3_se
 
 #TODO: this needs a test
     def norm_resid(self):
