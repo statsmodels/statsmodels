@@ -50,40 +50,49 @@ class check_regression_results(object):
         assert_almost_equal(self.res1.scale, self.res2.scale, DECIMAL)
 
     def test_RSquared(self):
-        assert_almost_equal(self.res1.Rsq, self.res2.Rsq,DECIMAL)
+        assert_almost_equal(self.res1.rsquared, self.res2.rsquared,DECIMAL)
 
     def test_AdjRSquared(self):
-        assert_almost_equal(self.res1.adjRsq, self.res2.adjRsq, DECIMAL)
+        assert_almost_equal(self.res1.rsquared_adj, self.res2.rsquared_adj,
+                DECIMAL)
 
     def test_degrees(self):
-        assert_almost_equal(self.res1.df_model, self.res2.df_model, DECIMAL)
-        assert_almost_equal(self.res1.df_resid, self.res2.df_resid, DECIMAL)
+        assert_almost_equal(self.res1.model.df_model, self.res2.df_model, DECIMAL)
+        assert_almost_equal(self.res1.model.df_resid, self.res2.df_resid, DECIMAL)
 
     def test_ExplainedSumofSquares(self):
-        assert_almost_equal(self.res1.ESS, self.res2.ESS, DECIMAL)
+        assert_almost_equal(self.res1.ess, self.res2.ess, DECIMAL)
 
     def test_SumofSquaredResiduals(self):
-        assert_almost_equal(self.res1.SSR, self.res2.SSR,DECIMAL)
+        assert_almost_equal(self.res1.ssr, self.res2.ssr,DECIMAL)
 
     def test_MeanSquaredError(self):
-        assert_almost_equal(self.res1.MSE_model, self.res2.MSE_model, DECIMAL)
-        assert_almost_equal(self.res1.MSE_resid, self.res2.MSE_resid, DECIMAL)
+        assert_almost_equal(self.res1.mse_model, self.res2.mse_model, DECIMAL)
+        assert_almost_equal(self.res1.mse_resid, self.res2.mse_resid, DECIMAL)
 
     def test_FStatistic(self):
-        assert_almost_equal(self.res1.F, self.res2.F, DECIMAL)
+        assert_almost_equal(self.res1.fvalue, self.res2.fvalue, DECIMAL)
 
     def test_loglike(self):
         assert_almost_equal(self.res1.llf, self.res2.llf, DECIMAL)
 
     def test_AIC(self):
-        assert_almost_equal(self.res1.aic, self.res2.AIC, DECIMAL)
+        assert_almost_equal(self.res1.aic, self.res2.aic, DECIMAL)
 
     def test_BIC(self):
-        assert_almost_equal(self.res1.bic, self.res2.BIC, DECIMAL)
+        assert_almost_equal(self.res1.bic, self.res2.bic, DECIMAL)
 
-#TODO: add residuals from another package or R
-#    def test_resids(self):
-#        assert_almost_equal(self.res1.resid, self.res2.resid, DECIMAL)
+    def test_pvalues(self):
+        assert_almost_equal(self.res1.pvalues, self.res2.pvalues, DECIMAL)
+
+    def test_wresid(self):
+        if not hasattr(self.res2, 'wresid'):
+            raise SkipTest('Comparison results (res2) has no wresid')
+        else:
+            assert_almost_equal(self.res1.wresid, self.res2.wresid, DECIMAL)
+
+    def test_resids(self):
+        assert_almost_equal(self.res1.resid, self.res2.resid, DECIMAL)
 
 class test_ols(check_regression_results):
     def __init__(self):
@@ -115,13 +124,13 @@ class TestFtest(object):
         self.Ftest = self.res1.f_test(self.R)
 
     def test_F(self):
-        assert_almost_equal(self.Ftest.fvalue, self.res1.F, DECIMAL)
+        assert_almost_equal(self.Ftest.fvalue, self.res1.fvalue, DECIMAL)
 
     def test_p(self):
-        assert_almost_equal(self.Ftest.pvalue, self.res1.F_p, DECIMAL)
+        assert_almost_equal(self.Ftest.pvalue, self.res1.f_pvalue, DECIMAL)
 
     def test_Df_denom(self):
-        assert_equal(self.Ftest.df_denom, self.res1.df_resid)
+        assert_equal(self.Ftest.df_denom, self.res1.model.df_resid)
 
     def test_Df_num(self):
         assert_equal(self.Ftest.df_num, tools.rank(self.R))
@@ -185,10 +194,10 @@ class TestTtest(object):
 
     def test_p(self):
         assert_almost_equal(np.diag(self.Ttest.pvalue),
-                t.sf(np.abs(self.res1.t()),self.res1.df_resid), DECIMAL)
+                t.sf(np.abs(self.res1.t()),self.res1.model.df_resid), DECIMAL)
 
     def test_Df_denom(self):
-        assert_equal(self.Ttest.df_denom, self.res1.df_resid)
+        assert_equal(self.Ttest.df_denom, self.res1.model.df_resid)
 
     def test_effect(self):
         assert_almost_equal(self.Ttest.effect, self.res1.params)
@@ -257,13 +266,13 @@ class test_gls(object):
 
     def test_params(self):
         assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_least)
-        # rounding vs. stata
 
+#FIXME: I know this fails.  Need to get results from a GLS regression
+# or WLS that allows n x n weights
     def test_standarderrors(self):
         assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL_lesser)
-        # rounding vs. stata
 
-class test_gls_scalar(check_regression_results):
+class test_gls_nosigma(check_regression_results):
     '''
     Test that GLS with no argument is equivalent to OLS.
     '''
@@ -276,17 +285,42 @@ class test_gls_scalar(check_regression_results):
         self.res1 = gls_res
         self.res2 = ols_res
         self.res2.conf_int = self.res2.conf_int()
-        self.res2.BIC = self.res2.bic
-        self.res2.AIC = self.res2.aic
 
     def check_confidenceintervals(self, conf1, conf2):
         assert_almost_equal(conf1, conf2, DECIMAL)
 
 
-#class test_wls(object):
-#    '''
-#    GLM results are an implicit test of WLS
-#    '''
+class test_wls(check_regression_results):
+    '''
+    GLM results are an implicit test of WLS
+    '''
+    def __init__(self):
+        from models.datasets.ccard.data import load
+        data = load()
+        self.res1 = WLS(data.endog, data.exog, weights=1/data.exog[:,2]).fit()
+        self.res2 = RModel(data.endog, data.exog, r.lm,
+                weights=1/data.exog[:,2])
+        self.res2.wresid = self.res2.rsum['residuals']
+        self.res2.scale = self.res2.scale**2 # R has sigma not sigma**2
+#FIXME: triaged results
+        self.res1.ess = self.res1.uncentered_tss - self.res1.ssr
+        self.res1.rsquared = self.res1.ess/self.res1.uncentered_tss
+        self.res1.mse_model = self.res1.ess/(self.res1.df_model + 1)
+        self.res1.fvalue = self.res1.mse_model/self.res1.mse_resid
+        self.res1.rsquared_adj = 1 -(self.res1.nobs)/(self.res1.df_resid)*\
+                (1-self.res1.rsquared)
+
+
+    def setup(self):
+        if skipR:
+            raise SkipTest, "Rpy not installed"
+
+    def check_confidenceintervals(self, conf1, conf2):
+        assert_almost_equal(conf1, conf2, DECIMAL)
+
+#NOTE: R reports the whitened residuals
+
+
 #TODO: Make sure no argument given is the same as OLS
 #    pass
 

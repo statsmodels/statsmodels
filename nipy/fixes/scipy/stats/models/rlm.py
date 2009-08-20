@@ -44,7 +44,7 @@ class RLM(LikelihoodModel):
         Note that self.scale is interpreted as a variance, so we divide
         the residuals by its sqrt.
         """
-        return self.M((self._endog - tmp_results.predict)/\
+        return self.M((self._endog - tmp_results.fittedvalues)/\
                     tmp_results.scale).sum()
 
     def update_history(self, tmp_results):
@@ -153,7 +153,7 @@ class RLM(LikelihoodModel):
         while (np.all(np.fabs(criterion[self.iteration]-\
                 criterion[self.iteration-1]) > tol) and \
                 self.iteration < maxiter):
-            self.weights = self.M.weights((self._endog - wls_results.predict)\
+            self.weights = self.M.weights((self._endog - wls_results.fittedvalues)\
                         /self.scale)
             wls_results = WLS(self._endog, self._exog,
                                     weights=self.weights).fit()

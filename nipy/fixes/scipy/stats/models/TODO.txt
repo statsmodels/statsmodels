@@ -27,6 +27,7 @@ Make sure docs examples run
 Run lint
 Technical docs (theory, references, formulas)
 Install for standalone package
+Make a recarray dataset and masked dataset for testing and development
 
 Docs
 -----

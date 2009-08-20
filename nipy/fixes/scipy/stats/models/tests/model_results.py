@@ -242,18 +242,26 @@ class longley(object):
                    (-1.517948,-.5485049),(-.5625173,.4603083),
                    (798.7873,2859.515),(-5496529,-1467987)]
         self.scale = 92936.0061673238
-        self.Rsq = 0.995479004577296
-        self.adjRsq = 0.99246501
+        self.rsquared = 0.995479004577296
+        self.rsquared_adj = 0.99246501
         self.df_model = 6
         self.df_resid = 9
-        self.ESS = 184172401.944494
-        self.SSR = 836424.055505915
-        self.MSE_model = 30695400.3240823
-        self.MSE_resid = 92936.0061673238
-        self.F = 330.285339234588
+        self.ess = 184172401.944494
+        self.ssr = 836424.055505915
+        self.mse_model = 30695400.3240823
+        self.mse_resid = 92936.0061673238
+        self.fvalue = 330.285339234588
         self.llf = -109.6174
-        self.AIC = 233.2349
-        self.BIC = 238.643
+        self.aic = 233.2349
+        self.bic = 238.643
+        self.pvalues = np.array([ 0.86314083,  0.31268106,  0.00253509,
+            0.00094437,  0.8262118 , 0.0030368 ,  0.0035604 ])
+#pvalues from rmodelwrap
+        self.resid = np.array((267.34003, -94.01394, 46.28717, -410.11462,
+            309.71459, -249.31122, -164.04896, -13.18036, 14.30477, 455.39409,
+            -17.26893, -39.05504, -155.54997, -85.67131, 341.93151,
+            -206.75783))
+
 #    sas_bse_HC0=(51.22035, 0.02458, 0.38324, 0.14625, 0.15821,
 #                428.38438, 832212,)
 #    sas_bse_HC1=(68.29380, 0.03277, 0.51099, 0.19499, 0.21094,
@@ -270,6 +278,9 @@ class longley_gls(object):
     def __init__(self):
         self.params = (6.738948e-02, -4.742739e-01, 9.489888e+04)
         self.bse = (1.086675e-02, 1.557265e-01, 1.415760e+04)
+#FIXME: I don't think the standard errors are taken from the correct
+# covariance matrix.  Decide how to get whitened residuals and
+# fix
 
 ### RLM MODEL RESULTS ###
 

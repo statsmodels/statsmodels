@@ -57,8 +57,10 @@ class check_rlm_results(object):
         assert_almost_equal(self.res1.resid, self.res2.resid, DECIMAL)
 
     def test_degrees(self):
-        assert_almost_equal(self.res1.df_model, self.res2.df_model, DECIMAL)
-        assert_almost_equal(self.res1.df_resid, self.res2.df_resid, DECIMAL)
+        assert_almost_equal(self.res1.model.df_model, self.res2.df_model,
+                DECIMAL)
+        assert_almost_equal(self.res1.model.df_resid, self.res2.df_resid,
+                DECIMAL)
 
     def test_bcov_unscaled(self):
         if self.res2.__module__ == 'model_results':

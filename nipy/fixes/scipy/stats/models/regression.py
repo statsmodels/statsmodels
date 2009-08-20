@@ -51,97 +51,173 @@ class GLS(LikelihoodModel):
     Parameters
     ----------
     endog : array-like
-        `endog` is a 1-d vector that contains the response variable
-
+        `endog` is a 1-d vector that contains the response/independent variable
     exog : array-like
-        `exog` is a nobs x p vector where nobs is the number of observations
-
+        `exog` is a nobs x p vector where nobs is the number of observations and
+        p is the number of regressors/dependent variables including the intercept
+        if one is included in the data.
     sigma : scalar or array
        `sigma` is the weighting matrix of the covariance.
-       The default is 1 for no scaling.
+       The default is None for no scaling.  If `sigma` is a scalar, it is
+       assumed that `sigma` is an n x n diagonal matrix with the given sclar,
+       `sigma` as the value of each diagonal element.  If `sigma` is an
+       n-length vector, then `sigma` is assumed to be a diagonal matrix
+       with the given `sigma` on the diagonal.  This should be the same as WLS.
+??? is it the same was WLS?
 
     Attributes
     ----------
     calc_params : array
-        `calc_params` is a p x n array that is the Moore-Penrose pseudoinverse
-        of the design matrix where p is the number of regressors including the
-        intercept and n is the number of observations. It is approximately
-        equal to (X^(T)X)^(-1)X^(T) in matrix notation.
+        `calc_params` is the p x n Moore-Penrose pseudoinverse
+        of the whitened design matrix. In matrix notation it is approximately
+        [X^(T)(sigma)^(-1)X]^(-1)X^(T)psi
 
+        where psi is cholsigmainv.T
+    cholsimgainv : array
+        n x n upper triangular matrix such that in matrix notation
+        (cholsigmainv^(T) cholsigmainv) = (sigma)^(-1).
+        It is the transpose of the Cholesky decomposition of the pseudoinverse
+        of sigma.
     df_model : scalar
         The model degrees of freedom is equal to p - 1, where p is the number
-        of regressors.  Note that the intercept is not included in the reported
-        degrees of freedom.
-
+        of regressors.  Note that the intercept is not reported as a degree
+        of freedom.
     df_resid : scalar
         The residual degrees of freedom is equal to the number of observations
-        less the number of parameters.  Note that the intercept is counted
-        as a regressor when calculating the degrees of freedom of the
+        n less the number of parameters p.  Note that the intercept is counted as
+        using a degree of freedom for the degrees of freedom of the
         residuals.
-
     llf : float
-        `llf` is the value of the maximum likelihood function of the model.
-
+        The value of the likelihood function of the fitted model.
+    nobs : float
+        The number of observations n
     normalized_cov_params : array
-        `normalized_cov_params` is a p x p array that is the inverse of ...
-        In matrix notation this can be written (X^(T)X)^(-1)
+        `normalized_cov_params` is a p x p array
+        In matrix notation this can be written (X^(T) sigma^(-1) X)^(-1)
+    sigma : array
+        `sigma` is the n x n covariance matrix of the error terms or
 
-    sigma :
+        E(resid resid.T)
 
+        where E is the expectations operator.
     wdesign : array
-        `wdesign` is the whitened design matrix.  If sigma is not a scalar
-        this is np.dot(cholsigmainv,Y).  Where cholsigmainv is the lower-
-        triangular Cholesky factor of the transpose of the pseudoinverse of
-        sigma.  In matrix notation this can be written L^(T)X where LL^(T)
-        is approximately Sigma^(+), the pseudoinverse of Sigma.
-#FIXME: Check explanation, try to write in terms of matrices and inverses
-#        only rather than pseudoinverses and factors.
+        `wdesign` is the whitened design matrix.  In matrix notation
+        (cholsigmainv exog)
+    wendog : array
+        The whitened response /dependent variable.  In matrix notation
+        (cholsigmainv endog)
+#TODO: is this correct?
 
     Methods
     -------
     fit
        Solves the least squares minimization.
-
+       Note that using the model's results property is equivalent to
+       calling fit.
     information
-        Returns the Fisher information matrix.
-
+        Returns the Fisher information matrix for a given set of parameters.
     initialize
         (Re)-initialize a model.
-
+#TODO: should this be a public method?
+    loglike
+        Obtain the loglikelihood for a given set of parameters.
     newton
         Used to solve the maximum likelihood problem.
-        Not currently implemented.
-
     predict
         Returns the fitted values given the parameters and exogenous design.
-
     score
         Score function.
-
     whiten
-        TODO
+        Returns the input premultiplied by cholsigmainv
+
+    Examples
+    --------
+    >>>import numpy as np
+    >>>import models
+    >>>from models.tools import add_constant
+    >>>from models.datasets.longley.data import load
+    >>>data = load()
+    >>>data.exog = add_constant(data.exog)
+    >>>ols_tmp = models.OLS(data.endog, data.exog).results
+    >>>rho = np.corrcoef(ols_tmp.resid[1:],ols_model.resid[:-1])[0][1]
+
+    `rho` is the correlation of the residuals from an OLS fit of the longley
+    data.  It is assumed that this is the true rho of the data, and it
+    will be used to estimate the structure of heteroskedasticity.
+
+    >>>from scipy.linalg import toeplitz
+    >>>order = toeplitz(np.arange(16))
+    >>>sigma = rho**order
+
+    `sigma` is an n x n matrix of the autocorrelation structure of the
+    data.
+
+    >>>gls_model = models.GLS(data.endog, data.exog, sigma=sigma)
+    >>>gls_results = gls_model.results
+
+    *Assume* that the error terms in the OLS fit above are uncorrelated.
+    Then sigma will be a diagonal matrix.
+
+    >>>s = np.var(ols_tmp.resid)
+#TODO: Unfinished, compare to WLS.
+    >>>
+
+    See Also
+    --------
+    See the docs/gls.rst for more info.
+
     """
     def __init__(self, endog, exog, sigma=None):
-        self.sigma = sigma
-        if np.any(self.sigma) and not np.shape(self.sigma)==():
-            #JP whats required dimension of sigma, needs checking
-            self.cholsigmainv = np.linalg.cholesky(np.linalg.pinv(sigma)).T
+#TODO: make sure checks work
+#TODO: are these assumptions about what to do with sigma correct
+# they results in difference from WLS
+# ie., wresid, etc. when they should be the same?
+# why should they be the same is the whitener is different?
+# do the math...
+# wresid should be the same between GLS and WLS with the same weights?
+        if sigma is not None:
+            self.sigma = np.asarray(sigma)
+        else:
+            self.sigma = sigma
+        if self.sigma is not None and not self.sigma.shape == (): #greedy logic
+            nobs = int(endog.shape[0])
+            if self.sigma.ndim == 1 or np.squeeze(self.sigma).ndim == 1:
+                if self.sigma.shape[0] != nobs:
+                    raise ValueError, "sigma is not the correct dimension.  \
+Should be of length %s, if sigma is a 1d array" % nobs
+            elif self.sigma.shape[0] != nobs and \
+                    self.sigma.shape[1] != nobs:
+                raise ValueError, "expected an %s x %s array for sigma" % \
+                        (nobs, nobs)
+        if self.sigma is not None:
+            nobs = int(endog.shape[0])
+            if self.sigma.shape == ():
+                self.sigma = np.diag(np.ones(nobs)*self.sigma)
+            if np.squeeze(self.sigma).ndim == 1:
+                self.sigma = np.diag(np.squeeze(self.sigma))
+            self.cholsigmainv = np.linalg.cholesky(np.linalg.pinv(\
+                    self.sigma)).T
         super(GLS, self).__init__(endog, exog)
 
     def initialize(self):
         self.wdesign = self.whiten(self._exog)
+        self.wendog = self.whiten(self._endog)
+        # shouldn't actual whitened endog be
+#       wendog = np.dot(np.linalg.inv(self.sigma),self._endog)
+# or equivalently
+#       wendog = np.dot(np.dot(self.cholsigmainv.T,self.cholsigmainv),self._endog)
+
         #JP: calc_params is not an informative name, but anything better?
         #SS: gen_inv?  it's the generalized inverse
-        # ie., beta = calc_params dot y
         self.calc_params = np.linalg.pinv(self.wdesign)
         self.normalized_cov_params = np.dot(self.calc_params,
                                          np.transpose(self.calc_params))
-        self.df_resid = self.wdesign.shape[0] - tools.rank(self._exog)
+        self.df_resid = self.nobs - tools.rank(self._exog)
 #       Below assumes that we will always have a constant
-        self.df_model = tools.rank(self._exog)-1
+        self.df_model = float(tools.rank(self._exog)-1)
 
     def whiten(self, Y):
-        if np.any(self.sigma) and not self.sigma==() :
+        if np.any(self.sigma) and not self.sigma==():
             return np.dot(self.cholsigmainv, Y)
         else:
             return Y
@@ -153,60 +229,25 @@ class GLS(LikelihoodModel):
 
         Returns
         -------
-        adjRsq
-            Adjusted R-squared
-        bse
-            The standard errors of the parameter estimates
-        cTSS
-            The total sum of squares centered about the mean
-        df_resid
-            Residual degrees of freedom
-        df_model
-            Model degress of freedom
-        ESS
-            Explained sum of squares
-        F
-            F-statistic
-        F_p
-            F-statistic p-value
-        MSE_model
-            Mean squared error the model
-        MSE_resid
-            Mean squared error of the residuals
-        MSE_total
-            Total mean squared error
-        predict
-            The predict the values for a given design
-        resid
-            The residuals of the model.
-        Rsq
-            R-squared of a model with an intercept
-        scale
-            A scale factor for the covariance matrix.
-            Default value is SSR/(n-k)
-            Otherwise, determined by the `robust` keyword argument
-        SSR
-            Sum of squared residuals
-        uTSS
-            Uncentered sum of squares
-        Z
-            The whitened response variable
+        A RegressionResults class.
+
+        See Also
+        ---------
+        regression.RegressionResults
+
+        Notes
+        -----
+        Currently it is assumed that all models will have an intercept /
+        constant in the design matrix for postestimation statistics.
         """
-        Z = self.whiten(self._endog)
-        beta = np.dot(self.calc_params, Z)
+#TODO: add a full_output keyword so that only lite results needed for
+# IRLS are calculated?
+        beta = np.dot(self.calc_params, self.wendog)
         # should this use lstsq instead?
+        # worth a comparison at least...though this is readable
         lfit = RegressionResults(self, beta,
                        normalized_cov_params=self.normalized_cov_params)
-        lfit.predict = np.dot(self._exog, lfit.params)
-#        lfit.resid = Z - np.dot(self.wdesign, lfit.params)
-#TODO: why was the above in the original?  do we care about whitened resids?
-#        lfit.resid = Y - np.dot(self._exog, lfit.params)
-#TODO: check discussion in D&M
-        lfit.Z = Z   # not a good name wendog analogy to wdesign
-        lfit.df_resid = self.df_resid
-        lfit.df_model = self.df_model
-        lfit.calc_params = self.calc_params
-        self._summary(lfit)
+#        lfit.fittedvalues = self.predict(self._exog, beta)
         return lfit
 
     @property
@@ -215,39 +256,18 @@ class GLS(LikelihoodModel):
             self._results = self.fit()
         return self._results
 
-    def _summary(self, lfit):
+    def predict(self, design, params=None):
         """
-        Private method to call additional statistics for GLS.
-        Meant to be overwritten by subclass as needed(?).
+        Return linear predicted values from a design matrix.
         """
-        lfit.resid = self._endog - lfit.predict
-        lfit.scale = ss(lfit.resid) / self.df_resid
-        lfit.nobs = float(self.wdesign.shape[0])
-        lfit.SSR = ss(lfit.resid)
-        lfit.cTSS = ss(lfit.Z-np.mean(lfit.Z))
-#TODO: Z or Y here?  Need to have tests in GLS.
-#JP what does c and u in front of TSS stand for?
-#c is centered and u is uncentered
-#JP I think, it should be Y instead of Z, are the following results correct, with Z?
-#TODO: more robust tests for WLS or GLS, to see if Y or Z is used.
-# I think Y as well, but Z = Y for OLS
-
-        lfit.uTSS = ss(lfit.Z)
-# Centered R2 for models with intercepts
-        lfit.Rsq = 1 - lfit.SSR/lfit.cTSS
-        lfit.ESS = ss(lfit.predict - np.mean(lfit.Z))
-        lfit.SSR = ss(lfit.resid)
-        lfit.adjRsq = 1 - (lfit.nobs - 1)/(lfit.nobs - (lfit.df_model+1))\
-                *(1 - lfit.Rsq)
-        lfit.MSE_model = lfit.ESS/lfit.df_model
-        lfit.MSE_resid = lfit.SSR/lfit.df_resid
-        lfit.MSE_total = lfit.uTSS/(lfit.df_model+lfit.df_resid)
-        lfit.F = lfit.MSE_model/lfit.MSE_resid
-        lfit.F_p = 1 - stats.f.cdf(lfit.F, lfit.df_model, lfit.df_resid)
-        lfit.bse = np.sqrt(np.diag(lfit.cov_params()))
-        lfit.llf = self.loglike(lfit.params)
-        lfit.aic = -2 * lfit.llf + 2*(self.df_model+1)
-        lfit.bic = -2 * lfit.llf + np.log(lfit.nobs)*(self.df_model+1)
+        #JP: this doesn't look correct for GLMAR
+        #SS: it needs its own predict method
+        if self._results is None and params is None:
+            raise ValueError, "If the model has not been fit, then you must specify the params argument."
+        if self._results is not None:
+            return np.dot(design, self.results.params)
+        else:
+            return np.dot(design, params)
 
     def loglike(self, params):
         """
@@ -264,27 +284,12 @@ class GLS(LikelihoodModel):
         Returns
         -------
         The value of the loglikelihood function for an OLS Model.
-
-        Notes
-        -----
-        The Likelihood Function is
-        .. math:: \ell(\boldsymbol{y},\hat{\beta},\hat{\sigma})=
-        -\frac{n}{2}(1+\log2\pi-\log n)-\frac{n}{2}\log\text{SSR}(\hat{\beta})
-
-        The AIC is
-        .. math:: \text{AIC}=\log\frac{SSR}{n}+\frac{2K}{n}
-
-        The BIC (or Schwartz Criterion) is
-        .. math:: \text{BIC}=\log\frac{SSR}{n}+\frac{K}{n}\log n
-
         """
-        nobs = float(self._exog.shape[0])
-        nobs2 = nobs / 2.0
+        nobs2 = self.nobs / 2.0
         SSR = ss(self._endog - np.dot(self._exog,params))
         llf = -np.log(SSR) * nobs2      # concentrated likelihood
         llf -= (1+np.log(np.pi/nobs2))*nobs2  # with constant
         return llf
-
 
 class WLS(GLS):
     """
@@ -328,14 +333,14 @@ class WLS(GLS):
             design_rows = exog.shape[0]
             if not(weights.shape[0] == design_rows and
                    weights.size == design_rows) :
-                raise ValueError(
+                raise ValueError(\
                     'Weights must be scalar or same length as design')
             self.weights = weights.reshape(design_rows)
         super(WLS, self).__init__(endog, exog)
 
     def whiten(self, X):
         """
-        Whitener for WLS model, multiplies by sqrt(self.weights)
+        Whitener for WLS model, multiplies each column by sqrt(self.weights)
         """
         X = np.asarray(X)
         if X.ndim == 1:
@@ -420,7 +425,7 @@ class OLS(WLS):
         -------
         The concentrated likelihood function evaluated at params.
         '''
-        nobs2 = self._endog.shape[0]/2.
+        nobs2 = self.nobs/2.
         return -nobs2*np.log(2*np.pi)-nobs2*np.log(1/(2*nobs2) *\
                 np.dot(np.transpose(self._endog -
                     np.dot(self._exog, params)),
@@ -457,7 +462,7 @@ class AR(GLS):
     >>> for i in range(6):
     ...     results = model.fit(data['Y'])
     ...     print "AR coefficients:", model.rho
-    ...     rho, sigma = model.yule_walker(data["Y"] - results.predict)
+    ...     rho, sigma = model.yule_walker(data["Y"] - results.fittedvalues)
     ...     model = AR(model.design, rho)
     ...
 ### NOTE ### the above call to yule_walker needs an order = model.order
@@ -617,11 +622,144 @@ class RegressionResults(LikelihoodModelResults):
     This class summarizes the fit of a linear regression model.
 
     It handles the output of contrasts, estimates of covariance, etc.
+
+    Attributes
+    -----------
+    aic
+        Aikake's information criteria
+    bic
+        Bayes' information criteria
+    bse
+        The standard errors of the parameter estimates
+    calc_params
+        See specific model class docstring
+    centered_tss
+        The total sum of squares centered about the mean
+    df_model
+        Model degress of freedom
+    df_resid
+        Residual degrees of freedom
+    ess
+        Explained sum of squares
+    fvalue
+        F-statistic of the fully specified model
+    f_pvalue
+        p-value of the F-statistic
+    fittedvalues
+        The predict the values for the given design
+    model
+        A pointer to the model instance that is fitted
+    mse_model
+        Mean squared error the model
+    mse_resid
+        Mean squared error of the residuals
+    mse_total
+        Total mean squared error
+    nobs
+        Number of observations
+    normalized_cov_params
+        See specific model class docstring
+    params
+        The fitted coefficients that minimize the least squares criterion
+    pvalues
+        The two-tailed p values for the t-stats of the params
+    resid
+        The residuals of the model.
+    rsquared
+        R-squared of a model with an intercept
+    rsquared_adj
+        Adjusted R-squared
+    scale
+        A scale factor for the covariance matrix.
+        Default value is ssr/(n-k)
+    ssr
+        Sum of squared residuals
+    uncentered_tss
+        Uncentered sum of squares
+    wresid
+        The residuals of the transformed regressand and regressor(s)
+
+    Methods
+    -------
+    cov_params
+
+    conf_int
+
+    f_test
+
+    norm_resid
+
+    t
+
+    t_test
+
+
     """
     def __init__(self, model, params, normalized_cov_params=None, scale=1.):
         super(RegressionResults, self).__init__(model, params,
                                                  normalized_cov_params,
                                                  scale)
+        self._get_results()
+
+    def _get_results(self):
+        '''
+        This contains the results that are the same across models
+
+        It in turn calls 'model_type'._ls_results() to compute model-
+        specific results
+        '''
+        self.fittedvalues = self.model.predict(self.model._exog, self.params)
+        self.wresid = self.model.wendog - \
+                self.model.predict(self.model.wdesign,self.params)
+        self.resid = self.model._endog - self.fittedvalues
+        self.calc_params = self.model.calc_params # needed?
+        self.scale = ss(self.wresid) / self.model.df_resid
+        self.nobs = float(self.model.wdesign.shape[0])
+        self.df_resid = self.model.df_resid
+        self.df_model = self.model.df_model
+
+#        if isinstance(self.model, GLS) and \
+#            (if hasattr(self.model, 'weights') and self.model.weights!=1) or\
+               # (if hasattr(self.model, 'sigma') and self.model.sigma!=1):
+                    # anything derived directly from GLS that isn't just
+                    # a model without an argument ergo OLS.  Ugly I know...
+#            self.ess = np.dot(self.params,(np.dot(self.model.wdesign.T,
+#                self.model.wendog)))
+#            self.uncentered_tss =
+#            self.centered_tss = ssr + ess
+#            self.ssr = ss(self.model.wendog)- self.ess
+#            self.rsquared
+#            self.rsquared_adj
+#        else:
+
+# This ess isn't right for weighted by ssr and tss are so...
+#        self.ess = ss(self.fittedvalues - np.mean(self.model.wendog))
+        self.ssr = ss(self.wresid)
+        self.centered_tss = ss(self.model.wendog - \
+                np.mean(self.model.wendog))
+        self.uncentered_tss = ss(self.model.wendog)
+        self.ess = self.centered_tss - self.ssr
+# Centered R2 for models with intercepts
+#FIXME: have a look in the tests for wls to see
+# how to compute these stats for a model without intercept,
+# where the weights are a (linear?) function of the data...
+        self.rsquared = 1 - self.ssr/self.centered_tss
+        self.rsquared_adj = 1 - (self.model.nobs - 1)/(self.df_resid)*\
+                (1 - self.rsquared)
+        self.mse_model = self.ess/self.model.df_model
+        self.mse_resid = self.ssr/self.model.df_resid
+        self.mse_total = self.uncentered_tss/(self.df_model+self.df_resid+1)
+        self.fvalue = self.mse_model/self.mse_resid
+        self.f_pvalue = stats.f.sf(self.fvalue, self.model.df_model,
+                self.model.df_resid)
+        self.bse = np.sqrt(np.diag(self.cov_params()))
+        self.llf = self.model.loglike(self.params)
+        self.aic = -2 * self.llf + 2*(self.model.df_model+1)
+        self.bic = -2 * self.llf + np.log(self.model.nobs)*\
+                (self.model.df_model+1)
+        self.pvalues = stats.t.sf(np.abs(self.t()), self.model.df_resid)*2
+        self.PostEstimation = PostRegression(self)
+
 #TODO: this needs a test
     def norm_resid(self):
         """
@@ -646,12 +784,92 @@ class RegressionResults(LikelihoodModelResults):
             raise ValueError, 'need normalized residuals to estimate standard deviation'
         return self.resid * tools.recipr(np.sqrt(self.scale))
 
-    def predictors(self, design):
+#TODO: these need to be tested
+#TODO: also allow tests to take an input, so more general
+class PostRegression(object):
+    def __init__(self, results):
+        self.results = results
+        self.y_varnm = 'Y'
+        self.x_varnm = ['X.%d' %
+                (i) for i in range(self.results.model._exog.shape[1])]
+        self.modeltype = \
+                str(self.results.model.__class__).split(' ')[1].strip('\'>')
+
+    def durbin_watson(self):
         """
-        Return linear predictor values from a design matrix.
+        Calculates the Durbin-Waston statistic
         """
-        #JP: this doesn't look correct for GLMAR
-        return np.dot(design, self.params)
+        diff_resids = np.diff(self.results.wresid,1)
+        dw = np.dot(diff_resids,diff_resids) / \
+                np.dot(self.results.wresid,self.results.wresid);
+        return dw
+
+    def omni_norm_test(self):
+        """
+        Omnibus test for normality
+        """
+        return stats.normaltest(self.results.wresid)
+
+    def jarque_bera(self):
+        """
+        Calculate residual skewness, kurtosis, and do the JB test for normality
+        """
+
+        # Calculate residual skewness and kurtosis
+        skew = stats.skew(self.results.wresid)
+        kurtosis = 3 + stats.kurtosis(self.results.wresid)
+
+        # Calculate the Jarque-Bera test for normality
+        JB = (self.results.nobs/6) * (np.square(skew) + (1/4)*np.square(kurtosis-3))
+        JBpv = 1-stats.chi2.cdf(JB,2);
+
+        return JB, JBpv, skew, kurtosis
+
+#FIXME: print sig digits for better alignment
+    def summary(self):
+        """
+        Printing model output to screen
+        """
+
+        import time # delay import until here?
+        import os
+
+        # local time & date
+        t = time.localtime()
+
+        # extra stats
+        llf, aic, bic = self.results.llf, self.results.aic, self.results.bic
+        JB, JBpv, skew, kurtosis = self.jarque_bera()
+        omni, omnipv = self.omni_norm_test()
+
+
+        fit_sum = os.linesep+'=============================================================================='+os.linesep
+        fit_sum += "Dependent Variable: " + self.y_varnm + os.linesep
+        fit_sum += "Model: " + self.modeltype + os.linesep
+        fit_sum += "Method: Least Squares" + os.linesep
+        fit_sum += "Date: " + time.strftime("%a, %d %b %Y",t) + os.linesep
+        fit_sum += "Time: " + time.strftime("%H:%M:%S",t) + os.linesep
+        fit_sum += '# obs:        %5.0f' % self.results.nobs + os.linesep
+        fit_sum += 'Df residuals: %5.0f' % self.results.df_resid + os.linesep
+        fit_sum += 'Df model:     %5.0f' % self.results.df_model + os.linesep
+        fit_sum += '=============================================================================='+os.linesep
+        fit_sum += 'variable     coefficient     std. Error      t-statistic     prob.'+\
+                os.linesep
+        fit_sum += '==============================================================================' + os.linesep
+        for i in range(len(self.x_varnm)):
+            fit_sum += '''% -5s          % -5.6f     % -5.6f     % -5.6f     % -5.6f''' % tuple([self.x_varnm[i],self.results.params[i],self.results.bse[i],self.results.t()[i],self.results.pvalues[i]]) + os.linesep
+        fit_sum += '==============================================================================' + os.linesep
+        fit_sum += 'Models stats                         Residual stats' + os.linesep
+        fit_sum += '==============================================================================' + os.linesep
+        fit_sum += 'R-squared            % -5.6f         Durbin-Watson stat  % -5.6f' % tuple([self.results.rsquared, self.durbin_watson()]) + os.linesep
+        fit_sum += 'Adjusted R-squared   % -5.6f         Omnibus stat        % -5.6f' % tuple([self.results.rsquared_adj, omni]) + os.linesep
+        fit_sum += 'F-statistic          % -5.6f         Prob(Omnibus stat)  % -5.6f' % tuple([self.results.fvalue, omnipv]) + os.linesep
+        fit_sum += 'Prob (F-statistic)   % -5.6f         JB stat             % -5.6f' % tuple([self.results.f_pvalue, JB]) + os.linesep
+        fit_sum += 'Log likelihood       % -5.6f         Prob(JB)            % -5.6f' % tuple([llf, JBpv]) + os.linesep
+        fit_sum += 'AIC criterion        % -5.6f         Skew                % -5.6f' % tuple([aic, skew]) + os.linesep
+        fit_sum += 'BIC criterion        % -5.6f         Kurtosis            % -5.6f' % tuple([bic, kurtosis]) + os.linesep
+        fit_sum += '==============================================================================' + os.linesep
+        return fit_sum
 
 ### The below is replicated by np.io
 

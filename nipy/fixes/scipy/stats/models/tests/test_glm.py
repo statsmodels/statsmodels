@@ -82,8 +82,8 @@ class check_model_results(object):
 
     def test_degrees(self):
         if not isinstance(self.res2, RModel):
-            assert_almost_equal(self.res1.df_model,self.res2.df_model, DECIMAL)
-        assert_almost_equal(self.res1.df_resid,self.res2.df_resid, DECIMAL)
+            assert_almost_equal(self.res1.model.df_model,self.res2.df_model, DECIMAL)
+        assert_almost_equal(self.res1.model.df_resid,self.res2.df_resid, DECIMAL)
 
     def test_pearsonX2(self):
         if isinstance(self.res2, RModel):
@@ -344,7 +344,7 @@ class test_glm_gamma(check_model_results):
     def check_aic_Stata(self, aic1, aic2):
         llf1 = self.res1.model.family.logLike(self.res1.model.y,
                 self.res1.mu, scale=1)
-        aic1 = 2 *(self.res1.df_model + 1 - llf1)/self.res1.nobs
+        aic1 = 2 *(self.res1.model.df_model + 1 - llf1)/self.res1.nobs
         assert_almost_equal(aic1, aic2, DECIMAL)
 
     def check_loglike(self, llf1, llf2):
@@ -494,7 +494,7 @@ class test_glm_invgauss(check_model_results):
     def check_aic_Stata(self, aic1, aic2):
         llf1 = self.res1.model.family.logLike(self.res1.model.y, self.res1.mu,
                 scale=1)
-        aic1 = 2 * (self.res1.df_model + 1 - llf1)/self.res1.nobs
+        aic1 = 2 * (self.res1.model.df_model + 1 - llf1)/self.res1.nobs
         assert_almost_equal(aic1, aic2, DECIMAL)
 
     def check_loglike(self, llf1, llf2):

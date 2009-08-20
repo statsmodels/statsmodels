@@ -16,8 +16,15 @@ x <- model.matrix(m1)
 xPrimexInv <- solve(t(x) %*% sigma_inv %*% x)
 beta <- xPrimexInv %*% t(x) %*% sigma_inv %*% TOTEMP
 beta
+# residuals
 res <- TOTEMP - x %*% beta
+# whitened residuals, not sure if this is right
+# xPrimexInv is different than cholsigmainv obviously...
+wres = sigma_inv %*% TOTEMP - sigma_inv %*% x %*% beta
+
 sig <- sqrt(sum(res^2)/m1$df)
+wsig <- sqrt(sum(wres^2)/m1$df)
+wvc <- sqrt(diag(xPrimexInv))*wsig
 vc <- sqrt(diag(xPrimexInv))*sig
 vc
 
