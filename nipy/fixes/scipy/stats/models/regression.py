@@ -286,7 +286,8 @@ Should be of length %s, if sigma is a 1d array" % nobs
         The value of the loglikelihood function for an OLS Model.
         """
         nobs2 = self.nobs / 2.0
-        SSR = ss(self._endog - np.dot(self._exog,params))
+        SSR = ss(self.wendog - np.dot(self.wdesign,params))
+        #SSR = ss(self._endog - np.dot(self._exog,params))
         llf = -np.log(SSR) * nobs2      # concentrated likelihood
         llf -= (1+np.log(np.pi/nobs2))*nobs2  # with constant
         return llf
