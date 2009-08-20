@@ -38,8 +38,11 @@ class check_regression_results(object):
         assert_almost_equal(self.res1.bse,self.res2.bse, DECIMAL)
 
     def test_confidenceintervals(self):
-        self.check_confidenceintervals(self.res1.conf_int(),
+        if hasattr(self.res2, 'conf_int'):
+            self.check_confidenceintervals(self.res1.conf_int(),
                 self.res2.conf_int)
+        else:
+            raise SkipTest, "Results from Rpy"
 
     def test_conf_int_subset(self):
         ci1 = self.res1.conf_int(cols=(1,2))
@@ -61,14 +64,23 @@ class check_regression_results(object):
         assert_almost_equal(self.res1.model.df_resid, self.res2.df_resid, DECIMAL)
 
     def test_ExplainedSumofSquares(self):
-        assert_almost_equal(self.res1.ess, self.res2.ess, DECIMAL)
+        if hasattr(self.res2, 'ess'):
+            assert_almost_equal(self.res1.ess, self.res2.ess, DECIMAL)
+        else:
+            raise SkipTest, "Results from Rpy"
 
     def test_SumofSquaredResiduals(self):
-        assert_almost_equal(self.res1.ssr, self.res2.ssr,DECIMAL)
+        if hasattr(self.res2, 'ssr'):
+            assert_almost_equal(self.res1.ssr, self.res2.ssr,DECIMAL)
+        else:
+            raise SkipTest, "Results from Rpy"
 
     def test_MeanSquaredError(self):
-        assert_almost_equal(self.res1.mse_model, self.res2.mse_model, DECIMAL)
-        assert_almost_equal(self.res1.mse_resid, self.res2.mse_resid, DECIMAL)
+        if hasattr(self.res2, "mse_model") and hasattr(self.res2, "mse_resid"):
+            assert_almost_equal(self.res1.mse_model, self.res2.mse_model, DECIMAL)
+            assert_almost_equal(self.res1.mse_resid, self.res2.mse_resid, DECIMAL)
+        else:
+            raise SkipTest, "Results from Rpy"
 
     def test_FStatistic(self):
         assert_almost_equal(self.res1.fvalue, self.res2.fvalue, DECIMAL)
@@ -77,10 +89,16 @@ class check_regression_results(object):
         assert_almost_equal(self.res1.llf, self.res2.llf, DECIMAL)
 
     def test_AIC(self):
-        assert_almost_equal(self.res1.aic, self.res2.aic, DECIMAL)
+        if hasattr(self.res2, 'aic'):
+            assert_almost_equal(self.res1.aic, self.res2.aic, DECIMAL)
+        else:
+            raise SkipTest, "Results from Rpy"
 
     def test_BIC(self):
-        assert_almost_equal(self.res1.bic, self.res2.bic, DECIMAL)
+        if hasattr(self.res2, 'bic'):
+            assert_almost_equal(self.res1.bic, self.res2.bic, DECIMAL)
+        else:
+            raise SkipTest, "Results from Rpy"
 
     def test_pvalues(self):
         assert_almost_equal(self.res1.pvalues, self.res2.pvalues, DECIMAL)
@@ -189,23 +207,22 @@ class TestTtest(object):
             self.Ttest = self.res1.t_test(self.R)
             self.R_Results = RModel(self.data.endog, self.data.exog, r.lm).robj
 
-    def test_T(self):
+    def test_tvalue(self):
         assert_almost_equal(np.diag(self.Ttest.tvalue), self.res1.t(), DECIMAL)
 
     def test_sd(self):
         assert_almost_equal(np.diag(self.Ttest.sd), self.res1.bse, DECIMAL)
 
-    def test_p(self):
+    def test_pvalue(self):
         assert_almost_equal(np.diag(self.Ttest.pvalue),
                 t.sf(np.abs(self.res1.t()),self.res1.model.df_resid), DECIMAL)
 
-    def test_Df_denom(self):
+    def test_df_denom(self):
         assert_equal(self.Ttest.df_denom, self.res1.model.df_resid)
 
     def test_effect(self):
         assert_almost_equal(self.Ttest.effect, self.res1.params)
 
-#this test is broken wrong arguments in linear hypothesis
 class TestTtest2(TestTtest):
     '''
     Tests the hypothesis that the coefficients on POP and YEAR
@@ -223,30 +240,29 @@ class TestTtest2(TestTtest):
         self.R = R
         self.Ttest1 = self.res1.t_test(self.R)
         self.R_Results = RModel(self.data.endog, self.data.exog, r.lm).robj
-        self.Ttest2 = r.linear_hypothesis(self.R_Results['F'], r.c('x.5 = x.6',))
-        t = np.inner(self.R, self.res1.params)/\
-            (np.sign(np.inner(self.R, self.res1.params))*\
-            np.sqrt(self.Ttest2['F'][1]))
+        self.Ttest2 = r.linear_hypothesis(self.R_Results, 'x.5 = x.6')
+        t = np.sign(np.inner(self.R, self.res1.params))*\
+            np.sqrt(self.Ttest2['F'][1])
         self.t = t
         effect = np.inner(self.R, self.res1.params)
         self.effect = effect
 
-
-    def test_T(self):
-        assert_equal(self.Ttest1.t, self.t, DECIMAL)
+    def test_tvalue(self):
+        assert_almost_equal(self.Ttest1.tvalue, self.t, DECIMAL)
 
     def test_sd(self):
-        assert_almost_equal(self.Ttest1.sd, effect/t, DECIMAL)
+        assert_almost_equal(self.Ttest1.sd, self.effect/self.t, DECIMAL)
 
-    def test_p(self):
-        assert_almost_equal(self.Ftest2.pvalue, t.sf(self.t, self.F['Res.Df'][0]),
+    def test_pvalue(self):
+        assert_almost_equal(self.Ttest1.pvalue, t.sf(np.abs(self.t),
+            self.Ttest2['Res.Df'][0]),
             DECIMAL)
 
-    def test_Df_denom(self):
-        assert_equal(self.Ftest2.df_denom, self.F['Res.Df'][0])
+    def test_df_denom(self):
+        assert_equal(self.Ttest1.df_denom, self.Ttest2['Res.Df'][0])
 
     def test_effect(self):
-        assert_equal(self.Ttest1.effect, self.effect, DECIMAL)
+        assert_almost_equal(self.Ttest1.effect, self.effect, DECIMAL)
 
 
 class test_gls(object):
