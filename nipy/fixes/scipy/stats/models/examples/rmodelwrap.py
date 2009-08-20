@@ -22,7 +22,7 @@ class RModel(object):
         self._design_cols = ['x.%d' % (i+1) for i in range(
             self.design.shape[1])]
         # Note the '-1' for no intercept - this is included in the design
-        self.formula = r('y ~ %s-1' % '+'.join(self._design_cols))
+        self.formula = r('y ~ %s - 1' % '+'.join(self._design_cols))
         self.frame = r.data_frame(y=y, x=self.design)
         rpy.set_default_mode(rpy.NO_CONVERSION)
         results = self.model_type(self.formula,
@@ -44,8 +44,8 @@ class RModel(object):
                 self.resid[int(i)-1] = self.results['residuals'][i]
         else:
             self.resid = self.results['residuals']
-        self.predict = self.results['fitted.values']
-        self.df_resid = self.results['df.residual']
+        self.fittedvalues = self.results.setdefault('fitted.values', None)
+        self.df_resid = self.results.setdefault('df.residual', None)
         self.params = rsum['coefficients'][:,0]
         self.bse = rsum['coefficients'][:,1]
         self.bt = rsum['coefficients'][:,2]

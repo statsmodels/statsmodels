@@ -4,9 +4,9 @@
 d <- read.table('./longley.csv', sep=',', header=T)
 attach(d)
 m1 <- lm(TOTEMP ~ GNP + POP)
-c <- cor(m1$res[-1],m1$res[-16])
+rho <- cor(m1$res[-1],m1$res[-16])
 sigma <- diag(16)  # diagonal matrix of ones
-sigma <- c^abs(row(sigma)-col(sigma))
+sigma <- rho^abs(row(sigma)-col(sigma))
 # row sigma is a matrix of the row index
 # col sigma is a matrix of the column index
 # this gives a upper-lower triangle with the
@@ -28,6 +28,10 @@ wvc <- sqrt(diag(xPrimexInv))*wsig
 vc <- sqrt(diag(xPrimexInv))*sig
 vc
 
-
+### Attempt to use a varFunc for GLS
+library(nlme)
+m1 <- gls(TOTEMP ~ GNP + POP, correlation=corAR1(value=rho, fixed=TRUE))
+results <- summary(m1)
+bse <- sqrt(diag(vcov(m1)))
 
 

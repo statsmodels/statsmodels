@@ -31,7 +31,7 @@ W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
 
 __docformat__ = 'restructuredtext en'
 
-__all__ = ['GLS', 'WLS', 'OLS', 'AR']
+__all__ = ['GLS', 'WLS', 'OLS', 'GLSAR']
 
 from string import join as sjoin    #
 from csv import reader              # These are for read_array
@@ -67,8 +67,8 @@ class GLS(LikelihoodModel):
 
     Attributes
     ----------
-    calc_params : array
-        `calc_params` is the p x n Moore-Penrose pseudoinverse
+    pinv_wexog : array
+        `pinv_wexog` is the p x n Moore-Penrose pseudoinverse
         of the whitened design matrix. In matrix notation it is approximately
         [X^(T)(sigma)^(-1)X]^(-1)X^(T)psi
 
@@ -100,8 +100,8 @@ class GLS(LikelihoodModel):
         E(resid resid.T)
 
         where E is the expectations operator.
-    wdesign : array
-        `wdesign` is the whitened design matrix.  In matrix notation
+    wexog : array
+        `wexog` is the whitened design matrix.  In matrix notation
         (cholsigmainv exog)
     wendog : array
         The whitened response /dependent variable.  In matrix notation
@@ -200,20 +200,13 @@ Should be of length %s, if sigma is a 1d array" % nobs
         super(GLS, self).__init__(endog, exog)
 
     def initialize(self):
-        self.wdesign = self.whiten(self._exog)
+        self.wexog = self.whiten(self._exog)
         self.wendog = self.whiten(self._endog)
-        # shouldn't actual whitened endog be
-#       wendog = np.dot(np.linalg.inv(self.sigma),self._endog)
-# or equivalently
-#       wendog = np.dot(np.dot(self.cholsigmainv.T,self.cholsigmainv),self._endog)
-
-        #JP: calc_params is not an informative name, but anything better?
-        #SS: gen_inv?  it's the generalized inverse
-        self.calc_params = np.linalg.pinv(self.wdesign)
-        self.normalized_cov_params = np.dot(self.calc_params,
-                                         np.transpose(self.calc_params))
+        self.pinv_wexog = np.linalg.pinv(self.wexog)
+        self.normalized_cov_params = np.dot(self.pinv_wexog,
+                                         np.transpose(self.pinv_wexog))
         self.df_resid = self.nobs - tools.rank(self._exog)
-#       Below assumes that we will always have a constant
+#       Below assumes that we have a constant
         self.df_model = float(tools.rank(self._exog)-1)
 
     def whiten(self, Y):
@@ -242,12 +235,11 @@ Should be of length %s, if sigma is a 1d array" % nobs
         """
 #TODO: add a full_output keyword so that only lite results needed for
 # IRLS are calculated?
-        beta = np.dot(self.calc_params, self.wendog)
+        beta = np.dot(self.pinv_wexog, self.wendog)
         # should this use lstsq instead?
         # worth a comparison at least...though this is readable
         lfit = RegressionResults(self, beta,
                        normalized_cov_params=self.normalized_cov_params)
-#        lfit.fittedvalues = self.predict(self._exog, beta)
         return lfit
 
     @property
@@ -286,7 +278,7 @@ Should be of length %s, if sigma is a 1d array" % nobs
         The value of the loglikelihood function for an GLS Model.
         """
         nobs2 = self.nobs / 2.0
-        SSR = ss(self.wendog - np.dot(self.wdesign,params))
+        SSR = ss(self.wendog - np.dot(self.wexog,params))
         #SSR = ss(self._endog - np.dot(self._exog,params))
         llf = -np.log(SSR) * nobs2      # concentrated likelihood
         llf -= (1+np.log(np.pi/nobs2))*nobs2  # with likelihood constant
@@ -297,18 +289,19 @@ Should be of length %s, if sigma is a 1d array" % nobs
 class WLS(GLS):
     """
     A regression model with diagonal but non-identity covariance structure.
-    The weights are presumed to be (proportional to the) inverse of the
+    The weights are presumed to be (proportional to) the inverse of the
     variance of the observations.
 
     Parameters
     ----------
 
     endog : array-like
-        n length array containing the input vector.
+        n length array containing the response variable
 
     exog : array-like
 
-    weights
+    weights : array-like
+
 
     Methods
     -------
@@ -335,7 +328,7 @@ class WLS(GLS):
     >>> print results.Fcontrast(np.identity(2))
     <F contrast: F=81.213965087281849, p=0.00015411866558, df_denom=5, df_num=2>    """
 
-    def __init__(self, endog, exog, weights=1):
+    def __init__(self, endog, exog, weights=1.):
         weights = np.array(weights)
         if weights.shape == ():
             self.weights = weights
@@ -379,7 +372,7 @@ class WLS(GLS):
         The value of the loglikelihood function for a WLS Model.
         """
         nobs2 = self.nobs / 2.0
-        SSR = ss(self.wendog - np.dot(self.wdesign,params))
+        SSR = ss(self.wendog - np.dot(self.wexog,params))
         #SSR = ss(self._endog - np.dot(self._exog,params))
         llf = -np.log(SSR) * nobs2      # concentrated likelihood
         llf -= (1+np.log(np.pi/nobs2))*nobs2  # with constant
@@ -406,14 +399,14 @@ class OLS(WLS):
     ----------
     design : ndarray
         This is the design, or X, matrix.
-    wdesign : ndarray
+    wexog : ndarray
         This is the whitened design matrix.
-        design = wdesign by default for the OLS, though models that
+        design = wexog by default for the OLS, though models that
         inherit from the OLS will whiten the design.
-    calc_params : ndarray
+    pinv_wexog : ndarray
         This is the Moore-Penrose pseudoinverse of the whitened design matrix.
     normalized_cov_params : ndarray
-        np.dot(calc_params, calc_params.T)
+        np.dot(pinv_wexog, pinv_wexog.T)
     df_resid : integer
         Degrees of freedom of the residuals.
         Number of observations less the rank of the design.
@@ -473,7 +466,7 @@ class OLS(WLS):
         """
         return Y
 
-class AR(GLS):
+class GLSAR(GLS):
     """
     A regression model with an AR(p) covariance structure.
 
@@ -665,7 +658,7 @@ class RegressionResults(LikelihoodModelResults):
         Bayes' information criteria
     bse
         The standard errors of the parameter estimates
-    calc_params
+    pinv_wexog
         See specific model class docstring
     centered_tss
         The total sum of squares centered about the mean
@@ -742,16 +735,16 @@ class RegressionResults(LikelihoodModelResults):
         '''
         self.fittedvalues = self.model.predict(self.model._exog, self.params)
         self.wresid = self.model.wendog - \
-                self.model.predict(self.model.wdesign,self.params)
+                self.model.predict(self.model.wexog,self.params)
         self.resid = self.model._endog - self.fittedvalues
-        self.calc_params = self.model.calc_params # needed?
+        self.pinv_wexog = self.model.pinv_wexog # needed?
         self.scale = ss(self.wresid) / self.model.df_resid
-        self.nobs = float(self.model.wdesign.shape[0])
+        self.nobs = float(self.model.wexog.shape[0])
         self.df_resid = self.model.df_resid
         self.df_model = self.model.df_model
 
 # if not hascons?
-#            self.ess = np.dot(self.params,(np.dot(self.model.wdesign.T,
+#            self.ess = np.dot(self.params,(np.dot(self.model.wexog.T,
 #                self.model.wendog)))
 #            self.uncentered_tss =
 #            self.centered_tss = ssr + ess
@@ -767,9 +760,9 @@ class RegressionResults(LikelihoodModelResults):
         self.uncentered_tss = ss(self.model.wendog)
         self.ess = self.centered_tss - self.ssr
 # Centered R2 for models with intercepts
-#FIXME: have a look in the tests for wls to see
+# have a look in test_regression.test_wls to see
 # how to compute these stats for a model without intercept,
-# where the weights are a (linear?) function of the data...
+# and when the weights are a (linear?) function of the data...
         self.rsquared = 1 - self.ssr/self.centered_tss
         self.rsquared_adj = 1 - (self.model.nobs - 1)/(self.df_resid)*\
                 (1 - self.rsquared)

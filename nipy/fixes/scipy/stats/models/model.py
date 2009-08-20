@@ -290,8 +290,8 @@ arguments.'
 # TODO: Algorithm for HCCM
 # the first return is needed if scale is not a scalar
 #                scale=np.eye(len(self._model._endog))*scale
-#            return np.dot(np.dot(self.calc_params, np.array(scale)),
-#                self.calc_params.T)
+#            return np.dot(np.dot(self.pinv_wexog, np.array(scale)),
+#                self.pinv_wexog.T)
             return self.normalized_cov_params * scale
 
     def t_test(self, r_matrix, scale=None):

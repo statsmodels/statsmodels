@@ -53,9 +53,9 @@ class GLM(LikelihoodModel):
                          'deviance' : [np.inf]}
         self.iteration = 0
         self.y = self._endog
-        self.calc_params = np.linalg.pinv(self._exog)
-        self.normalized_cov_params = np.dot(self.calc_params,
-                                        np.transpose(self.calc_params))
+        self.pinv_wexog = np.linalg.pinv(self._exog)
+        self.normalized_cov_params = np.dot(self.pinv_wexog,
+                                        np.transpose(self.pinv_wexog))
         self.df_model = tools.rank(self._exog)-1
         self.df_resid = self._exog.shape[0] - tools.rank(self._exog)
 
@@ -197,7 +197,7 @@ class GLMResults(LikelihoodModelResults):
         self.df_resid = model.df_resid
         self.df_model = model.df_model
         self.mu = model.mu
-        self.calc_params = model.calc_params
+        self.pinv_wexog = model.pinv_wexog
 #        self.bse = np.sqrt(np.diag(tmp_results.cov_params(scale=model.scale)))
         self.resid_response = model.data_weights*(model.y - model.mu)
         self.resid_pearson = np.sqrt(model.data_weights)*(model.y-model.mu)/\

@@ -24,9 +24,9 @@ class RLM(LikelihoodModel):
         self.history = {'deviance' : [np.inf], 'params' : [np.inf],
             'weights' : [np.inf], 'sresid' : [np.inf], 'scale' : []}
         self.iteration = 0
-        self.calc_params = np.linalg.pinv(self._exog)
-        self.normalized_cov_params = np.dot(self.calc_params,
-                                        np.transpose(self.calc_params))
+        self.pinv_wexog = np.linalg.pinv(self._exog)
+        self.normalized_cov_params = np.dot(self.pinv_wexog,
+                                        np.transpose(self.pinv_wexog))
         self.df_resid = np.float(self._exog.shape[0] - tools.rank(self._exog))
         self.df_model = np.float(tools.rank(self._exog)-1)
         self.nobs = float(self._endog.shape[0])
@@ -181,7 +181,7 @@ class RLMResults(LikelihoodModelResults):
         self.fitted_values = np.dot(model._exog, self.params)
         self.resid = model._endog - self.fitted_values   # before bcov
         self.sresid = self.resid/self.scale
-        self.calc_params = model.calc_params    # for bcov,
+        self.pinv_wexog = model.pinv_wexog    # for bcov,
                                                 # this is getting sloppy
         self.bcov_unscaled = self.cov_params(scale=1)
         self.nobs = model.nobs

@@ -6,7 +6,7 @@ from numpy.random import standard_normal
 from numpy.testing import *
 from scipy.linalg import toeplitz
 from models.tools import add_constant
-from models.regression import OLS, AR, WLS, GLS, yule_walker
+from models.regression import OLS, GLSAR, WLS, GLS, yule_walker
 import models
 from models import tools
 from check_for_rpy import skip_rpy
@@ -19,6 +19,7 @@ DECIMAL_less = 3
 DECIMAL_lesser = 2
 DECIMAL_least = 1
 DECIMAL_sig = 7
+DECIMAL_none = 0
 skipR = skip_rpy()
 if not skipR:
     from rpy import r
@@ -30,7 +31,6 @@ class check_regression_results(object):
     res2 contains results from Rmodelwrap or were obtained from a statistical
     packages such as R or Stata and written to model_results
     '''
-
     def test_params(self):
         assert_almost_equal(self.res1.params, self.res2.params, DECIMAL)
 
@@ -53,15 +53,24 @@ class check_regression_results(object):
         assert_almost_equal(self.res1.scale, self.res2.scale, DECIMAL)
 
     def test_RSquared(self):
-        assert_almost_equal(self.res1.rsquared, self.res2.rsquared,DECIMAL)
+        if hasattr(self.res2, 'rsquared'):
+            assert_almost_equal(self.res1.rsquared, self.res2.rsquared,DECIMAL)
+        else:
+            raise SkipTest, "Results from R"
 
     def test_AdjRSquared(self):
-        assert_almost_equal(self.res1.rsquared_adj, self.res2.rsquared_adj,
-                DECIMAL)
+        if hasattr(self.res2, 'rsquared_adj'):
+            assert_almost_equal(self.res1.rsquared_adj, self.res2.rsquared_adj,
+                    DECIMAL)
+        else:
+            raise SkipTest, "Results from R"
 
     def test_degrees(self):
-        assert_almost_equal(self.res1.model.df_model, self.res2.df_model, DECIMAL)
-        assert_almost_equal(self.res1.model.df_resid, self.res2.df_resid, DECIMAL)
+        if hasattr(self.res2, 'df_resid') and hasattr(self.res2, 'df_model'):
+            assert_almost_equal(self.res1.model.df_model, self.res2.df_model, DECIMAL)
+            assert_almost_equal(self.res1.model.df_resid, self.res2.df_resid, DECIMAL)
+        else:
+            raise SkipTest, "Results from R"
 
     def test_ExplainedSumofSquares(self):
         if hasattr(self.res2, 'ess'):
@@ -83,7 +92,10 @@ class check_regression_results(object):
             raise SkipTest, "Results from Rpy"
 
     def test_FStatistic(self):
-        assert_almost_equal(self.res1.fvalue, self.res2.fvalue, DECIMAL)
+        if hasattr(self.res2, 'fvalue'):
+            assert_almost_equal(self.res1.fvalue, self.res2.fvalue, DECIMAL)
+        else:
+            raise SkipTest, "Results from R"
 
     def test_loglike(self):
         assert_almost_equal(self.res1.llf, self.res2.llf, DECIMAL)
@@ -264,7 +276,6 @@ class TestTtest2(TestTtest):
     def test_effect(self):
         assert_almost_equal(self.Ttest1.effect, self.effect, DECIMAL)
 
-
 class test_gls(object):
     '''
     These test results were obtained by replication with R.
@@ -285,13 +296,36 @@ class test_gls(object):
         self.res1 = GLS_results
         self.res2 = longley_gls()
 
+    def test_AIC(self):
+        assert_approx_equal(self.res1.aic+2, self.res2.aic, 3)
+
+    def test_BIC(self):
+        assert_approx_equal(self.res1.bic, self.res2.bic, 2)
+
+    def test_loglike(self):
+        assert_almost_equal(self.res1.llf, self.res2.llf, DECIMAL_none)
+
     def test_params(self):
         assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_least)
 
-#FIXME: I know this fails.  Need to get results from a GLS regression
-# or WLS that allows n x n weights
+    def test_resid(self):
+        assert_almost_equal(self.res1.resid, self.res2.resid, DECIMAL)
+
+    def test_scale(self):
+        assert_almost_equal(self.res1.scale, self.res2.scale, DECIMAL)
+
+    def test_tvalues(self):
+        assert_almost_equal(self.res1.t(), self.res2.t, DECIMAL)
+
     def test_standarderrors(self):
-        assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL_lesser)
+        assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL)
+
+    def test_fittedvalues(self):
+        assert_almost_equal(self.res1.fittedvalues, self.res2.fittedvalues, DECIMAL)
+
+    def test_pvalues(self):
+        assert_almost_equal(self.res1.pvalues, self.res2.pvalues, DECIMAL)
+
 
 class test_gls_nosigma(check_regression_results):
     '''
@@ -313,7 +347,7 @@ class test_gls_nosigma(check_regression_results):
 
 class test_wls(check_regression_results):
     '''
-    GLM results are an implicit test of WLS
+    Test WLS with Greene's credit card data
     '''
     def __init__(self):
         from models.datasets.ccard.data import load
@@ -323,14 +357,13 @@ class test_wls(check_regression_results):
                 weights=1/data.exog[:,2])
         self.res2.wresid = self.res2.rsum['residuals']
         self.res2.scale = self.res2.scale**2 # R has sigma not sigma**2
-#FIXME: triaged results
+#FIXME: triaged results for noconstant
         self.res1.ess = self.res1.uncentered_tss - self.res1.ssr
         self.res1.rsquared = self.res1.ess/self.res1.uncentered_tss
         self.res1.mse_model = self.res1.ess/(self.res1.df_model + 1)
         self.res1.fvalue = self.res1.mse_model/self.res1.mse_resid
         self.res1.rsquared_adj = 1 -(self.res1.nobs)/(self.res1.df_resid)*\
                 (1-self.res1.rsquared)
-
 
     def setup(self):
         if skipR:
@@ -339,11 +372,38 @@ class test_wls(check_regression_results):
     def check_confidenceintervals(self, conf1, conf2):
         assert_almost_equal(conf1, conf2, DECIMAL)
 
-#NOTE: R reports the whitened residuals
 
+class test_wls_gls(check_regression_results):
+    def __init__(self):
+        from models.datasets.ccard.data import load
+        data = load()
+        self.res1 = WLS(data.endog, data.exog, weights = 1/data.exog[:,2]).fit()
+        self.res2 = GLS(data.endog, data.exog, sigma = data.exog[:,2]).fit()
 
-#TODO: Make sure no argument given is the same as OLS
-#    pass
+    def check_confidenceintervals(self, conf1, conf2):
+        assert_almost_equal(conf1, conf2(), DECIMAL)
+
+class test_wls_ols(check_regression_results):
+    def __init__(self):
+        from models.datasets.longley.data import load
+        data = load()
+        data.exog = add_constant(data.exog)
+        self.res1 = OLS(data.endog, data.exog).fit()
+        self.res2 = WLS(data.endog, data.exog).fit()
+
+    def check_confidenceintervals(self, conf1, conf2):
+        assert_almost_equal(conf1, conf2(), DECIMAL)
+
+class test_gls_ols(check_regression_results):
+    def __init__(self):
+        from models.datasets.longley.data import load
+        data = load()
+        data.exog = add_constant(data.exog)
+        self.res1 = GLS(data.endog, data.exog).fit()
+        self.res2 = OLS(data.endog, data.exog).fit()
+
+    def check_confidenceintervals(self, conf1, conf2):
+        assert_almost_equal(conf1, conf2(), DECIMAL)
 
 #TODO: test AR
 # why the two-stage in AR?
