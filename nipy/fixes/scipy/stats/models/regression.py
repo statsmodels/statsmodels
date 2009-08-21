@@ -15,8 +15,8 @@ prewhitens the response by calling 'whiten'.
 
 General reference for regression models:
 
-'Introduction to Linear Regression Analysis', Douglas C. Montgomery,
-    Elizabeth A. Peck, G. Geoffrey Vining. Wiley, 2006.
+D. C. Montgomery and E.A. Peck. "Introduction to Linear Regression
+    Analysis." 2nd. Ed., Wiley, 1992.
 
 Econometrics references for regression models:
 
@@ -24,9 +24,6 @@ R. Davidson and J.G. MacKinnon.  "Econometric Theory and Methods," Oxford,
     2004.
 
 W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
-
-
-
 """
 
 __docformat__ = 'restructuredtext en'
