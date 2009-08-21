@@ -1,7 +1,0 @@
-include *.txt *.py
-include INSTALL
-include THANKS
-include LICENSE
-graft examples
-graft doc
-global-exclude *~ *.swp
