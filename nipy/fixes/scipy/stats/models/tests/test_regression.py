@@ -26,10 +26,10 @@ if not skipR:
     from rmodelwrap import RModel
 
 
-class check_regression_results(object):
+class CheckRegressionResults(object):
     '''
     res2 contains results from Rmodelwrap or were obtained from a statistical
-    packages such as R or Stata and written to model_results
+    packages such as R, Stata, or SAS and were written to model_results
     '''
     def test_params(self):
         assert_almost_equal(self.res1.params, self.res2.params, DECIMAL)
@@ -52,13 +52,13 @@ class check_regression_results(object):
     def test_scale(self):
         assert_almost_equal(self.res1.scale, self.res2.scale, DECIMAL)
 
-    def test_RSquared(self):
+    def test_rsquared(self):
         if hasattr(self.res2, 'rsquared'):
             assert_almost_equal(self.res1.rsquared, self.res2.rsquared,DECIMAL)
         else:
             raise SkipTest, "Results from R"
 
-    def test_AdjRSquared(self):
+    def test_rsquared_adju(self):
         if hasattr(self.res2, 'rsquared_adj'):
             assert_almost_equal(self.res1.rsquared_adj, self.res2.rsquared_adj,
                     DECIMAL)
@@ -72,26 +72,26 @@ class check_regression_results(object):
         else:
             raise SkipTest, "Results from R"
 
-    def test_ExplainedSumofSquares(self):
+    def test_explained_sumof_squares(self):
         if hasattr(self.res2, 'ess'):
             assert_almost_equal(self.res1.ess, self.res2.ess, DECIMAL)
         else:
             raise SkipTest, "Results from Rpy"
 
-    def test_SumofSquaredResiduals(self):
+    def test_sumof_squaredresids(self):
         if hasattr(self.res2, 'ssr'):
             assert_almost_equal(self.res1.ssr, self.res2.ssr,DECIMAL)
         else:
             raise SkipTest, "Results from Rpy"
 
-    def test_MeanSquaredError(self):
+    def test_mean_squared_error(self):
         if hasattr(self.res2, "mse_model") and hasattr(self.res2, "mse_resid"):
             assert_almost_equal(self.res1.mse_model, self.res2.mse_model, DECIMAL)
             assert_almost_equal(self.res1.mse_resid, self.res2.mse_resid, DECIMAL)
         else:
             raise SkipTest, "Results from Rpy"
 
-    def test_FStatistic(self):
+    def test_fvalue(self):
         if hasattr(self.res2, 'fvalue'):
             assert_almost_equal(self.res1.fvalue, self.res2.fvalue, DECIMAL)
         else:
@@ -100,13 +100,13 @@ class check_regression_results(object):
     def test_loglike(self):
         assert_almost_equal(self.res1.llf, self.res2.llf, DECIMAL)
 
-    def test_AIC(self):
+    def test_aic(self):
         if hasattr(self.res2, 'aic'):
             assert_almost_equal(self.res1.aic, self.res2.aic, DECIMAL)
         else:
             raise SkipTest, "Results from Rpy"
 
-    def test_BIC(self):
+    def test_bic(self):
         if hasattr(self.res2, 'bic'):
             assert_almost_equal(self.res1.bic, self.res2.bic, DECIMAL)
         else:
@@ -124,7 +124,7 @@ class check_regression_results(object):
     def test_resids(self):
         assert_almost_equal(self.res1.resid, self.res2.resid, DECIMAL)
 
-class test_ols(check_regression_results):
+class TestOLS(CheckRegressionResults):
     def __init__(self):
         from models.datasets.longley.data import load
         from model_results import longley
@@ -211,16 +211,16 @@ class TestFTest2(TestFtest):
                 r.c('x.2 = x.3', 'x.5 = x.6'))
 
 
-    def test_F(self):
+    def test_fvalue(self):
         assert_almost_equal(self.Ftest2.fvalue, self.F['F'][1], DECIMAL)
 
-    def test_p(self):
+    def test_pvalue(self):
         assert_almost_equal(self.Ftest2.pvalue, self.F['Pr(>F)'][1], DECIMAL)
 
-    def test_Df_denom(self):
+    def test_df_denom(self):
         assert_equal(self.Ftest2.df_denom, self.F['Res.Df'][0])
 
-    def test_Df_num(self):
+    def test_df_num(self):
         self.F['Res.Df'].reverse()
         assert_equal(self.Ftest2.df_num, np.subtract.reduce(self.F['Res.Df']))
 
@@ -301,7 +301,7 @@ class TestTtest2(TestTtest):
     def test_effect(self):
         assert_almost_equal(self.Ttest1.effect, self.effect, DECIMAL)
 
-class test_gls(object):
+class TestGLS(object):
     '''
     These test results were obtained by replication with R.
     '''
@@ -321,10 +321,10 @@ class test_gls(object):
         self.res1 = GLS_results
         self.res2 = longley_gls()
 
-    def test_AIC(self):
+    def test_aic(self):
         assert_approx_equal(self.res1.aic+2, self.res2.aic, 3)
 
-    def test_BIC(self):
+    def test_bic(self):
         assert_approx_equal(self.res1.bic, self.res2.bic, 2)
 
     def test_loglike(self):
@@ -351,8 +351,7 @@ class test_gls(object):
     def test_pvalues(self):
         assert_almost_equal(self.res1.pvalues, self.res2.pvalues, DECIMAL)
 
-
-class test_gls_nosigma(check_regression_results):
+class TestGLS_nosigma(CheckRegressionResults):
     '''
     Test that GLS with no argument is equivalent to OLS.
     '''
@@ -369,8 +368,7 @@ class test_gls_nosigma(check_regression_results):
     def check_confidenceintervals(self, conf1, conf2):
         assert_almost_equal(conf1, conf2, DECIMAL)
 
-
-class test_wls(check_regression_results):
+class TestWLS(CheckRegressionResults):
     '''
     Test WLS with Greene's credit card data
     '''
@@ -398,7 +396,7 @@ class test_wls(check_regression_results):
         assert_almost_equal(conf1, conf2, DECIMAL)
 
 
-class test_wls_gls(check_regression_results):
+class TestWLS_GLS(CheckRegressionResults):
     def __init__(self):
         from models.datasets.ccard.data import load
         data = load()
@@ -408,7 +406,7 @@ class test_wls_gls(check_regression_results):
     def check_confidenceintervals(self, conf1, conf2):
         assert_almost_equal(conf1, conf2(), DECIMAL)
 
-class test_wls_ols(check_regression_results):
+class TestWLS_OLS(CheckRegressionResults):
     def __init__(self):
         from models.datasets.longley.data import load
         data = load()
@@ -419,7 +417,7 @@ class test_wls_ols(check_regression_results):
     def check_confidenceintervals(self, conf1, conf2):
         assert_almost_equal(conf1, conf2(), DECIMAL)
 
-class test_gls_ols(check_regression_results):
+class TestGLS_OLS(CheckRegressionResults):
     def __init__(self):
         from models.datasets.longley.data import load
         data = load()
@@ -447,7 +445,7 @@ class test_gls_ols(check_regression_results):
 #        pass
 
 
-class test_yule_walker(object):
+class TestYuleWalker(object):
     def __init__(self):
         from models.datasets.sunspots.data import load
         data = load()
