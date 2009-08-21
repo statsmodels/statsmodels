@@ -18,7 +18,7 @@ import sys
 import setuptools
 from numpy.distutils.core import setup
 
-DISTNAME = 'scikits.statmodels'
+DISTNAME = 'scikits.statsmodels'
 DESCRIPTION = 'Statistical computations and models for use with SciPy'
 LONG_DESCRIPTION = descr
 MAINTAINER = ''
@@ -55,9 +55,10 @@ def configuration(parent_package='', top_path=None, package_name=DISTNAME):
     if os.path.exists('MANIFEST'): os.remove('MANIFEST')
 
     from numpy.distutils.misc_util import Configuration
-    config = Configuration(package_name, parent_package, top_path,
+    config = Configuration(None, parent_package, top_path,
                            namespace_packages = ['scikits'],
-                           #version = build_fver_str(),
+                           name = DISTNAME,
+                           version = fbuild_fver_str(),
                            maintainer  = MAINTAINER,
                            #maintainer_email = MAINTAINER_EMAIL,
                            description = DESCRIPTION,
@@ -65,6 +66,10 @@ def configuration(parent_package='', top_path=None, package_name=DISTNAME):
                            url = URL,
                            download_url = DOWNLOAD_URL,
                            long_description = LONG_DESCRIPTION)
+
+    config.add_data_files('scikits/__init__.py')
+    config.add_data_dir('scikits/statsmodels/tests')
+    config.add_data_dir('scikits/statsmodels/examples')
 
     config.set_options(
             ignore_setup_xxx_py = True,
