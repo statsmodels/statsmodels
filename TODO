@@ -1,0 +1,16 @@
+Make sure INSTALL.txt is correct (versions)
+
+Remove Scikits instructions from README.txt once finished.
+
+Remove scikitsetup.txt
+
+Have a look at setup.py and fill in the blanks
+    name
+    maintainer
+    urls
+    license
+    development status
+
+Is setup.cfg right?
+
+Test
