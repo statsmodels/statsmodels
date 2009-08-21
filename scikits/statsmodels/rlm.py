@@ -3,11 +3,11 @@ Robust linear models
 """
 import numpy as np
 
-from models import tools
-from models.regression import WLS, GLS
-from models.robust import norms, scale
+from scikits.statsmodels import tools
+from scikits.statsmodels.regression import WLS, GLS
+from scikits.statsmodels.robust import norms, scale
 from scipy.stats import norm as Gaussian # can get rid of once scale is sorted
-from models.model import LikelihoodModel, LikelihoodModelResults
+from scikits.statsmodels.model import LikelihoodModel, LikelihoodModelResults
 
 __all__ = ['RLM']
 

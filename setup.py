@@ -4,7 +4,7 @@ please download and install it from http://pypi.python.org/pypi/setuptools
 """
 
 descr = """
-Statmodels (?) is a python package that provides an interface to SciPy for
+Statsmodels is a python package that provides an interface to SciPy for
 statistical computations including descriptive statistics and
 fitting statistical models.
 
@@ -22,7 +22,7 @@ DISTNAME = 'scikits.statsmodels'
 DESCRIPTION = 'Statistical computations and models for use with SciPy'
 LONG_DESCRIPTION = descr
 MAINTAINER = ''
-MAINAINER_EMAIL =''
+MAINTAINER_EMAIL =''
 URL = ''
 LICENSE = ''
 DOWNLOAD_URL = ''
@@ -60,7 +60,7 @@ def configuration(parent_package='', top_path=None, package_name=DISTNAME):
                            name = DISTNAME,
                            version = fbuild_fver_str(),
                            maintainer  = MAINTAINER,
-                           #maintainer_email = MAINTAINER_EMAIL,
+                           maintainer_email = MAINTAINER_EMAIL,
                            description = DESCRIPTION,
                            license = LICENSE,
                            url = URL,
@@ -88,5 +88,5 @@ if __name__ == "__main__":
         packages = setuptools.find_packages(),
         include_package_data = True,
         test_suite="tester",
-        zip_safe = True, # the package can run out of an .egg file
+        zip_safe = False, # the package can run out of an .egg file
         classifiers = classifiers)

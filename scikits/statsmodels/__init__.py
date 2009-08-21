@@ -4,8 +4,8 @@
 
 __docformat__ = 'restructuredtext'
 
-#from version import __version__
-from models.info import __doc__
+from version import __version__
+from info import __doc__
 
 from regression import *
 from glm import *

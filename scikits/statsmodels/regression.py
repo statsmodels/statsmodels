@@ -35,9 +35,9 @@ from csv import reader              # These are for read_array
 
 import numpy as np
 from scipy.linalg import norm, toeplitz
-from models.model import LikelihoodModel, LikelihoodModelResults
-from models import tools
-from models.tools import add_constant
+from scikits.statsmodels.model import LikelihoodModel, LikelihoodModelResults
+from scikits.statsmodels import tools
+from scikits.statsmodels.tools import add_constant
 from scipy import stats
 from scipy.stats.stats import ss
 
@@ -60,7 +60,6 @@ class GLS(LikelihoodModel):
        `sigma` as the value of each diagonal element.  If `sigma` is an
        n-length vector, then `sigma` is assumed to be a diagonal matrix
        with the given `sigma` on the diagonal.  This should be the same as WLS.
-??? is it the same was WLS?
 
     Attributes
     ----------

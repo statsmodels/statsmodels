@@ -15,7 +15,7 @@ apt-get install python python-setuptools python-numpy python-scipy
 
 Installing
 -----------
-Once in the statmodels directory do:
+Once in the statsmodels directory do:
 
 python setup.py install
 
