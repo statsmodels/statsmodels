@@ -789,7 +789,8 @@ class RegressionResults(LikelihoodModelResults):
         HC1_se is a property.  It is not evaluated until it is called.
         When it is called the RegressionResults instance will then have
         another attribute cov_HC1, which is the full HCCM and also `het_scale`,
-        which is in this case n/(n-p)*resid**2.
+        which is in this case n/(n-p)*resid**2.  HCCM matrices are only
+        appropriate for OLS.
     HC2_se
         MacKinnon and White's (1985) alternative heteroskedasticity robust
         standard errors.
@@ -798,7 +799,8 @@ class RegressionResults(LikelihoodModelResults):
         HC2_se is a property.  It is not evaluated until it is called.
         When it is called the RegressionResults instance will then have
         another attribute cov_HC2, which is the full HCCM and also `het_scale`,
-        which is in this case is resid^(2)/(1-h_ii).
+        which is in this case is resid^(2)/(1-h_ii).  HCCM matrices are only
+        appropriate for OLS.
     HC3_se
         MacKinnon and White's (1985) alternative heteroskedasticity robust
         standard errors.
@@ -807,7 +809,8 @@ class RegressionResults(LikelihoodModelResults):
         HC3_se is a property.  It is not evaluated until it is called.
         When it is called the RegressionResults instance will then have
         another attribute cov_HC3, which is the full HCCM and also `het_scale`,
-        which is in this case is resid^(2)/(1-h_ii)^(2).
+        which is in this case is resid^(2)/(1-h_ii)^(2).  HCCM matrices are
+        only appropriate for OLS.
     model
         A pointer to the model instance that called fit() or results.
     mse_model
