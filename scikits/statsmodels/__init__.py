@@ -20,12 +20,16 @@ from datasets import *
 # tried add_subpackage in both setup.py
 
 __all__ = filter(lambda s:not s.startswith('_'),dir())
-from numpy.testing import Tester
+#from numpy.testing import Tester
 #test = Tester().test(extra_argv=["--exe"])
 test = Tester().test
 #TODO:
+#this can't work until bug in NoseTester is fixed?
 #def test():
-#'''
-#on posix systems, this need to be the test call
-#'''
-#    Tester().test(extra_argv=["--exe"])
+#    '''
+#    on posix systems, this need to be the test call
+#    '''
+#    from numpy.testing import Tester
+#    import os
+#    package_name = os.path.dirname(os.path.abspath(__file__))
+#    Tester(package=package_name).test(extra_argv=["--exe"])
