@@ -266,7 +266,6 @@ Should be of length %s, if sigma is a 1d array" % nobs
         ---------
         exog : array-like
             Design / exogenous data
-
         params : array-like, optional after first fit
             Parameters of a linear model
 
@@ -336,11 +335,9 @@ class WLS(GLS):
     ----------
 
     endog : array-like
-        n length array containing the response variable
-
+        n length array containing the response variabl
     exog : array-like
         n x p array of design / exogenous data
-
     weights : array-like, optional
         1d array of weights.  If you supply 1/W then the variables are pre-
         multiplied by 1/sqrt(W).  If no weights are supplied the default value
@@ -463,7 +460,6 @@ class OLS(WLS):
     ----------
     endog : array-like
          1d vector of response/dependent variable
-
     exog: array-like
         Column ordered (observations in rows) design matrix.
 
@@ -544,28 +540,44 @@ class GLSAR(GLS):
 
     Examples
     --------
-    import numpy as np
-    from scikits.statsmodels.tools import add_constant
-    from scikits.statsmodels.regression import AR, yule_walker
+    >>> import scikits.statsmodels as models
+    >>> X = range(1,8)
+    >>> X = models.tools.add_constant(X)
+    >>> Y = [1,3,4,5,8,10,9]
+    >>> model = models.GLSAR(Y, X, rho=2)
+    >>> for i in range(6):
+    ...    results = model.fit()
+    ...    print "AR coefficients:", model.rho
+    ...    rho, sigma = models.regression.yule_walker(results.resid,
+                order = model.order)
+    ...    model = models.GLSAR(Y, X, rho)
+    AR coefficients: [ 0.  0.]
+    AR coefficients: [-0.52571491 -0.84496178]
+    AR coefficients: [-0.620642   -0.88654567]
+    AR coefficients: [-0.61887622 -0.88137957]
+    AR coefficients: [-0.61894058 -0.88152761]
+    AR coefficients: [-0.61893842 -0.88152263]
+    >>> results.params
+    array([ 1.58747943, -0.56145497])
+    >>> results.t()
+    array([ 30.796394  ,  -2.66543144])
+    >>> print results.t_test([0,1])
+    <T test: effect=-0.56145497223945595, sd=0.21064318655324663, t=-2.6654314408481032, p=0.022296117189135045, df_denom=5>
+    >>> import numpy as np
+    >>> print(results.f_test(np.identity(2)))
+    <F test: F=2762.4281271616205, p=2.4583312696e-08, df_denom=5, df_num=2>
 
-    X = np.arange(1,8)
-    X = add_constant(X)
-    Y = [1, 3, 4, 5, 8, 10, 9]
-    model = AR(Y, X, rho=2)
-    for i in range(6):
-        results = model.fit()
-        print "AR coefficients:", model.rho
-        rho, sigma = yule_walker(results.resid, order = model.order)
-        model = AR(Y, X, rho)
-    results.params
-    results.t() # is this correct? it does equal params/bse
-    print results.Tcontrast([0,1])  # are sd and t correct? vs
-    print results.Fcontrast(np.eye(2))
+    Or, equivalently
 
-    #equivalently
-    model2 = AR(Y, X, rho=2)
-    model2.iterative_fit(maxiter=6)
-    model2.rho
+    >>> model2 = models.GLSAR(Y, X, rho=2)
+    >>> model2.iterative_fit(maxiter=6)
+    >>> model2.rho
+    array([-0.61893842, -0.88152263])
+
+    Notes
+    -----
+    GLSAR is considered to be experimental for now, since it has not been
+    adequately tested.
     """
     def __init__(self, endog, exog=None, rho=1):
         if isinstance(rho, np.int):
@@ -582,21 +594,27 @@ class GLSAR(GLS):
             #JP this looks wrong, should be a regression on constant
             #results for rho estimate now identical to yule-walker on y
             #super(AR, self).__init__(endog, add_constant(endog))
-            super(AR, self).__init__(endog, np.ones((endog.shape[0],1)))
+            super(GLSAR, self).__init__(endog, np.ones((endog.shape[0],1)))
         else:
-            super(AR, self).__init__(endog, exog)
+            super(GLSAR, self).__init__(endog, exog)
 
     def iterative_fit(self, maxiter=3):
         """
-        Perform an iterative two-stage procedure to estimate AR(p)
-        parameters and regression coefficients simultaneously.
+        Perform an iterative two-stage procedure to estimate a GLS model.
 
-        :Parameters:
-            Y : TODO
-                TODO
-            niter : ``integer``
-                the number of iterations
+        The model is assumed to have AR(p) errors, AR(p) parameters and
+        regression coefficients are estimated simultaneously.
+
+        Parameters
+        -----------
+        endog : array-like
+
+        exog : array-like, optional
+
+        maxiter : integer, optional
+            the number of iterations
         """
+#TODO: update this after going through example.
         for i in range(maxiter-1):
             self.initialize()
             results = self.fit()
@@ -612,10 +630,16 @@ class GLSAR(GLS):
         Whiten a series of columns according to an AR(p)
         covariance structure.
 
-        :Parameters:
-            X : TODO
-                TODO
+        Parameters:
+        -----------
+        X : array-like
+            The data to be whitened
+
+        Returns
+        -------
+        TODO
         """
+#TODO: notation for AR process
         X = np.asarray(X, np.float64)
         _X = X.copy()
         for i in range(self.order):
@@ -626,25 +650,55 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False):
     """
     Estimate AR(p) parameters from a sequence X using Yule-Walker equation.
 
-    unbiased or maximum-likelihood estimator (mle)
+    Unbiased or maximum-likelihood estimator (mle)
 
     See, for example:
 
     http://en.wikipedia.org/wiki/Autoregressive_moving_average_model
 
-    :Parameters:
-        X : a 1d ndarray
-        method : ``string``
-               Method can be "unbiased" or "mle" and this determines
-               denominator in estimate of autocorrelation function (ACF)
-               at lag k. If "mle", the denominator is n=r.shape[0], if
-               "unbiased" the denominator is n-k.
-        df : ``integer``
-               Specifies the degrees of freedom. If df is supplied,
-               then it is assumed the X has df degrees of
-               freedom rather than n.
-    """
+    Parameters:
+    -----------
+    X : array-like
+        1d array
+    order : integer, optional
+        The order of the autoregressive process.  Default is 1.
+    method : string, optional
+       Method can be "unbiased" or "mle" and this determines
+       denominator in estimate of autocorrelation function (ACF)
+       at lag k. If "mle", the denominator is n=X.shape[0], if
+       "unbiased" the denominator is n-k.
+       The default is unbiased.
+    df : integer, optional
+       Specifies the degrees of freedom. If df is supplied,
+       then it is assumed the X has df degrees of
+       freedom rather than n.  Default is None.
+    inv : Bool
+        If inv is True the inverse of R is also returned.
+        The default is False.
 
+    Returns
+    -------
+    rho
+        The autoregressive coefficients
+    sigma
+        TODO
+
+    Examples
+    --------
+    >>> import scikits.statsmodels as models
+    >>> from scikits.statsmodels.datasets.sunspots.data import load
+    >>> data = load()
+    >>> rho, sigma = models.regression.yule_walker(data.endog,
+        order=4, method="mle")
+    >>>rho
+    array([ 1.28310031, -0.45240924, -0.20770299,  0.04794365])
+    >>>sigma
+    16.808022730464351
+
+    """
+#TODO: define R better, look back at notes and technical notes on YW.
+#First link here is useful
+#http://www-stat.wharton.upenn.edu/~steele/Courses/956/ResourceDetails/YuleWalkerAndMore.htm
     method = str(method).lower()
     if method not in ["unbiased", "mle"]:
         raise ValueError, "ACF estimation method must be 'unbiased' \
