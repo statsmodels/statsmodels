@@ -6,7 +6,7 @@ import numpy as np
 import numpy.random as R
 from numpy.testing import *
 
-from models import tools
+from scikits.statsmodels import tools
 
 class TestTools(TestCase):
 

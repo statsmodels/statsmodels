@@ -10,5 +10,7 @@ These families are described in
 
 '''
 
-from scikits.statsmodels.family.family import Gaussian, Family, Poisson, Gamma, \
+#from scikits.statsmodels.family.family import Gaussian, Family, Poisson, Gamma, \
+#    InverseGaussian, Binomial, NegativeBinomial
+from family import Gaussian, Family, Poisson, Gamma, \
     InverseGaussian, Binomial, NegativeBinomial

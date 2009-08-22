@@ -5,9 +5,13 @@ General linear models
 """
 
 import numpy as np
-from scikits.statsmodels import family, tools
-from scikits.statsmodels.regression import WLS#,GLS #might need for mlogit
-from scikits.statsmodels.model import LikelihoodModel, LikelihoodModelResults
+#from scikits.statsmodels import family, tools
+#from scikits.statsmodels.regression import WLS#,GLS #might need for mlogit
+#from scikits.statsmodels.model import LikelihoodModel, LikelihoodModelResults
+import family, tools
+from regression import WLS#,GLS #might need for mlogit
+from model import LikelihoodModel, LikelihoodModelResults
+
 
 __all__ = ['GLM']
 

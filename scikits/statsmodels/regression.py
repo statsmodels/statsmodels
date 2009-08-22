@@ -35,11 +35,16 @@ from csv import reader              # These are for read_array
 
 import numpy as np
 from scipy.linalg import norm, toeplitz
-from scikits.statsmodels.model import LikelihoodModel, LikelihoodModelResults
-from scikits.statsmodels import tools
-from scikits.statsmodels.tools import add_constant
+#from scikits.statsmodels.model import LikelihoodModel, LikelihoodModelResults
+#from scikits.statsmodels import tools
+#from scikits.statsmodels.tools import add_constant
 from scipy import stats
 from scipy.stats.stats import ss
+
+
+from model import LikelihoodModel, LikelihoodModelResults
+import tools
+from tools import add_constant
 
 class GLS(LikelihoodModel):
     """
@@ -504,8 +509,8 @@ class GLSAR(GLS):
     >>> print model.rho
     [-0.61887622 -0.88137957]
 
-    New Example
-    --------
+
+    Updated Example
     import numpy as np
     from models.tools import add_constant
     from models.regression import AR, yule_walker

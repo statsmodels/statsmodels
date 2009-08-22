@@ -5,7 +5,7 @@ def configuration(parent_package='',top_path=None):
 
     config.add_subpackage('family')
     config.add_subpackage('robust')
-
+#    confid.add_subpackage('datasets')
     config.add_data_dir('tests')
 
     config.add_extension('_hbspline',

@@ -4,11 +4,11 @@ Test functions for models.rlm
 
 import numpy.random as R
 from numpy.testing import *
-import models
+import scikits.statsmodels as models
 from rmodelwrap import RModel
 import rpy # for hampel test...ugh
 import numpy as np # ditto
-from models.rlm import RLM
+from scikits.statsmodels.rlm import RLM
 import model_results
 from nose import SkipTest
 from check_for_rpy import skip_rpy
@@ -76,7 +76,7 @@ class check_rlm_results(object):
         # rounding errors in Andrew's make it necessary to use least vs. lesser
 
 class test_rlm(check_rlm_results):
-    from models.datasets.stackloss.data import load
+    from scikits.statsmodels.datasets.stackloss.data import load
     data = load()
     data.exog = models.tools.add_constant(data.exog)
     r.library('MASS')
@@ -167,7 +167,7 @@ class test_rlm_andrews(test_rlm):
 ### tests with Huber scaling
 
 class test_rlm_huber(check_rlm_results):
-    from models.datasets.stackloss.data import load
+    from scikits.statsmodels.datasets.stackloss.data import load
     data = load()
     data.exog = models.tools.add_constant(data.exog)
     def __init__(self):
