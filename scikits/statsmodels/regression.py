@@ -50,7 +50,7 @@ class GLS(LikelihoodModel):
     endog : array-like
         `endog` is a 1-d vector that contains the response/independent variable
     exog : array-like
-        `exog` is a nobs x p vector where nobs is the number of observations and
+        `exog` is a n x p vector where n is the number of observations and
         p is the number of regressors/dependent variables including the intercept
         if one is included in the data.
     sigma : scalar or array
@@ -373,15 +373,21 @@ class WLS(GLS):
     array([ 0.0952381 ,  2.91666667])
     >>> results.t()
     array([ 0.35684428,  2.0652652 ])
+    <T test: effect=2.9166666666666674, sd=1.4122480109543243, t=2.0652651970780505, p=0.046901390323708769, df_denom=5>
+    >>> print results.f_test([1,0])
+    <F test: F=0.12733784321528099, p=0.735774089183, df_denom=5, df_num=1>
+
+    Notes
+    -----
+    If the weights are a function of the data, then the postestimation statistics
+    such as fvalue and mse_model might not be correct, as the package does not
+    yet support no-constant regression.
     """
-#FIXME: don't include here, and sort this out.
-#    <T contrast: effect=2.9166666666666674, sd=1.4122480109543243, t=2.0652651970780505, p=0.046901390323708769, df_denom=5>
-#>>> print results.f_test(np.identity(2))
-#    <F contrast: F=26.998607242339855, p=0.00209096249397, df_denom=5, df_num=2>    """
 #FIXME: bug in fvalue or f_test for this example?
-#    results.f_test([1,0])!=results.fvalue
-# or is it a matter of no constant since weights = X
-# looks like a bug, after comparing to constant fvalue
+#UPDATE the bug is in fvalue, f_test is correct vs. R
+#mse_model is calculated incorrectly according to R
+#same fixed used for WLS in the tests doesn't work
+#mse_resid is good
     def __init__(self, endog, exog, weights=1.):
         weights = np.array(weights)
         if weights.shape == ():
@@ -427,7 +433,7 @@ class WLS(GLS):
 
         Parameters
         ----------
-        `params` : array-like
+        params : array-like
             The parameter estimates.
 
         Returns
@@ -438,10 +444,7 @@ class WLS(GLS):
         --------
         .. math :: -\frac{n}{2}\text{\ensuremath{\log}}\left(Y-\hat{Y}\right)-\frac{n}{2}\left(1+\log\left(\frac{2\pi}{n}\right)\right)-\frac{1}{2}\text{log}\left(\left|W\right|\right)\]
 
-        Notes
-        -----
         W is treated as a diagonal matrix for the purposes of the formula.
-
         """
         nobs2 = self.nobs / 2.0
         SSR = ss(self.wendog - np.dot(self.wexog,params))
@@ -458,56 +461,50 @@ class OLS(WLS):
 
     Parameters
     ----------
-        `endog` : array-like
-            1d vector of response/dependent variable
+    endog : array-like
+         1d vector of response/dependent variable
 
-        `exog`: array-like
-            Column ordered (observations in rows) design matrix.
+    exog: array-like
+        Column ordered (observations in rows) design matrix.
 
     Methods
     -------
+    See regression.GLS
+
 
     Attributes
     ----------
-    design : ndarray
-        This is the design, or X, matrix.
-    wexog : ndarray
-        This is the whitened design matrix.
-        design = wexog by default for the OLS, though models that
-        inherit from the OLS will whiten the design.
-    pinv_wexog : ndarray
-        This is the Moore-Penrose pseudoinverse of the whitened design matrix.
-    normalized_cov_params : ndarray
-        np.dot(pinv_wexog, pinv_wexog.T)
-    df_resid : integer
-        Degrees of freedom of the residuals.
-        Number of observations less the rank of the design.
-    df_model : integer
-        Degres of freedome of the model.
-        The rank of the design.
+    weights : scalar
+        The OLS model has an attribute weights = array(1.0).  This is due to
+        its inheritance from WLS.
+
+    See regression.GLS
 
     Examples
     --------
     >>> import numpy as np
     >>>
-    >>> from scikits.statsmodels.tools import add_constant
-    >>> from scikits.statsmodels.regression import OLS
+    >>> import scikits.statsmodels as models
     >>>
     >>> Y = [1,3,4,5,2,3,4],
     >>> X = range(1,8)
-    >>> X = add_constant(X)
+    >>> X = models.tools.add_constant(X)
     >>>
-    >>> model = OLS(Y,X)
+    >>> model = models.OLS(Y,X)
     >>> results = model.fit()
-    >>>
+    >>> # or results = model.results
     >>> results.params
     array([ 0.25      ,  2.14285714])
     >>> results.t()
     array([ 0.98019606,  1.87867287])
-    >>> print results.Tcontrast([0,1])
-    <T contrast: effect=2.14285714286, sd=1.14062281591, t=1.87867287326, df_denom=5>
-    >>> print results.Fcontrast(np.identity(2))
-    <F contrast: F=19.4607843137, df_denom=5, df_num=2>
+    >>> print results.t_test([0,1])
+<T test: effect=2.1428571428571423, sd=1.1406228159050935, t=1.8786728732554485, p=0.059539737780605395, df_denom=5>
+    >>> print results.f_test(np.identity(2))
+<F test: F=19.460784313725501, p=0.00437250591095, df_denom=5, df_num=2>
+
+    Notes
+    -----
+    OLS, as the other models, assumes that the design matrix contains a constant.
     """
     def __init__(self, endog, exog=None):
         super(OLS, self).__init__(endog, exog)
@@ -547,54 +544,13 @@ class GLSAR(GLS):
 
     Examples
     --------
-    >>> import numpy as N
-    >>> import numpy.random as R
-    >>>
-    >>> from nipy.fixes.scipy.stats.models.formula import Term, I
-    >>> from nipy.fixes.scipy.stats.models.regression import AR
-    >>>
-    >>> data={'Y':[1,3,4,5,8,10,9],
-    ...       'X':range(1,8)}
-    >>> f = term("X") + I
-    >>> f.namespace = data
-    >>>
-    >>> model = AR(f.design(), 2)
-    >>> for i in range(6):
-    ...     results = model.fit(data['Y'])
-    ...     print "AR coefficients:", model.rho
-    ...     rho, sigma = model.yule_walker(data["Y"] - results.fittedvalues)
-    ...     model = AR(model.design, rho)
-    ...
-### NOTE ### the above call to yule_walker needs an order = model.order
-    AR coefficients: [ 0.  0.]
-    AR coefficients: [-0.52571491 -0.84496178]
-    AR coefficients: [-0.620642   -0.88654567]
-    AR coefficients: [-0.61887622 -0.88137957]
-    AR coefficients: [-0.61894058 -0.88152761]
-    AR coefficients: [-0.61893842 -0.88152263]
-    >>> results.params
-    array([ 1.58747943, -0.56145497])
-    >>> results.t()
-    array([ 30.796394  ,  -2.66543144])
-    >>> print results.Tcontrast([0,1])
-    <T contrast: effect=-0.561454972239, sd=0.210643186553, t=-2.66543144085, df_denom=5>
-    >>> print results.Fcontrast(np.identity(2))
-    <F contrast: F=2762.42812716, df_denom=5, df_num=2>
-    >>>
-    >>> model.rho = np.array([0,0])
-    >>> model.iterative_fit(data['Y'], niter=3)
-    >>> print model.rho
-    [-0.61887622 -0.88137957]
-
-
-    Updated Example
     import numpy as np
     from scikits.statsmodels.tools import add_constant
     from scikits.statsmodels.regression import AR, yule_walker
 
     X = np.arange(1,8)
     X = add_constant(X)
-    Y = np.array((1, 3, 4, 5, 8, 10, 9))
+    Y = [1, 3, 4, 5, 8, 10, 9]
     model = AR(Y, X, rho=2)
     for i in range(6):
         results = model.fit()
