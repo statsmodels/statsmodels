@@ -35,13 +35,8 @@ from csv import reader              # These are for read_array
 
 import numpy as np
 from scipy.linalg import norm, toeplitz
-#from scikits.statsmodels.model import LikelihoodModel, LikelihoodModelResults
-#from scikits.statsmodels import tools
-#from scikits.statsmodels.tools import add_constant
 from scipy import stats
 from scipy.stats.stats import ss
-
-
 from model import LikelihoodModel, LikelihoodModelResults
 import tools
 from tools import add_constant
@@ -72,7 +67,6 @@ class GLS(LikelihoodModel):
         `pinv_wexog` is the p x n Moore-Penrose pseudoinverse
         of the whitened design matrix. In matrix notation it is approximately
         [X^(T)(sigma)^(-1)X]^(-1)X^(T)psi
-
         where psi is cholsigmainv.T
     cholsimgainv : array
         n x n upper triangular matrix such that in matrix notation
@@ -97,9 +91,7 @@ class GLS(LikelihoodModel):
         In matrix notation this can be written (X^(T) sigma^(-1) X)^(-1)
     sigma : array
         `sigma` is the n x n covariance matrix of the error terms or
-
         E(resid resid.T)
-
         where E is the expectations operator.
     wexog : array
         `wexog` is the whitened design matrix.  In matrix notation
@@ -107,7 +99,6 @@ class GLS(LikelihoodModel):
     wendog : array
         The whitened response /dependent variable.  In matrix notation
         (cholsigmainv endog)
-#TODO: is this correct?
 
     Methods
     -------
@@ -117,6 +108,7 @@ class GLS(LikelihoodModel):
        calling fit.
     information
         Returns the Fisher information matrix for a given set of parameters.
+        Not yet implemented
     initialize
         (Re)-initialize a model.
 #TODO: should this be a public method?
@@ -134,9 +126,9 @@ class GLS(LikelihoodModel):
     Examples
     --------
     >>>import numpy as np
-    >>>import models
-    >>>from models.tools import add_constant
-    >>>from models.datasets.longley.data import load
+    >>>import scikits.statsmodels as models
+    >>>from scikits.statsmodels.tools import add_constant
+    >>>from scikits.statsmodels.datasets.longley.data import load
     >>>data = load()
     >>>data.exog = add_constant(data.exog)
     >>>ols_tmp = models.OLS(data.endog, data.exog).results
@@ -156,17 +148,10 @@ class GLS(LikelihoodModel):
     >>>gls_model = models.GLS(data.endog, data.exog, sigma=sigma)
     >>>gls_results = gls_model.results
 
-    *Assume* that the error terms in the OLS fit above are uncorrelated.
-    Then sigma will be a diagonal matrix.
-
-    >>>s = np.var(ols_tmp.resid)
-#TODO: Unfinished, compare to WLS.
-    >>>
-
-    See Also
-    --------
-    See the docs/gls.rst for more info.
-
+    Notes
+    -----
+    If sigma is a function of the data making one of the regressors
+    a constant, then the current postestimation statistics will not be correct.
     """
 
     def __init__(self, endog, exog, sigma=None):
@@ -205,6 +190,23 @@ Should be of length %s, if sigma is a 1d array" % nobs
         self.df_model = float(tools.rank(self._exog)-1)
 
     def whiten(self, Y):
+        """
+        GLS whiten method.
+
+        Parameters
+        -----------
+        Y : array-like
+            The array that is to be whitened.
+
+        Returns
+        -------
+        np.dot(cholsigmainv,Y)
+
+        See Also
+        --------
+        regression.GLS
+        """
+        Y = np.asarray(Y)
         if np.any(self.sigma) and not self.sigma==():
             return np.dot(self.cholsigmainv, Y)
         else:
@@ -212,12 +214,14 @@ Should be of length %s, if sigma is a 1d array" % nobs
 
     def fit(self):
         """
-        Full fit of the model including estimate of covariance matrix,
-        (whitened) residuals and scale.
+        Full fit of the model.
+
+        The results include an estimate of covariance matrix, (whitened)
+        residuals and an estimate of scale.
 
         Returns
         -------
-        A RegressionResults class.
+        A RegressionResults class instance.
 
         See Also
         ---------
@@ -227,6 +231,10 @@ Should be of length %s, if sigma is a 1d array" % nobs
         -----
         Currently it is assumed that all models will have an intercept /
         constant in the design matrix for postestimation statistics.
+
+        The fit method uses the pseudoinverse of the design/exogenous variables
+        to solve the least squares minimization.
+
         """
 #TODO: add a full_output keyword so that only lite results needed for
 # IRLS are calculated?
@@ -239,53 +247,90 @@ Should be of length %s, if sigma is a 1d array" % nobs
 
     @property
     def results(self):
+        """
+        A property that returns a RegressResults class.
+
+        Notes
+        -----
+        Calls fit, if it has not already been called.
+        """
         if self._results is None:
             self._results = self.fit()
         return self._results
 
-    def predict(self, design, params=None):
+    def predict(self, exog, params=None):
         """
         Return linear predicted values from a design matrix.
+
+        Paremters
+        ---------
+        exog : array-like
+            Design / exogenous data
+
+        params : array-like, optional after first fit
+            Parameters of a linear model
+
+        Returns
+        -------
+        An array of fitted values
+
+        Notes
+        -----
+        If the model as not yet been fit, params is not optional.
         """
         #JP: this doesn't look correct for GLMAR
         #SS: it needs its own predict method
         if self._results is None and params is None:
             raise ValueError, "If the model has not been fit, then you must specify the params argument."
         if self._results is not None:
-            return np.dot(design, self.results.params)
+            return np.dot(exog, self.results.params)
         else:
-            return np.dot(design, params)
+            return np.dot(exog, params)
 
     def loglike(self, params):
         """
-        Returns the value of the gaussian loglikelihood function at b.
+        Returns the value of the gaussian loglikelihood function at params.
 
         Given the whitened design matrix, the loglikelihood is evaluated
-        at the parameter vector `params` for the dependent variable `Y`.
+        at the parameter vector `params` for the dependent variable `endog`.
 
         Parameters
         ----------
         `params` : array-like
-            The parameter estimates.
+            The parameter estimates
 
         Returns
         -------
-        The value of the loglikelihood function for an GLS Model.
+        The value of the loglikelihood function for a GLS Model.
+
+        Formula
+        -------
+        ..math :: -\frac{n}{2}\text{\ensuremath{\log}}\left(Y-\hat{Y}\right)-\frac{n}{2}\left(1+\log\left(\frac{2\pi}{n}\right)\right)-\frac{1}{2}\text{log}\left(\left|\Sigma\right|\right)\]
+
+        Notes
+        -----
+        Y and Y-hat are whitened.
         """
+#TODO: combine this with OLS/WLS loglike and add _det_sigma argument
         nobs2 = self.nobs / 2.0
         SSR = ss(self.wendog - np.dot(self.wexog,params))
-        #SSR = ss(self._endog - np.dot(self._exog,params))
         llf = -np.log(SSR) * nobs2      # concentrated likelihood
         llf -= (1+np.log(np.pi/nobs2))*nobs2  # with likelihood constant
-        if np.any(self.sigma) and self.sigma.ndim == 2: #FIXME: robust-enough check?
-            llf -= .5*np.log(np.linalg.det(self.sigma)) # with error covariance matrix
+        if np.any(self.sigma) and self.sigma.ndim == 2:
+#FIXME: robust-enough check?  unneeded if _det_sigma gets defined
+            llf -= .5*np.log(np.linalg.det(self.sigma))
+            # with error covariance matrix
         return llf
 
 class WLS(GLS):
     """
     A regression model with diagonal but non-identity covariance structure.
+
     The weights are presumed to be (proportional to) the inverse of the
-    variance of the observations.
+    variance of the observations.  That is, if the variables are to be
+    transformed by 1/sqrt(W) you must supply weights = 1/W.  Note that this
+    is different than the behavior for GLS with a diagonal Sigma, where you
+    would just supply W.
 
     Parameters
     ----------
@@ -294,8 +339,11 @@ class WLS(GLS):
         n length array containing the response variable
 
     exog : array-like
+        n x p array of design / exogenous data
 
     weights : array-like
+        1d array of weights.  If you supply 1/W then the variables are pre-
+        multiplied by 1/sqrt(W)
 
 
     Methods
@@ -307,8 +355,7 @@ class WLS(GLS):
     Examples
     ---------
     >>>import numpy as np
-    >>>import models
-    >>>import numpy as np
+    >>>import scikits.statsmodels as models
     >>> Y = [1,3,4,5,2,3,4]
     >>> X = range(1,8)
     >>> X = models.tools.add_constant(X)
@@ -413,8 +460,8 @@ class OLS(WLS):
     --------
     >>> import numpy as np
     >>>
-    >>> from models.tools import add_constant
-    >>> from models.regression import OLS
+    >>> from scikits.statsmodels.tools import add_constant
+    >>> from scikits.statsmodels.regression import OLS
     >>>
     >>> Y = [1,3,4,5,2,3,4],
     >>> X = range(1,8)
@@ -512,8 +559,8 @@ class GLSAR(GLS):
 
     Updated Example
     import numpy as np
-    from models.tools import add_constant
-    from models.regression import AR, yule_walker
+    from scikits.statsmodels.tools import add_constant
+    from scikits.statsmodels.regression import AR, yule_walker
 
     X = np.arange(1,8)
     X = add_constant(X)

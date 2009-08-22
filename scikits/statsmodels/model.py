@@ -20,7 +20,7 @@ class Model(object):
     def __init__(self, endog, exog=None):
         self._endog = np.asarray(endog)
         self._exog = np.asarray(exog)
-        self.nobs = float(endog.shape[0])
+        self.nobs = float(self._endog.shape[0])
 
     def fit(self):
         """

@@ -20,7 +20,7 @@ from datasets import *
 # tried add_subpackage in both setup.py
 
 __all__ = filter(lambda s:not s.startswith('_'),dir())
-#from numpy.testing import Tester
+from numpy.testing import Tester
 #test = Tester().test(extra_argv=["--exe"])
 test = Tester().test
 #TODO:
