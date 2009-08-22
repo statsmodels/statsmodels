@@ -736,71 +736,145 @@ class RegressionResults(LikelihoodModelResults):
     -----------
     aic
         Aikake's information criteria
+        -2 * llf + 2*(df_model+1)
     bic
         Bayes' information criteria
-    bse
-        The standard errors of the parameter estimates
+        -2 * llf + log(n)*(df_model+1)
     pinv_wexog
         See specific model class docstring
     centered_tss
         The total sum of squares centered about the mean
+    cov_HC0
+        See HC0_se below.  Only available after calling HC0_se.
+    cov_HC1
+        See HC1_se below.  Only available after calling HC1_se.
+    cov_HC2
+        See HC2_se below.  Only available after calling HC2_se.
+    cov_HC3
+        See HC3_se below.  Only available after calling HC3_se.
     df_model
-        Model degress of freedom
+        Model degress of freedom. The number of regressors p - 1 for the
+        constant  Note that df_model does not include the constant even though
+        the design does.  The design is always assumed to have a constant
+        in calculating results for now.
     df_resid
-        Residual degrees of freedom
+        Residual degrees of freedom. n - p.  Note that the constant *is*
+        included in calculating the residual degrees of freedom.
     ess
-        Explained sum of squares
+        Explained sum of squares.  The centered total sum of squares minus
+        the sum of squared residuals.
     fvalue
-        F-statistic of the fully specified model
+        F-statistic of the fully specified model.  Calculated as the mean
+        squared error of the model divided by the mean squared error of the
+        residuals.
     f_pvalue
         p-value of the F-statistic
     fittedvalues
-        The predict the values for the given design
+        The predicted the values for the original (unwhitened) design.
+    het_scale
+        Only available if HC#_se is called.  See HC#_se for more information.
+    HC0_se
+        White's (1980) heteroskedasticity robust standard errors.
+        Defined as sqrt(diag(X.T X)^(-1)X.T diag(e_i^(2)) X(X.T X)^(-1)
+        where e_i = resid[i]
+        HC0_se is a property.  It is not evaluated until it is called.
+        When it is called the RegressionResults instance will then have
+        another attribute cov_HC0, which is the full heteroskedasticity
+        consistent covariance matrix and also `het_scale`, which is in
+        this case just resid**2.  HCCM matrices are only appropriate for OLS.
+    HC1_se
+        MacKinnon and White's (1985) alternative heteroskedasticity robust
+        standard errors.
+        Defined as sqrt(diag(n/(n-p)*HC_0)
+        HC1_se is a property.  It is not evaluated until it is called.
+        When it is called the RegressionResults instance will then have
+        another attribute cov_HC1, which is the full HCCM and also `het_scale`,
+        which is in this case n/(n-p)*resid**2.
+    HC2_se
+        MacKinnon and White's (1985) alternative heteroskedasticity robust
+        standard errors.
+        Defined as (X.T X)^(-1)X.T diag(e_i^(2)/(1-h_ii)) X(X.T X)^(-1)
+        where h_ii = x_i(X.T X)^(-1)x_i.T
+        HC2_se is a property.  It is not evaluated until it is called.
+        When it is called the RegressionResults instance will then have
+        another attribute cov_HC2, which is the full HCCM and also `het_scale`,
+        which is in this case is resid^(2)/(1-h_ii).
+    HC3_se
+        MacKinnon and White's (1985) alternative heteroskedasticity robust
+        standard errors.
+        Defined as (X.T X)^(-1)X.T diag(e_i^(2)/(1-h_ii)^(2)) X(X.T X)^(-1)
+        where h_ii = x_i(X.T X)^(-1)x_i.T
+        HC3_se is a property.  It is not evaluated until it is called.
+        When it is called the RegressionResults instance will then have
+        another attribute cov_HC3, which is the full HCCM and also `het_scale`,
+        which is in this case is resid^(2)/(1-h_ii)^(2).
     model
-        A pointer to the model instance that is fitted
+        A pointer to the model instance that called fit() or results.
     mse_model
-        Mean squared error the model
+        Mean squared error the model. This is the explained sum of squares
+        divided by the model degrees of freedom.
     mse_resid
-        Mean squared error of the residuals
+        Mean squared error of the residuals.  The sum of squared residuals
+        divided by the residual degrees of freedom.
     mse_total
-        Total mean squared error
+        Total mean squared error.  Defined as the uncentered total sum of
+        squares divided by n the number of observations.
     nobs
-        Number of observations
+        Number of observations n.
     normalized_cov_params
         See specific model class docstring
     params
-        The fitted coefficients that minimize the least squares criterion
+        The linear coefficients that minimize the least squares criterion.  This
+        is usually called Beta for the classical linear model.
     pvalues
-        The two-tailed p values for the t-stats of the params
+        The two-tailed p values for the t-stats of the params.
     resid
         The residuals of the model.
     rsquared
-        R-squared of a model with an intercept
+        R-squared of a model with an intercept.  This is defined here as
+        1 - `ssr`/`centered_tss`
     rsquared_adj
-        Adjusted R-squared
+        Adjusted R-squared.  This is defined here as
+        1 - (n-1)/(n-p)*(1-`rsquared`)
     scale
         A scale factor for the covariance matrix.
-        Default value is ssr/(n-k)
+        Default value is ssr/(n-p).  Note that the square root of `scale` is
+        often called the standard error of the regression.
     ssr
-        Sum of squared residuals
+        Sum of squared (whitened) residuals.
+    stand_errors
+        The standard errors of the parameter estimates
     uncentered_tss
-        Uncentered sum of squares
+        Uncentered sum of squares.  Sum of the squared values of the
+        (whitened) endogenous response variable.
     wresid
-        The residuals of the transformed regressand and regressor(s)
+        The residuals of the transformed/whitened regressand and regressor(s)
 
     Methods
     -------
     cov_params
-
+        This is the estimated covariance matrix scaled by `scale`
+        See statsmodels.model.cov_params
     conf_int
-
+        Returns 1 - alpha % confidence intervals for the estimates
+        See statsmodels.model.conf_int()
     f_test
-
+        F test (sometimes called F contrast) returns a ContrastResults instance
+        given an array of linear restrictions.
+        See statsmodels.model.f_test
     norm_resid
-
+        Returns the (whitened) residuals normalized to have unit length.
+    PostEstimation
+        Returns a PostRegression instance.
+        See statsmodels.regression.PostRegression
     t
-
+        Returns the t-value for the (optional) given columns.  Calling t()
+        without an argument returns all of the t-values.
+        See statsmodels.model.t
     t_test
+        T tests (sometimes called T contrast) returns a ContrastResults instance
+        given a 1d array of linear restrictions.  There is not yet full support
+        for multiple an array of multiple t-tests.
     """
 
     # For robust covariance matrix properties
@@ -818,9 +892,6 @@ class RegressionResults(LikelihoodModelResults):
     def _get_results(self):
         '''
         This contains the results that are the same across models
-
-        It in turn calls 'model_type'._ls_results() to compute model-
-        specific results
         '''
         self.fittedvalues = self.model.predict(self.model._exog, self.params)
         self.wresid = self.model.wendog - \
@@ -857,11 +928,11 @@ class RegressionResults(LikelihoodModelResults):
                 (1 - self.rsquared)
         self.mse_model = self.ess/self.model.df_model
         self.mse_resid = self.ssr/self.model.df_resid
-        self.mse_total = self.uncentered_tss/(self.df_model+self.df_resid+1)
+        self.mse_total = self.uncentered_tss/(self.nobs)
         self.fvalue = self.mse_model/self.mse_resid
         self.f_pvalue = stats.f.sf(self.fvalue, self.model.df_model,
                 self.model.df_resid)
-        self.bse = np.sqrt(np.diag(self.cov_params()))
+        self.stand_errors = np.sqrt(np.diag(self.cov_params()))
         self.llf = self.model.loglike(self.params)
         self.aic = -2 * self.llf + 2*(self.model.df_model+1)
         self.bic = -2 * self.llf + np.log(self.model.nobs)*\
@@ -870,16 +941,15 @@ class RegressionResults(LikelihoodModelResults):
         self.PostEstimation = PostRegression(self)
 
     def _HCCM(self, scale):
-#        scale=np.diag(scale)
-#        return np.dot(np.dot(self.pinv_wexog, scale), self.pinv_wexog.T)
-#   This can be done with broadcasting!
         H = np.dot(self.model.pinv_wexog,
             scale[:,None]*self.model.pinv_wexog.T)
-#        self.robust_se = np.sqrt(np.diag(H))
         return H
 
     @property
     def HC0_se(self):
+        """
+        See statsmodels.RegressionResults
+        """
         if self._HC0_se is None:
             self.het_scale = self.resid**2 # or whitened residuals? only OLS?
             self.cov_HC0 = self._HCCM(self.het_scale)
@@ -890,6 +960,9 @@ class RegressionResults(LikelihoodModelResults):
 
     @property
     def HC1_se(self):
+        """
+        See statsmodels.RegressionResults
+        """
         if self._HC1_se is None:
             self.het_scale = self.nobs/(self.df_resid)*(self.resid**2)
             self.cov_HC1 = self._HCCM(self.het_scale)
@@ -898,6 +971,9 @@ class RegressionResults(LikelihoodModelResults):
 
     @property
     def HC2_se(self):
+        """
+        See statsmodels.RegressionResults
+        """
         if self._HC2_se is None:
             h=np.diag(np.dot(np.dot(self.model._exog, self.normalized_cov_params),
                     self.model._exog.T)) # probably could be optimized
@@ -908,6 +984,9 @@ class RegressionResults(LikelihoodModelResults):
 
     @property
     def HC3_se(self):
+        """
+        See statsmodels.RegressionResults
+        """
         if self._HC3_se is None:
             h=np.diag(np.dot(np.dot(self.model._exog,self.normalized_cov_params),
                     self.model._exog.T)) # probably could be optimized
@@ -919,26 +998,20 @@ class RegressionResults(LikelihoodModelResults):
 #TODO: this needs a test
     def norm_resid(self):
         """
-        Residuals, normalized to have unit length.
+        Residuals, normalized to have unit length and unit variance.
 
-        Note: residuals are whitened residuals.
+        Returns
+        -------
+        An array resid/sqrt(mse_resid)
 
         Notes
         -----
-        Is this supposed to return "stanardized residuals," residuals standardized
-        to have mean zero and approximately unit variance?
-
-        d_i = e_i/sqrt(MS_E)
-
-        Where MS_E = SSE/(n - k)
-
-        See: Montgomery and Peck 3.2.1 p. 68
-             Davidson and MacKinnon 15.2 p 662
-
+        This method is untested
         """
         if not hasattr(self, 'resid'):
-            raise ValueError, 'need normalized residuals to estimate standard deviation'
-        return self.resid * tools.recipr(np.sqrt(self.scale))
+            raise ValueError, 'need normalized residuals to estimate standard\
+ deviation'
+        return self.wresid * tools.recipr(np.sqrt(self.scale))
 
 #TODO: these need to be tested
 #TODO: also allow tests to take an input, so more general
