@@ -1,7 +1,10 @@
 import numpy as np
-from scikits.statsmodels import tools
+#from scikits.statsmodels import tools
 from scipy.stats import f as fdist
 from scipy.stats import t as student_t
+
+import tools
+
 
 #TODO: should this be public if it's just a container?
 class ContrastResults(object):

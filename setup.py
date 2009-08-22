@@ -68,8 +68,10 @@ def configuration(parent_package='', top_path=None, package_name=DISTNAME):
                            long_description = LONG_DESCRIPTION)
 
     config.add_data_files('scikits/__init__.py')
-    config.add_data_dir('scikits/statsmodels/tests')
-    config.add_data_dir('scikits/statsmodels/examples')
+#    config.add_subpackage('scikits/statsmodels/datasets')
+#    config.add_data_dir('scikits/statsmodels/datasets')
+    config.add_data_dir('scikits/statsmodels/tests/')
+    config.add_data_dir('scikits/statsmodels/examples/')
 
     config.set_options(
             ignore_setup_xxx_py = True,
@@ -87,6 +89,6 @@ if __name__ == "__main__":
         namespace_packages = ['scikits'],
         packages = setuptools.find_packages(),
         include_package_data = True,
-        test_suite="tester",
+        test_suite="nose.collector",
         zip_safe = False, # the package can run out of an .egg file
         classifiers = classifiers)

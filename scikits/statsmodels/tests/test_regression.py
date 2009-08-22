@@ -5,10 +5,10 @@ import numpy as np
 from numpy.random import standard_normal
 from numpy.testing import *
 from scipy.linalg import toeplitz
-from models.tools import add_constant
-from models.regression import OLS, GLSAR, WLS, GLS, yule_walker
-import models
-from models import tools
+from scikits.statsmodels.tools import add_constant
+from scikits.statsmodels.regression import OLS, GLSAR, WLS, GLS, yule_walker
+import scikits.statsmodels as models
+from scikits.statsmodels import tools
 from check_for_rpy import skip_rpy
 from nose import SkipTest
 from scipy.stats import t

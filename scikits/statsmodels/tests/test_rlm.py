@@ -4,11 +4,11 @@ Test functions for models.rlm
 
 import numpy.random as R
 from numpy.testing import *
-import models
+import scikits.statsmodels as models
 from rmodelwrap import RModel
 import rpy # for hampel test...ugh
 import numpy as np # ditto
-from models.rlm import RLM
+from scikits.statsmodels.rlm import RLM
 import model_results
 from nose import SkipTest
 from check_for_rpy import skip_rpy

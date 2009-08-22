@@ -8,7 +8,7 @@ from numpy.testing import *
 
 # Example from Section 5.5, Venables & Ripley (2002)
 
-import models.robust.scale as scale
+import scikits.statsmodels.robust.scale as scale
 
 W = R.standard_normal
 

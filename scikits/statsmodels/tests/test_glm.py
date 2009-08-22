@@ -6,9 +6,9 @@ import numpy as np
 import numpy.random as R
 from numpy.testing import *
 
-import models
-from models.glm import GLM
-from models.tools import add_constant, xi
+import scikits.statsmodels as models
+from scikits.statsmodels.glm import GLM
+from scikits.statsmodels.tools import add_constant, xi
 from scipy import stats
 from rmodelwrap import RModel
 from nose import SkipTest

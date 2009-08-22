@@ -60,8 +60,10 @@ models.family.Poisson(link = links.logit)
 import numpy as np
 from scipy import special
 from scipy.stats import ss
-from scikits.statsmodels.family import links as L
-from scikits.statsmodels.family import varfuncs as V
+#from scikits.statsmodels.family import links as L
+#from scikits.statsmodels.family import varfuncs as V
+import links as L
+import varfuncs as V
 
 class Family(object):
 

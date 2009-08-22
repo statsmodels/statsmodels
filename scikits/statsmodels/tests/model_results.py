@@ -1,7 +1,7 @@
 import numpy as np
 import os
-import models
-from models import tools
+import scikits.statsmodels as models
+from scikits.statsmodels import tools
 import glm_test_resids
 
 def generated_data():

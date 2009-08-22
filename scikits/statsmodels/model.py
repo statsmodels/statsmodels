@@ -1,8 +1,11 @@
 import numpy as np
 from scipy.stats import t, norm
 from scipy import optimize, derivative
-from scikits.statsmodels.contrast import ContrastResults
-from scikits.statsmodels.tools import recipr
+#from scikits.statsmodels.contrast import ContrastResults
+#from scikits.statsmodels.tools import recipr
+from tools import recipr
+from contrast import ContrastResults
+
 
 import numpy.lib.recfunctions as nprf
 
