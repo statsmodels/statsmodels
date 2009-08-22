@@ -189,26 +189,26 @@ Should be of length %s, if sigma is a 1d array" % nobs
 #       Below assumes that we have a constant
         self.df_model = float(tools.rank(self._exog)-1)
 
-    def whiten(self, Y):
+    def whiten(self, X):
         """
         GLS whiten method.
 
         Parameters
         -----------
-        Y : array-like
-            The array that is to be whitened.
+        X : array-like
+            Data to be whitened.
 
         Returns
         -------
-        np.dot(cholsigmainv,Y)
+        np.dot(cholsigmainv,X)
 
         See Also
         --------
         regression.GLS
         """
-        Y = np.asarray(Y)
+        X = np.asarray(X)
         if np.any(self.sigma) and not self.sigma==():
-            return np.dot(self.cholsigmainv, Y)
+            return np.dot(self.cholsigmainv, X)
         else:
             return Y
 
@@ -341,16 +341,24 @@ class WLS(GLS):
     exog : array-like
         n x p array of design / exogenous data
 
-    weights : array-like
+    weights : array-like, optional
         1d array of weights.  If you supply 1/W then the variables are pre-
-        multiplied by 1/sqrt(W)
-
-
-    Methods
-    -------
+        multiplied by 1/sqrt(W).  If no weights are supplied the default value
+        is 1 and WLS reults are the same as OLS.
 
     Attributes
     ----------
+    weights : array
+        The stored weights supplied as an argument.
+
+    See regression.GLS
+
+    Methods
+    -------
+    whiten
+        Returns the input scaled by sqrt(W)
+
+    See regression.GLS
 
     Examples
     ---------
@@ -359,17 +367,21 @@ class WLS(GLS):
     >>> Y = [1,3,4,5,2,3,4]
     >>> X = range(1,8)
     >>> X = models.tools.add_constant(X)
-    >>> model1 = models.WLS(Y,X, weights=range(1,8))
-    >>> results = model1.fit()
+    >>> wls_model = models.WLS(Y,X, weights=range(1,8))
+    >>> results = wls_model.fit()
     >>> results.params
     array([ 0.0952381 ,  2.91666667])
     >>> results.t()
-    array([ 0.61890419,  3.58195812])
-    >>> print results.Tcontrast([0,1])
-    <T contrast: effect=2.9166666666666674, sd=0.81426598880777334, t=3.5819581153538946, p=0.0079210215745977308, df_denom=5>
-    >>> print results.Fcontrast(np.identity(2))
-    <F contrast: F=81.213965087281849, p=0.00015411866558, df_denom=5, df_num=2>    """
-
+    array([ 0.35684428,  2.0652652 ])
+    """
+#FIXME: don't include here, and sort this out.
+#    <T contrast: effect=2.9166666666666674, sd=1.4122480109543243, t=2.0652651970780505, p=0.046901390323708769, df_denom=5>
+#>>> print results.f_test(np.identity(2))
+#    <F contrast: F=26.998607242339855, p=0.00209096249397, df_denom=5, df_num=2>    """
+#FIXME: bug in fvalue or f_test for this example?
+#    results.f_test([1,0])!=results.fvalue
+# or is it a matter of no constant since weights = X
+# looks like a bug, after comparing to constant fvalue
     def __init__(self, endog, exog, weights=1.):
         weights = np.array(weights)
         if weights.shape == ():
@@ -386,6 +398,15 @@ class WLS(GLS):
     def whiten(self, X):
         """
         Whitener for WLS model, multiplies each column by sqrt(self.weights)
+
+        Parameters
+        ----------
+        X : array-like
+            Data to be whitened
+
+        Returns
+        -------
+        sqrt(weights)*X
         """
         X = np.asarray(X)
         if X.ndim == 1:
@@ -399,7 +420,7 @@ class WLS(GLS):
 
     def loglike(self, params):
         """
-        Returns the value of the gaussian loglikelihood function at b.
+        Returns the value of the gaussian loglikelihood function at params.
 
         Given the whitened design matrix, the loglikelihood is evaluated
         at the parameter vector `params` for the dependent variable `Y`.
@@ -412,6 +433,15 @@ class WLS(GLS):
         Returns
         -------
         The value of the loglikelihood function for a WLS Model.
+
+        Formula
+        --------
+        .. math :: -\frac{n}{2}\text{\ensuremath{\log}}\left(Y-\hat{Y}\right)-\frac{n}{2}\left(1+\log\left(\frac{2\pi}{n}\right)\right)-\frac{1}{2}\text{log}\left(\left|W\right|\right)\]
+
+        Notes
+        -----
+        W is treated as a diagonal matrix for the purposes of the formula.
+
         """
         nobs2 = self.nobs / 2.0
         SSR = ss(self.wendog - np.dot(self.wexog,params))
