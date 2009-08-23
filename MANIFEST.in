@@ -1,0 +1,19 @@
+include *.txt *.py 
+#scikits*.*
+include MANIFEST.in
+
+#exclude scikits/statsmodels/docs/build/htmlhelp*
+#exclude build 
+#exclude dist
+
+graft scikits/statsmodels/datasets
+graft scikits/statsmodels/tests
+recursive-include scikits/statsmodels/docs/source *
+exclude scikits/statsmodels/docs/source/generated/*
+recursive-include scikits/statsmodels/docs/sphinxext *
+recursive-exclude scikits/statsmodels/docs/build *
+recursive-include scikits/statsmodels/docs/build/html *
+recursive-exclude scikits/statsmodels/docs/build/htmlhelp *
+#include scikits/statsmodels/docs mak*
+#include scikits/statsmodels/docs GLM*
+global-exclude *~ *.swp  *.pyc 

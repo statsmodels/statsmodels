@@ -5,17 +5,17 @@ TODO: compare standard error of parameter estimates
 
 from scipy import optimize
 import numpy as np
-import models
+import scikits.statsmodels
 
 print '\nExample 1: artificial data'
 print   '--------------------------\n'
 
 np.random.seed(54321)
 X = np.random.rand(40,2)
-X = models.tools.add_constant(X)
+X = scikits.statsmodels.tools.add_constant(X)
 beta = np.array((3.5, 5.7, 150))
 Y = np.dot(X,beta) + np.random.standard_normal(40)
-mod2 = models.OLS(Y,X)
+mod2 = scikits.statsmodels.OLS(Y,X)
 f2 = lambda params: -1*mod2.loglike(params)
 resfmin = optimize.fmin(f2, np.ones(3))
 print 'OLS'
@@ -28,10 +28,10 @@ print resfmin
 print '\nExample 2: longley data, high multicollinearity'
 print   '-----------------------------------------------\n'
 
-from models.datasets.longley.data import load
+from scikits.statsmodels.datasets.longley.data import load
 data = load()
-data.exog = models.tools.add_constant(data.exog)
-mod = models.OLS(data.endog, data.exog)
+data.exog = scikits.statsmodels.tools.add_constant(data.exog)
+mod = scikits.statsmodels.OLS(data.endog, data.exog)
 f = lambda params: -1*mod.loglike(params)
 score = lambda params: -1*mod.score(params)
 

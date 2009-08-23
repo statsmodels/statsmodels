@@ -6,10 +6,10 @@ import numpy as np
 from numpy.random import standard_normal
 from numpy.testing import *
 from scipy.linalg import toeplitz
-from models.tools import add_constant
-from models.regression import OLS, AR, WLS, GLS, yule_walker
-import models
-from models import tools
+from scikits.statsmodels.tools import add_constant
+from scikits.statsmodels.regression import OLS, GLSAR, WLS, GLS, yule_walker
+import scikits.statsmodels
+from scikits.statsmodels import tools
 from scipy.stats import t
 from rmodelwrap import RModel
 from rpy import r
@@ -24,7 +24,7 @@ self = Dummy()
 ##    GLM results are an implicit test of WLS
 ##    '''
 ##    def __init__(self):
-from models.datasets.ccard.data import load
+from scikits.statsmodels.datasets.ccard.data import load
 data = load()
 data.exog = add_constant(data.exog)
 weights = 1/data.exog[:,2]**2
@@ -57,6 +57,39 @@ print self.res2.fvalue
 print 'GLS llf:           ', self.res1.llf
 print 'R   llf:           ', self.res2.llf
 
-print 'GLS llf corrected: ' # which one
-print -np.log(np.linalg.det(np.diag(1/weights)))/2. + self.res1.llf
-print  np.log(np.linalg.det(np.diag(weights)))/2. + self.res1.llf
+# llf is correct now
+##print 'GLS llf corrected: ' # which one
+##print -np.log(np.linalg.det(np.diag(1/weights)))/2. + self.res1.llf
+##print  np.log(np.linalg.det(np.diag(weights)))/2. + self.res1.llf
+
+
+# comparison with anova on the model in R
+'''
+>>> r.anova(self.res2.robj)
+{'Df': [1, 1, 1, 1, 1, 67], 'Sum Sq': [33023.458414240784, 6425.0947815597365, 656.2454976748644, 797.81634550895842, 1.3428271834340058, 29269.692912443163], 'F value': [75.59258378189277, 14.707409184381831, 1.5021834522057456, 1.8262472144480861, 0.0030738081728158648, 1.#QNAN], 'Mean Sq': [33023.458414240784, 6425.0947815597365, 656.2454976748644, 797.81634550895842, 1.3428271834340058, 436.86108824542032], 'Pr(>F)': [1.3518684874757728e-012, 0.00028008727120000537, 0.22462655207459495, 0.1811169042369537, 0.95595138678960656, 1.#QNAN]}
+>>> self.res1.mse_model
+8180.7915732335559
+>>> self.res1.fvalue
+18.726299488220249
+>>> self.res1.mse_resid
+436.86108824542038
+>>> self.res1.ess, self.res1.uncentered_tss, self.res1.ssr
+(40903.957866167781, 70173.650778610943, 29269.692912443166)
+>>> ran = r.anova(self.res2.robj)
+>>> np.sum(ran['Sum Sq'][:-1])
+40903.957866167781
+>>> np.sum(ran['Sum Sq'])
+70173.650778610943
+>>> np.sum(ran['Sum Sq'][:-1]), np.sum(ran['Sum Sq']), np.sum(ran['Sum Sq'][-1])
+(40903.957866167781, 70173.650778610943, 29269.692912443163)
+>>> self.res1.ess, self.res1.uncentered_tss, self.res1.ssr
+(40903.957866167781, 70173.650778610943, 29269.692912443166)
+>>> np.sum(ran['Sum Sq'][:-1]) - self.res1.ess
+0.0
+>>> np.sum(ran['Sum Sq']) - self.res1.uncentered_tss
+0.0
+>>> self.res1.ssr - np.sum(ran['Sum Sq'][-1])
+3.637978807091713e-012
+>>>
+'''
+

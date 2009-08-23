@@ -1,3 +1,7 @@
+'''What's the origin of this file? It is not ours.
+Does not run because of missing mtx files
+'''
+
 from numpy import dot,  outer, random, argsort
 from scipy import io, linalg, optimize
 from scipy.sparse import speye

@@ -9,10 +9,10 @@ TODO: check to get simultaneous t-tests back
 
 import numpy as np
 import numpy.testing as npt
-import models
-from models.datasets.longley.data import load
-from models.regression import OLS
-from models import tools
+import scikits.statsmodels
+from scikits.statsmodels.datasets.longley.data import load
+from scikits.statsmodels.regression import OLS
+from scikits.statsmodels import tools
 
 data = load()
 data.exog = tools.add_constant(data.exog)
@@ -21,7 +21,7 @@ res = OLS(data.endog, data.exog).fit()
 # test pairwise equality of some coefficients
 R2 = [[0,1,-1,0,0,0,0],[0, 0, 0, 0, 1, -1, 0]]
 Ftest = res.f_test(R2)
-print repr((Ftest.F, Ftest.pvalue)) #use repr to get more digits
+print repr((Ftest.fvalue, Ftest.pvalue)) #use repr to get more digits
 # 9.740461873303655 0.0056052885317360301
 
 ##Compare to R (after running R_lm.s in the longley folder) looks good.
@@ -44,17 +44,17 @@ print repr((Ftest.F, Ftest.pvalue)) #use repr to get more digits
 # test all variables have zero effect
 R = np.eye(7)[:-1,:]
 Ftest0 = res.f_test(R)
-print repr((Ftest0.F, Ftest0.pvalue))
-print '%r' % res.F
-npt.assert_almost_equal(res.F, Ftest0.F, decimal=9)
+print repr((Ftest0.fvalue, Ftest0.pvalue))
+print '%r' % res.fvalue
+npt.assert_almost_equal(res.fvalue, Ftest0.fvalue, decimal=9)
 # values differ in 11th decimal, or 10th
 
 ttest0 = res.t_test(R[0,:])
-print repr((ttest0.t, ttest0.pvalue))
+print repr((ttest0.tvalue, ttest0.pvalue))
 
 betatval = res.t()
 betatval[0]
-npt.assert_almost_equal(betatval[0], ttest0.t, decimal=15)
+npt.assert_almost_equal(betatval[0], ttest0.tvalue, decimal=15)
 
 '''
 # several ttests at the same time
@@ -87,10 +87,13 @@ array([ 0.17737603, -1.06951632, -4.13642736, -4.82198531, -0.22605114,
         4.01588981])
 '''
 
-
+print "\nExample: simultaneous ttests"
 ttest0 = res.t_test(R2)
-t2 = np.diag(ttest0.t)
-t2a = np.r_[res.t_test(np.array(R2)[0,:]).t, res.t_test(np.array(R2)[1,:]).t]
+
+t2 = np.diag(ttest0.tvalue)
+print ttest0.tvalue
+print t2
+t2a = np.r_[res.t_test(np.array(R2)[0,:]).tvalue, res.t_test(np.array(R2)[1,:]).tvalue]
 print t2 - t2a
 t2pval = np.diag(ttest0.pvalue)
 print '%r' % t2pval    #reject
@@ -100,12 +103,12 @@ print '%r' % (t2pval < 0.05)
 
 # f_test needs 2-d currently
 Ftest2a = res.f_test(np.asarray(R2)[:1,:])
-print repr((Ftest2a.F, Ftest2a.pvalue))
+print repr((Ftest2a.fvalue, Ftest2a.pvalue))
 Ftest2b = res.f_test(np.asarray(R2)[1:2,:])
-print repr((Ftest2b.F, Ftest2b.pvalue))
+print repr((Ftest2b.fvalue, Ftest2b.pvalue))
 # equality of ttest and Ftest
-print t2a**2 - np.array((Ftest2a.F, Ftest2b.F))
-npt.assert_almost_equal(t2a**2, np.array((Ftest2a.F, Ftest2b.F)))
+print t2a**2 - np.array((Ftest2a.fvalue, Ftest2b.fvalue))
+npt.assert_almost_equal(t2a**2, np.array((Ftest2a.fvalue, Ftest2b.fvalue)))
 #npt.assert_almost_equal(t2pval, np.array((Ftest2a.pvalue, Ftest2b.pvalue)))
 npt.assert_almost_equal(t2pval*2, np.array((Ftest2a.pvalue, Ftest2b.pvalue)))
 
@@ -128,43 +131,43 @@ mod = OLS(y[:,0], X)
 res = mod.fit()
 R = np.eye(ncat)[:-1,:]
 Ftest = res.f_test(R)
-print repr((Ftest.F, Ftest.pvalue))
+print repr((Ftest.fvalue, Ftest.pvalue))
 R = np.atleast_2d([0, 1, -1, 2])
 Ftest = res.f_test(R)
-print repr((Ftest.F, Ftest.pvalue))
+print repr((Ftest.fvalue, Ftest.pvalue))
 
 print 'simultaneous ttest for zero effects'
 R = np.eye(ncat)[:-1,:]
 ttest = res.t_test(R)
-print repr((np.diag(ttest.t), np.diag(ttest.pvalue)))
+print repr((np.diag(ttest.tvalue), np.diag(ttest.pvalue)))
 
 
 R = np.atleast_2d([0, 1, 1, 2])
 np.dot(R,res.params)
 Ftest = res.f_test(R)
-print repr((Ftest.F, Ftest.pvalue))
+print repr((Ftest.fvalue, Ftest.pvalue))
 ttest = res.t_test(R)
 #print repr((np.diag(ttest.t), np.diag(ttest.pvalue)))
-print repr((ttest.t, ttest.pvalue))
+print repr((ttest.tvalue, ttest.pvalue))
 
 R = np.atleast_2d([1, -1, 0, 0])
 np.dot(R,res.params)
 Ftest = res.f_test(R)
-print repr((Ftest.F, Ftest.pvalue))
+print repr((Ftest.fvalue, Ftest.pvalue))
 ttest = res.t_test(R)
 #print repr((np.diag(ttest.t), np.diag(ttest.pvalue)))
-print repr((ttest.t, ttest.pvalue))
+print repr((ttest.tvalue, ttest.pvalue))
 
 R = np.atleast_2d([1, 0, 0, 0])
 np.dot(R,res.params)
 Ftest = res.f_test(R)
-print repr((Ftest.F, Ftest.pvalue))
+print repr((Ftest.fvalue, Ftest.pvalue))
 ttest = res.t_test(R)
 #print repr((np.diag(ttest.t), np.diag(ttest.pvalue)))
-print repr((ttest.t, ttest.pvalue))
+print repr((ttest.tvalue, ttest.pvalue))
 
 
-# Example: 2 categories: replicate stats.glm and stats.ttest_ind
+print "\nExample: 2 categories: replicate stats.glm and stats.ttest_ind"
 
 mod2 = OLS(y[xcat.flat<2][:,0], X[xcat.flat<2,:][:,(0,-1)])
 res2 = mod2.fit()
@@ -172,12 +175,13 @@ res2 = mod2.fit()
 R = np.atleast_2d([1, 0])
 np.dot(R,res2.params)
 Ftest = res2.f_test(R)
-print repr((Ftest.F, Ftest.pvalue))
+print repr((Ftest.fvalue, Ftest.pvalue))
+print repr((np.sqrt(Ftest.fvalue), Ftest.pvalue))
 ttest = res2.t_test(R)
 #print repr((np.diag(ttest.t), np.diag(ttest.pvalue)))
-print repr((ttest.t, ttest.pvalue))
+print repr((ttest.tvalue, ttest.pvalue))
 
 
 from scipy import stats
-stats.glm(y[xcat<2].ravel(), xcat[xcat<2].ravel())
-stats.ttest_ind(y[xcat==0], y[xcat==1])
+print stats.glm(y[xcat<2].ravel(), xcat[xcat<2].ravel())
+print stats.ttest_ind(y[xcat==0], y[xcat==1])
