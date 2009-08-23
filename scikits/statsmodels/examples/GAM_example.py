@@ -8,9 +8,9 @@ example = 1  # 1,2 or 3
 
 import numpy as np
 import numpy.random as R
-from models.gam import AdditiveModel
-from models.family import family
-from models.glm import GLM
+from scikits.statsmodels.sandbox.gam import AdditiveModel
+from scikits.statsmodels.family import family
+from scikits.statsmodels.glm import GLM
 
 # n is not a good name for a function, use normalize or something
 n = lambda x: (x - x.mean()) / x.std()

@@ -1,8 +1,8 @@
 import numpy as np
 import numpy.testing as npt
 from scipy import signal
-from models.tools import add_constant
-from models.regression import AR, yule_walker
+from scikits.statsmodels.tools import add_constant
+from scikits.statsmodels.regression import GLSAR, yule_walker
 
 examples_all = range(10) + ['test_copy']
 
@@ -13,21 +13,21 @@ if 0 in examples:
     X = add_constant(X)
     Y = np.array((1, 3, 4, 5, 8, 10, 9))
     rho = 2
-    model = AR(Y, X, 2)
+    model = GLSAR(Y, X, 2)
     for i in range(6):
         results = model.fit()
         print "AR coefficients:", model.rho
         rho, sigma = yule_walker(results.resid, order = model.order)
-        model = AR(Y, X, rho)
+        model = GLSAR(Y, X, rho)
     par0 = results.params
     print par0
-    model0if = AR(Y, X, 2)
+    model0if = GLSAR(Y, X, 2)
     res = model0if.iterative_fit(6)
     print 'iterativefit beta', res.params
     results.t() # is this correct? it does equal params/bse
     # but isn't the same as the AR example (which was wrong in the first place..)
-    print results.Tcontrast([0,1])  # are sd and t correct? vs
-    print results.Fcontrast(np.eye(2))
+    print results.t_test([0,1])  # are sd and t correct? vs
+    print results.f_test(np.eye(2))
 
 
 rhotrue = [0.5, 0.2]
@@ -63,7 +63,7 @@ else:
 y1 = np.dot(X1,beta) + noise
 
 if 1 in examples:
-    mod1 = AR(y1, X1, 1)
+    mod1 = GLSAR(y1, X1, 1)
     print mod1.results.params
     print mod1.rho
 
@@ -76,10 +76,10 @@ if 2 in examples:
     print '\n iterative fitting of first model'
     print 'with AR(0)', par0
     parold = par0
-    mod0 = AR(Y, X, 1)
+    mod0 = GLSAR(Y, X, 1)
     for i in range(10):
-        print mod0.wdesign.sum()
-        print mod0.calc_params.sum()
+        print mod0.wexog.sum()
+        print mod0.pinv_wexog.sum()
         mod0.iterative_fit(1)
         print mod0.rho
         parnew = mod0.results.params
@@ -94,12 +94,12 @@ Y = noise
 #results now have same estimated rho as yule-walker directly
 
 if 3 in examples:
-    model3 = AR(Y, rho=2)
+    model3 = GLSAR(Y, rho=2)
     for i in range(10):
         results = model3.fit()
         print "AR coefficients:", model3.rho, results.params
         rho, sigma = yule_walker(results.resid, order = model3.order)
-        model3 = AR(Y, rho=rho)
+        model3 = GLSAR(Y, rho=rho)
 
 if 'test_copy' in examples:
     xx = X.copy()
@@ -115,15 +115,15 @@ if 'test_copy' in examples:
 
 if 4 in examples:
     Ydemeaned = Y - Y.mean()
-    model4 = AR(Ydemeaned, rho=2)
+    model4 = GLSAR(Ydemeaned, rho=2)
     for i in range(10):
         results = model4.fit()
         print "AR coefficients:", model3.rho, results.params
         rho, sigma = yule_walker(results.resid, order = model4.order)
-        model4 = AR(Ydemeaned, rho=rho)
+        model4 = GLSAR(Ydemeaned, rho=rho)
 
 if 5 in examples:
-    model3a = AR(Y, rho=1)
+    model3a = GLSAR(Y, rho=1)
     res3a = model3a.iterative_fit(5)
     print res3a.params
     print model3a.rho
