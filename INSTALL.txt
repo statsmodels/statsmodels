@@ -3,9 +3,9 @@ Requirements
 
 To run correctly, scipy models requires the following:
 
-        -python (>= 2.4): http://www.python.org
-        -numpy (>= 1.2.1)? http://www.scipy.org/Numpy
-        -scipy (>= 0.7)? http://www.scipy.org/
+        -python (>= 2.4): http://www.python.org tested with 2.5 and 2.6
+        -numpy (>= 1.3.0) ?(>= 1.2.1)not tested http://www.scipy.org/Numpy
+        -scipy (>= 0.7) http://www.scipy.org/
         -setuptools (easy_install):
         http://peak.telecommunity.com/DevCenter/EasyInstall
 
