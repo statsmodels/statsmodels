@@ -210,7 +210,7 @@ Should be of length %s, if sigma is a 1d array" % nobs
         if np.any(self.sigma) and not self.sigma==():
             return np.dot(self.cholsigmainv, X)
         else:
-            return Y
+            return X
 
     def fit(self):
         """
@@ -935,7 +935,8 @@ class RegressionResults(LikelihoodModelResults):
         self.fvalue = self.mse_model/self.mse_resid
         self.f_pvalue = stats.f.sf(self.fvalue, self.model.df_model,
                 self.model.df_resid)
-        self.stand_errors = np.sqrt(np.diag(self.cov_params()))
+        self.bse = np.sqrt(np.diag(self.cov_params()))
+#TODO: change to stand_errors or something
         self.llf = self.model.loglike(self.params)
         self.aic = -2 * self.llf + 2*(self.model.df_model+1)
         self.bic = -2 * self.llf + np.log(self.model.nobs)*\
