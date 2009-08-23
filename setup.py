@@ -52,7 +52,7 @@ def fbuild_fver_str():
 VERSION = build_ver_str()
 
 def configuration(parent_package='', top_path=None, package_name=DISTNAME):
-    if os.path.exists('MANIFEST'): os.remove('MANIFEST')
+    #if os.path.exists('MANIFEST'): os.remove('MANIFEST')
 
     from numpy.distutils.misc_util import Configuration
     config = Configuration(None, parent_package, top_path,
@@ -66,7 +66,7 @@ def configuration(parent_package='', top_path=None, package_name=DISTNAME):
                            url = URL,
                            download_url = DOWNLOAD_URL,
                            long_description = LONG_DESCRIPTION)
-
+    config.add_subpackage('scikits')
     config.add_data_files('scikits/__init__.py')
 #    config.add_subpackage('scikits/statsmodels/datasets')
 #    config.add_data_dir('scikits/statsmodels/datasets')
@@ -79,6 +79,9 @@ def configuration(parent_package='', top_path=None, package_name=DISTNAME):
     for f in extradatafiles:
         config.add_data_files(f)
 
+    #config.add_subpackage(DISTNAME)
+    #config.add_subpackage('scikits/statsmodels/examples')
+    #config.add_subpackage('scikits/statsmodels/tests')
 
 
     config.set_options(
@@ -93,6 +96,7 @@ def configuration(parent_package='', top_path=None, package_name=DISTNAME):
 if __name__ == "__main__":
 
     setup(configuration = configuration,
+        #name = DISTNAME,
         install_requires = 'numpy',
         namespace_packages = ['scikits'],
         packages = setuptools.find_packages(),

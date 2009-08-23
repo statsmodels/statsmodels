@@ -8,9 +8,9 @@ def configuration(parent_package='',top_path=None):
 #    confid.add_subpackage('datasets')
     config.add_data_dir('tests')
 
-    config.add_extension('_hbspline',
-                         sources=['src/bspline_ext.c',
-                                  'src/bspline_impl.c'],
+##    config.add_extension('_hbspline',
+##                         sources=['src/bspline_ext.c',
+##                                  'src/bspline_impl.c'],
     )
     return config
 

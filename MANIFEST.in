@@ -1,0 +1,2 @@
+include *.txt *.py scikits*.*
+global-exclude *~ *.swp *bzr* dist* build *.pyc
