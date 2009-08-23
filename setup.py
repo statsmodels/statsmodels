@@ -70,8 +70,16 @@ def configuration(parent_package='', top_path=None, package_name=DISTNAME):
     config.add_data_files('scikits/__init__.py')
 #    config.add_subpackage('scikits/statsmodels/datasets')
 #    config.add_data_dir('scikits/statsmodels/datasets')
-    config.add_data_dir('scikits/statsmodels/tests/')
-    config.add_data_dir('scikits/statsmodels/examples/')
+    config.add_data_dir('scikits/statsmodels/tests')
+    config.add_data_dir('scikits/statsmodels/examples')
+    config.add_data_dir('scikits/statsmodels/docs')
+    extradatafiles = [os.path.join(r,d) for r,ds,f in os.walk('scikits/statsmodels/datasets')
+                      for d in f if not os.path.splitext(d)[1] in
+                      ['.py', '.pyc']]
+    for f in extradatafiles:
+        config.add_data_files(f)
+
+
 
     config.set_options(
             ignore_setup_xxx_py = True,
