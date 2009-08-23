@@ -960,8 +960,6 @@ class RegressionResults(LikelihoodModelResults):
             self._HC0_se = np.sqrt(np.diag(self.cov_HC0))
         return self._HC0_se
 
- # HC1-3 MacKinnon and White (1985)
-
     @property
     def HC1_se(self):
         """
@@ -1020,6 +1018,35 @@ class RegressionResults(LikelihoodModelResults):
 #TODO: these need to be tested
 #TODO: also allow tests to take an input, so more general
 class PostRegression(object):
+    '''
+    A container class for post-estimation statistics and output.
+
+    Parameters
+    ----------
+    results : RegressionResults class instance
+
+    Attributes
+    ----------
+    results
+    y_varnm
+    x_varnm
+    modeltype
+
+    Methods
+    --------
+
+    Returns
+    -------
+    PostRegression class instance
+
+    Examples
+    --------
+
+    Notes
+    -----
+    This class is highly experimental and will probably be changed.
+
+    '''
     def __init__(self, results):
         self.results = results
         self.y_varnm = 'Y'
@@ -1028,10 +1055,12 @@ class PostRegression(object):
         self.modeltype = \
                 str(self.results.model.__class__).split(' ')[1].strip('\'>')
 
-    def durbin_watson(self):
+    def durbin_watson(self, resids=None):
         """
         Calculates the Durbin-Waston statistic
         """
+        if resids is None:
+            resids = self.resids
         diff_resids = np.diff(self.results.wresid,1)
         dw = np.dot(diff_resids,diff_resids) / \
                 np.dot(self.results.wresid,self.results.wresid);
