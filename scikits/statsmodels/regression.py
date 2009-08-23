@@ -125,28 +125,28 @@ class GLS(LikelihoodModel):
 
     Examples
     --------
-    >>>import numpy as np
-    >>>import scikits.statsmodels as models
-    >>>from scikits.statsmodels.tools import add_constant
-    >>>from scikits.statsmodels.datasets.longley.data import load
-    >>>data = load()
-    >>>data.exog = add_constant(data.exog)
-    >>>ols_tmp = models.OLS(data.endog, data.exog).results
-    >>>rho = np.corrcoef(ols_tmp.resid[1:],ols_model.resid[:-1])[0][1]
+    >>> import numpy as np
+    >>> import scikits.statsmodels as models
+    >>> from scikits.statsmodels.tools import add_constant
+    >>> from scikits.statsmodels.datasets.longley.data import load
+    >>> data = load()
+    >>> data.exog = add_constant(data.exog)
+    >>> ols_tmp = models.OLS(data.endog, data.exog).results
+    >>> rho = np.corrcoef(ols_tmp.resid[1:],ols_tmp.resid[:-1])[0][1]
 
     `rho` is the correlation of the residuals from an OLS fit of the longley
     data.  It is assumed that this is the true rho of the data, and it
     will be used to estimate the structure of heteroskedasticity.
 
-    >>>from scipy.linalg import toeplitz
-    >>>order = toeplitz(np.arange(16))
-    >>>sigma = rho**order
+    >>> from scipy.linalg import toeplitz
+    >>> order = toeplitz(np.arange(16))
+    >>> sigma = rho**order
 
     `sigma` is an n x n matrix of the autocorrelation structure of the
     data.
 
-    >>>gls_model = models.GLS(data.endog, data.exog, sigma=sigma)
-    >>>gls_results = gls_model.results
+    >>> gls_model = models.GLS(data.endog, data.exog, sigma=sigma)
+    >>> gls_results = gls_model.results
 
     Notes
     -----
@@ -359,8 +359,8 @@ class WLS(GLS):
 
     Examples
     ---------
-    >>>import numpy as np
-    >>>import scikits.statsmodels as models
+    >>> import numpy as np
+    >>> import scikits.statsmodels as models
     >>> Y = [1,3,4,5,2,3,4]
     >>> X = range(1,8)
     >>> X = models.tools.add_constant(X)
@@ -483,7 +483,7 @@ class OLS(WLS):
     >>> import scikits.statsmodels as models
     >>>
     >>> Y = [1,3,4,5,2,3,4],
-    >>> X = range(1,8)
+    >>> X = range(1,8) #[:,np.newaxis]
     >>> X = models.tools.add_constant(X)
     >>>
     >>> model = models.OLS(Y,X)
@@ -494,9 +494,9 @@ class OLS(WLS):
     >>> results.t()
     array([ 0.98019606,  1.87867287])
     >>> print results.t_test([0,1])
-<T test: effect=2.1428571428571423, sd=1.1406228159050935, t=1.8786728732554485, p=0.059539737780605395, df_denom=5>
+    <T test: effect=2.1428571428571423, sd=1.1406228159050935, t=1.8786728732554485, p=0.059539737780605395, df_denom=5>
     >>> print results.f_test(np.identity(2))
-<F test: F=19.460784313725501, p=0.00437250591095, df_denom=5, df_num=2>
+    <F test: F=19.460784313725501, p=0.00437250591095, df_denom=5, df_num=2>
 
     Notes
     -----
@@ -549,7 +549,7 @@ class GLSAR(GLS):
     ...    results = model.fit()
     ...    print "AR coefficients:", model.rho
     ...    rho, sigma = models.regression.yule_walker(results.resid,
-                order = model.order)
+    ...                 order=model.order)
     ...    model = models.GLSAR(Y, X, rho)
     AR coefficients: [ 0.  0.]
     AR coefficients: [-0.52571491 -0.84496178]
@@ -570,7 +570,7 @@ class GLSAR(GLS):
     Or, equivalently
 
     >>> model2 = models.GLSAR(Y, X, rho=2)
-    >>> model2.iterative_fit(maxiter=6)
+    >>> res = model2.iterative_fit(maxiter=6)
     >>> model2.rho
     array([-0.61893842, -0.88152263])
 
@@ -690,9 +690,9 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False):
     >>> data = load()
     >>> rho, sigma = models.regression.yule_walker(data.endog,
         order=4, method="mle")
-    >>>rho
+    >>> rho
     array([ 1.28310031, -0.45240924, -0.20770299,  0.04794365])
-    >>>sigma
+    >>> sigma
     16.808022730464351
 
     """
