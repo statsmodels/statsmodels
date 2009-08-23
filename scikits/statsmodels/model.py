@@ -1,13 +1,8 @@
 import numpy as np
 from scipy.stats import t, norm
 from scipy import optimize, derivative
-#from scikits.statsmodels.contrast import ContrastResults
-#from scikits.statsmodels.tools import recipr
 from tools import recipr
 from contrast import ContrastResults
-
-
-import numpy.lib.recfunctions as nprf
 
 class Model(object):
     """
@@ -20,7 +15,7 @@ class Model(object):
     def __init__(self, endog, exog=None):
         self._endog = np.asarray(endog)
         self._exog = np.asarray(exog)
-        self.nobs = float(endog.shape[0])
+        self.nobs = float(self._endog.shape[0])
 
     def fit(self):
         """
@@ -28,15 +23,12 @@ class Model(object):
         """
         raise NotImplementedError
 
-#FIXME:  Why not have it as a model method if we're going to put it here anyway?
-#        Putting it in results gives infinite recursion with results property
     def predict(self, design):
         """
         After a model has been fit, results are (assumed to be) stored
         in self.results, which itself should have a predict method.
         """
         raise NotImplementedErrror
-#        return self.results.predict(design)
 
 class LikelihoodModel(Model):
     """

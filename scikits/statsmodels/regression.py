@@ -35,13 +35,8 @@ from csv import reader              # These are for read_array
 
 import numpy as np
 from scipy.linalg import norm, toeplitz
-#from scikits.statsmodels.model import LikelihoodModel, LikelihoodModelResults
-#from scikits.statsmodels import tools
-#from scikits.statsmodels.tools import add_constant
 from scipy import stats
 from scipy.stats.stats import ss
-
-
 from model import LikelihoodModel, LikelihoodModelResults
 import tools
 from tools import add_constant
@@ -55,7 +50,7 @@ class GLS(LikelihoodModel):
     endog : array-like
         `endog` is a 1-d vector that contains the response/independent variable
     exog : array-like
-        `exog` is a nobs x p vector where nobs is the number of observations and
+        `exog` is a n x p vector where n is the number of observations and
         p is the number of regressors/dependent variables including the intercept
         if one is included in the data.
     sigma : scalar or array
@@ -72,7 +67,6 @@ class GLS(LikelihoodModel):
         `pinv_wexog` is the p x n Moore-Penrose pseudoinverse
         of the whitened design matrix. In matrix notation it is approximately
         [X^(T)(sigma)^(-1)X]^(-1)X^(T)psi
-
         where psi is cholsigmainv.T
     cholsimgainv : array
         n x n upper triangular matrix such that in matrix notation
@@ -97,9 +91,7 @@ class GLS(LikelihoodModel):
         In matrix notation this can be written (X^(T) sigma^(-1) X)^(-1)
     sigma : array
         `sigma` is the n x n covariance matrix of the error terms or
-
         E(resid resid.T)
-
         where E is the expectations operator.
     wexog : array
         `wexog` is the whitened design matrix.  In matrix notation
@@ -107,7 +99,6 @@ class GLS(LikelihoodModel):
     wendog : array
         The whitened response /dependent variable.  In matrix notation
         (cholsigmainv endog)
-#TODO: is this correct?
 
     Methods
     -------
@@ -117,6 +108,7 @@ class GLS(LikelihoodModel):
        calling fit.
     information
         Returns the Fisher information matrix for a given set of parameters.
+        Not yet implemented
     initialize
         (Re)-initialize a model.
 #TODO: should this be a public method?
@@ -134,9 +126,9 @@ class GLS(LikelihoodModel):
     Examples
     --------
     >>>import numpy as np
-    >>>import models
-    >>>from models.tools import add_constant
-    >>>from models.datasets.longley.data import load
+    >>>import scikits.statsmodels as models
+    >>>from scikits.statsmodels.tools import add_constant
+    >>>from scikits.statsmodels.datasets.longley.data import load
     >>>data = load()
     >>>data.exog = add_constant(data.exog)
     >>>ols_tmp = models.OLS(data.endog, data.exog).results
@@ -156,17 +148,10 @@ class GLS(LikelihoodModel):
     >>>gls_model = models.GLS(data.endog, data.exog, sigma=sigma)
     >>>gls_results = gls_model.results
 
-    *Assume* that the error terms in the OLS fit above are uncorrelated.
-    Then sigma will be a diagonal matrix.
-
-    >>>s = np.var(ols_tmp.resid)
-#TODO: Unfinished, compare to WLS.
-    >>>
-
-    See Also
-    --------
-    See the docs/gls.rst for more info.
-
+    Notes
+    -----
+    If sigma is a function of the data making one of the regressors
+    a constant, then the current postestimation statistics will not be correct.
     """
 
     def __init__(self, endog, exog, sigma=None):
@@ -204,20 +189,39 @@ Should be of length %s, if sigma is a 1d array" % nobs
 #       Below assumes that we have a constant
         self.df_model = float(tools.rank(self._exog)-1)
 
-    def whiten(self, Y):
+    def whiten(self, X):
+        """
+        GLS whiten method.
+
+        Parameters
+        -----------
+        X : array-like
+            Data to be whitened.
+
+        Returns
+        -------
+        np.dot(cholsigmainv,X)
+
+        See Also
+        --------
+        regression.GLS
+        """
+        X = np.asarray(X)
         if np.any(self.sigma) and not self.sigma==():
-            return np.dot(self.cholsigmainv, Y)
+            return np.dot(self.cholsigmainv, X)
         else:
             return Y
 
     def fit(self):
         """
-        Full fit of the model including estimate of covariance matrix,
-        (whitened) residuals and scale.
+        Full fit of the model.
+
+        The results include an estimate of covariance matrix, (whitened)
+        residuals and an estimate of scale.
 
         Returns
         -------
-        A RegressionResults class.
+        A RegressionResults class instance.
 
         See Also
         ---------
@@ -227,6 +231,10 @@ Should be of length %s, if sigma is a 1d array" % nobs
         -----
         Currently it is assumed that all models will have an intercept /
         constant in the design matrix for postestimation statistics.
+
+        The fit method uses the pseudoinverse of the design/exogenous variables
+        to solve the least squares minimization.
+
         """
 #TODO: add a full_output keyword so that only lite results needed for
 # IRLS are calculated?
@@ -239,90 +247,144 @@ Should be of length %s, if sigma is a 1d array" % nobs
 
     @property
     def results(self):
+        """
+        A property that returns a RegressResults class.
+
+        Notes
+        -----
+        Calls fit, if it has not already been called.
+        """
         if self._results is None:
             self._results = self.fit()
         return self._results
 
-    def predict(self, design, params=None):
+    def predict(self, exog, params=None):
         """
         Return linear predicted values from a design matrix.
+
+        Paremters
+        ---------
+        exog : array-like
+            Design / exogenous data
+        params : array-like, optional after first fit
+            Parameters of a linear model
+
+        Returns
+        -------
+        An array of fitted values
+
+        Notes
+        -----
+        If the model as not yet been fit, params is not optional.
         """
         #JP: this doesn't look correct for GLMAR
         #SS: it needs its own predict method
         if self._results is None and params is None:
             raise ValueError, "If the model has not been fit, then you must specify the params argument."
         if self._results is not None:
-            return np.dot(design, self.results.params)
+            return np.dot(exog, self.results.params)
         else:
-            return np.dot(design, params)
+            return np.dot(exog, params)
 
     def loglike(self, params):
         """
-        Returns the value of the gaussian loglikelihood function at b.
+        Returns the value of the gaussian loglikelihood function at params.
 
         Given the whitened design matrix, the loglikelihood is evaluated
-        at the parameter vector `params` for the dependent variable `Y`.
+        at the parameter vector `params` for the dependent variable `endog`.
 
         Parameters
         ----------
         `params` : array-like
-            The parameter estimates.
+            The parameter estimates
 
         Returns
         -------
-        The value of the loglikelihood function for an GLS Model.
+        The value of the loglikelihood function for a GLS Model.
+
+        Formula
+        -------
+        ..math :: -\frac{n}{2}\text{\ensuremath{\log}}\left(Y-\hat{Y}\right)-\frac{n}{2}\left(1+\log\left(\frac{2\pi}{n}\right)\right)-\frac{1}{2}\text{log}\left(\left|\Sigma\right|\right)\]
+
+        Notes
+        -----
+        Y and Y-hat are whitened.
         """
+#TODO: combine this with OLS/WLS loglike and add _det_sigma argument
         nobs2 = self.nobs / 2.0
         SSR = ss(self.wendog - np.dot(self.wexog,params))
-        #SSR = ss(self._endog - np.dot(self._exog,params))
         llf = -np.log(SSR) * nobs2      # concentrated likelihood
         llf -= (1+np.log(np.pi/nobs2))*nobs2  # with likelihood constant
-        if np.any(self.sigma) and self.sigma.ndim == 2: #FIXME: robust-enough check?
-            llf -= .5*np.log(np.linalg.det(self.sigma)) # with error covariance matrix
+        if np.any(self.sigma) and self.sigma.ndim == 2:
+#FIXME: robust-enough check?  unneeded if _det_sigma gets defined
+            llf -= .5*np.log(np.linalg.det(self.sigma))
+            # with error covariance matrix
         return llf
 
 class WLS(GLS):
     """
     A regression model with diagonal but non-identity covariance structure.
+
     The weights are presumed to be (proportional to) the inverse of the
-    variance of the observations.
+    variance of the observations.  That is, if the variables are to be
+    transformed by 1/sqrt(W) you must supply weights = 1/W.  Note that this
+    is different than the behavior for GLS with a diagonal Sigma, where you
+    would just supply W.
 
     Parameters
     ----------
 
     endog : array-like
-        n length array containing the response variable
-
+        n length array containing the response variabl
     exog : array-like
-
-    weights : array-like
-
-
-    Methods
-    -------
+        n x p array of design / exogenous data
+    weights : array-like, optional
+        1d array of weights.  If you supply 1/W then the variables are pre-
+        multiplied by 1/sqrt(W).  If no weights are supplied the default value
+        is 1 and WLS reults are the same as OLS.
 
     Attributes
     ----------
+    weights : array
+        The stored weights supplied as an argument.
+
+    See regression.GLS
+
+    Methods
+    -------
+    whiten
+        Returns the input scaled by sqrt(W)
+
+    See regression.GLS
 
     Examples
     ---------
     >>>import numpy as np
-    >>>import models
-    >>>import numpy as np
+    >>>import scikits.statsmodels as models
     >>> Y = [1,3,4,5,2,3,4]
     >>> X = range(1,8)
     >>> X = models.tools.add_constant(X)
-    >>> model1 = models.WLS(Y,X, weights=range(1,8))
-    >>> results = model1.fit()
+    >>> wls_model = models.WLS(Y,X, weights=range(1,8))
+    >>> results = wls_model.fit()
     >>> results.params
     array([ 0.0952381 ,  2.91666667])
     >>> results.t()
-    array([ 0.61890419,  3.58195812])
-    >>> print results.Tcontrast([0,1])
-    <T contrast: effect=2.9166666666666674, sd=0.81426598880777334, t=3.5819581153538946, p=0.0079210215745977308, df_denom=5>
-    >>> print results.Fcontrast(np.identity(2))
-    <F contrast: F=81.213965087281849, p=0.00015411866558, df_denom=5, df_num=2>    """
+    array([ 0.35684428,  2.0652652 ])
+    <T test: effect=2.9166666666666674, sd=1.4122480109543243, t=2.0652651970780505, p=0.046901390323708769, df_denom=5>
+    >>> print results.f_test([1,0])
+    <F test: F=0.12733784321528099, p=0.735774089183, df_denom=5, df_num=1>
 
+    Notes
+    -----
+    If the weights are a function of the data, then the postestimation statistics
+    such as fvalue and mse_model might not be correct, as the package does not
+    yet support no-constant regression.
+    """
+#FIXME: bug in fvalue or f_test for this example?
+#UPDATE the bug is in fvalue, f_test is correct vs. R
+#mse_model is calculated incorrectly according to R
+#same fixed used for WLS in the tests doesn't work
+#mse_resid is good
     def __init__(self, endog, exog, weights=1.):
         weights = np.array(weights)
         if weights.shape == ():
@@ -339,6 +401,15 @@ class WLS(GLS):
     def whiten(self, X):
         """
         Whitener for WLS model, multiplies each column by sqrt(self.weights)
+
+        Parameters
+        ----------
+        X : array-like
+            Data to be whitened
+
+        Returns
+        -------
+        sqrt(weights)*X
         """
         X = np.asarray(X)
         if X.ndim == 1:
@@ -352,19 +423,25 @@ class WLS(GLS):
 
     def loglike(self, params):
         """
-        Returns the value of the gaussian loglikelihood function at b.
+        Returns the value of the gaussian loglikelihood function at params.
 
         Given the whitened design matrix, the loglikelihood is evaluated
         at the parameter vector `params` for the dependent variable `Y`.
 
         Parameters
         ----------
-        `params` : array-like
+        params : array-like
             The parameter estimates.
 
         Returns
         -------
         The value of the loglikelihood function for a WLS Model.
+
+        Formula
+        --------
+        .. math :: -\frac{n}{2}\text{\ensuremath{\log}}\left(Y-\hat{Y}\right)-\frac{n}{2}\left(1+\log\left(\frac{2\pi}{n}\right)\right)-\frac{1}{2}\text{log}\left(\left|W\right|\right)\]
+
+        W is treated as a diagonal matrix for the purposes of the formula.
         """
         nobs2 = self.nobs / 2.0
         SSR = ss(self.wendog - np.dot(self.wexog,params))
@@ -381,56 +458,49 @@ class OLS(WLS):
 
     Parameters
     ----------
-        `endog` : array-like
-            1d vector of response/dependent variable
-
-        `exog`: array-like
-            Column ordered (observations in rows) design matrix.
+    endog : array-like
+         1d vector of response/dependent variable
+    exog: array-like
+        Column ordered (observations in rows) design matrix.
 
     Methods
     -------
+    See regression.GLS
+
 
     Attributes
     ----------
-    design : ndarray
-        This is the design, or X, matrix.
-    wexog : ndarray
-        This is the whitened design matrix.
-        design = wexog by default for the OLS, though models that
-        inherit from the OLS will whiten the design.
-    pinv_wexog : ndarray
-        This is the Moore-Penrose pseudoinverse of the whitened design matrix.
-    normalized_cov_params : ndarray
-        np.dot(pinv_wexog, pinv_wexog.T)
-    df_resid : integer
-        Degrees of freedom of the residuals.
-        Number of observations less the rank of the design.
-    df_model : integer
-        Degres of freedome of the model.
-        The rank of the design.
+    weights : scalar
+        The OLS model has an attribute weights = array(1.0).  This is due to
+        its inheritance from WLS.
+
+    See regression.GLS
 
     Examples
     --------
     >>> import numpy as np
     >>>
-    >>> from models.tools import add_constant
-    >>> from models.regression import OLS
+    >>> import scikits.statsmodels as models
     >>>
     >>> Y = [1,3,4,5,2,3,4],
     >>> X = range(1,8)
-    >>> X = add_constant(X)
+    >>> X = models.tools.add_constant(X)
     >>>
-    >>> model = OLS(Y,X)
+    >>> model = models.OLS(Y,X)
     >>> results = model.fit()
-    >>>
+    >>> # or results = model.results
     >>> results.params
     array([ 0.25      ,  2.14285714])
     >>> results.t()
     array([ 0.98019606,  1.87867287])
-    >>> print results.Tcontrast([0,1])
-    <T contrast: effect=2.14285714286, sd=1.14062281591, t=1.87867287326, df_denom=5>
-    >>> print results.Fcontrast(np.identity(2))
-    <F contrast: F=19.4607843137, df_denom=5, df_num=2>
+    >>> print results.t_test([0,1])
+<T test: effect=2.1428571428571423, sd=1.1406228159050935, t=1.8786728732554485, p=0.059539737780605395, df_denom=5>
+    >>> print results.f_test(np.identity(2))
+<F test: F=19.460784313725501, p=0.00437250591095, df_denom=5, df_num=2>
+
+    Notes
+    -----
+    OLS, as the other models, assumes that the design matrix contains a constant.
     """
     def __init__(self, endog, exog=None):
         super(OLS, self).__init__(endog, exog)
@@ -470,25 +540,17 @@ class GLSAR(GLS):
 
     Examples
     --------
-    >>> import numpy as N
-    >>> import numpy.random as R
-    >>>
-    >>> from nipy.fixes.scipy.stats.models.formula import Term, I
-    >>> from nipy.fixes.scipy.stats.models.regression import AR
-    >>>
-    >>> data={'Y':[1,3,4,5,8,10,9],
-    ...       'X':range(1,8)}
-    >>> f = term("X") + I
-    >>> f.namespace = data
-    >>>
-    >>> model = AR(f.design(), 2)
+    >>> import scikits.statsmodels as models
+    >>> X = range(1,8)
+    >>> X = models.tools.add_constant(X)
+    >>> Y = [1,3,4,5,8,10,9]
+    >>> model = models.GLSAR(Y, X, rho=2)
     >>> for i in range(6):
-    ...     results = model.fit(data['Y'])
-    ...     print "AR coefficients:", model.rho
-    ...     rho, sigma = model.yule_walker(data["Y"] - results.fittedvalues)
-    ...     model = AR(model.design, rho)
-    ...
-### NOTE ### the above call to yule_walker needs an order = model.order
+    ...    results = model.fit()
+    ...    print "AR coefficients:", model.rho
+    ...    rho, sigma = models.regression.yule_walker(results.resid,
+                order = model.order)
+    ...    model = models.GLSAR(Y, X, rho)
     AR coefficients: [ 0.  0.]
     AR coefficients: [-0.52571491 -0.84496178]
     AR coefficients: [-0.620642   -0.88654567]
@@ -499,40 +561,23 @@ class GLSAR(GLS):
     array([ 1.58747943, -0.56145497])
     >>> results.t()
     array([ 30.796394  ,  -2.66543144])
-    >>> print results.Tcontrast([0,1])
-    <T contrast: effect=-0.561454972239, sd=0.210643186553, t=-2.66543144085, df_denom=5>
-    >>> print results.Fcontrast(np.identity(2))
-    <F contrast: F=2762.42812716, df_denom=5, df_num=2>
-    >>>
-    >>> model.rho = np.array([0,0])
-    >>> model.iterative_fit(data['Y'], niter=3)
-    >>> print model.rho
-    [-0.61887622 -0.88137957]
+    >>> print results.t_test([0,1])
+    <T test: effect=-0.56145497223945595, sd=0.21064318655324663, t=-2.6654314408481032, p=0.022296117189135045, df_denom=5>
+    >>> import numpy as np
+    >>> print(results.f_test(np.identity(2)))
+    <F test: F=2762.4281271616205, p=2.4583312696e-08, df_denom=5, df_num=2>
 
+    Or, equivalently
 
-    Updated Example
-    import numpy as np
-    from models.tools import add_constant
-    from models.regression import AR, yule_walker
+    >>> model2 = models.GLSAR(Y, X, rho=2)
+    >>> model2.iterative_fit(maxiter=6)
+    >>> model2.rho
+    array([-0.61893842, -0.88152263])
 
-    X = np.arange(1,8)
-    X = add_constant(X)
-    Y = np.array((1, 3, 4, 5, 8, 10, 9))
-    model = AR(Y, X, rho=2)
-    for i in range(6):
-        results = model.fit()
-        print "AR coefficients:", model.rho
-        rho, sigma = yule_walker(results.resid, order = model.order)
-        model = AR(Y, X, rho)
-    results.params
-    results.t() # is this correct? it does equal params/bse
-    print results.Tcontrast([0,1])  # are sd and t correct? vs
-    print results.Fcontrast(np.eye(2))
-
-    #equivalently
-    model2 = AR(Y, X, rho=2)
-    model2.iterative_fit(maxiter=6)
-    model2.rho
+    Notes
+    -----
+    GLSAR is considered to be experimental for now, since it has not been
+    adequately tested.
     """
     def __init__(self, endog, exog=None, rho=1):
         if isinstance(rho, np.int):
@@ -549,21 +594,27 @@ class GLSAR(GLS):
             #JP this looks wrong, should be a regression on constant
             #results for rho estimate now identical to yule-walker on y
             #super(AR, self).__init__(endog, add_constant(endog))
-            super(AR, self).__init__(endog, np.ones((endog.shape[0],1)))
+            super(GLSAR, self).__init__(endog, np.ones((endog.shape[0],1)))
         else:
-            super(AR, self).__init__(endog, exog)
+            super(GLSAR, self).__init__(endog, exog)
 
     def iterative_fit(self, maxiter=3):
         """
-        Perform an iterative two-stage procedure to estimate AR(p)
-        parameters and regression coefficients simultaneously.
+        Perform an iterative two-stage procedure to estimate a GLS model.
 
-        :Parameters:
-            Y : TODO
-                TODO
-            niter : ``integer``
-                the number of iterations
+        The model is assumed to have AR(p) errors, AR(p) parameters and
+        regression coefficients are estimated simultaneously.
+
+        Parameters
+        -----------
+        endog : array-like
+
+        exog : array-like, optional
+
+        maxiter : integer, optional
+            the number of iterations
         """
+#TODO: update this after going through example.
         for i in range(maxiter-1):
             self.initialize()
             results = self.fit()
@@ -579,10 +630,16 @@ class GLSAR(GLS):
         Whiten a series of columns according to an AR(p)
         covariance structure.
 
-        :Parameters:
-            X : TODO
-                TODO
+        Parameters:
+        -----------
+        X : array-like
+            The data to be whitened
+
+        Returns
+        -------
+        TODO
         """
+#TODO: notation for AR process
         X = np.asarray(X, np.float64)
         _X = X.copy()
         for i in range(self.order):
@@ -593,25 +650,55 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False):
     """
     Estimate AR(p) parameters from a sequence X using Yule-Walker equation.
 
-    unbiased or maximum-likelihood estimator (mle)
+    Unbiased or maximum-likelihood estimator (mle)
 
     See, for example:
 
     http://en.wikipedia.org/wiki/Autoregressive_moving_average_model
 
-    :Parameters:
-        X : a 1d ndarray
-        method : ``string``
-               Method can be "unbiased" or "mle" and this determines
-               denominator in estimate of autocorrelation function (ACF)
-               at lag k. If "mle", the denominator is n=r.shape[0], if
-               "unbiased" the denominator is n-k.
-        df : ``integer``
-               Specifies the degrees of freedom. If df is supplied,
-               then it is assumed the X has df degrees of
-               freedom rather than n.
-    """
+    Parameters:
+    -----------
+    X : array-like
+        1d array
+    order : integer, optional
+        The order of the autoregressive process.  Default is 1.
+    method : string, optional
+       Method can be "unbiased" or "mle" and this determines
+       denominator in estimate of autocorrelation function (ACF)
+       at lag k. If "mle", the denominator is n=X.shape[0], if
+       "unbiased" the denominator is n-k.
+       The default is unbiased.
+    df : integer, optional
+       Specifies the degrees of freedom. If df is supplied,
+       then it is assumed the X has df degrees of
+       freedom rather than n.  Default is None.
+    inv : Bool
+        If inv is True the inverse of R is also returned.
+        The default is False.
 
+    Returns
+    -------
+    rho
+        The autoregressive coefficients
+    sigma
+        TODO
+
+    Examples
+    --------
+    >>> import scikits.statsmodels as models
+    >>> from scikits.statsmodels.datasets.sunspots.data import load
+    >>> data = load()
+    >>> rho, sigma = models.regression.yule_walker(data.endog,
+        order=4, method="mle")
+    >>>rho
+    array([ 1.28310031, -0.45240924, -0.20770299,  0.04794365])
+    >>>sigma
+    16.808022730464351
+
+    """
+#TODO: define R better, look back at notes and technical notes on YW.
+#First link here is useful
+#http://www-stat.wharton.upenn.edu/~steele/Courses/956/ResourceDetails/YuleWalkerAndMore.htm
     method = str(method).lower()
     if method not in ["unbiased", "mle"]:
         raise ValueError, "ACF estimation method must be 'unbiased' \
@@ -649,71 +736,148 @@ class RegressionResults(LikelihoodModelResults):
     -----------
     aic
         Aikake's information criteria
+        -2 * llf + 2*(df_model+1)
     bic
         Bayes' information criteria
-    bse
-        The standard errors of the parameter estimates
+        -2 * llf + log(n)*(df_model+1)
     pinv_wexog
         See specific model class docstring
     centered_tss
         The total sum of squares centered about the mean
+    cov_HC0
+        See HC0_se below.  Only available after calling HC0_se.
+    cov_HC1
+        See HC1_se below.  Only available after calling HC1_se.
+    cov_HC2
+        See HC2_se below.  Only available after calling HC2_se.
+    cov_HC3
+        See HC3_se below.  Only available after calling HC3_se.
     df_model
-        Model degress of freedom
+        Model degress of freedom. The number of regressors p - 1 for the
+        constant  Note that df_model does not include the constant even though
+        the design does.  The design is always assumed to have a constant
+        in calculating results for now.
     df_resid
-        Residual degrees of freedom
+        Residual degrees of freedom. n - p.  Note that the constant *is*
+        included in calculating the residual degrees of freedom.
     ess
-        Explained sum of squares
+        Explained sum of squares.  The centered total sum of squares minus
+        the sum of squared residuals.
     fvalue
-        F-statistic of the fully specified model
+        F-statistic of the fully specified model.  Calculated as the mean
+        squared error of the model divided by the mean squared error of the
+        residuals.
     f_pvalue
         p-value of the F-statistic
     fittedvalues
-        The predict the values for the given design
+        The predicted the values for the original (unwhitened) design.
+    het_scale
+        Only available if HC#_se is called.  See HC#_se for more information.
+    HC0_se
+        White's (1980) heteroskedasticity robust standard errors.
+        Defined as sqrt(diag(X.T X)^(-1)X.T diag(e_i^(2)) X(X.T X)^(-1)
+        where e_i = resid[i]
+        HC0_se is a property.  It is not evaluated until it is called.
+        When it is called the RegressionResults instance will then have
+        another attribute cov_HC0, which is the full heteroskedasticity
+        consistent covariance matrix and also `het_scale`, which is in
+        this case just resid**2.  HCCM matrices are only appropriate for OLS.
+    HC1_se
+        MacKinnon and White's (1985) alternative heteroskedasticity robust
+        standard errors.
+        Defined as sqrt(diag(n/(n-p)*HC_0)
+        HC1_se is a property.  It is not evaluated until it is called.
+        When it is called the RegressionResults instance will then have
+        another attribute cov_HC1, which is the full HCCM and also `het_scale`,
+        which is in this case n/(n-p)*resid**2.  HCCM matrices are only
+        appropriate for OLS.
+    HC2_se
+        MacKinnon and White's (1985) alternative heteroskedasticity robust
+        standard errors.
+        Defined as (X.T X)^(-1)X.T diag(e_i^(2)/(1-h_ii)) X(X.T X)^(-1)
+        where h_ii = x_i(X.T X)^(-1)x_i.T
+        HC2_se is a property.  It is not evaluated until it is called.
+        When it is called the RegressionResults instance will then have
+        another attribute cov_HC2, which is the full HCCM and also `het_scale`,
+        which is in this case is resid^(2)/(1-h_ii).  HCCM matrices are only
+        appropriate for OLS.
+    HC3_se
+        MacKinnon and White's (1985) alternative heteroskedasticity robust
+        standard errors.
+        Defined as (X.T X)^(-1)X.T diag(e_i^(2)/(1-h_ii)^(2)) X(X.T X)^(-1)
+        where h_ii = x_i(X.T X)^(-1)x_i.T
+        HC3_se is a property.  It is not evaluated until it is called.
+        When it is called the RegressionResults instance will then have
+        another attribute cov_HC3, which is the full HCCM and also `het_scale`,
+        which is in this case is resid^(2)/(1-h_ii)^(2).  HCCM matrices are
+        only appropriate for OLS.
     model
-        A pointer to the model instance that is fitted
+        A pointer to the model instance that called fit() or results.
     mse_model
-        Mean squared error the model
+        Mean squared error the model. This is the explained sum of squares
+        divided by the model degrees of freedom.
     mse_resid
-        Mean squared error of the residuals
+        Mean squared error of the residuals.  The sum of squared residuals
+        divided by the residual degrees of freedom.
     mse_total
-        Total mean squared error
+        Total mean squared error.  Defined as the uncentered total sum of
+        squares divided by n the number of observations.
     nobs
-        Number of observations
+        Number of observations n.
     normalized_cov_params
         See specific model class docstring
     params
-        The fitted coefficients that minimize the least squares criterion
+        The linear coefficients that minimize the least squares criterion.  This
+        is usually called Beta for the classical linear model.
     pvalues
-        The two-tailed p values for the t-stats of the params
+        The two-tailed p values for the t-stats of the params.
     resid
         The residuals of the model.
     rsquared
-        R-squared of a model with an intercept
+        R-squared of a model with an intercept.  This is defined here as
+        1 - `ssr`/`centered_tss`
     rsquared_adj
-        Adjusted R-squared
+        Adjusted R-squared.  This is defined here as
+        1 - (n-1)/(n-p)*(1-`rsquared`)
     scale
         A scale factor for the covariance matrix.
-        Default value is ssr/(n-k)
+        Default value is ssr/(n-p).  Note that the square root of `scale` is
+        often called the standard error of the regression.
     ssr
-        Sum of squared residuals
+        Sum of squared (whitened) residuals.
+    stand_errors
+        The standard errors of the parameter estimates
     uncentered_tss
-        Uncentered sum of squares
+        Uncentered sum of squares.  Sum of the squared values of the
+        (whitened) endogenous response variable.
     wresid
-        The residuals of the transformed regressand and regressor(s)
+        The residuals of the transformed/whitened regressand and regressor(s)
 
     Methods
     -------
     cov_params
-
+        This is the estimated covariance matrix scaled by `scale`
+        See statsmodels.model.cov_params
     conf_int
-
+        Returns 1 - alpha % confidence intervals for the estimates
+        See statsmodels.model.conf_int()
     f_test
-
+        F test (sometimes called F contrast) returns a ContrastResults instance
+        given an array of linear restrictions.
+        See statsmodels.model.f_test
     norm_resid
-
+        Returns the (whitened) residuals normalized to have unit length.
+    PostEstimation
+        Returns a PostRegression instance.
+        See statsmodels.regression.PostRegression
     t
-
+        Returns the t-value for the (optional) given columns.  Calling t()
+        without an argument returns all of the t-values.
+        See statsmodels.model.t
     t_test
+        T tests (sometimes called T contrast) returns a ContrastResults instance
+        given a 1d array of linear restrictions.  There is not yet full support
+        for multiple an array of multiple t-tests.
     """
 
     # For robust covariance matrix properties
@@ -731,9 +895,6 @@ class RegressionResults(LikelihoodModelResults):
     def _get_results(self):
         '''
         This contains the results that are the same across models
-
-        It in turn calls 'model_type'._ls_results() to compute model-
-        specific results
         '''
         self.fittedvalues = self.model.predict(self.model._exog, self.params)
         self.wresid = self.model.wendog - \
@@ -770,11 +931,11 @@ class RegressionResults(LikelihoodModelResults):
                 (1 - self.rsquared)
         self.mse_model = self.ess/self.model.df_model
         self.mse_resid = self.ssr/self.model.df_resid
-        self.mse_total = self.uncentered_tss/(self.df_model+self.df_resid+1)
+        self.mse_total = self.uncentered_tss/(self.nobs)
         self.fvalue = self.mse_model/self.mse_resid
         self.f_pvalue = stats.f.sf(self.fvalue, self.model.df_model,
                 self.model.df_resid)
-        self.bse = np.sqrt(np.diag(self.cov_params()))
+        self.stand_errors = np.sqrt(np.diag(self.cov_params()))
         self.llf = self.model.loglike(self.params)
         self.aic = -2 * self.llf + 2*(self.model.df_model+1)
         self.bic = -2 * self.llf + np.log(self.model.nobs)*\
@@ -783,16 +944,15 @@ class RegressionResults(LikelihoodModelResults):
         self.PostEstimation = PostRegression(self)
 
     def _HCCM(self, scale):
-#        scale=np.diag(scale)
-#        return np.dot(np.dot(self.pinv_wexog, scale), self.pinv_wexog.T)
-#   This can be done with broadcasting!
         H = np.dot(self.model.pinv_wexog,
             scale[:,None]*self.model.pinv_wexog.T)
-#        self.robust_se = np.sqrt(np.diag(H))
         return H
 
     @property
     def HC0_se(self):
+        """
+        See statsmodels.RegressionResults
+        """
         if self._HC0_se is None:
             self.het_scale = self.resid**2 # or whitened residuals? only OLS?
             self.cov_HC0 = self._HCCM(self.het_scale)
@@ -803,6 +963,9 @@ class RegressionResults(LikelihoodModelResults):
 
     @property
     def HC1_se(self):
+        """
+        See statsmodels.RegressionResults
+        """
         if self._HC1_se is None:
             self.het_scale = self.nobs/(self.df_resid)*(self.resid**2)
             self.cov_HC1 = self._HCCM(self.het_scale)
@@ -811,6 +974,9 @@ class RegressionResults(LikelihoodModelResults):
 
     @property
     def HC2_se(self):
+        """
+        See statsmodels.RegressionResults
+        """
         if self._HC2_se is None:
             h=np.diag(np.dot(np.dot(self.model._exog, self.normalized_cov_params),
                     self.model._exog.T)) # probably could be optimized
@@ -821,6 +987,9 @@ class RegressionResults(LikelihoodModelResults):
 
     @property
     def HC3_se(self):
+        """
+        See statsmodels.RegressionResults
+        """
         if self._HC3_se is None:
             h=np.diag(np.dot(np.dot(self.model._exog,self.normalized_cov_params),
                     self.model._exog.T)) # probably could be optimized
@@ -832,26 +1001,20 @@ class RegressionResults(LikelihoodModelResults):
 #TODO: this needs a test
     def norm_resid(self):
         """
-        Residuals, normalized to have unit length.
+        Residuals, normalized to have unit length and unit variance.
 
-        Note: residuals are whitened residuals.
+        Returns
+        -------
+        An array resid/sqrt(mse_resid)
 
         Notes
         -----
-        Is this supposed to return "stanardized residuals," residuals standardized
-        to have mean zero and approximately unit variance?
-
-        d_i = e_i/sqrt(MS_E)
-
-        Where MS_E = SSE/(n - k)
-
-        See: Montgomery and Peck 3.2.1 p. 68
-             Davidson and MacKinnon 15.2 p 662
-
+        This method is untested
         """
         if not hasattr(self, 'resid'):
-            raise ValueError, 'need normalized residuals to estimate standard deviation'
-        return self.resid * tools.recipr(np.sqrt(self.scale))
+            raise ValueError, 'need normalized residuals to estimate standard\
+ deviation'
+        return self.wresid * tools.recipr(np.sqrt(self.scale))
 
 #TODO: these need to be tested
 #TODO: also allow tests to take an input, so more general
