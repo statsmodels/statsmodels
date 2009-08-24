@@ -22,7 +22,7 @@ DECIMAL_sig = 7
 DECIMAL_none = 0
 skipR = skip_rpy()
 if not skipR:
-    from rpy import r
+    from rpy import r, RPyRException
     from rmodelwrap import RModel
 
 
@@ -202,7 +202,7 @@ class TestFTest2(TestFtest):
             raise SkipTest, "Rpy not installed"
         try:
             r.library('car')
-        except RPy_RException:
+        except RPyRException:
             raise SkipTest, "car library not installed for R"
         self.R2 = [[0,1,-1,0,0,0,0],[0, 0, 0, 0, 1, -1, 0]]
         self.Ftest2 = self.res1.f_test(self.R2)
@@ -270,7 +270,7 @@ class TestTtest2(TestTtest):
             raise SkipTest, "Rpy not installed"
         try:
             r.library('car')
-        except RPy_RException:
+        except RPyRException:
             raise SkipTest, "car library not installed for R"
         R = np.zeros(len(self.res1.params))
         R[4:6] = [1,-1]

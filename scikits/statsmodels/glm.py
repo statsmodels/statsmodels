@@ -157,15 +157,14 @@ TODO: fix example location
 
     McCullagh, P. and Nelder, J.A.  1989.  "Generalized Linear Models." 2nd ed.
         Chapman & Hall, Boca Rotan.
-
     '''
 
     def __init__(self, endog, exog, family=family.Gaussian()):
         if endog.shape[0] != exog.shape[0]:
             raise ValueError, 'size of endog does not match shape of exog'
         self.family = family
-        self._endog = np.asarray(endog)
-        self._exog = np.asarray(exog)
+        self.endog = np.asarray(endog)
+        self.exog = np.asarray(exog)
         self.initialize()
 
     def initialize(self):
@@ -176,11 +175,11 @@ TODO: fix example location
         self.history = { 'fittedvalues' : [], 'params' : [np.inf],
                          'deviance' : [np.inf]}
         self.iteration = 0
-        self.pinv_wexog = np.linalg.pinv(self._exog)
+        self.pinv_wexog = np.linalg.pinv(self.exog)
         self.normalized_cov_params = np.dot(self.pinv_wexog,
                                         np.transpose(self.pinv_wexog))
-        self.df_model = tools.rank(self._exog)-1
-        self.df_resid = self._exog.shape[0] - tools.rank(self._exog)
+        self.df_model = tools.rank(self.exog)-1
+        self.df_resid = self.exog.shape[0] - tools.rank(self.exog)
 
     def score(self, params):
         """
@@ -209,7 +208,7 @@ TODO: fix example location
         """
         self.history['params'].append(tmp_result.params)
         self.history['fittedvalues'].append(tmp_result.fittedvalues)
-        self.history['deviance'].append(self.family.deviance(self._endog, mu))
+        self.history['deviance'].append(self.family.deviance(self.endog, mu))
 
     def estimate_scale(self, mu):
         """
@@ -239,7 +238,7 @@ TODO: fix example location
             if isinstance(self.family, (family.Binomial, family.Poisson)):
                 return np.array(1.)
             else:
-                resid = self._endog - mu
+                resid = self.endog - mu
                 return ((np.power(resid, 2) / self.family.variance(mu)).sum() \
                     / self.df_resid)
 
@@ -248,11 +247,11 @@ TODO: fix example location
 
         if isinstance(self.scaletype, str):
             if self.scaletype.lower() == 'x2':
-                resid = self._endog - mu
+                resid = self.endog - mu
                 return ((np.power(resid, 2) / self.family.variance(mu)).sum() \
                     / self.df_resid)
             elif self.scaletype.lower() == 'dev':
-                return self.family.deviance(self._endog, mu)/self.df_resid
+                return self.family.deviance(self.endog, mu)/self.df_resid
             else:
                 raise ValueError, "Scale %s with type %s not understood" %\
                     (self.scaletype,type(self.scaletype))
@@ -322,34 +321,34 @@ the Binomial family"
         self.data_weights = data_weights
         if np.shape(self.data_weights) == () and self.data_weights>1:
             self.data_weights = self.data_weights *\
-                    np.ones((self._exog.shape[0]))
+                    np.ones((self.exog.shape[0]))
         self.scaletype = scale
         if isinstance(self.family, family.Binomial):
-            self._endog = self.family.initialize(self._endog)
-        mu = self.family.starting_mu(self._endog)
-        wls_exog = self._exog
+            self.endog = self.family.initialize(self.endog)
+        mu = self.family.starting_mu(self.endog)
+        wlsexog = self.exog
         eta = self.family.predict(mu)
         self.iteration += 1
-        self.history['deviance'].append(self.family.deviance(self._endog, mu)
+        self.history['deviance'].append(self.family.deviance(self.endog, mu))
             # first guess on the deviance is assumed to be scaled by 1.
-        while ((np.fabs(self.history['deviance'][self.iteration]-\
+        while((np.fabs(self.history['deviance'][self.iteration]-\
                     self.history['deviance'][self.iteration-1])) > tol and \
                     self.iteration < maxiter):
             self.weights = data_weights*self.family.weights(mu)
-            wls_endog = eta + self.family.link.deriv(mu) * (self._endog-mu)
+            wlsendog = eta + self.family.link.deriv(mu) * (self.endog-mu)
                 # - offset
-            wls_results = WLS(wls_endog, wls_exog, self.weights).fit()
-            eta = np.dot(self._exog, wls_results.params) # + offset
+            wls_results = WLS(wlsendog, wlsexog, self.weights).fit()
+            eta = np.dot(self.exog, wls_results.params) # + offset
             mu = self.family.fitted(eta)
             self._update_history(wls_results, mu)
             self.scale = self.estimate_scale(mu)
             self.iteration += 1
         self.mu = mu
-        self.results = GLMResults(self, wls_results.params,
+        glm_results = GLMResults(self, wls_results.params,
                 wls_results.normalized_cov_params, self.scale)
-        self.results.bse = np.sqrt(np.diag(wls_results.cov_params(\
+        glm_results.bse = np.sqrt(np.diag(wls_results.cov_params(\
                 scale=self.scale)))
-        return self.results
+        return glm_results
 
     @property
     def results(self):
@@ -481,26 +480,26 @@ still named bse
         self._get_results(model)
 
     def _get_results(self, model):
-        self.nobs = model._endog.shape[0]
+        self.nobs = model.endog.shape[0]
         self.df_resid = model.df_resid
         self.df_model = model.df_model
         self.mu = model.mu
         self.pinv_wexog = model.pinv_wexog
 #        self.bse = np.sqrt(np.diag(tmp_results.cov_params(scale=model.scale)))
-        self.resid_response = model.data_weights*(model._endog - model.mu)
-        self.resid_pearson = np.sqrt(model.data_weights)*(model._endog-\
+        self.resid_response = model.data_weights*(model.endog - model.mu)
+        self.resid_pearson = np.sqrt(model.data_weights)*(model.endog-\
                 model.mu)/np.sqrt(model.family.variance(model.mu))
         self.resid_working = model.data_weights * (self.resid_response/\
                     model.family.link.deriv(model.mu))
-        self.resid_anscombe = model.family.resid_anscombe(model._endog,model.mu)
-        self.resid_dev = model.family.devresid(model._endog, model.mu)
+        self.resid_anscombe = model.family.resid_anscombe(model.endog,model.mu)
+        self.resid_dev = model.family.devresid(model.endog, model.mu)
         self.pearsonX2 = np.sum(self.resid_pearson**2)
-        self.fittedvalues = np.dot(model._exog, self.params)
-        null = WLS(model._endog,np.ones((len(model._endog),1)),
+        self.fittedvalues = np.dot(model.exog, self.params)
+        null = WLS(model.endog,np.ones((len(model.endog),1)),
             weights=model.data_weights).fit().fittedvalues
         # null is the predicted values of constant only fit
-        self.null_deviance = model.family.deviance(model._endog,null)
-        self.deviance = model.family.deviance(model._endog,model.mu)
+        self.null_deviance = model.family.deviance(model.endog,null)
+        self.deviance = model.family.deviance(model.endog,model.mu)
         self.aic = -2 * self.llf + 2*(self.df_model+1)
         self.bic = self.deviance - self.df_resid*np.log(self.nobs)
 
@@ -508,10 +507,10 @@ still named bse
     def llf(self):
         if self._llf is None:
             if isinstance(self.model.family, family.NegativeBinomial):
-                self._llf = self.model.family.loglike(self.model._endog,
+                self._llf = self.model.family.loglike(self.model.endog,
                     predicted=self.fittedvalues)
             else:
-                self._llf = self.model.family.loglike(self.model._endog,
+                self._llf = self.model.family.loglike(self.model.endog,
                     self.model.mu, scale=self.scale)
         return self._llf
 

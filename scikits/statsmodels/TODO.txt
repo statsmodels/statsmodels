@@ -36,4 +36,6 @@ regression (done)
 glm / family / links (started)
 rlm / robust / scales
 tools
+document datasets
+note the tests requirements somewhere (rpy, R, car library)
 

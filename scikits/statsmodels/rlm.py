@@ -18,23 +18,21 @@ __all__ = ['RLM']
 
 class RLM(LikelihoodModel):
     def __init__(self, endog, exog, M=norms.HuberT()):
-        """
-        """
         self.M = M
-        self._endog = endog
-        self._exog = exog
+        self.endog = np.asarray(endog)
+        self.exog = np.asarray(exog)
         self.initialize()
 
     def initialize(self):
         self.history = {'deviance' : [np.inf], 'params' : [np.inf],
             'weights' : [np.inf], 'sresid' : [np.inf], 'scale' : []}
         self.iteration = 0
-        self.pinv_wexog = np.linalg.pinv(self._exog)
+        self.pinv_wexog = np.linalg.pinv(self.exog)
         self.normalized_cov_params = np.dot(self.pinv_wexog,
                                         np.transpose(self.pinv_wexog))
-        self.df_resid = np.float(self._exog.shape[0] - tools.rank(self._exog))
-        self.df_model = np.float(tools.rank(self._exog)-1)
-        self.nobs = float(self._endog.shape[0])
+        self.df_resid = np.float(self.exog.shape[0] - tools.rank(self.exog))
+        self.df_model = np.float(tools.rank(self.exog)-1)
+        self.nobs = float(self.endog.shape[0])
 
     def score(self, params):
         pass
@@ -49,7 +47,7 @@ class RLM(LikelihoodModel):
         Note that self.scale is interpreted as a variance, so we divide
         the residuals by its sqrt.
         """
-        return self.M((self._endog - tmp_results.fittedvalues)/\
+        return self.M((self.endog - tmp_results.fittedvalues)/\
                     tmp_results.scale).sum()
 
     def update_history(self, tmp_results):
@@ -142,7 +140,7 @@ class RLM(LikelihoodModel):
             raise AttributeError, "Convergence argument %s not understood" \
                 % conv
         self.scale_est = scale_est
-        wls_results = WLS(self._endog, self._exog).fit()
+        wls_results = WLS(self.endog, self.exog).fit()
         if not init:
             self.scale = self.estimate_scale(wls_results.resid)
         self.update_history(wls_results)
@@ -158,9 +156,9 @@ class RLM(LikelihoodModel):
         while (np.all(np.fabs(criterion[self.iteration]-\
                 criterion[self.iteration-1]) > tol) and \
                 self.iteration < maxiter):
-            self.weights = self.M.weights((self._endog - wls_results.fittedvalues)\
+            self.weights = self.M.weights((self.endog - wls_results.fittedvalues)\
                         /self.scale)
-            wls_results = WLS(self._endog, self._exog,
+            wls_results = WLS(self.endog, self.exog,
                                     weights=self.weights).fit()
             if update_scale is True:
                 self.scale = self.estimate_scale(wls_results.resid)
@@ -183,8 +181,8 @@ class RLMResults(LikelihoodModelResults):
         #TODO: "pvals" should come from chisq on bse?
         self.df_model = model.df_model
         self.df_resid = model.df_resid
-        self.fitted_values = np.dot(model._exog, self.params)
-        self.resid = model._endog - self.fitted_values   # before bcov
+        self.fitted_values = np.dot(model.exog, self.params)
+        self.resid = model.endog - self.fitted_values   # before bcov
         self.sresid = self.resid/self.scale
         self.pinv_wexog = model.pinv_wexog    # for bcov,
                                                 # this is getting sloppy
@@ -201,7 +199,7 @@ class RLMResults(LikelihoodModelResults):
                 *model.normalized_cov_params
         else:
 #FIXME: could be optimized to not take the inverse?  Document for now.
-            W = np.dot(model.M.psi_deriv(self.sresid)*model._exog.T,model._exog)
+            W = np.dot(model.M.psi_deriv(self.sresid)*model.exog.T,model.exog)
             W_inv = np.linalg.inv(W)
 # [W_jk]^-1 = [SUM(psi_deriv(Sr_i)*x_ij*x_jk)]^-1
 # where Sr are the standardized residuals
@@ -214,7 +212,7 @@ class RLMResults(LikelihoodModelResults):
             elif model.cov == "H3":
                 self.bcov_scaled = k**-1*1/self.df_resid*np.sum(\
                     model.M.psi(self.sresid)**2)*self.scale**2\
-                    *np.dot(np.dot(W_inv, np.dot(model._exog.T,model._exog)),\
+                    *np.dot(np.dot(W_inv, np.dot(model.exog.T,model.exog)),\
                     W_inv)
         self.bse = np.sqrt(np.diag(self.bcov_scaled))
 

@@ -1,21 +1,31 @@
 '''
-Defines the link functions to be used with GLM.
-
+Defines the link functions to be used with GLM families.
 '''
 
 import numpy as np
 import scipy.stats
 
+#TODO: are the instance actually "aliases"
+# I used this terminology in varfuncs as well -ss
+
 class Link(object):
 
     """
-    A generic link function for one-parameter exponential
-    family, with call, inverse and deriv methods.
+    A generic link function for one-parameter exponential family.
 
+    `Link` does nothing, but lays out the methods expected of any subclass.
+
+    Methods
+    --------
+    call
+        Return the value of the link function g(p) = z
+    inverse
+        Return the value of the inverse of the link function g^(-1)(z) = p
+        z is usually the linear predictor of the transformed variable
+        in the IRLS algorithm for GLM.
+    deriv
+        Return the value of the derivative of the link function g'(p)
     """
-
-    def initialize(self, Y):
-        return self(np.asarray(Y).mean() * np.ones(Y.shape))
 
     def __call__(self, p):
         return NotImplementedError
@@ -26,60 +36,87 @@ class Link(object):
     def deriv(self, p):
         return NotImplementedError
 
-
 class Logit(Link):
-
     """
-    The logit transform as a link function:
+    The logit transform as a link function
 
-    g'(x) = 1 / (x * (1 - x))
-    g^(-1)(x) = exp(x)/(1 + exp(x))
+    Methods
+    -------
+    call
+        Returns the logit transform at `p`
+        g(p) = log(p / (1 - p))
+    inverse
+        Returns the inverse of the logit transform of `z`
+        g^(-1)(`z`) = exp(`z`)/(1 + exp(`z`))
+    derivative
+        Returns the derivative of the logit transform at `p`
+        g'(p) = 1 / (x * (1 - x))
 
+    Notes
+    -----
+    call and derivative use a private method _clean to make trim p by
+    1e-10 so that p is in (0,1)
+
+    Alias of Logit:
+    logit = Logit()
     """
 
     tol = 1.0e-10
 
-    def clean(self, p):
+    def _clean(self, p):
         """
         Clip logistic values to range (tol, 1-tol)
 
-        INPUTS:
-           p     -- probabilities
+        Parameters
+        -----------
+        p : array-like
+            Probabilities
 
-        OUTPUTS: pclip
-           pclip -- clipped probabilities
+        Returns
+        --------
+        pclip : array
+            Clipped probabilities
         """
-
         return np.clip(p, Logit.tol, 1. - Logit.tol)
 
     def __call__(self, p):
         """
-        Logit transform
+        The logit transform
 
+        Parameters
+        ----------
+        p : array-like
+            Probabilities
+
+        Returns
+        -------
+        z : array
+            Logit transform of `p`
+
+        Formulas
+        --------
         g(p) = log(p / (1 - p))
-
-        INPUTS:
-           p   -- probabilities
-
-        OUTPUTS: z
-           z   -- logit transform of p
-
         """
-        p = self.clean(p)
+        p = self._clean(p)
         return np.log(p / (1. - p))
 
     def inverse(self, z):
         """
-        Inverse logit transform
+        Inverse of the logit transform
 
-        h(z) = exp(z)/(1+exp(z))
+        Parameters
+        ----------
+        z : array-like
+            The value of the logit transform at `p`
 
-        INPUTS:
-           z -- logit transform of p
+        Returns
+        -------
+        p : array
+            Probabilities
 
-        OUTPUTS: p
-           p   -- probabilities
-
+        Formulas
+        --------
+        g^(-1)(z) = exp(z)/(1+exp(z))
         """
         t = np.exp(z)
         return t / (1. + t)
@@ -87,18 +124,27 @@ class Logit(Link):
     def deriv(self, p):
 
         """
-        Derivative of logit transform
+        Derivative of the logit transform
 
-        g'(p) = 1 / (p * (1 - p))
 
         INPUTS:
            p   -- probabilities
 
-        OUTPUTS: y
-           y   -- derivative of logit transform of p
+        Returns
+        -------
+        g'(p) : array
+           Value of the derivative of logit transform at `p`
 
+        Formulas
+        --------
+        g'(p) = 1 / (p * (1 - p))
+
+        Notes
+        -----
+        Alias for `Logit`:
+        logit = Logit()
         """
-        p = self.clean(p)
+        p = self._clean(p)
         return 1. / (p * (1 - p))
 
 logit = Logit()
@@ -106,165 +152,282 @@ logit = Logit()
 class Power(Link):
 
     """
-    The power transform as a link function:
+    The power transform as a link function
 
-    g(x) = x**power
+    Parameters
+    ----------
+    power : float
+        The exponent of the power tranform
 
+    Methods
+    -------
+    call
+        The value of the power tranform link at `p`
+        g(p) = `p`**`power`
+    inverse
+        The inverse of the power transorm link at `z`
+        g^(-1) = `z`**(1/`power`)
+    derivative
+        The derivative of the power transform link at `p`
+        g'(p) = `power`*`p`**(`power`-1)
+
+    Notes
+    -----
+    Aliases of Power:
+    inverse = Power(power=-1)
+    sqrt = Power(power=.5)
+    inverse_squared = Power(power=-2.)
+    identity = Power(power=1.)
     """
 
     def __init__(self, power=1.):
         self.power = power
 
-    def __call__(self, x):
+    def __call__(self, p):
         """
-        Power transform
+        Power transform link function
 
-        g(x) = x**self.power
+        Parameters
+        ----------
+        p : array-like
+            Mean parameters
 
-        INPUTS:
-           x   -- mean parameters
+        Returns
+        -------
+        z : array-like
+            Power transform of x
 
-        OUTPUTS: z
-           z   -- power transform of x
-
+        Formulas
+        --------
+        g(p) = x**self.power
         """
 
-        return np.power(x, self.power)
+        return np.power(p, self.power)
 
     def inverse(self, z):
         """
-        Inverse of power transform
+        Inverse of the power transform link function
 
-        g(x) = x**(1/self.power)
 
-        INPUTS:
-           z   -- linear predictors in GLM
+        Parameters
+        ----------
+        `z` : array-like
+            Value of the transformed mean parameters at `p`
 
-        OUTPUTS: x
-           x   -- mean parameters
+        Returns
+        -------
+        `p` : array
+            Mean parameters
 
+        Formulas
+        --------
+        g^(-1)(`z`) = `z`**(1/`power`)
         """
         return np.power(z, 1. / self.power)
 
-    def deriv(self, x):
+    def deriv(self, p):
         """
-        Derivative of power transform
+        Derivative of the power transform
 
-        g'(x) = self.power * x**(self.power - 1)
+        Parameters
+        ----------
+        p : array-like
+            Mean parameters
 
-        INPUTS:
-           x   -- mean parameters
+        Returns
+        --------
+        g'(p) : array
+            Derivative of power transform of `p`
 
-        OUTPUTS: z
-           z   -- derivative of power transform of x
-
+        Formulas
+        --------
+        g'(`p`) = `power` * `p`**(`power` - 1)
         """
-
-        return self.power * np.power(x, self.power - 1)
+        return self.power * np.power(p, self.power - 1)
 
 inverse = Power(power=-1.)
 inverse.__doc__ = """
 
-The inverse transform as a link function:
+The inverse transform as a link function
 
-g(x) = 1 / x
+Formulas
+--------
+g(`p`) = 1 / `p`
+
+Notes
+-----
+Alias of statsmodels.family.links.Power(power=-1.)
 """
 
 sqrt = Power(power=0.5)
 sqrt.__doc__ = """
 
-The square-root transform as a link function:
+The square-root transform as a link function
 
-g(x) = sqrt(x)
-"""
+Formulas
+--------
+g(`p`) = sqrt(`p`)
+
+Notes
+-----
+Alias of statsmodels.family.links.Power(power=.5)"""
 
 inverse_squared = Power(power=-2.)
 inverse_squared.__doc__ = """
 
-The inverse squared transform as a link function:
+The inverse squared transform as a link function
 
-g(x) = 1 / x**2
+Formulas
+---------
+g(`p`) = 1 / `p`**2
+
+Notes
+-----
+Alias of statsmodels.family.links.Power(power=2.)
 """
 
 identity = Power(power=1.)
 identity.__doc__ = """
+The identity transform as a link function
 
-The identity transform as a link function:
+Formulas
+---------
+g(`p`) = `p`
 
-g(x) = x
+Notes
+-----
+Alias of statsmodels.family.links.Power(power=1.)
 """
 
 class Log(Link):
 
     """
-    The log transform as a link function:
+    The log transform as a link function
 
-    g(x) = log(x)
+    Methods
+    -------
+    call
+        Returns the value of the log link function at `p`
+        g(p) = log(p)
+    inverse
+        Returns the value of the inverse of the log link function at `z`
+        g^(-1)(z) = exp(z)
+    derivative
+        Returns the derivative of the log link function at `p`
+        g'(p) = 1/p
 
+    Notes
+    -----
+    call and derivative call a private method _clean to trim the data by
+    1e-10 so that p is in (0,1)
+
+    Alias of Log:
+    log = Log()
     """
 
     tol = 1.0e-10
 
-    def clean(self, x):
+    def _clean(self, x):
         return np.clip(x, Logit.tol, np.inf)
 
-    def __call__(self, x, **extra):
+    def __call__(self, p, **extra):
         """
-        Log transform
+        Log transform link function
 
-        g(x) = log(x)
+        Parameters
+        ----------
+        x : array-like
+            Mean parameters
 
-        INPUTS:
-           x   -- mean parameters
+        Returns
+        -------
+        z : array
+            log(x)
 
-        OUTPUTS: z
-           z   -- log(x)
-
+        Formulas
+        ---------
+        g(p) = log(p)
         """
-        x = self.clean(x)
-        return np.log(x)
+        x = self._clean(p)
+        return np.log(p)
 
     def inverse(self, z):
         """
-        Inverse of log transform
+        Inverse of log transform link function
 
-        g^{-1}(x) = exp(x)
+        Parameters
+        ----------
+        z : array
+            The inverse of the link function at `p`
 
-        INPUTS:
-           z   -- linear predictors in GLM
+        Returns
+        -------
+        p : array
+            The mean probabilities given the value of the inverse `z`
 
-        OUTPUTS: x
-           x   -- exp(z)
-
+        Formulas
+        --------
+        g^(-1)(z) = exp(z)
         """
         return np.exp(z)
 
-    def deriv(self, x):
+    def deriv(self, p):
         """
-        Derivative of log transform
+        Derivative of log transform link function
 
+        Parameters
+        ----------
+        p : array-like
+            Mean parameters
+
+        Returns
+        -------
+        g'(p) : array
+            derivative of log transform of x
+
+        Formulas
+        --------
         g(x) = 1/x
-
-        INPUTS:
-           x   -- mean parameters
-
-        OUTPUTS: z
-           z   -- derivative of log transform of x
-
         """
-
-        x = self.clean(x)
-        return 1. / x
-
+        p = self._clean(p)
+        return 1. / p
 log = Log()
+log.__doc__ = """
+The log transform as a link function
 
+Notes
+-----
+log is a an alias of Log.  log = Log()
+"""
+
+#TODO: the CDFLink is untested
 class CDFLink(Logit):
-
     """
-    The use the CDF of a scipy.stats distribution as a link function:
+    The use the CDF of a scipy.stats distribution as a link function
 
-    g(x) = dbn.ppf(x)
+    CDFLink is a subclass of logit in order to use its _clean method
+    for the link and its derivative.
 
+    Parameters
+    ----------
+    dbn : scipy.stats distribution
+        Default is dbn=scipy.stats.norm
+
+    Methods
+    -------
+    call
+        Return the value of CDF link at `p`
+        g(p) = `dbn`.ppf(`p`)
+    inverse
+        Return the inverse of the CDF link at `z`
+        g^(-1)(z) = `dbn`.cdf(`z`)
+    derivative
+        Return the derivative of the CDF link at `p`
+        g'(`p`) = 1. / `dbn`.pdf(p)
+
+    Notes
+    -----
+    The CDF link is untested.
     """
 
     def __init__(self, dbn=scipy.stats.norm):
@@ -272,32 +435,42 @@ class CDFLink(Logit):
 
     def __call__(self, p):
         """
-        CDF link
+        CDF link function
 
-        g(p) = self.dbn.pdf(p)
+        Parameters
+        ----------
+        p : array-like
+            Mean parameters
 
-        INPUTS:
-           p   -- mean parameters
+        Returns
+        -------
+        z : array
+           (ppf) inverse of CDF transform of p
 
-        OUTPUTS: z
-           z   -- (ppf) inverse of CDF transform of p
-
+        Formulas
+        --------
+        g(`p`) = `dbn`.ppf(`p`)
         """
-        p = self.clean(p)
+        p = self._clean(p)
         return self.dbn.ppf(p)
 
     def inverse(self, z):
         """
-        Derivative of CDF link
+        The inverse of the CDF link
 
-        g(z) = self.dbn.cdf(z)
+        Parameters
+        ----------
+        z : array-like
+            The value of the inverse of the link function at `p`
 
-        INPUTS:
-           z   -- linear predictors in GLM
+        Returns
+        -------
+        p : array
+            Mean probabilities.  The value of the inverse of CDF link of `z`
 
-        OUTPUTS: p
-           p   -- inverse of CDF link of z
-
+        Formulas
+        --------
+        g^(-1)(`z`) = `dbn`.cdf(`z`)
         """
         return self.dbn.cdf(z)
 
@@ -305,100 +478,182 @@ class CDFLink(Logit):
         """
         Derivative of CDF link
 
-        g(p) = 1/self.dbn.pdf(self.dbn.ppf(p))
+        Parameters
+        ----------
+        p : array-like
+            mean parameters
 
-        INPUTS:
-           x   -- mean parameters
+        Returns
+        -------
+        g'(p) : array
+         The derivative of CDF transform at `p`
 
-        OUTPUTS: z
-           z   -- derivative of CDF transform of x
-
+        Formulas
+        --------
+        g'(`p`) = 1./ `dbn`.pdf(`p`)
         """
-        p = self.clean(p)
-        return 1. / self.dbn.pdf(self(p))
-# is this correct?
+# Or is it
+#        g'(`p`) = 1/`dbn`.pdf(`dbn`.ppf(`p`))
+#TODO: make sure this is correct.
+#can we just have a numerical approximation?
+        p = self._clean(p)
+        return 1. / self.dbn.pdf(p)
 
 probit = CDFLink()
 probit.__doc__ = """
 
-The probit (standard normal CDF) transform as a link function:
+The probit (standard normal CDF) transform as a link function
 
-g(x) = scipy.stats.norm.ppf(x)
+Formulas
+--------
+g(p) = scipy.stats.norm.ppf(p)
 
+Notes
+-----
+probit is an alias of CDFLink.
+probit = CDFLink()
 """
 
 cauchy = CDFLink(dbn=scipy.stats.cauchy)
 cauchy.__doc__ = """
 
-The Cauchy (standard Cauchy CDF) transform as a link function:
+The Cauchy (standard Cauchy CDF) transform as a link function
 
-g(x) = scipy.stats.cauchy.ppf(x)
+Formulas
+--------
+g(p) = scipy.stats.cauchy.ppf(p)
 
+Notes
+-----
+cauchy is an alias of CDFLink.
+cauch = CFGLink(dbn=scipy.stats.cauchy)
 """
 
+#TODO: CLogLog is untested
 class CLogLog(Logit):
-
     """
-    The complementary log-log transform as a link function:
+    The complementary log-log transform as a link function
 
-    g(x) = log(-log(1-x))
+    CLogLog inherits from Logit in order to have access to its _clean method
+    for the link and its derivative.
 
+    Methods
+    -------
+    call
+        The comlementary log-log tranform at `p`
+        g(`p`) = log(-log(1-`p`))
+    inverse
+        The inverse of the complementary log-log transform at `z`
+        g^(-1) = 1 - exp(-exp('z'))
+    derivative
+        The derivate of the complementary log-log transform at `p
+        g'(p) = -1 / (log(p) * p)
+
+    Notes
+    -----
+    CLogLog is untested.
     """
 
     def __call__(self, p):
         """
-        C-Log-Log transform
+        C-Log-Log transform link function
 
+        Parameters
+        ----------
+        p : array
+            Mean parameters
+
+        Returns
+        -------
+        z : array
+            The CLogLog transform of `p`
+
+        Formulas
+        --------
         g(p) = log(-log(1-p))
-
-        INPUTS:
-           p   -- mean parameters
-
-        OUTPUTS: z
-           z   -- log(-log(1-p))
-
         """
-        p = self.clean(p)
+        p = self._clean(p)
         return np.log(-np.log(1-p))
 
     def inverse(self, z):
         """
-        Inverse of C-Log-Log transform
+        Inverse of C-Log-Log transform link function
 
-        g^{-1}(z) = 1-exp(-exp(z))
 
-        INPUTS:
-           z   -- linear predictor scale
+        Parameters
+        ----------
+        z : array-like
+            The value of the inverse of the CLogLog link function at `p`
 
-        OUTPUTS: p
-           p   -- mean parameters
+        Returns
+        -------
+        p : array
+           Mean parameters
 
+        Formulas
+        --------
+        g^(-1)(`z`) = 1-exp(-exp(`z`))
         """
         return 1-np.exp(-np.exp(z))
 
     def deriv(self, p):
         """
-        Derivatve of C-Log-Log transform
+        Derivatve of C-Log-Log transform link function
 
-        g(p) = - 1 / (log(p) * p)
+        Parameters
+        ----------
+        p : array-like
+            Mean parameters
 
-        INPUTS:
-           p   -- mean parameters
+        Returns
+        -------
+        g'(p) : array
+           The derivative of the CLogLog transform link function
 
-        OUTPUTS: z
-           z   --  - 1 / (log(p) * p)
-
+        Formulas
+        --------
+        g'(p) = - 1 / (log(p) * p)
         """
-        p = self.clean(p)
+        p = self._clean(p)
         return 1. / ((p-1)*(np.log(1-p)))
 
 cloglog = CLogLog()
+cloglog.__doc__ = """
+The CLogLog transform link function.
+
+Formulas
+--------
+g(`p`) = log(-log(1-`p`))
+
+Notes
+-----
+cloglog is an alias for CLogLog
+cloglog = CLogLog()
+"""
 
 class NegativeBinomial(object):
     '''
     The negative binomial link function
 
-    g(x) = log(x/(x+1/alpha))
+    Parameters
+    ----------
+    alpha : float, optional
+        Alpha is the ancillary parameter of the Negative Binomial link function.
+        It is assumed to be nonstochastic.  The default value is 1. Permissible
+        values are usually assumed to be in (.01,2).
+
+    Methods
+    -------
+    call
+        The value of the negative binomial link function at `p`
+        g(p) = log(p/(p + 1/alpha))
+    inverse
+        The value of the inverse of the negative binomial link function at `z`
+        g^(-1)(`z`) = 1 - exp(-exp(`z`))
+    derivative
+        The value of the derivative of the negative binomial link function at
+        `p`
+        g'(p) = - 1 / (log(p) * p)
     '''
 
     tol = 1.0e-10
@@ -406,51 +661,79 @@ class NegativeBinomial(object):
     def __init__(self, alpha=1.):
         self.alpha = alpha
 
-    def clean(self, x):
+    def _clean(self, x):
         return np.clip(x, NegativeBinomial.tol, np.inf)
 
     def __call__(self, x):
         '''
-        Negative Binomial transform
-
-        g(x) = log(x/(x+1/alpha))
+        Negative Binomial transform link function
 
         Parameters
         ----------
-        x : array-like
-            Fitted values
-        alpha : scalar, optional
-            `alpha` is the scale parameter of the negative binomial distribution
-            The default is 1, though permissible values are usually between .01 and 2
+        p : array-like
+            Mean parameters
+
+        Returns
+        -------
+        z : array
+            The negative binomial transform of `p`
+
+        Formulas
+        --------
+        g(p) = log(p/(p + 1/alpha))
         '''
-        x = self.clean(x)
-        return np.log(x/(x+1/self.alpha))
+        p = self._clean(p)
+        return np.log(p/(p+1/self.alpha))
 
     def inverse(self, z):
         '''
         Inverse of the negative binomial transform
 
-        g^{-1}(z) = exp(z)/(alpha*(1-exp(z)))
-
-
         Parameters
         -----------
         z : array-like
-            `z` is the linear predictor
-
+            The value of the inverse of the negative binomial link at `p`.
         Returns
         -------
-        x : array-like
-            `x` is the fitted values given the linear predictor `z`
+        p : array
+            Mean parameters
+
+        Formulas
+        --------
+        g^(-1)(z) = exp(z)/(alpha*(1-exp(z)))
         '''
         return np.exp(z)/(self.alpha*(1-np.exp(z)))
 
-    def deriv(self, x):
+    def deriv(self,p):
         '''
         Derivative of the negative binomial transform
 
+        Parameters
+        ----------
+        p : array-like
+            Mean parameters
+
+        Returns
+        -------
+        g'(p) : array
+            The derivative of the negative binomial transform link function
+
+        Formulas
+        --------
         g'(x) = 1/(x+alpha*x^2)
         '''
-        return 1/(x+self.alpha*x**2)
+        return 1/(p+self.alpha*p**2)
 
 nbinom = NegativeBinomial()
+nbinom.__doc__ = """
+The negative binomial link function.
+
+Formulas
+--------
+g(p) = log(p/(p + 1/alpha))
+
+Notes
+-----
+nbinom is an alias of NegativeBinomial.
+nbinom = NegativeBinomial(alpha=1.)
+"""

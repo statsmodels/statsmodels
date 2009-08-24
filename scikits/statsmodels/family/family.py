@@ -312,15 +312,15 @@ class Gamma(Family):
         self.variance = Gamma.variance
         self.link = link
 
-    def clean(self, x):
+    def _clean(self, x):
         return np.clip(x, 1.0e-10, np.inf)
 
     def deviance(self, Y, mu, scale=1.):
-        Y_mu = self.clean(Y/mu)
+        Y_mu = self._clean(Y/mu)
         return 2 * np.sum((Y - mu)/mu - np.log(Y_mu))/scale
 
     def devresid(self, Y, mu, scale=1.):
-        Y_mu = self.clean(Y/mu)
+        Y_mu = self._clean(Y/mu)
         return np.sign(Y-mu) * np.sqrt(-2*(-(Y-mu)/mu + np.log(Y_mu)))
 
     def loglike(self, Y, mu, scale=1.):
@@ -408,7 +408,7 @@ class Binomial(Family):
 
         """
 
-        mu = self.link.clean(mu)
+        mu = self.link._clean(mu)
         if np.shape(self.n) == ():
             ind_one = np.where(Y==1)
             ind_zero = np.where(Y==0)
@@ -489,7 +489,7 @@ class NegativeBinomial(Family):
     links = [L.log, L.cloglog, L.identity, L.nbinom, L.Power]
 #TODO: add the ability to use the power the links with an if test
 # similar to below
-    variance = V.negbin
+    variance = V.nbinom
 
     def __init__(self, link=L.log, alpha=1.):
         self.alpha = alpha
