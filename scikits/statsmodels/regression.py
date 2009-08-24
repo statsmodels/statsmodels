@@ -1056,10 +1056,10 @@ class RegressionResults(LikelihoodModelResults):
         t = time.localtime()
 
         # extra stats
-        from postestimation import jarque_bera, omni_norm_test, durbin_watson
+        from stattests import jarque_bera, omni_normtest, durbin_watson
         llf, aic, bic = self.llf, self.aic, self.bic
         JB, JBpv, skew, kurtosis = jarque_bera(self.wresid)
-        omni, omnipv = omni_norm_test(self.wresid)
+        omni, omnipv = omni_normtest(self.wresid)
 
         fit_sum = os.linesep+''.join(["="]*80)+os.linesep
         fit_sum += "Dependent Variable: " + yname + os.linesep
