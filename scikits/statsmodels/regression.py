@@ -867,9 +867,8 @@ class RegressionResults(LikelihoodModelResults):
         See statsmodels.model.f_test
     norm_resid
         Returns the (whitened) residuals normalized to have unit length.
-    PostEstimation
-        Returns a PostRegression instance.
-        See statsmodels.regression.PostRegression
+    summary
+        Returns a string summarizing the fit of a linear regression model.
     t
         Returns the t-value for the (optional) given columns.  Calling t()
         without an argument returns all of the t-values.
@@ -942,7 +941,6 @@ class RegressionResults(LikelihoodModelResults):
         self.bic = -2 * self.llf + np.log(self.model.nobs)*\
                 (self.model.df_model+1)
         self.pvalues = stats.t.sf(np.abs(self.t()), self.model.df_resid)*2
-        self.PostEstimation = PostRegression(self)
 
     def _HCCM(self, scale):
         H = np.dot(self.model.pinv_wexog,
@@ -959,8 +957,6 @@ class RegressionResults(LikelihoodModelResults):
             self.cov_HC0 = self._HCCM(self.het_scale)
             self._HC0_se = np.sqrt(np.diag(self.cov_HC0))
         return self._HC0_se
-
- # HC1-3 MacKinnon and White (1985)
 
     @property
     def HC1_se(self):
@@ -992,8 +988,9 @@ class RegressionResults(LikelihoodModelResults):
         See statsmodels.RegressionResults
         """
         if self._HC3_se is None:
-            h=np.diag(np.dot(np.dot(self.model._exog,self.normalized_cov_params),
-                    self.model._exog.T)) # probably could be optimized
+            h=np.diag(np.dot(np.dot(self.model._exog,
+                self.normalized_cov_params),self.model._exog.T))
+            # above probably could be optimized to only calc the diag
             self.het_scale=(self.resid/(1-h))**2
             self.cov_HC3 = self._HCCM(self.het_scale)
             self._HC3_se = np.sqrt(np.diag(self.cov_HC3))
@@ -1006,7 +1003,7 @@ class RegressionResults(LikelihoodModelResults):
 
         Returns
         -------
-        An array resid/sqrt(mse_resid)
+        An array wresid/sqrt(scale)
 
         Notes
         -----
@@ -1017,53 +1014,41 @@ class RegressionResults(LikelihoodModelResults):
  deviation'
         return self.wresid * tools.recipr(np.sqrt(self.scale))
 
-#TODO: these need to be tested
-#TODO: also allow tests to take an input, so more general
-class PostRegression(object):
-    def __init__(self, results):
-        self.results = results
-        self.y_varnm = 'Y'
-        self.x_varnm = ['X.%d' %
-                (i) for i in range(self.results.model._exog.shape[1])]
-        self.modeltype = \
-                str(self.results.model.__class__).split(' ')[1].strip('\'>')
-
-    def durbin_watson(self):
+    def summary(self, yname=None, xname=None):
         """
-        Calculates the Durbin-Waston statistic
-        """
-        diff_resids = np.diff(self.results.wresid,1)
-        dw = np.dot(diff_resids,diff_resids) / \
-                np.dot(self.results.wresid,self.results.wresid);
-        return dw
+        Parameters
+        -----------
+        yname : string, optional
+            Default is `Y`
+        xname : list of strings, optional
+            Default is `X.#` for # in p the number of regressors
 
-    def omni_norm_test(self):
-        """
-        Omnibus test for normality
-        """
-        return stats.normaltest(self.results.wresid)
+        Returns
+        -------
+        String summarizing the fit of a linear model.
 
-    def jarque_bera(self):
+        Examples
+        --------
+        >>> from scikits import statsmodels as models
+        >>> from scikits.statsmodels.datasets.longley.data import load
+        >>> data = load()
+        >>> data.exog = models.tools.add_constant(data.exog)
+        >>> ols_results = models.OLS(data.endog, data.exog).results
+        >>> print ols_results.summary()
+        ...
+
+        Notes
+        -----
+        All residual statistics are calculated on whitened residuals.
         """
-        Calculate residual skewness, kurtosis, and do the JB test for normality
-        """
+        if yname is None:
+            yname = 'Y'
+        if xname is None:
+            xname = ['X.%d' %
+                (i) for i in range(self.model._exog.shape[1])]
+        modeltype = self.model.__class__.__name__
 
-        # Calculate residual skewness and kurtosis
-        skew = stats.skew(self.results.wresid)
-        kurtosis = 3 + stats.kurtosis(self.results.wresid)
-
-        # Calculate the Jarque-Bera test for normality
-        JB = (self.results.nobs/6) * (np.square(skew) + (1/4)*np.square(kurtosis-3))
-        JBpv = 1-stats.chi2.cdf(JB,2);
-
-        return JB, JBpv, skew, kurtosis
-
-#FIXME: print sig digits for better alignment
-    def summary(self):
-        """
-        Printing model output to screen
-        """
-
+#FIXME: better string formatting for alignment
         import time # delay import until here?
         import os
 
@@ -1071,104 +1056,45 @@ class PostRegression(object):
         t = time.localtime()
 
         # extra stats
-        llf, aic, bic = self.results.llf, self.results.aic, self.results.bic
-        JB, JBpv, skew, kurtosis = self.jarque_bera()
-        omni, omnipv = self.omni_norm_test()
+        from postestimation import jarque_bera, omni_norm_test, durbin_watson
+        llf, aic, bic = self.llf, self.aic, self.bic
+        JB, JBpv, skew, kurtosis = jarque_bera(self.wresid)
+        omni, omnipv = omni_norm_test(self.wresid)
 
-
-        fit_sum = os.linesep+'=============================================================================='+os.linesep
-        fit_sum += "Dependent Variable: " + self.y_varnm + os.linesep
-        fit_sum += "Model: " + self.modeltype + os.linesep
+        fit_sum = os.linesep+''.join(["="]*80)+os.linesep
+        fit_sum += "Dependent Variable: " + yname + os.linesep
+        fit_sum += "Model: " + modeltype + os.linesep
         fit_sum += "Method: Least Squares" + os.linesep
         fit_sum += "Date: " + time.strftime("%a, %d %b %Y",t) + os.linesep
         fit_sum += "Time: " + time.strftime("%H:%M:%S",t) + os.linesep
-        fit_sum += '# obs:        %5.0f' % self.results.nobs + os.linesep
-        fit_sum += 'Df residuals: %5.0f' % self.results.df_resid + os.linesep
-        fit_sum += 'Df model:     %5.0f' % self.results.df_model + os.linesep
-        fit_sum += '=============================================================================='+os.linesep
-        fit_sum += 'variable     coefficient     std. Error      t-statistic     prob.'+\
-                os.linesep
-        fit_sum += '==============================================================================' + os.linesep
-        for i in range(len(self.x_varnm)):
-            fit_sum += '''% -5s          % -5.6f     % -5.6f     % -5.6f     % -5.6f''' % tuple([self.x_varnm[i],self.results.params[i],self.results.bse[i],self.results.t()[i],self.results.pvalues[i]]) + os.linesep
-        fit_sum += '==============================================================================' + os.linesep
-        fit_sum += 'Models stats                         Residual stats' + os.linesep
-        fit_sum += '==============================================================================' + os.linesep
-        fit_sum += 'R-squared            % -5.6f         Durbin-Watson stat  % -5.6f' % tuple([self.results.rsquared, self.durbin_watson()]) + os.linesep
-        fit_sum += 'Adjusted R-squared   % -5.6f         Omnibus stat        % -5.6f' % tuple([self.results.rsquared_adj, omni]) + os.linesep
-        fit_sum += 'F-statistic          % -5.6f         Prob(Omnibus stat)  % -5.6f' % tuple([self.results.fvalue, omnipv]) + os.linesep
-        fit_sum += 'Prob (F-statistic)   % -5.6f         JB stat             % -5.6f' % tuple([self.results.f_pvalue, JB]) + os.linesep
-        fit_sum += 'Log likelihood       % -5.6f         Prob(JB)            % -5.6f' % tuple([llf, JBpv]) + os.linesep
-        fit_sum += 'AIC criterion        % -5.6f         Skew                % -5.6f' % tuple([aic, skew]) + os.linesep
-        fit_sum += 'BIC criterion        % -5.6f         Kurtosis            % -5.6f' % tuple([bic, kurtosis]) + os.linesep
-        fit_sum += '==============================================================================' + os.linesep
+        fit_sum += '# obs:        %5.0f' % self.nobs + os.linesep
+        fit_sum += 'Df residuals: %5.0f' % self.df_resid + os.linesep
+        fit_sum += 'Df model:     %5.0f' % self.df_model + os.linesep
+        fit_sum += ''.join(["="]*80) + os.linesep
+        fit_sum += 'variable       coefficient       std. error     \
+t-statistic       prob.'+os.linesep
+        fit_sum += ''.join(["="]*80) + os.linesep
+        for i in range(len(xname)):
+            fit_sum += '''%-10s    %#12.6g     %#12.6g      %#10.4g       \
+%#5.4g''' % tuple([xname[i],self.params[i],self.bse[i],self.t()[i],
+                    self.pvalues[i]]) + os.linesep
+        fit_sum += ''.join(["="]*80) + os.linesep
+        fit_sum += 'Models stats                         Residual stats' +\
+os.linesep
+        fit_sum += ''.join(["="]*80) + os.linesep
+        fit_sum += 'R-squared            %-8.5g         Durbin-Watson stat  \
+% -8.4g' % tuple([self.rsquared, durbin_watson(self.wresid)]) + os.linesep
+        fit_sum += 'Adjusted R-squared   %-8.5g         Omnibus stat        \
+% -8.4g' % tuple([self.rsquared_adj, omni]) + os.linesep
+        fit_sum += 'F-statistic          %-8.5g         Prob(Omnibus stat)  \
+% -8.4g' % tuple([self.fvalue, omnipv]) + os.linesep
+        fit_sum += 'Prob (F-statistic)   %-8.5g         JB stat             \
+% -8.4g' % tuple([self.f_pvalue, JB]) + os.linesep
+        fit_sum += 'Log likelihood       %-8.5g         Prob(JB)            \
+% -8.4g' % tuple([llf, JBpv]) + os.linesep
+        fit_sum += 'AIC criterion        %-8.5g         Skew                \
+% -8.4g' % tuple([aic, skew]) + os.linesep
+        fit_sum += 'BIC criterion        %-8.4g         Kurtosis            \
+% -8.4g' % tuple([bic, kurtosis]) + os.linesep
+        fit_sum += ''.join(["="]*80) + os.linesep
         return fit_sum
-
-### The below is replicated by np.io
-
-def read_design(desfile, delimiter=',', try_integer=True):
-    """
-    Return a record array with the design.
-    The columns are first cast as numpy.float, if this fails, its
-    dtype is unchanged.
-
-    If try_integer is True and a given column can be cast as float,
-    it is then tested to see if it can be cast as numpy.int.
-
-    >>> design = [["id","age","gender"],[1,23.5,"male"],[2,24.1,"female"],[3,24.5,"male"]]
-    >>> read_design(design)
-    recarray([(1, 23.5, 'male'), (2, 24.100000000000001, 'female'),
-    (3, 24.5, 'male')],
-    dtype=[('id', '<i4'), ('age', '<f8'), ('gender', '|S6')])
-    >>> design = [["id","age","gender"],[1,23.5,"male"],[2,24.1,"female"],[3.,24.5,"male"]]
-    >>> read_design(design)
-    recarray([(1, 23.5, 'male'), (2, 24.100000000000001, 'female'),
-    (3, 24.5, 'male')],
-    dtype=[('id', '<i4'), ('age', '<f8'), ('gender', '|S6')])
-    >>> read_design(design, try_integer=False)
-    recarray([(1.0, 23.5, 'male'), (2.0, 24.100000000000001, 'female'),
-    (3.0, 24.5, 'male')],http://soccernet.espn.go.com/news/story?id=655585&sec=global&cc=5901
-    dtype=[('id', '<f8'), ('age', '<f8'), ('gender', '|S6')])
-    >>>
-
-    Notes
-    -----
-    This replicates np.recfromcsv pretty closely.  The only difference I can
-    can see is the try_integer will cast integers to floats.  np.io should
-    be preferred especially if we import division from __future__.
-    """
-
-    if type(desfile) == type("string"):
-        desfile = file(desfile)
-        _reader = reader(desfile, delimiter=delimiter)
-    else:
-        _reader = iter(desfile)
-    colnames = _reader.next()
-    predesign = np.rec.fromrecords([row for row in _reader], names=colnames)
-
-    # Try to typecast each column to float, then int
-
-    dtypes = predesign.dtype.descr
-    newdescr = []
-    newdata = []
-    for name, descr in dtypes:
-        x = predesign[name]
-        try:
-            y = np.asarray(x.copy(), np.float) # cast as float
-            if np.alltrue(np.equal(x, y)):
-                if try_integer:
-                    z = y.astype(np.int) # cast as int
-                    if np.alltrue(np.equal(y, z)):
-                        newdata.append(z)
-                        newdescr.append(z.dtype.descr[0][1])
-                    else:
-                        newdata.append(y)
-                        newdescr.append(y.dtype.descr[0][1])
-                else:
-                    newdata.append(y)
-                    newdescr.append(y.dtype.descr[0][1])
-        except:
-            newdata.append(x)
-            newdescr.append(descr)
-
-    return np.rec.fromarrays(newdata, formats=sjoin(newdescr, ','), names=colnames)
