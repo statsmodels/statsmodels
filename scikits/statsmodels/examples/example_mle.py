@@ -7,7 +7,7 @@ from scipy import optimize
 import numpy as np
 import scikits.statsmodels
 
-print '\nExample 1: artificial data'
+print '\nExample 1: Artificial Data'
 print   '--------------------------\n'
 
 np.random.seed(54321)
@@ -25,7 +25,7 @@ print resfmin
 
 
 
-print '\nExample 2: longley data, high multicollinearity'
+print '\nExample 2: Longley Data, high multicollinearity'
 print   '-----------------------------------------------\n'
 
 from scikits.statsmodels.datasets.longley.data import load

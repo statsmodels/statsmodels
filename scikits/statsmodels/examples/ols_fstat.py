@@ -14,6 +14,9 @@ from scikits.statsmodels.datasets.longley.data import load
 from scikits.statsmodels.regression import OLS
 from scikits.statsmodels import tools
 
+
+print '\n\n Example 1: Longley Data, high multicollinearity'
+
 data = load()
 data.exog = tools.add_constant(data.exog)
 res = OLS(data.endog, data.exog).fit()
@@ -41,7 +44,11 @@ print repr((Ftest.fvalue, Ftest.pvalue)) #use repr to get more digits
 ##1      9   836424
 ##2     11  2646903 -2  -1810479 9.7405 0.005605 **
 
-# test all variables have zero effect
+print 'Regression Results Summary'
+print res.summary()
+
+
+print '\n F-test whether all variables have zero effect'
 R = np.eye(7)[:-1,:]
 Ftest0 = res.f_test(R)
 print repr((Ftest0.fvalue, Ftest0.pvalue))
@@ -87,7 +94,7 @@ array([ 0.17737603, -1.06951632, -4.13642736, -4.82198531, -0.22605114,
         4.01588981])
 '''
 
-print "\nExample: simultaneous ttests"
+print "\nsimultaneous t-tests"
 ttest0 = res.t_test(R2)
 
 t2 = np.diag(ttest0.tvalue)
@@ -106,16 +113,15 @@ Ftest2a = res.f_test(np.asarray(R2)[:1,:])
 print repr((Ftest2a.fvalue, Ftest2a.pvalue))
 Ftest2b = res.f_test(np.asarray(R2)[1:2,:])
 print repr((Ftest2b.fvalue, Ftest2b.pvalue))
-# equality of ttest and Ftest
+
+print '\nequality of t-test and F-test'
 print t2a**2 - np.array((Ftest2a.fvalue, Ftest2b.fvalue))
 npt.assert_almost_equal(t2a**2, np.array((Ftest2a.fvalue, Ftest2b.fvalue)))
 #npt.assert_almost_equal(t2pval, np.array((Ftest2a.pvalue, Ftest2b.pvalue)))
 npt.assert_almost_equal(t2pval*2, np.array((Ftest2a.pvalue, Ftest2b.pvalue)))
 
-#print "Why is there a huge difference in the pvalue comparing"
-# ttest and Ftest with a single row
-# shouldn't this be the same ---> verify
-# error in pvalue of Ftest, statistics are correct
+
+print '\n\n Example 2: Artificial Data'
 
 nsample = 100
 ncat = 4
@@ -129,6 +135,9 @@ X = tools.add_constant(dummyvar[:,:-1])
 y = ytrue + sigma * np.random.randn(nsample,1)
 mod = OLS(y[:,0], X)
 res = mod.fit()
+
+print res.summary()
+
 R = np.eye(ncat)[:-1,:]
 Ftest = res.f_test(R)
 print repr((Ftest.fvalue, Ftest.pvalue))
@@ -136,7 +145,7 @@ R = np.atleast_2d([0, 1, -1, 2])
 Ftest = res.f_test(R)
 print repr((Ftest.fvalue, Ftest.pvalue))
 
-print 'simultaneous ttest for zero effects'
+print 'simultaneous t-test for zero effects'
 R = np.eye(ncat)[:-1,:]
 ttest = res.t_test(R)
 print repr((np.diag(ttest.tvalue), np.diag(ttest.pvalue)))
@@ -185,3 +194,5 @@ print repr((ttest.tvalue, ttest.pvalue))
 from scipy import stats
 print stats.glm(y[xcat<2].ravel(), xcat[xcat<2].ravel())
 print stats.ttest_ind(y[xcat==0], y[xcat==1])
+
+#TODO: compare with f_oneway
