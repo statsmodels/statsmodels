@@ -1,3 +1,6 @@
+# this is old and not adjusted, superseded by examples/glm_example
+
+
 import numpy as np
 from exampledata import lbw
 from nipy.fixes.scipy.stats.models.functions import xi, add_constant

@@ -19,6 +19,7 @@ if 0 in examples:
         print "AR coefficients:", model.rho
         rho, sigma = yule_walker(results.resid, order = model.order)
         model = GLSAR(Y, X, rho)
+
     par0 = results.params
     print par0
     model0if = GLSAR(Y, X, 2)
@@ -49,7 +50,7 @@ wnoise = noiseratio * np.random.randn(nsample+nlags)
 #find my drafts for univariate ARMA functions
 # generate AR(p)
 if np.size(rhotrue) == 1:
-    # replace with scipy.signal.lfilter ?
+    # replace with scipy.signal.lfilter, keep for testing
     arnoise = np.zeros(nsample+1)
     for i in range(1,nsample+1):
         arnoise[i] = rhotrue*arnoise[i-1] + wnoise[i]
