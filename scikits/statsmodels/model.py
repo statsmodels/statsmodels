@@ -121,6 +121,7 @@ class Results(object):
     def initialize(self, model, params, **kwd):
         self.params = params
         self.model = model
+#TODO: public method?
 
 class LikelihoodModelResults(Results):
     """ Class to contain results from likelihood models """
@@ -283,6 +284,7 @@ arguments.'
         if r_matrix is None and column is None:
             return self.normalized_cov_params * scale
 
+#TODO: make sure this works as needed for GLMs
     def t_test(self, r_matrix, scale=None):
         """
         Compute a tcontrast/t-test for a row vector array.
@@ -351,6 +353,7 @@ T statistics'
         return ContrastResults(effect=_effect, t=_t, sd=_sd,
                 df_denom=self.model.df_resid)
 
+#TODO: untested for GLMs?
     def f_test(self, r_matrix, scale=1.0, invcov=None):
         """
         Compute an Fcontrast/F-test for a contrast matrix.

@@ -184,7 +184,7 @@ class Family(object):
         """
         return self.link(mu)
 
-    def logLike(self, Y, mu, scale=1.):
+    def loglike(self, Y, mu, scale=1.):
         raise NotImplementedError
 
     def resid_anscombe(self, Y, mu):
@@ -232,7 +232,7 @@ class Poisson(Family):
         '''
         return 2*np.sum(Y*np.log(Y/mu))
 
-    def logLike(self, Y, mu, scale=1.):
+    def loglike(self, Y, mu, scale=1.):
         return scale * np.sum(-mu + Y*np.log(mu)-special.gammaln(Y+1))
 
     def resid_anscombe(self, Y, mu):
@@ -273,7 +273,7 @@ class Gaussian(Family):
     def deviance(self, Y, mu, scale=1.):
         return np.sum(np.power((Y-mu),2))
 
-    def logLike(self, Y, mu, scale=1.):
+    def loglike(self, Y, mu, scale=1.):
         #Implementation for R differs.  For identity link, same result
         #For non-identity link, there is a rounding error
         if isinstance(self.link, L.Power) and self.link.power == 1:
@@ -323,7 +323,7 @@ class Gamma(Family):
         Y_mu = self.clean(Y/mu)
         return np.sign(Y-mu) * np.sqrt(-2*(-(Y-mu)/mu + np.log(Y_mu)))
 
-    def logLike(self, Y, mu, scale=1.):
+    def loglike(self, Y, mu, scale=1.):
         return - 1/scale * np.sum(Y/mu+np.log(mu)+(scale-1)*np.log(Y)\
                 +np.log(scale)+scale*special.gammaln(1/scale))
 # in Stata scale is set to equal 1.
@@ -420,7 +420,7 @@ class Binomial(Family):
             return np.sign(Y-mu) * np.sqrt(2*self.n*(Y*np.log(Y/mu)+(1-Y)*\
                         np.log((1-Y)/(1-mu))))
 
-    def logLike(self, Y, mu, scale=1.):
+    def loglike(self, Y, mu, scale=1.):
         if np.shape(self.n) == ():
             return scale*np.sum(Y*np.log(mu/(1-mu))+np.log(1-mu))
         else:
@@ -468,7 +468,7 @@ class InverseGaussian(Family):
     def deviance(self, Y, mu, scale=1.):
         return np.sum((Y-mu)**2/(Y*mu**2))/scale
 
-    def logLike(self, Y, mu, scale=1.):
+    def loglike(self, Y, mu, scale=1.):
         return -.5 * np.sum((Y-mu)**2/(Y*mu**2*scale)\
                 + np.log(scale*Y**3) + np.log(2*np.pi))
 
@@ -535,7 +535,7 @@ class NegativeBinomial(Family):
                 np.log((1+self.alpha*Y)/(1+self.alpha*mu))
         return np.sign(Y-mu)*np.sqrt(tmp)
 
-    def logLike(self, Y, mu=None, scale=1., predicted=None):
+    def loglike(self, Y, mu=None, scale=1., predicted=None):
         # don't need to specify mu
         if predicted is None:
             raise AttributeError, '''The loglikelihood for the negative binomial requires that the predicted values of the fit be provided via the `predicted` keyword argument.'''

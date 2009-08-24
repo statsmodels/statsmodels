@@ -73,11 +73,11 @@ class GLS(LikelihoodModel):
         (cholsigmainv^(T) cholsigmainv) = (sigma)^(-1).
         It is the transpose of the Cholesky decomposition of the pseudoinverse
         of sigma.
-    df_model : scalar
+    df_model : float
         The model degrees of freedom is equal to p - 1, where p is the number
         of regressors.  Note that the intercept is not reported as a degree
         of freedom.
-    df_resid : scalar
+    df_resid : float
         The residual degrees of freedom is equal to the number of observations
         n less the number of parameters p.  Note that the intercept is counted as
         using a degree of freedom for the degrees of freedom of the
@@ -248,7 +248,7 @@ Should be of length %s, if sigma is a 1d array" % nobs
     @property
     def results(self):
         """
-        A property that returns a RegressResults class.
+        A property that returns a RegressionResults class.
 
         Notes
         -----
@@ -262,11 +262,11 @@ Should be of length %s, if sigma is a 1d array" % nobs
         """
         Return linear predicted values from a design matrix.
 
-        Paremters
+        Parameters
         ---------
         exog : array-like
             Design / exogenous data
-        params : array-like, optional after first fit
+        params : array-like, optional after fit has been called
             Parameters of a linear model
 
         Returns
