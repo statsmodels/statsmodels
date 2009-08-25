@@ -1331,7 +1331,7 @@ class NegativeBinomial(Family):
         `resid_anscombe` = (hyp2f1(-alpha*Y)-hyp2f1(-alpha*mu)+\
                 1.5*(Y**(2/3.)-mu**(2/3.)))/(mu+alpha*mu**2)**(1/6.)
 
-        where hyp2f1 is the hypergeometric 2f1 function paramterized as
+        where hyp2f1 is the hypergeometric 2f1 function parameterized as
         hyp2f1(x) = hyp2f1(2/3.,1/3.,5/3.,x)
         """
 
