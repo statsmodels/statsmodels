@@ -1,12 +1,55 @@
 import numpy as np
 
 class RobustNorm(object):
+    """
+    The parent class for the norms used for robust regression.
+
+    Lays out the methods expected of the robust norms to be used
+    by scikits.statsmodels.RLM.
+
+    Parameters
+    ----------
+    Some subclasses have optional tuning constants.
+
+    Methods
+    -------
+    call
+        Returns the value of estimator rho applied to an input
+    psi
+        Returns the derivative of rho.  Sometimes referred to as the influence
+        function.
+    psi_deriv
+        Returns the analytic deriative of psi.  This is used in obtaining robust
+        estimates of the covariance matrix.  See scikits.statsmodels.rlm for
+        more information.
+    rho
+        The robust criterion estimator function.
+    weights
+        Returns the value of psi(z) / z
+
+    References
+    ----------
+    DC Montgomery, EA Peck. \'Introduction to Linear Regression Analysis\',
+        John Wiley and Sons, Inc., New York, 2001.
+
+    R Venables, B Ripley. \'Modern Applied Statistics in S\'
+        Springer, New York, 2002.
+
+    See Also
+    --------
+    scikits.statsmodels.rlm for more information on how the estimators are used
+    and the inputs for the methods of RobustNorm and subclasses.
+
+    Notes
+    -----
+    Currently only M-estimators are available.
+    """
 
     def rho(self, z):
         """
         Abstract method:
 
-        -2 log L used in M-estimator
+        -2 loglike used in M-estimator
         """
         raise NotImplementedError
 
@@ -40,56 +83,133 @@ class RobustNorm(object):
 class LeastSquares(RobustNorm):
 
     """
-    Least squares rho for M estimation.
+    Least squares rho for M-estimation and its derived functions.
 
-    DC Montgomery, EA Peck. \'Introduction to Linear Regression Analysis\',
-    John Wiley and Sons, Inc., New York, 2001.
-
+    See also
+    --------
+    scikits.statsmodels.robust.norms.RobustNorm for the methods.
     """
+
     def rho(self, z):
+        """
+        The least squares estimator rho function
+
+        Parameters
+        -----------
+        z : array
+            1d array
+
+        Returns
+        -------
+        array
+            rho(z) = (1/2.)*z**2
+        """
         return z**2 * 0.5
 
     def psi(self, z):
+        """
+        The least squares estimator psi function
+
+        The analytic derivative of rho
+
+        Parameters
+        ----------
+        z : array
+            1d array
+
+        Returns
+        -------
+        array
+            psi(z) = z
+        """
         return np.asarray(z)
 
     def weights(self, z):
+        """
+        The least squares estimator weighting function for the IRLS algorithm.
+
+        The psi function scaled by the input z
+
+        Parameters
+        ----------
+        z : array
+            1d array
+
+        Returns
+        -------
+        array
+            weights(z) = np.ones(z.shape)
+        """
         return np.ones(z.shape, np.float64)
 
     def psi_deriv(self, z):
+        """
+        The derivative of the least squares psi function.
+
+        Notes
+        -----
+        Used to estimate the robust covariance matrix.
+        """
         return np.ones(z.shape, np.float64)
 
 class HuberT(RobustNorm):
     """
-    Huber\'s T for M estimation.
+    Huber's T for M estimation.
 
-    DC Montgomery, EA Peck. \'Introduction to Linear Regression Analysis\',
-    John Wiley and Sons, Inc., New York, 2001.
+    Parameters
+    ----------
+    t : float, optional
+        The tuning constant for Huber's t function.
 
-    R Venables, B Ripley. \'Modern Applied Statistics in S\'
-    Springer, New York, 2002.
+    See also
+    --------
+    scikits.statsmodels.robust.norms.RobustNorm for the methods.
     """
 
     def __init__(self, t=1.345):
         self.t = t
 
-    def subset(self, z):
+    def _subset(self, z):
+        """
+        Huber's T is defined differently over range abs(z) <= t and abs(z)>t
+
+        This is a helper function to calculate where this is true for
+        computations.
+        """
         z = np.asarray(z)
         return np.less_equal(np.fabs(z), self.t)
 
     def rho(self, z):
+        """
+        The robust criterion function for Huber's t.
+
+        Parameters
+        ----------
+        z : array
+            1d array
+
+        Returns
+        -------
+        rho(z) = t1 * .5*z**2 + t2 * (abs(z)*t - .5*t**2)
+
+        where t1 is an indicator function that evaluates to 1 if abs(z_i) <= t
+        and t1 evaluating to 1 if abs(z_i) > t
+        """
         z = np.asarray(z)
-        test = self.subset(z)
+        test = self._subset(z)
         return (test * 0.5 * z**2 +
                 (1 - test) * (np.fabs(z) * self.t - 0.5 * self.t**2))
 
     def psi(self, z):
+        """
+        """
         z = np.asarray(z)
-        test = self.subset(z)
+        test = self._subset(z)
         return test * z + (1 - test) * self.t * np.sign(z)
 
     def weights(self, z):
         z = np.asarray(z)
-        test = self.subset(z)
+        test = self._subset(z)
         return test + (1 - test) * self.t / np.fabs(z)
 
     def psi_deriv(self, z):
@@ -133,31 +253,31 @@ class AndrewWave(RobustNorm):
     """
     a = 1.339
 
-    def subset(self, z):
+    def _subset(self, z):
         z = np.asarray(z)
         return np.less_equal(np.fabs(z), self.a * np.pi)
 
     def rho(self, z):
         a = self.a
         z = np.asarray(z)
-        test = self.subset(z)
+        test = self._subset(z)
         return (test * a * (1 - np.cos(z / a)) +
                 (1 - test) * 2 * a)
 
     def psi(self, z):
         a = self.a
         z = np.asarray(z)
-        test = self.subset(z)
+        test = self._subset(z)
         return test * np.sin(z / a)
 
     def weights(self, z):
         a = self.a
         z = np.asarray(z)
-        test = self.subset(z)
+        test = self._subset(z)
         return test * np.sin(z / a) / (z / a)
 
     def psi_deriv(self, z):
-        test = self.subset(z)
+        test = self._subset(z)
         return test*np.cos(z / self.a)/self.a
 
 class TrimmedMean(RobustNorm):
@@ -171,23 +291,23 @@ class TrimmedMean(RobustNorm):
 
     c = 2
 
-    def subset(self, z):
+    def _subset(self, z):
         z = np.asarray(z)
         return np.less_equal(np.fabs(z), self.c)
 
     def rho(self, z):
         z = np.asarray(z)
-        test = self.subset(z)
+        test = self._subset(z)
         return test * np.power(z, 2) * 0.5
 
     def psi(self, z):
         z = np.asarray(z)
-        test = self.subset(z)
+        test = self._subset(z)
         return test * z
 
     def weights(self, z):
         z = np.asarray(z)
-        test = self.subset(z)
+        test = self._subset(z)
         return test
 
     def psi_derive(self, z):
@@ -213,7 +333,7 @@ class Hampel(RobustNorm):
         self.b = b
         self.c = c
 
-    def subset(self, z):
+    def _subset(self, z):
         z = np.fabs(np.asarray(z))
         t1 = np.less_equal(z, self.a)
         t2 = np.less_equal(z, self.b) * np.greater(z, self.a)
@@ -223,7 +343,7 @@ class Hampel(RobustNorm):
     def rho(self, z):
         z = np.fabs(z)
         a = self.a; b = self.b; c = self.c
-        t1, t2, t3 = self.subset(z)
+        t1, t2, t3 = self._subset(z)
         v = (t1 * z**2 * 0.5 +
              t2 * (a * z - a**2 * 0.5) +
              t3 * (a * (c * z - z**2 * 0.5) / (c - b) - 7 * a**2 / 6.) +     #(7/6) not (7/2) from M&P
@@ -233,7 +353,7 @@ class Hampel(RobustNorm):
     def psi(self, z):
         z = np.asarray(z)
         a = self.a; b = self.b; c = self.c
-        t1, t2, t3 = self.subset(z)
+        t1, t2, t3 = self._subset(z)
         s = np.sign(z)
         z = np.fabs(z)
         v = s * (t1 * z +
@@ -247,16 +367,15 @@ class Hampel(RobustNorm):
 #        return self.psi(z) * test / z + (1 - test)     # check Venables, this is different than M&P
 # don't think the above handles the signs correctly, need to check
         a = self.a; b = self.b; c = self.c
-        t1, t2, t3 = self.subset(z)
+        t1, t2, t3 = self._subset(z)
         v = (t1 +
             t2 * a/np.fabs(z) +
             t3 * a*(c-np.fabs(z))/(np.fabs(z)*(c-b)))
         return v
 
     def psi_deriv(self, z):
-        t1, t2, t3 = self.subset(z)
+        t1, t2, t3 = self._subset(z)
         return t1 + t3 * (self.a*np.sign(z)*z)/(np.fabs(z)*(self.c-self.b))
-
 
 class TukeyBiweight(RobustNorm):
     """
@@ -267,29 +386,28 @@ class TukeyBiweight(RobustNorm):
     Springer, New York, 2002.
     """
 
-
     def __init__(self, R = 4.685):
         self.R = R
 
-    def subset(self, z):
+    def _subset(self, z):
         z = np.fabs(np.asarray(z))
         return np.less_equal(z, self.R) # have also seen just less()
 
     def psi(self, z):
         z = np.asarray(z)
-        subset = self.subset(z)
+        subset = self._subset(z)
         return z * (1 - (z / self.R)**2)**2 * subset
 
     def rho(self, z):
-        subset = self.subset(z)
+        subset = self._subset(z)
         return -(1 - (z / self.R)**2)**3 * subset * self.R**2 / 6
 
     def weights(self, z):
-        subset = self.subset(z)
+        subset = self._subset(z)
         return (1 - (z / self.R)**2)**2 * subset
 
     def psi_deriv(self, z):
-        subset = self.subset(z)
+        subset = self._subset(z)
         return subset*((1 - (z/self.R)**2)**2 - (4*z**2/self.R**2) *\
                     (1-(z/self.R)**2))
 #        return (self.R - z)*(self.R + z)*(self.R**2 - 5*z**2)/self.R**4
