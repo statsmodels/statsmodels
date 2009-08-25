@@ -1,16 +1,19 @@
+'''Just two examples for using rpy
+
+# example 1: OLS using LM
+# example 2: GLM with binomial family
+
+'''
+
 from rpy import r
 import numpy as np
 
-# OLS Example using LM
-
-#FIXME: longley(), lbw() are not defined, copied exampledata.py and datafiles
-#FIXME: still errors in loading lbw data: field named black not found.
-
+from scikits.statsmodels.tools import xi, add_constant
 from exampledata import longley, lbw
 
-example = 1
+examples = [1, 2]
 
-if example == 1:
+if 1 in examples:
     y,x = longley()
     des = np.hstack((np.ones((x.shape[0],1)),x))
     des_cols = ['x.%d' % (i+1) for i in range(x.shape[1])]
@@ -23,14 +26,21 @@ if example == 1:
     # How to get Standard Errors for COV Matrix?
 
 
-if example == 2:
+if 2 in examples:
+    #corrected, see also glm_example.py and test_glm.py
     X = lbw()
-    des = np.vstack((X['age'],X['lwt'],X['black'],X['other'],X['smoke'],X['ptl'],X['ht'],X['ui'])).T
-    des = np.hstack((np.ones((des.shape[0],1)),des))
+    X = xi(X, col='race', drop=True)
+    des = np.column_stack((X['age'],X['lwt'],X['black'],X['other'],X['smoke'], X['ptl'], X['ht'], X['ui']))
+    #des = np.vstack((X['age'],X['lwt'],X['bwt'],X['ftv'],X['smoke'],X['ptl'],X['ht'],X['ui'])).T
+    des = np.hstack((des, np.ones((des.shape[0],1))))
     des_cols = ['x.%d' % (i+1) for i in range(des.shape[1])]
     formula = r('y~%s-1' % '+'.join(des_cols))
     frame = r.data_frame(y=X.low, x=des)
     results = r.glm(formula, data=frame, family='binomial')
+    params_est = [results['coefficients'][k] for k
+                    in sorted(results['coefficients'])]
+    print params_est
+    print ', '.join(['%13.10f']*9) % tuple(params_est)
 
 # HOW TO DO THIS IN R
 # data <- read.csv("./lwb_for_R.csv",headers=FALSE)

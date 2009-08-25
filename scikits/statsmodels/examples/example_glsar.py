@@ -1,3 +1,8 @@
+'''6 examples for GLSAR with artificial data
+
+Note: this examples were written mostly to cross-checking results
+'''
+
 import numpy as np
 import numpy.testing as npt
 from scipy import signal
@@ -9,6 +14,7 @@ examples_all = range(10) + ['test_copy']
 examples = examples_all #[5]
 
 if 0 in examples:
+    print '\n Example 0'
     X = np.arange(1,8)
     X = add_constant(X)
     Y = np.array((1, 3, 4, 5, 8, 10, 9))
@@ -19,6 +25,7 @@ if 0 in examples:
         print "AR coefficients:", model.rho
         rho, sigma = yule_walker(results.resid, order = model.order)
         model = GLSAR(Y, X, rho)
+
     par0 = results.params
     print par0
     model0if = GLSAR(Y, X, 2)
@@ -34,7 +41,7 @@ rhotrue = [0.5, 0.2]
 rhotrue = np.asarray(rhotrue)
 nlags = np.size(rhotrue)
 beta = np.array([0.1, 2])
-noiseratio = 0.01
+noiseratio = 0.5
 nsample = 2000
 x = np.arange(nsample)
 X1 = add_constant(x)
@@ -49,7 +56,7 @@ wnoise = noiseratio * np.random.randn(nsample+nlags)
 #find my drafts for univariate ARMA functions
 # generate AR(p)
 if np.size(rhotrue) == 1:
-    # replace with scipy.signal.lfilter ?
+    # replace with scipy.signal.lfilter, keep for testing
     arnoise = np.zeros(nsample+1)
     for i in range(1,nsample+1):
         arnoise[i] = rhotrue*arnoise[i-1] + wnoise[i]
@@ -63,28 +70,29 @@ else:
 y1 = np.dot(X1,beta) + noise
 
 if 1 in examples:
+    print '\nExample 1: iterative_fit and repeated calls'
     mod1 = GLSAR(y1, X1, 1)
     print mod1.results.params
     print mod1.rho
 
-    for i in range(10):
+    for i in range(5):
         mod1.iterative_fit(1)
         print mod1.rho
         print mod1.results.params
 
 if 2 in examples:
-    print '\n iterative fitting of first model'
+    print '\nExample 2: iterative fitting of first model'
     print 'with AR(0)', par0
     parold = par0
     mod0 = GLSAR(Y, X, 1)
-    for i in range(10):
-        print mod0.wexog.sum()
-        print mod0.pinv_wexog.sum()
+    for i in range(5):
+        #print mod0.wexog.sum()
+        #print mod0.pinv_wexog.sum()
         mod0.iterative_fit(1)
-        print mod0.rho
+        print 'rho', mod0.rho
         parnew = mod0.results.params
-        print parnew
-        print parnew - parold
+        print 'params', parnew
+        print 'params change in iteration', parnew - parold
         parold = parnew
 
 # generate pure AR(p) process
@@ -94,8 +102,9 @@ Y = noise
 #results now have same estimated rho as yule-walker directly
 
 if 3 in examples:
+    print '\nExample 3: pure AR(2), GLSAR versus Yule_Walker'
     model3 = GLSAR(Y, rho=2)
-    for i in range(10):
+    for i in range(5):
         results = model3.fit()
         print "AR coefficients:", model3.rho, results.params
         rho, sigma = yule_walker(results.resid, order = model3.order)
@@ -114,15 +123,17 @@ if 'test_copy' in examples:
 
 
 if 4 in examples:
+    print '\nExample 4: demeaned pure AR(2), GLSAR versus Yule_Walker'
     Ydemeaned = Y - Y.mean()
     model4 = GLSAR(Ydemeaned, rho=2)
-    for i in range(10):
+    for i in range(5):
         results = model4.fit()
         print "AR coefficients:", model3.rho, results.params
         rho, sigma = yule_walker(results.resid, order = model4.order)
         model4 = GLSAR(Ydemeaned, rho=rho)
 
 if 5 in examples:
+    print '\nExample 5: pure AR(2), GLSAR iterative_fit versus Yule_Walker'
     model3a = GLSAR(Y, rho=1)
     res3a = model3a.iterative_fit(5)
     print res3a.params
