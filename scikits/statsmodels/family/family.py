@@ -1,10 +1,8 @@
 '''
-Family provides the distributions used by GLM.
+The one parameter exponential family distributions used by GLM.
 
 Usage example (specifies defaults)
 -------------
-import models
-from models.family import links
 
 models.family.Family
     general base class
@@ -60,22 +58,54 @@ models.family.Poisson(link = links.logit)
 import numpy as np
 from scipy import special
 from scipy.stats import ss
-#from scikits.statsmodels.family import links as L
-#from scikits.statsmodels.family import varfuncs as V
 import links as L
 import varfuncs as V
 
 class Family(object):
 
     """
-    A class to model one-parameter exponential
-    families.
+    The parent class for one-parameter exponential families.
 
-    INPUTS:
-       link      -- a Link instance
-       variance  -- a variance function (models means as a function
-                    of mean)
+    Parameters
+    ----------
+    link : a link function instance
+        Link is the linear transformation function.
+        See the individual families for available links.
+    variance : a variance function
+        Measures the variance as a function of the mean probabilities.
+        See the individual families for the default variance function.
 
+    Methods
+    -------
+    deviance
+        Returns the deviance function of a (Y,mu) pair for a model.
+        Deviance is usually defined as twice the loglikelihood ratio of a
+        fitted model.
+        Deviance = sum_i(2loglike(Y_i,Y_i) - 2loglike(Y_i,mu_i)) / scale
+        Where loglike is defined for each family.
+    devresid
+        Returns the deviance residuals for a fitted model.
+        `devresid` is defined for each family.
+    fitted
+        Returns the fitted values based on the linear predictor of the model.
+        Calls the inverse of the link function.
+    loglike
+        The loglikelihood function.  `loglike` is defined for each family.
+    predict
+        The linear predictors based on a given `mu`.  Returns the link's call
+        method.
+    resid_anscombe
+        The Anscombe residuals.  `resid_anscombe` is defined for each family.
+        In general, the Anscombe residuals are defined as
+        `resid_anscombe` =
+            (A(Y_i) - A(mu_hat_i))/(A'(mu_hat_i)*sqrt(V(mu_hat_i)))
+            where A(.) = integral(dmu/V^(1/3)(mu)) and
+            V is the variance function.
+    starting_mu
+        The value of mu at the start of the IRLS algorithm.
+    weights
+        The weighting function used in the IRLS algorithm.
+        `weights` = 1 / (link'(mu)**2 * variance(mu))
     """
 
     valid = [-np.inf, np.inf]
@@ -84,15 +114,43 @@ class Family(object):
     links = []
 
     def _setlink(self, link):
+        """
+        Helper method to set the link for a family.
+
+        Raises a ValueError exception if the link is not available.  Note that
+        the error message might not be that informative because it tells you
+        that the link should be in the base class for the link function.
+
+        See glm.GLM for a list of appropriate links for each family but note
+        that not all of these are currently available.
+        """
+#TODO: change deviance to use llf, so that scale is used accurately?
+# note that I removed scale from deviance and dev_resids, since I'm not
+# sure it was used consistently and I don't have a reference for its usage
+# as such
+# note that Hardin and Hilbe discusses 'deviance adjustment factors'
+
+#TODO: change the links class attribute in the families to hold meaningful
+# information instead of a list of links instances such as
+#[<scikits.statsmodels.family.links.Log object at 0x9a4240c>,
+# <scikits.statsmodels.family.links.Power object at 0x9a423ec>,
+# <scikits.statsmodels.family.links.Power object at 0x9a4236c>]
+# for Poisson...
+# for now the links class attributes will not be documented
         self._link = link
         if hasattr(self, "links"):
             if link not in self.links:
-                raise ValueError, 'invalid link for family, should be in %s' \
-                % `self.links`
+                raise ValueError, 'Invalid link for family, should be in %s'\
+                    % `self.links`
 
     def _getlink(self):
+        """
+        Helper method to get the link for a family.
+        """
         return self._link
 
+    #link property for each family
+    #pointer to link instance
     link = property(_getlink, _setlink)
 
     def __init__(self, link, variance):
@@ -100,73 +158,117 @@ class Family(object):
         self.variance = variance
 
     def starting_mu(self, y):
+        """
+        Starting value for mu in the IRLS algorithm.
+
+        Parameters
+        ----------
+        y : array
+            The untransformed response variable.
+
+        Returns
+        -------
+        mu_0 : array
+            The first guess on the transformed response variable.
+
+        Formulas
+        --------
+        mu_0 = (endog + mean(endog))/2.
+
+        Notes
+        -----
+        Only the Binomial family takes a different initial value.
+        """
         return (y + y.mean())/2.
 
     def weights(self, mu):
-
         """
-        Weights for IRLS step.
+        Weights for IRLS steps
 
-        w = 1 / (link'(mu)**2 * variance(mu))
+        Parameters
+        ----------
+        mu : array-like
+            The transformed mean response variable in the exponential family
 
-        INPUTS:
-           mu  -- mean parameter in exponential family
+        Returns
+        -------
+        w : array
+            The weights for the IRLS steps
 
-        OUTPUTS:
-           w   -- weights used in WLS step of GLM/GAM fit
-
+        Formulas
+        ---------
+        `w` = 1 / (link'(`mu`)**2 * variance(`mu`))
         """
         return 1. / (self.link.deriv(mu)**2 * self.variance(mu))
 
     def deviance(self, Y, mu, scale=1.):
         """
-        Deviance of (Y,mu) pair. Deviance is usually defined
-        as the difference
+        Deviance of (Y,mu) pair.
 
-        DEV = (SUM_i 2 log Likelihood(Y_i,Y_i) - 2 log Likelihood(Y_i,mu_i)) / scale
+        Deviance is usually defined as twice the loglikelihood ratio.
 
-        INPUTS:
-           Y     -- response variable
-           mu    -- mean parameter
-           scale -- optional scale in denominator of deviance
+        Parameters
+        ----------
+        Y : array-like
+            The endogenous response variable
+        mu : array-like
+            The inverse of the link function at the linear predicted values.
+        scale : float, optional
+            An optional scale argument.
 
-        OUTPUTS: dev
-           dev   -- DEV, as described aboce
+        Returns
+        -------
+        DEV : array
+            The value of deviance function defined below.
 
+        Formulas
+        ---------
+        DEV = (sum_i(2*loglike(Y_i,Y_i) - 2*loglike(Y_i,mu_i)) / scale
+
+        Notes
+        -----
+        The deviance functions are analytically defined for each family.
         """
-
-        return np.power(self.devresid(Y, mu), 2).sum() / scale
+        raise NotImplementedError
+#        return np.power(self.devresid(Y, mu), 2).sum() / scale
 
     def devresid(self, Y, mu):
         """
-        The deviance residuals, defined as the residuals
-        in the deviance.
+        The deviance residuals
 
-        Without knowing the link, they default to Pearson residuals
+        Parameters
+        ----------
+        Y : array
+            The endogenous response variable
+        mu : array
+            The inverse of the link function at the linear predicted values.
 
-        resid_P = (Y - mu) * sqrt(weight(mu))
+        Returns
+        -------
+        Deviance residuals.
 
-        INPUTS:
-           Y     -- response variable
-           mu    -- mean parameter
-
-        OUTPUTS: resid
-           resid -- deviance residuals
+        Notes
+        -----
+        The deviance residuals are defined for each family.
         """
-
-        return (Y - mu) * np.sqrt(self.weights(mu))
+        raise NotImplementedError
+#        return (Y - mu) * np.sqrt(self.weights(mu))
 
     def fitted(self, eta):
         """
         Fitted values based on linear predictors eta.
 
-        INPUTS:
-           eta  -- values of linear predictors, say,
-                   X beta in a generalized linear model.
+        Parameters
+        -----------
+        eta : array
+            Values of the linear predictor of the model.
+            dot(X,beta) in a classical linear model.
 
-        OUTPUTS: mu
-           mu   -- link.inverse(eta), mean parameter based on eta
-
+        Returns
+        --------
+        mu : array
+            The mean response variables given by the inverse of the link
+            function.
         """
         return self.link.inverse(eta)
 
@@ -174,30 +276,87 @@ class Family(object):
         """
         Linear predictors based on given mu values.
 
-        INPUTS:
-           mu   -- mean parameter of one-parameter exponential family
+        Parameters
+        ----------
+        mu : array
+            The mean response variables
 
-        OUTPUTS: eta
-           eta  -- link(mu), linear predictors, based on
-                   mean parameters mu
-
+        Returns
+        -------
+        eta : array
+            Linear predictors based on the mean response variables.  The value
+            of the link function at the given mu.
         """
         return self.link(mu)
 
-    def logLike(self, Y, mu, scale=1.):
+    def loglike(self, Y, mu, scale=1.):
+        """
+        The loglikelihood function.
+
+        Parameters
+        ----------
+        `Y` : array
+            Usually the endogenous response variable.
+        `mu` : array
+            Usually but not always the fitted mean response variable.
+
+        Returns
+        -------
+        llf : float
+            The value of the loglikelihood evaluated at (Y,mu).
+        Notes
+        -----
+        This is defined for each family.  Y and mu are not restricted to
+        `Y` and `mu` respectively.  For instance, the deviance function calls
+        both loglike(Y,Y) and loglike(Y,mu) to get the likelihood ratio.
+        """
         raise NotImplementedError
 
     def resid_anscombe(self, Y, mu):
+        """
+        The Anscome residuals.
+
+        See also
+        --------
+        statsmodesl.family.family.Family docstring and the `resid_anscombe` for
+        the individual families for more information.
+        """
         raise NotImplementedError
 
 class Poisson(Family):
-
     """
     Poisson exponential family.
 
-    INPUTS:
-       link      -- a Link instance
+    Parameters
+    ----------
+    link : a link instance, optional
+        The default link for the Poisson family is the log link.
+        Available links are log, identity, and sqrt.
+        See statsmodels.family.links for more information.
 
+    Attributes
+    ----------
+    link : a link instance
+        The link function of the Poisson instance.
+    variance : varfuncs instance
+        `variance` is an instance of statsmodels.family.varfuncs.mu
+    valid (class attribute) : list
+        A list contained the domain for the Poisson family.
+
+    Methods
+    -------
+    devresid
+        Returns the deviance residuals for the Poisson family.
+    deviance
+        Returns the value of the deviance function for the Poisson family.
+    loglike
+        Returns the value of the loglikelihood function for the Poisson family.
+    resid_anscombe
+        Returns the Anscombe residuals for the Poisson family.
+
+    See also
+    --------
+    statsmodels.family.family.Family
     """
 
     links = [L.log, L.identity, L.sqrt]
@@ -209,43 +368,164 @@ class Poisson(Family):
         self.link = link
 
     def devresid(self, Y, mu):
-        """
-        Poisson deviance residual
+        """Gaussian deviance residual
 
-        INPUTS:
-           Y     -- response variable
-           mu    -- mean parameter
+        Parameters
+        -----------
+        Y : array-like
+            Endogenous response variable
+        mu : array-like
+            Fitted mean response variable
 
-        OUTPUTS: resid
-           resid -- deviance residuals
+        Returns
+        -------
+        resid_dev : array
+            Deviance residuals as defined below
 
+        Formulas
+        --------
+
+        Poisson deviance residuals
+
+        Parameters
+        -----------
+Gaussian deviance residual
+
+        Parameters
+        -----------
+        Y : array-like
+            Endogenous response variable
+        mu : array-like
+            Fitted mean response variable
+
+        Returns
+        -------
+        resid_dev : array
+            Deviance residuals as defined below
+
+        Formulas
+        --------
+        Y : array-like
+            Endogenous response variable
+        mu : array-like
+            Fitted mean response variable
+
+        Returns
+        -------
+        resid_dev : array
+            Deviance residuals as defined below
+
+        Formulas
+        --------
+        resid_dev = sign(Y-mu)*sqrt(2*Y*log(Y/mu)-2*(Y-mu))
         """
         return np.sign(Y-mu) * np.sqrt(2*Y*np.log(Y/mu)-2*(Y-mu))
 
-    def deviance(self, Y, mu, scale=1.):
+    def deviance(self, Y, mu):
         '''
-        Poisson deviance
+        Poisson deviance function
 
-        If a constant term is included it is
+        Parameters
+        ----------
+        Y : array-like
+            Endogenous response variable
+        mu : array-like
+            Fitted mean response variable
 
-        2 * sum_i{y_i*log(y_i/mu_i)}
+        Returns
+        -------
+        deviance : float
+            The deviance function at (Y,mu) as defined below.
+
+        Formulas
+        --------
+        If a constant term is included it is defined as
+
+        `deviance` = 2*sum_i(Y*log(Y/mu))
         '''
         return 2*np.sum(Y*np.log(Y/mu))
 
-    def logLike(self, Y, mu, scale=1.):
+    def loglike(self, Y, mu, scale=1.):
+        """
+        Loglikelihood function for Poisson exponential family distribution.
+
+        Parameters
+        ----------
+        Y : array-like
+            Endogenous response variable
+        mu : array-like
+            Fitted mean response variable
+        scale : float, optional
+            The default is 1.
+
+        Returns
+        -------
+        llf : float
+            The value of the loglikelihood function evaluated at (Y,mu,scale)
+            as defined below.
+
+        Formulas
+        --------
+        llf = scale * sum(-mu + Y*log(mu) - gammaln(Y+1))
+        where gammaln is the log gamma function
+        """
         return scale * np.sum(-mu + Y*np.log(mu)-special.gammaln(Y+1))
 
     def resid_anscombe(self, Y, mu):
+        """
+        Anscombe residuals for the Poisson exponential family distribution
+
+        Parameters
+        ----------
+        Y : array-like
+            Endogenous response variable
+        mu : array-like
+            Fitted mean response variable
+
+        Returns
+        -------
+        resid_anscombe : array
+            The Anscome residuals for the Poisson family defined below
+
+        Formulas
+        --------
+        `resid_anscombe` = (3/2.)*(`Y`**(2/3.) - `mu`**(2/3.))/`mu`**(1/6.)
+        """
         return (3/2.)*(Y**(2/3.)-mu**(2/3.))/mu**(1/6.)
 
 class Gaussian(Family):
 
     """
-    Gaussian exponential family.
+    Gaussian exponential family distribution.
 
-    INPUTS:
-       link      -- a Link instance
+    Parameters
+    ----------
+    link : a link instance, optional
+        The default link for the Gaussian family is the identity link.
+        Available links are log, identity, and inverse.
+        See statsmodels.family.links for more information
 
+    Attributes
+    ----------
+    link : a link instance
+        The link function of the Gaussian instance
+    variance : varfunc instance
+        `variance` is an instance of statsmodels.family.varfuncs.constant
+
+    Methods
+    -------
+    devresid
+        Returns the deviance residuals for the Gaussian family.
+    deviance
+        Returns the value of the deviance function for the Gaussian family.
+    loglike
+        Returns the value of the loglikelihood function for the Gaussian family.
+    resid_anscombe
+        Returns the Anscombe residuals for the Gaussian family.
+
+    See also
+    --------
+    statsmodels.family.family.Family
     """
 
     links = [L.log, L.identity, L.inverse]
@@ -255,29 +535,84 @@ class Gaussian(Family):
         self.variance = Gaussian.variance
         self.link = link
 
-    def devresid(self, Y, mu, scale=1.):
+    def devresid(self, Y, mu):
         """
-        Gaussian deviance residual
+        Gaussian deviance residuals
 
-        INPUTS:
-           Y     -- response variable
-           mu    -- mean parameter
-           scale -- optional scale in denominator (after taking sqrt)
+        Parameters
+        -----------
+        Y : array-like
+            Endogenous response variable
+        mu : array-like
+            Fitted mean response variable
 
-        OUTPUTS: resid
-           resid -- deviance residuals
+        Returns
+        -------
+        resid_dev : array
+            Deviance residuals as defined below
+
+        Formulas
+        --------
+        `resid_dev` = (`Y` - `mu`)/sqrt(variance(`mu`))
         """
 
-        return (Y - mu) / np.sqrt(self.variance(mu) * scale)
+        return (Y - mu) / np.sqrt(self.variance(mu))
 
-    def deviance(self, Y, mu, scale=1.):
-        return np.sum(np.power((Y-mu),2))
+    def deviance(self, Y, mu):
+        """
+        Gaussian deviance function
 
-    def logLike(self, Y, mu, scale=1.):
-        #Implementation for R differs.  For identity link, same result
-        #For non-identity link, there is a rounding error
+        Parameters
+        ----------
+        Y : array-like
+            Endogenous response variable
+        mu : array-like
+            Fitted mean response variable
+
+        Returns
+        -------
+        deviance : float
+            The deviance function at (Y,mu) as defined below.
+
+        Formulas
+        --------
+        `deviance` = sum((Y-mu)**2)
+        """
+        return np.sum((Y-mu)**2)
+
+    def loglike(self, Y, mu, scale=1.):
+        """
+        Loglikelihood function for Gaussian exponential family distribution.
+
+        Parameters
+        ----------
+        Y : array-like
+            Endogenous response variable
+        mu : array-like
+            Fitted mean response variable
+        scale : float, optional
+            The default is 1.
+
+        Returns
+        -------
+        llf : float
+            The value of the loglikelihood function evaluated at (Y,mu,scale)
+            as defined below.
+
+        Formulas
+        --------
+        If the link is the identity link function then the
+        loglikelihood function is the same as the classical OLS model.
+        llf = -(nobs/2)*(log(SSR) + (1 + log(2*pi/nobs)))
+        where SSR = sum((Y-link^(-1)(mu))**2)
+
+        If the links is not the identity link then the loglikelihood
+        function is defined as
+        llf = sum((`Y`*`mu`-`mu`**2/2)/`scale` - `Y`**2/(2*`scale`) - \
+            (1/2.)*log(2*pi*`scale`))
+        """
         if isinstance(self.link, L.Power) and self.link.power == 1:
-        # This is just the loglikelihood for OLS
+        # This is just the loglikelihood for classical OLS
             nobs2 = Y.shape[0]/2.
             SSR = ss(Y-self.fitted(mu))
             llf = -np.log(SSR) * nobs2
@@ -288,21 +623,61 @@ class Gaussian(Family):
             return np.sum((Y*mu-mu**2/2)/scale-Y**2/(2*scale)-\
                     .5*np.log(2*np.pi*scale))
 
-
     def resid_anscombe(self, Y, mu):
+        """
+        The Anscombe residuals for the Gaussian exponential family distribution
+
+        Parameters
+        ----------
+        Y : array
+            Endogenous response variable
+        mu : array
+            Fitted mean response variable
+
+        Returns
+        -------
+        resid_anscombe : array
+            The Anscombe residuals for the Gaussian family defined below
+
+        Formulas
+        --------
+        `resid_anscombe` = `Y` - `mu`
+        """
         return Y-mu
 
 class Gamma(Family):
 
     """
-    Gamma exponential family.
+    Gamma exponential family distribution.
 
-    INPUTS:
-       link      -- a Link instance
+    Parameters
+    ----------
+    link : a link instance, optional
+        The default link for the Gamma family is the inverse link.
+        Available links are log, identity, and inverse.
+        See statsmodels.family.links for more information
 
-    BUGS:
-       no deviance residuals?
+    Attributes
+    ----------
+    link : a link instance
+        The link function of the Gamma instance
+    variance : varfunc instance
+        `variance` is an instance of statsmodels.family.varfuncs.mu_squared
 
+    Methods
+    -------
+    devresid
+        Returns the deviance residuals for the Gamma family.
+    deviance
+        Returns the value of the deviance function for the Gamma family.
+    loglike
+        Returns the value of the loglikelihood function for the Gamma family.
+    resid_anscombe
+        Returns the Anscombe residuals for the Gamma family.
+
+    See also
+    --------
+    statsmodels.family.family.Family
     """
 
     links = [L.log, L.identity, L.inverse]
@@ -312,25 +687,116 @@ class Gamma(Family):
         self.variance = Gamma.variance
         self.link = link
 
-    def clean(self, x):
+#TODO: note the note
+    def _clean(self, x):
+        """
+        Helper function to trim the data so that is in (0,inf)
+
+        Notes
+        -----
+        The need for this function was discovered through usage and its
+        possible that other families might need a check for validity of the
+        domain.
+        """
         return np.clip(x, 1.0e-10, np.inf)
 
-    def deviance(self, Y, mu, scale=1.):
-        Y_mu = self.clean(Y/mu)
-        return 2 * np.sum((Y - mu)/mu - np.log(Y_mu))/scale
+    def deviance(self, Y, mu):
+        """
+        Gamma deviance function
 
-    def devresid(self, Y, mu, scale=1.):
-        Y_mu = self.clean(Y/mu)
+        Parameters
+        -----------
+        Y : array-like
+            Endogenous response variable
+        mu : array-like
+            Fitted mean response variable
+
+        Returns
+        -------
+        deviance : float
+            Deviance function as defined below
+
+        Formulas
+        --------
+        `deviance` = 2*sum((Y - mu)/mu - log(Y/mu))
+        """
+        Y_mu = self._clean(Y/mu)
+        return 2 * np.sum((Y - mu)/mu - np.log(Y_mu))
+
+    def devresid(self, Y, mu):
+        """
+        Gamma deviance residuals
+
+        Parameters
+        -----------
+        Y : array-like
+            Endogenous response variable
+        mu : array-like
+            Fitted mean response variable
+
+        Returns
+        -------
+        resid_dev : array
+            Deviance residuals as defined below
+
+        Formulas
+        --------
+        `resid_dev` = sign(Y - mu) * sqrt(-2*(-(Y-mu)/mu + log(Y/mu)))
+        """
+        Y_mu = self._clean(Y/mu)
         return np.sign(Y-mu) * np.sqrt(-2*(-(Y-mu)/mu + np.log(Y_mu)))
 
-    def logLike(self, Y, mu, scale=1.):
+    def loglike(self, Y, mu, scale=1.):
+        """
+        Loglikelihood function for Gamma exponential family distribution.
+
+        Parameters
+        ----------
+        Y : array-like
+            Endogenous response variable
+        mu : array-like
+            Fitted mean response variable
+        scale : float, optional
+            The default is 1.
+
+        Returns
+        -------
+        llf : float
+            The value of the loglikelihood function evaluated at (Y,mu,scale)
+            as defined below.
+
+        Formulas
+        --------
+        llf = -1/scale * sum(Y/mu + log(mu) + (scale-1)*log(Y) + log(scale) +\
+            scale*gammaln(1/scale))
+        where gammaln is the log gamma function.
+        """
         return - 1/scale * np.sum(Y/mu+np.log(mu)+(scale-1)*np.log(Y)\
                 +np.log(scale)+scale*special.gammaln(1/scale))
-# in Stata scale is set to equal 1.
-# in R it's the dispersion, though there is a loss of precision, the
-# answer is equivalent.
+# in Stata scale is set to equal 1 for reporting llf
+# in R it's the dispersion, though there is a loss of precision vs. our
+# results due to an assumed difference in implementation
 
     def resid_anscombe(self, Y, mu):
+        """
+        The Anscombe residuals for Gamma exponential family distribution
+
+        Parameters
+        ----------
+        Y : array
+            Endogenous response variable
+        mu : array
+            Fitted mean response variable
+
+        Returns
+        -------
+        resid_anscombe : array
+            The Anscombe residuals for the Gamma family defined below
+
+        Formulas
+        --------
+        resid_anscombe = 3*(Y**(1/3.)-mu**(1/3.))/mu**(1/3.)
+        """
         return 3*(Y**(1/3.)-mu**(1/3.))/mu**(1/3.)
 
 class Binomial(Family):
@@ -408,7 +874,7 @@ class Binomial(Family):
 
         """
 
-        mu = self.link.clean(mu)
+        mu = self.link._clean(mu)
         if np.shape(self.n) == ():
             ind_one = np.where(Y==1)
             ind_zero = np.where(Y==0)
@@ -420,7 +886,7 @@ class Binomial(Family):
             return np.sign(Y-mu) * np.sqrt(2*self.n*(Y*np.log(Y/mu)+(1-Y)*\
                         np.log((1-Y)/(1-mu))))
 
-    def logLike(self, Y, mu, scale=1.):
+    def loglike(self, Y, mu, scale=1.):
         if np.shape(self.n) == ():
             return scale*np.sum(Y*np.log(mu/(1-mu))+np.log(1-mu))
         else:
@@ -468,7 +934,7 @@ class InverseGaussian(Family):
     def deviance(self, Y, mu, scale=1.):
         return np.sum((Y-mu)**2/(Y*mu**2))/scale
 
-    def logLike(self, Y, mu, scale=1.):
+    def loglike(self, Y, mu, scale=1.):
         return -.5 * np.sum((Y-mu)**2/(Y*mu**2*scale)\
                 + np.log(scale*Y**3) + np.log(2*np.pi))
 
@@ -489,7 +955,7 @@ class NegativeBinomial(Family):
     links = [L.log, L.cloglog, L.identity, L.nbinom, L.Power]
 #TODO: add the ability to use the power the links with an if test
 # similar to below
-    variance = V.negbin
+    variance = V.nbinom
 
     def __init__(self, link=L.log, alpha=1.):
         self.alpha = alpha
@@ -535,7 +1001,7 @@ class NegativeBinomial(Family):
                 np.log((1+self.alpha*Y)/(1+self.alpha*mu))
         return np.sign(Y-mu)*np.sqrt(tmp)
 
-    def logLike(self, Y, mu=None, scale=1., predicted=None):
+    def loglike(self, Y, mu=None, scale=1., predicted=None):
         # don't need to specify mu
         if predicted is None:
             raise AttributeError, '''The loglikelihood for the negative binomial requires that the predicted values of the fit be provided via the `predicted` keyword argument.'''
@@ -550,14 +1016,3 @@ class NegativeBinomial(Family):
         hyp2f1 = lambda x : special.hyp2f1(2/3.,1/3.,5/3.,x)
         return (hyp2f1(-self.alpha*Y)-hyp2f1(-self.alpha*mu)+1.5*(Y**(2/3.)-\
                 mu**(2/3.)))/(mu+self.alpha*mu**2)**(1/6.)
-
-
-
-
-
-
-
-
-
-
-

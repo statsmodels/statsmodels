@@ -6,16 +6,38 @@ from contrast import ContrastResults
 
 class Model(object):
     """
-    A (predictive) statistical model. The class Model itself does nothing
-    but lays out the methods expected of any subclass.
+    A (predictive) statistical model. The class Model itself is not to be used.
+
+    Model lays out the methods expected of any subclass.
+
+    Parameters
+    ----------
+    endog : array-like
+        Endogenous response variable.
+
+    exog : array-like
+        Exogenous design.
+
+    Methods
+    -------
+    fit
+        Call a models fit method
+    predict
+        Return fitted response values for a model
+
+    Notes
+    -----
+    `endog` and `exog` are references to any data provided.  So if the data is
+    already stored in numpy arrays and it is changed then `endog` and `exog`
+    will change as well.
     """
 
     _results = None
 
     def __init__(self, endog, exog=None):
-        self._endog = np.asarray(endog)
-        self._exog = np.asarray(exog)
-        self.nobs = float(self._endog.shape[0])
+        self.endog = np.asarray(endog)
+        self.exog = np.asarray(exog)
+        self.nobs = float(self.endog.shape[0])
 
     def fit(self):
         """
@@ -76,18 +98,14 @@ class LikelihoodModel(Model):
             raise ValueError("Unknown fit method.")
         self._results = results
 
+#FIXME: change name to mle?
 #FIXME: This does not work as implemented
 #FIXME: Params should be a first guess on the params
 #       so supplied or default guess?
     def newton(self, params):
         #JP this is not newton, it's fmin
-# it also doesn't work
 # tried fmin, fmin_ncg, fmin_powell
 # converges to wrong estimates
-# will probably need to write own root-finding routine
-#FIXME: should we call it MLE for Maximum Likelihood Estimator?
-# SS no this isn't used anywhere right now, but needs attention for
-# MLE
         # is this used anywhere
         # results should be attached to self
         f = lambda params: -self.loglike(params)
@@ -121,6 +139,7 @@ class Results(object):
     def initialize(self, model, params, **kwd):
         self.params = params
         self.model = model
+#TODO: public method?
 
 class LikelihoodModelResults(Results):
     """ Class to contain results from likelihood models """
@@ -138,29 +157,17 @@ class LikelihoodModelResults(Results):
             For (some subset of models) scale will typically be the
             mean square error from the estimated model (sigma^2)
 
-        Comments
+        Notes
         --------
-
         The covariance of params is given by scale times
         normalized_cov_params
         """
-
-        #JP what are the minimum attributes and methods that are used of model
-        # i.e. can this be called with an almost empty model
-        # what's the smallest duck that quacks like a model - list
-# SS the minimum is data.endog, data.exog (except for AR)
-# some models take more kwd arguments
-# the minimum needed for results are the inits here
         super(LikelihoodModelResults, self).__init__(model, params)
         self.normalized_cov_params = normalized_cov_params
         self.scale = scale
 
     def normalized_cov_params(self):
         raise NotImplementedError
-
-#    def scale(self):    #JP very bad, first scale is an attribute, now a method
-#        raise NotImplementedError
-                        # SS It's not used I don't think and can be removed
 
     def t(self, column=None):
         """
@@ -195,7 +202,8 @@ class LikelihoodModelResults(Results):
         """
 
         if self.normalized_cov_params is None:
-            raise ValueError, 'need covariance of parameters for computing T statistics'
+            raise ValueError, 'need covariance of parameters for computing T\
+ statistics'
 
         if column is None:
             column = range(self.params.shape[0])
@@ -283,6 +291,7 @@ arguments.'
         if r_matrix is None and column is None:
             return self.normalized_cov_params * scale
 
+#TODO: make sure this works as needed for GLMs
     def t_test(self, r_matrix, scale=None):
         """
         Compute a tcontrast/t-test for a row vector array.
@@ -351,6 +360,7 @@ T statistics'
         return ContrastResults(effect=_effect, t=_t, sd=_sd,
                 df_denom=self.model.df_resid)
 
+#TODO: untested for GLMs?
     def f_test(self, r_matrix, scale=1.0, invcov=None):
         """
         Compute an Fcontrast/F-test for a contrast matrix.
@@ -368,8 +378,8 @@ T statistics'
         r_matrix : array-like
             q x p array where q is the number of restrictions to test and
             p is the number of regressors in the full model fit.
-            If q is 1 then f_test(r_matrix).fvalue is equivalent to the square of
-            t_test(r_matrix).t
+            If q is 1 then f_test(r_matrix).fvalue is equivalent to
+            the square of t_test(r_matrix).t
         scale : float, optional
             Default is 1.0 for no scaling.
         invcov : array-like, optional

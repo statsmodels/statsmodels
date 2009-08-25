@@ -4,21 +4,14 @@ Test I/O of models wrt array types, dimensions
     - add checks in all top class for data
 Make sure all tests actually run...
     -some problems with removing imports from __init__ have been hidden
-Test residuals, stats for weighted least squares
 
 Issues
 ----------
-GLS residuals - whitened or not? (ie., Z - dot(wdesign, params) or
-endog - dot(exog,params))
-   -I think not... (leaving as not)
-AR - test for this (only univariate yule-walker is tested right now)
 Make sure all results are computed where they should be
 Need to clip mu's in GLM to avoid np.log(0), etc. (done for gamma)
 
 Other cleanup
 --------------------
-Put formulas in docstring? (this could become "heavy"...)
-    -no make a /docs/ folder for technical documentation in .rst format
 Check all imports, cut out what's not needed
 
 
@@ -26,15 +19,23 @@ Update all examples/docstrings
 Make sure docs examples run
 Run lint
 Technical docs (theory, references, formulas)
-Install for standalone package
 Make a recarray dataset and masked dataset for testing and development
+
+Put inheritance structure in docs, note where attributes/methods of parent class
+    are overwritten.
+
+Rename bse
+Add tvalues attribute to results instead of calling t method?
+
 
 Docs
 -----
 contrasts (done)
 model (done)
-regression (started)
-glm / family / links
+regression (done)
+glm / family / links (started)
 rlm / robust / scales
 tools
+document datasets
+note the tests requirements somewhere (rpy, R, car library)
 

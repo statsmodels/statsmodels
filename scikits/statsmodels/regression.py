@@ -73,11 +73,11 @@ class GLS(LikelihoodModel):
         (cholsigmainv^(T) cholsigmainv) = (sigma)^(-1).
         It is the transpose of the Cholesky decomposition of the pseudoinverse
         of sigma.
-    df_model : scalar
+    df_model : float
         The model degrees of freedom is equal to p - 1, where p is the number
         of regressors.  Note that the intercept is not reported as a degree
         of freedom.
-    df_resid : scalar
+    df_resid : float
         The residual degrees of freedom is equal to the number of observations
         n less the number of parameters p.  Note that the intercept is counted as
         using a degree of freedom for the degrees of freedom of the
@@ -180,14 +180,14 @@ Should be of length %s, if sigma is a 1d array" % nobs
         super(GLS, self).__init__(endog, exog)
 
     def initialize(self):
-        self.wexog = self.whiten(self._exog)
-        self.wendog = self.whiten(self._endog)
+        self.wexog = self.whiten(self.exog)
+        self.wendog = self.whiten(self.endog)
         self.pinv_wexog = np.linalg.pinv(self.wexog)
         self.normalized_cov_params = np.dot(self.pinv_wexog,
                                          np.transpose(self.pinv_wexog))
-        self.df_resid = self.nobs - tools.rank(self._exog)
+        self.df_resid = self.nobs - tools.rank(self.exog)
 #       Below assumes that we have a constant
-        self.df_model = float(tools.rank(self._exog)-1)
+        self.df_model = float(tools.rank(self.exog)-1)
 
     def whiten(self, X):
         """
@@ -248,7 +248,7 @@ Should be of length %s, if sigma is a 1d array" % nobs
     @property
     def results(self):
         """
-        A property that returns a RegressResults class.
+        A property that returns a RegressionResults class.
 
         Notes
         -----
@@ -262,11 +262,11 @@ Should be of length %s, if sigma is a 1d array" % nobs
         """
         Return linear predicted values from a design matrix.
 
-        Paremters
+        Parameters
         ---------
         exog : array-like
             Design / exogenous data
-        params : array-like, optional after first fit
+        params : array-like, optional after fit has been called
             Parameters of a linear model
 
         Returns
@@ -445,7 +445,7 @@ class WLS(GLS):
         """
         nobs2 = self.nobs / 2.0
         SSR = ss(self.wendog - np.dot(self.wexog,params))
-        #SSR = ss(self._endog - np.dot(self._exog,params))
+        #SSR = ss(self.endog - np.dot(self.exog,params))
         llf = -np.log(SSR) * nobs2      # concentrated likelihood
         llf -= (1+np.log(np.pi/nobs2))*nobs2  # with constant
         if np.all(self.weights != 1):    #FIXME: is this a robust-enough check?
@@ -520,9 +520,9 @@ class OLS(WLS):
         '''
         nobs2 = self.nobs/2.
         return -nobs2*np.log(2*np.pi)-nobs2*np.log(1/(2*nobs2) *\
-                np.dot(np.transpose(self._endog -
-                    np.dot(self._exog, params)),
-                    (self._endog - np.dot(self._exog,params)))) -\
+                np.dot(np.transpose(self.endog -
+                    np.dot(self.exog, params)),
+                    (self.endog - np.dot(self.exog,params)))) -\
                     nobs2
 
     def whiten(self, Y):
@@ -895,10 +895,10 @@ class RegressionResults(LikelihoodModelResults):
         '''
         This contains the results that are the same across models
         '''
-        self.fittedvalues = self.model.predict(self.model._exog, self.params)
+        self.fittedvalues = self.model.predict(self.model.exog, self.params)
         self.wresid = self.model.wendog - \
                 self.model.predict(self.model.wexog,self.params)
-        self.resid = self.model._endog - self.fittedvalues
+        self.resid = self.model.endog - self.fittedvalues
         self.pinv_wexog = self.model.pinv_wexog # needed?
         self.scale = ss(self.wresid) / self.model.df_resid
         self.nobs = float(self.model.wexog.shape[0])
@@ -975,8 +975,8 @@ class RegressionResults(LikelihoodModelResults):
         See statsmodels.RegressionResults
         """
         if self._HC2_se is None:
-            h=np.diag(np.dot(np.dot(self.model._exog, self.normalized_cov_params),
-                    self.model._exog.T)) # probably could be optimized
+            h=np.diag(np.dot(np.dot(self.model.exog, self.normalized_cov_params),
+                    self.model.exog.T)) # probably could be optimized
             self.het_scale= self.resid**2/(1-h)
             self.cov_HC2 = self._HCCM(self.het_scale)
             self._HC2_se = np.sqrt(np.diag(self.cov_HC2))
@@ -988,8 +988,8 @@ class RegressionResults(LikelihoodModelResults):
         See statsmodels.RegressionResults
         """
         if self._HC3_se is None:
-            h=np.diag(np.dot(np.dot(self.model._exog,
-                self.normalized_cov_params),self.model._exog.T))
+            h=np.diag(np.dot(np.dot(self.model.exog,
+                self.normalized_cov_params),self.model.exog.T))
             # above probably could be optimized to only calc the diag
             self.het_scale=(self.resid/(1-h))**2
             self.cov_HC3 = self._HCCM(self.het_scale)
@@ -1045,7 +1045,7 @@ class RegressionResults(LikelihoodModelResults):
             yname = 'Y'
         if xname is None:
             xname = ['X.%d' %
-                (i) for i in range(self.model._exog.shape[1])]
+                (i) for i in range(self.model.exog.shape[1])]
         modeltype = self.model.__class__.__name__
 
 #FIXME: better string formatting for alignment
