@@ -128,8 +128,8 @@ class GLS(LikelihoodModel):
     >>> import numpy as np
     >>> import scikits.statsmodels as models
     >>> from scikits.statsmodels.tools import add_constant
-    >>> from scikits.statsmodels.datasets.longley.data import load
-    >>> data = load()
+    >>> from scikits.statsmodels.datasets.longley import Load
+    >>> data = Load()
     >>> data.exog = add_constant(data.exog)
     >>> ols_tmp = models.OLS(data.endog, data.exog).results
     >>> rho = np.corrcoef(ols_tmp.resid[1:],ols_tmp.resid[:-1])[0][1]
@@ -686,8 +686,8 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False):
     Examples
     --------
     >>> import scikits.statsmodels as models
-    >>> from scikits.statsmodels.datasets.sunspots.data import load
-    >>> data = load()
+    >>> from scikits.statsmodels.datasets.sunspots import Load
+    >>> data = Load()
     >>> rho, sigma = models.regression.yule_walker(data.endog,
         order=4, method="mle")
     >>> rho
@@ -1030,8 +1030,8 @@ class RegressionResults(LikelihoodModelResults):
         Examples
         --------
         >>> from scikits import statsmodels as models
-        >>> from scikits.statsmodels.datasets.longley.data import load
-        >>> data = load()
+        >>> from scikits.statsmodels.datasets.longley import Load
+        >>> data = Load()
         >>> data.exog = models.tools.add_constant(data.exog)
         >>> ols_results = models.OLS(data.endog, data.exog).results
         >>> print ols_results.summary()

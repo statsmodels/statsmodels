@@ -96,8 +96,8 @@ class test_glm_gaussian(check_model_results):
         Test Gaussian family with canonical identity link(tmp_arr[:,np.newaxis]==data[col]).astype(float)
         '''
 
-        from scikits.statsmodels.datasets.longley.data import load
-        self.data = load()
+        from scikits.statsmodels.datasets.longley import Load
+        self.data = Load()
         self.data.exog = add_constant(self.data.exog)
         self.res1 = GLM(self.data.endog, self.data.exog,
                         family=models.family.Gaussian()).fit()
@@ -208,9 +208,9 @@ class test_glm_binomial(check_model_results):
         '''
         Test Binomial family with canonical logit link
         '''
-        from scikits.statsmodels.datasets.star98.data import load
+        from scikits.statsmodels.datasets.star98 import Load
         from model_results import star98
-        self.data = load()
+        self.data = Load()
         self.data.exog = add_constant(self.data.exog)
         trials = self.data.endog[:,:2].sum(axis=1)
         self.res1 = GLM(self.data.endog, self.data.exog, \
@@ -321,9 +321,9 @@ class test_glm_gamma(check_model_results):
         '''
         Tests Gamma family with canonical inverse link (power -1)
         '''
-        from scikits.statsmodels.datasets.scotland.data import load
+        from scikits.statsmodels.datasets.scotland import Load
         from model_results import scotvote
-        self.data = load()
+        self.data = Load()
         self.data.exog = add_constant(self.data.exog)
         self.res1 = GLM(self.data.endog, self.data.exog, \
                     family=models.family.Gamma()).fit()
@@ -425,8 +425,8 @@ class test_glm_poisson(check_model_results):
         Test results were obtained by R.
         '''
         from model_results import cpunish
-        from scikits.statsmodels.datasets.cpunish.data import load
-        self.data = load()
+        from scikits.statsmodels.datasets.cpunish import Load
+        self.data = Load()
         self.data.exog[:,3] = np.log(self.data.exog[:,3])
         self.data.exog = add_constant(self.data.exog)
         self.res1 = GLM(self.data.endog, self.data.exog,
@@ -577,8 +577,8 @@ class test_glm_negbinomial(check_model_results):
         '''
         Test Negative Binomial family with canonical log link
         '''
-        from scikits.statsmodels.datasets.committee.data import load
-        self.data = load()
+        from scikits.statsmodels.datasets.committee import Load
+        self.data = Load()
         self.data.exog[:,2] = np.log(self.data.exog[:,2])
         interaction = self.data.exog[:,2]*self.data.exog[:,1]
         self.data.exog = np.column_stack((self.data.exog,interaction))

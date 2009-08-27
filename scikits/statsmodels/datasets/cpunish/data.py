@@ -36,20 +36,19 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'Load']
+
 """US Capital Punishment dataset."""
 
 __docformat__ = 'restructuredtext'
 
-COPYRIGHT   = """Permission granted by the author."""
+COPYRIGHT   = """Used with expressed permission from the original author,
+who retains all rights."""
 TITLE       = "US Capital Punishment Dataset"
 SOURCE      = """
-http://jgill.wustl.edu/research/books.html
+Jeff Gill's `Generalized Linear Models: A Unifited Approach
 
-Dr. Jeff Gill
-Department of Political Science
-One Brookings Drive, Seigle L079
-Washington University
-St. Louis, MO 63130-4899
+http://jgill.wustl.edu/research/books.html
 """
 
 DESCRSHORT  = """Number of state executions in 1997"""
@@ -83,12 +82,13 @@ State names are included in the data file, though not returned.
 
 import numpy as np
 
-class load():
+class Load():
     """load the cpunish data and returns a data class.
 
-    :returns:
-        data instance:
-            a class of the data with array attrbutes 'endog' and 'exog'
+    Returns
+    -------
+    Load instance:
+        a class of the data with array attrbutes 'endog' and 'exog'
     """
     def __init__(self):
         from cpunish import __dict__, names

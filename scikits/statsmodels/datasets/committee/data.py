@@ -36,20 +36,19 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'Load']
+
 """First 100 days of the US House 1995 dataset."""
 
 __docformat__ = 'restructuredtext'
 
-COPYRIGHT   = """Permission granted by the author."""
+COPYRIGHT   = """Used with expressed permission from the original author,
+who retains all rights."""
 TITLE       = "First 100 days of 1995 US House Dataset"
 SOURCE      = """
-http://jgill.wustl.edu/research/books.html
+Jeff Gill's `Generalized Linear Models: A Unifited Approach`
 
-Dr. Jeff Gill
-Department of Political Science
-One Brookings Drive, Seigle L079
-Washington University
-St. Louis, MO 63130-4899
+http://jgill.wustl.edu/research/books.html
 """
 
 DESCRSHORT  = """Number of bill assignments in the 104th House in 1995"""
@@ -82,12 +81,13 @@ Committee names are included in the data file, though not returned.
 
 import numpy as np
 
-class load():
+class Load():
     """load the committee data and returns a data class.
 
-    :returns:
-        data instance:
-            a class of the data with array attrbutes 'endog' and 'exog'
+    Returns
+    --------
+    Load instance:
+        a class of the data with array attrbutes 'endog' and 'exog'
     """
 
     def __init__(self):

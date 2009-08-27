@@ -76,8 +76,8 @@ class CheckRlmResults(object):
         # rounding errors in Andrew's make it necessary to use least vs. lesser
 
 class TestRlm(CheckRlmResults):
-    from scikits.statsmodels.datasets.stackloss.data import load
-    data = load()
+    from scikits.statsmodels.datasets.stackloss import Load
+    data = Load()
     data.exog = models.tools.add_constant(data.exog)
     r.library('MASS')
     def __init__(self):
@@ -167,8 +167,8 @@ class TestRlmAndrews(TestRlm):
 ### tests with Huber scaling
 
 class TestRlmHuber(CheckRlmResults):
-    from scikits.statsmodels.datasets.stackloss.data import load
-    data = load()
+    from scikits.statsmodels.datasets.stackloss import Load
+    data = Load()
     data.exog = models.tools.add_constant(data.exog)
     def __init__(self):
         results = RLM(self.data.endog, self.data.exog,\

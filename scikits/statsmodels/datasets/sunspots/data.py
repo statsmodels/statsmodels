@@ -37,6 +37,8 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'Load']
+
 """Yearly sunspots data 1700-2008"""
 
 __docformat__ = 'restructuredtext'
@@ -53,7 +55,7 @@ The original dataset contains monthly data on sunspot activity in the file
 DESCRSHORT  = """Yearly (1700-2008) data on sunspots from the National
 Geophysical Data Center."""
 
-DESCRLONG   = """"""
+DESCRLONG   = DESCRSHORT
 
 NOTE        = """
 The dataset contains 309 observations on sunspot activity from
@@ -62,12 +64,13 @@ The dataset contains 309 observations on sunspot activity from
 
 import numpy as np
 
-class load():
+class Load():
     """load the yearly sunspot data and returns a data class.
 
-    :returns:
-        data instance:
-            a class of the data with array attrbute 'endog'
+    Returns
+    --------
+    Load instance:
+        a class of the data with array attrbute 'endog'
 
     Notes
     -----

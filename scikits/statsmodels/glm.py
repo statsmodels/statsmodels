@@ -113,8 +113,8 @@ TODO: fix example location
     Examples
     --------
     >>> from scikits import statsmodels as models
-    >>> from scikits.statsmodels.datasets.scotland.data import load
-    >>> data = load
+    >>> from scikits.statsmodels.datasets.scotland import Load
+    >>> data = Load()
     >>> data.exog = models.tools.add_constant(data.exog)
 
     Instantiate a gamma family model with the default link function.
