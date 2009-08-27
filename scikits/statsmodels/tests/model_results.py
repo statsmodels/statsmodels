@@ -4,25 +4,6 @@ import scikits.statsmodels as models
 from scikits.statsmodels import tools
 import glm_test_resids
 
-def generated_data():
-    '''
-    Returns `Y` and `X` from test_data.bin
-
-    Returns
-    -------
-    Y : array
-        Endogenous Data
-    X : array
-        Exogenous Data
-    '''
-    filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-            "test_data.bin")
-    data = np.fromfile(filename, "<f8")
-    data.shape = (126,15)
-    y = data[:,0]
-    x = data[:,1:]
-    return y,x
-
 ### GLM MODEL RESULTS ###
 
 class lbw(object):

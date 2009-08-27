@@ -469,7 +469,8 @@ class test_glm_invgauss(check_model_results):
         Notes
         -----
         Used the rndivgx.ado file provided by Hardin and Hilbe to
-        generate the data.
+        generate the data.  Results are read from model_results, which
+        were obtained by running R_ig.s
         '''
 
         from model_results import inv_gauss
