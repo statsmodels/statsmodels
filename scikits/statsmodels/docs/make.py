@@ -59,14 +59,14 @@ def latex():
     os.chdir('../build/latex')
 
     # first call to pdflatex used to generate .idx files
-    os.system('pdflatex TimeSeries.tex')
+    os.system('pdflatex statsmodels.tex')
 
     # convert .idx files to indices
-    os.system('makeindex -s python.ist TimeSeries.idx')
-    os.system('makeindex -s python.ist modTimeSeries.idx')
+    os.system('makeindex -s python.ist statsmodels.idx')
+    os.system('makeindex -s python.ist modstatsmodels.idx')
 
     # regenerate pdf with proper indices
-    os.system('pdflatex TimeSeries.tex')
+    os.system('pdflatex statsmodels.tex')
 
     os.chdir('../..')
 
