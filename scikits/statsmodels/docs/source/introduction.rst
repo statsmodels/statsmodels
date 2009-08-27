@@ -41,23 +41,22 @@ Compared to the original code, the class structure and some of the
 method arguments have changed. Additional estimation
 results, e.g. test statistics have been included.
 
-Most importantly, almost every result has been verified with at least
-one other statistical package, R, Stata and SAS. The guiding principal
-for the rewrite was that all numbers have to be verified, even if we
-don't manage to cover everything. There are a few remaining issues,
-that we hope to clear up by next week. Not all parts of the code have
-been tested for unexpected inputs. We are currently adding checks for,
-and conversions of array types and dimension. Additionally, many of
-the tests call rpy to compare the results directly with R. We use an
-extended wrapper for R models in the test suite. This provides greater
-flexibility writing new test cases, but will eventually be replaced by
-hard coded expected results.
+Most importantly, almost every result has been verified with at least one
+other statistical package, R, Stata and SAS. The guiding principal for the
+rewrite was that all numbers have to be verified, even if we don't manage
+to cover everything. There are a few remaining issues, that we hope to
+clear up soon. Not all parts of the code have been tested for unexpected
+inputs and been made robust against them. Additionally, many of the tests
+call rpy to compare the results directly with R. We use an extended
+wrapper for R models in the test suite. This provides greater flexibility
+writing new test cases, but will eventually be replaced by hard coded
+expected results.
 
 The code is written for plain NumPy arrays.
 
 We have also included several datasets from the public domain and by
 permission for the tests and examples.  The datasets follow
-fairly closely David C's datasets proposal in
+fairly closely David Cournapeaus datasets proposal in
 scikits.learn, with some small modifications. The datasets
 are set up so that it is easy to add more datasets.
 
@@ -80,10 +79,11 @@ mailing list on the structure of the API and about possible
 additional methods for the model classes. We would like
 to invite everyone to give statsmodels a test drive and report
 comments and possibilities for improvement and bugs to the
-scipy-user mailing list or file tickets on our bug tracker.
+scipy-user mailing list or file tickets on our bug tracker at
+https://bugs.launchpad.net/statsmodels
 
-We would also like to use statsmodels or related projects to
-it as a staging ground for new models. The current maintainers
+We would also like to use statsmodels, or related projects to
+it, as a staging ground for new models. The current maintainers
 are mostly interested in econometrics and time series analysis,
 but we would like to invite any users or developers to contribute
 their own extensions to existing models or new models.

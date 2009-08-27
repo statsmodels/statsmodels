@@ -340,8 +340,8 @@ arguments.'
 
         See also
         ---------
-        `t` method to get simpler t values
-        `f_test` method for f tests
+        t : method to get simpler t values
+        f_test : method for f tests
         """
         r_matrix = np.squeeze(np.asarray(r_matrix))
 
@@ -461,8 +461,8 @@ T statistics'
         conf_int : array
             Each row contains [lower, upper] confidence interval
 
-        Example
-        -------
+        Examples
+        --------
         >>>import models
         >>>from models.datasets.longley.data import load
         >>>data = load()

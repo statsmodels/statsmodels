@@ -3,6 +3,11 @@
 
 .. _glm:
 
+.. toctree::
+   :maxdepth: 1
+
+   glm.techn
+
 Generalized Linear Models
 =========================
 
@@ -85,3 +90,11 @@ available link functions can be obtained by ::
    probit
 
 
+Technical Documentation
+-----------------------
+
+.. toctree::
+   :maxdepth: 1
+
+   glm_techn1
+   glm_techn2
