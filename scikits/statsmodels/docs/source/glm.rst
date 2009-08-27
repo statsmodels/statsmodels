@@ -3,10 +3,6 @@
 
 .. _glm:
 
-.. toctree::
-   :maxdepth: 1
-
-   glm.techn
 
 Generalized Linear Models
 =========================

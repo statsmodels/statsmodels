@@ -24,7 +24,6 @@ Model and Result Classes
 
 .. autosummary::
    :toctree: generated/
-   :maxdepth: 2
 
    RLM
    RLMResults
