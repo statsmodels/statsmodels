@@ -1,48 +1,61 @@
+"""
+Support and standalone functions for Robust Linear Models
+
+References
+----------
+PJ Huber.  'Robust Statistics' John Wiley and Sons, Inc., New York, 1981.
+
+R Venables, B Ripley. 'Modern Applied Statistics in S'
+    Springer, New York, 2002.
+"""
+
 import numpy as np
 from scipy.stats import norm as Gaussian
 import norms
-
-
-def unsqueeze(data, axis, oldshape):
-    """
-    unsqueeze a collapsed array
-
-    >>> from numpy import mean
-    >>> from numpy.random import standard_normal
-    >>> x = standard_normal((3,4,5))
-    >>> m = mean(x, axis=1)
-    >>> m.shape
-    (3, 5)
-    >>> m = unsqueeze(m, 1, x.shape)
-    >>> m.shape
-    (3, 1, 5)
-    >>>
-    """
-
-    newshape = list(oldshape)
-    newshape[axis] = 1
-    return data.reshape(newshape)
-# what would this be used for?
+from scikits.statsmodels.tools import unsqueeze
 
 def MAD(a, c=Gaussian.ppf(3/4.), axis=0):  # c \approx .6745
     """
-    The Median Absolute Deviation along given axis of an array:
+    The Median Absolute Deviation along given axis of an array
 
-    median(abs(a)) / c
+    Parameters
+    ----------
+    a : array-like
+        Input array.
+    c : float, optional
+        The normalization constant.  Defined as scipy.stats.norm.ppf(3/4.),
+        which is approximately .6745.
+    axis : int, optional
+        The defaul is 0.
 
-    Reference
-    ---------
-    Venables and Ripley
+    Returns
+    --------
+    MAD : float
+        `MAD` = median(abs(`a`))/`c`
     """
     a = np.asarray(a)
     return np.median((np.fabs(a))/c, axis=axis)
 
 def stand_MAD(a, c=Gaussian.ppf(3/4.), axis=0):
     """
-    The standardized Median Absolute Deviation along given axis of an array:
+    The standardized Median Absolute Deviation along given axis of an array.
 
-    MAD = median(abs(a - median(a))) / c
+    Parameters
+    ----------
+    a : array-like
+        Input array.
+    c : float, optional
+        The normalization constant.  Defined as scipy.stats.norm.ppf(3/4.),
+        which is approximately .6745.
+    axis : int, optional
+        The defaul is 0.
+
+    Returns
+    --------
+    MAD : float
+        `MAD` = median(abs(`a`-median(`a`))/`c`
     """
+
     a = np.asarray(a)
     d = np.median(a, axis = axis)
     d = unsqueeze(d, axis, a.shape)
@@ -50,30 +63,35 @@ def stand_MAD(a, c=Gaussian.ppf(3/4.), axis=0):
 
 class Huber(object):
     """
-    Huber's proposal 2 for estimating scale.
+    Huber's proposal 2 for estimating location and scale jointly.
 
-    R Venables, B Ripley. \'Modern Applied Statistics in S\'
-    Springer, New York, 2002.
+    Parameters
+    ----------
+    c : float, optional
+        Threshold used in threshold for chi=psi**2.  Default value is 1.5.
+    tol : float, optional
+        Tolerance for convergence.  Default value is 1e-08.
+    maxiter : int, optional0
+        Maximum number of iterations.  Default value is 30.
+    norm : scikits.statsmodels.robust.norms.RobustNorm, optional
+        A robust norm used in M estimator of location. If None,
+        the location estimator defaults to a one-step
+        fixed point version of the M-estimator using Huber's T.
+
+    call
+        Return joint estimates of Huber's scale and location.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> chem_data = np.array([2.20, 2.20, 2.4, 2.4, 2.5, 2.7, 2.8, 2.9, 3.03,
+    ...        3.03, 3.10, 3.37, 3.4, 3.4, 3.4, 3.5, 3.6, 3.7, 3.7, 3.7, 3.7,
+    ...        3.77, 5.28, 28.95])
+    >>> models.robust.scale.huber(chem_data)
+    (array(3.2054980819923693), array(0.67365260010478967))
     """
 
     def __init__(self, c=1.5, tol=1.0e-08, maxiter=30, norm=None):
-        """
-        Instance of Huber's proposal 2 for estimating
-        (location, scale) jointly.
-
-        Inputs:
-        -------
-        c : float
-            Threshold used in threshold for chi=psi**2
-        tol : float
-            Tolerance for convergence
-        maxiter : int
-            Maximum number of iterations
-        norm : ``norms.RobustNorm``
-            A robust norm used in M estimator of location. If None,
-            the location estimator defaults to a one-step
-            fixed point version of the M-estimator using norms.HuberT
-        """
         self.c = c
         self.maxiter = maxiter
         self.tol = tol
@@ -81,21 +99,32 @@ class Huber(object):
         tmp = 2 * Gaussian.cdf(c) - 1
         self.gamma = tmp + c**2 * (1 - tmp) - 2 * c * Gaussian.pdf(c)
 
-    def __call__(self, a, mu=None, scale=None, axis=0):
+    def __call__(self, a, mu=None, initscale=None, axis=0):
         """
-        Compute Huber\'s proposal 2 estimate of scale, using an optional
+        Compute Huber's proposal 2 estimate of scale, using an optional
         initial value of scale and an optional estimate of mu. If mu
         is supplied, it is not reestimated.
 
-        Given a one-dimensional array a,
-        this function minimises the quantity
+        Parameters
+        ----------
+        a : array
+            1d array
+        mu : float or None, optional
+            If the location mu is supplied then it is not reestimated.
+            Default is None, which means that it is estimated.
+        initscale : float or None, optional
+            A first guess on scale.  If initscale is None then the standardized
+            median absolute deviation of a is used.
+
+        Notes
+        --------
+        `Huber` minimizes the function
 
         sum(psi((a[i]-mu)/scale)**2)
 
         as a function of (mu, scale), where
 
         psi(x) = np.clip(x, -self.c, self.c)
-
         """
         a = np.asarray(a)
         if mu is None:
@@ -107,10 +136,10 @@ class Huber(object):
             mu = mu
             est_mu = False
 
-        if scale is None:
+        if initscale is None:
             scale = stand_MAD(a, axis=axis)
         else:
-            scale = scale
+            scale = initscale
         scale = unsqueeze(scale, axis, a.shape)
         mu = unsqueeze(mu, axis, a.shape)
         return self._estimate_both(a, scale, mu, axis, est_mu, n)
@@ -125,15 +154,11 @@ class Huber(object):
 
         where estimate_location is an M-estimator and estimate_scale implements
         the check used in Section 5.5 of Venables & Ripley
-
         """
         for _ in range(self.maxiter):
             # Estimate the mean along a given axis
             if est_mu:
-                if self.norm is None:   # it will always be None as written
-                                        # allowing to specify norm in IRLS
-                                        # resulted in nonconvergence for
-                                        # HuberT()
+                if self.norm is None:
                     # This is a one-step fixed-point estimator
                     # if self.norm == norms.HuberT
                     # It should be faster than using norms.HuberT
@@ -167,15 +192,41 @@ huber = Huber()
 
 class Hubers_scale(object):
     '''
-    Huber's scaling for fitting robust linear models
+    Huber's scaling for fitting robust linear models.
 
-    Params
+    Huber's scale is intended to be used as the scale estimate in the IRLS algorithm and
+    is slightly different than the `Huber` class.
+
+    Parameters
     ------
-    d : float
-        d is the tuning constant for Huber's scale
-        Default is 2.5
+    d : float, optional
+        d is the tuning constant for Huber's scale.  Default is 2.5
+    tol : float, optional
+        The convergence tolerance
+    maxiter : int, optiona
+        The maximum number of iterations.  The default is 30.
+
+    Methods
+    -------
+    call
+        Return's Huber's scale computed as below
+
+    Formulas
+    --------
+    Huber's scale is the iterative solution to
+
+    scale_(i+1)**2 = 1/(n*h)*sum(chi(r/sigma_i)*sigma_i**2
+
+    where the Huber function is
+
+    chi(x) = (x**2)/2       for |x| < d
+    chi(x) = (d**2)/2       for |x| >= d
+
+    and the Huber constant h = (n-p)/n*(d**2 + (1-d**2)*scipy.stats.norm.cdf(d) - \
+                .5 - d*sqrt(2*pi)*exp(-0.5*d**2)
+
     '''
-    def __init__(self, d=2.5, tol=1e-08, maxiter=100):
+    def __init__(self, d=2.5, tol=1e-08, maxiter=30):
         self.d = d
         self.tol = tol
         self.maxiter = maxiter

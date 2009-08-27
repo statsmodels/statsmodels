@@ -1,5 +1,7 @@
 import numpy as np
 
+#TODO: add plots to weighting functions for online docs.
+
 class RobustNorm(object):
     """
     The parent class for the norms used for robust regression.
@@ -29,10 +31,12 @@ class RobustNorm(object):
 
     References
     ----------
-    DC Montgomery, EA Peck. \'Introduction to Linear Regression Analysis\',
+    PJ Huber.  'Robust Statistics' John Wiley and Sons, Inc., New York, 1981.
+
+    DC Montgomery, EA Peck. 'Introduction to Linear Regression Analysis',
         John Wiley and Sons, Inc., New York, 2001.
 
-    R Venables, B Ripley. \'Modern Applied Statistics in S\'
+    R Venables, B Ripley. 'Modern Applied Statistics in S'
         Springer, New York, 2002.
 
     See Also
@@ -762,8 +766,8 @@ class TukeyBiweight(RobustNorm):
         Used to estimate the robust covariance matrix.
         """
         subset = self._subset(z)
-        return subset*((1 - (z/self.R)**2)**2 - (4*z**2/self.R**2) *\
-                    (1-(z/self.R)**2))
+        return subset*((1 - (z/self.c)**2)**2 - (4*z**2/self.c**2) *\
+                    (1-(z/self.c)**2))
 
 def estimate_location(a, scale, norm=HuberT(), axis=0, initial=None,
                       maxiter=30, tol=1.0e-06):

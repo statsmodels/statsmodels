@@ -10,11 +10,7 @@ from info import __doc__
 from regression import *
 from glm import *
 from rlm import *
-import model
-import tools
-import datasets # why did I have to add this but robust and family are imported?
-#from datasets import *
-
+import model, tools, datasets, family # robust is imported somewhere else?
 __all__ = filter(lambda s:not s.startswith('_'),dir())
 #from numpy.testing import Tester
 #test = Tester().test(extra_argv=["--exe"])
