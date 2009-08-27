@@ -16,7 +16,9 @@ Contents:
    regression
    glm
    rlm
+   stattests
    tools
+   internal
 
 Indices and tables
 ==================
