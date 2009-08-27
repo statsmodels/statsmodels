@@ -324,6 +324,8 @@ the Binomial family"
                     np.ones((self.exog.shape[0]))
         self.scaletype = scale
         if isinstance(self.family, family.Binomial):
+# thisc checks what kind of data is given for Binomial.  family will need a reference to
+# endog if this is to be removed from the preprocessing
             self.endog = self.family.initialize(self.endog)
         mu = self.family.starting_mu(self.endog)
         wlsexog = self.exog
@@ -508,7 +510,7 @@ still named bse
         if self._llf is None:
             if isinstance(self.model.family, family.NegativeBinomial):
                 self._llf = self.model.family.loglike(self.model.endog,
-                    predicted=self.fittedvalues)
+                    fittedvalues=self.fittedvalues)
             else:
                 self._llf = self.model.family.loglike(self.model.endog,
                     self.model.mu, scale=self.scale)
