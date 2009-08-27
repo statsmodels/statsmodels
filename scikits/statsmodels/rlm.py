@@ -107,7 +107,7 @@ class RLM(LikelihoodModel):
     >>>
     >>> rlm_hamp_hub = models.RLM(data.endog, data.exog, \
     ...     M=models.robust.norms.Hampel()).fit(scale_est=\
-            models.robust.scale.Hubers_scale())
+            models.robust.scale.HuberScale())
     >>> rlm_hamp_hub.params
     array([  0.73175452,   1.25082038,  -0.14794399, -40.27122257])
     """
@@ -163,15 +163,15 @@ class RLM(LikelihoodModel):
         """
         if isinstance(self.scale_est, str):
             if self.scale_est.lower() == 'mad':
-                return scale.MAD(resid)
+                return scale.mad(resid)
             if self.scale_est.lower() == 'stand_mad':
-                return scale.stand_MAD(resid)
-        elif isinstance(self.scale_est, scale.Hubers_scale):
+                return scale.stand_mad(resid)
+        elif isinstance(self.scale_est, scale.HuberScale):
             return scale.hubers_scale(self.df_resid, self.nobs, resid)
         else:
             return scale.scale_est(self, resid)**2
 
-    def fit(self, maxiter=50, tol=1e-8, scale_est='MAD', init=None, cov='H1',
+    def fit(self, maxiter=50, tol=1e-8, scale_est='mad', init=None, cov='H1',
             update_scale=True, conv='dev'):
         """
         Fits the model using iteratively reweighted least squares.
@@ -197,12 +197,12 @@ class RLM(LikelihoodModel):
             is used.  Currently it is the only available choice.
         maxiter : int
             The maximum number of iterations to try. Default is 50.
-        scale_est : string or Hubers_scale()
-            'MAD', 'stand_MAD', or Hubers_scale()
+        scale_est : string or HuberScale()
+            'mad', 'stand_mad', or HuberScale()
             Indicates the estimate to use for scaling the weights in the IRLS.
-            The default is 'MAD' (median absolute deviation.  Other options are
-            use 'stand_MAD' for the median absolute deviation standardized
-            around the median and 'Hubers_scale' for Huber's proposal 2.
+            The default is 'mad' (median absolute deviation.  Other options are
+            use 'stand_mad' for the median absolute deviation standardized
+            around the median and 'HuberScale' for Huber's proposal 2.
             Huber's proposal 2 has optional keyword arguments d, tol, and
             maxiter for specifying the tuning constant, the convergence
             tolerance, and the maximum number of iterations.
@@ -397,7 +397,7 @@ if __name__=="__main__":
 #    results_ols = model_ols.fit()
 
 #    model_huber = RLM(endog, exog, M=norms.HuberT(t=2.))
-#    results_huber = model_huber.fit(scale_est="stand_MAD", update_scale=False)
+#    results_huber = model_huber.fit(scale_est="stand_mad", update_scale=False)
 
 #    model_ramsaysE = RLM(endog, exog, M=norms.RamsayE())
 #    results_ramsaysE = model_ramsaysE.fit(update_scale=False)
@@ -451,7 +451,7 @@ if __name__=="__main__":
 ### Huber'sT ###
 ################
     m1_Huber_H = RLM(data.endog, data.exog, M=norms.HuberT())
-    results_Huber1_H = m1_Huber_H.fit(scale_est=scale.Hubers_scale())
+    results_Huber1_H = m1_Huber_H.fit(scale_est=scale.HuberScale())
 #    m2_Huber_H
 #    m3_Huber_H
 #    m4 = RLM(data.endog, data.exog, M=norms.HuberT())

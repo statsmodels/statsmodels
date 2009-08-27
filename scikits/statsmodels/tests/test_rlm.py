@@ -22,7 +22,7 @@ skipR = skip_rpy()
 if not skipR:
     from rpy import r
 
-class check_rlm_results(object):
+class CheckRlmResults(object):
     '''
     res2 contains  results from Rmodelwrap or were obtained from a statistical
     packages such as R, Stata, or SAS and written to model_results.
@@ -75,7 +75,7 @@ class check_rlm_results(object):
         assert_almost_equal(self.res1.h3, self.res2.h3, DECIMAL_lesser)
         # rounding errors in Andrew's make it necessary to use least vs. lesser
 
-class test_rlm(check_rlm_results):
+class TestRlm(CheckRlmResults):
     from scikits.statsmodels.datasets.stackloss.data import load
     data = load()
     data.exog = models.tools.add_constant(data.exog)
@@ -100,7 +100,7 @@ class test_rlm(check_rlm_results):
         if skipR:
             raise SkipTest, "Rpy not installed"
 
-class test_hampel(test_rlm):
+class TestHampel(TestRlm):
     def __init__(self):
         results = RLM(self.data.endog, self.data.exog,
                     M=models.robust.norms.Hampel()).fit()
@@ -122,7 +122,7 @@ class test_hampel(test_rlm):
             raise SkipTest, "Rpy not installed"
 
 
-class test_rlm_bisquare(test_rlm):
+class TestRlmBisquare(TestRlm):
     def __init__(self):
         results = RLM(self.data.endog, self.data.exog,
                     M=models.robust.norms.TukeyBiweight()).fit()
@@ -145,7 +145,7 @@ class test_rlm_bisquare(test_rlm):
         if skipR:
             raise SkipTest, "Rpy not installed"
 
-class test_rlm_andrews(test_rlm):
+class TestRlmAndrews(TestRlm):
     def __init__(self):
         results = RLM(self.data.endog, self.data.exog,
                     M=models.robust.norms.AndrewWave()).fit()
@@ -166,20 +166,20 @@ class test_rlm_andrews(test_rlm):
 
 ### tests with Huber scaling
 
-class test_rlm_huber(check_rlm_results):
+class TestRlmHuber(CheckRlmResults):
     from scikits.statsmodels.datasets.stackloss.data import load
     data = load()
     data.exog = models.tools.add_constant(data.exog)
     def __init__(self):
         results = RLM(self.data.endog, self.data.exog,\
                     M=models.robust.norms.HuberT()).fit(scale_est=\
-                    models.robust.scale.Hubers_scale())
+                    models.robust.scale.HuberScale())
         h2 = RLM(self.data.endog, self.data.exog,\
                     M=models.robust.norms.HuberT()).fit(cov="H2",
-                    scale_est=models.robust.scale.Hubers_scale()).bcov_scaled
+                    scale_est=models.robust.scale.HuberScale()).bcov_scaled
         h3 = RLM(self.data.endog, self.data.exog,\
                     M=models.robust.norms.HuberT()).fit(cov="H3",
-                    scale_est=models.robust.scale.Hubers_scale()).bcov_scaled
+                    scale_est=models.robust.scale.HuberScale()).bcov_scaled
         self.res1 = results
         self.res1.h2 = h2
         self.res1.h3 = h3
@@ -189,19 +189,19 @@ class test_rlm_huber(check_rlm_results):
         if skipR:
             raise SkipTest, "Rpy not installed"
 
-class test_hampel_huber(test_rlm):
+class TestHampelHuber(TestRlm):
     def __init__(self):
         results = RLM(self.data.endog, self.data.exog,
                     M=models.robust.norms.Hampel()).fit(scale_est=\
-                    models.robust.scale.Hubers_scale())
+                    models.robust.scale.HuberScale())
         h2 = RLM(self.data.endog, self.data.exog,\
                     M=models.robust.norms.Hampel()).fit(cov="H2",
                     scale_est=\
-                    models.robust.scale.Hubers_scale()).bcov_scaled
+                    models.robust.scale.HuberScale()).bcov_scaled
         h3 = RLM(self.data.endog, self.data.exog,\
                     M=models.robust.norms.Hampel()).fit(cov="H3",
                     scale_est=\
-                    models.robust.scale.Hubers_scale()).bcov_scaled
+                    models.robust.scale.HuberScale()).bcov_scaled
         self.res1 = results
         self.res1.h2 = h2
         self.res1.h3 = h3
@@ -211,20 +211,20 @@ class test_hampel_huber(test_rlm):
         if skipR:
             raise SkipTest, "Rpy not installed"
 
-class test_rlm_bisquare_huber(test_rlm):
+class TestRlmBisquareHuber(TestRlm):
     def __init__(self):
         results = RLM(self.data.endog, self.data.exog,
                     M=models.robust.norms.TukeyBiweight()).fit(\
                     scale_est=\
-                    models.robust.scale.Hubers_scale())
+                    models.robust.scale.HuberScale())
         h2 = RLM(self.data.endog, self.data.exog,\
                     M=models.robust.norms.TukeyBiweight()).fit(cov=\
                     "H2", scale_est=\
-                    models.robust.scale.Hubers_scale()).bcov_scaled
+                    models.robust.scale.HuberScale()).bcov_scaled
         h3 = RLM(self.data.endog, self.data.exog,\
                     M=models.robust.norms.TukeyBiweight()).fit(cov=\
                     "H3", scale_est=\
-                    models.robust.scale.Hubers_scale()).bcov_scaled
+                    models.robust.scale.HuberScale()).bcov_scaled
         self.res1 = results
         self.res1.h2 = h2
         self.res1.h3 = h3
@@ -234,19 +234,19 @@ class test_rlm_bisquare_huber(test_rlm):
         if skipR:
             raise SkipTest, "Rpy not installed"
 
-class test_rlm_andrews_huber(test_rlm):
+class TestRlmAndrewsHuber(TestRlm):
     def __init__(self):
         results = RLM(self.data.endog, self.data.exog,
                     M=models.robust.norms.AndrewWave()).fit(scale_est=\
-                    models.robust.scale.Hubers_scale())
+                    models.robust.scale.HuberScale())
         h2 = RLM(self.data.endog, self.data.exog,
                     M=models.robust.norms.AndrewWave()).fit(cov=\
                     "H2", scale_est=\
-                    models.robust.scale.Hubers_scale()).bcov_scaled
+                    models.robust.scale.HuberScale()).bcov_scaled
         h3 = RLM(self.data.endog, self.data.exog,
                     M=models.robust.norms.AndrewWave()).fit(cov=\
                     "H3", scale_est=\
-                    models.robust.scale.Hubers_scale()).bcov_scaled
+                    models.robust.scale.HuberScale()).bcov_scaled
         self.res1 = results
         self.res1.h2 = h2
         self.res1.h3 = h3
@@ -258,6 +258,3 @@ class test_rlm_andrews_huber(test_rlm):
 
 if __name__=="__main__":
     run_module_suite()
-
-
-
