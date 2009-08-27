@@ -776,7 +776,7 @@ def estimate_location(a, scale, norm=HuberT(), axis=0, initial=None,
     norm.psi((a-mu)/scale).sum() == 0
 
     Parameters
-    -------
+    ----------
     a : array
         Array over which the location parameter is to be estimated
     scale : array

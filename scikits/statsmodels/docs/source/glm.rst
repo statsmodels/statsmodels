@@ -96,4 +96,5 @@ Technical Documentation
 .. toctree::
    :maxdepth: 1
 
-   glm_techn
+   glm_techn1
+   glm_techn2
