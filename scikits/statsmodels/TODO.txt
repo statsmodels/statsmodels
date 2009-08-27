@@ -33,8 +33,8 @@ Docs
 contrasts (done)
 model (done)
 regression (done)
-glm / family / links (started)
-rlm / robust / scales
+glm / family / links (done)
+rlm / robust / scales (done)
 tools
 document datasets
 note the tests requirements somewhere (rpy, R, car library)

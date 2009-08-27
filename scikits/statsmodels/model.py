@@ -23,7 +23,7 @@ class Model(object):
     fit
         Call a models fit method
     predict
-        Return fitted response values for a model
+        Return fitted response values for a model.  If the model has
 
     Notes
     -----
@@ -45,10 +45,11 @@ class Model(object):
         """
         raise NotImplementedError
 
+#TODO: decorate predict with fit?
     def predict(self, design):
         """
-        After a model has been fit, results are (assumed to be) stored
-        in self.results, which itself should have a predict method.
+        After a model has been fit predict returns the fitted values.  If
+        the model has not been fit, then fit is called.
         """
         raise NotImplementedErrror
 
@@ -61,13 +62,15 @@ class LikelihoodModel(Model):
         super(LikelihoodModel, self).__init__(endog, exog)
         self.initialize()
 
-    def initialize(self):
+    def _initialize(self):
         """
         Initialize (possibly re-initialize) a Model instance. For
         instance, the design matrix of a linear model may change
         and some things must be recomputed.
         """
         pass
+#TODO: if the intent is to re-initialize the model with new data then
+# this method needs to take inputs...
 
     def loglike(self, params):
         """

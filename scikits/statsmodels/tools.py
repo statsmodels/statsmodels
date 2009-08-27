@@ -268,3 +268,22 @@ def monotone_fn_inverter(fn, x, vectorized=True, **keywords):
 
     return scipy.interpolate.interp1d(y[a], x[a])
 
+def unsqueeze(data, axis, oldshape):
+    """
+    Unsqueeze a collapsed array
+
+    >>> from numpy import mean
+    >>> from numpy.random import standard_normal
+    >>> x = standard_normal((3,4,5))
+    >>> m = mean(x, axis=1)
+    >>> m.shape
+    (3, 5)
+    >>> m = unsqueeze(m, 1, x.shape)
+    >>> m.shape
+    (3, 1, 5)
+    >>>
+    """
+    newshape = list(oldshape)
+    newshape[axis] = 1
+    return data.reshape(newshape)
+

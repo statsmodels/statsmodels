@@ -40,6 +40,15 @@ TODO: fix example location
     df_resid : float
         Residual degrees of freedom is equal to the number of observation n
         minus the number of regressors p.
+
+    endog : array
+        See above.  Note that endog is a reference to the data so that if
+        data is already an array and it is changed, then `endog` changes
+        as well.
+    exog : array
+        See above.  Note that endog is a reference to the data so that if
+        data is already an array and it is changed, then `endog` changes
+        as well.
     history : dict
         Contains information about the iterations. Its keys are `fittedvalues`,
         `deviance`, and `params`.
