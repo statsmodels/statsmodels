@@ -247,7 +247,7 @@ class TestRlmAndrewsHuber(TestRlm):
         self.res1 = results
         self.res1.h2 = h2
         self.res1.h3 = h3
-        self.res2 = Model_results.andrews_huber()
+        self.res2 = model_results.AndrewsHuber()
 
     def setup(self):
         if skipR:

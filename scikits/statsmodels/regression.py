@@ -136,7 +136,9 @@ class GLS(LikelihoodModel):
 
     `rho` is the correlation of the residuals from an OLS fit of the longley
     data.  It is assumed that this is the true rho of the data, and it
-    will be used to estimate the structure of heteroskedasticity.
+    will be used to estimate the structure of heteroskedasticity.  Perhaps
+    a better way to obtain a consistent estimator for `rho` is to regress
+    the residuals on the one-step lagged residuals.
 
     >>> from scipy.linalg import toeplitz
     >>> order = toeplitz(np.arange(16))
@@ -182,6 +184,7 @@ Should be of length %s, if sigma is a 1d array" % nobs
     def initialize(self):
         self.wexog = self.whiten(self.exog)
         self.wendog = self.whiten(self.endog)
+#TODO: !!!! this will not work if wexog is 1d !!!!
         self.pinv_wexog = np.linalg.pinv(self.wexog)
         self.normalized_cov_params = np.dot(self.pinv_wexog,
                                          np.transpose(self.pinv_wexog))
@@ -502,6 +505,7 @@ class OLS(WLS):
     -----
     OLS, as the other models, assumes that the design matrix contains a constant.
     """
+#TODO: change example to use datasets.  This was the point of datasets!
     def __init__(self, endog, exog=None):
         super(OLS, self).__init__(endog, exog)
 
@@ -576,8 +580,7 @@ class GLSAR(GLS):
 
     Notes
     -----
-    GLSAR is considered to be experimental for now, since it has not been
-    adequately tested.
+    GLSAR is considered to be experimental.
     """
     def __init__(self, endog, exog=None, rho=1):
         if isinstance(rho, np.int):
@@ -620,8 +623,6 @@ class GLSAR(GLS):
             results = self.fit()
             self.rho, _ = yule_walker(results.resid,
                                       order=self.order, df=None)
-                                        #note that the X passed is different for
-                                      #univariate.  Why this X anyway?
         self._results = self.fit() #final estimate
         return self._results # add missing return
 

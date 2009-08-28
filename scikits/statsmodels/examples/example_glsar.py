@@ -1,6 +1,12 @@
-'''6 examples for GLSAR with artificial data
+'''
+Example: scikits.statsmodels.GLSAR
 
-Note: this examples were written mostly to cross-checking results
+6 examples for GLSAR with artificial data
+
+Notes
+------
+These examples were written mostly to cross-check results.  It is still being
+written, and GLSAR is still being worked on.
 '''
 
 import numpy as np

@@ -1,4 +1,5 @@
 """
+
 Test functions for models.GLM
 """
 
@@ -203,8 +204,8 @@ class TestGlmBinomial(CheckModelResults):
         '''
         Test Binomial family with canonical logit link
         '''
-        from scikits.statsmodels.datasets.Star98 import Load
-        from model_results import star98
+        from scikits.statsmodels.datasets.star98 import Load
+        from model_results import Star98
         self.data = Load()
         self.data.exog = add_constant(self.data.exog)
         trials = self.data.endog[:,:2].sum(axis=1)

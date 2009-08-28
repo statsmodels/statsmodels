@@ -361,20 +361,22 @@ the Binomial family"
                 scale=self.scale)))
         return glm_results
 
-    @property
-    def results(self):
-        """
-        A property that returns a GLMResults class.
-
-        Notes
-        -----
-        Calls fit if it has not already been called.  The default values for
-        fit are used.  If the data_weights argument needs to be supplied for
-        the Binomial family, then you should directly call fit.
-        """
-        if self._results is None:
-            self._results = self.fit()
-        return self._results
+# doesn't make sense really if there are arguments to fit
+# also conflicts with refactor of GAM
+#    @property
+#    def results(self):
+#        """
+#        A property that returns a GLMResults class.
+#
+#        Notes
+#        -----
+#        Calls fit if it has not already been called.  The default values for
+#        fit are used.  If the data_weights argument needs to be supplied for
+#        the Binomial family, then you should directly call fit.
+#        """
+#        if self._results is None:
+#            self._results = self.fit()
+#        return self._results
 #TODO: remove dataweights argument and have it calculated from endog
 # note that data_weights is not documented because I'm going to remove it.
 # make the number of trials an argument to Binomial if constant and 1d endog
