@@ -1,8 +1,13 @@
 """
 Python script for building documentation. This script was designed for
 building the docs on windows, but may work on other platforms as well.
+It has been tested on Ubuntu Jaunty and works there as well.  If it does not
+work for you and returns an error about finding sphinx-build then you need
+to edit the first lines that define `sphinx_build` to point to where
+sphinx-build is installed.  On linux you can find out by typing
+`which sphinx-build` at the command line.
 
-To build the docs you must have all optional dependencies for the timeseries
+To build the docs you must have all optional dependencies for statsmodels
 installed. See the installation instructions for a list of these.
 
 Note: currently latex builds do not work because of table formats that are not
@@ -20,7 +25,13 @@ import glob
 import shutil
 import sys
 
-sphinx_build = os.path.join(sys.prefix, 'Scripts', 'sphinx-build')
+# checks for sphinx-build binary these will find it if it is installed
+# in sys.prefix+'/local/bin/' or
+# in sys.predix+'/Scripts/'
+if os.path.isfile(os.path.join(sys.prefix, 'Scripts', 'sphinx-build')):
+    sphinx_build = os.path.join(sys.prefix, 'Scripts', 'sphinx-build')
+elif os.path.isfile(os.path.join(sys.prefix, 'local', 'bin', 'sphinx-build')):
+    sphinx_build = os.path.join(sys.prefix, 'local', 'bin', 'sphinx-build')
 
 def check_build():
     build_dirs = [

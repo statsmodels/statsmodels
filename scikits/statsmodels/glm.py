@@ -1,5 +1,20 @@
 """
 Generalized linear models
+
+References
+----------
+Gill, Jeff. 2000. Generalized Linear Models: A Unified Approach.
+    SAGE QASS Series.
+
+Green, PJ. 1984.  "Iteratively reweighted least squares for maximum
+    likelihood estimation, and some robust and resistant alternatives."
+    Journal of the Royal Statistical Society, Series B, 46, 149-192.
+
+Hardin, J.W. and Hilbe, J.M. 2007.  "Generalized Linear Models and
+    Extensions."  2nd ed.  Stata Press, College Station, TX.
+
+McCullagh, P. and Nelder, J.A.  1989.  "Generalized Linear Models." 2nd ed.
+    Chapman & Hall, Boca Rotan.
 """
 
 import numpy as np
@@ -151,21 +166,6 @@ TODO: fix example location
     gamma        |   x    x                        x
 
     Not all of these link functions are currently available.
-
-    References
-    ----------
-    Gill, Jeff. 2000. Generalized Linear Models: A Unified Approach.
-        SAGE QASS Series.
-
-    Green, PJ. 1984.  "Iteratively reweighted least squares for maximum
-        likelihood estimation, and some robust and resistant alternatives."
-        Journal of the Royal Statistical Society, Series B, 46, 149-192.
-
-    Hardin, J.W. and Hilbe, J.M. 2007.  "Generalized Linear Models and
-        Extensions."  2nd ed.  Stata Press, College Station, TX.
-
-    McCullagh, P. and Nelder, J.A.  1989.  "Generalized Linear Models." 2nd ed.
-        Chapman & Hall, Boca Rotan.
     '''
 
     def __init__(self, endog, exog, family=family.Gaussian()):
