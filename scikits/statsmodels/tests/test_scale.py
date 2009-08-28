@@ -3,14 +3,12 @@ Test functions for models.robust.scale
 """
 
 import numpy as np
-import numpy.random as R
+from numpy.random import standard_normal
 from numpy.testing import *
 
 # Example from Section 5.5, Venables & Ripley (2002)
 
 import scikits.statsmodels.robust.scale as scale
-
-W = R.standard_normal
 
 DECIMAL = 4
 #TODO: Can replicate these tests using stackloss data and R if this
@@ -51,7 +49,7 @@ class TestChem(object):
 class TestMad(object):
     def __init__(self):
         np.random.seed(54321)
-        self.X = W((40,10))
+        self.X = standard_normal((40,10))
 
     def test_stand_mad(self):
         m = scale.stand_mad(self.X)
@@ -64,7 +62,7 @@ class TestMad(object):
 class TestMadAxes():
     def __init__(self):
         np.random.seed(54321)
-        self.X = W((40,10,30))
+        self.X = standard_normal((40,10,30))
 
     def test_axis0(self):
         m = scale.stand_mad(self.X, axis=0)
@@ -82,12 +80,10 @@ class TestMadAxes():
         m = scale.stand_mad(self.X, axis=-1)
         assert_equal(m.shape, (40,10))
 
-
-
 class TestHuber():
     def __init__(self):
         np.random.seed(54321)
-        self.X = W((40,10))
+        self.X = standard_normal((40,10))
 
     def basic_functionality(self):
         h = scale.Huber(maxiter=100)
@@ -97,7 +93,7 @@ class TestHuber():
 class TestHuberAxes(object):
     def __init__(self):
         np.random.seed(54321)
-        self.X = W((40,10,30))
+        self.X = standard_normal((40,10,30))
         self.h = scale.Huber(maxiter=1000, tol=1.0e-05)
 
     def test_default(self):

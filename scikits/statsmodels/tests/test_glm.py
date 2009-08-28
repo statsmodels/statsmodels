@@ -3,18 +3,13 @@ Test functions for models.GLM
 """
 
 import numpy as np
-import numpy.random as R
 from numpy.testing import *
-
 import scikits.statsmodels as models
 from scikits.statsmodels.glm import GLM
-from scikits.statsmodels.tools import add_constant, xi
-from scipy import stats
+from scikits.statsmodels.tools import add_constant
 from rmodelwrap import RModel
 from nose import SkipTest
 from check_for_rpy import skip_rpy
-
-W = R.standard_normal
 
 DECIMAL = 4
 DECIMAL_less = 3
@@ -25,7 +20,7 @@ skipR = skip_rpy()
 if not skipR:
     from rpy import r
 
-class check_model_results(object):
+class CheckModelResults(object):
     '''
     res2 should be either the results from RModelWrap
     or the results as defined in model_results_data
@@ -87,13 +82,13 @@ class check_model_results(object):
 
     def test_pearsonX2(self):
         if isinstance(self.res2, RModel):
-            raise SkipTest("Results ar(tmp_arr[:,np.newaxis]==data[col]).astype(float)e from RModel wrapper")
+            raise SkipTest("Results are from RModel wrapper")
         self.check_pearsonX2(self.res1.pearsonX2, self.res2.pearsonX2)
 
-class test_glm_gaussian(check_model_results):
+class TestGlmGaussian(CheckModelResults):
     def __init__(self):
         '''
-        Test Gaussian family with canonical identity link(tmp_arr[:,np.newaxis]==data[col]).astype(float)
+        Test Gaussian family with canonical identity link
         '''
 
         from scikits.statsmodels.datasets.longley import Load
@@ -132,7 +127,7 @@ class test_glm_gaussian(check_model_results):
     def check_pearsonX2(self, pearsonX21, pearsonX22):
         assert_almost_equal(pearsonX21, pearsonX22, DECIMAL)
 
-class test_gaussian_log(check_model_results):
+class TestGaussianLog(CheckModelResults):
     def __init__(self):
         nobs = 100
         x = np.arange(nobs)
@@ -168,7 +163,7 @@ class test_gaussian_log(check_model_results):
         assert_almost_equal(aic1, aic2, DECIMAL_none)
 #TODO: is this a full test?
 
-class test_gaussian_inverse(check_model_results):
+class TestGaussianInverse(CheckModelResults):
     def __init__(self):
         nobs = 100
         x = np.arange(nobs)
@@ -203,19 +198,19 @@ class test_gaussian_inverse(check_model_results):
         assert_almost_equal(self.res1.null_deviance, self.res2.null_deviance,
                     DECIMAL_least)
 
-class test_glm_binomial(check_model_results):
+class TestGlmBinomial(CheckModelResults):
     def __init__(self):
         '''
         Test Binomial family with canonical logit link
         '''
-        from scikits.statsmodels.datasets.star98 import Load
+        from scikits.statsmodels.datasets.Star98 import Load
         from model_results import star98
         self.data = Load()
         self.data.exog = add_constant(self.data.exog)
         trials = self.data.endog[:,:2].sum(axis=1)
         self.res1 = GLM(self.data.endog, self.data.exog, \
         family=models.family.Binomial()).fit(data_weights = trials)
-        self.res2 = star98()
+        self.res2 = Star98()
 
     def check_params(self, params1, params2):
         assert_almost_equal(params1, params2, DECIMAL)
@@ -244,32 +239,32 @@ class test_glm_binomial(check_model_results):
 #TODO:
 #Non-Canonical Links for the Binomial family require the algorithm to be
 #slightly changed
-#class test_glm_binomial_log(check_model_results):
+#class TestGlmBinomialLog(CheckModelResults):
 #    pass
 
-#class test_glm_binomial_logit(check_model_results):
+#class TestGlmBinomialLogit(CheckModelResults):
 #    pass
 
-#class test_glm_binomial_probit(check_model_results):
+#class TestGlmBinomialProbit(CheckModelResults):
 #    pass
 
-#class test_glm_binomial_cloglog(check_model_results):
+#class TestGlmBinomialCloglog(CheckModelResults):
 #    pass
 
-#class test_glm_binomial_power(check_model_results):
+#class TestGlmBinomialPower(CheckModelResults):
 #    pass
 
-#class test_glm_binomial_loglog(check_model_results):
+#class TestGlmBinomialLoglog(CheckModelResults):
 #    pass
 
-#class test_glm_binomial_logc(check_model_results):
+#class TestGlmBinomialLogc(CheckModelResults):
 #TODO: need include logc link
 #    pass
 
-class test_glm_bernoulli(check_model_results):
+class TestGlmBernoulli(CheckModelResults):
     def __init__(self):
-        from model_results import lbw
-        self.res2 = lbw()
+        from model_results import Lbw
+        self.res2 = Lbw()
         self.res1 = GLM(self.res2.endog, self.res2.exog,
                 family=models.family.Binomial()).fit()
 
@@ -294,40 +289,40 @@ class test_glm_bernoulli(check_model_results):
     def check_pearsonX2(self, pearsonX21, pearsonX22):
         assert_almost_equal(pearsonX21, pearsonX22, DECIMAL)
 
-#class test_glm_bernoulli_identity(check_model_results):
+#class TestGlmBernoulliIdentity(CheckModelResults):
 #    pass
 
-#class test_glm_bernoulli_log(check_model_results):
+#class TestGlmBernoulliLog(CheckModelResults):
 #    pass
 
-#class test_glm_bernoulli_probit(check_model_results):
+#class TestGlmBernoulliProbit(CheckModelResults):
 #    pass
 
-#class test_glm_bernoulli_cloglog(check_model_results):
+#class TestGlmBernoulliCloglog(CheckModelResults):
 #    pass
 
-#class test_glm_bernoulli_power(check_model_results):
+#class TestGlmBernoulliPower(CheckModelResults):
 #    pass
 
-#class test_glm_bernoulli_loglog(check_model_results):
+#class TestGlmBernoulliLoglog(CheckModelResults):
 #    pass
 
-#class test_glm_bernoulli_logc(check_model_results):
+#class test_glm_bernoulli_logc(CheckModelResults):
 #    pass
 
-class test_glm_gamma(check_model_results):
+class TestGlmGamma(CheckModelResults):
 
     def __init__(self):
         '''
         Tests Gamma family with canonical inverse link (power -1)
         '''
         from scikits.statsmodels.datasets.scotland import Load
-        from model_results import scotvote
+        from model_results import Scotvote
         self.data = Load()
         self.data.exog = add_constant(self.data.exog)
         self.res1 = GLM(self.data.endog, self.data.exog, \
                     family=models.family.Gamma()).fit()
-        self.res2 = scotvote()
+        self.res2 = Scotvote()
 
     def check_params(self, params1, params2):
         assert_almost_equal(params1, params2, DECIMAL)
@@ -358,10 +353,10 @@ class test_glm_gamma(check_model_results):
     def check_pearsonX2(self, pearsonX21, pearsonX22):
         assert_almost_equal(pearsonX21, pearsonX22, DECIMAL)
 
-class test_glm_gamma_log(check_model_results):
+class TestGlmGammaLog(CheckModelResults):
     def __init__(self):
-        from model_results import cancer
-        data = cancer()
+        from model_results import Cancer
+        data = Cancer()
         self.res1 = GLM(data.endog, data.exog,
             family=models.family.Gamma(link=models.family.links.log)).fit()
         self.res2 = RModel(data.endog, data.exog, r.glm,
@@ -388,10 +383,10 @@ class test_glm_gamma_log(check_model_results):
     def check_bic(self, bic1, bic2):
         assert_almost_equal(bic1, bic2, DECIMAL)
 
-class test_glm_gamma_identity(check_model_results):
+class TestGlmGammaIdentity(CheckModelResults):
     def __init__(self):
-        from model_results import cancer
-        data = cancer()
+        from model_results import Cancer
+        data = Cancer()
         self.res1 = GLM(data.endog, data.exog,
             family=models.family.Gamma(link=models.family.links.identity)).fit()
         self.res2 = RModel(data.endog, data.exog, r.glm,
@@ -417,21 +412,21 @@ class test_glm_gamma_identity(check_model_results):
     def check_bic(self, bic1, bic2):
         assert_almost_equal(bic1, bic2, DECIMAL)
 
-class test_glm_poisson(check_model_results):
+class TestGlmPoisson(CheckModelResults):
     def __init__(self):
         '''
         Tests Poisson family with canonical log link.
 
         Test results were obtained by R.
         '''
-        from model_results import cpunish
+        from model_results import Cpunish
         from scikits.statsmodels.datasets.cpunish import Load
         self.data = Load()
         self.data.exog[:,3] = np.log(self.data.exog[:,3])
         self.data.exog = add_constant(self.data.exog)
         self.res1 = GLM(self.data.endog, self.data.exog,
                     family=models.family.Poisson()).fit()
-        self.res2 = cpunish()
+        self.res2 = Cpunish()
 
     def check_params(self, params1, params2):
         assert_almost_equal(params1, params2, DECIMAL)
@@ -454,14 +449,13 @@ class test_glm_poisson(check_model_results):
     def check_pearsonX2(self, pearsonX21, pearsonX22):
         assert_almost_equal(pearsonX21, pearsonX22, DECIMAL)
 
-#class test_glm_poisson_identity(check_model_results):
+#class TestGlmPoissonIdentity(CheckModelResults):
 #    pass
 
-#class test_glm_poisson_power(check_model_results):
+#class TestGlmPoissonPower(CheckModelResults):
 #    pass
 
-#@dec.slow
-class test_glm_invgauss(check_model_results):
+class TestGlmInvgauss(CheckModelResults):
     def __init__(self):
         '''
         Tests the Inverse Gaussian family in GLM.
@@ -473,8 +467,8 @@ class test_glm_invgauss(check_model_results):
         were obtained by running R_ig.s
         '''
 
-        from model_results import inv_gauss
-        self.res2 = inv_gauss()
+        from model_results import InvGauss
+        self.res2 = InvGauss()
         self.res1 = GLM(self.res2.endog, self.res2.exog, \
                 family=models.family.InverseGaussian()).fit()
 
@@ -510,10 +504,10 @@ class test_glm_invgauss(check_model_results):
     def check_pearsonX2(self, pearsonX21, pearsonX22):
         assert_almost_equal(pearsonX21, pearsonX22, DECIMAL_less)# summed resids
 
-class test_glm_invgauss_log(check_model_results):
+class TestGlmInvgaussLog(CheckModelResults):
     def __init__(self):
-        from model_results import medpar1
-        data = medpar1()
+        from model_results import Medpar1
+        data = Medpar1()
         self.res1 = GLM(data.endog, data.exog,
             family=models.family.InverseGaussian(link=\
             models.family.links.log)).fit()
@@ -542,10 +536,10 @@ class test_glm_invgauss_log(check_model_results):
                 self.res1.mu, scale=1)
         assert_almost_equal(llf1, llf2, DECIMAL)
 
-class test_glm_invgauss_identity(check_model_results):
+class TestGlmInvgaussIdentity(CheckModelResults):
     def __init__(self):
-        from model_results import medpar1
-        data = medpar1()
+        from model_results import Medpar1
+        data = Medpar1()
         self.res1 = GLM(data.endog, data.exog,
             family=models.family.InverseGaussian(link=\
             models.family.links.identity)).fit()
@@ -573,7 +567,7 @@ class test_glm_invgauss_identity(check_model_results):
                 self.res1.mu, scale=1)
         assert_almost_equal(llf1, llf2, DECIMAL)
 
-class test_glm_negbinomial(check_model_results):
+class TestGlmNegbinomial(CheckModelResults):
     def __init__(self):
         '''
         Test Negative Binomial family with canonical log link
@@ -621,13 +615,13 @@ class test_glm_negbinomial(check_model_results):
     def check_pearsonX2(self, pearsonX21, pearsonX22):
         assert_almost_equal(pearsonX21, pearsonX22, DECIMAL)
 
-#class test_glm_negbinomial_log(check_model_results):
+#class TestGlmNegbinomial_log(CheckModelResults):
 #    pass
 
-#class test_glm_negbinomial_power(check_model_results):
+#class TestGlmNegbinomial_power(CheckModelResults):
 #    pass
 
-#class test_glm_negbinomial_nbinom(check_model_results):
+#class TestGlmNegbinomial_nbinom(CheckModelResults):
 #    pass
 
 if __name__=="__main__":

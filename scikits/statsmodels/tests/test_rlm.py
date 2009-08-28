@@ -2,12 +2,9 @@
 Test functions for models.rlm
 """
 
-import numpy.random as R
 from numpy.testing import *
 import scikits.statsmodels as models
 from rmodelwrap import RModel
-import rpy # for hampel test...ugh
-import numpy as np # ditto
 from scikits.statsmodels.rlm import RLM
 import model_results
 from nose import SkipTest
@@ -92,9 +89,9 @@ class TestRlm(CheckRlmResults):
         self.res1.h3 = h3
         self.res2 = RModel(self.data.endog, self.data.exog,
                         r.rlm, psi="psi.huber")
-        self.res2.h1 = model_results.huber.h1
-        self.res2.h2 = model_results.huber.h2
-        self.res2.h3 = model_results.huber.h3
+        self.res2.h1 = model_results.Huber.h1
+        self.res2.h2 = model_results.Huber.h2
+        self.res2.h3 = model_results.Huber.h3
 
     def setup(self):
         if skipR:
@@ -113,9 +110,9 @@ class TestHampel(TestRlm):
         self.res1.h3 = h3
         self.res2 = RModel(self.data.endog[:,None], self.data.exog,
                     r.rlm, psi="psi.hampel") #, init="lts")
-        self.res2.h1 = model_results.hampel.h1
-        self.res2.h2 = model_results.hampel.h2
-        self.res2.h3 = model_results.hampel.h3
+        self.res2.h1 = model_results.Hampel.h1
+        self.res2.h2 = model_results.Hampel.h2
+        self.res2.h3 = model_results.Hampel.h3
 
     def setup(self):
         if skipR:
@@ -137,9 +134,9 @@ class TestRlmBisquare(TestRlm):
         self.res1.h3 = h3
         self.res2 = RModel(self.data.endog, self.data.exog,
                         r.rlm, psi="psi.bisquare")
-        self.res2.h1 = model_results.bisquare.h1
-        self.res2.h2 = model_results.bisquare.h2
-        self.res2.h3 = model_results.bisquare.h3
+        self.res2.h1 = model_results.Bisquare.h1
+        self.res2.h2 = model_results.Bisquare.h2
+        self.res2.h3 = model_results.Bisquare.h3
 
     def setup(self):
         if skipR:
@@ -158,7 +155,7 @@ class TestRlmAndrews(TestRlm):
         self.res1 = results
         self.res1.h2 = h2
         self.res1.h3 = h3
-        self.res2 = model_results.andrews()
+        self.res2 = model_results.Andrews()
 
     def setup(self):
         if skipR:
@@ -183,7 +180,7 @@ class TestRlmHuber(CheckRlmResults):
         self.res1 = results
         self.res1.h2 = h2
         self.res1.h3 = h3
-        self.res2 = model_results.huber_huber()
+        self.res2 = model_results.HuberHuber()
 
     def setup(self):
         if skipR:
@@ -205,7 +202,7 @@ class TestHampelHuber(TestRlm):
         self.res1 = results
         self.res1.h2 = h2
         self.res1.h3 = h3
-        self.res2 = model_results.hampel_huber()
+        self.res2 = model_results.HampelHuber()
 
     def setup(self):
         if skipR:
@@ -228,7 +225,7 @@ class TestRlmBisquareHuber(TestRlm):
         self.res1 = results
         self.res1.h2 = h2
         self.res1.h3 = h3
-        self.res2 = model_results.bisquare_huber()
+        self.res2 = model_results.BisquareHuber()
 
     def setup(self):
         if skipR:
@@ -250,7 +247,7 @@ class TestRlmAndrewsHuber(TestRlm):
         self.res1 = results
         self.res1.h2 = h2
         self.res1.h3 = h3
-        self.res2 = model_results.andrews_huber()
+        self.res2 = Model_results.andrews_huber()
 
     def setup(self):
         if skipR:

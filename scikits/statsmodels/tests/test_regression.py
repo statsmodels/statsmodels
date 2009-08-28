@@ -2,18 +2,14 @@
 Test functions for models.regression
 """
 import numpy as np
-from numpy.random import standard_normal
 from numpy.testing import *
 from scipy.linalg import toeplitz
-from scikits.statsmodels.tools import add_constant
+from scikits.statsmodels.tools import add_constant, rank
 from scikits.statsmodels.regression import OLS, GLSAR, WLS, GLS, yule_walker
-import scikits.statsmodels as models
-from scikits.statsmodels import tools
 from check_for_rpy import skip_rpy
 from nose import SkipTest
-from scipy.stats import t
+from scipy.stats import t as student_t
 
-W = standard_normal
 DECIMAL = 4
 DECIMAL_less = 3
 DECIMAL_lesser = 2
@@ -127,12 +123,12 @@ class CheckRegressionResults(object):
 class TestOLS(CheckRegressionResults):
     def __init__(self):
         from scikits.statsmodels.datasets.longley import Load
-        from model_results import longley
+        from model_results import Longley
         data = Load()
         data.exog = add_constant(data.exog)
         results = OLS(data.endog, data.exog).fit()
         self.res1 = results
-        self.res2 = longley()
+        self.res2 = Longley()
 
     def check_confidenceintervals(self, conf1, conf2):
         for i in range(len(conf1)):
@@ -188,7 +184,7 @@ class TestFtest(object):
         assert_equal(self.Ftest.df_denom, self.res1.model.df_resid)
 
     def test_Df_num(self):
-        assert_equal(self.Ftest.df_num, tools.rank(self.R))
+        assert_equal(self.Ftest.df_num, rank(self.R))
 
 class TestFTest2(TestFtest):
     '''
@@ -252,7 +248,8 @@ class TestTtest(object):
 
     def test_pvalue(self):
         assert_almost_equal(np.diag(self.Ttest.pvalue),
-                t.sf(np.abs(self.res1.t()),self.res1.model.df_resid), DECIMAL)
+                student_t.sf(np.abs(self.res1.t()),self.res1.model.df_resid),
+                    DECIMAL)
 
     def test_df_denom(self):
         assert_equal(self.Ttest.df_denom, self.res1.model.df_resid)
@@ -291,7 +288,7 @@ class TestTtest2(TestTtest):
         assert_almost_equal(self.Ttest1.sd, self.effect/self.t, DECIMAL)
 
     def test_pvalue(self):
-        assert_almost_equal(self.Ttest1.pvalue, t.sf(np.abs(self.t),
+        assert_almost_equal(self.Ttest1.pvalue, student_t.sf(np.abs(self.t),
             self.Ttest2['Res.Df'][0]),
             DECIMAL)
 
@@ -307,7 +304,7 @@ class TestGLS(object):
     '''
     def __init__(self):
         from scikits.statsmodels.datasets.longley import Load
-        from model_results import longley_gls
+        from model_results import LongleyGls
 
         data = Load()
         exog = add_constant(np.column_stack(\
@@ -319,7 +316,7 @@ class TestGLS(object):
         sigma = rho**order
         GLS_results = GLS(data.endog, exog, sigma=sigma).fit()
         self.res1 = GLS_results
-        self.res2 = longley_gls()
+        self.res2 = LongleyGls()
 
     def test_aic(self):
         assert_approx_equal(self.res1.aic+2, self.res2.aic, 3)
