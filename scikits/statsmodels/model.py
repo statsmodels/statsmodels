@@ -359,6 +359,8 @@ T statistics'
 
         _effect = np.dot(r_matrix, self.params)
         _sd = np.sqrt(self.cov_params(r_matrix=r_matrix))
+        if _sd.ndim > 1:
+            _sd = np.diag(_sd)
         _t = _effect * recipr(_sd)
         return ContrastResults(effect=_effect, t=_t, sd=_sd,
                 df_denom=self.model.df_resid)

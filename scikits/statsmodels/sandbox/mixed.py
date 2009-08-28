@@ -1,5 +1,10 @@
 """
 Mixed effects models
+
+
+Notes
+------
+This still depends on nipy
 """
 
 import numpy as np
@@ -158,7 +163,7 @@ class Mixed(object):
 
         self.N = 0
         for unit in self.units:
-            unit.Y = np.squeeze(unit.design(self.response))
+            unit.Y = np.squeeze(unit.design(self.response)) # respnose is just 'y'
             unit.X = unit.design(self.fixed)
             unit.Z = unit.design(self.random)
             self.N += unit.X.shape[0]

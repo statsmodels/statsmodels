@@ -241,13 +241,13 @@ class TestTtest(object):
             self.R_Results = RModel(self.data.endog, self.data.exog, r.lm).robj
 
     def test_tvalue(self):
-        assert_almost_equal(np.diag(self.Ttest.tvalue), self.res1.t(), DECIMAL)
+        assert_almost_equal(self.Ttest.tvalue, self.res1.t(), DECIMAL)
 
     def test_sd(self):
-        assert_almost_equal(np.diag(self.Ttest.sd), self.res1.bse, DECIMAL)
+        assert_almost_equal(self.Ttest.sd, self.res1.bse, DECIMAL)
 
     def test_pvalue(self):
-        assert_almost_equal(np.diag(self.Ttest.pvalue),
+        assert_almost_equal(self.Ttest.pvalue,
                 student_t.sf(np.abs(self.res1.t()),self.res1.model.df_resid),
                     DECIMAL)
 
