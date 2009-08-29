@@ -79,3 +79,29 @@ def jarque_bera(resids):
     JBpv = stats.chi2.sf(JB,2);
 
     return JB, JBpv, skew, kurtosis
+
+collinearity(exog):
+    """
+    Returns the condition number of an exogenous design array.
+
+    The given array is first normalized (except for any constant term)
+    so that each column is a unit length vector then
+
+    Parameters
+    ----------
+    exog
+
+    Returns
+    -------
+    Condition numbers.
+    """
+    exog = np.array(exog)
+    if exog.ndim is 1:
+        exog = exog[:,None]
+    numvar = exog.shape[1]
+    norm_exog = np.ones_like(exog)
+    for i in range(numvar):
+        norm_exog[:,i] = data.exog[:,i]/np.linalg.norm(data.exog[:,i])
+    xtx = np.dot(norm_exog.T,norm_exog)
+    eigs = np.lingalg.eigvals(xtx)
+    return np.sqrt(eigs.max()/eigs.min())
