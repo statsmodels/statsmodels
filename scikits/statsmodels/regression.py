@@ -126,19 +126,16 @@ class GLS(LikelihoodModel):
     Examples
     --------
     >>> import numpy as np
-    >>> import scikits.statsmodels as models
-    >>> from scikits.statsmodels.tools import add_constant
-    >>> from scikits.statsmodels.datasets.longley import Load
-    >>> data = Load()
-    >>> data.exog = add_constant(data.exog)
-    >>> ols_tmp = models.OLS(data.endog, data.exog).results
-    >>> rho = np.corrcoef(ols_tmp.resid[1:],ols_tmp.resid[:-1])[0][1]
+    >>> import scikits.statsmodels as sm
+    >>> data = sm.datasets.longley.Load()
+    >>> data.exog = sm.add_constant(data.exog)
+    >>> ols_resid = sm.OLS(data.endog, data.exog).fit().resid
+    >>> res_fit = sm.OLS(ols_resid[1:], sm.add_constant(ols_resid[:,-1]).fit()
+    >>> rho = res_fit.params[0]
 
-    `rho` is the correlation of the residuals from an OLS fit of the longley
-    data.  It is assumed that this is the true rho of the data, and it
-    will be used to estimate the structure of heteroskedasticity.  Perhaps
-    a better way to obtain a consistent estimator for `rho` is to regress
-    the residuals on the one-step lagged residuals.
+    `rho` is a consistent estimator of the correlation of the residuals from
+    an OLS fit of the longley data.  It is assumed that this is the true rho
+    of the AR process data.
 
     >>> from scipy.linalg import toeplitz
     >>> order = toeplitz(np.arange(16))
@@ -147,7 +144,7 @@ class GLS(LikelihoodModel):
     `sigma` is an n x n matrix of the autocorrelation structure of the
     data.
 
-    >>> gls_model = models.GLS(data.endog, data.exog, sigma=sigma)
+    >>> gls_model = sm.GLS(data.endog, data.exog, sigma=sigma)
     >>> gls_results = gls_model.results
 
     Notes
@@ -362,11 +359,11 @@ class WLS(GLS):
     Examples
     ---------
     >>> import numpy as np
-    >>> import scikits.statsmodels as models
+    >>> import scikits.statsmodels as sm
     >>> Y = [1,3,4,5,2,3,4]
     >>> X = range(1,8)
-    >>> X = models.tools.add_constant(X)
-    >>> wls_model = models.WLS(Y,X, weights=range(1,8))
+    >>> X = sm.add_constant(X)
+    >>> wls_model = sm.WLS(Y,X, weights=range(1,8))
     >>> results = wls_model.fit()
     >>> results.params
     array([ 0.0952381 ,  2.91666667])
@@ -482,13 +479,13 @@ class OLS(WLS):
     --------
     >>> import numpy as np
     >>>
-    >>> import scikits.statsmodels as models
+    >>> import scikits.statsmodels as sm
     >>>
     >>> Y = [1,3,4,5,2,3,4],
     >>> X = range(1,8) #[:,np.newaxis]
-    >>> X = models.tools.add_constant(X)
+    >>> X = sm.add_constant(X)
     >>>
-    >>> model = models.OLS(Y,X)
+    >>> model = sm.OLS(Y,X)
     >>> results = model.fit()
     >>> # or results = model.results
     >>> results.params
@@ -543,17 +540,17 @@ class GLSAR(GLS):
 
     Examples
     --------
-    >>> import scikits.statsmodels as models
+    >>> import scikits.statsmodels as sm
     >>> X = range(1,8)
-    >>> X = models.tools.add_constant(X)
+    >>> X = sm.add_constant(X)
     >>> Y = [1,3,4,5,8,10,9]
-    >>> model = models.GLSAR(Y, X, rho=2)
+    >>> model = sm.GLSAR(Y, X, rho=2)
     >>> for i in range(6):
     ...    results = model.fit()
     ...    print "AR coefficients:", model.rho
-    ...    rho, sigma = models.regression.yule_walker(results.resid,
+    ...    rho, sigma = sm.regression.yule_walker(results.resid,
     ...                 order=model.order)
-    ...    model = models.GLSAR(Y, X, rho)
+    ...    model = sm.GLSAR(Y, X, rho)
     AR coefficients: [ 0.  0.]
     AR coefficients: [-0.52571491 -0.84496178]
     AR coefficients: [-0.620642   -0.88654567]
@@ -572,7 +569,7 @@ class GLSAR(GLS):
 
     Or, equivalently
 
-    >>> model2 = models.GLSAR(Y, X, rho=2)
+    >>> model2 = sm.GLSAR(Y, X, rho=2)
     >>> res = model2.iterative_fit(maxiter=6)
     >>> model2.rho
     array([-0.61893842, -0.88152263])
@@ -685,10 +682,10 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False):
 
     Examples
     --------
-    >>> import scikits.statsmodels as models
+    >>> import scikits.statsmodels as sm
     >>> from scikits.statsmodels.datasets.sunspots import Load
     >>> data = Load()
-    >>> rho, sigma = models.regression.yule_walker(data.endog,
+    >>> rho, sigma = sm.regression.yule_walker(data.endog,
         order=4, method="mle")
     >>> rho
     array([ 1.28310031, -0.45240924, -0.20770299,  0.04794365])
@@ -1029,11 +1026,10 @@ class RegressionResults(LikelihoodModelResults):
 
         Examples
         --------
-        >>> from scikits import statsmodels as models
-        >>> from scikits.statsmodels.datasets.longley import Load
-        >>> data = Load()
-        >>> data.exog = models.tools.add_constant(data.exog)
-        >>> ols_results = models.OLS(data.endog, data.exog).results
+        >>> import scikits.statsmodels as sm
+        >>> data = sm.datasets.longley.Load()
+        >>> data.exog = sm.add_constant(data.exog)
+        >>> ols_results = sm.OLS(data.endog, data.exog).results
         >>> print ols_results.summary()
         ...
 

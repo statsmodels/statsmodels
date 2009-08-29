@@ -1,28 +1,26 @@
 """
 Statistical models
 
- - model `formula`
  - standard `regression` models
 
-  - `OLSModel` (ordinary least square regression)
-  - `WLSModel` (weighted least square regression)
-  - `ARModel` (autoregressive model)
+  - `GLS` (generalized least squares regression)
+  - `OLS` (ordinary least square regression)
+  - `WLS` (weighted least square regression)
+  - `GLASAR` (GLS with autoregressive errors model)
 
- - `glm.Model` (generalized linear models)
+ - `GLM` (generalized linear models)
  - robust statistical models
 
-  - `rlm.Model` (robust linear models using M estimators)
+  - `RLM` (robust linear models using M estimators)
   - `robust.norms` estimates
   - `robust.scale` estimates (MAD, Huber's proposal 2).
-
- - `mixed` effects models
- - `gam` (generalized additive models)
+ - sandbox models
+  - `mixed` effects models
+  - `gam` (generalized additive models)
 """
 __docformat__ = 'restructuredtext en'
 
-depends = ['special.orthogonal',
-           'integrate',
-           'optimize',
-           'linalg']
+depends = ['numpy',
+        'scipy']
 
 postpone_import = True

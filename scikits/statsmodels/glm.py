@@ -127,15 +127,14 @@ TODO: fix example location
 
     Examples
     --------
-    >>> from scikits import statsmodels as models
-    >>> from scikits.statsmodels.datasets.scotland import Load
-    >>> data = Load()
-    >>> data.exog = models.tools.add_constant(data.exog)
+    >>> import scikits.statsmodels as sm
+    >>> data = sm.datasets.scotland.Load()
+    >>> data.exog = sm.add_constant(data.exog)
 
     Instantiate a gamma family model with the default link function.
 
-    >>> gamma_model = models.GLM(data.endog, data.exog,
-            family=models.family.Gamma())
+    >>> gamma_model = sm.GLM(data.endog, data.exog,
+            family=sm.family.Gamma())
     >>> gamma_results = gamma_model.fit()
     >>> gamma_results.params
     array([  4.96176830e-05,   2.03442259e-03,  -7.18142874e-05,
@@ -528,3 +527,4 @@ still named bse
         return self._llf
 
 #TODO: write summary method to return a string
+#       using output.py in sandbox...

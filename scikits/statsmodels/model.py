@@ -187,12 +187,10 @@ class LikelihoodModelResults(Results):
 
         Examples
         --------
-        >>>from models.datasets.longley import Load
-        >>>from models.tools import add_constant
-        >>>import models
-        >>>data = Load()
-        >>>data.exog = add_constant(data.exog)
-        >>>results = models.OLS(data.endog, data.exog).fit()
+        >>> import scikits.statsmodels as sm
+        >>>data = sm.datasets.longley.Load()
+        >>>data.exog = sm.add_constant(data.exog)
+        >>>results = sm.OLS(data.endog, data.exog).fit()
         >>>results.t()
         array([ 0.17737603, -1.06951632, -4.13642736, -4.82198531, -0.22605114,
         4.01588981, -3.91080292])
@@ -311,13 +309,11 @@ arguments.'
         Examples
         -------
         >>>import numpy as np
-        >>>import models
-        >>>from models.datasets.longley import Load
-        >>>from models.tools import add_constant
-        >>>data = Load()
-        >>>data.exog = add_constant(data.exog)
-        >>>results = models.OLS(data.endog, data.exog).fit()
-        >>>r = np.zeros(len(results.params))
+        >>>import scikits.statsmodels as sm
+        >>>data = sm.datasets.longley.Load()
+        >>>data.exog = sm.add_constant(data.exog)
+        >>>results = sm.OLS(data.endog, data.exog).fit()
+        >>>r = np.zeros_like(results.params)
         >>>r[4:6] = [1,-1]
         >>>print r
         [ 0.  0.  0.  0.  1. -1.  0.]
@@ -340,7 +336,7 @@ arguments.'
         See also
         ---------
         t : method to get simpler t values
-        f_test : method for f tests
+        f_test : for f tests
         """
         r_matrix = np.squeeze(np.asarray(r_matrix))
 
@@ -393,11 +389,10 @@ T statistics'
         Examples
         ---------
         >>>import numpy as np
-        >>>import models
-        >>>from models.datasets.longley.data import Load
-        >>>data = Load()
-        >>>data.exog = models.tools.add_constant(data.exog)
-        >>>results = models.OLS(data.endog, data.exog).fit()
+        >>>import scikits.statsmodels as sm
+        >>>data = sm.datasets.longley.Load()
+        >>>data.exog = sm.add_constant(data.exog)
+        >>>results = sm.OLS(data.endog, data.exog).fit()
         >>>A = np.identity(len(results.params))
         >>>A = A[:-1,:]
 
@@ -408,6 +403,7 @@ T statistics'
         <F contrast: F=330.28533923463488, p=4.98403052872e-10, df_denom=9, df_num=6>
 
         Compare this to
+
         >>>results.F
         330.2853392346658
         >>>results.F_p
@@ -424,8 +420,8 @@ T statistics'
 
         See also
         --------
-        models.contrasts
-        models.model.t_test
+        scikits.statsmodels.contrasts
+        scikits.statsmodels.model.t_test
 
         """
         r_matrix = np.asarray(r_matrix)
@@ -464,11 +460,10 @@ T statistics'
 
         Examples
         --------
-        >>>import models
-        >>>from models.datasets.longley.data import Load
-        >>>data = Load()
-        >>>data.exog = models.tools.add_constant(data.exog)
-        >>>results = models.OLS(data.endog, data.exog).fit()
+        >>>import scikits.statsmodels as sm
+        >>>data = sm.datasets.longley.Load()
+        >>>data.exog = sm.add_constant(data.exog)
+        >>>results = sm.OLS(data.endog, data.exog).fit()
         >>>results.conf_int()
         array([[ -1.77029035e+02,   2.07152780e+02],
        [ -1.11581102e-01,   3.99427438e-02],

@@ -1,8 +1,6 @@
 import numpy as np
-#from scikits.statsmodels import tools
 from scipy.stats import f as fdist
 from scipy.stats import t as student_t
-
 import tools
 
 
@@ -76,7 +74,7 @@ class Contrast(object):
     Examples
     ---------
     >>>import numpy.random as R
-    >>>import models
+    >>>import scikits.statsmodels as sm
     >>>import numpy as np
     >>>R.seed(54321)
     >>>X = R.standard_normal((40,10))
@@ -84,7 +82,7 @@ class Contrast(object):
     Get a contrast
 
     >>>new_term = np.column_stack((X[:,0], X[:,2]))
-    >>>c = models.contrast.Contrast(new_term, X)
+    >>>c = sm.contrast.Contrast(new_term, X)
     >>>test = [[1] + [0]*9, [0]*2 + [1] + [0]*7]
     >>>np.allclose(c.contrast_matrix, test)
     True
@@ -105,7 +103,7 @@ class Contrast(object):
 
     >>>zero = np.zeros((40,))
     >>>new_term3 = np.column_stack((zero,X[:,2]))
-    >>>c3 = models.contrast.Contrast(new_term3, X)
+    >>>c3 = sm.contrast.Contrast(new_term3, X)
     >>>test2 = [0]*2 + [1] + [0]*7
     >>>np.allclose(c3.contrast_matrix, test2)
     True

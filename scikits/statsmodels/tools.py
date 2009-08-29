@@ -189,7 +189,8 @@ class StepFunction:
     Examples
     --------
     >>> from numpy import arange
-    >>> from models.tools import StepFunction
+    >>> import scikits.statsmodels as sm
+    >>> from sm.tools import StepFunction
     >>>
     >>> x = arange(20)
     >>> y = arange(20)

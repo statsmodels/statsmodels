@@ -1,5 +1,5 @@
 """
-Statistical tests to be used in conjuction with the smodels
+Statistical tests to be used in conjuction with the models
 
 Notes
 -----
