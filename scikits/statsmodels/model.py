@@ -36,7 +36,7 @@ class Model(object):
 
     def __init__(self, endog, exog=None):
         self.endog = np.asarray(endog)
-        self.exog = np.asarray(exog)
+        self.exog = np.atleast_2d(np.asarray(exog)) # 2d so that pinv works for 1d
         self.nobs = float(self.endog.shape[0])
 
     def fit(self):
@@ -45,7 +45,6 @@ class Model(object):
         """
         raise NotImplementedError
 
-#TODO: decorate predict with fit?
     def predict(self, design):
         """
         After a model has been fit predict returns the fitted values.  If

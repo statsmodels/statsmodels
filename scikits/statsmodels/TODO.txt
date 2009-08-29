@@ -1,41 +1,20 @@
-Tests
+Tests TODO
 ----------
 Test I/O of models wrt array types, dimensions
     - add checks in all top class for data
-Make sure all tests actually run...
-    -some problems with removing imports from __init__ have been hidden
 
-Issues
+Known Issues
 ----------
-Make sure all results are computed where they should be
 Need to clip mu's in GLM to avoid np.log(0), etc. (done for gamma)
+Regression will not work with a 1d array for exog (pinv needs two), then
+    other calculations need checking and changing
 
-Other cleanup
---------------------
-Check all imports, cut out what's not needed
-
-
-Update all examples/docstrings
-Make sure docs examples run
-Run lint
-Technical docs (theory, references, formulas)
+TODO
+-----
 Make a recarray dataset and masked dataset for testing and development
-
-Put inheritance structure in docs, note where attributes/methods of parent class
-    are overwritten.
-
+Put inheritance structure in docs, note where attributes/methods of parent class      are overwritten.
 Rename bse
 Add tvalues attribute to results instead of calling t method?
 
 
-Docs
------
-contrasts (done)
-model (done)
-regression (done)
-glm / family / links (done)
-rlm / robust / scales (done)
-tools (mostly done)
-document datasets (done)
 note the tests requirements somewhere (rpy, R, car library)
-

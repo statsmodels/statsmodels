@@ -184,10 +184,6 @@ Should be of length %s, if sigma is a 1d array" % nobs
     def initialize(self):
         self.wexog = self.whiten(self.exog)
         self.wendog = self.whiten(self.endog)
-#TODO:
-# wexog = np.atleast_2d(wexog)
-# or
-# exog = np.array(exog)[:,None]
         self.pinv_wexog = np.linalg.pinv(self.wexog)
         self.normalized_cov_params = np.dot(self.pinv_wexog,
                                          np.transpose(self.pinv_wexog))

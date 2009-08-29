@@ -1,5 +1,9 @@
 """
 Statistical tests to be used in conjuction with the smodels
+
+Notes
+-----
+These functions haven't been formally tested.
 """
 
 from scipy import stats
@@ -80,16 +84,21 @@ def jarque_bera(resids):
 
     return JB, JBpv, skew, kurtosis
 
-collinearity(exog):
+conditionnum(exog):
     """
     Returns the condition number of an exogenous design array.
 
-    The given array is first normalized (except for any constant term)
-    so that each column is a unit length vector then
+    The given array is first normalized (except for a constant term assumed
+    to be in the last column) so that each column is a unit length vector
+    then the condition number of dot(norm_exog.T,norm_exog) is returned.
+    The condition number is defined as the square root of the ratio of the
+    largest eigenvalue to the smallest eigenvalue.
 
     Parameters
     ----------
-    exog
+    exog : array-like
+        An exogenous design matrix with the final column assumed to be a
+        the constant
 
     Returns
     -------

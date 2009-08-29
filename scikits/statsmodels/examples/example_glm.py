@@ -1,45 +1,38 @@
-'''Example for Generalized Linear Model
-
-* load data
-* convert string category to dummy or indicator variable
-* initialize model
-* call fit() and obtain estimation results
-* look at results
-
+'''Examples: scikits.statsmodels.GLM
 '''
-
 import numpy as np
+import scikits.statsmodels as sm
 
-import scikits.statsmodels
-from scikits.statsmodels import glm
-from scikits.statsmodels.tools import xi, add_constant
+### Example for using GLM on binomial response data
+### the input response vector is specified as (success, failure)
 
-from exampledata import lbw
+data = sm.datasets.star98.Load()
+data.exog = sm.add_constant(data.exog)
 
-X = lbw()
-X = xi(X, col='race', drop=True)
-des = np.column_stack((X['age'],X['lwt'],X['black'],X['other'],X['smoke'], X['ptl'], X['ht'], X['ui']))
-des = add_constant(des)
-model = glm.GLM(X.low, des, family=scikits.statsmodels.family.Binomial())
-results = model.fit()
-print '\n Parameter Estimates'
-print 'our results'
-print results.params
-stata_lbw_beta = (-.0271003, -.0151508, 1.262647,
-                   .8620792,  .9233448,  .5418366,
-                  1.832518,   .7585135,  .4612239)
-# R results from Rpy_example.py
-R_lbw_beta = (-0.0271003108, -0.0151508184,  1.2626472825,
-               0.8620791601,  0.9233448207,  0.5418365644,
-               1.8325178019,  0.7585134798,  0.4612238834)
-print 'stata results'
-print ' '.join(['%11.7f']*9) % stata_lbw_beta
-print 'R/rpy results'
-print ' '.join(['%11.8f']*9) % R_lbw_beta
+print """The response variable is (success, failure).  Eg., the first
+observation is """, data.endog[0]
 
-print '\nstandard errors of parameters'
-print results.bse
-print '\nt-statistics for parameter estimates'
-print results.t()
+glm_binom = sm.GLM(data.endog, data.exog, family=sm.family.Binomial())
 
+### In order to fit this model, you must (for now) specify the number of
+### trials per observation ie., success + failure
+### This is the only time the data_weights argument should be used.
 
+trials = data.endog.sum(axis=1)
+binom_results = glm_binom.fit(data_weights = trials)
+
+### Example for using GLM Gamma
+data2 = sm.datasets.scotvote.Load()
+data2.exog = sm.add_constant(data2.exog)
+glm_gamma = sm.GLM(data.endog, data.exog, family=sm.family.Gamma())
+glm_results = glm_gamma.fit()
+
+### Example for Gaussian link with a noncanonical link
+nobs = 100
+x = np.arange(nobs)
+np.random.seed(54321)
+X = np.column_stack(x,x**2)
+X = sm.add_constant(X)
+lny = np.exp(-(.03*x + .0001*x**2 - 1.0)) + .001 * np.random.rand(nobs)
+gauss_log = sm.GLM(lny, X, family=sm.family.Gaussian(sm.family.links.log))
+gauss_log_results = gauss_log.fit()
