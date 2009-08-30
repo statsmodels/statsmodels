@@ -8,13 +8,13 @@ Background
 ----------
 
 Scipy.stats.models was originally written by Jonathan Taylor.
-For some time it was part of scipy but then removed from it.During
+For some time it was part of scipy but then removed from it. During
 the Google Summer of Code 2009, stats.models was corrected, tested and
 enhanced.
 
 Now, we are releasing it as a standalone package in the scikits
 namespace as :mod:`scikits.statsmodels` to gain some experience with
-actual usage of it. This scikits.statsmodel is intended to be eventually
+actual usage of it. This scikits.statsmodels is intended to be eventually
 re-included in scipy.
 
 
@@ -42,7 +42,7 @@ method arguments have changed. Additional estimation
 results, e.g. test statistics have been included.
 
 Most importantly, almost every result has been verified with at least one
-other statistical package, R, Stata and SAS. The guiding principal for the
+other statistical package: R, Stata or SAS. The guiding principal for the
 rewrite was that all numbers have to be verified, even if we don't manage
 to cover everything. There are a few remaining issues, that we hope to
 clear up soon. Not all parts of the code have been tested for unexpected
@@ -56,7 +56,7 @@ The code is written for plain NumPy arrays.
 
 We have also included several datasets from the public domain and by
 permission for the tests and examples.  The datasets follow
-fairly closely David Cournapeaus datasets proposal in
+fairly closely David Cournapeau's datasets proposal in
 scikits.learn, with some small modifications. The datasets
 are set up so that it is easy to add more datasets.
 
