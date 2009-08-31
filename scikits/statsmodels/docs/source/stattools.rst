@@ -1,7 +1,7 @@
-.. currentmodule:: scikits.statsmodels.stattests
+.. currentmodule:: scikits.statsmodels.stattools
 
 
-.. _stattests:
+.. _stattools:
 
 Statistical Tests for Residual Analysis
 =======================================
@@ -20,3 +20,4 @@ scipy.stats.
    durbin_watson
    jarque_bera
    omni_normtest
+   conditionnum
