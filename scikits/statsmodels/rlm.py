@@ -36,8 +36,28 @@ class RLM(LikelihoodModel):
         TrimmedMean, Hampel, and TukeyBiweight.  The default is HuberT().
         See scikits.statsmodels.robust.norms for more information.
 
-    Attributes
-    ----------
+
+    Methods
+    -------
+    deviance
+        Returns the (unnormalized) log-likelihood of the model
+    fit
+        Fits the model.  Returns an RLMResults class.
+    information
+        Not yet implemented.
+    newton
+        Not yet implemented.
+    results
+        A property that returns an RLMResults class.  Equivalent to calling
+        fit with the default arguments.
+    score
+        Not yet implemented.
+
+    Notes
+    -----
+
+    **Attributes**
+
     df_model : float
         The degrees of freedom of the model.  The number of regressors p less
         one for the intercept.  Note that the reported model degrees
@@ -59,7 +79,7 @@ class RLM(LikelihoodModel):
         Contains information about the iterations. Its keys are `fittedvalues`,
         `deviance`, and `params`.
     M : scikits.statsmodels.robust.norms.RobustNorm
-         See above.  Robust esstimator instance instantiated.
+         See above.  Robust estimator instance instantiated.
     nobs : float
         The number of observations n
     pinv_wexog : array
@@ -70,21 +90,6 @@ class RLM(LikelihoodModel):
         The p x p normalized covariance of the design / exogenous data.
         This is approximately equal to (X.T X)^(-1)
 
-    Methods
-    -------
-    deviance
-        Returns the (unnormalized) log-likelihood of the model
-    fit
-        Fits the model.  Returns an RLMResults class.
-    information
-        Not yet implemented.
-    newton
-        Not yet implemented.
-    results
-        A property that returns an RLMResults class.  Equivalent to calling
-        fit with the default arguments.
-    score
-        Not yet implemented.
 
     Examples
     ---------
@@ -261,8 +266,8 @@ class RLMResults(LikelihoodModelResults):
     """
     Class to contain RLM results
 
-    Attributes
-    ----------
+    **Attributes**
+
     bcov_scaled : array
         p x p scaled covariance matrix specified in the model fit method.
         The default is H1. H1 is defined as

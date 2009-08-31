@@ -321,7 +321,7 @@ class Poisson(Family):
         """Gaussian deviance residual
 
         Parameters
-        -----------
+        ----------
         Y : array-like
             Endogenous response variable
         mu : array-like
@@ -337,33 +337,7 @@ class Poisson(Family):
 
         Poisson deviance residuals
 
-        Parameters
-        -----------
-Gaussian deviance residual
 
-        Parameters
-        -----------
-        Y : array-like
-            Endogenous response variable
-        mu : array-like
-            Fitted mean response variable
-
-        Returns
-        -------
-        resid_dev : array
-            Deviance residuals as defined below
-
-        Formulas
-        --------
-        Y : array-like
-            Endogenous response variable
-        mu : array-like
-            Fitted mean response variable
-
-        Returns
-        -------
-        resid_dev : array
-            Deviance residuals as defined below
 
         Formulas
         --------
@@ -387,8 +361,8 @@ Gaussian deviance residual
         deviance : float
             The deviance function at (Y,mu) as defined below.
 
-        Formulas
-        --------
+        Notes
+        -----
         If a constant term is included it is defined as
 
         `deviance` = 2*sum_i(Y*log(Y/mu))
@@ -1256,7 +1230,7 @@ class NegativeBinomial(Family):
         resid_dev : array
             The array of deviance residuals
 
-        Formula
+        Formulas
         --------
         `resid_dev` = sign(Y-mu) * sqrt(piecewise)
 
