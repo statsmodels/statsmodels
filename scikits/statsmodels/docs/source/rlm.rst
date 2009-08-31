@@ -8,9 +8,10 @@ Robust Linear Models
 
 Introduction
 ------------
-Robust linear models are robust
-more
-text
+Robust Linear models
+
+.. automodule:: scikits.statsmodels.rlm
+
 
 Examples
 --------

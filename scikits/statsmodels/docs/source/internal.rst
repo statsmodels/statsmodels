@@ -1,6 +1,16 @@
 
 .. _model:
 
+Introduction
+------------
+
+The following summarizes classes and functions that are not intended to be
+directly used, but of interest only for internal use or for a developer who
+wants to extend on existing model classes.
+
+
+Reference
+---------
 
 Model and Result Classes
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -9,14 +19,12 @@ These are the base classes for both the estimation models and the results.
 They are not directly useful, but layout the structure of the subclasses and
 define some common methods.
 
-.. currentmodule:: scikits.statsmodels.models
+.. currentmodule:: scikits.statsmodels.model
 
 .. autosummary::
    :toctree: generated/
 
-
-   LikelihoodModel
    Model
+   LikelihoodModel
    Results
    LikelihoodModelResults
-   ContrastResults

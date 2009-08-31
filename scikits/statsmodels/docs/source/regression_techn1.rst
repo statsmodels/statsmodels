@@ -1,7 +1,7 @@
-.. currentmodule:: scikits.statsmodels.glm
+.. currentmodule:: scikits.statsmodels.regression
 
 
-.. _glm_techn1:
+.. _regression-techn1:
 
 Technical Documentation
 =======================

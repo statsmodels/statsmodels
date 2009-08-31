@@ -12,8 +12,10 @@ Introduction
 
 Generalized linear models is currently implemented for several families
 more text
-b
-b
+
+
+.. automodule:: scikits.statsmodels.glm
+
 
 Examples
 --------
@@ -36,6 +38,8 @@ Model and Result Classes
 Families
 ^^^^^^^^
 
+
+
 The distribution families currently implemented are
 
 .. currentmodule:: scikits.statsmodels.family.family
@@ -43,8 +47,8 @@ The distribution families currently implemented are
 .. autosummary::
    :toctree: generated/
 
-   Binomial
    Family
+   Binomial
    Gamma
    Gaussian
    InverseGaussian
