@@ -84,7 +84,7 @@ def jarque_bera(resids):
 
     return JB, JBpv, skew, kurtosis
 
-conditionnum(exog):
+def conditionnum(exog):
     """
     Returns the condition number of an exogenous design array.
 

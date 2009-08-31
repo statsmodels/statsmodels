@@ -11,7 +11,7 @@ from regression import *
 from glm import *
 from rlm import *
 from tools import add_constant
-import model, tools, datasets, family, stattests
+import model, tools, datasets, family, stattools
 # robust is imported somewhere else?
 __all__ = filter(lambda s:not s.startswith('_'),dir())
 
