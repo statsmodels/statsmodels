@@ -75,7 +75,7 @@ Table of Content
    regression
    glm
    rlm
-   stattests
+   stattools
    tools
    internal
 
