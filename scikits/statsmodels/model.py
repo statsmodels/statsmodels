@@ -188,17 +188,18 @@ class LikelihoodModelResults(Results):
         Examples
         --------
         >>> import scikits.statsmodels as sm
-        >>>data = sm.datasets.longley.Load()
-        >>>data.exog = sm.add_constant(data.exog)
-        >>>results = sm.OLS(data.endog, data.exog).fit()
-        >>>results.t()
+        >>> data = sm.datasets.longley.Load()
+        >>> data.exog = sm.add_constant(data.exog)
+        >>> results = sm.OLS(data.endog, data.exog).fit()
+        >>> results.t()
         array([ 0.17737603, -1.06951632, -4.13642736, -4.82198531, -0.22605114,
         4.01588981, -3.91080292])
-        >>>results.t([1,2,4])
+        >>> results.t([1,2,4])
         array([-1.06951632, -4.13642736, -0.22605114])
-        >>>import numpy as np
-        >>>results.t(np.array([1,2,4]))
+        >>> import numpy as np
+        >>> results.t(np.array([1,2,4]))
         array([-1.06951632, -4.13642736, -0.22605114])
+
         """
 
         if self.normalized_cov_params is None:
@@ -307,15 +308,15 @@ arguments.'
         scale : scalar
 
         Examples
-        -------
-        >>>import numpy as np
-        >>>import scikits.statsmodels as sm
-        >>>data = sm.datasets.longley.Load()
-        >>>data.exog = sm.add_constant(data.exog)
-        >>>results = sm.OLS(data.endog, data.exog).fit()
-        >>>r = np.zeros_like(results.params)
-        >>>r[4:6] = [1,-1]
-        >>>print r
+        --------
+        >>> import numpy as np
+        >>> import scikits.statsmodels as sm
+        >>> data = sm.datasets.longley.Load()
+        >>> data.exog = sm.add_constant(data.exog)
+        >>> results = sm.OLS(data.endog, data.exog).fit()
+        >>> r = np.zeros_like(results.params)
+        >>> r[4:6] = [1,-1]
+        >>> print r
         [ 0.  0.  0.  0.  1. -1.  0.]
 
         r tests that the coefficients on the 5th and 6th independent
@@ -337,6 +338,7 @@ arguments.'
         ---------
         t : method to get simpler t values
         f_test : for f tests
+
         """
         r_matrix = np.squeeze(np.asarray(r_matrix))
 
@@ -387,35 +389,35 @@ T statistics'
             matrix based on a restrictions matrix.
 
         Examples
-        ---------
-        >>>import numpy as np
-        >>>import scikits.statsmodels as sm
-        >>>data = sm.datasets.longley.Load()
-        >>>data.exog = sm.add_constant(data.exog)
-        >>>results = sm.OLS(data.endog, data.exog).fit()
-        >>>A = np.identity(len(results.params))
-        >>>A = A[:-1,:]
+        --------
+        >>> import numpy as np
+        >>> import scikits.statsmodels as sm
+        >>> data = sm.datasets.longley.Load()
+        >>> data.exog = sm.add_constant(data.exog)
+        >>> results = sm.OLS(data.endog, data.exog).fit()
+        >>> A = np.identity(len(results.params))
+        >>> A = A[:-1,:]
 
         This tests that each coefficient is jointly statistically
         significantly different from zero.
 
-        >>>print results.f_test(A)
+        >>> print results.f_test(A)
         <F contrast: F=330.28533923463488, p=4.98403052872e-10, df_denom=9, df_num=6>
 
         Compare this to
 
-        >>>results.F
+        >>> results.F
         330.2853392346658
-        >>>results.F_p
+        >>> results.F_p
         4.98403096572e-10
 
-        >>>B = np.array(([0,1,-1,0,0,0,0],[0,0,0,0,1,-1,0]))
+        >>> B = np.array(([0,1,-1,0,0,0,0],[0,0,0,0,1,-1,0]))
 
         This tests that the coefficient on the 2nd and 3rd regressors are
         equal and jointly that the coefficient on the 5th and 6th regressors
         are equal.
 
-        >>>print results.f_test(B)
+        >>> print results.f_test(B)
         <F contrast: F=9.740461873303655, p=0.00560528853174, df_denom=9, df_num=2>
 
         See also
@@ -481,6 +483,7 @@ T statistics'
         -----
         The confidence interval is based on Student's t distribution for all
         models except RLM and GLM, which uses the standard normal distribution.
+
         """
         if self.__class__.__name__ in ['RLMResults','GLMResults']:
             dist = norm

@@ -11,7 +11,8 @@ class RobustNorm(object):
 
     Parameters
     ----------
-    Some subclasses have optional tuning constants.
+    None :
+        Some subclasses have optional tuning constants.
 
     Methods
     -------
@@ -431,6 +432,11 @@ class AndrewWave(RobustNorm):
         Returns
         -------
         array
+
+        Notes
+        -----
+        The weighting function for Andrews wave is defined as ::
+
             weights(z) = sin(z/a)/(z/a)     for |z| <= a*pi
             weights(z) = 0                  for |z| > a*pi
         """
