@@ -38,7 +38,7 @@ class Link(object):
 
 class Logit(Link):
     """
-    The logit transform as a link function
+    The logit transform
 
     Methods
     -------
@@ -152,7 +152,7 @@ logit = Logit()
 class Power(Link):
 
     """
-    The power transform as a link function
+    The power transform
 
     Parameters
     ----------
@@ -248,7 +248,7 @@ class Power(Link):
 inverse = Power(power=-1.)
 inverse.__doc__ = """
 
-The inverse transform as a link function
+The inverse transform
 
 Formulas
 --------
@@ -262,7 +262,7 @@ Alias of statsmodels.family.links.Power(power=-1.)
 sqrt = Power(power=0.5)
 sqrt.__doc__ = """
 
-The square-root transform as a link function
+The square-root transform
 
 Formulas
 --------
@@ -275,7 +275,7 @@ Alias of statsmodels.family.links.Power(power=.5)"""
 inverse_squared = Power(power=-2.)
 inverse_squared.__doc__ = """
 
-The inverse squared transform as a link function
+The inverse squared transform
 
 Formulas
 ---------
@@ -288,7 +288,7 @@ Alias of statsmodels.family.links.Power(power=2.)
 
 identity = Power(power=1.)
 identity.__doc__ = """
-The identity transform as a link function
+The identity transform
 
 Formulas
 ---------
@@ -302,7 +302,7 @@ Alias of statsmodels.family.links.Power(power=1.)
 class Log(Link):
 
     """
-    The log transform as a link function
+    The log transform
 
     Methods
     -------
@@ -393,7 +393,7 @@ class Log(Link):
         return 1. / p
 log = Log()
 log.__doc__ = """
-The log transform as a link function
+The log transform
 
 Notes
 -----
@@ -403,7 +403,7 @@ log is a an alias of Log.  log = Log()
 #TODO: the CDFLink is untested
 class CDFLink(Logit):
     """
-    The use the CDF of a scipy.stats distribution as a link function
+    The use the CDF of a scipy.stats distribution
 
     CDFLink is a subclass of logit in order to use its _clean method
     for the link and its derivative.
@@ -502,7 +502,7 @@ class CDFLink(Logit):
 probit = CDFLink()
 probit.__doc__ = """
 
-The probit (standard normal CDF) transform as a link function
+The probit (standard normal CDF) transform
 
 Formulas
 --------
@@ -517,7 +517,7 @@ probit = CDFLink()
 cauchy = CDFLink(dbn=scipy.stats.cauchy)
 cauchy.__doc__ = """
 
-The Cauchy (standard Cauchy CDF) transform as a link function
+The Cauchy (standard Cauchy CDF) transform
 
 Formulas
 --------
@@ -532,7 +532,7 @@ cauch = CFGLink(dbn=scipy.stats.cauchy)
 #TODO: CLogLog is untested
 class CLogLog(Logit):
     """
-    The complementary log-log transform as a link function
+    The complementary log-log transform
 
     CLogLog inherits from Logit in order to have access to its _clean method
     for the link and its derivative.

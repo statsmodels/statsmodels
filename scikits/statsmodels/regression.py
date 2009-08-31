@@ -223,7 +223,7 @@ Should be of length %s, if sigma is a 1d array" % nobs
         to solve the least squares minimization.
 
         """
-#TODO: add a full_output keyword so that only lite results needed for
+#TODO: add a full_output keyword so that only light results needed for
 # IRLS are calculated?
         beta = np.dot(self.pinv_wexog, self.wendog)
         # should this use lstsq instead?
@@ -291,7 +291,8 @@ Should be of length %s, if sigma is a 1d array" % nobs
 
         Formula
         -------
-        ..math :: -\frac{n}{2}\text{\ensuremath{\log}}\left(Y-\hat{Y}\right)-\frac{n}{2}\left(1+\log\left(\frac{2\pi}{n}\right)\right)-\frac{1}{2}\text{log}\left(\left|\Sigma\right|\right)\]
+        ..math ::
+        -\frac{n}{2}\text{\ensuremath{\log}}\left(Y-\hat{Y}\right)-\frac{n}{2}\left(1+\log\left(\frac{2\pi}{n}\right)\right)-\frac{1}{2}\text{log}\left(\left|\Sigma\right|\right)\]
 
         Notes
         -----
@@ -459,8 +460,7 @@ class OLS(WLS):
     Attributes
     ----------
     weights : scalar
-        The OLS model has an attribute weights = array(1.0).  This is due to
-        its inheritance from WLS.
+        Has an attribute weights = array(1.0) due to inheritance from WLS.
 
     See regression.GLS
 
@@ -645,18 +645,15 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False):
     order : integer, optional
         The order of the autoregressive process.  Default is 1.
     method : string, optional
-       Method can be "unbiased" or "mle" and this determines
-       denominator in estimate of autocorrelation function (ACF)
-       at lag k. If "mle", the denominator is n=X.shape[0], if
-       "unbiased" the denominator is n-k.
+       Method can be "unbiased" or "mle" and this determines denominator in
+       estimate of autocorrelation function (ACF) at lag k. If "mle", the
+       denominator is n=X.shape[0], if "unbiased" the denominator is n-k.
        The default is unbiased.
     df : integer, optional
-       Specifies the degrees of freedom. If df is supplied,
-       then it is assumed the X has df degrees of
-       freedom rather than n.  Default is None.
+       Specifies the degrees of freedom. If `df` is supplied, then it is assumed
+       the X has `df` degrees of freedom rather than `n`.  Default is None.
     inv : Bool
-        If inv is True the inverse of R is also returned.
-        The default is False.
+        If inv is True the inverse of R is also returned.  Default is False.
 
     Returns
     -------
@@ -717,11 +714,9 @@ class RegressionResults(LikelihoodModelResults):
     Attributes
     -----------
     aic
-        Aikake's information criteria
-        -2 * llf + 2*(df_model+1)
+        Aikake's information criteria :math:`-2llf + 2(df_model+1)`
     bic
-        Bayes' information criteria
-        -2 * llf + log(n)*(df_model+1)
+        Bayes' information criteria :math:`-2llf + \log(n)(df_model+1)`
     pinv_wexog
         See specific model class docstring
     centered_tss
