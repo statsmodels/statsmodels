@@ -65,20 +65,38 @@ class GLS(LikelihoodModel):
            n-length vector, then `sigma` is assumed to be a diagonal matrix
            with the given `sigma` on the diagonal.  This should be the same as WLS.
 
-
-
+    Attributes
+    ----------
+    pinv_wexog : array
+        `pinv_wexog` is the p x n Moore-Penrose pseudoinverse of `wexog`.
+    cholsimgainv : array
+        The transpose of the Cholesky decomposition of the pseudoinverse.
+    df_model : float
+        p - 1, where p is the number of regressors including the intercept.
+        of freedom.
+    df_resid : float
+        Number of observations n less the number of parameters p.
+    llf : float
+        The value of the likelihood function of the fitted model.
+    nobs : float
+        The number of observations n.
+    normalized_cov_params : array
+        p x p array :math:`(X^{T}\Sigma^{-1}X)^{-1}`
+    sigma : array
+        `sigma` is the n x n covariance structure of the error terms.
+    wexog : array
+        Design matrix whitened by `cholsigmainv`
+    wendog : array
+        Response variable whitened by `cholsigmainv`
 
     Methods
     -------
     fit
        Solves the least squares minimization.
-       Note that using the model's results property is equivalent to
-       calling fit.
     information
-        Returns the Fisher information matrix for a given set of parameters.
-        Not yet implemented
+        Fisher information matrix.  Not yet implemented
     initialize
-        (Re)-initialize a model. #TODO: should this be a public method?
+        (Re)-initialize a model.
     loglike
         Obtain the loglikelihood for a given set of parameters.
     newton
@@ -91,50 +109,10 @@ class GLS(LikelihoodModel):
         Returns the input premultiplied by cholsigmainv
 
 
-
     Notes
     -----
     If sigma is a function of the data making one of the regressors
     a constant, then the current postestimation statistics will not be correct.
-
-    **Attributes**
-
-    pinv_wexog : array
-        `pinv_wexog` is the p x n Moore-Penrose pseudoinverse
-        of the whitened design matrix. In matrix notation it is approximately
-        [X^(T)(sigma)^(-1)X]^(-1)X^(T)psi
-        where psi is cholsigmainv.T
-    cholsimgainv : array
-        n x n upper triangular matrix such that in matrix notation
-        (cholsigmainv^(T) cholsigmainv) = (sigma)^(-1).
-        It is the transpose of the Cholesky decomposition of the pseudoinverse
-        of sigma.
-    df_model : float
-        The model degrees of freedom is equal to p - 1, where p is the number
-        of regressors.  Note that the intercept is not reported as a degree
-        of freedom.
-    df_resid : float
-        The residual degrees of freedom is equal to the number of observations
-        n less the number of parameters p.  Note that the intercept is counted as
-        using a degree of freedom for the degrees of freedom of the
-        residuals.
-    llf : float
-        The value of the likelihood function of the fitted model.
-    nobs : float
-        The number of observations n
-    normalized_cov_params : array
-        `normalized_cov_params` is a p x p array
-        In matrix notation this can be written (X^(T) sigma^(-1) X)^(-1)
-    sigma : array
-        `sigma` is the n x n covariance matrix of the error terms or
-        E(resid resid.T)
-        where E is the expectations operator.
-    wexog : array
-        `wexog` is the whitened design matrix.  In matrix notation
-        (cholsigmainv exog)
-    wendog : array
-        The whitened response /dependent variable.  In matrix notation
-        (cholsigmainv endog)
 
 
     Examples
