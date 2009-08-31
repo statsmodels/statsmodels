@@ -37,6 +37,8 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'Load']
+
 """Name of dataset."""
 
 __docformat__ = 'restructuredtext'
@@ -79,12 +81,12 @@ label: 0 for good credit, +1 for bad credit
 
 import numpy as np
 
-class load():
+class Load():
     """load the committee data and returns a data class.
 
-    :returns:
-        data instance:
-            a class of the data with array attrbutes 'endog' and 'exog'
+    Returns
+    Load instance:
+        a class of the data with array attrbutes 'endog' and 'exog'
     """
     def __init__(self):
 ##### EDIT THE FOLLOWING LINE TO INCLUDE THE DatasetName.py #####

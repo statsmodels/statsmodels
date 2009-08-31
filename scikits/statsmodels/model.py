@@ -188,10 +188,10 @@ class LikelihoodModelResults(Results):
 
         Examples
         --------
-        >>>from models.datasets.longley.data import load
+        >>>from models.datasets.longley import Load
         >>>from models.tools import add_constant
         >>>import models
-        >>>data = load()
+        >>>data = Load()
         >>>data.exog = add_constant(data.exog)
         >>>results = models.OLS(data.endog, data.exog).fit()
         >>>results.t()
@@ -313,9 +313,9 @@ arguments.'
         -------
         >>>import numpy as np
         >>>import models
-        >>>from models.datasets.longley.data import load
+        >>>from models.datasets.longley import Load
         >>>from models.tools import add_constant
-        >>>data = load()
+        >>>data = Load()
         >>>data.exog = add_constant(data.exog)
         >>>results = models.OLS(data.endog, data.exog).fit()
         >>>r = np.zeros(len(results.params))
@@ -359,6 +359,8 @@ T statistics'
 
         _effect = np.dot(r_matrix, self.params)
         _sd = np.sqrt(self.cov_params(r_matrix=r_matrix))
+        if _sd.ndim > 1:
+            _sd = np.diag(_sd)
         _t = _effect * recipr(_sd)
         return ContrastResults(effect=_effect, t=_t, sd=_sd,
                 df_denom=self.model.df_resid)
@@ -393,8 +395,8 @@ T statistics'
         ---------
         >>>import numpy as np
         >>>import models
-        >>>from models.datasets.longley.data import load
-        >>>data = load()
+        >>>from models.datasets.longley.data import Load
+        >>>data = Load()
         >>>data.exog = models.tools.add_constant(data.exog)
         >>>results = models.OLS(data.endog, data.exog).fit()
         >>>A = np.identity(len(results.params))
@@ -464,8 +466,8 @@ T statistics'
         Examples
         --------
         >>>import models
-        >>>from models.datasets.longley.data import load
-        >>>data = load()
+        >>>from models.datasets.longley.data import Load
+        >>>data = Load()
         >>>data.exog = models.tools.add_constant(data.exog)
         >>>results = models.OLS(data.endog, data.exog).fit()
         >>>results.conf_int()

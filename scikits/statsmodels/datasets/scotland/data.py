@@ -36,22 +36,20 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'Load']
+
 """Taxation Powers Vote for the Scottish Parliament 1997 dataset."""
 
 __docformat__ = 'restructuredtext'
 
-COPYRIGHT   = """Permission granted by the author."""
+COPYRIGHT   = """Used with expressed permission from the original author,
+who retains all rights."""
 TITLE       = "Taxation Powers Vote for the Scottish Parliamant 1997"
 SOURCE      = """
+Jeff Gill's `Generalized Linear Models: A Unifited Approach
+
 http://jgill.wustl.edu/research/books.html
-
-Dr. Jeff Gill
-Department of Political Science
-One Brookings Drive, Seigle L079
-Washington University
-St. Louis, MO 63130-4899
 """
-
 DESCRSHORT  = """Taxation Powers' Yes Vote for Scottish Parliamanet-1997"""
 
 DESCRLONG   = """
@@ -84,12 +82,13 @@ Council district names are included in the data file, though not returned.
 
 import numpy as np
 
-class load():
+class Load():
     """load the scotland data and returns a data class.
 
-    :returns:
-        data instance:
-            a class of the data with array attrbutes 'endog' and 'exog'
+    Returns
+    -------
+    Load instance:
+        a class of the data with array attrbutes 'endog' and 'exog'
     """
     def __init__(self):
         from scotvote import __dict__, names

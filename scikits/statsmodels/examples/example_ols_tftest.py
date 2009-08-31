@@ -9,17 +9,14 @@ TODO: check to get simultaneous t-tests back
 
 import numpy as np
 import numpy.testing as npt
-import scikits.statsmodels
-from scikits.statsmodels.datasets.longley.data import load
-from scikits.statsmodels.regression import OLS
-from scikits.statsmodels import tools
-
+import scikits.statsmodels as models
+from scikits.statsmodels.datasets.longley import Load
 
 print '\n\n Example 1: Longley Data, high multicollinearity'
 
-data = load()
-data.exog = tools.add_constant(data.exog)
-res = OLS(data.endog, data.exog).fit()
+data = Load()
+data.exog = models.tools.add_constant(data.exog)
+res = models.OLS(data.endog, data.exog).fit()
 
 # test pairwise equality of some coefficients
 R2 = [[0,1,-1,0,0,0,0],[0, 0, 0, 0, 1, -1, 0]]
@@ -89,7 +86,7 @@ array([[  1.77376028e-01,              NaN,              NaN,
 >>> betatval
 array([ 0.17737603, -1.06951632, -4.13642736, -4.82198531, -0.22605114,
         4.01588981, -3.91080292])
->>> np.diag(ttest0.t)
+>>> ttest0.t
 array([ 0.17737603, -1.06951632, -4.13642736, -4.82198531, -0.22605114,
         4.01588981])
 '''
@@ -97,12 +94,12 @@ array([ 0.17737603, -1.06951632, -4.13642736, -4.82198531, -0.22605114,
 print "\nsimultaneous t-tests"
 ttest0 = res.t_test(R2)
 
-t2 = np.diag(ttest0.tvalue)
+t2 = ttest0.tvalue
 print ttest0.tvalue
 print t2
 t2a = np.r_[res.t_test(np.array(R2)[0,:]).tvalue, res.t_test(np.array(R2)[1,:]).tvalue]
 print t2 - t2a
-t2pval = np.diag(ttest0.pvalue)
+t2pval = ttest0.pvalue
 print '%r' % t2pval    #reject
 # array([  9.33832896e-04,   9.98483623e-01])
 print 'reject'
@@ -131,63 +128,63 @@ dummyvar = (xcat == np.arange(ncat)).astype(float)
 
 beta = np.array([0., 2, -2, 1])[:,np.newaxis]
 ytrue = np.dot(dummyvar, beta)
-X = tools.add_constant(dummyvar[:,:-1])
+X = models.tools.add_constant(dummyvar[:,:-1])
 y = ytrue + sigma * np.random.randn(nsample,1)
-mod = OLS(y[:,0], X)
-res = mod.fit()
+mod2 = models.OLS(y[:,0], X)
+res2 = mod2.fit()
 
-print res.summary()
+print res2.summary()
 
-R = np.eye(ncat)[:-1,:]
-Ftest = res.f_test(R)
+R3 = np.eye(ncat)[:-1,:]
+Ftest = res2.f_test(R3)
 print repr((Ftest.fvalue, Ftest.pvalue))
-R = np.atleast_2d([0, 1, -1, 2])
-Ftest = res.f_test(R)
+R3 = np.atleast_2d([0, 1, -1, 2])
+Ftest = res2.f_test(R3)
 print repr((Ftest.fvalue, Ftest.pvalue))
 
 print 'simultaneous t-test for zero effects'
-R = np.eye(ncat)[:-1,:]
-ttest = res.t_test(R)
-print repr((np.diag(ttest.tvalue), np.diag(ttest.pvalue)))
-
-
-R = np.atleast_2d([0, 1, 1, 2])
-np.dot(R,res.params)
-Ftest = res.f_test(R)
-print repr((Ftest.fvalue, Ftest.pvalue))
-ttest = res.t_test(R)
-#print repr((np.diag(ttest.t), np.diag(ttest.pvalue)))
+R4 = np.eye(ncat)[:-1,:]
+ttest = res2.t_test(R4)
 print repr((ttest.tvalue, ttest.pvalue))
 
-R = np.atleast_2d([1, -1, 0, 0])
-np.dot(R,res.params)
-Ftest = res.f_test(R)
+
+R5 = np.atleast_2d([0, 1, 1, 2])
+np.dot(R5,res2.params)
+Ftest = res2.f_test(R5)
 print repr((Ftest.fvalue, Ftest.pvalue))
-ttest = res.t_test(R)
-#print repr((np.diag(ttest.t), np.diag(ttest.pvalue)))
+ttest = res2.t_test(R5)
+#print repr((ttest.t, ttest.pvalue))
 print repr((ttest.tvalue, ttest.pvalue))
 
-R = np.atleast_2d([1, 0, 0, 0])
-np.dot(R,res.params)
-Ftest = res.f_test(R)
+R6 = np.atleast_2d([1, -1, 0, 0])
+np.dot(R6,res2.params)
+Ftest = res2.f_test(R6)
 print repr((Ftest.fvalue, Ftest.pvalue))
-ttest = res.t_test(R)
-#print repr((np.diag(ttest.t), np.diag(ttest.pvalue)))
+ttest = res2.t_test(R6)
+#print repr((ttest.t, ttest.pvalue))
+print repr((ttest.tvalue, ttest.pvalue))
+
+R7 = np.atleast_2d([1, 0, 0, 0])
+np.dot(R7,res2.params)
+Ftest = res2.f_test(R7)
+print repr((Ftest.fvalue, Ftest.pvalue))
+ttest = res2.t_test(R7)
+#print repr((ttest.t, ttest.pvalue))
 print repr((ttest.tvalue, ttest.pvalue))
 
 
 print "\nExample: 2 categories: replicate stats.glm and stats.ttest_ind"
 
-mod2 = OLS(y[xcat.flat<2][:,0], X[xcat.flat<2,:][:,(0,-1)])
+mod2 = models.OLS(y[xcat.flat<2][:,0], X[xcat.flat<2,:][:,(0,-1)])
 res2 = mod2.fit()
 
-R = np.atleast_2d([1, 0])
-np.dot(R,res2.params)
-Ftest = res2.f_test(R)
+R8 = np.atleast_2d([1, 0])
+np.dot(R8,res2.params)
+Ftest = res2.f_test(R8)
 print repr((Ftest.fvalue, Ftest.pvalue))
 print repr((np.sqrt(Ftest.fvalue), Ftest.pvalue))
-ttest = res2.t_test(R)
-#print repr((np.diag(ttest.t), np.diag(ttest.pvalue)))
+ttest = res2.t_test(R8)
+#print repr(ttest.t), ttest.pvalue))
 print repr((ttest.tvalue, ttest.pvalue))
 
 

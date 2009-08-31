@@ -89,8 +89,8 @@ class RLM(LikelihoodModel):
     Examples
     ---------
     >>> import scikits.statsmodels as models
-    >>> from scikits.statsmodels.datasets.stackloss.data import load
-    >>> data = load()
+    >>> from scikits.statsmodels.datasets.stackloss import Load
+    >>> data = Load()
     >>> data.exog = models.tools.add_constant(data.exog)
     >>> rlm_model = models.RLM(data.endog, data.exog, \
     ...     M=models.robust.norms.HuberT())
@@ -107,7 +107,7 @@ class RLM(LikelihoodModel):
     >>>
     >>> rlm_hamp_hub = models.RLM(data.endog, data.exog, \
     ...     M=models.robust.norms.Hampel()).fit(scale_est=\
-            models.robust.scale.Hubers_scale())
+            models.robust.scale.HuberScale())
     >>> rlm_hamp_hub.params
     array([  0.73175452,   1.25082038,  -0.14794399, -40.27122257])
     """
@@ -163,15 +163,15 @@ class RLM(LikelihoodModel):
         """
         if isinstance(self.scale_est, str):
             if self.scale_est.lower() == 'mad':
-                return scale.MAD(resid)
+                return scale.mad(resid)
             if self.scale_est.lower() == 'stand_mad':
-                return scale.stand_MAD(resid)
-        elif isinstance(self.scale_est, scale.Hubers_scale):
+                return scale.stand_mad(resid)
+        elif isinstance(self.scale_est, scale.HuberScale):
             return scale.hubers_scale(self.df_resid, self.nobs, resid)
         else:
             return scale.scale_est(self, resid)**2
 
-    def fit(self, maxiter=50, tol=1e-8, scale_est='MAD', init=None, cov='H1',
+    def fit(self, maxiter=50, tol=1e-8, scale_est='mad', init=None, cov='H1',
             update_scale=True, conv='dev'):
         """
         Fits the model using iteratively reweighted least squares.
@@ -197,12 +197,12 @@ class RLM(LikelihoodModel):
             is used.  Currently it is the only available choice.
         maxiter : int
             The maximum number of iterations to try. Default is 50.
-        scale_est : string or Hubers_scale()
-            'MAD', 'stand_MAD', or Hubers_scale()
+        scale_est : string or HuberScale()
+            'mad', 'stand_mad', or HuberScale()
             Indicates the estimate to use for scaling the weights in the IRLS.
-            The default is 'MAD' (median absolute deviation.  Other options are
-            use 'stand_MAD' for the median absolute deviation standardized
-            around the median and 'Hubers_scale' for Huber's proposal 2.
+            The default is 'mad' (median absolute deviation.  Other options are
+            use 'stand_mad' for the median absolute deviation standardized
+            around the median and 'HuberScale' for Huber's proposal 2.
             Huber's proposal 2 has optional keyword arguments d, tol, and
             maxiter for specifying the tuning constant, the convergence
             tolerance, and the maximum number of iterations.
@@ -244,8 +244,9 @@ class RLM(LikelihoodModel):
         while (np.all(np.fabs(criterion[self.iteration]-\
                 criterion[self.iteration-1]) > tol) and \
                 self.iteration < maxiter):
-            self.weights = self.M.weights((self.endog - \
-                    wls_results.fittedvalues)/self.scale)
+#            self.weights = self.M.weights((self.endog - \
+#                    wls_results.fittedvalues)/self.scale)
+            self.weights = self.M.weights(wls_results.resid/self.scale)
             wls_results = WLS(self.endog, self.exog,
                                     weights=self.weights).fit()
             if update_scale is True:
@@ -262,42 +263,73 @@ class RLMResults(LikelihoodModelResults):
 
     Attributes
     ----------
-    bcov_scaled
-    bcov_unscaled
-    bse
+    bcov_scaled : array
+        p x p scaled covariance matrix specified in the model fit method.
+        The default is H1. H1 is defined as
+        k**2 * (1/df_resid*sum(M.psi(sresid)**2)*scale**2)/
+        ((1/nobs*sum(M.psi_deriv(sresid)))**2) * (X.T X)^(-1)
+
+        where k = 1 + (df_model +1)/nobs * var_psiprime/m**2
+        where m = mean(M.psi_deriv(sresid)) and
+        var_psiprime = var(M.psi_deriv(sresid))
+
+        H2 is defined as
+        k * (1/df_resid) * sum(M.psi(sresid)**2) *scale**2/
+        ((1/nobs)*sum(M.psi_deriv(sresid)))*W_inv
+
+        H3 is defined as
+        1/k * (1/df_resid * sum(M.psi(sresid)**2)*scale**2 *
+        (W_inv X.T X W_inv))
+
+        where k is defined as above and
+        W_inv = (M.psi_deriv(sresid) exog.T exog)^(-1)
+
+        See the technical documentation for cleaner formulae.
+    bcov_unscaled : array
+        The usual p x p covariance matrix with scale set equal to 1.  It
+        is then just equivalent to normalized_cov_params.
+    bse : array
+        An array of the standard errors of the parameters.  The standard
+        errors are taken from the robust covariance matrix specified in the
+        argument to fit.
+    chisq : array
+        An array of the chi-squared values of the paramter estimates.
     df_model
+        See RLM.df_model
     df_resid
-    fittedvalues
-    model
-    nobs
-    normalized_cov_params
-    params
-    pinv_wexog
-    resid
-    scale
-    sresid
-    weights
+        See RLM.df_resid
+    fittedvalues : array
+        The linear predicted values.  dot(exog, params)
+    model : scikits.statsmodels.rlm.RLM
+        A reference to the model instance
+    nobs : float
+        The number of observations n
+    normalized_cov_params : array
+        See RLM.normalized_cov_params
+    params : array
+        The coefficients of the fitted model
+    pinv_wexog : array
+        See RLM.pinv_wexog
+    resid : array
+        The residuals of the fitted model.  endog - fittedvalues
+    scale : float
+        The type of scale is determined in the arguments to the fit method in
+        RLM.  The reported scale is taken from the residuals of the weighted
+        least squares in the last IRLS iteration if update_scale is True.  If
+        update_scale is False, then it is the scale given by the first OLS
+        fit before the IRLS iterations.
+    sresid : array
+        The scaled residuals.
+    weights : array
+        The reported weights are determined by passing the scaled residuals
+        from the last weighted least squares fit in the IRLS algortihm.
 
-    Methods
-    -------
-    conf_int
-    cov_params
-    f_test
-    t
-    t_test
-
-    Examples
-
-    Notes
-    -----
-    The three options for robust covariance matrices were proposed by
-    Huber (1973, 1981; see References in scikits.statsmodels.rlm)
-
-    If cov is "H1" then the covariance matrix (and the standard errors
-    associated with the parameter estimates) is computed as
-
-
+    See also
+    --------
+    scikits.statsmodels.model.LikelihoodModelResults
     """
+
+
     def __init__(self, model, params, normalized_cov_params, scale):
         super(RLMResults, self).__init__(model, params,
                 normalized_cov_params, scale)
@@ -312,20 +344,19 @@ class RLMResults(LikelihoodModelResults):
         self.sresid = self.resid/self.scale
         self.pinv_wexog = model.pinv_wexog    # for bcov,
                                                 # this is getting sloppy
-        self.bcov_unscaled = self.cov_params(scale=1)
+        self.bcov_unscaled = self.cov_params(scale=1.)
         self.nobs = model.nobs
         self.weights = model.weights
-        m = np.mean(model.M.psi_deriv(self.resid/self.scale))
-        var_psiprime = np.var(model.M.psi_deriv(self.resid/self.scale))
+        m = np.mean(model.M.psi_deriv(self.sresid))
+        var_psiprime = np.var(model.M.psi_deriv(self.sresid))
         k = 1 + (self.df_model+1)/self.nobs * var_psiprime/m**2
-#make these properties like for regression?
+
         if model.cov == "H1":
             self.bcov_scaled = k**2 * (1/self.df_resid*\
                 np.sum(model.M.psi(self.sresid)**2)*self.scale**2)\
                 /((1/self.nobs*np.sum(model.M.psi_deriv(self.sresid)))**2)\
                 *model.normalized_cov_params
         else:
-#FIXME: could be optimized to not take the inverse?  Document for now.
             W = np.dot(model.M.psi_deriv(self.sresid)*model.exog.T,model.exog)
             W_inv = np.linalg.inv(W)
 # [W_jk]^-1 = [SUM(psi_deriv(Sr_i)*x_ij*x_jk)]^-1
@@ -342,6 +373,7 @@ class RLMResults(LikelihoodModelResults):
                     *np.dot(np.dot(W_inv, np.dot(model.exog.T,model.exog)),\
                     W_inv)
         self.bse = np.sqrt(np.diag(self.bcov_scaled))
+        self.chisq = (self.params/self.bse)**2
 
 if __name__=="__main__":
 #NOTE: This is to be removed
@@ -365,7 +397,7 @@ if __name__=="__main__":
 #    results_ols = model_ols.fit()
 
 #    model_huber = RLM(endog, exog, M=norms.HuberT(t=2.))
-#    results_huber = model_huber.fit(scale_est="stand_MAD", update_scale=False)
+#    results_huber = model_huber.fit(scale_est="stand_mad", update_scale=False)
 
 #    model_ramsaysE = RLM(endog, exog, M=norms.RamsayE())
 #    results_ramsaysE = model_ramsaysE.fit(update_scale=False)
@@ -379,8 +411,8 @@ if __name__=="__main__":
 #######################
 ### Stack Loss Data ###
 #######################
-    from models.datasets.stackloss.data import load
-    data = load()
+    from models.datasets.stackloss import Load
+    data = Load()
     data.exog = models.tools.add_constant(data.exog)
 #############
 ### Huber ###
@@ -419,7 +451,7 @@ if __name__=="__main__":
 ### Huber'sT ###
 ################
     m1_Huber_H = RLM(data.endog, data.exog, M=norms.HuberT())
-    results_Huber1_H = m1_Huber_H.fit(scale_est=scale.Hubers_scale())
+    results_Huber1_H = m1_Huber_H.fit(scale_est=scale.HuberScale())
 #    m2_Huber_H
 #    m3_Huber_H
 #    m4 = RLM(data.endog, data.exog, M=norms.HuberT())

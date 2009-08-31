@@ -12,9 +12,9 @@ R Venables, B Ripley. 'Modern Applied Statistics in S'
 import numpy as np
 from scipy.stats import norm as Gaussian
 import norms
-from scikits.statsmodels.tools import unsqueeze
+from scikits.statsmodels import tools
 
-def MAD(a, c=Gaussian.ppf(3/4.), axis=0):  # c \approx .6745
+def mad(a, c=Gaussian.ppf(3/4.), axis=0):  # c \approx .6745
     """
     The Median Absolute Deviation along given axis of an array
 
@@ -30,13 +30,13 @@ def MAD(a, c=Gaussian.ppf(3/4.), axis=0):  # c \approx .6745
 
     Returns
     --------
-    MAD : float
-        `MAD` = median(abs(`a`))/`c`
+    mad : float
+        `mad` = median(abs(`a`))/`c`
     """
     a = np.asarray(a)
     return np.median((np.fabs(a))/c, axis=axis)
 
-def stand_MAD(a, c=Gaussian.ppf(3/4.), axis=0):
+def stand_mad(a, c=Gaussian.ppf(3/4.), axis=0):
     """
     The standardized Median Absolute Deviation along given axis of an array.
 
@@ -52,13 +52,13 @@ def stand_MAD(a, c=Gaussian.ppf(3/4.), axis=0):
 
     Returns
     --------
-    MAD : float
-        `MAD` = median(abs(`a`-median(`a`))/`c`
+    mad : float
+        `mad` = median(abs(`a`-median(`a`))/`c`
     """
 
     a = np.asarray(a)
     d = np.median(a, axis = axis)
-    d = unsqueeze(d, axis, a.shape)
+    d = tools.unsqueeze(d, axis, a.shape)
     return np.median(np.fabs(a - d)/c, axis = axis)
 
 class Huber(object):
@@ -137,11 +137,11 @@ class Huber(object):
             est_mu = False
 
         if initscale is None:
-            scale = stand_MAD(a, axis=axis)
+            scale = stand_mad(a, axis=axis)
         else:
             scale = initscale
-        scale = unsqueeze(scale, axis, a.shape)
-        mu = unsqueeze(mu, axis, a.shape)
+        scale = tools.unsqueeze(scale, axis, a.shape)
+        mu = tools.unsqueeze(mu, axis, a.shape)
         return self._estimate_both(a, scale, mu, axis, est_mu, n)
 
     def _estimate_both(self, a, scale, mu, axis, est_mu, n):
@@ -170,14 +170,14 @@ class Huber(object):
             else:
                 # Effectively, do nothing
                 nmu = mu.squeeze()
-            nmu = unsqueeze(nmu, axis, a.shape)
+            nmu = tools.unsqueeze(nmu, axis, a.shape)
 
             subset = np.less_equal(np.fabs((a - mu)/scale), self.c)
             card = subset.sum(axis)
 
             nscale = np.sqrt(np.sum(subset * (a - nmu)**2, axis) \
                     / (n * self.gamma - (a.shape[axis] - card) * self.c**2))
-            nscale = unsqueeze(nscale, axis, a.shape)
+            nscale = tools.unsqueeze(nscale, axis, a.shape)
 
             test1 = np.alltrue(np.less_equal(np.fabs(scale - nscale),
                         nscale * self.tol))
@@ -190,7 +190,7 @@ class Huber(object):
 
 huber = Huber()
 
-class Hubers_scale(object):
+class HuberScale(object):
     '''
     Huber's scaling for fitting robust linear models.
 
@@ -235,7 +235,7 @@ class Hubers_scale(object):
         h = (df_resid)/nobs*(self.d**2 + (1-self.d**2)*\
                     Gaussian.cdf(self.d)-.5 - self.d/(np.sqrt(2*np.pi))*\
                     np.exp(-.5*self.d**2))
-        s = stand_MAD(resid)
+        s = stand_mad(resid)
         subset = lambda x: np.less(np.fabs(resid/x),self.d)
         chi = lambda s: subset(s)*(resid/s)**2/2+(1-subset(s))*(self.d**2/2)
         scalehist = [np.inf,s]
@@ -250,4 +250,4 @@ class Hubers_scale(object):
                 raise ValueError, "Huber's scale failed to converge"
         return scalehist[-1]
 
-hubers_scale = Hubers_scale()
+hubers_scale = HuberScale()

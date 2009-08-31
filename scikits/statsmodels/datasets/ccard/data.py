@@ -37,18 +37,28 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Name of dataset."""
+__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'Load']
+
+"""Greene's credit scoring data."""
 
 __docformat__ = 'restructuredtext'
 
-COPYRIGHT   = """Pending"""
-TITLE       = ""
+COPYRIGHT   = """Used with expressed permission of the original author, who retains all rights."""
+TITLE       = """Greene's credit scoring data"""
 SOURCE      = """
+William Greene's `Econometric Analysis`
+
+More information can be found at the web site of the text:
+http://pages.stern.nyu.edu/~wgreene/Text/econometricanalysis.htm
 """
 
-DESCRSHORT  = """"""
+DESCRSHORT  = """William Greene's credit scoring data"""
 
-DESCRLONG   = """"""
+DESCRLONG   = """More information on this data can be found on the
+homepage for Greene's `Econometric Analysis`.
+
+http://pages.stern.nyu.edu/~wgreene/Text/econometricanalysis.htm
+"""
 
 NOTE        = """
 When loaded, the attributes are
@@ -57,36 +67,22 @@ exog = AVGEXP
 
 endog = AGE INCOME INCOME**2 OWNRENT
 
-There are 72 observations for which AVGEXP != 0
+There are 72 observations for which AVGEXP != 0 and only these are loaded.
 
-The original dataset including the following
-can be found in the ccard/src/ folder
-----------------------------------------------
+The cleaned dataset can be found in a comma-delimited file ccard/ccard.csv.
 
-MDR = Number of derogator reports
-
-Acc = Credit card application accpeted (1=yes)
-
-Age = Age in years + 12ths of a year
-
-Income = Income divided by 10,000
-
-Avgexp = Avg. monthly credit card expenditure
-
-Ownrent = Indiviual owns(1) or rents(0) home
-
-Selfempl = (1=yes, 0=no)
-
+The original dataset can be found in the ccard/src/ folder.
 """
 
 import numpy as np
 
-class load():
-    """load the credit card data and returns a data class.
+class Load():
+    """Load the credit card data and returns a data class.
 
-    :returns:
-        data instance:
-            a class of the data with array attrbutes 'endog' and 'exog'
+    Returns
+    -------
+    Load instance:
+        a class of the data with array attrbutes 'endog' and 'exog'
     """
     def __init__(self):
         from ccard import __dict__, names

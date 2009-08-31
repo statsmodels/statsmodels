@@ -10,7 +10,6 @@ import scipy.linalg
 
 #FIXME: make this more robust
 # needs to not return a dummy for *every* variable...
-#TODO: update docstring to show handling of ndarrays
 #TODO: needs to better preserve dtype and be more flexible
 # ie., if you still have a string variable in your array you don't
 # want to cast it to float
@@ -23,30 +22,21 @@ def xi(data, col=None, time=None, drop=False):
     Take a structured or record array and returns an array with categorical
     variables.
 
-
     Notes
     -----
     This returns a dummy variable for EVERY distinct string.  If noconsant
-    then this is okay.  Otherwise, a "intercept" needs to be designated in
-    regression.  Note that STATA returns which variable is omitted when this
+    then this is okay.  Otherwise, an "intercept" needs to be designated in
+    regression and this value should be dropped from the array returned by xi.
+
+    Note that STATA returns which variable is omitted when this
     is called. And it is called at runtime of fit...
 
-    Returns the same array as it's given right now (recarray and structured
+    Returns the same array type as it's given right now (recarray and structured
     array only).
 
-    Where should categoricals home be?
-    It is used by every (?) model.
-
-    In STATA, you use xi -- interaction expansion for turning categorical
-    into indicator variables, perhaps this is a better name.
-
-    Should also be able to handle numeric data in addition to strings.
-
-    Default drops the "first" group (how to define? -- have an attribute
-    "dropped"?)
-
-    Also allows to define dropped as "prevalent" for most prevalent
-    or to define which variable -- the latter may be our best option for now.
+    The design of xi was pretty ad hoc.  Please report any bugs/ additional
+    functionality and note that this function should change heavily in the
+    near future.
     '''
 
 #needs error checking
@@ -128,20 +118,6 @@ def recipr(X):
     x = np.maximum(np.asarray(X).astype(np.float64), 0)
     return np.greater(x, 0.) / (x + np.less_equal(x, 0.))
 
-def mad(a, c=0.6745, axis=0):
-    """
-    Median Absolute Deviation:
-
-    median(abs(a - median(a))) / c
-
-    """
-
-    _shape = a.shape
-    a.shape = np.product(a.shape,axis=0)
-    m = np.median(np.fabs(a - np.median(a))) / c
-    a.shape = _shape
-    return m
-
 def recipr0(X):
     """
     Return the reciprocal of an array, setting all entries equal to 0
@@ -191,11 +167,24 @@ def fullrank(X, r=None):
         value.append(V[:,order[i]])
     return np.asarray(np.transpose(value)).astype(np.float64)
 
+#TODO: sort out the next three classes/functions
 class StepFunction:
     """
-    A basic step function: values at the ends are handled in the simplest
-    way possible: everything to the left of x[0] is set to ival; everything
+    A basic step function.
+
+    Values at the ends are handled in the simplest way possible:
+    everything to the left of x[0] is set to ival; everything
     to the right of x[-1] is set to y[-1].
+
+    Parameters
+    ----------
+    x : array-like
+    y : array-like
+    ival : float
+        ival is the value given to the values to the left of x[0]. Default
+        is 0.
+    sorted : bool
+        Default is False.
 
     Examples
     --------
@@ -240,7 +229,15 @@ class StepFunction:
 
 def ECDF(values):
     """
-    Return the ECDF of an array as a step function.
+    Return the Empirical CDF of an array as a step function.
+
+    Parameters
+    ----------
+    values : array-like
+
+    Returns
+    -------
+    Empirical CDF as a step function.
     """
     x = np.array(values, copy=True)
     x.sort()

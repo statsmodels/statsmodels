@@ -37,13 +37,17 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Name of dataset."""
+__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'Load']
+
+"""Stack loss data."""
 
 __docformat__ = 'restructuredtext'
 
 COPYRIGHT   = """This is public domain. """
-TITLE       = ""
+TITLE       = "Brownlee's classic stack loss plant data"
 SOURCE      = """
+Brownlee, K. A. (1965), "Statistical Theory and Methodology in
+Science and Engineering", 2nd edition, New York:Wiley.
 """
 
 DESCRSHORT  = """"""
@@ -55,12 +59,13 @@ NOTE        = """
 
 import numpy as np
 
-class load():
+class Load():
     """load the stackloss data and returns a data class.
 
-    :returns:
-        data class instance:
-            a class of the data with array attrbutes 'endog' and 'exog'
+    Returns
+    --------
+    Load instance:
+        a class of the data with array attrbutes 'endog' and 'exog'
     """
     def __init__(self):
         from stackloss import __dict__, names

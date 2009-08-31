@@ -10,7 +10,8 @@ from info import __doc__
 from regression import *
 from glm import *
 from rlm import *
-import model, tools, datasets, family # robust is imported somewhere else?
+import model, tools, datasets, family, stattests
+# robust is imported somewhere else?
 __all__ = filter(lambda s:not s.startswith('_'),dir())
 #from numpy.testing import Tester
 #test = Tester().test(extra_argv=["--exe"])

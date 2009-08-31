@@ -3,7 +3,7 @@ Test functions for models.tools
 """
 
 import numpy as np
-import numpy.random as R
+from numpy.random import standard_normal
 from numpy.testing import *
 
 from scikits.statsmodels import tools
@@ -21,14 +21,14 @@ class TestTools(TestCase):
         assert_almost_equal(Y, np.array([[0.5,1],[-0.25,0]]))
 
     def test_rank(self):
-        X = R.standard_normal((40,10))
+        X = standard_normal((40,10))
         self.assertEquals(tools.rank(X), 10)
 
         X[:,0] = X[:,1] + X[:,2]
         self.assertEquals(tools.rank(X), 9)
 
     def test_fullrank(self):
-        X = R.standard_normal((40,10))
+        X = standard_normal((40,10))
         X[:,0] = X[:,1] + X[:,2]
 
         Y = tools.fullrank(X)

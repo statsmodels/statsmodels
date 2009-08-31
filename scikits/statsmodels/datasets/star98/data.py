@@ -36,22 +36,20 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'Load']
+
 """Star98 Educational Testing dataset."""
 
 __docformat__ = 'restructuredtext'
 
-COPYRIGHT   = """Permission granted by the author"""
+COPYRIGHT   = """Used with expressed permission from the original author,
+who retains all rights."""
 TITLE       = "Star98 Educational Dataset"
 SOURCE      = """
+Jeff Gill's `Generalized Linear Models: A Unifited Approach`
+
 http://jgill.wustl.edu/research/books.html
-
-Dr. Jeff Gill
-Department of Political Science
-One Brookings Drive, Seigle L079
-Washington University
-St. Louis, MO 63130-4899
 """
-
 DESCRSHORT  = """Math scores for 303 student with 10 explanatory factors"""
 
 DESCRLONG   = """
@@ -82,12 +80,13 @@ label: 0 for below median, 1 for above median
 Missing Attribute Values: None
 """
 
-class load():
+class Load():
     """load the star98 data and returns them.
 
-    :returns:
-        data instance:
-            a class of the data with array attrbutes 'endog' and 'exog'
+    Returns
+    -------
+    Load instance:
+        a class of the data with array attrbutes 'endog' and 'exog'
     """
 
     def __init__(self):

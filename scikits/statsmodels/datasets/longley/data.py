@@ -37,15 +37,18 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'Load']
+
 """Longley dataset."""
 
 __docformat__ = 'restructuredtext'
 
-COPYRIGHT   = """This is public domain. """
+COPYRIGHT   = """This is public domain."""
 TITLE       = ""
 SOURCE      = """
-Longley Data
+The classic 1967 Longley Data
 
+http://www.itl.nist.gov/div898/strd/lls/data/Longley.shtml
 """
 
 DESCRSHORT  = """"""
@@ -61,12 +64,13 @@ Number of Attributes: 6
 
 import numpy as np
 
-class load():
+class Load():
     """load the longley data and returns a data class.
 
-    :returns:
-        data instance:
-            a class of the data with array attrbutes 'endog' and 'exog'
+    Returns
+    --------
+    Load instance:
+        a class of the data with array attrbutes 'endog' and 'exog'
     """
     def __init__(self):
         from longley import __dict__, names

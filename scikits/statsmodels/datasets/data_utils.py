@@ -1,67 +1,55 @@
 import os
 import time
-import numpy as np
+from numpy import genfromtxt
 
-def convert(fname, overwrite=False, **kwds):
+def convert(fname, overwrite=False, delimiter=","):
     '''
-    Pulls out the data of a csv file with headers and arranges it
-    as Var = [1, 2, 3, 4, 5] and writes it to
-    ./fname.py.  It warns on overwrite.  Each variable is on a new line.
+    Simple function to make a python file out of a delimited text file.
 
-    Keywords
-    --------
-    delimiter : string, optional
-        default = ","
-    skiprows : int, optional
-        default = 0
-    usecols : list, optional
-        default : None
-    names : {None, True, string, sequence}, optional
+    This fuction places the column-ordered data in a text file and puts
+    it into a python file with a list for each column on a new line.
+    The python file takes the name fname.py and warns on overwrite.
 
-    Example usage
-    convert('/path/to/file.csv')
+    Parameters
+    ----------
+    fname : string
+        The filename to convert
+    overwrite : bool
+        Overwrite the python file if it already exists.  Default is False so
+        that the user is warned.
+    delimiter : string
+        The default is ","
 
-    See Also
-    ----
-    numpy.genfromtxt
-    numpy.recfromtxt
+    Examples
+    ---------
+    >>> from scikits.statsmodels.datasets.data_utils import convert
+    >>> convert('/path/to/file.csv')
+
+    There will now be a file /path/to/file.py that contains a list
+    `names` and then a list for each name in names.
 
     Notes
     -----
-    Data should be columm ordered in the data.py file as y x1 x2 ...
+    Uses numpy.genfromtxt
+    It is currently assumed that the text file that contains the data
+    has a row of headers.
     '''
-    opts = kwds.keys()
-    if 'delimiter' in opts:
-        delimit = kwds['delimiter']
-    else: delimit = ','
-#    if 'usecols' in opts:
-#        uc = kwds['usecols']
-#    else: uc = None
-#    if 'dtype' in opts:
-#        dt = kwds['dtype']
-#    else: dt = np.str
-#    if 'names' in opts:
-#        n = kwds['names']
-#    else: n = True
-#    if 'skiprows' in opts:
-#        sr = kwds['skiprows']
-#    elif 'skiprows' not in opts and n is True: sr = 1
-#    elif 'skiprows' not in opts and n is False: sr = 0
-    getnames = open(fname) # scrape for header names, done this we because dtype=np.str
+
+#TODO: could be extended to use kwds to pass to np.genfromtxt
+    getnames = open(fname) # scrape for header names,
+                           # do this because dtype=np.str
     names = getnames.readline()
     getnames.close()
     names = names.strip(os.linesep)
     names = names.split(",")
     for i in range(len(names)): names[i] = names[i].strip("\"")
-#    dataset = np.genfromtxt(fname, delimiter=delimit, skiprows = sr,
-#                            names=n, usecols = uc, dtype=dt)
-    dataset = np.genfromtxt(fname, delimiter=delimit, dtype=np.str, skiprows=1)
+    dataset = genfromtxt(fname, delimiter=delimiter, dtype=np.str, skiprows=1)
     dir,f = os.path.split(fname)
     f=f.split('.')
     new_file = os.path.join(dir,f[0]+'.py')
     if os.path.isfile(new_file):
         print 'Do you want to overwrite the existing file %s?' % new_file
-        exist = raw_input("[y/n] >")
+        exist = raw_input("[y/n] > ")
         if 'y' in exist.lower():
             pass
         else:
@@ -73,4 +61,3 @@ def convert(fname, overwrite=False, **kwds):
     for i,name in enumerate(names):
         f.write(name.upper()+' = '+str(dataset[:,i].tolist())+os.linesep*2)
     f.close()
-

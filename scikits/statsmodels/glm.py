@@ -1,5 +1,20 @@
 """
 Generalized linear models
+
+References
+----------
+Gill, Jeff. 2000. Generalized Linear Models: A Unified Approach.
+    SAGE QASS Series.
+
+Green, PJ. 1984.  "Iteratively reweighted least squares for maximum
+    likelihood estimation, and some robust and resistant alternatives."
+    Journal of the Royal Statistical Society, Series B, 46, 149-192.
+
+Hardin, J.W. and Hilbe, J.M. 2007.  "Generalized Linear Models and
+    Extensions."  2nd ed.  Stata Press, College Station, TX.
+
+McCullagh, P. and Nelder, J.A.  1989.  "Generalized Linear Models." 2nd ed.
+    Chapman & Hall, Boca Rotan.
 """
 
 import numpy as np
@@ -113,8 +128,8 @@ TODO: fix example location
     Examples
     --------
     >>> from scikits import statsmodels as models
-    >>> from scikits.statsmodels.datasets.scotland.data import load
-    >>> data = load
+    >>> from scikits.statsmodels.datasets.scotland import Load
+    >>> data = Load()
     >>> data.exog = models.tools.add_constant(data.exog)
 
     Instantiate a gamma family model with the default link function.
@@ -151,21 +166,6 @@ TODO: fix example location
     gamma        |   x    x                        x
 
     Not all of these link functions are currently available.
-
-    References
-    ----------
-    Gill, Jeff. 2000. Generalized Linear Models: A Unified Approach.
-        SAGE QASS Series.
-
-    Green, PJ. 1984.  "Iteratively reweighted least squares for maximum
-        likelihood estimation, and some robust and resistant alternatives."
-        Journal of the Royal Statistical Society, Series B, 46, 149-192.
-
-    Hardin, J.W. and Hilbe, J.M. 2007.  "Generalized Linear Models and
-        Extensions."  2nd ed.  Stata Press, College Station, TX.
-
-    McCullagh, P. and Nelder, J.A.  1989.  "Generalized Linear Models." 2nd ed.
-        Chapman & Hall, Boca Rotan.
     '''
 
     def __init__(self, endog, exog, family=family.Gaussian()):
@@ -361,20 +361,22 @@ the Binomial family"
                 scale=self.scale)))
         return glm_results
 
-    @property
-    def results(self):
-        """
-        A property that returns a GLMResults class.
-
-        Notes
-        -----
-        Calls fit if it has not already been called.  The default values for
-        fit are used.  If the data_weights argument needs to be supplied for
-        the Binomial family, then you should directly call fit.
-        """
-        if self._results is None:
-            self._results = self.fit()
-        return self._results
+# doesn't make sense really if there are arguments to fit
+# also conflicts with refactor of GAM
+#    @property
+#    def results(self):
+#        """
+#        A property that returns a GLMResults class.
+#
+#        Notes
+#        -----
+#        Calls fit if it has not already been called.  The default values for
+#        fit are used.  If the data_weights argument needs to be supplied for
+#        the Binomial family, then you should directly call fit.
+#        """
+#        if self._results is None:
+#            self._results = self.fit()
+#        return self._results
 #TODO: remove dataweights argument and have it calculated from endog
 # note that data_weights is not documented because I'm going to remove it.
 # make the number of trials an argument to Binomial if constant and 1d endog
