@@ -34,96 +34,62 @@ class GLM(LikelihoodModel):
     -----------
     endog : array-like
         1d array of endogenous response variable.  This array can be
-        1d or 2d for Binomial family models.  See examples/glm.py for more
-        information
-TODO: fix example location
+        1d or 2d for Binomial family models.
     exog : array-like
         n x p design / exogenous data array
     family : family class instance
-        The default is Gaussian.  If for example, you would like to
-        specify the binomial distribution and you have imported
-        statsmodels then family = statsmodels.family.Binomial().
+        The default is Gaussian.  To specify the binomial distribution
+        family = sm.family.Binomial()
         Each family can take a link instance as an argument.  See
         statsmodels.family.family for more information.
 
     Attributes
     -----------
     df_model : float
-        Model degrees of freedom is equal to p - 1, where p is the number
-        of regressors.  Note that the intercept is not reported as a
-        degree of freedom.
+        `p` - 1, where `p` is the number of regressors including the intercept.
     df_resid : float
-        Residual degrees of freedom is equal to the number of observation n
-        minus the number of regressors p.
-
+        The number of observation `n` minus the number of regressors `p`.
     endog : array
-        See above.  Note that endog is a reference to the data so that if
-        data is already an array and it is changed, then `endog` changes
-        as well.
+        See above.
     exog : array
-        See above.  Note that endog is a reference to the data so that if
-        data is already an array and it is changed, then `endog` changes
-        as well.
+        See above.
     history : dict
-        Contains information about the iterations. Its keys are `fittedvalues`,
-        `deviance`, and `params`.
+        Contains information about the iterations.
     iteration : int
         The number of iterations that fit has run.  Initialized at 0.
     family : family class instance
         A pointer to the distribution family of the model.
     mu : array
-        The mean response of the transformed variable.  `mu` is the value of
-        the inverse of the link function at eta, where eta is the linear
-        predicted value of the WLS fit of the transformed variable.  `mu` is
-        only available after fit is called.  See
-        statsmodels.family.family.fitted of the distribution family for more
-        information.
+        The estimated mean response of the transformed variable.
     normalized_cov_params : array
-        The p x p normalized covariance of the design / exogenous data.
-        This is approximately equal to (X.T X)^(-1)
+        `p` x `p` normalized covariance of the design / exogenous data.
     pinv_wexog : array
-        The pseudoinverse of the design / exogenous data array.  Note that
-        GLM has no whiten method, so this is just the pseudo inverse of the
-        design.
-        The pseudoinverse is approximately equal to (X.T X)^(-1)X.T
+        For GLM this is just the pseudo inverse of the original design.
     scale : float
-        The estimate of the scale / dispersion of the model fit.  Only
-        available after fit is called.  See GLM.fit and GLM.estimate_scale
-        for more information.
+        The estimate of the scale / dispersion.  Available after fit is called.
     scaletype : str
-        The scaling used for fitting the model.  This is only available after
-        fit is called.  The default is None.  See GLM.fit for more information.
+        The scaling used for fitting the model.  Available after fit is called.
     weights : array
-        The value of the weights after the last iteration of fit.  Only
-        available after fit is called.  See statsmodels.family.family for
-        the specific distribution weighting functions.
+        The value of the weights after the last iteration of fit.
 
     Methods
     -------
     estimate_scale
         Estimates the dispersion / scale of the model.
     fit
-        Fits the generalized linear model using iteratively reweighted least
-        squares.
+        Fits the model using iteratively reweighted least squares.
     information
-        Returns the Fisher information matrix.
-        Not yet implemented.
+        Returns the Fisher information matrix.  Not yet implemented.
     initialize
-        (Re)initialize the design.  This resets history and number of
-        iterations.
+        (Re)initialize the design.  Resets history and number of iterations.
     loglike
         Returns the loglikelihood at `params` for a given distribution family.
     newton
-        Used to fit the model via Newton-Raphson.
-        Not yet implemented.
+        Used to fit the model via Newton-Raphson.  Not yet implemented.
     predict
         Returns the linear predictor of the model.
-        dot(X,params).  See the fitted method of the specific family
-        for the inverse of the link function.
     score
-        Returns the score matrix of the model.
-        Not yet implemented.
-
+        Returns the score matrix of the model.  Not yet implemented.
 
     Examples
     --------
@@ -165,6 +131,9 @@ TODO: fix example location
     gamma        |   x    x                        x
 
     Not all of these link functions are currently available.
+
+    Endog and exog are references so that if the data they refer to are already
+    arrays and these arrays are changed, endog and exog will change.
     '''
 
     def __init__(self, endog, exog, family=family.Gaussian()):
