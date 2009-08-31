@@ -1,5 +1,7 @@
 
 
+stop_on_error = True
+
 
 filelist = ['example_glsar.py', 'example_wls.py', 'example_gls.py',
             'example_glm.py', 'example_ols_tftest.py', 'example_rpy.py',
@@ -12,4 +14,6 @@ for f in filelist:
         print "*********************"
         print "ERROR in example file", f
         print "*********************"
+        if stop_on_error:
+            raise
 
