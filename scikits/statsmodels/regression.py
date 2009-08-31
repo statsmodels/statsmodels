@@ -282,21 +282,23 @@ Should be of length %s, if sigma is a 1d array" % nobs
 
         Parameters
         ----------
-        `params` : array-like
+        params : array-like
             The parameter estimates
 
         Returns
         -------
-        The value of the loglikelihood function for a GLS Model.
+        loglike : float
+            The value of the loglikelihood function for a GLS Model.
 
-        Formula
-        -------
-        ..math ::
-        -\frac{n}{2}\text{\ensuremath{\log}}\left(Y-\hat{Y}\right)-\frac{n}{2}\left(1+\log\left(\frac{2\pi}{n}\right)\right)-\frac{1}{2}\text{log}\left(\left|\Sigma\right|\right)\]
 
         Notes
         -----
+        The loglikelihood function for the normal distribution is
+
+        .. math:: -\frac{n}{2}\text{\ensuremath{\log}}\left(Y-\hat{Y}\right)-\frac{n}{2}\left(1+\log\left(\frac{2\pi}{n}\right)\right)-\frac{1}{2}\text{log}\left(\left|\Sigma\right|\right)\]
+
         Y and Y-hat are whitened.
+
         """
 #TODO: combine this with OLS/WLS loglike and add _det_sigma argument
         nobs2 = self.nobs / 2.0
