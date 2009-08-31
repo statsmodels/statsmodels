@@ -25,36 +25,7 @@ Examples
     rlm_results = rlm_model.fit()
     print rlm_results.params
 
-Weight Functions
-----------------
 
-Andrew's Wave
-
-.. image:: images/aw.png
-
-Hampel 17A
-
-.. image:: images/hl.png
-
-Huber's t
-
-.. image:: images/ht.png
-
-Least Squares
-
-.. image:: images/ls.png
-
-Ramsay's Ea
-
-.. image:: images/re.png
-
-Trimmed Mean
-
-.. image:: images/tm.png
-
-Tukey's Biweight
-
-.. image:: images/tk.png
 
 Model and Result Classes
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -94,7 +65,6 @@ Scale
 .. autosummary::
    :toctree: generated/
 
-    Gaussian
     Huber
     HuberScale
     mad
@@ -109,4 +79,4 @@ Technical Documentation
 .. toctree::
    :maxdepth: 1
 
-   glm_techn1
+   rlm_techn1
