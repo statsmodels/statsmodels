@@ -12,7 +12,7 @@ written, and GLSAR is still being worked on.
 import numpy as np
 import numpy.testing as npt
 from scipy import signal
-from scikits.statsmodels.tools import add_constant
+import scikits.statsmodels as sm
 from scikits.statsmodels.regression import GLSAR, yule_walker
 
 examples_all = range(10) + ['test_copy']
@@ -22,7 +22,7 @@ examples = examples_all #[5]
 if 0 in examples:
     print '\n Example 0'
     X = np.arange(1,8)
-    X = add_constant(X)
+    X = sm.add_constant(X)
     Y = np.array((1, 3, 4, 5, 8, 10, 9))
     rho = 2
     model = GLSAR(Y, X, 2)
@@ -50,14 +50,10 @@ beta = np.array([0.1, 2])
 noiseratio = 0.5
 nsample = 2000
 x = np.arange(nsample)
-X1 = add_constant(x)
+X1 = sm.add_constant(x)
 
 wnoise = noiseratio * np.random.randn(nsample+nlags)
 #noise = noise[1:] + rhotrue*noise[:-1] # wrong this is not AR
-
-
-
-
 
 #find my drafts for univariate ARMA functions
 # generate AR(p)

@@ -2,10 +2,10 @@
 Example: scikis.statsmodels.GLS
 """
 
-import scikits.statsmodels as models
+import scikits.statsmodels as sm
 import numpy as np
-data = models.datasets.longley.Load()
-data.exog = models.tools.add_constant(data.exog)
+data = sm.datasets.longley.Load()
+data.exog = sm.add_constant(data.exog)
 
 # The Longley dataset is a time series dataset
 # Let's assume that the data is heteroskedastic and that we know
@@ -14,7 +14,7 @@ data.exog = models.tools.add_constant(data.exog)
 
 # First we will obtain the residuals from an OLS fit
 
-ols_resid = models.OLS(data.endog, data.exog).fit().resid
+ols_resid = sm.OLS(data.endog, data.exog).fit().resid
 
 # Assume that the error terms follow an AR(1) process with a trend
 # resid[i] = beta_0 + rho*resid[i-1] + e[i]
@@ -23,9 +23,9 @@ ols_resid = models.OLS(data.endog, data.exog).fit().resid
 # a consistent estimator for rho is to regress the residuals
 # on the lagged residuals
 
-resid_fit = models.OLS(ols_resid[1:], ols_resid[:-1]).fit()
-resid_fit.t(0)
-resid_fit.pavlues[0]
+resid_fit = sm.OLS(ols_resid[1:], sm.add_constant(ols_resid[:-1])).fit()
+print resid_fit.t(0)
+print resid_fit.pvalues[0]
 # While we don't have strong evidence that the errors follow an AR(1)
 # process we continue
 
@@ -36,7 +36,7 @@ rho = resid_fit.params[0]
 
 from scipy.linalg import toeplitz
 
-# for example
+# # for example
 # >>> toeplitz(range(5))
 # array([[0, 1, 2, 3, 4],
 #       [1, 0, 1, 2, 3],
@@ -51,7 +51,7 @@ order = toeplitz(range(len(ols_resid)))
 
 sigma = rho**order
 
-gls_model = models.GLS(data.endog, data.exog, sigma=sigma)
+gls_model = sm.GLS(data.endog, data.exog, sigma=sigma)
 gls_results = gls_model.fit()
 
 # of course, the exact rho in this instance is not known so it

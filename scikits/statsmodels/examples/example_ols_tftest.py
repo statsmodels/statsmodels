@@ -4,19 +4,22 @@ linear restriction is R \beta = 0
 R is (nr,nk), beta is (nk,1) (in matrix notation)
 
 
-TODO: check to get simultaneous t-tests back
+TODO: clean this up for readability and explain
+
+Notes
+-----
+This example was written mostly for cross-checks and refactoring.
 """
 
 import numpy as np
 import numpy.testing as npt
-import scikits.statsmodels as models
-from scikits.statsmodels.datasets.longley import Load
+import scikits.statsmodels as sm
 
 print '\n\n Example 1: Longley Data, high multicollinearity'
 
-data = Load()
-data.exog = models.tools.add_constant(data.exog)
-res = models.OLS(data.endog, data.exog).fit()
+data = sm.datasets.longley.Load()
+data.exog = sm.add_constant(data.exog)
+res = sm.OLS(data.endog, data.exog).fit()
 
 # test pairwise equality of some coefficients
 R2 = [[0,1,-1,0,0,0,0],[0, 0, 0, 0, 1, -1, 0]]
@@ -24,7 +27,7 @@ Ftest = res.f_test(R2)
 print repr((Ftest.fvalue, Ftest.pvalue)) #use repr to get more digits
 # 9.740461873303655 0.0056052885317360301
 
-##Compare to R (after running R_lm.s in the longley folder) looks good.
+##Compare to R (after running R_lm.s in the longley folder)
 ##
 ##> library(car)
 ##> linear.hypothesis(m1, c("GNP = UNEMP","POP = YEAR"))
@@ -51,7 +54,6 @@ Ftest0 = res.f_test(R)
 print repr((Ftest0.fvalue, Ftest0.pvalue))
 print '%r' % res.fvalue
 npt.assert_almost_equal(res.fvalue, Ftest0.fvalue, decimal=9)
-# values differ in 11th decimal, or 10th
 
 ttest0 = res.t_test(R[0,:])
 print repr((ttest0.tvalue, ttest0.pvalue))
@@ -128,9 +130,9 @@ dummyvar = (xcat == np.arange(ncat)).astype(float)
 
 beta = np.array([0., 2, -2, 1])[:,np.newaxis]
 ytrue = np.dot(dummyvar, beta)
-X = models.tools.add_constant(dummyvar[:,:-1])
+X = sm.tools.add_constant(dummyvar[:,:-1])
 y = ytrue + sigma * np.random.randn(nsample,1)
-mod2 = models.OLS(y[:,0], X)
+mod2 = sm.OLS(y[:,0], X)
 res2 = mod2.fit()
 
 print res2.summary()
@@ -175,7 +177,7 @@ print repr((ttest.tvalue, ttest.pvalue))
 
 print "\nExample: 2 categories: replicate stats.glm and stats.ttest_ind"
 
-mod2 = models.OLS(y[xcat.flat<2][:,0], X[xcat.flat<2,:][:,(0,-1)])
+mod2 = sm.OLS(y[xcat.flat<2][:,0], X[xcat.flat<2,:][:,(0,-1)])
 res2 = mod2.fit()
 
 R8 = np.atleast_2d([1, 0])

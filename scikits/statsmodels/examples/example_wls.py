@@ -1,12 +1,12 @@
 """
 Example: scikits.statsmodels.WLS
 """
-from scikits.statsmodels.datasets.ccard.data import Load
-import scikits.statsmodels as models
+import scikits.statsmodels as sm
 import pylab
-data = Load()
-data.exog = models.tools.add_constant(data.exog)
-ols_test_fit = models.OLS(data.endog, data.exog).fit()
+
+data = sm.datasets.ccard.Load()
+data.exog = sm.add_constant(data.exog)
+ols_test_fit = sm.OLS(data.endog, data.exog).fit()
 
 # perhaps the residuals from this fit depend on the square of income
 incomesq = data.exog[:,2]
@@ -22,7 +22,7 @@ pylab.show()
 # this type of regression without an explicit constant in the design
 
 data.exog = data.exog[:,:-1]
-wls_fit = models.WLS(data.endog, data.exog, weights=1/incomesq).fit()
+wls_fit = sm.WLS(data.endog, data.exog, weights=1/incomesq).fit()
 
 # This however, leads to difficulties in interpreting the post-estimation
 # statistics.  Statsmodels does not yet handle this elegantly, but

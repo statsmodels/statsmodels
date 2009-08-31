@@ -86,12 +86,16 @@ class Family(object):
 # <scikits.statsmodels.family.links.Power object at 0x9a423ec>,
 # <scikits.statsmodels.family.links.Power object at 0x9a4236c>]
 # for Poisson...
-# for now the links class attributes will not be documented
         self._link = link
+        if not isinstance(link, L.Link):
+            raise TypeError("The input should be a valid Link object.")
         if hasattr(self, "links"):
-            if link not in self.links:
-                raise ValueError, 'Invalid link for family, should be in %s'\
-                    % `self.links`
+            validlink = link in self.links
+            validlink = max([isinstance(link, _.__class__) for _ in self.links])
+            if not validlink:
+                errmsg = "Invalid link for family, should be in %s. (got %s)"
+                raise ValueError(errmsg % (`self.links`, link))
+
 
     def _getlink(self):
         """
@@ -180,7 +184,6 @@ class Family(object):
         The deviance functions are analytically defined for each family.
         """
         raise NotImplementedError
-#        return np.power(self.devresid(Y, mu), 2).sum() / scale
 
     def devresid(self, Y, mu):
         """
@@ -202,7 +205,6 @@ class Family(object):
         The deviance residuals are defined for each family.
         """
         raise NotImplementedError
-#        return (Y - mu) * np.sqrt(self.weights(mu))
 
     def fitted(self, eta):
         """
@@ -958,7 +960,7 @@ class Binomial(Family):
 
         Notes
         -----
-        The name 'cox_snell' is highly idiosyncratic and is simply used for
+        The name 'cox_snell' is idiosyncratic and is simply used for
         convenience following the approach suggested in Cox and Snell (1968).
         Further note that
         cox_snell(x) = x**(2/3.)/(2/3.)*hyp2f1(2/3.,1/3.,5/3.,x)

@@ -77,3 +77,5 @@ plt.show()
 ##     pylab.plot(x2, standardize(m.smoothers[1](x2)), 'b')
 ##     pylab.plot(x2, standardize(f2(x2)), linewidth=2)
 ##     pylab.show()
+
+data = np.genfromtxt('./iowa.csv',delimiter=',')

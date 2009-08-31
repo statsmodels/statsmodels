@@ -1,51 +1,50 @@
 '''Just two examples for using rpy
 
+These examples are mainly for developers.
+
 # example 1: OLS using LM
 # example 2: GLM with binomial family
+    The second results isn't exactly correct since it assumes that each
+    obvervation has the same number of trials see datasets/longley for an R script
+    with the correct syntax.
 
+See rmodelwrap.py in the tests folder for a convenience wrapper
+to make rpy more like statsmodels.  Note, however, that rmodelwrap
+was created in a very ad hoc manner and due to the idiosyncracies in R
+it does not work for all types of R models.
+
+There are also R scripts included with most of the datasets to run
+some basic models for comparisons of results to statsmodels.
 '''
 
 from rpy import r
 import numpy as np
+import scikits.statsmodels as sm
 
-from scikits.statsmodels.tools import xi, add_constant
-from exampledata import longley, lbw
 
 examples = [1, 2]
 
 if 1 in examples:
-    y,x = longley()
-    des = np.hstack((np.ones((x.shape[0],1)),x))
+    data = sm.datasets.longley.Load()
+    y,x = data.endog, sm.add_constant(data.exog)
     des_cols = ['x.%d' % (i+1) for i in range(x.shape[1])]
     formula = r('y~%s-1' % '+'.join(des_cols))
-    frame = r.data_frame(y=y, x=des)
+    frame = r.data_frame(y=y, x=x)
     results = r.lm(formula, data=frame)
     print results.keys()
     print results['coefficients']
 
-    # How to get Standard Errors for COV Matrix?
-
-
 if 2 in examples:
-    #corrected, see also glm_example.py and test_glm.py
-    X = lbw()
-    X = xi(X, col='race', drop=True)
-    des = np.column_stack((X['age'],X['lwt'],X['black'],X['other'],X['smoke'], X['ptl'], X['ht'], X['ui']))
-    #des = np.vstack((X['age'],X['lwt'],X['bwt'],X['ftv'],X['smoke'],X['ptl'],X['ht'],X['ui'])).T
-    des = np.hstack((des, np.ones((des.shape[0],1))))
-    des_cols = ['x.%d' % (i+1) for i in range(des.shape[1])]
-    formula = r('y~%s-1' % '+'.join(des_cols))
-    frame = r.data_frame(y=X.low, x=des)
-    results = r.glm(formula, data=frame, family='binomial')
-    params_est = [results['coefficients'][k] for k
-                    in sorted(results['coefficients'])]
+    data2 = sm.datasets.star98.Load()
+    y2,x2 = data2.endog, sm.add_constant(data2.exog)
+    import rpy
+    y2 = y2[:,0]/y2.sum(axis=1)
+    des_cols2 = ['x.%d' % (i+1) for i in range(x2.shape[1])]
+    formula2 = r('y~%s-1' % '+'.join(des_cols2))
+    frame2 = r.data_frame(y=y2, x=x2)
+    results2 = r.glm(formula2, data=frame2, family='binomial')
+    params_est = [results2['coefficients'][k] for k
+                    in sorted(results2['coefficients'])]
     print params_est
-    print ', '.join(['%13.10f']*9) % tuple(params_est)
-
-# HOW TO DO THIS IN R
-# data <- read.csv("./lwb_for_R.csv",headers=FALSE)
-# low <- data$V1
-# age <- data$V3; lwt <- data$V3; black <- data$V5; other <- data$V6; smoke <- data$V7; ptl <- data$V8; ht <- data$V9; ui <- data$V10
-# probably a better way to do that!
-# summary(glm(low ~ age + lwt + black + other + smoke + ptl + ht + ui, family=binomial))
+    print ', '.join(['%13.10f']*21) % tuple(params_est)
 

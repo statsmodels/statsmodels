@@ -8,9 +8,7 @@ Statsmodels is a python package that provides an interface to SciPy for
 statistical computations including descriptive statistics and
 fitting statistical models.
 
-Brief history of the major codebase...
-
-LICENSE: TBD
+LICENSE: BSD
 """
 import os
 import sys
@@ -24,7 +22,7 @@ LONG_DESCRIPTION = descr
 MAINTAINER = ''
 MAINTAINER_EMAIL =''
 URL = ''
-LICENSE = ''
+LICENSE = 'BSD'
 DOWNLOAD_URL = ''
 
 MAJ = 0
@@ -68,8 +66,6 @@ def configuration(parent_package='', top_path=None, package_name=DISTNAME):
                            long_description = LONG_DESCRIPTION)
     config.add_subpackage('scikits')
     config.add_data_files('scikits/__init__.py')
-#    config.add_subpackage('scikits/statsmodels/datasets')
-#    config.add_data_dir('scikits/statsmodels/datasets')
     config.add_data_dir('scikits/statsmodels/tests')
     config.add_data_dir('scikits/statsmodels/examples')
     config.add_data_dir('scikits/statsmodels/docs')
@@ -102,5 +98,6 @@ if __name__ == "__main__":
         packages = setuptools.find_packages(),
         include_package_data = True,
         test_suite="nose.collector",
-        zip_safe = False, # the package can run out of an .egg file
+        zip_safe = False, # the package can not run out of an .egg file bc of
+                          # nose tests
         classifiers = classifiers)

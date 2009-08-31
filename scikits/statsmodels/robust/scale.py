@@ -84,10 +84,11 @@ class Huber(object):
     Examples
     --------
     >>> import numpy as np
+    >>> import scikits.statsmodels as sm
     >>> chem_data = np.array([2.20, 2.20, 2.4, 2.4, 2.5, 2.7, 2.8, 2.9, 3.03,
     ...        3.03, 3.10, 3.37, 3.4, 3.4, 3.4, 3.5, 3.6, 3.7, 3.7, 3.7, 3.7,
     ...        3.77, 5.28, 28.95])
-    >>> models.robust.scale.huber(chem_data)
+    >>> sm.robust.scale.huber(chem_data)
     (array(3.2054980819923693), array(0.67365260010478967))
     """
 
@@ -194,8 +195,8 @@ class HuberScale(object):
     '''
     Huber's scaling for fitting robust linear models.
 
-    Huber's scale is intended to be used as the scale estimate in the IRLS algorithm and
-    is slightly different than the `Huber` class.
+    Huber's scale is intended to be used as the scale estimate in the
+    IRLS algorithm and is slightly different than the `Huber` class.
 
     Parameters
     ------
@@ -222,8 +223,8 @@ class HuberScale(object):
     chi(x) = (x**2)/2       for |x| < d
     chi(x) = (d**2)/2       for |x| >= d
 
-    and the Huber constant h = (n-p)/n*(d**2 + (1-d**2)*scipy.stats.norm.cdf(d) - \
-                .5 - d*sqrt(2*pi)*exp(-0.5*d**2)
+    and the Huber constant h = (n-p)/n*(d**2 + (1-d**2)*\
+            scipy.stats.norm.cdf(d) - .5 - d*sqrt(2*pi)*exp(-0.5*d**2)
 
     '''
     def __init__(self, d=2.5, tol=1e-08, maxiter=30):

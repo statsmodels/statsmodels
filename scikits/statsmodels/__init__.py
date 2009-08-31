@@ -10,16 +10,15 @@ from info import __doc__
 from regression import *
 from glm import *
 from rlm import *
+from tools import add_constant
 import model, tools, datasets, family, stattests
 # robust is imported somewhere else?
 __all__ = filter(lambda s:not s.startswith('_'),dir())
-#from numpy.testing import Tester
-#test = Tester().test(extra_argv=["--exe"])
-#test = Tester().test
+
 from numpy.testing import Tester
 class NoseWrapper(Tester):
     '''
-    This is simply a wrapper for numpt.testing.Tester, so that extra_argv can
+    This is simply a wrapper for numpy.testing.Tester, so that extra_argv can
     be changed from its default None to ['--exe'] so that the tests can be run
     the same across platforms.
     '''
