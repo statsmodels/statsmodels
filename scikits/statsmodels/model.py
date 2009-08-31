@@ -460,22 +460,22 @@ T statistics'
 
         Examples
         --------
-        >>>import scikits.statsmodels as sm
-        >>>data = sm.datasets.longley.Load()
-        >>>data.exog = sm.add_constant(data.exog)
-        >>>results = sm.OLS(data.endog, data.exog).fit()
-        >>>results.conf_int()
+        >>> import scikits.statsmodels as sm
+        >>> data = sm.datasets.longley.Load()
+        >>> data.exog = sm.add_constant(data.exog)
+        >>> results = sm.OLS(data.endog, data.exog).fit()
+        >>> results.conf_int()
         array([[ -1.77029035e+02,   2.07152780e+02],
-       [ -1.11581102e-01,   3.99427438e-02],
-       [ -3.12506664e+00,  -9.15392966e-01],
-       [ -1.51794870e+00,  -5.48505034e-01],
-       [ -5.62517214e-01,   4.60309003e-01],
-       [  7.98787515e+02,   2.85951541e+03],
-       [ -5.49652948e+06,  -1.46798779e+06]])
+        [ -1.11581102e-01,   3.99427438e-02],
+        [ -3.12506664e+00,  -9.15392966e-01],
+        [ -1.51794870e+00,  -5.48505034e-01],
+        [ -5.62517214e-01,   4.60309003e-01],
+        [  7.98787515e+02,   2.85951541e+03],
+        [ -5.49652948e+06,  -1.46798779e+06]])
 
-        >>>results.conf_int(cols=(1,2))
+        >>> results.conf_int(cols=(1,2))
         array([[-0.1115811 ,  0.03994274],
-       [-3.12506664, -0.91539297]])
+        [-3.12506664, -0.91539297]])
 
         Notes
         -----

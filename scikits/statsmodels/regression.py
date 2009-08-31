@@ -45,21 +45,25 @@ class GLS(LikelihoodModel):
     """
     Generalized least squares model with a general covariance structure.
 
+
+
     Parameters
     ----------
     endog : array-like
-        `endog` is a 1-d vector that contains the response/independent variable
+          endog is a 1-d vector that contains the response/independent variable
+
     exog : array-like
-        `exog` is a n x p vector where n is the number of observations and
-        p is the number of regressors/dependent variables including the intercept
-        if one is included in the data.
+           exog is a n x p vector where n is the number of observations and p is
+           the number of regressors/dependent variables including the intercept
+           if one is included in the data.
+
     sigma : scalar or array
-       `sigma` is the weighting matrix of the covariance.
-       The default is None for no scaling.  If `sigma` is a scalar, it is
-       assumed that `sigma` is an n x n diagonal matrix with the given sclar,
-       `sigma` as the value of each diagonal element.  If `sigma` is an
-       n-length vector, then `sigma` is assumed to be a diagonal matrix
-       with the given `sigma` on the diagonal.  This should be the same as WLS.
+           `sigma` is the weighting matrix of the covariance.
+           The default is None for no scaling.  If `sigma` is a scalar, it is
+           assumed that `sigma` is an n x n diagonal matrix with the given sclar,
+           `sigma` as the value of each diagonal element.  If `sigma` is an
+           n-length vector, then `sigma` is assumed to be a diagonal matrix
+           with the given `sigma` on the diagonal.  This should be the same as WLS.
 
     Attributes
     ----------
@@ -104,6 +108,13 @@ class GLS(LikelihoodModel):
     whiten
         Returns the input premultiplied by cholsigmainv
 
+
+    Notes
+    -----
+    If sigma is a function of the data making one of the regressors
+    a constant, then the current postestimation statistics will not be correct.
+
+
     Examples
     --------
     >>> import numpy as np
@@ -128,10 +139,6 @@ class GLS(LikelihoodModel):
     >>> gls_model = sm.GLS(data.endog, data.exog, sigma=sigma)
     >>> gls_results = gls_model.results
 
-    Notes
-    -----
-    If sigma is a function of the data making one of the regressors
-    a constant, then the current postestimation statistics will not be correct.
     """
 
     def __init__(self, endog, exog, sigma=None):
@@ -243,7 +250,7 @@ Should be of length %s, if sigma is a 1d array" % nobs
         Return linear predicted values from a design matrix.
 
         Parameters
-        ---------
+        ----------
         exog : array-like
             Design / exogenous data
         params : array-like, optional after fit has been called
@@ -312,6 +319,12 @@ class WLS(GLS):
     is different than the behavior for GLS with a diagonal Sigma, where you
     would just supply W.
 
+    **Methods**
+
+    whiten
+        Returns the input scaled by sqrt(W)
+
+
     Parameters
     ----------
 
@@ -331,12 +344,7 @@ class WLS(GLS):
 
     See regression.GLS
 
-    Methods
-    -------
-    whiten
-        Returns the input scaled by sqrt(W)
 
-    See regression.GLS
 
     Examples
     ---------
@@ -437,16 +445,16 @@ class OLS(WLS):
     """
     A simple ordinary least squares model.
 
+    **Methods**
+
+    inherited from regression.GLS
+
     Parameters
     ----------
     endog : array-like
          1d vector of response/dependent variable
     exog: array-like
         Column ordered (observations in rows) design matrix.
-
-    Methods
-    -------
-    See regression.GLS
 
 
     Attributes
@@ -586,11 +594,7 @@ class GLSAR(GLS):
         regression coefficients are estimated simultaneously.
 
         Parameters
-        -----------
-        endog : array-like
-
-        exog : array-like, optional
-
+        ----------
         maxiter : integer, optional
             the number of iterations
         """
@@ -608,8 +612,8 @@ class GLSAR(GLS):
         Whiten a series of columns according to an AR(p)
         covariance structure.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         X : array-like
             The data to be whitened
 
@@ -634,8 +638,8 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False):
 
     http://en.wikipedia.org/wiki/Autoregressive_moving_average_model
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     X : array-like
         1d array
     order : integer, optional

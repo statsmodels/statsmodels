@@ -192,14 +192,14 @@ class Huber(object):
 huber = Huber()
 
 class HuberScale(object):
-    '''
+    """
     Huber's scaling for fitting robust linear models.
 
     Huber's scale is intended to be used as the scale estimate in the
     IRLS algorithm and is slightly different than the `Huber` class.
 
     Parameters
-    ------
+    ----------
     d : float, optional
         d is the tuning constant for Huber's scale.  Default is 2.5
     tol : float, optional
@@ -212,7 +212,7 @@ class HuberScale(object):
     call
         Return's Huber's scale computed as below
 
-    Formulas
+    Notes
     --------
     Huber's scale is the iterative solution to
 
@@ -225,8 +225,7 @@ class HuberScale(object):
 
     and the Huber constant h = (n-p)/n*(d**2 + (1-d**2)*\
             scipy.stats.norm.cdf(d) - .5 - d*sqrt(2*pi)*exp(-0.5*d**2)
-
-    '''
+    """
     def __init__(self, d=2.5, tol=1e-08, maxiter=30):
         self.d = d
         self.tol = tol

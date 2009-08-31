@@ -26,8 +26,8 @@ statsmodels is a pure python package.
 statsmodels includes:
 
   * regression: mainly OLS and generalized least squares, GLS
-   including weighted least squares and least squares with AR
-   errors.
+    including weighted least squares and least squares with AR
+    errors.
   * glm: generalized linear models
   * rlm: robust linear models
   * datasets: for examples and tests
@@ -68,11 +68,8 @@ package to gain experience with the API, and to allow us to
 make changes without being committed to backwards
 compatibility. It will also give us the opportunity to find
 and kill some remaining bugs, and fill some holes in our
-test suite. Depending on the feedback, statsmodels
-could go into scipy 0.8 to close the gap in the stats area,
-but with a warning that there might still be some changes to
-the API, or we could wait for 0.9, if 0.8 is coming out
-soon.
+test suite. However, statsmodels is intended to become
+part of scipy after some maturing of the package.
 
 Earlier this summer, there was a discussion on the nipy
 mailing list on the structure of the API and about possible
@@ -81,6 +78,9 @@ to invite everyone to give statsmodels a test drive and report
 comments and possibilities for improvement and bugs to the
 scipy-user mailing list or file tickets on our bug tracker at
 https://bugs.launchpad.net/statsmodels
+
+The development repository is at the new location http://code.launchpad.net/statsmodels,
+and the old location http://code.launchpad.net/~scipystats
 
 We would also like to use statsmodels, or related projects to
 it, as a staging ground for new models. The current maintainers

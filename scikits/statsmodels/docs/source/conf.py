@@ -17,6 +17,7 @@ import sys, os
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #sys.path.append(os.path.abspath('.'))
+sys.path.insert(0, os.path.abspath('../sphinxext'))
 
 sys.path.extend([
 
@@ -37,7 +38,7 @@ extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest','numpydoc',
 'sphinx.ext.pngmath', 'sphinx.ext.ifconfig', 'sphinx.ext.autosummary']
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ['_templates', '_templates/autosummary']
 
 # The suffix of source filenames.
 source_suffix = '.rst'
@@ -158,7 +159,7 @@ html_static_path = ['_static']
 #html_additional_pages = {}
 
 # If false, no module index is generated.
-#html_use_modindex = True
+html_use_modindex = True
 
 # If false, no index is generated.
 #html_use_index = True
@@ -216,3 +217,5 @@ latex_documents = [
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'http://docs.scipy.org/': None}
+import glob
+autosummary_generate = glob.glob("*.rst")

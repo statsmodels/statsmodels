@@ -1,5 +1,6 @@
 """
-Generalized linear models
+Generalized linear models currently supports estimation using the one-parameter
+exponential families
 
 References
 ----------
@@ -30,6 +31,8 @@ class GLM(LikelihoodModel):
 
     GLM inherits from statsmodels.LikelihoodModel
 
+
+
     Parameters
     -----------
     endog : array-like
@@ -43,6 +46,7 @@ class GLM(LikelihoodModel):
         Each family can take a link instance as an argument.  See
         statsmodels.family.family for more information.
 
+
     Attributes
     -----------
     df_model : float
@@ -50,9 +54,9 @@ class GLM(LikelihoodModel):
     df_resid : float
         The number of observation `n` minus the number of regressors `p`.
     endog : array
-        See above.
+        See Parameters.
     exog : array
-        See above.
+        See Parameters.
     history : dict
         Contains information about the iterations.
     iteration : int
@@ -91,6 +95,8 @@ class GLM(LikelihoodModel):
     score
         Returns the score matrix of the model.  Not yet implemented.
 
+
+
     Examples
     --------
     >>> import scikits.statsmodels as sm
@@ -121,19 +127,73 @@ class GLM(LikelihoodModel):
 
     Notes
     -----
-    Only the following combinations make sense for family and link
-                 + ident log logit probit cloglog pow opow nbinom loglog logc
-    Gaussian     |   x    x                        x
-    inv Gaussian |   x    x                        x
-    binomial     |   x    x    x     x       x     x    x           x      x
-    Poission     |   x    x                        x
-    neg binomial |   x    x                        x          x
-    gamma        |   x    x                        x
+    Only the following combinations make sense for family and link ::
+
+                     + ident log logit probit cloglog pow opow nbinom loglog logc
+        Gaussian     |   x    x                        x
+        inv Gaussian |   x    x                        x
+        binomial     |   x    x    x     x       x     x    x           x      x
+        Poission     |   x    x                        x
+        neg binomial |   x    x                        x          x
+        gamma        |   x    x                        x
 
     Not all of these link functions are currently available.
 
     Endog and exog are references so that if the data they refer to are already
     arrays and these arrays are changed, endog and exog will change.
+
+
+    **Attributes**
+
+    df_model : float
+        Model degrees of freedom is equal to p - 1, where p is the number
+        of regressors.  Note that the intercept is not reported as a
+        degree of freedom.
+    df_resid : float
+        Residual degrees of freedom is equal to the number of observation n
+        minus the number of regressors p.
+    endog : array
+        See above.  Note that endog is a reference to the data so that if
+        data is already an array and it is changed, then `endog` changes
+        as well.
+    exog : array
+        See above.  Note that endog is a reference to the data so that if
+        data is already an array and it is changed, then `endog` changes
+        as well.
+    history : dict
+        Contains information about the iterations. Its keys are `fittedvalues`,
+        `deviance`, and `params`.
+    iteration : int
+        The number of iterations that fit has run.  Initialized at 0.
+    family : family class instance
+        A pointer to the distribution family of the model.
+    mu : array
+        The mean response of the transformed variable.  `mu` is the value of
+        the inverse of the link function at eta, where eta is the linear
+        predicted value of the WLS fit of the transformed variable.  `mu` is
+        only available after fit is called.  See
+        statsmodels.family.family.fitted of the distribution family for more
+        information.
+    normalized_cov_params : array
+        The p x p normalized covariance of the design / exogenous data.
+        This is approximately equal to (X.T X)^(-1)
+    pinv_wexog : array
+        The pseudoinverse of the design / exogenous data array.  Note that
+        GLM has no whiten method, so this is just the pseudo inverse of the
+        design.
+        The pseudoinverse is approximately equal to (X.T X)^(-1)X.T
+    scale : float
+        The estimate of the scale / dispersion of the model fit.  Only
+        available after fit is called.  See GLM.fit and GLM.estimate_scale
+        for more information.
+    scaletype : str
+        The scaling used for fitting the model.  This is only available after
+        fit is called.  The default is None.  See GLM.fit for more information.
+    weights : array
+        The value of the weights after the last iteration of fit.  Only
+        available after fit is called.  See statsmodels.family.family for
+        the specific distribution weighting functions.
+
     '''
 
     def __init__(self, endog, exog, family=family.Gaussian()):
@@ -242,7 +302,7 @@ class GLM(LikelihoodModel):
         Return linear predicted values for a design matrix
 
         Parameters
-        ---------
+        ----------
         exog : array-like
             Design / exogenous data
         params : array-like, optional after fit has been called
@@ -365,22 +425,29 @@ class GLMResults(LikelihoodModelResults):
     aic : float
         Akaike Information Criterion
         -2 * `llf` + 2*(`df_model` + 1)
+
     bic : float
         Bayes Information Criterion
         `deviance` - `df_resid` * log(`nobs`)
+
     deviance : float
         See statsmodels.family.family for the distribution-specific deviance
         functions.
+
     df_model : float
         See GLM.df_model
+
     df_resid : float
         See GLM.df_resid
+
     fittedvalues : array
         Linear predicted values for the fitted model.
         dot(exog, params)
+
     llf : float
         Value of the loglikelihood function evalued at params.
         See statsmodels.family.family for distribution-specific loglikelihoods.
+
     model : class instance
         Pointer to GLM model instance that called fit.
     mu : array
@@ -423,8 +490,7 @@ class GLMResults(LikelihoodModelResults):
         The estimate of the scale / dispersion for the model fit.
         See GLM.fit and GLM.estimate_scale for more information.
     stand_errors : array
-        The standard errors of the fitted GLM.
-still named bse
+        The standard errors of the fitted GLM.   #TODO still named bse
 
     Methods
     -------
