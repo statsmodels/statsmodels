@@ -54,15 +54,17 @@ Norms
 Scale
 ^^^^^
 
+.. autosummary::
    :toctree: generated/
 
-Gaussian
-Huber
-Hubers_scale
-MAD
-huber
-hubers_scale
-stand_MAD
+   Gaussian
+   Huber
+   HuberScale
+
+   huber
+   hubers_scale
+   mad
+   stand_mad
 
 
 Technical Documentation

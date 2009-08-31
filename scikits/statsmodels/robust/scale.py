@@ -29,7 +29,7 @@ def mad(a, c=Gaussian.ppf(3/4.), axis=0):  # c \approx .6745
         The defaul is 0.
 
     Returns
-    --------
+    -------
     mad : float
         `mad` = median(abs(`a`))/`c`
     """
@@ -51,7 +51,7 @@ def stand_mad(a, c=Gaussian.ppf(3/4.), axis=0):
         The defaul is 0.
 
     Returns
-    --------
+    -------
     mad : float
         `mad` = median(abs(`a`-median(`a`))/`c`
     """
@@ -118,7 +118,7 @@ class Huber(object):
             median absolute deviation of a is used.
 
         Notes
-        --------
+        -----
         `Huber` minimizes the function
 
         sum(psi((a[i]-mu)/scale)**2)
@@ -199,7 +199,7 @@ class HuberScale(object):
     IRLS algorithm and is slightly different than the `Huber` class.
 
     Parameters
-    ------
+    ----------
     d : float, optional
         d is the tuning constant for Huber's scale.  Default is 2.5
     tol : float, optional
