@@ -32,12 +32,21 @@ GLS is the superclass of the other regression classes.
 
 Class hierachy: TODO
 
-GLS (Generalized Least Squares)
--------------------------------
+yule_walker is not a full model class, but a function that estimate the
+parameters of a univariate autoregressive process, AR(p). It is used in GLSAR,
+but it can also be used independently of any models. yule_walker only
+calculates the estimates and the standard deviation of the lag parameters but
+not the additional regression statistics. We hope to include yule-walker in
+future in a separate univariate time series class. A similar result can be
+obtained with GLSAR if only the constant is included as regressors. In this
+case the parameter estimates of the lag estimates are not reported, however
+additional statistics, for example aic, become available.
+
 
 Attributes
-~~~~~~~~~~
-A more verbose description of the attributes.
+^^^^^^^^^^
+The following is more verbose description of the attributes which is mostly common to all
+regression classes
 
 pinv_wexog : array
     | `pinv_wexog` is the `p` x `n` Moore-Penrose pseudoinverse of the
@@ -73,19 +82,27 @@ wendog : array
     | The whitened response variable.
     | :math:`\Psi^{T}Y`
 
-yule_walker is not a full model class, but a function that estimate the
-parameters of a univariate autoregressive process, AR(p). It is used in GLSAR,
-but it can also be used independently of any models. yule_walker only
-calculates the estimates and the standard deviation of the lag parameters but
-not the additional regression statistics. We hope to include yule-walker in
-future in a separate univariate time series class. A similar result can be
-obtained with GLSAR if only the constant is included as regressors. In this
-case the parameter estimates of the lag estimates are not reported, however
-additional statistics, for example aic, become available.
+
+
+References
+^^^^^^^^^^
+
+General reference for regression models:
+
+D. C. Montgomery and E.A. Peck. "Introduction to Linear Regression
+    Analysis." 2nd. Ed., Wiley, 1992.
+
+Econometrics references for regression models:
+
+R. Davidson and J.G. MacKinnon.  "Econometric Theory and Methods," Oxford,
+    2004.
+
+W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
 
 Examples
 --------
 
+see also the `examples` and the `tests` folders
 
 
 Module Reference

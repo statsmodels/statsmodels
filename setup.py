@@ -4,11 +4,11 @@ please download and install it from http://pypi.python.org/pypi/setuptools
 """
 
 descr = """
-Statsmodels is a python package that provides an interface to SciPy for
+Statsmodels is a python package that provides an interface to scipy for
 statistical computations including descriptive statistics and
 fitting statistical models.
 
-LICENSE: BSD
+LICENSE: Simplified BSD
 """
 import os
 import sys
@@ -19,7 +19,7 @@ from numpy.distutils.core import setup
 DISTNAME = 'scikits.statsmodels'
 DESCRIPTION = 'Statistical computations and models for use with SciPy'
 LONG_DESCRIPTION = descr
-MAINTAINER = ''
+MAINTAINER = 'Skipper Seabold, Josef Perktold'
 MAINTAINER_EMAIL =''
 URL = ''
 LICENSE = 'BSD'
@@ -27,8 +27,9 @@ DOWNLOAD_URL = ''
 
 MAJ = 0
 MIN = 1
-REV = 1
-DEV = True
+REV = 0
+DEV = False #True
+QUALIFIER = 'b1'
 
 classifiers = [ 'Development Status :: 3 - Alpha',
               'Environment :: Console',
@@ -43,9 +44,9 @@ def build_ver_str():
 
 def fbuild_fver_str():
     if DEV:
-        return build_ver_str() +'dev'
+        return build_ver_str() + 'dev'
     else:
-        return build_ver_str()
+        return build_ver_str() + QUALIFIER
 
 VERSION = build_ver_str()
 

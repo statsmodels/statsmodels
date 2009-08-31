@@ -25,22 +25,11 @@ Examples
             family=sm.family.Gamma())
     >>> gamma_results = gamma_model.fit()
 
-Reference
----------
+see also the `examples` and the `tests` folders
 
-Gill, Jeff. 2000. Generalized Linear Models: A Unified Approach.
-    SAGE QASS Series.
 
-Green, PJ. 1984.  "Iteratively reweighted least squares for maximum
-    likelihood estimation, and some robust and resistant alternatives."
-    Journal of the Royal Statistical Society, Series B, 46, 149-192.
-
-Hardin, J.W. and Hilbe, J.M. 2007.  "Generalized Linear Models and
-    Extensions."  2nd ed.  Stata Press, College Station, TX.
-
-McCullagh, P. and Nelder, J.A.  1989.  "Generalized Linear Models." 2nd ed.
-    Chapman & Hall, Boca Rotan.
-
+Module Reference
+----------------
 
 Model and Result Classes
 ^^^^^^^^^^^^^^^^^^^^^^^^

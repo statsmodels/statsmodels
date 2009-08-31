@@ -12,7 +12,6 @@ Regression will not work with a 1d array for exog (pinv needs two), then
 TODO
 -----
 Make a recarray dataset and masked dataset for testing and development
-Put inheritance structure in docs, note where attributes/methods of parent class      are overwritten.
 Rename bse
 Add tvalues attribute to results instead of calling t method?
 
