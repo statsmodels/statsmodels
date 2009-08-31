@@ -28,8 +28,8 @@ import sys
 # checks for sphinx-build binary these will find it if it is installed
 # in sys.prefix+'/local/bin/' or
 # in sys.predix+'/Scripts/'
-if os.path.isfile(os.path.join(sys.prefix, 'Scripts', 'sphinx-build')):
-    sphinx_build = os.path.join(sys.prefix, 'Scripts', 'sphinx-build')
+if os.path.isfile(os.path.join(sys.prefix, 'Scripts', 'sphinx-build.exe')):
+    sphinx_build = os.path.join(sys.prefix, 'Scripts', 'sphinx-build.exe')
 elif os.path.isfile(os.path.join(sys.prefix, 'local', 'bin', 'sphinx-build')):
     sphinx_build = os.path.join(sys.prefix, 'local', 'bin', 'sphinx-build')
 
