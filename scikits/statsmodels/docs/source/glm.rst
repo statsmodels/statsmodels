@@ -10,9 +10,6 @@ Generalized Linear Models
 Introduction
 ------------
 
-Generalized linear models currently supports estimation using the one-parameter
-exponential families.
-
 .. automodule:: scikits.statsmodels.glm
 
 

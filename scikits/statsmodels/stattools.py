@@ -31,11 +31,6 @@ def durbin_watson(resids):
         np.dot(resids,resids);
     return dw
 
-#@setastest(False)
-#@nottest(omni_norm_test)
-#@nottest   # should pass func?
-# neither of these seems to exclude this from the tests?
-#@dec.skipif(True, "This is not a test!")
 def omni_normtest(resids, axis=0):
     """
     Omnibus test for normality

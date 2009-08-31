@@ -108,6 +108,7 @@ class LeastSquares(RobustNorm):
         array
             rho(z) = (1/2.)*z**2
         """
+
         return z**2 * 0.5
 
     def psi(self, z):
@@ -126,6 +127,7 @@ class LeastSquares(RobustNorm):
         array
             psi(z) = z
         """
+
         return np.asarray(z)
 
     def weights(self, z):
@@ -144,6 +146,7 @@ class LeastSquares(RobustNorm):
         array
             weights(z) = np.ones(z.shape)
         """
+
         z = np.asarray(z)
         return np.ones(z.shape, np.float64)
 
@@ -155,6 +158,7 @@ class LeastSquares(RobustNorm):
         -----
         Used to estimate the robust covariance matrix.
         """
+
         return np.ones(z.shape, np.float64)
 
 class HuberT(RobustNorm):
@@ -656,6 +660,7 @@ class Hampel(RobustNorm):
             weights(z) = a/|z|                        for a < |z| <= b
             weights(z) = a*(c - |z|)/(|z|*(c-b))      for b < |z| <= c
             weights(z) = 0                            for |z| > c
+
         """
         z = np.asarray(z)
         a = self.a; b = self.b; c = self.c
@@ -663,6 +668,7 @@ class Hampel(RobustNorm):
         v = (t1 +
             t2 * a/np.fabs(z) +
             t3 * a*(c-np.fabs(z))/(np.fabs(z)*(c-b)))
+        v[np.where(np.isnan(v))]=1. # for some reason 0 returns a nan?
         return v
 
     def psi_deriv(self, z):

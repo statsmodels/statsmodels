@@ -8,7 +8,7 @@ Robust Linear Models
 
 Introduction
 ------------
-Robust Linear models
+
 
 .. automodule:: scikits.statsmodels.rlm
 
@@ -16,9 +16,45 @@ Robust Linear models
 Examples
 --------
 
+::
 
-Reference
----------
+    import scikits.statsmodels as sm
+    date = sm.datasets.stackloss.Load()
+    data.exog = sm.add_constant(data.exog)
+    rlm_model = models.RLM(data.endog, data.exog, M=models.robust.norms.HuberT())
+    rlm_results = rlm_model.fit()
+    print rlm_results.params
+
+Weight Functions
+----------------
+
+Andrew's Wave
+
+.. image:: images/aw.png
+
+Hampel 17A
+
+.. image:: images/hl.png
+
+Huber's t
+
+.. image:: images/ht.png
+
+Least Squares
+
+.. image:: images/ls.png
+
+Ramsay's Ea
+
+.. image:: images/re.png
+
+Trimmed Mean
+
+.. image:: images/tm.png
+
+Tukey's Biweight
+
+.. image:: images/tk.png
 
 Model and Result Classes
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -29,6 +65,7 @@ Model and Result Classes
    RLM
    RLMResults
 
+.. _norms:
 
 Norms
 ^^^^^
@@ -57,14 +94,13 @@ Scale
 .. autosummary::
    :toctree: generated/
 
-   Gaussian
-   Huber
-   HuberScale
-
-   huber
-   hubers_scale
-   mad
-   stand_mad
+    Gaussian
+    Huber
+    HuberScale
+    mad
+    huber
+    hubers_scale
+    stand_mad
 
 
 Technical Documentation

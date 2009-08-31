@@ -1,5 +1,6 @@
 """
-Robust linear models
+Robust linear models with support for the M-estimators  listed under
+:ref:`norms <norms>`.
 
 References
 ----------
@@ -8,6 +9,9 @@ PJ Huber.  'Robust Statistics' John Wiley and Sons, Inc., New York.  1981.
 PJ Huber.  1973,  'The 1972 Wald Memorial Lectures: Robust Regression:
     Asymptotics, Conjectures, and Monte Carlo.'  The Annals of Statistics,
     1.5, 799-821.
+
+R Venables, B Ripley. 'Modern Applied Statistics in S'  Springer, New York,
+    2002.
 """
 import numpy as np
 import tools
@@ -93,10 +97,9 @@ class RLM(LikelihoodModel):
 
     Examples
     ---------
-    >>> import scikits.statsmodels as models
-    >>> from scikits.statsmodels.datasets.stackloss import Load
-    >>> data = Load()
-    >>> data.exog = models.tools.add_constant(data.exog)
+    >>> import scikits.statsmodels as sm
+    >>> data = sm.datasets.stackloss.Load()
+    >>> data.exog = sm.add_constant(data.exog)
     >>> rlm_model = models.RLM(data.endog, data.exog, \
     ...     M=models.robust.norms.HuberT())
     >>> rlm_results = rlm_model.fit()
