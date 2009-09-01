@@ -14,8 +14,8 @@ directly used, but of interest only for internal use or for a developer who
 wants to extend on existing model classes.
 
 
-Reference
----------
+Module Reference
+----------------
 
 Model and Result Classes
 ^^^^^^^^^^^^^^^^^^^^^^^^

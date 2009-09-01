@@ -25,7 +25,11 @@ Examples
     rlm_results = rlm_model.fit()
     print rlm_results.params
 
+see also the `examples` and the `tests` folders
 
+
+Module Reference
+----------------
 
 Model and Result Classes
 ^^^^^^^^^^^^^^^^^^^^^^^^

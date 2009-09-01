@@ -12,7 +12,7 @@ ols_test_fit = sm.OLS(data.endog, data.exog).fit()
 incomesq = data.exog[:,2]
 pylab.scatter(incomesq, ols_test_fit.resid)
 pylab.grid()
-pylab.show()
+#pylab.show()
 
 # If we think that the variance is proportional to income**2
 # we would want to weight the regression by income
@@ -33,7 +33,7 @@ ess = wls_fit.uncentered_tss - wls_fit.ssr
 # rsquared
 rsquared = ess/wls_fit.uncentered_tss
 # mean squared error of the model
-mse_model = ess/(wls_fit.res1.df_model + 1) # add back the dof of the constant
+mse_model = ess/(wls_fit.df_model + 1) # add back the dof of the constant
 # f statistic
 fvalue = mse_model/wls_fit.mse_resid
 # adjusted r-squared

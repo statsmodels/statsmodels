@@ -1034,7 +1034,7 @@ class RegressionResults(LikelihoodModelResults):
         t = time.localtime()
 
         # extra stats
-        from stattests import jarque_bera, omni_normtest, durbin_watson
+        from stattools import jarque_bera, omni_normtest, durbin_watson
         llf, aic, bic = self.llf, self.aic, self.bic
         JB, JBpv, skew, kurtosis = jarque_bera(self.wresid)
         omni, omnipv = omni_normtest(self.wresid)

@@ -14,6 +14,7 @@ recursive-include scikits/statsmodels/docs/sphinxext *
 recursive-exclude scikits/statsmodels/docs/build *
 recursive-include scikits/statsmodels/docs/build/html *
 recursive-exclude scikits/statsmodels/docs/build/htmlhelp *
+include scikits/statsmodels/docs/build/htmlhelp/statsmodelsdoc.chm
 #include scikits/statsmodels/docs mak*
 #include scikits/statsmodels/docs GLM*
 global-exclude *~ *.swp  *.pyc 
