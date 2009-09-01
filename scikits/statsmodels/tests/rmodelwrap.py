@@ -3,7 +3,11 @@
 import numpy as np
 
 import rpy
-from rpy import r
+from check_for_rpy import skip_rpy
+skipR = skip_rpy()
+if not skipR:
+    from rpy import r
+
 # MASS contains
 # negative binomial family for GLM
 # rlm

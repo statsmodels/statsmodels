@@ -4,7 +4,6 @@ Test functions for models.rlm
 
 from numpy.testing import *
 import scikits.statsmodels as models
-from rmodelwrap import RModel
 from scikits.statsmodels.rlm import RLM
 import model_results
 from nose import SkipTest
@@ -18,6 +17,7 @@ DECIMAL_least = 1
 skipR = skip_rpy()
 if not skipR:
     from rpy import r
+    from rmodelwrap import RModel
 
 class CheckRlmResults(object):
     '''
@@ -76,7 +76,6 @@ class TestRlm(CheckRlmResults):
     from scikits.statsmodels.datasets.stackloss import Load
     data = Load()
     data.exog = models.tools.add_constant(data.exog)
-    r.library('MASS')
     def __init__(self):
         results = RLM(self.data.endog, self.data.exog,\
                     M=models.robust.norms.HuberT()).fit()   # default M
@@ -87,15 +86,17 @@ class TestRlm(CheckRlmResults):
         self.res1 = results
         self.res1.h2 = h2
         self.res1.h3 = h3
+
+
+    def setup(self):
+        if skipR:
+            raise SkipTest, "Rpy not installed"
+        r.library('MASS')
         self.res2 = RModel(self.data.endog, self.data.exog,
                         r.rlm, psi="psi.huber")
         self.res2.h1 = model_results.Huber.h1
         self.res2.h2 = model_results.Huber.h2
         self.res2.h3 = model_results.Huber.h3
-
-    def setup(self):
-        if skipR:
-            raise SkipTest, "Rpy not installed"
 
 class TestHampel(TestRlm):
     def __init__(self):
@@ -108,15 +109,16 @@ class TestHampel(TestRlm):
         self.res1 = results
         self.res1.h2 = h2
         self.res1.h3 = h3
-        self.res2 = RModel(self.data.endog[:,None], self.data.exog,
-                    r.rlm, psi="psi.hampel") #, init="lts")
-        self.res2.h1 = model_results.Hampel.h1
-        self.res2.h2 = model_results.Hampel.h2
-        self.res2.h3 = model_results.Hampel.h3
 
     def setup(self):
         if skipR:
             raise SkipTest, "Rpy not installed"
+        self.res2 = RModel(self.data.endog[:,None], self.data.exog,
+        r.rlm, psi="psi.hampel") #, init="lts")
+        self.res2.h1 = model_results.Hampel.h1
+        self.res2.h2 = model_results.Hampel.h2
+        self.res2.h3 = model_results.Hampel.h3
+
 
 
 class TestRlmBisquare(TestRlm):
@@ -132,15 +134,16 @@ class TestRlmBisquare(TestRlm):
         self.res1 = results
         self.res1.h2 = h2
         self.res1.h3 = h3
+
+    def setup(self):
+        if skipR:
+            raise SkipTest, "Rpy not installed"
         self.res2 = RModel(self.data.endog, self.data.exog,
                         r.rlm, psi="psi.bisquare")
         self.res2.h1 = model_results.Bisquare.h1
         self.res2.h2 = model_results.Bisquare.h2
         self.res2.h3 = model_results.Bisquare.h3
 
-    def setup(self):
-        if skipR:
-            raise SkipTest, "Rpy not installed"
 
 class TestRlmAndrews(TestRlm):
     def __init__(self):

@@ -8,7 +8,6 @@ from numpy.testing import *
 import scikits.statsmodels as models
 from scikits.statsmodels.glm import GLM
 from scikits.statsmodels.tools import add_constant
-from rmodelwrap import RModel
 from nose import SkipTest
 from check_for_rpy import skip_rpy
 
@@ -20,6 +19,7 @@ DECIMAL_none = 0
 skipR = skip_rpy()
 if not skipR:
     from rpy import r
+    from rmodelwrap import RModel
 
 class CheckModelResults(object):
     '''
@@ -33,7 +33,7 @@ class CheckModelResults(object):
         assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL)
 
     def test_residuals(self):
-        if isinstance(self.res2, RModel) and not hasattr(self.res2, 'resids'):
+        if 'rmodelwrap' in self.res2.__module__ and not hasattr(self.res2, 'resids'):
            assert_almost_equal(self.res1.resid_dev, self.res2.resid_dev,
                 DECIMAL)
         else:
@@ -52,7 +52,7 @@ class CheckModelResults(object):
                 self.res2.aic_R)
 
     def test_aic_Stata(self):
-        if isinstance(self.res2, RModel):
+        if 'rmodelwrap' in self.res2.__module__:
             raise SkipTest("Results are from RModel wrapper")
         aic = self.res1.aic/self.res1.nobs
         self.check_aic_Stata(aic, self.res2.aic_Stata)
@@ -71,18 +71,18 @@ class CheckModelResults(object):
                     DECIMAL)
 
     def test_bic(self):
-        if isinstance(self.res2, RModel) and not hasattr(self.res2, 'bic'):
+        if 'rmodelwrap' in self.res2.__module__ and not hasattr(self.res2, 'bic'):
             raise SkipTest("Results are from RModel wrapper")
         self.check_bic(self.res1.bic,
             self.res2.bic)
 
     def test_degrees(self):
-        if not isinstance(self.res2, RModel):
+        if not 'rmodelwrap' in self.res2.__module__:
             assert_almost_equal(self.res1.model.df_model,self.res2.df_model, DECIMAL)
         assert_almost_equal(self.res1.model.df_resid,self.res2.df_resid, DECIMAL)
 
     def test_pearsonX2(self):
-        if isinstance(self.res2, RModel):
+        if 'rmodelwrap' in self.res2.__module__:
             raise SkipTest("Results are from RModel wrapper")
         self.check_pearsonX2(self.res1.pearsonX2, self.res2.pearsonX2)
 
@@ -97,15 +97,16 @@ class TestGlmGaussian(CheckModelResults):
         self.data.exog = add_constant(self.data.exog)
         self.res1 = GLM(self.data.endog, self.data.exog,
                         family=models.family.Gaussian()).fit()
-        Gauss = r.gaussian
-        self.res2 = RModel(self.data.endog, self.data.exog, r.glm, family=Gauss)
-        self.res2.resids = np.array(self.res2.resid)[:,None]*np.ones((1,5))
-        self.res2.null_deviance = 185008826 # taken from R.
                                             # I think this is a bug in Rpy
 
     def setup(self):
         if skipR:
             raise SkipTest, "Rpy not installed."
+        Gauss = r.gaussian
+        self.res2 = RModel(self.data.endog, self.data.exog, r.glm, family=Gauss)
+        self.res2.resids = np.array(self.res2.resid)[:,None]*np.ones((1,5))
+        self.res2.null_deviance = 185008826 # taken from R.
+
 
     def check_params(self, params1, params2):
         assert_almost_equal(params1, params2, DECIMAL)
@@ -141,14 +142,14 @@ class TestGaussianLog(CheckModelResults):
         GaussLog_Model = GLM(lny, X, \
                 family=models.family.Gaussian(models.family.links.log))
         GaussLog_Res = GaussLog_Model.fit()
-        GaussLogLink = r.gaussian(link = "log")
-        GaussLog_Res_R = RModel(lny, X, r.glm, family=GaussLogLink)
         self.res1 = GaussLog_Res
-        self.res2 = GaussLog_Res_R
 
     def setup(self):
         if skipR:
             raise SkipTest, "Rpy not installed"
+        GaussLogLink = r.gaussian(link = "log")
+        GaussLog_Res_R = RModel(lny, X, r.glm, family=GaussLogLink)
+
 
     def test_null_deviance(self):
         assert_almost_equal(self.res1.null_deviance, self.res2.null_deviance,
@@ -170,19 +171,19 @@ class TestGaussianInverse(CheckModelResults):
         x = np.arange(nobs)
         np.random.seed(54321)
         y = 1.0 + 2.0 * x + x**2 + 0.1 * np.random.randn(nobs)
-        X = np.c_[np.ones((nobs,1)),x,x**2]
-        y_inv = (1. + .02*x + .001*x**2)**-1 + .001 * np.random.randn(nobs)
-        InverseLink_Model = GLM(y_inv, X,
+        self.X = np.c_[np.ones((nobs,1)),x,x**2]
+        self.y_inv = (1. + .02*x + .001*x**2)**-1 + .001 * np.random.randn(nobs)
+        InverseLink_Model = GLM(self.y_inv, self.X,
                 family=models.family.Gaussian(models.family.links.inverse))
         InverseLink_Res = InverseLink_Model.fit()
-        InverseLink = r.gaussian(link = "inverse")
-        InverseLink_Res_R = RModel(y_inv, X, r.glm, family=InverseLink)
         self.res1 = InverseLink_Res
-        self.res2 = InverseLink_Res_R
 
     def setup(self):
         if skipR:
             raise SkipTest, "Rpy not installed."
+        InverseLink = r.gaussian(link = "inverse")
+        InverseLink_Res_R = RModel(self.y_inv, self.X, r.glm, family=InverseLink)
+        self.res2 = InverseLink_Res_R
 
     def check_params(self, params1, params2):
         assert_almost_equal(params1, params2, DECIMAL)
@@ -360,14 +361,15 @@ class TestGlmGammaLog(CheckModelResults):
         data = Cancer()
         self.res1 = GLM(data.endog, data.exog,
             family=models.family.Gamma(link=models.family.links.log)).fit()
+
+    def setup(self):
+        if skipR:
+            raise SkipTest, "Rpy not installed."
         self.res2 = RModel(data.endog, data.exog, r.glm,
             family=r.Gamma(link="log"))
         self.res2.null_deviance = 27.92207137420696 # From R (bug in rpy)
         self.res2.bic = -154.1582 # from Stata
 
-    def setup(self):
-        if skipR:
-            raise SkipTest, "Rpy not installed."
 
     def check_params(self, params1, params2):
         assert_almost_equal(params1, params2, DECIMAL)
@@ -390,13 +392,13 @@ class TestGlmGammaIdentity(CheckModelResults):
         data = Cancer()
         self.res1 = GLM(data.endog, data.exog,
             family=models.family.Gamma(link=models.family.links.identity)).fit()
-        self.res2 = RModel(data.endog, data.exog, r.glm,
-            family=r.Gamma(link="identity"))
-        self.res2.null_deviance = 27.92207137420696 # from R, Rpy bug
 
     def setup(self):
         if skipR:
             raise SkipTest, "Rpy not installed."
+        self.res2 = RModel(data.endog, data.exog, r.glm,
+            family=r.Gamma(link="identity"))
+        self.res2.null_deviance = 27.92207137420696 # from R, Rpy bug
 
     def check_params(self, params1, params2):
         assert_almost_equal(params1, params2, DECIMAL_lesser)
@@ -473,9 +475,9 @@ class TestGlmInvgauss(CheckModelResults):
         self.res1 = GLM(self.res2.endog, self.res2.exog, \
                 family=models.family.InverseGaussian()).fit()
 
-    def setup(self):
-        if skipR:
-            raise nose.SkipTest('requires rpy')
+#    def setup(self):
+#        if skipR:
+#            raise nose.SkipTest('requires rpy')
 
     def check_params(self, params1, params2):
         assert_almost_equal(params1, params2, DECIMAL)
@@ -512,15 +514,15 @@ class TestGlmInvgaussLog(CheckModelResults):
         self.res1 = GLM(data.endog, data.exog,
             family=models.family.InverseGaussian(link=\
             models.family.links.log)).fit()
-        self.res2 = RModel(data.endog, data.exog, r.glm,
-            family=r.inverse_gaussian(link="log"))
-        self.res2.null_deviance = 335.1539777981053 # from R, Rpy bug
-        self.res2.llf = -12162.72308 # from Stata, R's has big rounding diff
                                      # common across Gamma implementation
 
     def setup(self):
         if skipR:
             raise SkipTest, "Rpy not installed."
+        self.res2 = RModel(data.endog, data.exog, r.glm,
+            family=r.inverse_gaussian(link="log"))
+        self.res2.null_deviance = 335.1539777981053 # from R, Rpy bug
+        self.res2.llf = -12162.72308 # from Stata, R's has big rounding diff
 
     def check_params(self, params1, params2):
         assert_almost_equal(params1, params2, DECIMAL)
@@ -544,14 +546,14 @@ class TestGlmInvgaussIdentity(CheckModelResults):
         self.res1 = GLM(data.endog, data.exog,
             family=models.family.InverseGaussian(link=\
             models.family.links.identity)).fit()
-        self.res2 = RModel(data.endog, data.exog, r.glm,
-            family=r.inverse_gaussian(link="identity"))
-        self.res2.null_deviance = 335.1539777981053 # from R, Rpy bug
-        self.res2.llf = -12163.25545    # from Stata, big diff with R
 
     def setup(self):
         if skipR:
             raise SkipTest, "Rpy not installed."
+        self.res2 = RModel(data.endog, data.exog, r.glm,
+            family=r.inverse_gaussian(link="identity"))
+        self.res2.null_deviance = 335.1539777981053 # from R, Rpy bug
+        self.res2.llf = -12163.25545    # from Stata, big diff with R
 
     def check_params(self, params1, params2):
         assert_almost_equal(params1, params2, DECIMAL_less)
@@ -582,15 +584,15 @@ class TestGlmNegbinomial(CheckModelResults):
         results = GLM(self.data.endog, self.data.exog,
                 family=models.family.NegativeBinomial()).fit()
         self.res1 = results
-        r.library('MASS')  # this doesn't work when done in rmodelwrap?
-        self.res2 = RModel(self.data.endog, self.data.exog, r.glm,
-                family=r.negative_binomial(1))
-        self.res2.null_deviance = 27.8110469364343
         # Rpy does not return the same null deviance as R for some reason
 
     def setup(self):
         if skipR:
             raise SkipTest, "Rpy not installed"
+        r.library('MASS')  # this doesn't work when done in rmodelwrap?
+        self.res2 = RModel(self.data.endog, self.data.exog, r.glm,
+                family=r.negative_binomial(1))
+        self.res2.null_deviance = 27.8110469364343
 
     def check_params(self, params1, params2):
         assert_almost_equal(params1, params2, DECIMAL-1)    # precision issue
