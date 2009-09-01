@@ -371,12 +371,9 @@ class TestWLS(CheckRegressionResults):
     '''
     def __init__(self):
         from scikits.statsmodels.datasets.ccard import Load
-        data = Load()
-        self.res1 = WLS(data.endog, data.exog, weights=1/data.exog[:,2]).fit()
-        self.res2 = RModel(data.endog, data.exog, r.lm,
-                weights=1/data.exog[:,2])
-        self.res2.wresid = self.res2.rsum['residuals']
-        self.res2.scale = self.res2.scale**2 # R has sigma not sigma**2
+        self.data = Load()
+        self.res1 = WLS(self.data.endog, self.data.exog,
+                weights=1/self.data.exog[:,2]).fit()
 #FIXME: triaged results for noconstant
         self.res1.ess = self.res1.uncentered_tss - self.res1.ssr
         self.res1.rsquared = self.res1.ess/self.res1.uncentered_tss
@@ -388,6 +385,10 @@ class TestWLS(CheckRegressionResults):
     def setup(self):
         if skipR:
             raise SkipTest, "Rpy not installed"
+        self.res2 = RModel(self.data.endog, self.data.exog, r.lm,
+                        weights=1/self.data.exog[:,2])
+        self.res2.wresid = self.res2.rsum['residuals']
+        self.res2.scale = self.res2.scale**2 # R has sigma not sigma**2
 
     def check_confidenceintervals(self, conf1, conf2):
         assert_almost_equal(conf1, conf2, DECIMAL)
@@ -445,14 +446,15 @@ class TestGLS_OLS(CheckRegressionResults):
 class TestYuleWalker(object):
     def __init__(self):
         from scikits.statsmodels.datasets.sunspots import Load
-        data = Load()
-        self.rho, self.sigma = yule_walker(data.endog, order=4, method="mle")
-        R_results = r.ar(data.endog, aic="FALSE", order_max=4)
-        self.R_params = R_results['ar']
+        self.data = Load()
+        self.rho, self.sigma = yule_walker(self.data.endog, order=4, method="mle")
 
     def setup(self):
         if skipR:
             raise SkipTest, "Rpy not installed."
+
+        R_results = r.ar(self.data.endog, aic="FALSE", order_max=4)
+        self.R_params = R_results['ar']
 
     def test_params(self):
         assert_almost_equal(self.rho, self.R_params, DECIMAL)
