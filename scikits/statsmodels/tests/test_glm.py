@@ -358,14 +358,14 @@ class TestGlmGamma(CheckModelResults):
 class TestGlmGammaLog(CheckModelResults):
     def __init__(self):
         from model_results import Cancer
-        data = Cancer()
-        self.res1 = GLM(data.endog, data.exog,
+        self.data = Cancer()
+        self.res1 = GLM(self.data.endog, self.data.exog,
             family=models.family.Gamma(link=models.family.links.log)).fit()
 
     def setup(self):
         if skipR:
             raise SkipTest, "Rpy not installed."
-        self.res2 = RModel(data.endog, data.exog, r.glm,
+        self.res2 = RModel(self.data.endog, self.data.exog, r.glm,
             family=r.Gamma(link="log"))
         self.res2.null_deviance = 27.92207137420696 # From R (bug in rpy)
         self.res2.bic = -154.1582 # from Stata
@@ -389,14 +389,14 @@ class TestGlmGammaLog(CheckModelResults):
 class TestGlmGammaIdentity(CheckModelResults):
     def __init__(self):
         from model_results import Cancer
-        data = Cancer()
-        self.res1 = GLM(data.endog, data.exog,
+        self.data = Cancer()
+        self.res1 = GLM(self.data.endog, self.data.exog,
             family=models.family.Gamma(link=models.family.links.identity)).fit()
 
     def setup(self):
         if skipR:
             raise SkipTest, "Rpy not installed."
-        self.res2 = RModel(data.endog, data.exog, r.glm,
+        self.res2 = RModel(self.data.endog, self.data.exog, r.glm,
             family=r.Gamma(link="identity"))
         self.res2.null_deviance = 27.92207137420696 # from R, Rpy bug
 
@@ -510,8 +510,8 @@ class TestGlmInvgauss(CheckModelResults):
 class TestGlmInvgaussLog(CheckModelResults):
     def __init__(self):
         from model_results import Medpar1
-        data = Medpar1()
-        self.res1 = GLM(data.endog, data.exog,
+        self.data = Medpar1()
+        self.res1 = GLM(self.data.endog, self.data.exog,
             family=models.family.InverseGaussian(link=\
             models.family.links.log)).fit()
                                      # common across Gamma implementation
@@ -519,7 +519,7 @@ class TestGlmInvgaussLog(CheckModelResults):
     def setup(self):
         if skipR:
             raise SkipTest, "Rpy not installed."
-        self.res2 = RModel(data.endog, data.exog, r.glm,
+        self.res2 = RModel(self.data.endog, self.data.exog, r.glm,
             family=r.inverse_gaussian(link="log"))
         self.res2.null_deviance = 335.1539777981053 # from R, Rpy bug
         self.res2.llf = -12162.72308 # from Stata, R's has big rounding diff
@@ -542,15 +542,15 @@ class TestGlmInvgaussLog(CheckModelResults):
 class TestGlmInvgaussIdentity(CheckModelResults):
     def __init__(self):
         from model_results import Medpar1
-        data = Medpar1()
-        self.res1 = GLM(data.endog, data.exog,
+        self.data = Medpar1()
+        self.res1 = GLM(self.data.endog, self.data.exog,
             family=models.family.InverseGaussian(link=\
             models.family.links.identity)).fit()
 
     def setup(self):
         if skipR:
             raise SkipTest, "Rpy not installed."
-        self.res2 = RModel(data.endog, data.exog, r.glm,
+        self.res2 = RModel(self.data.endog, self.data.exog, r.glm,
             family=r.inverse_gaussian(link="identity"))
         self.res2.null_deviance = 335.1539777981053 # from R, Rpy bug
         self.res2.llf = -12163.25545    # from Stata, big diff with R
