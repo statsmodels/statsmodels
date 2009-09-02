@@ -539,7 +539,7 @@ class GLMResults(LikelihoodModelResults):
         self.resid_working = model.data_weights * (self.resid_response/\
                     model.family.link.deriv(model.mu))
         self.resid_anscombe = model.family.resid_anscombe(model.endog,model.mu)
-        self.resid_dev = model.family.devresid(model.endog, model.mu)
+        self.resid_dev = model.family.resid_dev(model.endog, model.mu)
         self.pearsonX2 = np.sum(self.resid_pearson**2)
         self.fittedvalues = np.dot(model.exog, self.params)
         null = WLS(model.endog,np.ones((len(model.endog),1)),
@@ -561,5 +561,4 @@ class GLMResults(LikelihoodModelResults):
                     self.model.mu, scale=self.scale)
         return self._llf
 
-#TODO: write summary method to return a string
-#       using output.py in sandbox...
+#TODO: write summary method to use output.py in sandbox
