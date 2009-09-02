@@ -135,11 +135,11 @@ class TestGaussianLog(CheckModelResults):
         x = np.arange(nobs)
         np.random.seed(54321)
 #        y = 1.0 - .02*x - .001*x**2 + 0.001 * np.random.randn(nobs)
-        X = np.c_[np.ones((nobs,1)),x,x**2]
-        lny = np.exp(-(-1.0 + 0.02*x + 0.0001*x**2)) +\
+        self.X = np.c_[np.ones((nobs,1)),x,x**2]
+        self.lny = np.exp(-(-1.0 + 0.02*x + 0.0001*x**2)) +\
                         0.001 * np.random.randn(nobs)
 
-        GaussLog_Model = GLM(lny, X, \
+        GaussLog_Model = GLM(self.lny, self.X, \
                 family=models.family.Gaussian(models.family.links.log))
         GaussLog_Res = GaussLog_Model.fit()
         self.res1 = GaussLog_Res
@@ -148,7 +148,8 @@ class TestGaussianLog(CheckModelResults):
         if skipR:
             raise SkipTest, "Rpy not installed"
         GaussLogLink = r.gaussian(link = "log")
-        GaussLog_Res_R = RModel(lny, X, r.glm, family=GaussLogLink)
+        GaussLog_Res_R = RModel(self.lny, self.X, r.glm, family=GaussLogLink)
+        self.res2 = GaussLog_Res_R
 
 
     def test_null_deviance(self):
@@ -358,14 +359,14 @@ class TestGlmGamma(CheckModelResults):
 class TestGlmGammaLog(CheckModelResults):
     def __init__(self):
         from model_results import Cancer
-        data = Cancer()
-        self.res1 = GLM(data.endog, data.exog,
+        self.data = Cancer()
+        self.res1 = GLM(self.data.endog, self.data.exog,
             family=models.family.Gamma(link=models.family.links.log)).fit()
 
     def setup(self):
         if skipR:
             raise SkipTest, "Rpy not installed."
-        self.res2 = RModel(data.endog, data.exog, r.glm,
+        self.res2 = RModel(self.data.endog, self.data.exog, r.glm,
             family=r.Gamma(link="log"))
         self.res2.null_deviance = 27.92207137420696 # From R (bug in rpy)
         self.res2.bic = -154.1582 # from Stata
@@ -389,14 +390,14 @@ class TestGlmGammaLog(CheckModelResults):
 class TestGlmGammaIdentity(CheckModelResults):
     def __init__(self):
         from model_results import Cancer
-        data = Cancer()
-        self.res1 = GLM(data.endog, data.exog,
+        self.data = Cancer()
+        self.res1 = GLM(self.data.endog, self.data.exog,
             family=models.family.Gamma(link=models.family.links.identity)).fit()
 
     def setup(self):
         if skipR:
             raise SkipTest, "Rpy not installed."
-        self.res2 = RModel(data.endog, data.exog, r.glm,
+        self.res2 = RModel(self.data.endog, self.data.exog, r.glm,
             family=r.Gamma(link="identity"))
         self.res2.null_deviance = 27.92207137420696 # from R, Rpy bug
 
@@ -510,8 +511,8 @@ class TestGlmInvgauss(CheckModelResults):
 class TestGlmInvgaussLog(CheckModelResults):
     def __init__(self):
         from model_results import Medpar1
-        data = Medpar1()
-        self.res1 = GLM(data.endog, data.exog,
+        self.data = Medpar1()
+        self.res1 = GLM(self.data.endog, self.data.exog,
             family=models.family.InverseGaussian(link=\
             models.family.links.log)).fit()
                                      # common across Gamma implementation
@@ -519,7 +520,7 @@ class TestGlmInvgaussLog(CheckModelResults):
     def setup(self):
         if skipR:
             raise SkipTest, "Rpy not installed."
-        self.res2 = RModel(data.endog, data.exog, r.glm,
+        self.res2 = RModel(self.data.endog, self.data.exog, r.glm,
             family=r.inverse_gaussian(link="log"))
         self.res2.null_deviance = 335.1539777981053 # from R, Rpy bug
         self.res2.llf = -12162.72308 # from Stata, R's has big rounding diff
@@ -542,15 +543,15 @@ class TestGlmInvgaussLog(CheckModelResults):
 class TestGlmInvgaussIdentity(CheckModelResults):
     def __init__(self):
         from model_results import Medpar1
-        data = Medpar1()
-        self.res1 = GLM(data.endog, data.exog,
+        self.data = Medpar1()
+        self.res1 = GLM(self.data.endog, self.data.exog,
             family=models.family.InverseGaussian(link=\
             models.family.links.identity)).fit()
 
     def setup(self):
         if skipR:
             raise SkipTest, "Rpy not installed."
-        self.res2 = RModel(data.endog, data.exog, r.glm,
+        self.res2 = RModel(self.data.endog, self.data.exog, r.glm,
             family=r.inverse_gaussian(link="identity"))
         self.res2.null_deviance = 335.1539777981053 # from R, Rpy bug
         self.res2.llf = -12163.25545    # from Stata, big diff with R
