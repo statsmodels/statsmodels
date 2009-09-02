@@ -135,11 +135,11 @@ class TestGaussianLog(CheckModelResults):
         x = np.arange(nobs)
         np.random.seed(54321)
 #        y = 1.0 - .02*x - .001*x**2 + 0.001 * np.random.randn(nobs)
-        X = np.c_[np.ones((nobs,1)),x,x**2]
-        lny = np.exp(-(-1.0 + 0.02*x + 0.0001*x**2)) +\
+        self.X = np.c_[np.ones((nobs,1)),x,x**2]
+        self.lny = np.exp(-(-1.0 + 0.02*x + 0.0001*x**2)) +\
                         0.001 * np.random.randn(nobs)
 
-        GaussLog_Model = GLM(lny, X, \
+        GaussLog_Model = GLM(self.lny, self.X, \
                 family=models.family.Gaussian(models.family.links.log))
         GaussLog_Res = GaussLog_Model.fit()
         self.res1 = GaussLog_Res
@@ -148,7 +148,8 @@ class TestGaussianLog(CheckModelResults):
         if skipR:
             raise SkipTest, "Rpy not installed"
         GaussLogLink = r.gaussian(link = "log")
-        GaussLog_Res_R = RModel(lny, X, r.glm, family=GaussLogLink)
+        GaussLog_Res_R = RModel(self.lny, self.X, r.glm, family=GaussLogLink)
+        self.res2 = GaussLog_Res_R
 
 
     def test_null_deviance(self):
