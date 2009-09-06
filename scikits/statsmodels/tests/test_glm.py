@@ -34,11 +34,11 @@ class CheckModelResults(object):
 
     def test_residuals(self):
         if 'rmodelwrap' in self.res2.__module__ and not hasattr(self.res2, 'resids'):
-           assert_almost_equal(self.res1.resid_dev, self.res2.resid_dev,
+           assert_almost_equal(self.res1.resid_deviance, self.res2.resid_deviance,
                 DECIMAL)
         else:
             resids = np.column_stack((self.res1.resid_pearson,
-            self.res1.resid_dev, self.res1.resid_working,
+            self.res1.resid_deviance, self.res1.resid_working,
             self.res1.resid_anscombe, self.res1.resid_response))
             self.check_resids(resids, self.res2.resids)
 
@@ -81,10 +81,10 @@ class CheckModelResults(object):
             assert_almost_equal(self.res1.model.df_model,self.res2.df_model, DECIMAL)
         assert_almost_equal(self.res1.model.df_resid,self.res2.df_resid, DECIMAL)
 
-    def test_pearsonX2(self):
+    def test_pearson_chi2(self):
         if 'rmodelwrap' in self.res2.__module__:
             raise SkipTest("Results are from RModel wrapper")
-        self.check_pearsonX2(self.res1.pearsonX2, self.res2.pearsonX2)
+        self.check_pearson_chi2(self.res1.pearson_chi2, self.res2.pearson_chi2)
 
 class TestGlmGaussian(CheckModelResults):
     def __init__(self):
@@ -126,8 +126,8 @@ class TestGlmGaussian(CheckModelResults):
     def check_bic(self, bic1, bic2):
         assert_almost_equal(bic1, bic2, DECIMAL)
 
-    def check_pearsonX2(self, pearsonX21, pearsonX22):
-        assert_almost_equal(pearsonX21, pearsonX22, DECIMAL)
+    def check_pearson_chi2(self, pearson_chi21, pearson_chi22):
+        assert_almost_equal(pearson_chi21, pearson_chi22, DECIMAL)
 
 class TestGaussianLog(CheckModelResults):
     def __init__(self):
@@ -236,8 +236,8 @@ class TestGlmBinomial(CheckModelResults):
         assert_almost_equal(bic1, bic2, DECIMAL_lesser)
         # accurate to 1e-02
 
-    def check_pearsonX2(self, pearsonX21, pearsonX22):
-        assert_almost_equal(pearsonX21, pearsonX22, DECIMAL_lesser)
+    def check_pearson_chi2(self, pearson_chi21, pearson_chi22):
+        assert_almost_equal(pearson_chi21, pearson_chi22, DECIMAL_lesser)
         # Pearson's X2 sums residuals that are rounded differently in Stata
 #TODO:
 #Non-Canonical Links for the Binomial family require the algorithm to be
@@ -289,8 +289,8 @@ class TestGlmBernoulli(CheckModelResults):
     def check_bic(self, bic1, bic2):
         assert_almost_equal(bic1, bic2, DECIMAL)
 
-    def check_pearsonX2(self, pearsonX21, pearsonX22):
-        assert_almost_equal(pearsonX21, pearsonX22, DECIMAL)
+    def check_pearson_chi2(self, pearson_chi21, pearson_chi22):
+        assert_almost_equal(pearson_chi21, pearson_chi22, DECIMAL)
 
 #class TestGlmBernoulliIdentity(CheckModelResults):
 #    pass
@@ -353,8 +353,8 @@ class TestGlmGamma(CheckModelResults):
     def check_bic(self, bic1, bic2):
         assert_almost_equal(bic1, bic2, DECIMAL)
 
-    def check_pearsonX2(self, pearsonX21, pearsonX22):
-        assert_almost_equal(pearsonX21, pearsonX22, DECIMAL)
+    def check_pearson_chi2(self, pearson_chi21, pearson_chi22):
+        assert_almost_equal(pearson_chi21, pearson_chi22, DECIMAL)
 
 class TestGlmGammaLog(CheckModelResults):
     def __init__(self):
@@ -450,8 +450,8 @@ class TestGlmPoisson(CheckModelResults):
     def check_bic(self, bic1, bic2):
         assert_almost_equal(bic1, bic2, DECIMAL)
 
-    def check_pearsonX2(self, pearsonX21, pearsonX22):
-        assert_almost_equal(pearsonX21, pearsonX22, DECIMAL)
+    def check_pearson_chi2(self, pearson_chi21, pearson_chi22):
+        assert_almost_equal(pearson_chi21, pearson_chi22, DECIMAL)
 
 #class TestGlmPoissonIdentity(CheckModelResults):
 #    pass
@@ -505,8 +505,8 @@ class TestGlmInvgauss(CheckModelResults):
     def check_bic(self, bic1, bic2):
         assert_almost_equal(bic1, bic2, DECIMAL_lesser) # precision in STATA
 
-    def check_pearsonX2(self, pearsonX21, pearsonX22):
-        assert_almost_equal(pearsonX21, pearsonX22, DECIMAL_less)# summed resids
+    def check_pearson_chi2(self, pearson_chi21, pearson_chi22):
+        assert_almost_equal(pearson_chi21, pearson_chi22, DECIMAL_less)# summed resids
 
 class TestGlmInvgaussLog(CheckModelResults):
     def __init__(self):
@@ -616,8 +616,8 @@ class TestGlmNegbinomial(CheckModelResults):
     def check_bic(self, bic1, bic2):
         assert_almost_equal(bic1, bic2, DECIMAL)
 
-    def check_pearsonX2(self, pearsonX21, pearsonX22):
-        assert_almost_equal(pearsonX21, pearsonX22, DECIMAL)
+    def check_pearson_chi2(self, pearson_chi21, pearson_chi22):
+        assert_almost_equal(pearson_chi21, pearson_chi22, DECIMAL)
 
 #class TestGlmNegbinomial_log(CheckModelResults):
 #    pass

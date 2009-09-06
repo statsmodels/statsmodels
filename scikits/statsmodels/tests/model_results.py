@@ -40,7 +40,7 @@ class Lbw(object):
         self.df_resid = 180
         self.df_model = 8
         self.df_null = 188
-        self.pearsonX2 = 182.0233425
+        self.pearson_chi2 = 182.0233425
         self.resids = glm_test_resids.lbw_resids
 
 class Cancer(object):
@@ -97,7 +97,7 @@ class Cpunish(object):
         self.bic = -9.740492
         self.llf = -31.92732831
         self.scale = 1
-        self.pearsonX2 = 24.75374835
+        self.pearson_chi2 = 24.75374835
         self.resids = glm_test_resids.cpunish_resids
 
 class Scotvote(object):
@@ -117,7 +117,7 @@ class Scotvote(object):
         self.llf = -163.5539382 # from Stata, same as ours with scale = 1
         self.llf_R = -82.47352  # Very close to ours as is
         self.scale = 0.003584283
-        self.pearsonX2 = .0860228056
+        self.pearson_chi2 = .0860228056
         self.resids = glm_test_resids.scotvote_resids
 
 class Star98(object):
@@ -144,7 +144,7 @@ class Star98(object):
         self.bic = 2467.494
         self.llf = -2998.612928
         self.scale = 1.
-        self.pearsonX2 = 4051.921614
+        self.pearson_chi2 = 4051.921614
         self.resids = glm_test_resids.star98_resids
 
 class InvGauss():
@@ -197,7 +197,7 @@ class InvGauss():
         self.llf = -3877.700354 # same as ours with scale set to 1
         self.llf_R = -2525.70955823223  # this is close to our defintion
         self.scale = 0.2867266359127567
-        self.pearsonX2 = 1432.771536
+        self.pearson_chi2 = 1432.771536
         self.resids = glm_test_resids.invgauss_resids
 
 
