@@ -31,8 +31,6 @@ class GLM(LikelihoodModel):
 
     GLM inherits from statsmodels.LikelihoodModel
 
-
-
     Parameters
     -----------
     endog : array-like
@@ -197,12 +195,16 @@ class GLM(LikelihoodModel):
     '''
 
     def __init__(self, endog, exog, family=family.Gaussian()):
-        if endog.shape[0] != exog.shape[0]:
-            raise ValueError, 'size of endog does not match shape of exog'
+        endog = np.asarray(endog)
+        exog = np.asarray(exog)
+        if endog.shape[0] != len(exog):
+            msg = "Size of endog (%s) does not match the shape of exog (%s)"
+            raise ValueError(msg % (endog.size, len(exog)))
+        self.endog = endog
+        self.exog = exog
         self.family = family
-        self.endog = np.asarray(endog)
-        self.exog = np.asarray(exog)
         self.initialize()
+
 
     def initialize(self):
         """
@@ -463,7 +465,7 @@ class GLMResults(LikelihoodModelResults):
         The coefficients of the fitted model.  Note that interpretation
         of the coefficients often depends on the distribution family and the
         data.
-    pearsonX2 : array
+    pearson_chi2 : array
         Pearson's Chi-Squared statistic is defined as the sum of the squares
         of the Pearson residuals.
     pinv_wexog : array
@@ -471,7 +473,7 @@ class GLMResults(LikelihoodModelResults):
     resid_anscombe : array
         Anscombe residuals.  See statsmodels.family.family for distribution-
         specific Anscombe residuals.
-    resid_dev : array
+    resid_deviance : array
         Deviance residuals.  See statsmodels.family.family for distribution-
         specific deviance residuals.
     resid_pearson : array
@@ -520,45 +522,92 @@ class GLMResults(LikelihoodModelResults):
     '''
 #TODO: add a z value function to LLMResults
     _llf = None
+    _null = None
 
     def __init__(self, model, params, normalized_cov_params, scale):
         super(GLMResults, self).__init__(model, params,
                 normalized_cov_params=normalized_cov_params, scale=scale)
-        self._get_results(model)
-
-    def _get_results(self, model):
+        self.family = model.family
+        self._endog = model.endog
         self.nobs = model.endog.shape[0]
+        self.mu = model.mu
+        self._data_weights = model.data_weights
         self.df_resid = model.df_resid
         self.df_model = model.df_model
-        self.mu = model.mu
         self.pinv_wexog = model.pinv_wexog
-#        self.bse = np.sqrt(np.diag(tmp_results.cov_params(scale=model.scale)))
-        self.resid_response = model.data_weights*(model.endog - model.mu)
-        self.resid_pearson = np.sqrt(model.data_weights)*(model.endog-\
-                model.mu)/np.sqrt(model.family.variance(model.mu))
-        self.resid_working = model.data_weights * (self.resid_response/\
-                    model.family.link.deriv(model.mu))
-        self.resid_anscombe = model.family.resid_anscombe(model.endog,model.mu)
-        self.resid_dev = model.family.resid_dev(model.endog, model.mu)
-        self.pearsonX2 = np.sum(self.resid_pearson**2)
         self.fittedvalues = np.dot(model.exog, self.params)
-        null = WLS(model.endog,np.ones((len(model.endog),1)),
-            weights=model.data_weights).fit().fittedvalues
-        # null is the predicted values of constant only fit
-        self.null_deviance = model.family.deviance(model.endog,null)
-        self.deviance = model.family.deviance(model.endog,model.mu)
-        self.aic = -2 * self.llf + 2*(self.df_model+1)
-        self.bic = self.deviance - self.df_resid*np.log(self.nobs)
+
+    @property
+    def resid_response(self):
+        return self._data_weights * (self._endog - self.mu)
+
+    @property
+    def resid_pearson(self):
+        resid_pearson = np.sqrt(self._data_weights) * (self._endog - self.mu) /\
+                        np.sqrt(self.family.variance(self.mu))
+        return resid_pearson
+
+    @property
+    def resid_working(self):
+        resid_working = (self.resid_response / self.family.link.deriv(self.mu))
+        resid_working *= self._data_weights
+        return resid_working
+
+    @property
+    def resid_anscombe(self):
+        resid_anscombe = self.family.resid_anscombe(self._endog, self.mu)
+        return resid_anscombe
+
+    @property
+    def resid_deviance(self):
+        resid_dev = self.family.resid_dev(self._endog, self.mu)
+        return resid_dev
+
+    @property
+    def pearson_chi2(self):
+        chisq =  (self._endog- self.mu)**2 / self.family.variance(self.mu)
+        chisq *= self._data_weights
+        return np.sum(chisq)
+
+    @property
+    def fitted_values(self):
+        return np.dot(self.model.exog, self.params)
+
+    @property
+    def null(self):
+        if self._null is None:
+            _endog = self._endog
+            wls = WLS(_endog, np.ones((len(_endog),1)),
+                    weights=self._data_weights)
+            self._null = wls.fit().fittedvalues
+        return self._null
+
+    @property
+    def deviance(self):
+        return self.family.deviance(self._endog, self.mu)
+
+    @property
+    def null_deviance(self):
+        return self.family.deviance(self._endog, self.null)
 
     @property
     def llf(self):
         if self._llf is None:
-            if isinstance(self.model.family, family.NegativeBinomial):
-                self._llf = self.model.family.loglike(self.model.endog,
-                    fittedvalues=self.fittedvalues)
+            _modelfamily = self.family
+            if isinstance(_modelfamily, family.NegativeBinomial):
+                self._llf = _modelfamily.loglike(self.model.endog,
+                        fittedvalues = self.fittedvalues)
             else:
-                self._llf = self.model.family.loglike(self.model.endog,
-                    self.model.mu, scale=self.scale)
+                self._llf = _modelfamily.loglike(self._endog, self.mu,
+                                        scale=self.scale)
         return self._llf
+
+    @property
+    def aic(self):
+        return -2 * self.llf + 2 * (self.df_model + 1)
+
+    @property
+    def bic(self):
+        return self.deviance - self.df_resid * np.log(self.nobs)
 
 #TODO: write summary method to use output.py in sandbox
