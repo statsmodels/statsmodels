@@ -551,7 +551,6 @@ class GLMResults(LikelihoodModelResults):
             self._cache["resid_pearson"] = resid_pearson
         return self._cache["resid_pearson"]
 
-
     @property
     def resid_working(self):
         if self._cache["resid_working"] is None:
