@@ -21,7 +21,10 @@ Notes
 * written without textbook, works but not sure about everything
   brief check
 
-* theoretical autocorrelation function of general ARMA ?
+* theoretical autocorrelation function of general ARMA
+  Done, relatively easy to guess solution, time consuming to get
+  theoretical test cases,
+  example file contains explicit formulas for acovf of MA(1), MA(2) and ARMA(1,1)
 
 * two names for lag polynomials ar = rhoy, ma = rhoe ?
 
@@ -146,10 +149,24 @@ class ARIMA(object):
         eta = std * np.random.randn(nsample)
         return signal.lfilter(ma, ar, eta)
 
-def arma_generate_sample(self, ar, ma, nsample, scale=1, distrvs=np.random.randn):
+def arma_generate_sample(ar, ma, nsample, scale=1, distrvs=np.random.randn):
+    '''generate an random sample of an ARMA process
+    '''
     eta = scale * distrvs(nsample)
     return signal.lfilter(ma, ar, eta)
 
+def arma_acovf(ar, ma, nobs=10):
+    '''theoretical autocovariance function of ARMA process
+    '''
+    ir = arma_impulse_response(ar, ma, nobs=100)
+    acovf = np.correlate(ir,ir,'full')[len(ir)-1:]
+    return acovf[:10]
+
+def arma_acf(ar, ma, nobs=10):
+    '''theoretical autocovariance function of ARMA process
+    '''
+    acovf = arma_acovf(ar, ma, nobs)
+    return acovf/acovf[0]
 
 def arma_impulse_response(ar, ma, nobs=100):
     '''get the impulse response function for ARMA process
