@@ -21,6 +21,8 @@ Notes
 * written without textbook, works but not sure about everything
   brief check
 
+* theoretical autocorrelation function of general ARMA ?
+
 * two names for lag polynomials ar = rhoy, ma = rhoe ?
 
 
@@ -140,16 +142,16 @@ class ARIMA(object):
             ma = self.rhoe
         return signal.lfilter(ma, ar, eta)
 
-    def generate_sample(self,ar,ma,nsample,std=1):
+    def generate_sample(self, ar, ma, nsample, std=1):
         eta = std * np.random.randn(nsample)
         return signal.lfilter(ma, ar, eta)
 
-def generate_sample(self, ar, ma, nsample, std=1, distrvs=np.random.randn):
-    eta = std * distrvs(nsample)
+def arma_generate_sample(self, ar, ma, nsample, scale=1, distrvs=np.random.randn):
+    eta = scale * distrvs(nsample)
     return signal.lfilter(ma, ar, eta)
 
 
-def impulse_response(ar, ma, nobs=100):
+def arma_impulse_response(ar, ma, nobs=100):
     '''get the impulse response function for ARMA process
 
     Parameters
@@ -165,7 +167,7 @@ def impulse_response(ar, ma, nobs=100):
     Examples
     --------
     AR(1)
-    >>> impulse_response([1.0, -0.8], [1.], nobs=10)
+    >>> arma_impulse_response([1.0, -0.8], [1.], nobs=10)
     array([ 1.        ,  0.8       ,  0.64      ,  0.512     ,  0.4096    ,
             0.32768   ,  0.262144  ,  0.2097152 ,  0.16777216,  0.13421773])
 
@@ -175,11 +177,11 @@ def impulse_response(ar, ma, nobs=100):
             0.32768   ,  0.262144  ,  0.2097152 ,  0.16777216,  0.13421773])
 
     MA(2)
-    >>> impulse_response([1.0], [1., 0.5, 0.2], nobs=10)
+    >>> arma_impulse_response([1.0], [1., 0.5, 0.2], nobs=10)
     array([ 1. ,  0.5,  0.2,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ])
 
     ARMA(1,2)
-    >>> impulse_response([1.0, -0.8], [1., 0.5, 0.2], nobs=10)
+    >>> arma_impulse_response([1.0, -0.8], [1., 0.5, 0.2], nobs=10)
     array([ 1.        ,  1.3       ,  1.24      ,  0.992     ,  0.7936    ,
             0.63488   ,  0.507904  ,  0.4063232 ,  0.32505856,  0.26004685])
 
@@ -193,6 +195,12 @@ def impulse_response(ar, ma, nobs=100):
 
 
 def mcarma22(niter=10):
+    '''run Monte Carlo for ARMA(2,2)
+
+    DGP parameters currently hard coded
+    also sample size `nsample`
+
+    '''
     nsample = 1000
     #ar = [1.0, 0, 0]
     ar = [1.0, -0.75, -0.1]
@@ -210,6 +218,7 @@ def mcarma22(niter=10):
         results_bse.append(sige2a * np.sqrt(np.diag(cov_x2a)))
     return np.r_[ar[1:], ma[1:]], np.array(results), np.array(results_bse)
 
+__all__ = [ARIMA, arma_generate_sample, arma_impulse_response]
 
 
 if __name__ == '__main__':
