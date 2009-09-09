@@ -546,7 +546,7 @@ class GLMResults(LikelihoodModelResults):
     @property
     def resid_pearson(self):
         if self._cache["resid_pearson"] is None:
-            resid_pearson = np.sqrt(self._data_weights) * (self._endog - self.mu) /\
+            resid_pearson = np.sqrt(self._data_weights) * (self._endog-self.mu)/\
                         np.sqrt(self.family.variance(self.mu))
             self._cache["resid_pearson"] = resid_pearson
         return self._cache["resid_pearson"]

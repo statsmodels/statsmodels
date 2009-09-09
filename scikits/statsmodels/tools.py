@@ -46,22 +46,35 @@ def xi(data, col=None, time=None, drop=False):
         if data.dtype.names and isinstance(col,str):
             tmp_arr = np.unique(data[col])
             tmp_dummy = (tmp_arr[:,np.newaxis]==data[col]).astype(float)
+            if tmp_arr.dtype is not str:
+                tmp_arr = tmp_arr.astype('str').tolist()
             if drop is True:
                 data=nprf.drop_fields(data, col, usemask=False,
-                asrecarray=type(data) is np.recarray)
+                        asrecarray=True)
+#                asrecarray=type(data) is np.recarray)
             data=nprf.append_fields(data, tmp_arr, data=tmp_dummy,
-                usemask=False, asrecarray=type(data) is np.recarray)
+                        usemask=False, asrecarray=True)
+#                usemask=False, asrecarray=type(data) is np.recarray)
 # TODO: need better column names for numerical indicators
             return data
     elif data.__class__ is np.ndarray:
         if isinstance(col, int):
             tmp_arr = np.unique(data[:,col])
             tmp_dummy = (tmp_arr[:,np.newaxis]==data[:,col]).astype(float)
-            tmp_dummy = np.rollaxis(tmp_dummy, 1, 0)
+#            tmp_dummy = np.rollaxis(tmp_dummy, 1, 0)
+            tmp_dummy = tmp_dummy.swapaxes(1,0)
             if drop is True:
                 data = np.delete(data, col, axis=1).astype(float)
             data = np.column_stack((data,tmp_dummy))
             return data
+        elif col is None and data.ndim == 1:
+            tmp_arr = np.unique(data)
+            tmp_dummy = (tmp_arr[:,None]==data).astype(float)
+            tmp_dummy = tmp_dummy.swapaxes(1,0)
+            if drop is True:
+                return tmp_dummy
+            else:
+                return np.column_stack((data, tmp_dummy))
         else:
             raise IndexError, "The index %s is not understood" % col
 
