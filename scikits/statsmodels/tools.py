@@ -40,8 +40,46 @@ def categorical(data, col=None, time=None, drop=False):
 
     Notes
     -----
-    This returns a dummy variable for EVERY distinct variable.
+    This returns a dummy variable for EVERY distinct variable.  If a
+    a recarray is provided, the names for the new variable prepend
+    an underscore, so that attribute
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import scikits.statsmodels as sm
+
+    Univariate examples
+
+    >>> import string
+    >>> string_var = [string.lowercase[0:5], string.lowercase[5:10],
+                string.lowercase[10:15], string.lowercase[15:20],
+                string.lowercase[20:25]]
+    >>> string_var *= 5
+    >>> string_var = np.asarray(sorted(string_var))
+    >>> design = sm.tools.categorical(string_var, drop=True)
+
+    Or for a numerical categorical variable
+
+    >>> instr = np.floor(np.arange(10,60, step=2)/10)
+    >>> design = sm.tools.categorical(instr, drop=True)
+
+    With a structured array
+
+    >>> num = np.random.randn(25,2)
+    >>> struct_ar = np.zeros((25,1), dtype=[('var1', 'f4'),('var2', 'f4'),
+                    ('instrument','f4'),('str_instr','a5')])
+    >>> struct_ar['var1'] = num[:,0][:,None]
+    >>> struct_ar['var2'] = num[:,1][:,None]
+    >>> struct_ar['instrument'] = instr[:,None]
+    >>> struct_ar['str_instr'] = string_var[:,None]
+    >>> design = sm.tools.categorical(struct_ar, col='instrument', drop=True)
+
+    Or
+
+    >>> design2 = sm.tools.categorical(struct_ar, col='str_instr', drop=True)
     '''
+
     # catch recarrays and structured arrays
     if data.__class__ is np.recarray or (isinstance(data, np.ndarray) and\
             data.dtype.names):
@@ -74,22 +112,22 @@ def categorical(data, col=None, time=None, drop=False):
         if drop is True:
             # if col is None then we have a 1d array.
             if not col:
-#                tmp_arr = ['_' + _ for _ in tmp_arr]    # so attr can be called
                 dt = zip(tmp_arr, [tmp_dummy.dtype.str]*len(tmp_arr))
                 # preserve array type
                 return np.squeeze(tmp_dummy.view(dt).view(type(data)))
 
             data=nprf.drop_fields(data, col, usemask=False,
-            asrecarray=type(data) is np.recarray)
+                            asrecarray=type(data) is np.recarray)
         data=nprf.append_fields(data, tmp_arr, data=tmp_dummy,
             usemask=False, asrecarray=type(data) is np.recarray)
         return data
 
-    # handle ndarrays and array-like
+    # handle ndarrays and catch array-like for an error for now.
     elif data.__class__ is np.ndarray or not isinstance(data,np.ndarray):
 
         # take care of array-like
 #TODO: how to best capture the parsed dtype?
+# see np.lib.io for a robust version...
 
         if not isinstance(data, np.ndarray):
 #            from numpy.lib._iotools import StringConverter

@@ -8,59 +8,98 @@ In the directory example (the same as the file you are reading now), just do:
 
 python setup.py install
 
-See INSTALL.txt for requirements.
+See INSTALL.txt for requirements or
 
-Distribution
-============
+http://statsmodels.sourceforge.net/
 
-A scikit can be distributed by different means:
+For more information.
 
-Source distribution
--------------------
 
-To prepare a source distribution of the package:
+=============
+Release Notes
+=============
 
-        python setup.py sdist
+Background
+==========
 
-Eggs
-----
+The statsmodels code was started by Jonathan Taylor and was formerly included
+as part of scipy. It was taken up to be tested, corrected, and extended as part
+of the Google Summer of Code 2009.
 
-Eggs are a format for easy distribution of packages. It is cross platform for
-packages without any C code, and platform specific otherwise. To build an egg:
+What it is
+==========
 
-Binary installers
------------------
+We are now releasing the efforts of the last few months under the scikits
+namespace as scikits.statsmodels. Statsmodels is a pure python package that
+requires numpy and scipy. It offers a convenient interface for fitting
+parameterized statistical models with growing support for displaying univariate
+and multivariate summary statistics, regression summaries, and (postestimation)
+statistical tests.
 
-Binary installers are platform specific. On Windows, you can do:
+Main Feautures
+==============
 
-        python setup.py bdist_wininst
+* regression: Generalized least squares (including weighted least squares and
+least squares with autoregressive errors), ordinary least squares.
+* glm: Generalized linear models with support for all of the one-parameter
+exponential family distributions.
+* rlm: Robust linear models with support for several M-estimators.
+* datasets: Datasets to be distributed and used for examples and in testing.
 
-On Mac OS X (this requires an extension, bdist_mpkg, available on Pypi)
+There is also a sandbox which contains code for generalized additive models
+(untested), mixed effects models, cox proportional hazards model (both are
+untested and still dependent on the nipy formula framework), generating
+descriptive statistics, and printing table output to ascii, latex, and html.
+None of this code is considered "production ready".
 
-        python setup.py bdist_mpkg
+Where to get it
+===============
 
-Pypi
-====
+Development branches will be on LaunchPad. This is where to go to get the most
+up to date code in the trunk branch. Experimental code will also be hosted here
+in different branches and merged to trunk often.
 
-Any scikits can also be registered to pypi, for source and eventually binary
-installer hosting. To register a package, and upload the sources at the same time:
+https://code.launchpad.net/statsmodels
 
-        python setup.py register sdist upload
+Source download of stable tags will be on SourceForge.
 
-This will register the package to pypi, prepare a tarball of the package, and
-upload it to pypi. You can also upload the files manually to pypi webpage.
+https://sourceforge.net/projects/statsmodels/
 
-Other distributions can be uploaded to pypi. For example:
+or
 
-        python setup.py bdist_egg upload
+PyPi: http://pypi.python.org/pypi/scikits.statsmodels/
 
-Once an egge is uploaded to scipy, people can simply install it with easy_install:
+License
+=======
 
-        easy_install scikits.example
+Simplified BSD
 
-If you don't want to install as an egg, but from the sources:
+Documentation
+=============
 
-        easy_install -eNb example scikits.example
+The official documentation is hosted on SourceForge.
 
-Will download the most recent sources, and extract them into the example
-directory.
+http://statsmodels.sourceforge.net/
+
+The sphinx docs are currently undergoing a lot of work. They are not yet
+comprehensive, but should get you started.
+
+Our blog will continue to be updated as we make progress on the code.
+
+http://scipystats.blogspot.com
+
+
+Discussion and Development
+==========================
+
+All chatter will take place on the or scipy-user mailing list. We are very
+interested in receiving feedback about usability, suggestions for improvements,
+and bug reports via the mailing list or the bug tracker at
+https://bugs.launchpad.net/statsmodels.
+
+There is also a google group at
+
+http://groups.google.com/group/pystatsmodels
+
+to discuss development and design issues that are deemed to be too specialized
+for the scipy-dev/user list.
