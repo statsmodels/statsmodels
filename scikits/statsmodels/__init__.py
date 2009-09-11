@@ -18,7 +18,7 @@ __all__ = filter(lambda s:not s.startswith('_'),dir())
 from numpy.testing import Tester
 class NoseWrapper(Tester):
     '''
-    This is simply a wrapper for numpy.testing.Tester, so that extra_argv can
+    This is simply a monkey patch for numpy.testing.Tester, so that extra_argv can
     be changed from its default None to ['--exe'] so that the tests can be run
     the same across platforms.
     '''

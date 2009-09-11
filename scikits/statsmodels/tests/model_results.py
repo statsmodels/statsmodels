@@ -17,10 +17,10 @@ class Lbw(object):
         filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
             "stata_lbw_glm.csv")
         data=np.recfromcsv(filename, converters={4: lambda s: s.strip("\"")})
-        data = tools.xi(data, col='race', drop=True)
+        data = tools.categorical(data, col='race', drop=True)
         self.endog = data.low
         design = np.column_stack((data['age'], data['lwt'],
-                    data['black'], data['other'], data['smoke'], data['ptl'],
+                    data['_black'], data['_other'], data['smoke'], data['ptl'],
                     data['ht'], data['ui']))
         self.exog = tools.add_constant(design)
         # Results for Canonical Logit Link
@@ -55,7 +55,7 @@ class Cancer(object):
         data = np.recfromcsv(filename)
         self.endog = data.studytime
         design = np.column_stack((data.age,data.drug))
-        design = tools.xi(design, col=1, drop=True)
+        design = tools.categorical(design, col=1, drop=True)
         design = np.delete(design, 1, axis=1) # drop first dummy
         self.exog = tools.add_constant(design)
 
@@ -71,7 +71,7 @@ class Medpar1(object):
         data = np.recfromcsv(filename, converters ={1: lambda s: s.strip("\"")})
         self.endog = data.los
         design = np.column_stack((data.admitype, data.codes))
-        design = tools.xi(design, col=0, drop=True)
+        design = tools.categorical(design, col=0, drop=True)
         design = np.delete(design, 1, axis=1) # drop first dummy
         self.exog = tools.add_constant(design)
 

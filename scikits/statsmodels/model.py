@@ -14,7 +14,6 @@ class Model(object):
     ----------
     endog : array-like
         Endogenous response variable.
-
     exog : array-like
         Exogenous design.
 
