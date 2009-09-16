@@ -76,4 +76,7 @@ plt.plot(x1, resrlm2.fitted_values, 'g.-')
 plt.title('blue: true,   red: OLS,   green: RLM')
 
 
+# see also help(sm.RLM.fit) for more options and
+# module sm.robust.scale for scale options
+
 plt.show()
