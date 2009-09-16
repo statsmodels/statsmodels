@@ -86,6 +86,12 @@ class CheckModelResults(object):
             raise SkipTest("Results are from RModel wrapper")
         self.check_pearson_chi2(self.res1.pearson_chi2, self.res2.pearson_chi2)
 
+    def test_fittedvalues(self):
+        if not 'rmodelwrap' in self.res2.__module__:
+            raise SkipTest("Results do not have fitted values")
+        assert_almost_equal(self.res1.fittedvalues, self.res2.fittedvalues,
+                DECIMAL_least)
+
 class TestGlmGaussian(CheckModelResults):
     def __init__(self):
         '''

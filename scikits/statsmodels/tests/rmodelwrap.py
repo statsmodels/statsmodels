@@ -48,7 +48,7 @@ class RModel(object):
                 self.resid[int(i)-1] = self.results['residuals'][i]
         else:
             self.resid = self.results['residuals']
-        self.predict = self.results['fitted.values']
+        self.fittedvalues = self.results['fitted.values']
         self.df_resid = self.results['df.residual']
         self.params = rsum['coefficients'][:,0]
         self.bse = rsum['coefficients'][:,1]
@@ -92,7 +92,7 @@ class RModel(object):
             self.resid = tmp
         self.predict = [self.results['linear.predictors'][str(k)] \
                 for k in range(1, 1+self.nobs)]
-        self.predictedy = [self.results['fitted.values'][str(k)] \
+        self.fittedvalues = [self.results['fitted.values'][str(k)] \
                 for k in range(1, 1+self.nobs)]
         self.weights = [self.results['weights'][str(k)] \
                 for k in range(1, 1+self.nobs)]

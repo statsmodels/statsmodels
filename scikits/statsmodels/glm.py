@@ -585,7 +585,7 @@ class GLMResults(LikelihoodModelResults):
     @property
     def fittedvalues(self):
         if self._cache["fittedvalues"] is None:
-            self._cache["fittedvalues"] = np.dot(self.model.exog, self.params)
+            self._cache["fittedvalues"] = self.mu
         return self._cache["fittedvalues"]
 
     @property
@@ -616,7 +616,7 @@ class GLMResults(LikelihoodModelResults):
             _modelfamily = self.family
             if isinstance(_modelfamily, family.NegativeBinomial):
                 self._cache['llf'] = _modelfamily.loglike(self.model.endog,
-                        fittedvalues = self.fittedvalues)
+                        fittedvalues = np.dot(self.model.exog,self.params))
             else:
                 self._cache['llf'] = _modelfamily.loglike(self._endog, self.mu,
                                         scale=self.scale)
