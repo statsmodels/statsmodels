@@ -5,9 +5,6 @@ import numpy as np
 from scipy import stats
 import os
 
-#from scipystats.sandbox.string2dummy import string2dummy as s2d
-
-
 #############################################
 #
 #============================================
@@ -71,35 +68,15 @@ def descstats(data, cols=None, axis=0):
     decstats(data.exog,v=['x_1','x_2','x_3'])
 
     '''
-#   todo: check that x and v are not empty
-#   todo: check that var in v exists
-#   todo: scipy.stats.mode? (http://projects.scipy.org/scipy/ticket/905)
-    # don't worry about premature optimization...
-#   todo: add optional user-defined precision?
-#   todo: throw different numbers at it to test string formatting
-#   todo: should this be a class that prints, but also holds data?
-#   todo: have a closer look at matplotlib.mlab.group_by for stats by attribute
-#   todo: explicit handling of missing values (this has to be handled consistently
-#         at the data loading level)
-#   use scipy.stats.describe?
-#TODO: make it work for recarrays: can't reduce on mixed datatype
-    x = np.array(data) # make copy
-    #TODO: replace 1 with axis?
-#TODO: make univariate and multivariate flags
-#TODO: needs to use xi to allow for mixed dtypes?
-    if cols is None:
-        if isinstance(x, np.recarray):
-            cols = np.array(len(x.dtype.names))
-        if x.ndim == 1:
-            cols = np.array((1))
-        else:
-            cols = np.squeeze(np.array(x.shape[1])) # squeeze to handle recarray no cols
-        cols = cols[None]
-    else:
-        cols = np.array(cols)
 
-    if (isinstance(cols[0],int) and cols[0] == 1 and len(cols) == 1) or \
-        (isinstance(cols[0],str) and len(cols) == 1):
+    x = np.array(data)  # or rather, the data we're interested in
+    if cols is None:
+#       if isinstance(x, np.recarray):
+#            cols = np.array(len(x.dtype.names))
+        if not isinstance(x, np.recarray) and x.ndim == 1:
+            x = x[:,None]
+
+    if x.shape[1] == 1:
         desc = '''
     ---------------------------------------------
     Univariate Descriptive Statistics
@@ -107,7 +84,7 @@ def descstats(data, cols=None, axis=0):
 
     Var. Name   %(name)12s
     ----------
-    Obs.          %(nobs)22i  Range              %(range)22s
+    Obs.          %(nobs)22i  Range                  %(range)22s
     Sum of Wts.   %(sum)22s  Coeff. of Variation     %(coeffvar)22.4g
     Mode          %(mode)22.4g  Skewness                %(skewness)22.4g
     Repeats       %(nmode)22i  Kurtosis                %(kurtosis)22.4g
@@ -115,14 +92,14 @@ def descstats(data, cols=None, axis=0):
     Median        %(median)22.4g  Corrected SS            %(ss)22.4g
     Variance      %(variance)22.4g  Sum Observations        %(sobs)22.4g
     Std. Dev.     %(stddev)22.4g
-    ''' % {'name': cols, 'sum': 'N/A', 'nobs': len(x[cols]), 'mode': \
-    stats.mode(x[cols])[0][0], 'nmode': stats.mode(x[cols])[1][0], \
-    'mean': x[cols].mean(), 'median': np.median(x[cols]), 'range': \
-    '('+str(x[cols].min())+', '+str(x[cols].max())+')', 'variance': \
-    x[cols].var(), 'stddev': x[cols].std(), 'coeffvar': \
-    stats.variation(x[cols]), 'skewness': stats.skew(x[cols]), \
-    'kurtosis': stats.kurtosis(x[cols]), 'uss': stats.ss(x[cols]),\
-    'ss': stats.ss(x[cols]-x[cols].mean()), 'sobs': np.sum(x[cols])}
+    ''' % {'name': cols, 'sum': 'N/A', 'nobs': len(x), 'mode': \
+    stats.mode(x)[0][0], 'nmode': stats.mode(x)[1][0], \
+    'mean': x.mean(), 'median': np.median(x), 'range': \
+    '('+str(x.min())+', '+str(x.max())+')', 'variance': \
+    x.var(), 'stddev': x.std(), 'coeffvar': \
+    stats.variation(x), 'skewness': stats.skew(x), \
+    'kurtosis': stats.kurtosis(x), 'uss': stats.ss(x),\
+    'ss': stats.ss(x-x.mean()), 'sobs': np.sum(x)}
 
 #    ''' % {'name': cols[0], 'sum': 'N/A', 'nobs': len(x[cols[0]]), 'mode': \
 #    stats.mode(x[cols[0]])[0][0], 'nmode': stats.mode(x[cols[0]])[1][0], \
@@ -148,10 +125,11 @@ def descstats(data, cols=None, axis=0):
     90 %%          %12.4g
     95 %%          %12.4g
     99 %%          %12.4g
-    ''' % tuple([stats.scoreatpercentile(x[cols],per) for per in (1,5,10,25,50,75,90,95,99)])
-        t,p_t=stats.ttest_1samp(x[cols],0)
-        M,p_M=sign_test(x[cols])
-        S,p_S=stats.wilcoxon(x[cols])
+    ''' % tuple([stats.scoreatpercentile(x,per) for per in (1,5,10,25,
+                50,75,90,95,99)])
+        t,p_t=stats.ttest_1samp(x,0)
+        M,p_M=sign_test(x)
+        S,p_S=stats.wilcoxon(np.squeeze(x))
 
         desc+= '''
 
@@ -160,8 +138,8 @@ def descstats(data, cols=None, axis=0):
     Test                Statistic       Two-tailed probability
     -----------------+-----------------------------------------
     Student's t      |  t %7.5f   Pr > |t|   <%.4f
-    Sign             |  M %8.1f   Pr >= |M|  <%.4f
-    Signed Rank      |  S %8.1f   Pr >= |S|  <%.4f
+    Sign             |  M %8.2f   Pr >= |M|  <%.4f
+    Signed Rank      |  S %8.2f   Pr >= |S|  <%.4f
 
     ''' % (t,p_t,M,p_M,S,p_S)
 # Should this be part of a 'descstats'
@@ -169,30 +147,29 @@ def descstats(data, cols=None, axis=0):
 # individually and only returned together if someone calls summary
 # or something of the sort
 
-    elif cols[0] > 1 or cols.shape[0]:
+    elif x.shape[1] > 1:
         desc ='''
     Var. Name   |     Obs.        Mean    Std. Dev.           Range
     ------------+--------------------------------------------------------'''+\
             os.linesep
-        if isinstance(cols[0],str):
-            for var in cols:
-                desc += "%(name)15s %(obs)9i %(mean)12.4g %(stddev)12.4g \
-%(range)20s" %\
-                {'name': var, 'obs': len(x[var]), 'mean': x[var].mean(), 'stddev': \
-                x[var].std(), 'range': '('+str(x[var].min())+', '+str(x[var].max())+')'+os.linesep}
-        else:
-            for var in range(cols):
-                desc += "%(name)15s %(obs)9i %(mean)12.4g %(stddev)12.4g \
-%(range)20s" %\
-                {'name': var, 'obs': len(x[var]), 'mean': x[var].mean(), 'stddev': \
-                x[var].std(), 'range': '('+str(x[var].min())+', '+str(x[var].max())+')'+os.linesep}
 
+# for recarrays with columns passed as names
+#        if isinstance(cols[0],str):
+#            for var in cols:
+#                desc += "%(name)15s %(obs)9i %(mean)12.4g %(stddev)12.4g \
+#%(range)20s" %  {'name': var, 'obs': len(x[var]), 'mean': x[var].mean(),
+#        'stddev': x[var].std(), 'range': '('+str(x[var].min())+', '\
+#                +str(x[var].max())+')'+os.linesep}
+#        else:
+        for var in range(x.shape[1]):
+                desc += "%(name)15s %(obs)9i %(mean)12.4g %(stddev)12.4g \
+%(range)20s" % {'name': var, 'obs': len(x[:,var]), 'mean': x[:,var].mean(),
+                'stddev': x[:,var].std(), 'range': '('+str(x[:,var].min())+', '+\
+                str(x[:,var].max())+')'+os.linesep}
     else:
-        raise Exception, "Something didn't go right, check the docstring"
+        raise ValueError, "data not understood"
 
     return desc
-
-
 
 #if __name__=='__main__':
 # test descstats
@@ -216,10 +193,6 @@ def descstats(data, cols=None, axis=0):
 # ntda=ntds.swapaxis(1,0)
 # ntda is ntds returns false?
 
-
-# What about the stats for the string variables, that whole array should
-# be a "dummy array"
-
 # or now we just have detailed information about the different strings
 # would this approach ever be inappropriate for a string typed variable
 # other than dates?
@@ -228,16 +201,16 @@ def descstats(data, cols=None, axis=0):
 #    descstats(ndts, [1,20,3])
 
 if __name__ == '__main__':
-    from models.datasets.longley.data import load
-    import models
-    data = load()
-    data.exog = models.tools.add_constant(data.exog)
-    summary = descstats(data.exog)
+    import scikits.statsmodels as sm
+    import os
+    data = sm.datasets.longley.Load()
+    data.exog = sm.add_constant(data.exog)
+    sum1 = descstats(data.exog)
 
-    loc='http://eagle1.american.edu/~js2796a/data/handguns_data.csv'
-    dta=np.recfromcsv(loc)
-    summary2 = descstats(dta,['stpop'])
-    summary3 =  descstats(dta,['stpop','avginc','vio'])
+#    loc='http://eagle1.american.edu/~js2796a/data/handguns_data.csv'
+#    dta=np.recfromcsv(loc)
+#    summary2 = descstats(dta,['stpop'])
+#    summary3 =  descstats(dta,['stpop','avginc','vio'])
 #TODO: needs a by argument
 #    summary4 = descstats(dta) this fails
 # this is a bug
@@ -245,5 +218,13 @@ if __name__ == '__main__':
 # p.view(dtype = np.float, type = np.ndarray)
 # this works
 # p.view(dtype = np.int, type = np.ndarray)
+
+### This is *really* slow ###
+    if os.path.isfile('./Econ724_PS_I_Data.csv'):
+        data2 = np.recfromcsv('./Econ724_PS_I_Data.csv')
+        sum2 = descstats(data2.ahe)
+        sum3 = descstats(np.column_stack((data2.ahe,data2.yrseduc)))
+        sum4 = descstats(np.column_stack(([data2[_] for \
+                _ in data2.dtype.names])))
 
 
