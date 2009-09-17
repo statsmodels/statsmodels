@@ -3,7 +3,7 @@
 import numpy as np
 import scikits.statsmodels as sm
 from scipy import stats
-import pylab
+from matplotlib import pyplot as plt
 
 ### Example for using GLM on binomial response data
 ### the input response vector in this case is N by 2 (success, failure)
@@ -83,30 +83,52 @@ nobs = binom_results.nobs
 y = data.endog[:,0]/trials
 yhat = binom_results.mu
 
-pylab.scatter(yhat, y)
+# Plot of yhat vs y
+plt.figure()
+plt.scatter(yhat, y)
 line_fit = sm.OLS(y, sm.add_constant(yhat)).fit().params
 fit = lambda x: line_fit[1]+line_fit[0]*x # better way in scipy?
-pylab.plot(np.linspace(0,1,nobs), fit(np.linspace(0,1,nobs)))
-pylab.title('Model Fit Plot')
-pylab.ylabel('Observed values')
-pylab.xlabel('Fitted values')
-pylab.show()
-pylab.clf()
+plt.plot(np.linspace(0,1,nobs), fit(np.linspace(0,1,nobs)))
+plt.title('Model Fit Plot')
+plt.ylabel('Observed values')
+plt.xlabel('Fitted values')
 
-pylab.scatter(yhat, binom_results.resid_pearson)
-#pylab.plot(np.linspace(yhat.min()-.05, yhat.max()+.05,nobs), np.zeros_like(y))
-pylab.plot([0.0, 1.0],[0.0, 0.0], 'k-')
-pylab.title('Residual Dependence Plot')
-pylab.ylabel('Pearson Residuals')
-pylab.xlabel('Fitted values')
-pylab.show()
-pylab.clf()
+# Plot of yhat vs. Pearson residuals
+plt.figure()
+plt.scatter(yhat, binom_results.resid_pearson)
+plt.plot([0.0, 1.0],[0.0, 0.0], 'k-')
+plt.title('Residual Dependence Plot')
+plt.ylabel('Pearson Residuals')
+plt.xlabel('Fitted values')
 
-res = binom_results.resid_deviance
+# Histogram of standardized deviance residuals
+plt.figure()
+res = binom_results.resid_deviance.copy()
 stdres = (res - res.mean())/res.std()
-pylab.hist(stdres, bins=25)
-pylab.title('Histogram of standardized deviance residuals')
-pylab.show()
+plt.hist(stdres, bins=25)
+plt.title('Histogram of standardized deviance residuals')
+
+# QQ Plot of Deviance Residuals
+plt.figure()
+res.sort()
+p = np.linspace(0 + 1./(nobs-1), 1-1./(nobs-1), nobs)
+quants = np.zeros_like(res)
+for i in range(nobs):
+    quants[i] = stats.scoreatpercentile(res, p[i]*100)
+mu = res.mean()
+sigma = res.std()
+y = stats.norm.ppf(p, loc=mu, scale=sigma)
+plt.scatter(y, quants)
+plt.plot([y.min(),y.max()],[y.min(),y.max()],'r--')
+plt.title('Normal - Quantile Plot')
+plt.ylabel('Deviance Residuals Quantiles')
+plt.xlabel('Quantiles of N(0,1)')
+# in branch *-skipper
+#from scikits.statsmodels.sandbox import graphics
+#img = graphics.qqplot(res)
+
+plt.show()
+#plt.close('all')
 
 
 ### Example for using GLM Gamma for a proportional count response
@@ -118,11 +140,11 @@ glm_gamma = sm.GLM(data2.endog, data2.exog, family=sm.family.Gamma())
 glm_results = glm_gamma.fit()
 
 ### Example for Gaussian distribution with a noncanonical link
-nobs = 100
-x = np.arange(nobs)
+nobs2 = 100
+x = np.arange(nobs2)
 np.random.seed(54321)
 X = np.column_stack((x,x**2))
 X = sm.add_constant(X)
-lny = np.exp(-(.03*x + .0001*x**2 - 1.0)) + .001 * np.random.rand(nobs)
+lny = np.exp(-(.03*x + .0001*x**2 - 1.0)) + .001 * np.random.rand(nobs2)
 gauss_log = sm.GLM(lny, X, family=sm.family.Gaussian(sm.family.links.log))
 gauss_log_results = gauss_log.fit()
