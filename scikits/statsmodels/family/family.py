@@ -33,9 +33,9 @@ class Family(object):
         fitted model.
         Deviance = sum_i(2loglike(Y_i,Y_i) - 2loglike(Y_i,mu_i)) / scale
         Where loglike is defined for each family.
-    devresid
+    resid_dev
         Returns the deviance residuals for a fitted model.
-        `devresid` is defined for each family.
+        `resid_dev` is defined for each family.
     fitted
         Returns the fitted values based on the linear predictor of the model.
         Calls the inverse of the link function.
@@ -74,12 +74,6 @@ class Family(object):
         See glm.GLM for a list of appropriate links for each family but note
         that not all of these are currently available.
         """
-#TODO: change deviance to use llf, so that scale is used accurately?
-# note that I removed scale from deviance and dev_resids, since I'm not
-# sure it was used consistently and I don't have a reference for its usage
-# as such
-# note that Hardin and Hilbe discusses 'deviance adjustment factors'
-
 #TODO: change the links class attribute in the families to hold meaningful
 # information instead of a list of links instances such as
 #[<scikits.statsmodels.family.links.Log object at 0x9a4240c>,
@@ -168,7 +162,7 @@ class Family(object):
         mu : array-like
             The inverse of the link function at the linear predicted values.
         scale : float, optional
-            An optional scale argument.
+            An optional scale argument
 
         Returns
         -------
@@ -185,7 +179,7 @@ class Family(object):
         """
         raise NotImplementedError
 
-    def devresid(self, Y, mu):
+    def resid_dev(self, Y, mu, scale=1.):
         """
         The deviance residuals
 
@@ -195,6 +189,8 @@ class Family(object):
             The endogenous response variable
         mu : array
             The inverse of the link function at the linear predicted values.
+        scale : float, optional
+            An optional argument to divide the residuals by scale
 
         Returns
         -------
@@ -297,7 +293,7 @@ class Poisson(Family):
 
     Methods
     -------
-    devresid
+    resid_dev
         Returns the deviance residuals for the Poisson family.
     deviance
         Returns the value of the deviance function for the Poisson family.
@@ -319,7 +315,7 @@ class Poisson(Family):
         self.variance = Poisson.variance
         self.link = link
 
-    def devresid(self, Y, mu):
+    def resid_dev(self, Y, mu, scale=1.):
         """Gaussian deviance residual
 
         Parameters
@@ -328,6 +324,8 @@ class Poisson(Family):
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
+        scale : float, optional
+            An optional argument to divide the residuals by scale
 
         Returns
         -------
@@ -345,9 +343,9 @@ class Poisson(Family):
         --------
         resid_dev = sign(Y-mu)*sqrt(2*Y*log(Y/mu)-2*(Y-mu))
         """
-        return np.sign(Y-mu) * np.sqrt(2*Y*np.log(Y/mu)-2*(Y-mu))
+        return np.sign(Y-mu) * np.sqrt(2*Y*np.log(Y/mu)-2*(Y-mu))/scale
 
-    def deviance(self, Y, mu):
+    def deviance(self, Y, mu, scale=1.):
         '''
         Poisson deviance function
 
@@ -357,6 +355,8 @@ class Poisson(Family):
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
+        scale : float, optional
+            An optional scale argument
 
         Returns
         -------
@@ -369,7 +369,7 @@ class Poisson(Family):
 
         `deviance` = 2*sum_i(Y*log(Y/mu))
         '''
-        return 2*np.sum(Y*np.log(Y/mu))
+        return 2*np.sum(Y*np.log(Y/mu))/scale
 
     def loglike(self, Y, mu, scale=1.):
         """
@@ -440,7 +440,7 @@ class Gaussian(Family):
 
     Methods
     -------
-    devresid
+    resid_dev
         Returns the deviance residuals for the Gaussian family.
     deviance
         Returns the value of the deviance function for the Gaussian family.
@@ -461,7 +461,7 @@ class Gaussian(Family):
         self.variance = Gaussian.variance
         self.link = link
 
-    def devresid(self, Y, mu):
+    def resid_dev(self, Y, mu, scale=1.):
         """
         Gaussian deviance residuals
 
@@ -471,6 +471,8 @@ class Gaussian(Family):
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
+        scale : float, optional
+            An optional argument to divide the residuals by scale
 
         Returns
         -------
@@ -482,9 +484,9 @@ class Gaussian(Family):
         `resid_dev` = (`Y` - `mu`)/sqrt(variance(`mu`))
         """
 
-        return (Y - mu) / np.sqrt(self.variance(mu))
+        return (Y - mu) / np.sqrt(self.variance(mu))/scale
 
-    def deviance(self, Y, mu):
+    def deviance(self, Y, mu, scale=1.):
         """
         Gaussian deviance function
 
@@ -494,6 +496,8 @@ class Gaussian(Family):
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
+        scale : float, optional
+            An optional scale argument
 
         Returns
         -------
@@ -504,7 +508,7 @@ class Gaussian(Family):
         --------
         `deviance` = sum((Y-mu)**2)
         """
-        return np.sum((Y-mu)**2)
+        return np.sum((Y-mu)**2)/scale
 
     def loglike(self, Y, mu, scale=1.):
         """
@@ -592,7 +596,7 @@ class Gamma(Family):
 
     Methods
     -------
-    devresid
+    resid_dev
         Returns the deviance residuals for the Gamma family.
     deviance
         Returns the value of the deviance function for the Gamma family.
@@ -626,7 +630,7 @@ class Gamma(Family):
         """
         return np.clip(x, 1.0e-10, np.inf)
 
-    def deviance(self, Y, mu):
+    def deviance(self, Y, mu, scale=1.):
         """
         Gamma deviance function
 
@@ -636,6 +640,8 @@ class Gamma(Family):
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
+        scale : float, optional
+            An optional scale argument
 
         Returns
         -------
@@ -649,7 +655,7 @@ class Gamma(Family):
         Y_mu = self._clean(Y/mu)
         return 2 * np.sum((Y - mu)/mu - np.log(Y_mu))
 
-    def devresid(self, Y, mu):
+    def resid_dev(self, Y, mu, scale=1.):
         """
         Gamma deviance residuals
 
@@ -659,6 +665,8 @@ class Gamma(Family):
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
+        scale : float, optional
+            An optional argument to divide the residuals by scale
 
         Returns
         -------
@@ -746,7 +754,7 @@ class Binomial(Family):
 
     Methods
     -------
-    devresid
+    resid_dev
         Returns the deviance residuals for the Binomial family.
     deviance
         Returns the value of the deviance function for the Binomial family.
@@ -815,7 +823,7 @@ class Binomial(Family):
         else:
             return Y
 
-    def deviance(self, Y, mu):
+    def deviance(self, Y, mu, scale=1.):
         '''
         Deviance function for either Bernoulli or Binomial data.
 
@@ -826,6 +834,8 @@ class Binomial(Family):
             if appropriate).
         mu : array
             Fitted mean response variable
+        scale : float, optional
+            An optional scale argument
 
         Returns
         --------
@@ -853,7 +863,7 @@ class Binomial(Family):
         else:
             return 2*np.sum(self.n*(Y*np.log(Y/mu)+(1-Y)*np.log((1-Y)/(1-mu))))
 
-    def devresid(self, Y, mu):
+    def resid_dev(self, Y, mu, scale=1.):
         """
         Binomial deviance residuals
 
@@ -863,6 +873,8 @@ class Binomial(Family):
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
+        scale : float, optional
+            An optional argument to divide the residuals by scale
 
         Returns
         -------
@@ -888,10 +900,11 @@ class Binomial(Family):
         mu = self.link._clean(mu)
         if np.shape(self.n) == () and self.n == 1:
             one = np.equal(Y,1)
-            return np.sign(Y-mu)*np.sqrt(-2*np.log(one*mu+(1-one)*(1-mu)))
+            return np.sign(Y-mu)*np.sqrt(-2*np.log(one*mu+(1-one)*(1-mu)))\
+                    /scale
         else:
             return np.sign(Y-mu) * np.sqrt(2*self.n*(Y*np.log(Y/mu)+(1-Y)*\
-                        np.log((1-Y)/(1-mu))))
+                        np.log((1-Y)/(1-mu))))/scale
 
     def loglike(self, Y, mu, scale=1.):
         """
@@ -1004,7 +1017,7 @@ class InverseGaussian(Family):
 
     Methods
     -------
-    devresid
+    resid_dev
         Returns the deviance residuals for the inverse Gaussian family.
     deviance
         Returns the value of the deviance function for the inverse
@@ -1032,7 +1045,7 @@ class InverseGaussian(Family):
         self.variance = InverseGaussian.variance
         self.link = link
 
-    def devresid(self, Y, mu):
+    def resid_dev(self, Y, mu, scale=1.):
         """
         Returns the deviance residuals for the inverse Gaussian family.
 
@@ -1042,6 +1055,8 @@ class InverseGaussian(Family):
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
+        scale : float, optional
+            An optional argument to divide the residuals by scale
 
         Returns
         -------
@@ -1052,9 +1067,9 @@ class InverseGaussian(Family):
         --------
         `dev_resid` = sign(Y-mu)*sqrt((Y-mu)**2/(Y*mu**2))
         """
-        return np.sign(Y-mu) * np.sqrt((Y-mu)**2/(Y*mu**2))
+        return np.sign(Y-mu) * np.sqrt((Y-mu)**2/(Y*mu**2))/scale
 
-    def deviance(self, Y, mu):
+    def deviance(self, Y, mu, scale=1.):
         """
         Inverse Gaussian deviance function
 
@@ -1064,6 +1079,8 @@ class InverseGaussian(Family):
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
+        scale : float, optional
+            An optional scale argument
 
         Returns
         -------
@@ -1074,7 +1091,7 @@ class InverseGaussian(Family):
         --------
         `deviance` = sum((Y=mu)**2/(Y*mu**2))
         """
-        return np.sum((Y-mu)**2/(Y*mu**2))
+        return np.sum((Y-mu)**2/(Y*mu**2))/scale
 
     def loglike(self, Y, mu, scale=1.):
         """
@@ -1151,7 +1168,7 @@ class NegativeBinomial(Family):
 
     Methods
     -------
-    devresid
+    resid_dev
         Returns the deviance residuals for the megative binomial family.
     deviance
         Returns the value of the deviance function for the negative binomial
@@ -1183,7 +1200,7 @@ class NegativeBinomial(Family):
         else:
             self.link = link
 
-    def deviance(self, Y, mu):
+    def deviance(self, Y, mu, scale=1.):
         """
         Parameters
         -----------
@@ -1191,6 +1208,8 @@ class NegativeBinomial(Family):
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
+        scale : float, optional
+            An optional scale argument
 
         Returns
         -------
@@ -1214,9 +1233,9 @@ class NegativeBinomial(Family):
         tmp = iszero*2*np.log(1+self.alpha*mu)/self.alpha
         tmp += notzero*(2*Y*np.log(Y/mu)-2/self.alpha*(1+self.alpha*Y)*\
                 np.log((1+self.alpha*Y)/(1+self.alpha*mu)))
-        return np.sum(tmp)
+        return np.sum(tmp)/scale
 
-    def devresid(self, Y, mu):
+    def resid_dev(self, Y, mu, scale=1.):
         '''
         Negative Binomial Deviance Residual
 
@@ -1226,6 +1245,8 @@ class NegativeBinomial(Family):
             `Y` is the response variable
         mu : array-like
             `mu` is the fitted value of the model
+        scale : float, optional
+            An optional argument to divide the residuals by scale
 
         Returns
         --------
@@ -1249,7 +1270,7 @@ class NegativeBinomial(Family):
         tmp = iszero*2*np.log(1+self.alpha*mu)/self.alpha
         tmp += notzero*(2*Y*np.log(Y/mu)-2/self.alpha*(1+self.alpha*Y)*\
                 np.log((1+self.alpha*Y)/(1+self.alpha*mu)))
-        return np.sign(Y-mu)*np.sqrt(tmp)
+        return np.sign(Y-mu)*np.sqrt(tmp)/scale
 
     def loglike(self, Y, fittedvalues=None):
         """

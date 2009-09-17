@@ -48,7 +48,7 @@ class RModel(object):
                 self.resid[int(i)-1] = self.results['residuals'][i]
         else:
             self.resid = self.results['residuals']
-        self.predict = self.results['fitted.values']
+        self.fittedvalues = self.results['fitted.values']
         self.df_resid = self.results['df.residual']
         self.params = rsum['coefficients'][:,0]
         self.bse = rsum['coefficients'][:,1]
@@ -92,16 +92,16 @@ class RModel(object):
             self.resid = tmp
         self.predict = [self.results['linear.predictors'][str(k)] \
                 for k in range(1, 1+self.nobs)]
-        self.predictedy = [self.results['fitted.values'][str(k)] \
+        self.fittedvalues = [self.results['fitted.values'][str(k)] \
                 for k in range(1, 1+self.nobs)]
         self.weights = [self.results['weights'][str(k)] \
                 for k in range(1, 1+self.nobs)]
-        self.resid_dev = self.rsum['deviance.resid']
-        if isinstance(self.resid_dev, dict):
-            tmp = np.zeros(len(self.resid_dev))
-            for i in self.resid_dev.keys():
-                tmp[int(i)-1] = self.resid_dev[i]
-            self.resid_dev = tmp
+        self.resid_deviance = self.rsum['deviance.resid']
+        if isinstance(self.resid_deviance, dict):
+            tmp = np.zeros(len(self.resid_deviance))
+            for i in self.resid_deviance.keys():
+                tmp[int(i)-1] = self.resid_deviance[i]
+            self.resid_deviance = tmp
         self.null_deviance = self.rsum['null.deviance']
 
     def getrlm(self):

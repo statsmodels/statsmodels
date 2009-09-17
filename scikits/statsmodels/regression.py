@@ -230,6 +230,7 @@ Should be of length %s, if sigma is a 1d array" % nobs
         # worth a comparison at least...though this is readable
         lfit = RegressionResults(self, beta,
                        normalized_cov_params=self.normalized_cov_params)
+        self._results = lfit
         return lfit
 
     @property

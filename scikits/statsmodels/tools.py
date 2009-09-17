@@ -13,55 +13,152 @@ import scipy.linalg
 #TODO: needs to better preserve dtype and be more flexible
 # ie., if you still have a string variable in your array you don't
 # want to cast it to float
-def xi(data, col=None, time=None, drop=False):
+def categorical(data, col=None, time=None, drop=False):
     '''
-    Returns an array changing categorical variables to dummy variables.
+    Returns a dummy matrix given an array of categorical variables.
 
-    Returns an interaction expansion on the specified variable.
+    Parameters
+    ----------
+    data : array
+        A structured array, recarray, or array.  This can be either
+        a 1d vector of the categorical variable or a 2d array with
+        the column specifying the categorical variable specified by the col
+        argument.
+    col : 'string', int, or None
+        If data is a structured array or a recarray, `col` can be a string
+        that is the name of the column that contains the variable.  For all
+        arrays `col` can be an int that is the (zero-based) column index
+        number.  `col` can only be None for a 1d array.  The default is None.
+    drop : bool
+        Whether or not keep the categorical variable in the returned matrix.
 
-    Take a structured or record array and returns an array with categorical
-    variables.
+    Returns
+    --------
+    dummy_matrix
+        A matrix of dummy (indicator/binary) float variables for the
+        categorical data.
 
     Notes
     -----
-    This returns a dummy variable for EVERY distinct string.  If noconsant
-    then this is okay.  Otherwise, an "intercept" needs to be designated in
-    regression and this value should be dropped from the array returned by xi.
+    This returns a dummy variable for EVERY distinct variable.  If a
+    a recarray is provided, the names for the new variable prepend
+    an underscore, so that attribute
 
-    Note that STATA returns which variable is omitted when this
-    is called. And it is called at runtime of fit...
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import scikits.statsmodels as sm
 
-    Returns the same array type as it's given right now (recarray and structured
-    array only).
+    Univariate examples
 
-    The design of xi was pretty ad hoc.  Please report any bugs/ additional
-    functionality and note that this function should change heavily in the
-    near future.
+    >>> import string
+    >>> string_var = [string.lowercase[0:5], string.lowercase[5:10],
+                string.lowercase[10:15], string.lowercase[15:20],
+                string.lowercase[20:25]]
+    >>> string_var *= 5
+    >>> string_var = np.asarray(sorted(string_var))
+    >>> design = sm.tools.categorical(string_var, drop=True)
+
+    Or for a numerical categorical variable
+
+    >>> instr = np.floor(np.arange(10,60, step=2)/10)
+    >>> design = sm.tools.categorical(instr, drop=True)
+
+    With a structured array
+
+    >>> num = np.random.randn(25,2)
+    >>> struct_ar = np.zeros((25,1), dtype=[('var1', 'f4'),('var2', 'f4'),
+                    ('instrument','f4'),('str_instr','a5')])
+    >>> struct_ar['var1'] = num[:,0][:,None]
+    >>> struct_ar['var2'] = num[:,1][:,None]
+    >>> struct_ar['instrument'] = instr[:,None]
+    >>> struct_ar['str_instr'] = string_var[:,None]
+    >>> design = sm.tools.categorical(struct_ar, col='instrument', drop=True)
+
+    Or
+
+    >>> design2 = sm.tools.categorical(struct_ar, col='str_instr', drop=True)
     '''
 
-#needs error checking
-    if data.__class__ is np.recarray:
+    # catch recarrays and structured arrays
+    if data.__class__ is np.recarray or (isinstance(data, np.ndarray) and\
+            data.dtype.names):
+        if not col and np.squeeze(data).ndim > 1:
+            raise IndexError, "col is None and the input array is not 1d"
         if isinstance(col, int):
             col = data.dtype.names[col]
-        if data.dtype.names and isinstance(col,str):
-            tmp_arr = np.unique(data[col])
-            tmp_dummy = (tmp_arr[:,np.newaxis]==data[col]).astype(float)
-            if drop is True:
-                data=nprf.drop_fields(data, col, usemask=False,
-                asrecarray=type(data) is np.recarray)
-            data=nprf.append_fields(data, tmp_arr, data=tmp_dummy,
-                usemask=False, asrecarray=type(data) is np.recarray)
-# TODO: need better column names for numerical indicators
-            return data
-    elif data.__class__ is np.ndarray:
+        tmp_arr = np.unique(data[col])
+
+        # if the cols are shape (#,) vs (#,1) need to add an axis and flip
+        _swap = True
+        if data[col].ndim == 1:
+            tmp_arr = tmp_arr[:,None]
+            _swap = False
+        tmp_dummy = (tmp_arr==data[col]).astype(float)
+        if _swap:
+            tmp_dummy = np.squeeze(tmp_dummy).swapaxes(1,0)
+
+        if tmp_arr.dtype is not str: # this needs to be more robust
+            # a 1d struct array retains the dtype
+            if not tmp_arr.dtype.names:
+                tmp_arr = np.squeeze(tmp_arr).astype('str').tolist()
+            elif tmp_arr.dtype.names:
+                tmp_arr = np.squeeze(tmp_arr.tolist()).astype('str').tolist()
+
+# prepend an underscore, so attribute lookup is preserved if numerical
+        if data.__class__ is np.recarray:
+            tmp_arr = ['_'+_ for _ in tmp_arr]
+
+        if drop is True:
+            # if col is None then we have a 1d array.
+            if not col:
+                dt = zip(tmp_arr, [tmp_dummy.dtype.str]*len(tmp_arr))
+                # preserve array type
+                return np.squeeze(tmp_dummy.view(dt).view(type(data)))
+
+            data=nprf.drop_fields(data, col, usemask=False,
+                            asrecarray=type(data) is np.recarray)
+        data=nprf.append_fields(data, tmp_arr, data=tmp_dummy,
+            usemask=False, asrecarray=type(data) is np.recarray)
+        return data
+
+    # handle ndarrays and catch array-like for an error for now.
+    elif data.__class__ is np.ndarray or not isinstance(data,np.ndarray):
+
+        # take care of array-like
+#TODO: how to best capture the parsed dtype?
+# see np.lib.io for a robust version...
+
+        if not isinstance(data, np.ndarray):
+#            from numpy.lib._iotools import StringConverter
+#            converters = [StringConverter(None)
+            raise NotImplementedError, "Array-like objects are not currently well \
+supported"
+#            data = np.asarray(data)
+#            data = np.squeeze(data)
+#            _dtype = None
+#        else:
+#            _dtype = data.dtype
+
         if isinstance(col, int):
             tmp_arr = np.unique(data[:,col])
             tmp_dummy = (tmp_arr[:,np.newaxis]==data[:,col]).astype(float)
-            tmp_dummy = np.rollaxis(tmp_dummy, 1, 0)
+#            tmp_dummy = np.rollaxis(tmp_dummy, 1, 0)
+            tmp_dummy = tmp_dummy.swapaxes(1,0)
             if drop is True:
                 data = np.delete(data, col, axis=1).astype(float)
             data = np.column_stack((data,tmp_dummy))
+#            if _dtype:
+#                data = data.view(_dtype)
             return data
+        elif col is None and np.squeeze(data).ndim == 1:
+            tmp_arr = np.unique(data)
+            tmp_dummy = (tmp_arr[:,None]==data).astype(float)
+            tmp_dummy = tmp_dummy.swapaxes(1,0)
+            if drop is True:
+                return tmp_dummy
+            else:
+                return np.column_stack((data, tmp_dummy))
         else:
             raise IndexError, "The index %s is not understood" % col
 
