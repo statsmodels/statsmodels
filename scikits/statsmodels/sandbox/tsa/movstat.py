@@ -258,7 +258,8 @@ def ccf(x,y):
 ##    pass
 ##    #x=0.5**np.arange(10);xm=x-x.mean();a=np.correlate(xm,xo,'full')
 
-__all__ = [mov_order, movmean, movvar, movmoment, acovf, ccovf, acf, ccf]
+__all__ = ['mov_order', 'movmean', 'movvar', 'movmoment', 'acovf', 'ccovf',
+           'acf', 'ccf']
 
 if __name__ == '__main__':
 
