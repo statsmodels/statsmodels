@@ -36,7 +36,7 @@ classifiers = [ 'Development Status :: 3 - Alpha',
               'Programming Language :: Python :: 2.4',
               'Intended Audience :: Developers',
               'Intended Audience :: Science/Research',
-              'License :: TBD',
+              #'License :: BSD',
               'Topic :: Scientific/Engineering']
 
 def build_ver_str():
