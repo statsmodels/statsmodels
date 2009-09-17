@@ -43,8 +43,8 @@ plt.plot(x1, iv_l, 'r--')
 resrlm = sm.RLM(y2, X).fit()
 print resrlm.params
 print resrlm.bse
-# Note different spelling fitted_values with underline
-plt.plot(x1, resrlm.fitted_values, 'g.-')
+# Note different spelling fittedvalues with underline -> corrected spelling
+plt.plot(x1, resrlm.fittedvalues, 'g.-')
 plt.title('blue: true,   red: OLS,   green: RLM')
 
 
@@ -71,8 +71,8 @@ plt.plot(x1, iv_l, 'r--')
 resrlm2 = sm.RLM(y2, X2).fit()
 print resrlm2.params
 print resrlm2.bse
-# Note different spelling fitted_values with underline
-plt.plot(x1, resrlm2.fitted_values, 'g.-')
+# Note different spelling fittedvalues with underline -> corrected spelling
+plt.plot(x1, resrlm2.fittedvalues, 'g.-')
 plt.title('blue: true,   red: OLS,   green: RLM')
 
 
