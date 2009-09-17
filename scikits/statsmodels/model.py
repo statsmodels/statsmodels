@@ -484,6 +484,7 @@ T statistics'
         models except RLM and GLM, which uses the standard normal distribution.
 
         """
+        #TODO: simplify structure, DRY
         if self.__class__.__name__ in ['RLMResults','GLMResults']:
             dist = norm
         else:
