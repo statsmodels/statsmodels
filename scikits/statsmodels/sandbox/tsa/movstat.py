@@ -57,7 +57,7 @@ def expandarr(x,k):
         kadd = (kadd, np.shape(x)[1])
     return np.r_[np.ones(kadd)*x[0],x,np.ones(kadd)*x[-1]]
 
-def mov_order(x, order = 'med', windsize=3, lag='lagged'):
+def movorder(x, order = 'med', windsize=3, lag='lagged'):
     '''moving order statistics
 
     Parameters
@@ -107,24 +107,24 @@ def check_movorder():
     '''graphical test for movorder'''
     import matplotlib.pylab as plt
     x = np.arange(1,10)
-    xo = mov_order(x, order='max')
+    xo = movorder(x, order='max')
     assert_array_equal(xo, x)
     x = np.arange(10,1,-1)
-    xo = mov_order(x, order='min')
+    xo = movorder(x, order='min')
     assert_array_equal(xo, x)
-    assert_array_equal(mov_order(x, order='min', lag='centered')[:-1], x[1:])
+    assert_array_equal(movorder(x, order='min', lag='centered')[:-1], x[1:])
 
     tt = np.linspace(0,2*np.pi,15)
     x = np.sin(tt) + 1
-    xo = mov_order(x, order='max')
+    xo = movorder(x, order='max')
     plt.figure()
     plt.plot(tt,x,'.-',tt,xo,'.-')
     plt.title('moving max lagged')
-    xo = mov_order(x, order='max', lag='centered')
+    xo = movorder(x, order='max', lag='centered')
     plt.figure()
     plt.plot(tt,x,'.-',tt,xo,'.-')
     plt.title('moving max centered')
-    xo = mov_order(x, order='max', lag='leading')
+    xo = movorder(x, order='max', lag='leading')
     plt.figure()
     plt.plot(tt,x,'.-',tt,xo,'.-')
     plt.title('moving max leading')
@@ -258,7 +258,7 @@ def ccf(x,y):
 ##    pass
 ##    #x=0.5**np.arange(10);xm=x-x.mean();a=np.correlate(xm,xo,'full')
 
-__all__ = ['mov_order', 'movmean', 'movvar', 'movmoment', 'acovf', 'ccovf',
+__all__ = ['movorder', 'movmean', 'movvar', 'movmoment', 'acovf', 'ccovf',
            'acf', 'ccf']
 
 if __name__ == '__main__':
