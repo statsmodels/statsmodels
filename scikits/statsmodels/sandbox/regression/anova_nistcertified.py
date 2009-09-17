@@ -1,10 +1,6 @@
 '''calculating anova and verifying with NIST test data
 
-note:
-this requires try_catdata.py to run first to have the functions of it
-available in __main__
-
-compares my implementations, stats.f_oneway and oneway_anova of pymvpa (rewritten)
+compares my implementations, stats.f_oneway and anova using statsmodels.OLS
 '''
 import os
 import numpy as np
