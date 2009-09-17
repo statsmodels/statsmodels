@@ -260,11 +260,6 @@ class Family(object):
         """
         raise NotImplementedError
 
-    loglikelihood = loglike
-    loglikelihood.__doc__ = """
-Alias for loglike
-"""
-
     def resid_anscombe(self, Y, mu):
         """
         The Anscome residuals.
