@@ -255,7 +255,8 @@ def mcarma22(niter=10):
         results_bse.append(sige2a * np.sqrt(np.diag(cov_x2a)))
     return np.r_[ar[1:], ma[1:]], np.array(results), np.array(results_bse)
 
-__all__ = [ARIMA, arma_generate_sample, arma_impulse_response]
+__all__ = ['ARIMA', 'arma_acf', 'arma_acovf', 'arma_generate_sample',
+           'arma_impulse_response']
 
 
 if __name__ == '__main__':
