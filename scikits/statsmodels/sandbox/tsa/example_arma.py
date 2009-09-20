@@ -1,5 +1,8 @@
 '''trying to verify theoretical acf of arma
 
+explicit functions for autocovariance functions of ARIMA(1,1), MA(1), MA(2)
+plus 3 functions from nitime.utils
+
 '''
 
 import numpy as np
@@ -19,19 +22,6 @@ x = arma_generate_sample(ar, ma, 5000)
 x_acf = acf(x)[:10]
 x_ir = arma_impulse_response(ar, ma)
 
-#moved to arima
-##def arma_acovf(ar, ma, nobs=10):
-##    '''theoretical autocovariance function of ARMA process
-##    '''
-##    ir = arma_impulse_response(ar, ma)
-##    acovf = np.correlate(ir,ir,'full')[len(ir)-1:]
-##    return acovf[:10]
-##
-##def arma_acf(ar, ma, nobs=10):
-##    '''theoretical autocovariance function of ARMA process
-##    '''
-##    acovf = arma_acovf(ar, ma, nobs)
-##    return acovf/acovf[0]
 
 #print x_acf[:10]
 #print x_ir[:10]

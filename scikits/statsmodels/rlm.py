@@ -347,8 +347,8 @@ class RLMResults(LikelihoodModelResults):
         #TODO: "pvals" should come from chisq on bse?
         self.df_model = model.df_model
         self.df_resid = model.df_resid
-        self.fitted_values = np.dot(model.exog, self.params)
-        self.resid = model.endog - self.fitted_values   # before bcov
+        self.fittedvalues = np.dot(model.exog, self.params)
+        self.resid = model.endog - self.fittedvalues   # before bcov
         self.sresid = self.resid/self.scale
         self.pinv_wexog = model.pinv_wexog    # for bcov,
                                                 # this is getting sloppy
