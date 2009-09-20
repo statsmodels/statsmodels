@@ -57,3 +57,19 @@ gls_results = gls_model.fit()
 # of course, the exact rho in this instance is not known so it
 # it might make more sense to use feasible gls, which currently only
 # has experimental support
+
+# We can use the GLSAR model with one lag, to get to a similar result
+
+glsar_model = sm.GLSAR(data.endog, data.exog, 1)
+glsar_results = glsar_model.iterative_fit(0)
+
+# comparing gls and glsar results, we see that there are some small
+# differences in the parameter estimates and the resultsing standard
+# errors of the parameter estimate. This might be do to the numerical
+# differences in the algorithm, e.g. the treatment of initial conditions,
+# because of the small number of observations in the lonley dataset.
+print gls_results.params
+print glsar_results.params
+print gls_results.bse
+print glsar_results.bse
+
