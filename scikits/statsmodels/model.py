@@ -36,6 +36,7 @@ class Model(object):
     def __init__(self, endog, exog=None):
         self.endog = np.asarray(endog)
         self.exog = np.atleast_2d(np.asarray(exog)) # 2d so that pinv works for 1d
+        #if not hasattr(self, 'nobs'):
         self.nobs = float(self.endog.shape[0])
 
     def fit(self):
