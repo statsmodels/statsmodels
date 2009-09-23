@@ -35,7 +35,14 @@ class Model(object):
 
     def __init__(self, endog, exog=None):
         self.endog = np.asarray(endog)
-        self.exog = np.atleast_2d(np.asarray(exog)) # 2d so that pinv works for 1d
+        #self.exog = np.atleast_2d(np.asarray(exog)) # 2d so that pinv works for 1d
+        self.exog = np.asarray(exog)
+        if self.exog.ndim == 1:
+            self.exog = self.exog[:, np.newaxis]
+        if self.exog.ndim != 2:
+            raise ValueError, "exog is not 1d or 2d"
+        if self.exog.shape[0] != self.endog.shape[0]:
+            raise ValueError, "endog and exog don't have matching length "
         #if not hasattr(self, 'nobs'):
         self.nobs = float(self.endog.shape[0])
 

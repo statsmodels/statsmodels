@@ -708,9 +708,11 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False):
     r[0] = (X**2).sum() / denom(0)
     for k in range(1,order+1):
         r[k] = (X[0:-k]*X[k:]).sum() / denom(k)
-    R = toeplitz(r[:-1])
+    #R = toeplitz(r[:-1])
+    R = toeplitz(r[1:])
 
-    rho = np.linalg.solve(R, r[1:])
+    #rho = np.linalg.solve(R, r[1:])
+    rho = np.linalg.solve(R, r[:-1])
     sigmasq = r[0] - (r[1:]*rho).sum()
     if inv == True:
         return rho, np.sqrt(sigmasq), np.linalg.inv(R)
