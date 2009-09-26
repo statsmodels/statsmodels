@@ -8,12 +8,22 @@ import numpy.linalg as L
 import scipy.interpolate
 import scipy.linalg
 
+def _make_dictnames(tmp_arr, offset=0):
+    """
+    Helper function to create a dictionary mapping a column number
+    to the name in tmp_arr.
+    """
+    col_map = {}
+    for i,col_name in enumerate(tmp_arr):
+        col_map.update({i+offset : col_name})
+    return col_map
+
 #FIXME: make this more robust
 # needs to not return a dummy for *every* variable...
 #TODO: needs to better preserve dtype and be more flexible
 # ie., if you still have a string variable in your array you don't
 # want to cast it to float
-def categorical(data, col=None, time=None, drop=False):
+def categorical(data, col=None, dictnames=False, drop=False):
     '''
     Returns a dummy matrix given an array of categorical variables.
 
@@ -29,20 +39,25 @@ def categorical(data, col=None, time=None, drop=False):
         that is the name of the column that contains the variable.  For all
         arrays `col` can be an int that is the (zero-based) column index
         number.  `col` can only be None for a 1d array.  The default is None.
+    dict : bool, optional
+        If True, a dictionary mapping the column number to the categorical
+        name is returned.  Used to have information about plain arrays.
     drop : bool
         Whether or not keep the categorical variable in the returned matrix.
 
     Returns
     --------
-    dummy_matrix
+    dummy_matrix, [dictnames, optional]
         A matrix of dummy (indicator/binary) float variables for the
-        categorical data.
+        categorical data.  If dictnames is True, then the dictionary
+        is returned as well.
 
     Notes
     -----
     This returns a dummy variable for EVERY distinct variable.  If a
     a recarray is provided, the names for the new variable prepend
-    an underscore, so that attribute
+    an underscore, so that attribute lookup is preserved.  There is currently
+    no name checking.
 
     Examples
     --------
@@ -80,6 +95,7 @@ def categorical(data, col=None, time=None, drop=False):
     >>> design2 = sm.tools.categorical(struct_ar, col='str_instr', drop=True)
     '''
 
+#TODO: add a NameValidator function
     # catch recarrays and structured arrays
     if data.__class__ is np.recarray or (isinstance(data, np.ndarray) and\
             data.dtype.names):
@@ -122,43 +138,39 @@ def categorical(data, col=None, time=None, drop=False):
             usemask=False, asrecarray=type(data) is np.recarray)
         return data
 
-    # handle ndarrays and catch array-like for an error for now.
+    # handle ndarrays and catch array-like for an error
     elif data.__class__ is np.ndarray or not isinstance(data,np.ndarray):
-
-        # take care of array-like
-#TODO: how to best capture the parsed dtype?
-# see np.lib.io for a robust version...
-
         if not isinstance(data, np.ndarray):
-#            from numpy.lib._iotools import StringConverter
-#            converters = [StringConverter(None)
-            raise NotImplementedError, "Array-like objects are not currently well \
-supported"
-#            data = np.asarray(data)
-#            data = np.squeeze(data)
-#            _dtype = None
-#        else:
-#            _dtype = data.dtype
+            raise NotImplementedError, "Array-like objects are not supported"
 
         if isinstance(col, int):
+            offset = data.shape[1]          # need error catching here?
             tmp_arr = np.unique(data[:,col])
             tmp_dummy = (tmp_arr[:,np.newaxis]==data[:,col]).astype(float)
-#            tmp_dummy = np.rollaxis(tmp_dummy, 1, 0)
             tmp_dummy = tmp_dummy.swapaxes(1,0)
             if drop is True:
+                offset -= 1
                 data = np.delete(data, col, axis=1).astype(float)
             data = np.column_stack((data,tmp_dummy))
-#            if _dtype:
-#                data = data.view(_dtype)
+            if dictname is True:
+                col_map = _make_dictnames(tmp_arr, offset)
+                return data, col_map
             return data
         elif col is None and np.squeeze(data).ndim == 1:
             tmp_arr = np.unique(data)
             tmp_dummy = (tmp_arr[:,None]==data).astype(float)
             tmp_dummy = tmp_dummy.swapaxes(1,0)
             if drop is True:
+                if dictnames is True:
+                    col_map = _make_dictnames(tmp_arr)
+                    return tmp_dummy, col_map
                 return tmp_dummy
             else:
-                return np.column_stack((data, tmp_dummy))
+                data = np.column_stack((data, tmp_dummy))
+                if dictnames is True:
+                    col_map = _make_dictnames(tmp_arr, offset=1)
+                    return data, col_map
+                return data
         else:
             raise IndexError, "The index %s is not understood" % col
 
