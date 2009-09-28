@@ -29,7 +29,7 @@ MAJ = 0
 MIN = 1
 REV = 0
 DEV = False #True
-QUALIFIER = 'b1'
+QUALIFIER = 'b2dev'
 
 classifiers = [ 'Development Status :: 3 - Alpha',
               'Environment :: Console',

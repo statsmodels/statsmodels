@@ -1038,40 +1038,41 @@ class RegressionResults(LikelihoodModelResults):
         JB, JBpv, skew, kurtosis = jarque_bera(self.wresid)
         omni, omnipv = omni_normtest(self.wresid)
 
-        fit_sum = os.linesep+''.join(["="]*80)+os.linesep
-        fit_sum += "Dependent Variable: " + yname + os.linesep
-        fit_sum += "Model: " + modeltype + os.linesep
-        fit_sum += "Method: Least Squares" + os.linesep
-        fit_sum += "Date: " + time.strftime("%a, %d %b %Y",t) + os.linesep
-        fit_sum += "Time: " + time.strftime("%H:%M:%S",t) + os.linesep
-        fit_sum += '# obs:        %5.0f' % self.nobs + os.linesep
-        fit_sum += 'Df residuals: %5.0f' % self.df_resid + os.linesep
-        fit_sum += 'Df model:     %5.0f' % self.df_model + os.linesep
-        fit_sum += ''.join(["="]*80) + os.linesep
+        linesep = '\n' #os.linesep
+        fit_sum = linesep+''.join(["="]*80)+linesep
+        fit_sum += "Dependent Variable: " + yname + linesep
+        fit_sum += "Model: " + modeltype + linesep
+        fit_sum += "Method: Least Squares" + linesep
+        fit_sum += "Date: " + time.strftime("%a, %d %b %Y",t) + linesep
+        fit_sum += "Time: " + time.strftime("%H:%M:%S",t) + linesep
+        fit_sum += '# obs:        %5.0f' % self.nobs + linesep
+        fit_sum += 'Df residuals: %5.0f' % self.df_resid + linesep
+        fit_sum += 'Df model:     %5.0f' % self.df_model + linesep
+        fit_sum += ''.join(["="]*80) + linesep
         fit_sum += 'variable       coefficient       std. error     \
-t-statistic       prob.'+os.linesep
-        fit_sum += ''.join(["="]*80) + os.linesep
+t-statistic       prob.'+linesep
+        fit_sum += ''.join(["="]*80) + linesep
         for i in range(len(xname)):
             fit_sum += '''%-10s    %#12.6g     %#12.6g      %#10.4g       \
 %#5.4g''' % tuple([xname[i],self.params[i],self.bse[i],self.t()[i],
-                    self.pvalues[i]]) + os.linesep
-        fit_sum += ''.join(["="]*80) + os.linesep
+                    self.pvalues[i]]) + linesep
+        fit_sum += ''.join(["="]*80) + linesep
         fit_sum += 'Models stats                         Residual stats' +\
-os.linesep
-        fit_sum += ''.join(["="]*80) + os.linesep
+linesep
+        fit_sum += ''.join(["="]*80) + linesep
         fit_sum += 'R-squared            %-8.5g         Durbin-Watson stat  \
-% -8.4g' % tuple([self.rsquared, durbin_watson(self.wresid)]) + os.linesep
+% -8.4g' % tuple([self.rsquared, durbin_watson(self.wresid)]) + linesep
         fit_sum += 'Adjusted R-squared   %-8.5g         Omnibus stat        \
-% -8.4g' % tuple([self.rsquared_adj, omni]) + os.linesep
+% -8.4g' % tuple([self.rsquared_adj, omni]) + linesep
         fit_sum += 'F-statistic          %-8.5g         Prob(Omnibus stat)  \
-% -8.4g' % tuple([self.fvalue, omnipv]) + os.linesep
+% -8.4g' % tuple([self.fvalue, omnipv]) + linesep
         fit_sum += 'Prob (F-statistic)   %-8.5g         JB stat             \
-% -8.4g' % tuple([self.f_pvalue, JB]) + os.linesep
+% -8.4g' % tuple([self.f_pvalue, JB]) + linesep
         fit_sum += 'Log likelihood       %-8.5g         Prob(JB)            \
-% -8.4g' % tuple([llf, JBpv]) + os.linesep
+% -8.4g' % tuple([llf, JBpv]) + linesep
         fit_sum += 'AIC criterion        %-8.5g         Skew                \
-% -8.4g' % tuple([aic, skew]) + os.linesep
+% -8.4g' % tuple([aic, skew]) + linesep
         fit_sum += 'BIC criterion        %-8.4g         Kurtosis            \
-% -8.4g' % tuple([bic, kurtosis]) + os.linesep
-        fit_sum += ''.join(["="]*80) + os.linesep
+% -8.4g' % tuple([bic, kurtosis]) + linesep
+        fit_sum += ''.join(["="]*80) + linesep
         return fit_sum

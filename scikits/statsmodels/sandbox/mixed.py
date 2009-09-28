@@ -9,9 +9,9 @@ This still depends on nipy
 
 import numpy as np
 import numpy.linalg as L
-import nipy
+#import nipy
 
-from nipy.fixes.scipy.stats.models.formula import Formula, I
+from scikits.statsmodels.sandbox.formula import Formula, I
 
 class Unit(object):
     """
@@ -34,8 +34,8 @@ class Unit(object):
     def __setitem__(self, item, value):
         self.dict[item] = value
 
-    def __init__(self, dict):
-        self.dict = dict
+    def __init__(self, dict_):
+        self.dict = dict_ # don't use build in names
 
     def __call__(self, formula, **extra):
         """
@@ -318,39 +318,48 @@ if __name__ == '__main__':
 
     n = 3
 
-    from nipy.fixes.scipy.stats.models.formula import Term
+    from scikits.statsmodels.sandbox.formula import Term
     fixed = Term('f')
     random = Term('r')
     response = Term('y')
 
+    nx = 4
+    beta = np.ones(nx)
     for i in range(nsubj):
         d = R.standard_normal()
-        X = R.standard_normal((10,n))
+        X = R.standard_normal((nx,n))
         Z = X[0:2]
-        Y = R.standard_normal((n,)) + d * 4
+        #Y = R.standard_normal((n,)) + d * 4
+        Y = np.dot(X.T,beta) + d * 4
         units.append(Unit({'f':X, 'r':Z, 'y':Y}))
 
     #m = Mixed(units, response)#, fixed, random)
     m = Mixed(units, response, fixed, random)
+    #m = Mixed(units, response, fixed + random, random)
     m.initialize()
     m.fit()
     #print dir(m)
     #print vars(m)
+    print 'estimates for fixed effects'
+    print m.a
+    bfixed_cov = m.cov_fixed()
+    print 'beta fixed standard errors'
+    print np.sqrt(np.diag(bfixed_cov))
 
 
 
 
-## a = Unit()
-## a['x'] = np.array([2,3])
-## a['y'] = np.array([3,4])
+    a = Unit({})
+    a['x'] = np.array([2,3])
+    a['y'] = np.array([3,4])
 
-## x = Term('x')
-## y = Term('y')
+    x = Term('x')
+    y = Term('y')
 
-## fixed = x + y + x * y
-## random = Formula(x)
+    fixed = x + y + x * y
+    random = Formula(x)
 
-## a.X = a.design(fixed)
-## a.Z = a.design(random)
+    a.X = a.design(fixed)
+    a.Z = a.design(random)
 
-## print help(a.compute_S)
+    print help(a._compute_S)
