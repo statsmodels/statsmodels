@@ -30,9 +30,6 @@ __docformat__ = 'restructuredtext en'
 
 __all__ = ['GLS', 'WLS', 'OLS', 'GLSAR']
 
-from string import join as sjoin    #
-from csv import reader              # These are for read_array
-
 import numpy as np
 from scipy.linalg import norm, toeplitz
 from scipy import stats
@@ -60,10 +57,11 @@ class GLS(LikelihoodModel):
     sigma : scalar or array
            `sigma` is the weighting matrix of the covariance.
            The default is None for no scaling.  If `sigma` is a scalar, it is
-           assumed that `sigma` is an n x n diagonal matrix with the given sclar,
-           `sigma` as the value of each diagonal element.  If `sigma` is an
-           n-length vector, then `sigma` is assumed to be a diagonal matrix
-           with the given `sigma` on the diagonal.  This should be the same as WLS.
+           assumed that `sigma` is an n x n diagonal matrix with the given
+           scalar, `sigma` as the value of each diagonal element.  If `sigma`
+           is an n-length vector, then `sigma` is assumed to be a diagonal
+           matrix with the given `sigma` on the diagonal.  This should be the
+           same as WLS.
 
     Attributes
     ----------

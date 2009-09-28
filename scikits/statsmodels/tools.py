@@ -152,7 +152,7 @@ def categorical(data, col=None, dictnames=False, drop=False):
                 offset -= 1
                 data = np.delete(data, col, axis=1).astype(float)
             data = np.column_stack((data,tmp_dummy))
-            if dictname is True:
+            if dictnames is True:
                 col_map = _make_dictnames(tmp_arr, offset)
                 return data, col_map
             return data

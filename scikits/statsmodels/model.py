@@ -34,8 +34,15 @@ class Model(object):
     _results = None
 
     def __init__(self, endog, exog=None):
-        self.endog = np.asarray(endog)
-        self.exog = np.atleast_2d(np.asarray(exog)) # 2d so that pinv works for 1d
+        endog = np.asarray(endog)
+        endog = np.squeeze(endog) # for consistent outputs if endog is (n,1)
+        exog = np.asarray(exog)
+        if exog.ndim == 1:
+            exog = exog[:,None]
+        if endog.shape[0] != exog.shape[0]:
+            raise ValueError, "endog and exog matrices are not aligned."
+        self.endog = endog
+        self.exog = exog
         self.nobs = float(self.endog.shape[0])
 
     def fit(self):
