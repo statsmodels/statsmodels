@@ -10,16 +10,20 @@ Notes
 * checked with Monte Carlo and cross comparison with statsmodels yule_walker
   for AR numbers are close but not identical to yule_walker
   not compared to other statistics packages, no degrees of freedom correction
+* ARMA(2,2) estimation (in Monte Carlo) requires longer time series to estimate parameters
+  without large variance. There might be different ARMA parameters
+  with similar impulse response function that cannot be well
+  distinguished with small samples (e.g. 100 observations)
 * good for one time calculations for entire time series, not for recursive
   prediction
 * class structure not very clean yet
 * many one-liners with scipy.signal, but takes time to figure out usage
-* missing result statistics, e.g. t-values
+* missing result statistics, e.g. t-values, but standard errors in examples
 * no criteria for choice of number of lags
 * no constant term in ARMA process
 * no integration, differencing for ARIMA
 * written without textbook, works but not sure about everything
-  brief check
+  briefly checked and it looks to be standard least squares, see below
 
 * theoretical autocorrelation function of general ARMA
   Done, relatively easy to guess solution, time consuming to get
@@ -55,8 +59,11 @@ from scipy import signal, optimize
 class ARIMA(object):
     '''currently ARMA only, no differencing used - no I
 
-    reparameterized
+    parameterized as
          rhoy(L) y_t = rhoe(L) eta_t
+
+    A instance of this class preserves state, so new class instances should
+    be created for different examples
     '''
     def __init__(self):
         pass
@@ -193,13 +200,29 @@ def arma_impulse_response(ar, ma, nobs=100):
 
     Parameters
     ----------
-        ma : array_like
-            moving average lag polynomial
-        ar : array_like
-            auto regressive lag polynomial
-        nobs : int
-            number of observations to calculate
+    ma : array_like, 1d
+        moving average lag polynomial
+    ar : array_like, 1d
+        auto regressive lag polynomial
+    nobs : int
+        number of observations to calculate
 
+    Returns
+    -------
+    ir : array, 1d
+        impulse response function with nobs elements
+    `
+
+    Notes
+    -----
+    This is the same as finding the MA representation of an ARMA(p,q).
+    By reversing the role of ar and ma in the function arguments, the
+    returned result is the AR representation of an ARMA(p,q), i.e
+
+    ma_representation = arma_impulse_response(ar, ma, nobs=100)
+    ar_representation = arma_impulse_response(ma, ar, nobs=100)
+
+    fully tested against matlab
 
     Examples
     --------
@@ -237,6 +260,9 @@ def mcarma22(niter=10):
     DGP parameters currently hard coded
     also sample size `nsample`
 
+    was not a self contained function, used instances from outer scope
+      now corrected
+
     '''
     nsample = 1000
     #ar = [1.0, 0, 0]
@@ -245,12 +271,13 @@ def mcarma22(niter=10):
     ma = [1.0,  0.3,  0.2]
     results = []
     results_bse = []
-    arma = ARIMA()
+    arest = ARIMA()
+    arest2 = ARIMA()
     for _ in range(niter):
-        y2 = arest.generate_sample(ar,ma,nsample,0.1)
+        y2 = arma_generate_sample(ar,ma,nsample,0.1)
         rhohat2a, cov_x2a, infodict, mesg, ier = arest2.fit(y2,2,2)
         results.append(rhohat2a)
-        err2a = arest.errfn(x=y2)
+        err2a = arest2.errfn(x=y2)
         sige2a = np.sqrt(np.dot(err2a,err2a)/nsample)
         results_bse.append(sige2a * np.sqrt(np.diag(cov_x2a)))
     return np.r_[ar[1:], ma[1:]], np.array(results), np.array(results_bse)
@@ -260,6 +287,8 @@ __all__ = ['ARIMA', 'arma_acf', 'arma_acovf', 'arma_generate_sample',
 
 
 if __name__ == '__main__':
+    print mcarma22()
+
 
     # Simulate AR(1)
     #--------------
@@ -404,7 +433,7 @@ if __name__ == '__main__':
         print 'positive error fraction'
         print (res > rt).mean(0)
 
-    run_mc = False
+    run_mc = True#False
     if run_mc:
         import time
         t0 = time.time()
@@ -423,4 +452,4 @@ if __name__ == '__main__':
 
     import matplotlib.pyplot as plt
     plt.plot(arest2.forecast()[-100:])
-    plt.show()
+    #plt.show()
