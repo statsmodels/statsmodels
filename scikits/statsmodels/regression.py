@@ -30,9 +30,6 @@ __docformat__ = 'restructuredtext en'
 
 __all__ = ['GLS', 'WLS', 'OLS', 'GLSAR']
 
-from string import join as sjoin    #
-from csv import reader              # These are for read_array
-
 import numpy as np
 from scipy.linalg import norm, toeplitz
 from scipy import stats
@@ -60,10 +57,11 @@ class GLS(LikelihoodModel):
     sigma : scalar or array
            `sigma` is the weighting matrix of the covariance.
            The default is None for no scaling.  If `sigma` is a scalar, it is
-           assumed that `sigma` is an n x n diagonal matrix with the given sclar,
-           `sigma` as the value of each diagonal element.  If `sigma` is an
-           n-length vector, then `sigma` is assumed to be a diagonal matrix
-           with the given `sigma` on the diagonal.  This should be the same as WLS.
+           assumed that `sigma` is an n x n diagonal matrix with the given
+           scalar, `sigma` as the value of each diagonal element.  If `sigma`
+           is an n-length vector, then `sigma` is assumed to be a diagonal
+           matrix with the given `sigma` on the diagonal.  This should be the
+           same as WLS.
 
     Attributes
     ----------
@@ -122,8 +120,8 @@ class GLS(LikelihoodModel):
     >>> data = sm.datasets.longley.Load()
     >>> data.exog = sm.add_constant(data.exog)
     >>> ols_resid = sm.OLS(data.endog, data.exog).fit().resid
-    >>> res_fit = sm.OLS(ols_resid[1:], sm.add_constant(ols_resid[:,-1]).fit()
-    >>> rho = res_fit.params[0]
+    >>> res_fit = sm.OLS(ols_resid[1:], ols_resid[:-1].fit()
+    >>> rho = res_fit.params
 
     `rho` is a consistent estimator of the correlation of the residuals from
     an OLS fit of the longley data.  It is assumed that this is the true rho

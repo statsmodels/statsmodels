@@ -41,9 +41,12 @@ class CheckRegressionResults(object):
             raise SkipTest, "Results from Rpy"
 
     def test_conf_int_subset(self):
-        ci1 = self.res1.conf_int(cols=(1,2))
-        ci2 = self.res1.conf_int()[1:3]
-        assert_almost_equal(ci1, ci2, DECIMAL)
+        if len(self.res1.params) > 1:
+            ci1 = self.res1.conf_int(cols=(1,2))
+            ci2 = self.res1.conf_int()[1:3]
+            assert_almost_equal(ci1, ci2, DECIMAL)
+        else:
+            SkipTest, "No subset of intervals for one parameter fit"
 
     def test_scale(self):
         assert_almost_equal(self.res1.scale, self.res2.scale, DECIMAL)
@@ -136,8 +139,8 @@ class TestOLS(CheckRegressionResults):
             assert_approx_equal(conf1[i][1], conf2[i][1], 6)
             # stata rounds big residuals to significant digits
 
-    def check_params(self, params1, params2):
-        assert_almost_equal(params1, params2, DECIMAL)
+#    def check_params(self, params1, params2):
+#        assert_almost_equal(params1, params2, DECIMAL)
 
 #  Robust error tests.  Compare values computed with SAS
     def test_HC0_errors(self):
@@ -458,6 +461,42 @@ class TestYuleWalker(object):
 
     def test_params(self):
         assert_almost_equal(self.rho, self.R_params, DECIMAL)
+
+class TestDataDimensions(CheckRegressionResults):
+    def __init__(self):
+        np.random.seed(54321)
+        self.endog_n_ = np.random.uniform(0,20,size=30)
+        self.endog_n_one = self.endog_n_[:,None]
+        self.exog_n_ = np.random.uniform(0,20,size=30)
+        self.exog_n_one = self.exog_n_[:,None]
+        self.degen_exog = self.exog_n_one[:-1]
+        self.res1 = OLS(self.endog_n_one, self.exog_n_one).fit()
+        # Note that these are created for every subclass..
+        # A little extra overhead probably
+        self.res2 = OLS(self.endog_n_one, self.exog_n_one).fit()
+
+    def check_confidenceintervals(self, conf1, conf2):
+        assert_almost_equal(conf1, conf2(), DECIMAL)
+
+class TestNxNx(TestDataDimensions):
+    def __init__(self):
+        super(TestNxNx, self).__init__()
+        self.res2 = OLS(self.endog_n_,self.exog_n_).fit()
+
+class TestNxOneNx(TestDataDimensions):
+    def __init__(self):
+        super(TestNxOneNx, self).__init__()
+        self.res2 = OLS(self.endog_n_one, self.exog_n_).fit()
+
+class TestNxNxOne(TestDataDimensions):
+    def __init__(self):
+        super(TestNxNxOne, self).__init__()
+        self.res2 = OLS(self.endog_n_, self.exog_n_one).fit()
+
+def test_bad_size():
+    np.random.seed(54321)
+    data = np.random.uniform(0,20,31)
+    assert_raises(ValueError, OLS, data, data[1:])
 
 if __name__=="__main__":
     #run_module_suite()
