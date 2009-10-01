@@ -47,7 +47,7 @@ from scipy import signal
 
 from numpy.testing import assert_array_equal, assert_array_almost_equal
 
-
+import scikits.statsmodels as sm
 
 
 def expandarr(x,k):
@@ -210,34 +210,93 @@ def movmoment(x, k, windowsize=3, lag='lagged'):
 
 
 #None of the acovf, ... are tested; starting index? orientation?
-def acovf(x):
+def acovf(x, unbiased=True):
     ''' autocovariance for 1D
     '''
     n = len(x)
     xo = x - x.mean();
-    xi = np.ones(n);
-    d = np.correlate(xi, xi, 'full')
-    return ( np.correlate(xo, xo, 'full')/d )[n-1:]
+    if unbiased:
+        xi = np.ones(n);
+        d = np.correlate(xi, xi, 'full')
+    else:
+        d = n
+    return (np.correlate(xo, xo, 'full') / d)[n-1:]
 
-def ccovf(x,y):
+def ccovf(x, y, unbiased=True):
     ''' crosscovariance for 1D
     '''
     n = len(x)
     xo = x - x.mean();
     yo = y - y.mean();
-    xi = np.ones(10);
-    d = np.correlate(xi,xi,'full')
-    return ( np.correlate(xo,yo,'full')/d )[n-1:]
+    if unbiased:
+        xi = np.ones(n);
+        d = np.correlate(xi, xi, 'full')
+    else:
+        d = n
+    return (np.correlate(xo,yo,'full') / d)[n-1:]
 
-def acf(x):
+def acf(x, unbiased=True):
     '''autocorrelation function for 1d'''
-    avf = acovf(x)
+    avf = acovf(x, unbiased=unbiased)
     return avf/avf[0]
 
-def ccf(x,y):
+def ccf(x, y, unbiased=True):
     '''cross-correlation function for 1d'''
-    cvf = ccovf(x,y)
-    return cvf/np.std(x)/np.std(y)
+    cvf = ccovf(x, y, unbiased=unbiased)
+    return cvf / (np.std(x) * np.std(y))
+
+
+def pacf_yw(x, maxlag=20, method='unbiased'):
+    '''Partial autocorrelation estimated with non-recursive yule_walker
+
+    Parameters
+    ----------
+    x : 1d array
+        observations of time series for which pacf is calculated
+    maxlag : int
+        largest lag for which pacf is returned
+    method : 'unbiased' (default) or 'mle'
+        method for the autocovariance calculations in yule walker
+
+    Returns
+    -------
+    pacf : 1d array
+        partial autocorrelations, maxlag+1 elements
+
+    Notes
+    -----
+
+    '''
+    xm = x - x.mean()
+    pacf = [1.]
+    for k in range(1, maxlag+1):
+        pacf.append(sm.regression.yule_walker(x, k, method=method)[0][-1])
+    return np.array(pacf)
+
+def pacf_ols(x, maxlag=20):
+    '''Partial autocorrelation estimated with non-recursive OLS
+
+    Parameters
+    ----------
+    x : 1d array
+        observations of time series for which pacf is calculated
+    maxlag : int
+        largest lag for which pacf is returned
+
+    Returns
+    -------
+    pacf : 1d array
+        partial autocorrelations, maxlag+1 elements
+    '''
+    from scikits.statsmodels.sandbox.tools.tools_tsa import lagmat
+    xlags = lagmat(x-x.mean(), maxlag)
+    pacfols = [1.]
+    for k in range(1, maxlag+1):
+        res = sm.OLS(xlags[k:,0], xlags[k:,1:k+1]).fit()
+        #print res.params
+        pacfols.append(res.params[-1])
+    return np.array(pacfols)
+
 
 
 #x=0.5**np.arange(10);xm=x-x.mean();a=np.correlate(xm,[1],'full')
@@ -259,7 +318,7 @@ def ccf(x,y):
 ##    #x=0.5**np.arange(10);xm=x-x.mean();a=np.correlate(xm,xo,'full')
 
 __all__ = ['movorder', 'movmean', 'movvar', 'movmoment', 'acovf', 'ccovf',
-           'acf', 'ccf']
+           'acf', 'ccf', 'pacf_yw', 'pacf_ols']
 
 if __name__ == '__main__':
 
