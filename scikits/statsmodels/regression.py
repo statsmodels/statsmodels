@@ -170,6 +170,8 @@ Should be of length %s, if sigma is a 1d array" % nobs
         self.wexog = self.whiten(self.exog)
         self.wendog = self.whiten(self.endog)
         self.pinv_wexog = np.linalg.pinv(self.wexog)
+        # overwrite nobs from class Model:
+        self.nobs = float(self.wexog.shape[0])
         self.normalized_cov_params = np.dot(self.pinv_wexog,
                                          np.transpose(self.pinv_wexog))
         self.df_resid = self.nobs - tools.rank(self.exog)
@@ -627,9 +629,16 @@ class GLSAR(GLS):
 #TODO: notation for AR process
         X = np.asarray(X, np.float64)
         _X = X.copy()
-        for i in range(self.order):
-            _X[(i+1):] = _X[(i+1):] - self.rho[i] * X[0:-(i+1)]
-        return _X
+        #dimension handling is not DRY
+        # I think previous code worked for 2d because of single index rows in np
+        if X.ndim == 1:
+            for i in range(self.order):
+                _X[(i+1):] = _X[(i+1):] - self.rho[i] * X[0:-(i+1)]
+            return _X[self.order:]
+        elif X.ndim == 2:
+            for i in range(self.order):
+                _X[(i+1):,:] = _X[(i+1):,:] - self.rho[i] * X[0:-(i+1),:]
+                return _X[self.order:,:]
 
 def yule_walker(X, order=1, method="unbiased", df=None, inv=False):
     """
