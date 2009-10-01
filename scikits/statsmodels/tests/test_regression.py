@@ -92,6 +92,8 @@ class CheckRegressionResults(object):
 
     def test_fvalue(self):
         if hasattr(self.res2, 'fvalue'):
+            #didn't change this, not sure it should complain -inf not equal -inf
+            #if not (np.isinf(self.res1.fvalue) and np.isinf(self.res2.fvalue)):
             assert_almost_equal(self.res1.fvalue, self.res2.fvalue, DECIMAL)
         else:
             raise SkipTest, "Results from R"
@@ -501,7 +503,7 @@ def test_bad_size():
 if __name__=="__main__":
     #run_module_suite()
     import nose
-    nose.runmodule(argv=[__file__,'-vvs','-x'], exit=False) #, '--pdb'
+    #nose.runmodule(argv=[__file__,'-vvs','-x'], exit=False) #, '--pdb'
 
 
 
