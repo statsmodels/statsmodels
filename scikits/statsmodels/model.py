@@ -39,6 +39,8 @@ class Model(object):
         exog = np.asarray(exog)
         if exog.ndim == 1:
             exog = exog[:,None]
+        if self.exog.ndim != 2:
+            raise ValueError, "exog is not 1d or 2d"
         if endog.shape[0] != exog.shape[0]:
             raise ValueError, "endog and exog matrices are not aligned."
         self.endog = endog

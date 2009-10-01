@@ -1,0 +1,76 @@
+
+
+
+* make groupstats into a class with additional functions for easy access
+  use bincount but loop over 2d, or maybe two versions 1d,2d (or nd?)
+  similar to groupbys
+  class GroupStats
+    init with label data
+    attributes/properties on demand: mean, var, callback, devfrommean, meanarr, vararr
+  does var need bias option ? yes?
+  def groupmean(label, data)
+  def groupvar(label, data)
+  def groupnormalize(label, data, reweight = True)
+
+
+* ANOVA wrapper usage example
+  discussed on mailing list and proposed by Skipper
+  create design matrix
+  create restriction matrices for F tests, t tests
+  ? normalization redundant ?
+  reports ANOVA style
+
+* maybe: quick helpers for structured arrays and masked arrays
+  formula for selection of variables
+  specification for which variable are factors
+  Anova(y, use='x1;x2;x3', factors='x2', data = dataarray)
+  or
+  Anova(y, use='x1; x2:F; x3', data = dataarray)
+
+  masked arrays need row compression
+
+
+* meta object
+  for variable names, and .... ?
+
+* OLSR, OLS with linear restriction    -> design changes ?
+  need to overwrite params_cov calculation - move it back to models
+
+* regression: OLS, WLS
+  - add prediction
+
+
+* Granger causality test: which test statistic, F test is easiest, LR, Wald ?  -> easy
+  in R: example in Wikipedia
+
+* get lag matrix helper function to use lagged dependent and lagged independent regressors
+
+* nonlinear hypothesis tests for the estimate parameters, delta method ?  -> easy, but derivatives by hand w/o sympy
+
+* minimal PCA, PCR, or PLS (NIPALS): interesting also for finance but not urgent -> messy multiplicity of definitions ?
+
+* non-linear least squares:
+  use/imitate scipy.interpolate curvefit + full set of results statistics
+
+* tests    -> needed
+  - GLSAR: check, R's gls
+  - ARMA: check R for arma, e.g. dynamo, also look more closely at GARCH_UCSD (BSD) and offspring (license ?)
+
+* other models in draft stage  -> requires cleaning
+  - gaussian process   -> might fit in
+  - multinomial logit -> requires ML, result statistics don't fit into current classes ?
+
+* stochastic processes, time series  -> first step is relatively easy
+  more simulators, random process generators, for fun and Monte Carlo and testing
+  estimators to follow
+  first group GARCH,
+  continuous time: not until I need them
+
+* other multivariate analysis
+  discriminance, factor analysis, more anova: not my business
+
+* MLE, GMM: big open question  -> needs to wait until we have more code that uses it
+  difference of approaches
+  - parametric assumptions, distributions fully specified - problem misspecification
+  - efficient estimation with full information MLE
+  -> example panel data, yogurt paper

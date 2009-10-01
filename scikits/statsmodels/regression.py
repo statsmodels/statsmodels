@@ -473,7 +473,7 @@ class OLS(WLS):
     >>>
     >>> import scikits.statsmodels as sm
     >>>
-    >>> Y = [1,3,4,5,2,3,4],
+    >>> Y = [1,3,4,5,2,3,4]
     >>> X = range(1,8) #[:,np.newaxis]
     >>> X = sm.add_constant(X)
     >>>
