@@ -140,6 +140,8 @@ class GLS(LikelihoodModel):
     """
 
     def __init__(self, endog, exog, sigma=None):
+#TODO: add options igls, for iterative fgls if sigma is None
+#TODO: default is sigma is none should be two-step GLS
         if sigma is not None:
             self.sigma = np.asarray(sigma)
         else:
@@ -471,7 +473,7 @@ class OLS(WLS):
     >>>
     >>> import scikits.statsmodels as sm
     >>>
-    >>> Y = [1,3,4,5,2,3,4],
+    >>> Y = [1,3,4,5,2,3,4]
     >>> X = range(1,8) #[:,np.newaxis]
     >>> X = sm.add_constant(X)
     >>>
