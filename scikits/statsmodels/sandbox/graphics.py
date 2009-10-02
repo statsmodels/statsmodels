@@ -65,8 +65,8 @@ def qqplot(data, dist=stats.distributions.norm, binom_n=None):
     y = dist.ppf(prob, loc=loc, scale=scale)
 #    plt.figure()
     plt.scatter(y, quantiles)
-    y_low = np.min(y.min(),quantiles.min())-1
-    y_high = np.max(y.max(),quantiles.max())+1
+    y_low = np.min(y.min(),quantiles.min())-.25
+    y_high = np.max(y.max(),quantiles.max())+.25
     plt.plot([y.min()-.25, y.max()+.25], [y_low, y_high], 'b-')
     title = '%s - Quantile Plot' % plotname
     plt.title(title)

@@ -34,16 +34,22 @@ class Model(object):
     _results = None
 
     def __init__(self, endog, exog=None):
-        self.endog = np.asarray(endog)
-        #self.exog = np.atleast_2d(np.asarray(exog)) # 2d so that pinv works for 1d
-        self.exog = np.asarray(exog)
-        if self.exog.ndim == 1:
-            self.exog = self.exog[:, np.newaxis]
-        if self.exog.ndim != 2:
+        endog = np.asarray(endog)
+        endog = np.squeeze(endog) # for consistent outputs if endog is (n,1)
+        exog = np.asarray(exog)
+##        # not sure if we want type conversion, needs tests with integers
+##        if np.issubdtype(endog.dtype, int):
+##            endog = endog.astype(float)
+##        if np.issubdtype(exog.dtype, int):
+##            endog = exog.astype(float)
+        if exog.ndim == 1:
+            exog = exog[:,None]
+        if exog.ndim != 2:
             raise ValueError, "exog is not 1d or 2d"
-        if self.exog.shape[0] != self.endog.shape[0]:
-            raise ValueError, "endog and exog don't have matching length "
-        #if not hasattr(self, 'nobs'):
+        if endog.shape[0] != exog.shape[0]:
+            raise ValueError, "endog and exog matrices are not aligned."
+        self.endog = endog
+        self.exog = exog
         self.nobs = float(self.endog.shape[0])
 
     def fit(self):

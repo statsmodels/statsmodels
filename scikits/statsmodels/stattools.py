@@ -105,7 +105,7 @@ def conditionnum(exog):
     numvar = exog.shape[1]
     norm_exog = np.ones_like(exog)
     for i in range(numvar):
-        norm_exog[:,i] = data.exog[:,i]/np.linalg.norm(data.exog[:,i])
+        norm_exog[:,i] = exog[:,i]/np.linalg.norm(exog[:,i])
     xtx = np.dot(norm_exog.T,norm_exog)
-    eigs = np.lingalg.eigvals(xtx)
+    eigs = np.linalg.eigvals(xtx)
     return np.sqrt(eigs.max()/eigs.min())
