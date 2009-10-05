@@ -45,10 +45,14 @@ fvalue = mse_model/wls_fit.mse_resid
 rsquared_adj = 1 -(wls_fit.nobs)/(wls_fit.df_resid)*(1-rsquared)
 
 
+
+#Trying to figure out what's going on in this example
+#----------------------------------------------------
+
 #JP: I need to look at this again. Even if I exclude the weight variable
 # from the regressors and keep the constant in then the reported rsquared
-# stays small
-# need to add 45 degree line to graphs
+# stays small. Below also compared using squared or sqrt of weight variable.
+# TODO: need to add 45 degree line to graphs
 wls_fit3 = sm.WLS(data.endog, data.exog[:,(0,1,3,4)], weights=1/incomesq).fit()
 print wls_fit3.summary()
 print 'corrected rsquared',
@@ -72,12 +76,19 @@ plt.plot(data.endog, rlm_fit.fittedvalues, 'o')
 plt.xlim([0,2000])
 plt.ylim([0,2000])
 
-# What is going on?
+#What is going on? A more systematic look at the data
+#----------------------------------------------------
 
 # two helper functions
 
 def getrsq(fitresult):
-    '''
+    '''calculates rsquared residual, total and explained sums of squares
+
+    Parameters
+    ----------
+    fitresult : instance of Regression Result class, or tuple of (resid, endog) arrays
+        regression residuals and endogenous variable
+
     Returns
     -------
     rsquared
@@ -101,6 +112,29 @@ def getrsq(fitresult):
 
 
 def index_trim_outlier(resid, k):
+    '''returns indices to residual array with k outliers removed
+
+    Parameters
+    ----------
+    resid : array_like, 1d
+        data vector, usually residuals of a regression
+    k : int
+        number of outliers to remove
+
+    Returns
+    -------
+    trimmed_index : array, 1d
+        index array with k outliers removed
+    outlier_index : array, 1d
+        index array of k outliers
+
+    Notes
+    -----
+
+    Outliers are defined as the k observations with the largest
+    absolute values.
+
+    '''
     sort_index = np.argsort(np.abs(resid))
     # index of non-outlier
     trimmed_index = np.sort(sort_index[:-k])
@@ -108,13 +142,18 @@ def index_trim_outlier(resid, k):
     return trimmed_index, outlier_index
 
 
+#Comparing estimation results for ols, rlm and wls with and without outliers
+#---------------------------------------------------------------------------
+
 #ols_test_fit = sm.OLS(data.endog, data.exog).fit()
 olskeep, olsoutl = index_trim_outlier(ols_fit.resid, 2)
-print olsoutl, ols_fit.resid[olsoutl]
+print 'ols outliers', olsoutl, ols_fit.resid[olsoutl]
 ols_fit_rm2 = sm.OLS(data.endog[olskeep], data.exog[olskeep,:]).fit()
 rlm_fit_rm2 = sm.RLM(data.endog[olskeep], data.exog[olskeep,:]).fit()
 #weights = 1/incomesq
+
 results = [ols_fit, ols_fit_rm2, rlm_fit, rlm_fit_rm2]
+#Note: I think incomesq is already square
 for weights in [1/incomesq, 1/incomesq**2, np.sqrt(incomesq)]:
     print '\nComparison OLS and WLS with and without outliers'
     wls_fit0 = sm.WLS(data.endog, data.exog, weights=weights).fit()
@@ -123,7 +162,7 @@ for weights in [1/incomesq, 1/incomesq**2, np.sqrt(incomesq)]:
     wlskeep, wlsoutl = index_trim_outlier(ols_fit.resid, 2)
     print '2 outliers candidates and residuals'
     print wlsoutl, wls_fit.resid[olsoutl]
-    # redundant because ols and wls outliers are the same
+    # redundant because ols and wls outliers are the same:
     ##wls_fit_rm2_ = sm.WLS(data.endog[wlskeep], data.exog[wlskeep,:],
     ##                     weights=1/incomesq[wlskeep]).fit()
 
@@ -198,7 +237,10 @@ removing 2 outliers
 
 '''
 
-# a quick bootstrap analysis (I didn't check whether this is fully correct)
+# a quick bootstrap analysis
+# --------------------------
+#
+#(I didn't check whether this is fully correct statistically)
 
 nobs, nvar = data.exog.shape
 niter = 2000
@@ -223,6 +265,8 @@ for i in range(4):
     plt.subplot(2,2,i+1)
     plt.hist(bootres[:,i],50)
     plt.title('var%d'%i)
+plt.figtext(0.5, 0.935,  'OLS Bootstrap',
+               ha='center', color='black', weight='bold', size='large')
 
 data_endog = data.endog[olskeep]
 data_exog = data.exog[olskeep,:]
@@ -240,7 +284,8 @@ for it in range(niter):
     bootreswls[it, :nvar] = res.params
     bootreswls[it, nvar:] = res.bse
 
-print 'Bootstrap Results of parameters and parameter standard deviation  WLS removed 2 outliers from sample'
+print 'Bootstrap Results of parameters and parameter standard deviation',
+print 'WLS removed 2 outliers from sample'
 print 'median', np.median(bootreswls, 0)
 print 'mean  ', np.mean(bootreswls, 0)
 print 'std   ', np.std(bootreswls, 0)
@@ -250,6 +295,12 @@ for i in range(4):
     plt.subplot(2,2,i+1)
     plt.hist(bootreswls[:,i],50)
     plt.title('var%d'%i)
+plt.figtext(0.5, 0.935,  'WLS rm2 Bootstrap',
+               ha='center', color='black', weight='bold', size='large')
+
+
+#plt.show()
+#plt.close('all')
 
 '''
 Bootstrap Results of parameters and parameter standard deviation  OLS
@@ -263,6 +314,8 @@ std    [   2.98910276   62.09939811    7.69331958   47.34312848  107.83863519   
 
 
 Conclusion: problem with outliers and possibly heteroscedasticity
+-----------------------------------------------------------------
+
 in bootstrap results
 * bse in OLS underestimates the standard deviation of the parameters
   compared to standard deviation in bootstrap
@@ -272,7 +325,34 @@ in bootstrap results
   the mean or median bse and the std of the parameter estimates in the
   bootstrap
 
-could include rsquared in bootstrap, and do it also for RLM
+We could also include rsquared in bootstrap, and do it also for RLM.
+The problems could also mean that the linearity assumption is violated,
+e.g. try non-linear transformation of exog variables, but linear
+in parameters.
+
+
+for statsmodels
+ * In this case rsquared for original data looks less random/arbitrary.
+ * Don't change definition of rsquared from centered tss to uncentered
+   tss when calculating rsquared in WLS if the original exog contains
+   a constant. The increase in rsquared because of a change in definition
+   will be very misleading.
+ * Whether there is a constant in the transformed exog, wexog, or not,
+   might affect also the degrees of freedom calculation, but I haven't
+   checked this. I would guess that the df_model should stay the same,
+   but needs to be verified with a textbook.
+ * df_model has to be adjusted if the original data does not have a
+   constant, e.g. when regressing an endog on a single exog variable
+   without constant. This case might require also a redefinition of
+   the rsquare and f statistic for the regression anova to use the
+   uncentered tss.
+   This can be done through keyword parameter to model.__init__ or
+   through autodedection with hasconst = (exog.var(0)<1e-10).any()
+   I'm not sure about fixed effects with a full dummy set but
+   without a constant. In this case autodedection wouldn't work this
+   way. Also, I'm not sure whether a ddof keyword parameter can also
+   handle the hasconst case.
+
+
 '''
 
-#plt.show()
