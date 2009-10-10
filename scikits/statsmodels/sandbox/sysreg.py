@@ -57,7 +57,6 @@ exogenous variables.  Got length %s" % len(sys)
 # Endog, might just go ahead and reshape this?
         endog = np.asarray(sys[::2])
         self.endog = endog
-
         self.nobs = float(self.endog[0].shape[0]) # assumes all the same length
 
 # Degrees of Freedom
@@ -236,10 +235,14 @@ http://www.ats.ucla.edu/stat/R/faq/hsb2.csv"
     sys2 = [endog1,exog1,endog2,exog2,endog3,exog3]
     sur_model = SUR(sys)
     sur_results_fgls = sur_model.fit()  # this is correct vs.
-                                #http://www.ats.ucla.edu/stat/sas/webbooks/reg/chapter4/sasreg4.htm
+    #http://www.ats.ucla.edu/stat/sas/webbooks/reg/chapter4/sasreg4.htm
     sur_model2 = SUR(sys)
     sur_results_ifgls = sur_model2.fit(igls=True) # this doesn't look right and can't run an iterated
                                                   # fit an fgls fit on a model, because it updates...
 #TODO: finish the results class, ie., R-squared, LR test, verify F tests, covariance matrix, standard
 # errors, confidence intervals, etc.
 #TODO: need to add tests, even though the parameter estimation is correct
+    print "Results from sysreg.SUR"
+    print sur_results_fgls.params
+    print "Results from UCLA SAS page"
+    print np.array([-2.18934, .625141, 20.13265, 5.453748, .535484, 21.83439])

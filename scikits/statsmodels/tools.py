@@ -39,7 +39,7 @@ def categorical(data, col=None, dictnames=False, drop=False):
         that is the name of the column that contains the variable.  For all
         arrays `col` can be an int that is the (zero-based) column index
         number.  `col` can only be None for a 1d array.  The default is None.
-    dict : bool, optional
+    dictnames : bool, optional
         If True, a dictionary mapping the column number to the categorical
         name is returned.  Used to have information about plain arrays.
     drop : bool
