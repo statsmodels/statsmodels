@@ -70,12 +70,12 @@ exogenous variables.  Got length %s" % len(sys)
 
 # "Block-diagonal" sparse matrix of exog
         sp_exog = sparse.lil_matrix((int(self.nobs*M),
-            int(np.sum(self.df_model+1))))
+            int(np.sum(self.df_model+1)))) # linked lists to build
         self._cols = np.cumsum(np.hstack((0, self.df_model+1)))
         for i in range(M):
             sp_exog[i*self.nobs:(i+1)*self.nobs,
                     self._cols[i]:self._cols[i+1]] = sys[1::2][i]
-        self.sp_exog = sp_exog
+        self.sp_exog = sp_exog.tocsr() # cast to compressed for efficiency
 # Deal with sigma, check shape earlier if given
         if np.any(sigma):
             sigma = np.asarray(sigma) # check shape
@@ -150,8 +150,10 @@ exogenous variables.  Got length %s" % len(sys)
             return np.dot(np.kron(self.cholsigmainv,np.eye(nobs)),
                 X.reshape(-1,1))
         elif X is self.sp_exog:
-            return np.dot(sparse.kron(self.cholsigmainv,
-                sparse.eye(nobs,nobs)),X).todense()
+#            return np.dot(sparse.kron(self.cholsigmainv,
+#                sparse.eye(nobs,nobs)),X).todense()
+            return (sparse.kron(self.cholsigmainv,
+                sparse.eye(nobs,nobs))*X).toarray()#*=dot until cast to array
 
     def fit(self, igls=False, tol=1e-5, maxiter=100):
         """
@@ -183,9 +185,11 @@ exogenous variables.  Got length %s" % len(sys)
         conv = self.history['params']
         while igls and (np.any(np.abs(conv[-2] - conv[-1]) > tol)) and (self.iterations\
                 < maxiter):
-            resids = np.dot(self.exog,beta).reshape(M,-1) # change this to use fittedvalues and be
+#            resids = np.dot(self.exog,beta).reshape(M,-1) #change this to use fittedvalues and be
                                                          # cleaner
-            self.sigma = self._compute_sigma(resids)
+            fittedvalues = (self.sp_exog*beta).reshape(M,-1)
+            resids = self.endog - fittedvalues # don't attach results yet
+            self.sigma = self._compute_sigma(resids) # need to attach for compute?
             self.wendog = self.whiten(self.endog)
             self.wexog = self.whiten(self.sp_exog)
             self.pinv_wexog = np.linalg.pinv(self.wexog)
@@ -213,7 +217,6 @@ if __name__=='__main__':
     try:
         data = np.genfromtxt('./hsb2.csv', delimiter=",",
                 dtype=[",".join(["f8"]*11)][0], names=True)
-# note for Pierre, if dtype=float and names=True, names are never used
     except:
         raise ValueError, "You don't have the file, because I'm not sure if \
 it's public domain.  You can download it here \
@@ -223,6 +226,7 @@ http://www.ats.ucla.edu/stat/R/faq/hsb2.csv"
     # eq 2: write = read female
 
     import scikits.statsmodels as sm
+    import time
 
     endog1 = data['science'].view(float)
     exog1 = sm.add_constant(data[['math','female']].view(float).reshape(-1,2))
@@ -233,9 +237,11 @@ http://www.ats.ucla.edu/stat/R/faq/hsb2.csv"
     endog3 = data['write'].view(float)
     exog3 = sm.add_constant(data[['write','female','read']].view(float).reshape(-1,3))
     sys2 = [endog1,exog1,endog2,exog2,endog3,exog3]
+    t = time.time()
     sur_model = SUR(sys)
     sur_results_fgls = sur_model.fit()  # this is correct vs.
     #http://www.ats.ucla.edu/stat/sas/webbooks/reg/chapter4/sasreg4.htm
+    print "This ran in %s seconds" % str(time.time() - t)
     sur_model2 = SUR(sys)
     sur_results_ifgls = sur_model2.fit(igls=True) # this doesn't look right and can't run an iterated
                                                   # fit an fgls fit on a model, because it updates...
@@ -246,3 +252,17 @@ http://www.ats.ucla.edu/stat/R/faq/hsb2.csv"
     print sur_results_fgls.params
     print "Results from UCLA SAS page"
     print np.array([-2.18934, .625141, 20.13265, 5.453748, .535484, 21.83439])
+
+# timings for the old version run without csr
+#This ran in 0.228526115417 seconds
+#This ran in 0.228340148926 seconds
+#This ran in 0.228056907654 seconds
+#This ran in 0.229265928268 seconds
+#This ran in 0.229331970215 seconds
+#This ran in 0.23272895813 seconds
+#This ran in 0.22826218605 seconds
+#This ran in 0.228145122528 seconds
+#This ran in 0.229871034622 seconds
+#This ran in 0.22944188118 seconds
+
+
