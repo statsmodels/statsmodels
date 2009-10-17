@@ -368,33 +368,33 @@ class TestGLS_nosigma(CheckRegressionResults):
     def check_confidenceintervals(self, conf1, conf2):
         assert_almost_equal(conf1, conf2, DECIMAL)
 
-class TestWLS(CheckRegressionResults):
-    '''
-    Test WLS with Greene's credit card data
-    '''
-    def __init__(self):
-        from scikits.statsmodels.datasets.ccard import Load
-        self.data = Load()
-        self.res1 = WLS(self.data.endog, self.data.exog,
-                weights=1/self.data.exog[:,2]).fit()
+#class TestWLS(CheckRegressionResults):
+#    '''
+#    Test WLS with Greene's credit card data
+#    '''
+#    def __init__(self):
+#        from scikits.statsmodels.datasets.ccard import Load
+#        self.data = Load()
+#        self.res1 = WLS(self.data.endog, self.data.exog,
+#                weights=1/self.data.exog[:,2]).fit()
 #FIXME: triaged results for noconstant
-        self.res1.ess = self.res1.uncentered_tss - self.res1.ssr
-        self.res1.rsquared = self.res1.ess/self.res1.uncentered_tss
-        self.res1.mse_model = self.res1.ess/(self.res1.df_model + 1)
-        self.res1.fvalue = self.res1.mse_model/self.res1.mse_resid
-        self.res1.rsquared_adj = 1 -(self.res1.nobs)/(self.res1.df_resid)*\
-                (1-self.res1.rsquared)
+#        self.res1.ess = self.res1.uncentered_tss - self.res1.ssr
+#        self.res1.rsquared = self.res1.ess/self.res1.uncentered_tss
+#        self.res1.mse_model = self.res1.ess/(self.res1.df_model + 1)
+#        self.res1.fvalue = self.res1.mse_model/self.res1.mse_resid
+#        self.res1.rsquared_adj = 1 -(self.res1.nobs)/(self.res1.df_resid)*\
+#                (1-self.res1.rsquared)
 
-    def setup(self):
-        if skipR:
-            raise SkipTest, "Rpy not installed"
-        self.res2 = RModel(self.data.endog, self.data.exog, r.lm,
-                        weights=1/self.data.exog[:,2])
-        self.res2.wresid = self.res2.rsum['residuals']
-        self.res2.scale = self.res2.scale**2 # R has sigma not sigma**2
+#    def setup(self):
+#        if skipR:
+#            raise SkipTest, "Rpy not installed"
+#        self.res2 = RModel(self.data.endog, self.data.exog, r.lm,
+#                        weights=1/self.data.exog[:,2])
+#        self.res2.wresid = self.res2.rsum['residuals']
+#        self.res2.scale = self.res2.scale**2 # R has sigma not sigma**2
 
-    def check_confidenceintervals(self, conf1, conf2):
-        assert_almost_equal(conf1, conf2, DECIMAL)
+#    def check_confidenceintervals(self, conf1, conf2):
+#        assert_almost_equal(conf1, conf2, DECIMAL)
 
 
 class TestWLS_GLS(CheckRegressionResults):

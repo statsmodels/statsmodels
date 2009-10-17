@@ -14,8 +14,8 @@ print 'vecs:',p.getEigenvectors()
 print 'projected data',p.project(vals=np.ones((3,10)))
 
 
-p.plot2d() #requires matplotlib
-from matplotlib import pyplot as plt
-plt.show() #necessary for script
+#p.plot2d() #requires matplotlib
+#from matplotlib import pyplot as plt
+#plt.show() #necessary for script
 
-p.plot3d() #requires mayavi
+#p.plot3d() #requires mayavi

@@ -865,25 +865,236 @@ class RegressionResults(LikelihoodModelResults):
     _HC2_se = None
     _HC3_se = None
 
+    _cache = {} # needs to be a class attribute for scale setter?
+
     def __init__(self, model, params, normalized_cov_params=None, scale=1.):
         super(RegressionResults, self).__init__(model, params,
                                                  normalized_cov_params,
                                                  scale)
-        self._get_results()
+#        self._get_results()
+#        self._cache = {}
+#        self.endog = self.model.endog
+        self._cache = {} # this needs to be here or it doesn't reset values
+                         # only noticed with fittedvalues
 
-    def _get_results(self):
-        '''
-        This contains the results that are the same across models
-        '''
-        self.fittedvalues = self.model.predict(self.model.exog, self.params)
-        self.wresid = self.model.wendog - \
-                self.model.predict(self.model.wexog,self.params)
-        self.resid = self.model.endog - self.fittedvalues
-        self.pinv_wexog = self.model.pinv_wexog # needed?
-        self.scale = ss(self.wresid) / self.model.df_resid
-        self.nobs = float(self.model.wexog.shape[0])
-        self.df_resid = self.model.df_resid
-        self.df_model = self.model.df_model
+    @property
+    def df_resid(self):
+        val = self._cache.get("df_resid", None)
+        if val is None:
+            val = self.model.df_resid
+            self._cache["df_resid"] = val
+        return val
+
+    @property
+    def df_model(self):
+        val = self._cache.get("df_model", None)
+        if val is None:
+            val = self.model.df_model
+            self._cache["df_model"] = val
+        return val
+
+    @property
+    def nobs(self):
+        val = self._cache.get("nobs", None)
+        if val is None:
+            val = float(self.model.wexog.shape[0])
+            self._cache["nobs"] = val
+        return val
+
+    @property
+    def fittedvalues(self):
+        val = self._cache.get("fittedvalues", None)
+        if val is None:
+            val = self.model.predict(self.model.exog, self.params)
+            self._cache["fittedvalues"] = val
+        return val
+
+    @property
+    def wresid(self):
+        val = self._cache.get("wresid", None)
+        if val is None:
+            val = self.model.wendog - self.model.predict(self.model.wexog,
+                    self.params)
+            self._cache["wresid"] = val
+        return val
+
+    @property
+    def resid(self):
+        val = self._cache.get("resid", None)
+        if val is None:
+            val = self.model.endog - self.model.predict(self.model.exog,
+                    self.params)
+            self._cache["resid"] = val
+        return val
+
+#    @property
+#    def scale(self):
+#        val = self._cache.get("scale", None)
+#        if val is None:
+#            val = ss(self.wresid) / self.df_resid
+#            self._cache["scale"] = val
+#        return val
+# Scale has to be settable
+
+    def _getscale(self):
+        val = self._cache.get("scale", None)
+        if val is None:
+            val = ss(self.wresid) / self.df_resid
+            self._cache["scale"] = val
+        return val
+
+    def _setscale(self, val):
+        self._cache.setdefault("scale", val)
+
+    scale = property(_getscale, _setscale)
+
+    @property
+    def ssr(self):
+        val = self._cache.get("ssr", None)
+        if val is None:
+            val = ss(self.wresid)
+            self._cache["ssr"] = val
+        return val
+
+    @property
+    def centered_tss(self):
+        val = self._cache.get("centered_tss", None)
+        if val is None:
+            val = ss(self.model.wendog - np.mean(self.model.wendog))
+            self._cache["centered_tss"] = val
+        return val
+
+    @property
+    def uncentered_tss(self):
+        val = self._cache.get("uncentered_tss", None)
+        if val is None:
+            val = ss(self.model.wendog)
+            self._cache["uncentered_tss"] = val
+        return val
+
+    @property
+    def ess(self):
+        val = self._cache.get("ess", None)
+        if val is None:
+            val = self.centered_tss - self.ssr
+            self._cache["ess"] = val
+        return val
+
+# Centered R2 for models with intercepts
+# have a look in test_regression.test_wls to see
+# how to compute these stats for a model without intercept,
+# and when the weights are a (linear?) function of the data...
+    @property
+    def rsquared(self):
+        val = self._cache.get("rsquared", None)
+        if val is None:
+            val = 1 - self.ssr/self.centered_tss
+            self._cache["rsquared"] = val
+        return val
+
+    @property
+    def rsquared_adj(self):
+        val = self._cache.get("rsquared_adj", None)
+        if val is None:
+            val = 1 - (self.nobs-1)/(self.df_resid)*\
+                    (1 - self.rsquared)
+            self._cache["rsquared_adj"] = val
+        return val
+
+    @property
+    def mse_model(self):
+        val = self._cache.get("mse_model", None)
+        if val is None:
+            val = self.ess/self.df_model
+            self._cache["mse_model"] = val
+        return val
+
+    @property
+    def mse_resid(self):
+        val = self._cache.get("mse_resid", None)
+        if val is None:
+            val = self.ssr/self.df_resid
+            self._cache["mse_resid"] = val
+        return val
+
+    @property
+    def mse_total(self):
+        val = self._cache.get("mse_total", None)
+        if val is None:
+            val = self.uncentered_tss/self.nobs
+            self._cache["mse_total"] = val
+        return val
+
+    @property
+    def fvalue(self):
+        val = self._cache.get("fvalue", None)
+        if val is None:
+            val = self.mse_model/self.mse_resid
+            self._cache["fvalue"] = val
+        return val
+
+    @property
+    def f_pvalue(self):
+        val = self._cache.get("f_pvalue", None)
+        if val is None:
+            val = stats.f.sf(self.fvalue, self.df_model, self.df_resid)
+            self._cache["f_pvalue"] = val
+        return val
+
+    @property
+    def bse(self):
+        val = self._cache.get("bse", None)
+        if val is None:
+            val = np.sqrt(np.diag(self.cov_params()))
+            self._cache["bse"] = val
+        return val
+
+    @property
+    def pvalues(self):
+        val = self._cache.get("pvalues", None)
+        if val is None:
+            val = stats.t.sf(np.abs(self.t()), self.df_resid)*2
+            self._cache["pvalues"] = val
+        return val
+
+    @property
+    def llf(self):
+        val = self._cache.get("llf", None)
+        if val is None:
+            val = self.model.loglike(self.params)
+            self._cache["bse"] = val
+        return val
+
+    @property
+    def aic(self):
+        val = self._cache.get("aic", None)
+        if val is None:
+            val = -2 * self.llf + 2 * (self.df_model + 1)
+            self._cache["aic"] = val
+        return val
+
+    @property
+    def bic(self):
+        val = self._cache.get("bic", None)
+        if val is None:
+            val = -2 * self.llf + np.log(self.nobs) * (self.df_model + 1)
+            self._cache["bic"] = val
+        return val
+
+
+#    def _get_results(self):
+#        '''
+#        This contains the results that are the same across models
+#        '''
+#        self.fittedvalues = self.model.predict(self.model.exog, self.params)
+#        self.wresid = self.model.wendog - \
+#                self.model.predict(self.model.wexog,self.params)
+#        self.resid = self.model.endog - self.fittedvalues
+#        self.pinv_wexog = self.model.pinv_wexog # needed?
+#        self.scale = ss(self.wresid) / self.model.df_resid
+#        self.nobs = float(self.model.wexog.shape[0])
+#        self.df_resid = self.model.df_resid
+#        self.df_model = self.model.df_model
 
 # if not hascons?
 #            self.ess = np.dot(self.params,(np.dot(self.model.wexog.T,
@@ -896,31 +1107,31 @@ class RegressionResults(LikelihoodModelResults):
 #        else:
 
 #        self.ess = ss(self.fittedvalues - np.mean(self.model.wendog))
-        self.ssr = ss(self.wresid)
-        self.centered_tss = ss(self.model.wendog - \
-                np.mean(self.model.wendog))
-        self.uncentered_tss = ss(self.model.wendog)
-        self.ess = self.centered_tss - self.ssr
+#        self.ssr = ss(self.wresid)
+#        self.centered_tss = ss(self.model.wendog - \
+#                np.mean(self.model.wendog))
+#        self.uncentered_tss = ss(self.model.wendog)
+#        self.ess = self.centered_tss - self.ssr
 # Centered R2 for models with intercepts
 # have a look in test_regression.test_wls to see
 # how to compute these stats for a model without intercept,
 # and when the weights are a (linear?) function of the data...
-        self.rsquared = 1 - self.ssr/self.centered_tss
-        self.rsquared_adj = 1 - (self.model.nobs - 1)/(self.df_resid)*\
-                (1 - self.rsquared)
-        self.mse_model = self.ess/self.model.df_model
-        self.mse_resid = self.ssr/self.model.df_resid
-        self.mse_total = self.uncentered_tss/(self.nobs)
-        self.fvalue = self.mse_model/self.mse_resid
-        self.f_pvalue = stats.f.sf(self.fvalue, self.model.df_model,
-                self.model.df_resid)
-        self.bse = np.sqrt(np.diag(self.cov_params()))
+#        self.rsquared = 1 - self.ssr/self.centered_tss
+#        self.rsquared_adj = 1 - (self.model.nobs - 1)/(self.df_resid)*\
+#                (1 - self.rsquared)
+#        self.mse_model = self.ess/self.model.df_model
+#        self.mse_resid = self.ssr/self.model.df_resid
+#        self.mse_total = self.uncentered_tss/(self.nobs)
+#        self.fvalue = self.mse_model/self.mse_resid
+#        self.f_pvalue = stats.f.sf(self.fvalue, self.model.df_model,
+#                self.model.df_resid)
+#        self.bse = np.sqrt(np.diag(self.cov_params()))
 #TODO: change to stand_errors or something
-        self.llf = self.model.loglike(self.params)
-        self.aic = -2 * self.llf + 2*(self.model.df_model+1)
-        self.bic = -2 * self.llf + np.log(self.model.nobs)*\
-                (self.model.df_model+1)
-        self.pvalues = stats.t.sf(np.abs(self.t()), self.model.df_resid)*2
+#        self.llf = self.model.loglike(self.params)
+#        self.aic = -2 * self.llf + 2*(self.model.df_model+1)
+#        self.bic = -2 * self.llf + np.log(self.model.nobs)*\
+#                (self.model.df_model+1)
+#        self.pvalues = stats.t.sf(np.abs(self.t()), self.model.df_resid)*2
 
     def _HCCM(self, scale):
         H = np.dot(self.model.pinv_wexog,

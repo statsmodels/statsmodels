@@ -248,10 +248,10 @@ http://www.ats.ucla.edu/stat/R/faq/hsb2.csv"
 #TODO: finish the results class, ie., R-squared, LR test, verify F tests, covariance matrix, standard
 # errors, confidence intervals, etc.
 #TODO: need to add tests, even though the parameter estimation is correct
-    print "Results from sysreg.SUR"
-    print sur_results_fgls.params
-    print "Results from UCLA SAS page"
-    print np.array([-2.18934, .625141, 20.13265, 5.453748, .535484, 21.83439])
+#    print "Results from sysreg.SUR"
+#    print sur_results_fgls.params
+#    print "Results from UCLA SAS page"
+#    print np.array([-2.18934, .625141, 20.13265, 5.453748, .535484, 21.83439])
 
 # timings for the old version run without csr
 #This ran in 0.228526115417 seconds
@@ -265,4 +265,17 @@ http://www.ats.ucla.edu/stat/R/faq/hsb2.csv"
 #This ran in 0.229871034622 seconds
 #This ran in 0.22944188118 seconds
 
+# with casting to csr
+#This ran in 0.232534885406 seconds
+#This ran in 0.238698959351 seconds
+#This ran in 0.233359098434 seconds
+#This ran in 0.232124090195 seconds
+#This ran in 0.232531070709 seconds
+#This ran in 0.231685161591 seconds
+#This ran in 0.232370138168 seconds
+#This ran in 0.232092142105 seconds
+#This ran in 0.230885028839 seconds
+#This ran in 0.231520175934 seconds
+
+# Looks marginally slower, though it may be a scalability issue or the dot?
 
