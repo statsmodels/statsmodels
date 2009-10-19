@@ -43,7 +43,7 @@ def convert(fname, overwrite=False, delimiter=","):
     names = names.strip(os.linesep)
     names = names.split(",")
     for i in range(len(names)): names[i] = names[i].strip("\"")
-    dataset = genfromtxt(fname, delimiter=delimiter, dtype=np.str, skiprows=1)
+    dataset = genfromtxt(fname, delimiter=delimiter, dtype=np.str, skip_headers=1)
     dir,f = os.path.split(fname)
     f=f.split('.')
     new_file = os.path.join(dir,f[0]+'.py')

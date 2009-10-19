@@ -37,6 +37,7 @@ from scipy.stats.stats import ss
 from model import LikelihoodModel, LikelihoodModelResults
 import tools
 from tools import add_constant
+from decorators import *
 
 class GLS(LikelihoodModel):
     """
@@ -871,70 +872,33 @@ class RegressionResults(LikelihoodModelResults):
         super(RegressionResults, self).__init__(model, params,
                                                  normalized_cov_params,
                                                  scale)
-#        self._get_results()
-#        self._cache = {}
-#        self.endog = self.model.endog
-        self._cache = {} # this needs to be here or it doesn't reset values
-                         # only noticed with fittedvalues
+        self._cache = resettable_cache()
 
-    @property
+    @cache_readonly
     def df_resid(self):
-        val = self._cache.get("df_resid", None)
-        if val is None:
-            val = self.model.df_resid
-            self._cache["df_resid"] = val
-        return val
+        return self.model.df_resid
 
-    @property
+    @cache_readonly
     def df_model(self):
-        val = self._cache.get("df_model", None)
-        if val is None:
-            val = self.model.df_model
-            self._cache["df_model"] = val
-        return val
+        return self.model.df_model
 
-    @property
+    @cache_readonly
     def nobs(self):
-        val = self._cache.get("nobs", None)
-        if val is None:
-            val = float(self.model.wexog.shape[0])
-            self._cache["nobs"] = val
-        return val
+        return float(self.model.wexog.shape[0])
 
-    @property
+    @cache_readonly
     def fittedvalues(self):
-        val = self._cache.get("fittedvalues", None)
-        if val is None:
-            val = self.model.predict(self.model.exog, self.params)
-            self._cache["fittedvalues"] = val
-        return val
+        return self.model.predict(self.model.exog, self.params)
 
-    @property
+    @cache_readonly
     def wresid(self):
-        val = self._cache.get("wresid", None)
-        if val is None:
-            val = self.model.wendog - self.model.predict(self.model.wexog,
-                    self.params)
-            self._cache["wresid"] = val
-        return val
+        return self.model.wendog - self.model.predict(self.model.wexog,
+                self.params)
 
-    @property
+    @cache_readonly
     def resid(self):
-        val = self._cache.get("resid", None)
-        if val is None:
-            val = self.model.endog - self.model.predict(self.model.exog,
-                    self.params)
-            self._cache["resid"] = val
-        return val
-
-#    @property
-#    def scale(self):
-#        val = self._cache.get("scale", None)
-#        if val is None:
-#            val = ss(self.wresid) / self.df_resid
-#            self._cache["scale"] = val
-#        return val
-# Scale has to be settable
+        return self.model.endog - self.model.predict(self.model.exog,
+                self.params)
 
     def _getscale(self):
         val = self._cache.get("scale", None)
@@ -948,138 +912,81 @@ class RegressionResults(LikelihoodModelResults):
 
     scale = property(_getscale, _setscale)
 
-    @property
+#    @cache_writable
+#    def scale(self):
+#        wresid = self.wresid
+#        return np.dot(wresid, wresid) / self.df_resid
+
+    @cache_readonly
     def ssr(self):
-        val = self._cache.get("ssr", None)
-        if val is None:
-            val = ss(self.wresid)
-            self._cache["ssr"] = val
-        return val
+        wresid = self.wresid
+        return np.dot(wresid, wresid)
 
-    @property
+    @cache_readonly
     def centered_tss(self):
-        val = self._cache.get("centered_tss", None)
-        if val is None:
-            val = ss(self.model.wendog - np.mean(self.model.wendog))
-            self._cache["centered_tss"] = val
-        return val
+        centered_wendog = self.model.wendog - np.mean(self.model.wendog)
+        return np.dot(centered_wendog, centered_wendog)
 
-    @property
+    @cache_readonly
     def uncentered_tss(self):
-        val = self._cache.get("uncentered_tss", None)
-        if val is None:
-            val = ss(self.model.wendog)
-            self._cache["uncentered_tss"] = val
-        return val
+        wendog = self.model.wendog
+        return np.dot(wendog, wendog)
 
-    @property
+    @cache_readonly
     def ess(self):
-        val = self._cache.get("ess", None)
-        if val is None:
-            val = self.centered_tss - self.ssr
-            self._cache["ess"] = val
-        return val
+        return self.centered_tss - self.ssr
 
 # Centered R2 for models with intercepts
 # have a look in test_regression.test_wls to see
 # how to compute these stats for a model without intercept,
 # and when the weights are a (linear?) function of the data...
-    @property
+    @cache_readonly
     def rsquared(self):
-        val = self._cache.get("rsquared", None)
-        if val is None:
-            val = 1 - self.ssr/self.centered_tss
-            self._cache["rsquared"] = val
-        return val
+        return 1 - self.ssr/self.centered_tss
 
-    @property
+    @cache_readonly
     def rsquared_adj(self):
-        val = self._cache.get("rsquared_adj", None)
-        if val is None:
-            val = 1 - (self.nobs-1)/(self.df_resid)*\
-                    (1 - self.rsquared)
-            self._cache["rsquared_adj"] = val
-        return val
+        return 1 - (self.nobs - 1)/self.df_resid * (1 - self.rsquared)
 
-    @property
+    @cache_readonly
     def mse_model(self):
-        val = self._cache.get("mse_model", None)
-        if val is None:
-            val = self.ess/self.df_model
-            self._cache["mse_model"] = val
-        return val
+        return self.ess/self.df_model
 
-    @property
+    @cache_readonly
     def mse_resid(self):
-        val = self._cache.get("mse_resid", None)
-        if val is None:
-            val = self.ssr/self.df_resid
-            self._cache["mse_resid"] = val
-        return val
+        return self.ssr/self.df_resid
 
-    @property
+    @cache_readonly
     def mse_total(self):
-        val = self._cache.get("mse_total", None)
-        if val is None:
-            val = self.uncentered_tss/self.nobs
-            self._cache["mse_total"] = val
-        return val
+        return self.uncentered_tss/self.nobs
 
-    @property
+    @cache_readonly
     def fvalue(self):
-        val = self._cache.get("fvalue", None)
-        if val is None:
-            val = self.mse_model/self.mse_resid
-            self._cache["fvalue"] = val
-        return val
+        return self.mse_model/self.mse_resid
 
-    @property
+    @cache_readonly
     def f_pvalue(self):
-        val = self._cache.get("f_pvalue", None)
-        if val is None:
-            val = stats.f.sf(self.fvalue, self.df_model, self.df_resid)
-            self._cache["f_pvalue"] = val
-        return val
+        return stats.f.sf(self.fvalue, self.df_model, self.df_resid)
 
-    @property
+    @cache_readonly
     def bse(self):
-        val = self._cache.get("bse", None)
-        if val is None:
-            val = np.sqrt(np.diag(self.cov_params()))
-            self._cache["bse"] = val
-        return val
+        return np.sqrt(np.diag(self.cov_params()))
 
-    @property
+    @cache_readonly
     def pvalues(self):
-        val = self._cache.get("pvalues", None)
-        if val is None:
-            val = stats.t.sf(np.abs(self.t()), self.df_resid)*2
-            self._cache["pvalues"] = val
-        return val
+        return stats.t.sf(np.abs(self.t()), self.df_resid)*2
 
-    @property
+    @cache_readonly
     def llf(self):
-        val = self._cache.get("llf", None)
-        if val is None:
-            val = self.model.loglike(self.params)
-            self._cache["bse"] = val
-        return val
+        return self.model.loglike(self.params)
 
-    @property
+    @cache_readonly
     def aic(self):
-        val = self._cache.get("aic", None)
-        if val is None:
-            val = -2 * self.llf + 2 * (self.df_model + 1)
-            self._cache["aic"] = val
-        return val
+        return -2 * self.llf + 2 * (self.df_model + 1)
 
-    @property
+    @cache_readonly
     def bic(self):
-        val = self._cache.get("bic", None)
-        if val is None:
-            val = -2 * self.llf + np.log(self.nobs) * (self.df_model + 1)
-            self._cache["bic"] = val
-        return val
+        return -2 * self.llf + np.log(self.nobs) * (self.df_model + 1)
 
 
 #    def _get_results(self):
