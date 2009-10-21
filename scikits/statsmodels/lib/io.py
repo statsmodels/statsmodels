@@ -15,12 +15,24 @@ import sys
 import numpy as np
 
 
-### Helper classes for Stata .dta files ###
+### Helper classes for StataReader ###
 
 class _StataMissingValue(object):
     """
     An observation's missing value.
 
+    Parameters
+    -----------
+    offset
+    value
+
+    Attributes
+    ----------
+    string
+    value
+
+    Notes
+    -----
     More information: <http://www.stata.com/help.cgi?missing>
     """
 
@@ -40,7 +52,30 @@ of the missing value.')
 
 class _StataVariable(object):
     """
-    A dataset variable.
+    A dataset variable.  Not intended for public use.
+
+    Parameters
+    ----------
+    variable_data
+
+    Attributes
+    -----------
+    format : str
+        Stata variable format.  See notes for more information.
+    index : int
+        Zero-index column index of variable.
+    label : str
+        Data Label
+    name : str
+        Variable name
+    type : str
+        Stata data type.  See notes for more information.
+    value_format : str
+        Value format.
+
+    Notes
+    -----
+    More information: http://www.stata.com/help.cgi?format
     """
     def __init__(self, variable_data):
         self._data = variable_data
@@ -64,32 +99,21 @@ value format')
     __int__.__doc__ = index.__doc__
     __str__.__doc__ = name.__doc__
 
-#TODO: StataReader needs a seek method?
 class StataReader(object):
     """
-    Stata .dta file reader
+    Stata .dta file reader.
+
+    Provides methods to return the metadata of a Stata .dta file and
+    a generator for the data itself.
 
     Parameters
     ----------
-    file : Stata .dta file
+    file : file-like
+        A file-like object representing a Stata .dta file.
 
     missing_values : bool
         If missing_values is True, parse missing_values and return a
         Missing Values object instead of None.
-
-    Returns
-    -------
-    File-like object of .dta binary data file.
-
-    Attributes
-    ----------
-    file_headers
-    file_format
-    file_label
-    file_timestamp
-    variables
-    dataset
-
 
     See also
     --------
@@ -97,8 +121,9 @@ class StataReader(object):
 
     Notes
     -----
-    This is known only to work on 113 (untested) and 114.
-    Needs to be tested on older versions.  Known not to work on format 104, 108.
+    This is known only to work on file formats 113 (Stata 8/9) and 114
+    (Stata 10/11).  Needs to be tested on older versions.
+    Known not to work on format 104, 108.
 
     For more information about the .dta format see
     http://www.stata.com/help.cgi?dta
@@ -116,18 +141,16 @@ class StataReader(object):
             (-1.798e+308, +8.988e+307) }
 
     def __init__(self, fname, missing_values=False):
-        """
-        Creates a new parser from a file object.
-
-        If missing_values, parse missing values and return as a MissingValue
-        object (instead of None).
-        """
         self._missing_values = missing_values
         self._parse_header(fname)
 
     def file_headers(self):
         """
         Returns all .dta file headers.
+
+        out: dict
+            Has keys typlist, data_label, lbllist, varlist, nvar, filetype,
+            ds_format, nobs, fmtlist, vlblist, time_stamp, srtlist, byteorder
         """
         return self._header
 
@@ -135,26 +158,40 @@ class StataReader(object):
         """
         Returns the file format.
 
-        Format 113: Stata 9
-        Format 114: Stata 10
+        Returns
+        -------
+        out : int
+
+        Notes
+        -----
+        Format 113: Stata 8/9
+        Format 114: Stata 10/11
         """
         return self._header['ds_format']
 
     def file_label(self):
         """
         Returns the dataset's label.
+
+        Returns
+        ------
+        out: string
         """
         return self._header['data_label']
 
     def file_timestamp(self):
         """
         Returns the date and time Stata recorded on last file save.
+
+        Returns
+        -------
+        out : str
         """
         return self._header['time_stamp']
 
     def variables(self):
         """
-        Returns a list of the dataset's PyDTA.Variables.
+        Returns a list of the dataset's StataVariables objects.
         """
         return map(_StataVariable, zip(range(self._header['nvar']),
             self._header['typlist'], self._header['varlist'],
@@ -166,10 +203,25 @@ class StataReader(object):
         """
         Returns a Python generator object for iterating over the dataset.
 
-        Each observation is returned as a list unless as_dict is set.
-        Observations with a MissingValue(s) are not filtered and should be
-        handled by your applcation.
+
+        Parameters
+        ----------
+        as_dict : bool, optional
+            If as_dict is True, yield each row of observations as a dict.
+            If False, yields each row of observations as a list.
+
+        Returns
+        -------
+        Generator object for iterating over the dataset.  Yields each row of
+        observations as a list by default.
+
+        Notes
+        -----
+        If missing_values is True during instantiation of StataReader then
+        observations with _StataMissingValue(s) are not filtered and should
+        be handled by your applcation.
         """
+
         try:
             self._file.seek(self._data_location)
         except Exception:
@@ -260,15 +312,11 @@ incorrect." % self._header['dsformat']
                 for i in range(nvar)]
 
         # ignore expansion fields
-#    When
-#    reading, read five bytes; the last four bytes now tell you the size of
-#    the next read, which you discard.  You then continue like this until you
-#    read 5 bytes of zeros.
-# the way I read this is that they both should be zero, but that's not what we
-# get.  And you can't just keep reading until both are zero because the 2nd
-# iteration gives a big length.  Maybe there is an error in the above and
-# we aren't where we think we are in the file?
-# The above pertains to an unsupported file format (104?)
+# When reading, read five bytes; the last four bytes now tell you the size of
+# the next read, which you discard.  You then continue like this until you
+# read 5 bytes of zeros.
+# TODO: The way I read this is that they both should be zero, but that's
+# not what we get.
 
         while True:
             data_type = unpack(byteorder+'b', self._file.read(1))[0]
@@ -324,8 +372,7 @@ incorrect." % self._header['dsformat']
                 self._file.read(self._col_size(i))),
                 range(self._header['nvar']))
 
-#TODO: extend to get data from online
-def genfromdta(fname, missing_values=False, excludelist=None, missing_flt=-999., missing_str=""):
+def genfromdta(fname, excludelist=None, missing_flt=-999., missing_str=""):
     """
     Returns an ndarray from a Stata .dta file.
 
@@ -338,28 +385,27 @@ def genfromdta(fname, missing_values=False, excludelist=None, missing_flt=-999.,
     missing_str
 
     """
-#TODO: not sure if we care about missing values, if it returns
-# none when missing_values is false then that's fine for our purposes
+#TODO: extend to get data from online
     if isinstance(fname, basestring):
-        fhd = StataReader(open(fname, 'r'), missing_values=missing_values)
+        fhd = StataReader(open(fname, 'r'), missing_values=False)
     elif not hasattr(fname, 'read'):
         raise TypeError("The input should be a string or a filehandle. "\
                 "(got %s instead)" % type(fname))
     else:
         fhd = StataReader(fname, missing_values)
-    # validate_names = np.lib._iotools.NameValidator(excludelist=excludelist,
+#    validate_names = np.lib._iotools.NameValidator(excludelist=excludelist,
 #                                    deletechars=deletechars,
 #                                    case_sensitive=case_sensitive)
 
 
 #TODO: does this need to handle the byteorder?
     header = fhd.file_headers()
-#    types = header['typlist'] # maybe change this in StataReader
+#    types = header['typlist'] # typemap in StataReader?
     nobs = header['nobs']
     numvars = header['nvar']
     varnames = header['varlist']
     dataname = header['data_label']
-    labels = header['vlblist'] # labels are thrown away unless my DataArray
+    labels = header['vlblist'] # labels are thrown away unless DataArray
                                # type is used
     data = np.zeros((nobs,numvars))
     stata_dta = fhd.dataset()
@@ -368,6 +414,7 @@ def genfromdta(fname, missing_values=False, excludelist=None, missing_flt=-999.,
     # see http://www.stata.com/help.cgi?format
     # This converts all of these to float64
     # all time and strings are converted to strings
+    #TODO: put these notes in the docstring
     #TODO: need to write a time parser
     to_flt = ['g','e','f','h','gc','fc', 'x', 'l'] # how to deal with x
                                                    # and double-precision
