@@ -900,23 +900,23 @@ class RegressionResults(LikelihoodModelResults):
         return self.model.endog - self.model.predict(self.model.exog,
                 self.params)
 
-    def _getscale(self):
-        val = self._cache.get("scale", None)
-        if val is None:
-            val = ss(self.wresid) / self.df_resid
-            self._cache["scale"] = val
-        return val
+#    def _getscale(self):
+#        val = self._cache.get("scale", None)
+#        if val is None:
+#            val = ss(self.wresid) / self.df_resid
+#            self._cache["scale"] = val
+#        return val
 
-    def _setscale(self, val):
-        self._cache.setdefault("scale", val)
+#    def _setscale(self, val):
+#        self._cache.setdefault("scale", val)
 
-    scale = property(_getscale, _setscale)
+#    scale = property(_getscale, _setscale)
 
 #TODO: fix writable example
-#    @cache_writable
-#    def scale(self):
-#        wresid = self.wresid
-#        return np.dot(wresid, wresid) / self.df_resid
+    @cache_writable()
+    def scale(self):
+        wresid = self.wresid
+        return np.dot(wresid, wresid) / self.df_resid
 
     @cache_readonly
     def ssr(self):
