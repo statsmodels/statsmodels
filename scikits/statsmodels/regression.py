@@ -912,6 +912,7 @@ class RegressionResults(LikelihoodModelResults):
 
     scale = property(_getscale, _setscale)
 
+#TODO: fix writable example
 #    @cache_writable
 #    def scale(self):
 #        wresid = self.wresid
@@ -988,58 +989,12 @@ class RegressionResults(LikelihoodModelResults):
     def bic(self):
         return -2 * self.llf + np.log(self.nobs) * (self.df_model + 1)
 
-
-#    def _get_results(self):
-#        '''
-#        This contains the results that are the same across models
-#        '''
-#        self.fittedvalues = self.model.predict(self.model.exog, self.params)
-#        self.wresid = self.model.wendog - \
-#                self.model.predict(self.model.wexog,self.params)
-#        self.resid = self.model.endog - self.fittedvalues
-#        self.pinv_wexog = self.model.pinv_wexog # needed?
-#        self.scale = ss(self.wresid) / self.model.df_resid
-#        self.nobs = float(self.model.wexog.shape[0])
-#        self.df_resid = self.model.df_resid
-#        self.df_model = self.model.df_model
-
-# if not hascons?
-#            self.ess = np.dot(self.params,(np.dot(self.model.wexog.T,
-#                self.model.wendog)))
-#            self.uncentered_tss =
-#            self.centered_tss = ssr + ess
-#            self.ssr = ss(self.model.wendog)- self.ess
-#            self.rsquared
-#            self.rsquared_adj
-#        else:
-
-#        self.ess = ss(self.fittedvalues - np.mean(self.model.wendog))
-#        self.ssr = ss(self.wresid)
-#        self.centered_tss = ss(self.model.wendog - \
-#                np.mean(self.model.wendog))
-#        self.uncentered_tss = ss(self.model.wendog)
-#        self.ess = self.centered_tss - self.ssr
 # Centered R2 for models with intercepts
 # have a look in test_regression.test_wls to see
 # how to compute these stats for a model without intercept,
 # and when the weights are a (linear?) function of the data...
-#        self.rsquared = 1 - self.ssr/self.centered_tss
-#        self.rsquared_adj = 1 - (self.model.nobs - 1)/(self.df_resid)*\
-#                (1 - self.rsquared)
-#        self.mse_model = self.ess/self.model.df_model
-#        self.mse_resid = self.ssr/self.model.df_resid
-#        self.mse_total = self.uncentered_tss/(self.nobs)
-#        self.fvalue = self.mse_model/self.mse_resid
-#        self.f_pvalue = stats.f.sf(self.fvalue, self.model.df_model,
-#                self.model.df_resid)
-#        self.bse = np.sqrt(np.diag(self.cov_params()))
-#TODO: change to stand_errors or something
-#        self.llf = self.model.loglike(self.params)
-#        self.aic = -2 * self.llf + 2*(self.model.df_model+1)
-#        self.bic = -2 * self.llf + np.log(self.model.nobs)*\
-#                (self.model.df_model+1)
-#        self.pvalues = stats.t.sf(np.abs(self.t()), self.model.df_resid)*2
 
+#TODO: make these properties reset bse
     def _HCCM(self, scale):
         H = np.dot(self.model.pinv_wexog,
             scale[:,None]*self.model.pinv_wexog.T)
