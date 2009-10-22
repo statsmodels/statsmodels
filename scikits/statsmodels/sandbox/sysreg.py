@@ -53,6 +53,7 @@ exogenous variables.  Got length %s" % len(sys)
 #            exog[i,i] = np.asarray(eq)  # not sure this exog is needed
                                         # used to compute resids for now
         exog = np.column_stack(np.asarray(sys[1::2][i]) for i in range(M))
+#       exog = np.vstack(np.asarray(sys[1::2][i]) for i in range(M))
         self.exog = exog # 2d ndarray exog is better
 # Endog, might just go ahead and reshape this?
         endog = np.asarray(sys[::2])
@@ -82,7 +83,8 @@ exogenous variables.  Got length %s" % len(sys)
         elif sigma == None:
             resids = []
             for i in range(M):
-                resids.append(GLS(endog[i],exog[:,self._cols[i]:self._cols[i+1]]).fit().resid)
+                resids.append(GLS(endog[i],exog[:,
+                    self._cols[i]:self._cols[i+1]]).fit().resid)
             resids = np.asarray(resids).reshape(M,-1)
             sigma = self._compute_sigma(resids)
         self.sigma = sigma
@@ -94,7 +96,8 @@ exogenous variables.  Got length %s" % len(sys)
         self.wendog = self.whiten(self.endog)
         self.wexog = self.whiten(self.sp_exog)
         self.pinv_wexog = np.linalg.pinv(self.wexog)
-        self.normalized_cov_params = np.dot(self.pinv_wexog, np.transpose(self.pinv_wexog))
+        self.normalized_cov_params = np.dot(self.pinv_wexog,
+                np.transpose(self.pinv_wexog))
         self.history = {'params' : [np.inf]}
         self.iterations = 0
 
@@ -150,8 +153,6 @@ exogenous variables.  Got length %s" % len(sys)
             return np.dot(np.kron(self.cholsigmainv,np.eye(nobs)),
                 X.reshape(-1,1))
         elif X is self.sp_exog:
-#            return np.dot(sparse.kron(self.cholsigmainv,
-#                sparse.eye(nobs,nobs)),X).todense()
             return (sparse.kron(self.cholsigmainv,
                 sparse.eye(nobs,nobs))*X).toarray()#*=dot until cast to array
 
@@ -183,17 +184,16 @@ exogenous variables.  Got length %s" % len(sys)
             return sur_fit
 
         conv = self.history['params']
-        while igls and (np.any(np.abs(conv[-2] - conv[-1]) > tol)) and (self.iterations\
-                < maxiter):
-#            resids = np.dot(self.exog,beta).reshape(M,-1) #change this to use fittedvalues and be
-                                                         # cleaner
+        while igls and (np.any(np.abs(conv[-2] - conv[-1]) > tol)) and \
+                (self.iterations < maxiter):
             fittedvalues = (self.sp_exog*beta).reshape(M,-1)
             resids = self.endog - fittedvalues # don't attach results yet
             self.sigma = self._compute_sigma(resids) # need to attach for compute?
             self.wendog = self.whiten(self.endog)
             self.wexog = self.whiten(self.sp_exog)
             self.pinv_wexog = np.linalg.pinv(self.wexog)
-            self.normalized_cov_params = np.dot(self.pinv_wexog, np.transpose(self.pinv_wexog))
+            self.normalized_cov_params = np.dot(self.pinv_wexog,
+                    np.transpose(self.pinv_wexog))
             beta = np.dot(self.pinv_wexog, self.wendog)
             self._update_history(beta)
             self.iterations += 1
@@ -207,7 +207,8 @@ class SysResults(LikelihoodModelResults):
     """
     """
     def __init__(self, model, params, normalized_cov_params=None, scale=1.):
-        super(SysResults, self).__init__(model, params, normalized_cov_params, scale)
+        super(SysResults, self).__init__(model, params,
+                normalized_cov_params, scale)
         self._get_results()
 
     def _get_results(self):
@@ -278,4 +279,76 @@ http://www.ats.ucla.edu/stat/R/faq/hsb2.csv"
 #This ran in 0.231520175934 seconds
 
 # Looks marginally slower, though it may be a scalability issue or the dot?
+
+#    data2 = np.genfromtxt('./tablef5-1.txt', names=True)
+
+    # Green estimates p. 351 (?) Grunfeld Investment Data
+    data2 = np.genfromtxt('http://pages.stern.nyu.edu/\
+~wgreene/Text/Edition6/Grunfeld.txt', skip_header=1, names=['Firm', 'Year',
+        'I','F','C'])
+    # Greene uses 1,4,3,8,2 in Maddala's order, but 2,1940,I = 261.6 instead
+    # of 261.6 and K(1946) was changed from 132.6 to 232.6
+    # see: http://stanford.edu/~clint/bench/grunfeld.htm
+    firms = data2['Firm']
+    ind = (firms == 1) | (firms == 4) | (firms == 3) | (firms == 8) | \
+            (firms == 2)
+    grun_data = data2[ind]
+    endog_grun = np.column_stack(([grun_data['I'][grun_data['Firm']==_] for _ in np.unique(grun_data['Firm'])]))
+    exog_grun = np.vstack(([sm.add_constant(grun_data[['F','C']]\
+            [grun_data['Firm']==_].view(float).reshape(20,2)) for _ \
+            in np.unique(grun_data['Firm'])]))
+    exog_grun = exog_grun.view(float).reshape(5,20,3)
+    for i,arr in enumerate(exog_grun):
+        exog_grun[i] = sm.add_constant(arr)
+
+#    sys = list(*zip([endog_grun[:,_] for _ in range(endog_grun.shape[1])],exog_grun))
+# having a list of pairs doesn't work.
+
+# whew that was painful.  Has to be an easier way to do that with
+# DataArray.groupby or something
+    sys = []
+    for i in range(5):
+        sys.append(endog_grun[:,i])
+        sys.append(exog_grun[i])
+
+# put in a different order for ease of comparison
+# GM CH GE WE US
+#  1   2   3   4   8
+# 0,1 2,3 4,5 6,7 8,9
+#  1   4   3   8   2
+# 0,1 6,7 4,5 8,9 2,3
+    sys2 = []
+    sys2.append(sys[0])
+    sys2.append(sys[1])
+    sys2.append(sys[6])
+    sys2.append(sys[7])
+    sys2.append(sys[4])
+    sys2.append(sys[5])
+    sys2.append(sys[8])
+    sys2.append(sys[9])
+    sys2.append(sys[2])
+    sys2.append(sys[3])
+    sys = sys2
+
+# correct bad data
+# discrepancies are noted in Grunfeld.txt
+    sys[-2][5] = 261.6
+    sys[-2][-3] = 645.2
+    sys[-1][11,1] = 232.6
+    grun_mod = SUR(sys)
+    grun_res = grun_mod.fit()
+    print "Compare these results to Greene 5th ed. p 351"
+    print grun_res.params
+# We are majorly losing precision somewhere
+# Nope, the data from Greene's web site was bad
+# Looks good now.
+
+    grun_imod = SUR(sys)
+    grun_iter = grun_imod.fit(igls=True)
+    print "Compare these results to Greene 5th ed. p. 352 MLE"
+    print grun_iter.params
+# These are *very* close to MLE in table 14-3, probably just a precision issue
+# in convergence
+# maybe a different one of the dof corrections in sigma computation?
+
 

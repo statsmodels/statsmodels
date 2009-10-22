@@ -174,6 +174,7 @@ def categorical(data, col=None, dictnames=False, drop=False):
         else:
             raise IndexError, "The index %s is not understood" % col
 
+#TODO: add an axis argument to this for sysreg
 def add_constant(data):
     '''
     This appends a constant to the design matrix.
