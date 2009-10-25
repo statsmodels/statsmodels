@@ -7,7 +7,11 @@ from scipy import sparse
 #http://www.irisa.fr/aladin/wg-statlin/WORKSHOPS/RENNES02/SLIDES/Foschi.pdf
 
 #probably should have a SystemModel superclass
-
+# TODO: does it make sense of SUR equations to have
+# independent endogenous regressors?  If so, then
+# change docs to LHS = RHS
+#TODO: make a dictionary that holds equation specific information
+#rather than these cryptic lists?  Slower to get a dict value?
 class SUR(object):
     """
     Seemingly Unrelated Regression
@@ -203,6 +207,117 @@ exogenous variables.  Got length %s" % len(sys)
     def predict(self, design):
         pass
 
+#TODO: Should just have a general 2SLS estimator to subclass
+# for IV, FGLS, etc.
+# Also should probably have SEM class and estimators as subclasses
+class Sem2SLS(object):
+    """
+    Basic Two-Stage Least Squares for Simultaneous equations
+
+    Parameters
+    ----------
+    sys
+
+    indep_endog : dict
+        A dictionary mapping the equation to the column numbers of the
+        the independent endogenous regressors in each equation.
+        It is assumed that the system is inputed as broken up into
+        LHS and RHS. For now, the values of the dict have to be sequences.
+        Note that the keys for the equations should be zero-indexed.
+
+    instruments : array
+        Array of the exogenous independent variables.
+
+    Notes
+    -----
+    This is unfinished, and the design should be refactored.
+    I just need it for homework.
+    Estimation is done by brute force and there is no exploitation of
+    the structure of the system.
+    """
+    def __init__(self, sys, indep_endog=None, instruments=None):
+        if len(sys) % 2 != 0:
+            raise ValueError, "sys must be a list of pairs of endogenous and \
+exogenous variables.  Got length %s" % len(sys)
+        M = len(sys[1::2])
+        self._M = M
+# The lists are probably a bad idea
+        self.endog = sys[::2]   # these are just list containers
+        self.exog = sys[1::2]
+        self._K = [sm.tools.rank(_) for _ in sys[1::2]]
+#        fullexog = np.column_stack((_ for _ in self.exog))
+
+        self.instruments = instruments
+
+        # Keep the Y_j's in a container to get IVs
+        instr_endog = {}
+        [instr_endog.setdefault(_,[]) for _ in indep_endog.keys()]
+
+        for eq_key in indep_endog:
+            for varcol in indep_endog[eq_key]:
+                instr_endog[eq_key].append(self.exog[eq_key][:,varcol])
+                # ^ copy needed?
+#        self._instr_endog = instr_endog
+
+        self._indep_endog = indep_endog
+        _col_map = np.cumsum(np.hstack((0,self._K))) # starting col no.s
+# move this check to whiten since we're not going to build a full exog?
+        for eq_key in indep_endog:
+            try:
+                iter(indep_endog[eq_key])
+            except:
+#                eq_key = [eq_key]
+                raise TypeError, "The values of the indep_exog dict must be\
+ iterable. Got type %s for converter %s" % (type(del_col))
+#            for del_col in indep_endog[eq_key]:
+#                fullexog = np.delete(fullexog,  _col_map[eq_key]+del_col, 1)
+#                _col_map[eq_key+1:] -= 1
+
+# Josef's example for deleting reoccuring "rows"
+#        fullexog = np.unique(fullexog.T.view([('',fullexog.dtype)]*\
+#                fullexog.shape[0])).view(fullexog.dtype).reshape(\
+#                fullexog.shape[0],-1)
+# From http://article.gmane.org/gmane.comp.python.numeric.general/32276/
+# Or Jouni' suggetsion of taking a hash:
+# http://www.mail-archive.com/numpy-discussion@scipy.org/msg04209.html
+# not clear to me how this would work though, only if they are the *same*
+# elements?
+#        self.fullexog = fullexog
+        self.wexog = self.whiten(instr_endog)
+
+
+    def whiten(self, Y):
+        """
+        Runs the first stage of the 2SLS.
+
+        Returns the RHS variables that include the instruments.
+        """
+        wexog = []
+        indep_endog = self._indep_endog # this has the col mapping
+#        fullexog = self.fullexog
+        instruments = self.instruments
+        for eq in range(self._M): # need to go through all equations regardless
+            instr_eq = Y.get(eq, None) # Y has the eq to ind endog array map
+            newRHS = self.exog[eq].copy()
+            if instr_eq:
+                for i,LHS in enumerate(instr_eq):
+                    yhat = sm.GLS(LHS, self.instruments).fit().fittedvalues
+                    newRHS[:,indep_endog[eq][i]] = yhat
+                # this might fail if there is a one variable column (nobs,)
+                # in exog
+            wexog.append(newRHS)
+        return wexog
+
+    def fit(self):
+        """
+        """
+        delta = []
+        wexog = self.wexog
+        endog = self.endog
+        for j in range(self._M):
+            delta.append(sm.GLS(endog[j], wexog[j]).fit().params)
+        return delta
+
 class SysResults(LikelihoodModelResults):
     """
     """
@@ -350,5 +465,61 @@ http://www.ats.ucla.edu/stat/R/faq/hsb2.csv"
 # These are *very* close to MLE in table 14-3, probably just a precision issue
 # in convergence
 # maybe a different one of the dof corrections in sigma computation?
+    try:
+        data3 = np.genfromtxt('/home/skipper/school/MetricsII/Greene \
+TableF5-1.txt', names=True)
+    except:
+        raise ValueError, "Based on Greene TableF5-1"
 
+    # Example 13.1 in Greene 5th Edition
+# c_t = constant + y_t + c_t-1
+# i_t = constant + r_t + (y_t - y_t-1)
+# y_t = c_t + i_t + g_t
+    sys3 = []
+    sys3.append(data3['realcons'][1:])  # have to leave off a beg. date
+# impose 3rd equation on y
+    y = data3['realcons'] + data3['realinvs'] + data3['realgovt']
+
+    exog1 = np.column_stack((y[1:],data3['realcons'][:-1]))
+    exog1 = sm.add_constant(exog1)
+    sys3.append(exog1)
+    sys3.append(data3['realinvs'][1:])
+    exog2 = np.column_stack((data3['tbilrate'][1:],
+        np.diff(y)))
+    # realint is missing 1st observation
+    exog2 = sm.add_constant(exog2)
+    sys3.append(exog2)
+    indep_endog = {0 : [0]} # need to be able to say that y_1 is an instrument..
+    instruments = np.column_stack((data3[['realgovt','tbilrate']][1:].view(float).reshape(-1,2),data3['realcons'][:-1],y[:-1]))
+    instruments = sm.add_constant(instruments)
+    sem_mod = Sem2SLS(sys3, indep_endog = indep_endog, instruments=instruments)
+    sem_params = sem_mod.fit() # first equation is right, but not second?
+                               # should y_t in the diff be instrumented?
+                               # how would R know this in the script?
+    # well, let's check...
+    y_instr = sem_mod.wexog[0][:,0]
+    wyd = y_instr - y[:-1]
+    wexog = np.column_stack((data3['tbilrate'][1:],wyd))
+    wexog = sm.add_constant(wexog)
+    params = sm.GLS(data3['realinvs'][1:], wexog).fit().params
+
+    print "These are the simultaneous equation estimates for Greene's \
+example 13-1 (Also application 13-1 in 6th edition."
+    print sem_params
+    print "The first set of parameters is correct.  The second set is not."
+    print "Compare to the solution manual at \
+http://pages.stern.nyu.edu/~wgreene/Text/econometricanalysis.htm"
+    print "The reason is the restriction on (y_t - y_1)"
+    print "Compare to R script GreeneEx15_1.s"
+    print "Somehow R carries y.1 in yd to know that it needs to be \
+instrumented"
+    print "If we replace our estimate with the instrumented one"
+    print params
+    print "We get the right estimate"
+    print "Without a formula framework we have to be able to do restrictions."
+# yep!, but how in the world does R know this when we just fed it yd??
+# must be implicit in the formula framework...
+# we are going to need to keep the two equations separate and use
+# a restrictions matrix.  Ugh, is a formula framework really, necessary to get
+# around this?
 
