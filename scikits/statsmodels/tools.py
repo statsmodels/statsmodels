@@ -175,9 +175,9 @@ def categorical(data, col=None, dictnames=False, drop=False):
             raise IndexError, "The index %s is not understood" % col
 
 #TODO: add an axis argument to this for sysreg
-def add_constant(data):
+def add_constant(data, prepend=False):
     '''
-    This appends a constant to the design matrix.
+    This appends a constant to the design matrix if prepend==False.
 
     It checks to make sure a constant is not already included.  If there is
     at least one column of ones then an array of the original design is
@@ -187,6 +187,8 @@ def add_constant(data):
     ----------
     data : array-like
         `data` is the column-ordered design matrix
+    prepend : bool
+        True and the constant is prepended rather than appended.
 
     Returns
     -------
@@ -204,6 +206,8 @@ def add_constant(data):
                 if np.all(data[:,col] == 1):
                     return data
     data = np.column_stack((data, np.ones((data.shape[0], 1))))
+    if prepend:
+        return np.roll(data, 1, 1)
     return data
 
 def isestimable(C, D):
