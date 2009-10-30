@@ -490,7 +490,9 @@ TableF5-1.txt', names=True)
     exog2 = sm.add_constant(exog2)
     sys3.append(exog2)
     indep_endog = {0 : [0]} # need to be able to say that y_1 is an instrument..
-    instruments = np.column_stack((data3[['realgovt','tbilrate']][1:].view(float).reshape(-1,2),data3['realcons'][:-1],y[:-1]))
+    instruments = np.column_stack((data3[['realgovt',
+        'tbilrate']][1:].view(float).reshape(-1,2),data3['realcons'][:-1],
+        y[:-1]))
     instruments = sm.add_constant(instruments)
     sem_mod = Sem2SLS(sys3, indep_endog = indep_endog, instruments=instruments)
     sem_params = sem_mod.fit() # first equation is right, but not second?

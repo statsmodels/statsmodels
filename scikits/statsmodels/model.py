@@ -99,27 +99,23 @@ class LikelihoodModel(Model):
         raise NotImplementedError
 
 #TODO: newton's method is not correctly implemented yet
-    def fit(self, params, method='newton'):
+    def fit(self, params=None, method='newton'):
+        if not params:
+            params = [0]*self.exog.shape[1] # this will fail for shape (K,)
         if method is 'newton':
             results = self.newton(params)
         else:
             raise ValueError("Unknown fit method.")
         self._results = results
+        return results
 
 #FIXME: change name to mle?
-#FIXME: This does not work as implemented
 #FIXME: Params should be a first guess on the params
-#       so supplied or default guess?
     def newton(self, params):
-        #JP this is not newton, it's fmin
-# tried fmin, fmin_ncg, fmin_powell
-# converges to wrong estimates
-        # is this used anywhere
-        # results should be attached to self
         f = lambda params: -self.loglike(params)
         score = lambda params: -self.score(params)
-#        xopt, fopt, iter, funcalls, warnflag =\
-#          optimize.fmin(f, params, full_output=True)
+        xopt, fopt, iter, funcalls, warnflag =\
+          optimize.fmin(f, params, full_output=True)
 #        xopt, fopt, fcalls, gcalls, hcalls, warnflag = \
 #                optimize.fmin_ncg(f, params, score)
         converge = not warnflag
