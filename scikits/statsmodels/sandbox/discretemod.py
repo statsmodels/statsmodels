@@ -18,10 +18,21 @@ Davidson and MacKinnon
 
 from scikits.statsmodels.model import LikelihoodModel
 from scikits.statsmodels.family import links
-from scipy import stats, factorial
+from scipy import stats, factorial, special, optimize # opt just for nbin
 
 #TODO: is there not a logistic distribution or Weibull distribution in
 #TODO: scipy.stats?
+
+def add_factorial(X):
+    """
+    Returns a vector of descending numbers added sequential.
+
+    For instance, if given [5, 4, 0, 2], returns [15, 10, 0, 3].
+    """
+    X = np.asarray(X)
+    return X/2. * X + (1-X)
+# or equivalently
+#    return X*(X+1)/2.
 
 class DiscreteModel(LikelihoodModel):
     """
@@ -136,9 +147,6 @@ class Probit(DiscreteModel):
     """
     Binary choice Probit model
     """
-    def initialize(self):
-        pass
-
     def pdf(self, X):
         """
         Probit (Normal) probability density function
@@ -217,6 +225,95 @@ class Weibull(DiscreteModel):
         term = (y*f/F + (1 - y)*-f/(1-F))
         return np.dot(term,X)
 
+class NegBinTwo(DiscreteModel):
+    """
+    NB2 Negative Binomial model.
+    """
+#NOTE: to use this with the solvers, the likelihood fit will probably
+# need to be amended to have args, so that we can pass the ancillary param
+# if not we can just stick the alpha param on the end of the beta params and
+# amend all the methods to reflect this
+# if we try to keep them separate I think we'd have to use a callback...
+# need to check variance function, then derive score vector, and hessian
+# loglike should be fine...
+# also, alpha should maybe always be lnalpha to contrain it to be positive
+
+#    def pdf(self, X, alpha):
+#        a1 = alpha**-1
+#        term1 = special.gamma(X + a1)/(special.agamma(X+1)*special.gamma(a1))
+
+    def loglike(self, params):
+        """
+        Loglikelihood for NB2 model
+
+        Notes
+        -----
+        The ancillary parameter is assumed to be the last element of
+        the params vector
+        """
+        alpha = params[-1]
+        params = params[:-1]
+        a1 = alpha**-1
+        y = self.endog
+        J = special.gammaln(y+a1) - special.gammaln(a1)
+# See Cameron and Trivedi 1998 for a simplification of the above
+# writing a convenience function using the log summation, *might*
+# be more accurate
+        XB = np.dot(self.exog,params)
+        return np.sum(J - np.log(factorial(y)) - \
+                (y+a1)*np.log(1+alpha*np.exp(XB))+y*np.log(alpha)+y*XB)
+
+    def score(self, params):
+        """
+        Score vector for NB2 model
+        """
+        y = self.endog
+        X = self.exog
+        alpha = params[-1]
+        params = params[:-1]
+        XB = np.dot(X,params)
+        mu = np.exp(XB)
+        a1 = alpha**-1
+        f1 = lambda x: 1./((x-1)*x/2. + x*a1)
+        cond = y>0
+        dJ = np.piecewise(y, cond, [f1,1./a1])
+        dLdB = np.dot((y-mu)/(1+alpha*mu),X)
+        dLda = np.sum(1/alpha**2 * (np.log(1+alpha*mu) - dJ) + \
+                (y-mu)/(alpha*(1+alpha*mu)))
+        scorevec = np.zeros((len(dLdB)+1))
+        scorevec[:-1] = dLdB
+        scorevec[-1] = dLda
+        return scorevec
+
+    def hessian(self, params):
+        """
+        """
+#        d2dBdB =
+#        d2da2 =
+        pass
+
+    def fit(self, start_params=None, maxiter=35, method='bfgs'):
+#        start_params = [0]*(self.exog.shape[1])+[1]
+# Use poisson fit as first guess.
+        start_params = Poisson(self.endog, self.exog).fit().params
+        start_params = np.roll(np.insert(start_params, 0, 1), -1)
+        mlefit = super(NegBinTwo, self).fit(start_params=start_params,
+                maxiter=maxiter, method=method)
+        return mlefit
+
+#    def fit(self, start_params=None, maxiter=35):
+#        """
+#        Temporary solution just to see mistake check.
+#        """
+#        start_params = ([0]*self.exog.shape[1]+1)
+#Right now, the plus one above is pretty much the only diff.
+#        f = lambda params, alpha: -self.loglike(params, alpha=alpha)
+#        score = lambda params: -self.score(params, alpha=alpha)
+#        xopt, fopt, gopt, Hopt, func_calls, grad_calls, warnflag = \
+#                optimize.fmin_bfgs(f, start_params, score, args=(alpha=alpha),
+#                        full_output=1, maxiter=maxiter)
+#        return xopt
+
 
 if __name__=="__main__":
     from urllib2 import urlopen
@@ -262,3 +359,10 @@ changed."
     exog = sm.add_constant(exog, prepend=True)
     poisson_mod = Poisson(endog, exog)
     poisson_res = poisson_mod.fit()
+    nb2_mod = NegBinTwo(endog, exog)
+#    nb2_res = nb2_mod.fit()
+# solvers hang (with no error and no maxiter warn...)
+# haven't derived hessian (though it will be block diagonal) to check
+# newton
+    nb2_params = [-2.190,.217,-.216,.609,-.142,.118,-.497,.145,.214,.144,
+            .038,.099,.190,1.077] # alpha is last

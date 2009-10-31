@@ -119,10 +119,11 @@ class LikelihoodModel(Model):
             The default is newton.  See scipy.optimze for more information.
         """
         methods = ['newton', 'bfgs', 'powell', 'cg', 'ncg']
-        if not start_params:
+        if start_params is None:
             start_params = [0]*self.exog.shape[1] # this will fail for shape (K,)
-        if start_params and not len(start_params) == self.exog.shape[1]:
-            raise ValueError, "start_params is not the same shape as the design"
+#        if start_params and not len(start_params) == self.exog.shape[1]:
+#            raise ValueError, "start_params is not the same shape as the design"
+# the above isn't an appropriate check when estimating ancillary parameters
         if not method in methods:
             raise ValueError, "Unknown fit method %s" % method
 
