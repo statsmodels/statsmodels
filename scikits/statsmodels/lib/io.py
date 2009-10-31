@@ -392,7 +392,7 @@ def genfromdta(fname, excludelist=None, missing_flt=-999., missing_str=""):
         raise TypeError("The input should be a string or a filehandle. "\
                 "(got %s instead)" % type(fname))
     else:
-        fhd = StataReader(fname, missing_values)
+        fhd = StataReader(fname, missing_values=False)
 #    validate_names = np.lib._iotools.NameValidator(excludelist=excludelist,
 #                                    deletechars=deletechars,
 #                                    case_sensitive=case_sensitive)
