@@ -371,7 +371,12 @@ the Binomial family"
         wlsexog = self.exog
         eta = self.family.predict(mu)
         self.iteration += 1
-        self.history['deviance'].append(self.family.deviance(self.endog, mu))
+        dev = self.family.deviance(self.endog, mu)
+        if np.isnan(dev):
+            raise ValueError, "The first guess on the deviance function \
+returned a nan.  This could be a boundary problem and should be reported."
+        else:
+            self.history['deviance'].append(dev)
             # first guess on the deviance is assumed to be scaled by 1.
         while((np.fabs(self.history['deviance'][self.iteration]-\
                     self.history['deviance'][self.iteration-1])) > tol and \
