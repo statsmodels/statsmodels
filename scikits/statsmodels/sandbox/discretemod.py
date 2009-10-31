@@ -19,6 +19,7 @@ Davidson and MacKinnon
 from scikits.statsmodels.model import LikelihoodModel
 from scikits.statsmodels.family import links
 from scipy import stats, factorial, special, optimize # opt just for nbin
+import numdifftools as nd
 
 #TODO: is there not a logistic distribution or Weibull distribution in
 #TODO: scipy.stats?
@@ -269,6 +270,9 @@ class NegBinTwo(DiscreteModel):
         """
         y = self.endog
         X = self.exog
+        jfun = nd.Jacobian(self.loglike)
+        print params
+        dLda2 = jfun(params)[-1]
         alpha = params[-1]
         params = params[:-1]
         XB = np.dot(X,params)
@@ -277,20 +281,26 @@ class NegBinTwo(DiscreteModel):
         f1 = lambda x: 1./((x-1)*x/2. + x*a1)
         cond = y>0
         dJ = np.piecewise(y, cond, [f1,1./a1])
+# if y_i < 1, this equals zero!  Not noted in C &T
         dLdB = np.dot((y-mu)/(1+alpha*mu),X)
         dLda = np.sum(1/alpha**2 * (np.log(1+alpha*mu) - dJ) + \
                 (y-mu)/(alpha*(1+alpha*mu)))
         scorevec = np.zeros((len(dLdB)+1))
         scorevec[:-1] = dLdB
-        scorevec[-1] = dLda
+#        scorevec[-1] = dLda
+        print dLda2[-1]
+        scorevec[-1] = dLda2[-1]
         return scorevec
 
     def hessian(self, params):
         """
+        Hessian of NB2 model.  Currently uses numdifftools
         """
 #        d2dBdB =
 #        d2da2 =
-        pass
+        print params
+        Hfun = nd.Jacobian(self.score)
+        return Hfun(params)
 
     def fit(self, start_params=None, maxiter=35, method='bfgs'):
 #        start_params = [0]*(self.exog.shape[1])+[1]
@@ -364,5 +374,11 @@ changed."
 # solvers hang (with no error and no maxiter warn...)
 # haven't derived hessian (though it will be block diagonal) to check
 # newton
+# appear to be something wrong with the score?
     nb2_params = [-2.190,.217,-.216,.609,-.142,.118,-.497,.145,.214,.144,
             .038,.099,.190,1.077] # alpha is last
+
+   arr=np.array([  2.20160970e+02,   1.56881957e-01,   1.05629904e+00,  -8.48703607e-01,
+  -2.05320578e-01,   1.23185435e-01,  -4.40060928e-01,   7.97984292e-02,
+   1.86948430e-01,   1.26846479e-01,   3.00810049e-02,   1.14085308e-01,
+   1.41158279e-01,   1.00000000e+00])
