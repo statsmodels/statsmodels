@@ -105,7 +105,7 @@ class LikelihoodModel(Model):
         """
         raise NotImplementedError
 
-    def fit(self, start_params=None, method='newton', maxiter=35):
+    def fit(self, start_params=None, method='newton', maxiter=35, tol=1e-08):
         """
         Fit method for likelihood based models
 
@@ -120,24 +120,18 @@ class LikelihoodModel(Model):
         """
         methods = ['newton', 'bfgs', 'powell', 'cg', 'ncg']
         if start_params is None:
-            start_params = [0]*self.exog.shape[1] # this will fail for shape (K,)
-#        if start_params and not len(start_params) == self.exog.shape[1]:
-#            raise ValueError, "start_params is not the same shape as the design"
-# the above isn't an appropriate check when estimating ancillary parameters
+            start_params = [0]*self.exog.shape[1] # will fail for shape (K,)
         if not method in methods:
             raise ValueError, "Unknown fit method %s" % method
-
         f = lambda params: -self.loglike(params)
         score = lambda params: -self.score(params)
+#        hess = lambda params: -self.hessian(params)
+        hess = None
 #TODO: can we have a unified framework so that we can just do func = method
 # and write one call for each solver?
-# Only bfgs is used right now, but I tested a few others
-#        xopt, fopt, iter, funcalls, warnflag =\
-#          optimize.fmin(f, params, full_output=True)
 
         if method.lower() == 'newton':
             iteration = 0
-            tol = 1e-08 #TODO: move these into arguments
             start = np.array(start_params)
             history = [np.inf, start]
             while (iteration < maxiter and np.all(np.abs(history[-1] - \
@@ -152,13 +146,13 @@ class LikelihoodModel(Model):
         elif method == 'bfgs':
             xopt, fopt, gopt, Hopt, func_calls, grad_calls, warnflag = \
                 optimize.fmin_bfgs(f, start_params, score, full_output=1,
-                        maxiter=maxiter)
+                        maxiter=maxiter, gtol=tol)
             converge = not warnflag
             mlefit = LikelihoodModelResults(self, xopt)
         elif method == 'ncg':
             xopt, fopt, fcalls, gcalls, hcalls, warnflag = \
-                optimize.fmin_ncg(f, start_params, score, full_output=1,
-                        maxiter=maxiter)
+                optimize.fmin_ncg(f, start_params, score, fhess=hess,
+                        full_output=1, maxiter=maxiter, avextol=tol)
             mlefit = LikelihoodModelResults(self, xopt)
             converge = not warnflag
         self._results = mlefit

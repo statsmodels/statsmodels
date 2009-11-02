@@ -187,6 +187,75 @@ class Probit(DiscreteModel):
         L = q*self.pdf(q*XB)/self.cdf(q*XB)
         return np.dot(-L*(L+XB)*X.T,X)
 
+class MNLogit(DiscreteModel):
+    def initialize(self):
+#This is also a "whiten" method
+        wendog, self.names = sm.tools.categorical(self.endog, drop=True,
+                dictnames=True)
+        self.wendog = wendog    # don't drop first category
+
+    def pdf(self, params):
+        exog = self.exog
+#        endog = self.endog
+        eXB = np.exp(np.dot(exog, params.reshape(exog.shape[1],-1)))
+                # pred vals for each level except 0
+        eXB = np.column_stack((np.ones((self.nobs,1)), eXB))
+                # add 1 for b0 = vec(0)
+        num = eXB
+#        denom = 1 + eXB.sum(axis=1)
+        denom = eXB.sum(axis=1)
+        return num/denom[:,None]
+
+    def loglike(self, params):
+        d = self.wendog
+        logprob = np.log(self.pdf(params))
+        return (d * logprob).sum()
+
+    def score(self, params):
+        """
+        Score matrix for multinomial model
+
+        In the multinomial model ths score matrix is K x J-1
+
+        Returned as a flattened array to work with the solvers.
+        """
+        firstterm = self.wendog[:,1:] - self.pdf(params)[:,1:]
+        return np.dot(self.exog.T, firstterm).flatten()
+
+    def hessian(self, params):
+        """
+        Hessian matrix for multinomial model
+
+        The hessian matrix has J**2 * K x K blocks.
+        Note that ours will have this same number of elements but
+        a different shape because of the shapes needed for solvers...
+        """
+#TODO: test this for a model where K != J-1
+        hess = nd.Jacobian(self.score)
+        h = hess(params)
+#        X = self.exog
+#        XTX = np.dot(X.T,X)
+#        print params
+#        pr = self.pdf(params)
+#        pp = np.dot(pr[:,1:].T,-pr[:,1:]) # but this has the wrong diag so
+#        ppdiag = np.diag(np.dot(pr[:,1:].T,1-pr[:,1:]))
+#        for i, number in enumerate(ppdiag):
+#            pp[i,i] = number
+#        h = -np.kron(pp,XTX)
+        self.h = h
+        return h
+
+    def fit(self, start_params=None, maxiter=35, method='newton',
+            tol=1e-08):
+        if start_params is None:
+            start_params = np.zeros((self.exog.shape[1]*\
+                    (self.wendog.shape[1]-1)))
+        mlefit = super(MNLogit, self).fit(start_params=start_params,
+                maxiter=maxiter, method=method, tol=tol)
+        mlefit.params = mlefit.params.reshape(self.exog.shape[1],-1)
+        return mlefit
+
+
 class Weibull(DiscreteModel):
     """
     Binary choice Weibull model
@@ -225,6 +294,18 @@ class Weibull(DiscreteModel):
         f = self.pdf(np.dot(X,params))
         term = (y*f/F + (1 - y)*-f/(1-F))
         return np.dot(term,X)
+
+    def hessian(self, params):
+        hess = nd.Jacobian(self.score)
+        return hess(params)
+
+    def fit(self, start_params=None, method='newton', maxiter=35, tol=1e-08):
+# The example had problems with all zero start values, Hessian = 0
+        if start_params is None:
+            start_params = sm.OLS(self.endog, self.exog).fit().params
+        mlefit = super(Weibull, self).fit(start_params=start_params,
+                method=method, maxiter=maxiter, tol=tol)
+        return mlefit
 
 class NegBinTwo(DiscreteModel):
     """
@@ -271,7 +352,7 @@ class NegBinTwo(DiscreteModel):
         y = self.endog
         X = self.exog
         jfun = nd.Jacobian(self.loglike)
-        print params
+        return jfun(params)[-1]
         dLda2 = jfun(params)[-1]
         alpha = params[-1]
         params = params[:-1]
@@ -283,14 +364,15 @@ class NegBinTwo(DiscreteModel):
         dJ = np.piecewise(y, cond, [f1,1./a1])
 # if y_i < 1, this equals zero!  Not noted in C &T
         dLdB = np.dot((y-mu)/(1+alpha*mu),X)
-        dLda = np.sum(1/alpha**2 * (np.log(1+alpha*mu) - dJ) + \
-                (y-mu)/(alpha*(1+alpha*mu)))
-        scorevec = np.zeros((len(dLdB)+1))
-        scorevec[:-1] = dLdB
+        return dLdB
+#
+#        dLda = np.sum(1/alpha**2 * (np.log(1+alpha*mu) - dJ) + \
+#                (y-mu)/(alpha*(1+alpha*mu)))
+#        scorevec = np.zeros((len(dLdB)+1))
+#        scorevec[:-1] = dLdB
 #        scorevec[-1] = dLda
-        print dLda2[-1]
-        scorevec[-1] = dLda2[-1]
-        return scorevec
+#        scorevec[-1] = dLda2[-1]
+#        return scorevec
 
     def hessian(self, params):
         """
@@ -298,32 +380,18 @@ class NegBinTwo(DiscreteModel):
         """
 #        d2dBdB =
 #        d2da2 =
-        print params
         Hfun = nd.Jacobian(self.score)
-        return Hfun(params)
+        return Hfun(params)[-1]
+# is the numerical hessian block diagonal?  or is it block diagonal by assumption?
 
-    def fit(self, start_params=None, maxiter=35, method='bfgs'):
+    def fit(self, start_params=None, maxiter=35, method='bfgs', tol=1e-08):
 #        start_params = [0]*(self.exog.shape[1])+[1]
 # Use poisson fit as first guess.
         start_params = Poisson(self.endog, self.exog).fit().params
         start_params = np.roll(np.insert(start_params, 0, 1), -1)
         mlefit = super(NegBinTwo, self).fit(start_params=start_params,
-                maxiter=maxiter, method=method)
+                maxiter=maxiter, method=method, tol=tol)
         return mlefit
-
-#    def fit(self, start_params=None, maxiter=35):
-#        """
-#        Temporary solution just to see mistake check.
-#        """
-#        start_params = ([0]*self.exog.shape[1]+1)
-#Right now, the plus one above is pretty much the only diff.
-#        f = lambda params, alpha: -self.loglike(params, alpha=alpha)
-#        score = lambda params: -self.score(params, alpha=alpha)
-#        xopt, fopt, gopt, Hopt, func_calls, grad_calls, warnflag = \
-#                optimize.fmin_bfgs(f, start_params, score, args=(alpha=alpha),
-#                        full_output=1, maxiter=maxiter)
-#        return xopt
-
 
 if __name__=="__main__":
     from urllib2 import urlopen
@@ -346,7 +414,7 @@ changed."
     probit_mod = Probit(endog, exog)
     probit_res = probit_mod.fit()
     weibull_mod = Weibull(endog, exog)
-    weibull_res = weibull_mod.fit(method='ncg')
+    weibull_res = weibull_mod.fit(method='newton')
 # The Weibull doesn't converge for bfgs?
 #TODO: add hessian for Weibull
     print "This example is based on Greene Table 21.1 5th Edition"
@@ -373,12 +441,60 @@ changed."
 #    nb2_res = nb2_mod.fit()
 # solvers hang (with no error and no maxiter warn...)
 # haven't derived hessian (though it will be block diagonal) to check
-# newton
+# newton, note that Lawless (1987) has the derivations
 # appear to be something wrong with the score?
+# according to Lawless, traditionally the likelihood is maximized wrt to B
+# and a gridsearch on a to determin ahat?
+# or the Breslow approach, which is 2 step iterative.
     nb2_params = [-2.190,.217,-.216,.609,-.142,.118,-.497,.145,.214,.144,
             .038,.099,.190,1.077] # alpha is last
+    # taken from Cameron and Trivedi
+# the below is from Cameron and Trivedi as well
+    endog2 = np.array(endog>=1, dtype=float)
+# skipped for now, binary poisson results look off?
 
-   arr=np.array([  2.20160970e+02,   1.56881957e-01,   1.05629904e+00,  -8.48703607e-01,
-  -2.05320578e-01,   1.23185435e-01,  -4.40060928e-01,   7.97984292e-02,
-   1.86948430e-01,   1.26846479e-01,   3.00810049e-02,   1.14085308e-01,
-   1.41158279e-01,   1.00000000e+00])
+    # multinomial example from
+# http://www.stat.washington.edu/quinn/classes/536/S/multinomexample.html
+    mlogdata = np.genfromtxt("./nes96r.dat", names=True)
+    mendog = mlogdata['PID']
+    mexog = np.column_stack((np.log(mlogdata['popul']+.1),mlogdata[['selfLR',
+                'age','educ','income']].view(float).reshape(-1,4)))
+    mexog = sm.add_constant(mexog, prepend=True)
+    mlogit_mod = MNLogit(mendog, mexog)
+#    for PID 0-7 is
+# results from R nnet package
+    mlogit_arr = np.array([-0.373356261, -2.250934805, -3.665905084,
+        -7.613694423, -7.060431370, -12.105193452, -0.011537359,
+        -0.088750964, -0.105967684, -0.091555188, -0.093285749,
+        -0.140879420,  0.297697981,  0.391662761,  0.573513420,
+        1.278742543,  1.346939966,  2.069988287, -0.024944529,
+        -0.022897526, -0.014851243, -0.008680754, -0.017903442,
+        -0.009432601,  0.082487696, 0.181044184, -0.007131611,
+        0.199828063,  0.216938699,  0.321923127,  0.005195818,
+        0.047874118,  0.057577321,  0.084495215,  0.080958623, 0.108890412])
+    mlogit_arr = mlogit_arr.reshape(6,-1)
+# the rows are the different K coefs, and the cols are the J-1 responses
+    mlogit_res = mlogit_mod.fit(method = 'bfgs', maxiter=100)
+#    mlogit_res2 = mlogit_mod.fit(method = 'ncg', maxiter=100)
+    np.testing.assert_almost_equal(mlogit_res.params, mlogit_arr, 3)
+#    np.testing.assert_almost_equal(mlogit_res2.params, mlogit_arr, 3)
+
+# this example taken from
+# http://www.ats.ucla.edu/stat/r/dae/mlogit.htm
+    mlogdta = np.genfromtxt('./mlogit.csv', delimiter=',', names=True)
+    mend = mlogdta['brand']
+    mex = mlogdta[['female','age']].view(float).reshape(-1,2)
+    mex = sm.add_constant(mex, prepend=True)
+    mlog = MNLogit(mend, mex)
+    marr = np.array([[22.721396, 10.946741],[-.465941,.057873],
+        [-.685908,-.317702]])
+# note these are coefficients from a different estimator, but the loglike
+# is the same.  Maybe those coefficients are mfx?
+
+# The last ncg method for mlogit was slow on the last one
+# Should have some kind of testing in mlefit to see which
+# method will be the fastest
+# the non-conjugate gradient methods are always going to be slower
+# unless we provide the analytic hessian
+
+
