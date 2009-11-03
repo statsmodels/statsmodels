@@ -193,6 +193,8 @@ class MNLogit(DiscreteModel):
         wendog, self.names = sm.tools.categorical(self.endog, drop=True,
                 dictnames=True)
         self.wendog = wendog    # don't drop first category
+        self.J = wendog.shape[1]
+        self.K = self.exog.shape[1]
 
     def pdf(self, params):
         exog = self.exog
@@ -236,12 +238,19 @@ class MNLogit(DiscreteModel):
 #        X = self.exog
 #        XTX = np.dot(X.T,X)
 #        print params
-#        pr = self.pdf(params)
+        pr = self.pdf(params)
 #        pp = np.dot(pr[:,1:].T,-pr[:,1:]) # but this has the wrong diag so
 #        ppdiag = np.diag(np.dot(pr[:,1:].T,1-pr[:,1:]))
 #        for i, number in enumerate(ppdiag):
 #            pp[i,i] = number
 #        h = -np.kron(pp,XTX)
+        pr_secondder = pr*(1-pr)
+        pr_secondder = pr_secondder[:,1:] # if drop 1st category
+        pr_crosspartial = []
+        for p in pr[:,1:].T: # assume drop first one
+            pr_crosspartial.append()
+#TODO: stopped here but need to just append all of the cross-partialed
+
         self.h = h
         return h
 
@@ -395,11 +404,6 @@ class NegBinTwo(DiscreteModel):
 
 if __name__=="__main__":
     from urllib2 import urlopen
-    try:
-        from scikits.statsmodels import lib
-    except:
-        raise ImportError, "I haven't distributed PyDTA until the license is \
-changed."
     import numpy as np
     import scikits.statsmodels as sm
 #    data = np.genfromtxt("http://pages.stern.nyu.edu/~wgreene/Text/Edition6/TableF16-1.txt", names=True)
@@ -428,16 +432,16 @@ changed."
     print weibull_res.params
 # dvisits was written using an R package, I can provide the dataset
 # on request until the copyright is cleared up
-    data2 = np.genfromtxt('./dvisits.txt', names=True)
+#    data2 = np.genfromtxt('./dvisits.txt', names=True)
 # note that this has missing values for Accident
-    endog = data2['doctorco']
-    exog = data2[['sex','age','agesq','income','levyplus','freepoor',
-            'freerepa','illness','actdays','hscore','chcond1',
-            'chcond2']].view(float).reshape(len(data2),-1)
-    exog = sm.add_constant(exog, prepend=True)
-    poisson_mod = Poisson(endog, exog)
-    poisson_res = poisson_mod.fit()
-    nb2_mod = NegBinTwo(endog, exog)
+#    endog = data2['doctorco']
+#    exog = data2[['sex','age','agesq','income','levyplus','freepoor',
+#            'freerepa','illness','actdays','hscore','chcond1',
+#            'chcond2']].view(float).reshape(len(data2),-1)
+#    exog = sm.add_constant(exog, prepend=True)
+#    poisson_mod = Poisson(endog, exog)
+#    poisson_res = poisson_mod.fit()
+#    nb2_mod = NegBinTwo(endog, exog)
 #    nb2_res = nb2_mod.fit()
 # solvers hang (with no error and no maxiter warn...)
 # haven't derived hessian (though it will be block diagonal) to check
@@ -450,7 +454,7 @@ changed."
             .038,.099,.190,1.077] # alpha is last
     # taken from Cameron and Trivedi
 # the below is from Cameron and Trivedi as well
-    endog2 = np.array(endog>=1, dtype=float)
+#    endog2 = np.array(endog>=1, dtype=float)
 # skipped for now, binary poisson results look off?
 
     # multinomial example from
@@ -486,10 +490,14 @@ changed."
     mex = mlogdta[['female','age']].view(float).reshape(-1,2)
     mex = sm.add_constant(mex, prepend=True)
     mlog = MNLogit(mend, mex)
-    marr = np.array([[22.721396, 10.946741],[-.465941,.057873],
-        [-.685908,-.317702]])
-# note these are coefficients from a different estimator, but the loglike
-# is the same.  Maybe those coefficients are mfx?
+#    marr = np.array([[22.721396, 10.946741],[-.465941,.057873],
+#        [-.685908,-.317702]])
+# The above are the results from R using Brand 3 as base outcome
+    marr = np.array([[-11.77466, -22.7214],[.5238143, .4659414],
+        [.3682065, .6859082]])
+# The above results are from Stata using Brand 1 as base outcome
+# we match these, but should provide a baseoutcome option
+
 
 # The last ncg method for mlogit was slow on the last one
 # Should have some kind of testing in mlefit to see which
