@@ -21,9 +21,6 @@ from scikits.statsmodels.family import links
 from scipy import stats, factorial, special, optimize # opt just for nbin
 import numdifftools as nd
 
-#TODO: is there not a logistic distribution or Weibull distribution in
-#TODO: scipy.stats?
-
 def add_factorial(X):
     """
     Returns a vector of descending numbers added sequential.
@@ -199,14 +196,20 @@ class MNLogit(DiscreteModel):
     def pdf(self, params):
         exog = self.exog
 #        endog = self.endog
-        eXB = np.exp(np.dot(exog, params.reshape(exog.shape[1],-1)))
+#        eXB = np.exp(np.dot(exog, params.reshape(exog.shape[1],-1)))
                 # pred vals for each level except 0
-        eXB = np.column_stack((np.ones((self.nobs,1)), eXB))
+#        eXB = np.column_stack((np.ones((self.nobs,1)), eXB))
                 # add 1 for b0 = vec(0)
+
+# change to using rows so that hessians, etc are easier
+        eXB = np.exp(np.dot(params.reshape(-1, exog.shape[1]), mex.T))
+        eXB = np.vstack((np.ones((1, self.nobs)), eXB))
+
         num = eXB
 #        denom = 1 + eXB.sum(axis=1)
-        denom = eXB.sum(axis=1)
-        return num/denom[:,None]
+        denom = eXB.sum(axis=0)
+#        return num/denom[:,None]
+        return num/denom[None,:]
 
     def loglike(self, params):
         d = self.wendog
@@ -221,8 +224,10 @@ class MNLogit(DiscreteModel):
 
         Returned as a flattened array to work with the solvers.
         """
-        firstterm = self.wendog[:,1:] - self.pdf(params)[:,1:]
-        return np.dot(self.exog.T, firstterm).flatten()
+#        firstterm = self.wendog[:,1:] - self.pdf(params)[:,1:]
+        firstterm = self.wendog[:,1:].T - self.pdf(params)[1:,:]
+#        return np.dot(self.exog.T, firstterm).flatten(1)
+        return np.dot(firstterm, self.exog).flatten(0)
 
     def hessian(self, params):
         """
@@ -235,7 +240,7 @@ class MNLogit(DiscreteModel):
 #TODO: test this for a model where K != J-1
         hess = nd.Jacobian(self.score)
         h = hess(params)
-#        X = self.exog
+        X = self.exog
 #        XTX = np.dot(X.T,X)
 #        print params
         pr = self.pdf(params)
@@ -246,10 +251,32 @@ class MNLogit(DiscreteModel):
 #        h = -np.kron(pp,XTX)
         pr_secondder = pr*(1-pr)
         pr_secondder = pr_secondder[:,1:] # if drop 1st category
-        pr_crosspartial = []
-        for p in pr[:,1:].T: # assume drop first one
-            pr_crosspartial.append()
+        partials = []
+        J = self.wendog.shape[1] - 1
+# This doesn't take advantage of symmetry, so computes upper and lower
+        for i in range(J):
+            for j in range(J): # this loop assumes we drop the first col.
+                if i == j:
+                    partials.append(\
+                        -np.dot((pr[i+1,:]*(1-pr[j+1,:]))[None,:]*X.T,X))
+                else:
+                    partials.append(-np.dot(pr[i+1,:]*-pr[j+1,:][None,:]*X.T,X))
+
+
+
+# discarding 1 col, we will always have log((K-1)!) == K choose 2 ==
 #TODO: stopped here but need to just append all of the cross-partialed
+#        for i in range(J-1):
+
+#        for i in range(K - 2)*(K-1)/2.):
+#        for i in range(735):
+#    a += pr[i,1] * (1 - pr[i,1]) * np.dot(mex[i][:,None],mex[i][None,:])
+#==
+#np.dot(mex.T, (pr[:,1]*(1-pr[:,1]))[:,None]*mex)
+#        for i in range(
+# change the axes around and this works!!!
+
+
 
         self.h = h
         return h
@@ -261,7 +288,8 @@ class MNLogit(DiscreteModel):
                     (self.wendog.shape[1]-1)))
         mlefit = super(MNLogit, self).fit(start_params=start_params,
                 maxiter=maxiter, method=method, tol=tol)
-        mlefit.params = mlefit.params.reshape(self.exog.shape[1],-1)
+#        mlefit.params = mlefit.params.reshape(self.exog.shape[1],-1)
+        mlefit.params = mlefit.params.reshape(-1, self.exog.shape[1])
         return mlefit
 
 
@@ -478,9 +506,9 @@ if __name__=="__main__":
         0.047874118,  0.057577321,  0.084495215,  0.080958623, 0.108890412])
     mlogit_arr = mlogit_arr.reshape(6,-1)
 # the rows are the different K coefs, and the cols are the J-1 responses
-    mlogit_res = mlogit_mod.fit(method = 'bfgs', maxiter=100)
+#    mlogit_res = mlogit_mod.fit(method = 'bfgs', maxiter=100)
 #    mlogit_res2 = mlogit_mod.fit(method = 'ncg', maxiter=100)
-    np.testing.assert_almost_equal(mlogit_res.params, mlogit_arr, 3)
+#    np.testing.assert_almost_equal(mlogit_res.params, mlogit_arr, 3)
 #    np.testing.assert_almost_equal(mlogit_res2.params, mlogit_arr, 3)
 
 # this example taken from
@@ -490,6 +518,7 @@ if __name__=="__main__":
     mex = mlogdta[['female','age']].view(float).reshape(-1,2)
     mex = sm.add_constant(mex, prepend=True)
     mlog = MNLogit(mend, mex)
+    mlog_res = mlog.fit(method='newton')
 #    marr = np.array([[22.721396, 10.946741],[-.465941,.057873],
 #        [-.685908,-.317702]])
 # The above are the results from R using Brand 3 as base outcome

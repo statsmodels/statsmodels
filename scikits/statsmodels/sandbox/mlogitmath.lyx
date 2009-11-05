@@ -1,0 +1,219 @@
+#LyX 1.6.2 created this file. For more info see http://www.lyx.org/
+\lyxformat 345
+\begin_document
+\begin_header
+\textclass article
+\use_default_options true
+\language english
+\inputencoding auto
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_default_family default
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+
+\graphics default
+\paperfontsize default
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_amsmath 1
+\use_esint 1
+\cite_engine basic
+\use_bibtopic false
+\paperorientation portrait
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\defskip medskip
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\author "" 
+\author "" 
+\end_header
+
+\begin_body
+
+\begin_layout Standard
+Notes on mlogit.
+\end_layout
+
+\begin_layout Standard
+Assume that 
+\begin_inset Formula $J=3$
+\end_inset
+
+, so that there are 
+\begin_inset Formula $2$
+\end_inset
+
+ vectors of parameters for 
+\begin_inset Formula $J-1$
+\end_inset
+
+.
+ For now the parameters are passed around as 
+\begin_inset Formula \[
+\left[\beta_{1}^{\prime}\beta_{2}^{\prime}\right]\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+So if 
+\begin_inset Formula $K=3$
+\end_inset
+
+ (including the constant), then the matrix of parameters is
+\begin_inset Formula \[
+\left[\begin{array}{cc}
+b_{10} & b_{20}\\
+b_{11} & b_{21}\\
+b_{12} & b_{22}\end{array}\right]^{\prime}\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+(changed to rows and added prime above, so this all changes and the score
+ is also just transposed and flattend along the zero axis.) This is flattened
+ along the zero axis for the sake of the solvers.
+ So that it is passed internally as 
+\begin_inset Formula \[
+\left[\begin{array}{cccccc}
+b_{10} & b_{20} & b_{11} & b_{21} & b_{12} & b_{22}\end{array}\right]\]
+
+\end_inset
+
+Now the matrix of score vectors is
+\begin_inset Formula \[
+\left[\begin{array}{cc}
+\frac{\partial\ln L}{\partial b_{10}} & \frac{\partial\ln L}{\partial b_{20}}\\
+\frac{\partial\ln L}{\partial b_{11}} & \frac{\partial\ln L}{\partial b_{21}}\\
+\frac{\partial\ln L}{\partial b_{12}} & \frac{\partial\ln L}{\partial b_{22}}\end{array}\right]\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+In Dhrymes notation, this would be column vectors 
+\begin_inset Formula $\left(\partial\ln L/\partial\beta_{j}\right)^{\prime}\text{ for }j=1,2$
+\end_inset
+
+ in our example.
+ So, our Jacobian is actually transposed vis-a-vis the more traditional
+ notation.
+ So that the solvers can handle this, though, it gets flattened but the
+ score gets flattened along the first axis to make things easier, which
+ is going to make things tricky.
+ Now, in traditional notation, the Hessian would be 
+\begin_inset Formula \[
+\frac{\partial^{2}\ln L}{\partial\beta_{j}\partial\beta_{j}}=\frac{\partial}{\partial\beta_{j}}\vec{\left[\left(\frac{\partial\ln L}{\partial\beta_{j}}\right)\right]}\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where 
+\begin_inset Formula $\vec{}$
+\end_inset
+
+ denotes a vectorized matrix, i.e., for a 
+\begin_inset Formula $n\times m$
+\end_inset
+
+ matrix 
+\begin_inset Formula $X$
+\end_inset
+
+, 
+\begin_inset Formula $\vec{X}=\left(x_{\cdot1}^{\prime},x_{\cdot2}^{\prime},...,x_{\cdot m}^{\prime}\right)^{\prime}$
+\end_inset
+
+ such that 
+\begin_inset Formula $x_{\cdot1}$
+\end_inset
+
+ is the first 
+\begin_inset Formula $n$
+\end_inset
+
+ elements of column 1 of 
+\begin_inset Formula $X$
+\end_inset
+
+.
+ This matrix is 
+\begin_inset Formula $mn\times n$
+\end_inset
+
+.
+ In our case 
+\begin_inset Formula $\ln L$
+\end_inset
+
+ is a scalar so 
+\begin_inset Formula $m=1$
+\end_inset
+
+, so each second derivative is 
+\begin_inset Formula $n\times n$
+\end_inset
+
+ and 
+\begin_inset Formula $n=K=3$
+\end_inset
+
+ in our example.
+ Given our score 
+\begin_inset Quotes eld
+\end_inset
+
+matrix,
+\begin_inset Quotes erd
+\end_inset
+
+ our Hessian will look like
+\begin_inset Formula \[
+H=\left[\begin{array}{cc}
+\frac{\partial\ln L}{\partial\beta_{1}\partial\beta_{1}} & \frac{\partial\ln L}{\partial\beta_{1}\partial\beta_{2}}\\
+\frac{\partial\ln L}{\partial\beta_{2}\partial\beta_{1}} & \frac{\partial\ln L}{\partial\beta_{2}\partial\beta_{2}}\end{array}\right]\]
+
+\end_inset
+
+
+\begin_inset Formula \[
+H=\left[\begin{array}{cccccc}
+\frac{\partial^{2}\ln L}{\partial b_{10}\partial b_{10}} & \frac{\partial^{2}\ln L}{\partial b_{10}\partial b_{11}} & \frac{\partial^{2}\ln L}{\partial b_{10}\partial b_{12}} & \frac{\partial^{2}\ln L}{\partial b_{10}\partial b_{20}} & \frac{\partial^{2}\ln L}{\partial b_{10}\partial b_{21}} & \frac{\partial^{2}\ln L}{\partial b_{10}\partial b_{22}}\\
+\frac{\partial\ln L}{\partial b_{11}\partial b_{10}} & \frac{\partial\ln L}{\partial b_{11}\partial b_{11}} & \frac{\partial\ln L}{\partial b_{11}\partial b_{12}} & \frac{\partial\ln L}{\partial b_{11}\partial b_{20}} & \frac{\partial\ln L}{\partial b_{11}\partial b_{21}} & \frac{\partial\ln L}{\partial b_{11}\partial b_{22}}\\
+\frac{\partial\ln L}{\partial b_{12}\partial b_{10}} & \frac{\partial\ln L}{\partial b_{12}\partial b_{11}} & \frac{\partial\ln L}{\partial b_{12}\partial b_{12}} & \frac{\partial\ln L}{\partial b_{12}\partial b_{20}} & \frac{\partial\ln L}{\partial b_{12}\partial b_{21}} & \frac{\partial\ln L}{\partial b_{12}\partial b_{22}}\\
+\frac{\partial^{2}\ln L}{\partial b_{20}\partial b_{10}} & \frac{\partial^{2}\ln L}{\partial b_{20}\partial b_{11}} & \frac{\partial^{2}\ln L}{\partial b_{20}\partial b_{12}} & \frac{\partial^{2}\ln L}{\partial b_{20}\partial b_{20}} & \frac{\partial^{2}\ln L}{\partial b_{20}\partial b_{21}} & \frac{\partial^{2}\ln L}{\partial b_{20}\partial b_{22}}\\
+\frac{\partial\ln L}{\partial b_{21}\partial b_{10}} & \frac{\partial\ln L}{\partial b_{21}\partial b_{11}} & \frac{\partial\ln L}{\partial b_{21}\partial b_{12}} & \frac{\partial\ln L}{\partial b_{21}\partial b_{20}} & \frac{\partial\ln L}{\partial b_{21}\partial b_{21}} & \frac{\partial\ln L}{\partial b_{21}\partial b_{22}}\\
+\frac{\partial\ln L}{\partial b_{22}\partial b_{10}} & \frac{\partial\ln L}{\partial b_{22}\partial b_{11}} & \frac{\partial\ln L}{\partial b_{22}\partial b_{12}} & \frac{\partial\ln L}{\partial b_{22}\partial b_{20}} & \frac{\partial\ln L}{\partial b_{22}\partial b_{21}} & \frac{\partial\ln L}{\partial b_{22}\partial b_{22}}\end{array}\right]\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+But since our Jacobian is a row vector that alternate
+\end_layout
+
+\end_body
+\end_document
