@@ -15,11 +15,37 @@ Greene
 
 Davidson and MacKinnon
 """
-
-from scikits.statsmodels.model import LikelihoodModel
+import numpy as np
+from scikits.statsmodels.model import LikelihoodModel, LikelihoodModelResults
 from scikits.statsmodels.family import links
 from scipy import stats, factorial, special, optimize # opt just for nbin
 import numdifftools as nd
+
+#TODO: all of the fit methods that call super can be taken out
+# once the ResultsClass is settled, except of course the ones
+# that need to do some preprocessing before fit is called
+
+#TODO: add options for the parameter covariance/variance
+# ie., OIM, EIM, and BHHH see Green 21.4
+
+def isdummy(X):
+    """
+    Given an array X, returns a column index for the dummy variables.
+
+    Examples
+    --------
+    >>> X = np.random.randint(0, 2, size=(15,5)).view(float)
+    >>> X = np.asarray(X, dtype=float)
+    >>> X[:,1:3] = np.random.randn(15,2)
+    >>> ind = isdummy(X)
+    >>> ind
+    (array([0, 3, 4]),)
+    """
+    nobs = X.shape[0]
+    sums = X.sum(0)
+    colsums = np.logical_or(X == 1, X == 0).sum(0)
+    ind = np.where(np.logical_and(colsums == nobs, sums/nobs!=1))
+    return ind
 
 def block_eye(N, k=(), dtype=float):
     """
@@ -46,10 +72,10 @@ class DiscreteModel(LikelihoodModel):
     def initialize(self):
         pass
 
-    def cdf(self, params):
+    def cdf(self, X):
         raise NotImplementedError
 
-    def pdf(self, params):
+    def pdf(self, X):
         raise NotImplementedError
 
 
@@ -88,10 +114,15 @@ class Poisson(DiscreteModel):
         L = np.exp(np.dot(X,params))
         return -np.dot(L*X.T, X)
 
-class NbReg(DiscreteModel):
-    pass
+    def fit(self, start_params=None, maxiter=35, method='newton',
+            tol=1e-08):
+        mlefit = super(Poisson, self).fit(start_params=start_params,
+            maxiter=maxiter, method=method, tol=tol)
+        params = mlefit.params
+        mlefit = DiscreteResults(self, params, self.hessian(params))
+        return mlefit
 
-class mLogit(DiscreteModel):
+class NbReg(DiscreteModel):
     pass
 
 class Logit(DiscreteModel):
@@ -114,11 +145,11 @@ class Logit(DiscreteModel):
         """
         return 1/(1+np.exp(-X))
 
-#    def pdf(self, X):
-#        """
-#        The logistic probability density function
-#        """
-#        return np.exp(-X)/((1+np.exp(-X)**2)
+    def pdf(self, X):
+        """
+        The logistic probability density function
+        """
+        return np.exp(-X)/(1+np.exp(-X))**2
 
     def loglike(self, params):
         """
@@ -144,6 +175,14 @@ class Logit(DiscreteModel):
         X = self.exog
         L = self.cdf(np.dot(X,params))
         return -np.dot(L*(1-L)*X.T,X)
+
+    def fit(self, start_params=None, maxiter=35, method='newton',
+            tol=1e-08):
+        mlefit = super(Logit, self).fit(start_params=start_params,
+            maxiter=maxiter, method=method, tol=tol)
+        params = mlefit.params
+        mlefit = DiscreteResults(self, params, self.hessian(params))
+        return mlefit
 
 
 class Probit(DiscreteModel):
@@ -189,6 +228,15 @@ class Probit(DiscreteModel):
         L = q*self.pdf(q*XB)/self.cdf(q*XB)
         return np.dot(-L*(L+XB)*X.T,X)
 
+    def fit(self, start_params=None, maxiter=35, method='newton',
+            tol=1e-08):
+        mlefit = super(Probit, self).fit(start_params=start_params,
+            maxiter=maxiter, method=method, tol=tol)
+        params = mlefit.params
+        mlefit = DiscreteResults(self, params, self.hessian(params))
+        return mlefit
+
+
 class MNLogit(DiscreteModel):
     def initialize(self):
 #This is also a "whiten" method
@@ -198,27 +246,28 @@ class MNLogit(DiscreteModel):
         self.J = wendog.shape[1]
         self.K = self.exog.shape[1]
 
-    def pdf(self, params):
-        exog = self.exog
-#        endog = self.endog
-#        eXB = np.exp(np.dot(exog, params.reshape(exog.shape[1],-1)))
-                # pred vals for each level except 0
-#        eXB = np.column_stack((np.ones((self.nobs,1)), eXB))
-                # add 1 for b0 = vec(0)
-
-# change to using rows so that hessians, etc are easier
+    def _eXB(self, params, exog=None):
+        if exog is None:
+            exog = self.exog
         eXB = np.exp(np.dot(params.reshape(-1, exog.shape[1]), exog.T))
         eXB = np.vstack((np.ones((1, self.nobs)), eXB))
+        return eXB
 
+    def pdf(self, eXB):
+        pass
+
+    def cdf(self, eXB):
+#        exog = self.exog
+#        eXB = np.exp(np.dot(params.reshape(-1, exog.shape[1]), exog.T))
+#        eXB = np.vstack((np.ones((1, self.nobs)), eXB))
         num = eXB
-#        denom = 1 + eXB.sum(axis=1)
         denom = eXB.sum(axis=0)
-#        return num/denom[:,None]
         return num/denom[None,:]
 
     def loglike(self, params):
         d = self.wendog
-        logprob = np.log(self.pdf(params))
+        eXB = self._eXB(params)
+        logprob = np.log(self.cdf(eXB))
         return (d.T * logprob).sum()
 
     def score(self, params):
@@ -229,9 +278,8 @@ class MNLogit(DiscreteModel):
 
         Returned as a flattened array to work with the solvers.
         """
-#        firstterm = self.wendog[:,1:] - self.pdf(params)[:,1:]
-        firstterm = self.wendog[:,1:].T - self.pdf(params)[1:,:]
-#        return np.dot(self.exog.T, firstterm).flatten(1)
+        eXB = self._eXB(params)
+        firstterm = self.wendog[:,1:].T - self.cdf(eXB)[1:,:]
         return np.dot(firstterm, self.exog).flatten(0)
 
     def hessian(self, params):
@@ -243,10 +291,9 @@ class MNLogit(DiscreteModel):
         a different shape because of the shapes needed for solvers...
         """
 #TODO: test this for a model where K != J-1
-#        hess = nd.Jacobian(self.score)
-#        h = hess(params)
         X = self.exog
-        pr = self.pdf(params)
+        eXB = self._eXB(params)
+        pr = self.cdf(eXB)
         partials = []
         J = self.wendog.shape[1] - 1
         K = self.exog.shape[1]
@@ -262,13 +309,10 @@ class MNLogit(DiscreteModel):
 # We now have a matrix that's J**2, K, K I believe, so we need to reshape this
 # to be J*K, J*K as follows, see math note (once I've updated it)
 # to clear this up.
-# Test for other Js and Ks to make sure this is robust
+#TODO: Test for other Js and Ks to make sure this is robust
         H = np.transpose(H.reshape(J,J,K,K), (0,2,1,3)).reshape(J*K,J*K)
-#Also realize that once we only caclculate the J*(J-1)/2. this might be different
-
+#Once we only caclculate the J*(J-1)/2. this might be different
         return H
-#        self.h = h
-#        return h
 
     def fit(self, start_params=None, maxiter=35, method='newton',
             tol=1e-08):
@@ -277,7 +321,6 @@ class MNLogit(DiscreteModel):
                     (self.wendog.shape[1]-1)))
         mlefit = super(MNLogit, self).fit(start_params=start_params,
                 maxiter=maxiter, method=method, tol=tol)
-#        mlefit.params = mlefit.params.reshape(self.exog.shape[1],-1)
         mlefit.params = mlefit.params.reshape(-1, self.exog.shape[1])
         return mlefit
 
@@ -418,6 +461,75 @@ class NegBinTwo(DiscreteModel):
         mlefit = super(NegBinTwo, self).fit(start_params=start_params,
                 maxiter=maxiter, method=method, tol=tol)
         return mlefit
+
+
+### Results Class ###
+
+#class DiscreteResults(object):
+class DiscreteResults(LikelihoodModelResults):
+    def __init__(self, model, params, hessian, scale=1.):
+        """
+        """
+        super(DiscreteResults, self).__init__(model, params,
+                np.linalg.inv(-hessian), scale=1.)
+
+    def margeff(self, params=None, loc='meanfx', method='dydx', exog=None,
+        nodummy=None):
+        """
+        Parameters
+        ----------
+        params : array-like, optional
+            The parameters.
+        loc : str, optional
+            'meanfx' - The average of the marginal effects over all of the
+                exogenous variables.
+            'atmeanfx' - The marginal effects at the mean of the exogenous
+                variables.
+            'all' - returns the marginal effects at each observation.
+        method : str not implemented yet, optional
+            'dydx' dy/dx
+            'eyex' dlogy/dlogx
+            'dyex' dy/dlogx
+            'eydx' dlogy/dx
+        exog : array-like, optional
+            Optionally, you can provide the exogenous variables over which
+                to get the marginal effects.
+        nodummy : None or list of ints of dummy variable columns
+            If None, treats dummy variables as continuous.  Default
+            If a list of columns which contain dummy variables is provided the
+            marginal effects account for the dummies.
+
+        Notes
+        -----
+        Only the defaults are available now.
+        """
+        model = self.model
+        if params is None:
+            params = self.params
+        if exog is None:
+            exog = model.exog
+            ind = np.where(exog.var(0) != 0)[0] # don't report the constant
+        elif exog is not None:
+            exog = np.asarray(exog)
+            if exog.ndim == 1:
+                return np.dot(model.pdf(np.dot(exog,params),params))
+#TODO: this definitely needs to be tested
+#                ind = np.arange(len(exog))
+#                exog = exog
+            if exog.ndim > 1:
+                ind = np.where(exog.var(0) != 0)[0]
+        if loc is 'meanfx' and not nodummy:
+            if not isinstance(model, MNLogit):
+                change = np.dot(model.pdf(np.dot(exog,params))[:,None],
+                    params[None,:]).mean(0)
+#            elif isinstance(model, MNLogit):
+#                change = np.dot(model.pdf(model._eXB(params, exog)),
+#                    params[None,:]).mean(0)
+
+        return change[ind]
+#TODO: probit mfx look slightly off, so this may come from some rounding error
+# in the scipy pdf, or there may be a dof correction needed or something
+
 
 if __name__=="__main__":
     from urllib2 import urlopen
