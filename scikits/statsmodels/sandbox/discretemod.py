@@ -21,6 +21,11 @@ from scikits.statsmodels.family import links
 from scipy import stats, factorial, special, optimize # opt just for nbin
 import numdifftools as nd
 
+def block_eye(N, k=(), dtype=float):
+    """
+    """
+    m = np.zeros((N,N), dtype=dtype)
+
 def add_factorial(X):
     """
     Returns a vector of descending numbers added sequential.
@@ -202,7 +207,7 @@ class MNLogit(DiscreteModel):
                 # add 1 for b0 = vec(0)
 
 # change to using rows so that hessians, etc are easier
-        eXB = np.exp(np.dot(params.reshape(-1, exog.shape[1]), mex.T))
+        eXB = np.exp(np.dot(params.reshape(-1, exog.shape[1]), exog.T))
         eXB = np.vstack((np.ones((1, self.nobs)), eXB))
 
         num = eXB
@@ -214,7 +219,7 @@ class MNLogit(DiscreteModel):
     def loglike(self, params):
         d = self.wendog
         logprob = np.log(self.pdf(params))
-        return (d * logprob).sum()
+        return (d.T * logprob).sum()
 
     def score(self, params):
         """
@@ -238,21 +243,13 @@ class MNLogit(DiscreteModel):
         a different shape because of the shapes needed for solvers...
         """
 #TODO: test this for a model where K != J-1
-        hess = nd.Jacobian(self.score)
-        h = hess(params)
+#        hess = nd.Jacobian(self.score)
+#        h = hess(params)
         X = self.exog
-#        XTX = np.dot(X.T,X)
-#        print params
         pr = self.pdf(params)
-#        pp = np.dot(pr[:,1:].T,-pr[:,1:]) # but this has the wrong diag so
-#        ppdiag = np.diag(np.dot(pr[:,1:].T,1-pr[:,1:]))
-#        for i, number in enumerate(ppdiag):
-#            pp[i,i] = number
-#        h = -np.kron(pp,XTX)
-        pr_secondder = pr*(1-pr)
-        pr_secondder = pr_secondder[:,1:] # if drop 1st category
         partials = []
         J = self.wendog.shape[1] - 1
+        K = self.exog.shape[1]
 # This doesn't take advantage of symmetry, so computes upper and lower
         for i in range(J):
             for j in range(J): # this loop assumes we drop the first col.
@@ -261,25 +258,17 @@ class MNLogit(DiscreteModel):
                         -np.dot((pr[i+1,:]*(1-pr[j+1,:]))[None,:]*X.T,X))
                 else:
                     partials.append(-np.dot(pr[i+1,:]*-pr[j+1,:][None,:]*X.T,X))
+        H = np.array(partials)
+# We now have a matrix that's J**2, K, K I believe, so we need to reshape this
+# to be J*K, J*K as follows, see math note (once I've updated it)
+# to clear this up.
+# Test for other Js and Ks to make sure this is robust
+        H = np.transpose(H.reshape(J,J,K,K), (0,2,1,3)).reshape(J*K,J*K)
+#Also realize that once we only caclculate the J*(J-1)/2. this might be different
 
-
-
-# discarding 1 col, we will always have log((K-1)!) == K choose 2 ==
-#TODO: stopped here but need to just append all of the cross-partialed
-#        for i in range(J-1):
-
-#        for i in range(K - 2)*(K-1)/2.):
-#        for i in range(735):
-#    a += pr[i,1] * (1 - pr[i,1]) * np.dot(mex[i][:,None],mex[i][None,:])
-#==
-#np.dot(mex.T, (pr[:,1]*(1-pr[:,1]))[:,None]*mex)
-#        for i in range(
-# change the axes around and this works!!!
-
-
-
-        self.h = h
-        return h
+        return H
+#        self.h = h
+#        return h
 
     def fit(self, start_params=None, maxiter=35, method='newton',
             tol=1e-08):
@@ -504,10 +493,13 @@ if __name__=="__main__":
         -0.009432601,  0.082487696, 0.181044184, -0.007131611,
         0.199828063,  0.216938699,  0.321923127,  0.005195818,
         0.047874118,  0.057577321,  0.084495215,  0.080958623, 0.108890412])
-    mlogit_arr = mlogit_arr.reshape(6,-1)
+# the question is which is more accurate?  Our 3 agree more with each others..
+    mlogit_arr = mlogit_arr.reshape(6,-1).T
 # the rows are the different K coefs, and the cols are the J-1 responses
-#    mlogit_res = mlogit_mod.fit(method = 'bfgs', maxiter=100)
+# the aboce comment is wrong now
+    mlogit_res = mlogit_mod.fit(method = 'bfgs', maxiter=100)
 #    mlogit_res2 = mlogit_mod.fit(method = 'ncg', maxiter=100)
+    mlogit_res3 = mlogit_mod.fit(method = 'newton', maxiter=25)
 #    np.testing.assert_almost_equal(mlogit_res.params, mlogit_arr, 3)
 #    np.testing.assert_almost_equal(mlogit_res2.params, mlogit_arr, 3)
 
