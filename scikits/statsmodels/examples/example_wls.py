@@ -256,9 +256,15 @@ for it in range(niter):
 
 np.set_printoptions(linewidth=200)
 print 'Bootstrap Results of parameters and parameter standard deviation  OLS'
-print 'median', np.median(bootres, 0)
-print 'mean  ', np.mean(bootres, 0)
-print 'std   ', np.std(bootres, 0)
+print 'Parameter estimates'
+print 'median', np.median(bootres[:,:5], 0)
+print 'mean  ', np.mean(bootres[:,:5], 0)
+print 'std   ', np.std(bootres[:,:5], 0)
+
+print 'Standard deviation of parameter estimates'
+print 'median', np.median(bootres[:,5:], 0)
+print 'mean  ', np.mean(bootres[:,5:], 0)
+print 'std   ', np.std(bootres[:,5:], 0)
 
 plt.figure()
 for i in range(4):
@@ -286,9 +292,15 @@ for it in range(niter):
 
 print 'Bootstrap Results of parameters and parameter standard deviation',
 print 'WLS removed 2 outliers from sample'
-print 'median', np.median(bootreswls, 0)
-print 'mean  ', np.mean(bootreswls, 0)
-print 'std   ', np.std(bootreswls, 0)
+print 'Parameter estimates'
+print 'median', np.median(bootreswls[:,:5], 0)
+print 'mean  ', np.mean(bootreswls[:,:5], 0)
+print 'std   ', np.std(bootreswls[:,:5], 0)
+
+print 'Standard deviation of parameter estimates'
+print 'median', np.median(bootreswls[:,5:], 0)
+print 'mean  ', np.mean(bootreswls[:,5:], 0)
+print 'std   ', np.std(bootreswls[:,5:], 0)
 
 plt.figure()
 for i in range(4):
@@ -303,14 +315,34 @@ plt.figtext(0.5, 0.935,  'WLS rm2 Bootstrap',
 #plt.close('all')
 
 '''
-Bootstrap Results of parameters and parameter standard deviation  OLS
-median [  -3.04125996  231.20993709  -14.97923025   34.10594396 -235.10747868    5.48232819   83.09007638    7.67172506   81.30178993  203.03602477]
-mean   [  -2.66449452  239.34828555  -15.47544619   27.50424465 -259.10131082    5.47553213   86.69551773    8.62542007   80.981501    203.16683496]
-std    [   3.84493753   97.81427442    8.7309225    94.73725     225.25484971    1.44609204   28.84804555    4.05290203   19.66878013   53.15375727]
-Bootstrap Results of parameters and parameter standard deviation  WLS removed 2 outliers from sample
-median [  -3.77646484  127.07126372   -8.95480054   89.29419789  -26.91749833    2.93461369   59.52475355    6.68662469   45.57741685  121.51721577]
-mean   [  -3.6442859   131.08263041   -8.42832217   87.98266189  -38.3049122     2.96985444   60.42514986    6.93731901   45.94165296  122.52899355]
-std    [   2.98910276   62.09939811    7.69331958   47.34312848  107.83863519    0.50805597   11.16565648    1.56924041    7.82027873   23.10233359]
+The following a random variables not fixed by a seed
+
+Bootstrap Results of parameters and parameter standard deviation
+OLS
+
+Parameter estimates
+median [  -3.26216383  228.52546429  -14.57239967   34.27155426 -227.02816597]
+mean   [  -2.89855173  234.37139359  -14.98726881   27.96375666 -243.18361746]
+std    [   3.78704907   97.35797802    9.16316538   94.65031973  221.79444244]
+
+Standard deviation of parameter estimates
+median [   5.44701033   81.96921398    7.58642431   80.64906783  200.19167735]
+mean   [   5.44840542   86.02554883    8.56750041   80.41864084  201.81196849]
+std    [   1.43425083   29.74806562    4.22063268   19.14973277   55.34848348]
+
+Bootstrap Results of parameters and parameter standard deviation
+WLS removed 2 outliers from sample
+
+Parameter estimates
+median [  -3.95876112  137.10419042   -9.29131131   88.40265447  -44.21091869]
+mean   [  -3.67485724  135.42681207   -8.7499235    89.74703443  -46.38622848]
+std    [   2.96908679   56.36648967    7.03870751   48.51201918  106.92466097]
+
+Standard deviation of parameter estimates
+median [   2.89349748   59.19454402    6.70583332   45.40987953  119.05241283]
+mean   [   2.97600894   60.14540249    6.92102065   45.66077486  121.35519673]
+std    [   0.55378808   11.77831934    1.69289179    7.4911526    23.72821085]
+
 
 
 Conclusion: problem with outliers and possibly heteroscedasticity
