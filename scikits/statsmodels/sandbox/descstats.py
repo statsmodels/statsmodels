@@ -206,6 +206,7 @@ if __name__ == '__main__':
     data = sm.datasets.longley.Load()
     data.exog = sm.add_constant(data.exog)
     sum1 = descstats(data.exog)
+    sum1a = descstats(data.exog[:,:1])
 
 #    loc='http://eagle1.american.edu/~js2796a/data/handguns_data.csv'
 #    dta=np.recfromcsv(loc)

@@ -54,8 +54,8 @@ plt.title('WLS dropping heteroscedasticity variable from regressors')
 plt.plot(data.endog, wls_fit3.fittedvalues, 'o')
 plt.xlim([0,2000])
 plt.ylim([0,2000])
-print 'raw correlation of endog and fittedvalues'
-print np.corrcoef(data.endog, wls_fit.fittedvalues)
+print 'raw correlation of endog and fittedvalues squared'
+print np.corrcoef(data.endog, wls_fit.fittedvalues)**2
 
 # compare with robust regression,
 # heteroscedasticity correction downweights the outliers
