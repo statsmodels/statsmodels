@@ -22,6 +22,7 @@ import numpy as np
 import family, tools
 from regression import WLS#,GLS #might need for mlogit
 from model import LikelihoodModel, LikelihoodModelResults
+from decorators import *
 
 __all__ = ['GLM']
 
@@ -370,7 +371,12 @@ the Binomial family"
         wlsexog = self.exog
         eta = self.family.predict(mu)
         self.iteration += 1
-        self.history['deviance'].append(self.family.deviance(self.endog, mu))
+        dev = self.family.deviance(self.endog, mu)
+        if np.isnan(dev):
+            raise ValueError, "The first guess on the deviance function \
+returned a nan.  This could be a boundary problem and should be reported."
+        else:
+            self.history['deviance'].append(dev)
             # first guess on the deviance is assumed to be scaled by 1.
         while((np.fabs(self.history['deviance'][self.iteration]-\
                     self.history['deviance'][self.iteration-1])) > tol and \
@@ -533,123 +539,75 @@ class GLMResults(LikelihoodModelResults):
         self.df_resid = model.df_resid
         self.df_model = model.df_model
         self.pinv_wexog = model.pinv_wexog
-        self._cache = {}
+        self._cache = resettable_cache()
+# are these intermediate results needed or can we just call the model's attributes?
 
-    @property
+    @cache_readonly
     def resid_response(self):
-        val = self._cache.get("resid_response", None)
-        if val is None:
-            val = self._data_weights * (self._endog-self.mu)
-            self._cache["resid_response"] = val
-        return val
+        return self._data_weights * (self._endog-self.mu)
 
-    @property
+    @cache_readonly
     def resid_pearson(self):
-        val = self._cache.get("resid_pearson", None)
-        if val is None:
-            val = np.sqrt(self._data_weights) * (self._endog-self.mu)/\
+        return np.sqrt(self._data_weights) * (self._endog-self.mu)/\
                         np.sqrt(self.family.variance(self.mu))
-            self._cache["resid_pearson"] = val
-        return val
 
-    @property
+    @cache_readonly
     def resid_working(self):
-        val = self._cache.get("resid_working", None)
-        if val is None:
-            val = (self.resid_response / self.family.link.deriv(self.mu))
-            val *= self._data_weights
-            self._cache["resid_working"] = val
+        val = (self.resid_response / self.family.link.deriv(self.mu))
+        val *= self._data_weights
         return val
 
-    @property
+    @cache_readonly
     def resid_anscombe(self):
-        val = self._cache.get("resid_anscombe", None)
-        if val is None:
-            val = self.family.resid_anscombe(self._endog, self.mu)
-            self._cache["resid_anscombe"] = val
-        return val
+        return self.family.resid_anscombe(self._endog, self.mu)
 
-    @property
+    @cache_readonly
     def resid_deviance(self):
-        val = self._cache.get("resid_deviance", None)
-        if val is None:
-            val = self.family.resid_dev(self._endog, self.mu)
-            self._cache["resid_deviance"] = val
-        return val
+        return self.family.resid_dev(self._endog, self.mu)
 
-    @property
+    @cache_readonly
     def pearson_chi2(self):
-        chisqsum = self._cache.get("pearson_chi2", None)
-        if chisqsum is None:
-            chisq =  (self._endog- self.mu)**2 / self.family.variance(self.mu)
-            chisq *= self._data_weights
-            chisqsum = np.sum(chisq)
-            self._cache["pearson_chi2"] = chisqsum
+        chisq =  (self._endog- self.mu)**2 / self.family.variance(self.mu)
+        chisq *= self._data_weights
+        chisqsum = np.sum(chisq)
         return chisqsum
 
-    @property
+    @cache_readonly
     def fittedvalues(self):
-        val = self._cache.get("fittedvalues", None)
-        if val is None:
-            val = self.mu
-            self._cache["fittedvalues"] = val
-        return val
+        return self.mu
 
-    @property
+    @cache_readonly
     def null(self):
-        val = self._cache.get("null", None)
-        if val is None:
-            _endog = self._endog
-            wls = WLS(_endog, np.ones((len(_endog),1)),
+        _endog = self._endog
+        wls = WLS(_endog, np.ones((len(_endog),1)),
                     weights=self._data_weights)
-            val = wls.fit().fittedvalues
-            self._cache['null'] = val
-        return val
+        return wls.fit().fittedvalues
 
-    @property
+    @cache_readonly
     def deviance(self):
-        val = self._cache.get("deviance", None)
-        if val is None:
-            val = self.family.deviance(self._endog, self.mu)
-            self._cache["deviance"] = val
-        return val
+        return self.family.deviance(self._endog, self.mu)
 
-    @property
+    @cache_readonly
     def null_deviance(self):
-        val = self._cache.get("null_deviance", None)
-        if val is None:
-            val = self.family.deviance(self._endog, self.null)
-            self._cache["null_deviance"] = val
-        return val
+        return self.family.deviance(self._endog, self.null)
 
-    @property
+    @cache_readonly
     def llf(self):
-        val = self._cache.get("llf", None)
-        if val is None:
-            _modelfamily = self.family
-            if isinstance(_modelfamily, family.NegativeBinomial):
-                val = _modelfamily.loglike(self.model.endog,
+        _modelfamily = self.family
+        if isinstance(_modelfamily, family.NegativeBinomial):
+            val = _modelfamily.loglike(self.model.endog,
                         fittedvalues = np.dot(self.model.exog,self.params))
-            else:
-                val = _modelfamily.loglike(self._endog, self.mu,
-                                        scale=self.scale)
-            self._cache['llf'] = val
+        else:
+            val = _modelfamily.loglike(self._endog, self.mu,
+                                    scale=self.scale)
         return val
 
-    @property
+    @cache_readonly
     def aic(self):
-        val = self._cache.get("aic", None)
-        if val is None:
-            val = -2 * self.llf + 2*(self.df_model+1)
-            self._cache["aic"] = val
-        return val
+        return -2 * self.llf + 2*(self.df_model+1)
 
-    @property
+    @cache_readonly
     def bic(self):
-        val = self._cache.get("bic", None)
-        if val is None:
-            val = self.deviance - self.df_resid*np.log(self.nobs)
-            self._cache["bic"] = val
-        return val
+        return self.deviance - self.df_resid*np.log(self.nobs)
 
 #TODO: write summary method to use output.py in sandbox

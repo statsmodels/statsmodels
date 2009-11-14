@@ -1200,6 +1200,18 @@ class NegativeBinomial(Family):
         else:
             self.link = link
 
+    def _clean(self, x):
+        """
+        Helper function to trim the data so that is in (0,inf)
+
+        Notes
+        -----
+        The need for this function was discovered through usage and its
+        possible that other families might need a check for validity of the
+        domain.
+        """
+        return np.clip(x, 1.0e-10, np.inf)
+
     def deviance(self, Y, mu, scale=1.):
         """
         Parameters
@@ -1230,8 +1242,9 @@ class NegativeBinomial(Family):
         iszero = np.equal(Y,0)
         notzero = 1 - iszero
         tmp = np.zeros(len(Y))
+        Y_mu = self._clean(Y/mu)
         tmp = iszero*2*np.log(1+self.alpha*mu)/self.alpha
-        tmp += notzero*(2*Y*np.log(Y/mu)-2/self.alpha*(1+self.alpha*Y)*\
+        tmp += notzero*(2*Y*np.log(Y_mu)-2/self.alpha*(1+self.alpha*Y)*\
                 np.log((1+self.alpha*Y)/(1+self.alpha*mu)))
         return np.sum(tmp)/scale
 

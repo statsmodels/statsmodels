@@ -37,6 +37,7 @@ from scipy.stats.stats import ss
 from model import LikelihoodModel, LikelihoodModelResults
 import tools
 from tools import add_constant
+from decorators import *
 
 class GLS(LikelihoodModel):
     """
@@ -140,6 +141,8 @@ class GLS(LikelihoodModel):
     """
 
     def __init__(self, endog, exog, sigma=None):
+#TODO: add options igls, for iterative fgls if sigma is None
+#TODO: default is sigma is none should be two-step GLS
         if sigma is not None:
             self.sigma = np.asarray(sigma)
         else:
@@ -872,63 +875,135 @@ class RegressionResults(LikelihoodModelResults):
     _HC2_se = None
     _HC3_se = None
 
+    _cache = {} # needs to be a class attribute for scale setter?
+
     def __init__(self, model, params, normalized_cov_params=None, scale=1.):
         super(RegressionResults, self).__init__(model, params,
                                                  normalized_cov_params,
                                                  scale)
-        self._get_results()
+        self._cache = resettable_cache()
 
-    def _get_results(self):
-        '''
-        This contains the results that are the same across models
-        '''
-        self.fittedvalues = self.model.predict(self.model.exog, self.params)
-        self.wresid = self.model.wendog - \
-                self.model.predict(self.model.wexog,self.params)
-        self.resid = self.model.endog - self.fittedvalues
-        self.pinv_wexog = self.model.pinv_wexog # needed?
-        self.scale = ss(self.wresid) / self.model.df_resid
-        self.nobs = float(self.model.wexog.shape[0])
-        self.df_resid = self.model.df_resid
-        self.df_model = self.model.df_model
+    @cache_readonly
+    def df_resid(self):
+        return self.model.df_resid
 
-# if not hascons?
-#            self.ess = np.dot(self.params,(np.dot(self.model.wexog.T,
-#                self.model.wendog)))
-#            self.uncentered_tss =
-#            self.centered_tss = ssr + ess
-#            self.ssr = ss(self.model.wendog)- self.ess
-#            self.rsquared
-#            self.rsquared_adj
-#        else:
+    @cache_readonly
+    def df_model(self):
+        return self.model.df_model
 
-#        self.ess = ss(self.fittedvalues - np.mean(self.model.wendog))
-        self.ssr = ss(self.wresid)
-        self.centered_tss = ss(self.model.wendog - \
-                np.mean(self.model.wendog))
-        self.uncentered_tss = ss(self.model.wendog)
-        self.ess = self.centered_tss - self.ssr
+    @cache_readonly
+    def nobs(self):
+        return float(self.model.wexog.shape[0])
+
+    @cache_readonly
+    def fittedvalues(self):
+        return self.model.predict(self.model.exog, self.params)
+
+    @cache_readonly
+    def wresid(self):
+        return self.model.wendog - self.model.predict(self.model.wexog,
+                self.params)
+
+    @cache_readonly
+    def resid(self):
+        return self.model.endog - self.model.predict(self.model.exog,
+                self.params)
+
+#    def _getscale(self):
+#        val = self._cache.get("scale", None)
+#        if val is None:
+#            val = ss(self.wresid) / self.df_resid
+#            self._cache["scale"] = val
+#        return val
+
+#    def _setscale(self, val):
+#        self._cache.setdefault("scale", val)
+
+#    scale = property(_getscale, _setscale)
+
+#TODO: fix writable example
+    @cache_writable()
+    def scale(self):
+        wresid = self.wresid
+        return np.dot(wresid, wresid) / self.df_resid
+
+    @cache_readonly
+    def ssr(self):
+        wresid = self.wresid
+        return np.dot(wresid, wresid)
+
+    @cache_readonly
+    def centered_tss(self):
+        centered_wendog = self.model.wendog - np.mean(self.model.wendog)
+        return np.dot(centered_wendog, centered_wendog)
+
+    @cache_readonly
+    def uncentered_tss(self):
+        wendog = self.model.wendog
+        return np.dot(wendog, wendog)
+
+    @cache_readonly
+    def ess(self):
+        return self.centered_tss - self.ssr
+
 # Centered R2 for models with intercepts
 # have a look in test_regression.test_wls to see
 # how to compute these stats for a model without intercept,
 # and when the weights are a (linear?) function of the data...
-        self.rsquared = 1 - self.ssr/self.centered_tss
-        self.rsquared_adj = 1 - (self.model.nobs - 1)/(self.df_resid)*\
-                (1 - self.rsquared)
-        self.mse_model = self.ess/self.model.df_model
-        self.mse_resid = self.ssr/self.model.df_resid
-        self.mse_total = self.uncentered_tss/(self.nobs)
-        self.fvalue = self.mse_model/self.mse_resid
-        self.f_pvalue = stats.f.sf(self.fvalue, self.model.df_model,
-                self.model.df_resid)
-        self.bse = np.sqrt(np.diag(self.cov_params()))
-#TODO: change to stand_errors or something
-        self.llf = self.model.loglike(self.params)
-        self.aic = -2 * self.llf + 2*(self.model.df_model+1)
-        self.bic = -2 * self.llf + np.log(self.model.nobs)*\
-                (self.model.df_model+1)
-        self.pvalues = stats.t.sf(np.abs(self.t()), self.model.df_resid)*2
+    @cache_readonly
+    def rsquared(self):
+        return 1 - self.ssr/self.centered_tss
 
+    @cache_readonly
+    def rsquared_adj(self):
+        return 1 - (self.nobs - 1)/self.df_resid * (1 - self.rsquared)
+
+    @cache_readonly
+    def mse_model(self):
+        return self.ess/self.df_model
+
+    @cache_readonly
+    def mse_resid(self):
+        return self.ssr/self.df_resid
+
+    @cache_readonly
+    def mse_total(self):
+        return self.uncentered_tss/self.nobs
+
+    @cache_readonly
+    def fvalue(self):
+        return self.mse_model/self.mse_resid
+
+    @cache_readonly
+    def f_pvalue(self):
+        return stats.f.sf(self.fvalue, self.df_model, self.df_resid)
+
+    @cache_readonly
+    def bse(self):
+        return np.sqrt(np.diag(self.cov_params()))
+
+    @cache_readonly
+    def pvalues(self):
+        return stats.t.sf(np.abs(self.t()), self.df_resid)*2
+
+    @cache_readonly
+    def llf(self):
+        return self.model.loglike(self.params)
+
+    @cache_readonly
+    def aic(self):
+        return -2 * self.llf + 2 * (self.df_model + 1)
+
+    @cache_readonly
+    def bic(self):
+        return -2 * self.llf + np.log(self.nobs) * (self.df_model + 1)
+
+# Centered R2 for models with intercepts
+# have a look in test_regression.test_wls to see
+# how to compute these stats for a model without intercept,
+# and when the weights are a (linear?) function of the data...
+
+#TODO: make these properties reset bse
     def _HCCM(self, scale):
         H = np.dot(self.model.pinv_wexog,
             scale[:,None]*self.model.pinv_wexog.T)

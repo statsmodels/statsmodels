@@ -92,48 +92,78 @@ class LikelihoodModel(Model):
 
     def score(self, params):
         """
-        Score function of model.
+        Score vector of model.
 
-        The gradient of logL with respect to params.
-        """
-        return derivative(self.loglike, params, dx=1e-04, n=1, order=3)
-
-    def information(self, params):
-        """
-        Fisher information function of model = - Hessian of logL with respect
-        to params.
+        The gradient of logL with respect to each parameter.
         """
         raise NotImplementedError
 
-#TODO: newton's method is not correctly implemented yet
-    def fit(self, params, method='newton'):
-        if method is 'newton':
-            results = self.newton(params)
-        else:
-            raise ValueError("Unknown fit method.")
-        self._results = results
+    def information(self, params):
+        """
+        Fisher information matrix of model
 
-#FIXME: change name to mle?
-#FIXME: This does not work as implemented
-#FIXME: Params should be a first guess on the params
-#       so supplied or default guess?
-    def newton(self, params):
-        #JP this is not newton, it's fmin
-# tried fmin, fmin_ncg, fmin_powell
-# converges to wrong estimates
-        # is this used anywhere
-        # results should be attached to self
+        Returns -Hessian of loglike evaluated at params.
+        """
+        raise NotImplementedError
+
+    def hessian(self, params):
+        """
+        The Hessian matrix of the model
+        """
+        raise NotImplementedError
+
+    def fit(self, start_params=None, method='newton', maxiter=35, tol=1e-08):
+        """
+        Fit method for likelihood based models
+
+        Parameters
+        ----------
+        start_params : array-like, optional
+            An optional
+
+        method : str
+            Method can be 'newton', 'bfgs', 'powell', 'cg', or 'ncg'.
+            The default is newton.  See scipy.optimze for more information.
+        """
+        methods = ['newton', 'bfgs', 'powell', 'cg', 'ncg']
+        if start_params is None:
+            start_params = [0]*self.exog.shape[1] # will fail for shape (K,)
+        if not method in methods:
+            raise ValueError, "Unknown fit method %s" % method
         f = lambda params: -self.loglike(params)
         score = lambda params: -self.score(params)
-#        xopt, fopt, iter, funcalls, warnflag =\
-#          optimize.fmin(f, params, full_output=True)
-#        xopt, fopt, fcalls, gcalls, hcalls, warnflag = \
-#                optimize.fmin_ncg(f, params, score)
-        converge = not warnflag
-        extras = dict(iter=iter, evaluations=funcalls, converge=converge)
-#        return LikelihoodModelResults(self, params, llf=fopt, **extras)
-        return LikelihoodModelResults(self, xopt)
+#        hess = lambda params: -self.hessian(params)
+        hess = None
+#TODO: can we have a unified framework so that we can just do func = method
+# and write one call for each solver?
 
+        if method.lower() == 'newton':
+            iteration = 0
+            start = np.array(start_params)
+            history = [np.inf, start]
+            while (iteration < maxiter and np.all(np.abs(history[-1] - \
+                    history[-2])>tol)):
+                H = self.hessian(history[-1])
+                newparams = history[-1] - np.dot(np.linalg.inv(H),
+                        self.score(history[-1]))
+                history.append(newparams)
+                iteration += 1
+            mlefit = LikelihoodModelResults(self, newparams)
+            mlefit.iteration = iteration
+        elif method == 'bfgs':
+            xopt, fopt, gopt, Hopt, func_calls, grad_calls, warnflag = \
+                optimize.fmin_bfgs(f, start_params, score, full_output=1,
+                        maxiter=maxiter, gtol=tol)
+            converge = not warnflag
+            mlefit = LikelihoodModelResults(self, xopt)
+        elif method == 'ncg':
+            xopt, fopt, fcalls, gcalls, hcalls, warnflag = \
+                optimize.fmin_ncg(f, start_params, score, fhess=hess,
+                        full_output=1, maxiter=maxiter, avextol=tol)
+            mlefit = LikelihoodModelResults(self, xopt)
+            converge = not warnflag
+        self._results = mlefit
+        return mlefit
 
 class Results(object):
     """

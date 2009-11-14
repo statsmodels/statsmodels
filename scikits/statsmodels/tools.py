@@ -39,7 +39,7 @@ def categorical(data, col=None, dictnames=False, drop=False):
         that is the name of the column that contains the variable.  For all
         arrays `col` can be an int that is the (zero-based) column index
         number.  `col` can only be None for a 1d array.  The default is None.
-    dict : bool, optional
+    dictnames : bool, optional
         If True, a dictionary mapping the column number to the categorical
         name is returned.  Used to have information about plain arrays.
     drop : bool
@@ -174,9 +174,10 @@ def categorical(data, col=None, dictnames=False, drop=False):
         else:
             raise IndexError, "The index %s is not understood" % col
 
-def add_constant(data):
+#TODO: add an axis argument to this for sysreg
+def add_constant(data, prepend=False):
     '''
-    This appends a constant to the design matrix.
+    This appends a constant to the design matrix if prepend==False.
 
     It checks to make sure a constant is not already included.  If there is
     at least one column of ones then an array of the original design is
@@ -186,6 +187,8 @@ def add_constant(data):
     ----------
     data : array-like
         `data` is the column-ordered design matrix
+    prepend : bool
+        True and the constant is prepended rather than appended.
 
     Returns
     -------
@@ -203,6 +206,8 @@ def add_constant(data):
                 if np.all(data[:,col] == 1):
                     return data
     data = np.column_stack((data, np.ones((data.shape[0], 1))))
+    if prepend:
+        return np.roll(data, 1, 1)
     return data
 
 def isestimable(C, D):
