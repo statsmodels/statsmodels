@@ -163,6 +163,34 @@ Additional to these functions, sandbox regression still contains several
 examples, that are illustrative of the use of the regression models of
 statsmodels.
 
+Regression with Discrete Dependent Variable
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+ .. currentmodule:: scikits.statsmodels.sandbox.discretemod
+
+.. autosummary::
+   :toctree: generated/
+
+   DiscreteModel
+   DiscreteResults
+   Logit
+   MNLogit
+   NbReg
+   NegBinTwo
+   Poisson
+   Probit
+   Weibull
+
+
+Seemingly Unrelated Regression
+""""""""""""""""""""""""""""""
+
+.. currentmodule:: scikits.statsmodels.sandbox.sysreg
+
+.. autosummary::
+   :toctree: generated/
+
+   SUR
 
 Miscellaneous
 ^^^^^^^^^^^^^
@@ -191,15 +219,7 @@ Tools: Principal Component Analysis
    pca
    pcasvd
 
-.. currentmodule:: scikits.statsmodels.sandbox.sysreg
 
-Seemingly Unrelated Regression
-""""""""""""""""""""""""""""""
-
-.. autosummary::
-   :toctree: generated/
-
-   SUR
 
 Graphics
 """"""""

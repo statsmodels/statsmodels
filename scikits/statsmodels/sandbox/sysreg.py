@@ -24,7 +24,7 @@ class SUR(object):
 
     sigma : array-like
        M x M array where sigma[i,j] is the covariance between equation i and j
-#TODO: refine this definition
+       #TODO: refine this definition
 
     dfk : None, 'dfk1', or 'dfk2'.
         Default is None.  Correction for the degrees of freedom
@@ -32,12 +32,12 @@ class SUR(object):
         information.
 
     Notes
-    ------
+    -----
     All individual equations are assumed to be well-behaved, homoeskedastic
     iid errors.  This is currently under development and not tested.
 
     References
-    ---------
+    ----------
     Zellner (1962), Greene
 
     """
