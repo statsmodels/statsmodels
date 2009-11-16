@@ -384,6 +384,10 @@ def genfromdta(fname, excludelist=None, missing_flt=-999., missing_str=""):
     missing_flt
     missing_str
 
+    Notes
+    ------
+    If the parser encounters a format that it doesn't understand, then it will
+    convert to string.  This may be the case with date formats.
     """
 #TODO: extend to get data from online
     if isinstance(fname, basestring):
@@ -421,9 +425,9 @@ def genfromdta(fname, excludelist=None, missing_flt=-999., missing_str=""):
     to_str = ['s']
     if 1:#    if not convert_time: #time parser not written
         to_str.append('t')
-    flt_or_str = lambda x: (x.lower()[-1] in to_str and 's') or \
-            (x.lower()[-1] in to_flt and 'f8')
-        #TODO: this is surely not the best way to handle data types
+    flt_or_str = lambda x: ((x.lower()[-1] in to_str and 's') or \
+            (x.lower()[-1] in to_flt and 'f8')) or 's'
+    #TODO: this is surely not the best way to handle data types
     convert_missing = {'f8' : missing_flt, 's' : missing_str}
     #TODO: needs to be made more flexible when change types
     fmt = [_.split('.')[-1] for _ in header['fmtlist']]
@@ -434,8 +438,11 @@ def genfromdta(fname, excludelist=None, missing_flt=-999., missing_str=""):
         if i in remove_comma:
             fmt[i] = fmt[i][:-1] # needs to be changed if time doesn't req.
                                  # loop
-    dt = zip(varnames, map(flt_or_str, fmt)) # make dtype
-    data = np.zeros((nobs), dtype=dt)
+    formats = map(flt_or_str, fmt)
+# have to go through the whole file first to find string lengths?
+#TODO: this is going to be miserably slow
+# have a closer look at numpy.genfromtxt and revisit this
+    first_list = []
     for rownum,line in enumerate(stata_dta):
         # doesn't handle missing value objects
         # Untested for commas and string missing
@@ -459,8 +466,21 @@ def genfromdta(fname, excludelist=None, missing_flt=-999., missing_str=""):
                 if dt[j][1] == 'f8': # change when change f8
                     line[j] = float(line[j])
 
-        data[rownum] = tuple(line) # tuples the only solution?
+        first_list.append(line)
 #TODO: add informative error message similar to genfromtxt
+# Get string lengths
+    strcolidx = []
+    if 's' in formats:
+        for col,type in enumerate(formats):
+            if type == 's':
+                strcolidx.append(col)
+        for i in strcolidx:
+            formats[i] = "a%i" % max(len(str(row[i])) for row in first_list)
+    dt = zip(varnames, formats) # make dtype
+    data = np.zeros((nobs), dtype=dt) # init final array
+    for i,row in enumerate(first_list):
+        data[i] = tuple(row)
+
 #TODO: make it possible to return plain array if all 'f8' for example
     return data
 
