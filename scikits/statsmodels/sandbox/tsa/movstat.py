@@ -2,6 +2,9 @@
 '''using scipy signal and numpy correlate to calculate some time series
 statistics
 
+original developer notes
+------------------------
+
 see also scikits.timeseries  (movstat is partially inspired by it)
 (added 2009-08-29:
 timeseries moving stats are in c, autocorrelation similar to here
@@ -47,7 +50,7 @@ from scipy import signal
 
 from numpy.testing import assert_array_equal, assert_array_almost_equal
 
-
+import scikits.statsmodels as sm
 
 
 def expandarr(x,k):
@@ -157,9 +160,47 @@ def check_movorder():
 ##    return m[takeslice], v[takeslice], v1
 
 def movmean(x, windowsize=3, lag='lagged'):
+    '''moving window mean
+
+
+    Parameters
+    ----------
+    x : array
+       time series data
+    windsize : int
+       window size
+    lag : 'lagged', 'centered', or 'leading'
+       location of window relative to current position
+
+    Returns
+    -------
+    mk : array
+        moving mean, with same shape as x
+
+
+    '''
     return movmoment(x, 1, windowsize=windowsize, lag=lag)
 
 def movvar(x, windowsize=3, lag='lagged'):
+    '''moving window variance
+
+
+    Parameters
+    ----------
+    x : array
+       time series data
+    windsize : int
+       window size
+    lag : 'lagged', 'centered', or 'leading'
+       location of window relative to current position
+
+    Returns
+    -------
+    mk : array
+        moving variance, with same shape as x
+
+
+    '''
     m1 = movmoment(x, 1, windowsize=windowsize, lag=lag)
     m2 = movmoment(x, 2, windowsize=windowsize, lag=lag)
     return m2 - m1*m1
@@ -182,6 +223,11 @@ def movmoment(x, k, windowsize=3, lag='lagged'):
     mk : array
         k-th moving non-central moment, with same shape as x
 
+
+    Notes
+    -----
+    If data x is 2d, then moving moment is calculated for each
+    column.
 
     '''
 
@@ -210,34 +256,186 @@ def movmoment(x, k, windowsize=3, lag='lagged'):
 
 
 #None of the acovf, ... are tested; starting index? orientation?
-def acovf(x):
+def acovf(x, unbiased=True, demean=True):
     ''' autocovariance for 1D
+
+    Parameters
+    ----------
+    x : array
+       time series data
+    unbiased : boolean
+       if True, then denominators is n-k, otherwise n
+
+    Returns
+    -------
+    acovf : array
+        autocovariance function
+
+    Notes
+    -----
+    This uses np.correlate which does full convolution. For very long time
+    series it is recommended to use fft convolution instead.
+
     '''
     n = len(x)
-    xo = x - x.mean();
-    xi = np.ones(n);
-    d = np.correlate(xi, xi, 'full')
-    return ( np.correlate(xo, xo, 'full')/d )[n-1:]
+    if demean:
+        xo = x - x.mean();
+    else:
+        xo = x
+    if unbiased:
+        xi = np.ones(n);
+        d = np.correlate(xi, xi, 'full')
+    else:
+        d = n
+    return (np.correlate(xo, xo, 'full') / d)[n-1:]
 
-def ccovf(x,y):
+def ccovf(x, y, unbiased=True, demean=True):
     ''' crosscovariance for 1D
+
+    Parameters
+    ----------
+    x, y : arrays
+       time series data
+    unbiased : boolean
+       if True, then denominators is n-k, otherwise n
+
+    Returns
+    -------
+    ccovf : array
+        autocovariance function
+
+    Notes
+    -----
+    This uses np.correlate which does full convolution. For very long time
+    series it is recommended to use fft convolution instead.
     '''
     n = len(x)
-    xo = x - x.mean();
-    yo = y - y.mean();
-    xi = np.ones(10);
-    d = np.correlate(xi,xi,'full')
-    return ( np.correlate(xo,yo,'full')/d )[n-1:]
+    if demean:
+        xo = x - x.mean();
+        yo = y - y.mean();
+    else:
+        xo = x
+        yo = y
+    if unbiased:
+        xi = np.ones(n);
+        d = np.correlate(xi, xi, 'full')
+    else:
+        d = n
+    return (np.correlate(xo,yo,'full') / d)[n-1:]
 
-def acf(x):
-    '''autocorrelation function for 1d'''
-    avf = acovf(x)
+def acf(x, unbiased=True):
+    '''autocorrelation function for 1d
+
+    Parameters
+    ----------
+    x : array
+       time series data
+    unbiased : boolean
+       if True, then denominators for autocovariance is n-k, otherwise n
+
+    Returns
+    -------
+    acf : array
+        autocorrelation function
+
+    Notes
+    -----
+    This is based np.correlate which does full convolution. For very long time
+    series it is recommended to use fft convolution instead.
+
+    If unbiased is true, the denominator for the autocovariance is adjusted
+    but the autocorrelation is not an unbiased estimtor.
+
+    '''
+
+    avf = acovf(x, unbiased=unbiased, demean=True)
     return avf/avf[0]
 
-def ccf(x,y):
-    '''cross-correlation function for 1d'''
-    cvf = ccovf(x,y)
-    return cvf/np.std(x)/np.std(y)
+def ccf(x, y, unbiased=True):
+    '''cross-correlation function for 1d
+    Parameters
+    ----------
+    x, y : arrays
+       time series data
+    unbiased : boolean
+       if True, then denominators for autocovariance is n-k, otherwise n
+
+    Returns
+    -------
+    ccf : array
+        cross-correlation function of x and y
+
+    Notes
+    -----
+    This is based np.correlate which does full convolution. For very long time
+    series it is recommended to use fft convolution instead.
+
+    If unbiased is true, the denominator for the autocovariance is adjusted
+    but the autocorrelation is not an unbiased estimtor.
+
+    '''
+    cvf = ccovf(x, y, unbiased=unbiased, demean=True)
+    return cvf / (np.std(x) * np.std(y))
+
+
+def pacf_yw(x, maxlag=20, method='unbiased'):
+    '''Partial autocorrelation estimated with non-recursive yule_walker
+
+    Parameters
+    ----------
+    x : 1d array
+        observations of time series for which pacf is calculated
+    maxlag : int
+        largest lag for which pacf is returned
+    method : 'unbiased' (default) or 'mle'
+        method for the autocovariance calculations in yule walker
+
+    Returns
+    -------
+    pacf : 1d array
+        partial autocorrelations, maxlag+1 elements
+
+    Notes
+    -----
+    This solves yule_walker for each desired lag and contains
+    currently duplicate calculations.
+
+    '''
+    xm = x - x.mean()
+    pacf = [1.]
+    for k in range(1, maxlag+1):
+        pacf.append(sm.regression.yule_walker(x, k, method=method)[0][-1])
+    return np.array(pacf)
+
+def pacf_ols(x, maxlag=20):
+    '''Partial autocorrelation estimated with non-recursive OLS
+
+    Parameters
+    ----------
+    x : 1d array
+        observations of time series for which pacf is calculated
+    maxlag : int
+        largest lag for which pacf is returned
+
+    Returns
+    -------
+    pacf : 1d array
+        partial autocorrelations, maxlag+1 elements
+
+    Notes
+    -----
+    This solves a separate OLS estimation for each desired lag.
+
+    '''
+    from scikits.statsmodels.sandbox.tools.tools_tsa import lagmat
+    xlags = lagmat(x-x.mean(), maxlag)
+    pacfols = [1.]
+    for k in range(1, maxlag+1):
+        res = sm.OLS(xlags[k:,0], xlags[k:,1:k+1]).fit()
+        #print res.params
+        pacfols.append(res.params[-1])
+    return np.array(pacfols)
+
 
 
 #x=0.5**np.arange(10);xm=x-x.mean();a=np.correlate(xm,[1],'full')
@@ -259,7 +457,7 @@ def ccf(x,y):
 ##    #x=0.5**np.arange(10);xm=x-x.mean();a=np.correlate(xm,xo,'full')
 
 __all__ = ['movorder', 'movmean', 'movvar', 'movmoment', 'acovf', 'ccovf',
-           'acf', 'ccf']
+           'acf', 'ccf', 'pacf_yw', 'pacf_ols']
 
 if __name__ == '__main__':
 

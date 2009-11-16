@@ -10,4 +10,20 @@ Tools
    :toctree: generated/
 
    add_constant
-   xi
+
+The following are mostly helper functions that are not separately tested or
+insufficiently tested.
+
+.. autosummary::
+   :toctree: generated/
+
+   categorical
+   ECDF
+   clean0
+   fullrank
+   isestimable
+   monotone_fn_inverter
+   rank
+   recipr
+   recipr0
+   unsqueeze

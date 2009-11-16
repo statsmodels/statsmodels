@@ -7,13 +7,18 @@
 trunk
 -----
 
- * add sandbox.tsa (time series analysis) and sandbox.regression (anova)
+
  * renames for more consistency
    RLM.fitted_values -> RLM.fittedvalues
    GLMResults.resid_dev -> GLMResults.resid_deviance
 
  * GLMResults: lazy calculations, convert attributes to properties with _cache
  * fix test to run without rpy
+
+*sandbox*
+
+ * add qqplot in sandbox.graphics
+ * add sandbox.tsa (time series analysis) and sandbox.regression (anova)
 
 
 0.1.0b1

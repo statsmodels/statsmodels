@@ -37,8 +37,15 @@ class Model(object):
         endog = np.asarray(endog)
         endog = np.squeeze(endog) # for consistent outputs if endog is (n,1)
         exog = np.asarray(exog)
+##        # not sure if we want type conversion, needs tests with integers
+##        if np.issubdtype(endog.dtype, int):
+##            endog = endog.astype(float)
+##        if np.issubdtype(exog.dtype, int):
+##            endog = exog.astype(float)
         if exog.ndim == 1:
             exog = exog[:,None]
+        if exog.ndim != 2:
+            raise ValueError, "exog is not 1d or 2d"
         if endog.shape[0] != exog.shape[0]:
             raise ValueError, "endog and exog matrices are not aligned."
         self.endog = endog

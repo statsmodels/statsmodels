@@ -72,12 +72,14 @@ Table of Content
 
 
    introduction
+   related
    regression
    glm
    rlm
    stattools
    tools
    internal
+   sandbox
 
 Indices and tables
 ------------------

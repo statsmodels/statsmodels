@@ -6,7 +6,7 @@ import numpy as np
 from scipy import stats
 import scikits.statsmodels as sm
 import matplotlib.pyplot as plt
-from predstd import wls_prediction_std
+from scikits.statsmodels.sandbox.regression.predstd import wls_prediction_std
 
 
 #

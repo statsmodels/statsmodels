@@ -10,16 +10,20 @@ Notes
 * checked with Monte Carlo and cross comparison with statsmodels yule_walker
   for AR numbers are close but not identical to yule_walker
   not compared to other statistics packages, no degrees of freedom correction
+* ARMA(2,2) estimation (in Monte Carlo) requires longer time series to estimate parameters
+  without large variance. There might be different ARMA parameters
+  with similar impulse response function that cannot be well
+  distinguished with small samples (e.g. 100 observations)
 * good for one time calculations for entire time series, not for recursive
   prediction
 * class structure not very clean yet
 * many one-liners with scipy.signal, but takes time to figure out usage
-* missing result statistics, e.g. t-values
+* missing result statistics, e.g. t-values, but standard errors in examples
 * no criteria for choice of number of lags
 * no constant term in ARMA process
 * no integration, differencing for ARIMA
 * written without textbook, works but not sure about everything
-  brief check
+  briefly checked and it looks to be standard least squares, see below
 
 * theoretical autocorrelation function of general ARMA
   Done, relatively easy to guess solution, time consuming to get
@@ -55,8 +59,11 @@ from scipy import signal, optimize
 class ARIMA(object):
     '''currently ARMA only, no differencing used - no I
 
-    reparameterized
+    parameterized as
          rhoy(L) y_t = rhoe(L) eta_t
+
+    A instance of this class preserves state, so new class instances should
+    be created for different examples
     '''
     def __init__(self):
         pass
@@ -149,8 +156,32 @@ class ARIMA(object):
         eta = std * np.random.randn(nsample)
         return signal.lfilter(ma, ar, eta)
 
-def arma_generate_sample(ar, ma, nsample, scale=1, distrvs=np.random.randn):
+def arma_generate_sample(ar, ma, nsample, sigma=1, distrvs=np.random.randn):
     '''generate an random sample of an ARMA process
+
+    Parameters
+    ----------
+    ar : array_like, 1d
+        coefficient for autoregressive lag polynomial, including zero lag
+    ma : array_like, 1d
+        coefficient for moving-average lag polynomial, including zero lag
+    nsample : int
+        length of simulated time series
+    sigma : float
+        standard deviation of noise
+    distrvs : function, random number generator
+        function that generates the random numbers, and takes sample size
+        as argument
+        default: np.random.randn
+        TODO: change to size argument
+
+
+    Returns
+    -------
+    acovf : array
+        autocovariance of ARMA process given by ar, ma
+
+
     '''
     eta = scale * distrvs(nsample)
     return signal.lfilter(ma, ar, eta)
@@ -158,10 +189,28 @@ def arma_generate_sample(ar, ma, nsample, scale=1, distrvs=np.random.randn):
 def arma_acovf(ar, ma, nobs=10):
     '''theoretical autocovariance function of ARMA process
 
+    Parameters
+    ----------
+    ar : array_like, 1d
+        coefficient for autoregressive lag polynomial, including zero lag
+    ma : array_like, 1d
+        coefficient for moving-average lag polynomial, including zero lag
 
-    Notes:
+    Returns
+    -------
+    acovf : array
+        autocovariance of ARMA process given by ar, ma
+
+    See Also
+    --------
+    arma_acf
+    acovf
+
+
+    Notes
+    -----
     tries to do some crude numerical speed improvements for cases
-    with high persistance
+    with high persistance.
     '''
     #increase length of impulse response for AR closer to 1
     #maybe cheap/fast enough to always keep nobs for ir large
@@ -177,29 +226,65 @@ def arma_acovf(ar, ma, nobs=10):
         ir = arma_impulse_response(ar, ma, nobs=nobs)
     #again no idea where the speed break points are:
     if nobs_ir > 50000 and nobs < 1001:
-        [np.dot(ir[:nobs-t], ir[t:nobs]) for t in range(10)]
+        acovf = np.array([np.dot(ir[:nobs-t], ir[t:nobs]) for t in range(10)])
     else:
         acovf = np.correlate(ir,ir,'full')[len(ir)-1:]
     return acovf[:nobs]
 
 def arma_acf(ar, ma, nobs=10):
     '''theoretical autocovariance function of ARMA process
+
+    Parameters
+    ----------
+    ar : array_like, 1d
+        coefficient for autoregressive lag polynomial, including zero lag
+    ma : array_like, 1d
+        coefficient for moving-average lag polynomial, including zero lag
+
+    Returns
+    -------
+    acovf : array
+        autocovariance of ARMA process given by ar, ma
+
+
+    See Also
+    --------
+    arma_acovf
+    acf
+    acovf
+
     '''
     acovf = arma_acovf(ar, ma, nobs)
     return acovf/acovf[0]
 
 def arma_impulse_response(ar, ma, nobs=100):
-    '''get the impulse response function for ARMA process
+    '''get the impulse response function (MA representation) for ARMA process
 
     Parameters
     ----------
-        ma : array_like
-            moving average lag polynomial
-        ar : array_like
-            auto regressive lag polynomial
-        nobs : int
-            number of observations to calculate
+    ma : array_like, 1d
+        moving average lag polynomial
+    ar : array_like, 1d
+        auto regressive lag polynomial
+    nobs : int
+        number of observations to calculate
 
+    Returns
+    -------
+    ir : array, 1d
+        impulse response function with nobs elements
+    `
+
+    Notes
+    -----
+    This is the same as finding the MA representation of an ARMA(p,q).
+    By reversing the role of ar and ma in the function arguments, the
+    returned result is the AR representation of an ARMA(p,q), i.e
+
+    ma_representation = arma_impulse_response(ar, ma, nobs=100)
+    ar_representation = arma_impulse_response(ma, ar, nobs=100)
+
+    fully tested against matlab
 
     Examples
     --------
@@ -228,6 +313,135 @@ def arma_impulse_response(ar, ma, nobs=100):
     impulse[0] = 1.
     return signal.lfilter(ma, ar, impulse)
 
+#alias, easier to remember
+arma2ma = arma_impulse_response
+
+#alias, easier to remember
+def arma2ar(ar, ma, nobs=100):
+    '''get the AR representation of an ARMA process
+
+    Parameters
+    ----------
+    ar : array_like, 1d
+        auto regressive lag polynomial
+    ma : array_like, 1d
+        moving average lag polynomial
+    nobs : int
+        number of observations to calculate
+
+    Returns
+    -------
+    ar : array, 1d
+        coefficients of AR lag polynomial with nobs elements
+    `
+
+    Notes
+    -----
+    This is just an alias for
+
+    ``ar_representation = arma_impulse_response(ma, ar, nobs=100)``
+
+    fully tested against matlab
+
+    Examples
+    --------
+
+    '''
+    return arma_impulse_response(ma, ar, nobs=100)
+
+def lpol2index(ar):
+    '''remove zeros from lagpolynomial, squeezed representation with index
+
+    Parameters
+    ----------
+    ar : array_like
+        coefficients of lag polynomial
+
+    Returns
+    -------
+    coeffs : array
+        non-zero coefficients of lag polynomial
+    index : array
+        index (lags) of lagpolynomial with non-zero elements
+    '''
+
+    index = np.nonzero(ar)
+    coeffs = ar[index]
+    return coeffs, index
+
+def index2lpol(coeffs, index):
+    '''expand coefficients to lag poly
+
+    Parameters
+    ----------
+    coeffs : array
+        non-zero coefficients of lag polynomial
+    index : array
+        index (lags) of lagpolynomial with non-zero elements
+    ar : array_like
+        coefficients of lag polynomial
+
+    Returns
+    -------
+    ar : array_like
+        coefficients of lag polynomial
+
+    '''
+    n = max(index)
+    ar = np.zeros(n)
+    ar[index] = coeffs
+    return ar
+
+
+def deconvolve(num, den, n=None):
+    """Deconvolves divisor out of signal, division of polynomials for n terms
+
+    calculates den^{-1} * num
+
+    Parameters
+    ----------
+    num : array_like
+        signal or lag polynomial
+    denom : array_like
+        coefficients of lag polynomial (linear filter)
+    n : None or int
+        number of terms of quotient
+
+    Returns
+    -------
+    quot : array
+        quotient or filtered series
+    rem : array
+        remainder
+
+    Notes
+    -----
+    If num is a time series, then this applies the linear filter den^{-1}.
+    If both num and den are both lagpolynomials, then this calculates the
+    quotient polynomial for n terms and also returns the remainder.
+
+    This is copied from scipy.signal.signaltools and added n as optional
+    parameter.
+
+    """
+    num = np.atleast_1d(num)
+    den = np.atleast_1d(den)
+    N = len(num)
+    D = len(den)
+    if D > N and n is None:
+        quot = [];
+        rem = num;
+    else:
+        if n is None:
+            n = N-D+1
+        input = np.zeros(n, float)
+        input[0] = 1
+        quot = signal.lfilter(num, den, input)
+        num_approx = signal.convolve(den, quot, mode='full')
+        if len(num) < len(num_approx):  # 1d only ?
+            num = np.concatenate((num, np.zeros(len(num_approx)-len(num))))
+        rem = num - num_approx
+    return quot, rem
 
 
 
@@ -237,6 +451,9 @@ def mcarma22(niter=10):
     DGP parameters currently hard coded
     also sample size `nsample`
 
+    was not a self contained function, used instances from outer scope
+      now corrected
+
     '''
     nsample = 1000
     #ar = [1.0, 0, 0]
@@ -245,21 +462,26 @@ def mcarma22(niter=10):
     ma = [1.0,  0.3,  0.2]
     results = []
     results_bse = []
-    arma = ARIMA()
+    arest = ARIMA()
+    arest2 = ARIMA()
     for _ in range(niter):
-        y2 = arest.generate_sample(ar,ma,nsample,0.1)
+        y2 = arma_generate_sample(ar,ma,nsample,0.1)
         rhohat2a, cov_x2a, infodict, mesg, ier = arest2.fit(y2,2,2)
         results.append(rhohat2a)
-        err2a = arest.errfn(x=y2)
+        err2a = arest2.errfn(x=y2)
         sige2a = np.sqrt(np.dot(err2a,err2a)/nsample)
         results_bse.append(sige2a * np.sqrt(np.diag(cov_x2a)))
     return np.r_[ar[1:], ma[1:]], np.array(results), np.array(results_bse)
 
+
 __all__ = ['ARIMA', 'arma_acf', 'arma_acovf', 'arma_generate_sample',
-           'arma_impulse_response']
+           'arma_impulse_response', 'arma2ar', 'arma2ma', 'deconvolve',
+           'lpol2index', 'index2lpol']
 
 
 if __name__ == '__main__':
+    print mcarma22()
+
 
     # Simulate AR(1)
     #--------------
@@ -404,7 +626,7 @@ if __name__ == '__main__':
         print 'positive error fraction'
         print (res > rt).mean(0)
 
-    run_mc = False
+    run_mc = True#False
     if run_mc:
         import time
         t0 = time.time()
@@ -423,4 +645,12 @@ if __name__ == '__main__':
 
     import matplotlib.pyplot as plt
     plt.plot(arest2.forecast()[-100:])
-    plt.show()
+    #plt.show()
+
+    ar1, ar2 = ([1, -0.4], [1, 0.5])
+    ar2 = [1, -1]
+    lagpolyproduct = np.convolve(ar1, ar2)
+    print deconvolve(lagpolyproduct, ar2, n=None)
+    print signal.deconvolve(lagpolyproduct, ar2)
+    print deconvolve(lagpolyproduct, ar2, n=10)
+

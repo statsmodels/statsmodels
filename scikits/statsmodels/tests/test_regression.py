@@ -92,6 +92,8 @@ class CheckRegressionResults(object):
 
     def test_fvalue(self):
         if hasattr(self.res2, 'fvalue'):
+            #didn't change this, not sure it should complain -inf not equal -inf
+            #if not (np.isinf(self.res1.fvalue) and np.isinf(self.res2.fvalue)):
             assert_almost_equal(self.res1.fvalue, self.res2.fvalue, DECIMAL)
         else:
             raise SkipTest, "Results from R"
@@ -470,10 +472,15 @@ class TestDataDimensions(CheckRegressionResults):
         self.exog_n_ = np.random.uniform(0,20,size=30)
         self.exog_n_one = self.exog_n_[:,None]
         self.degen_exog = self.exog_n_one[:-1]
-        self.res1 = OLS(self.endog_n_one, self.exog_n_one).fit()
+        self.mod1 = OLS(self.endog_n_one, self.exog_n_one)
+        self.mod1.df_model += 1
+        #self.mod1.df_resid -= 1
+        self.res1 = self.mod1.fit()
         # Note that these are created for every subclass..
         # A little extra overhead probably
-        self.res2 = OLS(self.endog_n_one, self.exog_n_one).fit()
+        self.mod2 = OLS(self.endog_n_one, self.exog_n_one)
+        self.mod2.df_model += 1
+        self.res2 = self.mod2.fit()
 
     def check_confidenceintervals(self, conf1, conf2):
         assert_almost_equal(conf1, conf2(), DECIMAL)
@@ -481,17 +488,23 @@ class TestDataDimensions(CheckRegressionResults):
 class TestNxNx(TestDataDimensions):
     def __init__(self):
         super(TestNxNx, self).__init__()
-        self.res2 = OLS(self.endog_n_,self.exog_n_).fit()
+        self.mod2 = OLS(self.endog_n_,self.exog_n_)
+        self.mod2.df_model += 1
+        self.res2 = self.mod2.fit()
 
 class TestNxOneNx(TestDataDimensions):
     def __init__(self):
         super(TestNxOneNx, self).__init__()
-        self.res2 = OLS(self.endog_n_one, self.exog_n_).fit()
+        self.mod2 = OLS(self.endog_n_one, self.exog_n_)
+        self.mod2.df_model += 1
+        self.res2 = self.mod2.fit()
 
 class TestNxNxOne(TestDataDimensions):
     def __init__(self):
         super(TestNxNxOne, self).__init__()
-        self.res2 = OLS(self.endog_n_, self.exog_n_one).fit()
+        self.mod2 = OLS(self.endog_n_, self.exog_n_one)
+        self.mod2.df_model += 1
+        self.res2 = self.mod2.fit()
 
 def test_bad_size():
     np.random.seed(54321)
@@ -501,7 +514,7 @@ def test_bad_size():
 if __name__=="__main__":
     #run_module_suite()
     import nose
-    nose.runmodule(argv=[__file__,'-vvs','-x'], exit=False) #, '--pdb'
+    #nose.runmodule(argv=[__file__,'-vvs','-x'], exit=False) #, '--pdb'
 
 
 
