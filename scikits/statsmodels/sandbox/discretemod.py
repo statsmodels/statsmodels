@@ -644,6 +644,8 @@ class MNLogit(DiscreteModel):
 
     Attributes
     ----------
+    J
+    K
     endog
     exog
     names : dict
