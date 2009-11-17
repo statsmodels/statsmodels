@@ -8,7 +8,8 @@ import scikits.statsmodels as sm
 import matplotlib.pyplot as plt
 from scikits.statsmodels.sandbox.regression.predstd import wls_prediction_std
 
-
+#fix a seed for these examples
+np.random.seed(9876789)
 
 # OLS non-linear curve but linear in parameters
 # ---------------------------------------------

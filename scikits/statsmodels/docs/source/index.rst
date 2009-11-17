@@ -35,7 +35,7 @@ or get the source from pypi, sourceforge, or from the launchpad repository and
 
 ::
 
-  setup.py install   or   setup.py develop
+  setup.py install
 
 **Usage:**
 

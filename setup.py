@@ -8,7 +8,13 @@ Statsmodels is a python package that provides an interface to scipy for
 statistical computations including descriptive statistics and
 fitting statistical models.
 
-LICENSE: Simplified BSD
+scikits.statsmodels provides classes and functions for the estimation of
+several categories of statistical models. These currently include linear
+regression models, OLS, GLS, WLS and GLS with AR(p) errors, generalized
+linear models for six distribution families and M-estimators for robust
+linear models. An extensive list of result statistics are avalable for
+each estimation problem
+
 """
 import os
 import sys
@@ -31,12 +37,13 @@ REV = 0
 DEV = False #True
 QUALIFIER = 'b2dev'
 
-classifiers = [ 'Development Status :: 3 - Alpha',
+classifiers = [ 'Development Status :: 4 - Beta',
               'Environment :: Console',
               'Programming Language :: Python :: 2.4',
+              'Operating System :: OS Independent',
               'Intended Audience :: Developers',
               'Intended Audience :: Science/Research',
-              #'License :: BSD',
+              'License :: OSI Approved :: BSD License',
               'Topic :: Scientific/Engineering']
 
 def build_ver_str():
