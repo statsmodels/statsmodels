@@ -146,11 +146,11 @@ class Poisson(DiscreteModel):
         --------
         The pmf is defined as
 
-        .. math:: \frac{e^{-\lambda_{i}}\lambda_{i}^{y_{i}}}{y_{i}!}
+        .. math:: \\frac{e^{-\\lambda_{i}}\\lambda_{i}^{y_{i}}}{y_{i}!}
 
-        where :math:`\lambda` assumes the loglinear model. I.e.,
+        where :math:`\\lambda` assumes the loglinear model. I.e.,
 
-        .. math:: \ln\lambda_{i}=X\beta
+        .. math:: \\ln\\lambda_{i}=X\\beta
 
         This method is not used in the fitting algorithm.
         """
@@ -174,7 +174,7 @@ class Poisson(DiscreteModel):
 
         Notes
         --------
-        .. math :: \ln L=\sum_{i=1}^{n}\left[-\lambda_{i}+y_{i}x_{i}^{\prime}\beta-\ln y_{i}!\right]
+        .. math :: \\ln L=\\sum_{i=1}^{n}\\left[-\\lambda_{i}+y_{i}x_{i}^{\\prime}\\beta-\\ln y_{i}!\\right]
         """
         XB = np.dot(self.exog, params)
         endog = self.endog
@@ -195,11 +195,11 @@ class Poisson(DiscreteModel):
 
         Notes
         -----
-        .. math:: \frac{\partial\ln L}{\partial\beta}=\sum_{i=1}^{n}\left(y_{i}-\lambda_{i}\right)x_{i}
+        .. math:: \\frac{\\partial\\ln L}{\\partial\\beta}=\\sum_{i=1}^{n}\\left(y_{i}-\\lambda_{i}\\right)x_{i}
 
         where the loglinear model is assumed
 
-        .. math:: \ln\lambda_{i}=X\beta
+        .. math:: \\ln\\lambda_{i}=X\\beta
         """
 
         X = self.exog
@@ -221,11 +221,11 @@ class Poisson(DiscreteModel):
 
         Notes
         -----
-        .. math:: \frac{\partial^{2}\ln L}{\partial\beta\partial\beta^{\prime}}=-\sum_{i=1}^{n}\lambda_{i}x_{i}x_{i}^{\prime}
+        .. math:: \\frac{\\partial^{2}\\ln L}{\\partial\\beta\\partial\\beta^{\\prime}}=-\\sum_{i=1}^{n}\\lambda_{i}x_{i}x_{i}^{\\prime}
 
         where the loglinear model is assumed
 
-        .. math:: \ln\lambda_{i}=X\beta
+        .. math:: \\ln\\lambda_{i}=X\\beta
 
         """
         X = self.exog
@@ -315,7 +315,7 @@ class Logit(DiscreteModel):
         ------
         In the logit model,
 
-        .. math:: \Lambda\left(x^{\prime}\beta\right)=\text{Prob}\left(Y=1|x\right)=\frac{e^{x^{\prime}\beta}}{1+e^{x^{\prime}\beta}}
+        .. math:: \\Lambda\\left(x^{\\prime}\\beta\\right)=\\text{Prob}\\left(Y=1|x\\right)=\\frac{e^{x^{\\prime}\\beta}}{1+e^{x^{\\prime}\\beta}}
         """
         X = np.asarray(X)
         return 1/(1+np.exp(-X))
@@ -337,7 +337,7 @@ class Logit(DiscreteModel):
         -----
         In the logit model,
 
-        .. math:: \lambda\left(x^{\prime}\beta\right)=\frac{e^{-x^{\prime}\beta}}{\left(1+e^{-x^{\prime}\beta}\right)^{2}}
+        .. math:: \\lambda\\left(x^{\\prime}\\beta\\right)=\\frac{e^{-x^{\\prime}\\beta}}{\\left(1+e^{-x^{\\prime}\\beta}\\right)^{2}}
         """
         X = np.asarray(X)
         return np.exp(-X)/(1+np.exp(-X))**2
@@ -357,7 +357,7 @@ class Logit(DiscreteModel):
 
         Notes
         ------
-        .. math:: \ln L=\sum_{i}\ln\Lambda\left(q_{i}x_{i}^{\prime}\beta\right)
+        .. math:: \\ln L=\\sum_{i}\\ln\\Lambda\\left(q_{i}x_{i}^{\\prime}\\beta\\right)
 
         Where :math:`q=2y-1`. This simplification comes from the fact that the
         logistic distribution is symmetric.
@@ -381,7 +381,7 @@ class Logit(DiscreteModel):
 
         Notes
         -----
-        .. math:: \frac{\partial\ln L}{\partial\beta}=\sum_{i=1}^{n}\left(y_{i}-\Lambda_{i}\right)x_{i}
+        .. math:: \\frac{\\partial\\ln L}{\\partial\\beta}=\\sum_{i=1}^{n}\\left(y_{i}-\\Lambda_{i}\\right)x_{i}
         """
 
         y = self.endog
@@ -404,7 +404,7 @@ class Logit(DiscreteModel):
 
         Notes
         -----
-        .. math:: \frac{\partial^{2}\ln L}{\partial\beta\partial\beta^{\prime}}=-\sum_{i}\Lambda_{i}\left(1-\Lambda_{i}\right)x_{i}x_{i}^{\prime}
+        .. math:: \\frac{\\partial^{2}\\ln L}{\\partial\\beta\\partial\\beta^{\\prime}}=-\\sum_{i}\\Lambda_{i}\\left(1-\\Lambda_{i}\\right)x_{i}x_{i}^{\\prime}
         """
         X = self.exog
         L = self.cdf(np.dot(X,params))
@@ -529,7 +529,7 @@ class Probit(DiscreteModel):
 
         Notes
         -----
-        .. math:: \ln L=\sum_{i}\ln\Phi\left(q_{i}x_{i}^{\prime}\beta\right)
+        .. math:: \\ln L=\\sum_{i}\\ln\\Phi\\left(q_{i}x_{i}^{\\prime}\\beta\\right)
 
         Where :math:`q=2y-1`. This simplification comes from the fact that the
         normal distribution is symmetric.
@@ -554,7 +554,7 @@ class Probit(DiscreteModel):
 
         Notes
         -----
-        .. math:: frac{\partial\ln L}{\partial\beta}=\sum_{i=1}^{n}\left[\frac{q_{i}\phi\left(q_{i}x_{i}^{\prime}\beta\right)}{\Phi\left(q_{i}x_{i}^{\prime}\beta\right)}\right]x_{i}
+        .. math:: frac{\\partial\\ln L}{\\partial\\beta}=\\sum_{i=1}^{n}\\left[\\frac{q_{i}\\phi\\left(q_{i}x_{i}^{\\prime}\\beta\\right)}{\\Phi\\left(q_{i}x_{i}^{\\prime}\\beta\\right)}\\right]x_{i}
 
         Where :math:`q=2y-1`. This simplification comes from the fact that the
         normal distribution is symmetric.
@@ -581,11 +581,11 @@ class Probit(DiscreteModel):
 
         Notes
         -----
-        .. math:: \frac{\partial^{2}\ln L}{\partial\beta\partial\beta^{\prime}}=-\lambda_{i}\left(\lambda_{i}+x_{i}^{\prime}\beta\right)x_{i}x_{i}^{\prime}
+        .. math:: \\frac{\\partial^{2}\\ln L}{\\partial\\beta\\partial\\beta^{\\prime}}=-\lambda_{i}\\left(\\lambda_{i}+x_{i}^{\\prime}\\beta\\right)x_{i}x_{i}^{\\prime}
 
         where
 
-        .. math:: \lambda_{i}=\frac{q_{i}\phi\left(q_{i}x_{i}^{\prime}\beta\right)}{\Phi\left(q_{i}x_{i}^{\prime}\beta\right)}
+        .. math:: \\lambda_{i}=\\frac{q_{i}\\phi\\left(q_{i}x_{i}^{\\prime}\\beta\\right)}{\\Phi\\left(q_{i}x_{i}^{\\prime}\\beta\\right)}
 
         and :math:`q=2y-1`
         """
