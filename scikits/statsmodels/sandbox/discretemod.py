@@ -17,6 +17,8 @@ W. Greene
 Davidson and MacKinnon
 """
 
+__all__ = ["Poisson","Logit","Probit","MNLogit"]
+
 import numpy as np
 from scikits.statsmodels.model import LikelihoodModel, LikelihoodModelResults
 from scikits.statsmodels.family import links
