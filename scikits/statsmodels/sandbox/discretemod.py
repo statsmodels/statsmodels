@@ -976,9 +976,19 @@ class DiscreteResults(LikelihoodModelResults):
 
 
         return change[ind]
-#TODO: probit mfx look slightly off, so this may come from some rounding error
-# in the scipy pdf, or there may be a dof correction needed or something
 
+    @cache_readonly
+    def llf(self):
+        model = self.model
+        return model.loglike(self.params)
+
+#untested
+    @cache_readonly
+    def llr(self):
+        model = self.model # will this use a new instance?
+        null = model.__class__(model.endog, np.ones(model.nobs)).fit()
+        # use the same method to fit this ?
+        return -2*(self.llf - null.llf)
 
 if __name__=="__main__":
     from urllib2 import urlopen
