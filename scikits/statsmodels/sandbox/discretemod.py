@@ -25,7 +25,7 @@ from scikits.statsmodels.family import links
 from scikits.statsmodels.decorators import *
 from scikits.statsmodels.regression import OLS
 from scipy import stats, factorial, special, optimize # opt just for nbin
-import numdifftools as nd
+import numdifftools as nd #This will be removed when all have analytic hessians
 
 #TODO: all of the fit methods that call super can be taken out
 # once the ResultsClass is settled, except of course the ones
@@ -995,7 +995,6 @@ class DiscreteResults(LikelihoodModelResults):
         return -2*(self.llf - null.llf)
 
 if __name__=="__main__":
-    from urllib2 import urlopen
     import numpy as np
     import scikits.statsmodels as sm
 
@@ -1027,57 +1026,5 @@ if __name__=="__main__":
 # the below is from Cameron and Trivedi as well
 #    endog2 = np.array(endog>=1, dtype=float)
 # skipped for now, binary poisson results look off?
-
-    # multinomial example from
-# http://www.stat.washington.edu/quinn/classes/536/S/multinomexample.html
-    mlogdata = np.genfromtxt("./nes96r.dat", names=True)
-    mendog = mlogdata['PID']
-    mexog = np.column_stack((np.log(mlogdata['popul']+.1),mlogdata[['selfLR',
-                'age','educ','income']].view(float).reshape(-1,4)))
-    mexog = sm.add_constant(mexog, prepend=True)
-    mlogit_mod = MNLogit(mendog, mexog)
-#    for PID 0-7 is
-# results from R nnet package
-    mlogit_arr = np.array([-0.373356261, -2.250934805, -3.665905084,
-        -7.613694423, -7.060431370, -12.105193452, -0.011537359,
-        -0.088750964, -0.105967684, -0.091555188, -0.093285749,
-        -0.140879420,  0.297697981,  0.391662761,  0.573513420,
-        1.278742543,  1.346939966,  2.069988287, -0.024944529,
-        -0.022897526, -0.014851243, -0.008680754, -0.017903442,
-        -0.009432601,  0.082487696, 0.181044184, -0.007131611,
-        0.199828063,  0.216938699,  0.321923127,  0.005195818,
-        0.047874118,  0.057577321,  0.084495215,  0.080958623, 0.108890412])
-# the question is which is more accurate?  Our 3 agree more with each others..
-    mlogit_arr = mlogit_arr.reshape(6,-1).T
-# the rows are the different K coefs, and the cols are the J-1 responses
-# the aboce comment is wrong now
-    mlogit_res = mlogit_mod.fit(method = 'bfgs', maxiter=100)
-#    mlogit_res2 = mlogit_mod.fit(method = 'ncg', maxiter=100)
-    mlogit_res3 = mlogit_mod.fit(method = 'newton', maxiter=25)
-#    np.testing.assert_almost_equal(mlogit_res.params, mlogit_arr, 3)
-#    np.testing.assert_almost_equal(mlogit_res2.params, mlogit_arr, 3)
-
-# this example taken from
-# http://www.ats.ucla.edu/stat/r/dae/mlogit.htm
-    mlogdta = np.genfromtxt('./mlogit.csv', delimiter=',', names=True)
-    mend = mlogdta['brand']
-    mex = mlogdta[['female','age']].view(float).reshape(-1,2)
-    mex = sm.add_constant(mex, prepend=True)
-    mlog = MNLogit(mend, mex)
-    mlog_res = mlog.fit(method='newton')
-#    marr = np.array([[22.721396, 10.946741],[-.465941,.057873],
-#        [-.685908,-.317702]])
-# The above are the results from R using Brand 3 as base outcome
-    marr = np.array([[-11.77466, -22.7214],[.5238143, .4659414],
-        [.3682065, .6859082]])
-# The above results are from Stata using Brand 1 as base outcome
-# we match these, but should provide a baseoutcome option
-
-
-# The last ncg method for mlogit was slow on the last one
-# Should have some kind of testing in mlefit to see which
-# method will be the fastest
-# the non-conjugate gradient methods are always going to be slower
-# unless we provide the analytic hessian
 
 
