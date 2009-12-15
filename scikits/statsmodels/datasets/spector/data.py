@@ -70,7 +70,7 @@ GPA - Student's grade point average
 import numpy as np
 
 class Load():
-    """load the committee data and returns a data class.
+    """Load the Spector data and returns a data class.
 
     Returns
     Load instance:

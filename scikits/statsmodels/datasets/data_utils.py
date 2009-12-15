@@ -48,7 +48,7 @@ def convert(fname, overwrite=False, delimiter=","):
         names = names.split(None)
     else:
         names = names.split(delimiter)
-    for i in range(len(names)): names[i] = names[i].strip("\"")
+    for i in range(len(names)): names[i] = names[i].strip("\"'")
     if delimiter.isspace():
         dataset = genfromtxt(fname, dtype=np.str, skip_header=1)
     else:
