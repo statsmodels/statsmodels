@@ -67,7 +67,7 @@ popul - Census place population in 1000s
 
 TVnews - Number of times per week that respondent watches TV news.
 
-PID - Polytomous variable. Party identification of respondent.
+PID - Polychotomous variable. Party identification of respondent.
     0 - Strong Democrat
     1 - Weak Democrat
     2 - Independent-Democrat
@@ -78,7 +78,7 @@ PID - Polytomous variable. Party identification of respondent.
 
 age - Age of respondent.
 
-educ - Polytomous variable.
+educ - Polychotomous variable.
     1 - 1-8 grades
     2 - Some high school
     3 - High school graduate
@@ -113,10 +113,9 @@ income - Polytmous variable. Income of household
     23 - $90,000-$104,999
     24 - $105,000 and over
 
-vote - Whether or not the respondent voted in the previous presidential
-        election.
-    0 - No
-    1 - Yes
+vote - Expected vote.
+    0 - Clinton
+    1 - Dole
 
 The following 3 variables all take the values:
     1 - Extremely liberal
@@ -126,11 +125,11 @@ The following 3 variables all take the values:
     5 - Slightly conservative
     6 - Conservative
     7 - Extremely Conservative
-selfLR - Polytomous variable. Respondent's self-reported political leanings
+selfLR - Polychotomous variable. Respondent's self-reported political leanings
             from "Left" to "Right".
-ClinLR - Polytomous variable. Respondents impression of Bill Clinton's
+ClinLR - Polychotomous variable. Respondents impression of Bill Clinton's
             political leanings from "Left" to "Right".
-DoleLR  - Polytmous variable. Respondents impression of Bob Dole's
+DoleLR  - Polychotomous variable. Respondents impression of Bob Dole's
             political leanings from "Left" to "Right".
 """
 
