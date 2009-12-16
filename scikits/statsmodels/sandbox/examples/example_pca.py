@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import numpy as np
-from pca import Pca
+from scikits.statsmodels.sandbox.pca import Pca
 
 x=np.random.randn(1000)
 y=x*2.3+5+np.random.randn(1000)

@@ -5,10 +5,10 @@ import numpy as np
 from scikits.statsmodels.sandbox.discretemod import *
 from scikits.statsmodels.sandbox.discretemod import Weibull
 import scikits.statsmodels as sm
-spector_data = sm.datasets.spector.Load()
 
 # Load the data from Spector and Mazzeo (1980)
 # Examples follow Greene's Econometric Analysis Ch. 22 (5th Edition).
+spector_data = sm.datasets.spector.Load()
 spector_data.exog = sm.add_constant(spector_data.exog, prepend=True)
 
 # Linear Probability Model using OLS

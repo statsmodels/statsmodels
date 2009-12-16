@@ -6,6 +6,8 @@ from scipy import sparse
 
 #http://www.irisa.fr/aladin/wg-statlin/WORKSHOPS/RENNES02/SLIDES/Foschi.pdf
 
+__all__ = ['SUR', 'Sem2SLS']
+
 #probably should have a SystemModel superclass
 # TODO: does it make sense of SUR equations to have
 # independent endogenous regressors?  If so, then
@@ -447,9 +449,9 @@ http://www.ats.ucla.edu/stat/R/faq/hsb2.csv"
 
 # correct bad data
 # discrepancies are noted in Grunfeld.txt
-    sys[-2][5] = 261.6
-    sys[-2][-3] = 645.2
-    sys[-1][11,1] = 232.6
+#    sys[-2][5] = 261.6
+#    sys[-2][-3] = 645.2
+#    sys[-1][11,1] = 232.6
     grun_mod = SUR(sys)
     grun_res = grun_mod.fit()
     print "Compare these results to Greene 5th ed. p 351"
