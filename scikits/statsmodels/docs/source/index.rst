@@ -61,7 +61,10 @@ For example, here is a minimal ordinary least squares case ::
   and look at `dir(results)` to see some of the results
   that are available
 
-
+**Note:**
+Due to our infrequent official releases, it should be noted that the trunk
+branch in the launchpad repository given above will have the most recent
+code and is for the most part quite stable and fine for daily use.
 
 
 Table of Content
