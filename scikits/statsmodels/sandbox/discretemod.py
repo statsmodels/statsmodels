@@ -7,21 +7,20 @@ dependent variables.
 General References
 --------------------
 
-A.C. Cameron and P.K. Trivedi.  `Regression Analysis of Count Data`  Cambridge,     1998
+A.C. Cameron and P.K. Trivedi.  `Regression Analysis of Count Data`.  Cambridge,
+    1998
 
-G.S. Madalla. Limited-Dependent and Qualitative Variables in Econometrics.
+G.S. Madalla. `Limited-Dependent and Qualitative Variables in Econometrics`.
     Cambridge, 1983.
 
-W. Greene
-
-Davidson and MacKinnon
+W. Greene. `Econometric Analysis`. Prentice Hall, 5th. edition. 2003.
 """
 
 __all__ = ["Poisson","Logit","Probit","MNLogit"]
 
 import numpy as np
 from scikits.statsmodels.model import LikelihoodModel, LikelihoodModelResults
-from scikits.statsmodels.family import links
+from scikits.statsmodels import tools
 from scikits.statsmodels.decorators import *
 from scikits.statsmodels.regression import OLS
 from scipy import stats, factorial, special, optimize # opt just for nbin
@@ -68,7 +67,7 @@ class DiscreteModel(LikelihoodModel):
     """
     Template for discrete choice models.
 
-    This class does not do anything itself but lays out the methods and basic
+    This class does not do anything itself but lays out the methods and
     call signature expected of child classes in addition to those of
     scikits.statsmodels.model.LikelihoodModel.
     """
@@ -111,9 +110,12 @@ class Poisson(DiscreteModel):
 
     Attributes
     -----------
-    endog
-    exog
-    nobs
+    endog : array
+        A reference to the endogenous response variable
+    exog : array
+        A reference to the exogenous design.
+    nobs : float
+        The number of observations of the model.
 
     Methods
     -------
@@ -278,14 +280,21 @@ class Logit(DiscreteModel):
 
     Parameters
     ----------
-    endog
-    exog
+    endog : array-like
+        1-d array of the response variable.
+    exog : array-like
+        `exog` is an n x p array where n is the number of observations and p
+        is the number of regressors including the intercept if one is included
+        in the data.
 
     Attributes
-    ----------
-    endog
-    exog
-    nobs
+    -----------
+    endog : array
+        A reference to the endogenous response variable
+    exog : array
+        A reference to the exogenous design.
+    nobs : float
+        The number of observations of the model.
 
     Methods
     --------
@@ -295,7 +304,6 @@ class Logit(DiscreteModel):
     information
     initialize
     loglike
-    nobs
     pdf
     predict
     score
@@ -453,14 +461,21 @@ class Probit(DiscreteModel):
 
     Parameters
     ----------
-    endog
-    exog
+    endog : array-like
+        1-d array of the response variable.
+    exog : array-like
+        `exog` is an n x p array where n is the number of observations and p
+        is the number of regressors including the intercept if one is included
+        in the data.
 
     Attributes
-    ----------
-    endog
-    exog
-    nobs
+    -----------
+    endog : array
+        A reference to the endogenous response variable
+    exog : array
+        A reference to the exogenous design.
+    nobs : float
+        The number of observations of the model.
 
     Methods
     --------
@@ -470,7 +485,6 @@ class Probit(DiscreteModel):
     information
     initialize
     loglike
-    nobs
     pdf
     predict
     score
@@ -487,7 +501,7 @@ class Probit(DiscreteModel):
 
         Returns
         --------
-        The cdf evaluated at X.
+        The cdf evaluated at `X`.
 
         Notes
         -----
@@ -557,7 +571,7 @@ class Probit(DiscreteModel):
 
         Notes
         -----
-        .. math:: frac{\\partial\\ln L}{\\partial\\beta}=\\sum_{i=1}^{n}\\left[\\frac{q_{i}\\phi\\left(q_{i}x_{i}^{\\prime}\\beta\\right)}{\\Phi\\left(q_{i}x_{i}^{\\prime}\\beta\\right)}\\right]x_{i}
+        .. math:: \\frac{\\partial\\ln L}{\\partial\\beta}=\\sum_{i=1}^{n}\\left[\\frac{q_{i}\\phi\\left(q_{i}x_{i}^{\\prime}\\beta\\right)}{\\Phi\\left(q_{i}x_{i}^{\\prime}\\beta\\right)}\\right]x_{i}
 
         Where :math:`q=2y-1`. This simplification comes from the fact that the
         normal distribution is symmetric.
@@ -585,11 +599,8 @@ class Probit(DiscreteModel):
         Notes
         -----
         .. math:: \\frac{\\partial^{2}\\ln L}{\\partial\\beta\\partial\\beta^{\\prime}}=-\lambda_{i}\\left(\\lambda_{i}+x_{i}^{\\prime}\\beta\\right)x_{i}x_{i}^{\\prime}
-
         where
-
         .. math:: \\lambda_{i}=\\frac{q_{i}\\phi\\left(q_{i}x_{i}^{\\prime}\\beta\\right)}{\\Phi\\left(q_{i}x_{i}^{\\prime}\\beta\\right)}
-
         and :math:`q=2y-1`
         """
         X = self.exog
@@ -643,24 +654,33 @@ class MNLogit(DiscreteModel):
         contain strings, ints, or floats.  Note that if it contains strings,
         every distinct string will be a category.  No stripping of whitespace
         is done.
-    exog
+    exog : array-like
+        `exog` is an n x p array where n is the number of observations and p
+        is the number of regressors including the intercept if one is included
+        in the data.
 
     Attributes
     ----------
-    J
-    K
-    endog
-    exog
+    J : float
+        The number of choices for the endogenous variable. Note that this
+        is zero-indexed.
+    K : float
+        The actual number of parameters for the exogenous design.  Includes
+        the constant if the design has one.
+    endog : array
+        A reference to the endogenous response variable
+    exog : array
+        A reference to the exogenous design.
     names : dict
         A dictionary mapping the column number in `wendog` to the variables
         in `endog`.
-    nobs
+    nobs : float
+        The number of observations of the model.
     wendog : array
         An n x j array where j is the number of unique categories in `endog`.
         Each column of j is a dummy variable indicating the category of
-        each observation. `names` is a dictionary mapping each column to
-        the categories.
-
+        each observation. See `names` for a dictionary mapping each column to
+        its category.
 
     Methods
     --------
@@ -670,21 +690,43 @@ class MNLogit(DiscreteModel):
     information
     initialize
     loglike
-    nobs
     pdf
     predict
     score
+
+    Notes
+    -----
+    See developer notes for further information on `MNLogit` internals.
     """
 
     def initialize(self):
-#This is also a "whiten" method as used in other models
-        wendog, self.names = sm.tools.categorical(self.endog, drop=True,
+        """
+        Preprocesses the data for MNLogit.
+
+        Turns the endogenous variable into an array of dummies and assigns
+        J and K.
+        """
+        #This is also a "whiten" method as used in other models
+        wendog, self.names = tools.categorical(self.endog, drop=True,
                 dictnames=True)
         self.wendog = wendog    # don't drop first category
-        self.J = wendog.shape[1]
-        self.K = self.exog.shape[1]
+        self.J = float(wendog.shape[1])
+        self.K = float(self.exog.shape[1])
 
     def _eXB(self, params, exog=None):
+        """
+        A private method used by the cdf.
+
+        Returns
+        -------
+        :math:`\exp(\beta_{j}^{\prime}x_{i})`
+
+        where :math:`j = 0,1,...,J`
+
+        Notes
+        -----
+        A row of ones is appended for the dropped category.
+        """
         if exog is None:
             exog = self.exog
         eXB = np.exp(np.dot(params.reshape(-1, exog.shape[1]), exog.T))
@@ -692,17 +734,52 @@ class MNLogit(DiscreteModel):
         return eXB
 
     def pdf(self, eXB):
+        """
+        NotImplemented
+        """
         pass
 
     def cdf(self, eXB):
-#        exog = self.exog
-#        eXB = np.exp(np.dot(params.reshape(-1, exog.shape[1]), exog.T))
-#        eXB = np.vstack((np.ones((1, self.nobs)), eXB))
+        """
+        Multinomial logit cumulative distribution function.
+
+        Parameters
+        ----------
+        eXB : array
+            The exponential predictor of the model exp(XB).
+
+        Returns
+        --------
+        The cdf evaluated at `eXB`.
+
+        Notes
+        -----
+        In the multinomial logit model.
+        .. math:: \\frac{\\exp\\left(\\beta_{j}^{\\prime}x_{i}\\right)}{\\sum_{k=0}^{J}\\exp\\left(\\beta_{k}^{\\prime}x_{i}\\right)}
+        """
         num = eXB
         denom = eXB.sum(axis=0)
         return num/denom[None,:]
 
     def loglike(self, params):
+        """
+        Log-likelihood of the multinomial logit model.
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the multinomial logit model.
+
+        Returns
+        -------
+        The log-likelihood function of the logit model.  See notes.
+
+        Notes
+        ------
+        .. math:: \\ln L=\\sum_{i=1}^{n}\\sum_{j=0}^{J}d_{ij}\\ln\\left(\\frac{\\exp\\left(\\beta_{j}^{\\prime}x_{i}\\right)}{\\sum_{k=0}^{J}\\exp\\left(\\beta_{k}^{\\prime}x_{i}\\right)}\\right)
+        where :math:`d_{ij}=1` if individual `i` chose alternative `j` and 0
+        if not.
+        """
         d = self.wendog
         eXB = self._eXB(params)
         logprob = np.log(self.cdf(eXB))
@@ -710,26 +787,57 @@ class MNLogit(DiscreteModel):
 
     def score(self, params):
         """
-        Score matrix for multinomial model
+        Score matrix for multinomial logit model log-likelihood
 
-        In the multinomial model ths score matrix is K x J-1
+        Parameters
+        ----------
+        params : array
+            The parameters of the multinomial logit model.
 
-        Returned as a flattened array to work with the solvers.
+        Returns
+        --------
+        The 2-d score vector of the multinomial logit model evaluated at
+        `params`.
+
+        Notes
+        -----
+        .. math:: \\frac{\\partial\\ln L}{\\partial\\beta_{j}}=\\sum_{i}\\left(d_{ij}-\\frac{\\exp\\left(\\beta_{j}^{\\prime}x_{i}\\right)}{\\sum_{k=0}^{J}\\exp\\left(\\beta_{k}^{\\prime}x_{i}\\right)}\\right)x_{i}
+
+        for :math:`j=1,...,J`
+
+        In the multinomial model ths score matrix is K x J-1 but is returned
+        as a flattened array to work with the solvers.
         """
         eXB = self._eXB(params)
         firstterm = self.wendog[:,1:].T - self.cdf(eXB)[1:,:]
-        return np.dot(firstterm, self.exog).flatten(0)
+        return np.dot(firstterm, self.exog).flatten()
 
     def hessian(self, params):
         """
-        Hessian matrix for multinomial model
+        Multinomial logit Hessian matrix of the log-likelihood
 
+        Parameters
+        -----------
+        params : array-like
+            The parameters of the model
+
+        Returns
+        -------
+        The Hessian evaluated at `params`
 
         Notes
-        ------
+        -----
+        .. math:: \\frac{\\partial^{2}\\ln L}{\\partial\\beta_{j}\\partial\\beta_{l}}=-\\sum_{i=1}^{n}\\frac{\\exp\\left(\\beta_{j}^{\\prime}x_{i}\\right)}{\\sum_{k=0}^{J}\\exp\\left(\\beta_{k}^{\\prime}x_{i}\\right)}\\left[\\boldsymbol{1}\\left(j=l\\right)-\\frac{\\exp\\left(\\beta_{l}^{\\prime}x_{i}\\right)}{\\sum_{k=0}^{J}\\exp\\left(\\beta_{k}^{\\prime}x_{i}\\right)}\\right]x_{i}x_{l}^{\\prime}
+
+        where
+        :math:`\boldsymbol{1}\left(j=l\right)` equals 1 if `j` = `l` and 0
+        otherwise.
 
         The actual Hessian matrix has J**2 * K x K elements. Our Hessian
         is reshaped to be square (J*K, J*K) so that the solvers can use it.
+
+        This implementation does not take advantage of the symmetry of
+        the Hessian and could probably be refactored for speed.
         """
         X = self.exog
         eXB = self._eXB(params)
@@ -737,9 +845,6 @@ class MNLogit(DiscreteModel):
         partials = []
         J = self.wendog.shape[1] - 1
         K = self.exog.shape[1]
-# TODO: refactor for symmetry
-# Once we only caclculate the J*(J-1)/2. this might be different
-# This doesn't take advantage of symmetry, so computes upper and lower
         for i in range(J):
             for j in range(J): # this loop assumes we drop the first col.
                 if i == j:
@@ -748,15 +853,27 @@ class MNLogit(DiscreteModel):
                 else:
                     partials.append(-np.dot(pr[i+1,:]*-pr[j+1,:][None,:]*X.T,X))
         H = np.array(partials)
-# We now have a matrix that's J**2, K, K I believe, so we need to reshape this
-# to be J*K, J*K as follows, see math note (once I've updated it)
-# to clear this up.
+        # the developer's notes on multinomial should clear this math up
         H = np.transpose(H.reshape(J,J,K,K), (0,2,1,3)).reshape(J*K,J*K)
         return H
 
     def fit(self, start_params=None, maxiter=35, method='newton',
             tol=1e-08):
         """
+        Fits the multinomial logit model.
+
+        Parameters
+        ----------
+        start_params : array-like, optional
+            The default is a 0 vector.
+        maxiter : int, optional
+            Maximum number of iterations.  The default is 35.
+        method : str, optional
+            `method` can be 'newton', 'ncg', 'bfgs'. The default is 'newton'.
+        tol : float, optional
+            The convergence tolerance for the solver.  The default is
+            1e-08.
+
         Notes
         -----
         The reference category is always the first column of `wendog` for now.
@@ -773,6 +890,10 @@ class MNLogit(DiscreteModel):
 class Weibull(DiscreteModel):
     """
     Binary choice Weibull model
+
+    Notes
+    ------
+    This is unfinished and untested.
     """
 #TODO: add analytic hessian for Weibull
     def initialize(self):
@@ -784,8 +905,8 @@ class Weibull(DiscreteModel):
         """
 #        return np.exp(-np.exp(-X))
         return stats.gumbel_r.cdf(X)
-# these two are equivalent.
-# Greene table and discussion is incorrect.
+        # these two are equivalent.
+        # Greene table and discussion is incorrect.
 
     def pdf(self, X):
         """
@@ -914,12 +1035,38 @@ class NegBinTwo(DiscreteModel):
 #class DiscreteResults(object):
 #TODO: these need to return z scores
 class DiscreteResults(LikelihoodModelResults):
+    """
+    A results class for the discrete dependent variable models.
 
+    Parameters
+    ----------
+    model : A DiscreteModel instance
+    params : array-like
+        The parameters of a fitted model.
+    hessian : array-like
+        The hessian of the fitted model.
+    scale : float
+        A scale parameter for the covariance matrix.
+
+    Attributes
+    ----------
+    llf : float
+        Value of the loglikelihood
+    llr : float
+        Value of the likelihood ratio that all regressors are jointly
+        significant vs. the null of a constant-only model.
+
+    Methods
+    -------
+    margeff - Get marginal effects of the fitted model.
+
+    Notes
+    -----
+    This is not yet finished.
+    """
 #    _cache = {} # needs to be a class attribute for scale setter?
 
     def __init__(self, model, params, hessian, scale=1.):
-        """
-        """
         super(DiscreteResults, self).__init__(model, params,
                 np.linalg.inv(-hessian), scale=1.)
         self._cache = resettable_cache()
@@ -952,7 +1099,7 @@ class DiscreteResults(LikelihoodModelResults):
 
         Notes
         -----
-        Only the defaults are available now.
+        Only the defaults are available now.  This is not yet finished or tested.
         """
         model = self.model
         if params is None:

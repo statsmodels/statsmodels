@@ -45,20 +45,21 @@ anes_exog[:,0] = np.log(anes_exog[:,0] + .1)
 anes_exog = np.column_stack((anes_exog[:,0],anes_exog[:,2],anes_exog[:,5:8]))
 anes_exog = sm.add_constant(anes_exog, prepend=True)
 mlogit_mod = MNLogit(anes_data.endog, anes_exog)
-mlogit_res = MNLogit.fit()
+mlogit_res = mlogit_mod.fit()
 
 # The default method for the fit is Newton-Raphson
 # However, you can use other solvers
-mlogit_res = MNLogit.fit(method='bfgs')
-mlogit_res = MNLogit.fit(method='ncg')
+mlogit_res = mlogit_mod.fit(method='bfgs')
+mlogit_res = mlogit_mod.fit(method='ncg')
 
 # Example from http://www.ats.ucla.edu/stat/r/dae/mlogit.htm
-mlog_data = np.genfromtxt('./mlogit.csv', delimiter=',', names=True)
-mlog_endog = mlog_data['brand']
-mlog_exog = mlog_data[['female','age']].view(float).reshape(-1,2)
-mlog_exog = sm.add_constant(mlog_exog, prepend=True)
-mlog_mod = MNLogit(mlog_endog, mlog_exog)
-mlog_res = mlog_mod.fit(method='newton')
+#mlog_data = np.genfromtxt('http://www.ats.ucla.edu/stat/r/dae/mlogit.csv',
+#        delimiter=',', names=True)
+#mlog_endog = mlog_data['brand']
+#mlog_exog = mlog_data[['female','age']].view(float).reshape(-1,2)
+#mlog_exog = sm.add_constant(mlog_exog, prepend=True)
+#mlog_mod = MNLogit(mlog_endog, mlog_exog)
+#mlog_res = mlog_mod.fit(method='newton')
 #marr = np.array([[22.721396, 10.946741],[-.465941,.057873],
 #        [-.685908,-.317702]])
 # The above are the results from R using Brand 3 as base outcome

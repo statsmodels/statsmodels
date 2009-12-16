@@ -14,6 +14,7 @@ __all__ = ['SUR', 'Sem2SLS']
 # change docs to LHS = RHS
 #TODO: make a dictionary that holds equation specific information
 #rather than these cryptic lists?  Slower to get a dict value?
+#TODO: refine sigma definition
 class SUR(object):
     """
     Seemingly Unrelated Regression
@@ -21,29 +22,80 @@ class SUR(object):
     Parameters
     ----------
     sys : list
-        [endog, exog, endog, exog, ...], length 2*M, where M is the number
-        of equations endog = exog.
-
+        [endog1, exog1, endog2, exog2,...] It will be of length 2 x M,
+        where M is the number of equations endog = exog.
     sigma : array-like
-       M x M array where sigma[i,j] is the covariance between equation i and j
-       #TODO: refine this definition
-
-    dfk : None, 'dfk1', or 'dfk2'.
+        M x M array where sigma[i,j] is the covariance between equation i and j
+    dfk : None, 'dfk1', or 'dfk2'
         Default is None.  Correction for the degrees of freedom
         should be specified for small samples.  See the notes for more
         information.
 
+    Attributes
+    ----------
+    cholsigmainv : array
+        The transpose of the Cholesky decomposition of `pinv_wexog`
+    df_model : array
+        Model degrees of freedom of each equation. p_{m} - 1 where p is
+        the number of regressors for each equation m and one is subtracted
+        for the constant.
+    df_resid : array
+        Residual degrees of freedom of each equation. Number of observations
+        less the number of parameters.
+    endog : array
+        The LHS variables for each equation in the system.
+        It is a M x nobs array where M is the number of equations.
+    exog : array
+        The RHS variable for each equation in the system.
+        It is a nobs x sum(p_{m}) array.  Which is just each
+        RHS array stacked next to each other in columns.
+    history : dict
+        Contains the history of fitting the model. Probably not of interest
+        if the model is fit with `igls`=False.
+    iterations : int
+        The number of iterations until convergence if the model is fit
+        iteratively.
+    nobs : float
+        The number of observations of the equations.
+    normalized_cov_params : array
+        sum(p_{m}) x sum(p_{m}) array
+        :math:`\left[X^{T}\left(\Sigma^{-1}\otimes\boldsymbol{I}\right)X\right]^{-1}
+    pinv_wexog : array
+        The pseudo-inverse of the `wexog`
+    sigma : array
+        M x M covariance matrix of the cross-equation disturbances. See notes.
+    sp_exog : CSR sparse matrix
+        Contains a block diagonal sparse matrix of the design so that
+        exog1 ... exogM are on the diagonal.
+    wendog : array
+        M * nobs x 1 array of the endogenous variables whitened by
+        `cholsigmainv` and stacked into a single column.
+    wexog : array
+        M*nobs x sum(p_{m}) array of the whitened exogenous variables.
+
+    Methods
+    -------
+    initialize
+    fit
+    predict
+    whiten
+
     Notes
     -----
     All individual equations are assumed to be well-behaved, homoeskedastic
-    iid errors.  This is currently under development and not tested.
+    iid errors.  This is basically just an extension of GLS, using sparse
+    matrices.
+
+    .. math:: \\Sigma=\\left[\\begin{array}{cccc}
+\\sigma_{11} & \\sigma_{12} & \\cdots & \\sigma_{1M}\\
+\\sigma_{21} & \\sigma_{22} &  & \\sigma_{2M}\\
+\\vdots &  & \\ddots\\
 
     References
     ----------
-    Zellner (1962), Greene
-
+    Zellner (1962), Greene (2003)
     """
-
+#TODO: Does each equation need nobs to be the same?
     def __init__(self, sys, sigma=None, dfk=None):
         if len(sys) % 2 != 0:
             raise ValueError, "sys must be a list of pairs of endogenous and \
@@ -214,26 +266,25 @@ exogenous variables.  Got length %s" % len(sys)
 # Also should probably have SEM class and estimators as subclasses
 class Sem2SLS(object):
     """
-    Basic Two-Stage Least Squares for Simultaneous equations
+    Two-Stage Least Squares for Simultaneous equations
 
     Parameters
     ----------
-    sys
-
+    sys : list
+        [endog1, exog1, endog2, exog2,...] It will be of length 2 x M,
+        where M is the number of equations endog = exog.
     indep_endog : dict
         A dictionary mapping the equation to the column numbers of the
         the independent endogenous regressors in each equation.
         It is assumed that the system is inputed as broken up into
         LHS and RHS. For now, the values of the dict have to be sequences.
         Note that the keys for the equations should be zero-indexed.
-
     instruments : array
         Array of the exogenous independent variables.
 
     Notes
     -----
     This is unfinished, and the design should be refactored.
-    I just need it for homework.
     Estimation is done by brute force and there is no exploitation of
     the structure of the system.
     """
@@ -322,6 +373,7 @@ exogenous variables.  Got length %s" % len(sys)
 
 class SysResults(LikelihoodModelResults):
     """
+    Not implemented yet.
     """
     def __init__(self, model, params, normalized_cov_params=None, scale=1.):
         super(SysResults, self).__init__(model, params,
