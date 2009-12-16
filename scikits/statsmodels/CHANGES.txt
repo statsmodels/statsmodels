@@ -15,16 +15,29 @@ trunk
    lazy calculations, convert attributes to properties with _cache
  * fix tests to run without rpy
  * expanded examples in examples directory
+ * add PyDTA to lib.io -- functions for reading Stata *.dta binary files
+   and converting
+   them to numpy arrays
+ * made tools.categorical much more robust
+ * add_constant now takes a prepend argument
+ * fix GLS to work with only a one column design
+ * add four new datasets
+    - A dataset from the American National Election Studies (1996)
+    - Grunfeld (1950) investment data
+    - Spector and Mazzeo (1980) program effectiveness data
+    - A US macroeconomic dataset
 
 *sandbox*
 
  * add qqplot in sandbox.graphics
  * add sandbox.tsa (time series analysis) and sandbox.regression (anova)
  * add principal component analysis in sandbox.tools
- * add Seemingly Unrelated Regression (SUR) in sandbox.sysreg
- * add Maximum Likelihood Estimation of models with discrete endogenous variable
-   (Logit, Probit, Multinomial Logit, Poisson, and others) in sandbox.discretemod
-
+ * add Seemingly Unrelated Regression (SUR) and Two-Stage Least Squares
+   for systems of equations in sandbox.sysreg.Sem2SLS
+ * add Maximum Likelihood Estimation of models with discrete endogenous
+   variable (Logit, Probit, Multinomial Logit, Poisson, and others) in
+   sandbox.discretemod
+ * add restricted least squares (RLS)
 
 0.1.0b1
 -------
