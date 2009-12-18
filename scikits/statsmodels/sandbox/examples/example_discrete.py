@@ -3,13 +3,12 @@
 
 import numpy as np
 from scikits.statsmodels.sandbox.discretemod import *
-from scikits.statsmodels.sandbox.discretemod import Weibull
 import scikits.statsmodels as sm
 
 # Load the data from Spector and Mazzeo (1980)
-# Examples follow Greene's Econometric Analysis Ch. 22 (5th Edition).
+# Examples follow Greene's Econometric Analysis Ch. 21 (5th Edition).
 spector_data = sm.datasets.spector.Load()
-spector_data.exog = sm.add_constant(spector_data.exog, prepend=True)
+spector_data.exog = sm.add_constant(spector_data.exog)
 
 # Linear Probability Model using OLS
 lpm_mod = sm.OLS(spector_data.endog,spector_data.exog)
@@ -23,11 +22,6 @@ logit_res = logit_mod.fit()
 probit_mod = Probit(spector_data.endog, spector_data.exog)
 probit_res = probit_mod.fit()
 
-# Weibull Model
-#TODO: this may be incorrect until tests are finished
-weibull_mod = Weibull(spector_data.endog, spector_data.exog)
-weibull_res = weibull_mod.fit(method='newton')
-
 print "This example is based on Greene Table 21.1 5th Edition"
 print "Linear Model"
 print lmp_res.params
@@ -35,22 +29,22 @@ print "Logit Model"
 print logit_res.params
 print "Probit Model"
 print probit_res.params
-print "Typo in Greene for Weibull, replaced with logWeibull or Gumbel"
-print "(Tentatively) Weibull Model"
-print weibull_res.params
+#print "Typo in Greene for Weibull, replaced with logWeibull or Gumbel"
+#print "(Tentatively) Weibull Model"
+#print weibull_res.params
 
 anes_data = sm.datasets.anes96.Load()
 anes_exog = anes_data.exog
 anes_exog[:,0] = np.log(anes_exog[:,0] + .1)
 anes_exog = np.column_stack((anes_exog[:,0],anes_exog[:,2],anes_exog[:,5:8]))
-anes_exog = sm.add_constant(anes_exog, prepend=True)
+anes_exog = sm.add_constant(anes_exog)
 mlogit_mod = MNLogit(anes_data.endog, anes_exog)
 mlogit_res = mlogit_mod.fit()
 
 # The default method for the fit is Newton-Raphson
 # However, you can use other solvers
 mlogit_res = mlogit_mod.fit(method='bfgs')
-mlogit_res = mlogit_mod.fit(method='ncg')
+mlogit_res = mlogit_mod.fit(method='ncg') # this takes forever
 
 # Example from http://www.ats.ucla.edu/stat/r/dae/mlogit.htm
 #mlog_data = np.genfromtxt('http://www.ats.ucla.edu/stat/r/dae/mlogit.csv',

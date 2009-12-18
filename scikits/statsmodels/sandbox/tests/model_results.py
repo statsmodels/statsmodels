@@ -4,7 +4,7 @@ move out of the sandbox.
 """
 import numpy as np
 
-class Anes(object):
+class Anes():
     def __init__(self):
         """
         Results are from R nnet package.
@@ -21,3 +21,52 @@ class Anes(object):
 #TODO: the below will change when we return a different
         self.params = params.reshape(6,-1).T
 
+class Spector():
+    """
+    Results are from Stata 11
+    """
+    def __init__(self):
+        self.nobs = 32
+        self.params = None
+#        self.stderrvalues
+#       only test variance covariance?
+        self.cov_params = None
+
+    def logit(self):
+        self.params = [2.82611297201, .0951576702557, 2.37868772835,
+                -13.0213483201]
+        self.cov_params = [[1.59502033639, -.036920566629, .427615725153,
+                -4.57347950298], [-.036920566629, .0200375937069,
+                .0149126464275, -.346255757562], [.427615725153 ,
+                .0149126464275, 1.13329715236, -2.35916128427],
+                [-4.57347950298, -.346255757562, -2.35916128427,
+                24.3179625937]]
+        self.bse = [1.26294114526, .141554207662, 1.06456430165, 4.93132462871]
+        self.llf = -12.8896334653335
+        self.llnull = -20.5917296966173
+        self.df_model = 3
+        self.df_resid = 32 - 4  #TODO: is this right? not reported in stata
+        self.llr = 15.4041924625676
+        self.prsquared = .374038332124624
+        self.llr_pvalue = .00150187761112892
+        self.aic = 33.779266930667
+        self.bic = 39.642210541866
+
+    def probit(self):
+        self.params = [1.62581025407, .051728948442, 1.42633236818,
+                -7.45232041607]
+        self.cov_params =    [[.481472955383, -.01891350017, .105439226234,
+            -1.1696681354], [-.01891350017, .00703757594, .002471864882,
+            -.101172838897], [.105439226234, .002471864882, .354070126802,
+            -.594791776765], [-1.1696681354, -.101172838897, -.594791776765,
+            6.46416639958]]
+        self.bse = [.693882522754, .083890261293, .595037920474, 2.54247249731]
+        self.llf = -12.8188033249334
+        self.llnull = -20.5917296966173
+        self.df_model = 3
+        self.df_resid = 32 - 4
+        self.llr = 15.5458527433678
+        self.prsquared = .377478069409622
+        self.llr_pvalue = .00140489496775855
+        self.aic = 33.637606649867
+        self.bic = 39.500550261066

@@ -80,7 +80,8 @@ class DiscreteModel(LikelihoodModel):
         scikits.statsmodels.model.LikelihoodModel.__init__
         and should contain any preprocessing that needs to be done for a model.
         """
-        pass
+        self.df_model = float(tools.rank(self.exog) - 1) # assumes constant
+        self.df_resid = float(self.exog.shape[0] - tools.rank(self.exog))
 
     def cdf(self, X):
         """
@@ -887,62 +888,64 @@ class MNLogit(DiscreteModel):
         return mlefit
 
 
-class Weibull(DiscreteModel):
-    """
-    Binary choice Weibull model
-
-    Notes
-    ------
-    This is unfinished and untested.
-    """
-#TODO: add analytic hessian for Weibull
-    def initialize(self):
-        pass
-
-    def cdf(self, X):
-        """
-        Gumbell (Log Weibull) cumulative distribution function
-        """
-#        return np.exp(-np.exp(-X))
-        return stats.gumbel_r.cdf(X)
-        # these two are equivalent.
-        # Greene table and discussion is incorrect.
-
-    def pdf(self, X):
-        """
-        Gumbell (LogWeibull) probability distribution function
-        """
-        return stats.gumbel_r.pdf(X)
-
-    def loglike(self, params):
-        """
-        Loglikelihood of Weibull distribution
-        """
-        X = self.exog
-        cdf = self.cdf(np.dot(X,params))
-        y = self.endog
-        return np.sum(y*np.log(cdf) + (1-y)*np.log(1-cdf))
-
-    def score(self, params):
-        y = self.endog
-        X = self.exog
-        F = self.cdf(np.dot(X,params))
-        f = self.pdf(np.dot(X,params))
-        term = (y*f/F + (1 - y)*-f/(1-F))
-        return np.dot(term,X)
-
-    def hessian(self, params):
-        hess = nd.Jacobian(self.score)
-        return hess(params)
-
-    def fit(self, start_params=None, method='newton', maxiter=35, tol=1e-08):
-# The example had problems with all zero start values, Hessian = 0
-        if start_params is None:
-            start_params = OLS(self.endog, self.exog).fit().params
-        mlefit = super(Weibull, self).fit(start_params=start_params,
-                method=method, maxiter=maxiter, tol=tol)
-        return mlefit
-
+#TODO: Weibull can replaced by a survival analsysis function
+# like stat's streg (The cox model as well)
+#class Weibull(DiscreteModel):
+#    """
+#    Binary choice Weibull model
+#
+#    Notes
+#    ------
+#    This is unfinished and untested.
+#    """
+##TODO: add analytic hessian for Weibull
+#    def initialize(self):
+#        pass
+#
+#    def cdf(self, X):
+#        """
+#        Gumbell (Log Weibull) cumulative distribution function
+#        """
+##        return np.exp(-np.exp(-X))
+#        return stats.gumbel_r.cdf(X)
+#        # these two are equivalent.
+#        # Greene table and discussion is incorrect.
+#
+#    def pdf(self, X):
+#        """
+#        Gumbell (LogWeibull) probability distribution function
+#        """
+#        return stats.gumbel_r.pdf(X)
+#
+#    def loglike(self, params):
+#        """
+#        Loglikelihood of Weibull distribution
+#        """
+#        X = self.exog
+#        cdf = self.cdf(np.dot(X,params))
+#        y = self.endog
+#        return np.sum(y*np.log(cdf) + (1-y)*np.log(1-cdf))
+#
+#    def score(self, params):
+#        y = self.endog
+#        X = self.exog
+#        F = self.cdf(np.dot(X,params))
+#        f = self.pdf(np.dot(X,params))
+#        term = (y*f/F + (1 - y)*-f/(1-F))
+#        return np.dot(term,X)
+#
+#    def hessian(self, params):
+#        hess = nd.Jacobian(self.score)
+#        return hess(params)
+#
+#    def fit(self, start_params=None, method='newton', maxiter=35, tol=1e-08):
+## The example had problems with all zero start values, Hessian = 0
+#        if start_params is None:
+#            start_params = OLS(self.endog, self.exog).fit().params
+#        mlefit = super(Weibull, self).fit(start_params=start_params,
+#                method=method, maxiter=maxiter, tol=tol)
+#        return mlefit
+#
 class NegBinTwo(DiscreteModel):
     """
     NB2 Negative Binomial model.
@@ -1050,26 +1053,77 @@ class DiscreteResults(LikelihoodModelResults):
 
     Attributes
     ----------
+    aic : float
+        Akaike information criterion.  -2*(`llf` - p) where p is the number
+        of regressors including the intercept.
+    bic : float
+        Bayesian information criterion. -2*`llf` + ln(`nobs`)*p where p is the
+        number of regressors including the intercept.
+    bse : array
+        The standard errors of the coefficients.
+    df_resid : float
+        See model definition.
+    df_model : float
+        See model definition.
     llf : float
         Value of the loglikelihood
+    llnull : float
+        Value of the constant-only loglikelihood
     llr : float
-        Value of the likelihood ratio that all regressors are jointly
-        significant vs. the null of a constant-only model.
+        Likelihood ratio chi-squared statistic; -2*(`llnull` - `llf`)
+    llr_pvalue : float
+        The chi-squared probability of getting a log-likelihood ratio
+        statistic greater than llr.  llr has a chi-squared distribution
+        with degrees of freedom `df_model`.
+    prsquared : float
+        McFadden's pseudo-R-squared. 1 - (`llf`/`llnull`)
 
     Methods
     -------
     margeff - Get marginal effects of the fitted model.
-
-    Notes
-    -----
-    This is not yet finished.
     """
-#    _cache = {} # needs to be a class attribute for scale setter?
 
     def __init__(self, model, params, hessian, scale=1.):
         super(DiscreteResults, self).__init__(model, params,
                 np.linalg.inv(-hessian), scale=1.)
+        self.df_model = model.df_model
+        self.df_resid = model.df_resid
         self._cache = resettable_cache()
+
+    @cache_readonly
+    def bse(self):
+        return np.sqrt(np.diag(self.cov_params()))
+
+    @cache_readonly
+    def llf(self):
+        model = self.model
+        return model.loglike(self.params)
+
+    @cache_readonly
+    def prsquared(self):
+        return 1 - self.llf/self.llnull
+
+    @cache_readonly
+    def llr(self):
+        return -2*(self.llnull - self.llf)
+
+    @cache_readonly
+    def llr_pvalue(self):
+        return stats.chisqprob(self.llr, self.df_model)
+
+    @cache_readonly
+    def llnull(self):
+        model = self.model # will this use a new instance?
+        null = model.__class__(model.endog, np.ones(model.nobs)).fit()
+        return null.llf
+
+    @cache_readonly
+    def aic(self):
+        return -2*(self.llf - (self.df_model+1))
+
+    @cache_readonly
+    def bic(self):
+        return -2*self.llf + np.log(self.nobs)*(self.df_model+1)
 
     def margeff(self, params=None, loc='meanfx', method='dydx', exog=None,
         nodiscrete=None):
@@ -1127,19 +1181,6 @@ class DiscreteResults(LikelihoodModelResults):
 
 
         return change[ind]
-
-    @cache_readonly
-    def llf(self):
-        model = self.model
-        return model.loglike(self.params)
-
-#untested
-    @cache_readonly
-    def llr(self):
-        model = self.model # will this use a new instance?
-        null = model.__class__(model.endog, np.ones(model.nobs)).fit()
-        # use the same method to fit this ?
-        return -2*(self.llf - null.llf)
 
 if __name__=="__main__":
     import numpy as np
