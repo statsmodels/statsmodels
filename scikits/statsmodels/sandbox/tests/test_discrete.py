@@ -63,6 +63,12 @@ class CheckModelResults(object):
         assert_equal(self.res1.df_model, self.res2.df_model)
         assert_equal(self.res1.df_resid, self.res2.df_resid)
 
+    def test_aic(self):
+        assert_almost_equal(self.res1.aic, self.res2.aic)
+
+    def test_bic(self):
+        assert_almost_equal(self.res1.bic, self.res2.bic)
+
 class TestProbitNewton(CheckModelResults):
     def __init__(self):
         data = sm.datasets.spector.Load()

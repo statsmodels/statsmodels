@@ -43,8 +43,9 @@ mlogit_res = mlogit_mod.fit()
 
 # The default method for the fit is Newton-Raphson
 # However, you can use other solvers
-mlogit_res = mlogit_mod.fit(method='bfgs')
-mlogit_res = mlogit_mod.fit(method='ncg') # this takes forever
+mlogit_res = mlogit_mod.fit(method='bfgs', maxiter=100)
+# needs a lot of iterations to get it right?
+#mlogit_res = mlogit_mod.fit(method='ncg') # this takes forever
 
 # Example from http://www.ats.ucla.edu/stat/r/dae/mlogit.htm
 #mlog_data = np.genfromtxt('http://www.ats.ucla.edu/stat/r/dae/mlogit.csv',

@@ -707,12 +707,14 @@ class MNLogit(DiscreteModel):
         Turns the endogenous variable into an array of dummies and assigns
         J and K.
         """
-        #This is also a "whiten" method as used in other models
+        #This is also a "whiten" method as used in other models (eg regression)
         wendog, self.names = tools.categorical(self.endog, drop=True,
                 dictnames=True)
         self.wendog = wendog    # don't drop first category
         self.J = float(wendog.shape[1])
         self.K = float(self.exog.shape[1])
+        super(MNLogit, self).initialize()
+
 
     def _eXB(self, params, exog=None):
         """
@@ -884,9 +886,9 @@ class MNLogit(DiscreteModel):
                     (self.wendog.shape[1]-1)))
         mlefit = super(MNLogit, self).fit(start_params=start_params,
                 maxiter=maxiter, method=method, tol=tol)
-        mlefit.params = mlefit.params.reshape(-1, self.exog.shape[1])
+        params = mlefit.params.reshape(-1, self.exog.shape[1])
+        mlefit = DiscreteResults(self, params, self.hessian(params))
         return mlefit
-
 
 #TODO: Weibull can replaced by a survival analsysis function
 # like stat's streg (The cox model as well)
@@ -1088,11 +1090,16 @@ class DiscreteResults(LikelihoodModelResults):
                 np.linalg.inv(-hessian), scale=1.)
         self.df_model = model.df_model
         self.df_resid = model.df_resid
+        self.nobs = model.nobs
         self._cache = resettable_cache()
 
     @cache_readonly
     def bse(self):
-        return np.sqrt(np.diag(self.cov_params()))
+        bse = np.sqrt(np.diag(self.cov_params()))
+        if self.params.ndim == 1 or self.params.shape[1] == 1:
+            return bse
+        else:
+            return bse.reshape(self.params.shape)
 
     @cache_readonly
     def llf(self):
