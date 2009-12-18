@@ -707,13 +707,15 @@ class MNLogit(DiscreteModel):
         Turns the endogenous variable into an array of dummies and assigns
         J and K.
         """
+        super(MNLogit, self).initialize()
         #This is also a "whiten" method as used in other models (eg regression)
         wendog, self.names = tools.categorical(self.endog, drop=True,
                 dictnames=True)
         self.wendog = wendog    # don't drop first category
         self.J = float(wendog.shape[1])
         self.K = float(self.exog.shape[1])
-        super(MNLogit, self).initialize()
+        self.df_model *= (self.J-1) # for each J - 1 equation.
+        self.df_resid = self.nobs - self.df_model - (self.J-1)
 
 
     def _eXB(self, params, exog=None):
@@ -1126,11 +1128,18 @@ class DiscreteResults(LikelihoodModelResults):
 
     @cache_readonly
     def aic(self):
-        return -2*(self.llf - (self.df_model+1))
+        if hasattr(self.model, "J"):
+            return -2*(self.llf - (self.df_model+self.model.J-1))
+        else:
+            return -2*(self.llf - (self.df_model+1))
 
     @cache_readonly
     def bic(self):
-        return -2*self.llf + np.log(self.nobs)*(self.df_model+1)
+        if hasattr(self.model, "J"):
+            return -2*self.llf + np.log(self.nobs)*\
+                    (self.df_model+self.model.J-1)
+        else:
+            return -2*self.llf + np.log(self.nobs)*(self.df_model+1)
 
     def margeff(self, params=None, loc='meanfx', method='dydx', exog=None,
         nodiscrete=None):

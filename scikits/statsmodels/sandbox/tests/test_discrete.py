@@ -26,9 +26,9 @@ class CheckModelResults(object):
     def test_conf_int(self):
         pass
 
-    def test_cov_params(self):
-        assert_almost_equal(self.res1.cov_params(), self.res2.cov_params,
-                DECIMAL)
+#    def test_cov_params(self):
+#        assert_almost_equal(self.res1.cov_params(), self.res2.cov_params,
+#                DECIMAL)
 
     def test_llf(self):
         assert_almost_equal(self.res1.llf, self.res2.llf, DECIMAL)
@@ -52,22 +52,15 @@ class CheckModelResults(object):
     def test_bse(self):
         assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL)
 
-    def test_t(self):
-        pass
-#TODO: these need to be z scores.  this stuff should be a mixin class
-
-    def test_t_test(self):
-        pass
-
     def test_dof(self):
         assert_equal(self.res1.df_model, self.res2.df_model)
         assert_equal(self.res1.df_resid, self.res2.df_resid)
 
     def test_aic(self):
-        assert_almost_equal(self.res1.aic, self.res2.aic)
+        assert_almost_equal(self.res1.aic, self.res2.aic, DECIMAL)
 
     def test_bic(self):
-        assert_almost_equal(self.res1.bic, self.res2.bic)
+        assert_almost_equal(self.res1.bic, self.res2.bic, DECIMAL)
 
 class TestProbitNewton(CheckModelResults):
     def __init__(self):
@@ -94,9 +87,24 @@ class TestLogitNewton(CheckModelResults):
 #    raise SkipTest("Test not written yet")
 
 #@dec.skipif(True, "Test not written yet")
-#class testMNLogit(CheckModelResults):
-#    raise SkipTest("Test not written yet")
+class TestMNLogitNewtonBaseZero(CheckModelResults):
+    def __init__(self):
+        data = sm.datasets.anes96.Load()
+        exog = data.exog
+        exog[:,0] = np.log(exog[:,0] + .1)
+        exog = np.column_stack((exog[:,0],exog[:,2],
+            exog[:,5:8]))
+        exog = sm.add_constant(exog)
+        self.res1 = MNLogit(data.endog, exog).fit(method="newton")
+        res2 = model_results.Anes()
+        res2.mnlogit_basezero()
+        self.res2 = res2
 
+    def test_j(self):
+        assert_equal(self.res1.model.J, self.res2.J)
+
+    def test_k(self):
+        assert_equal(self.res1.model.K, self.res2.K)
 
 if __name__ == "__main__":
     import nose
