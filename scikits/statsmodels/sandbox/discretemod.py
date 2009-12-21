@@ -1141,6 +1141,30 @@ class DiscreteResults(LikelihoodModelResults):
         else:
             return -2*self.llf + np.log(self.nobs)*(self.df_model+1)
 
+    def conf_int(self, alpha=.05, cols=None):
+        if hasattr(self.model, "J"):
+            confint = super(DiscreteResults, self).conf_int(alpha=alpha,
+                    cols=cols)
+            return confint.transpose(0,2,1).reshape(self.model.J-1,self.model.K,2)
+        else:
+            return super(DiscreteResults, self).conf_int(alpha=alpha, cols=cols)
+    conf_int.__doc__ = LikelihoodModelResults.conf_int.__doc__
+#TODO: does the above work?
+
+#TODO: the baove and the below will change if we merge the mixin branch
+    def t(self, column=None):
+        if hasattr(self.model, "J"):
+            #TODO: make this more robust once this is sorted
+            if column is None:
+                column = range(int(self.model.K))
+            else:
+                column = np.asarray(column)
+            return self.params/self.bse[:,column]
+        else:
+            return super(DiscreteResults, self).t(column=column)
+    t.__doc__ = LikelihoodModelResults.t.__doc__
+
+
     def margeff(self, params=None, loc='meanfx', method='dydx', exog=None,
         nodiscrete=None):
         """
