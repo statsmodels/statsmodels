@@ -24,7 +24,13 @@ class CheckModelResults(object):
         assert_almost_equal(self.res1.params, self.res2.params, DECIMAL)
 
     def test_conf_int(self):
-        pass
+        assert_almost_equal(self.res1.conf_int(), self.res2.conf_int, DECIMAL)
+
+    def test_zstat(self):
+        assert_almost_equal(self.res1.t(), self.res2.z, DECIMAL)
+
+    def pvalues(self):
+        assert_almost_equal(self.res1.pvalues, self.res2.pvalues, DECIMAL)
 
 #    def test_cov_params(self):
 #        assert_almost_equal(self.res1.cov_params(), self.res2.cov_params,

@@ -529,7 +529,7 @@ T statistics'
 
         """
         #TODO: simplify structure, DRY
-        if self.__class__.__name__ in ['RLMResults','GLMResults']:
+        if self.__class__.__name__ in ['RLMResults','GLMResults','DiscreteResults']:
             dist = norm
         else:
             dist = t
