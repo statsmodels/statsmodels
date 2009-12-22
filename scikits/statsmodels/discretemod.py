@@ -19,16 +19,12 @@ W. Greene. `Econometric Analysis`. Prentice Hall, 5th. edition. 2003.
 __all__ = ["Poisson","Logit","Probit","MNLogit"]
 
 import numpy as np
-from scikits.statsmodels.model import LikelihoodModel, LikelihoodModelResults
-from scikits.statsmodels import tools
-from scikits.statsmodels.decorators import *
-from scikits.statsmodels.regression import OLS
+from model import LikelihoodModel, LikelihoodModelResults
+import tools
+from decorators import *
+from regression import OLS
 from scipy import stats, factorial, special, optimize # opt just for nbin
-import numdifftools as nd #This will be removed when all have analytic hessians
-
-#TODO: all of the fit methods that call super can be taken out
-# once the ResultsClass is settled, except of course the ones
-# that need to do some preprocessing before fit is called
+#import numdifftools as nd #This will be removed when all have analytic hessians
 
 #TODO: add options for the parameter covariance/variance
 # ie., OIM, EIM, and BHHH see Green 21.4
@@ -1225,7 +1221,6 @@ class DiscreteResults(LikelihoodModelResults):
 if __name__=="__main__":
     import numpy as np
     import scikits.statsmodels as sm
-
 # Scratch work for negative binomial models
 # dvisits was written using an R package, I can provide the dataset
 # on request until the copyright is cleared up

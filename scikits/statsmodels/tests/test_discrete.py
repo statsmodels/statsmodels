@@ -10,10 +10,9 @@ tests.
 
 import numpy as np
 from numpy.testing import *
-from scikits.statsmodels.sandbox.discretemod import *
+from scikits.statsmodels.discretemod import *
 import scikits.statsmodels as sm
 import model_results
-from nose import SkipTest
 
 DECIMAL = 4
 DECIMAL_less = 3
