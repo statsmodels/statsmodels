@@ -1,5 +1,11 @@
 """
 Tests for discrete models
+
+Notes
+-----
+DECIMAL_less is used because it seems that there is a loss of precision
+in the Stata *.dta -> *.csv output, NOT the estimator for the Poisson
+tests.
 """
 
 import numpy as np
@@ -43,7 +49,7 @@ class CheckModelResults(object):
         assert_almost_equal(self.res1.llnull, self.res2.llnull, DECIMAL)
 
     def test_llr(self):
-        assert_almost_equal(self.res1.llr, self.res2.llr, DECIMAL)
+        assert_almost_equal(self.res1.llr, self.res2.llr, DECIMAL_less)
 
     def test_llr_pvalue(self):
         assert_almost_equal(self.res1.llr_pvalue, self.res2.llr_pvalue, DECIMAL)
@@ -63,10 +69,10 @@ class CheckModelResults(object):
         assert_equal(self.res1.df_resid, self.res2.df_resid)
 
     def test_aic(self):
-        assert_almost_equal(self.res1.aic, self.res2.aic, DECIMAL)
+        assert_almost_equal(self.res1.aic, self.res2.aic, DECIMAL_less)
 
     def test_bic(self):
-        assert_almost_equal(self.res1.bic, self.res2.bic, DECIMAL)
+        assert_almost_equal(self.res1.bic, self.res2.bic, DECIMAL_less)
 
 class TestProbitNewton(CheckModelResults):
     def __init__(self):
@@ -88,11 +94,16 @@ class TestLogitNewton(CheckModelResults):
         res2.logit()
         self.res2 = res2
 
-#@dec.skipif(True, "Test not written yet")
-#class TestPoisson(CheckModelResults):
-#    raise SkipTest("Test not written yet")
+class TestPoissonNewton(CheckModelResults):
+    def __init__(self):
+        data = sm.datasets.randhie.Load()
+        nobs = len(data.endog)
+        exog = sm.add_constant(data.exog.view(float).reshape(nobs,-1))
+        self.res1 = Poisson(data.endog, exog).fit(method='newton')
+        res2 = model_results.RandHIE()
+        res2.poisson()
+        self.res2 = res2
 
-#@dec.skipif(True, "Test not written yet")
 class TestMNLogitNewtonBaseZero(CheckModelResults):
     def __init__(self):
         data = sm.datasets.anes96.Load()

@@ -106,9 +106,9 @@ class Load():
 #        nobs = len(__dict__[names[0]])
 #        endog = np.zeros(nobs, dtype=[('mdvis', float)])
         self.endog = np.array(__dict__[names[0]]).astype(float)
-        design_dt = [_.lower() for _ in names]
+        design_dt = [_.lower() for _ in names[1:]]
         design_dt = np.dtype(zip(design_dt, [float]*len(design_dt)))
         exog = np.zeros(len(self.endog), dtype=design_dt)
-        for i in design_dt.names[1:]:
+        for i in design_dt.names:
             exog[i] = np.array(__dict__[i.upper()]).astype(float)
         self.exog = exog
