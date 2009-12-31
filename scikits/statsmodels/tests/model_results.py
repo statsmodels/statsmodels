@@ -649,6 +649,68 @@ class Spector():
         self.conf_int = [[.3507938,5.301432],[-.1822835,.3725988],[.29218,
                 4.465195],[-22.68657,-3.35613]]
         self.pvalues = [.0252390974, .5014342039, .0254552063, .0082774596]
+        self.margeff_nodummy_dydx = [.36258084688424,.01220841099085,
+                .30517768382304]
+        self.margeff_nodummy_dydxmean = [.53385885781692,.01797548988961,
+                .44933926079386]
+        self.margeff_nodummy_dydxmedian = [.25009492465091,.00842091261329,
+                .2105003352955]
+
+        self.margeff_nodummy_dydxzero = [6.252993785e-06,2.105437138e-07,
+                5.263030788e-06]
+        self.margeff_nodummy_dyex = [1.1774000792198,.27896245178384,
+                .16960002159996]
+        self.margeff_nodummy_dyexmean = [1.6641381583512,.39433730945339,
+                .19658592659731]
+        self.margeff_nodummy_dyexmedian = [.76654095836557,.18947053379898,0]
+        self.margeff_nodummy_dyexzero = [0,0,0]
+        self.margeff_nodummy_eydx = [1.8546366266779,.06244722072812,
+                1.5610138123033]
+        self.margeff_nodummy_eydxmean = [2.1116143062702,.0710998816585,
+                1.7773072368626]
+        self.margeff_nodummy_eydxmedian = [2.5488082240624,.0858205793373,
+                2.1452853812126]
+        self.margeff_nodummy_eydxzero = [2.8261067189993,.0951574597115,
+                2.3786824653103]
+        self.margeff_nodummy_eyex = [5.4747106798973,1.3173389907576,
+                .44600395466634]
+        self.margeff_nodummy_eyexmean = [6.5822977203268,1.5597536538833,
+                .77757191612739]
+        self.margeff_nodummy_eyexmedian = [7.8120973525952,1.9309630350892,0]
+        self.margeff_nodummy_eyexzero = [0,0,0]
+        # for below GPA = 2.0, psi = 1
+        self.margeff_nodummy_atexog1 = [.1456333017086,.00490359933927,
+                .12257689308426]
+        # for below GPA at mean, tuce = 21, psi = 0
+        self.margeff_nodummy_atexog2 = [.25105129214546,.00845311433473,
+                .2113052923675]
+        self.margeff_dummy_dydx = [.36258084688424,.01220841099085,
+                .35751515254729]
+        self.margeff_dummy_dydxmean = [.53385885781692,.01797548988961,
+                .4564984096959]
+#        self.margeff_dummy_dydxmedian
+#        self.margeff_dummy_dydxzero
+        self.margeff_dummy_eydx = [1.8546366266779,.06244722072812,
+                1.5549034398832]
+        self.margeff_dummy_eydxmean = [2.1116143062702,.0710998816585,
+                1.6631775707188]
+#        self.margeff_dummy_eydxmedian
+#        self.margeff_dummy_eydxzero
+# Factor variables not allowed in below
+#        self.margeff_dummy_dyex
+#        self.margeff_dummy_dyexmean
+#        self.margeff_dummy_dyexmedian
+#        self.margeff_dummy_dyexzero
+#        self.margeff_dummy_eyex
+#        self.margeff_dummy_eyex
+#        self.margeff_dummy_eyex
+#        self.margeff_dummy_eyex
+        # for below GPA = 2.0, psi = 1
+        self.margeff_dummy_atexog1 = [.1456333017086,.00490359933927,
+                .0494715429937]
+        # for below GPA at mean, tuce = 21, psi = 0
+        self.margeff_dummy_atexog2 = [.25105129214546,.00845311433473,
+                .44265645632553]
 
     def probit(self):
         self.params = [1.62581025407, .051728948442, 1.42633236818,

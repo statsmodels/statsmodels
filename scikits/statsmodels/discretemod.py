@@ -1225,9 +1225,10 @@ class DiscreteResults(LikelihoodModelResults):
                 d(lny)/d(lnx)
             'dyex' - estimate semielasticity -- dy/d(lnx)
             'eydx' - estimate semeilasticity -- d(lny)/dx
-            Note that tranformations are done before the `at` option, so, for
-            instance, mean(ln(x)) would be used.  'dyex' and 'eyex' do not
-            make sense for factor variables.
+            Note that tranformations are done after each observation is
+            calculated.  Semi-elasticities for binary variables are not
+            reported. 'dyex' and 'eyex' do not make sense for discrete
+            variables.
         atexog : array-like, optional
             Optionally, you can provide the exogenous variables over which to
             get the marginal effects.  This should be a dictionary with the key
@@ -1237,7 +1238,8 @@ class DiscreteResults(LikelihoodModelResults):
             If False, treats binary variables (if present) as continuous.  This
             is the default.  Else if True, treats binary variables as
             changing from 0 to 1.  Note that any variable that is either 0 or 1
-            is treated as a dummy.
+            is treated as binary.  Each binary variable is treated separately
+            for now.
         count : bool, optional
             If False, treats count variables (if present) as continuous.  This
             is the default.  Else if True, the marginal effect is the
@@ -1253,13 +1255,9 @@ class DiscreteResults(LikelihoodModelResults):
 #            of type float), then `factor` may be a dict with the zero-indexed
 #            column of the factor and the value should be the base-outcome.
 
-#TODO: is it worth it to have two helper functions that automatically
-#determine binary variable and count variables?
-
         model = self.model
         method = method.lower()
         at = at.lower()
-#        exog = self.model.exog.copy() # makes a copy because it changes values
         if params is None:
             params = self.params
         else:
@@ -1267,6 +1265,11 @@ class DiscreteResults(LikelihoodModelResults):
             # could prob use a shape check here (do we even need this option?)
         if not at in ['overall','mean','median','zero','all']:
             raise ValueError, "%s not a valid option for `at`." % at
+
+        exog = model.exog.copy() # copy because values are changed
+        ind = exog.var(0) != 0 # index for non-constants
+
+        # get user instructions
         if dummy == True or count == True:
             if method in ['dyex','eyex']:
                 raise ValueError, "%s not allowed for discrete \
@@ -1274,29 +1277,29 @@ variables" % method
             if at in ['median', 'zero']:
                 raise ValueError, "%s not allowed for discrete \
 variables" % at
-        exog = model.exog.copy() # copy because values are changed
-        ind = exog.var(0) != 0 # index for non-constants
-        if at == 'mean':
-            tmp = np.zeros_like(exog)
-            tmp[:] = exog.mean(0)
-            exog = tmp
-        elif at == 'median':
-            tmp = np.zeros_like(exog)
-            tmp[:] = np.median(exog, axis=0)
-            exog = tmp
-        elif at == 'zero':
-            exog = np.ones_like(exog)
-            exog[:,ind] -= 1
-        if atexog != None:
+            if dummy:
+                dummy_ind = isdummy(exog)
+            if count:
+                count_ind = iscount(exog)
+        if atexog is not None:
             if not isinstance(atexog, dict):
                 raise ValueError, "exog, if not None, should be a dict. \
 Got %s" % type(atexog)
-                for key in atexog:
-                    exog[:,key] = atexog[key]
+            for key in atexog:
+                exog[:,key] = atexog[key]
+
+        if at == 'mean':
+            exog[:,ind] = exog.mean(0)[ind]
+        elif at == 'median':
+            exog[:,ind] = np.median(exog, axis=0)[ind]
+        elif at == 'zero':
+            exog[:,ind] = 0
         if method not in ['dydx','eyex','dyex','eydx']:
             raise ValueError, "method is not understood.  Got %s" % method
         effects = np.dot(model.pdf(np.dot(exog,params))[:,None],
                     params[None,:])
+        fittedvalues = np.dot(exog, params) #TODO: add a predict method
+                                            # that takes an exog kwd
         if 'ex' in method:
             effects *= exog
         if 'dy' in method:
@@ -1307,7 +1310,7 @@ Got %s" % type(atexog)
             else:
                 effects = effects[0,ind]
         if 'ey' in method:
-            effects /= model.cdf(self.fittedvalues[:,None])
+            effects /= model.cdf(fittedvalues[:,None])
             if at == 'all':
                 effects = effects[:,ind]
             elif at == 'overall':
@@ -1315,21 +1318,21 @@ Got %s" % type(atexog)
             else:
                 effects = effects[0,ind]
         if dummy == True:
-            dummy_ind = isdummy(exog)
             for i, tf in enumerate(dummy_ind):
                 if tf == True:
                     exog0 = exog.copy()
                     exog0[:,i] = 0
+                    fittedvalues0 = np.dot(exog0,params)
                     exog1 = exog.copy()
                     exog1[:,i] = 1
+                    fittedvalues1 = np.dot(exog1, params)
                     effect0 = model.cdf(np.dot(exog0, params))
                     effect1 = model.cdf(np.dot(exog1, params))
                     if 'ey' in method:
-                        effect0 /= model.cdf(self.fittedvalues)
-                        effect1 /= model.cdf(self.fittedvalues)
+                        effect0 /= model.cdf(fittedvalues0)
+                        effect1 /= model.cdf(fittedvalues1)
                     effects[i] = (effect1 - effect0).mean()
         if count == True:
-            count_ind = iscount(exog)
             for i, tf in enumerate(count_ind):
                 if tf == True:
                     exog0 = exog.copy()
@@ -1337,9 +1340,15 @@ Got %s" % type(atexog)
                     exog1[:,i] += 1
                     effect0 = model.cdf(np.dot(exog0, params))
                     effect1 = model.cdf(np.dot(exog1, params))
-                    if 'ey' in method:
-                        effect0 /= self.fittedvalues
-                        effect1 /= self.fittedvalues
+#                    if 'ey' in method:
+#                        #TODO: don't know if this is theoretically correct
+#                        fittedvalues0 = np.dot(exog0,params)
+#                        fittedvalues1 = np.dot(exog1,params)
+#                        weight1 = model.exog[:,i].mean()
+#                        weight0 = 1 - weight1
+#                        wfv = (.5*model.cdf(fittedvalues1) + \
+#                                .5*model.cdf(fittedvalues0)).mean(0)
+#                        effects[i] = (effect1 - effect0)/wfv
                     effects[i] = (effect1 - effect0).mean()
         # Set standard error of the marginal effects by Delta method.
         self.margeff_se = None
