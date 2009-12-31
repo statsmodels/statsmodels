@@ -31,22 +31,54 @@ from scipy import stats, factorial, special, optimize # opt just for nbin
 
 def isdummy(X):
     """
-    Given an array X, returns a column index for the dummy variables.
+    Given an array X, returns a boolean column index for the dummy variables.
+
+    Parameters
+    ----------
+    X : array-like
+        A 1d or 2d array of numbers
 
     Examples
     --------
-    >>> X = np.random.randint(0, 2, size=(15,5)).view(float)
-    >>> X = np.asarray(X, dtype=float)
+    >>> X = np.random.randint(0, 2, size=(15,5)).astype(float)
     >>> X[:,1:3] = np.random.randn(15,2)
     >>> ind = isdummy(X)
     >>> ind
-    (array([0, 3, 4]),)
+    array([ True, False, False,  True,  True], dtype=bool)
     """
-    nobs = X.shape[0]
-    sums = X.sum(0)
-    colsums = np.logical_or(X == 1, X == 0).sum(0)
-    ind = np.where(np.logical_and(colsums == nobs, sums/nobs!=1))
+    X = np.asarray(X)
+    if X.ndim > 1:
+        ind = np.zeros(X.shape[1]).astype(bool)
+    max = (np.max(X, axis=0) == 1)
+    min = (np.min(X, axis=0) == 0)
+    remainder = np.all(X % 1. == 0, axis=0)
+    ind = min & max & remainder
+    if X.ndim == 1:
+        ind = np.asarray([ind])
     return ind
+
+def iscount(X):
+    """
+    Given an array X, returns a boolean column index for count variables.
+
+    Parameters
+    ----------
+    X : array-like
+        A 1d or 2d array of numbers
+
+    Examples
+    --------
+    >>> X = np.random.randint(0, 10, size=(15,5)).astype(float)
+    >>> X[:,1:3] = np.random.randn(15,2)
+    >>> ind = iscount(X)
+    >>> ind
+    array([ True, False, False,  True,  True], dtype=bool)
+    """
+    X = np.asarray(X)
+    remainder = np.all(X % 1. == 0, axis = 0)
+    dummy = isdummy(X)
+    remainder -= dummy
+    return remainder
 
 def add_factorial(X):
     """
@@ -728,7 +760,7 @@ class MNLogit(DiscreteModel):
         -----
         A row of ones is appended for the dropped category.
         """
-        if exog is None:
+        if exog == None:
             exog = self.exog
         eXB = np.exp(np.dot(params.reshape(-1, exog.shape[1]), exog.T))
         eXB = np.vstack((np.ones((1, self.nobs)), eXB))
@@ -879,7 +911,7 @@ class MNLogit(DiscreteModel):
         -----
         The reference category is always the first column of `wendog` for now.
         """
-        if start_params is None:
+        if start_params == None:
             start_params = np.zeros((self.exog.shape[1]*\
                     (self.wendog.shape[1]-1)))
         mlefit = super(MNLogit, self).fit(start_params=start_params,
@@ -1161,62 +1193,151 @@ class DiscreteResults(LikelihoodModelResults):
     t.__doc__ = LikelihoodModelResults.t.__doc__
 
 
-    def margeff(self, params=None, loc='meanfx', method='dydx', exog=None,
-        nodiscrete=None):
+#TODO: make this a cacheable attribute?
+#TODO: then we can add margeff_se as an attribute as well?
+    def margeff(self, params=None, at='overall', method='dydx', atexog=None,
+        dummy=False, count=False):
         """
         Parameters
         ----------
         params : array-like, optional
             The parameters.
-        loc : str, optional
-            'meanfx' - The average of the marginal effects over all of the
-                exogenous variables.
-            'atmeanfx' - The marginal effects at the mean of the exogenous
-                variables.
-            'all' - returns the marginal effects at each observation.
-        method : str not implemented yet, optional
-            'dydx' dy/dx
-            'eyex' dlogy/dlogx
-            'dyex' dy/dlogx
-            'eydx' dlogy/dx
-        exog : array-like, optional
-            Optionally, you can provide the exogenous variables over which
-                to get the marginal effects.
-        nodiscrete : None or list of ints of dummy variable columns
-            If None, treats dummy variables as continuous.  Default
-            If a list of columns which contain dummy variables is provided the
-            marginal effects account for the dummies.
+        at : str, optional
+            Options are:
+            'overall', The average of the marginal effects at each observation.
+            'mean', The marginal effects at the mean of each regressor.
+            'median', The marginal effects at the median of each regressor.
+            'zero', The marginal effects at zero for each regressor.
+            'all', The marginal effects at each observation.
+            Note that if `exog` is specified, then marginal effects for all
+            variables not specified by `exog` are calculated using the `at`
+            option.
+        method : str, optional
+            'dydx' - dy/dx - No transformation is made and marginal effects
+                are returned.  This is the default.
+            'eyex' - estimate elasticities of variables in `exog` --
+                d(lny)/d(lnx)
+            'dyex' - estimate semielasticity -- dy/d(lnx)
+            'eydx' - estimate semeilasticity -- d(lny)/dx
+            Note that tranformations are done before the `at` option, so, for
+            instance, mean(ln(x)) would be used.  'dyex' and 'eyex' do not
+            make sense for factor variables.
+        atexog : array-like, optional
+            Optionally, you can provide the exogenous variables over which to
+            get the marginal effects.  This should be a dictionary with the key
+            as the zero-indexed column number and the value of the dictionary.
+            Default is None for all independent variables less the constant.
+        dummy : bool, optional
+            If False, treats binary variables (if present) as continuous.  This
+            is the default.  Else if True, treats binary variables as
+            changing from 0 to 1.  Note that any variable that is either 0 or 1
+            is treated as a dummy.
+        count : bool, optional
+            If False, treats count variables (if present) as continuous.  This
+            is the default.  Else if True, the marginal effect is the
+            change in probabilities when each observation is increased by one.
 
         Notes
         -----
         Only the defaults are available now.  This is not yet finished or tested.
         """
+#TODO:
+#        factor : None or dictionary, optional
+#            If a factor variable is present (it must be an integer, though
+#            of type float), then `factor` may be a dict with the zero-indexed
+#            column of the factor and the value should be the base-outcome.
+
+#TODO: is it worth it to have two helper functions that automatically
+#determine binary variable and count variables?
+
         model = self.model
+        method = method.lower()
+        at = at.lower()
+#        exog = self.model.exog.copy() # makes a copy because it changes values
         if params is None:
             params = self.params
-        if exog is None:
-            exog = model.exog
-            ind = np.where(exog.var(0) != 0)[0] # don't report the constant
-        elif exog is not None:
-            exog = np.asarray(exog)
-            if exog.ndim == 1:
-                return np.dot(model.pdf(np.dot(exog,params),params))
-#TODO: this definitely needs to be tested
-#                ind = np.arange(len(exog))
-#                exog = exog
-            if exog.ndim > 1:
-                ind = np.where(exog.var(0) != 0)[0]
-        if loc is 'meanfx' and not nodiscrete:
-            if not isinstance(model, MNLogit):
-                change = np.dot(model.pdf(np.dot(exog,params))[:,None],
-                    params[None,:]).mean(0)
-#            elif isinstance(model, MNLogit):
-#                change = np.dot(model.pdf(model._eXB(params, exog)),
-#                    params[None,:]).mean(0)
-
-
-
-        return change[ind]
+        else:
+            params = np.asarray(params)
+            # could prob use a shape check here (do we even need this option?)
+        if not at in ['overall','mean','median','zero','all']:
+            raise ValueError, "%s not a valid option for `at`." % at
+        if dummy == True or count == True:
+            if method in ['dyex','eyex']:
+                raise ValueError, "%s not allowed for discrete \
+variables" % method
+            if at in ['median', 'zero']:
+                raise ValueError, "%s not allowed for discrete \
+variables" % at
+        exog = model.exog.copy() # copy because values might be changed
+        ind = exog.var(0) != 0 # index for non-constants
+        if at == 'mean':
+            tmp = np.zeros_like(exog)
+            tmp[:] = exog.mean(0)
+            exog = tmp
+        elif at == 'median':
+            tmp = np.zeros_like(exog)
+            tmp[:] = np.median(exog, axis=0)
+            exog = tmp
+        elif at == 'zero':
+            exog = np.ones_like(exog)
+            exog[:,ind] -= 1
+        if atexog != None:
+            if not isinstance(atexog, dict):
+                raise ValueError, "exog, if not None, should be a dict. \
+Got %s" % type(atexog)
+                for key in atexog:
+                    exog[:,key] = atexog[key]
+        if method not in ['dydx','eyex','dyex','eydx']:
+            raise ValueError, "method is not understood.  Got %s" % method
+        effects = np.dot(model.pdf(np.dot(exog,params))[:,None],
+                    params[None,:])
+        if 'ex' in method:
+            effects *= exog
+        if 'dy' in method:
+            if at == 'all':
+                effects = effects[:,ind]
+            elif at == 'overall':
+                effects = effects.mean(0)[ind]
+            else:
+                effects = effects[0,ind]
+        if 'ey' in method:
+            effects /= model.endog[:,None]
+            if at == 'all':
+                effects = effects[:,ind]
+            elif at == 'overall':
+                effects = effects.mean(0)[ind]
+            else:
+                effects = effects[0,ind]
+        if dummy == True:
+            dummy_ind = isdummy(exog)
+            for i, tf in enumerate(dummy_ind):
+                if tf == True:
+                    exog0 = exog.copy()
+                    exog0[:,i] = 0
+                    exog1 = exog.copy()
+                    exog1[:,i] = 1
+                    effect0 = model.cdf(np.dot(exog0, params))
+                    effect1 = model.cdf(np.dot(exog1, params))
+                    if 'ey' in method:
+                        effect0 /= model.endog
+                        effect1 /= model.endog
+                    effects[i] = (effect1 - effect0).mean()
+        if count == True:
+            count_ind = iscount(exog)
+            for i, tf in enumerate(count_ind):
+                if tf == True:
+                    exog0 = exog.copy()
+                    exog1 = exog.copy()
+                    exog1[:,i] += 1
+                    effect0 = model.cdf(np.dot(exog0, params))
+                    effect1 = model.cdf(np.dot(exog1, params))
+                    if 'ey' in method:
+                        effect0 /= model.endog
+                        effect1 /= model.endog
+                    effects[i] = (effect1 - effect0).mean()
+        # Set standard error of the marginal effects by Delta method.
+        self.margeff_se = None
+        return effects
 
 if __name__=="__main__":
     import numpy as np

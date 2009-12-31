@@ -73,6 +73,24 @@ class CheckModelResults(object):
     def test_bic(self):
         assert_almost_equal(self.res1.bic, self.res2.bic, DECIMAL_less)
 
+class CheckMargEff():
+#    def test_defaults(self):
+#        assert_almost_equal(self.res1.margeff_default, self.res2.margeff_default)
+
+    def test_nodiscrete_overall(self):
+        pass
+
+    def test_nodiscrete_mean(self):
+        pass
+
+    def test_nodiscrete_median(self):
+        pass
+
+    def test_nodiscrete_zero(self):
+        pass
+
+#    def test_eform(self):
+
 class TestProbitNewton(CheckModelResults):
     def __init__(self):
         data = sm.datasets.spector.Load()
@@ -121,6 +139,9 @@ class TestMNLogitNewtonBaseZero(CheckModelResults):
 
     def test_k(self):
         assert_equal(self.res1.model.K, self.res2.K)
+
+
+
 
 if __name__ == "__main__":
     import nose
