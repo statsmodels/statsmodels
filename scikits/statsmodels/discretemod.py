@@ -1097,6 +1097,8 @@ class DiscreteResults(LikelihoodModelResults):
         See model definition.
     df_model : float
         See model definition.
+    fitted_values : array
+        Linear predictor XB.
     llf : float
         Value of the loglikelihood
     llnull : float
@@ -1153,6 +1155,10 @@ class DiscreteResults(LikelihoodModelResults):
         model = self.model # will this use a new instance?
         null = model.__class__(model.endog, np.ones(model.nobs)).fit()
         return null.llf
+
+    @cache_readonly
+    def fittedvalues(self):
+        return np.dot(self.model.exog, self.params)
 
     @cache_readonly
     def aic(self):
@@ -1268,7 +1274,7 @@ variables" % method
             if at in ['median', 'zero']:
                 raise ValueError, "%s not allowed for discrete \
 variables" % at
-        exog = model.exog.copy() # copy because values might be changed
+        exog = model.exog.copy() # copy because values are changed
         ind = exog.var(0) != 0 # index for non-constants
         if at == 'mean':
             tmp = np.zeros_like(exog)
@@ -1301,7 +1307,7 @@ Got %s" % type(atexog)
             else:
                 effects = effects[0,ind]
         if 'ey' in method:
-            effects /= model.endog[:,None]
+            effects /= model.cdf(self.fittedvalues[:,None])
             if at == 'all':
                 effects = effects[:,ind]
             elif at == 'overall':
@@ -1319,8 +1325,8 @@ Got %s" % type(atexog)
                     effect0 = model.cdf(np.dot(exog0, params))
                     effect1 = model.cdf(np.dot(exog1, params))
                     if 'ey' in method:
-                        effect0 /= model.endog
-                        effect1 /= model.endog
+                        effect0 /= model.cdf(self.fittedvalues)
+                        effect1 /= model.cdf(self.fittedvalues)
                     effects[i] = (effect1 - effect0).mean()
         if count == True:
             count_ind = iscount(exog)
@@ -1332,8 +1338,8 @@ Got %s" % type(atexog)
                     effect0 = model.cdf(np.dot(exog0, params))
                     effect1 = model.cdf(np.dot(exog1, params))
                     if 'ey' in method:
-                        effect0 /= model.endog
-                        effect1 /= model.endog
+                        effect0 /= self.fittedvalues
+                        effect1 /= self.fittedvalues
                     effects[i] = (effect1 - effect0).mean()
         # Set standard error of the marginal effects by Delta method.
         self.margeff_se = None
