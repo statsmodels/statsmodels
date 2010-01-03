@@ -29,7 +29,7 @@ from scipy import stats, factorial, special, optimize # opt just for nbin
 #TODO: add options for the parameter covariance/variance
 # ie., OIM, EIM, and BHHH see Green 21.4
 
-def isdummy(X):
+def _isdummy(X):
     """
     Given an array X, returns a boolean column index for the dummy variables.
 
@@ -42,7 +42,7 @@ def isdummy(X):
     --------
     >>> X = np.random.randint(0, 2, size=(15,5)).astype(float)
     >>> X[:,1:3] = np.random.randn(15,2)
-    >>> ind = isdummy(X)
+    >>> ind = _isdummy(X)
     >>> ind
     array([ True, False, False,  True,  True], dtype=bool)
     """
@@ -57,7 +57,7 @@ def isdummy(X):
         ind = np.asarray([ind])
     return ind
 
-def iscount(X):
+def _iscount(X):
     """
     Given an array X, returns a boolean column index for count variables.
 
@@ -70,30 +70,19 @@ def iscount(X):
     --------
     >>> X = np.random.randint(0, 10, size=(15,5)).astype(float)
     >>> X[:,1:3] = np.random.randn(15,2)
-    >>> ind = iscount(X)
+    >>> ind = _iscount(X)
     >>> ind
     array([ True, False, False,  True,  True], dtype=bool)
     """
     X = np.asarray(X)
     remainder = np.all(X % 1. == 0, axis = 0)
-    dummy = isdummy(X)
+    dummy = _isdummy(X)
     remainder -= dummy
     return remainder
 
-def add_factorial(X):
-    """
-    Returns a vector of descending numbers added sequential.
-
-    For instance, if given [5, 4, 0, 2], returns [15, 10, 0, 3].
-    """
-    X = np.asarray(X)
-    return X/2. * X + (1-X)
-# or equivalently
-#    return X*(X+1)/2.
-
 class DiscreteModel(LikelihoodModel):
     """
-    Template for discrete choice models.
+    Abstract class for discrete choice models.
 
     This class does not do anything itself but lays out the methods and
     call signature expected of child classes in addition to those of
@@ -1199,8 +1188,6 @@ class DiscreteResults(LikelihoodModelResults):
     t.__doc__ = LikelihoodModelResults.t.__doc__
 
 
-#TODO: make this a cacheable attribute?
-#TODO: then we can add margeff_se as an attribute as well?
     def margeff(self, params=None, at='overall', method='dydx', atexog=None,
         dummy=False, count=False):
         """
@@ -1226,9 +1213,9 @@ class DiscreteResults(LikelihoodModelResults):
             'dyex' - estimate semielasticity -- dy/d(lnx)
             'eydx' - estimate semeilasticity -- d(lny)/dx
             Note that tranformations are done after each observation is
-            calculated.  Semi-elasticities for binary variables are not
-            reported. 'dyex' and 'eyex' do not make sense for discrete
-            variables.
+            calculated.  Semi-elasticities for binary variables are computed
+            using the midpoint method. 'dyex' and 'eyex' do not make sense
+            for discrete variables.
         atexog : array-like, optional
             Optionally, you can provide the exogenous variables over which to
             get the marginal effects.  This should be a dictionary with the key
@@ -1278,9 +1265,9 @@ variables" % method
                 raise ValueError, "%s not allowed for discrete \
 variables" % at
             if dummy:
-                dummy_ind = isdummy(exog)
+                dummy_ind = _isdummy(exog)
             if count:
-                count_ind = iscount(exog)
+                count_ind = _iscount(exog)
         if atexog is not None:
             if not isinstance(atexog, dict):
                 raise ValueError, "exog, if not None, should be a dict. \
@@ -1340,18 +1327,22 @@ Got %s" % type(atexog)
                     exog1[:,i] += 1
                     effect0 = model.cdf(np.dot(exog0, params))
                     effect1 = model.cdf(np.dot(exog1, params))
-#                    if 'ey' in method:
+#TODO: compute discrete elasticity correctly
+#Stata doesn't use the midpoint method or a weighted average.
+#Check elsewhere
+                    if 'ey' in method:
 #                        #TODO: don't know if this is theoretically correct
-#                        fittedvalues0 = np.dot(exog0,params)
-#                        fittedvalues1 = np.dot(exog1,params)
+                        fittedvalues0 = np.dot(exog0,params)
+                        fittedvalues1 = np.dot(exog1,params)
 #                        weight1 = model.exog[:,i].mean()
 #                        weight0 = 1 - weight1
-#                        wfv = (.5*model.cdf(fittedvalues1) + \
-#                                .5*model.cdf(fittedvalues0)).mean(0)
-#                        effects[i] = (effect1 - effect0)/wfv
+                        wfv = (.5*model.cdf(fittedvalues1) + \
+                                .5*model.cdf(fittedvalues0))
+                        effects[i] = ((effect1 - effect0)/wfv).mean()
                     effects[i] = (effect1 - effect0).mean()
         # Set standard error of the marginal effects by Delta method.
         self.margeff_se = None
+        self.margeff = effects
         return effects
 
 if __name__=="__main__":
