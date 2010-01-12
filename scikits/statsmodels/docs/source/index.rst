@@ -67,8 +67,8 @@ branch in the launchpad repository given above will have the most recent
 code and is for the most part quite stable and fine for daily use.
 
 
-Table of Content
-----------------
+Table of Contents
+-----------------
 
 .. toctree::
    :maxdepth: 4
