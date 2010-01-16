@@ -10,6 +10,7 @@ from info import __doc__
 from regression import *
 from glm import *
 from rlm import *
+from discretemod import *
 from tools import add_constant
 import model, tools, datasets, family, stattools, lib
 # robust is imported somewhere else?

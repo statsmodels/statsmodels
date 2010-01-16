@@ -71,7 +71,7 @@ and kill some remaining bugs, and fill some holes in our
 test suite. However, statsmodels is intended to become
 part of scipy after some maturing of the package.
 
-Earlier this summer, there was a discussion on the nipy
+Summer 2009, there was a discussion on the nipy
 mailing list on the structure of the API and about possible
 additional methods for the model classes. We would like
 to invite everyone to give statsmodels a test drive and report
@@ -82,8 +82,8 @@ https://bugs.launchpad.net/statsmodels
 The development repository is at the new location http://code.launchpad.net/statsmodels,
 and the old location http://code.launchpad.net/~scipystats
 
-We would also like to use statsmodels, or related projects to
-it, as a staging ground for new models. The current maintainers
+We would also like to use statsmodels, or projects related to it, as
+a staging ground for new models. The current maintainers
 are mostly interested in econometrics and time series analysis,
 but we would like to invite any users or developers to contribute
 their own extensions to existing models or new models.

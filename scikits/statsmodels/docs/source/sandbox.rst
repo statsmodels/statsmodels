@@ -166,7 +166,12 @@ statsmodels.
 Regression with Discrete Dependent Variable
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
- .. currentmodule:: scikits.statsmodels.sandbox.discretemod
+The following is the beginning of support for models with discrete dependent
+variables.  The Logit, Multinomial Logit, Poisson, and Probit models should
+be fairly mature, though are still untested.  The negative binomial models and
+the Weibull model are not yet finished and should not yet be used.
+
+.. currentmodule:: scikits.statsmodels.sandbox.discretemod
 
 .. autosummary::
    :toctree: generated/
@@ -182,8 +187,13 @@ Regression with Discrete Dependent Variable
    Weibull
 
 
-Seemingly Unrelated Regression
-""""""""""""""""""""""""""""""
+Systems of Regression Equations and Simultaneous Equations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The following are for fitting systems of equations models.  Though the returned
+parameters have been verified as accurate, this code is still very
+experimental, and the usage of the models will very likely change significantly
+before they are added to the main codebase.
 
 .. currentmodule:: scikits.statsmodels.sandbox.sysreg
 
@@ -191,6 +201,7 @@ Seemingly Unrelated Regression
    :toctree: generated/
 
    SUR
+   Sem2SLS
 
 Miscellaneous
 ^^^^^^^^^^^^^

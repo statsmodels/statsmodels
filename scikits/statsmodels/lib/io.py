@@ -451,19 +451,19 @@ def genfromdta(fname, excludelist=None, missing_flt=-999., missing_str=""):
             for val in line:
                 if val is None:
                     line[line.index(val)] = convert_missing[\
-                            dt[line.index(val)][1]]
+                            formats[line.index(val)]]
         if None in line and remove_comma:
             for i,val in enumerate(line):
                 if val is None:
-                    line[i] = convert_missing[dt[i][1]]
+                    line[i] = convert_missing[formats[i]]
                 elif i in remove_comma:
                     line[i] = ''.join(line[i].split(','))
-                    if dt[i][1] == 'f8':
+                    if formats[i] == 'f8':
                         line[i] = float(line[i])
         if remove_comma and not None in line:
             for j in remove_comma:
                 line[j] = ''.join(line[j].split(','))
-                if dt[j][1] == 'f8': # change when change f8
+                if formats[j] == 'f8': # change when change f8
                     line[j] = float(line[j])
 
         first_list.append(line)
@@ -476,7 +476,7 @@ def genfromdta(fname, excludelist=None, missing_flt=-999., missing_str=""):
                 strcolidx.append(col)
         for i in strcolidx:
             formats[i] = "a%i" % max(len(str(row[i])) for row in first_list)
-    dt = zip(varnames, formats) # make dtype
+    dt = zip(varnames, formats) # make dtype again
     data = np.zeros((nobs), dtype=dt) # init final array
     for i,row in enumerate(first_list):
         data[i] = tuple(row)

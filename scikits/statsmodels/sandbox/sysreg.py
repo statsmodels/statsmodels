@@ -6,12 +6,15 @@ from scipy import sparse
 
 #http://www.irisa.fr/aladin/wg-statlin/WORKSHOPS/RENNES02/SLIDES/Foschi.pdf
 
+__all__ = ['SUR', 'Sem2SLS']
+
 #probably should have a SystemModel superclass
 # TODO: does it make sense of SUR equations to have
 # independent endogenous regressors?  If so, then
 # change docs to LHS = RHS
 #TODO: make a dictionary that holds equation specific information
 #rather than these cryptic lists?  Slower to get a dict value?
+#TODO: refine sigma definition
 class SUR(object):
     """
     Seemingly Unrelated Regression
@@ -19,29 +22,80 @@ class SUR(object):
     Parameters
     ----------
     sys : list
-        [endog, exog, endog, exog, ...], length 2*M, where M is the number
-        of equations endog = exog.
-
+        [endog1, exog1, endog2, exog2,...] It will be of length 2 x M,
+        where M is the number of equations endog = exog.
     sigma : array-like
-       M x M array where sigma[i,j] is the covariance between equation i and j
-       #TODO: refine this definition
-
-    dfk : None, 'dfk1', or 'dfk2'.
+        M x M array where sigma[i,j] is the covariance between equation i and j
+    dfk : None, 'dfk1', or 'dfk2'
         Default is None.  Correction for the degrees of freedom
         should be specified for small samples.  See the notes for more
         information.
 
+    Attributes
+    ----------
+    cholsigmainv : array
+        The transpose of the Cholesky decomposition of `pinv_wexog`
+    df_model : array
+        Model degrees of freedom of each equation. p_{m} - 1 where p is
+        the number of regressors for each equation m and one is subtracted
+        for the constant.
+    df_resid : array
+        Residual degrees of freedom of each equation. Number of observations
+        less the number of parameters.
+    endog : array
+        The LHS variables for each equation in the system.
+        It is a M x nobs array where M is the number of equations.
+    exog : array
+        The RHS variable for each equation in the system.
+        It is a nobs x sum(p_{m}) array.  Which is just each
+        RHS array stacked next to each other in columns.
+    history : dict
+        Contains the history of fitting the model. Probably not of interest
+        if the model is fit with `igls`=False.
+    iterations : int
+        The number of iterations until convergence if the model is fit
+        iteratively.
+    nobs : float
+        The number of observations of the equations.
+    normalized_cov_params : array
+        sum(p_{m}) x sum(p_{m}) array
+        :math:`\left[X^{T}\left(\Sigma^{-1}\otimes\boldsymbol{I}\right)X\right]^{-1}
+    pinv_wexog : array
+        The pseudo-inverse of the `wexog`
+    sigma : array
+        M x M covariance matrix of the cross-equation disturbances. See notes.
+    sp_exog : CSR sparse matrix
+        Contains a block diagonal sparse matrix of the design so that
+        exog1 ... exogM are on the diagonal.
+    wendog : array
+        M * nobs x 1 array of the endogenous variables whitened by
+        `cholsigmainv` and stacked into a single column.
+    wexog : array
+        M*nobs x sum(p_{m}) array of the whitened exogenous variables.
+
+    Methods
+    -------
+    initialize
+    fit
+    predict
+    whiten
+
     Notes
     -----
     All individual equations are assumed to be well-behaved, homoeskedastic
-    iid errors.  This is currently under development and not tested.
+    iid errors.  This is basically just an extension of GLS, using sparse
+    matrices.
+
+    .. math:: \\Sigma=\\left[\\begin{array}{cccc}
+\\sigma_{11} & \\sigma_{12} & \\cdots & \\sigma_{1M}\\
+\\sigma_{21} & \\sigma_{22} &  & \\sigma_{2M}\\
+\\vdots &  & \\ddots\\
 
     References
     ----------
-    Zellner (1962), Greene
-
+    Zellner (1962), Greene (2003)
     """
-
+#TODO: Does each equation need nobs to be the same?
     def __init__(self, sys, sigma=None, dfk=None):
         if len(sys) % 2 != 0:
             raise ValueError, "sys must be a list of pairs of endogenous and \
@@ -212,26 +266,25 @@ exogenous variables.  Got length %s" % len(sys)
 # Also should probably have SEM class and estimators as subclasses
 class Sem2SLS(object):
     """
-    Basic Two-Stage Least Squares for Simultaneous equations
+    Two-Stage Least Squares for Simultaneous equations
 
     Parameters
     ----------
-    sys
-
+    sys : list
+        [endog1, exog1, endog2, exog2,...] It will be of length 2 x M,
+        where M is the number of equations endog = exog.
     indep_endog : dict
         A dictionary mapping the equation to the column numbers of the
         the independent endogenous regressors in each equation.
         It is assumed that the system is inputed as broken up into
         LHS and RHS. For now, the values of the dict have to be sequences.
         Note that the keys for the equations should be zero-indexed.
-
     instruments : array
         Array of the exogenous independent variables.
 
     Notes
     -----
     This is unfinished, and the design should be refactored.
-    I just need it for homework.
     Estimation is done by brute force and there is no exploitation of
     the structure of the system.
     """
@@ -244,7 +297,7 @@ exogenous variables.  Got length %s" % len(sys)
 # The lists are probably a bad idea
         self.endog = sys[::2]   # these are just list containers
         self.exog = sys[1::2]
-        self._K = [sm.tools.rank(_) for _ in sys[1::2]]
+        self._K = [tools.rank(_) for _ in sys[1::2]]
 #        fullexog = np.column_stack((_ for _ in self.exog))
 
         self.instruments = instruments
@@ -301,7 +354,7 @@ exogenous variables.  Got length %s" % len(sys)
             newRHS = self.exog[eq].copy()
             if instr_eq:
                 for i,LHS in enumerate(instr_eq):
-                    yhat = sm.GLS(LHS, self.instruments).fit().fittedvalues
+                    yhat = GLS(LHS, self.instruments).fit().fittedvalues
                     newRHS[:,indep_endog[eq][i]] = yhat
                 # this might fail if there is a one variable column (nobs,)
                 # in exog
@@ -315,11 +368,12 @@ exogenous variables.  Got length %s" % len(sys)
         wexog = self.wexog
         endog = self.endog
         for j in range(self._M):
-            delta.append(sm.GLS(endog[j], wexog[j]).fit().params)
+            delta.append(GLS(endog[j], wexog[j]).fit().params)
         return delta
 
 class SysResults(LikelihoodModelResults):
     """
+    Not implemented yet.
     """
     def __init__(self, model, params, normalized_cov_params=None, scale=1.):
         super(SysResults, self).__init__(model, params,
@@ -328,200 +382,3 @@ class SysResults(LikelihoodModelResults):
 
     def _get_results(self):
         pass
-
-if __name__=='__main__':
-    try:
-        data = np.genfromtxt('./hsb2.csv', delimiter=",",
-                dtype=[",".join(["f8"]*11)][0], names=True)
-    except:
-        raise ValueError, "You don't have the file, because I'm not sure if \
-it's public domain.  You can download it here \
-http://www.ats.ucla.edu/stat/R/faq/hsb2.csv"
-
-    # eq 1: science = math female
-    # eq 2: write = read female
-
-    import scikits.statsmodels as sm
-    import time
-
-    endog1 = data['science'].view(float)
-    exog1 = sm.add_constant(data[['math','female']].view(float).reshape(-1,2))
-    endog2 = data['write'].view(float)
-    exog2 = sm.add_constant(data[['read','female']].view(float).reshape(-1,2))
-    sys = [endog1,exog1,endog2,exog2]
-# just for a test
-    endog3 = data['write'].view(float)
-    exog3 = sm.add_constant(data[['write','female','read']].view(float).reshape(-1,3))
-    sys2 = [endog1,exog1,endog2,exog2,endog3,exog3]
-    t = time.time()
-    sur_model = SUR(sys)
-    sur_results_fgls = sur_model.fit()  # this is correct vs.
-    #http://www.ats.ucla.edu/stat/sas/webbooks/reg/chapter4/sasreg4.htm
-    print "This ran in %s seconds" % str(time.time() - t)
-    sur_model2 = SUR(sys)
-    sur_results_ifgls = sur_model2.fit(igls=True) # this doesn't look right and can't run an iterated
-                                                  # fit an fgls fit on a model, because it updates...
-#TODO: finish the results class, ie., R-squared, LR test, verify F tests, covariance matrix, standard
-# errors, confidence intervals, etc.
-#TODO: need to add tests, even though the parameter estimation is correct
-#    print "Results from sysreg.SUR"
-#    print sur_results_fgls.params
-#    print "Results from UCLA SAS page"
-#    print np.array([-2.18934, .625141, 20.13265, 5.453748, .535484, 21.83439])
-
-# timings for the old version run without csr
-#This ran in 0.228526115417 seconds
-#This ran in 0.228340148926 seconds
-#This ran in 0.228056907654 seconds
-#This ran in 0.229265928268 seconds
-#This ran in 0.229331970215 seconds
-#This ran in 0.23272895813 seconds
-#This ran in 0.22826218605 seconds
-#This ran in 0.228145122528 seconds
-#This ran in 0.229871034622 seconds
-#This ran in 0.22944188118 seconds
-
-# with casting to csr
-#This ran in 0.232534885406 seconds
-#This ran in 0.238698959351 seconds
-#This ran in 0.233359098434 seconds
-#This ran in 0.232124090195 seconds
-#This ran in 0.232531070709 seconds
-#This ran in 0.231685161591 seconds
-#This ran in 0.232370138168 seconds
-#This ran in 0.232092142105 seconds
-#This ran in 0.230885028839 seconds
-#This ran in 0.231520175934 seconds
-
-# Looks marginally slower, though it may be a scalability issue or the dot?
-
-#    data2 = np.genfromtxt('./tablef5-1.txt', names=True)
-
-    # Green estimates p. 351 (?) Grunfeld Investment Data
-    data2 = np.genfromtxt('http://pages.stern.nyu.edu/\
-~wgreene/Text/Edition6/Grunfeld.txt', skip_header=1, names=['Firm', 'Year',
-        'I','F','C'])
-    # Greene uses 1,4,3,8,2 in Maddala's order, but 2,1940,I = 261.6 instead
-    # of 261.6 and K(1946) was changed from 132.6 to 232.6
-    # see: http://stanford.edu/~clint/bench/grunfeld.htm
-    firms = data2['Firm']
-    ind = (firms == 1) | (firms == 4) | (firms == 3) | (firms == 8) | \
-            (firms == 2)
-    grun_data = data2[ind]
-    endog_grun = np.column_stack(([grun_data['I'][grun_data['Firm']==_] for _ in np.unique(grun_data['Firm'])]))
-    exog_grun = np.vstack(([sm.add_constant(grun_data[['F','C']]\
-            [grun_data['Firm']==_].view(float).reshape(20,2)) for _ \
-            in np.unique(grun_data['Firm'])]))
-    exog_grun = exog_grun.view(float).reshape(5,20,3)
-    for i,arr in enumerate(exog_grun):
-        exog_grun[i] = sm.add_constant(arr)
-
-#    sys = list(*zip([endog_grun[:,_] for _ in range(endog_grun.shape[1])],exog_grun))
-# having a list of pairs doesn't work.
-
-# whew that was painful.  Has to be an easier way to do that with
-# DataArray.groupby or something
-    sys = []
-    for i in range(5):
-        sys.append(endog_grun[:,i])
-        sys.append(exog_grun[i])
-
-# put in a different order for ease of comparison
-# GM CH GE WE US
-#  1   2   3   4   8
-# 0,1 2,3 4,5 6,7 8,9
-#  1   4   3   8   2
-# 0,1 6,7 4,5 8,9 2,3
-    sys2 = []
-    sys2.append(sys[0])
-    sys2.append(sys[1])
-    sys2.append(sys[6])
-    sys2.append(sys[7])
-    sys2.append(sys[4])
-    sys2.append(sys[5])
-    sys2.append(sys[8])
-    sys2.append(sys[9])
-    sys2.append(sys[2])
-    sys2.append(sys[3])
-    sys = sys2
-
-# correct bad data
-# discrepancies are noted in Grunfeld.txt
-    sys[-2][5] = 261.6
-    sys[-2][-3] = 645.2
-    sys[-1][11,1] = 232.6
-    grun_mod = SUR(sys)
-    grun_res = grun_mod.fit()
-    print "Compare these results to Greene 5th ed. p 351"
-    print grun_res.params
-# We are majorly losing precision somewhere
-# Nope, the data from Greene's web site was bad
-# Looks good now.
-
-    grun_imod = SUR(sys)
-    grun_iter = grun_imod.fit(igls=True)
-    print "Compare these results to Greene 5th ed. p. 352 MLE"
-    print grun_iter.params
-# These are *very* close to MLE in table 14-3, probably just a precision issue
-# in convergence
-# maybe a different one of the dof corrections in sigma computation?
-    try:
-        data3 = np.genfromtxt('/home/skipper/school/MetricsII/Greene \
-TableF5-1.txt', names=True)
-    except:
-        raise ValueError, "Based on Greene TableF5-1"
-
-    # Example 13.1 in Greene 5th Edition
-# c_t = constant + y_t + c_t-1
-# i_t = constant + r_t + (y_t - y_t-1)
-# y_t = c_t + i_t + g_t
-    sys3 = []
-    sys3.append(data3['realcons'][1:])  # have to leave off a beg. date
-# impose 3rd equation on y
-    y = data3['realcons'] + data3['realinvs'] + data3['realgovt']
-
-    exog1 = np.column_stack((y[1:],data3['realcons'][:-1]))
-    exog1 = sm.add_constant(exog1)
-    sys3.append(exog1)
-    sys3.append(data3['realinvs'][1:])
-    exog2 = np.column_stack((data3['tbilrate'][1:],
-        np.diff(y)))
-    # realint is missing 1st observation
-    exog2 = sm.add_constant(exog2)
-    sys3.append(exog2)
-    indep_endog = {0 : [0]} # need to be able to say that y_1 is an instrument..
-    instruments = np.column_stack((data3[['realgovt',
-        'tbilrate']][1:].view(float).reshape(-1,2),data3['realcons'][:-1],
-        y[:-1]))
-    instruments = sm.add_constant(instruments)
-    sem_mod = Sem2SLS(sys3, indep_endog = indep_endog, instruments=instruments)
-    sem_params = sem_mod.fit() # first equation is right, but not second?
-                               # should y_t in the diff be instrumented?
-                               # how would R know this in the script?
-    # well, let's check...
-    y_instr = sem_mod.wexog[0][:,0]
-    wyd = y_instr - y[:-1]
-    wexog = np.column_stack((data3['tbilrate'][1:],wyd))
-    wexog = sm.add_constant(wexog)
-    params = sm.GLS(data3['realinvs'][1:], wexog).fit().params
-
-    print "These are the simultaneous equation estimates for Greene's \
-example 13-1 (Also application 13-1 in 6th edition."
-    print sem_params
-    print "The first set of parameters is correct.  The second set is not."
-    print "Compare to the solution manual at \
-http://pages.stern.nyu.edu/~wgreene/Text/econometricanalysis.htm"
-    print "The reason is the restriction on (y_t - y_1)"
-    print "Compare to R script GreeneEx15_1.s"
-    print "Somehow R carries y.1 in yd to know that it needs to be \
-instrumented"
-    print "If we replace our estimate with the instrumented one"
-    print params
-    print "We get the right estimate"
-    print "Without a formula framework we have to be able to do restrictions."
-# yep!, but how in the world does R know this when we just fed it yd??
-# must be implicit in the formula framework...
-# we are going to need to keep the two equations separate and use
-# a restrictions matrix.  Ugh, is a formula framework really, necessary to get
-# around this?
-

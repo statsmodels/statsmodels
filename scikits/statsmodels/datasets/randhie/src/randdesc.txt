@@ -1,0 +1,49 @@
+              storage  display     value
+variable name   type   format      label      variable label
+--------------------------------------------------------------------
+plan            float  %9.0g                  hie plan number
+site            float  %9.0g                  site
+coins           float  %9.0g                  coinsurance -- medical
+tookphys        float  %9.0g                  took baseline physical
+year            float  %9.0g                  study year
+zper            float  %9.0g                  person id, leading digit is sit
+black           float  %9.0g                  black
+income          float  %9.0g                  income based on annual income r
+xage            float  %9.0g                  age that year
+female          float  %9.0g                  female
+educdec         float  %9.0g                  education of decision maker
+time            float  %9.0g                  time eligible during the year
+outpdol         float  %9.0g                  outpatient exp. excl. ment and
+drugdol         float  %9.0g                  drugs purchased, outpatient
+suppdol         float  %9.0g                  supplies purchased, outpatient
+mentdol         float  %9.0g                  psychotherapy exp., outpatient
+inpdol          float  %9.0g                  inpatient exp., facilities & md
+meddol          float  %9.0g                  medical exp excl outpatient men
+totadm          float  %9.0g                  number of hosp. admissions
+inpmis          float  %9.0g                  missing any inpatient charges
+mentvis         float  %9.0g                  number psychotherapy visits
+mdvis           float  %9.0g                  number face-to-fact md visits
+notmdvis        float  %9.0g                  number face-to-face, not-md vis
+num             float  %9.0g                  family size
+mhi             float  %9.0g                  mental health index -- baselin
+disea           float  %9.0g                  count of chronic diseases -- ba
+physlm          float  %9.0g                  physical limitations -- baselin
+ghindx          float  %9.0g                  general health index -- baselin
+mdeoff          float  %9.0g                  maximum expenditure offer
+pioff           float  %9.0g                  participation incentive
+child           float  %9.0g                  child
+fchild          float  %9.0g                  female child
+lfam            float  %9.0g                  log of family size
+lpi             float  %9.0g                  log participation incentive
+idp             float  %9.0g                  individual deductible plan
+logc            float  %9.0g                  log(coinsurance+1)
+fmde            float  %9.0g                  function of mdeoff
+hlthg           float  %9.0g                  good health
+hlthf           float  %9.0g                  fair health
+hlthp           float  %9.0g                  poor health
+xghindx         float  %9.0g                  ghi with imputation
+linc            float  %9.0g
+lnum            float  %9.0g
+lnmeddol        float  %9.0g
+binexp          float  %9.0g
+
