@@ -257,7 +257,9 @@ class LikelihoodModelResults(Results):
         _cov = self.cov_params(column=column)
         if _cov.ndim == 2:
             _cov = np.diag(_cov)
-        _t = _params * recipr(np.sqrt(_cov))
+#        _t = _params * recipr(np.sqrt(_cov))
+# repicr drops precision for MNLogit?
+        _t = _params / np.sqrt(_cov)
         return _t
 
 
@@ -529,7 +531,7 @@ T statistics'
 
         """
         #TODO: simplify structure, DRY
-        if self.__class__.__name__ in ['RLMResults','GLMResults']:
+        if self.__class__.__name__ in ['RLMResults','GLMResults','DiscreteResults']:
             dist = norm
         else:
             dist = t

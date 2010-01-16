@@ -31,14 +31,20 @@ see also the `examples` and the `tests` folders
 Module Reference
 ----------------
 
-Model and Result Classes
-^^^^^^^^^^^^^^^^^^^^^^^^
+Model Class
+^^^^^^^^^^^^
 
 .. autosummary::
    :toctree: generated/
 
    GLM
-   GLMResults
+
+Results Class
+^^^^^^^^^^^^^
+
+.. toctree::
+
+   glmresults
 
 Families
 ^^^^^^^^

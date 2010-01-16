@@ -1,5 +1,6 @@
 import os
 import time
+import numpy as np
 from numpy import genfromtxt
 
 def convert(fname, overwrite=False, delimiter=","):
@@ -18,7 +19,8 @@ def convert(fname, overwrite=False, delimiter=","):
         Overwrite the python file if it already exists.  Default is False so
         that the user is warned.
     delimiter : string
-        The default is ","
+        The default is ",". If the delimiter is a space, then consecutive
+        delimiters are merged.
 
     Examples
     ---------
@@ -40,10 +42,17 @@ def convert(fname, overwrite=False, delimiter=","):
                            # do this because dtype=np.str
     names = getnames.readline()
     getnames.close()
-    names = names.strip(os.linesep)
-    names = names.split(",")
-    for i in range(len(names)): names[i] = names[i].strip("\"")
-    dataset = genfromtxt(fname, delimiter=delimiter, dtype=np.str, skip_headers=1)
+    names = names.strip(os.linesep) # strip linesep
+    names = names.strip("\r") # strip carriage return
+    if delimiter.isspace():
+        names = names.split(None)
+    else:
+        names = names.split(delimiter)
+    for i in range(len(names)): names[i] = names[i].strip("\"'")
+    if delimiter.isspace():
+        dataset = genfromtxt(fname, dtype=np.str, skip_header=1)
+    else:
+        dataset = genfromtxt(fname, delimiter=delimiter, dtype=np.str, skip_header=1)
     dir,f = os.path.split(fname)
     f=f.split('.')
     new_file = os.path.join(dir,f[0]+'.py')
