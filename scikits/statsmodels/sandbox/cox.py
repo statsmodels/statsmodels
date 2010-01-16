@@ -1,9 +1,24 @@
+'''Cox proportional hazards regression model.
+
+
+some dimension problems
+fixed import errors
+currently produces parameter estimate but then raises exception for other results
+
+finally, after running the script several times, I get a OSError with too many
+open file handles
+
+'''
+
+
 import shutil
 import tempfile
 
 import numpy as np
 
-from models import survival, model
+
+from scikits.statsmodels import model
+import survival
 
 class Discrete(object):
 
@@ -17,6 +32,9 @@ class Discrete(object):
         self.x = np.squeeze(x)
         if self.x.shape == ():
             self.x = np.array([self.x])
+##        #JP added and removed again b/c still broadcast error
+##        if self.x.ndim == 1:
+##            self.x = self.x[:,None]
         self.n = self.x.shape[0]
         if w is None:
             w = np.ones(self.n, np.float64)
@@ -25,7 +43,7 @@ class Discrete(object):
                 raise ValueError, 'incompatible shape for weights w'
             if np.any(np.less(w, 0)):
                 raise ValueError, 'weights should be non-negative'
-        self.w = w / w.sum()
+        self.w = w*1.0 / w.sum()
 
     def mean(self, f=None):
         if f is None:
@@ -35,9 +53,12 @@ class Discrete(object):
         return (fx * self.w).sum()
 
     def cov(self):
-        mu = self.mean()  #JP: this looks fishy, should it be with axis=0, i.e. mu = self.mean(0)
-        dx = self.x - np.multiply.outer(mu, self.x.shape[1])
+        mu = self.mean()  #JP: call to method (confusing name)
+        dx = self.x - mu#np.multiply.outer(mu, self.x.shape[1])
         return np.dot(dx, np.transpose(dx))
+##        if dx.ndim == 1:
+##            dx = dx[:,None]
+##        return np.dot(dx.T, dx)
 
 class Observation(survival.RightCensored):
 
@@ -63,7 +84,7 @@ class CoxPH(model.LikelihoodModel):
         self.initialize(self.subjects)
 
     def initialize(self, subjects):
-
+        print 'called initialize'
         self.failures = {}
         for i in range(len(subjects)):
             s = subjects[i]
@@ -87,7 +108,7 @@ class CoxPH(model.LikelihoodModel):
         for t in self.failures.keys():
             if self.time_dependent:
                 d = np.array([s(self.formula, time=t)
-                             for s in self.subjects]).astype('<f8')
+                             for s in self.subjects]).astype('<f8')[:,None]
                 dshape = d.shape
                 dfile = file(tempfile.mkstemp(dir=self.cachedir)[1], 'w')
                 d.tofile(dfile)
@@ -112,7 +133,7 @@ class CoxPH(model.LikelihoodModel):
             print "AttributeError: 'CoxPH' object has no attribute 'cachedir'"
             pass
 
-    def logL(self, b, ties='breslow'):
+    def loglike(self, b, ties='breslow'):
 
         logL = 0
         for t in self.failures.keys():
@@ -157,7 +178,7 @@ class CoxPH(model.LikelihoodModel):
                 score += Z[fail].sum()
                 for j in range(d):
                     efron_w = w
-                    efron_w[fail] -= i * w[fail] / d
+                    efron_w[fail] -= i * w[fail] / float(d)
                     rv = Discrete(Z[risk], w=efron_w[risk])
                     score -= rv.mean()
             elif ties == 'cox':
@@ -168,7 +189,7 @@ class CoxPH(model.LikelihoodModel):
 
     def information(self, b, ties='breslow'):
 
-        info = 0
+        info = 0 #np.zeros((len(b),len(b))) #0
         score = 0
         for t in self.failures.keys():
             fail = self.failures[t]
@@ -207,7 +228,7 @@ if __name__ == '__main__':
     for i in range(2*n):
         subjects[i].X = X[i]
 
-    import nipy.fixes.scipy.stats.models.formula as F
+    import scikits.statsmodels.sandbox.formula as F
     x = F.Quantitative('X')
     f = F.Formula(x)
 
@@ -216,9 +237,12 @@ if __name__ == '__main__':
 #    c.cache()
     # temp file cleanup doesn't work on windows
     c = CoxPH(subjects, f, time_dependent=True)
-#    c.cache() #this creates  tempfile cache,
+    c.cache() #this creates  tempfile cache,
     # no tempfile cache is created in normal use of CoxPH
 
 
-#    c.newton([0.4])
+    res = c.newton([0.4])
+    print res.params
     print dir(c)
+    #print c.fit(Y)
+    #c.information(res.params)  #raises exception

@@ -35,7 +35,7 @@ or get the source from pypi, sourceforge, or from the launchpad repository and
 
 ::
 
-  setup.py install   or   setup.py develop
+  setup.py install
 
 **Usage:**
 
@@ -72,12 +72,14 @@ Table of Content
 
 
    introduction
+   related
    regression
    glm
    rlm
    stattools
    tools
    internal
+   sandbox
 
 Indices and tables
 ------------------

@@ -7,13 +7,23 @@
 trunk
 -----
 
- * add sandbox.tsa (time series analysis) and sandbox.regression (anova)
+
  * renames for more consistency
    RLM.fitted_values -> RLM.fittedvalues
    GLMResults.resid_dev -> GLMResults.resid_deviance
+ * GLMResults, RegressionResults:
+   lazy calculations, convert attributes to properties with _cache
+ * fix tests to run without rpy
+ * expanded examples in examples directory
 
- * GLMResults: lazy calculations, convert attributes to properties with _cache
- * fix test to run without rpy
+*sandbox*
+
+ * add qqplot in sandbox.graphics
+ * add sandbox.tsa (time series analysis) and sandbox.regression (anova)
+ * add principal component analysis in sandbox.tools
+ * add Seemingly Unrelated Regression (SUR) in sandbox.sysreg
+ * add Maximum Likelihood Estimation of models with discrete endogenous variable
+   (Logit, Probit, Multinomial Logit, Poisson, and others) in sandbox.discretemod
 
 
 0.1.0b1

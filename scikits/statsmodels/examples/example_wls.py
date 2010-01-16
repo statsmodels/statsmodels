@@ -64,7 +64,7 @@ plt.xlim([0,2000])
 plt.ylim([0,2000])
 print 'raw correlation of endog and fittedvalues'
 print np.corrcoef(data.endog, wls_fit.fittedvalues)
-print 'raw correlation of endog and fittedvalues squared'
+print 'raw correlation coefficient of endog and fittedvalues squared'
 print np.corrcoef(data.endog, wls_fit.fittedvalues)[0,1]**2
 
 # compare with robust regression,
