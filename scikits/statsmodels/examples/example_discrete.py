@@ -11,7 +11,7 @@ spector_data.exog = sm.add_constant(spector_data.exog)
 
 # Linear Probability Model using OLS
 lpm_mod = sm.OLS(spector_data.endog,spector_data.exog)
-lmp_res = lpm_mod.fit()
+lpm_res = lpm_mod.fit()
 
 # Logit Model
 logit_mod = sm.Logit(spector_data.endog, spector_data.exog)
