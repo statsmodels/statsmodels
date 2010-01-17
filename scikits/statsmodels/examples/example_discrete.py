@@ -11,7 +11,7 @@ spector_data.exog = sm.add_constant(spector_data.exog)
 
 # Linear Probability Model using OLS
 lpm_mod = sm.OLS(spector_data.endog,spector_data.exog)
-lmp_res = lpm_mod.fit()
+lpm_res = lpm_mod.fit()
 
 # Logit Model
 logit_mod = sm.Logit(spector_data.endog, spector_data.exog)
@@ -23,7 +23,7 @@ probit_res = probit_mod.fit()
 
 print "This example is based on Greene Table 21.1 5th Edition"
 print "Linear Model"
-print lmp_res.params
+print lpm_res.params
 print "Logit Model"
 print logit_res.params
 print "Probit Model"
