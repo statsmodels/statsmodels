@@ -1258,7 +1258,8 @@ class DiscreteResults(LikelihoodModelResults):
 
         Notes
         -----
-        Only the defaults are available now.  This is not yet finished or tested.
+        When using after Poisson, returns the expected number of events
+        per period, assuming that the model is loglinear.
         """
 #TODO:
 #        factor : None or dictionary, optional
