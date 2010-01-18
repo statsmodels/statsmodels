@@ -146,20 +146,45 @@ class Poisson(DiscreteModel):
     pdf
     predict
     score
-
-    Notes
-    -----
-    The cdf method is not implemented for the Poisson.
     """
 
-    def pdf(self, params):
+    def cdf(self, X):
+        """
+        Poisson model cumulative distribution function
+
+        Parameters
+        -----------
+        X : array-like
+            `X` is the linear predictor of the model.  See notes.
+
+        Returns
+        -------
+        The value of the Poisson CDF at each point.
+
+        Notes
+        -----
+        The CDF is defined as
+
+        .. math:: \\exp\left(-\\lambda\\right)\\sum_{i=0}^{y}\\frac{\\lambda^{i}}{i!}
+
+        where :math:`\\lambda` assumes the loglinear model. I.e.,
+
+        .. math:: \\ln\\lambda_{i}=X\\beta
+
+        The parameter `X` is :math:`X\\beta` in the above formula.
+        """
+        y = self.endog
+#        xb = np.dot(self.exog, params)
+        return stats.poisson.cdf(y, np.exp(X))
+
+    def pdf(self, X):
         """
         Poisson model probability mass function
 
         Parameters
         -----------
-        params : array-like
-            The parameters of the model.
+        X : array-like
+            `X` is the linear predictor of the model.  See notes.
 
         Returns
         -------
@@ -167,7 +192,7 @@ class Poisson(DiscreteModel):
 
         Notes
         --------
-        The pmf is defined as
+        The PMF is defined as
 
         .. math:: \\frac{e^{-\\lambda_{i}}\\lambda_{i}^{y_{i}}}{y_{i}!}
 
@@ -175,12 +200,11 @@ class Poisson(DiscreteModel):
 
         .. math:: \\ln\\lambda_{i}=X\\beta
 
-        This method is not used in the fitting algorithm.
+        The parameter `X` is :math:`X\\beta` in the above formula.
         """
         y = self.endog
-        X = self.exog
-        L = np.exp(np.dot(X,params))
-        return (np.exp(-L)*L**y)/factorial(y)
+#        xb = np.dot(self.exog,params)
+        return stats.poisson.pmf(y, np.exp(X))
 
     def loglike(self, params):
         """
@@ -1234,7 +1258,8 @@ class DiscreteResults(LikelihoodModelResults):
 
         Notes
         -----
-        Only the defaults are available now.  This is not yet finished or tested.
+        When using after Poisson, returns the expected number of events
+        per period, assuming that the model is loglinear.
         """
 #TODO:
 #        factor : None or dictionary, optional
@@ -1283,8 +1308,15 @@ Got %s" % type(atexog)
             exog[:,ind] = 0
         if method not in ['dydx','eyex','dyex','eydx']:
             raise ValueError, "method is not understood.  Got %s" % method
-        effects = np.dot(model.pdf(np.dot(exog,params))[:,None],
+        # group 1 probit, logit, logistic, cloglog, heckprob, xtprobit
+        if isinstance(model, (Probit, Logit)):
+            effects = np.dot(model.pdf(np.dot(exog,params))[:,None],
                     params[None,:])
+        # group 2 oprobit, ologit, gologit, mlogit, biprobit
+        #TODO
+        # group 3 poisson, nbreg, zip, zinb
+        elif isinstance(model, (Poisson)):
+            effects = np.exp(np.dot(exog, params))[:,None]*params[None,:]
         fittedvalues = np.dot(exog, params) #TODO: add a predict method
                                             # that takes an exog kwd
         if 'ex' in method:
@@ -1341,8 +1373,8 @@ Got %s" % type(atexog)
                         effects[i] = ((effect1 - effect0)/wfv).mean()
                     effects[i] = (effect1 - effect0).mean()
         # Set standard error of the marginal effects by Delta method.
-        self.margeff_se = None
-        #self.margeff = effects
+        self.margfx_se = None
+        self.margfx = effects
         return effects
 
 if __name__=="__main__":

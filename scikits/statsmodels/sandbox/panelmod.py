@@ -35,6 +35,48 @@ package.  http://code.google.com/p/pandas/"
 
 #########
 
+def repanel_cov(groups, sigmas):
+    '''calculate error covariance matrix for random effects model
+
+    Parameters
+    ----------
+    groups : array, (nobs, nre) or (nobs,)
+        array of group/category observations
+    sigma : array, (nre+1,)
+        array of standard deviations of random effects,
+        last element is the standard deviation of the
+        idiosyncratic error
+
+    Returns
+    -------
+    omega : array, (nobs, nobs)
+        covariance matrix of error
+    omegainv : array, (nobs, nobs)
+        inverse covariance matrix of error
+    omegainvsqrt : array, (nobs, nobs)
+        squareroot inverse covariance matrix of error
+        such that omega = omegainvsqrt * omegainvsqrt.T
+
+    Notes
+    -----
+    This does not use sparse matrices and constructs nobs by nobs
+    matrices. Also, omegainvsqrt is not sparse, i.e. elements are non-zero
+    '''
+
+    if groups.ndim == 1:
+        groups = groups[:,None]
+    nobs, nre = groups.shape
+    omega = sigmas[-1]*np.eye(nobs)
+    for igr in range(nre):
+        group = groups[:,igr:igr+1]
+        groupuniq = np.unique(group)
+        dummygr = sigmas[igr] * (group == groupuniq).astype(float)
+        omega +=  np.dot(dummygr, dummygr.T)
+    ev, evec = np.linalg.eigh(omega)  #eig doesn't work
+    omegainv = np.dot(evec, (1/ev * evec).T)
+    omegainvhalf = evec/np.sqrt(ev)
+    return omega, omegainv, omegainvhalf
+
 
 
 #class PanelData(object):
@@ -217,7 +259,82 @@ if __name__ == "__main__":
     panel = LongPanel.fromRecords(arrpanel, major_field='year',
             minor_field='firm')
     panel_mod_oneway = OneWayError(panel, endog_name='investment')
+#
+#""" Covariance matrix, inverse, and negative sqrt for 2way random effects model
+#
+#Created on Wed Jan 13 08:44:20 2010
+#Author: josef-pktd
+#
+#
+#see also Baltagi (3rd edt) 3.3 THE RANDOM EFFECTS MODEL p.35
+#for explicit formulas for spectral decomposition
+#but this works also for unbalanced panel
+#
+#I also just saw: 9.4.2 The Random Effects Model p.176 which is
+#partially almost the same as I did
+#
+#this needs to use sparse matrices for larger datasets
+#
+#"""
+#
+#import numpy as np
+#
+
+    groups = np.array([0,0,0,1,1,2,2,2])
+    #groups = np.array([0,0,0,1,1,1,2,2,2])
+    nobs = groups.shape[0]
+    groupuniq = np.unique(groups)
+    periods = np.array([0,1,2,1,2,0,1,2])
+    #periods = np.array([0,1,2,0,1,2,0,1,2])
+    perioduniq = np.unique(periods)
+
+    dummygr = (groups[:,None] == groupuniq).astype(float)
+    dummype = (periods[:,None] == perioduniq).astype(float)
+
+    sigma = 1.
+    sigmagr = np.sqrt(2.)
+    sigmape = np.sqrt(3.)
+
+    #dummyall = np.c_[sigma*np.ones((nobs,1)), sigmagr*dummygr,
+    #                                           sigmape*dummype]
+    #exclude constant ?
+    dummyall = np.c_[sigmagr*dummygr, sigmape*dummype]
+    # omega is the error variance-covariance matrix for the stacked
+    # observations
+    omega = np.dot(dummyall, dummyall.T) + sigma* np.eye(nobs)
+    print omega
+    print np.linalg.cholesky(omega)
+    ev, evec = np.linalg.eigh(omega)  #eig doesn't work
+    omegainv = np.dot(evec, (1/ev * evec).T)
+    omegainv2 = np.linalg.inv(omega)
+    omegacomp = np.dot(evec, (ev * evec).T)
+    print np.max(np.abs(omegacomp - omega))
+    #check
+    #print np.dot(omegainv,omega)
+    print np.max(np.abs(np.dot(omegainv,omega) - np.eye(nobs)))
+    omegainvhalf = evec/np.sqrt(ev)  #not sure whether ev shouldn't be column
+    print np.max(np.abs(np.dot(omegainvhalf,omegainvhalf.T) - omegainv))
+
+    # now we can use omegainvhalf in GLS (instead of the cholesky)
 
 
 
 
+
+
+
+
+    sigmas2 = np.array([sigmagr, sigmape, sigma])
+    groups2 = np.column_stack((groups, periods))
+    omega_, omegainv_, omegainvhalf_ = repanel_cov(groups2, sigmas2)
+    print np.max(np.abs(omega_ - omega))
+    print np.max(np.abs(omegainv_ - omegainv))
+    print np.max(np.abs(omegainvhalf_ - omegainvhalf))
+
+    # notation Baltagi (3rd) section 9.4.1 (Fixed Effects Model)
+    Pgr = reduce(np.dot,[dummygr,
+            np.linalg.inv(np.dot(dummygr.T, dummygr)),dummygr.T])
+    Qgr = np.eye(nobs) - Pgr
+    # within group effect: np.dot(Qgr, groups)
+    # but this is not memory efficient, compared to groupstats
+    print np.max(np.abs(np.dot(Qgr, groups)))
