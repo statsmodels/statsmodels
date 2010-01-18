@@ -1342,7 +1342,7 @@ Got %s" % type(atexog)
                     effects[i] = (effect1 - effect0).mean()
         # Set standard error of the marginal effects by Delta method.
         self.margeff_se = None
-        self.margeff = effects
+        #self.margeff = effects
         return effects
 
 if __name__=="__main__":

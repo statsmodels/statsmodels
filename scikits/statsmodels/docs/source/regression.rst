@@ -26,7 +26,7 @@ depending on the assumption on :math:`\Sigma`, we have currently four classes av
 
 All regression models define the same methods and follow the same structure,
 and can be used in a similar fashion. Some of them contain additional model
-spedific methods and attributes.
+specific methods and attributes.
 
 GLS is the superclass of the other regression classes.
 
