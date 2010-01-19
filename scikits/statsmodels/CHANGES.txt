@@ -4,9 +4,10 @@
 
 
 
-trunk
------
+trunk for 0.2.0
+---------------
 
+*main changes*
 
  * renames for more consistency
    RLM.fitted_values -> RLM.fittedvalues
@@ -21,6 +22,9 @@ trunk
  * made tools.categorical much more robust
  * add_constant now takes a prepend argument
  * fix GLS to work with only a one column design
+
+*new*
+
  * add four new datasets
     - A dataset from the American National Election Studies (1996)
     - Grunfeld (1950) investment data
@@ -41,6 +45,7 @@ trunk
  * add Seemingly Unrelated Regression (SUR) and Two-Stage Least Squares
    for systems of equations in sandbox.sysreg.Sem2SLS
  * add restricted least squares (RLS)
+
 
 0.1.0b1
 -------

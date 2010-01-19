@@ -724,8 +724,10 @@ class RegressionResults(LikelihoodModelResults):
 
     It handles the output of contrasts, estimates of covariance, etc.
 
-    Attributes
-    -----------
+    Returns
+    -------
+    **Attributes**
+
     aic
         Aikake's information criteria :math:`-2llf + 2(df_model+1)`
     bic
@@ -742,7 +744,7 @@ class RegressionResults(LikelihoodModelResults):
         See HC2_se below.  Only available after calling HC2_se.
     cov_HC3
         See HC3_se below.  Only available after calling HC3_se.
-    df_model
+    df_model :
         Model degress of freedom. The number of regressors p - 1 for the
         constant  Note that df_model does not include the constant even though
         the design does.  The design is always assumed to have a constant
@@ -836,12 +838,19 @@ class RegressionResults(LikelihoodModelResults):
     ssr
         Sum of squared (whitened) residuals.
     stand_errors
-        The standard errors of the parameter estimates
+        The standard errors of the parameter estimates.
     uncentered_tss
         Uncentered sum of squares.  Sum of the squared values of the
         (whitened) endogenous response variable.
     wresid
         The residuals of the transformed/whitened regressand and regressor(s)
+
+    Attributes
+    ----------
+    aic
+    bic
+    HC0_se
+    mse_resid
 
     Methods
     -------
@@ -964,6 +973,9 @@ class RegressionResults(LikelihoodModelResults):
 
     @cache_readonly
     def mse_resid(self):
+        '''Mean squared error of the residuals.  The sum of squared residuals
+        divided by the residual degrees of freedom.
+        '''
         return self.ssr/self.df_resid
 
     @cache_readonly
@@ -992,10 +1004,12 @@ class RegressionResults(LikelihoodModelResults):
 
     @cache_readonly
     def aic(self):
+        '''Aikake's information criteria :math:`-2llf + 2(df_model+1)`'''
         return -2 * self.llf + 2 * (self.df_model + 1)
 
     @cache_readonly
     def bic(self):
+        """Bayes' information criteria :math:`-2llf + \log(n)(df_model+1)`"""
         return -2 * self.llf + np.log(self.nobs) * (self.df_model + 1)
 
 # Centered R2 for models with intercepts
