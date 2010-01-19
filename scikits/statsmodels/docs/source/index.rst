@@ -18,11 +18,17 @@ Quickstart for the impatient
 
 **License:** BSD
 
-**Requirements:** python 2.4. to 2.6 and latest releases of numpy and scipy
+**Requirements:** python 2.4. to 2.6 and
+  recent releases of numpy (>=1.3) and scipy (>=0.7)
+  earlier versions of numpy and scipy might work but not tested
 
 **Repository:** http://code.launchpad.net/statsmodels
 
 **Online Documentation:** http://statsmodels.sourceforge.net/
+
+**Pypi:** http://pypi.python.org/pypi/scikits.statsmodels
+
+**Mailing List:** http://groups.google.com/group/pystatsmodels?hl=en
 
 
 **Installation:**
@@ -62,7 +68,7 @@ For example, here is a minimal ordinary least squares case ::
   that are available
 
 **Note:**
-Due to our infrequent official releases, it should be noted that the trunk
+Due to our infrequent official releases, we want to point out that the trunk
 branch in the launchpad repository given above will have the most recent
 code and is for the most part quite stable and fine for daily use.
 
@@ -71,12 +77,13 @@ Table of Contents
 -----------------
 
 .. toctree::
-   :maxdepth: 4
+   :maxdepth: 3
 
 
    introduction
    related
    regression
+   discretemod
    glm
    rlm
    stattools

@@ -32,6 +32,13 @@ print probit_res.params
 #print "(Tentatively) Weibull Model"
 #print weibull_res.params
 
+print "Linear Model"
+print lpm_res.params[:-1]
+print "Logit Model"
+print logit_res.margeff()
+print "Probit Model"
+print probit_res.margeff()
+
 anes_data = sm.datasets.anes96.Load()
 anes_exog = anes_data.exog
 anes_exog[:,0] = np.log(anes_exog[:,0] + .1)
