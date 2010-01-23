@@ -63,7 +63,7 @@ class Model(object):
         After a model has been fit predict returns the fitted values.  If
         the model has not been fit, then fit is called.
         """
-        raise NotImplementedErrror
+        raise NotImplementedError
 
 class LikelihoodModel(Model):
     """

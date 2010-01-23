@@ -163,28 +163,6 @@ Additional to these functions, sandbox regression still contains several
 examples, that are illustrative of the use of the regression models of
 statsmodels.
 
-Regression with Discrete Dependent Variable
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-The following is the beginning of support for models with discrete dependent
-variables.  The Logit, Multinomial Logit, Poisson, and Probit models should
-be fairly mature, though are still untested.  The negative binomial models and
-the Weibull model are not yet finished and should not yet be used.
-
-.. currentmodule:: scikits.statsmodels.sandbox.discretemod
-
-.. autosummary::
-   :toctree: generated/
-
-   DiscreteModel
-   DiscreteResults
-   Logit
-   MNLogit
-   NbReg
-   NegBinTwo
-   Poisson
-   Probit
-   Weibull
 
 
 Systems of Regression Equations and Simultaneous Equations

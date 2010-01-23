@@ -26,7 +26,7 @@ depending on the assumption on :math:`\Sigma`, we have currently four classes av
 
 All regression models define the same methods and follow the same structure,
 and can be used in a similar fashion. Some of them contain additional model
-spedific methods and attributes.
+specific methods and attributes.
 
 GLS is the superclass of the other regression classes.
 
@@ -108,6 +108,9 @@ see also the `examples` and the `tests` folders
 Module Reference
 ----------------
 
+Model Classes
+^^^^^^^^^^^^^
+
 .. autosummary::
    :toctree: generated/
 
@@ -116,6 +119,14 @@ Module Reference
    WLS
    GLSAR
    yule_walker
+
+Result Class
+^^^^^^^^^^^^
+
+.. autosummary::
+   :toctree: generated/
+
+   RegressionResults
 
 
 Technical Documentation
