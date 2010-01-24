@@ -994,6 +994,8 @@ class MNLogit(DiscreteModel):
 class NegBinTwo(DiscreteModel):
     """
     NB2 Negative Binomial model.
+
+    Note: This is not working yet
     """
 #NOTE: to use this with the solvers, the likelihood fit will probably
 # need to be amended to have args, so that we can pass the ancillary param
@@ -1033,6 +1035,7 @@ class NegBinTwo(DiscreteModel):
         """
         Score vector for NB2 model
         """
+        import numdifftools as nd
         y = self.endog
         X = self.exog
         jfun = nd.Jacobian(self.loglike)
@@ -1064,6 +1067,7 @@ class NegBinTwo(DiscreteModel):
         """
 #        d2dBdB =
 #        d2da2 =
+        import numdifftools as nd
         Hfun = nd.Jacobian(self.score)
         return Hfun(params)[-1]
 # is the numerical hessian block diagonal?  or is it block diagonal by assumption?
