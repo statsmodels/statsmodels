@@ -595,11 +595,11 @@ class VarmaPoly(object):
             a = a
         else:
             if self.isstructured:
-                a = self.reduceform(self.ar)[1:]
+                a = -self.reduceform(self.ar)[1:]
             else:
-                a = self.ar[1:]
+                a = -self.ar[1:]
         amat = self.stacksquare(a)
-        ev = np.sort(np.linalg.eigvals(amat))
+        ev = np.sort(np.linalg.eigvals(amat))[::-1]
         self.areigenvalues = ev
         return (np.abs(ev) < 1).all()
 
@@ -634,7 +634,7 @@ class VarmaPoly(object):
 
 
         amat = self.stacksquare(a)
-        ev = np.sort(np.linalg.eigvals(amat))
+        ev = np.sort(np.linalg.eigvals(amat))[::-1]
         self.maeigenvalues = ev
         return (np.abs(ev) < 1).all()
 
@@ -696,10 +696,10 @@ ma22 = np.array([[[ 1. ,  0. ],
 ar23ns = np.array([[[ 1. ,  0. ],
                  [ 0. ,  1. ]],
 
-                [[-1.2,  0. ],
-                 [ 0.2, -0.6]],
+                [[-1.9,  0. ],
+                 [ 0.4, -0.6]],
 
-                [[-0.1,  0. ],
+                [[ 0.3,  0. ],
                  [ 0.1, -0.1]]])
 
 vp = VarmaPoly(ar23, ma22)
@@ -712,4 +712,4 @@ print vp.getisinvertible()
 
 vp2 = VarmaPoly(ar23ns)
 print vp2.getisstationary()
-print vp2.getisinvertible()
+print vp2.getisinvertible()  # no ma lags
