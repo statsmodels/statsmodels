@@ -7,16 +7,11 @@ References
 Baltagi, Badi H. `Econometric Analysis of Panel Data.` 4th ed. Wiley, 2008.
 """
 
-#How to organize the models?
-#Right now by error structure?
-
-#Do we have one "panel model" then be able to do any estimations from there
-#Is this how the cross-sectional models should be too?
-#General Linear Model and all derived from there...probably
-
 from scikits.statsmodels.tools import categorical
 from scikits.statsmodels.regression import GLS, WLS
 import numpy as np
+
+__all__ = ["PanelModel"]
 
 try:
     from pandas import LongPanel, __version__
@@ -25,14 +20,6 @@ except:
     raise ImportError, "While in the sandbox this code depends on the pandas \
 package.  http://code.google.com/p/pandas/"
 
-#######
-
-# class PanelModel()
-
-# fit(method=None, **kwargs):
-
-
-#########
 
 def group(X):
     """
@@ -97,24 +84,9 @@ def repanel_cov(groups, sigmas):
 
 
 
-#class PanelData(object):
-#    def __init__(self, dataset, endog, exog, time='time', panel=None):
-#        self.parse_dataset(dataset)
-#        self.endog_name = endog
-#        self.exog_name = exog
-#        self.time_name = time
-#        self.panel_name = panel
-
-#    def parse_dataset(self, dataset):
-#        if isinstance(dataset, LongPanel):
-#            pass
-
 class PanelData(LongPanel):
     pass
 
-#TODO: not sure what the inheritance structure should look like
-# Model and LikelihoodModel weren't designed for panels
-# maybe should start over?
 class PanelModel(object):
     """
     An abstract statistical model class for panel (longitudinal) datasets.
@@ -182,7 +154,7 @@ class PanelModel(object):
         self.time = np.asarray(time)
 
         self.paneluniq = np.unique(panel)
-        self.timeuniq = np.unique(panel)
+        self.timeuniq = np.unique(time)
 #TODO: this  structure can possibly be extracted somewhat to deal with
 #names in general
 
@@ -229,13 +201,12 @@ class PanelModel(object):
 #TODO: this could be pulled out and just have a by kwd that takes
 # the panel or time array
 #TODO: this also needs to be expanded for 'twoway'
-    def _group_mean(self, X, index='oneway', counts=False):
+    def _group_mean(self, X, index='oneway', counts=False, dummies=False):
         """
         Get group means of X by time or by panel.
 
         index default is panel
         """
-        # get group means
         if index == 'oneway':
             Y = self.panel
             uniq = self.paneluniq
@@ -251,25 +222,20 @@ class PanelModel(object):
             mean = np.dot(dummy,X)/dummy.sum(1)[:,None]
         else:
             mean = np.dot(dummy,X)/dummy.sum(1)
-        if counts == False:
+        if counts == False and dummies == False:
             return mean
-        elif counts == True:
+        elif counts == True and dummies == False:
             return mean, dummy.sum(1)
+        elif counts == True and dummies == True:
+            return mean, dummy.sum(1), dummy
+        elif counts == False and dummies == True:
+            return mean, dummy
 
 #TODO: Use kwd arguments or have fit_method methods?
     def fit(self, model=None, method=None, effects='oneway'):
         """
         method : LSDV, demeaned, MLE, GLS, BE, FE, optional
         model :
-                BTWNP : Between panels
-                BTWNT : Between time periods
-                FIXONE : One-way fixed effects
-                FIXONETIME : One-way time fixed effects
-                GMM : Dynamic panel estimator
-                POOLED : Pooled
-                RANONE : One-way random effects
-                RANTWO : Two-way random effects
-
                 between
                 fixed
                 random
@@ -279,6 +245,14 @@ class PanelModel(object):
                 oneway
                 time
                 twoway
+        femethod : demeaned (only one implemented)
+                   WLS
+        remethod :
+                swar -
+                amemiya
+                nerlove
+                walhus
+
 
         Notes
         ------
@@ -312,24 +286,39 @@ class PanelModel(object):
 #        tdummies = None
 
     def _fit_btwn(self, method, effects):
-        #TODO: check effects,
         # group mean regression or WLS
-        endog = self._group_mean(self.endog, index=effects)
-        exog = self._group_mean(self.exog, index=effects)
+        if effects != "twoway":
+            endog = self._group_mean(self.endog, index=effects)
+            exog = self._group_mean(self.exog, index=effects)
+        else:
+            raise ValueError, "%s effects is not valid for the between \
+estimator" % s
         befit = GLS(endog, exog).fit()
         return befit
 
     def _fit_fixed(self, method, effects):
         endog = self.endog
         exog = self.exog
-        endog_mean, counts = self._group_mean(endog, index=effects,
+        demeantwice = False
+        if effects in ["oneway","twoways"]:
+            if effects == "twoways":
+                demeantwice = True
+                effects = "oneway"
+            endog_mean, counts = self._group_mean(endog, index=effects,
                 counts=True)
-        exog_mean = self._group_mean(exog, index=effects)
-        counts = counts.astype(int)
-        endog = endog - np.repeat(endog_mean, counts)
-        exog = exog - np.repeat(exog_mean, counts, axis=0)
+            exog_mean = self._group_mean(exog, index=effects)
+            counts = counts.astype(int)
+            endog = endog - np.repeat(endog_mean, counts)
+            exog = exog - np.repeat(exog_mean, counts, axis=0)
+        if demeantwice or effects == "time":
+            endog_mean, dummies = self._group_mean(endog, index="time",
+                dummies=True)
+            exog_mean = self._group_mean(exog, index="time")
+            # This allows unbalanced panels
+            endog = endog - np.dot(endog_mean, dummies)
+            exog = exog - np.dot(dummies.T, exog_mean)
         fefit = GLS(endog, exog[:,-self._cons_index]).fit()
-#TODO: this will probably fail with one regressor
+#TODO: might fail with one regressor
         return fefit
 
 
@@ -373,9 +362,14 @@ if __name__ == "__main__":
             equation='invest value capital')
 # note that equation doesn't actually do anything but name the variables
     panel_ols = panel_mod.fit(model='pooled')
-    panel_be = panel_mod.fit(model='between')
+
+    panel_be = panel_mod.fit(model='between', effects='oneway')
     panel_fe = panel_mod.fit(model='fixed', effects='oneway')
 
+    panel_bet = panel_mod.fit(model='between', effects='time')
+    panel_fet = panel_mod.fit(model='fixed', effects='time')
+
+    panel_fe2 = panel_mod.fit(model='fixed', effects='twoways')
 
 
 #see also Baltagi (3rd edt) 3.3 THE RANDOM EFFECTS MODEL p.35
