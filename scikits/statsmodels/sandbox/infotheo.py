@@ -68,6 +68,46 @@ def _isproperdist(X):
     else:
         return True
 
+def discretize(X, method="ef", nbins=None):
+    """
+    Discretize `X`
+
+    Parameters
+    ----------
+    bins : int, optional
+        Number of bins.  Default is floor(sqrt(N))
+    method : string
+        "ef" is equal-frequency binning
+        "ew" is equal-width binning
+
+    Examples
+    --------
+    """
+    nobs = len(X)
+    if nbins == None:
+        nbins = np.floor(np.sqrt(nobs))
+    if method == "ef":
+        discrete = np.ceil(nbins * stats.rankdata(X)/nobs)
+    if method == "ew":
+        width = np.max(X) - np.min(X)
+        width = np.floor(width/nbins)
+        svec, ivec = stats.fastsort(X)
+        discrete = np.zeros(nobs)
+        binnum = 1
+        base = svec[0]
+        discrete[ivec[0]] = binnum
+        for i in xrange(1,nobs):
+            if svec[i] < base + width:
+                discrete[ivec[i]] = binnum
+            else:
+                base = svec[i]
+                binnum += 1
+                discrete[ivec[i]] = binnum
+    return discrete
+#TODO: looks okay but needs more robust tests for corner cases
+
+
+
 def logbasechange(a,b):
     """
     There is a one-to-one transformation of the entropy value from
@@ -332,6 +372,12 @@ and Synthesis"
     I_XY = mutualinfo(px,py,w)
     print "Table 3.3"
     print H_X,H_Y, H_XY, H_XgivenY, H_YgivenX, D_YX, D_XY, I_XY
+
+    print "discretize functions"
+    X=np.array([21.2,44.5,31.0,19.5,40.6,38.7,11.1,15.8,31.9,25.8,20.2,14.2,24.0,21.0,
+        11.3,18.0,16.3,22.2,7.8,27.8,16.3,35.1,14.9,17.1,28.2,16.4,16.5,46.0,9.5,18.8,
+        32.1,26.1,16.1,7.3,21.4,20.0,29.3,14.9,8.3,22.5,12.8,26.9,25.5,22.9,11.2,20.7,
+        26.2,9.3,10.8,15.6])
 
 
 
