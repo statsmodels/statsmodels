@@ -282,17 +282,20 @@ if __name__ == '__main__':
     print resls[1]
 
     print '\nparameter estimate'
+    print 'parameter of DGP ar(1), ma(1), sigma_error'
+    print [-0.8, 0.5, 0.1]
     print 'mle with fmin'
     print arma1res.params
     print 'mle with bfgs'
     print res2.params
     print 'cond. least squares'
-    print resls[0]
+    errls = arest.error_estimate
+    print resls[0], np.sqrt(np.dot(errls,errls)/errls.shape[0])
 
     err = arma1.geterrors(res2.params)
     print 'cond least squares parameter cov'
     #print np.dot(err,err)/err.shape[0] * resls[1]
-    errls = arest.error_estimate
+    #errls = arest.error_estimate
     print np.dot(errls,errls)/errls.shape[0] * resls[1]
     print 'bfgs hessian'
     print res2.model.optimresults['Hopt'][:2,:2]
