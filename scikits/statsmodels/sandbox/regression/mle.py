@@ -301,7 +301,7 @@ def generate_garch(nobs, ar, ma, mu=1., scale=0.1):
     #h = np.abs(h)
     #h = np.exp(h)
     #err = np.sqrt(h)*np.random.randn(nobs)
-    err = np.sqrt(h)*np.random.standard_t(8, size=nobs)
+    err = np.sqrt(h)*eta #np.random.standard_t(8, size=nobs)
     return err, h
 
 
@@ -357,7 +357,7 @@ def generate_gjrgarch(nobs, ar, ma, mu=1., scale=0.1, varinnovation=None):
     #h = np.exp(h)
     #err = np.sqrt(h)*np.random.randn(nobs)
     print 'h.shape', h.shape
-    err = np.sqrt(h)*np.random.standard_t(8, size=len(h))
+    err = np.sqrt(h[:len(eta)])*eta #np.random.standard_t(8, size=len(h))
     return err, h, etax
 
 def miso_lfilter(ar, ma, x):
@@ -467,6 +467,49 @@ def test_misofilter():
     assert_almost_equal(y, yt, decimal=15)
     assert_almost_equal(inp, yt, decimal=15)
 
+def test_gjrgarch():
+    # test impulse response of gjr simulator
+    varinno = np.zeros(100)
+    varinno[0] = 1.
+    errgjr5,hgjr5, etax5 = generate_gjrgarch(100, [1.0, 0],
+                        [[1., 1,0],[0, 0.1,0.8],[0, 0.05,0.7],[0, 0.01,0.6]],
+                        mu=0.0,scale=0.1, varinnovation=varinno)
+    ht = np.array([ 1., 0.1, 0.05,  0.01, 0., 0.  ])
+    assert_almost_equal(hgjr5[:6], ht, decimal=15)
+
+    errgjr5,hgjr5, etax5 = generate_gjrgarch(100, [1.0, -1.0],
+                        [[1., 1,0],[0, 0.1,0.8],[0, 0.05,0.7],[0, 0.01,0.6]],
+                        mu=0.0,scale=0.1, varinnovation=varinno)
+    assert_almost_equal(hgjr5[:6], ht.cumsum(), decimal=15)
+
+    errgjr5,hgjr5, etax5 = generate_gjrgarch(100, [1.0, 1.0],
+                        [[1., 1,0],[0, 0.1,0.8],[0, 0.05,0.7],[0, 0.01,0.6]],
+                        mu=0.0,scale=0.1, varinnovation=varinno)
+    ht1 = [0]
+    for h in ht: ht1.append(h-ht1[-1])
+    assert_almost_equal(hgjr5[:6], ht1[1:], decimal=15)
+
+    # negative shock
+    varinno = np.zeros(100)
+    varinno[0] = -1.
+    errgjr5,hgjr5, etax5 = generate_gjrgarch(100, [1.0, 0],
+                        [[1., 1,0],[0, 0.1,0.8],[0, 0.05,0.7],[0, 0.01,0.6]],
+                        mu=0.0,scale=0.1, varinnovation=varinno)
+    ht = np.array([ 1.  ,  0.9 ,  0.75,  0.61,  0.  ,  0.  ])
+    assert_almost_equal(hgjr5[:6], ht, decimal=15)
+
+    errgjr5,hgjr5, etax5 = generate_gjrgarch(100, [1.0, -1.0],
+                        [[1., 1,0],[0, 0.1,0.8],[0, 0.05,0.7],[0, 0.01,0.6]],
+                        mu=0.0,scale=0.1, varinnovation=varinno)
+    assert_almost_equal(hgjr5[:6], ht.cumsum(), decimal=15)
+
+    errgjr5,hgjr5, etax5 = generate_gjrgarch(100, [1.0, 1.0],
+                        [[1., 1,0],[0, 0.1,0.8],[0, 0.05,0.7],[0, 0.01,0.6]],
+                        mu=0.0,scale=0.1, varinnovation=varinno)
+    ht1 = [0]
+    for h in ht: ht1.append(h-ht1[-1])
+    assert_almost_equal(hgjr5[:6], ht1[1:], decimal=15)
+
 
 '''
 >>> print signal.correlate(x3, np.array([[-2.0,3,1],[0.0,0.0,0]])[::-1,:],mode='full')[:-1, (x3.shape[1]+1)//2]
@@ -489,6 +532,9 @@ def garchplot(err, h, title='Garch simulation'):
     plt.ylabel('conditional variance')
 
 if __name__ == '__main__':
+
+    test_misofilter()
+    test_gjrgarch()
 
     examples = []
     if 'arma' in examples:
@@ -555,7 +601,7 @@ if __name__ == '__main__':
     plt.plot(h)
     #plt.show()
 
-    seed = 91234  #8837708
+    seed = 3842774 #91234  #8837708
     seed = np.random.randint(9999999)
     print 'seed', seed
     np.random.seed(seed)
@@ -602,9 +648,9 @@ if __name__ == '__main__':
     garchplot(errgjr4[-400:nobs], hgjr4[-400:nobs], 'GJR-GARCH(1,3) Simulation')
 
     varinno = np.zeros(100)
-    varinno[5] = 1.
-    errgjr5,hgjr5, etax5 = generate_gjrgarch(100, [1.0, ar1],
-                        [[1., 1,0],[0, 0.1,0.9],[0, 0.1,0.9],[0, 0.1,0.9]],
+    varinno[0] = 1.
+    errgjr5,hgjr5, etax5 = generate_gjrgarch(100, [1.0, 0],
+                        [[1., 1,0],[0, 0.1,0.8],[0, 0.05,0.7],[0, 0.01,0.6]],
                         mu=0.0,scale=0.1, varinnovation=varinno)
     garchplot(errgjr5[:nobs], hgjr5[:nobs], 'GJR-GARCH(1,3) Simulation')
     #garchplot(errgjr4[-400:nobs], hgjr4[-400:nobs], 'GJR-GARCH(1,3) Simulation')
@@ -615,4 +661,4 @@ if __name__ == '__main__':
     x = np.arange(20).reshape(10,2)
     x3=np.column_stack((np.ones((x.shape[0],1)),x))
     y, inp = miso_lfilter([1., 0],np.array([[-2.0,3,1],[0.0,0.0,0]]),x3)
-    test_misofilter()
+
