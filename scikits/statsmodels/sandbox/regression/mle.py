@@ -42,6 +42,8 @@ from numpy.testing import assert_almost_equal
 #from scipy.stats import t, norm
 from scipy import optimize, signal, derivative
 
+import matplotlib.pyplot as plt
+
 import numdifftools as ndt
 
 from scikits.statsmodels.model import Model, LikelihoodModelResults
@@ -185,20 +187,223 @@ class LikelihoodModel(Model):
         return mlefit
 
 
-class Arma(LikelihoodModel):
+
+class TSMLEModel(LikelihoodModel):
     """
-    univariate Autoregressive Moving Average model
+    univariate time series model for estimation with maximum likelihood
 
     Note: This is not working yet
     """
 
     def __init__(self, endog, exog=None):
         #need to override p,q (nar,nma) correctly
-        super(LikelihoodModel, self).__init__(endog, exog)
+        super(TSMLEModel, self).__init__(endog, exog)
         #set default arma(1,1)
         self.nar = 1
         self.nma = 1
         #self.initialize()
+
+    #why to I need this here? AttributeError: 'Arma' object has no attribute 'initialize'
+    def initialize(self):
+        """
+        Initialize (possibly re-initialize) a Model instance. For
+        instance, the design matrix of a linear model may change
+        and some things must be recomputed.
+        """
+        pass
+    def geterrors(self, params):
+        raise NotImplementedError
+
+    def loglike(self, params):
+        """
+        Loglikelihood for timeseries model
+
+        Notes
+        -----
+        needs to be overwritten by subclass
+        """
+        raise NotImplementedError
+
+
+    def score(self, params):
+        """
+        Score vector for Arma model
+        """
+        #return None
+        #print params
+        jac = ndt.Jacobian(self.loglike, stepMax=1e-4)
+        return jac(params)[-1]
+
+    def hessian(self, params):
+        """
+        Hessian of arma model.  Currently uses numdifftools
+        """
+        #return None
+        Hfun = ndt.Jacobian(self.score, stepMax=1e-4)
+        return Hfun(params)[-1]
+
+
+    def fit(self, start_params=None, maxiter=5000, method='fmin', tol=1e-08):
+        '''estimate model by minimizing negative loglikelihood
+
+        does this need to be overwritten ?
+        '''
+        if start_params is None and hasattr(self, '_start_params'):
+            start_params = self._start_params
+        #start_params = np.concatenate((0.05*np.ones(self.nar + self.nma), [1]))
+        mlefit = super(TSMLEModel, self).fit(start_params=start_params,
+                maxiter=maxiter, method=method, tol=tol)
+        return mlefit
+
+
+class Garch(TSMLEModel):
+    '''Garch model gjrgarch (t-garch)
+
+    still experimentation stage, try with
+
+    '''
+    def __init__(self, endog, exog=None):
+        #need to override p,q (nar,nma) correctly
+        super(Garch, self).__init__(endog, exog)
+        #set default arma(1,1)
+        self.nar = 1
+        self.nma = 1
+        #self.initialize()
+
+    def initialize(self):
+        pass
+
+    def geterrors(self, params):
+        '''
+
+        Parameters
+        ----------
+        params : tuple, (mu, ar, ma)
+            try to keep the params conversion in loglike
+
+        copied from generate_gjrgarch
+        needs to be extracted to separate function
+        '''
+        #mu, ar, ma = params
+        ar, ma = params
+        eta = self.endog
+        nobs = eta.shape[0]
+
+        etax = np.empty((nobs,3))
+        etax[:,0] = 1
+        etax[:,1:] = (eta**2)[:,None]
+        etax[eta>0,2] = 0
+        #print 'etax.shape', etax.shape
+        h = miso_lfilter(ar, ma, etax, useic=np.atleast_1d(etax[:,1].mean()))[0]
+        #print 'h.shape', h.shape
+        hneg = h<0
+        if hneg.any():
+            #h[hneg] = 1e-6
+            h = np.abs(h)
+
+            #print 'Warning negative variance found'
+
+        #check timing, starting time for h and eta, do they match
+        #err = np.sqrt(h[:len(eta)])*eta #np.random.standard_t(8, size=len(h))
+        # let it break if there is a len/shape mismatch
+        err = np.sqrt(h)*eta
+        return err, h, etax
+
+    def loglike(self, params):
+        """
+        Loglikelihood for timeseries model
+
+        Notes
+        -----
+        needs to be overwritten by subclass
+        """
+        p, q = self.nar, self.nma
+        ar = np.concatenate(([1], params[:p]))
+        #ar = np.concatenate(([1], -np.abs(params[:p]))) #???
+        #better safe than fast and sorry
+        #
+        ma = np.zeros((q+1,3))
+        ma[0,0] = params[-1]
+        #lag coefficients for ma innovation
+        ma[:,1] = np.concatenate(([0], params[p:p+q]))
+        #delta lag coefficients for negative ma innovation
+        ma[:,2] = np.concatenate(([0], params[p+q:p+2*q]))
+
+        mu = params[-1]
+        params = (ar, ma) #(mu, ar, ma)
+
+        errorsest, h, etax = self.geterrors(params)
+        #temporary safe for debugging
+        self.params_converted = params
+        self.errorsest, self.h, self.etax = errorsest, h, etax
+        #h = h[:-1] #correct this in geterrors
+        #print 'shapes errorsest, h, etax', errorsest.shape, h.shape, etax.shape
+        sigma2 = np.maximum(h, 1e-6)
+        axis = 0
+        nobs = len(errorsest)
+        #this doesn't help for exploding paths
+        #errorsest[np.isnan(errorsest)] = 100
+        axis=0 #not used
+#        muy = errorsest.mean()
+#        # llike is verified, see below
+#        # same as with y = errorsest, ht = sigma2
+#        # np.log(stats.norm.pdf(y,scale=np.sqrt(ht))).sum()
+#        llike  =  -0.5 * (np.sum(np.log(sigma2),axis)
+#                          + np.sum(((errorsest)**2)/sigma2, axis)
+#                          +  nobs*np.log(2*np.pi))
+#        return llike
+        muy = errorsest.mean()
+        # llike is verified, see below
+        # same as with y = errorsest, ht = sigma2
+        # np.log(stats.norm.pdf(y,scale=np.sqrt(ht))).sum()
+        llike  =  -0.5 * (np.sum(np.log(sigma2),axis)
+                          + np.sum(((self.endog)**2)/sigma2, axis)
+                          +  nobs*np.log(2*np.pi))
+        return llike
+
+
+def gjrconvertparams(self, params, nar, nma):
+    """
+    flat to matrix
+
+    Notes
+    -----
+    needs to be overwritten by subclass
+    """
+    p, q = nar, nma
+    ar = np.concatenate(([1], params[:p]))
+    #ar = np.concatenate(([1], -np.abs(params[:p]))) #???
+    #better safe than fast and sorry
+    #
+    ma = np.zeros((q+1,3))
+    ma[0,0] = params[-1]
+    #lag coefficients for ma innovation
+    ma[:,1] = np.concatenate(([0], params[p:p+q]))
+    #delta lag coefficients for negative ma innovation
+    ma[:,2] = np.concatenate(([0], params[p+q:p+2*q]))
+
+    mu = params[-1]
+    params2 = (ar, ma) #(mu, ar, ma)
+    return params2
+
+class Arma(LikelihoodModel):
+    """
+    univariate Autoregressive Moving Average model
+
+    Note: This is not working yet, or does it
+    this can subclass TSMLEModel
+    """
+
+    def __init__(self, endog, exog=None):
+        #need to override p,q (nar,nma) correctly
+        super(Arma, self).__init__(endog, exog)
+        #set default arma(1,1)
+        self.nar = 1
+        self.nma = 1
+        #self.initialize()
+
+    def initialize(self):
+        pass
 
     def geterrors(self, params):
         #copied from sandbox.tsa.arima.ARIMA
@@ -360,7 +565,29 @@ def generate_gjrgarch(nobs, ar, ma, mu=1., scale=0.1, varinnovation=None):
     err = np.sqrt(h[:len(eta)])*eta #np.random.standard_t(8, size=len(h))
     return err, h, etax
 
-def miso_lfilter(ar, ma, x):
+def loglike_GARCH11(params, y):
+    # Computes the likelihood vector of a GARCH11
+    # assumes y is centered
+
+    w     =  params[0] # constant (1);
+    alpha =  params[1] # coefficient of lagged squared error
+    beta  =  params[2] # coefficient of lagged variance
+
+    y2   = y**2;
+    nobs = y2.shape[0]
+    ht    = np.zeros(nobs);
+    ht[0] = y2.mean()  #sum(y2)/T;
+
+    for i in range(1,nobs):
+        ht[i] = w + alpha*y2[i-1] + beta * ht[i-1]
+
+    sqrtht  = np.sqrt(ht)
+    x       = y/sqrtht
+
+    llvalues = -0.5*np.log(2*np.pi) - np.log(sqrtht) - 0.5*(x**2);
+    return llvalues.sum(), llvalues, ht
+
+def miso_lfilter(ar, ma, x, useic=False): #[0.1,0.1]):
     '''
     use nd convolution to merge inputs,
     then use lfilter to produce output
@@ -399,6 +626,7 @@ def miso_lfilter(ar, ma, x):
 
     '''
     ma = np.asarray(ma)
+    ar = np.asarray(ar)
     #inp = signal.convolve(x, ma, mode='valid')
     #inp = signal.convolve(x, ma)[:, (x.shape[1]+1)//2]
     #Note: convolve mixes up the variable left-right flip
@@ -409,7 +637,17 @@ def miso_lfilter(ar, ma, x):
     inp2 = signal.convolve(x, ma[:,::-1])[:, (x.shape[1]+1)//2]
     inp = signal.correlate(x, ma[::-1,:])[:, (x.shape[1]+1)//2]
     assert_almost_equal(inp2, inp)
-    return signal.lfilter([1], ar, inp), inp
+    nobs = x.shape[0]
+    # cut of extra values at end
+
+    #todo initialize also x for correlate
+    if useic:
+        return signal.lfilter([1], ar, inp,
+                #zi=signal.lfilter_ic(np.array([1.,0.]),ar, ic))[0][:nobs], inp[:nobs]
+                zi=signal.lfiltic(np.array([1.,0.]),ar, useic))[0][:nobs], inp[:nobs]
+    else:
+        return signal.lfilter([1], ar, inp)[:nobs], inp[:nobs]
+    #return signal.lfilter([1], ar, inp), inp
 
 
 def test_misofilter():
@@ -533,8 +771,8 @@ def garchplot(err, h, title='Garch simulation'):
 
 if __name__ == '__main__':
 
-    test_misofilter()
-    test_gjrgarch()
+    #test_misofilter()
+    #test_gjrgarch()
 
     examples = []
     if 'arma' in examples:
@@ -592,73 +830,244 @@ if __name__ == '__main__':
 
     nobs = 1000
 
-    err,h = generate_kindofgarch(nobs, [1.0, -0.95], [1.0,  0.1], mu=0.5)
-    import matplotlib.pyplot as plt
-    plt.figure()
-    plt.subplot(211)
-    plt.plot(err)
-    plt.subplot(212)
-    plt.plot(h)
-    #plt.show()
+    if 'garch' in examples:
+        err,h = generate_kindofgarch(nobs, [1.0, -0.95], [1.0,  0.1], mu=0.5)
+        import matplotlib.pyplot as plt
+        plt.figure()
+        plt.subplot(211)
+        plt.plot(err)
+        plt.subplot(212)
+        plt.plot(h)
+        #plt.show()
 
-    seed = 3842774 #91234  #8837708
-    seed = np.random.randint(9999999)
+        seed = 3842774 #91234  #8837708
+        seed = np.random.randint(9999999)
+        print 'seed', seed
+        np.random.seed(seed)
+        ar1 = -0.9
+        err,h = generate_garch(nobs, [1.0, ar1], [1.0,  0.50], mu=0.0,scale=0.1)
+    #    plt.figure()
+    #    plt.subplot(211)
+    #    plt.plot(err)
+    #    plt.subplot(212)
+    #    plt.plot(h)
+    #    plt.figure()
+    #    plt.subplot(211)
+    #    plt.plot(err[-400:])
+    #    plt.subplot(212)
+    #    plt.plot(h[-400:])
+        #plt.show()
+        garchplot(err, h)
+        garchplot(err[-400:], h[-400:])
+
+
+        np.random.seed(seed)
+        errgjr,hgjr, etax = generate_gjrgarch(nobs, [1.0, ar1],
+                                    [[1,0],[0.5,0]], mu=0.0,scale=0.1)
+        garchplot(errgjr[:nobs], hgjr[:nobs], 'GJR-GARCH(1,1) Simulation - symmetric')
+        garchplot(errgjr[-400:nobs], hgjr[-400:nobs], 'GJR-GARCH(1,1) Simulation - symmetric')
+
+        np.random.seed(seed)
+        errgjr2,hgjr2, etax = generate_gjrgarch(nobs, [1.0, ar1],
+                                    [[1,0],[0.1,0.9]], mu=0.0,scale=0.1)
+        garchplot(errgjr2[:nobs], hgjr2[:nobs], 'GJR-GARCH(1,1) Simulation')
+        garchplot(errgjr2[-400:nobs], hgjr2[-400:nobs], 'GJR-GARCH(1,1) Simulation')
+
+        np.random.seed(seed)
+        errgjr3,hgjr3, etax3 = generate_gjrgarch(nobs, [1.0, ar1],
+                            [[1,0],[0.1,0.9],[0.1,0.9],[0.1,0.9]], mu=0.0,scale=0.1)
+        garchplot(errgjr3[:nobs], hgjr3[:nobs], 'GJR-GARCH(1,3) Simulation')
+        garchplot(errgjr3[-400:nobs], hgjr3[-400:nobs], 'GJR-GARCH(1,3) Simulation')
+
+        np.random.seed(seed)
+        errgjr4,hgjr4, etax4 = generate_gjrgarch(nobs, [1.0, ar1],
+                            [[1., 1,0],[0, 0.1,0.9],[0, 0.1,0.9],[0, 0.1,0.9]],
+                            mu=0.0,scale=0.1)
+        garchplot(errgjr4[:nobs], hgjr4[:nobs], 'GJR-GARCH(1,3) Simulation')
+        garchplot(errgjr4[-400:nobs], hgjr4[-400:nobs], 'GJR-GARCH(1,3) Simulation')
+
+        varinno = np.zeros(100)
+        varinno[0] = 1.
+        errgjr5,hgjr5, etax5 = generate_gjrgarch(100, [1.0, -0.],
+                            [[1., 1,0],[0, 0.1,0.8],[0, 0.05,0.7],[0, 0.01,0.6]],
+                            mu=0.0,scale=0.1, varinnovation=varinno)
+        garchplot(errgjr5[:20], hgjr5[:20], 'GJR-GARCH(1,3) Simulation')
+        #garchplot(errgjr4[-400:nobs], hgjr4[-400:nobs], 'GJR-GARCH(1,3) Simulation')
+
+
+    #plt.show()
+    seed = np.random.randint(9999999)  # 9188410
     print 'seed', seed
-    np.random.seed(seed)
-    ar1 = -0.9
-    err,h = generate_garch(nobs, [1.0, ar1], [1.0,  0.50], mu=0.0,scale=0.1)
-#    plt.figure()
-#    plt.subplot(211)
-#    plt.plot(err)
-#    plt.subplot(212)
-#    plt.plot(h)
-#    plt.figure()
-#    plt.subplot(211)
-#    plt.plot(err[-400:])
-#    plt.subplot(212)
-#    plt.plot(h[-400:])
-    #plt.show()
-    garchplot(err, h)
-    garchplot(err[-400:], h[-400:])
-
-
-    np.random.seed(seed)
-    errgjr,hgjr, etax = generate_gjrgarch(nobs, [1.0, ar1],
-                                [[1,0],[0.5,0]], mu=0.0,scale=0.1)
-    garchplot(errgjr[:nobs], hgjr[:nobs], 'GJR-GARCH(1,1) Simulation - symmetric')
-    garchplot(errgjr[-400:nobs], hgjr[-400:nobs], 'GJR-GARCH(1,1) Simulation - symmetric')
-
-    np.random.seed(seed)
-    errgjr2,hgjr2, etax = generate_gjrgarch(nobs, [1.0, ar1],
-                                [[1,0],[0.1,0.9]], mu=0.0,scale=0.1)
-    garchplot(errgjr2[:nobs], hgjr2[:nobs], 'GJR-GARCH(1,1) Simulation')
-    garchplot(errgjr2[-400:nobs], hgjr2[-400:nobs], 'GJR-GARCH(1,1) Simulation')
-
-    np.random.seed(seed)
-    errgjr3,hgjr3, etax3 = generate_gjrgarch(nobs, [1.0, ar1],
-                        [[1,0],[0.1,0.9],[0.1,0.9],[0.1,0.9]], mu=0.0,scale=0.1)
-    garchplot(errgjr3[:nobs], hgjr3[:nobs], 'GJR-GARCH(1,3) Simulation')
-    garchplot(errgjr3[-400:nobs], hgjr3[-400:nobs], 'GJR-GARCH(1,3) Simulation')
-
-    np.random.seed(seed)
-    errgjr4,hgjr4, etax4 = generate_gjrgarch(nobs, [1.0, ar1],
-                        [[1., 1,0],[0, 0.1,0.9],[0, 0.1,0.9],[0, 0.1,0.9]],
-                        mu=0.0,scale=0.1)
-    garchplot(errgjr4[:nobs], hgjr4[:nobs], 'GJR-GARCH(1,3) Simulation')
-    garchplot(errgjr4[-400:nobs], hgjr4[-400:nobs], 'GJR-GARCH(1,3) Simulation')
-
-    varinno = np.zeros(100)
-    varinno[0] = 1.
-    errgjr5,hgjr5, etax5 = generate_gjrgarch(100, [1.0, 0],
-                        [[1., 1,0],[0, 0.1,0.8],[0, 0.05,0.7],[0, 0.01,0.6]],
-                        mu=0.0,scale=0.1, varinnovation=varinno)
-    garchplot(errgjr5[:nobs], hgjr5[:nobs], 'GJR-GARCH(1,3) Simulation')
-    #garchplot(errgjr4[-400:nobs], hgjr4[-400:nobs], 'GJR-GARCH(1,3) Simulation')
-
-
-    plt.show()
 
     x = np.arange(20).reshape(10,2)
-    x3=np.column_stack((np.ones((x.shape[0],1)),x))
+    x3 = np.column_stack((np.ones((x.shape[0],1)),x))
     y, inp = miso_lfilter([1., 0],np.array([[-2.0,3,1],[0.0,0.0,0]]),x3)
 
+    nobs = 1000
+    warmup = 1000
+    np.random.seed(seed)
+    ar = [1.0, -0.7]#7, -0.16, -0.1]
+    #ma = [[1., 1, 0],[0, 0.6,0.1],[0, 0.1,0.1],[0, 0.1,0.1]]
+    ma = [[1., 0, 0],[0, 0.4,0.0]] #,[0, 0.9,0.0]]
+#    errgjr4,hgjr4, etax4 = generate_gjrgarch(warmup+nobs, [1.0, -0.99],
+#                        [[1., 1, 0],[0, 0.6,0.1],[0, 0.1,0.1],[0, 0.1,0.1]],
+#                        mu=0.2, scale=0.25)
+
+    errgjr4,hgjr4, etax4 = generate_gjrgarch(warmup+nobs, ar, ma,
+                         mu=0.4, scale=1.01)
+    errgjr4,hgjr4, etax4 = errgjr4[warmup:], hgjr4[warmup:], etax4[warmup:]
+    garchplot(errgjr4[:nobs], hgjr4[:nobs], 'GJR-GARCH(1,3) Simulation')
+    ggmod = Garch(errgjr4-errgjr4.mean())#hgjr4[:nobs])#-hgjr4.mean()) #errgjr4)
+    ggmod.nar = 1
+    ggmod.nma = 1
+    ggmod._start_params = np.array([-0.6, 0.1, 0.2, 0.0])
+    ggres = ggmod.fit(start_params=np.array([-0.6, 0.1, 0.2, 0.0]), maxiter=1000)
+    print 'ggres.params', ggres.params
+    garchplot(ggmod.errorsest, ggmod.h)
+    plt.show()
+
+    print optimize.fmin(lambda params: -loglike_GARCH11(params, errgjr4-errgjr4.mean())[0], [0.93, 0.9, 0.2])
+
+
+    if 'rpy' in examples:
+        from rpy import r
+        f = r.formula('~garch(1, 1)')
+        #fit = r.garchFit(f, data = errgjr4)
+        x = r.garchSim( n = 500)
+        print 'R acf', tsa.acf(np.power(x,2))[:15]
+        arma3 = Arma(np.power(x,2))
+        arma3res = arma3.fit(start_params=[-0.2,0.1,0.5],maxiter=5000)
+        print arma3res.params
+        arma3b = Arma(np.power(x,2))
+        arma3bres = arma3b.fit(start_params=[-0.2,0.1,0.5],maxiter=5000, method='bfgs')
+        print arma3bres.params
+
+    llf = loglike_GARCH11([0.93, 0.9, 0.2], errgjr4)
+    print llf[0]
+
+    erro,ho, etaxo = generate_gjrgarch(20, ar, ma, mu=0.04, scale=0.01,
+                      varinnovation = np.ones(20))
+
+
+    ''' this looks relatively good
+
+    >>> Arma.initialize = lambda x: x
+    >>> arma3 = Arma(errgjr4**2)
+    >>> arma3res = arma3.fit()
+    Warning: Maximum number of function evaluations has been exceeded.
+    >>> arma3res.params
+    array([-0.775, -0.583, -0.001])
+    >>> arma2.nar
+    1
+    >>> arma2.nma
+    1
+
+    unit root ?
+    >>> arma3 = Arma(hgjr4)
+    >>> arma3res = arma3.fit()
+    Optimization terminated successfully.
+             Current function value: -3641.529780
+             Iterations: 250
+             Function evaluations: 458
+    >>> arma3res.params
+    array([ -1.000e+00,  -3.096e-04,   6.343e-03])
+
+    or maybe not great
+    >>> arma3res = arma3.fit(start_params=[-0.8,0.1,0.5],maxiter=5000)
+    Warning: Maximum number of function evaluations has been exceeded.
+    >>> arma3res.params
+    array([-0.086,  0.186, -0.001])
+    >>> arma3res = arma3.fit(start_params=[-0.8,0.1,0.5],maxiter=5000,method='bfgs')
+    Divide-by-zero encountered: rhok assumed large
+    Optimization terminated successfully.
+             Current function value: -5988.332952
+             Iterations: 16
+             Function evaluations: 245
+             Gradient evaluations: 49
+    >>> arma3res.params
+    array([ -9.995e-01,  -9.715e-01,   6.501e-04])
+    '''
+
+    '''
+    current problems
+    persistence in errgjr looks too low, small tsa.acf(errgjr4**2)[:15]
+    as a consequence the ML estimate has also very little persistence,
+    estimated ar term is much too small
+    -> need to compare with R or matlab
+
+    help.search("garch") :  ccgarch, garchSim(fGarch), garch(tseries)
+    HestonNandiGarchFit(fOptions)
+
+    > library('fGarch')
+    > spec = garchSpec()
+    > x = garchSim(model = spec@model, n = 500)
+    > acf(x**2)    # has low correlation
+    but fit has high parameters:
+    > fit = garchFit(~garch(1, 1), data = x)
+
+    with rpy:
+
+    from rpy import r
+    r.library('fGarch')
+    f = r.formula('~garch(1, 1)')
+    fit = r.garchFit(f, data = errgjr4)
+    Final Estimate:
+    LLH:  -3198.2    norm LLH:  -3.1982
+          mu        omega       alpha1        beta1
+    1.870485e-04 9.437557e-05 3.457349e-02 1.000000e-08
+
+    second run with ar = [1.0, -0.8]  ma = [[1., 0, 0],[0, 1.0,0.0]]
+    Final Estimate:
+    LLH:  -3979.555    norm LLH:  -3.979555
+          mu        omega       alpha1        beta1
+    1.465050e-05 1.641482e-05 1.092600e-01 9.654438e-02
+    mine:
+    >>> ggres.params
+    array([ -2.000e-06,   3.283e-03,   3.769e-01,  -1.000e-06])
+
+    another rain, same ar, ma
+    Final Estimate:
+    LLH:  -3956.197    norm LLH:  -3.956197
+          mu        omega       alpha1        beta1
+    7.487278e-05 1.171238e-06 1.511080e-03 9.440843e-01
+
+    every step needs to be compared and tested
+
+    something looks wrong with likelihood function, either a silly
+    mistake or still some conceptional problems
+
+    * found the silly mistake, I was normalizing the errors before
+      plugging into espression for likelihood function
+
+    * now gjr garch estimation works and produces results that are very
+      close to the explicit garch11 estimation
+
+    initial conditions for miso_filter need to be cleaned up
+
+    lots of clean up to to after the bug hunting
+
+    '''
+    y = np.random.randn(20)
+    params = [0.93, 0.9, 0.2]
+    lls, llt, ht = loglike_GARCH11(params, y)
+    sigma2 = ht
+    axis=0
+    nobs = len(ht)
+    llike  =  -0.5 * (np.sum(np.log(sigma2),axis)
+                          + np.sum((y**2)/sigma2, axis)
+                          +  nobs*np.log(2*np.pi))
+    print lls, llike
+    print np.log(stats.norm.pdf(y,scale=np.sqrt(ht))).sum()
+
+    '''
+    >>> optimize.fmin(lambda params: -loglike_GARCH11(params, errgjr4)[0], [0.93, 0.9, 0.2])
+    Optimization terminated successfully.
+             Current function value: 7312.393886
+             Iterations: 95
+             Function evaluations: 175
+    array([ 3.691,  0.072,  0.932])
+    >>> ar
+    [1.0, -0.93000000000000005]
+    >>> ma
+    [[1.0, 0, 0], [0, 0.90000000000000002, 0.0]]
+    '''
