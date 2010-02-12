@@ -1,6 +1,4 @@
-This is a simple scikits. The main intent is to serve as a template for new
-scikits.
-
+=========================
 Installation from sources
 =========================
 
@@ -29,12 +27,11 @@ of the Google Summer of Code 2009.
 What it is
 ==========
 
-We are now releasing the efforts of the last few months under the scikits
-namespace as scikits.statsmodels. Statsmodels is a pure python package that
-requires numpy and scipy. It offers a convenient interface for fitting
-parameterized statistical models with growing support for displaying univariate
-and multivariate summary statistics, regression summaries, and (postestimation)
-statistical tests.
+Statsmodels under the scikits namespace as scikits.statsmodels. Statsmodels is a
+pure python package that requires numpy and scipy. It offers a convenient
+interface for fitting parameterized statistical models with growing support
+for displaying univariate and multivariate summary statistics, regression summaries,
+and (postestimation) statistical tests.
 
 Main Feautures
 ==============
@@ -46,6 +43,7 @@ exponential family distributions.
 * discrete choice models: Poisson, probit, logit, multinomial logit
 * rlm: Robust linear models with support for several M-estimators.
 * datasets: Datasets to be distributed and used for examples and in testing.
+* PyDTA: Tools for reading Stata *.dta files into numpy arrays.
 
 There is also a sandbox which contains code for generalized additive models
 (untested), mixed effects models, cox proportional hazards model (both are
