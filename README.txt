@@ -43,6 +43,7 @@ Main Feautures
 least squares with autoregressive errors), ordinary least squares.
 * glm: Generalized linear models with support for all of the one-parameter
 exponential family distributions.
+* discrete choice models: Poisson, probit, logit, multinomial logit
 * rlm: Robust linear models with support for several M-estimators.
 * datasets: Datasets to be distributed and used for examples and in testing.
 
@@ -50,14 +51,17 @@ There is also a sandbox which contains code for generalized additive models
 (untested), mixed effects models, cox proportional hazards model (both are
 untested and still dependent on the nipy formula framework), generating
 descriptive statistics, and printing table output to ascii, latex, and html.
-None of this code is considered "production ready".
+There is also experimental code for systems of equations regression,
+time series models, and information theoretic measures.  None of this code
+is considered "production ready".
 
 Where to get it
 ===============
 
 Development branches will be on LaunchPad. This is where to go to get the most
 up to date code in the trunk branch. Experimental code will also be hosted here
-in different branches and merged to trunk often.
+in different branches and merged to trunk often.  We try to make sure that the
+trunk code is always stable.
 
 https://code.launchpad.net/statsmodels
 
