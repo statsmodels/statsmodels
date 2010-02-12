@@ -32,7 +32,7 @@ Module Reference
 ----------------
 
 Model Class
-^^^^^^^^^^^^
+^^^^^^^^^^^
 
 .. autosummary::
    :toctree: generated/

@@ -994,6 +994,8 @@ class MNLogit(DiscreteModel):
 class NegBinTwo(DiscreteModel):
     """
     NB2 Negative Binomial model.
+
+    Note: This is not working yet
     """
 #NOTE: to use this with the solvers, the likelihood fit will probably
 # need to be amended to have args, so that we can pass the ancillary param
@@ -1033,6 +1035,7 @@ class NegBinTwo(DiscreteModel):
         """
         Score vector for NB2 model
         """
+        import numdifftools as nd
         y = self.endog
         X = self.exog
         jfun = nd.Jacobian(self.loglike)
@@ -1064,6 +1067,7 @@ class NegBinTwo(DiscreteModel):
         """
 #        d2dBdB =
 #        d2da2 =
+        import numdifftools as nd
         Hfun = nd.Jacobian(self.score)
         return Hfun(params)[-1]
 # is the numerical hessian block diagonal?  or is it block diagonal by assumption?
@@ -1096,8 +1100,11 @@ class DiscreteResults(LikelihoodModelResults):
     scale : float
         A scale parameter for the covariance matrix.
 
-    Attributes
-    ----------
+
+    Returns
+    -------
+    *Attributes*
+
     aic : float
         Akaike information criterion.  -2*(`llf` - p) where p is the number
         of regressors including the intercept.
@@ -1127,7 +1134,10 @@ class DiscreteResults(LikelihoodModelResults):
 
     Methods
     -------
-    margeff - Get marginal effects of the fitted model.
+    margeff
+        Get marginal effects of the fitted model.
+    conf_int
+
     """
 
     def __init__(self, model, params, hessian, scale=1.):
@@ -1214,7 +1224,8 @@ class DiscreteResults(LikelihoodModelResults):
 
     def margeff(self, params=None, at='overall', method='dydx', atexog=None,
         dummy=False, count=False):
-        """
+        """Get marginal effects of the fitted model.
+
         Parameters
         ----------
         params : array-like, optional
@@ -1255,6 +1266,11 @@ class DiscreteResults(LikelihoodModelResults):
             If False, treats count variables (if present) as continuous.  This
             is the default.  Else if True, the marginal effect is the
             change in probabilities when each observation is increased by one.
+
+        Returns
+        -------
+        effects : ndarray
+            the marginal effect corresponding to the input options
 
         Notes
         -----

@@ -108,6 +108,9 @@ see also the `examples` and the `tests` folders
 Module Reference
 ----------------
 
+Model Classes
+^^^^^^^^^^^^^
+
 .. autosummary::
    :toctree: generated/
 
@@ -116,6 +119,14 @@ Module Reference
    WLS
    GLSAR
    yule_walker
+
+Result Class
+^^^^^^^^^^^^
+
+.. autosummary::
+   :toctree: generated/
+
+   RegressionResults
 
 
 Technical Documentation

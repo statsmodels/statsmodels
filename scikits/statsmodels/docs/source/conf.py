@@ -51,16 +51,16 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'statsmodels'
-copyright = u'2009, Skipper Seabold, Josef Perktold, Jonathan Taylor'
+copyright = u'2009-2010, Skipper Seabold, Josef Perktold, Jonathan Taylor'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
 # The short X.Y version.
-version = '0.1.0'
+version = '0.2.0'
 # The full version, including alpha/beta/rc tags.
-release = '0.1.0'
+release = '0.2.0'
 
 # JP: added from sphinxdocs
 autosummary_generate = True
