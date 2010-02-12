@@ -845,13 +845,6 @@ class RegressionResults(LikelihoodModelResults):
     wresid
         The residuals of the transformed/whitened regressand and regressor(s)
 
-    Attributes
-    ----------
-    aic
-    bic
-    HC0_se
-    mse_resid
-
     Methods
     -------
     cov_params
@@ -973,9 +966,6 @@ class RegressionResults(LikelihoodModelResults):
 
     @cache_readonly
     def mse_resid(self):
-        '''Mean squared error of the residuals.  The sum of squared residuals
-        divided by the residual degrees of freedom.
-        '''
         return self.ssr/self.df_resid
 
     @cache_readonly
@@ -1004,12 +994,10 @@ class RegressionResults(LikelihoodModelResults):
 
     @cache_readonly
     def aic(self):
-        '''Aikake's information criteria :math:`-2llf + 2(df_model+1)`'''
         return -2 * self.llf + 2 * (self.df_model + 1)
 
     @cache_readonly
     def bic(self):
-        """Bayes' information criteria :math:`-2llf + \log(n)(df_model+1)`"""
         return -2 * self.llf + np.log(self.nobs) * (self.df_model + 1)
 
 # Centered R2 for models with intercepts

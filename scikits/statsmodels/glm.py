@@ -428,8 +428,10 @@ class GLMResults(LikelihoodModelResults):
     ----------
     See statsmodels.LikelihoodModelReesults
 
-    Attributes
-    ----------
+    Returns
+    -------
+    **Attributes**
+
     aic : float
         Akaike Information Criterion
         -2 * `llf` + 2*(`df_model` + 1)
@@ -537,62 +539,29 @@ class GLMResults(LikelihoodModelResults):
 
     @cache_readonly
     def resid_response(self):
-        """
-        resid_response : array
-            Respnose residuals.  The response residuals are defined as
-            `endog` - `fittedvalues`
-        """
         return self._data_weights * (self._endog-self.mu)
 
     @cache_readonly
     def resid_pearson(self):
-        """
-        resid_pearson : array
-            Pearson residuals.  The Pearson residuals are defined as
-            (`endog` - `mu`)/sqrt(VAR(`mu`)) where VAR is the distribution
-            specific variance function.  See statsmodels.family.family and
-            statsmodels.family.varfuncs for more information.
-        """
         return np.sqrt(self._data_weights) * (self._endog-self.mu)/\
                         np.sqrt(self.family.variance(self.mu))
 
     @cache_readonly
     def resid_working(self):
-        """
-        resid_working : array
-            Working residuals.  The working residuals are defined as
-            `resid_response`/link'(`mu`).  See statsmodels.family.links for the
-            derivatives of the link functions.  They are defined analytically.
-        """
         val = (self.resid_response / self.family.link.deriv(self.mu))
         val *= self._data_weights
         return val
 
     @cache_readonly
     def resid_anscombe(self):
-        """
-        resid_anscombe : array
-            Anscombe residuals.  See statsmodels.family.family for distribution-
-            specific Anscombe residuals.
-        """
         return self.family.resid_anscombe(self._endog, self.mu)
 
     @cache_readonly
     def resid_deviance(self):
-        """
-        resid_deviance : array
-            Deviance residuals.  See statsmodels.family.family for distribution-
-            specific deviance residuals.
-        """
         return self.family.resid_dev(self._endog, self.mu)
 
     @cache_readonly
     def pearson_chi2(self):
-        """
-        pearson_chi2 : array
-            Pearson's Chi-Squared statistic is defined as the sum of the squares
-            of the Pearson residuals.
-        """
         chisq =  (self._endog- self.mu)**2 / self.family.variance(self.mu)
         chisq *= self._data_weights
         chisqsum = np.sum(chisq)
@@ -600,10 +569,6 @@ class GLMResults(LikelihoodModelResults):
 
     @cache_readonly
     def fittedvalues(self):
-        """
-        fittedvalues : array
-            Linear predicted values for the fitted model.
-        """
         return self.mu
 
     @cache_readonly
@@ -615,28 +580,14 @@ class GLMResults(LikelihoodModelResults):
 
     @cache_readonly
     def deviance(self):
-        """
-        deviance : float
-            See statsmodels.family.family for the distribution-specific deviance
-        """
         return self.family.deviance(self._endog, self.mu)
 
     @cache_readonly
     def null_deviance(self):
-        """
-        null_deviance : float
-            The value of the deviance function for the model fit with a constant
-            as the only regressor.
-        """
         return self.family.deviance(self._endog, self.null)
 
     @cache_readonly
     def llf(self):
-        """
-        llf : float
-            Value of the loglikelihood function evalued at params.
-            See statsmodels.family.family for distribution-specific loglikelihoods.
-        """
         _modelfamily = self.family
         if isinstance(_modelfamily, family.NegativeBinomial):
             val = _modelfamily.loglike(self.model.endog,
@@ -648,20 +599,10 @@ class GLMResults(LikelihoodModelResults):
 
     @cache_readonly
     def aic(self):
-        """
-        aic : float
-            Akaike Information Criterion
-            -2 * `llf` + 2*(`df_model` + 1)
-        """
         return -2 * self.llf + 2*(self.df_model+1)
 
     @cache_readonly
     def bic(self):
-        """
-        bic : float
-            Bayes Information Criterion
-            `deviance` - `df_resid` * log(`nobs`)
-        """
         return self.deviance - self.df_resid*np.log(self.nobs)
 
 #TODO: write summary method to use output.py in sandbox
