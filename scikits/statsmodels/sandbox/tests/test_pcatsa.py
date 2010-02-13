@@ -63,6 +63,8 @@ def test_pca_svd():
     assert_array_almost_equal(evals_svd, evals, 14)
     msign = (evecs/evecs_svd)[0]
     assert_array_almost_equal(msign*evecs_svd, evecs, 14)
+    #the next assert fails sometimes at the given precision,
+    #   why is precision low?
     assert_array_almost_equal(msign*factors_svd, factors, 13)
     assert_array_almost_equal(xred_svd, xreduced, 14)
 
