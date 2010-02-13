@@ -11,11 +11,8 @@ uncomment plt.show() to show all plot windows
 stop_on_error = True
 
 
-filelist = ['example_glsar.py', 'example_wls.py', 'example_gls.py',
-            'example_glm.py', 'example_ols_tftest.py', 'example_rpy.py',
-            'example_ols.py', 'example_ols_minimal.py', 'example_rlm.py',
-            'example_discrete.py', 'example_predict.py',
-            'tut_ols.py', 'tut_ols_rlm.py', 'tut_ols_wls.py']
+filelist = ['example_pca.py', 'example_sysreg.py', 'example_mle.py',
+            'example_gam.py']
 
 cont = raw_input("""Are you sure you want to run all of the examples?
 This is done mainly to check that they are up to date.
@@ -23,12 +20,12 @@ This is done mainly to check that they are up to date.
 if 'y' in cont.lower():
     for run_all_f in filelist:
         try:
-            print "\n\nExecuting example file", run_all_f
+            print "Executing example file", run_all_f
             print "-----------------------" + "-"*len(run_all_f)
             execfile(run_all_f)
         except:
             #f might be overwritten in the executed file
-            print "**********************" + "*"*len(run_all_f)
+            print "*********************"
             print "ERROR in example file", run_all_f
             print "**********************" + "*"*len(run_all_f)
             if stop_on_error:
