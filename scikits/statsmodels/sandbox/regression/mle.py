@@ -463,7 +463,8 @@ class Arma(LikelihoodModel):
 
 
     def fit(self, start_params=None, maxiter=5000, method='fmin', tol=1e-08):
-        start_params = np.concatenate((0.05*np.ones(self.nar + self.nma), [1]))
+        if start_params is None:
+            start_params = np.concatenate((0.05*np.ones(self.nar + self.nma), [1]))
         mlefit = super(Arma, self).fit(start_params=start_params,
                 maxiter=maxiter, method=method, tol=tol)
         return mlefit

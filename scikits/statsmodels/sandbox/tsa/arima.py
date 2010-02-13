@@ -183,7 +183,7 @@ def arma_generate_sample(ar, ma, nsample, sigma=1, distrvs=np.random.randn):
 
 
     '''
-    eta = scale * distrvs(nsample)
+    eta = sigma * distrvs(nsample)
     return signal.lfilter(ma, ar, eta)
 
 def arma_acovf(ar, ma, nobs=10):

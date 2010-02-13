@@ -8,6 +8,8 @@ plus 3 functions from nitime.utils
 import numpy as np
 from numpy.testing import assert_array_almost_equal
 
+import matplotlib.mlab as mlab
+
 from arima import arma_generate_sample, arma_impulse_response
 from arima import arma_acovf, arma_acf, ARIMA
 from movstat import acf, acovf
@@ -287,7 +289,7 @@ def pltxcorr(self, x, y, normed=True, detrend=mlab.detrend_none,
     .. plot:: mpl_examples/pylab_examples/xcorr_demo.py
     """
 
-    #import matplotlib.mlab as mlab
+
     Nx = len(x)
     if Nx!=len(y):
         raise ValueError('x and y must be equal length')
