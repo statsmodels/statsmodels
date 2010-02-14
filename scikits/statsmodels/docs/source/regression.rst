@@ -120,8 +120,8 @@ Model Classes
    GLSAR
    yule_walker
 
-Result Class
-^^^^^^^^^^^^
+Results Class
+^^^^^^^^^^^^^
 
 .. autosummary::
    :toctree: generated/

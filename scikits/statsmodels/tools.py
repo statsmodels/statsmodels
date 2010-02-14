@@ -67,8 +67,8 @@ def categorical(data, col=None, dictnames=False, drop=False):
     Univariate examples
 
     >>> import string
-    >>> string_var = [string.lowercase[0:5], string.lowercase[5:10],
-                string.lowercase[10:15], string.lowercase[15:20],
+    >>> string_var = [string.lowercase[0:5], string.lowercase[5:10],   \
+                string.lowercase[10:15], string.lowercase[15:20],   \
                 string.lowercase[20:25]]
     >>> string_var *= 5
     >>> string_var = np.asarray(sorted(string_var))
@@ -82,7 +82,7 @@ def categorical(data, col=None, dictnames=False, drop=False):
     With a structured array
 
     >>> num = np.random.randn(25,2)
-    >>> struct_ar = np.zeros((25,1), dtype=[('var1', 'f4'),('var2', 'f4'),
+    >>> struct_ar = np.zeros((25,1), dtype=[('var1', 'f4'),('var2', 'f4'),  \
                     ('instrument','f4'),('str_instr','a5')])
     >>> struct_ar['var1'] = num[:,0][:,None]
     >>> struct_ar['var2'] = num[:,1][:,None]
@@ -302,13 +302,12 @@ class StepFunction:
 
     Examples
     --------
-    >>> from numpy import arange
-    >>> import scikits.statsmodels as sm
-    >>> from sm.tools import StepFunction
+    >>> import numpy as np
+    >>> from scikits.statsmodels.tools import StepFunction
     >>>
-    >>> x = arange(20)
-    >>> y = arange(20)
-    >> f = StepFunction(x, y)
+    >>> x = np.arange(20)
+    >>> y = np.arange(20)
+    >>> f = StepFunction(x, y)
     >>>
     >>> print f(3.2)
     3.0

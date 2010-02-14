@@ -42,9 +42,10 @@ Model Class
 Results Class
 ^^^^^^^^^^^^^
 
-.. toctree::
+.. autosummary::
+   :toctree: generated/
 
-   glmresults
+   GLMResults
 
 Families
 ^^^^^^^^

@@ -1,4 +1,6 @@
 '''Examples: scikits.statsmodels.GLM
+
+Note: uncomment plt.show() to display graphs
 '''
 import numpy as np
 import scikits.statsmodels as sm
@@ -127,7 +129,7 @@ plt.xlabel('Quantiles of N(0,1)')
 #from scikits.statsmodels.sandbox import graphics
 #img = graphics.qqplot(res)
 
-plt.show()
+#plt.show()
 #plt.close('all')
 
 

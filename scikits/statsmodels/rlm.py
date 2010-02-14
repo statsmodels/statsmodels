@@ -100,24 +100,27 @@ class RLM(LikelihoodModel):
     >>> import scikits.statsmodels as sm
     >>> data = sm.datasets.stackloss.Load()
     >>> data.exog = sm.add_constant(data.exog)
-    >>> rlm_model = models.RLM(data.endog, data.exog, \
-    ...     M=models.robust.norms.HuberT())
+    >>> rlm_model = sm.RLM(data.endog, data.exog, \
+                           M=sm.robust.norms.HuberT())
+
     >>> rlm_results = rlm_model.fit()
     >>> rlm_results.params
     array([  0.82938433,   0.92606597,  -0.12784672, -41.02649835])
     >>> rlm_results.bse
     array([ 0.11100521,  0.30293016,  0.12864961,  9.79189854])
     >>> rlm_results_HC2 = rlm_model.fit(cov="H2")
-    >>>rlm_results_HC2.params
+    >>> rlm_results_HC2.params
     array([  0.82938433,   0.92606597,  -0.12784672, -41.02649835])
     >>> rlm_results_HC2.bse
     array([ 0.11945975,  0.32235497,  0.11796313,  9.08950419])
     >>>
-    >>> rlm_hamp_hub = models.RLM(data.endog, data.exog, \
-    ...     M=models.robust.norms.Hampel()).fit(scale_est=\
-            models.robust.scale.HuberScale())
+    >>> rlm_hamp_hub = sm.RLM(data.endog, data.exog, \
+                          M=sm.robust.norms.Hampel()).fit( \
+                          sm.robust.scale.HuberScale())
+
     >>> rlm_hamp_hub.params
     array([  0.73175452,   1.25082038,  -0.14794399, -40.27122257])
+
     """
 
     def __init__(self, endog, exog, M=norms.HuberT()):
