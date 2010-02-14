@@ -41,7 +41,7 @@ Compared to the original code, the class structure and some of the
 method arguments have changed. Additional estimation
 results, e.g. test statistics have been included.
 
-Most importantly, almost every result has been verified with at least one
+Most importantly, most results have been verified with at least one
 other statistical package: R, Stata or SAS. The guiding principal for the
 rewrite was that all numbers have to be verified, even if we don't manage
 to cover everything. There are a few remaining issues, that we hope to
@@ -79,8 +79,8 @@ comments and possibilities for improvement and bugs to the
 scipy-user mailing list or file tickets on our bug tracker at
 https://bugs.launchpad.net/statsmodels
 
-The development repository is at the new location http://code.launchpad.net/statsmodels,
-and the old location http://code.launchpad.net/~scipystats
+The development repository is at http://code.launchpad.net/statsmodels .
+
 
 We would also like to use statsmodels, or projects related to it, as
 a staging ground for new models. The current maintainers
