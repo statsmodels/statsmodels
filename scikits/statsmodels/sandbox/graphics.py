@@ -25,7 +25,7 @@ def qqplot(data, dist=stats.distributions.norm, binom_n=None):
     >>> data.exog = sm.add_constant(data.exog)
     >>> mod_fit = sm.OLS(data.endog, data.exog).fit()
     >>> res = mod_fit.resid
-    >>> std_res = (mod_fit.resid - mod_fit.mean())/mod_fit.std()
+    >>> std_res = (mod_fit.resid - mod_fit.resid.mean())/mod_fit.resid.std()
 
     Import qqplots from the sandbox
 
