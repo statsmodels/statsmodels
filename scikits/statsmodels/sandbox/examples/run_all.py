@@ -12,7 +12,8 @@ stop_on_error = True
 
 
 filelist = ['example_pca.py', 'example_sysreg.py', 'example_mle.py',
-            'example_gam.py']
+#            'example_gam.py', # exclude, currently we are not working on it
+            'example_pca_regression.py']
 
 cont = raw_input("""Are you sure you want to run all of the examples?
 This is done mainly to check that they are up to date.
