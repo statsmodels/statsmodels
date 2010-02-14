@@ -121,7 +121,7 @@ class GLS(LikelihoodModel):
     >>> data = sm.datasets.longley.Load()
     >>> data.exog = sm.add_constant(data.exog)
     >>> ols_resid = sm.OLS(data.endog, data.exog).fit().resid
-    >>> res_fit = sm.OLS(ols_resid[1:], ols_resid[:-1].fit()
+    >>> res_fit = sm.OLS(ols_resid[1:], ols_resid[:-1]).fit()
     >>> rho = res_fit.params
 
     `rho` is a consistent estimator of the correlation of the residuals from
@@ -680,8 +680,9 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False):
     >>> import scikits.statsmodels as sm
     >>> from scikits.statsmodels.datasets.sunspots import Load
     >>> data = Load()
-    >>> rho, sigma = sm.regression.yule_walker(data.endog,
-        order=4, method="mle")
+    >>> rho, sigma = sm.regression.yule_walker(data.endog,       \
+                                       order=4, method="mle")
+
     >>> rho
     array([ 1.28310031, -0.45240924, -0.20770299,  0.04794365])
     >>> sigma

@@ -104,18 +104,19 @@ class GLM(LikelihoodModel):
 
     Instantiate a gamma family model with the default link function.
 
-    >>> gamma_model = sm.GLM(data.endog, data.exog,
-            family=sm.family.Gamma())
+    >>> gamma_model = sm.GLM(data.endog, data.exog,        \
+                             family=sm.family.Gamma())
+
     >>> gamma_results = gamma_model.fit()
     >>> gamma_results.params
     array([  4.96176830e-05,   2.03442259e-03,  -7.18142874e-05,
          1.11852013e-04,  -1.46751504e-07,  -5.18683112e-04,
         -2.42717498e-06,  -1.77652703e-02])
-    >>> gamma.scale
+    >>> gamma_results.scale
     0.0035842831734919055
     >>> gamma_results.deviance
     0.087388516416999198
-    >>>gamma_results.pearsonX2
+    >>> gamma_results.pearson_chi2
     0.086022796163805704
     >>> gamma_results.llf
     -83.017202161073527
