@@ -25,7 +25,7 @@ def qqplot(data, dist=stats.distributions.norm, binom_n=None):
     >>> data.exog = sm.add_constant(data.exog)
     >>> mod_fit = sm.OLS(data.endog, data.exog).fit()
     >>> res = mod_fit.resid
-    >>> std_res = (mod_fit.resid - mod_fit.resid.mean())/mod_fit.resid.std()
+    >>> std_res = (res - res.mean())/res.std()
 
     Import qqplots from the sandbox
 
@@ -65,8 +65,8 @@ def qqplot(data, dist=stats.distributions.norm, binom_n=None):
     y = dist.ppf(prob, loc=loc, scale=scale)
 #    plt.figure()
     plt.scatter(y, quantiles)
-    y_low = np.min(y.min(),quantiles.min())-.25
-    y_high = np.max(y.max(),quantiles.max())+.25
+    y_low = np.min((y.min(),quantiles.min()))-.25
+    y_high = np.max((y.max(),quantiles.max()))+.25
     plt.plot([y.min()-.25, y.max()+.25], [y_low, y_high], 'b-')
     title = '%s - Quantile Plot' % plotname
     plt.title(title)
