@@ -45,7 +45,8 @@ or get the source from pypi, sourceforge, or from the launchpad repository and
 
 ::
 
-  setup.py install
+  setup.py install  or, if this does not work, try
+  setup.py build install
 
 **Usage:**
 

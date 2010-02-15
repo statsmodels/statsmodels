@@ -9,6 +9,7 @@ include MANIFEST.in
 graft scikits/statsmodels/datasets
 graft scikits/statsmodels/tests
 graft scikits/statsmodels/sandbox/regression/data
+graft scikits/statsmodels/sandbox/tests
 recursive-include scikits/statsmodels/docs/source *
 exclude scikits/statsmodels/docs/source/generated/*
 recursive-include scikits/statsmodels/docs/sphinxext *
@@ -16,6 +17,8 @@ recursive-exclude scikits/statsmodels/docs/build *
 recursive-include scikits/statsmodels/docs/build/html *
 recursive-exclude scikits/statsmodels/docs/build/htmlhelp *
 include scikits/statsmodels/docs/build/htmlhelp/statsmodelsdoc.chm
+include scikits/statsmodels/docs/make.bat
+include scikits/statsmodels/docs/Makefile
 #include scikits/statsmodels/docs mak*
 #include scikits/statsmodels/docs GLM*
 global-exclude *~ *.swp  *.pyc *.bak
