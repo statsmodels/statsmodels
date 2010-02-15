@@ -26,7 +26,8 @@ Quickstart for the impatient
 
 **Repository:** http://code.launchpad.net/statsmodels
 
-**Online Documentation:** http://statsmodels.sourceforge.net/
+**Documentation:** http://statsmodels.sourceforge.net/
+    and in the docs/build folder
 
 **Pypi:** http://pypi.python.org/pypi/scikits.statsmodels
 
@@ -92,6 +93,7 @@ Table of Contents
    discretemod
    glm
    rlm
+   discretemod
    stattools
    tools
    internal
