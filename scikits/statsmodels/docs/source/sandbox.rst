@@ -28,17 +28,9 @@ sandbox code varies widely.
 
 Examples
 --------
-    >>> import scikits.statsmodels as sm
-    >>> data = sm.datasets.scotland.Load()
-    >>> data.exog = sm.add_constant(data.exog)
-
-    Instantiate a gamma family model with the default link function.
-
-    >>> gamma_model = sm.GLM(data.endog, data.exog,
-            family=sm.family.Gamma())
-    >>> gamma_results = gamma_model.fit()
-
-see also the `examples` and the `tests` folders
+    There are some examples in the `sandbox.examples` folder. Additional
+    examples are directly included in the modules and in subfolders of
+    the sandbox.
 
 
 Module Reference
@@ -59,7 +51,7 @@ Some of the functions are currently written mainly to discover a way to use
 existing functions in scipy for time series analysis. Related functions are
 available in matplotlib, nitime, and scikits.talkbox. Those functions are
 designed more for the use in signal processing where longer time series are
-available and work largely in the frequency domain.
+available and work more in the frequency domain.
 
 
 .. currentmodule:: scikits.statsmodels.sandbox
@@ -144,7 +136,7 @@ be rewritten or reorganized.
 
 The following are helper functions for group statistics where groups are
 defined by a label array. The qualifying comments for the previous group
- apply similar apply also to this group of functions.
+apply also to this group of functions.
 
 
 .. autosummary::

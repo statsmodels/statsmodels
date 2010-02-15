@@ -17,8 +17,8 @@ wants to extend on existing model classes.
 Module Reference
 ----------------
 
-Model and Result Classes
-^^^^^^^^^^^^^^^^^^^^^^^^
+Model and Results Classes
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
 These are the base classes for both the estimation models and the results.
 They are not directly useful, but layout the structure of the subclasses and
