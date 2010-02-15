@@ -4,16 +4,48 @@ please download and install it from http://pypi.python.org/pypi/setuptools
 """
 
 descr = """
-Statsmodels is a python package that provides an interface to scipy for
+Statsmodels is a python package that provides a complement to scipy for
 statistical computations including descriptive statistics and
-fitting statistical models.
+estimation of statistical models.
 
 scikits.statsmodels provides classes and functions for the estimation of
 several categories of statistical models. These currently include linear
 regression models, OLS, GLS, WLS and GLS with AR(p) errors, generalized
-linear models for six distribution families and M-estimators for robust
-linear models. An extensive list of result statistics are avalable for
-each estimation problem
+linear models for six distribution families, M-estimators for robust
+linear models, and regression with discrete dependent variables, Logit,
+Probit, MNLogit, Poisson, based on maximum likelihood estimators.
+An extensive list of result statistics are avalable for each estimation
+problem.
+
+We welcome feedback:
+mailing list at http://groups.google.com/group/pystatsmodels?hl=en  or
+our bug tracker at https://bugs.launchpad.net/statsmodels
+
+For updated versions between releases, we recommend our repository at
+http://code.launchpad.net/statsmodels
+
+Main Changes in 0.2.0
+---------------------
+
+* Improved documentation and expanded and more examples
+* Added four discrete choice models: Poisson, Probit, Logit, and Multinomial Logit.
+* Added PyDTA. Tools for reading Stata binary datasets (*.dta) and putting
+  them into numpy arrays.
+* Added four new datasets for examples and tests.
+* Results classes have been refactored to use lazy evaluation.
+* Improved support for maximum likelihood estimation.
+* bugfixes
+* renames for more consistency
+  RLM.fitted_values -> RLM.fittedvalues
+  GLMResults.resid_dev -> GLMResults.resid_deviance
+
+Sandbox
+-------
+
+We are continuing to work on support for systems of equations models, panel data
+models, time series analysis, and information and entropy econometrics in the
+sandbox. This code is often merged into trunk as it becomes more robust.
+
 
 """
 import os
@@ -28,14 +60,14 @@ LONG_DESCRIPTION = descr
 MAINTAINER = 'Skipper Seabold, Josef Perktold'
 MAINTAINER_EMAIL =''
 URL = ''
-LICENSE = 'BSD'
+LICENSE = 'BSD License'
 DOWNLOAD_URL = ''
 
 MAJ = 0
-MIN = 1
+MIN = 2
 REV = 0
 DEV = False #True
-QUALIFIER = 'b2dev'
+QUALIFIER = '' #'b2dev'
 
 classifiers = [ 'Development Status :: 4 - Beta',
               'Environment :: Console',
