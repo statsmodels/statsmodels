@@ -22,7 +22,6 @@ x = arma_generate_sample(ar, ma, 5000)
 x_acf = acf(x)[:10]
 x_ir = arma_impulse_response(ar, ma)
 
-
 #print x_acf[:10]
 #print x_ir[:10]
 #irc2 = np.correlate(x_ir,x_ir,'full')[len(x_ir)-1:]
@@ -30,6 +29,39 @@ x_ir = arma_impulse_response(ar, ma)
 #print irc2[:10]/irc2[0]
 #print irc2[:10-1] / irc2[1:10]
 #print x_acf[:10-1] / x_acf[1:10]
+
+# detrend helper from matplotlib.mlab
+def detrend(x, key=None):
+    if key is None or key=='constant':
+        return detrend_mean(x)
+    elif key=='linear':
+        return detrend_linear(x)
+
+def demean(x, axis=0):
+    "Return x minus its mean along the specified axis"
+    x = np.asarray(x)
+    if axis:
+        ind = [slice(None)] * axis
+        ind.append(np.newaxis)
+        return x - x.mean(axis)[ind]
+    return x - x.mean(axis)
+
+def detrend_mean(x):
+    "Return x minus the mean(x)"
+    return x - x.mean()
+
+def detrend_none(x):
+    "Return x: no detrending"
+    return x
+
+def detrend_linear(y):
+    "Return y minus best fit line; 'linear' detrending "
+    # This is faster than an algorithm based on linalg.lstsq.
+    x = np.arange(len(y), dtype=np.float_)
+    C = np.cov(x, y, bias=1)
+    b = C[0,1]/C[0,0]
+    a = y.mean() - b*x.mean()
+    return y - (b*x + a)
 
 def acovf_explicit(ar, ma, nobs):
     '''add correlation of MA representation explicitely
@@ -174,7 +206,7 @@ def pltacorr(self, x, **kwargs):
     """
     call signature::
 
-        acorr(x, normed=True, detrend=mlab.detrend_none, usevlines=True,
+        acorr(x, normed=True, detrend=detrend_none, usevlines=True,
               maxlags=10, **kwargs)
 
     Plot the autocorrelation of *x*.  If *normed* = *True*,
@@ -232,12 +264,12 @@ def pltacorr(self, x, **kwargs):
     """
     return self.xcorr(x, x, **kwargs)
 
-def pltxcorr(self, x, y, normed=True, detrend=mlab.detrend_none,
+def pltxcorr(self, x, y, normed=True, detrend=detrend_none,
           usevlines=True, maxlags=10, **kwargs):
     """
     call signature::
 
-        def xcorr(self, x, y, normed=True, detrend=mlab.detrend_none,
+        def xcorr(self, x, y, normed=True, detrend=detrend_none,
           usevlines=True, maxlags=10, **kwargs):
 
     Plot the cross correlation between *x* and *y*.  If *normed* =
@@ -321,38 +353,7 @@ def pltxcorr(self, x, y, normed=True, detrend=mlab.detrend_none,
     return lags, c, a, b
 
 
-# detrend helper from matplotlib.mlab
-def detrend(x, key=None):
-    if key is None or key=='constant':
-        return detrend_mean(x)
-    elif key=='linear':
-        return detrend_linear(x)
 
-def demean(x, axis=0):
-    "Return x minus its mean along the specified axis"
-    x = np.asarray(x)
-    if axis:
-        ind = [slice(None)] * axis
-        ind.append(np.newaxis)
-        return x - x.mean(axis)[ind]
-    return x - x.mean(axis)
-
-def detrend_mean(x):
-    "Return x minus the mean(x)"
-    return x - x.mean()
-
-def detrend_none(x):
-    "Return x: no detrending"
-    return x
-
-def detrend_linear(y):
-    "Return y minus best fit line; 'linear' detrending "
-    # This is faster than an algorithm based on linalg.lstsq.
-    x = np.arange(len(y), dtype=np.float_)
-    C = np.cov(x, y, bias=1)
-    b = C[0,1]/C[0,0]
-    a = y.mean() - b*x.mean()
-    return y - (b*x + a)
 
 
 
