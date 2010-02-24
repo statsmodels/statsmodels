@@ -7,15 +7,11 @@ References
 Baltagi, Badi H. `Econometric Analysis of Panel Data.` 4th ed. Wiley, 2008.
 """
 
-#How to organize the models?
-#Right now by error structure?
-
-#Do we have one "panel model" then be able to do any estimations from there
-#Is this how the cross-sectional models should be too?
-#General Linear Model and all derived from there...probably
-
 from scikits.statsmodels.tools import categorical
+from scikits.statsmodels.regression import GLS, WLS
 import numpy as np
+
+__all__ = ["PanelModel"]
 
 try:
     from pandas import LongPanel, __version__
@@ -24,16 +20,25 @@ except:
     raise ImportError, "While in the sandbox this code depends on the pandas \
 package.  http://code.google.com/p/pandas/"
 
-#######
 
-# class PanelModel()
+def group(X):
+    """
+    Returns unique numeric values for groups without sorting.
 
-# fit(method=None, **kwargs):
-
-
-
-
-#########
+    Examples
+    --------
+    >>> X = np.array(['a','a','b','c','b','c'])
+    >>> group(X)
+    >>> g
+    array([ 0.,  0.,  1.,  2.,  1.,  2.])
+    """
+    uniq_dict = {}
+    group = np.zeros(len(X))
+    for i in xrange(len(X)):
+        if not X[i] in uniq_dict:
+            uniq_dict.update({X[i] : len(uniq_dict)})
+        group[i] = uniq_dict[X[i]]
+    return group
 
 def repanel_cov(groups, sigmas):
     '''calculate error covariance matrix for random effects model
@@ -79,26 +84,9 @@ def repanel_cov(groups, sigmas):
 
 
 
-#class PanelData(object):
-#    def __init__(self, dataset, endog, exog, time='time', panel=None):
-#        self.parse_dataset(dataset)
-#        self.endog_name = endog
-#        self.exog_name = exog
-#        self.time_name = time
-#        self.panel_name = panel
-
-#    def parse_dataset(self, dataset):
-#        if isinstance(dataset, LongPanel):
-#            pass
-
 class PanelData(LongPanel):
     pass
 
-
-
-#TODO: not sure what the inheritance structure should look like
-# Model and LikelihoodModel weren't designed for panels
-# maybe should start over?
 class PanelModel(object):
     """
     An abstract statistical model class for panel (longitudinal) datasets.
@@ -118,16 +106,14 @@ class PanelModel(object):
     If a pandas object is supplied it is assumed that the major_axis is time
     and that the minor_axis has the panel variable.
     """
-#    def __init__(self, endog=None, exog=None, panel_arr=None, time_arr=None,
-#            aspandas=False, endog_name=None, exog_name=None, panel_name=None):
-#        if aspandas == False:
-#            if endog == None and exog == None and panel_arr == None and \
-#                    time_arr == None:
-#                raise ValueError, "If aspandas is False then endog, exog, \
+    def __init__(self, endog=None, exog=None, panel=None, time=None,
+            xtnames=None, equation=None, panel_data=None):
+        if panel_data == None:
+#            if endog == None and exog == None and panel == None and \
+#                    time == None:
+#                raise ValueError, "If pandel_data is False then endog, exog, \
 #panel_arr, and time_arr cannot be None."
-#            else:
-#               self.initialize(endog, exog, panel_arr, time_arr, endog_name,
-#                        exog_name, panel_name)
+           self.initialize(endog, exog, panel, time, xtnames, equation)
 #        elif aspandas != False:
 #            if not isinstance(endog, str):
 #                raise ValueError, "If a pandas object is supplied then endog \
@@ -137,30 +123,41 @@ class PanelModel(object):
 #            self.initialize_pandas(endog, aspandas, panel_name)
 
 
-    def __init__(self, panel_data, endog_name, exog_name=None):
-        if not isinstance(panel_data, (LongPanel, PanelData)):
-            raise ValueError, "Only pandas.LongPanel or PanelData objects are \
-supported"
-        if not isinstance(endog_name, str):
-            raise ValueError, "endog_name must be a string containing the name\
- of the endogenous variable in panel_data"
-        if exog_name != None and not isinstance(exog_name, (str, list)):
-            raise ValueError, "exog_name should be a string or a list of \
-strings of the endogenous variables in panel_data"
+    def initialize(self, endog, exog, panel, time, xtnames, equation):
+        """
+        Initialize plain array model.
 
-        self.initialize_pandas(panel_data, endog_name, exog_name)
+        See PanelModel
+        """
+#TODO: for now, we are going assume a constant, and then make the first
+#panel the base, add a flag for this....
 
-#    def initialize(self, endog, exog, panel_arr, time_arr, endog_name,
-#            exog_name, panel_name):
-#        """
-#        Initialize plain array model.
-#
-#        See PanelModel
-#        """
-#                self.endog = np.squeeze(np.asarray(endog))
-#                self.exog = np.asarray(exog)
-#                self.panel_arr = np.asanyarray(panel_arr)
-#                self.time_arr = np.asanyarray(time_arr)
+        # get names
+        names = equation.split(" ")
+        self.endog_name = names[0]
+        exog_names = names[1:]  # this makes the order matter in the array
+        self.panel_name = xtnames[0]
+        self.time_name = xtnames[1]
+
+
+        novar = exog.var(0) == 0
+        if True in novar:
+            cons_index = np.where(novar == 1)[0][0] # constant col. num
+            exog_names.insert(cons_index, 'cons')
+
+        self._cons_index = novar # used again in fit_fixed
+        self.exog_names = exog_names
+        self.endog = np.squeeze(np.asarray(endog))
+        exog = np.asarray(exog)
+        self.exog = exog
+        self.panel = np.asarray(panel)
+        self.time = np.asarray(time)
+
+        self.paneluniq = np.unique(panel)
+        self.timeuniq = np.unique(time)
+#TODO: this  structure can possibly be extracted somewhat to deal with
+#names in general
+
 #TODO: add some dimension checks, etc.
 
 #    def initialize_pandas(self, endog, aspandas):
@@ -187,6 +184,7 @@ strings of the endogenous variables in panel_data"
 # on the pandas LongPanel structure for speed and convenience.
 # not sure this part is finished...
 
+#TODO: doesn't conform to new initialize
     def initialize_pandas(self, panel_data, endog_name, exog_name):
         self.panel_data = panel_data
         endog = panel_data[endog_name].values # does this create a copy?
@@ -200,36 +198,131 @@ strings of the endogenous variables in panel_data"
         self._timeseries = panel_data.major_axis # might not need these
         self._panelseries = panel_data.minor_axis
 
-#TODO: Use kwd arguments or have fit_method methods?
-    def fit(self, method=None, effects='oneway', *opts):
+#TODO: this could be pulled out and just have a by kwd that takes
+# the panel or time array
+#TODO: this also needs to be expanded for 'twoway'
+    def _group_mean(self, X, index='oneway', counts=False, dummies=False):
         """
-        method : LSDV, demeaned, MLE, GLS, BE, FE
-        effects : 'invidividual', 'oneway', or 'twoway'
-        """
-        method = method.lower()
-        if method not in ["lsdv", "demeaned", "mle", "gls", "be",
-            "fe"]:
-            raise ValueError, "%s not a valid method" % method
-        if method == "lsdv":
-            self.fit_lsdv(opts)
+        Get group means of X by time or by panel.
 
-    def fit_lsdv(self, errors='oneway'):
+        index default is panel
         """
-        Fit using least squares dummy variables.
+        if index == 'oneway':
+            Y = self.panel
+            uniq = self.paneluniq
+        elif index == 'time':
+            Y = self.time
+            uniq = self.timeuniq
+        else:
+            raise ValueError, "index %s not understood" % index
+
+        #TODO: use sparse matrices
+        dummy = (Y == uniq[:,None]).astype(float)
+        if X.ndim > 1:
+            mean = np.dot(dummy,X)/dummy.sum(1)[:,None]
+        else:
+            mean = np.dot(dummy,X)/dummy.sum(1)
+        if counts == False and dummies == False:
+            return mean
+        elif counts == True and dummies == False:
+            return mean, dummy.sum(1)
+        elif counts == True and dummies == True:
+            return mean, dummy.sum(1), dummy
+        elif counts == False and dummies == True:
+            return mean, dummy
+
+#TODO: Use kwd arguments or have fit_method methods?
+    def fit(self, model=None, method=None, effects='oneway'):
+        """
+        method : LSDV, demeaned, MLE, GLS, BE, FE, optional
+        model :
+                between
+                fixed
+                random
+                pooled
+                [gmm]
+        effects :
+                oneway
+                time
+                twoway
+        femethod : demeaned (only one implemented)
+                   WLS
+        remethod :
+                swar -
+                amemiya
+                nerlove
+                walhus
+
 
         Notes
-        -----
-        Should only be used for small `nobs`.
+        ------
+        This is unfinished.  None of the method arguments work yet.
+        Only oneway effects should work.
         """
-        pdummies = None
-        tdummies = None
+        if method: # get rid of this with default
+            method = method.lower()
+        model = model.lower()
+        if method and method not in ["lsdv", "demeaned", "mle", "gls", "be",
+            "fe"]: # get rid of if method with default
+            raise ValueError, "%s not a valid method" % method
+#        if method == "lsdv":
+#            self.fit_lsdv(model)
+        if model == 'pooled':
+            return GLS(self.endog, self.exog).fit()
+        if model == 'between':
+            return self._fit_btwn(method, effects)
+        if model == 'fixed':
+            return self._fit_fixed(method, effects)
 
-# does this even make sense?
-class OneWayError(PanelModel):
-    pass
+#    def fit_lsdv(self, effects):
+#        """
+#        Fit using least squares dummy variables.
+#
+#        Notes
+#        -----
+#        Should only be used for small `nobs`.
+#        """
+#        pdummies = None
+#        tdummies = None
 
-class TwoWayError(PanelModel):
-    pass
+    def _fit_btwn(self, method, effects):
+        # group mean regression or WLS
+        if effects != "twoway":
+            endog = self._group_mean(self.endog, index=effects)
+            exog = self._group_mean(self.exog, index=effects)
+        else:
+            raise ValueError, "%s effects is not valid for the between \
+estimator" % s
+        befit = GLS(endog, exog).fit()
+        return befit
+
+    def _fit_fixed(self, method, effects):
+        endog = self.endog
+        exog = self.exog
+        demeantwice = False
+        if effects in ["oneway","twoways"]:
+            if effects == "twoways":
+                demeantwice = True
+                effects = "oneway"
+            endog_mean, counts = self._group_mean(endog, index=effects,
+                counts=True)
+            exog_mean = self._group_mean(exog, index=effects)
+            counts = counts.astype(int)
+            endog = endog - np.repeat(endog_mean, counts)
+            exog = exog - np.repeat(exog_mean, counts, axis=0)
+        if demeantwice or effects == "time":
+            endog_mean, dummies = self._group_mean(endog, index="time",
+                dummies=True)
+            exog_mean = self._group_mean(exog, index="time")
+            # This allows unbalanced panels
+            endog = endog - np.dot(endog_mean, dummies)
+            exog = exog - np.dot(dummies.T, exog_mean)
+        fefit = GLS(endog, exog[:,-self._cons_index]).fit()
+#TODO: might fail with one regressor
+        return fefit
+
+
+
 
 class SURPanel(PanelModel):
     pass
@@ -253,19 +346,32 @@ if __name__ == "__main__":
     data = sm.datasets.grunfeld.Load()
     # Baltagi doesn't include American Steel
     endog = data.endog[:-20]
-    exog = data.exog[:-20]
-    arrpanel = nprf.append_fields(exog, 'investment', endog, float,
+    fullexog = data.exog[:-20]
+#    fullexog.sort(order=['firm','year'])
+    panel_arr = nprf.append_fields(fullexog, 'investment', endog, float,
             usemask=False)
-    panel = LongPanel.fromRecords(arrpanel, major_field='year',
+    panel_panda = LongPanel.fromRecords(panel_arr, major_field='year',
             minor_field='firm')
-    panel_mod_oneway = OneWayError(panel, endog_name='investment')
-#
-#""" Covariance matrix, inverse, and negative sqrt for 2way random effects model
-#
-#Created on Wed Jan 13 08:44:20 2010
-#Author: josef-pktd
-#
-#
+
+    # the most cumbersome way of doing it as far as preprocessing by hand
+    exog = fullexog[['value','capital']].view(float).reshape(-1,2)
+    exog = sm.add_constant(exog)
+    panel = group(fullexog['firm'])
+    year = fullexog['year']
+    panel_mod = PanelModel(endog, exog, panel, year, xtnames=['firm','year'],
+            equation='invest value capital')
+# note that equation doesn't actually do anything but name the variables
+    panel_ols = panel_mod.fit(model='pooled')
+
+    panel_be = panel_mod.fit(model='between', effects='oneway')
+    panel_fe = panel_mod.fit(model='fixed', effects='oneway')
+
+    panel_bet = panel_mod.fit(model='between', effects='time')
+    panel_fet = panel_mod.fit(model='fixed', effects='time')
+
+    panel_fe2 = panel_mod.fit(model='fixed', effects='twoways')
+
+
 #see also Baltagi (3rd edt) 3.3 THE RANDOM EFFECTS MODEL p.35
 #for explicit formulas for spectral decomposition
 #but this works also for unbalanced panel
@@ -281,11 +387,9 @@ if __name__ == "__main__":
 #
 
     groups = np.array([0,0,0,1,1,2,2,2])
-    #groups = np.array([0,0,0,1,1,1,2,2,2])
     nobs = groups.shape[0]
     groupuniq = np.unique(groups)
     periods = np.array([0,1,2,1,2,0,1,2])
-    #periods = np.array([0,1,2,0,1,2,0,1,2])
     perioduniq = np.unique(periods)
 
     dummygr = (groups[:,None] == groupuniq).astype(float)
