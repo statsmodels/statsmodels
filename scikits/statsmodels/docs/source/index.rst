@@ -91,7 +91,6 @@ Table of Contents
    :maxdepth: 3
 
    regression
-   discretemod
    glm
    rlm
    discretemod
