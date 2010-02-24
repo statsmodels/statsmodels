@@ -16,20 +16,24 @@ are avalable for each estimation problem
 Quickstart for the impatient
 ----------------------------
 
-**License:** BSD
+**License:** Simplified BSD
 
 **Requirements:** python 2.4. to 2.6 and
   recent releases of numpy (>=1.3) and scipy (>=0.7)
   earlier versions of numpy and scipy might work but not tested
+  Optional: Many of the examples use matplotlib, and some sandbox functions
+  have additional dependencies
 
 **Repository:** http://code.launchpad.net/statsmodels
 
-**Online Documentation:** http://statsmodels.sourceforge.net/
+**Documentation:** http://statsmodels.sourceforge.net/
+    and in the docs/build folder
 
 **Pypi:** http://pypi.python.org/pypi/scikits.statsmodels
 
 **Mailing List:** http://groups.google.com/group/pystatsmodels?hl=en
 
+**Bug Tracker:**  https://bugs.launchpad.net/statsmodels
 
 **Installation:**
 
@@ -41,7 +45,8 @@ or get the source from pypi, sourceforge, or from the launchpad repository and
 
 ::
 
-  setup.py install
+  setup.py install  or, if this does not work, try
+  setup.py build install
 
 **Usage:**
 
@@ -69,23 +74,26 @@ For example, here is a minimal ordinary least squares case ::
 
 **Note:**
 Due to our infrequent official releases, we want to point out that the trunk
-branch in the launchpad repository given above will have the most recent
-code and is for the most part quite stable and fine for daily use.
+branch in the launchpad repository will have the most recent code and is
+usually stable and tested and fine for daily use.
 
 
 Table of Contents
 -----------------
 
 .. toctree::
-   :maxdepth: 3
-
+   :maxdepth: 2
 
    introduction
    related
+
+.. toctree::
+   :maxdepth: 3
+
    regression
-   discretemod
    glm
    rlm
+   discretemod
    stattools
    tools
    internal

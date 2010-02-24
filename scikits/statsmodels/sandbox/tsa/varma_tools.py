@@ -40,9 +40,11 @@ from scikits.statsmodels.sandbox.tools.tools_tsa import lagmat
 
 def varfilter(x, a):
     '''apply an autoregressive filter to a series x
+
     Warning: I just found out that convolve doesn't work as I
        thought, this likely doesn't work correctly for
        nvars>3
+
 
     x can be 2d, a can be 1d, 2d, or 3d
 

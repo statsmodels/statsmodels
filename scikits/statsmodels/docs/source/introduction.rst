@@ -30,18 +30,20 @@ statsmodels includes:
     errors.
   * glm: generalized linear models
   * rlm: robust linear models
+  * discretemod: regression with discrete dependent variables, Logit, Probit,
+    MNLogit, Poisson, based on maximum likelihood estimators
   * datasets: for examples and tests
 
 The other code which we didn't have enough time to verify and fix
 was moved to a sandbox folder. The formula framework is not used any
-more (in the verified code). Only the verified part would go into
-scipy.
+more (in the verified code). The sandbox also contains models and functions
+that we are currently developing, partially unfinished and not fully tested.
 
 Compared to the original code, the class structure and some of the
 method arguments have changed. Additional estimation
 results, e.g. test statistics have been included.
 
-Most importantly, almost every result has been verified with at least one
+Most importantly, most results have been verified with at least one
 other statistical package: R, Stata or SAS. The guiding principal for the
 rewrite was that all numbers have to be verified, even if we don't manage
 to cover everything. There are a few remaining issues, that we hope to
@@ -63,24 +65,23 @@ are set up so that it is easy to add more datasets.
 Looking Forward
 ---------------
 
-We are distributing statsmodels as a standalone
-package to gain experience with the API, and to allow us to
-make changes without being committed to backwards
-compatibility. It will also give us the opportunity to find
-and kill some remaining bugs, and fill some holes in our
-test suite. However, statsmodels is intended to become
-part of scipy after some maturing of the package.
+We are distributing statsmodels as a standalone package to gain
+experience with the API, and to allow us to make changes without
+being committed to backwards compatibility. It will also give us
+the opportunity to find and kill some remaining bugs, and fill
+some holes in our test suite. However, statsmodels is intended
+to become part of scipy after some maturing of the package.
 
 Summer 2009, there was a discussion on the nipy
 mailing list on the structure of the API and about possible
 additional methods for the model classes. We would like
 to invite everyone to give statsmodels a test drive and report
 comments and possibilities for improvement and bugs to the
-scipy-user mailing list or file tickets on our bug tracker at
-https://bugs.launchpad.net/statsmodels
+scipy-user or statsmodels mailing lists or file tickets on our
+bug tracker at https://bugs.launchpad.net/statsmodels
 
-The development repository is at the new location http://code.launchpad.net/statsmodels,
-and the old location http://code.launchpad.net/~scipystats
+The development repository is at http://code.launchpad.net/statsmodels .
+
 
 We would also like to use statsmodels, or projects related to it, as
 a staging ground for new models. The current maintainers

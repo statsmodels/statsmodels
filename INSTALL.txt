@@ -13,9 +13,21 @@ On (X)ubuntu you can get the packages through
 
 apt-get install python python-setuptools python-numpy python-scipy
 
+Optional Requirements:
+----------------------
+
+matplotlib: used in examples http://pypi.python.org/pypi/matplotlib
+rpy: used in tests http://pypi.python.org/pypi/rpy
+in sandbox: numdifftools
+
 Installing
 -----------
 Once in the statsmodels directory do:
 
 python setup.py install
 
+numpy 1.4.0 seems to require:
+python setup.py build install
+
+alternatively since statsmodels is a pure python package, it can be added
+to the python path directly without installation
