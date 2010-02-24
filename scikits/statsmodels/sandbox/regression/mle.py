@@ -1,10 +1,23 @@
 '''general non-linear MLE for time series analysis
 
 idea for general version
+------------------------
 
 subclass defines geterrors(parameters) besides loglike,...
 and covariance matrix of parameter estimates (e.g. from hessian
 or outerproduct of jacobian)
+update: I don't really need geterrors directly, but get_h the conditional
+    variance process
+
+new version Garch0 looks ok, time to clean up and test
+no constraints yet
+in some cases: "Warning: Maximum number of function evaluations has been exceeded."
+
+Notes
+-----
+
+idea: cache intermediate design matrix for geterrors so it doesn't need
+    to be build at each function call
 
 superclass or result class calculates result statistic based
 on errors, loglike, jacobian and cov/hessian
@@ -14,7 +27,7 @@ on errors, loglike, jacobian and cov/hessian
   -> parameter restrictions or transformation with corrected covparams (?)
   -> sse, rss, rsquared  ??? are they defined from this in general
   -> robust parameter cov ???
-  -> additional residual bast tests, NW, ... likelihood ratio, lagrange
+  -> additional residual based tests, NW, ... likelihood ratio, lagrange
      multiplier tests ???
 
 how much can be reused from linear model result classes where
@@ -30,6 +43,30 @@ examples:
  * garch: need loglike and (recursive) errorest
  * regime switching model without unobserved state, e.g. threshold
 
+
+roadmap for garch:
+ * simple case
+ * starting values: garch11 explicit formulas
+ * arma-garch, assumed separable, blockdiagonal Hessian
+ * empirical example: DJI, S&P500, MSFT, ???
+ * other standard garch: egarch, pgarch,
+ * non-normal distributions
+ * other methods: forecast, news impact curves (impulse response)
+ * analytical gradient, Hessian for basic garch
+ * cleaner simulation of garch
+ * result statistics, AIC, ...
+ * parameter constraints
+ * try penalization for higher lags
+ * other garch: regime-switching
+
+for pgarch (power garch) need transformation of etax given
+   the parameters, but then misofilter should work
+   general class aparch (see garch glossary)
+
+References
+----------
+
+see notes_references.txt
 
 
 Created on Feb 6, 2010
@@ -254,6 +291,243 @@ class TSMLEModel(LikelihoodModel):
         mlefit = super(TSMLEModel, self).fit(start_params=start_params,
                 maxiter=maxiter, method=method, tol=tol)
         return mlefit
+
+class Garch0(TSMLEModel):
+    '''Garch model,
+
+    still experimentation stage:
+    simplified structure, plain garch, no constraints
+    still looking for the design of the base class
+
+    serious bug:
+    ar estimate looks ok, ma estimate awful
+    -> check parameterization of lagpolys and constant
+    looks ok after adding missing constant
+        but still difference to garch11 function
+    corrected initial condition
+    -> only small differences left between the 3 versions
+    ar estimate is close to true/DGP model
+    note constant has different parameterization
+    but design looks better
+
+    '''
+    def __init__(self, endog, exog=None):
+        #need to override p,q (nar,nma) correctly
+        super(Garch0, self).__init__(endog, exog)
+        #set default arma(1,1)
+        self.nar = 1
+        self.nma = 1
+        #self.initialize()
+        # put this in fit (?) or in initialize instead
+        self._etax = endog**2
+        self._icetax = np.atleast_1d(self._etax.mean())
+
+    def initialize(self):
+        pass
+
+    def geth(self, params):
+        '''
+
+        Parameters
+        ----------
+        params : tuple, (ar, ma)
+            try to keep the params conversion in loglike
+
+        copied from generate_gjrgarch
+        needs to be extracted to separate function
+        '''
+        #mu, ar, ma = params
+        ar, ma, mu = params
+
+        #etax = self.endog  #this would be enough for basic garch version
+        etax = self._etax + mu
+        icetax = self._icetax  #read ic-eta-x, initial condition
+
+        #TODO: where does my go with lfilter ?????????????
+        #      shouldn't matter except for interpretation
+
+        nobs = etax.shape[0]
+
+        #check arguments of lfilter
+        zi = signal.lfiltic(ma,ar, icetax)
+        #h = signal.lfilter(ar, ma, etax, zi=zi) #np.atleast_1d(etax[:,1].mean()))
+        #just guessing: b/c ValueError: BUG: filter coefficient a[0] == 0 not supported yet
+        h = signal.lfilter(ma, ar, etax, zi=zi)[0]
+        return h
+
+
+    def loglike(self, params):
+        """
+        Loglikelihood for timeseries model
+
+        Notes
+        -----
+        needs to be overwritten by subclass
+
+        make more generic with using function _convertparams
+        which could also include parameter transformation
+        _convertparams_in, _convertparams_out
+
+        allow for different distributions t, ged,...
+        """
+        p, q = self.nar, self.nma
+        ar = np.concatenate(([1], params[:p]))
+
+        # check where constant goes
+
+        #ma = np.zeros((q+1,3))
+        #ma[0,0] = params[-1]
+        #lag coefficients for ma innovation
+        ma = np.concatenate(([0], params[p:p+q]))
+
+        mu = params[-1]
+        params = (ar, ma, mu) #(ar, ma)
+
+        h = self.geth(params)
+
+        #temporary safe for debugging:
+        self.params_converted = params
+        self.h = h  #for testing
+
+        sigma2 = np.maximum(h, 1e-6)
+        axis = 0
+        nobs = len(h)
+        #this doesn't help for exploding paths
+        #errorsest[np.isnan(errorsest)] = 100
+        axis=0 #no choice of axis
+
+        # same as with y = self.endog, ht = sigma2
+        # np.log(stats.norm.pdf(y,scale=np.sqrt(ht))).sum()
+        llike  =  -0.5 * (np.sum(np.log(sigma2),axis)
+                          + np.sum(((self.endog)**2)/sigma2, axis)
+                          +  nobs*np.log(2*np.pi))
+        return llike
+
+class GarchX(TSMLEModel):
+    '''Garch model,
+
+    still experimentation stage:
+    another version, this time with exog and miso_filter
+    still looking for the design of the base class
+
+    not done yet, just a design idea
+    * use misofilter as in garch (gjr)
+    * but take etax = exog
+      this can include constant, asymetric effect (gjr) and
+      other explanatory variables (e.g. high-low spread)
+
+    todo: renames
+    eta -> varprocess
+    etax -> varprocessx
+    icetax -> varprocessic (is actually ic of eta/sigma^2)
+    '''
+    def __init__(self, endog, exog=None):
+        #need to override p,q (nar,nma) correctly
+        super(Garch0, self).__init__(endog, exog)
+        #set default arma(1,1)
+        self.nar = 1
+        self.nma = 1
+        #self.initialize()
+        # put this in fit (?) or in initialize instead
+        #nobs defined in super - verify
+        #self.nobs = nobs = endog.shape[0]
+        #add nexog to super
+        #self.nexog = nexog = exog.shape[1]
+        self._etax = np.column_stack(np.ones((nobs,1)), endog**2, exog)
+        self._icetax = np.atleast_1d(self._etax.mean())
+
+    def initialize(self):
+        pass
+
+    def convert_mod2params(ar, ma, mu):
+        pass
+
+    def geth(self, params):
+        '''
+
+        Parameters
+        ----------
+        params : tuple, (ar, ma)
+            try to keep the params conversion in loglike
+
+        copied from generate_gjrgarch
+        needs to be extracted to separate function
+        '''
+        #mu, ar, ma = params
+        ar, ma, mu = params
+
+        #etax = self.endog  #this would be enough for basic garch version
+        etax = self._etax + mu
+        icetax = self._icetax  #read ic-eta-x, initial condition
+
+        #TODO: where does my go with lfilter ?????????????
+        #      shouldn't matter except for interpretation
+
+        nobs = self.nobs
+
+##        #check arguments of lfilter
+##        zi = signal.lfiltic(ma,ar, icetax)
+##        #h = signal.lfilter(ar, ma, etax, zi=zi) #np.atleast_1d(etax[:,1].mean()))
+##        #just guessing: b/c ValueError: BUG: filter coefficient a[0] == 0 not supported yet
+##        h = signal.lfilter(ma, ar, etax, zi=zi)[0]
+##
+        h = miso_lfilter(ar, ma, etax, useic=self._icetax))[0]
+        #print 'h.shape', h.shape
+        hneg = h<0
+        if hneg.any():
+            #h[hneg] = 1e-6
+            h = np.abs(h)
+            #todo: raise warning, maybe not during optimization calls
+
+        return h
+
+
+    def loglike(self, params):
+        """
+        Loglikelihood for timeseries model
+
+        Notes
+        -----
+        needs to be overwritten by subclass
+
+        make more generic with using function _convertparams
+        which could also include parameter transformation
+        _convertparams_in, _convertparams_out
+
+        allow for different distributions t, ged,...
+        """
+        p, q = self.nar, self.nma
+        ar = np.concatenate(([1], params[:p]))
+
+        # check where constant goes
+
+        #ma = np.zeros((q+1,3))
+        #ma[0,0] = params[-1]
+        #lag coefficients for ma innovation
+        ma = np.concatenate(([0], params[p:p+q]))
+
+        mu = params[-1]
+        params = (ar, ma, mu) #(ar, ma)
+
+        h = self.geth(params)
+
+        #temporary safe for debugging:
+        self.params_converted = params
+        self.h = h  #for testing
+
+        sigma2 = np.maximum(h, 1e-6)
+        axis = 0
+        nobs = len(h)
+        #this doesn't help for exploding paths
+        #errorsest[np.isnan(errorsest)] = 100
+        axis=0 #no choice of axis
+
+        # same as with y = self.endog, ht = sigma2
+        # np.log(stats.norm.pdf(y,scale=np.sqrt(ht))).sum()
+        llike  =  -0.5 * (np.sum(np.log(sigma2),axis)
+                          + np.sum(((self.endog)**2)/sigma2, axis)
+                          +  nobs*np.log(2*np.pi))
+        return llike
 
 
 class Garch(TSMLEModel):
@@ -775,7 +1049,7 @@ if __name__ == '__main__':
     #test_misofilter()
     #test_gjrgarch()
 
-    examples = []
+    examples = ['garch']
     if 'arma' in examples:
         arest = tsa.arima.ARIMA()
         print "\nExample 1"
@@ -925,9 +1199,26 @@ if __name__ == '__main__':
     ggres = ggmod.fit(start_params=np.array([-0.6, 0.1, 0.2, 0.0]), maxiter=1000)
     print 'ggres.params', ggres.params
     garchplot(ggmod.errorsest, ggmod.h)
-    plt.show()
+    #plt.show()
 
+    print 'Garch11'
     print optimize.fmin(lambda params: -loglike_GARCH11(params, errgjr4-errgjr4.mean())[0], [0.93, 0.9, 0.2])
+
+    ggmod0 = Garch0(errgjr4-errgjr4.mean())#hgjr4[:nobs])#-hgjr4.mean()) #errgjr4)
+    ggmod0.nar = 1
+    ggmod.nma = 1
+    start_params = np.array([-0.6, 0.2, 0.1])
+    ggmod0._start_params = start_params #np.array([-0.6, 0.1, 0.2, 0.0])
+    ggres0 = ggmod0.fit(start_params=start_params, maxiter=2000)
+    print 'ggres0.params', ggres0.params
+
+    ggmod0 = Garch0(errgjr4-errgjr4.mean())#hgjr4[:nobs])#-hgjr4.mean()) #errgjr4)
+    ggmod0.nar = 1
+    ggmod.nma = 1
+    start_params = np.array([-0.6, 0.2, 0.1])
+    ggmod0._start_params = start_params #np.array([-0.6, 0.1, 0.2, 0.0])
+    ggres0 = ggmod0.fit(start_params=start_params, method='bfgs', maxiter=2000)
+    print 'ggres0.params', ggres0.params
 
 
     if 'rpy' in examples:
@@ -1058,7 +1349,9 @@ if __name__ == '__main__':
                           + np.sum((y**2)/sigma2, axis)
                           +  nobs*np.log(2*np.pi))
     print lls, llike
-    print np.log(stats.norm.pdf(y,scale=np.sqrt(ht))).sum()
+    #print np.log(stats.norm.pdf(y,scale=np.sqrt(ht))).sum()
+
+
 
     '''
     >>> optimize.fmin(lambda params: -loglike_GARCH11(params, errgjr4)[0], [0.93, 0.9, 0.2])
