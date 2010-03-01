@@ -1,5 +1,6 @@
 '''Examples OLS
 
+Note: uncomment plt.show() to display graphs
 '''
 
 import numpy as np
@@ -101,4 +102,4 @@ print res3.f_test(R)
 
 
 
-plt.show()
+#plt.show()

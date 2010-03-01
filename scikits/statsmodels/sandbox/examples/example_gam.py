@@ -1,4 +1,7 @@
+'''example for checking how far GAM work, GAM is incompletely fixed
 
+Note: uncomment plt.show() to display graphs
+'''
 #FIXME problems calling GLM, 3rd parameter missing
 
 
@@ -68,8 +71,12 @@ plt.plot(x1, standardize(m.smoothers[0](x1)), 'r')
 plt.plot(x1, standardize(f1(x1)), linewidth=2)
 plt.figure(num=2)
 plt.plot(x2, standardize(m.smoothers[1](x2)), 'r')
-plt.plot(x2, standardize(f2(x2)), linewidth=2);
-plt.show()
+plt.plot(x2, standardize(f2(x2)), linewidth=2)
+
+#plt.show()
+
+
+
 ##     pylab.figure(num=1)
 ##     pylab.plot(x1, standardize(m.smoothers[0](x1)), 'b')
 ##     pylab.plot(x1, standardize(f1(x1)), linewidth=2)
@@ -78,4 +85,3 @@ plt.show()
 ##     pylab.plot(x2, standardize(f2(x2)), linewidth=2)
 ##     pylab.show()
 
-data = np.genfromtxt('./iowa.csv',delimiter=',')

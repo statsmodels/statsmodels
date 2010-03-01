@@ -1,5 +1,6 @@
 '''Examples: comparing OLS and WLS
 
+Note: uncomment plt.show() to display graphs
 '''
 
 import numpy as np
@@ -144,4 +145,4 @@ print 'feasible WLS stddev of beta'
 print res3.bse
 
 
-plt.show()
+#plt.show()

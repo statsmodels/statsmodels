@@ -40,9 +40,11 @@ from scikits.statsmodels.sandbox.tools.tools_tsa import lagmat
 
 def varfilter(x, a):
     '''apply an autoregressive filter to a series x
-   Warning: I just found out that convolve doesn't work as I
-      thought, this likely doesn't work correctly for
-      nvars>3
+
+    Warning: I just found out that convolve doesn't work as I
+       thought, this likely doesn't work correctly for
+       nvars>3
+
 
     x can be 2d, a can be 1d, 2d, or 3d
 
@@ -305,42 +307,7 @@ def trimone(x, front=0, back=0, axis=0):
     #print x[tuple(myslice)].shape
     return x[tuple(myslice)]
 
-# some example lag polynomials
-a21 = np.array([[[ 1. ,  0. ],
-                 [ 0. ,  1. ]],
 
-                [[-0.8,  0. ],
-                 [ 0.,  -0.6]]])
-
-a22 = np.array([[[ 1. ,  0. ],
-                 [ 0. ,  1. ]],
-
-                [[-0.8,  0. ],
-                 [ 0.1, -0.8]]])
-
-a23 = np.array([[[ 1. ,  0. ],
-                 [ 0. ,  1. ]],
-
-                [[-0.8,  0.2],
-                 [ 0.1, -0.6]]])
-
-a24 = np.array([[[ 1. ,  0. ],
-                 [ 0. ,  1. ]],
-
-                [[-0.6,  0. ],
-                 [ 0.2, -0.6]],
-
-                [[-0.1,  0. ],
-                 [ 0.1, -0.1]]])
-
-a31 = np.r_[np.eye(3)[None,:,:], 0.8*np.eye(3)[None,:,:]]
-a32 = np.array([[[ 1. ,  0. ,  0. ],
-                 [ 0. ,  1. ,  0. ],
-                 [ 0. ,  0. ,  1. ]],
-
-                [[ 0.8,  0. ,  0. ],
-                 [ 0.1,  0.6,  0. ],
-                 [ 0. ,  0. ,  0.9]]])
 
 def ar2full(ar):
     '''make reduced lagpolynomial into a right side lagpoly array
@@ -666,53 +633,91 @@ class VarmaPoly(object):
 
 
 
+if __name__ == "__main__":
+    # some example lag polynomials
+    a21 = np.array([[[ 1. ,  0. ],
+                     [ 0. ,  1. ]],
 
-ut = np.random.randn(1000,2)
-ar2s = vargenerate(a22,ut)
-res = np.linalg.lstsq(lagmat(ar2s,1)[:,2:], ar2s)
-bhat = res[0].reshape(1,2,2)
-arhat = ar2full(bhat)
-#print maxabs(arhat - a22)
+                    [[-0.8,  0. ],
+                     [ 0.,  -0.6]]])
+
+    a22 = np.array([[[ 1. ,  0. ],
+                     [ 0. ,  1. ]],
+
+                    [[-0.8,  0. ],
+                     [ 0.1, -0.8]]])
+
+    a23 = np.array([[[ 1. ,  0. ],
+                     [ 0. ,  1. ]],
+
+                    [[-0.8,  0.2],
+                     [ 0.1, -0.6]]])
+
+    a24 = np.array([[[ 1. ,  0. ],
+                     [ 0. ,  1. ]],
+
+                    [[-0.6,  0. ],
+                     [ 0.2, -0.6]],
+
+                    [[-0.1,  0. ],
+                     [ 0.1, -0.1]]])
+
+    a31 = np.r_[np.eye(3)[None,:,:], 0.8*np.eye(3)[None,:,:]]
+    a32 = np.array([[[ 1. ,  0. ,  0. ],
+                     [ 0. ,  1. ,  0. ],
+                     [ 0. ,  0. ,  1. ]],
+
+                    [[ 0.8,  0. ,  0. ],
+                     [ 0.1,  0.6,  0. ],
+                     [ 0. ,  0. ,  0.9]]])
+
+    ########
+    ut = np.random.randn(1000,2)
+    ar2s = vargenerate(a22,ut)
+    res = np.linalg.lstsq(lagmat(ar2s,1)[:,2:], ar2s)
+    bhat = res[0].reshape(1,2,2)
+    arhat = ar2full(bhat)
+    #print maxabs(arhat - a22)
 
 
-v = Var(ar2s)
-v.fit(1)
-v.forecast()
-v.forecast(25)[-30:]
+    v = Var(ar2s)
+    v.fit(1)
+    v.forecast()
+    v.forecast(25)[-30:]
 
 
-ar23 = np.array([[[ 1. ,  0. ],
-                 [ 0. ,  1. ]],
+    ar23 = np.array([[[ 1. ,  0. ],
+                     [ 0. ,  1. ]],
 
-                [[-0.6,  0. ],
-                 [ 0.2, -0.6]],
+                    [[-0.6,  0. ],
+                     [ 0.2, -0.6]],
 
-                [[-0.1,  0. ],
-                 [ 0.1, -0.1]]])
+                    [[-0.1,  0. ],
+                     [ 0.1, -0.1]]])
 
-ma22 = np.array([[[ 1. ,  0. ],
-                 [ 0. ,  1. ]],
+    ma22 = np.array([[[ 1. ,  0. ],
+                     [ 0. ,  1. ]],
 
-                [[ 0.4,  0. ],
-                 [ 0.2, 0.3]]])
+                    [[ 0.4,  0. ],
+                     [ 0.2, 0.3]]])
 
-ar23ns = np.array([[[ 1. ,  0. ],
-                 [ 0. ,  1. ]],
+    ar23ns = np.array([[[ 1. ,  0. ],
+                     [ 0. ,  1. ]],
 
-                [[-1.9,  0. ],
-                 [ 0.4, -0.6]],
+                    [[-1.9,  0. ],
+                     [ 0.4, -0.6]],
 
-                [[ 0.3,  0. ],
-                 [ 0.1, -0.1]]])
+                    [[ 0.3,  0. ],
+                     [ 0.1, -0.1]]])
 
-vp = VarmaPoly(ar23, ma22)
-print vars(vp)
-print vp.vstack()
-print vp.vstack(a24)
-print vp.hstackarma_minus1()
-print vp.getisstationary()
-print vp.getisinvertible()
+    vp = VarmaPoly(ar23, ma22)
+    print vars(vp)
+    print vp.vstack()
+    print vp.vstack(a24)
+    print vp.hstackarma_minus1()
+    print vp.getisstationary()
+    print vp.getisinvertible()
 
-vp2 = VarmaPoly(ar23ns)
-print vp2.getisstationary()
-print vp2.getisinvertible()  # no ma lags
+    vp2 = VarmaPoly(ar23ns)
+    print vp2.getisstationary()
+    print vp2.getisinvertible()  # no ma lags
