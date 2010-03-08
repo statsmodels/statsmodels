@@ -1,4 +1,5 @@
 
+
 import numpy as np
 
 
@@ -97,6 +98,25 @@ def grangercausalitytests(x, maxlag):
     prints results
     not verified with other packages,
     all four tests give similar results (1 and 4 identical)
+
+    Parameters
+    ----------
+    x : array, 2d, (nobs,2)
+        data for test whether the time series in the second column Granger
+        causes the time series in the first column
+    maxlag : integer
+        the Granger causality test results are calculated for all lags up to
+        maxlag
+
+    Returns
+    -------
+    None : no returns
+        all test results are currently printed
+
+    Notes
+    -----
+    TODO: convert to function that returns and compare with other packages
+
     '''
     from scipy import stats # lazy import
     import scikits.statsmodels as sm  # absolute import for now
