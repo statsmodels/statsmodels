@@ -74,10 +74,10 @@ print np.corrcoef(np.c_[x[2:], x[1:-1], x[:-2]],rowvar=0)
 #padding, note arcomb is already full length
 arcombp = np.zeros(nobs)
 arcombp[:len(arcomb)] = arcomb
-map = np.zeros(nobs)
-map[:len(ma)] = ma
+map_ = np.zeros(nobs)    #rename: map was shadowing builtin
+map_[:len(ma)] = ma
 ar0fr = fft.fft(arcombp)
-ma0fr = fft.fft(map)
+ma0fr = fft.fft(map_)
 y2 = fft.ifft(ma0fr/ar0fr*datafr)
 #the next two are (almost) equal in real part, almost zero but different in imag
 print y2[:10]
