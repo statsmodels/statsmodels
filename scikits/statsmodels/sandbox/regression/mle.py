@@ -78,6 +78,7 @@ from numpy.testing import assert_almost_equal
 
 #from scipy.stats import t, norm
 from scipy import optimize, signal, derivative
+from scipy.stats import ss as sumofsq
 
 import matplotlib.pyplot as plt
 
@@ -464,7 +465,7 @@ class GarchX(TSMLEModel):
 ##        #just guessing: b/c ValueError: BUG: filter coefficient a[0] == 0 not supported yet
 ##        h = signal.lfilter(ma, ar, etax, zi=zi)[0]
 ##
-        h = miso_lfilter(ar, ma, etax, useic=self._icetax))[0]
+        h = miso_lfilter(ar, ma, etax, useic=self._icetax)[0]
         #print 'h.shape', h.shape
         hneg = h<0
         if hneg.any():
