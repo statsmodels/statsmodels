@@ -121,7 +121,7 @@ class LikelihoodModel(Model):
         super(LikelihoodModel, self).__init__(endog, exog)
         self.initialize()
 
-    def _initialize(self):
+    def initialize(self):
         """
         Initialize (possibly re-initialize) a Model instance. For
         instance, the design matrix of a linear model may change
@@ -224,7 +224,8 @@ class LikelihoodModel(Model):
         return mlefit
 
 
-
+#TODO: I take it this is only a stub and should be included in another
+# model class?
 class TSMLEModel(LikelihoodModel):
     """
     univariate time series model for estimation with maximum likelihood
@@ -240,14 +241,6 @@ class TSMLEModel(LikelihoodModel):
         self.nma = 1
         #self.initialize()
 
-    #why to I need this here? AttributeError: 'Arma' object has no attribute 'initialize'
-    def initialize(self):
-        """
-        Initialize (possibly re-initialize) a Model instance. For
-        instance, the design matrix of a linear model may change
-        and some things must be recomputed.
-        """
-        pass
     def geterrors(self, params):
         raise NotImplementedError
 
