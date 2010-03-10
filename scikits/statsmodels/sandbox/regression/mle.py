@@ -651,7 +651,135 @@ def gjrconvertparams(self, params, nar, nma):
 
     mu = params[-1]
     params2 = (ar, ma) #(mu, ar, ma)
-    return params2
+    return paramsclass
+
+#TODO: this should be generalized to ARMA?
+#can possibly also leverage TSME above
+# also note that this is NOT yet general
+# it was written for my homework, assumes constant is zero
+# and that process is AR(1)
+# examples at the end of run as main below
+class AR(LikelihoodModel):
+    """
+    Notes
+    -----
+    This is not general, only written for the AR(1) case.
+
+    Fit methods that use super and broyden do not yet work.
+    """
+    def __init__(self, endog, exog=None, nlags=1):
+        if exog is None:    # extend to handle ADL(p,q) model? or subclass?
+            exog = endog[:-nlags]
+        endog = endog[nlags:]
+        super(AR, self).__init__(endog, exog)
+        self.nobs += nlags # add lags back to nobs for real T
+
+#TODO: need to fix underscore in Model class.
+    def initialize(self):
+        pass
+
+    def loglike(self, params):
+        """
+        The unconditional loglikelihood of an AR(p) process
+
+        Notes
+        -----
+        Contains constant term.
+        """
+        nobs = self.nobs
+        y = self.endog
+        ylag = self.exog
+        penalty = self.penalty
+#TODO: I have no idea why broyden returns a tuple
+#file bug report
+        if isinstance(params,tuple):
+            params = np.asarray(params)
+        usepenalty=False
+        if not np.all(np.abs(params)<1) and penalty:
+            oldparams = params
+#need the sign?
+            params = np.array([.9999]) # make it the edge
+            usepenalty=True
+        diffsumsq = sumofsq(y-np.dot(ylag,params))
+        # concentrating the likelihood means that sigma2 is given by
+#        print params
+        sigma2 = 1/nobs*(diffsumsq-ylag[0]**2*(1-params**2))
+        loglike = -nobs/2 * np.log(2*np.pi) - nobs/2*np.log(sigma2) + \
+                .5 * np.log(1-params**2) - .5*diffsumsq/sigma2 -\
+                ylag[0]**2 * (1-params**2)/(2*sigma2)
+        if usepenalty:
+    # subtract a quadratic penalty since we min the negative of loglike
+#            print "Called penalty"
+            loglike -= 1000 *(oldparams-.9999)**2
+        return loglike
+
+    def score(self, params):
+        """
+        Notes
+        -----
+        Need to generalize for AR(p) and for a constant. Doesn't look correct
+        yet.
+        """
+        y = self.endog
+        ylag = self.exog
+        nobs = self.nobs
+        diffsumsq = sumofsq(y-np.dot(ylag,params))
+        dsdr = 1/nobs * -2 *np.sum(ylag*(y-np.dot(ylag,params))[:,None])+\
+                2*params*ylag[0]**2
+        sigma2 = 1/nobs*(diffsumsq-ylag[0]**2*(1-params**2))
+        gradient = -nobs/(2*sigma2)*dsdr + params/(1-params**2) + \
+                1/sigma2*np.sum(ylag*(y-np.dot(ylag, params))[:,None])+\
+                .5*sigma2**-2*diffsumsq*dsdr+\
+                ylag[0]**2*params/sigma2 +\
+                ylag[0]**2*(1-params**2)/(2*sigma2**2)*dsdr
+        if self.penalty:
+            pass
+        j = Jacobian(self.loglike)
+        return j(params)
+#        return gradient
+
+
+    def information(self, params):
+        return
+
+    def hessian(self, params):
+        h = Hessian(self.loglike)
+        return h(params)
+
+    def fit(self, start_params=None, method='bfgs', maxiter=35, tol=1e-08,
+            penalty=False):
+        self.penalty = penalty
+        method = method.lower()
+#        if penalty and method not in ['bfgs_b','tnc','cobyla','slsqp']:
+#            minfunc = lambda params : -self.loglike(params) - \
+#                    self.penfunc(params)
+#        else:
+        minfunc = lambda params: -self.loglike(params)
+        if method in ['newton', 'bfgs', 'ncg']:
+            super(AR, self).fit(start_params=start_params, method=method,
+                    maxiter=maxiter, tol=tol)
+        else:
+            bounds = [(-.999,.999)]   # assume stationarity
+            if start_params == None:
+                start_params = np.array([0]) #TODO: assumes AR(1)
+            if method == 'bfgs-b':
+                retval = optimize.fmin_l_bfgs_b(minfunc, start_params,
+                        approx_grad=True, bounds=bounds)
+                self.params, self.llf = retval[0:2]
+            if method == 'tnc':
+                retval = optimize.fmin_tnc(minfunc, start_params,
+                        approx_grad=True, bounds = bounds)
+                self.params = retval[0]
+            if method == 'powell':
+                retval = optimize.fmin_powell(minfunc,start_params)
+                self.params = retval[None]
+#TODO: write regression tests for Pauli's branch so that
+# new line_search and optimize.nonlin can get put in.
+#http://projects.scipy.org/scipy/ticket/791
+#            if method == 'broyden':
+#                retval = optimize.broyden2(minfunc, [.5], verbose=True)
+#                self.results = retval
+
 
 class Arma(LikelihoodModel):
     """
@@ -1358,3 +1486,23 @@ if __name__ == '__main__':
     >>> ma
     [[1.0, 0, 0], [0, 0.90000000000000002, 0.0]]
     '''
+
+
+    np.random.seed(1)
+    tseries = np.zeros(200) # set first observation
+    for i in range(1,200): # get 99 more observations based on the given process
+        error = np.random.randn()
+        tseries[i] = .9 * tseries[i-1] + .01 * error
+
+    tseries = tseries[100:]
+
+    armodel = AR(tseries)
+    #armodel.fit(method='bfgs-b')
+    #armodel.fit(method='tnc')
+    #powell should be the most robust, see Hamilton 5.7
+    armodel.fit(method='powell', penalty=True)
+    # The below don't work yet
+    #armodel.fit(method='newton', penalty=True)
+    #armodel.fit(method='broyden', penalty=True)
+    print "Unconditional MLE for AR(1) y_t = .9*y_t-1 +.01 * err"
+    print armodel.params
