@@ -257,6 +257,24 @@ def arma_acf(ar, ma, nobs=10):
     acovf = arma_acovf(ar, ma, nobs)
     return acovf/acovf[0]
 
+def arma_pacf(ar, ma, nobs=10):
+    '''partial autocorrelation function of an ARMA process
+
+    Notes
+    -----
+    solves yule-walker equation for each lag order up to nobs lags
+
+    not tested/checked yet
+    '''
+    apacf = np.zeros(nobs)
+    acov = tsa.arma_acf(ar,ma)
+
+    apacf[0] = 1.
+    for k in range(2,nobs+1):
+        r = acov[:k];
+        apacf[k] = np.linalg.solve(scipy.linalg.toeplitz(r[:-1]), r[1:])[-1]
+
+
 def arma_impulse_response(ar, ma, nobs=100):
     '''get the impulse response function (MA representation) for ARMA process
 
@@ -365,7 +383,7 @@ def lpol2index(ar):
         index (lags) of lagpolynomial with non-zero elements
     '''
 
-    index = np.nonzero(ar)
+    index = np.nonzero(ar)[0]
     coeffs = ar[index]
     return coeffs, index
 
