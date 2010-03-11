@@ -19,9 +19,11 @@ build
 *.diff
 .settings/
 *.svn/
+*.log.py
 # Egg metadata
 ./*.egg-info
 # The shelf plugin uses this dir
 ./.shelf
 # Mac droppings
 .DS_Store
+help
