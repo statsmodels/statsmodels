@@ -20,6 +20,11 @@ def norm_lls(y, params):
         normally distributed random variable
     params: array, (nobs, 2)
         array of mean, variance (mu, sigma2) with observations in rows
+
+    Returns
+    -------
+    lls : array
+        contribution to loglikelihood for each observation
     '''
 
     mu, sigma2 = params.T
@@ -82,19 +87,24 @@ def normgrad(y, x, params):
     dmudbeta = mean_grad(x, beta)
     mu = np.dot(x, beta)
     #print beta, sigma2
-    params2 = np.column_stack((mu,sigma2)) #np.concatenate((beta, np.atleast_1d(sigma2)))
+    params2 = np.column_stack((mu,sigma2))
     dllsdms = norm_lls_grad(y,params2)
     grad = np.column_stack((dllsdms[:,:1]*dmudbeta, dllsdms[:,:1]))
     return grad
 
-sig = 0.1
-beta = np.ones(2)
-rvs = np.random.randn(10,3)
-x = rvs[:,1:]
-y = np.dot(x,beta) + sig*rvs[:,0]
 
-params = [1,1,0.1**2]
-print normgrad(y, x, params)
+if __name__ == '__main__':
+    sig = 0.1
+    beta = np.ones(2)
+    rvs = np.random.randn(10,3)
+    x = rvs[:,1:]
+    y = np.dot(x,beta) + sig*rvs[:,0]
+
+    params = [1,1,1]
+    print normgrad(y, x, params)
+
+    dllfdbeta = (y-np.dot(x, beta))[:,None]*x   #for sigma = 1
+    print dllfdbeta
 
 
 
