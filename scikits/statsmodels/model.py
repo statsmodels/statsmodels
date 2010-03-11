@@ -76,7 +76,7 @@ class LikelihoodModel(Model):
         super(LikelihoodModel, self).__init__(endog, exog)
         self.initialize()
 
-    def _initialize(self):
+    def initialize(self):
         """
         Initialize (possibly re-initialize) a Model instance. For
         instance, the design matrix of a linear model may change
