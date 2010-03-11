@@ -1214,6 +1214,8 @@ class NegativeBinomial(Family):
 
     def deviance(self, Y, mu, scale=1.):
         """
+        Returns the value of the deviance function.
+
         Parameters
         -----------
         Y : array-like

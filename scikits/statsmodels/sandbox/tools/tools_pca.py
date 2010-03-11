@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Tue Sep 29 20:11:23 2009
+"""Principal Component Analysis
 
+
+Created on Tue Sep 29 20:11:23 2009
 Author: josef-pktd
+
+TODO : add class for better reuse of results
 """
 
 import numpy as np
@@ -11,6 +14,37 @@ import numpy as np
 def pca(data, keepdim=0, normalize=0, demean=True):
     '''principal components with eigenvector decomposition
     similar to princomp in matlab
+
+    Parameters
+    ----------
+    data : ndarray, 2d
+        data with observations by rows and variables in columns
+    keepdim : integer
+        number of eigenvectors to keep
+        if keepdim is zero, then all eigenvectors are included
+    normalize : boolean
+        if true, then eigenvectors are normalized by sqrt of eigenvalues
+    demean : boolean
+        if true, then the column mean is subtracted from the data
+
+    Returns
+    -------
+    xreduced : ndarray, 2d, (nobs, nvars)
+        projection of the data x on the kept eigenvectors
+    factors : ndarray, 2d, (nobs, nfactors)
+        factor matrix, given by np.dot(x, evecs)
+    evals : ndarray, 2d, (nobs, nfactors)
+        eigenvalues
+    evecs : ndarray, 2d, (nobs, nfactors)
+        eigenvectors, normalized if normalize is true
+
+    Notes
+    -----
+
+    SeeAlso
+    -------
+    pcasvd : principal component analysis using svd
+
     '''
     x = np.array(data)
     #make copy so original doesn't change, maybe not necessary anymore
@@ -44,7 +78,7 @@ def pca(data, keepdim=0, normalize=0, demean=True):
     factors = np.dot(x, evecs)
     # get original data from reduced number of components
     #xreduced = np.dot(evecs.T, factors) + m
-    print x.shape, factors.shape, evecs.shape, m.shape
+    #print x.shape, factors.shape, evecs.shape, m.shape
     xreduced = np.dot(factors, evecs.T) + m
     return xreduced, factors, evals, evecs
 
@@ -52,9 +86,39 @@ def pca(data, keepdim=0, normalize=0, demean=True):
 
 def pcasvd(data, keepdim=0, demean=True):
     '''principal components with svd
+
+    Parameters
+    ----------
+    data : ndarray, 2d
+        data with observations by rows and variables in columns
+    keepdim : integer
+        number of eigenvectors to keep
+        if keepdim is zero, then all eigenvectors are included
+    demean : boolean
+        if true, then the column mean is subtracted from the data
+
+    Returns
+    -------
+    xreduced : ndarray, 2d, (nobs, nvars)
+        projection of the data x on the kept eigenvectors
+    factors : ndarray, 2d, (nobs, nfactors)
+        factor matrix, given by np.dot(x, evecs)
+    evals : ndarray, 2d, (nobs, nfactors)
+        eigenvalues
+    evecs : ndarray, 2d, (nobs, nfactors)
+        eigenvectors, normalized if normalize is true
+
+    SeeAlso
+    -------
+    pca : principal component analysis using eigenvector decomposition
+
+    Notes
+    -----
+    This doesn't have yet the normalize option of pca.
+
     '''
     nobs, nvars = data.shape
-    print nobs, nvars, keepdim
+    #print nobs, nvars, keepdim
     x = np.array(data)
     #make copy so original doesn't change
     if demean:
@@ -77,5 +141,8 @@ def pcasvd(data, keepdim=0, demean=True):
     # s = evals, U = evecs
     # no idea why denominator for s is with minus 1
     evals = s**2/(x.shape[0]-1)
-    print keepdim
+    #print keepdim
     return xreduced, factors[:,:keepdim], evals[:keepdim], U[:,:keepdim] #, v
+
+
+__all__ = ['pca', 'pcasvd']

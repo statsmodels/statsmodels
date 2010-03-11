@@ -1080,7 +1080,8 @@ class RegressionResults(LikelihoodModelResults):
         return self.wresid * tools.recipr(np.sqrt(self.scale))
 
     def summary(self, yname=None, xname=None):
-        """
+        """returns a string that summarizes the regression results
+
         Parameters
         -----------
         yname : string, optional
