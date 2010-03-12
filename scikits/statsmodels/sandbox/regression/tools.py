@@ -2,6 +2,8 @@
 
 use chain rule
 
+normal derivative wrt sigma
+
 
 A: josef-pktd
 
@@ -9,6 +11,8 @@ A: josef-pktd
 
 
 import numpy as np
+#from scipy import special
+from scipy.special import gammaln
 
 
 def norm_lls(y, params):
@@ -46,6 +50,12 @@ def norm_lls_grad(y, params):
     grad : array (nobs, 2)
         derivative of loglikelihood for each observation wrt mean in first
         column, and wrt variance in second column
+
+    Notes
+    -----
+    this is actually the derivative wrt sigma not sigma**2, but evaluated
+    with parameter sigma2 = sigma**2
+
     '''
     mu, sigma2 = params.T
     dllsdmu = (y-mu)/sigma2
@@ -74,7 +84,7 @@ def normgrad(y, x, params):
     -------
     grad : array (nobs, 2)
         derivative of loglikelihood for each observation wrt mean in first
-        column, and wrt variance in second column
+        column, and wrt scale (sigma) in second column
     assume params = (beta, sigma2)
 
     Notes
@@ -93,6 +103,116 @@ def normgrad(y, x, params):
     return grad
 
 
+
+def t_lls(y, params, df):
+    '''t loglikelihood given observations and mean mu and variance sigma2 = 1
+
+    Parameters
+    ----------
+    y : array, 1d
+        normally distributed random variable
+    params: array, (nobs, 2)
+        array of mean, variance (mu, sigma2) with observations in rows
+    df : integer
+        degrees of freedom of the t distribution
+
+    Returns
+    -------
+    lls : array
+        contribution to loglikelihood for each observation
+
+    Notes
+    -----
+    parameterized for garch
+    '''
+
+    mu, sigma2 = params.T
+    df = df*1.0
+    #lls = gammaln((df+1)/2.) - gammaln(df/2.) - 0.5*np.log((df-2)*np.pi)
+    #lls -= (df+1)/2. * np.log(1. + (y-mu)**2/(df-2.)/sigma2) + 0.5 * np.log(sigma2)
+    lls = gammaln((df+1)/2.) - gammaln(df/2.) - 0.5*np.log((df-2)*np.pi)
+    lls -= (df+1)/2. * np.log(1. + (y-mu)**2/(df-2)/sigma2) + 0.5 * np.log(sigma2)
+
+    return lls
+
+def norm_dlldy(y):
+    '''derivative of log pdf of standard normal with respect to y
+    '''
+    return -y
+
+def t_dlldy(y, df):
+    '''derivative of log pdf of standard (?) t with respect to y
+
+    Notes
+    -----
+    parameterized for garch
+    '''
+    #(df+1)/2. / (1 + y**2/(df-2.)) * 2.*y/(df-2.)
+    #return -(df+1)/(df-2.) / (1 + y**2/(df-2.)) * y
+    return -(df+1)/(df) / (1 + y**2/(df)) * y
+
+def ts_lls(y, params, df):
+    '''t loglikelihood given observations and mean mu and variance sigma2 = 1
+
+    Parameters
+    ----------
+    y : array, 1d
+        normally distributed random variable
+    params: array, (nobs, 2)
+        array of mean, variance (mu, sigma2) with observations in rows
+    df : integer
+        degrees of freedom of the t distribution
+
+    Returns
+    -------
+    lls : array
+        contribution to loglikelihood for each observation
+
+    Notes
+    -----
+    parameterized for garch
+    normalized so that sigma2 is the variance
+    '''
+    print y, params, df
+    mu, sigma2 = params.T
+    df = df*1.0
+    #lls = gammaln((df+1)/2.) - gammaln(df/2.) - 0.5*np.log((df-2)*np.pi)
+    #lls -= (df+1)/2. * np.log(1. + (y-mu)**2/(df-2.)/sigma2) + 0.5 * np.log(sigma2)
+    lls = gammaln((df+1)/2.) - gammaln(df/2.) - 0.5*np.log((df)*np.pi)
+    lls -= (df+1.)/2. * np.log(1. + (y-mu)**2/(df)/sigma2) + 0.5 * np.log(sigma2)
+
+    return lls
+
+
+def ts_dlldy(y, df):
+    '''derivative of log pdf of standard, renormalized t with respect to y
+
+    Notes
+    -----
+    parameterized for garch
+    '''
+    df = df*1.
+    #(df+1)/2. / (1 + y**2/(df-2.)) * 2.*y/(df-2.)
+    #return -(df+1)/(df-2.) / (1 + y**2/(df-2.)) * y
+    return -(df+1)/(df) / (1 + y**2/(df)) * y
+
+def t_dlldy(y, df):
+    '''derivative of log pdf of standard, renormalized t with respect to y
+
+    Notes
+    -----
+    parameterized for garch
+    '''
+    #(df+1)/2. / (1 + y**2/(df-2.)) * 2.*y/(df-2.)
+    return -(df+1)/(df-2.) / (1 + y**2/(df-2.)) * y
+    #return (df+1)/(df) / (1 + y**2/(df)) * y
+
+def locscale_grad(y, loc, scale, dlldy, *args):
+    yst = (y-loc)/scale    #ystandardized
+    dlldloc = -dlldy(yst, *args) / scale
+    dlldscale = -1./scale - dlldy(yst, *args) * (y-loc)/scale**2
+    return dlldloc, dlldscale
+
 if __name__ == '__main__':
     sig = 0.1
     beta = np.ones(2)
@@ -105,6 +225,62 @@ if __name__ == '__main__':
 
     dllfdbeta = (y-np.dot(x, beta))[:,None]*x   #for sigma = 1
     print dllfdbeta
+
+    print locscale_grad(y, np.dot(x, beta), 1, norm_dlldy)
+    print (y-np.dot(x, beta))
+
+    from scipy import stats, misc
+
+    def llt(y,loc,scale,df):
+        return np.log(stats.t.pdf(y, df, loc=loc, scale=scale))
+    def lltloc(loc,y,scale,df):
+        return np.log(stats.t.pdf(y, df, loc=loc, scale=scale))
+    def lltscale(scale,y,loc,df):
+        return np.log(stats.t.pdf(y, df, loc=loc, scale=scale))
+
+    def llnorm(y,loc,scale):
+        return np.log(stats.norm.pdf(y, loc=loc, scale=scale))
+    def llnormloc(loc,y,scale):
+        return np.log(stats.norm.pdf(y, loc=loc, scale=scale))
+    def llnormscale(scale,y,loc):
+        return np.log(stats.norm.pdf(y, loc=loc, scale=scale))
+
+    print '\ngradient of t'
+    print misc.derivative(llt, 1, dx=1e-6, n=1, args=(0,1,10), order=3)
+    print 't ', locscale_grad(1, 0, 1, t_dlldy, 10)
+    print 'ts', locscale_grad(1, 0, 1, ts_dlldy, 10)
+    print misc.derivative(llt, 1.5, dx=1e-10, n=1, args=(0,1,20), order=3),
+    print 'ts', locscale_grad(1.5, 0, 1, ts_dlldy, 20)
+    print misc.derivative(llt, 1.5, dx=1e-10, n=1, args=(0,2,20), order=3),
+    print 'ts', locscale_grad(1.5, 0, 2, ts_dlldy, 20)
+    print misc.derivative(llt, 1.5, dx=1e-10, n=1, args=(1,2,20), order=3),
+    print 'ts', locscale_grad(1.5, 1, 2, ts_dlldy, 20)
+    print misc.derivative(lltloc, 1, dx=1e-10, n=1, args=(1.5,2,20), order=3),
+    print misc.derivative(lltscale, 2, dx=1e-10, n=1, args=(1.5,1,20), order=3)
+    y,loc,scale,df = 1.5, 1, 2, 20
+    print 'ts', locscale_grad(y,loc,scale, ts_dlldy, 20)
+    print misc.derivative(lltloc, loc, dx=1e-10, n=1, args=(y,scale,df), order=3),
+    print misc.derivative(lltscale, scale, dx=1e-10, n=1, args=(y,loc,df), order=3)
+
+    print '\ngradient of norm'
+    print misc.derivative(llnorm, 1, dx=1e-6, n=1, args=(0,1), order=3)
+    print locscale_grad(1, 0, 1, norm_dlldy)
+    y,loc,scale = 1.5, 1, 2
+    print 'ts', locscale_grad(y,loc,scale, norm_dlldy,)
+    print misc.derivative(llnormloc, loc, dx=1e-10, n=1, args=(y,scale), order=3),
+    print misc.derivative(llnormscale, scale, dx=1e-10, n=1, args=(y,loc), order=3)
+    y,loc,scale = 1.5, 0, 1
+    print 'ts', locscale_grad(y,loc,scale, norm_dlldy,)
+    print misc.derivative(llnormloc, loc, dx=1e-10, n=1, args=(y,scale), order=3),
+    print misc.derivative(llnormscale, scale, dx=1e-10, n=1, args=(y,loc), order=3)
+    #print 'still something wrong with handling of scale and variance'
+
+    print '\nloglike of t'
+    print t_lls(1, np.array([0,1]), 100), llt(1,0,1,100), 'differently standardized'
+    print t_lls(1, np.array([0,1]), 10), llt(1,0,1,10), 'differently standardized'
+    print ts_lls(1, np.array([0,1]), 10), llt(1,0,1,10)
+    print t_lls(1, np.array([0,1.*10./8.]), 10), llt(1.,0,1.,10)
+    print ts_lls(1, np.array([0,1]), 100), llt(1,0,1,100)
 
 
 
