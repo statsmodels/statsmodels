@@ -3,7 +3,7 @@ Statistical tools for time series analysis
 """
 
 import numpy as np
-from scipy import stats
+from scipy import stats, signal
 import scikits.statsmodels as sm
 from scikits.statsmodels.sandbox.tsa.varma_tools import lagmat
 #from scikits.statsmodels.sandbox.rls import RLS
@@ -35,7 +35,7 @@ def dfuller(X, nlags=1, noconstant=False, trend=False):
     """
     if nlags < 0:
         raise ValueError, "nlags should be >= 0"
-    X = np.asarray(X)
+    X = np.asarray(X).squeeze()
     nobs = float(len(X))
     xdiff = np.diff(X)
     xlag1 = X[:-1]
@@ -102,6 +102,54 @@ def pacorr(X,nlags=40, method="ols"):
         pacf[i-1] = sm.OLS(X[i:],sm.add_constant(lagmat(X, i,
             trim="both")[:,1:], prepend=True)).fit().params[-1]
     return pacf
+
+def pergram(X, kernel='bartlett', log=True):
+    """
+    Returns the (log) periodogram for the natural frequency of X
+
+    Parameters
+    ----------
+    X
+    M : int
+        Should this be hardcoded?
+    kernel : str, optional
+    Notes
+    -----
+    The autocovariances are normalized by len(X).
+    The frequencies are calculated as
+    If len(X) is odd M = (len(X) - 1)/2 else M = len(X)/2. Either way
+        freq[i] = 2*[i+1]/T and len(freq) == M
+
+
+    Reference
+    ----------
+    Based on Lutkepohl; Hamilton.
+
+    Notes
+    -----
+    Doesn't look right yet.
+    """
+    X = np.asarray(X).squeeze()
+    nobs = len(X)
+    M = np.floor(nobs/2.)
+    acov = np.zeros(M+1)
+    acov[0] = np.var(X)
+    Xbar = X.mean()
+    for i in range(1,int(M+1)):
+        acov[i] = np.dot(X[i:] - Xbar,X[:-i] - Xbar)
+    acov /= nobs
+    #    #TODO: make a list to check window
+#    ell = np.r_[1,np.arange(1,M+1)*np.pi/nobs]
+    if kernel == "bartlett":
+        w = 1 - np.arange(M+1)/M
+
+#    weights = exec('signal.'+window+'(M='str(M)')')
+    j = np.arange(1,M+1)
+    ell = np.linspace(0,np.pi,M)
+    pergr = np.zeros_like(ell)
+    for i,L in enumerate(ell):
+        pergr[i] = 1/(2*np.pi)*acov[0] + 2 * np.sum(w[1:]*acov[1:]*np.cos(L*j))
+    return pergr
 
 
 
