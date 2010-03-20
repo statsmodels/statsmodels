@@ -156,7 +156,6 @@ def kdensityf(X, kernel="epa", bw=None, weights=None, gridsize=None, clip=(-np.i
     # round gridsize up to the next power of 2
     gridsize = 2**np.ceil(np.log2(gridsize))
 
-    # 1.
     # Discretize the data on an M-element grid over [a,b] to find the weight seq.
     # define grid
     grid,delta = np.linspace(np.min(X),np.max(X),gridsize,retstep=True)
@@ -166,23 +165,44 @@ def kdensityf(X, kernel="epa", bw=None, weights=None, gridsize=None, clip=(-np.i
     # how fine is the data vis-a-vis the grid?
     count = counts(X,grid)
     # make a weights array
-    xi = np.zeros_like(grid)
-    j = 0
-    for k in range(gridsize-1):
-        if count[k]>0:
-            xx = X[j:j+count[k]]
-            # get weights at grid[k],grid[k+1]
-            xi[k] = xi[k] + np.sum(grid[k+1]-xx)
-            xi[k+1] = xi[k+1] + np.sum(xx-grid[k])
-            j = j+count[k]
-    xi = xi/(nobs*delta**2) # normalize xi to sum to 1/delta
+# weighting according to Silverman
+#    wt = np.zeros_like(grid)    #xi_{k} in Silverman
+#    j = 0
+#    for k in range(int(gridsize-1)):
+#        if count[k]>0: # there are points of X in the grid here
+#            Xingrid = X[j:j+count[k]] # get all these points
+#            # get weights at grid[k],grid[k+1]
+#            wt[k] += np.sum(grid[k+1]-Xingrid)
+#            wt[k+1] += np.sum(Xingrid-grid[k])
+#            j += count[k]
+#    wt /= (nobs-1)*delta**2 # normalize wt to sum to 1/delta # why nobs-1
+                            # missing weight for the last data point
 
-    # step 2 compute FFT of the weights and get s
-    print xi.shape
-    y = np.fft.rfft(xi)
-    ell = np.arange(-gridsize/2.,gridsize/2.+1)
-    print ell.shape
-    print gridsize
+# Weights according to Hall and Jones
+# still use count
+    wt = np.zeros_like(grid[:gridsize/2])
+
+
+#    print nobs
+#    print len(wt)
+    assert np.allclose(np.sum(wt), 1/delta)
+    # step 2 compute FFT of the weights
+#    y = np.fft.rfft(wt) # RFFT uses opposite sign vs. Silverman and doesn't
+                        # normalize by len(wt)
+# so Silverman's definition corresponds to
+#    y = np.fft.irfft(wt, n =gridsize)
+    # put in order expected
+    # see Monro (1976) AS 97 (FORRT) real parts first then the imaginary parts.
+    # brute force
+    #   don't have to reorder if you use irfft
+#    y_neworder = np.zeros_like(grid)
+#    for i in range(int(gridsize)):
+#        if i <= gridsize/2:
+#            y_neworder[i] = np.real(y[i])
+#        else:
+#            y_neworder[i] = np.imag(y[i-(gridsize/2)])
+
+    ell = np.arange(-gridsize/2.,gridsize/2.)
     s = 2*ell*np.pi/RANGE
 
     # step 3 and 4 for optimal bandwidt compute zstar and the density estimate f
@@ -192,16 +212,32 @@ def kdensityf(X, kernel="epa", bw=None, weights=None, gridsize=None, clip=(-np.i
         if kernel.lower() == "epa":
             c = 1.0487 * np.std(X, ddof=1) # is this correct?
 #TODO: can use windows from scipy.signal?
-        h = c * nobs**(-1/5.)
-    else:
-        h = bw
-    print ell.shape
-    print s.shape, y.shape
-    zstar = np.exp(-.5*h**2*s**2)*y
-    f = np.fft.irfft(zstar)
+        bw = c * nobs**(-1/5.)
+#   3.59
+
+# if use irfft then you don't have to reorder
+    print y.shape
+    print s.shape
+    zstar = np.exp(-.5*bw**2*s**2)*y
+#    zstar = np.exp(-.5*bw**2*s**2)*y_neworder
+#    f = np.fft.irfft(zstar)
+# and given the defintion in Silverman and numpy then f should be
+    f = np.real(np.fft.fft(zstar))
     return f
 
 if __name__ == "__main__":
-    xi = np.random.randn(1000)
+    xi = np.random.randn(100)
     f,k = kdensity(xi)
     f2 = kdensityf(xi, kernel="gauss")
+
+    # Hall and Jones example
+    c = [4,2,1,2,0,0,0,0]
+    kappa = [7,5,2,0,0,0,2,5]
+
+    C = np.fft.fft(c)
+    K = np.fft.fft(kappa)
+    F_tilde = C*K
+    f_tilde = np.fft.ifft(F_tilde)
+    # only keep first 4 because last 4 have wrap-around error
+    f = f_tild[:4]
+    # this is our density estimate.
