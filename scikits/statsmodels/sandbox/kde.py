@@ -239,5 +239,8 @@ if __name__ == "__main__":
     F_tilde = C*K
     f_tilde = np.fft.ifft(F_tilde)
     # only keep first 4 because last 4 have wrap-around error
-    f = f_tild[:4]
+    f = f_tilde[:4]
     # this is our density estimate.
+    # can this be done with fftconvolve?
+    from scipy import signal
+#TODO: note that scipy.fftpack looks to be more "standard" notation

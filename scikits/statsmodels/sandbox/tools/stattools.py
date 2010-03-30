@@ -17,9 +17,10 @@ from scikits.statsmodels.sandbox.tsa import acf
 from scikits.statsmodels.sandbox.tools.tools_tsa import lagmat
 
 class ResultsStore(object):
-    pass
+    def __str__(self):
+        return self._str
 
-def ljungbox(x, lags=None, boxpierce=False):
+def acorr_ljungbox(x, lags=None, boxpierce=False):
     '''Ljung-Box test for no autocorrelation
 
 
@@ -213,7 +214,7 @@ def unitroot_adf(x, maxlag=None, trendorder=0, autolag='AIC', store=False):
         return adfstat
 
 
-def lm_acorr(x, maxlag=None, autolag='AIC', store=False):
+def acorr_lm(x, maxlag=None, autolag='AIC', store=False):
     '''Lagrange Multiplier tests for autocorrelation
 
     not checked yet, copied from unitrood_adf with adjustments
@@ -340,7 +341,42 @@ def het_white(y, x, retres=False):
 def het_goldfeldquandt(y, x, idx, split=None, retres=False):
     '''test whether variance is the same in 2 subsamples
 
-    todo add resultinstance
+    Parameters
+    ----------
+    y : array_like
+        endogenous variable
+    x : array_like
+        exogenous variable, regressors
+    idx : integer
+        column index of variable according to which observations are
+        sorted for the split
+    split : None or integer or float in intervall (0,1)
+        index at which sample is split.
+        If 0<split<0 then split is interpreted as fraction of the observations
+        in the first sample
+    retres : boolean
+        if true, then an instance of a result class is returned,
+        otherwise 2 numbers, fvalue and p-value, are returned
+
+    Returns
+    -------
+    (fval, pval) or res
+    fval : float
+        value of the F-statistic
+    pval : float
+        p-value of the hypothesis that the variance in one subsample is larger
+        than in the other subsample
+    res : instance of result class
+        The class instance is just a storage for the intermediate and final
+        results that are calculated
+
+    Notes
+    -----
+
+    TODO:
+    add resultinstance - DONE
+    maybe add drop-middle as option
+    maybe allow for several breaks
 
     recommendation for users: use this function as pattern for more flexible
         split in tests, e.g. drop middle.
@@ -381,7 +417,8 @@ def het_goldfeldquandt(y, x, idx, split=None, retres=False):
         res.resols2 = resols2
         res.ordering = ordering
         res.split = split
-        res.__str__ = '''The Goldfeld-Quandt test for null hypothesis that the
+        #res.__str__
+        res._str = '''The Goldfeld-Quandt test for null hypothesis that the
 variance in the second subsample is %s than in the first subsample:
     F-statistic =%8.4f and p-value =%8.4f''' % (ordering, fval, fpval)
 
@@ -413,7 +450,7 @@ def neweywestcov(resid, x):
         za = np.dot(hhat[:,lag:nobs] * hhat[:,:nobs-lag].T)
         w = 1 - lag/(nobs + 1.)
         xuux = xuux + np.dot(w, za+za.T)
-    xtxi = np.inv(np.dot(x.T, x))  #QR instead?
+    xtxi = np.linalg.inv(np.dot(x.T, x))  #QR instead?
     covbNW = np.dot(xtxi, np.dot(xuux, xtxi))
 
     return covbNW
@@ -421,13 +458,23 @@ def neweywestcov(resid, x):
 
 
 class StatTestMC(object):
+    """class to run Monte Carlo study on a statistical test'''
 
+    TODO
+    print summary, for quantiles and for histogram
+    draft in trying out script log
+
+    """
 
     def __init__(self, dgp, statistic):
         self.dgp = dgp #staticmethod(dgp)  #no self
         self.statistic = statistic # staticmethod(statistic)  #no self
 
     def run(self, nrepl, statindices=None, dgpargs=[], statsargs=[]):
+        '''run the actual Monte Carlo and save results
+
+
+        '''
         self.nrepl = nrepl
         self.statindices = statindices
         self.dgpargs = dgpargs
@@ -455,6 +502,10 @@ class StatTestMC(object):
         self.mcres = mcres
 
     def histogram(self, idx=None, critval=None):
+        '''calculate histogram values
+
+        does not do any plotting
+        '''
         if self.mcres.ndim == 2:
             if  not idx is None:
                 mcres = self.mcres[:,idx]
@@ -479,6 +530,10 @@ class StatTestMC(object):
         return histo, self.cumhisto, self.cumhistoreversed
 
     def quantiles(self, idx=None, frac=[0.01, 0.025, 0.05, 0.1, 0.975]):
+        '''calculate quantiles of Monte Carlo results
+
+        '''
+
         if self.mcres.ndim == 2:
             if not idx is None:
                 mcres = self.mcres[:,idx]
@@ -491,106 +546,120 @@ class StatTestMC(object):
         self.mcressort = mcressort = np.sort(self.mcres)
         return frac, mcressort[(self.nrepl*frac).astype(int)]
 
+if __name__ == '__main__':
 
-examples = []
-if 'adf' in examples:
+    examples = []
+    if 'adf' in examples:
 
-    x = np.random.randn(20)
-    print ljungbox(x)
-    print unitroot_adf(x)
+        x = np.random.randn(20)
+        print acorr_ljungbox(x)
+        print unitroot_adf(x)
 
-    nrepl = 100
+        nrepl = 100
+        nobs = 100
+        mcres = np.zeros(nrepl)
+        for ii in range(nrepl-1):
+            x = (1e-4+np.random.randn(nobs)).cumsum()
+            mcres[ii] = unitroot_adf(x, 2,trendorder=0, autolag=None)
+
+        print (mcres<-2.57).sum()
+        print np.histogram(mcres)
+        mcressort = np.sort(mcres)
+        for ratio in [0.01, 0.025, 0.05, 0.1]:
+            print ratio, mcressort[int(nrepl*ratio)]
+
+        print 'critical values in Green table 20.5'
+        print 'sample size = 100'
+        print 'with constant'
+        print '0.01: -19.8,  0.025: -16.3, 0.05: -13.7, 0.01: -11.0, 0.975: 0.47'
+
+        print '0.01: -3.50,  0.025: -3.17, 0.05: -2.90, 0.01: -2.58, 0.975: 0.26'
+        crvdg = dict([map(float,s.split(':')) for s in ('0.01: -19.8,  0.025: -16.3, 0.05: -13.7, 0.01: -11.0, 0.975: 0.47'.split(','))])
+        crvd = dict([map(float,s.split(':')) for s in ('0.01: -3.50,  0.025: -3.17, 0.05: -2.90, 0.01: -2.58, 0.975: 0.26'.split(','))])
+        '''
+        >>> crvd
+        {0.050000000000000003: -13.699999999999999, 0.97499999999999998: 0.46999999999999997, 0.025000000000000001: -16.300000000000001, 0.01: -11.0}
+        >>> sorted(crvd.values())
+        [-16.300000000000001, -13.699999999999999, -11.0, 0.46999999999999997]
+        '''
+
+        #for trend = 0
+        crit_5lags0p05 =-4.41519 + (-14.0406)/nobs + (-12.575)/nobs**2
+        print crit_5lags0p05
+
+
+        adfstat, resstore = unitroot_adf(x, 2,trendorder=0, autolag=None, store=1)
+
+        print (mcres>crit_5lags0p05).sum()
+
+        print resstore.resols.model.exog[-5:]
+        print x[-5:]
+
+        print np.histogram(mcres, bins=[-np.inf, -3.5, -3.17, -2.9 , -2.58,  0.26, np.inf])
+
+        print mcressort[(nrepl*(np.array([0.01, 0.025, 0.05, 0.1, 0.975]))).astype(int)]
+
+
+        def randwalksim(nobs=100, drift=0.0):
+            return (drift+np.random.randn(nobs)).cumsum()
+
+        def normalnoisesim(nobs=500, loc=0.0):
+            return (loc+np.random.randn(nobs))
+
+        def adf20(x):
+            return unitroot_adf(x, 2,trendorder=0, autolag=None)
+
+        print '\nResults with MC class'
+        mc1 = StatTestMC(randwalksim, adf20)
+        mc1.run(1000)
+        print mc1.histogram(critval=[-3.5, -3.17, -2.9 , -2.58,  0.26])
+        print mc1.quantiles()
+
+        print '\nLjung Box'
+
+        def lb4(x):
+            s,p = acorr_ljungbox(x, lags=4)
+            return s[-1], p[-1]
+
+        def lb4(x):
+            s,p = acorr_ljungbox(x, lags=1)
+            return s[0], p[0]
+
+        print 'Results with MC class'
+        mc1 = StatTestMC(normalnoisesim, lb4)
+        mc1.run(1000, statindices=[0,1])
+        print mc1.histogram(1, critval=[0.01, 0.025, 0.05, 0.1, 0.975])
+        print mc1.quantiles(1)
+        print mc1.quantiles(0)
+        print mc1.histogram(0)
+
     nobs = 100
-    mcres = np.zeros(nrepl)
-    for ii in range(nrepl-1):
-        x = (1e-4+np.random.randn(nobs)).cumsum()
-        mcres[ii] = unitroot_adf(x, 2,trendorder=0, autolag=None)
+    x = np.ones((20,2))
+    x[:,1] = np.arange(20)
+    y = x.sum(1) + 1.01*(1+1.5*(x[:,1]>10))*np.random.rand(20)
+    print het_goldfeldquandt(y,x, 1)
 
-    print (mcres<-2.57).sum()
-    print np.histogram(mcres)
-    mcressort = np.sort(mcres)
-    for ratio in [0.01, 0.025, 0.05, 0.1]:
-        print ratio, mcressort[int(nrepl*ratio)]
+    y = x.sum(1) + 1.01*(1+0.5*(x[:,1]>10))*np.random.rand(20)
+    print het_goldfeldquandt(y,x, 1)
 
-    print 'critical values in Green table 20.5'
-    print 'sample size = 100'
-    print 'with constant'
-    print '0.01: -19.8,  0.025: -16.3, 0.05: -13.7, 0.01: -11.0, 0.975: 0.47'
+    y = x.sum(1) + 1.01*(1-0.5*(x[:,1]>10))*np.random.rand(20)
+    print het_goldfeldquandt(y,x, 1)
 
-    print '0.01: -3.50,  0.025: -3.17, 0.05: -2.90, 0.01: -2.58, 0.975: 0.26'
-    crvdg = dict([map(float,s.split(':')) for s in ('0.01: -19.8,  0.025: -16.3, 0.05: -13.7, 0.01: -11.0, 0.975: 0.47'.split(','))])
-    crvd = dict([map(float,s.split(':')) for s in ('0.01: -3.50,  0.025: -3.17, 0.05: -2.90, 0.01: -2.58, 0.975: 0.26'.split(','))])
-    '''
-    >>> crvd
-    {0.050000000000000003: -13.699999999999999, 0.97499999999999998: 0.46999999999999997, 0.025000000000000001: -16.300000000000001, 0.01: -11.0}
-    >>> sorted(crvd.values())
-    [-16.300000000000001, -13.699999999999999, -11.0, 0.46999999999999997]
-    '''
+    print het_breushpagan(y,x)
+    print het_white(y,x)
 
-    #for trend = 0
-    crit_5lags0p05 =-4.41519 + (-14.0406)/nobs + (-12.575)/nobs**2
-    print crit_5lags0p05
+    f,p = het_goldfeldquandt(y,x, 1)
+    print f, p
+    resgq = het_goldfeldquandt(y,x, 1, retres=True)
+    print resgq
+
+    #this is just a syntax check:
+    print neweywestcov(y, x)
+
+    resols1 = sm.OLS(y, x).fit()
+    print neweywestcov(resols1.resid, x)
+    print resols1.cov_params()
+    print resols1.HC0_se
+    print resols1.cov_HC0
 
 
-    adfstat, resstore = unitroot_adf(x, 2,trendorder=0, autolag=None, store=1)
-
-    print (mcres>crit_5lags0p05).sum()
-
-    print resstore.resols.model.exog[-5:]
-    print x[-5:]
-
-    print np.histogram(mcres, bins=[-np.inf, -3.5, -3.17, -2.9 , -2.58,  0.26, np.inf])
-
-    print mcressort[(nrepl*(np.array([0.01, 0.025, 0.05, 0.1, 0.975]))).astype(int)]
-
-
-    def randwalksim(nobs=100, drift=0.0):
-        return (drift+np.random.randn(nobs)).cumsum()
-
-    def normalnoisesim(nobs=500, loc=0.0):
-        return (loc+np.random.randn(nobs))
-
-    def adf20(x):
-        return unitroot_adf(x, 2,trendorder=0, autolag=None)
-
-    print '\nResults with MC class'
-    mc1 = StatTestMC(randwalksim, adf20)
-    mc1.run(1000)
-    print mc1.histogram(critval=[-3.5, -3.17, -2.9 , -2.58,  0.26])
-    print mc1.quantiles()
-
-    print '\nLjung Box'
-
-    def lb4(x):
-        s,p = ljungbox(x, lags=4)
-        return s[-1], p[-1]
-
-    def lb4(x):
-        s,p = ljungbox(x, lags=1)
-        return s[0], p[0]
-
-    print 'Results with MC class'
-    mc1 = StatTestMC(normalnoisesim, lb4)
-    mc1.run(1000, statindices=[0,1])
-    print mc1.histogram(1, critval=[0.01, 0.025, 0.05, 0.1, 0.975])
-    print mc1.quantiles(1)
-    print mc1.quantiles(0)
-    print mc1.histogram(0)
-
-nobs = 100
-x = np.ones((20,2))
-x[:,1] = np.arange(20)
-y = x.sum(1) + 1.01*(1+1.5*(x[:,1]>10))*np.random.rand(20)
-print het_goldfeldquandt(y,x, 1)
-
-y = x.sum(1) + 1.01*(1+0.5*(x[:,1]>10))*np.random.rand(20)
-print het_goldfeldquandt(y,x, 1)
-
-y = x.sum(1) + 1.01*(1-0.5*(x[:,1]>10))*np.random.rand(20)
-print het_goldfeldquandt(y,x, 1)
-
-print het_breushpagan(y,x)
-print het_white(y,x)
-
-f,p,d = het_goldfeldquandt(y,x, 1)
-print d
