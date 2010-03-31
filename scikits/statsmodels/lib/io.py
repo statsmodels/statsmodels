@@ -620,10 +620,9 @@ def savetxt(fname, X, names=None, fmt='%.18e', delimiter=' '):
     # handle names
     if names is None and X.dtype.names:
         names = X.dtype.names
+        fh.write(delimiter.join(names) + '\n')
 
     for row in X:
-        if names:
-            fh.write(delimiter.join(names) + '\n')
         fh.write(format % tuple(row) + '\n')
 
 
