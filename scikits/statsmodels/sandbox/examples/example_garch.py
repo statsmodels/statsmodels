@@ -30,10 +30,12 @@ print 'ggres.params', ggres.params
 garchplot(ggmod.errorsest, ggmod.h, title='Garch estimated')
 
 
-##from rpy import r
-##r.library('fGarch')
-##f = r.formula('~garch(1, 1)')
-##fit = r.garchFit(f, data = ret - ret.mean(), include_mean=False)
+from rpy import r
+r.library('fGarch')
+f = r.formula('~garch(1, 1)')
+fit = r.garchFit(f, data = ret - ret.mean(), include_mean=False)
+f = r.formula('~arma(1,1) + ~garch(1, 1)')
+fit = r.garchFit(f, data = ret)
 
 
 ggmod0 = Garch0(ret - ret.mean())#hgjr4[:nobs])#-hgjr4.mean()) #errgjr4)

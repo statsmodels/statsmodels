@@ -382,7 +382,7 @@ def lpol2index(ar):
     index : array
         index (lags) of lagpolynomial with non-zero elements
     '''
-
+    ar = np.asarray(ar)
     index = np.nonzero(ar)[0]
     coeffs = ar[index]
     return coeffs, index
