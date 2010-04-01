@@ -1,9 +1,19 @@
-'''gradient/Jacobian of normal loglikelihood
+'''gradient/Jacobian of normal and t loglikelihood
 
 use chain rule
 
-normal derivative wrt sigma
+normal derivative wrt mu, sigma and beta
 
+new version: loc-scale distributions, derivative wrt loc, scale
+
+also includes "standardized" t distribution (for use in GARCH)
+
+TODO:
+* use sympy for derivative of loglike wrt shape parameters
+  it works for df of t distribution dlog(gamma(a))da = polygamma(0,a) check
+  polygamma is available in scipy.special
+* get loc-scale example to work with mean = X*b
+* write some full unit test examples
 
 A: josef-pktd
 
@@ -11,7 +21,7 @@ A: josef-pktd
 
 
 import numpy as np
-#from scipy import special
+from scipy import special
 from scipy.special import gammaln
 
 
@@ -140,7 +150,7 @@ def norm_dlldy(y):
     '''
     return -y
 
-def tstd_dlldy(y, df):
+def ts_dlldy(y, df):
     '''derivative of log pdf of standardized (?) t with respect to y
 
     Notes
@@ -156,8 +166,8 @@ def tstd_pdf(x, df):
 
     '''
 
-    r = arr(df*1.0)
-    Px = exp(special.gammaln((r+1)/2.)-special.gammaln(r/2.))/sqrt((r-2)*pi)
+    r = np.array(df*1.0)
+    Px = np.exp(special.gammaln((r+1)/2.)-special.gammaln(r/2.))/np.sqrt((r-2)*pi)
     Px /= (1+(x**2)/(r-2))**((r+1)/2.)
     return Px
 
@@ -201,11 +211,26 @@ def ts_lls(y, params, df):
 
 
 def ts_dlldy(y, df):
-    '''derivative of log pdf of standard, renormalized t with respect to y
+    '''derivative of log pdf of standard t with respect to y
+
+    Parameters
+    ----------
+    y : array_like
+        data points of random variable at which loglike is evaluated
+    df : array_like
+        degrees of freedom,shape parameters of log-likelihood function
+        of t distribution
+
+    Returns
+    -------
+    dlldy : array
+        derivative of loglikelihood wrt random variable y evaluated at the
+        points given in y
 
     Notes
     -----
-    parameterized for garch
+    with mean 0 and scale 1, but variance is df/(df-2)
+
     '''
     df = df*1.
     #(df+1)/2. / (1 + y**2/(df-2.)) * 2.*y/(df-2.)
@@ -213,37 +238,79 @@ def ts_dlldy(y, df):
     return -(df+1)/(df) / (1 + y**2/(df)) * y
 
 def tstd_dlldy(y, df):
-    '''derivative of log pdf of standard, renormalized t with respect to y
+    '''derivative of log pdf of standardized t with respect to y
+
+        Parameters
+    ----------
+    y : array_like
+        data points of random variable at which loglike is evaluated
+    df : array_like
+        degrees of freedom,shape parameters of log-likelihood function
+        of t distribution
+
+    Returns
+    -------
+    dlldy : array
+        derivative of loglikelihood wrt random variable y evaluated at the
+        points given in y
+
 
     Notes
     -----
-    parameterized for garch
+    parameterized for garch, standardized to variance=1
     '''
     #(df+1)/2. / (1 + y**2/(df-2.)) * 2.*y/(df-2.)
     return -(df+1)/(df-2.) / (1 + y**2/(df-2.)) * y
     #return (df+1)/(df) / (1 + y**2/(df)) * y
 
 def locscale_grad(y, loc, scale, dlldy, *args):
+    '''derivative of log-likelihood with respect to location and scale
+
+    Parameters
+    ----------
+    y : array_like
+        data points of random variable at which loglike is evaluated
+    loc : float
+        location parameter of distribution
+    scale : float
+        scale parameter of distribution
+    dlldy : function
+        derivative of loglikelihood fuction wrt. random variable x
+    args : array_like
+        shape parameters of log-likelihood function
+
+    Returns
+    -------
+    dlldloc : array
+        derivative of loglikelihood wrt location evaluated at the
+        points given in y
+    dlldscale : array
+        derivative of loglikelihood wrt scale evaluated at the
+        points given in y
+
+    '''
     yst = (y-loc)/scale    #ystandardized
     dlldloc = -dlldy(yst, *args) / scale
     dlldscale = -1./scale - dlldy(yst, *args) * (y-loc)/scale**2
     return dlldloc, dlldscale
 
 if __name__ == '__main__':
-    sig = 0.1
-    beta = np.ones(2)
-    rvs = np.random.randn(10,3)
-    x = rvs[:,1:]
-    y = np.dot(x,beta) + sig*rvs[:,0]
+    verbose = 0
+    if verbose:
+        sig = 0.1
+        beta = np.ones(2)
+        rvs = np.random.randn(10,3)
+        x = rvs[:,1:]
+        y = np.dot(x,beta) + sig*rvs[:,0]
 
-    params = [1,1,1]
-    print normgrad(y, x, params)
+        params = [1,1,1]
+        print normgrad(y, x, params)
 
-    dllfdbeta = (y-np.dot(x, beta))[:,None]*x   #for sigma = 1
-    print dllfdbeta
+        dllfdbeta = (y-np.dot(x, beta))[:,None]*x   #for sigma = 1
+        print dllfdbeta
 
-    print locscale_grad(y, np.dot(x, beta), 1, norm_dlldy)
-    print (y-np.dot(x, beta))
+        print locscale_grad(y, np.dot(x, beta), 1, norm_dlldy)
+        print (y-np.dot(x, beta))
 
     from scipy import stats, misc
 
@@ -261,44 +328,71 @@ if __name__ == '__main__':
     def llnormscale(scale,y,loc):
         return np.log(stats.norm.pdf(y, loc=loc, scale=scale))
 
-    print '\ngradient of t'
-    print misc.derivative(llt, 1, dx=1e-6, n=1, args=(0,1,10), order=3)
-    print 't ', locscale_grad(1, 0, 1, tstd_dlldy, 10)
-    print 'ts', locscale_grad(1, 0, 1, ts_dlldy, 10)
-    print misc.derivative(llt, 1.5, dx=1e-10, n=1, args=(0,1,20), order=3),
-    print 'ts', locscale_grad(1.5, 0, 1, ts_dlldy, 20)
-    print misc.derivative(llt, 1.5, dx=1e-10, n=1, args=(0,2,20), order=3),
-    print 'ts', locscale_grad(1.5, 0, 2, ts_dlldy, 20)
-    print misc.derivative(llt, 1.5, dx=1e-10, n=1, args=(1,2,20), order=3),
-    print 'ts', locscale_grad(1.5, 1, 2, ts_dlldy, 20)
-    print misc.derivative(lltloc, 1, dx=1e-10, n=1, args=(1.5,2,20), order=3),
-    print misc.derivative(lltscale, 2, dx=1e-10, n=1, args=(1.5,1,20), order=3)
-    y,loc,scale,df = 1.5, 1, 2, 20
-    print 'ts', locscale_grad(y,loc,scale, ts_dlldy, 20)
-    print misc.derivative(lltloc, loc, dx=1e-10, n=1, args=(y,scale,df), order=3),
-    print misc.derivative(lltscale, scale, dx=1e-10, n=1, args=(y,loc,df), order=3)
+    if verbose:
+        print '\ngradient of t'
+        print misc.derivative(llt, 1, dx=1e-6, n=1, args=(0,1,10), order=3)
+        print 't ', locscale_grad(1, 0, 1, tstd_dlldy, 10)
+        print 'ts', locscale_grad(1, 0, 1, ts_dlldy, 10)
+        print misc.derivative(llt, 1.5, dx=1e-10, n=1, args=(0,1,20), order=3),
+        print 'ts', locscale_grad(1.5, 0, 1, ts_dlldy, 20)
+        print misc.derivative(llt, 1.5, dx=1e-10, n=1, args=(0,2,20), order=3),
+        print 'ts', locscale_grad(1.5, 0, 2, ts_dlldy, 20)
+        print misc.derivative(llt, 1.5, dx=1e-10, n=1, args=(1,2,20), order=3),
+        print 'ts', locscale_grad(1.5, 1, 2, ts_dlldy, 20)
+        print misc.derivative(lltloc, 1, dx=1e-10, n=1, args=(1.5,2,20), order=3),
+        print misc.derivative(lltscale, 2, dx=1e-10, n=1, args=(1.5,1,20), order=3)
+        y,loc,scale,df = 1.5, 1, 2, 20
+        print 'ts', locscale_grad(y,loc,scale, ts_dlldy, 20)
+        print misc.derivative(lltloc, loc, dx=1e-10, n=1, args=(y,scale,df), order=3),
+        print misc.derivative(lltscale, scale, dx=1e-10, n=1, args=(y,loc,df), order=3)
 
-    print '\ngradient of norm'
-    print misc.derivative(llnorm, 1, dx=1e-6, n=1, args=(0,1), order=3)
-    print locscale_grad(1, 0, 1, norm_dlldy)
-    y,loc,scale = 1.5, 1, 2
-    print 'ts', locscale_grad(y,loc,scale, norm_dlldy,)
-    print misc.derivative(llnormloc, loc, dx=1e-10, n=1, args=(y,scale), order=3),
-    print misc.derivative(llnormscale, scale, dx=1e-10, n=1, args=(y,loc), order=3)
-    y,loc,scale = 1.5, 0, 1
-    print 'ts', locscale_grad(y,loc,scale, norm_dlldy,)
-    print misc.derivative(llnormloc, loc, dx=1e-10, n=1, args=(y,scale), order=3),
-    print misc.derivative(llnormscale, scale, dx=1e-10, n=1, args=(y,loc), order=3)
-    #print 'still something wrong with handling of scale and variance'
+        print '\ngradient of norm'
+        print misc.derivative(llnorm, 1, dx=1e-6, n=1, args=(0,1), order=3)
+        print locscale_grad(1, 0, 1, norm_dlldy)
+        y,loc,scale = 1.5, 1, 2
+        print 'ts', locscale_grad(y,loc,scale, norm_dlldy)
+        print misc.derivative(llnormloc, loc, dx=1e-10, n=1, args=(y,scale), order=3),
+        print misc.derivative(llnormscale, scale, dx=1e-10, n=1, args=(y,loc), order=3)
+        y,loc,scale = 1.5, 0, 1
+        print 'ts', locscale_grad(y,loc,scale, norm_dlldy)
+        print misc.derivative(llnormloc, loc, dx=1e-10, n=1, args=(y,scale), order=3),
+        print misc.derivative(llnormscale, scale, dx=1e-10, n=1, args=(y,loc), order=3)
+        #print 'still something wrong with handling of scale and variance'
+        #looks ok now
+        print '\nloglike of t'
+        print tstd_lls(1, np.array([0,1]), 100), llt(1,0,1,100), 'differently standardized'
+        print tstd_lls(1, np.array([0,1]), 10), llt(1,0,1,10), 'differently standardized'
+        print ts_lls(1, np.array([0,1]), 10), llt(1,0,1,10)
+        print tstd_lls(1, np.array([0,1.*10./8.]), 10), llt(1.,0,1.,10)
+        print ts_lls(1, np.array([0,1]), 100), llt(1,0,1,100)
 
-    print '\nloglike of t'
-    print tstd_lls(1, np.array([0,1]), 100), llt(1,0,1,100), 'differently standardized'
-    print tstd_lls(1, np.array([0,1]), 10), llt(1,0,1,10), 'differently standardized'
-    print ts_lls(1, np.array([0,1]), 10), llt(1,0,1,10)
-    print tstd_lls(1, np.array([0,1.*10./8.]), 10), llt(1.,0,1.,10)
-    print ts_lls(1, np.array([0,1]), 100), llt(1,0,1,100)
+        print tstd_lls(1, np.array([0,1]), 10), llt(1,0,1.*np.sqrt(8/10.),10)
 
-    print tstd_lls(1, np.array([0,1]), 10), llt(1,0,1.*np.sqrt(8/10.),10)
+
+    from numpy.testing import assert_almost_equal
+    params =[(0, 1), (1.,1.), (0.,2.), ( 1., 2.)]
+    yt = np.linspace(-2.,2.,11)
+    for loc,scale in params:
+        dlldlo = misc.derivative(llnormloc, loc, dx=1e-10, n=1, args=(yt,scale), order=3)
+        dlldsc = misc.derivative(llnormscale, scale, dx=1e-10, n=1, args=(yt,loc), order=3)
+        gr = locscale_grad(yt, loc, scale, norm_dlldy)
+        assert_almost_equal(dlldlo, gr[0], 5, err_msg='deriv loc')
+        assert_almost_equal(dlldsc, gr[1], 5, err_msg='deriv scale')
+    for df in [3, 10, 100]:
+        for loc,scale in params:
+            dlldlo = misc.derivative(lltloc, loc, dx=1e-10, n=1, args=(yt,scale,df), order=3)
+            dlldsc = misc.derivative(lltscale, scale, dx=1e-10, n=1, args=(yt,loc,df), order=3)
+            gr = locscale_grad(yt, loc, scale, ts_dlldy, df)
+            assert_almost_equal(dlldlo, gr[0], 4, err_msg='deriv loc')
+            assert_almost_equal(dlldsc, gr[1], 4, err_msg='deriv scale')
+            assert_almost_equal(ts_lls(yt, np.array([loc, scale**2]), df),
+                                llt(yt,loc,scale,df), 5,
+                                err_msg='loglike')
+            assert_almost_equal(tstd_lls(yt, np.array([loc, scale**2]), df),
+                                llt(yt,loc,scale*np.sqrt((df-2.)/df),df), 5,
+                                err_msg='loglike')
+
+
 
 
 
