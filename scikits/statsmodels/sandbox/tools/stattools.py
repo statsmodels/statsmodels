@@ -426,6 +426,105 @@ variance in the second subsample is %s than in the first subsample:
     else:
         return fval, fpval
 
+
+class HetGoldfeldQuandt(object):
+    '''test whether variance is the same in 2 subsamples
+
+    Parameters
+    ----------
+    y : array_like
+        endogenous variable
+    x : array_like
+        exogenous variable, regressors
+    idx : integer
+        column index of variable according to which observations are
+        sorted for the split
+    split : None or integer or float in intervall (0,1)
+        index at which sample is split.
+        If 0<split<0 then split is interpreted as fraction of the observations
+        in the first sample
+    retres : boolean
+        if true, then an instance of a result class is returned,
+        otherwise 2 numbers, fvalue and p-value, are returned
+
+    Returns
+    -------
+    (fval, pval) or res
+    fval : float
+        value of the F-statistic
+    pval : float
+        p-value of the hypothesis that the variance in one subsample is larger
+        than in the other subsample
+    res : instance of result class
+        The class instance is just a storage for the intermediate and final
+        results that are calculated
+
+    Notes
+    -----
+
+    TODO:
+    add resultinstance - DONE
+    maybe add drop-middle as option
+    maybe allow for several breaks
+
+    recommendation for users: use this function as pattern for more flexible
+        split in tests, e.g. drop middle.
+
+    can do Chow test for structural break in same way
+
+    ran sanity check
+    '''
+    def run(self, x, y, idx, split=None, attach=True):
+        '''see class docstring'''
+        x = np.asarray(x)
+        y = np.asarray(y)**2
+        nobs, nvars = x.shape
+        if split is None:
+            split = nobs//2
+        elif (0<split) and (split<1):
+            split = int(nobs*split)
+
+        xsortind = np.argsort(x[:,idx])
+        y = y[xsortind]
+        x = x[xsortind,:]
+        resols1 = sm.OLS(y[:split], x[:split]).fit()
+        resols2 = sm.OLS(y[split:], x[split:]).fit()
+        fval = resols1.mse_resid/resols2.mse_resid
+        if fval>1:
+            fpval = stats.f.sf(fval, resols1.df_resid, resols2.df_resid)
+            ordering = 'larger'
+        else:
+            fval = 1./fval;
+            fpval = stats.f.sf(fval, resols2.df_resid, resols1.df_resid)
+            ordering = 'smaller'
+
+        if attach:
+            res = self
+            res.__doc__ = 'Test Results for Goldfeld-Quandt test of heterogeneity'
+            res.fval = fval
+            res.fpval = fpval
+            res.df_fval = (resols2.df_resid, resols1.df_resid)
+            res.resols1 = resols1
+            res.resols2 = resols2
+            res.ordering = ordering
+            res.split = split
+            #res.__str__
+            #TODO: check if string works
+            res.__str__ = '''The Goldfeld-Quandt test for null hypothesis that the
+    variance in the second subsample is %s than in the first subsample:
+        F-statistic =%8.4f and p-value =%8.4f''' % (ordering, fval, fpval)
+
+        return fval, fpval
+
+    def __call__(self, x, y, idx, split=None):
+        return self.run(x, y, idx, split=None, attach=False)
+
+hetgoldfeldquandt2 = HetGoldfeldQuandt()
+hetgoldfeldquandt2.__doc__ = hetgoldfeldquandt2.run.__doc__
+
+
+
+
 def neweywestcov(resid, x):
     ''' did not run  yet
     from regstats2
@@ -442,7 +541,7 @@ def neweywestcov(resid, x):
      d = struct;
      d.covb = xtxi*xuux*xtxi;
     '''
-    nobs = resid.shape[0]
+    nobs = resid.shape[0]   #TODO: check this can only be 1d
     nlags = round(4*(nobs/100)^(2/9))
     hhat = resid * x.T
     xuux = np.dot(hhat, hhat.T)
