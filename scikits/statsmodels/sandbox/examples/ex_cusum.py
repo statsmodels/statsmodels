@@ -16,7 +16,7 @@ from scikits.statsmodels.sandbox.regression.onewaygls import OneWayLS, \
 #examples from ex_onewaygls.py
 #choose example
 #--------------
-example = ['null', 'smalldiff', 'largediff'][2]
+example = ['null', 'smalldiff', 'mediumdiff', 'largediff'][1]
 example_size = [20, 100][1]
 example_groups = ['2', '2-2'][1]
 #'2-2': 4 groups,
@@ -43,6 +43,8 @@ if example == 'null':
     y2 = 10 + 15*x2 + 2*np.random.randn(nobs)  # if H0 is true
 elif example == 'smalldiff':
     y2 = 11 + 16*x2 + 2*np.random.randn(nobs)
+elif example == 'mediumdiff':
+    y2 = 12 + 16*x2 + 2*np.random.randn(nobs)
 else:
     y2 = 19 + 17*x2 + 2*np.random.randn(nobs)
 
@@ -85,7 +87,11 @@ plt.show()
 
 ####################  Example break test
 import scikits.statsmodels.sandbox.tools.stattools
-from scikits.statsmodels.sandbox.tools.stattools import breaks_hansen
+from scikits.statsmodels.sandbox.tools.stattools import breaks_hansen, \
+        breaks_cusumolsresid
 H, crit95, ft, s = breaks_hansen(res1)
 print H
 print crit95
+
+supb, pval, crit = breaks_cusumolsresid(res1.resid)
+print supb, pval, crit

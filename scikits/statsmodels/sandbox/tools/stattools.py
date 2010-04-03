@@ -667,6 +667,9 @@ def recursive_olsresiduals(olsresults, skip=None, lamda=0.0, alpha=0.95):
     jplv to check formulas, follows Harvey
     BigJudge 5.5.2b for formula for inverse(X'X) updating
     Greene section 7.5.2
+
+    Brown, R. L., J. Durbin, and J. M. Evans. “Techniques for Testing the Constancy of Regression Relationships over Time.” Journal of the Royal Statistical Society. Series B (Methodological) 37, no. 2 (1975): 149-192.
+
     '''
 
     y = olsresults.model.endog
@@ -802,7 +805,26 @@ def breaks_hansen(olsresults):
     #TODO: get critical values from Bruce Hansens' 1992 paper
     return H, crit95, ft, s
 
+def breaks_cusumolsresid(olsresidual):
+    '''cusum test for parameter stability based on ols residuals
 
+    References
+    ----------
+    Ploberger, Werner, and Walter Kramer. “The Cusum Test with Ols Residuals.”
+    Econometrica 60, no. 2 (March 1992): 271-285.
+
+    '''
+    resid = olsresidual.ravel()
+    nobssigma2 = (resid**2).sum()
+    #B is asymptotically a Brownian Bridge
+    B = resid.cumsum()/np.sqrt(nobssigma2) # use T*sigma directly
+    sup_b = np.abs(B).max() #asymptotically distributed as standard Brownian Bridge
+    crit = [(1,1.63), (5, 1.36), (10, 1.22)]
+    #Note stats.kstwobign.isf(0.1) is distribution of sup.abs of Brownian Bridge
+    #>>> stats.kstwobign.isf([0.01,0.05,0.1])
+    #array([ 1.62762361,  1.35809864,  1.22384787])
+    pval = stats.kstwobign.sf(sup_b)
+    return sup_b, pval, crit
 
 
 class StatTestMC(object):
