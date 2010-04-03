@@ -16,7 +16,7 @@ from scikits.statsmodels.sandbox.regression.onewaygls import OneWayLS, \
 #examples from ex_onewaygls.py
 #choose example
 #--------------
-example = ['null', 'diff'][1]
+example = ['null', 'smalldiff', 'largediff'][2]
 example_size = [20, 100][1]
 example_groups = ['2', '2-2'][1]
 #'2-2': 4 groups,
@@ -41,9 +41,10 @@ x1 = sm.add_constant(x1) #, prepend=True)
 x2 = 0.1+np.random.randn(nobs)
 if example == 'null':
     y2 = 10 + 15*x2 + 2*np.random.randn(nobs)  # if H0 is true
+elif example == 'smalldiff':
+    y2 = 11 + 16*x2 + 2*np.random.randn(nobs)
 else:
-    #y2 = 19 + 17*x2 + 2*np.random.randn(nobs)
-    y2 = 12 + 17*x2 + 2*np.random.randn(nobs)
+    y2 = 19 + 17*x2 + 2*np.random.randn(nobs)
 
 x2 = sm.add_constant(x2)
 
@@ -63,7 +64,7 @@ skip = 8
 rresid, rparams, rypred, rresid_standardized, rresid_scaled, rcusum, rcusumci = \
             recursive_olsresiduals(res1, skip)
 print rcusum
-print rresid_scaled[8-1:]
+print rresid_scaled[skip-1:]
 
 assert_almost_equal(rparams[-1], res1.params)
 
@@ -81,3 +82,10 @@ rresid2, rparams2, rypred2, rresid_standardized2, rresid_scaled2, rcusum2, rcusu
 assert_almost_equal(rparams[skip:], rparams2[skip:],13)
 #np.c_[rparams[skip+1:], rparams2[skip:-1]]
 plt.show()
+
+####################  Example break test
+import scikits.statsmodels.sandbox.tools.stattools
+from scikits.statsmodels.sandbox.tools.stattools import breaks_hansen
+H, crit95, ft, s = breaks_hansen(res1)
+print H
+print crit95

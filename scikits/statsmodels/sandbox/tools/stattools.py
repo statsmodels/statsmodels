@@ -556,6 +556,255 @@ def neweywestcov(resid, x):
 
 
 
+def recursive_olsresiduals2(olsresults, skip):
+    '''this is my original version based on Greene and references
+
+    keep for now for comparison and benchmarking
+    '''
+    y = olsresults.model.endog
+    x = olsresults.model.exog
+    nobs, nvars = x.shape
+    rparams = np.nan * np.zeros((nobs,nvars))
+    rresid = np.nan * np.zeros((nobs))
+    rypred = np.nan * np.zeros((nobs))
+    rvarraw = np.nan * np.zeros((nobs))
+
+    #XTX = np.zeros((nvars,nvars))
+    #XTY = np.zeros((nvars))
+
+    x0 = x[:skip]
+    y0 = y[:skip]
+    XTX = np.dot(x0.T, x0)
+    XTY = np.dot(x0.T, y0) #xi * y   #np.dot(xi, y)
+    beta = np.linalg.solve(XTX, XTY)
+    rparams[skip-1] = beta
+    yipred = np.dot(x[skip-1], beta)
+    rypred[skip-1] = yipred
+    rresid[skip-1] = y[skip-1] - yipred
+    rvarraw[skip-1] = 1+np.dot(x[skip-1],np.dot(np.linalg.inv(XTX),x[skip-1]))
+    for i in range(skip,nobs):
+        xi = x[i:i+1,:]
+        yi = y[i]
+        xxT = np.dot(xi.T, xi)  #xi is 2d 1 row
+        xy = (xi*yi).ravel() # XTY is 1d  #np.dot(xi, yi)   #np.dot(xi, y)
+        print xy.shape, XTY.shape
+        print XTX
+        print XTY
+        beta = np.linalg.solve(XTX, XTY)
+        rparams[i-1] = beta  #this is beta based on info up to t-1
+        yipred = np.dot(xi, beta)
+        rypred[i] = yipred
+        rresid[i] = yi - yipred
+        rvarraw[i] = 1 + np.dot(xi,np.dot(np.linalg.inv(XTX),xi.T))
+        XTX += xxT
+        XTY += xy
+
+    i = nobs
+    beta = np.linalg.solve(XTX, XTY)
+    rparams[i-1] = beta
+
+    rresid_scaled = rresid/np.sqrt(rvarraw)   #this is N(0,sigma2) distributed
+    nrr = nobs-skip
+    sigma2 = rresid_scaled[skip-1:].var(ddof=1)
+    rresid_standardized = rresid_scaled/np.sqrt(sigma2) #N(0,1) distributed
+    rcusum = rresid_standardized[skip-1:].cumsum()
+    #confidence interval points in Greene p136 looks strange?
+    #this assumes sum of independent standard normal
+    #rcusumci = np.sqrt(np.arange(skip,nobs+1))*np.array([[-1.],[+1.]])*stats.norm.sf(0.025)
+    a = 1.143 #for alpha=0.99  =0.948 for alpha=0.95
+    #following taken from Ploberger,
+    crit = a*np.sqrt(nrr)
+    rcusumci = (a*np.sqrt(nrr) + a*np.arange(0,nobs-skip)/np.sqrt(nrr)) * np.array([[-1.],[+1.]])
+    return rresid, rparams, rypred, rresid_standardized, rresid_scaled, rcusum, rcusumci
+
+
+def recursive_olsresiduals(olsresults, skip=None, lamda=0.0, alpha=0.95):
+    '''calculate recursive ols with residuals and cusum test statistic
+
+    Parameters
+    ----------
+    olsresults : instance of RegressionResults
+        uses only endog and exog
+    skip : int or None
+        number of observations to use for initial OLS, if None then skip is
+        set equal to the number of regressors (columns in exog)
+    lamda : float
+        weight for Ridge correction to initial (X'X)^{-1}
+    alpha : {0.95, 0.99}
+        confidence level of test, currently only two values supported,
+        used for confidence interval in cusum graph
+
+    Returns
+    -------
+    rresid : array
+        recursive ols residuals
+    rparams : array
+        recursive ols parameter estimates
+    rypred : array
+        recursive prediction of endogenous variable
+    rresid_standardized : array
+        recursive residuals standardized so that N(0,sigma2) distributed, where
+        sigma2 is the error variance
+    rresid_scaled : array
+        recursive residuals normalize so that N(0,1) distributed
+    rcusum : array
+        cumulative residuals for cusum test
+    rcusumci : array
+        confidence interval for cusum test, currently hard coded for alpha=0.95
+
+
+    Notes
+    -----
+    It produces same recursive residuals as other version. This version updates
+    the inverse of the X'X matrix and does not require matrix inversion during
+    updating. looks efficient but no timing
+
+    Confidence interval in Greene and Brown, Durbin and Evans is the same as
+    in Ploberger after a little bit of algebra.
+
+    References
+    ----------
+    jplv to check formulas, follows Harvey
+    BigJudge 5.5.2b for formula for inverse(X'X) updating
+    Greene section 7.5.2
+    '''
+
+    y = olsresults.model.endog
+    x = olsresults.model.exog
+    nobs, nvars = x.shape
+    if skip is None:
+        skip = nvars
+    rparams = np.nan * np.zeros((nobs,nvars))
+    rresid = np.nan * np.zeros((nobs))
+    rypred = np.nan * np.zeros((nobs))
+    rvarraw = np.nan * np.zeros((nobs))
+
+
+    #intialize with skip observations
+    x0 = x[:skip]
+    y0 = y[:skip]
+    #add Ridge to start (not in jplv
+    XTXi = np.linalg.inv(np.dot(x0.T, x0)+lamda*np.eye(nvars))
+    XTY = np.dot(x0.T, y0) #xi * y   #np.dot(xi, y)
+    #beta = np.linalg.solve(XTX, XTY)
+    beta = np.dot(XTXi, XTY)
+    #print 'beta', beta
+    rparams[skip-1] = beta
+    yipred = np.dot(x[skip-1], beta)
+    rypred[skip-1] = yipred
+    rresid[skip-1] = y[skip-1] - yipred
+    rvarraw[skip-1] = 1 + np.dot(x[skip-1],np.dot(XTXi, x[skip-1]))
+    for i in range(skip,nobs):
+        xi = x[i:i+1,:]
+        yi = y[i]
+        #xxT = np.dot(xi.T, xi)  #xi is 2d 1 row
+        xy = (xi*yi).ravel() # XTY is 1d  #np.dot(xi, yi)   #np.dot(xi, y)
+        #print xy.shape, XTY.shape
+        #print XTX
+        #print XTY
+
+        # get prediction error with previous beta
+        yipred = np.dot(xi, beta)
+        rypred[i] = yipred
+        residi = yi - yipred
+        rresid[i] = residi
+
+        #update beta and inverse(X'X)
+        tmp = np.dot(XTXi, xi.T)
+        ft = 1 + np.dot(xi, tmp)
+
+        XTXi = XTXi - np.dot(tmp,tmp.T) / ft  #BigJudge equ 5.5.15
+
+        #print 'beta', beta
+        beta = beta + (tmp*residi / ft).ravel()  #BigJudge equ 5.5.14
+#        #version for testing
+#        XTY += xy
+#        beta = np.dot(XTXi, XTY)
+#        print (tmp*yipred / ft).shape
+#        print 'tmp.shape, ft.shape, beta.shape', tmp.shape, ft.shape, beta.shape
+        rparams[i] = beta
+        rvarraw[i] = ft
+
+
+
+    i = nobs
+    #beta = np.linalg.solve(XTX, XTY)
+    #rparams[i] = beta
+
+    rresid_scaled = rresid/np.sqrt(rvarraw)   #this is N(0,sigma2) distributed
+    nrr = nobs-skip
+    sigma2 = rresid_scaled[skip-1:].var(ddof=1)  #var or sum of squares ?
+            #Greene has var, jplv and Ploberger have sum of squares (Ass.:mean=0)
+    rresid_standardized = rresid_scaled/np.sqrt(sigma2) #N(0,1) distributed
+    rcusum = rresid_standardized[skip-1:].cumsum()
+    #confidence interval points in Greene p136 looks strange. Cleared up
+    #this assumes sum of independent standard normal, which does not take into
+    #account that we make many tests at the same time
+    #rcusumci = np.sqrt(np.arange(skip,nobs+1))*np.array([[-1.],[+1.]])*stats.norm.sf(0.025)
+    if alpha == 0.95:
+        a = 0.948 #for alpha=0.95
+    else:
+        a = 1.143 #for alpha=0.99
+
+    #following taken from Ploberger,
+    crit = a*np.sqrt(nrr)
+    rcusumci = (a*np.sqrt(nrr) + a*np.arange(0,nobs-skip)/np.sqrt(nrr)) * np.array([[-1.],[+1.]])
+    return rresid, rparams, rypred, rresid_standardized, rresid_scaled, rcusum, rcusumci
+
+
+def breaks_hansen(olsresults):
+    '''test for model stability, breaks in parameters for ols, Hansen 1992
+
+    Parameters
+    ----------
+    olsresults : instance of RegressionResults
+        uses only endog and exog
+    skip : int or None
+        number of observations to use for initial OLS, if None then skip is
+        set equal to the number of regressors (columns in exog)
+
+    Returns
+    -------
+    teststat : float
+        Hansen's test statistic
+    crit : structured array
+        critical values at alpha=0.95 for different nvars
+    pvalue Not yet
+    ft, s : arrays
+        temporary return for debugging, will be removed
+
+    Notes
+    -----
+    looks good in example, maybe not very powerful for small changes in
+    parameters
+
+    According to Greene, distribution of test statistics depends on nvar but
+    not on nobs.
+
+    References
+    ----------
+    Greene section 7.5.1, notation follows Greene
+
+    '''
+    y = olsresults.model.endog
+    x = olsresults.model.exog
+    resid = olsresults.resid
+    nobs, nvars = x.shape
+    resid2 = resid**2
+    ft = np.c_[x*resid[:,None], (resid2 - resid2.mean())]
+    s = ft.cumsum(0)
+    assert (np.abs(s[-1]) < 1e10).all()  #can be optimized away
+    F = nobs*(ft[:,:,None]*ft[:,None,:]).sum(0)
+    S = (s[:,:,None]*s[:,None,:]).sum(0)
+    H = np.trace(np.dot(np.linalg.inv(F), S))
+    crit95 = np.array([(2,1.9),(6,3.75),(15,3.75),(19,4.52)],
+                      dtype = [('nobs',int), ('crit', float)])
+    #TODO: get critical values from Bruce Hansens' 1992 paper
+    return H, crit95, ft, s
+
+
+
+
 class StatTestMC(object):
     """class to run Monte Carlo study on a statistical test'''
 
