@@ -7,6 +7,103 @@ Script should be general (for known F,Q,A,H, and R)
 No smoothing.  No likelihood.
 """
 
+from scipy import optimize
+from var import chain_dot #TODO: move this to tools
+
+def kalmanfilter(f, h, y, xi10, q, ntrain, history=False):
+    """
+
+    Parameters
+    -----------
+    f : array-like
+        f is the transition matrix for the hidden state
+    h : array-like
+        Relates the observable state to the hidden state.
+    y : array-like
+        Observed data
+    x10 : array-like
+        Is the initial prior on the initial state vector
+    q : array-like
+        Variance/Covariance matrix on the error term in the hidden state
+    ntrain : int
+        The number of training periods for the filter.
+
+
+    Returns
+    -------
+    likelihood
+        The negatiev of the log likelihood
+    history or priors, history of posterior
+
+    TODO: change API, update names
+
+    No input checking is done.
+    """
+    f = np.asarray(f)
+    h = np.asarray(h)
+    y = np.asarray(y)
+    if y.ndim == 1: # note that Y is in rows for now
+        y = y[:,None]
+        y = y.T
+
+    xi10 = np.asarray(xi10) # could this be 1d?
+    q = np.asarray(q)
+    n = h.shape[1]
+    nobs = y.shape[1]
+    if history == False:
+        xi10History = xi10
+        xi11History = xi10History
+
+    p10 = q # eq 13.2.21
+    loglikelihood = 0
+
+    for i in range(nobs):
+        hP_p10_h = np.linalg.inv(chain_dot(h.T,p10,h))
+        part1 = y[:,i] - np.dot(h.T,xi10History)
+
+        # after training, don't throw this away
+        if i > ntrain:
+            part2 = -0.5 * chain_dot(part1.T,hP_p10_h,part1)
+            det_hpp10h = np.linalg.det(chain_dot(h.T,p10,h))
+            if det_hpp10h > 10e-300: # not singular
+                loglike_int = (-n/2.)*np.log(2*np.pi)-.5*np.log(det_hpp10h)+part2
+                if loglike_int > 10e300:
+                    raise ValueError("There was an error in forming likelihood")
+                loglikelihood += loglike_int
+
+        # 13.2.15
+        xi11History = xi10History + chain_dot(p10,h,hP_p10_h,
+                part1)
+        # 13.2.16
+
+        p11 = p10 - chain_dot(p10,h,hP_p10_h,h.T,p10)
+        # 13.2.17
+        xi10History = np.dot(f,xi11History)
+        # 13.2.21
+        p10 = chain_dot(f,p11,f.T) + q
+    return -loglikelihood
+
+
+def kalmanupdate(params, y, xi10, ntrain, penalty, upperbound, lowerbound):
+    """
+    TODO: change API, update names
+
+    This isn't general
+    """
+    paramsorig = params
+    # are the bounds binding?
+    params = np.min((np.max((lowerbound,params),axis=0),upperbound), axis=0)
+    rho = params[0]
+    sigma1 = params[1]
+    sigma2 = params[2]
+
+    F = np.array([[rho, 0],[0,0]])
+    cholQ = np.array([[sigma1,0],[0,sigma2]])
+    H = np.ones((2,1))
+    q = np.dot(cholQ,cholQ.T)
+    loglike = kalmanfilter(F,H,y,xi10,q,ntrain)
+    loglike = loglike + penalty*np.sum((params-params)**2)
+    return loglike
 
 
 if __name__ == "__main__":
@@ -105,3 +202,37 @@ if __name__ == "__main__":
     MSE_state = np.array(MSE_state)
     forecast_vector = np.array(forecast_vector)
     state_vector = np.array(state_vector).squeeze()
+
+##########
+#    Luca's example
+    # choose parameters governing the signal extraction problem
+    rho = .9
+    sigma1 = 1
+    sigma2 = 1
+    nobs = 100
+
+# get the state space representation (Hamilton's notation)\
+    F = np.array([[rho, 0],[0, 0]])
+    cholQ = np.array([[sigma1, 0],[0,sigma2]])
+    H = np.ones((2,1))
+
+# generate random data
+    np.random.seed(12345)
+    xihistory = np.zeros((2,nobs))
+    for i in range(1,nobs):
+        xihistory[:,i] = np.dot(F,xihistory[:,i-1]) + \
+                np.dot(cholQ,np.random.randn(2,1)).squeeze()
+                # this makes an ARMA process?
+                # check notes, do the math
+    y = np.dot(H.T, xihistory)
+
+    params = np.array([rho, sigma1, sigma2])
+    penalty = 1e5
+    upperbounds = np.array([.999, 100, 100])
+    lowerbounds = np.array([-.999, .001, .001])
+    xi10 = xihistory[:,0]
+    ntrain = 1
+    bounds = zip(lowerbounds,upperbounds) # if you use fmin_l_bfgs_b
+    results = optimize.fmin_bfgs(kalmanupdate, params,
+        args=(y,xi10,ntrain,penalty,upperbounds,lowerbounds),
+        gtol = 1e-8, epsilon=1e-10)
