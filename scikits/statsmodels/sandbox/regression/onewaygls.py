@@ -263,153 +263,153 @@ def linmod(y, x, **kwds):
         return OLS(y, x, kwds)
 
 
-
-def recursive_olsresiduals(olsresults, skip):
-    '''this is my original version based on Greene and references'''
-    y = olsresults.model.endog
-    x = olsresults.model.exog
-    nobs, nvars = x.shape
-    rparams = np.nan * np.zeros((nobs,nvars))
-    rresid = np.nan * np.zeros((nobs))
-    rypred = np.nan * np.zeros((nobs))
-    rvarraw = np.nan * np.zeros((nobs))
-
-    #XTX = np.zeros((nvars,nvars))
-    #XTY = np.zeros((nvars))
-
-    x0 = x[:skip]
-    y0 = y[:skip]
-    XTX = np.dot(x0.T, x0)
-    XTY = np.dot(x0.T, y0) #xi * y   #np.dot(xi, y)
-    beta = np.linalg.solve(XTX, XTY)
-    rparams[skip-1] = beta
-    yipred = np.dot(x[skip-1], beta)
-    rypred[skip-1] = yipred
-    rresid[skip-1] = y[skip-1] - yipred
-    rvarraw[skip-1] = 1+np.dot(x[skip-1],np.dot(np.linalg.inv(XTX),x[skip-1]))
-    for i in range(skip,nobs):
-        xi = x[i:i+1,:]
-        yi = y[i]
-        xxT = np.dot(xi.T, xi)  #xi is 2d 1 row
-        xy = (xi*yi).ravel() # XTY is 1d  #np.dot(xi, yi)   #np.dot(xi, y)
-        print xy.shape, XTY.shape
-        print XTX
-        print XTY
-        beta = np.linalg.solve(XTX, XTY)
-        rparams[i-1] = beta  #this is beta based on info up to t-1
-        yipred = np.dot(xi, beta)
-        rypred[i] = yipred
-        rresid[i] = yi - yipred
-        rvarraw[i] = 1 + np.dot(xi,np.dot(np.linalg.inv(XTX),xi.T))
-        XTX += xxT
-        XTY += xy
-
-    i = nobs
-    beta = np.linalg.solve(XTX, XTY)
-    rparams[i-1] = beta
-
-    rresid_scaled = rresid/np.sqrt(rvarraw)   #this is N(0,sigma2) distributed
-    nrr = nobs-skip
-    sigma2 = rresid_scaled[skip-1:].var(ddof=1)
-    rresid_standardized = rresid_scaled/np.sqrt(sigma2) #N(0,1) distributed
-    rcusum = rresid_standardized[skip-1:].cumsum()
-    #confidence interval points in Greene p136 looks strange?
-    #this assumes sum of independent standard normal
-    #rcusumci = np.sqrt(np.arange(skip,nobs+1))*np.array([[-1.],[+1.]])*stats.norm.sf(0.025)
-    a = 1.143 #for alpha=0.99  =0.948 for alpha=0.95
-    #following taken from Ploberger,
-    crit = a*np.sqrt(nrr)
-    rcusumci = (a*np.sqrt(nrr) + a*np.arange(0,nobs-skip)/np.sqrt(nrr)) * np.array([[-1.],[+1.]])
-    return rresid, rparams, rypred, rresid_standardized, rresid_scaled, rcusum, rcusumci
-
-
-def recursive_olsresiduals2(olsresults, skip=None):
-    '''
-
-    note: change to other version beta is now moved by 1 position
-    produces same recursive residuals as other version
-
-    References
-    ----------
-    jplv to check formulas, follows Harvey
-    BigJudge 5.5.2b for formula for inverse(X'X) updating
-    '''
-    lamda = 0.0
-    y = olsresults.model.endog
-    x = olsresults.model.exog
-    nobs, nvars = x.shape
-    if skip is None:
-        skip = nvars
-    rparams = np.nan * np.zeros((nobs,nvars))
-    rresid = np.nan * np.zeros((nobs))
-    rypred = np.nan * np.zeros((nobs))
-    rvarraw = np.nan * np.zeros((nobs))
-
-
-    #intialize with skip observations
-    x0 = x[:skip]
-    y0 = y[:skip]
-    #add Ridge to start (not in jplv
-    XTXi = np.linalg.inv(np.dot(x0.T, x0)+lamda*np.eye(nvars))
-    XTY = np.dot(x0.T, y0) #xi * y   #np.dot(xi, y)
-    #beta = np.linalg.solve(XTX, XTY)
-    beta = np.dot(XTXi, XTY)
-    #print 'beta', beta
-    rparams[skip-1] = beta
-    yipred = np.dot(x[skip-1], beta)
-    rypred[skip-1] = yipred
-    rresid[skip-1] = y[skip-1] - yipred
-    rvarraw[skip-1] = 1 + np.dot(x[skip-1],np.dot(XTXi, x[skip-1]))
-    for i in range(skip,nobs):
-        xi = x[i:i+1,:]
-        yi = y[i]
-        #xxT = np.dot(xi.T, xi)  #xi is 2d 1 row
-        xy = (xi*yi).ravel() # XTY is 1d  #np.dot(xi, yi)   #np.dot(xi, y)
-        #print xy.shape, XTY.shape
-        #print XTX
-        #print XTY
-
-        # get prediction error with previous beta
-        yipred = np.dot(xi, beta)
-        rypred[i] = yipred
-        residi = yi - yipred
-        rresid[i] = residi
-
-        #update beta and inverse(X'X)
-        tmp = np.dot(XTXi, xi.T)
-        ft = 1 + np.dot(xi, tmp)
-
-        XTXi = XTXi - np.dot(tmp,tmp.T) / ft  #BigJudge equ 5.5.15
-
-        #print 'beta', beta
-        beta = beta + (tmp*residi / ft).ravel()  #BigJudge equ 5.5.14
-#        #version for testing
+#this has been moved in sandbox/tools/stattools, next to the het and break tests
+#def recursive_olsresiduals(olsresults, skip):
+#    '''this is my original version based on Greene and references'''
+#    y = olsresults.model.endog
+#    x = olsresults.model.exog
+#    nobs, nvars = x.shape
+#    rparams = np.nan * np.zeros((nobs,nvars))
+#    rresid = np.nan * np.zeros((nobs))
+#    rypred = np.nan * np.zeros((nobs))
+#    rvarraw = np.nan * np.zeros((nobs))
+#
+#    #XTX = np.zeros((nvars,nvars))
+#    #XTY = np.zeros((nvars))
+#
+#    x0 = x[:skip]
+#    y0 = y[:skip]
+#    XTX = np.dot(x0.T, x0)
+#    XTY = np.dot(x0.T, y0) #xi * y   #np.dot(xi, y)
+#    beta = np.linalg.solve(XTX, XTY)
+#    rparams[skip-1] = beta
+#    yipred = np.dot(x[skip-1], beta)
+#    rypred[skip-1] = yipred
+#    rresid[skip-1] = y[skip-1] - yipred
+#    rvarraw[skip-1] = 1+np.dot(x[skip-1],np.dot(np.linalg.inv(XTX),x[skip-1]))
+#    for i in range(skip,nobs):
+#        xi = x[i:i+1,:]
+#        yi = y[i]
+#        xxT = np.dot(xi.T, xi)  #xi is 2d 1 row
+#        xy = np.squeeze(xi*yi) #.ravel() # XTY is 1d  #np.dot(xi, yi)   #np.dot(xi, y)
+#        #print xy.shape, XTY.shape
+#        #print XTX
+#        #print XTY
+#        beta = np.linalg.solve(XTX, XTY)
+#        rparams[i-1] = beta  #this is beta based on info up to t-1
+#        yipred = np.dot(xi, beta)
+#        rypred[i] = yipred
+#        rresid[i] = yi - yipred
+#        rvarraw[i] = 1 + np.dot(xi,np.dot(np.linalg.inv(XTX),xi.T))
+#        XTX += xxT
 #        XTY += xy
-#        beta = np.dot(XTXi, XTY)
-#        print (tmp*yipred / ft).shape
-#        print 'tmp.shape, ft.shape, beta.shape', tmp.shape, ft.shape, beta.shape
-        rparams[i] = beta
-        rvarraw[i] = ft
-
-
-
-    i = nobs
-    #beta = np.linalg.solve(XTX, XTY)
-    #rparams[i] = beta
-
-    rresid_scaled = rresid/np.sqrt(rvarraw)   #this is N(0,sigma2) distributed
-    nrr = nobs-skip
-    sigma2 = rresid_scaled[skip-1:].var(ddof=1)
-    rresid_standardized = rresid_scaled/np.sqrt(sigma2) #N(0,1) distributed
-    rcusum = rresid_standardized[skip-1:].cumsum()
-    #confidence interval points in Greene p136 looks strange?
-    #this assumes sum of independent standard normal
-    #rcusumci = np.sqrt(np.arange(skip,nobs+1))*np.array([[-1.],[+1.]])*stats.norm.sf(0.025)
-    a = 1.143 #for alpha=0.99  =0.948 for alpha=0.95
-    #following taken from Ploberger,
-    crit = a*np.sqrt(nrr)
-    rcusumci = (a*np.sqrt(nrr) + a*np.arange(0,nobs-skip)/np.sqrt(nrr)) * np.array([[-1.],[+1.]])
-    return rresid, rparams, rypred, rresid_standardized, rresid_scaled, rcusum, rcusumci
-
+#
+#    i = nobs
+#    beta = np.linalg.solve(XTX, XTY)
+#    rparams[i-1] = beta
+#
+#    rresid_scaled = rresid/np.sqrt(rvarraw)   #this is N(0,sigma2) distributed
+#    nrr = nobs-skip
+#    sigma2 = rresid_scaled[skip-1:].var(ddof=1)
+#    rresid_standardized = rresid_scaled/np.sqrt(sigma2) #N(0,1) distributed
+#    rcusum = rresid_standardized[skip-1:].cumsum()
+#    #confidence interval points in Greene p136 looks strange?
+#    #this assumes sum of independent standard normal
+#    #rcusumci = np.sqrt(np.arange(skip,nobs+1))*np.array([[-1.],[+1.]])*stats.norm.sf(0.025)
+#    a = 1.143 #for alpha=0.99  =0.948 for alpha=0.95
+#    #following taken from Ploberger,
+#    crit = a*np.sqrt(nrr)
+#    rcusumci = (a*np.sqrt(nrr) + a*np.arange(0,nobs-skip)/np.sqrt(nrr)) * np.array([[-1.],[+1.]])
+#    return rresid, rparams, rypred, rresid_standardized, rresid_scaled, rcusum, rcusumci
+#
+#
+#def recursive_olsresiduals2(olsresults, skip=None):
+#    '''
+#
+#    note: change to other version beta is now moved by 1 position
+#    produces same recursive residuals as other version
+#
+#    References
+#    ----------
+#    jplv to check formulas, follows Harvey
+#    BigJudge 5.5.2b for formula for inverse(X'X) updating
+#    '''
+#    lamda = 0.0
+#    y = olsresults.model.endog
+#    x = olsresults.model.exog
+#    nobs, nvars = x.shape
+#    if skip is None:
+#        skip = nvars
+#    rparams = np.nan * np.zeros((nobs,nvars))
+#    rresid = np.nan * np.zeros((nobs))
+#    rypred = np.nan * np.zeros((nobs))
+#    rvarraw = np.nan * np.zeros((nobs))
+#
+#
+#    #intialize with skip observations
+#    x0 = x[:skip]
+#    y0 = y[:skip]
+#    #add Ridge to start (not in jplv
+#    XTXi = np.linalg.inv(np.dot(x0.T, x0)+lamda*np.eye(nvars))
+#    XTY = np.dot(x0.T, y0) #xi * y   #np.dot(xi, y)
+#    #beta = np.linalg.solve(XTX, XTY)
+#    beta = np.dot(XTXi, XTY)
+#    #print 'beta', beta
+#    rparams[skip-1] = beta
+#    yipred = np.dot(x[skip-1], beta)
+#    rypred[skip-1] = yipred
+#    rresid[skip-1] = y[skip-1] - yipred
+#    rvarraw[skip-1] = 1 + np.dot(x[skip-1],np.dot(XTXi, x[skip-1]))
+#    for i in range(skip,nobs):
+#        xi = x[i:i+1,:]
+#        yi = y[i]
+#        #xxT = np.dot(xi.T, xi)  #xi is 2d 1 row
+#        xy = (xi*yi).ravel() # XTY is 1d  #np.dot(xi, yi)   #np.dot(xi, y)
+#        #print xy.shape, XTY.shape
+#        #print XTX
+#        #print XTY
+#
+#        # get prediction error with previous beta
+#        yipred = np.dot(xi, beta)
+#        rypred[i] = yipred
+#        residi = yi - yipred
+#        rresid[i] = residi
+#
+#        #update beta and inverse(X'X)
+#        tmp = np.dot(XTXi, xi.T)
+#        ft = 1 + np.dot(xi, tmp)
+#
+#        XTXi = XTXi - np.dot(tmp,tmp.T) / ft  #BigJudge equ 5.5.15
+#
+#        #print 'beta', beta
+#        beta = beta + (tmp*residi / ft).ravel()  #BigJudge equ 5.5.14
+##        #version for testing
+##        XTY += xy
+##        beta = np.dot(XTXi, XTY)
+##        print (tmp*yipred / ft).shape
+##        print 'tmp.shape, ft.shape, beta.shape', tmp.shape, ft.shape, beta.shape
+#        rparams[i] = beta
+#        rvarraw[i] = ft
+#
+#
+#
+#    i = nobs
+#    #beta = np.linalg.solve(XTX, XTY)
+#    #rparams[i] = beta
+#
+#    rresid_scaled = rresid/np.sqrt(rvarraw)   #this is N(0,sigma2) distributed
+#    nrr = nobs-skip
+#    sigma2 = rresid_scaled[skip-1:].var(ddof=1)
+#    rresid_standardized = rresid_scaled/np.sqrt(sigma2) #N(0,1) distributed
+#    rcusum = rresid_standardized[skip-1:].cumsum()
+#    #confidence interval points in Greene p136 looks strange?
+#    #this assumes sum of independent standard normal
+#    #rcusumci = np.sqrt(np.arange(skip,nobs+1))*np.array([[-1.],[+1.]])*stats.norm.sf(0.025)
+#    a = 1.143 #for alpha=0.99  =0.948 for alpha=0.95
+#    #following taken from Ploberger,
+#    crit = a*np.sqrt(nrr)
+#    rcusumci = (a*np.sqrt(nrr) + a*np.arange(0,nobs-skip)/np.sqrt(nrr)) * np.array([[-1.],[+1.]])
+#    return rresid, rparams, rypred, rresid_standardized, rresid_scaled, rcusum, rcusumci
+#
 
 

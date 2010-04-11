@@ -78,6 +78,9 @@ plt.figure()
 plt.plot(rresid)
 plt.plot(np.abs(rresid))
 
+print 'cusum test reject:'
+print ((rcusum[1:]>rcusumci[1])|(rcusum[1:]<rcusumci[0])).any()
+
 rresid2, rparams2, rypred2, rresid_standardized2, rresid_scaled2, rcusum2, rcusumci2 = \
             recursive_olsresiduals2(res1, skip)
 #assert_almost_equal(rparams[skip+1:], rparams2[skip:-1],13)
@@ -88,10 +91,19 @@ plt.show()
 ####################  Example break test
 import scikits.statsmodels.sandbox.tools.stattools
 from scikits.statsmodels.sandbox.tools.stattools import breaks_hansen, \
-        breaks_cusumolsresid
+        breaks_cusumolsresid#, breaks_cusum
 H, crit95, ft, s = breaks_hansen(res1)
 print H
 print crit95
 
 supb, pval, crit = breaks_cusumolsresid(res1.resid)
 print supb, pval, crit
+
+##check whether this works directly: Ploberger/Kramer framing of standard cusum
+##no, it's different, there is another denominator
+#print breaks_cusumolsresid(rresid[skip:])
+#this function is still completely wrong, cut and paste doesn't apply
+#print breaks_cusum(rresid[skip:])
+
+
+

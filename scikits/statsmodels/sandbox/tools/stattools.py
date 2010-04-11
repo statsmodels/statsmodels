@@ -808,6 +808,19 @@ def breaks_hansen(olsresults):
 def breaks_cusumolsresid(olsresidual):
     '''cusum test for parameter stability based on ols residuals
 
+
+    Notes
+    -----
+
+    Not clear: Assumption 2 in Ploberger, Kramer assumes that exog x have
+    asymptotically zero mean, x.mean(0) = [1, 0, 0, ..., 0]
+    Is this really necessary? I don't see how it can affect the test statistic
+    under the null. It does make a difference under the alternative.
+    Also, the asymptotic distribution of test statistic depends on this.
+
+    From examples it looks like there is little power for standard cusum if
+    exog (other than constant) have mean zero.
+
     References
     ----------
     Ploberger, Werner, and Walter Kramer. “The Cusum Test with Ols Residuals.”
@@ -826,6 +839,60 @@ def breaks_cusumolsresid(olsresidual):
     pval = stats.kstwobign.sf(sup_b)
     return sup_b, pval, crit
 
+#def breaks_cusum(recolsresid):
+#    '''renormalized cusum test for parameter stability based on recursive residuals
+#
+#
+#    still incorrect: in PK, the normalization for sigma is by T not T-K
+#    also the test statistic is asymptotically a Wiener Process, Brownian motion
+#    not Brownian Bridge
+#    for testing: result reject should be identical as in standard cusum version
+#
+#    References
+#    ----------
+#    Ploberger, Werner, and Walter Kramer. “The Cusum Test with Ols Residuals.”
+#    Econometrica 60, no. 2 (March 1992): 271-285.
+#
+#    '''
+#    resid = recolsresid.ravel()
+#    nobssigma2 = (resid**2).sum()
+#    #B is asymptotically a Brownian Bridge
+#    B = resid.cumsum()/np.sqrt(nobssigma2) # use T*sigma directly
+#    nobs = len(resid)
+#    denom = 1. + 2. * np.arange(nobs)/(nobs-1.) #not sure about limits
+#    sup_b = np.abs(B/denom).max() #asymptotically distributed as standard Brownian Bridge
+#    crit = [(1,1.63), (5, 1.36), (10, 1.22)]
+#    #Note stats.kstwobign.isf(0.1) is distribution of sup.abs of Brownian Bridge
+#    #>>> stats.kstwobign.isf([0.01,0.05,0.1])
+#    #array([ 1.62762361,  1.35809864,  1.22384787])
+#    pval = stats.kstwobign.sf(sup_b)
+#    return sup_b, pval, crit
+
+
+def breaks_AP(endog, exog, skip):
+    '''supLM, expLM and aveLM by Andrews, and Andrews,Ploberger
+
+    p-values by B Hansen
+
+    just idea for computation of sequence of tests with given change point
+    (Chow tests)
+    run recursive ols both forward and backward, match the two so they form a
+    split of the data, calculate sum of squares for residuals and get test
+    statistic for each breakpoint between skip and nobs-skip
+    need to put recursive ols (residuals) into separate function
+
+    alternative: B Hansen loops over breakpoints only once and updates
+        x'x and xe'xe
+    update: Andrews is based on GMM estimation not OLS, LM test statistic is easy
+       to compute because it only requires full sample GMM estimate (p.837)
+       with GMM the test has much wider applicability than just OLS
+
+
+
+    for testing loop over single breakpoint Chow test function
+
+    '''
+    pass
 
 class StatTestMC(object):
     """class to run Monte Carlo study on a statistical test'''
