@@ -185,8 +185,16 @@ changes from one and return to another, I have to type: ::
 
     > bzr pull
 
-And it will pull down all of the changes from your branch.  That's basically it.
-You should be up and running with bzr now.
+And it will pull down all of the changes from your branch.
+
+The last thing to know is that you will want to keep track of changes in trunk.
+To do this type: ::
+
+    > bzr merge lp:statsmodels
+    > bzr commit -m"Merged with trunk"
+    > bzr push
+
+That's basically it.  You should be up and running with bzr now.
 
 
 A few helpful commands
