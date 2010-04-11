@@ -48,6 +48,11 @@ or get the source from pypi, sourceforge, or from the launchpad repository and
   setup.py install  or, if this does not work, try
   setup.py build install
 
+**Note:**
+Due to our infrequent official releases, we want to point out that the trunk
+branch in the launchpad repository will have the most recent code and is
+usually stable, tested, and fine for daily use.
+
 **Usage:**
 
 Get the data, run the estimation, and look at the results.
@@ -72,10 +77,9 @@ For example, here is a minimal ordinary least squares case ::
   and look at `dir(results)` to see some of the results
   that are available
 
-**Note:**
-Due to our infrequent official releases, we want to point out that the trunk
-branch in the launchpad repository will have the most recent code and is
-usually stable and tested and fine for daily use.
+How to get involved
+-------------------
+See our `developer's page <developernotes.html>`_.
 
 
 Table of Contents
