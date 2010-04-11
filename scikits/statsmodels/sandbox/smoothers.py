@@ -13,6 +13,54 @@ from scipy.optimize import golden
                                     # extension from models or drop for scipy
 #from models.bspline import BSpline, _band2array
 
+
+class Kernel(object):
+    """
+    Generic 1D Kernel object.
+    Can be constructed by selecting a standard named Kernel,
+    or providing a lambda expression and domain.
+    The domain allows some algorithms to run faster for finite domain kernels.
+    """
+    # MC: Not sure how this will look in the end - or even still exist.
+    # Main purpose of this is to allow custom kernels and to allow speed up
+    # from finite support.
+
+    def __init__(self, shape, domain = None):
+        """
+        shape can be a string or a single variable lambda taking and
+        returning float.
+
+        """
+        self.domain = domain
+        # TODO: Add checking code that shape is valid
+        if type(shape) is str:
+            # TODO: Add standard kernels
+            raise NotImplementedError
+        self.shape = shape
+
+class KernelSmoother(object):
+    """
+    1D Kernel Density Regression/Kernel Smoother
+    """
+    def __init__(self, x, y, kernel = None):
+        if kernel is None:
+            kernel = Kernel("Normal")
+        self.kernel = Kernel
+        self.x = np.array(x)
+        self.y = np.array(y)
+
+    def fit(self):
+        pass
+
+    def __call__(self, x):
+        return np.array([self.predict(xx) for xx in x])
+
+    def error(self,x):
+        pass
+
+    def var(self, x):
+        pass
+
 class PolySmoother(object):
     """
     Polynomial smoother up to a given order.
