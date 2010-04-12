@@ -103,6 +103,8 @@ How to branch
 ^^^^^^^^^^^^^
 Given that you have already created a Launchpad account following the link
 above, the next step is to create an SSH key.  Follow the instructions `here <https://help.launchpad.net/YourAccount/CreatingAnSSHKeyPair>`_.
+If it is not obvious what your launchpad name is you can get and set it `here <https://launchpad.net/people/+me/+edit>`_
+We refer to this below as "yourname"
 
 The next step is to tell bzr who you are.  Using your name and e-mail address
 type: ::
