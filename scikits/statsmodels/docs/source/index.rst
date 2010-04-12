@@ -35,6 +35,10 @@ Quickstart for the impatient
 
 **Bug Tracker:**  https://bugs.launchpad.net/statsmodels
 
+Development
+-----------
+See our `developer's page <developernotes.html>`_.
+
 **Installation:**
 
 ::
@@ -47,6 +51,11 @@ or get the source from pypi, sourceforge, or from the launchpad repository and
 
   setup.py install  or, if this does not work, try
   setup.py build install
+
+**Note:**
+Due to our infrequent official releases, we want to point out that the trunk
+branch in the launchpad repository will have the most recent code and is
+usually stable, tested, and fine for daily use.
 
 **Usage:**
 
@@ -71,11 +80,6 @@ For example, here is a minimal ordinary least squares case ::
 
   and look at `dir(results)` to see some of the results
   that are available
-
-**Note:**
-Due to our infrequent official releases, we want to point out that the trunk
-branch in the launchpad repository will have the most recent code and is
-usually stable and tested and fine for daily use.
 
 
 Table of Contents
