@@ -676,6 +676,7 @@ class AR(LikelihoodModel):
         self.nobs += nlags # add lags back to nobs for real T
 
 #TODO: need to fix underscore in Model class.
+#Done?
     def initialize(self):
         pass
 
@@ -691,26 +692,22 @@ class AR(LikelihoodModel):
         y = self.endog
         ylag = self.exog
         penalty = self.penalty
-#TODO: I have no idea why broyden returns a tuple
-#file bug report
         if isinstance(params,tuple):
+            # broyden (all optimize.nonlin return a tuple until rewrite commit)
             params = np.asarray(params)
         usepenalty=False
         if not np.all(np.abs(params)<1) and penalty:
             oldparams = params
-#need the sign?
             params = np.array([.9999]) # make it the edge
             usepenalty=True
         diffsumsq = sumofsq(y-np.dot(ylag,params))
         # concentrating the likelihood means that sigma2 is given by
-#        print params
         sigma2 = 1/nobs*(diffsumsq-ylag[0]**2*(1-params**2))
         loglike = -nobs/2 * np.log(2*np.pi) - nobs/2*np.log(sigma2) + \
                 .5 * np.log(1-params**2) - .5*diffsumsq/sigma2 -\
                 ylag[0]**2 * (1-params**2)/(2*sigma2)
         if usepenalty:
-    # subtract a quadratic penalty since we min the negative of loglike
-#            print "Called penalty"
+        # subtract a quadratic penalty since we min the negative of loglike
             loglike -= 1000 *(oldparams-.9999)**2
         return loglike
 
@@ -718,8 +715,9 @@ class AR(LikelihoodModel):
         """
         Notes
         -----
-        Need to generalize for AR(p) and for a constant. Doesn't look correct
-        yet.
+        Need to generalize for AR(p) and for a constant.
+        Not correct yet.  Returns numerical gradient.  Depends on package
+        numdifftools.
         """
         y = self.endog
         ylag = self.exog
@@ -741,16 +739,55 @@ class AR(LikelihoodModel):
 
 
     def information(self, params):
+        """
+        Not Implemented Yet
+        """
         return
 
     def hessian(self, params):
+        """
+        Returns numerical hessian for now.  Depends on numdifftools.
+        """
+
         h = Hessian(self.loglike)
         return h(params)
 
     def fit(self, start_params=None, method='bfgs', maxiter=35, tol=1e-08,
             penalty=False):
+        """
+        Fit the unconditional maximum likelihood of an AR(p) process.
+
+        Parameters
+        ----------
+        start_params : array-like, optional
+            A first guess on the parameters.  Defaults is a vector of zeros.
+        method : str, optional
+            Unconstrained solvers:
+                Default is 'bfgs', 'newton' (newton-raphson), 'ncg'
+                (Note that previous 3 are not recommended at the moment.)
+                and 'powell'
+            Constrained solvers:
+                'bfgs-b', 'tnc'
+            See notes.
+        maxiter : int, optional
+            The maximum number of function evaluations. Default is 35.
+        tol = float
+            The convergence tolerance.  Default is 1e-08.
+        penalty : bool
+            Whether or not to use a penalty function.  Default is False,
+            though this is ignored at the moment and the penalty is always
+            used if appropriate.  See notes.
+
+        Notes
+        -----
+        The unconstrained solvers use a quadratic penalty (regardless if
+        penalty kwd is True or False) in order to ensure that the solution
+        stays within (-1,1).  The constrained solvers default to using a bound
+        of (-.999,.999).
+        """
         self.penalty = penalty
         method = method.lower()
+#TODO: allow user-specified penalty function
 #        if penalty and method not in ['bfgs_b','tnc','cobyla','slsqp']:
 #            minfunc = lambda params : -self.loglike(params) - \
 #                    self.penfunc(params)

@@ -10,7 +10,6 @@ from scipy import stats
 import numpy as np
 from numpy.testing.decorators import setastest # doesn't work for some reason
 from numpy.testing import dec
-from nose.tools import nottest  # can't get this to work either
 
 #TODO: these are pretty straightforward but they should be tested
 def durbin_watson(resids):
