@@ -35,7 +35,7 @@ Quickstart for the impatient
 
 **Bug Tracker:**  https://bugs.launchpad.net/statsmodels
 
-**Development:** See our `developer's page <developernotes.html>`_.
+**Development:** See our :doc:`developer's page <developernotes>`.
 
 **Installation:**
 

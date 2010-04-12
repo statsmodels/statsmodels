@@ -252,7 +252,7 @@ google group mailing list.
 Related Projects
 ================
 
-See our `related projects page <related.html>`_.
+See our :doc:`related projects page <related>`.
 
 Getting Involved and Road Map
 =============================
