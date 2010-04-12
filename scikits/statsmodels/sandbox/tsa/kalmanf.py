@@ -10,7 +10,9 @@ No smoothing.  No likelihood.
 from scipy import optimize
 from var import chain_dot #TODO: move this to tools
 
-def kalmanfilter(f, h, y, xi10, q, ntrain, history=False):
+#TODO: split out the loglikelihood part into its own function
+
+def kalmanfilter(F, A, H, Q, R, y, X, xi10, ntrain):
     """
 
     Parameters
@@ -39,52 +41,242 @@ def kalmanfilter(f, h, y, xi10, q, ntrain, history=False):
 
     No input checking is done.
     """
-    f = np.asarray(f)
-    h = np.asarray(h)
+# uses log of Hamilton 13.4.1
+    F = np.asarray(F)
+    H = np.asarray(H)
     y = np.asarray(y)
+    A = np.asarray(A)
     if y.ndim == 1: # note that Y is in rows for now
         y = y[:,None]
-        y = y.T
+    nobs = y.shape[0]
+    xi10 = np.asarray(xi10)
+    if xi10.ndim == 1:
+        xi10[:,None]
+#    if history is True:
+#        state_vector = [xi10]
+#        forecast_vector = []
+#        update_history = lambda x : x
+    Q = np.asarray(Q)
+    r = xi10.shape[0]
+# Eq. 12.2.21, other version says P0 = Q
+#    p10 = np.dot(np.linalg.inv(np.eye(r**2)-np.kron(F,F)),Q.ravel('F'))
+#    p10 = np.reshape(P0, (r,r), order='F')
 
-    xi10 = np.asarray(xi10) # could this be 1d?
-    q = np.asarray(q)
-    n = h.shape[1]
-    nobs = y.shape[1]
-    if history == False:
-        xi10History = xi10
-        xi11History = xi10History
+# Assume a fixed, known intial point and set P0 = Q?
+# this one doesn't take as long and gets "closer" to the answer.
+    p10 = Q
 
-    p10 = q # eq 13.2.21
     loglikelihood = 0
-
     for i in range(nobs):
-        hP_p10_h = np.linalg.inv(chain_dot(h.T,p10,h))
-        part1 = y[:,i] - np.dot(h.T,xi10History)
-
-        # after training, don't throw this away
         if i > ntrain:
-            part2 = -0.5 * chain_dot(part1.T,hP_p10_h,part1)
-            det_hpp10h = np.linalg.det(chain_dot(h.T,p10,h))
-            if det_hpp10h > 10e-300: # not singular
-                loglike_int = (-n/2.)*np.log(2*np.pi)-.5*np.log(det_hpp10h)+part2
-                if loglike_int > 10e300:
-                    raise ValueError("There was an error in forming likelihood")
-                loglikelihood += loglike_int
+            HTPHR = chain_dot(H.T,p10,H)+R
+            if HTPHR.ndim == 1:
+                HTPHRinv = 1./HTPHR
+            else:
+                HTPHRinv = np.linalg.inv(HTPHR)
+    #        FPH = chain_dot(F,P,H)
+            part1 = y[i] - np.dot(A.T,X) - np.dot(H.T,xi10)
+            HTPHRdet = np.linalg.det(HTPHR)
+            part2 = -.5*chain_dot(part1.T,HTPHRinv,part1)
+# I don't think these values can ever be returned.  There will be another
+# error.  Need to test with ill-conditioned problem.
+#            if HTPHRdet > 10e-300: # not singular
+            loglike_interm = (-nobs/2.) * np.log(2*np.pi) - .5*\
+                        np.log(HTPHRdet) + part2
+#                if loglike_interm > 10e300:
+#                    raise ValueError("""There was an error in forming likelihood.
+#Derivative term is greater than 10e300.""")
+            loglikelihood += loglike_interm
 
-        # 13.2.15
-        xi11History = xi10History + chain_dot(p10,h,hP_p10_h,
-                part1)
-        # 13.2.16
-
-        p11 = p10 - chain_dot(p10,h,hP_p10_h,h.T,p10)
-        # 13.2.17
-        xi10History = np.dot(f,xi11History)
-        # 13.2.21
-        p10 = chain_dot(f,p11,f.T) + q
+            # 13.2.15 Update linear project, guess xi now based on y
+            xi11 = xi10 + chain_dot(p10, H, HTPHRinv, part1)
+            # 13.2.16 MSE of that update projection
+            p11 = p10 - chain_dot(p10, H, HTPHRinv, H.T, p10)
+            # 13.2.17 Update forecast about xi based on our guess of F
+            xi10 = np.dot(F,xi11)
+            # 13.2.21 Update the MSE of the forecast
+            p10 = chain_dot(F,p11,F.T) + Q
     return -loglikelihood
 
+# The below is Luca's version
+#    n = H.shape[1]
+#    nobs = y.shape[1]
+#    if history == False:
+#        xi10History = xi10
+#        xi11History = xi10History
 
-def kalmanupdate(params, y, xi10, ntrain, penalty, upperbound, lowerbound):
+#    p10 = q # eq 13.2.21
+#    loglikelihood = 0
+
+#    for i in range(nobs):
+#        hP_p10_h = np.linalg.inv(chain_dot(h.T,p10,h))
+#        part1 = y[:,i] - np.dot(h.T,xi10History)
+
+        # after training, don't throw this away
+#        if i > ntrain:
+#            part2 = -0.5 * chain_dot(part1.T,hP_p10_h,part1)
+#            det_hpp10h = np.linalg.det(chain_dot(h.T,p10,h))
+#            if det_hpp10h > 10e-300: # not singular
+#                loglike_int = (-n/2.)*np.log(2*np.pi)-.5*np.log(det_hpp10h)+part2
+#                if loglike_int > 10e300:
+#                    raise ValueError("There was an error in forming likelihood")
+#                loglikelihood += loglike_int
+
+        # 13.2.15
+#        xi11History = xi10History + chain_dot(p10,h,hP_p10_h,
+#                part1)
+        # 13.2.16
+
+#        p11 = p10 - chain_dot(p10,h,hP_p10_h,h.T,p10)
+        # 13.2.17
+#        xi10History = np.dot(f,xi11History)
+        # 13.2.21
+#        p10 = chain_dot(f,p11,f.T) + q
+#    return -loglikelihood
+
+#TODO: make a state space model
+class StateSpaceModel(object):
+    def __init__(self, endog, exog=None):
+        """
+        Parameters
+        ----------
+        endog : array-like
+            A (nobs x n) array of observations.
+        exog : array-like, optional
+            A (nobs x k) array of covariates.
+
+        Notes
+        -----
+        exog are not handled right now.
+        Created with a (V)ARMA in mind.
+        """
+        endog = np.asarray(endog)
+        if endog.ndim == 1:
+            endog = endog[:,None]
+        self.endog = endog
+        n = endog.shape[1]
+        self.n = n
+        self.nobs = endog.shape[0]
+        self.exog = exog
+#        xi10 = np.ararray(xi10)
+#        if xi10.ndim == 1:
+#            xi10 = xi10[:,None]
+#        self.xi10 = xi10
+#        self.ntrain = ntrain
+#        self.p = ARMA[0]
+#        self.q = ARMA[1]
+#        self.pq = max(ARMA)
+#        self.r = xi10.shape[1]
+#        self.A = A
+#        self.Q = Q
+#        self.F = F
+#        self.Hmat =
+#        if n == 1:
+#            F =
+#        self._updatematrices(start_params)
+
+    def _updateloglike(self, params, ntrain, penalty, upperbounds, lowerbounds,
+            F,A,H,Q,R):
+        """
+        """
+        paramsorig = params
+        # are the bounds binding?
+        params = np.min((np.max((lowerbounds, params), axis=0),upperbounds),
+                axis=0)
+        #TODO: does it make sense for all of these to be allowed to be None?
+        if F != None and callable(F):
+            F = F(params)
+        elif F == None:
+            F = 0
+        if A != None and callable(A):
+            A = A(params)
+        elif A == None:
+            A = 0
+        if H != None and callable(H):
+            H = H(params)
+        elif H == None:
+            H = 0
+        if Q != None and callable(Q):
+            Q = Q(params)
+        elif Q == None:
+            Q = 0
+        if R != None and callable(R):
+            R = R(params)
+        elif R == None:
+            R = 0
+        X = self.exog
+        if X == None:
+            X = 0
+        y = self.endog
+        loglike = kalmanfilter(F,A,H,Q,R,y,X, xi10, ntrain)
+        # use a quadratic penalty function to move away from bounds
+        loglike += penalty * np.sum((paramsorig-params)**2)
+        return loglike
+
+#        r = self.r
+#        n = self.n
+#        F = np.diagonal(np.ones(r-1), k=-1) # think this will be wrong for VAR
+                                            # cf. 13.1.22 but think VAR
+#        F[0] = params[:p] # assumes first p start_params are coeffs
+                                # of obs. vector, needs to be nxp for VAR?
+#        self.F = F
+#        cholQ = np.diag(start_params[p:]) # fails for bivariate
+                                                        # MA(1) section
+                                                        # 13.4.2
+#        Q = np.dot(cholQ,cholQ.T)
+#        self.Q = Q
+#        HT = np.zeros((n,r))
+#        xi10 = self.xi10
+#        y = self.endog
+#        ntrain = self.ntrain
+ #       loglike = kalmanfilter(F,H,y,xi10,Q,ntrain)
+
+    def fit_kalman(self, start_params, ntrain=1, F=None, A=None, H=None, Q=None,
+            R=None, method="bfgs", penalty=True, upperbounds=None,
+            lowerbounds=None):
+        """
+        Parameters
+        ----------
+        method : str
+            Only "bfgs" is currently accepted.
+        start_params : array-like
+            The first guess on all parameters to be estimated.  This can
+            be in any order as long as the F,A,H,Q, and R functions handle
+            the parameters appropriately.
+        xi10 : arry-like
+            The (r x 1) vector of initial states.  See notes.
+        F,A,H,Q,R : functions or array-like, optional
+            If functions, they should take start_params (or the current
+            value of params during iteration and return the F,A,H,Q,R matrices).
+            See notes.  If they are constant then can be given as array-like
+            objects.  If not included in the state-space representation then
+            can be left as None.  See example in class docstring.
+        penalty : bool,
+            Whether or not to include a penalty for solutions that violate
+            the bounds given by `lowerbounds` and `upperbounds`.
+        lowerbounds : array-like
+            Lower bounds on the parameter solutions.  Expected to be in the
+            same order as `start_params`.
+        upperbounds : array-like
+            Upper bounds on the parameter solutions.  Expected to be in the
+            same order as `start_params`
+        """
+        y = self.endog
+#        xi10 = self.xi10
+#        Q = self.Q
+        ntrain = ntrain
+        _updateloglike = self._updateloglike
+        params = start_params
+        if method.lower() == 'bfgs':
+            results = optimize.fmin_bfgs(_updateloglike, params,
+                    args = (ntrain, penalty, upperbounds, lowerbounds,
+                        F,A,H,Q,R), gtol= 1e-8, epsilon=1e-10)
+            #TODO: provide more options to user for optimize
+        self.params = results
+
+
+
+def updatematrices(params, y, xi10, ntrain, penalty, upperbound, lowerbound):
     """
     TODO: change API, update names
 
@@ -101,8 +293,8 @@ def kalmanupdate(params, y, xi10, ntrain, penalty, upperbound, lowerbound):
     cholQ = np.array([[sigma1,0],[0,sigma2]])
     H = np.ones((2,1))
     q = np.dot(cholQ,cholQ.T)
-    loglike = kalmanfilter(F,H,y,xi10,q,ntrain)
-    loglike = loglike + penalty*np.sum((params-params)**2)
+    loglike = kalmanfilter(F,0,H,q,0, y, 0, xi10, ntrain)
+    loglike = loglike + penalty*np.sum((paramsorig-params)**2)
     return loglike
 
 
@@ -225,6 +417,7 @@ if __name__ == "__main__":
                 # this makes an ARMA process?
                 # check notes, do the math
     y = np.dot(H.T, xihistory)
+    y = y.T
 
     params = np.array([rho, sigma1, sigma2])
     penalty = 1e5
@@ -233,6 +426,20 @@ if __name__ == "__main__":
     xi10 = xihistory[:,0]
     ntrain = 1
     bounds = zip(lowerbounds,upperbounds) # if you use fmin_l_bfgs_b
-    results = optimize.fmin_bfgs(kalmanupdate, params,
+    results = optimize.fmin_bfgs(updatematrices, params,
         args=(y,xi10,ntrain,penalty,upperbounds,lowerbounds),
         gtol = 1e-8, epsilon=1e-10)
+#    array([ 0.83111567,  1.2695249 ,  0.61436685])
+
+
+    F = lambda x : np.array([[x[0],0],[0,0]])
+    def Q(x):
+        cholQ = np.array([[x[1],0],[0,x[2]]])
+        return np.dot(cholQ,cholQ.T)
+    H = np.ones((2,1))
+    ssm_model = StateSpaceModel(y)
+    ssm_model.fit_kalman(start_params=params, F=F, Q=Q, H=H,
+            upperbounds=upperbounds, lowerbounds=lowerbounds)
+# why does the above take 3 times as many iterations?
+
+
