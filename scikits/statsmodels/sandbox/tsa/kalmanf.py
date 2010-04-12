@@ -1,10 +1,12 @@
 """
-Kalman Filter following Hamilton 13.1 - 13.3
+State Space Analysis using the Kalman Filter
 
-Notes
------
-Script should be general (for known F,Q,A,H, and R)
-No smoothing.  No likelihood.
+References
+-----------
+Durbin., J and Koopman, S.J.  `Time Series Analysis by State Space Methods`.
+    Oxford, 2001.
+
+Hamilton, J.D.  `Time Series Analysis`.  Princeton, 1994.
 """
 
 from scipy import optimize
