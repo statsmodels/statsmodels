@@ -6,6 +6,7 @@ Hopefully in the future they may be reused/extended for other kernel based metho
 """
 
 import numpy as np
+from numpy import exp, multiply, square, divide, subtract
 
 class Custom(object):
     """
@@ -30,7 +31,7 @@ class Custom(object):
         self._shape = shape
         self.h = h
 
-    def evaluate(self, xs, ys, x):
+    def smooth(self, xs, ys, x):
         # TODO: make filtering more efficient
         if self.domain is None:
             filtered = zip(xs, ys)
@@ -93,6 +94,11 @@ class Gaussian(Custom):
         self.h = h
         self._shape = lambda x: np.exp(-x**2/2.0)
         self.domain = None
+
+    def smooth(self, xs, ys, x):
+        w = np.sum( exp( multiply( square( divide( subtract( xs, x), self.h)), -0.5)))
+        v = np.sum( multiply( ys, exp( multiply( square( divide( subtract( xs, x), self.h)), -0.5))))
+        return v/w
 
 class Cosine(Custom):
     def __init__(self, h=1.0):

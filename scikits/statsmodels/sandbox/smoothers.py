@@ -31,7 +31,7 @@ class KernelSmoother(object):
         return np.array([self.predict(xx) for xx in x])
 
     def predict(self, x):
-        return self.Kernel.evaluate(self.x, self.y, x)
+        return self.Kernel.smooth(self.x, self.y, x)
 
     def error(self,x):
         pass
