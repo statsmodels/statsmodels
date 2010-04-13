@@ -5,7 +5,7 @@ who generate a smooth fit of a set of (x,y) pairs.
 
 import numpy as np
 import numpy.linalg as L
-
+import kernel
 from scipy.linalg import solveh_banded
 from scipy.optimize import golden
 
@@ -13,56 +13,14 @@ from scipy.optimize import golden
                                     # extension from models or drop for scipy
 #from models.bspline import BSpline, _band2array
 
-class Kernel(object):
-    """
-    Generic 1D Kernel object.
-    Can be constructed by selecting a standard named Kernel,
-    or providing a lambda expression and domain.
-    The domain allows some algorithms to run faster for finite domain kernels.
-    """
-    # MC: Not sure how this will look in the end - or even still exist.
-    # Main purpose of this is to allow custom kernels and to allow speed up
-    # from finite support.
-
-    def __init__(self, shape, h = 1.0, domain = None):
-        """
-        shape should be a lambda taking and returning numeric type.
-
-        For sanity it should always return positive or zero.
-        """
-        self.domain = domain
-        # TODO: Add checking code that shape is valid
-        self._shape = shape
-        self.h = h
-
-    def evaluate(self, xs, ys, x):
-        # TODO: make filtering more efficient
-        filtered = [(xx,yy) for xx,yy in zip(xs,ys) if (xx-x)/self.h >= self.domain[0] and (xx-x)/self.h <= self.domain[1]]
-        if len(filtered) > 0:
-            xs,ys = zip(*filtered)
-            w = np.sum([self((xx-x)/self.h) for xx in xs])
-            v = np.sum([yy*self((xx-x)/self.h) for xx, yy in zip(xs,ys)])
-            return v/w
-        else:
-            return 0
-
-    def __call__(self, x):
-        return self._shape(x)
-
-class Gaussian(Kernel):
-    def __init__(self, h=1.0):
-            self.h = h
-            self._shape = lambda x: np.exp(-x**2/2.0)
-
-
 class KernelSmoother(object):
     """
     1D Kernel Density Regression/Kernel Smoother
     """
-    def __init__(self, x, y, kernel = None):
-        if kernel is None:
-            kernel = Gaussian
-        self.kernel = kernel
+    def __init__(self, x, y, Kernel = kernel.Default()):
+        if type(Kernel) is kernel.Default:
+            Kernel = kernel.Gaussian()
+        self.Kernel = Kernel
         self.x = np.array(x)
         self.y = np.array(y)
 
@@ -73,7 +31,7 @@ class KernelSmoother(object):
         return np.array([self.predict(xx) for xx in x])
 
     def predict(self, x):
-        return self.kernel.evaluate(self.x, self.y, x)
+        return self.Kernel.evaluate(self.x, self.y, x)
 
     def error(self,x):
         pass
