@@ -33,8 +33,8 @@ class KernelSmoother(object):
     def predict(self, x):
         return self.Kernel.smooth(self.x, self.y, x)
 
-    def error(self,x):
-        pass
+    def conf(self,x):
+        return np.array([self.Kernel.smoothconf(self.x, self.y, xx) for xx in x])
 
     def var(self, x):
         pass

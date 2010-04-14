@@ -32,11 +32,22 @@ class Custom(object):
         self.h = h
 
     def smooth(self, xs, ys, x):
+        """Returns the kernel smoothing estimate for point x based on x-values
+        xs and y-values ys.
+        Not expected to be called by the user.
+        """
         # TODO: make filtering more efficient
+        # TODO: Implement WARPing algorithm when possible
         if self.domain is None:
             filtered = zip(xs, ys)
         else:
-            filtered = [(xx,yy) for xx,yy in zip(xs,ys) if (xx-x)/self.h >= self.domain[0] and (xx-x)/self.h <= self.domain[1]]
+            filtered = [
+                (xx,yy)
+                for xx,yy in zip(xs,ys)
+                if (xx-x)/self.h >= self.domain[0]
+                and (xx-x)/self.h <= self.domain[1]
+            ]
+
         if len(filtered) > 0:
             xs,ys = zip(*filtered)
             w = np.sum([self((xx-x)/self.h) for xx in xs])
@@ -45,12 +56,85 @@ class Custom(object):
         else:
             return np.nan
 
+    def smoothvar(self, xs, ys, x):
+        """Returns the kernel smoothing estimate of the variance at point x.
+        """
+        # TODO: linear interpolation of the fit can speed this up for large
+        # datasets without noticable error.
+        # TODO: this is thoroughly inefficient way of doing this at the moment
+        # but it works for small dataset - remove repeated w calc.
+        if self.domain is None:
+            filtered = zip(xs, ys)
+        else:
+            filtered = [
+                (xx,yy)
+                for xx,yy in zip(xs, ys)
+                if (xx-x)/self.h >= self.domain[0]
+                and (xx-x)/self.h <= self.domain[1]
+            ]
+
+        if len(filtered) > 0:
+            xs,ys = zip(*filtered)
+            fittedvals = np.array([self.smooth(xs, ys, xx) for xx in xs])
+            sqresid = square(
+                subtract(ys, fittedvals)
+            )
+            w = np.sum([self((xx-x)/self.h) for xx in xs])
+            v = np.sum([rr*self((xx-x)/self.h) for xx, rr in zip(xs, rr)])
+            var = v/w
+        else:
+            return np.nan
+
+    def smoothconf(self, xs, ys, x):
+        """Returns the kernel smoothing estimate with confidence 1sigma bounds
+        """
+        # TODO:  This is a HORRIBLE implementation - need unhorribleising
+        # Also without the correct L2Norm and norm_const this will be out by a
+        # factor.
+        if self.domain is None:
+            filtered = zip(xs, ys)
+        else:
+            filtered = [
+                (xx,yy)
+                for xx,yy in zip(xs, ys)
+                if (xx-x)/self.h >= self.domain[0]
+                and (xx-x)/self.h <= self.domain[1]
+            ]
+
+        if len(filtered) > 0:
+            xs,ys = zip(*filtered)
+            fittedvals = np.array([self.smooth(xs, ys, xx) for xx in xs])
+            sqresid = square(
+                subtract(ys, fittedvals)
+            )
+            w = np.sum([self((xx-x)/self.h) for xx in xs])
+            v = np.sum([rr*self((xx-x)/self.h) for xx, rr in zip(xs, sqresid)])
+            var = v/w
+            sd = np.sqrt(var)
+            K = self.L2Norm()
+            yhat = self.smooth(xs, ys, x)
+            err = sd * K/np.sqrt(w)
+            return (yhat-err, yhat, yhat+err)
+        else:
+            return (np.nan, np.nan, np.nan)
+
+    # TODO: make this a property
+    def L2Norm(self):
+        """Returns the integral of the square of the kernal from -inf to inf"""
+        #TODO: yeah right.  For now just stick a number here
+        # easy enough to sort this for the specific kernels
+        return 1
+
+    # TODO: make this a property
+    def norm_const(self, x):
+        """Normalising constant for kernel (integral from -inf to inf)"""
+        # TODO: again, this needs sorting
+        return 1
+
     def __call__(self, x):
         return self._shape(x)
 
-    def norm_const(self, x):
-        """Don't need normalisation for Kernel Regression"""
-        raise NotImplementedError
+
 
 class Default(object):
     """Represents the default kernel - should not be used directly
@@ -96,9 +180,44 @@ class Gaussian(Custom):
         self.domain = None
 
     def smooth(self, xs, ys, x):
-        w = np.sum( exp( multiply( square( divide( subtract( xs, x), self.h)), -0.5)))
-        v = np.sum( multiply( ys, exp( multiply( square( divide( subtract( xs, x), self.h)), -0.5))))
+        w = np.sum(
+            exp(
+                multiply(
+                    square(
+                        divide(
+                            subtract(xs, x),
+                            self.h
+                        )
+                    ),
+                    -0.5
+                )
+            )
+        )
+
+        v = np.sum(
+            multiply(
+                ys,
+                exp(
+                    multiply(
+                        square(
+                            divide(
+                                subtract( xs, x),
+                                self.h
+                            )
+                        ),
+                        -0.5
+                    )
+                )
+            )
+        )
+
         return v/w
+
+    def norm_const(self):
+        return 0.39894228  # 1/sqrt(2 pi)
+
+    def L2Norm(self):
+        return 0.86226925   # sqrt(pi)/2
 
 class Cosine(Custom):
     def __init__(self, h=1.0):
