@@ -17,7 +17,7 @@ stats.distributions.vonmises.b = np.pi
 
 
 def _fitstart(self, x):
-    '''method of moment estimator as starting values
+    '''example method, method of moment estimator as starting values
 
     Parameters
     ----------
@@ -36,6 +36,7 @@ def _fitstart(self, x):
 
     This example was written for the gamma distribution, but not verified
     with literature
+
     '''
     loc = np.min([x.min(),0])
     a = 4/stats.skew(x)**2
@@ -88,6 +89,33 @@ def fit_fr(self, data, *args, **kwds):
     -------
     argest : array
         estimated parameters
+
+
+    Examples
+    --------
+    generate random sample
+    >>> np.random.seed(12345)
+    >>> x = stats.gamma.rvs(2.5, loc=0, scale=1.2, size=200)
+
+    estimate all parameters
+    >>> stats.gamma.fit(x)
+    array([ 2.0243194 ,  0.20395655,  1.44411371])
+    >>> stats.gamma.fit_fr(x, frozen=[np.nan, np.nan, np.nan])
+    array([ 2.0243194 ,  0.20395655,  1.44411371])
+
+    keep loc fixed, estimate shape and scale parameters
+    >>> stats.gamma.fit_fr(x, frozen=[np.nan, 0.0, np.nan])
+    array([ 2.45603985,  1.27333105])
+
+    keep loc and scale fixed, estimate shape parameter
+    >>> stats.gamma.fit_fr(x, frozen=[np.nan, 0.0, 1.0])
+    array([ 3.00048828])
+    >>> stats.gamma.fit_fr(x, frozen=[np.nan, 0.0, 1.2])
+    array([ 2.57792969])
+
+    estimate only scale parameter for fixed shape and loc
+    >>> stats.gamma.fit_fr(x, frozen=[2.5, 0.0, np.nan])
+    array([ 1.25087891])
 
     Notes
     -----
@@ -189,6 +217,7 @@ def distfitmc(sample, distr, nrepl=100, distkwds={}):
         res[ii] = distr.fit_fr(x, frozen=[np.nan, 0.0, 1.0])
     return res
 
+
 def printresults(sample, arg, bres, kind='bootstrap'):
     '''calculate and print Bootstrap or Monte Carlo result
 
@@ -249,9 +278,11 @@ def printresults(sample, arg, bres, kind='bootstrap'):
 
 if __name__ == '__main__':
 
-    examplecases = ['largenumber', 'bootstrap', 'montecarlo']
+    examplecases = ['largenumber', 'bootstrap', 'montecarlo'][:]
 
     if 'largenumber' in examplecases:
+
+        print '\nDistribution: vonmises'
 
         for nobs in [200]:#[20000, 1000, 100]:
             x = stats.vonmises.rvs(1.23, loc=0, scale=1, size=nobs)
@@ -264,7 +295,7 @@ if __name__ == '__main__':
             print 'with fixed loc and scale'
             print stats.vonmises.fit_fr(x, frozen=[np.nan, 0.0, 1.0])
 
-
+        print '\nDistribution: gamma'
         distr = stats.gamma
         arg, loc, scale = 2.5, 0., 20.
 
@@ -282,26 +313,25 @@ if __name__ == '__main__':
             print distr.fit_fr(x, frozen=[np.nan, 0.0, np.nan])
 
 
+    ex = ['gamma', 'vonmises'][0]
 
+    if ex == 'gamma':
+        distr = stats.gamma
+        arg, loc, scale = 2.5, 0., 1
+    elif ex == 'vonmises':
+        distr = stats.vonmises
+        arg, loc, scale = 1.5, 0., 1
+    else:
+        raise ValueError('wrong example')
 
-        ex = ['gamma', 'vonmises'][0]
+    nobs = 100
+    nrepl = 1000
 
-        if ex == 'gamma':
-            distr = stats.gamma
-            arg, loc, scale = 2.5, 0., 1
-        elif ex == 'vonmises':
-            distr = stats.vonmises
-            arg, loc, scale = 1.5, 0., 1
-        else:
-            raise ValueError('wrong example')
+    sample = distr.rvs(arg, loc=loc, scale=scale, size=nobs)
 
-        nobs = 100
-        nrepl = 1000
-
-        sample = distr.rvs(arg, loc=loc, scale=scale, size=nobs)
-
+    print '\nDistribution:', distr
     if 'bootstrap' in examplecases:
-        print 'Bootstrap'
+        print '\nBootstrap'
         bres = distfitbootstrap(sample, distr, nrepl=nrepl )
         printresults(sample, arg, bres)
 
