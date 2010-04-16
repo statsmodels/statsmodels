@@ -27,7 +27,7 @@ def acorr_ljungbox(x, lags=None, boxpierce=False):
     Parameters
     ----------
     x : array_like, 1d
-        data series
+        data series, regression residuals when used as diagnostic test
     lags : None, int or array_like
         If lags is an integer then this is taken to be the largest lag
         that is included, the test result is reported for all smaller lag length.
@@ -219,6 +219,10 @@ def acorr_lm(x, maxlag=None, autolag='AIC', store=False):
 
     not checked yet, copied from unitrood_adf with adjustments
     check array shapes because of the addition of the constant.
+    written/copied without reference
+    This is not Breush-Godfrey. BG adds lags of residual to exog in the
+    design matrix for the auxiliary regression with residuals as endog,
+    see Greene 12.7.1.
 
     Notes
     -----
@@ -296,6 +300,7 @@ def het_breushpagan(y,x):
     ----------
     http://en.wikipedia.org/wiki/Breusch%E2%80%93Pagan_test
     Greene
+
     '''
     x = np.asarray(x)
     y = np.asarray(y)**2

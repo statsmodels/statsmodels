@@ -59,6 +59,10 @@ acorr_ljungbox (scikits.sandbox.tools.stattools) :
 
 acorr_lm
   - Lagrange Multiplier tests for autocorrelation
+  - not checked yet, might not make sense
+
+missing
+  - Breush-Godfrey test, in stata and Greene 12.7.1
 
 
 Tests for Structural Change, Parameter Stability
