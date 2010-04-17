@@ -5,13 +5,39 @@ who generate a smooth fit of a set of (x,y) pairs.
 
 import numpy as np
 import numpy.linalg as L
-
+import kernel
 from scipy.linalg import solveh_banded
 from scipy.optimize import golden
 
 #from models import _hbspline        # Need to alter setup to be able to import
                                     # extension from models or drop for scipy
 #from models.bspline import BSpline, _band2array
+
+class KernelSmoother(object):
+    """
+    1D Kernel Density Regression/Kernel Smoother
+    """
+    def __init__(self, x, y, Kernel = kernel.Default()):
+        if type(Kernel) is kernel.Default:
+            Kernel = kernel.Gaussian()
+        self.Kernel = Kernel
+        self.x = np.array(x)
+        self.y = np.array(y)
+
+    def fit(self):
+        pass
+
+    def __call__(self, x):
+        return np.array([self.predict(xx) for xx in x])
+
+    def predict(self, x):
+        return self.Kernel.smooth(self.x, self.y, x)
+
+    def conf(self,x):
+        return np.array([self.Kernel.smoothconf(self.x, self.y, xx) for xx in x])
+
+    def var(self, x):
+        pass
 
 class PolySmoother(object):
     """

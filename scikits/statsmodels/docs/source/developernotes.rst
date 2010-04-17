@@ -39,6 +39,10 @@ Launchpad
 Statsmodels code base is hosted on `Launchpad <https://launchpad.net/>`_. To
 contribute you will need to `sign up for a Launchpad account <https://login.launchpad.net/vRDLGvcCNXXjP3F1/+new_account>`_.
 
+**Repository:** http://code.launchpad.net/statsmodels
+
+**Bug Tracker:**  https://bugs.launchpad.net/statsmodels
+
 Version Control and Bzr
 =======================
 We use the `Bazaar distributed version control system <http://bazaar.canonical.com/en/>`_.  Learning Bazaar (bzr) can be one of the biggest hurdles to
@@ -91,7 +95,7 @@ Why branch?
 Having a branch of the code allows you to make changes independent of the main
 code, but it still maintains a relationship with the main source code.  For
 instance, it is easy to keep up with changes in the main trunk while you are
-working in your branch, and when your changes are made you can propse to merge
+working in your branch, and when your changes are made you can propose to merge
 your work back into the trunk easily.
 
 
@@ -99,6 +103,8 @@ How to branch
 ^^^^^^^^^^^^^
 Given that you have already created a Launchpad account following the link
 above, the next step is to create an SSH key.  Follow the instructions `here <https://help.launchpad.net/YourAccount/CreatingAnSSHKeyPair>`_.
+If it is not obvious what your launchpad name is you can get and set it `here <https://launchpad.net/people/+me/+edit>`_
+We refer to this below as "yourname"
 
 The next step is to tell bzr who you are.  Using your name and e-mail address
 type: ::
@@ -233,18 +239,20 @@ Get help for any command.  For diff, for example, type: ::
 
 There are plenty of resources out there to help you through some more
 advanced features of bzr.  Note also that the people #bzr on irc.freenode.net
-have always neen quite helpful in my experience.
+have always been quite helpful in my experience.
 
 Mailing List
 ============
 
 Most of our developer conversations take place on our `psystatsmodels
-google group mailing list <http://groups.google.ca/group/pystatsmodels>`_.
+google group mailing list.
+
+**Mailing List:** http://groups.google.com/group/pystatsmodels?hl=en
 
 Related Projects
 ================
 
-See our `related projects page <related.html>`_.
+See our :doc:`related projects page <related>`.
 
 Getting Involved and Road Map
 =============================

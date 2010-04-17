@@ -35,6 +35,8 @@ Quickstart for the impatient
 
 **Bug Tracker:**  https://bugs.launchpad.net/statsmodels
 
+**Development:** See our :doc:`developer's page <developernotes>`.
+
 **Installation:**
 
 ::
@@ -77,10 +79,6 @@ For example, here is a minimal ordinary least squares case ::
   and look at `dir(results)` to see some of the results
   that are available
 
-How to get involved
--------------------
-See our `developer's page <developernotes.html>`_.
-
 
 Table of Contents
 -----------------
@@ -90,6 +88,7 @@ Table of Contents
 
    introduction
    related
+   developernotes
 
 .. toctree::
    :maxdepth: 3
