@@ -17,14 +17,10 @@ from scipy import optimize
 import numpy as np
 from var import chain_dot #TODO: move this to tools
 
-#TODO: split out the parts into their own function
-def kalman_pred():
-    return
+def kalmansmooth(F, A, H, Q, R, y, X, xi10):
+    pass
 
-def kalman_loglike():
-    return
-
-def kalmanfilter(F, A, H, Q, R, y, X, xi10, ntrain):
+def kalmanfilter(F, A, H, Q, R, y, X, xi10, ntrain, history=False):
     """
     Returns the negative log-likelihood of y conditional on the information set
 
@@ -63,9 +59,10 @@ def kalmanfilter(F, A, H, Q, R, y, X, xi10, ntrain):
     likelihood
         The negative of the log likelihood
     history or priors, history of posterior
+        If history is True.
 
-    TODO: change API, update names
-
+    Notes
+    -----
     No input checking is done.
     """
 # uses log of Hamilton 13.4.1
@@ -80,17 +77,14 @@ def kalmanfilter(F, A, H, Q, R, y, X, xi10, ntrain):
     xi10 = np.asarray(xi10)
     if xi10.ndim == 1:
         xi10[:,None]
-#    if history is True:
-#        state_vector = [xi10]
-#        forecast_vector = []
-#        update_history = lambda x : x
+    if history:
+        state_vector = [xi10]
     Q = np.asarray(Q)
     r = xi10.shape[0]
 # Eq. 12.2.21, other version says P0 = Q
 #    p10 = np.dot(np.linalg.inv(np.eye(r**2)-np.kron(F,F)),Q.ravel('F'))
 #    p10 = np.reshape(P0, (r,r), order='F')
 # Assume a fixed, known intial point and set P0 = Q
-# this one doesn't take as long and gets "closer" to the answer?
     p10 = Q
 
     loglikelihood = 0
@@ -115,9 +109,14 @@ def kalmanfilter(F, A, H, Q, R, y, X, xi10, ntrain):
         p11 = p10 - chain_dot(p10, H, HTPHRinv, H.T, p10)
         # 13.2.17 Update forecast about xi_{t+1} based on our F
         xi10 = np.dot(F,xi11)
+        if history:
+            state_vector.append(xi10)
         # 13.2.21 Update the MSE of the forecast
         p10 = chain_dot(F,p11,F.T) + Q
-    return -loglikelihood
+    if not history:
+        return -loglikelihood
+    else:
+        return -loglikelihood, np.asarray(state_vector[:-1])
 
 class StateSpaceModel(object):
     def __init__(self, endog, exog=None, ARMA=(0,0)):
@@ -159,7 +158,7 @@ class StateSpaceModel(object):
 #            F =
 
     def _updateloglike(self, params, ntrain, penalty, upperbounds, lowerbounds,
-            F,A,H,Q,R):
+            F,A,H,Q,R, history):
         """
         """
         paramsorig = params
@@ -191,7 +190,7 @@ class StateSpaceModel(object):
         if X == None:
             X = 0
         y = self.endog
-        loglike = kalmanfilter(F,A,H,Q,R,y,X, xi10, ntrain)
+        loglike = kalmanfilter(F,A,H,Q,R,y,X, xi10, ntrain, history)
         # use a quadratic penalty function to move away from bounds
         loglike += penalty * np.sum((paramsorig-params)**2)
         return loglike
@@ -249,11 +248,18 @@ class StateSpaceModel(object):
         _updateloglike = self._updateloglike
         params = start_params
         if method.lower() == 'bfgs':
-            results = optimize.fmin_bfgs(_updateloglike, params,
+            (params, llf, score, cov_params, func_calls, grad_calls,
+            warnflag) = optimize.fmin_bfgs(_updateloglike, params,
                     args = (ntrain, penalty, upperbounds, lowerbounds,
-                        F,A,H,Q,R), gtol= 1e-8, epsilon=1e-5)
+                        F,A,H,Q,R, False), gtol= 1e-8, epsilon=1e-5,
+                        full_output=1)
             #TODO: provide more options to user for optimize
-        self.params = results
+        # Getting history would require one more call to _updatelikelihood
+        self.params = params
+        self.llf = llf
+        self.gradient = score
+        self.cov_params = cov_params # how to interpret this?
+        self.warnflag = warnflag
 
 def updatematrices(params, y, xi10, ntrain, penalty, upperbound, lowerbound):
     """
@@ -432,3 +438,6 @@ if __name__ == "__main__":
     thetaunc = np.array([0.7833, 1.1688, 0.5584])
     np.testing.assert_almost_equal(ssm_model2.params, thetaunc, 4)
 # WooHoo!
+    # maybe add a line search check to make sure we didn't get stuck in a local
+    # max for more complicated ssm?
+
