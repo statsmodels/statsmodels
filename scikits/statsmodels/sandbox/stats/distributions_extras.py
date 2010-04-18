@@ -8,7 +8,7 @@ this is the not cleaned development file
 
 from scipy import stats, special, integrate
 from scipy.stats import distributions
-from extras import mvsk2mc, mc2mvsk
+from stats_extras import mvsk2mc, mc2mvsk
 import numpy as np
 
 class SkewNorm_gen(distributions.rv_continuous):
