@@ -52,4 +52,4 @@ fsp.set_title("Employment")
 # Plot real consumption
 #plt.subplot(224)
 
-plt.show()
+#plt.show()
