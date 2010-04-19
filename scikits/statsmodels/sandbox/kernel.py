@@ -3,12 +3,19 @@
 This models contains the Kernels for Kernel smoothing.
 
 Hopefully in the future they may be reused/extended for other kernel based method
+
+References:
+----------
+
+Pointwise Kernel Confidence Bounds
+(smoothconf)
+http://fedc.wiwi.hu-berlin.de/xplore/ebooks/html/anr/anrhtmlframe62.html
 """
 
 import numpy as np
 from numpy import exp, multiply, square, divide, subtract
 
-class Custom(object):
+class CustomKernel(object):
     """
     Generic 1D Kernel object.
     Can be constructed by selecting a standard named Kernel,
@@ -88,9 +95,10 @@ class Custom(object):
     def smoothconf(self, xs, ys, x):
         """Returns the kernel smoothing estimate with confidence 1sigma bounds
         """
-        # TODO:  This is a HORRIBLE implementation - need unhorribleising
+        # TODO:  This is a HORRIBLE implementation - needs unhorribleising
         # Also without the correct L2Norm and norm_const this will be out by a
         # factor.
+        # Also I think there is a bug in this.
         if self.domain is None:
             filtered = zip(xs, ys)
         else:
@@ -123,12 +131,14 @@ class Custom(object):
         """Returns the integral of the square of the kernal from -inf to inf"""
         #TODO: yeah right.  For now just stick a number here
         # easy enough to sort this for the specific kernels
+        # will use scipy or similar for custom kernels
         return 1
 
     # TODO: make this a property
     def norm_const(self, x):
         """Normalising constant for kernel (integral from -inf to inf)"""
         # TODO: again, this needs sorting
+        # will use scipy or similar for custom kernels
         return 1
 
     def __call__(self, x):
@@ -136,90 +146,65 @@ class Custom(object):
 
 
 
-class Default(object):
+class DefaultKernel(object):
     """Represents the default kernel - should not be used directly
     This contains no functionality and acts as a placeholder for the consuming
     function.
     """
     pass
 
-class Uniform(Custom):
+class Uniform(CustomKernel):
     def __init__(self, h=1.0):
         self.h = h
         self._shape = lambda x: 1.0
         self.domain = [-1.0,1.0]
 
-class Triangular(Custom):
+class Triangular(CustomKernel):
     def __init__(self, h=1.0):
         self.h = h
         self._shape = lambda x: 1-abs(x)
         self.domain = [-1.0,1.0]
 
-class Epanechnikov(Custom):
+class Epanechnikov(CustomKernel):
     def __init__(self, h=1.0):
         self.h = h
         self._shape = lambda x: (1-x*x)
         self.domain = [-1.0,1.0]
 
-class Biweight(Custom):
+class Biweight(CustomKernel):
     def __init__(self, h=1.0):
         self.h = h
         self._shape = lambda x: (1-x*x)**2
         self.domain = [-1.0,1.0]
 
-class Triweight(Custom):
+class Triweight(CustomKernel):
     def __init__(self, h=1.0):
         self.h = h
         self._shape = lambda x: (1-x*x)**3
         self.domain = [-1.0,1.0]
 
-class Gaussian(Custom):
+class Gaussian(CustomKernel):
     def __init__(self, h=1.0):
         self.h = h
         self._shape = lambda x: np.exp(-x**2/2.0)
         self.domain = None
 
     def smooth(self, xs, ys, x):
-        w = np.sum(
-            exp(
-                multiply(
-                    square(
-                        divide(
-                            subtract(xs, x),
-                            self.h
-                        )
-                    ),
-                    -0.5
-                )
-            )
-        )
+        w = np.sum(exp(multiply(square(divide(subtract(xs, x),
+                                              self.h)),-0.5)))
 
-        v = np.sum(
-            multiply(
-                ys,
-                exp(
-                    multiply(
-                        square(
-                            divide(
-                                subtract( xs, x),
-                                self.h
-                            )
-                        ),
-                        -0.5
-                    )
-                )
-            )
-        )
+        v = np.sum(multiply(ys,exp(multiply(square(divide(subtract( xs, x),
+                                                          self.h)),-0.5))))
 
         return v/w
 
     def norm_const(self):
-        return 0.39894228  # 1/sqrt(2 pi)
+        return 0.3989422804014327  # 1/sqrt(2 pi)
 
     def L2Norm(self):
-        return 0.86226925   # sqrt(pi)/2
+        return 0.88622692545275794   # sqrt(pi)/2
 
-class Cosine(Custom):
+class Cosine(CustomKernel):
     def __init__(self, h=1.0):
         self.h = h
         self._shape = lambda x: np.cos(np.pi/2.0 * x)

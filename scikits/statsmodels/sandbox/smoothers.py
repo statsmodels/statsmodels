@@ -17,8 +17,8 @@ class KernelSmoother(object):
     """
     1D Kernel Density Regression/Kernel Smoother
     """
-    def __init__(self, x, y, Kernel = kernel.Default()):
-        if type(Kernel) is kernel.Default:
+    def __init__(self, x, y, Kernel = kernel.DefaultKernel()):
+        if isinstance(Kernel,kernel.DefaultKernel):
             Kernel = kernel.Gaussian()
         self.Kernel = Kernel
         self.x = np.array(x)
@@ -121,6 +121,51 @@ class PolySmoother(object):
         #self.coef = np.dot(L.pinv(X).T, _y[:,None])
         #self.coef = np.dot(L.pinv(X), _y)
         self.coef = L.lstsq(X, _y)[0]
+
+
+
+
+
+
+if __name__ == "__main__":
+    import numpy as np
+    from scikits.statsmodels.sandbox import smoothers as s
+    import matplotlib.pyplot as plt
+    from numpy import sin, array, random
+
+    import time
+
+    x = array([random.normal() for i in xrange(0,100)])
+    y = array([sin(i*5)/i + 2*i + 3*random.normal() for i in x])
+
+    K = s.kernel.Gaussian(0.25)
+
+    KS = s.KernelSmoother(x, y, K)
+
+
+    KSx = np.arange(-3,3,0.1)
+    start = time.time()
+    KSy = KS.conf(KSx)
+    print time.time() - start
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.plot(x,y,"+")
+    ax.plot(KSx, KSy,"o")
+    ax.set_ylim(-10,10)
+    plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # comment out for now to remove dependency on _hbspline
