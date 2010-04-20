@@ -26,17 +26,44 @@ class CustomKernel(object):
     # Main purpose of this is to allow custom kernels and to allow speed up
     # from finite support.
 
-    def __init__(self, shape, h = 1.0, domain = None):
+    def __init__(self, shape, h = 1.0, domain = None, norm = None):
         """
         shape should be a lambda taking and returning numeric type.
 
         For sanity it should always return positive or zero but this isn't
-        enforces.
+        enforced incase you want to do weird things.  Bear in mind that the
+        statistical tests etc. may not be valid for non-positive kernels.
+
+        The bandwidth of the kernel is supplied as h.
+
+        You may specify a domain as a list of 2 values [min,max], in which case
+        kernel will be treated as zero outside these values.  This will speed up
+        calculation.
+
+        You may also specify the normalisation constant for the supplied Kernel.
+        If you do this number will be stored and used as the normalisation
+        without calculation.  It is recommended you do this if you know the
+        constant, to speed up calculation.  In particular if the shape function
+        provided is already normalised you should provide
+        norm = 1.0
+        or
+        norm = True
         """
+        if norm is True:
+            norm = 1.0
+        self._normconst = norm
         self.domain = domain
         # TODO: Add checking code that shape is valid
         self._shape = shape
-        self.h = h
+        self._h = h
+
+    def geth(self):
+        """Getter for kernel bandwidth, h"""
+        return self._h
+    def seth(self, value):
+        """Setter for kernel bandwidth, h"""
+        self._h = value
+    h = property(geth, seth, doc="Kernel Bandwidth")
 
     def smooth(self, xs, ys, x):
         """Returns the kernel smoothing estimate for point x based on x-values
@@ -59,7 +86,7 @@ class CustomKernel(object):
             xs,ys = zip(*filtered)
             w = np.sum([self((xx-x)/self.h) for xx in xs])
             v = np.sum([yy*self((xx-x)/self.h) for xx, yy in zip(xs,ys)])
-            return v/w
+            return v / w
         else:
             return np.nan
 
@@ -83,12 +110,10 @@ class CustomKernel(object):
         if len(filtered) > 0:
             xs,ys = zip(*filtered)
             fittedvals = np.array([self.smooth(xs, ys, xx) for xx in xs])
-            sqresid = square(
-                subtract(ys, fittedvals)
-            )
+            sqresid = square( subtract(ys, fittedvals) )
             w = np.sum([self((xx-x)/self.h) for xx in xs])
-            v = np.sum([rr*self((xx-x)/self.h) for xx, rr in zip(xs, rr)])
-            var = v/w
+            v = np.sum([rr*self((xx-x)/self.h) for xx, rr in zip(xs, sqresid)])
+            return v / w
         else:
             return np.nan
 
@@ -98,7 +123,6 @@ class CustomKernel(object):
         # TODO:  This is a HORRIBLE implementation - needs unhorribleising
         # Also without the correct L2Norm and norm_const this will be out by a
         # factor.
-        # Also I think there is a bug in this.
         if self.domain is None:
             filtered = zip(xs, ys)
         else:
@@ -119,14 +143,14 @@ class CustomKernel(object):
             v = np.sum([rr*self((xx-x)/self.h) for xx, rr in zip(xs, sqresid)])
             var = v/w
             sd = np.sqrt(var)
-            K = self.L2Norm()
+            K = self.L2Norm
             yhat = self.smooth(xs, ys, x)
-            err = sd * K/np.sqrt(w)
+            err = sd * K/np.sqrt(w*self.h*self.norm_const)
             return (yhat-err, yhat, yhat+err)
         else:
             return (np.nan, np.nan, np.nan)
 
-    # TODO: make this a property
+    @property
     def L2Norm(self):
         """Returns the integral of the square of the kernal from -inf to inf"""
         #TODO: yeah right.  For now just stick a number here
@@ -134,14 +158,27 @@ class CustomKernel(object):
         # will use scipy or similar for custom kernels
         return 1
 
-    # TODO: make this a property
-    def norm_const(self, x):
-        """Normalising constant for kernel (integral from -inf to inf)"""
+    @property
+    def norm_const(self):
+        """
+        Normalising constant for kernel (integral from -inf to inf)
+        """
         # TODO: again, this needs sorting
         # will use scipy or similar for custom kernels
-        return 1
+        if self._normconst is None:
+            self._normconst = 1.0 # TODO calculate the constant
+        return self._normconst
+
+    def weight(self, x):
+        """This returns the normalised weight at distance x"""
+        return self.norm_const*self._shape(x)
 
     def __call__(self, x):
+        """
+        This simply returns the value of the kernel function at x
+
+        Does the same as weight if the function is normalised
+        """
         return self._shape(x)
 
 
@@ -185,22 +222,17 @@ class Triweight(CustomKernel):
 
 class Gaussian(CustomKernel):
     def __init__(self, h=1.0):
-        self.h = h
-        self._shape = lambda x: np.exp(-x**2/2.0)
-        self.domain = None
+        CustomKernel.__init__(self, shape = lambda x: np.exp(-x**2/2.0),
+                h = h, domain = None, norm = 0.3989422804014327)
 
     def smooth(self, xs, ys, x):
         w = np.sum(exp(multiply(square(divide(subtract(xs, x),
                                               self.h)),-0.5)))
-
         v = np.sum(multiply(ys,exp(multiply(square(divide(subtract( xs, x),
                                                           self.h)),-0.5))))
-
         return v/w
 
-    def norm_const(self):
-        return 0.3989422804014327  # 1/sqrt(2 pi)
-
+    @property
     def L2Norm(self):
         return 0.88622692545275794   # sqrt(pi)/2
 

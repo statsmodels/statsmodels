@@ -37,7 +37,10 @@ class KernelSmoother(object):
         return np.array([self.Kernel.smoothconf(self.x, self.y, xx) for xx in x])
 
     def var(self, x):
-        pass
+        return np.array([self.Kernel.smoothvar(self.x, self.y, xx) for xx in x])
+
+    def std(self, x):
+        return np.sqrt(self.var(x))
 
 class PolySmoother(object):
     """
@@ -135,24 +138,27 @@ if __name__ == "__main__":
 
     import time
 
-    x = array([random.normal() for i in xrange(0,100)])
-    y = array([sin(i*5)/i + 2*i + 3*random.normal() for i in x])
+    x = random.normal(size = 500)
+    y = array([sin(i*5)/i + 2*i + (3+i)*random.normal() for i in x])
 
     K = s.kernel.Gaussian(0.25)
 
     KS = s.KernelSmoother(x, y, K)
 
-
     KSx = np.arange(-3,3,0.1)
-    start = time.time()
+    #start = time.time()
     KSy = KS.conf(KSx)
-    print time.time() - start
+    #print time.time() - start
+
+    KVar = KS.std(KSx)
 
     fig = plt.figure()
-    ax = fig.add_subplot(111)
+    ax = fig.add_subplot(211)
     ax.plot(x,y,"+")
     ax.plot(KSx, KSy,"o")
-    ax.set_ylim(-10,10)
+    ax.set_ylim(-20,30)
+    ax2 = fig.add_subplot(212)
+    ax2.plot(KSx, KVar, "o")
     plt.show()
 
 
