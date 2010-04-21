@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
+#
 """
 This models contains the Kernels for Kernel smoothing.
 
-Hopefully in the future they may be reused/extended for other kernel based method
+Hopefully in the future they may be reused/extended for other kernel based
+method
 
 References:
 ----------
@@ -11,6 +13,11 @@ Pointwise Kernel Confidence Bounds
 (smoothconf)
 http://fedc.wiwi.hu-berlin.de/xplore/ebooks/html/anr/anrhtmlframe62.html
 """
+
+# pylint: disable-msg=C0103
+# pylint: disable-msg=W0142
+# pylint: disable-msg=E1101
+# pylint: disable-msg=E0611
 
 import numpy as np
 from numpy import exp, multiply, square, divide, subtract
@@ -53,9 +60,12 @@ class CustomKernel(object):
             norm = 1.0
         self._normconst = norm
         self.domain = domain
-        # TODO: Add checking code that shape is valid
-        self._shape = shape
+        if callable(shape):
+            self._shape = shape
+        else:
+            raise TypeError("shape must be a callable object/function")
         self._h = h
+        self._L2Norm = None
 
     def geth(self):
         """Getter for kernel bandwidth, h"""
@@ -70,22 +80,27 @@ class CustomKernel(object):
         xs and y-values ys.
         Not expected to be called by the user.
         """
-        # TODO: make filtering more efficient
-        # TODO: Implement WARPing algorithm when possible
-        if self.domain is None:
-            filtered = zip(xs, ys)
-        else:
-            filtered = [
-                (xx,yy)
-                for xx,yy in zip(xs,ys)
-                if (xx-x)/self.h >= self.domain[0]
-                and (xx-x)/self.h <= self.domain[1]
-            ]
+        # Disable black-list functions: filter used for speed instead of
+        # list-comprehension
+        # pylint: disable-msg=W0141
 
-        if len(filtered) > 0:
-            xs,ys = zip(*filtered)
+        def inDomain(xy):
+            u = (xy[0]-x)/self.h
+            return u >= self.domain[0] and u <= self.domain[1]
+
+        if self.domain is None:
+            non_empty = True
+        else:
+            filtered = filter(inDomain, zip(xs, ys))
+            if len(filtered) > 0:
+                xs, ys = zip(*filtered)
+                non_empty = True
+            else:
+                non_empty = False
+
+        if non_empty:
             w = np.sum([self((xx-x)/self.h) for xx in xs])
-            v = np.sum([yy*self((xx-x)/self.h) for xx, yy in zip(xs,ys)])
+            v = np.sum([yy*self((xx-x)/self.h) for xx, yy in zip(xs, ys)])
             return v / w
         else:
             return np.nan
@@ -93,22 +108,25 @@ class CustomKernel(object):
     def smoothvar(self, xs, ys, x):
         """Returns the kernel smoothing estimate of the variance at point x.
         """
-        # TODO: linear interpolation of the fit can speed this up for large
-        # datasets without noticable error.
-        # TODO: this is thoroughly inefficient way of doing this at the moment
-        # but it works for small dataset - remove repeated w calc.
-        if self.domain is None:
-            filtered = zip(xs, ys)
-        else:
-            filtered = [
-                (xx,yy)
-                for xx,yy in zip(xs, ys)
-                if (xx-x)/self.h >= self.domain[0]
-                and (xx-x)/self.h <= self.domain[1]
-            ]
+        # Disable black-list functions: filter used for speed instead of
+        # list-comprehension
+        # pylint: disable-msg=W0141
 
-        if len(filtered) > 0:
-            xs,ys = zip(*filtered)
+        def inDomain(xy):
+            u = (xy[0]-x)/self.h
+            return u >= self.domain[0] and u <= self.domain[1]
+
+        if self.domain is None:
+            non_empty = True
+        else:
+            filtered = filter(inDomain, zip(xs, ys))
+            if len(filtered) > 0:
+                xs, ys = zip(*filtered)
+                non_empty = True
+            else:
+                non_empty = False
+
+        if non_empty:
             fittedvals = np.array([self.smooth(xs, ys, xx) for xx in xs])
             sqresid = square( subtract(ys, fittedvals) )
             w = np.sum([self((xx-x)/self.h) for xx in xs])
@@ -134,7 +152,7 @@ class CustomKernel(object):
             ]
 
         if len(filtered) > 0:
-            xs,ys = zip(*filtered)
+            xs, ys = zip(*filtered)
             fittedvals = np.array([self.smooth(xs, ys, xx) for xx in xs])
             sqresid = square(
                 subtract(ys, fittedvals)
@@ -153,18 +171,18 @@ class CustomKernel(object):
     @property
     def L2Norm(self):
         """Returns the integral of the square of the kernal from -inf to inf"""
-        #TODO: yeah right.  For now just stick a number here
+        #TODO: For now just stick a number here
         # easy enough to sort this for the specific kernels
         # will use scipy or similar for custom kernels
-        return 1
+        if self._L2Norm is None:
+            self._L2Norm = 1.0
+        return self._L2Norm
 
     @property
     def norm_const(self):
         """
         Normalising constant for kernel (integral from -inf to inf)
         """
-        # TODO: again, this needs sorting
-        # will use scipy or similar for custom kernels
         if self._normconst is None:
             self._normconst = 1.0 # TODO calculate the constant
         return self._normconst
@@ -182,62 +200,70 @@ class CustomKernel(object):
         return self._shape(x)
 
 
-
-class DefaultKernel(object):
+# pylint: disable-msg=R0903
+class DefaultKernel(CustomKernel):
     """Represents the default kernel - should not be used directly
     This contains no functionality and acts as a placeholder for the consuming
     function.
     """
     pass
+# pylint: enable-msg=R0903
 
 class Uniform(CustomKernel):
     def __init__(self, h=1.0):
-        self.h = h
-        self._shape = lambda x: 1.0
-        self.domain = [-1.0,1.0]
+        CustomKernel.__init__(self, shape=lambda x: 0.5, h=h,
+                              domain=[-1.0, 1.0], norm = 1.0)
+        self._L2Norm = 0.5
 
 class Triangular(CustomKernel):
     def __init__(self, h=1.0):
-        self.h = h
-        self._shape = lambda x: 1-abs(x)
-        self.domain = [-1.0,1.0]
+        CustomKernel.__init__(self, shape=lambda x: 1 - abs(x), h=h,
+                              domain=[-1.0, 1.0], norm = 1.0)
+        self._L2Norm = 2.0/3.0
 
 class Epanechnikov(CustomKernel):
     def __init__(self, h=1.0):
-        self.h = h
-        self._shape = lambda x: (1-x*x)
-        self.domain = [-1.0,1.0]
+        CustomKernel.__init__(self, shape=lambda x: 0.75*(1 - x*x), h=h,
+                              domain=[-1.0, 1.0], norm = 1.0)
+        self._L2Norm = 0.6
 
 class Biweight(CustomKernel):
     def __init__(self, h=1.0):
-        self.h = h
-        self._shape = lambda x: (1-x*x)**2
-        self.domain = [-1.0,1.0]
+        CustomKernel.__init__(self, shape=lambda x: 0.9375*(1 - x*x)**2, h=h,
+                              domain=[-1.0, 1.0], norm = 1.0)
+        self._L2Norm = 5.0/7.0
 
 class Triweight(CustomKernel):
     def __init__(self, h=1.0):
-        self.h = h
-        self._shape = lambda x: (1-x*x)**3
-        self.domain = [-1.0,1.0]
+        CustomKernel.__init__(self, shape=lambda x: 1.09375*(1 - x*x)**3, h=h,
+                              domain=[-1.0, 1.0], norm = 1.0)
+        self._L2Norm = 350.0/429.0
 
 class Gaussian(CustomKernel):
+    """
+    Gaussian (Normal) Kernel
+
+    K(u) = 1 / (sqrt(2*pi)) exp(-0.5 u**2)
+    """
     def __init__(self, h=1.0):
-        CustomKernel.__init__(self, shape = lambda x: np.exp(-x**2/2.0),
-                h = h, domain = None, norm = 0.3989422804014327)
+        CustomKernel.__init__(self, shape = lambda x: 0.3989422804014327 *
+                        np.exp(-x**2/2.0), h = h, domain = None, norm = 1.0)
+        self._L2Norm = 1.0/(2.0*np.sqrt(np.pi))
 
     def smooth(self, xs, ys, x):
         w = np.sum(exp(multiply(square(divide(subtract(xs, x),
                                               self.h)),-0.5)))
-        v = np.sum(multiply(ys,exp(multiply(square(divide(subtract( xs, x),
-                                                          self.h)),-0.5))))
+        v = np.sum(multiply(ys,exp(multiply(square(divide(subtract(xs, x),
+                                                          self.h)), -0.5))))
         return v/w
 
-    @property
-    def L2Norm(self):
-        return 0.88622692545275794   # sqrt(pi)/2
-
 class Cosine(CustomKernel):
+    """
+    Cosine Kernel
+
+    K(u) = pi/4 cos(0.5 * pi * u) between -1.0 and 1.0
+    """
     def __init__(self, h=1.0):
-        self.h = h
-        self._shape = lambda x: np.cos(np.pi/2.0 * x)
-        self.domain = [-1.0,1.0]
+        CustomKernel.__init__(self, shape=lambda x: 0.78539816339744828 *
+                np.cos(np.pi/2.0 * x), h=h, domain=[-1.0, 1.0], norm = 1.0)
+        self._L2Norm = np.pi**2/16.0
