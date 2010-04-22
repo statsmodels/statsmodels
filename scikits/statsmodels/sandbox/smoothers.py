@@ -190,23 +190,42 @@ if __name__ == "__main__":
     x = random.normal(size = 250)
     y = array([sin(i*5)/i + 2*i + (3+i)*random.normal() for i in x])
 
-    K = s.kernel.Uniform(0.25)
+    K = s.kernel.Biweight(0.25)
+    K2 = s.kernel.CustomKernel(lambda x: (1 - x*x)**2, 0.25, domain = [-1.0,
+                               1.0])
 
     KS = s.KernelSmoother(x, y, K)
+    KS2 = s.KernelSmoother(x, y, K2)
+
 
     KSx = np.arange(-3,3,0.1)
     start = time.time()
-    KSy = KS.predict(KSx)
+    KSy = KS.conf(KSx)
     KVar = KS.std(KSx)
-    print time.time() - start
+    print time.time() - start    # On my machine this takes 7.00
+    start = time.time()
+    KS2y = KS2.conf(KSx)
+    K2Var = KS2.std(KSx)
+    print time.time() - start    # On my machine this takes 6.86
+
+    print "L2 Norms Should Match:"
+    print K.L2Norm
+    print K2.L2Norm
 
     fig = plt.figure()
-    ax = fig.add_subplot(211)
+    ax = fig.add_subplot(221)
     ax.plot(x,y,"+")
     ax.plot(KSx, KSy,"o")
     ax.set_ylim(-20,30)
-    ax2 = fig.add_subplot(212)
+    ax2 = fig.add_subplot(222)
     ax2.plot(KSx, KVar, "o")
+
+    ax = fig.add_subplot(223)
+    ax.plot(x,y,"+")
+    ax.plot(KSx, KS2y,"o")
+    ax.set_ylim(-20,30)
+    ax2 = fig.add_subplot(224)
+    ax2.plot(KSx, K2Var, "o")
     plt.show()
 
 

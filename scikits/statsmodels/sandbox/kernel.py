@@ -20,7 +20,8 @@ http://fedc.wiwi.hu-berlin.de/xplore/ebooks/html/anr/anrhtmlframe62.html
 # pylint: disable-msg=E0611
 
 import numpy as np
-from numpy import exp, multiply, square, divide, subtract
+import scipy.integrate
+from numpy import exp, multiply, square, divide, subtract, inf
 
 class CustomKernel(object):
     """
@@ -85,6 +86,7 @@ class CustomKernel(object):
         # pylint: disable-msg=W0141
 
         def inDomain(xy):
+            """Used for filter to check if point is in the domain"""
             u = (xy[0]-x)/self.h
             return u >= self.domain[0] and u <= self.domain[1]
 
@@ -138,44 +140,50 @@ class CustomKernel(object):
     def smoothconf(self, xs, ys, x):
         """Returns the kernel smoothing estimate with confidence 1sigma bounds
         """
-        # TODO:  This is a HORRIBLE implementation - needs unhorribleising
-        # Also without the correct L2Norm and norm_const this will be out by a
-        # factor.
-        if self.domain is None:
-            filtered = zip(xs, ys)
-        else:
-            filtered = [
-                (xx,yy)
-                for xx,yy in zip(xs, ys)
-                if (xx-x)/self.h >= self.domain[0]
-                and (xx-x)/self.h <= self.domain[1]
-            ]
+        # Disable black-list functions: filter used for speed instead of
+        # list-comprehension
+        # pylint: disable-msg=W0141
 
-        if len(filtered) > 0:
-            xs, ys = zip(*filtered)
+        def inDomain(xy):
+            u = (xy[0]-x)/self.h
+            return u >= self.domain[0] and u <= self.domain[1]
+
+        if self.domain is None:
+            non_empty = True
+        else:
+            filtered = filter(inDomain, zip(xs, ys))
+            if len(filtered) > 0:
+                xs, ys = zip(*filtered)
+                non_empty = True
+            else:
+                non_empty = False
+
+        if non_empty:
             fittedvals = np.array([self.smooth(xs, ys, xx) for xx in xs])
             sqresid = square(
                 subtract(ys, fittedvals)
             )
             w = np.sum([self((xx-x)/self.h) for xx in xs])
             v = np.sum([rr*self((xx-x)/self.h) for xx, rr in zip(xs, sqresid)])
-            var = v/w
+            var = v / w
             sd = np.sqrt(var)
             K = self.L2Norm
             yhat = self.smooth(xs, ys, x)
-            err = sd * K/np.sqrt(w*self.h*self.norm_const)
-            return (yhat-err, yhat, yhat+err)
+            err = sd * K / np.sqrt(w * self.h * self.norm_const)
+            return (yhat - err, yhat, yhat + err)
         else:
             return (np.nan, np.nan, np.nan)
 
     @property
     def L2Norm(self):
         """Returns the integral of the square of the kernal from -inf to inf"""
-        #TODO: For now just stick a number here
-        # easy enough to sort this for the specific kernels
-        # will use scipy or similar for custom kernels
         if self._L2Norm is None:
-            self._L2Norm = 1.0
+            L2Func = lambda x: (self.norm_const*self._shape(x))**2
+            if self.domain is None:
+                self._L2Norm = scipy.integrate.quad(L2Func, -inf, inf)[0]
+            else:
+                self._L2Norm = scipy.integrate.quad(L2Func, self.domain[0],
+                                               self.domain[1])[0]
         return self._L2Norm
 
     @property
@@ -184,7 +192,12 @@ class CustomKernel(object):
         Normalising constant for kernel (integral from -inf to inf)
         """
         if self._normconst is None:
-            self._normconst = 1.0 # TODO calculate the constant
+            if self.domain is None:
+                quadres = scipy.integrate.quad(self._shape, -inf, inf)
+            else:
+                quadres = scipy.integrate.quad(self._shape, self.domain[0],
+                                               self.domain[1])
+            self._normconst = 1.0/(quadres[0])
         return self._normconst
 
     def weight(self, x):
@@ -251,9 +264,15 @@ class Gaussian(CustomKernel):
         self._L2Norm = 1.0/(2.0*np.sqrt(np.pi))
 
     def smooth(self, xs, ys, x):
+        """Returns the kernel smoothing estimate for point x based on x-values
+        xs and y-values ys.
+        Not expected to be called by the user.
+
+        Special implementation optimised for Gaussian.
+        """
         w = np.sum(exp(multiply(square(divide(subtract(xs, x),
                                               self.h)),-0.5)))
-        v = np.sum(multiply(ys,exp(multiply(square(divide(subtract(xs, x),
+        v = np.sum(multiply(ys, exp(multiply(square(divide(subtract(xs, x),
                                                           self.h)), -0.5))))
         return v/w
 
