@@ -53,6 +53,120 @@ def _fitstart(self, x):
     scale = np.std(x) / np.sqrt(a)
     return (a, loc, scale)
 
+def _fitstart_beta(self, x, fixed=None):
+    '''method of moment estimator as starting values for beta distribution
+
+    Parameters
+    ----------
+    x : array
+        data for which the parameters are estimated
+    fixed : None or array_like
+        sequence of numbers and np.nan to indicate fixed parameters and parameters
+        to estimate
+
+    Returns
+    -------
+    est : tuple
+        preliminary estimates used as starting value for fitting, not
+        necessarily a consistent estimator
+
+    Notes
+    -----
+    This needs to be written and attached to each individual distribution
+
+    References
+    ----------
+    for method of moment estimator for known loc and scale
+    http://en.wikipedia.org/wiki/Beta_distribution#Parameter_estimation
+    http://www.itl.nist.gov/div898/handbook/eda/section3/eda366h.htm
+    NIST reference also includes reference to MLE in
+    Johnson, Kotz, and Balakrishan, Volume II, pages 221-235
+
+    '''
+    #todo: separate out this part to be used for other compact support distributions
+    #      e.g. rdist, vonmises, and truncnorm
+    #      but this might not work because it might still be distribution specific
+    a, b = x.min(), x.max()
+    eps = (a-b)*0.01
+    if fixed is None:
+        #this part not checked with books
+        loc = a - eps
+        scale = (a - b) * (1 + 2*eps)
+    else:
+        if np.isnan(fixed[-2]):
+            #estimate loc
+            loc = a - eps
+        else:
+            loc = fixed[-2]
+        if np.isnan(fixed[-1]):
+            #estimate scale
+            scale = (b + eps) - loc
+        else:
+            scale = fixed[-1]
+
+    #method of moment for known loc scale:
+    scale = float(scale)
+    xtrans = (x - loc)/scale
+    xm = xtrans.mean()
+    xv = xtrans.var()
+    tmp = (xm*(1-xm)/xv - 1)
+    p = xm * tmp
+    q = (1 - xm) * tmp
+
+    return (p, q, loc, scale)  #check return type and should fixed be returned ?
+
+def _fitstart_poisson(self, x, fixed=None):
+    '''maximum likelihood estimator as starting values for Poisson distribution
+
+    Parameters
+    ----------
+    x : array
+        data for which the parameters are estimated
+    fixed : None or array_like
+        sequence of numbers and np.nan to indicate fixed parameters and parameters
+        to estimate
+
+    Returns
+    -------
+    est : tuple
+        preliminary estimates used as starting value for fitting, not
+        necessarily a consistent estimator
+
+    Notes
+    -----
+    This needs to be written and attached to each individual distribution
+
+    References
+    ----------
+    MLE :
+    http://en.wikipedia.org/wiki/Poisson_distribution#Maximum_likelihood
+
+    '''
+    #todo: separate out this part to be used for other compact support distributions
+    #      e.g. rdist, vonmises, and truncnorm
+    #      but this might not work because it might still be distribution specific
+    a = x.min()
+    eps = 0 # is this robust ?
+    if fixed is None:
+        #this part not checked with books
+        loc = a - eps
+    else:
+        if np.isnan(fixed[-1]):
+            #estimate loc
+            loc = a - eps
+        else:
+            loc = fixed[-1]
+
+    #MLE for standard (unshifted, if loc=0) Poisson distribution
+
+    xtrans = (x - loc)
+    lambd = xtrans.mean()
+    #second derivative d loglike/ dlambd Not used
+    #dlldlambd = 1/lambd # check
+
+    return (lambd, loc)  #check return type and should fixed be returned ?
+
+
 def nnlf_fr(self, thetash, x, frmask):
     # new frozen version
     # - sum (log pdf(x, theta),axis=0)
@@ -331,6 +445,8 @@ stats.distributions.rv_continuous.fit_fr = fit_fr
 stats.distributions.rv_continuous.nnlf_fr = nnlf_fr
 stats.distributions.rv_continuous.expect = expect
 stats.distributions.rv_continuous.expect = expect_discrete
+stats.distributions.beta_gen._fitstart = _fitstart_beta  #not tried out yet
+stats.distributions.poisson_gen._fitstart = _fitstart_poisson  #not tried out yet
 
 ########## end patching scipy
 
