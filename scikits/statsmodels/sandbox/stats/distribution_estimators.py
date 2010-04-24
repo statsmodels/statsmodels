@@ -13,6 +13,7 @@ quantile based estimator
 ^^^^^^^^^^^^^^^^^^^^^^^^
 only special cases for number or parameters so far
 Is there a literature for GMM estimation of distribution parameters? check
+    found one: Wu/Perloff 2007
 
 
 binned estimator
@@ -28,20 +29,44 @@ example: t-distribution
 * results with momentcondquant don't look as good as mle estimate
 
 TODOs
-* rearange and make sure I don't use module globals (as I did initially)
+* rearange and make sure I don't use module globals (as I did initially) DONE
   make two version exactly identified method of moments with fsolve
   and GMM (?) version with fmin
   and maybe the special cases of JD Cook
+  update: maybe exact (MM) version is not so interesting compared to GMM
 * add semifrozen version of moment and quantile based estimators,
   e.g. for beta (both loc and scale fixed), or gamma (loc fixed)
 * add beta example to the semifrozen MLE, fitfr, code
+  -> added method of moment estimator to _fitstart for beta
 * start a list of how well different estimators, especially current mle work
   for the different distributions
-* need general GMM code (with optimal weights ?), looks like a good example for it
+* need general GMM code (with optimal weights ?), looks like a good example
+  for it
 * get example for binned data estimation, mailing list a while ago
 * any idea when these are better than mle ?
 * check language: I use quantile to mean the value of the random variable, not
   quantile between 0 and 1.
+* for GMM: move moment conditions to separate function, so that they can be
+  used for further analysis, e.g. covariance matrix of parameter estimates
+* question: Are GMM properties different for matching quantiles with cdf or
+  ppf? Estimate should be the same, but derivatives of moment conditions
+  differ.
+* add maximum spacings estimator, Wikipedia, Per Brodtkorb
+* add parameter estimation based on empirical characteristic function
+  (Carrasco/Florens), especially for stable distribution
+
+
+References
+----------
+
+Ximing Wu, Jeffrey M. Perloff, GMM estimation of a maximum entropy
+distribution with interval data, Journal of Econometrics, Volume 138,
+Issue 2, 'Information and Entropy Econometrics' - A Volume in Honor of
+Arnold Zellner, June 2007, Pages 532-546, ISSN 0304-4076,
+DOI: 10.1016/j.jeconom.2006.05.008.
+http://www.sciencedirect.com/science/article/B6VC0-4K606TK-4/2/78bc07c6245546374490f777a6bdbbcc
+http://escholarship.org/uc/item/7jf5w1ht  (working paper)
+
 
 Author : josef-pktd
 License : BSD
@@ -52,23 +77,21 @@ created : 2010-04-20
 import numpy as np
 from scipy import stats, optimize, special
 
-alpha = 2
-xq = [0.5, 4]
-pq = [0.1, 0.9]
-print stats.gamma.ppf(pq, alpha)
-xq = stats.gamma.ppf(pq, alpha)
-print np.diff((stats.gamma.ppf(pq, np.linspace(0.01,4,10)[:,None])*xq[::-1]))
-#optimize.bisect(lambda alpha: np.diff((stats.gamma.ppf(pq, alpha)*xq[::-1])))
-print optimize.fsolve(lambda alpha: np.diff((stats.gamma.ppf(pq, alpha)*xq[::-1])), 3.)
+cache = {}   #module global storage for temp results, not used
 
-distfn = stats.gamma
-# the next two use distfn from module scope
-def gammamomentcond(params, mom2, quantile=None):
-    '''estimate distribution parameters based on globals, loc=0 is fixed
+
+# the next two use distfn from module scope - not anymore
+def gammamomentcond(distfn, params, mom2, quantile=None):
+    '''estimate distribution parameters based method of moments (mean,
+    variance) for distributions with 1 shape parameter and fixed loc=0.
 
     Returns
     -------
     cond : function
+
+    Notes
+    -----
+    first test version, quantile argument not used
 
     '''
     def cond(params):
@@ -78,35 +101,33 @@ def gammamomentcond(params, mom2, quantile=None):
         return np.array(mom2)-mom2s
     return cond
 
-def gammamomentcond2(params, mom2, quantile=None):
-    '''estimate distribution parameters based on globals, loc=0 is fixed
+def gammamomentcond2(distfn, params, mom2, quantile=None):
+    '''estimate distribution parameters based method of moments (mean,
+    variance) for distributions with 1 shape parameter and fixed loc=0.
 
     Returns
     -------
     difference : array
         difference between theoretical and empirical moments
 
+    Notes
+    -----
+    first test version, quantile argument not used
+
+    The only difference to previous function is return type.
+
     '''
     alpha, scale = params
     mom2s = distfn.stats(alpha, 0.,scale)
-    #quantil
     return np.array(mom2)-mom2s
 
-mcond = gammamomentcond([5.,10], mom2=stats.gamma.stats(alpha, 0.,1.), quantile=None)
-print optimize.fsolve(mcond, [1.,2.])
-mom2 = stats.gamma.stats(alpha, 0.,1.)
-print optimize.fsolve(lambda params:gammamomentcond2(params, mom2), [1.,2.])
 
-grvs = stats.gamma.rvs(alpha, 0.,2., size=1000)
-mom2 = np.array([grvs.mean(), grvs.var()])
-alphaestq = optimize.fsolve(lambda params:gammamomentcond2(params, mom2), [1.,3.])
-print alphaestq
-print 'scale = ', xq/stats.gamma.ppf(pq, alphaestq)
 
 ######### fsolve doesn't move in small samples, fmin not very accurate
 def momentcondunbound(distfn, params, mom2, quantile=None):
-    '''estimate distribution parameters based on globals, uses 2 moments and
-    one quantile
+    '''moment conditions for estimating distribution parameters using method
+    of moments, uses mean, variance and one quantile for distributions
+    with 1 shape parameter.
 
     Returns
     -------
@@ -123,23 +144,11 @@ def momentcondunbound(distfn, params, mom2, quantile=None):
         return np.concatenate([mom2diff, cdfdiff[:1]])
     return mom2diff
 
-nobs = 1000
-distfn = stats.t
-pq = np.array([0.1,0.9])
-paramsdgp = (5, 0, 1)
-trvs = distfn.rvs(5, 0, 1, size=nobs)
-xqs = [stats.scoreatpercentile(trvs, p) for p in pq*100]
-mom2th = distfn.stats(*paramsdgp)
-mom2s = np.array([trvs.mean(), trvs.var()])
-tparest_gmm3quantilefsolve = optimize.fsolve(lambda params:momentcondunbound(distfn,params, mom2s,(pq,xqs)), [10,1.,2.])
-print 'tparest_gmm3quantilefsolve', tparest_gmm3quantilefsolve
-tparest_gmm3quantile = optimize.fmin(lambda params:np.sum(momentcondunbound(distfn,params, mom2s,(pq,xqs))**2), [10,1.,2.])
-print 'tparest_gmm3quantile', tparest_gmm3quantile
-print distfn.fit(trvs)
 
 ###### loc scale only
 def momentcondunboundls(distfn, params, mom2, quantile=None, shape=None):
-    '''estimate loc and scale using either quantiles or moments (not both)
+    '''moment conditions for estimating loc and scale of a distribution
+    with method of moments using either 2 quantiles or 2 moments (not both).
 
     Returns
     -------
@@ -157,18 +166,6 @@ def momentcondunboundls(distfn, params, mom2, quantile=None, shape=None):
         return cdfdiff
     return mom2diff
 
-##distfn = stats.t
-##pq = np.array([0.1,0.9])
-##paramsdgp = (5, 0, 1)
-##trvs = distfn.rvs(5, 0, 1, size=nobs)
-##xqs = [stats.scoreatpercentile(trvs, p) for p in pq*100]
-##mom2th = distfn.stats(*paramsdgp)
-##mom2s = np.array([trvs.mean(), trvs.var()])
-print optimize.fsolve(lambda params:momentcondunboundls(distfn, params, mom2s,shape=5), [1.,2.])
-print optimize.fmin(lambda params:np.sum(momentcondunboundls(distfn, params, mom2s,shape=5)**2), [1.,2.])
-print distfn.fit(trvs)
-#loc, scale, based on quantiles
-print optimize.fsolve(lambda params:momentcondunboundls(distfn, params, mom2s,(pq,xqs),shape=5), [1.,2.])
 
 
 ######### try quantile GMM with identity weight matrix
@@ -176,14 +173,20 @@ print optimize.fsolve(lambda params:momentcondunboundls(distfn, params, mom2s,(p
 
 def momentcondquant(distfn, params, mom2, quantile=None, shape=None):
     '''moment conditions for estimating distribution parameters by matching
-    quantiles
+    quantiles, defines as many moment conditions as quantiles.
 
     Returns
     -------
     difference : array
         difference between theoretical and empirical quantiles
 
+    Notes
+    -----
+    This can be used for method of moments or for generalized method of
+    moments.
+
     '''
+    #this check looks redundant/unused know
     if len(params) == 2:
         loc, scale = params
     elif len(params) == 3:
@@ -201,22 +204,22 @@ def momentcondquant(distfn, params, mom2, quantile=None, shape=None):
     return cdfdiff
     #return mom2diff
 
-pq = np.array([0.01, 0.05,0.1,0.4,0.6,0.9,0.95,0.99])
-#paramsdgp = (5, 0, 1)
-xqs = [stats.scoreatpercentile(trvs, p) for p in pq*100]
-tparest_gmmquantile = optimize.fmin(lambda params:np.sum(momentcondquant(distfn, params, mom2s,(pq,xqs), shape=None)**2), [10, 1.,2.])
-print 'tparest_gmmquantile', tparest_gmmquantile
-rvsb = stats.beta.rvs(5,15,size=200)
-print stats.beta.fit(rvsb)
-xqsb = [stats.scoreatpercentile(trvs, p) for p in pq*100]
-betaparest_gmmquantile = optimize.fmin(lambda params:np.sum(momentcondquant(stats.beta, params, mom2s,(pq,xqsb), shape=None)**2), [10,10, 0., 1.])
-print 'betaparest_gmmquantile',  betaparest_gmmquantile
-#result sensitive to initial condition
+def fitquantilesgmm(distfn, x, start=None, pquant=None, frozen=None):
+    if pquant is None:
+        pquant = np.array([0.01, 0.05,0.1,0.4,0.6,0.9,0.95,0.99])
+    if start is None:
+        if hasattr(distfn, '_fitstart'):
+            start = distfn._fitstart(x)
+        else:
+            start = [1]*distfn.numargs + [0.,1.]
+    xqs = [stats.scoreatpercentile(trvs, p) for p in pquant*100]
+    parest = optimize.fmin(lambda params:np.sum(momentcondquant(distfn, params, mom2s,(pq,xqs), shape=None)**2), start)
+    return parest
+
 
 
 def fitbinned(distfn, freq, binedges, start, fixed=None):
-    '''
-    estimate parameters of distribution function for binned data
+    '''estimate parameters of distribution function for binned data using MLE
 
     Parameters
     ----------
@@ -254,10 +257,9 @@ def fitbinned(distfn, freq, binedges, start, fixed=None):
         return -(lnnobsfact + np.sum(freq*np.log(prob)- special.gammaln(freq+1)))
     return optimize.fmin(nloglike, start)
 
-cache = {}
+
 def fitbinnedgmm(distfn, freq, binedges, start, fixed=None, weightsoptimal=True):
-    '''
-    estimate parameters of distribution function for binned data
+    '''estimate parameters of distribution function for binned data using GMM
 
     Parameters
     ----------
@@ -269,6 +271,11 @@ def fitbinnedgmm(distfn, freq, binedges, start, fixed=None, weightsoptimal=True)
         binedges including lower and upper bound
     start : tuple or array_like ?
         starting values, needs to have correct length
+    fixed : None
+        not used yet
+    weightsoptimal : boolean
+        If true, then the optimal weighting matrix for GMM is used. If false,
+        then the identity matrix is used
 
     Returns
     -------
@@ -301,63 +308,149 @@ def fitbinnedgmm(distfn, freq, binedges, start, fixed=None, weightsoptimal=True)
         return np.dot(momcond*weights, momcond)
     return optimize.fmin(gmmobjective, start)
 
-#use trvs from before
-bt = stats.t.ppf(np.linspace(0,1,21),5)
-ft,bt = np.histogram(trvs,bins=bt)
-print 'fitbinned t-distribution'
-tparest_mlebinew = fitbinned(stats.t, ft, bt, [10, 0, 1])
-tparest_gmmbinewidentity = fitbinnedgmm(stats.t, ft, bt, [10, 0, 1])
-tparest_gmmbinewoptimal = fitbinnedgmm(stats.t, ft, bt, [10, 0, 1], weightsoptimal=False)
-print paramsdgp
 
-#Note: this can be used for chisquare test and then has correct asymptotic
-#   distribution for a distribution with estimated parameters, find ref again
-#TODO combine into test with binning included, check rule for number of bins
+if __name__ == '__main__':
 
-#bt2 = stats.t.ppf(np.linspace(trvs.,1,21),5)
-ft2,bt2 = np.histogram(trvs,bins=50)
-'fitbinned t-distribution'
-tparest_mlebinel = fitbinned(stats.t, ft2, bt2, [10, 0, 1])
-tparest_gmmbinelidentity = fitbinnedgmm(stats.t, ft2, bt2, [10, 0, 1])
-tparest_gmmbineloptimal = fitbinnedgmm(stats.t, ft2, bt2, [10, 0, 1], weightsoptimal=False)
-tparest_mle = stats.t.fit(trvs)
+    #Example: gamma - distribution
+    #-----------------------------
 
-np.set_printoptions(precision=6)
-print 'sample size', nobs
-print 'true (df, loc, scale)      ', paramsdgp
-print 'parest_mle                 ', tparest_mle
-print
-print 'tparest_mlebinel           ', tparest_mlebinel
-print 'tparest_gmmbinelidentity   ', tparest_gmmbinelidentity
-print 'tparest_gmmbineloptimal    ', tparest_gmmbineloptimal
-print
-print 'tparest_mlebinew           ', tparest_mlebinew
-print 'tparest_gmmbinewidentity   ', tparest_gmmbinewidentity
-print 'tparest_gmmbinewoptimal    ', tparest_gmmbinewoptimal
-print
-print 'tparest_gmmquantileidentity', tparest_gmmquantile
-print 'tparest_gmm3quantilefsolve ', tparest_gmm3quantilefsolve
-print 'tparest_gmm3quantile       ', tparest_gmm3quantile
+    alpha = 2
+    xq = [0.5, 4]
+    pq = [0.1, 0.9]
+    print stats.gamma.ppf(pq, alpha)
+    xq = stats.gamma.ppf(pq, alpha)
+    print np.diff((stats.gamma.ppf(pq, np.linspace(0.01,4,10)[:,None])*xq[::-1]))
+    #optimize.bisect(lambda alpha: np.diff((stats.gamma.ppf(pq, alpha)*xq[::-1])))
+    print optimize.fsolve(lambda alpha: np.diff((stats.gamma.ppf(pq, alpha)*xq[::-1])), 3.)
 
-''' example results:
-standard error for df estimate looks large
-note: iI don't impose that df is an integer, (b/c not necessary)
-need Monte Carlo to check variance of estimators
+    distfn = stats.gamma
+    mcond = gammamomentcond(distfn, [5.,10], mom2=stats.gamma.stats(alpha, 0.,1.), quantile=None)
+    print optimize.fsolve(mcond, [1.,2.])
+    mom2 = stats.gamma.stats(alpha, 0.,1.)
+    print optimize.fsolve(lambda params:gammamomentcond2(distfn, params, mom2), [1.,2.])
+
+    grvs = stats.gamma.rvs(alpha, 0.,2., size=1000)
+    mom2 = np.array([grvs.mean(), grvs.var()])
+    alphaestq = optimize.fsolve(lambda params:gammamomentcond2(distfn, params, mom2), [1.,3.])
+    print alphaestq
+    print 'scale = ', xq/stats.gamma.ppf(pq, alphaestq)
 
 
-sample size 1000
-true (df, loc, scale)       (5, 0, 1)
-parest_mle                  [ 4.571405 -0.021493  1.028584]
+    #Example beta - distribution
+    #---------------------------
 
-tparest_mlebinel            [ 4.534069 -0.022605  1.02962 ]
-tparest_gmmbinelidentity    [ 2.653056  0.012807  0.896958]
-tparest_gmmbineloptimal     [ 2.437261 -0.020491  0.923308]
+    pq = np.array([0.01, 0.05,0.1,0.4,0.6,0.9,0.95,0.99])
+    rvsb = stats.beta.rvs(5,15,size=200)
+    print stats.beta.fit(rvsb)
+    xqsb = [stats.scoreatpercentile(trvs, p) for p in pq*100]
+    betaparest_gmmquantile = optimize.fmin(lambda params:np.sum(momentcondquant(stats.beta, params, mom2s,(pq,xqsb), shape=None)**2), [10,10, 0., 1.])
+    print 'betaparest_gmmquantile',  betaparest_gmmquantile
+    #result sensitive to initial condition
 
-tparest_mlebinew            [ 2.999124 -0.0199    0.948811]
-tparest_gmmbinewidentity    [ 2.900939 -0.020159  0.93481 ]
-tparest_gmmbinewoptimal     [ 2.977764 -0.024925  0.946487]
 
-tparest_gmmquantileidentity [ 3.940797 -0.046469  1.002001]
-tparest_gmm3quantilefsolve  [ 10.   1.   2.]
-tparest_gmm3quantile        [ 6.376101 -0.029322  1.112403]
-'''
+    #Example t - distribution
+    #------------------------
+
+    nobs = 1000
+    distfn = stats.t
+    pq = np.array([0.1,0.9])
+    paramsdgp = (5, 0, 1)
+    trvs = distfn.rvs(5, 0, 1, size=nobs)
+    xqs = [stats.scoreatpercentile(trvs, p) for p in pq*100]
+    mom2th = distfn.stats(*paramsdgp)
+    mom2s = np.array([trvs.mean(), trvs.var()])
+    tparest_gmm3quantilefsolve = optimize.fsolve(lambda params:momentcondunbound(distfn,params, mom2s,(pq,xqs)), [10,1.,2.])
+    print 'tparest_gmm3quantilefsolve', tparest_gmm3quantilefsolve
+    tparest_gmm3quantile = optimize.fmin(lambda params:np.sum(momentcondunbound(distfn,params, mom2s,(pq,xqs))**2), [10,1.,2.])
+    print 'tparest_gmm3quantile', tparest_gmm3quantile
+    print distfn.fit(trvs)
+
+    ##
+
+    ##distfn = stats.t
+    ##pq = np.array([0.1,0.9])
+    ##paramsdgp = (5, 0, 1)
+    ##trvs = distfn.rvs(5, 0, 1, size=nobs)
+    ##xqs = [stats.scoreatpercentile(trvs, p) for p in pq*100]
+    ##mom2th = distfn.stats(*paramsdgp)
+    ##mom2s = np.array([trvs.mean(), trvs.var()])
+    print optimize.fsolve(lambda params:momentcondunboundls(distfn, params, mom2s,shape=5), [1.,2.])
+    print optimize.fmin(lambda params:np.sum(momentcondunboundls(distfn, params, mom2s,shape=5)**2), [1.,2.])
+    print distfn.fit(trvs)
+    #loc, scale, based on quantiles
+    print optimize.fsolve(lambda params:momentcondunboundls(distfn, params, mom2s,(pq,xqs),shape=5), [1.,2.])
+
+    ##
+
+    pq = np.array([0.01, 0.05,0.1,0.4,0.6,0.9,0.95,0.99])
+    #paramsdgp = (5, 0, 1)
+    xqs = [stats.scoreatpercentile(trvs, p) for p in pq*100]
+    tparest_gmmquantile = optimize.fmin(lambda params:np.sum(momentcondquant(distfn, params, mom2s,(pq,xqs), shape=None)**2), [10, 1.,2.])
+    print 'tparest_gmmquantile', tparest_gmmquantile
+    tparest_gmmquantile2 = fitquantilesgmm(distfn, trvs, start=[10, 1.,2.], pquant=None, frozen=None)
+    print 'tparest_gmmquantile2', tparest_gmmquantile2
+
+
+    ##
+
+
+    #use trvs from before
+    bt = stats.t.ppf(np.linspace(0,1,21),5)
+    ft,bt = np.histogram(trvs,bins=bt)
+    print 'fitbinned t-distribution'
+    tparest_mlebinew = fitbinned(stats.t, ft, bt, [10, 0, 1])
+    tparest_gmmbinewidentity = fitbinnedgmm(stats.t, ft, bt, [10, 0, 1])
+    tparest_gmmbinewoptimal = fitbinnedgmm(stats.t, ft, bt, [10, 0, 1], weightsoptimal=False)
+    print paramsdgp
+
+    #Note: this can be used for chisquare test and then has correct asymptotic
+    #   distribution for a distribution with estimated parameters, find ref again
+    #TODO combine into test with binning included, check rule for number of bins
+
+    #bt2 = stats.t.ppf(np.linspace(trvs.,1,21),5)
+    ft2,bt2 = np.histogram(trvs,bins=50)
+    'fitbinned t-distribution'
+    tparest_mlebinel = fitbinned(stats.t, ft2, bt2, [10, 0, 1])
+    tparest_gmmbinelidentity = fitbinnedgmm(stats.t, ft2, bt2, [10, 0, 1])
+    tparest_gmmbineloptimal = fitbinnedgmm(stats.t, ft2, bt2, [10, 0, 1], weightsoptimal=False)
+    tparest_mle = stats.t.fit(trvs)
+
+    np.set_printoptions(precision=6)
+    print 'sample size', nobs
+    print 'true (df, loc, scale)      ', paramsdgp
+    print 'parest_mle                 ', tparest_mle
+    print
+    print 'tparest_mlebinel           ', tparest_mlebinel
+    print 'tparest_gmmbinelidentity   ', tparest_gmmbinelidentity
+    print 'tparest_gmmbineloptimal    ', tparest_gmmbineloptimal
+    print
+    print 'tparest_mlebinew           ', tparest_mlebinew
+    print 'tparest_gmmbinewidentity   ', tparest_gmmbinewidentity
+    print 'tparest_gmmbinewoptimal    ', tparest_gmmbinewoptimal
+    print
+    print 'tparest_gmmquantileidentity', tparest_gmmquantile
+    print 'tparest_gmm3quantilefsolve ', tparest_gmm3quantilefsolve
+    print 'tparest_gmm3quantile       ', tparest_gmm3quantile
+
+    ''' example results:
+    standard error for df estimate looks large
+    note: iI don't impose that df is an integer, (b/c not necessary)
+    need Monte Carlo to check variance of estimators
+
+
+    sample size 1000
+    true (df, loc, scale)       (5, 0, 1)
+    parest_mle                  [ 4.571405 -0.021493  1.028584]
+
+    tparest_mlebinel            [ 4.534069 -0.022605  1.02962 ]
+    tparest_gmmbinelidentity    [ 2.653056  0.012807  0.896958]
+    tparest_gmmbineloptimal     [ 2.437261 -0.020491  0.923308]
+
+    tparest_mlebinew            [ 2.999124 -0.0199    0.948811]
+    tparest_gmmbinewidentity    [ 2.900939 -0.020159  0.93481 ]
+    tparest_gmmbinewoptimal     [ 2.977764 -0.024925  0.946487]
+
+    tparest_gmmquantileidentity [ 3.940797 -0.046469  1.002001]
+    tparest_gmm3quantilefsolve  [ 10.   1.   2.]
+    tparest_gmm3quantile        [ 6.376101 -0.029322  1.112403]
+    '''
