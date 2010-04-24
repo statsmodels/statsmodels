@@ -1,7 +1,18 @@
-'''skew normal and skew t distribution by Azzalini, A. & Capitanio, A.
-and Gram-Charlier expansion distribution (using 4 moments)
+'''Various extensions to distributions
 
-this is the not cleaned development file
+* skew normal and skew t distribution by Azzalini, A. & Capitanio, A.
+* Gram-Charlier expansion distribution (using 4 moments),
+* distributions based on non-linear transformation
+  - ExpTransf_gen, LogTransf_gen
+  - TransfTwo_gen
+    (defines as examples: square, negative square and abs transformations)
+* mnvormcdf, mvstdnormcdf : cdf, rectangular integral for multivariate normal
+  distribution
+
+TODO: Where is Transf_gen for general monotonic transformation ?
+
+
+this is only partially cleaned, still includes test examples as functions
 '''
 
 #note copied from distr_skewnorm_0.py
@@ -12,6 +23,12 @@ from stats_extras import mvsk2mc, mc2mvsk
 import numpy as np
 
 class SkewNorm_gen(distributions.rv_continuous):
+    '''univariate Skew-Normal distribution of Azzalini
+
+    class follows scipy.stats.distributions pattern
+    but with __init__
+
+    '''
     def __init__(self):
         #super(SkewNorm_gen,self).__init__(
         distributions.rv_continuous.__init__(self,
@@ -58,6 +75,11 @@ def example_n():
 
 # generated the same way as distributions in stats.distributions
 class SkewNorm2_gen(distributions.rv_continuous):
+    '''univariate Skew-Normal distribution of Azzalini
+
+    class follows scipy.stats.distributions pattern
+
+    '''
     def _argcheck(self, alpha):
         return 1 #where(alpha>=0, 1, 0)
 
@@ -71,6 +93,11 @@ skewnorm2 = SkewNorm2_gen(name = 'Skew Normal distribution', shapes = 'alpha',
 
 
 class ACSkewT_gen(distributions.rv_continuous):
+    '''univariate Skew-T distribution of Azzalini
+
+    class follows scipy.stats.distributions pattern
+    but with __init__
+    '''
     def __init__(self):
         #super(SkewT_gen,self).__init__(
         distributions.rv_continuous.__init__(self,
@@ -181,6 +208,10 @@ def _hermnorm(N):
 def pdf_moments_st(cnt):
     """Return the Gaussian expanded pdf function given the list of central
     moments (first one is mean).
+
+    version of scipy.stats, any changes ?
+    the scipy.stats version has a bug and returns normal distribution
+
     """
 
     N = len(cnt)
@@ -343,7 +374,14 @@ def pdf_moments(cnt):
     return thisfunc
 
 class NormExpan_gen(distributions.rv_continuous):
+    '''Gram-Charlier Expansion of Normal distribution
+
+    class follows scipy.stats.distributions pattern
+    but with __init__
+
+    '''
     def __init__(self,args, **kwds):
+        #todo: replace with super call
         distributions.rv_continuous.__init__(self,
             name = 'Normal Expansion distribution', shapes = 'alpha',
             extradoc = '''
@@ -439,6 +477,12 @@ from scipy.stats import distributions
 import numpy as np
 
 class ExpTransf_gen(distributions.rv_continuous):
+    '''Distribution based on log/exp transformation
+
+    the constructor can be called with a distribution class
+    and generates the distribution of the transformed random variable
+
+    '''
     def __init__(self, kls, *args, **kwargs):
         #print args
         #print kwargs
@@ -464,6 +508,12 @@ class ExpTransf_gen(distributions.rv_continuous):
         return np.exp(self.kls._ppf(q,*args))
 
 class LogTransf_gen(distributions.rv_continuous):
+    '''Distribution based on log/exp transformation
+
+    the constructor can be called with a distribution class
+    and generates the distribution of the transformed random variable
+
+    '''
     def __init__(self, kls, *args, **kwargs):
         #explicit for self.__dict__.update(kwargs)
         if 'numargs' in kwargs:
@@ -574,6 +624,7 @@ from scipy import stats, info
 from scipy.stats import distributions
 import numpy as np
 
+#Todo: What's this? wrong spacing, used in TransfTwo_gen
 def get_u_argskwargs(**kwargs):
         u_kwargs = dict((k.replace('u_','',1),v) for k,v in kwargs.items()
                         if k.startswith('u_'))
@@ -581,6 +632,20 @@ def get_u_argskwargs(**kwargs):
         return u_args, u_kwargs
 
 class TransfTwo_gen(distributions.rv_continuous):
+    '''Distribution based on a non-monotonic (u- or hump-shaped transformation)
+
+    the constructor can be called with a distribution class, and functions
+    that define the non-linear transformation.
+    and generates the distribution of the transformed random variable
+
+    Note: the transformation, it's inverse and derivatives need to be fully
+    specified: func, funcinvplus, funcinvminus, derivplus,  derivminus.
+    Currently no numerical derivatives or inverse are calculated
+
+    This can be used to generate distribution instances similar to the
+    distributions in scipy.stats.
+
+    '''
     #a class for non-linear non-monotonic transformation of a continuous random variable
     def __init__(self, kls, func, funcinvplus, funcinvminus, derivplus,
                  derivminus, *args, **kwargs):
@@ -657,6 +722,7 @@ class TransfTwo_gen(distributions.rv_continuous):
 #        elif self.shape == 'hump':
 #            return self.func(self.kls._ppf(1-q,*args, **kwargs))
 
+#TODO: rename these functions to have unique names
 
 def inverseplus(x):
     return np.sqrt(x)
