@@ -56,7 +56,7 @@ class KernelSmoother(object):
             return np.array([self.Kernel.smooth(self.x, self.y, xx) for xx
                                                 in np.array(x)])
 
-    def conf(self, x, confpoints=None):
+    def conf(self, x):
         """
         Returns the fitted curve and 1-sigma upper and lower point-wise
         confidence.
@@ -64,28 +64,23 @@ class KernelSmoother(object):
         If the bandwidth is much larger than the curvature of the underlying
         funtion then the bias could be large.
 
-        x is the points on which you want to evaluate the fit.  If confpoints
-        is not specified the errors will also be evaluated on these point and
-        the method returns an array of shape (N, 3).
+        x is the points on which you want to evaluate the fit and the errors.
 
-        If confpoints is specified as a positive integer, then the fit will be
-        evaluated on each of x,
-        while the confidence bands points will be returned after every
-        (confpoints)th sample point - so they are closer together where the data
+        Alternatively if x is specified as a positive integer, then the fit and
+        confidence bands points will be returned after every
+        xth sample point - so they are closer together where the data
         is denser.
         """
-        if confpoints is None:
+        if isinstance(x, int):
+            sorted_x = np.array(self.x)
+            sorted_x.sort()
+            confx = sorted_x[::x]
+            conffit = self.conf(confx)
+            return (confx, conffit)
+        else:
             return np.array([self.Kernel.smoothconf(self.x, self.y, xx)
                                                                 for xx in x])
-        elif isinstance(confpoints,int):
-            fit = self.predict(x)
-            sorted_x = array(self.x)
-            sorted_x.sort()
-            confx = sorted_x[::confpoints]
-            conffit = self.conf(confx)
-        else:
-            raise TypeError("confpoint expected integer, got %s"%type(
-                                                                confpoints))
+
 
     def var(self, x):
         return np.array([self.Kernel.smoothvar(self.x, self.y, xx) for xx in x])
@@ -182,7 +177,6 @@ class PolySmoother(object):
 
 
 if __name__ == "__main__":
-    import numpy as np
     from scikits.statsmodels.sandbox import smoothers as s
     import matplotlib.pyplot as plt
     from numpy import sin, array, random
@@ -200,7 +194,7 @@ if __name__ == "__main__":
     KS2 = s.KernelSmoother(x, y, K2)
 
 
-    KSx = np.arange(-3,3,0.1)
+    KSx = np.arange(-3, 3, 0.1)
     start = time.time()
     KSy = KS.conf(KSx)
     KVar = KS.std(KSx)
@@ -209,6 +203,8 @@ if __name__ == "__main__":
     KS2y = KS2.conf(KSx)         #
     K2Var = KS2.std(KSx)         #
     print time.time() - start    # ...than this.
+
+    KSConfIntx, KSConfInty = KS.conf(15)
 
     print "Norm const should be 0.9375"
     print K2.norm_const
@@ -229,18 +225,23 @@ if __name__ == "__main__":
 
     fig = plt.figure()
     ax = fig.add_subplot(221)
-    ax.plot(x,y,"+")
-    ax.plot(KSx, KSy,"o")
-    ax.set_ylim(-20,30)
+    ax.plot(x, y, "+")
+    ax.plot(KSx, KSy, "o")
+    ax.set_ylim(-20, 30)
     ax2 = fig.add_subplot(222)
     ax2.plot(KSx, KVar, "o")
 
-    ax = fig.add_subplot(223)
-    ax.plot(x,y,"+")
-    ax.plot(KSx, KS2y,"o")
-    ax.set_ylim(-20,30)
-    ax2 = fig.add_subplot(224)
-    ax2.plot(KSx, K2Var, "o")
+    ax3 = fig.add_subplot(223)
+    ax3.plot(x, y, "+")
+    ax3.plot(KSx, KS2y, "o")
+    ax3.set_ylim(-20, 30)
+    ax4 = fig.add_subplot(224)
+    ax4.plot(KSx, K2Var, "o")
+
+    fig2 = plt.figure()
+    ax5 = fig2.add_subplot(111)
+    ax5.plot(x, y, "+")
+    ax5.plot(KSConfIntx, KSConfInty, "o")
     plt.show()
 
 
