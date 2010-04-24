@@ -214,13 +214,13 @@ if __name__ == "__main__":
 
     print "Fit values should match:"
     #print zip(KSy, KS2y)
-    print KSy[10]
-    print KS2y[10]
+    print KSy[28]
+    print KS2y[28]
 
     print "Var values should match:"
     #print zip(KVar, K2Var)
-    print KVar[12]
-    print K2Var[12]
+    print KVar[39]
+    print K2Var[39]
 
     fig = plt.figure()
     ax = fig.add_subplot(221)

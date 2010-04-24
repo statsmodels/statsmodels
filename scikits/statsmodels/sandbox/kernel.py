@@ -76,6 +76,22 @@ class CustomKernel(object):
         self._h = value
     h = property(geth, seth, doc="Kernel Bandwidth")
 
+    def inDomain(self, xs, ys, x):
+        def isInDomain(xy):
+            """Used for filter to check if point is in the domain"""
+            u = (xy[0]-x)/self.h
+            return u >= self.domain[0] and u <= self.domain[1]
+
+        if self.domain is None:
+            return (xs, ys)
+        else:
+            filtered = filter(isInDomain, zip(xs, ys))
+            if len(filtered) > 0:
+                xs, ys = zip(*filtered)
+                return (xs, ys)
+            else:
+                return ([],[])
+
     def smooth(self, xs, ys, x):
         """Returns the kernel smoothing estimate for point x based on x-values
         xs and y-values ys.
@@ -253,26 +269,14 @@ class Biweight(CustomKernel):
 
         Special implementation optimised for Biweight.
         """
-
-        def inDomain(xy):
-            """Used for filter to check if point is in the domain"""
-            u = (xy[0]-x)/self.h
-            return u >= self.domain[0] and u <= self.domain[1]
-
-        if self.domain is None:
-            non_empty = True
+        xs, ys = self.inDomain(xs, ys, x)
+        if len(xs) > 0:
+            w = np.sum(square(subtract(1, square(divide(subtract(xs,x), self.h)))))
+            v = np.sum(multiply(ys, square(subtract(1, square(divide(subtract(xs,x),
+                                                                     self.h))))))
+            return v / w
         else:
-            filtered = filter(inDomain, zip(xs, ys))
-            if len(filtered) > 0:
-                xs, ys = zip(*filtered)
-                non_empty = True
-            else:
-                non_empty = False
-
-        w = np.sum(square(subtract(1, square(divide(subtract(xs,x), self.h)))))
-        v = np.sum(multiply(ys, square(subtract(1, square(divide(subtract(xs,x),
-                                                                 self.h))))))
-        return v / w
+            return np.nan
 
 class Triweight(CustomKernel):
     def __init__(self, h=1.0):
