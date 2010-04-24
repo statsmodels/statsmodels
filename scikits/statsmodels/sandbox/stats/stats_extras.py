@@ -1,7 +1,17 @@
-'''
-extra statistical function and helper functions
+'''extra statistical function and helper functions
 
-Author: Josef Perktold
+contains:
+
+* conversion between central and non-central moments, skew, kurtosis and
+  cummulants
+* goodness-of-fit tests
+  - powerdiscrepancy
+  - gof_chisquare_discrete
+  - gof_binning_discrete
+
+
+
+Author: josef-pktd
 '''
 
 import numpy as np

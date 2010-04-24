@@ -1,4 +1,8 @@
-"""Restricted least squares"""
+"""Restricted least squares
+
+from pandas
+License: Simplified BSD
+"""
 
 import numpy as np
 from scikits.statsmodels.regression import WLS, GLS, RegressionResults
