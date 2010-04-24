@@ -202,15 +202,25 @@ if __name__ == "__main__":
     start = time.time()
     KSy = KS.conf(KSx)
     KVar = KS.std(KSx)
-    print time.time() - start    # On my machine this takes 7.00
+    print time.time() - start    # On my machine this takes 6.4
     start = time.time()
     KS2y = KS2.conf(KSx)
     K2Var = KS2.std(KSx)
-    print time.time() - start    # On my machine this takes 6.86
+    print time.time() - start    # On my machine this takes 5.6
 
     print "L2 Norms Should Match:"
     print K.L2Norm
     print K2.L2Norm
+
+    print "Fit values should match:"
+    #print zip(KSy, KS2y)
+    print KSy[10]
+    print KS2y[10]
+
+    print "Var values should match:"
+    #print zip(KVar, K2Var)
+    print KVar[12]
+    print K2Var[12]
 
     fig = plt.figure()
     ax = fig.add_subplot(221)
