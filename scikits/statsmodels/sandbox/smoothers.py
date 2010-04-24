@@ -202,11 +202,11 @@ if __name__ == "__main__":
     start = time.time()
     KSy = KS.conf(KSx)
     KVar = KS.std(KSx)
-    print time.time() - start    # On my machine this takes 6.4
-    start = time.time()
-    KS2y = KS2.conf(KSx)
-    K2Var = KS2.std(KSx)
-    print time.time() - start    # On my machine this takes 5.6
+    print time.time() - start    # This should be significantly quicker...
+    start = time.time()          #
+    KS2y = KS2.conf(KSx)         #
+    K2Var = KS2.std(KSx)         #
+    print time.time() - start    # ...than this.
 
     print "L2 Norms Should Match:"
     print K.L2Norm

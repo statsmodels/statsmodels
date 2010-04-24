@@ -246,6 +246,34 @@ class Biweight(CustomKernel):
                               domain=[-1.0, 1.0], norm = 1.0)
         self._L2Norm = 5.0/7.0
 
+    def smooth(self, xs, ys, x):
+        """Returns the kernel smoothing estimate for point x based on x-values
+        xs and y-values ys.
+        Not expected to be called by the user.
+
+        Special implementation optimised for Biweight.
+        """
+
+        def inDomain(xy):
+            """Used for filter to check if point is in the domain"""
+            u = (xy[0]-x)/self.h
+            return u >= self.domain[0] and u <= self.domain[1]
+
+        if self.domain is None:
+            non_empty = True
+        else:
+            filtered = filter(inDomain, zip(xs, ys))
+            if len(filtered) > 0:
+                xs, ys = zip(*filtered)
+                non_empty = True
+            else:
+                non_empty = False
+
+        w = np.sum(square(subtract(1, square(divide(subtract(xs,x), self.h)))))
+        v = np.sum(multiply(ys, square(subtract(1, square(divide(subtract(xs,x),
+                                                                 self.h))))))
+        return v / w
+
 class Triweight(CustomKernel):
     def __init__(self, h=1.0):
         CustomKernel.__init__(self, shape=lambda x: 1.09375*(1 - x*x)**3, h=h,
