@@ -77,6 +77,12 @@ class CustomKernel(object):
     h = property(geth, seth, doc="Kernel Bandwidth")
 
     def inDomain(self, xs, ys, x):
+        """
+        Returns the filtered (xs, ys) based on the Kernel domain centred on x
+        """
+        # Disable black-list functions: filter used for speed instead of
+        # list-comprehension
+        # pylint: disable-msg=W0141
         def isInDomain(xy):
             """Used for filter to check if point is in the domain"""
             u = (xy[0]-x)/self.h
@@ -90,33 +96,16 @@ class CustomKernel(object):
                 xs, ys = zip(*filtered)
                 return (xs, ys)
             else:
-                return ([],[])
+                return ([], [])
 
     def smooth(self, xs, ys, x):
         """Returns the kernel smoothing estimate for point x based on x-values
         xs and y-values ys.
         Not expected to be called by the user.
         """
-        # Disable black-list functions: filter used for speed instead of
-        # list-comprehension
-        # pylint: disable-msg=W0141
+        xs, ys = self.inDomain(xs, ys, x)
 
-        def inDomain(xy):
-            """Used for filter to check if point is in the domain"""
-            u = (xy[0]-x)/self.h
-            return u >= self.domain[0] and u <= self.domain[1]
-
-        if self.domain is None:
-            non_empty = True
-        else:
-            filtered = filter(inDomain, zip(xs, ys))
-            if len(filtered) > 0:
-                xs, ys = zip(*filtered)
-                non_empty = True
-            else:
-                non_empty = False
-
-        if non_empty:
+        if len(xs)>0:
             w = np.sum([self((xx-x)/self.h) for xx in xs])
             v = np.sum([yy*self((xx-x)/self.h) for xx, yy in zip(xs, ys)])
             return v / w
@@ -126,25 +115,9 @@ class CustomKernel(object):
     def smoothvar(self, xs, ys, x):
         """Returns the kernel smoothing estimate of the variance at point x.
         """
-        # Disable black-list functions: filter used for speed instead of
-        # list-comprehension
-        # pylint: disable-msg=W0141
+        xs, ys = self.inDomain(xs, ys, x)
 
-        def inDomain(xy):
-            u = (xy[0]-x)/self.h
-            return u >= self.domain[0] and u <= self.domain[1]
-
-        if self.domain is None:
-            non_empty = True
-        else:
-            filtered = filter(inDomain, zip(xs, ys))
-            if len(filtered) > 0:
-                xs, ys = zip(*filtered)
-                non_empty = True
-            else:
-                non_empty = False
-
-        if non_empty:
+        if len(xs) > 0:
             fittedvals = np.array([self.smooth(xs, ys, xx) for xx in xs])
             sqresid = square( subtract(ys, fittedvals) )
             w = np.sum([self((xx-x)/self.h) for xx in xs])
@@ -156,25 +129,9 @@ class CustomKernel(object):
     def smoothconf(self, xs, ys, x):
         """Returns the kernel smoothing estimate with confidence 1sigma bounds
         """
-        # Disable black-list functions: filter used for speed instead of
-        # list-comprehension
-        # pylint: disable-msg=W0141
+        xs, ys = self.inDomain(xs, ys, x)
 
-        def inDomain(xy):
-            u = (xy[0]-x)/self.h
-            return u >= self.domain[0] and u <= self.domain[1]
-
-        if self.domain is None:
-            non_empty = True
-        else:
-            filtered = filter(inDomain, zip(xs, ys))
-            if len(filtered) > 0:
-                xs, ys = zip(*filtered)
-                non_empty = True
-            else:
-                non_empty = False
-
-        if non_empty:
+        if len(xs) > 0:
             fittedvals = np.array([self.smooth(xs, ys, xx) for xx in xs])
             sqresid = square(
                 subtract(ys, fittedvals)
@@ -270,13 +227,55 @@ class Biweight(CustomKernel):
         Special implementation optimised for Biweight.
         """
         xs, ys = self.inDomain(xs, ys, x)
+
         if len(xs) > 0:
-            w = np.sum(square(subtract(1, square(divide(subtract(xs,x), self.h)))))
-            v = np.sum(multiply(ys, square(subtract(1, square(divide(subtract(xs,x),
-                                                                     self.h))))))
+            w = np.sum(square(subtract(1, square(divide(subtract(xs, x),
+                                                        self.h)))))
+            v = np.sum(multiply(ys, square(subtract(1, square(divide(
+                                                subtract(xs, x), self.h))))))
             return v / w
         else:
             return np.nan
+
+    def smoothvar(self, xs, ys, x):
+        """
+        Returns the kernel smoothing estimate of the variance at point x.
+        """
+        xs, ys = self.inDomain(xs, ys, x)
+
+        if len(xs) > 0:
+            fittedvals = np.array([self.smooth(xs, ys, xx) for xx in xs])
+            rs = square(subtract(ys, fittedvals))
+            w = np.sum(square(subtract(1.0, square(divide(subtract(xs, x),
+                                                        self.h)))))
+            v = np.sum(multiply(rs, square(subtract(1, square(divide(
+                                                subtract(xs, x), self.h))))))
+            return v / w
+        else:
+            return np.nan
+
+    def smoothconf(self, xs, ys, x):
+        """Returns the kernel smoothing estimate with confidence 1sigma bounds
+        """
+        xs, ys = self.inDomain(xs, ys, x)
+
+        if len(xs) > 0:
+            fittedvals = np.array([self.smooth(xs, ys, xx) for xx in xs])
+            rs = square(
+                subtract(ys, fittedvals)
+            )
+            w = np.sum(square(subtract(1.0, square(divide(subtract(xs, x),
+                                                        self.h)))))
+            v = np.sum(multiply(rs, square(subtract(1, square(divide(
+                                                subtract(xs, x), self.h))))))
+            var = v / w
+            sd = np.sqrt(var)
+            K = self.L2Norm
+            yhat = self.smooth(xs, ys, x)
+            err = sd * K / np.sqrt(0.9375 * w * self.h)
+            return (yhat - err, yhat, yhat + err)
+        else:
+            return (np.nan, np.nan, np.nan)
 
 class Triweight(CustomKernel):
     def __init__(self, h=1.0):

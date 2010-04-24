@@ -75,7 +75,8 @@ class KernelSmoother(object):
         is denser.
         """
         if confpoints is None:
-            return np.array([self.Kernel.smoothconf(self.x, self.y, xx) for xx in x])
+            return np.array([self.Kernel.smoothconf(self.x, self.y, xx)
+                                                                for xx in x])
         elif isinstance(confpoints,int):
             fit = self.predict(x)
             sorted_x = array(self.x)
@@ -83,7 +84,8 @@ class KernelSmoother(object):
             confx = sorted_x[::confpoints]
             conffit = self.conf(confx)
         else:
-            raise TypeError("confpoint expected integer, got %s"%type(confpoints))
+            raise TypeError("confpoint expected integer, got %s"%type(
+                                                                confpoints))
 
     def var(self, x):
         return np.array([self.Kernel.smoothvar(self.x, self.y, xx) for xx in x])
@@ -207,6 +209,9 @@ if __name__ == "__main__":
     KS2y = KS2.conf(KSx)         #
     K2Var = KS2.std(KSx)         #
     print time.time() - start    # ...than this.
+
+    print "Norm const should be 0.9375"
+    print K2.norm_const
 
     print "L2 Norms Should Match:"
     print K.L2Norm
