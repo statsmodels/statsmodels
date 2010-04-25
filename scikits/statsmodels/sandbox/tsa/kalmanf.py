@@ -17,6 +17,12 @@ from scipy import optimize
 import numpy as np
 from var import chain_dot #TODO: move this to tools
 
+#TODO: See Koopman and Durbin (2000)
+#Fast filtering and smoothing for multivariate state space models
+# and The Riksbank -- Strid and Walentin (2008)
+# Block Kalman filtering for large-scale DSGE models
+# but this is obviously macro model specific
+
 def kalmansmooth(F, A, H, Q, R, y, X, xi10):
     pass
 
