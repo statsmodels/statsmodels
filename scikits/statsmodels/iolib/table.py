@@ -612,37 +612,3 @@ ltx=default_latex_fmt,
 csv=default_csv_fmt
 )
 #########  end: default formats  ##############
-#
-######  Below is part of StatsModels###########
-
-
-##if __name__ == "__main__":
-##        def test_SimpleTable_1():
-##                #desired = '\n=======================\n+      header1 header2-\n+stub1 1.30312 2.73999-\n+stub2 1.95038 2.65765-\n_______________________\n\n'
-##                data = [[1.30312, 2.73999],[1.95038, 2.65765]]
-##                stubs = ('stub1', 'stub2')
-##                header = ('header1', 'header2')
-##                actual = SimpleTable(data, header, stubs,
-##                                     txt_fmt = default_txt_fmt)
-##                print(actual)
-##
-##                actual.extend_right(actual)
-##                print(actual)
-##
-##        def test_SimpleTable_2():
-##                #desired = '\n=====================================================================================\n+           header s1            header d1            header s2            header d2-\n+          stub R1 C1              10.3031           stub R1 C2                20.74-\n+          stub R2 C1              10.9504           stub R2 C2              20.6577-\n_____________________________________________________________________________________\n\n'
-##                data1 = [[1.30312], [2.73999]]
-##                data2 = [[10.95038], [20.65765]]
-##                stubs1 = ('stub R1 C1', 'stub R2 C1')
-##                stubs2 = ('stub R1 C2', 'stub R2 C2')
-##                header1 =['headers1']
-##                header2 = ['headers2']
-##                actual1 = SimpleTable(data1, header1, stubs1, txt_fmt = default_txt_fmt)
-##                print(actual1)
-##                actual2 = SimpleTable(data2, header2, stubs2, txt_fmt = default_txt_fmt)
-##                print(actual2)
-##                actual1.extend_right(actual2)
-##                print(actual1)
-##
-##        test_SimpleTable_1()
-##        test_SimpleTable_2()
