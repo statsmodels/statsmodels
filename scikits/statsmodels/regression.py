@@ -886,6 +886,12 @@ class RegressionResults(LikelihoodModelResults):
                                                  scale)
         self._cache = resettable_cache()
 
+    def __str__(self):
+        self.summary()
+
+    def __repr__(self):
+        print self.summary()
+
     @cache_readonly
     def df_resid(self):
         return self.model.df_resid
@@ -1106,6 +1112,9 @@ class RegressionResults(LikelihoodModelResults):
         -----
         All residual statistics are calculated on whitened residuals.
         """
+        import time
+        from iolib import SimpleTable
+
         if yname is None:
             yname = 'Y'
         if xname is None:
@@ -1113,54 +1122,181 @@ class RegressionResults(LikelihoodModelResults):
                 (i) for i in range(self.model.exog.shape[1])]
         modeltype = self.model.__class__.__name__
 
-#FIXME: better string formatting for alignment
-        import time # delay import until here?
-        import os
-
-        # local time & date
-        t = time.localtime()
-
-        # extra stats
         from stattools import jarque_bera, omni_normtest, durbin_watson
         llf, aic, bic = self.llf, self.aic, self.bic
         JB, JBpv, skew, kurtosis = jarque_bera(self.wresid)
         omni, omnipv = omni_normtest(self.wresid)
 
-        linesep = '\n' #os.linesep
-        fit_sum = linesep+''.join(["="]*80)+linesep
-        fit_sum += "Dependent Variable: " + yname + linesep
-        fit_sum += "Model: " + modeltype + linesep
-        fit_sum += "Method: Least Squares" + linesep
-        fit_sum += "Date: " + time.strftime("%a, %d %b %Y",t) + linesep
-        fit_sum += "Time: " + time.strftime("%H:%M:%S",t) + linesep
-        fit_sum += '# obs:        %5.0f' % self.nobs + linesep
-        fit_sum += 'Df residuals: %5.0f' % self.df_resid + linesep
-        fit_sum += 'Df model:     %5.0f' % self.df_model + linesep
-        fit_sum += ''.join(["="]*80) + linesep
-        fit_sum += 'variable       coefficient       std. error     \
-t-statistic       prob.'+linesep
-        fit_sum += ''.join(["="]*80) + linesep
-        for i in range(len(xname)):
-            fit_sum += '''%-10s    %#12.6g     %#12.6g      %#10.4g       \
-%#5.4g''' % tuple([xname[i],self.params[i],self.bse[i],self.t()[i],
-                    self.pvalues[i]]) + linesep
-        fit_sum += ''.join(["="]*80) + linesep
-        fit_sum += 'Models stats                         Residual stats' +\
-linesep
-        fit_sum += ''.join(["="]*80) + linesep
-        fit_sum += 'R-squared            %-8.5g         Durbin-Watson stat  \
-% -8.4g' % tuple([self.rsquared, durbin_watson(self.wresid)]) + linesep
-        fit_sum += 'Adjusted R-squared   %-8.5g         Omnibus stat        \
-% -8.4g' % tuple([self.rsquared_adj, omni]) + linesep
-        fit_sum += 'F-statistic          %-8.5g         Prob(Omnibus stat)  \
-% -8.4g' % tuple([self.fvalue, omnipv]) + linesep
-        fit_sum += 'Prob (F-statistic)   %-8.5g         JB stat             \
-% -8.4g' % tuple([self.f_pvalue, JB]) + linesep
-        fit_sum += 'Log likelihood       %-8.5g         Prob(JB)            \
-% -8.4g' % tuple([llf, JBpv]) + linesep
-        fit_sum += 'AIC criterion        %-8.5g         Skew                \
-% -8.4g' % tuple([aic, skew]) + linesep
-        fit_sum += 'BIC criterion        %-8.4g         Kurtosis            \
-% -8.4g' % tuple([bic, kurtosis]) + linesep
-        fit_sum += ''.join(["="]*80) + linesep
-        return fit_sum
+        t = time.localtime()
+
+        part1_fmt = dict(
+            data_fmts = ["%s"],
+            data_fmt = "%s",  #deprecated; use data_fmts
+            empty_cell = '',
+            colwidths = 15,
+            colsep=' ',
+            row_pre = '| ',
+            row_post = '|',
+            table_dec_above='=',
+            table_dec_below='',
+            header_dec_below=None,
+            header_fmt = '%s',
+            stub_fmt = '%s',
+            title_align='c',
+            header_align = 'r',
+            data_aligns = "r",
+            stubs_align = "l",
+            fmt = 'txt',
+        )
+        part2_fmt = dict(
+            data_fmts = ["%#12.6g","%#12.6g","%#10.4g","%#5.4g"],
+            data_fmt = "%s",  #deprecated; use data_fmts
+            empty_cell = '',
+            colwidths = 14,
+            colsep='|',
+            row_pre = '| ',
+            row_post = '|',
+            table_dec_above='=',
+            table_dec_below=None,
+            header_dec_below='-',
+            header_fmt = '%s',
+            stub_fmt = '%s',
+            title_align='c',
+            header_align = 'c',
+            data_aligns = "c",
+            stubs_align = "l",
+            fmt = 'txt',
+        )
+        part3_fmt = dict(
+            data_fmts = ["%#12.6g","%#12.6g","%#10.4g","%#5.4g"],
+            data_fmt = "%s",  #deprecated; use data_fmts
+            empty_cell = '',
+            colwidths = 17,
+            colsep=' ',
+            row_pre = '| ',
+            row_post = ' |',
+            table_dec_above='=',
+            table_dec_below='-',
+            header_dec_below='-',
+            header_fmt = '%s',
+            stub_fmt = '%s',
+            title_align='c',
+            header_align = 'c',
+            data_aligns = "c",
+            stubs_align = "l",
+            fmt = 'txt',
+        )
+
+        # Print the first part of the summary table
+        part1data = [[yname],
+                     [modeltype],
+                     ['Least Squares'],
+                     [time.strftime("%a, %d %b %Y",t)],
+                     [time.strftime("%H:%M:%S",t)],
+                     [self.nobs],
+                     [self.df_resid],
+                     [self.df_model]]
+        part1header = None
+        part1title = 'Summary of Regression Results'
+        part1stubs = ('Dependent Variable:',
+                      'Model:',
+                      'Method:',
+                      'Date:',
+                      'Time:',
+                      '# obs:',
+                      'Df residuals:',
+                      'Df model:')
+        part1 = SimpleTable(part1data,
+                            part1header,
+                            part1stubs,
+                            title=part1title,
+                            txt_fmt = part1_fmt)
+
+        ########  summary Part 2   #######
+
+        part2data = zip([self.params[i] for i in range(len(xname))],
+                        [self.bse[i] for i in range(len(xname))],
+                        [self.t()[i] for i in range(len(xname))],
+                        [self.pvalues[i] for i in range(len(xname))])
+        part2header = ('coefficient', 'std. error', 't-statistic', 'prob.')
+        part2stubs = xname
+        #dfmt={'data_fmt':["%#12.6g","%#12.6g","%#10.4g","%#5.4g"]}
+        part2 = SimpleTable(part2data,
+                            part2header,
+                            part2stubs,
+                            title=None,
+                            txt_fmt = part2_fmt)
+
+        ########  summary Part 3   #######
+
+        part3Lheader = ['Models stats']
+        part3Rheader = ['Residual stats']
+        part3Lstubs = ('R-squared:',
+                       'Adjusted R-squared:',
+                       'F-statistic:',
+                       'Prob (F-statistic):',
+                       'Log likelihood:',
+                       'AIC criterion:',
+                       'BIC criterion:',)
+        part3Rstubs = ('Durbin-Watson:',
+                       'Omnibus:',
+                       'Prob(Omnibus):',
+                       'JB:',
+                       'Prob(JB):',
+                       'Skew:',
+                       'Kurtosis:')
+        part3Ldata = [[self.rsquared], [self.rsquared_adj],
+                      [self.fvalue],
+                      [self.f_pvalue],
+                      [llf],
+                      [aic],
+                      [bic]]
+        part3Rdata = [[durbin_watson(self.wresid)],
+                      [omni],
+                      [omnipv],
+                      [JB],
+                      [JBpv],
+                      [skew],
+                      [kurtosis]]
+        part3L = SimpleTable(part3Ldata, part3Lheader, part3Lstubs, txt_fmt = part3_fmt)
+        part3R = SimpleTable(part3Rdata, part3Rheader, part3Rstubs, txt_fmt = part3_fmt)
+        part3L.extend_right(part3R)
+        ########  Print Summary Tables ########
+        print('\n')
+        print(str(part1).rstrip('\n'))
+        print(str(part2).lstrip('\n').rstrip('\n'))
+        print(str(part3L).lstrip('\n'))
+
+##if __name__ == "__main__":
+##    data = np.recfromcsv('datasets/anes96/anes96.csv', delimiter='\t')
+##    ols2 = OLS(data['income'], np.column_stack((data['age'],data['educ']))).fit()
+##    print ols2.summary()
+##
+##"""
+##      Summary of Regression Results
+##=======================================
+##| Dependent Variable:                Y|
+##| Model:                           OLS|
+##| Method:                Least Squares|
+##| Date:               Sat, 01 May 2010|
+##| Time:                       19:35:02|
+##| # obs:                         944.0|
+##| Df residuals:                  942.0|
+##| Df model:                        1.0|
+##=============================================================================
+##|               | coefficient  |  std. error  | t-statistic  |    prob.     |
+##-----------------------------------------------------------------------------
+##| X.0           |    0.0978921 |   0.00806334 |       12.14  |  1.291e-31   |
+##| X.1           |      2.45744 |    0.0830518 |       29.59  |  1.368e-136  |
+##=============================================================================
+##|                        Models stats                       Residual stats  |
+##-----------------------------------------------------------------------------
+##| R-squared:              -0.00789126   Durbin-Watson:           0.766147   |
+##| Adjusted R-squared:     -0.00896121   Omnibus:                  45.9830   |
+##| F-statistic:               -7.37537   Prob(Omnibus):        1.03495e-10   |
+##| Prob (F-statistic):         1.00000   JB:                       51.6050   |
+##| Log likelihood:            -3030.13   Prob(JB):             6.22476e-12   |
+##| AIC criterion:              6064.27   Skew:                   -0.573318   |
+##| BIC criterion:              6073.97   Kurtosis:                 3.05805   |
+##-----------------------------------------------------------------------------
+##"""
