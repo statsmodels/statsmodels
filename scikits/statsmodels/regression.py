@@ -1262,10 +1262,10 @@ class RegressionResults(LikelihoodModelResults):
         part3R = SimpleTable(part3Rdata, part3Rheader, part3Rstubs, txt_fmt = part3_fmt)
         part3L.extend_right(part3R)
         ########  Print Summary Tables ########
-        print('\n')
-        print(str(part1).rstrip('\n'))
-        print(str(part2).lstrip('\n').rstrip('\n'))
-        print(str(part3L).lstrip('\n'))
+        # join table parts then print
+        table = ('\n' + str(part1) + str(part2).lstrip('\n') +
+                 str(part3L).lstrip('\n'))
+        print(table)
 
 ##if __name__ == "__main__":
 ##    data = np.recfromcsv('datasets/anes96/anes96.csv', delimiter='\t')
