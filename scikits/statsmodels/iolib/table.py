@@ -241,15 +241,10 @@ class SimpleTable(list):
         """
         #first get the default formatting
         try:
-            fmt = default_fmts[output_format].copy()
+            fmt = self.output_formats[output_format].copy()
         except KeyError:
             raise ValueError('Unknown format: %s' % output_format)
-        #second get table specific formatting (if possible)
-        try:
-            fmt.update(self.table.output_formats[output_format])
-        except AttributeError:
-            pass
-        #finally, add formatting for this call
+        #then, add formatting specific to this call
         fmt.update(fmt_dict)
         return fmt
     def as_csv(self, **fmt_dict):
@@ -620,8 +615,8 @@ default_txt_fmt = dict(
 )
 
 default_latex_fmt = dict(
-    data_fmts = ["%s"],
-    data_fmt = "%s",  #deprecated; use data_fmts
+    data_fmts = ['%s'],
+    data_fmt = '%s',  #deprecated; use data_fmts
     empty_cell = '',
     colwidths = None,
     colsep=' & ',
@@ -632,8 +627,8 @@ default_latex_fmt = dict(
     header_fmt = r'\textbf{%s}',
     stub_fmt =r'\textbf{%s}',
     header_align = 'c',
-    data_aligns = "c",
-    stubs_align = "l",
+    data_aligns = 'c',
+    stubs_align = 'l',
     fmt = 'ltx',
     row_post = r'  \\'
 )
