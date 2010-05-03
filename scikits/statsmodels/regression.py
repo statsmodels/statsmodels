@@ -1263,8 +1263,6 @@ class RegressionResults(LikelihoodModelResults):
         part3L.extend_right(part3R)
         ########  Print Summary Tables ########
         # join table parts then print
-##        table = ('\n' + str(part1) + str(part2).lstrip('\n') +
-##                 str(part3L).lstrip('\n'))
         table = (str(part1) + '\n' + str(part2) + '\n' + str(part3L))
         return table
 
