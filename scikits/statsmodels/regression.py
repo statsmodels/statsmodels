@@ -1146,7 +1146,7 @@ class RegressionResults(LikelihoodModelResults):
             header_align = 'r',
             data_aligns = "r",
             stubs_align = "l",
-            fmt = 'txt',
+            fmt = 'txt'
         )
         part2_fmt = dict(
             data_fmts = ["%#12.6g","%#12.6g","%#10.4g","%#5.4g"],
@@ -1165,7 +1165,7 @@ class RegressionResults(LikelihoodModelResults):
             header_align = 'c',
             data_aligns = "c",
             stubs_align = "l",
-            fmt = 'txt',
+            fmt = 'txt'
         )
         part3_fmt = dict(
             data_fmts = ["%#12.6g","%#12.6g","%#10.4g","%#5.4g"],
@@ -1184,7 +1184,7 @@ class RegressionResults(LikelihoodModelResults):
             header_align = 'c',
             data_aligns = "c",
             stubs_align = "l",
-            fmt = 'txt',
+            fmt = 'txt'
         )
 
         # Print the first part of the summary table
@@ -1263,13 +1263,13 @@ class RegressionResults(LikelihoodModelResults):
         part3L.extend_right(part3R)
         ########  Print Summary Tables ########
         # join table parts then print
-        table = (str(part1) + '\n' + str(part2) + '\n' + str(part3L))
+        table = str(part1) + '\n' + str(part2) + '\n' + str(part3L)
         return table
 
 ##if __name__ == "__main__":
 ##    data = np.recfromcsv('datasets/anes96/anes96.csv', delimiter='\t')
 ##    ols2 = OLS(data['income'], np.column_stack((data['age'],data['educ']))).fit()
-##    print ols2.summary()
+##    print(ols2.summary())
 ##
 ##"""
 ##      Summary of Regression Results
