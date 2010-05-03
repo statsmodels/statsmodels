@@ -889,8 +889,8 @@ class RegressionResults(LikelihoodModelResults):
     def __str__(self):
         self.summary()
 
-    def __repr__(self):
-        print self.summary()
+##    def __repr__(self):
+##        print self.summary()
 
     @cache_readonly
     def df_resid(self):
@@ -1265,7 +1265,7 @@ class RegressionResults(LikelihoodModelResults):
         # join table parts then print
         table = ('\n' + str(part1) + str(part2).lstrip('\n') +
                  str(part3L).lstrip('\n'))
-        print(table)
+        return table
 
 ##if __name__ == "__main__":
 ##    data = np.recfromcsv('datasets/anes96/anes96.csv', delimiter='\t')
