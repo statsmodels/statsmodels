@@ -1,6 +1,12 @@
 import numpy as np
 import unittest
-from scikits.statsmodels.iolib.table import SimpleTable, default_txt_fmt
+#from scikits.statsmodels.iolib.table import SimpleTable, default_txt_fmt
+
+import sys
+sys.path.append("/Users/vmd/Dropbox/Statsmodels/Descriptive-Stats/scikits/statsmodels/iolib")
+sys.path.append("/Users/vmd/Dropbox/Statsmodels/Descriptive-Stats/scikits/statsmodels/tests")
+from table import SimpleTable, default_txt_fmt
+from test_regression import TestOLS
 
 class TestSimpleTable(unittest.TestCase):
     def test_SimpleTable_1(self):
@@ -86,7 +92,8 @@ stub R2 C2  40.95038  40.65765
             fmt = 'txt'
         )
         desired = \
-'''*************************************************
+'''                                    test tiltle
+*************************************************
 *       *       *    header1    *    header2    *
 *************************************************
 *          stub1*1.30312        *2.73999        *
@@ -95,58 +102,64 @@ stub R2 C2  40.95038  40.65765
         test1data = [[1.30312, 2.73999],[1.95038, 2.65765]]
         test1stubs = ('stub1', 'stub2')
         test1header = ('header1', 'header2')
-        actual = SimpleTable(test1data, test1header, test1stubs,
+        actual = SimpleTable(test1data, test1header, test1stubs, title='test tiltle',
                              txt_fmt=test_fmt)
         print('###')
         print(actual)
         print('###')
         self.assertEqual(desired, str(actual))
 
-##    def test_regression_summary(self):
-##        from scikits.statsmodels.tests.test_regression import TestOLS
-##        desired = \
-##'''   Summary of Regression Results
-##====================================
-##Dependent Variable:        Y
-##Model:                    OLS
-##Method:              Least Squares
-##Date:               Sun, 02 May 2010
-##Time:                   23:30:28
-### obs:                    16.0
-##Df residuals:             9.0
-##Df model:                 6.0
-##------------------------------------
-##=====================================================================
-##      coefficient       std. error     t-statistic        prob.
-##---------------------------------------------------------------------
-##X.0  15.0618722715    84.9149257747   0.177376028231  0.863140832808
-##X.1 -0.0358191792926 0.0334910077722  -1.06951631722  0.312681061092
-##X.2  -2.02022980382   0.488399681652  -4.13642735594 0.0025350917341
-##X.3  -1.03322686717   0.214274163162  -4.82198531045 0.00094436676416
-##X.4 -0.0511041056536  0.226073200069 -0.226051144664  0.826211795764
-##X.5  1829.15146461    455.478499142   4.01588981271  0.00303680334162
-##X.6  -3482258.6346    890420.383607   -3.91080291816 0.00356040366371
-##---------------------------------------------------------------------
-##===================================================================
-##                       Models stats                  Residual stats
-##-------------------------------------------------------------------
-##R-squared:            0.995479004577  Durbin-Watson: 2.55948768928
-##Adjusted R-squared:   0.992465007629  Omnibus:       0.748615075597
-##F-statistic:          330.285339235   Prob(Omnibus): 0.687765365455
-##Prob (F-statistic): 4.98403052871e-10 JB:            0.352772786021
-##Log likelihood:       -109.617434808  Prob(JB):      0.838294009804
-##AIC criterion:        233.234869617   Skew:          0.419983800891
-##BIC criterion:        238.642990673   Kurtosis:      2.43373344891
-##-------------------------------------------------------------------'''
-##        aregression = TestOLS()
-##        summarytable = aregression.res1.summary()
-##        print('###')
-##        print(summarytable)
-##        print('###')
-##        print(desired)
-##        print('###')
-##
-##        self.assertEqual(desired, str(summarytable))
+    def test_regression_summary(self):
+        from test_regression import TestOLS
+        desired = \
+'''     Summary of Regression Results
+=======================================
+| Dependent Variable:                Y|
+| Model:                           OLS|
+| Method:                Least Squares|
+| Date:               Mon, 03 May 2010|
+| Time:                       09:07:09|
+| # obs:                          16.0|
+| Df residuals:                    9.0|
+| Df model:                        6.0|
+=============================================================================
+|               | coefficient  |  std. error  | t-statistic  |    prob.     |
+-----------------------------------------------------------------------------
+| X.0           |      15.0619 |      84.9149 |      0.1774  |    0.8631    |
+| X.1           |   -0.0358192 |    0.0334910 |      -1.070  |    0.3127    |
+| X.2           |     -2.02023 |     0.488400 |      -4.136  |   0.002535   |
+| X.3           |     -1.03323 |     0.214274 |      -4.822  |  0.0009444   |
+| X.4           |   -0.0511041 |     0.226073 |     -0.2261  |    0.8262    |
+| X.5           |      1829.15 |      455.478 |       4.016  |   0.003037   |
+| X.6           | -3.48226e+06 |      890420. |      -3.911  |   0.003560   |
+=============================================================================
+|                        Models stats                       Residual stats  |
+-----------------------------------------------------------------------------
+| R-squared:                 0.995479   Durbin-Watson:            2.55949   |
+| Adjusted R-squared:        0.992465   Omnibus:                 0.748615   |
+| F-statistic:                330.285   Prob(Omnibus):           0.687765   |
+| Prob (F-statistic):     4.98403e-10   JB:                      0.352773   |
+| Log likelihood:            -109.617   Prob(JB):                0.838294   |
+| AIC criterion:              233.235   Skew:                    0.419984   |
+| BIC criterion:              238.643   Kurtosis:                 2.43373   |
+-----------------------------------------------------------------------------'''
+        aregression = TestOLS()
+        results = aregression.res1
+        results_summary = results.summary()
+        # test will not pass unless the time value is ignored/changes
+        results_summary.replace(results_summary[143:159], 'Mon, 03 May 2010')
+        results_summary.replace(results_summary[167:174], '09:07:09')
+        print('###')
+        print(results_summary[143:159])
+        print('###')
+        print(results_summary[167:174])
+        print('###')
+        print(results_summary)
+        print('###')
+        print(desired)
+        print('###')
+
+        self.assertEqual(desired, str(results_summary))
 
 if __name__ == "__main__":
     unittest.main()
