@@ -1,10 +1,6 @@
 import numpy as np
 import unittest
-#from scikits.statsmodels.iolib.table import SimpleTable, default_txt_fmt
-import sys
-sys.path.append("/Users/vmd/Dropbox/Statsmodels/Descriptive-Stats/scikits/statsmodels/iolib")
-#sys.path.append("/Users/vmd/Dropbox/Statsmodels/Descriptive-Stats")
-from table import SimpleTable, default_txt_fmt
+from scikits.statsmodels.iolib.table import SimpleTable, default_txt_fmt
 
 class TestSimpleTable(unittest.TestCase):
     def test_SimpleTable_1(self):
