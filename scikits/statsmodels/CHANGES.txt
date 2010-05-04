@@ -2,10 +2,14 @@
 
 
 
-
-
-trunk for 0.2.0
+trunk for 0.3.0
 ---------------
+
+*main changes*
+
+
+0.2.0
+-----
 
 *main changes*
 
