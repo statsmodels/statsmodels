@@ -2,6 +2,9 @@ import numpy as np
 import unittest
 from scikits.statsmodels.iolib.table import SimpleTable, default_txt_fmt
 
+#TODO: Alan has a unit test for SimpleTables that tests Latex and HTML output
+#http://econpy.googlecode.com/svn/trunk/utilities/test_table.py
+
 class TestSimpleTable(unittest.TestCase):
     def test_SimpleTable_1(self):
         """Basic test, test_SimpleTable_1"""

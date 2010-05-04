@@ -1268,36 +1268,36 @@ class RegressionResults(LikelihoodModelResults):
 #      screen. This would take better advantage of table.SimpleTable
         return table
 
-##if __name__ == "__main__":
-##    data = np.recfromcsv('datasets/anes96/anes96.csv', delimiter='\t')
-##    ols2 = OLS(data['income'], np.column_stack((data['age'],data['educ']))).fit()
-##    print(ols2.summary())
-##
-##"""
-##      Summary of Regression Results
-##=======================================
-##| Dependent Variable:                Y|
-##| Model:                           OLS|
-##| Method:                Least Squares|
-##| Date:               Mon, 03 May 2010|
-##| Time:                       19:05:23|
-##| # obs:                         944.0|
-##| Df residuals:                  942.0|
-##| Df model:                        1.0|
-##======================================================================================
-##|                      coefficient       std. error      t-statistic            prob.|
-##--------------------------------------------------------------------------------------
-##| X.0                    0.0978921       0.00806334            12.14        1.291e-31|
-##| X.1                      2.45744        0.0830518            29.59       1.368e-136|
-##======================================================================================
-##|                        Models stats                      Residual stats |
-##---------------------------------------------------------------------------
-##| R-squared:              -0.00789126    Durbin-Watson:          0.766147 |
-##| Adjusted R-squared:     -0.00896121    Omnibus:                 45.9830 |
-##| F-statistic:               -7.37537    Prob(Omnibus):       1.03495e-10 |
-##| Prob (F-statistic):         1.00000    JB:                      51.6050 |
-##| Log likelihood:            -3030.13    Prob(JB):            6.22476e-12 |
-##| AIC criterion:              6064.27    Skew:                  -0.573318 |
-##| BIC criterion:              6073.97    Kurtosis:                3.05805 |
-##---------------------------------------------------------------------------
-##"""
+if __name__ == "__main__":
+    data = np.recfromcsv('datasets/anes96/anes96.csv', delimiter='\t')
+    ols2 = OLS(data['income'], np.column_stack((data['age'],data['educ']))).fit()
+    print(ols2.summary())
+
+"""
+      Summary of Regression Results
+=======================================
+| Dependent Variable:                Y|
+| Model:                           OLS|
+| Method:                Least Squares|
+| Date:               Mon, 03 May 2010|
+| Time:                       19:05:23|
+| # obs:                         944.0|
+| Df residuals:                  942.0|
+| Df model:                        1.0|
+======================================================================================
+|                      coefficient       std. error      t-statistic            prob.|
+--------------------------------------------------------------------------------------
+| X.0                    0.0978921       0.00806334            12.14        1.291e-31|
+| X.1                      2.45744        0.0830518            29.59       1.368e-136|
+======================================================================================
+|                        Models stats                      Residual stats |
+---------------------------------------------------------------------------
+| R-squared:              -0.00789126    Durbin-Watson:          0.766147 |
+| Adjusted R-squared:     -0.00896121    Omnibus:                 45.9830 |
+| F-statistic:               -7.37537    Prob(Omnibus):       1.03495e-10 |
+| Prob (F-statistic):         1.00000    JB:                      51.6050 |
+| Log likelihood:            -3030.13    Prob(JB):            6.22476e-12 |
+| AIC criterion:              6064.27    Skew:                  -0.573318 |
+| BIC criterion:              6073.97    Kurtosis:                3.05805 |
+---------------------------------------------------------------------------
+"""
