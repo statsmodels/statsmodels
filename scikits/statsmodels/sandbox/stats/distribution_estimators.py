@@ -54,6 +54,8 @@ TODOs
 * add maximum spacings estimator, Wikipedia, Per Brodtkorb
 * add parameter estimation based on empirical characteristic function
   (Carrasco/Florens), especially for stable distribution
+* provide a model class based on estimating all distributions, and collect
+  all distribution specific information
 
 
 References
