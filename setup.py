@@ -133,7 +133,7 @@ if __name__ == "__main__":
 
     setup(configuration = configuration,
         #name = DISTNAME,
-        install_requires = 'numpy',
+        #install_requires = 'numpy',
         namespace_packages = ['scikits'],
         packages = setuptools.find_packages(),
         include_package_data = True,
