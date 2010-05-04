@@ -1263,6 +1263,9 @@ class RegressionResults(LikelihoodModelResults):
         ########  Return Summary Tables ########
         # join table parts then print
         table = str(part1) + '\n' + str(part2) + '\n' + str(part3L)
+#TODO: return should require a argument in regression.summary(text)
+#      __str__ can be define to retun regression.summary(text) for printing to
+#      screen. This would take better advantage of table.SimpleTable
         return table
 
 ##if __name__ == "__main__":
