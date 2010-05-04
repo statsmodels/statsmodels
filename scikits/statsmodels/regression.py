@@ -1131,7 +1131,6 @@ class RegressionResults(LikelihoodModelResults):
 
         part1_fmt = dict(
             data_fmts = ["%s"],
-            data_fmt = "%s",  #deprecated; use data_fmts
             empty_cell = '',
             colwidths = 15,
             colsep=' ',
@@ -1150,40 +1149,38 @@ class RegressionResults(LikelihoodModelResults):
         )
         part2_fmt = dict(
             data_fmts = ["%#12.6g","%#12.6g","%#10.4g","%#5.4g"],
-            data_fmt = "%s",  #deprecated; use data_fmts
             empty_cell = '',
-            colwidths = 14,
-            colsep='|',
+            colwidths = 15,
+            colsep='  ',
             row_pre = '| ',
             row_post = '|',
             table_dec_above='=',
-            table_dec_below=None,
+            table_dec_below='=',
             header_dec_below='-',
             header_fmt = '%s',
             stub_fmt = '%s',
             title_align='c',
-            header_align = 'c',
-            data_aligns = "c",
-            stubs_align = "l",
+            header_align = 'r',
+            data_aligns = 'r',
+            stubs_align = 'l',
             fmt = 'txt'
         )
         part3_fmt = dict(
             data_fmts = ["%#12.6g","%#12.6g","%#10.4g","%#5.4g"],
-            data_fmt = "%s",  #deprecated; use data_fmts
             empty_cell = '',
-            colwidths = 17,
-            colsep=' ',
+            colwidths = None,
+            colsep='    ',
             row_pre = '| ',
             row_post = ' |',
-            table_dec_above='=',
+            table_dec_above=None,
             table_dec_below='-',
             header_dec_below='-',
             header_fmt = '%s',
             stub_fmt = '%s',
             title_align='c',
-            header_align = 'c',
-            data_aligns = "c",
-            stubs_align = "l",
+            header_align = 'r',
+            data_aligns = 'r',
+            stubs_align = 'l',
             fmt = 'txt'
         )
 
@@ -1258,10 +1255,12 @@ class RegressionResults(LikelihoodModelResults):
                       [JBpv],
                       [skew],
                       [kurtosis]]
-        part3L = SimpleTable(part3Ldata, part3Lheader, part3Lstubs, txt_fmt = part3_fmt)
-        part3R = SimpleTable(part3Rdata, part3Rheader, part3Rstubs, txt_fmt = part3_fmt)
+        part3L = SimpleTable(part3Ldata, part3Lheader, part3Lstubs,
+                             txt_fmt = part3_fmt)
+        part3R = SimpleTable(part3Rdata, part3Rheader, part3Rstubs,
+                             txt_fmt = part3_fmt)
         part3L.extend_right(part3R)
-        ########  Print Summary Tables ########
+        ########  Return Summary Tables ########
         # join table parts then print
         table = str(part1) + '\n' + str(part2) + '\n' + str(part3L)
         return table
@@ -1277,25 +1276,25 @@ class RegressionResults(LikelihoodModelResults):
 ##| Dependent Variable:                Y|
 ##| Model:                           OLS|
 ##| Method:                Least Squares|
-##| Date:               Sat, 01 May 2010|
-##| Time:                       19:35:02|
+##| Date:               Mon, 03 May 2010|
+##| Time:                       19:05:23|
 ##| # obs:                         944.0|
 ##| Df residuals:                  942.0|
 ##| Df model:                        1.0|
-##=============================================================================
-##|               | coefficient  |  std. error  | t-statistic  |    prob.     |
-##-----------------------------------------------------------------------------
-##| X.0           |    0.0978921 |   0.00806334 |       12.14  |  1.291e-31   |
-##| X.1           |      2.45744 |    0.0830518 |       29.59  |  1.368e-136  |
-##=============================================================================
-##|                        Models stats                       Residual stats  |
-##-----------------------------------------------------------------------------
-##| R-squared:              -0.00789126   Durbin-Watson:           0.766147   |
-##| Adjusted R-squared:     -0.00896121   Omnibus:                  45.9830   |
-##| F-statistic:               -7.37537   Prob(Omnibus):        1.03495e-10   |
-##| Prob (F-statistic):         1.00000   JB:                       51.6050   |
-##| Log likelihood:            -3030.13   Prob(JB):             6.22476e-12   |
-##| AIC criterion:              6064.27   Skew:                   -0.573318   |
-##| BIC criterion:              6073.97   Kurtosis:                 3.05805   |
-##-----------------------------------------------------------------------------
+##======================================================================================
+##|                      coefficient       std. error      t-statistic            prob.|
+##--------------------------------------------------------------------------------------
+##| X.0                    0.0978921       0.00806334            12.14        1.291e-31|
+##| X.1                      2.45744        0.0830518            29.59       1.368e-136|
+##======================================================================================
+##|                        Models stats                      Residual stats |
+##---------------------------------------------------------------------------
+##| R-squared:              -0.00789126    Durbin-Watson:          0.766147 |
+##| Adjusted R-squared:     -0.00896121    Omnibus:                 45.9830 |
+##| F-statistic:               -7.37537    Prob(Omnibus):       1.03495e-10 |
+##| Prob (F-statistic):         1.00000    JB:                      51.6050 |
+##| Log likelihood:            -3030.13    Prob(JB):            6.22476e-12 |
+##| AIC criterion:              6064.27    Skew:                  -0.573318 |
+##| BIC criterion:              6073.97    Kurtosis:                3.05805 |
+##---------------------------------------------------------------------------
 ##"""
