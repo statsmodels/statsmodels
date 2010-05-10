@@ -294,12 +294,12 @@ class GLM(LikelihoodModel):
             elif self.scaletype.lower() == 'dev':
                 return self.family.deviance(self.endog, mu)/self.df_resid
             else:
-                raise ValueError, "Scale %s with type %s not understood" %\
-                    (self.scaletype,type(self.scaletype))
+                raise ValueError("Scale %s with type %s not understood" %
+                    (self.scaletype,type(self.scaletype)))
 
         else:
-            raise ValueError, "Scale %s with type %s not understood" %\
-                (self.scaletype, type(self.scaletype))
+            raise ValueError("Scale %s with type %s not understood" %
+                (self.scaletype, type(self.scaletype)))
 
     def predict(self, exog, params=None):
         """
@@ -321,8 +321,8 @@ class GLM(LikelihoodModel):
         If the model as not yet been fit, params is not optional.
         """
         if self._results is None and params is None:
-            raise ValueError, "If the model has not been fit, then you must \
-specify the params argument."
+            raise ValueError("If the model has not been fit, then you must \
+specify the params argument.")
         if self._results is not None:
             return np.dot(exog, self.results.params)
         else:
@@ -357,8 +357,8 @@ specify the params argument."
         '''
         if np.shape(data_weights) != () and not isinstance(self.family,
                 family.Binomial):
-            raise ValueError, "Data weights are only to be supplied for\
-the Binomial family"
+            raise ValueError("Data weights are only to be supplied for \
+the Binomial family")
         self.data_weights = data_weights
         if np.shape(self.data_weights) == () and self.data_weights>1:
             self.data_weights = self.data_weights *\
@@ -374,8 +374,8 @@ the Binomial family"
         self.iteration += 1
         dev = self.family.deviance(self.endog, mu)
         if np.isnan(dev):
-            raise ValueError, "The first guess on the deviance function \
-returned a nan.  This could be a boundary problem and should be reported."
+            raise ValueError("The first guess on the deviance function \
+returned a nan.  This could be a boundary problem and should be reported.")
         else:
             self.history['deviance'].append(dev)
             # first guess on the deviance is assumed to be scaled by 1.

@@ -107,7 +107,7 @@ class TestGlmGaussian(CheckModelResults):
 
     def setup(self):
         if skipR:
-            raise SkipTest, "Rpy not installed."
+            raise SkipTest("Rpy not installed.")
         Gauss = r.gaussian
         self.res2 = RModel(self.data.endog, self.data.exog, r.glm, family=Gauss)
         self.res2.resids = np.array(self.res2.resid)[:,None]*np.ones((1,5))
@@ -152,7 +152,7 @@ class TestGaussianLog(CheckModelResults):
 
     def setup(self):
         if skipR:
-            raise SkipTest, "Rpy not installed"
+            raise SkipTest("Rpy not installed")
         GaussLogLink = r.gaussian(link = "log")
         GaussLog_Res_R = RModel(self.lny, self.X, r.glm, family=GaussLogLink)
         self.res2 = GaussLog_Res_R
@@ -187,7 +187,7 @@ class TestGaussianInverse(CheckModelResults):
 
     def setup(self):
         if skipR:
-            raise SkipTest, "Rpy not installed."
+            raise SkipTest("Rpy not installed.")
         InverseLink = r.gaussian(link = "inverse")
         InverseLink_Res_R = RModel(self.y_inv, self.X, r.glm, family=InverseLink)
         self.res2 = InverseLink_Res_R
@@ -371,7 +371,7 @@ class TestGlmGammaLog(CheckModelResults):
 
     def setup(self):
         if skipR:
-            raise SkipTest, "Rpy not installed."
+            raise SkipTest("Rpy not installed.")
         self.res2 = RModel(self.data.endog, self.data.exog, r.glm,
             family=r.Gamma(link="log"))
         self.res2.null_deviance = 27.92207137420696 # From R (bug in rpy)
@@ -402,7 +402,7 @@ class TestGlmGammaIdentity(CheckModelResults):
 
     def setup(self):
         if skipR:
-            raise SkipTest, "Rpy not installed."
+            raise SkipTest("Rpy not installed.")
         self.res2 = RModel(self.data.endog, self.data.exog, r.glm,
             family=r.Gamma(link="identity"))
         self.res2.null_deviance = 27.92207137420696 # from R, Rpy bug
@@ -525,7 +525,7 @@ class TestGlmInvgaussLog(CheckModelResults):
 
     def setup(self):
         if skipR:
-            raise SkipTest, "Rpy not installed."
+            raise SkipTest("Rpy not installed.")
         self.res2 = RModel(self.data.endog, self.data.exog, r.glm,
             family=r.inverse_gaussian(link="log"))
         self.res2.null_deviance = 335.1539777981053 # from R, Rpy bug
@@ -556,7 +556,7 @@ class TestGlmInvgaussIdentity(CheckModelResults):
 
     def setup(self):
         if skipR:
-            raise SkipTest, "Rpy not installed."
+            raise SkipTest("Rpy not installed.")
         self.res2 = RModel(self.data.endog, self.data.exog, r.glm,
             family=r.inverse_gaussian(link="identity"))
         self.res2.null_deviance = 335.1539777981053 # from R, Rpy bug
@@ -595,7 +595,7 @@ class TestGlmNegbinomial(CheckModelResults):
 
     def setup(self):
         if skipR:
-            raise SkipTest, "Rpy not installed"
+            raise SkipTest("Rpy not installed")
         r.library('MASS')  # this doesn't work when done in rmodelwrap?
         self.res2 = RModel(self.data.endog, self.data.exog, r.glm,
                 family=r.negative_binomial(1))

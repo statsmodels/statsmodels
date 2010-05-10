@@ -121,7 +121,7 @@ class RModel(object):
 def RModelConvert(model, sec_title=None, results_title=None):
     import os
     if not results_title:
-        raise AttributeError, "You need to specify a results title"
+        raise AttributeError("You need to specify a results title")
     outfile = open('./model_results.py', 'a')
     outfile.write('class '+results_title)
     outfile.write(' '*4)    # handle indents

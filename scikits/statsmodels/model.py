@@ -47,9 +47,9 @@ class Model(object):
             if exog.ndim == 1:
                 exog = exog[:,None]
             if exog.ndim != 2:
-                raise ValueError, "exog is not 1d or 2d"
+                raise ValueError("exog is not 1d or 2d")
             if endog.shape[0] != exog.shape[0]:
-                raise ValueError, "endog and exog matrices are not aligned."
+                raise ValueError("endog and exog matrices are not aligned.")
         self.endog = endog
         self.exog = exog
         self.nobs = float(self.endog.shape[0])
@@ -131,7 +131,7 @@ class LikelihoodModel(Model):
         if start_params is None:
             start_params = [0]*self.exog.shape[1] # will fail for shape (K,)
         if not method in methods:
-            raise ValueError, "Unknown fit method %s" % method
+            raise ValueError("Unknown fit method %s" % method)
         f = lambda params: -self.loglike(params)
         score = lambda params: -self.score(params)
 #        hess = lambda params: -self.hessian(params)
@@ -248,8 +248,8 @@ class LikelihoodModelResults(Results):
         """
 
         if self.normalized_cov_params is None:
-            raise ValueError, 'need covariance of parameters for computing T\
- statistics'
+            raise ValueError('need covariance of parameters for computing T\
+ statistics')
 
         if column is None:
             column = range(self.params.shape[0])

@@ -34,7 +34,7 @@ def dfuller(X, nlags=1, noconstant=False, trend=False):
 
     """
     if nlags < 0:
-        raise ValueError, "nlags should be >= 0"
+        raise ValueError("nlags should be >= 0")
     X = np.asarray(X).squeeze()
     nobs = float(len(X))
     xdiff = np.diff(X)
@@ -75,7 +75,7 @@ def acorr(X,nlags=40, level=95):
     X = np.asarray(X).squeeze()
     nobs = float(len(X))
     if nlags > nobs:
-        raise ValueError, "X does not have %s observations" % nlags
+        raise ValueError("X does not have %s observations" % nlags)
     Xbar = np.mean(X)
     acf = np.zeros(nlags)
     acov0 = np.var(X)
@@ -96,7 +96,7 @@ def pacorr(X,nlags=40, method="ols"):
     X = np.asarray(X).squeeze()
     nobs = float(len(X))
     if nlags > nobs:
-        raise ValueError, "X does not have %s observations" % nlags
+        raise ValueError("X does not have %s observations" % nlags)
     pacf = np.zeros(nlags)
     for i in range(1,nlags+1):
         pacf[i-1] = sm.OLS(X[i:],sm.add_constant(lagmat(X, i,

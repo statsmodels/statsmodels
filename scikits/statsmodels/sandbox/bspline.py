@@ -207,7 +207,7 @@ class BSpline(object):
         knots = np.squeeze(np.unique(np.asarray(knots)))
 
         if knots.ndim != 1:
-            raise ValueError, 'expecting 1d array for knots'
+            raise ValueError('expecting 1d array for knots')
 
         self.m = order
         if M is None:
@@ -222,7 +222,7 @@ class BSpline(object):
         else:
             self.coef = np.squeeze(coef)
             if self.coef.shape != (self.K + 2 * self.M - self.m):
-                raise ValueError, 'coefficients of Bspline have incorrect shape'
+                raise ValueError('coefficients of Bspline have incorrect shape')
         if x is not None:
             self.x = x
 
@@ -335,10 +335,9 @@ class BSpline(object):
             v = _hbspline.evaluate(x, self.tau, self.m, int(d), lower, upper)
         else:
             if d.shape[0] != 2:
-                raise ValueError, "if d is not an integer, expecting a jx2 \
+                raise ValueError("if d is not an integer, expecting a jx2 \
                    array with first row indicating order \
-                   of derivative, second row coefficient in front."
-
+                   of derivative, second row coefficient in front.")
             v = 0
             for i in range(d.shape[1]):
                 v += d[1,i] * _hbspline.evaluate(x, self.tau, self.m, d[0,i], lower, upper)
@@ -388,9 +387,9 @@ class BSpline(object):
         else:
             d = np.asarray(d)
             if d.shape[0] != 2:
-                raise ValueError, "if d is not an integer, expecting a jx2 \
+                raise ValueError("if d is not an integer, expecting a jx2 \
                    array with first row indicating order \
-                   of derivative, second row coefficient in front."
+                   of derivative, second row coefficient in front.")
             if d.shape == (2,):
                 d.shape = (2,1)
             self.g = 0
@@ -462,8 +461,8 @@ class SmoothingSpline(BSpline):
             banded = False
 
         if x.shape != y.shape:
-            raise ValueError, 'x and y shape do not agree, by default x are \
-               the Bspline\'s internal knots'
+            raise ValueError('x and y shape do not agree, by default x are \
+               the Bspline\'s internal knots')
 
         if pen >= self.penmax:
             pen = self.penmax
@@ -624,8 +623,8 @@ class SmoothingSpline(BSpline):
             else:
                 apen, bpen = apen, curpen
             if apen >= self.penmax:
-                raise ValueError, "penalty too large, try setting penmax \
-                   higher or decreasing df"
+                raise ValueError("penalty too large, try setting penmax \
+                   higher or decreasing df")
             if np.fabs(curdf - df) / df < tol:
                 break
 

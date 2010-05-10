@@ -130,7 +130,7 @@ class Unit(object):
             return (np.log(L.det(self.W)) - (self.r * np.dot(self.W, self.r)).sum()) / 2.
         else:
             if a is None:
-                raise ValueError, 'need fixed effect a for REML contribution to log-likelihood'
+                raise ValueError('need fixed effect a for REML contribution to log-likelihood')
             r = self.Y - np.dot(self.X, a)
             return (np.log(L.det(self.W)) - (r * np.dot(self.W, r)).sum()) / 2.
 

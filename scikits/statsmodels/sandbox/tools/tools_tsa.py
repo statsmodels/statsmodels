@@ -48,7 +48,7 @@ def lagmat(x, maxlag, trim='forward'):
     elif trimlower == 'backward':
         return lm[maxlag:,:]
     else:
-        raise ValueError, 'trim option not valid'
+        raise ValueError('trim option not valid')
 
 def lagmat2ds(x, maxlag0, maxlagex=None, dropex=0, trim='forward'):
     '''generate lagmatrix for 2d array, columns arranged by variables

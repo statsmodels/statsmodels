@@ -41,7 +41,7 @@ def qqplot(data, dist=stats.distributions.norm, binom_n=None):
     try:
         from matplotlib import pyplot as plt
     except:
-        ImportError, "matplotlib not installed"
+        raise ImportError("matplotlib not installed")
 
     if isinstance(dist, str):
         raise NotImplementedError

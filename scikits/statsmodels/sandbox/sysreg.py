@@ -98,11 +98,11 @@ class SUR(object):
 #TODO: Does each equation need nobs to be the same?
     def __init__(self, sys, sigma=None, dfk=None):
         if len(sys) % 2 != 0:
-            raise ValueError, "sys must be a list of pairs of endogenous and \
-exogenous variables.  Got length %s" % len(sys)
+            raise ValueError("sys must be a list of pairs of endogenous and \
+exogenous variables.  Got length %s" % len(sys))
         if dfk:
             if not dfk.lower() in ['dfk1','dfk2']:
-                raise ValueError, "dfk option %s not understood" % (dfk)
+                raise ValueError("dfk option %s not understood" % (dfk))
         self._dfk = dfk
         M = len(sys[1::2])
         self._M = M
@@ -290,8 +290,8 @@ class Sem2SLS(object):
     """
     def __init__(self, sys, indep_endog=None, instruments=None):
         if len(sys) % 2 != 0:
-            raise ValueError, "sys must be a list of pairs of endogenous and \
-exogenous variables.  Got length %s" % len(sys)
+            raise ValueError("sys must be a list of pairs of endogenous and \
+exogenous variables.  Got length %s" % len(sys))
         M = len(sys[1::2])
         self._M = M
 # The lists are probably a bad idea
@@ -320,8 +320,8 @@ exogenous variables.  Got length %s" % len(sys)
                 iter(indep_endog[eq_key])
             except:
 #                eq_key = [eq_key]
-                raise TypeError, "The values of the indep_exog dict must be\
- iterable. Got type %s for converter %s" % (type(del_col))
+                raise TypeError("The values of the indep_exog dict must be\
+ iterable. Got type %s for converter %s" % (type(del_col)))
 #            for del_col in indep_endog[eq_key]:
 #                fullexog = np.delete(fullexog,  _col_map[eq_key]+del_col, 1)
 #                _col_map[eq_key+1:] -= 1

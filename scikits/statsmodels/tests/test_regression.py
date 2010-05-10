@@ -38,7 +38,7 @@ class CheckRegressionResults(object):
             self.check_confidenceintervals(self.res1.conf_int(),
                 self.res2.conf_int)
         else:
-            raise SkipTest, "Results from Rpy"
+            raise SkipTest("Results from Rpy")
 
     def test_conf_int_subset(self):
         if len(self.res1.params) > 1:
@@ -55,40 +55,40 @@ class CheckRegressionResults(object):
         if hasattr(self.res2, 'rsquared'):
             assert_almost_equal(self.res1.rsquared, self.res2.rsquared,DECIMAL)
         else:
-            raise SkipTest, "Results from R"
+            raise SkipTest("Results from R")
 
     def test_rsquared_adju(self):
         if hasattr(self.res2, 'rsquared_adj'):
             assert_almost_equal(self.res1.rsquared_adj, self.res2.rsquared_adj,
                     DECIMAL)
         else:
-            raise SkipTest, "Results from R"
+            raise SkipTest("Results from R")
 
     def test_degrees(self):
         if hasattr(self.res2, 'df_resid') and hasattr(self.res2, 'df_model'):
             assert_almost_equal(self.res1.model.df_model, self.res2.df_model, DECIMAL)
             assert_almost_equal(self.res1.model.df_resid, self.res2.df_resid, DECIMAL)
         else:
-            raise SkipTest, "Results from R"
+            raise SkipTest("Results from R")
 
     def test_explained_sumof_squares(self):
         if hasattr(self.res2, 'ess'):
             assert_almost_equal(self.res1.ess, self.res2.ess, DECIMAL)
         else:
-            raise SkipTest, "Results from Rpy"
+            raise SkipTest("Results from Rpy")
 
     def test_sumof_squaredresids(self):
         if hasattr(self.res2, 'ssr'):
             assert_almost_equal(self.res1.ssr, self.res2.ssr,DECIMAL)
         else:
-            raise SkipTest, "Results from Rpy"
+            raise SkipTest("Results from Rpy")
 
     def test_mean_squared_error(self):
         if hasattr(self.res2, "mse_model") and hasattr(self.res2, "mse_resid"):
             assert_almost_equal(self.res1.mse_model, self.res2.mse_model, DECIMAL)
             assert_almost_equal(self.res1.mse_resid, self.res2.mse_resid, DECIMAL)
         else:
-            raise SkipTest, "Results from Rpy"
+            raise SkipTest("Results from Rpy")
 
     def test_fvalue(self):
         if hasattr(self.res2, 'fvalue'):
@@ -105,13 +105,13 @@ class CheckRegressionResults(object):
         if hasattr(self.res2, 'aic'):
             assert_almost_equal(self.res1.aic, self.res2.aic, DECIMAL)
         else:
-            raise SkipTest, "Results from Rpy"
+            raise SkipTest("Results from Rpy")
 
     def test_bic(self):
         if hasattr(self.res2, 'bic'):
             assert_almost_equal(self.res1.bic, self.res2.bic, DECIMAL)
         else:
-            raise SkipTest, "Results from Rpy"
+            raise SkipTest("Results from Rpy")
 
     def test_pvalues(self):
         assert_almost_equal(self.res1.pvalues, self.res2.pvalues, DECIMAL)
@@ -200,11 +200,11 @@ class TestFTest2(TestFtest):
 
     def setup(self):
         if skipR:
-            raise SkipTest, "Rpy not installed"
+            raise SkipTest("Rpy not installed")
         try:
             r.library('car')
         except RPyRException:
-            raise SkipTest, "car library not installed for R"
+            raise SkipTest("car library not installed for R")
         self.R2 = [[0,1,-1,0,0,0,0],[0, 0, 0, 0, 1, -1, 0]]
         self.Ftest2 = self.res1.f_test(self.R2)
         self.R_Results = RModel(self.data.endog, self.data.exog, r.lm).robj
@@ -239,7 +239,7 @@ class TestTtest(object):
 
     def setup(self):
         if skipR:
-            raise SkipTest, "Rpy not installed"
+            raise SkipTest("Rpy not installed")
         else:
             self.R = np.identity(len(self.res1.params))
             self.Ttest = self.res1.t_test(self.R)
@@ -269,11 +269,11 @@ class TestTtest2(TestTtest):
     '''
     def setup(self):
         if skipR:
-            raise SkipTest, "Rpy not installed"
+            raise SkipTest("Rpy not installed")
         try:
             r.library('car')
         except RPyRException:
-            raise SkipTest, "car library not installed for R"
+            raise SkipTest("car library not installed for R")
         R = np.zeros(len(self.res1.params))
         R[4:6] = [1,-1]
         self.R = R
@@ -389,7 +389,7 @@ class TestGLS_nosigma(CheckRegressionResults):
 
 #    def setup(self):
 #        if skipR:
-#            raise SkipTest, "Rpy not installed"
+#            raise SkipTest("Rpy not installed")
 #        self.res2 = RModel(self.data.endog, self.data.exog, r.lm,
 #                        weights=1/self.data.exog[:,2])
 #        self.res2.wresid = self.res2.rsum['residuals']
@@ -452,11 +452,12 @@ class TestYuleWalker(object):
     def __init__(self):
         from scikits.statsmodels.datasets.sunspots import Load
         self.data = Load()
-        self.rho, self.sigma = yule_walker(self.data.endog, order=4, method="mle")
+        self.rho, self.sigma = yule_walker(self.data.endog, order=4,
+                method="mle")
 
     def setup(self):
         if skipR:
-            raise SkipTest, "Rpy not installed."
+            raise SkipTest("Rpy not installed.")
 
         R_results = r.ar(self.data.endog, aic="FALSE", order_max=4)
         self.R_params = R_results['ar']

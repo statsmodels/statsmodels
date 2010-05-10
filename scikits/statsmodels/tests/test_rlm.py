@@ -90,7 +90,7 @@ class TestRlm(CheckRlmResults):
 
     def setup(self):
         if skipR:
-            raise SkipTest, "Rpy not installed"
+            raise SkipTest("Rpy not installed")
         r.library('MASS')
         self.res2 = RModel(self.data.endog, self.data.exog,
                         r.rlm, psi="psi.huber")
@@ -112,7 +112,7 @@ class TestHampel(TestRlm):
 
     def setup(self):
         if skipR:
-            raise SkipTest, "Rpy not installed"
+            raise SkipTest("Rpy not installed")
         self.res2 = RModel(self.data.endog[:,None], self.data.exog,
         r.rlm, psi="psi.hampel") #, init="lts")
         self.res2.h1 = model_results.Hampel.h1
@@ -137,7 +137,7 @@ class TestRlmBisquare(TestRlm):
 
     def setup(self):
         if skipR:
-            raise SkipTest, "Rpy not installed"
+            raise SkipTest("Rpy not installed")
         self.res2 = RModel(self.data.endog, self.data.exog,
                         r.rlm, psi="psi.bisquare")
         self.res2.h1 = model_results.Bisquare.h1
@@ -162,7 +162,7 @@ class TestRlmAndrews(TestRlm):
 
     def setup(self):
         if skipR:
-            raise SkipTest, "Rpy not installed"
+            raise SkipTest("Rpy not installed")
 
 ### tests with Huber scaling
 
@@ -187,7 +187,7 @@ class TestRlmHuber(CheckRlmResults):
 
     def setup(self):
         if skipR:
-            raise SkipTest, "Rpy not installed"
+            raise SkipTest("Rpy not installed")
 
 class TestHampelHuber(TestRlm):
     def __init__(self):
@@ -209,7 +209,7 @@ class TestHampelHuber(TestRlm):
 
     def setup(self):
         if skipR:
-            raise SkipTest, "Rpy not installed"
+            raise SkipTest("Rpy not installed")
 
 class TestRlmBisquareHuber(TestRlm):
     def __init__(self):
@@ -232,7 +232,7 @@ class TestRlmBisquareHuber(TestRlm):
 
     def setup(self):
         if skipR:
-            raise SkipTest, "Rpy not installed"
+            raise SkipTest("Rpy not installed")
 
 class TestRlmAndrewsHuber(TestRlm):
     def __init__(self):
@@ -254,7 +254,7 @@ class TestRlmAndrewsHuber(TestRlm):
 
     def setup(self):
         if skipR:
-            raise SkipTest, "Rpy not installed"
+            raise SkipTest("Rpy not installed")
 
 if __name__=="__main__":
     run_module_suite()

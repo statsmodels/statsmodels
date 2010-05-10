@@ -1292,7 +1292,7 @@ class DiscreteResults(LikelihoodModelResults):
             params = np.asarray(params)
             # could prob use a shape check here (do we even need this option?)
         if not at in ['overall','mean','median','zero','all']:
-            raise ValueError, "%s not a valid option for `at`." % at
+            raise ValueError("%s not a valid option for `at`." % at)
 
         exog = model.exog.copy() # copy because values are changed
         ind = exog.var(0) != 0 # index for non-constants
@@ -1300,19 +1300,19 @@ class DiscreteResults(LikelihoodModelResults):
         # get user instructions
         if dummy == True or count == True:
             if method in ['dyex','eyex']:
-                raise ValueError, "%s not allowed for discrete \
-variables" % method
+                raise ValueError("%s not allowed for discrete variables" %
+                        method)
             if at in ['median', 'zero']:
-                raise ValueError, "%s not allowed for discrete \
-variables" % at
+                raise ValueError("%s not allowed for discrete variables" %
+                        at)
             if dummy:
                 dummy_ind = _isdummy(exog)
             if count:
                 count_ind = _iscount(exog)
         if atexog is not None:
             if not isinstance(atexog, dict):
-                raise ValueError, "exog, if not None, should be a dict. \
-Got %s" % type(atexog)
+                raise ValueError("exog, if not None, should be a dict. \
+Got %s" % type(atexog))
             for key in atexog:
                 exog[:,key] = atexog[key]
 
@@ -1323,7 +1323,7 @@ Got %s" % type(atexog)
         elif at == 'zero':
             exog[:,ind] = 0
         if method not in ['dydx','eyex','dyex','eydx']:
-            raise ValueError, "method is not understood.  Got %s" % method
+            raise ValueError("method is not understood.  Got %s" % method)
         # group 1 probit, logit, logistic, cloglog, heckprob, xtprobit
         if isinstance(model, (Probit, Logit)):
             effects = np.dot(model.pdf(np.dot(exog,params))[:,None],

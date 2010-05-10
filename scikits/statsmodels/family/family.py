@@ -1314,7 +1314,9 @@ class NegativeBinomial(Family):
         """
         # don't need to specify mu
         if fittedvalues is None:
-            raise AttributeError, '''The loglikelihood for the negative binomial requires that the fitted values be provided via the `fittedvalues` keyword argument.'''
+            raise AttributeError('The loglikelihood for the negative binomial \
+requires that the fitted values be provided via the `fittedvalues` keyword \
+argument.')
         constant = special.gammaln(Y + 1/self.alpha) - special.gammaln(Y+1)\
                     -special.gammaln(1/self.alpha)
         return np.sum(Y*np.log(self.alpha*np.exp(fittedvalues)/\
