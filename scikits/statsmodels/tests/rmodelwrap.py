@@ -68,9 +68,9 @@ class RModel(object):
             self.df_resid = df[1]
         self.bcov_unscaled = rsum.setdefault('cov.unscaled', None)
         self.bcov = rsum.setdefault('cov.scaled', None)
-        if rsum.has_key('sigma'):
+        if 'sigma' in rsum:
             self.scale = rsum['sigma']
-        elif rsum.has_key('dispersion'):
+        elif 'dispersion' in rsum:
             self.scale = rsum['dispersion']
         else:
             self.scale = None
