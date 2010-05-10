@@ -3,21 +3,35 @@
 * skew normal and skew t distribution by Azzalini, A. & Capitanio, A.
 * Gram-Charlier expansion distribution (using 4 moments),
 * distributions based on non-linear transformation
+  - Transf_gen
   - ExpTransf_gen, LogTransf_gen
   - TransfTwo_gen
     (defines as examples: square, negative square and abs transformations)
+  - this versions are without __new__
 * mnvormcdf, mvstdnormcdf : cdf, rectangular integral for multivariate normal
   distribution
 
-TODO: Where is Transf_gen for general monotonic transformation ?
+TODO:
+* Where is Transf_gen for general monotonic transformation ? found and added it
+* write some docstrings, some parts I don't remember
+* add Box-Cox transformation, parameterized ?
 
 
 this is only partially cleaned, still includes test examples as functions
+
+main changes
+* add transf_gen (2010-05-09)
+* added separate example and tests (2010-05-09)
+* collect transformation function into classes
+
+Author: josef-pktd
+License: BSD
+
 '''
 
 #note copied from distr_skewnorm_0.py
 
-from scipy import stats, special, integrate
+from scipy import stats, special, integrate  # integrate is for scipy 0.6.0 ???
 from scipy.stats import distributions
 from stats_extras import mvsk2mc, mc2mvsk
 import numpy as np
@@ -465,6 +479,128 @@ def examples_normexpand():
     print normexpan.pdf([mc[0]-1,mc[0]+1])
 
 
+## copied from nonlinear_transform_gen.py
+
+''' A class for the distribution of a non-linear monotonic transformation of a continuous random variable
+
+simplest usage:
+example: create log-gamma distribution, i.e. y = log(x),
+            where x is gamma distributed (also available in scipy.stats)
+    loggammaexpg = Transf_gen(stats.gamma, np.log, np.exp)
+
+example: what is the distribution of the discount factor y=1/(1+x)
+            where interest rate x is normally distributed with N(mux,stdx**2)')?
+            (just to come up with a story that implies a nice transformation)
+    invnormalg = Transf_gen(stats.norm, inversew, inversew_inv, decr=True, a=-np.inf)
+
+This class does not work well for distributions with difficult shapes,
+    e.g. 1/x where x is standard normal, because of the singularity and jump at zero.
+
+Note: I'm working from my version of scipy.stats.distribution.
+      But this script runs under scipy 0.6.0 (checked with numpy: 1.2.0rc2 and python 2.4)
+
+This is not yet thoroughly tested, polished or optimized
+
+TODO:
+  * numargs handling is not yet working properly, numargs needs to be specified (default = 0 or 1)
+  * feeding args and kwargs to underlying distribution is untested and incomplete
+  * distinguish args and kwargs for the transformed and the underlying distribution
+    - currently all args and no kwargs are transmitted to underlying distribution
+    - loc and scale only work for transformed, but not for underlying distribution
+    - possible to separate args for transformation and underlying distribution parameters
+
+  * add _rvs as method, will be faster in many cases
+
+
+Created on Tuesday, October 28, 2008, 12:40:37 PM
+Author: josef-pktd
+License: BSD
+
+'''
+
+from scipy import integrate # for scipy 0.6.0
+
+from scipy import stats, info
+from scipy.stats import distributions
+import numpy as np
+
+def get_u_argskwargs(**kwargs):
+    #Todo: What's this? wrong spacing, used in Transf_gen TransfTwo_gen
+    u_kwargs = dict((k.replace('u_','',1),v) for k,v in kwargs.items()
+                    if k.startswith('u_'))
+    u_args = u_kwargs.pop('u_args',None)
+    return u_args, u_kwargs
+
+class Transf_gen(distributions.rv_continuous):
+    '''a class for non-linear monotonic transformation of a continuous random variable
+
+    '''
+    def __init__(self, kls, func, funcinv, *args, **kwargs):
+        #print args
+        #print kwargs
+
+        self.func = func
+        self.funcinv = funcinv
+        #explicit for self.__dict__.update(kwargs)
+        #need to set numargs because inspection does not work
+        self.numargs = kwargs.pop('numargs', 0)
+        print self.numargs
+        name = kwargs.pop('name','transfdist')
+        longname = kwargs.pop('longname','Non-linear transformed distribution')
+        extradoc = kwargs.pop('extradoc',None)
+        a = kwargs.pop('a', -np.inf)
+        b = kwargs.pop('b', np.inf)
+        self.decr = kwargs.pop('decr', False)
+            #defines whether it is a decreasing (True)
+            #       or increasing (False) monotonic transformation
+
+
+        self.u_args, self.u_kwargs = get_u_argskwargs(**kwargs)
+        self.kls = kls   #(self.u_args, self.u_kwargs)
+                         # possible to freeze the underlying distribution
+
+        super(Transf_gen,self).__init__(a=a, b=b, name = name,
+                                longname = longname, extradoc = extradoc)
+
+    def _cdf(self,x,*args, **kwargs):
+        print args
+        if not self.decr:
+            return self.kls._cdf(self.funcinv(x),*args, **kwargs)
+            #note scipy _cdf only take *args not *kwargs
+        else:
+            return 1.0 - self.kls._cdf(self.funcinv(x),*args, **kwargs)
+    def _ppf(self, q, *args, **kwargs):
+        if not self.decr:
+            return self.func(self.kls._ppf(q,*args, **kwargs))
+        else:
+            return self.func(self.kls._ppf(1-q,*args, **kwargs))
+
+
+def inverse(x):
+    return np.divide(1.0,x)
+
+mux, stdx = 0.05, 0.1
+mux, stdx = 9.0, 1.0
+def inversew(x):
+    return 1.0/(1+mux+x*stdx)
+def inversew_inv(x):
+    return (1.0/x - 1.0 - mux)/stdx #.np.divide(1.0,x)-10
+
+def identit(x):
+    return x
+
+invdnormalg = Transf_gen(stats.norm, inversew, inversew_inv, decr=True, #a=-np.inf,
+                numargs = 0, name = 'discf', longname = 'normal-based discount factor',
+                extradoc = '\ndistribution of discount factor y=1/(1+x)) with x N(0.05,0.1**2)')
+
+lognormalg = Transf_gen(stats.norm, np.exp, np.log,
+                numargs = 2, a=0, name = 'lnnorm',
+                longname = 'Exp transformed normal',
+                extradoc = '\ndistribution of y = exp(x), with x standard normal'
+                'precision for moment andstats is not very high, 2-3 decimals')
+
+
+loggammaexpg = Transf_gen(stats.gamma, np.log, np.exp, numargs=1)
 
 ## copied form nonlinear_transform_short.py
 
@@ -618,18 +754,6 @@ TODO:
 
 '''
 
-from scipy import integrate
-
-from scipy import stats, info
-from scipy.stats import distributions
-import numpy as np
-
-#Todo: What's this? wrong spacing, used in TransfTwo_gen
-def get_u_argskwargs(**kwargs):
-        u_kwargs = dict((k.replace('u_','',1),v) for k,v in kwargs.items()
-                        if k.startswith('u_'))
-        u_args = u_kwargs.pop('u_args',None)
-        return u_args, u_kwargs
 
 class TransfTwo_gen(distributions.rv_continuous):
     '''Distribution based on a non-monotonic (u- or hump-shaped transformation)
@@ -664,7 +788,8 @@ class TransfTwo_gen(distributions.rv_continuous):
         name = kwargs.pop('name','transfdist')
         longname = kwargs.pop('longname','Non-linear transformed distribution')
         extradoc = kwargs.pop('extradoc',None)
-        a = kwargs.pop('a', 0)
+        a = kwargs.pop('a', -np.inf) # attached to self in super
+        b = kwargs.pop('b', np.inf)  # self.a, self.b would be overwritten
         self.shape = kwargs.pop('shape', False)
             #defines whether it is a `u` shaped or `hump' shaped
             #       transformation
@@ -674,7 +799,7 @@ class TransfTwo_gen(distributions.rv_continuous):
         self.kls = kls   #(self.u_args, self.u_kwargs)
                          # possible to freeze the underlying distribution
 
-        super(TransfTwo_gen,self).__init__(a=a, name = name,
+        super(TransfTwo_gen,self).__init__(a=a, b=b, name = name,
                                 longname = longname, extradoc = extradoc)
 
     def _rvs(self, *args):
@@ -724,29 +849,39 @@ class TransfTwo_gen(distributions.rv_continuous):
 
 #TODO: rename these functions to have unique names
 
-def inverseplus(x):
-    return np.sqrt(x)
+class SquareFunc(object):
+    '''class to hold quadratic function with inverse function and derivative
 
-def inverseminus(x):
-    return 0.0 - np.sqrt(x)
+    using instance methods instead of class methods, if we want extension
+    to parameterized function
+    '''
+    def inverseplus(self, x):
+        return np.sqrt(x)
 
-def derivplus(x):
-    return 0.5/np.sqrt(x)
+    def inverseminus(self, x):
+        return 0.0 - np.sqrt(x)
 
-def derivminus(x):
-    return 0.0 - 0.5/np.sqrt(x)
+    def derivplus(self, x):
+        return 0.5/np.sqrt(x)
 
-def squarefunc(x):
-    return np.power(x,2)
+    def derivminus(self, x):
+        return 0.0 - 0.5/np.sqrt(x)
 
-squarenormalg = TransfTwo_gen(stats.norm, squarefunc, inverseplus, inverseminus,
-                derivplus, derivminus, shape='u', a=0.0, b=np.inf,
+    def squarefunc(self, x):
+        return np.power(x,2)
+
+sqfunc = SquareFunc()
+
+squarenormalg = TransfTwo_gen(stats.norm, sqfunc.squarefunc, sqfunc.inverseplus,
+                sqfunc.inverseminus, sqfunc.derivplus, sqfunc.derivminus,
+                shape='u', a=0.0, b=np.inf,
                 numargs = 0, name = 'squarenorm', longname = 'squared normal distribution',
                 extradoc = '\ndistribution of the square of a normal random variable' +\
                            ' y=x**2 with x N(0.0,1)')
                         #u_loc=l, u_scale=s)
-squaretg = TransfTwo_gen(stats.t, squarefunc, inverseplus, inverseminus,
-                derivplus, derivminus, shape='u', a=0.0, b=np.inf,
+squaretg = TransfTwo_gen(stats.t, sqfunc.squarefunc, sqfunc.inverseplus,
+                sqfunc.inverseminus, sqfunc.derivplus, sqfunc.derivminus,
+                shape='u', a=0.0, b=np.inf,
                 numargs = 1, name = 'squarenorm', longname = 'squared t distribution',
                 extradoc = '\ndistribution of the square of a t random variable' +\
                            ' y=x**2 with x t(dof,0.0,1)')
@@ -769,7 +904,7 @@ def negsquarefunc(x):
 
 negsquarenormalg = TransfTwo_gen(stats.norm, negsquarefunc, inverseplus, inverseminus,
                 derivplus, derivminus, shape='hump', a=-np.inf, b=0.0,
-                numargs = 0, name = 'negsquarenorm', longname = 'squared normal distribution',
+                numargs = 0, name = 'negsquarenorm', longname = 'negative squared normal distribution',
                 extradoc = '\ndistribution of the negative square of a normal random variable' +\
                            ' y=-x**2 with x N(0.0,1)')
                         #u_loc=l, u_scale=s)
