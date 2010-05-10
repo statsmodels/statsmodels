@@ -1,7 +1,10 @@
+trunk for 0.3.0
+---------------
 
-
-
-
+*Changes that break backwards compatability*
+sandbox/output.py -> iolib/table.py
+lib/io.py -> iolib/foreign.py (stata data format reader available from iolib)
+family -> families
 
 
 trunk for 0.2.0
