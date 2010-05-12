@@ -51,7 +51,7 @@ TODOs
 * question: Are GMM properties different for matching quantiles with cdf or
   ppf? Estimate should be the same, but derivatives of moment conditions
   differ.
-* add maximum spacings estimator, Wikipedia, Per Brodtkorb
+* add maximum spacings estimator, Wikipedia, Per Brodtkorb -> basic version Done
 * add parameter estimation based on empirical characteristic function
   (Carrasco/Florens), especially for stable distribution
 * provide a model class based on estimating all distributions, and collect
@@ -69,10 +69,16 @@ DOI: 10.1016/j.jeconom.2006.05.008.
 http://www.sciencedirect.com/science/article/B6VC0-4K606TK-4/2/78bc07c6245546374490f777a6bdbbcc
 http://escholarship.org/uc/item/7jf5w1ht  (working paper)
 
+Johnson, Kotz, Balakrishnan: Volume 2
+
 
 Author : josef-pktd
 License : BSD
 created : 2010-04-20
+
+changes:
+added Maximum Product-of-Spacings 2010-05-12
+
 '''
 
 
@@ -310,6 +316,109 @@ def fitbinnedgmm(distfn, freq, binedges, start, fixed=None, weightsoptimal=True)
         return np.dot(momcond*weights, momcond)
     return optimize.fmin(gmmobjective, start)
 
+#Addition from try_maxproductspacings:
+"""Estimating Parameters of Log-Normal Distribution with Maximum
+Likelihood and Maximum Product-of-Spacings
+
+MPS definiton from JKB page 233
+
+Created on Tue May 11 13:52:50 2010
+Author: josef-pktd
+License: BSD
+"""
+
+def hess_ndt(fun, pars, args, options):
+    import numdifftools as ndt
+    if not ('stepMax' in options or 'stepFix' in options):
+        options['stepMax'] = 1e-5
+    f = lambda params: fun(params, *args)
+    h = ndt.Hessian(f, **options)
+    return h(pars), h
+
+def logmps(params, xsorted, dist):
+    '''calculate negative log of Product-of-Spacings
+
+    Parameters
+    ----------
+    params : array_like, tuple ?
+        parameters of the distribution funciton
+    xsorted : array_like
+        data that is already sorted
+    dist : instance of a distribution class
+        only cdf method is used
+
+    Returns
+    -------
+    mps : float
+        negative log of Product-of-Spacings
+
+
+    Notes
+    -----
+    MPS definiton from JKB page 233
+    '''
+    xcdf = np.r_[0., dist.cdf(xsorted, *params), 1.]
+    D = np.diff(xcdf)
+    return -np.log(D).mean()
+
+def getstartparams(dist, data):
+    '''get starting values for estimation of distribution parameters
+
+    Parameters
+    ----------
+    dist : distribution instance
+        the distribution instance needs to have either a method fitstart
+        or an attribute numargs
+    data : ndarray
+        data for which preliminary estimator or starting value for
+        parameter estimation is desired
+
+    Returns
+    -------
+    x0 : ndarray
+        preliminary estimate or starting value for the parameters of
+        the distribution given the data, including loc and scale
+
+    '''
+    if hasattr(dist, 'fitstart'):
+        #x0 = getattr(dist, 'fitstart')(data)
+        x0 = dist.fitstart(data)
+    else:
+        if np.isfinite(dist.a):
+            x0 = np.r_[[1.]*dist.numargs, (data.min()-1), 1.]
+        else:
+            x0 = np.r_[[1.]*dist.numargs, (data.mean()-1), 1.]
+    return x0
+
+def fit_mps(dist, data, x0=None):
+    '''Estimate distribution parameters with Maximum Product-of-Spacings
+
+    Parameters
+    ----------
+    params : array_like, tuple ?
+        parameters of the distribution funciton
+    xsorted : array_like
+        data that is already sorted
+    dist : instance of a distribution class
+        only cdf method is used
+
+    Returns
+    -------
+    x : ndarray
+        estimates for the parameters of the distribution given the data,
+        including loc and scale
+
+
+    '''
+    xsorted = np.sort(data)
+    if x0 is None:
+        x0 = getstartparams(dist, xsorted)
+    args = (xsorted, dist)
+    print x0
+    #print args
+    return optimize.fmin(logmps, x0, args=args)
+
+
 
 if __name__ == '__main__':
 
@@ -341,10 +450,13 @@ if __name__ == '__main__':
     #Example beta - distribution
     #---------------------------
 
+    #Warning: this example had cut-and-paste errors
+
     pq = np.array([0.01, 0.05,0.1,0.4,0.6,0.9,0.95,0.99])
     rvsb = stats.beta.rvs(5,15,size=200)
     print stats.beta.fit(rvsb)
-    xqsb = [stats.scoreatpercentile(trvs, p) for p in pq*100]
+    xqsb = [stats.scoreatpercentile(rvsb, p) for p in pq*100]
+    mom2s = np.array([rvsb.mean(), rvsb.var()])
     betaparest_gmmquantile = optimize.fmin(lambda params:np.sum(momentcondquant(stats.beta, params, mom2s,(pq,xqsb), shape=None)**2), [10,10, 0., 1.])
     print 'betaparest_gmmquantile',  betaparest_gmmquantile
     #result sensitive to initial condition
@@ -456,3 +568,54 @@ if __name__ == '__main__':
     tparest_gmm3quantilefsolve  [ 10.   1.   2.]
     tparest_gmm3quantile        [ 6.376101 -0.029322  1.112403]
     '''
+
+    #Example with Maximum Product of Spacings Estimation
+    #===================================================
+
+    #Example: Lognormal Distribution
+    #-------------------------------
+
+    #tough problem for MLE according to JKB
+    #but not sure for which parameters
+
+    sh = np.exp(10)
+    sh = 0.01
+    print sh
+    x = stats.lognorm.rvs(sh,loc=100, scale=10,size=200)
+
+    print x.min()
+    print stats.lognorm.fit(x,  1.,loc=x.min()-1,scale=1)
+
+    xsorted = np.sort(x)
+
+    x0 = [1., x.min()-1, 1]
+    args = (xsorted, stats.lognorm)
+    print optimize.fmin(logmps,x0,args=args)
+
+
+    #Example: Lomax, Pareto, Generalized Pareto Distributions
+    #--------------------------------------------------------
+
+    #partially a follow-up to the discussion about numpy.random.pareto
+    #Reference: JKB
+    #example Maximum Product of Spacings Estimation
+
+    p2rvs = np.random.pareto(2,size=500)# + 1
+    #Note: is Lomax without +1; and classical Pareto with +1
+    p2rvssorted = np.sort(p2rvs)
+    argsp = (p2rvssorted, stats.pareto)
+    x0p = [1., p2rvs.min()-5, 1]
+    print optimize.fmin(logmps,x0p,args=argsp)
+    print stats.pareto.fit(p2rvs, 0.5, loc=-20, scale=0.5)
+    print stats.genpareto.fit(p2rvs)
+    parsgpd = fit_mps(stats.genpareto, p2rvs)
+    print parsgpd
+    argsgpd = (p2rvssorted, stats.genpareto)
+    options = dict(stepFix=1e-7)
+    #hess_ndt(fun, pars, argsgdp, options)
+    #the results for the following look strange, maybe refactoring error
+    he, h = hess_ndt(logmps, parsgpd, argsgpd, options)
+    print np.linalg.eigh(he)[0]
+    f = lambda params: logmps(params, *argsgpd)
+    print f(parsgpd)
+

@@ -6,8 +6,8 @@ in the matplotlib-user mailinglist  (links ???)
 Notes
 =====
 
-out off bounds interpolation raises exception and wouldn't be completely
-defined
+out of bounds interpolation raises exception and wouldn't be completely
+defined ::
 
 >>> scoreatpercentile(x, [0,25,50,100])
 Traceback (most recent call last):
@@ -153,6 +153,14 @@ def empiricalcdf(data, method='Hazen'):
 
 
 class HistDist(object):
+    '''Distribution with piecewise linear cdf, pdf is step function
+
+    can be created from empiricial distribution or from a histogram (not done yet)
+
+    work in progress, not finished
+
+
+    '''
 
     def __init__(self, data):
         self.data = np.atleast_1d(data)

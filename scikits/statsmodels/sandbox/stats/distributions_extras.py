@@ -256,7 +256,7 @@ def pdf_moments_st(cnt):
 
     def thisfunc(x):
         xn = (x-mu)/sig
-        return totp(xn)*exp(-xn*xn/2.0)/sqrt(2*pi)/sig
+        return totp(xn)*exp(-xn*xn/2.0)/sqrt(2*np.pi)/sig
     return thisfunc, totp
 
 def pdf_mvsk(mvsk):
