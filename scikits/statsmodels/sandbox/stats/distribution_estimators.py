@@ -1,5 +1,11 @@
-'''estimate distribution parameters by method of moments or matching quantiles,
-and Maximum Likelihood estimation based on binned data
+'''estimate distribution parameters by various methods
+method of moments or matching quantiles, and Maximum Likelihood estimation
+based on binned data and Maximum Product-of-Spacings
+
+Warning: I'm still finding cut-and-paste and refactoring errors, e.g.
+    hardcoded variables from outer scope in functions
+    some results don't seem to make sense for Pareto case,
+    looks better now after correcting some name errors
 
 initially loosely based on a paper and blog for quantile matching
   by John D. Cook
@@ -220,8 +226,11 @@ def fitquantilesgmm(distfn, x, start=None, pquant=None, frozen=None):
             start = distfn._fitstart(x)
         else:
             start = [1]*distfn.numargs + [0.,1.]
-    xqs = [stats.scoreatpercentile(trvs, p) for p in pquant*100]
-    parest = optimize.fmin(lambda params:np.sum(momentcondquant(distfn, params, mom2s,(pq,xqs), shape=None)**2), start)
+    #TODO: vectorize this:
+    xqs = [stats.scoreatpercentile(x, p) for p in pquant*100]
+    mom2s = None
+    parest = optimize.fmin(lambda params:np.sum(
+        momentcondquant(distfn, params, mom2s,(pquant,xqs), shape=None)**2), start)
     return parest
 
 
@@ -600,16 +609,21 @@ if __name__ == '__main__':
     #Reference: JKB
     #example Maximum Product of Spacings Estimation
 
-    p2rvs = np.random.pareto(2,size=500)# + 1
+    # current results:
+    # doesn't look very good yet sensitivity to starting values
+    # Pareto and Generalized Pareto look like a tough estimation problem
+
+    #p2rvs = np.random.pareto(2,size=500)# + 1
+    p2rvs = stats.genpareto.rvs(2, size=500)
     #Note: is Lomax without +1; and classical Pareto with +1
     p2rvssorted = np.sort(p2rvs)
     argsp = (p2rvssorted, stats.pareto)
     x0p = [1., p2rvs.min()-5, 1]
     print optimize.fmin(logmps,x0p,args=argsp)
     print stats.pareto.fit(p2rvs, 0.5, loc=-20, scale=0.5)
-    print stats.genpareto.fit(p2rvs)
+    print 'gpdparest_ mle', stats.genpareto.fit(p2rvs)
     parsgpd = fit_mps(stats.genpareto, p2rvs)
-    print parsgpd
+    print 'gpdparest_ mps', parsgpd
     argsgpd = (p2rvssorted, stats.genpareto)
     options = dict(stepFix=1e-7)
     #hess_ndt(fun, pars, argsgdp, options)
@@ -618,4 +632,36 @@ if __name__ == '__main__':
     print np.linalg.eigh(he)[0]
     f = lambda params: logmps(params, *argsgpd)
     print f(parsgpd)
-
+    #add binned
+    fp2, bp2 = np.histogram(p2rvs, bins=50)
+    'fitbinned t-distribution'
+    gpdparest_mlebinel = fitbinned(stats.genpareto, fp2, bp2, x0p)
+    gpdparest_gmmbinelidentity = fitbinnedgmm(stats.genpareto, fp2, bp2, x0p)
+    print 'gpdparest_mlebinel', gpdparest_mlebinel
+    print 'gpdparest_gmmbinelidentity', gpdparest_gmmbinelidentity
+    gpdparest_gmmquantile2 = fitquantilesgmm(stats.genpareto, p2rvs, start=x0p, pquant=None, frozen=None)
+    print 'gpdparest_gmmquantile2', gpdparest_gmmquantile2
+    #something wrong : something hard coded ?
+    '''
+    >>> fitquantilesgmm(stats.genpareto, p2rvs, start=x0p, pquant=np.linspace(0.5,0.95,10), frozen=None)
+    Traceback (most recent call last):
+      File "<pyshell#6>", line 1, in <module>
+        fitquantilesgmm(stats.genpareto, p2rvs, start=x0p, pquant=np.linspace(0.5,0.95,10), frozen=None)
+      File "C:\...\scikits\statsmodels\sandbox\stats\distribution_estimators.py", line 224, in fitquantilesgmm
+        parest = optimize.fmin(lambda params:np.sum(momentcondquant(distfn, params, mom2s,(pq,xqs), shape=None)**2), start)
+      File "c:\...\scipy-trunk_after\trunk\dist\scipy-0.8.0.dev6156.win32\programs\python25\lib\site-packages\scipy\optimize\optimize.py", line 183, in fmin
+        fsim[0] = func(x0)
+      File "c:\...\scipy-trunk_after\trunk\dist\scipy-0.8.0.dev6156.win32\programs\python25\lib\site-packages\scipy\optimize\optimize.py", line 103, in function_wrapper
+        return function(x, *args)
+      File "C:\...\scikits\statsmodels\sandbox\stats\distribution_estimators.py", line 224, in <lambda>
+        parest = optimize.fmin(lambda params:np.sum(momentcondquant(distfn, params, mom2s,(pq,xqs), shape=None)**2), start)
+      File "C:\...\scikits\statsmodels\sandbox\stats\distribution_estimators.py", line 210, in momentcondquant
+        cdfdiff = distfn.cdf(xq, *params) - pq
+    ValueError: shape mismatch: objects cannot be broadcast to a single shape
+    '''
+    print fitquantilesgmm(stats.genpareto, p2rvs, start=x0p,
+                          pquant=np.linspace(0.01,0.99,10), frozen=None)
+    fp2, bp2 = np.histogram(p2rvs,
+                    bins=stats.genpareto(2).ppf(np.linspace(0,0.99,10)))
+    print 'fitbinnedgmm equal weight bins',
+    print fitbinnedgmm(stats.genpareto, fp2, bp2, x0p)
