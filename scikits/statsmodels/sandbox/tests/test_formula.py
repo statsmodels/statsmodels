@@ -10,7 +10,7 @@ import numpy.linalg as L
 from numpy.testing import *
 
 from scikits.statsmodels.sandbox import formula #, contrast #, utils
-from scikits.statsmodels.sandbox import contrast_old
+from scikits.statsmodels.sandbox import contrast_old as contrast
 
 class TestTerm(TestCase):
 
