@@ -14,8 +14,9 @@ from scikits.statsmodels.sandbox.regression.onewaygls import OneWayLS
 
 #choose example
 #--------------
-example = ['null', 'diff'][1]
+example = ['null', 'diff'][1]   #null: identical coefficients across groups
 example_size = [10, 100][0]
+example_size = [(10,2), (100,2)][0]
 example_groups = ['2', '2-2'][1]
 #'2-2': 4 groups,
 #       groups 0 and 1 and groups 2 and 3 have identical parameters in DGP
@@ -23,9 +24,9 @@ example_groups = ['2', '2-2'][1]
 #generate example
 #----------------
 np.random.seed(87654589)
-nobs = example_size
-x1 = np.random.randn(nobs)
-y1 = 10 + 15*x1 + 2*np.random.randn(nobs)
+nobs, nvars = example_size
+x1 = np.random.normal(size=(nobs, nvars))
+y1 = 10 + np.dot(x1,[15.]*nvars) + 2*np.random.normal(size=nobs)
 
 x1 = sm.add_constant(x1) #, prepend=True)
 #assert_almost_equal(x1, np.vander(x1[:,0],2), 16)
@@ -36,11 +37,11 @@ x1 = sm.add_constant(x1) #, prepend=True)
 #print res1.summary(xname=['x1','const1'])
 
 #regression 2
-x2 = np.random.randn(nobs)
+x2 = np.random.normal(size=(nobs,nvars))
 if example == 'null':
-    y2 = 10 + 15*x2 + 2*np.random.randn(nobs)  # if H0 is true
+    y2 = 10 + np.dot(x2,[15.]*nvars) + 2*np.random.normal(size=nobs)  # if H0 is true
 else:
-    y2 = 19 + 17*x2 + 2*np.random.randn(nobs)
+    y2 = 19 + np.dot(x2,[17.]*nvars) + 2*np.random.normal(size=nobs)
 
 x2 = sm.add_constant(x2)
 
@@ -103,7 +104,7 @@ print   '-------------------------------------------------------------'
 res = OneWayLS(y,x, groups=groupind.astype(int))
 print_results(res)
 
-print '\nOne way ANOVA, constant is the only regressor'
+print '\n\nOne way ANOVA, constant is the only regressor'
 print   '---------------------------------------------'
 
 print 'this is the same as scipy.stats.f_oneway'
@@ -111,7 +112,7 @@ res = OneWayLS(y,np.ones(len(y)), groups=groupind)
 print_results(res)
 
 
-print '\nOne way ANOVA, constant is the only regressor with het is true'
+print '\n\nOne way ANOVA, constant is the only regressor with het is true'
 print   '--------------------------------------------------------------'
 
 print 'this is the similar to scipy.stats.f_oneway,'

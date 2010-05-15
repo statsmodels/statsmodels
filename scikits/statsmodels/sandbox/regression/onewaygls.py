@@ -7,7 +7,7 @@ F test for null hypothesis that coefficients in several regressions are the same
 * similar to test for structural change in all variables at predefined break points
 * allows only one group variable
 * currently tests for change in all exog variables
-* allows for heterogscedasticity, error variance varies across groups (not tried out)
+* allows for heterogscedasticity, error variance varies across groups
 
 
 TODO

@@ -81,7 +81,6 @@ License: BSD
 
 '''
 
-
 import scipy.interpolate as interpolate
 import numpy as np
 
@@ -244,7 +243,7 @@ class HistDist(object):
             width = 2* IQR* nobs**(-1./3)
 
         elif method=='Scott':
-            width = 3.49 * std(self.data) * nobs**(-1./3)
+            width = 3.49 * np.std(self.data) * nobs**(-1./3)
 
         self.nbin = (self.binlimit.ptp()/width)
         return self.nbin
