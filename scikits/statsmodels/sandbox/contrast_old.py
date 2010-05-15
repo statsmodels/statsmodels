@@ -2,7 +2,7 @@ import copy
 
 import numpy as np
 from numpy.linalg import pinv
-from scikits.statsmodels.sandbox import utils
+from scikits.statsmodels.sandbox import utils_old as utils
 
 class ContrastResults(object):
     """
