@@ -4,11 +4,12 @@ Note that this module depends only on the Python standard library.
 You can "install" it just by dropping it into your working directory.
 
 A SimpleTable is inherently (but not rigidly) rectangular.
+You should create it from a *rectangular* (2d!) iterable of data.
 A SimpleTable can be concatenated with another SimpleTable
 or extended by another SimpleTable. ::
 
-        table1.extend_right(table2)
-        table1.extend(table2)
+	table1.extend_right(table2)
+	table1.extend(table2)
 
 Note that although a SimpleTable allows only one column (the first) of
 stubs at initilization, concatenation of tables allows you to produce
@@ -33,6 +34,7 @@ Potential problems for Python 3
 
 - Calls ``next`` instead of ``__next__``.
   The 2to3 tool should handle that no problem.
+  (We will switch to the `next` function if 2.5 support is ever dropped.)
 - from __future__ import division, with_statement
 - from itertools import izip as zip
 - Let me know if you find other problems.
@@ -88,29 +90,32 @@ def csv2st(csvfile, headers=False, stubs=False, title=None):
         raise IOError('All rows of CSV file must have same length.')
     return SimpleTable(data=rows, headers=headers, stubs=stubs)
 
+
 class SimpleTable(list):
     """Produce a simple ASCII, CSV, HTML, or LaTeX table from a
-    *rectangular* array of data, not necessarily numerical.
-    Supports at most one header row,
-    which must be the length of data[0] (or +1 if stubs).
-    Supports at most one stubs column, which must be the length of data.
+    *rectangular* (2d!) array of data, not necessarily numerical.
+    Directly supports at most one header row,
+    which should be the length of data[0].
+    Directly supports at most one stubs column,
+    which must be the length of data.
+    (But see `insert_stubs` method.)
     See globals `default_txt_fmt`, `default_csv_fmt`, `default_html_fmt`,
     and `default_latex_fmt` for formatting options.
 
     Sample uses::
 
-            mydata = [[11,12],[21,22]]
-            myheaders = [ "Column 1", "Column 2" ]
-            mystubs = [ "Row 1", "Row 2" ]
-            tbl = text.SimpleTable(mydata, myheaders, mystubs, title="Title")
-            print( tbl )
-            print( tbl.as_html() )
-            # set column specific data formatting
-            tbl = text.SimpleTable(mydata, myheaders, mystubs,
-                    fmt={'data_fmt':["%3.2f","%d"]})
-            print( tbl.as_csv() )
-            with open('c:/temp/temp.tex','w') as fh:
-                    fh.write( tbl.as_latex_tabular() )
+    	mydata = [[11,12],[21,22]]  # data MUST be 2-dimensional
+    	myheaders = [ "Column 1", "Column 2" ]
+    	mystubs = [ "Row 1", "Row 2" ]
+    	tbl = text.SimpleTable(mydata, myheaders, mystubs, title="Title")
+    	print( tbl )
+    	print( tbl.as_html() )
+    	# set column specific data formatting
+    	tbl = text.SimpleTable(mydata, myheaders, mystubs,
+    		fmt={'data_fmts':["%3.2f","%d"]})
+    	print( tbl.as_csv() )
+    	with open('c:/temp/temp.tex','w') as fh:
+    		fh.write( tbl.as_latex_tabular() )
     """
     def __init__(self, data, headers=None, stubs=None, title='',
                  datatypes=None,
@@ -121,25 +126,29 @@ class SimpleTable(list):
         Parameters
         ----------
         data : list of lists or 2d array (not matrix!)
-                R rows by K columns of table elements
+        	R rows by K columns of table elements
         headers : list (or tuple) of str
-                sequence of K strings, one per header
+        	sequence of K strings, one per header
         stubs : list (or tuple) of str
-                sequence of R strings, one per stub
+        	sequence of R strings, one per stub
         title : string
-                title of the table
+        	title of the table
         datatypes : list of int
-                indexes to `data_fmts`
+        	indexes to `data_fmts`
         txt_fmt : dict
-                text formatting options
+        	text formatting options
         ltx_fmt : dict
-                latex formatting options
+        	latex formatting options
         csv_fmt : dict
-                csv formatting options
+        	csv formatting options
         hmtl_fmt : dict
-                hmtl formatting options
+        	hmtl formatting options
+        celltype : class
+        	the cell class for the table (default: Cell)
+        rowtype : class
+        	the row class for the table (default: Row)
         fmt_dict : dict
-                general formatting options
+        	general formatting options
         """
         #self._raw_data = data
         self.title = title
@@ -181,9 +190,9 @@ class SimpleTable(list):
         Parameters
         ----------
         headers : list of strings
-                K strings, where K is number of columns
+        	K strings, where K is number of columns
         stubs : list of strings
-                R strings, where R is number of non-header rows
+        	R strings, where R is number of non-header rows
 
         :note: a header row does not receive a stub!
         """
@@ -241,15 +250,10 @@ class SimpleTable(list):
         """
         #first get the default formatting
         try:
-            fmt = default_fmts[output_format].copy()
+            fmt = self.output_formats[output_format].copy()
         except KeyError:
             raise ValueError('Unknown format: %s' % output_format)
-        #second get table specific formatting (if possible)
-        try:
-            fmt.update(self.table.output_formats[output_format])
-        except AttributeError:
-            pass
-        #finally, add formatting for this call
+        #then, add formatting specific to this call
         fmt.update(fmt_dict)
         return fmt
     def as_csv(self, **fmt_dict):
@@ -265,7 +269,6 @@ class SimpleTable(list):
         #get rows formatted as strings
         formatted_rows = [ row.as_string('text', **fmt) for row in self ]
         rowlen = len(formatted_rows[-1]) #don't use header row
-
 
         #place decoration above the table body, if desired
         table_dec_above = fmt.get('table_dec_above','=')
@@ -323,14 +326,14 @@ class SimpleTable(list):
             formatted_rows.append(title)
         return '\n'.join(formatted_rows)
         """
-                if fmt_dict['strip_backslash']:
-                        ltx_stubs = [stub.replace('\\',r'$\backslash$') for stub in self.stubs]
-                        ltx_headers = [header.replace('\\',r'$\backslash$') for header in self.headers]
-                        ltx_headers = self.format_headers(fmt_dict, ltx_headers)
-                else:
-                        ltx_headers = self.format_headers(fmt_dict)
-                ltx_stubs = self.format_stubs(fmt_dict, ltx_stubs)
-                """
+		if fmt_dict['strip_backslash']:
+			ltx_stubs = [stub.replace('\\',r'$\backslash$') for stub in self.stubs]
+			ltx_headers = [header.replace('\\',r'$\backslash$') for header in self.headers]
+			ltx_headers = self.format_headers(fmt_dict, ltx_headers)
+		else:
+			ltx_headers = self.format_headers(fmt_dict)
+		ltx_stubs = self.format_stubs(fmt_dict, ltx_stubs)
+		"""
     def extend_right(self, table):
         """Return None.
         Extend each row of `self` with corresponding row of `table`.
@@ -471,7 +474,6 @@ class Row(list):
 #END class Row
 
 
-
 class Cell(object):
     def __init__(self, data='', datatype=0, row=None, **fmt_dict):
         self.data = data
@@ -559,6 +561,21 @@ class Cell(object):
 
 
 #########  begin: default formats for SimpleTable  ##############
+""" Some formatting suggestions:
+
+- if you want rows to have no extra spacing,
+  set colwidths=0 and colsep=''.
+  (Naturally the columns will not align.)
+- if you want rows to have minimal extra spacing,
+  set colwidths=1.  The columns will align.
+- to get consistent formatting, you should leave
+  all field width handling to SimpleTable:
+  use 0 as the field width in data_fmts.  E.g., ::
+
+        data_fmts = ["%#0.6g","%#0.6g","%#0.4g","%#0.4g"],
+        colwidths = 14,
+        data_aligns = "r",
+"""
 default_csv_fmt = dict(
     data_fmts = ['%s'],
     data_fmt = '%s',  #deprecated; use data_fmts
@@ -620,8 +637,8 @@ default_txt_fmt = dict(
 )
 
 default_latex_fmt = dict(
-    data_fmts = ["%s"],
-    data_fmt = "%s",  #deprecated; use data_fmts
+    data_fmts = ['%s'],
+    data_fmt = '%s',  #deprecated; use data_fmts
     empty_cell = '',
     colwidths = None,
     colsep=' & ',
@@ -632,8 +649,8 @@ default_latex_fmt = dict(
     header_fmt = r'\textbf{%s}',
     stub_fmt =r'\textbf{%s}',
     header_align = 'c',
-    data_aligns = "c",
-    stubs_align = "l",
+    data_aligns = 'c',
+    stubs_align = 'l',
     fmt = 'ltx',
     row_post = r'  \\'
 )
