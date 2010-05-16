@@ -588,4 +588,4 @@ if __name__ == '__main__':
     #E(Y) = E(N)*E(X)   eg. eq. (6.37) page 385 in http://ee.stanford.edu/~gray/sp.html
 
 
-    plt.show()
+    #plt.show()
