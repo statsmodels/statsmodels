@@ -544,7 +544,7 @@ class Transf_gen(distributions.rv_continuous):
         #explicit for self.__dict__.update(kwargs)
         #need to set numargs because inspection does not work
         self.numargs = kwargs.pop('numargs', 0)
-        print self.numargs
+        #print self.numargs
         name = kwargs.pop('name','transfdist')
         longname = kwargs.pop('longname','Non-linear transformed distribution')
         extradoc = kwargs.pop('extradoc',None)
@@ -563,7 +563,7 @@ class Transf_gen(distributions.rv_continuous):
                                 longname = longname, extradoc = extradoc)
 
     def _cdf(self,x,*args, **kwargs):
-        print args
+        #print args
         if not self.decr:
             return self.kls._cdf(self.funcinv(x),*args, **kwargs)
             #note scipy _cdf only take *args not *kwargs
@@ -669,7 +669,7 @@ class LogTransf_gen(distributions.rv_continuous):
         self.kls = kls
 
     def _cdf(self,x, *args):
-        print args
+        #print args
         return self.kls._cdf(np.exp(x),*args)
     def _ppf(self, q, *args):
         return np.log(self.kls._ppf(q,*args))
@@ -784,7 +784,7 @@ class TransfTwo_gen(distributions.rv_continuous):
         #explicit for self.__dict__.update(kwargs)
         #need to set numargs because inspection does not work
         self.numargs = kwargs.pop('numargs', 0)
-        print self.numargs
+        #print self.numargs
         name = kwargs.pop('name','transfdist')
         longname = kwargs.pop('longname','Non-linear transformed distribution')
         extradoc = kwargs.pop('extradoc',None)
