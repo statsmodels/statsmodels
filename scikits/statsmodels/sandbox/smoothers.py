@@ -3,11 +3,17 @@ This module contains scatterplot smoothers, that is classes
 who generate a smooth fit of a set of (x,y) pairs.
 """
 
+# pylint: disable-msg=C0103
+# pylint: disable-msg=W0142
+# pylint: disable-msg=E0611
+# pylint: disable-msg=E1101
+
 import numpy as np
 import numpy.linalg as L
 import kernel
-from scipy.linalg import solveh_banded
-from scipy.optimize import golden
+import numbers
+#from scipy.linalg import solveh_banded
+#from scipy.optimize import golden
 
 #from models import _hbspline        # Need to alter setup to be able to import
                                     # extension from models or drop for scipy
@@ -16,9 +22,14 @@ from scipy.optimize import golden
 class KernelSmoother(object):
     """
     1D Kernel Density Regression/Kernel Smoother
+
+    Requires:
+    x - array_like of x values
+    y - array_like of y values
+    Kernel - Kernel object, Default is Gaussian.
     """
-    def __init__(self, x, y, Kernel = kernel.Default()):
-        if type(Kernel) is kernel.Default:
+    def __init__(self, x, y, Kernel = None):
+        if Kernel is None:
             Kernel = kernel.Gaussian()
         self.Kernel = Kernel
         self.x = np.array(x)
@@ -31,13 +42,51 @@ class KernelSmoother(object):
         return np.array([self.predict(xx) for xx in x])
 
     def predict(self, x):
-        return self.Kernel.smooth(self.x, self.y, x)
+        """
+        Returns the kernel smoothed prediction at x
 
-    def conf(self,x):
-        return np.array([self.Kernel.smoothconf(self.x, self.y, xx) for xx in x])
+        If x is a real number then a single value is returned.
+
+        Otherwise an attempt is made to cast x to numpy.ndarray and an array of
+        corresponding y-points is returned.
+        """
+        if isinstance(x, numbers.Real):
+            return self.Kernel.smooth(self.x, self.y, x)
+        else:
+            return np.array([self.Kernel.smooth(self.x, self.y, xx) for xx
+                                                in np.array(x)])
+
+    def conf(self, x):
+        """
+        Returns the fitted curve and 1-sigma upper and lower point-wise
+        confidence.
+        These bounds are based on variance only, and do not include the bias.
+        If the bandwidth is much larger than the curvature of the underlying
+        funtion then the bias could be large.
+
+        x is the points on which you want to evaluate the fit and the errors.
+
+        Alternatively if x is specified as a positive integer, then the fit and
+        confidence bands points will be returned after every
+        xth sample point - so they are closer together where the data
+        is denser.
+        """
+        if isinstance(x, int):
+            sorted_x = np.array(self.x)
+            sorted_x.sort()
+            confx = sorted_x[::x]
+            conffit = self.conf(confx)
+            return (confx, conffit)
+        else:
+            return np.array([self.Kernel.smoothconf(self.x, self.y, xx)
+                                                                for xx in x])
+
 
     def var(self, x):
-        pass
+        return np.array([self.Kernel.smoothvar(self.x, self.y, xx) for xx in x])
+
+    def std(self, x):
+        return np.sqrt(self.var(x))
 
 class PolySmoother(object):
     """
@@ -121,6 +170,91 @@ class PolySmoother(object):
         #self.coef = np.dot(L.pinv(X).T, _y[:,None])
         #self.coef = np.dot(L.pinv(X), _y)
         self.coef = L.lstsq(X, _y)[0]
+
+
+
+
+
+
+if __name__ == "__main__":
+    from scikits.statsmodels.sandbox import smoothers as s
+    import matplotlib.pyplot as plt
+    from numpy import sin, array, random
+
+    import time
+    random.seed(500)
+    x = random.normal(size = 250)
+    y = array([sin(i*5)/i + 2*i + (3+i)*random.normal() for i in x])
+
+    K = s.kernel.Biweight(0.25)
+    K2 = s.kernel.CustomKernel(lambda x: (1 - x*x)**2, 0.25, domain = [-1.0,
+                               1.0])
+
+    KS = s.KernelSmoother(x, y, K)
+    KS2 = s.KernelSmoother(x, y, K2)
+
+
+    KSx = np.arange(-3, 3, 0.1)
+    start = time.time()
+    KSy = KS.conf(KSx)
+    KVar = KS.std(KSx)
+    print time.time() - start    # This should be significantly quicker...
+    start = time.time()          #
+    KS2y = KS2.conf(KSx)         #
+    K2Var = KS2.std(KSx)         #
+    print time.time() - start    # ...than this.
+
+    KSConfIntx, KSConfInty = KS.conf(15)
+
+    print "Norm const should be 0.9375"
+    print K2.norm_const
+
+    print "L2 Norms Should Match:"
+    print K.L2Norm
+    print K2.L2Norm
+
+    print "Fit values should match:"
+    #print zip(KSy, KS2y)
+    print KSy[28]
+    print KS2y[28]
+
+    print "Var values should match:"
+    #print zip(KVar, K2Var)
+    print KVar[39]
+    print K2Var[39]
+
+    fig = plt.figure()
+    ax = fig.add_subplot(221)
+    ax.plot(x, y, "+")
+    ax.plot(KSx, KSy, "o")
+    ax.set_ylim(-20, 30)
+    ax2 = fig.add_subplot(222)
+    ax2.plot(KSx, KVar, "o")
+
+    ax3 = fig.add_subplot(223)
+    ax3.plot(x, y, "+")
+    ax3.plot(KSx, KS2y, "o")
+    ax3.set_ylim(-20, 30)
+    ax4 = fig.add_subplot(224)
+    ax4.plot(KSx, K2Var, "o")
+
+    fig2 = plt.figure()
+    ax5 = fig2.add_subplot(111)
+    ax5.plot(x, y, "+")
+    ax5.plot(KSConfIntx, KSConfInty, "o")
+    plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # comment out for now to remove dependency on _hbspline

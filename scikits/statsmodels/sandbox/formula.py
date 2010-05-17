@@ -1,5 +1,12 @@
 """
 Provides the basic classes needed to specify statistical models.
+
+
+
+namespace : dictionary
+   mapping from names to data, used to associate data to a formula or term
+
+
 """
 import copy
 import types
@@ -462,8 +469,11 @@ class Formula(object):
 
         if not isinstance(query_term, Formula):
             if type(query_term) == type("name"):
-                try: query = self[query_term]
-                except: return False
+                try:
+                    query = self[query_term]
+                    return query.termname in self.termnames()
+                except:
+                    return False
             elif isinstance(query_term, Term):
                 return query_term.termname in self.termnames()
         elif len(query_term.terms) == 1:

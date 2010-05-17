@@ -15,7 +15,7 @@ Since our results depend on these statistical assumptions, the results are
 only correct of our assumptions hold (at least approximately).
 
 One solution to the problem of uncertainty about the correct specification is
-the use of robust methods, for example robust regression or robust covariance
+to use robust methods, for example robust regression or robust covariance
 (sandwich) estimators. The second approach is to test whether our sample is
 consistent with these assumptions.
 
@@ -23,7 +23,7 @@ The following briefly summarizes specification and diagnostics tests for
 linear regression.
 
 Note: Not all statistical tests in the sandbox are fully tested, and the API
-will still change.
+will still change. Some of the tests are still on the wishlist.
 
 Heteroscedasticity Tests
 ------------------------
@@ -63,6 +63,7 @@ acorr_lm
 
 missing
   - Breush-Godfrey test, in stata and Greene 12.7.1
+  -
 
 
 Tests for Structural Change, Parameter Stability
@@ -154,8 +155,8 @@ qqplot, scipy.stats.probplot
 other goodness-of-fit tests for distributions in scipy.stats and enhancements
   - kolmogorov-smirnov
   - anderson : Anderson-Darling
-  - mine ??? product, likelihood-ration, ...
-  - chisquare tests : needs wrapping
+  - likelihood-ratio, ...
+  - chisquare tests, powerdiscrepancy : needs wrapping (for binning)
 
 
 Non-Linearity Tests
