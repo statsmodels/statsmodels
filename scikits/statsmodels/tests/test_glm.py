@@ -33,9 +33,10 @@ class CheckModelResults(object):
         assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL)
 
     def test_residuals(self):
-        if 'rmodelwrap' in self.res2.__module__ and not hasattr(self.res2, 'resids'):
-           assert_almost_equal(self.res1.resid_deviance, self.res2.resid_deviance,
-                DECIMAL)
+        if 'rmodelwrap' in self.res2.__module__ and not hasattr(self.res2,
+                'resids'):
+           assert_almost_equal(self.res1.resid_deviance,
+                self.res2.resid_deviance, DECIMAL)
         else:
             resids = np.column_stack((self.res1.resid_pearson,
             self.res1.resid_deviance, self.res1.resid_working,
@@ -71,15 +72,18 @@ class CheckModelResults(object):
                     DECIMAL)
 
     def test_bic(self):
-        if 'rmodelwrap' in self.res2.__module__ and not hasattr(self.res2, 'bic'):
+        if 'rmodelwrap' in self.res2.__module__ and not hasattr(self.res2,
+                'bic'):
             raise SkipTest("Results are from RModel wrapper")
         self.check_bic(self.res1.bic,
             self.res2.bic)
 
     def test_degrees(self):
         if not 'rmodelwrap' in self.res2.__module__:
-            assert_almost_equal(self.res1.model.df_model,self.res2.df_model, DECIMAL)
-        assert_almost_equal(self.res1.model.df_resid,self.res2.df_resid, DECIMAL)
+            assert_almost_equal(self.res1.model.df_model,self.res2.df_model,
+                    DECIMAL)
+        assert_almost_equal(self.res1.model.df_resid,self.res2.df_resid,
+                DECIMAL)
 
     def test_pearson_chi2(self):
         if 'rmodelwrap' in self.res2.__module__:
@@ -103,7 +107,7 @@ class TestGlmGaussian(CheckModelResults):
         self.data.exog = add_constant(self.data.exog)
         self.res1 = GLM(self.data.endog, self.data.exog,
                         family=models.families.Gaussian()).fit()
-                                            # I think this is a bug in Rpy
+                                            # I think this is a bug in Rpydd
 
     def setup(self):
         if skipR:
@@ -341,7 +345,8 @@ class TestGlmGamma(CheckModelResults):
 
     def check_aic_R(self, aic1, aic2):
         assert_approx_equal(aic1-2, aic2, DECIMAL_less)
-        # R includes another degree of freedom in calculation of AIC, but not with
+        # R includes another degree of freedom in calculation of AIC,
+        # but not with
         # gamma for some reason
         # There is also a precision issue due to a different implementation
 
@@ -398,7 +403,8 @@ class TestGlmGammaIdentity(CheckModelResults):
         from model_results import Cancer
         self.data = Cancer()
         self.res1 = GLM(self.data.endog, self.data.exog,
-            family=models.families.Gamma(link=models.families.links.identity)).fit()
+            family=models.families.Gamma(link=
+                models.families.links.identity)).fit()
 
     def setup(self):
         if skipR:
@@ -497,15 +503,15 @@ class TestGlmInvgauss(CheckModelResults):
         # Off by 2e-1 due to implementation difference
 
     def check_aic_Stata(self, aic1, aic2):
-        llf1 = self.res1.model.family.loglike(self.res1.model.endog, self.res1.mu,
-                scale=1)
+        llf1 = self.res1.model.family.loglike(self.res1.model.endog,
+                self.res1.mu, scale=1)
         aic1 = 2 * (self.res1.model.df_model + 1 - llf1)/self.res1.nobs
         assert_almost_equal(aic1, aic2, DECIMAL)
 
     def check_loglike(self, llf1, llf2):
-        llf1 = self.res1.model.family.loglike(self.res1.model.endog, self.res1.mu,
-                scale=1)    # Stata assumes scale = 1 in calc,
-                            # which shouldn't be right...
+        llf1 = self.res1.model.family.loglike(self.res1.model.endog,
+                self.res1.mu, scale=1)    # Stata assumes scale = 1 in calc,
+                                          # which shouldn't be right...
         assert_almost_equal(llf1, llf2, DECIMAL_less)
 
     def check_bic(self, bic1, bic2):
