@@ -19,7 +19,7 @@ McCullagh, P. and Nelder, J.A.  1989.  "Generalized Linear Models." 2nd ed.
 """
 
 import numpy as np
-import family, tools
+import families, tools
 from regression import WLS#,GLS #might need for mlogit
 from model import LikelihoodModel, LikelihoodModelResults
 from decorators import *
@@ -105,7 +105,7 @@ class GLM(LikelihoodModel):
     Instantiate a gamma family model with the default link function.
 
     >>> gamma_model = sm.GLM(data.endog, data.exog,        \
-                             family=sm.family.Gamma())
+                             family=sm.families.Gamma())
 
     >>> gamma_results = gamma_model.fit()
     >>> gamma_results.params
@@ -123,7 +123,7 @@ class GLM(LikelihoodModel):
 
     See also
     --------
-    statsmodels.family.*
+    statsmodels.families.*
 
     Notes
     -----
@@ -172,7 +172,7 @@ class GLM(LikelihoodModel):
         the inverse of the link function at eta, where eta is the linear
         predicted value of the WLS fit of the transformed variable.  `mu` is
         only available after fit is called.  See
-        statsmodels.family.family.fitted of the distribution family for more
+        statsmodels.families.family.fitted of the distribution family for more
         information.
     normalized_cov_params : array
         The p x p normalized covariance of the design / exogenous data.
@@ -191,12 +191,12 @@ class GLM(LikelihoodModel):
         fit is called.  The default is None.  See GLM.fit for more information.
     weights : array
         The value of the weights after the last iteration of fit.  Only
-        available after fit is called.  See statsmodels.family.family for
+        available after fit is called.  See statsmodels.families.family for
         the specific distribution weighting functions.
 
     '''
 
-    def __init__(self, endog, exog, family=family.Gaussian()):
+    def __init__(self, endog, exog, family=families.Gaussian()):
         endog = np.asarray(endog)
         exog = np.asarray(exog)
         if endog.shape[0] != len(exog):
@@ -233,7 +233,7 @@ class GLM(LikelihoodModel):
         Loglikelihood function.
 
         Each distribution family has its own loglikelihood function.
-        See statsmodels.family.family
+        See statsmodels.families.family
         """
         return self.family.loglike(*args)
 
@@ -276,7 +276,7 @@ class GLM(LikelihoodModel):
         statsmodels.glm.fit for more information
         """
         if not self.scaletype:
-            if isinstance(self.family, (family.Binomial, family.Poisson)):
+            if isinstance(self.family, (families.Binomial, families.Poisson)):
                 return np.array(1.)
             else:
                 resid = self.endog - mu
@@ -356,7 +356,7 @@ specify the params argument."
             Convergence tolerance.  Default is 1e-8.
         '''
         if np.shape(data_weights) != () and not isinstance(self.family,
-                family.Binomial):
+                families.Binomial):
             raise ValueError, "Data weights are only to be supplied for\
 the Binomial family"
         self.data_weights = data_weights
@@ -364,7 +364,7 @@ the Binomial family"
             self.data_weights = self.data_weights *\
                     np.ones((self.exog.shape[0]))
         self.scaletype = scale
-        if isinstance(self.family, family.Binomial):
+        if isinstance(self.family, families.Binomial):
 # thisc checks what kind of data is given for Binomial.  family will need a reference to
 # endog if this is to be removed from the preprocessing
             self.endog = self.family.initialize(self.endog)
@@ -440,7 +440,7 @@ class GLMResults(LikelihoodModelResults):
         Bayes Information Criterion
         `deviance` - `df_resid` * log(`nobs`)
     deviance : float
-        See statsmodels.family.family for the distribution-specific deviance
+        See statsmodels.families.family for the distribution-specific deviance
         functions.
     df_model : float
         See GLM.df_model
@@ -451,7 +451,7 @@ class GLMResults(LikelihoodModelResults):
         dot(exog, params)
     llf : float
         Value of the loglikelihood function evalued at params.
-        See statsmodels.family.family for distribution-specific loglikelihoods.
+        See statsmodels.families.family for distribution-specific loglikelihoods.
     model : class instance
         Pointer to GLM model instance that called fit.
     mu : array
@@ -473,16 +473,16 @@ class GLMResults(LikelihoodModelResults):
     pinv_wexog : array
         See GLM docstring.
     resid_anscombe : array
-        Anscombe residuals.  See statsmodels.family.family for distribution-
+        Anscombe residuals.  See statsmodels.families.family for distribution-
         specific Anscombe residuals.
     resid_deviance : array
-        Deviance residuals.  See statsmodels.family.family for distribution-
+        Deviance residuals.  See statsmodels.families.family for distribution-
         specific deviance residuals.
     resid_pearson : array
         Pearson residuals.  The Pearson residuals are defined as
         (`endog` - `mu`)/sqrt(VAR(`mu`)) where VAR is the distribution
-        specific variance function.  See statsmodels.family.family and
-        statsmodels.family.varfuncs for more information.
+        specific variance function.  See statsmodels.families.family and
+        statsmodels.families.varfuncs for more information.
     resid_response : array
         Respnose residuals.  The response residuals are defined as
         `endog` - `fittedvalues`
@@ -590,7 +590,7 @@ class GLMResults(LikelihoodModelResults):
     @cache_readonly
     def llf(self):
         _modelfamily = self.family
-        if isinstance(_modelfamily, family.NegativeBinomial):
+        if isinstance(_modelfamily, families.NegativeBinomial):
             val = _modelfamily.loglike(self.model.endog,
                         fittedvalues = np.dot(self.model.exog,self.params))
         else:

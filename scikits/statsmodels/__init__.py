@@ -12,7 +12,7 @@ from glm import *
 from rlm import *
 from discretemod import *
 from tools import add_constant
-import model, tools, datasets, family, stattools, iolib
+import model, tools, datasets, families, stattools, iolib
 # robust is imported somewhere else?
 __all__ = filter(lambda s:not s.startswith('_'),dir())
 

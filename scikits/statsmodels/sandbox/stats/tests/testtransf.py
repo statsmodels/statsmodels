@@ -90,7 +90,7 @@ class Test_Transf2(object):
     def test_equivalent(self):
         xx, ppfq = self.xx, self.ppfq
         for d1,d2 in self.dist_equivalents:
-            print d1.name
+            #print d1.name
             assert_almost_equal(d1.cdf(xx), d2.cdf(xx), err_msg='cdf'+d1.name)
             assert_almost_equal(d1.pdf(xx), d2.pdf(xx),
                                 err_msg='pdf '+d1.name+d2.name)
@@ -118,7 +118,7 @@ class Test_Transf2(object):
         '''
         xx, nxx, ppfq = self.xx, self.nxx, self.ppfq
         d1,d2 = (negsquarenormalg, stats.chi2(1))
-        print d1.name
+        #print d1.name
         assert_almost_equal(d1.cdf(nxx), 1-d2.cdf(xx), err_msg='cdf'+d1.name)
         assert_almost_equal(d1.pdf(nxx), d2.pdf(xx))
         assert_almost_equal(d1.sf(nxx), 1-d2.sf(xx))
