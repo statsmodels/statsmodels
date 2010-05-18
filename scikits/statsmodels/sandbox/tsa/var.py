@@ -1,10 +1,6 @@
 """
-This is the VAR class taken from pymaclab.
+This is the VAR class adapted from pymaclab.
 """
-
-
-
-
 from __future__ import division
 import copy as COP
 import scipy as S
