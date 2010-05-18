@@ -16,7 +16,7 @@ ols_results = ols_model.fit()
 
 # normalize the independent variables to have unit length, Greene 4.9
 norm_x = np.ones_like(data.exog)
-for i in range(ols_model.df_model):
+for i in range(int(ols_model.df_model)):
     norm_x[:,i] = data.exog[:,i]/np.linalg.norm(data.exog[:,i])
 norm_xtx = np.dot(norm_x.T,norm_x)
 eigs = np.linalg.eigvals(norm_xtx)
