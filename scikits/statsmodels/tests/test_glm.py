@@ -3,9 +3,10 @@
 Test functions for models.GLM
 """
 
+#from __future__ import absolute_import
 import numpy as np
 from numpy.testing import *
-import scikits.statsmodels as models
+import scikits.statsmodels as sm
 from scikits.statsmodels.glm import GLM
 from scikits.statsmodels.tools import add_constant
 from nose import SkipTest
@@ -33,19 +34,22 @@ class CheckModelResults(object):
         assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL)
 
     def test_residuals(self):
+#TODO: remove RPY stuff?
         if 'rmodelwrap' in self.res2.__module__ and not hasattr(self.res2,
-                'resids'):
-           assert_almost_equal(self.res1.resid_deviance,
+               'resids'):
+            assert_almost_equal(self.res1.resid_deviance,
                 self.res2.resid_deviance, DECIMAL)
         else:
-            resids = np.column_stack((self.res1.resid_pearson,
-            self.res1.resid_deviance, self.res1.resid_working,
-            self.res1.resid_anscombe, self.res1.resid_response))
+            res1resids = np.column_stack((self.res1.resid_pearson,
+                self.res1.resid_deviance, self.res1.resid_working,
+                self.res1.resid_anscombe, self.res1.resid_response))
             self.check_resids(resids, self.res2.resids)
+#        assert_almost_equal(res1resids, res2.resids, DECIMAL)
 
     def test_aic_R(self):
         # R includes the estimation of the scale as a lost dof
         # Doesn't with Gamma though
+    #TODO:fix this?
         if self.res1.scale != 1:
             dof = 2
         else: dof = 0
@@ -53,6 +57,7 @@ class CheckModelResults(object):
                 self.res2.aic_R)
 
     def test_aic_Stata(self):
+#TODO: remove RPY stuff
         if 'rmodelwrap' in self.res2.__module__:
             raise SkipTest("Results are from RModel wrapper")
         aic = self.res1.aic/self.res1.nobs
@@ -72,6 +77,7 @@ class CheckModelResults(object):
                     DECIMAL)
 
     def test_bic(self):
+        #TODO: remove RPY stuff
         if 'rmodelwrap' in self.res2.__module__ and not hasattr(self.res2,
                 'bic'):
             raise SkipTest("Results are from RModel wrapper")
@@ -84,11 +90,11 @@ class CheckModelResults(object):
                     DECIMAL)
         assert_almost_equal(self.res1.model.df_resid,self.res2.df_resid,
                 DECIMAL)
-
-    def test_pearson_chi2(self):
-        if 'rmodelwrap' in self.res2.__module__:
-            raise SkipTest("Results are from RModel wrapper")
-        self.check_pearson_chi2(self.res1.pearson_chi2, self.res2.pearson_chi2)
+   #TODO: how is this different than deviance?
+#    def test_pearson_chi2(self):
+#        if 'rmodelwrap' in self.res2.__module__:
+#            raise SkipTest("Results are from RModel wrapper")
+#        self.check_pearson_chi2(self.res1.pearson_chi2, self.res2.pearson_chi2)
 
     def test_fittedvalues(self):
         if not 'rmodelwrap' in self.res2.__module__:
@@ -106,17 +112,17 @@ class TestGlmGaussian(CheckModelResults):
         self.data = Load()
         self.data.exog = add_constant(self.data.exog)
         self.res1 = GLM(self.data.endog, self.data.exog,
-                        family=models.families.Gaussian()).fit()
-                                            # I think this is a bug in Rpydd
+                        family=sm.families.Gaussian()).fit()
+        from results.results_glm import Longley
+        self.res2 = Longley()
 
-    def setup(self):
-        if skipR:
-            raise SkipTest, "Rpy not installed."
-        Gauss = r.gaussian
-        self.res2 = RModel(self.data.endog, self.data.exog, r.glm, family=Gauss)
-        self.res2.resids = np.array(self.res2.resid)[:,None]*np.ones((1,5))
-        self.res2.null_deviance = 185008826 # taken from R.
-
+#    def setup(self):
+#        if skipR:
+#            raise SkipTest, "Rpy not installed."
+#        Gauss = r.gaussian
+#        self.res2 = RModel(self.data.endog, self.data.exog, r.glm, family=Gauss)
+#        self.res2.resids = np.array(self.res2.resid)[:,None]*np.ones((1,5))
+#        self.res2.null_deviance = 185008826 # taken from R. Rpy bug?
 
     def check_params(self, params1, params2):
         assert_almost_equal(params1, params2, DECIMAL)
@@ -150,16 +156,15 @@ class TestGaussianLog(CheckModelResults):
                         0.001 * np.random.randn(nobs)
 
         GaussLog_Model = GLM(self.lny, self.X, \
-                family=models.families.Gaussian(models.families.links.log))
-        GaussLog_Res = GaussLog_Model.fit()
-        self.res1 = GaussLog_Res
+                family=sm.families.Gaussian(sm.families.links.log))
+        self.res1 = GaussLog_Model.fit()
 
-    def setup(self):
-        if skipR:
-            raise SkipTest, "Rpy not installed"
-        GaussLogLink = r.gaussian(link = "log")
-        GaussLog_Res_R = RModel(self.lny, self.X, r.glm, family=GaussLogLink)
-        self.res2 = GaussLog_Res_R
+#    def setup(self):
+#        if skipR:
+#            raise SkipTest, "Rpy not installed"
+#        GaussLogLink = r.gaussian(link = "log")
+#        GaussLog_Res_R = RModel(self.lny, self.X, r.glm, family=GaussLogLink)
+#        self.res2 = GaussLog_Res_R
 
 
     def test_null_deviance(self):
@@ -185,7 +190,7 @@ class TestGaussianInverse(CheckModelResults):
         self.X = np.c_[np.ones((nobs,1)),x,x**2]
         self.y_inv = (1. + .02*x + .001*x**2)**-1 + .001 * np.random.randn(nobs)
         InverseLink_Model = GLM(self.y_inv, self.X,
-                family=models.families.Gaussian(models.families.links.inverse))
+                family=sm.families.Gaussian(sm.families.links.inverse))
         InverseLink_Res = InverseLink_Model.fit()
         self.res1 = InverseLink_Res
 
@@ -217,12 +222,13 @@ class TestGlmBinomial(CheckModelResults):
         Test Binomial family with canonical logit link
         '''
         from scikits.statsmodels.datasets.star98 import Load
-        from model_results import Star98
+#        from model_results import Star98
+        from results.results_glm import Star98
         self.data = Load()
         self.data.exog = add_constant(self.data.exog)
         trials = self.data.endog[:,:2].sum(axis=1)
         self.res1 = GLM(self.data.endog, self.data.exog, \
-        family=models.families.Binomial()).fit(data_weights = trials)
+        family=sm.families.Binomial()).fit(data_weights = trials)
         self.res2 = Star98()
 
     def check_params(self, params1, params2):
@@ -276,10 +282,10 @@ class TestGlmBinomial(CheckModelResults):
 
 class TestGlmBernoulli(CheckModelResults):
     def __init__(self):
-        from model_results import Lbw
+        from results.results_glm import Lbw
         self.res2 = Lbw()
         self.res1 = GLM(self.res2.endog, self.res2.exog,
-                family=models.families.Binomial()).fit()
+                family=sm.families.Binomial()).fit()
 
     def check_params(self, params1, params2):
         assert_almost_equal(params1, params2, DECIMAL)
@@ -330,11 +336,12 @@ class TestGlmGamma(CheckModelResults):
         Tests Gamma family with canonical inverse link (power -1)
         '''
         from scikits.statsmodels.datasets.scotland import Load
-        from model_results import Scotvote
+#        from model_results import Scotvote
+        from results.results_glm import Scotvote
         self.data = Load()
         self.data.exog = add_constant(self.data.exog)
         self.res1 = GLM(self.data.endog, self.data.exog, \
-                    family=models.families.Gamma()).fit()
+                    family=sm.families.Gamma()).fit()
         self.res2 = Scotvote()
 
     def check_params(self, params1, params2):
@@ -369,10 +376,11 @@ class TestGlmGamma(CheckModelResults):
 
 class TestGlmGammaLog(CheckModelResults):
     def __init__(self):
-        from model_results import Cancer
+#        from model_results import Cancer
+        from results.results_glm import Cancer
         self.data = Cancer()
         self.res1 = GLM(self.data.endog, self.data.exog,
-            family=models.families.Gamma(link=models.families.links.log)).fit()
+            family=sm.families.Gamma(link=sm.families.links.log)).fit()
 
     def setup(self):
         if skipR:
@@ -400,11 +408,12 @@ class TestGlmGammaLog(CheckModelResults):
 
 class TestGlmGammaIdentity(CheckModelResults):
     def __init__(self):
-        from model_results import Cancer
+#        from model_results import Cancer
+        from results.results_glm import Cancer
         self.data = Cancer()
         self.res1 = GLM(self.data.endog, self.data.exog,
-            family=models.families.Gamma(link=
-                models.families.links.identity)).fit()
+            family=sm.families.Gamma(link=
+                sm.families.links.identity)).fit()
 
     def setup(self):
         if skipR:
@@ -435,13 +444,14 @@ class TestGlmPoisson(CheckModelResults):
 
         Test results were obtained by R.
         '''
-        from model_results import Cpunish
+#        from model_results import Cpunish
+        from results.results_glm import Cpunish
         from scikits.statsmodels.datasets.cpunish import Load
         self.data = Load()
         self.data.exog[:,3] = np.log(self.data.exog[:,3])
         self.data.exog = add_constant(self.data.exog)
         self.res1 = GLM(self.data.endog, self.data.exog,
-                    family=models.families.Poisson()).fit()
+                    family=sm.families.Poisson()).fit()
         self.res2 = Cpunish()
 
     def check_params(self, params1, params2):
@@ -483,10 +493,11 @@ class TestGlmInvgauss(CheckModelResults):
         were obtained by running R_ig.s
         '''
 
-        from model_results import InvGauss
+#        from model_results import InvGauss
+        from results.results_glm import InvGauss
         self.res2 = InvGauss()
         self.res1 = GLM(self.res2.endog, self.res2.exog, \
-                family=models.families.InverseGaussian()).fit()
+                family=sm.families.InverseGaussian()).fit()
 
 #    def setup(self):
 #        if skipR:
@@ -522,11 +533,12 @@ class TestGlmInvgauss(CheckModelResults):
 
 class TestGlmInvgaussLog(CheckModelResults):
     def __init__(self):
-        from model_results import Medpar1
+#        from model_results import Medpar1
+        from results.results_glm import Medpar1
         self.data = Medpar1()
         self.res1 = GLM(self.data.endog, self.data.exog,
-            family=models.families.InverseGaussian(link=\
-            models.families.links.log)).fit()
+            family=sm.families.InverseGaussian(link=\
+            sm.families.links.log)).fit()
                                      # common across Gamma implementation
 
     def setup(self):
@@ -554,11 +566,12 @@ class TestGlmInvgaussLog(CheckModelResults):
 
 class TestGlmInvgaussIdentity(CheckModelResults):
     def __init__(self):
-        from model_results import Medpar1
+#        from model_results import Medpar1
+        from results.results_glm import Medpar1
         self.data = Medpar1()
         self.res1 = GLM(self.data.endog, self.data.exog,
-            family=models.families.InverseGaussian(link=\
-            models.families.links.identity)).fit()
+            family=sm.families.InverseGaussian(link=\
+            sm.families.links.identity)).fit()
 
     def setup(self):
         if skipR:
@@ -595,7 +608,7 @@ class TestGlmNegbinomial(CheckModelResults):
         self.data.exog = np.column_stack((self.data.exog,interaction))
         self.data.exog = add_constant(self.data.exog)
         results = GLM(self.data.endog, self.data.exog,
-                family=models.families.NegativeBinomial()).fit()
+                family=sm.families.NegativeBinomial()).fit()
         self.res1 = results
         # Rpy does not return the same null deviance as R for some reason
 
