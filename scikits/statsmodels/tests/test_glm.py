@@ -40,11 +40,11 @@ class CheckModelResults(object):
             assert_almost_equal(self.res1.resid_deviance,
                 self.res2.resid_deviance, DECIMAL)
         else:
-            res1resids = np.column_stack((self.res1.resid_pearson,
+            resids = np.column_stack((self.res1.resid_pearson,
                 self.res1.resid_deviance, self.res1.resid_working,
                 self.res1.resid_anscombe, self.res1.resid_response))
-            self.check_resids(resids, self.res2.resids)
-#        assert_almost_equal(res1resids, res2.resids, DECIMAL)
+#            self.check_resids(resids, self.res2.resids)
+            assert_almost_equal(resids, self.res2.resids, DECIMAL)
 
     def test_aic_R(self):
         # R includes the estimation of the scale as a lost dof
@@ -61,7 +61,8 @@ class CheckModelResults(object):
         if 'rmodelwrap' in self.res2.__module__:
             raise SkipTest("Results are from RModel wrapper")
         aic = self.res1.aic/self.res1.nobs
-        self.check_aic_Stata(aic, self.res2.aic_Stata)
+#        self.check_aic_Stata(aic, self.res2.aic_Stata)
+        assert_almost_equal(aic, self.res2.aic_Stata, DECIMAL)
 
     def test_deviance(self):
         assert_almost_equal(self.res1.deviance, self.res2.deviance, DECIMAL)
@@ -81,8 +82,9 @@ class CheckModelResults(object):
         if 'rmodelwrap' in self.res2.__module__ and not hasattr(self.res2,
                 'bic'):
             raise SkipTest("Results are from RModel wrapper")
-        self.check_bic(self.res1.bic,
-            self.res2.bic)
+#        self.check_bic(self.res1.bic,
+#            self.res2.bic_Stata)
+        assert_almost_equal(self.res1.bic, self.res2.bic_Stata, DECIMAL)
 
     def test_degrees(self):
         if not 'rmodelwrap' in self.res2.__module__:
@@ -158,6 +160,8 @@ class TestGaussianLog(CheckModelResults):
         GaussLog_Model = GLM(self.lny, self.X, \
                 family=sm.families.Gaussian(sm.families.links.log))
         self.res1 = GaussLog_Model.fit()
+        from results.results_glm import GaussianLog
+        self.res2 = GaussianLog()
 
 #    def setup(self):
 #        if skipR:
@@ -193,13 +197,15 @@ class TestGaussianInverse(CheckModelResults):
                 family=sm.families.Gaussian(sm.families.links.inverse))
         InverseLink_Res = InverseLink_Model.fit()
         self.res1 = InverseLink_Res
+        from results.results_glm import GaussianInverse
+        self.res2 = GaussianInverse()
 
-    def setup(self):
-        if skipR:
-            raise SkipTest, "Rpy not installed."
-        InverseLink = r.gaussian(link = "inverse")
-        InverseLink_Res_R = RModel(self.y_inv, self.X, r.glm, family=InverseLink)
-        self.res2 = InverseLink_Res_R
+#    def setup(self):
+#        if skipR:
+#            raise SkipTest, "Rpy not installed."
+#        InverseLink = r.gaussian(link = "inverse")
+#        InverseLink_Res_R = RModel(self.y_inv, self.X, r.glm, family=InverseLink)
+#        self.res2 = InverseLink_Res_R
 
     def check_params(self, params1, params2):
         assert_almost_equal(params1, params2, DECIMAL)
@@ -211,7 +217,7 @@ class TestGaussianInverse(CheckModelResults):
         assert_almost_equal(aic1, aic2, DECIMAL_least)
 #TODO: is this a full test?
 
-    @dec.knownfailureif(True, "This is a bug in Rpy")
+#    @dec.knownfailureif(True, "This is a bug in Rpy")
     def test_null_deviance(self):
         assert_almost_equal(self.res1.null_deviance, self.res2.null_deviance,
                     DECIMAL_least)
@@ -355,7 +361,7 @@ class TestGlmGamma(CheckModelResults):
         # R includes another degree of freedom in calculation of AIC,
         # but not with
         # gamma for some reason
-        # There is also a precision issue due to a different implementation
+        # There is also a precision issue due to a different implementation?
 
     def check_aic_Stata(self, aic1, aic2):
         llf1 = self.res1.model.family.loglike(self.res1.model.endog,
@@ -377,18 +383,20 @@ class TestGlmGamma(CheckModelResults):
 class TestGlmGammaLog(CheckModelResults):
     def __init__(self):
 #        from model_results import Cancer
-        from results.results_glm import Cancer
-        self.data = Cancer()
-        self.res1 = GLM(self.data.endog, self.data.exog,
+        from results.results_glm import CancerLog
+        res2 = CancerLog()
+        self.res1 = GLM(res2.endog, res2.exog,
             family=sm.families.Gamma(link=sm.families.links.log)).fit()
+        self.res2 = res2
 
-    def setup(self):
-        if skipR:
-            raise SkipTest, "Rpy not installed."
-        self.res2 = RModel(self.data.endog, self.data.exog, r.glm,
-            family=r.Gamma(link="log"))
-        self.res2.null_deviance = 27.92207137420696 # From R (bug in rpy)
-        self.res2.bic = -154.1582 # from Stata
+
+#    def setup(self):
+#        if skipR:
+#            raise SkipTest, "Rpy not installed."
+#        self.res2 = RModel(self.data.endog, self.data.exog, r.glm,
+#            family=r.Gamma(link="log"))
+#        self.res2.null_deviance = 27.92207137420696 # From R (bug in rpy)
+#        self.res2.bic = -154.1582089453923 # from Stata
 
 
     def check_params(self, params1, params2):
@@ -409,18 +417,18 @@ class TestGlmGammaLog(CheckModelResults):
 class TestGlmGammaIdentity(CheckModelResults):
     def __init__(self):
 #        from model_results import Cancer
-        from results.results_glm import Cancer
-        self.data = Cancer()
-        self.res1 = GLM(self.data.endog, self.data.exog,
-            family=sm.families.Gamma(link=
-                sm.families.links.identity)).fit()
+        from results.results_glm import CancerIdentity
+        res2 = CancerIdentity()
+        self.res1 = GLM(res2.endog, res2.exog,
+            family=sm.families.Gamma(link=sm.families.links.identity)).fit()
+        self.res2 = res2
 
-    def setup(self):
-        if skipR:
-            raise SkipTest, "Rpy not installed."
-        self.res2 = RModel(self.data.endog, self.data.exog, r.glm,
-            family=r.Gamma(link="identity"))
-        self.res2.null_deviance = 27.92207137420696 # from R, Rpy bug
+#    def setup(self):
+#        if skipR:
+#            raise SkipTest, "Rpy not installed."
+#        self.res2 = RModel(self.data.endog, self.data.exog, r.glm,
+#            family=r.Gamma(link="identity"))
+#        self.res2.null_deviance = 27.92207137420696 # from R, Rpy bug
 
     def check_params(self, params1, params2):
         assert_almost_equal(params1, params2, DECIMAL_lesser)
@@ -495,9 +503,10 @@ class TestGlmInvgauss(CheckModelResults):
 
 #        from model_results import InvGauss
         from results.results_glm import InvGauss
-        self.res2 = InvGauss()
-        self.res1 = GLM(self.res2.endog, self.res2.exog, \
+        res2 = InvGauss()
+        self.res1 = GLM(res2.endog, res2.exog, \
                 family=sm.families.InverseGaussian()).fit()
+        self.res2 = res2
 
 #    def setup(self):
 #        if skipR:
@@ -534,20 +543,21 @@ class TestGlmInvgauss(CheckModelResults):
 class TestGlmInvgaussLog(CheckModelResults):
     def __init__(self):
 #        from model_results import Medpar1
-        from results.results_glm import Medpar1
-        self.data = Medpar1()
-        self.res1 = GLM(self.data.endog, self.data.exog,
+        from results.results_glm import InvGaussLog
+        res2 = InvGaussLog()
+        self.res1 = GLM(res2.endog, res2.exog,
             family=sm.families.InverseGaussian(link=\
             sm.families.links.log)).fit()
+        self.res2 = res2
                                      # common across Gamma implementation
 
-    def setup(self):
-        if skipR:
-            raise SkipTest, "Rpy not installed."
-        self.res2 = RModel(self.data.endog, self.data.exog, r.glm,
-            family=r.inverse_gaussian(link="log"))
-        self.res2.null_deviance = 335.1539777981053 # from R, Rpy bug
-        self.res2.llf = -12162.72308 # from Stata, R's has big rounding diff
+#    def setup(self):
+#        if skipR:
+#            raise SkipTest, "Rpy not installed."
+#        self.res2 = RModel(self.data.endog, self.data.exog, r.glm,
+#            family=r.inverse_gaussian(link="log"))
+#        self.res2.null_deviance = 335.1539777981053 # from R, Rpy bug
+#        self.res2.llf = -12162.72308 # from Stata, R's has big rounding diff
 
     def check_params(self, params1, params2):
         assert_almost_equal(params1, params2, DECIMAL)
@@ -555,7 +565,7 @@ class TestGlmInvgaussLog(CheckModelResults):
     def check_resids(self, resids1, resids2):
         assert_almost_equal(resids1, resids2, DECIMAL)
 
-    @dec.knownfailureif(True, "Big rounding difference vs. R")
+#    @dec.knownfailureif(True, "Big rounding difference vs. R")
     def check_aic_R(self, aic1, aic2):
         assert_almost_equal(aic1, aic2, DECIMAL)
 
@@ -572,14 +582,16 @@ class TestGlmInvgaussIdentity(CheckModelResults):
         self.res1 = GLM(self.data.endog, self.data.exog,
             family=sm.families.InverseGaussian(link=\
             sm.families.links.identity)).fit()
+        from results.results_glm import InvGaussIdentity
+        self.res2 = InvGaussIdentity()
 
-    def setup(self):
-        if skipR:
-            raise SkipTest, "Rpy not installed."
-        self.res2 = RModel(self.data.endog, self.data.exog, r.glm,
-            family=r.inverse_gaussian(link="identity"))
-        self.res2.null_deviance = 335.1539777981053 # from R, Rpy bug
-        self.res2.llf = -12163.25545    # from Stata, big diff with R
+#    def setup(self):
+#        if skipR:
+#            raise SkipTest, "Rpy not installed."
+#        self.res2 = RModel(self.data.endog, self.data.exog, r.glm,
+#            family=r.inverse_gaussian(link="identity"))
+#        self.res2.null_deviance = 335.1539777981053 # from R, Rpy bug
+#        self.res2.llf = -12163.25545    # from Stata, big diff with R
 
     def check_params(self, params1, params2):
         assert_almost_equal(params1, params2, DECIMAL_less)
@@ -587,7 +599,7 @@ class TestGlmInvgaussIdentity(CheckModelResults):
     def check_resids(self, resids1, resids2):
         assert_almost_equal(resids1, resids2, DECIMAL)
 
-    @dec.knownfailureif(True, "Big rounding difference vs R")
+#    @dec.knownfailureif(True, "Big rounding difference vs R")
     def check_aic_R(self, aic1, aic2):
         assert_almost_equal(aic1, aic2, DECIMAL)
 
@@ -607,18 +619,19 @@ class TestGlmNegbinomial(CheckModelResults):
         interaction = self.data.exog[:,2]*self.data.exog[:,1]
         self.data.exog = np.column_stack((self.data.exog,interaction))
         self.data.exog = add_constant(self.data.exog)
-        results = GLM(self.data.endog, self.data.exog,
+        self.res1 = GLM(self.data.endog, self.data.exog,
                 family=sm.families.NegativeBinomial()).fit()
-        self.res1 = results
+        from results.results_glm import Committee
+        self.res2 = Committee()
         # Rpy does not return the same null deviance as R for some reason
 
-    def setup(self):
-        if skipR:
-            raise SkipTest, "Rpy not installed"
-        r.library('MASS')  # this doesn't work when done in rmodelwrap?
-        self.res2 = RModel(self.data.endog, self.data.exog, r.glm,
-                family=r.negative_binomial(1))
-        self.res2.null_deviance = 27.8110469364343
+#    def setup(self):
+#        if skipR:
+#            raise SkipTest, "Rpy not installed"
+#        r.library('MASS')  # this doesn't work when done in rmodelwrap?
+#        self.res2 = RModel(self.data.endog, self.data.exog, r.glm,
+#                family=r.negative_binomial(1))
+#        self.res2.null_deviance = 27.8110469364343
 
     def check_params(self, params1, params2):
         assert_almost_equal(params1, params2, DECIMAL-1)    # precision issue
