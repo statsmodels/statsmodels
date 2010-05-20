@@ -587,7 +587,7 @@ class GLMResults(LikelihoodModelResults):
     def null_deviance(self):
         return self.family.deviance(self._endog, self.null)
 
-    @cache_readonly
+    @cache_writable() #TODO: should have resetlist = ('aic')
     def llf(self):
         _modelfamily = self.family
         if isinstance(_modelfamily, families.NegativeBinomial):
@@ -598,7 +598,7 @@ class GLMResults(LikelihoodModelResults):
                                     scale=self.scale)
         return val
 
-    @cache_readonly
+    @cache_writable()
     def aic(self):
         return -2 * self.llf + 2*(self.df_model+1)
 

@@ -1157,8 +1157,8 @@ class InvGauss(object):
         self.aic_R = 5059.41911646446
         self.aic_Stata = 1.552280060977946
         self.bic_Stata = -41136.47039418921
-        self.llf_Stata = -3877.700354 # same as ours with scale set to 1
-        self.llf = -2525.70955823223  # R this is close to our defintion
+        self.llf = -3877.700354 # Stata is same as ours with scale set to 1
+#        self.llf = -2525.70955823223  # from R, close to ours
         self.scale = 0.2867266359127567
         self.pearson_chi2 = 1432.771536
         self.resids = glm_test_resids.invgauss_resids
@@ -2168,7 +2168,7 @@ class InvGauss(object):
 
 class Medpar1(object):
     '''
-    The medpar1 data can be found here
+    The medpar1 data can be found here.
 
     http://www.stata-press.com/data/hh2/medpar1
     '''
@@ -2183,20 +2183,23 @@ class Medpar1(object):
         self.exog = sm.add_constant(design)
 
 class InvGaussLog(Medpar1):
+    """
+    InvGaussLog is used with TestGlmInvgaussLog
+    """
     def __init__(self):
         super(InvGaussLog, self).__init__()
         filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
             "medparlogresids.csv")
         self.resids = np.genfromtxt(filename, delimiter=",")
-        self.null_deviance = 15624.599410883269
+        self.null_deviance = 335.1539777981053 # from R, Rpy bug
         self.params = np.array([ 0.09927544, -0.19161722,  1.05712336])
         self.bse = np.array([ 0.00600728,  0.02632126,  0.04915765])
         self.aic_R = 18545.836421595981
         self.aic_Stata = 6.619000588187141
         self.deviance = 304.27188306012789
         self.scale = 0.10240599519220173
-        self.llf = -9268.9182107979905  # from R
-        self.llf_Stata = -12162.72308108797
+#        self.llf = -9268.9182107979905  # from R
+        self.llf = -12162.72308108797 # from Stata, big rounding diff with R
         self.bic_Stata = -29849.51723280784
         self.chi2 = 398.5465213008323   # from Stata not in sm
         self.df_model = 2
@@ -2961,7 +2964,8 @@ class InvGaussIdentity(Medpar1):
         self.bic_Stata = -29848.45250412075
         self.llf_stata = -12163.25544543151
         self.chi2 = 567.1229375785638 # in Stata not sm
-        self.llf = -9275.3386384410078 # from R
+#        self.llf = -9275.3386384410078 # from R
+        self.llf = -12163.25545    # from Stata, big diff with R
         self.scale = 0.10115387793455666
         self.pearson_chi2 = 371.5346609292967 # deviance_p in Stata
         self.fittedvalues = np.array([ 6.84797506,  6.84797506,  6.84797506,
