@@ -3,14 +3,12 @@
 Test functions for models.GLM
 """
 
-#TODO: use decorators to dynamical call test methods?
 import numpy as np
 from numpy.testing import *
 import scikits.statsmodels as sm
 from scikits.statsmodels.glm import GLM
 from scikits.statsmodels.tools import add_constant
 from nose import SkipTest
-from check_for_rpy import skip_rpy
 
 # Test Precisions
 DECIMAL_4 = 4
@@ -53,7 +51,7 @@ class CheckModelResults(object):
 
     decimal_aic_Stata = DECIMAL_4
     def test_aic_Stata(self):
-        # Stata uses the below llf for aic definition
+        # Stata uses the below llf for aic definition for these families
         if isinstance(self.res1.model.family, (sm.families.Gamma,
             sm.families.InverseGaussian)):
             llf = self.res1.model.family.loglike(self.res1.model.endog,
@@ -75,6 +73,8 @@ class CheckModelResults(object):
 
     decimal_loglike = DECIMAL_4
     def test_loglike(self):
+        # Stata uses the below llf for these families
+        # We differ with R for them
         if isinstance(self.res1.model.family, (sm.families.Gamma,
             sm.families.InverseGaussian)):
             llf = self.res1.model.family.loglike(self.res1.model.endog,
@@ -95,12 +95,6 @@ class CheckModelResults(object):
 
     def test_degrees(self):
         assert_equal(self.res1.model.df_resid,self.res2.df_resid)
-
-#TODO: how is this different than deviance?
-#    def test_pearson_chi2(self):
-#        if 'rmodelwrap' in self.res2.__module__:
-#            raise SkipTest("Results are from RModel wrapper")
-#        self.check_pearson_chi2(self.res1.pearson_chi2, self.res2.pearson_chi2)
 
     decimal_fittedvalues = DECIMAL_4
     def test_fittedvalues(self):
