@@ -767,8 +767,8 @@ class Scotvote(object):
         self.aic_R = 182.947045954721
         self.aic_Stata = 10.72212
         self.bic_Stata = -83.09027
-        self.llf_Stata = -163.5539382 # from Stata, same as ours with scale = 1
-        self.llf = -82.47352  # Very close to ours as is
+        self.llf = -163.5539382 # from Stata, same as ours with scale = 1
+#        self.llf = -82.47352  # Very close to ours as is
         self.scale = 0.003584283
         self.pearson_chi2 = .0860228056
         self.resids = glm_test_resids.scotvote_resids
@@ -914,9 +914,8 @@ class CancerLog(Cancer):
         self.deviance = 16.174635536991005
         self.scale = 0.31805268736385695
 
-        self.llf = -160.94511197686035
-        #TODO: don't know why llf different yet
-        self.llf_Stata = -173.6866032285836
+#        self.llf = -160.94511197686035 # From R
+        self.llf = -173.6866032285836 # from Staa
         self.bic_Stata = -154.1582089453923 # from Stata
         self.df_model = 3
         self.df_resid = 44
@@ -1055,8 +1054,8 @@ class CancerIdentity(Cancer):
 #NOTE: our scale is Stata's dispers_p (pearson?)
 #NOTE: if scale is analagous to Stata's dispersion, then this might be
 #where the discrepancies come from?
-        self.llf = -159.19604559476483
-        self.llf_Stata = -173.1461666245201
+#        self.llf = -159.19604559476483 # From R
+        self.llf = -173.1461666245201 # From Stata
         self.bic_Stata = -155.2390821535193
         self.df_model = 3
         self.df_resid = 44

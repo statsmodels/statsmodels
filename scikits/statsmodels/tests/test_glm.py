@@ -53,7 +53,14 @@ class CheckModelResults(object):
 
     decimal_aic_Stata = DECIMAL_4
     def test_aic_Stata(self):
-        aic = self.res1.aic/self.res1.nobs
+        # Stata uses the below llf for aic definition
+        if isinstance(self.res1.model.family, (sm.families.Gamma,
+            sm.families.InverseGaussian)):
+            llf = self.res1.model.family.loglike(self.res1.model.endog,
+                    self.res1.mu, scale=1)
+            aic = (-2*llf+2*(self.res1.df_model+1))/self.res1.nobs
+        else:
+            aic = self.res1.aic/self.res1.nobs
         assert_almost_equal(aic, self.res2.aic_Stata, self.decimal_aic_Stata)
 
     decimal_deviance = DECIMAL_4
@@ -68,7 +75,13 @@ class CheckModelResults(object):
 
     decimal_loglike = DECIMAL_4
     def test_loglike(self):
-        assert_almost_equal(self.res1.llf, self.res2.llf, self.decimal_loglike)
+        if isinstance(self.res1.model.family, (sm.families.Gamma,
+            sm.families.InverseGaussian)):
+            llf = self.res1.model.family.loglike(self.res1.model.endog,
+                    self.res1.mu, scale=1)
+        else:
+            llf = self.res1.llf
+        assert_almost_equal(llf, self.res2.llf, self.decimal_loglike)
 
     decimal_null_deviance = DECIMAL_4
     def test_null_deviance(self):
@@ -188,22 +201,17 @@ class TestGlmBinomial(CheckModelResults):
         self.decimal_bic = DECIMAL_2
 
         from scikits.statsmodels.datasets.star98 import Load
-#        from model_results import Star98
         from results.results_glm import Star98
-        self.data = Load()
-        self.data.exog = add_constant(self.data.exog)
-        trials = self.data.endog[:,:2].sum(axis=1)
-        self.res1 = GLM(self.data.endog, self.data.exog, \
+        data = Load()
+        data.exog = add_constant(data.exog)
+        trials = data.endog[:,:2].sum(axis=1)
+        self.res1 = GLM(data.endog, data.exog, \
         family=sm.families.Binomial()).fit(data_weights = trials)
         #NOTE: if you want to replicate with RModel
         #res2 = RModel(data.endog[:,0]/trials, data.exog, r.glm,
         #        family=r.binomial, weights=trials)
 
         self.res2 = Star98()
-
-    def check_pearson_chi2(self, pearson_chi21, pearson_chi22):
-        assert_almost_equal(pearson_chi21, pearson_chi22, DECIMAL_2)
-        # Pearson's X2 sums residuals that are rounded differently in Stata
 
 #TODO:
 #Non-Canonical Links for the Binomial family require the algorithm to be
@@ -237,27 +245,6 @@ class TestGlmBernoulli(CheckModelResults):
         self.res1 = GLM(self.res2.endog, self.res2.exog,
                 family=sm.families.Binomial()).fit()
 
-    def check_params(self, params1, params2):
-        assert_almost_equal(params1, params2, DECIMAL_4)
-
-    def check_resids(self, resids1, resids2):
-        assert_almost_equal(resids1, resids2, DECIMAL_4)
-
-    def check_aic_R(self, aic1, aic2):
-        assert_almost_equal(aic1, aic2, DECIMAL_4)
-
-    def check_aic_Stata(self, aic1, aic2):
-        assert_almost_equal(aic1, aic2, DECIMAL_4)
-
-    def check_loglike(self, llf1, llf2):
-        assert_almost_equal(llf1, llf2, DECIMAL_4)
-
-    def check_bic(self, bic1, bic2):
-        assert_almost_equal(bic1, bic2, DECIMAL_4)
-
-    def check_pearson_chi2(self, pearson_chi21, pearson_chi22):
-        assert_almost_equal(pearson_chi21, pearson_chi22, DECIMAL_4)
-
 #class TestGlmBernoulliIdentity(CheckModelResults):
 #    pass
 
@@ -286,45 +273,26 @@ class TestGlmGamma(CheckModelResults):
         Tests Gamma family with canonical inverse link (power -1)
         '''
         # Test Precisions
-        self.decimal_aic_R = -1 #TODO: off by about 1
-        self.decimal_loglike = -1 # off by ~.5, definitional?
+        self.decimal_aic_R = -1 #TODO: off by about 1, we are right with Stata
         self.decimal_resids = DECIMAL_2
-
-
 
         from scikits.statsmodels.datasets.scotland import Load
         from results.results_glm import Scotvote
-        self.data = Load()
-        self.data.exog = add_constant(self.data.exog)
-        res1 = GLM(self.data.endog, self.data.exog, \
+        data = Load()
+        data.exog = add_constant(data.exog)
+        res1 = GLM(data.endog, data.exog, \
                     family=sm.families.Gamma()).fit()
-#        res1.llf = res1.model.family.loglike(res1.model.endog, res1.mu, scale=1)
-        #NOTE that this is Stata's default for loglikelihood
-        # Ours is close to R's
         self.res1 = res1
+#        res2 = RModel(data.endog, data.exog, r.glm, family=r.Gamma)
         res2 = Scotvote()
         res2.aic_R += 2 # R doesn't count degree of freedom for scale with gamma
         self.res2 = res2
-
-
-#    def check_aic_Stata(self, aic1, aic2):
-#        llf1 = self.res1.model.family.loglike(self.res1.model.endog,
-#                self.res1.mu, scale=1)
-#        aic1 = 2 *(self.res1.model.df_model + 1 - llf1)/self.res1.nobs
-#        assert_almost_equal(aic1, aic2, DECIMAL_4)
-
-#    def check_loglike(self, llf1, llf2):
-#        llf1 = self.res1.model.family.loglike(self.res1.model.endog,
-#                self.res1.mu, scale=1)
-#        assert_almost_equal(llf1, llf2, DECIMAL_4)
 
 class TestGlmGammaLog(CheckModelResults):
     def __init__(self):
         # Test Precisions
         self.decimal_resids = DECIMAL_3
         self.decimal_aic_R = DECIMAL_0
-        self.decimal_aic_Stata = -1 # Off by .5, definition/scale ?
-        self.decimal_loglike = DECIMAL_1
         self.decimal_fittedvalues = DECIMAL_3
 
         from results.results_glm import CancerLog
@@ -347,7 +315,6 @@ class TestGlmGammaIdentity(CheckModelResults):
         self.decimal_resids = -100 #TODO Very off from Stata?
         self.decimal_params = DECIMAL_2
         self.decimal_aic_R = DECIMAL_0
-        self.decimal_aic_Stata = -1 #TODO: Off by .5, definition?
         self.decimal_loglike = DECIMAL_1
 
         from results.results_glm import CancerIdentity
@@ -398,52 +365,26 @@ class TestGlmInvgauss(CheckModelResults):
         '''
         # Test Precisions
         self.decimal_aic_R = DECIMAL_0
-        self.decimal_aic_Stata = DECIMAL_0
         self.decimal_loglike = DECIMAL_0
 
         from results.results_glm import InvGauss
         res2 = InvGauss()
         res1 = GLM(res2.endog, res2.exog, \
                 family=sm.families.InverseGaussian()).fit()
-        res1.llf = res1.model.family.loglike(res1.model.endog, res1.mu,
-                scale=1)
-        res1.aic = -2*res1.model.family.loglike(res1.model.endog, res1.mu,
-                scale=res1.scale) + 2*(res1.df_model+1) # R uses old llf
         self.res1 = res1
         self.res2 = res2
-
-#    def check_aic_R(self, aic1, aic2):
-#        assert_approx_equal(aic1, aic2, DECIMAL_4)
-        # Off by 2e-1 due to implementation difference
-
-#    def check_aic_Stata(self, aic1, aic2):
-#        llf1 = self.res1.model.family.loglike(self.res1.model.endog,
-#                self.res1.mu, scale=1)
-#        aic1 = 2 * (self.res1.model.df_model + 1 - llf1)/self.res1.nobs
-#        assert_almost_equal(aic1, aic2, DECIMAL_4)
-
-#    def check_loglike(self, llf1, llf2):
-#        llf1 = self.res1.model.family.loglike(self.res1.model.endog,
-#                self.res1.mu, scale=1)    # Stata assumes scale = 1 in calc,
-                                          # which shouldn't be right...
-#        assert_almost_equal(llf1, llf2, DECIMAL_3)
 
 class TestGlmInvgaussLog(CheckModelResults):
     def __init__(self):
         # Test Precisions
         self.decimal_aic_R = -10 # Big difference vs R.
-#        self.decimal_loglike = DECIMAL_0
         self.decimal_resids = DECIMAL_3
 
         from results.results_glm import InvGaussLog
         res2 = InvGaussLog()
-        res1 = GLM(res2.endog, res2.exog,
+        self.res1 = GLM(res2.endog, res2.exog,
             family=sm.families.InverseGaussian(link=\
             sm.families.links.log)).fit()
-        res1.llf = res1.model.family.loglike(res1.model.endog, res1.mu, scale=1)
-        res1.aic = -2*res1.model.family.loglike(res1.model.endog, res1.mu,
-                scale=res1.scale) + 2*(res1.df_model+1) # R uses old llf
-        self.res1 = res1
         self.res2 = res2
 
 #    def setup(self):
@@ -458,23 +399,15 @@ class TestGlmInvgaussIdentity(CheckModelResults):
     def __init__(self):
         # Test Precisions
         self.decimal_aic_R = -10 #TODO: Big difference vs R
-        self.decimal_aic_Stata = DECIMAL_0
         self.decimal_fittedvalues = DECIMAL_3
-#        self.decimal_loglike = DECIMAL_0
         self.decimal_params = DECIMAL_3
 
         from results.results_glm import Medpar1
         data = Medpar1()
-        res1 = GLM(data.endog, data.exog,
+        self.res1 = GLM(data.endog, data.exog,
             family=sm.families.InverseGaussian(link=\
             sm.families.links.identity)).fit()
         from results.results_glm import InvGaussIdentity
-        res1.llf = res1.model.family.loglike(res1.model.endog, res1.mu,
-                scale=1)
-        res1.aic = -2*res1.model.family.loglike(res1.model.endog, res1.mu,
-                scale=res1.scale) + 2*(res1.df_model+1) # R uses old llf
-        # Stata Loglikelihood uses the above
-        self.res1 = res1
         self.res2 = InvGaussIdentity()
 
 #    def setup(self):
@@ -491,7 +424,6 @@ class TestGlmNegbinomial(CheckModelResults):
         Test Negative Binomial family with canonical log link
         '''
         # Test Precision
-#        self.decimal_aic_R = DECIMAL_3
         self.decimal_resid = DECIMAL_1
         self.decimal_params = DECIMAL_3
         self.decimal_resids = -1 # 1 % mismatch at 0
@@ -509,7 +441,6 @@ class TestGlmNegbinomial(CheckModelResults):
         res2 = Committee()
         res2.aic_R += 2 # They don't count a degree of freedom for the scale
         self.res2 = res2
-        # Rpy does not return the same null deviance as R for some reason
 
 #    def setup(self):
 #        if skipR:
