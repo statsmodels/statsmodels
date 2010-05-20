@@ -4,9 +4,6 @@ Test functions for models.GLM
 """
 
 #TODO: use decorators to dynamical call test methods?
-#TODO: move decimal_precision attributes to the classes here
-
-#from __future__ import absolute_import
 import numpy as np
 from numpy.testing import *
 import scikits.statsmodels as sm
@@ -21,10 +18,6 @@ DECIMAL_3 = 3
 DECIMAL_2 = 2
 DECIMAL_1 = 1
 DECIMAL_0 = 0
-#skipR = skip_rpy()
-#if not skipR:
-#    from rpy import r
-#    from rmodelwrap import RModel
 
 class CheckModelResults(object):
     '''
@@ -33,7 +26,6 @@ class CheckModelResults(object):
     '''
     decimal_params = DECIMAL_4
     def test_params(self):
-#        self.check_params(self.res1.params, self.res2.params)
         assert_almost_equal(self.res1.params, self.res2.params,
                 self.decimal_params)
 
@@ -43,38 +35,25 @@ class CheckModelResults(object):
 
     decimal_resids = DECIMAL_4
     def test_residuals(self):
-#TODO: remove RPY stuff?
-#        if 'rmodelwrap' in self.res2.__module__ and not hasattr(self.res2,
-#               'resids'):
-#            assert_almost_equal(self.res1.resid_deviance,
-#                self.res2.resid_deviance, DECIMAL_4)
-#        else:
         resids = np.column_stack((self.res1.resid_pearson,
                 self.res1.resid_deviance, self.res1.resid_working,
                 self.res1.resid_anscombe, self.res1.resid_response))
-#            self.check_resids(resids, self.res2.resids)
         assert_almost_equal(resids, self.res2.resids, self.decimal_resids)
 
     decimal_aic_R = DECIMAL_4
     def test_aic_R(self):
         # R includes the estimation of the scale as a lost dof
         # Doesn't with Gamma though
-    #TODO:fix this?
         if self.res1.scale != 1:
             dof = 2
-        else: dof = 0
-#        self.check_aic_R(self.res1.aic+dof, self.res2.aic_R,
-#                self.decimal_aic_R)
+        else:
+            dof = 0
         assert_almost_equal(self.res1.aic+dof, self.res2.aic_R,
                 self.decimal_aic_R)
 
     decimal_aic_Stata = DECIMAL_4
     def test_aic_Stata(self):
-#TODO: remove RPY stuff
-        if 'rmodelwrap' in self.res2.__module__:
-            raise SkipTest("Results are from RModel wrapper")
         aic = self.res1.aic/self.res1.nobs
-#        self.check_aic_Stata(aic, self.res2.aic_Stata)
         assert_almost_equal(aic, self.res2.aic_Stata, self.decimal_aic_Stata)
 
     decimal_deviance = DECIMAL_4
@@ -89,8 +68,6 @@ class CheckModelResults(object):
 
     decimal_loglike = DECIMAL_4
     def test_loglike(self):
-#        self.check_loglike(self.res1.llf, self.res2.llf,
-#                self.decimal_loglike)
         assert_almost_equal(self.res1.llf, self.res2.llf, self.decimal_loglike)
 
     decimal_null_deviance = DECIMAL_4
@@ -100,19 +77,10 @@ class CheckModelResults(object):
 
     decimal_bic = DECIMAL_4
     def test_bic(self):
-        #TODO: remove RPY stuff
-#        if 'rmodelwrap' in self.res2.__module__ and not hasattr(self.res2,
-#                'bic'):
-#            raise SkipTest("Results are from RModel wrapper")
-#        self.check_bic(self.res1.bic,
-#            self.res2.bic_Stata)
         assert_almost_equal(self.res1.bic, self.res2.bic_Stata,
                 self.decimal_bic)
 
     def test_degrees(self):
-#        if not 'rmodelwrap' in self.res2.__module__:
-#            assert_almost_equal(self.res1.model.df_model,self.res2.df_model,
-#                    DECIMAL_4)
         assert_equal(self.res1.model.df_resid,self.res2.df_resid)
 
 #TODO: how is this different than deviance?
@@ -123,8 +91,6 @@ class CheckModelResults(object):
 
     decimal_fittedvalues = DECIMAL_4
     def test_fittedvalues(self):
-#        if not 'rmodelwrap' in self.res2.__module__:
-#            raise SkipTest("Results do not have fitted values")
         assert_almost_equal(self.res1.fittedvalues, self.res2.fittedvalues,
                 self.decimal_fittedvalues)
 
@@ -155,27 +121,6 @@ class TestGlmGaussian(CheckModelResults):
 #        self.res2.resids = np.array(self.res2.resid)[:,None]*np.ones((1,5))
 #        self.res2.null_deviance = 185008826 # taken from R. Rpy bug?
 
-#    def check_params(self, params1, params2):
-#        assert_almost_equal(params1, params2, DECIMAL_4)
-
-#    def check_resids(self, resids1, resids2):
-#        assert_almost_equal(resids1, resids2, DECIMAL_4)
-
-#    def check_aic_R(self, aic1, aic2):
-#        assert_almost_equal(aic1, aic2, DECIMAL_4)
-
-#    def check_aic_Stata(self, aic1, aic2):
-#        assert_almost_equal(aic1, aic2, DECIMAL_4)
-
-#    def check_loglike(self, llf1, llf2):
-#        assert_almost_equal(llf1, llf2, DECIMAL_4)
-
-#    def check_bic(self, bic1, bic2):
-#        assert_almost_equal(bic1, bic2, DECIMAL_4)
-
-#    def check_pearson_chi2(self, pearson_chi21, pearson_chi22):
-#        assert_almost_equal(pearson_chi21, pearson_chi22, DECIMAL_4)
-
 class TestGaussianLog(CheckModelResults):
     def __init__(self):
         # Test Precision
@@ -183,8 +128,6 @@ class TestGaussianLog(CheckModelResults):
         self.decimal_aic_Stata = DECIMAL_2
         self.decimal_loglike = DECIMAL_0
         self.decimal_null_deviance = DECIMAL_1
-
-
 
         nobs = 100
         x = np.arange(nobs)
@@ -207,21 +150,6 @@ class TestGaussianLog(CheckModelResults):
 #        GaussLog_Res_R = RModel(self.lny, self.X, r.glm, family=GaussLogLink)
 #        self.res2 = GaussLog_Res_R
 
-
-#    def test_null_deviance(self):
-#        assert_almost_equal(self.res1.null_deviance, self.res2.null_deviance,
-#                    DECIMAL_1)
-
-#    def check_params(self, params1, params2):
-#        assert_almost_equal(params1, params2, DECIMAL_4)
-
-#    def check_loglike(self, llf1, llf2):
-#        assert_almost_equal(llf1, llf2, DECIMAL_0)
-
-#    def check_aic_R(self, aic1, aic2):
-#        assert_almost_equal(aic1, aic2, DECIMAL_0)
-#TODO: is this a full test?
-
 class TestGaussianInverse(CheckModelResults):
     def __init__(self):
         # Test Precisions
@@ -230,7 +158,6 @@ class TestGaussianInverse(CheckModelResults):
         self.decimal_aic_Stata = DECIMAL_3
         self.decimal_loglike = DECIMAL_1
         self.decimal_resids = DECIMAL_3
-
 
         nobs = 100
         x = np.arange(nobs)
@@ -251,21 +178,6 @@ class TestGaussianInverse(CheckModelResults):
 #        InverseLink = r.gaussian(link = "inverse")
 #        InverseLink_Res_R = RModel(self.y_inv, self.X, r.glm, family=InverseLink)
 #        self.res2 = InverseLink_Res_R
-
-    def check_params(self, params1, params2):
-        assert_almost_equal(params1, params2, DECIMAL_4)
-
-    def check_loglike(self, llf1, llf2):
-        assert_almost_equal(llf1, llf2, DECIMAL_1)
-
-    def check_aic_R(self, aic1, aic2):
-        assert_almost_equal(aic1, aic2, DECIMAL_1)
-#TODO: is this a full test?
-
-#    @dec.knownfailureif(True, "This is a bug in Rpy")
-    def test_null_deviance(self):
-        assert_almost_equal(self.res1.null_deviance, self.res2.null_deviance,
-                    DECIMAL_1)
 
 class TestGlmBinomial(CheckModelResults):
     def __init__(self):
@@ -289,30 +201,10 @@ class TestGlmBinomial(CheckModelResults):
 
         self.res2 = Star98()
 
-#    def check_params(self, params1, params2):
-#        assert_almost_equal(params1, params2, DECIMAL_4)
-
-#    def check_resids(self, resids1, resids2):
-#        assert_almost_equal(resids1, resids2, DECIMAL_1)
-        # rounding difference vs. stata
-
-#    def check_aic_R(self, aic1, aic2):
-#        assert_almost_equal(aic1, aic2, DECIMAL_4)
-
-#    def check_aic_Stata(self, aic1, aic2):
-#        assert_almost_equal(aic1, aic2, DECIMAL_4)
-
-#    def check_loglike(self, llf1, llf2):
-#        assert_almost_equal(llf1, llf2, DECIMAL_3)
-        # precise up to 3 decimals
-
-#    def check_bic(self, bic1, bic2):
-#        assert_almost_equal(bic1, bic2, DECIMAL_2)
-        # accurate to 1e-02
-
     def check_pearson_chi2(self, pearson_chi21, pearson_chi22):
         assert_almost_equal(pearson_chi21, pearson_chi22, DECIMAL_2)
         # Pearson's X2 sums residuals that are rounded differently in Stata
+
 #TODO:
 #Non-Canonical Links for the Binomial family require the algorithm to be
 #slightly changed
@@ -395,14 +287,12 @@ class TestGlmGamma(CheckModelResults):
         '''
         # Test Precisions
         self.decimal_aic_R = -1 #TODO: off by about 1
-        #TODO: the below is going to fail.
         self.decimal_loglike = -1 # off by ~.5, definitional?
         self.decimal_resids = DECIMAL_2
 
 
 
         from scikits.statsmodels.datasets.scotland import Load
-#        from model_results import Scotvote
         from results.results_glm import Scotvote
         self.data = Load()
         self.data.exog = add_constant(self.data.exog)
@@ -416,18 +306,6 @@ class TestGlmGamma(CheckModelResults):
         res2.aic_R += 2 # R doesn't count degree of freedom for scale with gamma
         self.res2 = res2
 
-#    def check_params(self, params1, params2):
-#        assert_almost_equal(params1, params2, DECIMAL_4)
-
-#    def check_resids(self, resids1, resids2):
-#        assert_almost_equal(resids1, resids2, DECIMAL_2)
-
-#    def check_aic_R(self, aic1, aic2):
-#        assert_approx_equal(aic1-2, aic2, DECIMAL_3)
-        # R includes another degree of freedom in calculation of AIC,
-        # but not with
-        # gamma for some reason
-        # There is also a precision issue due to a different implementation?
 
 #    def check_aic_Stata(self, aic1, aic2):
 #        llf1 = self.res1.model.family.loglike(self.res1.model.endog,
@@ -440,12 +318,6 @@ class TestGlmGamma(CheckModelResults):
 #                self.res1.mu, scale=1)
 #        assert_almost_equal(llf1, llf2, DECIMAL_4)
 
-#    def check_bic(self, bic1, bic2):
-#        assert_almost_equal(bic1, bic2, DECIMAL_4)
-
-#    def check_pearson_chi2(self, pearson_chi21, pearson_chi22):
-#        assert_almost_equal(pearson_chi21, pearson_chi22, DECIMAL_4)
-
 class TestGlmGammaLog(CheckModelResults):
     def __init__(self):
         # Test Precisions
@@ -455,14 +327,11 @@ class TestGlmGammaLog(CheckModelResults):
         self.decimal_loglike = DECIMAL_1
         self.decimal_fittedvalues = DECIMAL_3
 
-
-#        from model_results import Cancer
         from results.results_glm import CancerLog
         res2 = CancerLog()
         self.res1 = GLM(res2.endog, res2.exog,
             family=sm.families.Gamma(link=sm.families.links.log)).fit()
         self.res2 = res2
-
 
 #    def setup(self):
 #        if skipR:
@@ -471,22 +340,6 @@ class TestGlmGammaLog(CheckModelResults):
 #            family=r.Gamma(link="log"))
 #        self.res2.null_deviance = 27.92207137420696 # From R (bug in rpy)
 #        self.res2.bic = -154.1582089453923 # from Stata
-
-
-#    def check_params(self, params1, params2):
-#        assert_almost_equal(params1, params2, DECIMAL_4)
-
-#    def check_resids(self, resids1, resids2):
-#        assert_almost_equal(resids1, resids2, DECIMAL_4)
-
-#    def check_aic_R(self, aic1, aic2):
-#        assert_almost_equal(aic1, aic2, DECIMAL_0)
-
-#    def check_loglike(self, llf1, llf2):
-#        assert_almost_equal(llf1, llf2, DECIMAL_1)
-
-#    def check_bic(self, bic1, bic2):
-#        assert_almost_equal(bic1, bic2, DECIMAL_4)
 
 class TestGlmGammaIdentity(CheckModelResults):
     def __init__(self):
@@ -497,8 +350,6 @@ class TestGlmGammaIdentity(CheckModelResults):
         self.decimal_aic_Stata = -1 #TODO: Off by .5, definition?
         self.decimal_loglike = DECIMAL_1
 
-
-#        from model_results import Cancer
         from results.results_glm import CancerIdentity
         res2 = CancerIdentity()
         self.res1 = GLM(res2.endog, res2.exog,
@@ -512,21 +363,6 @@ class TestGlmGammaIdentity(CheckModelResults):
 #            family=r.Gamma(link="identity"))
 #        self.res2.null_deviance = 27.92207137420696 # from R, Rpy bug
 
-#    def check_params(self, params1, params2):
-#        assert_almost_equal(params1, params2, DECIMAL_2)
-
-#    def check_resids(self, resids1, resids2):
-#        assert_almost_equal(resids1, resids2, DECIMAL_4)
-
-#    def check_aic_R(self, aic1, aic2):
-#        assert_almost_equal(aic1, aic2, DECIMAL_0)
-
-#    def check_loglike(self, llf1, llf2):
-#        assert_almost_equal(llf1, llf2, DECIMAL_1)
-
-#    def check_bic(self, bic1, bic2):
-#        assert_almost_equal(bic1, bic2, DECIMAL_4)
-
 class TestGlmPoisson(CheckModelResults):
     def __init__(self):
         '''
@@ -534,7 +370,6 @@ class TestGlmPoisson(CheckModelResults):
 
         Test results were obtained by R.
         '''
-#        from model_results import Cpunish
         from results.results_glm import Cpunish
         from scikits.statsmodels.datasets.cpunish import Load
         self.data = Load()
@@ -543,27 +378,6 @@ class TestGlmPoisson(CheckModelResults):
         self.res1 = GLM(self.data.endog, self.data.exog,
                     family=sm.families.Poisson()).fit()
         self.res2 = Cpunish()
-
-#    def check_params(self, params1, params2):
-#        assert_almost_equal(params1, params2, DECIMAL_4)
-
-#    def check_resids(self, resids1, resids2):
-#        assert_almost_equal(resids1, resids2, DECIMAL_4)
-
-#    def check_aic_R(self, aic1, aic2):
-#        assert_almost_equal(aic1, aic2, DECIMAL_4)
-
-#    def check_aic_Stata(self, aic1, aic2):
-#        assert_almost_equal(aic1, aic2, DECIMAL_4)
-
-#    def check_loglike(self, llf1, llf2):
-#        assert_almost_equal(llf1, llf2, DECIMAL_4)
-
-#    def check_bic(self, bic1, bic2):
-#        assert_almost_equal(bic1, bic2, DECIMAL_4)
-
-#    def check_pearson_chi2(self, pearson_chi21, pearson_chi22):
-#        assert_almost_equal(pearson_chi21, pearson_chi22, DECIMAL_4)
 
 #class TestGlmPoissonIdentity(CheckModelResults):
 #    pass
@@ -587,7 +401,6 @@ class TestGlmInvgauss(CheckModelResults):
         self.decimal_aic_Stata = DECIMAL_0
         self.decimal_loglike = DECIMAL_0
 
-#        from model_results import InvGauss
         from results.results_glm import InvGauss
         res2 = InvGauss()
         res1 = GLM(res2.endog, res2.exog, \
@@ -598,16 +411,6 @@ class TestGlmInvgauss(CheckModelResults):
                 scale=res1.scale) + 2*(res1.df_model+1) # R uses old llf
         self.res1 = res1
         self.res2 = res2
-
-#    def setup(self):
-#        if skipR:
-#            raise nose.SkipTest('requires rpy')
-
-#    def check_params(self, params1, params2):
-#        assert_almost_equal(params1, params2, DECIMAL_4)
-
-#    def check_resids(self, resids1, resids2):
-#        assert_almost_equal(resids1, resids2, DECIMAL_4)
 
 #    def check_aic_R(self, aic1, aic2):
 #        assert_approx_equal(aic1, aic2, DECIMAL_4)
@@ -625,12 +428,6 @@ class TestGlmInvgauss(CheckModelResults):
                                           # which shouldn't be right...
 #        assert_almost_equal(llf1, llf2, DECIMAL_3)
 
-#    def check_bic(self, bic1, bic2):
-#        assert_almost_equal(bic1, bic2, DECIMAL_2) # precision in STATA
-
-#    def check_pearson_chi2(self, pearson_chi21, pearson_chi22):
-#        assert_almost_equal(pearson_chi21, pearson_chi22, DECIMAL_3)# summed resids
-
 class TestGlmInvgaussLog(CheckModelResults):
     def __init__(self):
         # Test Precisions
@@ -638,8 +435,6 @@ class TestGlmInvgaussLog(CheckModelResults):
 #        self.decimal_loglike = DECIMAL_0
         self.decimal_resids = DECIMAL_3
 
-
-#        from model_results import Medpar1
         from results.results_glm import InvGaussLog
         res2 = InvGaussLog()
         res1 = GLM(res2.endog, res2.exog,
@@ -650,8 +445,6 @@ class TestGlmInvgaussLog(CheckModelResults):
                 scale=res1.scale) + 2*(res1.df_model+1) # R uses old llf
         self.res1 = res1
         self.res2 = res2
-                                     # common across Gamma implementation
-
 
 #    def setup(self):
 #        if skipR:
@@ -660,21 +453,6 @@ class TestGlmInvgaussLog(CheckModelResults):
 #            family=r.inverse_gaussian(link="log"))
 #        self.res2.null_deviance = 335.1539777981053 # from R, Rpy bug
 #        self.res2.llf = -12162.72308 # from Stata, R's has big rounding diff
-
-#    def check_params(self, params1, params2):
-#        assert_almost_equal(params1, params2, DECIMAL_4)
-
-#    def check_resids(self, resids1, resids2):
-#        assert_almost_equal(resids1, resids2, DECIMAL_4)
-
-#    @dec.knownfailureif(True, "Big rounding difference vs. R")
-#    def check_aic_R(self, aic1, aic2):
-#        assert_almost_equal(aic1, aic2, DECIMAL_4)
-
-#    def check_loglike(self, llf1, llf2):
-#        llf1 = self.res1.model.family.loglike(self.res1.model.endog,
-#                self.res1.mu, scale=1)
-#        assert_almost_equal(llf1, llf2, DECIMAL_4)
 
 class TestGlmInvgaussIdentity(CheckModelResults):
     def __init__(self):
@@ -685,7 +463,6 @@ class TestGlmInvgaussIdentity(CheckModelResults):
 #        self.decimal_loglike = DECIMAL_0
         self.decimal_params = DECIMAL_3
 
-#        from model_results import Medpar1
         from results.results_glm import Medpar1
         data = Medpar1()
         res1 = GLM(data.endog, data.exog,
@@ -707,21 +484,6 @@ class TestGlmInvgaussIdentity(CheckModelResults):
 #            family=r.inverse_gaussian(link="identity"))
 #        self.res2.null_deviance = 335.1539777981053 # from R, Rpy bug
 #        self.res2.llf = -12163.25545    # from Stata, big diff with R
-
-#    def check_params(self, params1, params2):
-#        assert_almost_equal(params1, params2, DECIMAL_3)
-
-#    def check_resids(self, resids1, resids2):
-#        assert_almost_equal(resids1, resids2, DECIMAL_4)
-
-#    @dec.knownfailureif(True, "Big rounding difference vs R")
-#    def check_aic_R(self, aic1, aic2):
-#        assert_almost_equal(aic1, aic2, DECIMAL_4)
-
-#    def check_loglike(self, llf1, llf2):
-#        llf1 = self.res1.model.family.loglike(self.res1.model.endog,
-#                self.res1.mu, scale=1)
-#        assert_almost_equal(llf1, llf2, DECIMAL_4)
 
 class TestGlmNegbinomial(CheckModelResults):
     def __init__(self):
@@ -756,30 +518,6 @@ class TestGlmNegbinomial(CheckModelResults):
 #        self.res2 = RModel(self.data.endog, self.data.exog, r.glm,
 #                family=r.negative_binomial(1))
 #        self.res2.null_deviance = 27.8110469364343
-
-#    def check_params(self, params1, params2):
-#        assert_almost_equal(params1, params2, DECIMAL_4-1)    # precision issue
-
-#    def check_resids(self, resids1, resids2):
-#        assert_almost_equal(resids1, resids2, DECIMAL_4)
-
-#    def check_aic_R(self, aic1, aic2):
-#        assert_almost_equal(aic1-2, aic2, DECIMAL_4)
-        # note that R subtracts an extra degree of freedom for estimating
-        # the scale
-
-#    def check_aic_Stata(self, aic1, aic2):
-#        aic1 = aci1/self.res1.nobs
-#        assert_almost_equal(aic1, aic2, DECIMAL_4)
-
-#    def check_loglike(self, llf1, llf2):
-#        assert_almost_equal(llf1, llf2, DECIMAL_4)
-
-#    def check_bic(self, bic1, bic2):
-#        assert_almost_equal(bic1, bic2, DECIMAL_4)
-
-#    def check_pearson_chi2(self, pearson_chi21, pearson_chi22):
-#        assert_almost_equal(pearson_chi21, pearson_chi22, DECIMAL_4)
 
 #class TestGlmNegbinomial_log(CheckModelResults):
 #    pass
