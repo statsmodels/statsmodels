@@ -6,8 +6,11 @@ taken from scikits.learn
 # Author: Alexandre Gramfort <alexandre.gramfort@inria.fr>,
 #         Gael Varoquaux    <gael.varoquaux@normalesup.org>
 # License: BSD Style.
-
 # $Id$
+
+changes to code by josef-pktd:
+ - docstring formatting: underlines of headers
+
 """
 
 
@@ -45,12 +48,12 @@ class LeaveOneOut(object):
         Provides train/test indexes to split data in train test sets
 
         Parameters
-        ===========
+        ----------
         n: int
             Total number of elements
 
         Examples
-        ========
+        --------
         >>> from scikits.learn import cross_val
         >>> X = [[1, 2], [3, 4]]
         >>> y = [1, 2]
@@ -98,14 +101,14 @@ class LeavePOut(object):
         Provides train/test indexes to split data in train test sets
 
         Parameters
-        ===========
+        ----------
         n: int
             Total number of elements
         p: int
             Size test sets
 
         Examples
-        ========
+        --------
         >>> from scikits.learn import cross_val
         >>> X = [[1, 2], [3, 4], [5, 6], [7, 8]]
         >>> y = [1, 2, 3, 4]
@@ -157,14 +160,14 @@ class KFold(object):
         Provides train/test indexes to split data in train test sets
 
         Parameters
-        ===========
+        ----------
         n: int
             Total number of elements
         k: int
             number of folds
 
         Examples
-        ========
+        --------
         >>> from scikits.learn import cross_val
         >>> X = [[1, 2], [3, 4], [1, 2], [3, 4]]
         >>> y = [1, 2, 3, 4]
@@ -175,8 +178,8 @@ class KFold(object):
         TRAIN: [False False  True  True] TEST: [ True  True False False]
         TRAIN: [ True  True False False] TEST: [False False  True  True]
 
-        Note
-        ====
+        Notes
+        -----
         All the folds have size trunc(n/k), the last one has the complementary
         """
         assert k>0, ValueError('cannot have k below 1')
@@ -227,7 +230,7 @@ class LeaveOneLabelOut(object):
                 List of labels
 
         Examples
-        ----------
+        --------
         >>> from scikits.learn import cross_val
         >>> X = [[1, 2], [3, 4], [5, 6], [7, 8]]
         >>> y = [1, 2, 1, 2]
@@ -291,6 +294,82 @@ possible to add other arrays of the same shape[0] too
 - y_test) ** 2).mean())
 '''
 
+
+################################################################################
+#below: Author: josef-pktd
+
+class KStepAhead(object):
+    """
+    KStepAhead cross validation iterator:
+    Provides fit/test indexes to split data in sequential sets
+    """
+
+    def __init__(self, n, k, start=None, kall=True):
+        """
+        KStepAhead cross validation iterator:
+        Provides train/test indexes to split data in train test sets
+
+        Parameters
+        ----------
+        n: int
+            Total number of elements
+        k : int
+            number of steps ahead
+        start : int
+            initial size of data for fitting
+
+        Notes
+        -----
+        I don't think this is really useful, because it can be done with
+        a very simple loop instead.
+
+        Examples
+        --------
+        >>> from scikits.learn import cross_val
+        >>> X = [[1, 2], [3, 4]]
+        >>> y = [1, 2]
+        >>> loo = cross_val.LeaveOneOut(2)
+        >>> for train_index, test_index in loo:
+        ...    print "TRAIN:", train_index, "TEST:", test_index
+        ...    X_train, X_test, y_train, y_test = cross_val.split(train_index, test_index, X, y)
+        ...    print X_train, X_test, y_train, y_test
+        TRAIN: [False  True] TEST: [ True False]
+        [[3 4]] [[1 2]] [2] [1]
+        TRAIN: [ True False] TEST: [False  True]
+        [[1 2]] [[3 4]] [1] [2]
+        """
+        self.n = n
+        self.k = k
+        if start is None:
+            start = np.trunc(n*0.25) # pick something arbitrary
+        self.start = start
+        self.kall = kall
+
+
+    def __iter__(self):
+        n = self.n
+        k = self.k
+        start = self.start
+        for i in xrange(start, n-k):
+            train_index  = np.zeros(n, dtype=np.bool)
+            train_index[:i] = True
+            test_index  = np.zeros(n, dtype=np.bool)
+            if self.kall:
+                test_index[i:i+k] = True # np.logical_not(test_index)
+            else:
+                test_index[i+k-1:i+k] = True
+            #or faster to return np.arange(i,i+k) ?
+            yield train_index, test_index
+
+
+    def __repr__(self):
+        return '%s.%s(n=%i)' % (self.__class__.__module__,
+                                self.__class__.__name__,
+                                self.n,
+                                )
+
+
+
 if __name__ == '__main__':
     #A: josef-pktd
 
@@ -310,3 +389,34 @@ if __name__ == '__main__':
         print data.endog[outidx], res.model.predict(data.exog[outidx,:]),
         print data.endog[outidx] - res.model.predict(data.exog[outidx,:])
 
+    resparams = []
+    for inidx, outidx in LeavePOut(len(data.endog), 2):
+        res = sm.OLS(data.endog[inidx], data.exog[inidx,:]).fit()
+        #print data.endog[outidx], res.model.predict(data.exog[outidx,:]),
+        #print ((data.endog[outidx] - res.model.predict(data.exog[outidx,:]))**2).sum()
+        resparams.append(res.params)
+
+    resparams = np.array(resparams)
+    doplots = 1
+    if doplots:
+        import matplotlib.pyplot as plt
+        from matplotlib.font_manager import FontProperties
+
+        plt.figure()
+        figtitle = 'Leave2out parameter estimates'
+
+        t = plt.gcf().text(0.5,
+        0.95, figtitle,
+        horizontalalignment='center',
+        fontproperties=FontProperties(size=16))
+
+        for i in range(resparams.shape[1]):
+            plt.subplot(4, 2, i+1)
+            plt.hist(resparams[:,i], bins = 10)
+            #plt.title("Leave2out parameter estimates")
+
+
+
+
+    for inidx, outidx in KStepAhead(20,2):
+        print inidx.sum(), np.arange(20)[inidx][-4:], np.nonzero(outidx)[0][()]
