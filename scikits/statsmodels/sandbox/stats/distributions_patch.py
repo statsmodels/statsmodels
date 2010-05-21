@@ -284,6 +284,8 @@ def fit_fr(self, data, *args, **kwds):
 #function, however for the continuous functions intquad is use, which might
 #require continuouity or smoothness in the function.
 
+#TODO: add option for Monte Carlo integration
+
 def expect(self, fn=None, args=(), loc=0, scale=1, lb=None, ub=None, conditional=False):
     '''calculate expected value of a function with respect to the distribution
 
@@ -334,6 +336,9 @@ def expect(self, fn=None, args=(), loc=0, scale=1, lb=None, ub=None, conditional
 
 
 ### for discrete distributions
+
+#TODO: check that for a distribution with finite support the calculations are
+#      done with one array summation (np.dot)
 
 #based on _drv2_moment(self, n, *args), but streamlined
 def expect_discrete(self, fn=None, args=(), loc=0, lb=None, ub=None,
