@@ -6,7 +6,7 @@ from numpy.testing import *
 from scipy.linalg import toeplitz
 from scikits.statsmodels.tools import add_constant
 from scikits.statsmodels.regression import OLS, GLSAR, WLS, GLS, yule_walker
-from check_for_rpy import skip_rpy
+#from check_for_rpy import skip_rpy
 from nose import SkipTest
 from scipy.stats import t as student_t
 
@@ -16,10 +16,10 @@ DECIMAL_2 = 2
 DECIMAL_1 = 1
 DECIMAL_7 = 7
 DECIMAL_0 = 0
-skipR = skip_rpy()
-if not skipR:
-    from rpy import r, RPyRException
-    from rmodelwrap import RModel
+#skipR = skip_rpy()
+#if not skipR:
+#    from rpy import r, RPyRException
+#    from rmodelwrap import RModel
 
 
 class CheckRegressionResults(object):
@@ -54,9 +54,6 @@ class CheckRegressionResults(object):
             assert_approx_equal(conf1[i][1], conf2[i][1],
                     self.decimal_confidenceintervals)
 
-#        assert_almost_equal(self.res1.conf_int(), self.res2.conf_int,
-#                self.decimal_confidenceintervals)
-
     decimal_conf_int_subset = DECIMAL_4
     def test_conf_int_subset(self):
         if len(self.res1.params) > 1:
@@ -65,7 +62,6 @@ class CheckRegressionResults(object):
             assert_almost_equal(ci1, ci2, self.decimal_conf_int_subset)
         else:
             pass
-#            SkipTest, "No subset of intervals for one parameter fit"
 
     decimal_scale = DECIMAL_4
     def test_scale(self):
@@ -74,51 +70,35 @@ class CheckRegressionResults(object):
 
     decimal_rsquared = DECIMAL_4
     def test_rsquared(self):
-#        if hasattr(self.res2, 'rsquared'):
         assert_almost_equal(self.res1.rsquared, self.res2.rsquared,
                 self.decimal_rsquared)
-#        else:
-#            raise SkipTest, "Results from R"
 
     decimal_rsquared_adj = DECIMAL_4
     def test_rsquared_adj(self):
-#        if hasattr(self.res2, 'rsquared_adj'):
         assert_almost_equal(self.res1.rsquared_adj, self.res2.rsquared_adj,
                     self.decimal_rsquared_adj)
-#        else:
-#            raise SkipTest, "Results from R"
 
     def test_degrees(self):
-#        if hasattr(self.res2, 'df_resid') and hasattr(self.res2, 'df_model'):
         assert_equal(self.res1.model.df_model, self.res2.df_model)
         assert_equal(self.res1.model.df_resid, self.res2.df_resid)
-#        else:
-#            raise SkipTest, "Results from R"
 
     decimal_ess = DECIMAL_4
     def test_ess(self):
         """
         Explained Sum of Squares
         """
-#        if hasattr(self.res2, 'ess'):
         assert_almost_equal(self.res1.ess, self.res2.ess,
                     self.decimal_ess)
-#        else:
-#            raise SkipTest, "Results from Rpy"
 
     decimal_ssr = DECIMAL_4
     def test_sumof_squaredresids(self):
-#        if hasattr(self.res2, 'ssr'):
         assert_almost_equal(self.res1.ssr, self.res2.ssr, self.decimal_ssr)
-#        else:
-#            raise SkipTest, "Results from Rpy"
 
     decimal_mse_resid = DECIMAL_4
     def test_mse_resid(self):
         """
         Mean squared error of residuals
         """
-#        if hasattr(self.res2, "mse_model") and hasattr(self.res2, "mse_resid"):
         assert_almost_equal(self.res1.mse_model, self.res2.mse_model,
                     self.decimal_mse_resid)
 
@@ -126,18 +106,13 @@ class CheckRegressionResults(object):
     def test_mse_model(self):
         assert_almost_equal(self.res1.mse_resid, self.res2.mse_resid,
                     self.decimal_mse_model)
-#        else:
-#            raise SkipTest, "Results from Rpy"
 
     decimal_fvalue = DECIMAL_4
     def test_fvalue(self):
-#        if hasattr(self.res2, 'fvalue'):
-            #didn't change this, not sure it should complain -inf not equal -inf
-            #if not (np.isinf(self.res1.fvalue) and np.isinf(self.res2.fvalue)):
+        #didn't change this, not sure it should complain -inf not equal -inf
+        #if not (np.isinf(self.res1.fvalue) and np.isinf(self.res2.fvalue)):
         assert_almost_equal(self.res1.fvalue, self.res2.fvalue,
                 self.decimal_fvalue)
-#        else:
-#            raise SkipTest, "Results from R"
 
     decimal_loglike = DECIMAL_4
     def test_loglike(self):
@@ -145,17 +120,11 @@ class CheckRegressionResults(object):
 
     decimal_aic = DECIMAL_4
     def test_aic(self):
-#        if hasattr(self.res2, 'aic'):
         assert_almost_equal(self.res1.aic, self.res2.aic, self.decimal_aic)
-#        else:
-#            raise SkipTest, "Results from Rpy"
 
     decimal_bic = DECIMAL_4
     def test_bic(self):
-#        if hasattr(self.res2, 'bic'):
         assert_almost_equal(self.res1.bic, self.res2.bic, self.decimal_bic)
-#        else:
-#            raise SkipTest, "Results from Rpy"
 
     decimal_pvalues = DECIMAL_4
     def test_pvalues(self):
@@ -164,9 +133,6 @@ class CheckRegressionResults(object):
 
     decimal_wresid = DECIMAL_4
     def test_wresid(self):
-#        if not hasattr(self.res2, 'wresid'):
-#            raise SkipTest('Comparison results (res2) has no wresid')
-#        else:
         assert_almost_equal(self.res1.wresid, self.res2.wresid,
             self.decimal_wresid)
 
@@ -175,7 +141,7 @@ class CheckRegressionResults(object):
         assert_almost_equal(self.res1.resid, self.res2.resid,
             self.decimal_resids)
 
-#TODO: test fittedvalues
+#TODO: test fittedvalues and what else?
 
 class TestOLS(CheckRegressionResults):
     def __init__(self):
@@ -189,15 +155,6 @@ class TestOLS(CheckRegressionResults):
         self.res1 = res1
         self.res2 = res2
 
-
-#    def check_confidenceintervals(self, conf1, conf2):
-#        for i in range(len(conf1)):
-#            assert_approx_equal(conf1[i][0], conf2[i][0], 6)
-#            assert_approx_equal(conf1[i][1], conf2[i][1], 6)
-            # stata rounds big residuals to significant digits
-
-#    def check_params(self, params1, params2):
-#        assert_almost_equal(params1, params2, DECIMAL_4)
 
 #  Robust error tests.  Compare values computed with SAS
     def test_HC0_errors(self):
@@ -259,11 +216,6 @@ class TestFTest2(TestFtest):
     def setup(self):
         R2 = [[0,1,-1,0,0,0,0],[0, 0, 0, 0, 1, -1, 0]]
         self.Ftest1 = self.res1.f_test(R2)
-#        from results.results_regression import FTest2
-#        self.Ftest2 = FTest2
-
-
-#    def setup(self):
 #        if skipR:
 #            raise SkipTest, "Rpy not installed"
 #        try:
@@ -332,42 +284,43 @@ class TestTtest2(TestTtest):
     '''
     Tests the hypothesis that the coefficients on POP and YEAR
     are equal.
+
+    Results from RPy using 'car' package.
     '''
     def setup(self):
-        if skipR:
-            raise SkipTest, "Rpy not installed"
-        try:
-            r.library('car')
-        except RPyRException:
-            raise SkipTest, "car library not installed for R"
-        R = np.zeros(len(self.res1.params))
+#        if skipR:
+#            raise SkipTest, "Rpy not installed"
+#        try:
+#            r.library('car')
+#        except RPyRException:
+#            raise SkipTest, "car library not installed for R"
+        R = np.zeros(7)
         R[4:6] = [1,-1]
-        self.R = R
-        self.Ttest1 = self.res1.t_test(self.R)
-        self.R_Results = RModel(self.data.endog, self.data.exog, r.lm).robj
-        self.Ttest2 = r.linear_hypothesis(self.R_Results, 'x.5 = x.6')
-        t = np.sign(np.inner(self.R, self.res1.params))*\
-            np.sqrt(self.Ttest2['F'][1])
-        self.t = t
-        effect = np.inner(self.R, self.res1.params)
-        self.effect = effect
+#        self.R = R
+        self.Ttest1 = self.res1.t_test(R)
+#        self.R_Results = RModel(self.data.endog, self.data.exog, r.lm).robj
+#        self.Ttest2 = r.linear_hypothesis(self.R_Results, 'x.5 = x.6')
+#        t = np.sign(np.inner(R, self.res1.params))*\
+#            np.sqrt(self.Ttest2['F'][1])
+#        self.t = t
+#        self.effect = np.sum(R * self.res1.params)
 
     def test_tvalue(self):
-        assert_almost_equal(self.Ttest1.tvalue, self.t, DECIMAL_4)
+        assert_almost_equal(self.Ttest1.tvalue, -4.0167754636397284,
+                DECIMAL_4)
 
     def test_sd(self):
-        assert_almost_equal(self.Ttest1.sd, self.effect/self.t, DECIMAL_4)
+        assert_almost_equal(self.Ttest1.sd, 455.39079425195314, DECIMAL_4)
 
     def test_pvalue(self):
-        assert_almost_equal(self.Ttest1.pvalue, student_t.sf(np.abs(self.t),
-            self.Ttest2['Res.Df'][0]),
+        assert_almost_equal(self.Ttest1.pvalue, 0.0015163772380932246,
             DECIMAL_4)
 
     def test_df_denom(self):
-        assert_equal(self.Ttest1.df_denom, self.Ttest2['Res.Df'][0])
+        assert_equal(self.Ttest1.df_denom, 9)
 
     def test_effect(self):
-        assert_almost_equal(self.Ttest1.effect, self.effect, DECIMAL_4)
+        assert_almost_equal(self.Ttest1.effect, -1829.2025687186533, DECIMAL_4)
 
 class TestGLS(object):
     '''
@@ -375,7 +328,7 @@ class TestGLS(object):
     '''
     def __init__(self):
         from scikits.statsmodels.datasets.longley import Load
-        from model_results import LongleyGls
+        from results.results_regression import LongleyGls
 
         data = Load()
         exog = add_constant(np.column_stack(\
@@ -519,14 +472,17 @@ class TestYuleWalker(object):
     def __init__(self):
         from scikits.statsmodels.datasets.sunspots import Load
         self.data = Load()
-        self.rho, self.sigma = yule_walker(self.data.endog, order=4, method="mle")
+        self.rho, self.sigma = yule_walker(self.data.endog, order=4,
+                method="mle")
+        self.R_params = [1.2831003105694765, -0.45240924374091945,
+                -0.20770298557575195, 0.047943648089542337]
 
-    def setup(self):
-        if skipR:
-            raise SkipTest, "Rpy not installed."
-
-        R_results = r.ar(self.data.endog, aic="FALSE", order_max=4)
-        self.R_params = R_results['ar']
+#    def setup(self):
+#        if skipR:
+#            raise SkipTest, "Rpy not installed."
+#
+#        R_results = r.ar(self.data.endog, aic="FALSE", order_max=4)
+#        self.R_params = R_results['ar']
 
     def test_params(self):
         assert_almost_equal(self.rho, self.R_params, DECIMAL_4)

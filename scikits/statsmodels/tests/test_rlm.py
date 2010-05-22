@@ -1,260 +1,261 @@
 """
-Test functions for models.rlm
+Test functions for sm.rlm
 """
 
 from numpy.testing import *
-import scikits.statsmodels as models
+from numpy.testing.decorators import skipif
+import scikits.statsmodels as sm
 from scikits.statsmodels.rlm import RLM
-import model_results
 from nose import SkipTest
-from check_for_rpy import skip_rpy
 
-DECIMAL = 4
-DECIMAL_less = 3
-DECIMAL_lesser = 2
-DECIMAL_least = 1
-
-skipR = skip_rpy()
-if not skipR:
-    from rpy import r
-    from rmodelwrap import RModel
+DECIMAL_4 = 4
+DECIMAL_3 = 3
+DECIMAL_2 = 2
+DECIMAL_1 = 1
 
 class CheckRlmResults(object):
     '''
     res2 contains  results from Rmodelwrap or were obtained from a statistical
-    packages such as R, Stata, or SAS and written to model_results.
+    packages such as R, Stata, or SAS and written to results.results_rlm
 
     Covariance matrices were obtained from SAS and are imported from
-    rlm_results
+    results.results_rlm
     '''
     def test_params(self):
-        assert_almost_equal(self.res1.params, self.res2.params, DECIMAL)
+        assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_4)
 
+    decimal_standarderrors = DECIMAL_4
     def test_standarderrors(self):
-        if isinstance(self.res2, RModel):
-            raise SkipTest("R bse from different cov matrix")
-        else:
-            assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL)
+        assert_almost_equal(self.res1.bse, self.res2.bse,
+                self.decimal_standarderrors)
 
+#TODO: get other results from SAS, though if it works for one...
     def test_confidenceintervals(self):
-        if isinstance(self.res2, RModel):
-            raise SkipTest("Results from RModel wrapper")
+        if not hasattr(self.res2, 'conf_int'):
+            raise SkipTest("Results from R")
         else:
-            assert_almost_equal(self.res1.conf_int(), self.res2.conf_int,
-            DECIMAL)
+            assert_almost_equal(self.res1.conf_int(), self.res2.conf_int(),
+            DECIMAL_4)
 
+    decimal_scale = DECIMAL_4
     def test_scale(self):
-        assert_almost_equal(self.res1.scale, self.res2.scale, DECIMAL_less)
-        # off by ~2e-04
+        assert_almost_equal(self.res1.scale, self.res2.scale,
+                self.decimal_scale)
 
     def test_weights(self):
-        assert_almost_equal(self.res1.weights, self.res2.weights, DECIMAL)
+        assert_almost_equal(self.res1.weights, self.res2.weights, DECIMAL_4)
 
     def test_residuals(self):
-        assert_almost_equal(self.res1.resid, self.res2.resid, DECIMAL)
+        assert_almost_equal(self.res1.resid, self.res2.resid, DECIMAL_4)
 
     def test_degrees(self):
         assert_almost_equal(self.res1.model.df_model, self.res2.df_model,
-                DECIMAL)
+                DECIMAL_4)
         assert_almost_equal(self.res1.model.df_resid, self.res2.df_resid,
-                DECIMAL)
+                DECIMAL_4)
 
     def test_bcov_unscaled(self):
-        if self.res2.__module__ == 'model_results':
+        if not hasattr(self.res2, 'bcov_unscaled'):
             raise SkipTest("No unscaled cov matrix from SAS")
         else:
             assert_almost_equal(self.res1.bcov_unscaled,
-                    self.res2.bcov_unscaled, DECIMAL)
+                    self.res2.bcov_unscaled, DECIMAL_4)
 
+    decimal_bcov_scaled = DECIMAL_4
     def test_bcov_scaled(self):
-        assert_almost_equal(self.res1.bcov_scaled, self.res2.h1, DECIMAL_lesser)
-        assert_almost_equal(self.res1.h2, self.res2.h2, DECIMAL_lesser)
-        assert_almost_equal(self.res1.h3, self.res2.h3, DECIMAL_lesser)
-        # rounding errors in Andrew's make it necessary to use least vs. lesser
+        assert_almost_equal(self.res1.bcov_scaled, self.res2.h1,
+                self.decimal_bcov_scaled)
+        assert_almost_equal(self.res1.h2, self.res2.h2,
+                self.decimal_bcov_scaled)
+        assert_almost_equal(self.res1.h3, self.res2.h3,
+                self.decimal_bcov_scaled)
+
+#TODO: figure out how to handle in results
+#    def test_tvalues(self):
+#        assert_almost_equal(self.res1.params/np.sqrt(np.diag(res1.bcov_scaled)),
+#                res2.tvalues)
 
 class TestRlm(CheckRlmResults):
     from scikits.statsmodels.datasets.stackloss import Load
-    data = Load()
-    data.exog = models.tools.add_constant(data.exog)
+    data = Load()   # class attributes for subclasses
+    data.exog = sm.add_constant(data.exog)
     def __init__(self):
+        # Test precisions
+        self.decimal_standarderrors = DECIMAL_1
+        self.decimal_scale = DECIMAL_3
+
         results = RLM(self.data.endog, self.data.exog,\
-                    M=models.robust.norms.HuberT()).fit()   # default M
+                    M=sm.robust.norms.HuberT()).fit()   # default M
         h2 = RLM(self.data.endog, self.data.exog,\
-                    M=models.robust.norms.HuberT()).fit(cov="H2").bcov_scaled
+                    M=sm.robust.norms.HuberT()).fit(cov="H2").bcov_scaled
         h3 = RLM(self.data.endog, self.data.exog,\
-                    M=models.robust.norms.HuberT()).fit(cov="H3").bcov_scaled
+                    M=sm.robust.norms.HuberT()).fit(cov="H3").bcov_scaled
         self.res1 = results
         self.res1.h2 = h2
         self.res1.h3 = h3
 
 
     def setup(self):
-        if skipR:
-            raise SkipTest, "Rpy not installed"
-        r.library('MASS')
-        self.res2 = RModel(self.data.endog, self.data.exog,
-                        r.rlm, psi="psi.huber")
-        self.res2.h1 = model_results.Huber.h1
-        self.res2.h2 = model_results.Huber.h2
-        self.res2.h3 = model_results.Huber.h3
+#        r.library('MASS')
+#        self.res2 = RModel(self.data.endog, self.data.exog,
+#                        r.rlm, psi="psi.huber")
+        from results.results_rlm import Huber
+        self.res2 = Huber()
 
 class TestHampel(TestRlm):
     def __init__(self):
+        # Test precisions
+        self.decimal_standarderrors = DECIMAL_2
+        self.decimal_scale = DECIMAL_3
+        self.decimal_bcov_scaled = DECIMAL_3
+
         results = RLM(self.data.endog, self.data.exog,
-                    M=models.robust.norms.Hampel()).fit()
+                    M=sm.robust.norms.Hampel()).fit()
         h2 = RLM(self.data.endog, self.data.exog,\
-                    M=models.robust.norms.Hampel()).fit(cov="H2").bcov_scaled
+                    M=sm.robust.norms.Hampel()).fit(cov="H2").bcov_scaled
         h3 = RLM(self.data.endog, self.data.exog,\
-                    M=models.robust.norms.Hampel()).fit(cov="H3").bcov_scaled
+                    M=sm.robust.norms.Hampel()).fit(cov="H3").bcov_scaled
         self.res1 = results
         self.res1.h2 = h2
         self.res1.h3 = h3
 
     def setup(self):
-        if skipR:
-            raise SkipTest, "Rpy not installed"
-        self.res2 = RModel(self.data.endog[:,None], self.data.exog,
-        r.rlm, psi="psi.hampel") #, init="lts")
-        self.res2.h1 = model_results.Hampel.h1
-        self.res2.h2 = model_results.Hampel.h2
-        self.res2.h3 = model_results.Hampel.h3
+#        self.res2 = RModel(self.data.endog[:,None], self.data.exog,
+#        r.rlm, psi="psi.hampel") #, init="lts")
+        from results.results_rlm import Hampel
+        self.res2 = Hampel()
 
 
 
 class TestRlmBisquare(TestRlm):
     def __init__(self):
+        # Test precisions
+        self.decimal_standarderrors = DECIMAL_1
+
         results = RLM(self.data.endog, self.data.exog,
-                    M=models.robust.norms.TukeyBiweight()).fit()
+                    M=sm.robust.norms.TukeyBiweight()).fit()
         h2 = RLM(self.data.endog, self.data.exog,\
-                    M=models.robust.norms.TukeyBiweight()).fit(cov=\
+                    M=sm.robust.norms.TukeyBiweight()).fit(cov=\
                     "H2").bcov_scaled
         h3 = RLM(self.data.endog, self.data.exog,\
-                    M=models.robust.norms.TukeyBiweight()).fit(cov=\
+                    M=sm.robust.norms.TukeyBiweight()).fit(cov=\
                     "H3").bcov_scaled
         self.res1 = results
         self.res1.h2 = h2
         self.res1.h3 = h3
 
     def setup(self):
-        if skipR:
-            raise SkipTest, "Rpy not installed"
-        self.res2 = RModel(self.data.endog, self.data.exog,
-                        r.rlm, psi="psi.bisquare")
-        self.res2.h1 = model_results.Bisquare.h1
-        self.res2.h2 = model_results.Bisquare.h2
-        self.res2.h3 = model_results.Bisquare.h3
+#        self.res2 = RModel(self.data.endog, self.data.exog,
+#                        r.rlm, psi="psi.bisquare")
+        from results.results_rlm import BiSquare
+        self.res2 = BiSquare()
 
 
 class TestRlmAndrews(TestRlm):
     def __init__(self):
         results = RLM(self.data.endog, self.data.exog,
-                    M=models.robust.norms.AndrewWave()).fit()
+                    M=sm.robust.norms.AndrewWave()).fit()
         h2 = RLM(self.data.endog, self.data.exog,
-                    M=models.robust.norms.AndrewWave()).fit(cov=\
+                    M=sm.robust.norms.AndrewWave()).fit(cov=\
                     "H2").bcov_scaled
         h3 = RLM(self.data.endog, self.data.exog,
-                    M=models.robust.norms.AndrewWave()).fit(cov=\
+                    M=sm.robust.norms.AndrewWave()).fit(cov=\
                     "H3").bcov_scaled
         self.res1 = results
         self.res1.h2 = h2
         self.res1.h3 = h3
-        self.res2 = model_results.Andrews()
 
     def setup(self):
-        if skipR:
-            raise SkipTest, "Rpy not installed"
+        from results.results_rlm import Andrews
+        self.res2 = Andrews()
 
 ### tests with Huber scaling
 
 class TestRlmHuber(CheckRlmResults):
     from scikits.statsmodels.datasets.stackloss import Load
     data = Load()
-    data.exog = models.tools.add_constant(data.exog)
+    data.exog = sm.add_constant(data.exog)
     def __init__(self):
         results = RLM(self.data.endog, self.data.exog,\
-                    M=models.robust.norms.HuberT()).fit(scale_est=\
-                    models.robust.scale.HuberScale())
+                    M=sm.robust.norms.HuberT()).fit(scale_est=\
+                    sm.robust.scale.HuberScale())
         h2 = RLM(self.data.endog, self.data.exog,\
-                    M=models.robust.norms.HuberT()).fit(cov="H2",
-                    scale_est=models.robust.scale.HuberScale()).bcov_scaled
+                    M=sm.robust.norms.HuberT()).fit(cov="H2",
+                    scale_est=sm.robust.scale.HuberScale()).bcov_scaled
         h3 = RLM(self.data.endog, self.data.exog,\
-                    M=models.robust.norms.HuberT()).fit(cov="H3",
-                    scale_est=models.robust.scale.HuberScale()).bcov_scaled
+                    M=sm.robust.norms.HuberT()).fit(cov="H3",
+                    scale_est=sm.robust.scale.HuberScale()).bcov_scaled
         self.res1 = results
         self.res1.h2 = h2
         self.res1.h3 = h3
-        self.res2 = model_results.HuberHuber()
 
     def setup(self):
-        if skipR:
-            raise SkipTest, "Rpy not installed"
+        from results.results_rlm import HuberHuber
+        self.res2 = HuberHuber()
 
 class TestHampelHuber(TestRlm):
     def __init__(self):
         results = RLM(self.data.endog, self.data.exog,
-                    M=models.robust.norms.Hampel()).fit(scale_est=\
-                    models.robust.scale.HuberScale())
+                    M=sm.robust.norms.Hampel()).fit(scale_est=\
+                    sm.robust.scale.HuberScale())
         h2 = RLM(self.data.endog, self.data.exog,\
-                    M=models.robust.norms.Hampel()).fit(cov="H2",
+                    M=sm.robust.norms.Hampel()).fit(cov="H2",
                     scale_est=\
-                    models.robust.scale.HuberScale()).bcov_scaled
+                    sm.robust.scale.HuberScale()).bcov_scaled
         h3 = RLM(self.data.endog, self.data.exog,\
-                    M=models.robust.norms.Hampel()).fit(cov="H3",
+                    M=sm.robust.norms.Hampel()).fit(cov="H3",
                     scale_est=\
-                    models.robust.scale.HuberScale()).bcov_scaled
+                    sm.robust.scale.HuberScale()).bcov_scaled
         self.res1 = results
         self.res1.h2 = h2
         self.res1.h3 = h3
-        self.res2 = model_results.HampelHuber()
 
     def setup(self):
-        if skipR:
-            raise SkipTest, "Rpy not installed"
+        from results.results_rlm import HampelHuber
+        self.res2 = HampelHuber()
 
 class TestRlmBisquareHuber(TestRlm):
     def __init__(self):
         results = RLM(self.data.endog, self.data.exog,
-                    M=models.robust.norms.TukeyBiweight()).fit(\
+                    M=sm.robust.norms.TukeyBiweight()).fit(\
                     scale_est=\
-                    models.robust.scale.HuberScale())
+                    sm.robust.scale.HuberScale())
         h2 = RLM(self.data.endog, self.data.exog,\
-                    M=models.robust.norms.TukeyBiweight()).fit(cov=\
+                    M=sm.robust.norms.TukeyBiweight()).fit(cov=\
                     "H2", scale_est=\
-                    models.robust.scale.HuberScale()).bcov_scaled
+                    sm.robust.scale.HuberScale()).bcov_scaled
         h3 = RLM(self.data.endog, self.data.exog,\
-                    M=models.robust.norms.TukeyBiweight()).fit(cov=\
+                    M=sm.robust.norms.TukeyBiweight()).fit(cov=\
                     "H3", scale_est=\
-                    models.robust.scale.HuberScale()).bcov_scaled
+                    sm.robust.scale.HuberScale()).bcov_scaled
         self.res1 = results
         self.res1.h2 = h2
         self.res1.h3 = h3
-        self.res2 = model_results.BisquareHuber()
 
     def setup(self):
-        if skipR:
-            raise SkipTest, "Rpy not installed"
+        from results.results_rlm import BisquareHuber
+        self.res2 = BisquareHuber()
 
 class TestRlmAndrewsHuber(TestRlm):
     def __init__(self):
         results = RLM(self.data.endog, self.data.exog,
-                    M=models.robust.norms.AndrewWave()).fit(scale_est=\
-                    models.robust.scale.HuberScale())
+                    M=sm.robust.norms.AndrewWave()).fit(scale_est=\
+                    sm.robust.scale.HuberScale())
         h2 = RLM(self.data.endog, self.data.exog,
-                    M=models.robust.norms.AndrewWave()).fit(cov=\
+                    M=sm.robust.norms.AndrewWave()).fit(cov=\
                     "H2", scale_est=\
-                    models.robust.scale.HuberScale()).bcov_scaled
+                    sm.robust.scale.HuberScale()).bcov_scaled
         h3 = RLM(self.data.endog, self.data.exog,
-                    M=models.robust.norms.AndrewWave()).fit(cov=\
+                    M=sm.robust.norms.AndrewWave()).fit(cov=\
                     "H3", scale_est=\
-                    models.robust.scale.HuberScale()).bcov_scaled
+                    sm.robust.scale.HuberScale()).bcov_scaled
         self.res1 = results
         self.res1.h2 = h2
         self.res1.h3 = h3
-        self.res2 = model_results.AndrewsHuber()
 
     def setup(self):
-        if skipR:
-            raise SkipTest, "Rpy not installed"
+        from results.results_rlm import AndrewsHuber
+        self.res2 = AndrewsHuber()
 
 if __name__=="__main__":
     run_module_suite()
