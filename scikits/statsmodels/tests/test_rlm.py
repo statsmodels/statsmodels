@@ -3,7 +3,6 @@ Test functions for sm.rlm
 """
 
 from numpy.testing import *
-from numpy.testing.decorators import skipif
 import scikits.statsmodels as sm
 from scikits.statsmodels.rlm import RLM
 from nose import SkipTest
