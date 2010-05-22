@@ -416,11 +416,11 @@ def chain_dot(*arrs):
     >>> from scikits.statsmodels.tools import chain_dot
     >>> A = np.arange(1,13).reshape(3,4)
     >>> B = np.arange(3,15).reshape(4,3)
-    >>> C = np.arange(5,17).reshape(3,1)
+    >>> C = np.arange(5,8).reshape(3,1)
     >>> chain_dot(A,B,C)
     array([[1820],
        [4300],
        [6780]])
     """
-    return reduce(lambda x, y: np.dot(y, x), matrices[::-1])
+    return reduce(lambda x, y: np.dot(y, x), arrs[::-1])
 
