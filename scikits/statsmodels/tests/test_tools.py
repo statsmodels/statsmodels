@@ -295,3 +295,10 @@ class TestCategoricalString(TestCategoricalNumerical):
 
     def test_arraylike1d_drop(self):
         pass
+
+
+def test_chain_dot():
+    A = np.arange(1,13).reshape(3,4)
+    B = np.arange(3,15).reshape(4,3)
+    C = np.arange(5,8).reshape(3,1)
+    assert_equal(tools.chain_dot(A,B,C), np.array([[1820],[4300],[6780]]))

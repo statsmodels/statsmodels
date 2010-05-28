@@ -18,6 +18,7 @@ import tools
 from regression import WLS, GLS
 from robust import norms, scale
 from model import LikelihoodModel, LikelihoodModelResults
+from decorators import *
 
 __all__ = ['RLM']
 
@@ -264,9 +265,9 @@ class RLM(LikelihoodModel):
                 self.scale = self._estimate_scale(wls_results.resid)
             self._update_history(wls_results)
             self.iteration += 1
-        self.results = RLMResults(self, wls_results.params,
+        results = RLMResults(self, wls_results.params,
                             self.normalized_cov_params, self.scale)
-        return self.results
+        return results
 
 class RLMResults(LikelihoodModelResults):
     """
@@ -344,47 +345,72 @@ class RLMResults(LikelihoodModelResults):
     def __init__(self, model, params, normalized_cov_params, scale):
         super(RLMResults, self).__init__(model, params,
                 normalized_cov_params, scale)
-        self._get_results(model)
-
-    def _get_results(self, model):
-        #TODO: "pvals" should come from chisq on bse?
+        self.model = model
         self.df_model = model.df_model
         self.df_resid = model.df_resid
-        self.fittedvalues = np.dot(model.exog, self.params)
-        self.resid = model.endog - self.fittedvalues   # before bcov
-        self.sresid = self.resid/self.scale
-        self.pinv_wexog = model.pinv_wexog    # for bcov,
-                                                # this is getting sloppy
-        self.bcov_unscaled = self.cov_params(scale=1.)
         self.nobs = model.nobs
-        self.weights = model.weights
+        self._cache = resettable_cache()
+
+        #TODO: "pvals" should come from chisq on bse?
+
+    @cache_readonly
+    def fittedvalues(self):
+        return np.dot(self.model.exog, self.params)
+
+    @cache_readonly
+    def resid(self):
+        return self.model.endog - self.fittedvalues   # before bcov
+
+    @cache_readonly
+    def sresid(self):
+        return self.resid/self.scale
+
+    @cache_readonly
+    def bcov_unscaled(self):
+        return self.cov_params(scale=1.)
+
+    @cache_readonly
+    def weights(self):
+        return self.model.weights
+
+    @cache_readonly
+    def bcov_scaled(self):
+        model = self.model
         m = np.mean(model.M.psi_deriv(self.sresid))
         var_psiprime = np.var(model.M.psi_deriv(self.sresid))
         k = 1 + (self.df_model+1)/self.nobs * var_psiprime/m**2
 
         if model.cov == "H1":
-            self.bcov_scaled = k**2 * (1/self.df_resid*\
+            return k**2 * (1/self.df_resid*\
                 np.sum(model.M.psi(self.sresid)**2)*self.scale**2)\
                 /((1/self.nobs*np.sum(model.M.psi_deriv(self.sresid)))**2)\
                 *model.normalized_cov_params
         else:
-            W = np.dot(model.M.psi_deriv(self.sresid)*model.exog.T,model.exog)
+            W = np.dot(model.M.psi_deriv(self.sresid)*model.exog.T,
+                    model.exog)
             W_inv = np.linalg.inv(W)
-# [W_jk]^-1 = [SUM(psi_deriv(Sr_i)*x_ij*x_jk)]^-1
-# where Sr are the standardized residuals
+            # [W_jk]^-1 = [SUM(psi_deriv(Sr_i)*x_ij*x_jk)]^-1
+            # where Sr are the standardized residuals
             if model.cov == "H2":
-# These are correct, based on Huber (1973) 8.13
-                self.bcov_scaled = k*(1/self.df_resid)*np.sum(\
-                        model.M.psi(self.sresid)**2)*self.scale**2\
-                        /((1/self.nobs)*np.sum(\
-                        model.M.psi_deriv(self.sresid)))*W_inv
+            # These are correct, based on Huber (1973) 8.13
+                return k*(1/self.df_resid)*np.sum(\
+                    model.M.psi(self.sresid)**2)*self.scale**2\
+                    /((1/self.nobs)*np.sum(\
+                    model.M.psi_deriv(self.sresid)))*W_inv
             elif model.cov == "H3":
-                self.bcov_scaled = k**-1*1/self.df_resid*np.sum(\
+                return k**-1*1/self.df_resid*np.sum(\
                     model.M.psi(self.sresid)**2)*self.scale**2\
                     *np.dot(np.dot(W_inv, np.dot(model.exog.T,model.exog)),\
                     W_inv)
-        self.bse = np.sqrt(np.diag(self.bcov_scaled))
-        self.chisq = (self.params/self.bse)**2
+
+        #TODO: make the t-values (or whatever) based on these
+    @cache_readonly
+    def bse(self):
+        return np.sqrt(np.diag(self.bcov_scaled))
+
+    @cache_readonly
+    def chisq(self):
+        return (self.params/self.bse)**2
 
 if __name__=="__main__":
 #NOTE: This is to be removed
