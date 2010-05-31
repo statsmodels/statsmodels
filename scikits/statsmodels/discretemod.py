@@ -1143,6 +1143,7 @@ class DiscreteResults(LikelihoodModelResults):
     def __init__(self, model, params, hessian, scale=1.):
         super(DiscreteResults, self).__init__(model, params,
                 np.linalg.inv(-hessian), scale=1.)
+        self.model = model
         self.df_model = model.df_model
         self.df_resid = model.df_resid
         self.nobs = model.nobs

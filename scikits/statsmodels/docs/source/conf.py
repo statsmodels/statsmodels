@@ -58,9 +58,25 @@ copyright = u'2009-2010, Skipper Seabold, Josef Perktold, Jonathan Taylor'
 # built documents.
 #
 # The short X.Y version.
-version = '0.2.0'
+import scikits.statsmodels as sm
+version = '0.3.0'
 # The full version, including alpha/beta/rc tags.
-release = '0.2.0'
+release = '0.3.0'
+try:
+    import subprocess
+    retcode = subprocess.check_call("bzr revno", shell=True,
+            stdout=subprocess.PIPE)
+    if retcode == 0:
+        revno = subprocess.Popen("bzr revno", shell=True,
+                stdout=subprocess.PIPE).communicate()[0]
+        revno = revno.rstrip()
+        release += " rev " + revno
+    else:
+        raise Exception
+except:
+    pass
+
+
 
 # JP: added from sphinxdocs
 autosummary_generate = True
