@@ -162,7 +162,7 @@ class CheckMargEff():
 class TestProbitNewton(CheckModelResults):
     def __init__(self):
         from results.results_discrete import Spector
-        data = sm.datasets.spector.Load()
+        data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog)
         self.data = data
         self.res1 = Probit(data.endog, data.exog).fit(method="newton")
@@ -173,7 +173,7 @@ class TestProbitNewton(CheckModelResults):
 class TestLogitNewton(CheckModelResults, CheckMargEff):
     def __init__(self):
         from results.results_discrete import Spector
-        data = sm.datasets.spector.Load()
+        data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog)
         self.data = data
         self.res1 = Logit(data.endog, data.exog).fit(method="newton")
@@ -194,7 +194,7 @@ class TestLogitNewton(CheckModelResults, CheckMargEff):
 class TestPoissonNewton(CheckModelResults):
     def __init__(self):
         from results.results_discrete import RandHIE
-        data = sm.datasets.randhie.Load()
+        data = sm.datasets.randhie.load()
         nobs = len(data.endog)
         exog = sm.add_constant(data.exog.view(float).reshape(nobs,-1))
         self.res1 = Poisson(data.endog, exog).fit(method='newton')
@@ -205,7 +205,7 @@ class TestPoissonNewton(CheckModelResults):
 class TestMNLogitNewtonBaseZero(CheckModelResults):
     def __init__(self):
         from results.results_discrete import Anes
-        data = sm.datasets.anes96.Load()
+        data = sm.datasets.anes96.load()
         exog = data.exog
         exog[:,0] = np.log(exog[:,0] + .1)
         exog = np.column_stack((exog[:,0],exog[:,2],

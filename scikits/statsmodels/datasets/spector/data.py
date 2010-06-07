@@ -37,13 +37,14 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'Load']
+__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'load']
 
 """Spector and Mazzeo (1980) - Program Effectiveness"""
 
 __docformat__ = 'restructuredtext'
 
-COPYRIGHT   = """Used with express permission of the original author, who retains all rights. """
+COPYRIGHT   = """Used with express permission of the original author, who
+retains all rights. """
 TITLE       = "Spector and Mazzeo (1980) - Program Effectiveness Data"
 SOURCE      = """
 http://pages.stern.nyu.edu/~wgreene/Text/econometricanalysis.htm
@@ -58,28 +59,38 @@ system of instruction (PSI)program"""
 DESCRLONG   = DESCRSHORT
 
 NOTE        = """
-Number of Instances: 32
-
-Grade - binary variable indicating whether or not a student's grade improved.
-        1 indicates an improvement.
-TUCE - Test score on economics test
-PSI - participation in program
-GPA - Student's grade point average
+Number of Observations: 32
+Number of Variables: 4
+Variable name definitions:
+    Grade - binary variable indicating whether or not a student's grade
+        improved.  1 indicates an improvement.
+    TUCE - Test score on economics test
+    PSI - participation in program
+    GPA - Student's grade point average
 """
 
-import numpy as np
+from numpy import recfromtxt, column_stack, array
+from scikits.statsmodels.datasets import Dataset
+from os.path import dirname, abspath
 
-class Load():
-    """Load the Spector data and returns a data class.
+def load():
+    """
+    Load the Spector dataset and returns a Dataset class instance.
 
     Returns
-    Load instance:
-        a class of the data with array attrbutes 'endog' and 'exog'
+    -------
+    Dataset instance:
+        See DATASET_PROPOSAL.txt for more information.
     """
-    def __init__(self):
-        from spector import __dict__, names
-        self._names = names
-        self._d = __dict__
-        self.endog = np.array(self._d[self._names[4]], dtype=np.float)
-        self.exog = np.column_stack(self._d[i] \
-                    for i in self._names[1:4]).astype(np.float)
+    filepath = dirname(abspath(__file__))
+##### EDIT THE FOLLOWING TO POINT TO DatasetName.csv #####
+    data = recfromtxt(filepath + '/spector.csv', delimiter=" ",
+            names=True, dtype=float, usecols=(1,2,3,4))
+    names = list(data.dtype.names)
+    endog = array(data[names[3]], dtype=float)
+    endog_name = names[3]
+    exog = column_stack(data[i] for i in names[:3]).astype(float)
+    exog_name = names[:3]
+    dataset = Dataset(data=data, names=names, endog=endog, exog=exog,
+            endog_name = endog_name, exog_name=exog_name)
+    return dataset

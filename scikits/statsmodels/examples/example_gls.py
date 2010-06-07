@@ -4,7 +4,7 @@ Example: scikis.statsmodels.GLS
 
 import scikits.statsmodels as sm
 import numpy as np
-data = sm.datasets.longley.Load()
+data = sm.datasets.longley.load()
 data.exog = sm.add_constant(data.exog)
 
 # The Longley dataset is a time series dataset

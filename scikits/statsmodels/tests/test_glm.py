@@ -112,8 +112,8 @@ class TestGlmGaussian(CheckModelResults):
         self.decimal_bic = DECIMAL_0
         self.decimal_bse = DECIMAL_3
 
-        from scikits.statsmodels.datasets.longley import Load
-        self.data = Load()
+        from scikits.statsmodels.datasets.longley import load
+        self.data = load()
         self.data.exog = add_constant(self.data.exog)
         self.res1 = GLM(self.data.endog, self.data.exog,
                         family=sm.families.Gaussian()).fit()
@@ -194,9 +194,9 @@ class TestGlmBinomial(CheckModelResults):
         self.decimal_resids = DECIMAL_1
         self.decimal_bic = DECIMAL_2
 
-        from scikits.statsmodels.datasets.star98 import Load
+        from scikits.statsmodels.datasets.star98 import load
         from results.results_glm import Star98
-        data = Load()
+        data = load()
         data.exog = add_constant(data.exog)
         trials = data.endog[:,:2].sum(axis=1)
         self.res1 = GLM(data.endog, data.exog, \
@@ -270,9 +270,9 @@ class TestGlmGamma(CheckModelResults):
         self.decimal_aic_R = -1 #TODO: off by about 1, we are right with Stata
         self.decimal_resids = DECIMAL_2
 
-        from scikits.statsmodels.datasets.scotland import Load
+        from scikits.statsmodels.datasets.scotland import load
         from results.results_glm import Scotvote
-        data = Load()
+        data = load()
         data.exog = add_constant(data.exog)
         res1 = GLM(data.endog, data.exog, \
                     family=sm.families.Gamma()).fit()
@@ -332,8 +332,8 @@ class TestGlmPoisson(CheckModelResults):
         Test results were obtained by R.
         '''
         from results.results_glm import Cpunish
-        from scikits.statsmodels.datasets.cpunish import Load
-        self.data = Load()
+        from scikits.statsmodels.datasets.cpunish import load
+        self.data = load()
         self.data.exog[:,3] = np.log(self.data.exog[:,3])
         self.data.exog = add_constant(self.data.exog)
         self.res1 = GLM(self.data.endog, self.data.exog,
@@ -423,8 +423,8 @@ class TestGlmNegbinomial(CheckModelResults):
         self.decimal_resids = -1 # 1 % mismatch at 0
         self.decimal_fittedvalues = DECIMAL_1
 
-        from scikits.statsmodels.datasets.committee import Load
-        self.data = Load()
+        from scikits.statsmodels.datasets.committee import load
+        self.data = load()
         self.data.exog[:,2] = np.log(self.data.exog[:,2])
         interaction = self.data.exog[:,2]*self.data.exog[:,1]
         self.data.exog = np.column_stack((self.data.exog,interaction))

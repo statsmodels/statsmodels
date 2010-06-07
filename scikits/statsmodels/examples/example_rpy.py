@@ -25,7 +25,7 @@ import scikits.statsmodels as sm
 examples = [1, 2]
 
 if 1 in examples:
-    data = sm.datasets.longley.Load()
+    data = sm.datasets.longley.load()
     y,x = data.endog, sm.add_constant(data.exog)
     des_cols = ['x.%d' % (i+1) for i in range(x.shape[1])]
     formula = r('y~%s-1' % '+'.join(des_cols))
@@ -35,7 +35,7 @@ if 1 in examples:
     print results['coefficients']
 
 if 2 in examples:
-    data2 = sm.datasets.star98.Load()
+    data2 = sm.datasets.star98.load()
     y2,x2 = data2.endog, sm.add_constant(data2.exog)
     import rpy
     y2 = y2[:,0]/y2.sum(axis=1)

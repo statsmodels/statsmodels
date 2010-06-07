@@ -37,64 +37,57 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'Load']
+__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'load']
 
 """Name of dataset."""
 
 __docformat__ = 'restructuredtext'
 
-COPYRIGHT   = """This is public domain. """
-TITLE       = ""
+COPYRIGHT   = """E.g., This is public domain."""
+TITLE       = """Title of the dataset"""
 SOURCE      = """
-http://www.liacc.up.pt/ML/old/statlog/datasets.html
-
-Professor Dr. Hans Hofmann
-Institut fÃŒr Statistik und Ãkonometrie UniversitÃ€t Hamburg
-FB Wirtschaftswissenschaften
-Von-Melle-Park 5
-2000 Hamburg 13
-
-Two datasets are provided. the original dataset, in the form provided by Prof.
-Hofmann, contains categorical/symbolic attributes and is in the file
-"german.dat".  For algorithms that need numerical attributes, Strathclyde
-University produced the file "german.numer". This file has been edited and
-several indicator variables added to make it suitable for algorithms which
-cannot cope with categorical variables. Several attributes that are ordered
-categorical (such as attribute 17) have been coded as integer. This was the
-form used by StatLog.
-
-Here (scikits), only the numeric datasets are provided.
+This section should provide a link to the original dataset if possible and
+attribution and correspondance information for the dataset's original author
+if so desired.
 """
 
-DESCRSHORT  = """"""
+DESCRSHORT  = """A short description."""
 
-DESCRLONG   = """"""
+DESCRLONG   = """A longer description of the dataset."""
 
+#suggested notes
 NOTE        = """
-Number of Instances: 1000. 700 for class 0 (good credit) and 300 for class 1
-(bad credit).
+Number of observations:
+Number of variables:
+Variable name definitions:
 
-Number of Attributes: 24.
-
-label: 0 for good credit, +1 for bad credit
+Any other useful information that does not fit into the above categories.
 """
 
-import numpy as np
+from numpy import recfromtxt, column_stack, array
+from scikits.statsmodels.datasets import Dataset
+from os.path import dirname, abspath
 
-class Load():
-    """load the committee data and returns a data class.
+def load():
+    """
+    Load the data and return a Dataset class instance.
 
     Returns
-    Load instance:
-        a class of the data with array attrbutes 'endog' and 'exog'
+    -------
+    Dataset instance:
+        See DATASET_PROPOSAL.txt for more information.
     """
-    def __init__(self):
-##### EDIT THE FOLLOWING LINE TO INCLUDE THE DatasetName.py #####
-        from DatasetName import __dict__, names
-        self._names = names
-        self._d = __dict__
+    filepath = dirname(abspath(__file__))
+##### EDIT THE FOLLOWING TO POINT TO DatasetName.csv #####
+    data = recfromtxt(filepath + '/DatasetName.csv', delimiter=",",
+            names=True, dtype=float)
+    names = list(data.dtype.names)
 ##### SET THE INDEX #####
-        self.endog = np.array(self._d[self._names[0]], dtype=np.float)
+    endog = array(data[names[0]], dtype=float)
+    endog_name = names[0]
 ##### SET THE INDEX #####
-        self.exog = np.column_stack(self._d[i] \
-                    for i in self._names[1:]).astype(np.float)
+    exog = column_stack(data[i] for i in names[1:]).astype(float)
+    exog_name = names[1:]
+    dataset = Dataset(data=data, names=names, endog=endog, exog=exog,
+            endog_name = endog_name, exog_name=exog_name)
+    return dataset

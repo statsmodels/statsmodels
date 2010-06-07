@@ -37,7 +37,7 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'Load']
+__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'load']
 
 """Yearly sunspots data 1700-2008"""
 
@@ -58,27 +58,40 @@ Geophysical Data Center."""
 DESCRLONG   = DESCRSHORT
 
 NOTE        = """
-The dataset contains 309 observations on sunspot activity from
-1700 through 2008.
+Number of Observations: 309 (Annual 1700 - 2008)
+Number of Variables: 1
+Variable name definitions:
+    SUNACTIVITY : Number of sunspots for each year
+
+The data file contains a 'YEAR' variable that is not returned by load.
 """
 
-import numpy as np
+from numpy import recfromtxt, column_stack, array
+from scikits.statsmodels.datasets import Dataset
+from os.path import dirname, abspath
 
-class Load():
-    """load the yearly sunspot data and returns a data class.
+def load():
+    """
+    Load the yearly sunspot data and returns a data class.
 
     Returns
     --------
-    Load instance:
-        a class of the data with array attrbute 'endog'
+    Dataset instance:
+        See DATASET_PROPOSAL.txt for more information.
 
     Notes
     -----
-    This dataset only contains data for one variable, so the only
-    class attribute is labeled endog.
+    This dataset only contains data for one variable, so the attributes
+    data, raw_data, and endog are all the same variable.  There is no exog
+    attribute defined.
     """
-    def __init__(self):
-        from sunspots import __dict__, names
-        self._names = names
-        self._d = __dict__
-        self.endog = np.array(self._d[self._names[1]], dtype=np.float)
+    filepath = dirname(abspath(__file__))
+    data = recfromtxt(filepath + '/sunspots.csv', delimiter=",",
+            names=True, dtype=float, usecols=(1))
+    names = list(data.dtype.names)
+    endog = array(data[names[0]], dtype=float)
+    endog_name = names
+    dataset = Dataset(data=data, names=names, endog=endog,
+            endog_name=endog_name)
+    return dataset
+

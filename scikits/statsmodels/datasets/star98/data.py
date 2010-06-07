@@ -36,7 +36,7 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'Load']
+__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'load']
 
 """Star98 Educational Testing dataset."""
 
@@ -64,40 +64,74 @@ over the national median value on the mathematics exam.
 The original source files and information are included in /star98/src/
 
 The data used in this example is only a subset of the original source.
-
-/star98/star98.csv contains this subset and interaction variables
-in a comma-delimited file
 """
 
 NOTE        = """
-Number of Instances: 303. 145 for MATHNCE9 > 50 (above national median)
-and 158 for MATHNCE9 < 50 (below median).
+Number of Observations: 303 (counties in California).
+Number of Variables: 13 and 8 interaction terms.
+Definition of variables names:
+    NABOVE - Total number of students above the national median for the math
+        section.
+    NBELOW - Total number of students below the national median for the math
+        section.
+    LOWINC - Percentage of low income students
+    PERASIAN - Percentage of Asian student
+    PERBLACK - Percentage of black students
+    PERHISP - Percentage of Hispanic students
+    PERMINTE - Percentage of minority teachers
+    AVYRSEXP - Sum of teachers' years in educational service divided by the
+        number of teachers.
+    AVSALK - Total salary budget including benefits divided by the number of
+        full-time teachers (in thousands)
+    PERSPENK - Per-pupil spending (in thousands)
+    PTRATIO - Pupil-teacher ratio.
+    PCTAF - Percentage of students taking UC/CSU prep courses
+    PCTCHRT - Percentage of charter schools
+    PCTYRRND - Percentage of year-round schools
 
-Number of Attributes: 12 and 8 interaction terms.
+    The below variables are interaction terms of the variables defined above.
 
-label: 0 for below median, 1 for above median
-
-Missing Attribute Values: None
+    PERMINTE_AVYRSEXP
+    PEMINTE_AVSAL
+    AVYRSEXP_AVSAL
+    PERSPEN_PTRATIO
+    PERSPEN_PCTAF
+    PTRATIO_PCTAF
+    PERMINTE_AVTRSEXP_AVSAL
+    PERSPEN_PTRATIO_PCTAF
 """
 
-class Load():
-    """load the star98 data and returns them.
+from numpy import recfromtxt, column_stack, array
+from scikits.statsmodels.datasets import Dataset
+from os.path import dirname, abspath
+
+def load():
+    """
+    Load the star98 data and returns a Dataset class instance.
 
     Returns
     -------
     Load instance:
         a class of the data with array attrbutes 'endog' and 'exog'
     """
-
-    def __init__(self):
-        import numpy as np
-        from star98 import __dict__, names
-        self._names = names
-        self._d = __dict__
-        # engog = (successes, failures)
-        y = np.array(self._d[names[1]]).astype(np.float) # successes
-        k = np.array(self._d[names[0]]).astype(np.float) \
-                - np.array(self._d[names[1]]).astype(np.float) # failures
-        self.endog = np.column_stack((y,k))
-        self.exog = np.column_stack(self._d[i] \
-                    for i in self._names[2:]).astype(np.float)
+    filepath = dirname(abspath(__file__))
+##### EDIT THE FOLLOWING TO POINT TO DatasetName.csv #####
+    names = ["NABOVE","NBELOW","LOWINC","PERASIAN","PERBLACK","PERHISP",
+            "PERMINTE","AVYRSEXP","AVSALK","PERSPENK","PTRATIO","PCTAF",
+            "PCTCHRT","PCTYRRND","PERMINTE_AVYRSEXP","PERMINTE_AVSAL",
+            "AVYRSEXP_AVSAL","PERSPEN_PTRATIO","PERSPEN_PCTAF","PTRATIO_PCTAF",
+            "PERMINTE_AVYRSEXP_AVSAL","PERSPEN_PTRATIO_PCTAF"]
+    data = recfromtxt(filepath + '/star98.csv', delimiter=",",
+            names=names, skip_header=1, dtype=float)
+    names = list(data.dtype.names)
+    # endog = (successes, failures)
+    NABOVE = array(data[names[1]]).astype(float) # successes
+    NBELOW = array(data[names[0]]).astype(float) \
+                - array(data[names[1]]).astype(float) # now its failures
+    endog = column_stack((NABOVE,NBELOW))
+    endog_name = names[:2]
+    exog = column_stack(data[i] for i in names[2:]).astype(float)
+    exog_name = names[2:]
+    dataset = Dataset(data=data, names=names, endog=endog, exog=exog,
+            endog_name = endog_name, exog_name=exog_name)
+    return dataset

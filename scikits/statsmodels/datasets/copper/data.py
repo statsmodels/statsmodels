@@ -36,14 +36,14 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'Load']
+__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'load']
 
 """World Copper Prices 1951-1975 dataset."""
 
 __docformat__ = 'restructuredtext'
 
 COPYRIGHT   = """Used with expressed permission from the original author,
-who retains all rights.."""
+who retains all rights."""
 TITLE       = "World Copper Market 1951-1975 Dataset"
 SOURCE      = """
 Jeff Gill's `Generalized Linear Models: A Unifited Approach
@@ -54,44 +54,52 @@ http://jgill.wustl.edu/research/books.html
 DESCRSHORT  = """World Copper Market 1951-1975"""
 
 DESCRLONG   = """
-This data describes the world copper market from 1951 to 1975.  The outcome
-variable (of a 2 stage estimation) is the world consumption of copper for
-the 25 years.  The variables included in the dataset are the world consumption
-of copper in 1000 metric tons, the constant dollar adjusted price of copper,
-the price of a substitute, aluminum, an index of real per capita income
-base 1970, an annual measure of manufacturer inventory change, and a time
-trend.
+This data describes the world copper market from 1951 through 1975.  In an
+example, in Gill, the outcome variable (of a 2 stage estimation) is the world
+consumption of copper for the 25 years.  The explanatory variables are the
+world consumption of copper in 1000 metric tons, the constant dollar adjusted
+price of copper, the price of a substitute, aluminum, an index of real per
+capita income base 1970, an annual measure of manufacturer inventory change,
+and a time trend.
 
 The original source files are included in /copper/src/
-
-/copper/copper.csv contains the cleaned data for the example
-in a comma-delimited file
 """
 
-NOTE        = """
-Number of Instances: 17.
+NOTE = """
+Number of Observations: 25
+Number of Variables: 6
+Variable name definitions:
+    WORLDCONSUMPTION : World consumption of copper (in 1000 metric tons)
+    COPPERPRICE : Constant dollar adjusted price of copper
+    INCOMEINDEX : An index of real per capita income (base 1970)
+    ALUMPRICE : The price of aluminum
+    INVENTORYINDEX : A measure of annual manufacturer inventory trend
+    TIME : A time trend
 
-Number of Attributes: 6
-
-Missing Attribute Values: None
-
-Years are included in the data file, though not returned.
+Years are included in the data file though not returned by load.
 """
 
-import numpy as np
+from numpy import recfromtxt, column_stack, array
+from scikits.statsmodels.datasets import Dataset
+from os.path import dirname, abspath
 
-class Load():
-    """load the copper data and returns a data class.
+def load():
+    """
+    Load the copper data and returns a Dataset class.
 
     Returns
     --------
-    Load instance:
-        a class of the data with array attrbutes 'endog' and 'exog'
+    Dataset instance:
+        See DATASET_PROPOSAL.txt for more information.
     """
-    def __init__(self):
-        from copper import __dict__, names
-        self._names = names
-        self._d = __dict__
-        self.endog = np.array(self._d[self._names[1]], dtype=np.float)
-        self.exog = np.column_stack(self._d[i] \
-                    for i in self._names[2:]).astype(np.float)
+    filepath = dirname(abspath(__file__))
+    data = recfromtxt(filepath + '/copper.csv', delimiter=",",
+            names=True, dtype=float, usecols=(1,2,3,4,5,6))
+    names = list(data.dtype.names)
+    endog = array(data[names[0]], dtype=float)
+    endog_name = names[0]
+    exog = column_stack(data[i] for i in names[1:]).astype(float)
+    exog_name = names[1:]
+    dataset = Dataset(data=data, names=names, endog=endog, exog=exog,
+            endog_name = endog_name, exog_name=exog_name)
+    return dataset

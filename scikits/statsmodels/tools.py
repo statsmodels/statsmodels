@@ -23,6 +23,7 @@ def _make_dictnames(tmp_arr, offset=0):
 #TODO: needs to better preserve dtype and be more flexible
 # ie., if you still have a string variable in your array you don't
 # want to cast it to float
+#TODO: add name validator (ie., bad names for datasets.grunfeld)
 def categorical(data, col=None, dictnames=False, drop=False):
     '''
     Returns a dummy matrix given an array of categorical variables.
