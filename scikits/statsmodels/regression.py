@@ -31,7 +31,8 @@ __docformat__ = 'restructuredtext en'
 __all__ = ['GLS', 'WLS', 'OLS', 'GLSAR']
 
 import numpy as np
-from scipy.linalg import norm, toeplitz
+from scipy.linalg import norm, toeplitz, lstsq, calc_lwork
+from scipy.linalg.lapack import get_lapack_funcs
 from scipy import stats
 from scipy.stats.stats import ss
 from model import LikelihoodModel, LikelihoodModelResults
@@ -43,18 +44,14 @@ class GLS(LikelihoodModel):
     """
     Generalized least squares model with a general covariance structure.
 
-
-
     Parameters
     ----------
     endog : array-like
           endog is a 1-d vector that contains the response/independent variable
-
     exog : array-like
            exog is a n x p vector where n is the number of observations and p is
            the number of regressors/dependent variables including the intercept
            if one is included in the data.
-
     sigma : scalar or array
            `sigma` is the weighting matrix of the covariance.
            The default is None for no scaling.  If `sigma` is a scalar, it is
@@ -234,16 +231,20 @@ Should be of length %s, if sigma is a 1d array" % nobs
         """
 #TODO: add a full_output keyword so that only light results needed for
 # IRLS are calculated?
-        self.normalized_cov_params = np.dot(self.pinv_wexog,
-                                         np.transpose(self.pinv_wexog))
+        pinv_wexog = np.linalg.pinv(self.wexog)
+        self.normalized_cov_params = np.dot(pinv_wexog,
+                                         np.transpose(pinv_wexog))
+        exog = self.wexog
+        endog = self.wendog
+#        self.normalized_cov_params = np.linalg.inv(np.dot(exog.T,exog))
+        self.pinv_wexog = pinv_wexog
         if method == "pinv":
-            self.pinv_wexog = np.linalg.pinv(self.wexog)
-            beta = np.dot(self.pinv_wexog, self.wendog)
-        elif method == "svd":
-            beta = np.linalg.lstsq(self.wexog, self.wendog)[0]
+#            beta = np.dot(np.linalg.pinv(np.dot(exog.T,exog)), np.dot(exog.T,
+#                endog))
+            beta = np.dot(pinv_wexog, endog)
         elif method == "qr":
-            Q,R = np.linalg.qr(model.wexog)
-            beta = np.linalg.solve(R,np.dot(Q.T,gls_model.wendog))
+            Q,R = np.linalg.qr(exog)
+            beta = np.linalg.solve(R,np.dot(Q.T,endog))
             # no upper triangular solve routine in numpy/scipy?
         lfit = RegressionResults(self, beta,
                        normalized_cov_params=self.normalized_cov_params)
