@@ -244,7 +244,7 @@ class LikelihoodModelResults(Results):
         Examples
         --------
         >>> import scikits.statsmodels as sm
-        >>> data = sm.datasets.longley.Load()
+        >>> data = sm.datasets.longley.load()
         >>> data.exog = sm.add_constant(data.exog)
         >>> results = sm.OLS(data.endog, data.exog).fit()
         >>> results.t()
@@ -369,7 +369,7 @@ arguments.'
         --------
         >>> import numpy as np
         >>> import scikits.statsmodels as sm
-        >>> data = sm.datasets.longley.Load()
+        >>> data = sm.datasets.longley.load()
         >>> data.exog = sm.add_constant(data.exog)
         >>> results = sm.OLS(data.endog, data.exog).fit()
         >>> r = np.zeros_like(results.params)
@@ -450,7 +450,7 @@ T statistics'
         --------
         >>> import numpy as np
         >>> import scikits.statsmodels as sm
-        >>> data = sm.datasets.longley.Load()
+        >>> data = sm.datasets.longley.load()
         >>> data.exog = sm.add_constant(data.exog)
         >>> results = sm.OLS(data.endog, data.exog).fit()
         >>> A = np.identity(len(results.params))
@@ -521,7 +521,7 @@ T statistics'
         Examples
         --------
         >>> import scikits.statsmodels as sm
-        >>> data = sm.datasets.longley.Load()
+        >>> data = sm.datasets.longley.load()
         >>> data.exog = sm.add_constant(data.exog)
         >>> results = sm.OLS(data.endog, data.exog).fit()
         >>> results.conf_int()

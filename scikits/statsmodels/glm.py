@@ -99,7 +99,7 @@ class GLM(LikelihoodModel):
     Examples
     --------
     >>> import scikits.statsmodels as sm
-    >>> data = sm.datasets.scotland.Load()
+    >>> data = sm.datasets.scotland.load()
     >>> data.exog = sm.add_constant(data.exog)
 
     Instantiate a gamma family model with the default link function.

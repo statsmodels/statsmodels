@@ -99,7 +99,7 @@ class RLM(LikelihoodModel):
     Examples
     ---------
     >>> import scikits.statsmodels as sm
-    >>> data = sm.datasets.stackloss.Load()
+    >>> data = sm.datasets.stackloss.load()
     >>> data.exog = sm.add_constant(data.exog)
     >>> rlm_model = sm.RLM(data.endog, data.exog, \
                            M=sm.robust.norms.HuberT())
@@ -448,8 +448,8 @@ if __name__=="__main__":
 #######################
 ### Stack Loss Data ###
 #######################
-    from models.datasets.stackloss import Load
-    data = Load()
+    from models.datasets.stackloss import load
+    data = load()
     data.exog = models.tools.add_constant(data.exog)
 #############
 ### Huber ###
