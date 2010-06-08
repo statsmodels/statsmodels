@@ -50,6 +50,17 @@ class Model(object):
                 raise ValueError, "exog is not 1d or 2d"
             if endog.shape[0] != exog.shape[0]:
                 raise ValueError, "endog and exog matrices are not aligned."
+            if np.any(exog.var(0) == 0):
+                # assumes one constant in first or last position
+                const_idx = np.where(exog.var(0) == 0)[0].item()
+                if const_idx == exog.shape[1] - 1:
+                    exog_names = ['x%d' % i for i in range(1,exog.shape[1])]
+                    exog_names += ['const']
+                else:
+                    exog_names = ['x%d' % i for i in range(exog.shape[1])]
+                    exog_names[const_idx] = 'const'
+                self.exog_names = exog_names
+            self.endog_names = ['y']
         self.endog = endog
         self.exog = exog
         self.nobs = float(self.endog.shape[0])

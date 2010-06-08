@@ -1114,15 +1114,14 @@ class RegressionResults(LikelihoodModelResults):
         """
         import time
         from iolib import SimpleTable
+        from stattools import jarque_bera, omni_normtest, durbin_watson
 
         if yname is None:
-            yname = 'Y'
+            yname = self.model.endog_names
         if xname is None:
-            xname = ['X.%d' %
-                (i) for i in range(self.model.exog.shape[1])]
+            xname = self.model.exog_names
         modeltype = self.model.__class__.__name__
 
-        from stattools import jarque_bera, omni_normtest, durbin_watson
         llf, aic, bic = self.llf, self.aic, self.bic
         JB, JBpv, skew, kurtosis = jarque_bera(self.wresid)
         omni, omnipv = omni_normtest(self.wresid)
