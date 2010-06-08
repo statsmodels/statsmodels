@@ -25,7 +25,7 @@ This proposal was adapted from David Cournapeau's original proposal for a
 datasets package for scipy and the learn scikit.  It has been adapted for use
 in the statsmodels scikit.  The structure of the datasets itself, while
 specific to statsmodels, should be general enough such that it might be used
-for other types of data (e.g., in the learn scikit).
+for other types of data (e.g., in the learn scikit or scipy itself).
 
 Organization
 ------------
@@ -33,6 +33,10 @@ Organization
 A preliminary set of datasets is available at the following address:
 
 http://projects.scipy.org/scipy/scikits/browser/trunk/learn/scikits/learn/datasets
+
+or
+
+http://bazaar.launchpad.net/~scipystats/statsmodels/trunk/files/head:/scikits/statsmodels/datasets/
 
 Each dataset is a directory and defines a python package (e.g. has the
 __init__.py file). Each package is expected to define the function load,
@@ -59,6 +63,8 @@ Python string:
     - DESCHOSRT: short description
     - DESCLONG: long description
     - NOTE: some notes on the datasets.
+
+See datasest/data_template.py for more information.
 
 Format of the data
 ------------------
@@ -121,37 +127,27 @@ the datasets namespace.
 
 Example Usage
 -------------
-#TODO: FINISH THE BELOW
 
+::
 
+  from scikits.statsmodels import datasets
+  data = datasets.longley.load()
 
-I already implemented a small module to do
-basic things such as:
-
-        - selecting only a subset of all samples.
-        - selecting only a subset of the attributes (only sepal length and
-          width, for example).
-        - selecting only the samples of a given class.
-        - small summary of the dataset.
-
-This is implemented in less than 100 lines, which tends to show that the above
-design is not too simplistic.
 
 Remaining problems:
 -------------------
 
-I see mainly two big problems:
 
-        - if the dataset is big and cannot fit into memory, what kind of API do
-          we want to avoid loading all the data in memory ? Can we use memory
-          mapped arrays ?
-        - Missing data: I thought about subclassing both record arrays and
-          masked arrays classes, but I don't know if this is feasable, or even
-          makes sense. I have the feeling that some Data mining software use
-          Nan (for example, weka seems to use float internally), but this
-          prevents them from representing integer data.
+    - If the dataset is big and cannot fit into memory, what kind of API do
+      we want to avoid loading all the data in memory ? Can we use memory
+      mapped arrays ?
+    - Missing data: I thought about subclassing both record arrays and
+      masked arrays classes, but I don't know if this is feasable, or even
+      makes sense. I have the feeling that some Data mining software use
+      Nan (for example, weka seems to use float internally), but this
+      prevents them from representing integer data.
+    - What to do with non-float data, i.e., strings or categorical variables?
 
-What to do with non-float data, i.e., strings or categorical variables?
 
 Current implementation
 ----------------------
@@ -159,21 +155,11 @@ Current implementation
 An implementation following the above design is available in
 scikits.statsmodels.datasets.
 
-If you installed scikits.learn, you can execute the
-file learn/utils/attrselect.py, which shows the information you can easily
-extract for now from this model.
-
-Also, once the above problems are solved, an arff converter will be available:
-arff is the format used by WEKA, and many datasets are available at this
-format:
-
-http://weka.sourceforge.net/wekadoc/index.php/en:ARFF_%283.5.4%29
-http://www.cs.waikato.ac.nz/ml/weka/index_datasets.html
 
 Note
 ----
 
-Although the datasets package emerged from the learn package, I try to keep it
+Although the datasets package emerged from the learn package, we try to keep it
 independant from everything else, that is once we agree on the remaining
 problems and where the package should go, it can easily be put elsewhere
 without too much trouble.
