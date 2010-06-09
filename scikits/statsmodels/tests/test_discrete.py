@@ -165,7 +165,7 @@ class TestProbitNewton(CheckModelResults):
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog)
         self.data = data
-        self.res1 = Probit(data.endog, data.exog).fit(method="newton")
+        self.res1 = Probit(data.endog, data.exog).fit(method="newton", disp=0)
         res2 = Spector()
         res2.probit()
         self.res2 = res2
@@ -176,7 +176,7 @@ class TestLogitNewton(CheckModelResults, CheckMargEff):
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog)
         self.data = data
-        self.res1 = Logit(data.endog, data.exog).fit(method="newton")
+        self.res1 = Logit(data.endog, data.exog).fit(method="newton", disp=0)
         res2 = Spector()
         res2.logit()
         self.res2 = res2
@@ -197,7 +197,7 @@ class TestPoissonNewton(CheckModelResults):
         data = sm.datasets.randhie.load()
         nobs = len(data.endog)
         exog = sm.add_constant(data.exog.view(float).reshape(nobs,-1))
-        self.res1 = Poisson(data.endog, exog).fit(method='newton')
+        self.res1 = Poisson(data.endog, exog).fit(method='newton', disp=0)
         res2 = RandHIE()
         res2.poisson()
         self.res2 = res2
@@ -211,7 +211,7 @@ class TestMNLogitNewtonBaseZero(CheckModelResults):
         exog = np.column_stack((exog[:,0],exog[:,2],
             exog[:,5:8]))
         exog = sm.add_constant(exog)
-        self.res1 = MNLogit(data.endog, exog).fit(method="newton")
+        self.res1 = MNLogit(data.endog, exog).fit(method="newton", disp=0)
         res2 = Anes()
         res2.mnlogit_basezero()
         self.res2 = res2

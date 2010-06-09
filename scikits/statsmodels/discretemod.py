@@ -112,6 +112,18 @@ class DiscreteModel(LikelihoodModel):
         """
         raise NotImplementedError
 
+    def fit(self, start_params=None, method='newton', maxiter=35, full_output=0,
+            disp=1, callback=None, **kwargs):
+        if start_params is None and isinstance(self, MNLogit):
+            start_params = np.zeros((self.exog.shape[1]*\
+                    (self.wendog.shape[1]-1)))
+        mlefit = super(DiscreteModel, self).fit(start_params=start_params,
+                method=method, maxiter=maxiter, full_output=full_output,
+                disp=disp, callback=callback, **kwargs)
+        if isinstance(self, MNLogit):
+            mlefit.params = mlefit.params.reshape(-1, self.exog.shape[1])
+        discretefit = DiscreteResults(self, mlefit)
+        return discretefit
 
 class Poisson(DiscreteModel):
     """
@@ -279,39 +291,39 @@ class Poisson(DiscreteModel):
         L = np.exp(np.dot(X,params))
         return -np.dot(L*X.T, X)
 
-    def fit(self, start_params=None, maxiter=35, method='newton',
-            tol=1e-08):
-        """
-        Fits the Poisson model.
-
-        Parameters
-        ----------
-        start_params : array-like, optional
-            The default is a 0 vector.
-        maxiter : int, optional
-            Maximum number of iterations.  The default is 35.
-        method : str, optional
-            `method` can be 'newton', 'ncg', 'bfgs'. The default is 'newton'.
-        tol : float, optional
-            The convergence tolerance for the solver.  The default is
-            1e-08.
-
-        Returns
-        --------
-        DiscreteResults object
-
-        See also
-        --------
-        scikits.statsmodels.model.LikelihoodModel
-        scikits.statsmodels.sandbox.discretemod.DiscreteResults
-        scipy.optimize
-        """
-
-        mlefit = super(Poisson, self).fit(start_params=start_params,
-            maxiter=maxiter, method=method, tol=tol)
-        params = mlefit.params
-        mlefit = DiscreteResults(self, params, self.hessian(params))
-        return mlefit
+#    def fit(self, start_params=None, maxiter=35, method='newton',
+#            tol=1e-08):
+#        """
+#        Fits the Poisson model.
+#
+#        Parameters
+#        ----------
+#        start_params : array-like, optional
+#            The default is a 0 vector.
+#        maxiter : int, optional
+#            Maximum number of iterations.  The default is 35.
+#        method : str, optional
+#            `method` can be 'newton', 'ncg', 'bfgs'. The default is 'newton'.
+#        tol : float, optional
+#            The convergence tolerance for the solver.  The default is
+#            1e-08.
+#
+#        Returns
+#        --------
+#        DiscreteResults object
+#
+#        See also
+#        --------
+#        scikits.statsmodels.model.LikelihoodModel
+#        scikits.statsmodels.sandbox.discretemod.DiscreteResults
+#        scipy.optimize
+#        """
+#
+#        mlefit = super(Poisson, self).fit(start_params=start_params,
+#            maxiter=maxiter, method=method, tol=tol)
+#        params = mlefit.params
+#        mlefit = DiscreteResults(self, params, self.hessian(params))
+#        return mlefit
 
 class NbReg(DiscreteModel):
     pass
@@ -463,38 +475,38 @@ class Logit(DiscreteModel):
         L = self.cdf(np.dot(X,params))
         return -np.dot(L*(1-L)*X.T,X)
 
-    def fit(self, start_params=None, maxiter=35, method='newton',
-            tol=1e-08):
-        """
-        Fits the binary logit model.
-
-        Parameters
-        ----------
-        start_params : array-like, optional
-            The default is a 0 vector.
-        maxiter : int, optional
-            Maximum number of iterations.  The default is 35.
-        method : str, optional
-            `method` can be 'newton', 'ncg', 'bfgs'. The default is 'newton'.
-        tol : float, optional
-            The convergence tolerance for the solver.  The default is
-            1e-08.
-
-        Returns
-        --------
-        DiscreteResults object
-
-        See also
-        --------
-        scikits.statsmodels.model.LikelihoodModel
-        scikits.statsmodels.sandbox.discretemod.DiscreteResults
-        scipy.optimize
-        """
-        mlefit = super(Logit, self).fit(start_params=start_params,
-            maxiter=maxiter, method=method, tol=tol)
-        params = mlefit.params
-        mlefit = DiscreteResults(self, params, self.hessian(params))
-        return mlefit
+#    def fit(self, start_params=None, maxiter=35, method='newton',
+#            tol=1e-08):
+#        """
+#        Fits the binary logit model.
+#
+#        Parameters
+#        ----------
+#        start_params : array-like, optional
+#            The default is a 0 vector.
+#        maxiter : int, optional
+#            Maximum number of iterations.  The default is 35.
+#        method : str, optional
+#            `method` can be 'newton', 'ncg', 'bfgs'. The default is 'newton'.
+#        tol : float, optional
+#            The convergence tolerance for the solver.  The default is
+#            1e-08.
+#
+#        Returns
+#        --------
+#        DiscreteResults object
+#
+#        See also
+#        --------
+#        scikits.statsmodels.model.LikelihoodModel
+#        scikits.statsmodels.sandbox.discretemod.DiscreteResults
+#        scipy.optimize
+#        """
+#        mlefit = super(Logit, self).fit(start_params=start_params,
+#            maxiter=maxiter, method=method, tol=tol)
+#        params = mlefit.params
+#        mlefit = DiscreteResults(self, params, self.hessian(params))
+#        return mlefit
 
 
 class Probit(DiscreteModel):
@@ -651,38 +663,38 @@ class Probit(DiscreteModel):
         L = q*self.pdf(q*XB)/self.cdf(q*XB)
         return np.dot(-L*(L+XB)*X.T,X)
 
-    def fit(self, start_params=None, maxiter=35, method='newton',
-            tol=1e-08):
-        """
-        Fits the binary probit model.
-
-        Parameters
-        ----------
-        start_params : array-like, optional
-            The default is a 0 vector.
-        maxiter : int, optional
-            Maximum number of iterations.  The default is 35.
-        method : str, optional
-            `method` can be 'newton', 'ncg', 'bfgs'. The default is 'newton'.
-        tol : float, optional
-            The convergence tolerance for the solver.  The default is
-            1e-08.
-
-        Returns
-        --------
-        DiscreteResults object
-
-        See also
-        --------
-        scikits.statsmodels.model.LikelihoodModel
-        scikits.statsmodels.sandbox.discretemod.DiscreteResults
-        scipy.optimize
-        """
-        mlefit = super(Probit, self).fit(start_params=start_params,
-            maxiter=maxiter, method=method, tol=tol)
-        params = mlefit.params
-        mlefit = DiscreteResults(self, params, self.hessian(params))
-        return mlefit
+#    def fit(self, start_params=None, maxiter=35, method='newton',
+#            tol=1e-08):
+#        """
+#        Fits the binary probit model.
+#
+#        Parameters
+#        ----------
+#        start_params : array-like, optional
+#            The default is a 0 vector.
+#        maxiter : int, optional
+#            Maximum number of iterations.  The default is 35.
+#        method : str, optional
+#            `method` can be 'newton', 'ncg', 'bfgs'. The default is 'newton'.
+#        tol : float, optional
+#            The convergence tolerance for the solver.  The default is
+#            1e-08.
+#
+#        Returns
+#        --------
+#        DiscreteResults object
+#
+#        See also
+#        --------
+#        scikits.statsmodels.model.LikelihoodModel
+#        scikits.statsmodels.sandbox.discretemod.DiscreteResults
+#        scipy.optimize
+#        """
+#        mlefit = super(Probit, self).fit(start_params=start_params,
+#            maxiter=maxiter, method=method, tol=tol)
+#        params = mlefit.params
+#        mlefit = DiscreteResults(self, params, self.hessian(params))
+#        return mlefit
 
 
 class MNLogit(DiscreteModel):
@@ -903,35 +915,35 @@ class MNLogit(DiscreteModel):
         H = np.transpose(H.reshape(J,J,K,K), (0,2,1,3)).reshape(J*K,J*K)
         return H
 
-    def fit(self, start_params=None, maxiter=35, method='newton',
-            tol=1e-08):
-        """
-        Fits the multinomial logit model.
-
-        Parameters
-        ----------
-        start_params : array-like, optional
-            The default is a 0 vector.
-        maxiter : int, optional
-            Maximum number of iterations.  The default is 35.
-        method : str, optional
-            `method` can be 'newton', 'ncg', 'bfgs'. The default is 'newton'.
-        tol : float, optional
-            The convergence tolerance for the solver.  The default is
-            1e-08.
-
-        Notes
-        -----
-        The reference category is always the first column of `wendog` for now.
-        """
-        if start_params == None:
-            start_params = np.zeros((self.exog.shape[1]*\
-                    (self.wendog.shape[1]-1)))
-        mlefit = super(MNLogit, self).fit(start_params=start_params,
-                maxiter=maxiter, method=method, tol=tol)
-        params = mlefit.params.reshape(-1, self.exog.shape[1])
-        mlefit = DiscreteResults(self, params, self.hessian(params))
-        return mlefit
+#    def fit(self, start_params=None, maxiter=35, method='newton',
+#            tol=1e-08):
+#        """
+#        Fits the multinomial logit model.
+#
+#        Parameters
+#        ----------
+#        start_params : array-like, optional
+#            The default is a 0 vector.
+#        maxiter : int, optional
+#            Maximum number of iterations.  The default is 35.
+#        method : str, optional
+#            `method` can be 'newton', 'ncg', 'bfgs'. The default is 'newton'.
+#        tol : float, optional
+#            The convergence tolerance for the solver.  The default is
+#            1e-08.
+#
+#        Notes
+#        -----
+#        The reference category is always the first column of `wendog` for now.
+#        """
+#        if start_params == None:
+#            start_params = np.zeros((self.exog.shape[1]*\
+#                    (self.wendog.shape[1]-1)))
+#        mlefit = super(MNLogit, self).fit(start_params=start_params,
+#                maxiter=maxiter, method=method, tol=tol)
+#        params = mlefit.params.reshape(-1, self.exog.shape[1])
+#        mlefit = DiscreteResults(self, params, self.hessian(params))
+#        return mlefit
 
 #TODO: Weibull can replaced by a survival analsysis function
 # like stat's streg (The cox model as well)
@@ -1140,14 +1152,15 @@ class DiscreteResults(LikelihoodModelResults):
 
     """
 
-    def __init__(self, model, params, hessian, scale=1.):
-        super(DiscreteResults, self).__init__(model, params,
-                np.linalg.inv(-hessian), scale=1.)
+    def __init__(self, model, mlefit):
+#        super(DiscreteResults, self).__init__(model, params,
+#                np.linalg.inv(-hessian), scale=1.)
         self.model = model
         self.df_model = model.df_model
         self.df_resid = model.df_resid
         self.nobs = model.nobs
         self._cache = resettable_cache()
+        self.__dict__.update(mlefit.__dict__)
 
     @cache_readonly
     def bse(self):
@@ -1177,7 +1190,8 @@ class DiscreteResults(LikelihoodModelResults):
     @cache_readonly
     def llnull(self):
         model = self.model # will this use a new instance?
-        null = model.__class__(model.endog, np.ones(model.nobs)).fit()
+#TODO: what parameters to pass to fit?
+        null = model.__class__(model.endog, np.ones(model.nobs)).fit(disp=0)
         return null.llf
 
     @cache_readonly

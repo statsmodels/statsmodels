@@ -194,7 +194,7 @@ Should be of length %s, if sigma is a 1d array" % nobs
         else:
             return X
 
-    def fit(self, method="pinv"):
+    def fit(self, method="pinv", **kwargs):
         """
         Full fit of the model.
 
@@ -204,7 +204,7 @@ Should be of length %s, if sigma is a 1d array" % nobs
         Parameters
         ----------
         method : str
-            Can be "pinv", "svd", "qr", or "mle".  "pinv" uses the
+            Can be "pinv", "qr", or "mle".  "pinv" uses the
             Moore-Penrose pseudoinverse to solve the least squares problem.
             "svd" uses the Singular Value Decomposition.  "qr" uses the
             QR factorization.  "mle" fits the model via maximum likelihood.
@@ -227,18 +227,13 @@ Should be of length %s, if sigma is a 1d array" % nobs
         to solve the least squares minimization.
 
         """
-#TODO: add a full_output keyword so that only light results needed for
-# IRLS are calculated?
         pinv_wexog = np.linalg.pinv(self.wexog)
         self.normalized_cov_params = np.dot(pinv_wexog,
                                          np.transpose(pinv_wexog))
         exog = self.wexog
         endog = self.wendog
-#        self.normalized_cov_params = np.linalg.inv(np.dot(exog.T,exog))
         self.pinv_wexog = pinv_wexog
         if method == "pinv":
-#            beta = np.dot(np.linalg.pinv(np.dot(exog.T,exog)), np.dot(exog.T,
-#                endog))
             beta = np.dot(pinv_wexog, endog)
         elif method == "qr":
             Q,R = np.linalg.qr(exog)

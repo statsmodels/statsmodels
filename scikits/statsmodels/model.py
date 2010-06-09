@@ -125,8 +125,8 @@ class LikelihoodModel(Model):
         """
         raise NotImplementedError
 
-    def fit(self, start_params=None, method='newton', maxiter=35, tol=1e-08,
-            full_output=0, disp=1, fargs=(), callback=None, **kwargs):
+    def fit(self, start_params=None, method='newton', maxiter=35, full_output=1,
+            disp=1, fargs=(), callback=None, **kwargs):
         """
         Fit method for likelihood based models
 
@@ -150,6 +150,7 @@ class LikelihoodModel(Model):
         hess = None
 
         if method == 'newton':
+            tol = kwargs.get('tol', 1e-8)
             hess = lambda params: -self.hessian(params) #TODO: negative?
                                                         #TODO: remove when ok
                                                         # above
@@ -160,13 +161,14 @@ class LikelihoodModel(Model):
             while (iterations < maxiter and np.all(np.abs(history[-1] - \
                     history[-2])>tol)):
                 H = hess(history[-1])
+#                H = self.hessian(history[-1])
                 newparams = history[-1] - np.dot(np.linalg.inv(H),
-                        score(history[-1]))
+                        self.score(history[-1]))
                 history.append(newparams)
-                fval = f(newparams) # this is the negative likelihood
                 if callback is not None:
                     callback(newparams)
                 iterations += 1
+            fval = f(newparams, *fargs) # this is the negative likelihood
             if iterations == maxiter:
                 warnflag = 1
                 if disp:
@@ -181,14 +183,16 @@ exceeded."
                     print "         Current function value: %f" % fval
                     print "         Iterations %d" % iterations
             if full_output:
-                xopt, fopt, niter, gopt, hopt = (newparams, f(newparams),
-                    iterations, score(newparams), hess(newparams))
+                xopt, fopt, niter, gopt, hopt = (newparams, fval,
+                    iterations, self.score(newparams), self.hessian(newparams))
                 converged = not warnflag
                 retvals = {'fopt' : fopt, 'iterations' : niter, 'score' : gopt,
                         'Hessian' : hopt, 'warnflag' : warnflag,
                         'converged' : converged}
             else:
                 retvals = newparams
+#            mlefit = LikelihoodModelResults(self, retvals)
+#            return mlefit
         elif method == 'nm':    # Nelder-Mead
             xtol = kwargs.get('xtol', 0.0001)
             ftol = kwargs.get('ftol', 0.0001)
@@ -262,10 +266,19 @@ exceeded."
         if not full_output:
             xopt = retvals
 
-        if not hess and full_output:
-            Hinv = retvals.get('Hinv', None)
-#TODO: get Hessian approximation
-        mlefit = LikelihoodModelResults(self, xopt)
+        if method == 'bfgs' and full_output:
+            Hinv = retvals.get('Hinv', 0)
+        elif method == 'newton' and full_output:
+            Hinv = np.linalg.inv(-hopt)
+        else:
+            try:
+                Hinv = np.linalg.inv(-1*self.hessian(xopt))
+            except:
+                Hinv = None
+#TODO: add Hessian approximation and change the above if needed
+        mlefit = LikelihoodModelResults(self, xopt, Hinv, scale=1.)
+#TODO: hardcode scale?
+
         if isinstance(retvals, dict):
             mlefit.mle_retvals = retvals
         optim_settings = {'optimizer' : method, 'start_params' : start_params,
