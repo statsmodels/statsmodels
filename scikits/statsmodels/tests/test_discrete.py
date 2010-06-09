@@ -193,7 +193,7 @@ class TestProbitCG(TestProbitNewton):
 class TestProbitNCG(TestProbitNewton):
     def setup(self):
         self.res1 = Probit(self.data.endog, self.data.exog).fit(method="ncg",
-            disp=1, avextol=1e-8)
+            disp=0, avextol=1e-8)
 
 class TestLogitNewton(CheckModelResults, CheckMargEff):
     def __init__(self):
