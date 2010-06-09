@@ -151,7 +151,7 @@ class LikelihoodModel(Model):
         except:
             hess = None
         if method == 'newton':
-            tol = kwargs.get('tol', 1e-8)
+            tol = kwargs.setdefault('tol', 1e-8)
             score = lambda params: self.score(params) # these are positive?
             hess = lambda params: self.hessian(params) # but neg for others?
             iterations = 0
@@ -192,9 +192,9 @@ exceeded."
             else:
                 retvals = newparams
         elif method == 'nm':    # Nelder-Mead
-            xtol = kwargs.get('xtol', 0.0001)
-            ftol = kwargs.get('ftol', 0.0001)
-            maxfun = kwargs.get('maxfun', None)
+            xtol = kwargs.setdefault('xtol', 0.0001)
+            ftol = kwargs.setdefault('ftol', 0.0001)
+            maxfun = kwargs.setdefault('maxfun', None)
             retvals = optimize.fmin(f, start_params, args=fargs, xtol=xtol,
                         ftol=ftol, maxiter=maxiter, maxfun=maxfun,
                         full_output=full_output, disp=disp, retall=0,
@@ -206,9 +206,9 @@ exceeded."
                     'fcalls' : fcalls, 'warnflag' : warnflag,
                     'converged' : converged}
         elif method == 'bfgs':
-            gtol = kwargs.get('gtol', 1.0000000000000001e-05)
-            norm = kwargs.get('norm', np.Inf)
-            epsilon = kwargs.get('epsilon', 1.4901161193847656e-08)
+            gtol = kwargs.setdefault('gtol', 1.0000000000000001e-05)
+            norm = kwargs.setdefault('norm', np.Inf)
+            epsilon = kwargs.setdefault('epsilon', 1.4901161193847656e-08)
             retvals = optimize.fmin_bfgs(f, start_params, score, args=fargs,
                             gtol=gtol, norm=norm, epsilon=epsilon,
                             maxiter=maxiter, full_output=full_output,
@@ -220,9 +220,9 @@ exceeded."
                         'fcalls' : fcalls, 'gcalls' : gcalls, 'warnflag' :
                         warnflag, 'converged' : converged}
         elif method == 'ncg':
-            fhess_p = kwargs.get('fhess_p', None)
-            avextol = kwargs.get('avextol', 1.0000000000000001e-05)
-            epsilon = kwargs.get('epsilon', 1.4901161193847656e-08)
+            fhess_p = kwargs.setdefault('fhess_p', None)
+            avextol = kwargs.setdefault('avextol', 1.0000000000000001e-05)
+            epsilon = kwargs.setdefault('epsilon', 1.4901161193847656e-08)
             retvals = optimize.fmin_ncg(f, start_params, score, fhess_p=fhess_p,
                             fhess=hess, args=fargs, avextol=avextol,
                             epsilon=epsilon, maxiter=maxiter,
@@ -235,9 +235,9 @@ exceeded."
                     'hcalls' : hcalls, 'warnflag' : warnflag,
                     'converged' : converged}
         elif method == 'cg':
-            gtol = kwargs.get('gtol', 1.0000000000000001e-05)
-            norm = kwargs.get('norm', np.Inf)
-            epsilon = kwargs.get('epsilon', 1.4901161193847656e-08)
+            gtol = kwargs.setdefault('gtol', 1.0000000000000001e-05)
+            norm = kwargs.setdefault('norm', np.Inf)
+            epsilon = kwargs.setdefault('epsilon', 1.4901161193847656e-08)
             retvals = optimize.fmin_cg(f, start_params, score,
                             gtol=gtol, norm=norm,
                             epsilon=epsilon, maxiter=maxiter,
@@ -249,10 +249,10 @@ exceeded."
                 retvals = {'fopt' : fopt, 'fcalls' : fcalls, 'gcalls' : gcalls,
                     'warnflag' : warnflag, 'converged' : converged}
         elif method == 'powell':
-            xtol = kwargs.get('xtol', 0.0001)
-            ftol = kwargs.get('ftol', 0.0001)
-            maxfun = kwargs.get('maxfun', None)
-            start_direc = kwargs.get('start_direc', None)
+            xtol = kwargs.setdefault('xtol', 0.0001)
+            ftol = kwargs.setdefault('ftol', 0.0001)
+            maxfun = kwargs.setdefault('maxfun', None)
+            start_direc = kwargs.setdefault('start_direc', None)
             retvals = optimize.fmin_powell(f, start_params, args=fargs,
                             xtol=xtol, ftol=ftol, maxiter=maxiter,
                             maxfun=maxfun, full_output=full_output, disp=disp,
@@ -266,7 +266,7 @@ exceeded."
             xopt = retvals
 
         if method == 'bfgs' and full_output:
-            Hinv = retvals.get('Hinv', 0)
+            Hinv = retvals.setdefault('Hinv', 0)
         elif method == 'newton' and full_output:
             Hinv = np.linalg.inv(-hopt)
         else:
