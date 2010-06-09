@@ -265,8 +265,9 @@ exceeded."
         if not full_output:
             xopt = retvals
 
-        if method == 'bfgs' and full_output:
-            Hinv = retvals.setdefault('Hinv', 0)
+#NOTE: better just to use the Analytic Hessian here.
+#        if method == 'bfgs' and full_output:
+#            Hinv = retvals.setdefault('Hinv', 0)
         elif method == 'newton' and full_output:
             Hinv = np.linalg.inv(-hopt)
         else:
