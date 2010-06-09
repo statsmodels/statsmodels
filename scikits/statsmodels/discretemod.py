@@ -608,7 +608,8 @@ class Probit(DiscreteModel):
 
         q = 2*self.endog - 1
         X = self.exog
-        return np.sum(np.log(self.cdf(q*np.dot(X,params))))
+        return np.sum(np.log(np.clip(self.cdf(q*np.dot(X,params)),1e-20,
+            1)))
 
     def score(self, params):
         """
@@ -634,7 +635,8 @@ class Probit(DiscreteModel):
         X = self.exog
         XB = np.dot(X,params)
         q = 2*y - 1
-        L = q*self.pdf(q*XB)/self.cdf(q*XB)
+        # clip to get rid of invalid divide complaint
+        L = q*self.pdf(q*XB)/np.clip(self.cdf(q*XB), 1e-20, 1-1e-20)
         return np.dot(L,X)
 
     def hessian(self, params):

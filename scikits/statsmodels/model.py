@@ -146,14 +146,14 @@ class LikelihoodModel(Model):
         method = method.lower()
         f = lambda params: -self.loglike(params)
         score = lambda params: -self.score(params)
-#        hess = lambda params: -self.hessian(params)
-        hess = None
-
+        try:
+            hess = lambda params: -self.hessian(params)
+        except:
+            hess = None
         if method == 'newton':
             tol = kwargs.get('tol', 1e-8)
-            hess = lambda params: -self.hessian(params) #TODO: negative?
-                                                        #TODO: remove when ok
-                                                        # above
+            score = lambda params: self.score(params) # these are positive?
+            hess = lambda params: self.hessian(params) # but neg for others?
             iterations = 0
             start = np.array(start_params)
 #TODO: do we want to keep a history?
@@ -163,7 +163,7 @@ class LikelihoodModel(Model):
                 H = hess(history[-1])
 #                H = self.hessian(history[-1])
                 newparams = history[-1] - np.dot(np.linalg.inv(H),
-                        self.score(history[-1]))
+                        score(history[-1]))
                 history.append(newparams)
                 if callback is not None:
                     callback(newparams)
@@ -183,21 +183,19 @@ exceeded."
                     print "         Current function value: %f" % fval
                     print "         Iterations %d" % iterations
             if full_output:
-                xopt, fopt, niter, gopt, hopt = (newparams, fval,
-                    iterations, self.score(newparams), self.hessian(newparams))
+                xopt, fopt, niter, gopt, hopt = (newparams, f(newparams),
+                    iterations, score(newparams), hess(newparams))
                 converged = not warnflag
                 retvals = {'fopt' : fopt, 'iterations' : niter, 'score' : gopt,
                         'Hessian' : hopt, 'warnflag' : warnflag,
                         'converged' : converged}
             else:
                 retvals = newparams
-#            mlefit = LikelihoodModelResults(self, retvals)
-#            return mlefit
         elif method == 'nm':    # Nelder-Mead
             xtol = kwargs.get('xtol', 0.0001)
             ftol = kwargs.get('ftol', 0.0001)
             maxfun = kwargs.get('maxfun', None)
-            retvals = optimize.fmin(f, start_params, args=(), xtol=xtol,
+            retvals = optimize.fmin(f, start_params, args=fargs, xtol=xtol,
                         ftol=ftol, maxiter=maxiter, maxfun=maxfun,
                         full_output=full_output, disp=disp, retall=0,
                         callback=callback)
@@ -209,9 +207,10 @@ exceeded."
                     'converged' : converged}
         elif method == 'bfgs':
             gtol = kwargs.get('gtol', 1.0000000000000001e-05)
-            epsilon = kwargs.get('1.4901161193847656e-08', epsilon)
+            norm = kwargs.get('norm', np.Inf)
+            epsilon = kwargs.get('epsilon', 1.4901161193847656e-08)
             retvals = optimize.fmin_bfgs(f, start_params, score, args=fargs,
-                            gtol=gtol, norm=inf, epsilon=epsilon,
+                            gtol=gtol, norm=norm, epsilon=epsilon,
                             maxiter=maxiter, full_output=full_output,
                             disp=disp, retall=0, callback=callback)
             if full_output:
@@ -224,7 +223,7 @@ exceeded."
             fhess_p = kwargs.get('fhess_p', None)
             avextol = kwargs.get('avextol', 1.0000000000000001e-05)
             epsilon = kwargs.get('epsilon', 1.4901161193847656e-08)
-            retvals = optimize.fmin_ncg(f, start_params, score, fhess_p=None,
+            retvals = optimize.fmin_ncg(f, start_params, score, fhess_p=fhess_p,
                             fhess=hess, args=fargs, avextol=avextol,
                             epsilon=epsilon, maxiter=maxiter,
                             full_output=full_output, disp=disp, retall=0,
@@ -237,8 +236,8 @@ exceeded."
                     'converged' : converged}
         elif method == 'cg':
             gtol = kwargs.get('gtol', 1.0000000000000001e-05)
-            gtol = kwargs.get('norm', inf)
-            gtol = kwargs.get('epsilon', 1.4901161193847656e-08)
+            norm = kwargs.get('norm', np.Inf)
+            epsilon = kwargs.get('epsilon', 1.4901161193847656e-08)
             retvals = optimize.fmin_cg(f, start_params, score,
                             gtol=gtol, norm=norm,
                             epsilon=epsilon, maxiter=maxiter,
@@ -254,7 +253,7 @@ exceeded."
             ftol = kwargs.get('ftol', 0.0001)
             maxfun = kwargs.get('maxfun', None)
             start_direc = kwargs.get('start_direc', None)
-            retvals = optimize.fmin_powell(f, start_params, args=fargs(),
+            retvals = optimize.fmin_powell(f, start_params, args=fargs,
                             xtol=xtol, ftol=ftol, maxiter=maxiter,
                             maxfun=maxfun, full_output=full_output, disp=disp,
                             retall=0, callback=callback, direc=start_direc)

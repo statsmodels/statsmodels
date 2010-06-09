@@ -170,6 +170,31 @@ class TestProbitNewton(CheckModelResults):
         res2.probit()
         self.res2 = res2
 
+class TestProbitBFGS(TestProbitNewton):
+    def setup(self):
+        self.res1 = Probit(self.data.endog, self.data.exog).fit(method="bfgs",
+            disp=0)
+
+class TestProbitNM(TestProbitNewton):
+    def setup(self):
+        self.res1 = Probit(self.data.endog, self.data.exog).fit(method="nm",
+            disp=0, maxiter=500)
+
+class TestProbitPowell(TestProbitNewton):
+    def setup(self):
+        self.res1 = Probit(self.data.endog, self.data.exog).fit(method="powell",
+            disp=0, ftol=1e-8)
+
+class TestProbitCG(TestProbitNewton):
+    def setup(self):
+        self.res1 = Probit(self.data.endog, self.data.exog).fit(method="cg",
+            disp=0, maxiter=100)
+
+class TestProbitNCG(TestProbitNewton):
+    def setup(self):
+        self.res1 = Probit(self.data.endog, self.data.exog).fit(method="ncg",
+            disp=1, avextol=1e-8)
+
 class TestLogitNewton(CheckModelResults, CheckMargEff):
     def __init__(self):
         from results.results_discrete import Spector
