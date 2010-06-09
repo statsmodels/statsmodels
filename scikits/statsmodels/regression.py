@@ -32,12 +32,10 @@ __all__ = ['GLS', 'WLS', 'OLS', 'GLSAR']
 
 import numpy as np
 from scipy.linalg import norm, toeplitz, lstsq, calc_lwork
-from scipy.linalg.lapack import get_lapack_funcs
 from scipy import stats
 from scipy.stats.stats import ss
 from model import LikelihoodModel, LikelihoodModelResults
-import tools
-from tools import add_constant
+from tools import add_constant, rank, recipr
 from decorators import *
 
 class GLS(LikelihoodModel):
@@ -47,7 +45,7 @@ class GLS(LikelihoodModel):
     Parameters
     ----------
     endog : array-like
-          endog is a 1-d vector that contains the response/independent variable
+           endog is a 1-d vector that contains the response/independent variable
     exog : array-like
            exog is a n x p vector where n is the number of observations and p is
            the number of regressors/dependent variables including the intercept
@@ -169,9 +167,9 @@ Should be of length %s, if sigma is a 1d array" % nobs
         self.wendog = self.whiten(self.endog)
         # overwrite nobs from class Model:
         self.nobs = float(self.wexog.shape[0])
-        self.df_resid = self.nobs - tools.rank(self.exog)
+        self.df_resid = self.nobs - rank(self.exog)
 #       Below assumes that we have a constant
-        self.df_model = float(tools.rank(self.exog)-1)
+        self.df_model = float(rank(self.exog)-1)
 
     def whiten(self, X):
         """
@@ -1098,7 +1096,7 @@ class RegressionResults(LikelihoodModelResults):
         if not hasattr(self, 'resid'):
             raise ValueError, 'need normalized residuals to estimate standard\
  deviation'
-        return self.wresid * tools.recipr(np.sqrt(self.scale))
+        return self.wresid * recipr(np.sqrt(self.scale))
 
     def summary(self, yname=None, xname=None):
         """returns a string that summarizes the regression results
