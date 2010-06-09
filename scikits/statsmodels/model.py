@@ -125,7 +125,8 @@ class LikelihoodModel(Model):
         """
         raise NotImplementedError
 
-    def fit(self, start_params=None, method='newton', maxiter=35, tol=1e-08):
+    def fit(self, start_params=None, method='newton', maxiter=35, tol=1e-08,
+            full_output=0, disp=1, fargs=(), callback=None, **kwargs):
         """
         Fit method for likelihood based models
 
@@ -133,48 +134,145 @@ class LikelihoodModel(Model):
         ----------
         start_params : array-like, optional
             An optional
-
         method : str
             Method can be 'newton', 'bfgs', 'powell', 'cg', or 'ncg'.
             The default is newton.  See scipy.optimze for more information.
         """
-        methods = ['newton', 'bfgs', 'powell', 'cg', 'ncg']
+        methods = ['newton', 'nm', 'bfgs', 'powell', 'cg', 'ncg']
         if start_params is None:
             start_params = [0]*self.exog.shape[1] # will fail for shape (K,)
-        if not method in methods:
+        if method.lower() not in methods:
             raise ValueError, "Unknown fit method %s" % method
+        method = method.lower()
         f = lambda params: -self.loglike(params)
         score = lambda params: -self.score(params)
 #        hess = lambda params: -self.hessian(params)
         hess = None
-#TODO: can we have a unified framework so that we can just do func = method
-# and write one call for each solver?
 
-        if method.lower() == 'newton':
-            iteration = 0
+        if method == 'newton':
+            hess = lambda params: -self.hessian(params) #TODO: negative?
+                                                        #TODO: remove when ok
+                                                        # above
+            iterations = 0
             start = np.array(start_params)
+#TODO: do we want to keep a history?
             history = [np.inf, start]
-            while (iteration < maxiter and np.all(np.abs(history[-1] - \
+            while (iterations < maxiter and np.all(np.abs(history[-1] - \
                     history[-2])>tol)):
-                H = self.hessian(history[-1])
+                H = hess(history[-1])
                 newparams = history[-1] - np.dot(np.linalg.inv(H),
-                        self.score(history[-1]))
+                        score(history[-1]))
                 history.append(newparams)
-                iteration += 1
-            mlefit = LikelihoodModelResults(self, newparams)
-            mlefit.iteration = iteration
+                fval = f(newparams) # this is the negative likelihood
+                if callback is not None:
+                    callback(newparams)
+                iterations += 1
+            if iterations == maxiter:
+                warnflag = 1
+                if disp:
+                    print "Warning: Maximum number of iterations has been \
+exceeded."
+                    print "         Current function value: %f" % fval
+                    print "         Iterations: %d" % iterations
+            else:
+                warnflag = 0
+                if disp:
+                    print "Optimization terminated successfully."
+                    print "         Current function value: %f" % fval
+                    print "         Iterations %d" % iterations
+            if full_output:
+                xopt, fopt, niter, gopt, hopt = (newparams, f(newparams),
+                    iterations, score(newparams), hess(newparams))
+                converged = not warnflag
+                retvals = {'fopt' : fopt, 'iterations' : niter, 'score' : gopt,
+                        'Hessian' : hopt, 'warnflag' : warnflag,
+                        'converged' : converged}
+            else:
+                retvals = newparams
+        elif method == 'nm':    # Nelder-Mead
+            xtol = kwargs.get('xtol', 0.0001)
+            ftol = kwargs.get('ftol', 0.0001)
+            maxfun = kwargs.get('maxfun', None)
+            retvals = optimize.fmin(f, start_params, args=(), xtol=xtol,
+                        ftol=ftol, maxiter=maxiter, maxfun=maxfun,
+                        full_output=full_output, disp=disp, retall=0,
+                        callback=callback)
+            if full_output:
+                xopt, fopt, niter, fcalls, warnflag = retvals
+                converged = not warnflag
+                retvals = {'fopt' : fopt, 'iterations' : niter,
+                    'fcalls' : fcalls, 'warnflag' : warnflag,
+                    'converged' : converged}
         elif method == 'bfgs':
-            xopt, fopt, gopt, Hopt, func_calls, grad_calls, warnflag = \
-                optimize.fmin_bfgs(f, start_params, score, full_output=1,
-                        maxiter=maxiter, gtol=tol)
-            converge = not warnflag
-            mlefit = LikelihoodModelResults(self, xopt)
+            gtol = kwargs.get('gtol', 1.0000000000000001e-05)
+            epsilon = kwargs.get('1.4901161193847656e-08', epsilon)
+            retvals = optimize.fmin_bfgs(f, start_params, score, args=fargs,
+                            gtol=gtol, norm=inf, epsilon=epsilon,
+                            maxiter=maxiter, full_output=full_output,
+                            disp=disp, retall=0, callback=callback)
+            if full_output:
+                xopt, fopt, gopt, Hinv, fcalls, gcalls, warnflag = retvals
+                converged = not warnflag
+                retvals = {'fopt' : fopt, 'gopt' : gopt, 'Hinv' : Hinv,
+                        'fcalls' : fcalls, 'gcalls' : gcalls, 'warnflag' :
+                        warnflag, 'converged' : converged}
         elif method == 'ncg':
-            xopt, fopt, fcalls, gcalls, hcalls, warnflag = \
-                optimize.fmin_ncg(f, start_params, score, fhess=hess,
-                        full_output=1, maxiter=maxiter, avextol=tol)
-            mlefit = LikelihoodModelResults(self, xopt)
-            converge = not warnflag
+            fhess_p = kwargs.get('fhess_p', None)
+            avextol = kwargs.get('avextol', 1.0000000000000001e-05)
+            epsilon = kwargs.get('epsilon', 1.4901161193847656e-08)
+            retvals = optimize.fmin_ncg(f, start_params, score, fhess_p=None,
+                            fhess=hess, args=fargs, avextol=avextol,
+                            epsilon=epsilon, maxiter=maxiter,
+                            full_output=full_output, disp=disp, retall=0,
+                            callback=callback)
+            if full_output:
+                xopt, fopt, fcalls, gcalls, hcalls, warnflag = retvals
+                converged = not warnflag
+                retvals = {'fopt' : fopt, 'fcalls' : fcalls, 'gcalls' : gcalls,
+                    'hcalls' : hcalls, 'warnflag' : warnflag,
+                    'converged' : converged}
+        elif method == 'cg':
+            gtol = kwargs.get('gtol', 1.0000000000000001e-05)
+            gtol = kwargs.get('norm', inf)
+            gtol = kwargs.get('epsilon', 1.4901161193847656e-08)
+            retvals = optimize.fmin_cg(f, start_params, score,
+                            gtol=gtol, norm=norm,
+                            epsilon=epsilon, maxiter=maxiter,
+                            full_output=full_output, disp=disp, retall=0,
+                            callback=callback)
+            if full_output:
+                xopt, fopt, fcalls, gcalls, warnflag = retvals
+                converged = not warnflag
+                retvals = {'fopt' : fopt, 'fcalls' : fcalls, 'gcalls' : gcalls,
+                    'warnflag' : warnflag, 'converged' : converged}
+        elif method == 'powell':
+            xtol = kwargs.get('xtol', 0.0001)
+            ftol = kwargs.get('ftol', 0.0001)
+            maxfun = kwargs.get('maxfun', None)
+            start_direc = kwargs.get('start_direc', None)
+            retvals = optimize.fmin_powell(f, start_params, args=fargs(),
+                            xtol=xtol, ftol=ftol, maxiter=maxiter,
+                            maxfun=maxfun, full_output=full_output, disp=disp,
+                            retall=0, callback=callback, direc=start_direc)
+            if full_output:
+                xopt, fopt, direc, niter, fcalls, warnflag = retvals
+                converged = not warnflag
+                retvals = {'fopt' : fopt, 'direc' : direc, 'iterations' : niter,
+                    'fcalls' : fcalls, 'warnflag' : warnflag}
+        if not full_output:
+            xopt = retvals
+
+        if not hess and full_output:
+            Hinv = retvals.get('Hinv', None)
+#TODO: get Hessian approximation
+        mlefit = LikelihoodModelResults(self, xopt)
+        if isinstance(retvals, dict):
+            mlefit.mle_retvals = retvals
+        optim_settings = {'optimizer' : method, 'start_params' : start_params,
+            'maxiter' : maxiter, 'full_output' : full_output, 'disp' : disp,
+            'fargs' : fargs, 'callback' : callback}
+        optim_settings.update(kwargs)
+        mlefit.mle_settings = optim_settings
         self._results = mlefit
         return mlefit
 
