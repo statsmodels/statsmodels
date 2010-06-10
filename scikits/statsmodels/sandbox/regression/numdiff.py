@@ -101,13 +101,11 @@ def approx_hess(xk,f,epsilon, *args):#, returngrad=True):
     todo: cleanup args and options
     '''
     returngrad=True
-
     if epsilon is None:  #check
         eps = 1e-5
         step = None
     else:
-        step = epsilon  #TODO: this shouldn't be here but I need to figure out args
-
+        step = epsilon  #TODO: shouldn't be here but I need to figure out args
     n = len(xk)
     x = xk  #alias
     f0 = f(*((xk,)+args))
@@ -133,13 +131,32 @@ def approx_hess(xk,f,epsilon, *args):#, returngrad=True):
     # Compute "double" forward step
     for i in range(n):
         for j in range(i,n):
-            hess[i,j] = (f(*((xk+ee[i,:]+ee[j,:],)+args))-g[i]-g[j]+f0)/hess[i,j];
+            hess[i,j] = (f(*((xk+ee[i,:]+ee[j,:],)+args))-g[i]-g[j]+f0)/hess[i,j]
             hess[j,i] = hess[i,j]
     if returngrad:
         grad = (g - f0)/h
         return hess, grad
     else:
         return hess
+
+def approx_fhess_p(x0,p,fprime,epsilon,*args):
+    """
+    Approximate the Hessian when the Jacobian is available.
+
+    Parameters
+    ----------
+    x0 : array-like
+        Point at which to evaluate the Hessian
+    p : array-like
+        Point
+    fprime : func
+        The Jacobian function
+    epsilon : float
+
+    """
+    f2 = fprime(*((x0+epsilon*p,)+args))
+    f1 = fprime(*((x0,)+args))
+    return (f2 - f1)/epsilon
 
 
 def fun(beta, x):

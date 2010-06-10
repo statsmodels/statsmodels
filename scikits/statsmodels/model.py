@@ -125,7 +125,7 @@ class LikelihoodModel(Model):
         """
         raise NotImplementedError
 
-    def fit(self, start_params=None, method='newton', maxiter=35, full_output=1,
+    def fit(self, start_params=None, method='newton', maxiter=100, full_output=1,
             disp=1, fargs=(), callback=None, retall=0, **kwargs):
         """
         Fit method for likelihood based models
@@ -133,11 +133,188 @@ class LikelihoodModel(Model):
         Parameters
         ----------
         start_params : array-like, optional
-            An optional
-        method : str
-            Method can be 'newton', 'bfgs', 'powell', 'cg', or 'ncg'.
-            The default is newton.  See scipy.optimze for more information.
+            Initial guess of the solution for the loglikelihood maximization.
+            The default is an array of zeros.
+        method : str {'newton','nm','bfgs','powell','cg', or 'ncg'}
+            Method can be 'newton' for Newton-Raphson, 'nm' for Nelder-Mead,
+            'bfgs' for Broyden-Fletcher-Goldfarb-Shanno, 'powell' for modified
+            Powell's method, 'cg' for conjugate gradient, or 'ncg' for Newton-
+            conjugate gradient. `method` determines which solver from
+            scipy.optimize is used.  The explicit arguments in `fit` are passed
+            to the solver.  Each solver has several optional arguments that are
+            not the same across solvers.  See the notes section below (or
+            scipy.optimize) for the available arguments.
+        maxiter : int
+            The maximum number of iterations to perform.
+        full_output : bool
+            Set to True to have all available output in the Results object's
+            mle_retvals attribute. The output is dependent on the solver.
+            See the notes section below for more information.
+        disp : bool
+            Set to True to print convergence messages.
+        fargs : tuple
+            Extra arguments passed to the likelihood function, i.e.,
+            loglike(x,*args)
+        callback : callable callback(xk)
+            Called after each iteration, as callback(xk), where xk is the
+            current parameter vector.
+        retall : bool
+            Set to True to return list of solutions at each iteration.
+            Available in Results object's mle_retvals attribute.
+
+        Notes
+        -----
+        Optional arguments for the solvers (available in Results.mle_settings):
+
+            'newton'
+                tol : float
+                    Relative error in params acceptable for convergence.
+            'nm' -- Nelder Mead
+                xtol : float
+                    Relative error in params acceptable for convergence
+                ftol : float
+                    Relative error in loglike(params) acceptable for
+                    convergence
+                maxfun : int
+                    Maximum number of function evaluations to make.
+            'bfgs'
+                gtol : float
+                    Stop when norm of gradient is less than gtol.
+                norm : float
+                    Order of norm (np.Inf is max, -np.Inf is min)
+                epsilon
+                    If fprime is approximated, use this value for the step
+                    size. Only relevant if LikelihoodModel.score is None.
+            'cg'
+                gtol : float
+                    Stop when norm of gradient is less than gtol.
+                norm : float
+                    Order of norm (np.Inf is max, -np.Inf is min)
+                epsilon : float
+                    If fprime is approximated, use this value for the step
+                    size. Can be scalar or vector.  Only relevant if
+                    Likelihoodmodel.score is None.
+            'ncg'
+                fhess_p : callable f'(x,*args)
+                    Function which computes the Hessian of f times an arbitrary
+                    vector, p.  Should only be supplied if
+                    LikelihoodModel.hessian is None.
+                avextol : float
+                    Stop when the average relative error in the minimizer
+                    falls below this amount.
+                epsilon : float or ndarray
+                    If fhess is approximated, use this value for the step size.
+                    Only relevant if Likelihoodmodel.hessian is None.
+            'powell'
+                xtol : float
+                    Line-search error tolerance
+                ftol : float
+                    Relative error in loglike(params) for acceptable for
+                    convergence.
+                maxfun : int
+                    Maximum number of function evaluations to make.
+                start_direc : ndarray
+                    Initial direction set.
+
+        Return values by solver if full_ouput is True (available in
+                Results.mle_retvals):
+
+            'newton'
+                fopt : float
+                    The value of the (negative) loglikelihood at its
+                    minimum.
+                iterations : int
+                    Number of iterations performed.
+                score : ndarray
+                    The score vector at the optimum.
+                Hessian : ndarray
+                    The Hessian at the optimum.
+                warnflag : int
+                    1 if maxiter is exceeded. 0 if successful convergence.
+                converged : bool
+                    True: converged. False: did not converge.
+                allvecs : list
+                    List of solutions at each iteration.
+            'nm'
+                fopt : float
+                    The value of the (negative) loglikelihood at its
+                    minimum.
+                iterations : int
+                    Number of iterations performed.
+                warnflag : int
+                    1: Maximum number of function evaluations made.
+                    2: Maximum number of iterations reached.
+                converged : bool
+                    True: converged. False: did not converge.
+                allvecs : list
+                    List of solutions at each iteration.
+            'bfgs'
+                fopt : float
+                    Value of the (negative) loglikelihood at its minimum.
+                gopt : float
+                    Value of gradient at minimum, which should be near 0.
+                Hinv : ndarray
+                    value of the inverse Hessian matrix at minimum.  Note
+                    that this is just an approximation and will often be
+                    different from the value of the analytic Hessian.
+                fcalls : int
+                    Number of calls to loglike.
+                gcalls : int
+                    Number of calls to gradient/score.
+                warnflag : int
+                    1: Maximum number of iterations exceeded. 2: Gradient
+                    and/or function calls are not changing.
+                converged : bool
+                    True: converged.  False: did not converge.
+                allvecs : list
+                    Results at each iteration.
+            'powell'
+                fopt : float
+                    Value of the (negative) loglikelihood at its minimum.
+                direc : ndarray
+                    Current direction set.
+                iterations : int
+                    Number of iterations performed.
+                fcalls : int
+                    Number of calls to loglike.
+                warnflag : int
+                    1: Maximum number of function evaluations. 2: Maximum number
+                    of iterations.
+                converged : bool
+                    True : converged. False: did not converge.
+                allvecs : list
+                    Results at each iteration.
+            'cg'
+                fopt : float
+                    Value of the (negative) loglikelihood at its minimum.
+                fcalls : int
+                    Number of calls to loglike.
+                gcalls : int
+                    Number of calls to gradient/score.
+                warnflag : int
+                    1: Maximum number of iterations exceeded. 2: Gradient and/
+                    or function calls not changing.
+                converged : bool
+                    True: converged. False: did not converge.
+                allvecs : list
+                    Results at each iteration.
+            'ncg'
+                fopt : float
+                    Value of the (negative) loglikelihood at its minimum.
+                fcalls : int
+                    Number of calls to loglike.
+                gcalls : int
+                    Number of calls to gradient/score.
+                hcalls : int
+                    Number of calls to hessian.
+                warnflag : int
+                    1: Maximum number of iterations exceeded.
+                converged : bool
+                    True: converged. False: did not converge.
+                allvecs : list
+                    Results at each iteration.
         """
+#TODO: move results docs to results class...
         methods = ['newton', 'nm', 'bfgs', 'powell', 'cg', 'ncg']
         if start_params is None:
             start_params = [0]*self.exog.shape[1] # will fail for shape (K,)
@@ -221,7 +398,7 @@ exceeded."
             retvals = optimize.fmin_bfgs(f, start_params, score, args=fargs,
                             gtol=gtol, norm=norm, epsilon=epsilon,
                             maxiter=maxiter, full_output=full_output,
-                            disp=disp, retall=0, callback=callback)
+                            disp=disp, retall=retall, callback=callback)
             if full_output:
                 if not retall:
                     xopt, fopt, gopt, Hinv, fcalls, gcalls, warnflag = retvals
@@ -241,7 +418,7 @@ exceeded."
             retvals = optimize.fmin_ncg(f, start_params, score, fhess_p=fhess_p,
                             fhess=hess, args=fargs, avextol=avextol,
                             epsilon=epsilon, maxiter=maxiter,
-                            full_output=full_output, disp=disp, retall=0,
+                            full_output=full_output, disp=disp, retall=retall,
                             callback=callback)
             if full_output:
                 if not retall:
@@ -262,7 +439,7 @@ exceeded."
             retvals = optimize.fmin_cg(f, start_params, score,
                             gtol=gtol, norm=norm,
                             epsilon=epsilon, maxiter=maxiter,
-                            full_output=full_output, disp=disp, retall=0,
+                            full_output=full_output, disp=disp, retall=retall,
                             callback=callback)
             if full_output:
                 if not retall:
@@ -282,7 +459,7 @@ exceeded."
             retvals = optimize.fmin_powell(f, start_params, args=fargs,
                             xtol=xtol, ftol=ftol, maxiter=maxiter,
                             maxfun=maxfun, full_output=full_output, disp=disp,
-                            retall=0, callback=callback, direc=start_direc)
+                            retall=retall, callback=callback, direc=start_direc)
             if full_output:
                 if not retall:
                     xopt, fopt, direc, niter, fcalls, warnflag = retvals
@@ -291,7 +468,8 @@ exceeded."
                         retvals
                 converged = not warnflag
                 retvals = {'fopt' : fopt, 'direc' : direc, 'iterations' : niter,
-                    'fcalls' : fcalls, 'warnflag' : warnflag}
+                    'fcalls' : fcalls, 'warnflag' : warnflag, 'converged' :
+                    converged}
                 if retall:
                     retvals.update({'allvecs' : allvecs})
         if not full_output:
