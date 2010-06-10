@@ -126,7 +126,7 @@ class LikelihoodModel(Model):
         raise NotImplementedError
 
     def fit(self, start_params=None, method='newton', maxiter=35, full_output=1,
-            disp=1, fargs=(), callback=None, **kwargs):
+            disp=1, fargs=(), callback=None, retall=0, **kwargs):
         """
         Fit method for likelihood based models
 
@@ -155,16 +155,21 @@ class LikelihoodModel(Model):
             score = lambda params: self.score(params) # these are positive?
             hess = lambda params: self.hessian(params) # but neg for others?
             iterations = 0
-            start = np.array(start_params)
-#TODO: do we want to keep a history?
-            history = [np.inf, start]
-            while (iterations < maxiter and np.all(np.abs(history[-1] - \
-                    history[-2])>tol)):
-                H = hess(history[-1])
-#                H = self.hessian(history[-1])
-                newparams = history[-1] - np.dot(np.linalg.inv(H),
-                        score(history[-1]))
-                history.append(newparams)
+            oldparams = np.inf
+            newparams = np.asarray(start_params)
+            if retall:
+                history = [oldparams, newparams]
+#            while (iterations < maxiter and np.all(np.abs(history[-1] - \
+#                    history[-2])>tol)):
+            while (iterations < maxiter and np.all(np.abs(newparams -
+                    oldparams) > tol)):
+#                H = hess(history[-1])
+                H = hess(newparams)
+                oldparams = newparams
+                newparams = oldparams - np.dot(np.linalg.inv(H),
+                        score(oldparams))
+                if retall:
+                    history.append(newparams)
                 if callback is not None:
                     callback(newparams)
                 iterations += 1
@@ -189,6 +194,8 @@ exceeded."
                 retvals = {'fopt' : fopt, 'iterations' : niter, 'score' : gopt,
                         'Hessian' : hopt, 'warnflag' : warnflag,
                         'converged' : converged}
+                if retall:
+                    retvals.update({'allvecs' : history})
             else:
                 retvals = newparams
         elif method == 'nm':    # Nelder-Mead
@@ -197,14 +204,19 @@ exceeded."
             maxfun = kwargs.setdefault('maxfun', None)
             retvals = optimize.fmin(f, start_params, args=fargs, xtol=xtol,
                         ftol=ftol, maxiter=maxiter, maxfun=maxfun,
-                        full_output=full_output, disp=disp, retall=0,
+                        full_output=full_output, disp=disp, retall=retall,
                         callback=callback)
             if full_output:
-                xopt, fopt, niter, fcalls, warnflag = retvals
+                if not retall:
+                    xopt, fopt, niter, fcalls, warnflag = retvals
+                else:
+                    xopt, fopt, niter, fcalls, warnflag, allvecs = retvals
                 converged = not warnflag
                 retvals = {'fopt' : fopt, 'iterations' : niter,
                     'fcalls' : fcalls, 'warnflag' : warnflag,
                     'converged' : converged}
+                if retall:
+                    retvals.update({'allvecs' : allvecs})
         elif method == 'bfgs':
             gtol = kwargs.setdefault('gtol', 1.0000000000000001e-05)
             norm = kwargs.setdefault('norm', np.Inf)
@@ -214,11 +226,17 @@ exceeded."
                             maxiter=maxiter, full_output=full_output,
                             disp=disp, retall=0, callback=callback)
             if full_output:
-                xopt, fopt, gopt, Hinv, fcalls, gcalls, warnflag = retvals
+                if not retall:
+                    xopt, fopt, gopt, Hinv, fcalls, gcalls, warnflag = retvals
+                else:
+                    xopt, fopt, gopt, Hinv, fcalls, gcalls, warnflag, allvecs =\
+                        retvals
                 converged = not warnflag
                 retvals = {'fopt' : fopt, 'gopt' : gopt, 'Hinv' : Hinv,
                         'fcalls' : fcalls, 'gcalls' : gcalls, 'warnflag' :
                         warnflag, 'converged' : converged}
+                if retall:
+                    retvals.update({'allvecs' : allvecs})
         elif method == 'ncg':
             fhess_p = kwargs.setdefault('fhess_p', None)
             avextol = kwargs.setdefault('avextol', 1.0000000000000001e-05)
@@ -229,11 +247,17 @@ exceeded."
                             full_output=full_output, disp=disp, retall=0,
                             callback=callback)
             if full_output:
-                xopt, fopt, fcalls, gcalls, hcalls, warnflag = retvals
+                if not retall:
+                    xopt, fopt, fcalls, gcalls, hcalls, warnflag = retvals
+                else:
+                    xopt, fopt, fcalls, gcalls, hcalls, warnflag, allvecs =\
+                        retvals
                 converged = not warnflag
                 retvals = {'fopt' : fopt, 'fcalls' : fcalls, 'gcalls' : gcalls,
                     'hcalls' : hcalls, 'warnflag' : warnflag,
                     'converged' : converged}
+                if retall:
+                    retvals.update({'allvecs' : allvecs})
         elif method == 'cg':
             gtol = kwargs.setdefault('gtol', 1.0000000000000001e-05)
             norm = kwargs.setdefault('norm', np.Inf)
@@ -244,10 +268,15 @@ exceeded."
                             full_output=full_output, disp=disp, retall=0,
                             callback=callback)
             if full_output:
-                xopt, fopt, fcalls, gcalls, warnflag = retvals
+                if not retall:
+                    xopt, fopt, fcalls, gcalls, warnflag = retvals
+                else:
+                    xopt, fopt, fcalls, gcalls, warnflag, allvecs = retvals
                 converged = not warnflag
                 retvals = {'fopt' : fopt, 'fcalls' : fcalls, 'gcalls' : gcalls,
                     'warnflag' : warnflag, 'converged' : converged}
+                if retall:
+                    retvals.update({'allvecs' : allvecs})
         elif method == 'powell':
             xtol = kwargs.setdefault('xtol', 0.0001)
             ftol = kwargs.setdefault('ftol', 0.0001)
@@ -258,14 +287,21 @@ exceeded."
                             maxfun=maxfun, full_output=full_output, disp=disp,
                             retall=0, callback=callback, direc=start_direc)
             if full_output:
-                xopt, fopt, direc, niter, fcalls, warnflag = retvals
+                if not retall:
+                    xopt, fopt, direc, niter, fcalls, warnflag = retvals
+                else:
+                    xopt, fopt, direc, niter, fcalls, warnflag, allvecs =\
+                        retvals
                 converged = not warnflag
                 retvals = {'fopt' : fopt, 'direc' : direc, 'iterations' : niter,
                     'fcalls' : fcalls, 'warnflag' : warnflag}
+                if retall:
+                    retvals.update({'allvecs' : allvecs})
         if not full_output:
             xopt = retvals
 
-#NOTE: better just to use the Analytic Hessian here.
+#NOTE: better just to use the Analytic Hessian here, as approximation isn't
+# great
 #        if method == 'bfgs' and full_output:
 #            Hinv = retvals.setdefault('Hinv', 0)
         elif method == 'newton' and full_output:
@@ -283,7 +319,7 @@ exceeded."
             mlefit.mle_retvals = retvals
         optim_settings = {'optimizer' : method, 'start_params' : start_params,
             'maxiter' : maxiter, 'full_output' : full_output, 'disp' : disp,
-            'fargs' : fargs, 'callback' : callback}
+            'fargs' : fargs, 'callback' : callback, 'retall' : retall}
         optim_settings.update(kwargs)
         mlefit.mle_settings = optim_settings
         self._results = mlefit
