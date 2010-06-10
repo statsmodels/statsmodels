@@ -159,11 +159,8 @@ class LikelihoodModel(Model):
             newparams = np.asarray(start_params)
             if retall:
                 history = [oldparams, newparams]
-#            while (iterations < maxiter and np.all(np.abs(history[-1] - \
-#                    history[-2])>tol)):
             while (iterations < maxiter and np.all(np.abs(newparams -
                     oldparams) > tol)):
-#                H = hess(history[-1])
                 H = hess(newparams)
                 oldparams = newparams
                 newparams = oldparams - np.dot(np.linalg.inv(H),
@@ -324,6 +321,41 @@ exceeded."
         mlefit.mle_settings = optim_settings
         self._results = mlefit
         return mlefit
+
+#TODO: the below is unfinished
+class GenericLikelihoodModel(LikelihoodModel):
+    """
+    Example
+
+    import scikits.statmodels as sm
+    data = sm.datasets.spector.load()
+    data.exog = sm.add_constant(data.exog)
+# in this dir
+    from model import GenericLikelihoodModel
+    probit_mod = sm.Probit(data.endog, data.exog)
+    probit_res = probit_mod.fit()
+    loglike = probit_mod.loglike
+    score = probit_mod.score
+    mod = GenericLikelihoodModel(data.endog, data.exog, loglike, score)
+    res = mod.fit(method="nm", maxiter = 500)
+    import numpy as np
+    np.allclose(res.params, probit_res.params)
+    """
+    def __init__(self, endog, exog, loglike, score, hessian=None):
+        self.loglike = loglike
+        self.score = score
+        self.hessian = hessian
+        super(GenericLikelihoodModel, self).__init__(endog, exog)
+
+    def initialize(self):
+        if not self.score:  # right now score is not optional
+            from sandbox.regression.numdiff import approx_fprime1
+            self.score = approx_fprime1
+            if not self.hessian:
+                pass
+        else:   # can use approx_hess_p if we have a gradient
+            if not self.hessian:
+                pass
 
 class Results(object):
     """

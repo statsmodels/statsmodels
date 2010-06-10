@@ -49,8 +49,9 @@ def approx_fprime(xk,f,epsilon,*args):
         ei[k] = 0.0
     return grad
 
-def approx_fprime1(xk, f, epsilon, *args):
-    '''Gradient of function, or Jacobian if function f returns 1d array
+def approx_fprime1(xk, f, epsilon=1e-12, args=()):
+    '''
+    Gradient of function, or Jacobian if function f returns 1d array
 
     Parameters
     ----------
@@ -72,9 +73,9 @@ def approx_fprime1(xk, f, epsilon, *args):
     -----
 
     todo:
-    * add centered option
     * add scaled stepsize
-
+    ss- should scaled stepsize be an option in the gradient or should the
+    gradient be scaled in within an optimization framework?
     '''
     f0 = f(*((xk,)+args))
     nobs = len(f0)
@@ -85,27 +86,19 @@ def approx_fprime1(xk, f, epsilon, *args):
         for k in range(len(xk)):
             ei[k] = epsilon
             grad[:,k] = (f(*((xk+ei,)+args)) - f0)/epsilon
-            ei[k] = 0.0
+#            ei[k] = 0.0 # why set this back?
     else:
         for k in range(len(xk)):
             ei[k] = epsilon/2.
             grad[:,k] = (f(*((xk+ei,)+args)) - f(*((xk-ei,)+args)))/epsilon
-            ei[k] = 0.0
-
+#            ei[k] = 0.0 # why set this back?
     return grad
 
-
-##def grad(xk,f,epsilon,*args):
-##    pass
-
-
-
 def approx_hess(xk,f,epsilon, *args):#, returngrad=True):
-    '''Calculate Hessian and Gradient by forward differentiation
+    '''
+    Calculate Hessian and Gradient by forward differentiation
 
     todo: cleanup args and options
-
-
     '''
     returngrad=True
 
@@ -163,6 +156,21 @@ def fun2(beta, y, x):
 
 
 if __name__ == '__main__':
+    import scikits.statsmodels as sm
+    from scipy.optimize import approx_fhess_p
+    import numpy as np
+
+    data = sm.datasets.spector.load()
+    data.exog = sm.add_constant(data.exog)
+    mod = sm.Probit(data.endog, data.exog)
+    res = mod.fit(method="newton")
+    test_params = [1,0.25,1.4,-7]
+    llf = mod.loglike
+    score = mod.score
+    hess = mod.hessian
+
+# below is Josef's scratch work
+
     nobs = 200
     x = np.arange(nobs*3).reshape(nobs,-1)
     x = np.random.randn(nobs,3)
