@@ -4,7 +4,7 @@ from stattools import unitroot_adf
 
 import scikits.statsmodels.datasets.macrodata.data as macro
 
-macrod = macro.Load().data
+macrod = macro.load().data
 
 print macro.NOTE
 
