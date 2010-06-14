@@ -67,6 +67,12 @@ paclose = pawp.getMinorXS('close')
 
 # take log and first difference over time
 paclose_ratereturn = paclose.apply(np.log).diff()
+
+import os
+if not os.path.exists('dj30rr'):
+    #if pandas is updated, then sometimes unpickling fails, and need to save again
+    paclose_ratereturn.save('dj30rr')
+
 plt.figure()
 paclose_ratereturn.plot()
 plt.title('daily rate of return')
@@ -81,5 +87,7 @@ paclose_ratereturn_vol.plot()
 paclose_ratereturn_vol_mov = paclose_ratereturn_vol.apply(
                         lambda x:np.convolve(x,np.ones(5)/5.,'same'))
 paclose_ratereturn_vol_mov.plot()
+
+
 
 #plt.show()

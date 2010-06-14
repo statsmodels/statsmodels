@@ -1,18 +1,9 @@
 # -*- coding: utf-8 -*-
-"""A quick look at volatility of stock returns for 2009
+"""Playing with correlation of DJ-30 stock returns
 
-Just an exercise to find my way around the pandas methods.
-Shows the daily rate of return, the square of it (volatility) and
-a 5 day moving average of the volatility.
-No guarantee for correctness.
-Assumes no missing values.
-colors of lines in graphs are not great
+this uses pickled data that needs to be created with findow.py
+to see graphs, uncomment plt.show()
 
-uses DataMatrix and WidePanel to hold data downloaded from yahoo using matplotlib.
-I haven't figured out storage, so the download happens at each run
-of the script.
-
-getquotes is from pandas\examples\finance.py
 
 Created on Sat Jan 30 16:30:18 2010
 Author: josef-pktd
@@ -30,9 +21,14 @@ import scikits.statsmodels as sm
 import scikits.statsmodels.sandbox as sb
 import scikits.statsmodels.sandbox.tools as sbtools
 
-rrdm = pickle.load(file('dj30rr','r'))
+try:
+    rrdm = pickle.load(file('dj30rr','rb'))
+except Exception: #blanket for any unpickling error
+    print "Error with unpickling, a new pickle file can be created with findow_1"
+    raise
+
 ticksym = rrdm.columns.tolist()
-rr = rrdm.values[:400]
+rr = rrdm.values[1:400]
 
 rrcorr = np.corrcoef(rr, rowvar=0)
 
@@ -87,5 +83,6 @@ plt.matshow(residcorr)
 plt.imshow(residcorr, cmap=plt.cm.jet, interpolation='nearest',
            extent=(0,30,0,30), vmin=-1.0, vmax=1.0)
 plt.colorbar()
-plt.show()
+#plt.show()
 #plt.close('all')
+
