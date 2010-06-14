@@ -284,6 +284,7 @@ def fit_fr(self, data, *args, **kwds):
 #function, however for the continuous functions intquad is use, which might
 #require continuouity or smoothness in the function.
 
+
 #TODO: add option for Monte Carlo integration
 
 def expect(self, fn=None, args=(), loc=0, scale=1, lb=None, ub=None, conditional=False):
