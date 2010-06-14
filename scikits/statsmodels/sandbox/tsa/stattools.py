@@ -72,6 +72,15 @@ def unitroot_adf(x, maxlag=None, trendorder=0, autolag='AIC', store=False):
     Greene
     Wikipedia
 
+    Critical Values (Canonical reference)
+    Fuller, W.A. 1996. `Introduction to Statistical Time Series.` 2nd ed.
+        New York: Wiley.
+
+    P-Values (regression surface approximation)
+    MacKinnon, J.G. 1994.  "Approximate asymptotic distribution functions for
+        unit-root and cointegration tests.  `Journal of Business and Economic
+        Statistics` 12, 167-76.
+
     '''
     x = np.asarray(x)
     nobs = x.shape[0]
