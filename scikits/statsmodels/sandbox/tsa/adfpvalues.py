@@ -2,10 +2,20 @@ from scipy.stats import norm
 from numpy import array, polyval
 import numpy as np #TODO: remove
 
+
+# These are the cut-off values for the left-tail vs. the rest of the
+# tau distribution
+
+tau_star_nc = [-1.04, -1.53, -2.68, -3.09, -3.07, -3.77]
+tau_star_c = [-1.61, -2.62, -3.13, -3.47, -3.78, -3.93]
+tau_star_ct = [-2.89, -3.19, -3.50, -3.65, -3.80, -4.36]
+tau_star_ctt = []
+
+
 # These are the cut-off values for the left-tail vs. the rest of the
 # distribution
 
-z_star_nc = [-2.9,-8.7,-14.8,-20.9,-25.7,-30.4]
+z_star_nc = [-2.9,-8.7,-14.8,-20.9,-25.7,-30.5]
 z_star_c = [-8.9,-14.3,-19.5,-25.1,-29.6,-34.4]
 z_star_ct = [-15.0,-19.6,-25.3,-29.6,-31.8,-38.4]
 z_star_ctt = [-20.7,-25.3,-29.9,-34.4,-38.5,-44.2]
@@ -96,7 +106,7 @@ def mackinnon_z_p_adf(teststat, regression="c", k=1):
 
 
 if __name__=="__main__":
-    tau = float(raw_input("What is tau? "))
+#    tau = float(raw_input("What is tau? "))
 # for tau it is just t-stat
     tau = -1.2009658
 # for z statistic it is
