@@ -188,7 +188,7 @@ class TestProbitPowell(TestProbitNewton):
 class TestProbitCG(TestProbitNewton):
     def setup(self):
         self.res1 = Probit(self.data.endog, self.data.exog).fit(method="cg",
-            disp=0, maxiter=100)
+            disp=0, maxiter=250)
 
 class TestProbitNCG(TestProbitNewton):
     def setup(self):
