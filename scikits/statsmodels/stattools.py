@@ -1,5 +1,5 @@
 """
-Statistical tests to be used in conjuction with the models
+Statistical tests to be used in conjunction with the models
 
 Notes
 -----
@@ -14,7 +14,7 @@ from numpy.testing import dec
 #TODO: these are pretty straightforward but they should be tested
 def durbin_watson(resids):
     """
-    Calculates the Durbin-Waston statistic
+    Calculates the Durbin-Watson statistic
 
     Parameters
     -----------
