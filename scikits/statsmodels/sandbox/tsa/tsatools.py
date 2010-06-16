@@ -9,16 +9,41 @@ def lagmat(x, maxlag, trim='forward'):
         data; if 2d, observation in rows and variables in columns
     maxlag : int
         all lags from zero to maxlag are included
-    trim : string
+    trim : str {'forward', 'backward', 'both', 'none'} or None
         * 'forward' : trim invalid observations in front
         * 'backward' : trim invalid initial observations
         * 'both' : trim invalid observations on both sides
-        * 'none' : no trimming of observations
+        * 'none', None : no trimming of observations
 
     Returns
     -------
     lagmat : 2d array
         array with lagged observations
+
+    Examples
+    --------
+    >>> from scikits.statsmodels.sandbox.tsa.tsatools import lagmat
+    >>> import numpy as np
+    >>> X = np.arange(1,7).reshape(-1,2)
+    >>> lagmat(X, maxlag=2, trim="forward")
+    array([[ 1.,  2.,  0.,  0.,  0.,  0.],
+       [ 3.,  4.,  1.,  2.,  0.,  0.],
+       [ 5.,  6.,  3.,  4.,  1.,  2.]])
+
+    >>> lagmat(X, maxlag=2, trim="backward")
+    array([[ 5.,  6.,  3.,  4.,  1.,  2.],
+       [ 0.,  0.,  5.,  6.,  3.,  4.],
+       [ 0.,  0.,  0.,  0.,  5.,  6.]])
+
+    >>> lagmat(X, maxlag=2, trim="both"
+    array([[ 5.,  6.,  3.,  4.,  1.,  2.]])
+
+    >>> lagmat(X, maxlag=2, trim="none")
+    array([[ 1.,  2.,  0.,  0.,  0.,  0.],
+       [ 3.,  4.,  1.,  2.,  0.,  0.],
+       [ 5.,  6.,  3.,  4.,  1.,  2.],
+       [ 0.,  0.,  5.,  6.,  3.,  4.],
+       [ 0.,  0.,  0.,  0.,  5.,  6.]])
 
     Notes
     -----
@@ -30,12 +55,17 @@ def lagmat(x, maxlag, trim='forward'):
     if x.ndim == 1:
         x = x[:,None]
     nobs, nvar = x.shape
+    if maxlag >= nobs:
+        raise ValueError("maxlag should be < nobs")
     lm = np.zeros((nobs+maxlag, nvar*(maxlag+1)))
     for k in range(0, maxlag+1):
         #print k, maxlag-k,nobs-k, nvar*k,nvar*(k+1), x.shape, lm.shape
         lm[maxlag-k:nobs+maxlag-k, nvar*(maxlag-k):nvar*(maxlag-k+1)] = x
-    trimlower = trim.lower()
-    if trimlower == 'none':
+    if trim:
+        trimlower = trim.lower()
+    else:
+        trimlower = trim
+    if trimlower == 'none' or not trimlower:
         return lm
     elif trimlower == 'forward':
         return lm[:nobs+maxlag-k,:]

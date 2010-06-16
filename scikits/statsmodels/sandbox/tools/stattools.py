@@ -14,7 +14,7 @@ import numpy as np
 from scipy import stats
 import scikits.statsmodels as sm
 from scikits.statsmodels.sandbox.tsa import acf
-from scikits.statsmodels.sandbox.tools.tools_tsa import lagmat
+from scikits.statsmodels.sandbox.tools.tsatools import lagmat
 
 class ResultsStore(object):
     def __str__(self):

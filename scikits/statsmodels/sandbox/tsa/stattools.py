@@ -6,6 +6,7 @@ import numpy as np
 from scipy import stats, signal
 import scikits.statsmodels as sm
 from scikits.statsmodels.sandbox.tsa.tsatools import lagmat, lagmat2ds
+from scikits.statsmodels.sandbox.tools.stattools import ResultsStore
 #from scikits.statsmodels.sandbox.rls import RLS
 
 #taken from econpy until we have large set of critical values
@@ -19,7 +20,14 @@ Approximate asymptotic critical values (t-ratio):
 -3.43   -2.86   -2.57     ADF with constant (no trend)
 -3.96   -3.41   -3.13     ADF with constant & trend
 ------------------------------------------------------------'''
-
+#NOTE: Don't have critical values or p-values for trend polynomial
+# greater than 2.
+#NOTE: I like the ResultsStore idea.  When a post-estimation test is
+# run as a mix-in, then this can attach a test_results dict to the Results
+# object.  If the test is standalone it can return a TestResults class
+# or not as asked.
+#TODO: rename, unitroot could be a super class for all unit root tests to
+# mix-in to time series models
 def unitroot_adf(x, maxlag=None, trendorder=0, autolag='AIC', store=False):
     '''Augmented Dickey-Fuller unit root test
 
@@ -34,11 +42,11 @@ def unitroot_adf(x, maxlag=None, trendorder=0, autolag='AIC', store=False):
         * -1: no constant no trend
         *  0: constant only
         * p>0 : trend polynomial of order p
-    autolag : {'AIC', 'BIC', None}
+    autolag : {'AIC', 'BIC', 't-stat', None}
         * if None, then maxlag lags are used
         * if 'AIC' or 'BIC', then the number of lags is chosen to minimize the
           corresponding information criterium
-        * TODO: t-statistic based choice of maxlag
+        * 't-stat' based choice of maxlag.
     store : {False, True}
         If true, then a result instance is returned additionally to
         the adf statistic
@@ -88,9 +96,8 @@ def unitroot_adf(x, maxlag=None, trendorder=0, autolag='AIC', store=False):
         #from Greene referencing Schwert 1989
         maxlag = 12. * np.power(nobs/100., 1/4.)
 
-
     xdiff = np.diff(x)
-    #
+
     xdall = lagmat(xdiff[:,None], maxlag, trim='both')
     nobs = xdall.shape[0]
     trend = np.vander(np.arange(nobs), trendorder+1)
@@ -101,16 +108,20 @@ def unitroot_adf(x, maxlag=None, trendorder=0, autolag='AIC', store=False):
     if store: resstore = ResultsStore()
 
     if autolag:
+        autolag = autolag.lower()
         #search for lag length with highest information criteria
         #Note: I use the same number of observations to have comparable IC
         results = {}
         for mlag in range(1,maxlag):
-            results[mlag] = sm.OLS(xdshort, np.column_stack([xdall[:,:mlag],trend])).fit()
+            results[mlag] = sm.OLS(xdshort, np.column_stack([xdall[:,:mlag],
+                trend])).fit()
 
-        if autolag.lower() == 'aic':
+        if autolag == 'aic':
             bestic, icbestlag = max((v.aic,k) for k,v in results.iteritems())
-        elif autolag.lower() == 'bic':
+        elif autolag == 'bic':
             icbest, icbestlag = max((v.bic,k) for k,v in results.iteritems())
+        elif autolag == 't-stat':
+            pass
         else:
             raise ValueError("autolag can only be None, 'AIC' or 'BIC'")
 
@@ -362,4 +373,5 @@ if __name__=="__main__":
     pacf = pacorr(data['realgdp'])
     x = np.random.normal(size=(100,2))
     grangercausalitytests(x,2)
+    adf3 = unitroot_adf(data['realgdp'],4,autolag=None)
 
