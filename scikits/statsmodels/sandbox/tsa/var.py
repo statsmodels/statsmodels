@@ -9,22 +9,10 @@ from numpy import matlib as MAT
 from scipy import linalg as LIN #TODO: get rid of this once cleaned up
 from scipy import linalg, sparse
 import scikits.statsmodels as sm    # maybe can be replaced later
-from scikits.statsmodels import GLS
+from scikits.statsmodels import GLS, chain_dot
 from scikits.statsmodels.sandbox.tools.tools_tsa import lagmat
 from scikits.statsmodels.model import LikelihoodModelResults
 from scikits.statsmodels.decorators import *
-
-#chain_dot was taken from pandas and is awesome!
-def chain_dot(*matrices):
-    """
-    Returns the dot product of the given matrices.
-
-    Parameters
-    ----------
-    matrices: argument list of ndarray
-    """
-    return reduce(lambda x, y: np.dot(y, x), matrices[::-1])
-
 
 # Refactor of VAR to be like statsmodels
 #inherit GLS, SUR?
