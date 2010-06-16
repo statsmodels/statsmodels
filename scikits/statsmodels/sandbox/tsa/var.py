@@ -10,7 +10,7 @@ from scipy import linalg as LIN #TODO: get rid of this once cleaned up
 from scipy import linalg, sparse
 import scikits.statsmodels as sm    # maybe can be replaced later
 from scikits.statsmodels import GLS, chain_dot
-from scikits.statsmodels.sandbox.tools.tools_tsa import lagmat
+from scikits.statsmodels.sandbox.tsa.tsatools import lagmat
 from scikits.statsmodels.model import LikelihoodModelResults
 from scikits.statsmodels.decorators import *
 
@@ -246,9 +246,9 @@ class VARMAResults(object):
         nobs = self.nobs
         linalg.det(self.omega)+np.log(nobs)/nobs*self.laglen*self.nvars**2
 
-    @wrap
-    def wrap(self, attr, *args):
-        return self.__getattribute__(attr, *args)
+#    @wrap
+#    def wrap(self, attr, *args):
+#        return self.__getattribute__(attr, *args)
 
     #could this just be a standalone function?
     def irf(self, shock, params=None, nperiods=100):
@@ -654,13 +654,13 @@ if __name__ == "__main__":
     np.random.seed(12345)
     data = np.random.rand(50,3)
     vr = VAR(data = data, laglen=2)
-    vr2 = VAR2(data = data, laglen=2)
-    dataset = sm.datasets.macrodata.Load()
+    vr2 = VAR2(endog = data, laglen=2)
+    dataset = sm.datasets.macrodata.load()
     data = dataset.data
     XX = data[['realinv','realgdp','realcons']].view(float).reshape(-1,3)
     XX = np.diff(np.log(XX), axis=0)
     vrx = VAR(data=XX,laglen=2)
-    vrx2 = VAR2(data=XX, laglen=2)
+    vrx2 = VAR2(endog=XX, laglen=2)
 
 
 

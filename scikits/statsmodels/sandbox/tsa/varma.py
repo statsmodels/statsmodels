@@ -29,7 +29,9 @@ from scipy import signal
 from numpy.testing import assert_array_equal, assert_array_almost_equal
 
 
-
+#NOTE: this just returns that predicted values given the
+#B matrix in polynomial form.
+#TODO: make sure VAR class returns B/params in this form.
 def VAR(x,B, const=0):
     ''' multivariate linear filter
 
