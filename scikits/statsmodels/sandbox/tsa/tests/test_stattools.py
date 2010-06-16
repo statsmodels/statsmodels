@@ -1,23 +1,29 @@
 from scikits.statsmodels.sandbox.tsa.stattools import dfuller
 from numpy.testing import array_almost_equal
+from scikits.statsmodels.datasets import macrodata
 
-def test_dfuller_constant_notrend():
+class TestADF(object):
+    def setup(self):
+        data = macrodata.load
+        x = data['realgdp']
+
+class TestADFConstantNoTrend(TestADF):
     """
     Dickey-Fuller test for unit root
     """
     return
 
-def test_dfuller_noconstant():
+class TestADFNoConstant(TestADF):
     """
     """
     return
 
-def test_dfuller_trend_noconstant():
+def TestADFTrendNoConstant(TestADF):
     """
     """
     return
 
-def test_dfuller_trend_constant():
+def TestADFTrendConstant(TestADF):
     """
     """
     return
