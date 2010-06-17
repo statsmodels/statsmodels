@@ -7,6 +7,7 @@ from scipy import stats, signal
 import scikits.statsmodels as sm
 from scikits.statsmodels.sandbox.tsa.tsatools import lagmat, lagmat2ds
 from scikits.statsmodels.sandbox.tools.stattools import ResultsStore
+from adfvalues import *
 #from scikits.statsmodels.sandbox.rls import RLS
 
 #taken from econpy until we have large set of critical values
@@ -68,8 +69,9 @@ def unitroot_adf(x, maxlag=None, regression="c", autolag='AIC',
         test statistic
     pvalue : float
         MacKinnon's approximate p-value based on MacKinnon (1994)
-    critical values : array
-        Critical values for the test statistic based on MacKinnon (2010)
+    critical values : dict
+        Critical values for the test statistic at the 1 %, 5 %, and 10 % levels.
+        Based on MacKinnon (2010)
     resstore : (optional) instance of ResultStore
         an instance of a dummy class with results attached as attributes
 
@@ -132,37 +134,48 @@ def unitroot_adf(x, maxlag=None, regression="c", autolag='AIC',
     xdall[:,0] = x[-nobs-1:-1] # replace 0 xdiff with level of x
     xdshort = xdiff[-nobs:]
 #    xdshort = x[-nobs:]
+#TODO: allow for this as endog, with Phillips Perron or DF test?
 
-    if store: resstore = ResultsStore()
+    if store:
+        resstore = ResultsStore()
 
     if autolag:
         autolag = autolag.lower()
         #search for lag length with highest information criteria
         #Note: I use the same number of observations to have comparable IC
         results = {}
-        for mlag in range(1,maxlag):
-            results[mlag] = sm.OLS(xdshort, np.column_stack([xdall[:,:mlag],
+        for mlag in range(1,maxlag+1):  # +1 so maxlag is inclusive
+            results[mlag] = sm.OLS(xdshort, np.column_stack([xdall[:,:mlag+1],
                 trend])).fit()
+            #NOTE: mlag+1 since level is in first column.
 
         if autolag == 'aic':
-            bestic, icbestlag = max((v.aic,k) for k,v in results.iteritems())
+            icbest, bestlag = max((v.aic,k) for k,v in results.iteritems())
         elif autolag == 'bic':
-            icbest, icbestlag = max((v.bic,k) for k,v in results.iteritems())
+            icbest, bestlag = max((v.bic,k) for k,v in results.iteritems())
         elif autolag == 't-stat':
-            stats.norm.ppf(.95)
-
+            lags = sorted(results.keys())[::-1]
+            stop = stats.norm.ppf(.95)
+            i = 0
+            lastt, bestlag = results[lags[i]].t(-trendorder-1)
+            i += 1
+            while not (abs(lastt) >= stop):
+                lastt, bestlag = results[lags[i]].t(-trendorder-1)
+                i += 1
         else:
             raise ValueError("autolag can be None, 'aic', 'bic', or 't-stat'")
 
-        #rerun ols with best ic
-        xdall = lagmat(xdiff[:,None], icbestlag, trim='forward')
+        #rerun ols with best autolag
+#        xdall = lagmat(xdiff[:,None], bestlag, trim='forward')
+        xdall = lagmat(xdiff[:,None], bestlag, trim='both')
+        # Why trim forward here and not above?
         nobs = xdall.shape[0]
         trend = np.vander(np.arange(nobs), trendorder+1)
         xdall[:,0] = x[-nobs-1:-1] # replace 0 xdiff with level of x
         xdshort = xdiff[-nobs:]
 #        xdshort = x[-nobs:]
 # NOTE: switched the above.  xdiff should be endog for augmented df
-        usedlag = icbestlag
+        usedlag = bestlag
     else:
         usedlag = maxlag
 
@@ -172,12 +185,24 @@ def unitroot_adf(x, maxlag=None, regression="c", autolag='AIC',
 #    adfstat = (resols.params[0]-1.0)/resols.bse[0]
 # the "asymptotically correct" z statistic is obtained as
 # nobs/(1-np.sum(resols.params[1:-(trendorder+1)])) (resols.params[0] - 1)
+# I think this is the statistic that is used for series that are integrated
+# for orders higher than I(1), ie., not ADF but cointegration tests.
+
+    # Get approx p-value and critical values
+    pvalue = mackinnonp(adfstat, regression=regression, N=1)
+    critvalues = mackinnoncrit(adfstat, regression=regression, nobs=nobs)
+    critvalues = {"1%" : critvalues[0], "5%" : critvalues[1],
+            "10%" : critvalues[2]}
     if store:
         resstore.resols = resols
         resstore.usedlag = usedlag
-        return adfstat, resstore
+        resstore.adfstat = adfstat
+        resstore.critvalues = critvalues
+        resstore.H0 = "The coefficient on the lagged level equals 1"
+        resstore.HA = "The coefficient on the lagged level < 1"
+        return adfstat, pvalue, critvalues, resstore
     else:
-        return adfstat
+        return adfstat, pvalue, critvalues
 
 
 def dfuller(X, nlags=1, noconstant=False, trend=False):

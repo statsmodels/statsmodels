@@ -16,6 +16,7 @@ import scikits.statsmodels as sm
 from scikits.statsmodels.sandbox.tsa import acf
 from scikits.statsmodels.sandbox.tsa.tsatools import lagmat
 
+#TODO: I like the bunch pattern for this too.
 class ResultsStore(object):
     def __str__(self):
         return self._str

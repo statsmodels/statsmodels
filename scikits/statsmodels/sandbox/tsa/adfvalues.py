@@ -2,6 +2,7 @@ from scipy.stats import norm
 from numpy import array, polyval, inf, asarray
 import numpy as np #TODO: remove?
 
+__all__ = ['mackinnonp','mackinnoncrit']
 
 # These are the cut-off values for the left-tail vs. the rest of the
 # tau distribution, for getting the p-values
@@ -117,12 +118,12 @@ z_c_smallp = array([[2.2142,-1.7863,.32828,-.07727],
                    [4.0356,-.9306,0,-.04776],
                    [13.9959,-8.4314,1.97411,-.22234]])
 
-z_ct_smallp = array([ [4.6476,-2.8932,0.5832,-0.0999]
-                      [7.2453,-4.7021,1.127,-.15665]
-                      [3.4893,-0.8914,0,-.04755]
-                      [1.6604,1.0375,-0.53377,0]
-                      [2.006,1.1197,-0.55315,0]
-                      [11.1626,-5.6858,1.21479,-.15428])])
+z_ct_smallp = array([ [4.6476,-2.8932,0.5832,-0.0999],
+                      [7.2453,-4.7021,1.127,-.15665],
+                      [3.4893,-0.8914,0,-.04755],
+                      [1.6604,1.0375,-0.53377,0],
+                      [2.006,1.1197,-0.55315,0],
+                      [11.1626,-5.6858,1.21479,-.15428]])
 
 z_ctt_smallp = array([ [3.6739,-1.1549,0,-0.03947],
                        [3.9783,-1.0619,0,-0.04394],
@@ -168,7 +169,7 @@ z_ctt_largep = array([ [3.4671,4.3476,1.9231,0.5381,0.6216],
 z_ctt_largep *= z_large_scaling
 
 #TODO: finish this and then integrate them into adf function
-def mackinnon_p(teststat, regression="c", N=1, lags=None):
+def mackinnonp(teststat, regression="c", N=1, lags=None):
     """
     Returns MacKinnon's approximate p-value for teststat.
 
@@ -187,7 +188,7 @@ def mackinnon_p(teststat, regression="c", N=1, lags=None):
     Returns
     -------
     p-value : float
-        The p-value for the ADF statistic³ estimated using MacKinnon 1994.
+        The p-value for the ADF statistic estimated using MacKinnon 1994.
 
     References
     ----------
@@ -201,18 +202,19 @@ def mackinnon_p(teststat, regression="c", N=1, lags=None):
     H_0: AR coefficient = 1
     H_a: AR coefficient < 1
     """
-    if regression=="c":
-        if teststat > tau_max_c[N-1]:
-            return 1.0
-        elif teststat < tau_max_c[N-1]:
-            return 0.0
-        if teststat > tau_star_c[k-1]:    # does k=0 for constant only?
-            tau_coef = tau_c_largep[k-1]
-        else:
-            tau_coef = tau_c_smallp[k-1]
-            teststat = np.log(np.abs(teststat))
-        return norm.cdf(polyval(tau_coef[::-1], teststat))
-
+    maxstat = eval("tau_max_"+regression)
+    minstat = eval("tau_min_"+regression)
+    starstat = eval("tau_star_"+regression)
+    if teststat > maxstat[N-1]:
+        return 1.0
+    elif teststat < minstat[N-1]:
+        return 0.0
+    if teststat <= starstat[N-1]:
+        tau_coef = eval("tau_" + regression + "_smallp["+str(N-1)+"]")
+    else:
+        tau_coef = eval("tau_" + regression + "_largep["+str(N-1)+"]")
+        teststat = np.log(np.abs(teststat))
+    return norm.cdf(polyval(tau_coef[::-1], teststat))
 
 # These are the new estimates from MacKinnon 2010
 # the first axis is N -1
@@ -337,7 +339,7 @@ tau_ctt_2010 = [[ [-4.37113,-11.5882,-35.819,-334.047], # N = 1
                   [-6.22941,-36.9673,-10.868,418.414]]]
 tau_ctt_2010 = np.asarray(tau_ctt_2010)
 
-def mackinnoncrit(N=1, reg ="c", nobs=inf):
+def mackinnoncrit(N=1, regression ="c", nobs=inf):
     """
     Returns the critical values for cointegrating and the ADF test.
 
@@ -372,10 +374,12 @@ def mackinnoncrit(N=1, reg ="c", nobs=inf):
         Queen's University, Dept of Economics Working Papers 1227.
         http://ideas.repec.org/p/qed/wpaper/1227.html
     """
+    reg = regression
+    if reg not in ['c','ct','nc','ctt']:
+        raise ValueError("regression keyword %s not understood") % reg
     if nobs is inf:
         return eval("tau_"+reg+"_2010["+str(N-1)+",:,0]")
     else:
-        print "got here"
         return polyval(eval("tau_"+reg+"_2010["+str(N-1)+",:,::-1].T"),1./nobs)
 
 if __name__=="__main__":
