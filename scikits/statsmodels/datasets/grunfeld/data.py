@@ -37,7 +37,7 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'Load']
+__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'load']
 
 """Grunfeld Investment Data"""
 
@@ -53,7 +53,7 @@ thesis recreated by Kleiber and Zeileis (2008) "The Grunfeld Data at 50".
 The data can be found here.
 http://statmath.wu-wien.ac.at/~zeileis/grunfeld/
 
-For a note on the many version of the Grunfeld data circulating see:
+For a note on the many versions of the Grunfeld data circulating see:
 http://www.stanford.edu/~clint/bench/grunfeld.htm
 """
 
@@ -63,38 +63,49 @@ DESCRLONG   = DESCRSHORT
 
 NOTE        = """
 Number of observations: 220 (20 years for 11 firms)
+Number of variables: 5
+Variables name definitions:
+    invest - Gross investment in 1947 dollars
+    value - Market value as of Dec. 31 in 1947 dollars
+    capital - Stock of plant and equipment in 1947 dollars
+    firm - General Motors, US Steel, General Electric, Chrysler,
+        Atlantic Refining, IBM, Union Oil, Westinghouse, Goodyear,
+        Diamond Match, American Steel
+    year - 1935 - 1954
 
-Variables
-----------
-invest - Gross investment in 1947 dollars
-value - Market value as of Dec. 31 in 1947 dollars
-capital - Stock of plant and equipment in 1947 dollars
-firm - General Motors, US Steel, General Electric, Chrysler, Atlantic Refining,
-        IBM, Union Oil, Westinghouse, Goodyear, Diamond Match, American Steel
-year - 1935 - 1954
+Note that raw_data has firm expanded to dummy variables, since it is a
+string categorical variable.
 """
 
-import numpy as np
+from numpy import recfromtxt, column_stack, array
+from scikits.statsmodels.datasets import Dataset
+from scikits.statsmodels.tools import categorical
+from os.path import dirname, abspath
 
-class Load():
-    """Loads the Grunfeld data and returns a data class.
+def load():
+    """
+    Loads the Grunfeld data and returns a Dataset class.
 
     Returns
-    Load instance:
-        a class of the data with array attrbutes 'endog' and 'exog'
+    -------
+    Dataset instance:
+        See DATASET_PROPOSAL.txt for more information.
 
     Notes
     -----
-    `endog` is a structured array for the Grunfled data since it contains
-    a float variable.
+    raw_data has the firm variable expanded to dummy variables for each
+    firm (ie., there is no reference dummy)
     """
-    def __init__(self):
-        from grunfeld import __dict__, names
-        self._names = [_.lower() for _ in names]
-        self._d = __dict__
-        self.endog = np.array(self._d[self._names[0].upper()], dtype=np.float)
-        dt = np.dtype([('value',float),('capital',float),('firm', 'a17'),
-            ('year',float)])
-        self.exog = np.zeros(220, dtype=dt)
-        for i in dt.names:
-            self.exog[i] = np.array(self._d[i.upper()]).astype(dt[i])
+    filepath = dirname(abspath(__file__))
+    data = recfromtxt(filepath + '/grunfeld.csv', delimiter=",",
+            names=True, dtype="f8,f8,f8,a17,f8")
+    names = list(data.dtype.names)
+    endog = array(data[names[0]], dtype=float)
+    endog_name = names[0]
+    exog = data[list(names[1:])]
+    exog_name = list(names[1:])
+    dataset = Dataset(data=data, names=names, endog=endog, exog=exog,
+            endog_name=endog_name, exog_name=exog_name)
+    raw_data = categorical(data, col='firm', drop=True)
+    dataset.raw_data = raw_data
+    return dataset

@@ -33,7 +33,7 @@ from matplotlib import pyplot as plt
 # "AVYRSEXP_AVSAL","PERSPEN_PTRATIO","PERSPEN_PCTAF","PTRATIO_PCTAF",
 # "PERMINTE_AVYRSEXP_AVSAL","PERSPEN_PTRATIO_PCTAF"
 
-data = sm.datasets.star98.Load()
+data = sm.datasets.star98.load()
 data.exog = sm.add_constant(data.exog)
 
 print """The response variable is (success, failure).  Eg., the first
@@ -136,7 +136,7 @@ plt.xlabel('Quantiles of N(0,1)')
 ### Example for using GLM Gamma for a proportional count response
 # Brief description of the data and design
 # print sm.datasets.scotland.DESCRLONG
-data2 = sm.datasets.scotland.Load()
+data2 = sm.datasets.scotland.load()
 data2.exog = sm.add_constant(data2.exog)
 glm_gamma = sm.GLM(data2.endog, data2.exog, family=sm.families.Gamma())
 glm_results = glm_gamma.fit()

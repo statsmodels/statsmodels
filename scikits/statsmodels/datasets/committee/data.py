@@ -36,7 +36,7 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'Load']
+__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'load']
 
 """First 100 days of the US House 1995 dataset."""
 
@@ -54,48 +54,61 @@ http://jgill.wustl.edu/research/books.html
 DESCRSHORT  = """Number of bill assignments in the 104th House in 1995"""
 
 DESCRLONG   = """
-This data describes the number of bill assignments in the first 100 days
-of the 104th House if Representatives.  The event is the number of bill
-assignments in the first 100 days.  There are 20 Committees.
-Included in the data are explanatory variables for the number of assignments
-in the first 100 days of the 103rd House, the number of members on the
-committee, the number of subcommittees, the log of the number of staff
-assigned to the committee, and a dummy variable indicating whether
-the committee is a high prestige committee.
+The example in Gill, seeks to explain the number of bill assignments in the
+first 100 days of the US' 104th House of Representatives.  The response
+variable is the number of bill assignments in the first 100 days over 20
+Committees.  The explanatory variables in the example are the number of
+assignments in the first 100 days of the 103rd House, the number of members on
+the committee, the number of subcommittees, the log of the number of staff
+assigned to the committee, a dummy variable indicating whether
+the committee is a high prestige committee, and an interaction term between
+the number of subcommittees and the log of the staff size.
+
+The data returned by load are not yet cleaned to represent the above example.
 
 The original source files are included in /committee/src/
-
-/committee/committee.csv contains the cleaned data for the example
-in a comma-delimited file.
 """
 
-NOTE        = """
-Number of Instances: 20.
+NOTE = """
+Number of Observations: 20
+Number of Variables: 6
+Variable name definitions:
+    BILLS104 : Number of bill assignments in the first 100 days of the 104th
+        House of Representatives.
+    SIZE : Number of members on the committee.
+    SUBS : Number of subcommittees.
+    STAFF : Number of staff members assigned to the committee.
+    PRESTIGE : PRESTIGE == 1 is a high prestige committee.
+    BILLS103 : Number of bill assignments in the first 100 days of the 103rd
+        House of Representatives.
 
-Number of Attributes: 5 plus an interaction term
-
-Missing Attribute Values: None
-
-Committee names are included in the data file, though not returned.
+Committee names are included as a variable in the data file though not
+returned by load.
 """
 
-import numpy as np
+from numpy import recfromtxt, column_stack, array
+from scikits.statsmodels.datasets import Dataset
+from os.path import dirname, abspath
 
-class Load():
-    """load the committee data and returns a data class.
+def load():
+    """Load the committee data and returns a data class.
 
     Returns
     --------
-    Load instance:
-        a class of the data with array attrbutes 'endog' and 'exog'
+    Dataset instance:
+        See DATASET_PROPOSAL.txt for more information.
     """
+    filepath = dirname(abspath(__file__))
+    data = recfromtxt(filepath + '/committee.csv', delimiter=",",
+            names=True, dtype=float, usecols=(1,2,3,4,5,6))
 
-    def __init__(self):
-        from committee import __dict__, names
-        self._names = names
-        self._d = __dict__
-        self.endog = np.array(self._d[self._names[1]], dtype=np.float)
-        self.exog = np.column_stack(self._d[i] \
-                    for i in self._names[2:]).astype(np.float)
+    names = list(data.dtype.names)
+    endog = array(data[names[0]], dtype=float)
+    endog_name = names[0]
+    exog = column_stack(data[i] for i in names[1:]).astype(float)
+    exog_name = names[1:]
+    dataset = Dataset(data=data, names=names, endog=endog, exog=exog,
+            endog_name = endog_name, exog_name=exog_name)
+    return dataset
 
 

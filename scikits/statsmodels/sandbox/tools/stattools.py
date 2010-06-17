@@ -14,8 +14,9 @@ import numpy as np
 from scipy import stats
 import scikits.statsmodels as sm
 from scikits.statsmodels.sandbox.tsa import acf
-from scikits.statsmodels.sandbox.tools.tools_tsa import lagmat
+from scikits.statsmodels.sandbox.tsa.tsatools import lagmat
 
+#TODO: I like the bunch pattern for this too.
 class ResultsStore(object):
     def __str__(self):
         return self._str
@@ -94,125 +95,6 @@ def acorr_ljungbox(x, lags=None, boxpierce=False):
         qboxpierce = nobs * np.cumsum(acfx[1:maxlag+1]**2)[lags]
         pvalbp = stats.chi2.sf(qboxpierce, lags)
         return qljungbox, pval, qboxpierce, pvalbp
-
-#taken from econpy until we have large set of critical values
-adf_cv1 = '''
-One-sided test of H0: Unit root vs. H1: Stationary
-Approximate asymptotic critical values (t-ratio):
-------------------------------------------------------------
-  1%      5%      10%      Model
-------------------------------------------------------------
--2.56   -1.94   -1.62     Simple ADF (no constant or trend)
--3.43   -2.86   -2.57     ADF with constant (no trend)
--3.96   -3.41   -3.13     ADF with constant & trend
-------------------------------------------------------------'''
-
-def unitroot_adf(x, maxlag=None, trendorder=0, autolag='AIC', store=False):
-    '''Augmented Dickey-Fuller unit root test
-
-    Parameters
-    ----------
-    x : array_like, 1d
-        data series
-    maxlag : int
-        maximum lag which is included in test, default 12*(nobs/100)^{1/4}
-    trendorder : int
-        constant and trend order to include in regression
-        * -1: no constant no trend
-        *  0: constant only
-        * p>0 : trend polynomial of order p
-    autolag : {'AIC', 'BIC', None}
-        * if None, then maxlag lags are used
-        * if 'AIC' or 'BIC', then the number of lags is chosen to minimize the
-          corresponding information criterium
-        * TODO: t-statistic based choice of maxlag
-    store : {False, True}
-        If true, then a result instance is returned additionally to
-        the adf statistic
-
-    Returns
-    -------
-    adf : float
-        test statistic
-    pvalue : NOT YET IMPLEMENTED
-    resstore : (optional) instance of ResultStore
-        an instance of a dummy class with results attached as attributes
-
-    Notes
-    -----
-    The pvalues are (will be) interpolated from the table of critical
-    values. NOT YET DONE
-
-    still requires pvalues and maybe some cleanup
-
-    ''Verification''
-
-    Looks correctly sized in Monte Carlo studies.
-    Differs from R tseries results in second decimal, based on a few examples
-
-    Examples
-    --------
-    see example script
-
-    References
-    ----------
-    Greene
-    Wikipedia
-
-    '''
-    x = np.asarray(x)
-    nobs = x.shape[0]
-    if maxlag is None:
-        #from Greene referencing Schwert 1989
-        maxlag = 12. * np.power(nobs/100., 1/4.)
-
-
-    xdiff = np.diff(x)
-    #
-    xdall = lagmat(xdiff[:,None], maxlag, trim='both')
-    nobs = xdall.shape[0]
-    trend = np.vander(np.arange(nobs), trendorder+1)
-    xdall[:,0] = x[-nobs-1:-1] # replace 0 xdiff with level of x
-    #xdshort = xdiff[-nobs:]
-    xdshort = x[-nobs:]
-
-    if store: resstore = ResultsStore()
-
-    if autolag:
-        #search for lag length with highest information criteria
-        #Note: I use the same number of observations to have comparable IC
-        results = {}
-        for mlag in range(1,maxlag):
-            results[mlag] = sm.OLS(xdshort, np.column_stack([xdall[:,:mlag],trend])).fit()
-
-        if autolag.lower() == 'aic':
-            bestic, icbestlag = max((v.aic,k) for k,v in results.iteritems())
-        elif autolag.lower() == 'bic':
-            icbest, icbestlag = max((v.bic,k) for k,v in results.iteritems())
-        else:
-            raise ValueError("autolag can only be None, 'AIC' or 'BIC'")
-
-        #rerun ols with best ic
-        xdall = lagmat(xdiff[:,None], icbestlag, trim='forward')
-        nobs = xdall.shape[0]
-        trend = np.vander(np.arange(nobs), trendorder+1)
-        xdall[:,0] = x[-nobs-1:-1] # replace 0 xdiff with level of x
-        #xdshort = xdiff[-nobs:]
-        xdshort = x[-nobs:]
-        usedlag = icbestlag
-    else:
-        usedlag = maxlag
-
-    resols = sm.OLS(xdshort, np.column_stack([xdall[:,:usedlag],trend])).fit()
-    adfstat = resols.t(0)
-    adfstat = (resols.params[0]-1.0)/resols.bse[0]
-    if store:
-        resstore.resols = resols
-        resstore.usedlag = usedlag
-        return adfstat, resstore
-    else:
-        return adfstat
-
 
 def acorr_lm(x, maxlag=None, autolag='AIC', store=False):
     '''Lagrange Multiplier tests for autocorrelation

@@ -23,6 +23,7 @@ def _make_dictnames(tmp_arr, offset=0):
 #TODO: needs to better preserve dtype and be more flexible
 # ie., if you still have a string variable in your array you don't
 # want to cast it to float
+#TODO: add name validator (ie., bad names for datasets.grunfeld)
 def categorical(data, col=None, dictnames=False, drop=False):
     '''
     Returns a dummy matrix given an array of categorical variables.
@@ -55,8 +56,10 @@ def categorical(data, col=None, dictnames=False, drop=False):
     Notes
     -----
     This returns a dummy variable for EVERY distinct variable.  If a
-    a recarray is provided, the names for the new variable prepend
-    an underscore, so that attribute lookup is preserved.  There is currently
+    a structured or recarray is provided, the names for the new variable is the
+    old variable name - underscore - category name.  So if the a variable
+    'vote' had answers as 'yes' or 'no' then the returned array would have to
+    new variables-- 'vote_yes' and 'vote_no'.  There is currently
     no name checking.
 
     Examples
@@ -97,12 +100,13 @@ def categorical(data, col=None, dictnames=False, drop=False):
 
 #TODO: add a NameValidator function
     # catch recarrays and structured arrays
-    if data.__class__ is np.recarray or (isinstance(data, np.ndarray) and\
-            data.dtype.names):
+    if data.dtype.names or data.__class__ is np.recarray:
         if not col and np.squeeze(data).ndim > 1:
             raise IndexError, "col is None and the input array is not 1d"
         if isinstance(col, int):
             col = data.dtype.names[col]
+#        if col is None and len(data.dtype.names) == 1:
+#            col = data.dtype.names[0]
         tmp_arr = np.unique(data[col])
 
         # if the cols are shape (#,) vs (#,1) need to add an axis and flip
@@ -114,23 +118,33 @@ def categorical(data, col=None, dictnames=False, drop=False):
         if _swap:
             tmp_dummy = np.squeeze(tmp_dummy).swapaxes(1,0)
 
-        if tmp_arr.dtype is not str: # this needs to be more robust
-            # a 1d struct array retains the dtype
-            if not tmp_arr.dtype.names:
-                tmp_arr = np.squeeze(tmp_arr).astype('str').tolist()
-            elif tmp_arr.dtype.names:
-                tmp_arr = np.squeeze(tmp_arr.tolist()).astype('str').tolist()
+        if not tmp_arr.dtype.names:
+            tmp_arr = np.squeeze(tmp_arr).astype('str').tolist()
+        elif tmp_arr.dtype.names:
+            tmp_arr = np.squeeze(tmp_arr.tolist()).astype('str').tolist()
 
-# prepend an underscore, so attribute lookup is preserved if numerical
-        if data.__class__ is np.recarray:
-            tmp_arr = ['_'+_ for _ in tmp_arr]
+# prepend the varname and underscore, if col is numeric attribute lookup
+# is lost for recarrays...
+        if col is None:
+            try:
+                col = data.dtype.names[0]
+            except:
+                col = 'var'
+#TODO: the above needs to be made robust because there could be many
+# var_yes, var_no varaibles for instance.
+        tmp_arr = [col + '_'+ item for item in tmp_arr]
+#TODO: test this for rec and structured arrays!!!
 
         if drop is True:
-            # if col is None then we have a 1d array.
-            if not col:
+            # if len(data.dtype) is 1 then we have a 1 column array
+#            if len(data.dtype) == 1:
+            if len(data.dtype) <= 1:
+                if tmp_dummy.shape[0] < tmp_dummy.shape[1]:
+                    tmp_dummy = np.squeeze(tmp_dummy).swapaxes(1,0)
                 dt = zip(tmp_arr, [tmp_dummy.dtype.str]*len(tmp_arr))
                 # preserve array type
-                return np.squeeze(tmp_dummy.view(dt).view(type(data)))
+                return np.array(map(tuple, tmp_dummy.tolist()),
+                        dtype=dt).view(type(data))
 
             data=nprf.drop_fields(data, col, usemask=False,
                             asrecarray=type(data) is np.recarray)
@@ -177,11 +191,12 @@ def categorical(data, col=None, dictnames=False, drop=False):
 #TODO: add an axis argument to this for sysreg
 def add_constant(data, prepend=False):
     '''
-    This appends a constant to the design matrix if prepend==False.
+    This appends a column of ones to an array if prepend==False.
 
-    It checks to make sure a constant is not already included.  If there is
-    at least one column of ones then an array of the original design is
-    returned.
+    For nadarrays it checks to make sure a constant is not already included.
+    If there is at least one column of ones then the original array is
+    returned.  Does not check for a constant if a structured or recarray is
+    given.
 
     Parameters
     ----------
@@ -193,21 +208,31 @@ def add_constant(data, prepend=False):
     Returns
     -------
     data : array
-        The original design matrix with a constant (column of ones)
-        as the last column.
+        The original array with a constant (column of ones) as the first or
+        last column.
     '''
-    data = np.asarray(data)
-    if np.any(data[0]==1):
-        ind = np.squeeze(np.where(data[0]==1))
-        if ind.size == 1 and np.all(data[:,ind] == 1):
-            return data
-        elif ind.size > 1:
-            for col in ind:
-                if np.all(data[:,col] == 1):
-                    return data
-    data = np.column_stack((data, np.ones((data.shape[0], 1))))
-    if prepend:
-        return np.roll(data, 1, 1)
+    if not data.dtype.names:
+        data = np.asarray(data)
+        if np.any(data[0]==1):
+            ind = np.squeeze(np.where(data[0]==1))
+            if ind.size == 1 and np.all(data[:,ind] == 1):
+                return data
+            elif ind.size > 1:
+                for col in ind:
+                    if np.all(data[:,col] == 1):
+                        return data
+        data = np.column_stack((data, np.ones((data.shape[0], 1))))
+        if prepend:
+            return np.roll(data, 1, 1)
+    else:
+        return_rec = data.__class__ is np.recarray
+        if prepend:
+            ones = np.ones((data.shape[0], 1), dtype=[('const', float)])
+            data = nprf.append_fields(ones, data.dtype.names, [data[i] for
+                i in data.dtype.names], usemask=False, asrecarray=return_rec)
+        else:
+            data = nprf.append_fields(data, 'const', np.ones(data.shape[0]),
+                    usemask=False, asrecarray = return_rec)
     return data
 
 def isestimable(C, D):

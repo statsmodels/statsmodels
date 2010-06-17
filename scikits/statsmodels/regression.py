@@ -31,30 +31,25 @@ __docformat__ = 'restructuredtext en'
 __all__ = ['GLS', 'WLS', 'OLS', 'GLSAR']
 
 import numpy as np
-from scipy.linalg import norm, toeplitz
+from scipy.linalg import norm, toeplitz, lstsq, calc_lwork
 from scipy import stats
 from scipy.stats.stats import ss
 from model import LikelihoodModel, LikelihoodModelResults
-import tools
-from tools import add_constant
+from tools import add_constant, rank, recipr
 from decorators import *
 
 class GLS(LikelihoodModel):
     """
     Generalized least squares model with a general covariance structure.
 
-
-
     Parameters
     ----------
     endog : array-like
-          endog is a 1-d vector that contains the response/independent variable
-
+           endog is a 1-d vector that contains the response/independent variable
     exog : array-like
            exog is a n x p vector where n is the number of observations and p is
            the number of regressors/dependent variables including the intercept
            if one is included in the data.
-
     sigma : scalar or array
            `sigma` is the weighting matrix of the covariance.
            The default is None for no scaling.  If `sigma` is a scalar, it is
@@ -118,7 +113,7 @@ class GLS(LikelihoodModel):
     --------
     >>> import numpy as np
     >>> import scikits.statsmodels as sm
-    >>> data = sm.datasets.longley.Load()
+    >>> data = sm.datasets.longley.load()
     >>> data.exog = sm.add_constant(data.exog)
     >>> ols_resid = sm.OLS(data.endog, data.exog).fit().resid
     >>> res_fit = sm.OLS(ols_resid[1:], ols_resid[:-1]).fit()
@@ -170,14 +165,11 @@ Should be of length %s, if sigma is a 1d array" % nobs
     def initialize(self):
         self.wexog = self.whiten(self.exog)
         self.wendog = self.whiten(self.endog)
-        self.pinv_wexog = np.linalg.pinv(self.wexog)
         # overwrite nobs from class Model:
         self.nobs = float(self.wexog.shape[0])
-        self.normalized_cov_params = np.dot(self.pinv_wexog,
-                                         np.transpose(self.pinv_wexog))
-        self.df_resid = self.nobs - tools.rank(self.exog)
+        self.df_resid = self.nobs - rank(self.exog)
 #       Below assumes that we have a constant
-        self.df_model = float(tools.rank(self.exog)-1)
+        self.df_model = float(rank(self.exog)-1)
 
     def whiten(self, X):
         """
@@ -202,12 +194,21 @@ Should be of length %s, if sigma is a 1d array" % nobs
         else:
             return X
 
-    def fit(self):
+    def fit(self, method="pinv", **kwargs):
         """
         Full fit of the model.
 
         The results include an estimate of covariance matrix, (whitened)
         residuals and an estimate of scale.
+
+        Parameters
+        ----------
+        method : str
+            Can be "pinv", "qr", or "mle".  "pinv" uses the
+            Moore-Penrose pseudoinverse to solve the least squares problem.
+            "svd" uses the Singular Value Decomposition.  "qr" uses the
+            QR factorization.  "mle" fits the model via maximum likelihood.
+            "mle" is not yet implemented.
 
         Returns
         -------
@@ -226,11 +227,18 @@ Should be of length %s, if sigma is a 1d array" % nobs
         to solve the least squares minimization.
 
         """
-#TODO: add a full_output keyword so that only light results needed for
-# IRLS are calculated?
-        beta = np.dot(self.pinv_wexog, self.wendog)
-        # should this use lstsq instead?
-        # worth a comparison at least...though this is readable
+        pinv_wexog = np.linalg.pinv(self.wexog)
+        self.normalized_cov_params = np.dot(pinv_wexog,
+                                         np.transpose(pinv_wexog))
+        exog = self.wexog
+        endog = self.wendog
+        self.pinv_wexog = pinv_wexog
+        if method == "pinv":
+            beta = np.dot(pinv_wexog, endog)
+        elif method == "qr":
+            Q,R = np.linalg.qr(exog)
+            beta = np.linalg.solve(R,np.dot(Q.T,endog))
+            # no upper triangular solve routine in numpy/scipy?
         lfit = RegressionResults(self, beta,
                        normalized_cov_params=self.normalized_cov_params)
         self._results = lfit
@@ -678,8 +686,8 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False):
     Examples
     --------
     >>> import scikits.statsmodels as sm
-    >>> from scikits.statsmodels.datasets.sunspots import Load
-    >>> data = Load()
+    >>> from scikits.statsmodels.datasets.sunspots import load
+    >>> data = load()
     >>> rho, sigma = sm.regression.yule_walker(data.endog,       \
                                        order=4, method="mle")
 
@@ -1083,7 +1091,7 @@ class RegressionResults(LikelihoodModelResults):
         if not hasattr(self, 'resid'):
             raise ValueError, 'need normalized residuals to estimate standard\
  deviation'
-        return self.wresid * tools.recipr(np.sqrt(self.scale))
+        return self.wresid * recipr(np.sqrt(self.scale))
 
     def summary(self, yname=None, xname=None):
         """returns a string that summarizes the regression results
@@ -1102,7 +1110,7 @@ class RegressionResults(LikelihoodModelResults):
         Examples
         --------
         >>> import scikits.statsmodels as sm
-        >>> data = sm.datasets.longley.Load()
+        >>> data = sm.datasets.longley.load()
         >>> data.exog = sm.add_constant(data.exog)
         >>> ols_results = sm.OLS(data.endog, data.exog).results
         >>> print ols_results.summary()
@@ -1114,15 +1122,14 @@ class RegressionResults(LikelihoodModelResults):
         """
         import time
         from iolib import SimpleTable
+        from stattools import jarque_bera, omni_normtest, durbin_watson
 
         if yname is None:
-            yname = 'Y'
+            yname = self.model.endog_names
         if xname is None:
-            xname = ['X.%d' %
-                (i) for i in range(self.model.exog.shape[1])]
+            xname = self.model.exog_names
         modeltype = self.model.__class__.__name__
 
-        from stattools import jarque_bera, omni_normtest, durbin_watson
         llf, aic, bic = self.llf, self.aic, self.bic
         JB, JBpv, skew, kurtosis = jarque_bera(self.wresid)
         omni, omnipv = omni_normtest(self.wresid)

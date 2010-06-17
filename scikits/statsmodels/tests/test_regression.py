@@ -145,9 +145,9 @@ class CheckRegressionResults(object):
 
 class TestOLS(CheckRegressionResults):
     def __init__(self):
-        from scikits.statsmodels.datasets.longley import Load
+        from scikits.statsmodels.datasets.longley import load
         from results.results_regression import Longley
-        data = Load()
+        data = load()
         data.exog = add_constant(data.exog)
         res1 = OLS(data.endog, data.exog).fit()
         res2 = Longley()
@@ -186,8 +186,8 @@ class TestFtest(object):
     Tests f_test vs. RegressionResults
     """
     def __init__(self):
-        from scikits.statsmodels.datasets.longley import Load
-        data = Load()
+        from scikits.statsmodels.datasets.longley import load
+        data = load()
         data.exog = add_constant(data.exog)
         self.res1 = OLS(data.endog, data.exog).fit()
         R = np.identity(7)[:-1,:]
@@ -249,8 +249,8 @@ class TestTtest(object):
 
         '''
     def __init__(self):
-        from scikits.statsmodels.datasets.longley import Load
-        data = Load()
+        from scikits.statsmodels.datasets.longley import load
+        data = load()
         self.data = data
         data.exog = add_constant(data.exog)
         self.res1 = OLS(data.endog, data.exog).fit()
@@ -327,10 +327,10 @@ class TestGLS(object):
     These test results were obtained by replication with R.
     '''
     def __init__(self):
-        from scikits.statsmodels.datasets.longley import Load
+        from scikits.statsmodels.datasets.longley import load
         from results.results_regression import LongleyGls
 
-        data = Load()
+        data = load()
         exog = add_constant(np.column_stack(\
                 (data.exog[:,1],data.exog[:,4])))
         tmp_results = OLS(data.endog, exog).fit()
@@ -378,8 +378,8 @@ class TestGLS_nosigma(CheckRegressionResults):
     Test that GLS with no argument is equivalent to OLS.
     '''
     def __init__(self):
-        from scikits.statsmodels.datasets.longley import Load
-        data = Load()
+        from scikits.statsmodels.datasets.longley import load
+        data = load()
         data.exog = add_constant(data.exog)
         ols_res = OLS(data.endog, data.exog).fit()
         gls_res = GLS(data.endog, data.exog).fit()
@@ -395,8 +395,8 @@ class TestGLS_nosigma(CheckRegressionResults):
 #    Test WLS with Greene's credit card data
 #    '''
 #    def __init__(self):
-#        from scikits.statsmodels.datasets.ccard import Load
-#        self.data = Load()
+#        from scikits.statsmodels.datasets.ccard import load
+#        self.data = load()
 #        self.res1 = WLS(self.data.endog, self.data.exog,
 #                weights=1/self.data.exog[:,2]).fit()
 #FIXME: triaged results for noconstant
@@ -421,8 +421,8 @@ class TestGLS_nosigma(CheckRegressionResults):
 
 class TestWLS_GLS(CheckRegressionResults):
     def __init__(self):
-        from scikits.statsmodels.datasets.ccard import Load
-        data = Load()
+        from scikits.statsmodels.datasets.ccard import load
+        data = load()
         self.res1 = WLS(data.endog, data.exog, weights = 1/data.exog[:,2]).fit()
         self.res2 = GLS(data.endog, data.exog, sigma = data.exog[:,2]).fit()
 
@@ -431,8 +431,8 @@ class TestWLS_GLS(CheckRegressionResults):
 
 class TestWLS_OLS(CheckRegressionResults):
     def __init__(self):
-        from scikits.statsmodels.datasets.longley import Load
-        data = Load()
+        from scikits.statsmodels.datasets.longley import load
+        data = load()
         data.exog = add_constant(data.exog)
         self.res1 = OLS(data.endog, data.exog).fit()
         self.res2 = WLS(data.endog, data.exog).fit()
@@ -442,8 +442,8 @@ class TestWLS_OLS(CheckRegressionResults):
 
 class TestGLS_OLS(CheckRegressionResults):
     def __init__(self):
-        from scikits.statsmodels.datasets.longley import Load
-        data = Load()
+        from scikits.statsmodels.datasets.longley import load
+        data = load()
         data.exog = add_constant(data.exog)
         self.res1 = GLS(data.endog, data.exog).fit()
         self.res2 = OLS(data.endog, data.exog).fit()
@@ -454,8 +454,8 @@ class TestGLS_OLS(CheckRegressionResults):
 #TODO: test AR
 # why the two-stage in AR?
 #class test_ar(object):
-#    from scikits.statsmodels.datasets.sunspots import Load
-#    data = Load()
+#    from scikits.statsmodels.datasets.sunspots import load
+#    data = load()
 #    model = AR(data.endog, rho=4).fit()
 #    R_res = RModel(data.endog, aic="FALSE", order_max=4)
 
@@ -470,8 +470,8 @@ class TestGLS_OLS(CheckRegressionResults):
 
 class TestYuleWalker(object):
     def __init__(self):
-        from scikits.statsmodels.datasets.sunspots import Load
-        self.data = Load()
+        from scikits.statsmodels.datasets.sunspots import load
+        self.data = load()
         self.rho, self.sigma = yule_walker(self.data.endog, order=4,
                 method="mle")
         self.R_params = [1.2831003105694765, -0.45240924374091945,

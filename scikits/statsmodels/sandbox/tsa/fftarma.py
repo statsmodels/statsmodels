@@ -33,6 +33,7 @@ import numpy as np
 import numpy.fft as fft
 #import scipy.fftpack as fft
 from scipy import signal
+from try_var_convolve import maxabs
 
 nobs = 10000
 ar = [1, 0.0]

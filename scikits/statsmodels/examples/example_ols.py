@@ -1,11 +1,11 @@
 """Example: scikits.statsmodels.OLS
 """
 
-from scikits.statsmodels.datasets.longley import Load
+from scikits.statsmodels.datasets.longley import load
 import scikits.statsmodels as models
 import numpy as np
 
-data = Load()
+data = load()
 data.exog = models.tools.add_constant(data.exog)
 
 ols_model = models.OLS(data.endog, data.exog)

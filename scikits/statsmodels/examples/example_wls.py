@@ -9,7 +9,7 @@ import numpy as np
 import scikits.statsmodels as sm
 import matplotlib.pyplot as plt
 
-data = sm.datasets.ccard.Load()
+data = sm.datasets.ccard.load()
 data.exog = sm.add_constant(data.exog)
 ols_fit = sm.OLS(data.endog, data.exog).fit()
 

@@ -37,7 +37,7 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'Load']
+__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'load']
 
 """Name of dataset."""
 
@@ -69,28 +69,29 @@ DESCRLONG   = """"""
 
 NOTE        = """
 Number of observations: 20,190
-
-Variables
-----------
-mdvis - Number of outpatient visits to an MD
-lncoins - ln(coinsurance + 1), 0 <= coninsurance <= 100
-idp - 1 if individual deductible plan, 0 otherwise
-lpi - ln(max(1, annual participation incentive payment))
-fmde - 0 if idp = 1; ln(max(1, MDE/(0.01 coinsurance))) otherwise
-physlm - 1 if the person has a physical limitation
-disea - number of chronic diseases
-hlthg - 1 if self-rated health is good
-hlthf - 1 if self-rated health is fair
-hlthp - 1 if self-rated health is poor
-        (Omitted category is excellent self-rated health)
+Number of variables: 10
+Variable name definitions:
+    mdvis : Number of outpatient visits to an MD
+    lncoins : ln(coinsurance + 1), 0 <= coninsurance <= 100
+    idp : 1 if individual deductible plan, 0 otherwise
+    lpi : ln(max(1, annual participation incentive payment))
+    fmde : 0 if idp = 1; ln(max(1, MDE/(0.01 coinsurance))) otherwise
+    physlm : 1 if the person has a physical limitation
+    disea : number of chronic diseases
+    hlthg : 1 if self-rated health is good
+    hlthf : 1 if self-rated health is fair
+    hlthp : 1 if self-rated health is poor
+            (Omitted category is excellent self-rated health)
 """
 
-import numpy as np
+from numpy import recfromtxt, column_stack, array
+from scikits.statsmodels.datasets import Dataset
+from os.path import dirname, abspath
 
-class Load():
-    """Loads the RAND HIE data and returns a data class.
+def load():
+    """
+    Loads the RAND HIE data and returns a Dataset class.
 
-    Attributes
     ----------
     endog - structured array of response variable, mdvis
     exog - strucutured array of design
@@ -99,16 +100,15 @@ class Load():
     Load instance:
         a class of the data with array attrbutes 'endog' and 'exog'
     """
-    def __init__(self):
-        from randhie import __dict__, names
-        self._names = names
-        self._d = __dict__
-#        nobs = len(__dict__[names[0]])
-#        endog = np.zeros(nobs, dtype=[('mdvis', float)])
-        self.endog = np.array(__dict__[names[0]]).astype(float)
-        design_dt = [_.lower() for _ in names[1:]]
-        design_dt = np.dtype(zip(design_dt, [float]*len(design_dt)))
-        exog = np.zeros(len(self.endog), dtype=design_dt)
-        for i in design_dt.names:
-            exog[i] = np.array(__dict__[i.upper()]).astype(float)
-        self.exog = exog
+    filepath = dirname(abspath(__file__))
+##### EDIT THE FOLLOWING TO POINT TO DatasetName.csv #####
+    data = recfromtxt(filepath + '/randhie.csv', delimiter=",",
+            names=True, dtype=float)
+    names = list(data.dtype.names)
+    endog = array(data[names[0]]).astype(float)
+    endog_name = names[0]
+    exog = data[list(names[1:])]
+    exog_name = names[1:]
+    dataset = Dataset(data=data, names=names, endog=endog, exog=exog,
+            endog_name = endog_name, exog_name=exog_name)
+    return dataset
