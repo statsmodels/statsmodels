@@ -5,6 +5,14 @@ trunk for 0.3.0
 sandbox/output.py -> iolib/table.py
 lib/io.py -> iolib/foreign.py (stata data format reader available from iolib)
 family -> families
+Datasets' Load class is now load function.
+
+*main changes*
+Improved maximum likelihood framework.
+Refactor of the datasets sub-package.
+Removed RPy dependency for running the test suite.
+Refactored the test suite.
+
 
 
 trunk for 0.2.0
