@@ -25,7 +25,7 @@ from matplotlib import pyplot as plt
 # The median teacher salary including benefits in 1000s "AVSALK"
 # The mean teacher experience in years "AVYRSEXP",
 # The per-pupil expenditures in thousands "PERSPENK"
-# The parent-teacher ratio "PTRATIO"
+# The pupil-teacher ratio "PTRATIO"
 # The percent of students taking college credit courses "PCTAF",
 # The percentage of charter schools in the districut "PCTCHRT"
 # The percent of schools in the district operating year round "PCTYRRND"
@@ -66,8 +66,8 @@ means25 = means.copy()
 means25[0] = stats.scoreatpercentile(data.exog[:,0], 25)
 means75 = means.copy()
 means75[0] = lowinc_75per = stats.scoreatpercentile(data.exog[:,0], 75)
-resp_25 = glm_binom.family.fitted(np.inner(means25, binom_results.params))
-resp_75 = glm_binom.family.fitted(np.inner(means75, binom_results.params))
+resp_25 = glm_binom.predict(np.inner(means25, binom_results.params))
+resp_75 = glm_binom.predict(np.inner(means75, binom_results.params))
 diff = resp_75 - resp_25
 print """The interquartile first difference for the percentage of low income
 households in a school district is %2.4f %%""" % (diff*100)
@@ -76,8 +76,8 @@ means0 = means.copy()
 means100 = means.copy()
 means0[0] = data.exog[:,0].min()
 means100[0] = data.exog[:,0].max()
-resp_0 = glm_binom.family.fitted(np.inner(means0, binom_results.params))
-resp_100 = glm_binom.family.fitted(np.inner(means100, binom_results.params))
+resp_0 = glm_binom.predict(np.inner(means0, binom_results.params))
+resp_100 = glm_binom.predict(np.inner(means100, binom_results.params))
 diff_full = resp_100 - resp_0
 print """The full range difference is %2.4f %%""" % (diff_full*100)
 

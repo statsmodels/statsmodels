@@ -301,9 +301,9 @@ class GLM(LikelihoodModel):
             raise ValueError, "Scale %s with type %s not understood" %\
                 (self.scaletype, type(self.scaletype))
 
-    def predict(self, exog, params=None):
+    def predict(self, exog, params=None, linear=False):
         """
-        Return linear predicted values for a design matrix
+        Return predicted values for a design matrix
 
         Parameters
         ----------
@@ -311,6 +311,10 @@ class GLM(LikelihoodModel):
             Design / exogenous data
         params : array-like, optional after fit has been called
             Parameters / coefficients of a GLM.
+        linear : bool
+            If True, returns the linear predicted values.  If False,
+            returns the value of the inverse of the model's link function at
+            the linear predicted values.
 
         Returns
         -------
@@ -324,9 +328,11 @@ class GLM(LikelihoodModel):
             raise ValueError, "If the model has not been fit, then you must \
 specify the params argument."
         if self._results is not None:
-            return np.dot(exog, self.results.params)
-        else:
+            params = self.results.params
+        if linear:
             return np.dot(exog, params)
+        else:
+            return self.family.fitted(np.dot(exog, params))
 
     def fit(self, maxiter=100, method='IRLS', tol=1e-8, data_weights=1.,
             scale=None):
@@ -527,6 +533,10 @@ class GLMResults(LikelihoodModelResults):
     def __init__(self, model, params, normalized_cov_params, scale):
         super(GLMResults, self).__init__(model, params,
                 normalized_cov_params=normalized_cov_params, scale=scale)
+        self.model._results = self.model.results = self # TODO: get rid of this
+                                                      # since results isn't a
+                                                      # property for GLM
+        # above is needed for model.predict
         self.family = model.family
         self._endog = model.endog
         self.nobs = model.endog.shape[0]
