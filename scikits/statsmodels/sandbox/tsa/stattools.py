@@ -15,14 +15,6 @@ class ResultsStore(object):
     def __str__(self):
         return self._str
 
-#NOTE: I like the ResultsStore idea.  When a post-estimation test is
-# run as a mix-in, then this can attach a test_results dict to the Results
-# object.  If the test is standalone it can return a TestResults class
-# or not as asked.
-#TODO: rename, unitroot could be a super class for all unit root tests to
-# mix-in to time series models
-#NOTE: ALL tests should note in the docstring the null and the alternative
-# and the null and alternative should be placed in the results holder.
 #TODO: include drift keyword, only valid with regression == "c"
 # just changes the distribution of the test statistic to a t distribution
 def adfuller(x, maxlag=None, regression="c", autolag='AIC',
@@ -198,48 +190,7 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
     else:
         return adfstat, usedlag, pvalue, critvalues
 
-
-def acorr(X,nlags=40, level=95):
-    """
-    Autocorrelation function
-
-    Parameters
-    ----------
-    X : array-like
-        The time series
-    nlags : int
-        The number of lags to estimate the autocorrelation function for.
-        Default is 40.
-    level : int
-        The level of the confidence intervals.  Defaults is 95 % confidence
-        intervals.
-
-    Returns
-    -------
-    acf : array
-        The values of the autocorrelation function
-    conf_int(acf) : array
-        The confidence interval of acf at level
-    """
-    X = np.asarray(X).squeeze()
-    nobs = float(len(X))
-    if nlags > nobs:
-        raise ValueError, "X does not have %s observations" % nlags
-    Xbar = np.mean(X)
-    acf = np.zeros(nlags)
-    acov0 = np.var(X)
-    for i in range(1,nlags+1):
-        acf[i-1] = np.dot(X[i:] - Xbar,X[:-i] - Xbar)
-    acf = 1/nobs*acf/acov0
-    varacf = np.ones(nlags)/nobs
-    varacf[1:] *= 1 + 2*np.cumsum(acf[1:]**2)
-    confint = np.array(zip(acf - stats.norm.ppf(1-(100 - level)/\
-            200.)*np.sqrt(varacf), acf+stats.norm.ppf(1-(100-level)/200.)\
-            *np.sqrt(varacf)))
-    return acf,confint
-
-#None of the acovf, ... are tested; starting index? orientation?
-def acovf(x, unbiased=True, demean=True):
+def acovf(x, unbiased=False, demean=True):
     '''
     Autocovariance for 1D
 
@@ -273,7 +224,35 @@ def acovf(x, unbiased=True, demean=True):
         d = n
     return (np.correlate(xo, xo, 'full') / d)[n-1:]
 
-def acf(x, unbiased=True):
+#eye-balled vs stata.  compare to Josef's Ljung Box
+def boxpierce(x,nobs):
+    """
+    Return's Box-Pierce Q Statistic.
+
+    x : array-like
+        Array of autocorrelation coefficients
+
+    Returns
+    -------
+    q-stat : array
+        Q-statistic for autocorrelation parameters
+    p-value : array
+        P-value of the Q statistic
+
+    Notes
+    ------
+    Written to be used with acf.
+    """
+    x = np.asarray(x)
+    ret = nobs*(nobs+2)*np.cumsum((1./(nobs-np.arange(1,
+        len(x)+1)))*x**2)
+    chi2 = stats.chi2.sf(ret,np.arange(1,len(x)+1))
+    return ret,chi2
+
+#NOTE: Changed unbiased to False
+#see for example
+# http://www.itl.nist.gov/div898/handbook/eda/section3/autocopl.htm
+def acf(x, unbiased=False, nlags=40, confint=None):
     '''
     Autocorrelation function for 1d arrays.
 
@@ -283,14 +262,23 @@ def acf(x, unbiased=True):
        Time series data
     unbiased : bool
        If True, then denominators for autocovariance are n-k, otherwise n
+    nlags: int, optional
+        Number of lags to return autocorrelation for.
+    confint : float or None, optional
+        If True, the confidence intervals for the given level are returned.
+        For instance if confint=95, 95 % confidence intervals are returned.
 
     Returns
     -------
     acf : array
         autocorrelation function
+    confint : array, optional
+        Confidence intervals for the ACF. Returned if confint != None.
 
     Notes
     -----
+    The acf at lag 0 is *not* returned.
+
     This is based np.correlate which does full convolution. For very long time
     series it is recommended to use fft convolution instead.
 
@@ -299,7 +287,23 @@ def acf(x, unbiased=True):
     '''
 
     avf = acovf(x, unbiased=unbiased, demean=True)
-    return avf/avf[0]
+    acf = np.take(avf/avf[0], range(1,nlags+1))
+    if not confint:
+        return acf
+    if confint:
+# Based on Bartlett's formula for MA(q) processes
+# var(rho) = 1/n for v = 1
+#          = 1/n * (1+2*np.cumsum(rho**2) for v > 1
+
+        nobs = len(avf)
+        varacf = np.ones(nlags)/nobs
+#        varacf[1:] *= 1 + 2*np.cumsum(acf[1:]**2)
+        varacf[1:] *= 1 + 2*np.cumsum(acf[:-1]**2)
+        interval = stats.norm.ppf(1-(100-confint)/200.)*np.sqrt(varacf)
+        return acf, np.array(zip(acf-interval, acf+interval)), boxpierce(acf,
+                nobs)
+
+
 
 def pacorr(X,nlags=40, method="ols"):
     """
@@ -500,8 +504,11 @@ def grangercausalitytests(x, maxlag):
 if __name__=="__main__":
     data = sm.datasets.macrodata.load().data
     x = data['realgdp']
-    adf = adfuller(x,4, autolag=None)
-    acf_,ci = acorr(x)
+# adf is tested now.
+#    adf = adfuller(x,4, autolag=None)
+
+    acf1,ci1,Q = acf(x, nlags=40, confint=95)
+
     pacf_ = pacorr(x)
     y = np.random.normal(size=(100,2))
     grangercausalitytests(y,2)

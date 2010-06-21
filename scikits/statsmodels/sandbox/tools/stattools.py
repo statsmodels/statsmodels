@@ -78,14 +78,17 @@ def acorr_ljungbox(x, lags=None, boxpierce=False):
     x = np.asarray(x)
     nobs = x.shape[0]
     if lags is None:
-        lags = range(1,nobs/4.)  #TODO: check default
+        lags = range(1,41)  #TODO: check default; SS: changed to 40
     elif isinstance(lags, int):
         lags = range(1,lags+1)
     maxlag = max(lags)
     lags = np.asarray(lags)
 
-    acfx = acf(x, unbiased=False)   # normalize by nobs not (nobs-nlags)
-    acf2norm = acfx[1:maxlag+1]**2 / (nobs - np.arange(1,maxlag+1))
+    acfx = acf(x, nlags=maxlag) # normalize by nobs not (nobs-nlags)
+                             # SS: unbiased=False is default now
+#    acf2norm = acfx[1:maxlag+1]**2 / (nobs - np.arange(1,maxlag+1))
+    acf2norm = acfx[:maxlag+1]**2 / (nobs - np.arange(1,maxlag+1))
+
     qljungbox = nobs * (nobs+2) * np.cumsum(acf2norm)[lags-1]
     pval = stats.chi2.sf(qljungbox, lags)
     if not boxpierce:
