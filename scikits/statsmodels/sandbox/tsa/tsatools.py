@@ -58,7 +58,7 @@ def lagmat(x, maxlag, trim='forward'):
     if maxlag >= nobs:
         raise ValueError("maxlag should be < nobs")
     lm = np.zeros((nobs+maxlag, nvar*(maxlag+1)))
-    for k in range(0, maxlag+1):
+    for k in range(0, int(maxlag+1)):
         #print k, maxlag-k,nobs-k, nvar*k,nvar*(k+1), x.shape, lm.shape
         lm[maxlag-k:nobs+maxlag-k, nvar*(maxlag-k):nvar*(maxlag-k+1)] = x
     if trim:

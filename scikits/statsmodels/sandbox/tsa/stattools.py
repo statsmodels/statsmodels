@@ -6,23 +6,15 @@ import numpy as np
 from scipy import stats, signal
 import scikits.statsmodels as sm
 from scikits.statsmodels.sandbox.tsa.tsatools import lagmat, lagmat2ds
-from scikits.statsmodels.sandbox.tools.stattools import ResultsStore
 from adfvalues import *
 #from scikits.statsmodels.sandbox.rls import RLS
 
-#taken from econpy until we have large set of critical values
-adf_cv1 = '''
-One-sided test of H0: Unit root vs. H1: Stationary
-Approximate asymptotic critical values (t-ratio):
-------------------------------------------------------------
-  1%      5%      10%      Model
-------------------------------------------------------------
--2.56   -1.94   -1.62     Simple ADF (no constant or trend)
--3.43   -2.86   -2.57     ADF with constant (no trend)
--3.96   -3.41   -3.13     ADF with constant & trend
-------------------------------------------------------------'''
-#NOTE: Don't have critical values or p-values for trend polynomial
-# greater than 2.
+#NOTE: now in two places to avoid circular import
+#TODO: I like the bunch pattern for this too.
+class ResultsStore(object):
+    def __str__(self):
+        return self._str
+
 #NOTE: I like the ResultsStore idea.  When a post-estimation test is
 # run as a mix-in, then this can attach a test_results dict to the Results
 # object.  If the test is standalone it can return a TestResults class
@@ -192,7 +184,7 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
 
     # Get approx p-value and critical values
     pvalue = mackinnonp(adfstat, regression=regression, N=1)
-    critvalues = mackinnoncrit(adfstat, regression=regression, nobs=nobs)
+    critvalues = mackinnoncrit(N=1, regression=regression, nobs=nobs)
     critvalues = {"1%" : critvalues[0], "5%" : critvalues[1],
             "10%" : critvalues[2]}
     if store:
@@ -246,6 +238,69 @@ def acorr(X,nlags=40, level=95):
             *np.sqrt(varacf)))
     return acf,confint
 
+#None of the acovf, ... are tested; starting index? orientation?
+def acovf(x, unbiased=True, demean=True):
+    '''
+    Autocovariance for 1D
+
+    Parameters
+    ----------
+    x : array
+       time series data
+    unbiased : boolean
+       if True, then denominators is n-k, otherwise n
+
+    Returns
+    -------
+    acovf : array
+        autocovariance function
+
+    Notes
+    -----
+    This uses np.correlate which does full convolution. For very long time
+    series it is recommended to use fft convolution instead.
+
+    '''
+    n = len(x)
+    if demean:
+        xo = x - x.mean();
+    else:
+        xo = x
+    if unbiased:
+        xi = np.ones(n);
+        d = np.correlate(xi, xi, 'full')
+    else:
+        d = n
+    return (np.correlate(xo, xo, 'full') / d)[n-1:]
+
+def acf(x, unbiased=True):
+    '''
+    Autocorrelation function for 1d arrays.
+
+    Parameters
+    ----------
+    x : array
+       Time series data
+    unbiased : bool
+       If True, then denominators for autocovariance are n-k, otherwise n
+
+    Returns
+    -------
+    acf : array
+        autocorrelation function
+
+    Notes
+    -----
+    This is based np.correlate which does full convolution. For very long time
+    series it is recommended to use fft convolution instead.
+
+    If unbiased is true, the denominator for the autocovariance is adjusted
+    but the autocorrelation is not an unbiased estimtor.
+    '''
+
+    avf = acovf(x, unbiased=unbiased, demean=True)
+    return avf/avf[0]
+
 def pacorr(X,nlags=40, method="ols"):
     """
     Partial autocorrelation function
@@ -259,6 +314,64 @@ def pacorr(X,nlags=40, method="ols"):
         pacf[i-1] = sm.OLS(X[i:],sm.add_constant(lagmat(X, i,
             trim="both")[:,1:], prepend=True)).fit().params[-1]
     return pacf
+
+def pacf_yw(x, maxlag=20, method='unbiased'):
+    '''Partial autocorrelation estimated with non-recursive yule_walker
+
+    Parameters
+    ----------
+    x : 1d array
+        observations of time series for which pacf is calculated
+    maxlag : int
+        largest lag for which pacf is returned
+    method : 'unbiased' (default) or 'mle'
+        method for the autocovariance calculations in yule walker
+
+    Returns
+    -------
+    pacf : 1d array
+        partial autocorrelations, maxlag+1 elements
+
+    Notes
+    -----
+    This solves yule_walker for each desired lag and contains
+    currently duplicate calculations.
+
+    '''
+    xm = x - x.mean()
+    pacf = [1.]
+    for k in range(1, maxlag+1):
+        pacf.append(sm.regression.yule_walker(x, k, method=method)[0][-1])
+    return np.array(pacf)
+
+def pacf_ols(x, maxlag=20):
+    '''Partial autocorrelation estimated with non-recursive OLS
+
+    Parameters
+    ----------
+    x : 1d array
+        observations of time series for which pacf is calculated
+    maxlag : int
+        largest lag for which pacf is returned
+
+    Returns
+    -------
+    pacf : 1d array
+        partial autocorrelations, maxlag+1 elements
+
+    Notes
+    -----
+    This solves a separate OLS estimation for each desired lag.
+
+    '''
+    from scikits.statsmodels.sandbox.tools.tools_tsa import lagmat
+    xlags = lagmat(x-x.mean(), maxlag)
+    pacfols = [1.]
+    for k in range(1, maxlag+1):
+        res = sm.OLS(xlags[k:,0], xlags[k:,1:k+1]).fit()
+        #print res.params
+        pacfols.append(res.params[-1])
+    return np.array(pacfols)
 
 def pergram(X, kernel='bartlett', log=True):
     """
@@ -386,9 +499,10 @@ def grangercausalitytests(x, maxlag):
 
 if __name__=="__main__":
     data = sm.datasets.macrodata.load().data
-    adf = adfuller(data['realgdp'],4, autolag=None)
-    acf,ci = acorr(data['realgdp'])
-    pacf = pacorr(data['realgdp'])
-    x = np.random.normal(size=(100,2))
-    grangercausalitytests(x,2)
+    x = data['realgdp']
+    adf = adfuller(x,4, autolag=None)
+    acf_,ci = acorr(x)
+    pacf_ = pacorr(x)
+    y = np.random.normal(size=(100,2))
+    grangercausalitytests(y,2)
 

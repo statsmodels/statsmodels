@@ -9,11 +9,10 @@ Author: josef-pktd
 License: BSD
 """
 
-
 import numpy as np
 from scipy import stats
 import scikits.statsmodels as sm
-from scikits.statsmodels.sandbox.tsa import acf
+from scikits.statsmodels.sandbox.tsa.stattools import acf
 from scikits.statsmodels.sandbox.tsa.tsatools import lagmat
 
 #TODO: I like the bunch pattern for this too.
