@@ -338,6 +338,7 @@ def ccovf(x, y, unbiased=True, demean=True):
         d = n
     return (np.correlate(xo,yo,'full') / d)[n-1:]
 
+#TODO: reference for unbiased?
 def acf(x, unbiased=True):
     '''autocorrelation function for 1d
 
@@ -559,9 +560,10 @@ if __name__ == '__main__':
                 58.5,  59.5,  60.5,  61.5,  62.5,  63.5,  64.5,  65.5,  66.5,
                 67.5,  68.5,  69.5,  70.5,  71.5,  72.5,  73.5,  74.5,  75.5,
                 76.5,  77.5,  78.5,  79.5,  80.5,  81.5,  82.5,  83.5,  84.5,
-                85.5,  86.5,  87.5,  88.5,  89.5,  90.5,  91.5,  92.5,  93.5,  94.5])
+                85.5,  86.5,  87.5,  88.5,  89.5,  90.5,  91.5,  92.5,  93.5,
+                94.5])
 
-    assert_array_almost_equal(xld, movmean(np.arange(100), 10,'lagged'))
+    assert_array_almost_equal(xg, movmean(np.arange(100), 10,'lagged'))
 
     xd = np.array([  0.3,   0.6,   1. ,   1.5,   2.1,   2.8,   3.6,   4.5,   5.5,
                  6.5,   7.5,   8.5,   9.5,  10.5,  11.5,  12.5,  13.5,  14.5,
@@ -575,7 +577,7 @@ if __name__ == '__main__':
                 78.5,  79.5,  80.5,  81.5,  82.5,  83.5,  84.5,  85.5,  86.5,
                 87.5,  88.5,  89.5,  90.5,  91.5,  92.5,  93.5,  94.5,  95.4,
                 96.2,  96.9,  97.5,  98. ,  98.4,  98.7,  98.9,  99. ])
-    assert_array_almost_equal(xld, movmean(np.arange(100), 10,'leading'))
+    assert_array_almost_equal(xd, movmean(np.arange(100), 10,'leading'))
 
     xc = np.array([ 1.36363636,   1.90909091,   2.54545455,   3.27272727,
                  4.09090909,   5.        ,   6.        ,   7.        ,
@@ -602,4 +604,4 @@ if __name__ == '__main__':
                 88.        ,  89.        ,  90.        ,  91.        ,
                 92.        ,  93.        ,  94.        ,  94.90909091,
                 95.72727273,  96.45454545,  97.09090909,  97.63636364])
-    assert_array_almost_equal(xld, movmean(np.arange(100), 11,'centered'))
+    assert_array_almost_equal(xc, movmean(np.arange(100), 11,'centered'))

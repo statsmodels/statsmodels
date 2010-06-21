@@ -33,7 +33,7 @@ Approximate asymptotic critical values (t-ratio):
 # and the null and alternative should be placed in the results holder.
 #TODO: include drift keyword, only valid with regression == "c"
 # just changes the distribution of the test statistic to a t distribution
-def unitroot_adf(x, maxlag=None, regression="c", autolag='AIC',
+def adfuller(x, maxlag=None, regression="c", autolag='AIC',
     store=False):
     '''Augmented Dickey-Fuller unit root test
 
@@ -66,7 +66,9 @@ def unitroot_adf(x, maxlag=None, regression="c", autolag='AIC',
     Returns
     -------
     adf : float
-        test statistic
+        Test statistic
+    usedlag : int
+        Number of lags used.
     pvalue : float
         MacKinnon's approximate p-value based on MacKinnon (1994)
     critical values : dict
@@ -97,7 +99,7 @@ def unitroot_adf(x, maxlag=None, regression="c", autolag='AIC',
     References
     ----------
     Greene
-    Wikipedia
+    Hamilton
 
     Critical Values (Canonical reference)
     Fuller, W.A. 1996. `Introduction to Statistical Time Series.` 2nd ed.
@@ -144,7 +146,7 @@ def unitroot_adf(x, maxlag=None, regression="c", autolag='AIC',
         #search for lag length with highest information criteria
         #Note: I use the same number of observations to have comparable IC
         results = {}
-        for mlag in range(1,maxlag+1):  # +1 so maxlag is inclusive
+        for mlag in range(1,int(maxlag+1)):  # +1 so maxlag is inclusive
             results[mlag] = sm.OLS(xdshort, np.column_stack([xdall[:,:mlag+1],
                 trend])).fit()
             #NOTE: mlag+1 since level is in first column.
@@ -202,50 +204,8 @@ def unitroot_adf(x, maxlag=None, regression="c", autolag='AIC',
         resstore.HA = "The coefficient on the lagged level < 1"
         return adfstat, pvalue, critvalues, resstore
     else:
-        return adfstat, pvalue, critvalues
+        return adfstat, usedlag, pvalue, critvalues
 
-
-def dfuller(X, nlags=1, noconstant=False, trend=False):
-    """
-    Augmented Dickey-Fuller test for a time series X.
-
-    Parameters
-    ----------
-    X - array-like
-        The time series that might contain a unit root.
-    nlags - int
-        nlags should be >= 0.
-        TODO: Allow string 'AIC' and 'BIC'
-    noconstant - bool
-        Include a constant or not.  Default is false, so that a constant
-        term is estimated.
-    trend : bool
-        Include a linear time trend or not.  Default is false for no
-        time trend.
-
-    Notes
-    -----
-    The ADF test statistic is not returned.  Refer to a ADF table for
-    inference.  Is nlags = 0, dfuller returns the classic Dickey-Fuller
-    statistic.
-
-    """
-    if nlags < 0:
-        raise ValueError, "nlags should be >= 0"
-    X = np.asarray(X).squeeze()
-    nobs = float(len(X))
-    xdiff = np.diff(X)
-    xlag1 = X[:-1]
-    xdiffp = lagmat(xdiff,nlags,trim='both')[:,1:]
-    t = np.arange(1,nobs-nlags)
-    RHS = np.column_stack((xlag1[nlags:],xdiffp))
-    if trend:
-        t = np.arange(1,nobs-nlags)
-        RHS = np.column_stack((t,RHS))
-    if not noconstant:
-        RHS = sm.add_constant(RHS,prepend=True)
-    results = sm.OLS(xdiff[nlags:],RHS).fit()
-    return results.t()[-(nlags+1)]
 
 def acorr(X,nlags=40, level=95):
     """
@@ -426,10 +386,9 @@ def grangercausalitytests(x, maxlag):
 
 if __name__=="__main__":
     data = sm.datasets.macrodata.load().data
-    adf = dfuller(data['realgdp'],4)
+    adf = adfuller(data['realgdp'],4, autolag=None)
     acf,ci = acorr(data['realgdp'])
     pacf = pacorr(data['realgdp'])
     x = np.random.normal(size=(100,2))
     grangercausalitytests(x,2)
-    adf3 = unitroot_adf(data['realgdp'],4,autolag=None)
 
