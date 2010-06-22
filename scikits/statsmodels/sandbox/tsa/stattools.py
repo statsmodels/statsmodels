@@ -321,20 +321,6 @@ def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False):
         else:
             return acf, qstat
 
-def pacorr(X,nlags=40, method="ols"):
-    """
-    Partial autocorrelation function
-    """
-    X = np.asarray(X).squeeze()
-    nobs = float(len(X))
-    if nlags > nobs:
-        raise ValueError, "X does not have %s observations" % nlags
-    pacf = np.zeros(nlags)
-    for i in range(1,nlags+1):
-        pacf[i-1] = sm.OLS(X[i:],sm.add_constant(lagmat(X, i,
-            trim="both")[:,1:], prepend=True)).fit().params[-1]
-    return pacf
-
 def pacf_yw(x, nlags=40, method='unbiased'):
     '''Partial autocorrelation estimated with non-recursive yule_walker
 
@@ -526,12 +512,12 @@ if __name__=="__main__":
 #    adf = adfuller(x,4, autolag=None)
 
 # acf is tested now
-    acf1,ci1,Q,pvalue = acf(x, nlags=40, confint=95, qstat=True)
+#    acf1,ci1,Q,pvalue = acf(x, nlags=40, confint=95, qstat=True)
 
-
-    pacf1 = pacorr(x)
-    pacfols = pacf_ols(x, nlags=40)
-    pacfyw = pacf_yw(x, nlags=40, method="mle")
+# pacf is tested now
+#    pacf1 = pacorr(x)
+#    pacfols = pacf_ols(x, nlags=40)
+#    pacfyw = pacf_yw(x, nlags=40, method="mle")
     y = np.random.normal(size=(100,2))
     grangercausalitytests(y,2)
 
