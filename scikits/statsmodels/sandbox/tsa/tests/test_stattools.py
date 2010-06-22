@@ -1,9 +1,14 @@
-from scikits.statsmodels.sandbox.tsa.stattools import adfuller
+from scikits.statsmodels.sandbox.tsa.stattools import adfuller, acf
 from numpy.testing import assert_almost_equal
+from numpy import genfromtxt
 from scikits.statsmodels.datasets import macrodata
+import os
 
+
+DECIMAL_8 = 8
 DECIMAL_6 = 6
 DECIMAL_5 = 5
+DECIMAL_4 = 4
 DECIMAL_3 = 3
 DECIMAL_2 = 2
 DECIMAL_1 = 1
@@ -94,6 +99,63 @@ class TestADFNoConstant2(CheckADF):
         self.pvalue = 0.013747 # Stata does not return a p-value for noconstant
                                # this value is just taken from our results
         self.critvalues = [-2.587,-1.950,-1.617]
+
+class CheckCorrGram(object):
+    """
+    Set up for ACF, PACF tests.
+    """
+    data = macrodata.load()
+    x = data.data['realgdp']
+    filename = os.path.dirname(os.path.abspath(__file__))+\
+            "/results/results_corrgram.csv"
+    results = genfromtxt(filename, delimiter=",", names=True,dtype=float)
+
+
+class TestACF(CheckCorrGram):
+    """
+    Test Autocorrelation Function
+    """
+    def __init__(self):
+        self.acf = self.results['acvar']
+        self.qstat = self.results['Q1']
+        self.res1 = acf(self.x, nlags=40, qstat=True)
+
+    def test_acf(self):
+        assert_almost_equal(self.res1[0], self.acf, DECIMAL_8)
+
+#    def test_confint(self):
+#        pass
+#NOTE: need to figure out how to center confidence intervals
+
+    def test_qstat(self):
+        assert_almost_equal(self.res1[1], self.qstat, DECIMAL_3)
+        # 3 decimal places because of stata rounding
+
+#    def pvalue(self):
+#        pass
+#NOTE: shouldn't need testing if Q stat is correct
+
+
+class TestACF_FFT(CheckCorrGram):
+    """
+    Test Autocorrelation Function using FFT
+    """
+    def __init__(self):
+        self.acf = self.results['acvarfft']
+        self.qstat = self.results['Q1']
+        self.res1 = acf(self.x, nlags=40, qstat=True, fft=True)
+
+    def test_acf(self):
+        assert_almost_equal(self.res1[0], self.acf, DECIMAL_8)
+
+    def test_qstat(self):
+        assert_almost_equal(self.res1[1], self.qstat, DECIMAL_3)
+
+
+class checkPACF(CheckCorrGram):
+    def __init__(self):
+        self.pacf = self.results['PAC1']
+
 
 if __name__=="__main__":
     import nose

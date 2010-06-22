@@ -291,17 +291,17 @@ def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False):
     If unbiased is true, the denominator for the autocovariance is adjusted
     but the autocorrelation is not an unbiased estimtor.
     '''
+    nobs = len(x)
     if not fft:
         avf = acovf(x, unbiased=unbiased, demean=True)
         acf = np.take(avf/avf[0], range(1,nlags+1))
     else:
         x0 = x - x.mean()
-        nobs = len(x)
         Frf = np.fft.fft(x0, n=nobs*2) # zero-pad for separability
         if unbiased:
             xi = np.arange(1,nobs+1)
             nobs = np.hstack((xi,xi[::-1][::-1]))
-        acf = (np.fft.ifft(Frf * np.conjugate(Frf))/nobs)[1:nobs+1]
+        acf = (np.fft.ifft(Frf * np.conjugate(Frf))/nobs)[:nobs]
         acf /= acf[0]
         acf = np.take(np.real(acf), range(1,nlags+1))
     if not (confint or qstat):
@@ -309,7 +309,6 @@ def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False):
 # Based on Bartlett's formula for MA(q) processes
 #NOTE: not sure if this is correct, or needs to be centered or what.
     if confint:
-        nobs = len(avf)
         varacf = np.ones(nlags)/nobs
         varacf[1:] *= 1 + 2*np.cumsum(acf[:-1]**2)
         interval = stats.norm.ppf(1-(100-confint)/200.)*np.sqrt(varacf)
@@ -539,13 +538,13 @@ if __name__=="__main__":
     Sf = FRf * FRf.conjugate()
 # Note
     np.allclose(np.abs(FRf)**2, FRf*FRf.conjugate())
-    acf2 = np.fft.ifft(Sf)
-    acf2 = acf2[1:n+1]/n
+    acf2 = np.fft.ifft(Sf).real[:n]
+#    acf2 = acf2[1:n+1]/n
+#    acf2 /= acf2[0]
+#    acf2 = np.real(acf2)
     acf2 /= acf2[0]
-    acf2 = np.real(acf2)
 
-    acf3 = acf(x, nlags=40, qstat=False, fft=True)
-
+#    acf3 = acf(x, nlags=40, qstat=False, fft=True)
 
     pacf_ = pacorr(x)
     y = np.random.normal(size=(100,2))
