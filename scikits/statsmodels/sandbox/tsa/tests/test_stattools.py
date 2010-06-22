@@ -1,4 +1,5 @@
-from scikits.statsmodels.sandbox.tsa.stattools import adfuller, acf
+from scikits.statsmodels.sandbox.tsa.stattools import (adfuller, acf, pacf_ols,
+        pacf_yw)
 from numpy.testing import assert_almost_equal
 from numpy import genfromtxt
 from scikits.statsmodels.datasets import macrodata
@@ -152,10 +153,18 @@ class TestACF_FFT(CheckCorrGram):
         assert_almost_equal(self.res1[1], self.qstat, DECIMAL_3)
 
 
-class checkPACF(CheckCorrGram):
+class TestPACF(CheckCorrGram):
     def __init__(self):
-        self.pacf = self.results['PAC1']
+        self.pacfols = self.results['PACOLS']
+        self.pacfyw = self.results['PACYW']
 
+    def test_ols(self):
+        pacfols = pacf_ols(self.x, nlags=40)
+        assert_almost_equal(pacfols, self.pacfols, DECIMAL_6)
+
+    def test_yw(self):
+        pacfyw = pacf_yw(self.x, nlags=40, method="mle")
+        assert_almost_equal(pacfyw, self.pacfyw, DECIMAL_8)
 
 if __name__=="__main__":
     import nose

@@ -216,7 +216,6 @@ def acovf(x, unbiased=False, demean=True):
         d = n
     return (np.correlate(xo, xo, 'full')/d)[n-1:]
 
-#eye-balled vs stata.  compare to Josef's Ljung Box
 def q_stat(x,nobs, type="ljungbox"):
     """
     Return's Ljung-Box Q Statistic
@@ -283,7 +282,7 @@ def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False):
 
     Notes
     -----
-    The acf at lag 0 is *not* returned.
+    The acf at lag 0 (ie., 1) is *not* returned.
 
     This is based np.correlate which does full convolution. For very long time
     series it is recommended to use fft convolution instead.
@@ -336,7 +335,7 @@ def pacorr(X,nlags=40, method="ols"):
             trim="both")[:,1:], prepend=True)).fit().params[-1]
     return pacf
 
-def pacf_yw(x, maxlag=20, method='unbiased'):
+def pacf_yw(x, nlags=40, method='unbiased'):
     '''Partial autocorrelation estimated with non-recursive yule_walker
 
     Parameters
@@ -356,24 +355,25 @@ def pacf_yw(x, maxlag=20, method='unbiased'):
     Notes
     -----
     This solves yule_walker for each desired lag and contains
-    currently duplicate calculations.
-
+    currently duplicate calculations.  The pacf at lag 0 (ie., 1) is *not*
+    returned.
     '''
     xm = x - x.mean()
     pacf = [1.]
-    for k in range(1, maxlag+1):
+    for k in range(1, nlags+1):
         pacf.append(sm.regression.yule_walker(x, k, method=method)[0][-1])
-    return np.array(pacf)
+    return np.array(pacf)[1:]
 
-def pacf_ols(x, maxlag=20):
-    '''Partial autocorrelation estimated with non-recursive OLS
+#NOTE: this is incorrect.
+def pacf_ols(x, nlags=40):
+    '''Calculate partial autocorrelations
 
     Parameters
     ----------
     x : 1d array
         observations of time series for which pacf is calculated
-    maxlag : int
-        largest lag for which pacf is returned
+    nlags : int
+        Number of lags for which pacf is returned.  Lag 0 is not returned.
 
     Returns
     -------
@@ -382,17 +382,18 @@ def pacf_ols(x, maxlag=20):
 
     Notes
     -----
-    This solves a separate OLS estimation for each desired lag.
-
+    This solves a separate OLS estimation for each desired lag.  The pacf at
+    lag 0 (ie., 1) is *not* returned.
     '''
-    from scikits.statsmodels.sandbox.tools.tools_tsa import lagmat
-    xlags = lagmat(x-x.mean(), maxlag)
-    pacfols = [1.]
-    for k in range(1, maxlag+1):
-        res = sm.OLS(xlags[k:,0], xlags[k:,1:k+1]).fit()
-        #print res.params
-        pacfols.append(res.params[-1])
-    return np.array(pacfols)
+    #TODO: add warnings for Yule-Walker
+    #NOTE: demeaning and not using a constant gave incorrect answers?
+    xlags = sm.add_constant(lagmat(x, nlags))
+    pacf = [1.]
+    for k in range(1, nlags+1):
+        res = sm.OLS(xlags[k:,0], np.take(xlags[k:], range(1,k+1)+[-1],
+                            axis=1)).fit()
+        pacf.append(res.params[-2])
+    return np.array(pacf)[1:]
 
 def pergram(X, kernel='bartlett', log=True):
     """
@@ -524,29 +525,13 @@ if __name__=="__main__":
 # adf is tested now.
 #    adf = adfuller(x,4, autolag=None)
 
+# acf is tested now
     acf1,ci1,Q,pvalue = acf(x, nlags=40, confint=95, qstat=True)
 
-# acovf
-    x0 = x - x.mean()
-    n = len(x)
-    d = n
-    convolution = np.correlate(x0,x0,'full')[n-1:]/d
 
-# Try to get this with FFT
-    # use zero-padding so that they are separable
-    FRf = np.fft.fft(x0, n=2*n)
-    Sf = FRf * FRf.conjugate()
-# Note
-    np.allclose(np.abs(FRf)**2, FRf*FRf.conjugate())
-    acf2 = np.fft.ifft(Sf).real[:n]
-#    acf2 = acf2[1:n+1]/n
-#    acf2 /= acf2[0]
-#    acf2 = np.real(acf2)
-    acf2 /= acf2[0]
-
-#    acf3 = acf(x, nlags=40, qstat=False, fft=True)
-
-    pacf_ = pacorr(x)
+    pacf1 = pacorr(x)
+    pacfols = pacf_ols(x, nlags=40)
+    pacfyw = pacf_yw(x, nlags=40, method="mle")
     y = np.random.normal(size=(100,2))
     grangercausalitytests(y,2)
 
