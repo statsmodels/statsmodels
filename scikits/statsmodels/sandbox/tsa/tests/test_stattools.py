@@ -23,10 +23,10 @@ class CheckADF(object):
         assert_almost_equal(self.res1[0], self.teststat, DECIMAL_5)
 
     def test_pvalue(self):
-        assert_almost_equal(self.res1[2], self.pvalue, DECIMAL_5)
+        assert_almost_equal(self.res1[1], self.pvalue, DECIMAL_5)
 
     def test_critvalues(self):
-        critvalues = [self.res1[3][lev] for lev in self.levels]
+        critvalues = [self.res1[4][lev] for lev in self.levels]
         assert_almost_equal(critvalues, self.critvalues, DECIMAL_2)
 
 class TestADFConstant(CheckADF):

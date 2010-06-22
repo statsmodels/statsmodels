@@ -51,10 +51,13 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
     -------
     adf : float
         Test statistic
-    usedlag : int
-        Number of lags used.
     pvalue : float
         MacKinnon's approximate p-value based on MacKinnon (1994)
+    usedlag : int
+        Number of lags used.
+    nobs : int
+        Number of observations used for the ADF regression and calculation of
+        the critical values.
     critical values : dict
         Critical values for the test statistic at the 1 %, 5 %, and 10 % levels.
         Based on MacKinnon (2010)
@@ -66,16 +69,6 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
     If the p-value is close to significant, then the critical values should be
     used to judge whether to accept or reject the null.
 
-    The pvalues are (will be) interpolated from the table of critical
-    values. NOT YET DONE
-
-    still requires pvalues and maybe some cleanup
-
-    ''Verification''
-
-    Looks correctly sized in Monte Carlo studies.
-    Differs from R tseries results in second decimal, based on a few examples
-
     Examples
     --------
     see example script
@@ -85,15 +78,16 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
     Greene
     Hamilton
 
-    Critical Values (Canonical reference)
-    Fuller, W.A. 1996. `Introduction to Statistical Time Series.` 2nd ed.
-        New York: Wiley.
 
     P-Values (regression surface approximation)
     MacKinnon, J.G. 1994.  "Approximate asymptotic distribution functions for
         unit-root and cointegration tests.  `Journal of Business and Economic
         Statistics` 12, 167-76.
 
+    Critical values
+    MacKinnon, J.G. 2010. "Critical Values for Cointegration Tests."
+        Queen's University, Dept of Economics, Working Papers.  Available at
+        http://ideas.repec.org/p/qed/wpaper/1227.html
     '''
     regression = regression.lower()
     if regression not in ['c','nc','ct','ctt']:
@@ -152,15 +146,11 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
             raise ValueError("autolag can be None, 'aic', 'bic', or 't-stat'")
 
         #rerun ols with best autolag
-#        xdall = lagmat(xdiff[:,None], bestlag, trim='forward')
         xdall = lagmat(xdiff[:,None], bestlag, trim='both')
-        # Why trim forward here and not above?
         nobs = xdall.shape[0]
         trend = np.vander(np.arange(nobs), trendorder+1)
         xdall[:,0] = x[-nobs-1:-1] # replace 0 xdiff with level of x
         xdshort = xdiff[-nobs:]
-#        xdshort = x[-nobs:]
-# NOTE: switched the above.  xdiff should be endog for augmented df
         usedlag = bestlag
     else:
         usedlag = maxlag
@@ -169,10 +159,10 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
     #NOTE: should be usedlag+1 since the first column is the level?
     adfstat = resols.t(0)
 #    adfstat = (resols.params[0]-1.0)/resols.bse[0]
-# the "asymptotically correct" z statistic is obtained as
-# nobs/(1-np.sum(resols.params[1:-(trendorder+1)])) (resols.params[0] - 1)
-# I think this is the statistic that is used for series that are integrated
-# for orders higher than I(1), ie., not ADF but cointegration tests.
+    # the "asymptotically correct" z statistic is obtained as
+    # nobs/(1-np.sum(resols.params[1:-(trendorder+1)])) (resols.params[0] - 1)
+    # I think this is the statistic that is used for series that are integrated
+    # for orders higher than I(1), ie., not ADF but cointegration tests.
 
     # Get approx p-value and critical values
     pvalue = mackinnonp(adfstat, regression=regression, N=1)
@@ -184,11 +174,12 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
         resstore.usedlag = usedlag
         resstore.adfstat = adfstat
         resstore.critvalues = critvalues
+        resstore.nobs = None
         resstore.H0 = "The coefficient on the lagged level equals 1"
         resstore.HA = "The coefficient on the lagged level < 1"
         return adfstat, pvalue, critvalues, resstore
     else:
-        return adfstat, usedlag, pvalue, critvalues
+        return adfstat, pvalue, usedlag, nobs, critvalues
 
 def acovf(x, unbiased=False, demean=True):
     '''
@@ -210,7 +201,6 @@ def acovf(x, unbiased=False, demean=True):
     -----
     This uses np.correlate which does full convolution. For very long time
     series it is recommended to use fft convolution instead.
-
     '''
     n = len(x)
     if demean:
@@ -218,24 +208,29 @@ def acovf(x, unbiased=False, demean=True):
     else:
         xo = x
     if unbiased:
-        xi = np.ones(n);
-        d = np.correlate(xi, xi, 'full')
+#        xi = np.ones(n);
+#        d = np.correlate(xi, xi, 'full')
+        xi = np.arange(1,n+1)
+        d = np.hstack((xi,xi[:-1][::-1])) # faster, is correlate more general?
     else:
         d = n
-    return (np.correlate(xo, xo, 'full') / d)[n-1:]
+    return (np.correlate(xo, xo, 'full')/d)[n-1:]
 
 #eye-balled vs stata.  compare to Josef's Ljung Box
-def boxpierce(x,nobs):
+def q_stat(x,nobs, type="ljungbox"):
     """
-    Return's Box-Pierce Q Statistic.
+    Return's Ljung-Box Q Statistic
 
     x : array-like
-        Array of autocorrelation coefficients
+        Array of autocorrelation coefficients.  Can be obtained from acf.
+    nobs : int
+        Number of observations in the entire sample (ie., not just the length
+        of the autocorrelation function results.
 
     Returns
     -------
     q-stat : array
-        Q-statistic for autocorrelation parameters
+        Ljung-Box Q-statistic for autocorrelation parameters
     p-value : array
         P-value of the Q statistic
 
@@ -244,15 +239,16 @@ def boxpierce(x,nobs):
     Written to be used with acf.
     """
     x = np.asarray(x)
-    ret = nobs*(nobs+2)*np.cumsum((1./(nobs-np.arange(1,
-        len(x)+1)))*x**2)
+    if type=="ljungbox":
+        ret = nobs*(nobs+2)*np.cumsum((1./(nobs-np.arange(1,
+            len(x)+1)))*x**2)
     chi2 = stats.chi2.sf(ret,np.arange(1,len(x)+1))
     return ret,chi2
 
 #NOTE: Changed unbiased to False
 #see for example
 # http://www.itl.nist.gov/div898/handbook/eda/section3/autocopl.htm
-def acf(x, unbiased=False, nlags=40, confint=None):
+def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False):
     '''
     Autocorrelation function for 1d arrays.
 
@@ -267,13 +263,23 @@ def acf(x, unbiased=False, nlags=40, confint=None):
     confint : float or None, optional
         If True, the confidence intervals for the given level are returned.
         For instance if confint=95, 95 % confidence intervals are returned.
+    qstat : bool, optional
+        If True, returns the Ljung-Box q statistic for each autocorrelation
+        coefficient.  See q_stat for more information.
+    fft : bool, optional
+        If True, computes the ACF via FFT.
 
     Returns
     -------
     acf : array
         autocorrelation function
     confint : array, optional
-        Confidence intervals for the ACF. Returned if confint != None.
+        Confidence intervals for the ACF. Returned if confint is not None.
+    qstat : array, optional
+        The Ljung-Box Q-Statistic.  Returned if q_stat is True.
+    pvalues : array, optional
+        The p-values associated with the Q-statistics.  Returned if q_stat is
+        True.
 
     Notes
     -----
@@ -285,25 +291,37 @@ def acf(x, unbiased=False, nlags=40, confint=None):
     If unbiased is true, the denominator for the autocovariance is adjusted
     but the autocorrelation is not an unbiased estimtor.
     '''
-
-    avf = acovf(x, unbiased=unbiased, demean=True)
-    acf = np.take(avf/avf[0], range(1,nlags+1))
-    if not confint:
+    if not fft:
+        avf = acovf(x, unbiased=unbiased, demean=True)
+        acf = np.take(avf/avf[0], range(1,nlags+1))
+    else:
+        x0 = x - x.mean()
+        nobs = len(x)
+        Frf = np.fft.fft(x0, n=nobs*2) # zero-pad for separability
+        if unbiased:
+            xi = np.arange(1,nobs+1)
+            nobs = np.hstack((xi,xi[::-1][::-1]))
+        acf = (np.fft.ifft(Frf * np.conjugate(Frf))/nobs)[1:nobs+1]
+        acf /= acf[0]
+        acf = np.take(np.real(acf), range(1,nlags+1))
+    if not (confint or qstat):
         return acf
-    if confint:
 # Based on Bartlett's formula for MA(q) processes
-# var(rho) = 1/n for v = 1
-#          = 1/n * (1+2*np.cumsum(rho**2) for v > 1
-
+#NOTE: not sure if this is correct, or needs to be centered or what.
+    if confint:
         nobs = len(avf)
         varacf = np.ones(nlags)/nobs
-#        varacf[1:] *= 1 + 2*np.cumsum(acf[1:]**2)
         varacf[1:] *= 1 + 2*np.cumsum(acf[:-1]**2)
         interval = stats.norm.ppf(1-(100-confint)/200.)*np.sqrt(varacf)
-        return acf, np.array(zip(acf-interval, acf+interval)), boxpierce(acf,
-                nobs)
-
-
+        confint = np.array(zip(acf-interval, acf+interval))
+        if not qstat:
+            return acf, confint
+    if qstat:
+        qstat, pvalue = q_stat(acf, nobs=nobs)
+        if confint is not None:
+            return acf, confint, qstat, pvalue
+        else:
+            return acf, qstat
 
 def pacorr(X,nlags=40, method="ols"):
     """
@@ -507,7 +525,27 @@ if __name__=="__main__":
 # adf is tested now.
 #    adf = adfuller(x,4, autolag=None)
 
-    acf1,ci1,Q = acf(x, nlags=40, confint=95)
+    acf1,ci1,Q,pvalue = acf(x, nlags=40, confint=95, qstat=True)
+
+# acovf
+    x0 = x - x.mean()
+    n = len(x)
+    d = n
+    convolution = np.correlate(x0,x0,'full')[n-1:]/d
+
+# Try to get this with FFT
+    # use zero-padding so that they are separable
+    FRf = np.fft.fft(x0, n=2*n)
+    Sf = FRf * FRf.conjugate()
+# Note
+    np.allclose(np.abs(FRf)**2, FRf*FRf.conjugate())
+    acf2 = np.fft.ifft(Sf)
+    acf2 = acf2[1:n+1]/n
+    acf2 /= acf2[0]
+    acf2 = np.real(acf2)
+
+    acf3 = acf(x, nlags=40, qstat=False, fft=True)
+
 
     pacf_ = pacorr(x)
     y = np.random.normal(size=(100,2))
