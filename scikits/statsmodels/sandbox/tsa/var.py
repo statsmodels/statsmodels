@@ -41,15 +41,15 @@ class VAR2(object):
         self.avobs = nobs - laglen
         # what's a better name for this? autonobs? lagnobs?
 
-#TODO: make ols comp default
-    def fit(self, method="ols", structural=None, dfk=None):
+#TODO: IRF, lag length selection
+    def fit(self, method="ols", structural=None, dfk=None, maxlag=None,
+            ic=None):
         """
         Fit the VAR model
 
         Parameters
         ----------
         method : str
-            "ols_comp" fit with OLS in companion form, defaul
             "ols" fit equation by equation with OLS
             "yw" fit with yule walker
             "mle" fit with unconditional maximum likelihood
@@ -60,6 +60,10 @@ class VAR2(object):
             Small-sample bias correction.  If None, dfk = neqs * nlags +
             number of exogenous variables. Run restrictions.  Details in Lyx
             notes.
+        maxlag : int, optional
+            The highest lag order for lag length selection according to `ic`.
+        ic : str {"aic","bic","hq"} or None, optional
+            Information criteria to maximize for lag length selection.
 
         Notes
         -----
@@ -72,8 +76,6 @@ class VAR2(object):
         else:
             self.dfk = dfk
         # What's cleaner? Logic handled here and private functions or all here?
-        if method == "ols_comp":
-            return self._ols_comp()
         if method == "ols":
             return self._ols()
 #TODO: should 'BQ' just have it's own method?
@@ -93,25 +95,36 @@ class VAR2(object):
         neqs = int(self.neqs)
         endog = self.endog
         # trim from the front, unravel in F-contiguous way
-        Y = endog[laglen:,:].ravel('F')
+#        Y = endog[laglen:,:].ravel('F')
+        Y = endog[laglen:,:]
+
         X = np.zeros((avobs,nvars*laglen))
         self.X = X #TODO: rename or refactor? (exog?) lagged_exog?
-        for x1 in range(0,laglen):
+        for x1 in xrange(laglen):
             X[:,x1*nvars:(x1+1)*nvars] = endog[(laglen-1)-x1:(nobs-1)-x1,:]
-        assert np.all(X == lagmat(endog, laglen-1, trim="backward")[:-laglen])
-        #which I don't understand yet...
+#NOTE: the above loop is faster than lagmat
+#        assert np.all(X == lagmat(endog, laglen-1, trim="backward")[:-laglen])
+
         if self._useconst: # let user handle this?
             X = sm.add_constant(X,prepend=True)
-#TODO:change to sparse matrices?
-        diag_X = linalg.block_diag(*[X]*nvars)
+
+# diag
+#        diag_X = linalg.block_diag(*[X]*nvars)
+
+#Sparse: Similar to SUR
 #        spdiag_X = sparse.lil_matrix(diag_X.shape)
 #        for i in range(nvars):
 #            spdiag_X[i*shape0:shape0*(i+1),i*shape1:(i+1)*shape1] = X
-#TODO: the below will be ok (get feedback on other ones from ML)
-#could also use SUR for this.
 #        spX = sparse.kron(sparse.eye(20,20),X).todia()
-        results = GLS(Y,diag_X).fit()
-        params = results.params.reshape(neqs,-1)
+
+#        results = GLS(Y,diag_X).fit()
+
+#NOTE: just use GLS directly
+        results = GLS(Y,X).fit()
+        params = results2.params.T
+#        params = results.params.reshape(neqs,-1)
+
+
 #TODO: make a separate SVAR class or this is going to get really messy
         if structural and structural.lower() == 'bq':
             phi = np.swapaxes(params.reshape(neqs,laglen,neqs), 1,0)
@@ -150,6 +163,14 @@ class VAR2(object):
         # not sure about the last index being general
         y_stack = lagmat(endog, laglen-1, trim="both")[laglen-1:]
         X_stack = lagmat(endog, laglen-1, trim="backward")[:-laglen]
+        p = 0
+        if self._useconst:
+            sm.add_constant(X_stack, prepend=True)
+            p = 1
+
+        params = np.zeros((nvars,p+nvars*laglen))
+        for i in range(nvars):
+            params[i,:] = np.dot(np.linalg.pinv(X_stack),y_stack[:,i])
 #TODO: finish this
 
 
@@ -239,7 +260,9 @@ class VARMAResults(object):
 
     @cache_readonly
     def aic(self):
-        return linalg.det(self.omega)+2.*self.laglen*self.neqs**2/self.nobs
+#        return linalg.det(self.omega)+2.*self.laglen*self.neqs**2/self.nobs
+        return np.linalg.slogdet(self.omega)+2*self.laglen*self.neqs**2/\
+                self.nobs
 
     @cache_readonly
     def bic(self):
@@ -657,7 +680,7 @@ if __name__ == "__main__":
     vr2 = VAR2(endog = data, laglen=2)
     dataset = sm.datasets.macrodata.load()
     data = dataset.data
-    XX = data[['realinv','realgdp','realcons']].view(float).reshape(-1,3)
+    XX = data[['realinv','realgdp','realcons']].view((float,3))
     XX = np.diff(np.log(XX), axis=0)
     vrx = VAR(data=XX,laglen=2)
     vrx2 = VAR2(endog=XX, laglen=2)

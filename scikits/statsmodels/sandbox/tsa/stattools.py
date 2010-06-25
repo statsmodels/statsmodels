@@ -15,10 +15,137 @@ class ResultsStore(object):
     def __str__(self):
         return self._str
 
+def add_trend(X, trend="c", prepend=False):
+    """
+    Adds a trend and/or constant to an array.
+
+    Parameters
+    ----------
+    X : array-like
+        Original array of data.
+    trend : str {"c","ct","ctt"}
+        "c" add constnat
+        "ct" add constant and linear trend
+        "ctt" add constant and linear and quadratic trend.
+    prepend : bool
+        If True, prepends the new data to the columns of X.
+
+    Notes
+    -----
+    Returns columns as ["ctt","ct","c"] whenever applicable.  There is currently
+    no checking for an existing constant or trend.
+
+    See also
+    --------
+    scikits.statsmodels.add_constant
+    """
+    #TODO: could be generalized for trend of aribitrary order
+    trend = trend.lower()
+    if trend == "c":    # handles structured arrays
+        return sm.add_constant(X, prepend=prepend)
+    elif trend == "ct":
+        trendorder = 1
+    elif trend == "ctt":
+        trendorder = 2
+    else:
+        raise ValueError("trend %s not understood") % trend
+    X = np.asanyarray(X)
+    nobs = len(X)
+    trendarr = np.vander(np.arange(1,nobs+1, dtype=float), trendorder+1)
+    if not X.dtype.names:
+        if not prepend:
+            X = np.column_stack((X, trendarr))
+        else:
+            X = np.column_stack((trendarr, X))
+    else:
+        return_rec = data.__clas__ is np.recarray
+        if trendorder == 1:
+            dt = [('trend',float),('const',float)]
+        elif trendorder == 2:
+            dt = [('trend_squared', float),('trend',float),('const',float)]
+        trendarr = trendarr.view(dt)
+        if prepend:
+            X = nprf.append_fields(trendarr, X.dtype.names, [X[i] for i
+                in data.dtype.names], usemask=False, asrecarray=return_rec)
+        else:
+            X = nprf.append_fields(X, trendarr.dtype.names, [trendarr[i] for i
+                in trendarr.dtype.names], usemask=false, asrecarray=return_rec)
+    return X
+
+
+def _autolag(mod, endog, exog, modargs=(), fitargs=(), lagstart=1,
+        maxlag=None, method=None):
+    """
+    Returns the results for the lag length that maximimizes the info criterion.
+
+    Parameters
+    ----------
+    mod : Model class
+        Model estimator class.
+    modargs : tuple
+        args to pass to model.  See notes.
+    fitargs : tuple
+        args to pass to fit.  See notes.
+    lagstart : int
+        The first zero-indexed column to hold a lag.  See Notes.
+    maxlag : int
+        The highest lag order for lag length selection.
+    method : str {"aic","bic","t-stat","hic"}
+        aic - Akaike Information Criterion
+        bic - Bayes Information Criterion
+        t-stat - Based on last lag
+        hq - Hannan-Quinn
+
+    Returns
+    -------
+    icbest : float
+        Best information criteria.
+    bestlag : int
+        The lag length that maximizes the information criterion.
+
+
+    Notes
+    -----
+    Does estimation like mod(endog, exog[:,:i], *modargs).fit(*fitargs)
+    where i goes from lagstart to lagstart+maxlag+1.  Therefore, lags are
+    assumed to be in contiguous columns from low to high lag length with
+    the highest lag in the last column.
+    """
+#TODO: can tcol be replaced by maxlag + 2?
+#TODO: This could be changed to laggedRHS and exog keyword arguments if this
+#    will be more general.
+
+    results = {}
+    method = method.lower()
+    for lag in range(int(lagstart),int(maxlag+1)):
+        results[lag] = mod(endog, exog[:,:lag]).fit(*fitargs)
+    if method == "aic":
+        icbest, bestlag = max((v.aic,k) for k,v in results.iteritems())
+    elif method == "bic":
+        icbest, bestlag = max((v.bic,k) for k,v in results.iteritems())
+    elif method == "t-stat":
+        lags = sorted(results.keys())[::-1]
+#        stop = stats.norm.ppf(.95)
+        stop = 1.6448536269514722
+        i = 0
+        icbest, bestlag = results[lags[i]].t(-1), lags[i]
+        i += 1
+        while not (abs(icbest) >= stop):
+            lastt, bestlag = results[lags[i]].t(-1), lags[i]
+            i += 1
+    elif method == "hq":
+        icbest, bestlag = max((v.hqic,k) for k,v in results.iteritems())
+    else:
+        raise ValueError("Information Criterion %s not understood.") % method
+    return icbest, bestlag
+
+# See:
+#Ng and Perron(2001), Lag length selection and the construction of unit root
+#tests with good size and power, Econometrica, Vol 69 (6) pp 1519-1554
 #TODO: include drift keyword, only valid with regression == "c"
 # just changes the distribution of the test statistic to a t distribution
 def adfuller(x, maxlag=None, regression="c", autolag='AIC',
-    store=False):
+    store=False, regresults=False):
     '''Augmented Dickey-Fuller unit root test
 
     The Augmented Dickey-Fuller test can be used to test for a unit root in a
@@ -43,9 +170,11 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
         * 't-stat' based choice of maxlag.  Starts with maxlag and drops a
           lag until the t-statistic on the last lag length is significant at
           the 95 % level.
-    store : {False, True}
+    store : bool
         If True, then a result instance is returned additionally to
         the adf statistic
+    regresults : bool
+        If True, the full regression results are returned.
 
     Returns
     -------
@@ -61,6 +190,10 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
     critical values : dict
         Critical values for the test statistic at the 1 %, 5 %, and 10 % levels.
         Based on MacKinnon (2010)
+    icbest : float
+        The maximized information criterion if autolag is not None.
+    regresults : RegressionResults instance
+        The
     resstore : (optional) instance of ResultStore
         an instance of a dummy class with results attached as attributes
 
@@ -94,14 +227,7 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
         raise ValueError("regression option %s not understood") % regression
     x = np.asarray(x)
     nobs = x.shape[0]
-    if maxlag is None:
-        #from Greene referencing Schwert 1989
-        maxlag = 12. * np.power(nobs/100., 1/4.)
 
-    xdiff = np.diff(x)
-
-    xdall = lagmat(xdiff[:,None], maxlag, trim='both')
-    nobs = xdall.shape[0]
     if regression == 'c':
         trendorder = 0
     elif regression == 'nc':
@@ -110,52 +236,69 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
         trendorder = 1
     elif regression == 'ctt':
         trendorder = 2
+    # only make the trend once with biggest nobs
     trend = np.vander(np.arange(nobs), trendorder+1)
+
+    if maxlag is None:
+        #from Greene referencing Schwert 1989
+        maxlag = 12. * np.power(nobs/100., 1/4.)
+
+    xdiff = np.diff(x)
+    xdall = lagmat(xdiff[:,None], maxlag, trim='both')
+    nobs = xdall.shape[0]
+
     xdall[:,0] = x[-nobs-1:-1] # replace 0 xdiff with level of x
     xdshort = xdiff[-nobs:]
 #    xdshort = x[-nobs:]
-#TODO: allow for this as endog, with Phillips Perron or DF test?
+#TODO: allow for 2nd xdshort as endog, with Phillips Perron or DF test?
 
     if store:
         resstore = ResultsStore()
-
     if autolag:
-        autolag = autolag.lower()
+        if trendorder is not -1:
+            fullRHS = np.column_stack((trend[:nobs],xdall))
+        else:
+            fullRHS = xdall
+        lagstart = trendorder + 1
+        icbest, bestlag = _autolag(sm.OLS, xdshort, fullRHS, lagstart=lagstart,
+                maxlag=maxlag, method=autolag)
+#        autolag = autolag.lower()
+
         #search for lag length with highest information criteria
         #Note: I use the same number of observations to have comparable IC
-        results = {}
-        for mlag in range(1,int(maxlag+1)):  # +1 so maxlag is inclusive
-            results[mlag] = sm.OLS(xdshort, np.column_stack([xdall[:,:mlag+1],
-                trend])).fit()
-            #NOTE: mlag+1 since level is in first column.
 
-        if autolag == 'aic':
-            icbest, bestlag = max((v.aic,k) for k,v in results.iteritems())
-        elif autolag == 'bic':
-            icbest, bestlag = max((v.bic,k) for k,v in results.iteritems())
-        elif autolag == 't-stat':
-            lags = sorted(results.keys())[::-1]
-            stop = stats.norm.ppf(.95)
-            i = 0
-            lastt, bestlag = results[lags[i]].t(-trendorder-1)
-            i += 1
-            while not (abs(lastt) >= stop):
-                lastt, bestlag = results[lags[i]].t(-trendorder-1)
-                i += 1
-        else:
-            raise ValueError("autolag can be None, 'aic', 'bic', or 't-stat'")
+#        results = {}
+#        for mlag in range(1,int(maxlag+1)):  # +1 so maxlag is inclusive
+#            results[mlag] = sm.OLS(xdshort, np.column_stack([xdall[:,:mlag],
+#                trend])).fit()
+#        if autolag == 'aic':
+#            icbest, bestlag = max((v.aic,k) for k,v in results.iteritems())
+#        elif autolag == 'bic':
+#            icbest, bestlag = max((v.bic,k) for k,v in results.iteritems())
+#        elif autolag == 't-stat':
+#            lags = sorted(results.keys())[::-1]
+#            stop = stats.norm.ppf(.95)
+#            i = 0
+#            lastt, bestlag = results[lags[i]].t(-trendorder-1)
+#            i += 1
+#            while not (abs(lastt) >= stop):
+#                lastt, bestlag = results[lags[i]].t(-trendorder-1)
+#                i += 1
+#        else:
+#            raise ValueError("autolag can be None, 'aic', 'bic', or 't-stat'")
 
         #rerun ols with best autolag
         xdall = lagmat(xdiff[:,None], bestlag, trim='both')
         nobs = xdall.shape[0]
-        trend = np.vander(np.arange(nobs), trendorder+1)
+#        trend = np.vander(np.arange(nobs), trendorder+1)
         xdall[:,0] = x[-nobs-1:-1] # replace 0 xdiff with level of x
         xdshort = xdiff[-nobs:]
         usedlag = bestlag
     else:
         usedlag = maxlag
 
-    resols = sm.OLS(xdshort, np.column_stack([xdall[:,:usedlag+1],trend])).fit()
+    resols = sm.OLS(xdshort, np.column_stack([xdall[:,:usedlag+1],
+        trend[:nobs]])).fit()
     #NOTE: should be usedlag+1 since the first column is the level?
     adfstat = resols.t(0)
 #    adfstat = (resols.params[0]-1.0)/resols.bse[0]
@@ -174,12 +317,16 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
         resstore.usedlag = usedlag
         resstore.adfstat = adfstat
         resstore.critvalues = critvalues
-        resstore.nobs = None
+        resstore.nobs = nobs
         resstore.H0 = "The coefficient on the lagged level equals 1"
         resstore.HA = "The coefficient on the lagged level < 1"
+        resstore.icbest = icbest
         return adfstat, pvalue, critvalues, resstore
     else:
-        return adfstat, pvalue, usedlag, nobs, critvalues
+        if not autolag:
+            return adfstat, pvalue, usedlag, nobs, critvalues
+        else:
+            return adfstat, pvalue, usedlag, nobs, critvalues, icbest
 
 def acovf(x, unbiased=False, demean=True):
     '''
@@ -509,10 +656,13 @@ if __name__=="__main__":
     data = sm.datasets.macrodata.load().data
     x = data['realgdp']
 # adf is tested now.
-#    adf = adfuller(x,4, autolag=None)
+    adf = adfuller(x,4, autolag=None)
+    adfbic = adfuller(x, autolag="bic")
+    adfaic = adfuller(x, autolag="aic")
+    adftstat = adfuller(x, autolag="t-stat")
 
 # acf is tested now
-#    acf1,ci1,Q,pvalue = acf(x, nlags=40, confint=95, qstat=True)
+    acf1,ci1,Q,pvalue = acf(x, nlags=40, confint=95, qstat=True)
 
 # pacf is tested now
 #    pacf1 = pacorr(x)
