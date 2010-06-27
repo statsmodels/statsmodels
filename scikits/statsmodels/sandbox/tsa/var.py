@@ -62,6 +62,7 @@ class VAR2(object):
             notes.
         maxlag : int, optional
             The highest lag order for lag length selection according to `ic`.
+            The default is 12 * (nobs/100.)**(1./4)
         ic : str {"aic","bic","hq"} or None, optional
             Information criteria to maximize for lag length selection.
 
@@ -121,7 +122,7 @@ class VAR2(object):
 
 #NOTE: just use GLS directly
         results = GLS(Y,X).fit()
-        params = results2.params.T
+        params = results.params.T
 #        params = results.params.reshape(neqs,-1)
 
 
@@ -185,6 +186,45 @@ VAR_opts['IRF_periods'] = 20
 #TODO: correct results if fit by 'BQ'
 class VARMAResults(object):
     """
+    Holds the results for VAR models.
+
+    Parameters
+    -----------
+    model
+    results
+    params
+
+    Attributes
+    ----------
+    aic
+    avobs : float
+        Available observations for estimation.  The size of the whole sample
+        less the pre-sample observations needed for lags.
+    bic : float
+
+    df_resid : float
+        Residual degrees of freedom.
+    dfk : float
+        Degrees of freedom correction.
+    fittedvalues
+    laglen
+    model
+    ncoefs
+    neqs
+    nobs : int
+        Total number of observations in the sample.
+    omega : ndarray
+        Sigma hat matrix.  Each element i,j is the average product of the OLS
+        residual for variable i and the OLS residual for variable j or
+        np.dot(resid.T,resid)/avobs.  There is no correction for the degrees
+        of freedom.
+    omega_beta_gls
+    omega_beta_gls_va
+    omega_beta_ols
+    omega_beta_va
+
+    Methods
+    -------
     """
     def __init__(self, model, results, params):
         self.results = results
@@ -213,11 +253,16 @@ class VARMAResults(object):
     def resid(self):
         return self.results.resid.reshape(-1,self.neqs,order='F')
 
-#TODO: pass in from fit like regression models?
     @cache_readonly
-    def omega(self): # variance of 'shocks' across equations
+    def omega(self):
         resid = self.resid
-        return np.dot(resid.T,resid)/(self.avobs - self.dfk)
+        return np.dot(resid.T,resid)/self.avobs
+#TODO: include dfk correction anywhere or not?  No small sample bias?
+
+#    @cache_readonly
+#    def omega(self): # variance of residuals across equations
+#        resid = self.resid
+#        return np.dot(resid.T,resid)/(self.avobs - self.dfk)
 
     @cache_readonly
     def omega_beta_ols(self): # the covariance of each equation (check)
@@ -236,6 +281,7 @@ class VARMAResults(object):
         X = self.model.X
         resid = self.resid
         neqs = self.neqs
+        ncoefs = self.ncoefs
         XTXinv = self.results.normalized_cov_params[:ncoefs,:ncoefs]
         # Get GLS Covariance
         # this is just a list of length nvars, with each
@@ -261,8 +307,15 @@ class VARMAResults(object):
     @cache_readonly
     def aic(self):
 #        return linalg.det(self.omega)+2.*self.laglen*self.neqs**2/self.nobs
-        return np.linalg.slogdet(self.omega)+2*self.laglen*self.neqs**2/\
-                self.nobs
+        logdet = np.linalg.slogdet(self.omega)
+#       det = logdet[0] * np.exp(logdet[1])
+        if logdet[0] == -1:
+            raise ValueError("Omega matrix is not positive definite")
+        elif logdet[0] == 0:
+            raise ValueError("Omega matrix is singluar")
+        else:
+            logdet = logdet[1]
+        return logdet+2*self.laglen*self.neqs**2/self.nobs
 
     @cache_readonly
     def bic(self):

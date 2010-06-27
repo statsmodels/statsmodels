@@ -144,6 +144,7 @@ def _autolag(mod, endog, exog, modargs=(), fitargs=(), lagstart=1,
 #tests with good size and power, Econometrica, Vol 69 (6) pp 1519-1554
 #TODO: include drift keyword, only valid with regression == "c"
 # just changes the distribution of the test statistic to a t distribution
+#TODO: autolag is untested
 def adfuller(x, maxlag=None, regression="c", autolag='AIC',
     store=False, regresults=False):
     '''Augmented Dickey-Fuller unit root test
@@ -260,32 +261,10 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
         else:
             fullRHS = xdall
         lagstart = trendorder + 1
-        icbest, bestlag = _autolag(sm.OLS, xdshort, fullRHS, lagstart=lagstart,
-                maxlag=maxlag, method=autolag)
-#        autolag = autolag.lower()
-
         #search for lag length with highest information criteria
         #Note: I use the same number of observations to have comparable IC
-
-#        results = {}
-#        for mlag in range(1,int(maxlag+1)):  # +1 so maxlag is inclusive
-#            results[mlag] = sm.OLS(xdshort, np.column_stack([xdall[:,:mlag],
-#                trend])).fit()
-#        if autolag == 'aic':
-#            icbest, bestlag = max((v.aic,k) for k,v in results.iteritems())
-#        elif autolag == 'bic':
-#            icbest, bestlag = max((v.bic,k) for k,v in results.iteritems())
-#        elif autolag == 't-stat':
-#            lags = sorted(results.keys())[::-1]
-#            stop = stats.norm.ppf(.95)
-#            i = 0
-#            lastt, bestlag = results[lags[i]].t(-trendorder-1)
-#            i += 1
-#            while not (abs(lastt) >= stop):
-#                lastt, bestlag = results[lags[i]].t(-trendorder-1)
-#                i += 1
-#        else:
-#            raise ValueError("autolag can be None, 'aic', 'bic', or 't-stat'")
+        icbest, bestlag = _autolag(sm.OLS, xdshort, fullRHS, lagstart=lagstart,
+                maxlag=maxlag, method=autolag)
 
         #rerun ols with best autolag
         xdall = lagmat(xdiff[:,None], bestlag, trim='both')
@@ -438,6 +417,7 @@ def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False):
     but the autocorrelation is not an unbiased estimtor.
     '''
     nobs = len(x)
+    d = nobs # changes if unbiased
     if not fft:
         avf = acovf(x, unbiased=unbiased, demean=True)
         acf = np.take(avf/avf[0], range(1,nlags+1))
@@ -445,9 +425,8 @@ def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False):
         x0 = x - x.mean()
         Frf = np.fft.fft(x0, n=nobs*2) # zero-pad for separability
         if unbiased:
-            xi = np.arange(1,nobs+1)
-            nobs = np.hstack((xi,xi[::-1][::-1]))
-        acf = (np.fft.ifft(Frf * np.conjugate(Frf))/nobs)[:nobs]
+            d = nobs - np.arange(nobs)
+        acf = np.fft.ifft(Frf * np.conjugate(Frf))[:nobs]/d
         acf /= acf[0]
         acf = np.take(np.real(acf), range(1,nlags+1))
     if not (confint or qstat):
@@ -663,6 +642,10 @@ if __name__=="__main__":
 
 # acf is tested now
     acf1,ci1,Q,pvalue = acf(x, nlags=40, confint=95, qstat=True)
+    acf2, ci2,Q2,pvalue2 = acf(x, nlags=40, confint=95, fft=True, qstat=True)
+    acf3,ci3,Q3,pvalue3 = acf(x, nlags=40, confint=95, qstat=True, unbiased=True)
+    acf4, ci4,Q4,pvalue4 = acf(x, nlags=40, confint=95, fft=True, qstat=True,
+            unbiased=True)
 
 # pacf is tested now
 #    pacf1 = pacorr(x)
