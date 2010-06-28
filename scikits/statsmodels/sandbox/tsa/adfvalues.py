@@ -211,9 +211,10 @@ def mackinnonp(teststat, regression="c", N=1, lags=None):
         return 0.0
     if teststat <= starstat[N-1]:
         tau_coef = eval("tau_" + regression + "_smallp["+str(N-1)+"]")
+#        teststat = np.log(np.abs(teststat))
+#above is only for z stats
     else:
         tau_coef = eval("tau_" + regression + "_largep["+str(N-1)+"]")
-        teststat = np.log(np.abs(teststat))
     return norm.cdf(polyval(tau_coef[::-1], teststat))
 
 # These are the new estimates from MacKinnon 2010
@@ -224,6 +225,7 @@ def mackinnonp(teststat, regression="c", N=1, lags=None):
 tau_nc_2010 = [[ [-2.56574,-2.2358,-3.627,0], # N = 1
                  [-1.94100,-0.2686,-3.365,31.223],
                  [-1.61682, 0.2656, -2.714, 25.364]]]
+tau_nc_2010 = np.asarray(tau_nc_2010)
 
 tau_c_2010 = [[ [-3.43035,-6.5393,-16.786,-79.433], # N = 1, 1%
                 [-2.86154,-2.8903,-4.234,-40.040],  # 5 %

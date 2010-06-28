@@ -828,7 +828,7 @@ T statistics'
                 df_denom=self.model.df_resid)
 
 #TODO: untested for GLMs?
-    def f_test(self, r_matrix, scale=1.0, invcov=None):
+    def f_test(self, r_matrix, q_matrix=None, scale=1.0, invcov=None):
         """
         Compute an Fcontrast/F-test for a contrast matrix.
 
@@ -847,6 +847,9 @@ T statistics'
             p is the number of regressors in the full model fit.
             If q is 1 then f_test(r_matrix).fvalue is equivalent to
             the square of t_test(r_matrix).t
+        q_matrix : array-like
+            q x 1 array, that represents the sum of each linear restriction.
+            Default is all zeros for each restriction.
         scale : float, optional
             Default is 1.0 for no scaling.
         invcov : array-like, optional
@@ -897,14 +900,21 @@ T statistics'
         if self.normalized_cov_params is None:
             raise ValueError, 'need covariance of parameters for computing F statistics'
 
-        cparams = np.dot(r_matrix, self.params)
-
-        q = r_matrix.shape[0]
+        cparams = np.dot(r_matrix, self.params[:,None])
+        J = float(r_matrix.shape[0]) # number of restrictions
+        if q_matrix is None:
+            q_matrix = np.zeros(J)
+        else:
+            q_matrix = np.asarray(q_matrix)
+        if q_matrix.ndim == 1:
+            q_matrix = q_matrix[:,None]
+            if q_matrix.shape[0] != J:
+                raise ValueError("r_matrix and q_matrix must have the same \
+number of rows")
+        Rbq = cparams - q_matrix
         if invcov is None:
-            invcov = np.linalg.inv(self.cov_params(r_matrix=r_matrix,
-                scale=scale))
-        F = np.add.reduce(np.dot(invcov, cparams) * cparams, 0) * \
-                recipr((q * self.scale))
+            invcov = np.linalg.inv(self.cov_params(r_matrix=r_matrix))
+        F = np.dot(np.dot(Rbq.T,invcov),Rbq)/J
         return ContrastResults(F=F, df_denom=self.model.df_resid,
                     df_num=invcov.shape[0])
 

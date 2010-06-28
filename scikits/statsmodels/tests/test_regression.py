@@ -242,6 +242,33 @@ class TestFTest2(TestFtest):
     def test_df_num(self):
         assert_equal(self.Ftest1.df_num, 2)
 
+class TestFtestQ(TestFtest):
+    """
+    A joint hypothesis test that Rb = q.  Coefficient tests are essentially
+    made up.  Test values taken from Stata.
+    """
+    def setup(self):
+        R = np.array([[0,1,1,0,0,0,0],
+              [0,1,0,1,0,0,0],
+              [0,1,0,0,0,0,0],
+              [0,0,0,0,1,0,0],
+              [0,0,0,0,0,1,0]])
+        q = np.array([0,0,0,1,0])
+        self.Ftest1 = self.res1.f_test(R,q)
+
+    def test_fvalue(self):
+        assert_almost_equal(self.Ftest1.fvalue, 70.115557, 5)
+
+    def test_pvalue(self):
+        assert_almost_equal(self.Ftest1.pvalue, 6.229e-07, 10)
+
+    def test_df_denom(self):
+        assert_equal(self.Ftest1.df_denom, 9)
+
+    def test_df_num(self):
+        assert_equal(self.Ftest1.df_num, 5)
+
+
 class TestTtest(object):
     '''
     Test individual t-tests.  Ie., are the coefficients significantly

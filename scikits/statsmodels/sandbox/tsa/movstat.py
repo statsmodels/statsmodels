@@ -270,40 +270,6 @@ def movmoment(x, k, windowsize=3, lag='lagged'):
         return signal.correlate(xext**k, avgkern[:,None], 'full')[sl,:]
 
 
-#None of the acovf, ... are tested; starting index? orientation?
-def acovf(x, unbiased=True, demean=True):
-    ''' autocovariance for 1D
-
-    Parameters
-    ----------
-    x : array
-       time series data
-    unbiased : boolean
-       if True, then denominators is n-k, otherwise n
-
-    Returns
-    -------
-    acovf : array
-        autocovariance function
-
-    Notes
-    -----
-    This uses np.correlate which does full convolution. For very long time
-    series it is recommended to use fft convolution instead.
-
-    '''
-    n = len(x)
-    if demean:
-        xo = x - x.mean();
-    else:
-        xo = x
-    if unbiased:
-        xi = np.ones(n);
-        d = np.correlate(xi, xi, 'full')
-    else:
-        d = n
-    return (np.correlate(xo, xo, 'full') / d)[n-1:]
-
 def ccovf(x, y, unbiased=True, demean=True):
     ''' crosscovariance for 1D
 
@@ -338,34 +304,6 @@ def ccovf(x, y, unbiased=True, demean=True):
         d = n
     return (np.correlate(xo,yo,'full') / d)[n-1:]
 
-def acf(x, unbiased=True):
-    '''autocorrelation function for 1d
-
-    Parameters
-    ----------
-    x : array
-       time series data
-    unbiased : boolean
-       if True, then denominators for autocovariance is n-k, otherwise n
-
-    Returns
-    -------
-    acf : array
-        autocorrelation function
-
-    Notes
-    -----
-    This is based np.correlate which does full convolution. For very long time
-    series it is recommended to use fft convolution instead.
-
-    If unbiased is true, the denominator for the autocovariance is adjusted
-    but the autocorrelation is not an unbiased estimtor.
-
-    '''
-
-    avf = acovf(x, unbiased=unbiased, demean=True)
-    return avf/avf[0]
-
 def ccf(x, y, unbiased=True):
     '''cross-correlation function for 1d
     Parameters
@@ -393,63 +331,7 @@ def ccf(x, y, unbiased=True):
     return cvf / (np.std(x) * np.std(y))
 
 
-def pacf_yw(x, maxlag=20, method='unbiased'):
-    '''Partial autocorrelation estimated with non-recursive yule_walker
 
-    Parameters
-    ----------
-    x : 1d array
-        observations of time series for which pacf is calculated
-    maxlag : int
-        largest lag for which pacf is returned
-    method : 'unbiased' (default) or 'mle'
-        method for the autocovariance calculations in yule walker
-
-    Returns
-    -------
-    pacf : 1d array
-        partial autocorrelations, maxlag+1 elements
-
-    Notes
-    -----
-    This solves yule_walker for each desired lag and contains
-    currently duplicate calculations.
-
-    '''
-    xm = x - x.mean()
-    pacf = [1.]
-    for k in range(1, maxlag+1):
-        pacf.append(sm.regression.yule_walker(x, k, method=method)[0][-1])
-    return np.array(pacf)
-
-def pacf_ols(x, maxlag=20):
-    '''Partial autocorrelation estimated with non-recursive OLS
-
-    Parameters
-    ----------
-    x : 1d array
-        observations of time series for which pacf is calculated
-    maxlag : int
-        largest lag for which pacf is returned
-
-    Returns
-    -------
-    pacf : 1d array
-        partial autocorrelations, maxlag+1 elements
-
-    Notes
-    -----
-    This solves a separate OLS estimation for each desired lag.
-
-    '''
-    from scikits.statsmodels.sandbox.tools.tools_tsa import lagmat
-    xlags = lagmat(x-x.mean(), maxlag)
-    pacfols = [1.]
-    for k in range(1, maxlag+1):
-        res = sm.OLS(xlags[k:,0], xlags[k:,1:k+1]).fit()
-        #print res.params
-        pacfols.append(res.params[-1])
-    return np.array(pacfols)
 
 
 
@@ -471,20 +353,10 @@ def pacf_ols(x, maxlag=20):
 ##    pass
 ##    #x=0.5**np.arange(10);xm=x-x.mean();a=np.correlate(xm,xo,'full')
 
-__all__ = ['movorder', 'movmean', 'movvar', 'movmoment', 'acovf', 'ccovf',
-           'acf', 'ccf', 'pacf_yw', 'pacf_ols']
+__all__ = ['movorder', 'movmean', 'movvar', 'movmoment', 'ccovf',
+           'ccf']
 
 if __name__ == '__main__':
-
-
-    T = 20
-    K = 2
-    x = np.column_stack([np.arange(T)]*K)
-    aav = acovf(x[:,0])
-    print aav[0] == np.var(x[:,0])
-    aac = acf(x[:,0])
-
-
 
     print '\ncheckin moving mean and variance'
     nobs = 10
@@ -559,9 +431,10 @@ if __name__ == '__main__':
                 58.5,  59.5,  60.5,  61.5,  62.5,  63.5,  64.5,  65.5,  66.5,
                 67.5,  68.5,  69.5,  70.5,  71.5,  72.5,  73.5,  74.5,  75.5,
                 76.5,  77.5,  78.5,  79.5,  80.5,  81.5,  82.5,  83.5,  84.5,
-                85.5,  86.5,  87.5,  88.5,  89.5,  90.5,  91.5,  92.5,  93.5,  94.5])
+                85.5,  86.5,  87.5,  88.5,  89.5,  90.5,  91.5,  92.5,  93.5,
+                94.5])
 
-    assert_array_almost_equal(xld, movmean(np.arange(100), 10,'lagged'))
+    assert_array_almost_equal(xg, movmean(np.arange(100), 10,'lagged'))
 
     xd = np.array([  0.3,   0.6,   1. ,   1.5,   2.1,   2.8,   3.6,   4.5,   5.5,
                  6.5,   7.5,   8.5,   9.5,  10.5,  11.5,  12.5,  13.5,  14.5,
@@ -575,7 +448,7 @@ if __name__ == '__main__':
                 78.5,  79.5,  80.5,  81.5,  82.5,  83.5,  84.5,  85.5,  86.5,
                 87.5,  88.5,  89.5,  90.5,  91.5,  92.5,  93.5,  94.5,  95.4,
                 96.2,  96.9,  97.5,  98. ,  98.4,  98.7,  98.9,  99. ])
-    assert_array_almost_equal(xld, movmean(np.arange(100), 10,'leading'))
+    assert_array_almost_equal(xd, movmean(np.arange(100), 10,'leading'))
 
     xc = np.array([ 1.36363636,   1.90909091,   2.54545455,   3.27272727,
                  4.09090909,   5.        ,   6.        ,   7.        ,
@@ -602,4 +475,4 @@ if __name__ == '__main__':
                 88.        ,  89.        ,  90.        ,  91.        ,
                 92.        ,  93.        ,  94.        ,  94.90909091,
                 95.72727273,  96.45454545,  97.09090909,  97.63636364])
-    assert_array_almost_equal(xld, movmean(np.arange(100), 11,'centered'))
+    assert_array_almost_equal(xc, movmean(np.arange(100), 11,'centered'))

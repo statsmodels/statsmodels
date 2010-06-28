@@ -41,15 +41,15 @@ class VAR2(object):
         self.avobs = nobs - laglen
         # what's a better name for this? autonobs? lagnobs?
 
-#TODO: make ols comp default
-    def fit(self, method="ols", structural=None, dfk=None):
+#TODO: IRF, lag length selection
+    def fit(self, method="ols", structural=None, dfk=None, maxlag=None,
+            ic=None):
         """
         Fit the VAR model
 
         Parameters
         ----------
         method : str
-            "ols_comp" fit with OLS in companion form, defaul
             "ols" fit equation by equation with OLS
             "yw" fit with yule walker
             "mle" fit with unconditional maximum likelihood
@@ -60,6 +60,11 @@ class VAR2(object):
             Small-sample bias correction.  If None, dfk = neqs * nlags +
             number of exogenous variables. Run restrictions.  Details in Lyx
             notes.
+        maxlag : int, optional
+            The highest lag order for lag length selection according to `ic`.
+            The default is 12 * (nobs/100.)**(1./4)
+        ic : str {"aic","bic","hq"} or None, optional
+            Information criteria to maximize for lag length selection.
 
         Notes
         -----
@@ -72,8 +77,6 @@ class VAR2(object):
         else:
             self.dfk = dfk
         # What's cleaner? Logic handled here and private functions or all here?
-        if method == "ols_comp":
-            return self._ols_comp()
         if method == "ols":
             return self._ols()
 #TODO: should 'BQ' just have it's own method?
@@ -93,25 +96,36 @@ class VAR2(object):
         neqs = int(self.neqs)
         endog = self.endog
         # trim from the front, unravel in F-contiguous way
-        Y = endog[laglen:,:].ravel('F')
+#        Y = endog[laglen:,:].ravel('F')
+        Y = endog[laglen:,:]
+
         X = np.zeros((avobs,nvars*laglen))
         self.X = X #TODO: rename or refactor? (exog?) lagged_exog?
-        for x1 in range(0,laglen):
+        for x1 in xrange(laglen):
             X[:,x1*nvars:(x1+1)*nvars] = endog[(laglen-1)-x1:(nobs-1)-x1,:]
-        assert np.all(X == lagmat(endog, laglen-1, trim="backward")[:-laglen])
-        #which I don't understand yet...
+#NOTE: the above loop is faster than lagmat
+#        assert np.all(X == lagmat(endog, laglen-1, trim="backward")[:-laglen])
+
         if self._useconst: # let user handle this?
             X = sm.add_constant(X,prepend=True)
-#TODO:change to sparse matrices?
-        diag_X = linalg.block_diag(*[X]*nvars)
+
+# diag
+#        diag_X = linalg.block_diag(*[X]*nvars)
+
+#Sparse: Similar to SUR
 #        spdiag_X = sparse.lil_matrix(diag_X.shape)
 #        for i in range(nvars):
 #            spdiag_X[i*shape0:shape0*(i+1),i*shape1:(i+1)*shape1] = X
-#TODO: the below will be ok (get feedback on other ones from ML)
-#could also use SUR for this.
 #        spX = sparse.kron(sparse.eye(20,20),X).todia()
-        results = GLS(Y,diag_X).fit()
-        params = results.params.reshape(neqs,-1)
+
+#        results = GLS(Y,diag_X).fit()
+
+#NOTE: just use GLS directly
+        results = GLS(Y,X).fit()
+        params = results.params.T
+#        params = results.params.reshape(neqs,-1)
+
+
 #TODO: make a separate SVAR class or this is going to get really messy
         if structural and structural.lower() == 'bq':
             phi = np.swapaxes(params.reshape(neqs,laglen,neqs), 1,0)
@@ -150,6 +164,14 @@ class VAR2(object):
         # not sure about the last index being general
         y_stack = lagmat(endog, laglen-1, trim="both")[laglen-1:]
         X_stack = lagmat(endog, laglen-1, trim="backward")[:-laglen]
+        p = 0
+        if self._useconst:
+            sm.add_constant(X_stack, prepend=True)
+            p = 1
+
+        params = np.zeros((nvars,p+nvars*laglen))
+        for i in range(nvars):
+            params[i,:] = np.dot(np.linalg.pinv(X_stack),y_stack[:,i])
 #TODO: finish this
 
 
@@ -164,6 +186,45 @@ VAR_opts['IRF_periods'] = 20
 #TODO: correct results if fit by 'BQ'
 class VARMAResults(object):
     """
+    Holds the results for VAR models.
+
+    Parameters
+    -----------
+    model
+    results
+    params
+
+    Attributes
+    ----------
+    aic
+    avobs : float
+        Available observations for estimation.  The size of the whole sample
+        less the pre-sample observations needed for lags.
+    bic : float
+
+    df_resid : float
+        Residual degrees of freedom.
+    dfk : float
+        Degrees of freedom correction.
+    fittedvalues
+    laglen
+    model
+    ncoefs
+    neqs
+    nobs : int
+        Total number of observations in the sample.
+    omega : ndarray
+        Sigma hat matrix.  Each element i,j is the average product of the OLS
+        residual for variable i and the OLS residual for variable j or
+        np.dot(resid.T,resid)/avobs.  There is no correction for the degrees
+        of freedom.
+    omega_beta_gls
+    omega_beta_gls_va
+    omega_beta_ols
+    omega_beta_va
+
+    Methods
+    -------
     """
     def __init__(self, model, results, params):
         self.results = results
@@ -192,11 +253,16 @@ class VARMAResults(object):
     def resid(self):
         return self.results.resid.reshape(-1,self.neqs,order='F')
 
-#TODO: pass in from fit like regression models?
     @cache_readonly
-    def omega(self): # variance of 'shocks' across equations
+    def omega(self):
         resid = self.resid
-        return np.dot(resid.T,resid)/(self.avobs - self.dfk)
+        return np.dot(resid.T,resid)/self.avobs
+#TODO: include dfk correction anywhere or not?  No small sample bias?
+
+#    @cache_readonly
+#    def omega(self): # variance of residuals across equations
+#        resid = self.resid
+#        return np.dot(resid.T,resid)/(self.avobs - self.dfk)
 
     @cache_readonly
     def omega_beta_ols(self): # the covariance of each equation (check)
@@ -215,6 +281,7 @@ class VARMAResults(object):
         X = self.model.X
         resid = self.resid
         neqs = self.neqs
+        ncoefs = self.ncoefs
         XTXinv = self.results.normalized_cov_params[:ncoefs,:ncoefs]
         # Get GLS Covariance
         # this is just a list of length nvars, with each
@@ -239,7 +306,16 @@ class VARMAResults(object):
 
     @cache_readonly
     def aic(self):
-        return linalg.det(self.omega)+2.*self.laglen*self.neqs**2/self.nobs
+#        return linalg.det(self.omega)+2.*self.laglen*self.neqs**2/self.nobs
+        logdet = np.linalg.slogdet(self.omega)
+#       det = logdet[0] * np.exp(logdet[1])
+        if logdet[0] == -1:
+            raise ValueError("Omega matrix is not positive definite")
+        elif logdet[0] == 0:
+            raise ValueError("Omega matrix is singluar")
+        else:
+            logdet = logdet[1]
+        return logdet+2*self.laglen*self.neqs**2/self.nobs
 
     @cache_readonly
     def bic(self):
@@ -657,7 +733,7 @@ if __name__ == "__main__":
     vr2 = VAR2(endog = data, laglen=2)
     dataset = sm.datasets.macrodata.load()
     data = dataset.data
-    XX = data[['realinv','realgdp','realcons']].view(float).reshape(-1,3)
+    XX = data[['realinv','realgdp','realcons']].view((float,3))
     XX = np.diff(np.log(XX), axis=0)
     vrx = VAR(data=XX,laglen=2)
     vrx2 = VAR2(endog=XX, laglen=2)
