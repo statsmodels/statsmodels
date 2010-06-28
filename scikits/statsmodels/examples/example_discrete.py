@@ -4,9 +4,9 @@
 import numpy as np
 import scikits.statsmodels as sm
 
-# Load the data from Spector and Mazzeo (1980)
+# load the data from Spector and Mazzeo (1980)
 # Examples follow Greene's Econometric Analysis Ch. 21 (5th Edition).
-spector_data = sm.datasets.spector.Load()
+spector_data = sm.datasets.spector.load()
 spector_data.exog = sm.add_constant(spector_data.exog)
 
 # Linear Probability Model using OLS
@@ -39,7 +39,7 @@ print logit_res.margeff()
 print "Probit Model"
 print probit_res.margeff()
 
-anes_data = sm.datasets.anes96.Load()
+anes_data = sm.datasets.anes96.load()
 anes_exog = anes_data.exog
 anes_exog[:,0] = np.log(anes_exog[:,0] + .1)
 anes_exog = np.column_stack((anes_exog[:,0],anes_exog[:,2],anes_exog[:,5:8]))
@@ -57,7 +57,7 @@ mlogit_res = mlogit_mod.fit(method='bfgs', maxiter=100)
 # Poisson model
 # This is similar to Cameron and Trivedi's Microeconometrics
 # Table 20.5; however, the data differs slightly from theirs
-rand_data = sm.datasets.randhie.Load()
+rand_data = sm.datasets.randhie.load()
 rand_exog = rand_data.exog.view(float).reshape(len(rand_data.exog), -1)
 rand_exog = sm.add_constant(rand_exog)
 poisson_mod = sm.Poisson(rand_data.endog, rand_exog)

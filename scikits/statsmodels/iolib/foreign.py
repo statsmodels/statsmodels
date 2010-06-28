@@ -624,12 +624,3 @@ def savetxt(fname, X, names=None, fmt='%.18e', delimiter=' '):
 
     for row in X:
         fh.write(format % tuple(row) + '\n')
-
-
-if __name__=="__main__":
-    try:
-        data = genfromdta('./fullauto.dta')
-    except:
-        raise ImportError, "You don't have the Stata test file downloaded into\
- this directory.  It's not distributed but you can download it here \
-http://www.stata-press.com/data/r11/fullauto.dta."

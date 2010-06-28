@@ -50,6 +50,17 @@ class Model(object):
                 raise ValueError, "exog is not 1d or 2d"
             if endog.shape[0] != exog.shape[0]:
                 raise ValueError, "endog and exog matrices are not aligned."
+            if np.any(exog.var(0) == 0):
+                # assumes one constant in first or last position
+                const_idx = np.where(exog.var(0) == 0)[0].item()
+                if const_idx == exog.shape[1] - 1:
+                    exog_names = ['x%d' % i for i in range(1,exog.shape[1])]
+                    exog_names += ['const']
+                else:
+                    exog_names = ['x%d' % i for i in range(exog.shape[1])]
+                    exog_names[const_idx] = 'const'
+                self.exog_names = exog_names
+            self.endog_names = ['y']
         self.endog = endog
         self.exog = exog
         self.nobs = float(self.endog.shape[0])
@@ -114,58 +125,346 @@ class LikelihoodModel(Model):
         """
         raise NotImplementedError
 
-    def fit(self, start_params=None, method='newton', maxiter=35, tol=1e-08):
+    def fit(self, start_params=None, method='newton', maxiter=100, full_output=1,
+            disp=1, fargs=(), callback=None, retall=0, **kwargs):
         """
         Fit method for likelihood based models
 
         Parameters
         ----------
         start_params : array-like, optional
-            An optional
+            Initial guess of the solution for the loglikelihood maximization.
+            The default is an array of zeros.
+        method : str {'newton','nm','bfgs','powell','cg', or 'ncg'}
+            Method can be 'newton' for Newton-Raphson, 'nm' for Nelder-Mead,
+            'bfgs' for Broyden-Fletcher-Goldfarb-Shanno, 'powell' for modified
+            Powell's method, 'cg' for conjugate gradient, or 'ncg' for Newton-
+            conjugate gradient. `method` determines which solver from
+            scipy.optimize is used.  The explicit arguments in `fit` are passed
+            to the solver.  Each solver has several optional arguments that are
+            not the same across solvers.  See the notes section below (or
+            scipy.optimize) for the available arguments.
+        maxiter : int
+            The maximum number of iterations to perform.
+        full_output : bool
+            Set to True to have all available output in the Results object's
+            mle_retvals attribute. The output is dependent on the solver.
+            See LikelihoodModelResults notes section for more information.
+        disp : bool
+            Set to True to print convergence messages.
+        fargs : tuple
+            Extra arguments passed to the likelihood function, i.e.,
+            loglike(x,*args)
+        callback : callable callback(xk)
+            Called after each iteration, as callback(xk), where xk is the
+            current parameter vector.
+        retall : bool
+            Set to True to return list of solutions at each iteration.
+            Available in Results object's mle_retvals attribute.
 
-        method : str
-            Method can be 'newton', 'bfgs', 'powell', 'cg', or 'ncg'.
-            The default is newton.  See scipy.optimze for more information.
-        """
-        methods = ['newton', 'bfgs', 'powell', 'cg', 'ncg']
+        Notes
+        -----
+        Optional arguments for the solvers (available in Results.mle_settings):
+
+            'newton'
+                tol : float
+                    Relative error in params acceptable for convergence.
+            'nm' -- Nelder Mead
+                xtol : float
+                    Relative error in params acceptable for convergence
+                ftol : float
+                    Relative error in loglike(params) acceptable for
+                    convergence
+                maxfun : int
+                    Maximum number of function evaluations to make.
+            'bfgs'
+                gtol : float
+                    Stop when norm of gradient is less than gtol.
+                norm : float
+                    Order of norm (np.Inf is max, -np.Inf is min)
+                epsilon
+                    If fprime is approximated, use this value for the step
+                    size. Only relevant if LikelihoodModel.score is None.
+            'cg'
+                gtol : float
+                    Stop when norm of gradient is less than gtol.
+                norm : float
+                    Order of norm (np.Inf is max, -np.Inf is min)
+                epsilon : float
+                    If fprime is approximated, use this value for the step
+                    size. Can be scalar or vector.  Only relevant if
+                    Likelihoodmodel.score is None.
+            'ncg'
+                fhess_p : callable f'(x,*args)
+                    Function which computes the Hessian of f times an arbitrary
+                    vector, p.  Should only be supplied if
+                    LikelihoodModel.hessian is None.
+                avextol : float
+                    Stop when the average relative error in the minimizer
+                    falls below this amount.
+                epsilon : float or ndarray
+                    If fhess is approximated, use this value for the step size.
+                    Only relevant if Likelihoodmodel.hessian is None.
+            'powell'
+                xtol : float
+                    Line-search error tolerance
+                ftol : float
+                    Relative error in loglike(params) for acceptable for
+                    convergence.
+                maxfun : int
+                    Maximum number of function evaluations to make.
+                start_direc : ndarray
+                    Initial direction set.
+                """
+        methods = ['newton', 'nm', 'bfgs', 'powell', 'cg', 'ncg']
         if start_params is None:
-            start_params = [0]*self.exog.shape[1] # will fail for shape (K,)
-        if not method in methods:
-            raise ValueError, "Unknown fit method %s" % method
-        f = lambda params: -self.loglike(params)
-        score = lambda params: -self.score(params)
-#        hess = lambda params: -self.hessian(params)
-        hess = None
-#TODO: can we have a unified framework so that we can just do func = method
-# and write one call for each solver?
+            if self.exog is not None:
+                start_params = [0]*self.exog.shape[1] # fails for shape (K,)?
+            else:
+                raise ValueError("If exog is None, then start_params should be \
+specified")
 
-        if method.lower() == 'newton':
-            iteration = 0
-            start = np.array(start_params)
-            history = [np.inf, start]
-            while (iteration < maxiter and np.all(np.abs(history[-1] - \
-                    history[-2])>tol)):
-                H = self.hessian(history[-1])
-                newparams = history[-1] - np.dot(np.linalg.inv(H),
-                        self.score(history[-1]))
-                history.append(newparams)
-                iteration += 1
-            mlefit = LikelihoodModelResults(self, newparams)
-            mlefit.iteration = iteration
+        if method.lower() not in methods:
+            raise ValueError, "Unknown fit method %s" % method
+        method = method.lower()
+#TODO: separate args from nonarg taking score and hessian, ie.,
+# user-supplied and numerically evaluated
+# estimate frprime doesn't take args in most (any?) of the optimize function
+        f = lambda params, *args: -self.loglike(params, *args)
+        score = lambda params: -self.score(params)
+        try:
+            hess = lambda params: -self.hessian(params)
+        except:
+            hess = None
+        if method == 'newton':
+            tol = kwargs.setdefault('tol', 1e-8)
+            score = lambda params: self.score(params)
+            hess = lambda params: self.hessian(params)
+            iterations = 0
+            oldparams = np.inf
+            newparams = np.asarray(start_params)
+            if retall:
+                history = [oldparams, newparams]
+            while (iterations < maxiter and np.all(np.abs(newparams -
+                    oldparams) > tol)):
+                H = hess(newparams)
+                oldparams = newparams
+                newparams = oldparams - np.dot(np.linalg.inv(H),
+                        score(oldparams))
+                if retall:
+                    history.append(newparams)
+                if callback is not None:
+                    callback(newparams)
+                iterations += 1
+            fval = f(newparams, *fargs) # this is the negative likelihood
+            if iterations == maxiter:
+                warnflag = 1
+                if disp:
+                    print "Warning: Maximum number of iterations has been \
+exceeded."
+                    print "         Current function value: %f" % fval
+                    print "         Iterations: %d" % iterations
+            else:
+                warnflag = 0
+                if disp:
+                    print "Optimization terminated successfully."
+                    print "         Current function value: %f" % fval
+                    print "         Iterations %d" % iterations
+            if full_output:
+                xopt, fopt, niter, gopt, hopt = (newparams, f(newparams, *fargs),
+                    iterations, score(newparams), hess(newparams))
+                converged = not warnflag
+                retvals = {'fopt' : fopt, 'iterations' : niter, 'score' : gopt,
+                        'Hessian' : hopt, 'warnflag' : warnflag,
+                        'converged' : converged}
+                if retall:
+                    retvals.update({'allvecs' : history})
+            else:
+                retvals = newparams
+        elif method == 'nm':    # Nelder-Mead
+            xtol = kwargs.setdefault('xtol', 0.0001)
+            ftol = kwargs.setdefault('ftol', 0.0001)
+            maxfun = kwargs.setdefault('maxfun', None)
+            retvals = optimize.fmin(f, start_params, args=fargs, xtol=xtol,
+                        ftol=ftol, maxiter=maxiter, maxfun=maxfun,
+                        full_output=full_output, disp=disp, retall=retall,
+                        callback=callback)
+            if full_output:
+                if not retall:
+                    xopt, fopt, niter, fcalls, warnflag = retvals
+                else:
+                    xopt, fopt, niter, fcalls, warnflag, allvecs = retvals
+                converged = not warnflag
+                retvals = {'fopt' : fopt, 'iterations' : niter,
+                    'fcalls' : fcalls, 'warnflag' : warnflag,
+                    'converged' : converged}
+                if retall:
+                    retvals.update({'allvecs' : allvecs})
         elif method == 'bfgs':
-            xopt, fopt, gopt, Hopt, func_calls, grad_calls, warnflag = \
-                optimize.fmin_bfgs(f, start_params, score, full_output=1,
-                        maxiter=maxiter, gtol=tol)
-            converge = not warnflag
-            mlefit = LikelihoodModelResults(self, xopt)
+            gtol = kwargs.setdefault('gtol', 1.0000000000000001e-05)
+            norm = kwargs.setdefault('norm', np.Inf)
+            epsilon = kwargs.setdefault('epsilon', 1.4901161193847656e-08)
+            retvals = optimize.fmin_bfgs(f, start_params, score, args=fargs,
+                            gtol=gtol, norm=norm, epsilon=epsilon,
+                            maxiter=maxiter, full_output=full_output,
+                            disp=disp, retall=retall, callback=callback)
+            if full_output:
+                if not retall:
+                    xopt, fopt, gopt, Hinv, fcalls, gcalls, warnflag = retvals
+                else:
+                    xopt, fopt, gopt, Hinv, fcalls, gcalls, warnflag, allvecs =\
+                        retvals
+                converged = not warnflag
+                retvals = {'fopt' : fopt, 'gopt' : gopt, 'Hinv' : Hinv,
+                        'fcalls' : fcalls, 'gcalls' : gcalls, 'warnflag' :
+                        warnflag, 'converged' : converged}
+                if retall:
+                    retvals.update({'allvecs' : allvecs})
         elif method == 'ncg':
-            xopt, fopt, fcalls, gcalls, hcalls, warnflag = \
-                optimize.fmin_ncg(f, start_params, score, fhess=hess,
-                        full_output=1, maxiter=maxiter, avextol=tol)
-            mlefit = LikelihoodModelResults(self, xopt)
-            converge = not warnflag
+            fhess_p = kwargs.setdefault('fhess_p', None)
+            avextol = kwargs.setdefault('avextol', 1.0000000000000001e-05)
+            epsilon = kwargs.setdefault('epsilon', 1.4901161193847656e-08)
+            retvals = optimize.fmin_ncg(f, start_params, score, fhess_p=fhess_p,
+                            fhess=hess, args=fargs, avextol=avextol,
+                            epsilon=epsilon, maxiter=maxiter,
+                            full_output=full_output, disp=disp, retall=retall,
+                            callback=callback)
+            if full_output:
+                if not retall:
+                    xopt, fopt, fcalls, gcalls, hcalls, warnflag = retvals
+                else:
+                    xopt, fopt, fcalls, gcalls, hcalls, warnflag, allvecs =\
+                        retvals
+                converged = not warnflag
+                retvals = {'fopt' : fopt, 'fcalls' : fcalls, 'gcalls' : gcalls,
+                    'hcalls' : hcalls, 'warnflag' : warnflag,
+                    'converged' : converged}
+                if retall:
+                    retvals.update({'allvecs' : allvecs})
+        elif method == 'cg':
+            gtol = kwargs.setdefault('gtol', 1.0000000000000001e-05)
+            norm = kwargs.setdefault('norm', np.Inf)
+            epsilon = kwargs.setdefault('epsilon', 1.4901161193847656e-08)
+            retvals = optimize.fmin_cg(f, start_params, score,
+                            gtol=gtol, norm=norm,
+                            epsilon=epsilon, maxiter=maxiter,
+                            full_output=full_output, disp=disp, retall=retall,
+                            callback=callback)
+            if full_output:
+                if not retall:
+                    xopt, fopt, fcalls, gcalls, warnflag = retvals
+                else:
+                    xopt, fopt, fcalls, gcalls, warnflag, allvecs = retvals
+                converged = not warnflag
+                retvals = {'fopt' : fopt, 'fcalls' : fcalls, 'gcalls' : gcalls,
+                    'warnflag' : warnflag, 'converged' : converged}
+                if retall:
+                    retvals.update({'allvecs' : allvecs})
+        elif method == 'powell':
+            xtol = kwargs.setdefault('xtol', 0.0001)
+            ftol = kwargs.setdefault('ftol', 0.0001)
+            maxfun = kwargs.setdefault('maxfun', None)
+            start_direc = kwargs.setdefault('start_direc', None)
+            retvals = optimize.fmin_powell(f, start_params, args=fargs,
+                            xtol=xtol, ftol=ftol, maxiter=maxiter,
+                            maxfun=maxfun, full_output=full_output, disp=disp,
+                            retall=retall, callback=callback, direc=start_direc)
+            if full_output:
+                if not retall:
+                    xopt, fopt, direc, niter, fcalls, warnflag = retvals
+                else:
+                    xopt, fopt, direc, niter, fcalls, warnflag, allvecs =\
+                        retvals
+                converged = not warnflag
+                retvals = {'fopt' : fopt, 'direc' : direc, 'iterations' : niter,
+                    'fcalls' : fcalls, 'warnflag' : warnflag, 'converged' :
+                    converged}
+                if retall:
+                    retvals.update({'allvecs' : allvecs})
+        if not full_output:
+            xopt = retvals
+
+#NOTE: better just to use the Analytic Hessian here, as approximation isn't
+# great
+#        if method == 'bfgs' and full_output:
+#            Hinv = retvals.setdefault('Hinv', 0)
+        elif method == 'newton' and full_output:
+            Hinv = np.linalg.inv(-hopt)
+        else:
+            try:
+                Hinv = np.linalg.inv(-1*self.hessian(xopt))
+            except:
+                Hinv = None
+#TODO: add Hessian approximation and change the above if needed
+        mlefit = LikelihoodModelResults(self, xopt, Hinv, scale=1.)
+#TODO: hardcode scale?
+
+        if isinstance(retvals, dict):
+            mlefit.mle_retvals = retvals
+        optim_settings = {'optimizer' : method, 'start_params' : start_params,
+            'maxiter' : maxiter, 'full_output' : full_output, 'disp' : disp,
+            'fargs' : fargs, 'callback' : callback, 'retall' : retall}
+        optim_settings.update(kwargs)
+        mlefit.mle_settings = optim_settings
         self._results = mlefit
         return mlefit
+
+#TODO: the below is unfinished
+class GenericLikelihoodModel(LikelihoodModel):
+    """
+    Allows the fitting of any likelihood function via maximum likelihood.
+
+    Notes
+    -----
+    Methods that require only a likelihood function.
+        'nm'
+        'powell'
+
+    Methods that require a likelihood function and a score/gradient.
+        'bfgs'
+        'cg'
+        'ncg' - A function to compute the Hessian is optional.
+
+    Methods that require a likelihood function, a score/gradient, and a
+    Hessian.
+        'newton'
+
+
+    Example
+
+    import scikits.statsmodels as sm
+    data = sm.datasets.spector.load()
+    data.exog = sm.add_constant(data.exog)
+# in this dir
+    from model import GenericLikelihoodModel
+    probit_mod = sm.Probit(data.endog, data.exog)
+    probit_res = probit_mod.fit()
+    loglike = probit_mod.loglike
+    score = probit_mod.score
+    mod = GenericLikelihoodModel(data.endog, data.exog, loglike, score)
+    res = mod.fit(method="nm", maxiter = 500)
+    import numpy as np
+    np.allclose(res.params, probit_res.params)
+    """
+    def __init__(self, endog, exog=None, loglike=None, score=None, hessian=None):
+    # let them be none in case user wants to use inheritance
+        if loglike:
+            self.loglike = loglike
+        if score:
+            self.score = score
+        if hessian:
+            self.hessian = hessian
+        super(GenericLikelihoodModel, self).__init__(endog, exog)
+
+    def initialize(self):
+        if not self.score:  # right now score is not optional
+            from sandbox.regression.numdiff import approx_fprime1
+            self.score = approx_fprime1
+            if not self.hessian:
+                pass
+        else:   # can use approx_hess_p if we have a gradient
+            if not self.hessian:
+                pass
 
 class Results(object):
     """
@@ -189,25 +488,144 @@ class Results(object):
 #TODO: public method?
 
 class LikelihoodModelResults(Results):
-    """ Class to contain results from likelihood models """
     def __init__(self, model, params, normalized_cov_params=None, scale=1.):
         """
+        Class to contain results from likelihood models
+
         Parameters
         -----------
+        model : LikelihoodModel instance or subclass instance
+            LikelihoodModelResults holds a reference to the model that is fit.
         params : 1d array_like
             parameter estimates from estimated model
         normalized_cov_params : 2d array
            Normalized (before scaling) covariance of params
-            normalized_cov_paramss is also known as the hat matrix or H
+            normalized_cov_params is also known as the hat matrix or H
             (Semiparametric regression, Ruppert, Wand, Carroll; CUP 2003)
         scale : float
             For (some subset of models) scale will typically be the
             mean square error from the estimated model (sigma^2)
 
+        Returns
+        -------
+        **Attributes**
+        mle_retvals : dict
+            Contains the values returned from the chosen optimization method if
+            full_output is True during the fit.  Available only if the model
+            is fit by maximum likelihood.  See notes below for the output from
+            the different methods.
+        mle_settings : dict
+            Contains the arguments passed to the chosen optimization method.
+            Available if the model is fit by maximum likelihood.  See
+            LikelihoodModel.fit for more information.
+        model : model instance
+            LikelihoodResults contains a reference to the model that is fit.
+        params : ndarray
+            The parameters estimated for the model.
+        scale : float
+            The scaling factor of the model given during instantiation.
+
+
         Notes
         --------
-        The covariance of params is given by scale times
-        normalized_cov_params
+        The covariance of params is given by scale times normalized_cov_params.
+
+        Return values by solver if full_ouput is True during fit:
+
+            'newton'
+                fopt : float
+                    The value of the (negative) loglikelihood at its
+                    minimum.
+                iterations : int
+                    Number of iterations performed.
+                score : ndarray
+                    The score vector at the optimum.
+                Hessian : ndarray
+                    The Hessian at the optimum.
+                warnflag : int
+                    1 if maxiter is exceeded. 0 if successful convergence.
+                converged : bool
+                    True: converged. False: did not converge.
+                allvecs : list
+                    List of solutions at each iteration.
+            'nm'
+                fopt : float
+                    The value of the (negative) loglikelihood at its
+                    minimum.
+                iterations : int
+                    Number of iterations performed.
+                warnflag : int
+                    1: Maximum number of function evaluations made.
+                    2: Maximum number of iterations reached.
+                converged : bool
+                    True: converged. False: did not converge.
+                allvecs : list
+                    List of solutions at each iteration.
+            'bfgs'
+                fopt : float
+                    Value of the (negative) loglikelihood at its minimum.
+                gopt : float
+                    Value of gradient at minimum, which should be near 0.
+                Hinv : ndarray
+                    value of the inverse Hessian matrix at minimum.  Note
+                    that this is just an approximation and will often be
+                    different from the value of the analytic Hessian.
+                fcalls : int
+                    Number of calls to loglike.
+                gcalls : int
+                    Number of calls to gradient/score.
+                warnflag : int
+                    1: Maximum number of iterations exceeded. 2: Gradient
+                    and/or function calls are not changing.
+                converged : bool
+                    True: converged.  False: did not converge.
+                allvecs : list
+                    Results at each iteration.
+            'powell'
+                fopt : float
+                    Value of the (negative) loglikelihood at its minimum.
+                direc : ndarray
+                    Current direction set.
+                iterations : int
+                    Number of iterations performed.
+                fcalls : int
+                    Number of calls to loglike.
+                warnflag : int
+                    1: Maximum number of function evaluations. 2: Maximum number
+                    of iterations.
+                converged : bool
+                    True : converged. False: did not converge.
+                allvecs : list
+                    Results at each iteration.
+            'cg'
+                fopt : float
+                    Value of the (negative) loglikelihood at its minimum.
+                fcalls : int
+                    Number of calls to loglike.
+                gcalls : int
+                    Number of calls to gradient/score.
+                warnflag : int
+                    1: Maximum number of iterations exceeded. 2: Gradient and/
+                    or function calls not changing.
+                converged : bool
+                    True: converged. False: did not converge.
+                allvecs : list
+                    Results at each iteration.
+            'ncg'
+                fopt : float
+                    Value of the (negative) loglikelihood at its minimum.
+                fcalls : int
+                    Number of calls to loglike.
+                gcalls : int
+                    Number of calls to gradient/score.
+                hcalls : int
+                    Number of calls to hessian.
+                warnflag : int
+                    1: Maximum number of iterations exceeded.
+                converged : bool
+                    True: converged. False: did not converge.
+                allvecs : list
+                    Results at each iteration.
         """
         super(LikelihoodModelResults, self).__init__(model, params)
         self.normalized_cov_params = normalized_cov_params
@@ -233,7 +651,7 @@ class LikelihoodModelResults(Results):
         Examples
         --------
         >>> import scikits.statsmodels as sm
-        >>> data = sm.datasets.longley.Load()
+        >>> data = sm.datasets.longley.load()
         >>> data.exog = sm.add_constant(data.exog)
         >>> results = sm.OLS(data.endog, data.exog).fit()
         >>> results.t()
@@ -358,7 +776,7 @@ arguments.'
         --------
         >>> import numpy as np
         >>> import scikits.statsmodels as sm
-        >>> data = sm.datasets.longley.Load()
+        >>> data = sm.datasets.longley.load()
         >>> data.exog = sm.add_constant(data.exog)
         >>> results = sm.OLS(data.endog, data.exog).fit()
         >>> r = np.zeros_like(results.params)
@@ -410,7 +828,7 @@ T statistics'
                 df_denom=self.model.df_resid)
 
 #TODO: untested for GLMs?
-    def f_test(self, r_matrix, scale=1.0, invcov=None):
+    def f_test(self, r_matrix, q_matrix=None, scale=1.0, invcov=None):
         """
         Compute an Fcontrast/F-test for a contrast matrix.
 
@@ -429,6 +847,9 @@ T statistics'
             p is the number of regressors in the full model fit.
             If q is 1 then f_test(r_matrix).fvalue is equivalent to
             the square of t_test(r_matrix).t
+        q_matrix : array-like
+            q x 1 array, that represents the sum of each linear restriction.
+            Default is all zeros for each restriction.
         scale : float, optional
             Default is 1.0 for no scaling.
         invcov : array-like, optional
@@ -439,7 +860,7 @@ T statistics'
         --------
         >>> import numpy as np
         >>> import scikits.statsmodels as sm
-        >>> data = sm.datasets.longley.Load()
+        >>> data = sm.datasets.longley.load()
         >>> data.exog = sm.add_constant(data.exog)
         >>> results = sm.OLS(data.endog, data.exog).fit()
         >>> A = np.identity(len(results.params))
@@ -479,14 +900,21 @@ T statistics'
         if self.normalized_cov_params is None:
             raise ValueError, 'need covariance of parameters for computing F statistics'
 
-        cparams = np.dot(r_matrix, self.params)
-
-        q = r_matrix.shape[0]
+        cparams = np.dot(r_matrix, self.params[:,None])
+        J = float(r_matrix.shape[0]) # number of restrictions
+        if q_matrix is None:
+            q_matrix = np.zeros(J)
+        else:
+            q_matrix = np.asarray(q_matrix)
+        if q_matrix.ndim == 1:
+            q_matrix = q_matrix[:,None]
+            if q_matrix.shape[0] != J:
+                raise ValueError("r_matrix and q_matrix must have the same \
+number of rows")
+        Rbq = cparams - q_matrix
         if invcov is None:
-            invcov = np.linalg.inv(self.cov_params(r_matrix=r_matrix,
-                scale=scale))
-        F = np.add.reduce(np.dot(invcov, cparams) * cparams, 0) * \
-                recipr((q * self.scale))
+            invcov = np.linalg.inv(self.cov_params(r_matrix=r_matrix))
+        F = np.dot(np.dot(Rbq.T,invcov),Rbq)/J
         return ContrastResults(F=F, df_denom=self.model.df_resid,
                     df_num=invcov.shape[0])
 
@@ -510,7 +938,7 @@ T statistics'
         Examples
         --------
         >>> import scikits.statsmodels as sm
-        >>> data = sm.datasets.longley.Load()
+        >>> data = sm.datasets.longley.load()
         >>> data.exog = sm.add_constant(data.exog)
         >>> results = sm.OLS(data.endog, data.exog).fit()
         >>> results.conf_int()

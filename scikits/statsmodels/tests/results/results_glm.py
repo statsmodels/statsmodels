@@ -687,8 +687,8 @@ class Lbw(object):
         data = sm.tools.categorical(data, col='race', drop=True)
         self.endog = data.low
         design = np.column_stack((data['age'], data['lwt'],
-                    data['_black'], data['_other'], data['smoke'], data['ptl'],
-                    data['ht'], data['ui']))
+                    data['race_black'], data['race_other'], data['smoke'],
+                    data['ptl'], data['ht'], data['ui']))
         self.exog = sm.add_constant(design)
         # Results for Canonical Logit Link
         self.params = (-.02710031, -.01515082, 1.26264728,

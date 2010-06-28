@@ -36,7 +36,7 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'Load']
+__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'load']
 
 """US Capital Punishment dataset."""
 
@@ -57,7 +57,7 @@ DESCRLONG   = """
 This data describes the number of times capital punishment is implemented
 at the state level for the year 1997.  The outcome variable is the number of
 executions.  There were executions in 17 states.
-Included in the data are explanatory variables for median per capital income
+Included in the data are explanatory variables for median per capita income
 in dollars, the percent of the population classified as living in poverty,
 the percent of Black citizens in the population, the rate of violent
 crimes per 100,000 residents for 1996, a dummy variable indicating
@@ -71,29 +71,42 @@ in a comma-delimited file
 """
 
 NOTE        = """
-Number of Instances: 17.
+Number of Observations: 17.
+Number of Variables: 7
+Variable name definitions:
+    EXECUTIONS: Executions in 1996
+    INCOME: Median per capita income in 1996 dollars
+    PERPOVERTY: Percent of the population classified as living in poverty
+    PERBLACK: Percent of black citizens in the population
+    VC100k96: Rate of violent crimes per 100,00 residents for 1996
+    SOUTH: SOUTH == 1 indicates a state in the South
+    DEGREE: An esimate of the proportion of the state population with a
+        college degree of some kind
 
-Number of Attributes: 6
-
-Missing Attribute Values: None
-
-State names are included in the data file, though not returned.
+State names are included in the data file, though not returned by load.
 """
 
-import numpy as np
+from numpy import recfromtxt, column_stack, array
+from scikits.statsmodels.datasets import Dataset
+from os.path import dirname, abspath
 
-class Load():
-    """load the cpunish data and returns a data class.
+def load():
+    """
+    Load the cpunish data and return a Dataset class.
 
     Returns
     -------
-    Load instance:
-        a class of the data with array attrbutes 'endog' and 'exog'
+    Dataset instance:
+        See DATASET_PROPOSAL.txt for more information.
     """
-    def __init__(self):
-        from cpunish import __dict__, names
-        self._names = names
-        self._d = __dict__
-        self.endog = np.array(self._d[self._names[1]], dtype=np.float)
-        self.exog = np.column_stack(self._d[i] \
-                    for i in self._names[2:]).astype(np.float)
+    filepath = dirname(abspath(__file__))
+    data = recfromtxt(filepath + '/cpunish.csv', delimiter=",",
+            names=True, dtype=float, usecols=(1,2,3,4,5,6,7))
+    names = list(data.dtype.names)
+    endog = array(data[names[0]], dtype=float)
+    endog_name = names[0]
+    exog = column_stack(data[i] for i in names[1:]).astype(float)
+    exog_name = names[1:]
+    dataset = Dataset(data=data, names=names, endog=endog, exog=exog,
+            endog_name=endog_name, exog_name=exog_name)
+    return dataset

@@ -77,34 +77,3 @@ def jarque_bera(resids):
     JBpv = stats.chi2.sf(JB,2);
 
     return JB, JBpv, skew, kurtosis
-
-def conditionnum(exog):
-    """
-    Returns the condition number of an exogenous design array.
-
-    The given array is first normalized (except for a constant term assumed
-    to be in the last column) so that each column is a unit length vector
-    then the condition number of dot(norm_exog.T,norm_exog) is returned.
-    The condition number is defined as the square root of the ratio of the
-    largest eigenvalue to the smallest eigenvalue.
-
-    Parameters
-    ----------
-    exog : array-like
-        An exogenous design matrix with the final column assumed to be a
-        the constant
-
-    Returns
-    -------
-    Condition numbers.
-    """
-    exog = np.array(exog)
-    if exog.ndim is 1:
-        exog = exog[:,None]
-    numvar = exog.shape[1]
-    norm_exog = np.ones_like(exog)
-    for i in range(numvar):
-        norm_exog[:,i] = exog[:,i]/np.linalg.norm(exog[:,i])
-    xtx = np.dot(norm_exog.T,norm_exog)
-    eigs = np.linalg.eigvals(xtx)
-    return np.sqrt(eigs.max()/eigs.min())

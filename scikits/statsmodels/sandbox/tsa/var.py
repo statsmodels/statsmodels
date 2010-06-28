@@ -1,5 +1,5 @@
 """
-This is the VAR class adapted from pymaclab.
+This is the VAR class refactored from pymaclab.
 """
 from __future__ import division
 import copy as COP
@@ -9,149 +9,170 @@ from numpy import matlib as MAT
 from scipy import linalg as LIN #TODO: get rid of this once cleaned up
 from scipy import linalg, sparse
 import scikits.statsmodels as sm    # maybe can be replaced later
-from scikits.statsmodels import GLS
-from scikits.statsmodels.sandbox.tools.tools_tsa import lagmat
-
-#chain_dot was taken from pandas and is awesome!
-def chain_dot(*matrices):
-    """
-    Returns the dot product of the given matrices.
-
-    Parameters
-    ----------
-    matrices: argument list of ndarray
-    """
-    return reduce(lambda x, y: np.dot(y, x), matrices[::-1])
-
+from scikits.statsmodels import GLS, chain_dot
+from scikits.statsmodels.sandbox.tsa.tsatools import lagmat
+from scikits.statsmodels.model import LikelihoodModelResults
+from scikits.statsmodels.decorators import *
 
 # Refactor of VAR to be like statsmodels
-#inherit GLS?
+#inherit GLS, SUR?
 class VAR2(object):
-    """
-    Parameters
-    ----------
-    data
-    laglen
-    useconst
-    """
-    def __init__(self, data=None, laglen=1, useconst=True):
-        self.data = data
+    def __init__(self, endog=None, exog=None, laglen=1, useconst=True):
+        """
+        Parameters
+        ----------
+        endog
+        exog
+        laglen
+        useconst
+
+        Notes
+        -----
+        Exogenous variables are not supported yet
+        """
+        self.endog = endog    #TOD):rename endog
         self.laglen = float(laglen)
         self._useconst = useconst
-        nobs = float(data.shape[0])
+        nobs = float(endog.shape[0])
         self.nobs = nobs
-        self.nvars = data.shape[1]
-        self.avobs = nobs - laglen # what's a better name for this? autonobs? lagnobs?
+        self.nvars = endog.shape[1] # should this be neqs since we might have
+                                   # exogenous data?
+        self.neqs = endog.shape[1]
+        self.avobs = nobs - laglen
+        # what's a better name for this? autonobs? lagnobs?
 
-#TODO: rename to fit or something?
-    def ols(self):
+#TODO: IRF, lag length selection
+    def fit(self, method="ols", structural=None, dfk=None, maxlag=None,
+            ic=None):
+        """
+        Fit the VAR model
+
+        Parameters
+        ----------
+        method : str
+            "ols" fit equation by equation with OLS
+            "yw" fit with yule walker
+            "mle" fit with unconditional maximum likelihood
+        structural : str, optional
+            If 'BQ' - Blanchard - Quah identification scheme is used.
+            This imposes Long
+        dfk : int, optional
+            Small-sample bias correction.  If None, dfk = neqs * nlags +
+            number of exogenous variables. Run restrictions.  Details in Lyx
+            notes.
+        maxlag : int, optional
+            The highest lag order for lag length selection according to `ic`.
+            The default is 12 * (nobs/100.)**(1./4)
+        ic : str {"aic","bic","hq"} or None, optional
+            Information criteria to maximize for lag length selection.
+
+        Notes
+        -----
+        Not sure what to do with structural. Restrictions would be on
+        coefficients or on omega.  So should it be short run (array),
+        long run (array), or sign (str)?  Recursive?
+        """
+        if dfk is None:
+            self.dfk = self.laglen * self.neqs
+        else:
+            self.dfk = dfk
+        # What's cleaner? Logic handled here and private functions or all here?
+        if method == "ols":
+            return self._ols()
+#TODO: should 'BQ' just have it's own method?
+
+
+    def _ols(self, structural=None):
         """
         The OLS Function does....
 
-        It just calls GLS
+        It just calls GLS with no arguments.
         """
         #recast indices to integers
         avobs = int(self.avobs)
         laglen = int(self.laglen)
         nobs = int(self.nobs)
         nvars = int(self.nvars)
-        data = self.data
+        neqs = int(self.neqs)
+        endog = self.endog
         # trim from the front, unravel in F-contiguous way
-        Y = data[laglen:,:].ravel('F')
+#        Y = endog[laglen:,:].ravel('F')
+        Y = endog[laglen:,:]
+
         X = np.zeros((avobs,nvars*laglen))
-        for x1 in range(0,laglen):
-            X[:,x1*nvars:(x1+1)*nvars] = data[(laglen-1)-x1:(nobs-1)-x1,:]
-        assert np.all(X == lagmat(data, laglen-1, trim="backward")[:-laglen])
-        #which I don't understand yet...
+        self.X = X #TODO: rename or refactor? (exog?) lagged_exog?
+        for x1 in xrange(laglen):
+            X[:,x1*nvars:(x1+1)*nvars] = endog[(laglen-1)-x1:(nobs-1)-x1,:]
+#NOTE: the above loop is faster than lagmat
+#        assert np.all(X == lagmat(endog, laglen-1, trim="backward")[:-laglen])
+
         if self._useconst: # let user handle this?
             X = sm.add_constant(X,prepend=True)
-#TODO:change to sparse matrices?
-        diag_X = linalg.block_diag(*[X]*nvars)
+
+# diag
+#        diag_X = linalg.block_diag(*[X]*nvars)
+
+#Sparse: Similar to SUR
 #        spdiag_X = sparse.lil_matrix(diag_X.shape)
 #        for i in range(nvars):
 #            spdiag_X[i*shape0:shape0*(i+1),i*shape1:(i+1)*shape1] = X
-#TODO: the below will be ok (get feedback on other ones from ML)
-#could also use SUR for this.
 #        spX = sparse.kron(sparse.eye(20,20),X).todia()
-        results = GLS(Y,diag_X).fit()
 
-#TODO: return a results class just like everything else
-        self.results = results
-        #params <-- betas
-        params = results.params.reshape(nvars,-1)
-        ncoefs = params.shape[1] # used in omega_beta_ols
-        self.params = params # does it make sense to partition like old VAR?
-        #yfit
-        self.fittedvalues = results.fittedvalues.reshape(-1,nvars,order='F')
-        #resid
-        resid = results.resid.reshape(-1,nvars,order='F')
-        self.resid = resid
-        #omega, better name? is this somewhere in the results already?
-        #I believe this is the between equation covariance
-        omega = np.dot(resid.T,resid)/avobs
-        self.omega = omega
-        #omega_beta_ols, the covariance of each equation
-        XTXinv = results.normalized_cov_params[:ncoefs,:ncoefs]
-        obols = map(np.multiply, [XTXinv]*nvars, np.diag(omega))
-        self.omega_beta_ols = np.asarray(obols)
-#TODO: this is deja vu... this is all in SUR is it not?
-        self.omega_beta_va = map(np.diag, obols)
-        #Get GLS Covariance
-        self.X = X # remove after testing
-        self.XTXinv =XTXinv # iXX in old VAR
-        # this is just a list of length nvars, with each
-        # XeeX where e is the residuals for that equation
-        # really just a scaling argument
-        XeeX = [chain_dot(X.T, resid[:,i][:,None], resid[:,i][:,None].T, X) for i in range(nvars)]
-#        XeeX = map(np.dot, map(np.dot, [X.T]*nvars,resid.T),
-#            map(np.dot, resid.T, [X]*nvars))
-        self.XeeX = XeeX #TODO: REMOVE
-        obgls = np.array(map(chain_dot, [XTXinv]*nvars, XeeX,
-                [XTXinv]*nvars))
-        self.omega_beta_gls = obgls
-        self.omega_beta_gls_va = map(np.diag, obgls)
-# the last three properties have rounding error stemming from fittedvalues
-# dot vs matrix multiplication, test with real data and not random
-        self.ssr = results.ssr # rss in old VAR
-        self.aic = linalg.det(omega)+2.*laglen*nvars**2/nobs
-        self.bic = linalg.det(omega)+np.log(nobs)/nobs*laglen*nvars**2
+#        results = GLS(Y,diag_X).fit()
 
-#could this just be a standalone function?
-    def irf(self, spos=1, nperiods=20):
-        self.spos = spos
-        self.nperiods = nperiods
-        nvars = self.nvars
-        laglen = self.laglen
-        nobs = self.nobs
-        avobs = self.avobs
-        useconst = self._useconst
+#NOTE: just use GLS directly
+        results = GLS(Y,X).fit()
+        params = results.params.T
+#        params = results.params.reshape(neqs,-1)
 
-        #demean y
-        data = self.data
-        self.dmdata = data - data.mean(0) # need to attach everything?
-        if useconst:
-            # takes demeaned data
-            # does OLS_comp
-            pass
 
-#TODO: None of these really make sense as methods of a VAR class
-    def olscomp(self):
+#TODO: make a separate SVAR class or this is going to get really messy
+        if structural and structural.lower() == 'bq':
+            phi = np.swapaxes(params.reshape(neqs,laglen,neqs), 1,0)
+            I_phi_inv = np.linalg.inv(np.eye(n) - phi.sum(0))
+            omega = np.dot(results.resid.T,resid)/(avobs - self.dfk)
+            shock_var = chain_dot(I_phi_inv, omega, I_phi_inv.T)
+            R = np.linalg.cholesky(shock_var)
+            phi_normalize = np.dot(I_phi_inv,R)
+            params = np.zeros_like(phi)
+            #TODO: apply a dot product along an axis?
+            for i in range(laglen):
+                params[i] = np.dot(phi_normalize, phi[i])
+                params = np.swapaxes(params, 1,0).reshape(neqs,laglen*neqs)
+        return VARMAResults(self, results, params)
+
+
+
+
+
+
+#TODO: None of these really make sense as methods
+#make a fit method with the choice of fit -- OLS, OLS Companion, Unconditional
+#MLE, etc.
+    def _olscomp(self, demean=False):
         """
         Does OLS in Companion Matrix Form.
-
-        Uses demeaned data.
         """
         nvars = self.nvars
         laglen = int(self.laglen)
         nobs = self.nobs
         avobs = self.avobs
         useconst = self._useconst
-        data = self.data
+        endog = self.endog
 
         # Stack Y,X
         # not sure about the last index being general
-        y_stack = lagmat(data, laglen-1, trim="both")[laglen-1:]
-        X_stack = lagmat(data, laglen-1, trim="backward")[:-laglen]
+        y_stack = lagmat(endog, laglen-1, trim="both")[laglen-1:]
+        X_stack = lagmat(endog, laglen-1, trim="backward")[:-laglen]
+        p = 0
+        if self._useconst:
+            sm.add_constant(X_stack, prepend=True)
+            p = 1
+
+        params = np.zeros((nvars,p+nvars*laglen))
+        for i in range(nvars):
+            params[i,:] = np.dot(np.linalg.pinv(X_stack),y_stack[:,i])
+#TODO: finish this
 
 
 
@@ -160,7 +181,194 @@ class VAR2(object):
 VAR_opts = {}
 VAR_opts['IRF_periods'] = 20
 
+#from scikits.statsmodels.sandbox.output import SimpleTable
 
+#TODO: correct results if fit by 'BQ'
+class VARMAResults(object):
+    """
+    Holds the results for VAR models.
+
+    Parameters
+    -----------
+    model
+    results
+    params
+
+    Attributes
+    ----------
+    aic
+    avobs : float
+        Available observations for estimation.  The size of the whole sample
+        less the pre-sample observations needed for lags.
+    bic : float
+
+    df_resid : float
+        Residual degrees of freedom.
+    dfk : float
+        Degrees of freedom correction.
+    fittedvalues
+    laglen
+    model
+    ncoefs
+    neqs
+    nobs : int
+        Total number of observations in the sample.
+    omega : ndarray
+        Sigma hat matrix.  Each element i,j is the average product of the OLS
+        residual for variable i and the OLS residual for variable j or
+        np.dot(resid.T,resid)/avobs.  There is no correction for the degrees
+        of freedom.
+    omega_beta_gls
+    omega_beta_gls_va
+    omega_beta_ols
+    omega_beta_va
+
+    Methods
+    -------
+    """
+    def __init__(self, model, results, params):
+        self.results = results
+        self.model = model
+        self.avobs = model.avobs
+        self.dfk = model.dfk
+        self.neqs = model.neqs
+        self.laglen = model.laglen
+        self.nobs = model.nobs
+        self.params = params
+        self.ncoefs = self.params.shape[1]
+        self.df_resid = model.avobs - self.ncoefs # normalize sigma by this
+
+#    @cache_readonly
+#    def params(self):
+# note the order of this
+# it's lag1 of y1, lag1 of y2, lag1 of y3 ... lag2 of y1, lag2 of y2 ...
+# and each row is a separate equation
+#        return self.results.params.reshape(self.neqs,-1)
+
+    @cache_readonly
+    def fittedvalues(self):
+        return self.results.fittedvalues.reshape(-1, self.neqs, order='F')
+
+    @cache_readonly
+    def resid(self):
+        return self.results.resid.reshape(-1,self.neqs,order='F')
+
+    @cache_readonly
+    def omega(self):
+        resid = self.resid
+        return np.dot(resid.T,resid)/self.avobs
+#TODO: include dfk correction anywhere or not?  No small sample bias?
+
+#    @cache_readonly
+#    def omega(self): # variance of residuals across equations
+#        resid = self.resid
+#        return np.dot(resid.T,resid)/(self.avobs - self.dfk)
+
+    @cache_readonly
+    def omega_beta_ols(self): # the covariance of each equation (check)
+        ncoefs = self.params.shape[1]
+        XTXinv = self.results.normalized_cov_params[:ncoefs,:ncoefs]
+        # above is iXX in old VAR
+        obols = map(np.multiply, [XTXinv]*self.neqs, np.diag(self.omega))
+        return np.asarray(obols)
+
+    @cache_readonly
+    def omega_beta_va(self):
+        return map(np.diag, self.omega_beta_ols)
+
+    @cache_readonly
+    def omega_beta_gls(self):
+        X = self.model.X
+        resid = self.resid
+        neqs = self.neqs
+        ncoefs = self.ncoefs
+        XTXinv = self.results.normalized_cov_params[:ncoefs,:ncoefs]
+        # Get GLS Covariance
+        # this is just a list of length nvars, with each
+        # XeeX where e is the residuals for that equation
+        # really just a scaling argument
+        XeeX = [chain_dot(X.T, resid[:,i][:,None], resid[:,i][:,None].T,
+            X) for i in range(neqs)]
+        obgls = np.array(map(chain_dot, [XTXinv]*neqs, XeeX,
+                [XTXinv]*neqs))
+        return obgls
+
+    @cache_readonly
+    def omega_beta_gls_va(self):
+        return map(np.diag, self.omega_beta_gls_va)
+
+# the next three properties have rounding error stemming from fittedvalues
+# dot vs matrix multiplication vs. old VAR, test with another package
+
+    @cache_readonly
+    def ssr(self):
+        return self.results.ssr # rss in old VAR
+
+    @cache_readonly
+    def aic(self):
+#        return linalg.det(self.omega)+2.*self.laglen*self.neqs**2/self.nobs
+        logdet = np.linalg.slogdet(self.omega)
+#       det = logdet[0] * np.exp(logdet[1])
+        if logdet[0] == -1:
+            raise ValueError("Omega matrix is not positive definite")
+        elif logdet[0] == 0:
+            raise ValueError("Omega matrix is singluar")
+        else:
+            logdet = logdet[1]
+        return logdet+2*self.laglen*self.neqs**2/self.nobs
+
+    @cache_readonly
+    def bic(self):
+        nobs = self.nobs
+        linalg.det(self.omega)+np.log(nobs)/nobs*self.laglen*self.nvars**2
+
+#    @wrap
+#    def wrap(self, attr, *args):
+#        return self.__getattribute__(attr, *args)
+
+    #could this just be a standalone function?
+    def irf(self, shock, params=None, nperiods=100):
+        """
+        Make the impulse response function.
+
+        Parameters
+        -----------
+        shock : array-like
+            An array of shocks must be provided that is shape (neqs,)
+
+        If params is None, uses the model params. Note that no normalizing is
+        done to the parameters.  Ie., this assumes the the coefficients are
+        the identified structural coefficients.
+
+        Notes
+        -----
+        TODO: Allow for common recursive structures.
+        """
+        neqs = self.neqs
+        shock = np.asarray(shock)
+        if shock.shape[0] != neqs:
+            raise ValueError("Each shock must be specified even if it's zero")
+        if shock.ndim > 1:
+            shock = np.squeeze(shock)   # more robust check vs neqs
+        if params == None:
+            params = self.params
+        laglen = int(self.laglen)
+        nobs = self.nobs
+        avobs = self.avobs
+#Needed?
+#        useconst = self._useconst
+        responses = np.zeros((neqs,laglen+nperiods))
+        responses[:,laglen] = shock # shock in the first period with
+                                    # all lags set to zero
+        for i in range(laglen,laglen+nperiods):
+            # flatten lagged responses to broadcast with
+            # current layout of params
+            # each equation is in a row
+            # row i needs to be y1_t-1 y2_t-1 y3_t-1 ... y1_t-2 y1_t-2...
+            laggedres = responses[:,i-laglen:i][:,::-1].ravel('F')
+            responses[:,i] = responses[:,i] + np.sum(laggedres * params,
+                    axis = 1)
+        return responses
 
 
 ###############THE VECTOR AUTOREGRESSION CLASS (WORKS)###############
@@ -522,13 +730,13 @@ if __name__ == "__main__":
     np.random.seed(12345)
     data = np.random.rand(50,3)
     vr = VAR(data = data, laglen=2)
-    vr2 = VAR2(data = data, laglen=2)
-    dataset = sm.datasets.macrodata.Load()
+    vr2 = VAR2(endog = data, laglen=2)
+    dataset = sm.datasets.macrodata.load()
     data = dataset.data
-    XX = data[['realinv','realgdp','realcons']].view(float).reshape(-1,3)
+    XX = data[['realinv','realgdp','realcons']].view((float,3))
     XX = np.diff(np.log(XX), axis=0)
     vrx = VAR(data=XX,laglen=2)
-    vrx2 = VAR2(data=XX, laglen=2)
+    vrx2 = VAR2(endog=XX, laglen=2)
 
 
 

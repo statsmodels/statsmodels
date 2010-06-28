@@ -17,7 +17,7 @@ import scikits.statsmodels as sm
 
 print '\n\n Example 1: Longley Data, high multicollinearity'
 
-data = sm.datasets.longley.Load()
+data = sm.datasets.longley.load()
 data.exog = sm.add_constant(data.exog)
 res = sm.OLS(data.endog, data.exog).fit()
 

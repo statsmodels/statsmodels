@@ -107,14 +107,14 @@ class SimpleTable(list):
     	mydata = [[11,12],[21,22]]  # data MUST be 2-dimensional
     	myheaders = [ "Column 1", "Column 2" ]
     	mystubs = [ "Row 1", "Row 2" ]
-    	tbl = text.SimpleTable(mydata, myheaders, mystubs, title="Title")
+    	tbl = sm.iolib.SimpleTable(mydata, myheaders, mystubs, title="Title")
     	print( tbl )
     	print( tbl.as_html() )
     	# set column specific data formatting
-    	tbl = text.SimpleTable(mydata, myheaders, mystubs,
+    	tbl = sm.iolib.SimpleTable(mydata, myheaders, mystubs,
     		fmt={'data_fmts':["%3.2f","%d"]})
     	print( tbl.as_csv() )
-    	with open('c:/temp/temp.tex','w') as fh:
+    	with open('./temp.tex','w') as fh:
     		fh.write( tbl.as_latex_tabular() )
     """
     def __init__(self, data, headers=None, stubs=None, title='',

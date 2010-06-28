@@ -75,8 +75,8 @@ class CheckRlmResults(object):
 #                res2.tvalues)
 
 class TestRlm(CheckRlmResults):
-    from scikits.statsmodels.datasets.stackloss import Load
-    data = Load()   # class attributes for subclasses
+    from scikits.statsmodels.datasets.stackloss import load
+    data = load()   # class attributes for subclasses
     data.exog = sm.add_constant(data.exog)
     def __init__(self):
         # Test precisions
@@ -171,8 +171,8 @@ class TestRlmAndrews(TestRlm):
 ### tests with Huber scaling
 
 class TestRlmHuber(CheckRlmResults):
-    from scikits.statsmodels.datasets.stackloss import Load
-    data = Load()
+    from scikits.statsmodels.datasets.stackloss import load
+    data = load()
     data.exog = sm.add_constant(data.exog)
     def __init__(self):
         results = RLM(self.data.endog, self.data.exog,\
