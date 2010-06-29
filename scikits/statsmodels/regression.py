@@ -1155,9 +1155,11 @@ class RegressionResults(LikelihoodModelResults):
             fmt = 'txt'
         )
         part2_fmt = dict(
-            data_fmts = ["%#12.6g","%#12.6g","%#10.4g","%#5.4g"],
+            #data_fmts = ["%#12.6g","%#12.6g","%#10.4g","%#5.4g"],
+            #data_fmts = ["%#10.4g","%#10.4g","%#10.4g","%#6.4g"],
+            data_fmts = ["%#15.4F","%#15.4F","%#15.4F","%#14.4G"],
             empty_cell = '',
-            colwidths = 15,
+            #colwidths = 10,
             colsep='  ',
             row_pre = '| ',
             row_post = '|',
