@@ -507,9 +507,10 @@ def pacf_ols(x, nlags=40):
     xlags = sm.add_constant(lagmat(x, nlags), prepend=True)
     pacf = [1.]
     for k in range(1, nlags+1):
-        res = sm.OLS(x0[k:], xlags[k:,:k+1], #np.take(xlags[k:], range(1,k+1)+[-1],
-                            axis=1)).fit()
-        pacf.append(res.params[-2])
+        res = sm.OLS(x0[k:], xlags[k:,:k+1]).fit()
+         #np.take(xlags[k:], range(1,k+1)+[-1],
+
+        pacf.append(res.params[-1])
     return np.array(pacf)
 
 def pacf(x, nlags=40, method='unbiased'):
@@ -649,7 +650,7 @@ def grangercausalitytests(x, maxlag):
               (ftres.fvalue, ftres.pvalue, ftres.df_denom, ftres.df_num)
 
 
-__all__ = ['acovf', 'acf', 'pacf_yw', 'pacf_ols', 'pergram', 'q_stat']
+__all__ = ['acovf', 'acf', 'acf', 'pacf_yw', 'pacf_ols', 'pergram', 'q_stat']
 
 if __name__=="__main__":
     data = sm.datasets.macrodata.load().data
