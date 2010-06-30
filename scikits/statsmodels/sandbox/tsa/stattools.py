@@ -469,14 +469,13 @@ def pacf_yw(x, nlags=40, method='unbiased'):
     Notes
     -----
     This solves yule_walker for each desired lag and contains
-    currently duplicate calculations.  The pacf at lag 0 (ie., 1) is *not*
-    returned.
+    currently duplicate calculations.
     '''
     xm = x - x.mean()
     pacf = [1.]
     for k in range(1, nlags+1):
         pacf.append(sm.regression.yule_walker(x, k, method=method)[0][-1])
-    return np.array(pacf)[1:]
+    return np.array(pacf)
 
 #NOTE: this is incorrect.
 def pacf_ols(x, nlags=40):
@@ -496,18 +495,35 @@ def pacf_ols(x, nlags=40):
 
     Notes
     -----
-    This solves a separate OLS estimation for each desired lag.  The pacf at
-    lag 0 (ie., 1) is *not* returned.
+    This solves a separate OLS estimation for each desired lag.
     '''
     #TODO: add warnings for Yule-Walker
     #NOTE: demeaning and not using a constant gave incorrect answers?
-    xlags = sm.add_constant(lagmat(x, nlags))
+    #JP: demeaning should have a better estimate of the constant
+    #maybe we can compare small sample properties with a MonteCarlo
+    xlags = lagmat(x, nlags)
+    x0 = xlags[:,0]
+    xlags = xlags[:,1:]
+    xlags = sm.add_constant(lagmat(x, nlags), prepend=True)
     pacf = [1.]
     for k in range(1, nlags+1):
-        res = sm.OLS(xlags[k:,0], np.take(xlags[k:], range(1,k+1)+[-1],
+        res = sm.OLS(x0[k:], xlags[k:,:k+1], #np.take(xlags[k:], range(1,k+1)+[-1],
                             axis=1)).fit()
         pacf.append(res.params[-2])
-    return np.array(pacf)[1:]
+    return np.array(pacf)
+
+def pacf(x, nlags=40, method='unbiased'):
+
+    if method == 'ols':
+        return pacf_ols(x, nlags=nlags)
+    elif method in ['yw', 'ywu', 'ywunbiased', 'yw_unbiased']:
+        return pacf_yw(x, nlags=nlags, method='unbiased')
+    elif method in ['ywm', 'ywmle', 'yw_mle']:
+        return pacf_yw(x, nlags=nlags, method='mle')
+    else:
+        raise ValueError('method not available')
+
+
 
 def pergram(X, kernel='bartlett', log=True):
     """
@@ -535,6 +551,7 @@ def pergram(X, kernel='bartlett', log=True):
     -----
     Doesn't look right yet.
     """
+    #JP: this should use covf and fft for speed and accuracy for longer time series
     X = np.asarray(X).squeeze()
     nobs = len(X)
     M = np.floor(nobs/2.)
