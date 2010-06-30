@@ -60,6 +60,8 @@ class Model(object):
                     exog_names = ['x%d' % i for i in range(exog.shape[1])]
                     exog_names[const_idx] = 'const'
                 self.exog_names = exog_names
+            else:
+                self.exog_names = ['x%d' % i for i in range(exog.shape[1])]
             self.endog_names = ['y']
         self.endog = endog
         self.exog = exog
