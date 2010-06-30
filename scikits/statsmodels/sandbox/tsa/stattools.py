@@ -420,8 +420,10 @@ def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False):
     d = nobs # changes if unbiased
     if not fft:
         avf = acovf(x, unbiased=unbiased, demean=True)
-        acf = np.take(avf/avf[0], range(1,nlags+1))
+        #acf = np.take(avf/avf[0], range(1,nlags+1))
+        acf = avf/avf[0]
     else:
+        #JP: move to acovf
         x0 = x - x.mean()
         Frf = np.fft.fft(x0, n=nobs*2) # zero-pad for separability
         if unbiased:
@@ -630,6 +632,7 @@ def grangercausalitytests(x, maxlag):
               (ftres.fvalue, ftres.pvalue, ftres.df_denom, ftres.df_num)
 
 
+__all__ = ['acovf', 'acf', 'pacf_yw', 'pacf_ols', 'pergram', 'q_stat']
 
 if __name__=="__main__":
     data = sm.datasets.macrodata.load().data
