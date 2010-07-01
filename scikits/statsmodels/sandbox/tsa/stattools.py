@@ -513,7 +513,31 @@ def pacf_ols(x, nlags=40):
         pacf.append(res.params[-1])
     return np.array(pacf)
 
-def pacf(x, nlags=40, method='unbiased'):
+def pacf(x, nlags=40, method='ywunbiased'):
+    '''Partial autocorrelation estimated
+
+    Parameters
+    ----------
+    x : 1d array
+        observations of time series for which pacf is calculated
+    maxlag : int
+        largest lag for which pacf is returned
+    method : 'ywunbiased' (default) or 'ywmle' or 'ols'
+        specifies which method for the calculations to use,
+        - yw or ywunbiased : yule walker with bias correction in denominator for acovf
+        - yw or ywmle : yule walker without bias correction
+        - ols - regression of time series on lags of it and on constant
+
+    Returns
+    -------
+    pacf : 1d array
+        partial autocorrelations, nlags elements, including lag zero
+
+    Notes
+    -----
+    This solves yule_walker equations or ols for each desired lag
+    and contains currently duplicate calculations.
+    '''
 
     if method == 'ols':
         return pacf_ols(x, nlags=nlags)
@@ -524,6 +548,67 @@ def pacf(x, nlags=40, method='unbiased'):
     else:
         raise ValueError('method not available')
 
+
+
+def ccovf(x, y, unbiased=True, demean=True):
+    ''' crosscovariance for 1D
+
+    Parameters
+    ----------
+    x, y : arrays
+       time series data
+    unbiased : boolean
+       if True, then denominators is n-k, otherwise n
+
+    Returns
+    -------
+    ccovf : array
+        autocovariance function
+
+    Notes
+    -----
+    This uses np.correlate which does full convolution. For very long time
+    series it is recommended to use fft convolution instead.
+    '''
+    n = len(x)
+    if demean:
+        xo = x - x.mean();
+        yo = y - y.mean();
+    else:
+        xo = x
+        yo = y
+    if unbiased:
+        xi = np.ones(n);
+        d = np.correlate(xi, xi, 'full')
+    else:
+        d = n
+    return (np.correlate(xo,yo,'full') / d)[n-1:]
+
+def ccf(x, y, unbiased=True):
+    '''cross-correlation function for 1d
+    Parameters
+    ----------
+    x, y : arrays
+       time series data
+    unbiased : boolean
+       if True, then denominators for autocovariance is n-k, otherwise n
+
+    Returns
+    -------
+    ccf : array
+        cross-correlation function of x and y
+
+    Notes
+    -----
+    This is based np.correlate which does full convolution. For very long time
+    series it is recommended to use fft convolution instead.
+
+    If unbiased is true, the denominator for the autocovariance is adjusted
+    but the autocorrelation is not an unbiased estimtor.
+
+    '''
+    cvf = ccovf(x, y, unbiased=unbiased, demean=True)
+    return cvf / (np.std(x) * np.std(y))
 
 
 def pergram(X, kernel='bartlett', log=True):
@@ -650,65 +735,6 @@ def grangercausalitytests(x, maxlag):
               (ftres.fvalue, ftres.pvalue, ftres.df_denom, ftres.df_num)
 
 
-def ccovf(x, y, unbiased=True, demean=True):
-    ''' crosscovariance for 1D
-
-    Parameters
-    ----------
-    x, y : arrays
-       time series data
-    unbiased : boolean
-       if True, then denominators is n-k, otherwise n
-
-    Returns
-    -------
-    ccovf : array
-        autocovariance function
-
-    Notes
-    -----
-    This uses np.correlate which does full convolution. For very long time
-    series it is recommended to use fft convolution instead.
-    '''
-    n = len(x)
-    if demean:
-        xo = x - x.mean();
-        yo = y - y.mean();
-    else:
-        xo = x
-        yo = y
-    if unbiased:
-        xi = np.ones(n);
-        d = np.correlate(xi, xi, 'full')
-    else:
-        d = n
-    return (np.correlate(xo,yo,'full') / d)[n-1:]
-
-def ccf(x, y, unbiased=True):
-    '''cross-correlation function for 1d
-    Parameters
-    ----------
-    x, y : arrays
-       time series data
-    unbiased : boolean
-       if True, then denominators for autocovariance is n-k, otherwise n
-
-    Returns
-    -------
-    ccf : array
-        cross-correlation function of x and y
-
-    Notes
-    -----
-    This is based np.correlate which does full convolution. For very long time
-    series it is recommended to use fft convolution instead.
-
-    If unbiased is true, the denominator for the autocovariance is adjusted
-    but the autocorrelation is not an unbiased estimtor.
-
-    '''
-    cvf = ccovf(x, y, unbiased=unbiased, demean=True)
-    return cvf / (np.std(x) * np.std(y))
 
 __all__ = ['acovf', 'acf', 'pacf', 'pacf_yw', 'pacf_ols', 'ccovf', 'ccf',
            'pergram', 'q_stat']
