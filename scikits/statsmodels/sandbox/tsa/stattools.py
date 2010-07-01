@@ -24,7 +24,8 @@ def add_trend(X, trend="c", prepend=False):
     X : array-like
         Original array of data.
     trend : str {"c","ct","ctt"}
-        "c" add constnat
+        "c" add constant only
+        "t" add trend only
         "ct" add constant and linear trend
         "ctt" add constant and linear and quadratic trend.
     prepend : bool
@@ -43,7 +44,7 @@ def add_trend(X, trend="c", prepend=False):
     trend = trend.lower()
     if trend == "c":    # handles structured arrays
         return sm.add_constant(X, prepend=prepend)
-    elif trend == "ct":
+    elif trend == "ct" or trend == "t":
         trendorder = 1
     elif trend == "ctt":
         trendorder = 2
@@ -52,6 +53,8 @@ def add_trend(X, trend="c", prepend=False):
     X = np.asanyarray(X)
     nobs = len(X)
     trendarr = np.vander(np.arange(1,nobs+1, dtype=float), trendorder+1)
+    if trend == "t":
+        trendarr = trendarr[:,0]
     if not X.dtype.names:
         if not prepend:
             X = np.column_stack((X, trendarr))
@@ -60,7 +63,10 @@ def add_trend(X, trend="c", prepend=False):
     else:
         return_rec = data.__clas__ is np.recarray
         if trendorder == 1:
-            dt = [('trend',float),('const',float)]
+            if trend == "ct":
+                dt = [('trend',float),('const',float)]
+            else:
+                dt = [('trend', float)]
         elif trendorder == 2:
             dt = [('trend_squared', float),('trend',float),('const',float)]
         trendarr = trendarr.view(dt)
