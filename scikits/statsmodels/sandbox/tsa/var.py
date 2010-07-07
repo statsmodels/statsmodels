@@ -15,6 +15,36 @@ from scikits.statsmodels.sandbox.tsa.stattools import add_trend
 from scikits.statsmodels.model import LikelihoodModelResults
 from scikits.statsmodels.decorators import *
 
+#TODO: move this somewhere to be reused.
+def irf(shock, params, nperiods=100):
+    """
+    Returns the impulse response function for a given shock.
+
+    Parameters
+    -----------
+    shock : array-like
+        An array of shocks must be provided that is shape (neqs,)
+
+    If params is None, uses the model params. Note that no normalizing is
+    done to the parameters.  Ie., this assumes the the coefficients are
+    the identified structural coefficients.
+
+    Notes
+    -----
+    TODO: Allow for common recursive structures.
+    """
+    shock = np.asarray(shock)
+    params = np.asanyarray(params)
+    neqs = params.shape[0]
+    if shock.shape[0] != neqs:
+        raise ValueError("Each shock must be specified even if it's zero")
+    if shock.ndim > 1:
+        shock = np.squeeze(shock)
+    for i in range(laglen, laglen+nperiods):
+        pass
+#TODO: stopped here
+
+
 # Refactor of VAR to be like statsmodels
 #inherit GLS, SUR?
 class VAR2(object):
@@ -194,37 +224,6 @@ class VAR2(object):
         return VARMAResults(self, results, params)
 
 
-#TODO: None of these really make sense as methods
-#make a fit method with the choice of fit -- OLS, OLS Companion, Unconditional
-#MLE, etc.
-    def _olscomp(self, demean=False):
-        """
-        Does OLS in Companion Matrix Form.
-        """
-        nvars = self.nvars
-        laglen = int(self.laglen)
-        nobs = self.nobs
-        avobs = self.avobs
-        useconst = self._useconst
-        endog = self.endog
-
-        # Stack Y,X
-        # not sure about the last index being general
-        y_stack = lagmat(endog, laglen-1, trim="both")[laglen-1:]
-        X_stack = lagmat(endog, laglen-1, trim="backward")[:-laglen]
-        p = 0
-        if self._useconst:
-            sm.add_constant(X_stack, prepend=True)
-            p = 1
-
-        params = np.zeros((nvars,p+nvars*laglen))
-        for i in range(nvars):
-            params[i,:] = np.dot(np.linalg.pinv(X_stack),y_stack[:,i])
-#TODO: finish this
-
-
-
-
 # Setting standard VAR options
 VAR_opts = {}
 VAR_opts['IRF_periods'] = 20
@@ -289,7 +288,7 @@ class VARMAResults(object):
           t = `trendorder`
     """
     def __init__(self, model, results, params):
-        self.results = results
+        self._results = results # most of this won't work, keep?
         self.model = model
         self.avobs = model.avobs
         self.dfk = model.dfk
@@ -306,15 +305,15 @@ class VARMAResults(object):
 # note the order of this
 # it's lag1 of y1, lag1 of y2, lag1 of y3 ... lag2 of y1, lag2 of y2 ...
 # and each row is a separate equation
-#        return self.results.params.reshape(self.neqs,-1)
+#        return self._results.params.reshape(self.neqs,-1)
 
     @cache_readonly
     def fittedvalues(self):
-        return self.results.fittedvalues.reshape(-1, self.neqs, order='F')
+        return self._results.fittedvalues.reshape(-1, self.neqs, order='F')
 
     @cache_readonly
     def resid(self):
-        return self.results.resid.reshape(-1,self.neqs,order='F')
+        return self._results.resid.reshape(-1,self.neqs,order='F')
 
     @cache_readonly
     def omega(self):
@@ -334,7 +333,7 @@ class VARMAResults(object):
     @cache_readonly
     def omega_beta_ols(self): # the covariance of each equation (check)
         ncoefs = self.params.shape[1]
-        XTXinv = self.results.normalized_cov_params[:ncoefs,:ncoefs]
+        XTXinv = self._results.normalized_cov_params[:ncoefs,:ncoefs]
         # above is iXX in old VAR
         obols = map(np.multiply, [XTXinv]*self.neqs, np.diag(self.omega))
         return np.asarray(obols)
@@ -349,7 +348,7 @@ class VARMAResults(object):
         resid = self.resid
         neqs = self.neqs
         ncoefs = self.ncoefs
-        XTXinv = self.results.normalized_cov_params[:ncoefs,:ncoefs]
+        XTXinv = self._results.normalized_cov_params[:ncoefs,:ncoefs]
         # Get GLS Covariance
         # this is just a list of length nvars, with each
         # XeeX where e is the residuals for that equation
@@ -369,8 +368,19 @@ class VARMAResults(object):
 
     @cache_readonly
     def ssr(self):
-        raise NotImplementedError
-        return self.results.ssr # rss in old VAR
+        return self._results.ssr # rss in old VAR
+
+    @cache_readonly
+    def root_MSE(self):
+        avobs = self.avobs
+        laglen = self.laglen
+        neqs = self.neqs
+        trendorder = self.trendorder
+        return np.sqrt(np.diag(self.omega*avobs/(avobs-neqs*laglen-trendorder)
+
+    @cache_readonly
+    def rsquared(self):
+
 
     @cache_readonly
     def aic(self):
@@ -382,7 +392,8 @@ class VARMAResults(object):
         else:
             logdet = logdet[1]
         neqs = self.neqs
-        return logdet+2*self.laglen*(neqs**2/self.avobs+trendorder*neqs)
+        trendorder = self.trendorder
+        return logdet+ (2/self.avobs) * (self.laglen*neqs**2+trendorder*neqs)
 
     @cache_readonly
     def bic(self):
@@ -395,8 +406,9 @@ class VARMAResults(object):
             logdet = logdet[1]
         avobs = self.avobs
         neqs = self.neqs
+        trendorder = self.trendorder
         return logdet+np.log(avobs)/avobs*(self.laglen*neqs**2 +
-                neqs*trenorder)
+                neqs*trendorder)
 
     @cache_readonly
     def hqic(self):
@@ -410,6 +422,7 @@ class VARMAResults(object):
         avobs = self.avobs
         laglen = self.laglen
         neqs = self.neqs
+        trendorder = self.trendorder
         return logdet + 2*np.log(np.log(avobs))/avobs * (laglen*neqs**2 +
                 trendorder * neqs)
 #TODO: do the above correctly handle extra exogenous variables?
