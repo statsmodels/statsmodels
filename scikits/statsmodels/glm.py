@@ -780,7 +780,7 @@ class GLMResults(LikelihoodModelResults):
             fmt = 'txt'
         )
         ########  summary table 1   #######
-        table_1l_title = 'Generalized linear model'
+        table_1l_title = title
         table_1l_header = None
         table_1l_stubs = ('Model Family:',
                           'Method:',
@@ -865,10 +865,10 @@ if __name__ == "__main__":
     #data.exog = add_constant(data.exog)
     GLM = GLM(data.endog, data.exog).fit()
     GLMT = GLM.summary(returns='tables')
-    GLMT[0].extend_right(GLMT[1])
-    print(GLMT[0])
-    print(GLMT[2])
-    GLMTp = GLM.summary()
+##    GLMT[0].extend_right(GLMT[1])
+##    print(GLMT[0])
+##    print(GLMT[2])
+    GLMTp = GLM.summary(title='Test GLM')
 
 """
 From Stata
