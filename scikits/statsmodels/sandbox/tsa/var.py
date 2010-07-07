@@ -11,20 +11,20 @@ from scipy import linalg, sparse
 import scikits.statsmodels as sm    # maybe can be replaced later
 from scikits.statsmodels import GLS, chain_dot
 from scikits.statsmodels.sandbox.tsa.tsatools import lagmat
+from scikits.statsmodels.sandbox.tsa.stattools import add_trend
 from scikits.statsmodels.model import LikelihoodModelResults
 from scikits.statsmodels.decorators import *
 
 # Refactor of VAR to be like statsmodels
 #inherit GLS, SUR?
 class VAR2(object):
-    def __init__(self, endog=None, exog=None, laglen=1, useconst=True):
+    def __init__(self, endog=None, exog=None, laglen=1):
         """
         Parameters
         ----------
         endog
         exog
         laglen
-        useconst
 
         Notes
         -----
@@ -32,18 +32,55 @@ class VAR2(object):
         """
         self.endog = endog    #TOD):rename endog
         self.laglen = float(laglen)
-        self._useconst = useconst
         nobs = float(endog.shape[0])
         self.nobs = nobs
         self.nvars = endog.shape[1] # should this be neqs since we might have
                                    # exogenous data?
         self.neqs = endog.shape[1]
-        self.avobs = nobs - laglen
-        # what's a better name for this? autonobs? lagnobs?
+        self.avobs = nobs - laglen # available obs (sample - pre-sample)
+
+    def loglike(self, params, omega):
+        """
+        Returns the value of the VAR(p) log-likelihood.
+
+        Parameters
+        ----------
+        params : array-like
+            The parameter estimates
+        omega : ndarray
+            Sigma hat matrix.  Each element i,j is the average product of the
+            OLS residual for variable i and the OLS residual for variable j or
+            np.dot(resid.T,resid)/avobs.  There should be no correction for the
+            degrees of freedom.
+
+
+        Returns
+        -------
+        loglike : float
+            The value of the loglikelihood function for a VAR(p) model
+
+        Notes
+        -----
+        The loglikelihood function for the VAR(p) is
+
+        .. math:: -\left(\frac{T}{2}\right)\left(\ln\left|\Omega\right|-K\ln\left(2\pi\right)-K\right)
+        """
+        params = np.asarray(params)
+        omega = np.asarray(omega)
+        logdet = np.linalg.slogdet(omega)
+        if logdet[0] == -1:
+            raise ValueError("Omega matrix is not positive definite")
+        elif logdet[0] == 0:
+            raise ValueError("Omega matrix is singluar")
+        else:
+            logdet = logdet[1]
+        avobs = self.avobs
+        neqs = self.neqs
+        return -(avobs/2.)*(neqs*np.log(2*np.pi)+logdet+neqs)
 
 #TODO: IRF, lag length selection
     def fit(self, method="ols", structural=None, dfk=None, maxlag=None,
-            ic=None):
+            ic=None, trend="c"):
         """
         Fit the VAR model
 
@@ -65,6 +102,13 @@ class VAR2(object):
             The default is 12 * (nobs/100.)**(1./4)
         ic : str {"aic","bic","hq"} or None, optional
             Information criteria to maximize for lag length selection.
+        trend, str {"c", "ct", "ctt", "nc"}
+            "c" - add constant
+            "ct" - constant and trend
+            "ctt" - constant, linear and quadratic trend
+            "nc" - co constant, no trend
+            Note that these are prepended to the columns of the dataset.
+
 
         Notes
         -----
@@ -77,18 +121,18 @@ class VAR2(object):
         else:
             self.dfk = dfk
         # What's cleaner? Logic handled here and private functions or all here?
-        if method == "ols":
-            return self._ols()
+#        if method == "ols":
+#            return self._ols()
 #TODO: should 'BQ' just have it's own method?
+#NOTE: Yes, removed the call to _ols
 
-
-    def _ols(self, structural=None):
-        """
-        The OLS Function does....
-
-        It just calls GLS with no arguments.
-        """
-        #recast indices to integers
+#    def _ols(self, structural=None):
+#        """
+#        The OLS Function does....
+#
+#        It just calls GLS with no arguments.
+#        """
+#        #recast indices to integers
         avobs = int(self.avobs)
         laglen = int(self.laglen)
         nobs = int(self.nobs)
@@ -100,14 +144,22 @@ class VAR2(object):
         Y = endog[laglen:,:]
 
         X = np.zeros((avobs,nvars*laglen))
-        self.X = X #TODO: rename or refactor? (exog?) lagged_exog?
         for x1 in xrange(laglen):
             X[:,x1*nvars:(x1+1)*nvars] = endog[(laglen-1)-x1:(nobs-1)-x1,:]
 #NOTE: the above loop is faster than lagmat
 #        assert np.all(X == lagmat(endog, laglen-1, trim="backward")[:-laglen])
 
-        if self._useconst: # let user handle this?
-            X = sm.add_constant(X,prepend=True)
+        if trend == 'c':
+            trendorder = 1
+        elif trend == 'nc':
+            trendorder = 0
+        elif trend == 'ct':
+            trendorder = 2
+        elif trend == 'ctt':
+            trendorder = 3
+        X = add_trend(X,prepend=True, trend=trend)
+        self.trendorder = trendorder
+        self.exog = X #TODO: rename or refactor? (exog?) lagged_exog?
 
 # diag
 #        diag_X = linalg.block_diag(*[X]*nvars)
@@ -140,10 +192,6 @@ class VAR2(object):
                 params[i] = np.dot(phi_normalize, phi[i])
                 params = np.swapaxes(params, 1,0).reshape(neqs,laglen*neqs)
         return VARMAResults(self, results, params)
-
-
-
-
 
 
 #TODO: None of these really make sense as methods
@@ -196,7 +244,7 @@ class VARMAResults(object):
 
     Attributes
     ----------
-    aic
+    aic (Lutkepohl 2004)
     avobs : float
         Available observations for estimation.  The size of the whole sample
         less the pre-sample observations needed for lags.
@@ -205,8 +253,11 @@ class VARMAResults(object):
     df_resid : float
         Residual degrees of freedom.
     dfk : float
-        Degrees of freedom correction.
+        Degrees of freedom correction.  Not currently used. MLE estimator of
+        omega is used everywhere.
     fittedvalues
+    fpe (Lutkepohl 2005, p 146-7).
+        See notes.
     laglen
     model
     ncoefs
@@ -217,7 +268,7 @@ class VARMAResults(object):
         Sigma hat matrix.  Each element i,j is the average product of the OLS
         residual for variable i and the OLS residual for variable j or
         np.dot(resid.T,resid)/avobs.  There is no correction for the degrees
-        of freedom.
+        of freedom.  This is the maximum likelihood estimator of Omega.
     omega_beta_gls
     omega_beta_gls_va
     omega_beta_ols
@@ -225,6 +276,17 @@ class VARMAResults(object):
 
     Methods
     -------
+
+    Notes
+    ------
+    FPE formula
+
+    \left[\frac{T+Kp+t}{T-Kp-t}\right]^{K}$$\left|\Omega\right|
+
+    Where T = `avobs`
+          K = `neqs`
+          p = `laglength`
+          t = `trendorder`
     """
     def __init__(self, model, results, params):
         self.results = results
@@ -237,6 +299,7 @@ class VARMAResults(object):
         self.params = params
         self.ncoefs = self.params.shape[1]
         self.df_resid = model.avobs - self.ncoefs # normalize sigma by this
+        self.trendorder = model.trendorder
 
 #    @cache_readonly
 #    def params(self):
@@ -258,6 +321,10 @@ class VARMAResults(object):
         resid = self.resid
         return np.dot(resid.T,resid)/self.avobs
 #TODO: include dfk correction anywhere or not?  No small sample bias?
+
+    @cache_readonly
+    def llf(self):
+        return self.model.loglike(self.params, self.omega)
 
 #    @cache_readonly
 #    def omega(self): # variance of residuals across equations
@@ -302,25 +369,60 @@ class VARMAResults(object):
 
     @cache_readonly
     def ssr(self):
+        raise NotImplementedError
         return self.results.ssr # rss in old VAR
 
     @cache_readonly
     def aic(self):
-#        return linalg.det(self.omega)+2.*self.laglen*self.neqs**2/self.nobs
         logdet = np.linalg.slogdet(self.omega)
-#       det = logdet[0] * np.exp(logdet[1])
         if logdet[0] == -1:
             raise ValueError("Omega matrix is not positive definite")
         elif logdet[0] == 0:
             raise ValueError("Omega matrix is singluar")
         else:
             logdet = logdet[1]
-        return logdet+2*self.laglen*self.neqs**2/self.nobs
+        neqs = self.neqs
+        return logdet+2*self.laglen*(neqs**2/self.avobs+trendorder*neqs)
 
     @cache_readonly
     def bic(self):
-        nobs = self.nobs
-        linalg.det(self.omega)+np.log(nobs)/nobs*self.laglen*self.nvars**2
+        logdet = np.linalg.slogdet(self.omega)
+        if logdet[0] == -1:
+            raise ValueError("Omega matrix is not positive definite")
+        elif logdet[0] == 0:
+            raise ValueError("Omega matrix is singluar")
+        else:
+            logdet = logdet[1]
+        avobs = self.avobs
+        neqs = self.neqs
+        return logdet+np.log(avobs)/avobs*(self.laglen*neqs**2 +
+                neqs*trenorder)
+
+    @cache_readonly
+    def hqic(self):
+        logdet = np.linalg.slogdet(self.omega)
+        if logdet[0] == -1:
+            raise ValueError("Omega matrix is not positive definite")
+        elif logdet[0] == 0:
+            raise ValueError("Omega matrix is singluar")
+        else:
+            logdet = logdet[1]
+        avobs = self.avobs
+        laglen = self.laglen
+        neqs = self.neqs
+        return logdet + 2*np.log(np.log(avobs))/avobs * (laglen*neqs**2 +
+                trendorder * neqs)
+#TODO: do the above correctly handle extra exogenous variables?
+
+    @cache_readonly
+    def fpe(self):
+        omegadet = np.linalg.det(self.omega)
+        avobs = self.avobs
+        neqs = self.neqs
+        laglen = self.laglen
+        trendorder = self.trendorder
+        return ((avobs+neqs*laglen+trendorder)/(avobs-neqs*laglen-
+            trendorder))**neqs * omegadet
 
 #    @wrap
 #    def wrap(self, attr, *args):
@@ -736,7 +838,11 @@ if __name__ == "__main__":
     XX = data[['realinv','realgdp','realcons']].view((float,3))
     XX = np.diff(np.log(XX), axis=0)
     vrx = VAR(data=XX,laglen=2)
+    vrx.ols() # fit
+    for i,j in vrx.ols_results.items():
+        setattr(vrx, i,j)
     vrx2 = VAR2(endog=XX, laglen=2)
+    res = vrx2.fit()
 
 
 
