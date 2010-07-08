@@ -369,7 +369,8 @@ class Poisson(Family):
 
         `deviance` = 2*sum_i(Y*log(Y/mu))
         '''
-        return 2*np.sum(Y*np.log(Y/mu))/scale
+        Yin = np.clip(Y, 1e-12, np.inf)
+        return 2*np.sum(Y*np.log(Yin/mu))/scale
 
     def loglike(self, Y, mu, scale=1.):
         """
