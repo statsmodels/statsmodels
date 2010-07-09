@@ -75,7 +75,7 @@ class VAR2(LikelihoodModel):
                                    # exogenous data?
                                    #NOTE: Yes
         self.neqs = endog.shape[1]
-#        super(VAR2, self).__init__(endog)
+        super(VAR2, self).__init__(endog)
 
     def loglike(self, params, omega):
         """
@@ -128,18 +128,21 @@ class VAR2(LikelihoodModel):
             "ols" fit equation by equation with OLS
             "yw" fit with yule walker
             "mle" fit with unconditional maximum likelihood
+            Only OLS is currently implemented.
         structural : str, optional
             If 'BQ' - Blanchard - Quah identification scheme is used.
-            This imposes Long
+            This imposes long run restrictions. Not yet implemented.
         dfk : int, optional
             Small-sample bias correction.  If None, dfk = neqs * nlags +
-            number of exogenous variables. Run restrictions.  Details in Lyx
-            notes.
+            number of exogenous variables.  Note however, that it is not
+            used when calculating Sigma.  See VARResults.
         maxlag : int, optional
             The highest lag order for lag length selection according to `ic`.
-            The default is 12 * (nobs/100.)**(1./4)
+            The default is 12 * (nobs/100.)**(1./4).  If ic=None, maxlag
+            is the number of lags that are fit for each equation.
         ic : str {"aic","bic","hq"} or None, optional
             Information criteria to maximize for lag length selection.
+            Not yet implemented for VAR.
         trend, str {"c", "ct", "ctt", "nc"}
             "c" - add constant
             "ct" - constant and trend
@@ -283,7 +286,7 @@ class VARMAResults(object):
         equations and that each row holds lags first then variables, so
         it is the first lag for `neqs` variables, the second lag for `neqs`
         variables, etc. exogenous variables and then the trend variables are
-        appended as columns.
+        prepended as columns.
     results : list
         Each entry is the equation by equation OLS results if VAR was fit by
         OLS.
@@ -525,6 +528,106 @@ class VARMAResults(object):
             responses[:,i] = responses[:,i] + np.sum(laggedres * params,
                     axis = 1)
         return responses
+
+    def summary(self, endog_names=None, exog_names=None):
+        """
+        Summary of VAR model
+        """
+        import time
+        from scikits.statsmodels.iolib import SimpleTable
+
+        if endog_names is None:
+            endog_names = self.model.endog_names
+            lag_names = []
+        # take care of lagged endogenous names
+        laglen = self.laglen
+        for i in range(1,laglen+1):
+            lag_names.append(['L1.'+str(i)+_ for _ in endog_names])
+        trendorder = self.trendorder
+        if trendorder != 0:
+            endog_names.insert(0, 'const')
+        if trendorder > 1:
+            endog_names.insert(0, 'trend')
+        if trendorder > 2:
+            endog_names.insert(0, 'trend**2')
+
+        if exog_names is not None and len(exog_names) != self.params.shape[1]:
+            raise ValueError("Number of exog_names does not match the number of\
+ parameters")
+        #TODO: handle exog_names when we handle exogenous variables
+
+        modeltype = self.model.__class__.__name__
+        t = time.localtime()
+
+        ncoefs = self.ncoefs #TODO: change when we allow coef restrictions
+        part1_fmt = dict(
+            data_fmts = ["%s"],
+            empty_cell = '',
+            colwidths = 15,
+            colsep=' ',
+            row_pre = '| ',
+            row_post = '|',
+            table_dec_above='=',
+            table_dec_below='',
+            header_dec_below=None,
+            header_fmt = '%s',
+            stub_fmt = '%s',
+            title_align='c',
+            header_align = 'r',
+            data_aligns = "r",
+            stubs_align = "l",
+            fmt = 'txt'
+        )
+        part2_fmt = dict(
+            data_fmts = ["%#12.6g","%#12.6g","%#10.4g","%#5.4g"],
+            empty_cell = '',
+            colwidths = None,
+            colsep='    ',
+            row_pre = '| ',
+            row_post = ' |',
+            table_dec_above='-',
+            table_dec_below='-',
+            header_dec_below=None,
+            header_fmt = '%s',
+            stub_fmt = '%s',
+            title_align='c',
+            header_align = 'r',
+            data_aligns = 'r',
+            stubs_align = 'l',
+            fmt = 'txt'
+        )
+
+        part1title = "Summary of Regression Results"
+        part1data = [[modeltype],
+                     ["OLS"], #TODO: change when fit methods change
+                     [time.strftime("%a, %d, %b, %Y", t)],
+                     [time.strftime("%H:%M:%S", t)]]
+        part1header = None
+        part1stubs = ('Model:',
+                     'Method:',
+                     'Date:',
+                     'Time:')
+        part1 = SimpleTable(part1data, part1header, part1stubs, title=
+                part1title, txt_fmt=part1_fmt)
+        part2Lstubs = ('No. of Equations:',
+                       'Nobs:',
+                       'Log likelihood:',
+                       'AIC:')
+        part2Rstubs = ('BIC:',
+                       'HQIC:',
+                       'FPE:',
+                       'Det(Omega_mle):')
+        part2Ldata = [[self.neqs],[self.nobs],[self.llf],[self.aic]]
+        part2Rdata = [[self.bic],[self.hqic],[self.fpe],[self.detomega]]
+        part2Lheader = None
+        part2L = SimpleTable(part2Ldata, part2Lheader, part2Lstubs,
+                txt_fmt = part2_fmt)
+        part2R = SimpleTable(part2Rdata, part2Lheader, part2Rstubs,
+                txt_fmt = part2_fmt)
+        part2L.extend_right(part2R)
+
+        table = str(part1) +'\n'+str(part2L)
+        return table
 
 
 ###############THE VECTOR AUTOREGRESSION CLASS (WORKS)###############
