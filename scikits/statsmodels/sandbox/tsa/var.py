@@ -397,6 +397,11 @@ class VARMAResults(object):
         return np.vstack((_.rsquared for _ in results))
 
     @cache_readonly
+    def bse(self):
+        results = self.results
+        return np.vstack((_.bse for _ in results))
+
+    @cache_readonly
     def aic(self):
         logdet = np.linalg.slogdet(self.omega)
         if logdet[0] == -1:
@@ -442,18 +447,40 @@ class VARMAResults(object):
 #TODO: do the above correctly handle extra exogenous variables?
 
     @cache_readonly
+    def df_eq(self):
+#TODO: change when we accept coefficient restrictions
+        return self.ncoefs
+
+    @cache_readonly
     def fpe(self):
-        omegadet = np.linalg.det(self.omega)
+        detomega = self.detomega
         avobs = self.avobs
         neqs = self.neqs
         laglen = self.laglen
         trendorder = self.trendorder
         return ((avobs+neqs*laglen+trendorder)/(avobs-neqs*laglen-
-            trendorder))**neqs * omegadet
+            trendorder))**neqs * detomega
+
+    @cache_readonly
+    def detomega(self):
+        return np.linalg.det(self.omega)
 
 #    @wrap
 #    def wrap(self, attr, *args):
 #        return self.__getattribute__(attr, *args)
+
+    @cache_readonly
+    def bse(self):
+        return np.sqrt(np.diag(self.cov_params)).reshape(self.neqs, -1,
+                order = 'F')
+
+
+    @cache_readonly
+    def cov_params(self):
+        #NOTE: Cov(Vec(B)) = (Z'Z)^-1 kron Omega
+        X = self.model.exog
+        return np.kron(np.linalg.inv(np.dot(X.T,X)), self.omega)
+#TODO: this might need to be changed when order is changed and with exog
 
     #could this just be a standalone function?
     def irf(self, shock, params=None, nperiods=100):
