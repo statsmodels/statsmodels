@@ -23,7 +23,7 @@ except:
 #TODO: add compatability program
 
 #TODO: move this somewhere to be reused.
-def irf(shock, params, nperiods=100):
+def irf(params, shock, omega, nperiods=100):
     """
     Returns the impulse response function for a given shock.
 
@@ -56,8 +56,10 @@ def irf(shock, params, nperiods=100):
 #inherit GLS, SUR?
 #class VAR2(object):
 class VAR2(LikelihoodModel):
-    def __init__(self, endog=None, exog=None):
+    def __init__(self, endog, exog=None):
         """
+        Vector Autoregression (VAR, VARX) models.
+
         Parameters
         ----------
         endog
@@ -76,7 +78,7 @@ class VAR2(LikelihoodModel):
                                    # exogenous data?
                                    #NOTE: Yes
         self.neqs = endog.shape[1]
-        super(VAR2, self).__init__(endog)
+        super(VAR2, self).__init__(endog, exog)
 
     def loglike(self, params, omega):
         """
@@ -133,10 +135,11 @@ class VAR2(LikelihoodModel):
         structural : str, optional
             If 'BQ' - Blanchard - Quah identification scheme is used.
             This imposes long run restrictions. Not yet implemented.
-        dfk : int, optional
-            Small-sample bias correction.  If None, dfk = neqs * nlags +
-            number of exogenous variables.  Note however, that it is not
-            used when calculating Sigma.  See VARResults.
+        dfk : int or Bool optional
+            Small-sample bias correction.  If None, dfk = 0.
+            If True, dfk = neqs * nlags + number of exogenous variables.  The
+            user can also provide a number for dfk. Omega is divided by (avobs -
+            dfk).
         maxlag : int, optional
             The highest lag order for lag length selection according to `ic`.
             The default is 12 * (nobs/100.)**(1./4).  If ic=None, maxlag
@@ -160,7 +163,10 @@ class VAR2(LikelihoodModel):
         """
 #TODO: keep dfk correction? everyone seems to use Omega_MLE
         if dfk is None:
-            self.dfk = maxlag * self.neqs
+            self.dfk = 0
+        elif dkf is True:
+            self.dfk = self.X.shape[1] #TODO: change when we accept
+                                          # equations for endog and exog
         else:
             self.dfk = dfk
 
@@ -183,12 +189,18 @@ class VAR2(LikelihoodModel):
         laglen = maxlag
         Y = endog[laglen:,:]
 
+        # Make lagged endogenous RHS
         X = np.zeros((avobs,nvars*laglen))
         for x1 in xrange(laglen):
             X[:,x1*nvars:(x1+1)*nvars] = endog[(laglen-1)-x1:(nobs-1)-x1,:]
 #NOTE: the above loop is faster than lagmat
 #        assert np.all(X == lagmat(endog, laglen-1, trim="backward")[:-laglen])
 
+        # Prepend Exogenous variables
+        if self.exog is not None:
+            X = np.column_stack((self.exog[laglen:,:], X))
+
+        # Handle constant, etc.
         if trend == 'c':
             trendorder = 1
         elif trend == 'nc':
@@ -199,7 +211,9 @@ class VAR2(LikelihoodModel):
             trendorder = 3
         X = add_trend(X,prepend=True, trend=trend)
         self.trendorder = trendorder
-        self.exog = X
+
+        self.Y = Y
+        self.X = X
 
 # Two ways to do block diagonal, but they are slow
 # diag
@@ -216,6 +230,8 @@ class VAR2(LikelihoodModel):
         for y in Y.T:
             results.append(GLS(y,X).fit())
         params = np.vstack((_.params for _ in results))
+
+#TODO: For coefficient restrictions, will have to use SUR
 
 
 #TODO: make a separate SVAR class or this is going to get really messy
@@ -334,7 +350,7 @@ class VARMAResults(object):
     @cache_readonly
     def omega(self):
         resid = self.resid
-        return np.dot(resid.T,resid)/self.avobs
+        return np.dot(resid.T,resid)/(self.avobs - self.dfk)
 #TODO: include dfk correction anywhere or not?  No small sample bias?
 
     @cache_readonly
@@ -484,12 +500,12 @@ class VARMAResults(object):
 
     @cache_readonly
     def pvalues(self):
-        return norm.sf(np.abs(res.z))*2
+        return norm.sf(np.abs(self.z))*2
 
     @cache_readonly
     def cov_params(self):
         #NOTE: Cov(Vec(B)) = (Z'Z)^-1 kron Omega
-        X = self.model.exog
+        X = self.model.X
         return np.kron(np.linalg.inv(np.dot(X.T,X)), self.omega)
 #TODO: this might need to be changed when order is changed and with exog
 
@@ -543,30 +559,42 @@ class VARMAResults(object):
         """
         import time
         from scikits.statsmodels.iolib import SimpleTable
+        model = self.model
 
         if endog_names is None:
             endog_names = self.model.endog_names
+
+        # take care of exogenous names
+        if model.exog is not None and exog_names is None:
+            exog_names = model.exog_names
+        elif exog_names is not None:
+            if len(exog_names) != model.exog.shape[1]:
+                raise ValueError("The number of exog_names does not match the \
+size of model.exog")
+        else:
+            exog_names = []
+
         lag_names = []
         # take care of lagged endogenous names
         laglen = self.laglen
         for i in range(1,laglen+1):
             for ename in endog_names:
                 lag_names.append('L'+str(i)+'.'+ename)
+        # put them together
+        Xnames = exog_names + lag_names
+
+        # handle the constant name
         trendorder = self.trendorder
         if trendorder != 0:
-            lag_names.insert(0, 'const')
+            Xnames.insert(0, 'const')
         if trendorder > 1:
-            lag_names.insert(0, 'trend')
+            Xnames.insert(0, 'trend')
         if trendorder > 2:
-            lag_names.insert(0, 'trend**2')
-        lag_names *= self.neqs
+            Xnames.insert(0, 'trend**2')
+        Xnames *= self.neqs
 
-        if exog_names is not None and len(exog_names) != self.params.shape[1]:
-            raise ValueError("Number of exog_names does not match the number of\
- parameters")
-        #TODO: handle exog_names when we handle exogenous variables
 
-        modeltype = self.model.__class__.__name__
+        modeltype = model.__class__.__name__
         t = time.localtime()
 
         ncoefs = self.ncoefs #TODO: change when we allow coef restrictions
@@ -628,6 +656,7 @@ class VARMAResults(object):
             fmt = 'txt'
         )
 
+        # Header information
         part1title = "Summary of Regression Results"
         part1data = [[modeltype],
                      ["OLS"], #TODO: change when fit methods change
@@ -640,6 +669,10 @@ class VARMAResults(object):
                      'Time:')
         part1 = SimpleTable(part1data, part1header, part1stubs, title=
                 part1title, txt_fmt=part1_fmt)
+
+        #TODO: do we want individual statistics or should users just
+        # use results if wanted?
+        # Handle overall fit statistics
         part2Lstubs = ('No. of Equations:',
                        'Nobs:',
                        'Log likelihood:',
@@ -656,13 +689,15 @@ class VARMAResults(object):
         part2R = SimpleTable(part2Rdata, part2Lheader, part2Rstubs,
                 txt_fmt = part2_fmt)
         part2L.extend_right(part2R)
+
+        # Handle coefficients
         part3data = []
-        part3data = zip([self.params.ravel()[i] for i in range(len(lag_names))],
-                [self.bse.ravel()[i] for i in range(len(lag_names))],
-                [self.z.ravel()[i] for i in range(len(lag_names))],
-                [self.pvalues.ravel()[i] for i in range(len(lag_names))])
+        part3data = zip([self.params.ravel()[i] for i in range(len(Xnames))],
+                [self.bse.ravel()[i] for i in range(len(Xnames))],
+                [self.z.ravel()[i] for i in range(len(Xnames))],
+                [self.pvalues.ravel()[i] for i in range(len(Xnames))])
         part3header = ('coefficient','std. error','z-stat','prob')
-        part3stubs = lag_names * self.neqs
+        part3stubs = Xnames
         part3 = SimpleTable(part3data, part3header, part3stubs, title=None,
                 txt_fmt = part3_fmt)
 
@@ -1042,6 +1077,9 @@ if __name__ == "__main__":
     vrx2 = VAR2(endog=XX)
     res = vrx2.fit(maxlag=2)
     vrx3 = VAR2(endog=XX)
+
+    varx = VAR2(endog=XX, exog=np.diff(np.log(data['realgovt']), axis=0))
+    resx = varx.fit(maxlag=2)
 
 
 
