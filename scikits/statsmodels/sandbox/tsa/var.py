@@ -8,6 +8,7 @@ import numpy as np
 from numpy import matlib as MAT
 from scipy import linalg as LIN #TODO: get rid of this once cleaned up
 from scipy import linalg, sparse
+from scipy.stats import norm
 import scikits.statsmodels as sm    # maybe can be replaced later
 from scikits.statsmodels import GLS, chain_dot
 from scikits.statsmodels.sandbox.tsa.tsatools import lagmat
@@ -477,6 +478,13 @@ class VARMAResults(object):
         return np.sqrt(np.diag(self.cov_params)).reshape(self.neqs, -1,
                 order = 'F')
 
+    @cache_readonly
+    def z(self):
+        return self.params/self.bse
+
+    @cache_readonly
+    def pvalues(self):
+        return norm.sf(np.abs(res.z))*2
 
     @cache_readonly
     def cov_params(self):
@@ -538,18 +546,20 @@ class VARMAResults(object):
 
         if endog_names is None:
             endog_names = self.model.endog_names
-            lag_names = []
+        lag_names = []
         # take care of lagged endogenous names
         laglen = self.laglen
         for i in range(1,laglen+1):
-            lag_names.append(['L1.'+str(i)+_ for _ in endog_names])
+            for ename in endog_names:
+                lag_names.append('L'+str(i)+'.'+ename)
         trendorder = self.trendorder
         if trendorder != 0:
-            endog_names.insert(0, 'const')
+            lag_names.insert(0, 'const')
         if trendorder > 1:
-            endog_names.insert(0, 'trend')
+            lag_names.insert(0, 'trend')
         if trendorder > 2:
-            endog_names.insert(0, 'trend**2')
+            lag_names.insert(0, 'trend**2')
+        lag_names *= self.neqs
 
         if exog_names is not None and len(exog_names) != self.params.shape[1]:
             raise ValueError("Number of exog_names does not match the number of\
@@ -565,8 +575,8 @@ class VARMAResults(object):
             empty_cell = '',
             colwidths = 15,
             colsep=' ',
-            row_pre = '| ',
-            row_post = '|',
+            row_pre = '',
+            row_post = '',
             table_dec_above='=',
             table_dec_below='',
             header_dec_below=None,
@@ -583,11 +593,32 @@ class VARMAResults(object):
             empty_cell = '',
             colwidths = None,
             colsep='    ',
-            row_pre = '| ',
-            row_post = ' |',
+            row_pre = '',
+            row_post = '',
             table_dec_above='-',
             table_dec_below='-',
             header_dec_below=None,
+            header_fmt = '%s',
+            stub_fmt = '%s',
+            title_align='c',
+            header_align = 'r',
+            data_aligns = 'r',
+            stubs_align = 'l',
+            fmt = 'txt'
+        )
+
+        part3_fmt = dict(
+            #data_fmts = ["%#12.6g","%#12.6g","%#10.4g","%#5.4g"],
+            #data_fmts = ["%#10.4g","%#10.4g","%#10.4g","%#6.4g"],
+            data_fmts = ["%#15.6F","%#15.6F","%#15.3F","%#14.3F"],
+            empty_cell = '',
+            #colwidths = 10,
+            colsep='  ',
+            row_pre = '',
+            row_post = '',
+            table_dec_above='=',
+            table_dec_below='=',
+            header_dec_below='-',
             header_fmt = '%s',
             stub_fmt = '%s',
             title_align='c',
@@ -625,8 +656,18 @@ class VARMAResults(object):
         part2R = SimpleTable(part2Rdata, part2Lheader, part2Rstubs,
                 txt_fmt = part2_fmt)
         part2L.extend_right(part2R)
+        part3data = []
+        part3data = zip([self.params.ravel()[i] for i in range(len(lag_names))],
+                [self.bse.ravel()[i] for i in range(len(lag_names))],
+                [self.z.ravel()[i] for i in range(len(lag_names))],
+                [self.pvalues.ravel()[i] for i in range(len(lag_names))])
+        part3header = ('coefficient','std. error','z-stat','prob')
+        part3stubs = lag_names * self.neqs
+        part3 = SimpleTable(part3data, part3header, part3stubs, title=None,
+                txt_fmt = part3_fmt)
 
-        table = str(part1) +'\n'+str(part2L)
+
+        table = str(part1) +'\n'+str(part2L) + '\n' + str(part3)
         return table
 
 
