@@ -21,6 +21,10 @@ except:
     def slogdet(X):
         return (1, np.log(np.linalg.log(X)))
 #TODO: add compatability program
+try:
+    from numdifftools import Jacobian
+except:
+    raise Warning("You need to install numdifftools to try out the AR model")
 
 
 #TODO: move this somewhere to be reused.
@@ -54,6 +58,177 @@ def irf(params, shock, omega, nperiods=100, ortho=True):
 #TODO: stopped here
 
 
+#TODO: move this
+#NOTE: writing this now to be used with ADF test so that
+# _autolag can be generalized to VAR.
+class AR(LikelihoodModel):
+    def __init__(self, endog, exog=None):
+        """
+        Autoregressive AR(p) Model
+
+        Notes
+        -----
+        Written for AR(1) case.  Not yet general.
+        """
+        self.endog = endog
+        self.nobs = float(endog.shape[0])
+        super(AR, self).__init__(endog, exog)
+
+    def initialize(self):
+        pass
+
+    def loglike(self, params):
+        """
+        The unconditional loglikelihood of an AR(p) process
+
+        Notes
+        -----
+        Contains constant term.
+        """
+        nobs = self.nobs
+        y = self.endog
+        ylag = self.exog
+        penalty = self.penalty
+        if isinstance(params,tuple):
+            # broyden (all optimize.nonlin return a tuple until rewrite commit)
+            params = np.asarray(params)
+        usepenalty = False
+        if not np.all(np.abs(params)<1) and penalty:
+            oldparams = params
+            params = np.array([.9999]) # make it the edge
+            usepenalty = True
+        diffsumsq = sumofsq(y-np.dot(ylag,params))
+        # concentrating the likelihood means that sigma2 is given by
+        sigma2 = 1/nobs*(diffsumsq-ylag[0]**2*(1-params**2))
+        loglike = -nobs/2 * np.log(2*np.pi) - nobs/2*np.log(sigma2) + \
+                .5 * np.log(1-params**2) - .5*diffsumsq/sigma2 -\
+                ylag[0]**2 * (1-params**2)/(2*sigma2)
+        if usepenalty:
+        # subtract a quadratic penalty since we min the negative of loglike
+            loglike -= 1000 *(oldparams-.9999)**2
+        return loglike
+
+    def score(self, params):
+        """
+        Notes
+        -----
+        Need to generalize for AR(p) and for a constant.
+        Not correct yet.  Returns numerical gradient.  Depends on package
+        numdifftools.
+        """
+        y = self.endog
+        ylag = self.exog
+        nobs = self.nobs
+        diffsumsq = sumofsq(y-np.dot(ylag,params))
+        dsdr = 1/nobs * -2 *np.sum(ylag*(y-np.dot(ylag,params))[:,None])+\
+                2*params*ylag[0]**2
+        sigma2 = 1/nobs*(diffsumsq-ylag[0]**2*(1-params**2))
+        gradient = -nobs/(2*sigma2)*dsdr + params/(1-params**2) + \
+                1/sigma2*np.sum(ylag*(y-np.dot(ylag, params))[:,None])+\
+                .5*sigma2**-2*diffsumsq*dsdr+\
+                ylag[0]**2*params/sigma2 +\
+                ylag[0]**2*(1-params**2)/(2*sigma2**2)*dsdr
+        if self.penalty:
+            pass
+        j = Jacobian(self.loglike)
+        return j(params)
+#        return gradient
+
+
+    def information(self, params):
+        """
+        Not Implemented Yet
+        """
+        return
+
+    def hessian(self, params):
+        """
+        Returns numerical hessian for now.  Depends on numdifftools.
+        """
+        h = Hessian(self.loglike)
+        return h(params)
+
+    def fit(self, method='ols', penalty=False, start_params=None, solver=None,
+            maxiter=35, full_output=1, disp=1, callback=None, **kwargs):
+        """
+        Fit the unconditional maximum likelihood of an AR(p) process.
+
+        Parameters
+        ----------
+        start_params : array-like, optional
+            A first guess on the parameters.  Defaults is a vector of zeros.
+        method : str {'ols', 'yw'. 'mle', 'umle'}, optional
+            ols - Ordinary Leasy Squares
+            yw - Yule-Walker
+            mle - conditional maximum likelihood
+            umle - unconditional maximum likelihood
+        solver : str or None, optional
+            Unconstrained solvers:
+                Default is 'bfgs', 'newton' (newton-raphson), 'ncg'
+                (Note that previous 3 are not recommended at the moment.)
+                and 'powell'
+            Constrained solvers:
+                'bfgs-b', 'tnc'
+            See notes.
+        maxiter : int, optional
+            The maximum number of function evaluations. Default is 35.
+        tol = float
+            The convergence tolerance.  Default is 1e-08.
+        penalty : bool
+            Whether or not to use a penalty function.  Default is False,
+            though this is ignored at the moment and the penalty is always
+            used if appropriate.  See notes.
+
+        Notes
+        -----
+        The unconstrained solvers use a quadratic penalty (regardless if
+        penalty kwd is True or False) in order to ensure that the solution
+        stays within (-1,1).  The constrained solvers default to using a bound
+        of (-.999,.999).
+
+        See also
+        --------
+        scikits.statsmodels.model.LikelihoodModel.fit for more information
+        on using the solvers.
+        """
+        self.penalty = penalty
+        method = method.lower()
+        if solver:
+            solver = solver.lower()
+#TODO: allow user-specified penalty function
+#        if penalty and method not in ['bfgs_b','tnc','cobyla','slsqp']:
+#            minfunc = lambda params : -self.loglike(params) - \
+#                    self.penfunc(params)
+#        else:
+        minfunc = lambda params: -self.loglike(params)
+        if method == "mle":
+            if solver in ['newton', 'bfgs', 'ncg']:
+                super(AR, self).fit(start_params=start_params, method=solver,
+                    maxiter=maxiter, full_output=full_output, disp=disp,
+                    callback=callback, **kwargs)
+        elif method == "umle":
+            bounds = [(-.999,.999)]   # assume stationarity
+            if start_params == None:
+                start_params = np.array([0]) # assumes AR(1)
+#TODO: move this stuff up to LikelihoodModel.fit
+            if method == 'bfgs-b':
+                retval = optimize.fmin_l_bfgs_b(minfunc, start_params,
+                        approx_grad=True, bounds=bounds)
+                self.params, self.llf = retval[0:2]
+            if method == 'tnc':
+                retval = optimize.fmin_tnc(minfunc, start_params,
+                        approx_grad=True, bounds = bounds)
+                self.params = retval[0]
+            if method == 'powell':
+                retval = optimize.fmin_powell(minfunc,start_params)
+                self.params = retval[None]
+#TODO: write regression tests for Pauli's branch so that
+# new line_search and optimize.nonlin can get put in.
+# http://projects.scipy.org/scipy/ticket/791
+#            if method == 'broyden':
+#                retval = optimize.broyden2(minfunc, [.5], verbose=True)
+#                self.results = retvar
+
 # Refactor of VAR to be like statsmodels
 #inherit GLS, SUR?
 #class VAR2(object):
@@ -72,8 +247,6 @@ class VAR2(LikelihoodModel):
         -----
         Exogenous variables are not supported yet
         """
-        self.endog = endog    #TOD):rename endog
-#        self.laglen = float(laglen)
         nobs = float(endog.shape[0])
         self.nobs = nobs
         self.nvars = endog.shape[1] # should this be neqs since we might have
@@ -227,10 +400,10 @@ class VAR2(LikelihoodModel):
 #        spX = sparse.kron(sparse.eye(20,20),X).todia()
 #        results = GLS(Y,diag_X).fit()
 
-                # determine the actual number of lags
-        if ic is not None:
-            _autolag(VAR2, y, X, fitargs = (method, structural,
-                dfk,maxlag,trend), lagstart=)
+        lagstart = trendorder
+        if self.exog is not None:
+            lagstart += self.exog.shape[1] #TODO: is there a variable that
+                                           #      holds exog.shapep[1]?
 
 
 #NOTE: just use GLS directly

@@ -79,8 +79,8 @@ def add_trend(X, trend="c", prepend=False):
     return X
 
 
-def _autolag(mod, endog, exog, modargs=(), fitargs=(), lagstart=1,
-        maxlag=None, method=None):
+def _autolag(mod, endog, exog, lagstart, maxlag, method, modargs=(), fitargs=(),
+        lagstart=1):
     """
     Returns the results for the lag length that maximimizes the info criterion.
 
@@ -270,9 +270,9 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
             fullRHS = xdall
         lagstart = trendorder + 1
         #search for lag length with highest information criteria
-        #Note: I use the same number of observations to have comparable IC
-        icbest, bestlag = _autolag(sm.OLS, xdshort, fullRHS, lagstart=lagstart,
-                maxlag=maxlag, method=autolag)
+        #Note: use the same number of observations to have comparable IC
+        icbest, bestlag = _autolag(sm.OLS, xdshort, fullRHS, lagstart,
+                maxlag, autolag)
 
         #rerun ols with best autolag
         xdall = lagmat(xdiff[:,None], bestlag, trim='both')
