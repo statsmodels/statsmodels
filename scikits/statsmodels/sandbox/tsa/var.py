@@ -190,6 +190,9 @@ class AR(LikelihoodModel):
         --------
         scikits.statsmodels.model.LikelihoodModel.fit for more information
         on using the solvers.
+
+        The below is the docstring from
+        scikits.statsmodels.LikelihoodModel.fit
         """
         self.penalty = penalty
         method = method.lower()
@@ -228,6 +231,12 @@ class AR(LikelihoodModel):
 #            if method == 'broyden':
 #                retval = optimize.broyden2(minfunc, [.5], verbose=True)
 #                self.results = retvar
+        elif method == "ols":
+            pass
+        elif method == "yw":
+            pass
+    fit.__doc__ += LikelihoodModel.fit.__doc__
+
 
 # Refactor of VAR to be like statsmodels
 #inherit GLS, SUR?
