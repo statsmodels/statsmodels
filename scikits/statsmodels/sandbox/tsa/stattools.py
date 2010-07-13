@@ -124,7 +124,7 @@ def _autolag(mod, endog, exog, modargs=(), fitargs=(), lagstart=1,
     results = {}
     method = method.lower()
     for lag in range(int(lagstart),int(maxlag+1)):
-        results[lag] = mod(endog, exog[:,:lag]).fit(*fitargs)
+        results[lag] = mod(endog, exog[:,:lag], *modargs).fit(*fitargs)
     if method == "aic":
         icbest, bestlag = max((v.aic,k) for k,v in results.iteritems())
     elif method == "bic":
@@ -141,6 +141,8 @@ def _autolag(mod, endog, exog, modargs=(), fitargs=(), lagstart=1,
             i += 1
     elif method == "hq":
         icbest, bestlag = max((v.hqic,k) for k,v in results.iteritems())
+    elif method == "fpe":
+        icbest, bestlag = max((v.fpe,k) for k,v in results.iteritems())
     else:
         raise ValueError("Information Criterion %s not understood.") % method
     return icbest, bestlag

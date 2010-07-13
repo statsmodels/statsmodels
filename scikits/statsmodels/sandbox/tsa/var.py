@@ -12,7 +12,7 @@ from scipy.stats import norm
 import scikits.statsmodels as sm    # maybe can be replaced later
 from scikits.statsmodels import GLS, chain_dot
 from scikits.statsmodels.sandbox.tsa.tsatools import lagmat
-from scikits.statsmodels.sandbox.tsa.stattools import add_trend
+from scikits.statsmodels.sandbox.tsa.stattools import add_trend, _autolag
 from scikits.statsmodels.model import LikelihoodModelResults, LikelihoodModel
 from scikits.statsmodels.decorators import *
 try:
@@ -22,8 +22,9 @@ except:
         return (1, np.log(np.linalg.log(X)))
 #TODO: add compatability program
 
+
 #TODO: move this somewhere to be reused.
-def irf(params, shock, omega, nperiods=100):
+def irf(params, shock, omega, nperiods=100, ortho=True):
     """
     Returns the impulse response function for a given shock.
 
@@ -49,6 +50,7 @@ def irf(params, shock, omega, nperiods=100):
         shock = np.squeeze(shock)
     for i in range(laglen, laglen+nperiods):
         pass
+
 #TODO: stopped here
 
 
@@ -144,7 +146,7 @@ class VAR2(LikelihoodModel):
             The highest lag order for lag length selection according to `ic`.
             The default is 12 * (nobs/100.)**(1./4).  If ic=None, maxlag
             is the number of lags that are fit for each equation.
-        ic : str {"aic","bic","hq"} or None, optional
+        ic : str {"aic","bic","hq", "fpe"} or None, optional
             Information criteria to maximize for lag length selection.
             Not yet implemented for VAR.
         trend, str {"c", "ct", "ctt", "nc"}
@@ -170,8 +172,8 @@ class VAR2(LikelihoodModel):
         else:
             self.dfk = dfk
 
-
         nobs = int(self.nobs)
+
         self.avobs = nobs - maxlag # available obs (sample - pre-sample)
 
 
@@ -224,6 +226,12 @@ class VAR2(LikelihoodModel):
 #            spdiag_X[i*shape0:shape0*(i+1),i*shape1:(i+1)*shape1] = X
 #        spX = sparse.kron(sparse.eye(20,20),X).todia()
 #        results = GLS(Y,diag_X).fit()
+
+                # determine the actual number of lags
+        if ic is not None:
+            _autolag(VAR2, y, X, fitargs = (method, structural,
+                dfk,maxlag,trend), lagstart=)
+
 
 #NOTE: just use GLS directly
         results = []
