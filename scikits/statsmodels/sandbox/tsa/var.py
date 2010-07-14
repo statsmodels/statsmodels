@@ -8,7 +8,7 @@ import numpy as np
 from numpy import matlib as MAT
 from scipy import linalg as LIN #TODO: get rid of this once cleaned up
 from scipy import linalg, sparse
-from scipy.stats import norm
+from scipy.stats import norm, ss as sumofsq
 import scikits.statsmodels as sm    # maybe can be replaced later
 from scikits.statsmodels import GLS, chain_dot, OLS
 from scikits.statsmodels.sandbox.tsa.tsatools import lagmat
@@ -95,10 +95,13 @@ class AR(LikelihoodModel):
         if isinstance(params,tuple):
             # broyden (all optimize.nonlin return a tuple until rewrite commit)
             params = np.asarray(params)
-        usepenalty = False
-        if not np.all(np.abs(params)<1) and penalty:
+        usepenalty = False #TODO: remove this when sorted
+        mask = np.abs(params) > 1
+        if np.any(mask) and penalty:
+#TODO: what is the stability condition for p > 1?
             oldparams = params
-            params = np.array([.9999]) # make it the edge
+            #TODO: change to putmask
+            params = np.array([.9999]) # make it the boundary
             usepenalty = True
         diffsumsq = sumofsq(y-np.dot(ylag,params))
         # concentrating the likelihood means that sigma2 is given by
@@ -208,11 +211,13 @@ class AR(LikelihoodModel):
         self.avobs = avobs
         laglen = maxlag
         self.laglen = laglen
-        endog = self.endog
         if demean:
+            endog = self.endog.copy() # have to copy if demeaning
             mean = endog.mean()
             endog -= mean
             self.endog_mean = mean
+        else:
+            endog = self.endog
         # LHS
         Y = endog[laglen:,:]
         # make lagged RHS
@@ -242,10 +247,15 @@ class AR(LikelihoodModel):
 #                    self.penfunc(params)
 #        else:
         if method == "mle":
+            if not solver: # make default?
+                solver = 'newton'
+            if not start_params:
+                start_params = np.zeros((X.shape[1]))
             if solver in ['newton', 'bfgs', 'ncg']:
-                super(AR, self).fit(start_params=start_params, method=solver,
+                return super(AR, self).fit(start_params=start_params, method=solver,
                     maxiter=maxiter, full_output=full_output, disp=disp,
                     callback=callback, **kwargs)
+#                return retvals
         elif method == "umle":
 #TODO: move this stuff up to LikelihoodModel.fit
             minfunc = lambda params: -self.loglike(params)
@@ -1316,11 +1326,11 @@ if __name__ == "__main__":
     resx = varx.fit(maxlag=2)
 
     sunspots = sm.datasets.sunspots.load()
-# Why does R demean the data by default?
+# Why does R demean the data by defaut?
     ar_ols = AR(sunspots.endog)
     ar_ols.fit(maxlag=4)
     ar_mle = AR(sunspots.endog)
-    ar_mle.fit(maxlag=4, method="mle")
+    res_mle = ar_mle.fit(maxlag=4, method="mle")
     ar_umle = AR(sunspots.endog)
     ar_umle.fit(maxlag=4, method="umle")
     ar_yw = AR(sunspots.endog)
