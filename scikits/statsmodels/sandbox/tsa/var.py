@@ -276,7 +276,7 @@ class AR(LikelihoodModel):
             self.params = params
         elif method == "yw":
             params, omega = sm.regression.yule_walker(endog, order=maxlag,
-                    method="mle")
+                    method="mle", demean=False)
             self.params = params
     fit.__doc__ += LikelihoodModel.fit.__doc__
 

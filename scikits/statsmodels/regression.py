@@ -715,7 +715,7 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False, demean=True):
         denom = lambda k: n - k
     else:
         denom = lambda k: n
-    if len(X.shape) != 1:
+    if X.ndim > 1 and X.shape[1] != 1:
         raise ValueError, "expecting a vector to estimate AR parameters"
     r = np.zeros(order+1, np.float64)
     r[0] = (X**2).sum() / denom(0)
