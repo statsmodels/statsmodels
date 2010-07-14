@@ -649,7 +649,7 @@ class GLSAR(GLS):
                 _X[(i+1):,:] = _X[(i+1):,:] - self.rho[i] * X[0:-(i+1),:]
                 return _X[self.order:,:]
 
-def yule_walker(X, order=1, method="unbiased", df=None, inv=False):
+def yule_walker(X, order=1, method="unbiased", df=None, inv=False, demean=True):
     """
     Estimate AR(p) parameters from a sequence X using Yule-Walker equation.
 
@@ -673,8 +673,10 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False):
     df : integer, optional
        Specifies the degrees of freedom. If `df` is supplied, then it is assumed
        the X has `df` degrees of freedom rather than `n`.  Default is None.
-    inv : Bool
+    inv : bool
         If inv is True the inverse of R is also returned.  Default is False.
+    demean : bool
+        True, the mean is subtracted from `X` before estimation.
 
     Returns
     -------
@@ -705,7 +707,8 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False):
         raise ValueError, "ACF estimation method must be 'unbiased' \
         or 'MLE'"
     X = np.array(X)
-    X -= X.mean()                  # automatically demean's X
+    if demean:
+        X -= X.mean()                  # automatically demean's X
     n = df or X.shape[0]
 
     if method == "unbiased":        # this is df_resid ie., n - p
