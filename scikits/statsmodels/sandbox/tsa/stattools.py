@@ -315,7 +315,7 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
         else:
             return adfstat, pvalue, usedlag, nobs, critvalues, icbest
 
-def acovf(x, unbiased=False, demean=True):
+def acovf(x, unbiased=False, demean=True, fft=False):
     '''
     Autocovariance for 1D
 
@@ -323,18 +323,16 @@ def acovf(x, unbiased=False, demean=True):
     ----------
     x : array
        time series data
-    unbiased : boolean
+    unbiased : bool
        if True, then denominators is n-k, otherwise n
+    fft : bool
+        If True, use FFT convolution.  This method should be preferred
+        for long time series.
 
     Returns
     -------
     acovf : array
         autocovariance function
-
-    Notes
-    -----
-    This uses np.correlate which does full convolution. For very long time
-    series it is recommended to use fft convolution instead.
     '''
     n = len(x)
     if demean:
@@ -348,7 +346,13 @@ def acovf(x, unbiased=False, demean=True):
         d = np.hstack((xi,xi[:-1][::-1])) # faster, is correlate more general?
     else:
         d = n
-    return (np.correlate(xo, xo, 'full')/d)[n-1:]
+    if fft:
+        nobs = len(xo)
+        Frf = np.fft.fft(xo, n=nobs*2)
+        acov = np.fft.ifft(Frf*np.conjugate(Frf))[:nobs]/d
+        return acov.real
+    else:
+        return (np.correlate(xo, xo, 'full')/d)[n-1:]
 
 def q_stat(x,nobs, type="ljungbox"):
     """
