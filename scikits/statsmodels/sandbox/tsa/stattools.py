@@ -79,8 +79,8 @@ def add_trend(X, trend="c", prepend=False):
     return X
 
 
-def _autolag(mod, endog, exog, lagstart, maxlag, method, modargs=(), fitargs=(),
-        lagstart=1):
+def _autolag(mod, endog, exog, lagstart, maxlag, method, modargs=(),
+        fitargs=()):
     """
     Returns the results for the lag length that maximimizes the info criterion.
 

@@ -10,7 +10,7 @@ from scipy import linalg as LIN #TODO: get rid of this once cleaned up
 from scipy import linalg, sparse
 from scipy.stats import norm
 import scikits.statsmodels as sm    # maybe can be replaced later
-from scikits.statsmodels import GLS, chain_dot
+from scikits.statsmodels import GLS, chain_dot, OLS
 from scikits.statsmodels.sandbox.tsa.tsatools import lagmat
 from scikits.statsmodels.sandbox.tsa.stattools import add_trend, _autolag
 from scikits.statsmodels.model import LikelihoodModelResults, LikelihoodModel
@@ -22,7 +22,7 @@ except:
         return (1, np.log(np.linalg.log(X)))
 #TODO: add compatability program
 try:
-    from numdifftools import Jacobian
+    from numdifftools import Jacobian, Hessian
 except:
     raise Warning("You need to install numdifftools to try out the AR model")
 
@@ -70,9 +70,12 @@ class AR(LikelihoodModel):
         -----
         Written for AR(1) case.  Not yet general.
         """
-        self.endog = endog
-        self.nobs = float(endog.shape[0])
         super(AR, self).__init__(endog, exog)
+        if endog.ndim == 1:
+            endog = endog[:,None]
+        elif endog.ndim > 1 and endog.shape[1] != 1:
+            raise ValueError("Only the univariate case is implemented")
+        self.endog = endog  # overwrite endog
 
     def initialize(self):
         pass
@@ -86,8 +89,8 @@ class AR(LikelihoodModel):
         Contains constant term.
         """
         nobs = self.nobs
-        y = self.endog
-        ylag = self.exog
+        y = self.Y
+        ylag = self.X
         penalty = self.penalty
         if isinstance(params,tuple):
             # broyden (all optimize.nonlin return a tuple until rewrite commit)
@@ -116,8 +119,8 @@ class AR(LikelihoodModel):
         Not correct yet.  Returns numerical gradient.  Depends on package
         numdifftools.
         """
-        y = self.endog
-        ylag = self.exog
+        y = self.Y
+        ylag = self.X
         nobs = self.nobs
         diffsumsq = sumofsq(y-np.dot(ylag,params))
         dsdr = 1/nobs * -2 *np.sum(ylag*(y-np.dot(ylag,params))[:,None])+\
@@ -148,8 +151,10 @@ class AR(LikelihoodModel):
         h = Hessian(self.loglike)
         return h(params)
 
-    def fit(self, method='ols', penalty=False, start_params=None, solver=None,
-            maxiter=35, full_output=1, disp=1, callback=None, **kwargs):
+    def fit(self, maxlag=None, method='ols', ic=None, trend='c', demean=True,
+            penalty=False,
+            start_params=None, solver=None, maxiter=35, full_output=1, disp=1,
+            callback=None, **kwargs):
         """
         Fit the unconditional maximum likelihood of an AR(p) process.
 
@@ -196,6 +201,39 @@ class AR(LikelihoodModel):
         """
         self.penalty = penalty
         method = method.lower()
+        nobs = self.nobs
+        if maxlag is None:
+            maxlag = round(12*(nobs/100.)**(1/4.))
+        avobs = nobs - maxlag
+        self.avobs = avobs
+        laglen = maxlag
+        self.laglen = laglen
+        endog = self.endog
+        if demean:
+            mean = endog.mean()
+            endog -= mean
+            self.endog_mean = mean
+        # LHS
+        Y = endog[laglen:,:]
+        # make lagged RHS
+        X = lagmat(endog, maxlag=laglen, trim='both')[:,1:]
+        if self.exog is not None:
+            X = np.column_stack((self.exog[laglen:,:], X))
+        # Handle constant, etc.
+        if trend == 'c':
+            trendorder = 1
+        elif trend == 'nc':
+            trendorder = 0
+        elif trend == 'ct':
+            trendorder = 2
+        elif trend == 'ctt':
+            trendorder = 3
+        X = add_trend(X,prepend=True, trend=trend)
+        self.trendorder = trendorder
+
+        self.Y = Y
+        self.X = X
+
         if solver:
             solver = solver.lower()
 #TODO: allow user-specified penalty function
@@ -203,17 +241,17 @@ class AR(LikelihoodModel):
 #            minfunc = lambda params : -self.loglike(params) - \
 #                    self.penfunc(params)
 #        else:
-        minfunc = lambda params: -self.loglike(params)
         if method == "mle":
             if solver in ['newton', 'bfgs', 'ncg']:
                 super(AR, self).fit(start_params=start_params, method=solver,
                     maxiter=maxiter, full_output=full_output, disp=disp,
                     callback=callback, **kwargs)
         elif method == "umle":
+#TODO: move this stuff up to LikelihoodModel.fit
+            minfunc = lambda params: -self.loglike(params)
             bounds = [(-.999,.999)]   # assume stationarity
             if start_params == None:
                 start_params = np.array([0]) # assumes AR(1)
-#TODO: move this stuff up to LikelihoodModel.fit
             if method == 'bfgs-b':
                 retval = optimize.fmin_l_bfgs_b(minfunc, start_params,
                         approx_grad=True, bounds=bounds)
@@ -232,9 +270,14 @@ class AR(LikelihoodModel):
 #                retval = optimize.broyden2(minfunc, [.5], verbose=True)
 #                self.results = retvar
         elif method == "ols":
-            pass
+            arfit = OLS(Y,X).fit()
+            params = arfit.params
+            omega = None
+            self.params = params
         elif method == "yw":
-            pass
+            params, omega = sm.regression.yule_walker(endog, order=maxlag,
+                    method="mle")
+            self.params = params
     fit.__doc__ += LikelihoodModel.fit.__doc__
 
 
@@ -304,7 +347,7 @@ class VAR2(LikelihoodModel):
         return -(avobs/2.)*(neqs*np.log(2*np.pi)+logdet+neqs)
 
 #TODO: IRF, lag length selection
-    def fit(self, method="ols", structural=None, dfk=None, maxlag=10,
+    def fit(self, method="ols", structural=None, dfk=None, maxlag=None,
             ic=None, trend="c"):
         """
         Fit the VAR model
@@ -345,7 +388,6 @@ class VAR2(LikelihoodModel):
         coefficients or on omega.  So should it be short run (array),
         long run (array), or sign (str)?  Recursive?
         """
-#TODO: keep dfk correction? everyone seems to use Omega_MLE
         if dfk is None:
             self.dfk = 0
         elif dkf is True:
@@ -365,6 +407,8 @@ class VAR2(LikelihoodModel):
 
         # need to recompute after lag length selection
         avobs = int(self.avobs)
+        if maxlag is None:
+            maxlag = round(12*(nobs/100.)**(1/4.))
         self.laglen = maxlag #TODO: change when IC selection is sorted
 #        laglen = se
         nvars = int(self.nvars)
@@ -1271,6 +1315,16 @@ if __name__ == "__main__":
     varx = VAR2(endog=XX, exog=np.diff(np.log(data['realgovt']), axis=0))
     resx = varx.fit(maxlag=2)
 
+    sunspots = sm.datasets.sunspots.load()
+# Why does R demean the data by default?
+    ar_ols = AR(sunspots.endog)
+    ar_ols.fit(maxlag=4)
+    ar_mle = AR(sunspots.endog)
+    ar_mle.fit(maxlag=4, method="mle")
+    ar_umle = AR(sunspots.endog)
+    ar_umle.fit(maxlag=4, method="umle")
+    ar_yw = AR(sunspots.endog)
+    ar_yw.fit(maxlag=4, method="yw")
 
 
 
