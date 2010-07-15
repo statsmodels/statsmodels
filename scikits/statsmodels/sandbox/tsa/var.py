@@ -16,10 +16,10 @@ from scikits.statsmodels.sandbox.tsa.stattools import add_trend, _autolag
 from scikits.statsmodels.model import LikelihoodModelResults, LikelihoodModel
 from scikits.statsmodels.decorators import *
 try:
-    from scipy.linalg import slogdet
+    from numpy.linalg import slogdet
 except:
     def slogdet(X):
-        return (1, np.log(np.linalg.log(X)))
+        return (1, np.log(np.linalg.det(X)))
 #TODO: add compatability program
 try:
     from numdifftools import Jacobian, Hessian
@@ -58,6 +58,7 @@ def irf(params, shock, omega, nperiods=100, ortho=True):
 #TODO: stopped here
 
 
+#TODO: maxlike isn't working very well for higher lag orders.
 #TODO: move this
 #NOTE: writing this now to be used with ADF test so that
 # _autolag can be generalized to VAR.
@@ -76,6 +77,8 @@ class AR(LikelihoodModel):
         elif endog.ndim > 1 and endog.shape[1] != 1:
             raise ValueError("Only the univariate case is implemented")
         self.endog = endog  # overwrite endog
+        if exog is not None:
+            raise ValueError("Exogenous variables are not supported for AR.")
 
     def initialize(self):
         pass
@@ -88,30 +91,71 @@ class AR(LikelihoodModel):
         -----
         Contains constant term.
         """
+
         nobs = self.nobs
-        y = self.Y
-        ylag = self.X
+        avobs = self.avobs
+        Y = self.Y
+        X = self.X
+        endog = self.endog
         penalty = self.penalty
+        laglen = self.laglen
+
+# Try reparamaterization:
+# just goes to the edge of the boundary for Newton
+# reparameterize to ensure stability -- Hamilton 5.9.1
+#        if not np.all(params==0):
+#            params = params/(1+np.abs(params))
+
         if isinstance(params,tuple):
             # broyden (all optimize.nonlin return a tuple until rewrite commit)
             params = np.asarray(params)
-        usepenalty = False #TODO: remove this when sorted
-        mask = np.abs(params) > 1
+
+        usepenalty = False
+        # http://en.wikipedia.org/wiki/Autoregressive_model
+        roots = np.roots(np.r_[1,-params[1:]])
+        mask = np.abs(roots) >= 1
         if np.any(mask) and penalty:
-#TODO: what is the stability condition for p > 1?
-            oldparams = params
-            #TODO: change to putmask
-            params = np.array([.9999]) # make it the boundary
+            mask = np.r_[False, mask]
+#            signs = np.sign(params)
+#            np.putmask(params, mask, .9999)
+#            params *= signs
             usepenalty = True
-        diffsumsq = sumofsq(y-np.dot(ylag,params))
+
+        yp = endog[:laglen]
+        mup = np.asarray([params[0]/(1-np.sum(params[1:]))]*laglen)
+        #TODO: the above is only correct for constant-only case
+        diffp = yp-mup[:,None]
+
+        # get inv(Vp) Hamilton 5.3.7
+        params0 = np.r_[-1, params[1:]]
+
+        p = len(params) - 1 #TODO: change to trendorder? and above?
+        p1 = p+1
+        Vpinv = np.zeros((p,p))
+        for i in range(1,p1):
+            for j in range(1,p1):
+                if i <= j and j <= p:
+                    part1 = np.sum(params0[:i] * params0[j-i:j])
+                    part2 = np.sum(params0[p1-j:p1+i-j]*params0[p1-i:])
+                    Vpinv[i-1,j-1] = part1 - part2
+        Vpinv = Vpinv + Vpinv.T - np.diag(Vpinv.diagonal())
+        # this is correct to here
+
+        diffpVpinv = np.dot(np.dot(diffp.T,Vpinv),diffp).item()
+        ssr = sumofsq(Y.squeeze() -np.dot(X,params))
+
         # concentrating the likelihood means that sigma2 is given by
-        sigma2 = 1/nobs*(diffsumsq-ylag[0]**2*(1-params**2))
-        loglike = -nobs/2 * np.log(2*np.pi) - nobs/2*np.log(sigma2) + \
-                .5 * np.log(1-params**2) - .5*diffsumsq/sigma2 -\
-                ylag[0]**2 * (1-params**2)/(2*sigma2)
+        sigma2 = 1./avobs * (diffpVpinv + ssr)
+        logdet = slogdet(Vpinv)[1] #TODO: add check for singularity
+        loglike = -1/2.*(nobs*(np.log(2*np.pi) + np.log(sigma2)) - \
+                logdet + diffpVpinv/sigma2 + ssr/sigma2)
+
         if usepenalty:
         # subtract a quadratic penalty since we min the negative of loglike
-            loglike -= 1000 *(oldparams-.9999)**2
+        #NOTE: penalty coefficient should increase with iterations
+        # this uses a static one of 1e3
+            print "Penalized!"
+            loglike -= 1000 *np.sum((mask*params)**2)
         return loglike
 
     def score(self, params):
@@ -125,19 +169,19 @@ class AR(LikelihoodModel):
         y = self.Y
         ylag = self.X
         nobs = self.nobs
-        diffsumsq = sumofsq(y-np.dot(ylag,params))
-        dsdr = 1/nobs * -2 *np.sum(ylag*(y-np.dot(ylag,params))[:,None])+\
-                2*params*ylag[0]**2
-        sigma2 = 1/nobs*(diffsumsq-ylag[0]**2*(1-params**2))
-        gradient = -nobs/(2*sigma2)*dsdr + params/(1-params**2) + \
-                1/sigma2*np.sum(ylag*(y-np.dot(ylag, params))[:,None])+\
-                .5*sigma2**-2*diffsumsq*dsdr+\
-                ylag[0]**2*params/sigma2 +\
-                ylag[0]**2*(1-params**2)/(2*sigma2**2)*dsdr
+#        diffsumsq = sumofsq(y-np.dot(ylag,params))
+#        dsdr = 1/nobs * -2 *np.sum(ylag*(y-np.dot(ylag,params))[:,None])+\
+#                2*params*ylag[0]**2
+#        sigma2 = 1/nobs*(diffsumsq-ylag[0]**2*(1-params**2))
+#        gradient = -nobs/(2*sigma2)*dsdr + params/(1-params**2) + \
+#                1/sigma2*np.sum(ylag*(y-np.dot(ylag, params))[:,None])+\
+#                .5*sigma2**-2*diffsumsq*dsdr+\
+#                ylag[0]**2*params/sigma2 +\
+#                ylag[0]**2*(1-params**2)/(2*sigma2**2)*dsdr
         if self.penalty:
             pass
         j = Jacobian(self.loglike)
-        return j(params)
+        return np.squeeze(j(params))
 #        return gradient
 
 
@@ -1328,9 +1372,12 @@ if __name__ == "__main__":
     sunspots = sm.datasets.sunspots.load()
 # Why does R demean the data by defaut?
     ar_ols = AR(sunspots.endog)
-    ar_ols.fit(maxlag=4)
+    ar_ols.fit(maxlag=2)
     ar_mle = AR(sunspots.endog)
-    res_mle = ar_mle.fit(maxlag=4, method="mle")
+    res_mle = ar_mle.fit(maxlag=1, method="mle", solver="bfgs", maxiter=500,
+            gtol=1e-10, penalty=True)
+    res_mle2 = ar_mle.fit(maxlag=1, method="mle", maxiter=500, penalty=True,
+            tol=1e-13)
     ar_umle = AR(sunspots.endog)
     ar_umle.fit(maxlag=4, method="umle")
     ar_yw = AR(sunspots.endog)
