@@ -432,8 +432,10 @@ def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False):
     d = nobs # changes if unbiased
     if not fft:
         avf = acovf(x, unbiased=unbiased, demean=True)
-        acf = np.take(avf/avf[0], range(1,nlags+1))
+        #acf = np.take(avf/avf[0], range(1,nlags+1))
+        acf = avf/avf[0]
     else:
+        #JP: move to acovf
         x0 = x - x.mean()
         Frf = np.fft.fft(x0, n=nobs*2) # zero-pad for separability
         if unbiased:
@@ -479,14 +481,13 @@ def pacf_yw(x, nlags=40, method='unbiased'):
     Notes
     -----
     This solves yule_walker for each desired lag and contains
-    currently duplicate calculations.  The pacf at lag 0 (ie., 1) is *not*
-    returned.
+    currently duplicate calculations.
     '''
     xm = x - x.mean()
     pacf = [1.]
     for k in range(1, nlags+1):
         pacf.append(sm.regression.yule_walker(x, k, method=method)[0][-1])
-    return np.array(pacf)[1:]
+    return np.array(pacf)
 
 #NOTE: this is incorrect.
 def pacf_ols(x, nlags=40):
@@ -506,18 +507,121 @@ def pacf_ols(x, nlags=40):
 
     Notes
     -----
-    This solves a separate OLS estimation for each desired lag.  The pacf at
-    lag 0 (ie., 1) is *not* returned.
+    This solves a separate OLS estimation for each desired lag.
     '''
     #TODO: add warnings for Yule-Walker
     #NOTE: demeaning and not using a constant gave incorrect answers?
-    xlags = sm.add_constant(lagmat(x, nlags))
+    #JP: demeaning should have a better estimate of the constant
+    #maybe we can compare small sample properties with a MonteCarlo
+    xlags = lagmat(x, nlags)
+    x0 = xlags[:,0]
+    xlags = xlags[:,1:]
+    xlags = sm.add_constant(lagmat(x, nlags), prepend=True)
     pacf = [1.]
     for k in range(1, nlags+1):
-        res = sm.OLS(xlags[k:,0], np.take(xlags[k:], range(1,k+1)+[-1],
-                            axis=1)).fit()
-        pacf.append(res.params[-2])
-    return np.array(pacf)[1:]
+        res = sm.OLS(x0[k:], xlags[k:,:k+1]).fit()
+         #np.take(xlags[k:], range(1,k+1)+[-1],
+
+        pacf.append(res.params[-1])
+    return np.array(pacf)
+
+def pacf(x, nlags=40, method='ywunbiased'):
+    '''Partial autocorrelation estimated
+
+    Parameters
+    ----------
+    x : 1d array
+        observations of time series for which pacf is calculated
+    maxlag : int
+        largest lag for which pacf is returned
+    method : 'ywunbiased' (default) or 'ywmle' or 'ols'
+        specifies which method for the calculations to use,
+        - yw or ywunbiased : yule walker with bias correction in denominator for acovf
+        - yw or ywmle : yule walker without bias correction
+        - ols - regression of time series on lags of it and on constant
+
+    Returns
+    -------
+    pacf : 1d array
+        partial autocorrelations, nlags elements, including lag zero
+
+    Notes
+    -----
+    This solves yule_walker equations or ols for each desired lag
+    and contains currently duplicate calculations.
+    '''
+
+    if method == 'ols':
+        return pacf_ols(x, nlags=nlags)
+    elif method in ['yw', 'ywu', 'ywunbiased', 'yw_unbiased']:
+        return pacf_yw(x, nlags=nlags, method='unbiased')
+    elif method in ['ywm', 'ywmle', 'yw_mle']:
+        return pacf_yw(x, nlags=nlags, method='mle')
+    else:
+        raise ValueError('method not available')
+
+
+
+def ccovf(x, y, unbiased=True, demean=True):
+    ''' crosscovariance for 1D
+
+    Parameters
+    ----------
+    x, y : arrays
+       time series data
+    unbiased : boolean
+       if True, then denominators is n-k, otherwise n
+
+    Returns
+    -------
+    ccovf : array
+        autocovariance function
+
+    Notes
+    -----
+    This uses np.correlate which does full convolution. For very long time
+    series it is recommended to use fft convolution instead.
+    '''
+    n = len(x)
+    if demean:
+        xo = x - x.mean();
+        yo = y - y.mean();
+    else:
+        xo = x
+        yo = y
+    if unbiased:
+        xi = np.ones(n);
+        d = np.correlate(xi, xi, 'full')
+    else:
+        d = n
+    return (np.correlate(xo,yo,'full') / d)[n-1:]
+
+def ccf(x, y, unbiased=True):
+    '''cross-correlation function for 1d
+    Parameters
+    ----------
+    x, y : arrays
+       time series data
+    unbiased : boolean
+       if True, then denominators for autocovariance is n-k, otherwise n
+
+    Returns
+    -------
+    ccf : array
+        cross-correlation function of x and y
+
+    Notes
+    -----
+    This is based np.correlate which does full convolution. For very long time
+    series it is recommended to use fft convolution instead.
+
+    If unbiased is true, the denominator for the autocovariance is adjusted
+    but the autocorrelation is not an unbiased estimtor.
+
+    '''
+    cvf = ccovf(x, y, unbiased=unbiased, demean=True)
+    return cvf / (np.std(x) * np.std(y))
+
 
 def pergram(X, kernel='bartlett', log=True):
     """
@@ -545,6 +649,7 @@ def pergram(X, kernel='bartlett', log=True):
     -----
     Doesn't look right yet.
     """
+    #JP: this should use covf and fft for speed and accuracy for longer time series
     X = np.asarray(X).squeeze()
     nobs = len(X)
     M = np.floor(nobs/2.)
@@ -642,6 +747,9 @@ def grangercausalitytests(x, maxlag):
               (ftres.fvalue, ftres.pvalue, ftres.df_denom, ftres.df_num)
 
 
+
+__all__ = ['acovf', 'acf', 'pacf', 'pacf_yw', 'pacf_ols', 'ccovf', 'ccf',
+           'pergram', 'q_stat']
 
 if __name__=="__main__":
     data = sm.datasets.macrodata.load().data
