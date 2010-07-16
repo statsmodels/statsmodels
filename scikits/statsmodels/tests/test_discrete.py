@@ -12,12 +12,15 @@ import numpy as np
 from numpy.testing import *
 from scikits.statsmodels.discretemod import *
 import scikits.statsmodels as sm
+from sys import platform
+from nose import SkipTest
 
 DECIMAL_4 = 4
 DECIMAL_3 = 3
 DECIMAL_2 = 2
 DECIMAL_1 = 1
 DECIMAL_0 = 0
+iswindows = 'win' in platform.lower()
 
 class CheckModelResults(object):
     """
@@ -50,7 +53,8 @@ class CheckModelResults(object):
         assert_almost_equal(self.res1.llr, self.res2.llr, DECIMAL_3)
 
     def test_llr_pvalue(self):
-        assert_almost_equal(self.res1.llr_pvalue, self.res2.llr_pvalue, DECIMAL_4)
+        assert_almost_equal(self.res1.llr_pvalue, self.res2.llr_pvalue,
+                DECIMAL_4)
 
     def test_margeff(self):
         pass
@@ -187,6 +191,8 @@ class TestProbitPowell(TestProbitNewton):
 
 class TestProbitCG(TestProbitNewton):
     def setup(self):
+        if iswindows:
+            raise SkipTest("fmin_cg sometimes fails to converge on windows")
         self.res1 = Probit(self.data.endog, self.data.exog).fit(method="cg",
             disp=0, maxiter=250)
 
