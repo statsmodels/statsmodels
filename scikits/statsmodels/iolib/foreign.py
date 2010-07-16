@@ -392,7 +392,7 @@ def genfromdta(fname, excludelist=None, missing_flt=-999., missing_str=""):
     """
 #TODO: extend to get data from online
     if isinstance(fname, basestring):
-        fhd = StataReader(open(fname, 'r'), missing_values=False)
+        fhd = StataReader(open(fname, 'rb'), missing_values=False)
     elif not hasattr(fname, 'read'):
         raise TypeError("The input should be a string or a filehandle. "\
                 "(got %s instead)" % type(fname))

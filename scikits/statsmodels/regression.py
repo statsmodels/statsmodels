@@ -1236,6 +1236,7 @@ class RegressionResults(LikelihoodModelResults):
                             title=None,
                             txt_fmt = part2_fmt)
 
+        self.summary2 = part2
         ########  summary Part 3   #######
 
         part3Lheader = ['Models stats']

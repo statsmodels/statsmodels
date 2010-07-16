@@ -20,6 +20,8 @@ try:
 except:
     def slogdet(X):
         return (1, np.log(np.linalg.det(X)))
+
+from scikits.statsmodels.compatibility import np_slogdet
 #TODO: add compatability program
 try:
     from numdifftools import Jacobian, Hessian
@@ -146,7 +148,7 @@ class AR(LikelihoodModel):
 
         # concentrating the likelihood means that sigma2 is given by
         sigma2 = 1./avobs * (diffpVpinv + ssr)
-        logdet = slogdet(Vpinv)[1] #TODO: add check for singularity
+        logdet = np_slogdet(Vpinv)[1] #TODO: add check for singularity
         loglike = -1/2.*(nobs*(np.log(2*np.pi) + np.log(sigma2)) - \
                 logdet + diffpVpinv/sigma2 + ssr/sigma2)
 
@@ -389,7 +391,7 @@ class VAR2(LikelihoodModel):
         """
         params = np.asarray(params)
         omega = np.asarray(omega)
-        logdet = np.linalg.slogdet(omega)
+        logdet = np_slogdet(omega)
         if logdet[0] == -1:
             raise ValueError("Omega matrix is not positive definite")
         elif logdet[0] == 0:
@@ -711,7 +713,7 @@ class VARMAResults(object):
 
     @cache_readonly
     def aic(self):
-        logdet = np.linalg.slogdet(self.omega)
+        logdet = np_slogdet(self.omega)
         if logdet[0] == -1:
             raise ValueError("Omega matrix is not positive definite")
         elif logdet[0] == 0:
@@ -724,7 +726,7 @@ class VARMAResults(object):
 
     @cache_readonly
     def bic(self):
-        logdet = np.linalg.slogdet(self.omega)
+        logdet = np_slogdet(self.omega)
         if logdet[0] == -1:
             raise ValueError("Omega matrix is not positive definite")
         elif logdet[0] == 0:
@@ -739,7 +741,7 @@ class VARMAResults(object):
 
     @cache_readonly
     def hqic(self):
-        logdet = np.linalg.slogdet(self.omega)
+        logdet = np_slogdet(self.omega)
         if logdet[0] == -1:
             raise ValueError("Omega matrix is not positive definite")
         elif logdet[0] == 0:
