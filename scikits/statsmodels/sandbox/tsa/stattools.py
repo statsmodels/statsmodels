@@ -79,8 +79,8 @@ def add_trend(X, trend="c", prepend=False):
     return X
 
 
-def _autolag(mod, endog, exog, modargs=(), fitargs=(), lagstart=1,
-        maxlag=None, method=None):
+def _autolag(mod, endog, exog, lagstart, maxlag, method, modargs=(),
+        fitargs=()):
     """
     Returns the results for the lag length that maximimizes the info criterion.
 
@@ -124,7 +124,7 @@ def _autolag(mod, endog, exog, modargs=(), fitargs=(), lagstart=1,
     results = {}
     method = method.lower()
     for lag in range(int(lagstart),int(maxlag+1)):
-        results[lag] = mod(endog, exog[:,:lag]).fit(*fitargs)
+        results[lag] = mod(endog, exog[:,:lag], *modargs).fit(*fitargs)
     if method == "aic":
         icbest, bestlag = max((v.aic,k) for k,v in results.iteritems())
     elif method == "bic":
@@ -141,6 +141,8 @@ def _autolag(mod, endog, exog, modargs=(), fitargs=(), lagstart=1,
             i += 1
     elif method == "hq":
         icbest, bestlag = max((v.hqic,k) for k,v in results.iteritems())
+    elif method == "fpe":
+        icbest, bestlag = max((v.fpe,k) for k,v in results.iteritems())
     else:
         raise ValueError("Information Criterion %s not understood.") % method
     return icbest, bestlag
@@ -268,9 +270,9 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
             fullRHS = xdall
         lagstart = trendorder + 1
         #search for lag length with highest information criteria
-        #Note: I use the same number of observations to have comparable IC
-        icbest, bestlag = _autolag(sm.OLS, xdshort, fullRHS, lagstart=lagstart,
-                maxlag=maxlag, method=autolag)
+        #Note: use the same number of observations to have comparable IC
+        icbest, bestlag = _autolag(sm.OLS, xdshort, fullRHS, lagstart,
+                maxlag, autolag)
 
         #rerun ols with best autolag
         xdall = lagmat(xdiff[:,None], bestlag, trim='both')
@@ -313,7 +315,7 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
         else:
             return adfstat, pvalue, usedlag, nobs, critvalues, icbest
 
-def acovf(x, unbiased=False, demean=True):
+def acovf(x, unbiased=False, demean=True, fft=False):
     '''
     Autocovariance for 1D
 
@@ -321,18 +323,16 @@ def acovf(x, unbiased=False, demean=True):
     ----------
     x : array
        time series data
-    unbiased : boolean
+    unbiased : bool
        if True, then denominators is n-k, otherwise n
+    fft : bool
+        If True, use FFT convolution.  This method should be preferred
+        for long time series.
 
     Returns
     -------
     acovf : array
         autocovariance function
-
-    Notes
-    -----
-    This uses np.correlate which does full convolution. For very long time
-    series it is recommended to use fft convolution instead.
     '''
     n = len(x)
     if demean:
@@ -346,7 +346,13 @@ def acovf(x, unbiased=False, demean=True):
         d = np.hstack((xi,xi[:-1][::-1])) # faster, is correlate more general?
     else:
         d = n
-    return (np.correlate(xo, xo, 'full')/d)[n-1:]
+    if fft:
+        nobs = len(xo)
+        Frf = np.fft.fft(xo, n=nobs*2)
+        acov = np.fft.ifft(Frf*np.conjugate(Frf))[:nobs]/d
+        return acov.real
+    else:
+        return (np.correlate(xo, xo, 'full')/d)[n-1:]
 
 def q_stat(x,nobs, type="ljungbox"):
     """

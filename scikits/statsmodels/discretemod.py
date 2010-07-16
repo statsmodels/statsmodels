@@ -114,6 +114,12 @@ class DiscreteModel(LikelihoodModel):
 
     def fit(self, start_params=None, method='newton', maxiter=35, full_output=1,
             disp=1, callback=None, **kwargs):
+        """
+        Fit the model using maximum likelihood.
+
+        The rest of the docstring is from
+        scikits.statsmodels.LikelihoodModel.fit
+        """
         if start_params is None and isinstance(self, MNLogit):
             start_params = np.zeros((self.exog.shape[1]*\
                     (self.wendog.shape[1]-1)))
@@ -124,6 +130,7 @@ class DiscreteModel(LikelihoodModel):
             mlefit.params = mlefit.params.reshape(-1, self.exog.shape[1])
         discretefit = DiscreteResults(self, mlefit)
         return discretefit
+    fit.__doc__ += LikelihoodModel.fit.__doc__
 
 class Poisson(DiscreteModel):
     """
