@@ -13,7 +13,7 @@ import matplotlib.mlab as mlab
 from scikits.statsmodels.sandbox.tsa.arima import arma_generate_sample, arma_impulse_response
 from scikits.statsmodels.sandbox.tsa.arima import arma_acovf, arma_acf, ARIMA
 #from movstat import acf, acovf
-from scikits.statsmodels.sandbox.tsa import acf, acovf
+from scikits.statsmodels.sandbox.tsa import acf, acovf, pacf
 
 ar = [1., -0.6]
 #ar = [1., 0.]
@@ -392,19 +392,8 @@ def plotacf(ax, corr, lags=None, usevlines=True, **kwargs):
 
     Data are plotted as ``plot(lags, c, **kwargs)``
 
-    Return value is a tuple (*lags*, *c*, *line*) where:
-
-      - *lags* are a length ``2*maxlags+1`` lag vector
-
-      - *c* is the ``2*maxlags+1`` auto correlation vector
-
-      - *line* is a :class:`~matplotlib.lines.Line2D` instance
-         returned by :func:`~matplotlib.pyplot.plot`.
-
     The default *linestyle* is *None* and the default *marker* is
-    'o', though these can be overridden with keyword args.  The
-    cross correlation is performed with :func:`numpy.correlate`
-    with *mode* = 2.
+    'o', though these can be overridden with keyword args.
 
     If *usevlines* is *True*:
 
@@ -414,47 +403,20 @@ def plotacf(ax, corr, lags=None, usevlines=True, **kwargs):
        plotstyle is determined by the kwargs, which are
        :class:`~matplotlib.lines.Line2D` properties.
 
-       The return value is a tuple (*lags*, *c*, *linecol*, *b*)
-       where *linecol* is the
-       :class:`matplotlib.collections.LineCollection` instance and
-       *b* is the *x*-axis.
+    See Also
+    --------
 
-    *maxlags* is a positive integer detailing the number of lags to show.
-    The default value of *None* will return all ``(2*len(x)-1)`` lags.
+    :func:`~matplotlib.pyplot.xcorr`
+    :func:`~matplotlib.pyplot.acorr`
+    mpl_examples/pylab_examples/xcorr_demo.py
 
-    **Example:**
-
-    :func:`~matplotlib.pyplot.xcorr` above, and
-    :func:`~matplotlib.pyplot.acorr` below.
-
-    **Example:**
-
-    .. plot:: mpl_examples/pylab_examples/xcorr_demo.py
     """
-
-
-#    Nx = len(x)
-#    if Nx!=len(y):
-#        raise ValueError('x and y must be equal length')
-#
-#    x = detrend(np.asarray(x))
-#    y = detrend(np.asarray(y))
-#
-#    c = np.correlate(x, y, mode=2)
-#
-#    if normed: c/= np.sqrt(np.dot(x,x) * np.dot(y,y))
-#
-#    if maxlags is None: maxlags = Nx - 1
-#
-#    if maxlags >= Nx or maxlags < 1:
-#        raise ValueError('maglags must be None or strictly '
-#                         'positive < %d'%Nx)
-#
-#    lags = np.arange(-maxlags,maxlags+1)
-#    c = c[Nx-1-maxlags:Nx+maxlags]
 
     if lags is None:
         lags = np.arange(len(corr))
+    else:
+        if len(lags) != len(corr):
+            raise ValueError('lags and corr must be equal length')
 
     if usevlines:
         b = ax.vlines(lags, [0], corr, **kwargs)
@@ -463,7 +425,6 @@ def plotacf(ax, corr, lags=None, usevlines=True, **kwargs):
         kwargs.setdefault('linestyle', 'None')
         a = ax.plot(lags, corr, **kwargs)
     else:
-
         kwargs.setdefault('marker', 'o')
         kwargs.setdefault('linestyle', 'None')
         a, = ax.plot(lags, corr, **kwargs)
