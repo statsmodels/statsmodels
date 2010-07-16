@@ -293,8 +293,7 @@ def movmoment(x, k, windowsize=3, lag='lagged'):
 ##    pass
 ##    #x=0.5**np.arange(10);xm=x-x.mean();a=np.correlate(xm,xo,'full')
 
-__all__ = ['movorder', 'movmean', 'movvar', 'movmoment', 'ccovf',
-           'ccf']
+__all__ = ['movorder', 'movmean', 'movvar', 'movmoment']
 
 if __name__ == '__main__':
 

@@ -433,7 +433,7 @@ def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False):
     if not fft:
         avf = acovf(x, unbiased=unbiased, demean=True)
         #acf = np.take(avf/avf[0], range(1,nlags+1))
-        acf = avf/avf[0]
+        acf = avf[:nlags+1]/avf[0]
     else:
         #JP: move to acovf
         x0 = x - x.mean()
@@ -442,20 +442,22 @@ def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False):
             d = nobs - np.arange(nobs)
         acf = np.fft.ifft(Frf * np.conjugate(Frf))[:nobs]/d
         acf /= acf[0]
-        acf = np.take(np.real(acf), range(1,nlags+1))
+        #acf = np.take(np.real(acf), range(1,nlags+1))
+        acf = np.real(acf[:nlags+1])   #keep lag 0
     if not (confint or qstat):
         return acf
 # Based on Bartlett's formula for MA(q) processes
 #NOTE: not sure if this is correct, or needs to be centered or what.
+
     if confint:
         varacf = np.ones(nlags)/nobs
-        varacf[1:] *= 1 + 2*np.cumsum(acf[:-1]**2)
+        varacf[1:] *= 1 + 2*np.cumsum(acf[1:-1]**2)
         interval = stats.norm.ppf(1-(100-confint)/200.)*np.sqrt(varacf)
         confint = np.array(zip(acf-interval, acf+interval))
         if not qstat:
             return acf, confint
     if qstat:
-        qstat, pvalue = q_stat(acf, nobs=nobs)
+        qstat, pvalue = q_stat(acf[1:], nobs=nobs)  #drop lag 0
         if confint is not None:
             return acf, confint, qstat, pvalue
         else:
@@ -516,7 +518,8 @@ def pacf_ols(x, nlags=40):
     xlags = lagmat(x, nlags)
     x0 = xlags[:,0]
     xlags = xlags[:,1:]
-    xlags = sm.add_constant(lagmat(x, nlags), prepend=True)
+    #xlags = sm.add_constant(lagmat(x, nlags), prepend=True)
+    xlags = sm.add_constant(xlags, prepend=True)
     pacf = [1.]
     for k in range(1, nlags+1):
         res = sm.OLS(x0[k:], xlags[k:,:k+1]).fit()
