@@ -518,7 +518,8 @@ def pacf_ols(x, nlags=40):
     xlags = lagmat(x, nlags)
     x0 = xlags[:,0]
     xlags = xlags[:,1:]
-    xlags = sm.add_constant(lagmat(x, nlags), prepend=True)
+    #xlags = sm.add_constant(lagmat(x, nlags), prepend=True)
+    xlags = sm.add_constant(xlags, prepend=True)
     pacf = [1.]
     for k in range(1, nlags+1):
         res = sm.OLS(x0[k:], xlags[k:,:k+1]).fit()
