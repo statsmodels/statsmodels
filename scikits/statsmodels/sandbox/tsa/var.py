@@ -15,19 +15,18 @@ from scikits.statsmodels.sandbox.tsa.tsatools import lagmat
 from scikits.statsmodels.sandbox.tsa.stattools import add_trend, _autolag
 from scikits.statsmodels.model import LikelihoodModelResults, LikelihoodModel
 from scikits.statsmodels.decorators import *
-try:
-    from numpy.linalg import slogdet as np_slogdet
-except:
-    def np_slogdet(X):
-        return (1, np.log(np.linalg.det(X)))
+#TODO: remove below
+#try:
+#    from numpy.linalg import slogdet as np_slogdet
+#except:
+#    def np_slogdet(X):
+#        return (1, np.log(np.linalg.det(X)))
 
-#from scikits.statsmodels.compatibility import np_slogdet
-#TODO: add compatability program
+from scikits.statsmodels.compatibility import np_slogdet
 try:
     from numdifftools import Jacobian, Hessian
 except:
     raise Warning("You need to install numdifftools to try out the AR model")
-
 
 #TODO: move this somewhere to be reused.
 def irf(params, shock, omega, nperiods=100, ortho=True):
@@ -334,9 +333,21 @@ class AR(LikelihoodModel):
         elif method == "yw":
             params, omega = sm.regression.yule_walker(endog, order=maxlag,
                     method="mle", demean=False)
+            # how to handle inference after Yule-Walker?
             self.params = params
+            self.omega = omega
+        pinv_exog = np.linalg.pinv(X)
+        normalized_cov_params = np.dot(pinv_exog, pinv_exog.T)
+        arfit = ARResults(self, params, normalized_cov_params)
+        return arfit
+
     fit.__doc__ += LikelihoodModel.fit.__doc__
 
+
+class ARResults(LikelihoodModelResults):
+    def __init__(self, model, params, normalized_cov_params=None, scale=1.):
+        super(ARResults, self).__init__(model, params, normalized_cov_params,
+                scale)
 
 # Refactor of VAR to be like statsmodels
 #inherit GLS, SUR?
@@ -1376,16 +1387,42 @@ if __name__ == "__main__":
     sunspots = sm.datasets.sunspots.load()
 # Why does R demean the data by defaut?
     ar_ols = AR(sunspots.endog)
-    ar_ols.fit(maxlag=2)
-    ar_mle = AR(sunspots.endog)
-    res_mle = ar_mle.fit(maxlag=1, method="mle", solver="bfgs", maxiter=500,
-            gtol=1e-10, penalty=True)
-    res_mle2 = ar_mle.fit(maxlag=1, method="mle", maxiter=500, penalty=True,
-            tol=1e-13)
-    ar_umle = AR(sunspots.endog)
-    ar_umle.fit(maxlag=4, method="umle")
+    res_ols = ar_ols.fit(maxlag=2, demean=False)
+#    ar_mle = AR(sunspots.endog)
+#    res_mle = ar_mle.fit(maxlag=1, method="mle", solver="bfgs", maxiter=500,
+#            gtol=1e-10, penalty=True)
+#    res_mle2 = ar_mle.fit(maxlag=1, method="mle", maxiter=500, penalty=True,
+#            tol=1e-13)
+#    ar_umle = AR(sunspots.endog)
+#    ar_umle.fit(maxlag=4, method="umle")
     ar_yw = AR(sunspots.endog)
-    ar_yw.fit(maxlag=4, method="yw")
+    res_yw = ar_yw.fit(maxlag=4, method="yw")
 
+    # Timings versus talkbox
+    from timeit import default_timer as timer
+    print "Time AR fit vs. talkbox"
+    # generate a long series of AR(2) data
 
+    nobs = 1000000
+    y = np.empty(nobs)
+    y[0:2] = 0
+    for i in range(2,nobs):
+        y[i] = .25 * y[i-1] - .75 * y[i-2] + np.random.rand()
+
+    mod_sm = AR(y)
+    t = timer()
+    res_sm = mod_sm.fit(method="yw", trend="nc", demean=False, maxlag=2)
+    t_end = timer()
+    print str(t_end - t) + " seconds for sm.AR with yule-walker, 2 lags"
+    try:
+        import scikits.talkbox as tb
+    except:
+        raise ImportError("You need scikits.talkbox installed for timings")
+    t = timer()
+    mod_tb = tb.lpc(y, 2)
+    t_end = timer()
+    print str(t_end - t) + " seconds for talkbox.lpc"
+    print """For higher lag lengths ours quickly fills up memory and starts
+thrashing the swap.  Should we include talkbox C code or Cythonize the
+Levinson recursion algorithm?"""
 
