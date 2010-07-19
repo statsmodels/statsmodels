@@ -16,12 +16,12 @@ from scikits.statsmodels.sandbox.tsa.stattools import add_trend, _autolag
 from scikits.statsmodels.model import LikelihoodModelResults, LikelihoodModel
 from scikits.statsmodels.decorators import *
 try:
-    from numpy.linalg import slogdet
+    from numpy.linalg import slogdet as np_slogdet
 except:
-    def slogdet(X):
+    def np_slogdet(X):
         return (1, np.log(np.linalg.det(X)))
 
-from scikits.statsmodels.compatibility import np_slogdet
+#from scikits.statsmodels.compatibility import np_slogdet
 #TODO: add compatability program
 try:
     from numdifftools import Jacobian, Hessian
@@ -279,7 +279,8 @@ class AR(LikelihoodModel):
             trendorder = 2
         elif trend == 'ctt':
             trendorder = 3
-        X = add_trend(X,prepend=True, trend=trend)
+        if trend != 'nc':
+            X = add_trend(X,prepend=True, trend=trend)
         self.trendorder = trendorder
 
         self.Y = Y
@@ -493,7 +494,8 @@ class VAR2(LikelihoodModel):
             trendorder = 2
         elif trend == 'ctt':
             trendorder = 3
-        X = add_trend(X,prepend=True, trend=trend)
+        if trend != 'nc':
+            X = add_trend(X,prepend=True, trend=trend)
         self.trendorder = trendorder
 
         self.Y = Y

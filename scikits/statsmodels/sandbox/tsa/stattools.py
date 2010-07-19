@@ -49,7 +49,7 @@ def add_trend(X, trend="c", prepend=False):
     elif trend == "ctt":
         trendorder = 2
     else:
-        raise ValueError("trend %s not understood") % trend
+        raise ValueError("trend %s not understood" % trend)
     X = np.asanyarray(X)
     nobs = len(X)
     trendarr = np.vander(np.arange(1,nobs+1, dtype=float), trendorder+1)
