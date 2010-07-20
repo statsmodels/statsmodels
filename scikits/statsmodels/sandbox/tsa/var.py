@@ -263,6 +263,12 @@ class AR(LikelihoodModel):
             self.endog_mean = mean
         else:
             endog = self.endog
+        if ic is not None: #TODO: change to accept exog
+            ic = ic.lower()
+            if ic not in ['aic','bic','hqic','t-stat']:
+                raise ValueError("ic option %s not understood" % ic)
+            icbest, bestlag = _autolag(self, endog, None, 1, maxlag, ic)
+            laglen = bestlag
         # LHS
         Y = endog[laglen:,:]
         # make lagged RHS
@@ -348,6 +354,26 @@ class ARResults(LikelihoodModelResults):
     def __init__(self, model, params, normalized_cov_params=None, scale=1.):
         super(ARResults, self).__init__(model, params, normalized_cov_params,
                 scale)
+
+    @cache_readonly
+    def sigma(self): #is this already in results?
+                     # no dof correction
+        return 1./self.model.avobs * self.ssr
+
+    @cache_readonly
+    def aic(self):
+        return np.log(self.sigma) + 1./self.model.avobs * self.nobs
+
+    @cache_readonly
+    def hqic(self):
+        avobs = self.avobs
+        return np.log(self.sigma) + 2 * np.log(np.log(avobs))/avobs * self.nobs
+
+    @cache_readonly
+    def bic(self):
+        avobs = self.avobs
+        return np.log(self.sigma) + np.log(avobs)/avobs * self.nobs
+
 
 # Refactor of VAR to be like statsmodels
 #inherit GLS, SUR?

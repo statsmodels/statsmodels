@@ -6,6 +6,7 @@ import numpy as np
 from scipy import stats, signal
 import scikits.statsmodels as sm
 from scikits.statsmodels.sandbox.tsa.tsatools import lagmat, lagmat2ds
+#from scikits.statsmodels.sandbox.tsa import var
 from adfvalues import *
 #from scikits.statsmodels.sandbox.rls import RLS
 
@@ -123,8 +124,10 @@ def _autolag(mod, endog, exog, lagstart, maxlag, method, modargs=(),
 
     results = {}
     method = method.lower()
+    mod_instance = mod(endog, exog, *modargs)
     for lag in range(int(lagstart),int(maxlag+1)):
-        results[lag] = mod(endog, exog[:,:lag], *modargs).fit(*fitargs)
+#        results[lag] = mod(endog, exog[:,:lag], *modargs).fit(*fitargs)
+        results[lag] = mod.fit(*fitargs, maxlag=lag)
     if method == "aic":
         icbest, bestlag = max((v.aic,k) for k,v in results.iteritems())
     elif method == "bic":
@@ -264,14 +267,15 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
     if store:
         resstore = ResultsStore()
     if autolag:
-        if trendorder is not -1:
-            fullRHS = np.column_stack((trend[:nobs],xdall))
-        else:
-            fullRHS = xdall
-        lagstart = trendorder + 1
+#        if trendorder is not -1:
+#            fullRHS = np.column_stack((trend[:nobs],xdall))
+#        else:
+#            fullRHS = xdall
+#        lagstart = trendorder + 1
+
         #search for lag length with highest information criteria
         #Note: use the same number of observations to have comparable IC
-        icbest, bestlag = _autolag(sm.OLS, xdshort, fullRHS, lagstart,
+        icbest, bestlag = _autolag(AR, xdshort, fullRHS, lagstart,
                 maxlag, autolag)
 
         #rerun ols with best autolag
