@@ -6,3 +6,5 @@ mod_yw <- ar(SUNACTIVITY, aic=FALSE, order.max=4, method="yw")
 mod_burg <- ar(SUNACTIVITY, aic=FALSE, order.max=4, method="burg")
 mod_mle <- ar(SUNACTIVITY, aic=FALSE, order.max=4, method="mle")
 
+select_ols <- ar(SUNACTIVITY, aic=TRUE, method="ols")
+

@@ -171,7 +171,7 @@ class TestPACF(CheckCorrGram):
         pacfyw = pacf_yw(self.x, nlags=40, method="mle")
         assert_almost_equal(pacfyw[1:], self.pacfyw, DECIMAL_8)
 
-class TestAutolag(object):
+class TestAutolagAR(object):
     pass
 
 if __name__=="__main__":

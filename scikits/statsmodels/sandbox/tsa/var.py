@@ -15,13 +15,6 @@ from scikits.statsmodels.sandbox.tsa.tsatools import lagmat
 from scikits.statsmodels.sandbox.tsa.stattools import add_trend, _autolag
 from scikits.statsmodels.model import LikelihoodModelResults, LikelihoodModel
 from scikits.statsmodels.decorators import *
-#TODO: remove below
-#try:
-#    from numpy.linalg import slogdet as np_slogdet
-#except:
-#    def np_slogdet(X):
-#        return (1, np.log(np.linalg.det(X)))
-
 from scikits.statsmodels.compatibility import np_slogdet
 try:
     from numdifftools import Jacobian, Hessian
@@ -124,7 +117,7 @@ class AR(LikelihoodModel):
 
         yp = endog[:laglen]
         mup = np.asarray([params[0]/(1-np.sum(params[1:]))]*laglen)
-        #TODO: the above is only correct for constant-only case
+        #TODO: the above is only correct for constant-only case and no exog
         diffp = yp-mup[:,None]
 
         # get inv(Vp) Hamilton 5.3.7
@@ -199,6 +192,31 @@ class AR(LikelihoodModel):
         h = Hessian(self.loglike)
         return h(params)
 
+    def _stackX(self, laglen, trend):
+        """
+        Private method to build the RHS matrix for estimation.
+
+        Columns are trend terms, then exogenous, then lags.
+        """
+        endog = self.endog
+        exog = self.exog
+        X = lagmat(endog, maxlag=laglen, trim='both')[:,1:]
+        if exog is not None:
+            X = np.column_stack((exog[laglen:,:], X))
+        # Handle trend terms
+        if trend == 'c':
+            trendorder = 1
+        elif trend == 'nc':
+            trendorder = 0
+        elif trend == 'ct':
+            trendorder = 2
+        elif trend == 'ctt':
+            trendorder = 3
+        if trend != 'nc':
+            X = add_trend(X,prepend=True, trend=trend)
+        self.trendorder = trendorder
+        return X
+
     def fit(self, maxlag=None, method='ols', ic=None, trend='c', demean=True,
             penalty=False,
             start_params=None, solver=None, maxiter=35, full_output=1, disp=1,
@@ -251,11 +269,7 @@ class AR(LikelihoodModel):
         method = method.lower()
         nobs = self.nobs
         if maxlag is None:
-            maxlag = round(12*(nobs/100.)**(1/4.))
-        avobs = nobs - maxlag
-        self.avobs = avobs
-        laglen = maxlag
-        self.laglen = laglen
+            maxlag = int(round(12*(nobs/100.)**(1/4.)))
         if demean:
             endog = self.endog.copy() # have to copy if demeaning
             mean = endog.mean()
@@ -263,31 +277,60 @@ class AR(LikelihoodModel):
             self.endog_mean = mean
         else:
             endog = self.endog
-        if ic is not None: #TODO: change to accept exog
+        exog = self.exog
+        laglen = maxlag # stays this if ic is None
+
+        # select lag length
+        if ic is not None:
             ic = ic.lower()
             if ic not in ['aic','bic','hqic','t-stat']:
                 raise ValueError("ic option %s not understood" % ic)
-            icbest, bestlag = _autolag(self, endog, None, 1, maxlag, ic)
+#            icbest, bestlag = _autolag(AR, endog, None, 1, maxlag, ic)
+            # make Y and X with same nobs to compare ICs
+            Y = endog[maxlag:]
+            self.Y = Y  # attach to get correct fit stats
+            X = self._stackX(maxlag, trend)
+            self.X = X
+            startlag = self.trendorder # trendorder set in the above call
+            if exog is not None:
+                startlag += exog.shape[1] # add dim happens in super?
+            results = {}
+            if ic != 't-stat':
+                for lag in range(startlag,maxlag+1):
+                    # have to reinstantiate the model to keep comparable models
+                    endog_tmp = endog[maxlag-lag:]
+                    fit = AR(endog_tmp).fit(maxlag=lag, demean=demean)
+                    results[lag] = eval('fit.'+ic)
+                bestic, bestlag = min((res, k) for k,res in results.iteritems())
+            else:
+                pass
             laglen = bestlag
+
+        # change to what was chosen by fit method
+        self.laglen = laglen
+        avobs = nobs - laglen
+        self.avobs = avobs
+
+        # redo estimation for best lag
         # LHS
         Y = endog[laglen:,:]
         # make lagged RHS
-        X = lagmat(endog, maxlag=laglen, trim='both')[:,1:]
-        if self.exog is not None:
-            X = np.column_stack((self.exog[laglen:,:], X))
-        # Handle constant, etc.
-        if trend == 'c':
-            trendorder = 1
-        elif trend == 'nc':
-            trendorder = 0
-        elif trend == 'ct':
-            trendorder = 2
-        elif trend == 'ctt':
-            trendorder = 3
-        if trend != 'nc':
-            X = add_trend(X,prepend=True, trend=trend)
-        self.trendorder = trendorder
-
+        X = self._stackX(laglen, trend)
+#        X = lagmat(endog, maxlag=laglen, trim='both')[:,1:]
+#        if exog is not None:
+#            X = np.column_stack((self.exog[laglen:,:], X))
+#        # Handle constant, etc.
+#        if trend == 'c':
+#            trendorder = 1
+#        elif trend == 'nc':
+#            trendorder = 0
+#        elif trend == 'ct':
+#            trendorder = 2
+#        elif trend == 'ctt':
+#            trendorder = 3
+#        if trend != 'nc':
+#            X = add_trend(X,prepend=True, trend=trend)
+#        self.trendorder = trendorder
         self.Y = Y
         self.X = X
 
@@ -354,25 +397,59 @@ class ARResults(LikelihoodModelResults):
     def __init__(self, model, params, normalized_cov_params=None, scale=1.):
         super(ARResults, self).__init__(model, params, normalized_cov_params,
                 scale)
+        self.nobs = model.nobs
+        self.avobs = model.avobs
+        self.X = model.X # copy?
+        self.Y = model.Y
+        self.laglen = model.laglen
 
     @cache_readonly
     def sigma(self): #is this already in results?
                      # no dof correction
-        return 1./self.model.avobs * self.ssr
+        return 1./self.avobs * self.ssr
 
     @cache_readonly
     def aic(self):
-        return np.log(self.sigma) + 1./self.model.avobs * self.nobs
+# Lutkepohl
+#        return np.log(self.sigma) + 1./self.model.avobs * self.laglen
+# Include constant as estimated free parameter and double the loss
+        return np.log(self.sigma) + 2 * (1 + self.laglen)/self.avobs
 
     @cache_readonly
     def hqic(self):
         avobs = self.avobs
-        return np.log(self.sigma) + 2 * np.log(np.log(avobs))/avobs * self.nobs
+# Lutkepohl
+#        return np.log(self.sigma)+ 2 * np.log(np.log(avobs))/avobs * self.laglen
+        return np.log(self.sigma) + 2 * np.log(np.log(avobs))/avobs * \
+                (1 + self.laglen)
+
+    @cache_readonly
+    def fpe(self):
+        avobs = self.avobs
+        laglen = self.laglen
+        return ((avobs+laglen+1)/(avobs-laglen-1)) * self.sigma
 
     @cache_readonly
     def bic(self):
         avobs = self.avobs
-        return np.log(self.sigma) + np.log(avobs)/avobs * self.nobs
+# Lutkepohl
+#        return np.log(self.sigma) + np.log(avobs)/avobs * self.laglen
+# Include constant as est. free parameter
+        return np.log(self.sigma) + (1 + self.laglen) * np.log(avobs)/avobs
+
+    @cache_readonly
+    def resid(self):
+        model = self.model
+#        print self.Y.squeeze().shape
+#        print self.X.shape
+#        print self.params.shape
+        return self.Y.squeeze() - np.dot(self.X, self.params)
+
+    @cache_readonly
+    def ssr(self):
+        resid = self.resid
+        return np.dot(resid, resid)
+
 
 
 # Refactor of VAR to be like statsmodels
