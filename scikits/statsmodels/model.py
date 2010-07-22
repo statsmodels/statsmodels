@@ -3,6 +3,7 @@ from scipy.stats import t, norm
 from scipy import optimize, derivative
 from tools import recipr
 from contrast import ContrastResults
+from decorators import *  #for moving llf
 
 class Model(object):
     """
@@ -243,8 +244,8 @@ specified")
             hess = None
         if method == 'newton':
             tol = kwargs.setdefault('tol', 1e-8)
-            score = lambda params: self.score(params)
-            hess = lambda params: self.hessian(params)
+            score = lambda params: self.score(params)  #JP: redundant ?
+            hess = lambda params: self.hessian(params) #JP: redundant ?
             iterations = 0
             oldparams = np.inf
             newparams = np.asarray(start_params)
@@ -471,6 +472,17 @@ class GenericLikelihoodModel(LikelihoodModel):
             if not self.hessian:
                 pass
 
+    def nloglike(self, params):
+        return -self.loglike(params)
+
+    def score(self, params):
+        from sandbox.regression.numdiff import approx_fprime1
+        return approx_fprime1(params, self.loglike, epsilon=1e-4).ravel()
+    def hessian(self, params):
+        from sandbox.regression.numdiff import approx_hess
+        return approx_hess(params, self.loglike)[0]  #need options for hess (epsilon)
+
+
 class Results(object):
     """
     Class to contain model results
@@ -636,6 +648,15 @@ class LikelihoodModelResults(Results):
 
     def normalized_cov_params(self):
         raise NotImplementedError
+
+    #JP: add methods that are valid generically higher up in class hierarchy
+    @cache_readonly
+    def llf(self):
+        return self.model.loglike(self.params)
+
+    @cache_readonly
+    def bse(self):
+        return np.sqrt(np.diag(self.cov_params()))
 
     def t(self, column=None):
         """

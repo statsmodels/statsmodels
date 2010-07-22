@@ -78,7 +78,7 @@ def approx_fprime1(xk, f, epsilon=1e-12, args=()):
     gradient be scaled in within an optimization framework?
     '''
     f0 = f(*((xk,)+args))
-    nobs = len(f0)
+    nobs = np.size(f0) #len(f0)
     grad = np.zeros((nobs,len(xk)), float)
     ei = np.zeros((len(xk),), float)
     centered = False
@@ -86,7 +86,7 @@ def approx_fprime1(xk, f, epsilon=1e-12, args=()):
         for k in range(len(xk)):
             ei[k] = epsilon
             grad[:,k] = (f(*((xk+ei,)+args)) - f0)/epsilon
-#            ei[k] = 0.0 # why set this back?
+            ei[k] = 0.0 # why set this back?
     else:
         for k in range(len(xk)):
             ei[k] = epsilon/2.
@@ -94,7 +94,7 @@ def approx_fprime1(xk, f, epsilon=1e-12, args=()):
 #            ei[k] = 0.0 # why set this back?
     return grad
 
-def approx_hess(xk,f,epsilon, *args):#, returngrad=True):
+def approx_hess(xk,f,epsilon=1e-4, *args):#, returngrad=True):
     '''
     Calculate Hessian and Gradient by forward differentiation
 
@@ -125,9 +125,9 @@ def approx_hess(xk,f,epsilon, *args):#, returngrad=True):
         g[i] = f(*((xk+ee[i,:],)+args))
 
     hess = np.outer(h,h)
-    print hess.shape,
-    print 'H=', hess
-    print 'h=', hess
+##    print hess.shape,
+##    print 'H=', hess
+##    print 'h=', hess
     # Compute "double" forward step
     for i in range(n):
         for j in range(i,n):
