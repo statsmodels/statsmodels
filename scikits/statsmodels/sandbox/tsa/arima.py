@@ -76,8 +76,9 @@ class ARIMA(LikelihoodModel):
         if exog is not None:
             raise ValueError("Exogenous variables are not yet supported.")
 
-    def fit(self, order=(0,0,0), rhoy0=None, rhoe0=None):
-        '''estimate lag coefficients of ARMA orocess by least squares
+    def fit(self, order=(0,0,0), method="ls", rhoy0=None, rhoe0=None):
+        '''
+        Estimate lag coefficients of an ARIMA process.
 
         Parameters
         ----------
@@ -85,6 +86,10 @@ class ARIMA(LikelihoodModel):
                 p,d,q where p is the number of AR lags, d is the number of
                 differences to induce stationarity, and q is the number of
                 MA lags to estimate.
+            method : str {"ls", "ssm"}
+                Method of estimation.  LS is conditional least squares.
+                SSM is state-space model and the Kalman filter is used to
+                maximize the exact likelihood.
             rhoy0, rhoe0 : array_like (optional)
                 starting values for estimation
 
@@ -121,10 +126,13 @@ class ARIMA(LikelihoodModel):
             rhoy0 = 0.5 * np.ones(p)
         if rhoe0 is None:
             rhoe0 = 0.5 * np.ones(q)
-        usels = True
-        if usels:
+
+        method = method.lower()
+
+        if method == "ls":
             rh, cov_x, infodict, mesg, ier = \
                optimize.leastsq(errfn, np.r_[rhoy0, rhoe0],ftol=1e-10,full_output=True)
+#TODO: integrate this into the MLE.fit framework?
         else:
             # fmin_bfgs is slow or doesn't work yet
             errfnsum = lambda rho : np.sum(errfn(rho)**2)
