@@ -35,4 +35,18 @@ class TestAutolagAR(object):
     def test_ic(self):
         npt.assert_almost_equal(self.res1, self.res2, DECIMAL_6)
 
+#TODO: likelihood for ARX model?
+#class TestAutolagARX(object):
+#    def setup(self):
+#        data = sm.datasets.macrodata.load()
+#        endog = data.data.realgdp
+#        exog = data.data.realint
+#        results = []
+#        for lag in range(1, 26):
+#            endog_tmp = endog[26-lag:]
+#            exog_tmp = exog[26-lag:]
+#            r = AR(endog_tmp, exog_tmp).fit(maxlag=lag, trend='ct')
+#            results.append([r.aic, r.hqic, r.bic, r.fpe])
+#        self.res1 = np.asarray(results).T.reshape(4,-1, order='C')
+
 
