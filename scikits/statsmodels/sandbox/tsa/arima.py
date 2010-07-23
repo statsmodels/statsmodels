@@ -133,6 +133,8 @@ class ARIMA(LikelihoodModel):
             rh, cov_x, infodict, mesg, ier = \
                optimize.leastsq(errfn, np.r_[rhoy0, rhoe0],ftol=1e-10,full_output=True)
 #TODO: integrate this into the MLE.fit framework?
+        elif method == "ssm":
+            pass
         else:
             # fmin_bfgs is slow or doesn't work yet
             errfnsum = lambda rho : np.sum(errfn(rho)**2)
