@@ -55,8 +55,9 @@ License: BSD
 
 import numpy as np
 from scipy import signal, optimize
+from scikits.statsmodels.model import LikelihoodModel
 
-class ARIMA(object):
+class ARIMA(LikelihoodModel):
     '''currently ARMA only, no differencing used - no I
 
     parameterized as
