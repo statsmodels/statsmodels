@@ -455,6 +455,41 @@ class ARResults(LikelihoodModelResults):
     def ar_roots(self):
         return np.roots(np.r_[1, -params[1:]])
 
+class ARIMA(LikelihoodModel):
+    def __init__(self, endog, exog=None):
+        """
+        ARIMA Model
+        """
+        super(ARIMA, self).__init__(endog, exog)
+        if endog.ndim == 1:
+            endog = endog[:,None]
+        elif endog.ndim > 1 and endog.shape[1] != 1:
+            raise ValueError("Only the univariate case is implemented")
+        self.endog = endog # overwrite endog
+        if exog is not None:
+            raise ValueError("Exogenous variables are not yet supported.")
+
+    def fit(self, order=(0,0,0), method="ssm")
+        """
+        Notes
+        -----
+        Current method being developed is the state-space representation.
+
+        Box and Jenkins outline many more procedures.
+        """
+        if not hasattr(order, '__iter__'):
+            raise ValueError("order must be an iterable sequence.  Got type \
+%s instead" % type(order))
+        p,d,q = order
+        if d > 0:
+            raise ValueError("Differencing not implemented yet")
+            # assume no constant, ie mu = 0
+            # unless overwritten then use w_bar for mu
+            Y = np.diff(endog, d, axis=0) #TODO: handle lags?
+
+
+
+
 # Refactor of VAR to be like statsmodels
 #inherit GLS, SUR?
 #class VAR2(object):
@@ -1532,6 +1567,7 @@ if __name__ == "__main__":
 #thrashing the swap.  Should we include talkbox C code or Cythonize the
 #Levinson recursion algorithm?"""
 
+# some data for an example in Box Jenkins
     IBM = np.asarray([460,457,452,459,462,459,463,479,493,490.])
     w = np.diff(IBM)
     theta = .5
