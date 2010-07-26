@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.stats import t, norm
+from scipy.stats import norm as stats_norm
 from scipy import optimize, derivative
 from tools import recipr
 from contrast import ContrastResults
@@ -460,6 +461,7 @@ class GenericLikelihoodModel(LikelihoodModel):
             self.score = score
         if hessian:
             self.hessian = hessian
+        self.confint_dist = stats_norm
         super(GenericLikelihoodModel, self).__init__(endog, exog)
 
     def initialize(self):
@@ -472,16 +474,56 @@ class GenericLikelihoodModel(LikelihoodModel):
             if not self.hessian:
                 pass
 
+    def loglike(self, params):
+        return self.loglikeobs(params).sum(0)
+
     def nloglike(self, params):
-        return -self.loglike(params)
+        return -self.loglikeobs(params).sum(0)
+
+    def loglikeobs(self, params):
+        return -self.nloglikeobs(params)
 
     def score(self, params):
         from sandbox.regression.numdiff import approx_fprime1
         return approx_fprime1(params, self.loglike, epsilon=1e-4).ravel()
+    def jac(self, params, **kwds):
+        kwds.setdefault('epsilon', 1e-4)
+        from sandbox.regression.numdiff import approx_fprime1
+        return approx_fprime1(params, self.loglikeobs, **kwds)
     def hessian(self, params):
         from sandbox.regression.numdiff import approx_hess
         return approx_hess(params, self.loglike)[0]  #need options for hess (epsilon)
 
+    @cache_readonly
+    def jacv(self):
+        if not hasattr(self, '_results'):
+            raise ValueError('need to call fit first')
+        return self.jac(self._results.params)
+
+    @cache_readonly
+    def hessv(self):
+        if not hasattr(self, '_results'):
+            raise ValueError('need to call fit first')
+        return self.hessian(self._results.params)
+
+    # the following could be moved to results
+    def covjac(self):
+        '''covariance of parameters based on outer product of jacobian of likelihood
+        '''
+##        if not hasattr(self, '_results'):
+##            raise ValueError('need to call fit first')
+##            #self.fit()
+##        self.jacv = jacv = self.jac(self._results.params)
+        jacv = self.jacv
+        return np.linalg.inv(np.dot(jacv.T, jacv))
+
+    def covjhj(self):
+        jacv = self.jacv
+##        hessv = self.hessv
+##        hessinv = np.linalg.inv(hessv)
+##        self.hessinv = hessinv
+        hessinv = self._results.cov_params()
+        return np.dot(hessinv, np.dot(np.dot(jacv.T, jacv), hessinv))
 
 class Results(object):
     """
@@ -985,7 +1027,9 @@ number of rows")
 
         """
         #TODO: simplify structure, DRY
-        if self.__class__.__name__ in ['RLMResults','GLMResults','DiscreteResults']:
+        if hasattr(self, 'confint_dist'):
+            dist = self.confint_dist
+        elif self.__class__.__name__ in ['RLMResults','GLMResults','DiscreteResults']:
             dist = norm
         else:
             dist = t

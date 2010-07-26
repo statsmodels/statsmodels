@@ -23,7 +23,7 @@ Procedures, 3rd ed., Chapman&Hall/CRC
 
 Zwillinger, Daniel and Stephen Kokoska, 2000, CRC standard probability and
 statistics tables and formulae, Chapman&Hall/CRC
-    14.9 WILCOXON RANK–SUM (MANN–WHITNEY) TEST
+    14.9 WILCOXON RANKSUM (MANN WHITNEY) TEST
 
 Author: Josef Pktd and example from H Raja and rewrite from Vincent Davis
 '''
@@ -551,7 +551,9 @@ class MultiComparison(object):
         self.nobs = x.shape[0]
 
     def getranks(self):
-        self.ranks = GroupsStats(np.column_stack([self.data, self.groups]),
+        #bug: the next should use self.groupintlab instead of self.groups
+        #self.ranks = GroupsStats(np.column_stack([self.data, self.groups]),
+        self.ranks = GroupsStats(np.column_stack([self.data, self.groupintlab]),
                                  useranks=True)
         self.rankdata = self.ranks.groupmeanfilter
 
@@ -569,7 +571,7 @@ class MultiComparison(object):
 
 
         # simultaneous/separate treatment of multiple tests
-        f=(tot*(tot+1.)/12.)/stats.tiecorrect(xranks)
+        f=(tot*(tot+1.)/12.)/stats.tiecorrect(self.rankdata) #(xranks)
         print 'MultiComparison.kruskal'
         for i,j in zip(*self.pairindices):
             #pdiff = np.abs(mrs[i] - mrs[j])

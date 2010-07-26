@@ -49,7 +49,7 @@ def approx_fprime(xk,f,epsilon,*args):
         ei[k] = 0.0
     return grad
 
-def approx_fprime1(xk, f, epsilon=1e-12, args=()):
+def approx_fprime1(xk, f, epsilon=1e-12, args=(), centered=False):
     '''
     Gradient of function, or Jacobian if function f returns 1d array
 
@@ -81,7 +81,7 @@ def approx_fprime1(xk, f, epsilon=1e-12, args=()):
     nobs = np.size(f0) #len(f0)
     grad = np.zeros((nobs,len(xk)), float)
     ei = np.zeros((len(xk),), float)
-    centered = False
+    #centered = False
     if not centered:
         for k in range(len(xk)):
             ei[k] = epsilon
@@ -91,7 +91,7 @@ def approx_fprime1(xk, f, epsilon=1e-12, args=()):
         for k in range(len(xk)):
             ei[k] = epsilon/2.
             grad[:,k] = (f(*((xk+ei,)+args)) - f(*((xk-ei,)+args)))/epsilon
-#            ei[k] = 0.0 # why set this back?
+            ei[k] = 0.0 # why set this back?
     return grad
 
 def approx_hess(xk,f,epsilon=1e-4, *args):#, returngrad=True):
