@@ -16,6 +16,7 @@ This file follows Hamilton's notation pretty closely.
 from scipy import optimize
 import numpy as np
 from scikits.statsmodels import chain_dot #TODO: move this to tools
+from scikits.statsmodels.model import LikelihoodModel
 
 #TODO: See Koopman and Durbin (2000)
 #Fast filtering and smoothing for multivariate state space models
@@ -92,6 +93,8 @@ def kalmanfilter(F, A, H, Q, R, y, X, xi10, ntrain, history=False):
 #    p10 = np.dot(np.linalg.inv(np.eye(r**2)-np.kron(F,F)),Q.ravel('F'))
 #    p10 = np.reshape(P0, (r,r), order='F')
 # Assume a fixed, known intial point and set P0 = Q
+#TODO: this looks *slightly * different than Durbin-Koopman exact likelihood
+# initialization p 112 unless I've misunderstood the notational translation.
     p10 = Q
 
     loglikelihood = 0
@@ -134,7 +137,7 @@ def kalmanfilter(F, A, H, Q, R, y, X, xi10, ntrain, history=False):
         return -loglikelihood, np.asarray(state_vector[:-1])
 
 class StateSpaceModel(object):
-    def __init__(self, endog, exog=None, ARMA=(0,0)):
+    def __init__(self, endog, exog=None):
         """
         Parameters
         ----------
@@ -300,6 +303,107 @@ def updatematrices(params, y, xi10, ntrain, penalty, upperbound, lowerbound):
     loglike = kalmanfilter(F,0,H,q,0, y, 0, xi10, ntrain)
     loglike = loglike + penalty*np.sum((paramsorig-params)**2)
     return loglike
+
+#class ARMA(StateSpaceModel):
+class ARMA(LikelihoodModel):
+    """
+    ARMA model using the exact Kalman Filter
+
+    Notes
+    -----
+    Assumes model is stationary
+    """
+    def __init__(self, endog, exog=None, constant=True, order=(0,0)):
+        if exog is None and constant:
+            exog = np.array([[1.0]])
+        elif exog is not None and constant:
+            exog = add_constant(exog,prepend=True)
+        super(ARMA, self).__init__(endog, exog)
+        p,q = map(int,order) #TODO: will need to use these to ensure that
+                    # some of params stays zero
+        if exog is not None:
+            k = exog.shape[1]  # number of exogenous variables, incl. const.
+            Z = np.zeros((self.nobs, k+r))
+            Z[:,:k] = exog
+            Z[:,k] = 1.
+        else:
+            k = 0
+            Z = np.zeros((self.nobs, r))
+            Z[:,0] = 1. # this is inefficient for no constant because
+                        # z_i = z_j for all i,j
+        self.Z = Z
+        self.k = k
+        #NOTE: above is for a stationary ARMA, no seasonality
+        #NOTE: Z is H' in Hamilton
+        self.r = r
+        #TODO: this assumes no constant.
+        def T(params): # F in Hamilton
+            r = self.r  #TODO: needed?
+            k = self.k
+            arr = np.zeros((r,r))
+            arr[:,0] = params[:r]   # first r params are AR coeffs
+            arr[:-1,1:] = np.eye(r-1)
+            arr = block_diag(np.eye(k),arr)
+            return arr
+
+        def R(params): # RQ'R is R in Hamilton
+            r = self.r #TODO needed?
+            k = self.k
+            arr = params[-r:].tolist()  # last r-1 params are MA coeffs
+            arr[0] = 1.
+            arr = np.asarray([0]*k + arr)[:,None]
+            return arr
+
+    def loglike(self, params):
+        """
+        Compute the loglikelihood using the exact Kalman filter
+        """
+        Z = self.Z
+        r = self.r
+        k = self.k
+
+        # treating delta as diffuse for initialization
+        alpha_0 = np.zeros((r+k,1)) # initial state
+        #TODO: but kappa -> to inf, so how to handle?
+        P_0 = kappa * Pinf + Pstar # its variance
+
+        # update the initialized states, etc. d times
+        # where d == the number of states with unknown means and variances
+        # in the case of the ARMA-style models this is always d == r (?)
+
+        # loop the below for d,...,n
+        # Predict
+#        KF.predict()
+        # get the next state
+        alpha_1 = np.dot(T,alpha_0) + K
+
+        # Update
+#        KF.update()
+
+
+
+    def fit(self):
+        r = self.r
+        p = self.p
+        q = self.q
+        start_params = np.zeros((r*2)) # use something else?
+        loglike = lambda params: -self.loglike(params)
+        # specify which coefficients should be zero according to (p,q)
+        # AR restrictions
+        bounds = [(None,)*2]*p + [(0.0,)*2] * (r-p)
+        # MA restrictions
+        bounds += [(None,)*2]*(q+1) + [(0.0,)*2] * (r-(q+1))
+        results = optimze.fmin_l_bfgs_b(loglike, start_params,
+                    approx_grad=True, pgtol=1e-12, factr=10.0,
+                    bounds = bounds, disp=1)
+        params = results[0]
+        llf = results[1]
+        self.params = params
+        self.llf = llf
+
+
+
+
 
 
 if __name__ == "__main__":
@@ -502,6 +606,9 @@ if __name__ == "__main__":
     T = np.zeros((s+1,s+1))
     C = lambda j : np.array([[np.cos(j), np.sin(j)],[-np.sin(j), np.cos(j)]])
     Cj = [C(j) for j in lambdaj] + [-1]
+#NOTE: the above is for handling seasonality
+#TODO: it is just a rotation matrix.  See if Robert's link has a better way
+#http://citeseerx.ist.psu.edu/viewdoc/download;jsessionid=5F5145BE25D61F87478B25AD1493C8F4?doi=10.1.1.110.5134&rep=rep1&type=pdf&ei=QcetSefqF4GEsQPnx4jSBA&sig2=HjJILSBPFgJTfuifbvKrxw&usg=AFQjCNFbABIxusr-NEbgrinhtR6buvjaYA
     from scipy import linalg
     F = linalg.block_diag(*Cj) # T in DK, F in Hamilton
     R = np.eye(s-1)
