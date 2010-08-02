@@ -220,7 +220,10 @@ class TestLogitNewton(CheckModelResults, CheckMargEff):
         assert_almost_equal(self.res1.margeff(atexog={1 : 21., 2 : 0}, at='mean'),
                 self.res2.margeff_nodummy_atexog2, DECIMAL_4)
 
-
+class TestLogitBFGS(TestLogitNewton):
+    def setup(self):
+        self.res1 = Logit(self.data.endog, self.data.exog).fit(method="bfgs",
+            disp=1)
 
 class TestPoissonNewton(CheckModelResults):
     def __init__(self):
