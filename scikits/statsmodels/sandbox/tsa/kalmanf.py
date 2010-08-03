@@ -355,8 +355,10 @@ class ARMA(LikelihoodModel):
         """
         r = self.r
         k = self.k
+        p = self.p
         arr = np.zeros((r,r))
-        arr[:,0] = params[:r]   # first r params are AR coeffs
+#        arr[:,0] = params[:r]   # first r params are AR coeffs
+        arr[:,0] = params[:p]   # first p params are AR coeffs w/ short params
         arr[:-1,1:] = np.eye(r-1)
         arr = block_diag(np.eye(k),arr)
         return arr
@@ -373,8 +375,12 @@ class ARMA(LikelihoodModel):
         """
         r = self.r
         k = self.k
-        arr = params[-r-1:-1].tolist()  # last r-2 to -1 params are MA coeffs
-        arr[0] = 1.
+        q = self.q
+        p = self.p
+#        arr = params[-r-1:-1].tolist()  # last r-2 to -1 params are MA coeffs
+        arr = params[p:p+q].tolist()  # p to p+q short params are MA coeffs
+#        arr[0] = 1.
+        arr = [1.0] + arr
         arr = np.asarray([0]*k + arr)[:,None]
         return arr
 
@@ -394,6 +400,7 @@ class ARMA(LikelihoodModel):
 
         # treating delta as diffuse for initialization
         alpha_0 = np.zeros((r+k,1)) # initial state
+#TODO: alpha gets beta stacked on top of it for exog != None
         R_mat = self.R(params)
 
         m = Z.shape[1] # should be r + k
@@ -422,6 +429,8 @@ class ARMA(LikelihoodModel):
             alpha_0 = np.dot(T_mat, alpha_0) + np.dot(K,v)
             L = T_mat - np.dot(K,Z[i,None])
             Q_0 = params[-1]  # doesn't need to be in a loop
+# reparameterize to always be positive
+#            Q_0 = np.exp(params[-1])
             P_0 = chain_dot(T_mat, P_0, L.T) + chain_dot(R_mat,Q_0,R_mat.T)
             loglikelihood -= 1/2. * (np.log(F) + chain_dot(v.T,Finv,v))
         return loglikelihood
@@ -452,17 +461,25 @@ class ARMA(LikelihoodModel):
         bounds += [(None,)*2]*k
         # Variance restriction, should it be positive instead of 0,inf?
         bounds += [(0.0,None)]
-        #TODO: impose a 1 restriction on first MA coeff? # No, done in R().
         # could drop one parameter then?
-        results = optimize.fmin_l_bfgs_b(loglike, start_params,
-                    approx_grad=True, pgtol=1e-12, factr=10.0,
-                    bounds = bounds, iprint=0)
-        self.results = results
-        params = results[0]
-        llf = results[1]
-        self.params = params
-        self.llf = llf
+#        results = optimize.fmin_l_bfgs_b(loglike, start_params,
+#                    approx_grad=True, m=30, pgtol=1e-12, factr=10.0,
+#                    bounds = bounds, iprint=0)
 
+#TODO: rewrite for bfgs.  Using stata coeffs, the Kalman loglike looks correct
+# off by just a small amount, so it's the optimization that looks bad
+#TODO: reparameterize variance so that it's always positive
+#TODO: write analytic gradient
+#NOTE: done below
+#        self.results = results
+#        params = results[0]
+#        llf = results[1]
+#        self.params = params
+#        self.llf = llf
+        start_params = np.zeros((p+q+k+1))
+        results = optimize.fmin_bfgs(loglike, start_params, gtol=1e-8,
+                        full_output=0, maxiter=1000)
+        self.results = results
 
 
 
