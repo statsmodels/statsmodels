@@ -34,3 +34,12 @@ class ARLagResults(object):
                   5.515935627515806,  5.601455679120634,  5.729461000735226,
                 248.654927915301300]
             self.ic = np.asarray(ic).reshape(4,-1, order='F')
+
+class ARResultsOLS(object):
+    """
+    Results of fitting an AR(9) model to the sunspot data.
+
+    Results were taken from gretl.
+    """
+    def __init__(self):
+        params = None

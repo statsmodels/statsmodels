@@ -60,10 +60,6 @@ class AR(LikelihoodModel):
     def __init__(self, endog, exog=None):
         """
         Autoregressive AR(p) Model
-
-        Notes
-        -----
-        Written for AR(1) case.  Not yet general.
         """
         super(AR, self).__init__(endog, exog)
         if endog.ndim == 1:
@@ -116,18 +112,26 @@ class AR(LikelihoodModel):
             usepenalty = True
 
         yp = endog[:laglen]
-        mup = np.asarray([params[0]/(1-np.sum(params[1:]))]*laglen)
-        #TODO: the above is only correct for constant-only case and no exog
+        lagstart = self.trendorder
+        exog = self.exog
+        if exog is not None:
+            lagstart += exog.shape[1]
+#            xp = exog[:laglen]
+        if self.trenorder = 1 and lagstart = 1:
+            c = [params[0]] * laglen # constant-only no exogenous variables
+        else:
+            c = np.dot(X[:laglen, :lagstart], params[:lagstart])
+        mup = np.asarray(c/(1-np.sum(params[lagstart:])))
         diffp = yp-mup[:,None]
 
         # get inv(Vp) Hamilton 5.3.7
-        params0 = np.r_[-1, params[1:]]
+        params0 = np.r_[-1, params[lagstart:]]
 
-        p = len(params) - 1 #TODO: change to trendorder? and above?
+        p = len(params) - lagstart
         p1 = p+1
         Vpinv = np.zeros((p,p))
-        for i in range(1,p1):
-            for j in range(1,p1):
+        for i in range(lagstart,p1):
+            for j in range(lagstart,p1):
                 if i <= j and j <= p:
                     part1 = np.sum(params0[:i] * params0[j-i:j])
                     part2 = np.sum(params0[p1-j:p1+i-j]*params0[p1-i:])
@@ -440,15 +444,49 @@ class ARResults(LikelihoodModelResults):
     @cache_readonly
     def resid(self):
         model = self.model
-#        print self.Y.squeeze().shape
-#        print self.X.shape
-#        print self.params.shape
         return self.Y.squeeze() - np.dot(self.X, self.params)
 
     @cache_readonly
     def ssr(self):
         resid = self.resid
         return np.dot(resid, resid)
+
+    @cache_readonly
+    def ar_roots(self):
+        return np.roots(np.r_[1, -params[1:]])
+
+class ARIMA(LikelihoodModel):
+    def __init__(self, endog, exog=None):
+        """
+        ARIMA Model
+        """
+        super(ARIMA, self).__init__(endog, exog)
+        if endog.ndim == 1:
+            endog = endog[:,None]
+        elif endog.ndim > 1 and endog.shape[1] != 1:
+            raise ValueError("Only the univariate case is implemented")
+        self.endog = endog # overwrite endog
+        if exog is not None:
+            raise ValueError("Exogenous variables are not yet supported.")
+
+    def fit(self, order=(0,0,0), method="ssm")
+        """
+        Notes
+        -----
+        Current method being developed is the state-space representation.
+
+        Box and Jenkins outline many more procedures.
+        """
+        if not hasattr(order, '__iter__'):
+            raise ValueError("order must be an iterable sequence.  Got type \
+%s instead" % type(order))
+        p,d,q = order
+        if d > 0:
+            raise ValueError("Differencing not implemented yet")
+            # assume no constant, ie mu = 0
+            # unless overwritten then use w_bar for mu
+            Y = np.diff(endog, d, axis=0) #TODO: handle lags?
+
 
 
 
@@ -1501,31 +1539,35 @@ if __name__ == "__main__":
     ar_yw = AR(sunspots.endog)
     res_yw = ar_yw.fit(maxlag=4, method="yw")
 
-    # Timings versus talkbox
-    from timeit import default_timer as timer
-    print "Time AR fit vs. talkbox"
-    # generate a long series of AR(2) data
+#    # Timings versus talkbox
+#    from timeit import default_timer as timer
+#    print "Time AR fit vs. talkbox"
+#    # generate a long series of AR(2) data
+#
+#    nobs = 1000000
+#    y = np.empty(nobs)
+#    y[0:2] = 0
+#    for i in range(2,nobs):
+#        y[i] = .25 * y[i-1] - .75 * y[i-2] + np.random.rand()
+#
+#    mod_sm = AR(y)
+#    t = timer()
+#    res_sm = mod_sm.fit(method="yw", trend="nc", demean=False, maxlag=2)
+#    t_end = timer()
+#    print str(t_end - t) + " seconds for sm.AR with yule-walker, 2 lags"
+#    try:
+#        import scikits.talkbox as tb
+#    except:
+#        raise ImportError("You need scikits.talkbox installed for timings")
+#    t = timer()
+#    mod_tb = tb.lpc(y, 2)
+#    t_end = timer()
+#    print str(t_end - t) + " seconds for talkbox.lpc"
+#    print """For higher lag lengths ours quickly fills up memory and starts
+#thrashing the swap.  Should we include talkbox C code or Cythonize the
+#Levinson recursion algorithm?"""
 
-    nobs = 1000000
-    y = np.empty(nobs)
-    y[0:2] = 0
-    for i in range(2,nobs):
-        y[i] = .25 * y[i-1] - .75 * y[i-2] + np.random.rand()
-
-    mod_sm = AR(y)
-    t = timer()
-    res_sm = mod_sm.fit(method="yw", trend="nc", demean=False, maxlag=2)
-    t_end = timer()
-    print str(t_end - t) + " seconds for sm.AR with yule-walker, 2 lags"
-    try:
-        import scikits.talkbox as tb
-    except:
-        raise ImportError("You need scikits.talkbox installed for timings")
-    t = timer()
-    mod_tb = tb.lpc(y, 2)
-    t_end = timer()
-    print str(t_end - t) + " seconds for talkbox.lpc"
-    print """For higher lag lengths ours quickly fills up memory and starts
-thrashing the swap.  Should we include talkbox C code or Cythonize the
-Levinson recursion algorithm?"""
-
+# some data for an example in Box Jenkins
+    IBM = np.asarray([460,457,452,459,462,459,463,479,493,490.])
+    w = np.diff(IBM)
+    theta = .5
