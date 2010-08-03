@@ -17,6 +17,7 @@ from scipy import optimize
 import numpy as np
 from scikits.statsmodels import chain_dot #TODO: move this to tools
 from scikits.statsmodels.model import LikelihoodModel
+from scipy.linalg import block_diag
 
 #TODO: See Koopman and Durbin (2000)
 #Fast filtering and smoothing for multivariate state space models
@@ -315,12 +316,14 @@ class ARMA(LikelihoodModel):
     """
     def __init__(self, endog, exog=None, constant=True, order=(0,0)):
         if exog is None and constant:
-            exog = np.array([[1.0]])
+            exog = np.ones((len(endog),1))
+            constant = False # to skip next logic
         elif exog is not None and constant:
             exog = add_constant(exog,prepend=True)
         super(ARMA, self).__init__(endog, exog)
         p,q = map(int,order) #TODO: will need to use these to ensure that
                     # some of params stays zero
+        r = max(p,q+1)
         if exog is not None:
             k = exog.shape[1]  # number of exogenous variables, incl. const.
             Z = np.zeros((self.nobs, k+r))
@@ -336,23 +339,24 @@ class ARMA(LikelihoodModel):
         #NOTE: above is for a stationary ARMA, no seasonality
         #NOTE: Z is H' in Hamilton
         self.r = r
-        #TODO: this assumes no constant.
-        def T(params): # F in Hamilton
-            r = self.r  #TODO: needed?
-            k = self.k
-            arr = np.zeros((r,r))
-            arr[:,0] = params[:r]   # first r params are AR coeffs
-            arr[:-1,1:] = np.eye(r-1)
-            arr = block_diag(np.eye(k),arr)
-            return arr
 
-        def R(params): # RQ'R is R in Hamilton
-            r = self.r #TODO needed?
-            k = self.k
-            arr = params[-r:].tolist()  # last r-1 params are MA coeffs
-            arr[0] = 1.
-            arr = np.asarray([0]*k + arr)[:,None]
-            return arr
+    #TODO: this assumes no constant.
+    def T(self,params): # F in Hamilton
+        r = self.r
+        k = self.k
+        arr = np.zeros((r,r))
+        arr[:,0] = params[:r]   # first r params are AR coeffs
+        arr[:-1,1:] = np.eye(r-1)
+        arr = block_diag(np.eye(k),arr)
+        return arr
+
+    def R(self,params): # RQ'R is R in Hamilton (check)
+        r = self.r
+        k = self.k
+        arr = params[-r:].tolist()  # last r-1 params are MA coeffs
+        arr[0] = 1.
+        arr = np.asarray([0]*k + arr)[:,None]
+        return arr
 
     def loglike(self, params):
         """
@@ -361,11 +365,18 @@ class ARMA(LikelihoodModel):
         Z = self.Z
         r = self.r
         k = self.k
+        nobs = self.nobs
 
         # treating delta as diffuse for initialization
         alpha_0 = np.zeros((r+k,1)) # initial state
-        #TODO: but kappa -> to inf, so how to handle?
-        P_0 = kappa * Pinf + Pstar # its variance
+        R_mat = self.R(params)
+
+        m = Z.shape[1]
+        T_mat = self.T(params)
+        Q_0 = np.dot(np.linalg.inv(np.eye(m**2)-np.kron(T_mat,T_mat)),
+                    np.dot(R_mat,R_mat.T).ravel('F'))
+        Q_0 = Q_0.reshape(r,r,order='F')
+        P_0 = Q_0
 
         # update the initialized states, etc. d times
         # where d == the number of states with unknown means and variances
@@ -373,14 +384,18 @@ class ARMA(LikelihoodModel):
 
         # loop the below for d,...,n
         # Predict
-#        KF.predict()
-        # get the next state
-        alpha_1 = np.dot(T,alpha_0) + K
+        for i in xrange(1,nobs): # there is only one initialization step
+                                 # bc alpha_1 is stationary for d = 0
+            #TODO: history stores these values
+            v = y[i] - np.dot(Z,alpha_0) # one-step forecast error
+            F = chain_dot(Z[i],P_0,Z[i,None].T) #+ H=0 for ARMA, var. forecast err
+            Finv = 1./F # always scalar for univariate series
+            K = chain_dot(T_mat,P_0,Z[i,None].T,Finv)
 
-        # Update
-#        KF.update()
-
-
+            # update state
+            alpha_0 = np.dot(T_mat, alpha) + np.dot(K,v)
+            L = T_mat - np.dot(K,Z)
+            P_0 = chain_dot(T_mat, P_0, L.T) + chain_dot(R_mat,Q_0,R_mat)
 
     def fit(self):
         r = self.r
@@ -393,6 +408,8 @@ class ARMA(LikelihoodModel):
         bounds = [(None,)*2]*p + [(0.0,)*2] * (r-p)
         # MA restrictions
         bounds += [(None,)*2]*(q+1) + [(0.0,)*2] * (r-(q+1))
+        #TODO: impose a 1 restriction on first MA coeff? # No, done in R().
+        # could drop one parameter then?
         results = optimze.fmin_l_bfgs_b(loglike, start_params,
                     approx_grad=True, pgtol=1e-12, factr=10.0,
                     bounds = bounds, disp=1)
@@ -590,12 +607,12 @@ if __name__ == "__main__":
     nile_ssm = StateSpaceModel(nile)
     R = lambda params : np.array(params[0])
     Q = lambda params : np.array(params[1])
-    nile_ssm.fit_kalman(start_params=[1.0,1.0], xi10=0, F=[1.], H=[1.],
-                Q=Q, R=R, penalty=False, ntrain=0)
+#    nile_ssm.fit_kalman(start_params=[1.0,1.0], xi10=0, F=[1.], H=[1.],
+#                Q=Q, R=R, penalty=False, ntrain=0)
 
 # p. 162 univariate structural time series example
     seatbelt = dk.open('Seatbelt.dat').readlines()
-    seatbelt = [float(_.strip()) for _ in seatbelt[1:]]
+    seatbelt = [map(float,_.split()) for _ in seatbelt[2:]]
     sb_ssm = StateSpaceModel(seatbelt)
     s = 12 # monthly data
 # s p.
@@ -614,3 +631,13 @@ if __name__ == "__main__":
     R = np.eye(s-1)
     sigma2_omega = 1.
     Q = np.eye(s-1) * sigma2_omega
+
+    # simulate ar process
+    np.random.seed(12345)
+    y = np.zeros(10000)
+    errors = np.random.randn(10000)
+    y[0] = np.random.randn()
+    # params = .75, .25 ARMA(1,1)
+    for i in range(1,len(y)):
+        y[i] = .75 * y[i-1] + errors[i] + .25*errors[i-1]
+    arma = ARMA(y, constant=False, order=(1,1))
