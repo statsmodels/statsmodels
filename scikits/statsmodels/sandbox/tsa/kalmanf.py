@@ -11,6 +11,7 @@ Hamilton, J.D.  `Time Series Analysis`.  Princeton, 1994.
 Notes
 -----
 This file follows Hamilton's notation pretty closely.
+The ARMA Model class follows Durbin and Koopman notation.
 """
 
 from scipy import optimize
@@ -19,7 +20,6 @@ from scikits.statsmodels import chain_dot #TODO: move this to tools
 from scikits.statsmodels.model import LikelihoodModel
 from scipy.linalg import block_diag
 
-#TODO: See Koopman and Durbin (2000)
 #Fast filtering and smoothing for multivariate state space models
 # and The Riksbank -- Strid and Walentin (2008)
 # Block Kalman filtering for large-scale DSGE models
@@ -339,9 +339,20 @@ class ARMA(LikelihoodModel):
         #NOTE: above is for a stationary ARMA, no seasonality
         #NOTE: Z is H' in Hamilton
         self.r = r
+        self.p = p
+        self.q = q
 
     #TODO: this assumes no constant.
     def T(self,params): # F in Hamilton
+        """
+        The coefficient matrix for the state vector in the state equation.
+
+        Its dimension is r+k x r+k.
+
+        Reference
+        ---------
+        Durbin and Koopman Section 3.7.
+        """
         r = self.r
         k = self.k
         arr = np.zeros((r,r))
@@ -350,13 +361,27 @@ class ARMA(LikelihoodModel):
         arr = block_diag(np.eye(k),arr)
         return arr
 
-    def R(self,params): # RQ'R is R in Hamilton (check)
+    def R(self,params): # R is H in Hamilton
+        """
+        The coefficient matrix for the state vector in the observation equation.
+
+        Its dimension is r+k x 1.
+
+        Reference
+        ---------
+        Durbin and Koopman Section 3.7.
+        """
         r = self.r
         k = self.k
-        arr = params[-r:].tolist()  # last r-1 params are MA coeffs
+        arr = params[-r-1:-1].tolist()  # last r-2 to -1 params are MA coeffs
         arr[0] = 1.
         arr = np.asarray([0]*k + arr)[:,None]
         return arr
+
+#TODO: can remove function Q if you want, but not when generalized
+    def Q(self,params): # Q is RQR' in Hamilton
+                        # returns MLE of state variance.
+        return params[-1]
 
     def loglike(self, params):
         """
@@ -371,7 +396,7 @@ class ARMA(LikelihoodModel):
         alpha_0 = np.zeros((r+k,1)) # initial state
         R_mat = self.R(params)
 
-        m = Z.shape[1]
+        m = Z.shape[1] # should be r + k
         T_mat = self.T(params)
         Q_0 = np.dot(np.linalg.inv(np.eye(m**2)-np.kron(T_mat,T_mat)),
                     np.dot(R_mat,R_mat.T).ravel('F'))
@@ -382,37 +407,57 @@ class ARMA(LikelihoodModel):
         # where d == the number of states with unknown means and variances
         # in the case of the ARMA-style models this is always d == r (?)
 
+        loglikelihood = -nobs/2 * np.log(2*np.pi)
+
         # loop the below for d,...,n
         # Predict
-        for i in xrange(1,nobs): # there is only one initialization step
+        for i in xrange(int(nobs)): # there is only one initialization step
                                  # bc alpha_1 is stationary for d = 0
             #TODO: history stores these values
-            v = y[i] - np.dot(Z,alpha_0) # one-step forecast error
+            v = y[i] - np.dot(Z[i,None],alpha_0) # one-step forecast error
             F = chain_dot(Z[i],P_0,Z[i,None].T) #+ H=0 for ARMA, var. forecast err
-            Finv = 1./F # always scalar for univariate series
-            K = chain_dot(T_mat,P_0,Z[i,None].T,Finv)
-
+            Finv = 1./F[:,None] # always scalar for univariate series
+            K = chain_dot(T_mat,P_0,Z[i,None].T,Finv) # Kalman Gain Matrix
             # update state
-            alpha_0 = np.dot(T_mat, alpha) + np.dot(K,v)
-            L = T_mat - np.dot(K,Z)
-            P_0 = chain_dot(T_mat, P_0, L.T) + chain_dot(R_mat,Q_0,R_mat)
+            alpha_0 = np.dot(T_mat, alpha_0) + np.dot(K,v)
+            L = T_mat - np.dot(K,Z[i,None])
+            Q_0 = params[-1]  # doesn't need to be in a loop
+            P_0 = chain_dot(T_mat, P_0, L.T) + chain_dot(R_mat,Q_0,R_mat.T)
+            loglikelihood -= 1/2. * (np.log(F) + chain_dot(v.T,Finv,v))
+        return loglikelihood
+#TODO: check for Steady-State convergence to reuse terms
 
     def fit(self):
         r = self.r
         p = self.p
         q = self.q
-        start_params = np.zeros((r*2)) # use something else?
+        k = self.k
+#        start_params = np.zeros((r*2)) # use something else?
+                                       #NOTE: this is incorrect
+                                       # it needs to include the
+                                       # variance terms
+        # should be something like r * 2 (with zeros) + k + # of terms in Q
+        start_params = np.zeros((r*2 + k + 1)) # use something else?
+        start_params[-1] = self.endog.std()**2  # estimate of state variance
+                                                # zero is bad first guess for
+                                                # optimization
         loglike = lambda params: -self.loglike(params)
+#        loglike = self.loglike
         # specify which coefficients should be zero according to (p,q)
         # AR restrictions
         bounds = [(None,)*2]*p + [(0.0,)*2] * (r-p)
         # MA restrictions
-        bounds += [(None,)*2]*(q+1) + [(0.0,)*2] * (r-(q+1))
+        bounds += [(1.0,1.0)] + [(None,)*2]*q + [(0.0,)*2] * (r-(q+1))
+        # Exog restrictions
+        bounds += [(None,)*2]*k
+        # Variance restriction, should it be positive instead of 0,inf?
+        bounds += [(0.0,None)]
         #TODO: impose a 1 restriction on first MA coeff? # No, done in R().
         # could drop one parameter then?
-        results = optimze.fmin_l_bfgs_b(loglike, start_params,
+        results = optimize.fmin_l_bfgs_b(loglike, start_params,
                     approx_grad=True, pgtol=1e-12, factr=10.0,
-                    bounds = bounds, disp=1)
+                    bounds = bounds, iprint=0)
+        self.results = results
         params = results[0]
         llf = results[1]
         self.params = params
@@ -641,3 +686,5 @@ if __name__ == "__main__":
     for i in range(1,len(y)):
         y[i] = .75 * y[i-1] + errors[i] + .25*errors[i-1]
     arma = ARMA(y, constant=False, order=(1,1))
+    arma.fit()
+
