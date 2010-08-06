@@ -8,11 +8,22 @@ Durbin., J and Koopman, S.J.  `Time Series Analysis by State Space Methods`.
 
 Hamilton, J.D.  `Time Series Analysis`.  Princeton, 1994.
 
+Harvey, A.C. `Forecasting, Structural Time Series Models and the Kalman Filter`.
+    Cambridge, 1989.
+
 Notes
 -----
 This file follows Hamilton's notation pretty closely.
 The ARMA Model class follows Durbin and Koopman notation.
+Harvey uses Durbin and Koopman notation.
 """
+#Anderson and Moore `Optimal Filtering` provides a more efficient algorithm
+# namely the information filter
+# if the number of series is much greater than the number of states
+# e.g., with a DSGE model.  See also
+# http://www.federalreserve.gov/pubs/oss/oss4/aimindex.html
+# Harvey notes that the square root filter will keep P_t pos. def. but
+# is not strictly needed outside of the engineering (long series)
 
 from scipy import optimize
 import numpy as np
@@ -358,7 +369,7 @@ class ARMA(LikelihoodModel):
         p = self.p
         arr = np.zeros((r,r))
 #        arr[:,0] = params[:r]   # first r params are AR coeffs
-        arr[:,0] = params[:p]   # first p params are AR coeffs w/ short params
+        arr[:p,0] = params[:p]   # first p params are AR coeffs w/ short params
         arr[:-1,1:] = np.eye(r-1)
         arr = block_diag(np.eye(k),arr)
         return arr
@@ -384,59 +395,121 @@ class ARMA(LikelihoodModel):
         arr = np.asarray([0]*k + arr)[:,None]
         return arr
 
-#TODO: can remove function Q if you want, but not when generalized
-    def Q(self,params): # Q is RQR' in Hamilton
-                        # returns MLE of state variance.
-        return params[-1]
-
-    def loglike(self, params):
+    def loglike1(self, params):
         """
         Compute the loglikelihood using the exact Kalman filter
         """
+#TODO: Define functions within loglike to save call to getattr?
+#NOTE: there is more overhead, so the below is more efficient
         Z = self.Z
         r = self.r
         k = self.k
         nobs = self.nobs
 
-        # treating delta as diffuse for initialization
-        alpha_0 = np.zeros((r+k,1)) # initial state
-#TODO: alpha gets beta stacked on top of it for exog != None
-        R_mat = self.R(params)
+        # initialization
+        # cf. Harvey section 3.3.4, Durbin-Koopman 5.1 - 5.6, and Hamilton 13.2
+        # DK is probably the most comprehensive treatment
+        # only one initialization step for stationary ARMA model
 
-        m = Z.shape[1] # should be r + k
+        # treat delta as diffuse for initialization
+        # doesn't necessarily matter for stationary ARMA model
+        alpha = np.zeros((r+k,1)) # initial state is null vector
+        #TODO: what about constant?  check Harvey
+        #Harvey includes constant terms, but can just stack into alpha_0
+        # and estimate like anything else, see 3.2.3a
+        #TODO: alpha gets beta stacked on top of it for exog != None
+
+        R_mat = self.R(params)
+        m = Z.shape[1] # r + k
         T_mat = self.T(params)
         Q_0 = np.dot(np.linalg.inv(np.eye(m**2)-np.kron(T_mat,T_mat)),
                     np.dot(R_mat,R_mat.T).ravel('F'))
         Q_0 = Q_0.reshape(r,r,order='F')
-        P_0 = Q_0
+        P = Q_0
 
         # update the initialized states, etc. d times
         # where d == the number of states with unknown means and variances
-        # in the case of the ARMA-style models this is always d == r (?)
+        # in the case of the ARMA-style models this is always d == 1
 
-        loglikelihood = -nobs/2 * np.log(2*np.pi)
+#        loglikelihood = -nobs/2 * np.log(2*np.pi)
+#NOTE: do this later since it's constant, speed this up
+        loglikelihood = 0.
+        sigma2 = 0
 
         # loop the below for d,...,n
-        # Predict
-        for i in xrange(int(nobs)): # there is only one initialization step
-                                 # bc alpha_1 is stationary for d = 0
+        for i in xrange(int(nobs)):
             #TODO: history stores these values
-            v = y[i] - np.dot(Z[i,None],alpha_0) # one-step forecast error
-            F = chain_dot(Z[i],P_0,Z[i,None].T) #+ H=0 for ARMA, var. forecast err
-            Finv = 1./F[:,None] # always scalar for univariate series
-            K = chain_dot(T_mat,P_0,Z[i,None].T,Finv) # Kalman Gain Matrix
+            # Predict
+            v = y[i] - np.dot(Z[i,None],alpha) # one-step forecast error
+            F = chain_dot(Z[i,None], P, Z[i,None].T) #+H=0 for ARMA, var. forecast err
+#NOTE: monitor the above for convergence to steady-state and switching to
+# fast recursion
+            Finv = 1./F # always scalar for univariate series
+            K = chain_dot(T_mat,P,Z[i,None].T,Finv) # Kalman Gain Matrix
             # update state
-            alpha_0 = np.dot(T_mat, alpha_0) + np.dot(K,v)
+            alpha = np.dot(T_mat, alpha) + np.dot(K,v)
+#            Q_0 = params[-1]  # doesn't need to be in a loop
+# for concentrated, univariate model, take Q = 1
+
             L = T_mat - np.dot(K,Z[i,None])
-            Q_0 = params[-1]  # doesn't need to be in a loop
-# reparameterize to always be positive
-#            Q_0 = np.exp(params[-1])
-            P_0 = chain_dot(T_mat, P_0, L.T) + chain_dot(R_mat,Q_0,R_mat.T)
-            loglikelihood -= 1/2. * (np.log(F) + chain_dot(v.T,Finv,v))
-        return loglikelihood
+            P = chain_dot(T_mat, P, L.T) + np.dot(R_mat,R_mat.T)
+
+#            loglikelihood -= 1/2. * (np.log(F) + chain_dot(v.T,Finv,v))
+# OR
+# we could concentrate the likelihood as in Harvey Section 3.4
+# where L_c = sum(log(f_t) + T*log(sigma_2))
+# where sigma_2 = 1/T * sum(v_t**2/f_t)
+            loglikelihood += np.log(F)
+        sigma2 = 1./nobs * np.sum(v**2/F)
+        loglike = -.5 *(loglikelihood + nobs*np.log(sigma2))
+        loglike -= nobs/2. * (np.log(2*np.pi)+1)
+#        print params, loglike - nobs/2. * np.log(2*np.pi + 1)
+        return loglike.squeeze()
 #TODO: check for Steady-State convergence to reuse terms
 
-    def fit(self):
+    def loglike(self, params):
+        Z = self.Z
+        r = self.r
+        k = self.k
+        nobs = self.nobs
+        alpha = np.zeros((r+k,1))
+        R_mat = self.R(params)
+        m = Z.shape[1] # r + k
+        T_mat = self.T(params)
+        Q_0 = np.dot(np.linalg.inv(np.eye(m**2)-np.kron(T_mat,T_mat)),
+                            np.dot(R_mat,R_mat.T).ravel('F'))
+        Q_0 = Q_0.reshape(r,r,order='F')
+        P = Q_0
+        sigma2 = 0
+        loglikelihood = 0
+        v = np.zeros((nobs,1))
+        F = np.zeros((nobs,1))
+        Finv = np.zeros((nobs,1))
+        alpha = np.zeros((2,nobs+1))
+        K = np.zeros((2,nobs))
+        P = np.zeros((nobs+1,2,2))
+        P[0] = Q_0
+
+        for i in xrange(int(nobs)):
+            # Predict
+            v[i] = y[i] - np.dot(Z[i,None],alpha[:,i]) # one-step forecast error
+            F[i] = chain_dot(Z[i,None], P[i], Z[i,None].T)
+            Finv[i] = 1./F[i] # always scalar for univariate series
+            K[:,i] = chain_dot(T_mat,P[i],Z[i,None].T,Finv[i]) # Kalman Gain Matrix
+            # update state
+            alpha[:,i+1] = np.dot(T_mat, alpha[:,i]) + np.dot(K[:,i,None],v[i])
+            L = T_mat - np.dot(K[:,i,None],Z[i,None])
+            P[i+1] = chain_dot(T_mat, P[i], L.T) + chain_dot(R_mat, R_mat.T)
+            loglikelihood += np.log(F[i])
+
+        sigma2 = 1./nobs * np.sum(v**2 / F)
+        loglike = -.5 *(loglikelihood + nobs*np.log(sigma2))
+        loglike -= nobs/2. * (np.log(2*np.pi) + 1)
+        print params, loglike
+        return loglike
+
+
+    def fit(self, start_params=None):
         r = self.r
         p = self.p
         q = self.q
@@ -446,8 +519,8 @@ class ARMA(LikelihoodModel):
                                        # it needs to include the
                                        # variance terms
         # should be something like r * 2 (with zeros) + k + # of terms in Q
-        start_params = np.zeros((r*2 + k + 1)) # use something else?
-        start_params[-1] = self.endog.std()**2  # estimate of state variance
+#        start_params = np.zeros((r*2 + k + 1)) # use something else?
+#        start_params[-1] = self.endog.std()**2  # estimate of state variance
                                                 # zero is bad first guess for
                                                 # optimization
         loglike = lambda params: -self.loglike(params)
@@ -476,10 +549,14 @@ class ARMA(LikelihoodModel):
 #        llf = results[1]
 #        self.params = params
 #        self.llf = llf
-        start_params = np.zeros((p+q+k+1))
+        if start_params is not None:
+            start_params = np.asarray(start_params)
+        else:
+            start_params = np.zeros((p+q+k))
         results = optimize.fmin_bfgs(loglike, start_params, gtol=1e-8,
-                        full_output=0, maxiter=1000)
+                        full_output=1, maxiter=1000, disp=1)
         self.results = results
+#TODO: remember that loglike equals fmax - nobs/2. *(np.log2*pi+1)
 
 
 
@@ -694,7 +771,7 @@ if __name__ == "__main__":
     sigma2_omega = 1.
     Q = np.eye(s-1) * sigma2_omega
 
-    # simulate ar process
+    # simulate arma process
     np.random.seed(12345)
     y = np.zeros(10000)
     errors = np.random.randn(10000)
