@@ -468,13 +468,22 @@ class ARMA(LikelihoodModel):
 #TODO: check for Steady-State convergence to reuse terms
 
     def loglike(self, params):
+
+#TODO: see section 3.4.6 in Harvey for computing the derivatives in the
+# recursion itself.
         Z = self.Z
         r = self.r
         k = self.k
         nobs = self.nobs
         alpha = np.zeros((r+k,1))
+        # try reparameterization
+        params = params/(1+np.abs(params))
+
         R_mat = self.R(params)
         m = Z.shape[1] # r + k
+
+
+
         T_mat = self.T(params)
         Q_0 = np.dot(np.linalg.inv(np.eye(m**2)-np.kron(T_mat,T_mat)),
                             np.dot(R_mat,R_mat.T).ravel('F'))
@@ -505,7 +514,7 @@ class ARMA(LikelihoodModel):
         sigma2 = 1./nobs * np.sum(v**2 / F)
         loglike = -.5 *(loglikelihood + nobs*np.log(sigma2))
         loglike -= nobs/2. * (np.log(2*np.pi) + 1)
-        print params, loglike
+#        print params, loglike
         return loglike
 
 
@@ -553,8 +562,10 @@ class ARMA(LikelihoodModel):
             start_params = np.asarray(start_params)
         else:
             start_params = np.zeros((p+q+k))
-        results = optimize.fmin_bfgs(loglike, start_params, gtol=1e-8,
+        results = optimize.fmin_bfgs(loglike, start_params, gtol=1e-4,
                         full_output=1, maxiter=1000, disp=1)
+#        results = optimize.fmin_l_bfgs_b(loglike, start_params, approx_grad=True,
+#                    m=5, pgtol=1e-12, factr=10., bounds=[(None,None),(None,None)])
         self.results = results
 #TODO: remember that loglike equals fmax - nobs/2. *(np.log2*pi+1)
 
@@ -781,4 +792,9 @@ if __name__ == "__main__":
         y[i] = .75 * y[i-1] + errors[i] + .25*errors[i-1]
     arma = ARMA(y, constant=False, order=(1,1))
     arma.fit()
+
+#NOTE: if you use the OLS AR estimate and the limited memory BFGS it converges
+# if you do the same with just bfgs, it does not converge for the MA coefficient
+# it needs better starting values.  Can you invert the MA component and get
+# a better starting value?  Still jumps, need the reparameterization.
 
