@@ -368,8 +368,11 @@ class ARMA(LikelihoodModel):
         k = self.k
         p = self.p
         arr = np.zeros((r,r))
+        params_padded = np.zeros(r) # handle zero coefficients if necessary
+        #NOTE: squeeze added for cg optimizer
+        params_padded[:p] = params[:p]
 #        arr[:,0] = params[:r]   # first r params are AR coeffs
-        arr[:p,0] = params[:p]   # first p params are AR coeffs w/ short params
+        arr[:,0] = params_padded   # first p params are AR coeffs w/ short params
         arr[:-1,1:] = np.eye(r-1)
         arr = block_diag(np.eye(k),arr)
         return arr
@@ -389,10 +392,12 @@ class ARMA(LikelihoodModel):
         q = self.q
         p = self.p
 #        arr = params[-r-1:-1].tolist()  # last r-2 to -1 params are MA coeffs
-        arr = params[p:p+q].tolist()  # p to p+q short params are MA coeffs
+        arr = np.zeros(r-1) # this allows zero coefficients
+#NOTE: squeeze added because
+        arr[:q] = params[p:p+q]  # p to p+q short params are MA coeffs
 #        arr[0] = 1.
-        arr = [1.0] + arr
-        arr = np.asarray([0]*k + arr)[:,None]
+        arr = np.hstack(([0]*k + [1.0] ,arr))[:,None]
+#        arr = np.asarray([0]*k + arr)[:,None]
         return arr
 
     def loglike1(self, params):
@@ -449,7 +454,6 @@ class ARMA(LikelihoodModel):
             # update state
             alpha = np.dot(T_mat, alpha) + np.dot(K,v)
 #            Q_0 = params[-1]  # doesn't need to be in a loop
-# for concentrated, univariate model, take Q = 1
 
             L = T_mat - np.dot(K,Z[i,None])
             P = chain_dot(T_mat, P, L.T) + np.dot(R_mat,R_mat.T)
@@ -533,7 +537,6 @@ class ARMA(LikelihoodModel):
                                                 # zero is bad first guess for
                                                 # optimization
         loglike = lambda params: -self.loglike(params)
-#        loglike = self.loglike
         # specify which coefficients should be zero according to (p,q)
         # AR restrictions
         bounds = [(None,)*2]*p + [(0.0,)*2] * (r-p)
@@ -566,6 +569,8 @@ class ARMA(LikelihoodModel):
                         full_output=1, maxiter=1000, disp=1)
 #        results = optimize.fmin_l_bfgs_b(loglike, start_params, approx_grad=True,
 #                    m=5, pgtol=1e-12, factr=10., bounds=[(None,None),(None,None)])
+#        results = optimize.fmin_powell(loglike, start_params, full_output=1,
+#                disp=1)
         self.results = results
 #TODO: remember that loglike equals fmax - nobs/2. *(np.log2*pi+1)
 
@@ -791,10 +796,28 @@ if __name__ == "__main__":
     for i in range(1,len(y)):
         y[i] = .75 * y[i-1] + errors[i] + .25*errors[i-1]
     arma = ARMA(y, constant=False, order=(1,1))
-    arma.fit()
+    arma.fit(start_params = [.75, .25])
+#    arma.fit()
+# Stata gets [.7515029, .2266321, .9981944] with BFGS, but it's practically
+# there on the first iteration...how?
+# with loglikelihood of -14171.91
+# our loglike gives -14171.92, so the problem is in the optimizer
+    y_ar = np.zeros(10000)
+    y_ar[0] = np.random.randn()
+    for i in range(1,len(y_ar)):
+        y_ar[i] = y_ar[i-1] * .75 + np.random.randn()
+    ar = ARMA(y_ar, constant=False, order=(1,0))
+    ar.fit()
+
+
+# References
+# Harvey (1989)
+# Jones (1980) - details missing observations and transformation for stationarity
+# he suggests using
+# a = [1-exp(-u_k)]/[1+exp(-u_k)] and maximizing wrt to uk but using the
+# a's in the actual likelihood.  Same as Hamilton.
 
 #NOTE: if you use the OLS AR estimate and the limited memory BFGS it converges
 # if you do the same with just bfgs, it does not converge for the MA coefficient
 # it needs better starting values.  Can you invert the MA component and get
 # a better starting value?  Still jumps, need the reparameterization.
-
