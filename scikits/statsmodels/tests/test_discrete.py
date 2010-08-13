@@ -174,6 +174,11 @@ class TestProbitNewton(CheckModelResults):
         res2.probit()
         self.res2 = res2
 
+    def test_predict(self):
+        assert_almost_equal(self.res1.model.predict(self.data.exog),
+                self.res2.predict, DECIMAL_4)
+
+
 class TestProbitBFGS(TestProbitNewton):
     def setup(self):
         self.res1 = Probit(self.data.endog, self.data.exog).fit(method="bfgs",

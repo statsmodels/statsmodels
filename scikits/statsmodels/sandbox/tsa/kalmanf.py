@@ -521,7 +521,6 @@ class ARMA(LikelihoodModel):
                     newparams[:j] = tmp[:j]
                 params[k+p:k+p+q] = newparams
                 #TODO: might be able to speed up the above, but shouldn't be too much
-        print params
         R_mat = self.R(params)
         T_mat = self.T(params)
         r = self.r
@@ -881,6 +880,8 @@ if __name__ == "__main__":
     for i in range(1,len(y)):
         y[i] = .75 * y[i-1] + errors[i] + .25*errors[i-1]
     arma = ARMA(y, constant=False, order=(1,1))
+#    arma.fit(start_params = [.75, .25])
+#    arma.fit()
 
     y_arma22 = np.zeros(10000)
     errors = np.random.randn(10000)
@@ -888,9 +889,8 @@ if __name__ == "__main__":
     for i in range(2,10000):
         y_arma22[i] = .85 * y_arma22[i-1] - .35*y_arma22[i-2] + errors[i] + .25 * errors[i-1]\
                 - .9 * errors[i-2]
-
-#    arma.fit(start_params = [.75, .25])
-#    arma.fit()
+    arma22 = ARMA(y_arma22, constant=False, order=(2,2))
+    arma22.fit()
 
 # Stata gets [.7515029, .2266321, .9981944] with BFGS, but it's practically
 # there on the first iteration...how?

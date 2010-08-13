@@ -132,6 +132,33 @@ class DiscreteModel(LikelihoodModel):
         return discretefit
     fit.__doc__ += LikelihoodModel.fit.__doc__
 
+    def predict(self, exog, linear=False):
+        """
+        Predict response variable of a model given exogenous variables.
+
+        exog : array-like
+            1d or 2d array of exogenous values
+        linear : bool, optional
+            If True, returns the linear predictor dot(exog,params).  Else,
+            returns the value of the cdf at the linear predictor.
+
+        Returns
+        -------
+        array
+            Fitted values at exog.
+
+        Notes
+        -----
+        You must fit the model first.
+        """
+        if self._results is None:
+            raise ValueError("You must fit the model first")
+        if not linear:
+            return self.cdf(np.dot(exog, self._results.params))
+        else:
+            return np.dot(exog, self.results.params)
+
+
 class Poisson(DiscreteModel):
     """
     Poisson model for count data
