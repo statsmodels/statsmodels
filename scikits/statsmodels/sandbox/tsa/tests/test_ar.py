@@ -12,13 +12,19 @@ DECIMAL_6 = 6
 
 class CheckAR(object):
     def test_params(self):
-        pass
+
 
     def test_llf(self):
         pass
 
-class TestAROLS(object):
-    pass
+class TestAR(CheckAR):
+    def __init__(self):
+        self.data = sm.datasets.sunspots.load()
+
+class TestAROLS(TestAR):
+    def setup(self):
+        self.res1 = AR(self.data.endog).fit(maxlag=9, method='ols', trend='c',
+                        demean=False)
 
 class TestAutolagAR(object):
     def setup(self):

@@ -117,7 +117,7 @@ class AR(LikelihoodModel):
         if exog is not None:
             lagstart += exog.shape[1]
 #            xp = exog[:laglen]
-        if self.trenorder = 1 and lagstart = 1:
+        if self.trendorder == 1 and lagstart == 1:
             c = [params[0]] * laglen # constant-only no exogenous variables
         else:
             c = np.dot(X[:laglen, :lagstart], params[:lagstart])
@@ -469,7 +469,7 @@ class ARIMA(LikelihoodModel):
         if exog is not None:
             raise ValueError("Exogenous variables are not yet supported.")
 
-    def fit(self, order=(0,0,0), method="ssm")
+    def fit(self, order=(0,0,0), method="ssm"):
         """
         Notes
         -----

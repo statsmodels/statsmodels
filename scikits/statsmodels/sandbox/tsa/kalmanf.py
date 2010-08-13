@@ -27,9 +27,13 @@ Harvey uses Durbin and Koopman notation.
 
 from scipy import optimize
 import numpy as np
-from scikits.statsmodels import chain_dot #TODO: move this to tools
+from numpy import dot, identity, kron, log, zeros, pi, exp
+from numpy.linalg import inv
+from scikits.statsmodels import chain_dot #Note that chain_dot is a bit slower
 from scikits.statsmodels.model import LikelihoodModel
+from scikits.statsmodels.regression import yule_walker
 from scipy.linalg import block_diag
+from scikits.statsmodels.sandbox.tsa.tsatools import lagmat
 
 #Fast filtering and smoothing for multivariate state space models
 # and The Riksbank -- Strid and Walentin (2008)
@@ -427,7 +431,7 @@ class ARMA(LikelihoodModel):
         R_mat = self.R(params)
         m = Z.shape[1] # r + k
         T_mat = self.T(params)
-        Q_0 = np.dot(np.linalg.inv(np.eye(m**2)-np.kron(T_mat,T_mat)),
+        Q_0 = np.dot(inv(identity(m**2)-np.kron(T_mat,T_mat)),
                     np.dot(R_mat,R_mat.T).ravel('F'))
         Q_0 = Q_0.reshape(r,r,order='F')
         P = Q_0
@@ -476,53 +480,86 @@ class ARMA(LikelihoodModel):
 #TODO: see section 3.4.6 in Harvey for computing the derivatives in the
 # recursion itself.
         Z = self.Z
-        r = self.r
-        k = self.k
+        y = self.endog
         nobs = self.nobs
-        alpha = np.zeros((r+k,1))
-        # try reparameterization
-        params = params/(1+np.abs(params))
-
-        R_mat = self.R(params)
         m = Z.shape[1] # r + k
+        alpha = zeros((m,1))
+        k = self.k
+        p = self.p
+        q = self.q
 
+        # try reparameterization
+#TODO: this is only the stability condition for p,q == 1
+#        params = params/(1+np.abs(params))
+#NOTE: reparameterization suggested in Jones (1980)
+        if self.transparams:
+            # AR Coeffs
+            if p != 0:
+                newparams = ((1-exp(-params[k:k+p]))/(1+exp(-params[k:k+p]))).copy()
+                tmp = ((1-exp(-params[k:k+p]))/(1+exp(-params[k:k+p]))).copy()
 
+                # levinson-durbin to get pacf
+                for j in range(1,p):
+                    a = newparams[j]
+                    for kiter in range(j):
+                        tmp[kiter] -= a * newparams[j-kiter-1]
+                    newparams[:j] = tmp[:j]
+                params[k:k+p] = newparams
 
+            # MA Coeffs
+            if q != 0:
+                newparams = ((1-exp(-params[k+p:k+p+q]))/\
+                                (1+exp(-params[k+p:k+p+q]))).copy()
+                tmp = ((1-exp(-params[k+p:k+p+q]))/\
+                        (1+exp(-params[k+p:k+p+q]))).copy()
+
+                # levinson-durbin to get macf
+                for j in range(1,q):
+                    b = newparams[j]
+                    for kiter in range(j):
+                        tmp[kiter] += b * newparams[j-kiter-1]
+                    newparams[:j] = tmp[:j]
+                params[k+p:k+p+q] = newparams
+                #TODO: might be able to speed up the above, but shouldn't be too much
+        print params
+        R_mat = self.R(params)
         T_mat = self.T(params)
-        Q_0 = np.dot(np.linalg.inv(np.eye(m**2)-np.kron(T_mat,T_mat)),
-                            np.dot(R_mat,R_mat.T).ravel('F'))
+        r = self.r
+        Q_0 = dot(inv(identity(m**2)-kron(T_mat,T_mat)),
+                            dot(R_mat,R_mat.T).ravel('F'))
         Q_0 = Q_0.reshape(r,r,order='F')
         P = Q_0
         sigma2 = 0
         loglikelihood = 0
-        v = np.zeros((nobs,1))
-        F = np.zeros((nobs,1))
-        Finv = np.zeros((nobs,1))
-        alpha = np.zeros((2,nobs+1))
-        K = np.zeros((2,nobs))
-        P = np.zeros((nobs+1,2,2))
-        P[0] = Q_0
-
+        v = zeros((nobs,1))
+        F = zeros((nobs,1))
+        P = Q_0
+#NOTE: can only do quick recursions if Z is time-invariant
         for i in xrange(int(nobs)):
             # Predict
-            v[i] = y[i] - np.dot(Z[i,None],alpha[:,i]) # one-step forecast error
-            F[i] = chain_dot(Z[i,None], P[i], Z[i,None].T)
-            Finv[i] = 1./F[i] # always scalar for univariate series
-            K[:,i] = chain_dot(T_mat,P[i],Z[i,None].T,Finv[i]) # Kalman Gain Matrix
+            Z_mat = Z[i,None]
+            v_mat = y[i] - dot(Z_mat,alpha) # one-step forecast error
+            v[i] = v_mat
+            F_mat = dot(dot(Z_mat, P), Z_mat.T)
+            F[i] = F_mat
+#            print F[i]
+            Finv = 1./F_mat # always scalar for univariate series
+            K = dot(dot(dot(T_mat,P),Z_mat.T),Finv) # Kalman Gain Matrix
             # update state
-            alpha[:,i+1] = np.dot(T_mat, alpha[:,i]) + np.dot(K[:,i,None],v[i])
-            L = T_mat - np.dot(K[:,i,None],Z[i,None])
-            P[i+1] = chain_dot(T_mat, P[i], L.T) + chain_dot(R_mat, R_mat.T)
-            loglikelihood += np.log(F[i])
+            alpha = dot(T_mat, alpha) + dot(K,v_mat)
+            L = T_mat - dot(K,Z_mat)
+            P = dot(dot(T_mat, P), L.T) + dot(R_mat, R_mat.T)
+            loglikelihood += log(F_mat)
 
         sigma2 = 1./nobs * np.sum(v**2 / F)
-        loglike = -.5 *(loglikelihood + nobs*np.log(sigma2))
-        loglike -= nobs/2. * (np.log(2*np.pi) + 1)
+        loglike = -.5 *(loglikelihood + nobs*log(sigma2))
+        loglike -= nobs/2. * (log(2*pi) + 1)
 #        print params, loglike
-        return loglike
+        return loglike.squeeze()
 
 
-    def fit(self, start_params=None):
+    def fit(self, start_params=None, transparams=True):
+        self.transparams = transparams
         r = self.r
         p = self.p
         q = self.q
@@ -539,13 +576,13 @@ class ARMA(LikelihoodModel):
         loglike = lambda params: -self.loglike(params)
         # specify which coefficients should be zero according to (p,q)
         # AR restrictions
-        bounds = [(None,)*2]*p + [(0.0,)*2] * (r-p)
+#        bounds = [(None,)*2]*p + [(0.0,)*2] * (r-p)
         # MA restrictions
-        bounds += [(1.0,1.0)] + [(None,)*2]*q + [(0.0,)*2] * (r-(q+1))
+#        bounds += [(1.0,1.0)] + [(None,)*2]*q + [(0.0,)*2] * (r-(q+1))
         # Exog restrictions
-        bounds += [(None,)*2]*k
+#        bounds += [(None,)*2]*k
         # Variance restriction, should it be positive instead of 0,inf?
-        bounds += [(0.0,None)]
+#        bounds += [(0.0,None)]
         # could drop one parameter then?
 #        results = optimize.fmin_l_bfgs_b(loglike, start_params,
 #                    approx_grad=True, m=30, pgtol=1e-12, factr=10.0,
@@ -563,12 +600,59 @@ class ARMA(LikelihoodModel):
 #        self.llf = llf
         if start_params is not None:
             start_params = np.asarray(start_params)
+            # reparameterize
         else:
             start_params = np.zeros((p+q+k))
-        results = optimize.fmin_bfgs(loglike, start_params, gtol=1e-4,
-                        full_output=1, maxiter=1000, disp=1)
+            endog = self.endog
+#TODO: don't forget constant and deterministic parts
+# tag all these parts on at the end.  Interested in time series properties.
+            if p != 0:
+                arcoefs = yule_walker(endog, order=p)[0]
+                start_params[k:k+p] = arcoefs
+            if q != 0:
+                resid = endog[p:] - np.dot(lagmat(endog, p, trim='both')[:,1:],
+                                    arcoefs)
+                macoefs = yule_walker(resid, order=q)[0]
+                start_params[k+p:k+p+q] = macoefs
+        # reparameterize given parameters
+# inverse reparameterization for Hamilton suggestion
+#        start_params = start_params/(1-np.abs(start_params))
+# inverse of reparameterization for Jones (1980)
+#        start_params = zeros((p+k+q))
+        if transparams:
+            # AR coeffs
+            if p != 0:
+                tmp = arcoefs.copy()
+                newparams = arcoefs.copy()
+                for j in range(p-1,0,-1):
+                    a = newparams[j]
+                    for k in range(j):
+                        tmp[k] = (newparams[k] + a * newparams[j-k-1])/(1-a**2)
+                    newparams[:j] = tmp[:j]
+                invarcoefs = -log((1-newparams)/(1+newparams))
+                start_params[k:k+p] = invarcoefs
+                # MA coeffs
+            if q != 0:
+                tmp = macoefs.copy()
+                newparams = macoefs.copy()
+                for j in range(q-1,0,-1):
+                    b = newparams[j]
+                    for k in range(j):
+                        tmp[k] = (newparams[k] - b * newparams[j-k-1])/(1-b**2)
+                    newparams[:j] = tmp[:j]
+                invmacoefs = -log((1-newparams)/(1+newparams))
+                start_params[k+p:k+p+q] = invmacoefs
+
+
+        print start_params
+
+
+        results = optimize.fmin_bfgs(loglike, start_params, gtol=1e-2,
+                        full_output=1, maxiter=35, disp=1, norm=2)
+        bounds = [(None,)*2]*(p+q+k)
+#        bounds = [(-250,250)]*(p+q+k) # to avoid exp overflow with reparam
 #        results = optimize.fmin_l_bfgs_b(loglike, start_params, approx_grad=True,
-#                    m=5, pgtol=1e-12, factr=10., bounds=[(None,None),(None,None)])
+#                    m=30, pgtol=1e-5, factr=1e13, bounds=bounds, iprint=1)
 #        results = optimize.fmin_powell(loglike, start_params, full_output=1,
 #                disp=1)
         self.results = results
@@ -736,6 +820,7 @@ if __name__ == "__main__":
     # max for more complicated ssm?
 
 
+
 # Examples from Durbin and Koopman
     import zipfile
     try:
@@ -796,17 +881,32 @@ if __name__ == "__main__":
     for i in range(1,len(y)):
         y[i] = .75 * y[i-1] + errors[i] + .25*errors[i-1]
     arma = ARMA(y, constant=False, order=(1,1))
-    arma.fit(start_params = [.75, .25])
+
+    y_arma22 = np.zeros(10000)
+    errors = np.random.randn(10000)
+    y_arma22[:2] = np.random.randn(2)
+    for i in range(2,10000):
+        y_arma22[i] = .85 * y_arma22[i-1] - .35*y_arma22[i-2] + errors[i] + .25 * errors[i-1]\
+                - .9 * errors[i-2]
+
+#    arma.fit(start_params = [.75, .25])
 #    arma.fit()
+
 # Stata gets [.7515029, .2266321, .9981944] with BFGS, but it's practically
 # there on the first iteration...how?
 # with loglikelihood of -14171.91
 # our loglike gives -14171.92, so the problem is in the optimizer
-    y_ar = np.zeros(10000)
-    y_ar[0] = np.random.randn()
-    for i in range(1,len(y_ar)):
-        y_ar[i] = y_ar[i-1] * .75 + np.random.randn()
-    ar = ARMA(y_ar, constant=False, order=(1,0))
+
+#    y_ar = np.zeros(10000)
+#    y_ar[0] = np.random.randn()
+#    for i in range(1,len(y_ar)):
+#        y_ar[i] = y_ar[i-1] * .75 + np.random.randn()
+#    ar = ARMA(y_ar, constant=False, order=(1,0))
+#    ar.fit()
+
+    import scikits.statsmodels as sm
+    data = sm.datasets.sunspots.load()
+    ar = ARMA(data.endog, constant=False, order=(9,0))
     ar.fit()
 
 
