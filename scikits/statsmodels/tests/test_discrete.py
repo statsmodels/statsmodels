@@ -178,6 +178,9 @@ class TestProbitNewton(CheckModelResults):
         assert_almost_equal(self.res1.model.predict(self.data.exog),
                 self.res2.predict, DECIMAL_4)
 
+    def test_resid(self):
+        assert_almost_equal(self.res1.resid, self.res2.resid, DECIMAL_4)
+
 
 class TestProbitBFGS(TestProbitNewton):
     def setup(self):
@@ -228,7 +231,7 @@ class TestLogitNewton(CheckModelResults, CheckMargEff):
 class TestLogitBFGS(TestLogitNewton):
     def setup(self):
         self.res1 = Logit(self.data.endog, self.data.exog).fit(method="bfgs",
-            disp=1)
+            disp=0)
 
 class TestPoissonNewton(CheckModelResults):
     def __init__(self):
