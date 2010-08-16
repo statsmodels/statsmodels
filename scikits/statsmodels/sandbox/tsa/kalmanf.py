@@ -475,6 +475,79 @@ class ARMA(LikelihoodModel):
         return loglike.squeeze()
 #TODO: check for Steady-State convergence to reuse terms
 
+
+    def _transparams(self, params):
+        """
+        Transforms params to induce stationarity/invertability.
+
+        Reference
+        ---------
+        Jones(1980)
+        """
+        newparams = np.zeros_like(params)
+            # AR Coeffs
+        if p != 0:
+            newparams[k:k+p] = ((1-exp(-params[k:k+p]))/(1+exp(-params[k:k+p]))).copy()
+            tmp = ((1-exp(-params[k:k+p]))/(1+exp(-params[k:k+p]))).copy()
+
+                # levinson-durbin to get pacf
+            for j in range(1,p):
+                a = newparams[k+j]
+                for kiter in range(j):
+                    tmp[kiter] -= a * newparams[k+j-kiter-1]
+                newparams[k:k+j] = tmp[:j]
+#                params[k:k+p] = newparams
+
+            # MA Coeffs
+        if q != 0:
+            newparams[k+p:] = ((1-exp(-params[k+p:k+p+q]))/\
+                             (1+exp(-params[k+p:k+p+q]))).copy()
+            tmp = ((1-exp(-params[k+p:k+p+q]))/\
+                        (1+exp(-params[k+p:k+p+q]))).copy()
+
+            # levinson-durbin to get macf
+            for j in range(1,q):
+                b = newparams[k+p+j]
+                for kiter in range(j):
+                    tmp[kiter] += b * newparams[k+p+j-kiter-1]
+                newparams[k+p:j] = tmp[:j]
+#                params[k+p:k+p+q] = newparams
+                #TODO: might be able to speed up the above, but shouldn't be too much
+        return newparams
+
+
+
+    def _invtransparams(self, params):
+        """
+        Inverse of the Jones reparameterization
+        """
+        p,q,k = self.p, self.q, self.k
+        arcoefs = params[k:k+p]
+        macoefs = params[k+p:]
+        # AR coeffs
+        if p != 0:
+            tmp = arcoefs.copy()
+            newparams = arcoefs.copy()
+            for j in range(p-1,0,-1):
+                a = newparams[j]
+                for k in range(j):
+                    tmp[k] = (newparams[k] + a * newparams[j-k-1])/(1-a**2)
+                newparams[:j] = tmp[:j]
+            invarcoefs = -log((1-newparams)/(1+newparams))
+            start_params[k:k+p] = invarcoefs
+                # MA coeffs
+        if q != 0:
+            tmp = macoefs.copy()
+            newparams = macoefs.copy()
+            for j in range(q-1,0,-1):
+                b = newparams[j]
+                for k in range(j):
+                    tmp[k] = (newparams[k] - b * newparams[j-k-1])/(1-b**2)
+                newparams[:j] = tmp[:j]
+            invmacoefs = -log((1-newparams)/(1+newparams))
+            start_params[k+p:k+p+q] = invmacoefs
+        return start_params
+
     def loglike(self, params):
 
 #TODO: see section 3.4.6 in Harvey for computing the derivatives in the
@@ -493,35 +566,37 @@ class ARMA(LikelihoodModel):
 #        params = params/(1+np.abs(params))
 #NOTE: reparameterization suggested in Jones (1980)
         if self.transparams:
-            newparams = params.copy() # copy so they don't get written over
-            # AR Coeffs
-            if p != 0:
-                newparams = ((1-exp(-params[k:k+p]))/(1+exp(-params[k:k+p]))).copy()
-                tmp = ((1-exp(-params[k:k+p]))/(1+exp(-params[k:k+p]))).copy()
-
-                # levinson-durbin to get pacf
-                for j in range(1,p):
-                    a = newparams[j]
-                    for kiter in range(j):
-                        tmp[kiter] -= a * newparams[j-kiter-1]
-                    newparams[:j] = tmp[:j]
-                params[k:k+p] = newparams
-
-            # MA Coeffs
-            if q != 0:
-                newparams = ((1-exp(-params[k+p:k+p+q]))/\
-                                (1+exp(-params[k+p:k+p+q]))).copy()
-                tmp = ((1-exp(-params[k+p:k+p+q]))/\
-                        (1+exp(-params[k+p:k+p+q]))).copy()
-
-                # levinson-durbin to get macf
-                for j in range(1,q):
-                    b = newparams[j]
-                    for kiter in range(j):
-                        tmp[kiter] += b * newparams[j-kiter-1]
-                    newparams[:j] = tmp[:j]
-                params[k+p:k+p+q] = newparams
-                #TODO: might be able to speed up the above, but shouldn't be too much
+            newparams = self._transparams(start_params)
+            # doesn't modify params in place
+#            newparams = np.zeros_like(params)
+#            # AR Coeffs
+#            if p != 0:
+#                newparams[k:k+p] = ((1-exp(-params[k:k+p]))/(1+exp(-params[k:k+p]))).copy()
+#                tmp = ((1-exp(-params[k:k+p]))/(1+exp(-params[k:k+p]))).copy()
+#
+#                # levinson-durbin to get pacf
+#                for j in range(1,p):
+#                    a = newparams[k+j]
+#                    for kiter in range(j):
+#                        tmp[kiter] -= a * newparams[k+j-kiter-1]
+#                    newparams[k:k+j] = tmp[:j]
+##                params[k:k+p] = newparams
+#
+#            # MA Coeffs
+#            if q != 0:
+#                newparams[k+p:] = ((1-exp(-params[k+p:k+p+q]))/\
+#                                (1+exp(-params[k+p:k+p+q]))).copy()
+#                tmp = ((1-exp(-params[k+p:k+p+q]))/\
+#                        (1+exp(-params[k+p:k+p+q]))).copy()
+#
+#                # levinson-durbin to get macf
+#                for j in range(1,q):
+#                    b = newparams[k+p+j]
+#                    for kiter in range(j):
+#                        tmp[kiter] += b * newparams[k+p+j-kiter-1]
+#                    newparams[k+p:j] = tmp[:j]
+##                params[k+p:k+p+q] = newparams
+#                #TODO: might be able to speed up the above, but shouldn't be too much
         else:
             newparams = params  # don't need a copy if not modified.
         R_mat = self.R(newparams)
@@ -602,12 +677,15 @@ class ARMA(LikelihoodModel):
 #        self.llf = llf
         if start_params is not None:
             start_params = np.asarray(start_params)
+            arcoefs = start_params[k:k+p]
+            macoefs = start_params[k+p:k+p+q]
             # reparameterize
         else:
             start_params = np.zeros((p+q+k))
             endog = self.endog
 #TODO: don't forget constant and deterministic parts
 # tag all these parts on at the end.  Interested in time series properties.
+#TODO: replace this with a call to Conditional Sum of Squares Kalman Filter
             if p != 0:
                 arcoefs = yule_walker(endog, order=p)[0]
                 start_params[k:k+p] = arcoefs
@@ -616,49 +694,79 @@ class ARMA(LikelihoodModel):
                                     arcoefs)
                 macoefs = yule_walker(resid, order=q)[0]
                 start_params[k+p:k+p+q] = macoefs
-        # reparameterize given parameters
-# inverse reparameterization for Hamilton suggestion
-#        start_params = start_params/(1-np.abs(start_params))
 # inverse of reparameterization for Jones (1980)
-#        start_params = zeros((p+k+q))
         if transparams:
-            # AR coeffs
-            if p != 0:
-                tmp = arcoefs.copy()
-                newparams = arcoefs.copy()
-                for j in range(p-1,0,-1):
-                    a = newparams[j]
-                    for k in range(j):
-                        tmp[k] = (newparams[k] + a * newparams[j-k-1])/(1-a**2)
-                    newparams[:j] = tmp[:j]
-                invarcoefs = -log((1-newparams)/(1+newparams))
-                start_params[k:k+p] = invarcoefs
-                # MA coeffs
-            if q != 0:
-                tmp = macoefs.copy()
-                newparams = macoefs.copy()
-                for j in range(q-1,0,-1):
-                    b = newparams[j]
-                    for k in range(j):
-                        tmp[k] = (newparams[k] - b * newparams[j-k-1])/(1-b**2)
-                    newparams[:j] = tmp[:j]
-                invmacoefs = -log((1-newparams)/(1+newparams))
-                start_params[k+p:k+p+q] = invmacoefs
+            start_params = self._invtransparams(start_params)
 
+#            # AR coeffs
+#            if p != 0:
+#                tmp = arcoefs.copy()
+#                newparams = arcoefs.copy()
+#                for j in range(p-1,0,-1):
+#                    a = newparams[j]
+#                    for k in range(j):
+#                        tmp[k] = (newparams[k] + a * newparams[j-k-1])/(1-a**2)
+#                    newparams[:j] = tmp[:j]
+#                invarcoefs = -log((1-newparams)/(1+newparams))
+#                start_params[k:k+p] = invarcoefs
+#                # MA coeffs
+#            if q != 0:
+#                tmp = macoefs.copy()
+#                newparams = macoefs.copy()
+#                for j in range(q-1,0,-1):
+#                    b = newparams[j]
+#                    for k in range(j):
+#                        tmp[k] = (newparams[k] - b * newparams[j-k-1])/(1-b**2)
+#                    newparams[:j] = tmp[:j]
+#                invmacoefs = -log((1-newparams)/(1+newparams))
+#                start_params[k+p:k+p+q] = invmacoefs
+#
 
         print start_params
 
 
-        results = optimize.fmin_bfgs(loglike, start_params, gtol=1e-2,
-                        full_output=1, maxiter=35, disp=1, norm=2)
+#        results = optimize.fmin_bfgs(loglike, start_params, gtol=1e-2,
+#                        full_output=1, maxiter=35, disp=1, norm=np.inf)
         bounds = [(None,)*2]*(p+q+k)
 #        bounds = [(-250,250)]*(p+q+k) # to avoid exp overflow with reparam
-#        results = optimize.fmin_l_bfgs_b(loglike, start_params, approx_grad=True,
-#                    m=30, pgtol=1e-5, factr=1e13, bounds=bounds, iprint=1)
+        results = optimize.fmin_l_bfgs_b(loglike, start_params, approx_grad=True,
+                    m=30, pgtol=1e-7, factr=1e3, bounds=bounds, iprint=1)
 #        results = optimize.fmin_powell(loglike, start_params, full_output=1,
 #                disp=1)
         self.results = results
+        if transparams:
+            #TODO: copied from loglike, make a function
+                        # doesn't modify params in place
+            resparams = results[0]
+            newparams = np.zeros_like(resparams)
+            # AR Coeffs
+            if p != 0:
+                newparams[k:k+p] = ((1-exp(-resparams[k:k+p]))/(1+exp(-resparams[k:k+p]))).copy()
+                tmp = ((1-exp(-resparams[k:k+p]))/(1+exp(-resparams[k:k+p]))).copy()
+
+                # levinson-durbin to get pacf
+                for j in range(1,p):
+                    a = newparams[k+j]
+                    for kiter in range(j):
+                        tmp[kiter] -= a * newparams[k+j-kiter-1]
+                    newparams[k:k+j] = tmp[:j]
+#                params[k:k+p] = newparams
+
+            # MA Coeffs
+            if q != 0:
+                newparams[k+p:] = ((1-exp(-resparams[k+p:k+p+q]))/\
+                                (1+exp(-resparams[k+p:k+p+q]))).copy()
+                tmp = ((1-exp(-resparams[k+p:k+p+q]))/\
+                        (1+exp(-resparams[k+p:k+p+q]))).copy()
+
+                # levinson-durbin to get macf
+                for j in range(1,q):
+                    b = newparams[k+p+j]
+                    for kiter in range(j):
+                        tmp[kiter] += b * newparams[k+p+j-kiter-1]
+                    newparams[k+p:j] = tmp[:j]
 #TODO: remember that loglike equals fmax - nobs/2. *(np.log2*pi+1)
+            self.params = newparams
 
 
 
