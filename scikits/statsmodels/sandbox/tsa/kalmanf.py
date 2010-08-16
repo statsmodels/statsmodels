@@ -493,6 +493,7 @@ class ARMA(LikelihoodModel):
 #        params = params/(1+np.abs(params))
 #NOTE: reparameterization suggested in Jones (1980)
         if self.transparams:
+            newparams = params.copy() # copy so they don't get written over
             # AR Coeffs
             if p != 0:
                 newparams = ((1-exp(-params[k:k+p]))/(1+exp(-params[k:k+p]))).copy()
@@ -521,8 +522,10 @@ class ARMA(LikelihoodModel):
                     newparams[:j] = tmp[:j]
                 params[k+p:k+p+q] = newparams
                 #TODO: might be able to speed up the above, but shouldn't be too much
-        R_mat = self.R(params)
-        T_mat = self.T(params)
+        else:
+            newparams = params  # don't need a copy if not modified.
+        R_mat = self.R(newparams)
+        T_mat = self.T(newparams)
         r = self.r
         Q_0 = dot(inv(identity(m**2)-kron(T_mat,T_mat)),
                             dot(R_mat,R_mat.T).ravel('F'))
