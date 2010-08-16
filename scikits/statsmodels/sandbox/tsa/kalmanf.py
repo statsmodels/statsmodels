@@ -562,6 +562,7 @@ class ARMA(LikelihoodModel):
         k = self.k
         p = self.p
         q = self.q
+        r = self.r
 
         # try reparameterization
 #TODO: this is only the stability condition for p,q == 1
@@ -603,9 +604,12 @@ class ARMA(LikelihoodModel):
             newparams = params  # don't need a copy if not modified.
         R_mat = self.R(newparams)
         T_mat = self.T(newparams)
-        r = self.r
         Q_0 = dot(inv(identity(m**2)-kron(T_mat,T_mat)),
                             dot(R_mat,R_mat.T).ravel('F'))
+        #TODO: above is only valid if Eigenvalues of T_mat are inside the
+        # unit circle, if not then Q_0 = kappa * eye(m**2)
+        # w/ kappa some large value say 1e7, but DK recommends not doing this
+        # for a diffuse prior
         Q_0 = Q_0.reshape(r,r,order='F')
         P = Q_0
         sigma2 = 0
@@ -634,6 +638,7 @@ class ARMA(LikelihoodModel):
         loglike = -.5 *(loglikelihood + nobs*log(sigma2))
         loglike -= nobs/2. * (log(2*pi) + 1)
 #        print params, loglike
+        self.sigma2 = sigma2
         return loglike.squeeze()
 
 
