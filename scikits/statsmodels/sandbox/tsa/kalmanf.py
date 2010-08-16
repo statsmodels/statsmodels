@@ -484,6 +484,7 @@ class ARMA(LikelihoodModel):
         ---------
         Jones(1980)
         """
+        p,q,k = self.p, self.q, self.k
         newparams = np.zeros_like(params)
             # AR Coeffs
         if p != 0:
@@ -510,43 +511,44 @@ class ARMA(LikelihoodModel):
                 b = newparams[k+p+j]
                 for kiter in range(j):
                     tmp[kiter] += b * newparams[k+p+j-kiter-1]
-                newparams[k+p:j] = tmp[:j]
+                newparams[k+p:k+p+j] = tmp[:j]
 #                params[k+p:k+p+q] = newparams
                 #TODO: might be able to speed up the above, but shouldn't be too much
         return newparams
 
 
 
-    def _invtransparams(self, params):
+    def _invtransparams(self, start_params):
         """
         Inverse of the Jones reparameterization
         """
         p,q,k = self.p, self.q, self.k
-        arcoefs = params[k:k+p]
-        macoefs = params[k+p:]
+        newparams = start_params.copy()
+        arcoefs = newparams[k:k+p]
+        macoefs = newparams[k+p:]
         # AR coeffs
         if p != 0:
             tmp = arcoefs.copy()
-            newparams = arcoefs.copy()
+#            newparams = arcoefs.copy()
             for j in range(p-1,0,-1):
-                a = newparams[j]
+                a = arcoefs[j]
                 for k in range(j):
-                    tmp[k] = (newparams[k] + a * newparams[j-k-1])/(1-a**2)
-                newparams[:j] = tmp[:j]
-            invarcoefs = -log((1-newparams)/(1+newparams))
-            start_params[k:k+p] = invarcoefs
-                # MA coeffs
+                    tmp[k] = (arcoefs[k] + a * arcoefs[j-k-1])/(1-a**2)
+                arcoefs[:j] = tmp[:j]
+            invarcoefs = -log((1-arcoefs)/(1+arcoefs))
+            newparams[k:k+p] = invarcoefs
+        # MA coeffs
         if q != 0:
             tmp = macoefs.copy()
-            newparams = macoefs.copy()
+#            newparams = macoefs.copy()
             for j in range(q-1,0,-1):
-                b = newparams[j]
+                b = macoefs[j]
                 for k in range(j):
-                    tmp[k] = (newparams[k] - b * newparams[j-k-1])/(1-b**2)
-                newparams[:j] = tmp[:j]
-            invmacoefs = -log((1-newparams)/(1+newparams))
-            start_params[k+p:k+p+q] = invmacoefs
-        return start_params
+                    tmp[k] = (macoefs[k] - b * macoefs[j-k-1])/(1-b**2)
+                macoefs[:j] = tmp[:j]
+            invmacoefs = -log((1-macoefs)/(1+macoefs))
+            newparams[k+p:k+p+q] = invmacoefs
+        return newparams
 
     def loglike(self, params):
 
@@ -566,7 +568,7 @@ class ARMA(LikelihoodModel):
 #        params = params/(1+np.abs(params))
 #NOTE: reparameterization suggested in Jones (1980)
         if self.transparams:
-            newparams = self._transparams(start_params)
+            newparams = self._transparams(params)
             # doesn't modify params in place
 #            newparams = np.zeros_like(params)
 #            # AR Coeffs
@@ -735,37 +737,38 @@ class ARMA(LikelihoodModel):
 #                disp=1)
         self.results = results
         if transparams:
-            #TODO: copied from loglike, make a function
-                        # doesn't modify params in place
-            resparams = results[0]
-            newparams = np.zeros_like(resparams)
-            # AR Coeffs
-            if p != 0:
-                newparams[k:k+p] = ((1-exp(-resparams[k:k+p]))/(1+exp(-resparams[k:k+p]))).copy()
-                tmp = ((1-exp(-resparams[k:k+p]))/(1+exp(-resparams[k:k+p]))).copy()
-
-                # levinson-durbin to get pacf
-                for j in range(1,p):
-                    a = newparams[k+j]
-                    for kiter in range(j):
-                        tmp[kiter] -= a * newparams[k+j-kiter-1]
-                    newparams[k:k+j] = tmp[:j]
-#                params[k:k+p] = newparams
-
-            # MA Coeffs
-            if q != 0:
-                newparams[k+p:] = ((1-exp(-resparams[k+p:k+p+q]))/\
-                                (1+exp(-resparams[k+p:k+p+q]))).copy()
-                tmp = ((1-exp(-resparams[k+p:k+p+q]))/\
-                        (1+exp(-resparams[k+p:k+p+q]))).copy()
-
-                # levinson-durbin to get macf
-                for j in range(1,q):
-                    b = newparams[k+p+j]
-                    for kiter in range(j):
-                        tmp[kiter] += b * newparams[k+p+j-kiter-1]
-                    newparams[k+p:j] = tmp[:j]
-#TODO: remember that loglike equals fmax - nobs/2. *(np.log2*pi+1)
+            newparams = self._transparams(results[0])
+#            # copied from loglike
+#            # doesn't modify params in place
+#            resparams = results[0]
+#            newparams = np.zeros_like(resparams)
+#            # AR Coeffs
+#            if p != 0:
+#                newparams[k:k+p] = ((1-exp(-resparams[k:k+p]))/(1+exp(-resparams[k:k+p]))).copy()
+#                tmp = ((1-exp(-resparams[k:k+p]))/(1+exp(-resparams[k:k+p]))).copy()
+#
+#                # levinson-durbin to get pacf
+#                for j in range(1,p):
+#                    a = newparams[k+j]
+#                    for kiter in range(j):
+#                        tmp[kiter] -= a * newparams[k+j-kiter-1]
+#                    newparams[k:k+j] = tmp[:j]
+##                params[k:k+p] = newparams
+#
+#            # MA Coeffs
+#            if q != 0:
+#                newparams[k+p:] = ((1-exp(-resparams[k+p:k+p+q]))/\
+#                                (1+exp(-resparams[k+p:k+p+q]))).copy()
+#                tmp = ((1-exp(-resparams[k+p:k+p+q]))/\
+#                        (1+exp(-resparams[k+p:k+p+q]))).copy()
+#
+#                # levinson-durbin to get macf
+#                for j in range(1,q):
+#                    b = newparams[k+p+j]
+#                    for kiter in range(j):
+#                        tmp[kiter] += b * newparams[k+p+j-kiter-1]
+#                    newparams[k+p:j] = tmp[:j]
+##TODO: remember that loglike equals fmax - nobs/2. *(np.log2*pi+1)
             self.params = newparams
 
 
