@@ -21,6 +21,9 @@ try:
 except:
     raise Warning("You need to install numdifftools to try out the AR model")
 
+
+__all__ = ['AR', 'VAR2']
+
 #TODO: move this somewhere to be reused.
 def irf(params, shock, omega, nperiods=100, ortho=True):
     """
@@ -221,7 +224,7 @@ class AR(LikelihoodModel):
         self.trendorder = trendorder
         return X
 
-    def fit(self, maxlag=None, method='ols', ic=None, trend='c', demean=True,
+    def fit(self, maxlag=None, method='ols', ic=None, trend='c', demean=False,
             penalty=False,
             start_params=None, solver=None, maxiter=35, full_output=1, disp=1,
             callback=None, **kwargs):
