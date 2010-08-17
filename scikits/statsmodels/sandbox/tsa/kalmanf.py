@@ -693,14 +693,17 @@ class ARMA(LikelihoodModel):
 #TODO: don't forget constant and deterministic parts
 # tag all these parts on at the end.  Interested in time series properties.
 #TODO: replace this with a call to Conditional Sum of Squares Kalman Filter
-            if p != 0:
-                arcoefs = yule_walker(endog, order=p)[0]
-                start_params[k:k+p] = arcoefs
             if q != 0:
+#TODO: Hannan and Rissanen (1982)
+# Fit a long AR process by maximizing AR BIC, then get resids and regress
+# y_t on resids and lagged y_t
                 resid = endog[p:] - np.dot(lagmat(endog, p, trim='both')[:,1:],
                                     arcoefs)
                 macoefs = yule_walker(resid, order=q)[0]
                 start_params[k+p:k+p+q] = macoefs
+            if p != 0:
+                arcoefs = yule_walker(endog, order=p)[0]
+                start_params[k:k+p] = arcoefs
 # inverse of reparameterization for Jones (1980)
         if transparams:
             start_params = self._invtransparams(start_params)
