@@ -39,19 +39,50 @@ class ARResultsOLS(object):
     """
     Results of fitting an AR(9) model to the sunspot data.
 
-    Results were taken from gretl.
-    """
+    Results were taken from Stata using the var command.
+   """
     def __init__(self, constant=True, demean=False):
-        if not constant and not demean:
+        self.avobs = 300.
+        if constant and not demean:
             self.params = [ 6.7430535917332, 1.1649421971129,  -.40535742259304,
                       -.16653934246587,  .14980629416032,  -.09462417064796,
                        .00491001240749,  .0504665930841, -.08635349190816,
                        .25349103194757]
-            self.bse = [.0560359041, .0874490762, .0900894414, .0899348339,
-                        .0900100797, .0898385666, .0896997939, .0869773089,
-                        .0559505756, 2.413485601]
-        elif constant and not demean:
-            self.params =
+            self.bse = [2.413485601, .0560359041, .0874490762, .0900894414,
+                        .0899348339, .0900100797, .0898385666, .0896997939,
+                        .0869773089, .0559505756]
+            self.rmse = 15.1279294937327
+            self.fpe = 236.4827257929261
+            self.llf = -1235.559128419549
+#NOTE: we use a different definition of these ic than Stata
+# but our order selection results agree with R VARselect
+#            self.bic = 8.427186938618863
+#            self.aic = 8.30372752279699
+#            self.hqic = 8.353136159250697
+
+        elif not constant and not demean:
+            self.params = [1.19582389902985, -0.40591818219637,
+                           -0.15813796884843, 0.16620079925202,
+                           -0.08570200254617, 0.01876298948686,
+                           0.06130211910707, -0.08461507700047,
+                           0.27995084653313]
+            self.bse = [.055645055, .088579237, .0912031179, .0909032462,
+                    .0911161784, .0908611473, .0907743174, .0880993504,
+                    .0558560278]
+            self.rmse = 15.29712618677774
+            self.sigma = 226.9820074869752
+            self.llf = -1239.41217278661
+#            self.bic =  8.433861292817106
+#            self.hqic =  8.367215591385756
+#            self.aic =  8.322747818577421
+            self.fpe =  241.0221316614273
+
+
+        elif constant and demean:
+            pass
+
+        elif not constant and demean:
+            pass
 
 class ARResultsMLE(object):
     """

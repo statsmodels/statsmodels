@@ -4,8 +4,9 @@ Statistical tools for time series analysis
 
 import numpy as np
 from scipy import stats, signal
-import scikits.statsmodels as sm
-from scikits.statsmodels.sandbox.tsa.tsatools import lagmat, lagmat2ds
+from scikits.statsmodels.regression import OLS, yule_walker
+from scikits.statsmodels.tools import add_constant
+from scikits.statsmodels.tsa.tsatools import lagmat, lagmat2ds
 #from scikits.statsmodels.sandbox.tsa import var
 from adfvalues import *
 #from scikits.statsmodels.sandbox.rls import RLS
@@ -44,7 +45,7 @@ def add_trend(X, trend="c", prepend=False):
     #TODO: could be generalized for trend of aribitrary order
     trend = trend.lower()
     if trend == "c":    # handles structured arrays
-        return sm.add_constant(X, prepend=prepend)
+        return add_constant(X, prepend=prepend)
     elif trend == "ct" or trend == "t":
         trendorder = 1
     elif trend == "ctt":
@@ -290,7 +291,7 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
     else:
         usedlag = maxlag
 
-    resols = sm.OLS(xdshort, np.column_stack([xdall[:,:usedlag+1],
+    resols = OLS(xdshort, np.column_stack([xdall[:,:usedlag+1],
         trend[:nobs]])).fit()
     #NOTE: should be usedlag+1 since the first column is the level?
     adfstat = resols.t(0)
@@ -494,7 +495,7 @@ def pacf_yw(x, nlags=40, method='unbiased'):
     xm = x - x.mean()
     pacf = [1.]
     for k in range(1, nlags+1):
-        pacf.append(sm.regression.yule_walker(x, k, method=method)[0][-1])
+        pacf.append(yule_walker(x, k, method=method)[0][-1])
     return np.array(pacf)
 
 #NOTE: this is incorrect.
@@ -525,10 +526,10 @@ def pacf_ols(x, nlags=40):
     x0 = xlags[:,0]
     xlags = xlags[:,1:]
     #xlags = sm.add_constant(lagmat(x, nlags), prepend=True)
-    xlags = sm.add_constant(xlags, prepend=True)
+    xlags = add_constant(xlags, prepend=True)
     pacf = [1.]
     for k in range(1, nlags+1):
-        res = sm.OLS(x0[k:], xlags[k:,:k+1]).fit()
+        res = OLS(x0[k:], xlags[k:,:k+1]).fit()
          #np.take(xlags[k:], range(1,k+1)+[-1],
 
         pacf.append(res.params[-1])
@@ -711,7 +712,6 @@ def grangercausalitytests(x, maxlag):
 
     '''
     from scipy import stats # lazy import
-    import scikits.statsmodels as sm  # absolute import for now
 
     for mlg in range(1, maxlag+1):
         print '\nGranger Causality'
@@ -722,12 +722,12 @@ def grangercausalitytests(x, maxlag):
         dta = lagmat2ds(x, mxlg, trim='both', dropex=1)
 
         #add constant
-        dtaown = sm.add_constant(dta[:,1:mxlg])
-        dtajoint = sm.add_constant(dta[:,1:])
+        dtaown = add_constant(dta[:,1:mxlg])
+        dtajoint = add_constant(dta[:,1:])
 
         #run ols on both models without and with lags of second variable
-        res2down = sm.OLS(dta[:,0], dtaown).fit()
-        res2djoint = sm.OLS(dta[:,0], dtajoint).fit()
+        res2down = OLS(dta[:,0], dtaown).fit()
+        res2djoint = OLS(dta[:,0], dtajoint).fit()
 
         #print results
         #for ssr based tests see: http://support.sas.com/rnd/app/examples/ets/granger/index.htm
@@ -761,6 +761,7 @@ __all__ = ['acovf', 'acf', 'pacf', 'pacf_yw', 'pacf_ols', 'ccovf', 'ccf',
            'pergram', 'q_stat']
 
 if __name__=="__main__":
+    import scikits.statsmodels as sm
     data = sm.datasets.macrodata.load().data
     x = data['realgdp']
 # adf is tested now.

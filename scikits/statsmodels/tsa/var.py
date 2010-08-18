@@ -9,10 +9,11 @@ from numpy import matlib as MAT
 from scipy import linalg as LIN #TODO: get rid of this once cleaned up
 from scipy import linalg, sparse
 from scipy.stats import norm, ss as sumofsq
-import scikits.statsmodels as sm    # maybe can be replaced later
-from scikits.statsmodels import GLS, chain_dot, OLS
-from scikits.statsmodels.sandbox.tsa.tsatools import lagmat
-from scikits.statsmodels.sandbox.tsa.stattools import add_trend, _autolag
+from scikits.statsmodels.regression import yule_walker
+from scikits.statsmodels import GLS, OLS
+from scikits.statsmodels.tools import chain_dot
+from scikits.statsmodels.tsa.tsatools import lagmat
+from scikits.statsmodels.tsa.stattools import add_trend, _autolag
 from scikits.statsmodels.model import LikelihoodModelResults, LikelihoodModel
 from scikits.statsmodels.decorators import *
 from scikits.statsmodels.compatibility import np_slogdet
@@ -78,17 +79,25 @@ class AR(LikelihoodModel):
 
     def loglike(self, params):
         """
-        The unconditional loglikelihood of an AR(p) process
+        The loglikelihood of an AR(p) process
 
         Notes
         -----
-        Contains constant term.
+        Contains constant term.  If the model is fit by OLS then this returns
+        the conditonal maximum likelihood.  If it is fit by MLE then the
+        (exact) unconditional maximum likelihood is returned.
         """
-
+        #TODO: Math is on Hamilton ~pp 124-5
+        #will need to be amended for inclusion of exogenous variables
         nobs = self.nobs
         avobs = self.avobs
         Y = self.Y
         X = self.X
+        if self.method == "ols":
+            ssr = sumofsq(Y.squeeze()-np.dot(X,params))
+            sigma2 = ssr/avobs
+            return -avobs/2 * (np.log(2*np.pi) + np.log(sigma2)) -\
+                    ssr/(2*sigma2)
         endog = self.endog
         penalty = self.penalty
         laglen = self.laglen
@@ -225,9 +234,8 @@ class AR(LikelihoodModel):
         return X
 
     def fit(self, maxlag=None, method='ols', ic=None, trend='c', demean=False,
-            penalty=False,
-            start_params=None, solver=None, maxiter=35, full_output=1, disp=1,
-            callback=None, **kwargs):
+            penalty=False, start_params=None, solver=None, maxiter=35,
+            full_output=1, disp=1, callback=None, **kwargs):
         """
         Fit the unconditional maximum likelihood of an AR(p) process.
 
@@ -239,7 +247,7 @@ class AR(LikelihoodModel):
             ols - Ordinary Leasy Squares
             yw - Yule-Walker
             mle - conditional maximum likelihood
-            umle - unconditional maximum likelihood
+            umle - unconditional (exact) maximum likelihood
         solver : str or None, optional
             Unconstrained solvers:
                 Default is 'bfgs', 'newton' (newton-raphson), 'ncg'
@@ -274,6 +282,7 @@ class AR(LikelihoodModel):
         """
         self.penalty = penalty
         method = method.lower()
+        self.method = method
         nobs = self.nobs
         if maxlag is None:
             maxlag = int(round(12*(nobs/100.)**(1/4.)))
@@ -317,6 +326,7 @@ class AR(LikelihoodModel):
         self.laglen = laglen
         avobs = nobs - laglen
         self.avobs = avobs
+                                                    # Model code
 
         # redo estimation for best lag
         # LHS
@@ -340,6 +350,7 @@ class AR(LikelihoodModel):
 #        self.trendorder = trendorder
         self.Y = Y
         self.X = X
+        self.df_resid = avobs - laglen - self.trendorder # for compatiblity with
 
         if solver:
             solver = solver.lower()
@@ -387,7 +398,7 @@ class AR(LikelihoodModel):
             omega = None
             self.params = params
         elif method == "yw":
-            params, omega = sm.regression.yule_walker(endog, order=maxlag,
+            params, omega = yule_walker(endog, order=maxlag,
                     method="mle", demean=False)
             # how to handle inference after Yule-Walker?
             self.params = params
@@ -401,19 +412,40 @@ class AR(LikelihoodModel):
 
 
 class ARResults(LikelihoodModelResults):
+
+    _cache = {} # for scale setter
+
     def __init__(self, model, params, normalized_cov_params=None, scale=1.):
         super(ARResults, self).__init__(model, params, normalized_cov_params,
                 scale)
+        self._cache = resettable_cache()
         self.nobs = model.nobs
         self.avobs = model.avobs
         self.X = model.X # copy?
         self.Y = model.Y
         self.laglen = model.laglen
+        self.trendorder = model.trendorder
+
+    @cache_writable()
+    def sigma(self):
+        #TODO: allow for DOF correction if exog is included
+        return 1./self.avobs * self.ssr
+
+    @cache_writable()   # for compatability with RegressionResults
+    def scale(self):
+        return self.sigma
 
     @cache_readonly
-    def sigma(self): #is this already in results?
-                     # no dof correction
-        return 1./self.avobs * self.ssr
+    def bse(self):
+        if self.model.method == "ols":
+            ols_scale = self.ssr/(self.avobs - self.laglen - self.trendorder)
+            return np.sqrt(np.diag(self.cov_params(scale=ols_scale)))
+        else:
+            return np.sqrt(np.diag(self.cov_params()))
+
+    @cache_readonly
+    def t(self):    # overwrite t()
+        return self.params/self.bse
 
     @cache_readonly
     def aic(self):
@@ -421,14 +453,22 @@ class ARResults(LikelihoodModelResults):
 #        return np.log(self.sigma) + 1./self.model.avobs * self.laglen
 # Include constant as estimated free parameter and double the loss
         return np.log(self.sigma) + 2 * (1 + self.laglen)/self.avobs
+# Stata defintion
+#        avobs = self.avobs
+#        return -2 * self.llf/avobs + 2 * (self.laglen+self.trendorder)/avobs
 
     @cache_readonly
     def hqic(self):
         avobs = self.avobs
 # Lutkepohl
 #        return np.log(self.sigma)+ 2 * np.log(np.log(avobs))/avobs * self.laglen
+# R uses all estimated parameters rather than just lags
         return np.log(self.sigma) + 2 * np.log(np.log(avobs))/avobs * \
                 (1 + self.laglen)
+# Stata
+#        avobs = self.avobs
+#        return -2 * self.llf/avobs + 2 * np.log(np.log(avobs))/avobs * \
+#                (self.laglen + self.trendorder)
 
     @cache_readonly
     def fpe(self):
@@ -437,12 +477,19 @@ class ARResults(LikelihoodModelResults):
         return ((avobs+laglen+1)/(avobs-laglen-1)) * self.sigma
 
     @cache_readonly
+    def llf(self):
+        return self.model.loglike(self.params)
+
+    @cache_readonly
     def bic(self):
         avobs = self.avobs
 # Lutkepohl
 #        return np.log(self.sigma) + np.log(avobs)/avobs * self.laglen
 # Include constant as est. free parameter
         return np.log(self.sigma) + (1 + self.laglen) * np.log(avobs)/avobs
+# Stata
+#        return -2 * self.llf/avobs + np.log(avobs)/avobs * (self.laglen + \
+#                self.trendorder)
 
     @cache_readonly
     def resid(self):
@@ -455,8 +502,8 @@ class ARResults(LikelihoodModelResults):
         return np.dot(resid, resid)
 
     @cache_readonly
-    def ar_roots(self):
-        return np.roots(np.r_[1, -params[1:]])
+    def roots(self):
+        return np.roots(np.r_[1, -self.params[1:]])
 
 class ARIMA(LikelihoodModel):
     def __init__(self, endog, exog=None):
@@ -1501,6 +1548,7 @@ class VAR:
 
 if __name__ == "__main__":
     import numpy as np
+    import scikits.statsmodels as sm
 #    vr = VAR(data = np.random.randn(50,3))
 #    vr.ols()
 #    vr.ols_comp()

@@ -2,7 +2,7 @@
 Test AR Model
 """
 import scikits.statsmodels as sm
-from scikits.statsmodels.tsa.var import AR
+from scikits.statsmodels.tsa import AR
 from numpy.testing import assert_almost_equal, assert_equal
 from results import results_ar
 import numpy as np
@@ -20,16 +20,28 @@ class CheckAR(object):
     def test_llf(self):
         assert_almost_equal(self.res1.llf, self.res2.llf, DECIMAL_6)
 
-class TestAR(CheckAR):
+    def test_fpe(self):
+        assert_almost_equal(self.res1.fpe, self.res2.fpe, DECIMAL_6)
+
+class TestAR(object):
     def __init__(self):
         self.data = sm.datasets.sunspots.load()
 
-class TestAROLS(TestAR):
+class TestAROLSConstant(TestAR, CheckAR):
     """
     Test AR fit by OLS with a constant.
     """
     def setup(self):
         self.res1 = AR(self.data.endog).fit(maxlag=9, method='ols')
+        self.res2 = results_ar.ARResultsOLS(constant=True)
+
+class TestAROLSNoConstant(TestAR, CheckAR):
+    """
+    Test AR fit by OLS without a constant.
+    """
+    def setup(self):
+        self.res1 = AR(self.data.endog).fit(maxlag=9,method='ols',trend='nc')
+        self.res2 = results_ar.ARResultsOLS(constant=False)
 
 class TestAutolagAR(object):
     def setup(self):
