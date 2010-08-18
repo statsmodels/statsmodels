@@ -48,6 +48,9 @@ class ARResultsOLS(object):
                       -.16653934246587,  .14980629416032,  -.09462417064796,
                        .00491001240749,  .0504665930841, -.08635349190816,
                        .25349103194757]
+# These are returned by VAR, using the (V)AR scale/sigma
+# we return the true OLS bse by default
+# these can be achived by np.sqrt(np.diag(res1.cov_params()))
             self.bse = [2.413485601, .0560359041, .0874490762, .0900894414,
                         .0899348339, .0900100797, .0898385666, .0896997939,
                         .0869773089, .0559505756]
@@ -56,6 +59,7 @@ class ARResultsOLS(object):
             self.llf = -1235.559128419549
 #NOTE: we use a different definition of these ic than Stata
 # but our order selection results agree with R VARselect
+# close to Stata for Lutkepohl but we penalize the ic for the trend terms
 #            self.bic = 8.427186938618863
 #            self.aic = 8.30372752279699
 #            self.hqic = 8.353136159250697
@@ -76,7 +80,6 @@ class ARResultsOLS(object):
 #            self.hqic =  8.367215591385756
 #            self.aic =  8.322747818577421
             self.fpe =  241.0221316614273
-
 
         elif constant and demean:
             pass

@@ -33,7 +33,7 @@ from scikits.statsmodels import chain_dot #Note that chain_dot is a bit slower
 from scikits.statsmodels.model import LikelihoodModel
 from scikits.statsmodels.regression import yule_walker
 from scipy.linalg import block_diag
-from scikits.statsmodels.sandbox.tsa.tsatools import lagmat
+from scikits.statsmodels.tsa.tsatools import lagmat
 
 #Fast filtering and smoothing for multivariate state space models
 # and The Riksbank -- Strid and Walentin (2008)
@@ -476,6 +476,8 @@ class ARMA(LikelihoodModel):
 #TODO: check for Steady-State convergence to reuse terms
 
 
+#TODO: this is going to bonk on trend terms and constant terms
+#will return zeros because of zeros_like
     def _transparams(self, params):
         """
         Transforms params to induce stationarity/invertability.
@@ -485,7 +487,7 @@ class ARMA(LikelihoodModel):
         Jones(1980)
         """
         p,q,k = self.p, self.q, self.k
-        newparams = np.zeros_like(params)
+        newparams = np.zeros_like(params) # = params.copy() # no copy below
             # AR Coeffs
         if p != 0:
             newparams[k:k+p] = ((1-exp(-params[k:k+p]))/(1+exp(-params[k:k+p]))).copy()
@@ -532,6 +534,7 @@ class ARMA(LikelihoodModel):
 #            newparams = arcoefs.copy()
             for j in range(p-1,0,-1):
                 a = arcoefs[j]
+#TODO: replace this with kiter, see AR model transparams
                 for k in range(j):
                     tmp[k] = (arcoefs[k] + a * arcoefs[j-k-1])/(1-a**2)
                 arcoefs[:j] = tmp[:j]

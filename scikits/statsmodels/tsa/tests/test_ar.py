@@ -15,7 +15,9 @@ class CheckAR(object):
         assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_6)
 
     def test_bse(self):
-        assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL_6)
+        bse = np.sqrt(np.diag(self.res1.cov_params())) # no dof correction
+                                            # for compatability with Stata
+        assert_almost_equal(bse, self.res2.bse, DECIMAL_6)
 
     def test_llf(self):
         assert_almost_equal(self.res1.llf, self.res2.llf, DECIMAL_6)
@@ -32,7 +34,7 @@ class TestAROLSConstant(TestAR, CheckAR):
     Test AR fit by OLS with a constant.
     """
     def setup(self):
-        self.res1 = AR(self.data.endog).fit(maxlag=9, method='ols')
+        self.res1 = AR(self.data.endog).fit(maxlag=9, method='cmle')
         self.res2 = results_ar.ARResultsOLS(constant=True)
 
 class TestAROLSNoConstant(TestAR, CheckAR):
@@ -40,8 +42,12 @@ class TestAROLSNoConstant(TestAR, CheckAR):
     Test AR fit by OLS without a constant.
     """
     def setup(self):
-        self.res1 = AR(self.data.endog).fit(maxlag=9,method='ols',trend='nc')
+        self.res1 = AR(self.data.endog).fit(maxlag=9,method='cmle',trend='nc')
         self.res2 = results_ar.ARResultsOLS(constant=False)
+
+class TestARMLEConstant(TestAR, CheckAR):
+    def setup(self)
+        self.res1 = AR(self.data.endog).fit(maxlag=9,method="mle")
 
 class TestAutolagAR(object):
     def setup(self):

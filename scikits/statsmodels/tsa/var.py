@@ -5,9 +5,9 @@ from __future__ import division
 import copy as COP
 import scipy as S
 import numpy as np
-from numpy import matlib as MAT
+from numpy import matlib as MAT, log, exp
 from scipy import linalg as LIN #TODO: get rid of this once cleaned up
-from scipy import linalg, sparse
+from scipy import linalg, sparse, optimize
 from scipy.stats import norm, ss as sumofsq
 from scikits.statsmodels.regression import yule_walker
 from scikits.statsmodels import GLS, OLS
@@ -77,6 +77,56 @@ class AR(LikelihoodModel):
     def initialize(self):
         pass
 
+    def _transparams(self, params):
+        """
+        Transforms params to induce stationarity/invertability.
+
+        Reference
+        ---------
+        Jones(1980)
+        """
+        p,k = self.laglen, self.trendorder # need to include exog here?
+        newparams = params.copy() # no copy below now?
+        newparams[k:k+p] = ((1-exp(-params[k:k+p]))/(1+exp(-\
+                params[k:k+p]))).copy()
+        tmp = ((1-exp(-params[k:k+p]))/(1+exp(-params[k:k+p]))).copy()
+
+        # levinson-durbin to get pacf
+        for j in range(1,p):
+            a = newparams[k+j]
+            for kiter in range(j):
+                tmp[kiter] -= a * newparams[k+j-kiter-1]
+            newparams[k:k+j] = tmp[:j]
+        return newparams
+
+    def _invtransparams(self, start_params):
+        """
+        Inverse of the Jones reparameterization
+        """
+        p,k = self.laglen, self.trendorder
+        newparams = start_params.copy()
+        arcoefs = newparams[k:k+p].copy()
+        # AR coeffs
+        tmp = arcoefs.copy()
+        for j in range(p-1,0,-1):
+            a = arcoefs[j]
+            for kiter in range(j):
+                tmp[kiter] = (arcoefs[kiter] + a * arcoefs[j-kiter-1])/\
+                        (1-a**2)
+            arcoefs[:j] = tmp[:j]
+        invarcoefs = -log((1-arcoefs)/(1+arcoefs))
+        newparams[k:k+p] = invarcoefs
+        return newparams
+
+    def predict(self, exog=None):
+        #TODO: what kind of options, dynamic, one-step, etc.
+#        for the presample, this is just the kalman filter
+# if the model is fit with a constant then the initial state is the
+# constant value and then y_t is always alpha[0] at the next step
+# the rest are just linear fitted values (which is also what the KF
+# produces
+        pass
+
     def loglike(self, params):
         """
         The loglikelihood of an AR(p) process
@@ -93,7 +143,7 @@ class AR(LikelihoodModel):
         avobs = self.avobs
         Y = self.Y
         X = self.X
-        if self.method == "ols":
+        if self.method == "cmle":
             ssr = sumofsq(Y.squeeze()-np.dot(X,params))
             sigma2 = ssr/avobs
             return -avobs/2 * (np.log(2*np.pi) + np.log(sigma2)) -\
@@ -102,27 +152,17 @@ class AR(LikelihoodModel):
         penalty = self.penalty
         laglen = self.laglen
 
-# Try reparamaterization:
-# just goes to the edge of the boundary for Newton
-# reparameterize to ensure stability -- Hamilton 5.9.1
-#        if not np.all(params==0):
-#            params = params/(1+np.abs(params))
-
         if isinstance(params,tuple):
             # broyden (all optimize.nonlin return a tuple until rewrite commit)
             params = np.asarray(params)
 
-        usepenalty = False
-        # http://en.wikipedia.org/wiki/Autoregressive_model
-        roots = np.roots(np.r_[1,-params[1:]])
-        mask = np.abs(roots) >= 1
-        if np.any(mask) and penalty:
-            mask = np.r_[False, mask]
-#            signs = np.sign(params)
-#            np.putmask(params, mask, .9999)
-#            params *= signs
-            usepenalty = True
 
+# reparameterize according to Jones (1980) like in ARMA/Kalman Filter
+        self.transparams = True #TODO: move to options after debugging
+        if self.transparams:
+            params = self._transparams(params) # will this overwrite?
+
+        # get mean and variance for pre-sample lags
         yp = endog[:laglen]
         lagstart = self.trendorder
         exog = self.exog
@@ -131,7 +171,7 @@ class AR(LikelihoodModel):
 #            xp = exog[:laglen]
         if self.trendorder == 1 and lagstart == 1:
             c = [params[0]] * laglen # constant-only no exogenous variables
-        else:
+        else:   #TODO: this probably isn't right
             c = np.dot(X[:laglen, :lagstart], params[:lagstart])
         mup = np.asarray(c/(1-np.sum(params[lagstart:])))
         diffp = yp-mup[:,None]
@@ -160,12 +200,13 @@ class AR(LikelihoodModel):
         loglike = -1/2.*(nobs*(np.log(2*np.pi) + np.log(sigma2)) - \
                 logdet + diffpVpinv/sigma2 + ssr/sigma2)
 
-        if usepenalty:
+        #NOTE: since we reparameterize, the penalty shouldn't be included
+#        if usepenalty:
         # subtract a quadratic penalty since we min the negative of loglike
         #NOTE: penalty coefficient should increase with iterations
         # this uses a static one of 1e3
-            print "Penalized!"
-            loglike -= 1000 *np.sum((mask*params)**2)
+#            print "Penalized!"
+#            loglike -= 1000 *np.sum((mask*params)**2)
         return loglike
 
     def score(self, params):
@@ -233,7 +274,7 @@ class AR(LikelihoodModel):
         self.trendorder = trendorder
         return X
 
-    def fit(self, maxlag=None, method='ols', ic=None, trend='c', demean=False,
+    def fit(self, maxlag=None, method='cmle', ic=None, trend='c', demean=False,
             penalty=False, start_params=None, solver=None, maxiter=35,
             full_output=1, disp=1, callback=None, **kwargs):
         """
@@ -242,12 +283,12 @@ class AR(LikelihoodModel):
         Parameters
         ----------
         start_params : array-like, optional
-            A first guess on the parameters.  Defaults is a vector of zeros.
-        method : str {'ols', 'yw'. 'mle', 'umle'}, optional
-            ols - Ordinary Leasy Squares
+            A first guess on the parameters.  Used for method == 'mle'.
+            Default is cmle estimates.
+        method : str {'cmle', 'yw'. 'mle'}, optional
+            cmle - Conditional maximum likelihood using OLS
             yw - Yule-Walker
-            mle - conditional maximum likelihood
-            umle - unconditional (exact) maximum likelihood
+            mle - unconditional (exact) maximum likelihood
         solver : str or None, optional
             Unconstrained solvers:
                 Default is 'bfgs', 'newton' (newton-raphson), 'ncg'
@@ -271,6 +312,8 @@ class AR(LikelihoodModel):
         penalty kwd is True or False) in order to ensure that the solution
         stays within (-1,1).  The constrained solvers default to using a bound
         of (-.999,.999).
+        This is no longer accurate or needed since we use the
+        reparameterization of Jones (1980)
 
         See also
         --------
@@ -282,6 +325,8 @@ class AR(LikelihoodModel):
         """
         self.penalty = penalty
         method = method.lower()
+        if method not in ['cmle','ar','mle']:
+            raise ValueError("Method %s not recognized" % method)
         self.method = method
         nobs = self.nobs
         if maxlag is None:
@@ -318,7 +363,7 @@ class AR(LikelihoodModel):
                     fit = AR(endog_tmp).fit(maxlag=lag, demean=demean)
                     results[lag] = eval('fit.'+ic)
                 bestic, bestlag = min((res, k) for k,res in results.iteritems())
-            else:
+            else: #TODO: t-stat not implemented?
                 pass
             laglen = bestlag
 
@@ -332,26 +377,12 @@ class AR(LikelihoodModel):
         # LHS
         Y = endog[laglen:,:]
         # make lagged RHS
-        X = self._stackX(laglen, trend)
-#        X = lagmat(endog, maxlag=laglen, trim='both')[:,1:]
-#        if exog is not None:
-#            X = np.column_stack((self.exog[laglen:,:], X))
-#        # Handle constant, etc.
-#        if trend == 'c':
-#            trendorder = 1
-#        elif trend == 'nc':
-#            trendorder = 0
-#        elif trend == 'ct':
-#            trendorder = 2
-#        elif trend == 'ctt':
-#            trendorder = 3
-#        if trend != 'nc':
-#            X = add_trend(X,prepend=True, trend=trend)
-#        self.trendorder = trendorder
+        X = self._stackX(laglen, trend) # sets self.trendorder
+        trendorder = self.trendorder
         self.Y = Y
         self.X = X
-        self.df_resid = avobs - laglen - self.trendorder # for compatiblity with
-
+        self.df_resid = avobs - laglen - trendorder # for compatiblity
+                                                # with Model code
         if solver:
             solver = solver.lower()
 #TODO: allow user-specified penalty function
@@ -359,44 +390,62 @@ class AR(LikelihoodModel):
 #            minfunc = lambda params : -self.loglike(params) - \
 #                    self.penfunc(params)
 #        else:
+        if method == "cmle":     # do OLS
+            arfit = OLS(Y,X).fit()
+            params = arfit.params
+#            omega = None
+#            self.params = params
         if method == "mle":
-            if not solver: # make default?
-                solver = 'newton'
+#            if not solver: # make default?
+#                solver = 'newton'
             if not start_params:
-                start_params = np.zeros((X.shape[1]))
-            if solver in ['newton', 'bfgs', 'ncg']:
-                return super(AR, self).fit(start_params=start_params, method=solver,
-                    maxiter=maxiter, full_output=full_output, disp=disp,
-                    callback=callback, **kwargs)
+                start_params = OLS(Y,X).fit().params
+# replace constant
+                if self.trendorder==1:
+                    start_params[0] = start_params[0]/(1-\
+                            start_params[1:].sum())
+                start_params = self._invtransparams(start_params)
+
+#            if solver in ['newton', 'bfgs', 'ncg']:
+#                return super(AR, self).fit(start_params=start_params, method=solver,
+#                    maxiter=maxiter, full_output=full_output, disp=disp,
+#                    callback=callback, **kwargs)
 #                return retvals
-        elif method == "umle":
+            loglike = lambda params : -self.loglike(params)
+            bounds = [(None,)*2]*(laglen+trendorder)
+            retvals = optimize.fmin_l_bfgs_b(loglike, start_params,
+                    approx_grad=True, m=30, pgtol = 1e-7, factr=1e3,
+                    bounds=bounds, iprint=1)
+            self.retvals = retvals
+            params = retvals[0]
+            params = self._transparams(params)
+#NOTE: constant vs. mean issue
+            if self.trendorder == 1:
+                params[0] = params[0]/(1-np.sum(params[1:]))
+#        elif method == "umle":
 #TODO: move this stuff up to LikelihoodModel.fit
-            minfunc = lambda params: -self.loglike(params)
-            bounds = [(-.999,.999)]   # assume stationarity
-            if start_params == None:
-                start_params = np.array([0]) # assumes AR(1)
-            if method == 'bfgs-b':
-                retval = optimize.fmin_l_bfgs_b(minfunc, start_params,
-                        approx_grad=True, bounds=bounds)
-                self.params, self.llf = retval[0:2]
-            if method == 'tnc':
-                retval = optimize.fmin_tnc(minfunc, start_params,
-                        approx_grad=True, bounds = bounds)
-                self.params = retval[0]
-            if method == 'powell':
-                retval = optimize.fmin_powell(minfunc,start_params)
-                self.params = retval[None]
+#            minfunc = lambda params: -self.loglike(params)
+#            bounds = [(-.999,.999)]   # assume stationarity
+#            if start_params == None:
+#                start_params = np.array([0]) # assumes AR(1)
+#            if method == 'bfgs-b':
+#                retval = optimize.fmin_l_bfgs_b(minfunc, start_params,
+#                        approx_grad=True, bounds=bounds)
+#                self.params, self.llf = retval[0:2]
+#            if method == 'tnc':
+#                retval = optimize.fmin_tnc(minfunc, start_params,
+#                        approx_grad=True, bounds = bounds)
+#                self.params = retval[0]
+#            if method == 'powell':
+#                retval = optimize.fmin_powell(minfunc,start_params)
+#                self.params = retval[None]
+
 #TODO: write regression tests for Pauli's branch so that
 # new line_search and optimize.nonlin can get put in.
 # http://projects.scipy.org/scipy/ticket/791
 #            if method == 'broyden':
 #                retval = optimize.broyden2(minfunc, [.5], verbose=True)
 #                self.results = retvar
-        elif method == "ols":
-            arfit = OLS(Y,X).fit()
-            params = arfit.params
-            omega = None
-            self.params = params
         elif method == "yw":
             params, omega = yule_walker(endog, order=maxlag,
                     method="mle", demean=False)
@@ -412,6 +461,17 @@ class AR(LikelihoodModel):
 
 
 class ARResults(LikelihoodModelResults):
+    """
+    Class to hold results from fitting an AR model.
+
+    Notes
+    -----
+    If `method` is 'cmle', then the standard errors that are returned
+    are the OLS standard errors of the coefficients.  That is, they correct
+    for the degrees of freedom in the estimate of the scale/sigma.  To
+    reproduce t-stats using the AR definition of sigma (no dof correction), one
+    can do np.sqrt(np.diag(results.cov_params())).
+    """
 
     _cache = {} # for scale setter
 
@@ -436,8 +496,8 @@ class ARResults(LikelihoodModelResults):
         return self.sigma
 
     @cache_readonly
-    def bse(self):
-        if self.model.method == "ols":
+    def bse(self): # allow user to specify?
+        if self.model.method == "cmle": # uses different scale/sigma definition
             ols_scale = self.ssr/(self.avobs - self.laglen - self.trendorder)
             return np.sqrt(np.diag(self.cov_params(scale=ols_scale)))
         else:
@@ -446,6 +506,10 @@ class ARResults(LikelihoodModelResults):
     @cache_readonly
     def t(self):    # overwrite t()
         return self.params/self.bse
+
+    @cache_readonly
+    def pvalues(self):
+        return stats.t.pp
 
     @cache_readonly
     def aic(self):
@@ -474,7 +538,9 @@ class ARResults(LikelihoodModelResults):
     def fpe(self):
         avobs = self.avobs
         laglen = self.laglen
-        return ((avobs+laglen+1)/(avobs-laglen-1)) * self.sigma
+        trendorder = self.trendorder
+#Lutkepohl
+        return ((avobs+laglen+trendorder)/(avobs-laglen-trendorder))*self.sigma
 
     @cache_readonly
     def llf(self):
@@ -1579,7 +1645,7 @@ if __name__ == "__main__":
     sunspots = sm.datasets.sunspots.load()
 # Why does R demean the data by defaut?
     ar_ols = AR(sunspots.endog)
-    res_ols = ar_ols.fit(maxlag=2, demean=False)
+    res_ols = ar_ols.fit(maxlag=9)
 #    ar_mle = AR(sunspots.endog)
 #    res_mle = ar_mle.fit(maxlag=1, method="mle", solver="bfgs", maxiter=500,
 #            gtol=1e-10, penalty=True)
