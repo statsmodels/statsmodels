@@ -381,7 +381,7 @@ class ARMA(LikelihoodModel):
         arr = block_diag(np.eye(k),arr)
         return arr
 
-    def R(self,params): # R is H in Hamilton
+    def R(self, params): # R is H in Hamilton
         """
         The coefficient matrix for the state vector in the observation equation.
 
@@ -567,44 +567,12 @@ class ARMA(LikelihoodModel):
         q = self.q
         r = self.r
 
-        # try reparameterization
-#TODO: this is only the stability condition for p,q == 1
-#        params = params/(1+np.abs(params))
-#NOTE: reparameterization suggested in Jones (1980)
+        #NOTE: reparameterization suggested in Jones (1980)
         if self.transparams:
             newparams = self._transparams(params)
-            # doesn't modify params in place
-#            newparams = np.zeros_like(params)
-#            # AR Coeffs
-#            if p != 0:
-#                newparams[k:k+p] = ((1-exp(-params[k:k+p]))/(1+exp(-params[k:k+p]))).copy()
-#                tmp = ((1-exp(-params[k:k+p]))/(1+exp(-params[k:k+p]))).copy()
-#
-#                # levinson-durbin to get pacf
-#                for j in range(1,p):
-#                    a = newparams[k+j]
-#                    for kiter in range(j):
-#                        tmp[kiter] -= a * newparams[k+j-kiter-1]
-#                    newparams[k:k+j] = tmp[:j]
-##                params[k:k+p] = newparams
-#
-#            # MA Coeffs
-#            if q != 0:
-#                newparams[k+p:] = ((1-exp(-params[k+p:k+p+q]))/\
-#                                (1+exp(-params[k+p:k+p+q]))).copy()
-#                tmp = ((1-exp(-params[k+p:k+p+q]))/\
-#                        (1+exp(-params[k+p:k+p+q]))).copy()
-#
-#                # levinson-durbin to get macf
-#                for j in range(1,q):
-#                    b = newparams[k+p+j]
-#                    for kiter in range(j):
-#                        tmp[kiter] += b * newparams[k+p+j-kiter-1]
-#                    newparams[k+p:j] = tmp[:j]
-##                params[k+p:k+p+q] = newparams
-#                #TODO: might be able to speed up the above, but shouldn't be too much
         else:
             newparams = params  # don't need a copy if not modified.
+
         R_mat = self.R(newparams)
         T_mat = self.T(newparams)
         Q_0 = dot(inv(identity(m**2)-kron(T_mat,T_mat)),
@@ -613,14 +581,15 @@ class ARMA(LikelihoodModel):
         # unit circle, if not then Q_0 = kappa * eye(m**2)
         # w/ kappa some large value say 1e7, but DK recommends not doing this
         # for a diffuse prior
-        Q_0 = Q_0.reshape(r,r,order='F')
+        Q_0 = Q_0.reshape(r,r,order='F') #TODO: should order be m,m if const?
         P = Q_0
         sigma2 = 0
         loglikelihood = 0
         v = zeros((nobs,1))
         F = zeros((nobs,1))
         P = Q_0
-#NOTE: can only do quick recursions if Z is time-invariant
+        #NOTE: can only do quick recursions if Z is time-invariant
+        #so could have recursions for pure ARMA vs ARMAX
         for i in xrange(int(nobs)):
             # Predict
             Z_mat = Z[i,None]

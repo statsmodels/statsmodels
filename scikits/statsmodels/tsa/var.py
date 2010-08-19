@@ -5,8 +5,10 @@ from __future__ import division
 import copy as COP
 import scipy as S
 import numpy as np
-from numpy import matlib as MAT, log, exp
+from numpy import matlib as MAT, log, exp, dot, identity, zeros, kron
+from numpy.linalg import inv
 from scipy import linalg as LIN #TODO: get rid of this once cleaned up
+from scipy.linalg import block_diag
 from scipy import linalg, sparse, optimize
 from scipy.stats import norm, ss as sumofsq
 from scikits.statsmodels.regression import yule_walker
@@ -118,14 +120,68 @@ class AR(LikelihoodModel):
         newparams[k:k+p] = invarcoefs
         return newparams
 
-    def predict(self, exog=None):
+    def predict(self, n=0):
+        """
+        If n == 0, returns fitted values.
+
+        Not yet implemented.
+        If n > 0.  Returns in sample
+        prediction plus one-step ahead dynamic .forecasts
+        """
         #TODO: what kind of options, dynamic, one-step, etc.
 #        for the presample, this is just the kalman filter
 # if the model is fit with a constant then the initial state is the
 # constant value and then y_t is always alpha[0] at the next step
 # the rest are just linear fitted values (which is also what the KF
 # produces
-        pass
+        # array to hold result
+        y = self.endog
+        predictedvalues = np.zeros_like((y))
+
+        # build T matrix, Transition Matrix
+        if self._results is None:
+            raise ValueError("You must fit the model first")
+        params = self._results.params
+        p = self.laglen
+        k = self.trendorder
+        T_mat = zeros((p,p))
+        T_mat[:,0] = params[k:]
+        T_mat[:-1,1:] = identity(p-1)
+        T_mat = block_diag(identity(k),T_mat)
+
+        R_mat = np.zeros((p+k,1))
+        R_mat[k] = 1 # robust?
+
+        # Initial State mean and variance
+        alpha = zeros((p,1))
+        if k==1:    # if constant, initial state is assumed to be mu
+            alpha[0] = params[0]
+            predictedvalues[0] = alpha[0]
+        # the shape of alpha should be m x 1.
+        # where m is the number of states.
+        # does that mean that T = [[1,0],[1,T]] ?
+
+# because this gives a singular matrix and it always will.
+        Q_0 = dot(inv(identity((p+k)**2)-kron(T_mat,T_mat)),dot(R_mat,
+                R_mat.T)).ravel('F')
+
+#                order='F') #TODO: order might need to be p+k
+        P = Q_0
+        Z_mat = np.array([1] + [1]*k + [0] * (p-1-k))  # TODO: change for exog
+        for i in xrange(1,p): # iterate p-1 times to get presample values
+            v_mat = y[i] - dot(Z_mat,alpha)
+            F_mat = dot(dot(Z_mat, P), Z_mat.T)
+            Finv = 1./F_mat # inv. always scalar
+            K = dot(dot(dot(T_mat,P),Z_mat.T),Finv)
+            # update state
+            alpha = dot(T_mat, alpha) + dot(K,v_mat)
+            L = T_mat - dot(K,Z_mat)
+            P = dot(dot(T_mat, P), L.T)
+            P[0,0] += 1 # for MA part
+            predictedvalues[p] = alpha[0]
+        predictedvalues[p:] = dot(self.X, params)
+        return predictedvalues
+
 
     def loglike(self, params):
         """
@@ -208,6 +264,22 @@ class AR(LikelihoodModel):
 #            print "Penalized!"
 #            loglike -= 1000 *np.sum((mask*params)**2)
         return loglike
+
+    def _R(self, params):
+        """
+        Private method for obtaining fitted presample values via Kalman filter.
+        """
+        pass
+
+    def _T(self, params):
+        """
+        Private method for obtaining fitted presample values via Kalman filter.
+
+        See also
+        --------
+        scikits.statsmodels.tsa.kalmanf.ARMA
+        """
+        pass
 
     def score(self, params):
         """
@@ -455,6 +527,7 @@ class AR(LikelihoodModel):
         pinv_exog = np.linalg.pinv(X)
         normalized_cov_params = np.dot(pinv_exog, pinv_exog.T)
         arfit = ARResults(self, params, normalized_cov_params)
+        self._results = arfit
         return arfit
 
     fit.__doc__ += LikelihoodModel.fit.__doc__
