@@ -192,6 +192,61 @@ class MyPareto(GenericLikelihoodModel):
         logpdf[x<1] = -np.inf
         return -logpdf
 
+    def fit_ks(self):
+        '''fit Pareto with nested optimization
+
+        originally published on stackoverflow
+        this doesn't trim lower values during ks optimization
+
+        '''
+        rvs = self.endog
+        rvsmin = rvs.min()
+
+        def pareto_ks(loc, rvs):
+            #start_scale = rvs.min() - loc # not used yet
+            #est = self.fit_fr(rvs, 1., frozen=[np.nan, loc, np.nan])
+            self.fixed_params[1] = loc
+            #est = self.fit(start_params=self.start_params[self.fixed_paramsmask]).params
+            est = self.fit(start_params=self.start_params, method='nm').params
+            args = (est[0], loc, est[1])
+            return stats.kstest(rvs,'pareto',args)[0]
+
+        locest = optimize.fmin(pareto_ks, rvsmin*0.7, (rvs,))
+        est = stats.pareto.fit_fr(rvs, 9., frozen=[np.nan, locest, np.nan])
+        args = (est[0], locest[0], est[1])
+        return args
+
+
+    def fit_ks1_trim(self):
+        '''fit Pareto with nested optimization
+
+        originally published on stackoverflow
+
+        '''
+        rvs = np.sort(self.endog)
+        rvsmin = rvs.min()
+
+        def pareto_ks(loc, rvs):
+            #start_scale = rvs.min() - loc # not used yet
+            est = stats.pareto.fit_fr(rvs, 1., frozen=[np.nan, loc, np.nan])
+            args = (est[0], loc, est[1])
+            return stats.kstest(rvs,'pareto',args)[0]
+
+        #locest = optimize.fmin(pareto_ks, rvsmin*0.7, (rvs,))
+        maxind = min(np.floor(self.nobs*0.95).astype(int), self.nobs-10)
+        res = []
+        for trimidx in range(self.nobs//2, maxind):
+            xmin = loc = rvs[trimidx]
+            res.append([trimidx, pareto_ks(loc-1e-10, rvs[trimidx:])])
+        res = np.array(res)
+        bestidx = res[np.argmin(res[:,1]),0].astype(int)
+        print bestidx
+        locest = rvs[bestidx]
+
+        est = stats.pareto.fit_fr(rvs[bestidx:], 1., frozen=[np.nan, locest, np.nan])
+        args = (est[0], locest, est[1])
+        return args
+
     def fit_ks1(self):
         '''fit Pareto with nested optimization
 
@@ -210,12 +265,13 @@ class MyPareto(GenericLikelihoodModel):
         locest = optimize.fmin(pareto_ks, rvsmin*0.7, (rvs,))
         est = stats.pareto.fit_fr(rvs, 1., frozen=[np.nan, locest, np.nan])
         args = (est[0], locest[0], est[1])
-
         return args
 
-y = stats.pareto.rvs(1, loc=10, scale=2, size=nobs)
+#y = stats.pareto.rvs(1, loc=10, scale=2, size=nobs)
+y = stats.pareto.rvs(1, loc=0, scale=2, size=nobs)
 
 
+par_start_params = np.array([1., 9., 2.])
 
 mod_par = MyPareto(y)
 mod_par.start_params = np.array([1., 10., 2.])
@@ -244,6 +300,17 @@ print res_par.params
 print res_parks
 
 print res_par.params[1:].sum(), sum(res_parks[1:]), mod_par.endog.min()
+
+mod_par.fixed_params = fixdf
+mod_par.fixed_paramsmask = np.isnan(fixdf)
+
+mod_par.start_params = par_start_params[mod_par.fixed_paramsmask]
+mod_par.fit(start_params=mod_par.start_params)
+res_parks2 = mod_par.fit_ks()
+
+res_parkst = mod_par.fit_ks1_trim()
+print res_parkst
+
 '''
 C:\Programs\Python25\lib\site-packages\matplotlib-0.99.1-py2.5-win32.egg\matplotlib\rcsetup.py:117: UserWarning: rcParams key "numerix" is obsolete and has no effect;
  please delete it from your matplotlibrc file
@@ -654,5 +721,352 @@ Optimization terminated successfully.
 12.001848088321712
 >>> y.min()
 12.001848089426717
+
+'''
+
+'''
+C:\Programs\Python25\lib\site-packages\matplotlib-0.99.1-py2.5-win32.egg\matplotlib\rcsetup.py:117: UserWarning: rcParams key "numerix" is obsolete and has no effect;
+ please delete it from your matplotlibrc file
+  warnings.warn('rcParams key "numerix" is obsolete and has no effect;\n'
+0.0686702747648
+0.0164150896481
+0.128121386381
+[ 0.10370428  0.09921315  0.09676723  0.10457413  0.10201618  0.89964496]
+(array(0.0), array(1.4552599885729829), array(0.0), array(2.5072143354058221))
+(array(0.0), array(1.6666666666666667), array(0.0), array(6.0))
+repr(start_params) array([ 0.10370428,  0.09921315,  0.09676723,  0.10457413,  0.10201618,
+        0.89964496,  6.39309417,  0.12812139])
+Optimization terminated successfully.
+         Current function value: -679.951339
+         Iterations: 398
+         Function evaluations: 609
+
+estimation results t-dist
+[ 0.10400826  0.10111893  0.09725133  0.10507788  0.10086163  0.8996041
+  4.72131318  0.09825355]
+[ 0.00365493  0.00356149  0.00349329  0.00362333  0.003732    0.00362716
+  0.72329352  0.00388832]
+repr(start_params) array([ 0.10400826,  0.10111893,  0.09725133,  0.10507788,  0.10086163,
+        0.8996041 ,  4.72131318,  0.09825355])
+Optimization terminated successfully.
+         Current function value: -679.950443
+         Iterations 3
+using Newton
+[ 0.10395383  0.10106762  0.09720665  0.10503384  0.10080599  0.89954546
+  4.70918964  0.09815885]
+[ 0.00365299  0.00355968  0.00349147  0.00362166  0.00373015  0.00362533
+  0.7201488   0.00388437]
+()
+[ 0.09992709  0.09786601  0.09387356  0.10229919  0.09756623  0.85466272
+  4.60459182  0.09661986]
+[ 0.11308292  0.10828401  0.1028508   0.11268895  0.10934726  0.94462721
+  7.15412655  0.13452746]
+repr(start_params) array([ 1.,  9.,  2.])
+Optimization terminated successfully.
+         Current function value: 2636.129089
+         Iterations: 147
+         Function evaluations: 279
+Optimization terminated successfully.
+         Current function value: 0.016555
+         Iterations: 16
+         Function evaluations: 35
+[  0.84856418  10.2197801    1.78206799]
+(1.0596088578825995, 9.9043376069230007, 2.0975104813987118)
+12.0018480891 12.0018480883 12.0018480894
+repr(start_params) array([ 1.,  2.])
+Warning: Desired error not necessarily achieveddue to precision loss
+         Current function value: 2643.549907
+         Iterations: 2
+         Function evaluations: 13
+         Gradient evaluations: 12
+>>> res_parks2 = mod_par.fit_ks()
+repr(start_params) array([ 1.,  2.])
+Optimization terminated successfully.
+         Current function value: 2642.465273
+         Iterations: 92
+         Function evaluations: 172
+repr(start_params) array([ 1.,  2.])
+Optimization terminated successfully.
+         Current function value: 2636.639863
+         Iterations: 73
+         Function evaluations: 136
+repr(start_params) array([ 1.,  2.])
+Optimization terminated successfully.
+         Current function value: 2631.568778
+         Iterations: 75
+         Function evaluations: 133
+repr(start_params) array([ 1.,  2.])
+Optimization terminated successfully.
+         Current function value: 2627.821044
+         Iterations: 75
+         Function evaluations: 135
+repr(start_params) array([ 1.,  2.])
+Warning: Maximum number of function evaluations has been exceeded.
+repr(start_params) array([ 1.,  2.])
+Optimization terminated successfully.
+         Current function value: 2631.568778
+         Iterations: 75
+         Function evaluations: 133
+repr(start_params) array([ 1.,  2.])
+Optimization terminated successfully.
+         Current function value: 2626.431596
+         Iterations: 58
+         Function evaluations: 109
+repr(start_params) array([ 1.,  2.])
+Warning: Maximum number of function evaluations has been exceeded.
+repr(start_params) array([ 1.,  2.])
+Warning: Maximum number of function evaluations has been exceeded.
+repr(start_params) array([ 1.,  2.])
+Optimization terminated successfully.
+         Current function value: 2626.737426
+         Iterations: 60
+         Function evaluations: 109
+repr(start_params) array([ 1.,  2.])
+Optimization terminated successfully.
+         Current function value: 2627.821044
+         Iterations: 75
+         Function evaluations: 135
+repr(start_params) array([ 1.,  2.])
+Optimization terminated successfully.
+         Current function value: 2626.471666
+         Iterations: 48
+         Function evaluations: 94
+repr(start_params) array([ 1.,  2.])
+Optimization terminated successfully.
+         Current function value: 2627.196314
+         Iterations: 66
+         Function evaluations: 119
+repr(start_params) array([ 1.,  2.])
+Optimization terminated successfully.
+         Current function value: 2626.578538
+         Iterations: 56
+         Function evaluations: 103
+repr(start_params) array([ 1.,  2.])
+Optimization terminated successfully.
+         Current function value: 2626.471666
+         Iterations: 48
+         Function evaluations: 94
+repr(start_params) array([ 1.,  2.])
+Optimization terminated successfully.
+         Current function value: 2626.651702
+         Iterations: 67
+         Function evaluations: 122
+repr(start_params) array([ 1.,  2.])
+Optimization terminated successfully.
+         Current function value: 2626.737426
+         Iterations: 60
+         Function evaluations: 109
+repr(start_params) array([ 1.,  2.])
+Optimization terminated successfully.
+         Current function value: 2626.613505
+         Iterations: 73
+         Function evaluations: 141
+repr(start_params) array([ 1.,  2.])
+Optimization terminated successfully.
+         Current function value: 2626.578538
+         Iterations: 56
+         Function evaluations: 103
+repr(start_params) array([ 1.,  2.])
+Optimization terminated successfully.
+         Current function value: 2626.632218
+         Iterations: 64
+         Function evaluations: 119
+repr(start_params) array([ 1.,  2.])
+Optimization terminated successfully.
+         Current function value: 2626.651702
+         Iterations: 67
+         Function evaluations: 122
+repr(start_params) array([ 1.,  2.])
+Optimization terminated successfully.
+         Current function value: 2626.622789
+         Iterations: 63
+         Function evaluations: 114
+repr(start_params) array([ 1.,  2.])
+Optimization terminated successfully.
+         Current function value: 2626.613505
+         Iterations: 73
+         Function evaluations: 141
+repr(start_params) array([ 1.,  2.])
+Optimization terminated successfully.
+         Current function value: 2626.627465
+         Iterations: 59
+         Function evaluations: 109
+repr(start_params) array([ 1.,  2.])
+Optimization terminated successfully.
+         Current function value: 2626.632218
+         Iterations: 64
+         Function evaluations: 119
+repr(start_params) array([ 1.,  2.])
+Optimization terminated successfully.
+         Current function value: 2626.625104
+         Iterations: 59
+         Function evaluations: 108
+repr(start_params) array([ 1.,  2.])
+Optimization terminated successfully.
+         Current function value: 2626.629829
+         Iterations: 66
+         Function evaluations: 118
+repr(start_params) array([ 1.,  2.])
+Optimization terminated successfully.
+         Current function value: 2626.632218
+         Iterations: 64
+         Function evaluations: 119
+repr(start_params) array([ 1.,  2.])
+Optimization terminated successfully.
+         Current function value: 2626.632218
+         Iterations: 64
+         Function evaluations: 119
+repr(start_params) array([ 1.,  2.])
+Optimization terminated successfully.
+         Current function value: 2626.628642
+         Iterations: 67
+         Function evaluations: 122
+repr(start_params) array([ 1.,  2.])
+Optimization terminated successfully.
+         Current function value: 2626.631023
+         Iterations: 68
+         Function evaluations: 129
+repr(start_params) array([ 1.,  2.])
+Optimization terminated successfully.
+         Current function value: 2626.630430
+         Iterations: 57
+         Function evaluations: 108
+repr(start_params) array([ 1.,  2.])
+Optimization terminated successfully.
+         Current function value: 2626.629598
+         Iterations: 60
+         Function evaluations: 112
+repr(start_params) array([ 1.,  2.])
+Optimization terminated successfully.
+         Current function value: 2626.630430
+         Iterations: 57
+         Function evaluations: 108
+repr(start_params) array([ 1.,  2.])
+Optimization terminated successfully.
+         Current function value: 2626.630130
+         Iterations: 65
+         Function evaluations: 122
+repr(start_params) array([ 1.,  2.])
+Optimization terminated successfully.
+         Current function value: 2626.629536
+         Iterations: 62
+         Function evaluations: 111
+repr(start_params) array([ 1.,  2.])
+Optimization terminated successfully.
+         Current function value: 2626.630130
+         Iterations: 65
+         Function evaluations: 122
+repr(start_params) array([ 1.,  2.])
+Optimization terminated successfully.
+         Current function value: 2626.629984
+         Iterations: 67
+         Function evaluations: 123
+Optimization terminated successfully.
+         Current function value: 0.016560
+         Iterations: 18
+         Function evaluations: 38
+>>> res_parks2
+(1.0592352626264809, 9.9051580457572399, 2.0966900385041591)
+>>> res_parks
+(1.0596088578825995, 9.9043376069230007, 2.0975104813987118)
+>>> res_par.params
+array([  0.84856418,  10.2197801 ,   1.78206799])
+>>> np.sqrt(np.diag(mod_par.hessian(res_par.params)))
+array([ NaN,  NaN,  NaN])
+>>> mod_par.hessian(res_par.params
+... )
+array([[ NaN,  NaN,  NaN],
+       [ NaN,  NaN,  NaN],
+       [ NaN,  NaN,  NaN]])
+>>> mod_par.hessian(res_parks)
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+  File "c:\josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\model.py", line 533, in hessian
+    return approx_hess(params, self.loglike)[0]  #need options for hess (epsilon)
+  File "c:\josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\sandbox\regression\numdiff.py", line 118, in approx_hess
+    xh = x + h
+TypeError: can only concatenate tuple (not "float") to tuple
+
+>>> mod_par.hessian(np.array(res_parks))
+array([[ NaN,  NaN,  NaN],
+       [ NaN,  NaN,  NaN],
+       [ NaN,  NaN,  NaN]])
+>>> mod_par.fixed_params
+array([        NaN,  9.90510677,         NaN])
+>>> mod_par.fixed_params=None
+>>> mod_par.hessian(np.array(res_parks))
+array([[-890.48553491,           NaN,           NaN],
+       [          NaN,           NaN,           NaN],
+       [          NaN,           NaN,           NaN]])
+>>> mod_par.loglike(np.array(res_parks))
+-2626.6322080820569
+>>> mod_par.bsejac
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+  File "c:\josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\decorators.py", line 85, in __get__
+    _cachedval = self.fget(obj)
+  File "c:\josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\model.py", line 592, in bsejac
+    return np.sqrt(np.diag(self.covjac))
+  File "c:\josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\decorators.py", line 85, in __get__
+    _cachedval = self.fget(obj)
+  File "c:\josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\model.py", line 574, in covjac
+    jacv = self.jacv
+  File "c:\josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\decorators.py", line 85, in __get__
+    _cachedval = self.fget(obj)
+  File "c:\josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\model.py", line 557, in jacv
+    return self.jac(self._results.params)
+  File "c:\josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\model.py", line 530, in jac
+    return approx_fprime1(params, self.loglikeobs, **kwds)
+  File "c:\josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\sandbox\regression\numdiff.py", line 80, in approx_fprime1
+    f0 = f(*((xk,)+args))
+  File "c:\josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\model.py", line 522, in loglikeobs
+    return -self.nloglikeobs(params)
+  File "C:\Josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\examples\ex_generic_mle_tdist.py", line 184, in nloglikeobs
+    scale = params[2]
+IndexError: index out of bounds
+>>> hasattr(self, 'start_params')
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+NameError: name 'self' is not defined
+
+>>> hasattr(mod_par, 'start_params')
+True
+>>> mod_par.start_params
+array([ 1.,  2.])
+>>> stats.pareto.stats(1., 9., 2., moments='mvsk')
+(array(1.#INF), array(1.#INF), array(1.#QNAN), array(1.#QNAN))
+>>> stats.pareto.stats(1., 8., 2., moments='mvsk')
+(array(1.#INF), array(1.#INF), array(1.#QNAN), array(1.#QNAN))
+>>> stats.pareto.stats(1., 8., 1., moments='mvsk')
+(array(1.#INF), array(1.#INF), array(1.#QNAN), array(1.#QNAN))
+>>> stats.pareto.stats(1., moments='mvsk')
+(array(1.#INF), array(1.#INF), array(1.#QNAN), array(1.#QNAN))
+>>> stats.pareto.stats(0.5., moments='mvsk')
+  File "<stdin>", line 1
+    stats.pareto.stats(0.5., moments='mvsk')
+                           ^
+SyntaxError: invalid syntax
+
+>>> stats.pareto.stats(0.5, moments='mvsk')
+(array(1.#INF), array(1.#INF), array(1.#QNAN), array(1.#QNAN))
+>>> stats.pareto.stats(2, moments='mvsk')
+(array(2.0), array(1.#INF), array(1.#QNAN), array(1.#QNAN))
+>>> stats.pareto.stats(10, moments='mvsk')
+(array(1.1111111111111112), array(0.015432098765432098), array(2.8110568859997356), array(14.828571428571429))
+>>> stats.pareto.rvs(10, size=10)
+array([ 1.07716265,  1.18977526,  1.07093   ,  1.05157081,  1.15991232,
+        1.31015589,  1.06675107,  1.08082475,  1.19501243,  1.34967158])
+>>> r = stats.pareto.rvs(10, size=1000)
+>>> plt
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+NameError: name 'plt' is not defined
+
+>>> import matplotlib.pyplot as plt
+>>> plt.hist(r)
+(array([962,  32,   3,   2,   0,   0,   0,   0,   0,   1]), array([ 1.00013046,  1.3968991 ,  1.79366773,  2.19043637,  2.587205  ,
+        2.98397364,  3.38074227,  3.77751091,  4.17427955,  4.57104818,
+        4.96781682]), <a list of 10 Patch objects>)
+>>> plt.show()
 
 '''
