@@ -12,7 +12,7 @@ License: Simplified BSD
 '''
 
 import numpy as np
-from scipy import stats, optimize
+from scipy import stats, optimize, integrate
 
 
 ########## patching scipy
@@ -324,9 +324,9 @@ def expect(self, fn=None, args=(), loc=0, scale=1, lb=None, ub=None, conditional
         def fun(x, *args):
             return fn(x)*self.pdf(x, loc=loc, scale=scale, *args)
     if lb is None:
-        lb = (self.a - loc)/(1.0*scale)
+        lb = loc + self.a * scale #(self.a - loc)/(1.0*scale)
     if ub is None:
-        ub = (self.b - loc)/(1.0*scale)
+        ub = loc + self.b * scale #(self.b - loc)/(1.0*scale)
     if conditional:
         invfac = self.sf(lb,*args) - self.sf(ub,*args)
     else:
@@ -335,6 +335,61 @@ def expect(self, fn=None, args=(), loc=0, scale=1, lb=None, ub=None, conditional
                                 args=args)[0]/invfac
 
 
+def expect_v2(self, fn=None, args=(), loc=0, scale=1, lb=None, ub=None, conditional=False):
+    '''calculate expected value of a function with respect to the distribution
+
+    location and scale only tested on a few examples
+
+    Parameters
+    ----------
+        all parameters are keyword parameters
+        fn : function (default: identity mapping)
+           Function for which integral is calculated. Takes only one argument.
+        args : tuple
+           argument (parameters) of the distribution
+        lb, ub : numbers
+           lower and upper bound for integration, default is set to the support
+           of the distribution
+        conditional : boolean (False)
+           If true then the integral is corrected by the conditional probability
+           of the integration interval. The return value is the expectation
+           of the function, conditional on being in the given interval.
+
+    Returns
+    -------
+        expected value : float
+
+    Notes
+    -----
+    This function has not been checked for it's behavior when the integral is
+    not finite. The integration behavior is inherited from scipy.integrate.quad.
+
+    '''
+    #changes: 20100809
+    #correction and refactoring how loc and scale are handled
+    #uses now _pdf
+    #needs more testing for distribution with bound support, e.g. genpareto
+
+    if fn is None:
+        def fun(x, *args):
+            return (loc + x*scale)*self._pdf(x, *args)
+    else:
+        def fun(x, *args):
+            return fn(loc + x*scale)*self._pdf(x, *args)
+    if lb is None:
+        lb = self.a
+    else:
+        lb = max(self.a, lb)
+    if ub is None:
+        ub = self.b
+    else:
+        ub = min(self.b, ub)
+    if conditional:
+        invfac = self.sf(lb,*args) - self.sf(ub,*args)
+    else:
+        invfac = 1.0
+    return integrate.quad(fun, lb, ub,
+                                args=args)[0]/invfac
 
 ### for discrete distributions
 
@@ -450,7 +505,7 @@ def expect_discrete(self, fn=None, args=(), loc=0, lb=None, ub=None,
 stats.distributions.rv_continuous.fit_fr = fit_fr
 stats.distributions.rv_continuous.nnlf_fr = nnlf_fr
 stats.distributions.rv_continuous.expect = expect
-stats.distributions.rv_continuous.expect = expect_discrete
+stats.distributions.rv_discrete.expect = expect_discrete
 stats.distributions.beta_gen._fitstart = _fitstart_beta  #not tried out yet
 stats.distributions.poisson_gen._fitstart = _fitstart_poisson  #not tried out yet
 
