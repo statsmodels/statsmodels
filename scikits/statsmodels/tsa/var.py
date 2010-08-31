@@ -492,8 +492,8 @@ class AR(LikelihoodModel):
             params = retvals[0]
             params = self._transparams(params)
 #NOTE: constant vs. mean issue
-            if self.trendorder == 1:
-                params[0] = params[0]/(1-np.sum(params[1:]))
+#            if self.trendorder == 1:
+#                params[0] = params[0]/(1-np.sum(params[1:]))
 #        elif method == "umle":
 #TODO: move this stuff up to LikelihoodModel.fit
 #            minfunc = lambda params: -self.loglike(params)

@@ -28,10 +28,10 @@ Harvey uses Durbin and Koopman notation.
 from scipy import optimize
 import numpy as np
 from numpy import dot, identity, kron, log, zeros, pi, exp
-from numpy.linalg import inv
+from numpy.linalg import inv, pinv
 from scikits.statsmodels import chain_dot #Note that chain_dot is a bit slower
 from scikits.statsmodels.model import LikelihoodModel
-from scikits.statsmodels.regression import yule_walker
+from scikits.statsmodels.regression import yule_walker, GLS
 from scipy.linalg import block_diag
 from scikits.statsmodels.tsa.tsatools import lagmat
 
@@ -374,7 +374,7 @@ class ARMA(LikelihoodModel):
         arr = np.zeros((r,r))
         params_padded = np.zeros(r) # handle zero coefficients if necessary
         #NOTE: squeeze added for cg optimizer
-        params_padded[:p] = params[:p]
+        params_padded[:p] = params[k:p+k]
 #        arr[:,0] = params[:r]   # first r params are AR coeffs
         arr[:,0] = params_padded   # first p params are AR coeffs w/ short params
         arr[:-1,1:] = np.eye(r-1)
@@ -534,9 +534,8 @@ class ARMA(LikelihoodModel):
 #            newparams = arcoefs.copy()
             for j in range(p-1,0,-1):
                 a = arcoefs[j]
-#TODO: replace this with kiter, see AR model transparams
-                for k in range(j):
-                    tmp[k] = (arcoefs[k] + a * arcoefs[j-k-1])/(1-a**2)
+                for kiter in range(j):
+                    tmp[kiter] = (arcoefs[kiter]+a*arcoefs[j-kiter-1])/(1-a**2)
                 arcoefs[:j] = tmp[:j]
             invarcoefs = -log((1-arcoefs)/(1+arcoefs))
             newparams[k:k+p] = invarcoefs
@@ -546,8 +545,8 @@ class ARMA(LikelihoodModel):
 #            newparams = macoefs.copy()
             for j in range(q-1,0,-1):
                 b = macoefs[j]
-                for k in range(j):
-                    tmp[k] = (macoefs[k] - b * macoefs[j-k-1])/(1-b**2)
+                for kiter in range(j):
+                    tmp[kiter] = (macoefs[kiter]-b *macoefs[j-kiter-1])/(1-b**2)
                 macoefs[:j] = tmp[:j]
             invmacoefs = -log((1-macoefs)/(1+macoefs))
             newparams[k+p:k+p+q] = invmacoefs
@@ -558,11 +557,13 @@ class ARMA(LikelihoodModel):
 #TODO: see section 3.4.6 in Harvey for computing the derivatives in the
 # recursion itself.
         Z = self.Z
-        y = self.endog
+        y = self.endog.copy() #TODO: remove copy if you can
+        k = self.k
+        if k > 0:
+            y -= np.dot(self.exog, params[:k])
         nobs = self.nobs
         m = Z.shape[1] # r + k
-        alpha = zeros((m,1))
-        k = self.k
+        alpha = zeros((m,1)) # if constant (I-T)**-1 * c
         p = self.p
         q = self.q
         r = self.r
@@ -577,17 +578,26 @@ class ARMA(LikelihoodModel):
         T_mat = self.T(newparams)
         Q_0 = dot(inv(identity(m**2)-kron(T_mat,T_mat)),
                             dot(R_mat,R_mat.T).ravel('F'))
+#        Q_0 = dot(pinv(identity((m-k)**2)-kron(T_mat[k:,k:],
+#                    T_mat[k:,k:])), dot(R_mat[k:],R_mat[k:].T).ravel('F'))
         #TODO: above is only valid if Eigenvalues of T_mat are inside the
         # unit circle, if not then Q_0 = kappa * eye(m**2)
         # w/ kappa some large value say 1e7, but DK recommends not doing this
         # for a diffuse prior
-        Q_0 = Q_0.reshape(r,r,order='F') #TODO: should order be m,m if const?
+        Q_0 = Q_0.reshape(r,r,order='F')
+        #TODO: should order be m,m if const?
+#        if k >= 1:
+#            kappa = 1
+            # kappa = 1e6
+#            P = block_diag(identity(k)*kappa,Q_0)
+#        else:
+#            P = Q_0
         P = Q_0
         sigma2 = 0
         loglikelihood = 0
         v = zeros((nobs,1))
+#TODO: replace this with kiter, see AR model transparams
         F = zeros((nobs,1))
-        P = Q_0
         #NOTE: can only do quick recursions if Z is time-invariant
         #so could have recursions for pure ARMA vs ARMAX
         for i in xrange(int(nobs)):
@@ -660,8 +670,9 @@ class ARMA(LikelihoodModel):
             macoefs = start_params[k+p:k+p+q]
             # reparameterize
         else:
-            start_params = np.zeros((p+q+k))
+            start_params = zeros((p+q+k))
             endog = self.endog
+            exog = self.exog
 #TODO: don't forget constant and deterministic parts
 # tag all these parts on at the end.  Interested in time series properties.
 #TODO: replace this with a call to Conditional Sum of Squares Kalman Filter
@@ -676,6 +687,8 @@ class ARMA(LikelihoodModel):
             if p != 0:
                 arcoefs = yule_walker(endog, order=p)[0]
                 start_params[k:k+p] = arcoefs
+            if k != 0:
+                start_params[:k] += GLS(endog, exog).fit().params
 # inverse of reparameterization for Jones (1980)
         if transparams:
             start_params = self._invtransparams(start_params)
@@ -703,9 +716,6 @@ class ARMA(LikelihoodModel):
 #                invmacoefs = -log((1-newparams)/(1+newparams))
 #                start_params[k+p:k+p+q] = invmacoefs
 #
-
-        print start_params
-
 
 #        results = optimize.fmin_bfgs(loglike, start_params, gtol=1e-2,
 #                        full_output=1, maxiter=35, disp=1, norm=np.inf)
@@ -988,6 +998,7 @@ if __name__ == "__main__":
 
 # Stata gets [.7515029, .2266321, .9981944] with BFGS, but it's practically
 # there on the first iteration...how?
+#NOTE: CSS or method mentioned above for ARMA
 # with loglikelihood of -14171.91
 # our loglike gives -14171.92, so the problem is in the optimizer
 
