@@ -341,14 +341,19 @@ class ARMA(LikelihoodModel):
         r = max(p,q+1)
         if exog is not None:
             k = exog.shape[1]  # number of exogenous variables, incl. const.
-            Z = np.zeros((self.nobs, k+r))
-            Z[:,:k] = exog
-            Z[:,k] = 1.
+#            Z = np.zeros((self.nobs, k+r))
+#            Z[:,:k] = exog
+#            Z[:,k] = 1.
         else:
             k = 0
-            Z = np.zeros((self.nobs, r))
-            Z[:,0] = 1. # this is inefficient for no constant because
+#            Z = np.zeros((self.nobs, r))
+#            Z[:,0] = 1. # this is inefficient for no constant because
                         # z_i = z_j for all i,j
+        #NOTE: if exog is not included in the recursions then it doesn't
+        # need to include constant and exog variables
+        #TODO: could actually just be  1 x r
+        Z = np.zeros((self.nobs, r))
+        Z[:,0] = 1.
         self.Z = Z
         self.k = k
         #NOTE: above is for a stationary ARMA, no seasonality
@@ -378,7 +383,7 @@ class ARMA(LikelihoodModel):
 #        arr[:,0] = params[:r]   # first r params are AR coeffs
         arr[:,0] = params_padded   # first p params are AR coeffs w/ short params
         arr[:-1,1:] = np.eye(r-1)
-        arr = block_diag(np.eye(k),arr)
+#        arr = block_diag(np.eye(k),arr)
         return arr
 
     def R(self, params): # R is H in Hamilton
@@ -396,12 +401,12 @@ class ARMA(LikelihoodModel):
         q = self.q
         p = self.p
 #        arr = params[-r-1:-1].tolist()  # last r-2 to -1 params are MA coeffs
-        arr = np.zeros(r-1) # this allows zero coefficients
+        arr = np.zeros((r,1)) # this allows zero coefficients
 #NOTE: squeeze added because
-        arr[:q] = params[p:p+q]  # p to p+q short params are MA coeffs
-#        arr[0] = 1.
-        arr = np.hstack(([0]*k + [1.0] ,arr))[:,None]
-#        arr = np.asarray([0]*k + arr)[:,None]
+        arr[1:q,:] = params[p+k:p+k+q]  # p to p+q short params are MA coeffs
+        arr[0] = 1.0
+#        arr = np.hstack(([0]*k + [1.0] ,arr))[:,None]
+# above can remove extra axis if uncommented.
         return arr
 
     def loglike1(self, params):
@@ -429,7 +434,7 @@ class ARMA(LikelihoodModel):
         #TODO: alpha gets beta stacked on top of it for exog != None
 
         R_mat = self.R(params)
-        m = Z.shape[1] # r + k
+        m = Z.shape[1] # just r for now (might be r + k later on)
         T_mat = self.T(params)
         Q_0 = np.dot(inv(identity(m**2)-np.kron(T_mat,T_mat)),
                     np.dot(R_mat,R_mat.T).ravel('F'))
@@ -488,6 +493,8 @@ class ARMA(LikelihoodModel):
         """
         p,q,k = self.p, self.q, self.k
         newparams = np.zeros_like(params) # = params.copy() # no copy below
+        if k != 0:
+            newparams[:k] = params[:k]
             # AR Coeffs
         if p != 0:
             newparams[k:k+p] = ((1-exp(-params[k:k+p]))/(1+exp(-params[k:k+p]))).copy()
@@ -556,11 +563,10 @@ class ARMA(LikelihoodModel):
 
 #TODO: see section 3.4.6 in Harvey for computing the derivatives in the
 # recursion itself.
+#TODO: this won't work for time-varying parameters
         Z = self.Z
         y = self.endog.copy() #TODO: remove copy if you can
         k = self.k
-        if k > 0:
-            y -= np.dot(self.exog, params[:k])
         nobs = self.nobs
         m = Z.shape[1] # r + k
         alpha = zeros((m,1)) # if constant (I-T)**-1 * c
@@ -574,6 +580,8 @@ class ARMA(LikelihoodModel):
         else:
             newparams = params  # don't need a copy if not modified.
 
+        if k > 0:
+            y -= np.dot(self.exog, newparams[:k])
         R_mat = self.R(newparams)
         T_mat = self.T(newparams)
         Q_0 = dot(inv(identity(m**2)-kron(T_mat,T_mat)),
@@ -690,6 +698,7 @@ class ARMA(LikelihoodModel):
             if k != 0:
                 start_params[:k] += GLS(endog, exog).fit().params
 # inverse of reparameterization for Jones (1980)
+        print start_params
         if transparams:
             start_params = self._invtransparams(start_params)
 
