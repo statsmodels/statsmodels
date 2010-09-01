@@ -135,7 +135,7 @@ class AR(LikelihoodModel):
 # the rest are just linear fitted values (which is also what the KF
 # produces
         # array to hold result
-        y = self.endog
+        y = self.endog.copy()
         predictedvalues = np.zeros_like((y))
 
         # build T matrix, Transition Matrix
@@ -147,22 +147,16 @@ class AR(LikelihoodModel):
         T_mat = zeros((p,p))
         T_mat[:,0] = params[k:]
         T_mat[:-1,1:] = identity(p-1)
-        T_mat = block_diag(identity(k),T_mat)
 
-        R_mat = np.zeros((p+k,1))
-        R_mat[k] = 1 # robust?
+        R_mat = np.zeros((p,1))
+        R_mat[0] = 1
 
         # Initial State mean and variance
         alpha = zeros((p,1))
-        if k==1:    # if constant, initial state is assumed to be mu
-            alpha[0] = params[0]
-            predictedvalues[0] = alpha[0]
-        # the shape of alpha should be m x 1.
-        # where m is the number of states.
-        # does that mean that T = [[1,0],[1,T]] ?
+        if k==1:    # if constant, demean
+            y -= dot(self.exog, params[:k])
 
-# because this gives a singular matrix and it always will.
-        Q_0 = dot(inv(identity((p+k)**2)-kron(T_mat,T_mat)),dot(R_mat,
+        Q_0 = dot(inv(identity(p**2)-kron(T_mat,T_mat)),dot(R_mat,
                 R_mat.T)).ravel('F')
 
 #                order='F') #TODO: order might need to be p+k
