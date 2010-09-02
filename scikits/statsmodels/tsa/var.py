@@ -5,7 +5,8 @@ from __future__ import division
 import copy as COP
 import scipy as S
 import numpy as np
-from numpy import matlib as MAT, log, exp, dot, identity, zeros, kron
+from numpy import (matlib as MAT, log, exp, dot, identity, zeros, zeros_like,
+        kron, atleast_2d)
 from numpy.linalg import inv
 from scipy import linalg as LIN #TODO: get rid of this once cleaned up
 from scipy.linalg import block_diag
@@ -134,13 +135,14 @@ class AR(LikelihoodModel):
 # constant value and then y_t is always alpha[0] at the next step
 # the rest are just linear fitted values (which is also what the KF
 # produces
-        # array to hold result
-        y = self.endog.copy()
-        predictedvalues = np.zeros_like((y))
 
         # build T matrix, Transition Matrix
         if self._results is None:
             raise ValueError("You must fit the model first")
+        # array to hold result
+        y = self.endog.copy()
+        predictedvalues = zeros_like((y))
+
         params = self._results.params
         p = self.laglen
         k = self.trendorder
@@ -148,21 +150,24 @@ class AR(LikelihoodModel):
         T_mat[:,0] = params[k:]
         T_mat[:-1,1:] = identity(p-1)
 
-        R_mat = np.zeros((p,1))
+        R_mat = zeros((p,1))
         R_mat[0] = 1
 
         # Initial State mean and variance
         alpha = zeros((p,1))
-        if k==1:    # if constant, demean
-            y -= dot(self.exog, params[:k])
+        mu = 0
+        if k>=1:    # if constant, demean, #TODO: handle higher trendorders
+            mu = params[0]/(1-np.sum(params[k:]))   # only for constant-only
+                                           # and exog
+            y -= mu
 
         Q_0 = dot(inv(identity(p**2)-kron(T_mat,T_mat)),dot(R_mat,
-                R_mat.T)).ravel('F')
+                R_mat.T).ravel('F'))
 
-#                order='F') #TODO: order might need to be p+k
+        Q_0 = Q_0.reshape(p,p, order='F') #TODO: order might need to be p+k
         P = Q_0
-        Z_mat = np.array([1] + [1]*k + [0] * (p-1-k))  # TODO: change for exog
-        for i in xrange(1,p): # iterate p-1 times to get presample values
+        Z_mat = atleast_2d([1] + [0] * (p-k))  # TODO: change for exog
+        for i in xrange(p): # iterate p-1 times to get presample values
             v_mat = y[i] - dot(Z_mat,alpha)
             F_mat = dot(dot(Z_mat, P), Z_mat.T)
             Finv = 1./F_mat # inv. always scalar
@@ -170,10 +175,11 @@ class AR(LikelihoodModel):
             # update state
             alpha = dot(T_mat, alpha) + dot(K,v_mat)
             L = T_mat - dot(K,Z_mat)
-            P = dot(dot(T_mat, P), L.T)
-            P[0,0] += 1 # for MA part
-            predictedvalues[p] = alpha[0]
-        predictedvalues[p:] = dot(self.X, params)
+            P = dot(dot(T_mat, P), L.T) + dot(R_mat, R_mat.T)
+#            P[0,0] += 1 # for MA part
+            predictedvalues[i+1] = dot(Z_mat,alpha)
+        predictedvalues[p:] = dot(self.X, params)[:,None]
+        predictedvalues[:p] += mu # does nothing if no constant
         return predictedvalues
 
 
@@ -340,6 +346,7 @@ class AR(LikelihoodModel):
         self.trendorder = trendorder
         return X
 
+#TODO: get rid of demean option
     def fit(self, maxlag=None, method='cmle', ic=None, trend='c', demean=False,
             penalty=False, start_params=None, solver=None, maxiter=35,
             full_output=1, disp=1, callback=None, **kwargs):

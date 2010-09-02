@@ -564,12 +564,9 @@ class ARMA(LikelihoodModel):
 #TODO: see section 3.4.6 in Harvey for computing the derivatives in the
 # recursion itself.
 #TODO: this won't work for time-varying parameters
-        Z = self.Z
         y = self.endog.copy() #TODO: remove copy if you can
         k = self.k
         nobs = self.nobs
-        m = Z.shape[1] # r + k
-        alpha = zeros((m,1)) # if constant (I-T)**-1 * c
         p = self.p
         q = self.q
         r = self.r
@@ -581,9 +578,16 @@ class ARMA(LikelihoodModel):
             newparams = params  # don't need a copy if not modified.
 
         if k > 0:
-            y -= np.dot(self.exog, newparams[:k])
+            y -= dot(self.exog, newparams[:k])
+
+        # system matrices
+        Z = self.Z
+        m = Z.shape[1] # r + k
         R_mat = self.R(newparams)
         T_mat = self.T(newparams)
+
+        # initial state and its variance
+        alpha = zeros((m,1)) # if constant (I-T)**-1 * c
         Q_0 = dot(inv(identity(m**2)-kron(T_mat,T_mat)),
                             dot(R_mat,R_mat.T).ravel('F'))
 #        Q_0 = dot(pinv(identity((m-k)**2)-kron(T_mat[k:,k:],
