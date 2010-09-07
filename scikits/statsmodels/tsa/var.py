@@ -121,31 +121,50 @@ class AR(LikelihoodModel):
         newparams[k:k+p] = invarcoefs
         return newparams
 
-    def predict(self, n=0):
+    def predict(self, n=-1, start=0, method='dynamic'):
         """
-        If n == 0, returns fitted values.
+        Returns in-sample prediction or forecasts.
 
-        Not yet implemented.
-        If n > 0.  Returns in sample
-        prediction plus one-step ahead dynamic .forecasts
+        n : int
+            Number of periods after start to forecast.  If n==-1, returns in-
+            sample forecast starting at `start`.
+        start : int
+            Observation number at which to start forecasting.  If start==-1,
+            forecasting starts at the end of the sample.
+        method : string {'dynamic', 'static'}
+            If method is 'dynamic', then fitted values are used in place of
+            observed 'endog' to make forecasts.  If 'static', observed 'endog'
+            are used.
+
+        Notes
+        -----
+        The linear Gaussian Kalman filter is used to return pre-sample fitted
+        values.  The initial state is assumed to be a zero vector with the
+        variance given by ...
         """
-        #TODO: what kind of options, dynamic, one-step, etc.
-#        for the presample, this is just the kalman filter
-# if the model is fit with a constant then the initial state is the
-# constant value and then y_t is always alpha[0] at the next step
-# the rest are just linear fitted values (which is also what the KF
-# produces
-
-        # build T matrix, Transition Matrix
         if self._results is None:
             raise ValueError("You must fit the model first")
+
+        if n == 0:
+            return np.array([])
+
         # array to hold result
         y = self.endog.copy()
-        predictedvalues = zeros_like((y))
+        nobs = int(self.nobs)
+
+        if n == -1:
+            if start != -1 and start < nobs:
+                predictedvalues = zeros((nobs-start))
+            else:
+                return np.array([])
+        else:
+            predictedvalues = zeros((n))
 
         params = self._results.params
         p = self.laglen
         k = self.trendorder
+
+        # build system matrices
         T_mat = zeros((p,p))
         T_mat[:,0] = params[k:]
         T_mat[:-1,1:] = identity(p-1)
@@ -167,7 +186,7 @@ class AR(LikelihoodModel):
         Q_0 = Q_0.reshape(p,p, order='F') #TODO: order might need to be p+k
         P = Q_0
         Z_mat = atleast_2d([1] + [0] * (p-k))  # TODO: change for exog
-        for i in xrange(p): # iterate p-1 times to get presample values
+        for i in xrange(start,p): #iterate p-1 times to fit presample
             v_mat = y[i] - dot(Z_mat,alpha)
             F_mat = dot(dot(Z_mat, P), Z_mat.T)
             Finv = 1./F_mat # inv. always scalar
@@ -176,10 +195,34 @@ class AR(LikelihoodModel):
             alpha = dot(T_mat, alpha) + dot(K,v_mat)
             L = T_mat - dot(K,Z_mat)
             P = dot(dot(T_mat, P), L.T) + dot(R_mat, R_mat.T)
-#            P[0,0] += 1 # for MA part
-            predictedvalues[i+1] = dot(Z_mat,alpha)
-        predictedvalues[p:] = dot(self.X, params)[:,None]
-        predictedvalues[:p] += mu # does nothing if no constant
+#            P[0,0] += 1 # for MA part, which is faster?
+            predictedvalues[i+1-start] = dot(Z_mat,alpha)
+        if start <= p and (n > p - start or n == -1):
+            if n == -1:
+                predictedvalues[p-start:] = dot(self.X, params)[:,None]
+            elif n-(p-start) <= nobs-p:
+                predictedvalues[p-start:] = dot(self.X,
+                        params)[:nobs-(p-start),None]
+            else:
+                predictedvalues[p-start:nobs-(p-start)] = dot(self.X,
+                        params)[:,None] # maybe p-start) - 1?
+            predictedvalues[start:p] += mu # does nothing if no constant
+        elif start <= nobs:
+            if n <= nobs-start:
+                predictedvalues[:] = dot(self.X,
+                        params)[start:n+start,None]
+            else:
+                predictedvalues[:nobs-start] = dot(self.X,
+                        params)[start:,None]
+        elif:
+            pass # don't need to cover any more cases?
+#NOTE: it only makes sense to forecast beyond nobs+1 if exog is None
+        # out of sample forecasting
+#NOTE: stopped here
+        if start > nobs or start + n > nobs:
+        for i in range(nobs,nobs+n):
+            pass
+
         return predictedvalues
 
 
