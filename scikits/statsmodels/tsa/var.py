@@ -6,7 +6,7 @@ import copy as COP
 import scipy as S
 import numpy as np
 from numpy import (matlib as MAT, log, exp, dot, identity, zeros, zeros_like,
-        kron, atleast_2d)
+        kron, atleast_2d, atleast_1d)
 from numpy.linalg import inv
 from scipy import linalg as LIN #TODO: get rid of this once cleaned up
 from scipy.linalg import block_diag
@@ -121,7 +121,8 @@ class AR(LikelihoodModel):
         newparams[k:k+p] = invarcoefs
         return newparams
 
-    def predict(self, n=-1, start=0, method='dynamic'):
+    def predict(self, n=-1, start=0, method='dynamic', resid=False,
+            confint=False):
         """
         Returns in-sample prediction or forecasts.
 
@@ -135,6 +136,20 @@ class AR(LikelihoodModel):
             If method is 'dynamic', then fitted values are used in place of
             observed 'endog' to make forecasts.  If 'static', observed 'endog'
             are used.
+        resid : bool
+            Whether or not to return the residuals.
+        confint : bool, float
+            Whether to return confidence intervals.  If `confint` == True,
+            95 % confidence intervals are returned.  Else if `confint` is a
+            float, then it is assumed to be the alpha value of the confidence
+            interval.  That is confint == .05 returns a 95% confidence
+            interval, and .10 would return a 90% confidence interval.
+
+        Returns
+        -------
+        predicted values : array
+        residuals : array, optional
+        confidence intervals : array, optional
 
         Notes
         -----
@@ -151,6 +166,9 @@ class AR(LikelihoodModel):
         # array to hold result
         y = self.endog.copy()
         nobs = int(self.nobs)
+
+        if start < 0:
+            start = nobs + start # convert negative indexing
 
         if n == -1:
             if start != -1 and start < nobs:
@@ -199,30 +217,55 @@ class AR(LikelihoodModel):
             predictedvalues[i+1-start] = dot(Z_mat,alpha)
         if start <= p and (n > p - start or n == -1):
             if n == -1:
-                predictedvalues[p-start:] = dot(self.X, params)[:,None]
+                predictedvalues[p-start:] = dot(self.X, params)
             elif n-(p-start) <= nobs-p:
                 predictedvalues[p-start:] = dot(self.X,
-                        params)[:nobs-(p-start),None]
+                        params)[:nobs-(p-start)]
             else:
                 predictedvalues[p-start:nobs-(p-start)] = dot(self.X,
-                        params)[:,None] # maybe p-start) - 1?
+                        params) # maybe p-start) - 1?
             predictedvalues[start:p] += mu # does nothing if no constant
         elif start <= nobs:
             if n <= nobs-start:
                 predictedvalues[:] = dot(self.X,
-                        params)[start:n+start,None]
+                        params)[start:n+start]
             else:
                 predictedvalues[:nobs-start] = dot(self.X,
-                        params)[start:,None]
-        elif:
+                        params)[start-p:]
+        else:
             pass # don't need to cover any more cases?
 #NOTE: it only makes sense to forecast beyond nobs+1 if exog is None
         # out of sample forecasting
 #NOTE: stopped here
         if start > nobs or start + n > nobs:
-        for i in range(nobs,nobs+n):
-            pass
-
+            endog = self.endog
+            if start < nobs:
+                for i in range(nobs-start,nobs-start+p):
+                # mixture of static/dynamic
+                    predictedvalues[i] = np.sum(np.r_[1,
+                        predictedvalues[nobs-start:i][::-1],
+                        atleast_1d(endog[-p+i-nobs+start:][::-1].squeeze())] *\
+                                params)
+                # dynamic forecasts
+                for i in range(nobs-start+p,n):
+                    predictedvalues[i] = np.sum(np.r_[1,
+                        predictedvalues[i-p:i][::-1]] * params)
+            else:
+                tmp = zeros((start-nobs)) # still calc interim values
+                for i in range(p):
+                    # mixed static/dynamic
+                    tmp[i] = np.sum(np.r_[1, tmp[:i][::-1],
+                        endog[-p+i:][::-1]] * params)
+                for i in range(p,start-nobs):
+                    tmp[i] = np.sum(np.r_[1, tmp[i-p:i][::-1]] * params)
+                for i in range(p):
+                    # mixed tmp/actual
+                    predictedvalues[i] = np.sum(np.r_[1,
+                        predictedvalues[:i][::-1], tmp[-p+i:][::-1]] *\
+                                params)
+                for i in range(p,n):
+                    predictedvalues[i] = np.sum(np.r_[1,
+                        predictedvalues[i-p:i][::-1]] * params)
         return predictedvalues
 
 
