@@ -17,7 +17,8 @@ class CheckAR(object):
     def test_bse(self):
         bse = np.sqrt(np.diag(self.res1.cov_params())) # no dof correction
                                             # for compatability with Stata
-        assert_almost_equal(bse, self.res2.bse, DECIMAL_6)
+        assert_almost_equal(bse, self.res2.bse_stata, DECIMAL_6)
+        assert_almost_equal(self.res1.bse, self.res2.bse_gretl, DECIMAL_6)
 
     def test_llf(self):
         assert_almost_equal(self.res1.llf, self.res2.llf, DECIMAL_6)

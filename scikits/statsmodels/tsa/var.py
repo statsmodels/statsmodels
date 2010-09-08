@@ -130,8 +130,9 @@ class AR(LikelihoodModel):
             Number of periods after start to forecast.  If n==-1, returns in-
             sample forecast starting at `start`.
         start : int
-            Observation number at which to start forecasting.  If start==-1,
-            forecasting starts at the end of the sample.
+            Observation number at which to start forecasting, ie., the first
+            forecast is for start+1.  If start==-1, forecasting starts at the
+            end of the sample.
         method : string {'dynamic', 'static'}
             If method is 'dynamic', then fitted values are used in place of
             observed 'endog' to make forecasts.  If 'static', observed 'endog'
@@ -160,15 +161,22 @@ class AR(LikelihoodModel):
         if self._results is None:
             raise ValueError("You must fit the model first")
 
-        if n == 0:
+        if n == 0 or n==start:
             return np.array([])
 
-        # array to hold result
         y = self.endog.copy()
         nobs = int(self.nobs)
 
         if start < 0:
             start = nobs + start # convert negative indexing
+
+        params = self._results.params
+        p = self.laglen
+        k = self.trendorder
+        method = self.method
+        if method != 'mle':
+            if start == 0:
+                start = p # can't do presample fit for != 'mle'
 
         if n == -1:
             if start != -1 and start < nobs:
@@ -178,43 +186,40 @@ class AR(LikelihoodModel):
         else:
             predictedvalues = zeros((n))
 
-        params = self._results.params
-        p = self.laglen
-        k = self.trendorder
+        mu = 0 # overwritten for 'mle' with constant
+        if method == 'mle':
+            # build system matrices
+            T_mat = zeros((p,p))
+            T_mat[:,0] = params[k:]
+            T_mat[:-1,1:] = identity(p-1)
 
-        # build system matrices
-        T_mat = zeros((p,p))
-        T_mat[:,0] = params[k:]
-        T_mat[:-1,1:] = identity(p-1)
+            R_mat = zeros((p,1))
+            R_mat[0] = 1
 
-        R_mat = zeros((p,1))
-        R_mat[0] = 1
-
-        # Initial State mean and variance
-        alpha = zeros((p,1))
-        mu = 0
-        if k>=1:    # if constant, demean, #TODO: handle higher trendorders
-            mu = params[0]/(1-np.sum(params[k:]))   # only for constant-only
+            # Initial State mean and variance
+            alpha = zeros((p,1))
+            if k>=1:    # if constant, demean, #TODO: handle higher trendorders
+                mu = params[0]/(1-np.sum(params[k:]))   # only for constant-only
                                            # and exog
-            y -= mu
+                y -= mu
 
-        Q_0 = dot(inv(identity(p**2)-kron(T_mat,T_mat)),dot(R_mat,
-                R_mat.T).ravel('F'))
+            Q_0 = dot(inv(identity(p**2)-kron(T_mat,T_mat)),dot(R_mat,
+                    R_mat.T).ravel('F'))
 
-        Q_0 = Q_0.reshape(p,p, order='F') #TODO: order might need to be p+k
-        P = Q_0
-        Z_mat = atleast_2d([1] + [0] * (p-k))  # TODO: change for exog
-        for i in xrange(start,p): #iterate p-1 times to fit presample
-            v_mat = y[i] - dot(Z_mat,alpha)
-            F_mat = dot(dot(Z_mat, P), Z_mat.T)
-            Finv = 1./F_mat # inv. always scalar
-            K = dot(dot(dot(T_mat,P),Z_mat.T),Finv)
-            # update state
-            alpha = dot(T_mat, alpha) + dot(K,v_mat)
-            L = T_mat - dot(K,Z_mat)
-            P = dot(dot(T_mat, P), L.T) + dot(R_mat, R_mat.T)
-#            P[0,0] += 1 # for MA part, which is faster?
-            predictedvalues[i+1-start] = dot(Z_mat,alpha)
+            Q_0 = Q_0.reshape(p,p, order='F') #TODO: order might need to be p+k
+            P = Q_0
+            Z_mat = atleast_2d([1] + [0] * (p-k))  # TODO: change for exog
+            for i in xrange(start,p): #iterate p-1 times to fit presample
+                v_mat = y[i] - dot(Z_mat,alpha)
+                F_mat = dot(dot(Z_mat, P), Z_mat.T)
+                Finv = 1./F_mat # inv. always scalar
+                K = dot(dot(dot(T_mat,P),Z_mat.T),Finv)
+                # update state
+                alpha = dot(T_mat, alpha) + dot(K,v_mat)
+                L = T_mat - dot(K,Z_mat)
+                P = dot(dot(T_mat, P), L.T) + dot(R_mat, R_mat.T)
+    #            P[0,0] += 1 # for MA part, which is faster?
+                predictedvalues[i+1-start] = dot(Z_mat,alpha)
         if start <= p and (n > p - start or n == -1):
             if n == -1:
                 predictedvalues[p-start:] = dot(self.X, params)
@@ -235,8 +240,6 @@ class AR(LikelihoodModel):
         else:
             pass # don't need to cover any more cases?
 #NOTE: it only makes sense to forecast beyond nobs+1 if exog is None
-        # out of sample forecasting
-#NOTE: stopped here
         if start > nobs or start + n > nobs:
             endog = self.endog
             if start < nobs:
@@ -433,8 +436,8 @@ class AR(LikelihoodModel):
         return X
 
 #TODO: get rid of demean option
-    def fit(self, maxlag=None, method='cmle', ic=None, trend='c', demean=False,
-            penalty=False, start_params=None, solver=None, maxiter=35,
+    def fit(self, maxlag=None, method='cmle', ic=None, trend='c',
+            start_params=None, solver=None, maxiter=35,
             full_output=1, disp=1, callback=None, **kwargs):
         """
         Fit the unconditional maximum likelihood of an AR(p) process.
@@ -460,19 +463,11 @@ class AR(LikelihoodModel):
             The maximum number of function evaluations. Default is 35.
         tol = float
             The convergence tolerance.  Default is 1e-08.
-        penalty : bool
-            Whether or not to use a penalty function.  Default is False,
-            though this is ignored at the moment and the penalty is always
-            used if appropriate.  See notes.
 
         Notes
         -----
-        The unconstrained solvers use a quadratic penalty (regardless if
-        penalty kwd is True or False) in order to ensure that the solution
-        stays within (-1,1).  The constrained solvers default to using a bound
-        of (-.999,.999).
-        This is no longer accurate or needed since we use the
-        reparameterization of Jones (1980)
+        The AR parameters are forced to be invertible using the
+        reparameterization suggested in Jones (1980).
 
         See also
         --------
@@ -482,21 +477,15 @@ class AR(LikelihoodModel):
         The below is the docstring from
         scikits.statsmodels.LikelihoodModel.fit
         """
-        self.penalty = penalty
         method = method.lower()
-        if method not in ['cmle','ar','mle']:
+        if method not in ['cmle','yw','mle']:
             raise ValueError("Method %s not recognized" % method)
         self.method = method
         nobs = self.nobs
         if maxlag is None:
             maxlag = int(round(12*(nobs/100.)**(1/4.)))
-        if demean:
-            endog = self.endog.copy() # have to copy if demeaning
-            mean = endog.mean()
-            endog -= mean
-            self.endog_mean = mean
-        else:
-            endog = self.endog
+
+        endog = self.endog
         exog = self.exog
         laglen = maxlag # stays this if ic is None
 
@@ -730,6 +719,10 @@ class ARResults(LikelihoodModelResults):
     @cache_readonly
     def roots(self):
         return np.roots(np.r_[1, -self.params[1:]])
+
+    @cache_readonly
+    def fittedvalues(self):
+        return self.model.predict()
 
 class ARIMA(LikelihoodModel):
     def __init__(self, endog, exog=None):
