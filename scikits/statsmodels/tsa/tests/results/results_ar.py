@@ -71,11 +71,37 @@ class ARResultsOLS(object):
 
 #NOTE: predictions were taken from gretl, but agree with Stata
             # test predict
+#TODO: remove one of the files
+            filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                "AROLSConstantPredict2.csv")
+            predictresults = np.loadtxt(filename)
             # cases - in sample predict
             # n = -1, start = 0 (fitted values)
-            self.FVOLS = pass
+            self.FVOLSnneg1start0 = None
 
-            # forecasting
+            # n=-1, start=9
+            self.FVOLSnneg1start9 = None
+
+            # n=-1, start=100
+            self.FVOLSnneg1start100 = None
+
+            # n = 200, start = 0
+            self.FVOLSn200start0 = None
+            # n = 200, start = 200
+            self.FVOLSn200start200 = None
+            # n = 200, start = -109 use above
+            self.FVOLSn200startneg109 = None
+            # n = 100, start = 325, post-sample forecasting
+            self.FVOLSn100start325 = None
+            # n = 301, start = 9
+            self.FVOLSn301start9 = None
+            # n = 301, start = 0
+            self.FVOLSn301start0 = None
+            # n = 4, start = 312
+            self.FVOLSn4start312 = None
+            # n = 15, start = 312
+            self.FVOLSn15start312 = None
+
 
         elif not constant:
             self.params = [1.19582389902985, -0.40591818219637,

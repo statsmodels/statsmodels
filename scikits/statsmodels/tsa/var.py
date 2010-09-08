@@ -130,9 +130,11 @@ class AR(LikelihoodModel):
             Number of periods after start to forecast.  If n==-1, returns in-
             sample forecast starting at `start`.
         start : int
-            Observation number at which to start forecasting, ie., the first
-            forecast is for start+1.  If start==-1, forecasting starts at the
-            end of the sample.
+            Zero-indexed observation number at which to start forecasting, ie.,
+            the first forecast is start.  If start==-1, forecasting starts from
+            the end of the sample.  If the model is fit using 'cmle' or 'yw',
+            `start` cannot be less than `laglen`.  If `start` < `laglen` for
+            'cmle' and 'yw', then `start` is set equal to `laglen`.
         method : string {'dynamic', 'static'}
             If method is 'dynamic', then fitted values are used in place of
             observed 'endog' to make forecasts.  If 'static', observed 'endog'
@@ -161,7 +163,7 @@ class AR(LikelihoodModel):
         if self._results is None:
             raise ValueError("You must fit the model first")
 
-        if n == 0 or n==start:
+        if n == 0 or (n==-1 and start==-1):
             return np.array([])
 
         y = self.endog.copy()
@@ -181,6 +183,7 @@ class AR(LikelihoodModel):
         if n == -1:
             if start != -1 and start < nobs:
                 predictedvalues = zeros((nobs-start))
+                n = nobs-start
             else:
                 return np.array([])
         else:
@@ -220,12 +223,12 @@ class AR(LikelihoodModel):
                 P = dot(dot(T_mat, P), L.T) + dot(R_mat, R_mat.T)
     #            P[0,0] += 1 # for MA part, which is faster?
                 predictedvalues[i+1-start] = dot(Z_mat,alpha)
-        if start <= p and (n > p - start or n == -1):
+        if start < p and (n > p - start or n == -1):
             if n == -1:
                 predictedvalues[p-start:] = dot(self.X, params)
             elif n-(p-start) <= nobs-p:
                 predictedvalues[p-start:] = dot(self.X,
-                        params)[:nobs-(p-start)]
+                        params)[:nobs-(p-start)] #start:nobs-p?
             else:
                 predictedvalues[p-start:nobs-(p-start)] = dot(self.X,
                         params) # maybe p-start) - 1?
@@ -233,41 +236,74 @@ class AR(LikelihoodModel):
         elif start <= nobs:
             if n <= nobs-start:
                 predictedvalues[:] = dot(self.X,
-                        params)[start:n+start]
-            else:
+#                        params)[start:n+start]
+                        params)[start-p:n+start-p]
+            else: # right now this handles when start == p only?
                 predictedvalues[:nobs-start] = dot(self.X,
                         params)[start-p:]
         else:
-            pass # don't need to cover any more cases?
+#            predictedvalues[:nobs-start] - dot(self.X,params)[p:]
+            pass
+
 #NOTE: it only makes sense to forecast beyond nobs+1 if exog is None
-        if start > nobs or start + n > nobs:
+        if start + n > nobs:
             endog = self.endog
             if start < nobs:
-                for i in range(nobs-start,nobs-start+p):
+                if n-(nobs-start) < p:
+                    endrange = n
+                else:
+                    endrange = nobs-start+p
+                for i in range(nobs-start,endrange):
                 # mixture of static/dynamic
-                    predictedvalues[i] = np.sum(np.r_[1,
+                    predictedvalues[i] = np.sum(np.r_[[1]*k,
                         predictedvalues[nobs-start:i][::-1],
                         atleast_1d(endog[-p+i-nobs+start:][::-1].squeeze())] *\
                                 params)
                 # dynamic forecasts
                 for i in range(nobs-start+p,n):
-                    predictedvalues[i] = np.sum(np.r_[1,
+                    predictedvalues[i] = np.sum(np.r_[[1]*k,
                         predictedvalues[i-p:i][::-1]] * params)
-            else:
+            else: # start > nobs
+# if start < nobs + p?
                 tmp = zeros((start-nobs)) # still calc interim values
-                for i in range(p):
+# this is only the range for
+                if start-nobs < p:
+                    endrange = start-nobs
+                else:
+                    endrange = p
+                for i in range(endrange):
                     # mixed static/dynamic
-                    tmp[i] = np.sum(np.r_[1, tmp[:i][::-1],
-                        endog[-p+i:][::-1]] * params)
+                    tmp[i] = np.sum(np.r_[[1]*k, tmp[:i][::-1],
+                            atleast_1d(endog[-p+i:][::-1].squeeze())] * params)
                 for i in range(p,start-nobs):
-                    tmp[i] = np.sum(np.r_[1, tmp[i-p:i][::-1]] * params)
-                for i in range(p):
-                    # mixed tmp/actual
-                    predictedvalues[i] = np.sum(np.r_[1,
-                        predictedvalues[:i][::-1], tmp[-p+i:][::-1]] *\
-                                params)
+                    tmp[i] = np.sum(np.r_[[1]*k, tmp[i-p:i][::-1]] * params)
+                if start - nobs > p:
+                    for i in range(p):
+                        # mixed tmp/actual
+                        predictedvalues[i] = np.sum(np.r_[[1]*k,
+                            predictedvalues[:i][::-1],
+                            atleast_1d(tmp[-p+i:][::-1].squeeze())] * params)
+                else:
+                    endtmp = len(tmp)
+                    if n < p:
+                        endrange = n
+                    else:
+                        endrange = p-endtmp
+                    for i in range(endrange):
+                        # mixed endog/tmp/actual
+                        predictedvalues[i] = np.sum(np.r_[[1]*k,
+                            predictedvalues[:i][::-1],
+                            atleast_1d(tmp[-p+i:][::-1].squeeze()),
+                            atleast_1d(endog[-\
+                            (p-i-endtmp):][::-1].squeeze())] * params)
+                    if n > endrange:
+                        for i in range(endrange,p):
+                            # mixed tmp/actual
+                            predictedvalues[i] = np.sum(np.r_[[1]*k,
+                                predictedvalues[:i][::-1],
+                                atleast_1d(tmp[-p+i:][::-1].squeeze())] * params)
                 for i in range(p,n):
-                    predictedvalues[i] = np.sum(np.r_[1,
+                    predictedvalues[i] = np.sum(np.r_[[1]*k,
                         predictedvalues[i-p:i][::-1]] * params)
         return predictedvalues
 
@@ -294,7 +330,6 @@ class AR(LikelihoodModel):
             return -avobs/2 * (np.log(2*np.pi) + np.log(sigma2)) -\
                     ssr/(2*sigma2)
         endog = self.endog
-        penalty = self.penalty
         laglen = self.laglen
 
         if isinstance(params,tuple):
@@ -344,14 +379,6 @@ class AR(LikelihoodModel):
         logdet = np_slogdet(Vpinv)[1] #TODO: add check for singularity
         loglike = -1/2.*(nobs*(np.log(2*np.pi) + np.log(sigma2)) - \
                 logdet + diffpVpinv/sigma2 + ssr/sigma2)
-
-        #NOTE: since we reparameterize, the penalty shouldn't be included
-#        if usepenalty:
-        # subtract a quadratic penalty since we min the negative of loglike
-        #NOTE: penalty coefficient should increase with iterations
-        # this uses a static one of 1e3
-#            print "Penalized!"
-#            loglike -= 1000 *np.sum((mask*params)**2)
         return loglike
 
     def _R(self, params):
