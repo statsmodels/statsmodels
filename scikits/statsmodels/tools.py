@@ -38,11 +38,14 @@ def drop_missing(Y,X=None, axis=1):
     -----
     If either Y or X is 1d, it is reshaped to be 2d.
     """
-    Y = np.atleast_2d(Y)
+    Y = np.asarray(Y)
+    if Y.ndim == 1:
+        Y = Y[:,None]
     if X is not None:
-        X = np.atleast_2d(X)
-
-        keepidx = np.logical_and(np.isnan(Y).any(axis),np.isnan(X).any(axis))
+        X = np.array(X)
+        if X.ndim == 1:
+            X = X[:,None]
+        keepidx = np.logical_and(~np.isnan(Y).any(axis),~np.isnan(X).any(axis))
         return Y[keepidx], X[keepidx]
     else:
         keepidx = ~np.isnany(Y)
