@@ -48,7 +48,7 @@ def drop_missing(Y,X=None, axis=1):
         keepidx = np.logical_and(~np.isnan(Y).any(axis),~np.isnan(X).any(axis))
         return Y[keepidx], X[keepidx]
     else:
-        keepidx = ~np.isnany(Y)
+        keepidx = ~np.isnan(Y)
         return Y[keepidx]
 
 #TODO: needs to better preserve dtype and be more flexible
