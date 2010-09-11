@@ -128,7 +128,39 @@ class ARResultsOLS(object):
 #            self.hqic =  8.367215591385756
 #            self.aic =  8.322747818577421
             self.fpe =  241.0221316614273
-            self.FVOLS = None
+            filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                "AROLSNoConstantPredict.csv")
+            predictresults = np.loadtxt(filename)
+            fv = predictresults[:300,0]
+            pv = predictresults[300:,1]
+            pv_lb = predictresults[300:,2]
+            pv_ub = predictresults[300:,3]
+            pv_se = predictresults[300:,4]
+            del predictresults
+
+            # cases - in sample predict
+            # n = -1, start = 0 (fitted values)
+            self.FVOLSnneg1start0 = fv
+            # n=-1, start=9
+            self.FVOLSnneg1start9 = fv
+            # n=-1, start=100
+            self.FVOLSnneg1start100 = fv[100-9:]
+            # n = 200, start = 0
+            self.FVOLSn200start0 = fv[:200]
+            # n = 200, start = 200
+            self.FVOLSn200start200 = np.hstack((fv[200-9:],pv[:100-9]))
+            # n = 200, start = -109 use above
+            self.FVOLSn200startneg109 = self.FVOLSn200start200
+            # n = 100, start = 325, post-sample forecasting
+            self.FVOLSn100start325 = pv[16:]
+            # n = 301, start = 9
+            self.FVOLSn301start9 = np.hstack((fv,pv[0]))
+            # n = 301, start = 0
+            self.FVOLSn301start0 = self.FVOLSn301start9
+            # n = 4, start = 312
+            self.FVOLSn4start312 = pv[3:7]
+            # n = 15, start = 312
+            self.FVOLSn15start312 = pv[3:18]
 
 
 class ARResultsMLE(object):
