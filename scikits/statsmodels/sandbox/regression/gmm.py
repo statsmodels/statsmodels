@@ -37,7 +37,7 @@ class IV2SLS(LikelihoodModel):
         ztx = np.dot(z.T, x)
         xhatparams = np.linalg.solve(ztz, ztx)
         print 'x.T.shape, xhatparams.shape', x.shape, xhatparams.shape
-        F = xhat = np.dot(x, xhatparams)
+        F = xhat = np.dot(z, xhatparams)
         FtF = np.dot(F.T, F)
         Ftx = np.dot(F.T, x)
         Fty = np.dot(F.T, y)
@@ -378,7 +378,7 @@ class GMM(object):
         momcond = self.momcond
 
         if start_weights is None:
-            w = np.eye(len(start))
+            w = np.eye(self.nmoms)
         else:
             w = start_weights
 
@@ -574,7 +574,7 @@ def momcondIVLS(params, endog, exog, instrum):
 
 if __name__ == '__main__':
 
-    exampledata = 'iv' #'ols'
+    exampledata = 'ivfake' #'ols'
     nobs = nsample = 5000
     sige = 10
 
@@ -600,11 +600,27 @@ if __name__ == '__main__':
         instrument = np.column_stack([z1, z2, z3, z4])
         return endog, exog, instrument
 
+    def sample_ivfake(exog):
+        X = exog
+        e = sige * np.random.normal(size=nobs)
+        endog = np.dot(X, beta) + e
+        #X[:,0] += 0.01 * e
+        #z1 = X.sum(1) + np.random.normal(size=nobs)
+        #z2 = X[:,1]
+        z3 = (np.dot(X, np.array([2,1, 0])) +
+                        sige/2. * np.random.normal(size=nobs))
+        z4 = X[:,1] + np.random.normal(size=nobs)
+        instrument = np.column_stack([X[:,:2], z3, z4, X[:,-1]]) #last is constant
+        return endog, exog, instrument
+
+
     if exampledata == 'ols':
         endog, exog, _ = sample_ols(X)
         instrument = exog
-    else:
+    elif exampledata == 'iv':
         endog, exog, instrument = sample_iv(exog)
+    elif exampledata == 'ivfake':
+        endog, exog, instrument = sample_ivfake(exog)
 
 
 
