@@ -5,7 +5,7 @@ from scipy import optimize
 import scikits.statsmodels as sm
 from scikits.statsmodels.sandbox.regression.numdiff import approx_fprime1, approx_hess
 from scikits.statsmodels.model import LikelihoodModel, LikelihoodModelResults
-from scikits.statsmodels.regression import RegressionResults
+from scikits.statsmodels.regression import RegressionResults, OLS
 
 
 def maxabs(x):
@@ -79,6 +79,9 @@ class IV2SLS(LikelihoodModel):
         else:
             return np.dot(exog, params)
 
+
+
+###############  GMM with standalone functions, only for development
 
 #copied from distributions estimation and not fully adjusted
 def fitgmm(momcond, args, start, weights=None, fixed=None, weightsoptimal=True):
@@ -164,7 +167,69 @@ def gmmcov_params(moms, gradmoms, weights=None, has_optimal_weights=True, center
     return cov/nobs
 
 
+########## end standalone GMM functions
+
+
 class GMM(object):
+    '''
+    Class for estimation by Generalized Method of Moments
+
+    needs to be subclassed, where the subclass defined the moment conditions
+    `momcond`
+
+    Parameters
+    ----------
+    endog : array
+        endogenous variable, see notes
+    exog : array
+        array of exogenous variables, see notes
+    instrument : array
+        array of instruments, see notes
+    nmoms : None or int
+        number of moment conditions, if None then it is set equal to the
+        number of columns of instruments. Mainly needed to determin the shape
+        or size of start parameters and starting weighting matrix.
+    kwds : anything
+        this is mainly if additional variables need to be stored for the
+        calculations of the moment conditions
+
+    Attributes
+    ----------
+    results : instance of GMMResults
+        currently just a storage class for params and cov_params without it's
+        own methods
+    bse : property
+        return bse
+
+
+    Methods
+    -------
+    fit
+    cov_params
+
+    other methods
+
+    fititer
+    fitgmm
+    calc_weightmatrix
+
+
+    Notes
+    -----
+    The GMM class only uses the moment conditions and does not use any data
+    directly. endog, exog, instrument and kwds in the creation of the class
+    instance are only used to store them for access in the moment conditions.
+    Which of this are required and how they are used depends on the moment
+    conditions of the subclass.
+
+    Warning:
+
+    Options for various methods have not been fully implemented and
+    are still missing in several methods.
+
+
+
+    '''
 
     def __init__(self, endog, exog, instrument, nmoms=None, **kwds):
         '''
@@ -177,14 +242,34 @@ class GMM(object):
         self.instrument = instrument
         self.nmoms = nmoms or instrument.shape[1]
         self.results = GMMResults()
+        self.__dict__.update(kwds)
+        self.epsilon_iter = 1e-6
 
     def fit(self):
         '''
-        just a default
+        Estimate the parameters using default settings.
+
+        For estimation with more options use fititer method.
+
+        Returns
+        -------
+        results : instance of GMMResults
+            this is also attached as attribute results
+
+        Notes
+        -----
+        this function attaches the estimated parameters, params, the
+        weighting matrix of the final iteration, weights, and the value
+        of the GMM objective function, jval to results
+
+
         '''
-        res = self.fititer(start, maxiter=2, start_weights=None,
+        params, weights = self.fititer(start, maxiter=2, start_weights=None,
                                         weights_method='cov', wargs=())
-        self.results.params = res
+        self.results.params = params
+        self.results.weights = weights
+        self.results.jval = self.gmmobjective(params, weights)
+
         return self.results
 
 
@@ -218,20 +303,76 @@ class GMM(object):
             weights = np.eye(nmoms)
 
 
-        def gmmobjective(params):
-            '''negative loglikelihood function of binned data
+##        def gmmobjective(self, params):
+##            '''
+##            objective function for GMM minimization
+##
+##            Parameters
+##            ----------
+##            params : array
+##               parameter values at which objective is evaluated
+##
+##            uses weights from outer scope
+##
+##            '''
+##            moms = momcond(params, *args)
+##            return np.dot(np.dot(moms.sum(0),weights), moms.sum(0))
+        return optimize.fmin(self.gmmobjective, start, (weights,), disp=0)
 
-            corresponds to multinomial
-            '''
+    def gmmobjective(self, params, weights):
+        '''
+        objective function for GMM minimization
 
-            moms = momcond(params, *args)
-            return np.dot(np.dot(moms.sum(0),weights), moms.sum(0))
-        return optimize.fmin(gmmobjective, start, disp=0)
+        Parameters
+        ----------
+        params : array
+            parameter values at which objective is evaluated
+        weights : array
+            weighting matrix
+
+        Returns
+        -------
+        jval : float
+            value of objective function
+
+        '''
+        moms = self.momcond(params)
+        return np.dot(np.dot(moms.sum(0),weights), moms.sum(0))
 
 
     def fititer(self, start, maxiter=2, start_weights=None,
                     weights_method='cov', wargs=()):
-        '''iteration over gmm estimation with updating of optimal weighting matrix
+        '''iterative estimation with updating of optimal weighting matrix
+
+        stopping criteria are maxiter or change in parameter estimate less
+        than self.epsilon_iter, with default 1e-6.
+
+        Parameters
+        ----------
+        start : array
+            starting value for parameters
+        maxiter : int
+            maximum number of iterations
+        start_weights : array (nmoms, nmoms)
+            initial weighting matrix; if None, then the identity matrix
+            is used
+        weights_method : {'cov', ...}
+            method to use to estimate the optimal weighting matrix,
+            see calc_weightmatrix for details
+
+        Returns
+        -------
+        params : array
+            estimated parameters
+        weights : array
+            optimal weighting matrix calculated with final parameter
+            estimates
+
+        Notes
+        -----
+
+
+
 
         '''
         momcond = self.momcond
@@ -242,7 +383,8 @@ class GMM(object):
             w = start_weights
 
         #call fitgmm function
-        args = (self.endog, self.exog, self.instrument)
+        #args = (self.endog, self.exog, self.instrument)
+        #args is not used in the method version
         for it in range(maxiter):
             resgmm = fitgmm(momcond, (), start, weights=w, fixed=None,
                             weightsoptimal=False)
@@ -250,13 +392,14 @@ class GMM(object):
             moms = momcond(resgmm)
             w = self.calc_weightmatrix(moms, method='cov', wargs=())
 
-            if it > 2 and maxabs(resgmm - start) < 1e-6:
+            if it > 2 and maxabs(resgmm - start) < self.epsilon_iter:
                 #check rule for early stopping
                 break
             start = resgmm
-        return resgmm
+        return resgmm, w
 
-    #todo: check there is a matrix inverse missing somewhere
+    #todo: check if there is a matrix inverse missing somewhere, after
+    #   converting to method
     def calc_weightmatrix(self, moms, method='momcov', wargs=()):
         '''calculate omega or the weighting matrix
 
@@ -313,8 +456,13 @@ class GMM(object):
 
 
     def momcond_mean(self, params):
+        '''
+        mean of moment conditions,
+
+        '''
+
         #endog, exog = args
-        return momcondOLS(params, endog, exog).mean(0)
+        return self.momcond(params).mean(0)
 
     def gradient_momcond(self, params, epsilon=1e-4, method='centered'):
 
@@ -426,7 +574,7 @@ def momcondIVLS(params, endog, exog, instrum):
 
 if __name__ == '__main__':
 
-    exampledata = 'ols'
+    exampledata = 'iv' #'ols'
     nobs = nsample = 5000
     sige = 10
 
@@ -446,7 +594,7 @@ if __name__ == '__main__':
         X[:,0] += 0.01 * e
         z1 = X.sum(1) + np.random.normal(size=nobs)
         z2 = X[:,1]
-        z3 = (np.dot(X, np.array([2,1])) +
+        z3 = (np.dot(X, np.array([2,1, 0])) +
                         sige/2. * np.random.normal(size=nobs))
         z4 = X[:,1] + np.random.normal(size=nobs)
         instrument = np.column_stack([z1, z2, z3, z4])
@@ -508,7 +656,26 @@ if __name__ == '__main__':
     covgmmw2 = gmmcov_params(moms, gradmoms2s,
                              weights=np.linalg.inv(np.cov(moms, rowvar=0)))
 
+
+    #using GMM and IV2SLS classes
+    #----------------------------
+
     mod = IVGMM(endog, exog, instrument, nmoms=instrument.shape[1])
     res = mod.fit()
     modls = IV2SLS(endog, exog, instrument)
     resls = modls.fit()
+    modols = OLS(endog, exog)
+    resols = modols.fit()
+
+    print '\nIV case'
+    print 'params'
+    print 'IV2SLS', resls.params
+    print 'OLS   ', resols.params
+    print 'GMM   ', res.params
+    print 'diff  ', res.params - resls.params
+    print '\nbse'
+    print 'IV2SLS', resls.bse
+    print 'OLS   ', resols.bse
+    print 'GMM   ', mod.bse   #bse currently only attached to model not results
+    print 'diff  ', mod.bse - resls.bse
+    print '%-diff', resls.bse / mod.bse * 100 - 100
