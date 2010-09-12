@@ -264,7 +264,7 @@ class GMM(object):
 
 
         '''
-        params, weights = self.fititer(start, maxiter=2, start_weights=None,
+        params, weights = self.fititer(start, maxiter=10, start_weights=None,
                                         weights_method='cov', wargs=())
         self.results.params = params
         self.results.weights = weights
@@ -386,7 +386,8 @@ class GMM(object):
         #args = (self.endog, self.exog, self.instrument)
         #args is not used in the method version
         for it in range(maxiter):
-            resgmm = fitgmm(momcond, (), start, weights=w, fixed=None,
+            winv = np.linalg.inv(w)
+            resgmm = fitgmm(momcond, (), start, weights=winv, fixed=None,
                             weightsoptimal=False)
 
             moms = momcond(resgmm)
@@ -574,7 +575,7 @@ def momcondIVLS(params, endog, exog, instrum):
 
 if __name__ == '__main__':
 
-    exampledata = 'ivfake' #'ols'
+    exampledata = 'iv' #'ivfake' #'ols'
     nobs = nsample = 5000
     sige = 10
 
@@ -597,7 +598,7 @@ if __name__ == '__main__':
         z3 = (np.dot(X, np.array([2,1, 0])) +
                         sige/2. * np.random.normal(size=nobs))
         z4 = X[:,1] + np.random.normal(size=nobs)
-        instrument = np.column_stack([z1, z2, z3, z4])
+        instrument = np.column_stack([z1, z2, z3, z4, X[:,-1]])
         return endog, exog, instrument
 
     def sample_ivfake(exog):
