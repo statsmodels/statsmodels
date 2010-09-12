@@ -1,3 +1,29 @@
+'''Generalized Method of Moments, GMM, and Two-Stage Least Squares for
+instrumental variables IV2SLS
+
+
+
+Issues
+------
+* number of parameters, nparams, and starting values for parameters
+  Where to put them? start was taken from global scope (bug)
+* When optimal weighting matrix cannot be calculated numerically
+  In DistQuantilesGMM, we only have one row of moment conditions, not a
+  moment condition for each observation, calculation for cov of moments
+  breaks down. iter=1 works (weights is identity matrix)
+  -> need method to do one iteration with an identity matrix or an
+     analytical weighting matrix goven as parameter.
+  -> add result statistics for this case, e.g. cov_params, I have it in the
+     standalone function (and in calc_covparams which is a copy of it),
+     but not tested yet.
+
+
+Author: josef-pktd
+License: BSD (3-clause)
+
+'''
+
+
 
 
 import numpy as np
@@ -19,7 +45,7 @@ class IV2SLS(LikelihoodModel):
         super(IV2SLS, self).__init__(endog, exog)
         # where is this supposed to be handled
         #Note: Greene p.77/78 dof correction is not necessary (because only
-        #       asy results), but most packages to it anyway
+        #       asy results), but most packages do it anyway
         self.df_resid = exog.shape[0] - exog.shape[1] + 1
 
     def initialize(self):
@@ -245,7 +271,7 @@ class GMM(object):
         self.__dict__.update(kwds)
         self.epsilon_iter = 1e-6
 
-    def fit(self):
+    def fit(self, start=None):
         '''
         Estimate the parameters using default settings.
 
@@ -264,6 +290,9 @@ class GMM(object):
 
 
         '''
+        #bug: where does start come from ???
+        if start is None:
+            start = self.fitstart() #TODO: temporary hack
         params, weights = self.fititer(start, maxiter=10, start_weights=None,
                                         weights_method='cov', wargs=())
         self.results.params = params
@@ -273,7 +302,7 @@ class GMM(object):
         return self.results
 
 
-    def fitgmm(self, momcond, args, start, weights=None):
+    def fitgmm(self, start, weights=None):
         '''estimate parameters using GMM
 
         Parameters
@@ -294,13 +323,13 @@ class GMM(object):
         added factorial
 
         '''
-        if not fixed is None:
-            raise NotImplementedError
+##        if not fixed is None:  #fixed not defined in this version
+##            raise NotImplementedError
 
-        tmp = momcond(start, *args)
-        nmoms = tmp.shape[-1]
+        #tmp = momcond(start, *args)  # forgott to delete this
+        #nmoms = tmp.shape[-1]
         if weights is None:
-            weights = np.eye(nmoms)
+            weights = np.eye(self.nmoms)
 
 
 ##        def gmmobjective(self, params):
@@ -387,8 +416,10 @@ class GMM(object):
         #args is not used in the method version
         for it in range(maxiter):
             winv = np.linalg.inv(w)
-            resgmm = fitgmm(momcond, (), start, weights=winv, fixed=None,
-                            weightsoptimal=False)
+            #this is still calling function not method
+##            resgmm = fitgmm(momcond, (), start, weights=winv, fixed=None,
+##                            weightsoptimal=False)
+            resgmm = self.fitgmm(start, weights=winv)
 
             moms = momcond(resgmm)
             w = self.calc_weightmatrix(moms, method='cov', wargs=())
@@ -541,10 +572,14 @@ class IVGMM(GMM):
 
     '''
 
+    def fitstart(self):
+        return np.zeros(self.exog.shape[1])
+
     def momcond(self, params):
         endog, exog, instrum = self.endog, self.exog, self.instrument
         return instrum * (endog - np.dot(exog, params))[:,None]
 
+#not tried out yet
 class NonlinearIVGMM(GMM):
     '''
     Class for linear instrumental variables estimation with homoscedastic
@@ -554,12 +589,152 @@ class NonlinearIVGMM(GMM):
 
     '''
 
+    def fitstart(self):
+        #might not make sense for more general functions
+        return np.zeros(self.exog.shape[1])
+
     def __init__(self, endog, exog, instrument, **kwds):
         self.func = func
 
     def momcond(self, params):
         endog, exog, instrum = self.endog, self.exog, self.instrument
         return instrum * (endog - self.func(params, exog))[:,None]
+
+
+###########
+
+class DistQuantilesGMM(GMM):
+    '''
+    Estimate distribution parameters by GMM based on matching quantiles
+
+
+
+    '''
+
+    def __init__(self, endog, exog, instrument, **kwds):
+        #TODO: something wrong with super
+        #super(self.__class__).__init__(endog, exog, instrument) #, **kwds)
+        #self.func = func
+        self.epsilon_iter = 1e-5
+
+        self.distfn = kwds['distfn']
+        #done by super doesn't work yet
+        #TypeError: super does not take keyword arguments
+        self.endog = endog
+
+        #make this optional for fit
+        if not 'pquant' in kwds:
+            self.pquant = pquant = np.array([0.01, 0.05,0.1,0.4,0.6,0.9,0.95,0.99])
+        else:
+            self.pquant = pquant = kwds['pquant']
+
+        #TODO: vectorize this: use edf
+        self.xquant = np.array([stats.scoreatpercentile(endog, p) for p
+                                in pquant*100])
+        self.nmoms = len(self.pquant)
+
+        #TODOcopied from GMM, make super work
+        self.endog = endog
+        self.exog = exog
+        self.instrument = instrument
+        self.results = GMMResults()
+        #self.__dict__.update(kwds)
+        self.epsilon_iter = 1e-6
+
+    def fitstart(self):
+        #todo: replace with or add call to distfn._fitstart
+        #      added but not used during testing, avoid Travis
+        distfn = self.distfn
+        if hasattr(distfn, '_fitstart'):
+            start = distfn._fitstart(x)
+        else:
+            start = [1]*distfn.numargs + [0.,1.]
+
+        return np.array([1]*self.distfn.numargs + [0,1])
+
+    def momcond(self, params): #drop distfn as argument
+        #, mom2, quantile=None, shape=None
+        '''moment conditions for estimating distribution parameters by matching
+        quantiles, defines as many moment conditions as quantiles.
+
+        Returns
+        -------
+        difference : array
+            difference between theoretical and empirical quantiles
+
+        Notes
+        -----
+        This can be used for method of moments or for generalized method of
+        moments.
+
+        '''
+        #this check looks redundant/unused know
+        if len(params) == 2:
+            loc, scale = params
+        elif len(params) == 3:
+            shape, loc, scale = params
+        else:
+            #raise NotImplementedError
+            pass #see whether this might work, seems to work for beta with 2 shape args
+
+        #mom2diff = np.array(distfn.stats(*params)) - mom2
+        #if not quantile is None:
+        pq, xq = self.pquant, self.xquant
+        #ppfdiff = distfn.ppf(pq, alpha)
+        cdfdiff = self.distfn.cdf(xq, *params) - pq
+        #return np.concatenate([mom2diff, cdfdiff[:1]])
+        return np.atleast_2d(cdfdiff    )
+
+#######original version of GMM estimation of distribution parameters
+
+from scipy import stats
+
+def momentcondquant(distfn, params, mom2, quantile=None, shape=None):
+    '''moment conditions for estimating distribution parameters by matching
+    quantiles, defines as many moment conditions as quantiles.
+
+    Returns
+    -------
+    difference : array
+        difference between theoretical and empirical quantiles
+
+    Notes
+    -----
+    This can be used for method of moments or for generalized method of
+    moments.
+
+    '''
+    #this check looks redundant/unused know
+    if len(params) == 2:
+        loc, scale = params
+    elif len(params) == 3:
+        shape, loc, scale = params
+    else:
+        #raise NotImplementedError
+        pass #see whether this might work, seems to work for beta with 2 shape args
+
+    #mom2diff = np.array(distfn.stats(*params)) - mom2
+    #if not quantile is None:
+    pq, xq = quantile
+    #ppfdiff = distfn.ppf(pq, alpha)
+    cdfdiff = distfn.cdf(xq, *params) - pq
+    #return np.concatenate([mom2diff, cdfdiff[:1]])
+    return cdfdiff
+
+def fitquantilesgmm(distfn, x, start=None, pquant=None, frozen=None):
+    if pquant is None:
+        pquant = np.array([0.01, 0.05,0.1,0.4,0.6,0.9,0.95,0.99])
+    if start is None:
+        if hasattr(distfn, '_fitstart'):
+            start = distfn._fitstart(x)
+        else:
+            start = [1]*distfn.numargs + [0.,1.]
+    #TODO: vectorize this:
+    xqs = [stats.scoreatpercentile(x, p) for p in pquant*100]
+    mom2s = None
+    parest = optimize.fmin(lambda params:np.sum(
+        momentcondquant(distfn, params, mom2s,(pquant,xqs), shape=None)**2), start)
+    return parest
 
 ######## original examples of moment conditions:
 
@@ -696,3 +871,33 @@ if __name__ == '__main__':
     print 'GMM   ', mod.bse   #bse currently only attached to model not results
     print 'diff  ', mod.bse - resls.bse
     print '%-diff', resls.bse / mod.bse * 100 - 100
+
+
+    #estimating distribution parameters from quantiles
+    #-------------------------------------------------
+
+    #example taken from distribution_estimators.py
+    gparrvs = stats.genpareto.rvs(2, size=500)
+    x0p = [1., gparrvs.min()-5, 1]
+    pfunc = fitquantilesgmm(stats.genpareto, gparrvs, start=x0p,
+                          pquant=np.linspace(0.01,0.99,10), frozen=None)
+    print pfunc
+
+    moddist = DistQuantilesGMM(gparrvs, None, None, distfn=stats.genpareto)
+    #produces non-sense because optimal weighting matrix calculations don't
+    #apply to this case
+    #resgp = moddist.fit() #now with 'cov': LinAlgError: Singular matrix
+    pit1, wit1 = moddist.fititer([1.5,0,1.5], maxiter=1)
+    print pit1
+    p1 = moddist.fitgmm([1.5,0,1.5])
+    print p1
+    moddist2 = DistQuantilesGMM(gparrvs, None, None, distfn=stats.genpareto,
+                                pquant=np.linspace(0.01,0.99,10))
+    pit1a, wit1a = moddist2.fititer([1.5,0,1.5], maxiter=1)
+    print pit1a
+    p1a = moddist2.fitgmm([1.5,0,1.5])
+    print p1a
+    #Note: pit1a and p1a are the same and almost the same (1e-5) as
+    #      fitquantilesgmm version (functions instead of class)
+    print p1a - pfunc
+
