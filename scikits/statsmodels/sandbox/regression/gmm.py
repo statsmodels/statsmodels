@@ -401,7 +401,7 @@ class GMM(object):
 
         '''
         moms = self.momcond(params)
-        return np.dot(np.dot(moms.sum(0),weights), moms.sum(0))
+        return np.dot(np.dot(moms.mean(0),weights), moms.mean(0))
 
 
     def fititer(self, start, maxiter=2, start_weights=None,
@@ -594,6 +594,17 @@ class GMM(object):
         '''
         return np.sqrt(np.diag(self.cov_params()))
 
+    def jtest(self):
+        '''overidentification test
+
+        I guess this is missing a division by nobs,
+        what's the normalization in jval ?
+        '''
+
+        jstat = self.results.jval
+        nparams = self.results.params.size #self.nparams
+        return jstat, stats.chi2.sf(jstat, self.nmoms - nparams)
+
 class GMMResults(object):
     '''just a storage class right now'''
     pass
@@ -671,7 +682,9 @@ def spec_hausman(params_e, params_i, cov_params_e, cov_params_i, dof=None):
     H = np.dot(params_diff, np.dot(cov_diffpinv, params_diff))
     pval = stats.chi2.sf(H, dof)
 
-    return H, pval, dof
+    evals = np.linalg.eigvalsh(cov_diff)
+
+    return H, pval, dof, evals
 
 
 
@@ -828,7 +841,7 @@ if __name__ == '__main__':
     exampledata = ['ols', 'iv', 'ivfake'][1]
     nobs = nsample = 500
     sige = 3
-    corrfactor = 0.01
+    corrfactor = 0.025
 
 
     x = np.linspace(0,10, nobs)
@@ -932,6 +945,8 @@ if __name__ == '__main__':
 
     mod = IVGMM(endog, exog, instrument, nmoms=instrument.shape[1])
     res = mod.fit()
+    modgmmols = IVGMM(endog, exog, exog, nmoms=exog.shape[1])
+    resgmmols = modgmmols.fit()
     modls = IV2SLS(endog, exog, instrument)
     resls = modls.fit()
     modols = OLS(endog, exog)
@@ -940,19 +955,23 @@ if __name__ == '__main__':
     print '\nIV case'
     print 'params'
     print 'IV2SLS', resls.params
-    print 'OLS   ', resols.params
     print 'GMM   ', res.params
     print 'diff  ', res.params - resls.params
+    print 'OLS   ', resols.params
+    print 'GMMOLS', resgmmols.params
     print '\nbse'
     print 'IV2SLS', resls.bse
-    print 'OLS   ', resols.bse
     print 'GMM   ', mod.bse   #bse currently only attached to model not results
     print 'diff  ', mod.bse - resls.bse
     print '%-diff', resls.bse / mod.bse * 100 - 100
+    print 'OLS   ', resols.bse
+    print 'GMMOLS', modgmmols.bse
 
     print "Hausman's specification test"
     print modls.spec_hausman()
     print spec_hausman(resols.params, res.params, resols.cov_params(),
+                       mod.cov_params())
+    print spec_hausman(resgmmols.params, res.params, modgmmols.cov_params(),
                        mod.cov_params())
 
 
