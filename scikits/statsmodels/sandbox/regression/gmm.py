@@ -6,16 +6,36 @@ instrumental variables IV2SLS
 Issues
 ------
 * number of parameters, nparams, and starting values for parameters
-  Where to put them? start was taken from global scope (bug)
+  Where to put them? start was initially taken from global scope (bug)
 * When optimal weighting matrix cannot be calculated numerically
   In DistQuantilesGMM, we only have one row of moment conditions, not a
   moment condition for each observation, calculation for cov of moments
   breaks down. iter=1 works (weights is identity matrix)
   -> need method to do one iteration with an identity matrix or an
-     analytical weighting matrix goven as parameter.
+     analytical weighting matrix given as parameter.
   -> add result statistics for this case, e.g. cov_params, I have it in the
      standalone function (and in calc_covparams which is a copy of it),
      but not tested yet.
+  DONE `fitonce` in DistQuantilesGMM, params are the same as in direct call to fitgmm
+      move it to GMM class (once it's clearer for which cases I need this.)
+* GMM doesn't know anything about the underlying model, e.g. y = X beta + u or panel
+  data model. It would be good if we can reuse methods from regressions, e.g.
+  predict, fitted values, calculating the error term, and some result statistics.
+  What's the best way to do this, multiple inheritance, outsourcing the functions,
+  mixins or delegation (a model creates a GMM instance just for estimation).
+
+
+Unclear
+-------
+* dof in Hausman
+  - based on rank
+  - differs between IV2SLS method and function used with GMM or (IV2SLS)
+  - with GMM, covariance matrix difference has negative eigenvalues in iv example, ???
+* jtest/jval
+  - I'm not sure about the normalization (multiply or divide by nobs) in jtest.
+    need a test case. Scaling of jval is irrelevant for estimation.
+    jval in jtest looks to large in example, but I have no idea about the size
+
 
 
 Author: josef-pktd
@@ -35,6 +55,8 @@ from scikits.statsmodels.regression import RegressionResults, OLS
 
 
 def maxabs(x):
+    '''just a shortcut to np.abs(x).max()
+    '''
     return np.abs(x).max()
 
 
@@ -273,6 +295,7 @@ class GMM(object):
         if weights is None:
             weights = np.eye(self.nmoms)
 
+        #TODO: add other optimization options and results
         return optimize.fmin(self.gmmobjective, start, (weights,), disp=0)
 
     def gmmobjective(self, params, weights):
@@ -357,8 +380,7 @@ class GMM(object):
             start = resgmm
         return resgmm, w
 
-    #todo: check if there is a matrix inverse missing somewhere, after
-    #   converting to method
+
     def calc_weightmatrix(self, moms, method='momcov', wargs=()):
         '''calculate omega or the weighting matrix
 
@@ -435,7 +457,7 @@ class GMM(object):
         return gradmoms
 
 
-    def cov_params(self):  #TODO add options ???
+    def cov_params(self, **kwds):  #TODO add options ???
         if not hasattr(self.results, 'params'):
             raise ValueError('the model has to be fit first')
 
@@ -445,27 +467,39 @@ class GMM(object):
 
         gradmoms = self.gradient_momcond(self.results.params)
         moms = self.momcond(self.results.params)
-        covparams = self.calc_cov_params(moms, gradmoms)
+        covparams = self.calc_cov_params(moms, gradmoms, **kwds)
         self.results._cov_params = covparams
         return self.results._cov_params
 
 
 
     #still needs to be fully converted to method
-    def calc_cov_params(self, moms, gradmoms, weights=None, has_optimal_weights=True, centered_weights=True):
+    def calc_cov_params(self, moms, gradmoms, weights=None,
+                                              has_optimal_weights=True,
+                                              method='momcov', wargs=()):
         '''calculate covariance of parameter estimates
 
         not all options tried out yet
+
+        If weights matrix is given, then the formula use to calculate cov_params
+        depends on whether has_optimal_weights is true.
+        If no weights are given, then the weight matrix is calculated with
+        the given method, and has_optimal_weights is assumed to be true.
+
+        (API Note: The latter assumption could be changed if we allow for
+        has_optimal_weights=None.)
+
         '''
 
         nobs = moms.shape[0]
-        if centered_weights:
-            # note: code duplication from gmmiter
-            omegahat = np.cov(moms, rowvar=0)  # estimate of moment covariance
+        if weights is None:
+            omegahat = self.calc_weightmatrix(moms, method=method, wargs=wargs)
+            has_optimal_weights = True
+            #add other options, Barzen, ...  longrun var estimators
         else:
-            omegahat = np.dot(moms.T, moms)/nobs
-        #add other options, Barzen, ...  longrun var estimators
-        if weights is None: #has_optimal_weights:
+            omegahat = weights   #2 different names used
+
+        if has_optimal_weights: #has_optimal_weights:
             cov = np.linalg.inv(np.dot(gradmoms.T,
                                        np.dot(np.linalg.inv(omegahat), gradmoms)))
         else:
@@ -477,6 +511,8 @@ class GMM(object):
 
     @property
     def bse(self):
+        '''standard error of the parameter estimates
+        '''
         return self.get_bse()
 
     def get_bse(self, method=None):
@@ -587,7 +623,8 @@ class DistQuantilesGMM(GMM):
     '''
     Estimate distribution parameters by GMM based on matching quantiles
 
-
+    Currently mainly to try out different requirements for GMM when we cannot
+    calculate the optimal weighting matrix.
 
     '''
 
@@ -663,7 +700,45 @@ class DistQuantilesGMM(GMM):
         #ppfdiff = distfn.ppf(pq, alpha)
         cdfdiff = self.distfn.cdf(xq, *params) - pq
         #return np.concatenate([mom2diff, cdfdiff[:1]])
-        return np.atleast_2d(cdfdiff    )
+        return np.atleast_2d(cdfdiff)
+
+    def fitonce(self, start=None, weights=None, has_optimal_weights=False):
+        '''fit without estimating an optimal weighting matrix and return results
+
+        This is a convenience function that calls fitgmm and covparams with
+        a given weight matrix or the identity weight matrix.
+        This is useful if the optimal weight matrix is know (or is analytically
+        given) or if an optimal weight matrix cannot be calculated.
+
+        (Developer Notes: this function could go into GMM, but is needed in this
+        class, at least at the moment.)
+
+        Parameters
+        ----------
+
+
+        Returns
+        -------
+        results : GMMResult instance
+            result instance with params and _cov_params attached
+
+        See Also
+        --------
+        fitgmm
+        cov_params
+
+        '''
+        if weights is None:
+            weights = np.eye(self.nmoms)
+        params = self.fitgmm(start=start)
+        self.results.params = params  #required before call to self.cov_params
+        _cov_params = self.cov_params(weights=weights,
+                                      has_optimal_weights=has_optimal_weights)
+
+
+        self.results.weights = weights
+        self.results.jval = self.gmmobjective(params, weights)
+        return self.results
 
 #######original version of GMM estimation of distribution parameters
 # keep for now for testing
@@ -839,4 +914,8 @@ if __name__ == '__main__':
         #Note: pit1a and p1a are the same and almost the same (1e-5) as
         #      fitquantilesgmm version (functions instead of class)
         print p1a - pfunc
+        res1b = moddist2.fitonce([1.5,0,1.5])
+        print res1b.params
+
+
 
