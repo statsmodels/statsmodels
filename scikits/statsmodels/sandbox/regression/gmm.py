@@ -61,10 +61,11 @@ class IV2SLS(LikelihoodModel):
         y,x,z = self.endog, self.exog, self.instrument
         ztz = np.dot(z.T, z)
         ztx = np.dot(z.T, x)
-        xhatparams = np.linalg.solve(ztz, ztx)
+        self.xhatparams = xhatparams = np.linalg.solve(ztz, ztx)
         print 'x.T.shape, xhatparams.shape', x.shape, xhatparams.shape
         F = xhat = np.dot(z, xhatparams)
         FtF = np.dot(F.T, F)
+        self.xhatprod = FtF  #store for Housman specification test
         Ftx = np.dot(F.T, x)
         Fty = np.dot(F.T, y)
         params = np.linalg.solve(FtF, Fty)
@@ -76,7 +77,7 @@ class IV2SLS(LikelihoodModel):
         self._results = lfit
         return lfit
 
-    #copied from GLS
+    #copied from GLS, because I subclass currently LikelihoodModel and not GLS
     def predict(self, exog, params=None):
         """
         Return linear predicted values from a design matrix.
@@ -104,6 +105,40 @@ class IV2SLS(LikelihoodModel):
             return np.dot(exog, self._results.params)
         else:
             return np.dot(exog, params)
+
+    def spec_hausman(self, dof=None):
+        '''Hausman's specification test
+
+
+        See Also
+        --------
+        spec_hausman : generic function for Hausman's specification test
+
+        '''
+        #use normalized cov_params for OLS
+
+        resols = OLS(endog, exog).fit()
+        normalized_cov_params_ols = resols.model.normalized_cov_params
+        se2 = resols.mse_resid
+
+        params_diff = self._results.params - resols.params
+
+        cov_diff = np.linalg.pinv(self.xhatprod) - normalized_cov_params_ols
+        #TODO: the following is very inefficient, solves problem (svd) twice
+        #use linalg.lstsq or svd directly
+        #cov_diff will very often be in-definite (singular)
+        if not dof:
+            dof = sm.tools.rank(cov_diff)
+        cov_diffpinv = np.linalg.pinv(cov_diff)
+        H = np.dot(params_diff, np.dot(cov_diffpinv, params_diff))/se2
+        pval = stats.chi2.sf(H, dof)
+
+        return H, pval, dof
+
+
+
+
+
 
 
 
@@ -422,7 +457,7 @@ class GMM(object):
             resgmm = self.fitgmm(start, weights=winv)
 
             moms = momcond(resgmm)
-            w = self.calc_weightmatrix(moms, method='cov', wargs=())
+            w = self.calc_weightmatrix(moms, method='momcov', wargs=())
 
             if it > 2 and maxabs(resgmm - start) < self.epsilon_iter:
                 #check rule for early stopping
@@ -601,6 +636,46 @@ class NonlinearIVGMM(GMM):
         return instrum * (endog - self.func(params, exog))[:,None]
 
 
+def spec_hausman(params_e, params_i, cov_params_e, cov_params_i, dof=None):
+    '''Hausmans specification test
+
+    (params_e, cov_params_e) :
+        efficient and consistent under Null hypothesis,
+        inconsistent under alternative hypothesis
+
+    params_i, cov_params_i
+        consistent under Null hypothesis,
+        consistent under alternative hypothesis
+
+    example instrumental variables OLS estimator is `e`, IV estimator is `i`
+
+    Todos,Issues
+    - check dof calculations and verify for linear case
+    - check one-sided hypothesis
+
+
+    References
+    ----------
+    Greene section 5.5 p.82/83
+
+
+    '''
+    params_diff = (params_i - params_e)
+    cov_diff = cov_params_i - cov_params_e
+    #TODO: the following is very inefficient, solves problem (svd) twice
+    #use linalg.lstsq or svd directly
+    #cov_diff will very often be in-definite (singular)
+    if not dof:
+        dof = sm.tools.rank(cov_diff)
+    cov_diffpinv = np.linalg.pinv(cov_diff)
+    H = np.dot(params_diff, np.dot(cov_diffpinv, params_diff))
+    pval = stats.chi2.sf(H, dof)
+
+    return H, pval, dof
+
+
+
+
 ###########
 
 class DistQuantilesGMM(GMM):
@@ -750,9 +825,10 @@ def momcondIVLS(params, endog, exog, instrum):
 
 if __name__ == '__main__':
 
-    exampledata = 'iv' #'ivfake' #'ols'
-    nobs = nsample = 5000
-    sige = 10
+    exampledata = ['ols', 'iv', 'ivfake'][1]
+    nobs = nsample = 500
+    sige = 3
+    corrfactor = 0.01
 
 
     x = np.linspace(0,10, nobs)
@@ -764,16 +840,18 @@ if __name__ == '__main__':
         return endog, exog, None
 
     def sample_iv(exog):
-        X = exog
+        print 'using iv example'
+        X = exog.copy()
         e = sige * np.random.normal(size=nobs)
         endog = np.dot(X, beta) + e
-        X[:,0] += 0.01 * e
+        exog[:,0] = X[:,0] + corrfactor * e
+        z0 = X[:,0] + np.random.normal(size=nobs)
         z1 = X.sum(1) + np.random.normal(size=nobs)
         z2 = X[:,1]
         z3 = (np.dot(X, np.array([2,1, 0])) +
                         sige/2. * np.random.normal(size=nobs))
         z4 = X[:,1] + np.random.normal(size=nobs)
-        instrument = np.column_stack([z1, z2, z3, z4, X[:,-1]])
+        instrument = np.column_stack([z0, z1, z2, z3, z4, X[:,-1]])
         return endog, exog, instrument
 
     def sample_ivfake(exog):
@@ -794,15 +872,15 @@ if __name__ == '__main__':
         endog, exog, _ = sample_ols(X)
         instrument = exog
     elif exampledata == 'iv':
-        endog, exog, instrument = sample_iv(exog)
+        endog, exog, instrument = sample_iv(X)
     elif exampledata == 'ivfake':
-        endog, exog, instrument = sample_ivfake(exog)
+        endog, exog, instrument = sample_ivfake(X)
 
 
 
 
 
-    results = sm.OLS(y, X).fit()
+    results = sm.OLS(endog, exog).fit()
     start = beta * 0.9
     resgmm = fitgmm(momcondOLS, (endog, exog), start, fixed=None, weightsoptimal=False)
     print resgmm
@@ -823,7 +901,7 @@ if __name__ == '__main__':
     resgmmiv = fitgmm(momcondIVLS, (endog, exog, exog), start, fixed=None, weightsoptimal=False)
     print gmmiter(momcondIVLS, start, maxiter=3, args=(endog, exog, exog))
 
-    endog, exog = y, X
+    #endog, exog = y, X
     def momcond(params):
         #endog, exog = args
         return momcondOLS(params, endog, exog).mean(0)
@@ -831,7 +909,7 @@ if __name__ == '__main__':
     #maybe grad first and then sum, need 3d return from approx_fprime1
     #   I don't think so, sum/mean and differentiation can be interchanged (?)
     gradgmm = approx_fprime1(resgmm, momcond)
-    moms = momcondOLS(resgmm, y, X)
+    moms = momcondOLS(resgmm, endog, exog)
     w = np.dot(moms.T,moms)
 
     gradmoms2s = (approx_fprime1(resgmm, momcond, epsilon=1e-4)+approx_fprime1(resgmm, momcond, epsilon=-1e-4))/2
@@ -871,6 +949,12 @@ if __name__ == '__main__':
     print 'GMM   ', mod.bse   #bse currently only attached to model not results
     print 'diff  ', mod.bse - resls.bse
     print '%-diff', resls.bse / mod.bse * 100 - 100
+
+    print "Hausman's specification test"
+    print modls.spec_hausman()
+    print spec_hausman(resols.params, res.params, resols.cov_params(),
+                       mod.cov_params())
+
 
 
     #estimating distribution parameters from quantiles
