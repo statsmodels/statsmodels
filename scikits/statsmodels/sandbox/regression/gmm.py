@@ -35,7 +35,7 @@ Unclear
   - I'm not sure about the normalization (multiply or divide by nobs) in jtest.
     need a test case. Scaling of jval is irrelevant for estimation.
     jval in jtest looks to large in example, but I have no idea about the size
-
+* bse for fitonce look too large (no time for checking now)
 
 
 Author: josef-pktd
@@ -47,7 +47,7 @@ License: BSD (3-clause)
 
 
 import numpy as np
-from scipy import optimize
+from scipy import optimize, stats
 import scikits.statsmodels as sm
 from scikits.statsmodels.sandbox.regression.numdiff import approx_fprime1, approx_hess
 from scikits.statsmodels.model import LikelihoodModel, LikelihoodModelResults
@@ -740,57 +740,8 @@ class DistQuantilesGMM(GMM):
         self.results.jval = self.gmmobjective(params, weights)
         return self.results
 
-#######original version of GMM estimation of distribution parameters
-# keep for now for testing
 
-from scipy import stats
 
-def momentcondquant(distfn, params, mom2, quantile=None, shape=None):
-    '''moment conditions for estimating distribution parameters by matching
-    quantiles, defines as many moment conditions as quantiles.
-
-    Returns
-    -------
-    difference : array
-        difference between theoretical and empirical quantiles
-
-    Notes
-    -----
-    This can be used for method of moments or for generalized method of
-    moments.
-
-    '''
-    #this check looks redundant/unused know
-    if len(params) == 2:
-        loc, scale = params
-    elif len(params) == 3:
-        shape, loc, scale = params
-    else:
-        #raise NotImplementedError
-        pass #see whether this might work, seems to work for beta with 2 shape args
-
-    #mom2diff = np.array(distfn.stats(*params)) - mom2
-    #if not quantile is None:
-    pq, xq = quantile
-    #ppfdiff = distfn.ppf(pq, alpha)
-    cdfdiff = distfn.cdf(xq, *params) - pq
-    #return np.concatenate([mom2diff, cdfdiff[:1]])
-    return cdfdiff
-
-def fitquantilesgmm(distfn, x, start=None, pquant=None, frozen=None):
-    if pquant is None:
-        pquant = np.array([0.01, 0.05,0.1,0.4,0.6,0.9,0.95,0.99])
-    if start is None:
-        if hasattr(distfn, '_fitstart'):
-            start = distfn._fitstart(x)
-        else:
-            start = [1]*distfn.numargs + [0.,1.]
-    #TODO: vectorize this:
-    xqs = [stats.scoreatpercentile(x, p) for p in pquant*100]
-    mom2s = None
-    parest = optimize.fmin(lambda params:np.sum(
-        momentcondquant(distfn, params, mom2s,(pquant,xqs), shape=None)**2), start)
-    return parest
 
 
 if __name__ == '__main__':
@@ -887,15 +838,13 @@ if __name__ == '__main__':
 
     if 'distquant' in examples:
 
+
         #estimating distribution parameters from quantiles
         #-------------------------------------------------
 
         #example taken from distribution_estimators.py
         gparrvs = stats.genpareto.rvs(2, size=500)
         x0p = [1., gparrvs.min()-5, 1]
-        pfunc = fitquantilesgmm(stats.genpareto, gparrvs, start=x0p,
-                              pquant=np.linspace(0.01,0.99,10), frozen=None)
-        print pfunc
 
         moddist = DistQuantilesGMM(gparrvs, None, None, distfn=stats.genpareto)
         #produces non-sense because optimal weighting matrix calculations don't
@@ -913,9 +862,10 @@ if __name__ == '__main__':
         print p1a
         #Note: pit1a and p1a are the same and almost the same (1e-5) as
         #      fitquantilesgmm version (functions instead of class)
-        print p1a - pfunc
         res1b = moddist2.fitonce([1.5,0,1.5])
         print res1b.params
+        print moddist2.bse  #they look much too large
+        print np.sqrt(np.diag(res1b._cov_params))
 
 
 
