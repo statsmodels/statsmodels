@@ -36,6 +36,10 @@ Unclear
     need a test case. Scaling of jval is irrelevant for estimation.
     jval in jtest looks to large in example, but I have no idea about the size
 * bse for fitonce look too large (no time for checking now)
+    formula for calc_cov_params for the case without optimal weighting matrix
+    is wrong. I don't have an estimate for omega in that case. And I'm confusing
+    between weights and omega, which are *not* the same in this case.
+
 
 
 Author: josef-pktd
@@ -497,7 +501,8 @@ class GMM(object):
             has_optimal_weights = True
             #add other options, Barzen, ...  longrun var estimators
         else:
-            omegahat = weights   #2 different names used
+            omegahat = weights   #2 different names used,
+            #TODO: this is wrong, I need an estimate for omega
 
         if has_optimal_weights: #has_optimal_weights:
             cov = np.linalg.inv(np.dot(gradmoms.T,
@@ -506,6 +511,7 @@ class GMM(object):
             gw = np.dot(gradmoms.T, weights)
             gwginv = np.linalg.inv(np.dot(gw, gradmoms))
             cov = np.dot(np.dot(gwginv, np.dot(np.dot(gw, omegahat), gw.T)), gwginv)
+            cov = np.linalg.inv(cov)
 
         return cov/nobs
 
@@ -843,7 +849,7 @@ if __name__ == '__main__':
         #-------------------------------------------------
 
         #example taken from distribution_estimators.py
-        gparrvs = stats.genpareto.rvs(2, size=500)
+        gparrvs = stats.genpareto.rvs(2, size=5000)
         x0p = [1., gparrvs.min()-5, 1]
 
         moddist = DistQuantilesGMM(gparrvs, None, None, distfn=stats.genpareto)
