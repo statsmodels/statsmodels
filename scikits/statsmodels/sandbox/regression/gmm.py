@@ -136,100 +136,7 @@ class IV2SLS(LikelihoodModel):
         return H, pval, dof
 
 
-
-
-
-
-
-
-###############  GMM with standalone functions, only for development
-
-#copied from distributions estimation and not fully adjusted
-def fitgmm(momcond, args, start, weights=None, fixed=None, weightsoptimal=True):
-    '''estimate parameters of distribution function for binned data using GMM
-
-    Parameters
-    ----------
-    momcond : function
-        needs to return (nobs, nmoms) array
-
-
-    Returns
-    -------
-    paramest : array
-        estimated parameters
-
-    Notes
-    -----
-    todo: add fixed parameter option
-
-    added factorial
-
-    '''
-    if not fixed is None:
-        raise NotImplementedError
-
-    tmp = momcond(start, *args)
-    nmoms = tmp.shape[-1]
-    if weights is None:
-        if weightsoptimal:
-            raise NotImplementedError
-            weights = freq/float(nobs)
-        else:
-            weights = np.eye(nmoms)
-    # skip turning weights into matrix diag(freq/float(nobs))
-    def gmmobjective(params):
-        '''negative loglikelihood function of binned data
-
-        corresponds to multinomial
-        '''
-
-        moms = momcond(params, *args)
-        #return np.dot(moms*weights, moms)
-        return np.dot(np.dot(moms.sum(0),weights), moms.sum(0))
-    return optimize.fmin(gmmobjective, start)
-
-def gmmiter(momcond, start, maxiter=2, args=None, centered_weights=True):
-    '''iteration over gmm estimation with updating of optimal weighting matrix
-
-    '''
-    w = np.eye(len(start))
-    for i in range(maxiter):
-        resgmm = fitgmm(momcond, args, start, weights=w, fixed=None, weightsoptimal=False)
-        moms = momcond(resgmm, *args)
-        if centered_weights:
-            w = np.cov(moms, rowvar=0) # note: I need this also for cov_params
-        else:
-            w = np.dot(moms.T, moms)
-        start = resgmm
-    return resgmm
-
-def gmmcov_params(moms, gradmoms, weights=None, has_optimal_weights=True, centered_weights=True):
-    '''calculate covariance of parameter estimates
-
-    not all options tried out yet
-    '''
-
-    nobs = moms.shape[0]
-    if centered_weights:
-        # note: code duplication from gmmiter
-        omegahat = np.cov(moms, rowvar=0)  # estimate of moment covariance
-    else:
-        omegahat = np.dot(moms.T, moms)/nobs
-    #add other options, Barzen, ...  longrun var estimators
-    if weights is None: #has_optimal_weights:
-        cov = np.linalg.inv(np.dot(gradmoms.T,
-                                   np.dot(np.linalg.inv(omegahat), gradmoms)))
-    else:
-        gw = np.dot(gradmoms.T, weights)
-        gwginv = np.linalg.inv(np.dot(gw, gradmoms))
-        cov = np.dot(np.dot(gwginv, np.dot(np.dot(gw, omegahat), gw.T)), gwginv)
-
-    return cov/nobs
-
-
-########## end standalone GMM functions
-
+############# classes for Generalized Method of Moments GMM
 
 class GMM(object):
     '''
@@ -366,21 +273,6 @@ class GMM(object):
         if weights is None:
             weights = np.eye(self.nmoms)
 
-
-##        def gmmobjective(self, params):
-##            '''
-##            objective function for GMM minimization
-##
-##            Parameters
-##            ----------
-##            params : array
-##               parameter values at which objective is evaluated
-##
-##            uses weights from outer scope
-##
-##            '''
-##            moms = momcond(params, *args)
-##            return np.dot(np.dot(moms.sum(0),weights), moms.sum(0))
         return optimize.fmin(self.gmmobjective, start, (weights,), disp=0)
 
     def gmmobjective(self, params, weights):
@@ -774,6 +666,7 @@ class DistQuantilesGMM(GMM):
         return np.atleast_2d(cdfdiff    )
 
 #######original version of GMM estimation of distribution parameters
+# keep for now for testing
 
 from scipy import stats
 
@@ -824,183 +717,126 @@ def fitquantilesgmm(distfn, x, start=None, pquant=None, frozen=None):
         momentcondquant(distfn, params, mom2s,(pquant,xqs), shape=None)**2), start)
     return parest
 
-######## original examples of moment conditions:
-
-def momcondOLS(params, endog, exog):
-    #print exog.T.shape, endog.shape, params.shape
-    #print np.dot(exog, params).shape
-    #return np.dot(exog.T, endog - np.dot(exog, params))
-    return exog * (endog - np.dot(exog, params))[:,None]
-
-def momcondIVLS(params, endog, exog, instrum):
-    return instrum * (endog - np.dot(exog, params))[:,None]
-
 
 if __name__ == '__main__':
 
-    exampledata = ['ols', 'iv', 'ivfake'][1]
-    nobs = nsample = 500
-    sige = 3
-    corrfactor = 0.025
+    examples = ['ivols', 'distquant'][:]
+
+    if 'ivols' in examples:
+        exampledata = ['ols', 'iv', 'ivfake'][1]
+        nobs = nsample = 500
+        sige = 3
+        corrfactor = 0.025
 
 
-    x = np.linspace(0,10, nobs)
-    X = sm.add_constant(np.column_stack((x, x**2)))
-    beta = np.array([1, 0.1, 10])
+        x = np.linspace(0,10, nobs)
+        X = sm.add_constant(np.column_stack((x, x**2)))
+        beta = np.array([1, 0.1, 10])
 
-    def sample_ols(exog):
-        endog = np.dot(exog, beta) + sige*np.random.normal(size=nobs)
-        return endog, exog, None
+        def sample_ols(exog):
+            endog = np.dot(exog, beta) + sige*np.random.normal(size=nobs)
+            return endog, exog, None
 
-    def sample_iv(exog):
-        print 'using iv example'
-        X = exog.copy()
-        e = sige * np.random.normal(size=nobs)
-        endog = np.dot(X, beta) + e
-        exog[:,0] = X[:,0] + corrfactor * e
-        z0 = X[:,0] + np.random.normal(size=nobs)
-        z1 = X.sum(1) + np.random.normal(size=nobs)
-        z2 = X[:,1]
-        z3 = (np.dot(X, np.array([2,1, 0])) +
-                        sige/2. * np.random.normal(size=nobs))
-        z4 = X[:,1] + np.random.normal(size=nobs)
-        instrument = np.column_stack([z0, z1, z2, z3, z4, X[:,-1]])
-        return endog, exog, instrument
+        def sample_iv(exog):
+            print 'using iv example'
+            X = exog.copy()
+            e = sige * np.random.normal(size=nobs)
+            endog = np.dot(X, beta) + e
+            exog[:,0] = X[:,0] + corrfactor * e
+            z0 = X[:,0] + np.random.normal(size=nobs)
+            z1 = X.sum(1) + np.random.normal(size=nobs)
+            z2 = X[:,1]
+            z3 = (np.dot(X, np.array([2,1, 0])) +
+                            sige/2. * np.random.normal(size=nobs))
+            z4 = X[:,1] + np.random.normal(size=nobs)
+            instrument = np.column_stack([z0, z1, z2, z3, z4, X[:,-1]])
+            return endog, exog, instrument
 
-    def sample_ivfake(exog):
-        X = exog
-        e = sige * np.random.normal(size=nobs)
-        endog = np.dot(X, beta) + e
-        #X[:,0] += 0.01 * e
-        #z1 = X.sum(1) + np.random.normal(size=nobs)
-        #z2 = X[:,1]
-        z3 = (np.dot(X, np.array([2,1, 0])) +
-                        sige/2. * np.random.normal(size=nobs))
-        z4 = X[:,1] + np.random.normal(size=nobs)
-        instrument = np.column_stack([X[:,:2], z3, z4, X[:,-1]]) #last is constant
-        return endog, exog, instrument
-
-
-    if exampledata == 'ols':
-        endog, exog, _ = sample_ols(X)
-        instrument = exog
-    elif exampledata == 'iv':
-        endog, exog, instrument = sample_iv(X)
-    elif exampledata == 'ivfake':
-        endog, exog, instrument = sample_ivfake(X)
+        def sample_ivfake(exog):
+            X = exog
+            e = sige * np.random.normal(size=nobs)
+            endog = np.dot(X, beta) + e
+            #X[:,0] += 0.01 * e
+            #z1 = X.sum(1) + np.random.normal(size=nobs)
+            #z2 = X[:,1]
+            z3 = (np.dot(X, np.array([2,1, 0])) +
+                            sige/2. * np.random.normal(size=nobs))
+            z4 = X[:,1] + np.random.normal(size=nobs)
+            instrument = np.column_stack([X[:,:2], z3, z4, X[:,-1]]) #last is constant
+            return endog, exog, instrument
 
 
+        if exampledata == 'ols':
+            endog, exog, _ = sample_ols(X)
+            instrument = exog
+        elif exampledata == 'iv':
+            endog, exog, instrument = sample_iv(X)
+        elif exampledata == 'ivfake':
+            endog, exog, instrument = sample_ivfake(X)
 
 
+        #using GMM and IV2SLS classes
+        #----------------------------
 
-    results = sm.OLS(endog, exog).fit()
-    start = beta * 0.9
-    resgmm = fitgmm(momcondOLS, (endog, exog), start, fixed=None, weightsoptimal=False)
-    print resgmm
-    print results.params
+        mod = IVGMM(endog, exog, instrument, nmoms=instrument.shape[1])
+        res = mod.fit()
+        modgmmols = IVGMM(endog, exog, exog, nmoms=exog.shape[1])
+        resgmmols = modgmmols.fit()
+        modls = IV2SLS(endog, exog, instrument)
+        resls = modls.fit()
+        modols = OLS(endog, exog)
+        resols = modols.fit()
 
-    print gmmiter(momcondOLS, start, maxiter=3, args=(endog, exog))
-    ##w = np.eye(len(start))
-    ##for i in range(10):
-    ##    resgmm = fitgmm(momcondOLS, (y,X), start, weights=w, fixed=None, weightsoptimal=False)
-    ##    moms = momcondOLS(resgmm, y, X)
-    ##    w = np.dot(moms.T,moms)
-    ##    start = resgmm
-    ##
-    ##    print resgmm
+        print '\nIV case'
+        print 'params'
+        print 'IV2SLS', resls.params
+        print 'GMM   ', res.params
+        print 'diff  ', res.params - resls.params
+        print 'OLS   ', resols.params
+        print 'GMMOLS', resgmmols.params
+        print '\nbse'
+        print 'IV2SLS', resls.bse
+        print 'GMM   ', mod.bse   #bse currently only attached to model not results
+        print 'diff  ', mod.bse - resls.bse
+        print '%-diff', resls.bse / mod.bse * 100 - 100
+        print 'OLS   ', resols.bse
+        print 'GMMOLS', modgmmols.bse
 
-
-    # OLS using IV
-    resgmmiv = fitgmm(momcondIVLS, (endog, exog, exog), start, fixed=None, weightsoptimal=False)
-    print gmmiter(momcondIVLS, start, maxiter=3, args=(endog, exog, exog))
-
-    #endog, exog = y, X
-    def momcond(params):
-        #endog, exog = args
-        return momcondOLS(params, endog, exog).mean(0)
-
-    #maybe grad first and then sum, need 3d return from approx_fprime1
-    #   I don't think so, sum/mean and differentiation can be interchanged (?)
-    gradgmm = approx_fprime1(resgmm, momcond)
-    moms = momcondOLS(resgmm, endog, exog)
-    w = np.dot(moms.T,moms)
-
-    gradmoms2s = (approx_fprime1(resgmm, momcond, epsilon=1e-4)+approx_fprime1(resgmm, momcond, epsilon=-1e-4))/2
-
-    covgmm = gmmcov_params(moms, gradmoms2s)
-    print results.cov_params()
-    print covgmm
-    print 'percent difference'
-    print (results.cov_params() - covgmm) / results.cov_params() *100
-    print results.bse
-    print np.sqrt(np.diag(covgmm))
-    covgmmw = gmmcov_params(moms, gradmoms2s,
-                            weights=np.linalg.inv(np.dot(moms.T, moms)))
-    covgmmw2 = gmmcov_params(moms, gradmoms2s,
-                             weights=np.linalg.inv(np.cov(moms, rowvar=0)))
+        print "Hausman's specification test"
+        print modls.spec_hausman()
+        print spec_hausman(resols.params, res.params, resols.cov_params(),
+                           mod.cov_params())
+        print spec_hausman(resgmmols.params, res.params, modgmmols.cov_params(),
+                           mod.cov_params())
 
 
-    #using GMM and IV2SLS classes
-    #----------------------------
+    if 'distquant' in examples:
 
-    mod = IVGMM(endog, exog, instrument, nmoms=instrument.shape[1])
-    res = mod.fit()
-    modgmmols = IVGMM(endog, exog, exog, nmoms=exog.shape[1])
-    resgmmols = modgmmols.fit()
-    modls = IV2SLS(endog, exog, instrument)
-    resls = modls.fit()
-    modols = OLS(endog, exog)
-    resols = modols.fit()
+        #estimating distribution parameters from quantiles
+        #-------------------------------------------------
 
-    print '\nIV case'
-    print 'params'
-    print 'IV2SLS', resls.params
-    print 'GMM   ', res.params
-    print 'diff  ', res.params - resls.params
-    print 'OLS   ', resols.params
-    print 'GMMOLS', resgmmols.params
-    print '\nbse'
-    print 'IV2SLS', resls.bse
-    print 'GMM   ', mod.bse   #bse currently only attached to model not results
-    print 'diff  ', mod.bse - resls.bse
-    print '%-diff', resls.bse / mod.bse * 100 - 100
-    print 'OLS   ', resols.bse
-    print 'GMMOLS', modgmmols.bse
+        #example taken from distribution_estimators.py
+        gparrvs = stats.genpareto.rvs(2, size=500)
+        x0p = [1., gparrvs.min()-5, 1]
+        pfunc = fitquantilesgmm(stats.genpareto, gparrvs, start=x0p,
+                              pquant=np.linspace(0.01,0.99,10), frozen=None)
+        print pfunc
 
-    print "Hausman's specification test"
-    print modls.spec_hausman()
-    print spec_hausman(resols.params, res.params, resols.cov_params(),
-                       mod.cov_params())
-    print spec_hausman(resgmmols.params, res.params, modgmmols.cov_params(),
-                       mod.cov_params())
-
-
-
-    #estimating distribution parameters from quantiles
-    #-------------------------------------------------
-
-    #example taken from distribution_estimators.py
-    gparrvs = stats.genpareto.rvs(2, size=500)
-    x0p = [1., gparrvs.min()-5, 1]
-    pfunc = fitquantilesgmm(stats.genpareto, gparrvs, start=x0p,
-                          pquant=np.linspace(0.01,0.99,10), frozen=None)
-    print pfunc
-
-    moddist = DistQuantilesGMM(gparrvs, None, None, distfn=stats.genpareto)
-    #produces non-sense because optimal weighting matrix calculations don't
-    #apply to this case
-    #resgp = moddist.fit() #now with 'cov': LinAlgError: Singular matrix
-    pit1, wit1 = moddist.fititer([1.5,0,1.5], maxiter=1)
-    print pit1
-    p1 = moddist.fitgmm([1.5,0,1.5])
-    print p1
-    moddist2 = DistQuantilesGMM(gparrvs, None, None, distfn=stats.genpareto,
-                                pquant=np.linspace(0.01,0.99,10))
-    pit1a, wit1a = moddist2.fititer([1.5,0,1.5], maxiter=1)
-    print pit1a
-    p1a = moddist2.fitgmm([1.5,0,1.5])
-    print p1a
-    #Note: pit1a and p1a are the same and almost the same (1e-5) as
-    #      fitquantilesgmm version (functions instead of class)
-    print p1a - pfunc
+        moddist = DistQuantilesGMM(gparrvs, None, None, distfn=stats.genpareto)
+        #produces non-sense because optimal weighting matrix calculations don't
+        #apply to this case
+        #resgp = moddist.fit() #now with 'cov': LinAlgError: Singular matrix
+        pit1, wit1 = moddist.fititer([1.5,0,1.5], maxiter=1)
+        print pit1
+        p1 = moddist.fitgmm([1.5,0,1.5])
+        print p1
+        moddist2 = DistQuantilesGMM(gparrvs, None, None, distfn=stats.genpareto,
+                                    pquant=np.linspace(0.01,0.99,10))
+        pit1a, wit1a = moddist2.fititer([1.5,0,1.5], maxiter=1)
+        print pit1a
+        p1a = moddist2.fitgmm([1.5,0,1.5])
+        print p1a
+        #Note: pit1a and p1a are the same and almost the same (1e-5) as
+        #      fitquantilesgmm version (functions instead of class)
+        print p1a - pfunc
 
