@@ -102,6 +102,7 @@ class RU2NMNL(object):
         if type(tree) == tuple:   #assumes leaves are int for choice index
             name, subtree = tree
             self.branchleaves[name] = []  #register branch in dictionary
+            print '----------- starting next branch-----------'
             print name, datadict[name]
             print 'subtree', subtree
             branchvalue = []
@@ -114,15 +115,21 @@ class RU2NMNL(object):
             for b in subtree:
                 print b
                 bv = self.calc_prob(b, name)
+                bv = np.exp(bv)  #this shouldn't be here, when adding branch data
                 branchvalue.append(bv)
                 branchsum = branchsum + bv
             self.branchvalues[name] = branchvalue #keep track what was returned
-            print 'branchsum', branchsum
+
+            print '----------- returning to branch-----------',
+            print name
+            print 'branchsum in branch', name, branchsum
 
             if parent:
                 print 'parent', parent
                 self.branchleaves[parent].extend(self.branchleaves[name])
-            if 1:  #not name == 'top':
+            if 0:  #not name == 'top':  # not used anymore !!! ???
+            #if not name == 'top':
+                #TODO: do I need this only on the lowest branches ?
                 tmpsum = 0
                 for k in self.branchleaves[name]:
                     #similar to this is now also in return branch values
@@ -134,8 +141,10 @@ class RU2NMNL(object):
                     self.probstxt[k] = self.probstxt[k] + ['*' + name + '-prob' +
                                     '(%s)' % ', '.join(self.paramsind[name])]
 
+                    #TODO: does this use the denominator twice now
                     self.probs[k] = self.probs[k] / tmpsum
                     if np.size(self.datadict[name])>0:
+                        #not used yet, might have to move one indentation level
                         #self.probs[k] = self.probs[k] / tmpsum
 ##                            np.exp(-self.datadict[name] *
 ##                             np.sum(self.recursionparams[self.parinddict[name]]))
@@ -147,33 +156,38 @@ class RU2NMNL(object):
             #walk one level down again to add branch probs to instance.probs
             for bidx, b in enumerate(subtree):
                 print 'repr(b)', repr(b), bidx
-                if len(b) == 1: #TODO: skip leaves, check this
-                    continue
-                bname = b#[0]
-                for k in self.branchleaves[name]:
+                #if len(b) == 1: #TODO: skip leaves, check this
+                if isinstance(b, str):
+                    #this implies name is a bottom branch,
+                    #possible to add special things here
+                    self.probs[b] = self.probs[b] / branchsum
+                else:
+                    bname = b[0]
+                    for k in self.branchleaves[bname]:
 
-                    bprob = branchvalue[bidx]/branchsum
-                    print 'branchprob', bname, k, bprob, branchsum
-                    #temporary hack with maximum to avoid zeros
-                    #self.probs[k] = self.probs[k] * np.maximum(bprob, 1e-4)
+                        bprob = branchvalue[bidx]/branchsum
+                        print 'branchprob', bname, k, bprob, branchsum
+                        #temporary hack with maximum to avoid zeros
+                        self.probs[k] = self.probs[k] * np.maximum(bprob, 1e-4)
 
 
             print 'working on branch', tree, branchsum
             if testxb<2:
                 return branchsum
             else:
-                return iv
+                return np.log(branchsum) #iv
 
         else:
             print 'parent', parent
             self.branchleaves[parent].append(tree) # register leave with parent
             self.probstxt[tree] = [tree + '-prob' +
                                 '(%s)' % ', '.join(self.paramsind[tree])]
-            self.probs[tree] = np.exp(np.sum(self.datadict[tree] *
+            leafprob = np.exp(np.sum(self.datadict[tree] *
                                   self.recursionparams[self.parinddict[tree]]))
+            self.probs[tree] = leafprob  #= 1 #try initialization only
 
             if testxb == 2:
-                return self.probs[tree]
+                return leafprob
             elif testxb == 1:
                 leavessum = np.array(datadict[tree]) # sum((datadict[bi] for bi in datadict[tree]))
                 print 'final branch with', tree, ''.join(tree), leavessum #sum(tree)
