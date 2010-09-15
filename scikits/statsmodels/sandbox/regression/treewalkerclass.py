@@ -68,6 +68,8 @@ class RU2NMNL(object):
         self.probstxt = {}
         self.branchleaves = {}
         self.branchvalues = {}  #just to keep track of returns by branches
+        self.branchsums = {}
+        self.bprobs = {}
 
         #copied over but not quite sure yet
         #unique, parameter array names,
@@ -86,8 +88,6 @@ class RU2NMNL(object):
         #for testing that individual parameters are used in the right place
         self.recursionparams = np.zeros(len(self.paramsnames))
         #self.recursionparams[1] = 1
-
-
 
 
     def calc_prob(self, tree, parent=None):
@@ -154,18 +154,27 @@ class RU2NMNL(object):
                     #    self.probs[k] = self.probs[k] * np.exp( iv)
 
             #walk one level down again to add branch probs to instance.probs
+            self.bprobs[name] = []
             for bidx, b in enumerate(subtree):
                 print 'repr(b)', repr(b), bidx
                 #if len(b) == 1: #TODO: skip leaves, check this
-                if isinstance(b, str):
+                if not type(b) == tuple: # isinstance(b, str):
+                    #TODO: replace this with a check for branch (tuple) instead
                     #this implies name is a bottom branch,
                     #possible to add special things here
+                    self.bprobs[name].append(self.probs[b])
                     self.probs[b] = self.probs[b] / branchsum
+                    print '*********** branchsum at bottom branch', branchsum
+                    #self.bprobs[name].append(self.probs[b])
                 else:
                     bname = b[0]
+                    branchsum2 = sum(self.branchvalues[name])
+                    assert np.abs(branchsum - branchsum2).sum() < 1e-8
+                    bprob = branchvalue[bidx]/branchsum
+                    self.bprobs[name].append(bprob)
+
                     for k in self.branchleaves[bname]:
 
-                        bprob = branchvalue[bidx]/branchsum
                         print 'branchprob', bname, k, bprob, branchsum
                         #temporary hack with maximum to avoid zeros
                         self.probs[k] = self.probs[k] * np.maximum(bprob, 1e-4)
@@ -175,19 +184,22 @@ class RU2NMNL(object):
             if testxb<2:
                 return branchsum
             else:
+                self.branchsums[name] = branchsum
                 return np.log(branchsum) #iv
+                #branchsum is now IV, TODO: add effect of branch variables
 
         else:
             print 'parent', parent
             self.branchleaves[parent].append(tree) # register leave with parent
             self.probstxt[tree] = [tree + '-prob' +
                                 '(%s)' % ', '.join(self.paramsind[tree])]
+            #this is not yet a prob, not normalized to 1, it is exp(x*b)
             leafprob = np.exp(np.sum(self.datadict[tree] *
                                   self.recursionparams[self.parinddict[tree]]))
             self.probs[tree] = leafprob  #= 1 #try initialization only
 
             if testxb == 2:
-                return leafprob
+                return np.log(leafprob)
             elif testxb == 1:
                 leavessum = np.array(datadict[tree]) # sum((datadict[bi] for bi in datadict[tree]))
                 print 'final branch with', tree, ''.join(tree), leavessum #sum(tree)
@@ -317,3 +329,13 @@ print 'sum of probs', sum(modru2.probs.values())
 print 'branchvalues'
 print modru2.branchvalues
 print modru.branchvalues
+
+print 'branch probabilities'
+print modru.bprobs
+
+'''
+>>> modru.bprobs
+{'Fly': [], 'top': [0.0016714179077931082, 0.99832858209220687], 'Ground': []}
+>>> modru2.bprobs
+{'top': [0.25000000000000006, 0.62499999999999989, 0.12500000000000003], 'B22': [], 'B21': [], 'B1': [], 'B2': [0.40000000000000008, 0.59999999999999998], 'B3': []}
+'''
