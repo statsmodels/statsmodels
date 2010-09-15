@@ -1,3 +1,50 @@
+'''
+
+Formulas
+--------
+
+This follows mostly Greene notation (in slides)
+partially ignoring factors tau or mu for now, ADDED
+(if all tau==1, then runmnl==clogit)
+
+leaf k probability :
+
+Prob(k|j) = exp(b_k * X_k / mu_j)/ sum_{i in L(j)} (exp(b_i * X_i / mu_j)
+
+branch j probabilities :
+
+Prob(j) = exp(b_j * X_j + mu*IV_j )/ sum_{i in NB(j)} (exp(b_i * X_i + mu_i*IV_i)
+
+inclusive value of branch j :
+
+IV_j = log( sum_{i in L(j)} (exp(b_i * X_i / mu_j) )
+
+this is the log of the denominator of the leaf probabilities
+
+
+L(j) : leaves at branch j, where k is child of j
+NB(j) : set of j and it's siblings
+
+Design
+------
+
+* splitting calculation transmission between returns and changes to
+  instance.probs
+  - probability for each leaf is in instance.probs
+  - inclusive values and contribution of exog on branch level need to be
+    added separately. handed up the tree through returns
+
+
+bugs/problems
+-------------
+
+* singleton branches return zero to `top`, not a value
+  I'm not sure what they are supposed to return, given the split between returns
+  and instance.probs
+* Why does 'Air' (singleton branch) get probability exactly 0.5 ?
+
+
+'''
 
 import numpy as np
 from pprint import pprint
@@ -36,6 +83,10 @@ class RU2NMNL(object):
                                for k,v in self.paramsind.items())
 
         self.recursionparams = 1. + np.arange(len(self.paramsnames))
+        #for testing that individual parameters are used in the right place
+        self.recursionparams = np.zeros(len(self.paramsnames))
+        self.recursionparams[1] = 1
+
 
 
 
@@ -72,6 +123,8 @@ class RU2NMNL(object):
             if 1:  #not name == 'top':
                 tmpsum = 0
                 for k in self.branchleaves[name]:
+                    #similar to this is now also in return branch values
+                    #depends on what will be returned
                     tmpsum += self.probs[k]
                     iv = np.log(tmpsum)
 
@@ -100,14 +153,16 @@ class RU2NMNL(object):
             self.branchleaves[parent].append(tree) # register leave with parent
             self.probstxt[tree] = [tree + '-prob' +
                                 '(%s)' % ', '.join(self.paramsind[tree])]
-            self.probs[tree] = np.exp(-self.datadict[tree] *
-                        np.sum(self.recursionparams[self.parinddict[tree]]))
+            self.probs[tree] = np.exp(np.sum(self.datadict[tree] *
+                                  self.recursionparams[self.parinddict[tree]]))
 
-            if testxb:
+            if testxb == 2:
+                return self.probs[tree]
+            elif testxb == 1:
                 leavessum = np.array(datadict[tree]) # sum((datadict[bi] for bi in datadict[tree]))
                 print 'final branch with', tree, ''.join(tree), leavessum #sum(tree)
                 return leavessum  #sum(xb[tree])
-            else:
+            elif testxb == 0:
                 return ''.join(tree) #sum(tree)
 
 
@@ -118,6 +173,9 @@ endog = 5 # dummy place holder
 
 
 ##############  Example similar to Greene
+
+#get pickled data
+#endog3, xifloat3 = pickle.load(open('xifloat2.pickle','rb'))
 
 
 tree0 = ('top',
@@ -226,3 +284,6 @@ print '\nmodru.probs'
 pprint(modru2.probs)
 
 print 'sum of probs', sum(modru2.probs.values())
+print 'branchvalues'
+print modru2.branchvalues
+print modru.branchvalues
