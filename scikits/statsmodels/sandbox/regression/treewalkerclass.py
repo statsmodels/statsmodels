@@ -1,9 +1,9 @@
 
-
+import numpy as np
 from pprint import pprint
 
 
-testxb = 0 #global to class to return strings instead of numbers
+testxb = 2 #global to class to return strings instead of numbers
 
 class RU2NMNL(object):
     '''Nested Multinomial Logit with Random Utility 2 parameterization
@@ -18,7 +18,25 @@ class RU2NMNL(object):
 
         self.branchsum = ''
         self.probs = {}
+        self.probstxt = {}
         self.branchleaves = {}
+        self.branchvalues = {}  #just to keep track of returns by branches
+
+        #copied over but not quite sure yet
+        #unique, parameter array names,
+        #sorted alphabetically, order is/should be only internal
+        self.paramsnames = sorted(set([i for j in paramsind.values() for i in j]))
+
+        #mapping coefficient names to indices to unique/parameter array
+        self.paramsidx = dict((name, idx) for (idx,name) in
+                              enumerate(self.paramsnames))
+
+        #mapping branch and leaf names to index in parameter array
+        self.parinddict = dict((k, [self.paramsidx[j] for j in v])
+                               for k,v in self.paramsind.items())
+
+        self.recursionparams = 1. + np.arange(len(self.paramsnames))
+
 
 
     def calc_prob(self, tree, parent=None):
@@ -35,36 +53,64 @@ class RU2NMNL(object):
             self.branchleaves[name] = []  #register branch in dictionary
             print name, datadict[name]
             print 'subtree', subtree
-            keys = []
+            branchvalue = []
             if testxb:
                 branchsum = datadict[name]
             else:
                 branchsum = name
             for b in subtree:
                 print b
-                branchsum = branchsum + self.calc_prob(b, name)
-            print 'branchsum', branchsum, keys
+                bv = self.calc_prob(b, name)
+                branchvalue.append(bv)
+                branchsum = branchsum + bv
+            self.branchvalues[name] = branchvalue #keep track what was returned
+            print 'branchsum', branchsum
 
             if parent:
                 print 'parent', parent
                 self.branchleaves[parent].extend(self.branchleaves[name])
-            for k in self.branchleaves[name]:
-                self.probs[k] = self.probs[k] + ['*' + name + '-prob']
+            if 1:  #not name == 'top':
+                tmpsum = 0
+                for k in self.branchleaves[name]:
+                    tmpsum += self.probs[k]
+                    iv = np.log(tmpsum)
+
+                for k in self.branchleaves[name]:
+                    self.probstxt[k] = self.probstxt[k] + ['*' + name + '-prob' +
+                                    '(%s)' % ', '.join(self.paramsind[name])]
+
+                    self.probs[k] = self.probs[k] / tmpsum
+                    if np.size(self.datadict[name])>0:
+                        #self.probs[k] = self.probs[k] / tmpsum
+##                            np.exp(-self.datadict[name] *
+##                             np.sum(self.recursionparams[self.parinddict[name]]))
+                        print 'self.datadict[name], self.probs[k]',
+                        print self.datadict[name], self.probs[k]
+                    #if not name == 'top':
+                    #    self.probs[k] = self.probs[k] * np.exp( iv)
+
+            print 'working on branch', tree, branchsum
+            if testxb<2:
+                return branchsum
+            else:
+                return iv
 
         else:
             print 'parent', parent
             self.branchleaves[parent].append(tree) # register leave with parent
-            self.probs[tree] = [tree + '-prob' +
+            self.probstxt[tree] = [tree + '-prob' +
                                 '(%s)' % ', '.join(self.paramsind[tree])]
+            self.probs[tree] = np.exp(-self.datadict[tree] *
+                        np.sum(self.recursionparams[self.parinddict[tree]]))
+
             if testxb:
-                leavessum = sum((datadict[bi] for bi in tree))
+                leavessum = np.array(datadict[tree]) # sum((datadict[bi] for bi in datadict[tree]))
                 print 'final branch with', tree, ''.join(tree), leavessum #sum(tree)
                 return leavessum  #sum(xb[tree])
             else:
                 return ''.join(tree) #sum(tree)
 
-        print 'working on branch', tree, branchsum
-        return branchsum
+
 
 
 
@@ -88,6 +134,10 @@ datadict = dict(zip(['Air', 'Train', 'Bus', 'Car'],
 #for testing only (mock that returns it's own name
 datadict = dict(zip(['Air', 'Train', 'Bus', 'Car'],
                     ['Airdata', 'Traindata', 'Busdata', 'Cardata']))
+
+if testxb:
+    datadict = dict(zip(['Air', 'Train', 'Bus', 'Car'],
+                    np.arange(4)))
 
 datadict.update({'top' :   [],
                  'Fly' :   [],
@@ -174,3 +224,5 @@ print 'Tree'
 pprint(modru2.tree)
 print '\nmodru.probs'
 pprint(modru2.probs)
+
+print 'sum of probs', sum(modru2.probs.values())
