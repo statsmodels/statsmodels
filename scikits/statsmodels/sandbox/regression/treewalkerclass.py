@@ -40,8 +40,31 @@ bugs/problems
 
 * singleton branches return zero to `top`, not a value
   I'm not sure what they are supposed to return, given the split between returns
-  and instance.probs
-* Why does 'Air' (singleton branch) get probability exactly 0.5 ?
+  and instance.probs DONE
+* Why does 'Air' (singleton branch) get probability exactly 0.5 ? DONE
+
+TODO
+----
+* add tau, normalization for nested logit, currently tau is 1 (clogit)
+  taus also needs to become part of params
+* add effect of branch level explanatory variables
+* write a generic multinomial logit that takes arbitrary probabilities, this
+  would be the same for MNL, clogit and runmnl,
+  delegate calculation of probabilities
+* test on actual data,
+  - tau=1 replicate clogit numbers,
+  - transport example from Greene tests 1-level tree and degenerate sub-trees
+  - test example for multi-level trees ???
+* associated test statistics
+  - (I don't think I will fight with the gradient or hessian of the log-like.)
+  - basic MLE statistics can be generic
+  - tests specific to the model (?)
+* nice printouts since I'm currently collecting a lot of information in the tree
+  recursion and everything has names
+
+The only parts that are really necessary to get a functional nested logit are
+adding the taus and the MLE wrapper class. The rest are enhancements.
+
 
 
 '''
