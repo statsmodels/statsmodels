@@ -85,7 +85,7 @@ class RU2NMNL(object):
         self.recursionparams = 1. + np.arange(len(self.paramsnames))
         #for testing that individual parameters are used in the right place
         self.recursionparams = np.zeros(len(self.paramsnames))
-        self.recursionparams[1] = 1
+        #self.recursionparams[1] = 1
 
 
 
@@ -105,7 +105,9 @@ class RU2NMNL(object):
             print name, datadict[name]
             print 'subtree', subtree
             branchvalue = []
-            if testxb:
+            if testxb == 2:
+                branchsum = 0
+            elif testxb == 1:
                 branchsum = datadict[name]
             else:
                 branchsum = name
@@ -141,6 +143,20 @@ class RU2NMNL(object):
                         print self.datadict[name], self.probs[k]
                     #if not name == 'top':
                     #    self.probs[k] = self.probs[k] * np.exp( iv)
+
+            #walk one level down again to add branch probs to instance.probs
+            for bidx, b in enumerate(subtree):
+                print 'repr(b)', repr(b), bidx
+                if len(b) == 1: #TODO: skip leaves, check this
+                    continue
+                bname = b#[0]
+                for k in self.branchleaves[name]:
+
+                    bprob = branchvalue[bidx]/branchsum
+                    print 'branchprob', bname, k, bprob, branchsum
+                    #temporary hack with maximum to avoid zeros
+                    #self.probs[k] = self.probs[k] * np.maximum(bprob, 1e-4)
+
 
             print 'working on branch', tree, branchsum
             if testxb<2:
