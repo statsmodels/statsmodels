@@ -87,7 +87,7 @@ class RU2NMNL(object):
         self.recursionparams = 1. + np.arange(len(self.paramsnames))
         #for testing that individual parameters are used in the right place
         self.recursionparams = np.zeros(len(self.paramsnames))
-        #self.recursionparams[1] = 1
+        self.recursionparams[2] = 1
 
 
     def calc_prob(self, tree, parent=None):
@@ -304,7 +304,7 @@ datadict2.update({'top':1000, 'B1':100, 'B2':200, 'B21':21,'B22':22, 'B3':300})
  'B21': 21,
  'B22': 22,
  'B3': 300,
- 'a': 0,
+ 'a': 0.5,
  'b': 1,
  'c': 2,
  'd': 3,
