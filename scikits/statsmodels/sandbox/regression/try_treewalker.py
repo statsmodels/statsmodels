@@ -42,7 +42,7 @@ print branch(tree)
 #   explanatory variables in leaf X_j, V_j is linear in X, IV is logsumexp of X,
 
 
-testxb = 1#0
+testxb = 0#1#0
 def branch2(tree):
     '''walking a tree bottom-up based on dictionary
     '''

@@ -25,6 +25,7 @@ License: BSD (simplified)
 
 
 import numpy as np
+import numpy.lib.recfunctions as recf
 
 class TryCLogit(object):
     '''
@@ -120,6 +121,7 @@ class TryNCLogit(object):
         self.nobs, self.nchoices = endog.shape
         self.nchoices = len(exog_bychoices)
 
+
         #TODO rename beta to params and include inclusive values for nested CL
         betaind = [exog_bychoices[ii].shape[1]-ncommon for ii in range(4)]
         zi = np.r_[[ncommon], ncommon + np.array(betaind).cumsum()]
@@ -168,6 +170,66 @@ class TryNCLogit(object):
         sumexptiv = exptiv.sum(1)
         logsumexpxb = np.log(sumexpxb)
         probs = exptiv/sumexptiv[:,None]
+
+
+####### obsolete version to try out attaching data,
+####### new in treewalkerclass.py, copy new version to replace this
+####### problem with bzr I will disconnect history when copying
+testxb = 0 #global to class
+class RU2NMNL(object):
+    '''Nested Multinomial Logit with Random Utility 2 parameterization
+
+    '''
+
+    def __init__(self, endog, exog, tree, paramsind):
+        self.endog = endog
+        self.datadict = exog
+        self.tree = tree
+        self.paramsind = paramsind
+
+        self.branchsum = ''
+        self.probs = {}
+
+
+    def calc_prob(self, tree, keys=None):
+        '''walking a tree bottom-up based on dictionary
+        '''
+        endog = self.endog
+        datadict = self.datadict
+        paramsind = self.paramsind
+        branchsum = self.branchsum
+
+
+        if type(tree) == tuple:   #assumes leaves are int for choice index
+            name, subtree = tree
+            print name, datadict[name]
+            print 'subtree', subtree
+            keys = []
+            if testxb:
+                branchsum = datadict[name]
+            else:
+                branchsum = name  #0
+            for b in subtree:
+                print b
+                #branchsum += branch2(b)
+                branchsum = branchsum + self.calc_prob(b, keys)
+            print 'branchsum', branchsum, keys
+            for k in keys:
+                self.probs[k] = self.probs[k] + ['*' + name + '-prob']
+
+        else:
+            keys.append(tree)
+            self.probs[tree] = [tree + '-prob' +
+                                '(%s)' % ', '.join(self.paramsind[tree])]
+            if testxb:
+                leavessum = sum((datadict[bi] for bi in tree))
+                print 'final branch with', tree, ''.join(tree), leavessum #sum(tree)
+                return leavessum  #sum(xb[tree])
+            else:
+                return ''.join(tree) #sum(tree)
+
+        print 'working on branch', tree, branchsum
+        return branchsum
 
 
 
@@ -232,6 +294,7 @@ for ii in range(4):
 ncommon = 2
 betaind = [len(xi[ii].dtype.names)-ncommon for ii in range(4)]
 zi=np.r_[[ncommon], ncommon+np.array(betaind).cumsum()]
+z=np.arange(7)  #what is n?
 betaindices = [np.r_[np.array([0, 1]),z[zi[ii]:zi[ii+1]]]
                for ii in range(len(zi)-1)]
 
@@ -250,10 +313,13 @@ xifloat = [xx.view(float).reshape(nobs,-1) for xx in xi]
 clogit = TryCLogit(endog, xifloat, 2)
 from scipy import optimize
 
-res = optimize.fmin(clogit.loglike, np.ones(6))
+debug = 0
+if debug:
+    res = optimize.fmin(clogit.loglike, np.ones(6))
 #estimated parameters from Greene:
 tab2324 = [-0.15501, -0.09612, 0.01329, 5.2074, 3.8690, 3.1632]
-res2 = optimize.fmin(clogit.loglike, tab2324)
+if debug:
+    res2 = optimize.fmin(clogit.loglike, tab2324)
 
 res3 = optimize.fmin(clogit.loglike, np.zeros(6),maxfun=10000)
 #this has same numbers as Greene table 23.24, but different sequence
@@ -273,3 +339,35 @@ print res3corr - tab2324  # diff 1e-5 to 1e-6
 #199.128369 - 199.1284  #llf same up to print precision of Greene
 
 print clogit.fit()
+
+
+tree0 = ('top',
+            [('Fly',['Air']),
+             ('Ground', ['Train', 'Car', 'Bus'])
+             ]
+        )
+
+datadict = dict(zip(['Air', 'Train', 'Bus', 'Car'],
+                    [xifloat[i]for i in range(4)]))
+
+#for testing only (mock that returns it's own name
+datadict = dict(zip(['Air', 'Train', 'Bus', 'Car'],
+                    ['Airdata', 'Traindata', 'Busdata', 'Cardata']))
+
+datadict.update({'top' :   [],
+                 'Fly' :   [],
+                 'Ground': []})
+
+paramsind = {'top' :   [],
+             'Fly' :   [],
+             'Ground': [],
+             'Air' :   ['GC', 'Ttme', 'ConstA', 'Hinc'],
+             'Train' : ['GC', 'Ttme', 'ConstT'],
+             'Bus' :   ['GC', 'Ttme', 'ConstB'],
+             'Car' :   ['GC', 'Ttme']
+             }
+
+modru = RU2NMNL(endog, datadict, tree0, paramsind)
+print modru.calc_prob(modru.tree)
+print '\nmodru.probs'
+print modru.probs
