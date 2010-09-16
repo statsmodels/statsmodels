@@ -65,7 +65,12 @@ TODO
 The only parts that are really necessary to get a functional nested logit are
 adding the taus and the MLE wrapper class. The rest are enhancements.
 
-
+I added fake tau, one fixed tau for all branches, not clear where the tau for
+leaf should be added either at original assignment of self.probs, or as part
+of the one-step-down probability correction in the bottom branches.
+The second would be cleaner (would make treatment of leaves and branches more
+symmetric, but requires that initial assignment in the leaf only does
+initialization. e.g self.probs = 1.  ???
 
 '''
 
@@ -110,12 +115,14 @@ class RU2NMNL(object):
         self.recursionparams = 1. + np.arange(len(self.paramsnames))
         #for testing that individual parameters are used in the right place
         self.recursionparams = np.zeros(len(self.paramsnames))
-        self.recursionparams[2] = 1
+        #self.recursionparams[2] = 1
 
 
     def calc_prob(self, tree, parent=None):
         '''walking a tree bottom-up based on dictionary
         '''
+        tau = 0.5#2 #placeholder for now
+        #should be tau=self.taus[name] but as part of params for optimization
         endog = self.endog
         datadict = self.datadict
         paramsind = self.paramsind
@@ -138,7 +145,7 @@ class RU2NMNL(object):
             for b in subtree:
                 print b
                 bv = self.calc_prob(b, name)
-                bv = np.exp(bv)  #this shouldn't be here, when adding branch data
+                bv = np.exp(bv/tau)  #this shouldn't be here, when adding branch data
                 branchvalue.append(bv)
                 branchsum = branchsum + bv
             self.branchvalues[name] = branchvalue #keep track what was returned
@@ -186,6 +193,7 @@ class RU2NMNL(object):
                     #this implies name is a bottom branch,
                     #possible to add special things here
                     self.bprobs[name].append(self.probs[b])
+                    #TODO: need tau possibly here
                     self.probs[b] = self.probs[b] / branchsum
                     print '*********** branchsum at bottom branch', branchsum
                     #self.bprobs[name].append(self.probs[b])
@@ -206,8 +214,14 @@ class RU2NMNL(object):
             print 'working on branch', tree, branchsum
             if testxb<2:
                 return branchsum
-            else:
+            else: #this is the relevant part
                 self.branchsums[name] = branchsum
+                if np.size(self.datadict[name])>0:
+                    branchxb = np.sum(self.datadict[name] *
+                                  self.recursionparams[self.parinddict[name]])
+                else:
+                    branchxb = 0
+                iv = branchxb + tau * branchsum #which tau: name or parent???
                 return np.log(branchsum) #iv
                 #branchsum is now IV, TODO: add effect of branch variables
 
@@ -218,8 +232,11 @@ class RU2NMNL(object):
                                 '(%s)' % ', '.join(self.paramsind[tree])]
             #this is not yet a prob, not normalized to 1, it is exp(x*b)
             leafprob = np.exp(np.sum(self.datadict[tree] *
-                                  self.recursionparams[self.parinddict[tree]]))
+                                  self.recursionparams[self.parinddict[tree]])
+                              / tau)   # fake tau for now, wrong spot ???
+            #it seems I get the same answer with and without tau here
             self.probs[tree] = leafprob  #= 1 #try initialization only
+            #TODO: where  should I add tau in the leaves
 
             if testxb == 2:
                 return np.log(leafprob)
