@@ -86,7 +86,9 @@ initialization. e.g self.probs = 1.  ???
 
 DONE added taus
 
-still todo: tau for degenerate branches are not identified, set to 1 for MLE
+still todo:
+- tau for degenerate branches are not identified, set to 1 for MLE
+- rename parinddict to paramsinddict
 
 
 Author: Josef Perktold
@@ -188,13 +190,52 @@ def getnodes(tree):
             al.extend(l)
             adeg.extend(d)
         return ab, al, adeg
-    return [], tree, []
+    return [], [tree], []
 
 
 testxb = 2 #global to class to return strings instead of numbers
 
 class RU2NMNL(object):
     '''Nested Multinomial Logit with Random Utility 2 parameterization
+
+
+    Parameters
+    ----------
+    endog : array
+        not used in this part
+    exog : dict_like
+        dictionary access to data where keys correspond to branch and leaf
+        names. The values are the data arrays for the exog in that node.
+    tree : nested tuples and lists
+        each branch, tree or subtree, is defined by a tuple
+        (branch_name, [subtree1, subtree2, ..., subtreek])
+        Bottom branches have as subtrees the list of leaf names.
+    paramsind : dictionary
+        dictionary that maps branch and leaf names to the names of parameters,
+        the coefficients for exogs)
+
+    Methods
+    -------
+    get_probs
+
+    Attributes
+    ----------
+    branches
+    leaves
+    paramsnames
+    parinddict
+
+    Notes
+    -----
+    endog needs to be encoded so it is consistent with self.leaves, which
+    defines the columns for the probability array. The ordering in leaves is
+    determined by the ordering of the tree.
+    In the dummy encoding of endog, the columns of endog need to have the
+    same order as self.leaves. In the integer encoding, the integer for a
+    choice has to correspond to the index in self.leaves.
+    (This could be made more robust, by handling the endog encoding internally
+    by leaf names, if endog is defined as categorical variable with
+    associated category level names.)
 
     '''
 
@@ -221,6 +262,7 @@ class RU2NMNL(object):
                                        for i in j])) +
                             ['tau_%s' % bname for bname in self.branches])
 
+        self.nparams = len(self.paramsnames)
 
         #mapping coefficient names to indices to unique/parameter array
         self.paramsidx = dict((name, idx) for (idx,name) in
@@ -236,6 +278,38 @@ class RU2NMNL(object):
         #self.recursionparams[2] = 1
         self.recursionparams[-self.nbranches:] = 1  #values for tau's
         #self.recursionparams[-2] = 2
+
+
+    def get_probs(self, params):
+        '''
+        obtain the probability array given an array of parameters
+
+        This is the function that can be called by loglike or other methods
+        that need the probabilities as function of the params.
+
+        Parameters
+        ----------
+        params : 1d array, (nparams,)
+            coefficients and tau that parameterize the model. The required
+            length can be obtained by nparams. (and will depend on the number
+            of degenerate leaves - not yet)
+
+        Returns
+        -------
+        probs : array, (nobs, nchoices)
+            probabilites for all choices for each observation. The order
+            is available by attribute leaves. See note in docstring of class
+
+
+
+        '''
+        self.recursionparams = params
+        self.calc_prob(self.tree)
+        probs_array = np.array([self.probs[leaf] for leaf in self.leaves])
+        return probs_array
+        #what's the ordering? Should be the same as sequence in tree.
+        #TODO: need a check/assert that this sequence is the same as the
+        #      encoding in endog
 
 
     def calc_prob(self, tree, parent=None):
@@ -256,9 +330,10 @@ class RU2NMNL(object):
             self.branchleaves[name] = []  #register branch in dictionary
 
             tau = self.recursionparams[self.paramsidx['tau_'+name]]
-            print '----------- starting next branch-----------'
-            print name, datadict[name], 'tau=', tau
-            print 'subtree', subtree
+            if DEBUG:
+                print '----------- starting next branch-----------'
+                print name, datadict[name], 'tau=', tau
+                print 'subtree', subtree
             branchvalue = []
             if testxb == 2:
                 branchsum = 0
@@ -267,19 +342,22 @@ class RU2NMNL(object):
             else:
                 branchsum = name
             for b in subtree:
-                print b
+                if DEBUG:
+                    print b
                 bv = self.calc_prob(b, name)
                 bv = np.exp(bv/tau)  #this shouldn't be here, when adding branch data
                 branchvalue.append(bv)
                 branchsum = branchsum + bv
             self.branchvalues[name] = branchvalue #keep track what was returned
 
-            print '----------- returning to branch-----------',
-            print name
-            print 'branchsum in branch', name, branchsum
+            if DEBUG:
+                print '----------- returning to branch-----------',
+                print name
+                print 'branchsum in branch', name, branchsum
 
             if parent:
-                print 'parent', parent
+                if DEBUG:
+                    print 'parent', parent
                 self.branchleaves[parent].extend(self.branchleaves[name])
             if 0:  #not name == 'top':  # not used anymore !!! ???
             #if not name == 'top':
@@ -302,15 +380,17 @@ class RU2NMNL(object):
                         #self.probs[k] = self.probs[k] / tmpsum
 ##                            np.exp(-self.datadict[name] *
 ##                             np.sum(self.recursionparams[self.parinddict[name]]))
-                        print 'self.datadict[name], self.probs[k]',
-                        print self.datadict[name], self.probs[k]
+                        if DEBUG:
+                            print 'self.datadict[name], self.probs[k]',
+                            print self.datadict[name], self.probs[k]
                     #if not name == 'top':
                     #    self.probs[k] = self.probs[k] * np.exp( iv)
 
             #walk one level down again to add branch probs to instance.probs
             self.bprobs[name] = []
             for bidx, b in enumerate(subtree):
-                print 'repr(b)', repr(b), bidx
+                if DEBUG:
+                    print 'repr(b)', repr(b), bidx
                 #if len(b) == 1: #TODO: skip leaves, check this
                 if not type(b) == tuple: # isinstance(b, str):
                     #TODO: replace this with a check for branch (tuple) instead
@@ -319,7 +399,8 @@ class RU2NMNL(object):
                     self.bprobs[name].append(self.probs[b])
                     #TODO: need tau possibly here
                     self.probs[b] = self.probs[b] / branchsum
-                    print '*********** branchsum at bottom branch', branchsum
+                    if DEBUG:
+                        print '*********** branchsum at bottom branch', branchsum
                     #self.bprobs[name].append(self.probs[b])
                 else:
                     bname = b[0]
@@ -330,12 +411,14 @@ class RU2NMNL(object):
 
                     for k in self.branchleaves[bname]:
 
-                        print 'branchprob', bname, k, bprob, branchsum
+                        if DEBUG:
+                            print 'branchprob', bname, k, bprob, branchsum
                         #temporary hack with maximum to avoid zeros
                         self.probs[k] = self.probs[k] * np.maximum(bprob, 1e-4)
 
 
-            print 'working on branch', tree, branchsum
+            if DEBUG:
+                print 'working on branch', tree, branchsum
             if testxb<2:
                 return branchsum
             else: #this is the relevant part
@@ -355,7 +438,8 @@ class RU2NMNL(object):
 
         else:
             tau = self.recursionparams[self.paramsidx['tau_'+parent]]
-            print 'parent', parent
+            if DEBUG:
+                print 'parent', parent
             self.branchleaves[parent].append(tree) # register leave with parent
             self.probstxt[tree] = [tree + '-prob' +
                                 '(%s)' % ', '.join(self.paramsind[tree])]
@@ -371,147 +455,152 @@ class RU2NMNL(object):
                 return np.log(leafprob)
             elif testxb == 1:
                 leavessum = np.array(datadict[tree]) # sum((datadict[bi] for bi in datadict[tree]))
-                print 'final branch with', tree, ''.join(tree), leavessum #sum(tree)
+                if DEBUG:
+                    print 'final branch with', tree, ''.join(tree), leavessum #sum(tree)
                 return leavessum  #sum(xb[tree])
             elif testxb == 0:
                 return ''.join(tree) #sum(tree)
 
 
 
+if __name__ == '__main__':
+    DEBUG = 0
+
+    endog = 5 # dummy place holder
 
 
-endog = 5 # dummy place holder
+    ##############  Example similar to Greene
+
+    #get pickled data
+    #endog3, xifloat3 = pickle.load(open('xifloat2.pickle','rb'))
 
 
-##############  Example similar to Greene
+    tree0 = ('top',
+                [('Fly',['Air']),
+                 ('Ground', ['Train', 'Car', 'Bus'])
+                 ]
+            )
 
-#get pickled data
-#endog3, xifloat3 = pickle.load(open('xifloat2.pickle','rb'))
-
-
-tree0 = ('top',
-            [('Fly',['Air']),
-             ('Ground', ['Train', 'Car', 'Bus'])
-             ]
-        )
-
-''' this is with real data from Greene's clogit example
-datadict = dict(zip(['Air', 'Train', 'Bus', 'Car'],
-                    [xifloat[i]for i in range(4)]))
-'''
-
-#for testing only (mock that returns it's own name
-datadict = dict(zip(['Air', 'Train', 'Bus', 'Car'],
-                    ['Airdata', 'Traindata', 'Busdata', 'Cardata']))
-
-if testxb:
+    ''' this is with real data from Greene's clogit example
     datadict = dict(zip(['Air', 'Train', 'Bus', 'Car'],
-                    np.arange(4)))
+                        [xifloat[i]for i in range(4)]))
+    '''
 
-datadict.update({'top' :   [],
+    #for testing only (mock that returns it's own name
+    datadict = dict(zip(['Air', 'Train', 'Bus', 'Car'],
+                        ['Airdata', 'Traindata', 'Busdata', 'Cardata']))
+
+    if testxb:
+        datadict = dict(zip(['Air', 'Train', 'Bus', 'Car'],
+                        np.arange(4)))
+
+    datadict.update({'top' :   [],
+                     'Fly' :   [],
+                     'Ground': []})
+
+    paramsind = {'top' :   [],
                  'Fly' :   [],
-                 'Ground': []})
+                 'Ground': [],
+                 'Air' :   ['GC', 'Ttme', 'ConstA', 'Hinc'],
+                 'Train' : ['GC', 'Ttme', 'ConstT'],
+                 'Bus' :   ['GC', 'Ttme', 'ConstB'],
+                 'Car' :   ['GC', 'Ttme']
+                 }
 
-paramsind = {'top' :   [],
-             'Fly' :   [],
-             'Ground': [],
-             'Air' :   ['GC', 'Ttme', 'ConstA', 'Hinc'],
-             'Train' : ['GC', 'Ttme', 'ConstT'],
-             'Bus' :   ['GC', 'Ttme', 'ConstB'],
-             'Car' :   ['GC', 'Ttme']
-             }
+    modru = RU2NMNL(endog, datadict, tree0, paramsind)
+    modru.recursionparams[-1] = 2
+    modru.recursionparams[1] = 1
 
-modru = RU2NMNL(endog, datadict, tree0, paramsind)
-modru.recursionparams[-1] = 2
-modru.recursionparams[1] = 1
+    print 'Example 1'
+    print '---------\n'
+    print modru.calc_prob(modru.tree)
 
-print 'Example 1'
-print '---------\n'
-print modru.calc_prob(modru.tree)
-
-print 'Tree'
-pprint(modru.tree)
-print '\nmodru.probs'
-pprint(modru.probs)
+    print 'Tree'
+    pprint(modru.tree)
+    print '\nmodru.probs'
+    pprint(modru.probs)
 
 
 
-##############  example with many layers
+    ##############  example with many layers
 
-tree2 = ('top',
-            [('B1',['a','b']),
-             ('B2',
-                   [('B21',['c', 'd']),
-                    ('B22',['e', 'f', 'g'])
-                    ]
-              ),
-             ('B3',['h'])
-            ]
-         )
+    tree2 = ('top',
+                [('B1',['a','b']),
+                 ('B2',
+                       [('B21',['c', 'd']),
+                        ('B22',['e', 'f', 'g'])
+                        ]
+                  ),
+                 ('B3',['h'])
+                ]
+             )
 
-#Note: dict looses ordering
-paramsind2 = {
- 'B1': [],
- 'a': ['consta', 'p'],
- 'b': ['constb', 'p'],
- 'B2': ['const2', 'x2'],
- 'B21': [],
- 'c': ['constc', 'p', 'time'],
- 'd': ['constd', 'p', 'time'],
- 'B22': ['x22'],
- 'e': ['conste', 'p', 'hince'],
- 'f': ['constf', 'p', 'hincf'],
- 'g': [          'p', 'hincg'],
- 'B3': [],
- 'h': ['consth', 'p', 'h'],
- 'top': []}
+    #Note: dict looses ordering
+    paramsind2 = {
+     'B1': [],
+     'a': ['consta', 'p'],
+     'b': ['constb', 'p'],
+     'B2': ['const2', 'x2'],
+     'B21': [],
+     'c': ['constc', 'p', 'time'],
+     'd': ['constd', 'p', 'time'],
+     'B22': ['x22'],
+     'e': ['conste', 'p', 'hince'],
+     'f': ['constf', 'p', 'hincf'],
+     'g': [          'p', 'hincg'],
+     'B3': [],
+     'h': ['consth', 'p', 'h'],
+     'top': []}
 
-datadict2 = dict([i for i in zip('abcdefgh',range(8))])
-datadict2.update({'top':1000, 'B1':100, 'B2':200, 'B21':21,'B22':22, 'B3':300})
-'''
->>> pprint(datadict2)
-{'B1': 100,
- 'B2': 200,
- 'B21': 21,
- 'B22': 22,
- 'B3': 300,
- 'a': 0.5,
- 'b': 1,
- 'c': 2,
- 'd': 3,
- 'e': 4,
- 'f': 5,
- 'g': 6,
- 'h': 7,
- 'top': 1000}
-'''
+    datadict2 = dict([i for i in zip('abcdefgh',range(8))])
+    datadict2.update({'top':1000, 'B1':100, 'B2':200, 'B21':21,'B22':22, 'B3':300})
+    '''
+    >>> pprint(datadict2)
+    {'B1': 100,
+     'B2': 200,
+     'B21': 21,
+     'B22': 22,
+     'B3': 300,
+     'a': 0.5,
+     'b': 1,
+     'c': 2,
+     'd': 3,
+     'e': 4,
+     'f': 5,
+     'g': 6,
+     'h': 7,
+     'top': 1000}
+    '''
 
 
-modru2 = RU2NMNL(endog, datadict2, tree2, paramsind2)
-modru2.recursionparams[-3] = 2
-modru2.recursionparams[3] = 1
-print '\n\nExample 2'
-print '---------\n'
-print modru2.calc_prob(modru2.tree)
-print 'Tree'
-pprint(modru2.tree)
-print '\nmodru.probs'
-pprint(modru2.probs)
+    modru2 = RU2NMNL(endog, datadict2, tree2, paramsind2)
+    modru2.recursionparams[-3] = 2
+    modru2.recursionparams[3] = 1
+    print '\n\nExample 2'
+    print '---------\n'
+    print modru2.calc_prob(modru2.tree)
+    print 'Tree'
+    pprint(modru2.tree)
+    print '\nmodru.probs'
+    pprint(modru2.probs)
 
-print 'sum of probs', sum(modru2.probs.values())
-print 'branchvalues'
-print modru2.branchvalues
-print modru.branchvalues
+    print 'sum of probs', sum(modru2.probs.values())
+    print 'branchvalues'
+    print modru2.branchvalues
+    print modru.branchvalues
 
-print 'branch probabilities'
-print modru.bprobs
+    print 'branch probabilities'
+    print modru.bprobs
 
-print 'degenerate branches'
-print modru.branches_degenerate
+    print 'degenerate branches'
+    print modru.branches_degenerate
 
-'''
->>> modru.bprobs
-{'Fly': [], 'top': [0.0016714179077931082, 0.99832858209220687], 'Ground': []}
->>> modru2.bprobs
-{'top': [0.25000000000000006, 0.62499999999999989, 0.12500000000000003], 'B22': [], 'B21': [], 'B1': [], 'B2': [0.40000000000000008, 0.59999999999999998], 'B3': []}
-'''
+    '''
+    >>> modru.bprobs
+    {'Fly': [], 'top': [0.0016714179077931082, 0.99832858209220687], 'Ground': []}
+    >>> modru2.bprobs
+    {'top': [0.25000000000000006, 0.62499999999999989, 0.12500000000000003], 'B22': [], 'B21': [], 'B1': [], 'B2': [0.40000000000000008, 0.59999999999999998], 'B3': []}
+    '''
+
+    params1 = np.array([ 0.,  1.,  0.,  0.,  0.,  0.,  1.,  1.,  2.])
+    print modru.get_probs(params1)
