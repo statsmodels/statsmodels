@@ -21,7 +21,6 @@ IV_j = log( sum_{i in L(j)} (exp(b_i * X_i / mu_j) )
 
 this is the log of the denominator of the leaf probabilities
 
-
 L(j) : leaves at branch j, where k is child of j
 NB(j) : set of j and it's siblings
 
@@ -33,6 +32,14 @@ Design
   - probability for each leaf is in instance.probs
   - inclusive values and contribution of exog on branch level need to be
     added separately. handed up the tree through returns
+* question: should params array be accessed directly through
+  `self.recursionparams[self.parinddict[name]]` or should the dictionary
+  return the values of the params, e.g. `self.params_node_dict[name]`.
+  The second would be easier for fixing tau=1 for degenerate branches.
+  The easiest might be to do the latter only for the taus and default to 1 if
+  the key ('tau_'+branchname) is not found. I also need to exclude tau for
+  degenerate branches from params, but then I cannot change them from the
+  outside for testing and experimentation. (?)
 
 
 bugs/problems
@@ -63,15 +70,23 @@ TODO
   recursion and everything has names
 
 The only parts that are really necessary to get a functional nested logit are
-adding the taus and the MLE wrapper class. The rest are enhancements.
+adding the taus (DONE) and the MLE wrapper class. The rest are enhancements.
 
-I added fake tau, one fixed tau for all branches, not clear where the tau for
-leaf should be added either at original assignment of self.probs, or as part
-of the one-step-down probability correction in the bottom branches.
-The second would be cleaner (would make treatment of leaves and branches more
-symmetric, but requires that initial assignment in the leaf only does
+I added fake tau, one fixed tau for all branches. (OBSOLETE)
+It's not clear where the tau for leaf should be added either at
+original assignment of self.probs, or as part of the one-step-down
+probability correction in the bottom branches. The second would be
+cleaner (would make treatment of leaves and branches more symmetric,
+but requires that initial assignment in the leaf only does
 initialization. e.g self.probs = 1.  ???
 
+DONE added taus
+
+still todo: tau for degenerate branches are not identified, set to 1 for MLE
+
+
+Author: Josef Perktold
+License : BSD (3-clause)
 '''
 
 import numpy as np
@@ -114,6 +129,20 @@ def randintw(w, size=1):
     return rvs
 
 def getbranches(tree):
+    '''
+    walk tree to get list of branches
+
+    Parameters
+    ----------
+    tree : list of tuples
+        tree as defined for RU2NMNL
+
+    Returns
+    -------
+    branch : list
+        list of all branch names
+
+    '''
     if type(tree) == tuple:
         name, subtree = tree
         a = [name]
@@ -123,19 +152,39 @@ def getbranches(tree):
     return []
 
 def getnodes(tree):
-    if type(tree) == tuple:
+    '''
+    walk tree to get list of branches and list of leaves
 
+    Parameters
+    ----------
+    tree : list of tuples
+        tree as defined for RU2NMNL
+
+    Returns
+    -------
+    branch : list
+        list of all branch names
+    leaves : list
+        list of all leaves names
+
+    '''
+    if type(tree) == tuple:
         name, subtree = tree
-        #print name, subtree
-        #b.append(name)
         ab = [name]
         al = []
+        #degenerate branches
+        if len(subtree) == 1:
+            adeg = [name]
+        else:
+            adeg = []
+
         for st in subtree:
-            b, l = getnodes(st)
+            b, l, d = getnodes(st)
             ab.extend(b)
             al.extend(l)
-        return ab, al
-    return [], tree
+            adeg.extend(d)
+        return ab, al, adeg
+    return [], tree, []
 
 
 testxb = 2 #global to class to return strings instead of numbers
@@ -158,7 +207,7 @@ class RU2NMNL(object):
         self.branchvalues = {}  #just to keep track of returns by branches
         self.branchsums = {}
         self.bprobs = {}
-        self.branches, self.leaves = getnodes(tree)
+        self.branches, self.leaves, self.branches_degenerate  = getnodes(tree)
         self.nbranches = len(self.branches)
 
         #copied over but not quite sure yet
@@ -452,6 +501,9 @@ print modru.branchvalues
 
 print 'branch probabilities'
 print modru.bprobs
+
+print 'degenerate branches'
+print modru.branches_degenerate
 
 '''
 >>> modru.bprobs
