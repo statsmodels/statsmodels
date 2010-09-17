@@ -53,8 +53,8 @@ bugs/problems
 TODO
 ----
 * add tau, normalization for nested logit, currently tau is 1 (clogit)
-  taus also needs to become part of params
-* add effect of branch level explanatory variables
+  taus also needs to become part of params MOSTLY DONE
+* add effect of branch level explanatory variables DONE
 * write a generic multinomial logit that takes arbitrary probabilities, this
   would be the same for MNL, clogit and runmnl,
   delegate calculation of probabilities
@@ -62,6 +62,10 @@ TODO
   - tau=1 replicate clogit numbers,
   - transport example from Greene tests 1-level tree and degenerate sub-trees
   - test example for multi-level trees ???
+* starting values: Greene mentiones that the starting values for the nested
+  version come from the (non-nested) MNL version. SPSS uses constant equal
+  (? check transformation) to sample frequencies and zeros for slope
+  coefficient as starting values for (non-nested) MNL
 * associated test statistics
   - (I don't think I will fight with the gradient or hessian of the log-like.)
   - basic MLE statistics can be generic
