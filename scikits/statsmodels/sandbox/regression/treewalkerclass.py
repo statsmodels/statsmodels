@@ -77,6 +77,66 @@ initialization. e.g self.probs = 1.  ???
 import numpy as np
 from pprint import pprint
 
+def randintw(w, size=1):
+    '''generate integer random variables given probabilties
+
+    useful because it can be used as index into any array or sequence type
+
+    Parameters
+    ----------
+    w : 1d array_like
+        sequence of weights, probabilites. The weights are normalized to add
+        to one.
+    size : int or tuple of ints
+        shape of output array
+
+    Returns
+    -------
+    rvs : array of shape given by size
+        random variables each distributed according to the same discrete
+        distribution defined by (normalized) w.
+
+    Examples
+    --------
+    >>> np.random.seed(0)
+    >>> randintw([0.4, 0.4, 0.2], size=(2,6))
+    array([[1, 1, 1, 1, 1, 1],
+           [1, 2, 2, 0, 1, 1]])
+
+    >>> np.bincount(randintw([0.6, 0.4, 0.0], size=3000))/3000.
+    array([ 0.59566667,  0.40433333])
+
+    '''
+    #from Charles Harris, numpy mailing list
+    from numpy.random import random
+    p = np.cumsum(w)/np.sum(w)
+    rvs = p.searchsorted(random(np.prod(size))).reshape(size)
+    return rvs
+
+def getbranches(tree):
+    if type(tree) == tuple:
+        name, subtree = tree
+        a = [name]
+        for st in subtree:
+            a.extend(getbranches(st))
+        return a
+    return []
+
+def getnodes(tree):
+    if type(tree) == tuple:
+
+        name, subtree = tree
+        #print name, subtree
+        #b.append(name)
+        ab = [name]
+        al = []
+        for st in subtree:
+            b, l = getnodes(st)
+            ab.extend(b)
+            al.extend(l)
+        return ab, al
+    return [], tree
+
 
 testxb = 2 #global to class to return strings instead of numbers
 
@@ -98,11 +158,16 @@ class RU2NMNL(object):
         self.branchvalues = {}  #just to keep track of returns by branches
         self.branchsums = {}
         self.bprobs = {}
+        self.branches, self.leaves = getnodes(tree)
+        self.nbranches = len(self.branches)
 
         #copied over but not quite sure yet
         #unique, parameter array names,
         #sorted alphabetically, order is/should be only internal
-        self.paramsnames = sorted(set([i for j in paramsind.values() for i in j]))
+        self.paramsnames = (sorted(set([i for j in paramsind.values()
+                                       for i in j])) +
+                            ['tau_%s' % bname for bname in self.branches])
+
 
         #mapping coefficient names to indices to unique/parameter array
         self.paramsidx = dict((name, idx) for (idx,name) in
@@ -116,12 +181,15 @@ class RU2NMNL(object):
         #for testing that individual parameters are used in the right place
         self.recursionparams = np.zeros(len(self.paramsnames))
         #self.recursionparams[2] = 1
+        self.recursionparams[-self.nbranches:] = 1  #values for tau's
+        #self.recursionparams[-2] = 2
 
 
     def calc_prob(self, tree, parent=None):
         '''walking a tree bottom-up based on dictionary
         '''
-        tau = 0.5#2 #placeholder for now
+
+        #0.5#2 #placeholder for now
         #should be tau=self.taus[name] but as part of params for optimization
         endog = self.endog
         datadict = self.datadict
@@ -130,10 +198,13 @@ class RU2NMNL(object):
 
 
         if type(tree) == tuple:   #assumes leaves are int for choice index
+
             name, subtree = tree
             self.branchleaves[name] = []  #register branch in dictionary
+
+            tau = self.recursionparams[self.paramsidx['tau_'+name]]
             print '----------- starting next branch-----------'
-            print name, datadict[name]
+            print name, datadict[name], 'tau=', tau
             print 'subtree', subtree
             branchvalue = []
             if testxb == 2:
@@ -221,11 +292,16 @@ class RU2NMNL(object):
                                   self.recursionparams[self.parinddict[name]])
                 else:
                     branchxb = 0
+                if not name=='top':
+                    tau = self.recursionparams[self.paramsidx['tau_'+name]]
+                else:
+                    tau = 1
                 iv = branchxb + tau * branchsum #which tau: name or parent???
-                return np.log(branchsum) #iv
+                return branchxb + tau * np.log(branchsum) #iv
                 #branchsum is now IV, TODO: add effect of branch variables
 
         else:
+            tau = self.recursionparams[self.paramsidx['tau_'+parent]]
             print 'parent', parent
             self.branchleaves[parent].append(tree) # register leave with parent
             self.probstxt[tree] = [tree + '-prob' +
@@ -293,6 +369,8 @@ paramsind = {'top' :   [],
              }
 
 modru = RU2NMNL(endog, datadict, tree0, paramsind)
+modru.recursionparams[-1] = 2
+modru.recursionparams[1] = 1
 
 print 'Example 1'
 print '---------\n'
@@ -357,6 +435,8 @@ datadict2.update({'top':1000, 'B1':100, 'B2':200, 'B21':21,'B22':22, 'B3':300})
 
 
 modru2 = RU2NMNL(endog, datadict2, tree2, paramsind2)
+modru2.recursionparams[-3] = 2
+modru2.recursionparams[3] = 1
 print '\n\nExample 2'
 print '---------\n'
 print modru2.calc_prob(modru2.tree)
