@@ -150,7 +150,7 @@ class DescrStatsW(object):
         '''standard deviation of mean
 
         '''
-        return self.std / np.sqrt(self.sum_weights)
+        return self.std / np.sqrt(self.sum_weights - 1)
 
 
     def std_var(self):
@@ -165,7 +165,7 @@ class DescrStatsW(object):
 
 
 
-    def ttest_mean(self, value, sides='two-sided'):
+    def ttest_mean(self, value, alternative='two-sided'):
         '''ttest of Null hypothesis that mean is equal to value.
 
         The alternative hypothesis H1 is defined by sides
@@ -174,14 +174,14 @@ class DescrStatsW(object):
         'smaller' :  H1: mean smaller than value
 
         '''
-        tstat = (self.mean - self.value) / self.std_mean
+        tstat = (self.mean - value) / self.std_mean
         dof = self.sum_weights - 1
         from scipy import stats
-        if tail == 'two-sided':
-           pvalue = stats.t.sf(np.abs(tstat, dof))*2
-        elif tail == 'larger':
+        if alternative == 'two-sided':
+           pvalue = stats.t.sf(np.abs(tstat), dof)*2
+        elif alternative == 'larger':
            pvalue = stats.t.sf(tstat, dof)
-        elif tail == 'smaller':
+        elif alternative == 'smaller':
            pvalue = stats.t.cdf(tstat, dof)
 
         return tstat, pvalue, dof
@@ -200,15 +200,15 @@ class DescrStatsW(object):
 
 
 
-def tstat_generic(value, value2, std_diff, dof, tail):
+def tstat_generic(value, value2, std_diff, dof, alternative):
     '''generic ttest to save typing'''
     tstat = (value - value2) / std_diff
     from scipy import stats
-    if tail == 'two-sided':
+    if alternative == 'two-sided':
        pvalue = stats.t.sf(np.abs(tstat), dof)*2
-    elif tail == 'larger':
+    elif alternative == 'larger':
        pvalue = stats.t.sf(tstat, dof)
-    elif tail == 'smaller':
+    elif alternative == 'smaller':
        pvalue = stats.t.cdf(tstat, dof)
     return tstat, pvalue
 
@@ -334,7 +334,7 @@ if __name__ == '__main__':
     print stats.ttest_ind(x1, x2)
     print ttest_ind(x1, x2, usevar='separate', alternative='larger')
     print ttest_ind(x1, x2, usevar='separate', alternative='smaller')
-    print ttest_ind(x1, x2, usevar='separate',weights=(w1, w2))
+    print ttest_ind(x1, x2, usevar='separate', weights=(w1, w2))
     print stats.ttest_ind(np.r_[x1, x1], np.r_[x2,x2])
     d1w = DescrStatsW(x1, weights=w1)
     d2w = DescrStatsW(x2, weights=w2)
@@ -344,6 +344,8 @@ if __name__ == '__main__':
     #not the same as new version with random weights/replication
     assert x1r.shape[0] == d1w.sum_weights
     assert x2r.shape[0] == d2w.sum_weights
+    print d1.ttest_mean(3)
+    print stats.ttest_1samp(x1, 3)
 
 
 
