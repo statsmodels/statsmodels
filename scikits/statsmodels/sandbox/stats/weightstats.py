@@ -242,7 +242,9 @@ class CompareMeans(object):
     def std_meandiff_separatevar(self):
         #note I have too little control so far over ddof since it's an option
         #formula assumes var has ddof=0, so we subtract ddof=1 now
-        return np.sqrt(d1.var / (d1.nobs-1) + d2.var / (d1.nobs-1))
+        d1 = self.d1
+        d2 = self.d2
+        return np.sqrt(d1.var / (d1.nobs-1) + d2.var / (d2.nobs-1))
 
     @OneTimeProperty
     def std_meandiff_pooledvar(self):
@@ -256,7 +258,7 @@ class CompareMeans(object):
         var_pooled = ((d1.sumsquares + d2.sumsquares) /
                           #(d1.nobs - d1.ddof + d2.nobs - d2.ddof))
                           (d1.nobs - 1 + d2.nobs - 1))
-        return np.sqrt(var_pooled * (1. / d1.nobs + 1. /d1.nobs))
+        return np.sqrt(var_pooled * (1. / d1.nobs + 1. /d2.nobs))
 
     def ttest_ind(self, tail='two-sided', usevar='pooled'):
         '''ttest for the null hypothesis of identical means
@@ -271,9 +273,9 @@ class CompareMeans(object):
 
         if usevar == 'pooled':
             stdm = self.std_meandiff_pooledvar
-            dof = (d1.nobs - 1 + d1.nobs - 1)
+            dof = (d1.nobs - 1 + d2.nobs - 1)
         elif usevar == 'separate':
-            stdm = self.std_meandiff_pooledvar
+            stdm = self.std_meandiff_separatevar
             #this follows blindly the SPSS manual
             #except I assume var has ddof=0
             #I should check d1.ddof, d2.ddof
@@ -318,12 +320,14 @@ def ttest_ind(x1, x2, alternative='two-sided',
 
 if __name__ == '__main__':
 
+    from numpy.testing import assert_almost_equal, assert_equal
+
     n1, n2 = 20,20
     m1, m2 = 1, 1.2
     x1 = m1 + np.random.randn(n1)
     x2 = m2 + np.random.randn(n2)
-    w1 = 2. * np.ones(n1)
-    w2 = 2. * np.ones(n2)
+    w1_ = 2. * np.ones(n1)
+    w2_ = 2. * np.ones(n2)
     w1 = np.random.randint(1,4, n1)
     w2 = np.random.randint(1,4, n2)
 
@@ -334,19 +338,34 @@ if __name__ == '__main__':
     print stats.ttest_ind(x1, x2)
     print ttest_ind(x1, x2, usevar='separate', alternative='larger')
     print ttest_ind(x1, x2, usevar='separate', alternative='smaller')
-    print ttest_ind(x1, x2, usevar='separate', weights=(w1, w2))
+    print ttest_ind(x1, x2, usevar='separate', weights=(w1_, w2_))
     print stats.ttest_ind(np.r_[x1, x1], np.r_[x2,x2])
+    assert_almost_equal(ttest_ind(x1, x2, weights=(w1_, w2_))[:2],
+                        stats.ttest_ind(np.r_[x1, x1], np.r_[x2,x2]))
+
+
     d1w = DescrStatsW(x1, weights=w1)
     d2w = DescrStatsW(x2, weights=w2)
     x1r = d1w.asrepeats()
     x2r = d2w.asrepeats()
+    print 'random weights'
+    print ttest_ind(x1, x2, weights=(w1, w2))
     print stats.ttest_ind(x1r, x2r)
+    assert_almost_equal(ttest_ind(x1, x2, weights=(w1, w2))[:2],
+                        stats.ttest_ind(x1r, x2r), 15)
     #not the same as new version with random weights/replication
     assert x1r.shape[0] == d1w.sum_weights
     assert x2r.shape[0] == d2w.sum_weights
+    assert_almost_equal(x2r.var(), d2w.var, 15)
+    assert_almost_equal(x2r.std(), d2w.std, 15)
+
+    #one-sample tests
     print d1.ttest_mean(3)
     print stats.ttest_1samp(x1, 3)
-
+    print d1w.ttest_mean(3)
+    print stats.ttest_1samp(x1r, 3)
+    assert_almost_equal(d1.ttest_mean(3)[:2], stats.ttest_1samp(x1, 3), 11)
+    assert_almost_equal(d1w.ttest_mean(3)[:2], stats.ttest_1samp(x1r, 3), 11)
 
 
 
