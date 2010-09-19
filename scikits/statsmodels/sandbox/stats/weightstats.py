@@ -102,7 +102,7 @@ class DescrStatsW(object):
 
     @OneTimeProperty
     def sum(self):
-        return np.dot(self.data, self.weights)
+        return np.dot(self.data.T, self.weights)
 
     @OneTimeProperty
     def mean(self):
@@ -114,7 +114,7 @@ class DescrStatsW(object):
 
     @OneTimeProperty
     def sumsquares(self):
-        return np.dot(self.demeaned**2, self.weights)
+        return np.dot((self.demeaned**2).T, self.weights)
 
     #need memoize instead of cache decorator
     def var_ddof(self, ddof=0):
@@ -196,7 +196,7 @@ class DescrStatsW(object):
 
         '''
         w_int = np.floor(self.weights).astype(int)
-        return np.repeat(self.data, w_int)
+        return np.repeat(self.data, w_int, axis=0)
 
 
 
@@ -326,6 +326,8 @@ if __name__ == '__main__':
     m1, m2 = 1, 1.2
     x1 = m1 + np.random.randn(n1)
     x2 = m2 + np.random.randn(n2)
+    x1_2d = m1 + np.random.randn(n1, 3)
+    x2_2d = m2 + np.random.randn(n2, 3)
     w1_ = 2. * np.ones(n1)
     w2_ = 2. * np.ones(n2)
     w1 = np.random.randint(1,4, n1)
@@ -352,12 +354,12 @@ if __name__ == '__main__':
     print ttest_ind(x1, x2, weights=(w1, w2))
     print stats.ttest_ind(x1r, x2r)
     assert_almost_equal(ttest_ind(x1, x2, weights=(w1, w2))[:2],
-                        stats.ttest_ind(x1r, x2r), 15)
+                        stats.ttest_ind(x1r, x2r), 14)
     #not the same as new version with random weights/replication
     assert x1r.shape[0] == d1w.sum_weights
     assert x2r.shape[0] == d2w.sum_weights
-    assert_almost_equal(x2r.var(), d2w.var, 15)
-    assert_almost_equal(x2r.std(), d2w.std, 15)
+    assert_almost_equal(x2r.var(), d2w.var, 14)
+    assert_almost_equal(x2r.std(), d2w.std, 14)
 
     #one-sample tests
     print d1.ttest_mean(3)
@@ -368,7 +370,15 @@ if __name__ == '__main__':
     assert_almost_equal(d1w.ttest_mean(3)[:2], stats.ttest_1samp(x1r, 3), 11)
 
 
-
+    d1w_2d = DescrStatsW(x1_2d, weights=w1)
+    d2w_2d = DescrStatsW(x2_2d, weights=w2)
+    x1r_2d = d1w_2d.asrepeats()
+    print d1w_2d.ttest_mean(3)
+    #scipy.stats.ttest is also vectorized
+    print stats.ttest_1samp(x1r_2d, 3)
+    t,p,d = d1w_2d.ttest_mean(3)
+    assert_almost_equal([t, p], stats.ttest_1samp(x1r_2d, 3), 11)
+    #print [stats.ttest_1samp(xi, 3) for xi in x1r_2d.T]
 
 
 
