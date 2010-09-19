@@ -40,6 +40,13 @@ Design
   the key ('tau_'+branchname) is not found. I also need to exclude tau for
   degenerate branches from params, but then I cannot change them from the
   outside for testing and experimentation. (?)
+* SAS manual describes restrictions on tau (though their model is a bit
+  different), e.g. equal tau across sibling branches, fixed tau. The also
+  allow linear and non-linear (? not sure) restriction on params, the
+  regression coefficients. Related to previous issue, callback without access
+  to the underlying array, where params_node_dict returns the actual params
+  value would provide more flexibility to impose different kinds of restrictions.
+
 
 
 bugs/problems
@@ -604,3 +611,6 @@ if __name__ == '__main__':
 
     params1 = np.array([ 0.,  1.,  0.,  0.,  0.,  0.,  1.,  1.,  2.])
     print modru.get_probs(params1)
+    params2 = np.array([ 0.,  0.,  0.,  1.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,
+                         0.,  0.,  0.,  0.,  0.,  1.,  1.,  1.,  2.,  1.,  1.])
+    print modru2.get_probs(params2) #raises IndexError
