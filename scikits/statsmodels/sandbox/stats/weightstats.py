@@ -79,6 +79,40 @@ class DescrStatsW(object):
     corresponds to the sample size.
 
 
+    Examples
+    --------
+
+    >>> x1_2d = 1.0 + np.random.randn(20, 3)
+    >>> w1 = np.random.randint(1,4, 20)
+    >>> d1 = DescrStatsW(x1_2d, weights=w1)
+    >>> d1.mean
+    array([ 1.42739844,  1.23174284,  1.083753  ])
+    >>> d1.var
+    array([ 0.94855633,  0.52074626,  1.12309325])
+    >>> d1.std_mean
+    array([ 0.14682676,  0.10878944,  0.15976497])
+
+    >>> tstat, pval, df = d1.ttest_mean(0)
+    >>> tstat; pval; df
+    array([  9.72165021,  11.32226471,   6.78342055])
+    array([  1.58414212e-12,   1.26536887e-14,   2.37623126e-08])
+    44.0
+
+    >>> tstat, pval, df = d1.ttest_mean([0, 1, 1])
+    >>> tstat; pval; df
+    array([ 9.72165021,  2.13019609,  0.52422632])
+    array([  1.58414212e-12,   3.87842808e-02,   6.02752170e-01])
+    44.0
+
+    #if weithts are integers, then asrepeats can be used
+
+    >>> x1r = d1.asrepeats()
+    >>> x1r.shape
+    ...
+    >>> stats.ttest_1samp(x1r, [0, 1, 1])
+    ...
+
+
     '''
     def __init__(self, data, weights=None, ddof=0):
 
@@ -373,12 +407,18 @@ if __name__ == '__main__':
     d1w_2d = DescrStatsW(x1_2d, weights=w1)
     d2w_2d = DescrStatsW(x2_2d, weights=w2)
     x1r_2d = d1w_2d.asrepeats()
+    x2r_2d = d2w_2d.asrepeats()
     print d1w_2d.ttest_mean(3)
     #scipy.stats.ttest is also vectorized
     print stats.ttest_1samp(x1r_2d, 3)
     t,p,d = d1w_2d.ttest_mean(3)
     assert_almost_equal([t, p], stats.ttest_1samp(x1r_2d, 3), 11)
     #print [stats.ttest_1samp(xi, 3) for xi in x1r_2d.T]
+    ressm = CompareMeans(d1w_2d, d2w_2d).ttest_ind()
+    resss = stats.ttest_ind(x1r_2d, x2r_2d)
+    assert_almost_equal(ressm[:2], resss, 14)
+    print ressm
+    print resss
 
 
 
