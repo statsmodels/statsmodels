@@ -21,6 +21,7 @@ This has potential problems with ddof, I started to follow numpy with ddof=0
 by default and users can change it, but this might still mess up the t-tests,
 since the estimates for the standard deviation will be based on the ddof that
 the user chooses.
+- fixed ddof for the meandiff ttest, now matches scipy.stats.ttest_ind
 
 '''
 
@@ -188,6 +189,16 @@ class DescrStatsW(object):
     def ttest_meandiff(self, other):
        pass
 
+    def asrepeats(self):
+        '''get array that has repeats given by floor(weights)
+
+        observations with weight=0 are dropped
+
+        '''
+        w_int = np.floor(self.weights).astype(int)
+        return np.repeat(self.data, w_int)
+
+
 
 def tstat_generic(value, value2, std_diff, dof, tail):
     '''generic ttest to save typing'''
@@ -209,6 +220,10 @@ class CompareMeans(object):
 
     not sure what happens if we have several variables.
     everything should go through vectorized but not checked yet.
+
+
+    extend to any number of groups or write a version that works in that
+    case, like in SAS and SPSS.
 
     '''
 
@@ -233,12 +248,14 @@ class CompareMeans(object):
     def std_meandiff_pooledvar(self):
         '''
         uses d1.ddof, d2.ddof which should be one for the ttest
+        hardcoding ddof=1 for varpooled
         '''
         d1 = self.d1
         d2 = self.d2
         #could make var_pooled into attribute
         var_pooled = ((d1.sumsquares + d2.sumsquares) /
-                          (d1.nobs - d1.ddof + d2.nobs - d2.ddof))
+                          #(d1.nobs - d1.ddof + d2.nobs - d2.ddof))
+                          (d1.nobs - 1 + d2.nobs - 1))
         return np.sqrt(var_pooled * (1. / d1.nobs + 1. /d1.nobs))
 
     def ttest_ind(self, tail='two-sided', usevar='pooled'):
@@ -273,13 +290,16 @@ class CompareMeans(object):
 
 
     def test_equal_var():
+        '''Levene test for independence
+
+        '''
         d1 = self.d1
         d2 = self.d2
-        #rewrite this now just use scipy.stats
+        #rewrite this, for now just use scipy.stats
         return stats.levene(d1.data, d2.data)
 
 
-def ttest_ind(x1, x2, tail='two-sided',
+def ttest_ind(x1, x2, alternative='two-sided',
                         usevar='pooled',
                         weights=(None, None)):
     '''ttest independent sample
@@ -289,20 +309,42 @@ def ttest_ind(x1, x2, tail='two-sided',
     compared to scipy stats: drops axis option, adds tail, usevar, and
     weights option
     '''
-    cm = CompareMeans(DescrStatsW(x1, weights=weights[0]),
-                     DescrStatsW(x2, weights=weights[1]))
-    tstat, pval, dof = cm.ttest_ind(tail=tail,usevar=usevar)
+    cm = CompareMeans(DescrStatsW(x1, weights=weights[0], ddof=0),
+                     DescrStatsW(x2, weights=weights[1], ddof=0))
+    tstat, pval, dof = cm.ttest_ind(tail=alternative, usevar=usevar)
     return tstat, pval, dof
 
 
 
 if __name__ == '__main__':
-     m1, m2 = 1, 2
-     x1, x2 = ([m1, m2] + np.random.randn(20, 2)).T
-     d1 = DescrStatsW(x1)
-     print ttest_ind(x1, x2)
-     print ttest_ind(x1, x2, usevar='separate')
-     print stats.ttest_ind(x1, x2)
+
+    n1, n2 = 20,20
+    m1, m2 = 1, 1.2
+    x1 = m1 + np.random.randn(n1)
+    x2 = m2 + np.random.randn(n2)
+    w1 = 2. * np.ones(n1)
+    w2 = 2. * np.ones(n2)
+    w1 = np.random.randint(1,4, n1)
+    w2 = np.random.randint(1,4, n2)
+
+    d1 = DescrStatsW(x1)
+    print ttest_ind(x1, x2)
+    print ttest_ind(x1, x2, usevar='separate')
+    #print ttest_ind(x1, x2, usevar='separate')
+    print stats.ttest_ind(x1, x2)
+    print ttest_ind(x1, x2, usevar='separate', alternative='larger')
+    print ttest_ind(x1, x2, usevar='separate', alternative='smaller')
+    print ttest_ind(x1, x2, usevar='separate',weights=(w1, w2))
+    print stats.ttest_ind(np.r_[x1, x1], np.r_[x2,x2])
+    d1w = DescrStatsW(x1, weights=w1)
+    d2w = DescrStatsW(x2, weights=w2)
+    x1r = d1w.asrepeats()
+    x2r = d2w.asrepeats()
+    print stats.ttest_ind(x1r, x2r)
+    #not the same as new version with random weights/replication
+    assert x1r.shape[0] == d1w.sum_weights
+    assert x2r.shape[0] == d2w.sum_weights
+
 
 
 
