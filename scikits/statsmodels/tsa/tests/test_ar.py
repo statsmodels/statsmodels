@@ -9,6 +9,8 @@ import numpy as np
 import numpy.testing as npt
 
 DECIMAL_6 = 6
+DECIMAL_5 = 5
+DECIMAL_4 = 4
 
 class CheckAR(object):
     def test_params(self):
@@ -18,7 +20,7 @@ class CheckAR(object):
         bse = np.sqrt(np.diag(self.res1.cov_params())) # no dof correction
                                             # for compatability with Stata
         assert_almost_equal(bse, self.res2.bse_stata, DECIMAL_6)
-        assert_almost_equal(self.res1.bse, self.res2.bse_gretl, DECIMAL_6)
+        assert_almost_equal(self.res1.bse, self.res2.bse_gretl, DECIMAL_5)
 
     def test_llf(self):
         assert_almost_equal(self.res1.llf, self.res2.llf, DECIMAL_6)
@@ -38,6 +40,32 @@ class TestAROLSConstant(TestAR, CheckAR):
         self.res1 = AR(self.data.endog).fit(maxlag=9, method='cmle')
         self.res2 = results_ar.ARResultsOLS(constant=True)
 
+    def test_predict(self):
+        model = self.res1.model
+        assert_almost_equal(model.predict(),self.res2.FVOLSnneg1start0,
+                DECIMAL_4)
+        assert_almost_equal(model.predict(),self.res2.FVOLSnneg1start9,
+                DECIMAL_4)
+        assert_almost_equal(model.predict(n=-1,start=100),
+                self.res2.FVOLSnneg1start100, DECIMAL_4)
+        assert_almost_equal(model.predict(n=200,start=0),
+                self.res2.FVOLSn200start0, DECIMAL_4)
+        assert_almost_equal(model.predict(n=200,start=200),
+                self.res2.FVOLSn200start200, DECIMAL_4)
+        assert_almost_equal(model.predict(n=200,start=-109),
+                self.res2.FVOLSn200startneg109, DECIMAL_4)
+        assert_almost_equal(model.predict(n=100,start=325),
+                self.res2.FVOLSn100start325, DECIMAL_4)
+        assert_almost_equal(model.predict(n=301,start=9),
+                self.res2.FVOLSn301start9, DECIMAL_4)
+        assert_almost_equal(model.predict(n=301,start=0),
+                self.res2.FVOLSn301start0, DECIMAL_4)
+        assert_almost_equal(model.predict(n=4,start=312),
+                self.res2.FVOLSn4start312, DECIMAL_4)
+        assert_almost_equal(model.predict(n=15,start=312),
+                self.res2.FVOLSn15start312, DECIMAL_4)
+
+
 class TestAROLSNoConstant(TestAR, CheckAR):
     """
     Test AR fit by OLS without a constant.
@@ -46,9 +74,9 @@ class TestAROLSNoConstant(TestAR, CheckAR):
         self.res1 = AR(self.data.endog).fit(maxlag=9,method='cmle',trend='nc')
         self.res2 = results_ar.ARResultsOLS(constant=False)
 
-class TestARMLEConstant(TestAR, CheckAR):
-    def setup(self)
-        self.res1 = AR(self.data.endog).fit(maxlag=9,method="mle")
+#class TestARMLEConstant(TestAR, CheckAR):
+#    def setup(self):
+#        self.res1 = AR(self.data.endog).fit(maxlag=9,method="mle")
 
 class TestAutolagAR(object):
     def setup(self):
