@@ -12,12 +12,15 @@ import numpy as np
 from numpy.testing import *
 from scikits.statsmodels.discretemod import *
 import scikits.statsmodels as sm
+from sys import platform
+from nose import SkipTest
 
 DECIMAL_4 = 4
 DECIMAL_3 = 3
 DECIMAL_2 = 2
 DECIMAL_1 = 1
 DECIMAL_0 = 0
+iswindows = 'win' in platform.lower()
 
 class CheckModelResults(object):
     """
@@ -50,7 +53,8 @@ class CheckModelResults(object):
         assert_almost_equal(self.res1.llr, self.res2.llr, DECIMAL_3)
 
     def test_llr_pvalue(self):
-        assert_almost_equal(self.res1.llr_pvalue, self.res2.llr_pvalue, DECIMAL_4)
+        assert_almost_equal(self.res1.llr_pvalue, self.res2.llr_pvalue,
+                DECIMAL_4)
 
     def test_margeff(self):
         pass
@@ -170,6 +174,14 @@ class TestProbitNewton(CheckModelResults):
         res2.probit()
         self.res2 = res2
 
+    def test_predict(self):
+        assert_almost_equal(self.res1.model.predict(self.data.exog),
+                self.res2.predict, DECIMAL_4)
+
+    def test_resid(self):
+        assert_almost_equal(self.res1.resid, self.res2.resid, DECIMAL_4)
+
+
 class TestProbitBFGS(TestProbitNewton):
     def setup(self):
         self.res1 = Probit(self.data.endog, self.data.exog).fit(method="bfgs",
@@ -185,10 +197,12 @@ class TestProbitPowell(TestProbitNewton):
         self.res1 = Probit(self.data.endog, self.data.exog).fit(method="powell",
             disp=0, ftol=1e-8)
 
-##class TestProbitCG(TestProbitNewton):
-##    def setup(self):
-##        self.res1 = Probit(self.data.endog, self.data.exog).fit(method="cg",
-##            disp=0, maxiter=250)
+class TestProbitCG(TestProbitNewton):
+    def setup(self):
+        if iswindows:
+            raise SkipTest("fmin_cg sometimes fails to converge on windows")
+        self.res1 = Probit(self.data.endog, self.data.exog).fit(method="cg",
+            disp=0, maxiter=250)
 
 class TestProbitNCG(TestProbitNewton):
     def setup(self):
@@ -214,7 +228,10 @@ class TestLogitNewton(CheckModelResults, CheckMargEff):
         assert_almost_equal(self.res1.margeff(atexog={1 : 21., 2 : 0}, at='mean'),
                 self.res2.margeff_nodummy_atexog2, DECIMAL_4)
 
-
+class TestLogitBFGS(TestLogitNewton):
+    def setup(self):
+        self.res1 = Logit(self.data.endog, self.data.exog).fit(method="bfgs",
+            disp=0)
 
 class TestPoissonNewton(CheckModelResults):
     def __init__(self):
