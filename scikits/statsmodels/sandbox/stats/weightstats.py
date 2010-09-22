@@ -82,6 +82,9 @@ class DescrStatsW(object):
     Examples
     --------
 
+    Note: I don't know the seed for the following, so the numbers will
+    differ
+
     >>> x1_2d = 1.0 + np.random.randn(20, 3)
     >>> w1 = np.random.randint(1,4, 20)
     >>> d1 = DescrStatsW(x1_2d, weights=w1)
@@ -202,7 +205,7 @@ class DescrStatsW(object):
     def ttest_mean(self, value, alternative='two-sided'):
         '''ttest of Null hypothesis that mean is equal to value.
 
-        The alternative hypothesis H1 is defined by sides
+        The alternative hypothesis H1 is defined by the following
         'two-sided': H1: mean different than value
         'larger' :   H1: mean larger than value
         'smaller' :  H1: mean smaller than value
@@ -238,11 +241,11 @@ def tstat_generic(value, value2, std_diff, dof, alternative):
     '''generic ttest to save typing'''
     tstat = (value - value2) / std_diff
     from scipy import stats
-    if alternative == 'two-sided':
+    if alternative in ['two-sided', '2-sided', '2']:
        pvalue = stats.t.sf(np.abs(tstat), dof)*2
-    elif alternative == 'larger':
+    elif alternative in ['larger', 'l']:
        pvalue = stats.t.sf(tstat, dof)
-    elif alternative == 'smaller':
+    elif alternative in ['smaller', 's']:
        pvalue = stats.t.cdf(tstat, dof)
     return tstat, pvalue
 
@@ -258,6 +261,9 @@ class CompareMeans(object):
 
     extend to any number of groups or write a version that works in that
     case, like in SAS and SPSS.
+
+    Parameters
+    ----------
 
     '''
 
@@ -294,7 +300,7 @@ class CompareMeans(object):
                           (d1.nobs - 1 + d2.nobs - 1))
         return np.sqrt(var_pooled * (1. / d1.nobs + 1. /d2.nobs))
 
-    def ttest_ind(self, tail='two-sided', usevar='pooled'):
+    def ttest_ind(self, alternative='two-sided', usevar='pooled'):
         '''ttest for the null hypothesis of identical means
 
         note: I was looking for `usevar` option for the multiple comparison
@@ -320,7 +326,7 @@ class CompareMeans(object):
             z2 = (sem2 / semsum)**2 / (d2.nobs - 1)
             dof = 1. / (z1 + z2)
 
-        tstat, pval = tstat_generic(d1.mean, d2.mean, stdm, dof, tail)
+        tstat, pval = tstat_generic(d1.mean, d2.mean, stdm, dof, alternative)
 
         return tstat, pval, dof
 
@@ -342,12 +348,12 @@ def ttest_ind(x1, x2, alternative='two-sided',
 
     convenience function that uses the classes and throws away the intermediate
     results,
-    compared to scipy stats: drops axis option, adds tail, usevar, and
+    compared to scipy stats: drops axis option, adds alternative, usevar, and
     weights option
     '''
     cm = CompareMeans(DescrStatsW(x1, weights=weights[0], ddof=0),
                      DescrStatsW(x2, weights=weights[1], ddof=0))
-    tstat, pval, dof = cm.ttest_ind(tail=alternative, usevar=usevar)
+    tstat, pval, dof = cm.ttest_ind(alternative=alternative, usevar=usevar)
     return tstat, pval, dof
 
 
