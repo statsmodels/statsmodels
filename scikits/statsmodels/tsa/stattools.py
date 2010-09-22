@@ -129,7 +129,7 @@ def _autolag(mod, endog, exog, lagstart, maxlag, method, modargs=(),
 # do we want this to be general like the above?
     for lag in range(int(lagstart),int(maxlag+1)):
 #        results[lag] = mod(endog, exog[:,:lag], *modargs).fit(*fitargs)
-        results[lag] = mod_instance.fit(*fitargs, maxlag=lag)
+        results[lag] = mod_instance.fit(*fitargs, **{maxlag:lag})
 #        results[lag] = mod(endog, exog, *modargs).fit(*fitargs, maxlag=lag)
     if method == "aic":
         icbest, bestlag = max((v.aic,k) for k,v in results.iteritems())
