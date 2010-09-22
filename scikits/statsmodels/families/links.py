@@ -147,7 +147,9 @@ class Logit(Link):
         p = self._clean(p)
         return 1. / (p * (1 - p))
 
-logit = Logit()
+#logit = Logit()
+class logit(Logit):
+    pass
 
 class Power(Link):
 
@@ -245,59 +247,71 @@ class Power(Link):
         """
         return self.power * np.power(p, self.power - 1)
 
-inverse = Power(power=-1.)
-inverse.__doc__ = """
+#inverse = Power(power=-1.)
+class inverse(Power):
+    """
 
-The inverse transform
+    The inverse transform
 
-Formulas
---------
-g(`p`) = 1 / `p`
+    Formulas
+    --------
+    g(`p`) = 1 / `p`
 
-Notes
------
-Alias of statsmodels.family.links.Power(power=-1.)
-"""
+    Notes
+    -----
+    Alias of statsmodels.family.links.Power(power=-1.)
+    """
+    def __init__(self):
+        super(inverse, self).__init__(power=-1.)
 
-sqrt = Power(power=0.5)
-sqrt.__doc__ = """
+#sqrt = Power(power=0.5)
+class sqrt(Power):
+    """
 
-The square-root transform
+    The square-root transform
 
-Formulas
---------
-g(`p`) = sqrt(`p`)
+    Formulas
+    --------
+    g(`p`) = sqrt(`p`)
 
-Notes
------
-Alias of statsmodels.family.links.Power(power=.5)"""
+    Notes
+    -----
+    Alias of statsmodels.family.links.Power(power=.5)
+    """
+    def __init__(self):
+        super(sqrt, self).__init__(power=.5)
 
-inverse_squared = Power(power=-2.)
-inverse_squared.__doc__ = """
+class inverse_squared(Power):
+#inverse_squared = Power(power=-2.)
+    """
 
-The inverse squared transform
+    The inverse squared transform
 
-Formulas
----------
-g(`p`) = 1 / `p`**2
+    Formulas
+    ---------
+    g(`p`) = 1 / `p`**2
 
-Notes
------
-Alias of statsmodels.family.links.Power(power=2.)
-"""
+    Notes
+    -----
+    Alias of statsmodels.family.links.Power(power=2.)
+    """
+    def __init__(self):
+        super(inverse_squared, self).__init__(power=-2.)
 
-identity = Power(power=1.)
-identity.__doc__ = """
-The identity transform
+class identity(Power):
+    """
+    The identity transform
 
-Formulas
----------
-g(`p`) = `p`
+    Formulas
+    ---------
+    g(`p`) = `p`
 
-Notes
------
-Alias of statsmodels.family.links.Power(power=1.)
-"""
+    Notes
+    -----
+    Alias of statsmodels.family.links.Power(power=1.)
+    """
+    def __init__(self):
+        super(identity, self).__init__(power=1.)
 
 class Log(Link):
 
@@ -391,14 +405,16 @@ class Log(Link):
         """
         p = self._clean(p)
         return 1. / p
-log = Log()
-log.__doc__ = """
-The log transform
 
-Notes
------
-log is a an alias of Log.  log = Log()
-"""
+class log(Log):
+    """
+    The log transform
+
+    Notes
+    -----
+    log is a an alias of Log.
+    """
+    pass
 
 #TODO: the CDFLink is untested
 class CDFLink(Logit):
@@ -499,35 +515,37 @@ class CDFLink(Logit):
         p = self._clean(p)
         return 1. / self.dbn.pdf(p)
 
-probit = CDFLink()
-probit.__doc__ = """
+#probit = CDFLink()
+class probit(CDFLink):
+    """
 
-The probit (standard normal CDF) transform
+    The probit (standard normal CDF) transform
 
-Formulas
---------
-g(p) = scipy.stats.norm.ppf(p)
+    Formulas
+    --------
+    g(p) = scipy.stats.norm.ppf(p)
 
-Notes
------
-probit is an alias of CDFLink.
-probit = CDFLink()
-"""
+    Notes
+    -----
+    probit is an alias of CDFLink.
+    """
+    pass
 
-cauchy = CDFLink(dbn=scipy.stats.cauchy)
-cauchy.__doc__ = """
+class cauchy(CDFLink):
+    """
 
-The Cauchy (standard Cauchy CDF) transform
+    The Cauchy (standard Cauchy CDF) transform
 
-Formulas
---------
-g(p) = scipy.stats.cauchy.ppf(p)
+    Formulas
+    --------
+    g(p) = scipy.stats.cauchy.ppf(p)
 
-Notes
------
-cauchy is an alias of CDFLink.
-cauch = CFGLink(dbn=scipy.stats.cauchy)
-"""
+    Notes
+    -----
+    cauchy is an alias of CDFLink with dbn=scipy.stats.cauchy
+    """
+    def __init__(self):
+        super(cauchy, self).__init__(dbn=scipy.stats.cauchy)
 
 #TODO: CLogLog is untested
 class CLogLog(Logit):
@@ -617,19 +635,20 @@ class CLogLog(Logit):
         p = self._clean(p)
         return 1. / ((p-1)*(np.log(1-p)))
 
-cloglog = CLogLog()
-cloglog.__doc__ = """
-The CLogLog transform link function.
+class cloglog(CLogLog):
+    """
+    The CLogLog transform link function.
 
-Formulas
---------
-g(`p`) = log(-log(1-`p`))
+    Formulas
+    --------
+    g(`p`) = log(-log(1-`p`))
 
-Notes
------
-cloglog is an alias for CLogLog
-cloglog = CLogLog()
-"""
+    Notes
+    -----
+    cloglog is an alias for CLogLog
+    cloglog = CLogLog()
+    """
+    pass
 
 class NegativeBinomial(object):
     '''
@@ -724,16 +743,17 @@ class NegativeBinomial(object):
         '''
         return 1/(p+self.alpha*p**2)
 
-nbinom = NegativeBinomial()
-nbinom.__doc__ = """
-The negative binomial link function.
+class nbinom(NegativeBinomial):
+    """
+    The negative binomial link function.
 
-Formulas
---------
-g(p) = log(p/(p + 1/alpha))
+    Formulas
+    --------
+    g(p) = log(p/(p + 1/alpha))
 
-Notes
------
-nbinom is an alias of NegativeBinomial.
-nbinom = NegativeBinomial(alpha=1.)
-"""
+    Notes
+    -----
+    nbinom is an alias of NegativeBinomial.
+    nbinom = NegativeBinomial(alpha=1.)
+    """
+    pass

@@ -281,7 +281,7 @@ Should be of length %s, if sigma is a 1d array" % nobs
         if self._results is None and params is None:
             raise ValueError, "If the model has not been fit, then you must specify the params argument."
         if self._results is not None:
-            return np.dot(exog, self.results.params)
+            return np.dot(exog, self._results.params)
         else:
             return np.dot(exog, params)
 
