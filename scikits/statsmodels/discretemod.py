@@ -114,6 +114,12 @@ class DiscreteModel(LikelihoodModel):
 
     def fit(self, start_params=None, method='newton', maxiter=35, full_output=1,
             disp=1, callback=None, **kwargs):
+        """
+        Fit the model using maximum likelihood.
+
+        The rest of the docstring is from
+        scikits.statsmodels.LikelihoodModel.fit
+        """
         if start_params is None and isinstance(self, MNLogit):
             start_params = np.zeros((self.exog.shape[1]*\
                     (self.wendog.shape[1]-1)))
@@ -124,6 +130,37 @@ class DiscreteModel(LikelihoodModel):
             mlefit.params = mlefit.params.reshape(-1, self.exog.shape[1])
         discretefit = DiscreteResults(self, mlefit)
         return discretefit
+    fit.__doc__ += LikelihoodModel.fit.__doc__
+
+    def predict(self, exog=None, linear=False):
+        """
+        Predict response variable of a model given exogenous variables.
+
+        exog : array-like
+            1d or 2d array of exogenous values.  If not supplied, the
+            whole exog attribute of the model is used.
+        linear : bool, optional
+            If True, returns the linear predictor dot(exog,params).  Else,
+            returns the value of the cdf at the linear predictor.
+
+        Returns
+        -------
+        array
+            Fitted values at exog.
+
+        Notes
+        -----
+        You must fit the model first.
+        """
+        if self._results is None:
+            raise ValueError("You must fit the model first")
+        if exog is None:
+            exog = self.exog
+        if not linear:
+            return self.cdf(np.dot(exog, self._results.params))
+        else:
+            return np.dot(exog, self.results.params)
+
 
 class Poisson(DiscreteModel):
     """
@@ -1195,6 +1232,26 @@ class DiscreteResults(LikelihoodModelResults):
 #TODO: what parameters to pass to fit?
         null = model.__class__(model.endog, np.ones(model.nobs)).fit(disp=0)
         return null.llf
+
+    @cache_readonly
+    def resid(self):
+        model = self.model
+        endog = model.endog
+        exog = model.exog
+#        M = # of individuals that share a covariate pattern
+# so M[i] = 2 for i = the two individuals who share a covariate pattern
+# use unique row pattern?
+#TODO: is this common to all models?  logit uses Pearson, should have options
+#These are the deviance residuals
+        M = 1
+        p = model.predict()
+        Y_0 = np.where(exog==0)
+        Y_M = np.where(exog == M)
+        res = np.zeros_like(endog)
+        res = -(1-endog)*np.sqrt(2*M*np.abs(np.log(1-p))) + \
+                endog*np.sqrt(2*M*np.abs(np.log(p)))
+        return res
+
 
     @cache_readonly
     def fittedvalues(self):

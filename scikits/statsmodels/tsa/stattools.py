@@ -4,8 +4,10 @@ Statistical tools for time series analysis
 
 import numpy as np
 from scipy import stats, signal
-import scikits.statsmodels as sm
-from scikits.statsmodels.sandbox.tsa.tsatools import lagmat, lagmat2ds
+from scikits.statsmodels.regression import OLS, yule_walker
+from scikits.statsmodels.tools import add_constant
+from scikits.statsmodels.tsa.tsatools import lagmat, lagmat2ds
+#from scikits.statsmodels.sandbox.tsa import var
 from adfvalues import *
 #from scikits.statsmodels.sandbox.rls import RLS
 
@@ -24,7 +26,8 @@ def add_trend(X, trend="c", prepend=False):
     X : array-like
         Original array of data.
     trend : str {"c","ct","ctt"}
-        "c" add constnat
+        "c" add constant only
+        "t" add trend only
         "ct" add constant and linear trend
         "ctt" add constant and linear and quadratic trend.
     prepend : bool
@@ -42,16 +45,18 @@ def add_trend(X, trend="c", prepend=False):
     #TODO: could be generalized for trend of aribitrary order
     trend = trend.lower()
     if trend == "c":    # handles structured arrays
-        return sm.add_constant(X, prepend=prepend)
-    elif trend == "ct":
+        return add_constant(X, prepend=prepend)
+    elif trend == "ct" or trend == "t":
         trendorder = 1
     elif trend == "ctt":
         trendorder = 2
     else:
-        raise ValueError("trend %s not understood") % trend
+        raise ValueError("trend %s not understood" % trend)
     X = np.asanyarray(X)
     nobs = len(X)
     trendarr = np.vander(np.arange(1,nobs+1, dtype=float), trendorder+1)
+    if trend == "t":
+        trendarr = trendarr[:,0]
     if not X.dtype.names:
         if not prepend:
             X = np.column_stack((X, trendarr))
@@ -60,7 +65,10 @@ def add_trend(X, trend="c", prepend=False):
     else:
         return_rec = data.__clas__ is np.recarray
         if trendorder == 1:
-            dt = [('trend',float),('const',float)]
+            if trend == "ct":
+                dt = [('trend',float),('const',float)]
+            else:
+                dt = [('trend', float)]
         elif trendorder == 2:
             dt = [('trend_squared', float),('trend',float),('const',float)]
         trendarr = trendarr.view(dt)
@@ -73,8 +81,8 @@ def add_trend(X, trend="c", prepend=False):
     return X
 
 
-def _autolag(mod, endog, exog, modargs=(), fitargs=(), lagstart=1,
-        maxlag=None, method=None):
+def _autolag(mod, endog, exog, lagstart, maxlag, method, modargs=(),
+        fitargs=()):
     """
     Returns the results for the lag length that maximimizes the info criterion.
 
@@ -117,8 +125,12 @@ def _autolag(mod, endog, exog, modargs=(), fitargs=(), lagstart=1,
 
     results = {}
     method = method.lower()
+    mod_instance = mod(endog, exog, *modargs)
+# do we want this to be general like the above?
     for lag in range(int(lagstart),int(maxlag+1)):
-        results[lag] = mod(endog, exog[:,:lag]).fit(*fitargs)
+#        results[lag] = mod(endog, exog[:,:lag], *modargs).fit(*fitargs)
+        results[lag] = mod_instance.fit(*fitargs, **{maxlag:lag})
+#        results[lag] = mod(endog, exog, *modargs).fit(*fitargs, maxlag=lag)
     if method == "aic":
         icbest, bestlag = max((v.aic,k) for k,v in results.iteritems())
     elif method == "bic":
@@ -135,6 +147,8 @@ def _autolag(mod, endog, exog, modargs=(), fitargs=(), lagstart=1,
             i += 1
     elif method == "hq":
         icbest, bestlag = max((v.hqic,k) for k,v in results.iteritems())
+    elif method == "fpe":
+        icbest, bestlag = max((v.fpe,k) for k,v in results.iteritems())
     else:
         raise ValueError("Information Criterion %s not understood.") % method
     return icbest, bestlag
@@ -256,15 +270,16 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
     if store:
         resstore = ResultsStore()
     if autolag:
-        if trendorder is not -1:
-            fullRHS = np.column_stack((trend[:nobs],xdall))
-        else:
-            fullRHS = xdall
-        lagstart = trendorder + 1
+#        if trendorder is not -1:
+#            fullRHS = np.column_stack((trend[:nobs],xdall))
+#        else:
+#            fullRHS = xdall
+#        lagstart = trendorder + 1
+
         #search for lag length with highest information criteria
-        #Note: I use the same number of observations to have comparable IC
-        icbest, bestlag = _autolag(sm.OLS, xdshort, fullRHS, lagstart=lagstart,
-                maxlag=maxlag, method=autolag)
+        #Note: use the same number of observations to have comparable IC
+        icbest, bestlag = _autolag(AR, xdshort, fullRHS, lagstart,
+                maxlag, autolag)
 
         #rerun ols with best autolag
         xdall = lagmat(xdiff[:,None], bestlag, trim='both')
@@ -276,7 +291,7 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
     else:
         usedlag = maxlag
 
-    resols = sm.OLS(xdshort, np.column_stack([xdall[:,:usedlag+1],
+    resols = OLS(xdshort, np.column_stack([xdall[:,:usedlag+1],
         trend[:nobs]])).fit()
     #NOTE: should be usedlag+1 since the first column is the level?
     adfstat = resols.t(0)
@@ -307,7 +322,7 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
         else:
             return adfstat, pvalue, usedlag, nobs, critvalues, icbest
 
-def acovf(x, unbiased=False, demean=True):
+def acovf(x, unbiased=False, demean=True, fft=False):
     '''
     Autocovariance for 1D
 
@@ -315,18 +330,16 @@ def acovf(x, unbiased=False, demean=True):
     ----------
     x : array
        time series data
-    unbiased : boolean
+    unbiased : bool
        if True, then denominators is n-k, otherwise n
+    fft : bool
+        If True, use FFT convolution.  This method should be preferred
+        for long time series.
 
     Returns
     -------
     acovf : array
         autocovariance function
-
-    Notes
-    -----
-    This uses np.correlate which does full convolution. For very long time
-    series it is recommended to use fft convolution instead.
     '''
     n = len(x)
     if demean:
@@ -340,7 +353,13 @@ def acovf(x, unbiased=False, demean=True):
         d = np.hstack((xi,xi[:-1][::-1])) # faster, is correlate more general?
     else:
         d = n
-    return (np.correlate(xo, xo, 'full')/d)[n-1:]
+    if fft:
+        nobs = len(xo)
+        Frf = np.fft.fft(xo, n=nobs*2)
+        acov = np.fft.ifft(Frf*np.conjugate(Frf))[:nobs]/d
+        return acov.real
+    else:
+        return (np.correlate(xo, xo, 'full')/d)[n-1:]
 
 def q_stat(x,nobs, type="ljungbox"):
     """
@@ -420,28 +439,32 @@ def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False):
     d = nobs # changes if unbiased
     if not fft:
         avf = acovf(x, unbiased=unbiased, demean=True)
-        acf = np.take(avf/avf[0], range(1,nlags+1))
+        #acf = np.take(avf/avf[0], range(1,nlags+1))
+        acf = avf[:nlags+1]/avf[0]
     else:
+        #JP: move to acovf
         x0 = x - x.mean()
         Frf = np.fft.fft(x0, n=nobs*2) # zero-pad for separability
         if unbiased:
             d = nobs - np.arange(nobs)
         acf = np.fft.ifft(Frf * np.conjugate(Frf))[:nobs]/d
         acf /= acf[0]
-        acf = np.take(np.real(acf), range(1,nlags+1))
+        #acf = np.take(np.real(acf), range(1,nlags+1))
+        acf = np.real(acf[:nlags+1])   #keep lag 0
     if not (confint or qstat):
         return acf
 # Based on Bartlett's formula for MA(q) processes
 #NOTE: not sure if this is correct, or needs to be centered or what.
+
     if confint:
         varacf = np.ones(nlags)/nobs
-        varacf[1:] *= 1 + 2*np.cumsum(acf[:-1]**2)
+        varacf[1:] *= 1 + 2*np.cumsum(acf[1:-1]**2)
         interval = stats.norm.ppf(1-(100-confint)/200.)*np.sqrt(varacf)
         confint = np.array(zip(acf-interval, acf+interval))
         if not qstat:
             return acf, confint
     if qstat:
-        qstat, pvalue = q_stat(acf, nobs=nobs)
+        qstat, pvalue = q_stat(acf[1:], nobs=nobs)  #drop lag 0
         if confint is not None:
             return acf, confint, qstat, pvalue
         else:
@@ -467,14 +490,13 @@ def pacf_yw(x, nlags=40, method='unbiased'):
     Notes
     -----
     This solves yule_walker for each desired lag and contains
-    currently duplicate calculations.  The pacf at lag 0 (ie., 1) is *not*
-    returned.
+    currently duplicate calculations.
     '''
     xm = x - x.mean()
     pacf = [1.]
     for k in range(1, nlags+1):
-        pacf.append(sm.regression.yule_walker(x, k, method=method)[0][-1])
-    return np.array(pacf)[1:]
+        pacf.append(yule_walker(x, k, method=method)[0][-1])
+    return np.array(pacf)
 
 #NOTE: this is incorrect.
 def pacf_ols(x, nlags=40):
@@ -494,18 +516,122 @@ def pacf_ols(x, nlags=40):
 
     Notes
     -----
-    This solves a separate OLS estimation for each desired lag.  The pacf at
-    lag 0 (ie., 1) is *not* returned.
+    This solves a separate OLS estimation for each desired lag.
     '''
     #TODO: add warnings for Yule-Walker
     #NOTE: demeaning and not using a constant gave incorrect answers?
-    xlags = sm.add_constant(lagmat(x, nlags))
+    #JP: demeaning should have a better estimate of the constant
+    #maybe we can compare small sample properties with a MonteCarlo
+    xlags = lagmat(x, nlags)
+    x0 = xlags[:,0]
+    xlags = xlags[:,1:]
+    #xlags = sm.add_constant(lagmat(x, nlags), prepend=True)
+    xlags = add_constant(xlags, prepend=True)
     pacf = [1.]
     for k in range(1, nlags+1):
-        res = sm.OLS(xlags[k:,0], np.take(xlags[k:], range(1,k+1)+[-1],
-                            axis=1)).fit()
-        pacf.append(res.params[-2])
-    return np.array(pacf)[1:]
+        res = OLS(x0[k:], xlags[k:,:k+1]).fit()
+         #np.take(xlags[k:], range(1,k+1)+[-1],
+
+        pacf.append(res.params[-1])
+    return np.array(pacf)
+
+def pacf(x, nlags=40, method='ywunbiased'):
+    '''Partial autocorrelation estimated
+
+    Parameters
+    ----------
+    x : 1d array
+        observations of time series for which pacf is calculated
+    maxlag : int
+        largest lag for which pacf is returned
+    method : 'ywunbiased' (default) or 'ywmle' or 'ols'
+        specifies which method for the calculations to use,
+        - yw or ywunbiased : yule walker with bias correction in denominator for acovf
+        - yw or ywmle : yule walker without bias correction
+        - ols - regression of time series on lags of it and on constant
+
+    Returns
+    -------
+    pacf : 1d array
+        partial autocorrelations, nlags elements, including lag zero
+
+    Notes
+    -----
+    This solves yule_walker equations or ols for each desired lag
+    and contains currently duplicate calculations.
+    '''
+
+    if method == 'ols':
+        return pacf_ols(x, nlags=nlags)
+    elif method in ['yw', 'ywu', 'ywunbiased', 'yw_unbiased']:
+        return pacf_yw(x, nlags=nlags, method='unbiased')
+    elif method in ['ywm', 'ywmle', 'yw_mle']:
+        return pacf_yw(x, nlags=nlags, method='mle')
+    else:
+        raise ValueError('method not available')
+
+
+
+def ccovf(x, y, unbiased=True, demean=True):
+    ''' crosscovariance for 1D
+
+    Parameters
+    ----------
+    x, y : arrays
+       time series data
+    unbiased : boolean
+       if True, then denominators is n-k, otherwise n
+
+    Returns
+    -------
+    ccovf : array
+        autocovariance function
+
+    Notes
+    -----
+    This uses np.correlate which does full convolution. For very long time
+    series it is recommended to use fft convolution instead.
+    '''
+    n = len(x)
+    if demean:
+        xo = x - x.mean();
+        yo = y - y.mean();
+    else:
+        xo = x
+        yo = y
+    if unbiased:
+        xi = np.ones(n);
+        d = np.correlate(xi, xi, 'full')
+    else:
+        d = n
+    return (np.correlate(xo,yo,'full') / d)[n-1:]
+
+def ccf(x, y, unbiased=True):
+    '''cross-correlation function for 1d
+    Parameters
+    ----------
+    x, y : arrays
+       time series data
+    unbiased : boolean
+       if True, then denominators for autocovariance is n-k, otherwise n
+
+    Returns
+    -------
+    ccf : array
+        cross-correlation function of x and y
+
+    Notes
+    -----
+    This is based np.correlate which does full convolution. For very long time
+    series it is recommended to use fft convolution instead.
+
+    If unbiased is true, the denominator for the autocovariance is adjusted
+    but the autocorrelation is not an unbiased estimtor.
+
+    '''
+    cvf = ccovf(x, y, unbiased=unbiased, demean=True)
+    return cvf / (np.std(x) * np.std(y))
+
 
 def pergram(X, kernel='bartlett', log=True):
     """
@@ -533,6 +659,7 @@ def pergram(X, kernel='bartlett', log=True):
     -----
     Doesn't look right yet.
     """
+    #JP: this should use covf and fft for speed and accuracy for longer time series
     X = np.asarray(X).squeeze()
     nobs = len(X)
     M = np.floor(nobs/2.)
@@ -585,7 +712,6 @@ def grangercausalitytests(x, maxlag):
 
     '''
     from scipy import stats # lazy import
-    import scikits.statsmodels as sm  # absolute import for now
 
     for mlg in range(1, maxlag+1):
         print '\nGranger Causality'
@@ -596,12 +722,12 @@ def grangercausalitytests(x, maxlag):
         dta = lagmat2ds(x, mxlg, trim='both', dropex=1)
 
         #add constant
-        dtaown = sm.add_constant(dta[:,1:mxlg])
-        dtajoint = sm.add_constant(dta[:,1:])
+        dtaown = add_constant(dta[:,1:mxlg])
+        dtajoint = add_constant(dta[:,1:])
 
         #run ols on both models without and with lags of second variable
-        res2down = sm.OLS(dta[:,0], dtaown).fit()
-        res2djoint = sm.OLS(dta[:,0], dtajoint).fit()
+        res2down = OLS(dta[:,0], dtaown).fit()
+        res2djoint = OLS(dta[:,0], dtajoint).fit()
 
         #print results
         #for ssr based tests see: http://support.sas.com/rnd/app/examples/ets/granger/index.htm
@@ -631,7 +757,11 @@ def grangercausalitytests(x, maxlag):
 
 
 
+__all__ = ['acovf', 'acf', 'pacf', 'pacf_yw', 'pacf_ols', 'ccovf', 'ccf',
+           'pergram', 'q_stat']
+
 if __name__=="__main__":
+    import scikits.statsmodels as sm
     data = sm.datasets.macrodata.load().data
     x = data['realgdp']
 # adf is tested now.

@@ -166,7 +166,8 @@ class GLM(LikelihoodModel):
     iteration : int
         The number of iterations that fit has run.  Initialized at 0.
     family : family class instance
-        A pointer to the distribution family of the model.
+        The distribution family of the model. Can be any family in
+        scikits.statsmodels.families.  Default is Gaussian.
     mu : array
         The mean response of the transformed variable.  `mu` is the value of
         the inverse of the link function at eta, where eta is the linear
@@ -196,12 +197,14 @@ class GLM(LikelihoodModel):
 
     '''
 
-    def __init__(self, endog, exog, family=families.Gaussian()):
+    def __init__(self, endog, exog, family=None):
         endog = np.asarray(endog)
         exog = np.asarray(exog)
         if endog.shape[0] != len(exog):
             msg = "Size of endog (%s) does not match the shape of exog (%s)"
             raise ValueError(msg % (endog.size, len(exog)))
+        if family is None:
+            family = families.Gaussian()
         self.endog = endog
         self.exog = exog
         self.family = family

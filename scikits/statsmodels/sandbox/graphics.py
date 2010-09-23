@@ -77,3 +77,41 @@ def qqplot(data, dist=stats.distributions.norm, binom_n=None):
     plt.axis([y.min()-.25,y.max()+.25, y_low-.25, y_high+.25])
     return plt.gcf()
 
+if __name__ == "__main__":
+    # sample from t-distribution with 3 degrees of freedom
+    import numpy as np
+    from scipy import stats
+    import matplotlib.pyplot as plt
+    np.random.seed(12345)
+    tsample = np.random.standard_t(3, size=1000)
+    tsample2 = stats.t.rvs(3, loc=0, scale=1, size=1000)
+#    graph = qqplot(tsample)
+#    graph2 = qqplot(tsample2)
+# export data to check vs. R
+#    np.savetxt('./tsample.csv', tsample2, delimiter=",")
+#TODO: it looks the expected order statistic line is wrong
+
+    x = np.array(tsample2, copy=True)
+    x.sort()
+    nobs = x.shape[0]
+
+#    prob = np.linspace(1/(nobs-1.), 1-1/(nobs-1.), nobs)
+#    prob = np.arange(1,nobs+1)/(nobs+1)
+#from wikipedia:
+    a = .5
+    prob = np.linspace(1.-a, nobs-a,nobs)/(nobs + 1. -2*a)
+    quantiles = np.zeros_like(x)
+    for i in range(nobs):
+        quantiles[i] = stats.scoreatpercentile(x, prob[i]*100)
+    loc, scale = stats.norm.fit(x) # this should also return args for
+                                   # distributions with other arguments?
+    y = stats.norm.ppf(prob, loc=loc, scale=scale)
+
+    plt.scatter(y, quantiles)
+
+    plt.plot(quantiles, quantiles, 'b-')
+#    plt.plot(stats.norm.ppf(prob))
+#    plt.show()
+
+
+

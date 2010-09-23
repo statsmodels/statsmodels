@@ -18,8 +18,39 @@ def _make_dictnames(tmp_arr, offset=0):
         col_map.update({i+offset : col_name})
     return col_map
 
-#FIXME: make this more robust
-# needs to not return a dummy for *every* variable...
+def drop_missing(Y,X=None, axis=1):
+    """
+    Returns views on the arrays Y and X where missing observations are dropped.
+
+    Y : array-like
+    X : array-like, optional
+    axis : int
+        Axis along which to look for missing observations.  Default is 1, ie.,
+        observations in rows.
+
+    Returns
+    -------
+    Y : array
+        All Y where the
+    X : array
+
+    Notes
+    -----
+    If either Y or X is 1d, it is reshaped to be 2d.
+    """
+    Y = np.asarray(Y)
+    if Y.ndim == 1:
+        Y = Y[:,None]
+    if X is not None:
+        X = np.array(X)
+        if X.ndim == 1:
+            X = X[:,None]
+        keepidx = np.logical_and(~np.isnan(Y).any(axis),~np.isnan(X).any(axis))
+        return Y[keepidx], X[keepidx]
+    else:
+        keepidx = ~np.isnan(Y).any(axis)
+        return Y[keepidx]
+
 #TODO: needs to better preserve dtype and be more flexible
 # ie., if you still have a string variable in your array you don't
 # want to cast it to float

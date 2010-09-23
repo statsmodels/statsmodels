@@ -1,7 +1,7 @@
 from scikits.statsmodels.sandbox.tsa.stattools import (adfuller, acf, pacf_ols,
         pacf_yw)
 from numpy.testing import assert_almost_equal
-from numpy import genfromtxt
+from numpy import genfromtxt#, concatenate
 from scikits.statsmodels.datasets import macrodata
 import os
 
@@ -111,6 +111,9 @@ class CheckCorrGram(object):
             "/results/results_corrgram.csv"
     results = genfromtxt(filename, delimiter=",", names=True,dtype=float)
 
+    #not needed: add 1. for lag zero
+    #self.results['acvar'] = np.concatenate(([1.], self.results['acvar']))
+
 
 class TestACF(CheckCorrGram):
     """
@@ -118,18 +121,19 @@ class TestACF(CheckCorrGram):
     """
     def __init__(self):
         self.acf = self.results['acvar']
+        #self.acf = np.concatenate(([1.], self.acf))
         self.qstat = self.results['Q1']
         self.res1 = acf(self.x, nlags=40, qstat=True)
 
     def test_acf(self):
-        assert_almost_equal(self.res1[0], self.acf, DECIMAL_8)
+        assert_almost_equal(self.res1[0][1:41], self.acf, DECIMAL_8)
 
 #    def test_confint(self):
 #        pass
 #NOTE: need to figure out how to center confidence intervals
 
     def test_qstat(self):
-        assert_almost_equal(self.res1[1], self.qstat, DECIMAL_3)
+        assert_almost_equal(self.res1[1][:40], self.qstat, DECIMAL_3)
         # 3 decimal places because of stata rounding
 
 #    def pvalue(self):
@@ -147,9 +151,10 @@ class TestACF_FFT(CheckCorrGram):
         self.res1 = acf(self.x, nlags=40, qstat=True, fft=True)
 
     def test_acf(self):
-        assert_almost_equal(self.res1[0], self.acf, DECIMAL_8)
+        assert_almost_equal(self.res1[0][1:], self.acf, DECIMAL_8)
 
     def test_qstat(self):
+        #todo why is res1/qstat 1 short
         assert_almost_equal(self.res1[1], self.qstat, DECIMAL_3)
 
 
@@ -160,11 +165,11 @@ class TestPACF(CheckCorrGram):
 
     def test_ols(self):
         pacfols = pacf_ols(self.x, nlags=40)
-        assert_almost_equal(pacfols, self.pacfols, DECIMAL_6)
+        assert_almost_equal(pacfols[1:], self.pacfols, DECIMAL_6)
 
     def test_yw(self):
         pacfyw = pacf_yw(self.x, nlags=40, method="mle")
-        assert_almost_equal(pacfyw, self.pacfyw, DECIMAL_8)
+        assert_almost_equal(pacfyw[1:], self.pacfyw, DECIMAL_8)
 
 if __name__=="__main__":
     import nose

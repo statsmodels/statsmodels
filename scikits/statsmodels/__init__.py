@@ -11,6 +11,7 @@ from regression import *
 from glm import *
 from rlm import *
 from discretemod import *
+import tsa
 from tools import add_constant, chain_dot
 import model, tools, datasets, families, stattools, iolib
 # robust is imported somewhere else?

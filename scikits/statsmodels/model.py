@@ -1,8 +1,10 @@
 import numpy as np
 from scipy.stats import t, norm
+from scipy.stats import norm as stats_norm
 from scipy import optimize, derivative
 from tools import recipr
 from contrast import ContrastResults
+from decorators import *  #for moving llf
 
 class Model(object):
     """
@@ -60,7 +62,12 @@ class Model(object):
                     exog_names = ['x%d' % i for i in range(exog.shape[1])]
                     exog_names[const_idx] = 'const'
                 self.exog_names = exog_names
+            else:
+                self.exog_names = ['x%d' % i for i in range(exog.shape[1])]
+        if endog.ndim == 1 or endog.shape[1] == 1:
             self.endog_names = ['y']
+        else: # for VAR
+            self.endog_names = ['y%d' % (i+1) for i in range(endog.shape[1])]
         self.endog = endog
         self.exog = exog
         self.nobs = float(self.endog.shape[0])
@@ -216,14 +223,17 @@ class LikelihoodModel(Model):
                 start_direc : ndarray
                     Initial direction set.
                 """
+        Hinv = None #JP error if full_output=0, Hinv not defined
         methods = ['newton', 'nm', 'bfgs', 'powell', 'cg', 'ncg']
         if start_params is None:
-            if self.exog is not None:
+            if hasattr(self, 'start_params'):
+                start_params = self.start_params
+            elif self.exog is not None:
                 start_params = [0]*self.exog.shape[1] # fails for shape (K,)?
             else:
                 raise ValueError("If exog is None, then start_params should be \
 specified")
-
+        print 'repr(start_params)', repr(start_params)
         if method.lower() not in methods:
             raise ValueError, "Unknown fit method %s" % method
         method = method.lower()
@@ -238,8 +248,8 @@ specified")
             hess = None
         if method == 'newton':
             tol = kwargs.setdefault('tol', 1e-8)
-            score = lambda params: self.score(params)
-            hess = lambda params: self.hessian(params)
+            score = lambda params: self.score(params)  #JP: redundant ?
+            hess = lambda params: self.hessian(params) #JP: redundant ?
             iterations = 0
             oldparams = np.inf
             newparams = np.asarray(start_params)
@@ -454,6 +464,7 @@ class GenericLikelihoodModel(LikelihoodModel):
             self.score = score
         if hessian:
             self.hessian = hessian
+        self.confint_dist = stats_norm
         super(GenericLikelihoodModel, self).__init__(endog, exog)
 
     def initialize(self):
@@ -465,6 +476,121 @@ class GenericLikelihoodModel(LikelihoodModel):
         else:   # can use approx_hess_p if we have a gradient
             if not self.hessian:
                 pass
+
+    def expandparams(self, params):
+        '''
+        expand to full parameter array when some parameters are fixed
+
+        Parameters
+        ----------
+        params : array
+            reduced parameter array
+
+        Return
+        ------
+        paramsfull : array
+            expanded parameter array where fixed parameters are included
+
+        Notes
+        -----
+        Calling this requires that self.fixed_params and self.fixed_paramsmask
+        are defined.
+
+        *developer notes:*
+
+        This can be used in the log-likelihood to ...
+
+        this could also be replaced by a more general parameter
+        transformation.
+
+        '''
+        paramsfull = self.fixed_params.copy()
+        paramsfull[self.fixed_paramsmask] = params
+        return paramsfull
+
+    def reduceparams(self, params):
+        return params[self.fixed_paramsmask]
+
+
+    def loglike(self, params):
+        return self.loglikeobs(params).sum(0)
+
+    def nloglike(self, params):
+        return -self.loglikeobs(params).sum(0)
+
+    def loglikeobs(self, params):
+        return -self.nloglikeobs(params)
+
+    def score(self, params):
+        from sandbox.regression.numdiff import approx_fprime1
+        return approx_fprime1(params, self.loglike, epsilon=1e-4).ravel()
+    def jac(self, params, **kwds):
+        kwds.setdefault('epsilon', 1e-4)
+        from sandbox.regression.numdiff import approx_fprime1
+        return approx_fprime1(params, self.loglikeobs, **kwds)
+    def hessian(self, params):
+        from sandbox.regression.numdiff import approx_hess
+        return approx_hess(params, self.loglike)[0]  #need options for hess (epsilon)
+
+    def fit(self, start_params=None, method='bfgs', maxiter=500, full_output=1,
+            disp=1, callback=None, retall=0, **kwargs):
+        """
+        Fit the model using maximum likelihood.
+
+        The rest of the docstring is from
+        scikits.statsmodels.LikelihoodModel.fit
+        """
+        if start_params is None and hasattr(self, 'start_params'):
+            self.start_params = start_params
+        mlefit = super(GenericLikelihoodModel, self).fit(start_params=start_params,
+                method=method, maxiter=maxiter, full_output=full_output,
+                disp=disp, callback=callback, **kwargs)
+        genericmlefit = GenericLikelihoodModelResults(self, mlefit)
+        return genericmlefit
+    #fit.__doc__ += LikelihoodModel.fit.__doc__
+
+
+    @cache_readonly
+    def jacv(self):
+        if not hasattr(self, '_results'):
+            raise ValueError('need to call fit first')
+        return self.jac(self._results.params)
+
+    @cache_readonly
+    def hessv(self):
+        if not hasattr(self, '_results'):
+            raise ValueError('need to call fit first')
+        return self.hessian(self._results.params)
+
+    # the following could be moved to results
+    @cache_readonly
+    def covjac(self):
+        '''covariance of parameters based on outer product of jacobian of likelihood
+        '''
+##        if not hasattr(self, '_results'):
+##            raise ValueError('need to call fit first')
+##            #self.fit()
+##        self.jacv = jacv = self.jac(self._results.params)
+        jacv = self.jacv
+        return np.linalg.inv(np.dot(jacv.T, jacv))
+
+    @cache_readonly
+    def covjhj(self):
+        jacv = self.jacv
+##        hessv = self.hessv
+##        hessinv = np.linalg.inv(hessv)
+##        self.hessinv = hessinv
+        hessinv = self._results.cov_params()
+        return np.dot(hessinv, np.dot(np.dot(jacv.T, jacv), hessinv))
+
+    @cache_readonly
+    def bsejhj(self):
+        return np.sqrt(np.diag(self.covjhj))
+
+    @cache_readonly
+    def bsejac(self):
+        return np.sqrt(np.diag(self.covjac))
+
 
 class Results(object):
     """
@@ -499,9 +625,7 @@ class LikelihoodModelResults(Results):
         params : 1d array_like
             parameter estimates from estimated model
         normalized_cov_params : 2d array
-           Normalized (before scaling) covariance of params
-            normalized_cov_params is also known as the hat matrix or H
-            (Semiparametric regression, Ruppert, Wand, Carroll; CUP 2003)
+           Normalized (before scaling) covariance of params. (dot(X.T,X))**-1
         scale : float
             For (some subset of models) scale will typically be the
             mean square error from the estimated model (sigma^2)
@@ -634,6 +758,15 @@ class LikelihoodModelResults(Results):
     def normalized_cov_params(self):
         raise NotImplementedError
 
+    #JP: add methods that are valid generically higher up in class hierarchy
+    @cache_readonly
+    def llf(self):
+        return self.model.loglike(self.params)
+
+    @cache_readonly
+    def bse(self):
+        return np.sqrt(np.diag(self.cov_params()))
+
     def t(self, column=None):
         """
         Return the t-statistic for a given parameter estimate.
@@ -681,6 +814,14 @@ class LikelihoodModelResults(Results):
 # repicr drops precision for MNLogit?
         _t = _params / np.sqrt(_cov)
         return _t
+
+    @cache_readonly
+    def tval(self, column=None):
+        """
+        Return the t-statistic for a given parameter estimate.
+        """
+        return self.params / self.bse
+
 
 
     def cov_params(self, r_matrix=None, column=None, scale=None, other=None):
@@ -961,7 +1102,9 @@ number of rows")
 
         """
         #TODO: simplify structure, DRY
-        if self.__class__.__name__ in ['RLMResults','GLMResults','DiscreteResults']:
+        if hasattr(self.model, 'confint_dist'):
+            dist = self.model.confint_dist
+        elif self.__class__.__name__ in ['RLMResults','GLMResults','DiscreteResults']:
             dist = norm
         else:
             dist = t
@@ -984,6 +1127,129 @@ number of rows")
             lower = self.params[cols] - dist.ppf(1-alpha/2)*self.bse[cols]
             upper = self.params[cols] + dist.ppf(1-alpha/2)*self.bse[cols]
         return np.asarray(zip(lower,upper))
+
+
+class ResultMixin(object):
+
+    @cache_readonly
+    def jacv(self):
+        return self.model.jac(self.params)
+
+    @cache_readonly
+    def hessv(self):
+        return self.model.hessian(self.params)
+
+    @cache_readonly
+    def covjac(self):
+        '''covariance of parameters based on outer product of jacobian of likelihood
+        '''
+##        if not hasattr(self, '_results'):
+##            raise ValueError('need to call fit first')
+##            #self.fit()
+##        self.jacv = jacv = self.jac(self._results.params)
+        jacv = self.jacv
+        return np.linalg.inv(np.dot(jacv.T, jacv))
+
+    @cache_readonly
+    def covjhj(self):
+        jacv = self.jacv
+##        hessv = self.hessv
+##        hessinv = np.linalg.inv(hessv)
+##        self.hessinv = hessinv
+        hessinv = self.cov_params()
+        return np.dot(hessinv, np.dot(np.dot(jacv.T, jacv), hessinv))
+
+    @cache_readonly
+    def bsejhj(self):
+        return np.sqrt(np.diag(self.covjhj))
+
+    @cache_readonly
+    def bsejac(self):
+        return np.sqrt(np.diag(self.covjac))
+
+    def bootstrap(self, nrep=100, method='bfgs', disp=0, store=1):
+        results = []
+        print self.model.__class__
+        for i in xrange(nrep):
+            rvsind = np.random.randint(self.nobs-1, size=self.nobs )
+            fitres = self.model.__class__(self.endog[rvsind],
+                                          self.exog[rvsind,:]
+                                          ).fit(method=method, disp=disp)
+            results.append(fitres.params)
+        results = np.array(results)
+        if store:
+            self.bootstrap_results = results
+        return results.mean(0), results.std(0), results
+
+    def get_nlfun(self, fun):
+        pass
+
+
+class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
+    """
+    A results class for the discrete dependent variable models.
+
+    Parameters
+    ----------
+    model : A DiscreteModel instance
+    params : array-like
+        The parameters of a fitted model.
+    hessian : array-like
+        The hessian of the fitted model.
+    scale : float
+        A scale parameter for the covariance matrix.
+
+
+    Returns
+    -------
+    *Attributes*
+
+    aic : float
+        Akaike information criterion.  -2*(`llf` - p) where p is the number
+        of regressors including the intercept.
+    bic : float
+        Bayesian information criterion. -2*`llf` + ln(`nobs`)*p where p is the
+        number of regressors including the intercept.
+    bse : array
+        The standard errors of the coefficients.
+    df_resid : float
+        See model definition.
+    df_model : float
+        See model definition.
+    fitted_values : array
+        Linear predictor XB.
+    llf : float
+        Value of the loglikelihood
+    llnull : float
+        Value of the constant-only loglikelihood
+    llr : float
+        Likelihood ratio chi-squared statistic; -2*(`llnull` - `llf`)
+    llr_pvalue : float
+        The chi-squared probability of getting a log-likelihood ratio
+        statistic greater than llr.  llr has a chi-squared distribution
+        with degrees of freedom `df_model`.
+    prsquared : float
+        McFadden's pseudo-R-squared. 1 - (`llf`/`llnull`)
+
+    Methods
+    -------
+    margeff
+        Get marginal effects of the fitted model.
+    conf_int
+
+    """
+
+    def __init__(self, model, mlefit):
+#        super(DiscreteResults, self).__init__(model, params,
+#                np.linalg.inv(-hessian), scale=1.)
+        self.model = model
+        #self.df_model = model.df_model
+        #self.df_resid = model.df_resid
+        self.endog = model.endog
+        self.exog = model.exog
+        self.nobs = model.nobs
+        self._cache = resettable_cache()
+        self.__dict__.update(mlefit.__dict__)
 
 
 

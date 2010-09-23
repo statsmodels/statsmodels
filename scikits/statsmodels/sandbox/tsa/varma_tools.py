@@ -35,7 +35,7 @@ from scipy import signal
 #might not (yet) need the following
 from scipy.signal.signaltools import _centered as trim_centered
 
-from scikits.statsmodels.sandbox.tools.tools_tsa import lagmat
+from scikits.statsmodels.sandbox.tsa.tsatools import lagmat
 
 
 def varfilter(x, a):

@@ -1,0 +1,34 @@
+
+
+
+
+access to data and parameters by branch and leaves
+--------------------------------------------------
+
+* this could be used in a similar way in other system estimators
+* dictionary access to data per equation, branch, leaf
+  * alternative dictionary of individual variables used in equations
+  * memory: temporary copies while using linalg, or permanent copies
+* outsource acces into call-back function or method
+* with a parser the dictionaries could be created from a formula
+* similar applies for accessing parameters from the params array in optimization (MLE, GMM)
+  when there are identical parameters across equations or leaves
+  * in latest version use dictionary mapping coefficient/parameter names to index into params
+
+global/outer-scope variables
+----------------------------
+
+* for nested logit I need to access params and store, change probabilites from the branch
+* need variables in a scope outside of the recursion
+* nested function or save params and probs in instance attribute
+
+
+constraint estimation as alternative and extension
+--------------------------------------------------
+
+* cross-equation and within equation restrictions on parameters could also be directly
+  imposed, instead of relying on the dictionary
+* no idea yet on how to encode this
+* might be easier to use constraint optimizer and keep constraints (partially) separate from
+  the parameterization in the likelihood calculations
+

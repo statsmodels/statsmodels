@@ -281,7 +281,7 @@ Should be of length %s, if sigma is a 1d array" % nobs
         if self._results is None and params is None:
             raise ValueError, "If the model has not been fit, then you must specify the params argument."
         if self._results is not None:
-            return np.dot(exog, self.results.params)
+            return np.dot(exog, self._results.params)
         else:
             return np.dot(exog, params)
 
@@ -648,8 +648,13 @@ class GLSAR(GLS):
             for i in range(self.order):
                 _X[(i+1):,:] = _X[(i+1):,:] - self.rho[i] * X[0:-(i+1),:]
                 return _X[self.order:,:]
+<<<<<<< TREE
 
 def yule_walker(X, order=1, method="unbiased", df=None, inv=False):
+=======
+
+def yule_walker(X, order=1, method="unbiased", df=None, inv=False, demean=True):
+>>>>>>> MERGE-SOURCE
     """
     Estimate AR(p) parameters from a sequence X using Yule-Walker equation.
 
@@ -673,8 +678,10 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False):
     df : integer, optional
        Specifies the degrees of freedom. If `df` is supplied, then it is assumed
        the X has `df` degrees of freedom rather than `n`.  Default is None.
-    inv : Bool
+    inv : bool
         If inv is True the inverse of R is also returned.  Default is False.
+    demean : bool
+        True, the mean is subtracted from `X` before estimation.
 
     Returns
     -------
@@ -705,14 +712,15 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False):
         raise ValueError, "ACF estimation method must be 'unbiased' \
         or 'MLE'"
     X = np.array(X)
-    X -= X.mean()                  # automatically demean's X
+    if demean:
+        X -= X.mean()                  # automatically demean's X
     n = df or X.shape[0]
 
     if method == "unbiased":        # this is df_resid ie., n - p
         denom = lambda k: n - k
     else:
         denom = lambda k: n
-    if len(X.shape) != 1:
+    if X.ndim > 1 and X.shape[1] != 1:
         raise ValueError, "expecting a vector to estimate AR parameters"
     r = np.zeros(order+1, np.float64)
     r[0] = (X**2).sum() / denom(0)
@@ -1234,6 +1242,7 @@ class RegressionResults(LikelihoodModelResults):
                             title=None,
                             txt_fmt = part2_fmt)
 
+        self.summary2 = part2
         ########  summary Part 3   #######
 
         part3Lheader = ['Models stats']
