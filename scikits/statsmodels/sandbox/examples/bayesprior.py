@@ -155,8 +155,7 @@ fsp.scatter(y1y2[:,0], y1y2[:,1], color='g',marker='+')
 # p in [0,1)
 # palpha ~ Gamma(2.00,.10)
 # mean = 2.00
-# std = .1
-# which implies k = 400, theta = .005
+# std = .1 which implies k = 400, theta = .005
 palpha = np.random.gamma(400,.005)
 
 # pi ~ Beta(.5,.05)

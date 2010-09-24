@@ -23,6 +23,7 @@ import families, tools
 from regression import WLS#,GLS #might need for mlogit
 from model import LikelihoodModel, LikelihoodModelResults
 from decorators import *
+from scipy.stats import t
 
 __all__ = ['GLM']
 
@@ -481,6 +482,8 @@ class GLMResults(LikelihoodModelResults):
         of the Pearson residuals.
     pinv_wexog : array
         See GLM docstring.
+    pvalues : array
+        The two-tailed p-values for the parameters.
     resid_anscombe : array
         Anscombe residuals.  See statsmodels.families.family for distribution-
         specific Anscombe residuals.
@@ -573,6 +576,10 @@ class GLMResults(LikelihoodModelResults):
     @cache_readonly
     def resid_deviance(self):
         return self.family.resid_dev(self._endog, self.mu)
+
+    @cache_readonly
+    def pvalues(self):
+        return t.sf(np.abs(self.t()), self.df_resid)*2
 
     @cache_readonly
     def pearson_chi2(self):
