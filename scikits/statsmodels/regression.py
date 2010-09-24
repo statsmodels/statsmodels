@@ -649,6 +649,7 @@ class GLSAR(GLS):
                 _X[(i+1):,:] = _X[(i+1):,:] - self.rho[i] * X[0:-(i+1),:]
                 return _X[self.order:,:]
 
+
 def yule_walker(X, order=1, method="unbiased", df=None, inv=False, demean=True):
     """
     Estimate AR(p) parameters from a sequence X using Yule-Walker equation.
@@ -1096,7 +1097,7 @@ class RegressionResults(LikelihoodModelResults):
  deviation'
         return self.wresid * recipr(np.sqrt(self.scale))
 
-    def summary(self, yname=None, xname=None):
+    def summary(self, yname=None, xname=None, returns='text'):
         """returns a string that summarizes the regression results
 
         Parameters
@@ -1159,13 +1160,13 @@ class RegressionResults(LikelihoodModelResults):
         )
         part2_fmt = dict(
             #data_fmts = ["%#12.6g","%#12.6g","%#10.4g","%#5.4g"],
-            #data_fmts = ["%#10.4g","%#10.4g","%#10.4g","%#6.4g"],
-            data_fmts = ["%#15.4F","%#15.4F","%#15.4F","%#14.4G"],
+            data_fmts = ["%#10.4g","%#10.4g","%#6.4f","%#6.4f"],
+            #data_fmts = ["%#15.4F","%#15.4F","%#15.4F","%#14.4G"],
             empty_cell = '',
-            #colwidths = 10,
-            colsep='  ',
+            colwidths = 14,
+            colsep=' ',
             row_pre = '| ',
-            row_post = '|',
+            row_post = ' |',
             table_dec_above='=',
             table_dec_below='=',
             header_dec_below='-',
@@ -1178,12 +1179,13 @@ class RegressionResults(LikelihoodModelResults):
             fmt = 'txt'
         )
         part3_fmt = dict(
-            data_fmts = ["%#12.6g","%#12.6g","%#10.4g","%#5.4g"],
+            #data_fmts = ["%#12.6g","%#12.6g","%#10.4g","%#5.4g"],
+            data_fmts = ["%#10.4g","%#10.4g","%#10.4g","%#6.4g"],
             empty_cell = '',
-            colwidths = None,
-            colsep='    ',
+            colwidths = 15,
+            colsep='   ',
             row_pre = '| ',
-            row_post = ' |',
+            row_post = '  |',
             table_dec_above=None,
             table_dec_below='-',
             header_dec_below='-',
@@ -1275,42 +1277,57 @@ class RegressionResults(LikelihoodModelResults):
         part3L.extend_right(part3R)
         ########  Return Summary Tables ########
         # join table parts then print
-        table = str(part1) + '\n' + str(part2) + '\n' + str(part3L)
-#TODO: return should require a argument in regression.summary(text)
-#      __str__ can be define to retun regression.summary(text) for printing to
-#      screen. This would take better advantage of table.SimpleTable
-        return table
+        if returns == 'text':
+            return str(part1) + '\n' +  str(part2) + '\n' + str(part3L)
+        elif returns == 'tables':
+            return [part1, part2 ,part3L]
+        elif returns == 'csv':
+            return part1.as_csv() + '\n' + part2.as_csv() + '\n' + \
+                   part3L.as_csv()
+        elif returns == 'latex':
+            print('not avalible yet')
+        elif returns == html:
+            print('not avalible yet')
 
 if __name__ == "__main__":
-    data = np.recfromcsv('datasets/anes96/anes96.csv', delimiter='\t')
-    ols2 = OLS(data['income'], np.column_stack((data['age'],data['educ']))).fit()
-    print(ols2.summary())
-
+    import scikits.statsmodels as sm
+    data = sm.datasets.longley.load()
+    data.exog = add_constant(data.exog)
+    ols_results = OLS(data.endog, data.exog).results
+    gls_results = GLS(data.endog, data.exog).results
+    print(ols_results.summary())
+    tables = ols_results.summary(returns='tables')
+    csv = ols_results.summary(returns='csv')
 """
-      Summary of Regression Results
+    Summary of Regression Results
 =======================================
-| Dependent Variable:                Y|
+| Dependent Variable:            ['y']|
 | Model:                           OLS|
 | Method:                Least Squares|
-| Date:               Mon, 03 May 2010|
-| Time:                       19:05:23|
-| # obs:                         944.0|
-| Df residuals:                  942.0|
-| Df model:                        1.0|
-======================================================================================
-|                      coefficient       std. error      t-statistic            prob.|
---------------------------------------------------------------------------------------
-| X.0                    0.0978921       0.00806334            12.14        1.291e-31|
-| X.1                      2.45744        0.0830518            29.59       1.368e-136|
-======================================================================================
+| Date:               Tue, 29 Jun 2010|
+| Time:                       22:32:21|
+| # obs:                          16.0|
+| Df residuals:                    9.0|
+| Df model:                        6.0|
+===========================================================================
+|            coefficient       std. error      t-statistic           prob.|
+---------------------------------------------------------------------------
+| x1             15.0619          84.9149           0.1774          0.8631|
+| x2             -0.0358           0.0335          -1.0695          0.3127|
+| x3             -2.0202           0.4884          -4.1364        0.002535|
+| x4             -1.0332           0.2143          -4.8220       0.0009444|
+| x5             -0.0511           0.2261          -0.2261          0.8262|
+| x6           1829.1515         455.4785           4.0159        0.003037|
+| const    -3482258.6346      890420.3836          -3.9108        0.003560|
+===========================================================================
 |                        Models stats                      Residual stats |
 ---------------------------------------------------------------------------
-| R-squared:              -0.00789126    Durbin-Watson:          0.766147 |
-| Adjusted R-squared:     -0.00896121    Omnibus:                 45.9830 |
-| F-statistic:               -7.37537    Prob(Omnibus):       1.03495e-10 |
-| Prob (F-statistic):         1.00000    JB:                      51.6050 |
-| Log likelihood:            -3030.13    Prob(JB):            6.22476e-12 |
-| AIC criterion:              6064.27    Skew:                  -0.573318 |
-| BIC criterion:              6073.97    Kurtosis:                3.05805 |
+| R-squared:                 0.995479    Durbin-Watson:           2.55949 |
+| Adjusted R-squared:        0.992465    Omnibus:                0.748615 |
+| F-statistic:                330.285    Prob(Omnibus):          0.687765 |
+| Prob (F-statistic):     4.98403e-10    JB:                     0.352773 |
+| Log likelihood:            -109.617    Prob(JB):               0.838294 |
+| AIC criterion:              233.235    Skew:                   0.419984 |
+| BIC criterion:              238.643    Kurtosis:                2.43373 |
 ---------------------------------------------------------------------------
 """

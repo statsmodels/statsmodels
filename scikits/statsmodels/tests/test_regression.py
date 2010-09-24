@@ -562,8 +562,9 @@ def test_bad_size():
     assert_raises(ValueError, OLS, data, data[1:])
 
 if __name__=="__main__":
-    #run_module_suite()
+
     import nose
+    run_module_suite()
     #nose.runmodule(argv=[__file__,'-vvs','-x'], exit=False) #, '--pdb'
 
 

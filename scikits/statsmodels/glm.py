@@ -23,6 +23,7 @@ import families, tools
 from regression import WLS#,GLS #might need for mlogit
 from model import LikelihoodModel, LikelihoodModelResults
 from decorators import *
+from scipy.stats import t
 
 __all__ = ['GLM']
 
@@ -481,6 +482,8 @@ class GLMResults(LikelihoodModelResults):
         of the Pearson residuals.
     pinv_wexog : array
         See GLM docstring.
+    pvalues : array
+        The two-tailed p-values for the parameters.
     resid_anscombe : array
         Anscombe residuals.  See statsmodels.families.family for distribution-
         specific Anscombe residuals.
@@ -575,6 +578,10 @@ class GLMResults(LikelihoodModelResults):
         return self.family.resid_dev(self._endog, self.mu)
 
     @cache_readonly
+    def pvalues(self):
+        return t.sf(np.abs(self.t()), self.df_resid)*2
+
+    @cache_readonly
     def pearson_chi2(self):
         chisq =  (self._endog- self.mu)**2 / self.family.variance(self.mu)
         chisq *= self._data_weights
@@ -620,3 +627,292 @@ class GLMResults(LikelihoodModelResults):
         return self.deviance - self.df_resid*np.log(self.nobs)
 
 #TODO: write summary method to use output.py in sandbox
+    def summary(self, yname=None, xname=None, title='Generalized linear model',
+                returns='print'):
+        """
+        Print a table of results or returns SimpleTable() instance which
+        summarizes the Generalized linear model results.
+
+        Parameters
+        -----------
+        yname : string
+                optional, Default is `Y`
+        xname : list of strings
+                optional, Default is `X.#` for # in p the number of regressors
+        title : string
+                optional, Defualt is 'Generalized linear model'
+        returns : string
+                  'text', 'table', 'csv', 'latex', 'html'
+
+        Returns
+        -------
+        Defualt :
+        returns='print'
+                Prints the summarirized results
+
+        Option :
+        returns='text'
+                Prints the summarirized results
+
+        Option :
+        returns='table'
+                 SimpleTable instance : summarizing the fit of a linear model.
+
+        Option :
+        returns='csv'
+                returns a string of csv of the results, to import into a spreadsheet
+
+        Option :
+        returns='latex'
+        Not implimented yet
+
+        Option :
+        returns='HTML'
+        Not implimented yet
+
+
+        Examples (needs updating)
+        --------
+        >>> import scikits.statsmodels as sm
+        >>> data = sm.datasets.longley.load()
+        >>> data.exog = sm.add_constant(data.exog)
+        >>> ols_results = sm.OLS(data.endog, data.exog).results
+        >>> print ols_results.summary()
+        ...
+
+        Notes
+        -----
+        stand_errors are not implimented.
+        conf_int calculated from normal dist.
+        """
+        import time as Time
+        from iolib import SimpleTable
+        from stattools import jarque_bera, omni_normtest, durbin_watson
+
+        if yname is None:
+            yname = 'Y'
+        if xname is None:
+            xname = ['x%d' % i for i in range(self.model.exog.shape[1])]
+
+        #List of results used in summary
+        #yname = yname
+        #xname = xname
+        time = Time.localtime()
+        dist_family = self.model.family.__class__.__name__
+        aic = self.aic
+        bic = self.bic
+        deviance = self.deviance
+        df_model = self.df_model
+        df_resid = self.df_resid
+        fittedvalues = self.fittedvalues
+        llf = self.llf
+        mu = self.mu
+        nobs = self.nobs
+        normalized_cov_params = self.normalized_cov_params
+        null_deviance = self.null_deviance
+        params = self.params
+        pearson_chi2 = self.pearson_chi2
+        pinv_wexog = self.pinv_wexog
+        resid_anscombe = self.resid_anscombe
+        resid_deviance = self.resid_deviance
+        resid_pearson = self.resid_pearson
+        resid_response = self.resid_response
+        resid_working = self.resid_working
+        scale = self.scale
+#TODO   #stand_errors = self.stand_errors
+        stand_errors = [' ' for x in range(len(self.params))]
+#Added note about conf_int
+        pvalues = self.pvalues
+        conf_int = self.conf_int()
+        cov_params = self.cov_params()
+        #f_test() = self.f_test()
+        t = self.t()
+        #t_test = self.t_test()
+
+
+
+        table_1l_fmt = dict(
+            data_fmts = ["%s", "%s", "%s", "%s", "%s"],
+            empty_cell = '',
+            colwidths = 17,
+            colsep='   ',
+            row_pre = '  ',
+            row_post = '  ',
+            table_dec_above='=',
+            table_dec_below='',
+            header_dec_below=None,
+            header_fmt = '%s',
+            stub_fmt = '%s',
+            title_align='c',
+            header_align = 'r',
+            data_aligns = "r",
+            stubs_align = "l",
+            fmt = 'txt'
+            )
+        # Note table_1l_fmt over rides the below formating.
+        table_1r_fmt = dict(
+            data_fmts = ["%s", "%s", "%s", "%s", "%S"],
+            empty_cell = '',
+            colwidths = 16,
+            colsep='   ',
+            row_pre = '',
+            row_post = '',
+            table_dec_above='=',
+            table_dec_below='',
+            header_dec_below=None,
+            header_fmt = '%s',
+            stub_fmt = '%s',
+            title_align='c',
+            header_align = 'r',
+            data_aligns = "r",
+            stubs_align = "l",
+            fmt = 'txt'
+            )
+
+        table_2_fmt = dict(
+            data_fmts = ["%s", "%s", "%s", "%s"],
+            #data_fmts = ["%#12.6g","%#12.6g","%#10.4g","%#5.4g"],
+            #data_fmts = ["%#10.4g","%#6.4f", "%#6.4f"],
+            #data_fmts = ["%#15.4F","%#15.4F","%#15.4F","%#14.4G"],
+            empty_cell = '',
+            colwidths = 14,
+            colsep=' ',
+            row_pre = '  ',
+            row_post = '   ',
+            table_dec_above='=',
+            table_dec_below='=',
+            header_dec_below='-',
+            header_fmt = '%s',
+            stub_fmt = '%s',
+            title_align='c',
+            header_align = 'r',
+            data_aligns = 'r',
+            stubs_align = 'l',
+            fmt = 'txt'
+        )
+        ########  summary table 1   #######
+        table_1l_title = title
+        table_1l_header = None
+        table_1l_stubs = ('Model Family:',
+                          'Method:',
+                          'Dependent Variable:',
+                          'Date:',
+                          'Time:',
+                          )
+        table_1l_data = [
+                         [dist_family],
+                         ['IRLS'],
+                         [yname],
+                         [Time.strftime("%a, %d %b %Y",time)],
+                         [Time.strftime("%H:%M:%S",time)],
+                        ]
+        table_1l = SimpleTable(table_1l_data,
+                            table_1l_header,
+                            table_1l_stubs,
+                            title=table_1l_title,
+                            txt_fmt = table_1l_fmt)
+        table_1r_title = None
+        table_1r_header = None
+        table_1r_stubs = ('# of obs:',
+                          'Df residuals:',
+                          'Df model:',
+                          'Scale:',
+                          'Log likelihood:'
+                          )
+        table_1r_data = [
+                         [nobs],
+                         [df_resid],
+                         [df_model],
+                         ["%#6.4f" % (scale,)],
+                         ["%#6.4f" % (llf,)]
+                        ]
+        table_1r = SimpleTable(table_1r_data,
+                            table_1r_header,
+                            table_1r_stubs,
+                            title=table_1r_title,
+                            txt_fmt = table_1r_fmt)
+
+        ########  summary table 2   #######
+#TODO add % range to confidance interval column header
+        table_2header = ('coefficient', 'stand errors', 't-statistic',
+        'Conf. Interval')
+        table_2stubs = xname
+        table_2data = zip(["%#6.4f" % (params[i]) for i in range(len(xname))],
+                          [stand_errors[i] for i in range(len(xname))],
+                          ["%#6.4f" % (t[i]) for i in range(len(xname))],
+                          ["""[%#6.3f, %#6.3f]""" % tuple(conf_int[i]) for i in
+                                                             range(len(xname))])
+
+
+        #dfmt={'data_fmt':["%#12.6g","%#12.6g","%#10.4g","%#5.4g"]}
+        table_2 = SimpleTable(table_2data,
+                            table_2header,
+                            table_2stubs,
+                            title=None,
+                            txt_fmt = table_2_fmt)
+
+        ########  Return Summary Tables ########
+        # join table table_s then print
+        if returns == 'text':
+            table_1l.extend_right(table_1r)
+            return str(table_1l) + '\n' +  str(table_2)
+        elif returns == 'print':
+            table_1l.extend_right(table_1r)
+            print(str(table_1l) + '\n' +  str(table_2))
+        elif returns == 'tables':
+            return [table_1l, table_1r, table_2]
+            #return [table_1, table_2 ,table_3L, notes]
+        elif returns == 'csv':
+            return table_1.as_csv() + '\n' + table_2.as_csv() + '\n' + \
+                   table_3L.as_csv()
+        elif returns == 'latex':
+            print('not avalible yet')
+        elif returns == html:
+            print('not avalible yet')
+
+if __name__ == "__main__":
+    import scikits.statsmodels as sm
+    data = sm.datasets.longley.load()
+    #data.exog = add_constant(data.exog)
+    GLM = GLM(data.endog, data.exog).fit()
+    GLMT = GLM.summary(returns='tables')
+##    GLMT[0].extend_right(GLMT[1])
+##    print(GLMT[0])
+##    print(GLMT[2])
+    GLMTp = GLM.summary(title='Test GLM')
+
+"""
+From Stata
+. webuse beetle
+. glm r i.beetle ldose, family(binomial n) link(cloglog)
+
+Iteration 0:   log likelihood = -79.012269
+Iteration 1:   log likelihood =  -76.94951
+Iteration 2:   log likelihood = -76.945645
+Iteration 3:   log likelihood = -76.945645
+
+Generalized linear models                          No. of obs      =        24
+Optimization     : ML                              Residual df     =        20
+                                                   Scale parameter =         1
+Deviance         =  73.76505595                    (1/df) Deviance =  3.688253
+Pearson          =   71.8901173                    (1/df) Pearson  =  3.594506
+
+Variance function: V(u) = u*(1-u/n)                [Binomial]
+Link function    : g(u) = ln(-ln(1-u/n))           [Complementary log-log]
+
+                                                   AIC             =   6.74547
+Log likelihood   = -76.94564525                    BIC             =  10.20398
+
+------------------------------------------------------------------------------
+             |                 OIM
+           r |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+      beetle |
+          2  |  -.0910396   .1076132    -0.85   0.398    -.3019576    .1198783
+          3  |  -1.836058   .1307125   -14.05   0.000     -2.09225   -1.579867
+             |
+       ldose |   19.41558   .9954265    19.50   0.000     17.46458    21.36658
+       _cons |  -34.84602    1.79333   -19.43   0.000    -38.36089   -31.33116
+------------------------------------------------------------------------------
+"""
+
