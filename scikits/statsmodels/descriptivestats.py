@@ -1,5 +1,4 @@
 import sys
-sys.path.append("/Users/vmd/Dropbox/statsmodels/Descriptive-Stats/scikits/statsmodels/iolib")
 import numpy as np
 from scipy import stats
 #from scikits.statsmodels.iolib.table import SimpleTable
