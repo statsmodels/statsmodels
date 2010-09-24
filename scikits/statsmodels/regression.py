@@ -648,13 +648,9 @@ class GLSAR(GLS):
             for i in range(self.order):
                 _X[(i+1):,:] = _X[(i+1):,:] - self.rho[i] * X[0:-(i+1),:]
                 return _X[self.order:,:]
-<<<<<<< TREE
 
-def yule_walker(X, order=1, method="unbiased", df=None, inv=False):
-=======
 
 def yule_walker(X, order=1, method="unbiased", df=None, inv=False, demean=True):
->>>>>>> MERGE-SOURCE
     """
     Estimate AR(p) parameters from a sequence X using Yule-Walker equation.
 
