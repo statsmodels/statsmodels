@@ -233,7 +233,7 @@ class LikelihoodModel(Model):
             else:
                 raise ValueError("If exog is None, then start_params should be \
 specified")
-        print 'repr(start_params)', repr(start_params)
+        #print 'repr(start_params)', repr(start_params)
         if method.lower() not in methods:
             raise ValueError, "Unknown fit method %s" % method
         method = method.lower()
