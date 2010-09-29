@@ -190,6 +190,8 @@ class PoissonZiGMLE(GenericLikelihoodModel):
             self.exog = np.ones((self.nobs,1))
         self.nparams = self.exog.shape[1]
         #what's the shape in regression for exog if only constant
+        self.start_params = np.hstack((np.ones(self.nparams), 0))
+        self.cloneattr = ['start_params']
 
     def loglike(self, params):
         return -self.nloglikeobs(params).sum(0)
@@ -214,13 +216,13 @@ class PoissonZiGMLE(GenericLikelihoodModel):
         .. math :: \\ln L=\\sum_{i=1}^{n}\\left[-\\lambda_{i}+y_{i}x_{i}^{\\prime}\\beta-\\ln y_{i}!\\right]
         """
         beta = params[:-1]
-        gamm = 1/(1+np.exp(params[-1]))  #check this
+        gamm = 1 / (1 + np.exp(params[-1]))  #check this
         # replace with np.dot(self.exogZ, gamma)
         #print np.shape(self.offset), self.exog.shape, beta.shape
         XB = self.offset + np.dot(self.exog, beta)
         endog = self.endog
-        nloglik = np.log(1-gamm) + np.exp(XB) -  endog*XB + np.log(factorial(endog))
-        nloglik[endog==0] = - np.log(gamm + (1-gamm) * np.exp(-nloglik[endog==0]))
+        nloglik = -np.log(1-gamm) + np.exp(XB) -  endog*XB + np.log(factorial(endog))
+        nloglik[endog==0] = - np.log(gamm + np.exp(-nloglik[endog==0]))
 
         return nloglik
 

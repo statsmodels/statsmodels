@@ -541,7 +541,7 @@ class GenericLikelihoodModel(LikelihoodModel):
         scikits.statsmodels.LikelihoodModel.fit
         """
         if start_params is None and hasattr(self, 'start_params'):
-            self.start_params = start_params
+            start_params = self.start_params
         mlefit = super(GenericLikelihoodModel, self).fit(start_params=start_params,
                 method=method, maxiter=maxiter, full_output=full_output,
                 disp=disp, callback=callback, **kwargs)
@@ -1170,11 +1170,19 @@ class ResultMixin(object):
     def bootstrap(self, nrep=100, method='bfgs', disp=0, store=1):
         results = []
         print self.model.__class__
+        hascloneattr = True if hasattr(self, 'cloneattr') else False
         for i in xrange(nrep):
             rvsind = np.random.randint(self.nobs-1, size=self.nobs )
-            fitres = self.model.__class__(self.endog[rvsind],
+            #this needs to set startparam and get other defining attributes
+            #need a clone method on model
+            fitmod = self.model.__class__(self.endog[rvsind],
                                           self.exog[rvsind,:]
-                                          ).fit(method=method, disp=disp)
+                                          )
+            if hascloneattr:
+                for attr in self.model.cloneattr:
+                    setattr(fitmod, attr, getattr(self.model, attr))
+
+            fitres = fitmod.fit(method=method, disp=disp)
             results.append(fitres.params)
         results = np.array(results)
         if store:
