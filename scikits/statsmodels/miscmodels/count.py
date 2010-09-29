@@ -3,6 +3,12 @@
 Created on Mon Jul 26 08:34:59 2010
 
 Author: josef-pktd
+
+changes:
+added offset and zero-inflated version of Poisson
+ - kind of ok, need better test cases,
+ - a nan in ZIP bse, need to check hessian calculations
+
 """
 
 import numpy as np
@@ -61,7 +67,7 @@ class NonlinearDeltaCov(object):
 
 
 
-class MyPoisson(GenericLikelihoodModel):
+class PoissonGMLE(GenericLikelihoodModel):
     '''Maximum Likelihood Estimation of Poisson Model
 
     This is an example for generic MLE which has the same
@@ -95,6 +101,129 @@ class MyPoisson(GenericLikelihoodModel):
         XB = np.dot(self.exog, params)
         endog = self.endog
         return np.exp(XB) -  endog*XB + np.log(factorial(endog))
+
+    def predict_distribution(self, exog):
+        '''return frozen scipy.stats distribution with mu at estimated prediction
+        '''
+        if not hasattr(self, result):
+            raise
+        else:
+            mu = np.exp(np.dot(exog, params))
+            return stats.poisson(mu, loc=0)
+
+
+
+class PoissonOffsetGMLE(GenericLikelihoodModel):
+    '''Maximum Likelihood Estimation of Poisson Model
+
+    This is an example for generic MLE which has the same
+    statistical model as discretemod.Poisson but adds offset
+
+    Except for defining the negative log-likelihood method, all
+    methods and results are generic. Gradients and Hessian
+    and all resulting statistics are based on numerical
+    differentiation.
+
+    '''
+
+    def __init__(self, endog, exog=None, offset=None, **kwds):
+        # let them be none in case user wants to use inheritance
+        if not offset is None:
+            if offset.ndim == 1:
+                offset = offset[:,None] #need column
+            self.offset = offset.ravel()
+        else:
+            self.offset = 0.
+        super(PoissonOffsetGMLE, self).__init__(endog, exog, **kwds)
+
+    def loglike(self, params):
+        return -self.nloglikeobs(params).sum(0)
+
+    # original copied from discretemod.Poisson
+    def nloglikeobs(self, params):
+        """
+        Loglikelihood of Poisson model
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model.
+
+        Returns
+        -------
+        The log likelihood of the model evaluated at `params`
+
+        Notes
+        --------
+        .. math :: \\ln L=\\sum_{i=1}^{n}\\left[-\\lambda_{i}+y_{i}x_{i}^{\\prime}\\beta-\\ln y_{i}!\\right]
+        """
+
+        XB = self.offset + np.dot(self.exog, params)
+        endog = self.endog
+        nloglik = np.exp(XB) -  endog*XB + np.log(factorial(endog))
+        return nloglik
+
+class PoissonZiGMLE(GenericLikelihoodModel):
+    '''Maximum Likelihood Estimation of Poisson Model
+
+    This is an example for generic MLE which has the same
+    statistical model as discretemod.Poisson but adds offset
+
+    Except for defining the negative log-likelihood method, all
+    methods and results are generic. Gradients and Hessian
+    and all resulting statistics are based on numerical
+    differentiation.
+
+    '''
+
+    def __init__(self, endog, exog=None, offset=None, **kwds):
+        # let them be none in case user wants to use inheritance
+
+        super(PoissonZiGMLE, self).__init__(endog, exog, **kwds)
+        if not offset is None:
+            if offset.ndim == 1:
+                offset = offset[:,None] #need column
+            self.offset = offset.ravel()  #which way?
+        else:
+            self.offset = 0.
+        if exog is None:
+            self.exog = np.ones((self.nobs,1))
+        self.nparams = self.exog.shape[1]
+        #what's the shape in regression for exog if only constant
+
+    def loglike(self, params):
+        return -self.nloglikeobs(params).sum(0)
+
+
+    # original copied from discretemod.Poisson
+    def nloglikeobs(self, params):
+        """
+        Loglikelihood of Poisson model
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model.
+
+        Returns
+        -------
+        The log likelihood of the model evaluated at `params`
+
+        Notes
+        --------
+        .. math :: \\ln L=\\sum_{i=1}^{n}\\left[-\\lambda_{i}+y_{i}x_{i}^{\\prime}\\beta-\\ln y_{i}!\\right]
+        """
+        beta = params[:-1]
+        gamm = 1/(1+np.exp(params[-1]))  #check this
+        # replace with np.dot(self.exogZ, gamma)
+        #print np.shape(self.offset), self.exog.shape, beta.shape
+        XB = self.offset + np.dot(self.exog, beta)
+        endog = self.endog
+        nloglik = np.log(1-gamm) + np.exp(XB) -  endog*XB + np.log(factorial(endog))
+        nloglik[endog==0] = - np.log(gamm + (1-gamm) * np.exp(-nloglik[endog==0]))
+
+        return nloglik
+
 
 
 if __name__ == '__main__':
