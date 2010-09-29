@@ -404,6 +404,8 @@ exceeded."
             try:
                 Hinv = np.linalg.inv(-1*self.hessian(xopt))
             except:
+                #warnings.warn ...  #todo convert to warning ?
+                print 'Inverting hessian failed, no bse or cov_params available'
                 Hinv = None
 #TODO: add Hessian approximation and change the above if needed
         mlefit = LikelihoodModelResults(self, xopt, Hinv, scale=1.)
@@ -1167,7 +1169,31 @@ class ResultMixin(object):
     def bsejac(self):
         return np.sqrt(np.diag(self.covjac))
 
-    def bootstrap(self, nrep=100, method='bfgs', disp=0, store=1):
+    def bootstrap(self, nrep=100, method='nm', disp=0, store=1):
+        '''simple bootstrap to get mean and variance of estimator
+
+        This was mainly written to compare estimators of the standard errors
+        of the parameter estimates.
+
+        Parameter
+        ---------
+        nrep : int
+            number of bootstrap replications
+        method : str
+            optimization method to use
+        disp : bool
+            If true, then optimization prints results
+        store : bool
+            If true, then parameter estimates for all bootstrap iterations
+            are attached in self.bootstrap_results
+
+        Returns
+        -------
+        mean : array
+            mean of parameter estimates over bootstrap replications
+        std : array
+            standard deviation of parameter estimates over bootstrap replications
+        '''
         results = []
         print self.model.__class__
         hascloneattr = True if hasattr(self, 'cloneattr') else False

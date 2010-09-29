@@ -8,6 +8,24 @@ changes:
 added offset and zero-inflated version of Poisson
  - kind of ok, need better test cases,
  - a nan in ZIP bse, need to check hessian calculations
+ - found error in ZIP loglike
+ - all tests pass with
+
+Issues
+------
+* If true model is not zero-inflated then numerical Hessian for ZIP has zeros
+  for the inflation probability and is not invertible.
+  -> hessian inverts and bse look ok if row and column are dropped, pinv also works
+* GenericMLE: still get somewhere (where?)
+   "CacheWriteWarning: The attribute 'bse' cannot be overwritten"
+* bfgs is too fragile, doesn't come back
+* `nm` is slow but seems to work
+* need good start_params and their use in genericmle needs to be checked for
+  consistency, set as attribute or method (called as attribute)
+* numerical hessian needs better scaling
+
+* check taking parts out of the loop, e.g. factorial(endog) could be precalculated
+
 
 """
 

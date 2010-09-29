@@ -109,14 +109,16 @@ class TestPoissonZi(Compare):
         mod_glm = sm.GLM(data_endog, data_exog, family=sm.families.Poisson())
         self.res_glm = mod_glm.fit()
 
+        self.decimal = 1
+
     def test_params(self):
-        assert_almost_equal(self.res.params[:-1], self.res_glm.params[1:], DEC)
-        assert_almost_equal(self.res.params[:-1], self.res_discrete.params[1:], DEC)
+        assert_almost_equal(self.res.params[:-1], self.res_glm.params[1:], self.decimal)
+        assert_almost_equal(self.res.params[:-1], self.res_discrete.params[1:], self.decimal)
 
     def test_cov_params(self):
-        assert_almost_equal(self.res.bse[:-1], self.res_glm.bse[1:], DEC)
-        assert_almost_equal(self.res.bse[:-1], self.res_discrete.bse[1:], DEC)
-        assert_almost_equal(self.res.tval[:-1], self.res_glm.t()[1:], DEC)
+        assert_almost_equal(self.res.bse[:-1], self.res_glm.bse[1:], self.decimal)
+        assert_almost_equal(self.res.bse[:-1], self.res_discrete.bse[1:], self.decimal)
+        assert_almost_equal(self.res.tval[:-1], self.res_glm.t()[1:], self.decimal)
 
 
 
