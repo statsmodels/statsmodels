@@ -565,7 +565,7 @@ class GenericLikelihoodModel(LikelihoodModel):
         from sandbox.regression.numdiff import approx_hess
         return approx_hess(params, self.loglike)[0]  #need options for hess (epsilon)
 
-    def fit(self, start_params=None, method='bfgs', maxiter=500, full_output=1,
+    def fit(self, start_params=None, method='nm', maxiter=500, full_output=1,
             disp=1, callback=None, retall=0, **kwargs):
         """
         Fit the model using maximum likelihood.
