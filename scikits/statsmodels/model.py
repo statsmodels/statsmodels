@@ -426,28 +426,41 @@ class GenericLikelihoodModel(LikelihoodModel):
     """
     Allows the fitting of any likelihood function via maximum likelihood.
 
+    A subclass needs to specify at least the log-likelihood
+    If the log-likelihood is specified for each observation, then results that
+    require the Jacobian will be available. (The other case is not tested yet.)
+
     Notes
     -----
-    Methods that require only a likelihood function.
+    Optimization methods that require only a likelihood function.
         'nm'
         'powell'
 
-    Methods that require a likelihood function and a score/gradient.
+    Optimization methods that require a likelihood function and a score/gradient.
         'bfgs'
         'cg'
         'ncg' - A function to compute the Hessian is optional.
 
-    Methods that require a likelihood function, a score/gradient, and a
+    Optimization methods that require a likelihood function, a score/gradient, and a
     Hessian.
         'newton'
 
+    If they are not overwritten by a subclass, then numerical gradient, Jacobian
+    and Hessian of the log-likelihood are caclulated by numerical forward
+    differentiation. This might results in some cases in precision problems, and
+    the Hessian might not be positive definite. Even if the Hessian is not positive
+    definite the covariance matrix of the parameter estimates based on the outer
+    product of the Jacobian might still be valid.
 
-    Example
+
+    Examples
+    --------
+    see also subclasses in directory miscmodels
 
     import scikits.statsmodels as sm
     data = sm.datasets.spector.load()
     data.exog = sm.add_constant(data.exog)
-# in this dir
+    # in this dir
     from model import GenericLikelihoodModel
     probit_mod = sm.Probit(data.endog, data.exog)
     probit_res = probit_mod.fit()
@@ -457,6 +470,7 @@ class GenericLikelihoodModel(LikelihoodModel):
     res = mod.fit(method="nm", maxiter = 500)
     import numpy as np
     np.allclose(res.params, probit_res.params)
+
     """
     def __init__(self, endog, exog=None, loglike=None, score=None, hessian=None):
     # let them be none in case user wants to use inheritance
@@ -467,8 +481,12 @@ class GenericLikelihoodModel(LikelihoodModel):
         if hessian:
             self.hessian = hessian
         self.confint_dist = stats_norm
+        if not exog is None:  #this won't work for ru2nmnl, maybe np.ndim of a dict?
+            #try:
+            self.nparams = self.df_model = exog.shape[1] if np.ndim(exog)==2 else 1
         super(GenericLikelihoodModel, self).__init__(endog, exog)
 
+    #this is redundant and not used when subclassing
     def initialize(self):
         if not self.score:  # right now score is not optional
             from sandbox.regression.numdiff import approx_fprime1
@@ -524,13 +542,26 @@ class GenericLikelihoodModel(LikelihoodModel):
         return -self.nloglikeobs(params)
 
     def score(self, params):
+        '''Gradient of log-likelihood evaluated at params
+
+        '''
         from sandbox.regression.numdiff import approx_fprime1
         return approx_fprime1(params, self.loglike, epsilon=1e-4).ravel()
+
     def jac(self, params, **kwds):
+        '''
+        Jacobian/Gradient of log-likelihood evaluated at params for each
+        observation.
+
+        '''
         kwds.setdefault('epsilon', 1e-4)
         from sandbox.regression.numdiff import approx_fprime1
         return approx_fprime1(params, self.loglikeobs, **kwds)
+
     def hessian(self, params):
+        '''Hessian of log-likelihood evaluated at params
+
+        '''
         from sandbox.regression.numdiff import approx_hess
         return approx_hess(params, self.loglike)[0]  #need options for hess (epsilon)
 
@@ -542,8 +573,12 @@ class GenericLikelihoodModel(LikelihoodModel):
         The rest of the docstring is from
         scikits.statsmodels.LikelihoodModel.fit
         """
-        if start_params is None and hasattr(self, 'start_params'):
-            start_params = self.start_params
+        if start_params is None:
+            if hasattr(self, 'start_params'):
+                start_params = self.start_params
+            else:
+                start_params = 0.1 * np.ones(self.nparams)
+
         mlefit = super(GenericLikelihoodModel, self).fit(start_params=start_params,
                 method=method, maxiter=maxiter, full_output=full_output,
                 disp=disp, callback=callback, **kwargs)
@@ -551,6 +586,9 @@ class GenericLikelihoodModel(LikelihoodModel):
         return genericmlefit
     #fit.__doc__ += LikelihoodModel.fit.__doc__
 
+    #------------------------------
+    #TODO: the following have been moved to the result mixin class
+    #      check if anything is still using them from here
 
     @cache_readonly
     def jacv(self):
@@ -567,7 +605,8 @@ class GenericLikelihoodModel(LikelihoodModel):
     # the following could be moved to results
     @cache_readonly
     def covjac(self):
-        '''covariance of parameters based on outer product of jacobian of likelihood
+        '''covariance of parameters based on outer product of jacobian of the
+        log-likelihood
         '''
 ##        if not hasattr(self, '_results'):
 ##            raise ValueError('need to call fit first')
@@ -1061,7 +1100,7 @@ number of rows")
         return ContrastResults(F=F, df_denom=self.model.df_resid,
                     df_num=invcov.shape[0])
 
-    def conf_int(self, alpha=.05, cols=None):
+    def conf_int(self, alpha=.05, cols=None, method='default'):
         """
         Returns the confidence interval of the fitted parameters.
 
@@ -1072,6 +1111,16 @@ number of rows")
             ie., The default `alpha` = .05 returns a 95% confidence interval.
         cols : array-like, optional
             `cols` specifies which confidence intervals to return
+        method : string
+            Not Implemented Yet
+            Method to estimate the confidence_interval.
+            "Default" : uses self.bse which is based on inverse Hessian for MLE
+            "jhj" :
+            "jac" :
+            "boot-bse"
+            "boot_quant"
+            "profile"
+
 
         Returns
         --------
@@ -1103,6 +1152,7 @@ number of rows")
         models except RLM and GLM, which uses the standard normal distribution.
 
         """
+        bse = self.bse
         #TODO: simplify structure, DRY
         if hasattr(self.model, 'confint_dist'):
             dist = self.model.confint_dist
@@ -1112,22 +1162,22 @@ number of rows")
             dist = t
         if cols is None and dist == t:
             lower = self.params - dist.ppf(1-alpha/2,self.model.df_resid) *\
-                    self.bse
+                    bse
             upper = self.params + dist.ppf(1-alpha/2,self.model.df_resid) *\
-                    self.bse
+                    bse
         elif cols is None and dist == norm:
-            lower = self.params - dist.ppf(1-alpha/2)*self.bse
-            upper = self.params + dist.ppf(1-alpha/2)*self.bse
+            lower = self.params - dist.ppf(1-alpha/2) * bse
+            upper = self.params + dist.ppf(1-alpha/2) * bse
         elif cols is not None and dist == t:
             cols = np.asarray(cols)
             lower = self.params[cols] - dist.ppf(1-\
-                        alpha/2,self.model.df_resid) *self.bse[cols]
+                        alpha/2,self.model.df_resid) * bse[cols]
             upper = self.params[cols] + dist.ppf(1-\
-                        alpha/2,self.model.df_resid) *self.bse[cols]
+                        alpha/2,self.model.df_resid) * bse[cols]
         elif cols is not None and dist == norm:
             cols = np.asarray(cols)
-            lower = self.params[cols] - dist.ppf(1-alpha/2)*self.bse[cols]
-            upper = self.params[cols] + dist.ppf(1-alpha/2)*self.bse[cols]
+            lower = self.params[cols] - dist.ppf(1-alpha/2) * bse[cols]
+            upper = self.params[cols] + dist.ppf(1-alpha/2) * bse[cols]
         return np.asarray(zip(lower,upper))
 
 
@@ -1135,15 +1185,22 @@ class ResultMixin(object):
 
     @cache_readonly
     def jacv(self):
+        '''cached Jacobian of log-likelihood
+        '''
         return self.model.jac(self.params)
 
     @cache_readonly
     def hessv(self):
+        '''cached Hessian of log-likelihood
+        '''
         return self.model.hessian(self.params)
 
     @cache_readonly
     def covjac(self):
-        '''covariance of parameters based on outer product of jacobian of likelihood
+        '''
+        covariance of parameters based on outer product of jacobian of
+        log-likelihood
+
         '''
 ##        if not hasattr(self, '_results'):
 ##            raise ValueError('need to call fit first')
@@ -1154,6 +1211,12 @@ class ResultMixin(object):
 
     @cache_readonly
     def covjhj(self):
+        '''covariance of parameters based on HJJH
+
+        dot product of Hessian, Jacobian, Jacobian, Hessian of likelihood
+
+        name should be covhjh
+        '''
         jacv = self.jacv
 ##        hessv = self.hessv
 ##        hessinv = np.linalg.inv(hessv)
@@ -1163,17 +1226,20 @@ class ResultMixin(object):
 
     @cache_readonly
     def bsejhj(self):
+        '''standard deviation of parameter estimates based on covHJH
+        '''
         return np.sqrt(np.diag(self.covjhj))
 
     @cache_readonly
     def bsejac(self):
+        '''standard deviation of parameter estimates based on covjac
+        '''
         return np.sqrt(np.diag(self.covjac))
 
     def bootstrap(self, nrep=100, method='nm', disp=0, store=1):
         '''simple bootstrap to get mean and variance of estimator
 
-        This was mainly written to compare estimators of the standard errors
-        of the parameter estimates.
+        see notes
 
         Parameter
         ---------
@@ -1193,6 +1259,15 @@ class ResultMixin(object):
             mean of parameter estimates over bootstrap replications
         std : array
             standard deviation of parameter estimates over bootstrap replications
+
+        Notes
+        -----
+        This was mainly written to compare estimators of the standard errors
+        of the parameter estimates.
+        It uses independent random sampling from the original endog and exog, and
+        therefore is only correct if observations are iid.
+
+
         '''
         results = []
         print self.model.__class__
@@ -1216,6 +1291,8 @@ class ResultMixin(object):
         return results.mean(0), results.std(0), results
 
     def get_nlfun(self, fun):
+        #I think this is supposed to get the delta method that is currently
+        #in miscmodels count (as part of Poisson example)
         pass
 
 
@@ -1223,20 +1300,23 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
     """
     A results class for the discrete dependent variable models.
 
+    ..Warning :
+    The following description has not been updated to this version/class.
+    Where are AIC, BIC, ....? docstring looks like copy from discretemod
+
     Parameters
     ----------
     model : A DiscreteModel instance
-    params : array-like
-        The parameters of a fitted model.
-    hessian : array-like
-        The hessian of the fitted model.
-    scale : float
-        A scale parameter for the covariance matrix.
+    mlefit : instance of LikelihoodResults
+        This contains the numerical optimization results as returned by
+        LikelihoodModel.fit(), in a superclass of GnericLikelihoodModels
 
 
     Returns
     -------
     *Attributes*
+
+    Warning most of these are not available yet
 
     aic : float
         Akaike information criterion.  -2*(`llf` - p) where p is the number

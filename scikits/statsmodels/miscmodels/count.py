@@ -154,8 +154,9 @@ class PoissonOffsetGMLE(GenericLikelihoodModel):
             self.offset = 0.
         super(PoissonOffsetGMLE, self).__init__(endog, exog, **kwds)
 
-    def loglike(self, params):
-        return -self.nloglikeobs(params).sum(0)
+#this was added temporarily for bug-hunting, but shouldn't be needed
+#    def loglike(self, params):
+#        return -self.nloglikeobs(params).sum(0)
 
     # original copied from discretemod.Poisson
     def nloglikeobs(self, params):
@@ -184,13 +185,15 @@ class PoissonOffsetGMLE(GenericLikelihoodModel):
 class PoissonZiGMLE(GenericLikelihoodModel):
     '''Maximum Likelihood Estimation of Poisson Model
 
-    This is an example for generic MLE which has the same
-    statistical model as discretemod.Poisson but adds offset
+    This is an example for generic MLE which has the same statistical model
+    as discretemod.Poisson but adds offset and zero-inflation.
 
     Except for defining the negative log-likelihood method, all
     methods and results are generic. Gradients and Hessian
     and all resulting statistics are based on numerical
     differentiation.
+
+    There are numerical problems if there is no zero-inflation.
 
     '''
 
@@ -210,9 +213,6 @@ class PoissonZiGMLE(GenericLikelihoodModel):
         #what's the shape in regression for exog if only constant
         self.start_params = np.hstack((np.ones(self.nparams), 0))
         self.cloneattr = ['start_params']
-
-    def loglike(self, params):
-        return -self.nloglikeobs(params).sum(0)
 
 
     # original copied from discretemod.Poisson
