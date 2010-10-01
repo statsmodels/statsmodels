@@ -29,43 +29,7 @@ the user chooses.
 import numpy as np
 from scipy import stats
 
-class OneTimeProperty(object):
-
-
-    """A descriptor to make special properties that become normal attributes.
-
-    This is meant to be used mostly by the auto_attr decorator in this module.
-    Author: Fernando Perez, copied from nitime
-    """
-    def __init__(self,func):
-
-        """Create a OneTimeProperty instance.
-
-         Parameters
-         ----------
-           func : method
-
-             The method that will be called the first time to compute a value.
-             Afterwards, the method's name will be a standard attribute holding
-             the value of this computation.
-             """
-        self.getter = func
-        self.name = func.func_name
-
-    def __get__(self,obj,type=None):
-        """This will be called on attribute access on the class or instance. """
-
-        if obj is None:
-            # Being called on the class, return the original function. This way,
-            # introspection works on the class.
-            #return func
-            print 'class access'
-            return self.getter
-
-        val = self.getter(obj)
-        #print "** auto_attr - loading '%s'" % self.name  # dbg
-        setattr(obj, self.name, val)
-        return val
+from scikits.statsmodels.decorators import OneTimeProperty
 
 
 class DescrStatsW(object):
@@ -77,6 +41,9 @@ class DescrStatsW(object):
     If degrees of freedom correction is used than weights should add up to the
     number of observations. ttest also assumes that the sum of weights
     corresponds to the sample size.
+
+    This is essentially the same as replicating each observations by it's weight,
+    if the weights are integers.
 
 
     Examples
