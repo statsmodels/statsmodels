@@ -942,15 +942,16 @@ arguments.'
 #TODO: make sure this works as needed for GLMs
     def t_test(self, r_matrix, q_matrix=None, scale=None):
         """
-        Compute a tcontrast/t-test for a row vector array.
+        Compute a tcontrast/t-test for a row vector array of the form Rb = q
+
+        where R is r_matrix, b = the parameter vector, and q is q_matrix.
 
         Parameters
         ----------
         r_matrix : array-like
             A length p row vector specifying the linear restrictions.
-        q_matrix : array-like or scalar
-            Either a scalar or a length p row vector.  If a scalar is given
-            tests that
+        q_matrix : array-like or scalar, optional
+            Either a scalar or a length p row vector.
         scale : float, optional
             An optional `scale` to use.  Default is the scale specified
             by the model fit.
@@ -1001,7 +1002,7 @@ T statistics'
             q_matrix = np.zeros(num_ttests)
         else:
             q_matrix = np.asarray(q_matrix)
-        if q_matrix.ndim == 1:
+        if q_matrix.size > 1:
             if q_matrix.shape[0] != num_ttests:
                 raise ValueError("r_matrix and q_matrix must have the same \
 number of rows")
