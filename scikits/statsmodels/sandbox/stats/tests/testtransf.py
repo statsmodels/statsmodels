@@ -90,7 +90,7 @@ class Test_Transf2(object):
     def test_equivalent(self):
         xx, ppfq = self.xx, self.ppfq
         for d1,d2 in self.dist_equivalents:
-            #print d1.name
+##            print d1.name
             assert_almost_equal(d1.cdf(xx), d2.cdf(xx), err_msg='cdf'+d1.name)
             assert_almost_equal(d1.pdf(xx), d2.pdf(xx),
                                 err_msg='pdf '+d1.name+d2.name)
@@ -100,7 +100,17 @@ class Test_Transf2(object):
                                 err_msg='ppq '+d1.name+d2.name)
             assert_almost_equal(d1.isf(ppfq), d2.isf(ppfq),
                                 err_msg='isf '+d1.name+d2.name)
-            assert_almost_equal(d1.moment(3), d2.moment(3),
+            self.d1 = d1
+            self.d2 = d2
+##            print d1, d2
+##            print d1.moment(3)
+##            print d2.moment(3)
+            #work around bug#1293
+            if hasattr(d2, 'dist'):
+                d2mom = d2.dist.moment(3, *d2.args)
+            else:
+                d2mom = d2.moment(3)
+            assert_almost_equal(d1.moment(3), d2mom,
                                 DECIMAL,
                                 err_msg='moment '+d1.name+d2.name)
             s1 = d1.stats(moments='mvsk')
@@ -136,7 +146,7 @@ if __name__ == '__main__':
     tt.test_equivalent()
     tt.test_equivalent_negsq()
 
-    debug = 0
+    debug = 1
     if debug:
         print negsquarenormalg.ppf([0.1,0.5,0.9])
         print stats.chi2.ppf([0.1,0.5,0.9],1)

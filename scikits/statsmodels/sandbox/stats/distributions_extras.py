@@ -627,7 +627,7 @@ class ExpTransf_gen(distributions.rv_continuous):
             self.numargs = kwargs['numargs']
         else:
             self.numargs = 1
-        if 'numargs' in kwargs:
+        if 'name' in kwargs:
             name = kwargs['name']
         else:
             name = 'Log transformed distribution'
