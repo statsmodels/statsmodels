@@ -167,8 +167,22 @@ class ARResultsMLE(object):
     """
     Results of fitting an AR(9) model to the sunspot data using exact MLE.
 
-    Results were taken from gretl
+    Results were taken from gretl.
     """
+    def __init__(self, constant=True):
+        self.avobs = 300
+        if constant:
+
+            # NOTE: Stata's estimated parameters differ from gretl
+            filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                "ARMLEConstantPredict.csv")
+            predictresults = np.loadtxt(filename, delimiter=",")
+            pv = predictresults[:,0]
+            rmse = predictresults[:,1]
+
+
+    else:
+        pass
 
 
 

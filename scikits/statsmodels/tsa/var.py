@@ -338,7 +338,6 @@ class AR(LikelihoodModel):
 
 
 # reparameterize according to Jones (1980) like in ARMA/Kalman Filter
-        self.transparams = True #TODO: move to options after debugging
         if self.transparams:
             params = self._transparams(params) # will this overwrite?
 
@@ -462,48 +461,83 @@ class AR(LikelihoodModel):
         self.trendorder = trendorder
         return X
 
-#TODO: get rid of demean option
     def fit(self, maxlag=None, method='cmle', ic=None, trend='c',
-            start_params=None, solver=None, maxiter=35,
+            transparams=True, start_params=None, solver=None, maxiter=35,
             full_output=1, disp=1, callback=None, **kwargs):
         """
         Fit the unconditional maximum likelihood of an AR(p) process.
 
         Parameters
         ----------
-        start_params : array-like, optional
-            A first guess on the parameters.  Used for method == 'mle'.
-            Default is cmle estimates.
+        maxlag : int
+            If `ic` is None, then maxlag is the lag length used in fit.  If
+            `ic` is specified then maxlag is the highest lag order used to
+            select the correct lag order.
         method : str {'cmle', 'yw'. 'mle'}, optional
             cmle - Conditional maximum likelihood using OLS
             yw - Yule-Walker
-            mle - unconditional (exact) maximum likelihood
+            mle - Unconditional (exact) maximum likelihood.  See `solver`
+            and the Notes.
+        ic : str {'aic','bic','hic','t-stat'}
+            Criterion used for selecting the optimal lag length.
+            aic - Akaike Information Criterion
+            bic - Bayes Information Criterion
+            t-stat - Based on last lag
+            hq - Hannan-Quinn Information Criterion
+            If any of the information criteria are selected, the lag length
+            which results in the lowest value is selected.  If t-stat, the
+            model starts with maxlag and drops a lag until the highest lag
+            has a t-stat that is significant at the 95 % level.
+        trend : str {'c','nc'}
+            Whether to include a constant or not. 'c' - include constant.
+            'nc' - no constant.
+
+        The below can be specified is method is 'mle'
+
+        transparams : bool, optional
+            Whether or not to transform the parameters to ensure stationarity.
+            Uses the transformation suggested in Jones (1980).
+        start_params : array-like, optional
+            A first guess on  the parameters.  Default is cmle estimates.
         solver : str or None, optional
-            Unconstrained solvers:
-                Default is 'bfgs', 'newton' (newton-raphson), 'ncg'
-                (Note that previous 3 are not recommended at the moment.)
-                and 'powell'
-            Constrained solvers:
-                'bfgs-b', 'tnc'
+            Solver to be used.  The default is 'bfgs' (Broyden-
+            Fletcher-Goldfarb-Shanno).  Other choices are 'newton' (Newton-
+            Raphson), 'nm' (Nelder-Mead), 'cg' - (conjugate gradient), 'ncg'
+            (non-conjugate gradient), and 'powell'.
             See notes.
         maxiter : int, optional
             The maximum number of function evaluations. Default is 35.
-        tol = float
+        tol : float
             The convergence tolerance.  Default is 1e-08.
+        full_output : bool, optional
+            If True, all output from solver will be available in
+            the Results object's mle_retvals attribute.  Output is dependent
+            on the solver.  See Notes for more information.
+        disp : bool, optional
+            If True, convergence information is output.
+        callback : function, optional
+            Called after each iteration as callback(xk) where xk is the current
+            parameter vector.
+        kwargs
+            See Notes for keyword arguments that can be passed to fit.
 
-        Notes
-        -----
-        The AR parameters are forced to be invertible using the
-        reparameterization suggested in Jones (1980).
+        References
+        ----------
+        Jones, R.H. 1980 "Maximum likelihood fitting of ARMA models to time
+            series with missing observations."  `Technometrics`.  22.3.
+            389-95.
 
         See also
         --------
         scikits.statsmodels.model.LikelihoodModel.fit for more information
         on using the solvers.
 
+        Notes
+        ------
         The below is the docstring from
         scikits.statsmodels.LikelihoodModel.fit
         """
+        self.transparams = transparams
         method = method.lower()
         if method not in ['cmle','yw','mle']:
             raise ValueError("Method %s not recognized" % method)
@@ -521,7 +555,6 @@ class AR(LikelihoodModel):
             ic = ic.lower()
             if ic not in ['aic','bic','hqic','t-stat']:
                 raise ValueError("ic option %s not understood" % ic)
-#            icbest, bestlag = _autolag(AR, endog, None, 1, maxlag, ic)
             # make Y and X with same nobs to compare ICs
             Y = endog[maxlag:]
             self.Y = Y  # attach to get correct fit stats
@@ -531,25 +564,37 @@ class AR(LikelihoodModel):
             if exog is not None:
                 startlag += exog.shape[1] # add dim happens in super?
             results = {}
+            stop = 1.6448536269514722 # for t-stat, norm.ppf(.95)
             if ic != 't-stat':
                 for lag in range(startlag,maxlag+1):
                     # have to reinstantiate the model to keep comparable models
                     endog_tmp = endog[maxlag-lag:]
-                    fit = AR(endog_tmp).fit(maxlag=lag, demean=demean)
+                    fit = AR(endog_tmp).fit(maxlag=lag, method=method,
+                            full_output=full_output, trend=trend,
+                            maxiter=maxiter, full_output=full_output,
+                            disp=disp)
                     results[lag] = eval('fit.'+ic)
                 bestic, bestlag = min((res, k) for k,res in results.iteritems())
-            else: #TODO: t-stat not implemented?
-                pass
+            else: # choose by last t-stat.
+                for lag in range(maxlag,startlag-1,-1):
+                    # have to reinstantiate the model to keep comparable models
+                    endog_tmp = endog[maxlag-lag:]
+                    fit = AR(endog_tmp).fit(maxlag=lag, method=method,
+                            full_output=full_output, trend=trend,
+                            maxiter=maxiter, full_output=full_output,
+                            disp=disp)
+                    if np.abs(fit.t(-1)) >= stop:
+                        bestlag = lag
+                        break
             laglen = bestlag
 
         # change to what was chosen by fit method
         self.laglen = laglen
         avobs = nobs - laglen
         self.avobs = avobs
-                                                    # Model code
 
         # redo estimation for best lag
-        # LHS
+        # make LHS
         Y = endog[laglen:,:]
         # make lagged RHS
         X = self._stackX(laglen, trend) # sets self.trendorder
@@ -560,7 +605,7 @@ class AR(LikelihoodModel):
                                                 # with Model code
         if solver:
             solver = solver.lower()
-#TODO: allow user-specified penalty function
+#TODO: allow user-specified penalty function? -penalty stuff not in llf anymore
 #        if penalty and method not in ['bfgs_b','tnc','cobyla','slsqp']:
 #            minfunc = lambda params : -self.loglike(params) - \
 #                    self.penfunc(params)
@@ -568,8 +613,6 @@ class AR(LikelihoodModel):
         if method == "cmle":     # do OLS
             arfit = OLS(Y,X).fit()
             params = arfit.params
-#            omega = None
-#            self.params = params
         if method == "mle":
 #            if not solver: # make default?
 #                solver = 'newton'
