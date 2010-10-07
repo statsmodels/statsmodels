@@ -24,7 +24,8 @@ try:
     from numdifftools import Jacobian, Hessian
 except:
     raise Warning("You need to install numdifftools to try out the AR model")
-from scikits.statsmodels.sandbox import numdiff
+from scikits.statsmodels.sandbox.regression.numdiff import approx_fprime1 as approx_fprime
+from scikits.statsmodels.sandbox.regression.numdiff import approx_hess
 
 
 __all__ = ['AR', 'VAR2']
@@ -411,11 +412,13 @@ class AR(LikelihoodModel):
 #                .5*sigma2**-2*diffsumsq*dsdr+\
 #                ylag[0]**2*params/sigma2 +\
 #                ylag[0]**2*(1-params**2)/(2*sigma2**2)*dsdr
-        if self.penalty:
-            pass
-        j = Jacobian(self.loglike)
-        return np.squeeze(j(params))
+#        if self.penalty:
+#            pass
+#        j = Jacobian(self.loglike)
+#        return np.squeeze(j(params))
 #        return gradient
+        loglike = self.loglike
+        return approx_fprime(params, loglike)
 
 
     def information(self, params):
@@ -428,8 +431,10 @@ class AR(LikelihoodModel):
         """
         Returns numerical hessian for now.  Depends on numdifftools.
         """
-        h = Hessian(self.loglike)
-        return h(params)
+#        h = Hessian(self.loglike)
+#        return h(params)
+        loglike = self.loglike
+        return approx_hess(params, loglike)[0]
 
     def _stackX(self, laglen, trend):
         """
