@@ -24,6 +24,7 @@ try:
     from numdifftools import Jacobian, Hessian
 except:
     raise Warning("You need to install numdifftools to try out the AR model")
+from scikits.statsmodels.sandbox.regression import numdiff
 
 
 __all__ = ['AR', 'VAR2']
