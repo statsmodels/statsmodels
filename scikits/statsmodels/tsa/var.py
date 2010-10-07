@@ -24,7 +24,7 @@ try:
     from numdifftools import Jacobian, Hessian
 except:
     raise Warning("You need to install numdifftools to try out the AR model")
-from scikits.statsmodels.sandbox.regression import numdiff
+from scikits.statsmodels.sandbox import numdiff
 
 
 __all__ = ['AR', 'VAR2']
@@ -59,11 +59,6 @@ def irf(params, shock, omega, nperiods=100, ortho=True):
 
 #TODO: stopped here
 
-
-#TODO: maxlike isn't working very well for higher lag orders.
-#TODO: move this
-#NOTE: writing this now to be used with ADF test so that
-# _autolag can be generalized to VAR.
 class AR(LikelihoodModel):
     def __init__(self, endog, exog=None):
         """
@@ -302,12 +297,12 @@ class AR(LikelihoodModel):
                             # mixed tmp/actual
                             predictedvalues[i] = np.sum(np.r_[[1]*k,
                                 predictedvalues[:i][::-1],
-                                atleast_1d(tmp[-p+i:][::-1].squeeze())] * params)
+                                atleast_1d(tmp[-p+i:][::-1].squeeze())] * \
+                                    params)
                 for i in range(p,n):
                     predictedvalues[i] = np.sum(np.r_[[1]*k,
                         predictedvalues[i-p:i][::-1]] * params)
         return predictedvalues
-
 
     def loglike(self, params):
         """
@@ -336,7 +331,6 @@ class AR(LikelihoodModel):
         if isinstance(params,tuple):
             # broyden (all optimize.nonlin return a tuple until rewrite commit)
             params = np.asarray(params)
-
 
 # reparameterize according to Jones (1980) like in ARMA/Kalman Filter
         if self.transparams:
@@ -824,9 +818,6 @@ class ARIMA(LikelihoodModel):
             # assume no constant, ie mu = 0
             # unless overwritten then use w_bar for mu
             Y = np.diff(endog, d, axis=0) #TODO: handle lags?
-
-
-
 
 # Refactor of VAR to be like statsmodels
 #inherit GLS, SUR?
