@@ -10,13 +10,12 @@ except:
 from scipy.stats import gamma, beta, invgamma
 import numpy as np
 from matplotlib import pyplot as plt
-#np.random.seed(12345)
 from scipy import stats
 from scipy.stats import rv_continuous
 from scipy.special import gammaln, gammaincinv, gamma, gammainc
 from numpy import log,exp
 
-np.random.seed(12345)
+#np.random.seed(12345)
 
 class igamma_gen(rv_continuous):
     def _pdf(self, x, a, b):
@@ -56,14 +55,17 @@ for x > 0, a > 0, b>0.
 )
 
 palpha = np.random.gamma(400.,.005, size=10000)
-print "First moment: %s\nSecond moment: %s", (palpha.mean(),palpha.std())
+print "First moment: %s\nSecond moment: %s" % (palpha.mean(),palpha.std())
 palpha = palpha[0]
 
 prho = np.random.beta(49.5,49.5, size=1e5)
-print "First moment: %s\nSecond moment: %s", (prho.mean(),prho.std())
+print "Beta Distribution"
+print "First moment: %s\nSecond moment: %s" % (prho.mean(),prho.std())
 prho = prho[0]
 
-psigma = igamma.rvs(1.,4., size=1e5)
+psigma = igamma.rvs(1.,4.**2/2, size=1e5)
+print "Inverse Gamma Distribution"
+print "First moment: %s\nSecond moment: %s" % (psigma.mean(),psigma.std())
 
 # First do the univariate case
 # y_t = theta_t + epsilon_t
@@ -83,57 +85,86 @@ psigma = igamma.rvs(1.,4., size=1e5)
 
 draws = 400
 # prior beliefs
-mu_, lambda_2 = 1.,2.
+mu_, lambda_ = 1.,2.
 
 # Model 1
 y1y2 = np.zeros((draws,2))
 for draw in range(draws):
-    theta = np.random.normal(mu_,lambda_2)
+    theta = np.random.normal(mu_,lambda_**2)
     y1 = theta + np.random.normal()
     y2 = theta + np.random.normal()
     y1y2[draw] = y1,y2
+
+
+# log marginal distribution
+lnp1p2_mod1 = stats.norm.pdf(y1,loc=mu_, scale=lambda_**2+1)*\
+                stats.norm.pdf(y2,mu_,scale=lambda_**2+1)
+
 
 # Model 2
 pmu_pairsp1 = np.zeros((draws,2))
 y1y2pairsp1 = np.zeros((draws,2))
 # prior 1
 for draw in range(draws):
-    y1 = np.random.uniform(-20,20)
     theta1 = np.random.uniform(0,1)
-    theta2 = np.random.normal(mu_, lambda_2) # mu_ assumed to be 2
+    theta2 = np.random.normal(mu_, lambda_**2)
     mu = theta2/(1-theta1)
+    y1 = np.random.normal(mu, lambda_**2)
     pmu_pairsp1[draw] = mu, theta1
     y2 = theta2 + theta1 * y1 + np.random.normal()
     y1y2pairsp1[draw] = y1,y2
 
+
+
+# for a = 0, b = 1 - epsilon = .99999
+# mean of u is .5*.99999
+# variance is 1./12 * .99999**2
+
 pmu_pairsp2 = np.zeros((draws,2))
 y1y2pairsp2 = np.zeros((draws,2))
+theta12_2 = []
 for draw in range(draws):
-    y1 = np.random.uniform(-20,20)
+#    y1 = np.random.uniform(-4,6)
     theta1 = np.random.uniform(0,1)
-    theta2 = np.random.normal(mu_*(1-theta1), lambda_2*(1-theta1)**2)
+    theta2 = np.random.normal(mu_*(1-theta1), lambda_**2*(1-theta1)**2)
+    theta12_2.append([theta1,theta2])
+
     mu = theta2/(1-theta1)
+    y1 = np.random.normal(mu,lambda_**2)
     y2 = theta2 + theta1 * y1 + np.random.normal()
     pmu_pairsp2[draw] = mu, theta1
     y1y2pairsp2[draw] = y1,y2
 
 fig = plt.figure()
 fsp = fig.add_subplot(221)
-fsp.scatter(pmu_pairsp1[:,0], pmu_pairsp2[:,1], color='b', facecolor='none')
+fsp.scatter(pmu_pairsp1[:,0], pmu_pairsp1[:,1], color='b', facecolor='none')
+fsp.set_title('Model 2 (P1)')
+fsp.axis([-20,20,0,1])
 
 fsp = fig.add_subplot(222)
 fsp.scatter(pmu_pairsp2[:,0],pmu_pairsp2[:,1], color='b', facecolor='none')
+fsp.set_title('Model 2 (P2)')
+fsp.axis([-20,20,0,1])
 
 fsp = fig.add_subplot(223)
 fsp.scatter(y1y2pairsp1[:,0], y1y2pairsp1[:,1], color='b', marker='o',
     facecolor='none')
 fsp.scatter(y1y2[:,0], y1y2[:,1], color ='g', marker='+')
+fsp.axis([-20,20,-20,20])
 
 fsp = fig.add_subplot(224)
 fsp.scatter(y1y2pairsp2[:,0], y1y2pairsp2[:,1], color='b', marker='o')
-fsp.scatter(y1y2[:,0], y1y2[:,1], color='g',marker='+')
+fsp.scatter(y1y2[:,0], y1y2[:,1], color='g', marker='+')
+fsp.axis([-20,20,-20,20])
 
 #TODO: this doesn't look the same as the paper?
+
+# Contour plots.
+# on the basis of observed data. ie., the mgrid
+#np.mgrid[6:-4:10j,-4:6:10j]
+
+
+
 
 # Example 2:
 # 2 NK Phillips Curves
@@ -168,6 +199,10 @@ pi = np.random.beta(49.5, 49.5)
 psigma = igamma.rvs(1.,4.0, size=1e6) #TODO: parameterization is not correct vs.
 # Del Negro and Schorfheide
 psigma2 = pymc.rinverse_gamma(1.,4.0, size=1e6)
+nsims = 500
+y = np.zeros((nsims))
+#for i in range(1,nsims):
+#    y[i] = .9*y[i-1] + 1/(1-p1/alpha) + np.random.normal()
 
 #Are these supposed to be sampled jointly?
 
