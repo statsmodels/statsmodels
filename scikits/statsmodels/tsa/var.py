@@ -571,8 +571,7 @@ class AR(LikelihoodModel):
                     endog_tmp = endog[maxlag-lag:]
                     fit = AR(endog_tmp).fit(maxlag=lag, method=method,
                             full_output=full_output, trend=trend,
-                            maxiter=maxiter, full_output=full_output,
-                            disp=disp)
+                            maxiter=maxiter, disp=disp)
                     results[lag] = eval('fit.'+ic)
                 bestic, bestlag = min((res, k) for k,res in results.iteritems())
             else: # choose by last t-stat.
@@ -581,8 +580,7 @@ class AR(LikelihoodModel):
                     endog_tmp = endog[maxlag-lag:]
                     fit = AR(endog_tmp).fit(maxlag=lag, method=method,
                             full_output=full_output, trend=trend,
-                            maxiter=maxiter, full_output=full_output,
-                            disp=disp)
+                            maxiter=maxiter, disp=disp)
                     if np.abs(fit.t(-1)) >= stop:
                         bestlag = lag
                         break
