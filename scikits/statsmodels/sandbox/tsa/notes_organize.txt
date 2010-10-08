@@ -149,3 +149,79 @@ imports scikits.talkbox which is not compiled against my current numpy and doesn
 run
 contains
 arma_periodogram : theoretical periodogram
+
+
+Proposed Structure (preliminary)
+================================
+
+arima_estimation
+----------------
+ARIMA class for estimation, wrapper or containing different estimators
+other wrappers: here or in separate ???
+  - support for choosing lag-length
+
+
+arma_process
+------------
+all theoretical properties for given parameters
+simulation method with options: initial conditions, errors, (?) not sure what else
+
+varma_process
+-------------
+including VarmaPoly and impulse response functions
+
+filters
+-------
+miso_filter (should be in cython eventually)
+ar_filter : fast VAR filter with convolution or fft convolution
+(not sure what's the relationship between the two)
+others ???
+
+stattools
+---------
+empirical properties
+acf, ...
+
+tsatools
+--------
+helper functions
+lagmat
+detrend ???
+
+others, unclear
+---------------
+???
+
+open questions
+==============
+
+support for exog
+----------------
+is incomplete or missing from some implementations
+not clear parameterization
+- ARMAX  A(L)y_t = C(L)x_t + B(L)e_t
+- ARMAX-simple  A(L)y_t = beta x_t + B(L)e_t
+  Note: covers previous version by extending x_t
+
+- ARMA residuals y_t = beta x_t + u_t, and A(L)u_t = B(L)e_t
+- ARMAX 2-step A(L)(y_t - beta x_t) = B(L)e_t
+  Note: looks the same as ARMA residuals, implies
+      A(L)y_t = A(L)x_t + B(L)e_t
+
+- ARMAX  A(L)(y_t - A^{-1}(L) C(L) x_t) = B(L)e_t
+  this doesn't look useful, unless we cutoff A^{-1}(L)
+
+problem: signal.lfilter can only handle ARMAX residuals model (I think)
+deterministic trend have ARMAX-simple model, e.g. in unit root tests
+
+
+support for seasonal and "sparse" lag-polynomials
+-------------------------------------------------
+- fit functions need support for different lag structures,
+  e.g. zeros, multiplicative
+- support for pre-filters, e.g. (seasonal) differencing
+
+
+
+
+

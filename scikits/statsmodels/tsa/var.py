@@ -689,6 +689,7 @@ class ARResults(LikelihoodModelResults):
 
     @cache_readonly
     def aic(self):
+        #JP: this is based on loglike with dropped constant terms ?
 # Lutkepohl
 #        return np.log(self.sigma) + 1./self.model.avobs * self.laglen
 # Include constant as estimated free parameter and double the loss
@@ -1163,6 +1164,7 @@ class VARMAResults(object):
 
     @cache_readonly
     def aic(self):
+        #JP: same as self.detomega ?
         logdet = np_slogdet(self.omega)
         if logdet[0] == -1:
             raise ValueError("Omega matrix is not positive definite")
@@ -1176,6 +1178,7 @@ class VARMAResults(object):
 
     @cache_readonly
     def bic(self):
+        #JP: same as self.detomega ?
         logdet = np_slogdet(self.omega)
         if logdet[0] == -1:
             raise ValueError("Omega matrix is not positive definite")
