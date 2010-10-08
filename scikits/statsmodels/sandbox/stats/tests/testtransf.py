@@ -5,6 +5,15 @@
 Created on Sun May 09 22:35:21 2010
 Author: josef-pktd
 License: BSD
+
+todo:
+change moment calculation, (currently uses default _ppf method - I think)
+>>> lognormalg.moment(4)
+Warning: The algorithm does not converge.  Roundoff error is detected
+  in the extrapolation table.  It is assumed that the requested tolerance
+  cannot be achieved, and that the returned result (if full_output = 1) is
+  the best which can be obtained.
+array(2981.0032380193438)
 """
 
 
@@ -146,7 +155,7 @@ if __name__ == '__main__':
     tt.test_equivalent()
     tt.test_equivalent_negsq()
 
-    debug = 1
+    debug = 0
     if debug:
         print negsquarenormalg.ppf([0.1,0.5,0.9])
         print stats.chi2.ppf([0.1,0.5,0.9],1)
