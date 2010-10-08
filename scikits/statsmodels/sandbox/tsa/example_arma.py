@@ -13,7 +13,8 @@ import matplotlib.mlab as mlab
 from scikits.statsmodels.sandbox.tsa.arima import arma_generate_sample, arma_impulse_response
 from scikits.statsmodels.sandbox.tsa.arima import arma_acovf, arma_acf, ARIMA
 #from movstat import acf, acovf
-from scikits.statsmodels.sandbox.tsa import acf, acovf, pacf
+#from scikits.statsmodels.sandbox.tsa import acf, acovf, pacf
+from scikits.statsmodels.tsa.stattools import acf, acovf, pacf
 
 ar = [1., -0.6]
 #ar = [1., 0.]
@@ -449,8 +450,11 @@ def plotacf(ax, corr, lags=None, usevlines=True, **kwargs):
 
 
 arrvs = ar_generator()
-arma = ARIMA()
-res = arma.fit(arrvs[0], 4, 0)
+##arma = ARIMA()
+##res = arma.fit(arrvs[0], 4, 0)
+arma = ARIMA(arrvs[0])
+res = arma.fit((4,0, 0))
+
 print res[0]
 
 acf1 = acf(arrvs[0])
