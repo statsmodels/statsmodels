@@ -24,7 +24,7 @@ try:
     from numdifftools import Jacobian, Hessian
 except:
     raise Warning("You need to install numdifftools to try out the AR model")
-from scikits.statsmodels.sandbox.regression.numdiff import approx_fprime1 as approx_fprime
+from scikits.statsmodels.sandbox.regression.numdiff import approx_fprime
 from scikits.statsmodels.sandbox.regression.numdiff import approx_hess
 
 
@@ -418,6 +418,9 @@ class AR(LikelihoodModel):
 #        return np.squeeze(j(params))
 #        return gradient
         loglike = self.loglike
+#        if self.transparams:
+#            params = self._invtransparams(params)
+#NOTE: always calculate at out of bounds params for estimation
         return approx_fprime(params, loglike)
 
 
@@ -434,6 +437,9 @@ class AR(LikelihoodModel):
 #        h = Hessian(self.loglike)
 #        return h(params)
         loglike = self.loglike
+#        if self.transparams:
+#            params = self._invtransparams(params)
+#see score
         return approx_hess(params, loglike)[0]
 
     def _stackX(self, laglen, trend):
@@ -617,9 +623,10 @@ class AR(LikelihoodModel):
             if not start_params:
                 start_params = OLS(Y,X).fit().params
 # replace constant
-                if self.trendorder==1:
-                    start_params[0] = start_params[0]/(1-\
-                            start_params[1:].sum())
+#                if self.trendorder==1:
+#                    start_params[0] = start_params[0]/(1-\
+#                            start_params[1:].sum())
+#TODO: do this after estimation
                 start_params = self._invtransparams(start_params)
 
 #            if solver in ['newton', 'bfgs', 'ncg']:
@@ -628,45 +635,32 @@ class AR(LikelihoodModel):
 #                    callback=callback, **kwargs)
 #                return retvals
             loglike = lambda params : -self.loglike(params)
-            bounds = [(None,)*2]*(laglen+trendorder)
-            retvals = optimize.fmin_l_bfgs_b(loglike, start_params,
+            if solver == None:  # use limited memory bfgs
+                bounds = [(None,)*2]*(laglen+trendorder)
+                retvals = optimize.fmin_l_bfgs_b(loglike, start_params,
                     approx_grad=True, m=30, pgtol = 1e-7, factr=1e3,
                     bounds=bounds, iprint=1)
-            self.retvals = retvals
-            params = retvals[0]
-            params = self._transparams(params)
-#NOTE: constant vs. mean issue
-#            if self.trendorder == 1:
-#                params[0] = params[0]/(1-np.sum(params[1:]))
-#        elif method == "umle":
-#TODO: move this stuff up to LikelihoodModel.fit
-#            minfunc = lambda params: -self.loglike(params)
-#            bounds = [(-.999,.999)]   # assume stationarity
-#            if start_params == None:
-#                start_params = np.array([0]) # assumes AR(1)
-#            if method == 'bfgs-b':
-#                retval = optimize.fmin_l_bfgs_b(minfunc, start_params,
-#                        approx_grad=True, bounds=bounds)
-#                self.params, self.llf = retval[0:2]
-#            if method == 'tnc':
-#                retval = optimize.fmin_tnc(minfunc, start_params,
-#                        approx_grad=True, bounds = bounds)
-#                self.params = retval[0]
-#            if method == 'powell':
-#                retval = optimize.fmin_powell(minfunc,start_params)
-#                self.params = retval[None]
+                self.retvals = retvals
+                params = retvals[0]
+                params = self._transparams(params)
+            else:
+                mlefit = super(AR, self).fit(start_params=start_params,
+                            method=solver, maxiter=maxiter,
+                            full_output=full_output, disp=disp,
+                            callback = callback, **kwargs)
+                self.mlefit = mlefit
+                params = mlefit.params
+                if self.transparams:
+                    params = self._transparams(params)
+#TODO: uncomment when sure it's what we want
+#                if self.trendorder == 1:
+#                    params[0] = params[0]/(1-params[1:].sum())
 
-#TODO: write regression tests for Pauli's branch so that
-# new line_search and optimize.nonlin can get put in.
-# http://projects.scipy.org/scipy/ticket/791
-#            if method == 'broyden':
-#                retval = optimize.broyden2(minfunc, [.5], verbose=True)
-#                self.results = retvar
         elif method == "yw":
             params, omega = yule_walker(endog, order=maxlag,
                     method="mle", demean=False)
             # how to handle inference after Yule-Walker?
-            self.params = params
+            self.params = params #TODO: don't attach here
             self.omega = omega
         pinv_exog = np.linalg.pinv(X)
         normalized_cov_params = np.dot(pinv_exog, pinv_exog.T)
@@ -1864,13 +1858,11 @@ if __name__ == "__main__":
 # Why does R demean the data by defaut?
     ar_ols = AR(sunspots.endog)
     res_ols = ar_ols.fit(maxlag=9)
-#    ar_mle = AR(sunspots.endog)
-#    res_mle = ar_mle.fit(maxlag=1, method="mle", solver="bfgs", maxiter=500,
-#            gtol=1e-10, penalty=True)
+    ar_mle = AR(sunspots.endog)
+    res_mle_bfgs = ar_mle.fit(maxlag=9, method="mle", solver="bfgs",
+                    maxiter=500, gtol=1e-10)
 #    res_mle2 = ar_mle.fit(maxlag=1, method="mle", maxiter=500, penalty=True,
 #            tol=1e-13)
-#    ar_umle = AR(sunspots.endog)
-#    ar_umle.fit(maxlag=4, method="umle")
     ar_yw = AR(sunspots.endog)
     res_yw = ar_yw.fit(maxlag=4, method="yw")
 

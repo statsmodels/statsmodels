@@ -39,7 +39,7 @@ License : BSD
 import numpy as np
 
 #from scipy.optimize
-def approx_fprime(xk,f,epsilon,*args):
+def approx_fprime(xk,f,epsilon=1e-8,*args):
     f0 = f(*((xk,)+args))
     grad = np.zeros((len(xk),), float)
     ei = np.zeros((len(xk),), float)
@@ -125,9 +125,9 @@ def approx_hess(xk,f,epsilon=None, *args):#, returngrad=True):
         g[i] = f(*((xk+ee[i,:],)+args))
 
     hess = np.outer(h,h)
-    print hess.shape,
-    print 'H=', hess
-    print 'h=', hess
+#    print hess.shape,
+#    print 'H=', hess
+#    print 'h=', hess
     # Compute "double" forward step
     for i in range(n):
         for j in range(i,n):
@@ -174,7 +174,7 @@ def fun2(beta, y, x):
 
 if __name__ == '__main__':
     import scikits.statsmodels as sm
-    from scipy.optimize import approx_fhess_p
+    from scipy.optimize.optimize import approx_fhess_p
     import numpy as np
 
     data = sm.datasets.spector.load()
@@ -205,8 +205,8 @@ if __name__ == '__main__':
     from scipy import optimize
     xfmin = optimize.fmin(fun2, (0,0,0), args)
     print approx_fprime((1,2,3),fun,epsilon,x)
-    jac = approx_fprime1(xk,fun1,epsilon,*args)
-    jacmin = approx_fprime1(xk,fun1,-epsilon,*args)
+    jac = approx_fprime1(xk,fun1,epsilon,args)
+    jacmin = approx_fprime1(xk,fun1,-epsilon,args)
     #print jac
     print jac.sum(0)
     print '\nnp.dot(jac.T, jac)'
