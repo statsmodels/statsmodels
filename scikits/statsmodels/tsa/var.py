@@ -218,7 +218,10 @@ class AR(LikelihoodModel):
                 alpha = dot(T_mat, alpha) + dot(K,v_mat)
                 L = T_mat - dot(K,Z_mat)
                 P = dot(dot(T_mat, P), L.T) + dot(R_mat, R_mat.T)
-    #            P[0,0] += 1 # for MA part, which is faster?
+    #            P[0,0] += 1 # for MA part, which is             self.retvals = retvals
+            params = retvals[0]
+            params = self._transparams(params)
+faster?
                 predictedvalues[i+1-start] = dot(Z_mat,alpha)
         if start < p and (n > p - start or n == -1):
             if n == -1:
@@ -417,7 +420,8 @@ class AR(LikelihoodModel):
 #        j = Jacobian(self.loglike)
 #        return np.squeeze(j(params))
 #        return gradient
-        loglike = self.loglike
+        loglike = lambda params: -self.loglike(params)
+        #TODO: want the negative right?
 #        if self.transparams:
 #            params = self._invtransparams(params)
 #NOTE: always calculate at out of bounds params for estimation
