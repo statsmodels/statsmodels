@@ -34,6 +34,7 @@ from scikits.statsmodels.model import LikelihoodModel
 from scikits.statsmodels.regression import yule_walker, GLS
 from scipy.linalg import block_diag
 from scikits.statsmodels.tsa.tsatools import lagmat
+from scikits.statsmodels.tsa import AR
 
 #Fast filtering and smoothing for multivariate state space models
 # and The Riksbank -- Strid and Walentin (2008)
@@ -330,6 +331,7 @@ class ARMA(LikelihoodModel):
     Assumes model is stationary
     """
     def __init__(self, endog, exog=None, constant=True, order=(0,0)):
+        #TODO: make this a trend argument like the rest
         if exog is None and constant:
             exog = np.ones((len(endog),1))
             constant = False # to skip next logic
@@ -361,6 +363,62 @@ class ARMA(LikelihoodModel):
         self.r = r
         self.p = p
         self.q = q
+
+    def _fit_start_params(self, order):
+        """
+        Get starting parameters for fit.
+
+        Parameters
+        ----------
+        order : iterable
+            (p,q,k) - AR lags, MA lags, and number of exogenous variables
+            including the constant.
+
+        Returns
+        -------
+        start_params : array
+            A first guess at the starting parameters.
+
+        Notes
+        -----
+        If necessary, fits an AR process according to BIC, uses the residuals
+        to find the q MA coefficients.  Then fits an ARMA process to find the p
+        AR coefficients and q MA coefficients via OLS.
+        Uses OLS to find the coefficients of exogenous variables.
+
+        References
+        ----------
+        Hannan, E.J. and Rissanen, J.  1982.  "Recursive estimation of mixed
+            autoregressive-moving average order."  `Biometrika`.  69.1.
+        """
+        p,q,k = order
+        start_params = zeros((p+q+k))
+        endog = self.endog.copy() # copy because overwritten
+        exog = self.exog
+        if k != 0:
+            ols_params = GLS(endog, exog).fit().params
+            start_params[:k] = ols_params
+            endog -= np.dot(exog, ols_params).squeeze()
+        if q != 0:
+            if p != 0:
+                armod = AR(endog).fit(ic='bic', trend='nc')
+                arcoefs_tmp = armod.params
+                p_tmp = armod.laglen
+                resid = endog[p_tmp:] - np.dot(lagmat(endog, p_tmp,
+                                trim='both')[:,1:], arcoefs_tmp)
+                X = np.column_stack((lagmat(endog,p,'both')[p_tmp+(q-p):,1:],
+                    lagmat(resid,q,'both')[:,1:])) # stack ar lags and resids
+                coefs = GLS(endog[p_tmp+q:], X).fit().params
+#                macoefs = yule_walker(resid, order=q)[0]
+                start_params[k:k+p+q] = coefs
+
+            else:
+                start_params[k+p:k+p+q] = yule_walker(endog, order=q)[0]
+        if q==0 and p != 0:
+            arcoefs = yule_walker(endog, order=p)[0]
+            start_params[k:k+p] = arcoefs
+        return start_params
+
 
     #TODO: this assumes no constant.
     def T(self,params): # F in Hamilton
@@ -403,7 +461,7 @@ class ARMA(LikelihoodModel):
 #        arr = params[-r-1:-1].tolist()  # last r-2 to -1 params are MA coeffs
         arr = np.zeros((r,1)) # this allows zero coefficients
 #NOTE: squeeze added because
-        arr[1:q,:] = params[p+k:p+k+q]  # p to p+q short params are MA coeffs
+        arr[1:q+1,:] = params[p+k:p+k+q][:,None]  # p to p+q short params are MA coeffs
         arr[0] = 1.0
 #        arr = np.hstack(([0]*k + [1.0] ,arr))[:,None]
 # above can remove extra axis if uncommented.
@@ -682,53 +740,31 @@ class ARMA(LikelihoodModel):
             macoefs = start_params[k+p:k+p+q]
             # reparameterize
         else:
-            start_params = zeros((p+q+k))
-            endog = self.endog
-            exog = self.exog
-#TODO: don't forget constant and deterministic parts
-# tag all these parts on at the end.  Interested in time series properties.
-#TODO: replace this with a call to Conditional Sum of Squares Kalman Filter
-            if q != 0:
-#TODO: Hannan and Rissanen (1982)
-# Fit a long AR process by maximizing AR BIC, then get resids and regress
-# y_t on resids and lagged y_t
-                resid = endog[p:] - np.dot(lagmat(endog, p, trim='both')[:,1:],
-                                    arcoefs)
-                macoefs = yule_walker(resid, order=q)[0]
-                start_params[k+p:k+p+q] = macoefs
-            if p != 0:
-                arcoefs = yule_walker(endog, order=p)[0]
-                start_params[k:k+p] = arcoefs
-            if k != 0:
-                start_params[:k] += GLS(endog, exog).fit().params
+            start_params = self._fit_start_params((p,q,k))
+#            start_params = zeros((p+q+k))
+#            endog = self.endog
+#            exog = self.exog
+#            if q != 0:
+##TODO: Hannan and Rissanen (1982)
+## Fit a long AR process by maximizing AR BIC, then get resids and regress
+## y_t on resids and lagged y_t
+##NOTE: how to handle exogs, do OLS first and demean?
+#                armod = AR(endog).fit(ic='bic')#, trend=trend)
+#                arcoefs_tmp = armod.params[1:]  # generalize for trend
+#                p_tmp = armod.laglen
+#
+#                resid = endog[p_tmp:] - np.dot(lagmat(endog, p_tmp,
+#                                trim='both')[:,1:], arcoefs_tmp)
+#                macoefs = yule_walker(resid, order=q)[0]
+#                start_params[k+p:k+p+q] = macoefs
+#            if p != 0:
+#                arcoefs = yule_walker(endog, order=p)[0]
+#                start_params[k:k+p] = arcoefs
+#            if k != 0:
+#                start_params[:k] += GLS(endog, exog).fit().params
 # inverse of reparameterization for Jones (1980)
-        print start_params
         if transparams:
             start_params = self._invtransparams(start_params)
-
-#            # AR coeffs
-#            if p != 0:
-#                tmp = arcoefs.copy()
-#                newparams = arcoefs.copy()
-#                for j in range(p-1,0,-1):
-#                    a = newparams[j]
-#                    for k in range(j):
-#                        tmp[k] = (newparams[k] + a * newparams[j-k-1])/(1-a**2)
-#                    newparams[:j] = tmp[:j]
-#                invarcoefs = -log((1-newparams)/(1+newparams))
-#                start_params[k:k+p] = invarcoefs
-#                # MA coeffs
-#            if q != 0:
-#                tmp = macoefs.copy()
-#                newparams = macoefs.copy()
-#                for j in range(q-1,0,-1):
-#                    b = newparams[j]
-#                    for k in range(j):
-#                        tmp[k] = (newparams[k] - b * newparams[j-k-1])/(1-b**2)
-#                    newparams[:j] = tmp[:j]
-#                invmacoefs = -log((1-newparams)/(1+newparams))
-#                start_params[k+p:k+p+q] = invmacoefs
-#
 
 #        results = optimize.fmin_bfgs(loglike, start_params, gtol=1e-2,
 #                        full_output=1, maxiter=35, disp=1, norm=np.inf)

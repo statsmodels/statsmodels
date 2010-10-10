@@ -394,34 +394,21 @@ class AR(LikelihoodModel):
 
     def score(self, params):
         """
+        Return the gradient of the loglikelihood at params.
+
+        Parameters
+        ----------
+        params : array-like
+            The parameter values at which to evaluate the score function.
+
         Notes
         -----
-        Need to generalize for AR(p) and for a constant.
-        Not correct yet.  Returns numerical gradient.  Depends on package
-        numdifftools.
+        Returns numerical gradient.
         """
-        y = self.Y
-        ylag = self.X
-        nobs = self.nobs
-#        diffsumsq = sumofsq(y-np.dot(ylag,params))
-#        dsdr = 1/nobs * -2 *np.sum(ylag*(y-np.dot(ylag,params))[:,None])+\
-#                2*params*ylag[0]**2
-#        sigma2 = 1/nobs*(diffsumsq-ylag[0]**2*(1-params**2))
-#        gradient = -nobs/(2*sigma2)*dsdr + params/(1-params**2) + \
-#                1/sigma2*np.sum(ylag*(y-np.dot(ylag, params))[:,None])+\
-#                .5*sigma2**-2*diffsumsq*dsdr+\
-#                ylag[0]**2*params/sigma2 +\
-#                ylag[0]**2*(1-params**2)/(2*sigma2**2)*dsdr
-#        if self.penalty:
-#            pass
-#        j = Jacobian(self.loglike)
-#        return np.squeeze(j(params))
-#        return gradient
         loglike = self.loglike
-#        if self.transparams:
-#            params = self._invtransparams(params)
 #NOTE: always calculate at out of bounds params for estimation
-        return approx_fprime(params, loglike)
+#TODO: allow for user-specified epsilon?
+        return approx_fprime(params, loglike, epsilon=1e-8)
 
 
     def information(self, params):
@@ -434,6 +421,7 @@ class AR(LikelihoodModel):
         """
         Returns numerical hessian for now.  Depends on numdifftools.
         """
+#numdifftools code
 #        h = Hessian(self.loglike)
 #        return h(params)
         loglike = self.loglike
@@ -478,10 +466,10 @@ class AR(LikelihoodModel):
         maxlag : int
             If `ic` is None, then maxlag is the lag length used in fit.  If
             `ic` is specified then maxlag is the highest lag order used to
-            select the correct lag order.
-        method : str {'cmle', 'yw'. 'mle'}, optional
+            select the correct lag order.  If maxlag is None, the default is
+            round(12*(nobs/100.)**(1/4.))
+        method : str {'cmle', 'mle'}, optional
             cmle - Conditional maximum likelihood using OLS
-            yw - Yule-Walker
             mle - Unconditional (exact) maximum likelihood.  See `solver`
             and the Notes.
         ic : str {'aic','bic','hic','t-stat'}
@@ -498,7 +486,7 @@ class AR(LikelihoodModel):
             Whether to include a constant or not. 'c' - include constant.
             'nc' - no constant.
 
-        The below can be specified is method is 'mle'
+        The below can be specified if method is 'mle'
 
         transparams : bool, optional
             Whether or not to transform the parameters to ensure stationarity.
@@ -566,11 +554,11 @@ class AR(LikelihoodModel):
             self.Y = Y  # attach to get correct fit stats
             X = self._stackX(maxlag, trend)
             self.X = X
-            startlag = self.trendorder # trendorder set in the above call
+            startlag = self.trendorder # trendorder set in _stackX
             if exog is not None:
                 startlag += exog.shape[1] # add dim happens in super?
+            startlag = max(1,startlag) # handle if startlag is 0
             results = {}
-            stop = 1.6448536269514722 # for t-stat, norm.ppf(.95)
             if ic != 't-stat':
                 for lag in range(startlag,maxlag+1):
                     # have to reinstantiate the model to keep comparable models
@@ -581,6 +569,7 @@ class AR(LikelihoodModel):
                     results[lag] = eval('fit.'+ic)
                 bestic, bestlag = min((res, k) for k,res in results.iteritems())
             else: # choose by last t-stat.
+                stop = 1.6448536269514722 # for t-stat, norm.ppf(.95)
                 for lag in range(maxlag,startlag-1,-1):
                     # have to reinstantiate the model to keep comparable models
                     endog_tmp = endog[maxlag-lag:]
@@ -609,31 +598,13 @@ class AR(LikelihoodModel):
                                                 # with Model code
         if solver:
             solver = solver.lower()
-#TODO: allow user-specified penalty function? -penalty stuff not in llf anymore
-#        if penalty and method not in ['bfgs_b','tnc','cobyla','slsqp']:
-#            minfunc = lambda params : -self.loglike(params) - \
-#                    self.penfunc(params)
-#        else:
         if method == "cmle":     # do OLS
             arfit = OLS(Y,X).fit()
             params = arfit.params
         if method == "mle":
-#            if not solver: # make default?
-#                solver = 'newton'
             if not start_params:
                 start_params = OLS(Y,X).fit().params
-# replace constant
-#                if self.trendorder==1:
-#                    start_params[0] = start_params[0]/(1-\
-#                            start_params[1:].sum())
-#TODO: do this after estimation
                 start_params = self._invtransparams(start_params)
-
-#            if solver in ['newton', 'bfgs', 'ncg']:
-#                return super(AR, self).fit(start_params=start_params, method=solver,
-#                    maxiter=maxiter, full_output=full_output, disp=disp,
-#                    callback=callback, **kwargs)
-#                return retvals
             loglike = lambda params : -self.loglike(params)
             if solver == None:  # use limited memory bfgs
                 bounds = [(None,)*2]*(laglen+trendorder)
@@ -656,12 +627,13 @@ class AR(LikelihoodModel):
 #                if self.trendorder == 1:
 #                    params[0] = params[0]/(1-params[1:].sum())
 
-        elif method == "yw":
-            params, omega = yule_walker(endog, order=maxlag,
-                    method="mle", demean=False)
+# don't use yw, because we can't estimate the constant
+#        elif method == "yw":
+#            params, omega = yule_walker(endog, order=maxlag,
+#                    method="mle", demean=False)
             # how to handle inference after Yule-Walker?
-            self.params = params #TODO: don't attach here
-            self.omega = omega
+#            self.params = params #TODO: don't attach here
+#            self.omega = omega
         pinv_exog = np.linalg.pinv(X)
         normalized_cov_params = np.dot(pinv_exog, pinv_exog.T)
         arfit = ARResults(self, params, normalized_cov_params)
@@ -1863,8 +1835,9 @@ if __name__ == "__main__":
                     maxiter=500, gtol=1e-10)
 #    res_mle2 = ar_mle.fit(maxlag=1, method="mle", maxiter=500, penalty=True,
 #            tol=1e-13)
-    ar_yw = AR(sunspots.endog)
-    res_yw = ar_yw.fit(maxlag=4, method="yw")
+
+#    ar_yw = AR(sunspots.endog)
+#    res_yw = ar_yw.fit(maxlag=4, method="yw")
 
 #    # Timings versus talkbox
 #    from timeit import default_timer as timer
