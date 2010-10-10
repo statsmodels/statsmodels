@@ -74,8 +74,11 @@ class MLEGLS(GenericLikelihoodModel):
     for loglikelihood of initial observations for ARMA.
 
 
-    seems biased towards zero if variance in data is too small
 
+    TODO:
+    This might be missing the error variance. Does it assume error is
+       distributed N(0,1)
+    Maybe extend to mean handling, or assume it is already removed.
     '''
 
 
