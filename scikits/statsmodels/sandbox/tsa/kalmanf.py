@@ -338,23 +338,13 @@ class ARMA(LikelihoodModel):
         elif exog is not None and constant:
             exog = add_constant(exog,prepend=True)
         super(ARMA, self).__init__(endog, exog)
-        p,q = map(int,order) #TODO: will need to use these to ensure that
-                    # some of params stays zero
+        p,q = map(int,order)
         r = max(p,q+1)
         if exog is not None:
             k = exog.shape[1]  # number of exogenous variables, incl. const.
-#            Z = np.zeros((self.nobs, k+r))
-#            Z[:,:k] = exog
-#            Z[:,k] = 1.
         else:
             k = 0
-#            Z = np.zeros((self.nobs, r))
-#            Z[:,0] = 1. # this is inefficient for no constant because
-                        # z_i = z_j for all i,j
-        #NOTE: if exog is not included in the recursions then it doesn't
-        # need to include constant and exog variables
-        #TODO: could actually just be  1 x r
-        Z = np.zeros((self.nobs, r))
+        Z = np.zeros((self.nobs, r)) # inefficient for c or nc
         Z[:,0] = 1.
         self.Z = Z
         self.k = k
@@ -381,10 +371,9 @@ class ARMA(LikelihoodModel):
 
         Notes
         -----
-        If necessary, fits an AR process according to BIC, uses the residuals
-        to find the q MA coefficients.  Then fits an ARMA process to find the p
-        AR coefficients and q MA coefficients via OLS.
-        Uses OLS to find the coefficients of exogenous variables.
+        If necessary, fits an AR process with the laglength selected according to        best BIC.  Obtain the residuals.  Then fit an ARMA(p,q) model via OLS
+        using these residuals for a first approximation.  Uses a separate OLS
+        regression to find the coefficients of exogenous variables.
 
         References
         ----------
@@ -409,7 +398,6 @@ class ARMA(LikelihoodModel):
                 X = np.column_stack((lagmat(endog,p,'both')[p_tmp+(q-p):,1:],
                     lagmat(resid,q,'both')[:,1:])) # stack ar lags and resids
                 coefs = GLS(endog[p_tmp+q:], X).fit().params
-#                macoefs = yule_walker(resid, order=q)[0]
                 start_params[k:k+p+q] = coefs
 
             else:
@@ -420,7 +408,6 @@ class ARMA(LikelihoodModel):
         return start_params
 
 
-    #TODO: this assumes no constant.
     def T(self,params): # F in Hamilton
         """
         The coefficient matrix for the state vector in the state equation.
@@ -438,10 +425,8 @@ class ARMA(LikelihoodModel):
         params_padded = np.zeros(r) # handle zero coefficients if necessary
         #NOTE: squeeze added for cg optimizer
         params_padded[:p] = params[k:p+k]
-#        arr[:,0] = params[:r]   # first r params are AR coeffs
         arr[:,0] = params_padded   # first p params are AR coeffs w/ short params
         arr[:-1,1:] = np.eye(r-1)
-#        arr = block_diag(np.eye(k),arr)
         return arr
 
     def R(self, params): # R is H in Hamilton
@@ -458,89 +443,11 @@ class ARMA(LikelihoodModel):
         k = self.k
         q = self.q
         p = self.p
-#        arr = params[-r-1:-1].tolist()  # last r-2 to -1 params are MA coeffs
         arr = np.zeros((r,1)) # this allows zero coefficients
-#NOTE: squeeze added because
-        arr[1:q+1,:] = params[p+k:p+k+q][:,None]  # p to p+q short params are MA coeffs
+        arr[1:q+1,:] = params[p+k:p+k+q][:,None]
         arr[0] = 1.0
-#        arr = np.hstack(([0]*k + [1.0] ,arr))[:,None]
-# above can remove extra axis if uncommented.
         return arr
 
-    def loglike1(self, params):
-        """
-        Compute the loglikelihood using the exact Kalman filter
-        """
-#TODO: Define functions within loglike to save call to getattr?
-#NOTE: there is more overhead, so the below is more efficient
-        Z = self.Z
-        r = self.r
-        k = self.k
-        nobs = self.nobs
-
-        # initialization
-        # cf. Harvey section 3.3.4, Durbin-Koopman 5.1 - 5.6, and Hamilton 13.2
-        # DK is probably the most comprehensive treatment
-        # only one initialization step for stationary ARMA model
-
-        # treat delta as diffuse for initialization
-        # doesn't necessarily matter for stationary ARMA model
-        alpha = np.zeros((r+k,1)) # initial state is null vector
-        #TODO: what about constant?  check Harvey
-        #Harvey includes constant terms, but can just stack into alpha_0
-        # and estimate like anything else, see 3.2.3a
-        #TODO: alpha gets beta stacked on top of it for exog != None
-
-        R_mat = self.R(params)
-        m = Z.shape[1] # just r for now (might be r + k later on)
-        T_mat = self.T(params)
-        Q_0 = np.dot(inv(identity(m**2)-np.kron(T_mat,T_mat)),
-                    np.dot(R_mat,R_mat.T).ravel('F'))
-        Q_0 = Q_0.reshape(r,r,order='F')
-        P = Q_0
-
-        # update the initialized states, etc. d times
-        # where d == the number of states with unknown means and variances
-        # in the case of the ARMA-style models this is always d == 1
-
-#        loglikelihood = -nobs/2 * np.log(2*np.pi)
-#NOTE: do this later since it's constant, speed this up
-        loglikelihood = 0.
-        sigma2 = 0
-
-        # loop the below for d,...,n
-        for i in xrange(int(nobs)):
-            #TODO: history stores these values
-            # Predict
-            v = y[i] - np.dot(Z[i,None],alpha) # one-step forecast error
-            F = chain_dot(Z[i,None], P, Z[i,None].T) #+H=0 for ARMA, var. forecast err
-#NOTE: monitor the above for convergence to steady-state and switching to
-# fast recursion
-            Finv = 1./F # always scalar for univariate series
-            K = chain_dot(T_mat,P,Z[i,None].T,Finv) # Kalman Gain Matrix
-            # update state
-            alpha = np.dot(T_mat, alpha) + np.dot(K,v)
-#            Q_0 = params[-1]  # doesn't need to be in a loop
-
-            L = T_mat - np.dot(K,Z[i,None])
-            P = chain_dot(T_mat, P, L.T) + np.dot(R_mat,R_mat.T)
-
-#            loglikelihood -= 1/2. * (np.log(F) + chain_dot(v.T,Finv,v))
-# OR
-# we could concentrate the likelihood as in Harvey Section 3.4
-# where L_c = sum(log(f_t) + T*log(sigma_2))
-# where sigma_2 = 1/T * sum(v_t**2/f_t)
-            loglikelihood += np.log(F)
-        sigma2 = 1./nobs * np.sum(v**2/F)
-        loglike = -.5 *(loglikelihood + nobs*np.log(sigma2))
-        loglike -= nobs/2. * (np.log(2*np.pi)+1)
-#        print params, loglike - nobs/2. * np.log(2*np.pi + 1)
-        return loglike.squeeze()
-#TODO: check for Steady-State convergence to reuse terms
-
-
-#TODO: this is going to bonk on trend terms and constant terms
-#will return zeros because of zeros_like
     def _transparams(self, params):
         """
         Transforms params to induce stationarity/invertability.
@@ -596,7 +503,6 @@ class ARMA(LikelihoodModel):
         # AR coeffs
         if p != 0:
             tmp = arcoefs.copy()
-#            newparams = arcoefs.copy()
             for j in range(p-1,0,-1):
                 a = arcoefs[j]
                 for kiter in range(j):
@@ -607,7 +513,6 @@ class ARMA(LikelihoodModel):
         # MA coeffs
         if q != 0:
             tmp = macoefs.copy()
-#            newparams = macoefs.copy()
             for j in range(q-1,0,-1):
                 b = macoefs[j]
                 for kiter in range(j):
@@ -618,7 +523,9 @@ class ARMA(LikelihoodModel):
         return newparams
 
     def loglike(self, params):
-
+        """
+        Compute exact loglikelihood for ARMA(p,q) model.
+        """
 #TODO: see section 3.4.6 in Harvey for computing the derivatives in the
 # recursion itself.
 #TODO: this won't work for time-varying parameters
@@ -629,7 +536,6 @@ class ARMA(LikelihoodModel):
         q = self.q
         r = self.r
 
-        #NOTE: reparameterization suggested in Jones (1980)
         if self.transparams:
             newparams = self._transparams(params)
         else:
@@ -648,25 +554,16 @@ class ARMA(LikelihoodModel):
         alpha = zeros((m,1)) # if constant (I-T)**-1 * c
         Q_0 = dot(inv(identity(m**2)-kron(T_mat,T_mat)),
                             dot(R_mat,R_mat.T).ravel('F'))
-#        Q_0 = dot(pinv(identity((m-k)**2)-kron(T_mat[k:,k:],
-#                    T_mat[k:,k:])), dot(R_mat[k:],R_mat[k:].T).ravel('F'))
         #TODO: above is only valid if Eigenvalues of T_mat are inside the
         # unit circle, if not then Q_0 = kappa * eye(m**2)
         # w/ kappa some large value say 1e7, but DK recommends not doing this
         # for a diffuse prior
+        # Note that we enforce stationarity
         Q_0 = Q_0.reshape(r,r,order='F')
-        #TODO: should order be m,m if const?
-#        if k >= 1:
-#            kappa = 1
-            # kappa = 1e6
-#            P = block_diag(identity(k)*kappa,Q_0)
-#        else:
-#            P = Q_0
         P = Q_0
         sigma2 = 0
         loglikelihood = 0
         v = zeros((nobs,1))
-#TODO: replace this with kiter, see AR model transparams
         F = zeros((nobs,1))
         #NOTE: can only do quick recursions if Z is time-invariant
         #so could have recursions for pure ARMA vs ARMAX
@@ -677,7 +574,6 @@ class ARMA(LikelihoodModel):
             v[i] = v_mat
             F_mat = dot(dot(Z_mat, P), Z_mat.T)
             F[i] = F_mat
-#            print F[i]
             Finv = 1./F_mat # always scalar for univariate series
             K = dot(dot(dot(T_mat,P),Z_mat.T),Finv) # Kalman Gain Matrix
             # update state
@@ -689,10 +585,8 @@ class ARMA(LikelihoodModel):
         sigma2 = 1./nobs * np.sum(v**2 / F)
         loglike = -.5 *(loglikelihood + nobs*log(sigma2))
         loglike -= nobs/2. * (log(2*pi) + 1)
-#        print params, loglike
         self.sigma2 = sigma2
         return loglike.squeeze()
-
 
     def fit(self, start_params=None, transparams=True):
         self.transparams = transparams
@@ -700,40 +594,8 @@ class ARMA(LikelihoodModel):
         p = self.p
         q = self.q
         k = self.k
-#        start_params = np.zeros((r*2)) # use something else?
-                                       #NOTE: this is incorrect
-                                       # it needs to include the
-                                       # variance terms
-        # should be something like r * 2 (with zeros) + k + # of terms in Q
-#        start_params = np.zeros((r*2 + k + 1)) # use something else?
-#        start_params[-1] = self.endog.std()**2  # estimate of state variance
-                                                # zero is bad first guess for
-                                                # optimization
         loglike = lambda params: -self.loglike(params)
-        # specify which coefficients should be zero according to (p,q)
-        # AR restrictions
-#        bounds = [(None,)*2]*p + [(0.0,)*2] * (r-p)
-        # MA restrictions
-#        bounds += [(1.0,1.0)] + [(None,)*2]*q + [(0.0,)*2] * (r-(q+1))
-        # Exog restrictions
-#        bounds += [(None,)*2]*k
-        # Variance restriction, should it be positive instead of 0,inf?
-#        bounds += [(0.0,None)]
-        # could drop one parameter then?
-#        results = optimize.fmin_l_bfgs_b(loglike, start_params,
-#                    approx_grad=True, m=30, pgtol=1e-12, factr=10.0,
-#                    bounds = bounds, iprint=0)
 
-#TODO: rewrite for bfgs.  Using stata coeffs, the Kalman loglike looks correct
-# off by just a small amount, so it's the optimization that looks bad
-#TODO: reparameterize variance so that it's always positive
-#TODO: write analytic gradient
-#NOTE: done below
-#        self.results = results
-#        params = results[0]
-#        llf = results[1]
-#        self.params = params
-#        self.llf = llf
         if start_params is not None:
             start_params = np.asarray(start_params)
             arcoefs = start_params[k:k+p]
@@ -741,78 +603,16 @@ class ARMA(LikelihoodModel):
             # reparameterize
         else:
             start_params = self._fit_start_params((p,q,k))
-#            start_params = zeros((p+q+k))
-#            endog = self.endog
-#            exog = self.exog
-#            if q != 0:
-##TODO: Hannan and Rissanen (1982)
-## Fit a long AR process by maximizing AR BIC, then get resids and regress
-## y_t on resids and lagged y_t
-##NOTE: how to handle exogs, do OLS first and demean?
-#                armod = AR(endog).fit(ic='bic')#, trend=trend)
-#                arcoefs_tmp = armod.params[1:]  # generalize for trend
-#                p_tmp = armod.laglen
-#
-#                resid = endog[p_tmp:] - np.dot(lagmat(endog, p_tmp,
-#                                trim='both')[:,1:], arcoefs_tmp)
-#                macoefs = yule_walker(resid, order=q)[0]
-#                start_params[k+p:k+p+q] = macoefs
-#            if p != 0:
-#                arcoefs = yule_walker(endog, order=p)[0]
-#                start_params[k:k+p] = arcoefs
-#            if k != 0:
-#                start_params[:k] += GLS(endog, exog).fit().params
-# inverse of reparameterization for Jones (1980)
         if transparams:
             start_params = self._invtransparams(start_params)
 
-#        results = optimize.fmin_bfgs(loglike, start_params, gtol=1e-2,
-#                        full_output=1, maxiter=35, disp=1, norm=np.inf)
         bounds = [(None,)*2]*(p+q+k)
-#        bounds = [(-250,250)]*(p+q+k) # to avoid exp overflow with reparam
         results = optimize.fmin_l_bfgs_b(loglike, start_params, approx_grad=True,
                     m=30, pgtol=1e-7, factr=1e3, bounds=bounds, iprint=1)
-#        results = optimize.fmin_powell(loglike, start_params, full_output=1,
-#                disp=1)
         self.results = results
         if transparams:
             newparams = self._transparams(results[0])
-#            # copied from loglike
-#            # doesn't modify params in place
-#            resparams = results[0]
-#            newparams = np.zeros_like(resparams)
-#            # AR Coeffs
-#            if p != 0:
-#                newparams[k:k+p] = ((1-exp(-resparams[k:k+p]))/(1+exp(-resparams[k:k+p]))).copy()
-#                tmp = ((1-exp(-resparams[k:k+p]))/(1+exp(-resparams[k:k+p]))).copy()
-#
-#                # levinson-durbin to get pacf
-#                for j in range(1,p):
-#                    a = newparams[k+j]
-#                    for kiter in range(j):
-#                        tmp[kiter] -= a * newparams[k+j-kiter-1]
-#                    newparams[k:k+j] = tmp[:j]
-##                params[k:k+p] = newparams
-#
-#            # MA Coeffs
-#            if q != 0:
-#                newparams[k+p:] = ((1-exp(-resparams[k+p:k+p+q]))/\
-#                                (1+exp(-resparams[k+p:k+p+q]))).copy()
-#                tmp = ((1-exp(-resparams[k+p:k+p+q]))/\
-#                        (1+exp(-resparams[k+p:k+p+q]))).copy()
-#
-#                # levinson-durbin to get macf
-#                for j in range(1,q):
-#                    b = newparams[k+p+j]
-#                    for kiter in range(j):
-#                        tmp[kiter] += b * newparams[k+p+j-kiter-1]
-#                    newparams[k+p:j] = tmp[:j]
-##TODO: remember that loglike equals fmax - nobs/2. *(np.log2*pi+1)
             self.params = newparams
-
-
-
-
 
 if __name__ == "__main__":
     import numpy as np
