@@ -63,7 +63,11 @@ def invertibleroots(ma):
         wasinvertible = True
     return mainv, wasinvertible
 
-
+def getpoly(self, params):
+    ar = np.r_[[1], -params[:self.nar]]
+    ma = np.r_[[1], params[-self.nma:]]
+    import numpy.polynomial as poly
+    return poly.Polynomial(ar), poly.Polynomial(ma)
 
 class MLEGLS(GenericLikelihoodModel):
     '''ARMA model with exact loglikelhood for short time series
@@ -85,7 +89,7 @@ class MLEGLS(GenericLikelihoodModel):
     def _params2cov(self, params, nobs):
         '''get autocovariance matrix from ARMA regression parameter
 
-        regression parameter are assumed to have rhs parameterization
+        ar parameters are assumed to have rhs parameterization
 
         '''
         ar = np.r_[[1], -params[:self.nar]]
@@ -102,17 +106,18 @@ class MLEGLS(GenericLikelihoodModel):
         return sigma
 
     def loglike(self, params):
-        sig = self._params2cov(params, self.nobs)
+        sig = self._params2cov(params[:-1], self.nobs)
+        sig = sig * params[-1]**2
         loglik = mvn_loglike(self.endog, sig)
         return loglik
 
     def fit_invertible(self, *args, **kwds):
         res = self.fit(*args, **kwds)
-        ma = np.r_[[1], res.params[-self.nma:]]
+        ma = np.r_[[1], res.params[self.nar: self.nar+self.nma]]
         mainv, wasinvertible = invertibleroots(ma)
         if not wasinvertible:
             start_params = res.params.copy()
-            start_params[-self.nma:] = mainv[1:]
+            start_params[self.nar: self.nar+self.nma] = mainv[1:]
             #need to add args kwds
             res = self.fit(start_params=start_params)
         return res
@@ -129,10 +134,12 @@ if __name__ == '__main__':
     mod = MLEGLS(y)
     mod.nar, mod.nma = 2, 2   #needs to be added, no init method
     mod.nobs = len(y)
-    res = mod.fit(start_params=[0.1,0,0.2,0])
+    res = mod.fit(start_params=[0.1,0,0.2,0, 0.5])
     print 'DGP', ar, ma
     print res.params
     from scikits.statsmodels.regression import yule_walker
     print yule_walker(y, 2)
-    resi = mod.fit_invertible(start_params=[0.1,0,0.2,0])
+    resi = mod.fit_invertible(start_params=[0.1,0,0.2,0, 0.5])
     print resi.params
+
+    arpoly, mapoly = getpoly(mod, res.params[:-1])
