@@ -419,7 +419,7 @@ class AR(LikelihoodModel):
 
     def hessian(self, params):
         """
-        Returns numerical hessian for now.  Depends on numdifftools.
+        Returns numerical hessian for now.
         """
 #numdifftools code
 #        h = Hessian(self.loglike)
@@ -492,13 +492,16 @@ class AR(LikelihoodModel):
             Whether or not to transform the parameters to ensure stationarity.
             Uses the transformation suggested in Jones (1980).
         start_params : array-like, optional
-            A first guess on  the parameters.  Default is cmle estimates.
+            A first guess on the parameters.  Default is cmle estimates.
         solver : str or None, optional
-            Solver to be used.  The default is 'bfgs' (Broyden-
-            Fletcher-Goldfarb-Shanno).  Other choices are 'newton' (Newton-
-            Raphson), 'nm' (Nelder-Mead), 'cg' - (conjugate gradient), 'ncg'
-            (non-conjugate gradient), and 'powell'.
-            See notes.
+            Solver to be used.  The default is 'l_bfgs' (limited memory Broyden-
+            Fletcher-Goldfarb-Shanno).  Other choices are 'bfgs', 'newton'
+            (Newton-Raphson), 'nm' (Nelder-Mead), 'cg' - (conjugate gradient),
+            'ncg' (non-conjugate gradient), and 'powell'.
+            The limited memory BFGS uses m=30 to approximate the Hessian,
+            projected gradient tolerance of 1e-7 and factr = 1e3.  These
+            cannot currently be changed for l_bfgs.  See notes for more
+            information.
         maxiter : int, optional
             The maximum number of function evaluations. Default is 35.
         tol : float
@@ -608,12 +611,11 @@ class AR(LikelihoodModel):
             loglike = lambda params : -self.loglike(params)
             if solver == None:  # use limited memory bfgs
                 bounds = [(None,)*2]*(laglen+trendorder)
-                retvals = optimize.fmin_l_bfgs_b(loglike, start_params,
+                mlefit = optimize.fmin_l_bfgs_b(loglike, start_params,
                     approx_grad=True, m=30, pgtol = 1e-7, factr=1e3,
                     bounds=bounds, iprint=1)
-                self.retvals = retvals
-                params = retvals[0]
-                params = self._transparams(params)
+                self.mlefit = mlefit
+                params = mlefit[0]
             else:
                 mlefit = super(AR, self).fit(start_params=start_params,
                             method=solver, maxiter=maxiter,
@@ -621,11 +623,8 @@ class AR(LikelihoodModel):
                             callback = callback, **kwargs)
                 self.mlefit = mlefit
                 params = mlefit.params
-                if self.transparams:
-                    params = self._transparams(params)
-#TODO: uncomment when sure it's what we want
-#                if self.trendorder == 1:
-#                    params[0] = params[0]/(1-params[1:].sum())
+            if self.transparams:
+                params = self._transparams(params)
 
 # don't use yw, because we can't estimate the constant
 #        elif method == "yw":
