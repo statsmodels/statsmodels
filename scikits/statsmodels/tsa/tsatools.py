@@ -64,7 +64,7 @@ def add_trend(X, trend="c", prepend=False):
                 in trendarr.dtype.names], usemask=false, asrecarray=return_rec)
     return X
 
-def lagmat(x, maxlag, trim='forward'):
+def lagmat(x, maxlag, trim='forward', drop=True):
     '''create 2d array of lags
 
     Parameters
@@ -78,6 +78,9 @@ def lagmat(x, maxlag, trim='forward'):
         * 'backward' : trim invalid initial observations
         * 'both' : trim invalid observations on both sides
         * 'none', None : no trimming of observations
+    drop : bool
+        If True, returns only the lagged values.  If False, returns the
+        original array and the lagged values together.
 
     Returns
     -------
@@ -116,6 +119,12 @@ def lagmat(x, maxlag, trim='forward'):
     * create varnames for columns
     '''
     x = np.asarray(x)
+    dropidx = 0
+    if drop:
+        if x.ndim == 1:
+            dropidx = 1
+        else:
+            dropidx = x.shape[1]
     if x.ndim == 1:
         x = x[:,None]
     nobs, nvar = x.shape
@@ -130,13 +139,13 @@ def lagmat(x, maxlag, trim='forward'):
     else:
         trimlower = trim
     if trimlower == 'none' or not trimlower:
-        return lm
+        return lm[:,dropidx:]
     elif trimlower == 'forward':
-        return lm[:nobs+maxlag-k,:]
+        return lm[:nobs+maxlag-k,dropidx:]
     elif trimlower == 'both':
-        return lm[maxlag:nobs+maxlag-k,:]
+        return lm[maxlag:nobs+maxlag-k,dropidx:]
     elif trimlower == 'backward':
-        return lm[maxlag:,:]
+        return lm[maxlag:,dropidx:]
     else:
         raise ValueError, 'trim option not valid'
 
