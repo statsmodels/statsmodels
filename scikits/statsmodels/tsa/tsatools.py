@@ -64,28 +64,34 @@ def add_trend(X, trend="c", prepend=False):
                 in trendarr.dtype.names], usemask=false, asrecarray=return_rec)
     return X
 
-def lagmat(x, maxlag, trim='forward', drop=True):
+def lagmat(x, maxlag, trim='forward', original='ex'):
     '''create 2d array of lags
 
     Parameters
     ----------
     x : array_like, 1d or 2d
         data; if 2d, observation in rows and variables in columns
-    maxlag : int
+    maxlag : int or sequence of ints
         all lags from zero to maxlag are included
     trim : str {'forward', 'backward', 'both', 'none'} or None
         * 'forward' : trim invalid observations in front
         * 'backward' : trim invalid initial observations
         * 'both' : trim invalid observations on both sides
         * 'none', None : no trimming of observations
-    drop : bool
-        If True, returns only the lagged values.  If False, returns the
-        original array and the lagged values together.
+    original : str {'ex','sep','in'}
+        * 'ex' : drops the original array returning only the lagged values.
+        * 'in' : returns the original array and the lagged values as a single
+        array.
+        * 'sep' : returns a tuple (original array, lagged values). The original
+                  array is truncated to have the same number of rows as
+                  the returned lagmat.
 
     Returns
     -------
     lagmat : 2d array
         array with lagged observations
+    y : 2d array, optional
+        Only returned if original == 'sep'
 
     Examples
     --------
@@ -120,34 +126,34 @@ def lagmat(x, maxlag, trim='forward', drop=True):
     '''
     x = np.asarray(x)
     dropidx = 0
-    if drop:
-        if x.ndim == 1:
-            dropidx = 1
-        else:
-            dropidx = x.shape[1]
     if x.ndim == 1:
         x = x[:,None]
     nobs, nvar = x.shape
+    if original in ['ex','sep']:
+        dropidx = nvar
     if maxlag >= nobs:
         raise ValueError("maxlag should be < nobs")
     lm = np.zeros((nobs+maxlag, nvar*(maxlag+1)))
     for k in range(0, int(maxlag+1)):
-        #print k, maxlag-k,nobs-k, nvar*k,nvar*(k+1), x.shape, lm.shape
         lm[maxlag-k:nobs+maxlag-k, nvar*(maxlag-k):nvar*(maxlag-k+1)] = x
     if trim:
         trimlower = trim.lower()
     else:
         trimlower = trim
     if trimlower == 'none' or not trimlower:
-        return lm[:,dropidx:]
+        lm = lm[:,dropidx:]
     elif trimlower == 'forward':
-        return lm[:nobs+maxlag-k,dropidx:]
+        lm = lm[:nobs+maxlag-k,dropidx:]
     elif trimlower == 'both':
-        return lm[maxlag:nobs+maxlag-k,dropidx:]
+        lm = lm[maxlag:nobs+maxlag-k,dropidx:]
     elif trimlower == 'backward':
-        return lm[maxlag:,dropidx:]
+        lm = lm[maxlag:,dropidx:]
     else:
         raise ValueError, 'trim option not valid'
+    if original == 'sep':
+        return lm, x[maxlag:]
+    else:
+        return lm
 
 def lagmat2ds(x, maxlag0, maxlagex=None, dropex=0, trim='forward'):
     '''generate lagmatrix for 2d array, columns arranged by variables
@@ -162,7 +168,8 @@ def lagmat2ds(x, maxlag0, maxlagex=None, dropex=0, trim='forward'):
         max lag for all other variables all lags from zero to maxlag are included
     dropex : int (default is 0)
         exclude first dropex lags from other variables
-        for all variables, except the first, lags from dropex to maxlagex are included
+        for all variables, except the first, lags from dropex to maxlagex are
+            included
     trim : string
         * 'forward' : trim invalid observations in front
         * 'backward' : trim invalid initial observations
