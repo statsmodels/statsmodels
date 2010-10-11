@@ -15,8 +15,8 @@ from scipy.stats import norm, ss as sumofsq
 from scikits.statsmodels.regression import yule_walker
 from scikits.statsmodels import GLS, OLS
 from scikits.statsmodels.tools import chain_dot
-from scikits.statsmodels.tsa.tsatools import lagmat
-from scikits.statsmodels.tsa.stattools import add_trend, _autolag
+from scikits.statsmodels.tsa.tsatools import lagmat, add_trend
+from scikits.statsmodels.tsa.stattools import _autolag
 from scikits.statsmodels.model import LikelihoodModelResults, LikelihoodModel
 from scikits.statsmodels.decorators import *
 from scikits.statsmodels.compatibility import np_slogdet
