@@ -218,10 +218,7 @@ class AR(LikelihoodModel):
                 alpha = dot(T_mat, alpha) + dot(K,v_mat)
                 L = T_mat - dot(K,Z_mat)
                 P = dot(dot(T_mat, P), L.T) + dot(R_mat, R_mat.T)
-    #            P[0,0] += 1 # for MA part, which is             self.retvals = retvals
-            params = retvals[0]
-            params = self._transparams(params)
-faster?
+#                P[0,0] += 1 # for MA part, R_mat.R_mat.T above
                 predictedvalues[i+1-start] = dot(Z_mat,alpha)
         if start < p and (n > p - start or n == -1):
             if n == -1:

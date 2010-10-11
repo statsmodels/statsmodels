@@ -615,6 +615,26 @@ class ARMA(LikelihoodModel):
         self.sigma2 = sigma2
         return loglike.item() # return a scalar not a 0d array
 
+    def loglike_css(self, params):
+        """
+        Conditional Sum of Squares likelihood function.
+        """
+        p = self.p
+        q = self.q
+        k = self.k
+        # how to handle if empty?
+        if self.transparams:
+            newparams = self._transparams(params)
+        else:
+            newparams = params
+        if k > 0:
+#            exparams = params[:k]
+            y -= dot(self.exog, newparams[:k])
+        arparams = newparams[k:k+p]
+        maparams = newparams[k+p:k+p+q]
+        errors = [0] * q
+
+
     def fit(self, order, start_params=None, trend='c', transparams=True,
             solver=None, maxiter=35, full_output=1, disp=1, callback=None,
             **kwargs):
