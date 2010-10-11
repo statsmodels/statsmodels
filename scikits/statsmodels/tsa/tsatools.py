@@ -1,4 +1,5 @@
 import numpy as np
+import numpy.lib.recfunctions as nprf
 
 def add_trend(X, trend="c", prepend=False):
     """
