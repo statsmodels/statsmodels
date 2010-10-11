@@ -438,7 +438,7 @@ class AR(LikelihoodModel):
         """
         endog = self.endog
         exog = self.exog
-        X = lagmat(endog, maxlag=laglen, trim='both')[:,1:]
+        X = lagmat(endog, maxlag=laglen, trim='both')
         if exog is not None:
             X = np.column_stack((exog[laglen:,:], X))
         # Handle trend terms

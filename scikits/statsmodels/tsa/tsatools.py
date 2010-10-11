@@ -99,20 +99,20 @@ def lagmat(x, maxlag, trim='forward', original='ex'):
     >>> from scikits.statsmodels.sandbox.tsa.tsatools import lagmat
     >>> import numpy as np
     >>> X = np.arange(1,7).reshape(-1,2)
-    >>> lagmat(X, maxlag=2, trim="forward")
+    >>> lagmat(X, maxlag=2, trim="forward", original='in')
     array([[ 1.,  2.,  0.,  0.,  0.,  0.],
        [ 3.,  4.,  1.,  2.,  0.,  0.],
        [ 5.,  6.,  3.,  4.,  1.,  2.]])
 
-    >>> lagmat(X, maxlag=2, trim="backward")
+    >>> lagmat(X, maxlag=2, trim="backward", original='in')
     array([[ 5.,  6.,  3.,  4.,  1.,  2.],
        [ 0.,  0.,  5.,  6.,  3.,  4.],
        [ 0.,  0.,  0.,  0.,  5.,  6.]])
 
-    >>> lagmat(X, maxlag=2, trim="both"
+    >>> lagmat(X, maxlag=2, trim="both", original='in')
     array([[ 5.,  6.,  3.,  4.,  1.,  2.]])
 
-    >>> lagmat(X, maxlag=2, trim="none")
+    >>> lagmat(X, maxlag=2, trim="none", original='in')
     array([[ 1.,  2.,  0.,  0.,  0.,  0.],
        [ 3.,  4.,  1.,  2.,  0.,  0.],
        [ 5.,  6.,  3.,  4.,  1.,  2.],

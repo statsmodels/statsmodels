@@ -195,7 +195,7 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
         maxlag = 12. * np.power(nobs/100., 1/4.)
 
     xdiff = np.diff(x)
-    xdall = lagmat(xdiff[:,None], maxlag, trim='both')
+    xdall = lagmat(xdiff[:,None], maxlag, trim='both', original='in')
     nobs = xdall.shape[0]
 
     xdall[:,0] = x[-nobs-1:-1] # replace 0 xdiff with level of x
@@ -218,7 +218,7 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
                 maxlag, autolag)
 
         #rerun ols with best autolag
-        xdall = lagmat(xdiff[:,None], bestlag, trim='both')
+        xdall = lagmat(xdiff[:,None], bestlag, trim='both', original='in')
         nobs = xdall.shape[0]
 #        trend = np.vander(np.arange(nobs), trendorder+1)
         xdall[:,0] = x[-nobs-1:-1] # replace 0 xdiff with level of x
@@ -458,9 +458,7 @@ def pacf_ols(x, nlags=40):
     #NOTE: demeaning and not using a constant gave incorrect answers?
     #JP: demeaning should have a better estimate of the constant
     #maybe we can compare small sample properties with a MonteCarlo
-    xlags = lagmat(x, nlags)
-    x0 = xlags[:,0]
-    xlags = xlags[:,1:]
+    xlags, x0 = lagmat(x, nlags, original='sep')
     #xlags = sm.add_constant(lagmat(x, nlags), prepend=True)
     xlags = add_constant(xlags, prepend=True)
     pacf = [1.]
