@@ -195,7 +195,7 @@ def lagmat2ds(x, maxlag0, maxlagex=None, dropex=0, trim='forward'):
     return np.column_stack(lagsli)
 
 
-__all__ = ['lagmat', 'lagmat2ds']
+__all__ = ['lagmat', 'lagmat2ds','add_trend']
 
 if __name__ == '__main__':
     # sanity check, mainly for imports
