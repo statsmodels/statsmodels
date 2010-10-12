@@ -1,10 +1,16 @@
 """
 Created on Sun Oct 10 14:57:50 2010
 
-Author: josef-pktd
+Author: josef-pktd, Skipper Seabold
 License: BSD
 
+TODO: check everywhere initialization of signal.lfilter
+
 """
+
+import numpy as np
+from scipy import signal, optimize
+from scikits.statsmodels.model import LikelihoodModel
 
 
 #copied from sandbox/regression/mle.py
@@ -118,6 +124,8 @@ class Arma(LikelihoodModel):
 %s instead" % type(order))
 
         p,d,q = order
+        self.nar = p  # needed for geterrors, needs cleanup
+        self.nma = q
 
         if d > 0:
             raise ValueError("Differencing not implemented yet")
@@ -159,7 +167,7 @@ class Arma(LikelihoodModel):
             rh, fopt, gopt, cov_x, _,_, ier = \
                 optimize.fmin_bfgs(errfnsum, np.r_[rhoy0, rhoe0], maxiter=2, full_output=True)
             infodict, mesg = None, None
-        self.params = params
+        self.params = rh
         self.ar_est = np.concatenate(([1], rh[:p]))
         self.ma_est = np.concatenate(([1], rh[p:])) #rh[-q:])) doesnt work for q=0
         self.error_estimate = self.geterrors(rh)
@@ -175,23 +183,28 @@ class Arma(LikelihoodModel):
         return mlefit
 
     #copied from arima.ARIMA
-    def predicted(self, rhoy=None, rhoe=None):
+    def predicted(self, ar=None, ma=None):
         '''past predicted values of time series
         just added, not checked yet
         '''
-        if rhoy is None:
-            rhoy = self.rhoy
-        if rhoe is None:
-            rhoe = self.rhoe
+
+#        #ar, ma not used, not useful as arguments for predicted pattern
+#        #need it for prediction for other time series, endog
+#        if ar is None:
+#            ar = self.ar_est
+#        if ma is None:
+#            ma = self.ma_est
         return self.x + self.error_estimate
 
     #copied from arima.ARIMA
     def forecast(self, ar=None, ma=None, nperiod=10):
+        '''nperiod ahead forecast at the end of the data period
+        '''
         eta = np.r_[self.error_estimate, np.zeros(nperiod)]
         if ar is None:
-            ar = self.rhoy
+            ar = self.ar_est
         if ma is None:
-            ma = self.rhoe
+            ma = self.ma_est
         return signal.lfilter(ma, ar, eta)
 
     #copied from arima.ARIMA
