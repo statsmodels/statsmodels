@@ -404,7 +404,6 @@ class ARMA(LikelihoodModel):
                     lagmat(resid,q,'both'))) # stack ar lags and resids
                 coefs = GLS(endog[p_tmp+q:], X).fit().params
                 start_params[k:k+p+q] = coefs
-
             else:
                 start_params[k+p:k+p+q] = yule_walker(endog, order=q)[0]
         if q==0 and p != 0:
@@ -622,6 +621,8 @@ class ARMA(LikelihoodModel):
         p = self.p
         q = self.q
         k = self.k
+        y = self.endog.copy()
+        nobs = self.nobs
         # how to handle if empty?
         if self.transparams:
             newparams = self._transparams(params)
@@ -630,10 +631,17 @@ class ARMA(LikelihoodModel):
         if k > 0:
 #            exparams = params[:k]
             y -= dot(self.exog, newparams[:k])
-        arparams = newparams[k:k+p]
-        maparams = newparams[k+p:k+p+q]
+        arcoefs = newparams[k:k+p][::-1]    # in reverse order so we can broadcast
+        macoefs = newparams[k+p:k+p+q][::-1]
         errors = [0] * q
-
+        # create error vector iteratively
+        for i in range(p,len(y)):
+            errors.append(y[i]-sum(arcoefs*y[i-p:i])-sum(macoefs*errors[i-q:i]))
+        errors = np.asarray(errors)
+        ssr = sum(errors[p:]**2)
+        sigma2 = ssr/(nobs-p)
+        llf = -(nobs-p)/2.*(log(2*pi) + log(sigma2)) - np.sum(ssr)/(2*sigma2)
+        return llf
 
     def fit(self, order, start_params=None, trend='c', transparams=True,
             solver=None, maxiter=35, full_output=1, disp=1, callback=None,
