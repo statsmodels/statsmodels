@@ -10,6 +10,7 @@ import numpy as np
 from scipy import linalg
 from scipy.linalg import norm, toeplitz
 
+import scikits.statsmodels as sm
 from scikits.statsmodels.model import GenericLikelihoodModel, LikelihoodModel
 from scikits.statsmodels.sandbox.tsa.arima import arma_acovf, ARIMA
 
@@ -139,7 +140,25 @@ if __name__ == '__main__':
     print res.params
     from scikits.statsmodels.regression import yule_walker
     print yule_walker(y, 2)
-    resi = mod.fit_invertible(start_params=[0.1,0,0.2,0, 0.5])
-    print resi.params
+    #resi = mod.fit_invertible(start_params=[0.1,0,0.2,0, 0.5])
+    #print resi.params
 
     arpoly, mapoly = getpoly(mod, res.params[:-1])
+
+    data = sm.datasets.sunspots.load()
+    #ys = data.endog[-100:]
+##    ys = data.endog[12:]-data.endog[:-12]
+##    ys -= ys.mean()
+##    mods = MLEGLS(ys)
+##    mods.nar, mods.nma = 13, 1   #needs to be added, no init method
+##    mods.nobs = len(ys)
+##    ress = mods.fit(start_params=np.r_[0.4, np.zeros(12), [0.2, 5.]],maxiter=200)
+##    print ress.params
+##    #from scikits.statsmodels.sandbox.tsa import arima as tsaa
+##    #tsaa
+##    import matplotlib.pyplot as plt
+##    plt.plot(data.endog[1])
+##    #plt.show()
+
+
+
