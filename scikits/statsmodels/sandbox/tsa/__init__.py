@@ -47,6 +47,6 @@ movvar
 '''
 
 
-from arima import *
+#from arima import *
 from movstat import *
 #from stattools import *

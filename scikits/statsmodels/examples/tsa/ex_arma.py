@@ -1,10 +1,10 @@
 
 import numpy as np
 import scikits.statsmodels as sm
-from scikits.statsmodels.sandbox.tsa.arima import arma_generate_sample
-from scikits.statsmodels.sandbox.tsa.arma_mle import Arma as Arma
-from scikits.statsmodels.sandbox.tsa.arima import ARIMA as ARIMA_old
-from scikits.statsmodels.sandbox.regression.mle import Arma as Armamle_old
+from scikits.statsmodels.tsa.arima_process import arma_generate_sample
+from scikits.statsmodels.tsa.arma_mle import Arma as Arma
+from scikits.statsmodels.tsa.arima_process import ARIMA as ARIMA_old
+from scikits.statsmodels.sandbox.tsa.garch import Arma as Armamle_old
 from scikits.statsmodels.sandbox.tsa.kalmanf import ARMA as ARMA_kf
 
 
@@ -13,7 +13,7 @@ from scikits.statsmodels.sandbox.tsa.kalmanf import ARMA as ARMA_kf
 print "\nExample 1"
 ar = [1.0,  -0.6, 0.1]
 ma = [1.0,  0.3, 0.1]
-nobs = 100
+nobs = 1000
 y22 = arma_generate_sample(ar, ma, nobs, 0.2)
 y22 -= y22.mean()
 start_params = [0.1, 0.1, 0.1, 0.1]
