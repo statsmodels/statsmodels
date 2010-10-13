@@ -159,7 +159,7 @@ class DiscreteModel(LikelihoodModel):
         if not linear:
             return self.cdf(np.dot(exog, self._results.params))
         else:
-            return np.dot(exog, self.results.params)
+            return np.dot(exog, self._results.params)
 
 
 class Poisson(DiscreteModel):
