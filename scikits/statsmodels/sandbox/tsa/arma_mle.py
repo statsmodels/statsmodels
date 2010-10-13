@@ -10,12 +10,12 @@ TODO: check everywhere initialization of signal.lfilter
 
 import numpy as np
 from scipy import signal, optimize
-from scikits.statsmodels.model import LikelihoodModel
+from scikits.statsmodels.model import LikelihoodModel, GenericLikelihoodModel
 
 
 #copied from sandbox/regression/mle.py
 #rename until merge of classes is complete
-class Arma(LikelihoodModel):
+class Arma(GenericLikelihoodModel):  #switch to generic mle
     """
     univariate Autoregressive Moving Average model
 
@@ -73,6 +73,37 @@ class Arma(LikelihoodModel):
                           + np.sum((errorsest**2)/sigma2, axis)
                           +  nobs*np.log(2*np.pi))
         return llike
+
+    #add for Jacobian calculation  bsejac in GenericMLE, copied from loglike
+    def nloglikeobs(self, params):
+        """
+        Loglikelihood for arma model
+
+        Notes
+        -----
+        The ancillary parameter is assumed to be the last element of
+        the params vector
+        """
+
+#        #copied from sandbox.tsa.arima.ARIMA
+#        p = self.nar
+#        rhoy = np.concatenate(([1], params[:p]))
+#        rhoe = np.concatenate(([1], params[p:-1]))
+#        errorsest = signal.lfilter(rhoy, rhoe, self.endog)
+        errorsest = self.geterrors(params)
+        sigma2 = np.maximum(params[-1]**2, 1e-6)
+        axis = 0
+        nobs = len(errorsest)
+        #this doesn't help for exploding paths
+        #errorsest[np.isnan(errorsest)] = 100
+#        llike  =  -0.5 * (np.sum(np.log(sigma2),axis)
+#                          + np.sum((errorsest**2)/sigma2, axis)
+#                          +  nobs*np.log(2*np.pi))
+        llike  =  0.5 * (np.log(sigma2)
+                          + (errorsest**2)/sigma2
+                          +  np.log(2*np.pi))
+        return llike
+
 
     def score(self, params):
         """
@@ -175,7 +206,7 @@ class Arma(LikelihoodModel):
 
 
     #renamed and needs check with other fit
-    def fit_mle(self, start_params=None, maxiter=5000, method='fmin', tol=1e-08):
+    def fit_mle(self, start_params=None, maxiter=5000, method='nm', tol=1e-08):
         if start_params is None:
             start_params = np.concatenate((0.05*np.ones(self.nar + self.nma), [1]))
         mlefit = super(Arma, self).fit(start_params=start_params,

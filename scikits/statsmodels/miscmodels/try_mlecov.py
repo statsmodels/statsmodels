@@ -40,6 +40,8 @@ def mvn_loglike(x, sigma):
     no checking of correct inputs
     use of inv and log-det should be replace with something more efficient
     '''
+    #see numpy thread
+    #Sturla: sqmahal = (cx*cho_solve(cho_factor(S),cx.T).T).sum(axis=1)
     sigmainv = linalg.inv(sigma)
     logdetsigma = np.log(np.linalg.det(sigma))
     nobs = len(x)
