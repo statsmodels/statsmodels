@@ -335,7 +335,7 @@ class ARMA(LikelihoodModel):
     exog : array-like, optional
         An optional arry of exogenous variables.
     """
-    def __init__(self, endog, exog=None):#, constant=True, order=(0,0)):
+    def __init__(self, endog, exog=None):
         #TODO: make this a trend argument like the rest
 #        if exog is None and constant:
 #            exog = np.ones((len(endog),1))
@@ -920,9 +920,9 @@ if __name__ == "__main__":
 # Examples from Durbin and Koopman
     import zipfile
     try:
-        dk = zipfile.ZipFile('./DK-data.zip')
+        dk = zipfile.ZipFile('/home/skipper/statsmodels/DK-data.zip')
     except:
-        raise IOError("Install DK-data.zip from http://www.ssfpack.com/DKbook.html")
+        raise IOError("Install DK-data.zip from http://www.ssfpack.com/DKbook.html or specify its correct local path.")
     nile = dk.open('Nile.dat').readlines()
     nile = [float(_.strip()) for _ in nile[1:]]
     nile = np.asarray(nile)
@@ -976,9 +976,8 @@ if __name__ == "__main__":
     # params = .75, .25 ARMA(1,1)
     for i in range(1,len(y)):
         y[i] = .75 * y[i-1] + errors[i] + .25*errors[i-1]
-    arma = ARMA(y, constant=False, order=(1,1))
-#    arma.fit(start_params = [.75, .25])
-#    arma.fit()
+    arma = ARMA(y)
+    arma.fit(trend='nc', order=(1,1))
 
     y_arma22 = np.zeros(10000)
     errors = np.random.randn(10000)
@@ -986,8 +985,8 @@ if __name__ == "__main__":
     for i in range(2,10000):
         y_arma22[i] = .85 * y_arma22[i-1] - .35*y_arma22[i-2] + errors[i] + .25 * errors[i-1]\
                 - .9 * errors[i-2]
-    arma22 = ARMA(y_arma22, constant=False, order=(2,2))
-    arma22.fit()
+    arma22 = ARMA(y_arma22)
+    arma22.fit(trend = 'nc', order=(2,2))
 
 # Stata gets [.7515029, .2266321, .9981944] with BFGS, but it's practically
 # there on the first iteration...how?
@@ -1004,8 +1003,8 @@ if __name__ == "__main__":
 
     import scikits.statsmodels as sm
     data = sm.datasets.sunspots.load()
-    ar = ARMA(data.endog, constant=False, order=(9,0))
-    ar.fit()
+    ar = ARMA(data.endog)
+    ar.fit(trend='nc', order=(9,0))
 
 
 # References
