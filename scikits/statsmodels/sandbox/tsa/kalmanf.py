@@ -969,30 +969,15 @@ if __name__ == "__main__":
     Q = np.eye(s-1) * sigma2_omega
 
     # simulate arma process
-    np.random.seed(12345)
-    y = np.zeros(10000)
-    errors = np.random.randn(10000)
-    y[0] = np.random.randn()
-    # params = .75, .25 ARMA(1,1)
-    for i in range(1,len(y)):
-        y[i] = .75 * y[i-1] + errors[i] + .25*errors[i-1]
+    from scikits.statsmodels.sandbox.tsa.arima import arma_generate_sample
+    y = arma_generate_sample([1., -.75],[1.,.25], nsample=1000)
     arma = ARMA(y)
     arma.fit(trend='nc', order=(1,1))
 
-    y_arma22 = np.zeros(10000)
-    errors = np.random.randn(10000)
-    y_arma22[:2] = np.random.randn(2)
-    for i in range(2,10000):
-        y_arma22[i] = .85 * y_arma22[i-1] - .35*y_arma22[i-2] + errors[i] + .25 * errors[i-1]\
-                - .9 * errors[i-2]
+    y_arma22 = arma_generate_sample([1.,-.85,.35],[1,.25,-.9], nsample=1000)
     arma22 = ARMA(y_arma22)
     arma22.fit(trend = 'nc', order=(2,2))
 
-# Stata gets [.7515029, .2266321, .9981944] with BFGS, but it's practically
-# there on the first iteration...how?
-#NOTE: CSS or method mentioned above for ARMA
-# with loglikelihood of -14171.91
-# our loglike gives -14171.92, so the problem is in the optimizer
 
 #    y_ar = np.zeros(10000)
 #    y_ar[0] = np.random.randn()
