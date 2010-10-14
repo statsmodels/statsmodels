@@ -104,25 +104,25 @@ class Arma(GenericLikelihoodModel):  #switch to generic mle
                           +  np.log(2*np.pi))
         return llike
 
+#use generic instead
+#    def score(self, params):
+#        """
+#        Score vector for Arma model
+#        """
+#        #return None
+#        #print params
+#        jac = ndt.Jacobian(self.loglike, stepMax=1e-4)
+#        return jac(params)[-1]
 
-    def score(self, params):
-        """
-        Score vector for Arma model
-        """
-        #return None
-        #print params
-        jac = ndt.Jacobian(self.loglike, stepMax=1e-4)
-        return jac(params)[-1]
 
-
-
-    def hessian(self, params):
-        """
-        Hessian of arma model.  Currently uses numdifftools
-        """
-        #return None
-        Hfun = ndt.Jacobian(self.score, stepMax=1e-4)
-        return Hfun(params)[-1]
+#use generic instead
+#    def hessian(self, params):
+#        """
+#        Hessian of arma model.  Currently uses numdifftools
+#        """
+#        #return None
+#        Hfun = ndt.Jacobian(self.score, stepMax=1e-4)
+#        return Hfun(params)[-1]
 
     #copied from arima.ARIMA, needs splitting out of method specific code
     def fit(self, order=(0,0,0), method="ls", rhoy0=None, rhoe0=None):
