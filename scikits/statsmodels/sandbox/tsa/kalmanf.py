@@ -631,7 +631,7 @@ class ARMA(LikelihoodModel):
         if k > 0:
 #            exparams = params[:k]
             y -= dot(self.exog, newparams[:k])
-        arcoefs = newparams[k:k+p][::-1]    # in reverse order so we can broadcast
+        arcoefs = newparams[k:k+p][::-1]    # reverse order for broadcast
         macoefs = newparams[k+p:k+p+q][::-1]
         errors = [0] * q
         # create error vector iteratively
@@ -643,9 +643,9 @@ class ARMA(LikelihoodModel):
         llf = -(nobs-p)/2.*(log(2*pi) + log(sigma2)) - np.sum(ssr)/(2*sigma2)
         return llf
 
-    def fit(self, order, start_params=None, trend='c', transparams=True,
-            solver=None, maxiter=35, full_output=1, disp=1, callback=None,
-            **kwargs):
+    def fit(self, order, start_params=None, trend='c', method = "css-mle",
+            transparams=True, solver=None, maxiter=35, full_output=1,
+            disp=1, callback=None, **kwargs):
         """
         Fits ARMA(p,q) model using exact maximum likelihood via Kalman filter.
 
@@ -658,6 +658,7 @@ class ARMA(LikelihoodModel):
             Whehter or not to transform the parameters to ensure stationarity.
             Uses the transformation suggested in Jones (1980).  If False,
             no checking for stationarity or invertibility is done.
+        method : str {'css-mle','mle','css'}
         trend : str {'c','nc'}
             Whehter to include a constant or not.  'c' includes constant,
             'nc' no constant.
@@ -723,19 +724,33 @@ class ARMA(LikelihoodModel):
         Z = np.zeros((self.nobs, r))
         Z[:,0] = 1.
         self.Z = Z
-        loglike = lambda params: -self.loglike(params)
-
+        if method.lower() in ['mle','css-mle']:
+            loglike = lambda params: -self.loglike(params)
+        if method.lower() == 'css':
+            loglike = lambda params: -self.loglike_css(params)
         if start_params is not None:
             start_params = np.asarray(start_params)
         else:
-            start_params = self._fit_start_params((p,q,k))
+            if method.lower() != 'css-mle':
+                start_params = self._fit_start_params((p,q,k))
+            else:
+                func = lambda params: -self.loglike_css(params)
+                #start_params = [.1]*(p+q+k) # different one for k?
+                start_params = self._fit_start_params((p,q,k))
+                if transparams:
+                    start_params = self._invtransparams(start_params)
+                bounds = [(None,)*2]*(p+q+k)
+                mlefit = optimize.fmin_l_bfgs_b(func, start_params,
+                            approx_grad=True, m=30, pgtol=1e-7, factr=1e3,
+                            bounds = bounds, iprint=-1)
+                start_params = self._transparams(mlefit[0])
         if transparams:
             start_params = self._invtransparams(start_params)
         if solver is None:
             bounds = [(None,)*2]*(p+q+k)
             mlefit = optimize.fmin_l_bfgs_b(loglike, start_params,
                     approx_grad=True, m=30, pgtol=1e-7, factr=1e3,
-                    bounds=bounds, iprint=1)
+                    bounds=bounds, iprint=3)
             self.mlefit = mlefit
             params = mlefit[0]
         else:
@@ -977,6 +992,11 @@ if __name__ == "__main__":
     y_arma22 = arma_generate_sample([1.,-.85,.35],[1,.25,-.9], nsample=1000)
     arma22 = ARMA(y_arma22)
     arma22.fit(trend = 'nc', order=(2,2))
+
+# test CSS
+
+    arma22_css = ARMA(y_arma22)
+    arma22_css.fit(trend='nc', order=(2,2), method='css')
 
 
 #    y_ar = np.zeros(10000)
