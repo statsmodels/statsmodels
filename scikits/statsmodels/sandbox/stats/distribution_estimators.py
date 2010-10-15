@@ -434,6 +434,9 @@ if __name__ == '__main__':
     #Example: gamma - distribution
     #-----------------------------
 
+    print '\n\nExample: gamma Distribution'
+    print     '---------------------------'
+
     alpha = 2
     xq = [0.5, 4]
     pq = [0.1, 0.9]
@@ -461,8 +464,20 @@ if __name__ == '__main__':
 
     #Warning: this example had cut-and-paste errors
 
+    print '\n\nExample: beta Distribution'
+    print     '--------------------------'
+
+    #monkey patching :
+##    if hasattr(stats.beta, '_fitstart'):
+##        del stats.beta._fitstart  #bug in _fitstart  #raises AttributeError: _fitstart
+    #stats.distributions.beta_gen._fitstart = lambda self, data : np.array([1,1,0,1])
+    #_fitstart seems to require a tuple
+    stats.distributions.beta_gen._fitstart = lambda self, data : (5,5,0,1)
+
     pq = np.array([0.01, 0.05,0.1,0.4,0.6,0.9,0.95,0.99])
-    rvsb = stats.beta.rvs(5,15,size=200)
+    #rvsb = stats.beta.rvs(0.5,0.15,size=200)
+    rvsb = stats.beta.rvs(10,15,size=2000)
+    print 'true params', 10, 15, 0, 1
     print stats.beta.fit(rvsb)
     xqsb = [stats.scoreatpercentile(rvsb, p) for p in pq*100]
     mom2s = np.array([rvsb.mean(), rvsb.var()])
@@ -473,6 +488,9 @@ if __name__ == '__main__':
 
     #Example t - distribution
     #------------------------
+
+    print '\n\nExample: t Distribution'
+    print     '-----------------------'
 
     nobs = 1000
     distfn = stats.t
@@ -587,6 +605,9 @@ if __name__ == '__main__':
     #tough problem for MLE according to JKB
     #but not sure for which parameters
 
+    print '\n\nExample: Lognormal Distribution'
+    print     '-------------------------------'
+
     sh = np.exp(10)
     sh = 0.01
     print sh
@@ -611,7 +632,12 @@ if __name__ == '__main__':
 
     # current results:
     # doesn't look very good yet sensitivity to starting values
-    # Pareto and Generalized Pareto look like a tough estimation problem
+    # Pareto and Generalized Pareto look like a tough estimation problemprint '\n\nExample: Lognormal Distribution'
+
+    print '\n\nExample: Lomax, Pareto, Generalized Pareto Distributions'
+    print     '--------------------------------------------------------'
+
+
 
     #p2rvs = np.random.pareto(2,size=500)# + 1
     p2rvs = stats.genpareto.rvs(2, size=500)
