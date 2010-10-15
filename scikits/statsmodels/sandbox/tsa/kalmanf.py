@@ -757,6 +757,8 @@ class ARMA(LikelihoodModel):
             mlefit = super(ARMA, self).fit(start_params, method=solver,
                         maxiter=maxiter, full_output=full_output, disp=disp,
                         callback = callback, **kwargs)
+            self.mlefit = mlefit
+            params = mlefit.params
         if transparams:
             params = self._transparams(params)
         self.params = params
