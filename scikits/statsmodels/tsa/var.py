@@ -16,7 +16,6 @@ from scikits.statsmodels.regression import yule_walker
 from scikits.statsmodels import GLS, OLS
 from scikits.statsmodels.tools import chain_dot
 from scikits.statsmodels.tsa.tsatools import lagmat, add_trend
-from scikits.statsmodels.tsa.stattools import _autolag
 from scikits.statsmodels.model import LikelihoodModelResults, LikelihoodModel
 from scikits.statsmodels.decorators import *
 from scikits.statsmodels.compatibility import np_slogdet
@@ -880,7 +879,7 @@ class VAR2(LikelihoodModel):
             The highest lag order for lag length selection according to `ic`.
             The default is 12 * (nobs/100.)**(1./4).  If ic=None, maxlag
             is the number of lags that are fit for each equation.
-        ic : str {"aic","bic","hq", "fpe"} or None, optional
+        ic : str {"aic","bic","hqic", "fpe"} or None, optional
             Information criteria to maximize for lag length selection.
             Not yet implemented for VAR.
         trend, str {"c", "ct", "ctt", "nc"}
