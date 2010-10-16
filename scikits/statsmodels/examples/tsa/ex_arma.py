@@ -1,6 +1,7 @@
 '''
 
 doesn't seem to work so well anymore even with nobs=1000 ???
+works ok if noise variance is large
 '''
 
 import numpy as np
@@ -15,10 +16,10 @@ from scikits.statsmodels.sandbox.tsa.kalmanf import ARMA as ARMA_kf
 
 
 print "\nExample 1"
-ar = [1.0,  -0.1, 0.1]
+ar = [1.0,  -0.6, 0.1]
 ma = [1.0,  0.5, 0.3]
 nobs = 1000
-y22 = arma_generate_sample(ar, ma, nobs+1000, 0.2)[-nobs:]
+y22 = arma_generate_sample(ar, ma, nobs+1000, 0.5)[-nobs:]
 y22 -= y22.mean()
 start_params = [0.1, 0.1, 0.1, 0.1]
 start_params_lhs = [-0.1, -0.1, 0.1, 0.1]
@@ -58,6 +59,9 @@ start_params_mle = np.r_[-res_ols.params[:2],
                           #areste.var()]
                           np.sqrt(res_ols.scale)]
 #need to iterate, ar1 too large ma terms too small
+#fix large parameters, if hannan_rissannen are too large
+start_params_mle[:-1] = (np.sign(start_params_mle[:-1])
+                         * np.minimum(np.abs(start_params_mle[:-1]),0.75))
 
 
 print 'conditional least-squares'
