@@ -940,19 +940,21 @@ arguments.'
             return self.normalized_cov_params * scale
 
 #TODO: make sure this works as needed for GLMs
-    def t_test(self, r_matrix, scale=None):
+    def t_test(self, r_matrix, q_matrix=None, scale=None):
         """
-        Compute a tcontrast/t-test for a row vector array.
+        Compute a tcontrast/t-test for a row vector array of the form Rb = q
+
+        where R is r_matrix, b = the parameter vector, and q is q_matrix.
 
         Parameters
         ----------
         r_matrix : array-like
             A length p row vector specifying the linear restrictions.
+        q_matrix : array-like or scalar, optional
+            Either a scalar or a length p row vector.
         scale : float, optional
             An optional `scale` to use.  Default is the scale specified
             by the model fit.
-
-        scale : scalar
 
         Examples
         --------
@@ -987,25 +989,32 @@ arguments.'
         f_test : for f tests
 
         """
-        r_matrix = np.squeeze(np.asarray(r_matrix))
+        r_matrix = np.atleast_2d(np.asarray(r_matrix))
+        num_ttests = r_matrix.shape[0]
+        num_params = r_matrix.shape[1]
 
         if self.normalized_cov_params is None:
             raise ValueError, 'Need covariance of parameters for computing \
 T statistics'
-        if r_matrix.ndim == 1:
-            if r_matrix.shape[0] != self.params.shape[0]:
-                raise ValueError, 'r_matrix and params are not aligned'
-        elif r_matrix.ndim >1:
-            if r_matrix.shape[1] != self.params.shape[0]:
-                raise ValueError, 'r_matrix and params are not aligned'
+        if num_params != self.params.shape[0]:
+            raise ValueError, 'r_matrix and params are not aligned'
+        if q_matrix is None:
+            q_matrix = np.zeros(num_ttests)
+        else:
+            q_matrix = np.asarray(q_matrix)
+        if q_matrix.size > 1:
+            if q_matrix.shape[0] != num_ttests:
+                raise ValueError("r_matrix and q_matrix must have the same \
+number of rows")
 
         _t = _sd = None
 
         _effect = np.dot(r_matrix, self.params)
-        _sd = np.sqrt(self.cov_params(r_matrix=r_matrix))
-        if _sd.ndim > 1:
-            _sd = np.diag(_sd)
-        _t = _effect * recipr(_sd)
+        if num_ttests > 1:
+            _sd = np.sqrt(np.diag(self.cov_params(r_matrix=r_matrix)))
+        else:
+            _sd = np.sqrt(self.cov_params(r_matrix=r_matrix))
+        _t = (_effect-qmatrix) * recipr(_sd)
         return ContrastResults(effect=_effect, t=_t, sd=_sd,
                 df_denom=self.model.df_resid)
 

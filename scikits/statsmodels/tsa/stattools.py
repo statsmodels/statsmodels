@@ -17,70 +17,6 @@ class ResultsStore(object):
     def __str__(self):
         return self._str
 
-def add_trend(X, trend="c", prepend=False):
-    """
-    Adds a trend and/or constant to an array.
-
-    Parameters
-    ----------
-    X : array-like
-        Original array of data.
-    trend : str {"c","ct","ctt"}
-        "c" add constant only
-        "t" add trend only
-        "ct" add constant and linear trend
-        "ctt" add constant and linear and quadratic trend.
-    prepend : bool
-        If True, prepends the new data to the columns of X.
-
-    Notes
-    -----
-    Returns columns as ["ctt","ct","c"] whenever applicable.  There is currently
-    no checking for an existing constant or trend.
-
-    See also
-    --------
-    scikits.statsmodels.add_constant
-    """
-    #TODO: could be generalized for trend of aribitrary order
-    trend = trend.lower()
-    if trend == "c":    # handles structured arrays
-        return add_constant(X, prepend=prepend)
-    elif trend == "ct" or trend == "t":
-        trendorder = 1
-    elif trend == "ctt":
-        trendorder = 2
-    else:
-        raise ValueError("trend %s not understood" % trend)
-    X = np.asanyarray(X)
-    nobs = len(X)
-    trendarr = np.vander(np.arange(1,nobs+1, dtype=float), trendorder+1)
-    if trend == "t":
-        trendarr = trendarr[:,0]
-    if not X.dtype.names:
-        if not prepend:
-            X = np.column_stack((X, trendarr))
-        else:
-            X = np.column_stack((trendarr, X))
-    else:
-        return_rec = data.__clas__ is np.recarray
-        if trendorder == 1:
-            if trend == "ct":
-                dt = [('trend',float),('const',float)]
-            else:
-                dt = [('trend', float)]
-        elif trendorder == 2:
-            dt = [('trend_squared', float),('trend',float),('const',float)]
-        trendarr = trendarr.view(dt)
-        if prepend:
-            X = nprf.append_fields(trendarr, X.dtype.names, [X[i] for i
-                in data.dtype.names], usemask=False, asrecarray=return_rec)
-        else:
-            X = nprf.append_fields(X, trendarr.dtype.names, [trendarr[i] for i
-                in trendarr.dtype.names], usemask=false, asrecarray=return_rec)
-    return X
-
-
 def _autolag(mod, endog, exog, lagstart, maxlag, method, modargs=(),
         fitargs=()):
     """
@@ -259,7 +195,7 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
         maxlag = 12. * np.power(nobs/100., 1/4.)
 
     xdiff = np.diff(x)
-    xdall = lagmat(xdiff[:,None], maxlag, trim='both')
+    xdall = lagmat(xdiff[:,None], maxlag, trim='both', original='in')
     nobs = xdall.shape[0]
 
     xdall[:,0] = x[-nobs-1:-1] # replace 0 xdiff with level of x
@@ -282,7 +218,7 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
                 maxlag, autolag)
 
         #rerun ols with best autolag
-        xdall = lagmat(xdiff[:,None], bestlag, trim='both')
+        xdall = lagmat(xdiff[:,None], bestlag, trim='both', original='in')
         nobs = xdall.shape[0]
 #        trend = np.vander(np.arange(nobs), trendorder+1)
         xdall[:,0] = x[-nobs-1:-1] # replace 0 xdiff with level of x
@@ -522,9 +458,7 @@ def pacf_ols(x, nlags=40):
     #NOTE: demeaning and not using a constant gave incorrect answers?
     #JP: demeaning should have a better estimate of the constant
     #maybe we can compare small sample properties with a MonteCarlo
-    xlags = lagmat(x, nlags)
-    x0 = xlags[:,0]
-    xlags = xlags[:,1:]
+    xlags, x0 = lagmat(x, nlags, original='sep')
     #xlags = sm.add_constant(lagmat(x, nlags), prepend=True)
     xlags = add_constant(xlags, prepend=True)
     pacf = [1.]

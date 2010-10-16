@@ -15,8 +15,8 @@ from scipy.stats import norm, ss as sumofsq
 from scikits.statsmodels.regression import yule_walker
 from scikits.statsmodels import GLS, OLS
 from scikits.statsmodels.tools import chain_dot
-from scikits.statsmodels.tsa.tsatools import lagmat
-from scikits.statsmodels.tsa.stattools import add_trend, _autolag
+from scikits.statsmodels.tsa.tsatools import lagmat, add_trend
+from scikits.statsmodels.tsa.stattools import _autolag
 from scikits.statsmodels.model import LikelihoodModelResults, LikelihoodModel
 from scikits.statsmodels.decorators import *
 from scikits.statsmodels.compatibility import np_slogdet
@@ -24,6 +24,8 @@ try:
     from numdifftools import Jacobian, Hessian
 except:
     raise Warning("You need to install numdifftools to try out the AR model")
+from scikits.statsmodels.sandbox.regression.numdiff import approx_fprime
+from scikits.statsmodels.sandbox.regression.numdiff import approx_hess
 
 
 __all__ = ['AR', 'VAR2']
@@ -58,11 +60,6 @@ def irf(params, shock, omega, nperiods=100, ortho=True):
 
 #TODO: stopped here
 
-
-#TODO: maxlike isn't working very well for higher lag orders.
-#TODO: move this
-#NOTE: writing this now to be used with ADF test so that
-# _autolag can be generalized to VAR.
 class AR(LikelihoodModel):
     def __init__(self, endog, exog=None):
         """
@@ -221,7 +218,7 @@ class AR(LikelihoodModel):
                 alpha = dot(T_mat, alpha) + dot(K,v_mat)
                 L = T_mat - dot(K,Z_mat)
                 P = dot(dot(T_mat, P), L.T) + dot(R_mat, R_mat.T)
-    #            P[0,0] += 1 # for MA part, which is faster?
+#                P[0,0] += 1 # for MA part, R_mat.R_mat.T above
                 predictedvalues[i+1-start] = dot(Z_mat,alpha)
         if start < p and (n > p - start or n == -1):
             if n == -1:
@@ -301,12 +298,12 @@ class AR(LikelihoodModel):
                             # mixed tmp/actual
                             predictedvalues[i] = np.sum(np.r_[[1]*k,
                                 predictedvalues[:i][::-1],
-                                atleast_1d(tmp[-p+i:][::-1].squeeze())] * params)
+                                atleast_1d(tmp[-p+i:][::-1].squeeze())] * \
+                                    params)
                 for i in range(p,n):
                     predictedvalues[i] = np.sum(np.r_[[1]*k,
                         predictedvalues[i-p:i][::-1]] * params)
         return predictedvalues
-
 
     def loglike(self, params):
         """
@@ -336,9 +333,7 @@ class AR(LikelihoodModel):
             # broyden (all optimize.nonlin return a tuple until rewrite commit)
             params = np.asarray(params)
 
-
 # reparameterize according to Jones (1980) like in ARMA/Kalman Filter
-        self.transparams = True #TODO: move to options after debugging
         if self.transparams:
             params = self._transparams(params) # will this overwrite?
 
@@ -399,29 +394,21 @@ class AR(LikelihoodModel):
 
     def score(self, params):
         """
+        Return the gradient of the loglikelihood at params.
+
+        Parameters
+        ----------
+        params : array-like
+            The parameter values at which to evaluate the score function.
+
         Notes
         -----
-        Need to generalize for AR(p) and for a constant.
-        Not correct yet.  Returns numerical gradient.  Depends on package
-        numdifftools.
+        Returns numerical gradient.
         """
-        y = self.Y
-        ylag = self.X
-        nobs = self.nobs
-#        diffsumsq = sumofsq(y-np.dot(ylag,params))
-#        dsdr = 1/nobs * -2 *np.sum(ylag*(y-np.dot(ylag,params))[:,None])+\
-#                2*params*ylag[0]**2
-#        sigma2 = 1/nobs*(diffsumsq-ylag[0]**2*(1-params**2))
-#        gradient = -nobs/(2*sigma2)*dsdr + params/(1-params**2) + \
-#                1/sigma2*np.sum(ylag*(y-np.dot(ylag, params))[:,None])+\
-#                .5*sigma2**-2*diffsumsq*dsdr+\
-#                ylag[0]**2*params/sigma2 +\
-#                ylag[0]**2*(1-params**2)/(2*sigma2**2)*dsdr
-        if self.penalty:
-            pass
-        j = Jacobian(self.loglike)
-        return np.squeeze(j(params))
-#        return gradient
+        loglike = self.loglike
+#NOTE: always calculate at out of bounds params for estimation
+#TODO: allow for user-specified epsilon?
+        return approx_fprime(params, loglike, epsilon=1e-8)
 
 
     def information(self, params):
@@ -432,10 +419,16 @@ class AR(LikelihoodModel):
 
     def hessian(self, params):
         """
-        Returns numerical hessian for now.  Depends on numdifftools.
+        Returns numerical hessian for now.
         """
-        h = Hessian(self.loglike)
-        return h(params)
+#numdifftools code
+#        h = Hessian(self.loglike)
+#        return h(params)
+        loglike = self.loglike
+#        if self.transparams:
+#            params = self._invtransparams(params)
+#see score
+        return approx_hess(params, loglike)[0]
 
     def _stackX(self, laglen, trend):
         """
@@ -445,7 +438,7 @@ class AR(LikelihoodModel):
         """
         endog = self.endog
         exog = self.exog
-        X = lagmat(endog, maxlag=laglen, trim='both')[:,1:]
+        X = lagmat(endog, maxlag=laglen, trim='both')
         if exog is not None:
             X = np.column_stack((exog[laglen:,:], X))
         # Handle trend terms
@@ -462,48 +455,86 @@ class AR(LikelihoodModel):
         self.trendorder = trendorder
         return X
 
-#TODO: get rid of demean option
     def fit(self, maxlag=None, method='cmle', ic=None, trend='c',
-            start_params=None, solver=None, maxiter=35,
+            transparams=True, start_params=None, solver=None, maxiter=35,
             full_output=1, disp=1, callback=None, **kwargs):
         """
         Fit the unconditional maximum likelihood of an AR(p) process.
 
         Parameters
         ----------
-        start_params : array-like, optional
-            A first guess on the parameters.  Used for method == 'mle'.
-            Default is cmle estimates.
-        method : str {'cmle', 'yw'. 'mle'}, optional
+        maxlag : int
+            If `ic` is None, then maxlag is the lag length used in fit.  If
+            `ic` is specified then maxlag is the highest lag order used to
+            select the correct lag order.  If maxlag is None, the default is
+            round(12*(nobs/100.)**(1/4.))
+        method : str {'cmle', 'mle'}, optional
             cmle - Conditional maximum likelihood using OLS
-            yw - Yule-Walker
-            mle - unconditional (exact) maximum likelihood
+            mle - Unconditional (exact) maximum likelihood.  See `solver`
+            and the Notes.
+        ic : str {'aic','bic','hic','t-stat'}
+            Criterion used for selecting the optimal lag length.
+            aic - Akaike Information Criterion
+            bic - Bayes Information Criterion
+            t-stat - Based on last lag
+            hq - Hannan-Quinn Information Criterion
+            If any of the information criteria are selected, the lag length
+            which results in the lowest value is selected.  If t-stat, the
+            model starts with maxlag and drops a lag until the highest lag
+            has a t-stat that is significant at the 95 % level.
+        trend : str {'c','nc'}
+            Whether to include a constant or not. 'c' - include constant.
+            'nc' - no constant.
+
+        The below can be specified if method is 'mle'
+
+        transparams : bool, optional
+            Whether or not to transform the parameters to ensure stationarity.
+            Uses the transformation suggested in Jones (1980).
+        start_params : array-like, optional
+            A first guess on the parameters.  Default is cmle estimates.
         solver : str or None, optional
-            Unconstrained solvers:
-                Default is 'bfgs', 'newton' (newton-raphson), 'ncg'
-                (Note that previous 3 are not recommended at the moment.)
-                and 'powell'
-            Constrained solvers:
-                'bfgs-b', 'tnc'
-            See notes.
+            Solver to be used.  The default is 'l_bfgs' (limited memory Broyden-
+            Fletcher-Goldfarb-Shanno).  Other choices are 'bfgs', 'newton'
+            (Newton-Raphson), 'nm' (Nelder-Mead), 'cg' - (conjugate gradient),
+            'ncg' (non-conjugate gradient), and 'powell'.
+            The limited memory BFGS uses m=30 to approximate the Hessian,
+            projected gradient tolerance of 1e-7 and factr = 1e3.  These
+            cannot currently be changed for l_bfgs.  See notes for more
+            information.
         maxiter : int, optional
             The maximum number of function evaluations. Default is 35.
-        tol = float
+        tol : float
             The convergence tolerance.  Default is 1e-08.
+        full_output : bool, optional
+            If True, all output from solver will be available in
+            the Results object's mle_retvals attribute.  Output is dependent
+            on the solver.  See Notes for more information.
+        disp : bool, optional
+            If True, convergence information is output.
+        callback : function, optional
+            Called after each iteration as callback(xk) where xk is the current
+            parameter vector.
+        kwargs
+            See Notes for keyword arguments that can be passed to fit.
 
-        Notes
-        -----
-        The AR parameters are forced to be invertible using the
-        reparameterization suggested in Jones (1980).
+        References
+        ----------
+        Jones, R.H. 1980 "Maximum likelihood fitting of ARMA models to time
+            series with missing observations."  `Technometrics`.  22.3.
+            389-95.
 
         See also
         --------
         scikits.statsmodels.model.LikelihoodModel.fit for more information
         on using the solvers.
 
+        Notes
+        ------
         The below is the docstring from
         scikits.statsmodels.LikelihoodModel.fit
         """
+        self.transparams = transparams
         method = method.lower()
         if method not in ['cmle','yw','mle']:
             raise ValueError("Method %s not recognized" % method)
@@ -521,35 +552,45 @@ class AR(LikelihoodModel):
             ic = ic.lower()
             if ic not in ['aic','bic','hqic','t-stat']:
                 raise ValueError("ic option %s not understood" % ic)
-#            icbest, bestlag = _autolag(AR, endog, None, 1, maxlag, ic)
             # make Y and X with same nobs to compare ICs
             Y = endog[maxlag:]
             self.Y = Y  # attach to get correct fit stats
             X = self._stackX(maxlag, trend)
             self.X = X
-            startlag = self.trendorder # trendorder set in the above call
+            startlag = self.trendorder # trendorder set in _stackX
             if exog is not None:
                 startlag += exog.shape[1] # add dim happens in super?
+            startlag = max(1,startlag) # handle if startlag is 0
             results = {}
             if ic != 't-stat':
                 for lag in range(startlag,maxlag+1):
                     # have to reinstantiate the model to keep comparable models
                     endog_tmp = endog[maxlag-lag:]
-                    fit = AR(endog_tmp).fit(maxlag=lag, demean=demean)
+                    fit = AR(endog_tmp).fit(maxlag=lag, method=method,
+                            full_output=full_output, trend=trend,
+                            maxiter=maxiter, disp=disp)
                     results[lag] = eval('fit.'+ic)
                 bestic, bestlag = min((res, k) for k,res in results.iteritems())
-            else: #TODO: t-stat not implemented?
-                pass
+            else: # choose by last t-stat.
+                stop = 1.6448536269514722 # for t-stat, norm.ppf(.95)
+                for lag in range(maxlag,startlag-1,-1):
+                    # have to reinstantiate the model to keep comparable models
+                    endog_tmp = endog[maxlag-lag:]
+                    fit = AR(endog_tmp).fit(maxlag=lag, method=method,
+                            full_output=full_output, trend=trend,
+                            maxiter=maxiter, disp=disp)
+                    if np.abs(fit.t(-1)) >= stop:
+                        bestlag = lag
+                        break
             laglen = bestlag
 
         # change to what was chosen by fit method
         self.laglen = laglen
         avobs = nobs - laglen
         self.avobs = avobs
-                                                    # Model code
 
         # redo estimation for best lag
-        # LHS
+        # make LHS
         Y = endog[laglen:,:]
         # make lagged RHS
         X = self._stackX(laglen, trend) # sets self.trendorder
@@ -560,73 +601,38 @@ class AR(LikelihoodModel):
                                                 # with Model code
         if solver:
             solver = solver.lower()
-#TODO: allow user-specified penalty function
-#        if penalty and method not in ['bfgs_b','tnc','cobyla','slsqp']:
-#            minfunc = lambda params : -self.loglike(params) - \
-#                    self.penfunc(params)
-#        else:
         if method == "cmle":     # do OLS
             arfit = OLS(Y,X).fit()
             params = arfit.params
-#            omega = None
-#            self.params = params
         if method == "mle":
-#            if not solver: # make default?
-#                solver = 'newton'
             if not start_params:
                 start_params = OLS(Y,X).fit().params
-# replace constant
-                if self.trendorder==1:
-                    start_params[0] = start_params[0]/(1-\
-                            start_params[1:].sum())
                 start_params = self._invtransparams(start_params)
-
-#            if solver in ['newton', 'bfgs', 'ncg']:
-#                return super(AR, self).fit(start_params=start_params, method=solver,
-#                    maxiter=maxiter, full_output=full_output, disp=disp,
-#                    callback=callback, **kwargs)
-#                return retvals
             loglike = lambda params : -self.loglike(params)
-            bounds = [(None,)*2]*(laglen+trendorder)
-            retvals = optimize.fmin_l_bfgs_b(loglike, start_params,
+            if solver == None:  # use limited memory bfgs
+                bounds = [(None,)*2]*(laglen+trendorder)
+                mlefit = optimize.fmin_l_bfgs_b(loglike, start_params,
                     approx_grad=True, m=30, pgtol = 1e-7, factr=1e3,
                     bounds=bounds, iprint=1)
-            self.retvals = retvals
-            params = retvals[0]
-            params = self._transparams(params)
-#NOTE: constant vs. mean issue
-#            if self.trendorder == 1:
-#                params[0] = params[0]/(1-np.sum(params[1:]))
-#        elif method == "umle":
-#TODO: move this stuff up to LikelihoodModel.fit
-#            minfunc = lambda params: -self.loglike(params)
-#            bounds = [(-.999,.999)]   # assume stationarity
-#            if start_params == None:
-#                start_params = np.array([0]) # assumes AR(1)
-#            if method == 'bfgs-b':
-#                retval = optimize.fmin_l_bfgs_b(minfunc, start_params,
-#                        approx_grad=True, bounds=bounds)
-#                self.params, self.llf = retval[0:2]
-#            if method == 'tnc':
-#                retval = optimize.fmin_tnc(minfunc, start_params,
-#                        approx_grad=True, bounds = bounds)
-#                self.params = retval[0]
-#            if method == 'powell':
-#                retval = optimize.fmin_powell(minfunc,start_params)
-#                self.params = retval[None]
+                self.mlefit = mlefit
+                params = mlefit[0]
+            else:
+                mlefit = super(AR, self).fit(start_params=start_params,
+                            method=solver, maxiter=maxiter,
+                            full_output=full_output, disp=disp,
+                            callback = callback, **kwargs)
+                self.mlefit = mlefit
+                params = mlefit.params
+            if self.transparams:
+                params = self._transparams(params)
 
-#TODO: write regression tests for Pauli's branch so that
-# new line_search and optimize.nonlin can get put in.
-# http://projects.scipy.org/scipy/ticket/791
-#            if method == 'broyden':
-#                retval = optimize.broyden2(minfunc, [.5], verbose=True)
-#                self.results = retvar
-        elif method == "yw":
-            params, omega = yule_walker(endog, order=maxlag,
-                    method="mle", demean=False)
+# don't use yw, because we can't estimate the constant
+#        elif method == "yw":
+#            params, omega = yule_walker(endog, order=maxlag,
+#                    method="mle", demean=False)
             # how to handle inference after Yule-Walker?
-            self.params = params
-            self.omega = omega
+#            self.params = params #TODO: don't attach here
+#            self.omega = omega
         pinv_exog = np.linalg.pinv(X)
         normalized_cov_params = np.dot(pinv_exog, pinv_exog.T)
         arfit = ARResults(self, params, normalized_cov_params)
@@ -783,9 +789,6 @@ class ARIMA(LikelihoodModel):
             # assume no constant, ie mu = 0
             # unless overwritten then use w_bar for mu
             Y = np.diff(endog, d, axis=0) #TODO: handle lags?
-
-
-
 
 # Refactor of VAR to be like statsmodels
 #inherit GLS, SUR?
@@ -1829,15 +1832,14 @@ if __name__ == "__main__":
 # Why does R demean the data by defaut?
     ar_ols = AR(sunspots.endog)
     res_ols = ar_ols.fit(maxlag=9)
-#    ar_mle = AR(sunspots.endog)
-#    res_mle = ar_mle.fit(maxlag=1, method="mle", solver="bfgs", maxiter=500,
-#            gtol=1e-10, penalty=True)
+    ar_mle = AR(sunspots.endog)
+    res_mle_bfgs = ar_mle.fit(maxlag=9, method="mle", solver="bfgs",
+                    maxiter=500, gtol=1e-10)
 #    res_mle2 = ar_mle.fit(maxlag=1, method="mle", maxiter=500, penalty=True,
 #            tol=1e-13)
-#    ar_umle = AR(sunspots.endog)
-#    ar_umle.fit(maxlag=4, method="umle")
-    ar_yw = AR(sunspots.endog)
-    res_yw = ar_yw.fit(maxlag=4, method="yw")
+
+#    ar_yw = AR(sunspots.endog)
+#    res_yw = ar_yw.fit(maxlag=4, method="yw")
 
 #    # Timings versus talkbox
 #    from timeit import default_timer as timer

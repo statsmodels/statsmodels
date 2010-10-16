@@ -74,6 +74,31 @@ class TestAROLSNoConstant(TestAR, CheckAR):
         self.res1 = AR(self.data.endog).fit(maxlag=9,method='cmle',trend='nc')
         self.res2 = results_ar.ARResultsOLS(constant=False)
 
+    def test_predict(self):
+        model = self.res1.model
+        assert_almost_equal(model.predict(),self.res2.FVOLSnneg1start0,
+                DECIMAL_4)
+        assert_almost_equal(model.predict(),self.res2.FVOLSnneg1start9,
+                DECIMAL_4)
+        assert_almost_equal(model.predict(n=-1,start=100),
+                self.res2.FVOLSnneg1start100, DECIMAL_4)
+        assert_almost_equal(model.predict(n=200,start=0),
+                self.res2.FVOLSn200start0, DECIMAL_4)
+        assert_almost_equal(model.predict(n=200,start=200),
+                self.res2.FVOLSn200start200, DECIMAL_4)
+        assert_almost_equal(model.predict(n=200,start=-109),
+                self.res2.FVOLSn200startneg109, DECIMAL_4)
+        assert_almost_equal(model.predict(n=100,start=325),
+                self.res2.FVOLSn100start325, DECIMAL_4)
+        assert_almost_equal(model.predict(n=301,start=9),
+                self.res2.FVOLSn301start9, DECIMAL_4)
+        assert_almost_equal(model.predict(n=301,start=0),
+                self.res2.FVOLSn301start0, DECIMAL_4)
+        assert_almost_equal(model.predict(n=4,start=312),
+                self.res2.FVOLSn4start312, DECIMAL_4)
+        assert_almost_equal(model.predict(n=15,start=312),
+                self.res2.FVOLSn15start312, DECIMAL_4)
+
 #class TestARMLEConstant(TestAR, CheckAR):
 #    def setup(self):
 #        self.res1 = AR(self.data.endog).fit(maxlag=9,method="mle")
