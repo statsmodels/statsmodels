@@ -6,7 +6,7 @@ import numpy as np
 from scipy import stats, signal
 from scikits.statsmodels.regression import OLS, yule_walker
 from scikits.statsmodels.tools import add_constant
-from scikits.statsmodels.tsa.tsatools import lagmat, lagmat2ds
+from scikits.statsmodels.tsa.tsatools import lagmat, lagmat2ds, add_trend
 #from scikits.statsmodels.sandbox.tsa import var
 from adfvalues import *
 #from scikits.statsmodels.sandbox.rls import RLS
@@ -17,7 +17,7 @@ class ResultsStore(object):
     def __str__(self):
         return self._str
 
-def _autolag(mod, endog, exog, lagstart, maxlag, method, modargs=(),
+def _autolag(mod, endog, exog, startlag, maxlag, method, modargs=(),
         fitargs=()):
     """
     Returns the results for the lag length that maximimizes the info criterion.
@@ -34,11 +34,10 @@ def _autolag(mod, endog, exog, lagstart, maxlag, method, modargs=(),
         The first zero-indexed column to hold a lag.  See Notes.
     maxlag : int
         The highest lag order for lag length selection.
-    method : str {"aic","bic","t-stat","hic"}
+    method : str {"aic","bic","t-stat"}
         aic - Akaike Information Criterion
         bic - Bayes Information Criterion
         t-stat - Based on last lag
-        hq - Hannan-Quinn
 
     Returns
     -------
@@ -61,12 +60,10 @@ def _autolag(mod, endog, exog, lagstart, maxlag, method, modargs=(),
 
     results = {}
     method = method.lower()
-    mod_instance = mod(endog, exog, *modargs)
-# do we want this to be general like the above?
-    for lag in range(int(lagstart),int(maxlag+1)):
-#        results[lag] = mod(endog, exog[:,:lag], *modargs).fit(*fitargs)
-        results[lag] = mod_instance.fit(*fitargs, **{maxlag:lag})
-#        results[lag] = mod(endog, exog, *modargs).fit(*fitargs, maxlag=lag)
+    for lag in range(startlag,maxlag+1):
+        mod_instance = mod(endog, exog[:,:lag], *modargs)
+        results[lag] = mod_instance.fit()
+
     if method == "aic":
         icbest, bestlag = max((v.aic,k) for k,v in results.iteritems())
     elif method == "bic":
@@ -75,16 +72,15 @@ def _autolag(mod, endog, exog, lagstart, maxlag, method, modargs=(),
         lags = sorted(results.keys())[::-1]
 #        stop = stats.norm.ppf(.95)
         stop = 1.6448536269514722
-        i = 0
-        icbest, bestlag = results[lags[i]].t(-1), lags[i]
-        i += 1
-        while not (abs(icbest) >= stop):
-            lastt, bestlag = results[lags[i]].t(-1), lags[i]
-            i += 1
-    elif method == "hq":
-        icbest, bestlag = max((v.hqic,k) for k,v in results.iteritems())
-    elif method == "fpe":
-        icbest, bestlag = max((v.fpe,k) for k,v in results.iteritems())
+        for lag in range(maxlag,startlag-1,-1):
+            print lag
+            print results[lag].t()
+            icbest = np.abs(results[lag].t(-1))
+            print icbest
+            if np.abs(icbest) >= stop:
+                bestlag = lag
+                icbest = icbest
+                break
     else:
         raise ValueError("Information Criterion %s not understood.") % method
     return icbest, bestlag
@@ -179,20 +175,9 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
     x = np.asarray(x)
     nobs = x.shape[0]
 
-    if regression == 'c':
-        trendorder = 0
-    elif regression == 'nc':
-        trendorder = -1
-    elif regression == 'ct':
-        trendorder = 1
-    elif regression == 'ctt':
-        trendorder = 2
-    # only make the trend once with biggest nobs
-    trend = np.vander(np.arange(nobs), trendorder+1)
-
     if maxlag is None:
         #from Greene referencing Schwert 1989
-        maxlag = 12. * np.power(nobs/100., 1/4.)
+        maxlag = int(round(12. * np.power(nobs/100., 1/4.)))
 
     xdiff = np.diff(x)
     xdall = lagmat(xdiff[:,None], maxlag, trim='both', original='in')
@@ -200,36 +185,33 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
 
     xdall[:,0] = x[-nobs-1:-1] # replace 0 xdiff with level of x
     xdshort = xdiff[-nobs:]
-#    xdshort = x[-nobs:]
-#TODO: allow for 2nd xdshort as endog, with Phillips Perron or DF test?
 
     if store:
         resstore = ResultsStore()
     if autolag:
-#        if trendorder is not -1:
-#            fullRHS = np.column_stack((trend[:nobs],xdall))
-#        else:
-#            fullRHS = xdall
-#        lagstart = trendorder + 1
+        if regression != 'nc':
+            fullRHS = add_trend(xdall, regression, prepend=True)
+        else:
+            fullRHS = xdall
+        startlag = fullRHS.shape[1] - xdall.shape[1] + 1 # 1 for level
 
         #search for lag length with highest information criteria
         #Note: use the same number of observations to have comparable IC
-        icbest, bestlag = _autolag(AR, xdshort, fullRHS, lagstart,
+        icbest, bestlag = _autolag(OLS, xdshort, fullRHS, startlag,
                 maxlag, autolag)
 
         #rerun ols with best autolag
         xdall = lagmat(xdiff[:,None], bestlag, trim='both', original='in')
         nobs = xdall.shape[0]
-#        trend = np.vander(np.arange(nobs), trendorder+1)
         xdall[:,0] = x[-nobs-1:-1] # replace 0 xdiff with level of x
         xdshort = xdiff[-nobs:]
         usedlag = bestlag
     else:
         usedlag = maxlag
-
-    resols = OLS(xdshort, np.column_stack([xdall[:,:usedlag+1],
-        trend[:nobs]])).fit()
-    #NOTE: should be usedlag+1 since the first column is the level?
+    if regression != 'nc':
+        resols = OLS(xdshort, add_trend(xdall[:,:usedlag+1], regression)).fit()
+    else:
+        resols = OLS(xdshort, xdall[:,:usedlag+1]).fit()
     adfstat = resols.t(0)
 #    adfstat = (resols.params[0]-1.0)/resols.bse[0]
     # the "asymptotically correct" z statistic is obtained as

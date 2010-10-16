@@ -11,7 +11,7 @@ who generate a smooth fit of a set of (x,y) pairs.
 import numpy as np
 import numpy.linalg as L
 import kernel
-import numbers
+#import numbers
 #from scipy.linalg import solveh_banded
 #from scipy.optimize import golden
 

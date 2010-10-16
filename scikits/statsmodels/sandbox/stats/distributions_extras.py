@@ -24,6 +24,27 @@ main changes
 * added separate example and tests (2010-05-09)
 * collect transformation function into classes
 
+Example
+-------
+
+>>> logtg = Transf_gen(stats.t, np.exp, np.log,
+                numargs = 1, a=0, name = 'lnnorm',
+                longname = 'Exp transformed normal',
+                extradoc = '\ndistribution of y = exp(x), with x standard normal'
+                'precision for moment andstats is not very high, 2-3 decimals')
+>>> logtg.cdf(5, 6)
+0.92067704211191848
+>>> stats.t.cdf(np.log(5), 6)
+0.92067704211191848
+
+>>> logtg.pdf(5, 6)
+0.021798547904239293
+>>> stats.t.pdf(np.log(5), 6)
+0.10899273954837908
+>>> stats.t.pdf(np.log(5), 6)/5.  #derivative
+0.021798547909675815
+
+
 Author: josef-pktd
 License: BSD
 
@@ -627,7 +648,7 @@ class ExpTransf_gen(distributions.rv_continuous):
             self.numargs = kwargs['numargs']
         else:
             self.numargs = 1
-        if 'numargs' in kwargs:
+        if 'name' in kwargs:
             name = kwargs['name']
         else:
             name = 'Log transformed distribution'
