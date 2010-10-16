@@ -1014,7 +1014,7 @@ number of rows")
             _sd = np.sqrt(np.diag(self.cov_params(r_matrix=r_matrix)))
         else:
             _sd = np.sqrt(self.cov_params(r_matrix=r_matrix))
-        _t = (_effect-qmatrix) * recipr(_sd)
+        _t = (_effect-q_matrix) * recipr(_sd)
         return ContrastResults(effect=_effect, t=_t, sd=_sd,
                 df_denom=self.model.df_resid)
 
