@@ -57,6 +57,7 @@ import numpy as np
 from scipy import signal, optimize
 from scikits.statsmodels.model import LikelihoodModel
 
+#this has been copied to new arma_mle.py - keep temporarily for easier lookup
 class ARIMA(LikelihoodModel):
     '''currently ARMA only, no differencing used - no I
 
@@ -493,32 +494,6 @@ def deconvolve(num, den, n=None):
 
 
 
-def mcarma22(niter=10):
-    '''run Monte Carlo for ARMA(2,2)
-
-    DGP parameters currently hard coded
-    also sample size `nsample`
-
-    was not a self contained function, used instances from outer scope
-      now corrected
-
-    '''
-    nsample = 1000
-    #ar = [1.0, 0, 0]
-    ar = [1.0, -0.75, -0.1]
-    #ma = [1.0, 0, 0]
-    ma = [1.0,  0.3,  0.2]
-    results = []
-    results_bse = []
-    for _ in range(niter):
-        y2 = arma_generate_sample(ar,ma,nsample,0.1)
-        arest2 = ARIMA(y2)
-        rhohat2a, cov_x2a, infodict, mesg, ier = arest2.fit((2,0,2))
-        results.append(rhohat2a)
-        err2a = arest2.errfn(x=y2)
-        sige2a = np.sqrt(np.dot(err2a,err2a)/nsample)
-        results_bse.append(sige2a * np.sqrt(np.diag(cov_x2a)))
-    return np.r_[ar[1:], ma[1:]], np.array(results), np.array(results_bse)
 
 
 __all__ = ['ARIMA', 'arma_acf', 'arma_acovf', 'arma_generate_sample',
@@ -658,38 +633,6 @@ if __name__ == '__main__':
     import scikits.statsmodels as sm
     print sm.regression.yule_walker(y4, order=2, method='mle', inv=True)
 
-    def mc_summary(res, rt=None):
-        if rt is None:
-            rt = np.zeros(res.shape[1])
-        print 'RMSE'
-        print np.sqrt(((res-rt)**2).mean(0))
-        print 'mean bias'
-        print (res-rt).mean(0)
-        print 'median bias'
-        print np.median((res-rt),0)
-        print 'median bias percent'
-        print np.median((res-rt)/rt*100,0)
-        print 'median absolute error'
-        print np.median(np.abs(res-rt),0)
-        print 'positive error fraction'
-        print (res > rt).mean(0)
-
-    run_mc = True#False
-    if run_mc:
-        import time
-        t0 = time.time()
-        rt, res_rho, res_bse = mcarma22(niter=1000)
-        print 'elapsed time for Monte Carlo', time.time()-t0
-        # 20 seconds for ARMA(2,2), 1000 iterations with 1000 observations
-        sige2a = np.sqrt(np.dot(err2a,err2a)/nsample)
-        print '\nbse of one sample'
-        print sige2a * np.sqrt(np.diag(cov_x2a))
-        print '\nMC of rho versus true'
-        mc_summary(res_rho, rt)
-        print '\nMC of bse versus zero'
-        mc_summary(res_bse)
-        print '\nMC of bse versus std'
-        mc_summary(res_bse, res_rho.std(0))
 
     import matplotlib.pyplot as plt
     plt.plot(arest2.forecast()[-100:])
