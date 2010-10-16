@@ -142,19 +142,24 @@ def lagmat(x, maxlag, trim='forward', original='ex'):
     else:
         trimlower = trim
     if trimlower == 'none' or not trimlower:
-        lm = lm[:,dropidx:]
+        startobs = 0
+        stopobs = len(lm)
     elif trimlower == 'forward':
-        lm = lm[:nobs+maxlag-k,dropidx:]
+        startobs = 0
+        stopobs = nobs+maxlag-k
     elif trimlower == 'both':
-        lm = lm[maxlag:nobs+maxlag-k,dropidx:]
+        startobs = maxlag
+        stopobs = nobs+maxlag-k
     elif trimlower == 'backward':
-        lm = lm[maxlag:,dropidx:]
+        startobs = maxlag
+        stopobs = len(lm)
+
     else:
         raise ValueError, 'trim option not valid'
     if original == 'sep':
-        return lm, x[maxlag:]
+        return lm[startobs:stopobs,dropidx:], x[startobs:stopobs]
     else:
-        return lm
+        return lm[startobs:stopobs,dropidx:]
 
 def lagmat2ds(x, maxlag0, maxlagex=None, dropex=0, trim='forward'):
     '''generate lagmatrix for 2d array, columns arranged by variables
