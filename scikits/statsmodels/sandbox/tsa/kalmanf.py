@@ -30,7 +30,8 @@ import numpy as np
 from numpy import dot, identity, kron, log, zeros, pi, exp
 from numpy.linalg import inv, pinv
 from scikits.statsmodels import chain_dot, add_constant #Note that chain_dot is a bit slower
-from scikits.statsmodels.model import LikelihoodModel, LikelihoodModelResults
+from scikits.statsmodels.model import (LikelihoodModel, LikelihoodModelResults,
+    GenericLikelihoodModel)
 from scikits.statsmodels.regression import yule_walker, GLS
 from scipy.linalg import block_diag
 from scikits.statsmodels.tsa.tsatools import lagmat
@@ -324,7 +325,7 @@ def updatematrices(params, y, xi10, ntrain, penalty, upperbound, lowerbound):
     return loglike
 
 #class ARMA(StateSpaceModel):
-class ARMA(LikelihoodModel):
+class ARMA(GenericLikelihoodModel):
     """
     ARMA model using the exact Kalman Filter
 
@@ -937,7 +938,7 @@ if __name__ == "__main__":
 # Examples from Durbin and Koopman
     import zipfile
     try:
-        dk = zipfile.ZipFile('/home/skipper/statsmodels/DK-data.zip')
+        dk = zipfile.ZipFile('/home/skipper/statsmodels/statsmodels-skipper/scikits/statsmodels/sandbox/tsa/DK-data.zip')
     except:
         raise IOError("Install DK-data.zip from http://www.ssfpack.com/DKbook.html or specify its correct local path.")
     nile = dk.open('Nile.dat').readlines()
@@ -986,7 +987,7 @@ if __name__ == "__main__":
     Q = np.eye(s-1) * sigma2_omega
 
     # simulate arma process
-    from scikits.statsmodels.sandbox.tsa.arima import arma_generate_sample
+    from scikits.statsmodels.tsa.arima_process import arma_generate_sample
     y = arma_generate_sample([1., -.75],[1.,.25], nsample=1000)
     arma = ARMA(y)
     arma.fit(trend='nc', order=(1,1))
