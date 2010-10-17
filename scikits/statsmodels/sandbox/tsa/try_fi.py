@@ -9,139 +9,19 @@ from numpy.testing import assert_array_almost_equal
 from scipy.special import gamma, gammaln
 from scipy import signal, optimize
 
-from scikits.statsmodels.sandbox import tsa
+#from scikits.statsmodels.sandbox import tsa
+from scikits.statsmodels.tsa.arima_process import arma_impulse_response
 
-
-def lpol_fima(d, n=20):
-    '''MA representation of fractional integration
-
-    .. math:: (1-L)^{-d} for |d|<0.5  or |d|<1 (?)
-
-    Parameters
-    ----------
-    d : float
-        fractional power
-    n : int
-        number of terms to calculate, including lag zero
-
-    Returns
-    -------
-    ma : array
-        coefficients of lag polynomial
-
-    '''
-    j = np.arange(n)
-    return np.exp(gammaln(d+j) - gammaln(j+1) - gammaln(d))
-
-def lpol_fiar(d, n=20):
-    '''AR representation of fractional integration
-
-    .. math:: (1-L)^{d} for |d|<0.5  or |d|<1 (?)
-
-    Parameters
-    ----------
-    d : float
-        fractional power
-    n : int
-        number of terms to calculate, including lag zero
-
-    Returns
-    -------
-    ar : array
-        coefficients of lag polynomial
-
-    Notes:
-    first coefficient is 1, negative signs except for first term,
-    ar(L)*x_t
-    '''
-    j = np.arange(n)
-    ar = - np.exp(gammaln(-d+j) - gammaln(j+1) - gammaln(-d))
-    ar[0] = 1
-    return ar
-
-def lpol_sdiff(s):
-    '''return coefficients for seasonal difference (1-L^s)
-
-    just a trivial convenience function
-
-    Parameters
-    ----------
-    s : int
-        number of periods in season
-
-    Returns
-    -------
-    sdiff : list, length s+1
-
-    '''
-    return [1] + [0]*(s-1) + [-1]
-
-
-def ar2arma(ar_des, p, q, n=20, mse='ar', start=None):
-    '''find arma approximation to ar process
-
-    This finds the ARMA(p,q) coefficients that minimize the integrated
-    squared difference between the impulse_response functions
-    (MA representation) of the AR and the ARMA process. This does
-    currently not check whether the MA lagpolynomial of the ARMA
-    process is invertible, neither does it check the roots of the AR
-    lagpolynomial.
-
-    Parameters
-    ----------
-    ar_des : array_like
-        coefficients of original AR lag polynomial, including lag zero
-    p, q : int
-        length of desired ARMA lag polynomials
-    n : int
-        number of terms of the impuls_response function to include in the
-        objective function for the approximation
-    mse : string, 'ar'
-        not used yet,
-
-    Returns
-    -------
-    ar_app, ma_app : arrays
-        coefficients of the AR and MA lag polynomials of the approximation
-    res : tuple
-        result of optimize.leastsq
-
-    Notes
-    -----
-    Extension is possible if we want to match autocovariance instead
-    of impulse response function.
-
-    TODO: convert MA lag polynomial, ma_app, to be invertible, by mirroring
-    roots outside the unit intervall to ones that are inside. How do we do
-    this?
-
-    '''
-    #p,q = pq
-    def msear_err(arma, ar_des):
-        ar, ma = np.r_[1, arma[:p-1]], np.r_[1, arma[p-1:]]
-        ar_approx = tsa.arma_impulse_response(ma, ar,  n)
-##        print ar,ma
-##        print ar_des.shape, ar_approx.shape
-##        print ar_des
-##        print ar_approx
-        return (ar_des - ar_approx) #((ar - ar_approx)**2).sum()
-    if start is None:
-        arma0 = np.r_[-0.9* np.ones(p-1), np.zeros(q-1)]
-    else:
-        arma0 = start
-    res = optimize.leastsq(msear_err, arma0, ar_des, maxfev=5000)#, full_output=True)
-    #print res
-    arma_app = np.atleast_1d(res[0])
-    ar_app = np.r_[1, arma_app[:p-1]],
-    ma_app = np.r_[1, arma_app[p-1:]]
-    return ar_app, ma_app, res
-
-
+#--------------------
+# functions have been moved to arima_process
+from scikits.statsmodels.tsa.arima_process import (lpol_fiar, lpol_fima, lpol_sdiff,
+                                                   ar2arma)
+#-----------------------------------
 
 def test_fi():
     #test identity of ma and ar representation of fi lag polynomial
     n = 100
-    mafromar = tsa.arma_impulse_response(lpol_fiar(0.4, n=n), [1], n)
+    mafromar = arma_impulse_response(lpol_fiar(0.4, n=n), [1], n)
     assert_array_almost_equal(mafromar, lpol_fima(0.4, n=n), 13)
 
 
@@ -178,7 +58,7 @@ if __name__ == '__main__':
     ma_true = [1, 0.5]
 
 
-    ar_desired = tsa.arma_impulse_response(ma_true, ar_true)
+    ar_desired = arma_impulse_response(ma_true, ar_true)
     ar_app, ma_app, res = ar2arma(ar_desired, 2,1, n=100, mse='ar', start = [0.1])
     print ar_app, ma_app
     ar_app, ma_app, res = ar2arma(ar_desired, 2,2, n=100, mse='ar', start = [-0.1, 0.1])

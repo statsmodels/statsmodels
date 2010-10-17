@@ -398,6 +398,69 @@ def arma2ar(ar, ma, nobs=100):
     '''
     return arma_impulse_response(ma, ar, nobs=100)
 
+
+#moved from sandbox.tsa.try_fi
+def ar2arma(ar_des, p, q, n=20, mse='ar', start=None):
+    '''find arma approximation to ar process
+
+    This finds the ARMA(p,q) coefficients that minimize the integrated
+    squared difference between the impulse_response functions
+    (MA representation) of the AR and the ARMA process. This does
+    currently not check whether the MA lagpolynomial of the ARMA
+    process is invertible, neither does it check the roots of the AR
+    lagpolynomial.
+
+    Parameters
+    ----------
+    ar_des : array_like
+        coefficients of original AR lag polynomial, including lag zero
+    p, q : int
+        length of desired ARMA lag polynomials
+    n : int
+        number of terms of the impuls_response function to include in the
+        objective function for the approximation
+    mse : string, 'ar'
+        not used yet,
+
+    Returns
+    -------
+    ar_app, ma_app : arrays
+        coefficients of the AR and MA lag polynomials of the approximation
+    res : tuple
+        result of optimize.leastsq
+
+    Notes
+    -----
+    Extension is possible if we want to match autocovariance instead
+    of impulse response function.
+
+    TODO: convert MA lag polynomial, ma_app, to be invertible, by mirroring
+    roots outside the unit intervall to ones that are inside. How do we do
+    this?
+
+    '''
+    #p,q = pq
+    def msear_err(arma, ar_des):
+        ar, ma = np.r_[1, arma[:p-1]], np.r_[1, arma[p-1:]]
+        ar_approx = arma_impulse_response(ma, ar,  n)
+##        print ar,ma
+##        print ar_des.shape, ar_approx.shape
+##        print ar_des
+##        print ar_approx
+        return (ar_des - ar_approx) #((ar - ar_approx)**2).sum()
+    if start is None:
+        arma0 = np.r_[-0.9* np.ones(p-1), np.zeros(q-1)]
+    else:
+        arma0 = start
+    res = optimize.leastsq(msear_err, arma0, ar_des, maxfev=5000)#, full_output=True)
+    #print res
+    arma_app = np.atleast_1d(res[0])
+    ar_app = np.r_[1, arma_app[:p-1]],
+    ma_app = np.r_[1, arma_app[p-1:]]
+    return ar_app, ma_app, res
+
+
+
 def lpol2index(ar):
     '''remove zeros from lagpolynomial, squeezed representation with index
 
@@ -440,6 +503,78 @@ def index2lpol(coeffs, index):
     ar = np.zeros(n)
     ar[index] = coeffs
     return ar
+
+#moved from sandbox.tsa.try_fi
+def lpol_fima(d, n=20):
+    '''MA representation of fractional integration
+
+    .. math:: (1-L)^{-d} for |d|<0.5  or |d|<1 (?)
+
+    Parameters
+    ----------
+    d : float
+        fractional power
+    n : int
+        number of terms to calculate, including lag zero
+
+    Returns
+    -------
+    ma : array
+        coefficients of lag polynomial
+
+    '''
+    #hide import inside function until we use this heavily
+    from scipy.special import gamma, gammaln
+    j = np.arange(n)
+    return np.exp(gammaln(d+j) - gammaln(j+1) - gammaln(d))
+
+#moved from sandbox.tsa.try_fi
+def lpol_fiar(d, n=20):
+    '''AR representation of fractional integration
+
+    .. math:: (1-L)^{d} for |d|<0.5  or |d|<1 (?)
+
+    Parameters
+    ----------
+    d : float
+        fractional power
+    n : int
+        number of terms to calculate, including lag zero
+
+    Returns
+    -------
+    ar : array
+        coefficients of lag polynomial
+
+    Notes:
+    first coefficient is 1, negative signs except for first term,
+    ar(L)*x_t
+    '''
+    #hide import inside function until we use this heavily
+    from scipy.special import gamma, gammaln
+    j = np.arange(n)
+    ar = - np.exp(gammaln(-d+j) - gammaln(j+1) - gammaln(-d))
+    ar[0] = 1
+    return ar
+
+#moved from sandbox.tsa.try_fi
+def lpol_sdiff(s):
+    '''return coefficients for seasonal difference (1-L^s)
+
+    just a trivial convenience function
+
+    Parameters
+    ----------
+    s : int
+        number of periods in season
+
+    Returns
+    -------
+    sdiff : list, length s+1
+
+    '''
+    return [1] + [0]*(s-1) + [-1]
+
 
 
 def deconvolve(num, den, n=None):
@@ -502,7 +637,6 @@ __all__ = ['ARIMA', 'arma_acf', 'arma_acovf', 'arma_generate_sample',
 
 
 if __name__ == '__main__':
-    print mcarma22()
 
 
     # Simulate AR(1)
