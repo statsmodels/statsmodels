@@ -17,9 +17,14 @@ from scipy import signal, ndimage
 import matplotlib.mlab as mlb
 import matplotlib.pyplot as plt
 
-from scikits.statsmodels.sandbox import tsa
-import scikits.talkbox as stb
-import scikits.talkbox.spectral.basic as stbs
+from scikits.statsmodels.tsa.arima_process import arma_generate_sample
+from scikits.statsmodels.tsa.stattools import acovf
+hastalkbox = False
+try:
+    import scikits.talkbox as stb
+    import scikits.talkbox.spectral.basic as stbs
+except:
+    hastalkbox = False
 
 ar = [1., -0.7]#[1,0,0,0,0,0,0,-0.7]
 ma = [1., 0.3]
@@ -29,7 +34,7 @@ ar = np.convolve([1.]+[0]*50 +[-0.6], ar)
 n_startup = 1000
 # throwing away samples at beginning makes sample more "stationary"
 
-xo = tsa.arma_generate_sample(ar,ma,n_startup+200)
+xo = arma_generate_sample(ar,ma,n_startup+200)
 x = xo[n_startup:]
 
 def arma_periodogram(ar, ma, worn=None):
@@ -90,16 +95,17 @@ else:
     plt.plot(wm, sdm, '-', wm[maxind], sdm[maxind], 'o')
 plt.title('matplotlib')
 
-sdp, wp = stbs.periodogram(x)
-plt.subplot(2,3,3)
+if hastalkbox:
+    sdp, wp = stbs.periodogram(x)
+    plt.subplot(2,3,3)
 
-if rescale:
-    plt.plot(wp,sdp/sdp[0])
-else:
-    plt.plot(wp, sdp)
-plt.title('stbs.periodogram')
+    if rescale:
+        plt.plot(wp,sdp/sdp[0])
+    else:
+        plt.plot(wp, sdp)
+    plt.title('stbs.periodogram')
 
-xacov = tsa.acovf(x, unbiased=False)
+xacov = acovf(x, unbiased=False)
 plt.subplot(2,3,4)
 plt.plot(xacov)
 plt.title('autocovariance')
@@ -115,22 +121,15 @@ else:
 
 plt.title('fft')
 
-sdpa, wpa = stbs.arspec(x, 50)
-plt.subplot(2,3,6)
+if hastalkbox:
+    sdpa, wpa = stbs.arspec(x, 50)
+    plt.subplot(2,3,6)
 
-if rescale:
-    plt.plot(wpa,sdpa/sdpa[0])
-else:
-    plt.plot(wpa, sdpa)
-plt.title('stbs.arspec')
-
-
-
-
-
-
-
-
+    if rescale:
+        plt.plot(wpa,sdpa/sdpa[0])
+    else:
+        plt.plot(wpa, sdpa)
+    plt.title('stbs.arspec')
 
 
 plt.show()

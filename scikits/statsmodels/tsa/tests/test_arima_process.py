@@ -2,8 +2,10 @@
 import numpy as np
 from numpy.testing import assert_array_almost_equal
 
-from scikits.statsmodels.tsa.arima_process import arma_impulse_response
+from scikits.statsmodels.tsa.arima_process import (arma_impulse_response,
+                        lpol_fiar, lpol_fima)
 
+from results.results_process import armarep
 
 def test_fi():
     #test identity of ma and ar representation of fi lag polynomial
@@ -19,3 +21,6 @@ def test_arma_impulse_response():
     #difference in sign convention to matlab for AR term
     assert_array_almost_equal(-armarep.arrep.ravel(), arrep, 14)
 
+if __name__ == '__main__':
+    test_fi()
+    test_arma_impulse_response()

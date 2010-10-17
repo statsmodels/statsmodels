@@ -10,8 +10,8 @@ from numpy.testing import assert_array_almost_equal
 
 import matplotlib.mlab as mlab
 
-from scikits.statsmodels.sandbox.tsa.arima import arma_generate_sample, arma_impulse_response
-from scikits.statsmodels.sandbox.tsa.arima import arma_acovf, arma_acf, ARIMA
+from scikits.statsmodels.tsa.arima_process import arma_generate_sample, arma_impulse_response
+from scikits.statsmodels.tsa.arima_process import arma_acovf, arma_acf, ARIMA
 #from movstat import acf, acovf
 #from scikits.statsmodels.sandbox.tsa import acf, acovf, pacf
 from scikits.statsmodels.tsa.stattools import acf, acovf, pacf
