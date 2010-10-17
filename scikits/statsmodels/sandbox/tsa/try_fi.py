@@ -2,6 +2,11 @@
 '''
 using lfilter to get fractional integration polynomial (1-L)^d, d<1
 `ri` is (1-L)^(-d), d<1
+
+second part in here is ar2arma
+
+only examples left
+
 '''
 
 import numpy as np
@@ -59,19 +64,19 @@ if __name__ == '__main__':
 
 
     ar_desired = arma_impulse_response(ma_true, ar_true)
-    ar_app, ma_app, res = ar2arma(ar_desired, 2,1, n=100, mse='ar', start = [0.1])
+    ar_app, ma_app, res = ar2arma(ar_desired, 2,1, n=100, mse='ar', start=[0.1])
     print ar_app, ma_app
-    ar_app, ma_app, res = ar2arma(ar_desired, 2,2, n=100, mse='ar', start = [-0.1, 0.1])
+    ar_app, ma_app, res = ar2arma(ar_desired, 2,2, n=100, mse='ar', start=[-0.1, 0.1])
     print ar_app, ma_app
     ar_app, ma_app, res = ar2arma(ar_desired, 2,3, n=100, mse='ar')#, start = [-0.1, 0.1])
     print ar_app, ma_app
 
-    slow = 0
+    slow = 1
     if slow:
         ar_desired = lpol_fiar(0.4, n=100)
-        ar_app, ma_app, res = ar2arma(ar_desired, (3,1), n=100, mse='ar')#, start = [-0.1, 0.1])
+        ar_app, ma_app, res = ar2arma(ar_desired, 3, 1, n=100, mse='ar')#, start = [-0.1, 0.1])
         print ar_app, ma_app
-        ar_app, ma_app, res = ar2arma(ar_desired, (10,10), n=100, mse='ar')#, start = [-0.1, 0.1])
+        ar_app, ma_app, res = ar2arma(ar_desired, 10, 10, n=100, mse='ar')#, start = [-0.1, 0.1])
         print ar_app, ma_app
 
 
