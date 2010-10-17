@@ -5,7 +5,7 @@
 import numpy as np
 from numpy.testing import assert_array_almost_equal
 import scikits.statsmodels as sm
-from scikits.statsmodels.sandbox import tsa
+import scikits.statsmodels.tsa.stattools as tsa
 
 import savedrvs
 from datamlw_tls import mlacf, mlccf, mlpacf, mlywar

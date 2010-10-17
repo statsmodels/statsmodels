@@ -916,7 +916,8 @@ def generate_kindofgarch(nobs, ar, ma, mu=1.):
     #ma = [1.0,  0.5]
     #this has the wrong distribution, should be eps**2
     #TODO: use new version tsa.arima.??? instead, has distr option
-    arest = tsa.arima.ARIMA()
+    #arest = tsa.arima.ARIMA()
+    arest = tsa.arima.ARIMA  #try class method, ARIMA needs data in constructor
     h = arest.generate_sample(ar,ma,nobs,0.1)
     #h = np.abs(h)
     h = (mu+h)**2

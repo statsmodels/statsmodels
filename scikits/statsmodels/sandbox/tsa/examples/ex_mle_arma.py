@@ -20,12 +20,12 @@ from mle import Arma  # local import
 
 examples = ['arma']
 if 'arma' in examples:
-    arest = tsa.arima.ARIMA()
+
     print "\nExample 1"
     print '----------'
     ar = [1.0, -0.8]
     ma = [1.0,  0.5]
-    y1 = arest.generate_sample(ar,ma,1000,0.1)
+    y1 = tsa.arima.ARIMA.generate_sample(ar,ma,1000,0.1)
     y1 -= y1.mean() #no mean correction/constant in estimation so far
 
     arma1 = Arma(y1)
@@ -42,7 +42,8 @@ if 'arma' in examples:
     print res2.params
     print res2.model.hessian(res2.params)
     print ndt.Hessian(arma1.loglike, stepMax=1e-2)(res2.params)
-    resls = arest.fit(y1,1,1)
+    arest = tsa.arima.ARIMA(y1)
+    resls = arest.fit((1,0,1))
     print resls[0]
     print resls[1]
 

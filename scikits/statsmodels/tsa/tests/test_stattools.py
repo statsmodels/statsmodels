@@ -1,5 +1,5 @@
-from scikits.statsmodels.sandbox.tsa.stattools import (adfuller, acf, pacf_ols,
-        pacf_yw)
+from scikits.statsmodels.tsa.stattools import (adfuller, acf, pacf_ols, pacf_yw)
+
 from numpy.testing import assert_almost_equal
 from numpy import genfromtxt#, concatenate
 from scikits.statsmodels.datasets import macrodata

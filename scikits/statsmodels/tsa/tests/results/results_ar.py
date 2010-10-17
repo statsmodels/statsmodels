@@ -181,8 +181,8 @@ class ARResultsMLE(object):
             rmse = predictresults[:,1]
 
 
-    else:
-        pass
+        else:
+            pass
 
 
 

@@ -245,9 +245,9 @@ def arma_acovf(ar, ma, nobs=10):
     #increase length of impulse response for AR closer to 1
     #maybe cheap/fast enough to always keep nobs for ir large
     if np.abs(np.sum(ar)-1) > 0.9:
-        nobs_ir = 1000
+        nobs_ir = max(1000, 2* nobs)   #no idea right now how large it is needed
     else:
-        nobs_ir = 100
+        nobs_ir = max(100, 2* nobs)   #no idea right now
     ir = arma_impulse_response(ar, ma, nobs=nobs_ir)
     #better save than sorry (?), I have no idea about the required precision
     #only checked for AR(1)
@@ -256,7 +256,7 @@ def arma_acovf(ar, ma, nobs=10):
         ir = arma_impulse_response(ar, ma, nobs=nobs)
     #again no idea where the speed break points are:
     if nobs_ir > 50000 and nobs < 1001:
-        acovf = np.array([np.dot(ir[:nobs-t], ir[t:nobs]) for t in range(10)])
+        acovf = np.array([np.dot(ir[:nobs-t], ir[t:nobs]) for t in range(nobs)])
     else:
         acovf = np.correlate(ir,ir,'full')[len(ir)-1:]
     return acovf[:nobs]

@@ -6,6 +6,8 @@ Note: uncomment plt.show() to display graphs
 import numpy as np
 #from scipy import stats
 import scikits.statsmodels as sm
+import matplotlib
+#matplotlib.use('Qt4Agg')#, warn=True)   #for Spyder
 import matplotlib.pyplot as plt
 from scikits.statsmodels.sandbox.regression.predstd import wls_prediction_std
 
@@ -101,5 +103,5 @@ print res3.f_test(R)
 #<F test: F=1.9715385826285652, p=0.15083366806, df_denom=46, df_num=2>
 
 
-
+#plt.draw()
 #plt.show()

@@ -30,7 +30,8 @@ import numpy as np
 from numpy import dot, identity, kron, log, zeros, pi, exp
 from numpy.linalg import inv, pinv
 from scikits.statsmodels import chain_dot, add_constant #Note that chain_dot is a bit slower
-from scikits.statsmodels.model import LikelihoodModel, LikelihoodModelResults
+from scikits.statsmodels.model import (LikelihoodModel, LikelihoodModelResults,
+    GenericLikelihoodModel)
 from scikits.statsmodels.regression import yule_walker, GLS
 from scipy.linalg import block_diag
 from scikits.statsmodels.tsa.tsatools import lagmat
@@ -324,7 +325,7 @@ def updatematrices(params, y, xi10, ntrain, penalty, upperbound, lowerbound):
     return loglike
 
 #class ARMA(StateSpaceModel):
-class ARMA(LikelihoodModel):
+class ARMA(GenericLikelihoodModel):
     """
     ARMA model using the exact Kalman Filter
 
@@ -335,7 +336,7 @@ class ARMA(LikelihoodModel):
     exog : array-like, optional
         An optional arry of exogenous variables.
     """
-    def __init__(self, endog, exog=None):#, constant=True, order=(0,0)):
+    def __init__(self, endog, exog=None):
         #TODO: make this a trend argument like the rest
 #        if exog is None and constant:
 #            exog = np.ones((len(endog),1))
@@ -631,7 +632,7 @@ class ARMA(LikelihoodModel):
         if k > 0:
 #            exparams = params[:k]
             y -= dot(self.exog, newparams[:k])
-        arcoefs = newparams[k:k+p][::-1]    # in reverse order so we can broadcast
+        arcoefs = newparams[k:k+p][::-1]    # reverse order for broadcast
         macoefs = newparams[k+p:k+p+q][::-1]
         errors = [0] * q
         # create error vector iteratively
@@ -643,9 +644,9 @@ class ARMA(LikelihoodModel):
         llf = -(nobs-p)/2.*(log(2*pi) + log(sigma2)) - np.sum(ssr)/(2*sigma2)
         return llf
 
-    def fit(self, order, start_params=None, trend='c', transparams=True,
-            solver=None, maxiter=35, full_output=1, disp=1, callback=None,
-            **kwargs):
+    def fit(self, order, start_params=None, trend='c', method = "css-mle",
+            transparams=True, solver=None, maxiter=35, full_output=1,
+            disp=1, callback=None, **kwargs):
         """
         Fits ARMA(p,q) model using exact maximum likelihood via Kalman filter.
 
@@ -658,6 +659,7 @@ class ARMA(LikelihoodModel):
             Whehter or not to transform the parameters to ensure stationarity.
             Uses the transformation suggested in Jones (1980).  If False,
             no checking for stationarity or invertibility is done.
+        method : str {'css-mle','mle','css'}
         trend : str {'c','nc'}
             Whehter to include a constant or not.  'c' includes constant,
             'nc' no constant.
@@ -723,25 +725,41 @@ class ARMA(LikelihoodModel):
         Z = np.zeros((self.nobs, r))
         Z[:,0] = 1.
         self.Z = Z
-        loglike = lambda params: -self.loglike(params)
-
+        if method.lower() in ['mle','css-mle']:
+            loglike = lambda params: -self.loglike(params)
+        if method.lower() == 'css':
+            loglike = lambda params: -self.loglike_css(params)
         if start_params is not None:
             start_params = np.asarray(start_params)
         else:
-            start_params = self._fit_start_params((p,q,k))
+            if method.lower() != 'css-mle':
+                start_params = self._fit_start_params((p,q,k))
+            else:
+                func = lambda params: -self.loglike_css(params)
+                #start_params = [.1]*(p+q+k) # different one for k?
+                start_params = self._fit_start_params((p,q,k))
+                if transparams:
+                    start_params = self._invtransparams(start_params)
+                bounds = [(None,)*2]*(p+q+k)
+                mlefit = optimize.fmin_l_bfgs_b(func, start_params,
+                            approx_grad=True, m=30, pgtol=1e-7, factr=1e3,
+                            bounds = bounds, iprint=-1)
+                start_params = self._transparams(mlefit[0])
         if transparams:
             start_params = self._invtransparams(start_params)
         if solver is None:
             bounds = [(None,)*2]*(p+q+k)
             mlefit = optimize.fmin_l_bfgs_b(loglike, start_params,
                     approx_grad=True, m=30, pgtol=1e-7, factr=1e3,
-                    bounds=bounds, iprint=1)
+                    bounds=bounds, iprint=3)
             self.mlefit = mlefit
             params = mlefit[0]
         else:
             mlefit = super(ARMA, self).fit(start_params, method=solver,
                         maxiter=maxiter, full_output=full_output, disp=disp,
                         callback = callback, **kwargs)
+            self.mlefit = mlefit
+            params = mlefit.params
         if transparams:
             params = self._transparams(params)
         self.params = params
@@ -920,9 +938,9 @@ if __name__ == "__main__":
 # Examples from Durbin and Koopman
     import zipfile
     try:
-        dk = zipfile.ZipFile('./DK-data.zip')
+        dk = zipfile.ZipFile('/home/skipper/statsmodels/statsmodels-skipper/scikits/statsmodels/sandbox/tsa/DK-data.zip')
     except:
-        raise IOError("Install DK-data.zip from http://www.ssfpack.com/DKbook.html")
+        raise IOError("Install DK-data.zip from http://www.ssfpack.com/DKbook.html or specify its correct local path.")
     nile = dk.open('Nile.dat').readlines()
     nile = [float(_.strip()) for _ in nile[1:]]
     nile = np.asarray(nile)
@@ -969,31 +987,20 @@ if __name__ == "__main__":
     Q = np.eye(s-1) * sigma2_omega
 
     # simulate arma process
-    np.random.seed(12345)
-    y = np.zeros(10000)
-    errors = np.random.randn(10000)
-    y[0] = np.random.randn()
-    # params = .75, .25 ARMA(1,1)
-    for i in range(1,len(y)):
-        y[i] = .75 * y[i-1] + errors[i] + .25*errors[i-1]
-    arma = ARMA(y, constant=False, order=(1,1))
-#    arma.fit(start_params = [.75, .25])
-#    arma.fit()
+    from scikits.statsmodels.tsa.arima_process import arma_generate_sample
+    y = arma_generate_sample([1., -.75],[1.,.25], nsample=1000)
+    arma = ARMA(y)
+    arma.fit(trend='nc', order=(1,1))
 
-    y_arma22 = np.zeros(10000)
-    errors = np.random.randn(10000)
-    y_arma22[:2] = np.random.randn(2)
-    for i in range(2,10000):
-        y_arma22[i] = .85 * y_arma22[i-1] - .35*y_arma22[i-2] + errors[i] + .25 * errors[i-1]\
-                - .9 * errors[i-2]
-    arma22 = ARMA(y_arma22, constant=False, order=(2,2))
-    arma22.fit()
+    y_arma22 = arma_generate_sample([1.,-.85,.35],[1,.25,-.9], nsample=1000)
+    arma22 = ARMA(y_arma22)
+    arma22.fit(trend = 'nc', order=(2,2))
 
-# Stata gets [.7515029, .2266321, .9981944] with BFGS, but it's practically
-# there on the first iteration...how?
-#NOTE: CSS or method mentioned above for ARMA
-# with loglikelihood of -14171.91
-# our loglike gives -14171.92, so the problem is in the optimizer
+# test CSS
+
+    arma22_css = ARMA(y_arma22)
+    arma22_css.fit(trend='nc', order=(2,2), method='css')
+
 
 #    y_ar = np.zeros(10000)
 #    y_ar[0] = np.random.randn()
@@ -1004,8 +1011,8 @@ if __name__ == "__main__":
 
     import scikits.statsmodels as sm
     data = sm.datasets.sunspots.load()
-    ar = ARMA(data.endog, constant=False, order=(9,0))
-    ar.fit()
+    ar = ARMA(data.endog)
+    ar.fit(trend='nc', order=(9,0))
 
 
 # References
