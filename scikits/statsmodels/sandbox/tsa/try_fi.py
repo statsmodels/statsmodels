@@ -10,9 +10,9 @@ only examples left
 '''
 
 import numpy as np
-from numpy.testing import assert_array_almost_equal
+#from numpy.testing import assert_array_almost_equal
 from scipy.special import gamma, gammaln
-from scipy import signal, optimize
+from scipy import signal
 
 #from scikits.statsmodels.sandbox import tsa
 from scikits.statsmodels.tsa.arima_process import arma_impulse_response
@@ -22,12 +22,6 @@ from scikits.statsmodels.tsa.arima_process import arma_impulse_response
 from scikits.statsmodels.tsa.arima_process import (lpol_fiar, lpol_fima, lpol_sdiff,
                                                    ar2arma)
 #-----------------------------------
-
-def test_fi():
-    #test identity of ma and ar representation of fi lag polynomial
-    n = 100
-    mafromar = arma_impulse_response(lpol_fiar(0.4, n=n), [1], n)
-    assert_array_almost_equal(mafromar, lpol_fima(0.4, n=n), 13)
 
 
 
