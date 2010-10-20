@@ -187,6 +187,112 @@ class ARIMA(LikelihoodModel):
         eta = std * np.random.randn(nsample)
         return signal.lfilter(ma, ar, eta)
 
+
+class ArmaProcess(object):
+    '''represents an ARMA process for given lag-polynomials
+
+    This is a class to bring together properties of the process.
+    It does not do any estimation or statistical analysis.
+
+    maybe needs special handling for unit roots
+
+    '''
+    def __init__(self, ar, ma, nobs=None):
+        self.ar = np.asarray(ar)
+        self.ma = np.asarray(ma)
+        self.arcoefs = -ar[1:]
+        self.macoefs = ma[1:]
+        self.arpoly = np.polynomial.Polynomial(self.ar)
+        self.mapoly = np.polynomial.Polynomial(self.ma)
+
+    @classmethod
+    def from_coeffs(cls, arcoefs, macoefs, nobs=None):
+        '''create ArmaProcess instance from coefficients of the lag-polynomials
+        '''
+        return cls(np.r_[1,-arcoefs], np.r_[1,-macoefs], nobs=nobs)
+
+    @classmethod
+    def from_estimation(cls, model_results, nobs=None):
+        '''create ArmaProcess instance from estimation results
+        '''
+        arcoefs = model_results.params[:model_results.nar]
+        macoefs = model_results.params[model_results.nar:
+                                       model_results.nar+model_results.nma]
+        return cls(np.r_[1,-arcoefs], np.r_[1,-macoefs], nobs=nobs)
+
+    def __mul__(self, oth):
+        if isinstance(oth, self.__class__):
+            ar = (self.arpoly * oth.arpoly).coef
+            ma = (self.mapoly * oth.mapoly).coef
+        else:
+            try:
+                aroth, maoth = oth
+                arpolyoth = np.polynomial.Polynomial(aroth)
+                mapolyoth = np.polynomial.Polynomial(maoth)
+                ar = (self.arpoly * arpolyoth).coef
+                ma = (self.mapoly * mapolyoth).coef
+            except:
+                print('other is not a valid type')
+                raise
+        return self.__class__(ar, ma, nobs=self.nobs)
+
+    def __repr__(self):
+        return 'ArmaProcess(%r, %r, nobs=%d)' % (self.ar.tolist(), self.ma.tolist(),
+                                            self.nobs)
+    def __str__(self):
+        return 'ArmaProcess\nAR: %r\nMA: %r' % (self.ar.tolist(), self.ma.tolist())
+
+
+    def arma_acovf(self, nobs=None):
+         nobs = nobs or self.nobs
+         return arma_acovf(self.ar, self.ma, nobs=nobs)
+
+    self.arma_acovf.__doc__ = arma_acovf.__doc__
+
+    def arma_acf(self, nobs=None):
+         nobs = nobs or self.nobs
+         return arma_acf(self.ar, self.ma, nobs=nobs)
+
+    self.arma_acf.__doc__ = arma_acf.__doc__
+
+    def arma_pacf(self, nobs=None):
+         nobs = nobs or self.nobs
+         return arma_pacf(self.ar, self.ma, nobs=nobs)
+
+    self.arma_pacf.__doc__ = arma_pacf.__doc__
+
+    def arma_periodogram(self, nobs=None):
+         nobs = nobs or self.nobs
+         return arma_periodogram(self.ar, self.ma, nobs=nobs)
+
+    self.arma_periodogram.__doc__ = arma_periodogram.__doc__
+
+    def arma_impulse_response(self, nobs=None):
+         nobs = nobs or self.nobs
+         return arma_impulse_response(self.ar, self.ma, nobs=nobs)
+
+    self.arma_impulse_response.__doc__ = arma_impulse_response.__doc__
+
+    def arma2ma(self, nobs=None):
+         nobs = nobs or self.nobs
+         return arma2ma(self.ar, self.ma, nobs=nobs)
+
+    self.arma2ma.__doc__ = arma2ma.__doc__
+
+    def arma2ar(self, nobs=None):
+         nobs = nobs or self.nobs
+         return arma2ar(self.ar, self.ma, nobs=nobs)
+
+    self.arma2ar.__doc__ = arma2ar.__doc__
+
+    def ar_roots(self):
+        return self.arpoly.roots()
+
+    def ma_roots(self):
+        return self.mapoly.roots()
+
+
+
 def arma_generate_sample(ar, ma, nsample, sigma=1, distrvs=np.random.randn):
     '''generate an random sample of an ARMA process
 
@@ -304,6 +410,47 @@ def arma_pacf(ar, ma, nobs=10):
     for k in range(2,nobs+1):
         r = acov[:k];
         apacf[k] = np.linalg.solve(scipy.linalg.toeplitz(r[:-1]), r[1:])[-1]
+
+def arma_periodogram(ar, ma, worN=None, whole=0):
+    '''periodogram for ARMA process given by lag-polynomials ar and ma
+
+    Parameters
+    ----------
+    ar : array_like
+        autoregressive lag-polynomial with leading 1 and lhs sign
+    ma : array_like
+        moving average lag-polynomial with leading 1
+    worN : {None, int}, optional
+        option for scipy.signal.freqz   (read "w or N")
+        If None, then compute at 512 frequencies around the unit circle.
+        If a single integer, the compute at that many frequencies.
+        Otherwise, compute the response at frequencies given in worN
+    whole : {0,1}, optional
+        options for scipy.signal.freqz
+        Normally, frequencies are computed from 0 to pi (upper-half of
+        unit-circle.  If whole is non-zero compute frequencies from 0 to 2*pi.
+
+    Returns
+    -------
+    w : array
+        frequencies
+    sd : array
+        periodogram, spectral density
+
+    Notes
+    -----
+    Normalization ?
+
+    This uses signal.freqz, which does not use fft. There is a fft version
+    somewhere.
+
+    '''
+    w, h = signal.freqz(ma, ar, worN=worN, whole=whole)
+    sd = np.abs(h)**2/np.sqrt(2*np.pi)
+    if np.sum(np.isnan(h)) > 0:
+        # this happens with unit root or seasonal unit root'
+        print 'Warning: nan in frequency response h, maybe a unit root'
+    return w, sd
 
 
 def arma_impulse_response(ar, ma, nobs=100):

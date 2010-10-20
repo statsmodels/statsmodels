@@ -17,7 +17,7 @@ from scipy import signal, ndimage
 import matplotlib.mlab as mlb
 import matplotlib.pyplot as plt
 
-from scikits.statsmodels.tsa.arima_process import arma_generate_sample
+from scikits.statsmodels.tsa.arima_process import arma_generate_sample, arma_periodogram
 from scikits.statsmodels.tsa.stattools import acovf
 hastalkbox = False
 try:
@@ -32,18 +32,44 @@ ma = [1., 0.3]
 ar = np.convolve([1.]+[0]*50 +[-0.6], ar)
 
 n_startup = 1000
+nobs = 1000
 # throwing away samples at beginning makes sample more "stationary"
 
-xo = arma_generate_sample(ar,ma,n_startup+200)
+xo = arma_generate_sample(ar,ma,n_startup+nobs)
 x = xo[n_startup:]
 
-def arma_periodogram(ar, ma, worn=None):
-    w, h = signal.freqz(ma, ar, **kwds)
-    sd = np.abs(h)**2/np.sqrt(2*np.pi)
-    if np.sum(np.isnan(h)) > 0:
-        # this happens with unit root or seasonal unit root'
-        print 'Warning: nan in frequency response h'
-    return w, sd
+#moved to tsa.arima_process
+#def arma_periodogram(ar, ma, **kwds):
+#    '''periodogram for ARMA process given by lag-polynomials ar and ma
+#
+#    Parameters
+#    ----------
+#    ar : array_like
+#        autoregressive lag-polynomial with leading 1 and lhs sign
+#    ma : array_like
+#        moving average lag-polynomial with leading 1
+#    kwds : options
+#        options for scipy.signal.freqz
+#        default: worN=None, whole=0
+#
+#    Returns
+#    -------
+#    w : array
+#        frequencies
+#    sd : array
+#        periodogram, spectral density
+#
+#    Notes
+#    -----
+#    Normalization ?
+#
+#    '''
+#    w, h = signal.freqz(ma, ar, **kwds)
+#    sd = np.abs(h)**2/np.sqrt(2*np.pi)
+#    if np.sum(np.isnan(h)) > 0:
+#        # this happens with unit root or seasonal unit root'
+#        print 'Warning: nan in frequency response h'
+#    return w, sd
 
 plt.figure()
 plt.plot(x)
