@@ -141,7 +141,7 @@ if __name__ == '__main__':
             #print sige2a * np.sqrt(np.diag(cov_x2a))
             print '\nMC of rho versus true'
             mc_summary(res_rho, rt)
-            print '\nMC of bse versus zero'
+            print '\nMC of bse versus zero'  # this implies inf in percent
             mc_summary(res_bse)
             print '\nMC of bse versus std'
             mc_summary(res_bse, res_rho.std(0))
