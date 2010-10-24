@@ -598,6 +598,39 @@ def pergram(X, kernel='bartlett', log=True):
         pergr[i] = 1/(2*np.pi)*acov[0] + 2 * np.sum(w[1:]*acov[1:]*np.cos(L*j))
     return pergr
 
+#copied from nitime and scikits\statsmodels\sandbox\tsa\examples\try_ld_nitime.py
+#TODO: check what to return, for testing and trying out returns everything
+def levinson_durbin_nitime(s, order=10, isacov=False):
+    '''Levinson-Durbin recursion for autoregressive processes
+
+    '''
+    #from nitime
+
+##    if sxx is not None and type(sxx) == np.ndarray:
+##        sxx_m = sxx[:order+1]
+##    else:
+##        sxx_m = ut.autocov(s)[:order+1]
+    if isacov:
+        sxx_m = s
+    else:
+        sxx_m = acovf(s)[:order+1]  #not tested
+
+    phi = np.zeros((order+1, order+1), 'd')
+    sig = np.zeros(order+1)
+    # initial points for the recursion
+    phi[1,1] = sxx_m[1]/sxx_m[0]
+    sig[1] = sxx_m[0] - phi[1,1]*sxx_m[1]
+    for k in xrange(2,order+1):
+        phi[k,k] = (sxx_m[k]-np.dot(phi[1:k,k-1], sxx_m[1:k][::-1]))/sig[k-1]
+        for j in xrange(1,k):
+            phi[j,k] = phi[j,k-1] - phi[k,k]*phi[k-j,k-1]
+        sig[k] = sig[k-1]*(1 - phi[k,k]**2)
+
+    sigma_v = sig[-1]; arcoefs = phi[1:,-1]
+    return sigma_v, arcoefs, pacf, phi  #return everything
+
+
+
 def grangercausalitytests(x, maxlag):
     '''four tests for granger causality of 2 timeseries
 
