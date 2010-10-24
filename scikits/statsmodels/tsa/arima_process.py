@@ -200,8 +200,8 @@ class ArmaProcess(object):
     def __init__(self, ar, ma, nobs=None):
         self.ar = np.asarray(ar)
         self.ma = np.asarray(ma)
-        self.arcoefs = -ar[1:]
-        self.macoefs = ma[1:]
+        self.arcoefs = -self.ar[1:]
+        self.macoefs = self.ma[1:]
         self.arpoly = np.polynomial.Polynomial(self.ar)
         self.mapoly = np.polynomial.Polynomial(self.ma)
 
@@ -247,49 +247,136 @@ class ArmaProcess(object):
          nobs = nobs or self.nobs
          return arma_acovf(self.ar, self.ma, nobs=nobs)
 
-    self.arma_acovf.__doc__ = arma_acovf.__doc__
+    arma_acovf.__doc__ = arma_acovf.__doc__
 
     def arma_acf(self, nobs=None):
          nobs = nobs or self.nobs
          return arma_acf(self.ar, self.ma, nobs=nobs)
 
-    self.arma_acf.__doc__ = arma_acf.__doc__
+    arma_acf.__doc__ = arma_acf.__doc__
 
     def arma_pacf(self, nobs=None):
          nobs = nobs or self.nobs
          return arma_pacf(self.ar, self.ma, nobs=nobs)
 
-    self.arma_pacf.__doc__ = arma_pacf.__doc__
+    arma_pacf.__doc__ = arma_pacf.__doc__
 
     def arma_periodogram(self, nobs=None):
          nobs = nobs or self.nobs
-         return arma_periodogram(self.ar, self.ma, nobs=nobs)
+         return arma_periodogram(self.ar, self.ma, worN=nobs)
 
-    self.arma_periodogram.__doc__ = arma_periodogram.__doc__
+    arma_periodogram.__doc__ = arma_periodogram.__doc__
 
     def arma_impulse_response(self, nobs=None):
          nobs = nobs or self.nobs
-         return arma_impulse_response(self.ar, self.ma, nobs=nobs)
+         return arma_impulse_response(self.ar, self.ma, worN=nobs)
 
-    self.arma_impulse_response.__doc__ = arma_impulse_response.__doc__
+    arma_impulse_response.__doc__ = arma_impulse_response.__doc__
 
     def arma2ma(self, nobs=None):
          nobs = nobs or self.nobs
          return arma2ma(self.ar, self.ma, nobs=nobs)
 
-    self.arma2ma.__doc__ = arma2ma.__doc__
+    arma2ma.__doc__ = arma2ma.__doc__
 
     def arma2ar(self, nobs=None):
          nobs = nobs or self.nobs
          return arma2ar(self.ar, self.ma, nobs=nobs)
 
-    self.arma2ar.__doc__ = arma2ar.__doc__
+    arma2ar.__doc__ = arma2ar.__doc__
 
     def ar_roots(self):
+        '''roots of autoregressive lag-polynomial
+        '''
         return self.arpoly.roots()
 
     def ma_roots(self):
+        '''roots of moving average lag-polynomial
+        '''
         return self.mapoly.roots()
+
+    def isstationary(self):
+        '''Arma process is stationary if AR roots are outside unit circle
+
+        Returns
+        -------
+        isstationary : boolean
+             True if autoregressive roots are outside unit circle
+
+        '''
+        if np.abs(self.ar_roots()) > 1:
+            return True
+        else:
+            return False
+
+    def isinvertible(self):
+        '''Arma process is invertible if MA roots are outside unit circle
+
+        Returns
+        -------
+        isinvertible : boolean
+             True if moving average roots are outside unit circle
+
+        '''
+        if np.abs(self.ma_roots()) > 1:
+            return True
+        else:
+            return False
+
+    def invertroots(self, retnew=False):
+        '''make MA polynomial invertible by inverting roots inside unit circle
+
+        Parameter
+        ---------
+        retnew : boolean
+            If False (default), then return the lag-polynomial as array.
+            If True, then return a new instance with invertible MA-polynomial
+
+        Returns
+        -------
+        manew : array
+           new invertible MA lag-polynomial, returned if retnew is false.
+        wasinvertible : boolean
+           True if the MA lag-polynomial was already invertible, returned if
+           retnew is false.
+
+        armaprocess : new instance of class
+           If retnew is true, then return a new instance with invertible
+           MA-polynomial
+
+
+        '''
+        pr = self.ma_roots()
+        insideroots = np.abs(pr)<1
+        if insideroots.any():
+            pr[np.abs(pr)<1] = 1./pr[np.abs(pr)<1]
+            pnew = poly.Polynomial.fromroots(pr)
+            mainv = pn.coef/pnew.coef[0]
+            wasinvertible = False
+        else:
+            mainv = self.ma
+            wasinvertible = True
+        if retnew:
+            return self.__class__(self.ar, mainv, nobs=self.nobs)
+        else:
+            return mainv, wasinvertible
+
+    def generate_sample(self, size=100, scale=1, sampler=None, axis=0):
+        '''generate ARMA samples
+
+        Parameters
+        ----------
+        size : int or tuple of ints
+            If size is an integer, then this creates a 1d timeseries of length size.
+            If size is a tuple, then the timeseries is along axis. All other axis
+            have independent arma samples.
+
+        '''
+        if sampler is None:
+            sampler = np.random.normal
+
+        eta = scale * sampler(size=size)
+        return signal.lfilter(self.ma, self.ar, eta, axis=axis)
 
 
 
