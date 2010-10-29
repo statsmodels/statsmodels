@@ -310,6 +310,7 @@ def arma_pacf(ar, ma, nobs=10):
     for k in range(2,nobs+1):
         r = acov[:k];
         apacf[k] = linalg.solve(linalg.toeplitz(r[:-1]), r[1:])[-1]
+    return apacf
 
 def arma_periodogram(ar, ma, worN=None, whole=0):
     '''periodogram for ARMA process given by lag-polynomials ar and ma
