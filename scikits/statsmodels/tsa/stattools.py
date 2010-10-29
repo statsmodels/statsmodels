@@ -463,8 +463,10 @@ def pacf(x, nlags=40, method='ywunbiased'):
     method : 'ywunbiased' (default) or 'ywmle' or 'ols'
         specifies which method for the calculations to use,
         - yw or ywunbiased : yule walker with bias correction in denominator for acovf
-        - yw or ywmle : yule walker without bias correction
+        - ywm or ywmle : yule walker without bias correction
         - ols - regression of time series on lags of it and on constant
+        - ld or ldunbiased : Levinson-Durbin recursion with bias correction
+        - ldb or ldbiased : Levinson-Durbin recursion without bias correction
 
     Returns
     -------
@@ -483,6 +485,14 @@ def pacf(x, nlags=40, method='ywunbiased'):
         return pacf_yw(x, nlags=nlags, method='unbiased')
     elif method in ['ywm', 'ywmle', 'yw_mle']:
         return pacf_yw(x, nlags=nlags, method='mle')
+    elif method in ['ld', 'ldu', 'ldunbiase', 'ld_unbiased']:
+        acv = acovf(x, unbiased=True)
+        ld = levinson_durbin(acv, order=nlags, isacov=True)
+        return ld[2]
+    elif method in ['ldb', 'ldbiased', 'ld_biased']: #inconsistent naming with ywmle
+        acv = acovf(x, unbiased=True)
+        ld = levinson_durbin(acv, order=nlags, isacov=True)
+        return ld[2]
     else:
         raise ValueError('method not available')
 
@@ -600,10 +610,46 @@ def pergram(X, kernel='bartlett', log=True):
 
 #copied from nitime and scikits\statsmodels\sandbox\tsa\examples\try_ld_nitime.py
 #TODO: check what to return, for testing and trying out returns everything
-def levinson_durbin_nitime(s, order=10, isacov=False):
+def levinson_durbin(s, nlags=10, isacov=False):
     '''Levinson-Durbin recursion for autoregressive processes
 
+    Parameters
+    ----------
+    s : array_like
+        If isacov is False, then this is the time series. If iasacov is true
+        then this is interpreted as autocovariance starting with lag 0
+    nlags : integer
+        largest lag to include in recursion or order of the autoregressive
+        process
+    isacov : boolean
+        flag to indicate whether the first argument, s, contains the autocovariances
+        or the data series.
+
+    Returns
+    -------
+    sigma_v : float
+        estimate of the error variance ?
+    arcoefs : ndarray
+        estimate of the autoregressive coefficients
+    pacf : ndarray
+        partial autocorrelation function
+    sigma : ndarray
+        entire sigma array from intermediate result, last value is sigma_v
+    phi : ndarray
+        entire phi array from intermediate result, last column contains
+        autoregressive coefficients for AR(nlags) with a leading 1
+
+    Notes
+    -----
+    This function returns currently all results, but maybe we drop sigma and
+    phi from the returns.
+
+    If this function is called with the time series (isacov=False), then the sample
+    autocovariance function is calculated with the default options (biased, no fft).
+
     '''
+    s = np.asarray(s)
+    order = nlags  #rename compared to nitime
     #from nitime
 
 ##    if sxx is not None and type(sxx) == np.ndarray:
@@ -621,13 +667,13 @@ def levinson_durbin_nitime(s, order=10, isacov=False):
     phi[1,1] = sxx_m[1]/sxx_m[0]
     sig[1] = sxx_m[0] - phi[1,1]*sxx_m[1]
     for k in xrange(2,order+1):
-        phi[k,k] = (sxx_m[k]-np.dot(phi[1:k,k-1], sxx_m[1:k][::-1]))/sig[k-1]
+        phi[k,k] = (sxx_m[k] - np.dot(phi[1:k,k-1], sxx_m[1:k][::-1]))/sig[k-1]
         for j in xrange(1,k):
             phi[j,k] = phi[j,k-1] - phi[k,k]*phi[k-j,k-1]
         sig[k] = sig[k-1]*(1 - phi[k,k]**2)
 
     sigma_v = sig[-1]; arcoefs = phi[1:,-1]
-    return sigma_v, arcoefs, pacf, phi  #return everything
+    return sigma_v, arcoefs, pacf, sigma, phi  #return everything
 
 
 
