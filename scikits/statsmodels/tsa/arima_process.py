@@ -54,7 +54,7 @@ License: BSD
 '''
 
 import numpy as np
-from scipy import signal, optimize
+from scipy import signal, optimize, linalg
 from scikits.statsmodels.model import LikelihoodModel
 
 #this has been copied to new arma_mle.py - keep temporarily for easier lookup
@@ -188,221 +188,6 @@ class ARIMA(LikelihoodModel):
         return signal.lfilter(ma, ar, eta)
 
 
-class ArmaProcess(object):
-    '''represents an ARMA process for given lag-polynomials
-
-    This is a class to bring together properties of the process.
-    It does not do any estimation or statistical analysis.
-
-    maybe needs special handling for unit roots
-
-    '''
-    def __init__(self, ar, ma, nobs=None):
-        self.ar = np.asarray(ar)
-        self.ma = np.asarray(ma)
-        self.arcoefs = -self.ar[1:]
-        self.macoefs = self.ma[1:]
-        self.arpoly = np.polynomial.Polynomial(self.ar)
-        self.mapoly = np.polynomial.Polynomial(self.ma)
-
-    @classmethod
-    def from_coeffs(cls, arcoefs, macoefs, nobs=None):
-        '''create ArmaProcess instance from coefficients of the lag-polynomials
-        '''
-        return cls(np.r_[1,-arcoefs], np.r_[1,-macoefs], nobs=nobs)
-
-    @classmethod
-    def from_estimation(cls, model_results, nobs=None):
-        '''create ArmaProcess instance from estimation results
-        '''
-        arcoefs = model_results.params[:model_results.nar]
-        macoefs = model_results.params[model_results.nar:
-                                       model_results.nar+model_results.nma]
-        return cls(np.r_[1,-arcoefs], np.r_[1,-macoefs], nobs=nobs)
-
-    def __mul__(self, oth):
-        if isinstance(oth, self.__class__):
-            ar = (self.arpoly * oth.arpoly).coef
-            ma = (self.mapoly * oth.mapoly).coef
-        else:
-            try:
-                aroth, maoth = oth
-                arpolyoth = np.polynomial.Polynomial(aroth)
-                mapolyoth = np.polynomial.Polynomial(maoth)
-                ar = (self.arpoly * arpolyoth).coef
-                ma = (self.mapoly * mapolyoth).coef
-            except:
-                print('other is not a valid type')
-                raise
-        return self.__class__(ar, ma, nobs=self.nobs)
-
-    def __repr__(self):
-        return 'ArmaProcess(%r, %r, nobs=%d)' % (self.ar.tolist(), self.ma.tolist(),
-                                            self.nobs)
-    def __str__(self):
-        return 'ArmaProcess\nAR: %r\nMA: %r' % (self.ar.tolist(), self.ma.tolist())
-
-
-    def acovf(self, nobs=None):
-         nobs = nobs or self.nobs
-         return arma_acovf(self.ar, self.ma, nobs=nobs)
-
-    acovf.__doc__ = arma_acovf.__doc__
-
-    def acf(self, nobs=None):
-         nobs = nobs or self.nobs
-         return arma_acf(self.ar, self.ma, nobs=nobs)
-
-    acf.__doc__ = arma_acf.__doc__
-
-    def pacf(self, nobs=None):
-         nobs = nobs or self.nobs
-         return arma_pacf(self.ar, self.ma, nobs=nobs)
-
-    pacf.__doc__ = arma_pacf.__doc__
-
-    def periodogram(self, nobs=None):
-         nobs = nobs or self.nobs
-         return arma_periodogram(self.ar, self.ma, worN=nobs)
-
-    periodogram.__doc__ = arma_periodogram.__doc__
-
-    def impulse_response(self, nobs=None):
-         nobs = nobs or self.nobs
-         return arma_impulse_response(self.ar, self.ma, worN=nobs)
-
-    impulse_response.__doc__ = arma_impulse_response.__doc__
-
-    def arma2ma(self, nobs=None):
-         nobs = nobs or self.nobs
-         return arma2ma(self.ar, self.ma, nobs=nobs)
-
-    arma2ma.__doc__ = arma2ma.__doc__
-
-    def arma2ar(self, nobs=None):
-         nobs = nobs or self.nobs
-         return arma2ar(self.ar, self.ma, nobs=nobs)
-
-    arma2ar.__doc__ = arma2ar.__doc__
-
-    def ar_roots(self):
-        '''roots of autoregressive lag-polynomial
-        '''
-        return self.arpoly.roots()
-
-    def ma_roots(self):
-        '''roots of moving average lag-polynomial
-        '''
-        return self.mapoly.roots()
-
-    def isstationary(self):
-        '''Arma process is stationary if AR roots are outside unit circle
-
-        Returns
-        -------
-        isstationary : boolean
-             True if autoregressive roots are outside unit circle
-
-        '''
-        if np.abs(self.ar_roots()) > 1:
-            return True
-        else:
-            return False
-
-    def isinvertible(self):
-        '''Arma process is invertible if MA roots are outside unit circle
-
-        Returns
-        -------
-        isinvertible : boolean
-             True if moving average roots are outside unit circle
-
-        '''
-        if np.abs(self.ma_roots()) > 1:
-            return True
-        else:
-            return False
-
-    def invertroots(self, retnew=False):
-        '''make MA polynomial invertible by inverting roots inside unit circle
-
-        Parameter
-        ---------
-        retnew : boolean
-            If False (default), then return the lag-polynomial as array.
-            If True, then return a new instance with invertible MA-polynomial
-
-        Returns
-        -------
-        manew : array
-           new invertible MA lag-polynomial, returned if retnew is false.
-        wasinvertible : boolean
-           True if the MA lag-polynomial was already invertible, returned if
-           retnew is false.
-
-        armaprocess : new instance of class
-           If retnew is true, then return a new instance with invertible
-           MA-polynomial
-
-
-        '''
-        pr = self.ma_roots()
-        insideroots = np.abs(pr)<1
-        if insideroots.any():
-            pr[np.abs(pr)<1] = 1./pr[np.abs(pr)<1]
-            pnew = poly.Polynomial.fromroots(pr)
-            mainv = pn.coef/pnew.coef[0]
-            wasinvertible = False
-        else:
-            mainv = self.ma
-            wasinvertible = True
-        if retnew:
-            return self.__class__(self.ar, mainv, nobs=self.nobs)
-        else:
-            return mainv, wasinvertible
-
-    def generate_sample(self, size=100, scale=1, distrvs=None, axis=0, burnin=0):
-        '''generate ARMA samples
-
-        Parameters
-        ----------
-        size : int or tuple of ints
-            If size is an integer, then this creates a 1d timeseries of length size.
-            If size is a tuple, then the timeseries is along axis. All other axis
-            have independent arma samples.
-
-        Returns
-        -------
-        rvs : ndarray
-            random sample(s) of arma process
-
-        Notes
-        -----
-        Should work for n-dimensional with time series along axis, but not tested
-        yet. Processes are sampled independently.
-
-        '''
-        if distrvs is None:
-            distrvs = np.random.normal
-        if np.ndim(size) == 0:
-                size = [size]
-        if burnin:
-            #handle burin time for nd arrays
-            #maybe there is a better trick in scipy.fft code
-            newsize = list(size)
-            newsize[axis] += burnin
-            newsize = tuple(newsize)
-            fslice = [slice(None)]*len(newsize)
-            fslice[axis] = slice(burnin, None, None)
-            fslice = tuple(fslice)
-        else:
-            newsize = tuple(size)
-            fslice = tuple([slice(None)]*np.ndim(newsize))
-
-        eta = scale * distrvs(size=newsize)
-        return signal.lfilter(self.ma, self.ar, eta, axis=axis)[fslice]
-
-
 
 def arma_generate_sample(ar, ma, nsample, sigma=1, distrvs=np.random.randn, burnin=0):
     '''generate an random sample of an ARMA process
@@ -518,13 +303,13 @@ def arma_pacf(ar, ma, nobs=10):
 
     not tested/checked yet
     '''
-    apacf = np.zeros(nobs)
-    acov = tsa.arma_acf(ar,ma)
+    apacf = np.zeros(nobs+1)
+    acov = arma_acf(ar,ma)
 
     apacf[0] = 1.
     for k in range(2,nobs+1):
         r = acov[:k];
-        apacf[k] = np.linalg.solve(scipy.linalg.toeplitz(r[:-1]), r[1:])[-1]
+        apacf[k] = linalg.solve(linalg.toeplitz(r[:-1]), r[1:])[-1]
 
 def arma_periodogram(ar, ma, worN=None, whole=0):
     '''periodogram for ARMA process given by lag-polynomials ar and ma
@@ -888,6 +673,221 @@ def deconvolve(num, den, n=None):
             num = np.concatenate((num, np.zeros(len(num_approx)-len(num))))
         rem = num - num_approx
     return quot, rem
+
+
+class ArmaProcess(object):
+    '''represents an ARMA process for given lag-polynomials
+
+    This is a class to bring together properties of the process.
+    It does not do any estimation or statistical analysis.
+
+    maybe needs special handling for unit roots
+
+    '''
+    def __init__(self, ar, ma, nobs=None):
+        self.ar = np.asarray(ar)
+        self.ma = np.asarray(ma)
+        self.arcoefs = -self.ar[1:]
+        self.macoefs = self.ma[1:]
+        self.arpoly = np.polynomial.Polynomial(self.ar)
+        self.mapoly = np.polynomial.Polynomial(self.ma)
+
+    @classmethod
+    def from_coeffs(cls, arcoefs, macoefs, nobs=None):
+        '''create ArmaProcess instance from coefficients of the lag-polynomials
+        '''
+        return cls(np.r_[1,-arcoefs], np.r_[1,-macoefs], nobs=nobs)
+
+    @classmethod
+    def from_estimation(cls, model_results, nobs=None):
+        '''create ArmaProcess instance from estimation results
+        '''
+        arcoefs = model_results.params[:model_results.nar]
+        macoefs = model_results.params[model_results.nar:
+                                       model_results.nar+model_results.nma]
+        return cls(np.r_[1,-arcoefs], np.r_[1,-macoefs], nobs=nobs)
+
+    def __mul__(self, oth):
+        if isinstance(oth, self.__class__):
+            ar = (self.arpoly * oth.arpoly).coef
+            ma = (self.mapoly * oth.mapoly).coef
+        else:
+            try:
+                aroth, maoth = oth
+                arpolyoth = np.polynomial.Polynomial(aroth)
+                mapolyoth = np.polynomial.Polynomial(maoth)
+                ar = (self.arpoly * arpolyoth).coef
+                ma = (self.mapoly * mapolyoth).coef
+            except:
+                print('other is not a valid type')
+                raise
+        return self.__class__(ar, ma, nobs=self.nobs)
+
+    def __repr__(self):
+        return 'ArmaProcess(%r, %r, nobs=%d)' % (self.ar.tolist(), self.ma.tolist(),
+                                            self.nobs)
+    def __str__(self):
+        return 'ArmaProcess\nAR: %r\nMA: %r' % (self.ar.tolist(), self.ma.tolist())
+
+
+    def acovf(self, nobs=None):
+         nobs = nobs or self.nobs
+         return arma_acovf(self.ar, self.ma, nobs=nobs)
+
+    acovf.__doc__ = arma_acovf.__doc__
+
+    def acf(self, nobs=None):
+         nobs = nobs or self.nobs
+         return arma_acf(self.ar, self.ma, nobs=nobs)
+
+    acf.__doc__ = arma_acf.__doc__
+
+    def pacf(self, nobs=None):
+         nobs = nobs or self.nobs
+         return arma_pacf(self.ar, self.ma, nobs=nobs)
+
+    pacf.__doc__ = arma_pacf.__doc__
+
+    def periodogram(self, nobs=None):
+         nobs = nobs or self.nobs
+         return arma_periodogram(self.ar, self.ma, worN=nobs)
+
+    periodogram.__doc__ = arma_periodogram.__doc__
+
+    def impulse_response(self, nobs=None):
+         nobs = nobs or self.nobs
+         return arma_impulse_response(self.ar, self.ma, worN=nobs)
+
+    impulse_response.__doc__ = arma_impulse_response.__doc__
+
+    def arma2ma(self, nobs=None):
+         nobs = nobs or self.nobs
+         return arma2ma(self.ar, self.ma, nobs=nobs)
+
+    arma2ma.__doc__ = arma2ma.__doc__
+
+    def arma2ar(self, nobs=None):
+         nobs = nobs or self.nobs
+         return arma2ar(self.ar, self.ma, nobs=nobs)
+
+    arma2ar.__doc__ = arma2ar.__doc__
+
+    def ar_roots(self):
+        '''roots of autoregressive lag-polynomial
+        '''
+        return self.arpoly.roots()
+
+    def ma_roots(self):
+        '''roots of moving average lag-polynomial
+        '''
+        return self.mapoly.roots()
+
+    def isstationary(self):
+        '''Arma process is stationary if AR roots are outside unit circle
+
+        Returns
+        -------
+        isstationary : boolean
+             True if autoregressive roots are outside unit circle
+
+        '''
+        if np.abs(self.ar_roots()) > 1:
+            return True
+        else:
+            return False
+
+    def isinvertible(self):
+        '''Arma process is invertible if MA roots are outside unit circle
+
+        Returns
+        -------
+        isinvertible : boolean
+             True if moving average roots are outside unit circle
+
+        '''
+        if np.abs(self.ma_roots()) > 1:
+            return True
+        else:
+            return False
+
+    def invertroots(self, retnew=False):
+        '''make MA polynomial invertible by inverting roots inside unit circle
+
+        Parameter
+        ---------
+        retnew : boolean
+            If False (default), then return the lag-polynomial as array.
+            If True, then return a new instance with invertible MA-polynomial
+
+        Returns
+        -------
+        manew : array
+           new invertible MA lag-polynomial, returned if retnew is false.
+        wasinvertible : boolean
+           True if the MA lag-polynomial was already invertible, returned if
+           retnew is false.
+
+        armaprocess : new instance of class
+           If retnew is true, then return a new instance with invertible
+           MA-polynomial
+
+
+        '''
+        pr = self.ma_roots()
+        insideroots = np.abs(pr)<1
+        if insideroots.any():
+            pr[np.abs(pr)<1] = 1./pr[np.abs(pr)<1]
+            pnew = poly.Polynomial.fromroots(pr)
+            mainv = pn.coef/pnew.coef[0]
+            wasinvertible = False
+        else:
+            mainv = self.ma
+            wasinvertible = True
+        if retnew:
+            return self.__class__(self.ar, mainv, nobs=self.nobs)
+        else:
+            return mainv, wasinvertible
+
+    def generate_sample(self, size=100, scale=1, distrvs=None, axis=0, burnin=0):
+        '''generate ARMA samples
+
+        Parameters
+        ----------
+        size : int or tuple of ints
+            If size is an integer, then this creates a 1d timeseries of length size.
+            If size is a tuple, then the timeseries is along axis. All other axis
+            have independent arma samples.
+
+        Returns
+        -------
+        rvs : ndarray
+            random sample(s) of arma process
+
+        Notes
+        -----
+        Should work for n-dimensional with time series along axis, but not tested
+        yet. Processes are sampled independently.
+
+        '''
+        if distrvs is None:
+            distrvs = np.random.normal
+        if np.ndim(size) == 0:
+                size = [size]
+        if burnin:
+            #handle burin time for nd arrays
+            #maybe there is a better trick in scipy.fft code
+            newsize = list(size)
+            newsize[axis] += burnin
+            newsize = tuple(newsize)
+            fslice = [slice(None)]*len(newsize)
+            fslice[axis] = slice(burnin, None, None)
+            fslice = tuple(fslice)
+        else:
+            newsize = tuple(size)
+            fslice = tuple([slice(None)]*np.ndim(newsize))
+
+        eta = scale * distrvs(size=newsize)
+        return signal.lfilter(self.ma, self.ar, eta, axis=axis)[fslice]
 
 
 
