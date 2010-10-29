@@ -45,12 +45,25 @@ from scikits.statsmodels.tsa.arima_process import ArmaProcess
 class ArmaFft(ArmaProcess):
     '''fft tools for arma processes
 
+    This class contains several methods that are providing the same or similar
+    returns to try out and test different implementations.
 
+    Notes
+    -----
+    TODO:
     check whether we don't want to fix maxlags, and create new instance if
     maxlag changes. usage for different lengths of timeseries ?
     or fix frequency and length for fft
 
     check default frequencies w, terminology norw  n_or_w
+
+    some ffts are currently done without padding with zeros
+
+    returns for spectral density methods needs checking, is it always the power
+    spectrum hw*hw.conj()
+
+    normalization of the power spectrum, spectral density: not checked yet, for
+    example no variance of underlying process is used
 
     '''
 
@@ -60,7 +73,7 @@ class ArmaFft(ArmaProcess):
 
         self.ar = np.asarray(ar)
         self.ma = np.asarray(ma)
-        self.nobs = nobs
+        self.nobs = n
         #could make the polynomials into cached attributes
         self.arpoly = np.polynomial.Polynomial(ar)
         self.mapoly = np.polynomial.Polynomial(ma)
@@ -69,46 +82,139 @@ class ArmaFft(ArmaProcess):
         self.arroots = self.arpoly.roots()
         self.maroots = self.mapoly.roots()
 
-    def padarr(self, arr, maxlag):
+    def padarr(self, arr, maxlag, atend=True):
         '''pad 1d array with zeros at end to have length maxlag
         function that is a method, no self used
+
+        Parameters
+        ----------
+        arr : array_like, 1d
+            array that will be padded with zeros
+        maxlag : int
+            length of array after padding
+        atend : boolean
+            If True (default), then the zeros are added to the end, otherwise
+            to the front of the array
+
+        Returns
+        -------
+        arrp : ndarray
+            zero-padded array
+
+        Notes
+        -----
+        This is mainly written to extend coefficient arrays for the lag-polynomials.
+        It returns a copy.
+
         '''
-        return np.r_[arr, np.zeros(maxlag-len(arr))]
+        if atend:
+            return np.r_[arr, np.zeros(maxlag-len(arr))]
+        else:
+            return np.r_[np.zeros(maxlag-len(arr)), arr]
 
 
     def pad(self, maxlag):
+        '''construct AR and MA polynomials that are zero-padded to a common length
+
+        Parameters
+        ----------
+        maxlag : int
+            new length of lag-polynomials
+
+        Returns
+        -------
+        ar : ndarray
+            extended AR polynomial coefficients
+        ma : ndarray
+            extended AR polynomial coefficients
+
+        '''
         arpad = np.r_[self.ar, np.zeros(maxlag-self.nar)]
         mapad = np.r_[self.ma, np.zeros(maxlag-self.nma)]
         return arpad, mapad
 
-    def fftar(self, n):
+    def fftar(self, n=None):
+        '''Fourier transform of AR polynomial, zero-padded at end to n
+
+        Parameters
+        ----------
+        n : int
+            length of array after zero-padding
+
+        Returns
+        -------
+        fftar : ndarray
+            fft of zero-padded ar polynomial
+        '''
+        if n is None:
+            n = len(self.ar)
         return fft.fft(self.padarr(self.ar, n))
 
     def fftma(self, n):
+        '''Fourier transform of MA polynomial, zero-padded at end to n
+
+        Parameters
+        ----------
+        n : int
+            length of array after zero-padding
+
+        Returns
+        -------
+        fftar : ndarray
+            fft of zero-padded ar polynomial
+        '''
+        if n is None:
+            n = len(self.ar)
         return fft.fft(self.padarr(self.ma, n))
 
     #@OneTimeProperty  # not while still debugging things
     def fftarma(self, n):
+        '''Fourier transform of ARMA polynomial, zero-padded at end to n
+
+        The Fourier transform of the ARMA process is calculated as the ratio
+        of the fft of the MA polynomial divided by the fft of the AR polynomial.
+
+        Parameters
+        ----------
+        n : int
+            length of array after zero-padding
+
+        Returns
+        -------
+        fftarma : ndarray
+            fft of zero-padded arma polynomial
+        '''
         n = self.nobs
         return (self.fftma(n) / self.fftar(n))
 
     def spd(self, n):
+        '''raw spectral density, returns Fourier transform
+        '''
         hw = self.fftarma(n)  #not sure, need to check normalization
         #return (hw*hw.conj()).real[n//2-1:]  * 0.5 / np.pi #doesn't show in plot
         return hw * 0.5 / np.pi
 
     def spdshift(self, n):
+        '''power spectral density using fftshift
+        '''
         #size = s1+s2-1
         mapadded = self.padarr(self.ma, n)
         arpadded = self.padarr(self.ar, n)
         hw = fft.fft(fft.fftshift(mapadded)) / fft.fft(fft.fftshift(arpadded))
         #return np.abs(spd)[n//2-1:]
-        return (hw*hw.conj()).real[n//2-1:]
+        w = fft.fftfreq(n)
+        wslice = slice(n//2-1, None, None)
+        return (hw*hw.conj()).real[wslice], w[wslice]
 
     def spddirect(self, n):
+        '''power spectral density using padding to length n done by fft
+        '''
         #size = s1+s2-1
         #abs looks wrong
-        return np.abs(fft.fft(self.ma, n) / fft.fft(self.ar, n))[n//2-1:]
+        hw = fft.fft(self.ma, n) / fft.fft(self.ar, n)
+        w = fft.fftfreq(n)
+        wslice = slice(n//2-1, None, None)
+        return (np.abs(hw)**2)[wslice], w[wslice]
 
     def spddirect2(self, n):
         #size = s1+s2-1
@@ -128,6 +234,17 @@ class ArmaFft(ArmaProcess):
 
         builds two arrays (number of roots, number of frequencies)
 
+        Parameters
+        ----------
+        arroots : ndarray
+            roots of ar (denominator) lag-polynomial
+        maroots : ndarray
+            roots of ma (numerator) lag-polynomial
+        w : array_like
+            frequencies for which spd is calculated
+
+        Notes
+        -----
         this should go into a function
         '''
         w = np.atleast_2d(w).T
@@ -136,23 +253,51 @@ class ArmaFft(ArmaProcess):
         den = 1 + arroots**2 + 2* arroots * cosw
         print 'num.shape, den.shape', num.shape, den.shape
         hw = 0.5 / np.pi * num.prod(-1) / den.prod(-1) #or use expsumlog
-        return np.squeeze(hw)
+        return np.squeeze(hw), w.squeeze()
 
     def filter(self, x):
+        '''
+        filter a timeseries with the ARMA filter
+
+        padding with zero is missing, in example I needed the padding to get
+        initial conditions identical to direct filter
+
+        See Also
+        --------
+        tsa.filters.fftconvolve
+
+        '''
         n = x.shape[0]
         if n == self.fftarma:
             fftarma = self.fftarma
         else:
             fftarma = self.fftma(n) / self.fftar(n)
-            #print 'not yet, currently needs same length'
         tmpfft = fftarma * fft.fft(x)
         return fft.ifft(tmpfft)
+
+    def filter2(self, x, pad=0):
+        '''filter a time series using fftconvolve3 with ARMA filter
+
+        padding of x currently works only if x is 1d
+        '''
+        from scikits.statsmodels.tsa.filters import fftconvolve3
+        if not pad:
+            pass
+        elif pad == 'auto':
+            #just guessing how much padding
+            x = self.padarr(x, x.shape[0] + 2*(self.nma+self.nar), atend=False)
+        else:
+            x = self.padarr(x, x.shape[0] + int(pad), atend=False)
+
+        return fftconvolve3(x, self.ma, self.ar)
 
 
     def acf2spdfreq(self, acovf, nfreq=100, w=None):
         '''
         not really a method
         just for comparison, not efficient for large n or long acf
+
+        this is also similarly use in tsa.stattools.periodogram with window
         '''
         if w is None:
             w = np.linspace(0, np.pi, nfreq)[:, None]
@@ -161,12 +306,47 @@ class ArmaFft(ArmaProcess):
                             2 * (acovf[1:] * np.cos(w*np.arange(1,nac))).sum(1))
         return hw
 
+    def invpowerspd(self, n):
+        '''
+        what is this? Is it the autocovariance?
+
+        '''
+        hw = self.fftarma(n)
+        return fft.ifft(hw*hw.conj())
+
     def spdmapoly(self, w, twosided=False):
         '''ma only, need division for ar, use LagPolynomial
         '''
         if w is None:
             w = np.linspace(0, np.pi, nfreq)
-        0.5 / np.pi * self.mapoly(np.exp(w*1j))
+        return 0.5 / np.pi * self.mapoly(np.exp(w*1j))
+
+
+    def plot4(self, fig, nobs=100, nacf=20, nfreq=100):
+        rvs = self.generate_sample(size=100, burnin=500)
+        acf = self.acf(nacf)[:nacf]  #TODO: check return length
+        pacf = self.pacf(nacf)
+        w = np.linspace(0, np.pi, nfreq)
+        spdr, wr = self.spdroots(w)
+
+        ax = fig.add_subplot(2,2,1)
+        ax.plot(rvs)
+        ax.set_title('Random Sample \nar=%s, ma=%s' % (self.ar, self.ma))
+
+        ax = fig.add_subplot(2,2,2)
+        ax.plot(acf)
+        ax.set_title('Autocorrelation \nar=%s, ma=%rs' % (self.ar, self.ma))
+
+        ax = fig.add_subplot(2,2,3)
+        ax.plot(wr, spdr)
+        ax.set_title('Power Spectrum \nar=%s, ma=%s' % (self.ar, self.ma))
+
+        ax = fig.add_subplot(2,2,4)
+        ax.plot(pacf)
+        ax.set_title('Partial Autocorrelation \nar=%s, ma=%s' % (self.ar, self.ma))
+
+        return fig  #return or not ?
+
 
 
 
@@ -249,13 +429,13 @@ _ = plt.plot(spd1)
 plt.title('spd fft')
 
 plt.figure()
-spd2 = arma1.spdshift(2**10)
+spd2, w2 = arma1.spdshift(2**10)
 print spd2.shape
 _ = plt.plot(spd2)
 plt.title('spd fft shift')
 
 plt.figure()
-spd3 = arma1.spddirect(2**10)
+spd3, w3 = arma1.spddirect(2**10)
 print spd3.shape
 _ = plt.plot(spd3)
 plt.title('spd fft direct')
@@ -267,7 +447,7 @@ _ = plt.plot(spd3b)
 plt.title('spd fft direct mirrored')
 
 plt.figure()
-spdr = arma1.spdroots(w)
+spdr, wr = arma1.spdroots(w)
 print spdr.shape
 plt.plot(w, spdr)
 plt.title('spd from roots')
@@ -280,7 +460,7 @@ plt.title('spd ar1')
 
 
 plt.figure()
-wper, spdper = arma1.arma_periodogram(nfreq)
+wper, spdper = arma1.periodogram(nfreq)
 print spdper.shape
 _ = plt.plot(w, spdper)
 plt.title('periodogram')
@@ -303,6 +483,9 @@ print 'spdnt.shape', spdnt.shape
 _ = plt.plot(spdnt.ravel())
 print spdnt[:10]
 plt.title('nitime')
+
+fig = plt.figure()
+arma1.plot4(fig)
 
 
 plt.show()
