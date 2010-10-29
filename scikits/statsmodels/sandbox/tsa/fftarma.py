@@ -79,8 +79,14 @@ class ArmaFft(ArmaProcess):
         self.mapoly = np.polynomial.Polynomial(ma)
         self.nar = len(ar)  #1d only currently
         self.nma = len(ma)
-        self.arroots = self.arpoly.roots()
-        self.maroots = self.mapoly.roots()
+        if self.nar > 1:
+            self.arroots = self.arpoly.roots()
+        else:
+            self.arroots = np.array([])
+        if self.nma > 1:
+            self.maroots = self.mapoly.roots()
+        else:
+            self.maroots = np.array([])
 
     def padarr(self, arr, maxlag, atend=True):
         '''pad 1d array with zeros at end to have length maxlag
@@ -212,9 +218,10 @@ class ArmaFft(ArmaProcess):
         #size = s1+s2-1
         #abs looks wrong
         hw = fft.fft(self.ma, n) / fft.fft(self.ar, n)
-        w = fft.fftfreq(n)
+        w = fft.fftfreq(n) * 2 * np.pi
         wslice = slice(n//2-1, None, None)
-        return (np.abs(hw)**2)[wslice], w[wslice]
+        #return (np.abs(hw)**2)[wslice], w[wslice]
+        return (np.abs(hw)**2) * 0.5/np.pi, w
 
     def spddirect2(self, n):
         #size = s1+s2-1
@@ -249,11 +256,26 @@ class ArmaFft(ArmaProcess):
         '''
         w = np.atleast_2d(w).T
         cosw = np.cos(w)
-        num = 1 + maroots**2 + 2* maroots * cosw
-        den = 1 + arroots**2 + 2* arroots * cosw
+        #Greene 5th edt. p626, section 20.2.7.a.
+        maroots = 1./maroots
+        arroots = 1./arroots
+        num = 1 + maroots**2 - 2* maroots * cosw
+        den = 1 + arroots**2 - 2* arroots * cosw
         print 'num.shape, den.shape', num.shape, den.shape
         hw = 0.5 / np.pi * num.prod(-1) / den.prod(-1) #or use expsumlog
         return np.squeeze(hw), w.squeeze()
+
+    def spdpoly(self, w, nma=50):
+        '''spectral density from MA polynomial representation
+
+        Reference
+        ---------
+        Cochrane, section 8.3.3
+        '''
+        mpoly = np.polynomial.Polynomial(self.arma2ma(nma))
+        spd = np.real_if_close(mpoly(np.exp(1j * w))
+                                * mpoly(np.exp(-1j * w)) * 0.5/np.pi)
+        return spd, w
 
     def filter(self, x):
         '''
@@ -322,13 +344,16 @@ class ArmaFft(ArmaProcess):
         return 0.5 / np.pi * self.mapoly(np.exp(w*1j))
 
 
-    def plot4(self, fig, nobs=100, nacf=20, nfreq=100):
+    def plot4(self, fig=None, nobs=100, nacf=20, nfreq=100):
         rvs = self.generate_sample(size=100, burnin=500)
         acf = self.acf(nacf)[:nacf]  #TODO: check return length
         pacf = self.pacf(nacf)
         w = np.linspace(0, np.pi, nfreq)
         spdr, wr = self.spdroots(w)
 
+        if fig is None:
+            import matplotlib.pyplot as plt
+            fig = plt.figure()
         ax = fig.add_subplot(2,2,1)
         ax.plot(rvs)
         ax.set_title('Random Sample \nar=%s, ma=%s' % (self.ar, self.ma))
@@ -345,7 +370,7 @@ class ArmaFft(ArmaProcess):
         ax.plot(pacf)
         ax.set_title('Partial Autocorrelation \nar=%s, ma=%s' % (self.ar, self.ma))
 
-        return fig  #return or not ?
+        return fig
 
 
 
@@ -354,138 +379,139 @@ class ArmaFft(ArmaProcess):
 
 
 def spdar1(ar, w):
-    if len(ar) == 1:
+    if np.ndim(ar) == 0:
         rho = ar
     else:
-        rho = ar[1]
+        rho = -ar[1]
     return 0.5 / np.pi /(1 + rho*rho - 2 * rho * np.cos(w))
 
-nobs = 200  #10000
-ar = [1, 0.0]
-ma = [1, 0.0]
-ar2 = np.zeros(nobs)
-ar2[:2] = [1, -0.9]
+if __name__ == '__main__':
+    nobs = 200  #10000
+    ar = [1, 0.0]
+    ma = [1, 0.0]
+    ar2 = np.zeros(nobs)
+    ar2[:2] = [1, -0.9]
 
 
 
-uni = np.zeros(nobs)
-uni[0]=1.
-#arrep = signal.lfilter(ma, ar, ar2)
-#marep = signal.lfilter([1],arrep, uni)
-# same faster:
-arcomb = np.convolve(ar, ar2, mode='same')
-marep = signal.lfilter(ma,arcomb, uni) #[len(ma):]
-print marep[:10]
-mafr = fft.fft(marep)
+    uni = np.zeros(nobs)
+    uni[0]=1.
+    #arrep = signal.lfilter(ma, ar, ar2)
+    #marep = signal.lfilter([1],arrep, uni)
+    # same faster:
+    arcomb = np.convolve(ar, ar2, mode='same')
+    marep = signal.lfilter(ma,arcomb, uni) #[len(ma):]
+    print marep[:10]
+    mafr = fft.fft(marep)
 
-rvs = np.random.normal(size=nobs)
-datafr = fft.fft(rvs)
-y = fft.ifft(mafr*datafr)
-print np.corrcoef(np.c_[y[2:], y[1:-1], y[:-2]],rowvar=0)
+    rvs = np.random.normal(size=nobs)
+    datafr = fft.fft(rvs)
+    y = fft.ifft(mafr*datafr)
+    print np.corrcoef(np.c_[y[2:], y[1:-1], y[:-2]],rowvar=0)
 
-arrep = signal.lfilter([1],marep, uni)
-print arrep[:20]  # roundtrip to ar
-arfr = fft.fft(arrep)
-yfr = fft.fft(y)
-x = fft.ifft(arfr*yfr).real  #imag part is e-15
-# the next two are equal, roundtrip works
-print x[:5]
-print rvs[:5]
-print np.corrcoef(np.c_[x[2:], x[1:-1], x[:-2]],rowvar=0)
-
-
-# ARMA filter using fft with ratio of fft of ma/ar lag polynomial
-# seems much faster than using lfilter
-
-#padding, note arcomb is already full length
-arcombp = np.zeros(nobs)
-arcombp[:len(arcomb)] = arcomb
-map_ = np.zeros(nobs)    #rename: map was shadowing builtin
-map_[:len(ma)] = ma
-ar0fr = fft.fft(arcombp)
-ma0fr = fft.fft(map_)
-y2 = fft.ifft(ma0fr/ar0fr*datafr)
-#the next two are (almost) equal in real part, almost zero but different in imag
-print y2[:10]
-print y[:10]
-print maxabs(y, y2)  # from chfdiscrete
-#1.1282071239631782e-014
-
-ar = [1, -0.4]
-ma = [1, 0.2]
-
-arma1 = ArmaFft([1, -0.5,0,0,0,00, -0.7, 0.3], [1, 0.8], nobs)
-
-nfreq = nobs
-w = np.linspace(0, np.pi, nfreq)
-w2 = np.linspace(0, 2*np.pi, nfreq)
-
-import matplotlib.pyplot as plt
-
-plt.figure()
-spd1 = arma1.spd(2**10)
-print spd1.shape
-_ = plt.plot(spd1)
-plt.title('spd fft')
-
-plt.figure()
-spd2, w2 = arma1.spdshift(2**10)
-print spd2.shape
-_ = plt.plot(spd2)
-plt.title('spd fft shift')
-
-plt.figure()
-spd3, w3 = arma1.spddirect(2**10)
-print spd3.shape
-_ = plt.plot(spd3)
-plt.title('spd fft direct')
-
-plt.figure()
-spd3b = arma1.spddirect2(2**10)
-print spd3b.shape
-_ = plt.plot(spd3b)
-plt.title('spd fft direct mirrored')
-
-plt.figure()
-spdr, wr = arma1.spdroots(w)
-print spdr.shape
-plt.plot(w, spdr)
-plt.title('spd from roots')
-
-plt.figure()
-spdar1 = spdar1(arma1.ar, w)
-print spdar1.shape
-_ = plt.plot(w, spdar1)
-plt.title('spd ar1')
+    arrep = signal.lfilter([1],marep, uni)
+    print arrep[:20]  # roundtrip to ar
+    arfr = fft.fft(arrep)
+    yfr = fft.fft(y)
+    x = fft.ifft(arfr*yfr).real  #imag part is e-15
+    # the next two are equal, roundtrip works
+    print x[:5]
+    print rvs[:5]
+    print np.corrcoef(np.c_[x[2:], x[1:-1], x[:-2]],rowvar=0)
 
 
-plt.figure()
-wper, spdper = arma1.periodogram(nfreq)
-print spdper.shape
-_ = plt.plot(w, spdper)
-plt.title('periodogram')
+    # ARMA filter using fft with ratio of fft of ma/ar lag polynomial
+    # seems much faster than using lfilter
 
-startup = 1000
-rvs = arma1.generate_sample(startup+10000)[startup:]
-import matplotlib.mlab as mlb
-plt.figure()
-sdm, wm = mlb.psd(x)
-print 'sdm.shape', sdm.shape
-sdm = sdm.ravel()
-plt.plot(wm, sdm)
-plt.title('matplotlib')
+    #padding, note arcomb is already full length
+    arcombp = np.zeros(nobs)
+    arcombp[:len(arcomb)] = arcomb
+    map_ = np.zeros(nobs)    #rename: map was shadowing builtin
+    map_[:len(ma)] = ma
+    ar0fr = fft.fft(arcombp)
+    ma0fr = fft.fft(map_)
+    y2 = fft.ifft(ma0fr/ar0fr*datafr)
+    #the next two are (almost) equal in real part, almost zero but different in imag
+    print y2[:10]
+    print y[:10]
+    print maxabs(y, y2)  # from chfdiscrete
+    #1.1282071239631782e-014
 
-from nitime.algorithms import LD_AR_est
-#yule_AR_est(s, order, Nfreqs)
-wnt, spdnt = LD_AR_est(rvs, 10, 512)
-plt.figure()
-print 'spdnt.shape', spdnt.shape
-_ = plt.plot(spdnt.ravel())
-print spdnt[:10]
-plt.title('nitime')
+    ar = [1, -0.4]
+    ma = [1, 0.2]
 
-fig = plt.figure()
-arma1.plot4(fig)
+    arma1 = ArmaFft([1, -0.5,0,0,0,00, -0.7, 0.3], [1, 0.8], nobs)
+
+    nfreq = nobs
+    w = np.linspace(0, np.pi, nfreq)
+    w2 = np.linspace(0, 2*np.pi, nfreq)
+
+    import matplotlib.pyplot as plt
+
+    plt.figure()
+    spd1 = arma1.spd(2**10)
+    print spd1.shape
+    _ = plt.plot(spd1)
+    plt.title('spd fft')
+
+    plt.figure()
+    spd2, w2 = arma1.spdshift(2**10)
+    print spd2.shape
+    _ = plt.plot(spd2)
+    plt.title('spd fft shift')
+
+    plt.figure()
+    spd3, w3 = arma1.spddirect(2**10)
+    print spd3.shape
+    _ = plt.plot(spd3)
+    plt.title('spd fft direct')
+
+    plt.figure()
+    spd3b = arma1.spddirect2(2**10)
+    print spd3b.shape
+    _ = plt.plot(spd3b)
+    plt.title('spd fft direct mirrored')
+
+    plt.figure()
+    spdr, wr = arma1.spdroots(w)
+    print spdr.shape
+    plt.plot(w, spdr)
+    plt.title('spd from roots')
+
+    plt.figure()
+    spdar1_ = spdar1(arma1.ar, w)
+    print spdar1_.shape
+    _ = plt.plot(w, spdar1_)
+    plt.title('spd ar1')
 
 
-plt.show()
+    plt.figure()
+    wper, spdper = arma1.periodogram(nfreq)
+    print spdper.shape
+    _ = plt.plot(w, spdper)
+    plt.title('periodogram')
+
+    startup = 1000
+    rvs = arma1.generate_sample(startup+10000)[startup:]
+    import matplotlib.mlab as mlb
+    plt.figure()
+    sdm, wm = mlb.psd(x)
+    print 'sdm.shape', sdm.shape
+    sdm = sdm.ravel()
+    plt.plot(wm, sdm)
+    plt.title('matplotlib')
+
+    from nitime.algorithms import LD_AR_est
+    #yule_AR_est(s, order, Nfreqs)
+    wnt, spdnt = LD_AR_est(rvs, 10, 512)
+    plt.figure()
+    print 'spdnt.shape', spdnt.shape
+    _ = plt.plot(spdnt.ravel())
+    print spdnt[:10]
+    plt.title('nitime')
+
+    fig = plt.figure()
+    arma1.plot4(fig)
+
+
+    plt.show()
