@@ -243,35 +243,35 @@ class ArmaProcess(object):
         return 'ArmaProcess\nAR: %r\nMA: %r' % (self.ar.tolist(), self.ma.tolist())
 
 
-    def arma_acovf(self, nobs=None):
+    def acovf(self, nobs=None):
          nobs = nobs or self.nobs
          return arma_acovf(self.ar, self.ma, nobs=nobs)
 
-    arma_acovf.__doc__ = arma_acovf.__doc__
+    acovf.__doc__ = arma_acovf.__doc__
 
-    def arma_acf(self, nobs=None):
+    def acf(self, nobs=None):
          nobs = nobs or self.nobs
          return arma_acf(self.ar, self.ma, nobs=nobs)
 
-    arma_acf.__doc__ = arma_acf.__doc__
+    acf.__doc__ = arma_acf.__doc__
 
-    def arma_pacf(self, nobs=None):
+    def pacf(self, nobs=None):
          nobs = nobs or self.nobs
          return arma_pacf(self.ar, self.ma, nobs=nobs)
 
-    arma_pacf.__doc__ = arma_pacf.__doc__
+    pacf.__doc__ = arma_pacf.__doc__
 
-    def arma_periodogram(self, nobs=None):
+    def periodogram(self, nobs=None):
          nobs = nobs or self.nobs
          return arma_periodogram(self.ar, self.ma, worN=nobs)
 
-    arma_periodogram.__doc__ = arma_periodogram.__doc__
+    periodogram.__doc__ = arma_periodogram.__doc__
 
-    def arma_impulse_response(self, nobs=None):
+    def impulse_response(self, nobs=None):
          nobs = nobs or self.nobs
          return arma_impulse_response(self.ar, self.ma, worN=nobs)
 
-    arma_impulse_response.__doc__ = arma_impulse_response.__doc__
+    impulse_response.__doc__ = arma_impulse_response.__doc__
 
     def arma2ma(self, nobs=None):
          nobs = nobs or self.nobs
@@ -382,8 +382,8 @@ class ArmaProcess(object):
         yet. Processes are sampled independently.
 
         '''
-        if sampler is None:
-            sampler = np.random.normal
+        if distrvs is None:
+            distrvs = np.random.normal
         if np.ndim(size) == 0:
                 size = [size]
         if burnin:
@@ -399,7 +399,7 @@ class ArmaProcess(object):
             newsize = tuple(size)
             fslice = tuple([slice(None)]*np.ndim(newsize))
 
-        eta = scale * sampler(size=newsize)
+        eta = scale * distrvs(size=newsize)
         return signal.lfilter(self.ma, self.ar, eta, axis=axis)[fslice]
 
 
@@ -888,6 +888,8 @@ def deconvolve(num, den, n=None):
             num = np.concatenate((num, np.zeros(len(num_approx)-len(num))))
         rem = num - num_approx
     return quot, rem
+
+
 
 
 
