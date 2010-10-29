@@ -361,7 +361,7 @@ class ArmaProcess(object):
         else:
             return mainv, wasinvertible
 
-    def generate_sample(self, size=100, scale=1, sampler=None, axis=0):
+    def generate_sample(self, size=100, scale=1, distrvs=None, axis=0, burnin=0):
         '''generate ARMA samples
 
         Parameters
@@ -371,16 +371,40 @@ class ArmaProcess(object):
             If size is a tuple, then the timeseries is along axis. All other axis
             have independent arma samples.
 
+        Returns
+        -------
+        rvs : ndarray
+            random sample(s) of arma process
+
+        Notes
+        -----
+        Should work for n-dimensional with time series along axis, but not tested
+        yet. Processes are sampled independently.
+
         '''
         if sampler is None:
             sampler = np.random.normal
+        if np.ndim(size) == 0:
+                size = [size]
+        if burnin:
+            #handle burin time for nd arrays
+            #maybe there is a better trick in scipy.fft code
+            newsize = list(size)
+            newsize[axis] += burnin
+            newsize = tuple(newsize)
+            fslice = [slice(None)]*len(newsize)
+            fslice[axis] = slice(burnin, None, None)
+            fslice = tuple(fslice)
+        else:
+            newsize = tuple(size)
+            fslice = tuple([slice(None)]*np.ndim(newsize))
 
-        eta = scale * sampler(size=size)
-        return signal.lfilter(self.ma, self.ar, eta, axis=axis)
+        eta = scale * sampler(size=newsize)
+        return signal.lfilter(self.ma, self.ar, eta, axis=axis)[fslice]
 
 
 
-def arma_generate_sample(ar, ma, nsample, sigma=1, distrvs=np.random.randn):
+def arma_generate_sample(ar, ma, nsample, sigma=1, distrvs=np.random.randn, burnin=0):
     '''generate an random sample of an ARMA process
 
     Parameters
@@ -398,6 +422,9 @@ def arma_generate_sample(ar, ma, nsample, sigma=1, distrvs=np.random.randn):
         as argument
         default: np.random.randn
         TODO: change to size argument
+    burnin : integer (default: 0)
+        to reduce the effect of initial conditions, burnin observations at the
+        beginning of the sample are dropped
 
 
     Returns
@@ -407,8 +434,9 @@ def arma_generate_sample(ar, ma, nsample, sigma=1, distrvs=np.random.randn):
 
 
     '''
-    eta = sigma * distrvs(nsample)
-    return signal.lfilter(ma, ar, eta)
+    #TODO: unify with ArmaProcess method
+    eta = sigma * distrvs(nsample+burnin)
+    return signal.lfilter(ma, ar, eta)[burnin:]
 
 def arma_acovf(ar, ma, nobs=10):
     '''theoretical autocovariance function of ARMA process
