@@ -174,7 +174,7 @@ class ArmaFft(ArmaProcess):
         return fft.fft(self.padarr(self.ma, n))
 
     #@OneTimeProperty  # not while still debugging things
-    def fftarma(self, n):
+    def fftarma(self, n=None):
         '''Fourier transform of ARMA polynomial, zero-padded at end to n
 
         The Fourier transform of the ARMA process is calculated as the ratio
@@ -190,44 +190,57 @@ class ArmaFft(ArmaProcess):
         fftarma : ndarray
             fft of zero-padded arma polynomial
         '''
-        n = self.nobs
+        if n is None:
+            n = self.nobs
         return (self.fftma(n) / self.fftar(n))
 
-    def spd(self, n):
+    def spd(self, npos):
         '''raw spectral density, returns Fourier transform
+
+        n is number of points in positive spectrum, the actual number of points
+        is twice as large. different from other spd methods with fft
         '''
-        hw = self.fftarma(n)  #not sure, need to check normalization
+        n = npos
+        w = fft.fftfreq(2*n) * 2 * np.pi
+        hw = self.fftarma(2*n)  #not sure, need to check normalization
         #return (hw*hw.conj()).real[n//2-1:]  * 0.5 / np.pi #doesn't show in plot
-        return hw * 0.5 / np.pi
+        return (hw*hw.conj()).real * 0.5 / np.pi, w
 
     def spdshift(self, n):
         '''power spectral density using fftshift
+
+        currently returns two-sided according to fft frequencies, use first half
         '''
         #size = s1+s2-1
         mapadded = self.padarr(self.ma, n)
         arpadded = self.padarr(self.ar, n)
         hw = fft.fft(fft.fftshift(mapadded)) / fft.fft(fft.fftshift(arpadded))
         #return np.abs(spd)[n//2-1:]
-        w = fft.fftfreq(n)
+        w = fft.fftfreq(n) * 2 * np.pi
         wslice = slice(n//2-1, None, None)
-        return (hw*hw.conj()).real[wslice], w[wslice]
+        #return (hw*hw.conj()).real[wslice], w[wslice]
+        return (hw*hw.conj()).real, w
 
     def spddirect(self, n):
         '''power spectral density using padding to length n done by fft
+
+        currently returns two-sided according to fft frequencies, use first half
         '''
         #size = s1+s2-1
         #abs looks wrong
         hw = fft.fft(self.ma, n) / fft.fft(self.ar, n)
         w = fft.fftfreq(n) * 2 * np.pi
-        wslice = slice(n//2-1, None, None)
+        wslice = slice(None, n//2, None)
         #return (np.abs(hw)**2)[wslice], w[wslice]
         return (np.abs(hw)**2) * 0.5/np.pi, w
 
-    def spddirect2(self, n):
+    def _spddirect2(self, n):
+        '''this looks bad, maybe with an fftshift
+        '''
         #size = s1+s2-1
         hw = (fft.fft(np.r_[self.ma[::-1],self.ma], n)
                 / fft.fft(np.r_[self.ar[::-1],self.ar], n))
-        return (hw*hw.conj()).real[n//2-1:]
+        return (hw*hw.conj()) #.real[n//2-1:]
 
     def spdroots(self, w):
         '''spectral density for frequency using polynomial roots
@@ -329,12 +342,21 @@ class ArmaFft(ArmaProcess):
         return hw
 
     def invpowerspd(self, n):
-        '''
-        what is this? Is it the autocovariance?
+        '''autocovariance from spectral density
 
+        scaling is correct, but n needs to be large for numerical accuracy
+        maybe padding with zero in fft would be faster
+        without slicing it returns 2-sided autocovariance with fftshift
+
+        >>> ArmaFft([1, -0.5], [1., 0.4], 40).invpowerspd(2**8)[:10]
+        array([ 2.08    ,  1.44    ,  0.72    ,  0.36    ,  0.18    ,  0.09    ,
+                0.045   ,  0.0225  ,  0.01125 ,  0.005625])
+        >>> ArmaFft([1, -0.5], [1., 0.4], 40).acovf(10)
+        array([ 2.08    ,  1.44    ,  0.72    ,  0.36    ,  0.18    ,  0.09    ,
+                0.045   ,  0.0225  ,  0.01125 ,  0.005625])
         '''
         hw = self.fftarma(n)
-        return fft.ifft(hw*hw.conj())
+        return np.real_if_close(fft.ifft(hw*hw.conj()))[:n]
 
     def spdmapoly(self, w, twosided=False):
         '''ma only, need division for ar, use LagPolynomial
@@ -447,27 +469,28 @@ if __name__ == '__main__':
     w2 = np.linspace(0, 2*np.pi, nfreq)
 
     import matplotlib.pyplot as plt
+    plt.close('all')
 
     plt.figure()
-    spd1 = arma1.spd(2**10)
+    spd1, w1 = arma1.spd(2**10)
     print spd1.shape
     _ = plt.plot(spd1)
-    plt.title('spd fft')
+    plt.title('spd fft complex')
 
     plt.figure()
     spd2, w2 = arma1.spdshift(2**10)
     print spd2.shape
-    _ = plt.plot(spd2)
+    _ = plt.plot(w2, spd2)
     plt.title('spd fft shift')
 
     plt.figure()
     spd3, w3 = arma1.spddirect(2**10)
     print spd3.shape
-    _ = plt.plot(spd3)
+    _ = plt.plot(w3, spd3)
     plt.title('spd fft direct')
 
     plt.figure()
-    spd3b = arma1.spddirect2(2**10)
+    spd3b = arma1._spddirect2(2**10)
     print spd3b.shape
     _ = plt.plot(spd3b)
     plt.title('spd fft direct mirrored')
