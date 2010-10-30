@@ -279,15 +279,15 @@ class ArmaFft(ArmaProcess):
         return np.squeeze(hw), w.squeeze()
 
     def spdpoly(self, w, nma=50):
-        '''spectral density from MA polynomial representation
+        '''spectral density from MA polynomial representation for ARMA process
 
         Reference
         ---------
         Cochrane, section 8.3.3
         '''
         mpoly = np.polynomial.Polynomial(self.arma2ma(nma))
-        spd = np.real_if_close(mpoly(np.exp(1j * w))
-                                * mpoly(np.exp(-1j * w)) * 0.5/np.pi)
+        hw = mpoly(np.exp(1j * w))
+        spd = np.real_if_close(hw * hw.conj() * 0.5/np.pi)
         return spd, w
 
     def filter(self, x):
@@ -296,6 +296,9 @@ class ArmaFft(ArmaProcess):
 
         padding with zero is missing, in example I needed the padding to get
         initial conditions identical to direct filter
+
+        Initial filtered observations differ from filter2 and signal.lfilter, but
+        at end they are the same.
 
         See Also
         --------
@@ -314,6 +317,10 @@ class ArmaFft(ArmaProcess):
         '''filter a time series using fftconvolve3 with ARMA filter
 
         padding of x currently works only if x is 1d
+        in example it produces same observations at beginning as lfilter even
+        without padding.
+
+        TODO: this returns 1 additional observation at the end
         '''
         from scikits.statsmodels.tsa.filters import fftconvolve3
         if not pad:
@@ -356,7 +363,7 @@ class ArmaFft(ArmaProcess):
                 0.045   ,  0.0225  ,  0.01125 ,  0.005625])
         '''
         hw = self.fftarma(n)
-        return np.real_if_close(fft.ifft(hw*hw.conj()))[:n]
+        return np.real_if_close(fft.ifft(hw*hw.conj()), tol=200)[:n]
 
     def spdmapoly(self, w, twosided=False):
         '''ma only, need division for ar, use LagPolynomial

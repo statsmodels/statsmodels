@@ -54,8 +54,21 @@ def test_spectrum():
             assert_almost_equal(spdr, spdd[:nfreq], decimal=7,
                                 err_msg='spdr spdd not equal for %s, %s' % (ar, ma))
 
+def test_armafft():
+    #test other methods
+    nfreq = 20
+    w = np.linspace(0, np.pi, nfreq, endpoint=False)
+    for ar in arlist:
+        for ma in malist:
+            arma = ArmaFft(ar, ma, 20)
+            ac1 = arma.invpowerspd(1024)[:10]
+            ac2 = arma.acovf(10)[:10]
+            assert_almost_equal(ac1, ac2, decimal=7,
+                                err_msg='acovf not equal for %s, %s' % (ar, ma))
+
 
 if __name__ == '__main__':
     test_fi()
     test_arma_impulse_response()
     test_spectrum()
+    test_armafft()
