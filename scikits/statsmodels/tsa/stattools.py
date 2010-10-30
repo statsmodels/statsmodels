@@ -487,12 +487,13 @@ def pacf(x, nlags=40, method='ywunbiased'):
         return pacf_yw(x, nlags=nlags, method='mle')
     elif method in ['ld', 'ldu', 'ldunbiase', 'ld_unbiased']:
         acv = acovf(x, unbiased=True)
-        ld = levinson_durbin(acv, order=nlags, isacov=True)
-        return ld[2]
+        ld_ = levinson_durbin(acv, nlags=nlags, isacov=True)
+        #print 'ld', ld_
+        return ld_[2]
     elif method in ['ldb', 'ldbiased', 'ld_biased']: #inconsistent naming with ywmle
-        acv = acovf(x, unbiased=True)
-        ld = levinson_durbin(acv, order=nlags, isacov=True)
-        return ld[2]
+        acv = acovf(x, unbiased=False)
+        ld_ = levinson_durbin(acv, nlags=nlags, isacov=True)
+        return ld_[2]
     else:
         raise ValueError('method not available')
 
@@ -672,8 +673,11 @@ def levinson_durbin(s, nlags=10, isacov=False):
             phi[j,k] = phi[j,k-1] - phi[k,k]*phi[k-j,k-1]
         sig[k] = sig[k-1]*(1 - phi[k,k]**2)
 
-    sigma_v = sig[-1]; arcoefs = phi[1:,-1]
-    return sigma_v, arcoefs, pacf, sigma, phi  #return everything
+    sigma_v = sig[-1]
+    arcoefs = phi[1:,-1]
+    pacf_ = np.diag(phi)
+    pacf_[0] = 1.
+    return sigma_v, arcoefs, pacf_, sig, phi  #return everything
 
 
 
@@ -766,11 +770,11 @@ if __name__=="__main__":
     adftstat = adfuller(x, autolag="t-stat")
 
 # acf is tested now
-    acf1,ci1,Q,pvalue = acf(x, nlags=40, confint=95, qstat=True)
-    acf2, ci2,Q2,pvalue2 = acf(x, nlags=40, confint=95, fft=True, qstat=True)
-    acf3,ci3,Q3,pvalue3 = acf(x, nlags=40, confint=95, qstat=True, unbiased=True)
-    acf4, ci4,Q4,pvalue4 = acf(x, nlags=40, confint=95, fft=True, qstat=True,
-            unbiased=True)
+##    acf1,ci1,Q,pvalue = acf(x, nlags=40, confint=95, qstat=True)
+##    acf2, ci2,Q2,pvalue2 = acf(x, nlags=40, confint=95, fft=True, qstat=True)
+##    acf3,ci3,Q3,pvalue3 = acf(x, nlags=40, confint=95, qstat=True, unbiased=True)
+##    acf4, ci4,Q4,pvalue4 = acf(x, nlags=40, confint=95, fft=True, qstat=True,
+##            unbiased=True)
 
 # pacf is tested now
 #    pacf1 = pacorr(x)
