@@ -374,9 +374,12 @@ def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False):
 # Based on Bartlett's formula for MA(q) processes
 #NOTE: not sure if this is correct, or needs to be centered or what.
 
-    if confint:
-        varacf = np.ones(nlags)/nobs
-        varacf[1:] *= 1 + 2*np.cumsum(acf[1:-1]**2)
+    if not confint is None:
+        varacf = np.ones(nlags+1)/nobs
+        #varacf[1:] *= 1 + 2*np.cumsum(acf[1:-1]**2)
+        #TODO: test this, are my changes correct
+        varacf[0] = 0
+        varacf[1:] *= 1 + 2*np.cumsum(acf[1:]**2)
         interval = stats.norm.ppf(1-(100-confint)/200.)*np.sqrt(varacf)
         confint = np.array(zip(acf-interval, acf+interval))
         if not qstat:
@@ -770,11 +773,11 @@ if __name__=="__main__":
     adftstat = adfuller(x, autolag="t-stat")
 
 # acf is tested now
-##    acf1,ci1,Q,pvalue = acf(x, nlags=40, confint=95, qstat=True)
-##    acf2, ci2,Q2,pvalue2 = acf(x, nlags=40, confint=95, fft=True, qstat=True)
-##    acf3,ci3,Q3,pvalue3 = acf(x, nlags=40, confint=95, qstat=True, unbiased=True)
-##    acf4, ci4,Q4,pvalue4 = acf(x, nlags=40, confint=95, fft=True, qstat=True,
-##            unbiased=True)
+    acf1,ci1,Q,pvalue = acf(x, nlags=40, confint=95, qstat=True)
+    acf2, ci2,Q2,pvalue2 = acf(x, nlags=40, confint=95, fft=True, qstat=True)
+    acf3,ci3,Q3,pvalue3 = acf(x, nlags=40, confint=95, qstat=True, unbiased=True)
+    acf4, ci4,Q4,pvalue4 = acf(x, nlags=40, confint=95, fft=True, qstat=True,
+            unbiased=True)
 
 # pacf is tested now
 #    pacf1 = pacorr(x)
