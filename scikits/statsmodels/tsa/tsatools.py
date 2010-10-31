@@ -97,8 +97,9 @@ def detrend(x, order=1, axis=0):
             x = x.T
         elif x.ndim > 2:
             raise NotImplementedError('x.ndim>2 is not implemented until it is needed')
-        trends = np.vander(np.arange(nobs).astype(float), order=order+1)
-        betas = np.linalg.lstsq(trends, x)
+        #could use a polynomial, but this should work also with 2d x, but maybe not yet
+        trends = np.vander(np.arange(nobs).astype(float), N=order+1)
+        beta = np.linalg.lstsq(trends, x)[0]
         resid = x - np.dot(trends, beta)
         if x.ndim == 2 and range(2)[axis]==1:
             resid = resid.T

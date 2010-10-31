@@ -590,6 +590,7 @@ def pergram(X, kernel='bartlett', log=True):
     Doesn't look right yet.
     """
     #JP: this should use covf and fft for speed and accuracy for longer time series
+    #should also return the implied frequencies
     X = np.asarray(X).squeeze()
     nobs = len(X)
     M = np.floor(nobs/2.)
@@ -608,7 +609,7 @@ def pergram(X, kernel='bartlett', log=True):
     j = np.arange(1,M+1)
     ell = np.linspace(0,np.pi,M)
     pergr = np.zeros_like(ell)
-    for i,L in enumerate(ell):
+    for i,L in enumerate(ell):  #todo: vectorize
         pergr[i] = 1/(2*np.pi)*acov[0] + 2 * np.sum(w[1:]*acov[1:]*np.cos(L*j))
     return pergr
 
