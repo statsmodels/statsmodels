@@ -644,6 +644,87 @@ class ARMA(GenericLikelihoodModel):
         llf = -(nobs-p)/2.*(log(2*pi) + log(sigma2)) - np.sum(ssr)/(2*sigma2)
         return llf
 
+    def loglike_exact(self, params):
+        """
+        Exact likelihood for ARMA process.
+
+        Notes
+        -----
+        Computes the exact likelihood for an ARMA process by modifying the
+        conditional sum of squares likelihood as suggested by Shephard (1997)
+        "The relationship between the conditional sum of squares and the exact
+        likelihood for autoregressive moving average models."
+        """
+        p = self.p
+        q = self.q
+        k = self.k
+        y = self.endog.copy()
+        nobs = self.nobs
+        if self.transparams:
+            newparams = self._transparams(params)
+        else:
+            newparams = params
+        if k > 0:
+            y -= dot(self.exog, newparams[:k])
+        if p != 0:
+            arcoefs = newparams[k:k+p][::-1]
+            T = self.T(arcoefs)
+        else:
+            arcoefs = 0
+        if q != 0:
+            macoefs = newparams[k+p:k+p+q][::-1]
+        else:
+            macoefs = 0
+#        errors = [0] * q # psuedo-errors
+#        rerrors = [1] * q # error correction term
+        # create pseudo-error and error correction series iteratively
+#        for i in range(p,len(y)):
+#            errors.append(y[i]-sum(arcoefs*y[i-p:i])-\
+#                                sum(macoefs*errors[i-q:i]))
+#            rerrors.append(-sum(macoefs*rerrors[i-q:i]))
+#        errors = np.asarray(errors)
+#        rerrors = np.asarray(rerrors)
+
+        # compute bayesian expected mean and variance of initial errors
+#        one_sumrt2 = 1 + np.sum(rerrors**2)
+#        sum_errors2 = np.sum(errors**2)
+#        mup = -np.sum(errors * rerrors)/one_sumrt2
+
+        # concentrating out the ML estimator of "true" sigma2 gives
+#        sigma2 = 1./(2*pi*nobs)  * (sum_errors2 - mup**2*(one_sumrt2))
+
+        # which gives a variance of the initial errors of
+#        sigma2p = sigma2/one_sumrt2
+
+#        llf = -(nobs-p)/2. * np.log(2*pi*sigma2) - 1./(2*sigma2)*sum_errors2 \
+#                + 1./2*log(one_sumrt2) + 1./(2*sigma2) * mup**2*one_sumrt2
+        T_mat = self.T(newparams)
+        Z = self.Z
+        m = Z.shape[1]
+        R_mat = self.R(newparams)
+        T_mat = self.T(newparams)
+        # initial state and its variance
+        alpha = zeros((m,1))
+        Q_0 = dot(inv(identity(m**2)-kron(T_mat,T_mat)),
+                dot(R_mat,R_mat.T).ravel('F'))
+        Q_0 = Q_0.reshape(r,r,order='F')
+        P = Q_0
+        v = zeros((nobs,1))
+        F = zeros((nobs,1))
+        B = array([T_mat, 0], dtype=object)
+
+
+        for i in xrange(int(nobs)):
+            z_mat = Z[i,None]
+            v_mat = (y[i],0) - dot(z_mat,B)
+
+        B_0 = (T,0)
+        v_t = (y_t,0) - z*B_t
+        llf = -nobs/2.*np.log(2*pi*sigma2) - 1/(2.*sigma2)*se_n - \
+            1/2.*logdet(Sigma_a) + 1/(2*sigma2)*s_n_prime*sigma_a*s_n
+        return llf
+
+
     def fit(self, order, start_params=None, trend='c', method = "css-mle",
             transparams=True, solver=None, maxiter=35, full_output=1,
             disp=1, callback=None, **kwargs):
