@@ -4,8 +4,10 @@ Statistical tools for time series analysis
 
 import numpy as np
 from scipy import stats, signal
-import scikits.statsmodels as sm
-from scikits.statsmodels.sandbox.tsa.tsatools import lagmat, lagmat2ds
+from scikits.statsmodels.regression import OLS, yule_walker
+from scikits.statsmodels.tools import add_constant
+from scikits.statsmodels.tsa.tsatools import lagmat, lagmat2ds, add_trend
+#from scikits.statsmodels.sandbox.tsa import var
 from adfvalues import *
 #from scikits.statsmodels.sandbox.rls import RLS
 
@@ -15,71 +17,7 @@ class ResultsStore(object):
     def __str__(self):
         return self._str
 
-def add_trend(X, trend="c", prepend=False):
-    """
-    Adds a trend and/or constant to an array.
-
-    Parameters
-    ----------
-    X : array-like
-        Original array of data.
-    trend : str {"c","ct","ctt"}
-        "c" add constant only
-        "t" add trend only
-        "ct" add constant and linear trend
-        "ctt" add constant and linear and quadratic trend.
-    prepend : bool
-        If True, prepends the new data to the columns of X.
-
-    Notes
-    -----
-    Returns columns as ["ctt","ct","c"] whenever applicable.  There is currently
-    no checking for an existing constant or trend.
-
-    See also
-    --------
-    scikits.statsmodels.add_constant
-    """
-    #TODO: could be generalized for trend of aribitrary order
-    trend = trend.lower()
-    if trend == "c":    # handles structured arrays
-        return sm.add_constant(X, prepend=prepend)
-    elif trend == "ct" or trend == "t":
-        trendorder = 1
-    elif trend == "ctt":
-        trendorder = 2
-    else:
-        raise ValueError("trend %s not understood") % trend
-    X = np.asanyarray(X)
-    nobs = len(X)
-    trendarr = np.vander(np.arange(1,nobs+1, dtype=float), trendorder+1)
-    if trend == "t":
-        trendarr = trendarr[:,0]
-    if not X.dtype.names:
-        if not prepend:
-            X = np.column_stack((X, trendarr))
-        else:
-            X = np.column_stack((trendarr, X))
-    else:
-        return_rec = data.__clas__ is np.recarray
-        if trendorder == 1:
-            if trend == "ct":
-                dt = [('trend',float),('const',float)]
-            else:
-                dt = [('trend', float)]
-        elif trendorder == 2:
-            dt = [('trend_squared', float),('trend',float),('const',float)]
-        trendarr = trendarr.view(dt)
-        if prepend:
-            X = nprf.append_fields(trendarr, X.dtype.names, [X[i] for i
-                in data.dtype.names], usemask=False, asrecarray=return_rec)
-        else:
-            X = nprf.append_fields(X, trendarr.dtype.names, [trendarr[i] for i
-                in trendarr.dtype.names], usemask=false, asrecarray=return_rec)
-    return X
-
-
-def _autolag(mod, endog, exog, lagstart, maxlag, method, modargs=(),
+def _autolag(mod, endog, exog, startlag, maxlag, method, modargs=(),
         fitargs=()):
     """
     Returns the results for the lag length that maximimizes the info criterion.
@@ -96,11 +34,10 @@ def _autolag(mod, endog, exog, lagstart, maxlag, method, modargs=(),
         The first zero-indexed column to hold a lag.  See Notes.
     maxlag : int
         The highest lag order for lag length selection.
-    method : str {"aic","bic","t-stat","hic"}
+    method : str {"aic","bic","t-stat"}
         aic - Akaike Information Criterion
         bic - Bayes Information Criterion
         t-stat - Based on last lag
-        hq - Hannan-Quinn
 
     Returns
     -------
@@ -123,8 +60,10 @@ def _autolag(mod, endog, exog, lagstart, maxlag, method, modargs=(),
 
     results = {}
     method = method.lower()
-    for lag in range(int(lagstart),int(maxlag+1)):
-        results[lag] = mod(endog, exog[:,:lag], *modargs).fit(*fitargs)
+    for lag in range(startlag,maxlag+1):
+        mod_instance = mod(endog, exog[:,:lag], *modargs)
+        results[lag] = mod_instance.fit()
+
     if method == "aic":
         icbest, bestlag = max((v.aic,k) for k,v in results.iteritems())
     elif method == "bic":
@@ -133,16 +72,15 @@ def _autolag(mod, endog, exog, lagstart, maxlag, method, modargs=(),
         lags = sorted(results.keys())[::-1]
 #        stop = stats.norm.ppf(.95)
         stop = 1.6448536269514722
-        i = 0
-        icbest, bestlag = results[lags[i]].t(-1), lags[i]
-        i += 1
-        while not (abs(icbest) >= stop):
-            lastt, bestlag = results[lags[i]].t(-1), lags[i]
-            i += 1
-    elif method == "hq":
-        icbest, bestlag = max((v.hqic,k) for k,v in results.iteritems())
-    elif method == "fpe":
-        icbest, bestlag = max((v.fpe,k) for k,v in results.iteritems())
+        for lag in range(maxlag,startlag-1,-1):
+            print lag
+            print results[lag].t()
+            icbest = np.abs(results[lag].t(-1))
+            print icbest
+            if np.abs(icbest) >= stop:
+                bestlag = lag
+                icbest = icbest
+                break
     else:
         raise ValueError("Information Criterion %s not understood.") % method
     return icbest, bestlag
@@ -237,56 +175,43 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
     x = np.asarray(x)
     nobs = x.shape[0]
 
-    if regression == 'c':
-        trendorder = 0
-    elif regression == 'nc':
-        trendorder = -1
-    elif regression == 'ct':
-        trendorder = 1
-    elif regression == 'ctt':
-        trendorder = 2
-    # only make the trend once with biggest nobs
-    trend = np.vander(np.arange(nobs), trendorder+1)
-
     if maxlag is None:
         #from Greene referencing Schwert 1989
-        maxlag = 12. * np.power(nobs/100., 1/4.)
+        maxlag = int(round(12. * np.power(nobs/100., 1/4.)))
 
     xdiff = np.diff(x)
-    xdall = lagmat(xdiff[:,None], maxlag, trim='both')
+    xdall = lagmat(xdiff[:,None], maxlag, trim='both', original='in')
     nobs = xdall.shape[0]
 
     xdall[:,0] = x[-nobs-1:-1] # replace 0 xdiff with level of x
     xdshort = xdiff[-nobs:]
-#    xdshort = x[-nobs:]
-#TODO: allow for 2nd xdshort as endog, with Phillips Perron or DF test?
 
     if store:
         resstore = ResultsStore()
     if autolag:
-        if trendorder is not -1:
-            fullRHS = np.column_stack((trend[:nobs],xdall))
+        if regression != 'nc':
+            fullRHS = add_trend(xdall, regression, prepend=True)
         else:
             fullRHS = xdall
-        lagstart = trendorder + 1
+        startlag = fullRHS.shape[1] - xdall.shape[1] + 1 # 1 for level
+
         #search for lag length with highest information criteria
         #Note: use the same number of observations to have comparable IC
-        icbest, bestlag = _autolag(sm.OLS, xdshort, fullRHS, lagstart,
+        icbest, bestlag = _autolag(OLS, xdshort, fullRHS, startlag,
                 maxlag, autolag)
 
         #rerun ols with best autolag
-        xdall = lagmat(xdiff[:,None], bestlag, trim='both')
+        xdall = lagmat(xdiff[:,None], bestlag, trim='both', original='in')
         nobs = xdall.shape[0]
-#        trend = np.vander(np.arange(nobs), trendorder+1)
         xdall[:,0] = x[-nobs-1:-1] # replace 0 xdiff with level of x
         xdshort = xdiff[-nobs:]
         usedlag = bestlag
     else:
         usedlag = maxlag
-
-    resols = sm.OLS(xdshort, np.column_stack([xdall[:,:usedlag+1],
-        trend[:nobs]])).fit()
-    #NOTE: should be usedlag+1 since the first column is the level?
+    if regression != 'nc':
+        resols = OLS(xdshort, add_trend(xdall[:,:usedlag+1], regression)).fit()
+    else:
+        resols = OLS(xdshort, xdall[:,:usedlag+1]).fit()
     adfstat = resols.t(0)
 #    adfstat = (resols.params[0]-1.0)/resols.bse[0]
     # the "asymptotically correct" z statistic is obtained as
@@ -488,7 +413,7 @@ def pacf_yw(x, nlags=40, method='unbiased'):
     xm = x - x.mean()
     pacf = [1.]
     for k in range(1, nlags+1):
-        pacf.append(sm.regression.yule_walker(x, k, method=method)[0][-1])
+        pacf.append(yule_walker(x, k, method=method)[0][-1])
     return np.array(pacf)
 
 #NOTE: this is incorrect.
@@ -515,14 +440,12 @@ def pacf_ols(x, nlags=40):
     #NOTE: demeaning and not using a constant gave incorrect answers?
     #JP: demeaning should have a better estimate of the constant
     #maybe we can compare small sample properties with a MonteCarlo
-    xlags = lagmat(x, nlags)
-    x0 = xlags[:,0]
-    xlags = xlags[:,1:]
+    xlags, x0 = lagmat(x, nlags, original='sep')
     #xlags = sm.add_constant(lagmat(x, nlags), prepend=True)
-    xlags = sm.add_constant(xlags, prepend=True)
+    xlags = add_constant(xlags, prepend=True)
     pacf = [1.]
     for k in range(1, nlags+1):
-        res = sm.OLS(x0[k:], xlags[k:,:k+1]).fit()
+        res = OLS(x0[k:], xlags[k:,:k+1]).fit()
          #np.take(xlags[k:], range(1,k+1)+[-1],
 
         pacf.append(res.params[-1])
@@ -705,7 +628,6 @@ def grangercausalitytests(x, maxlag):
 
     '''
     from scipy import stats # lazy import
-    import scikits.statsmodels as sm  # absolute import for now
 
     for mlg in range(1, maxlag+1):
         print '\nGranger Causality'
@@ -716,12 +638,12 @@ def grangercausalitytests(x, maxlag):
         dta = lagmat2ds(x, mxlg, trim='both', dropex=1)
 
         #add constant
-        dtaown = sm.add_constant(dta[:,1:mxlg])
-        dtajoint = sm.add_constant(dta[:,1:])
+        dtaown = add_constant(dta[:,1:mxlg])
+        dtajoint = add_constant(dta[:,1:])
 
         #run ols on both models without and with lags of second variable
-        res2down = sm.OLS(dta[:,0], dtaown).fit()
-        res2djoint = sm.OLS(dta[:,0], dtajoint).fit()
+        res2down = OLS(dta[:,0], dtaown).fit()
+        res2djoint = OLS(dta[:,0], dtajoint).fit()
 
         #print results
         #for ssr based tests see: http://support.sas.com/rnd/app/examples/ets/granger/index.htm
@@ -755,6 +677,7 @@ __all__ = ['acovf', 'acf', 'pacf', 'pacf_yw', 'pacf_ols', 'ccovf', 'ccf',
            'pergram', 'q_stat']
 
 if __name__=="__main__":
+    import scikits.statsmodels as sm
     data = sm.datasets.macrodata.load().data
     x = data['realgdp']
 # adf is tested now.

@@ -35,7 +35,7 @@ from scipy import signal
 #might not (yet) need the following
 from scipy.signal.signaltools import _centered as trim_centered
 
-from scikits.statsmodels.sandbox.tools.tools_tsa import lagmat
+from scikits.statsmodels.tsa.tsatools import lagmat
 
 
 def varfilter(x, a):
@@ -376,7 +376,7 @@ class Var(object):
         '''
         self.nlags = nlags # without current period
         nvars = self.nvars
-        lmat = lagmat(ar2s,nlags, trim='both')
+        lmat = lagmat(ar2s,nlags, trim='both', original='in')
         self.yred = lmat[:,:nvars]
         self.xred = lmat[:,nvars:]
         res = np.linalg.lstsq(self.xred, self.yred)
@@ -674,7 +674,7 @@ if __name__ == "__main__":
     ########
     ut = np.random.randn(1000,2)
     ar2s = vargenerate(a22,ut)
-    res = np.linalg.lstsq(lagmat(ar2s,1)[:,2:], ar2s)
+    res = np.linalg.lstsq(lagmat(ar2s,1)[:,1:], ar2s)
     bhat = res[0].reshape(1,2,2)
     arhat = ar2full(bhat)
     #print maxabs(arhat - a22)

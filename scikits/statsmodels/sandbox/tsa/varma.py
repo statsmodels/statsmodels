@@ -167,7 +167,9 @@ if __name__ == '__main__':
     print np.all(signal.correlate(x0,B[:,:,0],'valid')[:-1,0]==xhat0[P:,0])
     print np.all(signal.correlate(x0,B[:,:,1],'valid')[:-1,0]==xhat0[P:,1])
 
-    from movstat import acovf, acf
+    #import error
+    #from movstat import acovf, acf
+    from scikits.statsmodels.tsa.stattools import acovf, acf
     aav = acovf(x[:,0])
     print aav[0] == np.var(x[:,0])
     aac = acf(x[:,0])

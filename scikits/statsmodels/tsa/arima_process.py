@@ -55,8 +55,9 @@ License: BSD
 
 import numpy as np
 from scipy import signal, optimize
+from scikits.statsmodels.model import LikelihoodModel
 
-class ARIMA(object):
+class ARIMA(LikelihoodModel):
     '''currently ARMA only, no differencing used - no I
 
     parameterized as
@@ -65,19 +66,30 @@ class ARIMA(object):
     A instance of this class preserves state, so new class instances should
     be created for different examples
     '''
-    def __init__(self):
-        pass
-    def fit(self,x,p,q, rhoy0=None, rhoe0=None):
-        '''estimate lag coefficients of ARMA orocess by least squares
+    def __init__(self, endog, exog=None):
+        super(ARIMA, self).__init__(endog, exog)
+        if endog.ndim == 1:
+            endog = endog[:,None]
+        elif endog.ndim > 1 and endog.shape[1] != 1:
+            raise ValueError("Only the univariate case is implemented")
+        self.endog = endog # overwrite endog
+        if exog is not None:
+            raise ValueError("Exogenous variables are not yet supported.")
+
+    def fit(self, order=(0,0,0), method="ls", rhoy0=None, rhoe0=None):
+        '''
+        Estimate lag coefficients of an ARIMA process.
 
         Parameters
         ----------
-            x : array, 1d
-                time series data
-            p : int
-                number of AR lags to estimate
-            q : int
-                number of MA lags to estimate
+            order : sequence
+                p,d,q where p is the number of AR lags, d is the number of
+                differences to induce stationarity, and q is the number of
+                MA lags to estimate.
+            method : str {"ls", "ssm"}
+                Method of estimation.  LS is conditional least squares.
+                SSM is state-space model and the Kalman filter is used to
+                maximize the exact likelihood.
             rhoy0, rhoe0 : array_like (optional)
                 starting values for estimation
 
@@ -88,9 +100,20 @@ class ARIMA(object):
                 estimate of lag parameters, concatenated [rhoy, rhoe]
             cov_x :
                 unscaled (!) covariance matrix of coefficient estimates
-
-
         '''
+        if not hasattr(order, '__iter__'):
+            raise ValueError("order must be an iterable sequence.  Got type \
+%s instead" % type(order))
+
+        p,d,q = order
+
+        if d > 0:
+            raise ValueError("Differencing not implemented yet")
+            # assume no constant, ie mu = 0
+            # unless overwritten then use w_bar for mu
+            Y = np.diff(endog, d, axis=0) #TODO: handle lags?
+
+        x = self.endog.squeeze() # remove the squeeze might be needed later
         def errfn( rho):
             #rhoy, rhoe = rho
             rhoy = np.concatenate(([1], rho[:p]))
@@ -103,10 +126,15 @@ class ARIMA(object):
             rhoy0 = 0.5 * np.ones(p)
         if rhoe0 is None:
             rhoe0 = 0.5 * np.ones(q)
-        usels = True
-        if usels:
+
+        method = method.lower()
+
+        if method == "ls":
             rh, cov_x, infodict, mesg, ier = \
                optimize.leastsq(errfn, np.r_[rhoy0, rhoe0],ftol=1e-10,full_output=True)
+#TODO: integrate this into the MLE.fit framework?
+        elif method == "ssm":
+            pass
         else:
             # fmin_bfgs is slow or doesn't work yet
             errfnsum = lambda rho : np.sum(errfn(rho)**2)
@@ -152,7 +180,9 @@ class ARIMA(object):
             ma = self.rhoe
         return signal.lfilter(ma, ar, eta)
 
-    def generate_sample(self, ar, ma, nsample, std=1):
+#TODO: is this needed as a method at all?
+    @classmethod
+    def generate_sample(cls, ar, ma, nsample, std=1):
         eta = std * np.random.randn(nsample)
         return signal.lfilter(ma, ar, eta)
 
@@ -215,9 +245,9 @@ def arma_acovf(ar, ma, nobs=10):
     #increase length of impulse response for AR closer to 1
     #maybe cheap/fast enough to always keep nobs for ir large
     if np.abs(np.sum(ar)-1) > 0.9:
-        nobs_ir = 1000
+        nobs_ir = max(1000, 2* nobs)   #no idea right now how large it is needed
     else:
-        nobs_ir = 100
+        nobs_ir = max(100, 2* nobs)   #no idea right now
     ir = arma_impulse_response(ar, ma, nobs=nobs_ir)
     #better save than sorry (?), I have no idea about the required precision
     #only checked for AR(1)
@@ -226,7 +256,7 @@ def arma_acovf(ar, ma, nobs=10):
         ir = arma_impulse_response(ar, ma, nobs=nobs)
     #again no idea where the speed break points are:
     if nobs_ir > 50000 and nobs < 1001:
-        acovf = np.array([np.dot(ir[:nobs-t], ir[t:nobs]) for t in range(10)])
+        acovf = np.array([np.dot(ir[:nobs-t], ir[t:nobs]) for t in range(nobs)])
     else:
         acovf = np.correlate(ir,ir,'full')[len(ir)-1:]
     return acovf[:nobs]
@@ -480,11 +510,10 @@ def mcarma22(niter=10):
     ma = [1.0,  0.3,  0.2]
     results = []
     results_bse = []
-    arest = ARIMA()
-    arest2 = ARIMA()
     for _ in range(niter):
         y2 = arma_generate_sample(ar,ma,nsample,0.1)
-        rhohat2a, cov_x2a, infodict, mesg, ier = arest2.fit(y2,2,2)
+        arest2 = ARIMA(y2)
+        rhohat2a, cov_x2a, infodict, mesg, ier = arest2.fit((2,0,2))
         results.append(rhohat2a)
         err2a = arest2.errfn(x=y2)
         sige2a = np.sqrt(np.dot(err2a,err2a)/nsample)
@@ -512,8 +541,8 @@ if __name__ == '__main__':
     yar1 = signal.lfilter(ar, ma, eta)
 
     print "\nExample 0"
-    arest = ARIMA()
-    rhohat, cov_x, infodict, mesg, ier = arest.fit(yar1,1,1)
+    arest = ARIMA(yar1)
+    rhohat, cov_x, infodict, mesg, ier = arest.fit((1,0,1))
     print rhohat
     print cov_x
 
@@ -521,7 +550,8 @@ if __name__ == '__main__':
     ar = [1.0,  -0.8]
     ma = [1.0,  0.5]
     y1 = arest.generate_sample(ar,ma,1000,0.1)
-    rhohat1, cov_x1, infodict, mesg, ier = arest.fit(y1,1,1)
+    arest = ARIMA(y1)
+    rhohat1, cov_x1, infodict, mesg, ier = arest.fit((1,0,1))
     print rhohat1
     print cov_x1
     err1 = arest.errfn(x=y1)
@@ -530,12 +560,12 @@ if __name__ == '__main__':
     print sm.regression.yule_walker(y1, order=2, inv=True)
 
     print "\nExample 2"
-    arest2 = ARIMA()
     nsample = 1000
     ar = [1.0, -0.6, -0.1]
     ma = [1.0,  0.3,  0.2]
-    y2 = arest2.generate_sample(ar,ma,nsample,0.1)
-    rhohat2, cov_x2, infodict, mesg, ier = arest2.fit(y2,1,2)
+    y2 = ARIMA.generate_sample(ar,ma,nsample,0.1)
+    arest2 = ARIMA(y2)
+    rhohat2, cov_x2, infodict, mesg, ier = arest2.fit((1,0,2))
     print rhohat2
     print cov_x2
     err2 = arest.errfn(x=y2)
@@ -545,7 +575,7 @@ if __name__ == '__main__':
     print "true"
     print ar
     print ma
-    rhohat2a, cov_x2a, infodict, mesg, ier = arest2.fit(y2,2,2)
+    rhohat2a, cov_x2a, infodict, mesg, ier = arest2.fit((2,0,2))
     print rhohat2a
     print cov_x2a
     err2a = arest.errfn(x=y2)
@@ -559,12 +589,12 @@ if __name__ == '__main__':
     print sm.regression.yule_walker(y2, order=2, inv=True)
 
     print "\nExample 20"
-    arest20 = ARIMA()
     nsample = 1000
     ar = [1.0]#, -0.8, -0.4]
     ma = [1.0,  0.5,  0.2]
-    y3 = arest20.generate_sample(ar,ma,nsample,0.01)
-    rhohat3, cov_x3, infodict, mesg, ier = arest20.fit(y3,2,0)
+    y3 = ARIMA.generate_sample(ar,ma,nsample,0.01)
+    arest20 = ARIMA(y3)
+    rhohat3, cov_x3, infodict, mesg, ier = arest20.fit((2,0,0))
     print rhohat3
     print cov_x3
     err3 = arest20.errfn(x=y3)
@@ -576,7 +606,7 @@ if __name__ == '__main__':
     print ar
     print ma
 
-    rhohat3a, cov_x3a, infodict, mesg, ier = arest20.fit(y3,0,2)
+    rhohat3a, cov_x3a, infodict, mesg, ier = arest20.fit((0,0,2))
     print rhohat3a
     print cov_x3a
     err3a = arest20.errfn(x=y3)
@@ -591,12 +621,12 @@ if __name__ == '__main__':
     print sm.regression.yule_walker(y3, order=2, inv=True)
 
     print "\nExample 02"
-    arest02 = ARIMA()
     nsample = 1000
     ar = [1.0, -0.8, 0.4] #-0.8, -0.4]
     ma = [1.0]#,  0.8,  0.4]
-    y4 = arest02.generate_sample(ar,ma,nsample)
-    rhohat4, cov_x4, infodict, mesg, ier = arest02.fit(y4,2,0)
+    y4 = ARIMA.generate_sample(ar,ma,nsample)
+    arest02 = ARIMA(y4)
+    rhohat4, cov_x4, infodict, mesg, ier = arest02.fit((2,0,0))
     print rhohat4
     print cov_x4
     err4 = arest02.errfn(x=y4)
@@ -611,7 +641,7 @@ if __name__ == '__main__':
     print ar
     print ma
 
-    rhohat4a, cov_x4a, infodict, mesg, ier = arest02.fit(y4,0,2)
+    rhohat4a, cov_x4a, infodict, mesg, ier = arest02.fit((0,0,2))
     print rhohat4a
     print cov_x4a
     err4a = arest02.errfn(x=y4)

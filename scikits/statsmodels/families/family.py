@@ -85,7 +85,8 @@ class Family(object):
             raise TypeError("The input should be a valid Link object.")
         if hasattr(self, "links"):
             validlink = link in self.links
-            validlink = max([isinstance(link, _.__class__) for _ in self.links])
+#            validlink = max([isinstance(link, _.__class__) for _ in self.links])
+            validlink = max([isinstance(link, _) for _ in self.links])
             if not validlink:
                 errmsg = "Invalid link for family, should be in %s. (got %s)"
                 raise ValueError(errmsg % (`self.links`, link))
@@ -313,7 +314,7 @@ class Poisson(Family):
 
     def __init__(self, link=L.log):
         self.variance = Poisson.variance
-        self.link = link
+        self.link = link()
 
     def resid_dev(self, Y, mu, scale=1.):
         """Gaussian deviance residual
@@ -468,7 +469,7 @@ class Gaussian(Family):
 
     def __init__(self, link=L.identity):
         self.variance = Gaussian.variance
-        self.link = link
+        self.link = link()
 
     def resid_dev(self, Y, mu, scale=1.):
         """
@@ -624,7 +625,7 @@ class Gamma(Family):
 
     def __init__(self, link=L.inverse):
         self.variance = Gamma.variance
-        self.link = link
+        self.link = link()
 
 #TODO: note the note
     def _clean(self, x):
@@ -795,7 +796,7 @@ class Binomial(Family):
                    # always used to initialize variance
                    # since Y is assumed/forced to be (0,1)
         self.variance = V.Binomial(n=self.n)
-        self.link = link
+        self.link = link()
 
     def starting_mu(self, y):
         """
@@ -1052,7 +1053,7 @@ class InverseGaussian(Family):
 
     def __init__(self, link=L.inverse_squared):
         self.variance = InverseGaussian.variance
-        self.link = link
+        self.link = link()
 
     def resid_dev(self, Y, mu, scale=1.):
         """
@@ -1207,7 +1208,7 @@ class NegativeBinomial(Family):
         if isinstance(link, L.NegativeBinomial):
             self.link = link(alpha=self.alpha)
         else:
-            self.link = link
+            self.link = link()
 
     def _clean(self, x):
         """
