@@ -40,7 +40,14 @@ class Arma(GenericLikelihoodModel):  #switch to generic mle
         p, q = self.nar, self.nma
         rhoy = np.concatenate(([1], params[:p]))
         rhoe = np.concatenate(([1], params[p:p+q]))
-        errorsest = signal.lfilter(rhoy, rhoe, self.endog)
+        #try lfilter_zi, it requires same length for ar and ma
+        maxlag = 1+max(p,q)
+        armax = np.zeros(maxlag)
+        armax[:p+1] = rhoy
+        mamax = np.zeros(maxlag)
+        mamax[:q+1] = rhoe
+        zi = signal.lfilter_zi(armax, mamax)
+        errorsest = signal.lfilter(rhoy, rhoe, self.endog, zi=zi)[0] #zi is also returned
         return errorsest
 
 
@@ -237,6 +244,25 @@ class Arma(GenericLikelihoodModel):  #switch to generic mle
         if ma is None:
             ma = self.ma_est
         return signal.lfilter(ma, ar, eta)
+
+    def forecast2(self, step_ahead=1, endog=None):
+        '''rolling h-period ahead forecast without reestimation
+
+        Notes
+        -----
+        just the idea:
+        To improve performance with expanding arrays, specify total period by endog
+        and the conditional forecast period by step_ahead
+
+        This should be used by/with results which should contain predicted error or
+        noise. Could be either a recursive loop or lfilter with a h-step ahead
+        forecast filter, but then I need to calculate that one. ???
+
+        further extension: allow reestimation option
+
+        question: return h-step ahead or range(h)-step ahead ?
+        '''
+        pass
 
     #copied from arima.ARIMA
     #TODO: is this needed as a method at all?

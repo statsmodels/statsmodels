@@ -15,13 +15,6 @@ from scikits.statsmodels.tsa.arima_process import arma_impulse_response
 
 from datamlw import *
 
-#this needs to move to proper location
-def test_arma_impulse_response():
-    arrep = arma_impulse_response(armarep.ma, armarep.ar, nobs=21)[1:]
-    marep = arma_impulse_response(armarep.ar, armarep.ma, nobs=21)[1:]
-    assert_array_almost_equal(armarep.marep.ravel(), marep, 14)
-    #difference in sign convention to matlab for AR term
-    assert_array_almost_equal(-armarep.arrep.ravel(), arrep, 14)
 
 def check_pca_princomp(pcares, princomp):
     factors, evals, evecs = pcares[1:]

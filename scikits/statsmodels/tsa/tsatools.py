@@ -65,6 +65,47 @@ def add_trend(X, trend="c", prepend=False):
                 in trendarr.dtype.names], usemask=false, asrecarray=return_rec)
     return X
 
+def detrend(x, order=1, axis=0):
+    '''detrend an array with a trend of given order along axis 0 or 1
+
+    Parameters
+    ----------
+    x : array_like, 1d or 2d
+        data, if 2d, then each row or column is independently detrended with the
+        same trendorder, but independent trend estimates
+    order : int
+        specifies the polynomial order of the trend, zero is constant, one is
+        linear trend, two is quadratic trend
+    axis : int
+        for detrending with order > 0, axis can be either 0 observations by rows,
+        or 1, observations by columns
+
+    Returns
+    -------
+    detrended data series : ndarray
+        The detrended series is the residual of the linear regression of the
+        data on the trend of given order.
+
+
+    '''
+    x = np.asarray(x)
+    nobs = x.shape[0]
+    if order == 0:
+        return x - np.expand_dims(x.mean(ax), x)
+    else:
+        if x.ndim == 2 and range(2)[axis]==1:
+            x = x.T
+        elif x.ndim > 2:
+            raise NotImplementedError('x.ndim>2 is not implemented until it is needed')
+        #could use a polynomial, but this should work also with 2d x, but maybe not yet
+        trends = np.vander(np.arange(nobs).astype(float), N=order+1)
+        beta = np.linalg.lstsq(trends, x)[0]
+        resid = x - np.dot(trends, beta)
+        if x.ndim == 2 and range(2)[axis]==1:
+            resid = resid.T
+        return resid
+
+
 def lagmat(x, maxlag, trim='forward', original='ex'):
     '''create 2d array of lags
 
