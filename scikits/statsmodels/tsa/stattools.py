@@ -603,10 +603,10 @@ def pergram(X, kernel='bartlett', log=True):
     #    #TODO: make a list to check window
 #    ell = np.r_[1,np.arange(1,M+1)*np.pi/nobs]
     if kernel == "bartlett":
-        w = 1 - np.arange(M+1)/M
+        w = 1 - np.arange(M+1.)/M   #JP removed integer division
 
 #    weights = exec('signal.'+window+'(M='str(M)')')
-    j = np.arange(1,M+1)
+    j = np.arange(1,M+1.)
     ell = np.linspace(0,np.pi,M)
     pergr = np.zeros_like(ell)
     for i,L in enumerate(ell):  #todo: vectorize
