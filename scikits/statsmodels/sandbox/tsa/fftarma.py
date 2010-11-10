@@ -33,10 +33,9 @@ import numpy as np
 import numpy.fft as fft
 #import scipy.fftpack as fft
 from scipy import signal
-from try_var_convolve import maxabs
+#from try_var_convolve import maxabs
 from scikits.statsmodels.sandbox.archive.linalg_decomp_1 import OneTimeProperty
 from scikits.statsmodels.tsa.arima_process import ArmaProcess
-
 
 
 #trying to convert old experiments to a class
@@ -274,7 +273,7 @@ class ArmaFft(ArmaProcess):
         arroots = 1./arroots
         num = 1 + maroots**2 - 2* maroots * cosw
         den = 1 + arroots**2 - 2* arroots * cosw
-        print 'num.shape, den.shape', num.shape, den.shape
+        #print 'num.shape, den.shape', num.shape, den.shape
         hw = 0.5 / np.pi * num.prod(-1) / den.prod(-1) #or use expsumlog
         return np.squeeze(hw), w.squeeze()
 
@@ -415,6 +414,8 @@ def spdar1(ar, w):
     return 0.5 / np.pi /(1 + rho*rho - 2 * rho * np.cos(w))
 
 if __name__ == '__main__':
+    def maxabs(x,y):
+        return np.max(np.abs(x-y))
     nobs = 200  #10000
     ar = [1, 0.0]
     ma = [1, 0.0]
