@@ -97,6 +97,7 @@ Table of Contents
    glm
    rlm
    discretemod
+   tsa
    stattools
    tools
    internal
