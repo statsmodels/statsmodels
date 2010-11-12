@@ -176,8 +176,9 @@ def approx_fprime_cs(x0, f, args=(), h=1.0e-20):
     partials : ndarray
        array of partial derivatives, Gradient or Jacobian
     '''
-    dim = np.size(x0)
+    dim = np.size(x0) #TODO: What's the assumption on the shape here?
     increments = np.identity(dim) * 1j * h
+    #TODO: see if this can be vectorized, but usually dim is small
     partials = [f(x0+ih, *args).imag / h for ih in increments]
     return np.array(partials)
 
