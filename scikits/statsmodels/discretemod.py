@@ -598,7 +598,7 @@ class Probit(DiscreteModel):
         -----
         This function is just an alias for scipy.stats.norm.cdf
         """
-        return stats.norm.cdf(X)
+        return stats.norm._cdf(X)
 
     def pdf(self, X):
         """
@@ -619,7 +619,7 @@ class Probit(DiscreteModel):
 
         """
         X = np.asarray(X)
-        return stats.norm.pdf(X)
+        return stats.norm._pdf(X)
 
 
     def loglike(self, params):
