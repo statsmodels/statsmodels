@@ -180,7 +180,7 @@ def approx_fprime_cs(x0, f, args=(), h=1.0e-20):
     increments = np.identity(dim) * 1j * h
     #TODO: see if this can be vectorized, but usually dim is small
     partials = [f(x0+ih, *args).imag / h for ih in increments]
-    return np.array(partials)
+    return np.array(partials).T
 
 def approx_hess_cs(x0, func, args=(), h=1.0e-20, epsilon=1e-6):
     def grad(x0):
