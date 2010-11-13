@@ -21,6 +21,24 @@ def fun2(beta, y, x):
     return fun1(beta, y, x).sum(0)
 
 
+class TestGradLoglike(object):
+
+
+
+class TestGradMNLogit(TestGradLoglike):
+    def __init__(self):
+        from results.results_discrete import Anes
+        data = sm.datasets.anes96.load()
+        exog = data.exog
+        exog[:,0] = np.log(exog[:,0] + .1)
+        exog = np.column_stack((exog[:,0],exog[:,2],
+            exog[:,5:8]))
+        exog = sm.add_constant(exog)
+        self.mod = MNLogit(data.endog, exog)
+        self.params = np.ones(6)
+
+
+
 if __name__ == '__main__':
 
     epsilon = 1e-6
