@@ -2,6 +2,7 @@
 
 import numpy as np
 from numpy.testing import assert_almost_equal
+import scikits.statsmodels as sm
 import numdiff
 from numdiff import approx_fprime, approx_fprime_cs, approx_hess_cs
 
@@ -21,20 +22,23 @@ def fun2(beta, y, x):
     return fun1(beta, y, x).sum(0)
 
 
-class TestGradLoglike(object):
+class CheckGradLoglike(object):
+    def test_score(self):
+        pass
+        #assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_4)
 
 
 
-class TestGradMNLogit(TestGradLoglike):
+class TestGradMNLogit(CheckGradLoglike):
     def __init__(self):
-        from results.results_discrete import Anes
+        #from results.results_discrete import Anes
         data = sm.datasets.anes96.load()
         exog = data.exog
         exog[:,0] = np.log(exog[:,0] + .1)
         exog = np.column_stack((exog[:,0],exog[:,2],
             exog[:,5:8]))
         exog = sm.add_constant(exog)
-        self.mod = MNLogit(data.endog, exog)
+        self.mod = sm.MNLogit(data.endog, exog)
         self.params = np.ones(6)
 
 
