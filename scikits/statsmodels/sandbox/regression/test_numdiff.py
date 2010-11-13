@@ -13,8 +13,9 @@ import scikits.statsmodels as sm
 import numdiff
 from numdiff import approx_fprime, approx_fprime_cs, approx_hess_cs
 
-DEC6 = 6
+DEC4 = 4
 DEC5 = 5
+DEC6 = 6
 DEC8 = 8
 DEC13 = 13
 DEC14 = 14
@@ -153,15 +154,16 @@ class CheckDerivative(object):
             gcs = numdiff.approx_fprime_cs(test_params, fun, args=self.args)
             assert_almost_equal(gtrue, gcs, decimal=DEC13)
 
-    def est_hess_fun1_fd(self):
+    def test_hess_fun1_fd(self):
         for test_params in self.params:
             #hetrue = 0
             hetrue = self.hesstrue(test_params)
-            fun = self.fun()
-            epsilon = 1e-6  #default epsilon 1e-6 is not precise enough
-            hefd = numdiff.approx_hess(test_params, fun, #epsilon=1e-8,
-                                         *self.args) #TODO:should be kwds
-            assert_almost_equal(hetrue, hefd, decimal=DEC4)
+            if not hetrue is None: #Hessian doesn't work for 2d return of fun
+                fun = self.fun()
+                #default works, epsilon 1e-6 or 1e-8 is not precise enough
+                hefd = numdiff.approx_hess(test_params, fun, #epsilon=1e-8,
+                                             args=self.args)[0] #TODO:should be kwds
+                assert_almost_equal(hetrue, hefd, decimal=DEC4)
 
     def test_hess_fun1_cs(self):
         for test_params in self.params:

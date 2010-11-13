@@ -94,7 +94,7 @@ def approx_fprime1(xk, f, epsilon=1e-12, args=(), centered=False):
             ei[k] = 0.0 # why set this back?
     return grad.squeeze()
 
-def approx_hess(xk,f,epsilon=None, *args):#, returngrad=True):
+def approx_hess(xk, f, epsilon=None, args=None):#, returngrad=True):
     '''
     Calculate Hessian and Gradient by forward differentiation
 
