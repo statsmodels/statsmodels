@@ -245,7 +245,7 @@ if __name__ == '__main__':
     print approx_hess_cs((1,2,3), fun, (x,), h=1.0e-20)  #this is correctly zero
 
     print approx_hess_cs((1,2,3), fun2, (y,x), h=1.0e-20)-2*np.dot(x.T, x)
-    print numdiff.approx_hess(xk,fun2,1e-3, y,x)[0] - 2*np.dot(x.T, x)
+    print numdiff.approx_hess(xk,fun2,1e-3, (y,x))[0] - 2*np.dot(x.T, x)
 
     gt = (-x*2*(y-np.dot(x, [1,2,3]))[:,None])
     g = approx_fprime_cs((1,2,3), fun1, (y,x), h=1.0e-20)#.T   #this shouldn't be transposed
@@ -296,5 +296,11 @@ if __name__ == '__main__':
         exog[:,5:8]))
     exog = sm.add_constant(exog)
     res1 = sm.MNLogit(data.endog, exog).fit(method="newton", disp=0)
+
+    datap = sm.datasets.randhie.load()
+    nobs = len(datap.endog)
+    exogp = sm.add_constant(datap.exog.view(float).reshape(nobs,-1))
+    modp = sm.Poisson(datap.endog, exogp)
+    resp = modp.fit(method='newton', disp=0)
 
 
