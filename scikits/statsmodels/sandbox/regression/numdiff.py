@@ -158,6 +158,38 @@ def approx_fhess_p(x0,p,fprime,epsilon,*args):
     f1 = fprime(*((x0,)+args))
     return (f2 - f1)/epsilon
 
+#copied from try_gradient_complexsteps, which contains notes and some examples for testing
+#renamed from complex_step_grad to approx_fprime_cs, change order of arguments
+#from Guilherme P. de Freitas, numpy mailing list
+def approx_fprime_cs(x0, f, args=(), h=1.0e-20):
+    '''calculate gradient or Jacobian with complex step derivative approximation
+
+    Parameters
+    ----------
+    f : function
+       function of one array f(x)
+    x : array_like
+       value at which function derivative is evaluated
+
+    Returns
+    -------
+    partials : ndarray
+       array of partial derivatives, Gradient or Jacobian
+    '''
+    dim = np.size(x0) #TODO: What's the assumption on the shape here?
+    increments = np.identity(dim) * 1j * h
+    #TODO: see if this can be vectorized, but usually dim is small
+    partials = [f(x0+ih, *args).imag / h for ih in increments]
+    return np.array(partials)
+
+def approx_hess_cs(x0, func, args=(), h=1.0e-20, epsilon=1e-6):
+    def grad(x0):
+        return approx_fprime_cs(x0, func, args=args, h=1.0e-20)
+
+    #Hessian from gradient:
+    return (approx_fprime1(x0, grad, epsilon)
+            + approx_fprime1(x0, grad, -epsilon))/2.
+
 
 def fun(beta, x):
     return np.dot(x, beta).sum(0)

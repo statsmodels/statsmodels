@@ -151,3 +151,13 @@ TSA Tools
    tsatools.detrend
    tsatools.lagmat
    tsatools.lagmat2ds
+
+
+VARMA Process
+"""""""""""""
+
+.. autosummary::
+   :toctree: generated/
+
+   varma_process.VarmaPoly
+
