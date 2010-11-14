@@ -18,7 +18,7 @@ Quickstart for the impatient
 
 **License:** Simplified BSD
 
-**Requirements:** python 2.4. to 2.6 and
+**Requirements:** python 2.5. to 2.7 (there are only a few 2.4 incompatibilities) and
   recent releases of numpy (>=1.3) and scipy (>=0.7)
   earlier versions of numpy and scipy might work but not tested
   Optional: Many of the examples use matplotlib, and some sandbox functions
@@ -66,7 +66,7 @@ For example, here is a minimal ordinary least squares case ::
   # get data
   nsample = 100
   x = np.linspace(0,10, 100)
-  X = sm.tools.add_constant(np.column_stack((x, x**2)))
+  X = sm.add_constant(np.column_stack((x, x**2)))
   beta = np.array([1, 0.1, 10])
   y = np.dot(X, beta) + np.random.normal(size=nsample)
 

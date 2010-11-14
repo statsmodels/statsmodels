@@ -49,7 +49,7 @@ class TsaDescriptive(object):
         acf = self.acf(nacf)
         pacf = self.pacf(nacf)
         w = np.linspace(0, np.pi, nfreq, endpoint=False)
-        spdr = self.periodogram() #(w)
+        spdr = self.periodogram()[:nfreq] #(w)
 
         if fig is None:
             import matplotlib.pyplot as plt

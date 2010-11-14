@@ -13,8 +13,9 @@ import scikits.statsmodels as sm
 import numdiff
 from numdiff import approx_fprime, approx_fprime_cs, approx_hess_cs
 
-DEC6 = 6
+DEC4 = 4
 DEC5 = 5
+DEC6 = 6
 DEC8 = 8
 DEC13 = 13
 DEC14 = 14
@@ -153,15 +154,16 @@ class CheckDerivative(object):
             gcs = numdiff.approx_fprime_cs(test_params, fun, args=self.args)
             assert_almost_equal(gtrue, gcs, decimal=DEC13)
 
-    def est_hess_fun1_fd(self):
+    def test_hess_fun1_fd(self):
         for test_params in self.params:
             #hetrue = 0
             hetrue = self.hesstrue(test_params)
-            fun = self.fun()
-            epsilon = 1e-6  #default epsilon 1e-6 is not precise enough
-            hefd = numdiff.approx_hess(test_params, fun, #epsilon=1e-8,
-                                         *self.args) #TODO:should be kwds
-            assert_almost_equal(hetrue, hefd, decimal=DEC4)
+            if not hetrue is None: #Hessian doesn't work for 2d return of fun
+                fun = self.fun()
+                #default works, epsilon 1e-6 or 1e-8 is not precise enough
+                hefd = numdiff.approx_hess(test_params, fun, #epsilon=1e-8,
+                                             args=self.args)[0] #TODO:should be kwds
+                assert_almost_equal(hetrue, hefd, decimal=DEC4)
 
     def test_hess_fun1_cs(self):
         for test_params in self.params:
@@ -243,7 +245,7 @@ if __name__ == '__main__':
     print approx_hess_cs((1,2,3), fun, (x,), h=1.0e-20)  #this is correctly zero
 
     print approx_hess_cs((1,2,3), fun2, (y,x), h=1.0e-20)-2*np.dot(x.T, x)
-    print numdiff.approx_hess(xk,fun2,1e-3, y,x)[0] - 2*np.dot(x.T, x)
+    print numdiff.approx_hess(xk,fun2,1e-3, (y,x))[0] - 2*np.dot(x.T, x)
 
     gt = (-x*2*(y-np.dot(x, [1,2,3]))[:,None])
     g = approx_fprime_cs((1,2,3), fun1, (y,x), h=1.0e-20)#.T   #this shouldn't be transposed
@@ -294,5 +296,11 @@ if __name__ == '__main__':
         exog[:,5:8]))
     exog = sm.add_constant(exog)
     res1 = sm.MNLogit(data.endog, exog).fit(method="newton", disp=0)
+
+    datap = sm.datasets.randhie.load()
+    nobs = len(datap.endog)
+    exogp = sm.add_constant(datap.exog.view(float).reshape(nobs,-1))
+    modp = sm.Poisson(datap.endog, exogp)
+    resp = modp.fit(method='newton', disp=0)
 
 
