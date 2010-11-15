@@ -25,6 +25,8 @@ Harvey uses Durbin and Koopman notation.
 # Harvey notes that the square root filter will keep P_t pos. def. but
 # is not strictly needed outside of the engineering (long series)
 
+from scikits.statsmodels.decorators import (cache_readonly, cache_writable,
+            resettable_cache)
 from scipy import optimize
 import numpy as np
 from numpy import dot, identity, kron, log, zeros, pi, exp
@@ -675,32 +677,32 @@ class ARMA(GenericLikelihoodModel):
             macoefs = newparams[k+p:k+p+q][::-1]
         else:
             macoefs = 0
-#        errors = [0] * q # psuedo-errors
-#        rerrors = [1] * q # error correction term
+        errors = [0] * q # psuedo-errors
+        rerrors = [1] * q # error correction term
         # create pseudo-error and error correction series iteratively
-#        for i in range(p,len(y)):
-#            errors.append(y[i]-sum(arcoefs*y[i-p:i])-\
-#                                sum(macoefs*errors[i-q:i]))
-#            rerrors.append(-sum(macoefs*rerrors[i-q:i]))
-#        errors = np.asarray(errors)
-#        rerrors = np.asarray(rerrors)
+        for i in range(p,len(y)):
+            errors.append(y[i]-sum(arcoefs*y[i-p:i])-\
+                                sum(macoefs*errors[i-q:i]))
+            rerrors.append(-sum(macoefs*rerrors[i-q:i]))
+        errors = np.asarray(errors)
+        rerrors = np.asarray(rerrors)
 
         # compute bayesian expected mean and variance of initial errors
-#        one_sumrt2 = 1 + np.sum(rerrors**2)
-#        sum_errors2 = np.sum(errors**2)
-#        mup = -np.sum(errors * rerrors)/one_sumrt2
+        one_sumrt2 = 1 + np.sum(rerrors**2)
+        sum_errors2 = np.sum(errors**2)
+        mup = -np.sum(errors * rerrors)/one_sumrt2
 
         # concentrating out the ML estimator of "true" sigma2 gives
-#        sigma2 = 1./(2*pi*nobs)  * (sum_errors2 - mup**2*(one_sumrt2))
+        sigma2 = 1./(2*nobs)  * (sum_errors2 - mup**2*(one_sumrt2))
 
         # which gives a variance of the initial errors of
-#        sigma2p = sigma2/one_sumrt2
+        sigma2p = sigma2/one_sumrt2
 
-#        llf = -(nobs-p)/2. * np.log(2*pi*sigma2) - 1./(2*sigma2)*sum_errors2 \
-#                + 1./2*log(one_sumrt2) + 1./(2*sigma2) * mup**2*one_sumrt2
-        T_mat = self.T(newparams)
-        Z = self.Z
-        m = Z.shape[1]
+        llf = -(nobs-p)/2. * np.log(2*pi*sigma2) - 1./(2*sigma2)*sum_errors2 \
+                + 1./2*log(one_sumrt2) + 1./(2*sigma2) * mup**2*one_sumrt2
+#        T_mat = self.T(newparams)
+#        Z = self.Z
+#        m = Z.shape[1]
         R_mat = self.R(newparams)
         T_mat = self.T(newparams)
         # initial state and its variance
@@ -856,6 +858,51 @@ class ARMAResults(LikelihoodModelResults):
     def __init__(self, model, params, normalized_cov_params=None, scale=1.):
         super(ARMAResults, self).__init(model, params, normalized_cov_params,
                 scale)
+
+    @cache_readonly
+    def arroots(self):
+        np.roots(np.r_[1,-self.params[self.k:self.p]])**-1 # check indexing
+
+    @cache_readonly
+    def maroots(self):
+        pass
+
+    @cache_readonly
+    def params(self):
+        pass
+
+    @cache_readonly
+    def llf(self):
+        pass
+
+    @cache_readonly
+    def bse(self):
+        pass
+
+    @cache_readonly
+    def aic(self):
+        pass
+
+    @cache_readonly
+    def bic(self):
+        pass
+
+    @cache_readonly
+    def hic(self):
+        pass
+
+    @cache_readonly
+    def resids(self):
+        pass
+
+    @cache_readonly
+    def pvalues(self):
+        pass
+
+#    def t(self):
+#        pass
+
+
 
 if __name__ == "__main__":
     import numpy as np
@@ -1073,6 +1120,7 @@ if __name__ == "__main__":
     arma = ARMA(y)
     arma.fit(trend='nc', order=(1,1))
 
+    np.random.seed(12345)
     y_arma22 = arma_generate_sample([1.,-.85,.35],[1,.25,-.9], nsample=1000)
     arma22 = ARMA(y_arma22)
     arma22.fit(trend = 'nc', order=(2,2))
