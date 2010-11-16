@@ -452,8 +452,9 @@ class ARMA(GenericLikelihoodModel):
         r = self.r
         k = self.k
         p = self.p
-        arr = np.zeros((r,r))
-        params_padded = np.zeros(r) # handle zero coefficients if necessary
+        arr = np.zeros((r,r), dtype=params.dtype) # allows for complex-step
+                                                  # derivative
+        params_padded = np.zeros(r, dtype=params.dtype) # handle zero coefficients if necessary
         #NOTE: squeeze added for cg optimizer
         params_padded[:p] = params[k:p+k]
         arr[:,0] = params_padded   # first p params are AR coeffs w/ short params
@@ -474,7 +475,8 @@ class ARMA(GenericLikelihoodModel):
         k = self.k
         q = self.q
         p = self.p
-        arr = np.zeros((r,1)) # this allows zero coefficients
+        arr = np.zeros((r,1), dtype=params.dtype) # this allows zero coefficients
+                                                  # dtype allows for compl. der.
         arr[1:q+1,:] = params[p+k:p+k+q][:,None]
         arr[0] = 1.0
         return arr
@@ -592,8 +594,8 @@ class ARMA(GenericLikelihoodModel):
         P = Q_0
         sigma2 = 0
         loglikelihood = 0
-        v = zeros((nobs,1))
-        F = zeros((nobs,1))
+        v = zeros((nobs,1), dtype=params.dtype)
+        F = zeros((nobs,1), dtype=params.dtype)
         #NOTE: can only do quick recursions if Z is time-invariant
         #so could have recursions for pure ARMA vs ARMAX
         for i in xrange(int(nobs)):
