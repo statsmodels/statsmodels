@@ -25,6 +25,8 @@ Harvey uses Durbin and Koopman notation.
 # Harvey notes that the square root filter will keep P_t pos. def. but
 # is not strictly needed outside of the engineering (long series)
 
+from scikits.statsmodels.decorators import (cache_readonly, cache_writable,
+            resettable_cache)
 from scipy import optimize
 import numpy as np
 from numpy import dot, identity, kron, log, zeros, pi, exp
@@ -450,8 +452,9 @@ class ARMA(GenericLikelihoodModel):
         r = self.r
         k = self.k
         p = self.p
-        arr = np.zeros((r,r))
-        params_padded = np.zeros(r) # handle zero coefficients if necessary
+        arr = np.zeros((r,r), dtype=params.dtype) # allows for complex-step
+                                                  # derivative
+        params_padded = np.zeros(r, dtype=params.dtype) # handle zero coefficients if necessary
         #NOTE: squeeze added for cg optimizer
         params_padded[:p] = params[k:p+k]
         arr[:,0] = params_padded   # first p params are AR coeffs w/ short params
@@ -472,7 +475,8 @@ class ARMA(GenericLikelihoodModel):
         k = self.k
         q = self.q
         p = self.p
-        arr = np.zeros((r,1)) # this allows zero coefficients
+        arr = np.zeros((r,1), dtype=params.dtype) # this allows zero coefficients
+                                                  # dtype allows for compl. der.
         arr[1:q+1,:] = params[p+k:p+k+q][:,None]
         arr[0] = 1.0
         return arr
@@ -590,8 +594,8 @@ class ARMA(GenericLikelihoodModel):
         P = Q_0
         sigma2 = 0
         loglikelihood = 0
-        v = zeros((nobs,1))
-        F = zeros((nobs,1))
+        v = zeros((nobs,1), dtype=params.dtype)
+        F = zeros((nobs,1), dtype=params.dtype)
         #NOTE: can only do quick recursions if Z is time-invariant
         #so could have recursions for pure ARMA vs ARMAX
         for i in xrange(int(nobs)):
@@ -643,6 +647,87 @@ class ARMA(GenericLikelihoodModel):
         sigma2 = ssr/(nobs-p)
         llf = -(nobs-p)/2.*(log(2*pi) + log(sigma2)) - np.sum(ssr)/(2*sigma2)
         return llf
+
+    def loglike_exact(self, params):
+        """
+        Exact likelihood for ARMA process.
+
+        Notes
+        -----
+        Computes the exact likelihood for an ARMA process by modifying the
+        conditional sum of squares likelihood as suggested by Shephard (1997)
+        "The relationship between the conditional sum of squares and the exact
+        likelihood for autoregressive moving average models."
+        """
+        p = self.p
+        q = self.q
+        k = self.k
+        y = self.endog.copy()
+        nobs = self.nobs
+        if self.transparams:
+            newparams = self._transparams(params)
+        else:
+            newparams = params
+        if k > 0:
+            y -= dot(self.exog, newparams[:k])
+        if p != 0:
+            arcoefs = newparams[k:k+p][::-1]
+            T = self.T(arcoefs)
+        else:
+            arcoefs = 0
+        if q != 0:
+            macoefs = newparams[k+p:k+p+q][::-1]
+        else:
+            macoefs = 0
+        errors = [0] * q # psuedo-errors
+        rerrors = [1] * q # error correction term
+        # create pseudo-error and error correction series iteratively
+        for i in range(p,len(y)):
+            errors.append(y[i]-sum(arcoefs*y[i-p:i])-\
+                                sum(macoefs*errors[i-q:i]))
+            rerrors.append(-sum(macoefs*rerrors[i-q:i]))
+        errors = np.asarray(errors)
+        rerrors = np.asarray(rerrors)
+
+        # compute bayesian expected mean and variance of initial errors
+        one_sumrt2 = 1 + np.sum(rerrors**2)
+        sum_errors2 = np.sum(errors**2)
+        mup = -np.sum(errors * rerrors)/one_sumrt2
+
+        # concentrating out the ML estimator of "true" sigma2 gives
+        sigma2 = 1./(2*nobs)  * (sum_errors2 - mup**2*(one_sumrt2))
+
+        # which gives a variance of the initial errors of
+        sigma2p = sigma2/one_sumrt2
+
+        llf = -(nobs-p)/2. * np.log(2*pi*sigma2) - 1./(2*sigma2)*sum_errors2 \
+                + 1./2*log(one_sumrt2) + 1./(2*sigma2) * mup**2*one_sumrt2
+#        T_mat = self.T(newparams)
+#        Z = self.Z
+#        m = Z.shape[1]
+        R_mat = self.R(newparams)
+        T_mat = self.T(newparams)
+        # initial state and its variance
+        alpha = zeros((m,1))
+        Q_0 = dot(inv(identity(m**2)-kron(T_mat,T_mat)),
+                dot(R_mat,R_mat.T).ravel('F'))
+        Q_0 = Q_0.reshape(r,r,order='F')
+        P = Q_0
+        v = zeros((nobs,1))
+        F = zeros((nobs,1))
+        B = array([T_mat, 0], dtype=object)
+
+
+        for i in xrange(int(nobs)):
+            z_mat = Z[i,None]
+            v_mat = (y[i],0) - dot(z_mat,B)
+
+        B_0 = (T,0)
+        v_t = (y_t,0) - z*B_t
+        llf = -nobs/2.*np.log(2*pi*sigma2) - 1/(2.*sigma2)*se_n - \
+            1/2.*logdet(Sigma_a) + 1/(2*sigma2)*s_n_prime*sigma_a*s_n
+        return llf
+
 
     def fit(self, order, start_params=None, trend='c', method = "css-mle",
             transparams=True, solver=None, maxiter=35, full_output=1,
@@ -775,6 +860,51 @@ class ARMAResults(LikelihoodModelResults):
     def __init__(self, model, params, normalized_cov_params=None, scale=1.):
         super(ARMAResults, self).__init(model, params, normalized_cov_params,
                 scale)
+
+    @cache_readonly
+    def arroots(self):
+        np.roots(np.r_[1,-self.params[self.k:self.p]])**-1 # check indexing
+
+    @cache_readonly
+    def maroots(self):
+        pass
+
+    @cache_readonly
+    def params(self):
+        pass
+
+    @cache_readonly
+    def llf(self):
+        pass
+
+    @cache_readonly
+    def bse(self):
+        pass
+
+    @cache_readonly
+    def aic(self):
+        pass
+
+    @cache_readonly
+    def bic(self):
+        pass
+
+    @cache_readonly
+    def hic(self):
+        pass
+
+    @cache_readonly
+    def resids(self):
+        pass
+
+    @cache_readonly
+    def pvalues(self):
+        pass
+
+#    def t(self):
+#        pass
+
+
 
 if __name__ == "__main__":
     import numpy as np
@@ -992,6 +1122,7 @@ if __name__ == "__main__":
     arma = ARMA(y)
     arma.fit(trend='nc', order=(1,1))
 
+    np.random.seed(12345)
     y_arma22 = arma_generate_sample([1.,-.85,.35],[1,.25,-.9], nsample=1000)
     arma22 = ARMA(y_arma22)
     arma22.fit(trend = 'nc', order=(2,2))
