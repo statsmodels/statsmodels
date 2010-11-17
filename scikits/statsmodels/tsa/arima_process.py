@@ -54,9 +54,10 @@ License: BSD
 '''
 
 import numpy as np
-from scipy import signal, optimize
+from scipy import signal, optimize, linalg
 from scikits.statsmodels.model import LikelihoodModel
 
+#this has been copied to new arma_mle.py - keep temporarily for easier lookup
 class ARIMA(LikelihoodModel):
     '''currently ARMA only, no differencing used - no I
 
@@ -186,7 +187,9 @@ class ARIMA(LikelihoodModel):
         eta = std * np.random.randn(nsample)
         return signal.lfilter(ma, ar, eta)
 
-def arma_generate_sample(ar, ma, nsample, sigma=1, distrvs=np.random.randn):
+
+
+def arma_generate_sample(ar, ma, nsample, sigma=1, distrvs=np.random.randn, burnin=0):
     '''generate an random sample of an ARMA process
 
     Parameters
@@ -204,6 +207,9 @@ def arma_generate_sample(ar, ma, nsample, sigma=1, distrvs=np.random.randn):
         as argument
         default: np.random.randn
         TODO: change to size argument
+    burnin : integer (default: 0)
+        to reduce the effect of initial conditions, burnin observations at the
+        beginning of the sample are dropped
 
 
     Returns
@@ -213,8 +219,9 @@ def arma_generate_sample(ar, ma, nsample, sigma=1, distrvs=np.random.randn):
 
 
     '''
-    eta = sigma * distrvs(nsample)
-    return signal.lfilter(ma, ar, eta)
+    #TODO: unify with ArmaProcess method
+    eta = sigma * distrvs(nsample+burnin)
+    return signal.lfilter(ma, ar, eta)[burnin:]
 
 def arma_acovf(ar, ma, nobs=10):
     '''theoretical autocovariance function of ARMA process
@@ -239,8 +246,9 @@ def arma_acovf(ar, ma, nobs=10):
 
     Notes
     -----
-    tries to do some crude numerical speed improvements for cases
-    with high persistance.
+    Tries to do some crude numerical speed improvements for cases
+    with high persistance. However, this algorithm is slow if the process is
+    highly persistent and only a few autocovariances are desired.
     '''
     #increase length of impulse response for AR closer to 1
     #maybe cheap/fast enough to always keep nobs for ir large
@@ -252,8 +260,8 @@ def arma_acovf(ar, ma, nobs=10):
     #better save than sorry (?), I have no idea about the required precision
     #only checked for AR(1)
     while ir[-1] > 5*1e-5:
-        nobs *= 10
-        ir = arma_impulse_response(ar, ma, nobs=nobs)
+        nobs_ir *= 10
+        ir = arma_impulse_response(ar, ma, nobs=nobs_ir)
     #again no idea where the speed break points are:
     if nobs_ir > 50000 and nobs < 1001:
         acovf = np.array([np.dot(ir[:nobs-t], ir[t:nobs]) for t in range(nobs)])
@@ -296,13 +304,55 @@ def arma_pacf(ar, ma, nobs=10):
 
     not tested/checked yet
     '''
-    apacf = np.zeros(nobs)
-    acov = tsa.arma_acf(ar,ma)
+    apacf = np.zeros(nobs+1)
+    acov = arma_acf(ar,ma)
 
     apacf[0] = 1.
     for k in range(2,nobs+1):
         r = acov[:k];
-        apacf[k] = np.linalg.solve(scipy.linalg.toeplitz(r[:-1]), r[1:])[-1]
+        apacf[k] = linalg.solve(linalg.toeplitz(r[:-1]), r[1:])[-1]
+    return apacf
+
+def arma_periodogram(ar, ma, worN=None, whole=0):
+    '''periodogram for ARMA process given by lag-polynomials ar and ma
+
+    Parameters
+    ----------
+    ar : array_like
+        autoregressive lag-polynomial with leading 1 and lhs sign
+    ma : array_like
+        moving average lag-polynomial with leading 1
+    worN : {None, int}, optional
+        option for scipy.signal.freqz   (read "w or N")
+        If None, then compute at 512 frequencies around the unit circle.
+        If a single integer, the compute at that many frequencies.
+        Otherwise, compute the response at frequencies given in worN
+    whole : {0,1}, optional
+        options for scipy.signal.freqz
+        Normally, frequencies are computed from 0 to pi (upper-half of
+        unit-circle.  If whole is non-zero compute frequencies from 0 to 2*pi.
+
+    Returns
+    -------
+    w : array
+        frequencies
+    sd : array
+        periodogram, spectral density
+
+    Notes
+    -----
+    Normalization ?
+
+    This uses signal.freqz, which does not use fft. There is a fft version
+    somewhere.
+
+    '''
+    w, h = signal.freqz(ma, ar, worN=worN, whole=whole)
+    sd = np.abs(h)**2/np.sqrt(2*np.pi)
+    if np.sum(np.isnan(h)) > 0:
+        # this happens with unit root or seasonal unit root'
+        print 'Warning: nan in frequency response h, maybe a unit root'
+    return w, sd
 
 
 def arma_impulse_response(ar, ma, nobs=100):
@@ -397,6 +447,69 @@ def arma2ar(ar, ma, nobs=100):
     '''
     return arma_impulse_response(ma, ar, nobs=100)
 
+
+#moved from sandbox.tsa.try_fi
+def ar2arma(ar_des, p, q, n=20, mse='ar', start=None):
+    '''find arma approximation to ar process
+
+    This finds the ARMA(p,q) coefficients that minimize the integrated
+    squared difference between the impulse_response functions
+    (MA representation) of the AR and the ARMA process. This does
+    currently not check whether the MA lagpolynomial of the ARMA
+    process is invertible, neither does it check the roots of the AR
+    lagpolynomial.
+
+    Parameters
+    ----------
+    ar_des : array_like
+        coefficients of original AR lag polynomial, including lag zero
+    p, q : int
+        length of desired ARMA lag polynomials
+    n : int
+        number of terms of the impuls_response function to include in the
+        objective function for the approximation
+    mse : string, 'ar'
+        not used yet,
+
+    Returns
+    -------
+    ar_app, ma_app : arrays
+        coefficients of the AR and MA lag polynomials of the approximation
+    res : tuple
+        result of optimize.leastsq
+
+    Notes
+    -----
+    Extension is possible if we want to match autocovariance instead
+    of impulse response function.
+
+    TODO: convert MA lag polynomial, ma_app, to be invertible, by mirroring
+    roots outside the unit intervall to ones that are inside. How do we do
+    this?
+
+    '''
+    #p,q = pq
+    def msear_err(arma, ar_des):
+        ar, ma = np.r_[1, arma[:p-1]], np.r_[1, arma[p-1:]]
+        ar_approx = arma_impulse_response(ma, ar,  n)
+##        print ar,ma
+##        print ar_des.shape, ar_approx.shape
+##        print ar_des
+##        print ar_approx
+        return (ar_des - ar_approx) #((ar - ar_approx)**2).sum()
+    if start is None:
+        arma0 = np.r_[-0.9* np.ones(p-1), np.zeros(q-1)]
+    else:
+        arma0 = start
+    res = optimize.leastsq(msear_err, arma0, ar_des, maxfev=5000)#, full_output=True)
+    #print res
+    arma_app = np.atleast_1d(res[0])
+    ar_app = np.r_[1, arma_app[:p-1]],
+    ma_app = np.r_[1, arma_app[p-1:]]
+    return ar_app, ma_app, res
+
+
+
 def lpol2index(ar):
     '''remove zeros from lagpolynomial, squeezed representation with index
 
@@ -439,6 +552,78 @@ def index2lpol(coeffs, index):
     ar = np.zeros(n)
     ar[index] = coeffs
     return ar
+
+#moved from sandbox.tsa.try_fi
+def lpol_fima(d, n=20):
+    '''MA representation of fractional integration
+
+    .. math:: (1-L)^{-d} for |d|<0.5  or |d|<1 (?)
+
+    Parameters
+    ----------
+    d : float
+        fractional power
+    n : int
+        number of terms to calculate, including lag zero
+
+    Returns
+    -------
+    ma : array
+        coefficients of lag polynomial
+
+    '''
+    #hide import inside function until we use this heavily
+    from scipy.special import gamma, gammaln
+    j = np.arange(n)
+    return np.exp(gammaln(d+j) - gammaln(j+1) - gammaln(d))
+
+#moved from sandbox.tsa.try_fi
+def lpol_fiar(d, n=20):
+    '''AR representation of fractional integration
+
+    .. math:: (1-L)^{d} for |d|<0.5  or |d|<1 (?)
+
+    Parameters
+    ----------
+    d : float
+        fractional power
+    n : int
+        number of terms to calculate, including lag zero
+
+    Returns
+    -------
+    ar : array
+        coefficients of lag polynomial
+
+    Notes:
+    first coefficient is 1, negative signs except for first term,
+    ar(L)*x_t
+    '''
+    #hide import inside function until we use this heavily
+    from scipy.special import gamma, gammaln
+    j = np.arange(n)
+    ar = - np.exp(gammaln(-d+j) - gammaln(j+1) - gammaln(-d))
+    ar[0] = 1
+    return ar
+
+#moved from sandbox.tsa.try_fi
+def lpol_sdiff(s):
+    '''return coefficients for seasonal difference (1-L^s)
+
+    just a trivial convenience function
+
+    Parameters
+    ----------
+    s : int
+        number of periods in season
+
+    Returns
+    -------
+    sdiff : list, length s+1
+
+    '''
+    return [1] + [0]*(s-1) + [-1]
+
 
 
 def deconvolve(num, den, n=None):
@@ -492,33 +677,224 @@ def deconvolve(num, den, n=None):
     return quot, rem
 
 
+class ArmaProcess(object):
+    '''represents an ARMA process for given lag-polynomials
 
-def mcarma22(niter=10):
-    '''run Monte Carlo for ARMA(2,2)
+    This is a class to bring together properties of the process.
+    It does not do any estimation or statistical analysis.
 
-    DGP parameters currently hard coded
-    also sample size `nsample`
-
-    was not a self contained function, used instances from outer scope
-      now corrected
+    maybe needs special handling for unit roots
 
     '''
-    nsample = 1000
-    #ar = [1.0, 0, 0]
-    ar = [1.0, -0.75, -0.1]
-    #ma = [1.0, 0, 0]
-    ma = [1.0,  0.3,  0.2]
-    results = []
-    results_bse = []
-    for _ in range(niter):
-        y2 = arma_generate_sample(ar,ma,nsample,0.1)
-        arest2 = ARIMA(y2)
-        rhohat2a, cov_x2a, infodict, mesg, ier = arest2.fit((2,0,2))
-        results.append(rhohat2a)
-        err2a = arest2.errfn(x=y2)
-        sige2a = np.sqrt(np.dot(err2a,err2a)/nsample)
-        results_bse.append(sige2a * np.sqrt(np.diag(cov_x2a)))
-    return np.r_[ar[1:], ma[1:]], np.array(results), np.array(results_bse)
+    def __init__(self, ar, ma, nobs=None):
+        self.ar = np.asarray(ar)
+        self.ma = np.asarray(ma)
+        self.arcoefs = -self.ar[1:]
+        self.macoefs = self.ma[1:]
+        self.arpoly = np.polynomial.Polynomial(self.ar)
+        self.mapoly = np.polynomial.Polynomial(self.ma)
+
+    @classmethod
+    def from_coeffs(cls, arcoefs, macoefs, nobs=None):
+        '''create ArmaProcess instance from coefficients of the lag-polynomials
+        '''
+        return cls(np.r_[1,-arcoefs], np.r_[1,-macoefs], nobs=nobs)
+
+    @classmethod
+    def from_estimation(cls, model_results, nobs=None):
+        '''create ArmaProcess instance from estimation results
+        '''
+        arcoefs = model_results.params[:model_results.nar]
+        macoefs = model_results.params[model_results.nar:
+                                       model_results.nar+model_results.nma]
+        return cls(np.r_[1,-arcoefs], np.r_[1,-macoefs], nobs=nobs)
+
+    def __mul__(self, oth):
+        if isinstance(oth, self.__class__):
+            ar = (self.arpoly * oth.arpoly).coef
+            ma = (self.mapoly * oth.mapoly).coef
+        else:
+            try:
+                aroth, maoth = oth
+                arpolyoth = np.polynomial.Polynomial(aroth)
+                mapolyoth = np.polynomial.Polynomial(maoth)
+                ar = (self.arpoly * arpolyoth).coef
+                ma = (self.mapoly * mapolyoth).coef
+            except:
+                print('other is not a valid type')
+                raise
+        return self.__class__(ar, ma, nobs=self.nobs)
+
+    def __repr__(self):
+        return 'ArmaProcess(%r, %r, nobs=%d)' % (self.ar.tolist(), self.ma.tolist(),
+                                            self.nobs)
+    def __str__(self):
+        return 'ArmaProcess\nAR: %r\nMA: %r' % (self.ar.tolist(), self.ma.tolist())
+
+
+    def acovf(self, nobs=None):
+         nobs = nobs or self.nobs
+         return arma_acovf(self.ar, self.ma, nobs=nobs)
+
+    acovf.__doc__ = arma_acovf.__doc__
+
+    def acf(self, nobs=None):
+         nobs = nobs or self.nobs
+         return arma_acf(self.ar, self.ma, nobs=nobs)
+
+    acf.__doc__ = arma_acf.__doc__
+
+    def pacf(self, nobs=None):
+         nobs = nobs or self.nobs
+         return arma_pacf(self.ar, self.ma, nobs=nobs)
+
+    pacf.__doc__ = arma_pacf.__doc__
+
+    def periodogram(self, nobs=None):
+         nobs = nobs or self.nobs
+         return arma_periodogram(self.ar, self.ma, worN=nobs)
+
+    periodogram.__doc__ = arma_periodogram.__doc__
+
+    def impulse_response(self, nobs=None):
+         nobs = nobs or self.nobs
+         return arma_impulse_response(self.ar, self.ma, worN=nobs)
+
+    impulse_response.__doc__ = arma_impulse_response.__doc__
+
+    def arma2ma(self, nobs=None):
+         nobs = nobs or self.nobs
+         return arma2ma(self.ar, self.ma, nobs=nobs)
+
+    arma2ma.__doc__ = arma2ma.__doc__
+
+    def arma2ar(self, nobs=None):
+         nobs = nobs or self.nobs
+         return arma2ar(self.ar, self.ma, nobs=nobs)
+
+    arma2ar.__doc__ = arma2ar.__doc__
+
+    def ar_roots(self):
+        '''roots of autoregressive lag-polynomial
+        '''
+        return self.arpoly.roots()
+
+    def ma_roots(self):
+        '''roots of moving average lag-polynomial
+        '''
+        return self.mapoly.roots()
+
+    def isstationary(self):
+        '''Arma process is stationary if AR roots are outside unit circle
+
+        Returns
+        -------
+        isstationary : boolean
+             True if autoregressive roots are outside unit circle
+
+        '''
+        if np.abs(self.ar_roots()) > 1:
+            return True
+        else:
+            return False
+
+    def isinvertible(self):
+        '''Arma process is invertible if MA roots are outside unit circle
+
+        Returns
+        -------
+        isinvertible : boolean
+             True if moving average roots are outside unit circle
+
+        '''
+        if np.abs(self.ma_roots()) > 1:
+            return True
+        else:
+            return False
+
+    def invertroots(self, retnew=False):
+        '''make MA polynomial invertible by inverting roots inside unit circle
+
+        Parameter
+        ---------
+        retnew : boolean
+            If False (default), then return the lag-polynomial as array.
+            If True, then return a new instance with invertible MA-polynomial
+
+        Returns
+        -------
+        manew : array
+           new invertible MA lag-polynomial, returned if retnew is false.
+        wasinvertible : boolean
+           True if the MA lag-polynomial was already invertible, returned if
+           retnew is false.
+
+        armaprocess : new instance of class
+           If retnew is true, then return a new instance with invertible
+           MA-polynomial
+
+
+        '''
+        pr = self.ma_roots()
+        insideroots = np.abs(pr)<1
+        if insideroots.any():
+            pr[np.abs(pr)<1] = 1./pr[np.abs(pr)<1]
+            pnew = poly.Polynomial.fromroots(pr)
+            mainv = pn.coef/pnew.coef[0]
+            wasinvertible = False
+        else:
+            mainv = self.ma
+            wasinvertible = True
+        if retnew:
+            return self.__class__(self.ar, mainv, nobs=self.nobs)
+        else:
+            return mainv, wasinvertible
+
+    def generate_sample(self, size=100, scale=1, distrvs=None, axis=0, burnin=0):
+        '''generate ARMA samples
+
+        Parameters
+        ----------
+        size : int or tuple of ints
+            If size is an integer, then this creates a 1d timeseries of length size.
+            If size is a tuple, then the timeseries is along axis. All other axis
+            have independent arma samples.
+
+        Returns
+        -------
+        rvs : ndarray
+            random sample(s) of arma process
+
+        Notes
+        -----
+        Should work for n-dimensional with time series along axis, but not tested
+        yet. Processes are sampled independently.
+
+        '''
+        if distrvs is None:
+            distrvs = np.random.normal
+        if np.ndim(size) == 0:
+                size = [size]
+        if burnin:
+            #handle burin time for nd arrays
+            #maybe there is a better trick in scipy.fft code
+            newsize = list(size)
+            newsize[axis] += burnin
+            newsize = tuple(newsize)
+            fslice = [slice(None)]*len(newsize)
+            fslice[axis] = slice(burnin, None, None)
+            fslice = tuple(fslice)
+        else:
+            newsize = tuple(size)
+            fslice = tuple([slice(None)]*np.ndim(newsize))
+
+        eta = scale * distrvs(size=newsize)
+        return signal.lfilter(self.ma, self.ar, eta, axis=axis)[fslice]
+
+
+
+
+
 
 
 __all__ = ['ARIMA', 'arma_acf', 'arma_acovf', 'arma_generate_sample',
@@ -527,7 +903,6 @@ __all__ = ['ARIMA', 'arma_acf', 'arma_acovf', 'arma_generate_sample',
 
 
 if __name__ == '__main__':
-    print mcarma22()
 
 
     # Simulate AR(1)
@@ -658,38 +1033,6 @@ if __name__ == '__main__':
     import scikits.statsmodels as sm
     print sm.regression.yule_walker(y4, order=2, method='mle', inv=True)
 
-    def mc_summary(res, rt=None):
-        if rt is None:
-            rt = np.zeros(res.shape[1])
-        print 'RMSE'
-        print np.sqrt(((res-rt)**2).mean(0))
-        print 'mean bias'
-        print (res-rt).mean(0)
-        print 'median bias'
-        print np.median((res-rt),0)
-        print 'median bias percent'
-        print np.median((res-rt)/rt*100,0)
-        print 'median absolute error'
-        print np.median(np.abs(res-rt),0)
-        print 'positive error fraction'
-        print (res > rt).mean(0)
-
-    run_mc = True#False
-    if run_mc:
-        import time
-        t0 = time.time()
-        rt, res_rho, res_bse = mcarma22(niter=1000)
-        print 'elapsed time for Monte Carlo', time.time()-t0
-        # 20 seconds for ARMA(2,2), 1000 iterations with 1000 observations
-        sige2a = np.sqrt(np.dot(err2a,err2a)/nsample)
-        print '\nbse of one sample'
-        print sige2a * np.sqrt(np.diag(cov_x2a))
-        print '\nMC of rho versus true'
-        mc_summary(res_rho, rt)
-        print '\nMC of bse versus zero'
-        mc_summary(res_bse)
-        print '\nMC of bse versus std'
-        mc_summary(res_bse, res_rho.std(0))
 
     import matplotlib.pyplot as plt
     plt.plot(arest2.forecast()[-100:])

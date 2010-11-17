@@ -917,8 +917,9 @@ def generate_kindofgarch(nobs, ar, ma, mu=1.):
     #this has the wrong distribution, should be eps**2
     #TODO: use new version tsa.arima.??? instead, has distr option
     #arest = tsa.arima.ARIMA()
-    arest = tsa.arima.ARIMA  #try class method, ARIMA needs data in constructor
-    h = arest.generate_sample(ar,ma,nobs,0.1)
+    #arest = tsa.arima.ARIMA  #try class method, ARIMA needs data in constructor
+    from scikits.statsmodels.tsa.arima_process import arma_generate_sample
+    h = arma_generate_sample(ar,ma,nobs,0.1)
     #h = np.abs(h)
     h = (mu+h)**2
     h = np.exp(h)
@@ -1022,7 +1023,9 @@ def loglike_GARCH11(params, y):
     llvalues = -0.5*np.log(2*np.pi) - np.log(sqrtht) - 0.5*(x**2);
     return llvalues.sum(), llvalues, ht
 
-def miso_lfilter(ar, ma, x, useic=False): #[0.1,0.1]):
+from scikits.statsmodels.tsa.filters import miso_lfilter
+#copied to statsmodels.tsa.filters
+def miso_lfilter_old(ar, ma, x, useic=False): #[0.1,0.1]):
     '''
     use nd convolution to merge inputs,
     then use lfilter to produce output

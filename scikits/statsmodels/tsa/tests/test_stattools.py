@@ -1,4 +1,5 @@
-from scikits.statsmodels.tsa.stattools import (adfuller, acf, pacf_ols, pacf_yw)
+from scikits.statsmodels.tsa.stattools import (adfuller, acf, pacf_ols, pacf_yw,
+                                               pacf)
 
 from numpy.testing import assert_almost_equal
 from numpy import genfromtxt#, concatenate
@@ -170,6 +171,15 @@ class TestPACF(CheckCorrGram):
     def test_yw(self):
         pacfyw = pacf_yw(self.x, nlags=40, method="mle")
         assert_almost_equal(pacfyw[1:], self.pacfyw, DECIMAL_8)
+
+    def test_ld(self):
+        pacfyw = pacf_yw(self.x, nlags=40, method="mle")
+        pacfld = pacf(self.x, nlags=40, method="ldb")
+        assert_almost_equal(pacfyw, pacfld, DECIMAL_8)
+
+        pacfyw = pacf(self.x, nlags=40, method="yw")
+        pacfld = pacf(self.x, nlags=40, method="ldu")
+        assert_almost_equal(pacfyw, pacfld, DECIMAL_8)
 
 if __name__=="__main__":
     import nose

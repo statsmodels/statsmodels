@@ -33,9 +33,18 @@ sys.path.extend([
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.  sphinxext.
 
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest','numpydoc',
-'sphinx.ext.intersphinx', 'sphinx.ext.todo', 'sphinx.ext.coverage',
-'sphinx.ext.pngmath', 'sphinx.ext.ifconfig', 'sphinx.ext.autosummary']
+extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest',
+    'sphinx.ext.intersphinx', 'sphinx.ext.todo', 'sphinx.ext.coverage',
+    'sphinx.ext.pngmath', 'sphinx.ext.ifconfig', 'sphinx.ext.autosummary']
+
+try:
+    import numpy_ext.numpydoc
+    extensions.append('numpy_ext.numpydoc')
+    # With older versions of sphinx (<1.01b), this will raise an error
+    autosummary_generate = True
+except:
+    extensions.append('numpy_ext_old.numpydoc')
+
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates', '_templates/autosummary']
@@ -233,5 +242,6 @@ latex_documents = [
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'http://docs.scipy.org/': None}
-import glob
-autosummary_generate = glob.glob("*.rst")
+#import glob
+#autosummary_generate = glob.glob("*.rst")
+#autosummary_generate + = glob.glob("generated/*.rst")

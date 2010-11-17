@@ -25,13 +25,11 @@ Harvey uses Durbin and Koopman notation.
 # Harvey notes that the square root filter will keep P_t pos. def. but
 # is not strictly needed outside of the engineering (long series)
 
-from scipy import optimize
 import numpy as np
-from numpy import dot, identity, kron, log, zeros, pi, exp
+from numpy import dot, identity, kron, log, zeros, pi, exp, eye
 from numpy.linalg import inv, pinv
 from scikits.statsmodels import chain_dot, add_constant #Note that chain_dot is a bit slower
-from scikits.statsmodels.model import (LikelihoodModel, LikelihoodModelResults,
-    GenericLikelihoodModel)
+from scikits.statsmodels.model import GenericLikelihoodModel
 from scikits.statsmodels.regression import yule_walker, GLS
 from scipy.linalg import block_diag
 from scikits.statsmodels.tsa.tsatools import lagmat
@@ -155,6 +153,87 @@ def kalmanfilter(F, A, H, Q, R, y, X, xi10, ntrain, history=False):
         return -loglikelihood
     else:
         return -loglikelihood, np.asarray(state_vector[:-1])
+
+#TODO: this works if it gets refactored, but it's not quite as accurate
+# as KalmanFilter
+#    def loglike_exact(self, params):
+#        """
+#        Exact likelihood for ARMA process.
+#
+#        Notes
+#        -----
+#        Computes the exact likelihood for an ARMA process by modifying the
+#        conditional sum of squares likelihood as suggested by Shephard (1997)
+#        "The relationship between the conditional sum of squares and the exact
+#        likelihood for autoregressive moving average models."
+#        """
+#        p = self.p
+#        q = self.q
+#        k = self.k
+#        y = self.endog.copy()
+#        nobs = self.nobs
+#        if self.transparams:
+#            newparams = self._transparams(params)
+#        else:
+#            newparams = params
+#        if k > 0:
+#            y -= dot(self.exog, newparams[:k])
+#        if p != 0:
+#            arcoefs = newparams[k:k+p][::-1]
+#            T = KalmanFilter.T(arcoefs)
+#        else:
+#            arcoefs = 0
+#        if q != 0:
+#            macoefs = newparams[k+p:k+p+q][::-1]
+#        else:
+#            macoefs = 0
+#        errors = [0] * q # psuedo-errors
+#        rerrors = [1] * q # error correction term
+#        # create pseudo-error and error correction series iteratively
+#        for i in range(p,len(y)):
+#            errors.append(y[i]-sum(arcoefs*y[i-p:i])-\
+#                                sum(macoefs*errors[i-q:i]))
+#            rerrors.append(-sum(macoefs*rerrors[i-q:i]))
+#        errors = np.asarray(errors)
+#        rerrors = np.asarray(rerrors)
+#
+#        # compute bayesian expected mean and variance of initial errors
+#        one_sumrt2 = 1 + np.sum(rerrors**2)
+#        sum_errors2 = np.sum(errors**2)
+#        mup = -np.sum(errors * rerrors)/one_sumrt2
+#
+#        # concentrating out the ML estimator of "true" sigma2 gives
+#        sigma2 = 1./(2*nobs)  * (sum_errors2 - mup**2*(one_sumrt2))
+#
+#        # which gives a variance of the initial errors of
+#        sigma2p = sigma2/one_sumrt2
+#
+#        llf = -(nobs-p)/2. * np.log(2*pi*sigma2) - 1./(2*sigma2)*sum_errors2 \
+#                + 1./2*log(one_sumrt2) + 1./(2*sigma2) * mup**2*one_sumrt2
+#        Z_mat = KalmanFilter.Z(r)
+#        R_mat = KalmanFilter.R(newparams, r, k, q, p)
+#        T_mat = KalmanFilter.T(newparams, r, k, p)
+#        # initial state and its variance
+#        alpha = zeros((m,1))
+#        Q_0 = dot(inv(identity(m**2)-kron(T_mat,T_mat)),
+#                dot(R_mat,R_mat.T).ravel('F'))
+#        Q_0 = Q_0.reshape(r,r,order='F')
+#        P = Q_0
+#        v = zeros((nobs,1))
+#        F = zeros((nobs,1))
+#        B = array([T_mat, 0], dtype=object)
+#
+#
+#        for i in xrange(int(nobs)):
+#            v_mat = (y[i],0) - dot(z_mat,B)
+#
+#        B_0 = (T,0)
+#        v_t = (y_t,0) - z*B_t
+#        llf = -nobs/2.*np.log(2*pi*sigma2) - 1/(2.*sigma2)*se_n - \
+#            1/2.*logdet(Sigma_a) + 1/(2*sigma2)*s_n_prime*sigma_a*s_n
+#        return llf
+#
+
 
 class StateSpaceModel(object):
     def __init__(self, endog, exog=None):
@@ -324,258 +403,129 @@ def updatematrices(params, y, xi10, ntrain, penalty, upperbound, lowerbound):
     loglike = loglike + penalty*np.sum((paramsorig-params)**2)
     return loglike
 
-#class ARMA(StateSpaceModel):
-class ARMA(GenericLikelihoodModel):
+class KalmanFilter(object):
     """
-    ARMA model using the exact Kalman Filter
+    Kalman Filter code intended for use with the ARMA model.
 
-    Parameters
-    ----------
-    endog : array-like
-        The endogenous variable.
-    exog : array-like, optional
-        An optional arry of exogenous variables.
+    Notes
+    -----
+    The notation for the state-space form follows Durbin and Koopman (2001).
+
+    The observation equations is
+    y_{t} = Z_{t}\alpha_{t} + \epsilon_{t}
+
+    The state equation is
+    \alpha_{t+1} = T_{t}\alpha_{t} + R_{t}\eta_{t}
+
+    For the present purposed \epsilon_{t} is assumed to always be zero.
     """
-    def __init__(self, endog, exog=None):
-        #TODO: make this a trend argument like the rest
-#        if exog is None and constant:
-#            exog = np.ones((len(endog),1))
-#            constant = False # to skip next logic
-#        elif exog is not None and constant:
-#            exog = add_constant(exog,prepend=True)
-        super(ARMA, self).__init__(endog, exog)
-#        p,q = map(int,order)
-#        r = max(p,q+1)
-        if exog is not None:
-            k = exog.shape[1]  # number of exogenous variables, incl. const.
-        else:
-            k = 0
-#        Z = np.zeros((self.nobs, r)) # inefficient for c or nc
-#        Z[:,0] = 1.
-#        self.Z = Z
-#        self.k = k
-        #NOTE: above is for a stationary ARMA, no seasonality
-        #NOTE: Z is H' in Hamilton
-#        self.r = r
-#        self.p = p
-#        self.q = q
 
-    def _fit_start_params(self, order):
-        """
-        Get starting parameters for fit.
-
-        Parameters
-        ----------
-        order : iterable
-            (p,q,k) - AR lags, MA lags, and number of exogenous variables
-            including the constant.
-
-        Returns
-        -------
-        start_params : array
-            A first guess at the starting parameters.
-
-        Notes
-        -----
-        If necessary, fits an AR process with the laglength selected according to        best BIC.  Obtain the residuals.  Then fit an ARMA(p,q) model via OLS
-        using these residuals for a first approximation.  Uses a separate OLS
-        regression to find the coefficients of exogenous variables.
-
-        References
-        ----------
-        Hannan, E.J. and Rissanen, J.  1982.  "Recursive estimation of mixed
-            autoregressive-moving average order."  `Biometrika`.  69.1.
-        """
-        p,q,k = order
-        start_params = zeros((p+q+k))
-        endog = self.endog.copy() # copy because overwritten
-        exog = self.exog
-        if k != 0:
-            ols_params = GLS(endog, exog).fit().params
-            start_params[:k] = ols_params
-            endog -= np.dot(exog, ols_params).squeeze()
-        if q != 0:
-            if p != 0:
-                armod = AR(endog).fit(ic='bic', trend='nc')
-                arcoefs_tmp = armod.params
-                p_tmp = armod.laglen
-                resid = endog[p_tmp:] - np.dot(lagmat(endog, p_tmp,
-                                trim='both'), arcoefs_tmp)
-                X = np.column_stack((lagmat(endog,p,'both')[p_tmp+(q-p):],
-                    lagmat(resid,q,'both'))) # stack ar lags and resids
-                coefs = GLS(endog[p_tmp+q:], X).fit().params
-                start_params[k:k+p+q] = coefs
-            else:
-                start_params[k+p:k+p+q] = yule_walker(endog, order=q)[0]
-        if q==0 and p != 0:
-            arcoefs = yule_walker(endog, order=p)[0]
-            start_params[k:k+p] = arcoefs
-        return start_params
-
-    def score(self, params):
-        """
-        Compute the score function at params.
-
-        Notes
-        -----
-        This is a numerical approximation.
-        """
-        #while fitting this uses the untransformed params
-        #if used after fitting, should pass in invtransformed params
-        loglike = self.loglike
-        return approx_fprime(params, loglike, epsilon=1e-5)
-
-    def hessian(self, params):
-        """
-        Compute the Hessian at params,
-
-        Notes
-        -----
-        This is a numerical approximation.
-        """
-        loglike = self.loglike
-        return approx_hess(params, loglike, epsilon=1e-5)
-
-
-    def T(self,params): # F in Hamilton
+    @classmethod
+    def T(cls, params, r, k, p): # F in Hamilton
         """
         The coefficient matrix for the state vector in the state equation.
 
         Its dimension is r+k x r+k.
 
+        Parameters
+        ----------
+        r : int
+            In the context of the ARMA model r is max(p,q+1) where p is the
+            AR order and q is the MA order.
+        k : int
+            The number of exogenous variables in the ARMA model, including
+            the constant if appropriate.
+        p : int
+            The AR coefficient in an ARMA model.
+
         Reference
         ---------
         Durbin and Koopman Section 3.7.
         """
-        r = self.r
-        k = self.k
-        p = self.p
-        arr = np.zeros((r,r))
-        params_padded = np.zeros(r) # handle zero coefficients if necessary
+        arr = zeros((r,r), dtype=params.dtype) # allows for complex-step
+                                                  # derivative
+        params_padded = zeros(r, dtype=params.dtype) # handle zero coefficients if necessary
         #NOTE: squeeze added for cg optimizer
         params_padded[:p] = params[k:p+k]
         arr[:,0] = params_padded   # first p params are AR coeffs w/ short params
-        arr[:-1,1:] = np.eye(r-1)
+        arr[:-1,1:] = eye(r-1)
         return arr
 
-    def R(self, params): # R is H in Hamilton
+    @classmethod
+    def R(cls, params, r, k, q, p): # R is H in Hamilton
         """
         The coefficient matrix for the state vector in the observation equation.
 
         Its dimension is r+k x 1.
 
+        Parameters
+        ----------
+        r : int
+            In the context of the ARMA model r is max(p,q+1) where p is the
+            AR order and q is the MA order.
+        k : int
+            The number of exogenous variables in the ARMA model, including
+            the constant if appropriate.
+        q : int
+            The MA order in an ARMA model.
+        p : int
+            The AR order in an ARMA model.
+
         Reference
         ---------
         Durbin and Koopman Section 3.7.
         """
-        r = self.r
-        k = self.k
-        q = self.q
-        p = self.p
-        arr = np.zeros((r,1)) # this allows zero coefficients
+        arr = zeros((r,1), dtype=params.dtype) # this allows zero coefficients
+                                                  # dtype allows for compl. der.
         arr[1:q+1,:] = params[p+k:p+k+q][:,None]
         arr[0] = 1.0
         return arr
 
-    def _transparams(self, params):
+    @classmethod
+    def Z(cls, r):
         """
-        Transforms params to induce stationarity/invertability.
+        Returns the Z selector matrix in the observation equation.
 
-        Reference
-        ---------
-        Jones(1980)
+        Parameters
+        ----------
+        r : int
+            In the context of the ARMA model r is max(p,q+1) where p is the
+            AR order and q is the MA order.
+
+        Notes
+        -----
+        Currently only returns a 1 x r vector [1,0,0,...0].  Will need to
+        be generalized when the Kalman Filter becomes more flexible.
         """
-        p,q,k = self.p, self.q, self.k
-        newparams = np.zeros_like(params) # = params.copy() # no copy below
-        if k != 0:
-            newparams[:k] = params[:k]
-            # AR Coeffs
-        if p != 0:
-            newparams[k:k+p] = ((1-exp(-params[k:k+p]))/(1+exp(-params[k:k+p]))).copy()
-            tmp = ((1-exp(-params[k:k+p]))/(1+exp(-params[k:k+p]))).copy()
+        arr = zeros((1,r))
+        arr[:,0] = 1.
+        return arr
 
-                # levinson-durbin to get pacf
-            for j in range(1,p):
-                a = newparams[k+j]
-                for kiter in range(j):
-                    tmp[kiter] -= a * newparams[k+j-kiter-1]
-                newparams[k:k+j] = tmp[:j]
-#                params[k:k+p] = newparams
+    @classmethod
+    def loglike(cls, params, arma_model):
+        #TODO: see section 3.4.6 in Harvey for computing the derivatives in the
+        # recursion itself.
+        #TODO: this won't work for time-varying parameters
+        y = arma_model.endog.copy() #TODO: remove copy if you can
+        k = arma_model.k
+        nobs = arma_model.nobs
+        p = arma_model.p
+        q = arma_model.q
+        r = arma_model.r
 
-            # MA Coeffs
-        if q != 0:
-            newparams[k+p:] = ((1-exp(-params[k+p:k+p+q]))/\
-                             (1+exp(-params[k+p:k+p+q]))).copy()
-            tmp = ((1-exp(-params[k+p:k+p+q]))/\
-                        (1+exp(-params[k+p:k+p+q]))).copy()
-
-            # levinson-durbin to get macf
-            for j in range(1,q):
-                b = newparams[k+p+j]
-                for kiter in range(j):
-                    tmp[kiter] += b * newparams[k+p+j-kiter-1]
-                newparams[k+p:k+p+j] = tmp[:j]
-#                params[k+p:k+p+q] = newparams
-                #TODO: might be able to speed up the above, but shouldn't be too much
-        return newparams
-
-    def _invtransparams(self, start_params):
-        """
-        Inverse of the Jones reparameterization
-        """
-        p,q,k = self.p, self.q, self.k
-        newparams = start_params.copy()
-        arcoefs = newparams[k:k+p]
-        macoefs = newparams[k+p:]
-        # AR coeffs
-        if p != 0:
-            tmp = arcoefs.copy()
-            for j in range(p-1,0,-1):
-                a = arcoefs[j]
-                for kiter in range(j):
-                    tmp[kiter] = (arcoefs[kiter]+a*arcoefs[j-kiter-1])/(1-a**2)
-                arcoefs[:j] = tmp[:j]
-            invarcoefs = -log((1-arcoefs)/(1+arcoefs))
-            newparams[k:k+p] = invarcoefs
-        # MA coeffs
-        if q != 0:
-            tmp = macoefs.copy()
-            for j in range(q-1,0,-1):
-                b = macoefs[j]
-                for kiter in range(j):
-                    tmp[kiter] = (macoefs[kiter]-b *macoefs[j-kiter-1])/(1-b**2)
-                macoefs[:j] = tmp[:j]
-            invmacoefs = -log((1-macoefs)/(1+macoefs))
-            newparams[k+p:k+p+q] = invmacoefs
-        return newparams
-
-    def loglike(self, params):
-        """
-        Compute exact loglikelihood for ARMA(p,q) model.
-        """
-#TODO: see section 3.4.6 in Harvey for computing the derivatives in the
-# recursion itself.
-#TODO: this won't work for time-varying parameters
-        y = self.endog.copy() #TODO: remove copy if you can
-        k = self.k
-        nobs = self.nobs
-        p = self.p
-        q = self.q
-        r = self.r
-
-        if self.transparams:
-            newparams = self._transparams(params)
+        if arma_model.transparams:
+            newparams = arma_model._transparams(params)
         else:
             newparams = params  # don't need a copy if not modified.
 
         if k > 0:
-            y -= dot(self.exog, newparams[:k])
+            y -= dot(arma_model.exog, newparams[:k])
 
         # system matrices
-        Z = self.Z
-        m = Z.shape[1] # r + k
-        R_mat = self.R(newparams)
-        T_mat = self.T(newparams)
+        Z_mat = KalmanFilter.Z(r)
+        m = Z_mat.shape[1] # r
+        R_mat = KalmanFilter.R(newparams, r, k, q, p)
+        T_mat = KalmanFilter.T(newparams, r, k, p)
 
         # initial state and its variance
         alpha = zeros((m,1)) # if constant (I-T)**-1 * c
@@ -590,13 +540,12 @@ class ARMA(GenericLikelihoodModel):
         P = Q_0
         sigma2 = 0
         loglikelihood = 0
-        v = zeros((nobs,1))
-        F = zeros((nobs,1))
+        v = zeros((nobs,1), dtype=params.dtype)
+        F = zeros((nobs,1), dtype=params.dtype)
         #NOTE: can only do quick recursions if Z is time-invariant
         #so could have recursions for pure ARMA vs ARMAX
         for i in xrange(int(nobs)):
             # Predict
-            Z_mat = Z[i,None]
             v_mat = y[i] - dot(Z_mat,alpha) # one-step forecast error
             v[i] = v_mat
             F_mat = dot(dot(Z_mat, P), Z_mat.T)
@@ -612,252 +561,30 @@ class ARMA(GenericLikelihoodModel):
         sigma2 = 1./nobs * np.sum(v**2 / F)
         loglike = -.5 *(loglikelihood + nobs*log(sigma2))
         loglike -= nobs/2. * (log(2*pi) + 1)
-        self.sigma2 = sigma2
+        arma_model.sigma2 = sigma2
         return loglike.item() # return a scalar not a 0d array
 
-    def loglike_css(self, params):
-        """
-        Conditional Sum of Squares likelihood function.
-        """
-        p = self.p
-        q = self.q
-        k = self.k
-        y = self.endog.copy()
-        nobs = self.nobs
-        # how to handle if empty?
-        if self.transparams:
-            newparams = self._transparams(params)
-        else:
-            newparams = params
-        if k > 0:
-#            exparams = params[:k]
-            y -= dot(self.exog, newparams[:k])
-        arcoefs = newparams[k:k+p][::-1]    # reverse order for broadcast
-        macoefs = newparams[k+p:k+p+q][::-1]
-        errors = [0] * q
-        # create error vector iteratively
-        for i in range(p,len(y)):
-            errors.append(y[i]-sum(arcoefs*y[i-p:i])-sum(macoefs*errors[i-q:i]))
-        errors = np.asarray(errors)
-        ssr = sum(errors[p:]**2)
-        sigma2 = ssr/(nobs-p)
-        llf = -(nobs-p)/2.*(log(2*pi) + log(sigma2)) - np.sum(ssr)/(2*sigma2)
-        return llf
 
-    def loglike_exact(self, params):
-        """
-        Exact likelihood for ARMA process.
+#class ARMA():
 
-        Notes
-        -----
-        Computes the exact likelihood for an ARMA process by modifying the
-        conditional sum of squares likelihood as suggested by Shephard (1997)
-        "The relationship between the conditional sum of squares and the exact
-        likelihood for autoregressive moving average models."
-        """
-        p = self.p
-        q = self.q
-        k = self.k
-        y = self.endog.copy()
-        nobs = self.nobs
-        if self.transparams:
-            newparams = self._transparams(params)
-        else:
-            newparams = params
-        if k > 0:
-            y -= dot(self.exog, newparams[:k])
-        if p != 0:
-            arcoefs = newparams[k:k+p][::-1]
-            T = self.T(arcoefs)
-        else:
-            arcoefs = 0
-        if q != 0:
-            macoefs = newparams[k+p:k+p+q][::-1]
-        else:
-            macoefs = 0
-#        errors = [0] * q # psuedo-errors
-#        rerrors = [1] * q # error correction term
-        # create pseudo-error and error correction series iteratively
-#        for i in range(p,len(y)):
-#            errors.append(y[i]-sum(arcoefs*y[i-p:i])-\
-#                                sum(macoefs*errors[i-q:i]))
-#            rerrors.append(-sum(macoefs*rerrors[i-q:i]))
-#        errors = np.asarray(errors)
-#        rerrors = np.asarray(rerrors)
-
-        # compute bayesian expected mean and variance of initial errors
-#        one_sumrt2 = 1 + np.sum(rerrors**2)
-#        sum_errors2 = np.sum(errors**2)
-#        mup = -np.sum(errors * rerrors)/one_sumrt2
-
-        # concentrating out the ML estimator of "true" sigma2 gives
-#        sigma2 = 1./(2*pi*nobs)  * (sum_errors2 - mup**2*(one_sumrt2))
-
-        # which gives a variance of the initial errors of
-#        sigma2p = sigma2/one_sumrt2
-
-#        llf = -(nobs-p)/2. * np.log(2*pi*sigma2) - 1./(2*sigma2)*sum_errors2 \
-#                + 1./2*log(one_sumrt2) + 1./(2*sigma2) * mup**2*one_sumrt2
-        T_mat = self.T(newparams)
-        Z = self.Z
-        m = Z.shape[1]
-        R_mat = self.R(newparams)
-        T_mat = self.T(newparams)
-        # initial state and its variance
-        alpha = zeros((m,1))
-        Q_0 = dot(inv(identity(m**2)-kron(T_mat,T_mat)),
-                dot(R_mat,R_mat.T).ravel('F'))
-        Q_0 = Q_0.reshape(r,r,order='F')
-        P = Q_0
-        v = zeros((nobs,1))
-        F = zeros((nobs,1))
-        B = array([T_mat, 0], dtype=object)
-
-
-        for i in xrange(int(nobs)):
-            z_mat = Z[i,None]
-            v_mat = (y[i],0) - dot(z_mat,B)
-
-        B_0 = (T,0)
-        v_t = (y_t,0) - z*B_t
-        llf = -nobs/2.*np.log(2*pi*sigma2) - 1/(2.*sigma2)*se_n - \
-            1/2.*logdet(Sigma_a) + 1/(2*sigma2)*s_n_prime*sigma_a*s_n
-        return llf
-
-
-    def fit(self, order, start_params=None, trend='c', method = "css-mle",
-            transparams=True, solver=None, maxiter=35, full_output=1,
-            disp=1, callback=None, **kwargs):
-        """
-        Fits ARMA(p,q) model using exact maximum likelihood via Kalman filter.
-
-        Parameters
-        ----------
-        start_params : array-like, optional
-            Starting parameters for ARMA(p,q).  If None, the default is given
-            by ARMA._fit_start_params.  See there for more information.
-        transparams : bool, optional
-            Whehter or not to transform the parameters to ensure stationarity.
-            Uses the transformation suggested in Jones (1980).  If False,
-            no checking for stationarity or invertibility is done.
-        method : str {'css-mle','mle','css'}
-        trend : str {'c','nc'}
-            Whehter to include a constant or not.  'c' includes constant,
-            'nc' no constant.
-        solver : str or None, optional
-            Solver to be used.  The default is 'l_bfgs' (limited memory Broyden-
-            Fletcher-Goldfarb-Shanno).  Other choices are 'bfgs', 'newton'
-            (Newton-Raphson), 'nm' (Nelder-Mead), 'cg' - (conjugate gradient),
-            'ncg' (non-conjugate gradient), and 'powell'.
-            The limited memory BFGS uses m=30 to approximate the Hessian,
-            projected gradient tolerance of 1e-7 and factr = 1e3.  These
-            cannot currently be changed for l_bfgs.  See notes for more
-            information.
-        maxiter : int, optional
-            The maximum number of function evaluations. Default is 35.
-        tol : float
-            The convergence tolerance.  Default is 1e-08.
-        full_output : bool, optional
-            If True, all output from solver will be available in
-            the Results object's mle_retvals attribute.  Output is dependent
-            on the solver.  See Notes for more information.
-        disp : bool, optional
-            If True, convergence information is output.
-        callback : function, optional
-            Called after each iteration as callback(xk) where xk is the current
-            parameter vector.
-        kwargs
-            See Notes for keyword arguments that can be passed to fit.
-
-        Returns
-        -------
-        ARMAResults class
-
-        See also
-        --------
-        scikits.statsmodels.model.LikelihoodModel.fit for more information
-        on using the solvers.
-
-        Notes
-        ------
-        The below is the docstring from
-        scikits.statsmodels.LikelihoodModel.fit
-        """
-        #TODO: should this be in __init__?
-        # set up model constants
-        self.transparams = transparams
-        p,q = map(int,order)
-        r = max(p,q+1)
-        self.p = p
-        self.q = q
-        self.r = r
-        endog = self.endog
-        exog = self.exog
-        if exog is None and trend == 'c':
-            exog = np.ones((len(endog),1))
-        elif exog is not None and trend == 'c':
-            exog = add_constant(exog, prepend=True)
-        if exog is not None:
-            k = exog.shape[1]
-        else:
-            k = 0
-        self.exog = exog    # overwrites original exog
-        self.k = k
-        Z = np.zeros((self.nobs, r))
-        Z[:,0] = 1.
-        self.Z = Z
-        if method.lower() in ['mle','css-mle']:
-            loglike = lambda params: -self.loglike(params)
-        if method.lower() == 'css':
-            loglike = lambda params: -self.loglike_css(params)
-        if start_params is not None:
-            start_params = np.asarray(start_params)
-        else:
-            if method.lower() != 'css-mle':
-                start_params = self._fit_start_params((p,q,k))
-            else:
-                func = lambda params: -self.loglike_css(params)
-                #start_params = [.1]*(p+q+k) # different one for k?
-                start_params = self._fit_start_params((p,q,k))
-                if transparams:
-                    start_params = self._invtransparams(start_params)
-                bounds = [(None,)*2]*(p+q+k)
-                mlefit = optimize.fmin_l_bfgs_b(func, start_params,
-                            approx_grad=True, m=30, pgtol=1e-7, factr=1e3,
-                            bounds = bounds, iprint=-1)
-                start_params = self._transparams(mlefit[0])
-        if transparams:
-            start_params = self._invtransparams(start_params)
-        if solver is None:
-            bounds = [(None,)*2]*(p+q+k)
-            mlefit = optimize.fmin_l_bfgs_b(loglike, start_params,
-                    approx_grad=True, m=30, pgtol=1e-7, factr=1e3,
-                    bounds=bounds, iprint=3)
-            self.mlefit = mlefit
-            params = mlefit[0]
-        else:
-            mlefit = super(ARMA, self).fit(start_params, method=solver,
-                        maxiter=maxiter, full_output=full_output, disp=disp,
-                        callback = callback, **kwargs)
-            self.mlefit = mlefit
-            params = mlefit.params
-        if transparams:
-            params = self._transparams(params)
-        self.params = params
-    fit.__doc__ += LikelihoodModel.fit.__doc__
-
-
-class ARMAResults(LikelihoodModelResults):
+class ARMA_CSS(GenericLikelihoodModel):
     """
-    Class to hold results from fitting an ARMA model.
-    """
-    _cache = {}
+    ARMA model using Conditional Sum of Squares
 
-    def __init__(self, model, params, normalized_cov_params=None, scale=1.):
-        super(ARMAResults, self).__init(model, params, normalized_cov_params,
-                scale)
+    Parameters
+    ----------
+    endog : array-like
+        The endogenous variable.
+    exog : array-like, optional
+        An optional arry of exogenous variables.
+    """
+    pass
+
+
 
 if __name__ == "__main__":
+    import numpy as np
+    from scipy.linalg import block_diag
     import numpy as np
     # Make our observations as in 13.1.13
     np.random.seed(54321)
@@ -1066,44 +793,3 @@ if __name__ == "__main__":
     R = np.eye(s-1)
     sigma2_omega = 1.
     Q = np.eye(s-1) * sigma2_omega
-
-    # simulate arma process
-    from scikits.statsmodels.tsa.arima_process import arma_generate_sample
-    y = arma_generate_sample([1., -.75],[1.,.25], nsample=1000)
-    arma = ARMA(y)
-    arma.fit(trend='nc', order=(1,1))
-
-    y_arma22 = arma_generate_sample([1.,-.85,.35],[1,.25,-.9], nsample=1000)
-    arma22 = ARMA(y_arma22)
-    arma22.fit(trend = 'nc', order=(2,2))
-
-# test CSS
-
-    arma22_css = ARMA(y_arma22)
-    arma22_css.fit(trend='nc', order=(2,2), method='css')
-
-
-#    y_ar = np.zeros(10000)
-#    y_ar[0] = np.random.randn()
-#    for i in range(1,len(y_ar)):
-#        y_ar[i] = y_ar[i-1] * .75 + np.random.randn()
-#    ar = ARMA(y_ar, constant=False, order=(1,0))
-#    ar.fit()
-
-    import scikits.statsmodels as sm
-    data = sm.datasets.sunspots.load()
-    ar = ARMA(data.endog)
-    ar.fit(trend='nc', order=(9,0))
-
-
-# References
-# Harvey (1989)
-# Jones (1980) - details missing observations and transformation for stationarity
-# he suggests using
-# a = [1-exp(-u_k)]/[1+exp(-u_k)] and maximizing wrt to uk but using the
-# a's in the actual likelihood.  Same as Hamilton.
-
-#NOTE: if you use the OLS AR estimate and the limited memory BFGS it converges
-# if you do the same with just bfgs, it does not converge for the MA coefficient
-# it needs better starting values.  Can you invert the MA component and get
-# a better starting value?  Still jumps, need the reparameterization.

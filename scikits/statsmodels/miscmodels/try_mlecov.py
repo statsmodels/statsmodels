@@ -1,5 +1,6 @@
 '''Multivariate Normal Model with full covariance matrix
 
+toeplitz structure is not exploited, need cholesky or inv for toeplitz
 
 Author: josef-pktd
 '''
@@ -12,7 +13,7 @@ from scipy.linalg import norm, toeplitz
 
 import scikits.statsmodels as sm
 from scikits.statsmodels.model import GenericLikelihoodModel, LikelihoodModel
-from scikits.statsmodels.sandbox.tsa.arima import arma_acovf, ARIMA
+from scikits.statsmodels.tsa.arima_process import arma_acovf, arma_generate_sample
 
 
 def mvn_loglike_sum(x, sigma):
@@ -51,6 +52,65 @@ def mvn_loglike(x, sigma):
     llf -= logdetsigma
     llf *= 0.5
     return llf
+
+def mvn_loglike_chol(x, sigma):
+    '''loglike multivariate normal
+
+    assumes x is 1d, (nobs,) and sigma is 2d (nobs, nobs)
+
+    brute force from formula
+    no checking of correct inputs
+    use of inv and log-det should be replace with something more efficient
+    '''
+    #see numpy thread
+    #Sturla: sqmahal = (cx*cho_solve(cho_factor(S),cx.T).T).sum(axis=1)
+    sigmainv = np.linalg.inv(sigma)
+    cholsigmainv = np.linalg.cholesky(sigmainv).T
+    x_whitened = np.dot(cholsigmainv, x)
+
+    logdetsigma = np.log(np.linalg.det(sigma))
+    nobs = len(x)
+    from scipy import stats
+    print 'scipy.stats'
+    print np.log(stats.norm.pdf(x_whitened)).sum()
+
+    llf = - np.dot(x_whitened.T, x_whitened)
+    llf -= nobs * np.log(2 * np.pi)
+    llf -= logdetsigma
+    llf *= 0.5
+    return llf, logdetsigma, 2 * np.sum(np.log(np.diagonal(cholsigmainv)))
+#0.5 * np.dot(x_whitened.T, x_whitened) + nobs * np.log(2 * np.pi) + logdetsigma)
+
+def mvn_nloglike_obs(x, sigma):
+    '''loglike multivariate normal
+
+    assumes x is 1d, (nobs,) and sigma is 2d (nobs, nobs)
+
+    brute force from formula
+    no checking of correct inputs
+    use of inv and log-det should be replace with something more efficient
+    '''
+    #see numpy thread
+    #Sturla: sqmahal = (cx*cho_solve(cho_factor(S),cx.T).T).sum(axis=1)
+
+    #Still wasteful to calculate pinv first
+    sigmainv = np.linalg.inv(sigma)
+    cholsigmainv = np.linalg.cholesky(sigmainv).T
+    #2 * np.sum(np.log(np.diagonal(np.linalg.cholesky(A)))) #Dag mailinglist
+    # logdet not needed ???
+    #logdetsigma = 2 * np.sum(np.log(np.diagonal(cholsigmainv)))
+    x_whitened = np.dot(cholsigmainv, x)
+
+    #sigmainv = linalg.cholesky(sigma)
+    logdetsigma = np.log(np.linalg.det(sigma))
+
+    sigma2 = 1. # error variance is included in sigma
+
+    llike  =  0.5 * (np.log(sigma2) - 2.* np.log(np.diagonal(cholsigmainv))
+                          + (x_whitened**2)/sigma2
+                          +  np.log(2*np.pi))
+
+    return llike
 
 def invertibleroots(ma):
     import numpy.polynomial as poly
@@ -128,16 +188,17 @@ class MLEGLS(GenericLikelihoodModel):
 
 
 if __name__ == '__main__':
-    nobs = 100
-    ar = [1.0, -0.5, 0.1]
-    ma = [1.0,  0.6,  0.2]
+    nobs = 50
+    ar = [1.0, -0.8, 0.1]
+    ma = [1.0,  0.1,  0.2]
     #ma = [1]
-    y = ARIMA.generate_sample(ar,ma,nobs,0.2)
+    np.random.seed(9875789)
+    y = arma_generate_sample(ar,ma,nobs,2)
     y -= y.mean() #I haven't checked treatment of mean yet, so remove
     mod = MLEGLS(y)
     mod.nar, mod.nma = 2, 2   #needs to be added, no init method
     mod.nobs = len(y)
-    res = mod.fit(start_params=[0.1,0,0.2,0, 0.5])
+    res = mod.fit(start_params=[0.1, -0.8, 0.2, 0.1, 1.])
     print 'DGP', ar, ma
     print res.params
     from scikits.statsmodels.regression import yule_walker
@@ -161,6 +222,13 @@ if __name__ == '__main__':
 ##    import matplotlib.pyplot as plt
 ##    plt.plot(data.endog[1])
 ##    #plt.show()
+
+    sigma = mod._params2cov(res.params[:-1], nobs) * res.params[-1]**2
+    print mvn_loglike(y, sigma)
+    llo = mvn_nloglike_obs(y, sigma)
+    print llo.sum(), llo.shape
+    print mvn_loglike_chol(y, sigma)
+    print mvn_loglike_sum(y, sigma)
 
 
 

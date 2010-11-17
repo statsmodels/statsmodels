@@ -7,8 +7,8 @@ from numpy.testing import assert_array_almost_equal
 import scikits.statsmodels as sm
 import scikits.statsmodels.tsa.stattools as tsa
 
-import savedrvs
-from datamlw_tls import mlacf, mlccf, mlpacf, mlywar
+from results import savedrvs
+from results.datamlw_tls import mlacf, mlccf, mlpacf, mlywar
 
 xo = savedrvs.rvsdata.xar2
 x100 = xo[-100:]/1000.

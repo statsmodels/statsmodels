@@ -41,47 +41,14 @@ Time Series analysis :mod:`tsa`
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 In this part we develop models and functions that will be useful for time
-series analysis, initially focused on the ARMA model and functions to simulate
-arma processes, and basic statistical properties such as autocorrelation,
-periodogram both estimated from data and the theoretical statistic given the
-lag polynomials of the ARMA process, and tools to work with AR and MA
-lag polynomials.
-
-Some of the functions are currently written mainly to discover a way to use
-existing functions in scipy for time series analysis. Related functions are
-available in matplotlib, nitime, and scikits.talkbox. Those functions are
-designed more for the use in signal processing where longer time series are
-available and work more in the frequency domain.
+series analysis. Most of the models and function have been moved to
+:mod:`statsmodels.tsa`. Currently, GARCH models remain in development stage in
+`sandbox.tsa`.
 
 
 .. currentmodule:: scikits.statsmodels.sandbox
 
 
-
-Time Series Properties
-""""""""""""""""""""""
-
-.. autosummary::
-   :toctree: generated/
-
-   tsa.acf
-   tsa.acovf
-   tsa.pacf_ols
-   tsa.pacf_yw
-   tsa.ccf
-   tsa.ccovf
-
-ARMA Modeling
-"""""""""""""
-
-.. autosummary::
-   :toctree: generated/
-
-   tsa.ARIMA
-   tsa.arma_acf
-   tsa.arma_acovf
-   tsa.arma_generate_sample
-   tsa.arma_impulse_response
 
 Moving Window Statistics
 """"""""""""""""""""""""
