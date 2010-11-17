@@ -37,7 +37,7 @@ class TsaDescriptive(object):
         self.mod = ARMA(self.data)
         self.res = self.mod.fit(order=order, **kwds)
         #self.estimated_process =
-        return res
+        return self.res
 
     def acf(self, nlags=40):
         return stt.acf(self.data, nlags=nlags)
