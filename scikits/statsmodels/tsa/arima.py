@@ -1,3 +1,5 @@
+
+import numpy as np
 from scikits.statsmodels.decorators import (cache_readonly, cache_writable,
             resettable_cache)
 from scipy import optimize
