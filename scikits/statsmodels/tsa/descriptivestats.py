@@ -32,6 +32,12 @@ class TsaDescriptive(object):
         xdetrended = tsatools.detrend(self.data, order=order)
         return self.__class__(xdetrended, self.label, self.name + '_detrended')
 
+    def fit(self, order=(1,0,1), **kwds):
+        from arima import ARMA
+        self.mod = ARMA(self.data)
+        self.res = self.mod.fit(order=order, **kwds)
+        #self.estimated_process =
+        return res
 
     def acf(self, nlags=40):
         return stt.acf(self.data, nlags=nlags)
