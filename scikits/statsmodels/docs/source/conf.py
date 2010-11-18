@@ -35,7 +35,8 @@ sys.path.extend([
 
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest',
     'sphinx.ext.intersphinx', 'sphinx.ext.todo', 'sphinx.ext.coverage',
-    'sphinx.ext.pngmath', 'sphinx.ext.ifconfig', 'sphinx.ext.autosummary']
+    'sphinx.ext.pngmath', 'sphinx.ext.ifconfig', 'sphinx.ext.autosummary',
+    'sphinx.ext.inheritance_diagram']
 
 try:
     import numpy_ext.numpydoc

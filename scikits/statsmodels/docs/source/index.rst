@@ -100,6 +100,7 @@ Table of Contents
    tsa
    stattools
    tools
+   miscmodels
    internal
    sandbox
 
