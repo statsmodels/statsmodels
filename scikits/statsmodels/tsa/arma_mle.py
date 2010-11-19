@@ -57,9 +57,10 @@ class Arma(GenericLikelihoodModel):  #switch to generic mle
     def geterrors(self, params):
         #copied from sandbox.tsa.arima.ARIMA
         p, q = self.nar, self.nma
-        rhoy = np.concatenate(([1], params[:p]))
+        rhoy = np.concatenate(([1], -params[:p]))
         rhoe = np.concatenate(([1], params[p:p+q]))
-        #try lfilter_zi, it requires same length for ar and ma
+
+        #lfilter_zi requires same length for ar and ma
         maxlag = 1+max(p,q)
         armax = np.zeros(maxlag)
         armax[:p+1] = rhoy
@@ -151,7 +152,7 @@ class Arma(GenericLikelihoodModel):  #switch to generic mle
 #        return Hfun(params)[-1]
 
     #copied from arima.ARIMA, needs splitting out of method specific code
-    def fit(self, order=(0,0,0), method="ls", rhoy0=None, rhoe0=None):
+    def fit(self, order=(0,0), method="ls", rhoy0=None, rhoe0=None):
         '''
         Estimate lag coefficients of an ARIMA process.
 
@@ -180,15 +181,15 @@ class Arma(GenericLikelihoodModel):  #switch to generic mle
             raise ValueError("order must be an iterable sequence.  Got type \
 %s instead" % type(order))
 
-        p,d,q = order
+        p,q = order
         self.nar = p  # needed for geterrors, needs cleanup
         self.nma = q
 
-        if d > 0:
-            raise ValueError("Differencing not implemented yet")
-            # assume no constant, ie mu = 0
-            # unless overwritten then use w_bar for mu
-            Y = np.diff(endog, d, axis=0) #TODO: handle lags?
+##        if d > 0:
+##            raise ValueError("Differencing not implemented yet")
+##            # assume no constant, ie mu = 0
+##            # unless overwritten then use w_bar for mu
+##            Y = np.diff(endog, d, axis=0) #TODO: handle lags?
 
         x = self.endog.squeeze() # remove the squeeze might be needed later
 #        def errfn( rho):
@@ -225,7 +226,7 @@ class Arma(GenericLikelihoodModel):  #switch to generic mle
                 optimize.fmin_bfgs(errfnsum, np.r_[rhoy0, rhoe0], maxiter=2, full_output=True)
             infodict, mesg = None, None
         self.params = rh
-        self.ar_est = np.concatenate(([1], rh[:p]))
+        self.ar_est = np.concatenate(([1], -rh[:p]))
         self.ma_est = np.concatenate(([1], rh[p:p+q]))
         #rh[-q:])) doesnt work for q=0, added p+q as endpoint for safety if var is included
         self.error_estimate = self.geterrors(rh)
@@ -256,7 +257,7 @@ class Arma(GenericLikelihoodModel):  #switch to generic mle
             contains estimation results and additional statistics
 
         '''
-        nar, nma = order
+        nar, nma = p, q = order
         self.nar, self.nma = nar, nma
         if start_params is None:
             start_params = np.concatenate((0.05*np.ones(nar + nma), [1]))
@@ -265,7 +266,7 @@ class Arma(GenericLikelihoodModel):  #switch to generic mle
         #bug fix: running ls and then mle didn't overwrite this
         rh = mlefit.params
         self.params = rh
-        self.ar_est = np.concatenate(([1], rh[:p]))
+        self.ar_est = np.concatenate(([1], -rh[:p]))
         self.ma_est = np.concatenate(([1], rh[p:p+q]))
         return mlefit
 
