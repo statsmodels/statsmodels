@@ -30,4 +30,4 @@ def test_compare_arma():
 
     #assert_almost_equal(np.abs(rescm.params[:-1] / d.params), np.ones(d.params.shape), decimal=1)
     assert_almost_equal(rescm.params[:-1] / d.params, np.ones(d.params.shape), decimal=1)
-    return resls[0], d.params, rescm.params
+    #return resls[0], d.params, rescm.params

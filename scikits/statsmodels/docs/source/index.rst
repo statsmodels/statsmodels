@@ -84,14 +84,14 @@ Table of Contents
 -----------------
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    introduction
    related
    developernotes
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 2
 
    regression
    glm
@@ -102,7 +102,9 @@ Table of Contents
    tools
    miscmodels
    internal
+   gmm
    sandbox
+
 
 Indices and tables
 ------------------
