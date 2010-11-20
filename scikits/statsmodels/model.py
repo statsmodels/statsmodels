@@ -78,7 +78,7 @@ class Model(object):
         """
         raise NotImplementedError
 
-    def predict(self, design):
+    def predict(self, exog, params=None):
         """
         After a model has been fit predict returns the fitted values.  If
         the model has not been fit, then fit is called.
