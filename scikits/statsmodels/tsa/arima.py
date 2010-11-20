@@ -3,7 +3,7 @@ import numpy as np
 from scikits.statsmodels.decorators import (cache_readonly, cache_writable,
             resettable_cache)
 from scipy import optimize
-from numpy import dot, identity, kron, log, zeros, pi, exp, eye
+from numpy import dot, identity, kron, log, zeros, pi, exp, eye, abs
 from scikits.statsmodels import add_constant
 from scikits.statsmodels.model import (LikelihoodModel, LikelihoodModelResults,
                                         GenericLikelihoodModel)
@@ -95,8 +95,8 @@ class ARMA(GenericLikelihoodModel):
         loglike = self.loglike
         if self.transparams:
             params = self._invtransparams(params)
-        return approx_fprime(params, loglike, epsilon=1e-5)
-#        return approx_fprime_cs(params, loglike, epsilon=1e-5)
+#        return approx_fprime(params, loglike, epsilon=1e-5)
+        return approx_fprime_cs(params, loglike, epsilon=1e-5)
 
     def hessian(self, params):
         """
@@ -109,8 +109,8 @@ class ARMA(GenericLikelihoodModel):
         loglike = self.loglike
         if self.transparams:
             params = self._invtransparams(params)
-        return approx_hess_cs(params, loglike, epsilon=1e-5)
-#        return approx_hess(params, loglike, epsilon=1e-5)
+#        return approx_hess_cs(params, loglike, epsilon=1e-5)
+        return approx_hess(params, loglike, epsilon=1e-5)
 
     def _transparams(self, params):
         """
@@ -316,9 +316,9 @@ class ARMA(GenericLikelihoodModel):
             start_params = np.asarray(start_params)
 
         else:
-            if method.lower() != 'css-mle':
+            if method.lower() != 'css-mle': # use Hannan-Rissanen start_params
                 start_params = self._fit_start_params((p,q,k))
-            else:
+            else:   # use Hannan-Rissanen to get CSS start_params
                 func = lambda params: -self.loglike_css(params)
                 #start_params = [.1]*(p+q+k) # different one for k?
                 start_params = self._fit_start_params((p,q,k))
@@ -368,23 +368,37 @@ class ARMAResults(LikelihoodModelResults):
 
     @cache_readonly
     def arroots(self):
-        np.roots(np.r_[1,-self.params[self.k:self.p]])**-1 # check indexing
+        return np.roots(np.r_[1,-self.params[self.k:self.p]])**-1
 
     @cache_readonly
     def maroots(self):
-        pass
+        return np.roots(np.r_[1,np.r_[1,self.params[self.k+self.p:]]])**-1
+
+#    @cache_readonly
+#    def arfreq(self):
+#        return (np.log(arroots/abs(arroots))/(2j*pi)).real
+
+#NOTE: why don't root finding functions work well?
+#    @cache_readonly
+#    def mafreq(eslf):
+#        return
+
 
     @cache_readonly
-    def params(self):
-        pass
+    def arparams(self):
+        k = self.k
+        self.params[k:k+self.p]
 
     @cache_readonly
     def llf(self):
-        pass
+        #TODO: needs to carry a method attribute to see which one to use
+        return self.model.loglike(self.params)
 
     @cache_readonly
     def bse(self):
-        pass
+        #TODO: see note above
+        return np.sqrt(np.diag(-np.linalg.inv(approx_hess(sefl.params,
+            self.model.loglike, epsilon=1e-5)[0])))
 
     @cache_readonly
     def aic(self):
@@ -400,6 +414,7 @@ class ARMAResults(LikelihoodModelResults):
 
     @cache_readonly
     def resids(self):
+        #NOTE: going to have to build these up iteratively
         pass
 
     @cache_readonly
@@ -408,7 +423,6 @@ class ARMAResults(LikelihoodModelResults):
 
 #    def t(self):
 #        pass
-
 
 
 if __name__ == "__main__":
