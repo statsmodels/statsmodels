@@ -54,7 +54,7 @@ License: BSD
 
 from scipy import stats, special, integrate  # integrate is for scipy 0.6.0 ???
 from scipy.stats import distributions
-from stats_extras import mvsk2mc, mc2mvsk
+from scikits.statsmodels.stats.moment_helpers import mvsk2mc, mc2mvsk
 import numpy as np
 
 class SkewNorm_gen(distributions.rv_continuous):

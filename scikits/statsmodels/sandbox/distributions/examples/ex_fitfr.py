@@ -11,7 +11,7 @@ import numpy as np
 from scipy import stats
 #Note the following import attaches methods to scipy.stats.distributions
 #     and adds bounds to stats.vonmises
-from scikits.statsmodels.sandbox.stats import distributions_patch
+from scikits.statsmodels.sandbox.distributions import sppatch
 
 
 np.random.seed(12345)

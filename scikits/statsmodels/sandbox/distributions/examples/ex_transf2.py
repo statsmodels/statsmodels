@@ -7,7 +7,7 @@ Licese: BSD
 
 import numpy as np
 from scipy import stats
-from scikits.statsmodels.sandbox.stats.distributions_extras import (
+from scikits.statsmodels.sandbox.distributions.extras import (
     squarenormalg, absnormalg, negsquarenormalg, squaretg)
 
 

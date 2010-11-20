@@ -481,7 +481,8 @@ if __name__ == '__main__':
     print stats.beta.fit(rvsb)
     xqsb = [stats.scoreatpercentile(rvsb, p) for p in pq*100]
     mom2s = np.array([rvsb.mean(), rvsb.var()])
-    betaparest_gmmquantile = optimize.fmin(lambda params:np.sum(momentcondquant(stats.beta, params, mom2s,(pq,xqsb), shape=None)**2), [10,10, 0., 1.])
+    betaparest_gmmquantile = optimize.fmin(lambda params:np.sum(momentcondquant(stats.beta, params, mom2s,(pq,xqsb), shape=None)**2),
+                                           [10,10, 0., 1.], maxiter=2000)
     print 'betaparest_gmmquantile',  betaparest_gmmquantile
     #result sensitive to initial condition
 
