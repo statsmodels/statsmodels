@@ -323,6 +323,8 @@ Should be of length %s, if sigma is a 1d array" % nobs
             # with error covariance matrix
         return llf
 
+
+
 class WLS(GLS):
     """
     A regression model with diagonal but non-identity covariance structure.
@@ -1096,6 +1098,64 @@ class RegressionResults(LikelihoodModelResults):
             raise ValueError, 'need normalized residuals to estimate standard\
  deviation'
         return self.wresid * recipr(np.sqrt(self.scale))
+
+    def compare_f_test(self, restricted):
+        '''use F test to test whether restricted model is correct
+
+        Parameters
+        ----------
+        restricted : Result instance
+            The restricted model is assumed to be nested in the current model. The
+            result instance of the restricted model is required to have two attributes,
+            residual sum of squares, `ssr`, residual degrees of freedom, `df_resid`.
+
+        Returns
+        -------
+        f_value : float
+            test statistic, F distributed
+        p_value : float
+            p-value of the test statistic
+
+
+        Notes
+        -----
+        See mailing list discussion October 17,
+
+        '''
+        ssr_full = self.ssr
+        ssr_restr = restricted.ssr
+        df_full = self.df_resid
+        df_restr = restricted.df_resid
+
+        df_diff = (df_restr - df_full)
+        f_value = (ssr_restr - ssr_full) / df_diff / ssr_full * df_full
+        p_value = stats.f.sf(f_value, df_diff, df_full)
+        return f_value, p_value, df_diff
+
+    def compare_lr_test(self, restricted):
+
+        '''generic likelihood ration test between nested models
+
+           \begin{align} D & = -2(\ln(\text{likelihood for null
+            model}) - \ln(\text{likelihood for alternative model})) \\ & =
+            -2\ln\left( \frac{\text{likelihood for null model}}{\text{likelihood
+            for alternative model}} \right). \end{align}
+
+                       is distributed as chisquare with df equal to difference in
+            number of parameters or equivalently
+           difference in residual degrees of freedom  (sign?)
+
+        TODO: put into separate function
+        '''
+        llf_full = self.llf
+        llf_restr = restricted.llf
+        df_full = self.df_resid
+        df_restr = restricted.df_resid
+        lrstat = -2*(llf_restr - llf_full)   #??? check sign
+        lrdf = (df_restr - df_full)
+        lrpval = stats.chi2.sf(lrstat, lrdf)
+
+        return lrstat, lrpval, lrdf
 
     def summary(self, yname=None, xname=None, returns='text'):
         """returns a string that summarizes the regression results
