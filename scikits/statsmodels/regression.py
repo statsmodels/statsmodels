@@ -1115,7 +1115,8 @@ class RegressionResults(LikelihoodModelResults):
             test statistic, F distributed
         p_value : float
             p-value of the test statistic
-
+        df_diff : int
+            degrees of freedom of the restriction, i.e. difference in df between models
 
         Notes
         -----
@@ -1133,29 +1134,48 @@ class RegressionResults(LikelihoodModelResults):
         return f_value, p_value, df_diff
 
     def compare_lr_test(self, restricted):
+        '''use likelihood ratio test to test whether restricted model is correct
 
-        '''generic likelihood ration test between nested models
+        Parameters
+        ----------
+        restricted : Result instance
+            The restricted model is assumed to be nested in the current model. The
+            result instance of the restricted model is required to have two attributes,
+            residual sum of squares, `ssr`, residual degrees of freedom, `df_resid`.
+
+        Returns
+        -------
+        lr_stat : float
+            likelihood ratio, chisquare distributed with df_diff degrees of freedom
+        p_value : float
+            p-value of the test statistic
+        df_diff : int
+            degrees of freedom of the restriction, i.e. difference in df between models
+
+        Notes
+        -----
+        See mailing list discussion October 17,
 
            \begin{align} D & = -2(\ln(\text{likelihood for null
             model}) - \ln(\text{likelihood for alternative model})) \\ & =
             -2\ln\left( \frac{\text{likelihood for null model}}{\text{likelihood
             for alternative model}} \right). \end{align}
 
-                       is distributed as chisquare with df equal to difference in
-            number of parameters or equivalently
-           difference in residual degrees of freedom  (sign?)
+        is distributed as chisquare with df equal to difference in number of parameters
+        or equivalently difference in residual degrees of freedom
 
-        TODO: put into separate function
+        TODO: put into separate function, needs tests
         '''
         llf_full = self.llf
         llf_restr = restricted.llf
         df_full = self.df_resid
         df_restr = restricted.df_resid
-        lrstat = -2*(llf_restr - llf_full)   #??? check sign
-        lrdf = (df_restr - df_full)
-        lrpval = stats.chi2.sf(lrstat, lrdf)
 
-        return lrstat, lrpval, lrdf
+        lrdf = (df_restr - df_full)
+        lrstat = -2*(llf_restr - llf_full)
+        lr_pvalue = stats.chi2.sf(lrstat, lrdf)
+
+        return lrstat, lr_pvalue, lrdf
 
     def summary(self, yname=None, xname=None, returns='text'):
         """returns a string that summarizes the regression results
