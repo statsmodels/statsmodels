@@ -78,7 +78,7 @@ class TLinearModel(GenericLikelihoodModel):
 
         beta = params[:-2]
         df = params[-2]
-        scale = params[-1]
+        scale = np.abs(params[-1])  #TODO check behavior around zero
         loc = np.dot(self.exog, beta)
         endog = self.endog
         x = (endog - loc)/scale
@@ -87,3 +87,35 @@ class TLinearModel(GenericLikelihoodModel):
         lPx -= 0.5*np_log(df*np_pi) + (df+1)/2.*np_log(1+(x**2)/df)
         lPx -= np_log(scale)  # correction for scale
         return -lPx
+
+
+from scipy import stats
+from scikits.statsmodels.tsa.arma_mle import Arma
+
+class TArma(Arma):
+
+    def loglike(self, params):
+        return -self.nloglikeobs(params).sum(0)
+
+
+    #add for Jacobian calculation  bsejac in GenericMLE, copied from loglike
+    def nloglikeobs(self, params):
+        """
+        Loglikelihood for arma model for each observation, t-distribute
+
+        Notes
+        -----
+        The ancillary parameter is assumed to be the last element of
+        the params vector
+        """
+
+        errorsest = self.geterrors(params)
+        #sigma2 = np.maximum(params[-1]**2, 1e-6)  #do I need this
+        #axis = 0
+        #nobs = len(errorsest)
+
+        df = params[-2]
+        scale = np.abs(params[-1])
+        llike  = - stats.t._logpdf(errorsest/scale, df) + np_log(scale)
+        return llike
+

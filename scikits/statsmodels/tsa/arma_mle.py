@@ -234,7 +234,8 @@ class Arma(GenericLikelihoodModel):  #switch to generic mle
 
 
     #renamed and needs check with other fit
-    def fit_mle(self, order=(0,0), start_params=None, method='nm', maxiter=5000, tol=1e-08):
+    def fit_mle(self, order=(0,0), start_params=None, method='nm', maxiter=5000, tol=1e-08,
+                **kwds):
         '''Estimate an ARMA model with given order using Conditional Maximum Likelihood
 
         Parameters
@@ -262,12 +263,13 @@ class Arma(GenericLikelihoodModel):  #switch to generic mle
         if start_params is None:
             start_params = np.concatenate((0.05*np.ones(nar + nma), [1]))
         mlefit = super(Arma, self).fit(start_params=start_params,
-                maxiter=maxiter, method=method, tol=tol)
+                maxiter=maxiter, method=method, tol=tol,**kwds)
         #bug fix: running ls and then mle didn't overwrite this
         rh = mlefit.params
         self.params = rh
         self.ar_est = np.concatenate(([1], -rh[:p]))
         self.ma_est = np.concatenate(([1], rh[p:p+q]))
+        self.error_estimate = self.geterrors(rh)
         return mlefit
 
     #copied from arima.ARIMA
@@ -282,7 +284,7 @@ class Arma(GenericLikelihoodModel):  #switch to generic mle
 #            ar = self.ar_est
 #        if ma is None:
 #            ma = self.ma_est
-        return self.x + self.error_estimate
+        return self.endog - self.error_estimate
 
     #copied from arima.ARIMA
     def forecast(self, ar=None, ma=None, nperiod=10):
