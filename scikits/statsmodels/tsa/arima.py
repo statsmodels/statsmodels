@@ -184,7 +184,7 @@ class ARMA(GenericLikelihoodModel):
             newparams[k+p:k+p+q] = invmacoefs
         return newparams
 
-    def loglike(self, params):
+    def loglike_kalman(self, params):
         """
         Compute exact loglikelihood for ARMA(p,q) model using the Kalman Filter.
         """
@@ -238,6 +238,13 @@ class ARMA(GenericLikelihoodModel):
             Uses the transformation suggested in Jones (1980).  If False,
             no checking for stationarity or invertibility is done.
         method : str {'css-mle','mle','css'}
+            This is the loglikelihood to maximize.  If "css-mle", the conditional
+            sum of squares likelihood is maximized and its values are used as
+            starting values for the computation of the exact likelihood via the
+            Kalman filter.  If "mle", the exact likelihood is maximized via the
+            Kalman Filter.  If "css" the conditional sum of squares likelihood
+            is maximized.  All three methods use `start_params` as starting
+            parameters.  See above for more information.
         trend : str {'c','nc'}
             Whehter to include a constant or not.  'c' includes constant,
             'nc' no constant.
@@ -307,9 +314,10 @@ class ARMA(GenericLikelihoodModel):
 
         # choose objective function
         if method.lower() in ['mle','css-mle']:
-            loglike = lambda params: -self.loglike(params)
+            loglike = lambda params: -self.loglike_kalman(params)
         if method.lower() == 'css':
             loglike = lambda params: -self.loglike_css(params)
+        self.loglike = loglike  # attach loglike so it can be reused
 
 
         if start_params is not None:
