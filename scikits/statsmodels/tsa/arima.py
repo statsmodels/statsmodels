@@ -1,7 +1,8 @@
 from scikits.statsmodels.decorators import (cache_readonly, cache_writable,
             resettable_cache)
 from scipy import optimize
-from numpy import dot, identity, kron, log, zeros, pi, exp, eye, abs
+from numpy import dot, identity, kron, log, zeros, pi, exp, eye, abs, empty
+from numpy.linalg import inv
 from scikits.statsmodels import add_constant
 from scikits.statsmodels.model import (LikelihoodModel, LikelihoodModelResults,
                                         GenericLikelihoodModel)
@@ -349,8 +350,10 @@ class ARMA(GenericLikelihoodModel):
         if transparams: # transform parameters back
             params = self._transparams(params)
 
-        self.transparams = False
-        self.params = params
+        self.transparams = False # set to false so methods don't expect transf.
+
+        return ARMAResults(self, params)
+
     fit.__doc__ += LikelihoodModel.fit.__doc__
 
 
@@ -361,8 +364,9 @@ class ARMAResults(LikelihoodModelResults):
     _cache = {}
 
     def __init__(self, model, params, normalized_cov_params=None, scale=1.):
-        super(ARMAResults, self).__init(model, params, normalized_cov_params,
+        super(ARMAResults, self).__init__(model, params, normalized_cov_params,
                 scale)
+        self.nobs = model.nobs
 
     @cache_readonly
     def arroots(self):
@@ -411,9 +415,49 @@ class ARMAResults(LikelihoodModelResults):
         pass
 
     @cache_readonly
-    def resids(self):
+    def resid(self):
         #NOTE: going to have to build these up iteratively
-        pass
+        nobs = self.nobs
+        model = self.model
+        y = model.endog
+        r = model.r
+        p = model.p
+        k = model.k
+        q = model.q
+        params = self.params
+
+        #demean for exog != None
+        if k > 0:
+            y -= dot(model.exog, params[:k])
+
+        Z_mat = KalmanFilter.Z(r)
+        m = Z_mat.shape[1]
+        R_mat = KalmanFilter.R(params, r, k, q, p)
+        T_mat = KalmanFilter.T(params, r, k, p)
+
+        #initial state and its variance
+        alpha = zeros((m,1))
+        Q_0 = dot(inv(identity(m**2)-kron(T_mat,T_mat)),
+                            dot(R_mat,R_mat.T).ravel('F'))
+        Q_0 = Q_0.reshape(r,r,order='F')
+        P = Q_0
+
+        resids = empty((nobs,1), dtype=params.dtype)
+        for i in xrange(int(nobs)):
+            # Predict
+            v_mat = y[i] - dot(Z_mat,alpha) # one-step forecast error
+            resids[i] = v_mat
+            F_mat = dot(dot(Z_mat, P), Z_mat.T)
+            Finv = 1./F_mat # always scalar for univariate series
+            K = dot(dot(dot(T_mat,P),Z_mat.T),Finv) # Kalman Gain Matrix
+            # update state
+            alpha = dot(T_mat, alpha) + dot(K,v_mat)
+            L = T_mat - dot(K,Z_mat)
+            P = dot(dot(T_mat, P), L.T) + dot(R_mat, R_mat.T)
+
+        return resids
+
+
 
     @cache_readonly
     def pvalues(self):
@@ -431,18 +475,18 @@ if __name__ == "__main__":
     from scikits.statsmodels.tsa.arima_process import arma_generate_sample
     y = arma_generate_sample([1., -.75],[1.,.25], nsample=1000)
     arma = ARMA(y)
-    arma.fit(trend='nc', order=(1,1))
+    res = arma.fit(trend='nc', order=(1,1))
 
     np.random.seed(12345)
     y_arma22 = arma_generate_sample([1.,-.85,.35],[1,.25,-.9], nsample=1000)
     arma22 = ARMA(y_arma22)
-    arma22.fit(trend = 'nc', order=(2,2))
+    res22 = arma22.fit(trend = 'nc', order=(2,2))
 
     # test CSS
     arma22_css = ARMA(y_arma22)
-    arma22_css.fit(trend='nc', order=(2,2), method='css')
+    res22css = arma22_css.fit(trend='nc', order=(2,2), method='css')
 
 
     data = sm.datasets.sunspots.load()
     ar = ARMA(data.endog)
-    ar.fit(trend='nc', order=(9,0))
+    resar = ar.fit(trend='nc', order=(9,0))
