@@ -12,6 +12,7 @@ from var import AR
 from scikits.statsmodels.sandbox.regression.numdiff import approx_fprime, \
         approx_hess, approx_hess_cs
 from kalmanf import KalmanFilter
+from scipy.stats import t
 
 class ARMA(GenericLikelihoodModel):
     """
