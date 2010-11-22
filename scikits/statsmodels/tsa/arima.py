@@ -2,7 +2,7 @@ from scikits.statsmodels.decorators import (cache_readonly, cache_writable,
             resettable_cache)
 from scipy import optimize
 from numpy import dot, identity, kron, log, zeros, pi, exp, eye, abs, empty
-from numpy.linalg import inv
+from numpy.linalg import inv, pinv
 from scikits.statsmodels import add_constant
 from scikits.statsmodels.model import (LikelihoodModel, LikelihoodModelResults,
                                         GenericLikelihoodModel)
@@ -352,7 +352,9 @@ class ARMA(GenericLikelihoodModel):
 
         self.transparams = False # set to false so methods don't expect transf.
 
-        return ARMAResults(self, params)
+        normalized_cov_params = None
+
+        return ARMAResults(self, params, normalized_cov_params)
 
     fit.__doc__ += LikelihoodModel.fit.__doc__
 
@@ -366,6 +368,7 @@ class ARMAResults(LikelihoodModelResults):
     def __init__(self, model, params, normalized_cov_params=None, scale=1.):
         super(ARMAResults, self).__init__(model, params, normalized_cov_params,
                 scale)
+        self.sigma2 = model.sigma2
         self.nobs = model.nobs
 
     @cache_readonly
@@ -401,6 +404,9 @@ class ARMAResults(LikelihoodModelResults):
         #TODO: see note above
         return np.sqrt(np.diag(-np.linalg.inv(approx_hess(self.params,
             self.model.loglike, epsilon=1e-5)[0])))
+
+    def t(self):    # overwrites t() because there is no cov_params
+        return self.params/self.bse
 
     @cache_readonly
     def aic(self):
@@ -458,7 +464,9 @@ class ARMAResults(LikelihoodModelResults):
 
     @cache_readonly
     def pvalues(self):
-        pass
+        # TODO: is this correct for ARMA?
+        df_resid = self.nobs - (self.k+self.q+self.p)
+        return t.sf(np.abs(self.t()), df_resid)
 
 #    def t(self):
 #        pass
