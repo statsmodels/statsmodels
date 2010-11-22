@@ -423,15 +423,15 @@ class ARMAResults(LikelihoodModelResults):
 
     @cache_readonly
     def aic(self):
-        pass
+        return -2*self.llf + 2*(self.q+self.p+self.k+1)
 
     @cache_readonly
     def bic(self):
-        pass
+        return -2*self.llf + np.log(self.nobs)*(self.q+self.p+self.k+1)
 
     @cache_readonly
-    def hic(self):
-        pass
+    def hqic(self):
+        return -2*self.llf + 2*(self.q+self.p+self.k+1)*np.log(np.log(self.nobs))
 
     @cache_readonly
     def resid(self):
@@ -480,9 +480,6 @@ class ARMAResults(LikelihoodModelResults):
         # TODO: is this correct for ARMA?
         df_resid = self.nobs - (self.k+self.q+self.p)
         return t.sf(np.abs(self.t()), df_resid)
-
-#    def t(self):
-#        pass
 
 
 if __name__ == "__main__":
