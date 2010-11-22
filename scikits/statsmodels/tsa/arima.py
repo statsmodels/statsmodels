@@ -399,7 +399,7 @@ class ARMAResults(LikelihoodModelResults):
     @cache_readonly
     def bse(self):
         #TODO: see note above
-        return np.sqrt(np.diag(-np.linalg.inv(approx_hess(sefl.params,
+        return np.sqrt(np.diag(-np.linalg.inv(approx_hess(self.params,
             self.model.loglike, epsilon=1e-5)[0])))
 
     @cache_readonly
@@ -454,10 +454,7 @@ class ARMAResults(LikelihoodModelResults):
             alpha = dot(T_mat, alpha) + dot(K,v_mat)
             L = T_mat - dot(K,Z_mat)
             P = dot(dot(T_mat, P), L.T) + dot(R_mat, R_mat.T)
-
         return resids
-
-
 
     @cache_readonly
     def pvalues(self):
