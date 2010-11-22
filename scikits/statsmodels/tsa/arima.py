@@ -315,10 +315,10 @@ class ARMA(GenericLikelihoodModel):
         # choose objective function
         if method.lower() in ['mle','css-mle']:
             loglike = lambda params: -self.loglike_kalman(params)
+            self.loglike = self.loglike_kalman
         if method.lower() == 'css':
             loglike = lambda params: -self.loglike_css(params)
-        self.loglike = loglike  # attach loglike so it can be reused
-
+            self.loglike = self.loglike_css
 
         if start_params is not None:
             start_params = np.asarray(start_params)
