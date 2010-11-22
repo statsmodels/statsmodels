@@ -10,7 +10,7 @@ from scikits.statsmodels.regression import yule_walker, GLS
 from tsatools import lagmat
 from var import AR
 from scikits.statsmodels.sandbox.regression.numdiff import approx_fprime, \
-        approx_hess
+        approx_hess, approx_hess_cs
 from kalmanf import KalmanFilter
 
 class ARMA(GenericLikelihoodModel):
@@ -216,6 +216,7 @@ class ARMA(GenericLikelihoodModel):
         errors = np.asarray(errors)
         ssr = sum(errors[p:]**2)
         sigma2 = ssr/(nobs-p)
+        self.sigma2 = sigma2
         llf = -(nobs-p)/2.*(log(2*pi) + log(sigma2)) - np.sum(ssr)/(2*sigma2)
         return llf
 
@@ -370,6 +371,10 @@ class ARMAResults(LikelihoodModelResults):
                 scale)
         self.sigma2 = model.sigma2
         self.nobs = model.nobs
+        self.k = model.k
+        self.p = model.p
+        self.q = model.q
+        self._cache = resettable_cache()
 
     @cache_readonly
     def arroots(self):
@@ -402,8 +407,8 @@ class ARMAResults(LikelihoodModelResults):
     @cache_readonly
     def bse(self):
         #TODO: see note above
-        return np.sqrt(np.diag(-np.linalg.inv(approx_hess(self.params,
-            self.model.loglike, epsilon=1e-5)[0])))
+        return np.sqrt(np.diag(-inv(approx_hess_cs(self.params,
+            self.model.loglike, epsilon=1e-5))))
 
     def t(self):    # overwrites t() because there is no cov_params
         return self.params/self.bse
