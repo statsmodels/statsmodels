@@ -210,7 +210,7 @@ class ARMA(GenericLikelihoodModel):
             y -= dot(self.exog, newparams[:k])
         arcoefs = newparams[k:k+p][::-1]    # reverse order for broadcast
         macoefs = newparams[k+p:k+p+q][::-1]
-        errors = [0] * q
+        errors = [0] * p
         # create error vector iteratively
         for i in range(p,len(y)):
             errors.append(y[i]-sum(arcoefs*y[i-p:i])-sum(macoefs*errors[i-q:i]))
@@ -506,3 +506,8 @@ if __name__ == "__main__":
     data = sm.datasets.sunspots.load()
     ar = ARMA(data.endog)
     resar = ar.fit(trend='nc', order=(9,0))
+
+    y_arma31 = arma_generate_sample([1,-.75,-.35,.25],[.1], nsample=1000)
+
+    arma31css = ARMA(y_arma31)
+    res31css = arma31css.fit(order=(2,2), method="css", trend="nc", transparams=False)
