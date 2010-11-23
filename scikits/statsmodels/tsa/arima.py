@@ -480,7 +480,7 @@ class ARMAResults(LikelihoodModelResults):
     def pvalues(self):
         # TODO: is this correct for ARMA?
         df_resid = self.nobs - (self.k+self.q+self.p)
-        return t.sf(np.abs(self.t()), df_resid)
+        return t.sf(np.abs(self.t()), df_resid) * 2
 
 
 if __name__ == "__main__":
