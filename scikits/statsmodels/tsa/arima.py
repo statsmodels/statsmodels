@@ -387,11 +387,11 @@ class ARMAResults(LikelihoodModelResults):
 
     @cache_readonly
     def arroots(self):
-        return np.roots(np.r_[1,-self.params[self.k:self.p]])**-1
+        return np.roots(np.r_[1,-self.arparams])**-1
 
     @cache_readonly
     def maroots(self):
-        return np.roots(np.r_[1,np.r_[1,self.params[self.k+self.p:]]])**-1
+        return np.roots(np.r_[1,self.maparams]])**-1
 
 #    @cache_readonly
 #    def arfreq(self):
