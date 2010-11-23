@@ -406,7 +406,13 @@ class ARMAResults(LikelihoodModelResults):
     @cache_readonly
     def arparams(self):
         k = self.k
-        self.params[k:k+self.p]
+        return self.params[k:k+self.p]
+
+    @cache_readonly
+    def maparams(self):
+        k = self.k
+        p = self.p
+        return self.params[k+p:]
 
     @cache_readonly
     def llf(self):
@@ -510,4 +516,9 @@ if __name__ == "__main__":
     y_arma31 = arma_generate_sample([1,-.75,-.35,.25],[.1], nsample=1000)
 
     arma31css = ARMA(y_arma31)
-    res31css = arma31css.fit(order=(2,2), method="css", trend="nc", transparams=False)
+    res31css = arma31css.fit(order=(3,1), method="css", trend="nc",
+            transparams=True)
+
+    y_arma13 = arma_generate_sample([1., -.75],[1,.25,-.5,.8], nsample=1000)
+    arma13css = ARMA(y_arma13)
+    res13css = arma13css.fit(order=(1,3), method='css', trend='nc')
