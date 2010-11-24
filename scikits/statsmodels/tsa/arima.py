@@ -13,6 +13,7 @@ from scikits.statsmodels.sandbox.regression.numdiff import approx_fprime, \
         approx_hess, approx_hess_cs
 from kalmanf import KalmanFilter
 from scipy.stats import t
+from scipy.signal import lfilter
 
 class ARMA(GenericLikelihoodModel):
     """
@@ -217,8 +218,19 @@ class ARMA(GenericLikelihoodModel):
         # create error vector iteratively
         for i in range(p,len(y)):
             errors.append(y[i]-sum(arcoefs*y[i-p:i])-sum(macoefs*errors[-q:]))
-        errors = np.asarray(errors)
-        ssr = sum(errors[q:]**2)
+        errors = np.asarray(errors[q:])
+
+# the order of p determines how many zeros errors to set for lfilter
+        b,a = np.r_[1,-newparams[k:k+p]], np.r_[1,newparams[k+p:]]
+        zi = np.zeros((max(p,q)))
+        for i in range(p):
+            zi[i] = sum(-b[:i+1][::-1] * y[:i+1])
+        e = lfilter(b,a, y, zi=zi)
+        e = e[0][p:]
+#TODO: remove once tests are written and keep lfilter
+        assert(np.allclose(errors,e))
+
+        ssr = sum(errors**2)
         sigma2 = ssr/(nobs-p)
         self.sigma2 = sigma2
         llf = -(nobs-p)/2.*(log(2*pi) + log(sigma2)) - np.sum(ssr)/(2*sigma2)
