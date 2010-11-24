@@ -829,7 +829,7 @@ class Binomial(Family):
         if (Y.ndim > 1 and Y.shape[1] > 1):
             y = Y[:,0]
             self.n = Y.sum(1) # overwrite self.n for deviance below
-            return y/self.n
+            return y*1./self.n
         else:
             return Y
 

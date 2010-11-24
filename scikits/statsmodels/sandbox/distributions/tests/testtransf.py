@@ -20,9 +20,8 @@ array(2981.0032380193438)
 import numpy as np
 from numpy.testing import assert_almost_equal
 from scipy import stats, special
-from scikits.statsmodels.sandbox.stats.distributions_extras import (
-    lognormalg,
-    squarenormalg, absnormalg, negsquarenormalg, squaretg)
+from scikits.statsmodels.sandbox.distributions.extras import (
+    lognormalg, squarenormalg, absnormalg, negsquarenormalg, squaretg)
 
 
 #some patches to scipy.stats.distributions so tests work and pass

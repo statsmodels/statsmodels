@@ -304,7 +304,7 @@ class KStepAhead(object):
     Provides fit/test indexes to split data in sequential sets
     """
 
-    def __init__(self, n, k, start=None, kall=True):
+    def __init__(self, n, k=1, start=None, kall=True, return_slice=True):
         """
         KStepAhead cross validation iterator:
         Provides train/test indexes to split data in train test sets
@@ -317,11 +317,16 @@ class KStepAhead(object):
             number of steps ahead
         start : int
             initial size of data for fitting
+        kall : boolean
+            if true. all values for up to k-step ahead are included in the test index.
+            If false, then only the k-th step ahead value is returnd
+
 
         Notes
         -----
         I don't think this is really useful, because it can be done with
         a very simple loop instead.
+        Useful as a plugin, but it could return slices instead for faster array access.
 
         Examples
         --------
@@ -350,16 +355,27 @@ class KStepAhead(object):
         n = self.n
         k = self.k
         start = self.start
-        for i in xrange(start, n-k):
-            train_index  = np.zeros(n, dtype=np.bool)
-            train_index[:i] = True
-            test_index  = np.zeros(n, dtype=np.bool)
-            if self.kall:
-                test_index[i:i+k] = True # np.logical_not(test_index)
-            else:
-                test_index[i+k-1:i+k] = True
-            #or faster to return np.arange(i,i+k) ?
-            yield train_index, test_index
+        if return_slice:
+            for i in xrange(start, n-k):
+                train_slice = slice(None, i, None)
+                if self.kall:
+                    test_slice = slice(i, i+k)
+                else:
+                    test_slice = slice(i+k-1, i+k)
+                yield train_slice, test_slice
+
+        else: #for compatibility with other iterators
+            for i in xrange(start, n-k):
+                train_index  = np.zeros(n, dtype=np.bool)
+                train_index[:i] = True
+                test_index  = np.zeros(n, dtype=np.bool)
+                if self.kall:
+                    test_index[i:i+k] = True # np.logical_not(test_index)
+                else:
+                    test_index[i+k-1:i+k] = True
+                #or faster to return np.arange(i,i+k) ?
+                #returning slice should be faster in this case
+                yield train_index, test_index
 
 
     def __repr__(self):

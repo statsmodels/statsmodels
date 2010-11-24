@@ -148,12 +148,7 @@ Miscellaneous
 Tools for Time Series Analysis
 """"""""""""""""""""""""""""""
 
-.. autosummary::
-   :toctree: generated/
-
-   lagmat
-   lagmat2ds
-   grangercausalitytests
+nothing left in here
 
 
 Tools: Principal Component Analysis

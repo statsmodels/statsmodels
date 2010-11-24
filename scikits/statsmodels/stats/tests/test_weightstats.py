@@ -2,13 +2,16 @@
 
 no failures but needs cleanup
 
+Author: Josef Perktod (josef-pktd)
+License: BSD (3-clause)
+
 '''
 
 
 import numpy as np
 from scipy import stats
 from numpy.testing import assert_almost_equal, assert_equal
-from scikits.statsmodels.sandbox.stats.weightstats import \
+from scikits.statsmodels.stats.weightstats import \
                 DescrStatsW, CompareMeans, ttest_ind
 
 class TestWeightstats(object):
