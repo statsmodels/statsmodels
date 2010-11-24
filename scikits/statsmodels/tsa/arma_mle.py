@@ -66,8 +66,10 @@ class Arma(GenericLikelihoodModel):  #switch to generic mle
         armax[:p+1] = rhoy
         mamax = np.zeros(maxlag)
         mamax[:q+1] = rhoe
-        zi = signal.lfilter_zi(armax, mamax)
-        errorsest = signal.lfilter(rhoy, rhoe, self.endog, zi=zi)[0] #zi is also returned
+        #remove zi again to match better with Skipper's version
+        #zi = signal.lfilter_zi(armax, mamax)
+        #errorsest = signal.lfilter(rhoy, rhoe, self.endog, zi=zi)[0] #zi is also returned
+        errorsest = signal.lfilter(rhoy, rhoe, self.endog)
         return errorsest
 
 
