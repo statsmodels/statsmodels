@@ -15,6 +15,7 @@ from scikits.statsmodels.sandbox.regression.numdiff import approx_fprime, \
         approx_hess, approx_hess_cs
 from kalmanf import KalmanFilter
 from scipy.stats import t
+from scipy.signal import lfilter
 
 class ARMA(GenericLikelihoodModel):
     """
@@ -208,16 +209,30 @@ class ARMA(GenericLikelihoodModel):
         else:
             newparams = params
         if k > 0:
-#            exparams = params[:k]
             y -= dot(self.exog, newparams[:k])
         arcoefs = newparams[k:k+p][::-1]    # reverse order for broadcast
         macoefs = newparams[k+p:k+p+q][::-1]
+        if macoefs.size == 0:    # handle ar only case
+            macoefs = 0
+        if arcoefs.size == 0:   # handle ma only case
+            arcoefs = 0
         errors = [0] * q
         # create error vector iteratively
         for i in range(p,len(y)):
-            errors.append(y[i]-sum(arcoefs*y[i-p:i])-sum(macoefs*errors[i-q:i]))
-        errors = np.asarray(errors)
-        ssr = sum(errors[p:]**2)
+            errors.append(y[i]-sum(arcoefs*y[i-p:i])-sum(macoefs*errors[-q:]))
+        errors = np.asarray(errors[q:])
+
+# the order of p determines how many zeros errors to set for lfilter
+        b,a = np.r_[1,-newparams[k:k+p]], np.r_[1,newparams[k+p:]]
+        zi = np.zeros((max(p,q)))
+        for i in range(p):
+            zi[i] = sum(-b[:i+1][::-1] * y[:i+1])
+        e = lfilter(b,a, y, zi=zi)
+        e = e[0][p:]
+#TODO: remove once tests are written and keep lfilter
+        assert(np.allclose(errors,e))
+
+        ssr = sum(errors**2)
         sigma2 = ssr/(nobs-p)
         self.sigma2 = sigma2
         llf = -(nobs-p)/2.*(log(2*pi) + log(sigma2)) - np.sum(ssr)/(2*sigma2)
@@ -389,11 +404,11 @@ class ARMAResults(LikelihoodModelResults):
 
     @cache_readonly
     def arroots(self):
-        return np.roots(np.r_[1,-self.params[self.k:self.p]])**-1
+        return np.roots(np.r_[1,-self.arparams])**-1
 
     @cache_readonly
     def maroots(self):
-        return np.roots(np.r_[1,np.r_[1,self.params[self.k+self.p:]]])**-1
+        return np.roots(np.r_[1,self.maparams])**-1
 
 #    @cache_readonly
 #    def arfreq(self):
@@ -408,7 +423,13 @@ class ARMAResults(LikelihoodModelResults):
     @cache_readonly
     def arparams(self):
         k = self.k
-        self.params[k:k+self.p]
+        return self.params[k:k+self.p]
+
+    @cache_readonly
+    def maparams(self):
+        k = self.k
+        p = self.p
+        return self.params[k+p:]
 
     @cache_readonly
     def llf(self):
@@ -482,7 +503,7 @@ class ARMAResults(LikelihoodModelResults):
     def pvalues(self):
         # TODO: is this correct for ARMA?
         df_resid = self.nobs - (self.k+self.q+self.p)
-        return t.sf(np.abs(self.t()), df_resid)
+        return t.sf(np.abs(self.t()), df_resid) * 2
 
 
 if __name__ == "__main__":
@@ -508,3 +529,27 @@ if __name__ == "__main__":
     data = sm.datasets.sunspots.load()
     ar = ARMA(data.endog)
     resar = ar.fit(trend='nc', order=(9,0))
+
+    y_arma31 = arma_generate_sample([1,-.75,-.35,.25],[.1], nsample=1000)
+
+    arma31css = ARMA(y_arma31)
+    res31css = arma31css.fit(order=(3,1), method="css", trend="nc",
+            transparams=True)
+
+    y_arma13 = arma_generate_sample([1., -.75],[1,.25,-.5,.8], nsample=1000)
+    arma13css = ARMA(y_arma13)
+    res13css = arma13css.fit(order=(1,3), method='css', trend='nc')
+
+
+# check css for p < q and q < p
+    y_arma41 = arma_generate_sample([1., -.75, .35, .25, -.3],[1,-.35],
+                    nsample=1000)
+    arma41css = ARMA(y_arma41)
+    res41css = arma41css.fit(order=(4,1), trend='nc', method='css')
+
+    y_arma14 = arma_generate_sample([1, -.25], [1., -.75, .35, .25, -.3],
+                    nsample=1000)
+    arma14css = ARMA(y_arma14)
+    res14css = arma14css.fit(order=(4,1), trend='nc', method='css')
+
+
