@@ -206,16 +206,19 @@ class ARMA(GenericLikelihoodModel):
         else:
             newparams = params
         if k > 0:
-#            exparams = params[:k]
             y -= dot(self.exog, newparams[:k])
         arcoefs = newparams[k:k+p][::-1]    # reverse order for broadcast
         macoefs = newparams[k+p:k+p+q][::-1]
-        errors = [0] * p
+        if macoefs.size == 0:    # handle ar only case
+            macoefs = 0
+        if arcoefs.size == 0:   # handle ma only case
+            arcoefs = 0
+        errors = [0] * q
         # create error vector iteratively
         for i in range(p,len(y)):
-            errors.append(y[i]-sum(arcoefs*y[i-p:i])-sum(macoefs*errors[i-q:i]))
+            errors.append(y[i]-sum(arcoefs*y[i-p:i])-sum(macoefs*errors[-q:]))
         errors = np.asarray(errors)
-        ssr = sum(errors[p:]**2)
+        ssr = sum(errors[q:]**2)
         sigma2 = ssr/(nobs-p)
         self.sigma2 = sigma2
         llf = -(nobs-p)/2.*(log(2*pi) + log(sigma2)) - np.sum(ssr)/(2*sigma2)
@@ -522,3 +525,17 @@ if __name__ == "__main__":
     y_arma13 = arma_generate_sample([1., -.75],[1,.25,-.5,.8], nsample=1000)
     arma13css = ARMA(y_arma13)
     res13css = arma13css.fit(order=(1,3), method='css', trend='nc')
+
+
+# check css for p < q and q < p
+    y_arma41 = arma_generate_sample([1., -.75, .35, .25, -.3],[1,-.35],
+                    nsample=1000)
+    arma41css = ARMA(y_arma41)
+    res41css = arma41css.fit(order=(4,1), trend='nc', method='css')
+
+    y_arma14 = arma_generate_sample([1, -.25], [1., -.75, .35, .25, -.3],
+                    nsample=1000)
+    arma14css = ARMA(y_arma14)
+    res14css = arma14css.fit(order=(4,1), trend='nc', method='css')
+
+
