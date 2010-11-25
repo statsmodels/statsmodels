@@ -52,12 +52,21 @@ print rkf.params
 
 from scikits.statsmodels.tsa.arima_process import arma_generate_sample
 np.random.seed(12345)
-y_arma22 = arma_generate_sample([1.,-.85,.35],[1,.25,-.7], nsample=1000)
-arma22 = ARMA(y_arma22)
-res22 = arma22.fit(trend = 'nc', order=(2,2))
-print res22.params
+y_arma22 = arma_generate_sample([1.,-.85,.35, -0.1],[1,.25,-.7], nsample=1000)
+##arma22 = ARMA(y_arma22)
+##res22 = arma22.fit(trend = 'nc', order=(2,2))
+##print 'kf ',res22.params
+##res22css = arma22.fit(method='css',trend = 'nc', order=(2,2))
+##print 'css', res22css.params
 mod22 = Arma(y_arma22)
 resls22 = mod22.fit(order=(2,2))
-print resls22[0]
+print 'ls ', resls22[0]
 resmle22 = mod22.fit_mle(order=(2,2), maxfun=2000)
-print resmle22.params
+print 'mle', resmle22.params
+
+f = mod22.forecast()
+f3 = mod22.forecast3(start=900)[-20:]
+
+print y[-10:]
+print f[-20:]
+print f3[-109:-90]
