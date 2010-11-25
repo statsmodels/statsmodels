@@ -829,7 +829,7 @@ class Binomial(Family):
         if (Y.ndim > 1 and Y.shape[1] > 1):
             y = Y[:,0]
             self.n = Y.sum(1) # overwrite self.n for deviance below
-            return y/self.n
+            return y*1./self.n
         else:
             return Y
 
@@ -868,10 +868,10 @@ class Binomial(Family):
         '''
         if np.shape(self.n) == () and self.n == 1:
             one = np.equal(Y,1)
-            return -2 * np.sum(one * np.log(mu) + (1-one) * np.log(1-mu))
+            return -2 * np.sum(one * np.log(mu+1e-200) + (1-one) * np.log(1-mu+1e-200))
 
         else:
-            return 2*np.sum(self.n*(Y*np.log(Y/mu)+(1-Y)*np.log((1-Y)/(1-mu))))
+            return 2*np.sum(self.n*(Y*np.log(Y/mu+1e-200)+(1-Y)*np.log((1-Y)/(1-mu)+1e-200)))
 
     def resid_dev(self, Y, mu, scale=1.):
         """
@@ -913,8 +913,8 @@ class Binomial(Family):
             return np.sign(Y-mu)*np.sqrt(-2*np.log(one*mu+(1-one)*(1-mu)))\
                     /scale
         else:
-            return np.sign(Y-mu) * np.sqrt(2*self.n*(Y*np.log(Y/mu)+(1-Y)*\
-                        np.log((1-Y)/(1-mu))))/scale
+            return np.sign(Y-mu) * np.sqrt(2*self.n*(Y*np.log(Y/mu+1e-200)+(1-Y)*\
+                        np.log((1-Y)/(1-mu)+1e-200)))/scale
 
     def loglike(self, Y, mu, scale=1.):
         """
@@ -950,7 +950,7 @@ class Binomial(Family):
         """
 
         if np.shape(self.n) == () and self.n == 1:
-            return scale*np.sum(Y*np.log(mu/(1-mu))+np.log(1-mu))
+            return scale*np.sum(Y*np.log(mu/(1-mu)+1e-200)+np.log(1-mu))
         else:
             y=Y*self.n  #convert back to successes
             return scale * np.sum(special.gammaln(self.n+1)-\
