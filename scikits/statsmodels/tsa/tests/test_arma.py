@@ -15,8 +15,17 @@ def test_compare_arma():
     #np.random.seed(9876565)
     x = fa.ArmaFft([1, -0.5], [1., 0.4], 40).generate_sample(size=200, burnin=1000)
 
-    d = ARMA(x)
-    d.fit((1,1), trend='nc')
+# this used kalman filter through descriptive
+#    d = ARMA(x)
+#    d.fit((1,1), trend='nc')
+#    dres = d.res
+
+    from scikits.statsmodels.tsa.arima import ARMA
+    modkf = ARMA(x)
+    ##rkf = mkf.fit((1,1))
+    ##rkf.params
+    reskf = modkf.fit((1,1), trend='nc')
+    dres = reskf
 
     modc = Arma(x)
     resls = modc.fit(order=(1,1))
@@ -25,9 +34,9 @@ def test_compare_arma():
     #decimal 1 corresponds to threshold of 5% difference
     #still different sign  corrcted
     #assert_almost_equal(np.abs(resls[0] / d.params), np.ones(d.params.shape), decimal=1)
-    assert_almost_equal(resls[0] / d.params, np.ones(d.params.shape), decimal=1)
+    assert_almost_equal(resls[0] / dres.params, np.ones(dres.params.shape), decimal=1)
     #rescm also contains variance estimate as last element of params
 
     #assert_almost_equal(np.abs(rescm.params[:-1] / d.params), np.ones(d.params.shape), decimal=1)
-    assert_almost_equal(rescm.params[:-1] / d.params, np.ones(d.params.shape), decimal=1)
+    assert_almost_equal(rescm.params[:-1] / dres.params, np.ones(dres.params.shape), decimal=1)
     #return resls[0], d.params, rescm.params
