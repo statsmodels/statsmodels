@@ -64,9 +64,9 @@ LICENSE = 'BSD License'
 DOWNLOAD_URL = ''
 
 MAJ = 0
-MIN = 2
+MIN = 3
 REV = 0
-DEV = False #True
+DEV = True #False
 QUALIFIER = '' #'b2dev'
 
 classifiers = [ 'Development Status :: 4 - Beta',
