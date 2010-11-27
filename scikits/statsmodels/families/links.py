@@ -126,9 +126,10 @@ class Logit(Link):
         """
         Derivative of the logit transform
 
-
-        INPUTS:
-           p   -- probabilities
+        Parameters
+        ----------
+        p: array-like
+            Probabilities
 
         Returns
         -------
