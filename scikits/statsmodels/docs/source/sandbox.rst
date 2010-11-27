@@ -84,7 +84,6 @@ using statsmodels in three lines and is also best taken as a recipe.
 
    anova_oneway
    anova_ols
-   wls_prediction_std
 
 
 The following are helper functions for working with dummy variables and
