@@ -453,6 +453,19 @@ class TestGlmNegbinomial(CheckModelResults):
 #class TestGlmNegbinomial_nbinom(CheckModelResults):
 #    pass
 
+def test_attribute_writable_resettable():
+    """
+    Regression test for mutables and class constructors.
+    """
+    data = sm.datasets.longley.load()
+    endog, exog = data.endog, data.exog
+    glm_model = sm.GLM(endog, exog)
+    assert_equal(glm_model.family.link.power, 1.0)
+    glm_model.family.link.power = 2.
+    assert_equal(glm_model.family.link.power, 2.0)
+    glm_model2 = sm.GLM(endog, exog)
+    assert_equal(glm_model2.family.link.power, 1.0)
+
 if __name__=="__main__":
     #run_module_suite()
     #taken from Fernando Perez:
