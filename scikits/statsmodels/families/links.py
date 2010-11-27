@@ -268,9 +268,8 @@ class Power(Link):
         return self.power * np.power(p, self.power - 1)
 
 #inverse = Power(power=-1.)
-class inverse(Power):
+class inverse_power(Power):
     """
-
     The inverse transform
 
     Notes
@@ -280,7 +279,7 @@ class inverse(Power):
     Alias of statsmodels.family.links.Power(power=-1.)
     """
     def __init__(self):
-        super(inverse, self).__init__(power=-1.)
+        super(inverse_power, self).__init__(power=-1.)
 
 #sqrt = Power(power=0.5)
 class sqrt(Power):

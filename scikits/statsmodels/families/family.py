@@ -455,7 +455,7 @@ class Gaussian(Family):
     statsmodels.family.family.Family
     """
 
-    links = [L.log, L.identity, L.inverse]
+    links = [L.log, L.identity, L.inverse_power]
     variance = V.constant
 
     def __init__(self, link=L.identity):
@@ -611,10 +611,10 @@ class Gamma(Family):
     statsmodels.family.family.Family
     """
 
-    links = [L.log, L.identity, L.inverse]
+    links = [L.log, L.identity, L.inverse_power]
     variance = V.mu_squared
 
-    def __init__(self, link=L.inverse):
+    def __init__(self, link=L.inverse_power):
         self.variance = Gamma.variance
         self.link = link()
 
@@ -1037,7 +1037,7 @@ class InverseGaussian(Family):
     literature as the wald distribution.
     """
 
-    links = [L.inverse_squared, L.inverse, L.identity, L.log]
+    links = [L.inverse_squared, L.inverse_power, L.identity, L.log]
     variance = V.mu_cubed
 
     def __init__(self, link=L.inverse_squared):

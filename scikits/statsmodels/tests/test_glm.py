@@ -173,7 +173,7 @@ class TestGaussianInverse(CheckModelResults):
         self.X = np.c_[np.ones((nobs,1)),x,x**2]
         self.y_inv = (1. + .02*x + .001*x**2)**-1 + .001 * np.random.randn(nobs)
         InverseLink_Model = GLM(self.y_inv, self.X,
-                family=sm.families.Gaussian(sm.families.links.inverse))
+                family=sm.families.Gaussian(sm.families.links.inverse_power))
         InverseLink_Res = InverseLink_Model.fit()
         self.res1 = InverseLink_Res
         from results.results_glm import GaussianInverse
