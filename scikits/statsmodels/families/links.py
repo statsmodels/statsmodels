@@ -39,7 +39,7 @@ class Link(object):
 
     def inverse(self, z):
         """
-        Inverse of the link functin.  Just a placeholder.
+        Inverse of the link function.  Just a placeholder.
 
         Parameters
         ----------
