@@ -68,7 +68,7 @@ Moving Window Statistics
 Regression and ANOVA
 ^^^^^^^^^^^^^^^^^^^^
 
-.. currentmodule:: scikits.statsmodels.sandbox.regression
+.. currentmodule:: scikits.statsmodels.sandbox.regression.anova_nistcertified
 
 The following two ANOVA functions are fully tested against the NIST test data
 for balanced one-way ANOVA. ``anova_oneway`` follows the same pattern as the
@@ -91,6 +91,8 @@ The following are helper functions for working with dummy variables and
 generating ANOVA results with OLS. They are best considered as recipes since
 they were written with a specific use in mind. These function will eventually
 be rewritten or reorganized.
+
+.. currentmodule:: scikits.statsmodels.sandbox.regression
 
 .. autosummary::
    :toctree: generated/
