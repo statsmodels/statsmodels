@@ -118,8 +118,8 @@ Check this step by typing: ::
 
 Now you are ready to create and check out a branch.
 
-If you want to register your branch manually on Launchpad go to
-    `https://code.launchpad.net/statsmodels <https://code.launchpad.net/statsmodels>`_ and click on Register a branch.  Fill in a name (I will use test-branch).
+If you want to register your branch manually on Launchpad go to `https://code.launchpad.net/statsmodels <https://code.launchpad.net/statsmodels>`__
+and click on Register a branch.  Fill in a name (I will use test-branch).
 Click the Hosted radio button.  Choose a status, and click Register Branch.
 You will be taken to the branch's web page and there will be a command to
 "Update this branch" that shows: ::
@@ -245,7 +245,7 @@ have always been quite helpful in my experience.
 Mailing List
 ============
 
-Most of our developer conversations take place on our `psystatsmodels
+Most of our developer conversations take place on our psystatsmodels
 google group mailing list.
 
 **Mailing List:** http://groups.google.com/group/pystatsmodels?hl=en
