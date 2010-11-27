@@ -93,8 +93,8 @@ class Logit(Link):
         z : array
             Logit transform of `p`
 
-        Formulas
-        --------
+        Notes
+        -----
         g(p) = log(p / (1 - p))
         """
         p = self._clean(p)
@@ -114,8 +114,8 @@ class Logit(Link):
         p : array
             Probabilities
 
-        Formulas
-        --------
+        Notes
+        -----
         g^(-1)(z) = exp(z)/(1+exp(z))
         """
         t = np.exp(z)
@@ -135,12 +135,10 @@ class Logit(Link):
         g'(p) : array
            Value of the derivative of logit transform at `p`
 
-        Formulas
-        --------
-        g'(p) = 1 / (p * (1 - p))
-
         Notes
         -----
+        g'(p) = 1 / (p * (1 - p))
+
         Alias for `Logit`:
         logit = Logit()
         """
@@ -199,8 +197,8 @@ class Power(Link):
         z : array-like
             Power transform of x
 
-        Formulas
-        --------
+        Notes
+        -----
         g(p) = x**self.power
         """
 
@@ -221,8 +219,8 @@ class Power(Link):
         `p` : array
             Mean parameters
 
-        Formulas
-        --------
+        Notes
+        -----
         g^(-1)(`z`) = `z`**(1/`power`)
         """
         return np.power(z, 1. / self.power)
@@ -241,8 +239,8 @@ class Power(Link):
         g'(p) : array
             Derivative of power transform of `p`
 
-        Formulas
-        --------
+        Notes
+        -----
         g'(`p`) = `power` * `p`**(`power` - 1)
         """
         return self.power * np.power(p, self.power - 1)
@@ -253,12 +251,10 @@ class inverse(Power):
 
     The inverse transform
 
-    Formulas
-    --------
-    g(`p`) = 1 / `p`
-
     Notes
     -----
+    g(`p`) = 1 / `p`
+
     Alias of statsmodels.family.links.Power(power=-1.)
     """
     def __init__(self):
@@ -270,12 +266,10 @@ class sqrt(Power):
 
     The square-root transform
 
-    Formulas
-    --------
-    g(`p`) = sqrt(`p`)
-
     Notes
     -----
+    g(`p`) = sqrt(`p`)
+
     Alias of statsmodels.family.links.Power(power=.5)
     """
     def __init__(self):
@@ -287,12 +281,10 @@ class inverse_squared(Power):
 
     The inverse squared transform
 
-    Formulas
-    ---------
-    g(`p`) = 1 / `p`**2
-
     Notes
     -----
+    g(`p`) = 1 / `p`**2
+
     Alias of statsmodels.family.links.Power(power=2.)
     """
     def __init__(self):
@@ -302,12 +294,10 @@ class identity(Power):
     """
     The identity transform
 
-    Formulas
-    ---------
-    g(`p`) = `p`
-
     Notes
     -----
+    g(`p`) = `p`
+
     Alias of statsmodels.family.links.Power(power=1.)
     """
     def __init__(self):
@@ -358,8 +348,8 @@ class Log(Link):
         z : array
             log(x)
 
-        Formulas
-        ---------
+        Notes
+        -----
         g(p) = log(p)
         """
         x = self._clean(p)
@@ -379,8 +369,8 @@ class Log(Link):
         p : array
             The mean probabilities given the value of the inverse `z`
 
-        Formulas
-        --------
+        Notes
+        -----
         g^(-1)(z) = exp(z)
         """
         return np.exp(z)
@@ -399,8 +389,8 @@ class Log(Link):
         g'(p) : array
             derivative of log transform of x
 
-        Formulas
-        --------
+        Notes
+        -----
         g(x) = 1/x
         """
         p = self._clean(p)
@@ -463,8 +453,8 @@ class CDFLink(Logit):
         z : array
            (ppf) inverse of CDF transform of p
 
-        Formulas
-        --------
+        Notes
+        -----
         g(`p`) = `dbn`.ppf(`p`)
         """
         p = self._clean(p)
@@ -484,8 +474,8 @@ class CDFLink(Logit):
         p : array
             Mean probabilities.  The value of the inverse of CDF link of `z`
 
-        Formulas
-        --------
+        Notes
+        -----
         g^(-1)(`z`) = `dbn`.cdf(`z`)
         """
         return self.dbn.cdf(z)
@@ -504,8 +494,8 @@ class CDFLink(Logit):
         g'(p) : array
          The derivative of CDF transform at `p`
 
-        Formulas
-        --------
+        Notes
+        -----
         g'(`p`) = 1./ `dbn`.pdf(`p`)
         """
 # Or is it
@@ -521,12 +511,10 @@ class probit(CDFLink):
 
     The probit (standard normal CDF) transform
 
-    Formulas
+    Notes
     --------
     g(p) = scipy.stats.norm.ppf(p)
 
-    Notes
-    -----
     probit is an alias of CDFLink.
     """
     pass
@@ -536,12 +524,10 @@ class cauchy(CDFLink):
 
     The Cauchy (standard Cauchy CDF) transform
 
-    Formulas
-    --------
-    g(p) = scipy.stats.cauchy.ppf(p)
-
     Notes
     -----
+    g(p) = scipy.stats.cauchy.ppf(p)
+
     cauchy is an alias of CDFLink with dbn=scipy.stats.cauchy
     """
     def __init__(self):
@@ -586,8 +572,8 @@ class CLogLog(Logit):
         z : array
             The CLogLog transform of `p`
 
-        Formulas
-        --------
+        Notes
+        -----
         g(p) = log(-log(1-p))
         """
         p = self._clean(p)
@@ -608,8 +594,8 @@ class CLogLog(Logit):
         p : array
            Mean parameters
 
-        Formulas
-        --------
+        Notes
+        -----
         g^(-1)(`z`) = 1-exp(-exp(`z`))
         """
         return 1-np.exp(-np.exp(z))
@@ -628,8 +614,8 @@ class CLogLog(Logit):
         g'(p) : array
            The derivative of the CLogLog transform link function
 
-        Formulas
-        --------
+        Notes
+        -----
         g'(p) = - 1 / (log(p) * p)
         """
         p = self._clean(p)
@@ -639,12 +625,10 @@ class cloglog(CLogLog):
     """
     The CLogLog transform link function.
 
-    Formulas
-    --------
-    g(`p`) = log(-log(1-`p`))
-
     Notes
     -----
+    g(`p`) = log(-log(1-`p`))
+
     cloglog is an alias for CLogLog
     cloglog = CLogLog()
     """
@@ -697,8 +681,8 @@ class NegativeBinomial(object):
         z : array
             The negative binomial transform of `p`
 
-        Formulas
-        --------
+        Notes
+        -----
         g(p) = log(p/(p + 1/alpha))
         '''
         p = self._clean(p)
@@ -717,8 +701,8 @@ class NegativeBinomial(object):
         p : array
             Mean parameters
 
-        Formulas
-        --------
+        Notes
+        -----
         g^(-1)(z) = exp(z)/(alpha*(1-exp(z)))
         '''
         return np.exp(z)/(self.alpha*(1-np.exp(z)))
@@ -737,8 +721,8 @@ class NegativeBinomial(object):
         g'(p) : array
             The derivative of the negative binomial transform link function
 
-        Formulas
-        --------
+        Notes
+        -----
         g'(x) = 1/(x+alpha*x^2)
         '''
         return 1/(p+self.alpha*p**2)
@@ -747,12 +731,10 @@ class nbinom(NegativeBinomial):
     """
     The negative binomial link function.
 
-    Formulas
-    --------
-    g(p) = log(p/(p + 1/alpha))
-
     Notes
     -----
+    g(p) = log(p/(p + 1/alpha))
+
     nbinom is an alias of NegativeBinomial.
     nbinom = NegativeBinomial(alpha=1.)
     """
