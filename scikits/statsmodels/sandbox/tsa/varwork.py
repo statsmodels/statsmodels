@@ -8,7 +8,7 @@ from __future__ import division
 
 import numpy as np
 from numpy.linalg import cholesky as chol, solve
-from numpy.random import multivariate_normal as mvn
+from numpy.random import multivariate_normal as rmvnormn
 import scipy.stats as stats
 import scipy.linalg as L
 
@@ -92,11 +92,22 @@ def vec(mat):
     return mat.ravel('F')
 
 def vech(mat):
-    # would kind of like to use ndarray.take here
-    indices = np.triu_indices(len(mat))
-
     # Gets Fortran-order
-    return mat.T[indices]
+    return mat.T.take(_triu_indices(len(mat)))
+
+# tril/triu/diag, suitable for ndarray.take
+
+def _tril_indices(n):
+    rows, cols = np.tril_indices(n)
+    return rows * n + cols
+
+def _triu_indices(n):
+    rows, cols = np.triu_indices(n)
+    return rows * n + cols
+
+def _diag_indices(n):
+    rows, cols = np.diag_indices(n)
+    return rows * n + cols
 
 def unvec(v):
     k = int(np.sqrt(len(v)))
@@ -104,7 +115,35 @@ def unvec(v):
     return v.reshape((k, k), order='F')
 
 def unvech(v):
-    pass
+    # quadratic formula, correct fp error
+    rows = .5 * (-1 + np.sqrt(1 + 8 * len(v)))
+    rows = int(np.round(rows))
+
+    result = np.zeros((rows, rows))
+    result[np.triu_indices(rows)] = v
+    result = result + result.T
+
+    # divide diagonal elements by 2
+    result[np.diag_indices(rows)] /= 2
+
+    return result
+
+def dup_matrix(k):
+    """
+    Create duplication matrix for converting vech to vec
+
+    Notes
+    -----
+    For symmetric matrix S we have
+
+    vec(S) = D_k vech(S)
+    """
+    result = np.empty((k * (k + 1) / 2, k * k), dtype=float)
+    for i, row in enumerate(np.eye(k * (k + 1) / 2)):
+        result[i] = unvech(row).ravel()
+
+    # leaves it in fortran order... oh well, for now
+    return result.T
 
 def test_vec():
     pass
@@ -115,15 +154,16 @@ def test_vech():
 #-------------------------------------------------------------------------------
 # VAR process routines
 
-def varsim(coefs, nu, sig_u, steps=100, initvalues=None):
+def varsim(coefs, intercept, sig_u, steps=100, initvalues=None):
     """
-
+    Simulate simple VAR(p) process with known coefficients, intercept, white
+    noise covariance, etc.
     """
     p, k, k = coefs.shape
 
-    ugen = mvn(np.zeros(len(sig_u)), sig_u, steps)
+    ugen = rmvnorm(np.zeros(len(sig_u)), sig_u, steps)
     result = np.zeros((steps, k))
-    result[p:] = nu + ugen[p:]
+    result[p:] = intercept + ugen[p:]
 
     # add in AR terms
     for t in xrange(p, steps):
@@ -133,9 +173,31 @@ def varsim(coefs, nu, sig_u, steps=100, initvalues=None):
 
     return result
 
-def ma_rep(coefs, nu, maxn=10):
+def ma_rep(coefs, intercept, maxn=10):
     """
-    MA(\infty) representation
+    MA(\infty) representation of VAR(p) process
+
+    Parameters
+    ----------
+    coefs : ndarray (p x k x k)
+    intercept : ndarry length-k
+    maxn : int
+        Number of MA matrices to compute
+
+    Notes
+    -----
+    VAR(p) process as
+
+    .. math:: y_t = A_1 y_{t-1} + \ldots + A_p y_{t-p} + u_t
+
+    can be equivalently represented as
+
+    .. math:: y_t = \mu + \sum_{i=0}^\infty \Phi_i u_{t-i}
+
+    e.g. can recursively compute the \Phi_i matrices with \Phi_0 = I_k
+
+    Returns
+    -------
     """
     p, k, k = coefs.shape
     phis = np.zeros((maxn+1, k, k))
@@ -289,7 +351,7 @@ def forecast(y, coefs, intercept, steps):
     for h in xrange(1, steps + 1):
         f = forcs[h - 1]
 
-        # y_t(h) = nu + sum_1^p A_i y_t_(h-i)
+        # y_t(h) = intercept + sum_1^p A_i y_t_(h-i)
 
         for i in xrange(1, p + 1):
             # slightly hackish
@@ -316,7 +378,7 @@ def forecast_cov(ma_coefs, sig_u, steps):
     for h in xrange(steps):
         # Sigma(h) = Sigma(h-1) + Phi Sig_u Phi'
         phi = ma_coefs[h]
-        var = np.dot(phi, np.dot(sig_u, phi.T))
+        var = chain_dot(phi, sig_u, phi.T)
         forc_covs[h] = prior = prior + var
 
     return forc_covs
@@ -328,6 +390,10 @@ def granger_causes(coefs):
 # Plotting functions
 
 def plot_mts(Y, names=None):
+    """
+    Plot multiple time series
+    """
+
     k = Y.shape[1]
     rows, cols = k, 1
 
@@ -585,8 +651,11 @@ class KnownVARProcess(VARProcess):
     """
     Class for analyzing VAR(p) process with known coefficient matrices and white
     noise covariance matrix
-    """
 
+    Parameters
+    ----------
+
+    """
     def __init__(self, intercept, coefs, sigma_u):
         self.p = len(coefs)
         self.k = len(coefs[0])
@@ -600,6 +669,8 @@ class VAR(VARProcess):
     """
     Estimate VAR(p) process
 
+    .. math:: y_t = A_1 y_{t-1} + \ldots + A_p y_{t-p} + u_t
+
     Notes
     -----
     **References**
@@ -608,7 +679,28 @@ class VAR(VARProcess):
     Returns
     -------
     **Attributes**
-    Y : ndarray (K x T)
+    k : int
+        Number of variables (equations)
+    p : int
+        Order of VAR process
+    T : Number of model observations (len(data) - p)
+    y : ndarray (K x T)
+        Observed data
+    names : ndarray (K)
+        variables names
+
+    df_model : int
+    df_resid : int
+
+    coefs : ndarray (p x K x K)
+        Estimated A_i matrices, A_i = coefs[i-1]
+    intercept : ndarray (K)
+    beta : ndarray (Kp + 1) x K
+        A_i matrices and intercept in stacked form [int A_1 ... A_p]
+
+    sigma_u : ndarray (K x K)
+        Estimate of white noise process variance Var[u_t]
+
     """
 
     def __init__(self, data, p=1, names=None, dates=None):
@@ -687,6 +779,15 @@ class VAR(VARProcess):
     def sigma_u(self):
         return self._est_sigma_u()
 
+    @cache_readonly
+    def resid(self):
+        # Lutkepohl p75, this is slower
+        # middle = np.eye(self.T) - chain_dot(z, self._zzinv, z.T)
+        # return chain_dot(y.T, middle, y) / self.df_resid
+
+        # about 5x faster
+        return self._y_sample - np.dot(self.Z, self.beta)
+
 #-------------------------------------------------------------------------------
 # Auxiliary variables for estimation
 
@@ -700,11 +801,11 @@ class VAR(VARProcess):
 
         Ref: Lutkepohl p.70 (transposed)
         """
-        Y = self.y
+        y = self.y
         p = self.p
 
         # Ravel C order, need to put in descending order
-        Z = mat([Y[t-p : t][::-1].ravel() for t in xrange(p, self.nobs)])
+        Z = mat([y[t-p : t][::-1].ravel() for t in xrange(p, self.nobs)])
 
         # Add intercept
         return np.concatenate((np.ones((self.T, 1)), Z), axis=1)
@@ -736,7 +837,7 @@ class VAR(VARProcess):
 
     def _est_sigma_u(self):
         """
-        Unbiased estimate of covariance matrix $\Sgma_u$ of the white noise
+        Unbiased estimate of covariance matrix $\Sigma_u$ of the white noise
         process $u$
 
         equivalent definition
@@ -746,16 +847,7 @@ class VAR(VARProcess):
 
         Ref: Lutkepohl p.75
         """
-        y = self._y_sample
-        z = self.Z
-        b = self.beta
-
-        # Lutkepohl p75, this is slower
-        # middle = np.eye(self.T) - chain_dot(z, self._zzinv, z.T)
-        # return chain_dot(y.T, middle, y) / self.df_resid
-
-        # about 5x faster
-        resid = y - np.dot(z, b)
+        resid = self.resid
         # df_resid right now is T - Kp - 1, which is a suggested correction
         return np.dot(resid.T, resid) / self.df_resid
 
@@ -769,7 +861,7 @@ class VAR(VARProcess):
     @cache_readonly
     def cov_beta(self):
         """
-        Covariance of vec(B), where B is the matrix
+        Covariancee of vec(B), where B is the matrix
 
         [intercept, A_1, ..., A_p] (K x (Kp + 1))
 
@@ -850,7 +942,7 @@ class VAR(VARProcess):
         return forc_covs + omegas / self.T
 
     def _omega_forc_cov(self, steps):
-        # Approximate MSE matrix \Omega(h) as defined in Lut
+        # Approximate MSE matrix \Omega(h) as defined in Lut p97
         G = self._zz
         Ginv = L.inv(G)
 
@@ -987,3 +1079,4 @@ adj_data = np.diff(np.log(data), axis=0)
 est = VAR(adj_data[:-16], p=2, dates=dates[1:-16], names=names)
 
 y = est.y[-2:]
+
