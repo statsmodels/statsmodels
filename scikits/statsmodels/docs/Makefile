@@ -28,6 +28,7 @@ help:
 
 clean:
 	-rm -rf build/*
+	-rm -rf source/generated/*
 
 html:
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) build/html
