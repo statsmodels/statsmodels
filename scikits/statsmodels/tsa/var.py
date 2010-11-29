@@ -1068,7 +1068,7 @@ class VARMAResults(object):
     ------
     FPE formula
 
-    .. math:: \\left[\\frac{T+Kp+t}{T-Kp-t}\\right]^{K}$$\\left|\\Omega\\right|
+    .. math:: \\left[\\frac{T+Kp+t}{T-Kp-t}\\right]^{K}\\left|\\Omega\\right|
 
     Where T = `avobs`
           K = `neqs`
