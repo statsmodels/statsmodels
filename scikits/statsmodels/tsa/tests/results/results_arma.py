@@ -38,7 +38,7 @@ class Y_arma11(object):
             self.pvalues = [2.39e-78, 3.69e-10]
             self.tvalues = [18.74, 6.267]
             self.sigma2 = 0.994743350844 ** 2
-            self.cov_params = [[   0.0017704   -0.0010612],
+            self.cov_params = [[   0.0017704,   -0.0010612],
                                   [-0.0010612, 0.0037119 ]]
         elif method =="css":
             self.params = [0.791515576984, 0.383078056824]

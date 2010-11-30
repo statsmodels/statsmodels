@@ -119,7 +119,7 @@ def configuration(parent_package='', top_path=None, package_name=DISTNAME):
     tsaresultsfiles = [os.path.join(r,d) for r,ds,f in \
                        os.walk('scikits/statsmodels/tsa/tests/results') for \
                        d in f if not os.path.splitext(d)[1] in ['.py',
-                           '.do', '.pyc']]
+                           '.do', '.pyc', '.swp']]
     for f in tsaresultsfiles:
         config.add_data_files(f)
 

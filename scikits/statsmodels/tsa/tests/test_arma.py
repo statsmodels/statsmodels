@@ -5,11 +5,12 @@ import scikits.statsmodels.sandbox.tsa.fftarma as fa
 from scikits.statsmodels.tsa.arma_mle import Arma
 from scikits.statsmodels.tsa.arima import ARMA
 from results import results_arma
-
+import os
 
 DECIMAL_4 = 4
 
-y_arma = np.genfromtxt('./results/y_arma_data.csv', delimiter=",",
+current_path = os.path.dirname(os.path.abspath(__file__))
+y_arma = np.genfromtxt(current_path + '/results/y_arma_data.csv', delimiter=",",
         skip_header=1, dtype=float)
 
 
@@ -100,7 +101,7 @@ class CheckArmaResults(object):
 class Test_Y_ARMA11_NoConst(CheckArmaResults):
     def __init__(self):
         endog = y_arma[:,0]
-        self.res1 = ARMA(endog).fit(order=(1,1))
+        self.res1 = ARMA(endog).fit(order=(1,1), trend='nc')
         self.res2 = results_arma.Y_arma11()
 
 #class Test_Y_ARMA14_NoConst(CheckArmaResults):
