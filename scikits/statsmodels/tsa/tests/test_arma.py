@@ -149,16 +149,16 @@ class Test_Y_ARMA11_NoConst(CheckArmaResults):
 #        self.res1 = ARMA(endog).fit(order=(1,1), trend="c")
 #        self.res2 = results_arma.Y_arma11c()
 #
-
-
-class Test_Y_ARMA14_Const(CheckArmaResults):
-    def __init__(self):
-        endog = y_arma[:,7]
-        self.res1 = ARMA(endog).fit(order=(1,4), trend="c")
-        self.res2 = results_arma.Y_arma14c()
-
-
-
+#
+#
+#class Test_Y_ARMA14_Const(CheckArmaResults):
+#    def __init__(self):
+#        endog = y_arma[:,7]
+#        self.res1 = ARMA(endog).fit(order=(1,4), trend="c")
+#        self.res2 = results_arma.Y_arma14c()
+#
+#
+#
 #class Test_Y_ARMA41_Const(CheckArmaResults):
 #    def __init__(self):
 #        endog = y_arma[:,8]
@@ -212,12 +212,12 @@ class Test_Y_ARMA14_Const(CheckArmaResults):
 #        self.res2 = results_arma.Y_arma41("css")
 #
 #
-
-class Test_Y_ARMA22_NoConst_CSS(CheckArmaResults):
-    def __init__(self):
-        endog = y_arma[:,3]
-        self.res1 = ARMA(endog).fit(order=(2,2), method="css")
-        self.res2 = results_arma.Y_arma22("css")
+#
+#class Test_Y_ARMA22_NoConst_CSS(CheckArmaResults):
+#    def __init__(self):
+#        endog = y_arma[:,3]
+#        self.res1 = ARMA(endog).fit(order=(2,2), method="css")
+#        self.res2 = results_arma.Y_arma22("css")
 
 
 
@@ -266,22 +266,22 @@ class Test_Y_ARMA22_NoConst_CSS(CheckArmaResults):
 #        endog = y_arma[:,9]
 #        self.res1 = ARMA(endog).fit(order=(2,2), trend="c", method="css")
 #        self.res2 = results_arma.Y_arma22c("css")
-
-
-
-class Test_Y_ARMA50_Const_CSS(CheckArmaResults):
-    def __init__(self):
-        endog = y_arma[:,10]
-        self.res1 = ARMA(endog).fit(order=(5,0), trend="c", method="css")
-        self.res2 = results_arma.Y_arma50c("css")
-
-
-
-class Test_Y_ARMA02_Const_CSS(CheckArmaResults):
-    def __init__(self):
-        endog = y_arma[:,11]
-        self.res1 = ARMA(endog).fit(order=(0,2), trend="c", method="css")
-        self.res2 = results_arma.Y_arma02c("css")
+#
+#
+#
+#class Test_Y_ARMA50_Const_CSS(CheckArmaResults):
+#    def __init__(self):
+#        endog = y_arma[:,10]
+#        self.res1 = ARMA(endog).fit(order=(5,0), trend="c", method="css")
+#        self.res2 = results_arma.Y_arma50c("css")
+#
+#
+#
+#class Test_Y_ARMA02_Const_CSS(CheckArmaResults):
+#    def __init__(self):
+#        endog = y_arma[:,11]
+#        self.res1 = ARMA(endog).fit(order=(0,2), trend="c", method="css")
+#        self.res2 = results_arma.Y_arma02c("css")
 
 if __name__ == "__main__":
     import nose

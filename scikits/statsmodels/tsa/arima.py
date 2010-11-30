@@ -201,7 +201,7 @@ class ARMA(GenericLikelihoodModel):
         p = self.p
         q = self.q
         k = self.k
-        y = self.endog.copy()
+        y = self.endog.copy().astype(params.dtype)
         nobs = self.nobs
         # how to handle if empty?
         if self.transparams:
@@ -224,7 +224,7 @@ class ARMA(GenericLikelihoodModel):
 
 # the order of p determines how many zeros errors to set for lfilter
         b,a = np.r_[1,-newparams[k:k+p]], np.r_[1,newparams[k+p:]]
-        zi = np.zeros((max(p,q)))
+        zi = np.zeros((max(p,q)), dtype=params.dtype)
         for i in range(p):
             zi[i] = sum(-b[:i+1][::-1] * y[:i+1])
         e = lfilter(b,a, y, zi=zi)
