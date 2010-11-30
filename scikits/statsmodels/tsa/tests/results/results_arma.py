@@ -52,7 +52,7 @@ class Y_arma11(object):
 [  -0.0010996,    0.0043170]]
             self.hqic = 715.241545108550
             self.llf = -352.497023588285
-            self.resid = resids_css[:,0]
+            self.resid = resids_css[1:,0]
             self.fittedvalues = yhat_css[:,0]
             self.pvalues = [ 7.02e-78,  5.53e-09]
             self.tvalues = [18.68,  5.830]
@@ -79,7 +79,7 @@ class Y_arma14(object):
 [ -0.00037373,  -0.00062289,   -0.0028984,    0.0026998,    0.0051219 ]]
             self.hqic = 744.504804564101
             self.llf = -362.000547376215
-            self.resid = resids_mle[:,1]
+            self.resid = resids_mle[1:,1]
             self.fittedvalues = yhat_mle[:,1]
             self.pvalues = [5.51e-32, 8.59e-05,  5.96e-28, 0.0289, 3.98e-09]
             self.tvalues = [11.77, 3.927, -10.96, 2.185, 5.885]
@@ -92,8 +92,8 @@ class Y_arma14(object):
             self.aic = 734.294057687460
             self.bic = 755.398775066249
             self.arroots = [1.2952  +0.0000j]
-            self.maroots = [-1.2108    +0.1835j,  -1.2108    -0.1835j,
-                    1.0280    -0.6987j, 1.0280  +0.6987j]
+            self.maroots = [1.0280    -0.6987j, 1.0280  +0.6987j,
+                    -1.2108    -0.1835j,  -1.2108    +0.1835j]
             self.bse = [0.083423762397, 0.086852297123, 0.093883465705,
                     0.068170451942, 0.065938183073]
             self.cov_params = [
@@ -104,7 +104,7 @@ class Y_arma14(object):
 [ -0.00099984,    0.0010335,   -0.0018231,    0.0011853,    0.0043478]]
             self.hqic = 742.789053551421
             self.llf = -361.147028843730
-            self.resid = resids_css[:,1]
+            self.resid = resids_css[1:,1]
             self.fittedvalues = yhat_css[:,1]
             self.pvalues = [2.15e-20,   0.0011,  6.01e-19,  0.0206,  5.92e-11]
             self.tvalues = [9.255,   3.269, -8.892,   2.314,   6.546]
@@ -130,7 +130,7 @@ class Y_arma41(object):
 [   -0.011669,     0.015892,    -0.014626,    0.0089767,     0.019192]]
             self.hqic = 689.304925277181
             self.llf = -334.400607732754
-            self.resid = resids_mle[:,2]
+            self.resid = resids_mle[4:,2]
             self.fittedvalues = yhat_mle[:,2]
             self.pvalues = [1.10e-18, 0.0010, 0.4626, 5.48e-15, 0.7769]
             self.tvalues = [8.824, -3.279, -.7345, 7.815, .2833]
@@ -154,7 +154,7 @@ class Y_arma41(object):
                     ]
             self.hqic = 674.640335476392
             self.llf = -327.085865780964
-            self.resid = resids_css[:,2]
+            self.resid = resids_css[4:,2]
             self.fittedvalues = yhat_css[:,2]
             self.pvalues = [6.51e-29, 4.23e-05, 0.4122, 1.62e-20, 0.7679]
             self.tvalues = [11.16, -4.095, -0.8201,    9.285,    0.2951]
@@ -178,7 +178,7 @@ class Y_arma22(object):
 [  -0.0012756,   -0.0019999,    0.0017842,    0.0050802]]
             self.hqic = 763.372960386513
             self.llf = -373.143267771727
-            self.resid = resids_mle[:,3]
+            self.resid = resids_mle[2:,3]
             self.fittedvalues = yhat_mle[:,3]
             self.pvalues = [1.22e-35 , 8.59e-19, 0.1207, 2.81e-22]
             self.tvalues = [12.46, -8.852, 1.552, -9.707]
@@ -199,7 +199,7 @@ class Y_arma22(object):
 [  -0.0011369,   -0.0014322,    0.0020063,    0.0037765]]
             self.hqic = 756.724194601530
             self.llf = -369.826163767706
-            self.resid = resids_css[:,3]
+            self.resid = resids_css[2:,3]
             self.fittedvalues = yhat_css[:,3]
             self.pvalues = [1.57e-37,  8.26e-17,  0.0639,   7.55e-30]
             self.tvalues = [ 12.80,  -8.327,  1.853,  -11.35]
@@ -225,7 +225,7 @@ class Y_arma50(object):
 [ -0.00066624,   -0.0014275,    0.0013917,   -0.0028959,    0.0040322]]
             self.hqic = 699.926340238986
             self.llf = -339.711315213657
-            self.resid = resids_mle[:,4]
+            self.resid = resids_mle[5:,4]
             self.fittedvalues = yhat_mle[:,4]
             self.pvalues = [7.51e-31, 4.42e-05, 2.38e-05, 0.0034, 0.1584]
             self.tvalues = [11.55, -4.084, 4.226, 2.929, -1.410]
@@ -248,7 +248,7 @@ class Y_arma50(object):
 [ -0.00068813,   -0.0014765,    0.0014572,   -0.0029853,    0.0041454]]
             self.hqic = 681.867054880965
             self.llf = -332.408643282337
-            self.resid = resids_css[:,4]
+            self.resid = resids_css[5:,4]
             self.fittedvalues = yhat_css[:,4]
             self.pvalues = [1.68e-29, 9.09e-05, 3.91e-05, 0.0039, 0.1628]
             self.tvalues = [11.28, -3.914, 4.113, 2.890, -1.396]
@@ -339,8 +339,8 @@ class Y_arma14c(object):
             self.aic = 720.814886758937
             self.bic = 745.465113183973
             self.arroots = [ 1.6916 +0.0000j]
-            self.maroots = [-1.2868 +0.1705j, -1.2868  -0.1705j,
-                    1.1071  -0.7821j, 1.1071  +0.7821j]
+            self.maroots = [1.1071  -0.7821j, 1.1071  +0.7821j,
+                    -1.2868  -0.1705j,-1.2868 +0.1705j] # had to change order?
             self.bse = [0.160891073193, 0.151756542096, 0.152996852330,
                         0.140231020145, 0.064663675882, 0.065045468010]
             self.cov_params = [
@@ -509,7 +509,7 @@ class Y_arma50c(object):
 [-0.00013170, -0.00058978,  -0.0012307,   0.0013481,  -0.0028575,   0.0039241]]
             self.hqic = 721.738557560396
             self.llf = -348.908781390056
-            self.resid = residsc_mle[:,4]
+            self.resid = residsc_mle[5:,4]
             self.fittedvalues = yhatc_mle[:,4]
             self.pvalues = [1.50e-46, 9.06e-34, 6.53e-05, 0.0010, 0.0003,
                     0.0060]
@@ -535,7 +535,7 @@ class Y_arma50c(object):
                     ]
             self.hqic = 703.303100827167
             self.llf = -341.421689423809
-            self.resid = residsc_css[:,4]
+            self.resid = residsc_css[5:,4]
             self.fittedvalues = yhatc_css[:,4]
             self.pvalues = [0.0004, 1.45e-32,   0.0001, 0.0013, 0.0004, 0.0066]
             self.tvalues = [ 3.559, 11.88,  -3.796,   3.213,   3.543,  -2.715]
