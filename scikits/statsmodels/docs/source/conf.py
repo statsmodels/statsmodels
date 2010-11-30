@@ -242,7 +242,7 @@ latex_documents = [
 
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'http://docs.scipy.org/': None}
+intersphinx_mapping = {'http://docs.scipy.org/doc/numpy/': None}
 #import glob
 #autosummary_generate = glob.glob("*.rst")
 #autosummary_generate + = glob.glob("generated/*.rst")

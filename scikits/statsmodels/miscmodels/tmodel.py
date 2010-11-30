@@ -1,5 +1,23 @@
 """Linear Model with Student-t distributed errors
 
+Because the t distribution has fatter tails than the normal distribution, it
+can be used to model observations with heavier tails and observations that have
+some outliers. For the latter case, the t-distribution provides more robust
+estimators for mean or mean parameters (what about var?).
+
+
+
+References
+----------
+Kenneth L. Lange, Roderick J. A. Little, Jeremy M. G. Taylor (1989)
+Robust Statistical Modeling Using the t Distribution
+Journal of the American Statistical Association
+Vol. 84, No. 408 (Dec., 1989), pp. 881-896
+Published by: American Statistical Association
+Stable URL: http://www.jstor.org/stable/2290063
+
+not read yet
+
 
 Created on 2010-09-24
 Author: josef-pktd
@@ -93,6 +111,21 @@ from scipy import stats
 from scikits.statsmodels.tsa.arma_mle import Arma
 
 class TArma(Arma):
+    '''Univariate Arma Model with t-distributed errors
+
+    This inherit all methods except loglike from tsa.arma_mle.Arma
+
+    This uses the standard t-distribution, the implied variance of
+    the error is not equal to scale, but ::
+
+        error_variance = df/(df-2)*scale**2
+
+    Notes
+    -----
+    This might be replaced by a standardized t-distribution with scale**2
+    equal to variance
+
+    '''
 
     def loglike(self, params):
         return -self.nloglikeobs(params).sum(0)

@@ -19,10 +19,6 @@ from scikits.statsmodels.tsa.tsatools import lagmat, add_trend
 from scikits.statsmodels.model import LikelihoodModelResults, LikelihoodModel
 from scikits.statsmodels.decorators import *
 from scikits.statsmodels.compatibility import np_slogdet
-try:
-    from numdifftools import Jacobian, Hessian
-except:
-    raise Warning("You need to install numdifftools to try out the AR model")
 from scikits.statsmodels.sandbox.regression.numdiff import approx_fprime
 from scikits.statsmodels.sandbox.regression.numdiff import approx_hess
 
@@ -420,13 +416,7 @@ class AR(LikelihoodModel):
         """
         Returns numerical hessian for now.
         """
-#numdifftools code
-#        h = Hessian(self.loglike)
-#        return h(params)
         loglike = self.loglike
-#        if self.transparams:
-#            params = self._invtransparams(params)
-#see score
         return approx_hess(params, loglike)[0]
 
     def _stackX(self, laglen, trend):
@@ -1078,7 +1068,7 @@ class VARMAResults(object):
     ------
     FPE formula
 
-    .. math:: \\left[\\frac{T+Kp+t}{T-Kp-t}\\right]^{K}$$\\left|\\Omega\\right|
+    .. math:: \\left[\\frac{T+Kp+t}{T-Kp-t}\\right]^{K}\\left|\\Omega\\right|
 
     Where T = `avobs`
           K = `neqs`

@@ -5,8 +5,8 @@ Utility functions models code
 import numpy as np
 import numpy.lib.recfunctions as nprf
 import numpy.linalg as L
-import scipy.interpolate
-import scipy.linalg
+from scipy.interpolate import interp1d
+from scipy.linalg import svdvals
 
 def _make_dictnames(tmp_arr, offset=0):
     """
@@ -312,7 +312,7 @@ def rank(X, cond=1.0e-12):
     """
     X = np.asarray(X)
     if len(X.shape) == 2:
-        D = scipy.linalg.svdvals(X)
+        D = svdvals(X)
         return int(np.add.reduce(np.greater(D / D.max(), cond).astype(np.int32)))
     else:
         return int(not np.alltrue(np.equal(X, 0.)))
@@ -433,7 +433,7 @@ def monotone_fn_inverter(fn, x, vectorized=True, **keywords):
 
     a = np.argsort(y)
 
-    return scipy.interpolate.interp1d(y[a], x[a])
+    return interp1d(y[a], x[a])
 
 def unsqueeze(data, axis, oldshape):
     """

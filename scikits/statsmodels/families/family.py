@@ -120,8 +120,8 @@ class Family(object):
         mu_0 : array
             The first guess on the transformed response variable.
 
-        Formulas
-        --------
+        Notes
+        -----
         mu_0 = (endog + mean(endog))/2.
 
         Notes
@@ -144,7 +144,7 @@ class Family(object):
         w : array
             The weights for the IRLS steps
 
-        Formulas
+        Notes
         ---------
         `w` = 1 / (link'(`mu`)**2 * variance(`mu`))
         """
@@ -170,12 +170,10 @@ class Family(object):
         DEV : array
             The value of deviance function defined below.
 
-        Formulas
-        ---------
-        DEV = (sum_i(2*loglike(Y_i,Y_i) - 2*loglike(Y_i,mu_i)) / scale
-
         Notes
         -----
+        DEV = (sum_i(2*loglike(Y_i,Y_i) - 2*loglike(Y_i,mu_i)) / scale
+
         The deviance functions are analytically defined for each family.
         """
         raise NotImplementedError
@@ -317,7 +315,7 @@ class Poisson(Family):
         self.link = link()
 
     def resid_dev(self, Y, mu, scale=1.):
-        """Gaussian deviance residual
+        """Poisson deviance residual
 
         Parameters
         ----------
@@ -333,15 +331,8 @@ class Poisson(Family):
         resid_dev : array
             Deviance residuals as defined below
 
-        Formulas
-        --------
-
-        Poisson deviance residuals
-
-
-
-        Formulas
-        --------
+        Notes
+        -----
         resid_dev = sign(Y-mu)*sqrt(2*Y*log(Y/mu)-2*(Y-mu))
         """
         return np.sign(Y-mu) * np.sqrt(2*Y*np.log(Y/mu)-2*(Y-mu))/scale
@@ -400,8 +391,8 @@ class Poisson(Family):
             The value of the loglikelihood function evaluated at (Y,mu,scale)
             as defined below.
 
-        Formulas
-        --------
+        Notes
+        -----
         llf = scale * sum(-mu + Y*log(mu) - gammaln(Y+1))
         where gammaln is the log gamma function
         """
@@ -423,8 +414,8 @@ class Poisson(Family):
         resid_anscombe : array
             The Anscome residuals for the Poisson family defined below
 
-        Formulas
-        --------
+        Notes
+        -----
         `resid_anscombe` = (3/2.)*(`Y`**(2/3.) - `mu`**(2/3.))/`mu`**(1/6.)
         """
         return (3/2.)*(Y**(2/3.)-mu**(2/3.))/mu**(1/6.)
@@ -464,7 +455,7 @@ class Gaussian(Family):
     statsmodels.family.family.Family
     """
 
-    links = [L.log, L.identity, L.inverse]
+    links = [L.log, L.identity, L.inverse_power]
     variance = V.constant
 
     def __init__(self, link=L.identity):
@@ -489,7 +480,7 @@ class Gaussian(Family):
         resid_dev : array
             Deviance residuals as defined below
 
-        Formulas
+        Notes
         --------
         `resid_dev` = (`Y` - `mu`)/sqrt(variance(`mu`))
         """
@@ -514,7 +505,7 @@ class Gaussian(Family):
         deviance : float
             The deviance function at (Y,mu) as defined below.
 
-        Formulas
+        Notes
         --------
         `deviance` = sum((Y-mu)**2)
         """
@@ -539,8 +530,8 @@ class Gaussian(Family):
             The value of the loglikelihood function evaluated at (Y,mu,scale)
             as defined below.
 
-        Formulas
-        --------
+        Notes
+        -----
         If the link is the identity link function then the
         loglikelihood function is the same as the classical OLS model.
         llf = -(nobs/2)*(log(SSR) + (1 + log(2*pi/nobs)))
@@ -579,7 +570,7 @@ class Gaussian(Family):
         resid_anscombe : array
             The Anscombe residuals for the Gaussian family defined below
 
-        Formulas
+        Notes
         --------
         `resid_anscombe` = `Y` - `mu`
         """
@@ -620,10 +611,10 @@ class Gamma(Family):
     statsmodels.family.family.Family
     """
 
-    links = [L.log, L.identity, L.inverse]
+    links = [L.log, L.identity, L.inverse_power]
     variance = V.mu_squared
 
-    def __init__(self, link=L.inverse):
+    def __init__(self, link=L.inverse_power):
         self.variance = Gamma.variance
         self.link = link()
 
@@ -658,8 +649,8 @@ class Gamma(Family):
         deviance : float
             Deviance function as defined below
 
-        Formulas
-        --------
+        Notes
+        -----
         `deviance` = 2*sum((Y - mu)/mu - log(Y/mu))
         """
         Y_mu = self._clean(Y/mu)
@@ -683,8 +674,8 @@ class Gamma(Family):
         resid_dev : array
             Deviance residuals as defined below
 
-        Formulas
-        --------
+        Notes
+        -----
         `resid_dev` = sign(Y - mu) * sqrt(-2*(-(Y-mu)/mu + log(Y/mu)))
         """
         Y_mu = self._clean(Y/mu)
@@ -709,7 +700,7 @@ class Gamma(Family):
             The value of the loglikelihood function evaluated at (Y,mu,scale)
             as defined below.
 
-        Formulas
+        Notes
         --------
         llf = -1/scale * sum(Y/mu + log(mu) + (scale-1)*log(Y) + log(scale) +\
             scale*gammaln(1/scale))
@@ -737,8 +728,8 @@ class Gamma(Family):
         resid_anscombe : array
             The Anscombe residuals for the Gamma family defined below
 
-        Formulas
-        --------
+        Notes
+        -----
         resid_anscombe = 3*(Y**(1/3.)-mu**(1/3.))/mu**(1/3.)
         """
         return 3*(Y**(1/3.)-mu**(1/3.))/mu**(1/3.)
@@ -852,8 +843,8 @@ class Binomial(Family):
         deviance : float
             The deviance function as defined below
 
-        Formulas
-        --------
+        Notes
+        -----
         If the endogenous variable is binary:
 
         `deviance` = -2*sum(I_one * log(mu) + (I_zero)*log(1-mu))
@@ -868,10 +859,10 @@ class Binomial(Family):
         '''
         if np.shape(self.n) == () and self.n == 1:
             one = np.equal(Y,1)
-            return -2 * np.sum(one * np.log(mu) + (1-one) * np.log(1-mu))
+            return -2 * np.sum(one * np.log(mu+1e-200) + (1-one) * np.log(1-mu+1e-200))
 
         else:
-            return 2*np.sum(self.n*(Y*np.log(Y/mu)+(1-Y)*np.log((1-Y)/(1-mu))))
+            return 2*np.sum(self.n*(Y*np.log(Y/mu+1e-200)+(1-Y)*np.log((1-Y)/(1-mu)+1e-200)))
 
     def resid_dev(self, Y, mu, scale=1.):
         """
@@ -891,8 +882,8 @@ class Binomial(Family):
         resid_dev : array
             Deviance residuals as defined below
 
-        Formulas
-        --------
+        Notes
+        -----
         If `Y` is binary:
 
         resid_dev = sign(Y-mu)*sqrt(-2*log(I_one*mu + I_zero*(1-mu)))
@@ -913,8 +904,8 @@ class Binomial(Family):
             return np.sign(Y-mu)*np.sqrt(-2*np.log(one*mu+(1-one)*(1-mu)))\
                     /scale
         else:
-            return np.sign(Y-mu) * np.sqrt(2*self.n*(Y*np.log(Y/mu)+(1-Y)*\
-                        np.log((1-Y)/(1-mu))))/scale
+            return np.sign(Y-mu) * np.sqrt(2*self.n*(Y*np.log(Y/mu+1e-200)+(1-Y)*\
+                        np.log((1-Y)/(1-mu)+1e-200)))/scale
 
     def loglike(self, Y, mu, scale=1.):
         """
@@ -935,7 +926,7 @@ class Binomial(Family):
             The value of the loglikelihood function evaluated at (Y,mu,scale)
             as defined below.
 
-        Formulas
+        Notes
         --------
         If `Y` is binary:
         `llf` = scale*sum(Y*log(mu/(1-mu))+log(1-mu))
@@ -950,7 +941,7 @@ class Binomial(Family):
         """
 
         if np.shape(self.n) == () and self.n == 1:
-            return scale*np.sum(Y*np.log(mu/(1-mu))+np.log(1-mu))
+            return scale*np.sum(Y*np.log(mu/(1-mu)+1e-200)+np.log(1-mu))
         else:
             y=Y*self.n  #convert back to successes
             return scale * np.sum(special.gammaln(self.n+1)-\
@@ -973,16 +964,14 @@ class Binomial(Family):
         resid_anscombe : array
             The Anscombe residuals as defined below.
 
-        Formulas
-        ---------
+        Notes
+        -----
         sqrt(n)*(cox_snell(Y)-cox_snell(mu))/(mu**(1/6.)*(1-mu)**(1/6.))
 
         where cox_snell is defined as
         cox_snell(x) = betainc(2/3., 2/3., x)*betainc(2/3.,2/3.)
         where betainc is the incomplete beta function
 
-        Notes
-        -----
         The name 'cox_snell' is idiosyncratic and is simply used for
         convenience following the approach suggested in Cox and Snell (1968).
         Further note that
@@ -1048,7 +1037,7 @@ class InverseGaussian(Family):
     literature as the wald distribution.
     """
 
-    links = [L.inverse_squared, L.inverse, L.identity, L.log]
+    links = [L.inverse_squared, L.inverse_power, L.identity, L.log]
     variance = V.mu_cubed
 
     def __init__(self, link=L.inverse_squared):
@@ -1073,8 +1062,8 @@ class InverseGaussian(Family):
         resid_dev : array
             Deviance residuals as defined below
 
-        Formulas
-        --------
+        Notes
+        -----
         `dev_resid` = sign(Y-mu)*sqrt((Y-mu)**2/(Y*mu**2))
         """
         return np.sign(Y-mu) * np.sqrt((Y-mu)**2/(Y*mu**2))/scale
@@ -1097,8 +1086,8 @@ class InverseGaussian(Family):
         deviance : float
             Deviance function as defined below
 
-        Formulas
-        --------
+        Notes
+        -----
         `deviance` = sum((Y=mu)**2/(Y*mu**2))
         """
         return np.sum((Y-mu)**2/(Y*mu**2))/scale
@@ -1122,8 +1111,8 @@ class InverseGaussian(Family):
             The value of the loglikelihood function evaluated at (Y,mu,scale)
             as defined below.
 
-        Formulas
-        --------
+        Notes
+        -----
         `llf` = -(1/2.)*sum((Y-mu)**2/(Y*mu**2*scale) + log(scale*Y**3)\
                  + log(2*pi))
         """
@@ -1147,8 +1136,8 @@ class InverseGaussian(Family):
             The Anscombe residuals for the inverse Gaussian distribution  as
             defined below
 
-        Formulas
-        --------
+        Notes
+        -----
         `resid_anscombe` =  log(Y/mu)/sqrt(mu)
         """
         return np.log(Y/mu)/np.sqrt(mu)
@@ -1240,8 +1229,8 @@ class NegativeBinomial(Family):
         deviance : float
             Deviance function as defined below
 
-        Formulas
-        --------
+        Notes
+        -----
         `deviance` = sum(piecewise)
 
         where piecewise is defined as
@@ -1278,8 +1267,8 @@ class NegativeBinomial(Family):
         resid_dev : array
             The array of deviance residuals
 
-        Formulas
-        --------
+        Notes
+        -----
         `resid_dev` = sign(Y-mu) * sqrt(piecewise)
 
         where piecewise is defined as
@@ -1314,8 +1303,8 @@ class NegativeBinomial(Family):
             The value of the loglikelihood function evaluated at (Y,mu,scale)
             as defined below.
 
-        Formulas
-        --------
+        Notes
+        -----
         sum(Y*log(alpha*exp(fittedvalues)/(1+alpha*exp(fittedvalues))) -\
                 log(1+alpha*exp(fittedvalues))/alpha + constant)
 
@@ -1348,8 +1337,8 @@ class NegativeBinomial(Family):
         resid_anscombe : array
             The Anscombe residuals as defined below.
 
-        Formulas
-        ---------
+        Notes
+        -----
         `resid_anscombe` = (hyp2f1(-alpha*Y)-hyp2f1(-alpha*mu)+\
                 1.5*(Y**(2/3.)-mu**(2/3.)))/(mu+alpha*mu**2)**(1/6.)
 

@@ -573,6 +573,7 @@ def pergram(X, kernel='bartlett', log=True):
     M : int
         Should this be hardcoded?
     kernel : str, optional
+
     Notes
     -----
     The autocovariances are normalized by len(X).
@@ -580,8 +581,7 @@ def pergram(X, kernel='bartlett', log=True):
     If len(X) is odd M = (len(X) - 1)/2 else M = len(X)/2. Either way
         freq[i] = 2*[i+1]/T and len(freq) == M
 
-
-    Reference
+    References
     ----------
     Based on Lutkepohl; Hamilton.
 

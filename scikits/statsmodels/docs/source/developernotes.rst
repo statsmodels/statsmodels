@@ -8,7 +8,8 @@ the `BSD license <http://www.opensource.org/licenses/bsd-license.php>`_.
 
 Design
 ~~~~~~
-.. TODO: perhaps a flow chart would be the best presentation here?
+.. TODO perhaps a flow chart would be the best presentation here?
+
 For the most part, statsmodels is an object-oriented library of statistical
 models.  Our working definition of a statistical model is an object that has
 both endogenous and exogenous data defined as well as a statistical
@@ -58,7 +59,7 @@ see when a change was made, by whom, and why.
 
 Get Bzr
 ~~~~~~~
-Everyone can obtain bzr from their main page `here <http://wiki.bazaar.canonical.com/Download>`_.
+Everyone can obtain bzr from their main page `here <http://wiki.bazaar.canonical.com/Download>`__.
 
 
 Linux users
@@ -71,11 +72,11 @@ On \*Ubuntu: ::
 
 Windows users
 ^^^^^^^^^^^^^
-Windows users can follow the download instructions `here <http://wiki.bazaar.canonical.com/WindowsDownloads>`_.
+Windows users can follow the download instructions `here <http://wiki.bazaar.canonical.com/WindowsDownloads>`__.
 
 Mac Users
 ^^^^^^^^^
-Mac users can follow the download instructions `here <http://wiki.bazaar.canonical.com/MacOSXBundle>`_.
+Mac users can follow the download instructions `here <http://wiki.bazaar.canonical.com/MacOSXBundle>`__.
 
 
 Branching
@@ -102,8 +103,8 @@ your work back into the trunk easily.
 How to branch
 ^^^^^^^^^^^^^
 Given that you have already created a Launchpad account following the link
-above, the next step is to create an SSH key.  Follow the instructions `here <https://help.launchpad.net/YourAccount/CreatingAnSSHKeyPair>`_.
-If it is not obvious what your launchpad name is you can get and set it `here <https://launchpad.net/people/+me/+edit>`_
+above, the next step is to create an SSH key.  Follow the instructions `here <https://help.launchpad.net/YourAccount/CreatingAnSSHKeyPair>`__.
+If it is not obvious what your launchpad name is you can get and set it `here <https://launchpad.net/people/+me/+edit>`__.
 We refer to this below as "yourname"
 
 The next step is to tell bzr who you are.  Using your name and e-mail address
@@ -117,8 +118,8 @@ Check this step by typing: ::
 
 Now you are ready to create and check out a branch.
 
-If you want to register your branch manually on Launchpad go to
-    `https://code.launchpad.net/statsmodels <https://code.launchpad.net/statsmodels>`_ and click on Register a branch.  Fill in a name (I will use test-branch).
+If you want to register your branch manually on Launchpad go to `https://code.launchpad.net/statsmodels <https://code.launchpad.net/statsmodels>`__
+and click on Register a branch.  Fill in a name (I will use test-branch).
 Click the Hosted radio button.  Choose a status, and click Register Branch.
 You will be taken to the branch's web page and there will be a command to
 "Update this branch" that shows: ::
@@ -244,7 +245,7 @@ have always been quite helpful in my experience.
 Mailing List
 ============
 
-Most of our developer conversations take place on our `psystatsmodels
+Most of our developer conversations take place on our psystatsmodels
 google group mailing list.
 
 **Mailing List:** http://groups.google.com/group/pystatsmodels?hl=en

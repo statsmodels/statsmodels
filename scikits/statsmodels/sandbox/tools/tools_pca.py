@@ -41,8 +41,8 @@ def pca(data, keepdim=0, normalize=0, demean=True):
     Notes
     -----
 
-    SeeAlso
-    -------
+    See Also
+    --------
     pcasvd : principal component analysis using svd
 
     '''
@@ -108,7 +108,7 @@ def pcasvd(data, keepdim=0, demean=True):
     evecs : ndarray, 2d, (nobs, nfactors)
         eigenvectors, normalized if normalize is true
 
-    SeeAlso
+    See Also
     -------
     pca : principal component analysis using eigenvector decomposition
 
