@@ -216,10 +216,16 @@ def ma_rep(coefs, intercept, maxn=10):
 
 def is_stable(coefs, verbose=False):
     """
+    Determine stability of VAR(p) system by examining the eigenvalues of the
+    VAR(1) representation
+
+    Parameters
+    ----------
+    coefs : ndarray (p x k x k)
 
     Returns
     -------
-    bool
+    is_stable : bool
     """
     A_var1 = var1_rep(coefs)
     eigs = np.linalg.eigvals(A_var1)
@@ -319,13 +325,8 @@ def _var_acf(coefs, sig_u):
 
 def _acf_to_acorr(acf):
     diag = np.diag(acf[0])
-    D = np.sqrt(np.outer(diag, diag))
-
-    acorr = np.empty_like(acf)
-    for i in xrange(len(acf)):
-        acorr[i] = acf[i] / D
-
-    return acorr
+    # numpy broadcasting sufficient
+    return acf / np.sqrt(np.outer(diag, diag))
 
 def forecast(y, coefs, intercept, steps):
     """
