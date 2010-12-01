@@ -153,18 +153,19 @@ class CheckMargEff(object):
         assert_almost_equal(self.res1.margeff(at='mean', dummy=True),
                 self.res2.margeff_dummy_dydxmean, DECIMAL_4)
 
-    @dec.knownfailureif(True, "The discrete change elasticity is not correct")
+    #@dec.knownfailureif(True, "The discrete change elasticity is not correct")
     def test_dummy_eydxoverall(self):
         assert_almost_equal(self.res1.margeff(method='eydx', dummy=True),
                 self.res2.margeff_dummy_eydx, DECIMAL_4)
 
-    @dec.knownfailureif(True, "The discrete change elasticity is not correct")
+    #@dec.knownfailureif(True, "The discrete change elasticity is not correct")
     def test_dummy_eydxmean(self):
         assert_almost_equal(self.res1.margeff(at='mean', method='eydx',
             dummy=True), self.res2.margeff_dummy_eydxmean, DECIMAL_4)
 
 class TestProbitNewton(CheckModelResults):
-    def __init__(self):
+    @classmethod
+    def setup_class(self):
         from results.results_discrete import Spector
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog)
@@ -183,9 +184,9 @@ class TestProbitNewton(CheckModelResults):
 
 
 class TestProbitBFGS(TestProbitNewton):
-    def setup(self):
+    def setupClass(self):
         self.res1 = Probit(self.data.endog, self.data.exog).fit(method="bfgs",
-            disp=0)
+            disp=1)
 
 class TestProbitNM(TestProbitNewton):
     def setup(self):
