@@ -473,13 +473,17 @@ class ARMAResults(LikelihoodModelResults):
     def fittedvalues(self):
         model = self.model
         endog = model.endog.copy()
-        if model.method == "css" and self.p > 0:
+        if model.exog is not None:
+            exog = model.exog.copy()
+        p = self.p
+        if model.method == "css" and p > 0:
             endog = endog[p:]
-        fv = self.model.endog - self.resid
+            exog = exog[p:]
+        fv = endog - self.resid
         # add deterministic part back in
         k = self.k
         if k != 0:
-            fv += dot(self.model.exog, self.params[:k])
+            fv += dot(exog, self.params[:k])
         return fv
 
 #TODO: make both of these get errors into functions or methods?
