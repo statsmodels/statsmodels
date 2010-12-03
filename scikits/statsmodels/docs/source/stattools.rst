@@ -20,4 +20,3 @@ scipy.stats.
    durbin_watson
    jarque_bera
    omni_normtest
-   conditionnum

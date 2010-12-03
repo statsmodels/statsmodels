@@ -22,7 +22,7 @@ Examples
     Instantiate a gamma family model with the default link function.
 
     >>> gamma_model = sm.GLM(data.endog, data.exog,
-            family=sm.family.Gamma())
+            family=sm.families.Gamma())
     >>> gamma_results = gamma_model.fit()
 
 see also the `examples` and the `tests` folders
@@ -54,7 +54,7 @@ Families
 
 The distribution families currently implemented are
 
-.. currentmodule:: scikits.statsmodels.family.family
+.. currentmodule:: scikits.statsmodels.families.family
 
 .. autosummary::
    :toctree: generated/
@@ -75,9 +75,9 @@ The link functions currently implemented are the following. Not all link
 functions are available for each distribution family. The list of
 available link functions can be obtained by ::
 
->>> ssm.family.family.<familyname>.available ?
+>>> sm.families.family.<familyname>.available ?
 
-.. currentmodule:: scikits.statsmodels.family.links
+.. currentmodule:: scikits.statsmodels.families.links
 
 .. autosummary::
    :toctree: generated/

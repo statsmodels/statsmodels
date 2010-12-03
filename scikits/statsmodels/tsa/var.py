@@ -19,10 +19,6 @@ from scikits.statsmodels.tsa.tsatools import lagmat, add_trend
 from scikits.statsmodels.model import LikelihoodModelResults, LikelihoodModel
 from scikits.statsmodels.decorators import *
 from scikits.statsmodels.compatibility import np_slogdet
-try:
-    from numdifftools import Jacobian, Hessian
-except:
-    raise Warning("You need to install numdifftools to try out the AR model")
 from scikits.statsmodels.sandbox.regression.numdiff import approx_fprime
 from scikits.statsmodels.sandbox.regression.numdiff import approx_hess
 
@@ -420,13 +416,7 @@ class AR(LikelihoodModel):
         """
         Returns numerical hessian for now.
         """
-#numdifftools code
-#        h = Hessian(self.loglike)
-#        return h(params)
         loglike = self.loglike
-#        if self.transparams:
-#            params = self._invtransparams(params)
-#see score
         return approx_hess(params, loglike)[0]
 
     def _stackX(self, laglen, trend):
@@ -793,6 +783,20 @@ class ARIMA(LikelihoodModel):
 #inherit GLS, SUR?
 #class VAR2(object):
 class VAR2(LikelihoodModel):
+    """
+    Vector Autoregression (VAR, VARX) models.
+
+    Parameters
+    ----------
+    endog
+    exog
+    laglen
+
+    Notes
+    -----
+    Exogenous variables are not supported yet
+
+    """
     def __init__(self, endog, exog=None):
         """
         Vector Autoregression (VAR, VARX) models.
@@ -806,6 +810,7 @@ class VAR2(LikelihoodModel):
         Notes
         -----
         Exogenous variables are not supported yet
+
         """
         nobs = float(endog.shape[0])
         self.nobs = nobs
@@ -839,7 +844,8 @@ class VAR2(LikelihoodModel):
         -----
         The loglikelihood function for the VAR(p) is
 
-        .. math:: -\left(\frac{T}{2}\right)\left(\ln\left|\Omega\right|-K\ln\left(2\pi\right)-K\right)
+        .. math:: -\\left(\\frac{T}{2}\\right)\\left(\\ln\\left|\\Omega\\right|-K\\ln\\left(2\\pi\\right)-K\\right)
+
         """
         params = np.asarray(params)
         omega = np.asarray(omega)
@@ -1005,31 +1011,32 @@ class VARMAResults(object):
     Holds the results for VAR models.
 
     Parameters
-    -----------
+    ----------
     model
     results
     params
 
     Attributes
     ----------
-    aic (Lutkepohl 2004)
+    aic : float
+        (Lutkepohl 2004)
     avobs : float
         Available observations for estimation.  The size of the whole sample
         less the pre-sample observations needed for lags.
     bic : float
-
+        Bayesian information criterium
     df_resid : float
         Residual degrees of freedom.
     dfk : float
         Degrees of freedom correction.  Not currently used. MLE estimator of
         omega is used everywhere.
     fittedvalues
-    fpe (Lutkepohl 2005, p 146-7).
-        See notes.
-    laglen
-    model
-    ncoefs
-    neqs
+    fpe : float
+        (Lutkepohl 2005, p 146-7). See notes.
+    laglen :
+    model :
+    ncoefs :
+    neqs :
     nobs : int
         Total number of observations in the sample.
     omega : ndarray
@@ -1037,10 +1044,10 @@ class VARMAResults(object):
         residual for variable i and the OLS residual for variable j or
         np.dot(resid.T,resid)/avobs.  There is no correction for the degrees
         of freedom.  This is the maximum likelihood estimator of Omega.
-    omega_beta_gls
-    omega_beta_gls_va
-    omega_beta_ols
-    omega_beta_va
+    omega_beta_gls :
+    omega_beta_gls_va :
+    omega_beta_ols :
+    omega_beta_va :
     params : array
         The fitted parameters for each equation.  Note that the rows are the
         equations and that each row holds lags first then variables, so
@@ -1053,17 +1060,21 @@ class VARMAResults(object):
 
     Methods
     -------
+    summary
+       a summary table of the estimation results
+
 
     Notes
     ------
     FPE formula
 
-    \left[\frac{T+Kp+t}{T-Kp-t}\right]^{K}$$\left|\Omega\right|
+    .. math:: \\left[\\frac{T+Kp+t}{T-Kp-t}\\right]^{K}\\left|\\Omega\\right|
 
     Where T = `avobs`
           K = `neqs`
           p = `laglength`
           t = `trendorder`
+
     """
     def __init__(self, model, results, params):
         self.results = results # most of this won't work, keep?

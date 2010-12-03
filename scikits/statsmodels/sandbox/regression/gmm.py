@@ -814,6 +814,10 @@ if __name__ == '__main__':
         res = mod.fit()
         modgmmols = IVGMM(endog, exog, exog, nmoms=exog.shape[1])
         resgmmols = modgmmols.fit()
+        #the next is the same as IV2SLS, (Z'Z)^{-1} as weighting matrix
+        modgmmiv = IVGMM(endog, exog, instrument, nmoms=instrument.shape[1]) #same as mod
+        resgmmiv = modgmmiv.fitgmm(np.ones(exog.shape[1], float),
+                        weights=np.linalg.inv(np.dot(instrument.T, instrument)))
         modls = IV2SLS(endog, exog, instrument)
         resls = modls.fit()
         modols = OLS(endog, exog)
@@ -822,10 +826,12 @@ if __name__ == '__main__':
         print '\nIV case'
         print 'params'
         print 'IV2SLS', resls.params
+        print 'GMMIV ', resgmmiv # .params
         print 'GMM   ', res.params
         print 'diff  ', res.params - resls.params
         print 'OLS   ', resols.params
         print 'GMMOLS', resgmmols.params
+
         print '\nbse'
         print 'IV2SLS', resls.bse
         print 'GMM   ', mod.bse   #bse currently only attached to model not results
@@ -833,6 +839,7 @@ if __name__ == '__main__':
         print '%-diff', resls.bse / mod.bse * 100 - 100
         print 'OLS   ', resols.bse
         print 'GMMOLS', modgmmols.bse
+        #print 'GMMiv', modgmmiv.bse
 
         print "Hausman's specification test"
         print modls.spec_hausman()

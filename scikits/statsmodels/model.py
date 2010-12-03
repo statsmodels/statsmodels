@@ -78,7 +78,7 @@ class Model(object):
         """
         raise NotImplementedError
 
-    def predict(self, design):
+    def predict(self, exog, params=None):
         """
         After a model has been fit predict returns the fitted values.  If
         the model has not been fit, then fit is called.
@@ -1193,6 +1193,27 @@ number of rows")
 class ResultMixin(object):
 
     @cache_readonly
+    def df_modelwc(self):
+        #collect different ways of defining the number of parameters, used for aic, bic
+        if hasattr(self, 'df_model'):
+            if hasattr(self, 'hasconst'):
+                hasconst = self.hasconst
+            else:
+                hasconst = 1 #default assumption
+            return self.df_model + hasconst
+        else:
+            return self.params.size
+
+
+    @cache_readonly
+    def aic(self):
+        return -2 * self.llf + 2 * (self.df_modelwc)
+
+    @cache_readonly
+    def bic(self):
+        return -2 * self.llf + np.log(self.nobs) * (self.df_modelwc)
+
+    @cache_readonly
     def jacv(self):
         '''cached Jacobian of log-likelihood
         '''
@@ -1274,7 +1295,10 @@ class ResultMixin(object):
         This was mainly written to compare estimators of the standard errors
         of the parameter estimates.
         It uses independent random sampling from the original endog and exog, and
-        therefore is only correct if observations are iid.
+        therefore is only correct if observations are independently distributed.
+
+        This will be moved to apply only to models with independently distributed
+        observations.
 
 
         '''

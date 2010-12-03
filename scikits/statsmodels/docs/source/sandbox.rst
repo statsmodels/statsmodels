@@ -41,47 +41,14 @@ Time Series analysis :mod:`tsa`
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 In this part we develop models and functions that will be useful for time
-series analysis, initially focused on the ARMA model and functions to simulate
-arma processes, and basic statistical properties such as autocorrelation,
-periodogram both estimated from data and the theoretical statistic given the
-lag polynomials of the ARMA process, and tools to work with AR and MA
-lag polynomials.
-
-Some of the functions are currently written mainly to discover a way to use
-existing functions in scipy for time series analysis. Related functions are
-available in matplotlib, nitime, and scikits.talkbox. Those functions are
-designed more for the use in signal processing where longer time series are
-available and work more in the frequency domain.
+series analysis. Most of the models and function have been moved to
+:mod:`statsmodels.tsa`. Currently, GARCH models remain in development stage in
+`sandbox.tsa`.
 
 
 .. currentmodule:: scikits.statsmodels.sandbox
 
 
-
-Time Series Properties
-""""""""""""""""""""""
-
-.. autosummary::
-   :toctree: generated/
-
-   tsa.acf
-   tsa.acovf
-   tsa.pacf_ols
-   tsa.pacf_yw
-   tsa.ccf
-   tsa.ccovf
-
-ARMA Modeling
-"""""""""""""
-
-.. autosummary::
-   :toctree: generated/
-
-   tsa.ARIMA
-   tsa.arma_acf
-   tsa.arma_acovf
-   tsa.arma_generate_sample
-   tsa.arma_impulse_response
 
 Moving Window Statistics
 """"""""""""""""""""""""
@@ -101,7 +68,7 @@ Moving Window Statistics
 Regression and ANOVA
 ^^^^^^^^^^^^^^^^^^^^
 
-.. currentmodule:: scikits.statsmodels.sandbox.regression
+.. currentmodule:: scikits.statsmodels.sandbox.regression.anova_nistcertified
 
 The following two ANOVA functions are fully tested against the NIST test data
 for balanced one-way ANOVA. ``anova_oneway`` follows the same pattern as the
@@ -117,13 +84,14 @@ using statsmodels in three lines and is also best taken as a recipe.
 
    anova_oneway
    anova_ols
-   wls_prediction_std
 
 
 The following are helper functions for working with dummy variables and
 generating ANOVA results with OLS. They are best considered as recipes since
 they were written with a specific use in mind. These function will eventually
 be rewritten or reorganized.
+
+.. currentmodule:: scikits.statsmodels.sandbox.regression
 
 .. autosummary::
    :toctree: generated/
@@ -181,12 +149,7 @@ Miscellaneous
 Tools for Time Series Analysis
 """"""""""""""""""""""""""""""
 
-.. autosummary::
-   :toctree: generated/
-
-   lagmat
-   lagmat2ds
-   grangercausalitytests
+nothing left in here
 
 
 Tools: Principal Component Analysis

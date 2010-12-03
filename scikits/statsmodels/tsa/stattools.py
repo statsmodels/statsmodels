@@ -374,9 +374,12 @@ def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False):
 # Based on Bartlett's formula for MA(q) processes
 #NOTE: not sure if this is correct, or needs to be centered or what.
 
-    if confint:
-        varacf = np.ones(nlags)/nobs
-        varacf[1:] *= 1 + 2*np.cumsum(acf[1:-1]**2)
+    if not confint is None:
+        varacf = np.ones(nlags+1)/nobs
+        #varacf[1:] *= 1 + 2*np.cumsum(acf[1:-1]**2)
+        #TODO: test this, are my changes correct
+        varacf[0] = 0
+        varacf[1:] *= 1 + 2*np.cumsum(acf[1:]**2)
         interval = stats.norm.ppf(1-(100-confint)/200.)*np.sqrt(varacf)
         confint = np.array(zip(acf-interval, acf+interval))
         if not qstat:
@@ -463,8 +466,10 @@ def pacf(x, nlags=40, method='ywunbiased'):
     method : 'ywunbiased' (default) or 'ywmle' or 'ols'
         specifies which method for the calculations to use,
         - yw or ywunbiased : yule walker with bias correction in denominator for acovf
-        - yw or ywmle : yule walker without bias correction
+        - ywm or ywmle : yule walker without bias correction
         - ols - regression of time series on lags of it and on constant
+        - ld or ldunbiased : Levinson-Durbin recursion with bias correction
+        - ldb or ldbiased : Levinson-Durbin recursion without bias correction
 
     Returns
     -------
@@ -483,6 +488,15 @@ def pacf(x, nlags=40, method='ywunbiased'):
         return pacf_yw(x, nlags=nlags, method='unbiased')
     elif method in ['ywm', 'ywmle', 'yw_mle']:
         return pacf_yw(x, nlags=nlags, method='mle')
+    elif method in ['ld', 'ldu', 'ldunbiase', 'ld_unbiased']:
+        acv = acovf(x, unbiased=True)
+        ld_ = levinson_durbin(acv, nlags=nlags, isacov=True)
+        #print 'ld', ld_
+        return ld_[2]
+    elif method in ['ldb', 'ldbiased', 'ld_biased']: #inconsistent naming with ywmle
+        acv = acovf(x, unbiased=False)
+        ld_ = levinson_durbin(acv, nlags=nlags, isacov=True)
+        return ld_[2]
     else:
         raise ValueError('method not available')
 
@@ -559,6 +573,7 @@ def pergram(X, kernel='bartlett', log=True):
     M : int
         Should this be hardcoded?
     kernel : str, optional
+
     Notes
     -----
     The autocovariances are normalized by len(X).
@@ -566,8 +581,7 @@ def pergram(X, kernel='bartlett', log=True):
     If len(X) is odd M = (len(X) - 1)/2 else M = len(X)/2. Either way
         freq[i] = 2*[i+1]/T and len(freq) == M
 
-
-    Reference
+    References
     ----------
     Based on Lutkepohl; Hamilton.
 
@@ -576,6 +590,7 @@ def pergram(X, kernel='bartlett', log=True):
     Doesn't look right yet.
     """
     #JP: this should use covf and fft for speed and accuracy for longer time series
+    #should also return the implied frequencies
     X = np.asarray(X).squeeze()
     nobs = len(X)
     M = np.floor(nobs/2.)
@@ -588,15 +603,87 @@ def pergram(X, kernel='bartlett', log=True):
     #    #TODO: make a list to check window
 #    ell = np.r_[1,np.arange(1,M+1)*np.pi/nobs]
     if kernel == "bartlett":
-        w = 1 - np.arange(M+1)/M
+        w = 1 - np.arange(M+1.)/M   #JP removed integer division
 
 #    weights = exec('signal.'+window+'(M='str(M)')')
-    j = np.arange(1,M+1)
+    j = np.arange(1,M+1.)
     ell = np.linspace(0,np.pi,M)
     pergr = np.zeros_like(ell)
-    for i,L in enumerate(ell):
+    for i,L in enumerate(ell):  #todo: vectorize
         pergr[i] = 1/(2*np.pi)*acov[0] + 2 * np.sum(w[1:]*acov[1:]*np.cos(L*j))
     return pergr
+
+#copied from nitime and scikits\statsmodels\sandbox\tsa\examples\try_ld_nitime.py
+#TODO: check what to return, for testing and trying out returns everything
+def levinson_durbin(s, nlags=10, isacov=False):
+    '''Levinson-Durbin recursion for autoregressive processes
+
+    Parameters
+    ----------
+    s : array_like
+        If isacov is False, then this is the time series. If iasacov is true
+        then this is interpreted as autocovariance starting with lag 0
+    nlags : integer
+        largest lag to include in recursion or order of the autoregressive
+        process
+    isacov : boolean
+        flag to indicate whether the first argument, s, contains the autocovariances
+        or the data series.
+
+    Returns
+    -------
+    sigma_v : float
+        estimate of the error variance ?
+    arcoefs : ndarray
+        estimate of the autoregressive coefficients
+    pacf : ndarray
+        partial autocorrelation function
+    sigma : ndarray
+        entire sigma array from intermediate result, last value is sigma_v
+    phi : ndarray
+        entire phi array from intermediate result, last column contains
+        autoregressive coefficients for AR(nlags) with a leading 1
+
+    Notes
+    -----
+    This function returns currently all results, but maybe we drop sigma and
+    phi from the returns.
+
+    If this function is called with the time series (isacov=False), then the sample
+    autocovariance function is calculated with the default options (biased, no fft).
+
+    '''
+    s = np.asarray(s)
+    order = nlags  #rename compared to nitime
+    #from nitime
+
+##    if sxx is not None and type(sxx) == np.ndarray:
+##        sxx_m = sxx[:order+1]
+##    else:
+##        sxx_m = ut.autocov(s)[:order+1]
+    if isacov:
+        sxx_m = s
+    else:
+        sxx_m = acovf(s)[:order+1]  #not tested
+
+    phi = np.zeros((order+1, order+1), 'd')
+    sig = np.zeros(order+1)
+    # initial points for the recursion
+    phi[1,1] = sxx_m[1]/sxx_m[0]
+    sig[1] = sxx_m[0] - phi[1,1]*sxx_m[1]
+    for k in xrange(2,order+1):
+        phi[k,k] = (sxx_m[k] - np.dot(phi[1:k,k-1], sxx_m[1:k][::-1]))/sig[k-1]
+        for j in xrange(1,k):
+            phi[j,k] = phi[j,k-1] - phi[k,k]*phi[k-j,k-1]
+        sig[k] = sig[k-1]*(1 - phi[k,k]**2)
+
+    sigma_v = sig[-1]
+    arcoefs = phi[1:,-1]
+    pacf_ = np.diag(phi)
+    pacf_[0] = 1.
+    return sigma_v, arcoefs, pacf_, sig, phi  #return everything
+
+
 
 def grangercausalitytests(x, maxlag):
     '''four tests for granger causality of 2 timeseries

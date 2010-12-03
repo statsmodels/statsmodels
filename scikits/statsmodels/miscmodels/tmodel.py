@@ -1,5 +1,23 @@
 """Linear Model with Student-t distributed errors
 
+Because the t distribution has fatter tails than the normal distribution, it
+can be used to model observations with heavier tails and observations that have
+some outliers. For the latter case, the t-distribution provides more robust
+estimators for mean or mean parameters (what about var?).
+
+
+
+References
+----------
+Kenneth L. Lange, Roderick J. A. Little, Jeremy M. G. Taylor (1989)
+Robust Statistical Modeling Using the t Distribution
+Journal of the American Statistical Association
+Vol. 84, No. 408 (Dec., 1989), pp. 881-896
+Published by: American Statistical Association
+Stable URL: http://www.jstor.org/stable/2290063
+
+not read yet
+
 
 Created on 2010-09-24
 Author: josef-pktd
@@ -78,7 +96,7 @@ class TLinearModel(GenericLikelihoodModel):
 
         beta = params[:-2]
         df = params[-2]
-        scale = params[-1]
+        scale = np.abs(params[-1])  #TODO check behavior around zero
         loc = np.dot(self.exog, beta)
         endog = self.endog
         x = (endog - loc)/scale
@@ -87,3 +105,50 @@ class TLinearModel(GenericLikelihoodModel):
         lPx -= 0.5*np_log(df*np_pi) + (df+1)/2.*np_log(1+(x**2)/df)
         lPx -= np_log(scale)  # correction for scale
         return -lPx
+
+
+from scipy import stats
+from scikits.statsmodels.tsa.arma_mle import Arma
+
+class TArma(Arma):
+    '''Univariate Arma Model with t-distributed errors
+
+    This inherit all methods except loglike from tsa.arma_mle.Arma
+
+    This uses the standard t-distribution, the implied variance of
+    the error is not equal to scale, but ::
+
+        error_variance = df/(df-2)*scale**2
+
+    Notes
+    -----
+    This might be replaced by a standardized t-distribution with scale**2
+    equal to variance
+
+    '''
+
+    def loglike(self, params):
+        return -self.nloglikeobs(params).sum(0)
+
+
+    #add for Jacobian calculation  bsejac in GenericMLE, copied from loglike
+    def nloglikeobs(self, params):
+        """
+        Loglikelihood for arma model for each observation, t-distribute
+
+        Notes
+        -----
+        The ancillary parameter is assumed to be the last element of
+        the params vector
+        """
+
+        errorsest = self.geterrors(params)
+        #sigma2 = np.maximum(params[-1]**2, 1e-6)  #do I need this
+        #axis = 0
+        #nobs = len(errorsest)
+
+        df = params[-2]
+        scale = np.abs(params[-1])
+        llike  = - stats.t._logpdf(errorsest/scale, df) + np_log(scale)
+        return llike
+
