@@ -62,13 +62,20 @@ def print_results(res):
     ft = res.ftest_summary()
     #print ft[0]  #skip because table is nicer
     print '\nTable of F-tests for overall or pairwise equality of coefficients'
-    print 'hypothesis F-statistic         p-value  df_denom df_num  reject'
-    for row in ft[1]:
-        print row,
-        if row[1][1]<0.05:
-            print '*'
-        else:
-            print ''
+##    print 'hypothesis F-statistic         p-value  df_denom df_num  reject'
+##    for row in ft[1]:
+##        print row,
+##        if row[1][1]<0.05:
+##            print '*'
+##        else:
+##            print ''
+    from scikits.statsmodels.iolib import SimpleTable
+    print SimpleTable([(['%r'%(row[0],)]
+                        + list(row[1])
+                        + ['*']*(row[1][1]>0.5).item() ) for row in ft[1]],
+                      headers=['pair', 'F-statistic','p-value','df_denom',
+                               'df_num'])
+
     print 'Notes: p-values are not corrected for many tests'
     print '       (no Bonferroni correction)'
     print '       * : reject at 5% uncorrected confidence level'
@@ -95,6 +102,73 @@ def print_results(res):
     print 'variance    ', res.sigmabygroup
     print 'standard dev', np.sqrt(res.sigmabygroup)
 
+#now added to class
+def print_results2(res):
+    groupind = res.groups
+    #res.fitjoint()  #not really necessary, because called by ftest_summary
+    ft = res.ftest_summary()
+    txt = ''
+    #print ft[0]  #skip because table is nicer
+    templ = \
+'''Table of F-tests for overall or pairwise equality of coefficients'
+%(tab)s
+
+
+Notes: p-values are not corrected for many tests
+       (no Bonferroni correction)
+       * : reject at 5%% uncorrected confidence level
+Null hypothesis: all or pairwise coefficient are the same'
+Alternative hypothesis: all coefficients are different'
+
+
+Comparison with stats.f_oneway
+%(statsfow)s
+
+
+Likelihood Ratio Test
+%(lrtest)s
+Null model: pooled all coefficients are the same across groups,'
+Alternative model: all coefficients are allowed to be different'
+not verified but looks close to f-test result'
+
+
+Ols parameters by group from individual, separate ols regressions'
+%(olsbg)s
+for group in sorted(res.olsbygroup):
+    r = res.olsbygroup[group]
+    print group, r.params
+
+
+Check for heteroscedasticity, '
+variance and standard deviation for individual regressions'
+%(grh)s
+variance    ', res.sigmabygroup
+standard dev', np.sqrt(res.sigmabygroup)
+'''
+
+    from scikits.statsmodels.iolib import SimpleTable
+    resvals = {}
+    resvals['tab'] = str(SimpleTable([(['%r'%(row[0],)]
+                        + list(row[1])
+                        + ['*']*(row[1][1]>0.5).item() ) for row in ft[1]],
+                      headers=['pair', 'F-statistic','p-value','df_denom',
+                               'df_num']))
+    resvals['statsfow'] = str(stats.f_oneway(*[y[groupind==gr] for gr in
+                                               res.unique]))
+    #resvals['lrtest'] = str(res.lr_test())
+    resvals['lrtest'] = str(SimpleTable([res.lr_test()],
+                                headers=['likelihood ratio', 'p-value', 'df'] ))
+
+    resvals['olsbg'] = str(SimpleTable([[group]
+                                        + res.olsbygroup[group].params.tolist()
+                                        for group in sorted(res.olsbygroup)]))
+    resvals['grh'] = str(SimpleTable(np.vstack([res.sigmabygroup,
+                                           np.sqrt(res.sigmabygroup)]),
+                                 headers=res.unique.tolist()))
+
+    return templ % resvals
+
+
 
 #get results for example
 #-----------------------
@@ -117,5 +191,6 @@ print   '--------------------------------------------------------------'
 
 print 'this is the similar to scipy.stats.f_oneway,'
 print 'but variance is not assumed to be the same across groups'
-res = OneWayLS(y,np.ones(len(y)), groups=groupind, het=True)
+res = OneWayLS(y,np.ones(len(y)), groups=groupind.astype(str), het=True)
 print_results(res)
+print res.print_summary(res)
