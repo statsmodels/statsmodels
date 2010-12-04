@@ -121,8 +121,8 @@ def mc2mvsk(args):
     '''convert central moments to mean, variance, skew, kurtosis
     '''
     mc, mc2, mc3, mc4 = args
-    skew = mc3 / mc2**1.5
-    kurt = mc4 / mc2**2.0 - 3.0
+    skew = np.divide(mc3, mc2**1.5)
+    kurt = np.divide(mc4, mc2**2.0) - 3.0
     return (mc, mc2, skew, kurt)
 
 def mnc2mvsk(args):
@@ -135,7 +135,7 @@ def mnc2mvsk(args):
     mc3 = mnc3 - (3*mc*mc2+mc**3) # 3rd central moment
     mc4 = mnc4 - (4*mc*mc3+6*mc*mc*mc2+mc**4)
 
-    return mc2mvsk(mc, mc2, mc3, mc4)
+    return mc2mvsk((mc, mc2, mc3, mc4))
 
 def mnc2mc(args):
     '''convert four non-central moments to central moments
