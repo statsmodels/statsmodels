@@ -12,8 +12,8 @@ License: BSD
 import numpy as np
 from scipy import stats
 import scikits.statsmodels as sm
-from scikits.statsmodels.sandbox.tsa.stattools import acf
-from scikits.statsmodels.sandbox.tsa.tsatools import lagmat
+from scikits.statsmodels.tsa.stattools import acf
+from scikits.statsmodels.tsa.tsatools import lagmat
 
 #TODO: I like the bunch pattern for this too.
 class ResultsStore(object):
@@ -241,7 +241,7 @@ def het_goldfeldquandt(y, x, idx, split=None, retres=False):
         sorted for the split
     split : None or integer or float in intervall (0,1)
         index at which sample is split.
-        If 0<split<0 then split is interpreted as fraction of the observations
+        If 0<split<1 then split is interpreted as fraction of the observations
         in the first sample
     retres : boolean
         if true, then an instance of a result class is returned,
@@ -330,7 +330,7 @@ class HetGoldfeldQuandt(object):
         sorted for the split
     split : None or integer or float in intervall (0,1)
         index at which sample is split.
-        If 0<split<0 then split is interpreted as fraction of the observations
+        If 0<split<1 then split is interpreted as fraction of the observations
         in the first sample
     retres : boolean
         if true, then an instance of a result class is returned,
@@ -363,7 +363,8 @@ class HetGoldfeldQuandt(object):
 
     ran sanity check
     '''
-    def run(self, x, y, idx, split=None, attach=True):
+    def run(self, y, x, idx=None, split=None, drop=None,
+            alternative='increasing', attach=True):
         '''see class docstring'''
         x = np.asarray(x)
         y = np.asarray(y)**2
@@ -372,20 +373,35 @@ class HetGoldfeldQuandt(object):
             split = nobs//2
         elif (0<split) and (split<1):
             split = int(nobs*split)
+        if drop is None:
+            start2 = split
+        elif (0<split) and (split<1):
+            start2 = split + int(nobs*drop)
 
-        xsortind = np.argsort(x[:,idx])
-        y = y[xsortind]
-        x = x[xsortind,:]
+        if not idx is None:
+            xsortind = np.argsort(x[:,idx])
+            y = y[xsortind]
+            x = x[xsortind,:]
         resols1 = sm.OLS(y[:split], x[:split]).fit()
-        resols2 = sm.OLS(y[split:], x[split:]).fit()
-        fval = resols1.mse_resid/resols2.mse_resid
-        if fval>1:
+        resols2 = sm.OLS(y[start2:], x[start2:]).fit()
+        fval = resols2.mse_resid/resols1.mse_resid
+        #if fval>1:
+        if alternative.lower() in ['i', 'inc', 'increasing']:
             fpval = stats.f.sf(fval, resols1.df_resid, resols2.df_resid)
-            ordering = 'larger'
-        else:
+            ordering = 'increasing'
+        elif alternative.lower() in ['d', 'dec', 'decreasing']:
             fval = 1./fval;
             fpval = stats.f.sf(fval, resols2.df_resid, resols1.df_resid)
-            ordering = 'smaller'
+            ordering = 'decreasing'
+        elif alternative.lower() in ['2', '2-sided', 'two-sided']:
+            fpval_sm = stats.f.cdf(fval, resols2.df_resid, resols1.df_resid)
+            fpval_la = stats.f.sf(fval, resols2.df_resid, resols1.df_resid)
+            fpval = min(fpval_sm, fpval_la)   #TODO: check min is correct
+            ordering = 'two-sided'
+        else:
+            raise ValueError('invalid alternative')
+
+
 
         if attach:
             res = self
@@ -399,17 +415,24 @@ class HetGoldfeldQuandt(object):
             res.split = split
             #res.__str__
             #TODO: check if string works
-            res.__str__ = '''The Goldfeld-Quandt test for null hypothesis that the
+            res._str = '''The Goldfeld-Quandt test for null hypothesis that the
     variance in the second subsample is %s than in the first subsample:
         F-statistic =%8.4f and p-value =%8.4f''' % (ordering, fval, fpval)
 
-        return fval, fpval
+        return fval, fpval, ordering
+        #return self
 
-    def __call__(self, x, y, idx, split=None):
-        return self.run(x, y, idx, split=None, attach=False)
+    def __str__(self):
+        try:
+            return self._str
+        except AttributeError:
+            return repr(self)
 
-hetgoldfeldquandt2 = HetGoldfeldQuandt()
-hetgoldfeldquandt2.__doc__ = hetgoldfeldquandt2.run.__doc__
+    def __call__(self, y, x, idx=None, split=None):
+        return self.run(y, x, idx=idx, split=split, attach=False)
+
+het_goldfeldquandt2 = HetGoldfeldQuandt()
+het_goldfeldquandt2.__doc__ = hetgoldfeldquandt2.run.__doc__
 
 
 
@@ -431,11 +454,11 @@ def neweywestcov(resid, x):
      d.covb = xtxi*xuux*xtxi;
     '''
     nobs = resid.shape[0]   #TODO: check this can only be 1d
-    nlags = round(4*(nobs/100)^(2/9))
+    nlags = round(4*(nobs/100.)**(2/9.))
     hhat = resid * x.T
     xuux = np.dot(hhat, hhat.T)
     for lag in range(nlags):
-        za = np.dot(hhat[:,lag:nobs] * hhat[:,:nobs-lag].T)
+        za = np.dot(hhat[:,lag:nobs], hhat[:,:nobs-lag].T)
         w = 1 - lag/(nobs + 1.)
         xuux = xuux + np.dot(w, za+za.T)
     xtxi = np.linalg.inv(np.dot(x.T, x))  #QR instead?
@@ -960,15 +983,15 @@ if __name__ == '__main__':
         print mc1.histogram(0)
 
     nobs = 100
-    x = np.ones((20,2))
-    x[:,1] = np.arange(20)
-    y = x.sum(1) + 1.01*(1+1.5*(x[:,1]>10))*np.random.rand(20)
+    x = np.ones((nobs,2))
+    x[:,1] = np.arange(nobs)/20.
+    y = x.sum(1) + 1.01*(1+1.5*(x[:,1]>10))*np.random.rand(nobs)
     print het_goldfeldquandt(y,x, 1)
 
-    y = x.sum(1) + 1.01*(1+0.5*(x[:,1]>10))*np.random.rand(20)
+    y = x.sum(1) + 1.01*(1+0.5*(x[:,1]>10))*np.random.rand(nobs)
     print het_goldfeldquandt(y,x, 1)
 
-    y = x.sum(1) + 1.01*(1-0.5*(x[:,1]>10))*np.random.rand(20)
+    y = x.sum(1) + 1.01*(1-0.5*(x[:,1]>10))*np.random.rand(nobs)
     print het_goldfeldquandt(y,x, 1)
 
     print het_breushpagan(y,x)
@@ -987,5 +1010,8 @@ if __name__ == '__main__':
     print resols1.cov_params()
     print resols1.HC0_se
     print resols1.cov_HC0
+
+    y = x.sum(1) + 10.*(1-0.5*(x[:,1]>10))*np.random.rand(nobs)
+    print HetGoldfeldQuandt().run(y,x, 1, alternative='dec')
 
 
