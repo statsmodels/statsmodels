@@ -685,7 +685,7 @@ def levinson_durbin(s, nlags=10, isacov=False):
 
 
 
-def grangercausalitytests(x, maxlag):
+def grangercausalitytests(x, maxlag, addconst=True):
     '''four tests for granger causality of 2 timeseries
 
     this is a proof-of concept implementation
@@ -716,17 +716,24 @@ def grangercausalitytests(x, maxlag):
     '''
     from scipy import stats # lazy import
 
+    resli = {}
+
     for mlg in range(1, maxlag+1):
         print '\nGranger Causality'
         print 'number of lags (no zero)', mlg
-        mxlg = mlg + 1 # Note number of lags starting at zero in lagmat
+        mxlg = mlg #+ 1 # Note number of lags starting at zero in lagmat
 
         # create lagmat of both time series
         dta = lagmat2ds(x, mxlg, trim='both', dropex=1)
 
         #add constant
-        dtaown = add_constant(dta[:,1:mxlg])
-        dtajoint = add_constant(dta[:,1:])
+        if addconst:
+            dtaown = add_constant(dta[:,1:mxlg+1])
+            dtajoint = add_constant(dta[:,1:])
+        else:
+            raise ValueError('Not Implemented')
+            dtaown = dta[:,1:mxlg]
+            dtajoint = dta[:,1:]
 
         #run ols on both models without and with lags of second variable
         res2down = OLS(dta[:,0], dtaown).fit()
@@ -737,26 +744,32 @@ def grangercausalitytests(x, maxlag):
         #the other tests are made-up
 
         # Granger Causality test using ssr (F statistic)
-        fgc1 = (res2down.ssr-res2djoint.ssr)/res2djoint.ssr/(mxlg-1)*res2djoint.df_resid
+        fgc1 = (res2down.ssr-res2djoint.ssr)/res2djoint.ssr/(mxlg)*res2djoint.df_resid
         print 'ssr based F test:         F=%-8.4f, p=%-8.4f, df_denom=%d, df_num=%d' % \
-              (fgc1, stats.f.sf(fgc1, mxlg-1, res2djoint.df_resid), res2djoint.df_resid, mxlg-1)
+              (fgc1, stats.f.sf(fgc1, mxlg, res2djoint.df_resid), res2djoint.df_resid, mxlg)
 
         # Granger Causality test using ssr (ch2 statistic)
         fgc2 = res2down.nobs*(res2down.ssr-res2djoint.ssr)/res2djoint.ssr
         print 'ssr based chi2 test:   chi2=%-8.4f, p=%-8.4f, df=%d' %  \
-              (fgc2, stats.chi2.sf(fgc2, mxlg-1), mxlg-1)
+              (fgc2, stats.chi2.sf(fgc2, mxlg), mxlg)
 
         #likelihood ratio test pvalue:
         lr = -2*(res2down.llf-res2djoint.llf)
         print 'likelihood ratio test: chi2=%-8.4f, p=%-8.4f, df=%d' %  \
-              (lr, stats.chi2.sf(lr, mxlg-1), mxlg-1)
+              (lr, stats.chi2.sf(lr, mxlg), mxlg)
 
         # F test that all lag coefficients of exog are zero
         rconstr = np.column_stack((np.zeros((mxlg-1,mxlg-1)), np.eye(mxlg-1, mxlg-1),\
                                    np.zeros((mxlg-1, 1))))
+        rconstr = np.column_stack((np.zeros((mxlg,mxlg)), np.eye(mxlg, mxlg),\
+                                   np.zeros((mxlg, 1))))
         ftres = res2djoint.f_test(rconstr)
         print 'parameter F test:         F=%-8.4f, p=%-8.4f, df_denom=%d, df_num=%d' % \
               (ftres.fvalue, ftres.pvalue, ftres.df_denom, ftres.df_num)
+
+        resli[mxlg] = [res2down, res2djoint, rconstr]
+
+    return resli
 
 
 

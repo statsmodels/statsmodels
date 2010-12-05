@@ -137,7 +137,7 @@ def lagmat(x, maxlag, trim='forward', original='ex'):
 
     Examples
     --------
-    >>> from scikits.statsmodels.sandbox.tsa.tsatools import lagmat
+    >>> from scikits.statsmodels.tsa.tsatools import lagmat
     >>> import numpy as np
     >>> X = np.arange(1,7).reshape(-1,2)
     >>> lagmat(X, maxlag=2, trim="forward", original='in')
@@ -236,9 +236,9 @@ def lagmat2ds(x, maxlag0, maxlagex=None, dropex=0, trim='forward'):
         maxlagex = maxlag0
     maxlag = max(maxlag0, maxlagex)
     nobs, nvar = x.shape
-    lagsli = [lagmat(x[:,0], maxlag, trim=trim)[:,:maxlag0]]
+    lagsli = [lagmat(x[:,0], maxlag, trim=trim, original='in')[:,:maxlag0+1]]
     for k in range(1,nvar):
-        lagsli.append(lagmat(x[:,k], maxlag, trim=trim)[:,dropex:maxlagex])
+        lagsli.append(lagmat(x[:,k], maxlag, trim=trim, original='in')[:,dropex:maxlagex+1])
     return np.column_stack(lagsli)
 
 
