@@ -280,8 +280,8 @@ class ArmaFft(ArmaProcess):
     def spdpoly(self, w, nma=50):
         '''spectral density from MA polynomial representation for ARMA process
 
-        Reference
-        ---------
+        References
+        ----------
         Cochrane, section 8.3.3
         '''
         mpoly = np.polynomial.Polynomial(self.arma2ma(nma))

@@ -5,6 +5,7 @@ trunk for 0.3.0
 sandbox/output.py -> iolib/table.py
 lib/io.py -> iolib/foreign.py (stata data format reader available from iolib)
 family -> families
+families.links.inverse -> families.links.inverse_power
 Datasets' Load class is now load function.
 
 *main changes*

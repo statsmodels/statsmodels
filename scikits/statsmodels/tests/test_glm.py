@@ -173,7 +173,7 @@ class TestGaussianInverse(CheckModelResults):
         self.X = np.c_[np.ones((nobs,1)),x,x**2]
         self.y_inv = (1. + .02*x + .001*x**2)**-1 + .001 * np.random.randn(nobs)
         InverseLink_Model = GLM(self.y_inv, self.X,
-                family=sm.families.Gaussian(sm.families.links.inverse))
+                family=sm.families.Gaussian(sm.families.links.inverse_power))
         InverseLink_Res = InverseLink_Model.fit()
         self.res1 = InverseLink_Res
         from results.results_glm import GaussianInverse
@@ -452,6 +452,19 @@ class TestGlmNegbinomial(CheckModelResults):
 
 #class TestGlmNegbinomial_nbinom(CheckModelResults):
 #    pass
+
+def test_attribute_writable_resettable():
+    """
+    Regression test for mutables and class constructors.
+    """
+    data = sm.datasets.longley.load()
+    endog, exog = data.endog, data.exog
+    glm_model = sm.GLM(endog, exog)
+    assert_equal(glm_model.family.link.power, 1.0)
+    glm_model.family.link.power = 2.
+    assert_equal(glm_model.family.link.power, 2.0)
+    glm_model2 = sm.GLM(endog, exog)
+    assert_equal(glm_model2.family.link.power, 1.0)
 
 if __name__=="__main__":
     #run_module_suite()

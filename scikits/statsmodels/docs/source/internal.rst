@@ -33,3 +33,7 @@ define some common methods.
    LikelihoodModel
    Results
    LikelihoodModelResults
+
+
+.. inheritance-diagram:: scikits.statsmodels.model scikits.statsmodels.discretemod scikits.statsmodels.regression scikits.statsmodels.miscmodels.count
+   :parts: 3

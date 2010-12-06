@@ -76,7 +76,7 @@ class CheckModelResults(object):
     def test_bic(self):
         assert_almost_equal(self.res1.bic, self.res2.bic, DECIMAL_3)
 
-class CheckMargEff():
+class CheckMargEff(object):
     """
     Test marginal effects (margeff) and its options
     """

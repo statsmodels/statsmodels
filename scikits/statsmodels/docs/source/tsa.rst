@@ -76,23 +76,25 @@ Estimation
    :toctree: generated/
 
    var.AR
-   var.ARIMA
    var.ARResults
    var.VAR
    var.VAR2
    var.VARMAResults
    arma_mle.Arma
 
-.. currentmodule:: scikits.statsmodels
+Arma and Kalman Filter
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. currentmodule:: scikits.statsmodels.tsa
 
 .. autosummary::
    :toctree: generated/
 
-   scikits.statsmodels.sandbox.tsa.kalmanf.ARMA
-   scikits.statsmodels.sandbox.tsa.kalmanf.ARMAResults
-   scikits.statsmodels.sandbox.tsa.kalmanf.StateSpaceModel
-   scikits.statsmodels.sandbox.tsa.kalmanf.kalmanfilter
-   scikits.statsmodels.sandbox.tsa.kalmanf.kalmansmooth
+   arima.ARMA
+   arima.ARMAResults
+   kalmanf.kalmanf.StateSpaceModel
+   kalmanf.kalmanf.kalmanfilter
+   kalmanf.kalmanf.kalmansmooth
 
 .. currentmodule:: scikits.statsmodels.tsa
 

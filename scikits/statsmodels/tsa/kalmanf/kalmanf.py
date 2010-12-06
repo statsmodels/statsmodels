@@ -506,7 +506,7 @@ class KalmanFilter(object):
         #TODO: see section 3.4.6 in Harvey for computing the derivatives in the
         # recursion itself.
         #TODO: this won't work for time-varying parameters
-        y = arma_model.endog.copy() #TODO: remove copy if you can
+        y = arma_model.endog.copy().astype(params.dtype) #TODO: remove copy if you can
         k = arma_model.k
         nobs = arma_model.nobs
         p = arma_model.p

@@ -27,46 +27,79 @@ class FactorModelUnivariate(object):
     cross-validation is slow for large number of observations
     '''
     def __init__(self, endog, exog):
+        #do this in a superclass?
         self.endog = np.asarray(endog)
         self.exog = np.asarray(exog)
 
 
     def calc_factors(self, x=None, keepdim=0, addconst=True):
+        '''get factor decomposition of exogenous variables
+
+        This uses principal component analysis to obtain the factors. The number
+        of factors kept is the maximum that will be considered in the regression.
+        '''
         if x is None:
             x = self.exog
         else:
             x = np.asarray(x)
         xred, fact, evals, evecs  = pca(x, keepdim=keepdim, normalize=1)
         self.exog_reduced = xred
-        self.factors = fact
-        self.factors_wconst = sm.add_constant(fact, prepend=True)
+        #self.factors = fact
+        if addconst:
+            self.factors = sm.add_constant(fact, prepend=True)
+            self.hasconst = 1  #needs to be int
+        else:
+            self.factors = fact
+            self.hasconst = 0  #needs to be int
+
         self.evals = evals
         self.evecs = evecs
 
     def fit_fixed_nfact(self, nfact):
         if not hasattr(self, 'factors_wconst'):
             self.calc_factors()
-        return sm.OLS(self.endog, self.factors_wconst[:,:nfact+1]).fit()
+        return sm.OLS(self.endog, self.factors[:,:nfact+1]).fit()
 
-    def fit_find_nfact(self, maxfact=None):
+    def fit_find_nfact(self, maxfact=None, skip_crossval=True, cv_iter=None):
+        '''estimate the model and selection criteria for up to maxfact factors
+
+        The selection criteria that are calculated are AIC, BIC, and R2_adj. and
+        additionally cross-validation prediction error sum of squares if `skip_crossval`
+        is false. Cross-validation is not used by default because it can be
+        time consuming to calculate.
+
+        By default the cross-validation method is Leave-one-out on the full dataset.
+        A different cross-validation sample can be specified as an argument to
+        cv_iter.
+
+        Results are attached in `results_find_nfact`
+
+
+
+        '''
         #print 'OLS on Factors'
-        if not hasattr(self, 'factors_wconst'):
+        if not hasattr(self, 'factors'):
             self.calc_factors()
 
+        hasconst = self.hasconst
         if maxfact is None:
-            maxfact = self.factors.shape[1]
+            maxfact = self.factors.shape[1] - hasconst
+
+        if (maxfact+hasconst) < 1:
+            raise ValueError('nothing to do, number of factors (incl. constant) should ' +
+                             'be at least 1')
 
         #temporary safety
-        maxfact = min(maxfact, 3)
+        maxfact = min(maxfact, 10)
 
         y0 = self.endog
         results = []
         #xred, fact, eva, eve  = pca(x0, keepdim=0, normalize=1)
-        for k in range(0, maxfact+1): #x0.shape[1]+1):
+        for k in range(1, maxfact+hasconst): #k includes now the constnat
             #xred, fact, eva, eve  = pca(x0, keepdim=k, normalize=1)
             # this is faster and same result
-            fact_wconst = self.factors_wconst[:,:k+1]
-            res = sm.OLS(y0, fact_wconst).fit()
+            fact = self.factors[:,:k]
+            res = sm.OLS(y0, fact).fit()
         ##    print 'k =', k
         ##    print res.params
         ##    print 'aic:  ', res.aic
@@ -74,16 +107,33 @@ class FactorModelUnivariate(object):
         ##    print 'llf:  ', res.llf
         ##    print 'R2    ', res.rsquared
         ##    print 'R2 adj', res.rsquared_adj
-            prederr2 = 0.
-            for inidx, outidx in LeaveOneOut(len(y0)):
-                resl1o = sm.OLS(y0[inidx], fact_wconst[inidx,:]).fit()
-                #print data.endog[outidx], res.model.predict(data.exog[outidx,:]),
-                prederr2 += (y0[outidx] - resl1o.model.predict(fact_wconst[outidx,:]))**2.
+
+            if not skip_crossval:
+                if cv_iter is None:
+                    cv_iter = LeaveOneOut(len(y0))
+                prederr2 = 0.
+                for inidx, outidx in cv_iter:
+                    res_l1o = sm.OLS(y0[inidx], fact[inidx,:]).fit()
+                    #print data.endog[outidx], res.model.predict(data.exog[outidx,:]),
+                    prederr2 += (y0[outidx] - res_l1o.model.predict(fact[outidx,:]))**2.
+            else:
+                prederr2 = np.nan
+
             results.append([k, res.aic, res.bic, res.rsquared_adj, prederr2])
 
-        self.results_find_nfact = np.array(results)
+        self.results_find_nfact = results = np.array(results)
+        self.best_nfact = np.r_[(np.argmin(results[:,1:3],0), np.argmax(results[:,3],0),
+                     np.argmin(results[:,-1],0))]
 
     def summary_find_nfact(self):
+        '''provides a summary for the selection of the number of factors
+
+        Returns
+        -------
+        sumstr : string
+            summary of the results for selecting the number of factors
+
+        '''
         if not hasattr(self, 'results_find_nfact'):
             self.fit_find_nfact()
 
@@ -91,9 +141,10 @@ class FactorModelUnivariate(object):
         results = self.results_find_nfact
         sumstr = ''
         sumstr += '\n' + 'Best result for k, by AIC, BIC, R2_adj, L1O'
-        best = np.r_[(np.argmin(results[:,1:3],0), np.argmax(results[:,3],0),
-                     np.argmin(results[:,-1],0))]
-        sumstr += '\n' + ' '*19 + '%5d %4d %6d %5d' % tuple(best)
+#        best = np.r_[(np.argmin(results[:,1:3],0), np.argmax(results[:,3],0),
+#                     np.argmin(results[:,-1],0))]
+
+        sumstr += '\n' + ' '*19 + '%5d %4d %6d %5d' % tuple(self.best_nfact)
 
         from scikits.statsmodels.iolib.table import (SimpleTable, default_txt_fmt,
                                 default_latex_fmt, default_html_fmt)
