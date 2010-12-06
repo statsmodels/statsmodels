@@ -233,9 +233,10 @@ class ARMA(GenericLikelihoodModel):
         assert(np.allclose(errors,e))
 
         ssr = sum(errors**2)
-        sigma2 = ssr/(nobs-p)
+        sigma2 = ssr/(nobs-2*p) # 2 times p because we drop p observations then
+                                # est. p more
         self.sigma2 = sigma2
-        llf = -(nobs-p)/2.*(log(2*pi) + log(sigma2)) - np.sum(ssr)/(2*sigma2)
+        llf = -(nobs-p)/2.*(log(2*pi) + log(sigma2)) - ssr/(2*sigma2)
         return llf
 
 
@@ -308,6 +309,8 @@ class ARMA(GenericLikelihoodModel):
         # enforce invertibility
         self.transparams = transparams
 
+        self.method = method.lower()
+
         # get model order
         p,q = map(int,order)
         r = max(p,q+1)
@@ -326,6 +329,7 @@ class ARMA(GenericLikelihoodModel):
             k = exog.shape[1]
         else:   # no exogenous variables
             k = 0
+            exog = None # set back so can rerun model
         self.exog = exog    # overwrites original exog from __init__
         self.k = k
 
@@ -362,7 +366,7 @@ class ARMA(GenericLikelihoodModel):
         if solver is None:  # use default limited memory bfgs
             bounds = [(None,)*2]*(p+q+k)
             mlefit = optimize.fmin_l_bfgs_b(loglike, start_params,
-                    approx_grad=True, m=30, pgtol=1e-7, factr=1e3,
+                    approx_grad=True, m=30, pgtol=1e-8, factr=1e2,
                     bounds=bounds, iprint=3)
             self.mlefit = mlefit
             params = mlefit[0]
@@ -442,6 +446,11 @@ class ARMAResults(LikelihoodModelResults):
         return np.sqrt(np.diag(-inv(approx_hess_cs(self.params,
             self.model.loglike, epsilon=1e-5))))
 
+    def cov_params(self): # add scale argument?
+        func = self.model.loglike
+        x0 = self.params
+        return inv(-approx_hess_cs(x0, func))
+
     def t(self):    # overwrites t() because there is no cov_params
         return self.params/self.bse
 
@@ -455,12 +464,31 @@ class ARMAResults(LikelihoodModelResults):
 
     @cache_readonly
     def hqic(self):
-        return -2*self.llf + 2*(self.q+self.p+self.k+1)*np.log(np.log(self.nobs))
+        nobs = self.nobs
+        if self.model.method == "css":
+            nobs -= self.p
+        return -2*self.llf + 2*(self.q+self.p+self.k+1)*np.log(np.log(nobs))
 
     @cache_readonly
+    def fittedvalues(self):
+        model = self.model
+        endog = model.endog.copy()
+        if model.exog is not None:
+            exog = model.exog.copy()
+        p = self.p
+        if model.method == "css" and p > 0:
+            endog = endog[p:]
+            exog = exog[p:]
+        fv = endog - self.resid
+        # add deterministic part back in
+        k = self.k
+        if k != 0:
+            fv += dot(exog, self.params[:k])
+        return fv
+
+#TODO: make both of these get errors into functions or methods?
+    @cache_readonly
     def resid(self):
-        #NOTE: going to have to build these up iteratively
-        nobs = self.nobs
         model = self.model
         y = model.endog
         r = model.r
@@ -469,35 +497,46 @@ class ARMAResults(LikelihoodModelResults):
         q = model.q
         params = self.params
 
-        #demean for exog != None
-        if k > 0:
-            y -= dot(model.exog, params[:k])
+        if self.model.method != "css":
+            #TODO: move get errors to cython-ized Kalman filter
+            nobs = self.nobs
 
-        Z_mat = KalmanFilter.Z(r)
-        m = Z_mat.shape[1]
-        R_mat = KalmanFilter.R(params, r, k, q, p)
-        T_mat = KalmanFilter.T(params, r, k, p)
+            #demean for exog != None
+            if k > 0:
+                y -= dot(model.exog, params[:k])
 
-        #initial state and its variance
-        alpha = zeros((m,1))
-        Q_0 = dot(inv(identity(m**2)-kron(T_mat,T_mat)),
-                            dot(R_mat,R_mat.T).ravel('F'))
-        Q_0 = Q_0.reshape(r,r,order='F')
-        P = Q_0
+            Z_mat = KalmanFilter.Z(r)
+            m = Z_mat.shape[1]
+            R_mat = KalmanFilter.R(params, r, k, q, p)
+            T_mat = KalmanFilter.T(params, r, k, p)
 
-        resids = empty((nobs,1), dtype=params.dtype)
-        for i in xrange(int(nobs)):
-            # Predict
-            v_mat = y[i] - dot(Z_mat,alpha) # one-step forecast error
-            resids[i] = v_mat
-            F_mat = dot(dot(Z_mat, P), Z_mat.T)
-            Finv = 1./F_mat # always scalar for univariate series
-            K = dot(dot(dot(T_mat,P),Z_mat.T),Finv) # Kalman Gain Matrix
-            # update state
-            alpha = dot(T_mat, alpha) + dot(K,v_mat)
-            L = T_mat - dot(K,Z_mat)
-            P = dot(dot(T_mat, P), L.T) + dot(R_mat, R_mat.T)
-        return resids
+            #initial state and its variance
+            alpha = zeros((m,1))
+            Q_0 = dot(inv(identity(m**2)-kron(T_mat,T_mat)),
+                                dot(R_mat,R_mat.T).ravel('F'))
+            Q_0 = Q_0.reshape(r,r,order='F')
+            P = Q_0
+
+            resids = empty((nobs,1), dtype=params.dtype)
+            for i in xrange(int(nobs)):
+                # Predict
+                v_mat = y[i] - dot(Z_mat,alpha) # one-step forecast error
+                resids[i] = v_mat
+                F_mat = dot(dot(Z_mat, P), Z_mat.T)
+                Finv = 1./F_mat # always scalar for univariate series
+                K = dot(dot(dot(T_mat,P),Z_mat.T),Finv) # Kalman Gain Matrix
+                # update state
+                alpha = dot(T_mat, alpha) + dot(K,v_mat)
+                L = T_mat - dot(K,Z_mat)
+                P = dot(dot(T_mat, P), L.T) + dot(R_mat, R_mat.T)
+        else:
+            b,a = np.r_[1,-params[k:k+p]], np.r_[1,params[k+p:]]
+            zi = np.zeros((max(p,q)))
+            for i in range(p):
+                zi[i] = sum(-b[:i+1][::-1] * y[:i+1])
+            e = lfilter(b,a, y, zi=zi)
+            resids = e[0][p:]
+        return resids.squeeze()
 
     @cache_readonly
     def pvalues(self):
