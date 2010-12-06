@@ -1,52 +1,57 @@
-cimport numpy as np
-from numpy import dot, identity, kron, log, zeros, pi, exp, eye, sum
+# cython: profile=True
+from numpy cimport float64_t, ndarray
+from numpy import identity, dot, kron, zeros, pi, exp, eye, sum, empty
 from numpy.linalg import inv
-from scipy.linalg.fblas import dgemm, dger
 cimport cython
 
-ctypedef np.float64_t DOUBLE
+ctypedef float64_t DOUBLE
 
-# call from KalmanFilter.loglike would be on line 531
-#fast_kalman_loglike.loglike(params, k, p, q, r, Z_mat, R_mat, T_mat)
+cdef extern from "math.h":
+    double log(double x)
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-def kalman_loglike(np.ndarray[DOUBLE, ndim=1] y,
+def kalman_loglike(ndarray[DOUBLE, ndim=1] y,
                    unsigned int k, unsigned int p, unsigned int q,
-                   unsigned int r, unsigned int nobs,
-                   np.ndarray[DOUBLE, ndim=2] Z_mat,
-                   np.ndarray[DOUBLE, ndim=2] R_mat,
-                   np.ndarray[DOUBLE, ndim=2] T_mat):
+                  unsigned int r, unsigned int nobs,
+                   ndarray[DOUBLE, ndim=2] Z_mat,
+                   ndarray[DOUBLE, ndim=2] R_mat,
+                   ndarray[DOUBLE, ndim=2] T_mat):
     """
     Cython version of the Kalman filter recursions for an ARMA process.
     """
-    cdef unsigned int m = Z_mat.shape[1]
-
+#    cdef unsigned int m = Z_mat.shape[1]
+    m = Z_mat.shape[1]
     # store forecast-errors
-    cdef np.ndarray[DOUBLE, ndim=2] v = zeros((nobs,1))
+#    cdef np.ndarray[DOUBLE, ndim=2] v = zeros((nobs,1))
+    v = zeros((nobs,1))
     # store variance of forecast errors
-    cdef np.ndarray[DOUBLE, ndim=2] F = zeros((nobs, 1))
-    cdef np.ndarray[DOUBLE, ndim=2] v_mat
-    cdef np.ndarray[DOUBLE, ndim=2] F_mat
-    cdef np.ndarray[DOUBLE, ndim=2] Finv
-    cdef np.ndarray[DOUBLE, ndim=2] K
-    cdef np.ndarray[DOUBLE, ndim=2] L
-    cdef np.ndarray[DOUBLE, ndim=2] loglikelihood = zeros((1,1))
-    cdef np.ndarray[DOUBLE, ndim=2] loglike
-    cdef unsigned int i
-    cdef double sigma2
+#    cdef np.ndarray[DOUBLE, ndim=2] F = zeros((nobs, 1))
+    F = zeros((nobs,1))
+#    cdef np.ndarray[DOUBLE, ndim=2] v_mat
+#    cdef np.ndarray[DOUBLE, ndim=2] F_mat
+#    cdef np.ndarray[DOUBLE, ndim=2] Finv
+#    cdef np.ndarray[DOUBLE, ndim=2] K
+#    cdef np.ndarray[DOUBLE, ndim=2] L
+#    cdef np.ndarray[DOUBLE, ndim=2] loglikelihood = zeros((1,1))
+    loglikelihood = zeros((1,1))
+#    cdef np.ndarray[DOUBLE, ndim=2] loglike
+    cdef int i
+#    cdef double sigma2
 
     # initial state
-    cdef np.ndarray[DOUBLE, ndim=2] alpha = zeros((m,1))
+#    cdef np.ndarray[DOUBLE, ndim=2] alpha = zeros((m,1))
+    alpha = zeros((m,1))
 
     # initial variance
-    cdef np.ndarray[DOUBLE, ndim=2] P = dot(inv(identity(m**2)-kron(T_mat,
-                                        T_mat)),dot(R_mat,
-                                        R_mat.T).ravel('F')).reshape(r,r,
-                                        order='F')
+#    cdef np.ndarray[DOUBLE, ndim=2] P = dot(inv(identity(m**2)-kron(T_mat,
+#                                        T_mat)),dot(R_mat,
+#                                        R_mat.T).ravel('F')).reshape(r,r,
+#                                        order='F')
 
-
+    P = dot(inv(identity(m**2)-kron(T_mat, T_mat)),dot(R_mat,
+            R_mat.T).ravel('F')).reshape(r,r, order='F')
 
     for i in xrange(nobs):
         # Predict
@@ -60,11 +65,9 @@ def kalman_loglike(np.ndarray[DOUBLE, ndim=1] y,
         alpha = dot(T_mat, alpha) + dot(K,v_mat)
         L = T_mat - dot(K,Z_mat)
         P = dot(dot(T_mat, P), L.T) + dot(R_mat, R_mat.T)
-        loglikelihood += log(F_mat)
+        loglikelihood += log(F_mat.item())
 
     sigma2 = 1./nobs * sum(v**2 / F)
     loglike = -.5 *(loglikelihood + nobs*log(sigma2))
     loglike -= nobs/2. * (log(2*pi) + 1)
     return loglike, sigma2
-
-
