@@ -87,7 +87,7 @@ def acorr_ljungbox(x, lags=None, boxpierce=False):
     acfx = acf(x, nlags=maxlag) # normalize by nobs not (nobs-nlags)
                              # SS: unbiased=False is default now
 #    acf2norm = acfx[1:maxlag+1]**2 / (nobs - np.arange(1,maxlag+1))
-    acf2norm = acfx[:maxlag+1]**2 / (nobs - np.arange(1,maxlag+1))
+    acf2norm = acfx[1:maxlag+1]**2 / (nobs - np.arange(1,maxlag+1))
 
     qljungbox = nobs * (nobs+2) * np.cumsum(acf2norm)[lags-1]
     pval = stats.chi2.sf(qljungbox, lags)
@@ -432,7 +432,7 @@ class HetGoldfeldQuandt(object):
         return self.run(y, x, idx=idx, split=split, attach=False)
 
 het_goldfeldquandt2 = HetGoldfeldQuandt()
-het_goldfeldquandt2.__doc__ = hetgoldfeldquandt2.run.__doc__
+het_goldfeldquandt2.__doc__ = het_goldfeldquandt2.run.__doc__
 
 
 
@@ -806,12 +806,17 @@ def breaks_AP(endog, exog, skip):
     '''
     pass
 
+
+#delete when testing is finished
 class StatTestMC(object):
     """class to run Monte Carlo study on a statistical test'''
 
     TODO
     print summary, for quantiles and for histogram
     draft in trying out script log
+
+
+    this has been copied to tools/mctools.py, with improvements
 
     """
 
