@@ -169,6 +169,9 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
         Queen's University, Dept of Economics, Working Papers.  Available at
         http://ideas.repec.org/p/qed/wpaper/1227.html
     '''
+    trenddict = {None:'nc', 0:'c', 1:'ct', 2:'ctt'}
+    if regression is None or isinstance(regression, int):
+        regression = trenddict[regression]
     regression = regression.lower()
     if regression not in ['c','nc','ct','ctt']:
         raise ValueError("regression option %s not understood") % regression
