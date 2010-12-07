@@ -12,8 +12,14 @@ License: BSD
 import numpy as np
 from scipy import stats
 import scikits.statsmodels as sm
-from scikits.statsmodels.tsa.stattools import acf
+from scikits.statsmodels.tsa.stattools import acf, adfuller
 from scikits.statsmodels.tsa.tsatools import lagmat
+
+#get the old signature back so the examples work
+def unitroot_adf(x, maxlag=None, trendorder=0, autolag='AIC', store=False):
+    return adfuller(x, maxlag=maxlag, regression=trendorder, autolag=autolag,
+                    store=store, regresults=False)
+
 
 #TODO: I like the bunch pattern for this too.
 class ResultsStore(object):
@@ -902,11 +908,11 @@ class StatTestMC(object):
 
 if __name__ == '__main__':
 
-    examples = []
+    examples = ['adf']
     if 'adf' in examples:
 
         x = np.random.randn(20)
-        print acorr_ljungbox(x)
+        print acorr_ljungbox(x,4)
         print unitroot_adf(x)
 
         nrepl = 100
@@ -914,7 +920,7 @@ if __name__ == '__main__':
         mcres = np.zeros(nrepl)
         for ii in range(nrepl-1):
             x = (1e-4+np.random.randn(nobs)).cumsum()
-            mcres[ii] = unitroot_adf(x, 2,trendorder=0, autolag=None)
+            mcres[ii] = unitroot_adf(x, 2,trendorder=0, autolag=None)[0]
 
         print (mcres<-2.57).sum()
         print np.histogram(mcres)
@@ -942,7 +948,7 @@ if __name__ == '__main__':
         print crit_5lags0p05
 
 
-        adfstat, resstore = unitroot_adf(x, 2,trendorder=0, autolag=None, store=1)
+        adfstat, _,_,resstore = unitroot_adf(x, 2,trendorder=0, autolag=None, store=1)
 
         print (mcres>crit_5lags0p05).sum()
 
@@ -961,13 +967,13 @@ if __name__ == '__main__':
             return (loc+np.random.randn(nobs))
 
         def adf20(x):
-            return unitroot_adf(x, 2,trendorder=0, autolag=None)
+            return unitroot_adf(x, 2,trendorder=0, autolag=None)[:2]
 
         print '\nResults with MC class'
         mc1 = StatTestMC(randwalksim, adf20)
-        mc1.run(1000)
-        print mc1.histogram(critval=[-3.5, -3.17, -2.9 , -2.58,  0.26])
-        print mc1.quantiles()
+        mc1.run(1000, statindices=[0,1])
+        print mc1.histogram(0, critval=[-3.5, -3.17, -2.9 , -2.58,  0.26])
+        print mc1.quantiles(0)
 
         print '\nLjung Box'
 

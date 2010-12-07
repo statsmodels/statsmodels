@@ -85,6 +85,7 @@ def _autolag(mod, endog, exog, startlag, maxlag, method, modargs=(),
         raise ValueError("Information Criterion %s not understood.") % method
     return icbest, bestlag
 
+#this needs to be converted to a class like HetGoldfeldQuandt, 3 different returns are a mess
 # See:
 #Ng and Perron(2001), Lag length selection and the construction of unit root
 #tests with good size and power, Econometrica, Vol 69 (6) pp 1519-1554
@@ -211,6 +212,7 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
         usedlag = bestlag
     else:
         usedlag = maxlag
+        icbest = None
     if regression != 'nc':
         resols = OLS(xdshort, add_trend(xdall[:,:usedlag+1], regression)).fit()
     else:
