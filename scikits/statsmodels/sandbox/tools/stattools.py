@@ -177,23 +177,68 @@ def acorr_lm(x, maxlag=None, autolag='AIC', store=False):
         return fval, fpval, lm, lmpval
 
 
-def het_breushpagan(y,x):
+def het_breushpagan(resid, x, exog=None):
     '''Lagrange Multiplier Heteroscedasticity Test by Breush-Pagan
+
+    The tests the hypothesis that the residual variance does not depend on
+    the variables in x in the form
+
+    :math: \sigma_i = \\sigma * f(\\alpha_0 + \\alpha z_i)
+
+    Homoscedasticity implies that $\alpha=0$
+
+
+    Parameters
+    ----------
+    resid : arraylike, (nobs,)
+        For the Breush-Pagan test, this should be the residual of a regression.
+        If an array is given in exog, then the residuals are calculated by
+        the an OLS regression or resid on exog. In this case resid should
+        contain the dependent variable. Exog can be the same as x.
+    x : array_like, (nobs, nvars)
+        This contains variables that might create data dependent
+        heteroscedasticity.
+
+    Returns
+    -------
+    lm : float
+        lagrange multiplier statistic
+    lm_pvalue :float
+        p-value of lagrange multiplier test
+    fvalue : float
+        f-statistic of the hypothesis that the error variance does not depend
+        on x
+    f_pvalue : float
+        p-value for the f-statistic
 
     Notes
     -----
-    assumes x contains constant (for counting dof)
+    Assumes x contains constant (for counting dof and calculation of R^2).
+    In the general description of LM test, Greene mentions that this test
+    exaggerates the significance of results in small or moderately large
+    samples. In this case the F-statistic is preferrable.
 
-    need to check this again, is different in Greene p224
+    *Verification*
+
+    Chisquare test statistic is exactly (<1e-13) the same result as bptest
+    in R-stats with defaults (studentize=True).
+
+    Implementation
+    This is calculated using the generic formula for LM test using $R^2$
+    (Greene, section 17.6) and not with the explicit formula
+    Greene, section 11.4.3.
 
     References
     ----------
     http://en.wikipedia.org/wiki/Breusch%E2%80%93Pagan_test
-    Greene
+    Greene 5th edition
 
     '''
+    if not exog is None:
+        resid = sm.OLS(y, exog).fit()
+
     x = np.asarray(x)
-    y = np.asarray(y)**2
+    y = np.asarray(resid)**2
     nobs, nvars = x.shape
     resols = sm.OLS(y, x).fit()
     fval = resols.fvalue
@@ -338,9 +383,8 @@ class HetGoldfeldQuandt(object):
         index at which sample is split.
         If 0<split<1 then split is interpreted as fraction of the observations
         in the first sample
-    retres : boolean
-        if true, then an instance of a result class is returned,
-        otherwise 2 numbers, fvalue and p-value, are returned
+    drop :
+    alternative :
 
     Returns
     -------
@@ -368,12 +412,13 @@ class HetGoldfeldQuandt(object):
     can do Chow test for structural break in same way
 
     ran sanity check
+    now identical to R, why did I have y**2?
     '''
     def run(self, y, x, idx=None, split=None, drop=None,
             alternative='increasing', attach=True):
         '''see class docstring'''
         x = np.asarray(x)
-        y = np.asarray(y)**2
+        y = np.asarray(y)#**2
         nobs, nvars = x.shape
         if split is None:
             split = nobs//2
@@ -381,8 +426,10 @@ class HetGoldfeldQuandt(object):
             split = int(nobs*split)
         if drop is None:
             start2 = split
-        elif (0<split) and (split<1):
+        elif (0<drop) and (drop<1):
             start2 = split + int(nobs*drop)
+        else:
+            start2 = split + drop
 
         if not idx is None:
             xsortind = np.argsort(x[:,idx])
@@ -402,7 +449,7 @@ class HetGoldfeldQuandt(object):
         elif alternative.lower() in ['2', '2-sided', 'two-sided']:
             fpval_sm = stats.f.cdf(fval, resols2.df_resid, resols1.df_resid)
             fpval_la = stats.f.sf(fval, resols2.df_resid, resols1.df_resid)
-            fpval = min(fpval_sm, fpval_la)   #TODO: check min is correct
+            fpval = 2*min(fpval_sm, fpval_la)
             ordering = 'two-sided'
         else:
             raise ValueError('invalid alternative')
