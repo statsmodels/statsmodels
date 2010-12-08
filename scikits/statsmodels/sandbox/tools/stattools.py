@@ -4,6 +4,9 @@
 
 Warning: Work in progress
 
+TODO
+* how easy is it to attach a test that is a class to a result instance,
+  for example CompareCox as a method compare_cox(self, other) ?
 
 Author: josef-pktd
 License: BSD
@@ -25,6 +28,76 @@ def unitroot_adf(x, maxlag=None, trendorder=0, autolag='AIC', store=False):
 class ResultsStore(object):
     def __str__(self):
         return self._str
+
+
+
+class CompareCox(object):
+    '''Cox Test for non-nested models
+
+    Parameters
+    ----------
+    results_x : Result instance
+        result instance of first model
+    results_z : Result instance
+        result instance of second model
+    attach : bool
+
+
+    Formulas from Greene, section 8.3.4 translated to code
+
+    produces correct results for Example 8.3, Greene
+
+
+    '''
+
+
+    def run(self, results_x, results_z, attach=True):
+        '''
+
+        see class docstring (for now)
+        '''
+        if not np.allclose(results_x.model.endog, results_z.model.endog):
+            raise ValueError('endogenous variables in models are not the same')
+        nobs = results_x.model.endog.shape[0]
+        x = results_x.model.exog
+        z = results_z.model.exog
+        sigma2_x = results_x.ssr/nobs
+        sigma2_z = results_z.ssr/nobs
+        yhat_x = results_x.fittedvalues
+        yhat_z = results_z.fittedvalues
+        res_dx = sm.OLS(yhat_x, z).fit()
+        err_zx = res_dx.resid
+        res_xzx = sm.OLS(err_zx, x).fit()
+        err_xzx = res_xzx.resid
+
+        sigma2_zx = sigma2_x + np.dot(err_zx.T, err_zx)/nobs
+        c01 = nobs/2. * (np.log(sigma2_z) - np.log(sigma2_zx))
+        v01 = sigma2_x * np.dot(err_xzx.T, err_xzx) / sigma2_zx**2
+        q = c01 / np.sqrt(v01)
+        pval = 2*stats.norm.sf(np.abs(q))
+
+        if attach:
+            self.res_dx = res_dx
+            self.res_xzx = res_xzx
+            self.c01 = c01
+            self.v01 = v01
+            self.q = q
+            self.pvalue = pval
+            self.dist = stats.norm
+
+        return q, pval
+
+    def __call__(results_x, results_z):
+        return self.run(results_x, results_z, attach=False)
+
+
+compare_cox = CompareCox()
+compare_cox.__doc__ = CompareCox.__doc__
+
+
+
+
+
 
 def acorr_ljungbox(x, lags=None, boxpierce=False):
     '''Ljung-Box test for no autocorrelation
@@ -226,12 +299,13 @@ def het_breushpagan(resid, x, exog=None):
     Implementation
     This is calculated using the generic formula for LM test using $R^2$
     (Greene, section 17.6) and not with the explicit formula
-    Greene, section 11.4.3.
+    (Greene, section 11.4.3).
 
     References
     ----------
     http://en.wikipedia.org/wiki/Breusch%E2%80%93Pagan_test
     Greene 5th edition
+    Breush, Pagan article
 
     '''
     if not exog is None:
