@@ -21,39 +21,21 @@ def kalman_loglike(ndarray[DOUBLE, ndim=1] y,
     """
     Cython version of the Kalman filter recursions for an ARMA process.
     """
-#    cdef unsigned int m = Z_mat.shape[1]
     m = Z_mat.shape[1]
     # store forecast-errors
-#    cdef np.ndarray[DOUBLE, ndim=2] v = zeros((nobs,1))
     v = zeros((nobs,1))
     # store variance of forecast errors
-#    cdef np.ndarray[DOUBLE, ndim=2] F = zeros((nobs, 1))
     F = zeros((nobs,1))
-#    cdef np.ndarray[DOUBLE, ndim=2] v_mat
-#    cdef np.ndarray[DOUBLE, ndim=2] F_mat
-#    cdef np.ndarray[DOUBLE, ndim=2] Finv
-#    cdef np.ndarray[DOUBLE, ndim=2] K
-#    cdef np.ndarray[DOUBLE, ndim=2] L
-#    cdef np.ndarray[DOUBLE, ndim=2] loglikelihood = zeros((1,1))
     loglikelihood = zeros((1,1))
-#    cdef np.ndarray[DOUBLE, ndim=2] loglike
-    cdef int i
-#    cdef double sigma2
-
+    cdef int i = 0
     # initial state
 #    cdef np.ndarray[DOUBLE, ndim=2] alpha = zeros((m,1))
     alpha = zeros((m,1))
-
     # initial variance
-#    cdef np.ndarray[DOUBLE, ndim=2] P = dot(inv(identity(m**2)-kron(T_mat,
-#                                        T_mat)),dot(R_mat,
-#                                        R_mat.T).ravel('F')).reshape(r,r,
-#                                        order='F')
-
     P = dot(inv(identity(m**2)-kron(T_mat, T_mat)),dot(R_mat,
             R_mat.T).ravel('F')).reshape(r,r, order='F')
-
-    for i in xrange(nobs):
+    F_mat = 0
+    while not F_mat == 1 and i < nobs:
         # Predict
         v_mat = y[i] - dot(Z_mat,alpha) # one-step forecast error
         v[i] = v_mat
@@ -65,8 +47,12 @@ def kalman_loglike(ndarray[DOUBLE, ndim=1] y,
         alpha = dot(T_mat, alpha) + dot(K,v_mat)
         L = T_mat - dot(K,Z_mat)
         P = dot(dot(T_mat, P), L.T) + dot(R_mat, R_mat.T)
-        loglikelihood += log(F_mat.item())
-
+        loglikelihood += log(F_mat)
+        i+=1
+    for i in xrange(i,nobs):
+        v_mat = y[i] - dot(Z_mat,alpha)
+        v[i] = v_mat
+        alpha = dot(T_mat, alpha) + dot(K, v_mat)
     sigma2 = 1./nobs * sum(v**2 / F)
     loglike = -.5 *(loglikelihood + nobs*log(sigma2))
     loglike -= nobs/2. * (log(2*pi) + 1)
