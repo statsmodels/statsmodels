@@ -1,4 +1,3 @@
-
 import numpy as np
 from scikits.statsmodels.decorators import (cache_readonly, cache_writable,
             resettable_cache)
@@ -210,27 +209,27 @@ class ARMA(GenericLikelihoodModel):
             newparams = params
         if k > 0:
             y -= dot(self.exog, newparams[:k])
-        arcoefs = newparams[k:k+p][::-1]    # reverse order for broadcast
-        macoefs = newparams[k+p:k+p+q][::-1]
-        if macoefs.size == 0:    # handle ar only case
-            macoefs = 0
-        if arcoefs.size == 0:   # handle ma only case
-            arcoefs = 0
-        errors = [0] * q
+#        arcoefs = newparams[k:k+p][::-1]    # reverse order for broadcast
+#        macoefs = newparams[k+p:k+p+q][::-1]
+#        if macoefs.size == 0:    # handle ar only case
+#            macoefs = 0
+#        if arcoefs.size == 0:   # handle ma only case
+#            arcoefs = 0
+#        errors = [0] * q
         # create error vector iteratively
-        for i in range(p,len(y)):
-            errors.append(y[i]-sum(arcoefs*y[i-p:i])-sum(macoefs*errors[-q:]))
-        errors = np.asarray(errors[q:])
+#        for i in range(p,len(y)):
+#            errors.append(y[i]-sum(arcoefs*y[i-p:i])-sum(macoefs*errors[-q:]))
+#        errors = np.asarray(errors[q:])
 
 # the order of p determines how many zeros errors to set for lfilter
         b,a = np.r_[1,-newparams[k:k+p]], np.r_[1,newparams[k+p:]]
         zi = np.zeros((max(p,q)), dtype=params.dtype)
         for i in range(p):
             zi[i] = sum(-b[:i+1][::-1] * y[:i+1])
-        e = lfilter(b,a, y, zi=zi)
-        e = e[0][p:]
+        errors = lfilter(b,a, y, zi=zi)
+        errors = errors[0][p:]
 #TODO: remove once tests are written and keep lfilter
-        assert(np.allclose(errors,e))
+#        assert(np.allclose(errors,e))
 
         ssr = sum(errors**2)
         sigma2 = ssr/(nobs-2*p) # 2 times p because we drop p observations then
@@ -356,7 +355,7 @@ class ARMA(GenericLikelihoodModel):
                     start_params = self._invtransparams(start_params)
                 bounds = [(None,)*2]*(p+q+k)
                 mlefit = optimize.fmin_l_bfgs_b(func, start_params,
-                            approx_grad=True, m=30, pgtol=1e-7, factr=1e3,
+                            approx_grad=True, m=12, pgtol=1e-7, factr=1e3,
                             bounds = bounds, iprint=-1)
                 start_params = self._transparams(mlefit[0])
 
@@ -366,8 +365,8 @@ class ARMA(GenericLikelihoodModel):
         if solver is None:  # use default limited memory bfgs
             bounds = [(None,)*2]*(p+q+k)
             mlefit = optimize.fmin_l_bfgs_b(loglike, start_params,
-                    approx_grad=True, m=30, pgtol=1e-8, factr=1e2,
-                    bounds=bounds, iprint=3)
+                    approx_grad=True, m=12, pgtol=1e-8, factr=1e2,
+                    bounds=bounds, iprint=0)
             self.mlefit = mlefit
             params = mlefit[0]
 
