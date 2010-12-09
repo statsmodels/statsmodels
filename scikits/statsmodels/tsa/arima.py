@@ -308,6 +308,10 @@ class ARMA(GenericLikelihoodModel):
             exog = np.ones((len(endog),1))
         elif exog is not None and trend == 'c': # constant plus exogenous
             exog = add_constant(exog, prepend=True)
+        elif exog is not None and trend == 'nc':
+            # make sure it's not holding constant from last run
+            if exog.var() == 0:
+                exog = None
         if exog is not None:    # exog only
             k = exog.shape[1]
         else:   # no exogenous variables
