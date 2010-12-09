@@ -1,7 +1,7 @@
 # cython: profile=True
 from numpy cimport float64_t, ndarray
-from numpy import identity, dot, kron, zeros, pi, exp, eye, sum, empty
-from numpy.linalg import inv
+from numpy import identity, dot, kron, zeros, pi, exp, eye, sum, empty, ones
+from numpy.linalg import pinv
 cimport cython
 
 ctypedef float64_t DOUBLE
@@ -25,14 +25,14 @@ def kalman_loglike(ndarray[DOUBLE, ndim=1] y,
     # store forecast-errors
     v = zeros((nobs,1))
     # store variance of forecast errors
-    F = zeros((nobs,1))
+    F = ones((nobs,1))
     loglikelihood = zeros((1,1))
     cdef int i = 0
     # initial state
 #    cdef np.ndarray[DOUBLE, ndim=2] alpha = zeros((m,1))
     alpha = zeros((m,1))
     # initial variance
-    P = dot(inv(identity(m**2)-kron(T_mat, T_mat)),dot(R_mat,
+    P = dot(pinv(identity(m**2)-kron(T_mat, T_mat)),dot(R_mat,
             R_mat.T).ravel('F')).reshape(r,r, order='F')
     F_mat = 0
     while not F_mat == 1 and i < nobs:

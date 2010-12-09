@@ -362,7 +362,7 @@ class Test_Y_ARMA14_Const(CheckArmaResults):
 #        cls.res2 = results_arma.Y_arma02c("css")
 #
 
-def test_reset_trend(object):
+def test_reset_trend():
     endog = y_arma[:,0]
     mod = ARMA(endog)
     res1 = mod.fit(order=(1,1), trend="c")
