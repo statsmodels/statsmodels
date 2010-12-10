@@ -131,6 +131,24 @@ class StatTestMC(object):
         plt.hist(mcres, bins=bins, normed=True)
         plt.plot(lsp, distpdf(lsp), 'r')
 
+    def summary_quantiles(self, idx, distpdf, bins=50, ax=None):
+        '''summary table for quantiles
+
+        currently just a partial copy from python session, for ljung-box example
+
+        add also
+        >>> lb_dist.ppf([0.01, 0.025, 0.05, 0.1, 0.975])
+        array([  0.29710948,   0.48441856,   0.71072302,   1.06362322,  11.14328678])
+        >>> stats.kstest(mc1.mcres[:,3], stats.chi2(4).cdf)
+        (0.052009265258216836, 0.0086211970272969118)
+        '''
+        mcq = self.quantiles([1,3])[1]
+        perc = stats.chi2([2,4]).ppf(np.array([[0.01, 0.025, 0.05, 0.1, 0.975]]).T)
+        mml=[]
+        for i in range(2):
+            mml.extend([mcq[:,i],perc[:,i]])
+        print SimpleTable(np.column_stack(mml),txt_fmt={'data_fmts': ["%#6.3f"]+["%#10.4f"]*(mm.shape[1]-1)},headers=['quantile']+['mc','dist']*2)
+
 
 
 

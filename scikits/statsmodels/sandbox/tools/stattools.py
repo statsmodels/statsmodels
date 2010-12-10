@@ -87,7 +87,7 @@ class CompareCox(object):
 
         return q, pval
 
-    def __call__(results_x, results_z):
+    def __call__(self, results_x, results_z):
         return self.run(results_x, results_z, attach=False)
 
 
@@ -95,8 +95,61 @@ compare_cox = CompareCox()
 compare_cox.__doc__ = CompareCox.__doc__
 
 
+class CompareJ(object):
+    '''J-Test for comparing non-nested models
+
+    Parameters
+    ----------
+    results_x : Result instance
+        result instance of first model
+    results_z : Result instance
+        result instance of second model
+    attach : bool
 
 
+    From description in Greene, section 8.3.3
+
+    produces correct results for Example 8.3, Greene - not checked yet
+    #currently an exception, but I don't have clean reload in python session
+
+    check what results should be attached
+
+    '''
+
+
+    def run(self, results_x, results_z, attach=True):
+        '''
+
+        see class docstring (for now)
+        '''
+        if not np.allclose(results_x.model.endog, results_z.model.endog):
+            raise ValueError('endogenous variables in models are not the same')
+        nobs = results_x.model.endog.shape[0]
+        y = results_x.model.exog
+        x = results_x.model.exog
+        z = results_z.model.exog
+        #sigma2_x = results_x.ssr/nobs
+        #sigma2_z = results_z.ssr/nobs
+        yhat_x = results_x.fittedvalues
+        #yhat_z = results_z.fittedvalues
+        res_zx = sm.OLS(y, np.column_stack((yhat_x, z))).fit()
+        self.res_zx = res_zx  #for testing
+        tstat = res_zx.t()[0]  #use tstat instead after renaming
+        pval = res_zx.pvalues[0]
+        if attach:
+            self.res_zx = res_zx
+            self.dist = stats.t(res_zx.model.df_resid)
+            self.teststat = tstat
+            self.pvalue = pval
+
+        return tsta, pval
+
+    def __call__(self, results_x, results_z):
+        return self.run(results_x, results_z, attach=False)
+
+
+compare_j = CompareJ()
+compare_j.__doc__ = CompareJ.__doc__
 
 
 def acorr_ljungbox(x, lags=None, boxpierce=False):
