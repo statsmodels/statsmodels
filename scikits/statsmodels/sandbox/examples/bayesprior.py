@@ -5,8 +5,10 @@
 
 try:
     import pymc
+    pymc_installed = 1
 except:
     print "pymc not imported"
+    pymc_installed = 0
 from scipy.stats import gamma, beta, invgamma
 import numpy as np
 from matplotlib import pyplot as plt
@@ -54,6 +56,10 @@ for x > 0, a > 0, b>0.
 """
 )
 
+
+#NOTE: the above is unnecessary.  B takes the same role as the scale parameter
+# in inverted gamma
+
 palpha = np.random.gamma(400.,.005, size=10000)
 print "First moment: %s\nSecond moment: %s" % (palpha.mean(),palpha.std())
 palpha = palpha[0]
@@ -84,7 +90,7 @@ print "First moment: %s\nSecond moment: %s" % (psigma.mean(),psigma.std())
 # theta2|theta1 ~ N(mu(1-theta1),lambda**2(1-theta1)**2)
 
 draws = 400
-# prior beliefs
+# prior beliefs, from JME paper
 mu_, lambda_ = 1.,2.
 
 # Model 1
@@ -108,9 +114,12 @@ y1y2pairsp1 = np.zeros((draws,2))
 for draw in range(draws):
     theta1 = np.random.uniform(0,1)
     theta2 = np.random.normal(mu_, lambda_**2)
-    mu = theta2/(1-theta1)
-    y1 = np.random.normal(mu, lambda_**2)
-    pmu_pairsp1[draw] = mu, theta1
+#    mu = theta2/(1-theta1)
+#don't do this to maintain independence theta2 is the _location_
+#    y1 = np.random.normal(mu_, lambda_**2)
+    y1 = theta2
+#    pmu_pairsp1[draw] = mu, theta1
+    pmu_pairsp1[draw] = theta2, theta1 # mean, autocorr
     y2 = theta2 + theta1 * y1 + np.random.normal()
     y1y2pairsp1[draw] = y1,y2
 
@@ -120,8 +129,10 @@ for draw in range(draws):
 # mean of u is .5*.99999
 # variance is 1./12 * .99999**2
 
+# Model 2
 pmu_pairsp2 = np.zeros((draws,2))
 y1y2pairsp2 = np.zeros((draws,2))
+# prior 2
 theta12_2 = []
 for draw in range(draws):
 #    y1 = np.random.uniform(-4,6)
@@ -130,7 +141,7 @@ for draw in range(draws):
     theta12_2.append([theta1,theta2])
 
     mu = theta2/(1-theta1)
-    y1 = np.random.normal(mu,lambda_**2)
+    y1 = np.random.normal(mu_,lambda_**2)
     y2 = theta2 + theta1 * y1 + np.random.normal()
     pmu_pairsp2[draw] = mu, theta1
     y1y2pairsp2[draw] = y1,y2
@@ -138,11 +149,16 @@ for draw in range(draws):
 fig = plt.figure()
 fsp = fig.add_subplot(221)
 fsp.scatter(pmu_pairsp1[:,0], pmu_pairsp1[:,1], color='b', facecolor='none')
+fsp.set_ylabel('Autocorrelation (Y)')
+fsp.set_xlabel('Mean (Y)')
 fsp.set_title('Model 2 (P1)')
 fsp.axis([-20,20,0,1])
 
 fsp = fig.add_subplot(222)
 fsp.scatter(pmu_pairsp2[:,0],pmu_pairsp2[:,1], color='b', facecolor='none')
+fsp.set_title('Model 2 (P2)')
+fsp.set_ylabel('Autocorrelation (Y)')
+fsp.set_xlabel('Mean (Y)')
 fsp.set_title('Model 2 (P2)')
 fsp.axis([-20,20,0,1])
 
@@ -150,14 +166,23 @@ fsp = fig.add_subplot(223)
 fsp.scatter(y1y2pairsp1[:,0], y1y2pairsp1[:,1], color='b', marker='o',
     facecolor='none')
 fsp.scatter(y1y2[:,0], y1y2[:,1], color ='g', marker='+')
+fsp.set_title('Model 1 vs. Model 2 (P1)')
+fsp.set_ylabel('Y(2)')
+fsp.set_xlabel('Y(1)')
 fsp.axis([-20,20,-20,20])
 
 fsp = fig.add_subplot(224)
 fsp.scatter(y1y2pairsp2[:,0], y1y2pairsp2[:,1], color='b', marker='o')
 fsp.scatter(y1y2[:,0], y1y2[:,1], color='g', marker='+')
+fsp.set_title('Model 1 vs. Model 2 (P2)')
+fsp.set_ylabel('Y(2)')
+fsp.set_xlabel('Y(1)')
 fsp.axis([-20,20,-20,20])
 
-#TODO: this doesn't look the same as the paper?
+plt.show()
+
+#TODO: this doesn't look the same as the working paper?
+#NOTE: but it matches the language?  I think mine is right!
 
 # Contour plots.
 # on the basis of observed data. ie., the mgrid
@@ -198,7 +223,10 @@ pi = np.random.beta(49.5, 49.5)
 #NOTE: Use inverse gamma distribution igamma
 psigma = igamma.rvs(1.,4.0, size=1e6) #TODO: parameterization is not correct vs.
 # Del Negro and Schorfheide
-psigma2 = pymc.rinverse_gamma(1.,4.0, size=1e6)
+if pymc_installed:
+    psigma2 = pymc.rinverse_gamma(1.,4.0, size=1e6)
+else:
+    psigma2 = stats.invgamma.rvs(1., scale=4.0, size=1e6)
 nsims = 500
 y = np.zeros((nsims))
 #for i in range(1,nsims):
