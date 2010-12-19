@@ -8,6 +8,17 @@ Notes:
  - needs cases with non-monotonic inequality for test to see difference between
    one-step, step-up and step-down procedures
  - FDR doesn't look really better then Bonferoni in the MC examples that I tried
+update:
+ - now tested against R, stats and multtest, have all methods
+ - getting Hommel was impossible until I found reference for pvalue correction
+ - now, since I have p-values correction, some of the original tests
+   implementation is not really needed anymore. I think I keep it for reference.
+   Test procedure for Hommel in development session log
+ - I haven't updated other functions and classes in here.
+   - multtest has some good helper function according to docs
+ - still need to update references, the real papers
+ - fdr with estimated true hypothesis still missing
+
 
 some References:
 
@@ -26,6 +37,25 @@ statistics tables and formulae, Chapman&Hall/CRC
     14.9 WILCOXON RANKSUM (MANN WHITNEY) TEST
 
 Author: Josef Pktd and example from H Raja and rewrite from Vincent Davis
+
+
+TODO
+
+handle exception if empty, shows up only sometimes when running this
+- DONE I think
+
+Traceback (most recent call last):
+  File "C:\Josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\sandbox\stats\multicomp.py", line 711, in <module>
+    print 'sh', multipletests(tpval, alpha=0.05, method='sh')
+  File "C:\Josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\sandbox\stats\multicomp.py", line 241, in multipletests
+    rejectmax = np.max(np.nonzero(reject))
+  File "C:\Programs\Python25\lib\site-packages\numpy\core\fromnumeric.py", line 1765, in amax
+    return _wrapit(a, 'max', axis, out)
+  File "C:\Programs\Python25\lib\site-packages\numpy\core\fromnumeric.py", line 37, in _wrapit
+    result = getattr(asarray(obj),method)(*args, **kwds)
+ValueError: zero-size array to ufunc.reduce without identity
+
+
 '''
 
 
@@ -206,10 +236,54 @@ def catstack(args):
 
 
 def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
+    '''test results and p-value correction for multiple tests
+
+
+    Parameters
+    ----------
+    pvals : array_like
+        uncorrected p-values
+    alpha : float
+        FWER, family-wise error rate, e.g. 0.1
+    method : string
+        Method used for testing and adjustment of pvalues. Can be either the
+        full name or initial letters. Available methods are ::
+
+        `bonferroni` : one-step correction
+        `sidak` : on-step correction
+        `holm-sidak` :
+        `holm` :
+        `simes-hochberg` :
+        `hommel` :
+        `fdr_bh` : Benjamini/Hochberg
+        `fdr_by` : Benjamini/Yekutieli
+    returnsorted : bool
+         not tested, return sorted p-values instead of original sequence
+
+    Returns
+    -------
+    reject : array, boolean
+        true for hypothesis that can be rejected for given alpha
+    pvals_corrected : array
+        p-values corrected for multiple tests
+    alphacSidak: float
+        corrected pvalue with Sidak method
+    alphacBonf: float
+        corrected pvalue with Sidak method
+
+
+    Notes
+    -----
+    all corrected pvalues now tested against R.
+    insufficient "cosmetic" tests yet
+
+    there will be API changes.
+
+    References
+    ----------
+
     '''
-    alphaf : float
-        FWER, family-wise error rate
-    '''
+    pvals = np.asarray(pvals)
     alphaf = alpha  # Notation ?
     sortind = np.argsort(pvals)
     pvals = pvals[sortind]
@@ -220,24 +294,67 @@ def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
     if method.lower() in ['b', 'bonf', 'bonferroni']:
         reject = pvals < alphacBonf
         pvals_corrected = pvals * float(ntests)  # not sure
+
     elif method.lower() in ['s', 'sidak']:
         reject = pvals < alphacSidak
         pvals_corrected = 1 - np.power((1. - pvals), ntests)  # not sure
+
     elif method.lower() in ['hs', 'holm-sidak']:
         notreject = pvals > alphacSidak
         notrejectmin = np.min(np.nonzero(notreject))
         notreject[notrejectmin:] = True
         reject = ~notreject
         pvals_corrected = None  # not yet implemented
+        #TODO: new not tested, mainly guessing by analogy
+        pvals_corrected_raw = 1 - np.power((1. - pvals), np.arange(ntests, 0, -1))#ntests) # from "sidak" #pvals / alphacSidak * alphaf
+        pvals_corrected = np.maximum.accumulate(pvals_corrected_raw)
+
+    elif method.lower() in ['h', 'holm']:
+        notreject = pvals > alphaf / np.arange(ntests, 0, -1) #alphacSidak
+        notrejectmin = np.min(np.nonzero(notreject))
+        notreject[notrejectmin:] = True
+        reject = ~notreject
+        pvals_corrected = None  # not yet implemented
+        #TODO: new not tested, mainly guessing by analogy
+        pvals_corrected_raw = pvals * np.arange(ntests, 0, -1) #ntests) # from "sidak" #pvals / alphacSidak * alphaf
+        pvals_corrected = np.maximum.accumulate(pvals_corrected_raw)
+
     elif method.lower() in ['sh', 'simes-hochberg']:
         alphash = alphaf / np.arange(ntests, 0, -1)
         reject = pvals < alphash
         rejind = np.nonzero(reject)
-        if rejind:
+        if rejind[0].size > 0:
             rejectmax = np.max(np.nonzero(reject))
             reject[:rejectmax] = True
         #check else
         pvals_corrected = None  # not yet implemented
+        #TODO: new not tested, mainly guessing by analogy, looks ok in 1 example
+        pvals_corrected_raw = np.arange(ntests, 0, -1) * pvals
+        pvals_corrected = np.minimum.accumulate(pvals_corrected_raw[::-1])[::-1]
+
+    elif method.lower() in ['ho', 'hommel']:
+        a=pvals.copy()
+        for m in range(ntests, 1, -1):
+            cim = np.min(m * pvals[-m:] / np.arange(1,m+1.))
+            a[-m:] = np.maximum(a[-m:], cim)
+            a[:-m] = np.maximum(a[:-m], np.minimum(m * pvals[:-m], cim))
+        pvals_corrected = a
+        reject = a < alphaf
+
+    elif method.lower() in ['fdr_bh', 'fdr_i', 'fdr_p', 'fdri', 'fdrp']:
+        #delegate, call with sorted pvals
+        reject, pvals_corrected = fdrcorrection0(pvals, alpha=alpha,
+                                                 method='indep')
+    elif method.lower() in ['fdr_by', 'fdr_n', 'fdr_c', 'fdrn', 'fdrcorr']:
+        #delegate, call with sorted pvals
+        reject, pvals_corrected = fdrcorrection0(pvals, alpha=alpha,
+                                                 method='n')
+    else:
+        raise ValueError('method not recognized')
+
+
+    if not pvals_corrected is None:
+        pvals_corrected[pvals_corrected>1] = 1
     if returnsorted:
         return reject, pvals_corrected, alphacSidak, alphacBonf
     else:
@@ -336,23 +453,37 @@ def fdrcorrection0(pvals, alpha=0.05, method='indep'):
 
     pvals_sortind = np.argsort(pvals)
     pvals_sorted = pvals[pvals_sortind]
+    sortrevind = pvals_sortind.argsort()
+
     if method in ['i', 'indep', 'p', 'poscorr']:
         ecdffactor = ecdf(pvals_sorted)
     elif method in ['n', 'negcorr']:
-        cm = np.sum(np.arange(len(pvals)))
-        ecdffactor = ecdf(pvals_sorted)/cm
-    elif method in ['n', 'negcorr']:
-        cm = np.sum(np.arange(len(pvals)))
-        ecdffactor = ecdf(pvals_sorted)/cm
+        cm = np.sum(1./np.arange(1, len(pvals_sorted)+1))   #corrected this
+        ecdffactor = ecdf(pvals_sorted) / cm
+##    elif method in ['n', 'negcorr']:
+##        cm = np.sum(np.arange(len(pvals)))
+##        ecdffactor = ecdf(pvals_sorted)/cm
+    else:
+        raise ValueError('only indep and necorr implemented')
     reject = pvals_sorted < ecdffactor*alpha
     if reject.any():
         rejectmax = max(np.nonzero(reject)[0])
     else:
         rejectmax = 0
     reject[:rejectmax] = True
-    return reject[pvals_sortind.argsort()]
 
-def fdrcorrection(pvals, alpha=0.05, method='indep'):
+    pvals_corrected_raw = pvals_sorted / ecdffactor
+    pvals_corrected = np.minimum.accumulate(pvals_corrected_raw[::-1])[::-1]
+    pvals_corrected[pvals_corrected>1] = 1
+    return reject[sortrevind], pvals_corrected[sortrevind]
+    #return reject[pvals_sortind.argsort()]
+
+
+#I don't remember what I changed or why 2 versions,
+#this follows german diss ???  with rline
+#this might be useful if the null hypothesis is not "all effects are zero"
+#rename to _bak and working again on fdrcorrection0
+def fdrcorrection_bak(pvals, alpha=0.05, method='indep'):
     '''
     Reject False discovery rate correction for pvalues
 
@@ -395,8 +526,9 @@ def mcfdr(nrepl=100, nobs=50, ntests=10, ntrue=6, mu=0.5, alpha=0.05, rho=0.):
         #rvs = locs + stats.norm.rvs(size=(nobs, ntests))
         rvs = locs + randmvn(rho, size=(nobs, ntests))
         tt, tpval = stats.ttest_1samp(rvs, 0)
-        res = fdrcorrection(np.abs(tpval), alpha=alpha, method='i')
+        res = fdrcorrection_bak(np.abs(tpval), alpha=alpha, method='i')
         res0 = fdrcorrection0(np.abs(tpval), alpha=alpha)
+        #res and res0 give the same results
         results.append([np.sum(res[:ntrue]), np.sum(res[ntrue:])] +
                        [np.sum(res0[:ntrue]), np.sum(res0[ntrue:])] +
                        res.tolist() +
@@ -651,8 +783,8 @@ def rankdata(x):
 
 if __name__ == '__main__':
 
-    examples = ['tukey', 'tukeycrit', 'fdr', 'fdrmc', 'bonf', 'randmvn',
-                'multicompdev'][:0]
+    examples = []#['tukey', 'tukeycrit', 'fdr', 'fdrmc', 'bonf', 'randmvn',
+                #'multicompdev'][2:3]
 
     if 'tukey' in examples:
         #Example Tukey
@@ -662,7 +794,7 @@ if __name__ == '__main__':
         #Example FDR
         #------------
 
-    if 'fdr' or 'bonf' in examples:
+    if ('fdr' in examples) or ('bonf' in examples):
         x1 = [1,1,1,0,-1,-1,-1,0,1,1,-1,1]
         print zip(np.arange(len(x1)), x1)
         print maxzero(x1)
@@ -688,7 +820,7 @@ if __name__ == '__main__':
                               ('pval',float),
                               ('reject', np.bool8)])
         print sm.iolib.SimpleTable(res, headers=res.dtype.names)
-        print fdrcorrection(tpval, alpha=0.05)
+        print fdrcorrection_bak(tpval, alpha=0.05)
         print reject
 
         print '\nrandom example'
@@ -817,15 +949,16 @@ if __name__ == '__main__':
         tablemwhs, resmw, arrmw = multicomp.allpairtest(stats.mannwhitneyu, method='hs')
         print tablemwhs
 
-    xli = (np.random.randn(60,4) + np.array([0, 0, 0.5, 0.5])).T
-    #Xrvs = np.array(catstack(xli))
-    xrvs, xrvsgr = catstack(xli)
-    multicompr = MultiComparison(xrvs, xrvsgr)
-    tablett, restt, arrtt = multicompr.allpairtest(stats.ttest_ind)
-    print tablett
+    if 'last' in examples:
+        xli = (np.random.randn(60,4) + np.array([0, 0, 0.5, 0.5])).T
+        #Xrvs = np.array(catstack(xli))
+        xrvs, xrvsgr = catstack(xli)
+        multicompr = MultiComparison(xrvs, xrvsgr)
+        tablett, restt, arrtt = multicompr.allpairtest(stats.ttest_ind)
+        print tablett
 
 
-    xli=[[8,10,9,10,9],[7,8,5,8,5],[4,8,7,5,7]]
-    x,l = catstack(xli)
-    gs4 = GroupsStats(np.column_stack([x,l]))
-    print gs4.groupvarwithin()
+        xli=[[8,10,9,10,9],[7,8,5,8,5],[4,8,7,5,7]]
+        x,l = catstack(xli)
+        gs4 = GroupsStats(np.column_stack([x,l]))
+        print gs4.groupvarwithin()
