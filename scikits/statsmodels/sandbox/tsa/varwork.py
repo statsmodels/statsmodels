@@ -18,15 +18,17 @@ import scipy.linalg as L
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 
-import pandas.util.testing as test
-
 from scikits.statsmodels.decorators import cache_readonly
 from scikits.statsmodels.tools import chain_dot
 from scikits.statsmodels.iolib import SimpleTable
 
 mat = np.array
 
-st = test.set_trace
+try:
+    import pandas.util.testing as test
+    st = test.set_trace
+except ImportError:
+    pass
 
 class MPLConfigurator(object):
 
@@ -953,7 +955,7 @@ class VAR(VARProcess):
     @cache_readonly
     def cov_beta(self):
         """
-        Covariancee of vec(B), where B is the matrix
+        Covariance of vec(B), where B is the matrix
 
         [intercept, A_1, ..., A_p] (K x (Kp + 1))
 
@@ -1087,6 +1089,7 @@ class VAR(VARProcess):
         """
 
         """
+        pass
 
     def __str__(self):
         output = ('VAR(%d) process for %d-dimensional response y_t'
@@ -1118,14 +1121,6 @@ class VAR(VARProcess):
 
         """
         return IRAnalysis(self, P=P, periods=periods)
-
-    def fevd_cov(self, lag):
-        """
-
-        Returns
-        -------
-        """
-        pass
 
     @property
     def _cov_alpha(self):
@@ -1187,7 +1182,7 @@ class IRAnalysis(object):
         covs = self._empty_covm()
         for i in range(self.periods):
             Gi = self.G[i]
-            covs[i] = chain_dot(Gi, self.cov_a, Gi.T) / self.T
+            covs[i] = chain_dot(Gi, self.cov_a, Gi.T)
 
         return covs
 
@@ -1263,14 +1258,30 @@ class IRAnalysis(object):
         else:
             return chain_dot(Finfty, self.cov_a, Finfty.T) / self.T
 
-    def fevd(self):
-        pass
+    def fevd(self, steps=1):
+        """
 
-    def fevd_cov(self):
+        Parameters
+        ----------
+
+        Returns
+        -------
+        """
+        # cumulative impulse responses
+        irfs = (self.orth_irfs[:steps] ** 2).cumsum(axis=0)
+        mse = self.model.forecast_cov(steps)
+        return irfs / mse
+
+    def fevd_cov(self, lag):
+        """
+
+        Returns
+        -------
+        """
         pass
 
     def _empty_covm(self):
-        return np.empty((self.periods, self.k ** 2, self.k ** 2), dtype=float)
+        return np.zeros((self.periods, self.k ** 2, self.k ** 2), dtype=float)
 
     @cache_readonly
     def G(self):
@@ -1284,7 +1295,7 @@ class IRAnalysis(object):
                 if idx in _memo:
                     apow = _memo[idx]
                 else:
-                    apow = npl.matrix_power(self._A.T, i - 1 - m)[:self.k]
+                    apow = npl.matrix_power(self._A.T, idx)[:self.k]
 
                     _memo[idx] = apow
 
@@ -1306,13 +1317,43 @@ class IRAnalysis(object):
 
         return np.dot(Lk.T, L.inv(B))
 
-    def plot(self):
+    def plot_irf(self, orth=True):
+        irfs = self.irfs
+        stderr = self.cov()
+
+        k = self.k
+
+        plt.figure(figsize=(10, 10))
+
+        i = 2
+        j=1
+
+        ax = plt.gca()
+
+        est = irfs[:, i, j]
+        sig = np.sqrt(np.r_[0, stderr[:, j * k + i, j * k + i]])
+        ax.plot(est, 'k')
+        ax.plot(est - 1.96 * sig, 'k--')
+        ax.plot(est + 1.96 * sig, 'k--')
+        ax.axhline(0)
+
+        # for j in range(k):
+        #     ts = Y[:, j]
+
+        #     ax = plt.subplot(rows, cols, j+1)
+        #     if index is not None:
+        #         ax.plot(index, ts)
+        #     else:
+        #         ax.plot(ts)
+
+        #     if names is not None:
+        #         ax.set_title(names[j])
+
+
+    def plot_cum_effects(self, orth=True):
         pass
 
-    def plot_orth(self):
-        pass
-
-    def plot_lreffect(self):
+    def fevd_table(self):
         pass
 
 class FEVD(object):
@@ -1368,10 +1409,10 @@ class VARSummary(object):
 
     def __init__(self, estimator):
         self.model = estimator
-        # self.summary = self.make()
+        self.summary = self.make()
 
     def __repr__(self):
-        print self.summary
+        return self.summary
 
     def _lag_names(self):
         lag_names = []
@@ -1399,9 +1440,10 @@ class VARSummary(object):
         """
         Summary of VAR model
         """
-        return '\n'.join((self._header_table(),
-                          self._stats_table(),
-                          self._coef_table()))
+        return self._coef_table()
+        # return '\n'.join((self._header_table(),
+        #                   self._stats_table(),
+        #                   self._coef_table()))
 
     def _header_table(self):
         import time
@@ -1453,7 +1495,7 @@ class VARSummary(object):
         return str(part2L)
 
     def _coef_table(self):
-        Xnames = self._lag_names()
+        Xnames = self._lag_names() * self.model.k
 
         model = self.model
 
@@ -1461,8 +1503,6 @@ class VARSummary(object):
                    model.stderr.ravel(),
                    model.t().ravel(),
                    model.pvalues.ravel())
-
-        st()
 
         header = ('coefficient','std. error','z-stat','prob')
         table = SimpleTable(data, header, Xnames, title=None,
@@ -1530,23 +1570,22 @@ def foo():
 
     plt.show()
 
+if __name__ == '__main__':
+    path = 'scikits/statsmodels/sandbox/tsa/data/%s.dat'
+    sdata, dates = parse_data(path % 'e1')
 
+    names = sdata.dtype.names
+    data = _struct_to_ndarray(sdata)
 
-path = 'scikits/statsmodels/sandbox/tsa/data/%s.dat'
-sdata, dates = parse_data(path % 'e1')
+    adj_data = np.diff(np.log(data), axis=0)
+    # est = VAR(adj_data, p=2, dates=dates[1:], names=names)
+    est = VAR(adj_data[:-16], p=2, dates=dates[1:-16], names=names)
 
-names = sdata.dtype.names
-data = _struct_to_ndarray(sdata)
+    irf = est.irf()
 
-adj_data = np.diff(np.log(data), axis=0)
-# est = VAR(adj_data, p=2, dates=dates[1:], names=names)
-est = VAR(adj_data[:-16], p=2, dates=dates[1:-16], names=names)
+    y = est.y[-2:]
 
-irf = est.irf()
+    from scikits.statsmodels.tsa.var import VAR2
 
-y = est.y[-2:]
-
-from scikits.statsmodels.tsa.var import VAR2
-
-est2 = VAR2(adj_data[:-16])
-res2 = est2.fit(maxlag=2)
+    est2 = VAR2(adj_data[:-16])
+    res2 = est2.fit(maxlag=2)
