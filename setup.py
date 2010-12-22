@@ -55,6 +55,8 @@ import setuptools
 from numpy.distutils.core import setup
 import numpy
 
+compile_cython = 1
+
 DISTNAME = 'scikits.statsmodels'
 DESCRIPTION = 'Statistical computations and models for use with SciPy'
 LONG_DESCRIPTION = descr
@@ -124,7 +126,8 @@ def configuration(parent_package='', top_path=None, package_name=DISTNAME):
     for f in tsaresultsfiles:
         config.add_data_files(f)
 
-    config.add_extension('tsa/kalmanf/kalman_loglike',
+    if compile_cython:
+        config.add_extension('tsa/kalmanf/kalman_loglike',
                 sources = ['scikits/statsmodels/tsa/kalmanf/kalman_loglike.c'],
                 include_dirs=[numpy.get_include()])
 
