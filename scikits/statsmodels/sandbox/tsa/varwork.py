@@ -134,6 +134,9 @@ def unvech(v):
 
     return result
 
+def norm_signif_level(alpha=0.05):
+    return stats.norm.ppf(1 - alpha / 2)
+
 def duplication_matrix_old(k):
     """
     Create duplication matrix for converting vech to vec
@@ -219,10 +222,15 @@ def test_commutation_matrix():
     assert(np.array_equal(vec(m.T), np.dot(K, vec(m))))
 
 def test_vec():
-    pass
+    arr = mat([[1, 2],
+               [3, 4]])
+    assert(np.array_equal(vec(arr), [1, 3, 2, 4]))
 
 def test_vech():
-    pass
+    arr = mat([[1, 2, 3],
+               [4, 5, 6],
+               [7, 8, 9]])
+    assert(np.array_equal(vech(arr), [1, 4, 7, 5, 8, 9]))
 
 #-------------------------------------------------------------------------------
 # VAR process routines
@@ -510,6 +518,22 @@ def plot_var_forc(prior, forc, err_upper, err_lower,
     fig.legend((p1, p2, p3), ('Observed', 'Forecast', 'Forc 2 STD err'),
                'upper right')
 
+def plot_with_error(y, error, x=None, axes=None, value_fmt='k',
+                    error_fmt='k--', alpha=0.05):
+    if axes is None:
+        axes = plt.gca()
+
+    q = norm_signif_level(alpha)
+
+    if x is not None:
+        axes.plot(x, y, value_fmt)
+        axes.plot(x, y - q * error, error_fmt)
+        axes.plot(x, y + q * error, error_fmt)
+    else:
+        axes.plot(y, value_fmt)
+        axes.plot(y - q * error, error_fmt)
+        axes.plot(y + q * error, error_fmt)
+
 def plot_acorr(acf):
     """
 
@@ -709,7 +733,7 @@ class VARProcess(object):
         (lower, mid, upper) : (ndarray, ndarray, ndarray)
         """
         assert(0 < alpha < 1)
-        q = stats.norm.ppf(1 - alpha / 2)
+        q = norm_signif_level(alpha)
 
         point_forecast = self.forecast(y, steps)
         sigma = np.sqrt(self._forecast_vars(steps))
@@ -1112,23 +1136,36 @@ class VAR(VARProcess):
 #-------------------------------------------------------------------------------
 # Impulse responses, long run effects, standard errors
 
-    def irf(self, periods=10, P=None):
+    def irf(self, periods=10, var_decomp=None):
         """
-        Compute impulse responses to shocks in system
+        Analyze impulse responses to shocks in system
+
+        Parameters
+        ----------
+        periods : int
+        var_decomp : ndarray (k x k), lower triangular
+            Must satisfy Omega = P P', where P is the passed matrix. Defaults to
+            Cholesky decomposition of Omega
 
         Returns
         -------
 
         """
-        return IRAnalysis(self, P=P, periods=periods)
+        return IRAnalysis(self, P=var_decomp, periods=periods)
 
     @property
     def _cov_alpha(self):
+        """
+        Estimated covariance matrix of model coefficients ex intercept
+        """
         # drop intercept
         return self.cov_beta[self.k:, self.k:]
 
     @cache_readonly
     def _cov_sigma(self):
+        """
+        Estimated covariance matrix of vech(sigma_u)
+        """
         D_K = duplication_matrix(self.k)
         D_Kinv = npl.pinv(D_K)
 
@@ -1168,10 +1205,16 @@ class IRAnalysis(object):
 
         # auxiliary stuff
         self._A = var1_rep(model.coefs)
+
+        # memoize dict for G matrix function
         self._g_memo = {}
 
     def cov(self, orth=False):
         """
+
+        Notes
+        -----
+        Lutkepohl eq 3.7.5
 
         Returns
         -------
@@ -1188,6 +1231,10 @@ class IRAnalysis(object):
 
     def _orth_cov(self):
         """
+
+        Notes
+        -----
+        Lutkepohl 3.7.8
 
         Returns
         -------
@@ -1317,38 +1364,87 @@ class IRAnalysis(object):
 
         return np.dot(Lk.T, L.inv(B))
 
-    def plot_irf(self, orth=True):
+    def plot_irf(self, orth=False, impcol=None, rescol=None, signif=0.05,
+                 plot_params=None, subplot_params=None):
+        """
+        Plot impulse responses
+
+        Parameters
+        ----------
+        orth : bool, default False
+            Compute orthogonalized impulse responses
+        impcol : string or int
+            variable providing the impulse
+        rescol : string or int
+            variable affected by the impulse
+        signif : float (0 < signif < 1)
+            Significance level for error bars, defaults to 95% CI
+        subplot_params : dict
+            To pass to subplot plotting funcions. Example: if fonts are too big,
+            pass {'fontsize' : 8} or some number to your taste.
+        plot_params : dict
+        """
+        if subplot_params is None:
+            subplot_params = {}
+        if plot_params is None:
+            plot_params = {}
+
         irfs = self.irfs
-        stderr = self.cov()
+        stderr = self.cov(orth=orth)
 
+        def get_col(col):
+            try:
+                result = self.model.names.index(col)
+            except Exception:
+                if not isinstance(col, int):
+                    raise
+                result = col
+
+            return result
+
+        if orth:
+            title = 'Impulse responses (orthogonalized)'
+        else:
+            title = 'Impulse responses'
+
+        if impcol is not None and rescol is not None:
+            fig = plt.figure()
+            ax = fig.add_subplot()
+
+            j = get_col(impcol)
+            i = get_col(rescol)
+            sig = np.sqrt(np.r_[0, stderr[:, j * self.k + i, j * self.k + i]])
+            plot_with_error(irfs[:, i, j], sig, axes=ax, alpha=signif,
+                            value_fmt='b')
+        else:
+            self._plot_grid(irfs, stderr, signif, plot_params,
+                            subplot_params, title)
+
+    def _plot_grid(self, data, stderr, signif, plot_params,
+                   subplot_params, title):
         k = self.k
+        names = self.model.names
 
-        plt.figure(figsize=(10, 10))
+        fig, axes = plt.subplots(nrows=k, ncols=k, sharex=True,
+                                 figsize=(10, 10))
+        plt.subplots_adjust(bottom=0.05, top=0.925,
+                            left=0.05, right=0.95,
+                            hspace=0.2)
 
-        i = 2
-        j=1
+        subtitle_temp = r'%s$\rightarrow$%s'
 
-        ax = plt.gca()
+        fig.suptitle(title, fontsize=14)
 
-        est = irfs[:, i, j]
-        sig = np.sqrt(np.r_[0, stderr[:, j * k + i, j * k + i]])
-        ax.plot(est, 'k')
-        ax.plot(est - 1.96 * sig, 'k--')
-        ax.plot(est + 1.96 * sig, 'k--')
-        ax.axhline(0)
+        for i in range(k):
+            for j in range(k):
+                ax = axes[i][j]
+                sig = np.sqrt(np.r_[0, stderr[:, j * k + i, j * k + i]])
+                plot_with_error(data[:, i, j], sig, axes=ax, alpha=signif,
+                                value_fmt='b')
+                ax.axhline(0, color='k')
 
-        # for j in range(k):
-        #     ts = Y[:, j]
-
-        #     ax = plt.subplot(rows, cols, j+1)
-        #     if index is not None:
-        #         ax.plot(index, ts)
-        #     else:
-        #         ax.plot(ts)
-
-        #     if names is not None:
-        #         ax.set_title(names[j])
-
+                sz = subplot_params.get('fontsize', 12)
+                ax.set_title(subtitle_temp % (names[j], names[i]), fontsize=sz)
 
     def plot_cum_effects(self, orth=True):
         pass
@@ -1589,3 +1685,5 @@ if __name__ == '__main__':
 
     est2 = VAR2(adj_data[:-16])
     res2 = est2.fit(maxlag=2)
+
+    irf.plot_irf()
