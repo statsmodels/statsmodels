@@ -1222,7 +1222,7 @@ class IRAnalysis(object):
         if orth:
             return self._orth_cov()
 
-        covs = self._empty_covm()
+        covs = self._empty_covm(self.periods)
         for i in range(self.periods):
             Gi = self.G[i]
             covs[i] = chain_dot(Gi, self.cov_a, Gi.T)
@@ -1240,7 +1240,7 @@ class IRAnalysis(object):
         -------
 
         """
-        covs = self._empty_covm()
+        covs = self._empty_covm(self.periods)
 
         Ik = np.eye(self.k)
         PIk = np.kron(self.P.T, Ik)
@@ -1252,7 +1252,7 @@ class IRAnalysis(object):
 
             # is this right? I think Lutkepohl has a typo!
             covs[i] = (chain_dot(Ci, self.cov_a, Ci.T) +
-                       chain_dot(Cibar, self.cov_sig, Cibar.T)) / self.T
+                       chain_dot(Cibar, self.cov_sig, Cibar.T))
 
         return covs
 
@@ -1263,6 +1263,10 @@ class IRAnalysis(object):
         ----------
         orth : boolean
 
+        Notes
+        -----
+        eq. 3.7.7 (non-orth), 3.7.10 (orth)
+
         Returns
         -------
 
@@ -1271,7 +1275,7 @@ class IRAnalysis(object):
         PIk = np.kron(self.P.T, Ik)
 
         F = 0.
-        covs = self._empty_covm()
+        covs = self._empty_covm(self.periods)
         for i in range(self.periods):
             F = F + self.G[i]
             if orth:
@@ -1279,10 +1283,10 @@ class IRAnalysis(object):
                 Bnbar = np.dot(np.kron(Ik, self.cum_effects[i + 1]), self.H)
 
                 covs[i] = (chain_dot(Bn, self.cov_a, Bn.T) +
-                           chain_dot(Bnbar, self.cov_sig, Bnbar.T)) / self.T
+                           chain_dot(Bnbar, self.cov_sig, Bnbar.T))
 
             else:
-                covs[i] = chain_dot(F, self.cov_a, F.T) / self.T
+                covs[i] = chain_dot(F, self.cov_a, F.T)
 
         return covs
 
@@ -1301,9 +1305,9 @@ class IRAnalysis(object):
             Binfbar = np.dot(np.kron(np.eye(self.k), self.lr_effects), self.H)
 
             return (chain_dot(Binf, self.cov_a, Binf.T) +
-                    chain_dot(Binfbar, self.cov_a, Binfbar.T)) / self.T
+                    chain_dot(Binfbar, self.cov_a, Binfbar.T))
         else:
-            return chain_dot(Finfty, self.cov_a, Finfty.T) / self.T
+            return chain_dot(Finfty, self.cov_a, Finfty.T)
 
     def fevd(self, steps=1):
         """
@@ -1327,24 +1331,24 @@ class IRAnalysis(object):
         """
         pass
 
-    def _empty_covm(self):
-        return np.zeros((self.periods, self.k ** 2, self.k ** 2), dtype=float)
+    def _empty_covm(self, periods):
+        return np.zeros((periods, self.k ** 2, self.k ** 2),
+                        dtype=float)
 
     @cache_readonly
     def G(self):
-        _memo = {}
         def _make_g(i):
             # p. 111 Lutkepohl
             G = 0.
             for m in range(i):
                 # be a bit cute to go faster
                 idx = i - 1 - m
-                if idx in _memo:
-                    apow = _memo[idx]
+                if idx in self._g_memo:
+                    apow = self._g_memo[idx]
                 else:
                     apow = npl.matrix_power(self._A.T, idx)[:self.k]
 
-                    _memo[idx] = apow
+                    self._g_memo[idx] = apow
 
                 # take first K rows
                 piece = np.kron(apow, self.irfs[m])
@@ -1384,70 +1388,106 @@ class IRAnalysis(object):
             pass {'fontsize' : 8} or some number to your taste.
         plot_params : dict
         """
-        if subplot_params is None:
-            subplot_params = {}
-        if plot_params is None:
-            plot_params = {}
-
-        irfs = self.irfs
-        stderr = self.cov(orth=orth)
-
-        def get_col(col):
-            try:
-                result = self.model.names.index(col)
-            except Exception:
-                if not isinstance(col, int):
-                    raise
-                result = col
-
-            return result
-
         if orth:
             title = 'Impulse responses (orthogonalized)'
         else:
             title = 'Impulse responses'
 
-        if impcol is not None and rescol is not None:
-            fig = plt.figure()
-            ax = fig.add_subplot()
+        stderr = self.cov(orth=orth)
+        self._grid_plot(self.irfs, stderr, impcol, rescol, title,
+                        signif=signif, subplot_params=subplot_params,
+                        plot_params=plot_params)
 
-            j = get_col(impcol)
-            i = get_col(rescol)
-            sig = np.sqrt(np.r_[0, stderr[:, j * self.k + i, j * self.k + i]])
-            plot_with_error(irfs[:, i, j], sig, axes=ax, alpha=signif,
-                            value_fmt='b')
+    def plot_cum_effects(self, orth=False, impcol=None, rescol=None,
+                         signif=0.05, plot_params=None,
+                         subplot_params=None):
+        if orth:
+            title = 'Cumulative responses responses (orthogonalized)'
         else:
-            self._plot_grid(irfs, stderr, signif, plot_params,
-                            subplot_params, title)
+            title = 'Cumulative responses'
 
-    def _plot_grid(self, data, stderr, signif, plot_params,
-                   subplot_params, title):
-        k = self.k
-        names = self.model.names
+        stderr = self.cum_effect_cov(orth=orth)
+        self._grid_plot(self.cum_effects, stderr, impcol, rescol, title,
+                        signif=signif, hlines=self.lr_effects,
+                        subplot_params=subplot_params,
+                        plot_params=plot_params)
 
-        fig, axes = plt.subplots(nrows=k, ncols=k, sharex=True,
-                                 figsize=(10, 10))
+    def _grid_plot(self, values, stderr, impcol, rescol, title,
+                   signif=0.05, hlines=None, subplot_params=None,
+                   plot_params=None):
+        """
+        Reusable function to make flexible grid plots of impulse responses and
+        comulative effects
+
+        values : (T + 1) x k x k
+        stderr : T x k x k
+        hlines : k x k
+        """
+        if subplot_params is None:
+            subplot_params = {}
+        if plot_params is None:
+            plot_params = {}
+
+        nrows, ncols, to_plot = self._get_plot_config(impcol, rescol)
+
+        fig, axes = plt.subplots(nrows=nrows, ncols=ncols, sharex=True,
+                                 squeeze=False, figsize=(10, 10))
         plt.subplots_adjust(bottom=0.05, top=0.925,
                             left=0.05, right=0.95,
                             hspace=0.2)
 
-        subtitle_temp = r'%s$\rightarrow$%s'
-
         fig.suptitle(title, fontsize=14)
 
-        for i in range(k):
-            for j in range(k):
-                ax = axes[i][j]
-                sig = np.sqrt(np.r_[0, stderr[:, j * k + i, j * k + i]])
-                plot_with_error(data[:, i, j], sig, axes=ax, alpha=signif,
-                                value_fmt='b')
-                ax.axhline(0, color='k')
+        subtitle_temp = r'%s$\rightarrow$%s'
 
-                sz = subplot_params.get('fontsize', 12)
-                ax.set_title(subtitle_temp % (names[j], names[i]), fontsize=sz)
+        names = self.model.names
+        for (j, i, ai, aj) in to_plot:
+            ax = axes[ai][aj]
+            var = stderr[:, j * self.k + i, j * self.k + i]
+            sig = np.sqrt(np.r_[0, var])
+            plot_with_error(values[:, i, j], sig, axes=ax, alpha=signif,
+                            value_fmt='b')
+            ax.axhline(0, color='k')
 
-    def plot_cum_effects(self, orth=True):
-        pass
+            if hlines is not None:
+                ax.axhline(hlines[i,j], color='k')
+
+            sz = subplot_params.get('fontsize', 12)
+            ax.set_title(subtitle_temp % (names[j], names[i]), fontsize=sz)
+
+    def _get_col(self, col):
+        try:
+            result = self.model.names.index(col)
+        except Exception:
+            if not isinstance(col, int):
+                raise
+            result = col
+
+        return result
+
+    def _get_plot_config(self, impcol, rescol):
+        nrows = ncols = k = self.k
+        if impcol is not None and rescol is not None:
+            # plot one impulse-response pair
+            nrows = ncols = 1
+            j = self._get_col(impcol)
+            i = self._get_col(rescol)
+            to_plot = [(j, i, 0, 0)]
+        elif impcol is not None:
+            # plot impacts of impulse in one variable
+            ncols = 1
+            j = self._get_col(impcol)
+            to_plot = [(j, i, i, 0) for i in range(k)]
+        elif rescol is not None:
+            # plot only things having impact on particular variable
+            ncols = 1
+            i = self._get_col(rescol)
+            to_plot = [(j, i, j, 0) for j in range(k)]
+        else:
+            # plot everything
+            to_plot = [(j, i, i, j) for i in range(k) for j in range(k)]
+
+        return nrows, ncols, to_plot
 
     def fevd_table(self):
         pass
