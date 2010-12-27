@@ -8,16 +8,18 @@ Lutkepohl (2005) New Introduction to Multiple Time Series Analysis
 
 from __future__ import division
 
+from cStringIO import StringIO
+
 import numpy as np
 import numpy.linalg as npl
 from numpy.linalg import cholesky as chol, solve
-from numpy.random import multivariate_normal as rmvnormn
 import scipy.stats as stats
 import scipy.linalg as L
 
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 
+from scikits.statsmodels.compatibility import np_slogdet
 from scikits.statsmodels.decorators import cache_readonly
 from scikits.statsmodels.tools import chain_dot
 from scikits.statsmodels.iolib import SimpleTable
@@ -26,17 +28,29 @@ mat = np.array
 
 try:
     import pandas.util.testing as test
+    import IPython.core.debugger as _
     st = test.set_trace
 except ImportError:
-    pass
+    import pdb
+    st = pdb.set_trace
 
 class MPLConfigurator(object):
 
+    def __init__(self):
+        self._inverse_actions = []
+
     def revert(self):
-        pass
+        for action in self._inverse_actions:
+            action()
 
     def set_fontsize(self, size):
-        pass
+        old_size = mpl.rcParams['font.size']
+        mpl.rcParams['font.size'] = size
+
+        def revert():
+            mpl.rcParams['font.size'] = old_size
+
+        self._inverse_actions.append(revert)
 
 def parse_data(path):
     """
@@ -137,25 +151,6 @@ def unvech(v):
 def norm_signif_level(alpha=0.05):
     return stats.norm.ppf(1 - alpha / 2)
 
-def duplication_matrix_old(k):
-    """
-    Create duplication matrix for converting vech to vec
-
-    Notes
-    -----
-    For symmetric matrix S we have
-
-    vec(S) = D_k vech(S)
-    """
-    result = np.empty((k * (k + 1) / 2, k * k), dtype=float)
-
-    # most efficient way?
-    for i, row in enumerate(np.eye(k * (k + 1) / 2)):
-        result[i] = unvech(row).ravel()
-
-    # leaves it in fortran order... oh well, for now
-    return result.T
-
 def duplication_matrix(n):
     """
     Create duplication matrix D_n which satisfies vec(S) = D_n vech(S) for
@@ -240,8 +235,8 @@ def varsim(coefs, intercept, sig_u, steps=100, initvalues=None):
     Simulate simple VAR(p) process with known coefficients, intercept, white
     noise covariance, etc.
     """
+    from numpy.random import multivariate_normal as rmvnorm
     p, k, k = coefs.shape
-
     ugen = rmvnorm(np.zeros(len(sig_u)), sig_u, steps)
     result = np.zeros((steps, k))
     result[p:] = intercept + ugen[p:]
@@ -321,6 +316,7 @@ def is_stable(coefs, verbose=False):
 def var1_rep(coefs):
     """
     Return coefficient matrix for the VAR(1) representation for a VAR(p) process
+    (companion form)
 
     A = [A_1 A_2 ... A_p-1 A_p
          I_K 0       0     0
@@ -352,6 +348,8 @@ def var_acf(coefs, sig_u, nlags=None):
         Coefficient matrices A_i
     sig_u : ndarray (k x k)
         Covariance of white noise process u_t
+    nlags : int, optional
+        Defaults to order p of system
 
     Notes
     -----
@@ -520,27 +518,41 @@ def plot_var_forc(prior, forc, err_upper, err_lower,
 
 def plot_with_error(y, error, x=None, axes=None, value_fmt='k',
                     error_fmt='k--', alpha=0.05):
+    """
+    Make plot with optional error bars
+
+    Parameters
+    ----------
+    y :
+    error : array or None
+
+    """
     if axes is None:
         axes = plt.gca()
 
-    q = norm_signif_level(alpha)
-
     if x is not None:
-        axes.plot(x, y, value_fmt)
-        axes.plot(x, y - q * error, error_fmt)
-        axes.plot(x, y + q * error, error_fmt)
+        plot_action = lambda y, fmt: axes.plot(x, y, fmt)
     else:
-        axes.plot(y, value_fmt)
-        axes.plot(y - q * error, error_fmt)
-        axes.plot(y + q * error, error_fmt)
+        plot_action = lambda y, fmt: axes.plot(y, fmt)
 
-def plot_acorr(acf):
+    plot_action(y, value_fmt)
+
+    if error is not None:
+        q = norm_signif_level(alpha)
+        plot_action(y - q * error, error_fmt)
+        plot_action(y + q * error, error_fmt)
+
+def plot_acorr(acf, fontsize=8, linewidth=8):
     """
 
+    Parameters
+    ----------
+
+
+
     """
-    # hack
-    old_size = mpl.rcParams['font.size']
-    mpl.rcParams['font.size'] = 8
+    config = MPLConfigurator()
+    config.set_fontsize(fontsize)
 
     lags, k, k = acf.shape
     acorr = _acf_to_acorr(acf)
@@ -550,7 +562,7 @@ def plot_acorr(acf):
     for i in range(k):
         for j in range(k):
             ax = plt.subplot(k, k, i * k + j + 1)
-            ax.vlines(xs, [0], acorr[:, i, j])
+            ax.vlines(xs, [0], acorr[:, i, j], lw=linewidth)
 
             ax.axhline(0, color='k')
             ax.set_ylim([-1, 1])
@@ -558,7 +570,16 @@ def plot_acorr(acf):
             # hack?
             ax.set_xlim([-1, xs[-1] + 1])
 
-    mpl.rcParams['font.size'] = old_size
+    _adjust_subplots()
+    config.revert()
+
+def plot_acorr_with_error():
+    pass
+
+def _adjust_subplots():
+    plt.subplots_adjust(bottom=0.05, top=0.925,
+                        left=0.05, right=0.95,
+                        hspace=0.2)
 
 #-------------------------------------------------------------------------------
 # VARProcess class: for known or unknown VAR process
@@ -574,6 +595,17 @@ class TestVAR(unittest.TestCase):
     pass
 
 class VARProcess(object):
+    """
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+
+    **Attributes**:
+
+    """
 
     def __str__(self):
         output = ('VAR(%d) process for %d-dimensional response y_t'
@@ -674,8 +706,8 @@ class VARProcess(object):
     def acorr(self, nlags=None):
         return _acf_to_acorr(var_acf(self.coefs, self.sigma_u, nlags=nlags))
 
-    def plot_acorr(self, nlags=10):
-        plot_acorr(self.acf(nlags=nlags))
+    def plot_acorr(self, nlags=10, linewidth=8):
+        plot_acorr(self.acorr(nlags=nlags), linewidth=linewidth)
 
     def forecast(self, y, steps):
         """
@@ -761,6 +793,35 @@ class VARProcess(object):
         Compute forecast error variance decomposition ("fevd")
         """
         pass
+
+    def test_causality(self, equation, variables, kind='F'):
+        """
+        Compute test statistic for null hypothesis of Granger-noncausality
+
+        Parameters
+        ----------
+        equation : string
+            Equation to test for causality
+        variables : sequence
+            List, tuple, etc. of variables to test for Granger-causality
+
+        Notes
+        -----
+        Null hypothesis is that there is no Granger-causality for the indicated
+        variables
+
+        Returns
+        -------
+        results : dict
+        """
+        pass
+
+    def test_whiteness(self):
+        pass
+
+    def test_normality(self):
+        pass
+
 
 #-------------------------------------------------------------------------------
 # Estimator and Known VAR process classes
@@ -976,6 +1037,25 @@ class VAR(VARProcess):
     def _t_mean(self):
         self.mean() / np.sqrt(np.diag(self._est_var_ybar()))
 
+    @property
+    def _cov_alpha(self):
+        """
+        Estimated covariance matrix of model coefficients ex intercept
+        """
+        # drop intercept
+        return self.cov_beta[self.k:, self.k:]
+
+    @cache_readonly
+    def _cov_sigma(self):
+        """
+        Estimated covariance matrix of vech(sigma_u)
+        """
+        D_K = duplication_matrix(self.k)
+        D_Kinv = npl.pinv(D_K)
+
+        sigxsig = np.kron(self.sigma_u, self.sigma_u)
+        return 2 * chain_dot(D_Kinv, sigxsig, D_Kinv.T)
+
     @cache_readonly
     def cov_beta(self):
         """
@@ -1153,26 +1233,178 @@ class VAR(VARProcess):
         """
         return IRAnalysis(self, P=var_decomp, periods=periods)
 
-    @property
-    def _cov_alpha(self):
-        """
-        Estimated covariance matrix of model coefficients ex intercept
-        """
-        # drop intercept
-        return self.cov_beta[self.k:, self.k:]
+class BaseIRAnalysis(object):
+    """
+    Base class for plotting and computing IRF-related statistics, want to be
+    able to handle known and estimated processes
+    """
 
-    @cache_readonly
-    def _cov_sigma(self):
-        """
-        Estimated covariance matrix of vech(sigma_u)
-        """
-        D_K = duplication_matrix(self.k)
-        D_Kinv = npl.pinv(D_K)
+    def __init__(self, model, P=None, periods=10):
+        self.model = model
+        self.periods = periods
+        self.k, self.lags  = model.k, model.p
 
-        sigxsig = np.kron(self.sigma_u, self.sigma_u)
-        return 2 * chain_dot(D_Kinv, sigxsig, D_Kinv.T)
+        if P is None:
+            P = model._chol_sigma_u
+        self.P = P
 
-class IRAnalysis(object):
+        self.irfs = model.ma_rep(periods)
+        self.orth_irfs = model.orth_ma_rep(periods)
+
+        self.cum_effects = self.irfs.cumsum(axis=0)
+        self.orth_cum_effects = self.irfs.cumsum(axis=0)
+
+        self.lr_effects = model.long_run_effects()
+        self.orth_lr_effects = model.long_run_effects()
+
+        # auxiliary stuff
+        self._A = var1_rep(model.coefs)
+
+    def cov(self, *args, **kwargs):
+        raise NotImplementedError
+
+    def cum_effect_cov(self, *args, **kwargs):
+        raise NotImplementedError
+
+    def plot_irf(self, orth=False, impcol=None, rescol=None, signif=0.05,
+                 plot_params=None, subplot_params=None):
+        """
+        Plot impulse responses
+
+        Parameters
+        ----------
+        orth : bool, default False
+            Compute orthogonalized impulse responses
+        impcol : string or int
+            variable providing the impulse
+        rescol : string or int
+            variable affected by the impulse
+        signif : float (0 < signif < 1)
+            Significance level for error bars, defaults to 95% CI
+        subplot_params : dict
+            To pass to subplot plotting funcions. Example: if fonts are too big,
+            pass {'fontsize' : 8} or some number to your taste.
+        plot_params : dict
+        """
+        if orth:
+            title = 'Impulse responses (orthogonalized)'
+            irfs = self.orth_irfs
+        else:
+            title = 'Impulse responses'
+            irfs = self.irfs
+
+        try:
+            stderr = self.cov(orth=orth)
+        except NotImplementedError:
+            stderr = None
+
+        self._grid_plot(irfs, stderr, impcol, rescol, title,
+                        signif=signif, subplot_params=subplot_params,
+                        plot_params=plot_params)
+
+    def plot_cum_effects(self, orth=False, impcol=None, rescol=None,
+                         signif=0.05, plot_params=None,
+                         subplot_params=None):
+        if orth:
+            title = 'Cumulative responses responses (orthogonalized)'
+        else:
+            title = 'Cumulative responses'
+
+        try:
+            stderr = self.cum_effect_cov(orth=orth)
+        except NotImplementedError:
+            stderr = None
+
+        self._grid_plot(self.cum_effects, stderr, impcol, rescol, title,
+                        signif=signif, hlines=self.lr_effects,
+                        subplot_params=subplot_params,
+                        plot_params=plot_params)
+
+    def _grid_plot(self, values, stderr, impcol, rescol, title,
+                   signif=0.05, hlines=None, subplot_params=None,
+                   plot_params=None, figsize=(10,10)):
+        """
+        Reusable function to make flexible grid plots of impulse responses and
+        comulative effects
+
+        values : (T + 1) x k x k
+        stderr : T x k x k
+        hlines : k x k
+        """
+        if subplot_params is None:
+            subplot_params = {}
+        if plot_params is None:
+            plot_params = {}
+
+        nrows, ncols, to_plot = self._get_plot_config(impcol, rescol)
+
+        fig, axes = plt.subplots(nrows=nrows, ncols=ncols, sharex=True,
+                                 squeeze=False, figsize=figsize)
+
+        # fill out space
+        _adjust_subplots()
+
+        fig.suptitle(title, fontsize=14)
+
+        subtitle_temp = r'%s$\rightarrow$%s'
+
+        names = self.model.names
+        for (j, i, ai, aj) in to_plot:
+            ax = axes[ai][aj]
+
+            # hm, how hackish is this?
+            if stderr is not None:
+                var = stderr[:, j * self.k + i, j * self.k + i]
+                sig = np.sqrt(np.r_[0, var])
+                plot_with_error(values[:, i, j], sig, axes=ax, alpha=signif,
+                                value_fmt='b')
+            else:
+                plot_with_error(values[:, i, j], None, axes=ax, value_fmt='b')
+
+            ax.axhline(0, color='k')
+
+            if hlines is not None:
+                ax.axhline(hlines[i,j], color='k')
+
+            sz = subplot_params.get('fontsize', 12)
+            ax.set_title(subtitle_temp % (names[j], names[i]), fontsize=sz)
+
+    def _get_col(self, col):
+        try:
+            result = self.model.names.index(col)
+        except Exception:
+            if not isinstance(col, int):
+                raise
+            result = col
+
+        return result
+
+    def _get_plot_config(self, impcol, rescol):
+        nrows = ncols = k = self.k
+        if impcol is not None and rescol is not None:
+            # plot one impulse-response pair
+            nrows = ncols = 1
+            j = self._get_col(impcol)
+            i = self._get_col(rescol)
+            to_plot = [(j, i, 0, 0)]
+        elif impcol is not None:
+            # plot impacts of impulse in one variable
+            ncols = 1
+            j = self._get_col(impcol)
+            to_plot = [(j, i, i, 0) for i in range(k)]
+        elif rescol is not None:
+            # plot only things having impact on particular variable
+            ncols = 1
+            i = self._get_col(rescol)
+            to_plot = [(j, i, j, 0) for j in range(k)]
+        else:
+            # plot everything
+            to_plot = [(j, i, i, j) for i in range(k) for j in range(k)]
+
+        return nrows, ncols, to_plot
+
+
+class IRAnalysis(BaseIRAnalysis):
     """
     Impulse response analysis class
 
@@ -1186,25 +1418,10 @@ class IRAnalysis(object):
     """
 
     def __init__(self, model, P=None, periods=10):
-        self.model = model
-        self.periods = periods
-        self.k, self.lags, self.T = model.k, model.p, model.T
-
-        if P is None:
-            P = model._chol_sigma_u
-        self.P = P
-
-        self.irfs = model.ma_rep(periods)
-        self.orth_irfs = model.orth_ma_rep(periods)
-
-        self.lr_effects = model.long_run_effects()
-        self.cum_effects = self.irfs.cumsum(axis=0)
+        BaseIRAnalysis.__init__(self, model, P=P, periods=periods)
 
         self.cov_a = model._cov_alpha
         self.cov_sig = model._cov_sigma
-
-        # auxiliary stuff
-        self._A = var1_rep(model.coefs)
 
         # memoize dict for G matrix function
         self._g_memo = {}
@@ -1368,127 +1585,6 @@ class IRAnalysis(object):
 
         return np.dot(Lk.T, L.inv(B))
 
-    def plot_irf(self, orth=False, impcol=None, rescol=None, signif=0.05,
-                 plot_params=None, subplot_params=None):
-        """
-        Plot impulse responses
-
-        Parameters
-        ----------
-        orth : bool, default False
-            Compute orthogonalized impulse responses
-        impcol : string or int
-            variable providing the impulse
-        rescol : string or int
-            variable affected by the impulse
-        signif : float (0 < signif < 1)
-            Significance level for error bars, defaults to 95% CI
-        subplot_params : dict
-            To pass to subplot plotting funcions. Example: if fonts are too big,
-            pass {'fontsize' : 8} or some number to your taste.
-        plot_params : dict
-        """
-        if orth:
-            title = 'Impulse responses (orthogonalized)'
-        else:
-            title = 'Impulse responses'
-
-        stderr = self.cov(orth=orth)
-        self._grid_plot(self.irfs, stderr, impcol, rescol, title,
-                        signif=signif, subplot_params=subplot_params,
-                        plot_params=plot_params)
-
-    def plot_cum_effects(self, orth=False, impcol=None, rescol=None,
-                         signif=0.05, plot_params=None,
-                         subplot_params=None):
-        if orth:
-            title = 'Cumulative responses responses (orthogonalized)'
-        else:
-            title = 'Cumulative responses'
-
-        stderr = self.cum_effect_cov(orth=orth)
-        self._grid_plot(self.cum_effects, stderr, impcol, rescol, title,
-                        signif=signif, hlines=self.lr_effects,
-                        subplot_params=subplot_params,
-                        plot_params=plot_params)
-
-    def _grid_plot(self, values, stderr, impcol, rescol, title,
-                   signif=0.05, hlines=None, subplot_params=None,
-                   plot_params=None):
-        """
-        Reusable function to make flexible grid plots of impulse responses and
-        comulative effects
-
-        values : (T + 1) x k x k
-        stderr : T x k x k
-        hlines : k x k
-        """
-        if subplot_params is None:
-            subplot_params = {}
-        if plot_params is None:
-            plot_params = {}
-
-        nrows, ncols, to_plot = self._get_plot_config(impcol, rescol)
-
-        fig, axes = plt.subplots(nrows=nrows, ncols=ncols, sharex=True,
-                                 squeeze=False, figsize=(10, 10))
-        plt.subplots_adjust(bottom=0.05, top=0.925,
-                            left=0.05, right=0.95,
-                            hspace=0.2)
-
-        fig.suptitle(title, fontsize=14)
-
-        subtitle_temp = r'%s$\rightarrow$%s'
-
-        names = self.model.names
-        for (j, i, ai, aj) in to_plot:
-            ax = axes[ai][aj]
-            var = stderr[:, j * self.k + i, j * self.k + i]
-            sig = np.sqrt(np.r_[0, var])
-            plot_with_error(values[:, i, j], sig, axes=ax, alpha=signif,
-                            value_fmt='b')
-            ax.axhline(0, color='k')
-
-            if hlines is not None:
-                ax.axhline(hlines[i,j], color='k')
-
-            sz = subplot_params.get('fontsize', 12)
-            ax.set_title(subtitle_temp % (names[j], names[i]), fontsize=sz)
-
-    def _get_col(self, col):
-        try:
-            result = self.model.names.index(col)
-        except Exception:
-            if not isinstance(col, int):
-                raise
-            result = col
-
-        return result
-
-    def _get_plot_config(self, impcol, rescol):
-        nrows = ncols = k = self.k
-        if impcol is not None and rescol is not None:
-            # plot one impulse-response pair
-            nrows = ncols = 1
-            j = self._get_col(impcol)
-            i = self._get_col(rescol)
-            to_plot = [(j, i, 0, 0)]
-        elif impcol is not None:
-            # plot impacts of impulse in one variable
-            ncols = 1
-            j = self._get_col(impcol)
-            to_plot = [(j, i, i, 0) for i in range(k)]
-        elif rescol is not None:
-            # plot only things having impact on particular variable
-            ncols = 1
-            i = self._get_col(rescol)
-            to_plot = [(j, i, j, 0) for j in range(k)]
-        else:
-            # plot everything
-            to_plot = [(j, i, i, j) for i in range(k) for j in range(k)]
-
-        return nrows, ncols, to_plot
-
     def fevd_table(self):
         pass
 
@@ -1576,10 +1672,15 @@ class VARSummary(object):
         """
         Summary of VAR model
         """
-        return self._coef_table()
-        # return '\n'.join((self._header_table(),
-        #                   self._stats_table(),
-        #                   self._coef_table()))
+        buf = StringIO()
+
+        print >> buf, self._header_table()
+        # print >> buf, self._stats_table()
+
+        print >> buf, self._coef_table()
+        print >> buf, self._resid_info()
+
+        return buf.getvalue()
 
     def _header_table(self):
         import time
@@ -1608,7 +1709,7 @@ class VARSummary(object):
         return str(part1)
 
     def _stats_table(self):
-        #TODO: do we want individual statistics or should users just
+        # TODO: do we want individual statistics or should users just
         # use results if wanted?
         # Handle overall fit statistics
         part2Lstubs = ('No. of Equations:',
@@ -1631,21 +1732,86 @@ class VARSummary(object):
         return str(part2L)
 
     def _coef_table(self):
-        Xnames = self._lag_names() * self.model.k
-
         model = self.model
+        k = model.k
+
+        Xnames = self._lag_names() * k
 
         data = zip(model.beta.ravel(),
                    model.stderr.ravel(),
                    model.t().ravel(),
                    model.pvalues.ravel())
 
-        header = ('coefficient','std. error','z-stat','prob')
-        table = SimpleTable(data, header, Xnames, title=None,
-                            txt_fmt = self.default_fmt)
+        header = ('coefficient','std. error','t-stat','prob')
 
-        return str(table)
+        buf = StringIO()
+        dim = k * model.p + 1
+        for i in range(k):
+            section = "Results for equation %s" % model.names[i]
+            print >> buf, section
 
+            table = SimpleTable(data[dim * i : dim * (i + 1)], header,
+                                Xnames, title=None, txt_fmt = self.default_fmt)
+
+            print >> buf, str(table)
+
+            if i < k - 1: buf.write('\n')
+
+        return buf.getvalue()
+
+    def _resid_info(self):
+        buf = StringIO()
+        names = self.model.names
+
+        resid_cov = np.cov(self.model.resid, rowvar=0)
+        rdiag = np.sqrt(np.diag(resid_cov))
+        resid_corr = resid_cov / np.outer(rdiag, rdiag)
+
+        print >> buf, "Correlation matrix of residuals"
+        print >> buf, pprint_matrix(resid_corr, names, names)
+
+        return buf.getvalue()
+
+def pprint_matrix(values, clabels, rlabels, col_space=None):
+    buf = StringIO()
+
+    T, K = len(rlabels), len(clabels)
+
+    if col_space is None:
+        min_space = 10
+        col_space = [max(len(c) + 2, min_space) for c in clabels]
+    else:
+        col_space = (col_space,) * K
+
+    row_space = max([len(str(x)) for x in rlabels]) + 2
+
+    head = _pfixed('', row_space)
+
+    for j, h in enumerate(clabels):
+        head += _pfixed(h, col_space[j])
+
+    print >> buf, head
+
+    for i, rlab in enumerate(rlabels):
+        line = ('%s' % rlab).ljust(row_space)
+
+        for j in range(K):
+            line += _pfixed(values[i,j], col_space[i])
+
+        print >> buf, line
+
+    return buf.getvalue()
+
+def _pfixed(s, space, nanRep=None, float_format=None):
+    if isinstance(s, float):
+        if float_format:
+            formatted = float_format(s)
+        else:
+            formatted = "%#8.6F" % s
+
+        return formatted.rjust(space)
+    else:
+        return ('%s' % s)[:space].rjust(space)
 
 #-------------------------------------------------------------------------------
 
