@@ -722,11 +722,100 @@ class VAR(object):
     def loglike(self, params, omega):
         pass
 
-    def fit(self, maxlag=1, method='ols', ic=None):
-        lags = maxlag
-        est = VAREstimator(self.y, p=lags, names=self.names, dates=self.dates)
-        return est
+    def fit(self, maxlags=None, method='ols', ic=None, verbose=False):
+        """
+        Fit the VAR model
 
+        Parameters
+        ----------
+        maxlags : int
+            Maximum number of lags to check for order selection, defaults to
+            12 * (nobs/100.)**(1./4), see select_order function
+        method : {'ols'}
+            Estimation method to use
+        ic : {'aic', 'fpe', 'hq', 'sc', None}
+            Information criterion to use for VAR order selection.
+            aic : Akaike
+            fpe : Final prediction error
+            hq : Hannan-Quinn
+            sc : Schwarz
+        verbose : bool, default False
+            Print order selection output to the screen
+
+        Notes
+        -----
+        Lutkepohl pp. 146-153
+
+        Returns
+        -------
+        est : VAREstimator
+        """
+        lags = maxlags
+
+        if ic is not None:
+            selections = self.select_order(maxlags=maxlags, verbose=verbose)
+            if ic not in selections:
+                raise Exception("%s not recognized, must be among %s"
+                                % (ic, sorted(selections)))
+            lags = selections[ic]
+            if verbose:
+                print 'Using %d based on %s criterion' %  (lags, ic)
+
+        return VAREstimator(self.y, p=lags, names=self.names, dates=self.dates)
+
+    def select_order(self, maxlags=None, verbose=True):
+        """
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        """
+        from collections import defaultdict
+
+        if maxlags is None:
+            maxlags = int(round(12*(self.nobs/100.)**(1/4.)))
+
+        ics = defaultdict(list)
+        for p in range(maxlags + 1):
+            est = VAREstimator(self.y, p=p)
+            for k, v in est.info_criteria.iteritems():
+                ics[k].append(v)
+
+        selected_orders = dict((k, mat(v).argmin())
+                               for k, v in ics.iteritems())
+
+        if verbose:
+            self._print_ic_table(ics, selected_orders)
+
+        return selected_orders
+
+    def _print_ic_table(self, ics, selected_orders):
+        """
+
+        """
+        cols = sorted(ics)
+
+        data = mat([["%#10.4F" % v for v in ics[c]] for c in cols],
+                   dtype=object).T
+
+        # start minimums
+        for i, col in enumerate(cols):
+            idx = int(selected_orders[col]), i
+            data[idx] = data[idx] + '*'
+            # data[idx] = data[idx][:-1] + '*' # super hack, ugh
+
+        fmt = dict(_default_table_fmt,
+                   data_fmts=("%s",) * len(cols))
+
+        buf = StringIO()
+        table = SimpleTable(data, cols, range(len(data)),
+                            title='VAR Order Selection', txt_fmt=fmt)
+        print >> buf, table
+        print >> buf, '* Minimum'
+
+        print buf.getvalue()
 
 class VARProcess(object):
     """
@@ -1297,7 +1386,11 @@ class VAREstimator(VARProcess):
     def summary(self):
         return VARSummary(self)
 
-    def test_causality(self, equation, variables, kind='f', signif=0.05):
+#-------------------------------------------------------------------------------
+# VAR Diagnostics: Granger-causality, whiteness of residuals, normality, etc.
+
+    def test_causality(self, equation, variables, kind='f', signif=0.05,
+                       verbose=True):
         """
         Compute test statistic for null hypothesis of Granger-noncausality,
         general function to test joint Granger-causality of multiple variables
@@ -1362,28 +1455,40 @@ class VAREstimator(VARProcess):
         pvalue = dist.sf(test_stat)
         crit_value = dist.ppf(1 - signif)
 
-        # Should factor this out into a class or separate function?
+        conclusion = 'fail to reject' if test_stat < crit_value else 'reject'
+        results = {
+            'test_stat' : test_stat,
+            'crit_value' : crit_value,
+            'pvalue' : pvalue,
+            'df' : df,
+            'conclusion' : conclusion,
+            'signif' :  signif
+        }
 
+        if verbose:
+            self._causality_summary(results, variables, equation, signif, kind)
+
+        return results
+
+    def _causality_summary(self, results, variables, equation, signif, kind):
         fmt = dict(_default_table_fmt,
                    data_fmts=["%#15.6F","%#15.6F","%#15.3F", "%s"])
 
         buf = StringIO()
-        table = SimpleTable([[test_stat, crit_value, pvalue, str(df)]],
-                            ['Test statistic', 'Critical Value',
-                             'p-value', 'df'],
-                            [''], title=None,
-                            txt_fmt=fmt)
+        table = SimpleTable([[results['test_stat'],
+                              results['crit_value'],
+                              results['pvalue'],
+                              str(results['df'])]],
+                            ['Test statistic', 'Critical Value', 'p-value',
+                             'df'], [''], title=None, txt_fmt=fmt)
 
         print >> buf, "Granger causality %s-test" % kind
         print >> buf, table
 
         print >> buf, 'H_0: %s do not Granger-cause %s' % (variables, equation)
 
-        if test_stat < crit_value:
-            buf.write("Conclusion: FAIL to reject H_0")
-        else:
-            buf.write("Conclusion: REJECT H_0")
-        buf.write(" at %.2f%% significance level" % (signif * 100))
+        buf.write("Conclusion: %s H_0" % results['conclusion'])
+        buf.write(" at %.2f%% significance level" % (results['signif'] * 100))
 
         print buf.getvalue()
 
@@ -1420,7 +1525,7 @@ class VAREstimator(VARProcess):
             'aic' : self._aic(),
             'hq' : self._hqic(),
             'sc' : self._sc(),
-            'log_fpe' : self._log_fpe()
+            'fpe' : self._log_fpe()
             }
 
     def _aic(self):
@@ -2075,7 +2180,7 @@ if __name__ == '__main__':
     adj_data = np.diff(np.log(data), axis=0)
     # est = VAR(adj_data, p=2, dates=dates[1:], names=names)
     model = VAR(adj_data[:-16], dates=dates[1:-16], names=names)
-    est = model.fit(maxlag=2)
+    est = model.fit(maxlags=2)
 
     irf = est.irf()
 
