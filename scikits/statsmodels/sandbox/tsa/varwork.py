@@ -19,7 +19,6 @@ import scipy.linalg as L
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 
-from scikits.statsmodels.compatibility import np_slogdet
 from scikits.statsmodels.decorators import cache_readonly
 from scikits.statsmodels.tools import chain_dot
 from scikits.statsmodels.iolib import SimpleTable
@@ -33,6 +32,25 @@ try:
 except ImportError:
     import pdb
     st = pdb.set_trace
+
+
+_default_table_fmt = dict(
+    empty_cell = '',
+    colsep='  ',
+    row_pre = '',
+    row_post = '',
+    table_dec_above='=',
+    table_dec_below='=',
+    header_dec_below='-',
+    header_fmt = '%s',
+    stub_fmt = '%s',
+    title_align='c',
+    header_align = 'r',
+    data_aligns = 'r',
+    stubs_align = 'l',
+    fmt = 'txt'
+)
+
 
 class MPLConfigurator(object):
 
@@ -226,6 +244,89 @@ def test_vech():
                [4, 5, 6],
                [7, 8, 9]])
     assert(np.array_equal(vech(arr), [1, 4, 7, 5, 8, 9]))
+
+def pprint_matrix(values, clabels, rlabels, col_space=None):
+    buf = StringIO()
+
+    T, K = len(rlabels), len(clabels)
+
+    if col_space is None:
+        min_space = 10
+        col_space = [max(len(c) + 2, min_space) for c in clabels]
+    else:
+        col_space = (col_space,) * K
+
+    row_space = max([len(str(x)) for x in rlabels]) + 2
+
+    head = _pfixed('', row_space)
+
+    for j, h in enumerate(clabels):
+        head += _pfixed(h, col_space[j])
+
+    print >> buf, head
+
+    for i, rlab in enumerate(rlabels):
+        line = ('%s' % rlab).ljust(row_space)
+
+        for j in range(K):
+            line += _pfixed(values[i,j], col_space[i])
+
+        print >> buf, line
+
+    return buf.getvalue()
+
+def _pfixed(s, space, nanRep=None, float_format=None):
+    if isinstance(s, float):
+        if float_format:
+            formatted = float_format(s)
+        else:
+            formatted = "%#8.6F" % s
+
+        return formatted.rjust(space)
+    else:
+        return ('%s' % s)[:space].rjust(space)
+
+def get_logdet(m):
+    from scikits.statsmodels.compatibility import np_slogdet
+    logdet = np_slogdet(m)
+
+    if logdet[0] == -1:
+        raise ValueError("Omega matrix is not positive definite")
+    elif logdet[0] == 0:
+        raise ValueError("Omega matrix is singluar")
+    else:
+        logdet = logdet[1]
+
+    return logdet
+
+def _interpret_data(data, names):
+    """
+    Convert passed data structure to form required by VAR estimation classes
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+
+    """
+    if isinstance(data, np.ndarray):
+        provided_names = data.dtype.names
+
+        # structured array type
+        if provided_names:
+            if names is None:
+                names = provided_names
+            else:
+                assert(len(names) == len(provided_names))
+
+            Y = _struct_to_ndarray(data)
+        else:
+            Y = data
+    else:
+        raise Exception('cannot handle other input types at the moment')
+
+    return Y, names
 
 #-------------------------------------------------------------------------------
 # VAR process routines
@@ -594,6 +695,39 @@ import unittest
 class TestVAR(unittest.TestCase):
     pass
 
+class VAR(object):
+    """
+    Fit VAR(p) process and do lag order selection
+
+    .. math:: y_t = A_1 y_{t-1} + \ldots + A_p y_{t-p} + u_t
+
+    Notes
+    -----
+    **References**
+    Lutkepohl (2005) New Introduction to Multiple Time Series Analysis
+
+    Returns
+    -------
+    .fit() method returns VAREstimator object
+    """
+
+    def __init__(self, endog, names=None, dates=None):
+        self.y, self.names = _interpret_data(endog, names)
+        self.nobs, self.neqs = self.y.shape
+
+        if dates is not None:
+            assert(self.nobs == len(dates))
+        self.dates = dates
+
+    def loglike(self, params, omega):
+        pass
+
+    def fit(self, maxlag=1, method='ols', ic=None):
+        lags = maxlag
+        est = VAREstimator(self.y, p=lags, names=self.names, dates=self.dates)
+        return est
+
+
 class VARProcess(object):
     """
 
@@ -606,6 +740,18 @@ class VARProcess(object):
     **Attributes**:
 
     """
+    def __init__(self):
+        pass
+
+    def get_eq_index(self, name):
+        try:
+            result = self.names.index(name)
+        except Exception:
+            if not isinstance(name, int):
+                raise
+            result = name
+
+        return result
 
     def __str__(self):
         output = ('VAR(%d) process for %d-dimensional response y_t'
@@ -794,37 +940,9 @@ class VARProcess(object):
         """
         pass
 
-    def test_causality(self, equation, variables, kind='F'):
-        """
-        Compute test statistic for null hypothesis of Granger-noncausality
-
-        Parameters
-        ----------
-        equation : string
-            Equation to test for causality
-        variables : sequence
-            List, tuple, etc. of variables to test for Granger-causality
-
-        Notes
-        -----
-        Null hypothesis is that there is no Granger-causality for the indicated
-        variables
-
-        Returns
-        -------
-        results : dict
-        """
-        pass
-
-    def test_whiteness(self):
-        pass
-
-    def test_normality(self):
-        pass
-
 
 #-------------------------------------------------------------------------------
-# Estimator and Known VAR process classes
+# Known VAR process and Estimator classes
 
 class KnownVARProcess(VARProcess):
     """
@@ -844,16 +962,9 @@ class KnownVARProcess(VARProcess):
 
         self.sigma_u = sigma_u
 
-class VAR(VARProcess):
+class VAREstimator(VARProcess):
     """
-    Estimate VAR(p) process
-
-    .. math:: y_t = A_1 y_{t-1} + \ldots + A_p y_{t-p} + u_t
-
-    Notes
-    -----
-    **References**
-    Lutkepohl (2005) New Introduction to Multiple Time Series Analysis
+    Estimate VAR(p) process with fixed number of lags
 
     Returns
     -------
@@ -879,12 +990,12 @@ class VAR(VARProcess):
 
     sigma_u : ndarray (K x K)
         Estimate of white noise process variance Var[u_t]
-
     """
+    _model_type = 'VAR'
 
     def __init__(self, data, p=1, names=None, dates=None):
         self.p = p
-        self.y, self.names = self._interpret_data(data, names)
+        self.y, self.names = _interpret_data(data, names)
         self.nobs, self.k = self.y.shape
 
         # This will be the dimension of the Z matrix
@@ -897,26 +1008,6 @@ class VAR(VARProcess):
 
         self.names = names
         self.dates = dates
-
-    @staticmethod
-    def _interpret_data(data, names):
-        if isinstance(data, np.ndarray):
-            provided_names = data.dtype.names
-
-            # structured array type
-            if provided_names:
-                if names is None:
-                    names = provided_names
-                else:
-                    assert(len(names) == len(provided_names))
-
-                Y = _struct_to_ndarray(data)
-            else:
-                Y = data
-        else:
-            raise Exception('cannot handle other input types at the moment')
-
-        return Y, names
 
     def data_summary(self):
         pass
@@ -934,6 +1025,21 @@ class VAR(VARProcess):
     @property
     def df_resid(self):
         return self.T - self.df_model
+
+    def __str__(self):
+        output = ('VAR(%d) process for %d-dimensional response y_t'
+                  % (self.p, self.k))
+        output += '\nstable: %s' % self.is_stable()
+        output += '\nmean: %s' % self.mean()
+
+        return output
+
+    def forecast_dyn(self):
+        """
+        "Forward filter": compute forecasts for each time step
+        """
+
+        pass
 
 #-------------------------------------------------------------------------------
 # VARProcess interface
@@ -1094,9 +1200,6 @@ class VAR(VARProcess):
     def pvalues(self):
         return stats.t.sf(np.abs(self.t()), self.df_resid)*2
 
-#-------------------------------------------------------------------------------
-# Forecast error covariance
-
     def forecast_interval(self, steps, alpha=0.05):
         """
         Construct forecast interval estimates assuming the y are Gaussian
@@ -1121,6 +1224,8 @@ class VAR(VARProcess):
         """
         mid, lower, upper = self.forecast_interval(steps, alpha=alpha)
         plot_var_forc(self.y, mid, lower, upper, names=self.names)
+
+    # Forecast error covariance functions
 
     def forecast_cov(self, steps=1):
         """
@@ -1189,29 +1294,104 @@ class VAR(VARProcess):
 
         return np.vstack((upper, self.beta.T, lower))
 
-    def _approx_mse(self, h):
-        """
-
-        """
-        pass
-
-    def __str__(self):
-        output = ('VAR(%d) process for %d-dimensional response y_t'
-                  % (self.p, self.k))
-        output += '\nstable: %s' % self.is_stable()
-        output += '\nmean: %s' % self.mean()
-
-        return output
-
-    def forecast_dyn(self):
-        """
-        "Forward filter": compute forecasts for each time step
-        """
-
-        pass
-
     def summary(self):
         return VARSummary(self)
+
+    def test_causality(self, equation, variables, kind='f', signif=0.05):
+        """
+        Compute test statistic for null hypothesis of Granger-noncausality,
+        general function to test joint Granger-causality of multiple variables
+
+        Parameters
+        ----------
+        equation : string or int
+            Equation to test for causality
+        variables : sequence (of strings or ints)
+            List, tuple, etc. of variables to test for Granger-causality
+        kind : {'f', 'wald'}
+            Perform F-test or Wald (chi-sq) test
+        signif : float, default 5%
+            Significance level for computing critical values for test,
+            defaulting to standard 0.95 level
+
+        Notes
+        -----
+        Null hypothesis is that there is no Granger-causality for the indicated
+        variables
+
+        Returns
+        -------
+        results : dict
+        """
+        k, p = self.k, self.p
+
+        # number of restrictions
+        N = len(variables) * self.p
+
+        # Make restriction matrix
+        C = np.zeros((N, k ** 2 * self.p + k), dtype=float)
+
+        eq_index = self.get_eq_index(equation)
+        vinds = mat([self.get_eq_index(v) for v in variables])
+
+        # remember, vec is column order!
+        offsets = np.concatenate([k + k ** 2 * j + k * vinds + eq_index
+                                  for j in range(p)])
+        C[np.arange(N), offsets] = 1
+
+        # Lutkepohl 3.6.5
+        Cb = np.dot(C, vec(self.beta.T))
+        middle = L.inv(chain_dot(C, self.cov_beta, C.T))
+
+        # wald statistic
+        lam_wald = chain_dot(Cb, middle, Cb)
+
+        if kind.lower() == 'wald':
+            test_stat = lam_wald
+            df = N
+            dist = stats.chi2(df)
+            pvalue = stats.chi2.sf(test_stat, N)
+            crit_value = stats.chi2.ppf(1 - signif, N)
+        elif kind.lower() == 'f':
+            test_stat = lam_wald / N
+            df = (N, self.df_resid)
+            dist = stats.f(*df)
+        else:
+            raise Exception('kind %s not recognized' % kind)
+
+        pvalue = dist.sf(test_stat)
+        crit_value = dist.ppf(1 - signif)
+
+        # Should factor this out into a class or separate function?
+
+        fmt = dict(_default_table_fmt,
+                   data_fmts=["%#15.6F","%#15.6F","%#15.3F", "%s"])
+
+        buf = StringIO()
+        table = SimpleTable([[test_stat, crit_value, pvalue, str(df)]],
+                            ['Test statistic', 'Critical Value',
+                             'p-value', 'df'],
+                            [''], title=None,
+                            txt_fmt=fmt)
+
+        print >> buf, "Granger causality %s-test" % kind
+        print >> buf, table
+
+        print >> buf, 'H_0: %s do not Granger-cause %s' % (variables, equation)
+
+        if test_stat < crit_value:
+            buf.write("Conclusion: FAIL to reject H_0")
+        else:
+            buf.write("Conclusion: REJECT H_0")
+        buf.write(" at %.2f%% significance level" % (signif * 100))
+
+        print buf.getvalue()
+
+    def test_whiteness(self):
+        pass
+
+    def test_normality(self):
+        pass
 
 #-------------------------------------------------------------------------------
 # Impulse responses, long run effects, standard errors
@@ -1233,6 +1413,46 @@ class VAR(VARProcess):
         """
         return IRAnalysis(self, P=var_decomp, periods=periods)
 
+    @cache_readonly
+    def info_criteria(self):
+        # information criteria for order selection
+        return {
+            'aic' : self._aic(),
+            'hq' : self._hqic(),
+            'sc' : self._sc(),
+            'log_fpe' : self._log_fpe()
+            }
+
+    def _aic(self):
+        # Akaike information criterion
+        logdet = np.log(self._logdet_sigma_mle())
+        return logdet + (2. * self.p / self.T) * (self.k ** 2)
+
+    def _log_fpe(self):
+        """
+        Lutkepohl p. 147
+        """
+        # Log Final Prediction Error (FPE)
+        factor = ((self.T + self.df_model) / self.df_resid) ** self.k
+        return np.log(factor * self._logdet_sigma_mle())
+
+    def _hqic(self):
+        # Hannan-Quinn criterion
+        logdet = np.log(self._logdet_sigma_mle())
+        T = self.T
+
+        return logdet + 2 * np.log(np.log(T)) * self.p * self.k ** 2 / T
+
+    def _sc(self):
+        # Schwarz criterion
+        logdet = np.log(self._logdet_sigma_mle())
+        return logdet + (np.log(self.T) / self.T) * self.p * self.k ** 2
+
+    def _logdet_sigma_mle(self):
+        sigma_mle = self.sigma_u * self.df_resid / self.T
+        detsigma = L.det(sigma_mle)
+        return detsigma
+
 class BaseIRAnalysis(object):
     """
     Base class for plotting and computing IRF-related statistics, want to be
@@ -1242,7 +1462,7 @@ class BaseIRAnalysis(object):
     def __init__(self, model, P=None, periods=10):
         self.model = model
         self.periods = periods
-        self.k, self.lags  = model.k, model.p
+        self.k, self.lags, self.T  = model.k, model.p, model.T
 
         if P is None:
             P = model._chol_sigma_u
@@ -1252,10 +1472,10 @@ class BaseIRAnalysis(object):
         self.orth_irfs = model.orth_ma_rep(periods)
 
         self.cum_effects = self.irfs.cumsum(axis=0)
-        self.orth_cum_effects = self.irfs.cumsum(axis=0)
+        self.orth_cum_effects = self.orth_irfs.cumsum(axis=0)
 
         self.lr_effects = model.long_run_effects()
-        self.orth_lr_effects = model.long_run_effects()
+        self.orth_lr_effects = np.dot(model.long_run_effects(), P)
 
         # auxiliary stuff
         self._A = var1_rep(model.coefs)
@@ -1307,16 +1527,20 @@ class BaseIRAnalysis(object):
                          subplot_params=None):
         if orth:
             title = 'Cumulative responses responses (orthogonalized)'
+            cum_effects = self.orth_cum_effects
+            lr_effects = self.orth_lr_effects
         else:
             title = 'Cumulative responses'
+            cum_effects = self.cum_effects
+            lr_effects = self.lr_effects
 
         try:
             stderr = self.cum_effect_cov(orth=orth)
         except NotImplementedError:
             stderr = None
 
-        self._grid_plot(self.cum_effects, stderr, impcol, rescol, title,
-                        signif=signif, hlines=self.lr_effects,
+        self._grid_plot(cum_effects, stderr, impcol, rescol, title,
+                        signif=signif, hlines=lr_effects,
                         subplot_params=subplot_params,
                         plot_params=plot_params)
 
@@ -1354,8 +1578,7 @@ class BaseIRAnalysis(object):
 
             # hm, how hackish is this?
             if stderr is not None:
-                var = stderr[:, j * self.k + i, j * self.k + i]
-                sig = np.sqrt(np.r_[0, var])
+                sig = np.sqrt(stderr[:, j * self.k + i, j * self.k + i])
                 plot_with_error(values[:, i, j], sig, axes=ax, alpha=signif,
                                 value_fmt='b')
             else:
@@ -1369,33 +1592,23 @@ class BaseIRAnalysis(object):
             sz = subplot_params.get('fontsize', 12)
             ax.set_title(subtitle_temp % (names[j], names[i]), fontsize=sz)
 
-    def _get_col(self, col):
-        try:
-            result = self.model.names.index(col)
-        except Exception:
-            if not isinstance(col, int):
-                raise
-            result = col
-
-        return result
-
     def _get_plot_config(self, impcol, rescol):
         nrows = ncols = k = self.k
         if impcol is not None and rescol is not None:
             # plot one impulse-response pair
             nrows = ncols = 1
-            j = self._get_col(impcol)
-            i = self._get_col(rescol)
+            j = self.model.get_eq_index(impcol)
+            i = self.model.get_eq_index(rescol)
             to_plot = [(j, i, 0, 0)]
         elif impcol is not None:
             # plot impacts of impulse in one variable
             ncols = 1
-            j = self._get_col(impcol)
+            j = self.model.get_eq_index(impcol)
             to_plot = [(j, i, i, 0) for i in range(k)]
         elif rescol is not None:
             # plot only things having impact on particular variable
             ncols = 1
-            i = self._get_col(rescol)
+            i = self.model.get_eq_index(rescol)
             to_plot = [(j, i, j, 0) for j in range(k)]
         else:
             # plot everything
@@ -1439,9 +1652,10 @@ class IRAnalysis(BaseIRAnalysis):
         if orth:
             return self._orth_cov()
 
-        covs = self._empty_covm(self.periods)
-        for i in range(self.periods):
-            Gi = self.G[i]
+        covs = self._empty_covm(self.periods + 1)
+        covs[0] = np.zeros((self.k ** 2, self.k ** 2))
+        for i in range(1, self.periods + 1):
+            Gi = self.G[i - 1]
             covs[i] = chain_dot(Gi, self.cov_a, Gi.T)
 
         return covs
@@ -1457,19 +1671,23 @@ class IRAnalysis(BaseIRAnalysis):
         -------
 
         """
-        covs = self._empty_covm(self.periods)
-
         Ik = np.eye(self.k)
         PIk = np.kron(self.P.T, Ik)
         H = self.H
 
-        for i in range(self.periods):
-            Ci = np.dot(PIk, self.G[i])
-            Cibar = np.dot(np.kron(Ik, self.irfs[i + 1]), H)
+        covs = self._empty_covm(self.periods + 1)
+        for i in range(self.periods + 1):
+            if i == 0:
+                apiece = 0
+            else:
+                Ci = np.dot(PIk, self.G[i-1])
+                apiece = chain_dot(Ci, self.cov_a, Ci.T)
 
-            # is this right? I think Lutkepohl has a typo!
-            covs[i] = (chain_dot(Ci, self.cov_a, Ci.T) +
-                       chain_dot(Cibar, self.cov_sig, Cibar.T))
+            Cibar = np.dot(np.kron(Ik, self.irfs[i]), H)
+            bpiece = chain_dot(Cibar, self.cov_sig, Cibar.T) / self.T
+
+            # Lutkepohl typo, cov_sig correct
+            covs[i] = apiece + bpiece
 
         return covs
 
@@ -1492,17 +1710,27 @@ class IRAnalysis(BaseIRAnalysis):
         PIk = np.kron(self.P.T, Ik)
 
         F = 0.
-        covs = self._empty_covm(self.periods)
-        for i in range(self.periods):
-            F = F + self.G[i]
+        covs = self._empty_covm(self.periods + 1)
+        for i in range(self.periods + 1):
+            if i > 0:
+                F = F + self.G[i - 1]
+
             if orth:
-                Bn = np.dot(PIk, F)
-                Bnbar = np.dot(np.kron(Ik, self.cum_effects[i + 1]), self.H)
+                if i == 0:
+                    apiece = 0
+                else:
+                    Bn = np.dot(PIk, F)
+                    apiece = chain_dot(Bn, self.cov_a, Bn.T)
 
-                covs[i] = (chain_dot(Bn, self.cov_a, Bn.T) +
-                           chain_dot(Bnbar, self.cov_sig, Bnbar.T))
+                Bnbar = np.dot(np.kron(Ik, self.cum_effects[i]), self.H)
+                bpiece = chain_dot(Bnbar, self.cov_sig, Bnbar.T) / self.T
 
+                covs[i] = apiece + bpiece
             else:
+                if i == 0:
+                    covs[i] = np.zeros((self.k**2, self.k**2))
+                    continue
+
                 covs[i] = chain_dot(F, self.cov_a, F.T)
 
         return covs
@@ -1579,9 +1807,17 @@ class IRAnalysis(BaseIRAnalysis):
     def H(self):
         k = self.k
         Lk = elimination_matrix(k)
+        Kkk = commutation_matrix(k, k)
+        Ik = np.eye(k)
 
-        B = chain_dot(Lk, np.eye(k**2) + commutation_matrix(k, k),
-                      np.kron(self.P, np.eye(k)), Lk.T)
+        # B = chain_dot(Lk, np.eye(k**2) + commutation_matrix(k, k),
+        #               np.kron(self.P, np.eye(k)), Lk.T)
+
+        # return np.dot(Lk.T, L.inv(B))
+
+        B = chain_dot(Lk,
+                      np.dot(np.kron(Ik, self.P), Kkk) + np.kron(self.P, Ik),
+                      Lk.T)
 
         return np.dot(Lk.T, L.inv(B))
 
@@ -1687,14 +1923,12 @@ class VARSummary(object):
 
         model = self.model
 
-        modeltype = type(model).__name__
         t = time.localtime()
-
         # ncoefs = len(model.beta) #TODO: change when we allow coef restrictions
 
         # Header information
         part1title = "Summary of Regression Results"
-        part1data = [[modeltype],
+        part1data = [[model._model_type],
                      ["OLS"], #TODO: change when fit methods change
                      [time.strftime("%a, %d, %b, %Y", t)],
                      [time.strftime("%H:%M:%S", t)]]
@@ -1735,7 +1969,7 @@ class VARSummary(object):
         model = self.model
         k = model.k
 
-        Xnames = self._lag_names() * k
+        Xnames = self._lag_names()
 
         data = zip(model.beta.ravel(),
                    model.stderr.ravel(),
@@ -1771,47 +2005,6 @@ class VARSummary(object):
         print >> buf, pprint_matrix(resid_corr, names, names)
 
         return buf.getvalue()
-
-def pprint_matrix(values, clabels, rlabels, col_space=None):
-    buf = StringIO()
-
-    T, K = len(rlabels), len(clabels)
-
-    if col_space is None:
-        min_space = 10
-        col_space = [max(len(c) + 2, min_space) for c in clabels]
-    else:
-        col_space = (col_space,) * K
-
-    row_space = max([len(str(x)) for x in rlabels]) + 2
-
-    head = _pfixed('', row_space)
-
-    for j, h in enumerate(clabels):
-        head += _pfixed(h, col_space[j])
-
-    print >> buf, head
-
-    for i, rlab in enumerate(rlabels):
-        line = ('%s' % rlab).ljust(row_space)
-
-        for j in range(K):
-            line += _pfixed(values[i,j], col_space[i])
-
-        print >> buf, line
-
-    return buf.getvalue()
-
-def _pfixed(s, space, nanRep=None, float_format=None):
-    if isinstance(s, float):
-        if float_format:
-            formatted = float_format(s)
-        else:
-            formatted = "%#8.6F" % s
-
-        return formatted.rjust(space)
-    else:
-        return ('%s' % s)[:space].rjust(space)
 
 #-------------------------------------------------------------------------------
 
@@ -1881,7 +2074,8 @@ if __name__ == '__main__':
 
     adj_data = np.diff(np.log(data), axis=0)
     # est = VAR(adj_data, p=2, dates=dates[1:], names=names)
-    est = VAR(adj_data[:-16], p=2, dates=dates[1:-16], names=names)
+    model = VAR(adj_data[:-16], dates=dates[1:-16], names=names)
+    est = model.fit(maxlag=2)
 
     irf = est.irf()
 
@@ -1892,4 +2086,8 @@ if __name__ == '__main__':
     est2 = VAR2(adj_data[:-16])
     res2 = est2.fit(maxlag=2)
 
-    irf.plot_irf()
+    # irf.plot_irf()
+
+    i = 2; j = 1
+    cv = irf.cum_effect_cov(orth=True)
+    print np.sqrt(cv[:, j * 3 + i, j * 3 + i]) / 1e-2
