@@ -55,7 +55,7 @@ import setuptools
 from numpy.distutils.core import setup
 import numpy
 
-compile_cython = 1
+compile_cython = 0
 
 DISTNAME = 'scikits.statsmodels'
 DESCRIPTION = 'Statistical computations and models for use with SciPy'

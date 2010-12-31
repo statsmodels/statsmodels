@@ -217,9 +217,10 @@ class ARMA(GenericLikelihoodModel):
             zi[i] = sum(-b[:i+1][::-1] * y[:i+1])
         errors = lfilter(b,a, y, zi=zi)[0][p:]
 
-        ssr = sum(errors**2)
-        sigma2 = ssr/(nobs-2*p) # 2 times p because we drop p observations then
-                                # est. p more
+        ssr = np.dot(errors,errors)
+#        sigma2 = ssr/(nobs-2*p) # 2 times p because we drop p observations then
+#                                # est. p more
+        sigma2 = ssr/(nobs-p)  # not 2 times because gretl doesn't?
         self.sigma2 = sigma2
         llf = -(nobs-p)/2.*(log(2*pi) + log(sigma2)) - ssr/(2*sigma2)
         return llf
@@ -447,7 +448,11 @@ class ARMAResults(LikelihoodModelResults):
 
     @cache_readonly
     def bic(self):
-        return -2*self.llf + np.log(self.nobs)*(self.q+self.p+self.k+1)
+        nobs = self.nobs
+        p = self.p
+        if self.model.method == "css":
+            nobs -= p
+        return -2*self.llf + np.log(nobs)*(self.q+p+self.k+1)
 
     @cache_readonly
     def hqic(self):
@@ -460,37 +465,41 @@ class ARMAResults(LikelihoodModelResults):
     def fittedvalues(self):
         model = self.model
         endog = model.endog.copy()
-        if model.exog is not None:
-            exog = model.exog.copy()
         p = self.p
+        exog = model.exog # this is a copy
+        if exog is not None:
+            if model.method == "css" and p > 0:
+                exog = exog[p:]
         if model.method == "css" and p > 0:
             endog = endog[p:]
-            exog = exog[p:]
         fv = endog - self.resid
         # add deterministic part back in
         k = self.k
-        if k != 0:
-            fv += dot(exog, self.params[:k])
+#TODO: this needs to be commented out for MLE with constant
+
+#        if k != 0:
+#            fv += dot(exog, self.params[:k])
         return fv
 
 #TODO: make both of these get errors into functions or methods?
     @cache_readonly
     def resid(self):
         model = self.model
-        y = model.endog
+        params = self.params
+        y = model.endog.copy()
+
+        #demean for exog != None
+        k = model.k
+        if k > 0:
+            y -= dot(model.exog, params[:k])
+
         r = model.r
         p = model.p
-        k = model.k
         q = model.q
-        params = self.params
 
         if self.model.method != "css":
             #TODO: move get errors to cython-ized Kalman filter
             nobs = self.nobs
-
-            #demean for exog != None
-            if k > 0:
-                y -= dot(model.exog, params[:k])
 
             Z_mat = KalmanFilter.Z(r)
             m = Z_mat.shape[1]
