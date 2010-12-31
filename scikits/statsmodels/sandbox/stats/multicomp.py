@@ -254,6 +254,12 @@ def catstack(args):
     labels = np.hstack([k*np.ones(len(arr)) for k,arr in enumerate(args)])
     return x, labels
 
+#==============================================
+#
+# Part 1: Multiple Tests and P-Value Correction
+#
+#==============================================
+
 
 def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
     '''test results and p-value correction for multiple tests
@@ -389,6 +395,8 @@ def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
 def maxzero(x):
     '''find all up zero crossings and return the index of the highest
 
+    Not used anymore
+
 
     >>> np.random.seed(12345)
     >>> x = np.random.randn(8)
@@ -408,7 +416,7 @@ def maxzero(x):
            -0.97727788,  0.95008842, -0.15135721])
     >>> maxzero(x)
     (None, array([6]))
-'''
+    '''
     x = np.asarray(x)
     cond1 = x[:-1] < 0
     cond2 = x[1:] > 0
@@ -423,6 +431,7 @@ def maxzero(x):
 def maxzerodown(x):
     '''find all up zero crossings and return the index of the highest
 
+    Not used anymore
 
     >>> np.random.seed(12345)
     >>> x = np.random.randn(8)
@@ -455,11 +464,15 @@ def maxzerodown(x):
     return maxz, allzeros
 
 def ecdf(x):
+    '''no frills empirical cdf used in fdrcorrection
+    '''
     nobs = len(x)
     return np.arange(1,nobs+1)/float(nobs)
 
 def rejectionline(n, alpha=0.5):
-    '''
+    '''reference line for rejection in multiple tests
+
+    Not used anymore
 
     from: section 3.2, page 60
     '''
@@ -467,8 +480,44 @@ def rejectionline(n, alpha=0.5):
     frej = t/( t * (1-alpha) + alpha)
     return frej
 
+#TODO: rename drop 0 at end
 def fdrcorrection0(pvals, alpha=0.05, method='indep'):
-    '''
+    '''pvalue correction for false discovery rate
+
+    This covers Benjamini/Hochberg for independent or positively correlated and
+    Benjamini/Yekutieli for general or negatively correlated tests. Both are
+    available in the function multipletests, as method=`fdr_bh`, resp. `fdr_by`.
+
+    Parameters
+    ----------
+    pvals : array_like
+        set of p-values of the individual tests.
+    alpha : float
+        error rate
+    method : {'indep', 'negcorr')
+
+    Returns
+    -------
+    rejected : array, bool
+        True if a hypothesis is rejected, False if not
+    pvalue-corrected : array
+        pvalues adjusted for multiple hypothesis testing to limit FDR
+
+    Notes
+    -----
+
+    If there is prior information on the fraction of true hypothesis, then alpha
+    should be set to alpha * m/m_0 (TODOD: check!) where m is the number of tests,
+    given by the p-values, and m_0 is an estimate of the false(???) hypothesis.
+
+    The two-step method of Benjamini, Krieger and Yekutiel that estimates the number
+    of false hypotheses will be available (soon).
+
+    Method names can be abbreviated to first letter, 'i' or 'p' for fdr_bh and 'n' for
+    fdr_by.
+
+
+
     '''
     pvals = np.asarray(pvals)
 
@@ -505,8 +554,9 @@ def fdrcorrection0(pvals, alpha=0.05, method='indep'):
 #this might be useful if the null hypothesis is not "all effects are zero"
 #rename to _bak and working again on fdrcorrection0
 def fdrcorrection_bak(pvals, alpha=0.05, method='indep'):
-    '''
-    Reject False discovery rate correction for pvalues
+    '''Reject False discovery rate correction for pvalues
+
+    Old version, to be deleted
 
 
     missing: methods that estimate fraction of true hypotheses
@@ -540,6 +590,8 @@ def fdrcorrection_bak(pvals, alpha=0.05, method='indep'):
     return reject[pvals_sortind.argsort()]
 
 def mcfdr(nrepl=100, nobs=50, ntests=10, ntrue=6, mu=0.5, alpha=0.05, rho=0.):
+    '''MonteCarlo to test fdrcorrection
+    '''
     nfalse = ntests - ntrue
     locs = np.array([0.]*ntrue + [mu]*(ntests - ntrue))
     results = []
@@ -561,6 +613,22 @@ def mcfdr(nrepl=100, nobs=50, ntests=10, ntrue=6, mu=0.5, alpha=0.05, rho=0.):
     return np.array(results)
 
 def randmvn(rho, size=(1, 2), standardize=False):
+    '''create random draws from equi-correlated multivariate normal distribution
+
+    Parameter
+    ---------
+    rho : float
+        correlation coefficient
+    size : tuple of int
+        size is interpreted (nobs, nvars) where each row
+
+
+    Returns
+    -------
+    rvs : ndarray, (nobs, nvars)
+        where each row is a independent random draw of nvars-dimensional correlated rvs
+
+    '''
     nobs, nvars = size
     if 0 < rho and rho < 1:
         rvs = np.random.randn(nobs, nvars+1)
@@ -579,7 +647,11 @@ def randmvn(rho, size=(1, 2), standardize=False):
         rvs2 = stats.zscore(rvs2)
     return rvs2
 
-##############
+#============================
+#
+# Part 2: Multiple comparisons and independent samples tests
+#
+#============================
 
 def tiecorrect(xranks):
     '''
