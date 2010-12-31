@@ -245,14 +245,14 @@ def test_vech():
                [7, 8, 9]])
     assert(np.array_equal(vech(arr), [1, 4, 7, 5, 8, 9]))
 
-def pprint_matrix(values, clabels, rlabels, col_space=None):
+def pprint_matrix(values, rlabels, clabels, col_space=None):
     buf = StringIO()
 
     T, K = len(rlabels), len(clabels)
 
     if col_space is None:
         min_space = 10
-        col_space = [max(len(c) + 2, min_space) for c in clabels]
+        col_space = [max(len(str(c)) + 2, min_space) for c in clabels]
     else:
         col_space = (col_space,) * K
 
@@ -269,7 +269,7 @@ def pprint_matrix(values, clabels, rlabels, col_space=None):
         line = ('%s' % rlab).ljust(row_space)
 
         for j in range(K):
-            line += _pfixed(values[i,j], col_space[i])
+            line += _pfixed(values[i,j], col_space[j])
 
         print >> buf, line
 
@@ -677,10 +677,12 @@ def plot_acorr(acf, fontsize=8, linewidth=8):
 def plot_acorr_with_error():
     pass
 
-def _adjust_subplots():
-    plt.subplots_adjust(bottom=0.05, top=0.925,
-                        left=0.05, right=0.95,
-                        hspace=0.2)
+def _adjust_subplots(**kwds):
+    passed_kwds = dict(bottom=0.05, top=0.925,
+                       left=0.05, right=0.95,
+                       hspace=0.2)
+    passed_kwds.update(kwds)
+    plt.subplots_adjust(**passed_kwds)
 
 #-------------------------------------------------------------------------------
 # VARProcess class: for known or unknown VAR process
@@ -791,10 +793,13 @@ class VAR(object):
 
         return selected_orders
 
-    def _print_ic_table(self, ics, selected_orders):
+    @staticmethod
+    def _print_ic_table(ics, selected_orders):
         """
 
         """
+        # Can factor this out into a utility method if so desired
+
         cols = sorted(ics)
 
         data = mat([["%#10.4F" % v for v in ics[c]] for c in cols],
@@ -975,6 +980,9 @@ class VARProcess(object):
         -------
         covs : (steps, k, k)
         """
+        return self.mse(steps)
+
+    def mse(self, steps):
         return forecast_cov(self.ma_rep(steps), self.sigma_u, steps)
 
     def _forecast_vars(self, steps):
@@ -1322,6 +1330,7 @@ class VAREstimator(VARProcess):
 
         Parameters
         ----------
+        steps : int
 
         Notes
         -----
@@ -1331,11 +1340,11 @@ class VAREstimator(VARProcess):
 
         Returns
         -------
-
+        covs : ndarray (steps x k x k)
         """
-        forc_covs = VARProcess.forecast_cov(self, steps)
+        mse = self.mse(steps)
         omegas = self._omega_forc_cov(steps)
-        return forc_covs + omegas / self.T
+        return mse + omegas / self.T
 
     def _omega_forc_cov(self, steps):
         # Approximate MSE matrix \Omega(h) as defined in Lut p97
@@ -1385,6 +1394,33 @@ class VAREstimator(VARProcess):
 
     def summary(self):
         return VARSummary(self)
+
+    def irf(self, periods=10, var_decomp=None):
+        """
+        Analyze impulse responses to shocks in system
+
+        Parameters
+        ----------
+        periods : int
+        var_decomp : ndarray (k x k), lower triangular
+            Must satisfy Omega = P P', where P is the passed matrix. Defaults to
+            Cholesky decomposition of Omega
+
+        Returns
+        -------
+
+        """
+        return IRAnalysis(self, P=var_decomp, periods=periods)
+
+    def fevd(self, periods=10, var_decomp=None):
+        """
+        Compute forecast error variance decomposition ("fevd")
+
+        Returns
+        -------
+        fevd : FEVD instance
+        """
+        return FEVD(self, P=var_decomp, periods=periods)
 
 #-------------------------------------------------------------------------------
 # VAR Diagnostics: Granger-causality, whiteness of residuals, normality, etc.
@@ -1470,7 +1506,8 @@ class VAREstimator(VARProcess):
 
         return results
 
-    def _causality_summary(self, results, variables, equation, signif, kind):
+    @staticmethod
+    def _causality_summary(results, variables, equation, signif, kind):
         fmt = dict(_default_table_fmt,
                    data_fmts=["%#15.6F","%#15.6F","%#15.3F", "%s"])
 
@@ -1497,26 +1534,6 @@ class VAREstimator(VARProcess):
 
     def test_normality(self):
         pass
-
-#-------------------------------------------------------------------------------
-# Impulse responses, long run effects, standard errors
-
-    def irf(self, periods=10, var_decomp=None):
-        """
-        Analyze impulse responses to shocks in system
-
-        Parameters
-        ----------
-        periods : int
-        var_decomp : ndarray (k x k), lower triangular
-            Must satisfy Omega = P P', where P is the passed matrix. Defaults to
-            Cholesky decomposition of Omega
-
-        Returns
-        -------
-
-        """
-        return IRAnalysis(self, P=var_decomp, periods=periods)
 
     @cache_readonly
     def info_criteria(self):
@@ -1724,7 +1741,8 @@ class BaseIRAnalysis(object):
 
 class IRAnalysis(BaseIRAnalysis):
     """
-    Impulse response analysis class
+    Impulse response analysis class. Computes impulse responses, asymptotic
+    standard errors, and produces relevant plots
 
     Parameters
     ----------
@@ -1734,7 +1752,6 @@ class IRAnalysis(BaseIRAnalysis):
     -----
     Using Lutkepohl (2005) notation
     """
-
     def __init__(self, model, P=None, periods=10):
         BaseIRAnalysis.__init__(self, model, P=P, periods=periods)
 
@@ -1859,28 +1876,6 @@ class IRAnalysis(BaseIRAnalysis):
         else:
             return chain_dot(Finfty, self.cov_a, Finfty.T)
 
-    def fevd(self, steps=1):
-        """
-
-        Parameters
-        ----------
-
-        Returns
-        -------
-        """
-        # cumulative impulse responses
-        irfs = (self.orth_irfs[:steps] ** 2).cumsum(axis=0)
-        mse = self.model.forecast_cov(steps)
-        return irfs / mse
-
-    def fevd_cov(self, lag):
-        """
-
-        Returns
-        -------
-        """
-        pass
-
     def _empty_covm(self, periods):
         return np.zeros((periods, self.k ** 2, self.k ** 2),
                         dtype=float)
@@ -1931,16 +1926,98 @@ class IRAnalysis(BaseIRAnalysis):
 
 class FEVD(object):
     """
-    Forecast error variance decomposition
+    Compute and plot Forecast error variance decomposition and asymptotic
+    standard errors
     """
-    def __init__(self, model):
+    def __init__(self, model, P=None, periods=None):
+        self.periods = periods
+
         self.model = model
+        self.k = model.k
+        self.names = model.names
+
+        self.irfobj = model.irf(var_decomp=P, periods=periods)
+        self.orth_irfs = self.irfobj.orth_irfs
+
+        # cumulative impulse responses
+        irfs = (self.orth_irfs[:periods] ** 2).cumsum(axis=0)
+
+        rng = range(self.k)
+        mse = self.model.mse(periods)[:, rng, rng]
+
+        # lag x equation x component
+        fevd = np.empty_like(irfs)
+
+        for i in range(periods):
+            fevd[i] = (irfs[i].T / mse[i]).T
+
+        # switch to equation x lag x component
+        self.decomp = fevd.swapaxes(0, 1)
 
     def summary(self):
+        buf = StringIO()
+
+        rng = range(self.periods)
+        for i in range(self.k):
+            ppm = pprint_matrix(self.decomp[i], rng, self.names)
+
+            print >> buf, 'FEVD for %s' % self.names[i]
+            print >> buf, ppm
+
+        print buf.getvalue()
+
+    def cov(self, lag):
+        """
+        Compute asymptotic standard errors
+
+        Returns
+        -------
+        """
         pass
 
-    def plot(self, *args, **kwargs):
-        pass
+    def plot(self, periods=None, figsize=(10,10), **plot_kwds):
+        """
+        Plot graphical display of FEVD
+
+        Parameters
+        ----------
+        periods : int, default None
+            Defaults to number originally specified. Can be at most that number
+        """
+        k = self.k
+        periods = periods or self.periods
+
+        fig, axes = plt.subplots(nrows=k, figsize=(10,10))
+
+        fig.suptitle('Forecast error variance decomposition (FEVD)')
+
+        colors = [str(c) for c in np.arange(k, dtype=float) / k]
+        ticks = np.arange(periods)
+
+        limits = self.decomp.cumsum(2)
+
+        for i in range(k):
+            ax = axes[i]
+
+            this_limits = limits[i].T
+
+            handles = []
+
+            for j in range(k):
+                lower = this_limits[j - 1] if j > 0 else 0
+                upper = this_limits[j]
+                handle = ax.bar(ticks, upper - lower, bottom=lower,
+                                color=colors[j], label=self.names[j],
+                                **plot_kwds)
+
+                handles.append(handle)
+
+            ax.set_title(self.names[i])
+
+        # just use the last axis to get handles for plotting
+        handles, labels = ax.get_legend_handles_labels()
+        fig.legend(handles, labels, loc='upper right')
+        _adjust_subplots(right=0.85)
 
 class VARSummary(object):
     default_fmt = dict(
@@ -2181,7 +2258,6 @@ if __name__ == '__main__':
     # est = VAR(adj_data, p=2, dates=dates[1:], names=names)
     model = VAR(adj_data[:-16], dates=dates[1:-16], names=names)
     est = model.fit(maxlags=2)
-
     irf = est.irf()
 
     y = est.y[-2:]
@@ -2193,6 +2269,12 @@ if __name__ == '__main__':
 
     # irf.plot_irf()
 
-    i = 2; j = 1
-    cv = irf.cum_effect_cov(orth=True)
-    print np.sqrt(cv[:, j * 3 + i, j * 3 + i]) / 1e-2
+    # i = 2; j = 1
+    # cv = irf.cum_effect_cov(orth=True)
+    # print np.sqrt(cv[:, j * 3 + i, j * 3 + i]) / 1e-2
+
+    data = np.genfromtxt('Canada.csv', delimiter=',', names=True)
+
+    model = VAR(data)
+    est = model.fit(maxlags=2)
+    irf = est.irf()
