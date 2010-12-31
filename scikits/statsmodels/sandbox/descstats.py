@@ -62,11 +62,9 @@ def descstats(data, cols=None, axis=0):
     axis: 1 or 0
         axis order of data.  Default is 0 for column-ordered data.
 
-    Example
-    ----------simple
-    >>>
-    decstats(data.exog,v=['x_1','x_2','x_3'])
-
+    Examples
+    --------
+    >>> descstats(data.exog,v=['x_1','x_2','x_3'])
     '''
 
     x = np.array(data)  # or rather, the data we're interested in

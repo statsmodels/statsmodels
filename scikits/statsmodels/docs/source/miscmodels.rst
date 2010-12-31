@@ -45,7 +45,7 @@ method for the loglikelihood. All result statistics are inherited from the gener
 likelihood model and result classes. The results have been checked against R for a
 simple case.
 
-.. currentmodule:: scikits.statsmodels.miscmodels.count
+.. currentmodule:: scikits.statsmodels.miscmodels.tmodel
 
 .. autosummary::
    :toctree: generated/

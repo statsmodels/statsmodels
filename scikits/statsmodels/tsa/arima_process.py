@@ -815,8 +815,8 @@ class ArmaProcess(object):
     def invertroots(self, retnew=False):
         '''make MA polynomial invertible by inverting roots inside unit circle
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         retnew : boolean
             If False (default), then return the lag-polynomial as array.
             If True, then return a new instance with invertible MA-polynomial

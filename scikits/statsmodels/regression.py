@@ -442,9 +442,9 @@ class WLS(GLS):
         -------
         The value of the loglikelihood function for a WLS Model.
 
-        Formula
+        Notes
         --------
-        .. math :: -\frac{n}{2}\text{\ensuremath{\log}}\left(Y-\hat{Y}\right)-\frac{n}{2}\left(1+\log\left(\frac{2\pi}{n}\right)\right)-\frac{1}{2}\text{log}\left(\left|W\right|\right)\]
+        .. math:: -\frac{n}{2}\text{\ensuremath{\log}}\left(Y-\hat{Y}\right)-\frac{n}{2}\left(1+\log\left(\frac{2\pi}{n}\right)\right)-\frac{1}{2}\text{log}\left(\left|W\right|\right)\]
 
         W is treated as a diagonal matrix for the purposes of the formula.
         """

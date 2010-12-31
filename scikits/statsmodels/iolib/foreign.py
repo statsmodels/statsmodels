@@ -489,8 +489,8 @@ def savetxt(fname, X, names=None, fmt='%.18e', delimiter=' '):
     """
     Save an array to a text file.
 
-    This is just a copy of numpy.savetxt patched to support structured arrays or a
-    header of names.  Does not include py3 support now in savetxt.
+    This is just a copy of numpy.savetxt patched to support structured arrays
+    or a header of names.  Does not include py3 support now in savetxt.
 
     Parameters
     ----------
@@ -502,7 +502,8 @@ def savetxt(fname, X, names=None, fmt='%.18e', delimiter=' '):
         Data to be saved to a text file.
     names : list, optional
         If given names will be the column header in the text file.  If None and
-        X is a structured or recarray then the names are taken from X.dtype.names.
+        X is a structured or recarray then the names are taken from
+        X.dtype.names.
     fmt : str or sequence of strs
         A single format (%10.5f), a sequence of formats, or a
         multi-format string, e.g. 'Iteration %d -- %10.5f', in which
@@ -569,7 +570,7 @@ def savetxt(fname, X, names=None, fmt='%.18e', delimiter=' '):
 
     Examples
     --------
-    >>> savetxt('test.out', x, delimiter=',')   # X is an array
+    >>> savetxt('test.out', x, delimiter=',')   # x is an array
     >>> savetxt('test.out', (x,y,z))   # x,y,z equal sized 1D arrays
     >>> savetxt('test.out', x, fmt='%1.4e')   # use exponential notation
 
@@ -620,6 +621,7 @@ def savetxt(fname, X, names=None, fmt='%.18e', delimiter=' '):
     # handle names
     if names is None and X.dtype.names:
         names = X.dtype.names
+    if names is not None:
         fh.write(delimiter.join(names) + '\n')
 
     for row in X:

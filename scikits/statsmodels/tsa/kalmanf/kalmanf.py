@@ -26,7 +26,7 @@ Harvey uses Durbin and Koopman notation.
 # is not strictly needed outside of the engineering (long series)
 
 import numpy as np
-from numpy import dot, identity, kron, log, zeros, pi, exp, eye
+from numpy import dot, identity, kron, log, zeros, pi, exp, eye, ones
 from numpy.linalg import inv, pinv
 from scikits.statsmodels import chain_dot, add_constant #Note that chain_dot is a bit slower
 from scikits.statsmodels.model import GenericLikelihoodModel
@@ -508,7 +508,7 @@ class KalmanFilter(object):
         #TODO: this won't work for time-varying parameters
         y = arma_model.endog.copy().astype(params.dtype) #TODO: remove copy if you can
         k = arma_model.k
-        nobs = arma_model.nobs
+        nobs = int(arma_model.nobs)
         p = arma_model.p
         q = arma_model.q
         r = arma_model.r
@@ -541,10 +541,12 @@ class KalmanFilter(object):
         sigma2 = 0
         loglikelihood = 0
         v = zeros((nobs,1), dtype=params.dtype)
-        F = zeros((nobs,1), dtype=params.dtype)
-        #NOTE: can only do quick recursions if Z is time-invariant
-        #so could have recursions for pure ARMA vs ARMAX
-        for i in xrange(int(nobs)):
+        F = ones((nobs,1), dtype=params.dtype)
+        # for quick recursions
+        F_mat = 0
+        i = 0
+
+        while not F_mat == 1 and i < nobs:
             # Predict
             v_mat = y[i] - dot(Z_mat,alpha) # one-step forecast error
             v[i] = v_mat
@@ -557,6 +559,12 @@ class KalmanFilter(object):
             L = T_mat - dot(K,Z_mat)
             P = dot(dot(T_mat, P), L.T) + dot(R_mat, R_mat.T)
             loglikelihood += log(F_mat)
+            i+=1
+
+        for i in xrange(i,nobs):
+            v_mat = y[i] - dot(Z_mat,alpha)
+            v[i] = v_mat
+            alpha = dot(T_mat, alpha) + dot(K, v_mat)
 
         sigma2 = 1./nobs * np.sum(v**2 / F)
         loglike = -.5 *(loglikelihood + nobs*log(sigma2))

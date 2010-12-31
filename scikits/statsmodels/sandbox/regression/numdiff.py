@@ -88,12 +88,12 @@ def approx_fprime1(xk, f, epsilon=1e-12, args=(), centered=False):
         for k in range(len(xk)):
             ei[k] = epsilon
             grad[:,k] = (f(*((xk+ei,)+args)) - f0)/epsilon
-            ei[k] = 0.0 # why set this back?
+            ei[k] = 0.0
     else:
         for k in range(len(xk)):
             ei[k] = epsilon/2.
             grad[:,k] = (f(*((xk+ei,)+args)) - f(*((xk-ei,)+args)))/epsilon
-            ei[k] = 0.0 # why set this back?
+            ei[k] = 0.0
     return grad.squeeze()
 
 def approx_hess(xk, f, epsilon=None, args=()):#, returngrad=True):
