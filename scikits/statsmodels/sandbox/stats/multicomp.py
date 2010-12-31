@@ -9,15 +9,19 @@ Notes:
    one-step, step-up and step-down procedures
  - FDR doesn't look really better then Bonferoni in the MC examples that I tried
 update:
- - now tested against R, stats and multtest, have all methods
+ - now tested against R, stats and multtest,
+   I have all of their methods for p-value correction
  - getting Hommel was impossible until I found reference for pvalue correction
- - now, since I have p-values correction, some of the original tests
+ - now, since I have p-values correction, some of the original tests (rej/norej)
    implementation is not really needed anymore. I think I keep it for reference.
    Test procedure for Hommel in development session log
  - I haven't updated other functions and classes in here.
    - multtest has some good helper function according to docs
  - still need to update references, the real papers
  - fdr with estimated true hypothesis still missing
+ - multiple comparison procedures incomplete or missing
+ - I will get multiple comparison for now only for independent case, which might
+   be conservative in correlated case (?).
 
 
 some References:
@@ -36,12 +40,25 @@ Zwillinger, Daniel and Stephen Kokoska, 2000, CRC standard probability and
 statistics tables and formulae, Chapman&Hall/CRC
     14.9 WILCOXON RANKSUM (MANN WHITNEY) TEST
 
+
+S. Paul Wright, Adjusted P-Values for Simultaneous Inference, Biometrics
+    Vol. 48, No. 4 (Dec., 1992), pp. 1005-1013, International Biometric Society
+    Stable URL: http://www.jstor.org/stable/2532694
+ (p-value correction for Hommel in appendix)
+
+for multicomparison
+
+new book "multiple comparison in R"
+Hsu is a good reference but I don't have it.
+
+
 Author: Josef Pktd and example from H Raja and rewrite from Vincent Davis
 
 
 TODO
+----
 
-handle exception if empty, shows up only sometimes when running this
+* handle exception if empty, shows up only sometimes when running this
 - DONE I think
 
 Traceback (most recent call last):
@@ -55,6 +72,8 @@ Traceback (most recent call last):
     result = getattr(asarray(obj),method)(*args, **kwds)
 ValueError: zero-size array to ufunc.reduce without identity
 
+* name of function multipletests, rename to something like pvalue_correction?
+
 
 '''
 
@@ -66,6 +85,7 @@ import scipy.stats
 import numpy
 import numpy as np
 import math
+import copy
 from scipy import stats
 import scikits.statsmodels as sm
 from numpy.testing import assert_almost_equal
@@ -257,6 +277,7 @@ def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
         `hommel` :
         `fdr_bh` : Benjamini/Hochberg
         `fdr_by` : Benjamini/Yekutieli
+
     returnsorted : bool
          not tested, return sorted p-values instead of original sequence
 
@@ -585,6 +606,8 @@ class GroupsStats(object):
     gs = GroupsStats(X, useranks=True)
     assert_almost_equal(gs.groupmeanfilter, stats.rankdata(X[:,0]), 15)
 
+    TODO: incomplete doc strings
+
     '''
 
     def __init__(self, x, useranks=False, uni=None, intlab=None):
@@ -683,7 +706,16 @@ class MultiComparison(object):
         self.nobs = x.shape[0]
 
     def getranks(self):
+        '''convert data to rankdata and attach
+
+
+        This creates rankdata as it is used for non-parametric tests, where
+        in the case of ties the average rank is assigned.
+
+
+        '''
         #bug: the next should use self.groupintlab instead of self.groups
+        #update: looks fixed
         #self.ranks = GroupsStats(np.column_stack([self.data, self.groups]),
         self.ranks = GroupsStats(np.column_stack([self.data, self.groupintlab]),
                                  useranks=True)
@@ -694,6 +726,9 @@ class MultiComparison(object):
     def kruskal(self, pairs=None, multimethod='T'):
         '''
         pairwise comparison for kruskal-wallis test
+
+        This is just a reimplementation of scipy.stats.kruskal and does
+        not yet use a multiple comparison correction.
 
         '''
         self.getranks()
@@ -716,10 +751,33 @@ class MultiComparison(object):
             return stats.norm.sf(Q)*2
 
 
-    def allpairtest(self, testfunc, alpha=0.05, method='bonf'):
-        '''
+    def allpairtest(self, testfunc, alpha=0.05, method='bonf', pvalidx=1):
+        '''run a pairwise test on all pairs with multiple test correction
 
-        errors:
+        The statistical test given in testfunc is calculated for all pairs
+        and the p-values are adjusted by methods in multipletests. The p-value
+        correction is generic and based only on the p-values, and does not
+        take any special structure of the hypotheses into account.
+
+        Parameters
+        ----------
+        testfunc : function
+            A test function for two (independent) samples. It is assumed that
+            the return value on position pvalidx is the p-value.
+        alpha : float
+            familywise error rate
+        method : string
+            This specifies the method for the p-value correction. Any method
+            of multipletests is possible.
+        pvalidx : int (default: 1)
+            position of the p-value in the return of testfunc
+
+        Returns
+        -------
+        sumtab : SimpleTable instance
+            summary table for printing
+
+        errors:  TODO: check if this is still wrong, I think it's fixed.
         results from multipletests are in different order
         pval_corrected can be larger than 1 ???
         '''
@@ -728,7 +786,7 @@ class MultiComparison(object):
             res.append(testfunc(self.datali[i], self.datali[j]))
         res = np.array(res)
         reject, pvals_corrected, alphacSidak, alphacBonf = \
-                multipletests(res[:,1], alpha=0.05, method=method)
+                multipletests(res[:,pvalidx], alpha=0.05, method=method)
         #print np.column_stack([res[:,0],res[:,1], reject, pvals_corrected])
 
         i1, i2 = self.pairindices
@@ -761,6 +819,34 @@ class MultiComparison(object):
         return summtab, (res, reject, pvals_corrected, alphacSidak, alphacBonf), resarr
 
 
+    def tukeyhsd(self, alpha=0.05):
+        #unfinished
+        self.groupstats = GroupsStats(
+                            np.column_stack([self.data, self.groupintlab]),
+                            useranks=False)
+
+        means = self.groupstats.groupmean
+        nobs = self.groupstats.groupnobs
+        #var_ = self.groupstats.groupvarwithin() #possibly an error in varcorrection in this case
+        var_ = np.var(self.groupstats.groupdemean())
+        res = tukeyhsd(means, nobs, var_, df=None, alpha=0.05, q_crit=None)
+
+        resarr = np.array(zip(res[0][0], res[0][1],
+                                  np.round(res[2],4),
+                                  np.round(res[4][:,0],4),
+                                  np.round(res[4][:,1],4),
+                                  res[1]),
+                       dtype=[('group1', int),
+                              ('group2', int),
+                              ('meandiff',float),
+                              ('lower',float),
+                              ('upper',float),
+                              ('reject', np.bool8)])
+        summtab = sm.iolib.SimpleTable(resarr, headers=resarr.dtype.names)
+        summtab.title = 'Multiple Comparison of Means - Tukey HSD, FWER=%4.2f' % alpha
+
+        return summtab, res
+
 
 
 
@@ -781,10 +867,640 @@ def rankdata(x):
     grouprankmean = groupranksum * 1.0 / groupnobs + 1
     return grouprankmean[intlab]
 
+
+#new
+
+def compare_ordered(vals, alpha):
+    '''simple ordered sequential comparison of means
+
+    vals : array_like
+        means or rankmeans for independent groups
+
+    incomplete, not used yet
+    '''
+    vals = np.asarray(vals)
+    alphaf = alpha  # Notation ?
+    sortind = np.argsort(vals)
+    pvals = vals[sortind]
+    sortrevind = sortind.argsort()
+    ntests = len(vals)
+    #alphacSidak = 1 - np.power((1. - alphaf), 1./ntests)
+    #alphacBonf = alphaf / float(ntests)
+    v1, v2 = np.triu_indices(ntests, 1)
+    #v1,v2 have wrong sequence
+    for i in range(4):
+        for j in range(4,i, -1):
+            print i,j
+
+
+
+def varcorrection_unbalanced(nobs_all, srange=False):
+    '''correction factor for variance with unequal sample sizes
+
+    this is just a harmonic mean
+
+    Parameters
+    ----------
+    nobs_all : array_like
+        The number of observations for each sample
+    srange : bool
+        if true, then the correction is divided by the number of samples
+        for the variance of the studentized range statistic
+
+    Returns
+    -------
+    correction : float
+        Correction factor for variance.
+
+
+    Notes
+    -----
+
+    variance correction factor is
+
+    1/k * sum_i 1/n_i
+
+    where k is the number of samples and summation is over i=0,...,k-1.
+    If all n_i are the same, then the correction factor is 1.
+
+    This needs to be multiplies by the joint variance estimate, means square
+    error, MSE. To obtain the correction factor for the standard deviation,
+    square root needs to be taken.
+
+    '''
+    nobs_all = np.asarray(nobs_all)
+    if not srange:
+        return (1./nobs_all).sum()
+    else:
+        return (1./nobs_all).sum()/len(nobs_all)
+
+def varcorrection_pairs_unbalanced(nobs_all, srange=False):
+    '''correction factor for variance with unequal sample sizes for all pairs
+
+    this is just a harmonic mean
+
+    Parameters
+    ----------
+    nobs_all : array_like
+        The number of observations for each sample
+    srange : bool
+        if true, then the correction is divided by 2 for the variance of
+        the studentized range statistic
+
+    Returns
+    -------
+    correction : array
+        Correction factor for variance.
+
+
+    Notes
+    -----
+
+    variance correction factor is
+
+    1/k * sum_i 1/n_i
+
+    where k is the number of samples and summation is over i=0,...,k-1.
+    If all n_i are the same, then the correction factor is 1.
+
+    This needs to be multiplies by the joint variance estimate, means square
+    error, MSE. To obtain the correction factor for the standard deviation,
+    square root needs to be taken.
+
+    For the studentized range statistic, the resulting factor has to be
+    divided by 2.
+
+    '''
+    #TODO: test and replace with broadcasting
+    n1, n2 = np.meshgrid(nobs_all, nobs_all)
+    if not srange:
+        return (1./n1 + 1./n2)
+    else:
+        return (1./n1 + 1./n2) / 2.
+
+def varcorrection_unequal(var_all, nobs_all, df_all):
+    '''return joint variance from samples with unequal variances and unequal
+    sample sizes
+
+
+    Parameters
+    ----------
+    var_all : array_like
+        The variance for each sample
+    nobs_all : array_like
+        The number of observations for each sample
+    df_all : array_like
+        degrees of freedom for each sample
+
+    Returns
+    -------
+    varjoint : float
+        joint variance.
+    dfjoint : float
+        joint Satterthwait's degrees of freedom
+
+
+    Notes
+    -----
+    (copy, paste not correct)
+    variance is
+
+    1/k * sum_i 1/n_i
+
+    where k is the number of samples and summation is over i=0,...,k-1.
+    If all n_i are the same, then the correction factor is 1/n.
+
+    This needs to be multiplies by the joint variance estimate, means square
+    error, MSE. To obtain the correction factor for the standard deviation,
+    square root needs to be taken.
+
+    This is for variance of mean difference not of studentized range.
+    '''
+
+    var_all = np.asarray(var_all)
+    var_over_n = var_all *1./ nobs_all  #avoid integer division
+    varjoint = var_over_n.sum()
+
+    dfjoint = varjoint**2 / (var_over_n**2 * df_all).sum()
+
+    return varjoint, dfjoint
+
+def varcorrection_pairs_unequal(var_all, nobs_all, df_all):
+    '''return joint variance from samples with unequal variances and unequal
+    sample sizes for all pairs
+
+
+    Parameters
+    ----------
+    var_all : array_like
+        The variance for each sample
+    nobs_all : array_like
+        The number of observations for each sample
+    df_all : array_like
+        degrees of freedom for each sample
+
+    Returns
+    -------
+    varjoint : array
+        joint variance.
+    dfjoint : array
+        joint Satterthwait's degrees of freedom
+
+
+    Notes
+    -----
+
+    (copy, paste not correct)
+    variance is
+
+    1/k * sum_i 1/n_i
+
+    where k is the number of samples and summation is over i=0,...,k-1.
+    If all n_i are the same, then the correction factor is 1.
+
+    This needs to be multiplies by the joint variance estimate, means square
+    error, MSE. To obtain the correction factor for the standard deviation,
+    square root needs to be taken.
+
+    TODO: something looks wrong with dfjoint, is formula from SPSS
+    '''
+    #TODO: test and replace with broadcasting
+    v1, v2 = np.meshgrid(var_all, var_all)
+    n1, n2 = np.meshgrid(nobs_all, nobs_all)
+    df1, df2 = np.meshgrid(df_all, df_all)
+
+    varjoint = v1/n1 + v2/n2
+
+    dfjoint = varjoint**2 / (df1 * (v1/n1)**2 + df2 * (v2/n2)**2)
+
+    return varjoint, dfjoint
+
+def tukeyhsd(mean_all, nobs_all, var_all, df=None, alpha=0.05, q_crit=None):
+    '''simultaneous Tukey HSD
+
+
+    check: instead of sorting, I use absolute value of pairwise differences
+    in means. That's irrelevant for the test, but maybe reporting actual
+    differences would be better.
+    CHANGED: meandiffs are with sign, studentized range uses abs
+
+    q_crit added for testing
+
+    TODO: error in variance calculation when nobs_all is scalar, missing 1/n
+
+    '''
+    mean_all = np.asarray(mean_all)
+    #check if or when other ones need to be arrays
+
+    n_means = len(mean_all)
+
+    if df is None:
+        df = nobs_all - 1
+
+    if np.size(df) == 1:   # assumes balanced samples with df = n - 1, n_i = n
+        df_total = n_means * df
+        df = np.ones(n_means) * df
+    else:
+        df_total = np.sum(df)
+
+    if (np.size(nobs_all) == 1) and (np.size(var_all) == 1):
+        #balanced sample sizes and homogenous variance
+        var_pairs = 1. * var_all / nobs_all * np.ones((n_means, n_means))
+
+    elif np.size(var_all) == 1:
+        #unequal sample sizes and homogenous variance
+        var_pairs = var_all * varcorrection_pairs_unbalanced(nobs_all,
+                                                             srange=True)
+    elif np.size(var_all) > 1:
+        var_pairs, df_sum = varcorrection_pairs_unequal(nobs_all, var_all, df)
+        var_pairs /= 2.
+        #check division by two for studentized range
+
+    else:
+        raise ValueError('not supposed to be here')
+
+    #meandiffs_ = mean_all[:,None] - mean_all
+    meandiffs_ = mean_all - mean_all[:,None]  #reverse sign, check with R example
+    std_pairs_ = np.sqrt(var_pairs)
+
+    #select all pairs from upper triangle of matrix
+    idx1, idx2 = np.triu_indices(n_means, 1)
+    meandiffs = meandiffs_[idx1, idx2]
+    std_pairs = std_pairs_[idx1, idx2]
+
+    st_range = np.abs(meandiffs) / std_pairs #studentized range statistic
+
+    df_total_ = max(df_total, 5)  #TODO: smallest df in table
+    if q_crit is None:
+        q_crit = get_tukeyQcrit(n_means, df_total, alpha=alpha)
+
+    reject = st_range > q_crit
+    crit_int = std_pairs * q_crit
+    reject2 = meandiffs > crit_int
+
+    confint = np.column_stack((meandiffs - crit_int, meandiffs + crit_int))
+
+    return (idx1, idx2), reject, meandiffs, std_pairs, confint, q_crit, \
+           df_total, reject2
+
+def distance_st_range(mean_all, nobs_all, var_all, df=None):
+    '''pairwise distance matrix, outsourced from tukeyhsd
+
+
+
+    CHANGED: meandiffs are with sign, studentized range uses abs
+
+    q_crit added for testing
+
+    TODO: error in variance calculation when nobs_all is scalar, missing 1/n
+
+    '''
+    mean_all = np.asarray(mean_all)
+    #check if or when other ones need to be arrays
+
+    n_means = len(mean_all)
+
+    if df is None:
+        df = nobs_all - 1
+
+    if np.size(df) == 1:   # assumes balanced samples with df = n - 1, n_i = n
+        df_total = n_means * df
+    else:
+        df_total = np.sum(df)
+
+    if (np.size(nobs_all) == 1) and (np.size(var_all) == 1):
+        #balanced sample sizes and homogenous variance
+        var_pairs = 1. * var_all / nobs_all * np.ones((n_means, n_means))
+
+    elif np.size(var_all) == 1:
+        #unequal sample sizes and homogenous variance
+        var_pairs = var_all * varcorrection_pairs_unbalanced(nobs_all,
+                                                             srange=True)
+    elif np.size(var_all) > 1:
+        var_pairs, df_sum = varcorrection_pairs_unequal(nobs_all, var_all, df)
+        var_pairs /= 2.
+        #check division by two for studentized range
+
+    else:
+        raise ValueError('not supposed to be here')
+
+    #meandiffs_ = mean_all[:,None] - mean_all
+    meandiffs = mean_all - mean_all[:,None]  #reverse sign, check with R example
+    std_pairs = np.sqrt(var_pairs)
+
+    #select all pairs from upper triangle of matrix
+##    idx1, idx2 = np.triu_indices(n_means, 1)
+##    meandiffs = meandiffs_[idx1, idx2]
+##    std_pairs = std_pairs_[idx1, idx2]
+
+    st_range = np.abs(meandiffs) / std_pairs #studentized range statistic
+
+    return st_range, meandiffs, std_pairs  #return square arrays
+
+
+class StepDown(object):
+    '''a class for step down methods
+
+    This is currently for simple tree subset descend, similar to homogeneous_subsets,
+    but checks all leave-one-out subsets instead of assuming an ordered set.
+    Comment in SAS manual:
+    SAS only uses interval subsets of the sorted list, which is sufficient for range
+    tests (maybe also equal variance and balanced sample sizes are required).
+    For F-test based critical distances, the restriction to intervals is not sufficient.
+
+    This version uses a single critical value of the studentized range distribution
+    for all comparisons, and is therefore a step-down version of Tukey HSD.
+    The class is written so it can be subclassed, where the get_distance_matrix and
+    get_crit are overwritten to obtain other step-down procedures such as REGW.
+
+    iter_subsets can be overwritten, to get a recursion as in the many to one comparison
+    with a control such as in Dunnet's test.
+
+
+    A one-sided right tail test is not covered because the direction of the inequality
+    is hard coded in check_set.  Also Peritz's check of partitions is not possible, but
+    I have not seen it mentioned in any more recent references.
+    I have only partially read the step-down procedure for closed tests by Westfall.
+
+    One change to make it more flexible, is to separate out the decision on a subset,
+    also because the F-based tests, FREGW in SPSS, take information from all elements of
+    a set and not just pairwise comparisons. I haven't looked at the details of
+    the F-based tests such as Sheffe yet. It looks like running an F-test on equality
+    of means in each subset. This would also outsource how pairwise conditions are
+    combined, any larger or max. This would also imply that the distance matrix cannot
+    be calculated in advance for tests like the F-based ones.
+
+
+    '''
+
+    def __init__(self, vals, nobs_all, var_all, df=None):
+        self.vals = vals
+        self.n_vals = len(vals)
+        self.nobs_all = nobs_all
+        self.var_all = var_all
+        self.df = df
+        # the following has been moved to run
+        #self.cache_result = {}
+        #self.crit = self.getcrit(0.5)   #decide where to set alpha, moved to run
+        #self.accepted = []  #store accepted sets, not unique
+
+    def get_crit(self, alpha):
+        #currently tukey Q, add others
+        q_crit = get_tukeyQcrit(self.n_vals, self.df, alpha=alpha)
+        return q_crit * np.ones(self.n_vals)
+
+
+
+    def get_distance_matrix(self):
+        '''studentized range statistic'''
+        #make into property, decorate
+        dres = distance_st_range(self.vals, self.nobs_all, self.var_all, df=self.df)
+        self.distance_matrix = dres[0]
+
+    def iter_subsets(self, indices):
+        for ii in range(len(indices)):
+            idxsub = copy.copy(indices)
+            idxsub.pop(ii)
+            yield idxsub
+
+
+    def check_set(self, indices):
+        '''check whether pairwise distances of indices satisfy condition
+
+        '''
+        indtup = tuple(indices)
+        if indtup in self.cache_result:
+            return self.cache_result[indtup]
+        else:
+            set_distance_matrix = self.distance_matrix[np.asarray(indices)[:,None], indices]
+            n_elements = len(indices)
+            if np.any(set_distance_matrix > self.crit[n_elements-1]):
+                res = True
+            else:
+                res = False
+            self.cache_result[indtup] = res
+            return res
+
+    def stepdown(self, indices):
+        print indices
+        if self.check_set(indices): # larger than critical distance
+            if (len(indices) > 2):  # step down into subsets if more than 2 elements
+                for subs in self.iter_subsets(indices):
+                    self.stepdown(subs)
+            else:
+                self.rejected.append(tuple(indices))
+        else:
+            self.accepted.append(tuple(indices))
+            return indices
+
+    def run(self, alpha):
+        '''main function to run the test,
+
+        could be done in __call__ instead
+        this could have all the initialization code
+
+        '''
+        self.cache_result = {}
+        self.crit = self.get_crit(alpha)   #decide where to set alpha, moved to run
+        self.accepted = []  #store accepted sets, not unique
+        self.rejected = []
+        self.get_distance_matrix()
+        self.stepdown(range(self.n_vals))
+
+        return list(set(self.accepted)), list(set(sd.rejected))
+
+
+
+
+
+
+def homogeneous_subsets(vals, dcrit):
+    '''recursively check all pairs of vals for minimum distance
+
+    step down method as in Newman-Keuls and Ryan procedures. This is not a
+    closed procedure since not all partitions are checked.
+
+    Parameters
+    ----------
+    vals : array_like
+        values that are pairwise compared
+    dcrit : array_like or float
+        critical distance for rejecting, either float, or 2-dimensional array
+        with distances on the upper triangle.
+
+    Returns
+    -------
+    rejs : list of pairs
+        list of pair-indices with (strictly) larger than critical difference
+    nrejs : list of pairs
+        list of pair-indices with smaller than critical difference
+    lli : list of tuples
+        list of subsets with smaller than critical difference
+    res : tree
+        result of all comparisons (for checking)
+
+
+    this follows description in SPSS notes on Post-Hoc Tests
+
+    Because of the recursive structure, some comparisons are made several
+    times, but only unique pairs or sets are returned.
+
+    Examples
+    --------
+    >>> m = [0, 2, 2.5, 3, 6, 8, 9, 9.5,10 ]
+    >>> rej, nrej, ssli, res = homogeneous_subsets(m, 2)
+    >>> set_partition(ssli)
+    ([(5, 6, 7, 8), (1, 2, 3), (4,)], [0])
+    >>> [np.array(m)[list(pp)] for pp in set_partition(ssli)[0]]
+    [array([  8. ,   9. ,   9.5,  10. ]), array([ 2. ,  2.5,  3. ]), array([ 6.])]
+
+
+    '''
+
+    nvals = len(vals)
+    indices_ = range(nvals)
+    rejected = []
+    subsetsli = []
+    if np.size(dcrit) == 1:
+        dcrit = dcrit*np.ones((nvals, nvals))  #example numbers for experimenting
+    def subsets(vals, indices_):
+        '''recursive function for constructing homogeneous subset
+
+        registers rejected and subsetli in outer scope
+        '''
+        i, j = (indices_[0], indices_[-1])
+        if vals[-1] - vals[0] > dcrit[i,j]:
+            rejected.append((indices_[0], indices_[-1]))
+            return [subsets(vals[:-1], indices_[:-1]),
+                    subsets(vals[1:], indices_[1:]),
+                    (indices_[0], indices_[-1])]
+        else:
+            subsetsli.append(tuple(indices_))
+            return indices_
+    res = subsets(vals, indices_)
+
+    all_pairs = [(i,j) for i in range(nvals) for j in range(nvals-1,i,-1)]
+    rejs = set(rejected)
+    not_rejected = list(set(all_pairs) - rejs)
+
+    return list(rejs), not_rejected, list(set(subsetsli)), res
+
+def set_partition(ssli):
+    '''extract a partition from a list of tuples
+
+    this should be correctly called select largest disjoint sets.
+    Begun and Gabriel 1981 don't seem to be bothered by sets of accepted
+    hypothesis with joint elements,
+    e.g. maximal_accepted_sets = { {1,2,3}, {2,3,4} }
+
+    This creates a set partition from a list of sets given as tuples.
+    It tries to find the partition with the largest sets. That is, sets are
+    included after being sorted by length.
+
+    If the list doesn't include the singletons, then it will be only a
+    partial partition. Missing items are singletons (I think).
+
+    Examples
+    --------
+    >>> li
+    [(5, 6, 7, 8), (1, 2, 3), (4, 5), (0, 1)]
+    >>> set_partition(li)
+    ([(5, 6, 7, 8), (1, 2, 3)], [0, 4])
+
+    '''
+    part = []
+    for s in sorted(list(set(ssli)), key=len)[::-1]:
+        #print s,
+        s_ = set(s).copy()
+        if not any(set(s_).intersection(set(t)) for t in part):
+            #print 'inside:', s
+            part.append(s)
+        #else: print part
+
+    missing = list(set(i for ll in ssli for i in ll)
+                   - set(i for ll in part for i in ll))
+    return part, missing
+
+
+def set_remove_subs(ssli):
+    '''remove sets that are subsets of another set from a list of tuples
+
+    Parameters
+    ----------
+    ssli : list of tuples
+        each tuple is considered as a set
+
+    Returns
+    -------
+    part : list of tuples
+        new list with subset tuples removed, it is sorted by set-length of tuples. The
+        list contains original tuples, duplicate elements are not removed.
+
+    Examples
+    --------
+    >>> set_remove_subs([(0, 1), (1, 2), (1, 2, 3), (0,)])
+    [(1, 2, 3), (0, 1)]
+    >>> set_remove_subs([(0, 1), (1, 2), (1,1, 1, 2, 3), (0,)])
+    [(1, 1, 1, 2, 3), (0, 1)]
+
+    '''
+    #TODO: maybe convert all tuples to sets immediately, but I don't need the extra efficiency
+    part = []
+    for s in sorted(list(set(ssli)), key=lambda x: len(set(x)))[::-1]:
+        #print s,
+        #s_ = set(s).copy()
+        if not any(set(s).issubset(set(t)) for t in part):
+            #print 'inside:', s
+            part.append(s)
+        #else: print part
+
+##    missing = list(set(i for ll in ssli for i in ll)
+##                   - set(i for ll in part for i in ll))
+    return part
+
+def test_tukeyhsd():
+    #example multicomp in R p 83
+
+    res = '''\
+    pair      diff        lwr        upr       p adj
+    P-M   8.150000 -10.037586 26.3375861 0.670063958
+    S-M  -3.258333 -21.445919 14.9292527 0.982419709
+    T-M  23.808333   5.620747 41.9959194 0.006783701
+    V-M   4.791667 -13.395919 22.9792527 0.931020848
+    S-P -11.408333 -29.595919  6.7792527 0.360680099
+    T-P  15.658333  -2.529253 33.8459194 0.113221634
+    V-P  -3.358333 -21.545919 14.8292527 0.980350080
+    T-S  27.066667   8.879081 45.2542527 0.002027122
+    V-S   8.050000 -10.137586 26.2375861 0.679824487
+    V-T -19.016667 -37.204253 -0.8290806 0.037710044
+    '''
+
+    res = np.array([[ 8.150000,  -10.037586, 26.3375861, 0.670063958],
+                     [-3.258333,  -21.445919, 14.9292527, 0.982419709],
+                     [23.808333,    5.620747, 41.9959194, 0.006783701],
+                     [ 4.791667,  -13.395919, 22.9792527, 0.931020848],
+                     [-11.408333, -29.595919,  6.7792527, 0.360680099],
+                     [15.658333,  -2.529253,  33.8459194, 0.113221634],
+                     [-3.358333, -21.545919,  14.8292527, 0.980350080],
+                     [27.066667,   8.879081,  45.2542527, 0.002027122],
+                     [ 8.050000, -10.137586,  26.2375861, 0.679824487],
+                     [-19.016667, -37.204253, -0.8290806, 0.037710044]])
+
+    m_r = [94.39167, 102.54167,  91.13333, 118.20000,  99.18333]
+    myres = tukeyhsd(m_r, 6, 110.8, alpha=0.05, df=4)
+    from numpy.testing import assert_almost_equal, assert_equal
+    pairs, reject, meandiffs, std_pairs, confint, q_crit = myres[:6]
+    assert_almost_equal(meandiffs, res[:, 0], decimal=5)
+    assert_almost_equal(confint, res[:, 1:3], decimal=2)
+    assert_equal(reject, res[:, 3]<0.05)
+
+
+
+
 if __name__ == '__main__':
 
-    examples = []#['tukey', 'tukeycrit', 'fdr', 'fdrmc', 'bonf', 'randmvn',
-                #'multicompdev'][2:3]
+    examples = ['tukey', 'tukeycrit', 'fdr', 'fdrmc', 'bonf', 'randmvn',
+                'multicompdev', 'None'][-1]
 
     if 'tukey' in examples:
         #Example Tukey
@@ -878,11 +1594,12 @@ if __name__ == '__main__':
 
         mrs = np.sort(meanranks)
         v1, v2 = np.triu_indices(4,1)
+        print '\nsorted rank differences'
         print mrs[v2] - mrs[v1]
         diffidx = np.argsort(mrs[v2] - mrs[v1])[::-1]
         mrs[v2[diffidx]] - mrs[v1[diffidx]]
 
-        print 'kruskal for all pairs'
+        print '\nkruskal for all pairs'
         for i,j in zip(v2[diffidx], v1[diffidx]):
             print i,j, stats.kruskal(xli[i], xli[j]),
             mwu, mwupval = stats.mannwhitneyu(xli[i], xli[j], use_continuity=False)
@@ -903,6 +1620,7 @@ if __name__ == '__main__':
         grouprankmean = groupranksum * 1.0 / groupnobs + 1
         assert_almost_equal(grouprankmean[intlab], stats.rankdata(X[:,0]), 15)
         gs = GroupsStats(X, useranks=True)
+        print '\ngroupmeanfilter and grouprankmeans'
         print gs.groupmeanfilter
         print grouprankmean[intlab]
         #the following has changed
@@ -917,6 +1635,7 @@ if __name__ == '__main__':
         ntot = float(len(xranks));
         tiecorrection = 1 - (nties**3 - nties).sum()/(ntot**3 - ntot)
         assert_almost_equal(tiecorrection, stats.tiecorrect(xranks),15)
+        print '\ntiecorrection for data and ranks'
         print tiecorrection
         print tiecorrect(xranks)
 
@@ -924,6 +1643,7 @@ if __name__ == '__main__':
         t=500 #168
         f=(tot*(tot+1.)/12.)-(t/(6.*(tot-1.)))
         f=(tot*(tot+1.)/12.)/stats.tiecorrect(xranks)
+        print '\npairs of mean rank differences'
         for i,j in zip(v2[diffidx], v1[diffidx]):
             #pdiff = np.abs(mrs[i] - mrs[j])
             pdiff = np.abs(meanranks[i] - meanranks[j])
@@ -934,7 +1654,7 @@ if __name__ == '__main__':
         multicomp.kruskal()
         gsr = GroupsStats(X, useranks=True)
 
-
+        print '\nexamples for kruskal multicomparison'
         for i in range(10):
             x1, x2 = (np.random.randn(30,2) + np.array([0, 0.5])).T
             skw = stats.kruskal(x1, x2)
@@ -944,9 +1664,12 @@ if __name__ == '__main__':
 
         tablett, restt, arrtt = multicomp.allpairtest(stats.ttest_ind)
         tablemw, resmw, arrmw = multicomp.allpairtest(stats.mannwhitneyu)
+        print
         print tablett
+        print
         print tablemw
         tablemwhs, resmw, arrmw = multicomp.allpairtest(stats.mannwhitneyu, method='hs')
+        print
         print tablemwhs
 
     if 'last' in examples:
@@ -962,3 +1685,10 @@ if __name__ == '__main__':
         x,l = catstack(xli)
         gs4 = GroupsStats(np.column_stack([x,l]))
         print gs4.groupvarwithin()
+
+
+    test_tukeyhsd()
+
+    gmeans = np.array([ 7.71375,  7.76125,  7.78428571,  7.79875])
+    gnobs = np.array([8, 8, 7, 8])
+    sd = StepDown(multicomp.groupstats.groupmean, multicomp.groupstats.groupnobs, 0.001, [27])
