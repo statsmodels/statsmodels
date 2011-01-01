@@ -554,7 +554,7 @@ def test_cochransq():
                    [1, 1, 1]])
     res_qstat = 2.8
     res_pvalue = 0.246597
-    assert_almost_equal(cochran_q(d2), [res_qstat, res_pvalue])
+    assert_almost_equal(cochran_q(x), [res_qstat, res_pvalue])
 
     #equivalence of mcnemar and cochranq for 2 samples
     a,b = x[:,:2].T
@@ -581,16 +581,16 @@ def test_runstest():
                         [z_twosided, pvalue_twosided], decimal=6)
 
 
+if __name__ == '__main__':
 
+    x = np.array([1, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1])
 
-x = np.array([1, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1])
+    print Runs(x).runs_test()
+    print runstest_1samp(x, cutoff='mean')
+    print runstest_2samp(np.arange(16,0,-1), groups=x)
+    print TotalRunsProb(7,9).cdf(11)
+    print median_test_ksample(np.random.randn(100), np.random.randint(0,2,100))
+    print cochran_q(np.random.randint(0,2,(100,8)))
 
-print Runs(x).runs_test()
-print runstest_1samp(x, cutoff='mean')
-print runstest_2samp(np.arange(16,0,-1), groups=x)
-print TotalRunsProb(7,9).cdf(11)
-print median_test_ksample(np.random.randn(100), np.random.randint(0,2,100))
-print cochran_q(np.random.randint(0,2,(100,8)))
-
-test_runstest()
-test_cochransq()
+    test_runstest()
+    test_cochransq()
