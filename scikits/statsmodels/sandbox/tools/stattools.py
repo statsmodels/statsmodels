@@ -4,6 +4,9 @@
 
 Warning: Work in progress
 
+TODO
+* how easy is it to attach a test that is a class to a result instance,
+  for example CompareCox as a method compare_cox(self, other) ?
 
 Author: josef-pktd
 License: BSD
@@ -12,13 +15,142 @@ License: BSD
 import numpy as np
 from scipy import stats
 import scikits.statsmodels as sm
-from scikits.statsmodels.sandbox.tsa.stattools import acf
-from scikits.statsmodels.sandbox.tsa.tsatools import lagmat
+from scikits.statsmodels.tsa.stattools import acf, adfuller
+from scikits.statsmodels.tsa.tsatools import lagmat
+
+#get the old signature back so the examples work
+def unitroot_adf(x, maxlag=None, trendorder=0, autolag='AIC', store=False):
+    return adfuller(x, maxlag=maxlag, regression=trendorder, autolag=autolag,
+                    store=store, regresults=False)
+
 
 #TODO: I like the bunch pattern for this too.
 class ResultsStore(object):
     def __str__(self):
         return self._str
+
+
+
+class CompareCox(object):
+    '''Cox Test for non-nested models
+
+    Parameters
+    ----------
+    results_x : Result instance
+        result instance of first model
+    results_z : Result instance
+        result instance of second model
+    attach : bool
+
+
+    Formulas from Greene, section 8.3.4 translated to code
+
+    produces correct results for Example 8.3, Greene
+
+
+    '''
+
+
+    def run(self, results_x, results_z, attach=True):
+        '''
+
+        see class docstring (for now)
+        '''
+        if not np.allclose(results_x.model.endog, results_z.model.endog):
+            raise ValueError('endogenous variables in models are not the same')
+        nobs = results_x.model.endog.shape[0]
+        x = results_x.model.exog
+        z = results_z.model.exog
+        sigma2_x = results_x.ssr/nobs
+        sigma2_z = results_z.ssr/nobs
+        yhat_x = results_x.fittedvalues
+        yhat_z = results_z.fittedvalues
+        res_dx = sm.OLS(yhat_x, z).fit()
+        err_zx = res_dx.resid
+        res_xzx = sm.OLS(err_zx, x).fit()
+        err_xzx = res_xzx.resid
+
+        sigma2_zx = sigma2_x + np.dot(err_zx.T, err_zx)/nobs
+        c01 = nobs/2. * (np.log(sigma2_z) - np.log(sigma2_zx))
+        v01 = sigma2_x * np.dot(err_xzx.T, err_xzx) / sigma2_zx**2
+        q = c01 / np.sqrt(v01)
+        pval = 2*stats.norm.sf(np.abs(q))
+
+        if attach:
+            self.res_dx = res_dx
+            self.res_xzx = res_xzx
+            self.c01 = c01
+            self.v01 = v01
+            self.q = q
+            self.pvalue = pval
+            self.dist = stats.norm
+
+        return q, pval
+
+    def __call__(self, results_x, results_z):
+        return self.run(results_x, results_z, attach=False)
+
+
+compare_cox = CompareCox()
+compare_cox.__doc__ = CompareCox.__doc__
+
+
+class CompareJ(object):
+    '''J-Test for comparing non-nested models
+
+    Parameters
+    ----------
+    results_x : Result instance
+        result instance of first model
+    results_z : Result instance
+        result instance of second model
+    attach : bool
+
+
+    From description in Greene, section 8.3.3
+
+    produces correct results for Example 8.3, Greene - not checked yet
+    #currently an exception, but I don't have clean reload in python session
+
+    check what results should be attached
+
+    '''
+
+
+    def run(self, results_x, results_z, attach=True):
+        '''
+
+        see class docstring (for now)
+        '''
+        if not np.allclose(results_x.model.endog, results_z.model.endog):
+            raise ValueError('endogenous variables in models are not the same')
+        nobs = results_x.model.endog.shape[0]
+        y = results_x.model.exog
+        x = results_x.model.exog
+        z = results_z.model.exog
+        #sigma2_x = results_x.ssr/nobs
+        #sigma2_z = results_z.ssr/nobs
+        yhat_x = results_x.fittedvalues
+        #yhat_z = results_z.fittedvalues
+        res_zx = sm.OLS(y, np.column_stack((yhat_x, z))).fit()
+        self.res_zx = res_zx  #for testing
+        tstat = res_zx.t()[0]  #use tstat instead after renaming
+        pval = res_zx.pvalues[0]
+        if attach:
+            self.res_zx = res_zx
+            self.dist = stats.t(res_zx.model.df_resid)
+            self.teststat = tstat
+            self.pvalue = pval
+
+        return tsta, pval
+
+    def __call__(self, results_x, results_z):
+        return self.run(results_x, results_z, attach=False)
+
+
+compare_j = CompareJ()
+compare_j.__doc__ = CompareJ.__doc__
+
 
 def acorr_ljungbox(x, lags=None, boxpierce=False):
     '''Ljung-Box test for no autocorrelation
@@ -87,7 +219,7 @@ def acorr_ljungbox(x, lags=None, boxpierce=False):
     acfx = acf(x, nlags=maxlag) # normalize by nobs not (nobs-nlags)
                              # SS: unbiased=False is default now
 #    acf2norm = acfx[1:maxlag+1]**2 / (nobs - np.arange(1,maxlag+1))
-    acf2norm = acfx[:maxlag+1]**2 / (nobs - np.arange(1,maxlag+1))
+    acf2norm = acfx[1:maxlag+1]**2 / (nobs - np.arange(1,maxlag+1))
 
     qljungbox = nobs * (nobs+2) * np.cumsum(acf2norm)[lags-1]
     pval = stats.chi2.sf(qljungbox, lags)
@@ -171,23 +303,69 @@ def acorr_lm(x, maxlag=None, autolag='AIC', store=False):
         return fval, fpval, lm, lmpval
 
 
-def het_breushpagan(y,x):
+def het_breushpagan(resid, x, exog=None):
     '''Lagrange Multiplier Heteroscedasticity Test by Breush-Pagan
+
+    The tests the hypothesis that the residual variance does not depend on
+    the variables in x in the form
+
+    :math: \sigma_i = \\sigma * f(\\alpha_0 + \\alpha z_i)
+
+    Homoscedasticity implies that $\alpha=0$
+
+
+    Parameters
+    ----------
+    resid : arraylike, (nobs,)
+        For the Breush-Pagan test, this should be the residual of a regression.
+        If an array is given in exog, then the residuals are calculated by
+        the an OLS regression or resid on exog. In this case resid should
+        contain the dependent variable. Exog can be the same as x.
+    x : array_like, (nobs, nvars)
+        This contains variables that might create data dependent
+        heteroscedasticity.
+
+    Returns
+    -------
+    lm : float
+        lagrange multiplier statistic
+    lm_pvalue :float
+        p-value of lagrange multiplier test
+    fvalue : float
+        f-statistic of the hypothesis that the error variance does not depend
+        on x
+    f_pvalue : float
+        p-value for the f-statistic
 
     Notes
     -----
-    assumes x contains constant (for counting dof)
+    Assumes x contains constant (for counting dof and calculation of R^2).
+    In the general description of LM test, Greene mentions that this test
+    exaggerates the significance of results in small or moderately large
+    samples. In this case the F-statistic is preferrable.
 
-    need to check this again, is different in Greene p224
+    *Verification*
+
+    Chisquare test statistic is exactly (<1e-13) the same result as bptest
+    in R-stats with defaults (studentize=True).
+
+    Implementation
+    This is calculated using the generic formula for LM test using $R^2$
+    (Greene, section 17.6) and not with the explicit formula
+    (Greene, section 11.4.3).
 
     References
     ----------
     http://en.wikipedia.org/wiki/Breusch%E2%80%93Pagan_test
-    Greene
+    Greene 5th edition
+    Breush, Pagan article
 
     '''
+    if not exog is None:
+        resid = sm.OLS(y, exog).fit()
+
     x = np.asarray(x)
-    y = np.asarray(y)**2
+    y = np.asarray(resid)**2
     nobs, nvars = x.shape
     resols = sm.OLS(y, x).fit()
     fval = resols.fvalue
@@ -241,7 +419,7 @@ def het_goldfeldquandt(y, x, idx, split=None, retres=False):
         sorted for the split
     split : None or integer or float in intervall (0,1)
         index at which sample is split.
-        If 0<split<0 then split is interpreted as fraction of the observations
+        If 0<split<1 then split is interpreted as fraction of the observations
         in the first sample
     retres : boolean
         if true, then an instance of a result class is returned,
@@ -330,11 +508,10 @@ class HetGoldfeldQuandt(object):
         sorted for the split
     split : None or integer or float in intervall (0,1)
         index at which sample is split.
-        If 0<split<0 then split is interpreted as fraction of the observations
+        If 0<split<1 then split is interpreted as fraction of the observations
         in the first sample
-    retres : boolean
-        if true, then an instance of a result class is returned,
-        otherwise 2 numbers, fvalue and p-value, are returned
+    drop :
+    alternative :
 
     Returns
     -------
@@ -362,30 +539,49 @@ class HetGoldfeldQuandt(object):
     can do Chow test for structural break in same way
 
     ran sanity check
+    now identical to R, why did I have y**2?
     '''
-    def run(self, x, y, idx, split=None, attach=True):
+    def run(self, y, x, idx=None, split=None, drop=None,
+            alternative='increasing', attach=True):
         '''see class docstring'''
         x = np.asarray(x)
-        y = np.asarray(y)**2
+        y = np.asarray(y)#**2
         nobs, nvars = x.shape
         if split is None:
             split = nobs//2
         elif (0<split) and (split<1):
             split = int(nobs*split)
-
-        xsortind = np.argsort(x[:,idx])
-        y = y[xsortind]
-        x = x[xsortind,:]
-        resols1 = sm.OLS(y[:split], x[:split]).fit()
-        resols2 = sm.OLS(y[split:], x[split:]).fit()
-        fval = resols1.mse_resid/resols2.mse_resid
-        if fval>1:
-            fpval = stats.f.sf(fval, resols1.df_resid, resols2.df_resid)
-            ordering = 'larger'
+        if drop is None:
+            start2 = split
+        elif (0<drop) and (drop<1):
+            start2 = split + int(nobs*drop)
         else:
+            start2 = split + drop
+
+        if not idx is None:
+            xsortind = np.argsort(x[:,idx])
+            y = y[xsortind]
+            x = x[xsortind,:]
+        resols1 = sm.OLS(y[:split], x[:split]).fit()
+        resols2 = sm.OLS(y[start2:], x[start2:]).fit()
+        fval = resols2.mse_resid/resols1.mse_resid
+        #if fval>1:
+        if alternative.lower() in ['i', 'inc', 'increasing']:
+            fpval = stats.f.sf(fval, resols1.df_resid, resols2.df_resid)
+            ordering = 'increasing'
+        elif alternative.lower() in ['d', 'dec', 'decreasing']:
             fval = 1./fval;
             fpval = stats.f.sf(fval, resols2.df_resid, resols1.df_resid)
-            ordering = 'smaller'
+            ordering = 'decreasing'
+        elif alternative.lower() in ['2', '2-sided', 'two-sided']:
+            fpval_sm = stats.f.cdf(fval, resols2.df_resid, resols1.df_resid)
+            fpval_la = stats.f.sf(fval, resols2.df_resid, resols1.df_resid)
+            fpval = 2*min(fpval_sm, fpval_la)
+            ordering = 'two-sided'
+        else:
+            raise ValueError('invalid alternative')
+
+
 
         if attach:
             res = self
@@ -399,17 +595,24 @@ class HetGoldfeldQuandt(object):
             res.split = split
             #res.__str__
             #TODO: check if string works
-            res.__str__ = '''The Goldfeld-Quandt test for null hypothesis that the
+            res._str = '''The Goldfeld-Quandt test for null hypothesis that the
     variance in the second subsample is %s than in the first subsample:
         F-statistic =%8.4f and p-value =%8.4f''' % (ordering, fval, fpval)
 
-        return fval, fpval
+        return fval, fpval, ordering
+        #return self
 
-    def __call__(self, x, y, idx, split=None):
-        return self.run(x, y, idx, split=None, attach=False)
+    def __str__(self):
+        try:
+            return self._str
+        except AttributeError:
+            return repr(self)
 
-hetgoldfeldquandt2 = HetGoldfeldQuandt()
-hetgoldfeldquandt2.__doc__ = hetgoldfeldquandt2.run.__doc__
+    def __call__(self, y, x, idx=None, split=None):
+        return self.run(y, x, idx=idx, split=split, attach=False)
+
+het_goldfeldquandt2 = HetGoldfeldQuandt()
+het_goldfeldquandt2.__doc__ = het_goldfeldquandt2.run.__doc__
 
 
 
@@ -431,11 +634,11 @@ def neweywestcov(resid, x):
      d.covb = xtxi*xuux*xtxi;
     '''
     nobs = resid.shape[0]   #TODO: check this can only be 1d
-    nlags = round(4*(nobs/100)^(2/9))
+    nlags = round(4*(nobs/100.)**(2/9.))
     hhat = resid * x.T
     xuux = np.dot(hhat, hhat.T)
     for lag in range(nlags):
-        za = np.dot(hhat[:,lag:nobs] * hhat[:,:nobs-lag].T)
+        za = np.dot(hhat[:,lag:nobs], hhat[:,:nobs-lag].T)
         w = 1 - lag/(nobs + 1.)
         xuux = xuux + np.dot(w, za+za.T)
     xtxi = np.linalg.inv(np.dot(x.T, x))  #QR instead?
@@ -783,12 +986,17 @@ def breaks_AP(endog, exog, skip):
     '''
     pass
 
+
+#delete when testing is finished
 class StatTestMC(object):
     """class to run Monte Carlo study on a statistical test'''
 
     TODO
     print summary, for quantiles and for histogram
     draft in trying out script log
+
+
+    this has been copied to tools/mctools.py, with improvements
 
     """
 
@@ -874,11 +1082,11 @@ class StatTestMC(object):
 
 if __name__ == '__main__':
 
-    examples = []
+    examples = ['adf']
     if 'adf' in examples:
 
         x = np.random.randn(20)
-        print acorr_ljungbox(x)
+        print acorr_ljungbox(x,4)
         print unitroot_adf(x)
 
         nrepl = 100
@@ -886,7 +1094,7 @@ if __name__ == '__main__':
         mcres = np.zeros(nrepl)
         for ii in range(nrepl-1):
             x = (1e-4+np.random.randn(nobs)).cumsum()
-            mcres[ii] = unitroot_adf(x, 2,trendorder=0, autolag=None)
+            mcres[ii] = unitroot_adf(x, 2,trendorder=0, autolag=None)[0]
 
         print (mcres<-2.57).sum()
         print np.histogram(mcres)
@@ -914,7 +1122,7 @@ if __name__ == '__main__':
         print crit_5lags0p05
 
 
-        adfstat, resstore = unitroot_adf(x, 2,trendorder=0, autolag=None, store=1)
+        adfstat, _,_,resstore = unitroot_adf(x, 2,trendorder=0, autolag=None, store=1)
 
         print (mcres>crit_5lags0p05).sum()
 
@@ -933,13 +1141,13 @@ if __name__ == '__main__':
             return (loc+np.random.randn(nobs))
 
         def adf20(x):
-            return unitroot_adf(x, 2,trendorder=0, autolag=None)
+            return unitroot_adf(x, 2,trendorder=0, autolag=None)[:2]
 
         print '\nResults with MC class'
         mc1 = StatTestMC(randwalksim, adf20)
-        mc1.run(1000)
-        print mc1.histogram(critval=[-3.5, -3.17, -2.9 , -2.58,  0.26])
-        print mc1.quantiles()
+        mc1.run(1000, statindices=[0,1])
+        print mc1.histogram(0, critval=[-3.5, -3.17, -2.9 , -2.58,  0.26])
+        print mc1.quantiles(0)
 
         print '\nLjung Box'
 
@@ -960,15 +1168,15 @@ if __name__ == '__main__':
         print mc1.histogram(0)
 
     nobs = 100
-    x = np.ones((20,2))
-    x[:,1] = np.arange(20)
-    y = x.sum(1) + 1.01*(1+1.5*(x[:,1]>10))*np.random.rand(20)
+    x = np.ones((nobs,2))
+    x[:,1] = np.arange(nobs)/20.
+    y = x.sum(1) + 1.01*(1+1.5*(x[:,1]>10))*np.random.rand(nobs)
     print het_goldfeldquandt(y,x, 1)
 
-    y = x.sum(1) + 1.01*(1+0.5*(x[:,1]>10))*np.random.rand(20)
+    y = x.sum(1) + 1.01*(1+0.5*(x[:,1]>10))*np.random.rand(nobs)
     print het_goldfeldquandt(y,x, 1)
 
-    y = x.sum(1) + 1.01*(1-0.5*(x[:,1]>10))*np.random.rand(20)
+    y = x.sum(1) + 1.01*(1-0.5*(x[:,1]>10))*np.random.rand(nobs)
     print het_goldfeldquandt(y,x, 1)
 
     print het_breushpagan(y,x)
@@ -987,5 +1195,8 @@ if __name__ == '__main__':
     print resols1.cov_params()
     print resols1.HC0_se
     print resols1.cov_HC0
+
+    y = x.sum(1) + 10.*(1-0.5*(x[:,1]>10))*np.random.rand(nobs)
+    print HetGoldfeldQuandt().run(y,x, 1, alternative='dec')
 
 

@@ -164,7 +164,8 @@ class CheckMargEff(object):
             dummy=True), self.res2.margeff_dummy_eydxmean, DECIMAL_4)
 
 class TestProbitNewton(CheckModelResults):
-    def __init__(self):
+    @classmethod
+    def setup_class(self):
         from results.results_discrete import Spector
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog)
@@ -183,9 +184,9 @@ class TestProbitNewton(CheckModelResults):
 
 
 class TestProbitBFGS(TestProbitNewton):
-    def setup(self):
+    def setupClass(self):
         self.res1 = Probit(self.data.endog, self.data.exog).fit(method="bfgs",
-            disp=0)
+            disp=1)
 
 class TestProbitNM(TestProbitNewton):
     def setup(self):
