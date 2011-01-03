@@ -72,6 +72,7 @@ def mvstdtprob(a, b, R, df, quadkwds=None, mvstkwds=None):
     and the integration.
 
     '''
+    ieps = 1e-5
     res, err = integrate.quad(funbgh2, *chi.ppf([ieps,1-ieps], df),
                           **dict(args=(a,b,R,df), epsabs=1e-3,limit=75))
     prob = res * bghfactor(df)
@@ -108,7 +109,7 @@ def multivariate_t_rvs(m, S, df=np.inf, n=1):
     else:
         x = np.random.chisquare(df, n)/df
     z = np.random.multivariate_normal(np.zeros(d),S,(n,))
-    return m + z/np.sqrt(x)[:,None])   # same output format as random.multivariate_normal
+    return m + z/np.sqrt(x)[:,None]   # same output format as random.multivariate_normal
 
 
 from numpy.testing import assert_almost_equal
@@ -136,6 +137,7 @@ def test_mvn_mvt():
 
     corr2 = corr_equal.copy()
     corr2[2,1] = -0.5
+    R2 = corr2  #alias, partial refactoring
     probmvn_R = 0.6472497 #reported error approx. 7.7e-08
     probmvt_R = 0.5881863 #highest reported error up to approx. 1.99e-06
     assert_almost_equal(mvstdtprob(a, b, R2, df), probmvt_R, 4)
@@ -192,7 +194,7 @@ if __name__ == '__main__':
 
 
     df=4
-    print mvtprob(a, b, R, df)
+    print mvstdtprob(a, b, R, df)
     test_mvn_mvt()
 
     S = np.array([[1.,.5],[.5,1.]])
@@ -201,7 +203,7 @@ if __name__ == '__main__':
     nobs = 10000
     rvst = multivariate_t_rvs([10.,20.], S, 2, nobs)
     print np.sum((rvst<[10.,20.]).all(1),0) * 1. / nobs
-    print mvtprob(-np.inf*np.ones(2), np.zeros(2), R[:2,:2], 2)
+    print mvstdtprob(-np.inf*np.ones(2), np.zeros(2), R[:2,:2], 2)
 
 
     '''
