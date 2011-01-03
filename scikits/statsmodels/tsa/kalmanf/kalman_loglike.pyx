@@ -1,5 +1,5 @@
 # cython: profile=True
-from numpy cimport float64_t, ndarray, complex128_t
+from numpy cimport float64_t, ndarray, complex128_t, complex64_t
 from numpy import log as nplog
 from numpy import identity, dot, kron, zeros, pi, exp, eye, sum, empty, ones
 from numpy.linalg import pinv
