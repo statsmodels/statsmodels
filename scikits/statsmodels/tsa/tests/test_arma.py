@@ -6,6 +6,14 @@ from scikits.statsmodels.tsa.arma_mle import Arma
 from scikits.statsmodels.tsa.arima import ARMA
 from results import results_arma
 import os
+try:
+    from scikits.statsmodels.tsa.kalmanf import kalman_loglike
+    fast_kalman = 1
+except:
+    fast_kalman = 0
+    #NOTE: the KF with complex input returns a different precision for
+    # the hessian imaginary part, so we use approx_hess and the the
+    # resulting stats are slightly different.
 
 DECIMAL_4 = 4
 DECIMAL_3 = 3
@@ -135,6 +143,8 @@ class Test_Y_ARMA14_NoConst(CheckArmaResults):
         endog = y_arma[:,1]
         cls.res1 = ARMA(endog).fit(order=(1,4), trend='nc')
         cls.res2 = results_arma.Y_arma14()
+        if fast_kalman:
+            cls.decimal_t = 0
 
 
 #NOTE: Ok
@@ -152,6 +162,8 @@ class Test_Y_ARMA22_NoConst(CheckArmaResults):
         endog = y_arma[:,3]
         cls.res1 = ARMA(endog).fit(order=(2,2), trend='nc')
         cls.res2 = results_arma.Y_arma22()
+        if fast_kalman:
+            cls.decimal_t -= 1
 
 #NOTE: Ok
 class Test_Y_ARMA50_NoConst(CheckArmaResults):
@@ -168,6 +180,8 @@ class Test_Y_ARMA02_NoConst(CheckArmaResults):
         endog = y_arma[:,5]
         cls.res1 = ARMA(endog).fit(order=(0,2), trend='nc')
         cls.res2 = results_arma.Y_arma02()
+        if fast_kalman:
+            cls.decimal_t -= 1
 
 #NOTE: Ok
 class Test_Y_ARMA11_Const(CheckArmaResults):
@@ -184,6 +198,9 @@ class Test_Y_ARMA14_Const(CheckArmaResults):
         endog = y_arma[:,7]
         cls.res1 = ARMA(endog).fit(order=(1,4), trend="c")
         cls.res2 = results_arma.Y_arma14c()
+        if fast_kalman:
+            cls.decimal_t = 0
+            cls.decimal_cov_params -= 1
 
 #NOTE: Ok
 class Test_Y_ARMA41_Const(CheckArmaResults):
@@ -195,6 +212,9 @@ class Test_Y_ARMA41_Const(CheckArmaResults):
         cls.decimal_cov_params = DECIMAL_3
         cls.decimal_fittedvalues = DECIMAL_3
         cls.decimal_resid = DECIMAL_3
+        if fast_kalman:
+            cls.decimal_cov_params -= 2
+            cls.decimal_bse -= 1
 
 #NOTE: Ok
 class Test_Y_ARMA22_Const(CheckArmaResults):
@@ -203,6 +223,8 @@ class Test_Y_ARMA22_Const(CheckArmaResults):
         endog = y_arma[:,9]
         cls.res1 = ARMA(endog).fit(order=(2,2), trend="c")
         cls.res2 = results_arma.Y_arma22c()
+        if fast_kalman:
+            cls.decimal_t = 0
 
 #NOTE: Ok
 class Test_Y_ARMA50_Const(CheckArmaResults):
@@ -219,6 +241,8 @@ class Test_Y_ARMA02_Const(CheckArmaResults):
         endog = y_arma[:,11]
         cls.res1 = ARMA(endog).fit(order=(0,2), trend="c")
         cls.res2 = results_arma.Y_arma02c()
+        if fast_kalman:
+            cls.decimal_t -= 1
 
 #NOTE:
 # cov_params and tvalues are off still but not as much vs. R

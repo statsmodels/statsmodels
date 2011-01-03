@@ -16,6 +16,11 @@ from scikits.statsmodels.sandbox.regression.numdiff import approx_fprime, \
 from kalmanf import KalmanFilter
 from scipy.stats import t
 from scipy.signal import lfilter
+try:
+    from kalmanf import kalman_loglike
+    fast_kalman = 1
+except:
+    fast_kalman = 0
 
 class ARMA(GenericLikelihoodModel):
     """
@@ -431,13 +436,21 @@ class ARMAResults(LikelihoodModelResults):
     @cache_readonly
     def bse(self):
         #TODO: see note above
-        return np.sqrt(np.diag(-inv(approx_hess_cs(self.params,
-            self.model.loglike, epsilon=1e-5))))
+        if not fast_kalman or self.model.method == "css":
+            return np.sqrt(np.diag(-inv(approx_hess_cs(self.params,
+                self.model.loglike, epsilon=1e-5))))
+        else:
+            return np.sqrt(np.diag(-inv(approx_hess(self.params,
+                self.model.loglike, epsilon=1e-3)[0])))
+
 
     def cov_params(self): # add scale argument?
         func = self.model.loglike
         x0 = self.params
-        return inv(-approx_hess_cs(x0, func))
+        if not fast_kalman or self.model.method == "css":
+            return -inv(approx_hess_cs(x0, func))
+        else:
+            return -inv(approx_hess(x0, func, epsilon=1e-3)[0])
 
     def t(self):    # overwrites t() because there is no cov_params
         return self.params/self.bse

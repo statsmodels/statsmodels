@@ -26,7 +26,7 @@ Harvey uses Durbin and Koopman notation.
 # is not strictly needed outside of the engineering (long series)
 
 import numpy as np
-from numpy import dot, identity, kron, log, zeros, pi, exp, eye
+from numpy import dot, identity, kron, log, zeros, pi, exp, eye, issubdtype, ones
 from numpy.linalg import inv, pinv
 from scikits.statsmodels import chain_dot, add_constant #Note that chain_dot is a bit slower
 from scikits.statsmodels.model import GenericLikelihoodModel
@@ -512,7 +512,8 @@ class KalmanFilter(object):
         #TODO: see section 3.4.6 in Harvey for computing the derivatives in the
         # recursion itself.
         #TODO: this won't work for time-varying parameters
-        y = arma_model.endog.copy().astype(params.dtype) #TODO: remove copy if you can
+        paramsdtype = params.dtype
+        y = arma_model.endog.copy().astype(paramsdtype)
         k = arma_model.k
         nobs = arma_model.nobs
         p = arma_model.p
@@ -534,8 +535,15 @@ class KalmanFilter(object):
         T_mat = KalmanFilter.T(newparams, r, k, p)
 
         if fast_kalman:
-            loglike, sigma2 =  kalman_loglike.kalman_loglike(y, k, p, q, r,
-                                    int(nobs), Z_mat, R_mat, T_mat)
+            if issubdtype(paramsdtype, float):
+                loglike, sigma2 =  kalman_loglike.kalman_loglike_double(y, k,
+                                        p, q, r, int(nobs), Z_mat, R_mat, T_mat)
+            elif issubdtype(paramsdtype, complex):
+                loglike, sigma2 =  kalman_loglike.kalman_loglike_complex(y, k,
+                                        p, q, r, int(nobs), Z_mat, R_mat, T_mat)
+            else:
+                raise TypeError("This dtype %s is not supported\n\
+Please files a bug report." % paramsdtype)
         else:
             # initial state and its variance
             alpha = zeros((m,1)) # if constant (I-T)**-1 * c
@@ -550,11 +558,14 @@ class KalmanFilter(object):
             P = Q_0
             sigma2 = 0
             loglikelihood = 0
-            v = zeros((nobs,1), dtype=params.dtype)
-            F = zeros((nobs,1), dtype=params.dtype)
+            v = zeros((nobs,1), dtype=paramsdtype)
+            F = ones((nobs,1), dtype=paramsdtype)
             #NOTE: can only do quick recursions if Z is time-invariant
             #so could have recursions for pure ARMA vs ARMAX
-            for i in xrange(int(nobs)):
+#            for i in xrange(int(nobs)):
+            F_mat = 0
+            i = 0
+            while not F_mat == 1 and i < nobs:
                 # Predict
                 v_mat = y[i] - dot(Z_mat,alpha) # one-step forecast error
                 v[i] = v_mat
@@ -567,7 +578,11 @@ class KalmanFilter(object):
                 L = T_mat - dot(K,Z_mat)
                 P = dot(dot(T_mat, P), L.T) + dot(R_mat, R_mat.T)
                 loglikelihood += log(F_mat)
-
+                i += 1
+            for i in xrange(i,nobs):
+                v_mat = y[i] - dot(Z_mat, alpha)
+                v[i] = v_mat
+                alpha = dot(T_mat, alpha) + dot(K, v_mat)
             sigma2 = 1./nobs * np.sum(v**2 / F)
             loglike = -.5 *(loglikelihood + nobs*log(sigma2))
             loglike -= nobs/2. * (log(2*pi) + 1)
