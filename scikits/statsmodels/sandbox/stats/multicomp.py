@@ -598,7 +598,7 @@ def fdrcorrection_twostage(pvals, alpha=0.05, iter=False):
         ntests0 = ntests - ri_old
         alpha_star = alpha_prime * ntests / ntests0
         alpha_stages.append(alpha_star)
-        print ntests0, alpha_star
+        #print ntests0, alpha_star
         rej, pvalscorr = fdrcorrection0(pvals, alpha=alpha_star, method='indep')
         ri = rej.sum()
         if (not iter) or ri == ri_old:
@@ -1594,42 +1594,6 @@ def set_remove_subs(ssli):
 ##                   - set(i for ll in part for i in ll))
     return part
 
-def test_tukeyhsd():
-    #example multicomp in R p 83
-
-    res = '''\
-    pair      diff        lwr        upr       p adj
-    P-M   8.150000 -10.037586 26.3375861 0.670063958
-    S-M  -3.258333 -21.445919 14.9292527 0.982419709
-    T-M  23.808333   5.620747 41.9959194 0.006783701
-    V-M   4.791667 -13.395919 22.9792527 0.931020848
-    S-P -11.408333 -29.595919  6.7792527 0.360680099
-    T-P  15.658333  -2.529253 33.8459194 0.113221634
-    V-P  -3.358333 -21.545919 14.8292527 0.980350080
-    T-S  27.066667   8.879081 45.2542527 0.002027122
-    V-S   8.050000 -10.137586 26.2375861 0.679824487
-    V-T -19.016667 -37.204253 -0.8290806 0.037710044
-    '''
-
-    res = np.array([[ 8.150000,  -10.037586, 26.3375861, 0.670063958],
-                     [-3.258333,  -21.445919, 14.9292527, 0.982419709],
-                     [23.808333,    5.620747, 41.9959194, 0.006783701],
-                     [ 4.791667,  -13.395919, 22.9792527, 0.931020848],
-                     [-11.408333, -29.595919,  6.7792527, 0.360680099],
-                     [15.658333,  -2.529253,  33.8459194, 0.113221634],
-                     [-3.358333, -21.545919,  14.8292527, 0.980350080],
-                     [27.066667,   8.879081,  45.2542527, 0.002027122],
-                     [ 8.050000, -10.137586,  26.2375861, 0.679824487],
-                     [-19.016667, -37.204253, -0.8290806, 0.037710044]])
-
-    m_r = [94.39167, 102.54167,  91.13333, 118.20000,  99.18333]
-    myres = tukeyhsd(m_r, 6, 110.8, alpha=0.05, df=4)
-    from numpy.testing import assert_almost_equal, assert_equal
-    pairs, reject, meandiffs, std_pairs, confint, q_crit = myres[:6]
-    assert_almost_equal(meandiffs, res[:, 0], decimal=5)
-    assert_almost_equal(confint, res[:, 1:3], decimal=2)
-    assert_equal(reject, res[:, 3]<0.05)
-
 
 
 
@@ -1823,7 +1787,7 @@ if __name__ == '__main__':
         print gs4.groupvarwithin()
 
 
-    test_tukeyhsd()
+    #test_tukeyhsd() #moved to test_multi.py
 
     gmeans = np.array([ 7.71375,  7.76125,  7.78428571,  7.79875])
     gnobs = np.array([8, 8, 7, 8])
