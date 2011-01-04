@@ -1081,7 +1081,7 @@ class NegBinTwo(DiscreteModel):
         llf = np.sum(J+pdf)
         return llf
 
-    def score(self, params):
+    def score(self, params, full=False):
         """
         Score vector for NB2 model
         """
@@ -1098,18 +1098,16 @@ class NegBinTwo(DiscreteModel):
         da1 = -1*np.exp(lnalpha)**-2
         dalpha = da1 * (special.digamma(a1+y) - special.digamma(a1) + np.log(a1)\
                         - np.log(a1+mu) - (a1+y)/(a1+mu) + 1)
+        if full:
+            return np.column_stack([dparams, dalpha])
+
         return np.r_[dparams.sum(0), dalpha.sum()]
 
-#    def hessian(self, params):
-#        """
-#        Hessian of NB2 model.  Currently uses numdifftools
-#        """
-#        d2dBdB =
-#        d2da2 =
-        import numdifftools as nd
-#        Hfun = nd.Jacobian(self.score)
-#        return Hfun(params)[-1]
-# is the numerical hessian block diagonal?  or is it block diagonal by assumption?
+    def hessian(self, params):
+        """
+        Hessian of NB2 model.  Currently uses numdifftools
+        """
+        pass
 
     def fit(self, start_params=None, maxiter=35, method='bfgs', tol=1e-08):
 #        start_params = [0]*(self.exog.shape[1])+[1]
