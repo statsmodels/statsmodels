@@ -98,11 +98,12 @@ Table of Contents
    rlm
    discretemod
    tsa
-   stattools
+   stats
    tools
    miscmodels
    internal
    gmm
+   distributions
    sandbox
 
 

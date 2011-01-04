@@ -1,6 +1,6 @@
 
 
-from stattools import unitroot_adf
+from diagnostic import unitroot_adf
 
 import scikits.statsmodels.datasets.macrodata.data as macro
 
@@ -27,6 +27,7 @@ datatrendli = [
 
 print '%-10s %5s %-8s' % ('variable', 'trend', '  adf')
 for name, torder in datatrendli:
-    print '%-10s %5d %8.4f' % (name, torder, unitroot_adf(macrod[name], trendorder=torder))
+    adf_, pval = unitroot_adf(macrod[name], trendorder=torder)[:2]
+    print '%-10s %5d %8.4f %8.4f' % (name, torder, adf_, pval)
 
 

@@ -1124,9 +1124,10 @@ def mvstdnormcdf(lower, upper, corrcoef, **kwds):
         correl = corrcoef
     elif corrcoef.shape == (n,n):
         #print 'case square corr',  correl.shape
-        for ii in range(n):
-            for jj in range(ii):
-                correl[ jj + ((ii-2)*(ii-1))/2] = corrcoef[ii,jj]
+        correl = corrcoef[np.tril_indices(n, -1)]
+#        for ii in range(n):
+#            for jj in range(ii):
+#                correl[ jj + ((ii-2)*(ii-1))/2] = corrcoef[ii,jj]
     else:
         raise ValueError, 'corrcoef has incorrect dimension'
 

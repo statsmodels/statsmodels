@@ -6,6 +6,9 @@
 Tools
 =====
 
+Module Reference
+----------------
+
 .. autosummary::
    :toctree: generated/
 

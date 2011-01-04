@@ -59,7 +59,7 @@ class SUR(object):
         The number of observations of the equations.
     normalized_cov_params : array
         sum(p_{m}) x sum(p_{m}) array
-        :math:`\left[X^{T}\left(\Sigma^{-1}\otimes\boldsymbol{I}\right)X\right]^{-1}
+        :math:`\\left[X^{T}\\left(\\Sigma^{-1}\\otimes\\boldsymbol{I}\\right)X\\right]^{-1}
     pinv_wexog : array
         The pseudo-inverse of the `wexog`
     sigma : array

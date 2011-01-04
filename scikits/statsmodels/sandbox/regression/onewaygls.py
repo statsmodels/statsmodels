@@ -8,7 +8,7 @@ F test for null hypothesis that coefficients in several regressions are the same
 * allows only one group variable
 * currently tests for change in all exog variables
 * allows for heterogscedasticity, error variance varies across groups
-
+* does not work if there is a group with only a single observation
 
 TODO
 ----
@@ -101,6 +101,8 @@ class OneWayLS(object):
            and group id (integers in arange(ngroups)
            not tested for groups that are not arange(ngroups)
            make sure groupnames are always consistently sorted/ordered
+           Fixed for getting the results, but groups are not printed yet, still
+           inconsistent use for summaries of results.
     '''
     def __init__(self, y, x, groups=None, het=False, data=None, meta=None):
         if groups is None:
@@ -127,13 +129,31 @@ class OneWayLS(object):
                 self.groupsint = self.groups
 
         if self.groupsint is None: # groups are not consecutive integers
-            self.unique, self.groupsint = np.unique(self.groupsint, return_inverse=True)
+            self.unique, self.groupsint = np.unique(self.groups, return_inverse=True)
+        self.uniqueint = np.arange(len(self.unique)) #as shortcut
 
     def fitbygroups(self):
+        '''Fit OLS regression for each group separately.
+
+        Returns
+        -------
+        results are attached
+
+        olsbygroup : dictionary of result instance
+            the returned regression results for each group
+        sigmabygroup : array (ngroups,) (this should be called sigma2group ??? check)
+            mse_resid for each group
+        weights : array (nobs,)
+            standard deviation of group extended to the original observations. This can
+            be used as weights in WLS for group-wise heteroscedasticity.
+
+
+
+        '''
         olsbygroup = {}
         sigmabygroup = []
-        for gi, group in enumerate(self.unique):
-            groupmask = self.groupsint == group
+        for gi, group in enumerate(self.unique): #np.arange(len(self.unique))):
+            groupmask = self.groupsint == gi   #group index
             res = OLS(self.endog[groupmask], self.exog[groupmask]).fit()
             olsbygroup[group] = res
             sigmabygroup.append(res.mse_resid)
@@ -142,9 +162,27 @@ class OneWayLS(object):
         self.weights = np.sqrt(self.sigmabygroup[self.groupsint]) #TODO:chk sqrt
 
     def fitjoint(self):
+        '''fit a joint fixed effects model to all observations
+
+        The regression results are attached as `lsjoint`.
+
+        The contrasts for overall and pairwise tests for equality of coefficients are
+        attached as a dictionary `contrasts`. This also includes the contrasts for the test
+        that the coefficients of a level are zero. ::
+
+        >>> res.contrasts.keys()
+        [(0, 1), 1, 'all', 3, (1, 2), 2, (1, 3), (2, 3), (0, 3), (0, 2)]
+
+        The keys are based on the original names or labels of the groups.
+
+        TODO: keys can be numpy scalars and then the keys cannot be sorted
+
+
+
+        '''
         if not hasattr(self, 'weights'):
             self.fitbygroups()
-        groupdummy = (self.groupsint[:,None] == self.unique).astype(int)
+        groupdummy = (self.groupsint[:,None] == self.uniqueint).astype(int)
         #order of dummy variables by variable - not used
         #dummyexog = self.exog[:,:,None]*groupdummy[:,None,1:]
         #order of dummy variables by grous - used
@@ -163,7 +201,7 @@ class OneWayLS(object):
         nparams = exog.shape[1]
         ndummies = nparams - nvars
         contrasts['all'] = np.c_[np.zeros((ndummies, nvars)), np.eye(ndummies)]
-        for groupind,group in enumerate(self.unique[1:]):  #need enumerate if groups != groupsint
+        for groupind, group in enumerate(self.unique[1:]):  #need enumerate if groups != groupsint
             groupind = groupind + 1
             contr = np.zeros((nvars, nparams))
             contr[:,nvars*groupind:nvars*(groupind+1)] = np.eye(nvars)
@@ -188,6 +226,8 @@ class OneWayLS(object):
         self.contrasts = contrasts
 
     def fitpooled(self):
+        '''fit the pooled model, which assumes there are no differences across groups
+        '''
         if self.het:
             if not hasattr(self, 'weights'):
                 self.fitbygroups()
@@ -198,6 +238,20 @@ class OneWayLS(object):
         self.lspooled = res
 
     def ftest_summary(self):
+        '''run all ftests on the joint model
+
+        Returns
+        -------
+        fres : str
+           a string that lists the results of all individual f-tests
+        summarytable : list of tuples
+           contains (pair, (fvalue, pvalue,df_denom, df_num)) for each f-test
+
+        Note
+        ----
+        This are the raw results and not formatted for nice printing.
+
+        '''
         if not hasattr(self, 'lsjoint'):
             self.fitjoint()
         txt = []
@@ -225,9 +279,84 @@ class OneWayLS(object):
             txt.append(fres.__str__())
             summarytable.append((group,(fres.fvalue, fres.pvalue, fres.df_denom, fres.df_num)))
 
+        self.summarytable = summarytable
         return '\n'.join(txt), summarytable
 
 
+    def print_summary(res):
+        '''printable string of summary
+
+        '''
+        groupind = res.groups
+        #res.fitjoint()  #not really necessary, because called by ftest_summary
+        if hasattr(res, 'self.summarytable'):
+            summtable = self.summarytable
+        else:
+            _, summtable = res.ftest_summary()
+        txt = ''
+        #print ft[0]  #skip because table is nicer
+        templ = \
+'''Table of F-tests for overall or pairwise equality of coefficients'
+%(tab)s
+
+
+Notes: p-values are not corrected for many tests
+       (no Bonferroni correction)
+       * : reject at 5%% uncorrected confidence level
+Null hypothesis: all or pairwise coefficient are the same'
+Alternative hypothesis: all coefficients are different'
+
+
+Comparison with stats.f_oneway
+%(statsfow)s
+
+
+Likelihood Ratio Test
+%(lrtest)s
+Null model: pooled all coefficients are the same across groups,'
+Alternative model: all coefficients are allowed to be different'
+not verified but looks close to f-test result'
+
+
+Ols parameters by group from individual, separate ols regressions'
+%(olsbg)s
+for group in sorted(res.olsbygroup):
+    r = res.olsbygroup[group]
+    print group, r.params
+
+
+Check for heteroscedasticity, '
+variance and standard deviation for individual regressions'
+%(grh)s
+variance    ', res.sigmabygroup
+standard dev', np.sqrt(res.sigmabygroup)
+'''
+
+        from scikits.statsmodels.iolib import SimpleTable
+        resvals = {}
+        resvals['tab'] = str(SimpleTable([(['%r'%(row[0],)]
+                            + list(row[1])
+                            + ['*']*(row[1][1]>0.5).item() ) for row in summtable],
+                          headers=['pair', 'F-statistic','p-value','df_denom',
+                                   'df_num']))
+        resvals['statsfow'] = str(stats.f_oneway(*[res.endog[groupind==gr] for gr in
+                                                   res.unique]))
+        #resvals['lrtest'] = str(res.lr_test())
+        resvals['lrtest'] = str(SimpleTable([res.lr_test()],
+                                    headers=['likelihood ratio', 'p-value', 'df'] ))
+
+        resvals['olsbg'] = str(SimpleTable([[group]
+                                            + res.olsbygroup[group].params.tolist()
+                                            for group in sorted(res.olsbygroup)]))
+        resvals['grh'] = str(SimpleTable(np.vstack([res.sigmabygroup,
+                                               np.sqrt(res.sigmabygroup)]),
+                                     headers=res.unique.tolist()))
+
+        return templ % resvals
+
+
+
+    # a variation of this has been added to RegressionResults as compare_lr
     def lr_test(self):
         '''generic likelihood ration test between nested models
 
@@ -249,167 +378,4 @@ class OneWayLS(object):
         lrpval = stats.chi2.sf(lrstat, lrdf)
 
         return lrstat, lrpval, lrdf
-
-
-
-
-
-def linmod(y, x, **kwds):
-    if 'weights' in kwds:
-        return WLS(y, x, kwds)
-    elif 'sigma' in kwds:
-        return GLS(y, x,kwds)
-    else:
-        return OLS(y, x, kwds)
-
-
-#this has been moved in sandbox/tools/stattools, next to the het and break tests
-#def recursive_olsresiduals(olsresults, skip):
-#    '''this is my original version based on Greene and references'''
-#    y = olsresults.model.endog
-#    x = olsresults.model.exog
-#    nobs, nvars = x.shape
-#    rparams = np.nan * np.zeros((nobs,nvars))
-#    rresid = np.nan * np.zeros((nobs))
-#    rypred = np.nan * np.zeros((nobs))
-#    rvarraw = np.nan * np.zeros((nobs))
-#
-#    #XTX = np.zeros((nvars,nvars))
-#    #XTY = np.zeros((nvars))
-#
-#    x0 = x[:skip]
-#    y0 = y[:skip]
-#    XTX = np.dot(x0.T, x0)
-#    XTY = np.dot(x0.T, y0) #xi * y   #np.dot(xi, y)
-#    beta = np.linalg.solve(XTX, XTY)
-#    rparams[skip-1] = beta
-#    yipred = np.dot(x[skip-1], beta)
-#    rypred[skip-1] = yipred
-#    rresid[skip-1] = y[skip-1] - yipred
-#    rvarraw[skip-1] = 1+np.dot(x[skip-1],np.dot(np.linalg.inv(XTX),x[skip-1]))
-#    for i in range(skip,nobs):
-#        xi = x[i:i+1,:]
-#        yi = y[i]
-#        xxT = np.dot(xi.T, xi)  #xi is 2d 1 row
-#        xy = np.squeeze(xi*yi) #.ravel() # XTY is 1d  #np.dot(xi, yi)   #np.dot(xi, y)
-#        #print xy.shape, XTY.shape
-#        #print XTX
-#        #print XTY
-#        beta = np.linalg.solve(XTX, XTY)
-#        rparams[i-1] = beta  #this is beta based on info up to t-1
-#        yipred = np.dot(xi, beta)
-#        rypred[i] = yipred
-#        rresid[i] = yi - yipred
-#        rvarraw[i] = 1 + np.dot(xi,np.dot(np.linalg.inv(XTX),xi.T))
-#        XTX += xxT
-#        XTY += xy
-#
-#    i = nobs
-#    beta = np.linalg.solve(XTX, XTY)
-#    rparams[i-1] = beta
-#
-#    rresid_scaled = rresid/np.sqrt(rvarraw)   #this is N(0,sigma2) distributed
-#    nrr = nobs-skip
-#    sigma2 = rresid_scaled[skip-1:].var(ddof=1)
-#    rresid_standardized = rresid_scaled/np.sqrt(sigma2) #N(0,1) distributed
-#    rcusum = rresid_standardized[skip-1:].cumsum()
-#    #confidence interval points in Greene p136 looks strange?
-#    #this assumes sum of independent standard normal
-#    #rcusumci = np.sqrt(np.arange(skip,nobs+1))*np.array([[-1.],[+1.]])*stats.norm.sf(0.025)
-#    a = 1.143 #for alpha=0.99  =0.948 for alpha=0.95
-#    #following taken from Ploberger,
-#    crit = a*np.sqrt(nrr)
-#    rcusumci = (a*np.sqrt(nrr) + a*np.arange(0,nobs-skip)/np.sqrt(nrr)) * np.array([[-1.],[+1.]])
-#    return rresid, rparams, rypred, rresid_standardized, rresid_scaled, rcusum, rcusumci
-#
-#
-#def recursive_olsresiduals2(olsresults, skip=None):
-#    '''
-#
-#    note: change to other version beta is now moved by 1 position
-#    produces same recursive residuals as other version
-#
-#    References
-#    ----------
-#    jplv to check formulas, follows Harvey
-#    BigJudge 5.5.2b for formula for inverse(X'X) updating
-#    '''
-#    lamda = 0.0
-#    y = olsresults.model.endog
-#    x = olsresults.model.exog
-#    nobs, nvars = x.shape
-#    if skip is None:
-#        skip = nvars
-#    rparams = np.nan * np.zeros((nobs,nvars))
-#    rresid = np.nan * np.zeros((nobs))
-#    rypred = np.nan * np.zeros((nobs))
-#    rvarraw = np.nan * np.zeros((nobs))
-#
-#
-#    #intialize with skip observations
-#    x0 = x[:skip]
-#    y0 = y[:skip]
-#    #add Ridge to start (not in jplv
-#    XTXi = np.linalg.inv(np.dot(x0.T, x0)+lamda*np.eye(nvars))
-#    XTY = np.dot(x0.T, y0) #xi * y   #np.dot(xi, y)
-#    #beta = np.linalg.solve(XTX, XTY)
-#    beta = np.dot(XTXi, XTY)
-#    #print 'beta', beta
-#    rparams[skip-1] = beta
-#    yipred = np.dot(x[skip-1], beta)
-#    rypred[skip-1] = yipred
-#    rresid[skip-1] = y[skip-1] - yipred
-#    rvarraw[skip-1] = 1 + np.dot(x[skip-1],np.dot(XTXi, x[skip-1]))
-#    for i in range(skip,nobs):
-#        xi = x[i:i+1,:]
-#        yi = y[i]
-#        #xxT = np.dot(xi.T, xi)  #xi is 2d 1 row
-#        xy = (xi*yi).ravel() # XTY is 1d  #np.dot(xi, yi)   #np.dot(xi, y)
-#        #print xy.shape, XTY.shape
-#        #print XTX
-#        #print XTY
-#
-#        # get prediction error with previous beta
-#        yipred = np.dot(xi, beta)
-#        rypred[i] = yipred
-#        residi = yi - yipred
-#        rresid[i] = residi
-#
-#        #update beta and inverse(X'X)
-#        tmp = np.dot(XTXi, xi.T)
-#        ft = 1 + np.dot(xi, tmp)
-#
-#        XTXi = XTXi - np.dot(tmp,tmp.T) / ft  #BigJudge equ 5.5.15
-#
-#        #print 'beta', beta
-#        beta = beta + (tmp*residi / ft).ravel()  #BigJudge equ 5.5.14
-##        #version for testing
-##        XTY += xy
-##        beta = np.dot(XTXi, XTY)
-##        print (tmp*yipred / ft).shape
-##        print 'tmp.shape, ft.shape, beta.shape', tmp.shape, ft.shape, beta.shape
-#        rparams[i] = beta
-#        rvarraw[i] = ft
-#
-#
-#
-#    i = nobs
-#    #beta = np.linalg.solve(XTX, XTY)
-#    #rparams[i] = beta
-#
-#    rresid_scaled = rresid/np.sqrt(rvarraw)   #this is N(0,sigma2) distributed
-#    nrr = nobs-skip
-#    sigma2 = rresid_scaled[skip-1:].var(ddof=1)
-#    rresid_standardized = rresid_scaled/np.sqrt(sigma2) #N(0,1) distributed
-#    rcusum = rresid_standardized[skip-1:].cumsum()
-#    #confidence interval points in Greene p136 looks strange?
-#    #this assumes sum of independent standard normal
-#    #rcusumci = np.sqrt(np.arange(skip,nobs+1))*np.array([[-1.],[+1.]])*stats.norm.sf(0.025)
-#    a = 1.143 #for alpha=0.99  =0.948 for alpha=0.95
-#    #following taken from Ploberger,
-#    crit = a*np.sqrt(nrr)
-#    rcusumci = (a*np.sqrt(nrr) + a*np.arange(0,nobs-skip)/np.sqrt(nrr)) * np.array([[-1.],[+1.]])
-#    return rresid, rparams, rypred, rresid_standardized, rresid_scaled, rcusum, rcusumci
-#
-
 

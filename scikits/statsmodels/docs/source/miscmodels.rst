@@ -25,7 +25,7 @@ On the other hand, by subclassing GenericLikelihoodModel, it is easy to add new 
 another example can be seen in the zero inflated Poisson model, miscmodels.count.
 
 
-Count Models :mod: `count`
+Count Models :mod:`count`
 --------------------------
 
 .. currentmodule:: scikits.statsmodels.miscmodels.count

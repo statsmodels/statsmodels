@@ -54,7 +54,8 @@ class Model(object):
                 raise ValueError, "endog and exog matrices are not aligned."
             if np.any(exog.var(0) == 0):
                 # assumes one constant in first or last position
-                const_idx = np.where(exog.var(0) == 0)[0].item()
+                # avoid exception if more than one constant
+                const_idx = np.where(exog.var(0) == 0)[0][0].item()
                 if const_idx == exog.shape[1] - 1:
                     exog_names = ['x%d' % i for i in range(1,exog.shape[1])]
                     exog_names += ['const']

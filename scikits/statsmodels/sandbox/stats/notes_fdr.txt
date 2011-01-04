@@ -1,0 +1,128 @@
+
+Multiple Tests and Multiple Comparisons
+=======================================
+
+Introduction
+------------
+
+generic multiple testing procedures, p-value corrections and fdr don't use
+any additional information, only information contained in p-values.
+I don't know if there are any underlying assumption, except that the raw
+pvalues are uniformly on [0,1] distributed under the null hypothesis.
+
+fdr for microarray or fmri can use special structure
+A special case in general statistical literature is the comparison of means
+with specific methods to correct for multiple tests, e.g. Tukey
+
+(survey by Shaffer
+
+
+General Methods
+---------------
+
+pvalue correction
+~~~~~~~~~~~~~~~~~
+
+implemented,
+
+basic fdr, BH, BY
+
+multiple testing procedures
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+pvalue correction is not available/implemented, return reject is True/False
+for a given confidence level.
+(pvalue correction were initially written this way)
+
+
+fdr bky  2-step procedure with estimation of fraction of false hypothesis.
+
+
+Multiple Comparisons
+--------------------
+
+Tukey, Dunnet, ...
+see Hothorn, Bretz, Westfall, University of Munich 2008, working paper,
+published in ...
+
+The general theory in Bretz, Genz and Hothorn, Bretz, Westfall, multcomp,
+is based on the distribution of the maximum of the statistics when the
+statistics are distributed according to a joint t or normal distribution
+distribution. pvalues, whether to reject a hypothesis and joint confidence
+intervalls can be obtained directly from integration of the joint t or
+normal distribution.
+
+Scipy does not have the cdf of a multivariate t distribution, but according
+to Bretz and Gentz it can be obtained by a univariate integration from
+the cdf of the multivariate normal distribution.
+
+The distribution for Tukey's range statistic is half (?) of the distribution
+of the maximum of t-distributed random variables if the underlying means
+are assumed to be independently distributed. (my interpretation so far, but
+I have not verified the details yet, see ... )
+
+Bretz and Genz also have a table with the summary of the contrast matrices
+for different tests, like Tukey and Dunnet. These contrast matrices are
+implemented in R, but for some of them they are not immediately obvious.
+
+As an aside, this seems to be related to getting simultaneous confidence
+bands for forecasting. But it is not clear to me yet how to define the
+confidence bands, I have the articles but have not read them yet.
+
+The older tests, Tukey, Dunnet and similar assume that the means are
+independently normally distributed, and critical values are tabulated for this
+case. Newer methods allow for arbitrary correlation (Bretz, Hothorn,...) or
+assume a specific structure for simplicity, for example factor structure for
+the covariance as in Hsu. The latter is the default approach in SAS.
+The tests based on independence are often categorized as post-hoc tests, a good
+overview of the formulas is in the SPSS description.
+
+It is also mentioned in the literature (?) that these multiple comparison tests
+loose power if they are only used conditional on the rejection of an overall
+F-test
+
+
+TODO:
+* finish Tukey, Dunnet because they will be familiar
+* add multivariate normal cdf to statsmodels
+* try Bretz/Gentz cdf of t distribution form the cdf of the multivariate normal
+
+
+
+special cases
+-------------
+
+
+nipy.neurospin
+
+follows
+
+Schwartzman, A. et al., 2009. Empirical null and false discovery rate
+analysis in neuroimaging. NeuroImage, 44(1), pp.71-82.
+
+test defined for point-wise test on a 2 component mixture distribution.
+The probability of an observation to be in the null distribution can be
+estimated from the mixture distribution (not sure)
+fdr defined on observations not a sample mean
+alternative literature: use topological properties of the picture to
+correct fdr.
+
+
+TODO
+====
+
+* fdr_bky and check whether prior q can be used with current pvalue-correction
+* multi-comparison: Tukey, convenience classes/methods expand on current
+* Monte Carlo
+* maybe some resampling, bootstrap, permutation, later
+* for the rest I'm not really interested in doing the work: k-FWER, k-FDR,
+  other estimators for fraction of true or false hypothesis
+
+
+
+
+multtest (R)
+check bootstrap references
+
+multcomp (R)
+contrMat has the contrast matrices for various standard test
+function parm parm(coef, vcov, df = 0) can work with only the estimates given
