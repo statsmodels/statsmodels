@@ -88,7 +88,7 @@ import math
 import copy
 from scipy import stats
 import scikits.statsmodels as sm
-from numpy.testing import assert_almost_equal
+from numpy.testing import assert_almost_equal, assert_equal
 
 
 qcrit = '''
@@ -507,8 +507,9 @@ def fdrcorrection0(pvals, alpha=0.05, method='indep'):
     -----
 
     If there is prior information on the fraction of true hypothesis, then alpha
-    should be set to alpha * m/m_0 (TODOD: check!) where m is the number of tests,
-    given by the p-values, and m_0 is an estimate of the false(???) hypothesis.
+    should be set to alpha * m/m_0 where m is the number of tests,
+    given by the p-values, and m_0 is an estimate of the true hypothesis.
+    (see Benjamini, Krieger and Yekuteli)
 
     The two-step method of Benjamini, Krieger and Yekutiel that estimates the number
     of false hypotheses will be available (soon).
@@ -547,6 +548,69 @@ def fdrcorrection0(pvals, alpha=0.05, method='indep'):
     pvals_corrected[pvals_corrected>1] = 1
     return reject[sortrevind], pvals_corrected[sortrevind]
     #return reject[pvals_sortind.argsort()]
+
+def fdrcorrection_twostage(pvals, alpha=0.05, iter=False):
+    '''(iterated) two stage linear step-up procedure with estimation of number of true
+    hypotheses
+
+    Benjamini, Krieger and Yekuteli, procedure in Definition 6
+
+    Parameters
+    ----------
+    pvals : array_like
+        set of p-values of the individual tests.
+    alpha : float
+        error rate
+    method : {'indep', 'negcorr')
+
+    Returns
+    -------
+    rejected : array, bool
+        True if a hypothesis is rejected, False if not
+    pvalue-corrected : array
+        pvalues adjusted for multiple hypotheses testing to limit FDR
+    m0 : int
+        ntest - rej, estimated number of true hypotheses
+    alpha_stages : list of floats
+        A list of alphas that have been used at each stage
+
+    Notes
+    -----
+    The returned corrected p-values, are from the last stage of the fdr_bh linear step-up
+    procedure (fdrcorrection0 with method='indep')
+
+    BKY described several other multi-stage methods, which would be easy to implement.
+    However, in their simulation the simple two-stage method (with iter=False) was the
+    most robust to the presence of positive correlation
+
+    TODO: What should be returned?
+
+    '''
+    ntests = len(pvals)
+    alpha_prime = alpha/(1+alpha)
+    rej, pvalscorr = fdrcorrection0(pvals, alpha=alpha_prime, method='indep')
+    r1 = rej.sum()
+    if (r1 == 0) or (r1 == ntests):
+        return rej, pvalscorr, ntests - r1
+    ri_old = r1
+    alpha_stages = [alpha_prime]
+    while 1:
+        ntests0 = ntests - ri_old
+        alpha_star = alpha_prime * ntests / ntests0
+        alpha_stages.append(alpha_star)
+        #print ntests0, alpha_star
+        rej, pvalscorr = fdrcorrection0(pvals, alpha=alpha_star, method='indep')
+        ri = rej.sum()
+        if (not iter) or ri == ri_old:
+            break
+        elif ri < ri_old:
+            raise RuntimeError(" oops - shouldn't be here")
+        ri_old = ri
+
+    return rej, pvalscorr, ntests - ri, alpha_stages
+
+
+
 
 
 #I don't remember what I changed or why 2 versions,
@@ -1530,42 +1594,6 @@ def set_remove_subs(ssli):
 ##                   - set(i for ll in part for i in ll))
     return part
 
-def test_tukeyhsd():
-    #example multicomp in R p 83
-
-    res = '''\
-    pair      diff        lwr        upr       p adj
-    P-M   8.150000 -10.037586 26.3375861 0.670063958
-    S-M  -3.258333 -21.445919 14.9292527 0.982419709
-    T-M  23.808333   5.620747 41.9959194 0.006783701
-    V-M   4.791667 -13.395919 22.9792527 0.931020848
-    S-P -11.408333 -29.595919  6.7792527 0.360680099
-    T-P  15.658333  -2.529253 33.8459194 0.113221634
-    V-P  -3.358333 -21.545919 14.8292527 0.980350080
-    T-S  27.066667   8.879081 45.2542527 0.002027122
-    V-S   8.050000 -10.137586 26.2375861 0.679824487
-    V-T -19.016667 -37.204253 -0.8290806 0.037710044
-    '''
-
-    res = np.array([[ 8.150000,  -10.037586, 26.3375861, 0.670063958],
-                     [-3.258333,  -21.445919, 14.9292527, 0.982419709],
-                     [23.808333,    5.620747, 41.9959194, 0.006783701],
-                     [ 4.791667,  -13.395919, 22.9792527, 0.931020848],
-                     [-11.408333, -29.595919,  6.7792527, 0.360680099],
-                     [15.658333,  -2.529253,  33.8459194, 0.113221634],
-                     [-3.358333, -21.545919,  14.8292527, 0.980350080],
-                     [27.066667,   8.879081,  45.2542527, 0.002027122],
-                     [ 8.050000, -10.137586,  26.2375861, 0.679824487],
-                     [-19.016667, -37.204253, -0.8290806, 0.037710044]])
-
-    m_r = [94.39167, 102.54167,  91.13333, 118.20000,  99.18333]
-    myres = tukeyhsd(m_r, 6, 110.8, alpha=0.05, df=4)
-    from numpy.testing import assert_almost_equal, assert_equal
-    pairs, reject, meandiffs, std_pairs, confint, q_crit = myres[:6]
-    assert_almost_equal(meandiffs, res[:, 0], decimal=5)
-    assert_almost_equal(confint, res[:, 1:3], decimal=2)
-    assert_equal(reject, res[:, 3]<0.05)
-
 
 
 
@@ -1759,8 +1787,22 @@ if __name__ == '__main__':
         print gs4.groupvarwithin()
 
 
-    test_tukeyhsd()
+    #test_tukeyhsd() #moved to test_multi.py
 
     gmeans = np.array([ 7.71375,  7.76125,  7.78428571,  7.79875])
     gnobs = np.array([8, 8, 7, 8])
-    sd = StepDown(multicomp.groupstats.groupmean, multicomp.groupstats.groupnobs, 0.001, [27])
+    sd = StepDown(gmeans, gnobs, 0.001, [27])
+
+    #example from BKY
+    pvals = [0.0001, 0.0004, 0.0019, 0.0095, 0.0201, 0.0278, 0.0298, 0.0344, 0.0459,
+             0.3240, 0.4262, 0.5719, 0.6528, 0.7590, 1.000 ]
+
+    #same number of rejection as in BKY paper:
+    #single step-up:4, two-stage:8, iterated two-step:9
+    #also alpha_star is the same as theirs for TST
+    print fdrcorrection0(pvals, alpha=0.05, method='indep')
+    print fdrcorrection_twostage(pvals, alpha=0.05, iter=False)
+    res_tst = fdrcorrection_twostage(pvals, alpha=0.05, iter=False)
+    assert_almost_equal([0.047619, 0.0649], res_tst[-1][:2],3) #alpha_star for stage 2
+    assert_equal(8, res_tst[0].sum())
+    print fdrcorrection_twostage(pvals, alpha=0.05, iter=True)
