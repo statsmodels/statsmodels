@@ -1042,6 +1042,7 @@ class MNLogit(DiscreteModel):
 #                method=method, maxiter=maxiter, tol=tol)
 #        return mlefit
 #
+
 class NegBinTwo(DiscreteModel):
     """
     NB2 Negative Binomial model.
@@ -1070,64 +1071,51 @@ class NegBinTwo(DiscreteModel):
         The ancillary parameter is assumed to be the last element of
         the params vector
         """
-        alpha = params[-1]
+        lnalpha = params[-1]
         params = params[:-1]
-        a1 = alpha**-1
+        a1 = np.exp(lnalpha)**-1
         y = self.endog
-        J = special.gammaln(y+a1) - special.gammaln(a1)
-# See Cameron and Trivedi 1998 for a simplification of the above
-# writing a convenience function using the log summation, *might*
-# be more accurate
-        XB = np.dot(self.exog,params)
-        return np.sum(J - np.log(factorial(y)) - \
-                (y+a1)*np.log(1+alpha*np.exp(XB))+y*np.log(alpha)+y*XB)
+        J = special.gammaln(y+a1) - special.gammaln(a1) - special.gammaln(y+1)
+        mu = np.exp(np.dot(self.exog,params))
+        pdf = a1*np.log(a1/(a1+mu)) + y*np.log(mu/(mu+a1))
+        llf = np.sum(J+pdf)
+        return llf
 
     def score(self, params):
         """
         Score vector for NB2 model
         """
-        import numdifftools as nd
-        y = self.endog
-        X = self.exog
-        jfun = nd.Jacobian(self.loglike)
-        return jfun(params)[-1]
-        dLda2 = jfun(params)[-1]
-        alpha = params[-1]
+        lnalpha = params[-1]
         params = params[:-1]
-        XB = np.dot(X,params)
-        mu = np.exp(XB)
-        a1 = alpha**-1
-        f1 = lambda x: 1./((x-1)*x/2. + x*a1)
-        cond = y>0
-        dJ = np.piecewise(y, cond, [f1,1./a1])
-# if y_i < 1, this equals zero!  Not noted in C &T
-        dLdB = np.dot((y-mu)/(1+alpha*mu),X)
-        return dLdB
-#
-#        dLda = np.sum(1/alpha**2 * (np.log(1+alpha*mu) - dJ) + \
-#                (y-mu)/(alpha*(1+alpha*mu)))
-#        scorevec = np.zeros((len(dLdB)+1))
-#        scorevec[:-1] = dLdB
-#        scorevec[-1] = dLda
-#        scorevec[-1] = dLda2[-1]
-#        return scorevec
+        a1 = np.exp(lnalpha)**-1
+        y = self.endog[:,None]
+        exog = self.exog
+        mu = np.exp(np.dot(exog,params))[:,None]
+        dparams = exog*a1 * (y-mu)/(mu+a1)
 
-    def hessian(self, params):
-        """
-        Hessian of NB2 model.  Currently uses numdifftools
-        """
+
+
+        da1 = -1*np.exp(lnalpha)**-2
+        dalpha = da1 * (special.digamma(a1+y) - special.digamma(a1) + np.log(a1)\
+                        - np.log(a1+mu) - (a1+y)/(a1+mu) + 1)
+        return np.r_[dparams.sum(0), dalpha.sum()]
+
+#    def hessian(self, params):
+#        """
+#        Hessian of NB2 model.  Currently uses numdifftools
+#        """
 #        d2dBdB =
 #        d2da2 =
         import numdifftools as nd
-        Hfun = nd.Jacobian(self.score)
-        return Hfun(params)[-1]
+#        Hfun = nd.Jacobian(self.score)
+#        return Hfun(params)[-1]
 # is the numerical hessian block diagonal?  or is it block diagonal by assumption?
 
     def fit(self, start_params=None, maxiter=35, method='bfgs', tol=1e-08):
 #        start_params = [0]*(self.exog.shape[1])+[1]
 # Use poisson fit as first guess.
         start_params = Poisson(self.endog, self.exog).fit().params
-        start_params = np.roll(np.insert(start_params, 0, 1), -1)
+        start_params = np.r_[start_params, 0.1]
         mlefit = super(NegBinTwo, self).fit(start_params=start_params,
                 maxiter=maxiter, method=method, tol=tol)
         return mlefit
@@ -1474,7 +1462,7 @@ if __name__=="__main__":
 # dvisits was written using an R package, I can provide the dataset
 # on request until the copyright is cleared up
 #TODO: request permission to use dvisits
-    data2 = np.genfromtxt('./dvisits.txt', names=True)
+    data2 = np.genfromtxt('./datasets/dvisits/dvisits.csv', names=True)
 # note that this has missing values for Accident
     endog = data2['doctorco']
     exog = data2[['sex','age','agesq','income','levyplus','freepoor',
@@ -1498,5 +1486,23 @@ if __name__=="__main__":
 # the below is from Cameron and Trivedi as well
 #    endog2 = np.array(endog>=1, dtype=float)
 # skipped for now, binary poisson results look off?
+    data = sm.datasets.randhie.load()
+    nbreg = NegBinTwo
+    mod = nbreg(data.endog, data.exog.view((float,9)))
+#FROM STATA:
+    params = np.asarray([-.05654133,  -.21214282, .0878311, -.02991813, .22903632,
+            .06210226, .06799715, .08407035, .18532336])
+    lnalpha = .31221786
+    mod.loglike(np.r_[params,np.exp(lnalpha)])
+    poiss_res = Poisson(data.endog, data.exog.view((float,9))).fit()
+    func = lambda x: -mod.loglike(x)
+    grad = lambda x: -mod.score(x)
+    from scipy import optimize
+#    res1 = optimize.fmin_l_bfgs_b(func, np.r_[poiss_res.params,.1],
+#                        approx_grad=True)
+    res1 = optimize.fmin_bfgs(func, np.r_[poiss_res.params,.1], fprime=grad)
+    from scikits.statsmodels.sandbox.regression.numdiff import approx_hess_cs
+    np.sqrt(np.diag(-np.linalg.inv(approx_hess_cs(np.r_[params,lnalpha], mod.loglike))))
+#TODO: do math for negbin
 
 
