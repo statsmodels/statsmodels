@@ -14,6 +14,7 @@ from scikits.statsmodels.discretemod import *
 import scikits.statsmodels as sm
 from sys import platform
 from nose import SkipTest
+from results.results_discrete import Spector
 
 DECIMAL_4 = 4
 DECIMAL_3 = 3
@@ -164,62 +165,92 @@ class CheckMargEff(object):
             dummy=True), self.res2.margeff_dummy_eydxmean, DECIMAL_4)
 
 class TestProbitNewton(CheckModelResults):
+
     @classmethod
-    def setup_class(self):
-        from results.results_discrete import Spector
+    def setupClass(cls):
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog)
-        self.data = data
-        self.res1 = Probit(data.endog, data.exog).fit(method="newton", disp=0)
+        cls.res1 = Probit(data.endog, data.exog).fit(method="newton", disp=0)
         res2 = Spector()
         res2.probit()
-        self.res2 = res2
+        cls.res2 = res2
 
     def test_predict(self):
-        assert_almost_equal(self.res1.model.predict(self.data.exog),
+        assert_almost_equal(self.res1.model.predict(self.res1.model.exog),
                 self.res2.predict, DECIMAL_4)
 
     def test_resid(self):
         assert_almost_equal(self.res1.resid, self.res2.resid, DECIMAL_4)
 
 
-class TestProbitBFGS(TestProbitNewton):
-    def setupClass(self):
-        self.res1 = Probit(self.data.endog, self.data.exog).fit(method="bfgs",
-            disp=1)
+class TestProbitBFGS(CheckModelResults):
 
-class TestProbitNM(TestProbitNewton):
-    def setup(self):
-        self.res1 = Probit(self.data.endog, self.data.exog).fit(method="nm",
+    @classmethod
+    def setupClass(cls):
+        data = sm.datasets.spector.load()
+        data.exog = sm.add_constant(data.exog)
+        cls.res1 = Probit(data.endog, data.exog).fit(method="bfgs",
+            disp=0)
+        res2 = Spector()
+        res2.probit()
+        cls.res2 = res2
+
+
+class TestProbitNM(CheckModelResults):
+    @classmethod
+    def setupClass(cls):
+        data = sm.datasets.spector.load()
+        data.exog = sm.add_constant(data.exog)
+        res2 = Spector()
+        res2.probit()
+        cls.res2 = res2
+        cls.res1 = Probit(data.endog, data.exog).fit(method="nm",
             disp=0, maxiter=500)
 
-class TestProbitPowell(TestProbitNewton):
-    def setup(self):
-        self.res1 = Probit(self.data.endog, self.data.exog).fit(method="powell",
+class TestProbitPowell(CheckModelResults):
+    @classmethod
+    def setupClass(cls):
+        data = sm.datasets.spector.load()
+        data.exog = sm.add_constant(data.exog)
+        res2 = Spector()
+        res2.probit()
+        cls.res2 = res2
+        cls.res1 = Probit(data.endog, data.exog).fit(method="powell",
             disp=0, ftol=1e-8)
 
-class TestProbitCG(TestProbitNewton):
-    def setup(self):
-        if iswindows:
+class TestProbitCG(CheckModelResults):
+    @classmethod
+    def setupClass(cls):
+        if iswindows:   # does this work with classmethod?
             raise SkipTest("fmin_cg sometimes fails to converge on windows")
-        self.res1 = Probit(self.data.endog, self.data.exog).fit(method="cg",
+        data = sm.datasets.spector.load()
+        data.exog = sm.add_constant(data.exog)
+        res2 = Spector()
+        res2.probit()
+        cls.res2 = res2
+        cls.res1 = Probit(data.endog, data.exog).fit(method="cg",
             disp=0, maxiter=250)
 
-class TestProbitNCG(TestProbitNewton):
-    def setup(self):
-        self.res1 = Probit(self.data.endog, self.data.exog).fit(method="ncg",
+class TestProbitNCG(CheckModelResults):
+    @classmethod
+    def setupClass(cls):
+        data = sm.datasets.spector.load()
+        data.exog = sm.add_constant(data.exog)
+        res2 = Spector()
+        res2.probit()
+        cls.res2 = res2
+        cls.res1 = Probit(data.endog, data.exog).fit(method="ncg",
             disp=0, avextol=1e-8)
 
 class TestLogitNewton(CheckModelResults, CheckMargEff):
-    def __init__(self):
-        from results.results_discrete import Spector
+    @classmethod
+    def setupClass(cls):
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog)
-        self.data = data
-        self.res1 = Logit(data.endog, data.exog).fit(method="newton", disp=0)
+        cls.res1 = Logit(data.endog, data.exog).fit(method="newton", disp=0)
         res2 = Spector()
         res2.logit()
-        self.res2 = res2
+        cls.res2 = res2
 
     def test_nodummy_exog1(self):
         assert_almost_equal(self.res1.margeff(atexog={0 : 2.0, 2 : 1.}),
@@ -229,24 +260,32 @@ class TestLogitNewton(CheckModelResults, CheckMargEff):
         assert_almost_equal(self.res1.margeff(atexog={1 : 21., 2 : 0}, at='mean'),
                 self.res2.margeff_nodummy_atexog2, DECIMAL_4)
 
-class TestLogitBFGS(TestLogitNewton):
-    def setup(self):
-        self.res1 = Logit(self.data.endog, self.data.exog).fit(method="bfgs",
+class TestLogitBFGS(CheckModelResults, CheckMargEff):
+    @classmethod
+    def setupClass(cls):
+        data = sm.datasets.spector.load()
+        data.exog = sm.add_constant(data.exog)
+        res2 = Spector()
+        res2.logit()
+        cls.res2 = res2
+        cls.res1 = Logit(data.endog, data.exog).fit(method="bfgs",
             disp=0)
 
 class TestPoissonNewton(CheckModelResults):
-    def __init__(self):
+    @classmethod
+    def setupClass(cls):
         from results.results_discrete import RandHIE
         data = sm.datasets.randhie.load()
         nobs = len(data.endog)
         exog = sm.add_constant(data.exog.view(float).reshape(nobs,-1))
-        self.res1 = Poisson(data.endog, exog).fit(method='newton', disp=0)
+        cls.res1 = Poisson(data.endog, exog).fit(method='newton', disp=0)
         res2 = RandHIE()
         res2.poisson()
-        self.res2 = res2
+        cls.res2 = res2
 
 class TestMNLogitNewtonBaseZero(CheckModelResults):
-    def __init__(self):
+    @classmethod
+    def setupClass(cls):
         from results.results_discrete import Anes
         data = sm.datasets.anes96.load()
         exog = data.exog
@@ -254,10 +293,10 @@ class TestMNLogitNewtonBaseZero(CheckModelResults):
         exog = np.column_stack((exog[:,0],exog[:,2],
             exog[:,5:8]))
         exog = sm.add_constant(exog)
-        self.res1 = MNLogit(data.endog, exog).fit(method="newton", disp=0)
+        cls.res1 = MNLogit(data.endog, exog).fit(method="newton", disp=0)
         res2 = Anes()
         res2.mnlogit_basezero()
-        self.res2 = res2
+        cls.res2 = res2
 
     def test_j(self):
         assert_equal(self.res1.model.J, self.res2.J)

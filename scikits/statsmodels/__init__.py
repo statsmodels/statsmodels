@@ -1,6 +1,7 @@
 #
 # models - Statistical Models
 #
+from __future__ import with_statement
 
 __docformat__ = 'restructuredtext'
 
@@ -15,6 +16,7 @@ import tsa
 from tools import add_constant, chain_dot
 import model, tools, datasets, families, stattools, iolib
 # robust is imported somewhere else?
+from numpy import errstate
 __all__ = filter(lambda s:not s.startswith('_'),dir())
 
 from numpy.testing import Tester
@@ -57,6 +59,7 @@ class NoseWrapper(Tester):
         argv, plugins = self.prepare_test_args(label, verbose, extra_argv,
                                                doctests, coverage)
         from numpy.testing.noseclasses import NumpyTestProgram
-        t = NumpyTestProgram(argv=argv, exit=False, plugins=plugins)
+        with errstate(all='ignore'):
+            t = NumpyTestProgram(argv=argv, exit=False, plugins=plugins)
         return t.result
 test = NoseWrapper().test

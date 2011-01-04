@@ -1,3 +1,4 @@
+
 import numpy as np
 from scikits.statsmodels.decorators import (cache_readonly, cache_writable,
             resettable_cache)
@@ -15,6 +16,11 @@ from scikits.statsmodels.sandbox.regression.numdiff import approx_fprime, \
 from kalmanf import KalmanFilter
 from scipy.stats import t
 from scipy.signal import lfilter
+try:
+    from kalmanf import kalman_loglike
+    fast_kalman = 1
+except:
+    fast_kalman = 0
 
 class ARMA(GenericLikelihoodModel):
     """
@@ -209,36 +215,20 @@ class ARMA(GenericLikelihoodModel):
             newparams = params
         if k > 0:
             y -= dot(self.exog, newparams[:k])
-#        arcoefs = newparams[k:k+p][::-1]    # reverse order for broadcast
-#        macoefs = newparams[k+p:k+p+q][::-1]
-#        if macoefs.size == 0:    # handle ar only case
-#            macoefs = 0
-#        if arcoefs.size == 0:   # handle ma only case
-#            arcoefs = 0
-#        errors = [0] * q
-        # create error vector iteratively
-#        for i in range(p,len(y)):
-#            errors.append(y[i]-sum(arcoefs*y[i-p:i])-sum(macoefs*errors[-q:]))
-#        errors = np.asarray(errors[q:])
-
 # the order of p determines how many zeros errors to set for lfilter
         b,a = np.r_[1,-newparams[k:k+p]], np.r_[1,newparams[k+p:]]
         zi = np.zeros((max(p,q)), dtype=params.dtype)
         for i in range(p):
             zi[i] = sum(-b[:i+1][::-1] * y[:i+1])
-        errors = lfilter(b,a, y, zi=zi)
-        errors = errors[0][p:]
-#TODO: remove once tests are written and keep lfilter
-#        assert(np.allclose(errors,e))
+        errors = lfilter(b,a, y, zi=zi)[0][p:]
 
-        ssr = sum(errors**2)
-        sigma2 = ssr/(nobs-2*p) # 2 times p because we drop p observations then
-                                # est. p more
+        ssr = np.dot(errors,errors)
+#        sigma2 = ssr/(nobs-2*p) # 2 times p because we drop p observations then
+#                                # est. p more
+        sigma2 = ssr/(nobs-p)  # not 2 times because gretl doesn't?
         self.sigma2 = sigma2
         llf = -(nobs-p)/2.*(log(2*pi) + log(sigma2)) - ssr/(2*sigma2)
         return llf
-
-
 
     def fit(self, order, start_params=None, trend='c', method = "css-mle",
             transparams=True, solver=None, maxiter=35, full_output=1,
@@ -324,6 +314,10 @@ class ARMA(GenericLikelihoodModel):
             exog = np.ones((len(endog),1))
         elif exog is not None and trend == 'c': # constant plus exogenous
             exog = add_constant(exog, prepend=True)
+        elif exog is not None and trend == 'nc':
+            # make sure it's not holding constant from last run
+            if exog.var() == 0:
+                exog = None
         if exog is not None:    # exog only
             k = exog.shape[1]
         else:   # no exogenous variables
@@ -366,7 +360,7 @@ class ARMA(GenericLikelihoodModel):
             bounds = [(None,)*2]*(p+q+k)
             mlefit = optimize.fmin_l_bfgs_b(loglike, start_params,
                     approx_grad=True, m=12, pgtol=1e-8, factr=1e2,
-                    bounds=bounds, iprint=0)
+                    bounds=bounds, iprint=3)
             self.mlefit = mlefit
             params = mlefit[0]
 
@@ -442,13 +436,21 @@ class ARMAResults(LikelihoodModelResults):
     @cache_readonly
     def bse(self):
         #TODO: see note above
-        return np.sqrt(np.diag(-inv(approx_hess_cs(self.params,
-            self.model.loglike, epsilon=1e-5))))
+        if not fast_kalman or self.model.method == "css":
+            return np.sqrt(np.diag(-inv(approx_hess_cs(self.params,
+                self.model.loglike, epsilon=1e-5))))
+        else:
+            return np.sqrt(np.diag(-inv(approx_hess(self.params,
+                self.model.loglike, epsilon=1e-3)[0])))
+
 
     def cov_params(self): # add scale argument?
         func = self.model.loglike
         x0 = self.params
-        return inv(-approx_hess_cs(x0, func))
+        if not fast_kalman or self.model.method == "css":
+            return -inv(approx_hess_cs(x0, func))
+        else:
+            return -inv(approx_hess(x0, func, epsilon=1e-3)[0])
 
     def t(self):    # overwrites t() because there is no cov_params
         return self.params/self.bse
@@ -459,7 +461,11 @@ class ARMAResults(LikelihoodModelResults):
 
     @cache_readonly
     def bic(self):
-        return -2*self.llf + np.log(self.nobs)*(self.q+self.p+self.k+1)
+        nobs = self.nobs
+        p = self.p
+        if self.model.method == "css":
+            nobs -= p
+        return -2*self.llf + np.log(nobs)*(self.q+p+self.k+1)
 
     @cache_readonly
     def hqic(self):
@@ -472,37 +478,41 @@ class ARMAResults(LikelihoodModelResults):
     def fittedvalues(self):
         model = self.model
         endog = model.endog.copy()
-        if model.exog is not None:
-            exog = model.exog.copy()
         p = self.p
+        exog = model.exog # this is a copy
+        if exog is not None:
+            if model.method == "css" and p > 0:
+                exog = exog[p:]
         if model.method == "css" and p > 0:
             endog = endog[p:]
-            exog = exog[p:]
         fv = endog - self.resid
         # add deterministic part back in
         k = self.k
-        if k != 0:
-            fv += dot(exog, self.params[:k])
+#TODO: this needs to be commented out for MLE with constant
+
+#        if k != 0:
+#            fv += dot(exog, self.params[:k])
         return fv
 
 #TODO: make both of these get errors into functions or methods?
     @cache_readonly
     def resid(self):
         model = self.model
-        y = model.endog
+        params = self.params
+        y = model.endog.copy()
+
+        #demean for exog != None
+        k = model.k
+        if k > 0:
+            y -= dot(model.exog, params[:k])
+
         r = model.r
         p = model.p
-        k = model.k
         q = model.q
-        params = self.params
 
         if self.model.method != "css":
             #TODO: move get errors to cython-ized Kalman filter
             nobs = self.nobs
-
-            #demean for exog != None
-            if k > 0:
-                y -= dot(model.exog, params[:k])
 
             Z_mat = KalmanFilter.Z(r)
             m = Z_mat.shape[1]
