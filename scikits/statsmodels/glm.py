@@ -339,7 +339,7 @@ specify the params argument."
             return self.family.fitted(np.dot(exog, params))
 
     def fit(self, maxiter=100, method='IRLS', tol=1e-8, data_weights=1.,
-            scale=None):
+            scale=None, offset=0):
         '''
         Fits a generalized linear model for a given family.
 
@@ -393,10 +393,10 @@ returned a nan.  This could be a boundary problem and should be reported."
                     self.history['deviance'][self.iteration-1])) > tol and \
                     self.iteration < maxiter):
             self.weights = data_weights*self.family.weights(mu)
-            wlsendog = eta + self.family.link.deriv(mu) * (self.endog-mu)
-                # - offset
+            wlsendog = eta + self.family.link.deriv(mu) * (self.endog-mu) \
+                 - offset
             wls_results = WLS(wlsendog, wlsexog, self.weights).fit()
-            eta = np.dot(self.exog, wls_results.params) # + offset
+            eta = np.dot(self.exog, wls_results.params) + offset
             mu = self.family.fitted(eta)
             self._update_history(wls_results, mu)
             self.scale = self.estimate_scale(mu)
@@ -853,14 +853,14 @@ if __name__ == "__main__":
     import numpy as np
     data = sm.datasets.longley.load()
     #data.exog = add_constant(data.exog)
-    GLM = GLM(data.endog, data.exog).fit()
-    GLMT = GLM.summary(returns='tables')
+    GLMmod = GLM(data.endog, data.exog).fit()
+    GLMT = GLMmod.summary(returns='tables')
 ##    GLMT[0].extend_right(GLMT[1])
 ##    print(GLMT[0])
 ##    print(GLMT[2])
-    GLMTp = GLM.summary(title='Test GLM')
+    GLMTp = GLMmod.summary(title='Test GLM')
 
-"""
+    """
 From Stata
 . webuse beetle
 . glm r i.beetle ldose, family(binomial n) link(cloglog)
@@ -915,4 +915,4 @@ Log likelihood   = -76.94564525                    BIC             =  10.20398
     endog = data.endog
     mod = sm.GLM(endog, exog, family=sm.families.Poisson()).fit()
 
-    offsetmod = GLM(endog, exog, family=sm.families.Poisson())
+    offsetmod = GLM(endog, exog, family=sm.families.Poisson()).fit(offset=offset)
