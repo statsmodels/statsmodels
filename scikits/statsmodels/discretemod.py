@@ -1043,28 +1043,17 @@ class MNLogit(DiscreteModel):
 #        return mlefit
 #
 
-class NegBinTwo(DiscreteModel):
+class NBin(DiscreteModel):
     """
-    NB2 Negative Binomial model.
-
-    Note: This is not working yet
+    Negative Binomial model.
     """
-#NOTE: to use this with the solvers, the likelihood fit will probably
-# need to be amended to have args, so that we can pass the ancillary param
-# if not we can just stick the alpha param on the end of the beta params and
-# amend all the methods to reflect this
-# if we try to keep them separate I think we'd have to use a callback...
-# need to check variance function, then derive score vector, and hessian
-# loglike should be fine...
-# also, alpha should maybe always be lnalpha to contrain it to be positive
-
 #    def pdf(self, X, alpha):
 #        a1 = alpha**-1
 #        term1 = special.gamma(X + a1)/(special.agamma(X+1)*special.gamma(a1))
 
     def loglike(self, params):
         """
-        Loglikelihood for NB2 model
+        Loglikelihood for negative binomial model
 
         Notes
         -----
@@ -1096,23 +1085,63 @@ class NegBinTwo(DiscreteModel):
 
 
         da1 = -1*np.exp(lnalpha)**-2
-        dalpha = da1 * (special.digamma(a1+y) - special.digamma(a1) + np.log(a1)\
+        dalpha = (special.digamma(a1+y) - special.digamma(a1) + np.log(a1)\
                         - np.log(a1+mu) - (a1+y)/(a1+mu) + 1)
+
+        #multiply above by constant outside of the sum to reduce rounding error
         if full:
             return np.column_stack([dparams, dalpha])
 
-        return np.r_[dparams.sum(0), dalpha.sum()]
+        return np.r_[dparams.sum(0), da1*dalpha.sum()]
 
     def hessian(self, params):
         """
         Hessian of NB2 model.  Currently uses numdifftools
         """
-        pass
+        lnalpha = params[-1]
+        params = params[:-1]
+        a1 = np.exp(lnalpha)**-1
+
+        exog = self.exog
+        y = self.endog[:,None]
+        mu = np.exp(np.dot(exog,params))[:,None]
+
+        # for dl/dparams dparams
+        dim = exog.shape[1]
+        hess_arr = np.empty((dim+1,dim+1))
+        const_arr = a1*mu*(a1+y)/(mu+a1)**2
+        for i in range(dim):
+            for j in range(dim):
+                if j > i:
+                    continue
+                hess_arr[i,j] = np.sum(-exog[:,i,None]*exog[:,j,None] *\
+                                const_arr, axis=0)
+        hess_arr[np.triu_indices(dim, k=1)] = hess_arr.T[np.triu_indices(dim,
+                                                        k =1)]
+
+        # for dl/dparams dalpha
+        da1 = -1*np.exp(lnalpha)**-2
+        dldpda = np.sum(mu*exog*(y-mu)*da1/(mu+a1)**2 , axis=0)
+        hess_arr[-1,:-1] = dldpda
+        hess_arr[:-1,-1] = dldpda
+
+        # for dl/dalpha dalpha
+        #NOTE: polygamma(1,x) is the trigamma function
+        da2 = 2*np.exp(lnalpha)**-3
+        dalpha = da1 * (special.digamma(a1+y) - special.digamma(a1) + \
+                    np.log(a1) - np.log(a1+mu) - (a1+y)/(a1+mu) + 1)
+        dada = (da2*dalpha/da1 + da1**2 * (special.polygamma(1,a1+y) - \
+                    special.polygamma(1,a1) + 1/a1 -1/(a1+mu) + \
+                    (y-mu)/(mu+a1)**2)).sum()
+        hess_arr[-1,-1] = dada
+
+        return hess_arr
+
 
     def fit(self, start_params=None, maxiter=35, method='bfgs', tol=1e-08):
 #        start_params = [0]*(self.exog.shape[1])+[1]
 # Use poisson fit as first guess.
-        start_params = Poisson(self.endog, self.exog).fit().params
+        start_params = Poisson(self.endog, self.exog).fit(disp=0).params
         start_params = np.r_[start_params, 0.1]
         mlefit = super(NegBinTwo, self).fit(start_params=start_params,
                 maxiter=maxiter, method=method, tol=tol)
@@ -1485,11 +1514,13 @@ if __name__=="__main__":
 #    endog2 = np.array(endog>=1, dtype=float)
 # skipped for now, binary poisson results look off?
     data = sm.datasets.randhie.load()
-    nbreg = NegBinTwo
+    nbreg = NBin
     mod = nbreg(data.endog, data.exog.view((float,9)))
 #FROM STATA:
     params = np.asarray([-.05654133,  -.21214282, .0878311, -.02991813, .22903632,
             .06210226, .06799715, .08407035, .18532336])
+    bse = [0.0062541, 0.0231818, 0.0036942, 0.0034796, 0.0305176, 0.0012397,
+            0.0198008, 0.0368707, 0.0766506]
     lnalpha = .31221786
     mod.loglike(np.r_[params,np.exp(lnalpha)])
     poiss_res = Poisson(data.endog, data.exog.view((float,9))).fit()
@@ -1500,7 +1531,8 @@ if __name__=="__main__":
 #                        approx_grad=True)
     res1 = optimize.fmin_bfgs(func, np.r_[poiss_res.params,.1], fprime=grad)
     from scikits.statsmodels.sandbox.regression.numdiff import approx_hess_cs
-    np.sqrt(np.diag(-np.linalg.inv(approx_hess_cs(np.r_[params,lnalpha], mod.loglike))))
-#TODO: do math for negbin
+#    np.sqrt(np.diag(-np.linalg.inv(approx_hess_cs(np.r_[params,lnalpha], mod.loglike))))
+#NOTE: this is the hessian in terms of alpha _not_ lnalpha
+    hess_arr = mod.hessian(res1)
 
 
