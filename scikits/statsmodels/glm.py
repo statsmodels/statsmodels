@@ -850,6 +850,7 @@ class GLMResults(LikelihoodModelResults):
 
 if __name__ == "__main__":
     import scikits.statsmodels as sm
+    import numpy as np
     data = sm.datasets.longley.load()
     #data.exog = add_constant(data.exog)
     GLM = GLM(data.endog, data.exog).fit()
@@ -894,3 +895,24 @@ Log likelihood   = -76.94564525                    BIC             =  10.20398
 ------------------------------------------------------------------------------
 """
 
+
+    # example of using offset
+    data = sm.datasets.wfs.load()
+    # get offset
+    offset = np.log(data.exog[:,-1])
+    exog = data.exog[:,:-1]
+
+    # convert dur to dummy
+    exog = sm.tools.categorical(exog, col=0, drop=True)
+    # drop reference category
+    # convert res to dummy
+    exog = sm.tools.categorical(exog, col=0, drop=True)
+    # convert edu to dummy
+    exog = sm.tools.categorical(exog, col=0, drop=True)
+    # drop reference categories and add intercept
+    exog = sm.add_constant(exog[:,[1,2,3,4,5,7,8,10,11,12]], prepend=True)
+
+    endog = data.endog
+    mod = sm.GLM(endog, exog, family=sm.families.Poisson()).fit()
+
+    offsetmod = GLM(endog, exog, family=sm.families.Poisson())
