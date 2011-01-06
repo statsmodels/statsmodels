@@ -2,7 +2,7 @@
 
 dta <- read.csv('wfs.csv')
 attach(dta)
-y <- nwomen * nchild
+y <- round(nwomen * nchild)
 dur <- factor(dur)
 res <- factor(res)
 edu <- factor(edu)
