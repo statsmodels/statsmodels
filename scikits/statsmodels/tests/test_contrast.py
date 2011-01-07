@@ -4,9 +4,10 @@ from numpy.testing import *
 from scikits.statsmodels.contrast import Contrast
 
 class TestContrast(object):
-    def __init__(self):
+    @classmethod
+    def setupClass(cls):
         R.seed(54321)
-        self.X = R.standard_normal((40,10))
+        cls.X = R.standard_normal((40,10))
 
     def test_contrast1(self):
         term = np.column_stack((self.X[:,0], self.X[:,2]))

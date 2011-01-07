@@ -274,7 +274,9 @@ class ARMA(GenericLikelihoodModel):
             the Results object's mle_retvals attribute.  Output is dependent
             on the solver.  See Notes for more information.
         disp : bool, optional
-            If True, convergence information is output.
+            If True, convergence information is printed.  For the default
+            l_bfgs_b solver, disp controls the frequency of the output during
+            the iterations. disp < 0 means no output in this case.
         callback : function, optional
             Called after each iteration as callback(xk) where xk is the current
             parameter vector.
@@ -360,7 +362,7 @@ class ARMA(GenericLikelihoodModel):
             bounds = [(None,)*2]*(p+q+k)
             mlefit = optimize.fmin_l_bfgs_b(loglike, start_params,
                     approx_grad=True, m=12, pgtol=1e-8, factr=1e2,
-                    bounds=bounds, iprint=3)
+                    bounds=bounds, iprint=disp)
             self.mlefit = mlefit
             params = mlefit[0]
 

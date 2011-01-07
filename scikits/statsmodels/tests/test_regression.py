@@ -6,6 +6,7 @@ from numpy.testing import *
 from scipy.linalg import toeplitz
 from scikits.statsmodels.tools import add_constant
 from scikits.statsmodels.regression import OLS, GLSAR, WLS, GLS, yule_walker
+from scikits.statsmodels.datasets import longley
 #from check_for_rpy import skip_rpy
 from nose import SkipTest
 from scipy.stats import t as student_t
@@ -144,16 +145,16 @@ class CheckRegressionResults(object):
 #TODO: test fittedvalues and what else?
 
 class TestOLS(CheckRegressionResults):
-    def __init__(self):
-        from scikits.statsmodels.datasets.longley import load
+    @classmethod
+    def setupClass(cls):
         from results.results_regression import Longley
-        data = load()
+        data = longley.load()
         data.exog = add_constant(data.exog)
         res1 = OLS(data.endog, data.exog).fit()
         res2 = Longley()
         res2.wresid = res1.wresid # workaround hack
-        self.res1 = res1
-        self.res2 = res2
+        cls.res1 = res1
+        cls.res2 = res2
 
 
 #  Robust error tests.  Compare values computed with SAS
@@ -185,13 +186,13 @@ class TestFtest(object):
     """
     Tests f_test vs. RegressionResults
     """
-    def __init__(self):
-        from scikits.statsmodels.datasets.longley import load
-        data = load()
+    @classmethod
+    def setupClass(cls):
+        data = longley.load()
         data.exog = add_constant(data.exog)
-        self.res1 = OLS(data.endog, data.exog).fit()
+        cls.res1 = OLS(data.endog, data.exog).fit()
         R = np.identity(7)[:-1,:]
-        self.Ftest = self.res1.f_test(R)
+        cls.Ftest = cls.res1.f_test(R)
 
     def test_F(self):
         assert_almost_equal(self.Ftest.fvalue, self.res1.fvalue, DECIMAL_4)
@@ -205,7 +206,7 @@ class TestFtest(object):
     def test_Df_num(self):
         assert_equal(self.Ftest.df_num, 6)
 
-class TestFTest2(TestFtest):
+class TestFTest2(object):
     '''
     A joint test that the coefficient on
     GNP = the coefficient on UNEMP  and that the coefficient on
@@ -213,9 +214,13 @@ class TestFTest2(TestFtest):
 
     Ftest1 is from statsmodels.  Results are from Rpy using R's car library.
     '''
-    def setup(self):
+    @classmethod
+    def setupClass(cls):
+        data = longley.load()
+        data.exog = add_constant(data.exog)
+        res1 = OLS(data.endog, data.exog).fit()
         R2 = [[0,1,-1,0,0,0,0],[0, 0, 0, 0, 1, -1, 0]]
-        self.Ftest1 = self.res1.f_test(R2)
+        cls.Ftest1 = res1.f_test(R2)
 #        if skipR:
 #            raise SkipTest, "Rpy not installed"
 #        try:
@@ -242,19 +247,23 @@ class TestFTest2(TestFtest):
     def test_df_num(self):
         assert_equal(self.Ftest1.df_num, 2)
 
-class TestFtestQ(TestFtest):
+class TestFtestQ(object):
     """
     A joint hypothesis test that Rb = q.  Coefficient tests are essentially
     made up.  Test values taken from Stata.
     """
-    def setup(self):
+    @classmethod
+    def setupClass(cls):
+        data = longley.load()
+        data.exog = add_constant(data.exog)
+        res1 = OLS(data.endog, data.exog).fit()
         R = np.array([[0,1,1,0,0,0,0],
               [0,1,0,1,0,0,0],
               [0,1,0,0,0,0,0],
               [0,0,0,0,1,0,0],
               [0,0,0,0,0,1,0]])
         q = np.array([0,0,0,1,0])
-        self.Ftest1 = self.res1.f_test(R,q)
+        cls.Ftest1 = res1.f_test(R,q)
 
     def test_fvalue(self):
         assert_almost_equal(self.Ftest1.fvalue, 70.115557, 5)
@@ -275,19 +284,18 @@ class TestTtest(object):
     different than zero.
 
         '''
-    def __init__(self):
-        from scikits.statsmodels.datasets.longley import load
-        data = load()
-        self.data = data
+    @classmethod
+    def setupClass(cls):
+        data = longley.load()
         data.exog = add_constant(data.exog)
-        self.res1 = OLS(data.endog, data.exog).fit()
+        cls.res1 = OLS(data.endog, data.exog).fit()
+        R = np.identity(7)
+        cls.Ttest = cls.res1.t_test(R)
 
 #    def setup(self):
 #        if skipR:
 #            raise SkipTest, "Rpy not installed"
 #        else:
-        R = np.identity(7)
-        self.Ttest = self.res1.t_test(R)
 #        self.R_Results = RModel(data.endog, data.exog, r.lm).robj
 
     def test_tvalue(self):
@@ -307,14 +315,15 @@ class TestTtest(object):
     def test_effect(self):
         assert_almost_equal(self.Ttest.effect, self.res1.params)
 
-class TestTtest2(TestTtest):
+class TestTtest2(object):
     '''
     Tests the hypothesis that the coefficients on POP and YEAR
     are equal.
 
     Results from RPy using 'car' package.
     '''
-    def setup(self):
+    @classmethod
+    def setupClass(cls):
 #        if skipR:
 #            raise SkipTest, "Rpy not installed"
 #        try:
@@ -324,7 +333,10 @@ class TestTtest2(TestTtest):
         R = np.zeros(7)
         R[4:6] = [1,-1]
 #        self.R = R
-        self.Ttest1 = self.res1.t_test(R)
+        data = longley.load()
+        data.exog = add_constant(data.exog)
+        res1 = OLS(data.endog, data.exog).fit()
+        cls.Ttest1 = res1.t_test(R)
 #        self.R_Results = RModel(self.data.endog, self.data.exog, r.lm).robj
 #        self.Ttest2 = r.linear_hypothesis(self.R_Results, 'x.5 = x.6')
 #        t = np.sign(np.inner(R, self.res1.params))*\
@@ -353,11 +365,11 @@ class TestGLS(object):
     '''
     These test results were obtained by replication with R.
     '''
-    def __init__(self):
-        from scikits.statsmodels.datasets.longley import load
+    @classmethod
+    def setupClass(cls):
         from results.results_regression import LongleyGls
 
-        data = load()
+        data = longley.load()
         exog = add_constant(np.column_stack(\
                 (data.exog[:,1],data.exog[:,4])))
         tmp_results = OLS(data.endog, exog).fit()
@@ -366,8 +378,8 @@ class TestGLS(object):
         order = toeplitz(np.arange(16))
         sigma = rho**order
         GLS_results = GLS(data.endog, exog, sigma=sigma).fit()
-        self.res1 = GLS_results
-        self.res2 = LongleyGls()
+        cls.res1 = GLS_results
+        cls.res2 = LongleyGls()
 
     def test_aic(self):
         assert_approx_equal(self.res1.aic+2, self.res2.aic, 3)
@@ -404,14 +416,14 @@ class TestGLS_nosigma(CheckRegressionResults):
     '''
     Test that GLS with no argument is equivalent to OLS.
     '''
-    def __init__(self):
-        from scikits.statsmodels.datasets.longley import load
-        data = load()
+    @classmethod
+    def setupClass(cls):
+        data = longley.load()
         data.exog = add_constant(data.exog)
         ols_res = OLS(data.endog, data.exog).fit()
         gls_res = GLS(data.endog, data.exog).fit()
-        self.res1 = gls_res
-        self.res2 = ols_res
+        cls.res1 = gls_res
+        cls.res2 = ols_res
 #        self.res2.conf_int = self.res2.conf_int()
 
 #    def check_confidenceintervals(self, conf1, conf2):
@@ -447,33 +459,34 @@ class TestGLS_nosigma(CheckRegressionResults):
 
 
 class TestWLS_GLS(CheckRegressionResults):
-    def __init__(self):
+    @classmethod
+    def setupClass(cls):
         from scikits.statsmodels.datasets.ccard import load
         data = load()
-        self.res1 = WLS(data.endog, data.exog, weights = 1/data.exog[:,2]).fit()
-        self.res2 = GLS(data.endog, data.exog, sigma = data.exog[:,2]).fit()
+        cls.res1 = WLS(data.endog, data.exog, weights = 1/data.exog[:,2]).fit()
+        cls.res2 = GLS(data.endog, data.exog, sigma = data.exog[:,2]).fit()
 
     def check_confidenceintervals(self, conf1, conf2):
         assert_almost_equal(conf1, conf2(), DECIMAL_4)
 
 class TestWLS_OLS(CheckRegressionResults):
-    def __init__(self):
-        from scikits.statsmodels.datasets.longley import load
-        data = load()
+    @classmethod
+    def setupClass(cls):
+        data = longley.load()
         data.exog = add_constant(data.exog)
-        self.res1 = OLS(data.endog, data.exog).fit()
-        self.res2 = WLS(data.endog, data.exog).fit()
+        cls.res1 = OLS(data.endog, data.exog).fit()
+        cls.res2 = WLS(data.endog, data.exog).fit()
 
     def check_confidenceintervals(self, conf1, conf2):
         assert_almost_equal(conf1, conf2(), DECIMAL_4)
 
 class TestGLS_OLS(CheckRegressionResults):
-    def __init__(self):
-        from scikits.statsmodels.datasets.longley import load
-        data = load()
+    @classmethod
+    def setupClass(cls):
+        data = longley.load()
         data.exog = add_constant(data.exog)
-        self.res1 = GLS(data.endog, data.exog).fit()
-        self.res2 = OLS(data.endog, data.exog).fit()
+        cls.res1 = GLS(data.endog, data.exog).fit()
+        cls.res2 = OLS(data.endog, data.exog).fit()
 
     def check_confidenceintervals(self, conf1, conf2):
         assert_almost_equal(conf1, conf2(), DECIMAL_4)
@@ -496,12 +509,13 @@ class TestGLS_OLS(CheckRegressionResults):
 
 
 class TestYuleWalker(object):
-    def __init__(self):
+    @classmethod
+    def setupClass(cls):
         from scikits.statsmodels.datasets.sunspots import load
-        self.data = load()
-        self.rho, self.sigma = yule_walker(self.data.endog, order=4,
+        data = load()
+        cls.rho, cls.sigma = yule_walker(data.endog, order=4,
                 method="mle")
-        self.R_params = [1.2831003105694765, -0.45240924374091945,
+        cls.R_params = [1.2831003105694765, -0.45240924374091945,
                 -0.20770298557575195, 0.047943648089542337]
 
 #    def setup(self):
@@ -515,46 +529,50 @@ class TestYuleWalker(object):
         assert_almost_equal(self.rho, self.R_params, DECIMAL_4)
 
 class TestDataDimensions(CheckRegressionResults):
-    def __init__(self):
+    @classmethod
+    def setupClass(cls):
         np.random.seed(54321)
-        self.endog_n_ = np.random.uniform(0,20,size=30)
-        self.endog_n_one = self.endog_n_[:,None]
-        self.exog_n_ = np.random.uniform(0,20,size=30)
-        self.exog_n_one = self.exog_n_[:,None]
-        self.degen_exog = self.exog_n_one[:-1]
-        self.mod1 = OLS(self.endog_n_one, self.exog_n_one)
-        self.mod1.df_model += 1
-        #self.mod1.df_resid -= 1
-        self.res1 = self.mod1.fit()
+        cls.endog_n_ = np.random.uniform(0,20,size=30)
+        cls.endog_n_one = cls.endog_n_[:,None]
+        cls.exog_n_ = np.random.uniform(0,20,size=30)
+        cls.exog_n_one = cls.exog_n_[:,None]
+        cls.degen_exog = cls.exog_n_one[:-1]
+        cls.mod1 = OLS(cls.endog_n_one, cls.exog_n_one)
+        cls.mod1.df_model += 1
+        #cls.mod1.df_resid -= 1
+        cls.res1 = cls.mod1.fit()
         # Note that these are created for every subclass..
         # A little extra overhead probably
-        self.mod2 = OLS(self.endog_n_one, self.exog_n_one)
-        self.mod2.df_model += 1
-        self.res2 = self.mod2.fit()
+        cls.mod2 = OLS(cls.endog_n_one, cls.exog_n_one)
+        cls.mod2.df_model += 1
+        cls.res2 = cls.mod2.fit()
 
     def check_confidenceintervals(self, conf1, conf2):
         assert_almost_equal(conf1, conf2(), DECIMAL_4)
 
 class TestNxNx(TestDataDimensions):
-    def __init__(self):
-        super(TestNxNx, self).__init__()
-        self.mod2 = OLS(self.endog_n_,self.exog_n_)
-        self.mod2.df_model += 1
-        self.res2 = self.mod2.fit()
+    @classmethod
+    def setupClass(cls):
+        super(TestNxNx, cls).setupClass()
+        cls.mod2 = OLS(cls.endog_n_, cls.exog_n_)
+        cls.mod2.df_model += 1
+        cls.res2 = cls.mod2.fit()
 
 class TestNxOneNx(TestDataDimensions):
-    def __init__(self):
-        super(TestNxOneNx, self).__init__()
-        self.mod2 = OLS(self.endog_n_one, self.exog_n_)
-        self.mod2.df_model += 1
-        self.res2 = self.mod2.fit()
+    @classmethod
+    def setupClass(cls):
+        super(TestNxOneNx, cls).setupClass()
+        cls.mod2 = OLS(cls.endog_n_one, cls.exog_n_)
+        cls.mod2.df_model += 1
+        cls.res2 = cls.mod2.fit()
 
 class TestNxNxOne(TestDataDimensions):
-    def __init__(self):
-        super(TestNxNxOne, self).__init__()
-        self.mod2 = OLS(self.endog_n_, self.exog_n_one)
-        self.mod2.df_model += 1
-        self.res2 = self.mod2.fit()
+    @classmethod
+    def setupClass(cls):
+        super(TestNxNxOne, cls).setupClass()
+        cls.mod2 = OLS(cls.endog_n_, cls.exog_n_one)
+        cls.mod2.df_model += 1
+        cls.res2 = cls.mod2.fit()
 
 def test_bad_size():
     np.random.seed(54321)
