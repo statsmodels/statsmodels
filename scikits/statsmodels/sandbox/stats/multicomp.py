@@ -78,9 +78,14 @@ ValueError: zero-size array to ufunc.reduce without identity
 '''
 
 
-
-import xlrd
-import xlwt
+try:
+    import xlrd
+except:
+    print "sandbox.stats.multicomp depends on xlrd"
+try:
+    import xlwt
+except:
+    print "sandbox.stats.multicomp depends on xlwt"
 import scipy.stats
 import numpy
 import numpy as np

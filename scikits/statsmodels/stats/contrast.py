@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.stats import f as fdist
 from scipy.stats import t as student_t
-import tools
+from scikits.statsmodels.tools.tools import clean0, rank, fullrank
 
 
 #TODO: should this be public if it's just a container?
@@ -136,7 +136,7 @@ class Contrast(object):
         if T.ndim == 1:
             T = T[:,None]
 
-        self.T = tools.clean0(T)
+        self.T = clean0(T)
         self.D = self.design
         self._contrast_matrix = contrastfromcols(self.T, self.D)
         try:
@@ -197,8 +197,8 @@ def contrastfromcols(L, D, pseudo=None):
     if len(Lp.shape) == 1:
         Lp.shape = (n, 1)
 
-    if tools.rank(Lp) != Lp.shape[1]:
-        Lp = tools.fullrank(Lp)
+    if rank(Lp) != Lp.shape[1]:
+        Lp = fullrank(Lp)
         C = np.dot(pseudo, Lp).T
 
     return np.squeeze(C)

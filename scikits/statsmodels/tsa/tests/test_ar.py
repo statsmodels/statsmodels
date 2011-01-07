@@ -1,7 +1,7 @@
 """
 Test AR Model
 """
-import scikits.statsmodels as sm
+import scikits.statsmodels.api as sm
 from scikits.statsmodels.tsa import AR
 from numpy.testing import assert_almost_equal, assert_equal
 from results import results_ar

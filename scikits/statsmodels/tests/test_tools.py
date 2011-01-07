@@ -6,7 +6,7 @@ import numpy as np
 from numpy.random import standard_normal
 from numpy.testing import *
 
-from scikits.statsmodels import tools
+from scikits.statsmodels.tools import tools
 
 class TestTools(TestCase):
 

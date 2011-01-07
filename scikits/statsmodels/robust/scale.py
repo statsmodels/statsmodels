@@ -12,7 +12,7 @@ R Venables, B Ripley. 'Modern Applied Statistics in S'
 import numpy as np
 from scipy.stats import norm as Gaussian
 import norms
-from scikits.statsmodels import tools
+from scikits.statsmodels.tools import tools
 
 def mad(a, c=Gaussian.ppf(3/4.), axis=0):  # c \approx .6745
     """

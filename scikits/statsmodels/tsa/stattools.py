@@ -4,9 +4,9 @@ Statistical tools for time series analysis
 
 import numpy as np
 from scipy import stats, signal
-from scikits.statsmodels.regression import OLS, yule_walker
-from scikits.statsmodels.tools import add_constant
-from scikits.statsmodels.tsa.tsatools import lagmat, lagmat2ds, add_trend
+from scikits.statsmodels.regression.regression import OLS, yule_walker
+from scikits.statsmodels.tools.tools import add_constant
+from tsatools import lagmat, lagmat2ds, add_trend
 #from scikits.statsmodels.sandbox.tsa import var
 from adfvalues import *
 #from scikits.statsmodels.sandbox.rls import RLS

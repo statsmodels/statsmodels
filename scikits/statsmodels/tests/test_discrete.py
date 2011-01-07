@@ -10,8 +10,8 @@ tests.
 
 import numpy as np
 from numpy.testing import *
-from scikits.statsmodels.discretemod import *
-import scikits.statsmodels as sm
+from scikits.statsmodels.discrete.discretemod import *
+import scikits.statsmodels.api as sm
 from sys import platform
 from nose import SkipTest
 from results.results_discrete import Spector

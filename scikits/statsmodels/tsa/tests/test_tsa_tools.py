@@ -4,7 +4,7 @@
 
 import numpy as np
 from numpy.testing import assert_array_almost_equal
-import scikits.statsmodels as sm
+import scikits.statsmodels.api as sm
 import scikits.statsmodels.tsa.stattools as tsa
 
 from results import savedrvs

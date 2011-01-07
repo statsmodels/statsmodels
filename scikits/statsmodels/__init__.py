@@ -8,14 +8,19 @@ __docformat__ = 'restructuredtext'
 from version import __version__
 from info import __doc__
 
-from regression import *
-from glm import *
-from rlm import *
-from discretemod import *
-import tsa
-from tools import add_constant, chain_dot
-import model, tools, datasets, families, stattools, iolib
-# robust is imported somewhere else?
+#from regression import *
+#from glm.glm import *
+#from robust.rlm import *
+#from discrete.discretemod import *
+#import tsa
+#from tools.tools import add_constant, chain_dot
+#import base.model
+#import tools.tools
+#import datasets
+#import glm.families
+#import stats.stattools
+#import iolib
+
 from numpy import errstate
 __all__ = filter(lambda s:not s.startswith('_'),dir())
 

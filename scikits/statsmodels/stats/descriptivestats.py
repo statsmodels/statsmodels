@@ -2,7 +2,7 @@ import sys
 import numpy as np
 from scipy import stats
 #from scikits.statsmodels.iolib.table import SimpleTable
-from table import SimpleTable
+from scikits.statsmodels.iolib.table import SimpleTable
 
 
 class Describe(object):

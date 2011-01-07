@@ -2,9 +2,9 @@ import numpy as np
 from scipy.stats import t, norm
 from scipy.stats import norm as stats_norm
 from scipy import optimize, derivative
-from tools import recipr
-from contrast import ContrastResults
-from decorators import *  #for moving llf
+from scikits.statsmodels.tools.tools import recipr
+from scikits.statsmodels.stats.contrast import ContrastResults
+from scikits.statsmodels.tools.decorators import resettable_cache, cache_readonly
 
 class Model(object):
     """

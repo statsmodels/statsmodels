@@ -19,10 +19,12 @@ W. Greene. `Econometric Analysis`. Prentice Hall, 5th. edition. 2003.
 __all__ = ["Poisson","Logit","Probit","MNLogit"]
 
 import numpy as np
-from model import LikelihoodModel, LikelihoodModelResults
-import tools
-from decorators import *
-from regression import OLS
+from scikits.statsmodels.base.model import (LikelihoodModel,
+        LikelihoodModelResults)
+import scikits.statsmodels.tools.tools as tools
+from scikits.statsmodels.tools.decorators import (resettable_cache,
+        cache_readonly)
+from scikits.statsmodels.regression.regression import OLS
 from scipy import stats, factorial, special, optimize # opt just for nbin
 #import numdifftools as nd #This will be removed when all have analytic hessians
 

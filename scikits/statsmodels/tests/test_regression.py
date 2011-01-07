@@ -4,8 +4,9 @@ Test functions for models.regression
 import numpy as np
 from numpy.testing import *
 from scipy.linalg import toeplitz
-from scikits.statsmodels.tools import add_constant
-from scikits.statsmodels.regression import OLS, GLSAR, WLS, GLS, yule_walker
+from scikits.statsmodels.tools.tools import add_constant
+from scikits.statsmodels.regression.regression import (OLS, GLSAR, WLS, GLS,
+        yule_walker)
 from scikits.statsmodels.datasets import longley
 #from check_for_rpy import skip_rpy
 from nose import SkipTest

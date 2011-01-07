@@ -19,10 +19,13 @@ McCullagh, P. and Nelder, J.A.  1989.  "Generalized Linear Models." 2nd ed.
 """
 
 import numpy as np
-import families, tools
-from regression import WLS#,GLS #might need for mlogit
-from model import LikelihoodModel, LikelihoodModelResults
-from decorators import *
+import families
+from scikits.statsmodels.tools.tools import rank
+from scikits.statsmodels.regression.regression import WLS
+from scikits.statsmodels.base.model import (LikelihoodModel,
+        LikelihoodModelResults)
+from scikits.statsmodels.tools.decorators import (cache_readonly,
+        resettable_cache)
 from scipy.stats import t
 
 __all__ = ['GLM']
@@ -99,7 +102,7 @@ class GLM(LikelihoodModel):
 
     Examples
     --------
-    >>> import scikits.statsmodels as sm
+    >>> import scikits.statsmodels.api as sm
     >>> data = sm.datasets.scotland.load()
     >>> data.exog = sm.add_constant(data.exog)
 
@@ -237,8 +240,8 @@ class GLM(LikelihoodModel):
         self.pinv_wexog = np.linalg.pinv(self.exog)
         self.normalized_cov_params = np.dot(self.pinv_wexog,
                                         np.transpose(self.pinv_wexog))
-        self.df_model = tools.rank(self.exog)-1
-        self.df_resid = self.exog.shape[0] - tools.rank(self.exog)
+        self.df_model = rank(self.exog)-1
+        self.df_resid = self.exog.shape[0] - rank(self.exog)
 
     def score(self, params):
         """
@@ -688,7 +691,7 @@ class GLMResults(LikelihoodModelResults):
 
         Examples (needs updating)
         --------
-        >>> import scikits.statsmodels as sm
+        >>> import scikits.statsmodels.api as sm
         >>> data = sm.datasets.longley.load()
         >>> data.exog = sm.add_constant(data.exog)
         >>> ols_results = sm.OLS(data.endog, data.exog).results
@@ -886,7 +889,7 @@ class GLMResults(LikelihoodModelResults):
             print('not avalible yet')
 
 if __name__ == "__main__":
-    import scikits.statsmodels as sm
+    import scikits.statsmodels.api as sm
     import numpy as np
     data = sm.datasets.longley.load()
     #data.exog = add_constant(data.exog)

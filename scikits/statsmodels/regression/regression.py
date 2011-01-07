@@ -34,9 +34,11 @@ import numpy as np
 from scipy.linalg import norm, toeplitz, lstsq, calc_lwork
 from scipy import stats
 from scipy.stats.stats import ss
-from model import LikelihoodModel, LikelihoodModelResults
-from tools import add_constant, rank, recipr
-from decorators import *
+from scikits.statsmodels.base.model import (LikelihoodModel,
+        LikelihoodModelResults)
+from scikits.statsmodels.tools.tools import add_constant, rank, recipr
+from scikits.statsmodels.tools.decorators import (resettable_cache,
+        cache_readonly, cache_writable)
 
 class GLS(LikelihoodModel):
     """

@@ -55,7 +55,7 @@ License: BSD
 
 import numpy as np
 from scipy import signal, optimize, linalg
-from scikits.statsmodels.model import LikelihoodModel
+from scikits.statsmodels.base.model import LikelihoodModel
 
 #this has been copied to new arma_mle.py - keep temporarily for easier lookup
 class ARIMA(LikelihoodModel):

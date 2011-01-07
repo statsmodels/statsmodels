@@ -5,9 +5,9 @@ Test functions for models.GLM
 
 import numpy as np
 from numpy.testing import *
-import scikits.statsmodels as sm
-from scikits.statsmodels.glm import GLM
-from scikits.statsmodels.tools import add_constant
+import scikits.statsmodels.api as sm
+from scikits.statsmodels.glm.glm import GLM
+from scikits.statsmodels.tools.tools import add_constant
 from nose import SkipTest
 
 # Test Precisions
