@@ -19,7 +19,9 @@ McCullagh, P. and Nelder, J.A.  1989.  "Generalized Linear Models." 2nd ed.
 """
 
 import numpy as np
-import families, tools
+#import families, tools
+import tools
+from scikits.statsmodels import families
 from regression import WLS#,GLS #might need for mlogit
 from model import LikelihoodModel, LikelihoodModelResults
 from decorators import *
@@ -873,12 +875,12 @@ if __name__ == "__main__":
     import scikits.statsmodels as sm
     data = sm.datasets.longley.load()
     #data.exog = add_constant(data.exog)
-    GLM = GLM(data.endog, data.exog).fit()
-    GLMT = GLM.summary(returns='tables')
+    glm1 = GLM(data.endog, data.exog).fit()
+    glm1t = glm1.summary(returns='tables')
 ##    GLMT[0].extend_right(GLMT[1])
 ##    print(GLMT[0])
 ##    print(GLMT[2])
-    GLMTp = GLM.summary(title='Test GLM')
+    glm1tp = glm1.summary(title='Test GLM')
 
 """
 From Stata

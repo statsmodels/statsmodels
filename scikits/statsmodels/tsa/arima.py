@@ -4,7 +4,7 @@ from scikits.statsmodels.decorators import (cache_readonly, cache_writable,
 from scipy import optimize
 from numpy import dot, identity, kron, log, zeros, pi, exp, eye, abs, empty
 from numpy.linalg import inv, pinv
-from scikits.statsmodels import add_constant
+from scikits.statsmodels.tools import add_constant
 from scikits.statsmodels.model import (LikelihoodModel, LikelihoodModelResults,
                                         GenericLikelihoodModel)
 from scikits.statsmodels.regression import yule_walker, GLS
