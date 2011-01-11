@@ -154,12 +154,10 @@ class CheckMargEff(object):
         assert_almost_equal(self.res1.margeff(at='mean', dummy=True),
                 self.res2.margeff_dummy_dydxmean, DECIMAL_4)
 
-    @dec.knownfailureif(True, "The discrete change elasticity is not correct")
     def test_dummy_eydxoverall(self):
         assert_almost_equal(self.res1.margeff(method='eydx', dummy=True),
                 self.res2.margeff_dummy_eydx, DECIMAL_4)
 
-    @dec.knownfailureif(True, "The discrete change elasticity is not correct")
     def test_dummy_eydxmean(self):
         assert_almost_equal(self.res1.margeff(at='mean', method='eydx',
             dummy=True), self.res2.margeff_dummy_eydxmean, DECIMAL_4)
@@ -276,8 +274,7 @@ class TestPoissonNewton(CheckModelResults):
     def setupClass(cls):
         from results.results_discrete import RandHIE
         data = sm.datasets.randhie.load()
-        nobs = len(data.endog)
-        exog = sm.add_constant(data.exog.view(float).reshape(nobs,-1))
+        exog = sm.add_constant(data.exog.view((float,9)))
         cls.res1 = Poisson(data.endog, exog).fit(method='newton', disp=0)
         res2 = RandHIE()
         res2.poisson()

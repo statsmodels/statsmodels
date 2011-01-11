@@ -31,6 +31,15 @@ from scipy import stats, factorial, special, optimize # opt just for nbin
 #TODO: add options for the parameter covariance/variance
 # ie., OIM, EIM, and BHHH see Green 21.4
 
+def _check_discrete_args(at, method):
+    """
+    Checks the arguments for margeff if the exogenous variables are discrete.
+    """
+    if method in ['dyex','eyex']:
+        raise ValueError, "%s not allowed for discrete variables" % method
+    if at in ['median', 'zero']:
+        raise ValueError, "%s not allowed for discrete variables" % at
+
 def _isdummy(X):
     """
     Given an array X, returns a boolean column index for the dummy variables.
@@ -1313,14 +1322,12 @@ class DiscreteResults(LikelihoodModelResults):
     t.__doc__ = LikelihoodModelResults.t.__doc__
 
 
-    def margeff(self, params=None, at='overall', method='dydx', atexog=None,
-        dummy=False, count=False):
+    def margeff(self, at='overall', method='dydx', atexog=None, dummy=False,
+            count=False):
         """Get marginal effects of the fitted model.
 
         Parameters
         ----------
-        params : array-like, optional
-            The parameters.
         at : str, optional
             Options are:
             'overall', The average of the marginal effects at each observation.
@@ -1374,58 +1381,60 @@ class DiscreteResults(LikelihoodModelResults):
 #            of type float), then `factor` may be a dict with the zero-indexed
 #            column of the factor and the value should be the base-outcome.
 
+        # check arguments
+        if at not in ['overall','mean','median','zero','all']:
+            raise ValueError, "%s not a valid option for `at`." % at
+        if method not in ['dydx','eyex','dyex','eydx']:
+            raise ValueError, "method is not understood.  Got %s" % method
+
+
+        # get local variables
         model = self.model
+        params = self.params
         method = method.lower()
         at = at.lower()
-        if params is None:
-            params = self.params
-        else:
-            params = np.asarray(params)
-            # could prob use a shape check here (do we even need this option?)
-        if not at in ['overall','mean','median','zero','all']:
-            raise ValueError, "%s not a valid option for `at`." % at
-
         exog = model.exog.copy() # copy because values are changed
         ind = exog.var(0) != 0 # index for non-constants
 
-        # get user instructions
-        if dummy == True or count == True:
-            if method in ['dyex','eyex']:
-                raise ValueError, "%s not allowed for discrete \
-variables" % method
-            if at in ['median', 'zero']:
-                raise ValueError, "%s not allowed for discrete \
-variables" % at
-            if dummy:
-                dummy_ind = _isdummy(exog)
-            if count:
-                count_ind = _iscount(exog)
-        if atexog is not None:
+
+        # handle discrete exogenous variables
+        if dummy:
+            _check_discrete_args(at, method)
+            dummy_ind = _isdummy(exog)
+        if count:
+            _check_discrete_args(at, method)
+            count_ind = _iscount(exog)
+
+
+        # get the exogenous variables
+        if atexog is not None: # user supplied
             if not isinstance(atexog, dict):
-                raise ValueError, "exog, if not None, should be a dict. \
-Got %s" % type(atexog)
+                raise ValueError("atexog should be a dict not %s"\
+                        % type(atexog))
             for key in atexog:
                 exog[:,key] = atexog[key]
-
         if at == 'mean':
-            exog[:,ind] = exog.mean(0)[ind]
+            exog = np.atleast_2d(exog.mean(0))
         elif at == 'median':
-            exog[:,ind] = np.median(exog, axis=0)[ind]
+            exog = np.atleast_2d(np.median(exog, axis=0))
         elif at == 'zero':
-            exog[:,ind] = 0
-        if method not in ['dydx','eyex','dyex','eydx']:
-            raise ValueError, "method is not understood.  Got %s" % method
+            exog = np.zeros((1,params.shape[0]))
+            exog[0,~ind] = 1
+
+        # get linear fitted values #TODO: just go ahead and get yhat?
+        fittedvalues = np.dot(exog, params) #TODO: add a predict method
+                                            # that takes an exog kwd
+
         # group 1 probit, logit, logistic, cloglog, heckprob, xtprobit
         if isinstance(model, (Probit, Logit)):
-            effects = np.dot(model.pdf(np.dot(exog,params))[:,None],
+            effects = np.dot(model.pdf(fittedvalues)[:,None],
                     params[None,:])
         # group 2 oprobit, ologit, gologit, mlogit, biprobit
         #TODO
         # group 3 poisson, nbreg, zip, zinb
         elif isinstance(model, (Poisson)):
-            effects = np.exp(np.dot(exog, params))[:,None]*params[None,:]
-        fittedvalues = np.dot(exog, params) #TODO: add a predict method
-                                            # that takes an exog kwd
+            effects = np.exp(fittedvalues)[:,None]*params[None,:]
+
         if 'ex' in method:
             effects *= exog
         if 'dy' in method:
@@ -1452,12 +1461,12 @@ Got %s" % type(atexog)
                     exog1 = exog.copy()
                     exog1[:,i] = 1
                     fittedvalues1 = np.dot(exog1, params)
-                    effect0 = model.cdf(np.dot(exog0, params))
-                    effect1 = model.cdf(np.dot(exog1, params))
+                    effect0 = model.cdf(fittedvalues0)
+                    effect1 = model.cdf(fittedvalues1)
                     if 'ey' in method:
-                        effect0 /= model.cdf(fittedvalues0)
-                        effect1 /= model.cdf(fittedvalues1)
-                    effects[i] = (effect1 - effect0).mean()
+                        effect0 = np.log(effect0)
+                        effect1 = np.log(effect1)
+                    effects[i] = (effect1 - effect0).mean() # mean for overall
         if count == True:
             for i, tf in enumerate(count_ind):
                 if tf == True:
@@ -1491,7 +1500,7 @@ if __name__=="__main__":
 # dvisits was written using an R package, I can provide the dataset
 # on request until the copyright is cleared up
 #TODO: request permission to use dvisits
-    data2 = np.genfromtxt('./datasets/dvisits/dvisits.csv', names=True)
+    data2 = np.genfromtxt('../datasets/dvisits/dvisits.csv', names=True)
 # note that this has missing values for Accident
     endog = data2['doctorco']
     exog = data2[['sex','age','agesq','income','levyplus','freepoor',

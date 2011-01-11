@@ -21,6 +21,7 @@ Refactored the test suite.
 ARMA models for time series.
 Refactored entire codebase.
 Support for offest and exposure in GLM.
+Removed data_weights argument to GLM.fit for Binomial models.
 
 
 
