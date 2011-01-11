@@ -1,7 +1,7 @@
 import iolib, datasets, tools
 from tools.tools import add_constant, categorical
 import regression
-from regression.linear_model import OLS, GLS, WLS
+from regression.linear_model import OLS, GLS, WLS, GLSAR
 from .glm.glm import GLM
 from .glm import families
 import robust

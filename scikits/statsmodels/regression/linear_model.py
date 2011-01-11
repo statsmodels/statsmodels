@@ -1207,8 +1207,9 @@ class RegressionResults(LikelihoodModelResults):
         All residual statistics are calculated on whitened residuals.
         """
         import time
-        from iolib import SimpleTable
-        from stattools import jarque_bera, omni_normtest, durbin_watson
+        from scikits.statsmodels.iolib.table import SimpleTable
+        from scikits.statsmodels.stats.stattools import (jarque_bera,
+                omni_normtest, durbin_watson)
 
         if yname is None:
             yname = self.model.endog_names
