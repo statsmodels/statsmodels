@@ -8,7 +8,7 @@ License: BSD
 """
 
 import numpy as np
-import scikits.statsmodels as sm
+import scikits.statsmodels.api as sm
 from scikits.statsmodels import GLS, WLS, OLS
 
 def remove_nanrows(y, x):

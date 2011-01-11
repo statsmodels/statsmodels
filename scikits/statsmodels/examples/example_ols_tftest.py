@@ -13,7 +13,7 @@ This example was written mostly for cross-checks and refactoring.
 
 import numpy as np
 import numpy.testing as npt
-import scikits.statsmodels as sm
+import scikits.statsmodels.api as sm
 
 print '\n\n Example 1: Longley Data, high multicollinearity'
 

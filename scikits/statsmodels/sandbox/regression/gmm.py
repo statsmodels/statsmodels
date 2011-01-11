@@ -52,7 +52,7 @@ License: BSD (3-clause)
 
 import numpy as np
 from scipy import optimize, stats
-import scikits.statsmodels as sm
+import scikits.statsmodels.api as sm
 from scikits.statsmodels.sandbox.regression.numdiff import approx_fprime1, approx_hess
 from scikits.statsmodels.model import LikelihoodModel, LikelihoodModelResults
 from scikits.statsmodels.regression import RegressionResults, OLS

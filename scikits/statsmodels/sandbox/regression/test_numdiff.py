@@ -258,7 +258,7 @@ if __name__ == '__main__':
     print maxabs(gd, gt)
 
 
-    import scikits.statsmodels as sm
+    import scikits.statsmodels.api as sm
 
     data = sm.datasets.spector.load()
     data.exog = sm.add_constant(data.exog)

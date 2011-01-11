@@ -84,7 +84,7 @@ class Huber(object):
     Examples
     --------
     >>> import numpy as np
-    >>> import scikits.statsmodels as sm
+    >>> import scikits.statsmodels.api as sm
     >>> chem_data = np.array([2.20, 2.20, 2.4, 2.4, 2.5, 2.7, 2.8, 2.9, 3.03,
     ...        3.03, 3.10, 3.37, 3.4, 3.4, 3.4, 3.5, 3.6, 3.7, 3.7, 3.7, 3.7,
     ...        3.77, 5.28, 28.95])

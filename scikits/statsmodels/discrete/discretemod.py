@@ -1486,7 +1486,7 @@ Got %s" % type(atexog)
 
 if __name__=="__main__":
     import numpy as np
-    import scikits.statsmodels as sm
+    import scikits.statsmodels.api as sm
 # Scratch work for negative binomial models
 # dvisits was written using an R package, I can provide the dataset
 # on request until the copyright is cleared up

@@ -5,7 +5,7 @@ add example for new compare methods
 """
 
 import numpy as np
-import scikits.statsmodels as sm
+import scikits.statsmodels.api as sm
 
 np.random.seed(765367)
 nsample = 100

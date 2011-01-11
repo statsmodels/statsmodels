@@ -782,7 +782,7 @@ __all__ = ['acovf', 'acf', 'pacf', 'pacf_yw', 'pacf_ols', 'ccovf', 'ccf',
            'pergram', 'q_stat']
 
 if __name__=="__main__":
-    import scikits.statsmodels as sm
+    import scikits.statsmodels.api as sm
     data = sm.datasets.macrodata.load().data
     x = data['realgdp']
 # adf is tested now.

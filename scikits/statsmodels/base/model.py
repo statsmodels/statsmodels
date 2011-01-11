@@ -458,7 +458,7 @@ class GenericLikelihoodModel(LikelihoodModel):
     --------
     see also subclasses in directory miscmodels
 
-    import scikits.statsmodels as sm
+    import scikits.statsmodels.api as sm
     data = sm.datasets.spector.load()
     data.exog = sm.add_constant(data.exog)
     # in this dir
@@ -825,7 +825,7 @@ class LikelihoodModelResults(Results):
 
         Examples
         --------
-        >>> import scikits.statsmodels as sm
+        >>> import scikits.statsmodels.api as sm
         >>> data = sm.datasets.longley.load()
         >>> data.exog = sm.add_constant(data.exog)
         >>> results = sm.OLS(data.endog, data.exog).fit()
@@ -960,7 +960,7 @@ arguments.'
         Examples
         --------
         >>> import numpy as np
-        >>> import scikits.statsmodels as sm
+        >>> import scikits.statsmodels.api as sm
         >>> data = sm.datasets.longley.load()
         >>> data.exog = sm.add_constant(data.exog)
         >>> results = sm.OLS(data.endog, data.exog).fit()
@@ -1051,7 +1051,7 @@ number of rows")
         Examples
         --------
         >>> import numpy as np
-        >>> import scikits.statsmodels as sm
+        >>> import scikits.statsmodels.api as sm
         >>> data = sm.datasets.longley.load()
         >>> data.exog = sm.add_constant(data.exog)
         >>> results = sm.OLS(data.endog, data.exog).fit()
@@ -1139,7 +1139,7 @@ number of rows")
 
         Examples
         --------
-        >>> import scikits.statsmodels as sm
+        >>> import scikits.statsmodels.api as sm
         >>> data = sm.datasets.longley.load()
         >>> data.exog = sm.add_constant(data.exog)
         >>> results = sm.OLS(data.endog, data.exog).fit()

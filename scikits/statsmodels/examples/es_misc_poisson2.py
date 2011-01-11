@@ -2,7 +2,7 @@
 
 import numpy as np
 from numpy.testing import assert_almost_equal
-import scikits.statsmodels as sm
+import scikits.statsmodels.api as sm
 from scikits.statsmodels.miscmodels import PoissonGMLE, PoissonOffsetGMLE, \
                         PoissonZiGMLE
 

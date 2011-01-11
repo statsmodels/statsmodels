@@ -12,7 +12,7 @@ written, and GLSAR is still being worked on.
 import numpy as np
 import numpy.testing as npt
 from scipy import signal
-import scikits.statsmodels as sm
+import scikits.statsmodels.api as sm
 from scikits.statsmodels.regression import GLSAR, yule_walker
 
 examples_all = range(10) + ['test_copy']

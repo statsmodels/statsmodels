@@ -9,7 +9,7 @@ in ANOVA
 
 import numpy as np
 #from scipy import stats
-import scikits.statsmodels as sm
+import scikits.statsmodels.api as sm
 
 
 dt_b = np.dtype([('breed', int), ('sex', int), ('litter', int),

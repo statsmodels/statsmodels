@@ -3,7 +3,7 @@
 Note: uncomment plt.show() to display graphs
 '''
 import numpy as np
-import scikits.statsmodels as sm
+import scikits.statsmodels.api as sm
 from scipy import stats
 from matplotlib import pyplot as plt
 

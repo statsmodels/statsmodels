@@ -101,7 +101,7 @@ class RLM(LikelihoodModel):
 
     Examples
     ---------
-    >>> import scikits.statsmodels as sm
+    >>> import scikits.statsmodels.api as sm
     >>> data = sm.datasets.stackloss.load()
     >>> data.exog = sm.add_constant(data.exog)
     >>> rlm_model = sm.RLM(data.endog, data.exog, \

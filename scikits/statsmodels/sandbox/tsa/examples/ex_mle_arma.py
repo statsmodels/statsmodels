@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 
 import numdifftools as ndt
 
-import scikits.statsmodels as sm
+import scikits.statsmodels.api as sm
 from scikits.statsmodels.sandbox import tsa
 from mle import Arma  # local import
 

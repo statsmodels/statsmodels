@@ -114,7 +114,7 @@ class GLS(LikelihoodModel):
     Examples
     --------
     >>> import numpy as np
-    >>> import scikits.statsmodels as sm
+    >>> import scikits.statsmodels.api as sm
     >>> data = sm.datasets.longley.load()
     >>> data.exog = sm.add_constant(data.exog)
     >>> ols_resid = sm.OLS(data.endog, data.exog).fit().resid
@@ -367,7 +367,7 @@ class WLS(GLS):
     Examples
     ---------
     >>> import numpy as np
-    >>> import scikits.statsmodels as sm
+    >>> import scikits.statsmodels.api as sm
     >>> Y = [1,3,4,5,2,3,4]
     >>> X = range(1,8)
     >>> X = sm.add_constant(X)
@@ -486,7 +486,7 @@ class OLS(WLS):
     --------
     >>> import numpy as np
     >>>
-    >>> import scikits.statsmodels as sm
+    >>> import scikits.statsmodels.api as sm
     >>>
     >>> Y = [1,3,4,5,2,3,4]
     >>> X = range(1,8) #[:,np.newaxis]
@@ -547,7 +547,7 @@ class GLSAR(GLS):
 
     Examples
     --------
-    >>> import scikits.statsmodels as sm
+    >>> import scikits.statsmodels.api as sm
     >>> X = range(1,8)
     >>> X = sm.add_constant(X)
     >>> Y = [1,3,4,5,8,10,9]
@@ -692,7 +692,7 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False, demean=True):
 
     Examples
     --------
-    >>> import scikits.statsmodels as sm
+    >>> import scikits.statsmodels.api as sm
     >>> from scikits.statsmodels.datasets.sunspots import load
     >>> data = load()
     >>> rho, sigma = sm.regression.yule_walker(data.endog,       \
@@ -1195,7 +1195,7 @@ class RegressionResults(LikelihoodModelResults):
 
         Examples
         --------
-        >>> import scikits.statsmodels as sm
+        >>> import scikits.statsmodels.api as sm
         >>> data = sm.datasets.longley.load()
         >>> data.exog = sm.add_constant(data.exog)
         >>> ols_results = sm.OLS(data.endog, data.exog).results
@@ -1372,7 +1372,7 @@ class RegressionResults(LikelihoodModelResults):
             print('not avalible yet')
 
 if __name__ == "__main__":
-    import scikits.statsmodels as sm
+    import scikits.statsmodels.api as sm
     data = sm.datasets.longley.load()
     data.exog = add_constant(data.exog)
     ols_results = OLS(data.endog, data.exog).results

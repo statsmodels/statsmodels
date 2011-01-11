@@ -557,7 +557,7 @@ class ARMAResults(LikelihoodModelResults):
 
 if __name__ == "__main__":
     import numpy as np
-    import scikits.statsmodels as sm
+    import scikits.statsmodels.api as sm
 
     # simulate arma process
     from scikits.statsmodels.tsa.arima_process import arma_generate_sample

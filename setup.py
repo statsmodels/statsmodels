@@ -112,7 +112,7 @@ def configuration(parent_package='', top_path=None, package_name=DISTNAME):
                            download_url = DOWNLOAD_URL,
                            long_description = LONG_DESCRIPTION)
     config.add_subpackage('scikits')
-    config.add_subpackage('scikits.statsmodels')
+#    config.add_subpackage('scikits.statsmodels')
     config.add_data_files('scikits/__init__.py')
     config.add_data_dir('scikits/statsmodels/tests')
     config.add_data_dir('scikits/statsmodels/examples')

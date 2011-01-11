@@ -86,7 +86,7 @@ import numpy as np
 import math
 import copy
 from scipy import stats
-import scikits.statsmodels as sm
+from scikits.statsmodels.iolib.table import SimpleTable
 from numpy.testing import assert_almost_equal, assert_equal
 
 

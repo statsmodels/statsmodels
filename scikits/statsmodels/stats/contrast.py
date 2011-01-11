@@ -74,7 +74,7 @@ class Contrast(object):
     Examples
     ---------
     >>>import numpy.random as R
-    >>>import scikits.statsmodels as sm
+    >>>import scikits.statsmodels.api as sm
     >>>import numpy as np
     >>>R.seed(54321)
     >>>X = R.standard_normal((40,10))

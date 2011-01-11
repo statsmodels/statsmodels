@@ -6,7 +6,7 @@ at outliers, compares with RLM and a short bootstrap
 
 """
 import numpy as np
-import scikits.statsmodels as sm
+import scikits.statsmodels.api as sm
 import matplotlib.pyplot as plt
 
 data = sm.datasets.ccard.load()

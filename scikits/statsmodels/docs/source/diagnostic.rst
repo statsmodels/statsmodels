@@ -120,7 +120,7 @@ Outlier Diagnosis
   - robust regression results
     example from example_rlm.py ::
 
-        import scikits.statsmodels as sm
+        import scikits.statsmodels.api as sm
 
         ### Example for using Huber's T norm with the default
         ### median absolute deviation scaling

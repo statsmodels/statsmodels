@@ -1810,7 +1810,7 @@ class VAR:
 
 if __name__ == "__main__":
     import numpy as np
-    import scikits.statsmodels as sm
+    import scikits.statsmodels.api as sm
 #    vr = VAR(data = np.random.randn(50,3))
 #    vr.ols()
 #    vr.ols_comp()

@@ -931,7 +931,7 @@ if __name__ == '__main__':
     print cov_x1
     err1 = arest.errfn(x=y1)
     print np.var(err1)
-    import scikits.statsmodels as sm
+    import scikits.statsmodels.api as sm
     print sm.regression.yule_walker(y1, order=2, inv=True)
 
     print "\nExample 2"
@@ -1030,7 +1030,7 @@ if __name__ == '__main__':
     print "true"
     print ar
     print ma
-    import scikits.statsmodels as sm
+    import scikits.statsmodels.api as sm
     print sm.regression.yule_walker(y4, order=2, method='mle', inv=True)
 
 

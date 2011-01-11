@@ -19,7 +19,7 @@ def qqplot(data, dist=stats.distributions.norm, binom_n=None):
 
     Examples
     --------
-    >>> import scikits.statsmodels as sm
+    >>> import scikits.statsmodels.api as sm
     >>> from matplotlib import pyplot as plt
     >>> data = sm.datasets.longley.Load()
     >>> data.exog = sm.add_constant(data.exog)
