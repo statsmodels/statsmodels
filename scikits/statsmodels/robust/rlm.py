@@ -15,7 +15,7 @@ R Venables, B Ripley. 'Modern Applied Statistics in S'  Springer, New York,
 """
 import numpy as np
 from scikits.statsmodels.tools.tools import rank
-from scikits.statsmodels.regression.regression import WLS, GLS
+from scikits.statsmodels.regression.linear_model import WLS, GLS
 import norms
 import scale
 from scikits.statsmodels.base.model import (LikelihoodModel,

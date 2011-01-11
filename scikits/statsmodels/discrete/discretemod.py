@@ -24,7 +24,7 @@ from scikits.statsmodels.base.model import (LikelihoodModel,
 import scikits.statsmodels.tools.tools as tools
 from scikits.statsmodels.tools.decorators import (resettable_cache,
         cache_readonly)
-from scikits.statsmodels.regression.regression import OLS
+from scikits.statsmodels.regression.linear_model import OLS
 from scipy import stats, factorial, special, optimize # opt just for nbin
 #import numdifftools as nd #This will be removed when all have analytic hessians
 

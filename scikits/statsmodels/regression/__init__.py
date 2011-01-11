@@ -1,1 +1,1 @@
-from regression import yule_walker
+from linear_model import yule_walker

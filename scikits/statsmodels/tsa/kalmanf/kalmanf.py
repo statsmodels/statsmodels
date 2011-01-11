@@ -30,7 +30,7 @@ from numpy import dot, identity, kron, log, zeros, pi, exp, eye, issubdtype, one
 from numpy.linalg import inv, pinv
 from scikits.statsmodels.tools.tools import chain_dot, add_constant
 from scikits.statsmodels.base.model import GenericLikelihoodModel
-from scikits.statsmodels.regression.regression import yule_walker, GLS
+from scikits.statsmodels.regression.linear_model import yule_walker, GLS
 from scipy.linalg import block_diag
 from scikits.statsmodels.tsa.tsatools import lagmat
 from scikits.statsmodels.tsa import AR

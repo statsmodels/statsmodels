@@ -7,7 +7,7 @@ from numpy.linalg import inv, pinv
 from scikits.statsmodels.tools.tools import add_constant
 from scikits.statsmodels.base.model import (LikelihoodModel,
         LikelihoodModelResults, GenericLikelihoodModel)
-from scikits.statsmodels.regression.regression import yule_walker, GLS
+from scikits.statsmodels.regression.linear_model import yule_walker, GLS
 from tsatools import lagmat
 from var import AR
 from scikits.statsmodels.sandbox.regression.numdiff import approx_fprime, \

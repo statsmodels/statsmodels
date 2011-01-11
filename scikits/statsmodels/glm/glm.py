@@ -21,7 +21,7 @@ McCullagh, P. and Nelder, J.A.  1989.  "Generalized Linear Models." 2nd ed.
 import numpy as np
 import families
 from scikits.statsmodels.tools.tools import rank
-from scikits.statsmodels.regression.regression import WLS
+from scikits.statsmodels.regression.linear_model import WLS
 from scikits.statsmodels.base.model import (LikelihoodModel,
         LikelihoodModelResults)
 from scikits.statsmodels.tools.decorators import (cache_readonly,

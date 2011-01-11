@@ -11,7 +11,7 @@ from numpy.linalg import inv
 from scipy.linalg import block_diag
 from scipy import linalg, sparse, optimize
 from scipy.stats import norm, ss as sumofsq
-from scikits.statsmodels.regression.regression import (yule_walker, GLS, OLS)
+from scikits.statsmodels.regression.linear_model import (yule_walker, GLS, OLS)
 from scikits.statsmodels.tools.tools import chain_dot
 from tsatools import lagmat, add_trend
 from scikits.statsmodels.base.model import (LikelihoodModelResults,

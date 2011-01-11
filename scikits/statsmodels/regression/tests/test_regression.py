@@ -5,7 +5,7 @@ import numpy as np
 from numpy.testing import *
 from scipy.linalg import toeplitz
 from scikits.statsmodels.tools.tools import add_constant
-from scikits.statsmodels.regression.regression import (OLS, GLSAR, WLS, GLS,
+from scikits.statsmodels.regression.linear_model import (OLS, GLSAR, WLS, GLS,
         yule_walker)
 from scikits.statsmodels.datasets import longley
 #from check_for_rpy import skip_rpy

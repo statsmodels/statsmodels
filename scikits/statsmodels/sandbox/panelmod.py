@@ -8,7 +8,7 @@ Baltagi, Badi H. `Econometric Analysis of Panel Data.` 4th ed. Wiley, 2008.
 """
 
 from scikits.statsmodels.tools import categorical
-from scikits.statsmodels.regression.regression import GLS, WLS
+from scikits.statsmodels.regression.linear_model import GLS, WLS
 import numpy as np
 
 __all__ = ["PanelModel"]
