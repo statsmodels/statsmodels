@@ -5,8 +5,8 @@ from __future__ import with_statement
 
 __docformat__ = 'restructuredtext'
 
-from version import __version__
-from info import __doc__
+#from version import __version__
+#from info import __doc__
 
 #from regression import *
 #from glm.glm import *
@@ -22,14 +22,15 @@ from info import __doc__
 #import iolib
 
 from numpy import errstate
-__all__ = filter(lambda s:not s.startswith('_'),dir())
+#__all__ = filter(lambda s:not s.startswith('_'),dir())
 
 from numpy.testing import Tester
 class NoseWrapper(Tester):
     '''
-    This is simply a monkey patch for numpy.testing.Tester, so that extra_argv can
-    be changed from its default None to ['--exe'] so that the tests can be run
-    the same across platforms.
+    This is simply a monkey patch for numpy.testing.Tester.
+
+    It allows extra_argv to be changed from its default None to ['--exe'] so
+    that the tests can be run the same across platforms.
     '''
     def test(self, label='fast', verbose=1, extra_argv=['--exe'], doctests=False,
              coverage=False):

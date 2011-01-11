@@ -156,6 +156,7 @@ class Test_Y_ARMA41_NoConst(CheckArmaResults):
         endog = y_arma[:,2]
         cls.res1 = ARMA(endog).fit(order=(4,1), trend='nc', disp=-1)
         cls.res2 = results_arma.Y_arma41()
+        cls.decimal_maroots = DECIMAL_3
 
 #NOTE: Ok
 class Test_Y_ARMA22_NoConst(CheckArmaResults):

@@ -78,14 +78,8 @@ ValueError: zero-size array to ufunc.reduce without identity
 '''
 
 
-try:
-    import xlrd
-except:
-    print "sandbox.stats.multicomp depends on xlrd"
-try:
-    import xlwt
-except:
-    print "sandbox.stats.multicomp depends on xlwt"
+#import xlrd
+#import xlwt
 import scipy.stats
 import numpy
 import numpy as np
@@ -220,10 +214,10 @@ def Tukeythreegene(first,second,third):
 #rewrite by Vincent
 def Tukeythreegene2(genes): #Performing the Tukey HSD post-hoc test for three genes
    """gend is a list, ie [first, second, third]"""
-   qwb = xlrd.open_workbook('F:/Lab/bioinformatics/qcrittable.xls')
+#   qwb = xlrd.open_workbook('F:/Lab/bioinformatics/qcrittable.xls')
     #opening the workbook containing the q crit table
-   qwb.sheet_names()
-   qcrittable = qwb.sheet_by_name(u'Sheet1')
+#   qwb.sheet_names()
+#   qcrittable = qwb.sheet_by_name(u'Sheet1')
 
    means = []
    stds = []

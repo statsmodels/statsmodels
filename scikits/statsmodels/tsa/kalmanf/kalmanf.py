@@ -579,7 +579,7 @@ Please files a bug report." % paramsdtype)
                 P = dot(dot(T_mat, P), L.T) + dot(R_mat, R_mat.T)
                 loglikelihood += log(F_mat)
                 i += 1
-            for i in xrange(i,nobs):
+            for i in xrange(i,int(nobs)):
                 v_mat = y[i] - dot(Z_mat, alpha)
                 v[i] = v_mat
                 alpha = dot(T_mat, alpha) + dot(K, v_mat)
