@@ -130,13 +130,13 @@ class GLM(LikelihoodModel):
     -----
     Only the following combinations make sense for family and link ::
 
-                     + ident log logit probit cloglog pow opow nbinom loglog logc
-        Gaussian     |   x    x                        x
-        inv Gaussian |   x    x                        x
-        binomial     |   x    x    x     x       x     x    x           x      x
-        Poission     |   x    x                        x
-        neg binomial |   x    x                        x          x
-        gamma        |   x    x                        x
+                   + ident log logit probit cloglog pow opow nbinom loglog logc
+      Gaussian     |   x    x                        x
+      inv Gaussian |   x    x                        x
+      binomial     |   x    x    x     x       x     x    x           x      x
+      Poission     |   x    x                        x
+      neg binomial |   x    x                        x          x
+      gamma        |   x    x                        x
 
     Not all of these link functions are currently available.
 
@@ -157,6 +157,8 @@ class GLM(LikelihoodModel):
         See above.  Note that endog is a reference to the data so that if
         data is already an array and it is changed, then `endog` changes
         as well.
+    exposure : array-like
+        Include ln(exposure) in model with coefficient constrained to 1.
     exog : array
         See above.  Note that endog is a reference to the data so that if
         data is already an array and it is changed, then `endog` changes
@@ -179,6 +181,8 @@ class GLM(LikelihoodModel):
     normalized_cov_params : array
         The p x p normalized covariance of the design / exogenous data.
         This is approximately equal to (X.T X)^(-1)
+    offset : array-like
+        Include offset in model with coefficient constrained to 1.
     pinv_wexog : array
         The pseudoinverse of the design / exogenous data array.  Note that
         GLM has no whiten method, so this is just the pseudo inverse of the
@@ -198,7 +202,7 @@ class GLM(LikelihoodModel):
 
     '''
 
-    def __init__(self, endog, exog, family=None):
+    def __init__(self, endog, exog, family=None, offset=None, exposure=None):
         endog = np.asarray(endog)
         exog = np.asarray(exog)
         if endog.shape[0] != len(exog):
@@ -206,6 +210,16 @@ class GLM(LikelihoodModel):
             raise ValueError(msg % (endog.size, len(exog)))
         if family is None:
             family = families.Gaussian()
+        if offset is not None:
+            offset = np.asarray(offset)
+            if offset.shape[0] != endog.shape[0]:
+                raise ValueError("offset is not the same length as endog")
+            self.offset = offset
+        if exposure is not None:
+            exposure = np.log(exposure)
+            if exposure.shape[0] != endog.shape[0]:
+                raise ValueError("exposure is not the same length as endog")
+            self.exposure = exposure
         self.endog = endog
         self.exog = exog
         self.family = family
@@ -281,7 +295,12 @@ class GLM(LikelihoodModel):
         """
         if not self.scaletype:
             if isinstance(self.family, (families.Binomial, families.Poisson)):
-                return np.array(1.)
+                return 1.
+            #make it so you can run from source tree
+#            famstring = self.family.__str__().lower()
+#            if 'poisson' in famstring or \
+#                ('binomial' in famstring and 'negative' not in famstring):
+#                return 1.
             else:
                 resid = self.endog - mu
                 return ((np.power(resid, 2) / self.family.variance(mu)).sum() \
@@ -375,9 +394,19 @@ the Binomial family"
                     np.ones((self.exog.shape[0]))
         self.scaletype = scale
         if isinstance(self.family, families.Binomial):
-# thisc checks what kind of data is given for Binomial.  family will need a reference to
-# endog if this is to be removed from the preprocessing
+# this checks what kind of data is given for Binomial.
+# family will need a reference to endog if this is to be removed from the
+# preprocessing
             self.endog = self.family.initialize(self.endog)
+
+        if hasattr(self, 'offset'):
+            offset = self.offset
+        elif hasattr(self, 'exposure'):
+            offset = self.exposure
+        else:
+            offset = 0
+        #TODO: would there ever be both and exposure and an offset?
+
         mu = self.family.starting_mu(self.endog)
         wlsexog = self.exog
         eta = self.family.predict(mu)
@@ -393,10 +422,10 @@ returned a nan.  This could be a boundary problem and should be reported."
                     self.history['deviance'][self.iteration-1])) > tol and \
                     self.iteration < maxiter):
             self.weights = data_weights*self.family.weights(mu)
-            wlsendog = eta + self.family.link.deriv(mu) * (self.endog-mu)
-                # - offset
+            wlsendog = eta + self.family.link.deriv(mu) * (self.endog-mu) \
+                 - offset
             wls_results = WLS(wlsendog, wlsexog, self.weights).fit()
-            eta = np.dot(self.exog, wls_results.params) # + offset
+            eta = np.dot(self.exog, wls_results.params) + offset
             mu = self.family.fitted(eta)
             self._update_history(wls_results, mu)
             self.scale = self.estimate_scale(mu)
@@ -405,27 +434,6 @@ returned a nan.  This could be a boundary problem and should be reported."
         glm_results = GLMResults(self, wls_results.params,
                 wls_results.normalized_cov_params, self.scale)
         return glm_results
-
-# doesn't make sense really if there are arguments to fit
-# also conflicts with refactor of GAM
-#    @property
-#    def results(self):
-#        """
-#        A property that returns a GLMResults class.
-#
-#        Notes
-#        -----
-#        Calls fit if it has not already been called.  The default values for
-#        fit are used.  If the data_weights argument needs to be supplied for
-#        the Binomial family, then you should directly call fit.
-#        """
-#        if self._results is None:
-#            self._results = self.fit()
-#        return self._results
-#TODO: remove dataweights argument and have it calculated from endog
-# note that data_weights is not documented because I'm going to remove it.
-# make the number of trials an argument to Binomial if constant and 1d endog
-
 
 class GLMResults(LikelihoodModelResults):
     '''
@@ -593,10 +601,18 @@ class GLMResults(LikelihoodModelResults):
 
     @cache_readonly
     def null(self):
-        _endog = self._endog
-        wls = WLS(_endog, np.ones((len(_endog),1)),
-                    weights=self._data_weights)
-        return wls.fit().fittedvalues
+        endog = self._endog
+        model = self.model
+        exog = np.ones((len(endog),1))
+        if hasattr(model, 'offset'):
+            return GLM(endog, exog, offset=model.offset,
+                family=self.family).fit(data_weights=self._data_weights).mu
+        elif hasattr(model, 'exposure'):
+            return GLM(endog, exog, exposure=model.exposure,\
+                family=self.family).fit(data_weights=self._data_weights).mu
+        else:
+            return WLS(endog, exog,
+                weights=self._data_weights).fit().fittedvalues
 
     @cache_readonly
     def deviance(self):
@@ -871,16 +887,17 @@ class GLMResults(LikelihoodModelResults):
 
 if __name__ == "__main__":
     import scikits.statsmodels as sm
+    import numpy as np
     data = sm.datasets.longley.load()
     #data.exog = add_constant(data.exog)
-    GLM = GLM(data.endog, data.exog).fit()
-    GLMT = GLM.summary(returns='tables')
+    GLMmod = GLM(data.endog, data.exog).fit()
+    GLMT = GLMmod.summary(returns='tables')
 ##    GLMT[0].extend_right(GLMT[1])
 ##    print(GLMT[0])
 ##    print(GLMT[2])
-    GLMTp = GLM.summary(title='Test GLM')
+    GLMTp = GLMmod.summary(title='Test GLM')
 
-"""
+    """
 From Stata
 . webuse beetle
 . glm r i.beetle ldose, family(binomial n) link(cloglog)
@@ -915,3 +932,29 @@ Log likelihood   = -76.94564525                    BIC             =  10.20398
 ------------------------------------------------------------------------------
 """
 
+
+    # example of using offset
+    data = sm.datasets.wfs.load()
+    # get offset
+    offset = np.log(data.exog[:,-1])
+    exog = data.exog[:,:-1]
+
+    # convert dur to dummy
+    exog = sm.tools.categorical(exog, col=0, drop=True)
+    # drop reference category
+    # convert res to dummy
+    exog = sm.tools.categorical(exog, col=0, drop=True)
+    # convert edu to dummy
+    exog = sm.tools.categorical(exog, col=0, drop=True)
+    # drop reference categories and add intercept
+    exog = sm.add_constant(exog[:,[1,2,3,4,5,7,8,10,11,12]])
+
+    endog = np.round(data.endog)
+    mod = sm.GLM(endog, exog, family=sm.families.Poisson()).fit()
+
+    res1 = GLM(endog, exog, family=sm.families.Poisson(),
+                            offset=offset).fit(tol=1e-12, maxiter=250)
+    exposuremod = GLM(endog, exog, family=sm.families.Poisson(),
+                            exposure = data.exog[:,-1]).fit(tol=1e-12,
+                                                        maxiter=250)
+    assert(np.all(res1.params == exposuremod.params))

@@ -53,6 +53,13 @@ import sys
 
 import setuptools
 from numpy.distutils.core import setup
+import numpy
+
+compile_cython = 0
+if "--with-cython" in sys.argv:
+    compile_cython = 1
+    sys.argv.remove('--with-cython')
+
 
 DISTNAME = 'scikits.statsmodels'
 DESCRIPTION = 'Statistical computations and models for use with SciPy'
@@ -105,6 +112,7 @@ def configuration(parent_package='', top_path=None, package_name=DISTNAME):
                            download_url = DOWNLOAD_URL,
                            long_description = LONG_DESCRIPTION)
     config.add_subpackage('scikits')
+    config.add_subpackage('scikits.statsmodels')
     config.add_data_files('scikits/__init__.py')
     config.add_data_dir('scikits/statsmodels/tests')
     config.add_data_dir('scikits/statsmodels/examples')
@@ -122,6 +130,11 @@ def configuration(parent_package='', top_path=None, package_name=DISTNAME):
                            '.do', '.pyc', '.swp']]
     for f in tsaresultsfiles:
         config.add_data_files(f)
+
+    if compile_cython:
+        config.add_extension('tsa/kalmanf/kalman_loglike',
+                sources = ['scikits/statsmodels/tsa/kalmanf/kalman_loglike.c'],
+                include_dirs=[numpy.get_include()])
 
     #config.add_subpackage(DISTNAME)
     #config.add_subpackage('scikits/statsmodels/examples')

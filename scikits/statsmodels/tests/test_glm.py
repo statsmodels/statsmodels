@@ -453,6 +453,33 @@ class TestGlmNegbinomial(CheckModelResults):
 #class TestGlmNegbinomial_nbinom(CheckModelResults):
 #    pass
 
+class TestGlmPoissonOffset(CheckModelResults):
+    @classmethod
+    def setupClass(cls):
+        cls.decimal_resids = DECIMAL_1 # working resids off a bit in outlier
+        cls.decimal_fittedvalues = DECIMAL_3 # ditto
+
+        data = sm.datasets.wfs.load()
+        offset = np.log(data.exog[:,-1])
+        exog = data.exog[:,:-1]
+
+        # convert dur to dummy
+        exog = sm.tools.categorical(exog, col=0, drop=True)
+        # drop reference category
+        # convert res to dummy
+        exog = sm.tools.categorical(exog, col=0, drop=True)
+        # convert edu to dummy
+        exog = sm.tools.categorical(exog, col=0, drop=True)
+        # drop reference categories and add intercept
+        exog = sm.add_constant(exog[:,[1,2,3,4,5,7,8,10,11,12]])
+
+        endog = np.round(data.endog)
+
+        cls.res1 = GLM(endog, exog, family=sm.families.Poisson(),
+                            offset=offset).fit(tol=1e-12, maxiter=250)
+        from results.results_glm import Wfs
+        cls.res2 = Wfs()
+
 def test_attribute_writable_resettable():
     """
     Regression test for mutables and class constructors.
