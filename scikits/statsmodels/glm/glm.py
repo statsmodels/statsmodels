@@ -40,7 +40,8 @@ class GLM(LikelihoodModel):
     -----------
     endog : array-like
         1d array of endogenous response variable.  This array can be
-        1d or 2d for Binomial family models.
+        1d or 2d.  Binomial family models accept a 2d array with two columns.
+        If supplied, each observation is expected to be [success, failure].
     exog : array-like
         n x p design / exogenous data array
     family : family class instance
@@ -360,18 +361,12 @@ specify the params argument."
         else:
             return self.family.fitted(np.dot(exog, params))
 
-    def fit(self, maxiter=100, method='IRLS', tol=1e-8, data_weights=1.,
-            scale=None):
+    def fit(self, maxiter=100, method='IRLS', tol=1e-8, scale=None):
         '''
         Fits a generalized linear model for a given family.
 
         parameters
         ----------
-         data_weights : array-like or scalar, only used with Binomial
-            Number of trials for each observation. Used for only for
-            binomial data when `endog` is specified as a 2d array of
-            (successes, failures). Note that this argument will be
-            dropped in the future.
         maxiter : int, optional
             Default is 100.
         method : string
@@ -387,14 +382,15 @@ specify the params argument."
         tol : float
             Convergence tolerance.  Default is 1e-8.
         '''
-        if np.shape(data_weights) != () and not isinstance(self.family,
-                families.Binomial):
-            raise ValueError, "Data weights are only to be supplied for\
-the Binomial family"
+        endog = self.endog
+        if endog.ndim > 1 and endog.shape[1] == 2:
+            data_weights = endog.sum(1) # weights are total trials
+        else:
+            data_weights = np.ones((endog.shape[0]))
         self.data_weights = data_weights
         if np.shape(self.data_weights) == () and self.data_weights>1:
             self.data_weights = self.data_weights *\
-                    np.ones((self.exog.shape[0]))
+                    np.ones((endog.shape[0]))
         self.scaletype = scale
         if isinstance(self.family, families.Binomial):
 # this checks what kind of data is given for Binomial.
@@ -609,10 +605,10 @@ class GLMResults(LikelihoodModelResults):
         exog = np.ones((len(endog),1))
         if hasattr(model, 'offset'):
             return GLM(endog, exog, offset=model.offset,
-                family=self.family).fit(data_weights=self._data_weights).mu
+                family=self.family).fit().mu
         elif hasattr(model, 'exposure'):
-            return GLM(endog, exog, exposure=model.exposure,\
-                family=self.family).fit(data_weights=self._data_weights).mu
+            return GLM(endog, exog, exposure=model.exposure,
+                    family=self.family).fit().mu
         else:
             return WLS(endog, exog,
                 weights=self._data_weights).fit().fittedvalues

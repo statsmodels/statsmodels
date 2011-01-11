@@ -43,12 +43,7 @@ print"""Giving a total number of trials for this observation of
 
 glm_binom = sm.GLM(data.endog, data.exog, family=sm.families.Binomial())
 
-### In order to fit this model, you must (for now) specify the number of
-### trials per observation ie., success + failure
-### This is the only time the data_weights argument should be used.
-
-trials = data.endog.sum(axis=1)
-binom_results = glm_binom.fit(data_weights=trials)
+binom_results = glm_binom.fit()
 print """The fitted values are
 """, binom_results.params
 print """The corresponding t-values are
@@ -82,7 +77,7 @@ diff_full = resp_100 - resp_0
 print """The full range difference is %2.4f %%""" % (diff_full*100)
 
 nobs = binom_results.nobs
-y = data.endog[:,0]/trials
+y = data.endog[:,0]/data.endog.sum(1)
 yhat = binom_results.mu
 
 # Plot of yhat vs y

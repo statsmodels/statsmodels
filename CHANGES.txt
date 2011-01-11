@@ -19,6 +19,8 @@ Refactor of the datasets sub-package.
 Removed RPy dependency for running the test suite.
 Refactored the test suite.
 ARMA models for time series.
+Refactored entire codebase.
+Support for offest and exposure in GLM.
 
 
 
