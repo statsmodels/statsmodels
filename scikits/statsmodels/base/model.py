@@ -405,8 +405,11 @@ exceeded."
             try:
                 Hinv = np.linalg.inv(-1*self.hessian(xopt))
             except:
-                #warnings.warn ...  #todo convert to warning ?
-                print 'Inverting hessian failed, no bse or cov_params available'
+                #might want custom warning ResultsWarning? NumericalWarning?
+                from warnings import warn
+                warndoc= 'Inverting hessian failed, no bse or cov_params \
+available'
+                warn(warndoc, Warning)
                 Hinv = None
 #TODO: add Hessian approximation and change the above if needed
         mlefit = LikelihoodModelResults(self, xopt, Hinv, scale=1.)
