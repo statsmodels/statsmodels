@@ -3,7 +3,7 @@
 """
 
 import numpy as np
-import scikits.statsmodels as sm
+import scikits.statsmodels.api as sm
 
 nsample = 100
 x = np.linspace(0,10, 100)

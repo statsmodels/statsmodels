@@ -15,7 +15,7 @@ Introduction
 
 Examples
 --------
-    >>> import scikits.statsmodels as sm
+    >>> import scikits.statsmodels.api as sm
     >>> data = sm.datasets.scotland.Load()
     >>> data.exog = sm.add_constant(data.exog)
 

@@ -53,7 +53,7 @@ Author: josef-pktd
 """
 import numpy as np
 from scipy import stats
-from scikits.statsmodels.regression import OLS, WLS
+from scikits.statsmodels.regression.linear_model import OLS, WLS
 
 
 class OneWayLS(object):

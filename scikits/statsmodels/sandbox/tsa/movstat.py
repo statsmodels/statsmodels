@@ -50,7 +50,7 @@ from scipy import signal
 
 from numpy.testing import assert_array_equal, assert_array_almost_equal
 
-import scikits.statsmodels as sm
+import scikits.statsmodels.api as sm
 
 
 def expandarr(x,k):

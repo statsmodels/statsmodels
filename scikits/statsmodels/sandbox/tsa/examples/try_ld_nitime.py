@@ -51,5 +51,5 @@ X, v, _ = ut.ar_generator(npts, sigma, coefs, drop_transients)
 
 s = X
 
-import scikits.statsmodels as sm
+import scikits.statsmodels.api as sm
 sm.tsa.stattools.pacf(X)

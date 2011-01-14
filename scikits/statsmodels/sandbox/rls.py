@@ -142,7 +142,7 @@ class RLS(GLS):
         return lfit
 
 if __name__=="__main__":
-    import scikits.statsmodels as sm
+    import scikits.statsmodels.api as sm
     dta = np.genfromtxt('./rlsdata.txt', names=True)
     design = np.column_stack((dta['Y'],dta['Y']**2,dta[['NE','NC','W','S']].view(float).reshape(dta.shape[0],-1)))
     design = sm.add_constant(design, prepend=True)

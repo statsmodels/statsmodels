@@ -28,9 +28,9 @@ Harvey uses Durbin and Koopman notation.
 import numpy as np
 from numpy import dot, identity, kron, log, zeros, pi, exp, eye, issubdtype, ones
 from numpy.linalg import inv, pinv
-from scikits.statsmodels import chain_dot, add_constant #Note that chain_dot is a bit slower
-from scikits.statsmodels.model import GenericLikelihoodModel
-from scikits.statsmodels.regression import yule_walker, GLS
+from scikits.statsmodels.tools.tools import chain_dot, add_constant
+from scikits.statsmodels.base.model import GenericLikelihoodModel
+from scikits.statsmodels.regression.linear_model import yule_walker, GLS
 from scipy.linalg import block_diag
 from scikits.statsmodels.tsa.tsatools import lagmat
 from scikits.statsmodels.tsa import AR
@@ -579,7 +579,7 @@ Please files a bug report." % paramsdtype)
                 P = dot(dot(T_mat, P), L.T) + dot(R_mat, R_mat.T)
                 loglikelihood += log(F_mat)
                 i += 1
-            for i in xrange(i,nobs):
+            for i in xrange(i,int(nobs)):
                 v_mat = y[i] - dot(Z_mat, alpha)
                 v[i] = v_mat
                 alpha = dot(T_mat, alpha) + dot(K, v_mat)

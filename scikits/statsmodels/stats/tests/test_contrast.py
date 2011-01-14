@@ -1,7 +1,7 @@
 import numpy as np
 import numpy.random as R
 from numpy.testing import *
-from scikits.statsmodels.contrast import Contrast
+from scikits.statsmodels.stats.contrast import Contrast
 
 class TestContrast(object):
     @classmethod

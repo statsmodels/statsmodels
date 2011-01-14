@@ -1,7 +1,7 @@
 
 
 import numpy as np
-from scikits.statsmodels.tools import rank as smrank
+from scikits.statsmodels.tools.tools import rank as smrank
 
 
 def add_indep(x, varnames, dtype=None):

@@ -1,6 +1,6 @@
 import numpy as np
 import numpy.lib.recfunctions as nprf
-from scikits.statsmodels.tools import add_constant
+from scikits.statsmodels.tools.tools import add_constant
 
 def add_trend(X, trend="c", prepend=False):
     """

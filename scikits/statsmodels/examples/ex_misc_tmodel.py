@@ -2,7 +2,7 @@
 import numpy as np
 
 from scipy import stats, special, optimize
-import scikits.statsmodels as sm
+import scikits.statsmodels.api as sm
 from scikits.statsmodels.miscmodels import TLinearModel
 
 #Example:

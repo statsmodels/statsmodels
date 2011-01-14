@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 #import scikits.timeseries as ts
 #import scikits.timeseries.lib.plotlib as tpl
 
-import scikits.statsmodels as sm
+import scikits.statsmodels.api as sm
 from scikits.statsmodels.sandbox import tsa
 from scikits.statsmodels.sandbox.regression.mle import *  # local import
 

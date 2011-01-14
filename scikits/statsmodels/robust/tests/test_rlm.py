@@ -3,8 +3,8 @@ Test functions for sm.rlm
 """
 
 from numpy.testing import *
-import scikits.statsmodels as sm
-from scikits.statsmodels.rlm import RLM
+import scikits.statsmodels.api as sm
+from scikits.statsmodels.robust.rlm import RLM
 from nose import SkipTest
 
 DECIMAL_4 = 4

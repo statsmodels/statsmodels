@@ -5,7 +5,7 @@ Note: uncomment plt.show() to display graphs
 
 import numpy as np
 #from scipy import stats
-import scikits.statsmodels as sm
+import scikits.statsmodels.api as sm
 import matplotlib
 #matplotlib.use('Qt4Agg')#, warn=True)   #for Spyder
 import matplotlib.pyplot as plt

@@ -112,12 +112,15 @@ def configuration(parent_package='', top_path=None, package_name=DISTNAME):
                            download_url = DOWNLOAD_URL,
                            long_description = LONG_DESCRIPTION)
     config.add_subpackage('scikits')
-    config.add_subpackage('scikits.statsmodels')
     config.add_data_files('scikits/__init__.py')
     config.add_data_dir('scikits/statsmodels/tests')
     config.add_data_dir('scikits/statsmodels/examples')
     config.add_data_dir('scikits/statsmodels/docs')
     config.add_data_dir('scikits/statsmodels/iolib/tests')
+    config.add_data_dir('scikits/statsmodels/discrete/tests')
+    config.add_data_dir('scikits/statsmodels/glm/tests')
+    config.add_data_dir('scikits/statsmodels/regression/tests')
+    config.add_data_dir('scikits/statsmodels/robust/tests')
     extradatafiles = [os.path.join(r,d) for r,ds,f in \
                       os.walk('scikits/statsmodels/datasets')
                       for d in f if not os.path.splitext(d)[1] in

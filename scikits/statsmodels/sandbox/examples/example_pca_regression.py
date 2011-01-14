@@ -17,7 +17,7 @@ endogenous variable.
 
 import numpy as np
 from numpy.testing import assert_array_almost_equal
-import scikits.statsmodels as sm
+import scikits.statsmodels.api as sm
 from scikits.statsmodels.sandbox.tools import pca
 from scikits.statsmodels.sandbox.tools.cross_val import LeaveOneOut
 
@@ -42,7 +42,7 @@ print eve
 print fact[:5]
 print f0[:5]
 
-import scikits.statsmodels as sm
+import scikits.statsmodels.api as sm
 
 res = sm.OLS(y0, sm.add_constant(x0)).fit()
 print 'OLS on original data'

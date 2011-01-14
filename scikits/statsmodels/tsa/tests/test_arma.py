@@ -39,7 +39,6 @@ def test_compare_arma():
 #    d.fit((1,1), trend='nc')
 #    dres = d.res
 
-    from scikits.statsmodels.tsa.arima import ARMA
     modkf = ARMA(x)
     ##rkf = mkf.fit((1,1))
     ##rkf.params
@@ -48,7 +47,7 @@ def test_compare_arma():
 
     modc = Arma(x)
     resls = modc.fit(order=(1,1))
-    rescm = modc.fit_mle(order=(1,1), start_params=[0.4,0.4, 1.])
+    rescm = modc.fit_mle(order=(1,1), start_params=[0.4,0.4, 1.], disp=0)
 
     #decimal 1 corresponds to threshold of 5% difference
     #still different sign  corrcted
@@ -156,6 +155,7 @@ class Test_Y_ARMA41_NoConst(CheckArmaResults):
         endog = y_arma[:,2]
         cls.res1 = ARMA(endog).fit(order=(4,1), trend='nc', disp=-1)
         cls.res2 = results_arma.Y_arma41()
+        cls.decimal_maroots = DECIMAL_3
 
 #NOTE: Ok
 class Test_Y_ARMA22_NoConst(CheckArmaResults):
