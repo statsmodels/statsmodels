@@ -14,7 +14,7 @@ import scikits.statsmodels.sandbox.contrast_old as contrast
 #define a categorical variable - factor
 
 
-f = ['a','b','c']*4
+f0 = ['a','b','c']*4
 f = ['a']*4 + ['b']*3 + ['c']*4
 fac = formula.Factor('ff', f)
 fac.namespace = {'ff':f}

@@ -688,11 +688,11 @@ if __name__ == '__main__':
 
     transf_f_df = DummyTransform(dd_full, dd_dropf)
     print np.max(np.abs((dd_full - transf_f_df.inv_dot_right(dd_dropf))))
-    print np.max(np.abs((dd_dropf - tansf_f_df.dot_right(dd_full))))
+    print np.max(np.abs((dd_dropf - transf_f_df.dot_right(dd_full))))
     print np.max(np.abs((params_df_df
-                         - tansf_f_df.inv_dot_left(params_df_f))))
+                         - transf_f_df.inv_dot_left(params_df_f))))
     np.max(np.abs((params_f_df
-                         - tansf_f_df.inv_dot_left(params_f_f))))
+                         - transf_f_df.inv_dot_left(params_f_f))))
 
     prodlab, C1, C1lab, C2, C2lab,_ = contrast_product(v1name, v2name)
 
@@ -712,7 +712,7 @@ if __name__ == '__main__':
     #testing for no interaction effect
     R_noint = np.hstack((np.zeros((2,4)), np.eye(2)))
     inter_direct = resols_full_dropf.tval[-2:]
-    inter_transf = resols_full_full.t_test(tansf_f_df.inv_dot_right(R_noint)).tvalue
+    inter_transf = resols_full_full.t_test(transf_f_df.inv_dot_right(R_noint)).tvalue
     print np.max(np.abs((inter_direct - inter_transf)))
 
     #now with class version
