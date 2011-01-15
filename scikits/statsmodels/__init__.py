@@ -68,10 +68,10 @@ class NoseWrapper(Tester):
         argv, plugins = self.prepare_test_args(label, verbose, extra_argv,
                                                doctests, coverage)
         from numpy.testing.noseclasses import NumpyTestProgram
-        from warnings import catch_warnings, simplefilter
-        with errstate(**kwargs):
-            with catch_warnings():
-                simplefilter('ignore', category=DeprecationWarning)
-                t = NumpyTestProgram(argv=argv, exit=False, plugins=plugins)
+##        from warnings import catch_warnings, simplefilter
+##        with errstate(**kwargs):
+##            with catch_warnings():
+##                simplefilter('ignore', category=DeprecationWarning)
+        t = NumpyTestProgram(argv=argv, exit=False, plugins=plugins)
         return t.result
 test = NoseWrapper().test

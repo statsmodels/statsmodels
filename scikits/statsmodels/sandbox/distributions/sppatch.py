@@ -485,9 +485,12 @@ def expect_discrete(self, fn=None, args=(), loc=0, lb=None, ub=None,
     if lb is None:
         lb = (self.a)
     else:
+        lb = lb - loc
 
     if ub is None:
         ub = (self.b)
+    else:
+        ub = ub - loc
     if conditional:
         invfac = self.sf(lb,*args) - self.sf(ub+1,*args)
     else:
