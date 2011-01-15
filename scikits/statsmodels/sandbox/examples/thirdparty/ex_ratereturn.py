@@ -17,7 +17,7 @@ import datetime as dt
 import pandas as pa
 import pickle
 
-import scikits.statsmodels as sm
+import scikits.statsmodels.api as sm
 import scikits.statsmodels.sandbox as sb
 import scikits.statsmodels.sandbox.tools as sbtools
 

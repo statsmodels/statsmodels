@@ -78,16 +78,15 @@ ValueError: zero-size array to ufunc.reduce without identity
 '''
 
 
-
-import xlrd
-import xlwt
+#import xlrd
+#import xlwt
 import scipy.stats
 import numpy
 import numpy as np
 import math
 import copy
 from scipy import stats
-import scikits.statsmodels as sm
+from scikits.statsmodels.iolib.table import SimpleTable
 from numpy.testing import assert_almost_equal, assert_equal
 
 
@@ -215,10 +214,10 @@ def Tukeythreegene(first,second,third):
 #rewrite by Vincent
 def Tukeythreegene2(genes): #Performing the Tukey HSD post-hoc test for three genes
    """gend is a list, ie [first, second, third]"""
-   qwb = xlrd.open_workbook('F:/Lab/bioinformatics/qcrittable.xls')
+#   qwb = xlrd.open_workbook('F:/Lab/bioinformatics/qcrittable.xls')
     #opening the workbook containing the q crit table
-   qwb.sheet_names()
-   qcrittable = qwb.sheet_by_name(u'Sheet1')
+#   qwb.sheet_names()
+#   qcrittable = qwb.sheet_by_name(u'Sheet1')
 
    means = []
    stds = []

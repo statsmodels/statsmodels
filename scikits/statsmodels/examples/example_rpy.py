@@ -19,7 +19,7 @@ some basic models for comparisons of results to statsmodels.
 
 from rpy import r
 import numpy as np
-import scikits.statsmodels as sm
+import scikits.statsmodels.api as sm
 
 
 examples = [1, 2]

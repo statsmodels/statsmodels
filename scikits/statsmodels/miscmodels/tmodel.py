@@ -42,7 +42,7 @@ np_pi = np.pi
 sps_gamln = special.gammaln
 
 
-from scikits.statsmodels.model import GenericLikelihoodModel
+from scikits.statsmodels.base.model import GenericLikelihoodModel
 
 class TLinearModel(GenericLikelihoodModel):
     '''Maximum Likelihood Estimation of Linear Model with t-distributed errors

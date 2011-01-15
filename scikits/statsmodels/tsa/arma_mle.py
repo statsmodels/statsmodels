@@ -10,7 +10,8 @@ TODO: check everywhere initialization of signal.lfilter
 
 import numpy as np
 from scipy import signal, optimize
-from scikits.statsmodels.model import LikelihoodModel, GenericLikelihoodModel
+from scikits.statsmodels.base.model import (LikelihoodModel,
+        GenericLikelihoodModel)
 
 
 #copied from sandbox/regression/mle.py

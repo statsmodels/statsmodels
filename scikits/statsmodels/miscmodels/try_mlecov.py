@@ -11,8 +11,9 @@ import numpy as np
 from scipy import linalg
 from scipy.linalg import norm, toeplitz
 
-import scikits.statsmodels as sm
-from scikits.statsmodels.model import GenericLikelihoodModel, LikelihoodModel
+import scikits.statsmodels.api as sm
+from scikits.statsmodels.base.model import (GenericLikelihoodModel,
+        LikelihoodModel)
 from scikits.statsmodels.tsa.arima_process import arma_acovf, arma_generate_sample
 
 

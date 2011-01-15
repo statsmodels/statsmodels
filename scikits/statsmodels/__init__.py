@@ -1,31 +1,40 @@
 #
 # models - Statistical Models
 #
+from __future__ import with_statement
 
 __docformat__ = 'restructuredtext'
 
-from version import __version__
-from info import __doc__
+#from version import __version__
+#from info import __doc__
 
-from regression import *
-from glm import *
-from rlm import *
-from discretemod import *
-import tsa
-from tools import add_constant, chain_dot
-import model, tools, datasets, families, stattools, iolib
-# robust is imported somewhere else?
-__all__ = filter(lambda s:not s.startswith('_'),dir())
+#from regression import *
+#from glm.glm import *
+#from robust.rlm import *
+#from discrete.discretemod import *
+#import tsa
+#from tools.tools import add_constant, chain_dot
+#import base.model
+#import tools.tools
+#import datasets
+#import glm.families
+#import stats.stattools
+#import iolib
+
+from numpy import errstate
+#__all__ = filter(lambda s:not s.startswith('_'),dir())
 
 from numpy.testing import Tester
 class NoseWrapper(Tester):
     '''
-    This is simply a monkey patch for numpy.testing.Tester, so that extra_argv can
-    be changed from its default None to ['--exe'] so that the tests can be run
-    the same across platforms.
+    This is simply a monkey patch for numpy.testing.Tester.
+
+    It allows extra_argv to be changed from its default None to ['--exe'] so
+    that the tests can be run the same across platforms.  It also takes kwargs
+    that are passed to numpy.errstate to suppress floating point warnings.
     '''
     def test(self, label='fast', verbose=1, extra_argv=['--exe'], doctests=False,
-             coverage=False):
+            coverage=False, **kwargs):
         ''' Run tests for module using nose
 
         %(test_header)s
@@ -35,6 +44,8 @@ class NoseWrapper(Tester):
             If True, report coverage of NumPy code, default False
             (Requires the coverage module:
              http://nedbatchelder.com/code/modules/coverage.html)
+        kwargs
+            Passed to numpy.errstate.  See its documentation for details.
         '''
 
         # cap verbosity at 3 because nose becomes *very* verbose beyond that
@@ -57,6 +68,10 @@ class NoseWrapper(Tester):
         argv, plugins = self.prepare_test_args(label, verbose, extra_argv,
                                                doctests, coverage)
         from numpy.testing.noseclasses import NumpyTestProgram
-        t = NumpyTestProgram(argv=argv, exit=False, plugins=plugins)
+        from warnings import catch_warnings, simplefilter
+        with errstate(**kwargs):
+            with catch_warnings():
+                simplefilter('ignore', category=DeprecationWarning)
+                t = NumpyTestProgram(argv=argv, exit=False, plugins=plugins)
         return t.result
 test = NoseWrapper().test

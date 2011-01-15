@@ -9,7 +9,7 @@ Should Hessian also work per observation, if fun returns 2d
 
 import numpy as np
 from numpy.testing import assert_almost_equal
-import scikits.statsmodels as sm
+import scikits.statsmodels.api as sm
 import numdiff
 from numdiff import approx_fprime, approx_fprime_cs, approx_hess_cs
 
@@ -258,7 +258,7 @@ if __name__ == '__main__':
     print maxabs(gd, gt)
 
 
-    import scikits.statsmodels as sm
+    import scikits.statsmodels.api as sm
 
     data = sm.datasets.spector.load()
     data.exog = sm.add_constant(data.exog)

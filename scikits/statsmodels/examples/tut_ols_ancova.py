@@ -34,7 +34,7 @@ strongly rejected because differences in intercept are very large
 '''
 
 import numpy as np
-import scikits.statsmodels as sm
+import scikits.statsmodels.api as sm
 import matplotlib.pyplot as plt
 from scikits.statsmodels.sandbox.regression.predstd import wls_prediction_std
 

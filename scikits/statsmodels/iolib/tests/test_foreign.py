@@ -4,7 +4,7 @@ Tests for iolib/foreign.py
 
 from numpy.testing import *
 import numpy as np
-import scikits.statsmodels as sm
+import scikits.statsmodels.api as sm
 import os
 
 # Test precisions

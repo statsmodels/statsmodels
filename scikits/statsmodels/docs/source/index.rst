@@ -61,7 +61,7 @@ Get the data, run the estimation, and look at the results.
 For example, here is a minimal ordinary least squares case ::
 
   import numpy as np
-  import scikits.statsmodels as sm
+  import scikits.statsmodels.api as sm
 
   # get data
   nsample = 100

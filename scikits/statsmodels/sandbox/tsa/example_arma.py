@@ -469,7 +469,7 @@ print acf2m[:10]
 
 x = arma_generate_sample([1.0, -0.8], [1.0], 500)
 print acf(x)[:20]
-import scikits.statsmodels as sm
+import scikits.statsmodels.api as sm
 print sm.regression.yule_walker(x, 10)
 
 import matplotlib.pyplot as plt

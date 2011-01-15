@@ -18,7 +18,7 @@ Examples
 
 ::
 
-    import scikits.statsmodels as sm
+    import scikits.statsmodels.api as sm
     date = sm.datasets.stackloss.Load()
     data.exog = sm.add_constant(data.exog)
     rlm_model = models.RLM(data.endog, data.exog, M=models.robust.norms.HuberT())

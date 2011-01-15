@@ -67,7 +67,7 @@ def anova_oneway(y, x, seq=0):
     f, prob, R2, resstd = map(_fix2scalar, (f, prob, R2, resstd))
     return f, prob, R2, resstd
 
-import scikits.statsmodels as sm
+import scikits.statsmodels.api as sm
 from try_ols_anova import data2dummy
 
 def anova_ols(y, x):

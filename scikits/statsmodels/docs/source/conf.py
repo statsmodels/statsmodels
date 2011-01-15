@@ -68,7 +68,7 @@ copyright = u'2009-2010, Skipper Seabold, Josef Perktold, Jonathan Taylor'
 # built documents.
 #
 # The short X.Y version.
-import scikits.statsmodels as sm
+import scikits.statsmodels.api as sm
 version = '0.3.0'
 # The full version, including alpha/beta/rc tags.
 release = '0.3.0'

@@ -171,7 +171,7 @@ def approx_hess3(x0, f, epsilon=None, args=()):
     '''
 
     if epsilon is None:
-        h = EPS**(1/5.)*np.maximum(np.abs(xk),1e-2) # 1/4 from ...
+        h = EPS**(1/5.)*np.maximum(np.abs(x0),1e-2) # 1/4 from ...
     else:
         h = epsilon
     xh = x0 + h
@@ -271,7 +271,7 @@ def approx_hess_cs2(x0, f, epsilon=None, args=()):
     '''
 
     if epsilon is None:
-        h = EPS**(1/5.)*np.maximum(np.abs(xk),1e-2) # 1/4 from ...
+        h = EPS**(1/5.)*np.maximum(np.abs(x0),1e-2) # 1/4 from ...
     else:
         h = epsilon
     xh = x0 + h
@@ -304,7 +304,7 @@ def fun2(beta, y, x):
 
 
 if __name__ == '__main__':
-    import scikits.statsmodels as sm
+    import scikits.statsmodels.api as sm
     from scipy.optimize.optimize import approx_fhess_p
     import numpy as np
 

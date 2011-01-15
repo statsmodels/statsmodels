@@ -15,7 +15,7 @@ import numpy as np
 
 import numdifftools as ndt
 
-from scikits.statsmodels.model import LikelihoodModel
+from scikits.statsmodels.base.model import LikelihoodModel
 
 #copied from sandbox/regression/mle.py
 #TODO: I take it this is only a stub and should be included in another

@@ -8,17 +8,17 @@ import numpy as np
 from numpy import (matlib as MAT, log, exp, dot, identity, zeros, zeros_like,
         kron, atleast_2d, atleast_1d)
 from numpy.linalg import inv
-from scipy import linalg as LIN #TODO: get rid of this once cleaned up
 from scipy.linalg import block_diag
 from scipy import linalg, sparse, optimize
 from scipy.stats import norm, ss as sumofsq
-from scikits.statsmodels.regression import yule_walker
-from scikits.statsmodels import GLS, OLS
-from scikits.statsmodels.tools import chain_dot
-from scikits.statsmodels.tsa.tsatools import lagmat, add_trend
-from scikits.statsmodels.model import LikelihoodModelResults, LikelihoodModel
-from scikits.statsmodels.decorators import *
-from scikits.statsmodels.compatibility import np_slogdet
+from scikits.statsmodels.regression.linear_model import (yule_walker, GLS, OLS)
+from scikits.statsmodels.tools.tools import chain_dot
+from tsatools import lagmat, add_trend
+from scikits.statsmodels.base.model import (LikelihoodModelResults,
+        LikelihoodModel)
+from scikits.statsmodels.tools.decorators import (resettable_cache,
+        cache_readonly, cache_writable)
+from scikits.statsmodels.tools.compatibility import np_slogdet
 from scikits.statsmodels.sandbox.regression.numdiff import approx_fprime
 from scikits.statsmodels.sandbox.regression.numdiff import approx_hess
 
@@ -1810,7 +1810,7 @@ class VAR:
 
 if __name__ == "__main__":
     import numpy as np
-    import scikits.statsmodels as sm
+    import scikits.statsmodels.api as sm
 #    vr = VAR(data = np.random.randn(50,3))
 #    vr.ols()
 #    vr.ols_comp()
