@@ -1417,7 +1417,7 @@ def contrast_diff_mean(nm):
        contrast matrix for all against mean comparisons
 
     '''
-    return np.eye(nm) - np.ones((nm,nm))/nm.
+    return np.eye(nm) - np.ones((nm,nm))/nm
 
 def tukey_pvalues(std_range, df):
     from scikits.statsmodels.sandbox.distributions.multivariate import mvstdtprob
