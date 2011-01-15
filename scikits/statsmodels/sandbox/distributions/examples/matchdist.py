@@ -21,7 +21,7 @@ import numpy as np
 import matplotlib.mlab as mlab
 import matplotlib.pyplot as plt
 
-stats.distributions.beta_gen._fitstart = lambda self, data : (5,5,0,1)
+#stats.distributions.beta_gen._fitstart = lambda self, data : (5,5,0,1)
 
 def plothist(x,distfn, args, loc, scale, right=1):
 
