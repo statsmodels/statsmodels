@@ -972,7 +972,8 @@ class MultiComparison(object):
                               ('pval',float),
                               ('pval_corr',float),
                               ('reject', np.bool8)])
-        summtab = sm.iolib.SimpleTable(resarr, headers=resarr.dtype.names)
+        from scikits.statsmodels.iolib.table import SimpleTable
+        summtab = SimpleTable(resarr, headers=resarr.dtype.names)
         summtab.title = 'Test Multiple Comparison %s \n%s%4.2f method=%s' % (testfunc.__name__,
                         'FWER=', alpha, method) + \
                         '\nalphacSidak=%4.2f, alphacBonf=%5.3f' % (alphacSidak, alphacBonf)
@@ -1421,6 +1422,7 @@ def contrast_diff_mean(nm):
 
 def tukey_pvalues(std_range, df):
     from scikits.statsmodels.sandbox.distributions.multivariate import mvstdtprob
+    nm = len(std_range)
     contr = contrast_allpairs(nm)
     corr = np.dot(contr, contr.T)/2.
     tstat = std_range / np.sqrt(2)
@@ -1720,7 +1722,7 @@ def set_remove_subs(ssli):
 if __name__ == '__main__':
 
     examples = ['tukey', 'tukeycrit', 'fdr', 'fdrmc', 'bonf', 'randmvn',
-                'multicompdev', 'None'][-1]
+                'multicompdev', 'None']#[-1]
 
     if 'tukey' in examples:
         #Example Tukey
@@ -1755,7 +1757,8 @@ if __name__ == '__main__':
                        dtype=[('mean',float),
                               ('pval',float),
                               ('reject', np.bool8)])
-        print sm.iolib.SimpleTable(res, headers=res.dtype.names)
+        #from scikits.statsmodels.iolib import SimpleTable
+        print SimpleTable(res, headers=res.dtype.names)
         print fdrcorrection_bak(tpval, alpha=0.05)
         print reject
 

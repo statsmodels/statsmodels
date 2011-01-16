@@ -634,7 +634,7 @@ def neweywestcov(resid, x):
      d.covb = xtxi*xuux*xtxi;
     '''
     nobs = resid.shape[0]   #TODO: check this can only be 1d
-    nlags = round(4*(nobs/100.)**(2/9.))
+    nlags = int(round(4*(nobs/100.)**(2/9.)))
     hhat = resid * x.T
     xuux = np.dot(hhat, hhat.T)
     for lag in range(nlags):

@@ -625,7 +625,7 @@ if __name__ == '__main__':
     tt = TestContrastTools()
     tt.test_contrast_product()
 
-    import scikits.statsmodels as sm
+    import scikits.statsmodels.api as sm
 
     examples = ['small', 'large', None][1]
 
