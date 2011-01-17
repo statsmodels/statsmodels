@@ -545,4 +545,4 @@ if __name__ == '__main__':
     arma1.plot4(fig)
 
 
-    plt.show()
+    #plt.show()

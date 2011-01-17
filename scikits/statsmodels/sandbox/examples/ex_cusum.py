@@ -86,7 +86,7 @@ rresid2, rparams2, rypred2, rresid_standardized2, rresid_scaled2, rcusum2, rcusu
 #assert_almost_equal(rparams[skip+1:], rparams2[skip:-1],13)
 assert_almost_equal(rparams[skip:], rparams2[skip:],13)
 #np.c_[rparams[skip+1:], rparams2[skip:-1]]
-plt.show()
+#plt.show()
 
 ####################  Example break test
 import scikits.statsmodels.sandbox.tools.stattools

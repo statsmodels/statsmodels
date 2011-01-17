@@ -489,7 +489,7 @@ if __name__ == '__main__':
     plt.legend(loc='upper left')
     plt.title('CIRSubordinatedBrownian')
 
-    plt.show()
+    #plt.show()
 
 
 

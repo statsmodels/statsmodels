@@ -327,4 +327,4 @@ if 'sp500' in examples:
     sp500r = np.diff(np.log(sp500))
 
 
-plt.show()
+#plt.show()
