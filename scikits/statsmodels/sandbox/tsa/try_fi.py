@@ -51,6 +51,9 @@ if __name__ == '__main__':
     print lpol_fima(-0.4, n=20)
     print np.sum((lpol_fima(-0.4, n=n)[1:] + riinv[1:])**2) #different signs
     print np.sum((lpol_fiar(0.4, n=n)[1:] - riinv[1:])**2) #corrected signs
+
+    #test is now in statsmodels.tsa.tests.test_arima_process
+    from scikits.statsmodels.tsa.tests.test_arima_process import test_fi
     test_fi()
 
     ar_true = [1, -0.4]

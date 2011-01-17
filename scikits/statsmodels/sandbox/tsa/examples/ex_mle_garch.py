@@ -70,7 +70,7 @@ import numdifftools as ndt
 
 import scikits.statsmodels.api as sm
 from scikits.statsmodels.sandbox import tsa
-from mle import *  # local import
+from scikits.statsmodels.sandbox.tsa.garch import *  # local import
 
 
 nobs = 1000
