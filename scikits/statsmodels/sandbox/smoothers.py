@@ -242,7 +242,7 @@ if __name__ == "__main__":
     ax5 = fig2.add_subplot(111)
     ax5.plot(x, y, "+")
     ax5.plot(KSConfIntx, KSConfInty, "o")
-    plt.show()
+    #plt.show()
 
 
 

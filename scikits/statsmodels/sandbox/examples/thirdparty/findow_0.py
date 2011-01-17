@@ -78,4 +78,4 @@ paclose_ratereturn_vol_mov = paclose_ratereturn_vol.apply(
                         lambda x:np.convolve(x,np.ones(5)/5.,'same'))
 paclose_ratereturn_vol_mov.plot()
 
-plt.show()
+#plt.show()
