@@ -70,6 +70,16 @@ TODO:
 * docstrings
 
 
+random bug (showed up only once, need fuzz-testing to replicate)
+  File "...\diffusion2.py", line 375, in <module>
+    x = jd.simulate(mu,sigma,lambd,a,D,ts,nrepl)
+  File "...\diffusion2.py", line 129, in simulate
+    jumps_ts[n] = CumS[Events]
+IndexError: index out of bounds
+
+CumS is empty array, Events == -1
+
+
 """
 
 
@@ -125,8 +135,8 @@ class JumpDiffusionMerton(object):
                 Events = np.sum(t<=ts[n])-1
                 #print n, Events, CumS.shape, jumps_ts.shape
                 jumps_ts[n]=0
-                if Events:
-                    jumps_ts[n] = CumS[Events]
+                if Events > 0:
+                    jumps_ts[n] = CumS[Events] #TODO: out of bounds see top
 
             #jumps = np.column_stack((jumps, jumps_ts))  #maybe wrong transl
             jumps[j,:] = jumps_ts
