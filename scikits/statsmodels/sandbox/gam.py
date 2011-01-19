@@ -16,9 +16,9 @@ Generalized additive models
 
 import numpy as np
 
-from scikits.statsmodels import family
+from scikits.statsmodels.glm.families import family
 from smoothers import PolySmoother as SmoothingSpline   # relative import
-from scikits.statsmodels.glm import GLM
+from scikits.statsmodels.glm.glm import GLM
 
 def default_smoother(x):
     _x = x.copy()

@@ -59,7 +59,7 @@ s4 = ts.time_series(tabx['_data'],dates=ts.date_array(tabx['_dates'],freq="M"))
 print tabx
 print repr(s4)
 
-
+from finance import *  #hack to make it run as standalone
 #after running pandas/examples/finance.py
 larmsft = la.larry(msft.values, [msft.index.tolist(), msft.columns.tolist()])
 laribm = la.larry(ibm.values, [ibm.index.tolist(), ibm.columns.tolist()])

@@ -50,7 +50,7 @@ class KernelSmoother(object):
         Otherwise an attempt is made to cast x to numpy.ndarray and an array of
         corresponding y-points is returned.
         """
-        if isinstance(x, numbers.Real):
+        if np.size(x) == 1: # if isinstance(x, numbers.Real):
             return self.Kernel.smooth(self.x, self.y, x)
         else:
             return np.array([self.Kernel.smooth(self.x, self.y, xx) for xx

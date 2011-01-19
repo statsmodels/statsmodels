@@ -1,6 +1,6 @@
 from scikits.statsmodels.regression.linear_model import GLS
 import numpy as np
-from scikits.statsmodels import tools
+import scikits.statsmodels.tools.tools as tools
 from scikits.statsmodels.base.model import LikelihoodModelResults
 from scipy import sparse
 
