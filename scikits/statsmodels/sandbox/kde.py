@@ -242,5 +242,5 @@ if __name__ == "__main__":
     f = f_tilde[:4]
     # this is our density estimate.
     # can this be done with fftconvolve?
-    from scipy import signal
+    #from scipy import signal
 #TODO: note that scipy.fftpack looks to be more "standard" notation
