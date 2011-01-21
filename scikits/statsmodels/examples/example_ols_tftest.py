@@ -13,7 +13,7 @@ This example was written mostly for cross-checks and refactoring.
 
 import numpy as np
 import numpy.testing as npt
-import scikits.statsmodels as sm
+import scikits.statsmodels.api as sm
 
 print '\n\n Example 1: Longley Data, high multicollinearity'
 
@@ -115,9 +115,10 @@ print repr((Ftest2b.fvalue, Ftest2b.pvalue))
 
 print '\nequality of t-test and F-test'
 print t2a**2 - np.array((Ftest2a.fvalue, Ftest2b.fvalue))
-npt.assert_almost_equal(t2a**2, np.array((Ftest2a.fvalue, Ftest2b.fvalue)))
+npt.assert_almost_equal(t2a**2, np.vstack((Ftest2a.fvalue, Ftest2b.fvalue)))
 #npt.assert_almost_equal(t2pval, np.array((Ftest2a.pvalue, Ftest2b.pvalue)))
-npt.assert_almost_equal(t2pval*2, np.array((Ftest2a.pvalue, Ftest2b.pvalue)))
+npt.assert_almost_equal(t2pval*2, np.c_[Ftest2a.pvalue,
+    Ftest2b.pvalue].squeeze())
 
 
 print '\n\n Example 2: Artificial Data'

@@ -2,9 +2,9 @@ import numpy as np
 from scipy.stats import t, norm
 from scipy.stats import norm as stats_norm
 from scipy import optimize, derivative
-from tools import recipr
-from contrast import ContrastResults
-from decorators import *  #for moving llf
+from scikits.statsmodels.tools.tools import recipr
+from scikits.statsmodels.stats.contrast import ContrastResults
+from scikits.statsmodels.tools.decorators import resettable_cache, cache_readonly
 
 class Model(object):
     """
@@ -405,8 +405,11 @@ exceeded."
             try:
                 Hinv = np.linalg.inv(-1*self.hessian(xopt))
             except:
-                #warnings.warn ...  #todo convert to warning ?
-                print 'Inverting hessian failed, no bse or cov_params available'
+                #might want custom warning ResultsWarning? NumericalWarning?
+                from warnings import warn
+                warndoc= 'Inverting hessian failed, no bse or cov_params \
+available'
+                warn(warndoc, Warning)
                 Hinv = None
 #TODO: add Hessian approximation and change the above if needed
         mlefit = LikelihoodModelResults(self, xopt, Hinv, scale=1.)
@@ -458,7 +461,7 @@ class GenericLikelihoodModel(LikelihoodModel):
     --------
     see also subclasses in directory miscmodels
 
-    import scikits.statsmodels as sm
+    import scikits.statsmodels.api as sm
     data = sm.datasets.spector.load()
     data.exog = sm.add_constant(data.exog)
     # in this dir
@@ -825,7 +828,7 @@ class LikelihoodModelResults(Results):
 
         Examples
         --------
-        >>> import scikits.statsmodels as sm
+        >>> import scikits.statsmodels.api as sm
         >>> data = sm.datasets.longley.load()
         >>> data.exog = sm.add_constant(data.exog)
         >>> results = sm.OLS(data.endog, data.exog).fit()
@@ -960,7 +963,7 @@ arguments.'
         Examples
         --------
         >>> import numpy as np
-        >>> import scikits.statsmodels as sm
+        >>> import scikits.statsmodels.api as sm
         >>> data = sm.datasets.longley.load()
         >>> data.exog = sm.add_constant(data.exog)
         >>> results = sm.OLS(data.endog, data.exog).fit()
@@ -1051,7 +1054,7 @@ number of rows")
         Examples
         --------
         >>> import numpy as np
-        >>> import scikits.statsmodels as sm
+        >>> import scikits.statsmodels.api as sm
         >>> data = sm.datasets.longley.load()
         >>> data.exog = sm.add_constant(data.exog)
         >>> results = sm.OLS(data.endog, data.exog).fit()
@@ -1139,7 +1142,7 @@ number of rows")
 
         Examples
         --------
-        >>> import scikits.statsmodels as sm
+        >>> import scikits.statsmodels.api as sm
         >>> data = sm.datasets.longley.load()
         >>> data.exog = sm.add_constant(data.exog)
         >>> results = sm.OLS(data.endog, data.exog).fit()

@@ -3,7 +3,7 @@
 #TODO: this is going to change significantly once we have a panel data structure
 
 import numpy as np
-import scikits.statsmodels as sm
+import scikits.statsmodels.api as sm
 from scikits.statsmodels.sandbox.sysreg import *
 
 # Seemingly Unrelated Regressions (SUR) Model

@@ -8,7 +8,7 @@ Author: Josef Perktold based on scipy.optimize.curve_fit
 import numpy as np
 from scipy import optimize
 
-from scikits.statsmodels.model import Model
+from scikits.statsmodels.base.model import Model
 
 
 class Results(object):

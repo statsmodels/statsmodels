@@ -29,7 +29,7 @@ the user chooses.
 import numpy as np
 from scipy import stats
 
-from scikits.statsmodels.decorators import OneTimeProperty
+from scikits.statsmodels.tools.decorators import OneTimeProperty
 
 
 class DescrStatsW(object):

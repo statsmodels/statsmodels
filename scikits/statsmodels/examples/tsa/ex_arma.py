@@ -5,7 +5,7 @@ works ok if noise variance is large
 '''
 
 import numpy as np
-import scikits.statsmodels as sm
+import scikits.statsmodels.api as sm
 from scikits.statsmodels.tsa.arima_process import arma_generate_sample
 from scikits.statsmodels.tsa.arma_mle import Arma as Arma
 from scikits.statsmodels.tsa.arima_process import ARIMA as ARIMA_old

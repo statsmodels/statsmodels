@@ -8,7 +8,7 @@ IRLS.
 import numpy as np
 import glm_test_resids
 import os
-import scikits.statsmodels as sm
+from scikits.statsmodels.api import add_constant, categorical
 
 # Test Precisions
 DECIMAL_4 = 4
@@ -684,12 +684,12 @@ class Lbw(object):
         filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
             "stata_lbw_glm.csv")
         data=np.recfromcsv(filename, converters={4: lambda s: s.strip("\"")})
-        data = sm.tools.categorical(data, col='race', drop=True)
+        data = categorical(data, col='race', drop=True)
         self.endog = data.low
         design = np.column_stack((data['age'], data['lwt'],
                     data['race_black'], data['race_other'], data['smoke'],
                     data['ptl'], data['ht'], data['ui']))
-        self.exog = sm.add_constant(design)
+        self.exog = add_constant(design)
         # Results for Canonical Logit Link
         self.params = (-.02710031, -.01515082, 1.26264728,
                         .86207916, .92334482, .54183656, 1.83251780,
@@ -794,9 +794,9 @@ class Cancer(object):
         data = np.recfromcsv(filename)
         self.endog = data.studytime
         design = np.column_stack((data.age,data.drug))
-        design = sm.tools.categorical(design, col=1, drop=True)
+        design = categorical(design, col=1, drop=True)
         design = np.delete(design, 1, axis=1) # drop first dummy
-        self.exog = sm.add_constant(design)
+        self.exog = add_constant(design)
 
 class CancerLog(Cancer):
     """
@@ -1138,7 +1138,7 @@ class InvGauss(object):
         data=np.genfromtxt(filename, delimiter=",", dtype=float)[1:]
         self.endog = data[:5000,0]
         self.exog = data[:5000,1:]
-        self.exog = sm.add_constant(self.exog)
+        self.exog = add_constant(self.exog)
 
 #class InvGaussDefault(InvGauss)
 #    def __init__(self):
@@ -2177,9 +2177,9 @@ class Medpar1(object):
         data = np.recfromcsv(filename, converters ={1: lambda s: s.strip("\"")})
         self.endog = data.los
         design = np.column_stack((data.admitype, data.codes))
-        design = sm.tools.categorical(design, col=0, drop=True)
+        design = categorical(design, col=0, drop=True)
         design = np.delete(design, 1, axis=1) # drop first dummy
-        self.exog = sm.add_constant(design)
+        self.exog = add_constant(design)
 
 class InvGaussLog(Medpar1):
     """

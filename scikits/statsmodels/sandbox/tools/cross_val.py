@@ -389,10 +389,10 @@ class KStepAhead(object):
 if __name__ == '__main__':
     #A: josef-pktd
 
-    import scikits.statsmodels as sm
+    import scikits.statsmodels.api as sm
     from scikits.statsmodels import OLS
     from scikits.statsmodels.datasets.longley import Load
-    import scikits.statsmodels as sm
+    import scikits.statsmodels.api as sm
     from scikits.statsmodels.iolib.table import (SimpleTable, default_txt_fmt,
                             default_latex_fmt, default_html_fmt)
     import numpy as np

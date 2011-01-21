@@ -9,7 +9,7 @@ Author: josef-pktd
 import numpy as np
 
 from scipy import stats, special
-import scikits.statsmodels as sm
+import scikits.statsmodels.api as sm
 from scikits.statsmodels.model import GenericLikelihoodModel
 
 #redefine some shortcuts

@@ -8,7 +8,7 @@ A: josef pktd
 
 import numpy as np
 from scipy import stats
-import scikits.statsmodels as sm
+import scikits.statsmodels.api as sm
 
 def atleast_2dcol(x):
     ''' convert array_like to 2d from 1d or 0d

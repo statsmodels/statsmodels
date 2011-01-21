@@ -96,7 +96,7 @@ def categorical(data, col=None, dictnames=False, drop=False):
     Examples
     --------
     >>> import numpy as np
-    >>> import scikits.statsmodels as sm
+    >>> import scikits.statsmodels.api as sm
 
     Univariate examples
 

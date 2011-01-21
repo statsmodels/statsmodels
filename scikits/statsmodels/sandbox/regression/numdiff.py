@@ -304,7 +304,7 @@ def fun2(beta, y, x):
 
 
 if __name__ == '__main__':
-    import scikits.statsmodels as sm
+    import scikits.statsmodels.api as sm
     from scipy.optimize.optimize import approx_fhess_p
     import numpy as np
 

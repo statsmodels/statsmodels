@@ -3,7 +3,7 @@ Look at some macro plots, then do some VARs and IRFs.
 """
 
 import numpy as np
-import scikits.statsmodels as sm
+import scikits.statsmodels.api as sm
 import scikits.timeseries as ts
 import scikits.timeseries.lib.plotlib as tplt
 from matplotlib import pyplot as plt

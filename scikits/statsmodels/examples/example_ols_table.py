@@ -2,7 +2,7 @@
 """
 
 from scikits.statsmodels.datasets.longley import load
-import scikits.statsmodels as sm
+import scikits.statsmodels.api as sm
 from scikits.statsmodels.iolib.table import (SimpleTable, default_txt_fmt,
                         default_latex_fmt, default_html_fmt)
 import numpy as np

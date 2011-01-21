@@ -31,8 +31,8 @@ Issues
 
 import numpy as np
 from scipy import stats, factorial
-import scikits.statsmodels as sm
-from scikits.statsmodels.model import GenericLikelihoodModel
+import scikits.statsmodels.api as sm
+from scikits.statsmodels.base.model import GenericLikelihoodModel
 
 def maxabs(arr1, arr2):
     return np.max(np.abs(arr1 - arr2))

@@ -4,9 +4,9 @@ Statistical tools for time series analysis
 
 import numpy as np
 from scipy import stats, signal
-from scikits.statsmodels.regression import OLS, yule_walker
-from scikits.statsmodels.tools import add_constant
-from scikits.statsmodels.tsa.tsatools import lagmat, lagmat2ds, add_trend
+from scikits.statsmodels.regression.linear_model import OLS, yule_walker
+from scikits.statsmodels.tools.tools import add_constant
+from tsatools import lagmat, lagmat2ds, add_trend
 #from scikits.statsmodels.sandbox.tsa import var
 from adfvalues import *
 #from scikits.statsmodels.sandbox.rls import RLS
@@ -782,7 +782,7 @@ __all__ = ['acovf', 'acf', 'pacf', 'pacf_yw', 'pacf_ols', 'ccovf', 'ccf',
            'pergram', 'q_stat']
 
 if __name__=="__main__":
-    import scikits.statsmodels as sm
+    import scikits.statsmodels.api as sm
     data = sm.datasets.macrodata.load().data
     x = data['realgdp']
 # adf is tested now.

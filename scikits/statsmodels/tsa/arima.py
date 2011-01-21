@@ -1,14 +1,13 @@
-
 import numpy as np
-from scikits.statsmodels.decorators import (cache_readonly, cache_writable,
-            resettable_cache)
+from scikits.statsmodels.tools.decorators import (cache_readonly,
+        cache_writable, resettable_cache)
 from scipy import optimize
 from numpy import dot, identity, kron, log, zeros, pi, exp, eye, abs, empty
 from numpy.linalg import inv, pinv
-from scikits.statsmodels import add_constant
-from scikits.statsmodels.model import (LikelihoodModel, LikelihoodModelResults,
-                                        GenericLikelihoodModel)
-from scikits.statsmodels.regression import yule_walker, GLS
+from scikits.statsmodels.tools.tools import add_constant
+from scikits.statsmodels.base.model import (LikelihoodModel,
+        LikelihoodModelResults, GenericLikelihoodModel)
+from scikits.statsmodels.regression.linear_model import yule_walker, GLS
 from tsatools import lagmat
 from var import AR
 from scikits.statsmodels.sandbox.regression.numdiff import approx_fprime, \
@@ -558,7 +557,7 @@ class ARMAResults(LikelihoodModelResults):
 
 if __name__ == "__main__":
     import numpy as np
-    import scikits.statsmodels as sm
+    import scikits.statsmodels.api as sm
 
     # simulate arma process
     from scikits.statsmodels.tsa.arima_process import arma_generate_sample

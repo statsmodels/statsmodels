@@ -9,7 +9,7 @@ Author: josef-pktd
 import numpy as np
 from scipy import stats
 from numpy.testing import assert_almost_equal
-import scikits.statsmodels as sm
+import scikits.statsmodels.api as sm
 from scikits.statsmodels.sandbox.regression.onewaygls import OneWayLS, \
                                 recursive_olsresiduals,recursive_olsresiduals2
 

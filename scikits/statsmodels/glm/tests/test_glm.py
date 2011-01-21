@@ -5,9 +5,9 @@ Test functions for models.GLM
 
 import numpy as np
 from numpy.testing import *
-import scikits.statsmodels as sm
-from scikits.statsmodels.glm import GLM
-from scikits.statsmodels.tools import add_constant
+import scikits.statsmodels.api as sm
+from scikits.statsmodels.glm.glm import GLM
+from scikits.statsmodels.tools.tools import add_constant
 from nose import SkipTest
 
 # Test Precisions
@@ -198,9 +198,8 @@ class TestGlmBinomial(CheckModelResults):
         from results.results_glm import Star98
         data = load()
         data.exog = add_constant(data.exog)
-        trials = data.endog[:,:2].sum(axis=1)
         self.res1 = GLM(data.endog, data.exog, \
-        family=sm.families.Binomial()).fit(data_weights = trials)
+        family=sm.families.Binomial()).fit()
         #NOTE: if you want to replicate with RModel
         #res2 = RModel(data.endog[:,0]/trials, data.exog, r.glm,
         #        family=r.binomial, weights=trials)

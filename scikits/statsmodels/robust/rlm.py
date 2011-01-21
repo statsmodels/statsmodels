@@ -14,11 +14,14 @@ R Venables, B Ripley. 'Modern Applied Statistics in S'  Springer, New York,
     2002.
 """
 import numpy as np
-import tools
-from regression import WLS, GLS
-from robust import norms, scale
-from model import LikelihoodModel, LikelihoodModelResults
-from decorators import *
+from scikits.statsmodels.tools.tools import rank
+from scikits.statsmodels.regression.linear_model import WLS, GLS
+import norms
+import scale
+from scikits.statsmodels.base.model import (LikelihoodModel,
+        LikelihoodModelResults)
+from scikits.statsmodels.tools.decorators import (cache_readonly,
+        resettable_cache)
 
 __all__ = ['RLM']
 
@@ -98,7 +101,7 @@ class RLM(LikelihoodModel):
 
     Examples
     ---------
-    >>> import scikits.statsmodels as sm
+    >>> import scikits.statsmodels.api as sm
     >>> data = sm.datasets.stackloss.load()
     >>> data.exog = sm.add_constant(data.exog)
     >>> rlm_model = sm.RLM(data.endog, data.exog, \
@@ -142,8 +145,8 @@ class RLM(LikelihoodModel):
         self.pinv_wexog = np.linalg.pinv(self.exog)
         self.normalized_cov_params = np.dot(self.pinv_wexog,
                                         np.transpose(self.pinv_wexog))
-        self.df_resid = np.float(self.exog.shape[0] - tools.rank(self.exog))
-        self.df_model = np.float(tools.rank(self.exog)-1)
+        self.df_resid = np.float(self.exog.shape[0] - rank(self.exog))
+        self.df_model = np.float(rank(self.exog)-1)
         self.nobs = float(self.endog.shape[0])
 
     def score(self, params):
@@ -415,7 +418,7 @@ class RLMResults(LikelihoodModelResults):
 if __name__=="__main__":
 #NOTE: This is to be removed
 #Delivery Time Data is taken from Montgomery and Peck
-    import models
+    import scikits.statsmodels.api as sm
 
 #delivery time(minutes)
     endog = np.array([16.68, 11.50, 12.03, 14.88, 13.75, 18.11, 8.00, 17.83,
@@ -428,7 +431,7 @@ if __name__=="__main__":
     605, 688, 215, 255, 462, 448, 776, 200, 132, 36, 770, 140, 810, 450, 635,
     150]])
     exog = exog.T
-    exog = models.tools.add_constant(exog)
+    exog = add_constant(exog)
 
 #    model_ols = models.regression.OLS(endog, exog)
 #    results_ols = model_ols.fit()
@@ -448,9 +451,9 @@ if __name__=="__main__":
 #######################
 ### Stack Loss Data ###
 #######################
-    from models.datasets.stackloss import load
+    from scikits.statsmodels.datasets.stackloss import load
     data = load()
-    data.exog = models.tools.add_constant(data.exog)
+    data.exog = sm.add_constant(data.exog)
 #############
 ### Huber ###
 #############
