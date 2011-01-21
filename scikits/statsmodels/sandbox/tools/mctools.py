@@ -174,7 +174,7 @@ if __name__ == '__main__':
 #    print mc1.quantiles()
 
     print '\nLjung Box'
-    from scikits.statsmodels.sandbox.tools.stattools import acorr_ljungbox
+    from scikits.statsmodels.sandbox.stats.diagnostic import acorr_ljungbox
 
     def lb4(x):
         s,p = acorr_ljungbox(x, lags=4)

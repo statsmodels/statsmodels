@@ -25,7 +25,7 @@ Could be extended to AR(p) errors, but then requires panel with larger T
 import numpy as np
 from scipy import optimize
 
-from scikits.statsmodels import OLS
+from scikits.statsmodels.regression.linear_model import OLS
 
 
 class PanelAR1(object):

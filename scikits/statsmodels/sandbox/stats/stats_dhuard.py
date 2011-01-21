@@ -251,6 +251,7 @@ class HistDist(object):
 
 #changes: josef-pktd
 if __name__ == '__main__':
+    import matplotlib.pyplot as plt
 
     nobs = 100
     x = np.random.randn(nobs)

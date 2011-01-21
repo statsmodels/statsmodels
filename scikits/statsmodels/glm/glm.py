@@ -26,6 +26,7 @@ from scikits.statsmodels.base.model import (LikelihoodModel,
         LikelihoodModelResults)
 from scikits.statsmodels.tools.decorators import (cache_readonly,
         resettable_cache)
+
 from scipy.stats import t
 
 __all__ = ['GLM']
@@ -895,6 +896,7 @@ if __name__ == "__main__":
 ##    print(GLMT[0])
 ##    print(GLMT[2])
     GLMTp = GLMmod.summary(title='Test GLM')
+
 
     """
 From Stata

@@ -319,7 +319,7 @@ def expect(self, fn=None, args=(), loc=0, scale=1, lb=None, ub=None, conditional
     '''
     if fn is None:
         def fun(x, *args):
-            return x*self.pdf(x, loc=loc, scale=scale,*args)
+            return x*self.pdf(x, loc=loc, scale=scale, *args)
     else:
         def fun(x, *args):
             return fn(x)*self.pdf(x, loc=loc, scale=scale, *args)
@@ -328,7 +328,8 @@ def expect(self, fn=None, args=(), loc=0, scale=1, lb=None, ub=None, conditional
     if ub is None:
         ub = loc + self.b * scale #(self.b - loc)/(1.0*scale)
     if conditional:
-        invfac = self.sf(lb,*args) - self.sf(ub,*args)
+        invfac = (self.sf(lb, loc=loc, scale=scale, *args)
+                  - self.sf(ub, loc=loc, scale=scale, *args))
     else:
         invfac = 1.0
     return integrate.quad(fun, lb, ub,
@@ -348,8 +349,8 @@ def expect_v2(self, fn=None, args=(), loc=0, scale=1, lb=None, ub=None, conditio
         args : tuple
            argument (parameters) of the distribution
         lb, ub : numbers
-           lower and upper bound for integration, default is set to the support
-           of the distribution
+           lower and upper bound for integration, default is set using
+           quantiles of the distribution, see Notes
         conditional : boolean (False)
            If true then the integral is corrected by the conditional probability
            of the integration interval. The return value is the expectation
@@ -363,6 +364,8 @@ def expect_v2(self, fn=None, args=(), loc=0, scale=1, lb=None, ub=None, conditio
     -----
     This function has not been checked for it's behavior when the integral is
     not finite. The integration behavior is inherited from scipy.integrate.quad.
+
+    The default limits are lb = self.ppf(1e-9, *args), ub = self.ppf(1-1e-9, *args)
 
     For some heavy tailed distributions, 'alpha', 'cauchy', 'halfcauchy',
     'levy', 'levy_l', and for 'ncf', the default limits are not set correctly
@@ -393,7 +396,7 @@ def expect_v2(self, fn=None, args=(), loc=0, scale=1, lb=None, ub=None, conditio
         except ValueError:
             lb = self.a
     else:
-        lb = max(self.a, lb)
+        lb = max(self.a, (lb - loc)/(1.0*scale)) #transform to standardized
     if ub is None:
         #ub = self.b
         try:
@@ -401,9 +404,9 @@ def expect_v2(self, fn=None, args=(), loc=0, scale=1, lb=None, ub=None, conditio
         except ValueError:
             ub = self.b
     else:
-        ub = min(self.b, ub)
+        ub = min(self.b, (ub - loc)/(1.0*scale))
     if conditional:
-        invfac = self.sf(lb,*args) - self.sf(ub,*args)
+        invfac = self._sf(lb,*args) - self._sf(ub,*args)
     else:
         invfac = 1.0
     return integrate.quad(fun, lb, ub,
@@ -481,8 +484,13 @@ def expect_discrete(self, fn=None, args=(), loc=0, lb=None, ub=None,
     self._argcheck(*args) # (re)generate scalar self.a and self.b
     if lb is None:
         lb = (self.a)
+    else:
+        lb = lb - loc
+
     if ub is None:
         ub = (self.b)
+    else:
+        ub = ub - loc
     if conditional:
         invfac = self.sf(lb,*args) - self.sf(ub+1,*args)
     else:
