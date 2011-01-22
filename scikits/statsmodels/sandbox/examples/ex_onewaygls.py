@@ -193,4 +193,4 @@ print 'this is the similar to scipy.stats.f_oneway,'
 print 'but variance is not assumed to be the same across groups'
 res = OneWayLS(y,np.ones(len(y)), groups=groupind.astype(str), het=True)
 print_results(res)
-print res.print_summary(res)
+print res.print_summary() #(res)

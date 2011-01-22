@@ -302,8 +302,18 @@ def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
     -----
     all corrected pvalues now tested against R.
     insufficient "cosmetic" tests yet
+    new procedure 'fdr_gbs' not verified yet,
+        p-values derived from scratch not reference
+
+    All procedures that are included, control FWER or FDR in the independent
+    case, and most are robust in the positively correlated case.
+
+    fdr_gbs: high power, fdr control for independent case and only small
+        violation in positively correlated case
+
 
     there will be API changes.
+
 
     References
     ----------
@@ -375,11 +385,26 @@ def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
         #delegate, call with sorted pvals
         reject, pvals_corrected = fdrcorrection0(pvals, alpha=alpha,
                                                  method='n')
+
+    elif method.lower() in ['fdr_gbs']:
+        #adaptive stepdown in Favrilov, Benjamini, Sarkar, Annals of Statistics 2009
+##        notreject = pvals > alphaf / np.arange(ntests, 0, -1) #alphacSidak
+##        notrejectmin = np.min(np.nonzero(notreject))
+##        notreject[notrejectmin:] = True
+##        reject = ~notreject
+
+        ii = np.arange(1, ntests + 1)
+        q = (ntests + 1. - ii)/ii * pvals / (1. - pvals)
+        pvals_corrected_raw = np.maximum.accumulate(q) #up requirementd
+
+        pvals_corrected = np.minimum.accumulate(pvals_corrected_raw[::-1])[::-1]
+        reject = pvals_corrected < alpha
+
     else:
         raise ValueError('method not recognized')
 
 
-    if not pvals_corrected is None:
+    if not pvals_corrected is None: #not necessary anymore
         pvals_corrected[pvals_corrected>1] = 1
     if returnsorted:
         return reject, pvals_corrected, alphacSidak, alphacBonf
@@ -947,7 +972,8 @@ class MultiComparison(object):
                               ('pval',float),
                               ('pval_corr',float),
                               ('reject', np.bool8)])
-        summtab = sm.iolib.SimpleTable(resarr, headers=resarr.dtype.names)
+        from scikits.statsmodels.iolib.table import SimpleTable
+        summtab = SimpleTable(resarr, headers=resarr.dtype.names)
         summtab.title = 'Test Multiple Comparison %s \n%s%4.2f method=%s' % (testfunc.__name__,
                         'FWER=', alpha, method) + \
                         '\nalphacSidak=%4.2f, alphacBonf=%5.3f' % (alphacSidak, alphacBonf)
@@ -991,6 +1017,11 @@ class MultiComparison(object):
 
 
 def rankdata(x):
+    '''rankdata, equivalent to scipy.stats.rankdata
+
+    just a different implementation, I have not yet compared speed
+
+    '''
     uni, intlab = np.unique(x[:,0], return_inverse=True)
     groupnobs = np.bincount(intlab)
     groupxsum = np.bincount(intlab, weights=X[:,0])
@@ -1011,7 +1042,7 @@ def compare_ordered(vals, alpha):
     vals : array_like
         means or rankmeans for independent groups
 
-    incomplete, not used yet
+    incomplete, no return, not used yet
     '''
     vals = np.asarray(vals)
     alphaf = alpha  # Notation ?
@@ -1058,7 +1089,7 @@ def varcorrection_unbalanced(nobs_all, srange=False):
     where k is the number of samples and summation is over i=0,...,k-1.
     If all n_i are the same, then the correction factor is 1.
 
-    This needs to be multiplies by the joint variance estimate, means square
+    This needs to be multiplied by the joint variance estimate, means square
     error, MSE. To obtain the correction factor for the standard deviation,
     square root needs to be taken.
 
@@ -1117,6 +1148,7 @@ def varcorrection_unequal(var_all, nobs_all, df_all):
     '''return joint variance from samples with unequal variances and unequal
     sample sizes
 
+    something is wrong
 
     Parameters
     ----------
@@ -1164,6 +1196,7 @@ def varcorrection_pairs_unequal(var_all, nobs_all, df_all):
     '''return joint variance from samples with unequal variances and unequal
     sample sizes for all pairs
 
+    something is wrong
 
     Parameters
     ----------
@@ -1278,7 +1311,7 @@ def tukeyhsd(mean_all, nobs_all, var_all, df=None, alpha=0.05, q_crit=None):
     return (idx1, idx2), reject, meandiffs, std_pairs, confint, q_crit, \
            df_total, reject2
 
-def distance_st_range(mean_all, nobs_all, var_all, df=None):
+def distance_st_range(mean_all, nobs_all, var_all, df=None, triu=False):
     '''pairwise distance matrix, outsourced from tukeyhsd
 
 
@@ -1323,14 +1356,104 @@ def distance_st_range(mean_all, nobs_all, var_all, df=None):
     meandiffs = mean_all - mean_all[:,None]  #reverse sign, check with R example
     std_pairs = np.sqrt(var_pairs)
 
-    #select all pairs from upper triangle of matrix
-##    idx1, idx2 = np.triu_indices(n_means, 1)
-##    meandiffs = meandiffs_[idx1, idx2]
-##    std_pairs = std_pairs_[idx1, idx2]
+    idx1, idx2 = np.triu_indices(n_means, 1)
+    if triu:
+        #select all pairs from upper triangle of matrix
+        meandiffs = meandiffs_[idx1, idx2]
+        std_pairs = std_pairs_[idx1, idx2]
 
     st_range = np.abs(meandiffs) / std_pairs #studentized range statistic
 
-    return st_range, meandiffs, std_pairs  #return square arrays
+    return st_range, meandiffs, std_pairs, (idx1,idx2)  #return square arrays
+
+
+def contrast_allpairs(nm):
+    '''contrast or restriction matrix for all pairs of nm variables
+
+    Parameters
+    ----------
+    nm : int
+
+    Returns
+    -------
+    contr : ndarray, 2d, (nm*(nm-1)/2, nm)
+       contrast matrix for all pairwise comparisons
+
+    '''
+    contr = []
+    for i in range(nm):
+        for j in range(i+1, nm):
+            contr_row = np.zeros(nm)
+            contr_row[i] = 1
+            contr_row[j] = -1
+            contr.append(contr_row)
+    return np.array(contr)
+
+def contrast_all_one(nm):
+    '''contrast or restriction matrix for all against first comparison
+
+    Parameters
+    ----------
+    nm : int
+
+    Returns
+    -------
+    contr : ndarray, 2d, (nm-1, nm)
+       contrast matrix for all against first comparisons
+
+    '''
+    contr = np.column_stack((np.ones(nm-1), -np.eye(nm-1)))
+    return contr
+
+def contrast_diff_mean(nm):
+    '''contrast or restriction matrix for all against mean comparison
+
+    Parameters
+    ----------
+    nm : int
+
+    Returns
+    -------
+    contr : ndarray, 2d, (nm-1, nm)
+       contrast matrix for all against mean comparisons
+
+    '''
+    return np.eye(nm) - np.ones((nm,nm))/nm
+
+def tukey_pvalues(std_range, df):
+    from scikits.statsmodels.sandbox.distributions.multivariate import mvstdtprob
+    nm = len(std_range)
+    contr = contrast_allpairs(nm)
+    corr = np.dot(contr, contr.T)/2.
+    tstat = std_range / np.sqrt(2)
+    return multicontrast_pvalues(tstat, corr, df=df)
+
+def test_tukey_pvalues():
+    res = tukey_pvalues(3.649*np.ones(3), 16)
+    assert_almost_equal(0.05, res[0], 3)
+    assert_almost_equal(0.05*np.ones(3), res[1], 3)
+
+
+def multicontrast_pvalues(tstat, tcorr, df=None, dist='t', alternative='two-sided'):
+    '''pvalues for simultaneous tests
+
+    '''
+    from scikits.statsmodels.sandbox.distributions.multivariate import mvstdtprob
+    if (df is None) and (dist == 't'):
+        raise ValueError('df has to be specified for the t-distribution')
+    tstat = np.asarray(tstat)
+    ntests = len(tstat)
+    cc = np.abs(tstat)
+    pval_global = 1 - mvstdtprob(-cc,cc, tcorr, df)
+    pvals = []
+    for ti in cc:
+        limits = ti*np.ones(ntests)
+        pvals.append(1 - mvstdtprob(-cc,cc, tcorr, df))
+
+    return pval_global, np.asarray(pvals)
+
+
+
 
 
 class StepDown(object):
@@ -1599,7 +1722,7 @@ def set_remove_subs(ssli):
 if __name__ == '__main__':
 
     examples = ['tukey', 'tukeycrit', 'fdr', 'fdrmc', 'bonf', 'randmvn',
-                'multicompdev', 'None'][-1]
+                'multicompdev', 'None']#[-1]
 
     if 'tukey' in examples:
         #Example Tukey
@@ -1634,7 +1757,8 @@ if __name__ == '__main__':
                        dtype=[('mean',float),
                               ('pval',float),
                               ('reject', np.bool8)])
-        print sm.iolib.SimpleTable(res, headers=res.dtype.names)
+        #from scikits.statsmodels.iolib import SimpleTable
+        print SimpleTable(res, headers=res.dtype.names)
         print fdrcorrection_bak(tpval, alpha=0.05)
         print reject
 
@@ -1805,3 +1929,6 @@ if __name__ == '__main__':
     assert_almost_equal([0.047619, 0.0649], res_tst[-1][:2],3) #alpha_star for stage 2
     assert_equal(8, res_tst[0].sum())
     print fdrcorrection_twostage(pvals, alpha=0.05, iter=True)
+    print 'fdr_gbs', multipletests(pvals, alpha=0.05, method='fdr_gbs')
+    #multicontrast_pvalues(tstat, tcorr, df)
+    test_tukey_pvalues()

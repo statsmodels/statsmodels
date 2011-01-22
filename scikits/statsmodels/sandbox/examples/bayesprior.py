@@ -179,7 +179,7 @@ fsp.set_ylabel('Y(2)')
 fsp.set_xlabel('Y(1)')
 fsp.axis([-20,20,-20,20])
 
-plt.show()
+#plt.show()
 
 #TODO: this doesn't look the same as the working paper?
 #NOTE: but it matches the language?  I think mine is right!

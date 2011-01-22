@@ -94,7 +94,13 @@ def anovadict(res):
     not checked for completeness
     '''
     ad = {}
-    ad.update(res.__dict__)
+    ad.update(res.__dict__)  #dict doesn't work with cached attributes
+    anova_attr = ['df_model', 'df_resid', 'ess', 'ssr','uncentered_tss',
+                 'mse_model', 'mse_resid', 'mse_total', 'fvalue', 'f_pvalue',
+                  'rsquared']
+    for key in anova_attr:
+        ad[key] = getattr(res, key)
+    ad['nobs'] = res.model.nobs
     ad['ssmwithmean'] = res.uncentered_tss - res.ssr
     return ad
 
@@ -206,7 +212,7 @@ if __name__ == '__main__':
     X = np.column_stack([xx[nn] for nn in names])
     # simple test version: all coefficients equal to one
     y = X.sum(1) + 0.01*np.random.normal(size=(nobs))
-    rest1 = sm.OLS(y,X).results
+    rest1 = sm.OLS(y,X).fit() #results
     print rest1.params
     print anova_str % anovadict(rest1)
 
@@ -214,7 +220,7 @@ if __name__ == '__main__':
     X = np.column_stack([xx[nn] for nn in dropname('ae f', names)])
     # simple test version: all coefficients equal to one
     y = X.sum(1) + 0.01*np.random.normal(size=(nobs))
-    rest1 = sm.OLS(y,X).results
+    rest1 = sm.OLS(y,X).fit()
     print rest1.params
     print anova_str % anovadict(rest1)
 
@@ -250,7 +256,7 @@ if __name__ == '__main__':
     X_b1 = np.column_stack([xx_b1[nn] for nn in dropname('', names_b1)])
     y_b1 = dta_use_b1['y']
     # estimate using OLS
-    rest_b1 = sm.OLS(y_b1, X_b1).results
+    rest_b1 = sm.OLS(y_b1, X_b1).fit()
     # print results
     print rest_b1.params
     print anova_str % anovadict(rest_b1)
@@ -266,7 +272,7 @@ if __name__ == '__main__':
     xx_b1a, names_b1a = form2design('I F:breed F:sex F:litter F:pen age bage', dta_use_b1)
     X_b1a = np.column_stack([xx_b1a[nn] for nn in dropname('', names_b1a)])
     y_b1a = dta_use_b1['y']
-    rest_b1a = sm.OLS(y_b1a, X_b1a).results
+    rest_b1a = sm.OLS(y_b1a, X_b1a).fit()
     print rest_b1a.params
     print anova_str % anovadict(rest_b1a)
 
@@ -274,7 +280,7 @@ if __name__ == '__main__':
         print '\nResults dropping', dropn
         X_b1a_ = np.column_stack([xx_b1a[nn] for nn in dropname(dropn, names_b1a)])
         y_b1a_ = dta_use_b1['y']
-        rest_b1a_ = sm.OLS(y_b1a_, X_b1a_).results
+        rest_b1a_ = sm.OLS(y_b1a_, X_b1a_).fit()
         #print rest_b1a_.params
         print anova_str % anovadict(rest_b1a_)
 

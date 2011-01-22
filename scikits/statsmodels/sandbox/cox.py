@@ -32,7 +32,7 @@ import tempfile
 import numpy as np
 
 
-from scikits.statsmodels import model
+from scikits.statsmodels.base import model
 import survival
 
 class Discrete(object):

@@ -41,7 +41,7 @@ def acovf_fft(x, demean=True):
     might work for nd in parallel with time along axis 0
 
     '''
-    fom scipy import signal
+    from scipy import signal
     x = np.asarray(x)
 
     if demean:

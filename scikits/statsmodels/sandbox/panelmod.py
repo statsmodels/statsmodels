@@ -7,7 +7,7 @@ References
 Baltagi, Badi H. `Econometric Analysis of Panel Data.` 4th ed. Wiley, 2008.
 """
 
-from scikits.statsmodels.tools import categorical
+from scikits.statsmodels.tools.tools import categorical
 from scikits.statsmodels.regression.linear_model import GLS, WLS
 import numpy as np
 
@@ -343,7 +343,7 @@ if __name__ == "__main__":
     import scikits.statsmodels.api as sm
     import numpy.lib.recfunctions as nprf
 
-    data = sm.datasets.grunfeld.Load()
+    data = sm.datasets.grunfeld.load()
     # Baltagi doesn't include American Steel
     endog = data.endog[:-20]
     fullexog = data.exog[:-20]

@@ -5,7 +5,7 @@ License: Simplified BSD
 """
 
 import numpy as np
-from scikits.statsmodels.regression import WLS, GLS, RegressionResults
+from scikits.statsmodels.regression.linear_model import WLS, GLS, RegressionResults
 
 class RLS(GLS):
     """
@@ -148,4 +148,5 @@ if __name__=="__main__":
     design = sm.add_constant(design, prepend=True)
     rls_mod = RLS(dta['G'],design, constr=[0,0,0,1,1,1,1])
     rls_fit = rls_mod.fit()
+    print rls_fit.params
 

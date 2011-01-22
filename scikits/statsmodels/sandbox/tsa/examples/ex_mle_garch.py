@@ -70,7 +70,7 @@ import numdifftools as ndt
 
 import scikits.statsmodels.api as sm
 from scikits.statsmodels.sandbox import tsa
-from mle import *  # local import
+from scikits.statsmodels.sandbox.tsa.garch import *  # local import
 
 
 nobs = 1000
@@ -327,4 +327,4 @@ if 'sp500' in examples:
     sp500r = np.diff(np.log(sp500))
 
 
-plt.show()
+#plt.show()

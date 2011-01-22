@@ -12,8 +12,8 @@ Author: josef-pktd
 
 import numpy as np
 #fix these imports
-import scipy  #circular ?
-from scipy import stats
+import scipy
+#from scipy import stats   #not used here
 
 ## start moment helpers
 

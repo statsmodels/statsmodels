@@ -60,7 +60,7 @@ def bghfactor(df):
     return np.power(2.0, 1-df*0.5) / sps_gamma(df*0.5)
 
 
-def mvstdtprob(a, b, R, df, quadkwds=None, mvstkwds=None):
+def mvstdtprob(a, b, R, df, ieps=1e-5, quadkwds=None, mvstkwds=None):
     '''probability of rectangular area of standard t distribution
 
     assumes mean is zero and R is correlation matrix
@@ -72,9 +72,12 @@ def mvstdtprob(a, b, R, df, quadkwds=None, mvstkwds=None):
     and the integration.
 
     '''
-    ieps = 1e-5
+    kwds = dict(args=(a,b,R,df), epsabs=1e-4, epsrel=1e-2, limit=150)
+    if not quadkwds is None:
+        kwds.update(quadkwds)
+    #print kwds
     res, err = integrate.quad(funbgh2, *chi.ppf([ieps,1-ieps], df),
-                          **dict(args=(a,b,R,df), epsabs=1e-3,limit=75))
+                          **kwds)
     prob = res * bghfactor(df)
     return prob
 

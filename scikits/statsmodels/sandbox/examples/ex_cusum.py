@@ -10,8 +10,9 @@ import numpy as np
 from scipy import stats
 from numpy.testing import assert_almost_equal
 import scikits.statsmodels.api as sm
-from scikits.statsmodels.sandbox.regression.onewaygls import OneWayLS, \
-                                recursive_olsresiduals,recursive_olsresiduals2
+from scikits.statsmodels.sandbox.regression.onewaygls import OneWayLS
+from scikits.statsmodels.sandbox.stats.diagnostic import (recursive_olsresiduals,
+                                                          recursive_olsresiduals2)
 
 #examples from ex_onewaygls.py
 #choose example
@@ -86,11 +87,11 @@ rresid2, rparams2, rypred2, rresid_standardized2, rresid_scaled2, rcusum2, rcusu
 #assert_almost_equal(rparams[skip+1:], rparams2[skip:-1],13)
 assert_almost_equal(rparams[skip:], rparams2[skip:],13)
 #np.c_[rparams[skip+1:], rparams2[skip:-1]]
-plt.show()
+#plt.show()
 
 ####################  Example break test
-import scikits.statsmodels.sandbox.tools.stattools
-from scikits.statsmodels.sandbox.tools.stattools import breaks_hansen, \
+#import scikits.statsmodels.sandbox.tools.stattools
+from scikits.statsmodels.sandbox.stats.diagnostic import breaks_hansen, \
         breaks_cusumolsresid#, breaks_cusum
 H, crit95, ft, s = breaks_hansen(res1)
 print H

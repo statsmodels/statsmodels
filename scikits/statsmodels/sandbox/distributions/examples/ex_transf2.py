@@ -132,7 +132,7 @@ if __name__ == '__main__':
     freq,edges,_ = plt.hist(rvstsq, bins=50, range=(0,4),normed=True)
     edges += (edges[1]-edges[0])/2.0
     plt.plot(edges[:-1], squaretg.pdf(edges[:-1], 10), 'r')
-    plt.show()
+    #plt.show()
     #plt.close()
 
     '''

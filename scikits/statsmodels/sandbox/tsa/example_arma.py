@@ -489,4 +489,4 @@ plotacf(ax, acf1[:20], usevlines=True)
 ax = plt.subplot(212)
 plotacf(ax, acf1[:20], np.arange(len(acf1[:20])), usevlines=False)
 
-plt.show()
+#plt.show()

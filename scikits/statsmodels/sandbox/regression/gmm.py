@@ -52,10 +52,10 @@ License: BSD (3-clause)
 
 import numpy as np
 from scipy import optimize, stats
-import scikits.statsmodels.api as sm
 from scikits.statsmodels.sandbox.regression.numdiff import approx_fprime1, approx_hess
-from scikits.statsmodels.model import LikelihoodModel, LikelihoodModelResults
-from scikits.statsmodels.regression import RegressionResults, OLS
+from scikits.statsmodels.base.model import LikelihoodModel, LikelihoodModelResults
+from scikits.statsmodels.regression.linear_model import RegressionResults, OLS
+import scikits.statsmodels.tools.tools as tools
 
 
 def maxabs(x):
@@ -154,7 +154,7 @@ class IV2SLS(LikelihoodModel):
         #use linalg.lstsq or svd directly
         #cov_diff will very often be in-definite (singular)
         if not dof:
-            dof = sm.tools.rank(cov_diff)
+            dof = tools.rank(cov_diff)
         cov_diffpinv = np.linalg.pinv(cov_diff)
         H = np.dot(params_diff, np.dot(cov_diffpinv, params_diff))/se2
         pval = stats.chi2.sf(H, dof)
@@ -611,7 +611,7 @@ def spec_hausman(params_e, params_i, cov_params_e, cov_params_i, dof=None):
     #use linalg.lstsq or svd directly
     #cov_diff will very often be in-definite (singular)
     if not dof:
-        dof = sm.tools.rank(cov_diff)
+        dof = tools.rank(cov_diff)
     cov_diffpinv = np.linalg.pinv(cov_diff)
     H = np.dot(params_diff, np.dot(cov_diffpinv, params_diff))
     pval = stats.chi2.sf(H, dof)
@@ -751,7 +751,7 @@ class DistQuantilesGMM(GMM):
 
 
 if __name__ == '__main__':
-
+    import scikits.statsmodels.api as sm
     examples = ['ivols', 'distquant'][:]
 
     if 'ivols' in examples:
@@ -762,7 +762,7 @@ if __name__ == '__main__':
 
 
         x = np.linspace(0,10, nobs)
-        X = sm.add_constant(np.column_stack((x, x**2)))
+        X = tools.add_constant(np.column_stack((x, x**2)))
         beta = np.array([1, 0.1, 10])
 
         def sample_ols(exog):

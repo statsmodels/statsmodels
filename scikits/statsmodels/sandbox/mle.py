@@ -7,7 +7,7 @@ changes: JP corrections to imports so it runs, comment out print
 import numpy as np
 from numpy import dot,  outer, random, argsort
 from scipy import io, linalg, optimize
-from scipy.sparse import speye
+from scipy.sparse import eye as speye
 import matplotlib.pyplot as plt
 
 def R(v):

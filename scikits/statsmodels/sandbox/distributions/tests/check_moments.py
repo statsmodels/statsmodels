@@ -135,11 +135,11 @@ def nct_kurt_bug():
 
 if __name__ == '__main__':
 
-    test_cont_basic()
+    check_cont_basic()
     #print [(k, v[0]) for k,v in res.items() if np.abs(v[0]-1)>1e-3]
     #print [(k, v[2][0], 1+2*v[2][0]) for k,v in res.items() if np.abs(v[-1]-(1+2*v[2][0]))>1e-3]
     mean_ = [(k, v[1][0], v[2][0]) for k,v in res.items()
-             if np.abs(v[1][0] - v[2][0])>1e-4 and np.isfinite(v[1][0])]
+             if np.abs(v[1][0] - v[2][0])>1e-6 and np.isfinite(v[1][0])]
     var_ = [(k, v[1][1], v[2][1]) for k,v in res.items()
             if np.abs(v[1][1] - v[2][1])>1e-2 and np.isfinite(v[1][1])]
     skew = [(k, v[1][2], v[2][2]) for k,v in res.items()
@@ -148,8 +148,9 @@ if __name__ == '__main__':
             if np.abs(v[1][3] - v[2][3])>1e-2 and np.isfinite(v[1][1])]
 
     from scikits.statsmodels.iolib import SimpleTable
-    print '\nMean difference at least 1e-4'
-    print SimpleTable(mean_, headers=['distname', 'diststats', 'expect'])
+    if len(mean_) > 0:
+        print '\nMean difference at least 1e-6'
+        print SimpleTable(mean_, headers=['distname', 'diststats', 'expect'])
     print '\nVariance difference at least 1e-2'
     print SimpleTable(var_, headers=['distname', 'diststats', 'expect'])
     print '\nSkew difference at least 1e-2'

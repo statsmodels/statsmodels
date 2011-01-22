@@ -493,7 +493,7 @@ class GenericLikelihoodModel(LikelihoodModel):
     #this is redundant and not used when subclassing
     def initialize(self):
         if not self.score:  # right now score is not optional
-            from sandbox.regression.numdiff import approx_fprime1
+            from scikits.statsmodels.sandbox.regression.numdiff import approx_fprime1
             self.score = approx_fprime1
             if not self.hessian:
                 pass
@@ -549,7 +549,7 @@ class GenericLikelihoodModel(LikelihoodModel):
         '''Gradient of log-likelihood evaluated at params
 
         '''
-        from sandbox.regression.numdiff import approx_fprime1
+        from scikits.statsmodels.sandbox.regression.numdiff import approx_fprime1
         return approx_fprime1(params, self.loglike, epsilon=1e-4).ravel()
 
     def jac(self, params, **kwds):
@@ -559,14 +559,14 @@ class GenericLikelihoodModel(LikelihoodModel):
 
         '''
         kwds.setdefault('epsilon', 1e-4)
-        from sandbox.regression.numdiff import approx_fprime1
+        from scikits.statsmodels.sandbox.regression.numdiff import approx_fprime1
         return approx_fprime1(params, self.loglikeobs, **kwds)
 
     def hessian(self, params):
         '''Hessian of log-likelihood evaluated at params
 
         '''
-        from sandbox.regression.numdiff import approx_hess
+        from scikits.statsmodels.sandbox.regression.numdiff import approx_hess
         return approx_hess(params, self.loglike)[0]  #need options for hess (epsilon)
 
     def fit(self, start_params=None, method='nm', maxiter=500, full_output=1,
