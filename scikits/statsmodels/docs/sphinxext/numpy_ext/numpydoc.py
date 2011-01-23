@@ -93,7 +93,8 @@ def setup(app, get_doc_object_=get_doc_object):
     app.connect('autodoc-process-signature', mangle_signature)
     app.add_config_value('numpydoc_edit_link', None, False)
     app.add_config_value('numpydoc_use_plots', None, False)
-    app.add_config_value('numpydoc_show_class_members', True, True)
+    #app.add_config_value('numpydoc_show_class_members', True, True)
+    app.add_config_value('numpydoc_show_class_members', False, False)
 
     # Extra mangling domains
     app.add_domain(NumpyPythonDomain)
