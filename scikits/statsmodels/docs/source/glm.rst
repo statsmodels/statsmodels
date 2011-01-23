@@ -10,19 +10,19 @@ Generalized Linear Models
 Introduction
 ------------
 
-.. automodule:: scikits.statsmodels.glm
+.. automodule:: scikits.statsmodels.glm.glm
 
 
 Examples
 --------
     >>> import scikits.statsmodels.api as sm
-    >>> data = sm.datasets.scotland.Load()
+    >>> data = sm.datasets.scotland.load()
     >>> data.exog = sm.add_constant(data.exog)
 
     Instantiate a gamma family model with the default link function.
 
     >>> gamma_model = sm.GLM(data.endog, data.exog,
-            family=sm.families.Gamma())
+                             family=sm.families.Gamma())
     >>> gamma_results = gamma_model.fit()
 
 see also the `examples` and the `tests` folders
@@ -54,7 +54,7 @@ Families
 
 The distribution families currently implemented are
 
-.. currentmodule:: scikits.statsmodels.families.family
+.. currentmodule:: scikits.statsmodels.glm.families.family
 
 .. autosummary::
    :toctree: generated/
@@ -77,7 +77,7 @@ available link functions can be obtained by ::
 
 >>> sm.families.family.<familyname>.available ?
 
-.. currentmodule:: scikits.statsmodels.families.links
+.. currentmodule:: scikits.statsmodels.glm.families.links
 
 .. autosummary::
    :toctree: generated/
