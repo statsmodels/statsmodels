@@ -22,6 +22,10 @@ import matplotlib as mpl
 from scikits.statsmodels.decorators import cache_readonly
 from scikits.statsmodels.tools import chain_dot
 from scikits.statsmodels.iolib import SimpleTable
+from scikits.statsmodels.tsa.tsatools import vec, unvec
+import scikits.statsmodels.tsa.tsatools as tsa
+
+from .util import pprint_matrix
 
 mat = np.array
 
@@ -32,25 +36,6 @@ try:
 except ImportError:
     import pdb
     st = pdb.set_trace
-
-
-_default_table_fmt = dict(
-    empty_cell = '',
-    colsep='  ',
-    row_pre = '',
-    row_post = '',
-    table_dec_above='=',
-    table_dec_below='=',
-    header_dec_below='-',
-    header_fmt = '%s',
-    stub_fmt = '%s',
-    title_align='c',
-    header_align = 'r',
-    data_aligns = 'r',
-    stubs_align = 'l',
-    fmt = 'txt'
-)
-
 
 class MPLConfigurator(object):
 
@@ -70,105 +55,11 @@ class MPLConfigurator(object):
 
         self._inverse_actions.append(revert)
 
-def parse_data(path):
-    """
-    Parse data files from Lutkepohl (2005) book
-
-    Source for data files: www.jmulti.de
-    """
-
-    from collections import deque
-    from datetime import datetime
-    import pandas
-    import pandas.core.datetools as dt
-    import re
-
-    regex = re.compile('<(.*) (\w)([\d]+)>.*')
-    lines = deque(open(path))
-
-    to_skip = 0
-    while '*/' not in lines.popleft():
-        to_skip += 1
-
-    while True:
-        to_skip += 1
-        line = lines.popleft()
-        m = regex.match(line)
-        if m:
-            year, freq, start_point = m.groups()
-            break
-
-    data = np.genfromtxt(path, names=True, skip_header=to_skip+1)
-
-    n = len(data)
-
-    # generate the corresponding date range (using pandas for now)
-    start_point = int(start_point)
-    year = int(year)
-
-    offsets = {
-        'Q' : dt.BQuarterEnd(),
-        'M' : dt.BMonthEnd(),
-        'A' : dt.BYearEnd()
-    }
-
-    # create an instance
-    offset = offsets[freq]
-
-    inc = offset * (start_point - 1)
-    start_date = offset.rollforward(datetime(year, 1, 1)) + inc
-
-    offset = offsets[freq]
-    date_range = pandas.DateRange(start_date, offset=offset, periods=n)
-
-    return data, date_range
-
 #-------------------------------------------------------------------------------
 # Utilities
 
 def norm_signif_level(alpha=0.05):
     return stats.norm.ppf(1 - alpha / 2)
-
-def pprint_matrix(values, rlabels, clabels, col_space=None):
-    buf = StringIO()
-
-    T, K = len(rlabels), len(clabels)
-
-    if col_space is None:
-        min_space = 10
-        col_space = [max(len(str(c)) + 2, min_space) for c in clabels]
-    else:
-        col_space = (col_space,) * K
-
-    row_space = max([len(str(x)) for x in rlabels]) + 2
-
-    head = _pfixed('', row_space)
-
-    for j, h in enumerate(clabels):
-        head += _pfixed(h, col_space[j])
-
-    print >> buf, head
-
-    for i, rlab in enumerate(rlabels):
-        line = ('%s' % rlab).ljust(row_space)
-
-        for j in range(K):
-            line += _pfixed(values[i,j], col_space[j])
-
-        print >> buf, line
-
-    return buf.getvalue()
-
-def _pfixed(s, space, nanRep=None, float_format=None):
-    if isinstance(s, float):
-        if float_format:
-            formatted = float_format(s)
-        else:
-            formatted = "%#8.6F" % s
-
-        return formatted.rjust(space)
-    else:
-        return ('%s' % s)[:space].rjust(space)
 
 def get_logdet(m):
     from scikits.statsmodels.compatibility import np_slogdet
@@ -380,7 +271,7 @@ def _var_acf(coefs, sig_u):
     SigU[:k,:k] = sig_u
 
     # vec(ACF) = (I_(kp)^2 - kron(A, A))^-1 vec(Sigma_U)
-    vecACF = solve(np.eye((k*p)**2) - np.kron(A, A), vec(SigU))
+    vecACF = L.solve(np.eye((k*p)**2) - np.kron(A, A), vec(SigU))
 
     acf = unvec(vecACF)
     acf = acf[:k].T.reshape((p, k, k))
@@ -619,12 +510,12 @@ class VAR(object):
             12 * (nobs/100.)**(1./4), see select_order function
         method : {'ols'}
             Estimation method to use
-        ic : {'aic', 'fpe', 'hq', 'sc', None}
+        ic : {'aic', 'fpe', 'hq', 'sic', None}
             Information criterion to use for VAR order selection.
             aic : Akaike
             fpe : Final prediction error
             hq : Hannan-Quinn
-            sc : Schwarz
+            sic : Schwarz
         verbose : bool, default False
             Print order selection output to the screen
 
@@ -1137,7 +1028,7 @@ class VAREstimator(VARProcess):
         """
         Estimated covariance matrix of vech(sigma_u)
         """
-        D_K = duplication_matrix(self.k)
+        D_K = tsa.duplication_matrix(self.k)
         D_Kinv = npl.pinv(D_K)
 
         sigxsig = np.kron(self.sigma_u, self.sigma_u)
@@ -1425,7 +1316,7 @@ class VAREstimator(VARProcess):
         return {
             'aic' : self._aic(),
             'hq' : self._hqic(),
-            'sc' : self._sc(),
+            'sic' : self._sic(),
             'fpe' : self._log_fpe()
             }
 
@@ -1449,7 +1340,7 @@ class VAREstimator(VARProcess):
 
         return logdet + 2 * np.log(np.log(T)) * self.p * self.k ** 2 / T
 
-    def _sc(self):
+    def _sic(self):
         # Schwarz criterion
         logdet = np.log(self._logdet_sigma_mle())
         return logdet + (np.log(self.T) / self.T) * self.p * self.k ** 2
@@ -1790,8 +1681,8 @@ class IRAnalysis(BaseIRAnalysis):
     @cache_readonly
     def H(self):
         k = self.k
-        Lk = elimination_matrix(k)
-        Kkk = commutation_matrix(k, k)
+        Lk = tsa.elimination_matrix(k)
+        Kkk = tsa.commutation_matrix(k, k)
         Ik = np.eye(k)
 
         # B = chain_dot(Lk, np.eye(k**2) + commutation_matrix(k, k),
@@ -1903,235 +1794,11 @@ class FEVD(object):
         fig.legend(handles, labels, loc='upper right')
         _adjust_subplots(right=0.85)
 
-class VARSummary(object):
-    default_fmt = dict(
-        #data_fmts = ["%#12.6g","%#12.6g","%#10.4g","%#5.4g"],
-        #data_fmts = ["%#10.4g","%#10.4g","%#10.4g","%#6.4g"],
-        data_fmts = ["%#15.6F","%#15.6F","%#15.3F","%#14.3F"],
-        empty_cell = '',
-        #colwidths = 10,
-        colsep='  ',
-        row_pre = '',
-        row_post = '',
-        table_dec_above='=',
-        table_dec_below='=',
-        header_dec_below='-',
-        header_fmt = '%s',
-        stub_fmt = '%s',
-        title_align='c',
-        header_align = 'r',
-        data_aligns = 'r',
-        stubs_align = 'l',
-        fmt = 'txt'
-    )
-
-    part1_fmt = dict(default_fmt,
-        data_fmts = ["%s"],
-        colwidths = 15,
-        colsep=' ',
-        table_dec_below='',
-        header_dec_below=None,
-    )
-    part2_fmt = dict(default_fmt,
-        data_fmts = ["%#12.6g","%#12.6g","%#10.4g","%#5.4g"],
-        colwidths = None,
-        colsep='    ',
-        table_dec_above='-',
-        table_dec_below='-',
-        header_dec_below=None,
-    )
-
-    def __init__(self, estimator):
-        self.model = estimator
-        self.summary = self.make()
-
-    def __repr__(self):
-        return self.summary
-
-    def _lag_names(self):
-        lag_names = []
-
-        # take care of lagged endogenous names
-        for i in range(1, self.model.p+1):
-            for name in self.model.names:
-                lag_names.append('L'+str(i)+'.'+name)
-
-        # put them together
-        Xnames = lag_names
-
-        # handle the constant name
-        trendorder = 1 # self.trendorder
-        if trendorder != 0:
-            Xnames.insert(0, 'const')
-        if trendorder > 1:
-            Xnames.insert(0, 'trend')
-        if trendorder > 2:
-            Xnames.insert(0, 'trend**2')
-
-        return Xnames
-
-    def make(self, endog_names=None, exog_names=None):
-        """
-        Summary of VAR model
-        """
-        buf = StringIO()
-
-        print >> buf, self._header_table()
-        # print >> buf, self._stats_table()
-
-        print >> buf, self._coef_table()
-        print >> buf, self._resid_info()
-
-        return buf.getvalue()
-
-    def _header_table(self):
-        import time
-
-        model = self.model
-
-        t = time.localtime()
-        # ncoefs = len(model.beta) #TODO: change when we allow coef restrictions
-
-        # Header information
-        part1title = "Summary of Regression Results"
-        part1data = [[model._model_type],
-                     ["OLS"], #TODO: change when fit methods change
-                     [time.strftime("%a, %d, %b, %Y", t)],
-                     [time.strftime("%H:%M:%S", t)]]
-        part1header = None
-        part1stubs = ('Model:',
-                     'Method:',
-                     'Date:',
-                     'Time:')
-        part1 = SimpleTable(part1data, part1header, part1stubs,
-                            title=part1title, txt_fmt=self.part1_fmt)
-
-        return str(part1)
-
-    def _stats_table(self):
-        # TODO: do we want individual statistics or should users just
-        # use results if wanted?
-        # Handle overall fit statistics
-        part2Lstubs = ('No. of Equations:',
-                       'Nobs:',
-                       'Log likelihood:',
-                       'AIC:')
-        part2Rstubs = ('BIC:',
-                       'HQIC:',
-                       'FPE:',
-                       'Det(Omega_mle):')
-        part2Ldata = [[self.neqs],[self.nobs],[self.llf],[self.aic]]
-        part2Rdata = [[self.bic],[self.hqic],[self.fpe],[self.detomega]]
-        part2Lheader = None
-        part2L = SimpleTable(part2Ldata, part2Lheader, part2Lstubs,
-                             txt_fmt = self.part2_fmt)
-        part2R = SimpleTable(part2Rdata, part2Lheader, part2Rstubs,
-                             txt_fmt = self.part2_fmt)
-        part2L.extend_right(part2R)
-
-        return str(part2L)
-
-    def _coef_table(self):
-        model = self.model
-        k = model.k
-
-        Xnames = self._lag_names()
-
-        data = zip(model.beta.ravel(),
-                   model.stderr.ravel(),
-                   model.t().ravel(),
-                   model.pvalues.ravel())
-
-        header = ('coefficient','std. error','t-stat','prob')
-
-        buf = StringIO()
-        dim = k * model.p + 1
-        for i in range(k):
-            section = "Results for equation %s" % model.names[i]
-            print >> buf, section
-
-            table = SimpleTable(data[dim * i : dim * (i + 1)], header,
-                                Xnames, title=None, txt_fmt = self.default_fmt)
-
-            print >> buf, str(table)
-
-            if i < k - 1: buf.write('\n')
-
-        return buf.getvalue()
-
-    def _resid_info(self):
-        buf = StringIO()
-        names = self.model.names
-
-        resid_cov = np.cov(self.model.resid, rowvar=0)
-        rdiag = np.sqrt(np.diag(resid_cov))
-        resid_corr = resid_cov / np.outer(rdiag, rdiag)
-
-        print >> buf, "Correlation matrix of residuals"
-        print >> buf, pprint_matrix(resid_corr, names, names)
-
-        return buf.getvalue()
-
 #-------------------------------------------------------------------------------
 
-def foo():
-
-    a1 = [[.7, .1, 0],
-          [0, .4, .1],
-          [.9, 0, .8]]
-    a2 = [[-.2, 0, 0],
-          [0, .1, .1],
-          [0, 0, 0]]
-
-    a3 = [[-.2, 0, 0],
-          [0, .1, .1],
-          [0, 0, 0]]
-
-    coefs = mat([a1, a2])
-
-    nu = mat([2, 1, 0])
-
-    P = mat([[.5, .1, 0],
-             [0, .3, 0],
-             [0, 0, .9]])
-    sig_u = np.dot(P, P.T)
-
-    m = VAR(nu, coefs, sig_u)
-
-    y_2000 = mat([.7, 1.0, 1.5])
-    y_1999 = mat([1.0, 1.5, 3.0])
-    yprior = mat([y_1999, y_2000])
-
-    forc = m.forecast(yprior, 10)
-
-    m.plotforc(yprior, 10)
-
-    coefs2 = mat([[[.5, 0, 0],
-               [.1, .1, .3],
-               [0, .2, .3]]])
-
-    sig_u2 = mat([[2.25, 0, 0],
-                  [0, 1, .5],
-                  [0, .5, .74]])
-
-    m2 = VAR(nu, coefs2, sig_u2)
-
-    coefs3 = mat([[[.5, .1],
-                [.4, .5]],
-               [[0, 0],
-                [.25, 0]]])
-
-    sig_u3 = mat([[0.09, 0],
-                  [0, 0.04]])
-
-    m3 = VAR(mat([1, 1]), coefs3, sig_u3)
-
-    acf = var_acf(coefs, sig_u, nlags=10)
-    acf3 = var_acf(coefs3, sig_u3, nlags=10)
-
-    plt.show()
-
 if __name__ == '__main__':
+    from scikits.statsmodels.tsa.var.util import parse_data
+
     path = 'scikits/statsmodels/sandbox/tsa/data/%s.dat'
     sdata, dates = parse_data(path % 'e1')
 
@@ -2146,7 +1813,7 @@ if __name__ == '__main__':
 
     y = est.y[-2:]
 
-    from scikits.statsmodels.tsa.var import VAR2
+    from scikits.statsmodels.tsa.var.alt import VAR2
 
     est2 = VAR2(adj_data[:-16])
     res2 = est2.fit(maxlag=2)

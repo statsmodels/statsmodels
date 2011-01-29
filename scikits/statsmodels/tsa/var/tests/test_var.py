@@ -3,7 +3,7 @@ Test VAR Model
 """
 
 import scikits.statsmodels.api as sm
-from scikits.statsmodels.tsa.var import VAR2
+from scikits.statsmodels.tsa.var.alt import VAR2
 from numpy.testing import assert_almost_equal, assert_equal
 from numpy import diff,log
 
