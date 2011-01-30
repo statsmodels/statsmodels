@@ -4,6 +4,8 @@ Test VAR Model
 
 import scikits.statsmodels.api as sm
 from scikits.statsmodels.tsa.var.alt import VAR2
+from scikits.statsmodels.tsa.var.model import VAR
+
 from numpy.testing import assert_almost_equal, assert_equal
 from numpy import diff,log
 
@@ -14,6 +16,7 @@ DECIMAL_3 = 3
 DECIMAL_2 = 2
 
 class CheckVAR(object):
+
     def test_params(self):
         assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_3)
 
@@ -64,13 +67,61 @@ class CheckVAR(object):
         assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL_4)
 
 
-class TestVAR(CheckVAR):
+class TestVARAlt(CheckVAR):
     def __init__(self):
-        data = sm.datasets.macrodata.load()
-        data = data.data[['realinv','realgdp','realcons']].view((float,3))
-        data = diff(log(data),axis=0)
-        self.res1 = VAR2(endog=data).fit(maxlag=2)
+        self.res1 = VAR2(endog=get_macrodata()).fit(maxlag=2)
         from results import results_var
         self.res2 = results_var.MacrodataResults()
+
+def get_macrodata():
+    data = sm.datasets.macrodata.load()
+    data = data.data[['realinv','realgdp','realcons']].view((float,3))
+    data = diff(log(data),axis=0)
+    return data
+
+class TestIRF(object):
+
+    def test_plots(self):
+        pass
+
+
+class TestVARNew(CheckVAR):
+    def __init__(self):
+        self.res1 = VAR(endog=get_macrodata()).fit(maxlags=2)
+        from results import results_var
+        self.res2 = results_var.MacrodataResults()
+
+    def test_params(self):
+        assert_almost_equal(self.res1.params.T, self.res2.params, DECIMAL_3)
+
+    def test_neqs(self):
+        assert_equal(self.res1.neqs, self.res2.neqs)
+
+    def test_nobs(self):
+        assert_equal(self.res1.avobs, self.res2.nobs)
+
+    def test_df_eq(self):
+        assert_equal(self.res1.df_eq, self.res2.df_eq)
+
+    def test_aic(self):
+        assert_almost_equal(self.res1.aic, self.res2.aic)
+
+    def test_bic(self):
+        assert_almost_equal(self.res1.bic, self.res2.bic)
+
+    def test_hqic(self):
+        assert_almost_equal(self.res1.hqic, self.res2.hqic)
+
+    def test_fpe(self):
+        assert_almost_equal(self.res1.fpe, self.res2.fpe)
+
+    def test_detsig(self):
+        assert_almost_equal(self.res1.detomega, self.res2.detsig)
+
+    def test_bse(self):
+        assert_almost_equal(self.res1.bse.T, self.res2.bse, DECIMAL_4)
+
+    def test_info_crit(self):
+        pass
 
 

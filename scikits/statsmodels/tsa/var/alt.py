@@ -5,7 +5,7 @@ import numpy as np
 
 from scikits.statsmodels.regression.linear_model import GLS
 from scikits.statsmodels.tools.tools import chain_dot
-from tsatools import add_trend
+from scikits.statsmodels.tsa.tsatools import add_trend
 from scikits.statsmodels.base.model import LikelihoodModel
 from scikits.statsmodels.tools.decorators import cache_readonly
 from scikits.statsmodels.tools.compatibility import np_slogdet

@@ -1,6 +1,10 @@
 from cStringIO import StringIO
 import numpy as np
 
+from scikits.statsmodels.iolib import SimpleTable
+
+mat = np.array
+
 _default_table_fmt = dict(
     empty_cell = '',
     colsep='  ',
@@ -186,3 +190,97 @@ class VARSummary(object):
         print >> buf, pprint_matrix(resid_corr, names, names)
 
         return buf.getvalue()
+
+def causality_summary(results, variables, equation, signif, kind):
+    fmt = dict(_default_table_fmt,
+               data_fmts=["%#15.6F","%#15.6F","%#15.3F", "%s"])
+
+    buf = StringIO()
+    table = SimpleTable([[results['test_stat'],
+                          results['crit_value'],
+                          results['pvalue'],
+                          str(results['df'])]],
+                        ['Test statistic', 'Critical Value', 'p-value',
+                         'df'], [''], title=None, txt_fmt=fmt)
+
+    print >> buf, "Granger causality %s-test" % kind
+    print >> buf, table
+
+    print >> buf, 'H_0: %s do not Granger-cause %s' % (variables, equation)
+
+    buf.write("Conclusion: %s H_0" % results['conclusion'])
+    buf.write(" at %.2f%% significance level" % (results['signif'] * 100))
+
+    print buf.getvalue()
+
+
+def print_ic_table(ics, selected_orders):
+    """
+    For VAR order selection
+
+    """
+    # Can factor this out into a utility method if so desired
+
+    cols = sorted(ics)
+
+    data = mat([["%#10.4F" % v for v in ics[c]] for c in cols],
+               dtype=object).T
+
+    # start minimums
+    for i, col in enumerate(cols):
+        idx = int(selected_orders[col]), i
+        data[idx] = data[idx] + '*'
+        # data[idx] = data[idx][:-1] + '*' # super hack, ugh
+
+    fmt = dict(_default_table_fmt,
+               data_fmts=("%s",) * len(cols))
+
+    buf = StringIO()
+    table = SimpleTable(data, cols, range(len(data)),
+                        title='VAR Order Selection', txt_fmt=fmt)
+    print >> buf, table
+    print >> buf, '* Minimum'
+
+    print buf.getvalue()
+
+
+def pprint_matrix(values, rlabels, clabels, col_space=None):
+    buf = StringIO()
+
+    T, K = len(rlabels), len(clabels)
+
+    if col_space is None:
+        min_space = 10
+        col_space = [max(len(str(c)) + 2, min_space) for c in clabels]
+    else:
+        col_space = (col_space,) * K
+
+    row_space = max([len(str(x)) for x in rlabels]) + 2
+
+    head = _pfixed('', row_space)
+
+    for j, h in enumerate(clabels):
+        head += _pfixed(h, col_space[j])
+
+    print >> buf, head
+
+    for i, rlab in enumerate(rlabels):
+        line = ('%s' % rlab).ljust(row_space)
+
+        for j in range(K):
+            line += _pfixed(values[i,j], col_space[j])
+
+        print >> buf, line
+
+    return buf.getvalue()
+
+def _pfixed(s, space, nanRep=None, float_format=None):
+    if isinstance(s, float):
+        if float_format:
+            formatted = float_format(s)
+        else:
+            formatted = "%#8.6F" % s
+
+        return formatted.rjust(space)
+    else:
+        return ('%s' % s)[:space].rjust(space)

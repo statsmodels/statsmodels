@@ -1,6 +1,41 @@
-from cStringIO import StringIO
+"""
+Miscellaneous utility code for VAR estimation
+"""
 
 import numpy as np
+import scipy.stats as stats
+
+def interpret_data(data, names):
+    """
+    Convert passed data structure to form required by VAR estimation classes
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+
+    """
+    if isinstance(data, np.ndarray):
+        provided_names = data.dtype.names
+
+        # structured array type
+        if provided_names:
+            if names is None:
+                names = provided_names
+            else:
+                assert(len(names) == len(provided_names))
+
+            Y = struct_to_ndarray(data)
+        else:
+            Y = data
+    else:
+        raise Exception('cannot handle other input types at the moment')
+
+    return Y, names
+
+def struct_to_ndarray(arr):
+    return arr.view((float, len(arr.dtype.names)))
 
 def parse_data(path):
     """
@@ -56,43 +91,48 @@ def parse_data(path):
     return data, date_range
 
 
-def pprint_matrix(values, rlabels, clabels, col_space=None):
-    buf = StringIO()
+def comp_matrix(coefs):
+    """
+    Return compansion matrix for the VAR(1) representation for a VAR(p) process
+    (companion form)
 
-    T, K = len(rlabels), len(clabels)
+    A = [A_1 A_2 ... A_p-1 A_p
+         I_K 0       0     0
+         0   I_K ... 0     0
+         0 ...       I_K   0]
+    """
+    p, k, k2 = coefs.shape
+    assert(k == k2)
 
-    if col_space is None:
-        min_space = 10
-        col_space = [max(len(str(c)) + 2, min_space) for c in clabels]
+    kp = k * p
+
+    result = np.zeros((kp, kp))
+    result[:k] = np.concatenate(coefs, axis=1)
+
+    # Set I_K matrices
+    if p > 1:
+        result[np.arange(k, kp), np.arange(kp-k)] = 1
+
+    return result
+
+def get_logdet(m):
+    from scikits.statsmodels.compatibility import np_slogdet
+    logdet = np_slogdet(m)
+
+    if logdet[0] == -1:
+        raise ValueError("Matrix is not positive definite")
+    elif logdet[0] == 0:
+        raise ValueError("Matrix is singluar")
     else:
-        col_space = (col_space,) * K
+        logdet = logdet[1]
 
-    row_space = max([len(str(x)) for x in rlabels]) + 2
+    return logdet
 
-    head = _pfixed('', row_space)
+def norm_signif_level(alpha=0.05):
+    return stats.norm.ppf(1 - alpha / 2)
 
-    for j, h in enumerate(clabels):
-        head += _pfixed(h, col_space[j])
 
-    print >> buf, head
-
-    for i, rlab in enumerate(rlabels):
-        line = ('%s' % rlab).ljust(row_space)
-
-        for j in range(K):
-            line += _pfixed(values[i,j], col_space[j])
-
-        print >> buf, line
-
-    return buf.getvalue()
-
-def _pfixed(s, space, nanRep=None, float_format=None):
-    if isinstance(s, float):
-        if float_format:
-            formatted = float_format(s)
-        else:
-            formatted = "%#8.6F" % s
-
-        return formatted.rjust(space)
-    else:
-        return ('%s' % s)[:space].rjust(space)
+def acf_to_acorr(acf):
+    diag = np.diag(acf[0])
+    # numpy broadcasting sufficient
+    return acf / np.sqrt(np.outer(diag, diag))
