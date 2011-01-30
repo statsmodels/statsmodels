@@ -26,7 +26,7 @@ class BaseIRAnalysis(object):
     def __init__(self, model, P=None, periods=10):
         self.model = model
         self.periods = periods
-        self.k, self.lags, self.T  = model.k, model.p, model.T
+        self.neqs, self.lags, self.T  = model.neqs, model.p, model.T
 
         if P is None:
             P = model._chol_sigma_u
@@ -149,7 +149,7 @@ class IRAnalysis(BaseIRAnalysis):
             return self._orth_cov()
 
         covs = self._empty_covm(self.periods + 1)
-        covs[0] = np.zeros((self.k ** 2, self.k ** 2))
+        covs[0] = np.zeros((self.neqs ** 2, self.neqs ** 2))
         for i in range(1, self.periods + 1):
             Gi = self.G[i - 1]
             covs[i] = chain_dot(Gi, self.cov_a, Gi.T)
@@ -167,7 +167,7 @@ class IRAnalysis(BaseIRAnalysis):
         -------
 
         """
-        Ik = np.eye(self.k)
+        Ik = np.eye(self.neqs)
         PIk = np.kron(self.P.T, Ik)
         H = self.H
 
@@ -202,7 +202,7 @@ class IRAnalysis(BaseIRAnalysis):
         -------
 
         """
-        Ik = np.eye(self.k)
+        Ik = np.eye(self.neqs)
         PIk = np.kron(self.P.T, Ik)
 
         F = 0.
@@ -224,7 +224,7 @@ class IRAnalysis(BaseIRAnalysis):
                 covs[i] = apiece + bpiece
             else:
                 if i == 0:
-                    covs[i] = np.zeros((self.k**2, self.k**2))
+                    covs[i] = np.zeros((self.neqs**2, self.neqs**2))
                     continue
 
                 covs[i] = chain_dot(F, self.cov_a, F.T)
@@ -242,8 +242,8 @@ class IRAnalysis(BaseIRAnalysis):
         Finfty = np.kron(np.tile(lre.T, self.lags), lre)
 
         if orth:
-            Binf = np.dot(np.kron(self.P.T, np.eye(self.k)), Finfty)
-            Binfbar = np.dot(np.kron(np.eye(self.k), self.lr_effects), self.H)
+            Binf = np.dot(np.kron(self.P.T, np.eye(self.neqs)), Finfty)
+            Binfbar = np.dot(np.kron(np.eye(self.neqs), self.lr_effects), self.H)
 
             return (chain_dot(Binf, self.cov_a, Binf.T) +
                     chain_dot(Binfbar, self.cov_a, Binfbar.T))
@@ -251,7 +251,7 @@ class IRAnalysis(BaseIRAnalysis):
             return chain_dot(Finfty, self.cov_a, Finfty.T)
 
     def _empty_covm(self, periods):
-        return np.zeros((periods, self.k ** 2, self.k ** 2),
+        return np.zeros((periods, self.neqs ** 2, self.neqs ** 2),
                         dtype=float)
 
     @cache_readonly
@@ -265,7 +265,7 @@ class IRAnalysis(BaseIRAnalysis):
                 if idx in self._g_memo:
                     apow = self._g_memo[idx]
                 else:
-                    apow = npl.matrix_power(self._A.T, idx)[:self.k]
+                    apow = npl.matrix_power(self._A.T, idx)[:self.neqs]
 
                     self._g_memo[idx] = apow
 
@@ -279,7 +279,7 @@ class IRAnalysis(BaseIRAnalysis):
 
     @cache_readonly
     def H(self):
-        k = self.k
+        k = self.neqs
         Lk = tsa.elimination_matrix(k)
         Kkk = tsa.commutation_matrix(k, k)
         Ik = np.eye(k)

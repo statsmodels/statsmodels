@@ -1,12 +1,9 @@
 library(vars)
 
-# German income/investment/consumption data used in Lutkepohl (2005)
-## data <- read.table('data/e1.dat', skip=7,
-##                   col.names=c('invest', 'income', 'cons'))
-
-data <- read.csv('scikits/statsmodels/datasets/macrodata/macrodata.csv')
+data <- read.csv('/home/wesm/code/statsmodels/scikits/statsmodels/datasets/macrodata/macrodata.csv')
 names <- colnames(data)
-data <- data[c('realgdp', 'realcons', 'realinv')]
+data <- log(data[c('realgdp', 'realcons', 'realinv')])
+data <- sapply(data, diff)
 
 reorder.coefs <- function(coefs) {
  n <- dim(coefs)[1]
@@ -30,14 +27,25 @@ get.results <- function(data, p=1) {
   sel <- VARselect(data)
   est <- VAR(data, p=p)
 
+  nirfs <- 5
+  orth.irf <- irf(est, n.ahead=nirfs, boot=F)$irf
+  irf <- irf(est, n.ahead=nirfs, boot=F, orth=F)$irf
+
+  crit <- t(sel$criteria)
+  colnames(crit) <- c('aic', 'hqic', 'sic', 'fpe')
+
   list(coefs=get.coefs(est),
        stderr=get.stderr(est),
        obs=est$obs,
        totobs=est$totobs,
        type=est$type,
-       crit=t(sel$criteria))
+       crit=crit,
+       nirfs=nirfs,
+       orthirf=orth.irf,
+       irf=irf)
 }
 
 k <- dim(data)[2]
-result <- get.results(data)
+result <- get.results(data, p=2)
 
+est = VAR(data, p=2)

@@ -398,7 +398,7 @@ class VARProcess(object):
 
     def __str__(self):
         output = ('VAR(%d) process for %d-dimensional response y_t'
-                  % (self.p, self.k))
+                  % (self.p, self.neqs))
         output += '\nstable: %s' % self.is_stable()
         output += '\nmean: %s' % self.mean()
 
@@ -487,7 +487,7 @@ class VARProcess(object):
 
     @cache_readonly
     def _char_mat(self):
-        return np.eye(self.k) - self.coefs.sum(0)
+        return np.eye(self.neqs) - self.coefs.sum(0)
 
     def acf(self, nlags=None):
         return var_acf(self.coefs, self.sigma_u, nlags=nlags)
@@ -539,7 +539,7 @@ class VARProcess(object):
         covs = self.forecast_cov(steps)
 
         # Take diagonal for each cov
-        inds = np.arange(self.k)
+        inds = np.arange(self.neqs)
         return covs[:, inds, inds]
 
     def forecast_interval(self, y, steps, alpha=0.05):
@@ -602,7 +602,7 @@ class KnownVARProcess(VARProcess):
     """
     def __init__(self, intercept, coefs, sigma_u):
         self.p = len(coefs)
-        self.k = len(coefs[0])
+        self.neqs = len(coefs[0])
 
         self.intercept = intercept
         self.coefs = coefs
@@ -643,7 +643,7 @@ class VAREstimator(VARProcess):
     def __init__(self, data, p=1, names=None, dates=None):
         self.p = p
         self.y, self.names = util.interpret_data(data, names)
-        self.nobs, self.k = self.y.shape
+        self.nobs, self.neqs = self.y.shape
 
         # TODO: fix this to be something real
         self.trendorder = 1
@@ -670,7 +670,7 @@ class VAREstimator(VARProcess):
         """
         Number of estimated parameters, including the intercept / trends
         """
-        return self.k * self.p + self.trendorder
+        return self.neqs * self.p + self.trendorder
 
     @property
     def df_resid(self):
@@ -678,7 +678,7 @@ class VAREstimator(VARProcess):
 
     def __str__(self):
         output = ('VAR(%d) process for %d-dimensional response y_t'
-                  % (self.p, self.k))
+                  % (self.p, self.neqs))
         output += '\nstable: %s' % self.is_stable()
         output += '\nmean: %s' % self.mean()
 
@@ -691,13 +691,55 @@ class VAREstimator(VARProcess):
 
         pass
 
+    def loglike(self, params, omega):
+        r"""
+        Returns the value of the VAR(p) log-likelihood.
+
+        Parameters
+        ----------
+        params : array-like
+            The parameter estimates
+        omega : ndarray
+            Sigma hat matrix.  Each element i,j is the average product of the
+            OLS residual for variable i and the OLS residual for variable j or
+            np.dot(resid.T,resid)/avobs.  There should be no correction for the
+            degrees of freedom.
+
+
+        Returns
+        -------
+        loglike : float
+            The value of the loglikelihood function for a VAR(p) model
+
+        Notes
+        -----
+        The loglikelihood function for the VAR(p) is
+
+        .. math::
+
+            -\left(\frac{T}{2}\right)
+            \left(\ln\left|\Omega\right|-K\ln\left(2\pi\right)-K\right)
+        """
+        params = np.asarray(params)
+        omega = np.asarray(omega)
+        logdet = np_slogdet(omega)
+        if logdet[0] == -1:
+            raise ValueError("Omega matrix is not positive definite")
+        elif logdet[0] == 0:
+            raise ValueError("Omega matrix is singluar")
+        else:
+            logdet = logdet[1]
+        avobs = self.avobs
+        neqs = self.neqs
+        return -(avobs/2.)*(neqs*np.log(2*np.pi)+logdet+neqs)
+
 #-------------------------------------------------------------------------------
 # VARProcess interface
 
     @cache_readonly
     def coefs(self):
         # Each matrix needs to be transposed
-        reshaped = self.params[1:].reshape((self.p, self.k, self.k))
+        reshaped = self.params[1:].reshape((self.p, self.neqs, self.neqs))
 
         # Need to transpose each coefficient matrix
         return reshaped.swapaxes(1, 2).copy()
@@ -713,6 +755,10 @@ class VAREstimator(VARProcess):
     @cache_readonly
     def sigma_u(self):
         return self._est_sigma_u()
+
+    @cache_readonly
+    def sigma_u_mle(self):
+        return self.sigma_u * self.df_resid / self.T
 
     @cache_readonly
     def resid(self):
@@ -787,7 +833,7 @@ class VAREstimator(VARProcess):
         return np.dot(self.resid.T, self.resid) / self.df_resid
 
     def _est_var_ybar(self):
-        Ainv = L.inv(np.eye(self.k) - self.coefs.sum(0))
+        Ainv = L.inv(np.eye(self.neqs) - self.coefs.sum(0))
         return chain_dot(Ainv, self.sigma_u, Ainv.T)
 
     def _t_mean(self):
@@ -799,14 +845,14 @@ class VAREstimator(VARProcess):
         Estimated covariance matrix of model coefficients ex intercept
         """
         # drop intercept
-        return self.cov_beta[self.k:, self.k:]
+        return self.cov_beta[self.neqs:, self.neqs:]
 
     @cache_readonly
     def _cov_sigma(self):
         """
         Estimated covariance matrix of vech(sigma_u)
         """
-        D_K = tsa.duplication_matrix(self.k)
+        D_K = tsa.duplication_matrix(self.neqs)
         D_Kinv = npl.pinv(D_K)
 
         sigxsig = np.kron(self.sigma_u, self.sigma_u)
@@ -837,7 +883,7 @@ class VAREstimator(VARProcess):
         Standard errors of coefficients, reshaped to match in size
         """
         stderr = np.sqrt(np.diag(self.cov_beta))
-        return stderr.reshape((self.df_model, self.k), order='C')
+        return stderr.reshape((self.df_model, self.neqs), order='C')
 
     bse = stderr  # statsmodels interface?
 
@@ -919,7 +965,7 @@ class VAREstimator(VARProcess):
         phis = self.ma_rep(steps)
         sig_u = self.sigma_u
 
-        omegas = np.zeros((steps, self.k, self.k))
+        omegas = np.zeros((steps, self.neqs, self.neqs))
         for h in range(1, steps + 1):
             if h == 1:
                 omegas[h-1] = self.df_model * self.sigma_u
@@ -940,10 +986,10 @@ class VAREstimator(VARProcess):
         upper = np.zeros((1, self.df_model))
         upper[0,0] = 1
 
-        lower_dim = self.k * (self.p - 1)
+        lower_dim = self.neqs * (self.p - 1)
         I = np.eye(lower_dim)
         lower = np.column_stack((np.zeros((lower_dim, 1)), I,
-                                 np.zeros((lower_dim, self.k))))
+                                 np.zeros((lower_dim, self.neqs))))
 
         return np.vstack((upper, self.params.T, lower))
 
@@ -1009,7 +1055,7 @@ class VAREstimator(VARProcess):
         -------
         results : dict
         """
-        k, p = self.k, self.p
+        k, p = self.neqs, self.p
 
         # number of restrictions
         N = len(variables) * self.p
@@ -1101,12 +1147,11 @@ class VAREstimator(VARProcess):
     def info_criteria(self):
         # information criteria for order selection
         nobs = self.T
-        neqs = self.k
+        neqs = self.neqs
         free_params = self.df_model * neqs
         lag_order = self.p
 
-        sigma_mle = self.sigma_u * self.df_resid / nobs
-        ld = np.log(sigma_mle)
+        ld = np.log(self.sigma_u_mle)
 
         aic = ld + (2. * lag_order / nobs) * free_params
         bic = ld + (np.log(nobs) / nobs) * (lag_order * free_params)
@@ -1130,7 +1175,7 @@ class FEVD(object):
         self.periods = periods
 
         self.model = model
-        self.k = model.k
+        self.neqs = model.neqs
         self.names = model.names
 
         self.irfobj = model.irf(var_decomp=P, periods=periods)
@@ -1139,7 +1184,7 @@ class FEVD(object):
         # cumulative impulse responses
         irfs = (self.orth_irfs[:periods] ** 2).cumsum(axis=0)
 
-        rng = range(self.k)
+        rng = range(self.neqs)
         mse = self.model.mse(periods)[:, rng, rng]
 
         # lag x equation x component
@@ -1155,7 +1200,7 @@ class FEVD(object):
         buf = StringIO()
 
         rng = range(self.periods)
-        for i in range(self.k):
+        for i in range(self.neqs):
             ppm = output.pprint_matrix(self.decomp[i], rng, self.names)
 
             print >> buf, 'FEVD for %s' % self.names[i]
@@ -1183,7 +1228,7 @@ class FEVD(object):
         """
         import matplotlib.pyplot as plt
 
-        k = self.k
+        k = self.neqs
         periods = periods or self.periods
 
         fig, axes = plt.subplots(nrows=k, figsize=(10,10))
@@ -1221,8 +1266,11 @@ class FEVD(object):
 #-------------------------------------------------------------------------------
 
 if __name__ == '__main__':
-    from scikits.statsmodels.tsa.var.util import parse_data
     from scikits.statsmodels.tsa.var.alt import VAR2
+    import scikits.statsmodels.api as sm
+
+    """
+    from scikits.statsmodels.tsa.var.util import parse_data
 
     path = 'scikits/statsmodels/tsa/var/data/%s.dat'
     sdata, dates = parse_data(path % 'e1')
@@ -1238,21 +1286,24 @@ if __name__ == '__main__':
 
     y = est.y[-2:]
 
-    from scikits.statsmodels.tsa.var.alt import VAR2
-
     est2 = VAR2(adj_data[:-16])
     res2 = est2.fit(maxlag=2)
-
+    """
     # irf.plot_irf()
 
     # i = 2; j = 1
     # cv = irf.cum_effect_cov(orth=True)
     # print np.sqrt(cv[:, j * 3 + i, j * 3 + i]) / 1e-2
 
-    data = np.genfromtxt('Canada.csv', delimiter=',', names=True)
+    # data = np.genfromtxt('Canada.csv', delimiter=',', names=True)
+    # data = data.view((float, 4))
+
+    mdata = sm.datasets.macrodata.load().data
+    data = mdata[['realinv','realgdp','realcons']].view((float,3))
+    data = np.diff(np.log(data), axis=0)
 
     model = VAR(data)
-    model2 = VAR2(data.view((float, 4)))
+    model2 = VAR2(data)
 
     est = model.fit(maxlags=2)
     est2 = model2.fit(maxlag=2)
