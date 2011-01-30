@@ -1115,6 +1115,31 @@ class VAREstimator(VARProcess):
     def test_normality(self):
         pass
 
+    @cache_readonly
+    def info_criteria(self):
+        # information criteria for order selection
+        nobs = self.T
+        neqs = self.neqs
+        lag_order = self.p
+        free_params = lag_order * neqs ** 2 + neqs * self.trendorder
+
+        ld = np.log(L.det(self.sigma_u_mle))
+
+        st()
+
+        aic = ld + (2. / nobs) * free_params
+        bic = ld + (np.log(nobs) / nobs) * (lag_order * free_params)
+        hqic = ld + 2. * np.log(np.log(nobs)) * lag_order * free_params / nobs
+        fpe = ((nobs + self.df_model) / self.df_resid) ** neqs * ld
+
+        return {
+            'aic' : aic,
+            'bic' : bic,
+            'hq' : hqic,
+            'sic' : bic,
+            'fpe' : fpe
+            }
+
     @property
     def aic(self):
         # Akaike information criterion
@@ -1142,29 +1167,6 @@ class VAREstimator(VARProcess):
     def sic(self):
         # Schwarz criterion a.k.a. Bayesian i.c.
         return self.info_criteria['sic']
-
-    @cache_readonly
-    def info_criteria(self):
-        # information criteria for order selection
-        nobs = self.T
-        neqs = self.neqs
-        free_params = self.df_model * neqs
-        lag_order = self.p
-
-        ld = np.log(self.sigma_u_mle)
-
-        aic = ld + (2. * lag_order / nobs) * free_params
-        bic = ld + (np.log(nobs) / nobs) * (lag_order * free_params)
-        hqic = ld + 2 * np.log(np.log(nobs)) * lag_order * free_params / nobs
-        fpe = ((nobs + self.df_model) / self.df_resid) ** neqs * ld
-
-        return {
-            'aic' : aic,
-            'bic' : bic,
-            'hq' : hqic,
-            'sic' : bic,
-            'fpe' : fpe
-            }
 
 class FEVD(object):
     """

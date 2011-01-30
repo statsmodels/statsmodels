@@ -89,6 +89,15 @@ class TestIRF(object):
     def test_plots(self):
         pass
 
+def generate_var():
+    from rpy2.robjects import r
+    import pandas.rpy.common as prp
+    r.source('tests/var.R')
+    return prp.convert_robj(r['result'], use_pandas=False)
+
+def write_generate_var():
+    result = generate_var()
+    np.savez('tests/results/vars_results.npz', **result)
 
 class RResults(object):
     """
@@ -98,7 +107,9 @@ class RResults(object):
     def __init__(self):
         data = np.load(resultspath + 'vars_results.npz')
 
-        self.params = data['coefs']
+        names = data['coefs'].dtype.names
+        self.params = data['coefs'].view((float, len(names)))
+        self.stderr = data['stderr'].view((float, len(names)))
 
         self.irf = data['irf']
         self.orth_irf = data['orthirf']
@@ -107,14 +118,16 @@ class RResults(object):
         self.nobs = int(data['obs'][0])
         self.totobs = int(data['totobs'][0])
 
-        self.info_criteria = data['crit']
+        self.aic = data['crit']['aic'][0]
+        self.sic = data['crit']['sic'][0]
+        self.hqic = data['crit']['hqic'][0]
+        self.fpe = data['crit']['fpe'][0]
 
-
-class TestVARNew(CheckVAR):
+class TestVAR(object):
     def __init__(self):
-        self.res1 = VAR(endog=get_macrodata()).fit(maxlags=2)
-        from results import results_var
-        self.res2 = results_var.MacrodataResults()
+        self.p = 2
+        self.res = VAR(endog=get_macrodata()).fit(maxlags=self.p)
+        self.ref = RResults()
 
     def test_params(self):
         assert_almost_equal(self.res1.params.T, self.res2.params, DECIMAL_3)
@@ -132,16 +145,16 @@ class TestVARNew(CheckVAR):
         assert_equal(self.res1.df_eq, self.res2.df_eq)
 
     def test_aic(self):
-        assert_almost_equal(self.res1.aic, self.res2.aic)
+        assert_almost_equal(self.res.aic, self.ref.aic)
 
     def test_bic(self):
-        assert_almost_equal(self.res1.bic, self.res2.bic)
+        assert_almost_equal(self.res.bic, self.ref.bic)
 
     def test_hqic(self):
-        assert_almost_equal(self.res1.hqic, self.res2.hqic)
+        assert_almost_equal(self.res.hqic, self.ref.hqic)
 
     def test_fpe(self):
-        assert_almost_equal(self.res1.fpe, self.res2.fpe)
+        assert_almost_equal(self.res.fpe, self.ref.fpe)
 
     def test_detsig(self):
         assert_almost_equal(self.res1.detomega, self.res2.detsig)
@@ -153,3 +166,7 @@ class TestVARNew(CheckVAR):
         pass
 
 
+if __name__ == '__main__':
+    import nose
+    nose.runmodule(argv=[__file__,'-vvs','-x','--pdb', '--pdb-failure'],
+                   exit=False)

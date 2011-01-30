@@ -16,7 +16,7 @@ extract.mat <- function(lst, i) {
 }
 
 get.coefs <- function(est) {
-  t(reorder.coefs(extract.mat(coef(est), 1)))
+  reorder.coefs(extract.mat(coef(est), 1))
 }
 
 get.stderr <- function(est) {
@@ -24,7 +24,8 @@ get.stderr <- function(est) {
 }
 
 get.results <- function(data, p=1) {
-  sel <- VARselect(data)
+  sel <- VARselect(data, p) # do at most p
+
   est <- VAR(data, p=p)
 
   nirfs <- 5
@@ -39,7 +40,7 @@ get.results <- function(data, p=1) {
        obs=est$obs,
        totobs=est$totobs,
        type=est$type,
-       crit=crit,
+       crit=as.list(crit[p,]),
        nirfs=nirfs,
        orthirf=orth.irf,
        irf=irf)
