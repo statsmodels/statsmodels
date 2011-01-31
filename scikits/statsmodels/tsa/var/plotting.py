@@ -1,6 +1,26 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import scikits.statsmodels.tsa.var.util as util
+
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+
+class MPLConfigurator(object):
+
+    def __init__(self):
+        self._inverse_actions = []
+
+    def revert(self):
+        for action in self._inverse_actions:
+            action()
+
+    def set_fontsize(self, size):
+        old_size = mpl.rcParams['font.size']
+        mpl.rcParams['font.size'] = size
+
+        def revert():
+            mpl.rcParams['font.size'] = old_size
+
+        self._inverse_actions.append(revert)
 
 #-------------------------------------------------------------------------------
 # Plotting functions
@@ -91,7 +111,7 @@ def plot_acorr(acf, fontsize=8, linewidth=8):
     config.set_fontsize(fontsize)
 
     lags, k, k = acf.shape
-    acorr = _acf_to_acorr(acf)
+    acorr = util.acf_to_acorr(acf)
     plt.figure(figsize=(10, 10))
     xs = np.arange(lags)
 

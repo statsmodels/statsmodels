@@ -7,6 +7,9 @@ import numpy as np
 
 import scikits.statsmodels.api as sm
 from scikits.statsmodels.tsa.var.alt import VAR2
+
+import scikits.statsmodels.tsa.var.model as model
+reload(model)
 from scikits.statsmodels.tsa.var.model import VAR
 
 from numpy.testing import assert_almost_equal, assert_equal
@@ -71,18 +74,12 @@ class CheckVAR(object):
     def test_bse(self):
         assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL_4)
 
-
-class TestVARAlt(CheckVAR):
-    def __init__(self):
-        self.res1 = VAR2(endog=get_macrodata()).fit(maxlag=2)
-        from results import results_var
-        self.res2 = results_var.MacrodataResults()
-
 def get_macrodata():
-    data = sm.datasets.macrodata.load()
-    data = data.data[['realinv','realgdp','realcons']].view((float,3))
-    data = np.diff(np.log(data),axis=0)
-    return data
+    data = sm.datasets.macrodata.load().data[['realgdp','realcons','realinv']]
+    names = data.dtype.names
+    data = data.view((float,3))
+    data = np.diff(np.log(data), axis=0)
+    return data, names
 
 class TestIRF(object):
 
@@ -118,31 +115,44 @@ class RResults(object):
         self.nobs = int(data['obs'][0])
         self.totobs = int(data['totobs'][0])
 
-        self.aic = data['crit']['aic'][0]
-        self.sic = data['crit']['sic'][0]
-        self.hqic = data['crit']['hqic'][0]
-        self.fpe = data['crit']['fpe'][0]
+        crit = data['crit'].item()
+        self.aic = crit['aic'][0]
+        self.sic = self.bic = crit['sic'][0]
+        self.hqic = crit['hqic'][0]
+        self.fpe = crit['fpe'][0]
 
-class TestVAR(object):
+        self.detomega = data['detomega'][0]
+        self.loglike = data['loglike'][0]
+
+        self.nahead = int(data['nahead'][0])
+        self.ma_rep = data['phis']
+
+import sys
+
+class TestVARResults(object):
+
     def __init__(self):
         self.p = 2
-        self.res = VAR(endog=get_macrodata()).fit(maxlags=self.p)
+        data, names = get_macrodata()
+        self.res = VAR(data, names=names).fit(maxlags=self.p)
         self.ref = RResults()
+        self.nahead = self.ref.nahead
+
+    _old_stdout = None
+
+    def test_aaamonkeypatches(self):
+        from StringIO import StringIO
+        self._old_stdout = sys.stdout
+        sys.stdout = StringIO()
+
+    def test_zzzundomonkeypatches(self):
+        sys.stdout = self._old_stdout
 
     def test_params(self):
-        assert_almost_equal(self.res1.params.T, self.res2.params, DECIMAL_3)
+        assert_almost_equal(self.res.params, self.ref.params, DECIMAL_3)
 
-    def test_irfs(self):
-        pass
-
-    def test_neqs(self):
-        assert_equal(self.res1.neqs, self.res2.neqs)
-
-    def test_nobs(self):
-        assert_equal(self.res1.avobs, self.res2.nobs)
-
-    def test_df_eq(self):
-        assert_equal(self.res1.df_eq, self.res2.df_eq)
+    def test_detsig(self):
+        assert_almost_equal(self.res.detomega, self.ref.detomega)
 
     def test_aic(self):
         assert_almost_equal(self.res.aic, self.ref.aic)
@@ -156,15 +166,34 @@ class TestVAR(object):
     def test_fpe(self):
         assert_almost_equal(self.res.fpe, self.ref.fpe)
 
-    def test_detsig(self):
-        assert_almost_equal(self.res1.detomega, self.res2.detsig)
+    def test_nobs(self):
+        assert_equal(self.res.nobs, self.ref.nobs)
 
-    def test_bse(self):
-        assert_almost_equal(self.res1.bse.T, self.res2.bse, DECIMAL_4)
+    def test_stderr(self):
+        assert_almost_equal(self.res.stderr, self.ref.stderr, DECIMAL_4)
 
-    def test_info_crit(self):
+    def test_loglike(self):
+        assert_almost_equal(self.res.loglike, self.ref.loglike)
+
+    def test_ma_rep(self):
+        ma_rep = self.res.ma_rep(self.nahead)
+        assert_almost_equal(ma_rep, self.ref.ma_rep)
+
+    def test_is_stable(self):
+        # may not necessarily be true for other datasets
+        assert(self.res.is_stable())
+
+    def test_acf(self):
         pass
 
+    def test_irfs(self):
+        pass
+
+    # def test_neqs(self):
+    #     assert_equal(self.res1.neqs, self.res2.neqs)
+
+    # def test_df_eq(self):
+    #     assert_equal(self.res1.df_eq, self.res2.df_eq)
 
 if __name__ == '__main__':
     import nose

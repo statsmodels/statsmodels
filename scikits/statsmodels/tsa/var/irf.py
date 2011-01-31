@@ -8,7 +8,7 @@ import numpy as np
 import numpy.linalg as npl
 import scipy.linalg as L
 
-from scikits.statsmodels.decorators import cache_readonly
+from scikits.statsmodels.tools.decorators import cache_readonly
 from scikits.statsmodels.tools.tools import chain_dot
 
 import scikits.statsmodels.tsa.tsatools as tsa
@@ -26,7 +26,7 @@ class BaseIRAnalysis(object):
     def __init__(self, model, P=None, periods=10):
         self.model = model
         self.periods = periods
-        self.neqs, self.lags, self.T  = model.neqs, model.p, model.T
+        self.neqs, self.lags, self.T  = model.neqs, model.p, model.nobs
 
         if P is None:
             P = model._chol_sigma_u

@@ -8,6 +8,7 @@ Lutkepohl (2005) New Introduction to Multiple Time Series Analysis
 
 from __future__ import division
 
+from collections import defaultdict
 from cStringIO import StringIO
 
 import numpy as np
@@ -16,11 +17,12 @@ from numpy.linalg import cholesky as chol, solve
 import scipy.stats as stats
 import scipy.linalg as L
 
-import matplotlib as mpl
-
-from scikits.statsmodels.decorators import cache_readonly
+from scikits.statsmodels.tools.decorators import cache_readonly
 from scikits.statsmodels.tools.tools import chain_dot
 from scikits.statsmodels.tsa.tsatools import vec, unvec
+
+from scikits.statsmodels.tsa.var.irf import IRAnalysis
+from scikits.statsmodels.tsa.var.output import VARSummary
 
 import scikits.statsmodels.tsa.tsatools as tsa
 import scikits.statsmodels.tsa.var.output as output
@@ -29,56 +31,14 @@ import scikits.statsmodels.tsa.var.util as util
 
 mat = np.array
 
-try:
-    import pandas.util.testing as test
-    import IPython.core.debugger as _
-    st = test.set_trace
-except ImportError:
-    import pdb
-    st = pdb.set_trace
-
-class MPLConfigurator(object):
-
-    def __init__(self):
-        self._inverse_actions = []
-
-    def revert(self):
-        for action in self._inverse_actions:
-            action()
-
-    def set_fontsize(self, size):
-        old_size = mpl.rcParams['font.size']
-        mpl.rcParams['font.size'] = size
-
-        def revert():
-            mpl.rcParams['font.size'] = old_size
-
-        self._inverse_actions.append(revert)
+import pandas.util.testing as test
+st = test.set_trace
 
 #-------------------------------------------------------------------------------
 # VAR process routines
 
-def varsim(coefs, intercept, sig_u, steps=100, initvalues=None):
-    """
-    Simulate simple VAR(p) process with known coefficients, intercept, white
-    noise covariance, etc.
-    """
-    from numpy.random import multivariate_normal as rmvnorm
-    p, k, k = coefs.shape
-    ugen = rmvnorm(np.zeros(len(sig_u)), sig_u, steps)
-    result = np.zeros((steps, k))
-    result[p:] = intercept + ugen[p:]
-
-    # add in AR terms
-    for t in xrange(p, steps):
-        ygen = result[t]
-        for j in xrange(p):
-            ygen += np.dot(coefs[j], result[t-j-1])
-
-    return result
-
 def ma_rep(coefs, intercept, maxn=10):
-    """
+    r"""
     MA(\infty) representation of VAR(p) process
 
     Parameters
@@ -265,18 +225,67 @@ def forecast_cov(ma_coefs, sig_u, steps):
 def granger_causes(coefs):
     pass
 
+def var_loglike(resid, omega, nobs):
+    r"""
+    Returns the value of the VAR(p) log-likelihood.
+
+    Parameters
+    ----------
+    resid : ndarray (T x K)
+    omega : ndarray
+        Sigma hat matrix.  Each element i,j is the average product of the
+        OLS residual for variable i and the OLS residual for variable j or
+        np.dot(resid.T,resid)/nobs.  There should be no correction for the
+        degrees of freedom.
+    nobs : int
+
+    Returns
+    -------
+    loglike : float
+        The value of the loglikelihood function for a VAR(p) model
+
+    Notes
+    -----
+    The loglikelihood function for the VAR(p) is
+
+    .. math::
+
+        -\left(\frac{T}{2}\right)
+        \left(\ln\left|\Omega\right|-K\ln\left(2\pi\right)-K\right)
+    """
+    logdet = util.get_logdet(np.asarray(omega))
+
+    neqs = len(omega)
+
+    part1 = - (nobs * neqs / 2) * np.log(2 * np.pi)
+    part2 = - (nobs / 2) * logdet
+    part3 = - np.trace(chain_dot(resid, L.inv(omega), resid.T)) / 2
+
+    return part1 + part2 + part3
+
+def _get_trendorder(trend='c'):
+    # Handle constant, etc.
+    if trend == 'c':
+        trendorder = 1
+    elif trend == 'nc':
+        trendorder = 0
+    elif trend == 'ct':
+        trendorder = 2
+    elif trend == 'ctt':
+        trendorder = 3
+    if trend != 'nc':
+        X = add_trend(X, prepend=True, trend=trend)
+
+    return trendorder
+
 #-------------------------------------------------------------------------------
 # VARProcess class: for known or unknown VAR process
 
 def lag_select():
     pass
 
-import unittest
-class TestVAR(unittest.TestCase):
-    pass
-
 class VAR(object):
-    """
+    r"""
     Fit VAR(p) process and do lag order selection
 
     .. math:: y_t = A_1 y_{t-1} + \ldots + A_p y_{t-p} + u_t
@@ -288,7 +297,7 @@ class VAR(object):
 
     Returns
     -------
-    .fit() method returns VAREstimator object
+    .fit() method returns VARResults object
     """
 
     def __init__(self, endog, names=None, dates=None):
@@ -302,7 +311,8 @@ class VAR(object):
     def loglike(self, params, omega):
         pass
 
-    def fit(self, maxlags=None, method='ols', ic=None, verbose=False):
+    def fit(self, maxlags=None, method='ols', ic=None, trend='c',
+            verbose=False):
         """
         Fit the VAR model
 
@@ -318,9 +328,15 @@ class VAR(object):
             aic : Akaike
             fpe : Final prediction error
             hq : Hannan-Quinn
-            sic : Schwarz
+            sic : Schwarz a.k.a. Bayesian i.c.
         verbose : bool, default False
             Print order selection output to the screen
+        trend, str {"c", "ct", "ctt", "nc"}
+            "c" - add constant
+            "ct" - constant and trend
+            "ctt" - constant, linear and quadratic trend
+            "nc" - co constant, no trend
+            Note that these are prepended to the columns of the dataset.
 
         Notes
         -----
@@ -328,7 +344,7 @@ class VAR(object):
 
         Returns
         -------
-        est : VAREstimator
+        est : VARResults
         """
         lags = maxlags
 
@@ -341,7 +357,41 @@ class VAR(object):
             if verbose:
                 print 'Using %d based on %s criterion' %  (lags, ic)
 
-        return VAREstimator(self.y, p=lags, names=self.names, dates=self.dates)
+        return self._estimate_var(lags)
+
+    def _estimate_var(self, lags, trendorder=1):
+        z = self._get_z(lags)
+        zz = np.dot(z.T, z)
+        y_sample = self._get_y_sample(lags)
+
+        # Lutkepohl p75, about 5x faster than stated formula
+        params = np.linalg.lstsq(z, y_sample)[0]
+        resid = y_sample - np.dot(z, params)
+
+        # Unbiased estimate of covariance matrix $\Sigma_u$ of the white noise
+        # process $u$
+        # equivalent definition
+        # .. math:: \frac{1}{T - Kp - 1} Y^\prime (I_T - Z (Z^\prime Z)^{-1}
+        # Z^\prime) Y
+        # Ref: Lutkepohl p.75
+        # df_resid right now is T - Kp - 1, which is a suggested correction
+
+        avobs = len(y_sample)
+
+        df_resid = avobs - (self.neqs * lags + trendorder)
+
+        sse = np.dot(resid.T, resid)
+        omega = sse / df_resid
+
+        # Covariance of vec(B), where B is the matrix
+        # [intercept, A_1, ..., A_p] (K x (Kp + 1))
+        # Adjusted to be an unbiased estimator
+        # Ref: Lutkepohl p.74-75
+        cov_beta = np.kron(L.inv(zz), omega)
+
+        return VARResults(self.y, z, params, cov_beta, omega, lags,
+                          names=self.names, dates=self.dates,
+                          model=self)
 
     def select_order(self, maxlags=None, verbose=True):
         """
@@ -352,15 +402,13 @@ class VAR(object):
         Returns
         -------
         """
-        from collections import defaultdict
-
         if maxlags is None:
             maxlags = int(round(12*(self.nobs/100.)**(1/4.)))
 
         ics = defaultdict(list)
         for p in range(maxlags + 1):
-            est = VAREstimator(self.y, p=p)
-            for k, v in est.info_criteria.iteritems():
+            result = self._estimate_var(p)
+            for k, v in result.info_criteria.iteritems():
                 ics[k].append(v)
 
         selected_orders = dict((k, mat(v).argmin())
@@ -370,6 +418,32 @@ class VAR(object):
             output.print_ic_table(ics, selected_orders)
 
         return selected_orders
+
+#-------------------------------------------------------------------------------
+# Auxiliary functions for estimation
+
+    def _get_z(self, lags):
+        """
+        Predictor matrix for VAR(p) process
+
+        Z := (Z_0, ..., Z_T).T (T x Kp)
+        Z_t = [1 y_t y_{t-1} ... y_{t - p + 1}] (Kp x 1)
+
+        Ref: Lutkepohl p.70 (transposed)
+        """
+        y = self.y
+        T = self.nobs - lags
+
+        # Ravel C order, need to put in descending order
+        Z = mat([y[t-lags : t][::-1].ravel() for t in xrange(lags, self.nobs)])
+
+        # Add intercept
+        return np.concatenate((np.ones((T, 1)), Z), axis=1)
+
+    def _get_y_sample(self, lags):
+        # drop presample observations
+        return self.y[lags:]
+
 
 class VARProcess(object):
     """
@@ -420,7 +494,7 @@ class VARProcess(object):
         return is_stable(self.coefs, verbose=verbose)
 
     def plotsim(self, steps=1000):
-        Y = varsim(self.coefs, self.intercept, self.sigma_u, steps=steps)
+        Y = util.varsim(self.coefs, self.intercept, self.sigma_u, steps=steps)
         plotting.plot_mts(Y)
 
     def plotforc(self, y, steps, alpha=0.05):
@@ -433,7 +507,7 @@ class VARProcess(object):
                           names=self.names)
 
     def mean(self):
-        """
+        r"""
         Mean of stable process
 
         .. math:: \mu = (I - A_1 - \dots - A_p)^{-1} \alpha
@@ -490,11 +564,15 @@ class VARProcess(object):
         return np.eye(self.neqs) - self.coefs.sum(0)
 
     def acf(self, nlags=None):
+        """
+        Compute
+
+        """
         return var_acf(self.coefs, self.sigma_u, nlags=nlags)
 
     def acorr(self, nlags=None):
-        return util._acf_to_acorr(var_acf(self.coefs, self.sigma_u,
-                                          nlags=nlags))
+        return util.acf_to_acorr(var_acf(self.coefs, self.sigma_u,
+                                         nlags=nlags))
 
     def plot_acorr(self, nlags=10, linewidth=8):
         plotting.plot_acorr(self.acorr(nlags=nlags), linewidth=linewidth)
@@ -609,7 +687,7 @@ class KnownVARProcess(VARProcess):
 
         self.sigma_u = sigma_u
 
-class VAREstimator(VARProcess):
+class VARResults(VARProcess):
     """
     Estimate VAR(p) process with fixed number of lags
 
@@ -640,24 +718,24 @@ class VAREstimator(VARProcess):
     """
     _model_type = 'VAR'
 
-    def __init__(self, data, p=1, names=None, dates=None):
-        self.p = p
-        self.y, self.names = util.interpret_data(data, names)
-        self.nobs, self.neqs = self.y.shape
+    def __init__(self, y, ys_lagged, params, cov_beta, sigma_u, lag_order,
+                 model=None, trend='c', names=None, dates=None):
+        self.p = lag_order
+        self.y = y
+        self.ys_lagged = ys_lagged
 
-        # TODO: fix this to be something real
-        self.trendorder = 1
+        self.params = params
+        self.sigma_u = sigma_u
+        self.cov_beta = cov_beta
 
-        # This will be the dimension of the Z matrix
-        self.T = self.nobs  - self.p
+        self.totobs, self.neqs = self.y.shape
+        self.nobs = self.totobs  - lag_order
 
-        self.dates = dates
-
-        if dates is not None:
-            assert(self.nobs == len(dates))
+        self.trendorder = 1 # TODO: fix this to be something real
 
         self.names = names
         self.dates = dates
+        self.model = model
 
     def data_summary(self):
         pass
@@ -674,7 +752,7 @@ class VAREstimator(VARProcess):
 
     @property
     def df_resid(self):
-        return self.T - self.df_model
+        return self.nobs - self.df_model
 
     def __str__(self):
         output = ('VAR(%d) process for %d-dimensional response y_t'
@@ -690,48 +768,6 @@ class VAREstimator(VARProcess):
         """
 
         pass
-
-    def loglike(self, params, omega):
-        r"""
-        Returns the value of the VAR(p) log-likelihood.
-
-        Parameters
-        ----------
-        params : array-like
-            The parameter estimates
-        omega : ndarray
-            Sigma hat matrix.  Each element i,j is the average product of the
-            OLS residual for variable i and the OLS residual for variable j or
-            np.dot(resid.T,resid)/avobs.  There should be no correction for the
-            degrees of freedom.
-
-
-        Returns
-        -------
-        loglike : float
-            The value of the loglikelihood function for a VAR(p) model
-
-        Notes
-        -----
-        The loglikelihood function for the VAR(p) is
-
-        .. math::
-
-            -\left(\frac{T}{2}\right)
-            \left(\ln\left|\Omega\right|-K\ln\left(2\pi\right)-K\right)
-        """
-        params = np.asarray(params)
-        omega = np.asarray(omega)
-        logdet = np_slogdet(omega)
-        if logdet[0] == -1:
-            raise ValueError("Omega matrix is not positive definite")
-        elif logdet[0] == 0:
-            raise ValueError("Omega matrix is singluar")
-        else:
-            logdet = logdet[1]
-        avobs = self.avobs
-        neqs = self.neqs
-        return -(avobs/2.)*(neqs*np.log(2*np.pi)+logdet+neqs)
 
 #-------------------------------------------------------------------------------
 # VARProcess interface
@@ -749,88 +785,15 @@ class VAREstimator(VARProcess):
         return self.params[0]
 
     @cache_readonly
-    def params(self):
-        return self._est_params()
-
-    @cache_readonly
-    def sigma_u(self):
-        return self._est_sigma_u()
+    def resid(self):
+        return self.y[self.p:] - np.dot(self.ys_lagged, self.params)
 
     @cache_readonly
     def sigma_u_mle(self):
-        return self.sigma_u * self.df_resid / self.T
+        return self.sigma_u * self.df_resid / self.nobs
 
-    @cache_readonly
-    def resid(self):
-        # Lutkepohl p75, this is slower
-        # middle = np.eye(self.T) - chain_dot(z, self._zzinv, z.T)
-        # return chain_dot(y.T, middle, y) / self.df_resid
-
-        # about 5x faster
-        return self._y_sample - np.dot(self.Z, self.params)
-
-#-------------------------------------------------------------------------------
-# Auxiliary variables for estimation
-
-    @cache_readonly
-    def Z(self):
-        """
-        Predictor matrix for VAR(p) process
-
-        Z := (Z_0, ..., Z_T).T (T x Kp)
-        Z_t = [1 y_t y_{t-1} ... y_{t - p + 1}] (Kp x 1)
-
-        Ref: Lutkepohl p.70 (transposed)
-        """
-        y = self.y
-        p = self.p
-
-        # Ravel C order, need to put in descending order
-        Z = mat([y[t-p : t][::-1].ravel() for t in xrange(p, self.nobs)])
-
-        # Add intercept
-        return np.concatenate((np.ones((self.T, 1)), Z), axis=1)
-
-    @cache_readonly
-    def _zz(self):
-        return np.dot(self.Z.T, self.Z)
-
-    @cache_readonly
-    def _zzinv(self):
-        try:
-            zzinv = L.inv(self._zz)
-        except np.linalg.LinAlgError:
-            zzinv = L.pinv(self._zz)
-
-        return zzinv
-
-    @cache_readonly
-    def _y_sample(self):
-        # drop presample observations
-        return self.y[self.p:]
-
-    #------------------------------------------------------------
-    # Coefficient estimation
-
-    def _est_params(self):
-        res = np.linalg.lstsq(self.Z, self._y_sample)
-        # coefs = chain_dot(self._zzinv, self.Z.T, self._y_sample)
-        return res[0]
-
-    def _est_sigma_u(self):
-        """
-        Unbiased estimate of covariance matrix $\Sigma_u$ of the white noise
-        process $u$
-
-        equivalent definition
-
-        .. math:: \frac{1}{T - Kp - 1} Y^\prime (I_T - Z (Z^\prime Z)^{-1}
-        Z^\prime) Y
-
-        Ref: Lutkepohl p.75
-        """
-        # df_resid right now is T - Kp - 1, which is a suggested correction
-        return np.dot(self.resid.T, self.resid) / self.df_resid
+#------------------------------------------------------------
+# Estimation-related things
 
     def _est_var_ybar(self):
         Ainv = L.inv(np.eye(self.neqs) - self.coefs.sum(0))
@@ -859,23 +822,8 @@ class VAREstimator(VARProcess):
         return 2 * chain_dot(D_Kinv, sigxsig, D_Kinv.T)
 
     @cache_readonly
-    def cov_beta(self):
-        """
-        Covariance of vec(B), where B is the matrix
-
-        [intercept, A_1, ..., A_p] (K x (Kp + 1))
-
-        Notes
-        -----
-        Adjusted to be an unbiased estimator
-
-        Ref: Lutkepohl p.74-75
-
-        Returns
-        -------
-        cov_beta : ndarray (K^2p + K x K^2p + K) (# parameters)
-        """
-        return np.kron(L.inv(self._zz), self.sigma_u)
+    def loglike(self):
+        return var_loglike(self.resid, self.sigma_u_mle, self.nobs)
 
     @cache_readonly
     def stderr(self):
@@ -926,7 +874,7 @@ class VAREstimator(VARProcess):
     # Forecast error covariance functions
 
     def forecast_cov(self, steps=1):
-        """
+        r"""
         Compute forecast covariance matrices for desired number of steps
 
         Parameters
@@ -945,7 +893,7 @@ class VAREstimator(VARProcess):
         """
         mse = self.mse(steps)
         omegas = self._omega_forc_cov(steps)
-        return mse + omegas / self.T
+        return mse + omegas / self.nobs
 
     def _omega_forc_cov(self, steps):
         # Approximate MSE matrix \Omega(h) as defined in Lut p97
@@ -994,7 +942,6 @@ class VAREstimator(VARProcess):
         return np.vstack((upper, self.params.T, lower))
 
     def summary(self):
-        from scikits.statsmodels.tsa.var.output import VARSummary
         return VARSummary(self)
 
     def irf(self, periods=10, var_decomp=None):
@@ -1012,7 +959,6 @@ class VAREstimator(VARProcess):
         -------
 
         """
-        from scikits.statsmodels.tsa.var.irf import IRAnalysis
         return IRAnalysis(self, P=var_decomp, periods=periods)
 
     def fevd(self, periods=10, var_decomp=None):
@@ -1105,7 +1051,7 @@ class VAREstimator(VARProcess):
         }
 
         if verbose:
-            self._causality_summary(results, variables, equation, signif, kind)
+            output.causality_summary(results, variables, equation, signif, kind)
 
         return results
 
@@ -1116,26 +1062,38 @@ class VAREstimator(VARProcess):
         pass
 
     @cache_readonly
+    def detomega(self):
+        r"""
+        Return determinant of white noise covariance with degrees of freedom
+        correction:
+
+        .. math::
+
+            \hat \Omega = \frac{T}{T - Kp - 1} \hat \Omega_{\mathrm{MLE}}
+        """
+        return L.det(self.sigma_u)
+
+    @cache_readonly
     def info_criteria(self):
         # information criteria for order selection
-        nobs = self.T
+        nobs = self.nobs
         neqs = self.neqs
         lag_order = self.p
         free_params = lag_order * neqs ** 2 + neqs * self.trendorder
 
-        ld = np.log(L.det(self.sigma_u_mle))
+        ld = util.get_logdet(self.sigma_u_mle)
 
-        st()
+        # See Lutkepohl pp. 146-150
 
         aic = ld + (2. / nobs) * free_params
-        bic = ld + (np.log(nobs) / nobs) * (lag_order * free_params)
-        hqic = ld + 2. * np.log(np.log(nobs)) * lag_order * free_params / nobs
-        fpe = ((nobs + self.df_model) / self.df_resid) ** neqs * ld
+        bic = ld + (np.log(nobs) / nobs) * free_params
+        hqic = ld + (2. * np.log(np.log(nobs)) / nobs) * free_params
+        fpe = ((nobs + self.df_model) / self.df_resid) ** neqs * np.exp(ld)
 
         return {
             'aic' : aic,
             'bic' : bic,
-            'hq' : hqic,
+            'hqic' : hqic,
             'sic' : bic,
             'fpe' : fpe
             }
@@ -1300,11 +1258,12 @@ if __name__ == '__main__':
     # data = np.genfromtxt('Canada.csv', delimiter=',', names=True)
     # data = data.view((float, 4))
 
-    mdata = sm.datasets.macrodata.load().data
-    data = mdata[['realinv','realgdp','realcons']].view((float,3))
+    mdata = sm.datasets.macrodata.load().data[['realgdp','realcons','realinv']]
+    names = mdata.dtype.names
+    data = mdata.view((float,3))
     data = np.diff(np.log(data), axis=0)
 
-    model = VAR(data)
+    model = VAR(data, names=names)
     model2 = VAR2(data)
 
     est = model.fit(maxlags=2)

@@ -23,10 +23,26 @@ get.stderr <- function(est) {
   reorder.coefs(extract.mat(coef(est), 2))
 }
 
+reorder.phi <- function(phis) {
+  # Puts things in more proper C order for comparison purposes in Python
+
+  k <- dim(phis)[1]
+  n <- dim(phis)[3]
+
+  arr <- array(dim=c(n, k, k))
+
+  for (i in 1:n)
+    arr[i,,] <- phis[,,i]
+
+  arr
+}
+
 get.results <- function(data, p=1) {
   sel <- VARselect(data, p) # do at most p
 
   est <- VAR(data, p=p)
+
+  K <- ncol(data)
 
   nirfs <- 5
   orth.irf <- irf(est, n.ahead=nirfs, boot=F)$irf
@@ -34,6 +50,11 @@ get.results <- function(data, p=1) {
 
   crit <- t(sel$criteria)
   colnames(crit) <- c('aic', 'hqic', 'sic', 'fpe')
+
+  resid <- resid(est)
+  detomega <- det(crossprod(resid) / (est$obs - K * p - 1))
+
+  n.ahead <- 5
 
   list(coefs=get.coefs(est),
        stderr=get.stderr(est),
@@ -43,7 +64,11 @@ get.results <- function(data, p=1) {
        crit=as.list(crit[p,]),
        nirfs=nirfs,
        orthirf=orth.irf,
-       irf=irf)
+       irf=irf,
+       detomega=detomega,
+       loglike=as.numeric(logLik(est)),
+       nahead=n.ahead,
+       phis=Phi(est, n.ahead))
 }
 
 k <- dim(data)[2]
