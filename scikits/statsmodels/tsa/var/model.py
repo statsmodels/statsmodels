@@ -269,16 +269,10 @@ def _get_trendorder(trend='c'):
         trendorder = 2
     elif trend == 'ctt':
         trendorder = 3
-    if trend != 'nc':
-        X = add_trend(X, prepend=True, trend=trend)
-
     return trendorder
 
 #-------------------------------------------------------------------------------
 # VARProcess class: for known or unknown VAR process
-
-def lag_select():
-    pass
 
 class VAR(object):
     r"""
@@ -303,9 +297,6 @@ class VAR(object):
         if dates is not None:
             assert(self.nobs == len(dates))
         self.dates = dates
-
-    def loglike(self, params, omega):
-        pass
 
     def fit(self, maxlags=None, method='ols', ic=None, trend='c',
             verbose=False):
@@ -353,10 +344,12 @@ class VAR(object):
             if verbose:
                 print 'Using %d based on %s criterion' %  (lags, ic)
 
-        return self._estimate_var(lags)
+        return self._estimate_var(lags, trend=trend)
 
-    def _estimate_var(self, lags, trendorder=1):
-        z = self._get_z(lags)
+    def _estimate_var(self, lags, trend='c'):
+        trendorder = _get_trendorder(trend)
+
+        z = self._get_z(lags, trend=trend)
         y_sample = self._get_y_sample(lags)
 
         # Lutkepohl p75, about 5x faster than stated formula
@@ -410,7 +403,7 @@ class VAR(object):
 #-------------------------------------------------------------------------------
 # Auxiliary functions for estimation
 
-    def _get_z(self, lags):
+    def _get_z(self, lags, trend='c'):
         """
         Predictor matrix for VAR(p) process
 
@@ -420,13 +413,15 @@ class VAR(object):
         Ref: Lutkepohl p.70 (transposed)
         """
         y = self.y
-        T = self.nobs - lags
 
         # Ravel C order, need to put in descending order
         Z = mat([y[t-lags : t][::-1].ravel() for t in xrange(lags, self.nobs)])
 
-        # Add intercept
-        return np.concatenate((np.ones((T, 1)), Z), axis=1)
+        # Add constant, trend, etc.
+        if trend != 'nc':
+            Z = tsa.add_trend(Z, prepend=True, trend=trend)
+
+        return Z
 
     def _get_y_sample(self, lags):
         # drop presample observations
@@ -485,7 +480,7 @@ class VARProcess(object):
         Y = util.varsim(self.coefs, self.intercept, self.sigma_u, steps=steps)
         plotting.plot_mts(Y)
 
-    def plotforc(self, y, steps, alpha=0.05):
+    def plot_forecast(self, y, steps, alpha=0.05):
         """
 
         """
@@ -791,6 +786,11 @@ class VARResults(VARProcess):
 #------------------------------------------------------------
 # Estimation-related things
 
+    @cache_readonly
+    def _zz(self):
+        # Z'Z
+        return np.dot(self.ys_lagged.T, self.ys_lagged)
+
     def _est_var_ybar(self):
         Ainv = L.inv(np.eye(self.neqs) - self.coefs.sum(0))
         return chain_dot(Ainv, self.sigma_u, Ainv.T)
@@ -860,7 +860,7 @@ class VARResults(VARProcess):
         return VARProcess.forecast_interval(
             self, self.y[-self.p:], steps, alpha=alpha)
 
-    def plotforc(self, steps, alpha=0.05):
+    def plot_forecast(self, steps, alpha=0.05):
         """
 
         """

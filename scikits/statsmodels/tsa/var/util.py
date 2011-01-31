@@ -37,7 +37,7 @@ def interpret_data(data, names):
 def struct_to_ndarray(arr):
     return arr.view((float, len(arr.dtype.names)))
 
-def parse_data(path):
+def parse_lutkepohl_data(path): # pragma: no cover
     """
     Parse data files from Lutkepohl (2005) book
 

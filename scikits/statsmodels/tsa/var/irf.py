@@ -50,7 +50,7 @@ class BaseIRAnalysis(object):
     def cum_effect_cov(self, *args, **kwargs):
         raise NotImplementedError
 
-    def plot(self, orth=False, impcol=None, rescol=None, signif=0.05,
+    def plot(self, orth=False, impulse=None, response=None, signif=0.05,
              plot_params=None, subplot_params=None):
         """
         Plot impulse responses
@@ -59,9 +59,9 @@ class BaseIRAnalysis(object):
         ----------
         orth : bool, default False
             Compute orthogonalized impulse responses
-        impcol : string or int
+        impulse : string or int
             variable providing the impulse
-        rescol : string or int
+        response : string or int
             variable affected by the impulse
         signif : float (0 < signif < 1)
             Significance level for error bars, defaults to 95% CI
@@ -82,12 +82,12 @@ class BaseIRAnalysis(object):
         except NotImplementedError:
             stderr = None
 
-        plotting.irf_grid_plot(irfs, stderr, impcol, rescol, self.model.names,
-                               title, signif=signif,
+        plotting.irf_grid_plot(irfs, stderr, impulse, response,
+                               self.model.names, title, signif=signif,
                                subplot_params=subplot_params,
                                plot_params=plot_params)
 
-    def plot_cum_effects(self, orth=False, impcol=None, rescol=None,
+    def plot_cum_effects(self, orth=False, impulse=None, response=None,
                          signif=0.05, plot_params=None,
                          subplot_params=None):
         """
@@ -108,7 +108,7 @@ class BaseIRAnalysis(object):
         except NotImplementedError:
             stderr = None
 
-        plotting.irf_grid_plot(cum_effects, stderr, impcol, rescol,
+        plotting.irf_grid_plot(cum_effects, stderr, impulse, response,
                                self.model.names, title, signif=signif,
                                hlines=lr_effects, subplot_params=subplot_params,
                                plot_params=plot_params)

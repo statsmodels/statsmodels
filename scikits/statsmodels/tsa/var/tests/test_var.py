@@ -2,14 +2,17 @@
 Test VAR Model
 """
 
-import numpy as np
+from cStringIO import StringIO
+import nose
 import os
 import sys
 
+import numpy as np
 import matplotlib.pyplot as plt
 
 import scikits.statsmodels.api as sm
 import scikits.statsmodels.tsa.var.model as model
+import scikits.statsmodels.tsa.var.util as util
 reload(model)
 from scikits.statsmodels.tsa.var.model import VAR
 
@@ -23,6 +26,18 @@ DECIMAL_2 = 2
 
 basepath = os.path.split(sm.__file__)[0]
 resultspath = basepath + '/tsa/var/tests/results/'
+
+def test_lutkepohl_parse():
+    lut_data = basepath + '/tsa/var/data/'
+    files = [lut_data + 'e%d.dat' % i for i in range(1, 7)]
+
+    try:
+        import pandas
+    except ImportError:
+        raise nose.SkipTest
+
+    for f in files:
+        data = util.parse_lutkepohl_data(f)
 
 class CheckVAR(object):
 
@@ -81,11 +96,6 @@ def get_macrodata():
     data = data.view((float,3))
     data = np.diff(np.log(data), axis=0)
     return data, names
-
-class TestIRF(object):
-
-    def test_plots(self):
-        pass
 
 def generate_var():
     from rpy2.robjects import r
@@ -156,7 +166,12 @@ class CheckIRF(object):
             assert_almost_equal(ref_irfs, res_irfs)
 
     def test_plot_irf(self):
-        pass
+        self.irf.plot()
+        self.irf.plot(impulse=0, response=1)
+
+    def test_plot_cum_effects(self):
+        self.irf.plot_cum_effects()
+        self.irf.plot_cum_effects(impulse=0, response=1)
 
 class TestVARResults(CheckIRF):
 
@@ -165,20 +180,17 @@ class TestVARResults(CheckIRF):
 
         data, names = get_macrodata()
         self.ref = RResults()
-        self.res = VAR(data, names=names).fit(maxlags=self.p)
+        self.model = VAR(data, names=names)
+        self.res = self.model.fit(maxlags=self.p)
         self.irf = self.res.irf(self.ref.nirfs)
         self.nahead = self.ref.nahead
         self.k = len(self.ref.names)
 
-    _old_stdout = None
+    def test_aaamonkeypatches(self):
+        sys.stdout = StringIO()
 
-    # def test_aaamonkeypatches(self):
-    #     from StringIO import StringIO
-    #     self._old_stdout = sys.stdout
-    #     sys.stdout = StringIO()
-
-    # def test_zzzundomonkeypatches(self):
-    #     sys.stdout = self._old_stdout
+    def test_zzzundomonkeypatches(self):
+        sys.stdout = sys.__stdout__
 
     def test_params(self):
         assert_almost_equal(self.res.params, self.ref.params, DECIMAL_3)
@@ -211,6 +223,16 @@ class TestVARResults(CheckIRF):
         ma_rep = self.res.ma_rep(self.nahead)
         assert_almost_equal(ma_rep, self.ref.ma_rep)
 
+    #--------------------------------------------------
+    # Lots of tests to make sure stuff works...need to check correctness
+
+    def test_causality(self):
+        pass
+
+    def test_select_order(self):
+        result = self.model.fit(10, ic='aic', verbose=True)
+        result = self.model.fit(10, ic='fpe', verbose=True)
+
     def test_is_stable(self):
         # may not necessarily be true for other datasets
         assert(self.res.is_stable())
@@ -224,6 +246,15 @@ class TestVARResults(CheckIRF):
 
     def test_plot_acorr(self):
         self.res.plot_acorr()
+
+    def test_forecast(self):
+        point = self.res.forecast(self.res.y[-5:], 5)
+
+    def test_forecast_interval(self):
+        point, lower, upper = self.res.forecast_interval(5)
+
+    def test_plot_forecast(self):
+        self.res.plot_forecast(5)
 
     # def test_neqs(self):
     #     assert_equal(self.res1.neqs, self.res2.neqs)
