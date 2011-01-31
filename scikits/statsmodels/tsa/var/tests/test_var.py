@@ -2,12 +2,13 @@
 Test VAR Model
 """
 
-import os
 import numpy as np
+import os
+import sys
+
+import matplotlib.pyplot as plt
 
 import scikits.statsmodels.api as sm
-from scikits.statsmodels.tsa.var.alt import VAR2
-
 import scikits.statsmodels.tsa.var.model as model
 reload(model)
 from scikits.statsmodels.tsa.var.model import VAR
@@ -104,12 +105,12 @@ class RResults(object):
     def __init__(self):
         data = np.load(resultspath + 'vars_results.npz')
 
-        names = data['coefs'].dtype.names
-        self.params = data['coefs'].view((float, len(names)))
-        self.stderr = data['stderr'].view((float, len(names)))
+        self.names = data['coefs'].dtype.names
+        self.params = data['coefs'].view((float, len(self.names)))
+        self.stderr = data['stderr'].view((float, len(self.names)))
 
-        self.irf = data['irf']
-        self.orth_irf = data['orthirf']
+        self.irf = data['irf'].item()
+        self.orth_irf = data['orthirf'].item()
 
         self.nirfs = int(data['nirfs'][0])
         self.nobs = int(data['obs'][0])
@@ -127,26 +128,57 @@ class RResults(object):
         self.nahead = int(data['nahead'][0])
         self.ma_rep = data['phis']
 
-import sys
+# half-baked attempt
 
-class TestVARResults(object):
+_monkeypatched_mpl = False
+_draw_function = None
+
+def _suppress_plots():
+
+    global _monkeypatched_mpl, _draw_function
+    if not _monkeypatched_mpl:
+        _draw_function = plt.draw_if_interactive
+        plt.draw_if_interactive = lambda *args, **kwargs: None
+
+def _unsuppress_plots():
+    plt.draw_if_interactive = _draw_function
+
+class CheckIRF(object):
+
+    def test_irf_coefs(self):
+        self._check_irfs(self.irf.irfs, self.ref.irf)
+        self._check_irfs(self.irf.orth_irfs, self.ref.orth_irf)
+
+    def _check_irfs(self, py_irfs, r_irfs):
+        for i, name in enumerate(self.res.names):
+            ref_irfs = r_irfs[name].view((float, self.k))
+            res_irfs = py_irfs[:, :, i]
+            assert_almost_equal(ref_irfs, res_irfs)
+
+    def test_plot_irf(self):
+        pass
+
+class TestVARResults(CheckIRF):
 
     def __init__(self):
         self.p = 2
+
         data, names = get_macrodata()
-        self.res = VAR(data, names=names).fit(maxlags=self.p)
         self.ref = RResults()
+        self.res = VAR(data, names=names).fit(maxlags=self.p)
+        self.irf = self.res.irf(self.ref.nirfs)
         self.nahead = self.ref.nahead
+        self.k = len(self.ref.names)
 
     _old_stdout = None
 
-    def test_aaamonkeypatches(self):
-        from StringIO import StringIO
-        self._old_stdout = sys.stdout
-        sys.stdout = StringIO()
+    # def test_aaamonkeypatches(self):
+    #     from StringIO import StringIO
+    #     self._old_stdout = sys.stdout
+    #     sys.stdout = StringIO()
 
-    def test_zzzundomonkeypatches(self):
-        sys.stdout = self._old_stdout
+    # def test_zzzundomonkeypatches(self):
+    #     sys.stdout = self._old_stdout
 
     def test_params(self):
         assert_almost_equal(self.res.params, self.ref.params, DECIMAL_3)
@@ -184,10 +216,14 @@ class TestVARResults(object):
         assert(self.res.is_stable())
 
     def test_acf(self):
-        pass
+        # test that it works...for now
+        acfs = self.res.acf(10)
 
-    def test_irfs(self):
-        pass
+    def test_acorr(self):
+        acorrs = self.res.acorr(10)
+
+    def test_plot_acorr(self):
+        self.res.plot_acorr()
 
     # def test_neqs(self):
     #     assert_equal(self.res1.neqs, self.res2.neqs)

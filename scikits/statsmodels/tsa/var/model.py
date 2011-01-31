@@ -254,14 +254,10 @@ def var_loglike(resid, omega, nobs):
         \left(\ln\left|\Omega\right|-K\ln\left(2\pi\right)-K\right)
     """
     logdet = util.get_logdet(np.asarray(omega))
-
     neqs = len(omega)
-
     part1 = - (nobs * neqs / 2) * np.log(2 * np.pi)
-    part2 = - (nobs / 2) * logdet
-    part3 = - np.trace(chain_dot(resid, L.inv(omega), resid.T)) / 2
-
-    return part1 + part2 + part3
+    part2 = - (nobs / 2) * (logdet + neqs)
+    return part1 + part2
 
 def _get_trendorder(trend='c'):
     # Handle constant, etc.
@@ -361,7 +357,6 @@ class VAR(object):
 
     def _estimate_var(self, lags, trendorder=1):
         z = self._get_z(lags)
-        zz = np.dot(z.T, z)
         y_sample = self._get_y_sample(lags)
 
         # Lutkepohl p75, about 5x faster than stated formula
@@ -383,15 +378,8 @@ class VAR(object):
         sse = np.dot(resid.T, resid)
         omega = sse / df_resid
 
-        # Covariance of vec(B), where B is the matrix
-        # [intercept, A_1, ..., A_p] (K x (Kp + 1))
-        # Adjusted to be an unbiased estimator
-        # Ref: Lutkepohl p.74-75
-        cov_beta = np.kron(L.inv(zz), omega)
-
-        return VARResults(self.y, z, params, cov_beta, omega, lags,
-                          names=self.names, dates=self.dates,
-                          model=self)
+        return VARResults(self.y, z, params, omega, lags, names=self.names,
+                          dates=self.dates, model=self)
 
     def select_order(self, maxlags=None, verbose=True):
         """
@@ -718,7 +706,7 @@ class VARResults(VARProcess):
     """
     _model_type = 'VAR'
 
-    def __init__(self, y, ys_lagged, params, cov_beta, sigma_u, lag_order,
+    def __init__(self, y, ys_lagged, params, sigma_u, lag_order,
                  model=None, trend='c', names=None, dates=None):
         self.p = lag_order
         self.y = y
@@ -726,7 +714,6 @@ class VARResults(VARProcess):
 
         self.params = params
         self.sigma_u = sigma_u
-        self.cov_beta = cov_beta
 
         self.totobs, self.neqs = self.y.shape
         self.nobs = self.totobs  - lag_order
@@ -792,6 +779,15 @@ class VARResults(VARProcess):
     def sigma_u_mle(self):
         return self.sigma_u * self.df_resid / self.nobs
 
+    @cache_readonly
+    def cov_params(self):
+        # Covariance of vec(B), where B is the matrix
+        # [intercept, A_1, ..., A_p] (K x (Kp + 1))
+        # Adjusted to be an unbiased estimator
+        # Ref: Lutkepohl p.74-75
+        z = self.ys_lagged
+        return np.kron(L.inv(np.dot(z.T, z)), self.sigma_u)
+
 #------------------------------------------------------------
 # Estimation-related things
 
@@ -808,7 +804,7 @@ class VARResults(VARProcess):
         Estimated covariance matrix of model coefficients ex intercept
         """
         # drop intercept
-        return self.cov_beta[self.neqs:, self.neqs:]
+        return self.cov_params[self.neqs:, self.neqs:]
 
     @cache_readonly
     def _cov_sigma(self):
@@ -830,7 +826,7 @@ class VARResults(VARProcess):
         """
         Standard errors of coefficients, reshaped to match in size
         """
-        stderr = np.sqrt(np.diag(self.cov_beta))
+        stderr = np.sqrt(np.diag(self.cov_params))
         return stderr.reshape((self.df_model, self.neqs), order='C')
 
     bse = stderr  # statsmodels interface?
@@ -1019,7 +1015,7 @@ class VARResults(VARProcess):
 
         # Lutkepohl 3.6.5
         Cb = np.dot(C, vec(self.params.T))
-        middle = L.inv(chain_dot(C, self.cov_beta, C.T))
+        middle = L.inv(chain_dot(C, self.cov_params, C.T))
 
         # wald statistic
         lam_wald = chain_dot(Cb, middle, Cb)
@@ -1226,7 +1222,6 @@ class FEVD(object):
 #-------------------------------------------------------------------------------
 
 if __name__ == '__main__':
-    from scikits.statsmodels.tsa.var.alt import VAR2
     import scikits.statsmodels.api as sm
 
     """
@@ -1264,10 +1259,5 @@ if __name__ == '__main__':
     data = np.diff(np.log(data), axis=0)
 
     model = VAR(data, names=names)
-    model2 = VAR2(data)
-
     est = model.fit(maxlags=2)
-    est2 = model2.fit(maxlag=2)
     irf = est.irf()
-
-
