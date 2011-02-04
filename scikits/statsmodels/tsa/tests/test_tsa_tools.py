@@ -6,6 +6,8 @@ import numpy as np
 from numpy.testing import assert_array_almost_equal
 import scikits.statsmodels.api as sm
 import scikits.statsmodels.tsa.stattools as tsa
+import scikits.statsmodels.tsa.tsatools as tools
+from scikits.statsmodels.tsa.tsatools import vec, vech
 
 from results import savedrvs
 from results.datamlw_tls import mlacf, mlccf, mlpacf, mlywar
@@ -47,11 +49,40 @@ def test_ywcoef():
     assert_array_almost_equal(mlywar.arcoef1000[1:],
                     -sm.regression.yule_walker(x1000, 20, method='mle')[0], 8)
 
+def test_duplication_matrix():
+    k = 10
+    m = tools.unvech(np.random.randn(k * (k + 1) / 2))
+    D3 = tools.duplication_matrix(3)
+    assert(np.array_equal(vec(m), np.dot(D3, vech(m))))
+
+def test_elimination_matrix():
+    m = np.random.randn(3, 3)
+    L3 = tools.elimination_matrix(3)
+    assert(np.array_equal(vech(m), np.dot(L3, vec(m))))
+
+def test_commutation_matrix():
+    m = np.random.randn(4, 3)
+    K = tools.commutation_matrix(4, 3)
+    assert(np.array_equal(vec(m.T), np.dot(K, vec(m))))
+
+def test_vec():
+    arr = np.array([[1, 2],
+                    [3, 4]])
+    assert(np.array_equal(vec(arr), [1, 3, 2, 4]))
+
+def test_vech():
+    arr = np.array([[1, 2, 3],
+                    [4, 5, 6],
+                    [7, 8, 9]])
+    assert(np.array_equal(vech(arr), [1, 4, 7, 5, 8, 9]))
+
 if __name__ == '__main__':
     #running them directly
-    test_acf()
-    test_ccf()
-    test_pacf_yw()
-    test_pacf_ols()
-    test_ywcoef()
+    # test_acf()
+    # test_ccf()
+    # test_pacf_yw()
+    # test_pacf_ols()
+    # test_ywcoef()
 
+    import nose
+    nose.runmodule()

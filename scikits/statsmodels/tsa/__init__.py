@@ -1,3 +1,2 @@
-from var import *
-
+from ar import *
 from arima import ARMA
