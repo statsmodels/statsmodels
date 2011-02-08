@@ -1,4 +1,4 @@
-.. currentmodule:: scikits.statsmodels.rlm
+.. currentmodule:: scikits.statsmodels.robust
 
 
 .. _rlm:
@@ -10,7 +10,7 @@ Introduction
 ------------
 
 
-.. automodule:: scikits.statsmodels.rlm
+.. automodule:: scikits.statsmodels.robust.rlm
 
 
 Examples
