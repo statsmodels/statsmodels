@@ -37,7 +37,7 @@ def test_lutkepohl_parse():
         raise nose.SkipTest
 
     for f in files:
-        data = util.parse_lutkepohl_data(f)
+        util.parse_lutkepohl_data(f)
 
 class CheckVAR(object):
 
