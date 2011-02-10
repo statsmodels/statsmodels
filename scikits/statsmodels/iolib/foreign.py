@@ -13,7 +13,7 @@ numpy.lib.io
 from struct import unpack, calcsize
 import sys
 import numpy as np
-from numpy.lib._iotools import _is_string_like
+from numpy.lib._iotools import _is_string_like, easy_dtype
 
 
 ### Helper classes for StataReader ###
@@ -487,6 +487,7 @@ def genfromdta(fname, excludelist=None, missing_flt=-999., missing_str=""):
         for i in strcolidx:
             formats[i] = "a%i" % max(len(str(row[i])) for row in first_list)
     dt = zip(varnames, formats) # make dtype again
+    dt = easy_dtype(dt)
     data = np.zeros((nobs), dtype=dt) # init final array
     for i,row in enumerate(first_list):
         data[i] = tuple(row)
