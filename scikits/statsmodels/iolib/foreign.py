@@ -379,7 +379,8 @@ def genfromdta(fname, excludelist=None, missing_flt=-999., missing_str=""):
 
     Parameters
     ----------
-    fname
+    fname : str or filehandle
+        Stata .dta file.
     missing_values
     excludelist
     missing_flt
@@ -458,12 +459,20 @@ def genfromdta(fname, excludelist=None, missing_flt=-999., missing_str=""):
                 if val is None:
                     line[i] = convert_missing[formats[i]]
                 elif i in remove_comma:
-                    line[i] = ''.join(line[i].split(','))
+                    try: # sometimes a format, say gc is read as a float or int
+                        #TODO: I'm actually not sure now that comma formats
+                        # are read as strings.
+                        line[i] = ''.join(line[i].split(','))
+                    except:
+                        line[j] = str(line[j])
                     if formats[i] == 'f8':
                         line[i] = float(line[i])
         if remove_comma and not None in line:
             for j in remove_comma:
-                line[j] = ''.join(line[j].split(','))
+                try: # sometimes a format, say gc is read as a float or int
+                    line[j] = ''.join(line[j].split(','))
+                except:
+                    line[j] = str(line[j])
                 if formats[j] == 'f8': # change when change f8
                     line[j] = float(line[j])
 
