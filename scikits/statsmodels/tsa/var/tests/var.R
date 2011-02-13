@@ -37,6 +37,25 @@ reorder.phi <- function(phis) {
   arr
 }
 
+causality.matrix <- function(est) {
+  names <- colnames(est$y)
+  K <- est$K
+
+  # p-values
+  result <- matrix(0, nrow=K, ncol=)
+  for (i in 1:K) {
+    ## # causes
+    ## result[i,1] <- causality(est, cause=names[i])$Granger$p.value
+
+    # caused by others
+    result[i,1] <- causality(est, cause=names[-i])$Granger$p.value
+  }
+
+  colnames(result) <- c("causedby")
+
+  result
+}
+
 get.results <- function(data, p=1) {
   sel <- VARselect(data, p) # do at most p
 
@@ -65,6 +84,7 @@ get.results <- function(data, p=1) {
        nirfs=nirfs,
        orthirf=orth.irf,
        irf=irf,
+       causality=causality.matrix(est),
        detomega=detomega,
        loglike=as.numeric(logLik(est)),
        nahead=n.ahead,

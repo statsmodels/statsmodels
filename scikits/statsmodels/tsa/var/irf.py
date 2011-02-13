@@ -156,6 +156,10 @@ class IRAnalysis(BaseIRAnalysis):
 
         return covs
 
+    def stderr(self, orth=False):
+        return np.array([tsa.unvec(np.sqrt(np.diag(c)))
+                         for c in self.cov(orth=orth)])
+
     def _orth_cov(self):
         """
 
@@ -230,6 +234,10 @@ class IRAnalysis(BaseIRAnalysis):
                 covs[i] = chain_dot(F, self.cov_a, F.T)
 
         return covs
+
+    def cum_effect_stderr(self, orth=False):
+        return np.array([tsa.unvec(np.sqrt(np.diag(c)))
+                         for c in self.cum_effect_cov(orth=orth)])
 
     def lr_effect_cov(self, orth=False):
         """

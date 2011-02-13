@@ -1,6 +1,9 @@
 """
 Test VAR Model
 """
+from __future__ import with_statement
+
+# pylint: disable=W0612
 
 from cStringIO import StringIO
 import nose
@@ -12,6 +15,7 @@ import matplotlib.pyplot as plt
 
 import scikits.statsmodels.api as sm
 import scikits.statsmodels.tsa.var.model as model
+import scikits.statsmodels.tsa.tsatools as tsa
 import scikits.statsmodels.tsa.var.util as util
 reload(model)
 from scikits.statsmodels.tsa.var.model import VAR
@@ -24,22 +28,10 @@ DECIMAL_4 = 4
 DECIMAL_3 = 3
 DECIMAL_2 = 2
 
-basepath = os.path.split(sm.__file__)[0]
-resultspath = basepath + '/tsa/var/tests/results/'
-
-def test_lutkepohl_parse():
-    lut_data = basepath + '/tsa/var/data/'
-    files = [lut_data + 'e%d.dat' % i for i in range(1, 7)]
-
-    try:
-        import pandas
-    except ImportError:
-        raise nose.SkipTest
-
-    for f in files:
-        util.parse_lutkepohl_data(f)
-
 class CheckVAR(object):
+    # just so pylint won't complain
+    res1 = None
+    res2 = None
 
     def test_params(self):
         assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_3)
@@ -138,7 +130,9 @@ class RResults(object):
         self.nahead = int(data['nahead'][0])
         self.ma_rep = data['phis']
 
-# half-baked attempt
+        self.causality = data['causality']
+
+# half-baked attempt to suppress plotting
 
 _monkeypatched_mpl = False
 _draw_function = None
@@ -153,7 +147,160 @@ def _suppress_plots():
 def _unsuppress_plots():
     plt.draw_if_interactive = _draw_function
 
-class CheckIRF(object):
+class TestVARResults(object):
+
+    def __init__(self):
+        self.p = 2
+
+        self.data, self.names = get_macrodata()
+        self.ref = RResults()
+        self.k = len(self.ref.names)
+        self.model = VAR(self.data, names=self.names)
+        self.res = self.model.fit(maxlags=self.p)
+
+        self.irf = self.res.irf(self.ref.nirfs)
+        self.nahead = self.ref.nahead
+
+        self.fevd = self.res.fevd()
+
+    def test_aaamonkeypatches(self):
+        sys.stdout = StringIO()
+
+    def test_zzzundomonkeypatches(self):
+        sys.stdout = sys.__stdout__
+
+    def test_get_eq_index(self):
+        for i, name in enumerate(self.names):
+            idx = self.res.get_eq_index(i)
+            idx2 = self.res.get_eq_index(name)
+
+            assert_equal(idx, i)
+            assert_equal(idx, idx2)
+
+        with nose.tools.assert_raises(Exception):
+            self.res.get_eq_index('foo')
+
+    def test_repr(self):
+        # just want this to work
+        foo = str(self.res)
+        bar = repr(self.res)
+
+    def test_params(self):
+        assert_almost_equal(self.res.params, self.ref.params, DECIMAL_3)
+
+    def test_cov_params(self):
+        # do nothing for now
+        self.res.cov_params
+
+    def test_cov_ybar(self):
+        self.res.cov_ybar()
+
+    def test_tstat(self):
+        self.res.t()
+
+    def test_pvalues(self):
+        self.res.pvalues
+
+    def test_summary(self):
+        summ = self.res.summary()
+        print summ
+
+    def test_detsig(self):
+        assert_almost_equal(self.res.detomega, self.ref.detomega)
+
+    def test_aic(self):
+        assert_almost_equal(self.res.aic, self.ref.aic)
+
+    def test_bic(self):
+        assert_almost_equal(self.res.bic, self.ref.bic)
+
+    def test_hqic(self):
+        assert_almost_equal(self.res.hqic, self.ref.hqic)
+
+    def test_fpe(self):
+        assert_almost_equal(self.res.fpe, self.ref.fpe)
+
+    def test_lagorder_select(self):
+        ics = ['aic', 'fpe', 'hqic', 'bic']
+
+        for ic in ics:
+            res = self.model.fit(maxlags=10, ic=ic, verbose=True)
+
+        with nose.tools.assert_raises(Exception):
+            self.model.fit(ic='foo')
+
+    def test_nobs(self):
+        assert_equal(self.res.nobs, self.ref.nobs)
+
+    def test_stderr(self):
+        assert_almost_equal(self.res.stderr, self.ref.stderr, DECIMAL_4)
+
+    def test_loglike(self):
+        assert_almost_equal(self.res.loglike, self.ref.loglike)
+
+    def test_ma_rep(self):
+        ma_rep = self.res.ma_rep(self.nahead)
+        assert_almost_equal(ma_rep, self.ref.ma_rep)
+
+    #--------------------------------------------------
+    # Lots of tests to make sure stuff works...need to check correctness
+
+    def test_causality(self):
+        causedby = self.ref.causality['causedby']
+
+        for i, name in enumerate(self.names):
+            variables = self.names[:i] + self.names[i + 1:]
+            result = self.res.test_causality(name, variables, kind='f')
+            assert_almost_equal(result['pvalue'], causedby[i], DECIMAL_4)
+
+            rng = range(self.k)
+            rng.remove(i)
+            result2 = self.res.test_causality(i, rng, kind='f')
+            assert_equal(result['pvalue'], result2['pvalue'])
+
+            # make sure works
+            result = self.res.test_causality(name, variables, kind='wald')
+
+    def test_select_order(self):
+        result = self.model.fit(10, ic='aic', verbose=True)
+        result = self.model.fit(10, ic='fpe', verbose=True)
+
+    def test_is_stable(self):
+        # may not necessarily be true for other datasets
+        assert(self.res.is_stable(verbose=True))
+
+    def test_acf(self):
+        # test that it works...for now
+        acfs = self.res.acf(10)
+
+        # defaults to nlags=lag_order
+        acfs = self.res.acf()
+        assert(len(acfs) == self.p + 1)
+
+    def test_acorr(self):
+        acorrs = self.res.acorr(10)
+
+    def test_forecast(self):
+        point = self.res.forecast(self.res.y[-5:], 5)
+
+    def test_forecast_interval(self):
+        y = self.res.y[:-self.p:]
+        point, lower, upper = self.res.forecast_interval(y, 5)
+
+    def test_plot_sim(self):
+        self.res.plotsim(steps=100)
+
+    def test_plot(self):
+        self.res.plot()
+
+    def test_plot_acorr(self):
+        self.res.plot_acorr()
+
+    def test_plot_forecast(self):
+        self.res.plot_forecast(5)
+
+    #---------------------------------------------------------------------------
+    # IRF tests
 
     def test_irf_coefs(self):
         self._check_irfs(self.irf.irfs, self.ref.irf)
@@ -173,94 +320,119 @@ class CheckIRF(object):
         self.irf.plot_cum_effects()
         self.irf.plot_cum_effects(impulse=0, response=1)
 
-class TestVARResults(CheckIRF):
+
+    #---------------------------------------------------------------------------
+    # FEVD tests
+
+class E1_Results(object):
+    """
+    Results from Lutkepohl (2005) using E2 dataset
+    """
+
+    def __init__(self):
+        # Lutkepohl p. 120 results
+        # need to round python results to 3 decimal places
+        self.irf_stderr = np.array([[[.125, 0.562, 0.657 ],
+                                     [0.032, 0.143, 0.167],
+                                     [0.025, 0.115, 0.134]],
+
+                                    [[0.129, 0.546, 0.663],
+                                     [0.032, 0.135, 0.162],
+                                     [0.026, 0.108, 0.131]],
+
+                                    [[0.084, .384, .476],
+                                     [.016, .078, .094],
+                                     [.017, .078, .102]]])
+
+        self.cum_irf_stderr = np.array([[[.125, 0.562, 0.657 ],
+                                         [0.032, 0.143, 0.167],
+                                         [0.025, 0.115, 0.134]],
+
+                                        [[0.148, 0.651, 0.755],
+                                         [0.043, 0.192, 0.222],
+                                         [0.033, 0.144, 0.167]],
+
+                                        [[0.099, .483, .550],
+                                         [.037, .176, .203],
+                                         [.033, .156, .183]]])
+
+        self.lr_stderr = np.array([[.133, .661, .798],
+                                   [.048, .236, .285],
+                                   [.043, .213, .257]])
+
+basepath = os.path.split(sm.__file__)[0]
+resultspath = basepath + '/tsa/var/tests/results/'
+
+def get_lutkepohl_data(name='e2'):
+    lut_data = basepath + '/tsa/var/data/'
+    path = lut_data + '%s.dat' % name
+
+    try:
+        import pandas as _
+    except ImportError:
+        raise nose.SkipTest
+
+    return util.parse_lutkepohl_data(path)
+
+def test_lutkepohl_parse():
+    files = ['e%d' % i for i in range(1, 7)]
+
+    for f in files:
+        get_lutkepohl_data(f)
+
+class TestVARResultsLutkepohl(object):
+    """
+    Verify calculations using results from Lutkepohl's book
+    """
 
     def __init__(self):
         self.p = 2
 
-        data, names = get_macrodata()
-        self.ref = RResults()
-        self.model = VAR(data, names=names)
+        sdata, dates = get_lutkepohl_data('e1')
+
+        names = sdata.dtype.names
+        data = util.struct_to_ndarray(sdata)
+        adj_data = np.diff(np.log(data), axis=0)
+        # est = VAR(adj_data, p=2, dates=dates[1:], names=names)
+
+        self.model = VAR(adj_data[:-16], dates=dates[1:-16], names=names)
         self.res = self.model.fit(maxlags=self.p)
-        self.irf = self.res.irf(self.ref.nirfs)
-        self.nahead = self.ref.nahead
-        self.k = len(self.ref.names)
+        self.irf = self.res.irf(10)
+        self.lut = E1_Results()
 
-    def test_aaamonkeypatches(self):
-        sys.stdout = StringIO()
+    def test_approx_mse(self):
+        # 3.5.18, p. 99
+        mse2 = np.array([[25.12, .580, 1.300],
+                         [.580, 1.581, .586],
+                         [1.300, .586, 1.009]]) * 1e-4
 
-    def test_zzzundomonkeypatches(self):
-        sys.stdout = sys.__stdout__
+        assert_almost_equal(mse2, self.res.forecast_cov(3)[1],
+                            DECIMAL_3)
 
-    def test_params(self):
-        assert_almost_equal(self.res.params, self.ref.params, DECIMAL_3)
+    def test_irf_stderr(self):
+        irf_stderr = self.irf.stderr(orth=False)
 
-    def test_detsig(self):
-        assert_almost_equal(self.res.detomega, self.ref.detomega)
+        for i in range(1, 1 + len(self.lut.irf_stderr)):
+            assert_almost_equal(np.round(irf_stderr[i], 3),
+                                self.lut.irf_stderr[i-1])
 
-    def test_aic(self):
-        assert_almost_equal(self.res.aic, self.ref.aic)
+    def test_cum_irf_stderr(self):
+        stderr = self.irf.cum_effect_stderr(orth=False)
 
-    def test_bic(self):
-        assert_almost_equal(self.res.bic, self.ref.bic)
+        for i in range(1, 1 + len(self.lut.cum_irf_stderr)):
+            assert_almost_equal(np.round(stderr[i], 3),
+                                self.lut.cum_irf_stderr[i-1])
 
-    def test_hqic(self):
-        assert_almost_equal(self.res.hqic, self.ref.hqic)
+def test_get_trendorder():
+    results = {
+        'c' : 1,
+        'nc' : 0,
+        'ct' : 2,
+        'ctt' : 3
+    }
 
-    def test_fpe(self):
-        assert_almost_equal(self.res.fpe, self.ref.fpe)
-
-    def test_nobs(self):
-        assert_equal(self.res.nobs, self.ref.nobs)
-
-    def test_stderr(self):
-        assert_almost_equal(self.res.stderr, self.ref.stderr, DECIMAL_4)
-
-    def test_loglike(self):
-        assert_almost_equal(self.res.loglike, self.ref.loglike)
-
-    def test_ma_rep(self):
-        ma_rep = self.res.ma_rep(self.nahead)
-        assert_almost_equal(ma_rep, self.ref.ma_rep)
-
-    #--------------------------------------------------
-    # Lots of tests to make sure stuff works...need to check correctness
-
-    def test_causality(self):
-        pass
-
-    def test_select_order(self):
-        result = self.model.fit(10, ic='aic', verbose=True)
-        result = self.model.fit(10, ic='fpe', verbose=True)
-
-    def test_is_stable(self):
-        # may not necessarily be true for other datasets
-        assert(self.res.is_stable())
-
-    def test_acf(self):
-        # test that it works...for now
-        acfs = self.res.acf(10)
-
-    def test_acorr(self):
-        acorrs = self.res.acorr(10)
-
-    def test_plot_acorr(self):
-        self.res.plot_acorr()
-
-    def test_forecast(self):
-        point = self.res.forecast(self.res.y[-5:], 5)
-
-    def test_forecast_interval(self):
-        point, lower, upper = self.res.forecast_interval(5)
-
-    def test_plot_forecast(self):
-        self.res.plot_forecast(5)
-
-    # def test_neqs(self):
-    #     assert_equal(self.res1.neqs, self.res2.neqs)
-
-    # def test_df_eq(self):
-    #     assert_equal(self.res1.df_eq, self.res2.df_eq)
+    for t, trendorder in results.iteritems():
+        assert(model._get_trendorder(t) == trendorder)
 
 if __name__ == '__main__':
     import nose
