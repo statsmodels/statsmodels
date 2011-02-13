@@ -8,6 +8,7 @@ mutual information measures any kind of dependence, but does not distinguish
 between positive and negative relationship
 
 
+mutualinfo_kde and mutualinfo_binning follow Khan et al. 2007
 
 Shiraj Khan, Sharba Bandyopadhyay, Auroop R. Ganguly, Sunil Saigal,
 David J. Erickson, III, Vladimir Protopopescu, and George Ostrouchov,
@@ -15,6 +16,7 @@ Relative performance of mutual information estimation methods for
 quantifying the dependence among short and noisy data,
 Phys. Rev. E 76, 026209 (2007)
 http://pre.aps.org/abstract/PRE/v76/i2/e026209
+
 
 '''
 
@@ -49,6 +51,14 @@ def mutualinfo_kde(y, x, normed=True):
 
 def mutualinfo_binned(y, x, bins, normed=True):
     '''mutual information of two random variables estimated with kde
+
+
+
+    Notes
+    -----
+    bins='auto' selects the number of bins so that approximately 5 observations
+    are expected to be in each bin under the assumption of independence. This
+    follows roughly the description in Kahn et al. 2007
 
     '''
     nobs = len(x)
@@ -108,10 +118,11 @@ def mutualinfo_binned(y, x, bins, normed=True):
 if __name__ == '__main__':
     import scikits.statsmodels.api as sm
 
-    funtype = ['linear'][0]
-    nobs = 1000
-    sig = 5.
-    x = np.linspace(-3, 3, nobs) + np.random.randn(nobs)
+    funtype = ['linear', 'quadratic'][1]
+    nobs = 200
+    sig = 2#5.
+    #x = np.linspace(-3, 3, nobs) + np.random.randn(nobs)
+    x = np.sort(3*np.random.randn(nobs))
     exog = sm.add_constant(x, prepend=True)
     #y = 0 + np.log(1+x**2) + sig * np.random.randn(nobs)
     if funtype == 'quadratic':
