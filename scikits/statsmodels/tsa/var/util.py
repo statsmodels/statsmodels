@@ -11,10 +11,13 @@ def interpret_data(data, names):
 
     Parameters
     ----------
+    data : ndarray-like
+    names : sequence or None
+        May be part of data structure
 
     Returns
     -------
-
+    (Y, names) : (homogeneous ndarray, list)
     """
     if isinstance(data, np.ndarray):
         provided_names = data.dtype.names

@@ -222,9 +222,6 @@ def forecast_cov(ma_coefs, sig_u, steps):
 
     return forc_covs
 
-def granger_causes(coefs):
-    pass
-
 def var_loglike(resid, omega, nobs):
     r"""
     Returns the value of the VAR(p) log-likelihood.
@@ -975,9 +972,16 @@ class VARResults(VARProcess):
         return results
 
     def test_whiteness(self):
+        """
+        Test white noise assumption
+        """
+
         pass
 
     def test_normality(self):
+        """
+        Test assumption of Gaussian-distributed errors
+        """
         pass
 
     @cache_readonly
@@ -1081,7 +1085,7 @@ class FEVD(object):
 
         print buf.getvalue()
 
-    def cov(self, lag):
+    def cov(self):
         """
         Compute asymptotic standard errors
 
@@ -1164,13 +1168,13 @@ if __name__ == '__main__':
 
     # data = np.genfromtxt('Canada.csv', delimiter=',', names=True)
     # data = data.view((float, 4))
-
-    mdata = sm.datasets.macrodata.load().data[['realgdp','realcons','realinv']]
-    names = mdata.dtype.names
-    data = mdata.view((float,3))
-    data = np.diff(np.log(data), axis=0)
-
-    model = VAR(data, names=names)
-    est = model.fit(maxlags=2)
-    irf = est.irf()
     """
+
+    # mdata = sm.datasets.macrodata.load().data[['realgdp','realcons','realinv']]
+    # names = mdata.dtype.names
+    # data = mdata.view((float,3))
+    # data = np.diff(np.log(data), axis=0)
+
+    # model = VAR(data, names=names)
+    # est = model.fit(maxlags=2)
+    # irf = est.irf()
