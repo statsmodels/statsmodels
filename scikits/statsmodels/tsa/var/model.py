@@ -21,6 +21,9 @@ from scikits.statsmodels.tools.decorators import cache_readonly
 from scikits.statsmodels.tools.tools import chain_dot
 from scikits.statsmodels.tsa.tsatools import vec, unvec
 
+import scikits.statsmodels.tsa.var.irf as irf_module
+reload(irf_module)
+
 from scikits.statsmodels.tsa.var.irf import IRAnalysis
 from scikits.statsmodels.tsa.var.output import VARSummary
 
@@ -37,14 +40,13 @@ st = test.set_trace
 #-------------------------------------------------------------------------------
 # VAR process routines
 
-def ma_rep(coefs, intercept, maxn=10):
+def ma_rep(coefs, maxn=10):
     r"""
     MA(\infty) representation of VAR(p) process
 
     Parameters
     ----------
     coefs : ndarray (p x k x k)
-    intercept : ndarry length-k
     maxn : int
         Number of MA matrices to compute
 
@@ -69,12 +71,11 @@ def ma_rep(coefs, intercept, maxn=10):
 
     # recursively compute Phi matrices
     for i in xrange(1, maxn + 1):
-        phi = phis[i]
         for j in xrange(1, i+1):
             if j > p:
                 break
 
-            phi += np.dot(phis[i-j], coefs[j-1])
+            phis[i] += np.dot(phis[i-j], coefs[j-1])
 
     return phis
 
@@ -123,7 +124,7 @@ def var_acf(coefs, sig_u, nlags=None):
     -------
     acf : ndarray, (p, k, k)
     """
-    p, k, k2 = coefs.shape
+    p, k, _ = coefs.shape
     if nlags is None:
         nlags = p
 
@@ -136,9 +137,8 @@ def var_acf(coefs, sig_u, nlags=None):
         # compute ACF for lag=h
         # G(h) = A_1 G(h-1) + ... + A_p G(h-p)
 
-        res = result[h]
         for j in xrange(p):
-            res += np.dot(coefs[j], result[h-j-1])
+            result[h] += np.dot(coefs[j], result[h-j-1])
 
     return result
 
@@ -202,7 +202,7 @@ def forecast(y, coefs, intercept, steps):
                 prior_y = forcs[h - i - 1]
 
             # i=1 is coefs[0]
-            f += np.dot(coefs[i - 1], prior_y)
+            f = f + np.dot(coefs[i - 1], prior_y)
 
     return forcs
 
@@ -221,9 +221,6 @@ def forecast_cov(ma_coefs, sig_u, steps):
         forc_covs[h] = prior = prior + var
 
     return forc_covs
-
-def granger_causes(coefs):
-    pass
 
 def var_loglike(resid, omega, nobs):
     r"""
@@ -310,12 +307,12 @@ class VAR(object):
             12 * (nobs/100.)**(1./4), see select_order function
         method : {'ols'}
             Estimation method to use
-        ic : {'aic', 'fpe', 'hq', 'sic', None}
+        ic : {'aic', 'fpe', 'hqic', 'bic', None}
             Information criterion to use for VAR order selection.
             aic : Akaike
             fpe : Final prediction error
-            hq : Hannan-Quinn
-            sic : Schwarz a.k.a. Bayesian i.c.
+            hqic : Hannan-Quinn
+            bic : Bayesian a.k.a. Schwarz
         verbose : bool, default False
             Print order selection output to the screen
         trend, str {"c", "ct", "ctt", "nc"}
@@ -440,18 +437,16 @@ class VARProcess(object):
     **Attributes**:
 
     """
-    def __init__(self):
-        pass
+    def __init__(self, coefs, intercept, sigma_u, names=None):
+        self.p = len(coefs)
+        self.neqs = coefs.shape[1]
+        self.coefs = coefs
+        self.intercept = intercept
+        self.sigma_u = sigma_u
+        self.names = names
 
     def get_eq_index(self, name):
-        try:
-            result = self.names.index(name)
-        except Exception:
-            if not isinstance(name, int):
-                raise
-            result = name
-
-        return result
+        return util.get_index(self.names, name)
 
     def __str__(self):
         output = ('VAR(%d) process for %d-dimensional response y_t'
@@ -462,8 +457,7 @@ class VARProcess(object):
         return output
 
     def is_stable(self, verbose=False):
-        """
-        Determine stability based on model coefficients
+        """Determine stability based on model coefficients
 
         Parameters
         ----------
@@ -480,26 +474,17 @@ class VARProcess(object):
         Y = util.varsim(self.coefs, self.intercept, self.sigma_u, steps=steps)
         plotting.plot_mts(Y)
 
-    def plot_forecast(self, y, steps, alpha=0.05):
-        """
-
-        """
-        mid, lower, upper = self.forecast_interval(y, steps, alpha=alpha)
-        plotting.plot_var_forc(y, mid, lower, upper,
-                          index=self.dates,
-                          names=self.names)
-
     def mean(self):
-        r"""
-        Mean of stable process
+        r"""Mean of stable process
+
+        Lutkepohl eq. 2.1.23
 
         .. math:: \mu = (I - A_1 - \dots - A_p)^{-1} \alpha
         """
         return solve(self._char_mat, self.intercept)
 
     def ma_rep(self, maxn=10):
-        """
-        Compute MA(\infty) coefficient matrices (also are impulse response
+        """Compute MA(\infty) coefficient matrices (also are impulse response
         matrices))
 
         Parameters
@@ -511,12 +496,12 @@ class VARProcess(object):
         -------
         coefs : ndarray (maxn x k x k)
         """
-        return ma_rep(self.coefs, self.intercept, maxn=maxn)
+        return ma_rep(self.coefs, maxn=maxn)
 
     def orth_ma_rep(self, maxn=10, P=None):
-        """
-        Compute Orthogonalized MA coefficient matrices using P matrix such that
-        \Sigma_u = PP'. P defaults to the Cholesky decomposition of \Sigma_u
+        """Compute Orthogonalized MA coefficient matrices using P matrix such
+        that \Sigma_u = PP'. P defaults to the Cholesky decomposition of
+        \Sigma_u
 
         Parameters
         ----------
@@ -561,9 +546,8 @@ class VARProcess(object):
         plotting.plot_acorr(self.acorr(nlags=nlags), linewidth=linewidth)
 
     def forecast(self, y, steps):
-        """
-        Produce linear minimum MSE forecasts for desired number of steps ahead,
-        using prior values y
+        """Produce linear minimum MSE forecasts for desired number of steps
+        ahead, using prior values y
 
         Parameters
         ----------
@@ -579,9 +563,8 @@ class VARProcess(object):
         """
         return forecast(y, self.coefs, self.intercept, steps)
 
-    def forecast_cov(self, steps):
-        """
-        Compute forecast error covariance matrices
+    def mse(self, steps):
+        """Compute forecast error covariance matrices
 
         Parameters
         ----------
@@ -591,10 +574,9 @@ class VARProcess(object):
         -------
         covs : (steps, k, k)
         """
-        return self.mse(steps)
-
-    def mse(self, steps):
         return forecast_cov(self.ma_rep(steps), self.sigma_u, steps)
+
+    forecast_cov = mse
 
     def _forecast_vars(self, steps):
         covs = self.forecast_cov(steps)
@@ -604,8 +586,7 @@ class VARProcess(object):
         return covs[:, inds, inds]
 
     def forecast_interval(self, y, steps, alpha=0.05):
-        """
-        Construct forecast interval estimates assuming the y are Gaussian
+        """Construct forecast interval estimates assuming the y are Gaussian
 
         Parameters
         ----------
@@ -629,50 +610,12 @@ class VARProcess(object):
 
         return point_forecast, forc_lower, forc_upper
 
-    def forecast_dyn(self):
-        """
-        "Forward filter": compute forecasts for each time step
-        """
-
-        pass
-
-    def irf(self, nperiods=50):
-        """
-        Compute impulse responses to shocks in system
-        """
-        pass
-
-    def fevd(self):
-        """
-        Compute forecast error variance decomposition ("fevd")
-        """
-        pass
-
-
 #-------------------------------------------------------------------------------
-# Known VAR process and Estimator classes
+# VARResults class
 
-class KnownVARProcess(VARProcess):
-    """
-    Class for analyzing VAR(p) process with known coefficient matrices and white
-    noise covariance matrix
-
-    Parameters
-    ----------
-
-    """
-    def __init__(self, intercept, coefs, sigma_u):
-        self.p = len(coefs)
-        self.neqs = len(coefs[0])
-
-        self.intercept = intercept
-        self.coefs = coefs
-
-        self.sigma_u = sigma_u
 
 class VARResults(VARProcess):
-    """
-    Estimate VAR(p) process with fixed number of lags
+    """Estimate VAR(p) process with fixed number of lags
 
     Returns
     -------
@@ -703,24 +646,32 @@ class VARResults(VARProcess):
 
     def __init__(self, y, ys_lagged, params, sigma_u, lag_order,
                  model=None, trend='c', names=None, dates=None):
-        self.p = lag_order
+
+        self.model = model
         self.y = y
         self.ys_lagged = ys_lagged
+        self.dates = dates
 
-        self.params = params
-        self.sigma_u = sigma_u
-
-        self.totobs, self.neqs = self.y.shape
+        self.totobs, neqs = self.y.shape
         self.nobs = self.totobs  - lag_order
 
-        self.trendorder = 1 # TODO: fix this to be something real
+        # TODO: fix this to be something real
+        self.trendorder = 1
 
-        self.names = names
-        self.dates = dates
-        self.model = model
+        self.params = params
 
-    def data_summary(self):
-        pass
+        # Initialize VARProcess
+
+        # construct coefficient matrices
+        # Each matrix needs to be transposed
+        reshaped = self.params[1:].reshape((lag_order, neqs, neqs))
+
+        # Need to transpose each coefficient matrix
+        intercept = self.params[0]
+        coefs = reshaped.swapaxes(1, 2).copy()
+
+        VARProcess.__init__(self, coefs, intercept, sigma_u,
+                            names=names)
 
     def plot(self):
         plotting.plot_mts(self.y, names=self.names, index=self.dates)
@@ -735,36 +686,6 @@ class VARResults(VARProcess):
     @property
     def df_resid(self):
         return self.nobs - self.df_model
-
-    def __str__(self):
-        output = ('VAR(%d) process for %d-dimensional response y_t'
-                  % (self.p, self.neqs))
-        output += '\nstable: %s' % self.is_stable()
-        output += '\nmean: %s' % self.mean()
-
-        return output
-
-    def forecast_dyn(self):
-        """
-        "Forward filter": compute forecasts for each time step
-        """
-
-        pass
-
-#-------------------------------------------------------------------------------
-# VARProcess interface
-
-    @cache_readonly
-    def coefs(self):
-        # Each matrix needs to be transposed
-        reshaped = self.params[1:].reshape((self.p, self.neqs, self.neqs))
-
-        # Need to transpose each coefficient matrix
-        return reshaped.swapaxes(1, 2).copy()
-
-    @property
-    def intercept(self):
-        return self.params[0]
 
     @cache_readonly
     def resid(self):
@@ -783,6 +704,24 @@ class VARResults(VARProcess):
         z = self.ys_lagged
         return np.kron(L.inv(np.dot(z.T, z)), self.sigma_u)
 
+    def cov_ybar(self):
+        r"""Asymptotically consistent estimate of covariance of the sample mean
+
+        .. math::
+
+            \sqrt(T) (\bar{y} - \mu) \rightarrow {\cal N}(0, \Sigma_{\bar{y}})\\
+
+            \Sigma_{\bar{y}} = B \Sigma_u B^\prime, \text{where } B = (I_K - A_1
+            - \cdots - A_p)^{-1}
+
+        Notes
+        -----
+        L. Proposition 3.3
+        """
+
+        Ainv = L.inv(np.eye(self.neqs) - self.coefs.sum(0))
+        return chain_dot(Ainv, self.sigma_u, Ainv.T)
+
 #------------------------------------------------------------
 # Estimation-related things
 
@@ -790,13 +729,6 @@ class VARResults(VARProcess):
     def _zz(self):
         # Z'Z
         return np.dot(self.ys_lagged.T, self.ys_lagged)
-
-    def _est_var_ybar(self):
-        Ainv = L.inv(np.eye(self.neqs) - self.coefs.sum(0))
-        return chain_dot(Ainv, self.sigma_u, Ainv.T)
-
-    def _t_mean(self):
-        self.mean() / np.sqrt(np.diag(self._est_var_ybar()))
 
     @property
     def _cov_alpha(self):
@@ -823,8 +755,7 @@ class VARResults(VARProcess):
 
     @cache_readonly
     def stderr(self):
-        """
-        Standard errors of coefficients, reshaped to match in size
+        """Standard errors of coefficients, reshaped to match in size
         """
         stderr = np.sqrt(np.diag(self.cov_params))
         return stderr.reshape((self.df_model, self.neqs), order='C')
@@ -832,8 +763,7 @@ class VARResults(VARProcess):
     bse = stderr  # statsmodels interface?
 
     def t(self):
-        """
-        Compute t-statistics. Use Student-t(T - Kp - 1) = t(df_resid) to test
+        """Compute t-statistics. Use Student-t(T - Kp - 1) = t(df_resid) to test
         significance.
         """
         return self.params / self.stderr
@@ -842,36 +772,18 @@ class VARResults(VARProcess):
     def pvalues(self):
         return stats.t.sf(np.abs(self.t()), self.df_resid)*2
 
-    def forecast_interval(self, steps, alpha=0.05):
-        """
-        Construct forecast interval estimates assuming the y are Gaussian
-
-        Parameters
-        ----------
-
-        Notes
-        -----
-        Lutkepohl pp. 39-40
-
-        Returns
-        -------
-        (lower, mid, upper) : (ndarray, ndarray, ndarray)
-        """
-        return VARProcess.forecast_interval(
-            self, self.y[-self.p:], steps, alpha=alpha)
-
     def plot_forecast(self, steps, alpha=0.05):
         """
-
+        Plot forecast
         """
-        mid, lower, upper = self.forecast_interval(steps, alpha=alpha)
+        mid, lower, upper = self.forecast_interval(self.y[-self.p:], steps,
+                                                   alpha=alpha)
         plotting.plot_var_forc(self.y, mid, lower, upper, names=self.names)
 
     # Forecast error covariance functions
 
     def forecast_cov(self, steps=1):
-        r"""
-        Compute forecast covariance matrices for desired number of steps
+        r"""Compute forecast covariance matrices for desired number of steps
 
         Parameters
         ----------
@@ -922,6 +834,7 @@ class VARResults(VARProcess):
                     Bj = bpow(h - 1 - j)
                     mult = np.trace(chain_dot(Bi.T, Ginv, Bj, G))
                     om += mult * chain_dot(phis[i], sig_u, phis[j].T)
+            omegas[h-1] = om
 
         return omegas
 
@@ -941,8 +854,7 @@ class VARResults(VARProcess):
         return VARSummary(self)
 
     def irf(self, periods=10, var_decomp=None):
-        """
-        Analyze impulse responses to shocks in system
+        """Analyze impulse responses to shocks in system
 
         Parameters
         ----------
@@ -972,8 +884,7 @@ class VARResults(VARProcess):
 
     def test_causality(self, equation, variables, kind='f', signif=0.05,
                        verbose=True):
-        """
-        Compute test statistic for null hypothesis of Granger-noncausality,
+        """Compute test statistic for null hypothesis of Granger-noncausality,
         general function to test joint Granger-causality of multiple variables
 
         Parameters
@@ -997,6 +908,9 @@ class VARResults(VARProcess):
         -------
         results : dict
         """
+        if isinstance(variables, (basestring, int, np.integer)):
+            variables = [variables]
+
         k, p = self.neqs, self.p
 
         # number of restrictions
@@ -1018,27 +932,24 @@ class VARResults(VARProcess):
         middle = L.inv(chain_dot(C, self.cov_params, C.T))
 
         # wald statistic
-        lam_wald = chain_dot(Cb, middle, Cb)
+        lam_wald = statistic = chain_dot(Cb, middle, Cb)
 
         if kind.lower() == 'wald':
-            test_stat = lam_wald
             df = N
             dist = stats.chi2(df)
-            pvalue = stats.chi2.sf(test_stat, N)
-            crit_value = stats.chi2.ppf(1 - signif, N)
         elif kind.lower() == 'f':
-            test_stat = lam_wald / N
-            df = (N, self.df_resid)
+            statistic = lam_wald / N
+            df = (N, k * self.df_resid)
             dist = stats.f(*df)
         else:
             raise Exception('kind %s not recognized' % kind)
 
-        pvalue = dist.sf(test_stat)
+        pvalue = dist.sf(statistic)
         crit_value = dist.ppf(1 - signif)
 
-        conclusion = 'fail to reject' if test_stat < crit_value else 'reject'
+        conclusion = 'fail to reject' if statistic < crit_value else 'reject'
         results = {
-            'test_stat' : test_stat,
+            'statistic' : statistic,
             'crit_value' : crit_value,
             'pvalue' : pvalue,
             'df' : df,
@@ -1047,14 +958,23 @@ class VARResults(VARProcess):
         }
 
         if verbose:
-            output.causality_summary(results, variables, equation, signif, kind)
+            summ = output.causality_summary(results, variables, equation, kind)
+
+            print summ
 
         return results
 
     def test_whiteness(self):
+        """
+        Test white noise assumption
+        """
+
         pass
 
     def test_normality(self):
+        """
+        Test assumption of Gaussian-distributed errors
+        """
         pass
 
     @cache_readonly
@@ -1090,7 +1010,6 @@ class VARResults(VARProcess):
             'aic' : aic,
             'bic' : bic,
             'hqic' : hqic,
-            'sic' : bic,
             'fpe' : fpe
             }
 
@@ -1114,13 +1033,8 @@ class VARResults(VARProcess):
 
     @property
     def bic(self):
-        # Bayesian information criterion
+        # Bayesian a.k.a. Schwarz info criterion
         return self.info_criteria['bic']
-
-    @property
-    def sic(self):
-        # Schwarz criterion a.k.a. Bayesian i.c.
-        return self.info_criteria['sic']
 
 class FEVD(object):
     """
@@ -1164,7 +1078,7 @@ class FEVD(object):
 
         print buf.getvalue()
 
-    def cov(self, lag):
+    def cov(self):
         """
         Compute asymptotic standard errors
 
@@ -1223,16 +1137,14 @@ class FEVD(object):
 
 if __name__ == '__main__':
     import scikits.statsmodels.api as sm
+    from scikits.statsmodels.tsa.var.util import parse_lutkepohl_data
 
-    """
-    from scikits.statsmodels.tsa.var.util import parse_data
+    np.set_printoptions(linewidth=140, precision=5)
 
-    path = 'scikits/statsmodels/tsa/var/data/%s.dat'
-    sdata, dates = parse_data(path % 'e1')
+    sdata, dates = parse_lutkepohl_data('data/%s.dat' % 'e1')
 
     names = sdata.dtype.names
     data = util.struct_to_ndarray(sdata)
-
     adj_data = np.diff(np.log(data), axis=0)
     # est = VAR(adj_data, p=2, dates=dates[1:], names=names)
     model = VAR(adj_data[:-16], dates=dates[1:-16], names=names)
@@ -1240,9 +1152,6 @@ if __name__ == '__main__':
     irf = est.irf()
 
     y = est.y[-2:]
-
-    est2 = VAR2(adj_data[:-16])
-    res2 = est2.fit(maxlag=2)
     """
     # irf.plot_irf()
 
@@ -1252,12 +1161,13 @@ if __name__ == '__main__':
 
     # data = np.genfromtxt('Canada.csv', delimiter=',', names=True)
     # data = data.view((float, 4))
+    """
 
-    mdata = sm.datasets.macrodata.load().data[['realgdp','realcons','realinv']]
-    names = mdata.dtype.names
-    data = mdata.view((float,3))
-    data = np.diff(np.log(data), axis=0)
+    # mdata = sm.datasets.macrodata.load().data[['realgdp','realcons','realinv']]
+    # names = mdata.dtype.names
+    # data = mdata.view((float,3))
+    # data = np.diff(np.log(data), axis=0)
 
-    model = VAR(data, names=names)
-    est = model.fit(maxlags=2)
-    irf = est.irf()
+    # model = VAR(data, names=names)
+    # est = model.fit(maxlags=2)
+    # irf = est.irf()

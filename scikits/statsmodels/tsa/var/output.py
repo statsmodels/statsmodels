@@ -96,8 +96,7 @@ class VARSummary(object):
         buf = StringIO()
 
         print >> buf, self._header_table()
-        # print >> buf, self._stats_table()
-
+        print >> buf, self._stats_table()
         print >> buf, self._coef_table()
         print >> buf, self._resid_info()
 
@@ -109,7 +108,9 @@ class VARSummary(object):
         model = self.model
 
         t = time.localtime()
-        # ncoefs = len(model.beta) #TODO: change when we allow coef restrictions
+
+        # TODO: change when we allow coef restrictions
+        # ncoefs = len(model.beta)
 
         # Header information
         part1title = "Summary of Regression Results"
@@ -131,6 +132,10 @@ class VARSummary(object):
         # TODO: do we want individual statistics or should users just
         # use results if wanted?
         # Handle overall fit statistics
+
+        model = self.model
+
+
         part2Lstubs = ('No. of Equations:',
                        'Nobs:',
                        'Log likelihood:',
@@ -139,8 +144,8 @@ class VARSummary(object):
                        'HQIC:',
                        'FPE:',
                        'Det(Omega_mle):')
-        part2Ldata = [[self.neqs],[self.nobs],[self.llf],[self.aic]]
-        part2Rdata = [[self.bic],[self.hqic],[self.fpe],[self.detomega]]
+        part2Ldata = [[model.neqs], [model.nobs], [model.loglike], [model.aic]]
+        part2Rdata = [[model.bic], [model.hqic], [model.fpe], [model.detomega]]
         part2Lheader = None
         part2L = SimpleTable(part2Ldata, part2Lheader, part2Lstubs,
                              txt_fmt = self.part2_fmt)
@@ -152,11 +157,11 @@ class VARSummary(object):
 
     def _coef_table(self):
         model = self.model
-        k = model.k
+        k = model.neqs
 
         Xnames = self._lag_names()
 
-        data = zip(model.beta.ravel(),
+        data = zip(model.params.ravel(),
                    model.stderr.ravel(),
                    model.t().ravel(),
                    model.pvalues.ravel())
@@ -191,12 +196,12 @@ class VARSummary(object):
 
         return buf.getvalue()
 
-def causality_summary(results, variables, equation, signif, kind):
+def causality_summary(results, variables, equation, kind):
     fmt = dict(_default_table_fmt,
                data_fmts=["%#15.6F","%#15.6F","%#15.3F", "%s"])
 
     buf = StringIO()
-    table = SimpleTable([[results['test_stat'],
+    table = SimpleTable([[results['statistic'],
                           results['crit_value'],
                           results['pvalue'],
                           str(results['df'])]],
@@ -211,8 +216,7 @@ def causality_summary(results, variables, equation, signif, kind):
     buf.write("Conclusion: %s H_0" % results['conclusion'])
     buf.write(" at %.2f%% significance level" % (results['signif'] * 100))
 
-    print buf.getvalue()
-
+    return buf.getvalue()
 
 def print_ic_table(ics, selected_orders):
     """

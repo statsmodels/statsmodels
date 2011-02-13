@@ -51,7 +51,7 @@ class BaseIRAnalysis(object):
         raise NotImplementedError
 
     def plot(self, orth=False, impulse=None, response=None, signif=0.05,
-             plot_params=None, subplot_params=None):
+             plot_params=None, subplot_params=None, plot_stderr=True):
         """
         Plot impulse responses
 
@@ -79,7 +79,10 @@ class BaseIRAnalysis(object):
 
         try:
             stderr = self.cov(orth=orth)
-        except NotImplementedError:
+        except NotImplementedError: # pragma: no cover
+            stderr = None
+
+        if not plot_stderr:
             stderr = None
 
         plotting.irf_grid_plot(irfs, stderr, impulse, response,
@@ -89,7 +92,7 @@ class BaseIRAnalysis(object):
 
     def plot_cum_effects(self, orth=False, impulse=None, response=None,
                          signif=0.05, plot_params=None,
-                         subplot_params=None):
+                         subplot_params=None, plot_stderr=True):
         """
 
         """
@@ -105,7 +108,10 @@ class BaseIRAnalysis(object):
 
         try:
             stderr = self.cum_effect_cov(orth=orth)
-        except NotImplementedError:
+        except NotImplementedError: # pragma: no cover
+            stderr = None
+
+        if not plot_stderr:
             stderr = None
 
         plotting.irf_grid_plot(cum_effects, stderr, impulse, response,
@@ -137,6 +143,7 @@ class IRAnalysis(BaseIRAnalysis):
 
     def cov(self, orth=False):
         """
+        Compute asymptotic standard errors for impulse response coefficients
 
         Notes
         -----
@@ -156,17 +163,40 @@ class IRAnalysis(BaseIRAnalysis):
 
         return covs
 
+    @cache_readonly
+    def G(self):
+        # Gi matrices as defined on p. 111
+
+        K = self.neqs
+
+        # nlags = self.model.p
+        # J = np.hstack((np.eye(K),) + (np.zeros((K, K)),) * (nlags - 1))
+
+        def _make_g(i):
+            # p. 111 Lutkepohl
+            G = 0.
+            for m in range(i):
+                # be a bit cute to go faster
+                idx = i - 1 - m
+                if idx in self._g_memo:
+                    apow = self._g_memo[idx]
+                else:
+                    apow = npl.matrix_power(self._A.T, idx)
+                    # apow = np.dot(J, apow)
+                    apow = apow[:K]
+                    self._g_memo[idx] = apow
+
+                # take first K rows
+                piece = np.kron(apow, self.irfs[m])
+                G = G + piece
+
+            return G
+
+        return [_make_g(i) for i in range(1, self.periods + 1)]
+
     def _orth_cov(self):
-        """
+        # Lutkepohl 3.7.8
 
-        Notes
-        -----
-        Lutkepohl 3.7.8
-
-        Returns
-        -------
-
-        """
         Ik = np.eye(self.neqs)
         PIk = np.kron(self.P.T, Ik)
         H = self.H
@@ -189,6 +219,8 @@ class IRAnalysis(BaseIRAnalysis):
 
     def cum_effect_cov(self, orth=False):
         """
+        Compute asymptotic standard errors for cumulative impulse response
+        coefficients
 
         Parameters
         ----------
@@ -240,42 +272,32 @@ class IRAnalysis(BaseIRAnalysis):
         """
         lre = self.lr_effects
         Finfty = np.kron(np.tile(lre.T, self.lags), lre)
+        Ik = np.eye(self.neqs)
 
         if orth:
             Binf = np.dot(np.kron(self.P.T, np.eye(self.neqs)), Finfty)
-            Binfbar = np.dot(np.kron(np.eye(self.neqs), self.lr_effects), self.H)
+            Binfbar = np.dot(np.kron(Ik, lre), self.H)
 
             return (chain_dot(Binf, self.cov_a, Binf.T) +
-                    chain_dot(Binfbar, self.cov_a, Binfbar.T))
+                    chain_dot(Binfbar, self.cov_sig, Binfbar.T))
         else:
             return chain_dot(Finfty, self.cov_a, Finfty.T)
+
+    def stderr(self, orth=False):
+        return np.array([tsa.unvec(np.sqrt(np.diag(c)))
+                         for c in self.cov(orth=orth)])
+
+    def cum_effect_stderr(self, orth=False):
+        return np.array([tsa.unvec(np.sqrt(np.diag(c)))
+                         for c in self.cum_effect_cov(orth=orth)])
+
+    def lr_effect_stderr(self, orth=False):
+        cov = self.lr_effect_cov(orth=orth)
+        return tsa.unvec(np.sqrt(np.diag(cov)))
 
     def _empty_covm(self, periods):
         return np.zeros((periods, self.neqs ** 2, self.neqs ** 2),
                         dtype=float)
-
-    @cache_readonly
-    def G(self):
-        def _make_g(i):
-            # p. 111 Lutkepohl
-            G = 0.
-            for m in range(i):
-                # be a bit cute to go faster
-                idx = i - 1 - m
-                if idx in self._g_memo:
-                    apow = self._g_memo[idx]
-                else:
-                    apow = npl.matrix_power(self._A.T, idx)[:self.neqs]
-
-                    self._g_memo[idx] = apow
-
-                # take first K rows
-                piece = np.kron(apow, self.irfs[m])
-                G = G + piece
-
-            return G
-
-        return [_make_g(i) for i in range(1, self.periods + 1)]
 
     @cache_readonly
     def H(self):
@@ -297,6 +319,3 @@ class IRAnalysis(BaseIRAnalysis):
 
     def fevd_table(self):
         pass
-
-if __name__ == '__main__':
-    pass

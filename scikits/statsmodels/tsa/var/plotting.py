@@ -86,11 +86,8 @@ def plot_with_error(y, error, x=None, axes=None, value_fmt='k',
     if axes is None:
         axes = plt.gca()
 
-    if x is not None:
-        plot_action = lambda y, fmt: axes.plot(x, y, fmt)
-    else:
-        plot_action = lambda y, fmt: axes.plot(y, fmt)
-
+    x = x if x is not None else range(len(y))
+    plot_action = lambda y, fmt: axes.plot(x, y, fmt)
     plot_action(y, value_fmt)
 
     if error is not None:
@@ -172,16 +169,18 @@ def irf_grid_plot(values, stderr, impcol, rescol, names, title,
 
     k = len(names)
 
+    rng = range(len(values))
     for (j, i, ai, aj) in to_plot:
         ax = axes[ai][aj]
 
-        # hm, how hackish is this?
+        # HACK?
         if stderr is not None:
             sig = np.sqrt(stderr[:, j * k + i, j * k + i])
-            plot_with_error(values[:, i, j], sig, axes=ax, alpha=signif,
-                            value_fmt='b')
+            plot_with_error(values[:, i, j], sig, x=rng, axes=ax,
+                            alpha=signif, value_fmt='b')
         else:
-            plot_with_error(values[:, i, j], None, axes=ax, value_fmt='b')
+            plot_with_error(values[:, i, j], None, x=rng, axes=ax,
+                            value_fmt='b')
 
         ax.axhline(0, color='k')
 
@@ -193,31 +192,22 @@ def irf_grid_plot(values, stderr, impcol, rescol, names, title,
 
 
 def _get_irf_plot_config(names, impcol, rescol):
-    def _get_index(name):
-        try:
-            result = names.index(name)
-        except Exception:
-            if not isinstance(name, int):
-                raise
-            result = name
-        return result
-
     nrows = ncols = k = len(names)
     if impcol is not None and rescol is not None:
         # plot one impulse-response pair
         nrows = ncols = 1
-        j = _get_index(impcol)
-        i = _get_index(rescol)
+        j = util.get_index(names, impcol)
+        i = util.get_index(names, rescol)
         to_plot = [(j, i, 0, 0)]
     elif impcol is not None:
         # plot impacts of impulse in one variable
         ncols = 1
-        j = _get_index(impcol)
+        j = util.get_index(names, impcol)
         to_plot = [(j, i, i, 0) for i in range(k)]
     elif rescol is not None:
         # plot only things having impact on particular variable
         ncols = 1
-        i = _get_index(rescol)
+        i = util.get_index(names, rescol)
         to_plot = [(j, i, j, 0) for j in range(k)]
     else:
         # plot everything
