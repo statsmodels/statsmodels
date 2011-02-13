@@ -12,7 +12,6 @@ import os
 import sys
 
 import numpy as np
-import matplotlib.pyplot as plt
 
 import scikits.statsmodels.api as sm
 import scikits.statsmodels.tsa.var.model as model
@@ -138,6 +137,7 @@ _monkeypatched_mpl = False
 _draw_function = None
 
 def _suppress_plots():
+    import matplotlib.pyplot as plt
 
     global _monkeypatched_mpl, _draw_function
     if not _monkeypatched_mpl:
@@ -145,7 +145,14 @@ def _suppress_plots():
         plt.draw_if_interactive = lambda *args, **kwargs: None
 
 def _unsuppress_plots():
+    import matplotlib.pyplot as plt
     plt.draw_if_interactive = _draw_function
+
+def check_for_matplotlib():
+    try:
+        import matplotlib
+    except:
+        raise nose.SkipTest
 
 class CheckIRF(object):
 
@@ -166,14 +173,21 @@ class CheckIRF(object):
             assert_almost_equal(ref_irfs, res_irfs)
 
     def test_plot_irf(self):
+        check_for_matplotlib()
         self.irf.plot()
+        self.irf.plot(plot_stderr=False)
+
         self.irf.plot(impulse=0, response=1)
+        self.irf.plot(impulse=0)
+        self.irf.plot(response=0)
 
         self.irf.plot(orth=True)
         self.irf.plot(impulse=0, response=1, orth=True)
 
     def test_plot_cum_effects(self):
+        check_for_matplotlib()
         self.irf.plot_cum_effects()
+        self.irf.plot_cum_effects(plot_stderr=False)
         self.irf.plot_cum_effects(impulse=0, response=1)
 
         self.irf.plot_cum_effects(orth=True)
@@ -187,6 +201,7 @@ class CheckFEVD(object):
     # FEVD tests
 
     def test_fevd_plot(self):
+        check_for_matplotlib()
         self.fevd.plot()
 
     def test_fevd_repr(self):
@@ -355,15 +370,19 @@ class TestVARResults(CheckIRF, CheckFEVD):
         point, lower, upper = self.res.forecast_interval(y, 5)
 
     def test_plot_sim(self):
+        check_for_matplotlib()
         self.res.plotsim(steps=100)
 
     def test_plot(self):
+        check_for_matplotlib()
         self.res.plot()
 
     def test_plot_acorr(self):
+        check_for_matplotlib()
         self.res.plot_acorr()
 
     def test_plot_forecast(self):
+        check_for_matplotlib()
         self.res.plot_forecast(5)
 
 class E1_Results(object):

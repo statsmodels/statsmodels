@@ -446,14 +446,7 @@ class VARProcess(object):
         self.names = names
 
     def get_eq_index(self, name):
-        try:
-            result = self.names.index(name)
-        except Exception:
-            if not isinstance(name, int):
-                raise
-            result = name
-
-        return result
+        return util.get_index(self.names, name)
 
     def __str__(self):
         output = ('VAR(%d) process for %d-dimensional response y_t'

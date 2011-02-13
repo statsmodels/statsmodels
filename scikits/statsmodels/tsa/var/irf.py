@@ -51,7 +51,7 @@ class BaseIRAnalysis(object):
         raise NotImplementedError
 
     def plot(self, orth=False, impulse=None, response=None, signif=0.05,
-             plot_params=None, subplot_params=None):
+             plot_params=None, subplot_params=None, plot_stderr=True):
         """
         Plot impulse responses
 
@@ -82,6 +82,9 @@ class BaseIRAnalysis(object):
         except NotImplementedError: # pragma: no cover
             stderr = None
 
+        if not plot_stderr:
+            stderr = None
+
         plotting.irf_grid_plot(irfs, stderr, impulse, response,
                                self.model.names, title, signif=signif,
                                subplot_params=subplot_params,
@@ -89,7 +92,7 @@ class BaseIRAnalysis(object):
 
     def plot_cum_effects(self, orth=False, impulse=None, response=None,
                          signif=0.05, plot_params=None,
-                         subplot_params=None):
+                         subplot_params=None, plot_stderr=True):
         """
 
         """
@@ -106,6 +109,9 @@ class BaseIRAnalysis(object):
         try:
             stderr = self.cum_effect_cov(orth=orth)
         except NotImplementedError: # pragma: no cover
+            stderr = None
+
+        if not plot_stderr:
             stderr = None
 
         plotting.irf_grid_plot(cum_effects, stderr, impulse, response,

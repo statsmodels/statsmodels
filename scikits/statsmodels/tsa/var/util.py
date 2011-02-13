@@ -32,7 +32,7 @@ def interpret_data(data, names):
             Y = struct_to_ndarray(data)
         else:
             Y = data
-    else:
+    else: # pragma: no cover
         raise Exception('cannot handle other input types at the moment')
 
     return Y, names
@@ -122,10 +122,10 @@ def get_logdet(m):
     from scikits.statsmodels.tools.compatibility import np_slogdet
     logdet = np_slogdet(m)
 
-    if logdet[0] == -1:
+    if logdet[0] == -1: # pragma: no cover
         raise ValueError("Matrix is not positive definite")
-    elif logdet[0] == 0:
-        raise ValueError("Matrix is singluar")
+    elif logdet[0] == 0: # pragma: no cover
+        raise ValueError("Matrix is singular")
     else:
         logdet = logdet[1]
 
@@ -158,4 +158,13 @@ def varsim(coefs, intercept, sig_u, steps=100, initvalues=None):
         for j in xrange(p):
             ygen += np.dot(coefs[j], result[t-j-1])
 
+    return result
+
+def get_index(lst, name):
+    try:
+        result = lst.index(name)
+    except Exception:
+        if not isinstance(name, int):
+            raise
+        result = name
     return result
