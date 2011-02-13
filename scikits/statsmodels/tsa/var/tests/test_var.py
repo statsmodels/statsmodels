@@ -224,7 +224,10 @@ class TestVARResults(CheckIRF, CheckFEVD):
         sys.stdout = sys.__stdout__
 
     def test_names(self):
-        assert_equal(self.names, self.ref.names)
+        assert_equal(self.model.names, self.ref.names)
+
+        model2 = VAR(self.data, names=self.names)
+        assert_equal(model2.names, self.ref.names)
 
     def test_get_eq_index(self):
         for i, name in enumerate(self.names):
