@@ -288,15 +288,10 @@ def duplication_matrix(n):
 
     Returns
     -------
-
+    D_n : ndarray
     """
-    onesmat = np.ones((n, n))
-    vech_mask = vec(np.tril(onesmat)) == 1
-    subdiag_mask = vec(np.tril(onesmat, k=-1)) != 0
-
-    D = np.eye(n * n)
-    D[subdiag_mask] = D[subdiag_mask] + D[-vech_mask]
-    return D[vech_mask].T
+    tmp = np.eye(n * (n + 1) / 2)
+    return np.array([unvech(x).ravel() for x in tmp]).T
 
 def elimination_matrix(n):
     """
