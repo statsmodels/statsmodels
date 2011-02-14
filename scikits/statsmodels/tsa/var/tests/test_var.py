@@ -504,7 +504,7 @@ def test_get_trendorder():
     }
 
     for t, trendorder in results.iteritems():
-        assert(model._get_trendorder(t) == trendorder)
+        assert(util.get_trendorder(t) == trendorder)
 
 if __name__ == '__main__':
     import nose
