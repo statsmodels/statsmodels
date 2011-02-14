@@ -5,6 +5,11 @@ Miscellaneous utility code for VAR estimation
 import numpy as np
 import scipy.stats as stats
 
+import scikits.statsmodels.tsa.tsatools as tsa
+
+#-------------------------------------------------------------------------------
+# Auxiliary functions for estimation
+
 def interpret_data(data, names):
     """
     Convert passed data structure to form required by VAR estimation classes
@@ -37,8 +42,93 @@ def interpret_data(data, names):
 
     return Y, names
 
+def get_var_endog(y, lags, trend='c'):
+    """
+    Make predictor matrix for VAR(p) process
+
+    Z := (Z_0, ..., Z_T).T (T x Kp)
+    Z_t = [1 y_t y_{t-1} ... y_{t - p + 1}] (Kp x 1)
+
+    Ref: Lutkepohl p.70 (transposed)
+    """
+    nobs = len(y)
+    # Ravel C order, need to put in descending order
+    Z = np.array([y[t-lags : t][::-1].ravel() for t in xrange(lags, nobs)])
+
+    # Add constant, trend, etc.
+    if trend != 'nc':
+        Z = tsa.add_trend(Z, prepend=True, trend=trend)
+
+    return Z
+
+def get_trendorder(trend='c'):
+    # Handle constant, etc.
+    if trend == 'c':
+        trendorder = 1
+    elif trend == 'nc':
+        trendorder = 0
+    elif trend == 'ct':
+        trendorder = 2
+    elif trend == 'ctt':
+        trendorder = 3
+    return trendorder
+
+def make_lag_names(names, lag_order, trendorder=1):
+    """
+    Produce list of lag-variable names. Constant / trends go at the beginning
+
+    Example
+    -------
+    >>> make_lag_names(['foo', 'bar'], 2, 1)
+    ['const', 'L1.foo', 'L1.bar', 'L2.foo', 'L2.bar']
+
+    """
+    lag_names = []
+
+    # take care of lagged endogenous names
+    for i in range(1, lag_order + 1):
+        for name in names:
+            lag_names.append('L'+str(i)+'.'+name)
+
+    # handle the constant name
+    if trendorder != 0:
+        lag_names.insert(0, 'const')
+    if trendorder > 1:
+        lag_names.insert(0, 'trend')
+    if trendorder > 2:
+        lag_names.insert(0, 'trend**2')
+
+    return lag_names
+
 def struct_to_ndarray(arr):
     return arr.view((float, len(arr.dtype.names)))
+
+def comp_matrix(coefs):
+    """
+    Return compansion matrix for the VAR(1) representation for a VAR(p) process
+    (companion form)
+
+    A = [A_1 A_2 ... A_p-1 A_p
+         I_K 0       0     0
+         0   I_K ... 0     0
+         0 ...       I_K   0]
+    """
+    p, k, k2 = coefs.shape
+    assert(k == k2)
+
+    kp = k * p
+
+    result = np.zeros((kp, kp))
+    result[:k] = np.concatenate(coefs, axis=1)
+
+    # Set I_K matrices
+    if p > 1:
+        result[np.arange(k, kp), np.arange(kp-k)] = 1
+
+    return result
+
+#-------------------------------------------------------------------------------
+# Miscellaneous stuff
 
 def parse_lutkepohl_data(path): # pragma: no cover
     """
@@ -93,31 +183,6 @@ def parse_lutkepohl_data(path): # pragma: no cover
 
     return data, date_range
 
-
-def comp_matrix(coefs):
-    """
-    Return compansion matrix for the VAR(1) representation for a VAR(p) process
-    (companion form)
-
-    A = [A_1 A_2 ... A_p-1 A_p
-         I_K 0       0     0
-         0   I_K ... 0     0
-         0 ...       I_K   0]
-    """
-    p, k, k2 = coefs.shape
-    assert(k == k2)
-
-    kp = k * p
-
-    result = np.zeros((kp, kp))
-    result[:k] = np.concatenate(coefs, axis=1)
-
-    # Set I_K matrices
-    if p > 1:
-        result[np.arange(k, kp), np.arange(kp-k)] = 1
-
-    return result
-
 def get_logdet(m):
     from scikits.statsmodels.tools.compatibility import np_slogdet
     logdet = np_slogdet(m)
@@ -168,3 +233,4 @@ def get_index(lst, name):
             raise
         result = name
     return result
+
