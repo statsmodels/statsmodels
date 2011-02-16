@@ -20,35 +20,6 @@ from scikits.statsmodels.sandbox.regression.numdiff import approx_hess
 
 __all__ = ['AR']
 
-#TODO: move this somewhere to be reused.
-def irf(params, shock, omega, nperiods=100, ortho=True):
-    """
-    Returns the impulse response function for a given shock.
-
-    Parameters
-    -----------
-    shock : array-like
-        An array of shocks must be provided that is shape (neqs,)
-
-    If params is None, uses the model params. Note that no normalizing is
-    done to the parameters.  Ie., this assumes the the coefficients are
-    the identified structural coefficients.
-
-    Notes
-    -----
-    TODO: Allow for common recursive structures.
-    """
-    shock = np.asarray(shock)
-    params = np.asanyarray(params)
-    neqs = params.shape[0]
-    if shock.shape[0] != neqs:
-        raise ValueError("Each shock must be specified even if it's zero")
-    if shock.ndim > 1:
-        shock = np.squeeze(shock)
-    for i in range(laglen, laglen+nperiods):
-        pass
-
-#TODO: stopped here
 
 class AR(LikelihoodModel):
     def __init__(self, endog, exog=None):
