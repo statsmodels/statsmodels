@@ -121,6 +121,8 @@ def configuration(parent_package='', top_path=None, package_name=DISTNAME):
     config.add_data_dir('scikits/statsmodels/genmod/tests')
     config.add_data_dir('scikits/statsmodels/regression/tests')
     config.add_data_dir('scikits/statsmodels/robust/tests')
+    config.add_data_dir('scikits/statsmodels/tsa/var/tests')
+    config.add_data_dir('scikits/statsmodels/tsa/var/data')
     extradatafiles = [os.path.join(r,d) for r,ds,f in \
                       os.walk('scikits/statsmodels/datasets')
                       for d in f if not os.path.splitext(d)[1] in
