@@ -188,10 +188,8 @@ def forecast(y, coefs, intercept, steps):
 
     # make indices easier to think about
     for h in xrange(1, steps + 1):
-        f = forcs[h - 1]
-
         # y_t(h) = intercept + sum_1^p A_i y_t_(h-i)
-
+        f = forcs[h - 1]
         for i in xrange(1, p + 1):
             # slightly hackish
             if h - i <= 0:
@@ -203,6 +201,7 @@ def forecast(y, coefs, intercept, steps):
 
             # i=1 is coefs[0]
             f = f + np.dot(coefs[i - 1], prior_y)
+        forcs[h - 1] = f
 
     return forcs
 
@@ -255,18 +254,6 @@ def var_loglike(resid, omega, nobs):
     part1 = - (nobs * neqs / 2) * np.log(2 * np.pi)
     part2 = - (nobs / 2) * (logdet + neqs)
     return part1 + part2
-
-def _get_trendorder(trend='c'):
-    # Handle constant, etc.
-    if trend == 'c':
-        trendorder = 1
-    elif trend == 'nc':
-        trendorder = 0
-    elif trend == 'ct':
-        trendorder = 2
-    elif trend == 'ctt':
-        trendorder = 3
-    return trendorder
 
 #-------------------------------------------------------------------------------
 # VARProcess class: for known or unknown VAR process
@@ -344,10 +331,10 @@ class VAR(object):
         return self._estimate_var(lags, trend=trend)
 
     def _estimate_var(self, lags, trend='c'):
-        trendorder = _get_trendorder(trend)
+        trendorder = util.get_trendorder(trend)
 
-        z = self._get_z(lags, trend=trend)
-        y_sample = self._get_y_sample(lags)
+        z = util.get_var_endog(self.y, lags, trend=trend)
+        y_sample = self.y[lags:]
 
         # Lutkepohl p75, about 5x faster than stated formula
         params = np.linalg.lstsq(z, y_sample)[0]
@@ -397,43 +384,19 @@ class VAR(object):
 
         return selected_orders
 
-#-------------------------------------------------------------------------------
-# Auxiliary functions for estimation
-
-    def _get_z(self, lags, trend='c'):
-        """
-        Predictor matrix for VAR(p) process
-
-        Z := (Z_0, ..., Z_T).T (T x Kp)
-        Z_t = [1 y_t y_{t-1} ... y_{t - p + 1}] (Kp x 1)
-
-        Ref: Lutkepohl p.70 (transposed)
-        """
-        y = self.y
-
-        # Ravel C order, need to put in descending order
-        Z = mat([y[t-lags : t][::-1].ravel() for t in xrange(lags, self.nobs)])
-
-        # Add constant, trend, etc.
-        if trend != 'nc':
-            Z = tsa.add_trend(Z, prepend=True, trend=trend)
-
-        return Z
-
-    def _get_y_sample(self, lags):
-        # drop presample observations
-        return self.y[lags:]
-
-
 class VARProcess(object):
     """
+    Class represents a known VAR(p) process
 
     Parameters
     ----------
+    coefs : ndarray (p x k x k)
+    intercept : ndarray (length k)
+    sigma_u : ndarray (k x k)
+    names : sequence (length k)
 
     Returns
     -------
-
     **Attributes**:
 
     """
@@ -645,7 +608,7 @@ class VARResults(VARProcess):
     _model_type = 'VAR'
 
     def __init__(self, y, ys_lagged, params, sigma_u, lag_order,
-                 model=None, trend='c', names=None, dates=None):
+                 model=None, trendorder=1, names=None, dates=None):
 
         self.model = model
         self.y = y
@@ -654,14 +617,12 @@ class VARResults(VARProcess):
 
         self.totobs, neqs = self.y.shape
         self.nobs = self.totobs  - lag_order
+        self.trendorder = trendorder
 
-        # TODO: fix this to be something real
-        self.trendorder = 1
-
+        self.coef_names = util.make_lag_names(names, lag_order, trendorder)
         self.params = params
 
-        # Initialize VARProcess
-
+        # Initialize VARProcess parent class
         # construct coefficient matrices
         # Each matrix needs to be transposed
         reshaped = self.params[1:].reshape((lag_order, neqs, neqs))

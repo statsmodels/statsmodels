@@ -2,6 +2,7 @@ from cStringIO import StringIO
 import numpy as np
 
 from scikits.statsmodels.iolib import SimpleTable
+import scikits.statsmodels.tsa.var.util as util
 
 mat = np.array
 
@@ -66,28 +67,6 @@ class VARSummary(object):
 
     def __repr__(self):
         return self.summary
-
-    def _lag_names(self):
-        lag_names = []
-
-        # take care of lagged endogenous names
-        for i in range(1, self.model.p+1):
-            for name in self.model.names:
-                lag_names.append('L'+str(i)+'.'+name)
-
-        # put them together
-        Xnames = lag_names
-
-        # handle the constant name
-        trendorder = 1 # self.trendorder
-        if trendorder != 0:
-            Xnames.insert(0, 'const')
-        if trendorder > 1:
-            Xnames.insert(0, 'trend')
-        if trendorder > 2:
-            Xnames.insert(0, 'trend**2')
-
-        return Xnames
 
     def make(self, endog_names=None, exog_names=None):
         """
@@ -159,7 +138,7 @@ class VARSummary(object):
         model = self.model
         k = model.neqs
 
-        Xnames = self._lag_names()
+        Xnames = self.model.coef_names
 
         data = zip(model.params.ravel(),
                    model.stderr.ravel(),

@@ -50,15 +50,16 @@ def test_ywcoef():
                     -sm.regression.yule_walker(x1000, 20, method='mle')[0], 8)
 
 def test_duplication_matrix():
-    k = 10
-    m = tools.unvech(np.random.randn(k * (k + 1) / 2))
-    D3 = tools.duplication_matrix(3)
-    assert(np.array_equal(vec(m), np.dot(D3, vech(m))))
+    for k in range(2, 10):
+        m = tools.unvech(np.random.randn(k * (k + 1) / 2))
+        Dk = tools.duplication_matrix(k)
+        assert(np.array_equal(vec(m), np.dot(Dk, vech(m))))
 
 def test_elimination_matrix():
-    m = np.random.randn(3, 3)
-    L3 = tools.elimination_matrix(3)
-    assert(np.array_equal(vech(m), np.dot(L3, vec(m))))
+    for k in range(2, 10):
+        m = np.random.randn(k, k)
+        Lk = tools.elimination_matrix(k)
+        assert(np.array_equal(vech(m), np.dot(Lk, vec(m))))
 
 def test_commutation_matrix():
     m = np.random.randn(4, 3)
