@@ -9,7 +9,7 @@ __docformat__ = 'restructuredtext'
 #from info import __doc__
 
 #from regression import *
-#from glm.glm import *
+#from genmod.glm import *
 #from robust.rlm import *
 #from discrete.discretemod import *
 #import tsa

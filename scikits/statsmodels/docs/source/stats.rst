@@ -26,7 +26,7 @@ Debugging in Sphinx and rst sucks, where the missing invisible whitespace ????
 Residual Diagnostics and Specification Tests
 --------------------------------------------
 
-.. currentmodule:: scikits.statsmodels.stattools
+.. currentmodule:: scikits.statsmodels.stats.stattools
 
 .. autosummary::
    :toctree: generated/

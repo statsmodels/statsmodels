@@ -13,7 +13,7 @@ numpy.lib.io
 from struct import unpack, calcsize
 import sys
 import numpy as np
-from numpy.lib._iotools import _is_string_like
+from numpy.lib._iotools import _is_string_like, easy_dtype
 
 
 ### Helper classes for StataReader ###
@@ -379,7 +379,8 @@ def genfromdta(fname, excludelist=None, missing_flt=-999., missing_str=""):
 
     Parameters
     ----------
-    fname
+    fname : str or filehandle
+        Stata .dta file.
     missing_values
     excludelist
     missing_flt
@@ -458,12 +459,20 @@ def genfromdta(fname, excludelist=None, missing_flt=-999., missing_str=""):
                 if val is None:
                     line[i] = convert_missing[formats[i]]
                 elif i in remove_comma:
-                    line[i] = ''.join(line[i].split(','))
+                    try: # sometimes a format, say gc is read as a float or int
+                        #TODO: I'm actually not sure now that comma formats
+                        # are read as strings.
+                        line[i] = ''.join(line[i].split(','))
+                    except:
+                        line[j] = str(line[j])
                     if formats[i] == 'f8':
                         line[i] = float(line[i])
         if remove_comma and not None in line:
             for j in remove_comma:
-                line[j] = ''.join(line[j].split(','))
+                try: # sometimes a format, say gc is read as a float or int
+                    line[j] = ''.join(line[j].split(','))
+                except:
+                    line[j] = str(line[j])
                 if formats[j] == 'f8': # change when change f8
                     line[j] = float(line[j])
 
@@ -478,6 +487,7 @@ def genfromdta(fname, excludelist=None, missing_flt=-999., missing_str=""):
         for i in strcolidx:
             formats[i] = "a%i" % max(len(str(row[i])) for row in first_list)
     dt = zip(varnames, formats) # make dtype again
+    dt = easy_dtype(dt)
     data = np.zeros((nobs), dtype=dt) # init final array
     for i,row in enumerate(first_list):
         data[i] = tuple(row)

@@ -40,8 +40,10 @@ def add_trend(X, trend="c", prepend=False):
     X = np.asanyarray(X)
     nobs = len(X)
     trendarr = np.vander(np.arange(1,nobs+1, dtype=float), trendorder+1)
+    # put in order ctt
+    trendarr = np.fliplr(trendarr)
     if trend == "t":
-        trendarr = trendarr[:,0]
+        trendarr = trendarr[:,1]
     if not X.dtype.names:
         if not prepend:
             X = np.column_stack((X, trendarr))
@@ -51,11 +53,11 @@ def add_trend(X, trend="c", prepend=False):
         return_rec = data.__clas__ is np.recarray
         if trendorder == 1:
             if trend == "ct":
-                dt = [('trend',float),('const',float)]
+                dt = [('const',float),('trend',float)]
             else:
                 dt = [('trend', float)]
         elif trendorder == 2:
-            dt = [('trend_squared', float),('trend',float),('const',float)]
+            dt = [('const',float),('trend',float),('trend_squared', float)]
         trendarr = trendarr.view(dt)
         if prepend:
             X = nprf.append_fields(trendarr, X.dtype.names, [X[i] for i

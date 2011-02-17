@@ -14,6 +14,7 @@ linear instrumental variable model is included. This has been introduced as a te
 works correctly but it does not take the linear structure into account. For the linear
 case we intend to introduce a specific implementation which will be faster and numerically
 more accurate.
+
 Currently, GMM takes arbitrary non-linear moment conditions and calculates the estimates
 either for a given weighting matrix or iteratively by alternating between estimating
 the optimal weighting matrix and estimating the parameters. Implementing models with
