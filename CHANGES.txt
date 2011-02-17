@@ -10,7 +10,7 @@ Datasets' Load class is now load function.
 regression.py -> regression/linear_model.py
 discretemod.py -> discrete/discretemod.py
 rlm.py -> robust/rlm.py
-glm.py -> glm/glm.py
+glm.py -> genmod/glm.py
 model.py -> base/model.py
 
 *main changes*
