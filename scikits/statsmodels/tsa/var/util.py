@@ -40,6 +40,10 @@ def interpret_data(data, names):
     else: # pragma: no cover
         raise Exception('cannot handle other input types at the moment')
 
+
+    if not isinstance(names, list):
+        names = list(names)
+
     return Y, names
 
 def get_var_endog(y, lags, trend='c'):
