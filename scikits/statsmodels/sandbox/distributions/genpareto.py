@@ -128,7 +128,7 @@ data = genpareto2.rvs(-0.75, scale=5, size=1000)
 tmp = meanexcess_plot(data, params=(-0.75, 5), plot=1)
 print tmp[1][-20:]
 print tmp[0][-20:]
-plt.show()
+#plt.show()
 
 def meanexcess_emp(data):
     datasorted = np.sort(data).astype(float)

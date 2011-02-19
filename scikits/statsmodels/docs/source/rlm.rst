@@ -1,4 +1,4 @@
-.. currentmodule:: scikits.statsmodels.rlm
+.. currentmodule:: scikits.statsmodels.robust
 
 
 .. _rlm:
@@ -10,7 +10,7 @@ Introduction
 ------------
 
 
-.. automodule:: scikits.statsmodels.rlm
+.. automodule:: scikits.statsmodels.robust.rlm
 
 
 Examples
@@ -19,9 +19,9 @@ Examples
 ::
 
     import scikits.statsmodels.api as sm
-    date = sm.datasets.stackloss.Load()
+    date = sm.datasets.stackloss.load()
     data.exog = sm.add_constant(data.exog)
-    rlm_model = models.RLM(data.endog, data.exog, M=models.robust.norms.HuberT())
+    rlm_model = sm.RLM(data.endog, data.exog, M=models.robust.norms.HuberT())
     rlm_results = rlm_model.fit()
     print rlm_results.params
 

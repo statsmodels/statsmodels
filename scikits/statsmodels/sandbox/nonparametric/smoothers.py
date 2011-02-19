@@ -50,7 +50,7 @@ class KernelSmoother(object):
         Otherwise an attempt is made to cast x to numpy.ndarray and an array of
         corresponding y-points is returned.
         """
-        if isinstance(x, numbers.Real):
+        if np.size(x) == 1: # if isinstance(x, numbers.Real):
             return self.Kernel.smooth(self.x, self.y, x)
         else:
             return np.array([self.Kernel.smooth(self.x, self.y, xx) for xx
@@ -242,7 +242,7 @@ if __name__ == "__main__":
     ax5 = fig2.add_subplot(111)
     ax5.plot(x, y, "+")
     ax5.plot(KSConfIntx, KSConfInty, "o")
-    plt.show()
+    #plt.show()
 
 
 

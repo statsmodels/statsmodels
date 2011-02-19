@@ -201,20 +201,21 @@ def plotting_positions(data, alpha=0.4, beta=0.4, axis=0, masknan=False):
     Typical values for alpha and beta are:
         - (0,1)    : *p(k) = k/n* : linear interpolation of cdf (R, type 4)
         - (.5,.5)  : *p(k) = (k-1/2.)/n* : piecewise linear function (R, type 5)
-        - (0,0)    : *p(k) = k/(n+1)* : Weibull (R type 6)
+          (Bliss 1967: "Rankit")
+        - (0,0)    : *p(k) = k/(n+1)* : Weibull (R type 6), (Van der Waerden 1952)
         - (1,1)    : *p(k) = (k-1)/(n-1)*. In this case, p(k) = mode[F(x[k])].
           That's R default (R type 7)
         - (1/3,1/3): *p(k) = (k-1/3)/(n+1/3)*. Then p(k) ~ median[F(x[k])].
           The resulting quantile estimates are approximately median-unbiased
-          regardless of the distribution of x. (R type 8)
-        - (3/8,3/8): *p(k) = (k-3/8)/(n+1/4)*. Blom.
+          regardless of the distribution of x. (R type 8), (Tukey 1962)
+        - (3/8,3/8): *p(k) = (k-3/8)/(n+1/4)*.
           The resulting quantile estimates are approximately unbiased
-          if x is normally distributed (R type 9)
+          if x is normally distributed (R type 9) (Blom 1958)
         - (.4,.4)  : approximately quantile unbiased (Cunnane)
         - (.35,.35): APL, used with PWM
 
-Parameters
-----------
+    Parameters
+    ----------
     x : sequence
         Input data, as a sequence or array of dimension at most 2.
     prob : sequence
@@ -224,6 +225,15 @@ Parameters
     beta : {0.4, float} optional
         Plotting positions parameter.
 
+    Notes
+    -----
+    I think the adjustments assume that there are no ties in order to be a reasonable
+    approximation to a continuous density function. TODO: check this
+
+    References
+    ----------
+    unknown,
+    dates to original papers from Beasley, Erickson, Allison 2009 Behav Genet
     """
     if isinstance(data, np.ma.MaskedArray):
         if axis is None or data.ndim == 1:
@@ -272,7 +282,7 @@ def plotting_positions_w1d(data, weights=None, alpha=0.4, beta=0.4,
         - alpha and beta are two parameters.
 
     wtd.quantile in R package Hmisc seems to use the "notnormed" version.
-    notnormed coincides with unweighted segmetn in example, drop "normed" version ?
+    notnormed coincides with unweighted segment in example, drop "normed" version ?
 
 
     See Also
@@ -301,6 +311,13 @@ def plotting_positions_w1d(data, weights=None, alpha=0.4, beta=0.4,
         res[xargsort] = (1.*ws-alpha)/(ws[-1]+1.-alpha-beta)
     return res
 
+def edf_normal_inverse_transformed(x, alpha=3./8, beta=3./8, axis=0):
+    '''rank based normal inverse transformed cdf
+    '''
+    from scipy import stats
+    ranks = plotting_positions(data, alpha=alpha, beta=alpha, axis=0, masknan=False)
+    ranks_transf = stats.norm.ppf(ranks)
+    return ranks_transf
 
 if __name__ == '__main__':
 
@@ -363,4 +380,4 @@ if __name__ == '__main__':
         plt.step(np.repeat(x[:,0],w1,axis=0), stats.mstats.plotting_positions(np.repeat(x[:,0],w1,axis=0)),where='post')
         plt.plot(x[:,0], plotting_positions_w1d(x[:,0], weights=w1, method='0'), '-o')
         plt.plot(np.repeat(x[:,0],w1,axis=0), stats.mstats.plotting_positions(np.repeat(x[:,0],w1,axis=0)), '-o')
-    #plt.show()
+    plt.show()

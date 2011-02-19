@@ -7,11 +7,11 @@ from scikits.statsmodels.iolib.table import SimpleTable
 
 class Describe(object):
     '''
-    Calculates disciptive statistics for data.
-    Defualts to a basic set of statistics, "all" can be spesified, or a list can
+    Calculates descriptive statistics for data.
+    Defaults to a basic set of statistics, "all" can be specified, or a list can
     be given.
 
-    dataset : can be either a stuctured or std array (Larry?), observations in
+    dataset : can be either a structured or ndarray (Larry?), observations in
               rows, variables in columns.
     '''
     def __init__(self, dataset):

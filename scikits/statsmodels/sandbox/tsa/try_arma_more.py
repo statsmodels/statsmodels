@@ -162,4 +162,4 @@ if hastalkbox:
     plt.title('stbs.arspec')
 
 
-plt.show()
+#plt.show()

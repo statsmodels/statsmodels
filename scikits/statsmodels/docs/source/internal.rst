@@ -24,7 +24,7 @@ These are the base classes for both the estimation models and the results.
 They are not directly useful, but layout the structure of the subclasses and
 define some common methods.
 
-.. currentmodule:: scikits.statsmodels.model
+.. currentmodule:: scikits.statsmodels.base.model
 
 .. autosummary::
    :toctree: generated/
@@ -38,5 +38,5 @@ define some common methods.
    ResultMixin
 
 
-.. inheritance-diagram:: scikits.statsmodels.model scikits.statsmodels.discretemod scikits.statsmodels.regression scikits.statsmodels.miscmodels.count
+.. inheritance-diagram:: scikits.statsmodels.base.model scikits.statsmodels.discrete.discretemod scikits.statsmodels.regression.linear_model scikits.statsmodels.miscmodels.count
    :parts: 3

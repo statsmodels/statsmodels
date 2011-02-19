@@ -1,7 +1,7 @@
-from scikits.statsmodels.regression import GLS
+from scikits.statsmodels.regression.linear_model import GLS
 import numpy as np
-from scikits.statsmodels import tools
-from scikits.statsmodels.model import LikelihoodModelResults
+import scikits.statsmodels.tools.tools as tools
+from scikits.statsmodels.base.model import LikelihoodModelResults
 from scipy import sparse
 
 #http://www.irisa.fr/aladin/wg-statlin/WORKSHOPS/RENNES02/SLIDES/Foschi.pdf

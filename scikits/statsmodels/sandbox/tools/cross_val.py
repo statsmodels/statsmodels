@@ -349,13 +349,14 @@ class KStepAhead(object):
             start = np.trunc(n*0.25) # pick something arbitrary
         self.start = start
         self.kall = kall
+        self.return_slice = return_slice
 
 
     def __iter__(self):
         n = self.n
         k = self.k
         start = self.start
-        if return_slice:
+        if self.return_slice:
             for i in xrange(start, n-k):
                 train_slice = slice(None, i, None)
                 if self.kall:
@@ -390,14 +391,13 @@ if __name__ == '__main__':
     #A: josef-pktd
 
     import scikits.statsmodels.api as sm
-    from scikits.statsmodels import OLS
-    from scikits.statsmodels.datasets.longley import Load
-    import scikits.statsmodels.api as sm
+    from scikits.statsmodels.api import OLS
+    from scikits.statsmodels.datasets.longley import load
     from scikits.statsmodels.iolib.table import (SimpleTable, default_txt_fmt,
                             default_latex_fmt, default_html_fmt)
     import numpy as np
 
-    data = Load()
+    data = load()
     data.exog = sm.tools.add_constant(data.exog)
 
     for inidx, outidx in LeaveOneOut(len(data.endog)):
@@ -435,4 +435,8 @@ if __name__ == '__main__':
 
 
     for inidx, outidx in KStepAhead(20,2):
-        print inidx.sum(), np.arange(20)[inidx][-4:], np.nonzero(outidx)[0][()]
+        #note the following were broken because KStepAhead returns now a slice by default
+        print inidx
+        print np.ones(20)[inidx].sum(), np.arange(20)[inidx][-4:]
+        print outidx
+        print np.nonzero(np.ones(20)[outidx])[0][()]

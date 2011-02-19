@@ -29,7 +29,7 @@ def mcarma22(niter=10, nsample=1000, ar=None, ma=None, sig=0.5):
         y2 = arma_generate_sample(ar,ma,nsample+1000, sig)[-nsample:]
         y2 -= y2.mean()
         arest2 = Arma(y2)
-        rhohat2a, cov_x2a, infodict, mesg, ier = arest2.fit((2,0,2))
+        rhohat2a, cov_x2a, infodict, mesg, ier = arest2.fit((2,2))
         results.append(rhohat2a)
         err2a = arest2.geterrors(rhohat2a)
         sige2a = np.sqrt(np.dot(err2a,err2a)/nsample)

@@ -44,7 +44,7 @@ class TestPoissonMLE(Compare):
         data_endog = np.random.poisson(np.exp(xbeta))
 
         #estimate discretemod.Poisson as benchmark
-        from scikits.statsmodels.discretemod import Poisson
+        from scikits.statsmodels.discrete.discretemod import Poisson
         self.res_discrete = Poisson(data_endog, data_exog).fit()
 
         mod_glm = sm.GLM(data_endog, data_exog, family=sm.families.Poisson())
@@ -72,7 +72,7 @@ class TestPoissonOffset(Compare):
         data_endog = np.random.poisson(np.exp(xbeta))
 
         #estimate discretemod.Poisson as benchmark
-        from scikits.statsmodels.discretemod import Poisson
+        from scikits.statsmodels.discrete.discretemod import Poisson
         self.res_discrete = Poisson(data_endog, data_exog).fit()
 
         mod_glm = sm.GLM(data_endog, data_exog, family=sm.families.Poisson())
@@ -114,7 +114,7 @@ class TestPoissonZi(Compare):
         data_endog = np.random.poisson(np.exp(xbeta))
 
         #estimate discretemod.Poisson as benchmark
-        from scikits.statsmodels.discretemod import Poisson
+        from scikits.statsmodels.discrete.discretemod import Poisson
         self.res_discrete = Poisson(data_endog, data_exog).fit()
 
         mod_glm = sm.GLM(data_endog, data_exog, family=sm.families.Poisson())

@@ -12,8 +12,8 @@ import numpy as np
 import numpy.random as R
 from scikits.statsmodels.sandbox.gam import AdditiveModel
 from scikits.statsmodels.sandbox.gam import Model as GAM #?
-from scikits.statsmodels.family import family
-from scikits.statsmodels.glm import GLM
+from scikits.statsmodels.genmod.families import family
+from scikits.statsmodels.genmod.glm import GLM
 
 standardize = lambda x: (x - x.mean()) / x.std()
 demean = lambda x: (x - x.mean())

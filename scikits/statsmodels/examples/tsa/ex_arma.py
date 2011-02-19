@@ -10,7 +10,7 @@ from scikits.statsmodels.tsa.arima_process import arma_generate_sample
 from scikits.statsmodels.tsa.arma_mle import Arma as Arma
 from scikits.statsmodels.tsa.arima_process import ARIMA as ARIMA_old
 from scikits.statsmodels.sandbox.tsa.garch import Arma as Armamle_old
-from scikits.statsmodels.sandbox.tsa.kalmanf import ARMA as ARMA_kf
+from scikits.statsmodels.tsa.arima import ARMA as ARMA_kf
 
 
 
@@ -65,15 +65,15 @@ start_params_mle[:-1] = (np.sign(start_params_mle[:-1])
 
 
 print 'conditional least-squares'
-rhohat2, cov_x2a, infodict, mesg, ier = arest2.fit((2,0,2))
-print rhohat2
+
+#print rhohat2
 print 'with mle'
 arest2.nar = 2
 arest2.nma = 2
 #
 res = arest2.fit_mle(start_params=start_params_mle, method='nm') #no order in fit
 print res.params
-
+rhohat2, cov_x2a, infodict, mesg, ier = arest2.fit((2,2))
 print '\nARIMA_old'
 arest = ARIMA_old(y22)
 rhohat1, cov_x1, infodict, mesg, ier = arest.fit((2,0,2))
@@ -84,7 +84,9 @@ print np.var(err1)
 print 'bse ls, formula  not checked'
 print np.sqrt(np.diag(cov_x1))*err1.std()
 print 'bsejac for mle'
-print arest2.bsejac
+#print arest2.bsejac
+#TODO:check bsejac raises singular matrix linalg error
+#in model.py line620: return np.linalg.inv(np.dot(jacv.T, jacv))
 
 print '\nyule-walker'
 print sm.regression.yule_walker(y22, order=2, inv=True)

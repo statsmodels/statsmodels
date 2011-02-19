@@ -9,7 +9,7 @@ __docformat__ = 'restructuredtext'
 #from info import __doc__
 
 #from regression import *
-#from glm.glm import *
+#from genmod.glm import *
 #from robust.rlm import *
 #from discrete.discretemod import *
 #import tsa
@@ -68,10 +68,10 @@ class NoseWrapper(Tester):
         argv, plugins = self.prepare_test_args(label, verbose, extra_argv,
                                                doctests, coverage)
         from numpy.testing.noseclasses import NumpyTestProgram
-        from warnings import catch_warnings, simplefilter
+        from warnings import simplefilter #, catch_warnings
         with errstate(**kwargs):
-            with catch_warnings():
-                simplefilter('ignore', category=DeprecationWarning)
-                t = NumpyTestProgram(argv=argv, exit=False, plugins=plugins)
+##            with catch_warnings():
+            simplefilter('ignore', category=DeprecationWarning)
+            t = NumpyTestProgram(argv=argv, exit=False, plugins=plugins)
         return t.result
 test = NoseWrapper().test

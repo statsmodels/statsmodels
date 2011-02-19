@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-
+TODO: broken because of changes to arguments and import paths
+fixing this needs a closer look
 
 Created on Thu Feb 11 23:41:53 2010
 Author: josef-pktd
@@ -16,7 +17,8 @@ import numdifftools as ndt
 
 import scikits.statsmodels.api as sm
 from scikits.statsmodels.sandbox import tsa
-from mle import Arma  # local import
+from scikits.statsmodels.tsa.arma_mle import Arma  # local import
+from scikits.statsmodels.tsa.arima_process import arma_generate_sample
 
 examples = ['arma']
 if 'arma' in examples:
@@ -25,13 +27,13 @@ if 'arma' in examples:
     print '----------'
     ar = [1.0, -0.8]
     ma = [1.0,  0.5]
-    y1 = tsa.arima.ARIMA.generate_sample(ar,ma,1000,0.1)
+    y1 = arma_generate_sample(ar,ma,1000,0.1)
     y1 -= y1.mean() #no mean correction/constant in estimation so far
 
     arma1 = Arma(y1)
     arma1.nar = 1
     arma1.nma = 1
-    arma1res = arma1.fit(method='fmin')
+    arma1res = arma1.fit_mle(order=(1,1), method='fmin')
     print arma1res.params
 
     #Warning need new instance otherwise results carry over

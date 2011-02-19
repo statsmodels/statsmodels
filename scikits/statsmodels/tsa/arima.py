@@ -4,12 +4,13 @@ from scikits.statsmodels.tools.decorators import (cache_readonly,
 from scipy import optimize
 from numpy import dot, identity, kron, log, zeros, pi, exp, eye, abs, empty
 from numpy.linalg import inv, pinv
+
 from scikits.statsmodels.tools.tools import add_constant
 from scikits.statsmodels.base.model import (LikelihoodModel,
         LikelihoodModelResults, GenericLikelihoodModel)
 from scikits.statsmodels.regression.linear_model import yule_walker, GLS
 from tsatools import lagmat
-from var import AR
+from ar import AR
 from scikits.statsmodels.sandbox.regression.numdiff import approx_fprime, \
         approx_hess, approx_hess_cs
 from kalmanf import KalmanFilter

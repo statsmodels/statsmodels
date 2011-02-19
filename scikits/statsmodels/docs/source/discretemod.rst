@@ -1,4 +1,4 @@
-.. currentmodule:: scikits.statsmodels.discretemod
+.. currentmodule:: scikits.statsmodels.discrete.discretemod
 
 
 .. _discretemod:
@@ -30,7 +30,7 @@ specific methods and attributes.
 Example::
 
   # Load the data from Spector and Mazzeo (1980)
-  spector_data = sm.datasets.spector.Load()
+  spector_data = sm.datasets.spector.load()
   spector_data.exog = sm.add_constant(spector_data.exog)
 
   # Linear Probability Model using OLS

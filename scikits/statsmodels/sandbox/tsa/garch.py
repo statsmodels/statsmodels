@@ -84,7 +84,7 @@ import matplotlib.pyplot as plt
 
 import numdifftools as ndt
 
-from scikits.statsmodels.model import Model, LikelihoodModelResults
+from scikits.statsmodels.base.model import Model, LikelihoodModelResults
 from scikits.statsmodels.sandbox import tsa
 
 def normloglike(x, mu=0, sigma2=1, returnlls=False, axis=0):
