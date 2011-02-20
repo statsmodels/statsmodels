@@ -1,1 +1,1 @@
-from .model import VAR
+from .varmod import VAR
