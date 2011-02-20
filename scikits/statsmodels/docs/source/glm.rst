@@ -10,7 +10,7 @@ Generalized Linear Models
 Introduction
 ------------
 
-.. automodule:: scikits.statsmodels.glm.glm
+.. automodule:: scikits.statsmodels.genmod.glm
 
 
 Examples
@@ -54,7 +54,7 @@ Families
 
 The distribution families currently implemented are
 
-.. currentmodule:: scikits.statsmodels.glm.families.family
+.. currentmodule:: scikits.statsmodels.genmod.families.family
 
 .. autosummary::
    :toctree: generated/
@@ -77,7 +77,7 @@ available link functions can be obtained by ::
 
 >>> sm.families.family.<familyname>.available ?
 
-.. currentmodule:: scikits.statsmodels.glm.families.links
+.. currentmodule:: scikits.statsmodels.genmod.families.links
 
 .. autosummary::
    :toctree: generated/

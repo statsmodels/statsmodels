@@ -118,9 +118,16 @@ def configuration(parent_package='', top_path=None, package_name=DISTNAME):
     config.add_data_dir('scikits/statsmodels/docs')
     config.add_data_dir('scikits/statsmodels/iolib/tests')
     config.add_data_dir('scikits/statsmodels/discrete/tests')
-    config.add_data_dir('scikits/statsmodels/glm/tests')
+    config.add_data_dir('scikits/statsmodels/genmod/tests')
     config.add_data_dir('scikits/statsmodels/regression/tests')
     config.add_data_dir('scikits/statsmodels/robust/tests')
+    config.add_data_dir('scikits/statsmodels/tsa/var/tests')
+    vardatafiles = [os.path.join(r,d) for r,ds,f in \
+                    os.walk('scikits/statsmodels/tsa/var/data')
+                    for d in f if not os.path.splitext(d)[1] in ['.py',
+                    '.pyc']]
+    for f in vardatafiles:
+        config.add_data_files(f)
     extradatafiles = [os.path.join(r,d) for r,ds,f in \
                       os.walk('scikits/statsmodels/datasets')
                       for d in f if not os.path.splitext(d)[1] in

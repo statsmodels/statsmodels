@@ -40,8 +40,10 @@ def add_trend(X, trend="c", prepend=False):
     X = np.asanyarray(X)
     nobs = len(X)
     trendarr = np.vander(np.arange(1,nobs+1, dtype=float), trendorder+1)
+    # put in order ctt
+    trendarr = np.fliplr(trendarr)
     if trend == "t":
-        trendarr = trendarr[:,0]
+        trendarr = trendarr[:,1]
     if not X.dtype.names:
         if not prepend:
             X = np.column_stack((X, trendarr))
@@ -51,11 +53,11 @@ def add_trend(X, trend="c", prepend=False):
         return_rec = data.__clas__ is np.recarray
         if trendorder == 1:
             if trend == "ct":
-                dt = [('trend',float),('const',float)]
+                dt = [('const',float),('trend',float)]
             else:
                 dt = [('trend', float)]
         elif trendorder == 2:
-            dt = [('trend_squared', float),('trend',float),('const',float)]
+            dt = [('const',float),('trend',float),('trend_squared', float)]
         trendarr = trendarr.view(dt)
         if prepend:
             X = nprf.append_fields(trendarr, X.dtype.names, [X[i] for i
@@ -241,8 +243,93 @@ def lagmat2ds(x, maxlag0, maxlagex=None, dropex=0, trim='forward'):
         lagsli.append(lagmat(x[:,k], maxlag, trim=trim, original='in')[:,dropex:maxlagex+1])
     return np.column_stack(lagsli)
 
+def vec(mat):
+    return mat.ravel('F')
 
-__all__ = ['lagmat', 'lagmat2ds','add_trend']
+def vech(mat):
+    # Gets Fortran-order
+    return mat.T.take(_triu_indices(len(mat)))
+
+# tril/triu/diag, suitable for ndarray.take
+
+def _tril_indices(n):
+    rows, cols = np.tril_indices(n)
+    return rows * n + cols
+
+def _triu_indices(n):
+    rows, cols = np.triu_indices(n)
+    return rows * n + cols
+
+def _diag_indices(n):
+    rows, cols = np.diag_indices(n)
+    return rows * n + cols
+
+def unvec(v):
+    k = int(np.sqrt(len(v)))
+    assert(k * k == len(v))
+    return v.reshape((k, k), order='F')
+
+def unvech(v):
+    # quadratic formula, correct fp error
+    rows = .5 * (-1 + np.sqrt(1 + 8 * len(v)))
+    rows = int(np.round(rows))
+
+    result = np.zeros((rows, rows))
+    result[np.triu_indices(rows)] = v
+    result = result + result.T
+
+    # divide diagonal elements by 2
+    result[np.diag_indices(rows)] /= 2
+
+    return result
+
+def duplication_matrix(n):
+    """
+    Create duplication matrix D_n which satisfies vec(S) = D_n vech(S) for
+    symmetric matrix S
+
+    Returns
+    -------
+    D_n : ndarray
+    """
+    tmp = np.eye(n * (n + 1) / 2)
+    return np.array([unvech(x).ravel() for x in tmp]).T
+
+def elimination_matrix(n):
+    """
+    Create the elimination matrix L_n which satisfies vech(M) = L_n vec(M) for
+    any matrix M
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+
+    """
+    vech_indices = vec(np.tril(np.ones((n, n))))
+    return np.eye(n * n)[vech_indices != 0]
+
+def commutation_matrix(p, q):
+    """
+    Create the commutation matrix K_{p,q} satisfying vec(A') = K_{p,q} vec(A)
+
+    Parameters
+    ----------
+    p : int
+    q : int
+
+    Returns
+    -------
+    K : ndarray (pq x pq)
+    """
+    K = np.eye(p * q)
+    indices = np.arange(p * q).reshape((p, q), order='F')
+    return K.take(indices.ravel(), axis=0)
+
+__all__ = ['lagmat', 'lagmat2ds','add_trend', 'duplication_matrix',
+           'elimination_matrix', 'commutation_matrix',
+           'vec', 'vech', 'unvec', 'unvech']
 
 if __name__ == '__main__':
     # sanity check, mainly for imports
