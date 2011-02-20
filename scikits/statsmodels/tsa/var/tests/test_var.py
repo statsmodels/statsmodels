@@ -14,10 +14,10 @@ import sys
 import numpy as np
 
 import scikits.statsmodels.api as sm
-import scikits.statsmodels.tsa.var.model as model
+import scikits.statsmodels.tsa.var.varmod as model
 import scikits.statsmodels.tsa.var.util as util
 reload(model)
-from scikits.statsmodels.tsa.var.model import VAR
+from scikits.statsmodels.tsa.var.varmod import VAR
 
 from numpy.testing import assert_almost_equal, assert_equal
 
@@ -250,6 +250,12 @@ class TestVARResults(CheckIRF, CheckFEVD):
         sys.stdout = sys.__stdout__
 
         _unsuppress_plots()
+
+    def test_constructor(self):
+        # make sure this works with no names
+        ndarr = self.data.view((float, 3))
+        model = VAR(ndarr)
+        res = model.fit(self.p)
 
     def test_names(self):
         assert_equal(self.model.names, self.ref.names)

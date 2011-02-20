@@ -37,9 +37,10 @@ def interpret_data(data, names):
             Y = struct_to_ndarray(data)
         else:
             Y = data
+            names = ['Y_%d' % i for i in range(Y.shape[1])]
+
     else: # pragma: no cover
         raise Exception('cannot handle other input types at the moment')
-
 
     if not isinstance(names, list):
         names = list(names)
