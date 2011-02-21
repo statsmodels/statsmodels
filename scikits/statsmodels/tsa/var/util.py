@@ -37,7 +37,13 @@ def interpret_data(data, names):
             Y = struct_to_ndarray(data)
         else:
             Y = data
-            names = ['Y_%d' % i for i in range(Y.shape[1])]
+
+            if names is None:
+                names = ['Y_%d' % i for i in range(Y.shape[1])]
+            else:
+                if len(names) != Y.shape[1]:
+                    raise ValueError('length of passed names does not '
+                                     'match number of columns in data')
 
     else: # pragma: no cover
         raise Exception('cannot handle other input types at the moment')
