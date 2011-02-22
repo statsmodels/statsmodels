@@ -77,3 +77,4 @@ def jarque_bera(resids):
     JBpv = stats.chi2.sf(JB,2);
 
     return JB, JBpv, skew, kurtosis
+
