@@ -75,14 +75,13 @@ Estimation
 .. autosummary::
    :toctree: generated/
 
-   var.AR
-   var.ARResults
-   var.VAR
-   var.VAR2
-   var.VARMAResults
+   ar.AR
+   ar.ARResults
+   var.varmod.VAR
+   var.varmod.VARResults
    arma_mle.Arma
 
-Arma and Kalman Filter
+ARMA and Kalman Filter
 ~~~~~~~~~~~~~~~~~~~~~~
 
 .. currentmodule:: scikits.statsmodels.tsa
@@ -163,3 +162,10 @@ VARMA Process
 
    varma_process.VarmaPoly
 
+Interpolation
+"""""""""""""
+
+.. autosummary::
+   :toctree: generated/
+
+   interp.denton.dentonm
