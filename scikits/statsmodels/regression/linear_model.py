@@ -861,31 +861,6 @@ class RegressionResults(LikelihoodModelResults):
         (whitened) endogenous response variable.
     wresid
         The residuals of the transformed/whitened regressand and regressor(s)
-
-    Methods
-    -------
-    cov_params
-        This is the estimated covariance matrix scaled by `scale`
-        See statsmodels.model.cov_params
-    conf_int
-        Returns 1 - alpha % confidence intervals for the estimates
-        See statsmodels.model.conf_int()
-    f_test
-        F test (sometimes called F contrast) returns a ContrastResults instance
-        given an array of linear restrictions.
-        See statsmodels.model.f_test
-    norm_resid
-        Returns the (whitened) residuals normalized to have unit length.
-    summary
-        Returns a string summarizing the fit of a linear regression model.
-    t
-        Returns the t-value for the (optional) given columns.  Calling t()
-        without an argument returns all of the t-values.
-        See statsmodels.model.t
-    t_test
-        T tests (sometimes called T contrast) returns a ContrastResults instance
-        given a 1d array of linear restrictions.  There is not yet full support
-        for multiple an array of multiple t-tests.
     """
 
     # For robust covariance matrix properties
