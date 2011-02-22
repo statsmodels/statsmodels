@@ -7,7 +7,7 @@
 Time Series analysis :mod:`tsa`
 ===============================
 
-:mos:`scikits.statmodels.tsa` contains model classes and functions that are useful
+:mod:`scikits.statmodels.tsa` contains model classes and functions that are useful
 for time series analysis. This currently includes univariate autoregressive models (AR),
 vector autoregressive models (VAR) and univariate autoregressive moving average models
 (ARMA). It also includes descriptive statistics for time series, for example autocorrelation, partial
