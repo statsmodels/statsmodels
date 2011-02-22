@@ -100,6 +100,7 @@ Table of Contents
    rlm
    discretemod
    tsa
+   var
    stats
    tools
    miscmodels
