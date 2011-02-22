@@ -33,7 +33,7 @@ from scikits.statsmodels.base.model import GenericLikelihoodModel
 from scikits.statsmodels.regression.linear_model import yule_walker, GLS
 from scipy.linalg import block_diag
 from scikits.statsmodels.tsa.tsatools import lagmat
-from scikits.statsmodels.tsa import AR
+from scikits.statsmodels.tsa.ar import AR
 from scikits.statsmodels.sandbox.regression.numdiff import approx_fprime, \
         approx_hess
 try:
