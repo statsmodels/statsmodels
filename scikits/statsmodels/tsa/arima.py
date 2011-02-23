@@ -404,8 +404,10 @@ class ARMAResults(LikelihoodModelResults):
     scale : float, optional
         Optional argument to scale the variance covariance matrix.
 
-    Attributes
-    ----------
+    Returns
+    --------
+    **Attributes**
+
     aic : float
         Akaikie Information Criterion
         :math:`-2*llf+2*(q+p+k+1)`
