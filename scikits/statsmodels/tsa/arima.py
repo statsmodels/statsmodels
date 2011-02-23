@@ -690,12 +690,3 @@ if __name__ == "__main__":
                     nsample=1000)
     arma14css = ARMA(y_arma14)
     res14css = arma14css.fit(order=(4,1), trend='nc', method='css')
-
-Topics covered on these exams are subject to change. Questions are based on the last two years of teaching of the required courses for each exam.
-
-
-Master's Program Examinations
-
-MA Economic Theory (for students in all tracks in the MA program, based on ECON-500, 501)
-
-June 2010
