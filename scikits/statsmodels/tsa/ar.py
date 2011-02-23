@@ -22,10 +22,18 @@ __all__ = ['AR']
 
 
 class AR(LikelihoodModel):
+    """
+    Autoregressive AR(p) Model
+
+    Parameters
+    ----------
+    endog : array-like
+        Endogenous response variable.
+    exog : array-like
+        Exogenous variables. Note that exogenous variables are not yet
+        supported for AR.
+    """
     def __init__(self, endog, exog=None):
-        """
-        Autoregressive AR(p) Model
-        """
         super(AR, self).__init__(endog, exog)
         if endog.ndim == 1:
             endog = endog[:,None]
