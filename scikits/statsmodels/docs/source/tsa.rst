@@ -91,9 +91,7 @@ ARMA and Kalman Filter
 
    arima.ARMA
    arima.ARMAResults
-   kalmanf.kalmanf.StateSpaceModel
-   kalmanf.kalmanf.kalmanfilter
-   kalmanf.kalmanf.kalmansmooth
+   kalmanf.kalmanfilter.KalmanFilter
 
 .. currentmodule:: scikits.statsmodels.tsa
 

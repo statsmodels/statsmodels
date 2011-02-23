@@ -455,9 +455,9 @@ class ARMAResults(LikelihoodModelResults):
     p : int
         The number of AR coefficients in the model.
     params : array
-        The parameters of the model. The order is the trend coefficients,
-        then the `p` AR coefficients, the `q` MA coefficients, then the `k`
-        exogenous coefficients.
+        The parameters of the model. The order is the trend coefficients and
+        the 'k' exognous coefficients, then the `p` AR coefficients, and finally
+        the `q` MA coefficients.
     pvalues : array
         The p-values associated with the t-values of the coefficients. Note
         that the coefficients are assumed to have a Student's T distribution.
