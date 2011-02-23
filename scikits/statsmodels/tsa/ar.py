@@ -490,7 +490,7 @@ class AR(LikelihoodModel):
 
         See also
         --------
-        scikits.statsmodels.model.LikelihoodModel.fit for more information
+        `scikits.statsmodels.model.LikelihoodModel.fit` for more information
         on using the solvers.
 
         Notes
