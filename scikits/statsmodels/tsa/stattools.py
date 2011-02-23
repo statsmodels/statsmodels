@@ -543,6 +543,7 @@ def ccovf(x, y, unbiased=True, demean=True):
 
 def ccf(x, y, unbiased=True):
     '''cross-correlation function for 1d
+
     Parameters
     ----------
     x, y : arrays

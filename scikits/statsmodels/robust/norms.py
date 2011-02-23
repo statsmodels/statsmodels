@@ -247,7 +247,9 @@ class HuberT(RobustNorm):
         """
         z = np.asarray(z)
         test = self._subset(z)
-        return test + (1 - test) * self.t / np.fabs(z)
+        absz = np.fabs(z)
+        absz[test] = 1.0
+        return test + (1 - test) * self.t / absz
 
     def psi_deriv(self, z):
         """

@@ -24,7 +24,7 @@ except:
 
 class ARMA(GenericLikelihoodModel):
     """
-    ARMA model wrapper
+    Autoregressive Moving Average ARMA(p,q) Model
 
     Parameters
     ----------
@@ -223,16 +223,14 @@ class ARMA(GenericLikelihoodModel):
         errors = lfilter(b,a, y, zi=zi)[0][p:]
 
         ssr = np.dot(errors,errors)
-#        sigma2 = ssr/(nobs-2*p) # 2 times p because we drop p observations then
-#                                # est. p more
-        sigma2 = ssr/(nobs-p)  # not 2 times because gretl doesn't?
+        sigma2 = ssr/(nobs-p)
         self.sigma2 = sigma2
         llf = -(nobs-p)/2.*(log(2*pi) + log(sigma2)) - ssr/(2*sigma2)
         return llf
 
     def fit(self, order, start_params=None, trend='c', method = "css-mle",
             transparams=True, solver=None, maxiter=35, full_output=1,
-            disp=1, callback=None, **kwargs):
+            disp=5, callback=None, **kwargs):
         """
         Fits ARMA(p,q) model using exact maximum likelihood via Kalman filter.
 
@@ -246,13 +244,14 @@ class ARMA(GenericLikelihoodModel):
             Uses the transformation suggested in Jones (1980).  If False,
             no checking for stationarity or invertibility is done.
         method : str {'css-mle','mle','css'}
-            This is the loglikelihood to maximize.  If "css-mle", the conditional
-            sum of squares likelihood is maximized and its values are used as
-            starting values for the computation of the exact likelihood via the
-            Kalman filter.  If "mle", the exact likelihood is maximized via the
-            Kalman Filter.  If "css" the conditional sum of squares likelihood
-            is maximized.  All three methods use `start_params` as starting
-            parameters.  See above for more information.
+            This is the loglikelihood to maximize.  If "css-mle", the
+            conditional sum of squares likelihood is maximized and its values
+            are used as starting values for the computation of the exact
+            likelihood via the Kalman filter.  If "mle", the exact likelihood
+            is maximized via the Kalman Filter.  If "css" the conditional sum
+            of squares likelihood is maximized.  All three methods use
+            `start_params` as starting parameters.  See above for more
+            information.
         trend : str {'c','nc'}
             Whehter to include a constant or not.  'c' includes constant,
             'nc' no constant.
@@ -285,7 +284,7 @@ class ARMA(GenericLikelihoodModel):
 
         Returns
         -------
-        ARMAResults class
+        `scikits.statsmodels.tsa.arima.ARMAResults` class
 
         See also
         --------
@@ -294,8 +293,13 @@ class ARMA(GenericLikelihoodModel):
 
         Notes
         ------
+        If fit by 'mle', it is assumed for the Kalman Filter that the initial
+        unkown state is zero, and that the inital variance is
+        P = dot(inv(identity(m**2)-kron(T,T)),dot(R,R.T).ravel('F')).reshape(r,
+        r, order = 'F')
+
         The below is the docstring from
-        scikits.statsmodels.LikelihoodModel.fit
+        `scikits.statsmodels.LikelihoodModel.fit`
         """
         # enforce invertibility
         self.transparams = transparams
@@ -388,6 +392,93 @@ class ARMA(GenericLikelihoodModel):
 class ARMAResults(LikelihoodModelResults):
     """
     Class to hold results from fitting an ARMA model.
+
+    Parameters
+    ----------
+    model : ARMA instance
+        The fitted model instance
+    params : array
+        Fitted parameters
+    normalized_cov_params : array, optional
+        The normalized variance covariance matrix
+    scale : float, optional
+        Optional argument to scale the variance covariance matrix.
+
+    Returns
+    --------
+    **Attributes**
+
+    aic : float
+        Akaikie Information Criterion
+        :math:`-2*llf+2*(q+p+k+1)`
+        Where `p` is the number of autoregressive coefficients, `q` is the
+        number of moving average coefficients, `k` is the number of
+        exogenous variables, and `llf` is the log-likelihood of the model.
+    arparams : array
+        The parameters associated with the AR coefficients in the model.
+    arroots : array
+        The roots of the AR coefficients are the solution to
+        (1 - arparams[0]*z - arparams[1]*z**2 - ... - arparams[p-1]*z**p) = 0
+        Stability requires that the roots in modulus lie outside the unit
+        circle.
+    bic : float
+        Bayes Information Criterion
+        -2*llf + log(nobs)*(q+p+k+1)
+        Where if the model is fit using conditional sum of squares, the
+        number of observations `nobs` does not include the `p` pre-sample
+        observations.
+    bse : array
+        The standard errors of the parameters. These are computed using the
+        numerical Hessian.
+    fittedvalues : array
+        The predicted values of the model.
+    hqic : float
+        Hannan-Quinn Information Criterion
+        -2*llf + 2*(q+p+k+1)*log(log(nobs))
+        Like `bic` if the model is fit using conditional sum of squares then
+        the `p` pre-sample observations are not counted in `nobs`.
+    k : int
+        The number of exogenous variables included in the model.
+    llf : float
+        The value of the log-likelihood function evaluated at `params`.
+    maparams : array
+        The value of the moving average coefficients.
+    maroots : array
+        The roots of the MA coefficients are the solution to
+        (1 + maparams[0]*z + maparams[1]*z**2 + ... + maparams[q-1]*z**q) = 0
+        Stability requires that the roots in modules lie outside the unit
+        circle.
+    model : ARMA instance
+        A reference to the model that was fit.
+    nobs : float
+        The number of observations in the model. This includes *all*
+        observations, even pre-sample values of the model is fit using
+        'css'.
+    p : int
+        The number of AR coefficients in the model.
+    params : array
+        The parameters of the model. The order is the trend coefficients and
+        the 'k' exognous coefficients, then the `p` AR coefficients, and finally
+        the `q` MA coefficients.
+    pvalues : array
+        The p-values associated with the t-values of the coefficients. Note
+        that the coefficients are assumed to have a Student's T distribution.
+    q : int
+        The number of MA coefficients.
+    resid : array
+        The model residuals. If the model is fit using 'mle' then the
+        residuals are created via the Kalman Filter. If the model is fit
+        using 'css' then the residuals are obtained via `scipy.signal.lfilter`
+        adjusted such that the first `p` residuals are zero. These zero
+        residuals are not returned.
+    scale : float
+        This is currently set to 1.0 and not used by the model or its results.
+    sigma2 : float
+        The variance of the residuals. If the model is fit by 'css',
+        sigma2 = ssr/(nobs-p), where ssr is the sum of squared residuals. If
+        the model is fit by 'mle', then sigma2 = 1/nobs * sum(v**2 / F)
+        where v is the one-step forecast error and F is the forecast error
+        variance.
     """
     _cache = {}
 
@@ -601,5 +692,3 @@ if __name__ == "__main__":
                     nsample=1000)
     arma14css = ARMA(y_arma14)
     res14css = arma14css.fit(order=(4,1), trend='nc', method='css')
-
-
