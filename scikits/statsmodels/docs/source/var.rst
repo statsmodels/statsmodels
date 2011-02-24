@@ -9,7 +9,7 @@ Vector Autoregressions
 Introduction
 ------------
 
-.. currentmodule:: scikits.statsmodels.tsa.var.model
+.. currentmodule:: scikits.statsmodels.tsa.var.varmod
 
 .. autoclass:: VAR
 
