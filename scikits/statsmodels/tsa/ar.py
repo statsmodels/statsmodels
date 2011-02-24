@@ -610,6 +610,51 @@ class ARResults(LikelihoodModelResults):
     """
     Class to hold results from fitting an AR model.
 
+    Parameters
+    ----------
+    model
+    params
+    normalized_cov_params
+    scale
+
+    Returns
+    -------
+    ** Attributes **
+
+    aic : float
+        Akaike Information Criterion using Lutkephol's definition.
+        :math:`log(sigma) + 2*(1+laglen)/avobs`
+    avobs : float
+        The number of available observations `nobs` - `laglen`
+    bic : float
+        Bayes Information Criterion :math:
+        :math:`log(sigma) + (1+laglen)*log(avobs)/avobs`
+    bse : array
+        The standard errors of the estimated parameters.
+    fittedvalues : array
+        The in-sample predicted values of the fitted AR model. The `laglen`
+        initial values are computed via the Kalman Filter.
+    fpe : float
+        Final prediction error using Lutkepohl's definition
+        :math:`((nobs+trendorder)/(avobs-laglen-trendorder))*sigma
+    hqic : float
+        Hannan-Quinn Information Criterion.
+    laglen : float
+        Lag length.
+    llf : float
+    model : AR model instance
+    nobs : float
+    params : array
+    pvalues array
+    resid : array
+    roots : array
+    scale : float
+    sigma : float
+    ssr : array
+    trendorder : float
+    tval : array
+
+
     Notes
     -----
     If `method` is 'cmle', then the standard errors that are returned
