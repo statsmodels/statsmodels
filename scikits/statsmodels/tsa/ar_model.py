@@ -8,7 +8,7 @@ from numpy.linalg import inv
 from scipy import optimize
 from scipy.stats import ss as sumofsq
 from scikits.statsmodels.regression.linear_model import OLS
-from tsatools import lagmat, add_trend
+from scikits.statsmodels.tsa.tsatools import lagmat, add_trend
 from scikits.statsmodels.base.model import (LikelihoodModelResults,
         LikelihoodModel)
 from scikits.statsmodels.tools.decorators import (resettable_cache,
