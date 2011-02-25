@@ -10,7 +10,7 @@ from scikits.statsmodels.base.model import (LikelihoodModel,
         LikelihoodModelResults, GenericLikelihoodModel)
 from scikits.statsmodels.regression.linear_model import yule_walker, GLS
 from tsatools import lagmat
-from ar import AR
+from ar_model import AR
 from scikits.statsmodels.sandbox.regression.numdiff import approx_fprime, \
         approx_hess, approx_hess_cs
 from kalmanf import KalmanFilter
