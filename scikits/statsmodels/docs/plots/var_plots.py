@@ -24,3 +24,8 @@ def plot_irf_cum():
     irf = est.irf()
     irf.plot_cum_effects()
 
+def plot_forecast():
+    est.plot_forecast(10)
+
+def plot_fevd():
+    est.fevd(20).plot()

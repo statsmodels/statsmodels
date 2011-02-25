@@ -126,7 +126,7 @@ Plotting input time series:
 
 ::
 
-	>>> model.plot()
+    >>> model.plot()
 
 .. plot:: plots/var_plot_input.py
 
@@ -134,7 +134,7 @@ Plotting time series autocorrelation function:
 
 ::
 
-	>>> model.plot_acorr()
+    >>> model.plot_acorr()
 
 .. plot:: plots/var_plot_acorr.py
 
@@ -142,8 +142,72 @@ Plotting time series autocorrelation function:
 Lag order selection
 ~~~~~~~~~~~~~~~~~~~
 
+Choice of lag order can be a difficult problem. Standard analysis employs
+likelihood test or information criteria-based order selection. We have
+implemented the latter, accessable through the :class:`VAR` class:
+
+::
+
+    >>> model.select_order(15)
+                     VAR Order Selection
+    ======================================================
+                aic          bic          fpe         hqic
+    ------------------------------------------------------
+    0        -27.64       -27.59    9.960e-13       -27.62
+    1        -27.94      -27.74*    7.372e-13      -27.86*
+    2        -27.93       -27.58    7.421e-13       -27.79
+    3        -27.92       -27.43    7.476e-13       -27.72
+    4        -27.94       -27.29    7.328e-13       -27.68
+    5        -27.97       -27.17    7.107e-13       -27.65
+    6        -27.94       -26.99    7.324e-13       -27.56
+    7        -27.93       -26.82    7.418e-13       -27.48
+    8        -27.93       -26.66    7.475e-13       -27.41
+    9       -27.98*       -26.56   7.101e-13*       -27.40
+    10       -27.93       -26.36    7.458e-13       -27.29
+    11       -27.88       -26.15    7.850e-13       -27.18
+    12       -27.84       -25.94    8.271e-13       -27.07
+    13       -27.80       -25.74    8.594e-13       -26.97
+    14       -27.79       -25.57    8.733e-13       -26.89
+    15       -27.81       -25.43    8.599e-13       -26.85
+    ======================================================
+    * Minimum
+
+    {'aic': 9, 'bic': 1, 'fpe': 9, 'hqic': 1}
+
+When calling the `fit` function, one can pass a maximum number of lags and the
+order criterion to use for order selection:
+
+::
+
+    >>> results = model.fit(maxlags=15, ic='aic')
+
 Forecasting
 ~~~~~~~~~~~
+
+The linear predictor is the optimal h-step ahead forecast in terms of
+mean-squared error:
+
+.. math::
+
+   y_t(h) = \nu + A_1 y_t(h − 1) + \cdots + A_p y_t(h − p)
+
+We can use the `forecast` function to produce this forecast. Note that we have
+to specify the "initial value" for the forecast:
+
+::
+
+    >>> results.forecast(data[lag_order:], 5)
+    array([[ 0.00503,  0.00537,  0.00512],
+           [ 0.00594,  0.00785, -0.00302],
+           [ 0.00663,  0.00764,  0.00393],
+           [ 0.00732,  0.00797,  0.00657],
+           [ 0.00733,  0.00809,  0.0065 ]])
+
+The `forecast_interval` function will produce the above forecast along with
+asymptotic standard errors. These can be visualized using the `plot_forecast`
+function:
+
+.. plot:: plots/var_plot_forecast.py
 
 Impulse Response Analysis
 -------------------------
@@ -169,9 +233,9 @@ the 95% significance level, which can be modified by the user.
 
 .. note::
 
-	Orthogonalization is done using the Cholesky decomposition of the estimated
-	error covariance matrix :math:`\hat \Sigma_u` and hence interpretations may
-	change depending on variable ordering.
+    Orthogonalization is done using the Cholesky decomposition of the estimated
+    error covariance matrix :math:`\hat \Sigma_u` and hence interpretations may
+    change depending on variable ordering.
 
 ::
 
@@ -197,3 +261,63 @@ the long run effects as follows:
 
 Forecast Error Variance Decomposition (FEVD)
 --------------------------------------------
+
+Forecast errors of component j on k in an i-step ahead forecast can be
+decomposed using the orthogonalized impulse responses :math:`\Theta_i`:
+
+.. math::
+
+    \omega_{jk, i} = \sum_{i=0}^{h-1} (e_j^\prime \Theta_i e_k)^2 / \mathrm{MSE}_j(h)
+
+    \mathrm{MSE}_j(h) = \sum_{i=0}^{h-1} e_j^\prime \Phi_i \Sigma_u \Phi_i^\prime e_j
+
+These are computed via the `fevd` function up through a total number of steps ahead:
+
+::
+
+    >>> fevd = results.fevd(10)
+
+    >>> fevd.summary()
+    FEVD for realgdp
+          realgdp  realcons   realinv
+    0    1.000000  0.000000  0.000000
+    1    0.863082  0.130030  0.006888
+    2    0.816610  0.176750  0.006639
+    3    0.808872  0.181086  0.010042
+    4    0.803461  0.185049  0.011490
+
+    FEVD for realcons
+          realgdp  realcons   realinv
+    0    0.363990  0.636010  0.000000
+    1    0.369771  0.623928  0.006301
+    2    0.367706  0.616831  0.015463
+    3    0.367450  0.615517  0.017033
+    4    0.367197  0.614903  0.017901
+
+    FEVD for realinv
+          realgdp  realcons   realinv
+    0    0.563584  0.161984  0.274432
+    1    0.471910  0.307875  0.220215
+    2    0.463240  0.328467  0.208292
+    3    0.462148  0.328914  0.208938
+    4    0.461211  0.330359  0.208430
+
+They can also be visualized through the returned :class:`FEVD` object:
+
+::
+
+    >>> results.fevd(20).plot()
+
+.. plot:: plots/var_plot_fevd.py
+
+Statistical tests
+-----------------
+
+Granger causality
+~~~~~~~~~~~~~~~~~
+
+Normality
+~~~~~~~~~
+
+Whiteness of residuals
+~~~~~~~~~~~~~~~~~~~~~~
