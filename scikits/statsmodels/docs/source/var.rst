@@ -22,7 +22,7 @@ and their lagged values is the *vector autoregression process*:
 
 where :math:`A_i` is a :math:`K \times K` coefficient matrix.
 
-We follow in large part the theory the methods described in `Lutkepohl (2005)
+We follow in large part the methods and notation of `Lutkepohl (2005)
 <http://www.springer.com/economics/econometrics/book/978-3-540-26239-8>`__,
 which we will not develop here.
 
@@ -145,9 +145,55 @@ Lag order selection
 Forecasting
 ~~~~~~~~~~~
 
-Impulse response analysis
+Impulse Response Analysis
 -------------------------
+
+*Impulse responses* are of interest in econometric studies: they are the
+estimated responses to a unit impulse in one of the variables. They are computed
+in practice using the MA(:math:`\infty`) representation of the VAR(p) process:
+
+.. math::
+
+    Y_t = \mu + \sum_{i=0}^\infty \Phi_i u_{t-i}
+
+We can perform an impulse response analysis by calling the `irf` function on a
+`VARResults` object:
+
+::
+
+    >>> irf = results.irf(10)
+
+These can be visualized using the `plot` function, in either orthogonalized or
+non-orthogonalized form. Asymptotic standard errors are plotted by default at
+the 95% significance level, which can be modified by the user.
+
+.. note::
+
+	Orthogonalization is done using the Cholesky decomposition of the estimated
+	error covariance matrix :math:`\hat \Sigma_u` and hence interpretations may
+	change depending on variable ordering.
+
+::
+
+    >>> irf.plot(orth=False)
 
 .. plot:: plots/var_plot_irf.py
 
+Note the `plot` function is flexible and can plot only variables of interest if
+so desired:
+
+::
+
+    >>> irf.plot(impulse='realgdp')
+
+The cumulative effects :math:`\Psi_n = \sum_{i=0}^n \Phi_i` can be plotted with
+the long run effects as follows:
+
+::
+
+    >>> irf.plot_cum_effects(orth=False)
+
 .. plot:: plots/var_plot_irf_cum.py
+
+Forecast Error Variance Decomposition (FEVD)
+--------------------------------------------

@@ -1,7 +1,7 @@
 .. currentmodule:: scikits.statsmodels.sandbox.regression.gmm
 
 
-.. _tsa:
+.. _gmm:
 
 
 Generalized Method of Moments :mod:`gmm`
