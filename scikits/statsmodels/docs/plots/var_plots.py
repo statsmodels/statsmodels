@@ -1,0 +1,26 @@
+import numpy as np
+
+from scikits.statsmodels.tsa.api import VAR
+from scikits.statsmodels.api import datasets as ds
+
+mdata = ds.macrodata.load().data[['realgdp', 'realcons', 'realinv']]
+names = mdata.dtype.names
+data = mdata.view((float,3))
+data = np.diff(np.log(data), axis=0)
+
+model = VAR(data, names=names)
+est = model.fit(maxlags=2)
+
+def plot_input():
+    est.plot()
+
+def plot_acorr():
+    est.plot_acorr()
+
+def plot_irf():
+    est.irf().plot()
+
+def plot_irf_cum():
+    irf = est.irf()
+    irf.plot_cum_effects()
+
