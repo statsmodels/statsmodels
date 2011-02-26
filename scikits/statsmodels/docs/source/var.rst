@@ -3,20 +3,321 @@
 
 .. _var:
 
-Vector Autoregressions
-======================
+Vector Autoregressions :mod:`tsa.var`
+=====================================
 
-Introduction
-------------
+VAR(p) processes
+----------------
 
-.. currentmodule:: scikits.statsmodels.tsa.var.model
+We are interested in modeling a :math:`T \times K` multivariate time series
+:math:`Y`, where :math:`T` denotes the number of observations and :math:`K` the
+number of variables. One way of estimating relationships between the time series
+and their lagged values is the *vector autoregression process*:
 
-.. autoclass:: VAR
+.. math::
 
-.. autoclass:: VARResults
+   Y_t = A_1 Y_{t-1} + \ldots + A_p Y_{t-p} + u_t
 
-.. autosummary::
-   :toctree: generated/
+   u_t \sim {\sf Normal}(0, \Sigma_u)
 
-   VAR
-   VARResults
+where :math:`A_i` is a :math:`K \times K` coefficient matrix.
+
+We follow in large part the methods and notation of `Lutkepohl (2005)
+<http://www.springer.com/economics/econometrics/book/978-3-540-26239-8>`__,
+which we will not develop here.
+
+Model fitting
+~~~~~~~~~~~~~
+
+To estimate a VAR model, one must first create the model using an `ndarray` of
+homogeneous or structured dtype. When using a structured or record array, the
+class will use the passed variable names. Otherwise they can be passed
+explicitly:
+
+::
+
+    # some example data
+    >>> mdata = sm.datasets.macrodata.load().data
+    >>> mdata = mdata[['realgdp','realcons','realinv']]
+    >>> names = mdata.dtype.names
+    >>> data = mdata.view((float,3))
+    >>> data = np.diff(np.log(data), axis=0)
+
+    >>> model = VAR(data, names=names)
+
+.. note::
+
+   The :class:`VAR` class assumes that the passed time series are
+   stationary. Non-stationary or trending data can often be transformed to be
+   stationary by first-differencing or some other method. For direct analysis of
+   non-stationary time series, a standard stable VAR(p) model is not
+   appropriate.
+
+To actually do the estimation, call the `fit` method with the desired lag
+order. Or you can have the model select a lag order based on a standard
+information criterion (see below):
+
+::
+
+    >>> results = model.fit(2)
+
+    >>> results.summary()
+
+      Summary of Regression Results
+    ==================================
+    Model:                         VAR
+    Method:                        OLS
+    Date:           Thu, 24, Feb, 2011
+    Time:                     18:55:52
+    --------------------------------------------------------------------
+    No. of Equations:         3.00000    BIC:                   -27.5830
+    Nobs:                     200.000    HQIC:                  -27.7892
+    Log likelihood:           1962.57    FPE:                7.42129e-13
+    AIC:                     -27.9293    Det(Omega_mle):     6.69358e-13
+    --------------------------------------------------------------------
+    Results for equation realgdp
+    ==============================================================================
+                     coefficient       std. error           t-stat            prob
+    ------------------------------------------------------------------------------
+    const               0.001527         0.001119            1.365           0.174
+    L1.realgdp          0.005460         0.000969            5.634           0.000
+    L1.realcons        -0.023903         0.005863           -4.077           0.000
+    L1.realinv         -0.279435         0.169663           -1.647           0.101
+    L2.realgdp         -0.100468         0.146924           -0.684           0.495
+    L2.realcons        -1.970974         0.888892           -2.217           0.028
+    L2.realinv          0.675016         0.131285            5.142           0.000
+    ==============================================================================
+
+    Results for equation realcons
+    ==============================================================================
+                     coefficient       std. error           t-stat            prob
+    ------------------------------------------------------------------------------
+    const               0.268640         0.113690            2.363           0.019
+    L1.realgdp          4.414162         0.687825            6.418           0.000
+    L1.realcons         0.033219         0.026194            1.268           0.206
+    L1.realinv          0.025739         0.022683            1.135           0.258
+    L2.realgdp          0.225479         0.137234            1.643           0.102
+    L2.realcons         0.008221         0.173522            0.047           0.962
+    L2.realinv         -0.123174         0.150267           -0.820           0.413
+    ==============================================================================
+
+    Results for equation realinv
+    ==============================================================================
+                     coefficient       std. error           t-stat            prob
+    ------------------------------------------------------------------------------
+    const               0.380786         0.909114            0.419           0.676
+    L1.realgdp          0.290458         0.145904            1.991           0.048
+    L1.realcons         0.232499         0.126350            1.840           0.067
+    L1.realinv          0.800281         0.764416            1.047           0.296
+    L2.realgdp         -0.007321         0.025786           -0.284           0.777
+    L2.realcons         0.023504         0.022330            1.053           0.294
+    L2.realinv         -0.124079         0.135098           -0.918           0.360
+    ==============================================================================
+
+    Correlation matrix of residuals
+                 realgdp  realcons   realinv
+    realgdp     1.000000  0.603316  0.750722
+    realcons    0.603316  1.000000  0.131951
+    realinv     0.750722  0.131951  1.000000
+
+Several ways to visualize the data using `matplotlib` are available.
+
+Plotting input time series:
+
+::
+
+    >>> model.plot()
+
+.. plot:: plots/var_plot_input.py
+
+Plotting time series autocorrelation function:
+
+::
+
+    >>> model.plot_acorr()
+
+.. plot:: plots/var_plot_acorr.py
+
+
+Lag order selection
+~~~~~~~~~~~~~~~~~~~
+
+Choice of lag order can be a difficult problem. Standard analysis employs
+likelihood test or information criteria-based order selection. We have
+implemented the latter, accessable through the :class:`VAR` class:
+
+::
+
+    >>> model.select_order(15)
+                     VAR Order Selection
+    ======================================================
+                aic          bic          fpe         hqic
+    ------------------------------------------------------
+    0        -27.64       -27.59    9.960e-13       -27.62
+    1        -27.94      -27.74*    7.372e-13      -27.86*
+    2        -27.93       -27.58    7.421e-13       -27.79
+    3        -27.92       -27.43    7.476e-13       -27.72
+    4        -27.94       -27.29    7.328e-13       -27.68
+    5        -27.97       -27.17    7.107e-13       -27.65
+    6        -27.94       -26.99    7.324e-13       -27.56
+    7        -27.93       -26.82    7.418e-13       -27.48
+    8        -27.93       -26.66    7.475e-13       -27.41
+    9       -27.98*       -26.56   7.101e-13*       -27.40
+    10       -27.93       -26.36    7.458e-13       -27.29
+    11       -27.88       -26.15    7.850e-13       -27.18
+    12       -27.84       -25.94    8.271e-13       -27.07
+    13       -27.80       -25.74    8.594e-13       -26.97
+    14       -27.79       -25.57    8.733e-13       -26.89
+    15       -27.81       -25.43    8.599e-13       -26.85
+    ======================================================
+    * Minimum
+
+    {'aic': 9, 'bic': 1, 'fpe': 9, 'hqic': 1}
+
+When calling the `fit` function, one can pass a maximum number of lags and the
+order criterion to use for order selection:
+
+::
+
+    >>> results = model.fit(maxlags=15, ic='aic')
+
+Forecasting
+~~~~~~~~~~~
+
+The linear predictor is the optimal h-step ahead forecast in terms of
+mean-squared error:
+
+.. math::
+
+   y_t(h) = \nu + A_1 y_t(h − 1) + \cdots + A_p y_t(h − p)
+
+We can use the `forecast` function to produce this forecast. Note that we have
+to specify the "initial value" for the forecast:
+
+::
+
+    >>> results.forecast(data[lag_order:], 5)
+    array([[ 0.00503,  0.00537,  0.00512],
+           [ 0.00594,  0.00785, -0.00302],
+           [ 0.00663,  0.00764,  0.00393],
+           [ 0.00732,  0.00797,  0.00657],
+           [ 0.00733,  0.00809,  0.0065 ]])
+
+The `forecast_interval` function will produce the above forecast along with
+asymptotic standard errors. These can be visualized using the `plot_forecast`
+function:
+
+.. plot:: plots/var_plot_forecast.py
+
+Impulse Response Analysis
+-------------------------
+
+*Impulse responses* are of interest in econometric studies: they are the
+estimated responses to a unit impulse in one of the variables. They are computed
+in practice using the MA(:math:`\infty`) representation of the VAR(p) process:
+
+.. math::
+
+    Y_t = \mu + \sum_{i=0}^\infty \Phi_i u_{t-i}
+
+We can perform an impulse response analysis by calling the `irf` function on a
+`VARResults` object:
+
+::
+
+    >>> irf = results.irf(10)
+
+These can be visualized using the `plot` function, in either orthogonalized or
+non-orthogonalized form. Asymptotic standard errors are plotted by default at
+the 95% significance level, which can be modified by the user.
+
+.. note::
+
+    Orthogonalization is done using the Cholesky decomposition of the estimated
+    error covariance matrix :math:`\hat \Sigma_u` and hence interpretations may
+    change depending on variable ordering.
+
+::
+
+    >>> irf.plot(orth=False)
+
+.. plot:: plots/var_plot_irf.py
+
+Note the `plot` function is flexible and can plot only variables of interest if
+so desired:
+
+::
+
+    >>> irf.plot(impulse='realgdp')
+
+The cumulative effects :math:`\Psi_n = \sum_{i=0}^n \Phi_i` can be plotted with
+the long run effects as follows:
+
+::
+
+    >>> irf.plot_cum_effects(orth=False)
+
+.. plot:: plots/var_plot_irf_cum.py
+
+Forecast Error Variance Decomposition (FEVD)
+--------------------------------------------
+
+Forecast errors of component j on k in an i-step ahead forecast can be
+decomposed using the orthogonalized impulse responses :math:`\Theta_i`:
+
+.. math::
+
+    \omega_{jk, i} = \sum_{i=0}^{h-1} (e_j^\prime \Theta_i e_k)^2 / \mathrm{MSE}_j(h)
+
+    \mathrm{MSE}_j(h) = \sum_{i=0}^{h-1} e_j^\prime \Phi_i \Sigma_u \Phi_i^\prime e_j
+
+These are computed via the `fevd` function up through a total number of steps ahead:
+
+::
+
+    >>> fevd = results.fevd(10)
+
+    >>> fevd.summary()
+    FEVD for realgdp
+          realgdp  realcons   realinv
+    0    1.000000  0.000000  0.000000
+    1    0.863082  0.130030  0.006888
+    2    0.816610  0.176750  0.006639
+    3    0.808872  0.181086  0.010042
+    4    0.803461  0.185049  0.011490
+
+    FEVD for realcons
+          realgdp  realcons   realinv
+    0    0.363990  0.636010  0.000000
+    1    0.369771  0.623928  0.006301
+    2    0.367706  0.616831  0.015463
+    3    0.367450  0.615517  0.017033
+    4    0.367197  0.614903  0.017901
+
+    FEVD for realinv
+          realgdp  realcons   realinv
+    0    0.563584  0.161984  0.274432
+    1    0.471910  0.307875  0.220215
+    2    0.463240  0.328467  0.208292
+    3    0.462148  0.328914  0.208938
+    4    0.461211  0.330359  0.208430
+
+They can also be visualized through the returned :class:`FEVD` object:
+
+::
+
+    >>> results.fevd(20).plot()
+
+.. plot:: plots/var_plot_fevd.py
+
+Statistical tests
+-----------------
+
+Granger causality
+~~~~~~~~~~~~~~~~~
+
+Normality
+~~~~~~~~~
+
+Whiteness of residuals
+~~~~~~~~~~~~~~~~~~~~~~
