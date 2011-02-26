@@ -1,5 +1,5 @@
-import numpy as np
-from numpy import dot, eye, diag_indices, zeros, column_stack, ones, diag
+from numpy import (dot, eye, diag_indices, zeros, column_stack, ones, diag,
+        asarray, r_)
 from numpy.linalg import inv, solve
 from scipy.linalg import block_diag
 from scipy import linalg
@@ -163,10 +163,10 @@ def dentonm(indicator, benchmark, freq="aq", **kwarg):
 
 
     # check arrays and make 2d
-    indicator = np.asarray(indicator)
+    indicator = asarray(indicator)
     if indicator.ndim == 1:
         indicator = indicator[:,None]
-    benchmark = np.asarray(benchmark)
+    benchmark = asarray(benchmark)
     if benchmark.ndim == 1:
         benchmark = benchmark[:,None]
 
@@ -200,7 +200,7 @@ def dentonm(indicator, benchmark, freq="aq", **kwarg):
     # following the IMF paper, we can do
     Zinv = diag(1./indicator.squeeze()[:n])
     # this is D in Denton's notation (not using initial value correction)
-#    D = np.eye(n)
+#    D = eye(n)
     # make off-diagonal = -1
 #    D[((np.diag_indices(n)[0])[:-1]+1,(np.diag_indices(n)[1])[:-1])] = -1
     # account for starting conditions
@@ -232,11 +232,12 @@ def dentonm(indicator, benchmark, freq="aq", **kwarg):
         # get last Benchmark-Indicator ratio
         bi = X[n-1]/indicator[n-1]
         extrapolated = bi * indicator[n:]
-        X = np.r_[X,extrapolated]
+        X = r_[X,extrapolated]
 
     return X.squeeze()
 
 if __name__ == "__main__":
+    import numpy as np
     #these will be the tests
     # from IMF paper
 

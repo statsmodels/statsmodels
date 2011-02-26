@@ -10,7 +10,7 @@ tests.
 
 import numpy as np
 from numpy.testing import *
-from scikits.statsmodels.discrete.discretemod import *
+from scikits.statsmodels.discrete.discrete_model import *
 import scikits.statsmodels.api as sm
 from sys import platform
 from nose import SkipTest

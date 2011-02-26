@@ -206,7 +206,7 @@ def print_ic_table(ics, selected_orders):
 
     cols = sorted(ics)
 
-    data = mat([["%#10.4F" % v for v in ics[c]] for c in cols],
+    data = mat([["%#10.4g" % v for v in ics[c]] for c in cols],
                dtype=object).T
 
     # start minimums

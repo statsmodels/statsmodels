@@ -31,6 +31,8 @@ extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest',
               'sphinx.ext.pngmath', 'sphinx.ext.ifconfig',
               'sphinx.ext.viewcode', 'sphinx.ext.autosummary',
               'sphinx.ext.coverage', 'sphinx.ext.inheritance_diagram',
+              'matplotlib.sphinxext.only_directives',
+              'matplotlib.sphinxext.plot_directive',
               'numpy_ext.numpydoc']
 
 # Add any paths that contain templates here, relative to this directory.

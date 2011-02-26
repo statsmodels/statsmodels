@@ -1,4 +1,4 @@
-from .ar import AR
+from .ar_model import AR
 from .arima import ARMA
 import var
 from .var.varmod import VAR

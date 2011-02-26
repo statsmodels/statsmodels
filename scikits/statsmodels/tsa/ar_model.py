@@ -8,7 +8,7 @@ from numpy.linalg import inv
 from scipy import optimize
 from scipy.stats import ss as sumofsq
 from scikits.statsmodels.regression.linear_model import OLS
-from tsatools import lagmat, add_trend
+from scikits.statsmodels.tsa.tsatools import lagmat, add_trend
 from scikits.statsmodels.base.model import (LikelihoodModelResults,
         LikelihoodModel)
 from scikits.statsmodels.tools.decorators import (resettable_cache,
@@ -766,38 +766,6 @@ class ARResults(LikelihoodModelResults):
     @cache_readonly
     def fittedvalues(self):
         return self.model.predict()
-
-class ARIMA(LikelihoodModel):
-    def __init__(self, endog, exog=None):
-        """
-        ARIMA Model
-        """
-        super(ARIMA, self).__init__(endog, exog)
-        if endog.ndim == 1:
-            endog = endog[:,None]
-        elif endog.ndim > 1 and endog.shape[1] != 1:
-            raise ValueError("Only the univariate case is implemented")
-        self.endog = endog # overwrite endog
-        if exog is not None:
-            raise ValueError("Exogenous variables are not yet supported.")
-
-    def fit(self, order=(0,0,0), method="ssm"):
-        """
-        Notes
-        -----
-        Current method being developed is the state-space representation.
-
-        Box and Jenkins outline many more procedures.
-        """
-        if not hasattr(order, '__iter__'):
-            raise ValueError("order must be an iterable sequence.  Got type \
-%s instead" % type(order))
-        p,d,q = order
-        if d > 0:
-            raise ValueError("Differencing not implemented yet")
-            # assume no constant, ie mu = 0
-            # unless overwritten then use w_bar for mu
-            Y = np.diff(endog, d, axis=0) #TODO: handle lags?
 
 
 if __name__ == "__main__":

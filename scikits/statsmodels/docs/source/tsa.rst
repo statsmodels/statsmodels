@@ -25,8 +25,8 @@ structure is within scikits.statsmodels.tsa is
 
  - stattools : empirical properties and tests, acf, pacf, granger-causality,
  	  adf unit root test, ljung-box test and others.
- - var : contains univariate AR and multivariate AR (VAR) estimation models, either
-      conditional LS or MLE or exact MLE.
+ - var : multivariate AR (VAR) estimation models, impulse response analysis, forecast
+   error variance decompositions, and data visualization tools
  - arma_mle : estimation class for univariate ARMA with conditional least squares or
  	  conditional MLE
  - kalmanf : estimation classes for ARMA and other models with exact MLE using Kalman Filter
@@ -75,8 +75,8 @@ Estimation
 .. autosummary::
    :toctree: generated/
 
-   ar.AR
-   ar.ARResults
+   ar_model.AR
+   ar_model.ARResults
    var.varmod.VAR
    var.varmod.VARResults
    arma_mle.Arma
