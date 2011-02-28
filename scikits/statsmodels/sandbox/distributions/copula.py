@@ -147,6 +147,7 @@ def transform_tawn(t, a1, a2, theta):
     transf = (1 - a1) * (1-t)
     transf += (1 - a2) * t
     transf += ((a1 * t)**(1./theta) + (a2 * (1-t))**(1./theta))**theta
+
     return transf
 
 def transform_joe(t, a1, a2, theta):
@@ -170,6 +171,7 @@ def transform_joe(t, a1, a2, theta):
 
     transf = 1 - ((a1 * (1-t))**(-1./theta) + (a2 * t)**(-1./theta))**(-theta)
     return transf
+
 
 def transform_tawn2(t, theta, k):
     '''asymmetric mixed model of Tawn 1988
@@ -274,7 +276,7 @@ copulanames = {'indep' : copula_bv_indep,
                'max' : copula_bv_max,
                'clayton' : copula_bv_clayton,
                'cookjohnson' : copula_bv_clayton,
-               # 'cj' : copula_bv_cookjohnson,
+               'cj' : copula_bv_clayton,
                'frank' : copula_bv_frank,
                'gauss' : copula_bv_gauss,
                'normal' : copula_bv_gauss,
