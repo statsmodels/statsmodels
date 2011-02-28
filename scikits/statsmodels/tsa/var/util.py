@@ -9,50 +9,6 @@ import scikits.statsmodels.tsa.tsatools as tsa
 
 #-------------------------------------------------------------------------------
 # Auxiliary functions for estimation
-
-def interpret_data(data, names):
-    """
-    Convert passed data structure to form required by VAR estimation classes
-
-    Parameters
-    ----------
-    data : ndarray-like
-    names : sequence or None
-        May be part of data structure
-
-    Returns
-    -------
-    (Y, names) : (homogeneous ndarray, list)
-    """
-    if isinstance(data, np.ndarray):
-        provided_names = data.dtype.names
-
-        # structured array type
-        if provided_names:
-            if names is None:
-                names = provided_names
-            else:
-                assert(len(names) == len(provided_names))
-
-            Y = struct_to_ndarray(data)
-        else:
-            Y = data
-
-            if names is None:
-                names = ['Y_%d' % i for i in range(Y.shape[1])]
-            else:
-                if len(names) != Y.shape[1]:
-                    raise ValueError('length of passed names does not '
-                                     'match number of columns in data')
-
-    else: # pragma: no cover
-        raise Exception('cannot handle other input types at the moment')
-
-    if not isinstance(names, list):
-        names = list(names)
-
-    return Y, names
-
 def get_var_endog(y, lags, trend='c'):
     """
     Make predictor matrix for VAR(p) process
@@ -110,9 +66,6 @@ def make_lag_names(names, lag_order, trendorder=1):
         lag_names.insert(0, 'trend**2')
 
     return lag_names
-
-def struct_to_ndarray(arr):
-    return arr.view((float, len(arr.dtype.names)))
 
 def comp_matrix(coefs):
     """

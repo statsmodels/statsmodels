@@ -21,9 +21,6 @@ from scikits.statsmodels.tools.decorators import cache_readonly
 from scikits.statsmodels.tools.tools import chain_dot
 from scikits.statsmodels.tsa.tsatools import vec, unvec
 
-import scikits.statsmodels.tsa.var.irf as irf_module
-reload(irf_module)
-
 from scikits.statsmodels.tsa.var.irf import IRAnalysis
 from scikits.statsmodels.tsa.var.output import VARSummary
 
@@ -31,6 +28,8 @@ import scikits.statsmodels.tsa.tsatools as tsa
 import scikits.statsmodels.tsa.var.output as output
 import scikits.statsmodels.tsa.var.plotting as plotting
 import scikits.statsmodels.tsa.var.util as util
+
+from scikits.statsmodels.tools.data import interpret_data
 
 mat = np.array
 
@@ -275,12 +274,8 @@ class VAR(object):
     """
 
     def __init__(self, endog, names=None, dates=None):
-        self.y, self.names = util.interpret_data(endog, names)
+        self.y, self.names, self.dates = interpret_data(endog, names, dates)
         self.nobs, self.neqs = self.y.shape
-
-        if dates is not None:
-            assert(self.nobs == len(dates))
-        self.dates = dates
 
     def fit(self, maxlags=None, method='ols', ic=None, trend='c',
             verbose=False):
@@ -1099,13 +1094,14 @@ class FEVD(object):
 if __name__ == '__main__':
     import scikits.statsmodels.api as sm
     from scikits.statsmodels.tsa.var.util import parse_lutkepohl_data
+    import scikits.statsmodels.tools.data as data_util
 
     np.set_printoptions(linewidth=140, precision=5)
 
     sdata, dates = parse_lutkepohl_data('data/%s.dat' % 'e1')
 
     names = sdata.dtype.names
-    data = util.struct_to_ndarray(sdata)
+    data = data_util.struct_to_ndarray(sdata)
     adj_data = np.diff(np.log(data), axis=0)
     # est = VAR(adj_data, p=2, dates=dates[1:], names=names)
     model = VAR(adj_data[:-16], dates=dates[1:-16], names=names)
@@ -1124,11 +1120,17 @@ if __name__ == '__main__':
     # data = data.view((float, 4))
     """
 
-    mdata = sm.datasets.macrodata.load().data[['realgdp','realcons','realinv']]
-    names = mdata.dtype.names
-    data = mdata.view((float,3))
+    mdata = sm.datasets.macrodata.load().data
+    mdata2 = mdata[['realgdp','realcons','realinv']]
+    names = mdata2.dtype.names
+    data = mdata2.view((float,3))
     data = np.diff(np.log(data), axis=0)
 
-    model = VAR(data, names=names)
+    import pandas as pn
+    df = pn.DataFrame.fromRecords(mdata)
+    df = np.log(df.reindex(columns=names))
+    df = (df - df.shift(1)).dropIncompleteRows()
+
+    model = VAR(df)
     est = model.fit(maxlags=2)
     irf = est.irf()
