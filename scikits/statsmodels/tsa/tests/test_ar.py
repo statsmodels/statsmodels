@@ -2,7 +2,7 @@
 Test AR Model
 """
 import scikits.statsmodels.api as sm
-from scikits.statsmodels.tsa.ar import AR
+from scikits.statsmodels.tsa.ar_model import AR
 from numpy.testing import assert_almost_equal, assert_equal
 from results import results_ar
 import numpy as np
@@ -28,17 +28,15 @@ class CheckAR(object):
     def test_fpe(self):
         assert_almost_equal(self.res1.fpe, self.res2.fpe, DECIMAL_6)
 
-class TestAR(object):
-    def __init__(self):
-        self.data = sm.datasets.sunspots.load()
-
-class TestAROLSConstant(TestAR, CheckAR):
+class TestAROLSConstant(CheckAR):
     """
     Test AR fit by OLS with a constant.
     """
-    def setup(self):
-        self.res1 = AR(self.data.endog).fit(maxlag=9, method='cmle')
-        self.res2 = results_ar.ARResultsOLS(constant=True)
+    @classmethod
+    def setupClass(cls):
+        data = sm.datasets.sunspots.load()
+        cls.res1 = AR(data.endog).fit(maxlag=9, method='cmle')
+        cls.res2 = results_ar.ARResultsOLS(constant=True)
 
     def test_predict(self):
         model = self.res1.model
@@ -66,13 +64,15 @@ class TestAROLSConstant(TestAR, CheckAR):
                 self.res2.FVOLSn15start312, DECIMAL_4)
 
 
-class TestAROLSNoConstant(TestAR, CheckAR):
+class TestAROLSNoConstant(CheckAR):
     """
     Test AR fit by OLS without a constant.
     """
-    def setup(self):
-        self.res1 = AR(self.data.endog).fit(maxlag=9,method='cmle',trend='nc')
-        self.res2 = results_ar.ARResultsOLS(constant=False)
+    @classmethod
+    def setupClass(cls):
+        data = sm.datasets.sunspots.load()
+        cls.res1 = AR(data.endog).fit(maxlag=9,method='cmle',trend='nc')
+        cls.res2 = results_ar.ARResultsOLS(constant=False)
 
     def test_predict(self):
         model = self.res1.model
@@ -99,12 +99,15 @@ class TestAROLSNoConstant(TestAR, CheckAR):
         assert_almost_equal(model.predict(n=15,start=312),
                 self.res2.FVOLSn15start312, DECIMAL_4)
 
-#class TestARMLEConstant(TestAR, CheckAR):
-#    def setup(self):
-#        self.res1 = AR(self.data.endog).fit(maxlag=9,method="mle")
+#class TestARMLEConstant(CheckAR):
+#    @classmethod
+#    def setupClass(cls):
+#        data = sm.datasets.sunspots.load()
+#        cls.res1 = AR(data.endog).fit(maxlag=9,method="mle", disp=0)
 
 class TestAutolagAR(object):
-    def setup(self):
+    @classmethod
+    def setupClass(cls):
         data = sm.datasets.sunspots.load()
         endog = data.endog
         results = []
@@ -112,8 +115,8 @@ class TestAutolagAR(object):
             endog_tmp = endog[16-lag:]
             r = AR(endog_tmp).fit(maxlag=lag)
             results.append([r.aic, r.hqic, r.bic, r.fpe])
-        self.res1 = np.asarray(results).T.reshape(4,-1, order='C')
-        self.res2 = results_ar.ARLagResults("const").ic
+        cls.res1 = np.asarray(results).T.reshape(4,-1, order='C')
+        cls.res2 = results_ar.ARLagResults("const").ic
 
     def test_ic(self):
         npt.assert_almost_equal(self.res1, self.res2, DECIMAL_6)

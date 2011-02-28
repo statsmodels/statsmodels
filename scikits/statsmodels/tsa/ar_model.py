@@ -3,12 +3,12 @@ This is the VAR class refactored from pymaclab.
 """
 from __future__ import division
 import numpy as np
-from numpy import (dot, identity, atleast_2d, atleast_1d)
+from numpy import (dot, identity, atleast_2d, atleast_1d, zeros)
 from numpy.linalg import inv
 from scipy import optimize
-from scipy.stats import ss as sumofsq
+from scipy.stats import t, norm, ss as sumofsq
 from scikits.statsmodels.regression.linear_model import OLS
-from tsatools import lagmat, add_trend
+from scikits.statsmodels.tsa.tsatools import lagmat, add_trend
 from scikits.statsmodels.base.model import (LikelihoodModelResults,
         LikelihoodModel)
 from scikits.statsmodels.tools.decorators import (resettable_cache,
@@ -88,11 +88,51 @@ class AR(LikelihoodModel):
         newparams[k:k+p] = invarcoefs
         return newparams
 
+    def _presample_fit(self, params, start, p, y, predictedvalues):
+        """
+        Return the pre-sample predicted values using the Kalman Filter
+
+        Notes
+        -----
+        See predict method for how to use start and p.
+        """
+        if self._results is None:
+            raise ValueError("You must fit the model first")
+
+        k = self.trendorder
+
+        # build system matrices
+        T_mat = self._T(params)
+        R_mat = self._R()
+
+        # Initial State mean and variance
+        alpha = np.zeros((p,1))
+        Q_0 = dot(inv(identity(p**2)-np.kron(T_mat,T_mat)),dot(R_mat,
+                R_mat.T).ravel('F'))
+
+        Q_0 = Q_0.reshape(p,p, order='F') #TODO: order might need to be p+k
+        P = Q_0
+        Z_mat = atleast_2d([1] + [0] * (p-k))  # TODO: change for exog
+        for i in xrange(start,p): #iterate p-1 times to fit presample
+            v_mat = y[i] - dot(Z_mat,alpha)
+            F_mat = dot(dot(Z_mat, P), Z_mat.T)
+            Finv = 1./F_mat # inv. always scalar
+            K = dot(dot(dot(T_mat,P),Z_mat.T),Finv)
+            # update state
+            alpha = dot(T_mat, alpha) + dot(K,v_mat)
+            L = T_mat - dot(K,Z_mat)
+            P = dot(dot(T_mat, P), L.T) + dot(R_mat, R_mat.T)
+#            P[0,0] += 1 # for MA part, R_mat.R_mat.T above
+            predictedvalues[i+1-start] = dot(Z_mat,alpha)
+        return predictedvalues
+
     def predict(self, n=-1, start=0, method='dynamic', resid=False,
             confint=False):
         """
         Returns in-sample prediction or forecasts.
 
+        Parameters
+        -----------
         n : int
             Number of periods after start to forecast.  If n==-1, returns in-
             sample forecast starting at `start`.
@@ -124,8 +164,8 @@ class AR(LikelihoodModel):
         Notes
         -----
         The linear Gaussian Kalman filter is used to return pre-sample fitted
-        values.  The initial state is assumed to be a zero vector with the
-        variance given by ...
+        values. The exact initial Kalman Filter is used. See Durbin and Koopman
+        in the references for more information.
         """
         if self._results is None:
             raise ValueError("You must fit the model first")
@@ -154,42 +194,17 @@ class AR(LikelihoodModel):
             else:
                 return np.array([])
         else:
-            predictedvalues = np.zeros((n))
+            predictedvalues = zeros((n))
 
         mu = 0 # overwritten for 'mle' with constant
-        if method == 'mle':
-            # build system matrices
-            T_mat = np.zeros((p,p))
-            T_mat[:,0] = params[k:]
-            T_mat[:-1,1:] = identity(p-1)
-
-            R_mat = np.zeros((p,1))
-            R_mat[0] = 1
-
-            # Initial State mean and variance
-            alpha = np.zeros((p,1))
+        if method == 'mle': # use Kalman Filter to get initial values
             if k>=1:    # if constant, demean, #TODO: handle higher trendorders
                 mu = params[0]/(1-np.sum(params[k:]))   # only for constant-only
-                                           # and exog
+                                        # and exog
                 y -= mu
+            predictedvalues = self._presample_fit(params, start, p, y,
+                    predictedvalues)
 
-            Q_0 = dot(inv(identity(p**2)-np.kron(T_mat,T_mat)),dot(R_mat,
-                    R_mat.T).ravel('F'))
-
-            Q_0 = Q_0.reshape(p,p, order='F') #TODO: order might need to be p+k
-            P = Q_0
-            Z_mat = atleast_2d([1] + [0] * (p-k))  # TODO: change for exog
-            for i in xrange(start,p): #iterate p-1 times to fit presample
-                v_mat = y[i] - dot(Z_mat,alpha)
-                F_mat = dot(dot(Z_mat, P), Z_mat.T)
-                Finv = 1./F_mat # inv. always scalar
-                K = dot(dot(dot(T_mat,P),Z_mat.T),Finv)
-                # update state
-                alpha = dot(T_mat, alpha) + dot(K,v_mat)
-                L = T_mat - dot(K,Z_mat)
-                P = dot(dot(T_mat, P), L.T) + dot(R_mat, R_mat.T)
-#                P[0,0] += 1 # for MA part, R_mat.R_mat.T above
-                predictedvalues[i+1-start] = dot(Z_mat,alpha)
         if start < p and (n > p - start or n == -1):
             if n == -1:
                 predictedvalues[p-start:] = dot(self.X, params)
@@ -275,15 +290,61 @@ class AR(LikelihoodModel):
                         predictedvalues[i-p:i][::-1]] * params)
         return predictedvalues
 
-    def loglike(self, params):
+    def _presample_varcov(self, params, lagstart):
+        """
+        Returns the inverse of the presample variance-covariance.
+
+        Notes
+        -----
+        See Hamilton p. 125
+        """
+        # get inv(Vp) Hamilton 5.3.7
+        params0 = np.r_[-1, params[lagstart:]]
+
+        p = len(params) - lagstart
+        p1 = p+1
+        Vpinv = np.zeros((p,p), dtype=params.dtype)
+        for i in range(lagstart,p1):
+            for j in range(lagstart,p1):
+                if i <= j and j <= p:
+                    part1 = np.sum(params0[:i] * params0[j-i:j])
+                    part2 = np.sum(params0[p1-j:p1+i-j]*params0[p1-i:])
+                    Vpinv[i-1,j-1] = part1 - part2
+        Vpinv = Vpinv + Vpinv.T - np.diag(Vpinv.diagonal())
+        return Vpinv
+
+
+    def loglike(self, params, other=False):
         """
         The loglikelihood of an AR(p) process
+
+        Parameters
+        ----------
+        params : array
+            The fitted parameters of the AR model
+
+        Returns
+        -------
+        llf : float
+            The loglikelihood evaluated at `params`
 
         Notes
         -----
         Contains constant term.  If the model is fit by OLS then this returns
-        the conditonal maximum likelihood.  If it is fit by MLE then the
-        (exact) unconditional maximum likelihood is returned.
+        the conditonal maximum likelihood.
+
+        .. math:: \\frac{\\left(n-p\\right)}{2}\\left(\\log\\left(2\\pi\\right)+\\log\\left(\\sigma^{2}\\right)\\right)-\\frac{1}{\\sigma^{2}}\\sum_{i}\\epsilon_{i}^{2}
+
+        If it is fit by MLE then the (exact) unconditional maximum likelihood
+        is returned.
+
+        .. math:: -\\frac{n}{2}log\\left(2\\pi\\right)-\\frac{n}{2}\\log\\left(\\sigma^{2}\\right)+\\frac{1}{2}\\left|V_{p}^{-1}\\right|-\\frac{1}{2\\sigma^{2}}\\left(y_{p}-\\mu_{p}\\right)^{\\prime}V_{p}^{-1}\\left(y_{p}-\\mu_{p}\\right)-\\frac{1}{2\\sigma^{2}}\\sum_{t=p+1}^{n}\\epsilon_{i}^{2}
+
+        where
+
+        :math:`\\mu_{p}` is a (`p` x 1) vector with each element equal to the
+        mean of the AR process and :math:`\\sigma^{2}V_{p}` is the (`p` x `p`)
+        variance-covariance matrix of the first `p` observations.
         """
         #TODO: Math is on Hamilton ~pp 124-5
         #will need to be amended for inclusion of exogenous variables
@@ -305,7 +366,7 @@ class AR(LikelihoodModel):
 
 # reparameterize according to Jones (1980) like in ARMA/Kalman Filter
         if self.transparams:
-            params = self._transparams(params) # will this overwrite?
+            params = self._transparams(params)
 
         # get mean and variance for pre-sample lags
         yp = endog[:laglen]
@@ -316,41 +377,35 @@ class AR(LikelihoodModel):
 #            xp = exog[:laglen]
         if self.trendorder == 1 and lagstart == 1:
             c = [params[0]] * laglen # constant-only no exogenous variables
-        else:   #TODO: this probably isn't right
+        else:   #TODO: this isn't right
+                #NOTE: when handling exog just demean and proceed as usual.
             c = np.dot(X[:laglen, :lagstart], params[:lagstart])
         mup = np.asarray(c/(1-np.sum(params[lagstart:])))
         diffp = yp-mup[:,None]
 
         # get inv(Vp) Hamilton 5.3.7
-        params0 = np.r_[-1, params[lagstart:]]
-
-        p = len(params) - lagstart
-        p1 = p+1
-        Vpinv = np.zeros((p,p))
-        for i in range(lagstart,p1):
-            for j in range(lagstart,p1):
-                if i <= j and j <= p:
-                    part1 = np.sum(params0[:i] * params0[j-i:j])
-                    part2 = np.sum(params0[p1-j:p1+i-j]*params0[p1-i:])
-                    Vpinv[i-1,j-1] = part1 - part2
-        Vpinv = Vpinv + Vpinv.T - np.diag(Vpinv.diagonal())
-        # this is correct to here
+        Vpinv = self._presample_varcov(params, lagstart)
 
         diffpVpinv = np.dot(np.dot(diffp.T,Vpinv),diffp).item()
         ssr = sumofsq(Y.squeeze() -np.dot(X,params))
 
         # concentrating the likelihood means that sigma2 is given by
-        sigma2 = 1./avobs * (diffpVpinv + ssr)
+        sigma2 = 1./nobs * (diffpVpinv + ssr)
         logdet = np_slogdet(Vpinv)[1] #TODO: add check for singularity
         loglike = -1/2.*(nobs*(np.log(2*np.pi) + np.log(sigma2)) - \
                 logdet + diffpVpinv/sigma2 + ssr/sigma2)
+        if other:
+            return ssr
         return loglike
 
-    def _R(self, params):
+    def _R(self):
         """
         Private method for obtaining fitted presample values via Kalman filter.
         """
-        pass
+        p = self.laglen
+        R_mat = zeros((p,1))
+        R_mat[0] = 1
+        return R_mat
 
     def _T(self, params):
         """
@@ -360,7 +415,12 @@ class AR(LikelihoodModel):
         --------
         scikits.statsmodels.tsa.kalmanf.ARMA
         """
-        pass
+        p = self.laglen
+        k = self.trendorder
+        T_mat = zeros((p,p))
+        T_mat[:,0] = params[k:]
+        T_mat[:-1,1:] = identity(p-1)
+        return T_mat
 
     def score(self, params):
         """
@@ -519,7 +579,7 @@ class AR(LikelihoodModel):
             # make Y and X with same nobs to compare ICs
             Y = endog[maxlag:]
             self.Y = Y  # attach to get correct fit stats
-            X = self._stackX(maxlag, trend)
+            X = self._stackX(maxlag, trend) # sets trendorder
             self.X = X
             startlag = self.trendorder # trendorder set in _stackX
             if exog is not None:
@@ -589,6 +649,7 @@ class AR(LikelihoodModel):
                 params = mlefit.params
             if self.transparams:
                 params = self._transparams(params)
+                self.transparams = False # turn off now for other results
 
 # don't use yw, because we can't estimate the constant
 #        elif method == "yw":
@@ -597,6 +658,7 @@ class AR(LikelihoodModel):
             # how to handle inference after Yule-Walker?
 #            self.params = params #TODO: don't attach here
 #            self.omega = omega
+
         pinv_exog = np.linalg.pinv(X)
         normalized_cov_params = np.dot(pinv_exog, pinv_exog.T)
         arfit = ARResults(self, params, normalized_cov_params)
@@ -610,13 +672,74 @@ class ARResults(LikelihoodModelResults):
     """
     Class to hold results from fitting an AR model.
 
+    Parameters
+    ----------
+    model : AR Model instance
+        Reference to the model that is fit.
+    params : array
+        The fitted parameters from the AR Model.
+    normalized_cov_params : array
+        inv(dot(X.T,X)) where X is the exogenous variables including lagged
+        values.
+    scale : float, optional
+        An estimate of the scale of the model.
+
+    Returns
+    -------
+    ** Attributes **
+
+    aic : float
+        Akaike Information Criterion using Lutkephol's definition.
+        :math:`log(sigma) + 2*(1+laglen)/avobs`
+    avobs : float
+        The number of available observations `nobs` - `laglen`
+    bic : float
+        Bayes Information Criterion :math:
+        :math:`\\log(\\sigma) + (1+laglen)*\\log(avobs)/avobs`
+    bse : array
+        The standard errors of the estimated parameters. If `method` is 'cmle',
+        then the standard errors that are returned are the OLS standard errors
+        of the coefficients. If the `method` is 'mle' then they are computed using
+        the numerical Hessian.
+    fittedvalues : array
+        The in-sample predicted values of the fitted AR model. The `laglen`
+        initial values are computed via the Kalman Filter if the model is
+        fit by `mle`.
+    fpe : float
+        Final prediction error using Lutkepohl's definition
+        ((nobs+trendorder)/(avobs-laglen-trendorder))*sigma
+    hqic : float
+        Hannan-Quinn Information Criterion.
+    laglen : float
+        Lag length. Sometimes used as `p` in the docs.
+    llf : float
+        The loglikelihood of the model evaluated at `params'. See `AR.loglike`
+    model : AR model instance
+        A reference to the fitted AR model.
+    nobs : float
+        The number of observations. Sometimes `n` in the docs.
+    params : array
+        The fitted parameters of the model.
+    pvalues : array
+        The p values associated with the standard errors.
+    resid : array
+        The residuals of the model. If the model is fit by 'mle' then the pre-sample
+        residuals are calculated using fittedvalues from the Kalman Filter.
+    roots : array
+        The roots of the AR process.
+    scale : float
+        Same as sigma2
+    sigma2 : float
+        The variance of the innovations (residuals).
+    trendorder : float
+        The order of the trend. 'nc'=0, 'c'=1.
+    tvalues : array
+        The t-values associated with `params`.
+
+
     Notes
     -----
-    If `method` is 'cmle', then the standard errors that are returned
-    are the OLS standard errors of the coefficients.  That is, they correct
-    for the degrees of freedom in the estimate of the scale/sigma.  To
-    reproduce t-stats using the AR definition of sigma (no dof correction), one
-    can do np.sqrt(np.diag(results.cov_params())).
+    I
     """
 
     _cache = {} # for scale setter
@@ -633,37 +756,55 @@ class ARResults(LikelihoodModelResults):
         self.trendorder = model.trendorder
 
     @cache_writable()
-    def sigma(self):
+    def sigma2(self):
         #TODO: allow for DOF correction if exog is included
-        return 1./self.avobs * self.ssr
+        model = self.model
+        if model.method == "cmle": # do DOF correction
+            return 1./self.avobs * sumofsq(self.resid)
+        else: # we need to calculate the ssr for the pre-sample
+              # see loglike for details
+            lagstart = self.trendorder #TODO: handle exog
+            p = self.laglen
+            params = self.params
+            meany = params[0]/(1-params[lagstart:].sum())
+            pre_resid = model.endog[:p] - meany
+            # get presample var-cov
+            Vpinv = model._presample_varcov(params, lagstart)
+            diffpVpinv = np.dot(np.dot(pre_resid.T,Vpinv),pre_resid).item()
+            ssr = sumofsq(self.resid[p:]) # in-sample ssr
+
+            return 1/self.nobs * (diffpVpinv+ssr)
 
     @cache_writable()   # for compatability with RegressionResults
     def scale(self):
-        return self.sigma
+        return self.sigma2
 
     @cache_readonly
     def bse(self): # allow user to specify?
         if self.model.method == "cmle": # uses different scale/sigma definition
-            ols_scale = self.ssr/(self.avobs - self.laglen - self.trendorder)
+            resid = self.resid
+            ssr = np.dot(resid,resid)
+            ols_scale = ssr/(self.avobs - self.laglen - self.trendorder)
             return np.sqrt(np.diag(self.cov_params(scale=ols_scale)))
         else:
-            return np.sqrt(np.diag(self.cov_params()))
+            hess = approx_hess_cs(self.params, self.model.loglike)
+            return np.sqrt(np.diag(-np.linalg.inv(hess)))
 
-    @cache_readonly
     def t(self):    # overwrite t()
         return self.params/self.bse
 
     @cache_readonly
     def pvalues(self):
-        return stats.t.pp
+        if self.model.method == "cmle": # uses asymptotics so norm
+            return norm.sf(np.abs(self.t()))*2
 
     @cache_readonly
     def aic(self):
         #JP: this is based on loglike with dropped constant terms ?
 # Lutkepohl
-#        return np.log(self.sigma) + 1./self.model.avobs * self.laglen
+#        return np.log(self.sigma2) + 1./self.model.avobs * self.laglen
 # Include constant as estimated free parameter and double the loss
-        return np.log(self.sigma) + 2 * (1 + self.laglen)/self.avobs
+        return np.log(self.sigma2) + 2 * (1 + self.laglen)/self.avobs
 # Stata defintion
 #        avobs = self.avobs
 #        return -2 * self.llf/avobs + 2 * (self.laglen+self.trendorder)/avobs
@@ -672,9 +813,9 @@ class ARResults(LikelihoodModelResults):
     def hqic(self):
         avobs = self.avobs
 # Lutkepohl
-#        return np.log(self.sigma)+ 2 * np.log(np.log(avobs))/avobs * self.laglen
+#        return np.log(self.sigma2)+ 2 * np.log(np.log(avobs))/avobs * self.laglen
 # R uses all estimated parameters rather than just lags
-        return np.log(self.sigma) + 2 * np.log(np.log(avobs))/avobs * \
+        return np.log(self.sigma2) + 2 * np.log(np.log(avobs))/avobs * \
                 (1 + self.laglen)
 # Stata
 #        avobs = self.avobs
@@ -687,7 +828,7 @@ class ARResults(LikelihoodModelResults):
         laglen = self.laglen
         trendorder = self.trendorder
 #Lutkepohl
-        return ((avobs+laglen+trendorder)/(avobs-laglen-trendorder))*self.sigma
+        return ((avobs+laglen+trendorder)/(avobs-laglen-trendorder))*self.sigma2
 
     @cache_readonly
     def llf(self):
@@ -697,22 +838,26 @@ class ARResults(LikelihoodModelResults):
     def bic(self):
         avobs = self.avobs
 # Lutkepohl
-#        return np.log(self.sigma) + np.log(avobs)/avobs * self.laglen
+#        return np.log(self.sigma2) + np.log(avobs)/avobs * self.laglen
 # Include constant as est. free parameter
-        return np.log(self.sigma) + (1 + self.laglen) * np.log(avobs)/avobs
+        return np.log(self.sigma2) + (1 + self.laglen) * np.log(avobs)/avobs
 # Stata
 #        return -2 * self.llf/avobs + np.log(avobs)/avobs * (self.laglen + \
 #                self.trendorder)
 
     @cache_readonly
     def resid(self):
+        #NOTE: uses fittedvalues because it calculate presample values for mle
         model = self.model
-        return self.Y.squeeze() - np.dot(self.X, self.params)
+        endog = model.endog.squeeze()
+        if model.method == "cmle": # elimate pre-sample
+            return endog[self.laglen:] - self.fittedvalues
+        else:
+            return model.endog.squeeze() - self.fittedvalues
 
-    @cache_readonly
-    def ssr(self):
-        resid = self.resid
-        return np.dot(resid, resid)
+#    def ssr(self):
+#        resid = self.resid
+#        return np.dot(resid, resid)
 
     @cache_readonly
     def roots(self):
@@ -721,38 +866,6 @@ class ARResults(LikelihoodModelResults):
     @cache_readonly
     def fittedvalues(self):
         return self.model.predict()
-
-class ARIMA(LikelihoodModel):
-    def __init__(self, endog, exog=None):
-        """
-        ARIMA Model
-        """
-        super(ARIMA, self).__init__(endog, exog)
-        if endog.ndim == 1:
-            endog = endog[:,None]
-        elif endog.ndim > 1 and endog.shape[1] != 1:
-            raise ValueError("Only the univariate case is implemented")
-        self.endog = endog # overwrite endog
-        if exog is not None:
-            raise ValueError("Exogenous variables are not yet supported.")
-
-    def fit(self, order=(0,0,0), method="ssm"):
-        """
-        Notes
-        -----
-        Current method being developed is the state-space representation.
-
-        Box and Jenkins outline many more procedures.
-        """
-        if not hasattr(order, '__iter__'):
-            raise ValueError("order must be an iterable sequence.  Got type \
-%s instead" % type(order))
-        p,d,q = order
-        if d > 0:
-            raise ValueError("Differencing not implemented yet")
-            # assume no constant, ie mu = 0
-            # unless overwritten then use w_bar for mu
-            Y = np.diff(endog, d, axis=0) #TODO: handle lags?
 
 
 if __name__ == "__main__":

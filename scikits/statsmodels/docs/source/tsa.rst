@@ -75,8 +75,8 @@ Estimation
 .. autosummary::
    :toctree: generated/
 
-   ar.AR
-   ar.ARResults
+   ar_model.AR
+   ar_model.ARResults
    var.varmod.VAR
    var.varmod.VARResults
    arma_mle.Arma

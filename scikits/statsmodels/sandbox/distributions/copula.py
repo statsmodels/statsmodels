@@ -136,10 +136,10 @@ def transform_tawn(t, a1, a2, theta):
     '''
 
     def _check_args(a1, a2, theta):
-        condth = (theta > 0) & (theta <= 1)
-        conda1 = (a1 >= 0) & (a1 <= 1)
-        conda2 = (a2 >= 0) & (a2 <= 1)
-        return condth & conda1 & conda2
+        condth = (theta > 0) and (theta <= 1)
+        conda1 = (a1 >= 0) and (a1 <= 1)
+        conda2 = (a2 >= 0) and (a2 <= 1)
+        return condth and conda1 and conda2
 
     if not np.all(_check_args(a1, a2, theta)):
         raise ValueError('invalid args')
@@ -147,6 +147,7 @@ def transform_tawn(t, a1, a2, theta):
     transf = (1 - a1) * (1-t)
     transf += (1 - a2) * t
     transf += ((a1 * t)**(1./theta) + (a2 * (1-t))**(1./theta))**theta
+
     return transf
 
 def transform_joe(t, a1, a2, theta):
@@ -161,15 +162,16 @@ def transform_joe(t, a1, a2, theta):
 
     def _check_args(a1, a2, theta):
         condth = (theta > 0)
-        conda1 = (a1 > 0) & (a1 <= 1)
-        conda2 = (a2 > 0) & (a2 <= 1)
-        return condth & conda1 & conda2
+        conda1 = (a1 > 0) and (a1 <= 1)
+        conda2 = (a2 > 0) and (a2 <= 1)
+        return condth and conda1 and conda2
 
     if not np.all(_check_args(a1, a2, theta)):
         raise ValueError('invalid args')
 
     transf = 1 - ((a1 * (1-t))**(-1./theta) + (a2 * t)**(-1./theta))**(-theta)
     return transf
+
 
 def transform_tawn2(t, theta, k):
     '''asymmetric mixed model of Tawn 1988
@@ -186,8 +188,8 @@ def transform_tawn2(t, theta, k):
 
     def _check_args(theta, k):
         condth = (theta >= 0)
-        cond1 = (theta + 3*k > 0) & (theta + k <= 1) & (theta + 2*k <= 1)
-        return condth & cond1
+        cond1 = (theta + 3*k > 0) and (theta + k <= 1) and (theta + 2*k <= 1)
+        return condth and cond1
 
     if not np.all(_check_args(theta, k)):
         raise ValueError('invalid args')
@@ -206,8 +208,8 @@ def transform_bilogistic(t, beta, delta):
     '''
 
     def _check_args(beta, delta):
-        cond1 = (beta > 0) & (beta <= 1) & (delta > 0) & (delta <= 1)
-        cond2 = (beta < 0)  & (delta < 0)
+        cond1 = (beta > 0) and (beta <= 1) and (delta > 0) and (delta <= 1)
+        cond2 = (beta < 0)  and (delta < 0)
         return cond1 | cond2
 
     if not np.all(_check_args(beta, delta)):
@@ -254,8 +256,8 @@ def transform_tev(t, rho, x):
 
     def _check_args(rho, x):
         cond1 = (x > 0)
-        cond2 = (rho > 0) & (rho < 1)
-        return cond1 & cond2
+        cond2 = (rho > 0) and (rho < 1)
+        return cond1 and cond2
 
     if not np.all(_check_args(rho, x)):
         raise ValueError('invalid args')
@@ -274,7 +276,7 @@ copulanames = {'indep' : copula_bv_indep,
                'max' : copula_bv_max,
                'clayton' : copula_bv_clayton,
                'cookjohnson' : copula_bv_clayton,
-               # 'cj' : copula_bv_cookjohnson,
+               'cj' : copula_bv_clayton,
                'frank' : copula_bv_frank,
                'gauss' : copula_bv_gauss,
                'normal' : copula_bv_gauss,
