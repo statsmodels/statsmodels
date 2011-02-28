@@ -18,9 +18,6 @@ Many functions or classes have been tested on individual examples, but don't hav
 (consistent or complete) test suite yet.
 
 
-
-.. _stattools:
-
 Distribution Extras
 -------------------
 
@@ -44,7 +41,7 @@ Distribution Extras
 
    pdf_moments_st
    pdf_mvsk
-   pdf_moments\
+   pdf_moments
    NormExpan_gen
 
 *cdf of multivariate normal* wrapper for scipy.stats

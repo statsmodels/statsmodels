@@ -275,7 +275,7 @@ These are computed via the `fevd` function up through a total number of steps ah
 
 ::
 
-    >>> fevd = results.fevd(10)
+    >>> fevd = results.fevd(5)
 
     >>> fevd.summary()
     FEVD for realgdp
