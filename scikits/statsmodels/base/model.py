@@ -1,7 +1,6 @@
 import numpy as np
 from scipy.stats import t, norm
-from scipy.stats import norm as stats_norm
-from scipy import optimize, derivative
+from scipy import optimize
 from scikits.statsmodels.tools.tools import recipr
 from scikits.statsmodels.stats.contrast import ContrastResults
 from scikits.statsmodels.tools.decorators import resettable_cache, cache_readonly
@@ -486,7 +485,7 @@ class GenericLikelihoodModel(LikelihoodModel):
             self.score = score
         if hessian:
             self.hessian = hessian
-        self.confint_dist = stats_norm
+        self.confint_dist = norm
         if not exog is None:  #this won't work for ru2nmnl, maybe np.ndim of a dict?
             #try:
             self.nparams = self.df_model = exog.shape[1] if np.ndim(exog)==2 else 1
