@@ -151,6 +151,8 @@ def _unsuppress_plots():
 def check_for_matplotlib():
     try:
         import matplotlib
+        if matplotlib.__version__ < '1':
+            raise
     except:
         raise nose.SkipTest
 
