@@ -7,7 +7,7 @@
 Time Series analysis :mod:`tsa`
 ===============================
 
-:mos:`scikits.statmodels.tsa` contains model classes and functions that are useful
+:mod:`scikits.statmodels.tsa` contains model classes and functions that are useful
 for time series analysis. This currently includes univariate autoregressive models (AR),
 vector autoregressive models (VAR) and univariate autoregressive moving average models
 (ARMA). It also includes descriptive statistics for time series, for example autocorrelation, partial
@@ -25,8 +25,8 @@ structure is within scikits.statsmodels.tsa is
 
  - stattools : empirical properties and tests, acf, pacf, granger-causality,
  	  adf unit root test, ljung-box test and others.
- - var : contains univariate AR and multivariate AR (VAR) estimation models, either
-      conditional LS or MLE or exact MLE.
+ - var : multivariate AR (VAR) estimation models, impulse response analysis, forecast
+   error variance decompositions, and data visualization tools
  - arma_mle : estimation class for univariate ARMA with conditional least squares or
  	  conditional MLE
  - kalmanf : estimation classes for ARMA and other models with exact MLE using Kalman Filter
@@ -75,14 +75,13 @@ Estimation
 .. autosummary::
    :toctree: generated/
 
-   var.AR
-   var.ARResults
-   var.VAR
-   var.VAR2
-   var.VARMAResults
+   ar.AR
+   ar.ARResults
+   var.varmod.VAR
+   var.varmod.VARResults
    arma_mle.Arma
 
-Arma and Kalman Filter
+ARMA and Kalman Filter
 ~~~~~~~~~~~~~~~~~~~~~~
 
 .. currentmodule:: scikits.statsmodels.tsa
@@ -92,9 +91,7 @@ Arma and Kalman Filter
 
    arima.ARMA
    arima.ARMAResults
-   kalmanf.kalmanf.StateSpaceModel
-   kalmanf.kalmanf.kalmanfilter
-   kalmanf.kalmanf.kalmansmooth
+   kalmanf.kalmanfilter.KalmanFilter
 
 .. currentmodule:: scikits.statsmodels.tsa
 
@@ -154,6 +151,10 @@ TSA Tools
    tsatools.lagmat
    tsatools.lagmat2ds
 
+Vector Autogressive Processes (VAR)
+"""""""""""""""""""""""""""""""""""
+
+.. seealso:: :ref:`VAR documentation <var>`
 
 VARMA Process
 """""""""""""
@@ -163,3 +164,10 @@ VARMA Process
 
    varma_process.VarmaPoly
 
+Interpolation
+"""""""""""""
+
+.. autosummary::
+   :toctree: generated/
+
+   interp.denton.dentonm

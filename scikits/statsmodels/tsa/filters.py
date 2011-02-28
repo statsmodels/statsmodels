@@ -76,15 +76,14 @@ def fftconvolve3(in1, in2=None, in3=None, mode="full"):
     * note in2 and in3 need to have consistent dimension/shape
       since I'm using max of in2, in3 shapes and not the sum
 
-    copied from scipy.signal.signaltools, but here used to try out inverse filter
-    doesn't work or I can't get it to work
+    copied from scipy.signal.signaltools, but here used to try out inverse
+    filter doesn't work or I can't get it to work
 
-     2010-10-23:
+    2010-10-23
     looks ok to me for 1d,
     from results below with padded data array (fftp)
     but it doesn't work for multidimensional inverse filter (fftn)
     original signal.fftconvolve also uses fftn
-
     """
     if (in2 is None) and (in3 is None):
         raise ValueError('at least one of in2 and in3 needs to be given')

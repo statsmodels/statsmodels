@@ -33,7 +33,7 @@ from scikits.statsmodels.base.model import GenericLikelihoodModel
 from scikits.statsmodels.regression.linear_model import yule_walker, GLS
 from scipy.linalg import block_diag
 from scikits.statsmodels.tsa.tsatools import lagmat
-from scikits.statsmodels.tsa import AR
+from scikits.statsmodels.tsa.ar import AR
 from scikits.statsmodels.sandbox.regression.numdiff import approx_fprime, \
         approx_hess
 try:
@@ -242,20 +242,20 @@ def kalmanfilter(F, A, H, Q, R, y, X, xi10, ntrain, history=False):
 
 
 class StateSpaceModel(object):
-    def __init__(self, endog, exog=None):
-        """
-        Parameters
-        ----------
-        endog : array-like
-            A (nobs x n) array of observations.
-        exog : array-like, optional
-            A (nobs x k) array of covariates.
+    """
+    Parameters
+    ----------
+    endog : array-like
+        A (nobs x n) array of observations.
+    exog : array-like, optional
+        A (nobs x k) array of covariates.
 
-        Notes
-        -----
-        exog are not handled right now.
-        Created with a (V)ARMA in mind, but not really general yet.
-        """
+    Notes
+    -----
+    exog are not handled right now.
+    Created with a (V)ARMA in mind, but not really general yet.
+    """
+    def __init__(self, endog, exog=None):
         endog = np.asarray(endog)
         if endog.ndim == 1:
             endog = endog[:,None]
@@ -509,6 +509,24 @@ class KalmanFilter(object):
 
     @classmethod
     def loglike(cls, params, arma_model):
+        """
+        The loglikelihood for an ARMA model using the Kalman Filter recursions.
+
+        Parameters
+        ----------
+        params : array
+            The coefficients of the ARMA model, assumed to be in the order of
+            trend variables and `k` exogenous coefficients, the `p` AR
+            coefficients, then the `q` MA coefficients.
+        arma_model : `scikits.statsmodels.tsa.arima.ARMA` instance
+            A reference to the ARMA model instance.
+
+        Notes
+        -----
+        This works for both real valued and complex valued parameters. The
+        complex values being used to compute the numerical derivative. If
+        available will use a Cython version of the Kalman Filter.
+        """
         #TODO: see section 3.4.6 in Harvey for computing the derivatives in the
         # recursion itself.
         #TODO: this won't work for time-varying parameters
@@ -588,23 +606,6 @@ Please files a bug report." % paramsdtype)
             loglike -= nobs/2. * (log(2*pi) + 1)
         arma_model.sigma2 = sigma2
         return loglike.item() # return a scalar not a 0d array
-
-
-#class ARMA():
-
-class ARMA_CSS(GenericLikelihoodModel):
-    """
-    ARMA model using Conditional Sum of Squares
-
-    Parameters
-    ----------
-    endog : array-like
-        The endogenous variable.
-    exog : array-like, optional
-        An optional arry of exogenous variables.
-    """
-    pass
-
 
 
 if __name__ == "__main__":

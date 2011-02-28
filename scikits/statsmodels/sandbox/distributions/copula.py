@@ -146,7 +146,8 @@ def transform_tawn(t, a1, a2, theta):
 
     transf = (1 - a1) * (1-t)
     transf += (1 - a2) * t
-    transf += ((a1 * t)**(1./theta) + (a2 * (1-t))**(1./theta))**(theta)
+    transf += ((a1 * t)**(1./theta) + (a2 * (1-t))**(1./theta))**theta
+
     return transf
 
 def transform_joe(t, a1, a2, theta):
@@ -170,6 +171,7 @@ def transform_joe(t, a1, a2, theta):
 
     transf = 1 - ((a1 * (1-t))**(-1./theta) + (a2 * t)**(-1./theta))**(-theta)
     return transf
+
 
 def transform_tawn2(t, theta, k):
     '''asymmetric mixed model of Tawn 1988
@@ -232,7 +234,7 @@ def transform_hr(t, lamda):
     '''
 
     def _check_args(lamda):
-        cond = (theta > 0)
+        cond = (lamda > 0)
         return cond
 
     if not np.all(_check_args(lamda)):

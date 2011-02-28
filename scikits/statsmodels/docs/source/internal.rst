@@ -34,9 +34,8 @@ define some common methods.
    GenericLikelihoodModel
    Results
    LikelihoodModelResults
-   GenericLikelihoodModelResults
    ResultMixin
-
+   GenericLikelihoodModelResults
 
 .. inheritance-diagram:: scikits.statsmodels.base.model scikits.statsmodels.discrete.discretemod scikits.statsmodels.regression.linear_model scikits.statsmodels.miscmodels.count
    :parts: 3

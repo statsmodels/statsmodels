@@ -14,10 +14,10 @@ import sys
 import numpy as np
 
 import scikits.statsmodels.api as sm
-import scikits.statsmodels.tsa.var.model as model
+import scikits.statsmodels.tsa.var.varmod as model
 import scikits.statsmodels.tsa.var.util as util
 reload(model)
-from scikits.statsmodels.tsa.var.model import VAR
+from scikits.statsmodels.tsa.var.varmod import VAR
 
 from numpy.testing import assert_almost_equal, assert_equal
 
@@ -139,14 +139,20 @@ _draw_function = None
 def _suppress_plots():
     import matplotlib.pyplot as plt
 
-    global _monkeypatched_mpl, _draw_function
-    if not _monkeypatched_mpl:
-        _draw_function = plt.draw_if_interactive
-        plt.draw_if_interactive = lambda *args, **kwargs: None
+    # global _monkeypatched_mpl, _draw_function
+    # if not _monkeypatched_mpl:
+    #     _draw_function = plt.draw_if_interactive
+    #     plt.draw_if_interactive = lambda *args, **kwargs: None
 
 def _unsuppress_plots():
-    import matplotlib.pyplot as plt
-    plt.draw_if_interactive = _draw_function
+    # import matplotlib.pyplot as plt
+    # plt.draw_if_interactive = _draw_function
+    pass
+
+def close_plots():
+    # import matplotlib.pyplot as plt
+    # plt.close('all')
+    pass
 
 def check_for_matplotlib():
     try:
@@ -185,6 +191,7 @@ class CheckIRF(object):
 
         self.irf.plot(orth=True)
         self.irf.plot(impulse=0, response=1, orth=True)
+        close_plots()
 
     def test_plot_cum_effects(self):
         check_for_matplotlib()
@@ -194,6 +201,7 @@ class CheckIRF(object):
 
         self.irf.plot_cum_effects(orth=True)
         self.irf.plot_cum_effects(impulse=0, response=1, orth=True)
+        close_plots()
 
 class CheckFEVD(object):
 
@@ -205,6 +213,7 @@ class CheckFEVD(object):
     def test_fevd_plot(self):
         check_for_matplotlib()
         self.fevd.plot()
+        close_plots()
 
     def test_fevd_repr(self):
         print self.fevd
@@ -237,8 +246,18 @@ class TestVARResults(CheckIRF, CheckFEVD):
     def test_aaamonkeypatches(self):
         sys.stdout = StringIO()
 
+        _suppress_plots()
+
     def test_zzzundomonkeypatches(self):
         sys.stdout = sys.__stdout__
+
+        _unsuppress_plots()
+
+    def test_constructor(self):
+        # make sure this works with no names
+        ndarr = self.data.view((float, 3))
+        model = VAR(ndarr)
+        res = model.fit(self.p)
 
     def test_names(self):
         assert_equal(self.model.names, self.ref.names)
@@ -247,6 +266,8 @@ class TestVARResults(CheckIRF, CheckFEVD):
         assert_equal(model2.names, self.ref.names)
 
     def test_get_eq_index(self):
+        assert(isinstance(self.res.names, list))
+
         for i, name in enumerate(self.names):
             idx = self.res.get_eq_index(i)
             idx2 = self.res.get_eq_index(name)
@@ -254,8 +275,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
             assert_equal(idx, i)
             assert_equal(idx, idx2)
 
-        with assert_raises(Exception):
-            self.res.get_eq_index('foo')
+        assert_raises(Exception, self.res.get_eq_index, 'foo')
 
     def test_repr(self):
         # just want this to work
@@ -303,8 +323,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
         for ic in ics:
             res = self.model.fit(maxlags=10, ic=ic, verbose=True)
 
-        with assert_raises(Exception):
-            self.model.fit(ic='foo')
+        assert_raises(Exception, self.model.fit, ic='foo')
 
     def test_nobs(self):
         assert_equal(self.res.nobs, self.ref.nobs)
@@ -342,8 +361,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
         _ = self.res.test_causality(self.names[0], self.names[1])
         _ = self.res.test_causality(0, 1)
 
-        with assert_raises(Exception):
-            self.res.test_causality(0, 1, kind='foo')
+        assert_raises(Exception,self.res.test_causality, 0, 1, kind='foo')
 
     def test_select_order(self):
         result = self.model.fit(10, ic='aic', verbose=True)
@@ -374,18 +392,22 @@ class TestVARResults(CheckIRF, CheckFEVD):
     def test_plot_sim(self):
         check_for_matplotlib()
         self.res.plotsim(steps=100)
+        close_plots()
 
     def test_plot(self):
         check_for_matplotlib()
         self.res.plot()
+        close_plots()
 
     def test_plot_acorr(self):
         check_for_matplotlib()
         self.res.plot_acorr()
+        close_plots()
 
     def test_plot_forecast(self):
         check_for_matplotlib()
         self.res.plot_forecast(5)
+        close_plots()
 
 class E1_Results(object):
     """

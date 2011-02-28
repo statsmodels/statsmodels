@@ -1124,11 +1124,11 @@ if __name__ == '__main__':
     # data = data.view((float, 4))
     """
 
-    # mdata = sm.datasets.macrodata.load().data[['realgdp','realcons','realinv']]
-    # names = mdata.dtype.names
-    # data = mdata.view((float,3))
-    # data = np.diff(np.log(data), axis=0)
+    mdata = sm.datasets.macrodata.load().data[['realgdp','realcons','realinv']]
+    names = mdata.dtype.names
+    data = mdata.view((float,3))
+    data = np.diff(np.log(data), axis=0)
 
-    # model = VAR(data, names=names)
-    # est = model.fit(maxlags=2)
-    # irf = est.irf()
+    model = VAR(data, names=names)
+    est = model.fit(maxlags=2)
+    irf = est.irf()
