@@ -162,13 +162,13 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
 
     P-Values (regression surface approximation)
     MacKinnon, J.G. 1994.  "Approximate asymptotic distribution functions for
-        unit-root and cointegration tests.  `Journal of Business and Economic
-        Statistics` 12, 167-76.
+    unit-root and cointegration tests.  `Journal of Business and Economic
+    Statistics` 12, 167-76.
 
     Critical values
-    MacKinnon, J.G. 2010. "Critical Values for Cointegration Tests."
-        Queen's University, Dept of Economics, Working Papers.  Available at
-        http://ideas.repec.org/p/qed/wpaper/1227.html
+    MacKinnon, J.G. 2010. "Critical Values for Cointegration Tests."  Queen's
+    University, Dept of Economics, Working Papers.  Available at
+    http://ideas.repec.org/p/qed/wpaper/1227.html
     '''
     trenddict = {None:'nc', 0:'c', 1:'ct', 2:'ctt'}
     if regression is None or isinstance(regression, int):

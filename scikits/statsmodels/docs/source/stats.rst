@@ -35,7 +35,7 @@ Residual Diagnostics and Specification Tests
    jarque_bera
    omni_normtest
 
-.. currentmodule:: scikits.statsmodels.sandbox.tools.stattools
+.. currentmodule:: scikits.statsmodels.sandbox.stats.diagnostic
 
 .. autosummary::
    :toctree: generated/
@@ -151,10 +151,7 @@ The following functions are not (yet) public (here for my own benefit, JP)
    rejectionline
    set_partition
    set_remove_subs
-   test_tukeyhsd
    tiecorrect
-
-
 
 
 Basic Statistics and t-Tests with frequency weights
