@@ -29,7 +29,7 @@ import scikits.statsmodels.tsa.var.output as output
 import scikits.statsmodels.tsa.var.plotting as plotting
 import scikits.statsmodels.tsa.var.util as util
 
-from scikits.statsmodels.tools.data import interpret_data
+import scikits.statsmodels.tools.data as data_util
 
 mat = np.array
 
@@ -63,6 +63,7 @@ def ma_rep(coefs, maxn=10):
 
     Returns
     -------
+    phis : ndarray (maxn + 1 x k x k)
     """
     p, k, k = coefs.shape
     phis = np.zeros((maxn+1, k, k))
@@ -171,7 +172,14 @@ def forecast(y, coefs, intercept, steps):
 
     Parameters
     ----------
+    y :
+    coefs :
+    intercept :
+    steps :
 
+    Returns
+    -------
+    forecasts : ndarray (steps x neqs)
 
     Notes
     -----
@@ -206,7 +214,14 @@ def forecast(y, coefs, intercept, steps):
 
 def forecast_cov(ma_coefs, sig_u, steps):
     """
-    Compute forecast error variance matrices
+    Compute theoretical forecast error variance matrices
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+    forc_covs : ndarray (steps x neqs x neqs)
     """
     k = len(sig_u)
     forc_covs = np.zeros((steps, k, k))
@@ -272,9 +287,9 @@ class VAR(object):
     -------
     .fit() method returns VARResults object
     """
-
     def __init__(self, endog, names=None, dates=None):
-        self.y, self.names, self.dates = interpret_data(endog, names, dates)
+        (self.y, self.names,
+         self.dates) = data_util.interpret_data(endog, names, dates)
         self.nobs, self.neqs = self.y.shape
 
     def fit(self, maxlags=None, method='ols', ic=None, trend='c',
@@ -355,12 +370,19 @@ class VAR(object):
 
     def select_order(self, maxlags=None, verbose=True):
         """
+        Compute lag order selections based on each of the available information
+        criteria
 
         Parameters
         ----------
+        maxlags : int
+            if None, defaults to 12 * (nobs/100.)**(1./4)
+        verbose : bool, default True
+            If True, print table of info criteria and selected orders
 
         Returns
         -------
+        selections : dict {info_crit -> selected_order}
         """
         if maxlags is None:
             maxlags = int(round(12*(self.nobs/100.)**(1/4.)))
@@ -393,7 +415,6 @@ class VARProcess(object):
     Returns
     -------
     **Attributes**:
-
     """
     def __init__(self, coefs, intercept, sigma_u, names=None):
         self.p = len(coefs)
@@ -404,6 +425,7 @@ class VARProcess(object):
         self.names = names
 
     def get_eq_index(self, name):
+        "Return integer position of requested equation name"
         return util.get_index(self.names, name)
 
     def __str__(self):
@@ -420,15 +442,20 @@ class VARProcess(object):
         Parameters
         ----------
         verbose : bool
-            Print eigenvalues of VAR(1) rep matrix
+            Print eigenvalues of the VAR(1) companion
 
         Notes
         -----
-
+        Checks if det(I - Az) = 0 for any mod(z) <= 1, so all the eigenvalues of
+        the companion matrix must lie outside the unit circle
         """
         return is_stable(self.coefs, verbose=verbose)
 
     def plotsim(self, steps=1000):
+        """
+        Plot a simulation from the VAR(p) process for the desired number of
+        steps
+        """
         Y = util.varsim(self.coefs, self.intercept, self.sigma_u, steps=steps)
         plotting.plot_mts(Y)
 
@@ -442,8 +469,7 @@ class VARProcess(object):
         return solve(self._char_mat, self.intercept)
 
     def ma_rep(self, maxn=10):
-        """Compute MA(\infty) coefficient matrices (also are impulse response
-        matrices))
+        r"""Compute MA(:math:`\infty`) coefficient matrices
 
         Parameters
         ----------
@@ -457,9 +483,9 @@ class VARProcess(object):
         return ma_rep(self.coefs, maxn=maxn)
 
     def orth_ma_rep(self, maxn=10, P=None):
-        """Compute Orthogonalized MA coefficient matrices using P matrix such
-        that \Sigma_u = PP'. P defaults to the Cholesky decomposition of
-        \Sigma_u
+        r"""Compute Orthogonalized MA coefficient matrices using P matrix such
+        that :math:`\Sigma_u = PP^\prime`. P defaults to the Cholesky
+        decomposition of :math:`\Sigma_u`
 
         Parameters
         ----------
@@ -479,6 +505,13 @@ class VARProcess(object):
         return mat([np.dot(coefs, P) for coefs in ma_mats])
 
     def long_run_effects(self):
+        """Compute long-run effect of unit impulse
+
+        .. math::
+
+            \Psi_\infty = \sum_{i=0}^\infty \Phi_i
+
+        """
         return L.inv(self._char_mat)
 
     @cache_readonly
@@ -490,17 +523,25 @@ class VARProcess(object):
         return np.eye(self.neqs) - self.coefs.sum(0)
 
     def acf(self, nlags=None):
-        """
-        Compute
+        """Compute theoretical autocovariance function
 
+        Returns
+        -------
+        acf : ndarray (p x k x k)
         """
         return var_acf(self.coefs, self.sigma_u, nlags=nlags)
 
     def acorr(self, nlags=None):
-        return util.acf_to_acorr(var_acf(self.coefs, self.sigma_u,
-                                         nlags=nlags))
+        """Compute theoretical autocorrelation function
+
+        Returns
+        -------
+        acorr : ndarray (p x k x k)
+        """
+        return util.acf_to_acorr(self.acf(nlags=nlags))
 
     def plot_acorr(self, nlags=10, linewidth=8):
+        "Plot autocorrelation function"
         plotting.plot_acorr(self.acorr(nlags=nlags), linewidth=linewidth)
 
     def forecast(self, y, steps):
@@ -514,6 +555,7 @@ class VARProcess(object):
 
         Returns
         -------
+        forecasts : ndarray (steps x neqs)
 
         Notes
         -----
@@ -522,17 +564,35 @@ class VARProcess(object):
         return forecast(y, self.coefs, self.intercept, steps)
 
     def mse(self, steps):
-        """Compute forecast error covariance matrices
+        """
+        Compute theoretical forecast error variance matrices
 
         Parameters
         ----------
+        steps : int
+            Number of steps ahead
 
+        Notes
+        -----
+        .. math:: \mathrm{MSE}(h) = \sum_{i=0}^{h-1} \Phi \Sigma_u \Phi^T
 
         Returns
         -------
-        covs : (steps, k, k)
+        forc_covs : ndarray (steps x neqs x neqs)
         """
-        return forecast_cov(self.ma_rep(steps), self.sigma_u, steps)
+        ma_coefs = self.ma_rep(steps)
+
+        k = len(self.sigma_u)
+        forc_covs = np.zeros((steps, k, k))
+
+        prior = np.zeros((k, k))
+        for h in xrange(steps):
+            # Sigma(h) = Sigma(h-1) + Phi Sig_u Phi'
+            phi = ma_coefs[h]
+            var = chain_dot(phi, self.sigma_u, phi.T)
+            forc_covs[h] = prior = prior + var
+
+        return forc_covs
 
     forecast_cov = mse
 
@@ -630,33 +690,44 @@ class VARResults(VARProcess):
                             names=names)
 
     def plot(self):
+        """Plot input time series
+        """
         plotting.plot_mts(self.y, names=self.names, index=self.dates)
 
     @property
     def df_model(self):
-        """
-        Number of estimated parameters, including the intercept / trends
+        """Number of estimated parameters, including the intercept / trends
         """
         return self.neqs * self.p + self.trendorder
 
     @property
     def df_resid(self):
+        "Number of observations minus number of estimated parameters"
         return self.nobs - self.df_model
 
     @cache_readonly
     def resid(self):
+        """Residuals of response variable resulting from estimated coefficients
+        """
         return self.y[self.p:] - np.dot(self.ys_lagged, self.params)
 
     @cache_readonly
     def sigma_u_mle(self):
+        """(Biased) maximum likelihood estimate of noise process covariance
+        """
         return self.sigma_u * self.df_resid / self.nobs
 
     @cache_readonly
     def cov_params(self):
-        # Covariance of vec(B), where B is the matrix
-        # [intercept, A_1, ..., A_p] (K x (Kp + 1))
-        # Adjusted to be an unbiased estimator
-        # Ref: Lutkepohl p.74-75
+        """Estimated variance-covariance of model coefficients
+
+        Notes
+        -----
+        Covariance of vec(B), where B is the matrix
+        [intercept, A_1, ..., A_p] (K x (Kp + 1))
+        Adjusted to be an unbiased estimator
+        Ref: Lutkepohl p.74-75
+        """
         z = self.ys_lagged
         return np.kron(L.inv(np.dot(z.T, z)), self.sigma_u)
 
@@ -672,7 +743,7 @@ class VARResults(VARProcess):
 
         Notes
         -----
-        L. Proposition 3.3
+        Lutkepohl Proposition 3.3
         """
 
         Ainv = L.inv(np.eye(self.neqs) - self.coefs.sum(0))
@@ -707,6 +778,7 @@ class VARResults(VARProcess):
 
     @cache_readonly
     def loglike(self):
+        "Compute VAR(p) loglikelihood"
         return var_loglike(self.resid, self.sigma_u_mle, self.nobs)
 
     @cache_readonly
@@ -726,6 +798,8 @@ class VARResults(VARProcess):
 
     @cache_readonly
     def pvalues(self):
+        """Two-sided p-values for model coefficients from Student t-distribution
+        """
         return stats.t.sf(np.abs(self.t()), self.df_resid)*2
 
     def plot_forecast(self, steps, alpha=0.05):
@@ -807,6 +881,12 @@ class VARResults(VARProcess):
         return np.vstack((upper, self.params.T, lower))
 
     def summary(self):
+        """Compute console output summary of estimates
+
+        Returns
+        -------
+        summary : VARSummary
+        """
         return VARSummary(self)
 
     def irf(self, periods=10, var_decomp=None):
@@ -821,7 +901,7 @@ class VARResults(VARProcess):
 
         Returns
         -------
-
+        irf : IRAnalysis
         """
         return IRAnalysis(self, P=var_decomp, periods=periods)
 
@@ -947,7 +1027,7 @@ class VARResults(VARProcess):
 
     @cache_readonly
     def info_criteria(self):
-        # information criteria for order selection
+        "information criteria for lagorder selection"
         nobs = self.nobs
         neqs = self.neqs
         lag_order = self.p
@@ -971,25 +1051,25 @@ class VARResults(VARProcess):
 
     @property
     def aic(self):
-        # Akaike information criterion
+        "Akaike information criterion"
         return self.info_criteria['aic']
 
     @property
     def fpe(self):
-        """
+        """Final Prediction Error (FPE)
+
         Lutkepohl p. 147, see info_criteria
         """
-        # Final Prediction Error (FPE)
         return self.info_criteria['fpe']
 
     @property
     def hqic(self):
-        # Hannan-Quinn criterion
+        "Hannan-Quinn criterion"
         return self.info_criteria['hqic']
 
     @property
     def bic(self):
-        # Bayesian a.k.a. Schwarz info criterion
+        "Bayesian a.k.a. Schwarz info criterion"
         return self.info_criteria['bic']
 
 class FEVD(object):
@@ -1035,17 +1115,15 @@ class FEVD(object):
         print buf.getvalue()
 
     def cov(self):
-        """
-        Compute asymptotic standard errors
+        """Compute asymptotic standard errors
 
         Returns
         -------
         """
-        pass
+        raise NotImplementedError
 
     def plot(self, periods=None, figsize=(10,10), **plot_kwds):
-        """
-        Plot graphical display of FEVD
+        """Plot graphical display of FEVD
 
         Parameters
         ----------

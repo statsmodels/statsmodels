@@ -321,3 +321,18 @@ Normality
 
 Whiteness of residuals
 ~~~~~~~~~~~~~~~~~~~~~~
+
+Class Reference
+---------------
+
+.. currentmodule:: scikits.statsmodels.tsa.var
+
+.. autosummary::
+   :toctree: generated/
+
+   varmod.VAR
+   varmod.VARProcess
+   varmod.VARResults
+   irf.IRAnalysis
+   varmod.FEVD
+
