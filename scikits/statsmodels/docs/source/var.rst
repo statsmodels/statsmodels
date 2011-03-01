@@ -1,5 +1,4 @@
-.. currentmodule:: scikits.statsmodels.tsa.var
-
+.. currentmodule:: scikits.statsmodels.tsa.var.varmod
 
 .. _var:
 
@@ -313,11 +312,57 @@ They can also be visualized through the returned :class:`FEVD` object:
 Statistical tests
 -----------------
 
+A number of different methods are provided to carry out hypothesis tests about
+the model results and also the validity of the model assumptions (normality,
+whiteness / "iid-ness" of errors, etc.).
+
 Granger causality
 ~~~~~~~~~~~~~~~~~
+
+One is often interested in whether a variable or group of variables is "causal"
+for another variable, for some definition of "causal". In the context of VAR
+models, one can say that a set of variables are Granger-causal within one of the
+VAR equations. We will not detail the mathematics or definition of Granger
+causality, but leave it to the reader. The :class:`VARResults` object has the
+`test_causality` method for performing either a Wald (:math:`\chi^2`) test or an
+F-test.
+
+::
+
+    >>> est.test_causality('realgdp', ['realinv', 'realcons'], kind='f')
+    Granger causality f-test
+    =============================================================
+       Test statistic   Critical Value          p-value        df
+    -------------------------------------------------------------
+             9.904841         2.387325            0.000  (4, 579)
+    =============================================================
+    H_0: ['realinv', 'realcons'] do not Granger-cause realgdp
+    Conclusion: reject H_0 at 5.00% significance level
+
+    {'conclusion': 'reject',
+     'crit_value': 2.3873247573799259,
+     'df': (4, 579),
+     'pvalue': 9.3171720876318303e-08,
+     'signif': 0.050000000000000003,
+     'statistic': 9.9048411456983949}
 
 Normality
 ~~~~~~~~~
 
 Whiteness of residuals
 ~~~~~~~~~~~~~~~~~~~~~~
+
+Class Reference
+---------------
+
+.. currentmodule:: scikits.statsmodels.tsa.var
+
+.. autosummary::
+   :toctree: generated/
+
+   varmod.VAR
+   varmod.VARProcess
+   varmod.VARResults
+   irf.IRAnalysis
+   varmod.FEVD
+
