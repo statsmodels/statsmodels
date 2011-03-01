@@ -880,7 +880,7 @@ class LikelihoodModelResults(Results):
         a scalar.
 
         Parameters
-        -----------
+        ----------
         r_matrix : array-like
             Can be 1d, or 2d.  Can be used alone or with other.
         column :  array-like, optional
@@ -1038,7 +1038,7 @@ class LikelihoodModelResults(Results):
         where the rank of the covariance of the noise is not full.
 
         Parameters
-        -----------
+        ----------
         r_matrix : array-like
             q x p array where q is the number of restrictions to test and
             p is the number of regressors in the full model fit.
@@ -1278,8 +1278,8 @@ class ResultMixin(object):
 
         see notes
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         nrep : int
             number of bootstrap replications
         method : str
