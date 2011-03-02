@@ -23,6 +23,25 @@ import numpy as np
 import scipy.integrate
 from numpy import exp, multiply, square, divide, subtract, inf
 
+class NdKernel(object):
+    """Holder for Nd Kernel
+    Nd kernel is constructed from a list of marginal univariate kernels and a
+    covariance matrix.  Currently only support gaussian copula.
+    """
+    def __init__(self, n, kernels = None, cov = None):
+        if isinstance( kernels, CustomKernel ):
+            kernels = [ kernels ] * n
+        elif len(kernels) != n:
+            raise ValueError("Kernels supplied (%i) don't math dimension (%s)"
+                % (len(kernels), n))
+
+        self._kernels = kernels
+
+        if cov is None:
+            cov = np.identity(len(kernels))
+
+        self._cov = cov
+
 class CustomKernel(object):
     """
     Generic 1D Kernel object.
@@ -97,6 +116,19 @@ class CustomKernel(object):
                 return (xs, ys)
             else:
                 return ([], [])
+
+    def density(self, xs, x):
+        """Returns the kernel density estimate for point x based on x-values
+        xs
+        """
+        n = len(xs)
+        xs = self.inDomain( xs, xs, x )[0]
+
+        if len(xs)>0:
+            w = np.sum([self((xx-x)/self.h) for xx in xs])/n
+            return w
+        else:
+            return np.nan
 
     def smooth(self, xs, ys, x):
         """Returns the kernel smoothing estimate for point x based on x-values
@@ -184,16 +216,6 @@ class CustomKernel(object):
         Does the same as weight if the function is normalised
         """
         return self._shape(x)
-
-
-# pylint: disable-msg=R0903
-class DefaultKernel(CustomKernel):
-    """Represents the default kernel - should not be used directly
-    This contains no functionality and acts as a placeholder for the consuming
-    function.
-    """
-    pass
-# pylint: enable-msg=R0903
 
 class Uniform(CustomKernel):
     def __init__(self, h=1.0):

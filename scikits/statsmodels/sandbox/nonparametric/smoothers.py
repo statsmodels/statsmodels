@@ -9,7 +9,7 @@ who generate a smooth fit of a set of (x,y) pairs.
 # pylint: disable-msg=E1101
 
 import numpy as np
-import numpy.linalg as L
+#import numpy.linalg as L
 import kernel
 #import numbers
 #from scipy.linalg import solveh_banded
@@ -88,96 +88,13 @@ class KernelSmoother(object):
     def std(self, x):
         return np.sqrt(self.var(x))
 
-class PolySmoother(object):
-    """
-    Polynomial smoother up to a given order.
-    Fit based on weighted least squares.
-
-    The x values can be specified at instantiation or when called.
-    """
-    #JP: heavily adjusted to work as plugin replacement for bspline
-    #   smoother in gam.py  initalized by function default_smoother
-    #   Only fixed exceptions, I didn't check whether it is statistically
-    #   correctand I think it is not, there are still be some dimension
-    #   problems, and there were some dimension problems initially.
-    # TODO: undo adjustments and fix dimensions correctly
-    # comment: this is just like polyfit with initialization options
-    #          and additional results (OLS on polynomial of x (x is 1d?))
-
-
-    def df_fit(self):
-        """
-        Degrees of freedom used in the fit.
-        """
-        return self.order + 1
-
-    def gram(self, d=None):
-        #fake for spline imitation
-        pass
-
-    def smooth(self,*args, **kwds):
-        return self.fit(*args, **kwds)
-
-    def df_resid(self):
-        """
-        Residual degrees of freedom from last fit.
-        """
-        return self.N - self.order - 1
-
-    def __init__(self, order, x=None):
-        order = 3 # set this because we get knots instead of order
-        self.order = order
-
-        #print order, x.shape
-        self.coef = np.zeros((order+1,), np.float64)
-        if x is not None:
-            if x.ndim > 1: x=x[0,:]
-            self.X = np.array([x**i for i in range(order+1)]).T
-
-    def __call__(self, x=None):
-
-        if x is not None:
-            if x.ndim > 1: x=x[0,:]
-            X = np.array([(x**i) for i in range(self.order+1)])
-        else: X = self.X
-        #return np.squeeze(np.dot(X.T, self.coef))
-        #need to check what dimension this is supposed to be
-        if X.shape[1] == self.coef.shape[0]:
-            return np.squeeze(np.dot(X, self.coef))#[0]
-        else:
-            return np.squeeze(np.dot(X.T, self.coef))#[0]
-
-    def fit(self, y, x=None, weights=None):
-        self.N = y.shape[0]
-        if y.ndim == 1:
-            y = y[:,None]
-        if weights is None or np.isnan(weights).all():
-            weights = 1
-            _w = 1
-        else:
-            _w = np.sqrt(weights)[:,None]
-        if x is None:
-            if not hasattr(self, "X"):
-                raise ValueError, "x needed to fit PolySmoother"
-        else:
-            if x.ndim > 1: x=x[0,:]
-            self.X = np.array([(x**i) for i in range(self.order+1)]).T
-        #print _w.shape
-
-        X = self.X * _w
-
-        _y = y * _w#[:,None]
-        #self.coef = np.dot(L.pinv(X).T, _y[:,None])
-        #self.coef = np.dot(L.pinv(X), _y)
-        self.coef = L.lstsq(X, _y)[0]
-
-
-
 
 
 
 if __name__ == "__main__":
-    from scikits.statsmodels.sandbox import smoothers as s
+    PLOT = True
+
+    from scikits.statsmodels.sandbox.nonparametric import smoothers as s
     import matplotlib.pyplot as plt
     from numpy import sin, array, random
 
@@ -223,35 +140,121 @@ if __name__ == "__main__":
     print KVar[39]
     print K2Var[39]
 
-    fig = plt.figure()
-    ax = fig.add_subplot(221)
-    ax.plot(x, y, "+")
-    ax.plot(KSx, KSy, "o")
-    ax.set_ylim(-20, 30)
-    ax2 = fig.add_subplot(222)
-    ax2.plot(KSx, KVar, "o")
+    if PLOT:
+        fig = plt.figure()
+        ax = fig.add_subplot(221)
+        ax.plot(x, y, "+")
+        ax.plot(KSx, KSy, "o")
+        ax.set_ylim(-20, 30)
+        ax2 = fig.add_subplot(222)
+        ax2.plot(KSx, KVar, "o")
 
-    ax3 = fig.add_subplot(223)
-    ax3.plot(x, y, "+")
-    ax3.plot(KSx, KS2y, "o")
-    ax3.set_ylim(-20, 30)
-    ax4 = fig.add_subplot(224)
-    ax4.plot(KSx, K2Var, "o")
+        ax3 = fig.add_subplot(223)
+        ax3.plot(x, y, "+")
+        ax3.plot(KSx, KS2y, "o")
+        ax3.set_ylim(-20, 30)
+        ax4 = fig.add_subplot(224)
+        ax4.plot(KSx, K2Var, "o")
 
-    fig2 = plt.figure()
-    ax5 = fig2.add_subplot(111)
-    ax5.plot(x, y, "+")
-    ax5.plot(KSConfIntx, KSConfInty, "o")
-    #plt.show()
-
-
-
+        fig2 = plt.figure()
+        ax5 = fig2.add_subplot(111)
+        ax5.plot(x, y, "+")
+        ax5.plot(KSConfIntx, KSConfInty, "o")
+        plt.show()
 
 
 
 
 
 
+
+
+
+
+#
+#class PolySmoother(object):
+#    """
+#    Polynomial smoother up to a given order.
+#    Fit based on weighted least squares.
+#
+#    The x values can be specified at instantiation or when called.
+#    """
+#    #JP: heavily adjusted to work as plugin replacement for bspline
+#    #   smoother in gam.py  initalized by function default_smoother
+#    #   Only fixed exceptions, I didn't check whether it is statistically
+#    #   correctand I think it is not, there are still be some dimension
+#    #   problems, and there were some dimension problems initially.
+#    # TODO: undo adjustments and fix dimensions correctly
+#    # comment: this is just like polyfit with initialization options
+#    #          and additional results (OLS on polynomial of x (x is 1d?))
+#
+#
+#    def df_fit(self):
+#        """
+#        Degrees of freedom used in the fit.
+#        """
+#        return self.order + 1
+#
+#    def gram(self, d=None):
+#        #fake for spline imitation
+#        pass
+#
+#    def smooth(self,*args, **kwds):
+#        return self.fit(*args, **kwds)
+#
+#    def df_resid(self):
+#        """
+#        Residual degrees of freedom from last fit.
+#        """
+#        return self.N - self.order - 1
+#
+#    def __init__(self, order, x=None):
+#        order = 3 # set this because we get knots instead of order
+#        self.order = order
+#
+#        #print order, x.shape
+#        self.coef = np.zeros((order+1,), np.float64)
+#        if x is not None:
+#            if x.ndim > 1: x=x[0,:]
+#            self.X = np.array([x**i for i in range(order+1)]).T
+#
+#    def __call__(self, x=None):
+#
+#        if x is not None:
+#            if x.ndim > 1: x=x[0,:]
+#            X = np.array([(x**i) for i in range(self.order+1)])
+#        else: X = self.X
+#        #return np.squeeze(np.dot(X.T, self.coef))
+#        #need to check what dimension this is supposed to be
+#        if X.shape[1] == self.coef.shape[0]:
+#            return np.squeeze(np.dot(X, self.coef))#[0]
+#        else:
+#            return np.squeeze(np.dot(X.T, self.coef))#[0]
+#
+#    def fit(self, y, x=None, weights=None):
+#        self.N = y.shape[0]
+#        if y.ndim == 1:
+#            y = y[:,None]
+#        if weights is None or np.isnan(weights).all():
+#            weights = 1
+#            _w = 1
+#        else:
+#            _w = np.sqrt(weights)[:,None]
+#        if x is None:
+#            if not hasattr(self, "X"):
+#                raise ValueError, "x needed to fit PolySmoother"
+#        else:
+#            if x.ndim > 1: x=x[0,:]
+#            self.X = np.array([(x**i) for i in range(self.order+1)]).T
+#        #print _w.shape
+#
+#        X = self.X * _w
+#
+#        _y = y * _w#[:,None]
+#        #self.coef = np.dot(L.pinv(X).T, _y[:,None])
+#        #self.coef = np.dot(L.pinv(X), _y)
+#        self.coef = L.lstsq(X, _y)[0]
+#
 
 
 
