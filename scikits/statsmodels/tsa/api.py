@@ -1,5 +1,5 @@
 from .ar_model import AR
-from .arima import ARMA
+from .arima_model import ARMA
 import var
 from .var.varmod import VAR
 import tsatools
