@@ -820,13 +820,14 @@ class VARResults(VARProcess):
         """
         return stats.t.sf(np.abs(self.t()), self.df_resid)*2
 
-    def plot_forecast(self, steps, alpha=0.05):
+    def plot_forecast(self, steps, alpha=0.05, plot_stderr=True):
         """
         Plot forecast
         """
         mid, lower, upper = self.forecast_interval(self.y[-self.p:], steps,
                                                    alpha=alpha)
-        plotting.plot_var_forc(self.y, mid, lower, upper, names=self.names)
+        plotting.plot_var_forc(self.y, mid, lower, upper, names=self.names,
+                               plot_stderr=plot_stderr)
 
     # Forecast error covariance functions
 
@@ -907,7 +908,7 @@ class VARResults(VARProcess):
         """
         return VARSummary(self)
 
-    def irf(self, periods=10, var_decomp=None):
+    def irf(self, periods=10, var_decomp=None, var_order=None):
         """Analyze impulse responses to shocks in system
 
         Parameters
@@ -916,11 +917,17 @@ class VARResults(VARProcess):
         var_decomp : ndarray (k x k), lower triangular
             Must satisfy Omega = P P', where P is the passed matrix. Defaults to
             Cholesky decomposition of Omega
+        var_order : sequence
+            Alternate variable order for Cholesky decomposition
 
         Returns
         -------
         irf : IRAnalysis
         """
+        if var_order is not None:
+            raise NotImplementedError('alternate variable order not implemented'
+                                      ' (yet)')
+
         return IRAnalysis(self, P=var_decomp, periods=periods)
 
     def fevd(self, periods=10, var_decomp=None):

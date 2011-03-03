@@ -48,7 +48,7 @@ def plot_mts(Y, names=None, index=None):
             ax.set_title(names[j])
 
 def plot_var_forc(prior, forc, err_upper, err_lower,
-                  index=None, names=None):
+                  index=None, names=None, plot_stderr=True):
     n, k = prior.shape
     rows, cols = k, 1
 
@@ -63,8 +63,10 @@ def plot_var_forc(prior, forc, err_upper, err_lower,
 
         p1 = ax.plot(prange, prior[:, j], 'k')
         p2 = ax.plot(rng_f, np.r_[prior[-1:, j], forc[:, j]], 'k--')
-        p3 = ax.plot(rng_err, err_upper[:, j], 'k-.')
-        ax.plot(rng_err, err_lower[:, j], 'k-.')
+
+        if plot_stderr:
+            p3 = ax.plot(rng_err, err_upper[:, j], 'k-.')
+            ax.plot(rng_err, err_lower[:, j], 'k-.')
 
         if names is not None:
             ax.set_title(names[j])

@@ -446,8 +446,6 @@ The forecasts can be visualized using `plot_forecast`:
 
 	>>> var.plot_forecast(2)
 
-# .. plot:: plots/var_dynamic_forecast.py
-
 Class Reference
 ---------------
 
