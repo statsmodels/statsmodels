@@ -1,18 +1,22 @@
 # pylint: disable=W0201
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 from scikits.statsmodels.tools.decorators import cache_readonly
-import scikits.statsmodels.tsa.var.model as _model
-import scikits.statsmodels.tsa.var.util as util
 
-import pandas as pn
-import pandas.util.testing as ptest
-from pandas.util.testing import set_trace as st
+import varmod as _model
+import util
+import plotting
 
 FULL_SAMPLE = 0
 ROLLING = 1
 EXPANDING = 2
+
+try:
+    import pandas as pn
+except ImportError:
+    pass
 
 def _get_window_type(window_type):
     if window_type in (FULL_SAMPLE, ROLLING, EXPANDING):
@@ -29,6 +33,12 @@ def _get_window_type(window_type):
 
     raise Exception('Unrecognized window type: %s' % window_type)
 
+def require_pandas():
+    try:
+        import pandas as pn
+    except ImportError:
+        raise ImportError('pandas is required to use this code (for now)')
+
 class DynamicVAR(object):
     """
     Estimates time-varying vector autoregression (VAR(p)) using
@@ -44,10 +54,21 @@ class DynamicVAR(object):
         Minimum number of observations to require in window, defaults to window
         size if None specified
     trend : {'c', 'nc', 'ct', 'ctt'}
-        FOO PUT SOMETHING HERE
+        TODO
+
+    Returns
+    -------
+    **Attributes**:
+
+    coefs : WidePanel
+        items : coefficient names
+        major_axis : dates
+        minor_axis : VAR equation names
     """
     def __init__(self, data, lag_order=1, window=None, window_type='expanding',
                  trend='c', min_periods=None):
+        require_pandas()
+
         self.lag_order = lag_order
 
         self.names = list(data.columns)
@@ -112,6 +133,9 @@ class DynamicVAR(object):
 
     @cache_readonly
     def coefs(self):
+        """
+        Return dynamic regression coefficients as WidePanel
+        """
         data = {}
         for eq, result in self.equations.iteritems():
             data[eq] = result.beta
@@ -164,20 +188,19 @@ class DynamicVAR(object):
 
         return pn.DataMatrix(data)
 
-    def forecast(self, steps_ahead=1):
+    def forecast(self, steps=1):
         """
         Produce dynamic forecast
 
         Parameters
         ----------
-        steps_ahead
-
+        steps
 
         Returns
         -------
         forecasts : pandas.DataMatrix
         """
-        output = np.empty((self.T - steps_ahead, self.neqs))
+        output = np.empty((self.T - steps, self.neqs))
 
         y_values = self.y.values
         y_index_map = self.y.index.indexMap
@@ -187,22 +210,22 @@ class DynamicVAR(object):
         intercepts = self._intercepts_raw
 
         # can only produce this many forecasts
-        forc_index = self.result_index[steps_ahead:]
+        forc_index = self.result_index[steps:]
         for i, date in enumerate(forc_index):
             # TODO: check that this does the right thing in weird cases...
-            idx = y_index_map[date] - steps_ahead
-            result_idx = result_index_map[date] - steps_ahead
+            idx = y_index_map[date] - steps
+            result_idx = result_index_map[date] - steps
 
             y_slice = y_values[:idx]
 
             forcs = _model.forecast(y_slice, coefs[result_idx],
-                                    intercepts[result_idx], steps_ahead)
+                                    intercepts[result_idx], steps)
 
             output[i] = forcs[-1]
 
         return pn.DataMatrix(output, index=forc_index, columns=self.names)
 
-    def plot_forecast(self, steps_ahead=1, figsize=(10, 10)):
+    def plot_forecast(self, steps=1, figsize=(10, 10)):
         """
         Plot h-step ahead forecasts against actual realizations of time
         series. Note that forecasts are lined up with their respective
@@ -210,10 +233,33 @@ class DynamicVAR(object):
 
         Parameters
         ----------
-        steps_ahead :
+        steps :
         """
-        forc = self.forecast(steps_ahead=steps_ahead)
-        fig, axes = plt.subplots(figsize=figsize, nrows=self.neqs)
+        fig, axes = plt.subplots(figsize=figsize, nrows=self.neqs,
+                                 sharex=True)
+
+        forc = self.forecast(steps=steps)
+        dates = forc.index
+
+        y_overlay = self.y.reindex(dates)
+
+        for i, col in enumerate(forc.columns):
+            ax = axes[i]
+
+            y_ts = y_overlay[col]
+            forc_ts = forc[col]
+
+            y_handle = ax.plot(dates, y_ts.values, 'k.', ms=2)
+            forc_handle = ax.plot(dates, forc_ts.values, 'k-')
+
+        fig.legend((y_handle, forc_handle), ('Y', 'Forecast'))
+        fig.autofmt_xdate()
+
+        fig.suptitle('Dynamic %d-step forecast' % steps)
+
+        # pretty things up a bit
+        plotting.adjust_subplots(bottom=0.15, left=0.10)
+        plt.draw_if_interactive()
 
     @property
     def _is_rolling(self):
@@ -314,8 +360,13 @@ class Equation(object):
         pass
 
 if __name__ == '__main__':
-    data = ptest.makeTimeDataFrame()
+    import pandas.util.testing as ptest
+
+    ptest.N = 500
+    data = ptest.makeTimeDataFrame().cumsum(0)
 
     var = DynamicVAR(data, lag_order=2, window_type='expanding')
+    var2 = DynamicVAR(data, lag_order=2, window=10,
+                      window_type='rolling')
 
 

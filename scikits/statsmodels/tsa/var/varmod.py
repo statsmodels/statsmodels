@@ -184,6 +184,8 @@ def forecast(y, coefs, intercept, steps):
     Notes
     -----
     Lutkepohl p. 37
+
+    Also used by DynamicVAR class
     """
     p = len(coefs)
     k = len(coefs[0])
@@ -340,11 +342,24 @@ class VAR(object):
 
         return self._estimate_var(lags, trend=trend)
 
-    def _estimate_var(self, lags, trend='c'):
+    def _estimate_var(self, lags, offset=0, trend='c'):
+        """
+        lags : int
+        offset : int
+            Periods to drop from beginning-- for order selection so it's an
+            apples-to-apples comparison
+        trend : string or None
+            As per above
+        """
         trendorder = util.get_trendorder(trend)
 
-        z = util.get_var_endog(self.y, lags, trend=trend)
-        y_sample = self.y[lags:]
+        if offset < 0: # pragma: no cover
+            raise ValueError('offset must be >= 0')
+
+        y = self.y[offset:]
+
+        z = util.get_var_endog(y, lags, trend=trend)
+        y_sample = y[lags:]
 
         # Lutkepohl p75, about 5x faster than stated formula
         params = np.linalg.lstsq(z, y_sample)[0]
@@ -365,7 +380,7 @@ class VAR(object):
         sse = np.dot(resid.T, resid)
         omega = sse / df_resid
 
-        return VARResults(self.y, z, params, omega, lags, names=self.names,
+        return VARResults(y, z, params, omega, lags, names=self.names,
                           dates=self.dates, model=self)
 
     def select_order(self, maxlags=None, verbose=True):
@@ -389,7 +404,10 @@ class VAR(object):
 
         ics = defaultdict(list)
         for p in range(maxlags + 1):
-            result = self._estimate_var(p)
+            # exclude some periods to same amount of data used for each lag
+            # order
+            result = self._estimate_var(p, offset=maxlags-p)
+
             for k, v in result.info_criteria.iteritems():
                 ics[k].append(v)
 
@@ -802,13 +820,14 @@ class VARResults(VARProcess):
         """
         return stats.t.sf(np.abs(self.t()), self.df_resid)*2
 
-    def plot_forecast(self, steps, alpha=0.05):
+    def plot_forecast(self, steps, alpha=0.05, plot_stderr=True):
         """
         Plot forecast
         """
         mid, lower, upper = self.forecast_interval(self.y[-self.p:], steps,
                                                    alpha=alpha)
-        plotting.plot_var_forc(self.y, mid, lower, upper, names=self.names)
+        plotting.plot_var_forc(self.y, mid, lower, upper, names=self.names,
+                               plot_stderr=plot_stderr)
 
     # Forecast error covariance functions
 
@@ -889,7 +908,7 @@ class VARResults(VARProcess):
         """
         return VARSummary(self)
 
-    def irf(self, periods=10, var_decomp=None):
+    def irf(self, periods=10, var_decomp=None, var_order=None):
         """Analyze impulse responses to shocks in system
 
         Parameters
@@ -898,11 +917,17 @@ class VARResults(VARProcess):
         var_decomp : ndarray (k x k), lower triangular
             Must satisfy Omega = P P', where P is the passed matrix. Defaults to
             Cholesky decomposition of Omega
+        var_order : sequence
+            Alternate variable order for Cholesky decomposition
 
         Returns
         -------
         irf : IRAnalysis
         """
+        if var_order is not None:
+            raise NotImplementedError('alternate variable order not implemented'
+                                      ' (yet)')
+
         return IRAnalysis(self, P=var_decomp, periods=periods)
 
     def fevd(self, periods=10, var_decomp=None):
