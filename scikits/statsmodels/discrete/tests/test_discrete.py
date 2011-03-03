@@ -15,7 +15,6 @@ import scikits.statsmodels.api as sm
 from sys import platform
 from nose import SkipTest
 from results.results_discrete import Spector
-import scipy
 
 DECIMAL_4 = 4
 DECIMAL_3 = 3
@@ -262,7 +261,8 @@ class TestLogitNewton(CheckModelResults, CheckMargEff):
 class TestLogitBFGS(CheckModelResults, CheckMargEff):
     @classmethod
     def setupClass(cls):
-        major, minor, micro = scipy.__version__.split('.')
+        import scipy
+        major, minor, micro = scipy.__version__.split('.')[:3]
         if int(minor) < 9:
             raise SkipTest
 
