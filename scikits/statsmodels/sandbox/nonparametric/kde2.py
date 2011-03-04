@@ -48,16 +48,16 @@ if __name__ == "__main__":
         ax.set_ylim(0,0.4)
         plt.show()
 
-    if False:
-        # 5 D case (easy)
-        random.seed(142)
-        mu = [1.0, 4.0, 3.5, -2.4, 0.0]
-        sigma = np.matrix(
-            [[ 0.6 - 0.1*abs(i-j) if i != j else 1.0 for j in xrange(5)] for i in xrange(5)])
-        x = random.multivariate_normal(mu, sigma, size = 500)
-        kern = kernel.Gaussian()
-        kde = KernelEstimate( x, kern)
+    # 2 D case
+    import scikits.statsmodels.sandbox.nonparametric.testdata as testdata
+    x = zip(testdata.faithfulData["eruptions"], testdata.faithfulData["waiting"])
+    x = np.array(x)
 
-        # 3 D case (hard)
-        random.seed(142)
-
+    # 5 D case
+    random.seed(142)
+    mu = [1.0, 4.0, 3.5, -2.4, 0.0]
+    sigma = np.matrix(
+        [[ 0.6 - 0.1*abs(i-j) if i != j else 1.0 for j in xrange(5)] for i in xrange(5)])
+    x = random.multivariate_normal(mu, sigma, size = 100)
+    kern = kernel.Gaussian()
+    kde = KernelEstimate( x, kern )

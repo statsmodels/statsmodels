@@ -28,7 +28,7 @@ class NdKernel(object):
     Nd kernel is constructed from a list of marginal univariate kernels and a
     covariance matrix.  Currently only support gaussian copula.
     """
-    def __init__(self, n, kernels = None, cov = None):
+    def __init__(self, n, kernels = None, H = None):
         if isinstance( kernels, CustomKernel ):
             kernels = [ kernels ] * n
         elif len(kernels) != n:
@@ -37,10 +37,30 @@ class NdKernel(object):
 
         self._kernels = kernels
 
-        if cov is None:
-            cov = np.identity(len(kernels))
+        if H is None:
+            H = np.identity(len(kernels))
 
-        self._cov = cov
+        self._H = H
+        self._Hrootinv = np.linalg.cholesky( H.I )
+
+    def getH(self):
+        """Getter for kernel bandwidth, H"""
+        return self._H
+    def setH(self, value):
+        """Setter for kernel bandwidth, H"""
+        self._H = value
+    H = property(getH, setH, doc="Kernel bandwidth matrix")
+
+    def density(self, xs, x):
+        pass
+        n = len(xs)
+        #xs = self.inDomain( xs, xs, x )[0]
+
+        if len(xs)>0:
+            w = np.sum([self(self._Hrootinv * (xx-x) ) for xx in xs])/n
+            return w
+        else:
+            return np.nan
 
 class CustomKernel(object):
     """
