@@ -510,7 +510,7 @@ class KalmanFilter(object):
         params : array
             The coefficients of the ARMA model, assumed to be in the order of
             trend variables and `k` exogenous coefficients, the `p` AR
-            coefficients, then the `q MA coefficients.
+            coefficients, then the `q` MA coefficients.
         arma_model : `scikits.statsmodels.tsa.arima.ARMA` instance
             A reference to the ARMA model instance.
 

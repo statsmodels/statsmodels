@@ -151,6 +151,10 @@ TSA Tools
    tsatools.lagmat
    tsatools.lagmat2ds
 
+Vector Autogressive Processes (VAR)
+"""""""""""""""""""""""""""""""""""
+
+.. seealso:: :ref:`VAR documentation <var>`
 
 VARMA Process
 """""""""""""

@@ -132,8 +132,8 @@ class LikelihoodModel(Model):
         """
         raise NotImplementedError
 
-    def fit(self, start_params=None, method='newton', maxiter=100, full_output=1,
-            disp=1, fargs=(), callback=None, retall=0, **kwargs):
+    def fit(self, start_params=None, method='newton', maxiter=100,
+            full_output=1,disp=1, fargs=(), callback=None, retall=0, **kwargs):
         """
         Fit method for likelihood based models
 
@@ -231,8 +231,8 @@ class LikelihoodModel(Model):
             elif self.exog is not None:
                 start_params = [0]*self.exog.shape[1] # fails for shape (K,)?
             else:
-                raise ValueError("If exog is None, then start_params should be \
-specified")
+                raise ValueError("If exog is None, then start_params should be "
+                                 "specified")
         #print 'repr(start_params)', repr(start_params)
         if method.lower() not in methods:
             raise ValueError, "Unknown fit method %s" % method
@@ -439,21 +439,22 @@ class GenericLikelihoodModel(LikelihoodModel):
         'nm'
         'powell'
 
-    Optimization methods that require a likelihood function and a score/gradient.
+    Optimization methods that require a likelihood function and a
+    score/gradient.
         'bfgs'
         'cg'
         'ncg' - A function to compute the Hessian is optional.
 
-    Optimization methods that require a likelihood function, a score/gradient, and a
-    Hessian.
+    Optimization methods that require a likelihood function, a score/gradient,
+    and a Hessian.
         'newton'
 
     If they are not overwritten by a subclass, then numerical gradient, Jacobian
     and Hessian of the log-likelihood are caclulated by numerical forward
     differentiation. This might results in some cases in precision problems, and
-    the Hessian might not be positive definite. Even if the Hessian is not positive
-    definite the covariance matrix of the parameter estimates based on the outer
-    product of the Jacobian might still be valid.
+    the Hessian might not be positive definite. Even if the Hessian is not
+    positive definite the covariance matrix of the parameter estimates based on
+    the outer product of the Jacobian might still be valid.
 
 
     Examples
@@ -475,7 +476,8 @@ class GenericLikelihoodModel(LikelihoodModel):
     np.allclose(res.params, probit_res.params)
 
     """
-    def __init__(self, endog, exog=None, loglike=None, score=None, hessian=None):
+    def __init__(self, endog, exog=None, loglike=None, score=None,
+                 hessian=None):
     # let them be none in case user wants to use inheritance
         if loglike:
             self.loglike = loglike
@@ -509,8 +511,8 @@ class GenericLikelihoodModel(LikelihoodModel):
         params : array
             reduced parameter array
 
-        Return
-        ------
+        Returns
+        -------
         paramsfull : array
             expanded parameter array where fixed parameters are included
 
@@ -843,8 +845,8 @@ class LikelihoodModelResults(Results):
         """
 
         if self.normalized_cov_params is None:
-            raise ValueError, 'need covariance of parameters for computing T\
- statistics'
+            raise ValueError('need covariance of parameters for computing T '
+                             'statistics')
 
         if column is None:
             column = range(self.params.shape[0])
@@ -878,7 +880,7 @@ class LikelihoodModelResults(Results):
         a scalar.
 
         Parameters
-        -----------
+        ----------
         r_matrix : array-like
             Can be 1d, or 2d.  Can be used alone or with other.
         column :  array-like, optional
@@ -913,13 +915,13 @@ class LikelihoodModelResults(Results):
 
         """
         if self.normalized_cov_params is None:
-            raise ValueError, 'need covariance of parameters for computing \
-(unnormalized) covariances'
+            raise ValueError('need covariance of parameters for computing '
+                             '(unnormalized) covariances')
         if column is not None and (r_matrix is not None or other is not None):
-            raise ValueError, 'Column should be specified without other \
-arguments.'
+            raise ValueError('Column should be specified without other '
+                             'arguments.')
         if other is not None and r_matrix is None:
-            raise ValueError, 'other can only be specified with r_matrix'
+            raise ValueError('other can only be specified with r_matrix')
         if scale is None:
             scale = self.scale
         if column is not None:
@@ -931,7 +933,7 @@ arguments.'
         elif r_matrix is not None:
             r_matrix = np.asarray(r_matrix)
             if r_matrix.shape == ():
-                raise ValueError, "r_matrix should be 1d or 2d"
+                raise ValueError("r_matrix should be 1d or 2d")
             if other is None:
                 other = r_matrix
             else:
@@ -976,7 +978,8 @@ arguments.'
 
         >>>T_Test = results.t_test(r)
         >>>print T_test
-        <T contrast: effect=-1829.2025687192481, sd=455.39079425193762, t=-4.0167754636411717, p=0.0015163772380899498, df_denom=9>
+        <T contrast: effect=-1829.2025687192481, sd=455.39079425193762,
+        t=-4.0167754636411717, p=0.0015163772380899498, df_denom=9>
         >>> T_test.effect
         -1829.2025687192481
         >>> T_test.sd
@@ -997,8 +1000,8 @@ arguments.'
         num_params = r_matrix.shape[1]
 
         if self.normalized_cov_params is None:
-            raise ValueError, 'Need covariance of parameters for computing \
-T statistics'
+            raise ValueError('Need covariance of parameters for computing '
+                             'T statistics')
         if num_params != self.params.shape[0]:
             raise ValueError, 'r_matrix and params are not aligned'
         if q_matrix is None:
@@ -1007,8 +1010,8 @@ T statistics'
             q_matrix = np.asarray(q_matrix)
         if q_matrix.size > 1:
             if q_matrix.shape[0] != num_ttests:
-                raise ValueError("r_matrix and q_matrix must have the same \
-number of rows")
+                raise ValueError("r_matrix and q_matrix must have the same "
+                                 "number of rows")
 
         _t = _sd = None
 
@@ -1035,7 +1038,7 @@ number of rows")
         where the rank of the covariance of the noise is not full.
 
         Parameters
-        -----------
+        ----------
         r_matrix : array-like
             q x p array where q is the number of restrictions to test and
             p is the number of regressors in the full model fit.
@@ -1092,7 +1095,8 @@ number of rows")
         r_matrix = np.atleast_2d(r_matrix)
 
         if self.normalized_cov_params is None:
-            raise ValueError, 'need covariance of parameters for computing F statistics'
+            raise ValueError('need covariance of parameters for computing '
+                             'F statistics')
 
         cparams = np.dot(r_matrix, self.params[:,None])
         J = float(r_matrix.shape[0]) # number of restrictions
@@ -1103,8 +1107,8 @@ number of rows")
         if q_matrix.ndim == 1:
             q_matrix = q_matrix[:,None]
             if q_matrix.shape[0] != J:
-                raise ValueError("r_matrix and q_matrix must have the same \
-number of rows")
+                raise ValueError("r_matrix and q_matrix must have the same "
+                                 "number of rows")
         Rbq = cparams - q_matrix
         if invcov is None:
             invcov = np.linalg.inv(self.cov_params(r_matrix=r_matrix))
@@ -1274,8 +1278,8 @@ class ResultMixin(object):
 
         see notes
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         nrep : int
             number of bootstrap replications
         method : str

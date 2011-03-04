@@ -1,7 +1,7 @@
 .. currentmodule:: scikits.statsmodels.glm
 
 
-.. _glm:
+.. _glm_techn2:
 
 Technical Documentation - part 2
 ================================

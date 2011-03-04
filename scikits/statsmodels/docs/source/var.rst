@@ -1,5 +1,4 @@
-.. currentmodule:: scikits.statsmodels.tsa.var
-
+.. currentmodule:: scikits.statsmodels.tsa.var.varmod
 
 .. _var:
 
@@ -28,6 +27,11 @@ which we will not develop here.
 
 Model fitting
 ~~~~~~~~~~~~~
+
+.. note::
+
+    The classes referenced below are accessible via the
+    :mod:`scikits.statsmodels.tsa.api` module.
 
 To estimate a VAR model, one must first create the model using an `ndarray` of
 homogeneous or structured dtype. When using a structured or record array, the
@@ -275,7 +279,7 @@ These are computed via the `fevd` function up through a total number of steps ah
 
 ::
 
-    >>> fevd = results.fevd(10)
+    >>> fevd = results.fevd(5)
 
     >>> fevd.summary()
     FEVD for realgdp
@@ -313,11 +317,147 @@ They can also be visualized through the returned :class:`FEVD` object:
 Statistical tests
 -----------------
 
+A number of different methods are provided to carry out hypothesis tests about
+the model results and also the validity of the model assumptions (normality,
+whiteness / "iid-ness" of errors, etc.).
+
 Granger causality
 ~~~~~~~~~~~~~~~~~
+
+One is often interested in whether a variable or group of variables is "causal"
+for another variable, for some definition of "causal". In the context of VAR
+models, one can say that a set of variables are Granger-causal within one of the
+VAR equations. We will not detail the mathematics or definition of Granger
+causality, but leave it to the reader. The :class:`VARResults` object has the
+`test_causality` method for performing either a Wald (:math:`\chi^2`) test or an
+F-test.
+
+::
+
+    >>> est.test_causality('realgdp', ['realinv', 'realcons'], kind='f')
+    Granger causality f-test
+    =============================================================
+       Test statistic   Critical Value          p-value        df
+    -------------------------------------------------------------
+             9.904841         2.387325            0.000  (4, 579)
+    =============================================================
+    H_0: ['realinv', 'realcons'] do not Granger-cause realgdp
+    Conclusion: reject H_0 at 5.00% significance level
+
+    {'conclusion': 'reject',
+     'crit_value': 2.3873247573799259,
+     'df': (4, 579),
+     'pvalue': 9.3171720876318303e-08,
+     'signif': 0.050000000000000003,
+     'statistic': 9.9048411456983949}
 
 Normality
 ~~~~~~~~~
 
 Whiteness of residuals
 ~~~~~~~~~~~~~~~~~~~~~~
+
+Dynamic Vector Autoregressions
+------------------------------
+
+.. note::
+
+    To use this functionality, `pandas <http://pypi.python.org/pypi/pandas>`__
+    must be installed. See the `pandas documentation
+    <http://pandas.sourceforge.net>`__ for more information on the below data
+    structures.
+
+One is often interested in estimating a moving-window regression on time series
+data for the purposes of making forecasts throughout the data sample. For
+example, we may wish to produce the series of 2-step-ahead forecasts produced by
+a VAR(p) model estimated at each point in time.
+
+::
+
+    >>> data
+    <class 'pandas.core.frame.DataFrame'>
+    Index: 500 entries , 2000-01-03 00:00:00 to 2001-11-30 00:00:00
+    A    500  non-null values
+    B    500  non-null values
+    C    500  non-null values
+    D    500  non-null values
+
+    >>> var = DynamicVAR(data, lag_order=2, window_type='expanding')
+
+The estimated coefficients for the dynamic model are returned as a
+:class:`pandas.WidePanel` object, which can allow you to easily examine, for
+example, all of the model coefficients by equation or by date:
+
+::
+
+    >>> var.coefs
+    <class 'pandas.core.panel.WidePanel'>
+    Dimensions: 9 (items) x 489 (major) x 4 (minor)
+    Items: L1.A to intercept
+    Major axis: 2000-01-18 00:00:00 to 2001-11-30 00:00:00
+    Minor axis: A to D
+
+    # all estimated coefficients for equation A
+    >>> var.coefs.minor_xs('A').info()
+    Index: 489 entries , 2000-01-18 00:00:00 to 2001-11-30 00:00:00
+    Data columns:
+    L1.A         489  non-null values
+    L1.B         489  non-null values
+    L1.C         489  non-null values
+    L1.D         489  non-null values
+    L2.A         489  non-null values
+    L2.B         489  non-null values
+    L2.C         489  non-null values
+    L2.D         489  non-null values
+    intercept    489  non-null values
+    dtype: float64(9)
+
+    # coefficients on 11/30/2001
+    >>> var.coefs.major_xs(datetime(2001, 11, 30)).T
+                 A              B              C              D
+    L1.A         0.9567         -0.07389       0.0588         -0.02848
+    L1.B         -0.00839       0.9757         -0.004945      0.005938
+    L1.C         -0.01824       0.1214         0.8875         0.01431
+    L1.D         0.09964        0.02951        0.05275        1.037
+    L2.A         0.02481        0.07542        -0.04409       0.06073
+    L2.B         0.006359       0.01413        0.02667        0.004795
+    L2.C         0.02207        -0.1087        0.08282        -0.01921
+    L2.D         -0.08795       -0.04297       -0.06505       -0.06814
+    intercept    0.07778        -0.283         -0.1009        -0.6426
+
+Dynamic forecasts for a given number of steps ahead can be produced using the
+`forecast` function and return a :class:`pandas.DataMatrix` object:
+
+::
+
+    >>> In [76]: var.forecast(2)
+                           A              B              C              D
+    <snip>
+    2001-11-23 00:00:00    -6.661         43.18          33.43          -23.71
+    2001-11-26 00:00:00    -5.942         43.58          34.04          -22.13
+    2001-11-27 00:00:00    -6.666         43.64          33.99          -22.85
+    2001-11-28 00:00:00    -6.521         44.2           35.34          -24.29
+    2001-11-29 00:00:00    -6.432         43.92          34.85          -26.68
+    2001-11-30 00:00:00    -5.445         41.98          34.87          -25.94
+
+The forecasts can be visualized using `plot_forecast`:
+
+::
+
+	>>> var.plot_forecast(2)
+
+Class Reference
+---------------
+
+.. currentmodule:: scikits.statsmodels.tsa.var
+
+.. autosummary::
+   :toctree: generated/
+
+   varmod.VAR
+   varmod.VARProcess
+   varmod.VARResults
+   irf.IRAnalysis
+   varmod.FEVD
+   dynamic.DynamicVAR
+

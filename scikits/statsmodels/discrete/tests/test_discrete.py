@@ -261,6 +261,11 @@ class TestLogitNewton(CheckModelResults, CheckMargEff):
 class TestLogitBFGS(CheckModelResults, CheckMargEff):
     @classmethod
     def setupClass(cls):
+        import scipy
+        major, minor, micro = scipy.__version__.split('.')[:3]
+        if int(minor) < 9:
+            raise SkipTest
+
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog)
         res2 = Spector()

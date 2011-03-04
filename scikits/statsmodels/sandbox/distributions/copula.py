@@ -146,7 +146,8 @@ def transform_tawn(t, a1, a2, theta):
 
     transf = (1 - a1) * (1-t)
     transf += (1 - a2) * t
-    transf += ((a1 * t)**(1./theta) + (a2 * (1-t))**(1./theta)))**(theta)
+    transf += ((a1 * t)**(1./theta) + (a2 * (1-t))**(1./theta))**theta
+
     return transf
 
 def transform_joe(t, a1, a2, theta):
@@ -168,8 +169,9 @@ def transform_joe(t, a1, a2, theta):
     if not np.all(_check_args(a1, a2, theta)):
         raise ValueError('invalid args')
 
-    transf = 1 - ((a1 * (1-t))**(-1./theta) + (a2 * t)**(-1./theta)))**(-theta)
+    transf = 1 - ((a1 * (1-t))**(-1./theta) + (a2 * t)**(-1./theta))**(-theta)
     return transf
+
 
 def transform_tawn2(t, theta, k):
     '''asymmetric mixed model of Tawn 1988
@@ -232,7 +234,7 @@ def transform_hr(t, lamda):
     '''
 
     def _check_args(lamda):
-        cond = (theta > 0)
+        cond = (lamda > 0)
         return cond
 
     if not np.all(_check_args(lamda)):
@@ -252,12 +254,12 @@ def transform_tev(t, rho, x):
      - x > 0
     '''
 
-    def _check_args(, rho, x):
+    def _check_args(rho, x):
         cond1 = (x > 0)
         cond2 = (rho > 0) and (rho < 1)
         return cond1 and cond2
 
-    if not np.all(_check_args(, rho, x)):
+    if not np.all(_check_args(rho, x)):
         raise ValueError('invalid args')
 
     from scipy.stats import t as stats_t  #use special if I want to avoid stats import
@@ -274,7 +276,7 @@ copulanames = {'indep' : copula_bv_indep,
                'max' : copula_bv_max,
                'clayton' : copula_bv_clayton,
                'cookjohnson' : copula_bv_clayton,
-               'cj' : copula_bv_cookjohnson,
+               'cj' : copula_bv_clayton,
                'frank' : copula_bv_frank,
                'gauss' : copula_bv_gauss,
                'normal' : copula_bv_gauss,

@@ -5,7 +5,7 @@ Impulse reponse-related code
 from __future__ import division
 
 import numpy as np
-import numpy.linalg as npl
+import numpy.linalg as la
 import scipy.linalg as L
 
 from scikits.statsmodels.tools.decorators import cache_readonly
@@ -23,13 +23,26 @@ class BaseIRAnalysis(object):
     able to handle known and estimated processes
     """
 
-    def __init__(self, model, P=None, periods=10):
+    def __init__(self, model, P=None, periods=10, order=None):
         self.model = model
         self.periods = periods
         self.neqs, self.lags, self.T  = model.neqs, model.p, model.nobs
 
+        self.order = order
+
         if P is None:
-            P = model._chol_sigma_u
+            sigma = model.sigma_u
+
+            # TODO, may be difficult at the moment
+            # if order is not None:
+            #     indexer = [model.get_eq_index(name) for name in order]
+            #     sigma = sigma[:, indexer][indexer, :]
+
+            #     if sigma.shape != model.sigma_u.shape:
+            #         raise ValueError('variable order is wrong length')
+
+            P = la.cholesky(sigma)
+
         self.P = P
 
         self.irfs = model.ma_rep(periods)
@@ -132,8 +145,9 @@ class IRAnalysis(BaseIRAnalysis):
     -----
     Using Lutkepohl (2005) notation
     """
-    def __init__(self, model, P=None, periods=10):
-        BaseIRAnalysis.__init__(self, model, P=P, periods=periods)
+    def __init__(self, model, P=None, periods=10, order=None):
+        BaseIRAnalysis.__init__(self, model, P=P, periods=periods,
+                                order=order)
 
         self.cov_a = model._cov_alpha
         self.cov_sig = model._cov_sigma
@@ -181,7 +195,7 @@ class IRAnalysis(BaseIRAnalysis):
                 if idx in self._g_memo:
                     apow = self._g_memo[idx]
                 else:
-                    apow = npl.matrix_power(self._A.T, idx)
+                    apow = la.matrix_power(self._A.T, idx)
                     # apow = np.dot(J, apow)
                     apow = apow[:K]
                     self._g_memo[idx] = apow
