@@ -47,7 +47,7 @@ class TsaDescriptive(object):
 
     def periodogram(self):
         #doesn't return frequesncies
-        return stt.pergram(self.data)
+        return stt.periodogram(self.data)
 
     # copied from fftarma.py
     def plot4(self, fig=None, nobs=100, nacf=20, nfreq=100):

@@ -63,7 +63,7 @@ Time Series Properties
    stattools.pacf_ols
    stattools.ccovf
    stattools.ccf
-   stattools.pergram
+   stattools.periodogram
    stattools.adfuller
    stattools.q_stat
    stattools.grangercausalitytests
