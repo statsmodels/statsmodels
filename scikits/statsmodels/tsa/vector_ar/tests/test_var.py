@@ -453,10 +453,10 @@ class E1_Results(object):
                                    [.043, .208, .260]])
 
 basepath = os.path.split(sm.__file__)[0]
-resultspath = basepath + '/tsa/var/tests/results/'
+resultspath = basepath + '/tsa/vector_ar/tests/results/'
 
 def get_lutkepohl_data(name='e2'):
-    lut_data = basepath + '/tsa/var/data/'
+    lut_data = basepath + '/tsa/vector_ar/data/'
     path = lut_data + '%s.dat' % name
 
     try:
