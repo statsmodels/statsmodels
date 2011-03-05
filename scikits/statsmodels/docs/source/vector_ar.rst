@@ -1,9 +1,9 @@
-.. currentmodule:: scikits.statsmodels.tsa.var.varmod
+.. currentmodule:: scikits.statsmodels.tsa.vector_ar.varmod
 
-.. _var:
+.. _vector_ar:
 
-Vector Autoregressions :mod:`tsa.var`
-=====================================
+Vector Autoregressions :mod:`tsa.vector_ar`
+===========================================
 
 VAR(p) processes
 ----------------
@@ -449,7 +449,7 @@ The forecasts can be visualized using `plot_forecast`:
 Class Reference
 ---------------
 
-.. currentmodule:: scikits.statsmodels.tsa.var
+.. currentmodule:: scikits.statsmodels.tsa.vector_ar
 
 .. autosummary::
    :toctree: generated/
