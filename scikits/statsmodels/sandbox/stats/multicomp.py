@@ -771,7 +771,7 @@ class GroupsStats(object):
     '''
 
     def __init__(self, x, useranks=False, uni=None, intlab=None):
-        '''
+        '''descriptive statistics by groups
 
         Parameters
         ----------

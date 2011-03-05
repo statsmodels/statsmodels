@@ -643,7 +643,8 @@ class Results(object):
     Class to contain model results
     """
     def __init__(self, model, params, **kwd):
-        """
+        """create instance of Results class
+
         Parameters
         ----------
         model : class instance
