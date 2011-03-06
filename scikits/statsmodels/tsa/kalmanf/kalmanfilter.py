@@ -411,10 +411,14 @@ class KalmanFilter(object):
     The notation for the state-space form follows Durbin and Koopman (2001).
 
     The observation equations is
-    y_{t} = Z_{t}\alpha_{t} + \epsilon_{t}
+    .. math::
+
+       y_{t} = Z_{t}\\alpha_{t} + \\epsilon_{t}
 
     The state equation is
-    \alpha_{t+1} = T_{t}\alpha_{t} + R_{t}\eta_{t}
+    .. math::
+
+       \\alpha_{t+1} = T_{t}\\alpha_{t} + R_{t}\\eta_{t}
 
     For the present purposed \epsilon_{t} is assumed to always be zero.
     """
