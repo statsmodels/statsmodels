@@ -22,6 +22,7 @@ from scikits.statsmodels.tsa.vector_ar.varmod import VAR
 
 from numpy.testing import assert_almost_equal, assert_equal
 
+DECIMAL_12 = 12
 DECIMAL_6 = 6
 DECIMAL_5 = 5
 DECIMAL_4 = 4
@@ -356,7 +357,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
             rng = range(self.k)
             rng.remove(i)
             result2 = self.res.test_causality(i, rng, kind='f')
-            assert_equal(result['pvalue'], result2['pvalue'])
+            assert_almost_equal(result['pvalue'], result2['pvalue'], DECIMAL_12)
 
             # make sure works
             result = self.res.test_causality(name, variables, kind='wald')
