@@ -1,4 +1,4 @@
-.. currentmodule:: scikits.statsmodels.glm
+.. currentmodule:: scikits.statsmodels.genmod.generalized_linear_model
 
 
 .. _glm:
@@ -10,7 +10,7 @@ Generalized Linear Models
 Introduction
 ------------
 
-.. automodule:: scikits.statsmodels.genmod.glm
+.. automodule:: scikits.statsmodels.genmod.generalized_linear_model
 
 
 Examples

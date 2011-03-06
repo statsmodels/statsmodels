@@ -10,7 +10,7 @@ Introduction
 ------------
 
 
-.. automodule:: scikits.statsmodels.robust.rlm
+.. automodule:: scikits.statsmodels.robust.robust_linear_model
 
 
 Examples
