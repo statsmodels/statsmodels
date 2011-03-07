@@ -42,7 +42,7 @@ __all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'load']
 
 __docformat__ = 'restructuredtext'
 
-COPYRIGHT   = """Used with expressed permission from the original author,
+COPYRIGHT   = """Used with express permission from the original author,
 who retains all rights."""
 TITLE       = "US Capital Punishment Dataset"
 SOURCE      = """

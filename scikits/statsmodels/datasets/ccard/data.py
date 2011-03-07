@@ -43,7 +43,7 @@ __all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'load']
 
 __docformat__ = 'restructuredtext'
 
-COPYRIGHT   = """Used with expressed permission of the original author, who
+COPYRIGHT   = """Used with express permission of the original author, who
 retains all rights."""
 TITLE       = """Greene's credit scoring data"""
 SOURCE      = """
