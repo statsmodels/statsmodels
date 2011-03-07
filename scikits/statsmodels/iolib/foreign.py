@@ -276,9 +276,9 @@ class StataReader(object):
         self._header['ds_format'] = unpack('b', self._file.read(1))[0]
 
         if self._header['ds_format'] not in [113,114]:
-            raise ValueError, "Only file formats 113 and 114 (Stata 9, 10, 11)\
+            raise ValueError("Only file formats 113 and 114 (Stata 9, 10, 11)\
  are supported.  Got format %s.  Please report if you think this error is \
-incorrect." % self._header['ds_format']
+incorrect." % self._header['ds_format'])
         byteorder = self._header['byteorder'] = unpack('b',
                 self._file.read(1))[0]==0x1 and '>' or '<'
         self._header['filetype'] = unpack('b', self._file.read(1))[0]

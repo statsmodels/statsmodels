@@ -55,9 +55,9 @@ class Discrete(object):
             w = np.ones(self.n, np.float64)
         else:
             if w.shape[0] != self.n:
-                raise ValueError, 'incompatible shape for weights w'
+                raise ValueError('incompatible shape for weights w')
             if np.any(np.less(w, 0)):
-                raise ValueError, 'weights should be non-negative'
+                raise ValueError('weights should be non-negative')
         self.w = w*1.0 / w.sum()
 
     def mean(self, f=None):   #JP: this is expectation, "expect" in mine
@@ -168,9 +168,10 @@ class CoxPH(model.LikelihoodModel):
                 for j in range(d):
                     logL -= np.log(s - j * r / d)
             elif ties == 'cox':
-                raise NotImplementedError, 'Cox tie breaking method not implemented'
+                raise NotImplementedError('Cox tie breaking method not \
+implemented')
             else:
-                raise NotImplementedError, 'tie breaking method not recognized'
+                raise NotImplementedError('tie breaking method not recognized')
         return logL
 
     def score(self, b, ties='breslow'):
@@ -197,9 +198,10 @@ class CoxPH(model.LikelihoodModel):
                     rv = Discrete(Z[risk], w=efron_w[risk])
                     score -= rv.mean()
             elif ties == 'cox':
-                raise NotImplementedError, 'Cox tie breaking method not implemented'
+                raise NotImplementedError('Cox tie breaking method not \
+implemented')
             else:
-                raise NotImplementedError, 'tie breaking method not recognized'
+                raise NotImplementedError('tie breaking method not recognized')
         return np.array([score])
 
     def information(self, b, ties='breslow'):
@@ -225,9 +227,10 @@ class CoxPH(model.LikelihoodModel):
                     rv = Discrete(Z[risk], w=efron_w[risk])
                     info += rv.cov()
             elif ties == 'cox':
-                raise NotImplementedError, 'Cox tie breaking method not implemented'
+                raise NotImplementedError('Cox tie breaking method not \
+implemented')
             else:
-                raise NotImplementedError, 'tie breaking method not recognized'
+                raise NotImplementedError('tie breaking method not recognized')
         return score
 
 if __name__ == '__main__':

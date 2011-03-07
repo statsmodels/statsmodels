@@ -706,8 +706,8 @@ class Gamma(Family):
             scale*gammaln(1/scale))
         where gammaln is the log gamma function.
         """
-        return - 1/scale * np.sum(Y/mu+np.log(mu)+(scale-1)*np.log(Y)\
-                +np.log(scale)+scale*special.gammaln(1/scale))
+        return - 1./scale * np.sum(Y/mu+np.log(mu)+(scale-1)*np.log(Y)\
+                +np.log(scale)+scale*special.gammaln(1./scale))
 # in Stata scale is set to equal 1 for reporting llf
 # in R it's the dispersion, though there is a loss of precision vs. our
 # results due to an assumed difference in implementation
@@ -1313,7 +1313,9 @@ class NegativeBinomial(Family):
         """
         # don't need to specify mu
         if fittedvalues is None:
-            raise AttributeError, '''The loglikelihood for the negative binomial requires that the fitted values be provided via the `fittedvalues` keyword argument.'''
+            raise AttributeError('The loglikelihood for the negative binomial \
+requires that the fitted values be provided via the `fittedvalues` keyword \
+argument.')
         constant = special.gammaln(Y + 1/self.alpha) - special.gammaln(Y+1)\
                     -special.gammaln(1/self.alpha)
         return np.sum(Y*np.log(self.alpha*np.exp(fittedvalues)/\

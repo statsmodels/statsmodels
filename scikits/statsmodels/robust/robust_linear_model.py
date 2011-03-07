@@ -235,13 +235,13 @@ class RLM(LikelihoodModel):
             scikits.statsmodels.rlm.RLMresults
         """
         if not cov.upper() in ["H1","H2","H3"]:
-            raise AttributeError, "Covariance matrix %s not understood" % cov
+            raise ValueError("Covariance matrix %s not understood" % cov)
         else:
             self.cov = cov.upper()
         conv = conv.lower()
         if not conv in ["weights","coefs","dev","resid"]:
-            raise AttributeError, "Convergence argument %s not understood" \
-                % conv
+            raise ValueeError("Convergence argument %s not understood" \
+                % conv)
         self.scale_est = scale_est
         wls_results = WLS(self.endog, self.exog).fit()
         if not init:
