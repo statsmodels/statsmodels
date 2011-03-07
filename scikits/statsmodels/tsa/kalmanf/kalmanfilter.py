@@ -41,6 +41,13 @@ except:
 # Block Kalman filtering for large-scale DSGE models
 # but this is obviously macro model specific
 
+def _init_diffuse(T,R):
+    m = T.shape[1] # number of states
+    r = R.shape[1] # should also be the number of states?
+    Q_0 = dot(inv(identity(m**2)-kron(T,T)),dot(R,R.T).ravel('F'))
+    return zeros((m,1)), Q_0.reshape(r,r,order='F')
+
+
 def kalmansmooth(F, A, H, Q, R, y, X, xi10):
     pass
 
@@ -236,42 +243,102 @@ def kalmanfilter(F, A, H, Q, R, y, X, xi10, ntrain, history=False):
 
 class StateSpaceModel(object):
     """
+    Generic StateSpaceModel class. Meant to be a base class.
+
+    This class lays out the methods that are to be defined by any child
+    class.
+
     Parameters
     ----------
     endog : array-like
-        A (nobs x n) array of observations.
+        An `nobs` x `p` array of observations
     exog : array-like, optional
-        A (nobs x k) array of covariates.
+        An `nobs` x `k` array of exogenous variables.
+    **kwargs
+        Anything provided to the constructor will be attached as an
+        attribute.
 
     Notes
     -----
-    exog are not handled right now.
-    Created with a (V)ARMA in mind, but not really general yet.
+    The state space model is assumed to be of the form
+
+    y[t] = Z[t].dot(alpha[t]) + epsilon[t]
+    alpha[t+1] = T[t].dot(alpha[t]) + R[t].dot(eta[t])
+
+    where
+
+    epsilon[t] ~ N(0, H[t])
+    eta[t] ~ N(0, Q[t])
+    alpha[0] ~ N(a[0], P[0])
+
+    Where y is the `p` x 1 observations vector, and alpha is the `m` x 1
+    state vector.
+
+    References
+    -----------
+    Durbin, J. and S.J. Koopman. 2001. `Time Series Analysis by State Space
+        Methods.` Oxford.
     """
-    def __init__(self, endog, exog=None):
+    def __init__(self, endog, exog=None, **kwargs):
+        dict.__init__(self, kwargs)
+        self.__dict__ = self
+
         endog = np.asarray(endog)
         if endog.ndim == 1:
             endog = endog[:,None]
         self.endog = endog
-        n = endog.shape[1]
-        self.n = n
+        p = endog.shape[1]
+        self.p = nobs
         self.nobs = endog.shape[0]
-        self.exog = exog
-#        xi10 = np.ararray(xi10)
-#        if xi10.ndim == 1:
-#            xi10 = xi10[:,None]
-#        self.xi10 = xi10
-#        self.ntrain = ntrain
-#        self.p = ARMA[0]
-#        self.q = ARMA[1]
-#        self.pq = max(ARMA)
-#        self.r = xi10.shape[1]
-#        self.A = A
-#        self.Q = Q
-#        self.F = F
-#        self.Hmat =
-#        if n == 1:
-#            F =
+        if exog:
+            self.exog = exog
+
+    def T(self, params):
+        pass
+
+    def R(self, params):
+        pass
+
+    def Z(self, params):
+        pass
+
+    def H(self, params):
+        pass
+
+    def Q(self, params):
+        pass
+
+    def _univariatefilter(self, params, init_state, init_var):
+        """
+        Implements the Kalman Filter recursions. Optimized for univariate case.
+        """
+        y = self.endog
+        nobs = self.nobs
+
+        R = self.R
+        T = self.T
+        Z = self.Z
+        H = self.H
+        Q = self.Q
+        if not init_state and not init_var:
+            alpha, P = _init_diffuse(T,R)
+        #NOTE: stopped here
+
+    def _univariatefilter_update(self):
+        pass
+        # does the KF but calls _update after each loop to update the matrices
+        # for time-varying coefficients
+
+    def kalmanfilter(self, params, init_state=None, init_var=None):
+        """
+        Runs the Kalman Filter
+        """
+        # determine if
+        if self.p == 1:
+            return _univariatefilter(init_state, init_var)
+        else:
+            raise ValueError("No multivariate filter written yet")
+
 
     def _updateloglike(self, params, xi10, ntrain, penalty, upperbounds, lowerbounds,
             F,A,H,Q,R, history):
@@ -510,7 +577,7 @@ class KalmanFilter(object):
         params : array
             The coefficients of the ARMA model, assumed to be in the order of
             trend variables and `k` exogenous coefficients, the `p` AR
-            coefficients, then the `q` MA coefficients.
+            coefficients, then the `q MA coefficients.
         arma_model : `scikits.statsmodels.tsa.arima.ARMA` instance
             A reference to the ARMA model instance.
 
