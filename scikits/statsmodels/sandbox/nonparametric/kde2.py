@@ -4,7 +4,7 @@ import numpy as np
 import kernel
 
 class KernelEstimate(object):
-    def __init__(self, x, Kernel = None):
+    def __init__(self, x, Kernel = None, H = None):
         xshape= np.shape(x)
         if len(xshape) == 1:
             n = 1
@@ -15,8 +15,9 @@ class KernelEstimate(object):
             Kernel = kernel.Gaussian()
         if n > 1:
             if isinstance( Kernel, kernel.CustomKernel ):
-                cov = np.identity(n)
-                Kernel = kernel.NdKernel( n, kernels = Kernel, cov = cov )
+                if H is None:
+                    H = np.matrix(np.identity(n))
+                Kernel = kernel.NdKernel( n, kernels = Kernel, H = H )
         self._kernel = Kernel
         self.n = n
         self.x = x
@@ -28,7 +29,7 @@ class KernelEstimate(object):
         return np.array([self.density(xx) for xx in x])
 
 if __name__ == "__main__":
-    PLOT = True
+    PLOT = False
     from numpy import random
     import matplotlib.pyplot as plt
     # 1 D case
@@ -49,15 +50,20 @@ if __name__ == "__main__":
         plt.show()
 
     # 2 D case
-    import scikits.statsmodels.sandbox.nonparametric.testdata as testdata
-    x = zip(testdata.faithfulData["eruptions"], testdata.faithfulData["waiting"])
+    from scikits.statsmodels.sandbox.nonparametric.testdata import kdetest
+    x = zip(kdetest.faithfulData["eruptions"], kdetest.faithfulData["waiting"])
     x = np.array(x)
+    H = kdetest.Hpi
+    kern = kernel.NdKernel( 2 )
+    kde = KernelEstimate( x, kern )
+    print kde.density( np.matrix( [1,2 ]).T )
+
 
     # 5 D case
-    random.seed(142)
-    mu = [1.0, 4.0, 3.5, -2.4, 0.0]
-    sigma = np.matrix(
-        [[ 0.6 - 0.1*abs(i-j) if i != j else 1.0 for j in xrange(5)] for i in xrange(5)])
-    x = random.multivariate_normal(mu, sigma, size = 100)
-    kern = kernel.Gaussian()
-    kde = KernelEstimate( x, kern )
+#    random.seed(142)
+#    mu = [1.0, 4.0, 3.5, -2.4, 0.0]
+#    sigma = np.matrix(
+#        [[ 0.6 - 0.1*abs(i-j) if i != j else 1.0 for j in xrange(5)] for i in xrange(5)])
+#    x = random.multivariate_normal(mu, sigma, size = 100)
+#    kern = kernel.Gaussian()
+#    kde = KernelEstimate( x, kern )

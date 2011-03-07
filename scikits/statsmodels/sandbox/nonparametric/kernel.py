@@ -19,26 +19,30 @@ http://fedc.wiwi.hu-berlin.de/xplore/ebooks/html/anr/anrhtmlframe62.html
 # pylint: disable-msg=E1101
 # pylint: disable-msg=E0611
 
+import math
 import numpy as np
 import scipy.integrate
 from numpy import exp, multiply, square, divide, subtract, inf
 
 class NdKernel(object):
-    """Holder for Nd Kernel
-    Nd kernel is constructed from a list of marginal univariate kernels and a
-    covariance matrix.  Currently only support gaussian copula.
+    """Generic N-dimensial kernel
+    Can be constructed from either
+    a) a list of n kernels which will be treated as
+    indepent marginals on a gaussian copula (specified by H)
+    or b) a single univariate kernel which will be applied radially to the
+    mahalanobis distance defined by H.
+
+    In the case of the Gaussian these are both equivalent, and the second constructiong
+    is prefered.
     """
     def __init__(self, n, kernels = None, H = None):
-        if isinstance( kernels, CustomKernel ):
-            kernels = [ kernels ] * n
-        elif len(kernels) != n:
-            raise ValueError("Kernels supplied (%i) don't math dimension (%s)"
-                % (len(kernels), n))
+        if kernels is None:
+            kernels = Gaussian()
 
         self._kernels = kernels
 
         if H is None:
-            H = np.identity(len(kernels))
+            H = np.matrix( np.identity(len(kernels)))
 
         self._H = H
         self._Hrootinv = np.linalg.cholesky( H.I )
@@ -52,15 +56,22 @@ class NdKernel(object):
     H = property(getH, setH, doc="Kernel bandwidth matrix")
 
     def density(self, xs, x):
-        pass
         n = len(xs)
         #xs = self.inDomain( xs, xs, x )[0]
 
-        if len(xs)>0:
+        if len(xs)>0:  ## Need to do product of marginal distributions
             w = np.sum([self(self._Hrootinv * (xx-x) ) for xx in xs])/n
             return w
         else:
             return np.nan
+
+    def _kernweight(self, x ):
+        """returns the kernel weight for the independent multivariate kernel"""
+        if isinstance( self._kernels, CustomKernel ):
+            ## Radial case
+            d = math.sqrt( x.T * x )
+            return self._kernels( d )
+
 
 class CustomKernel(object):
     """
