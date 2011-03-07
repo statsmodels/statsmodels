@@ -158,7 +158,7 @@ class PolySmoother(object):
             _w = np.sqrt(weights)[:,None]
         if x is None:
             if not hasattr(self, "X"):
-                raise ValueError, "x needed to fit PolySmoother"
+                raise ValueError("x needed to fit PolySmoother")
         else:
             if x.ndim > 1: x=x[0,:]
             self.X = np.array([(x**i) for i in range(self.order+1)]).T
@@ -273,7 +273,7 @@ if __name__ == "__main__":
 ##            banded = False
 ##
 ##        if x.shape != y.shape:
-##            raise ValueError, 'x and y shape do not agree, by default x are the Bspline\'s internal knots'
+##            raise ValueError('x and y shape do not agree, by default x are the Bspline\'s internal knots')
 ##
 ##        bt = self.basis(x)
 ##        if pen >= self.penmax:
@@ -296,7 +296,7 @@ if __name__ == "__main__":
 ##        self.df_total = y.shape[0]
 ##
 ##        if bt.shape[1] != y.shape[0]:
-##            raise ValueError, "some x values are outside range of B-spline knots"
+##            raise ValueError("some x values are outside range of B-spline knots")
 ##        bty = np.dot(bt, _w * y)
 ##        self.N = y.shape[0]
 ##        if not banded:
@@ -392,7 +392,7 @@ if __name__ == "__main__":
 ##                else:
 ##                    apen, bpen = apen, curpen
 ##                    if apen >= self.penmax:
-##                        raise ValueError, "penalty too large, try setting penmax higher or decreasing df"
+##                        raise ValueError("penalty too large, try setting penmax higher or decreasing df")
 ##                if np.fabs(curdf - df) / df < tol:
 ##                    self.target_reached = True
 ##                    break
