@@ -48,7 +48,7 @@ class Model(object):
             if exog.ndim == 1:
                 exog = exog[:,None]
             if exog.ndim != 2:
-                raise ValueError, "exog is not 1d or 2d"
+                raise ValueError("exog is not 1d or 2d")
             if endog.shape[0] != exog.shape[0]:
                 raise ValueError("endog and exog matrices are not aligned.")
             if np.any(exog.var(0) == 0):

@@ -177,7 +177,7 @@ class LikelihoodModel(Model):
         if start_params is None:
             start_params = [0]*self.exog.shape[1] # will fail for shape (K,)
         if not method in methods:
-            raise ValueError, "Unknown fit method %s" % method
+            raise ValueError("Unknown fit method %s" % method)
         f = lambda params: -self.loglike(params)
         score = lambda params: -self.score(params)
 #        hess = lambda params: -self.hessian(params)

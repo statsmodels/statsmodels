@@ -21,7 +21,7 @@ def atleast_2dcol(x):
     elif (x.ndim == 0):
         x = np.atleast_2d(x)
     elif (x.ndim > 0):
-        raise ValueError, 'too many dimensions'
+        raise ValueError('too many dimensions')
     return x
 
 
@@ -79,7 +79,7 @@ def wls_prediction_std(res, exog=None, weights=None, alpha=0.05):
     else:
         exog = np.atleast_2d(exog)
         if covb.shape[1] != exog.shape[1]:
-            raise ValueError, 'wrong shape of exog'
+            raise ValueError('wrong shape of exog')
         predicted = res.model.predict(exog)
 
     if weights is None:
