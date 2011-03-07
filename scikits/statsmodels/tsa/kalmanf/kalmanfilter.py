@@ -441,8 +441,8 @@ class KalmanFilter(object):
         p : int
             The AR coefficient in an ARMA model.
 
-        Reference
-        ---------
+        References
+        ----------
         Durbin and Koopman Section 3.7.
         """
         arr = zeros((r,r), dtype=params.dtype) # allows for complex-step
@@ -474,8 +474,8 @@ class KalmanFilter(object):
         p : int
             The AR order in an ARMA model.
 
-        Reference
-        ---------
+        References
+        ----------
         Durbin and Koopman Section 3.7.
         """
         arr = zeros((r,1), dtype=params.dtype) # this allows zero coefficients
