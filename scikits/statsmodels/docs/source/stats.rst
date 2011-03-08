@@ -16,8 +16,6 @@ models and model results.
 API Warning: The functions and objects in this category are spread out in various modules
 and might still be moved around.
 
-Debugging in Sphinx and rst sucks, where the missing invisible whitespace ????
-
 
 
 .. _stattools:
@@ -59,11 +57,7 @@ Residual Diagnostics and Specification Tests
    recursive_olsresiduals
    recursive_olsresiduals2
 
-
-Univariate Distributions by non-linear Transformations
-------------------------------------------------------
-
-here for debugging Sphinx
+See also the notes on :ref:`notes on regression diagnostics <diagnostics>`
 
 
 
