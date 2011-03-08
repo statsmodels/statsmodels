@@ -704,6 +704,7 @@ class VARResults(VARProcess):
         intercept = self.params[0]
         coefs = reshaped.swapaxes(1, 2).copy()
 
+        #TODO: this looks like it's thrown away after creation
         VARProcess.__init__(self, coefs, intercept, sigma_u,
                             names=names)
 
@@ -724,10 +725,16 @@ class VARResults(VARProcess):
         return self.nobs - self.df_model
 
     @cache_readonly
+    def fittedvalues(self):
+        """The predicted insample values of the response variables of the model.
+        """
+        return np.dot(self.ys_lagged, self.params)
+
+    @cache_readonly
     def resid(self):
         """Residuals of response variable resulting from estimated coefficients
         """
-        return self.y[self.p:] - np.dot(self.ys_lagged, self.params)
+        return self.y[self.p:] - self.fittedvalues #np.dot(self.ys_lagged, self.params)
 
     @cache_readonly
     def sigma_u_mle(self):
