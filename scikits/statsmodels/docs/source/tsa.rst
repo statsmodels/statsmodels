@@ -154,7 +154,7 @@ TSA Tools
 Vector Autogressive Processes (VAR)
 """""""""""""""""""""""""""""""""""
 
-.. seealso:: :ref:`VAR documentation <var>`
+.. seealso:: :ref:`VAR documentation <vector_ar>`
 
 VARMA Process
 """""""""""""
