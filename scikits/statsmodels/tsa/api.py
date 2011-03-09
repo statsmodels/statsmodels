@@ -13,4 +13,4 @@ import interp
 import stattools
 from .stattools import (adfuller, acovf, q_stat, acf, pacf_yw, pacf_ols, pacf,
                             ccovf, ccf, pergram, grangercausalitytests)
-
+import arima_process
