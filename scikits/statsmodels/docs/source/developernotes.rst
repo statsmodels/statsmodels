@@ -257,4 +257,8 @@ See our :doc:`related projects page <related>`.
 
 Getting Involved and Road Map
 =============================
-Coming Soon.
+
+How to Add a Dataset
+~~~~~~~~~~~~~~~~~~~~
+
+See the :ref:`notes on adding a dataset <add_data>`.

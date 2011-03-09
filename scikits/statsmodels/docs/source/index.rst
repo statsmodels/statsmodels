@@ -107,6 +107,7 @@ Table of Contents
    internal
    gmm
    distributions
+   datasets
    sandbox
 
 

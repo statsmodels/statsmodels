@@ -1,6 +1,7 @@
 .. Last Change: Mon Jun 7 08:30 AM 2010
 .. vim:syntax=rest
 
+.. _dataset_proposal:
 
 Dataset for scikits.statmodels: design proposal
 ===============================================
