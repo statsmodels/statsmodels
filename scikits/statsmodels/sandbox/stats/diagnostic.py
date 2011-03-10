@@ -309,9 +309,9 @@ def het_breushpagan(resid, x, exog=None):
     The tests the hypothesis that the residual variance does not depend on
     the variables in x in the form
 
-    :math: \sigma_i = \\sigma * f(\\alpha_0 + \\alpha z_i)
+    :math:`\sigma_i = \\sigma * f(\\alpha_0 + \\alpha z_i)`
 
-    Homoscedasticity implies that $\alpha=0$
+    Homoscedasticity implies that :math:`\\alpha=0`
 
 
     Parameters

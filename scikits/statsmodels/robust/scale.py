@@ -247,7 +247,7 @@ class HuberScale(object):
             scalehist.append(nscale)
             niter += 1
             if niter == self.maxiter:
-                raise ValueError, "Huber's scale failed to converge"
+                raise ValueError("Huber's scale failed to converge")
         return scalehist[-1]
 
 hubers_scale = HuberScale()

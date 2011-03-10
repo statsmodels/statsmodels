@@ -60,12 +60,12 @@ def lstsq(a, b, cond=None, overwrite_a=0, overwrite_b=0):
     """
     a1, b1 = map(asarray_chkfinite,(a,b))
     if len(a1.shape) != 2:
-        raise ValueError, 'expected matrix'
+        raise ValueError('expected matrix')
     m,n = a1.shape
     if len(b1.shape)==2: nrhs = b1.shape[1]
     else: nrhs = 1
     if m != b1.shape[0]:
-        raise ValueError, 'incompatible dimensions'
+        raise ValueError('incompatible dimensions')
     gelss, = get_lapack_funcs(('gelss',),(a1,b1))
     if n>m:
         # need to extend b matrix as it will be filled with
@@ -83,10 +83,10 @@ def lstsq(a, b, cond=None, overwrite_a=0, overwrite_b=0):
                                 overwrite_a = overwrite_a,
                                 overwrite_b = overwrite_b)
     else:
-        raise NotImplementedError,'calling gelss from %s' % (gelss.module_name)
-    if info>0: raise LinAlgError, "SVD did not converge in Linear Least Squares"
-    if info<0: raise ValueError,\
-       'illegal value in %-th argument of internal gelss'%(-info)
+        raise NotImplementedError('calling gelss from %s' % (gelss.module_name))
+    if info>0: raise LinAlgError("SVD did not converge in Linear Least Squares")
+    if info<0: raise ValueError(\
+       'illegal value in %-th argument of internal gelss'%(-info))
     resids = asarray([], dtype=x.dtype)
     if n<m:
         x1 = x[:n]

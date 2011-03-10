@@ -12,8 +12,8 @@ from scikits.statsmodels.tools.decorators import cache_readonly
 from scikits.statsmodels.tools.tools import chain_dot
 
 import scikits.statsmodels.tsa.tsatools as tsa
-import scikits.statsmodels.tsa.var.plotting as plotting
-import scikits.statsmodels.tsa.var.util as util
+import scikits.statsmodels.tsa.vector_ar.plotting as plotting
+import scikits.statsmodels.tsa.vector_ar.util as util
 
 mat = np.array
 

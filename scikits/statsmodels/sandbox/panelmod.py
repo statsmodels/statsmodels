@@ -1,4 +1,4 @@
-"""
+m"""
 Sandbox Panel Estimators
 
 References
@@ -17,8 +17,8 @@ try:
     from pandas import LongPanel, __version__
     __version__ >= .1
 except:
-    raise ImportError, "While in the sandbox this code depends on the pandas \
-package.  http://code.google.com/p/pandas/"
+    raise ImportError("While in the sandbox this code depends on the pandas \
+package.  http://code.google.com/p/pandas/")
 
 
 def group(X):
@@ -111,15 +111,15 @@ class PanelModel(object):
         if panel_data == None:
 #            if endog == None and exog == None and panel == None and \
 #                    time == None:
-#                raise ValueError, "If pandel_data is False then endog, exog, \
-#panel_arr, and time_arr cannot be None."
+#                raise ValueError("If pandel_data is False then endog, exog, \
+#panel_arr, and time_arr cannot be None.")
            self.initialize(endog, exog, panel, time, xtnames, equation)
 #        elif aspandas != False:
 #            if not isinstance(endog, str):
-#                raise ValueError, "If a pandas object is supplied then endog \
-#must be a string containing the name of the endogenous variable"
+#                raise ValueError("If a pandas object is supplied then endog \
+#must be a string containing the name of the endogenous variable")
 #            if not isinstance(aspandas, LongPanel):
-#                raise ValueError, "Only pandas.LongPanel objects are supported"
+#                raise ValueError("Only pandas.LongPanel objects are supported")
 #            self.initialize_pandas(endog, aspandas, panel_name)
 
 
@@ -214,7 +214,7 @@ class PanelModel(object):
             Y = self.time
             uniq = self.timeuniq
         else:
-            raise ValueError, "index %s not understood" % index
+            raise ValueError("index %s not understood" % index)
 
         #TODO: use sparse matrices
         dummy = (Y == uniq[:,None]).astype(float)
@@ -264,7 +264,7 @@ class PanelModel(object):
         model = model.lower()
         if method and method not in ["lsdv", "demeaned", "mle", "gls", "be",
             "fe"]: # get rid of if method with default
-            raise ValueError, "%s not a valid method" % method
+            raise ValueError("%s not a valid method" % method)
 #        if method == "lsdv":
 #            self.fit_lsdv(model)
         if model == 'pooled':
@@ -291,8 +291,8 @@ class PanelModel(object):
             endog = self._group_mean(self.endog, index=effects)
             exog = self._group_mean(self.exog, index=effects)
         else:
-            raise ValueError, "%s effects is not valid for the between \
-estimator" % s
+            raise ValueError("%s effects is not valid for the between \
+estimator" % s)
         befit = GLS(endog, exog).fit()
         return befit
 
@@ -338,7 +338,7 @@ if __name__ == "__main__":
         import pandas
         pandas.version >= .1
     except:
-        raise ImportError, "pandas >= .10 not installed"
+        raise ImportError("pandas >= .10 not installed")
     from pandas import LongPanel
     import scikits.statsmodels.api as sm
     import numpy.lib.recfunctions as nprf

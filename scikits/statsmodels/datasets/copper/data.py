@@ -42,7 +42,7 @@ __all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'load']
 
 __docformat__ = 'restructuredtext'
 
-COPYRIGHT   = """Used with expressed permission from the original author,
+COPYRIGHT   = """Used with express permission from the original author,
 who retains all rights."""
 TITLE       = "World Copper Market 1951-1975 Dataset"
 SOURCE      = """

@@ -14,14 +14,15 @@ import sys
 import numpy as np
 
 import scikits.statsmodels.api as sm
-import scikits.statsmodels.tsa.var.varmod as model
-import scikits.statsmodels.tsa.var.util as util
+import scikits.statsmodels.tsa.vector_ar.varmod as model
+import scikits.statsmodels.tsa.vector_ar.util as util
 import scikits.statsmodels.tools.data as data_util
 reload(model)
-from scikits.statsmodels.tsa.var.varmod import VAR
+from scikits.statsmodels.tsa.vector_ar.varmod import VAR
 
 from numpy.testing import assert_almost_equal, assert_equal
 
+DECIMAL_12 = 12
 DECIMAL_6 = 6
 DECIMAL_5 = 5
 DECIMAL_4 = 4
@@ -356,7 +357,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
             rng = range(self.k)
             rng.remove(i)
             result2 = self.res.test_causality(i, rng, kind='f')
-            assert_equal(result['pvalue'], result2['pvalue'])
+            assert_almost_equal(result['pvalue'], result2['pvalue'], DECIMAL_12)
 
             # make sure works
             result = self.res.test_causality(name, variables, kind='wald')
@@ -453,10 +454,10 @@ class E1_Results(object):
                                    [.043, .208, .260]])
 
 basepath = os.path.split(sm.__file__)[0]
-resultspath = basepath + '/tsa/var/tests/results/'
+resultspath = basepath + '/tsa/vector_ar/tests/results/'
 
 def get_lutkepohl_data(name='e2'):
-    lut_data = basepath + '/tsa/var/data/'
+    lut_data = basepath + '/tsa/vector_ar/data/'
     path = lut_data + '%s.dat' % name
 
     try:
