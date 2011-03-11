@@ -1,6 +1,6 @@
 .. currentmodule:: scikits.statsmodels.tsa.vector_ar.varmod
 
-.. _vector_ar:
+.. _var:
 
 Vector Autoregressions :mod:`tsa.vector_ar`
 ===========================================
