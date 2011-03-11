@@ -94,6 +94,14 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
     array : ndarray
         Array with lags
 
+    Examples
+    --------
+
+    >>> import scikits.statsmodels.api as sm
+    >>> data = sm.datasets.macrodata.load()
+    >>> data = data.data[['year','quarter','realgdp','cpi']]
+    >>> data = sm.tsa.add_lag(data, 'realgdp', lags=2)
+
     Notes
     -----
     Trims the array both forward and backward, so that the array returned
