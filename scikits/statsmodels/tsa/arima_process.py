@@ -693,6 +693,7 @@ class ArmaProcess(object):
         self.macoefs = self.ma[1:]
         self.arpoly = np.polynomial.Polynomial(self.ar)
         self.mapoly = np.polynomial.Polynomial(self.ma)
+        self.nobs = nobs
 
     @classmethod
     def from_coeffs(cls, arcoefs, macoefs, nobs=None):

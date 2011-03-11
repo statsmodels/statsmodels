@@ -10,3 +10,7 @@ import gof
 from .gof import powerdiscrepancy, gof_chisquare_discrete
 import stattools
 from .stattools import durbin_watson, omni_normtest, jarque_bera
+
+from weightstats import DescrStatsW
+
+from descriptivestats import Describe
