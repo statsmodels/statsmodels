@@ -693,6 +693,7 @@ class ArmaProcess(object):
         self.macoefs = self.ma[1:]
         self.arpoly = np.polynomial.Polynomial(self.ar)
         self.mapoly = np.polynomial.Polynomial(self.ma)
+        self.nobs = nobs
 
     @classmethod
     def from_coeffs(cls, arcoefs, macoefs, nobs=None):
@@ -793,7 +794,7 @@ class ArmaProcess(object):
              True if autoregressive roots are outside unit circle
 
         '''
-        if np.abs(self.ar_roots()) > 1:
+        if np.all(np.abs(self.ar_roots())) > 1:
             return True
         else:
             return False
@@ -807,7 +808,7 @@ class ArmaProcess(object):
              True if moving average roots are outside unit circle
 
         '''
-        if np.abs(self.ma_roots()) > 1:
+        if np.all(np.abs(self.ma_roots())) > 1:
             return True
         else:
             return False
