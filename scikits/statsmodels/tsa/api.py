@@ -1,11 +1,8 @@
 from .ar_model import AR
-<<<<<<< TREE
 from .arima_model import ARMA
 import var
 from .var.varmod import VAR
 from .var.dynamic import DynamicVAR
-
-=======
 from .arima import ARMA
 import vector_ar as var
 from .vector_ar.varmod import VAR
@@ -14,7 +11,6 @@ try:
     from .vector_ar.dynamic import DynamicVAR
 except:
     pass
->>>>>>> MERGE-SOURCE
 import tsatools
 from .tsatools import (add_trend, detrend, lagmat, lagmat2ds, add_lag)
 import interp
