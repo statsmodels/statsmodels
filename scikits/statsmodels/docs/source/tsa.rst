@@ -89,8 +89,8 @@ ARMA and Kalman Filter
 .. autosummary::
    :toctree: generated/
 
-   arima.ARMA
-   arima.ARMAResults
+   arima_model.ARMA
+   arima_model.ARMAResults
    kalmanf.kalmanfilter.KalmanFilter
 
 .. currentmodule:: scikits.statsmodels.tsa
