@@ -253,7 +253,7 @@ def var_loglike(resid, omega, nobs):
 
     Returns
     -------
-    loglike : float
+    llf : float
         The value of the loglikelihood function for a VAR(p) model
 
     Notes
@@ -795,7 +795,7 @@ class VARResults(VARProcess):
         return 2 * chain_dot(D_Kinv, sigxsig, D_Kinv.T)
 
     @cache_readonly
-    def loglike(self):
+    def llf(self):
         "Compute VAR(p) loglikelihood"
         return var_loglike(self.resid, self.sigma_u_mle, self.nobs)
 

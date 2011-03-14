@@ -123,7 +123,7 @@ class VARSummary(object):
                        'HQIC:',
                        'FPE:',
                        'Det(Omega_mle):')
-        part2Ldata = [[model.neqs], [model.nobs], [model.loglike], [model.aic]]
+        part2Ldata = [[model.neqs], [model.nobs], [model.llf], [model.aic]]
         part2Rdata = [[model.bic], [model.hqic], [model.fpe], [model.detomega]]
         part2Lheader = None
         part2L = SimpleTable(part2Ldata, part2Lheader, part2Lstubs,

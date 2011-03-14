@@ -336,7 +336,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
         assert_almost_equal(self.res.stderr, self.ref.stderr, DECIMAL_4)
 
     def test_loglike(self):
-        assert_almost_equal(self.res.loglike, self.ref.loglike)
+        assert_almost_equal(self.res.llf, self.ref.loglike)
 
     def test_ma_rep(self):
         ma_rep = self.res.ma_rep(self.nahead)
