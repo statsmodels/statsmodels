@@ -435,19 +435,15 @@ class GenericLikelihoodModel(LikelihoodModel):
 
     Notes
     -----
-    Optimization methods that require only a likelihood function.
-        'nm'
-        'powell'
+    Optimization methods that require only a likelihood function are 'nm' and
+    'powell'
 
     Optimization methods that require a likelihood function and a
-    score/gradient.
-        'bfgs'
-        'cg'
-        'ncg' - A function to compute the Hessian is optional.
+    score/gradient are 'bfgs', 'cg', and 'ncg'. A function to compute the
+    Hessian is optional for 'ncg'.
 
-    Optimization methods that require a likelihood function, a score/gradient,
-    and a Hessian.
-        'newton'
+    Optimization method that require a likelihood function, a score/gradient,
+    and a Hessian is 'newton'
 
     If they are not overwritten by a subclass, then numerical gradient, Jacobian
     and Hessian of the log-likelihood are caclulated by numerical forward
@@ -547,8 +543,8 @@ class GenericLikelihoodModel(LikelihoodModel):
         return -self.nloglikeobs(params)
 
     def score(self, params):
-        '''Gradient of log-likelihood evaluated at params
-
+        '''
+        Gradient of log-likelihood evaluated at params
         '''
         from scikits.statsmodels.sandbox.regression.numdiff import approx_fprime1
         return approx_fprime1(params, self.loglike, epsilon=1e-4).ravel()
@@ -557,15 +553,14 @@ class GenericLikelihoodModel(LikelihoodModel):
         '''
         Jacobian/Gradient of log-likelihood evaluated at params for each
         observation.
-
         '''
         kwds.setdefault('epsilon', 1e-4)
         from scikits.statsmodels.sandbox.regression.numdiff import approx_fprime1
         return approx_fprime1(params, self.loglikeobs, **kwds)
 
     def hessian(self, params):
-        '''Hessian of log-likelihood evaluated at params
-
+        '''
+        Hessian of log-likelihood evaluated at params
         '''
         from scikits.statsmodels.sandbox.regression.numdiff import approx_hess
         return approx_hess(params, self.loglike)[0]  #need options for hess (epsilon)
@@ -610,8 +605,8 @@ class GenericLikelihoodModel(LikelihoodModel):
     # the following could be moved to results
     @cache_readonly
     def covjac(self):
-        '''covariance of parameters based on outer product of jacobian of the
-        log-likelihood
+        '''
+        covariance of parameters based on loglike outer product of jacobian
         '''
 ##        if not hasattr(self, '_results'):
 ##            raise ValueError('need to call fit first')
