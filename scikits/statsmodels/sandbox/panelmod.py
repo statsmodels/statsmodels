@@ -1,4 +1,4 @@
-m"""
+"""
 Sandbox Panel Estimators
 
 References
