@@ -586,7 +586,7 @@ class GLMResults(LikelihoodModelResults):
 
     @cache_readonly
     def pvalues(self):
-        return t.sf(np.abs(self.t()), self.df_resid)*2
+        return t.sf(np.abs(self.tvalues), self.df_resid)*2
 
     @cache_readonly
     def pearson_chi2(self):
@@ -741,7 +741,7 @@ class GLMResults(LikelihoodModelResults):
         conf_int = self.conf_int()
         cov_params = self.cov_params()
         #f_test() = self.f_test()
-        t = self.t()
+        t = self.tvalues
         #t_test = self.t_test()
 
 

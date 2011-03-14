@@ -47,7 +47,7 @@ binom_results = glm_binom.fit()
 print """The fitted values are
 """, binom_results.params
 print """The corresponding t-values are
-""", binom_results.t()
+""", binom_results.tvalues
 
 # It is common in GLMs with interactions to compare first differences.
 # We are interested in the difference of the impact of the explanatory variable

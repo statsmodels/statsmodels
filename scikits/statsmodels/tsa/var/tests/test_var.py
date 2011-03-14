@@ -297,7 +297,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
         self.res.cov_ybar()
 
     def test_tstat(self):
-        self.res.t()
+        self.res.tvalues
 
     def test_pvalues(self):
         self.res.pvalues

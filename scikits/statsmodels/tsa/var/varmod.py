@@ -808,7 +808,8 @@ class VARResults(VARProcess):
 
     bse = stderr  # statsmodels interface?
 
-    def t(self):
+    @cache_readonly
+    def tvalues(self):
         """Compute t-statistics. Use Student-t(T - Kp - 1) = t(df_resid) to test
         significance.
         """
@@ -818,7 +819,7 @@ class VARResults(VARProcess):
     def pvalues(self):
         """Two-sided p-values for model coefficients from Student t-distribution
         """
-        return stats.t.sf(np.abs(self.t()), self.df_resid)*2
+        return stats.t.sf(np.abs(self.tvalues), self.df_resid)*2
 
     def plot_forecast(self, steps, alpha=0.05, plot_stderr=True):
         """

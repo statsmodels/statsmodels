@@ -3,9 +3,11 @@ trunk for 0.3.0
 
 *Changes that break backwards compatability*
 
-Added api.py for importing. So the new convention for importing is
+Added api.py for importing. So the new convention for importing is ::
 
 import scikits.statsmodels.api as sm
+
+Other changes ::
 
 sandbox/output.py -> iolib/table.py
 lib/io.py -> iolib/foreign.py (Now contains Stata .dta format reader)
@@ -17,6 +19,7 @@ discretemod.py -> discrete/discrete_model.py
 rlm.py -> robust/robust_linear_model.py
 glm.py -> genmod/generalized_linear_model.py
 model.py -> base/model.py
+t() method -> tvalues attribute
 
 *Main additions*
 Numerous bugfixes

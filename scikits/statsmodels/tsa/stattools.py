@@ -74,8 +74,8 @@ def _autolag(mod, endog, exog, startlag, maxlag, method, modargs=(),
         stop = 1.6448536269514722
         for lag in range(maxlag,startlag-1,-1):
             print lag
-            print results[lag].t()
-            icbest = np.abs(results[lag].t(-1))
+            print results[lag].values
+            icbest = np.abs(results[lag].tvalues[-1])
             print icbest
             if np.abs(icbest) >= stop:
                 bestlag = lag
@@ -217,7 +217,7 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
         resols = OLS(xdshort, add_trend(xdall[:,:usedlag+1], regression)).fit()
     else:
         resols = OLS(xdshort, xdall[:,:usedlag+1]).fit()
-    adfstat = resols.t(0)
+    adfstat = resols.tvalues[0]
 #    adfstat = (resols.params[0]-1.0)/resols.bse[0]
     # the "asymptotically correct" z statistic is obtained as
     # nobs/(1-np.sum(resols.params[1:-(trendorder+1)])) (resols.params[0] - 1)

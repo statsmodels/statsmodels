@@ -694,6 +694,8 @@ class LikelihoodModelResults(Results):
             The parameters estimated for the model.
         scale : float
             The scaling factor of the model given during instantiation.
+        tvales : array
+            The t-values of the standard errors.
 
 
         Notes
@@ -813,56 +815,56 @@ class LikelihoodModelResults(Results):
     def bse(self):
         return np.sqrt(np.diag(self.cov_params()))
 
-    def t(self, column=None):
-        """
-        Return the t-statistic for a given parameter estimate.
-
-        Parameters
-        ----------
-        column : array-like
-            The columns for which you would like the t-value.
-            Note that this uses Python's indexing conventions.
-
-        See also
-        ---------
-        Use t_test for more complicated t-statistics.
-
-        Examples
-        --------
-        >>> import scikits.statsmodels.api as sm
-        >>> data = sm.datasets.longley.load()
-        >>> data.exog = sm.add_constant(data.exog)
-        >>> results = sm.OLS(data.endog, data.exog).fit()
-        >>> results.t()
-        array([ 0.17737603, -1.06951632, -4.13642736, -4.82198531, -0.22605114,
-        4.01588981, -3.91080292])
-        >>> results.t([1,2,4])
-        array([-1.06951632, -4.13642736, -0.22605114])
-        >>> import numpy as np
-        >>> results.t(np.array([1,2,4]))
-        array([-1.06951632, -4.13642736, -0.22605114])
-
-        """
-
-        if self.normalized_cov_params is None:
-            raise ValueError('need covariance of parameters for computing T '
-                             'statistics')
-
-        if column is None:
-            column = range(self.params.shape[0])
-
-        column = np.asarray(column)
-        _params = self.params[column]
-        _cov = self.cov_params(column=column)
-        if _cov.ndim == 2:
-            _cov = np.diag(_cov)
-#        _t = _params * recipr(np.sqrt(_cov))
-# repicr drops precision for MNLogit?
-        _t = _params / np.sqrt(_cov)
-        return _t
+#    def t(self, column=None):
+#        """
+#        Return the t-statistic for a given parameter estimate.
+#
+#        Parameters
+#        ----------
+#        column : array-like
+#            The columns for which you would like the t-value.
+#            Note that this uses Python's indexing conventions.
+#
+#        See also
+#        ---------
+#        Use t_test for more complicated t-statistics.
+#
+#        Examples
+#        --------
+#        >>> import scikits.statsmodels.api as sm
+#        >>> data = sm.datasets.longley.load()
+#        >>> data.exog = sm.add_constant(data.exog)
+#        >>> results = sm.OLS(data.endog, data.exog).fit()
+#        >>> results.tvalues
+#        array([ 0.17737603, -1.06951632, -4.13642736, -4.82198531, -0.22605114,
+#        4.01588981, -3.91080292])
+#        >>> results.tvalues[[1,2,4]]
+#        array([-1.06951632, -4.13642736, -0.22605114])
+#        >>> import numpy as np
+#        >>> results.tvalues[np.array([1,2,4]]
+#        array([-1.06951632, -4.13642736, -0.22605114])
+#
+#        """
+#
+#        if self.normalized_cov_params is None:
+#            raise ValueError('need covariance of parameters for computing T '
+#                             'statistics')
+#
+#        if column is None:
+#            column = range(self.params.shape[0])
+#
+#        column = np.asarray(column)
+#        _params = self.params[column]
+#        _cov = self.cov_params(column=column)
+#        if _cov.ndim == 2:
+#            _cov = np.diag(_cov)
+##        _t = _params * recipr(np.sqrt(_cov))
+## repicr drops precision for MNLogit?
+#        _t = _params / np.sqrt(_cov)
+#        return _t
 
     @cache_readonly
-    def tval(self, column=None):
+    def tvalues(self):
         """
         Return the t-statistic for a given parameter estimate.
         """

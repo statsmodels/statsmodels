@@ -105,7 +105,7 @@ class NonlinearLS(Model):  #or subclass a model
 
     myres.params
     myres.bse
-    myres.t()
+    myres.tvalues
 
 
     '''

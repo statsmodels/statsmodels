@@ -1306,21 +1306,14 @@ class DiscreteResults(LikelihoodModelResults):
         else:
             return super(DiscreteResults, self).conf_int(alpha=alpha, cols=cols)
     conf_int.__doc__ = LikelihoodModelResults.conf_int.__doc__
-#TODO: does the above work?
 
-#TODO: the baove and the below will change if we merge the mixin branch
-    def t(self, column=None):
-        if hasattr(self.model, "J"):
-            #TODO: make this more robust once this is sorted
-            if column is None:
-                column = range(int(self.model.K))
-            else:
-                column = np.asarray(column)
+    @cache_readonly
+    def tvalues(self):
+        if hasattr(self.model, "J"): # for MNLogit
+            column = range(int(self.model.K))
             return self.params/self.bse[:,column]
         else:
-            return super(DiscreteResults, self).t(column=column)
-    t.__doc__ = LikelihoodModelResults.t.__doc__
-
+            return super(DiscreteResults, self).tvalues
 
     def margeff(self, at='overall', method='dydx', atexog=None, dummy=False,
             count=False):

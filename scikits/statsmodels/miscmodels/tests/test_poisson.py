@@ -28,7 +28,7 @@ class Compare(object):
         #overall precision for tstat looks like 1%
 
         #assert_almost_equal(self.res.tval, self.res_glm.t(), DEC)
-        assert_almost_equal(self.res.tval, self.res_discrete.t(), DEC)
+        assert_almost_equal(self.res.tvalues, self.res_discrete.tvalues, DEC)
         #assert_almost_equal(self.res.params, self.res_discrete.params)
 
 

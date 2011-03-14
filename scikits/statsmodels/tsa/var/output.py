@@ -142,7 +142,7 @@ class VARSummary(object):
 
         data = zip(model.params.ravel(),
                    model.stderr.ravel(),
-                   model.t().ravel(),
+                   model.tvalues.ravel(),
                    model.pvalues.ravel())
 
         header = ('coefficient','std. error','t-stat','prob')

@@ -134,7 +134,7 @@ class CompareJ(object):
         #yhat_z = results_z.fittedvalues
         res_zx = sm.OLS(y, np.column_stack((yhat_x, z))).fit()
         self.res_zx = res_zx  #for testing
-        tstat = res_zx.t()[0]  #use tstat instead after renaming
+        tstat = res_zx.tvalues[0]
         pval = res_zx.pvalues[0]
         if attach:
             self.res_zx = res_zx

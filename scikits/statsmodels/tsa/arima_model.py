@@ -548,9 +548,6 @@ class ARMAResults(LikelihoodModelResults):
         else:
             return -inv(approx_hess(x0, func, epsilon=1e-3)[0])
 
-    def t(self):    # overwrites t() because there is no cov_params
-        return self.params/self.bse
-
     @cache_readonly
     def aic(self):
         return -2*self.llf + 2*(self.q+self.p+self.k+1)
@@ -647,7 +644,7 @@ class ARMAResults(LikelihoodModelResults):
     def pvalues(self):
         # TODO: is this correct for ARMA?
         df_resid = self.nobs - (self.k+self.q+self.p)
-        return t.sf(np.abs(self.t()), df_resid) * 2
+        return t.sf(np.abs(self.tvalues), df_resid) * 2
 
 
 if __name__ == "__main__":
