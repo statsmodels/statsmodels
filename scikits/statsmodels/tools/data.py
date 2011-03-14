@@ -2,6 +2,12 @@
 Compatibility tools for various data structure inputs
 """
 
+#TODO: question: interpret_data
+# looks good and could/should be merged with other check convertion functions we also have
+# similar also to what Nathaniel mentioned for Formula
+# good: if ndarray check passes then loading pandas is not triggered,
+
+
 import numpy as np
 
 def have_pandas():

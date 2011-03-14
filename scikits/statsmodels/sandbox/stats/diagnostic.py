@@ -405,7 +405,7 @@ def het_white(y, x, retres=False):
     lmpval = stats.chi2.sf(lm, nvars-1)
     return lm, lmpval, fval, fpval
 
-def het_goldfeldquandt(y, x, idx, split=None, retres=False):
+def het_goldfeldquandt2(y, x, idx, split=None, retres=False):
     '''test whether variance is the same in 2 subsamples
 
     Parameters
@@ -453,7 +453,7 @@ def het_goldfeldquandt(y, x, idx, split=None, retres=False):
     ran sanity check
     '''
     x = np.asarray(x)
-    y = np.asarray(y)**2
+    y = np.asarray(y)
     nobs, nvars = x.shape
     if split is None:
         split = nobs//2
@@ -611,8 +611,8 @@ class HetGoldfeldQuandt(object):
     def __call__(self, y, x, idx=None, split=None):
         return self.run(y, x, idx=idx, split=split, attach=False)
 
-het_goldfeldquandt2 = HetGoldfeldQuandt()
-het_goldfeldquandt2.__doc__ = het_goldfeldquandt2.run.__doc__
+het_goldfeldquandt = HetGoldfeldQuandt()
+het_goldfeldquandt.__doc__ = het_goldfeldquandt2.run.__doc__
 
 
 

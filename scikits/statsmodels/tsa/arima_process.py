@@ -693,12 +693,13 @@ class ArmaProcess(object):
         self.macoefs = self.ma[1:]
         self.arpoly = np.polynomial.Polynomial(self.ar)
         self.mapoly = np.polynomial.Polynomial(self.ma)
+        self.nobs = nobs
 
     @classmethod
     def from_coeffs(cls, arcoefs, macoefs, nobs=None):
         '''create ArmaProcess instance from coefficients of the lag-polynomials
         '''
-        return cls(np.r_[1,-arcoefs], np.r_[1,-macoefs], nobs=nobs)
+        return cls(np.r_[1, -arcoefs], np.r_[1, macoefs], nobs=nobs)
 
     @classmethod
     def from_estimation(cls, model_results, nobs=None):
@@ -707,7 +708,7 @@ class ArmaProcess(object):
         arcoefs = model_results.params[:model_results.nar]
         macoefs = model_results.params[model_results.nar:
                                        model_results.nar+model_results.nma]
-        return cls(np.r_[1,-arcoefs], np.r_[1,-macoefs], nobs=nobs)
+        return cls(np.r_[1, -arcoefs], np.r_[1, macoefs], nobs=nobs)
 
     def __mul__(self, oth):
         if isinstance(oth, self.__class__):
@@ -897,7 +898,7 @@ class ArmaProcess(object):
 
 
 
-__all__ = ['ARIMA', 'arma_acf', 'arma_acovf', 'arma_generate_sample',
+__all__ = ['arma_acf', 'arma_acovf', 'arma_generate_sample',
            'arma_impulse_response', 'arma2ar', 'arma2ma', 'deconvolve',
            'lpol2index', 'index2lpol']
 
