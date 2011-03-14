@@ -21,13 +21,13 @@ from scikits.statsmodels.tools.decorators import cache_readonly
 from scikits.statsmodels.tools.tools import chain_dot
 from scikits.statsmodels.tsa.tsatools import vec, unvec
 
-from scikits.statsmodels.tsa.var.irf import IRAnalysis
-from scikits.statsmodels.tsa.var.output import VARSummary
+from scikits.statsmodels.tsa.vector_ar.irf import IRAnalysis
+from scikits.statsmodels.tsa.vector_ar.output import VARSummary
 
 import scikits.statsmodels.tsa.tsatools as tsa
-import scikits.statsmodels.tsa.var.output as output
-import scikits.statsmodels.tsa.var.plotting as plotting
-import scikits.statsmodels.tsa.var.util as util
+import scikits.statsmodels.tsa.vector_ar.output as output
+import scikits.statsmodels.tsa.vector_ar.plotting as plotting
+import scikits.statsmodels.tsa.vector_ar.util as util
 
 import scikits.statsmodels.tools.data as data_util
 
@@ -1197,7 +1197,7 @@ class FEVD(object):
 
 if __name__ == '__main__':
     import scikits.statsmodels.api as sm
-    from scikits.statsmodels.tsa.var.util import parse_lutkepohl_data
+    from scikits.statsmodels.tsa.vector_ar.util import parse_lutkepohl_data
     import scikits.statsmodels.tools.data as data_util
 
     np.set_printoptions(linewidth=140, precision=5)

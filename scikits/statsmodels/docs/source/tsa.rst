@@ -77,8 +77,8 @@ Estimation
 
    ar_model.AR
    ar_model.ARResults
-   var.varmod.VAR
-   var.varmod.VARResults
+   vector_ar.varmod.VAR
+   vector_ar.varmod.VARResults
    arma_mle.Arma
 
 ARMA and Kalman Filter

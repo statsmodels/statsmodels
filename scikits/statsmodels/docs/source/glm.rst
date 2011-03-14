@@ -1,4 +1,4 @@
-.. currentmodule:: scikits.statsmodels.glm
+.. currentmodule:: scikits.statsmodels.genmod.generalized_linear_model
 
 
 .. _glm:

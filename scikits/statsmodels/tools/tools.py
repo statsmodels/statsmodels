@@ -133,7 +133,7 @@ def categorical(data, col=None, dictnames=False, drop=False):
     # catch recarrays and structured arrays
     if data.dtype.names or data.__class__ is np.recarray:
         if not col and np.squeeze(data).ndim > 1:
-            raise IndexError, "col is None and the input array is not 1d"
+            raise IndexError("col is None and the input array is not 1d")
         if isinstance(col, int):
             col = data.dtype.names[col]
 #        if col is None and len(data.dtype.names) == 1:
@@ -186,7 +186,7 @@ def categorical(data, col=None, dictnames=False, drop=False):
     # handle ndarrays and catch array-like for an error
     elif data.__class__ is np.ndarray or not isinstance(data,np.ndarray):
         if not isinstance(data, np.ndarray):
-            raise NotImplementedError, "Array-like objects are not supported"
+            raise NotImplementedError("Array-like objects are not supported")
 
         if isinstance(col, int):
             offset = data.shape[1]          # need error catching here?
@@ -217,7 +217,7 @@ def categorical(data, col=None, dictnames=False, drop=False):
                     return data, col_map
                 return data
         else:
-            raise IndexError, "The index %s is not understood" % col
+            raise IndexError("The index %s is not understood" % col)
 
 #TODO: add an axis argument to this for sysreg
 def add_constant(data, prepend=False):
@@ -378,9 +378,10 @@ class StepFunction:
         _y = np.asarray(y)
 
         if _x.shape != _y.shape:
-            raise ValueError, 'in StepFunction: x and y do not have the same shape'
+            raise ValueError('in StepFunction: x and y do not have the same \
+shape')
         if len(_x.shape) != 1:
-            raise ValueError, 'in StepFunction: x and y must be 1-dimensional'
+            raise ValueError('in StepFunction: x and y must be 1-dimensional')
 
         self.x = np.hstack([[-np.inf], _x])
         self.y = np.hstack([[ival], _y])

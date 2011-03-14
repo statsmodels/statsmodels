@@ -324,7 +324,7 @@ def lagmat(x, maxlag, trim='forward', original='ex'):
         stopobs = len(lm)
 
     else:
-        raise ValueError, 'trim option not valid'
+        raise ValueError('trim option not valid')
     if original == 'sep':
         return lm[startobs:stopobs,dropidx:], x[startobs:stopobs]
     else:

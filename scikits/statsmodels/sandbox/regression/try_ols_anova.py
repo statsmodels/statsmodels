@@ -163,7 +163,7 @@ def form2design(ss, data):
             vars[''.join(v)] = data2groupcont(data[v[0]], data[v[1]])
             names.append(''.join(v))
         else:
-            raise ValueError, 'unknown expression in formula'
+            raise ValueError('unknown expression in formula')
     return vars, names
 
 def dropname(ss, li):

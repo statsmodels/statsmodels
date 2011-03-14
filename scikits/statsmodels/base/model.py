@@ -48,9 +48,9 @@ class Model(object):
             if exog.ndim == 1:
                 exog = exog[:,None]
             if exog.ndim != 2:
-                raise ValueError, "exog is not 1d or 2d"
+                raise ValueError("exog is not 1d or 2d")
             if endog.shape[0] != exog.shape[0]:
-                raise ValueError, "endog and exog matrices are not aligned."
+                raise ValueError("endog and exog matrices are not aligned.")
             if np.any(exog.var(0) == 0):
                 # assumes one constant in first or last position
                 # avoid exception if more than one constant
@@ -638,7 +638,8 @@ class Results(object):
     Class to contain model results
     """
     def __init__(self, model, params, **kwd):
-        """
+        """create instance of Results class
+
         Parameters
         ----------
         model : class instance

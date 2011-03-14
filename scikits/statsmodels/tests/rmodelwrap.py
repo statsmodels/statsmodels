@@ -68,9 +68,9 @@ class RModel(object):
             self.df_resid = df[1]
         self.bcov_unscaled = rsum.setdefault('cov.unscaled', None)
         self.bcov = rsum.setdefault('cov.scaled', None)
-        if rsum.has_key('sigma'):
+        if 'sigma' in rsum:
             self.scale = rsum['sigma']
-        elif rsum.has_key('dispersion'):
+        elif 'dispersion' in rsum:
             self.scale = rsum['dispersion']
         else:
             self.scale = None
@@ -121,7 +121,7 @@ class RModel(object):
 def RModelConvert(model, sec_title=None, results_title=None):
     import os
     if not results_title:
-        raise AttributeError, "You need to specify a results title"
+        raise AttributeError("You need to specify a results title")
     outfile = open('./model_results.py', 'a')
     outfile.write('class '+results_title)
     outfile.write(' '*4)    # handle indents

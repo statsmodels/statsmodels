@@ -181,7 +181,7 @@ def contrastfromcols(L, D, pseudo=None):
     n, p = D.shape
 
     if L.shape[0] != n and L.shape[1] != p:
-        raise ValueError, 'shape of L and D mismatched'
+        raise ValueError("shape of L and D mismatched")
 
     if pseudo is None:
         pseudo = np.linalg.pinv(D)    # D^+ \approx= ((dot(D.T,D))^(-1),D.T)

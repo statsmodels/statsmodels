@@ -148,12 +148,12 @@ class GLS(LikelihoodModel):
             nobs = int(endog.shape[0])
             if self.sigma.ndim == 1 or np.squeeze(self.sigma).ndim == 1:
                 if self.sigma.shape[0] != nobs:
-                    raise ValueError, "sigma is not the correct dimension.  \
-Should be of length %s, if sigma is a 1d array" % nobs
+                    raise ValueError("sigma is not the correct dimension.  \
+Should be of length %s, if sigma is a 1d array" % nobs)
             elif self.sigma.shape[0] != nobs and \
                     self.sigma.shape[1] != nobs:
-                raise ValueError, "expected an %s x %s array for sigma" % \
-                        (nobs, nobs)
+                raise ValueError("expected an %s x %s array for sigma" % \
+                        (nobs, nobs))
         if self.sigma is not None:
             nobs = int(endog.shape[0])
             if self.sigma.shape == ():
@@ -281,7 +281,7 @@ Should be of length %s, if sigma is a 1d array" % nobs
         #JP: this doesn't look correct for GLMAR
         #SS: it needs its own predict method
         if self._results is None and params is None:
-            raise ValueError, "If the model has not been fit, then you must specify the params argument."
+            raise ValueError("If the model has not been fit, then you must specify the params argument.")
         if self._results is not None:
             return np.dot(exog, self._results.params)
         else:
@@ -592,7 +592,7 @@ class GLSAR(GLS):
         else:
             self.rho = np.squeeze(np.asarray(rho))
             if len(self.rho.shape) not in [0,1]:
-                raise ValueError, "AR parameters must be a scalar or a vector"
+                raise ValueError("AR parameters must be a scalar or a vector")
             if self.rho.shape == ():
                 self.rho.shape = (1,)
             self.order = self.rho.shape[0]
@@ -709,8 +709,7 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False, demean=True):
 #http://www-stat.wharton.upenn.edu/~steele/Courses/956/ResourceDetails/YuleWalkerAndMore.htm
     method = str(method).lower()
     if method not in ["unbiased", "mle"]:
-        raise ValueError, "ACF estimation method must be 'unbiased' \
-        or 'MLE'"
+        raise ValueError("ACF estimation method must be 'unbiased' or 'MLE'")
     X = np.array(X)
     if demean:
         X -= X.mean()                  # automatically demean's X
@@ -721,7 +720,7 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False, demean=True):
     else:
         denom = lambda k: n
     if X.ndim > 1 and X.shape[1] != 1:
-        raise ValueError, "expecting a vector to estimate AR parameters"
+        raise ValueError("expecting a vector to estimate AR parameters")
     r = np.zeros(order+1, np.float64)
     r[0] = (X**2).sum() / denom(0)
     for k in range(1,order+1):
@@ -1072,8 +1071,8 @@ class RegressionResults(LikelihoodModelResults):
         This method is untested
         """
         if not hasattr(self, 'resid'):
-            raise ValueError, 'need normalized residuals to estimate standard\
- deviation'
+            raise ValueError('need normalized residuals to estimate standard\
+ deviation')
         return self.wresid * recipr(np.sqrt(self.scale))
 
     def compare_f_test(self, restricted):

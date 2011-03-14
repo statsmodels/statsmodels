@@ -478,10 +478,12 @@ class KalmanFilter(object):
     The notation for the state-space form follows Durbin and Koopman (2001).
 
     The observation equations is
-    y_{t} = Z_{t}\alpha_{t} + \epsilon_{t}
+
+    .. math:: y_{t} = Z_{t}\\alpha_{t} + \\epsilon_{t}
 
     The state equation is
-    \alpha_{t+1} = T_{t}\alpha_{t} + R_{t}\eta_{t}
+
+    .. math:: \\alpha_{t+1} = T_{t}\\alpha_{t} + R_{t}\\eta_{t}
 
     For the present purposed \epsilon_{t} is assumed to always be zero.
     """
@@ -504,8 +506,8 @@ class KalmanFilter(object):
         p : int
             The AR coefficient in an ARMA model.
 
-        Reference
-        ---------
+        References
+        ----------
         Durbin and Koopman Section 3.7.
         """
         arr = zeros((r,r), dtype=params.dtype) # allows for complex-step
@@ -537,8 +539,8 @@ class KalmanFilter(object):
         p : int
             The AR order in an ARMA model.
 
-        Reference
-        ---------
+        References
+        ----------
         Durbin and Koopman Section 3.7.
         """
         arr = zeros((r,1), dtype=params.dtype) # this allows zero coefficients

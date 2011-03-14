@@ -36,9 +36,9 @@ def _check_discrete_args(at, method):
     Checks the arguments for margeff if the exogenous variables are discrete.
     """
     if method in ['dyex','eyex']:
-        raise ValueError, "%s not allowed for discrete variables" % method
+        raise ValueError("%s not allowed for discrete variables" % method)
     if at in ['median', 'zero']:
-        raise ValueError, "%s not allowed for discrete variables" % at
+        raise ValueError("%s not allowed for discrete variables" % at)
 
 def _isdummy(X):
     """
@@ -1376,9 +1376,9 @@ class DiscreteResults(LikelihoodModelResults):
 
         # check arguments
         if at not in ['overall','mean','median','zero','all']:
-            raise ValueError, "%s not a valid option for `at`." % at
+            raise ValueError("%s not a valid option for `at`." % at)
         if method not in ['dydx','eyex','dyex','eydx']:
-            raise ValueError, "method is not understood.  Got %s" % method
+            raise ValueError("method is not understood.  Got %s" % method)
 
 
         # get local variables

@@ -1,5 +1,5 @@
 import numpy as np
-import scikits.statsmodels.tsa.var.util as util
+import scikits.statsmodels.tsa.vector_ar.util as util
 
 import matplotlib.pyplot as plt
 import matplotlib as mpl

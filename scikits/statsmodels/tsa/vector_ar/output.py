@@ -2,7 +2,7 @@ from cStringIO import StringIO
 import numpy as np
 
 from scikits.statsmodels.iolib import SimpleTable
-import scikits.statsmodels.tsa.var.util as util
+import scikits.statsmodels.tsa.vector_ar.util as util
 
 mat = np.array
 
