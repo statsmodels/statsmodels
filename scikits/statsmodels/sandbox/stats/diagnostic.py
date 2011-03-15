@@ -612,7 +612,7 @@ class HetGoldfeldQuandt(object):
         return self.run(y, x, idx=idx, split=split, attach=False)
 
 het_goldfeldquandt = HetGoldfeldQuandt()
-het_goldfeldquandt.__doc__ = het_goldfeldquandt2.run.__doc__
+het_goldfeldquandt.__doc__ = het_goldfeldquandt.run.__doc__
 
 
 
