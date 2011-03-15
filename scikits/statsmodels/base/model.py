@@ -18,13 +18,6 @@ class Model(object):
     exog : array-like
         Exogenous design.
 
-    Methods
-    -------
-    fit
-        Call a models fit method
-    predict
-        Return fitted response values for a model.  If the model has
-
     Notes
     -----
     `endog` and `exog` are references to any data provided.  So if the data is
@@ -1339,6 +1332,7 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
     A results class for the discrete dependent variable models.
 
     ..Warning :
+
     The following description has not been updated to this version/class.
     Where are AIC, BIC, ....? docstring looks like copy from discretemod
 
@@ -1382,12 +1376,6 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
         with degrees of freedom `df_model`.
     prsquared : float
         McFadden's pseudo-R-squared. 1 - (`llf`/`llnull`)
-
-    Methods
-    -------
-    margeff
-        Get marginal effects of the fitted model.
-    conf_int
 
     """
 

@@ -14,22 +14,6 @@ class RobustNorm(object):
     None :
         Some subclasses have optional tuning constants.
 
-    Methods
-    -------
-    call
-        Returns the value of estimator rho applied to an input
-    psi
-        Returns the derivative of rho.  Sometimes referred to as the influence
-        function.
-    psi_deriv
-        Returns the analytic deriative of psi.  This is used in obtaining robust
-        estimates of the covariance matrix.  See scikits.statsmodels.rlm for
-        more information.
-    rho
-        The robust criterion estimator function.
-    weights
-        Returns the value of psi(z) / z
-
     References
     ----------
     PJ Huber.  'Robust Statistics' John Wiley and Sons, Inc., New York, 1981.
@@ -52,6 +36,8 @@ class RobustNorm(object):
 
     def rho(self, z):
         """
+        The robust criterion estimator function.
+
         Abstract method:
 
         -2 loglike used in M-estimator
@@ -60,6 +46,8 @@ class RobustNorm(object):
 
     def psi(self, z):
         """
+        Derivative of rho.  Sometimes referred to as the influence function.
+
         Abstract method:
 
         psi = rho'
@@ -68,14 +56,20 @@ class RobustNorm(object):
 
     def weights(self, z):
         """
-        Abstract method:
-        psi(z) / z
+        Returns the value of psi(z) / z
 
+        Abstract method:
+
+        psi(z) / z
         """
         raise NotImplementedError
 
     def psi_deriv(self, z):
         '''
+        Deriative of psi.  Used to obtain robust covariance matrix.
+
+        See scikits.statsmodels.rlm for more information.
+
         Abstract method:
 
         psi_derive = psi'
@@ -83,6 +77,9 @@ class RobustNorm(object):
         raise NotImplementedError
 
     def __call__(self, z):
+        """
+        Returns the value of estimator rho applied to an input
+        """
         return self.rho(z)
 
 class LeastSquares(RobustNorm):
@@ -106,7 +103,7 @@ class LeastSquares(RobustNorm):
 
         Returns
         -------
-        array
+        rho : array
             rho(z) = (1/2.)*z**2
         """
 
@@ -125,7 +122,7 @@ class LeastSquares(RobustNorm):
 
         Returns
         -------
-        array
+        psi : array
             psi(z) = z
         """
 
@@ -144,7 +141,7 @@ class LeastSquares(RobustNorm):
 
         Returns
         -------
-        array
+        weights : array
             weights(z) = np.ones(z.shape)
         """
 
@@ -155,11 +152,15 @@ class LeastSquares(RobustNorm):
         """
         The derivative of the least squares psi function.
 
+        Returns
+        -------
+        psi_deriv : array
+            ones(z.shape)
+
         Notes
         -----
         Used to estimate the robust covariance matrix.
         """
-
         return np.ones(z.shape, np.float64)
 
 class HuberT(RobustNorm):
@@ -198,9 +199,10 @@ class HuberT(RobustNorm):
 
         Returns
         -------
-        array
-            rho(z) = .5*z**2            for |z| <= t
-            rho(z_ = |z|*t - .5*t**2    for |z| > t
+        rho : array
+            rho(z) = .5*z**2            for \|z\| <= t
+
+            rho(z) = \|z\|*t - .5*t**2    for \|z\| > t
         """
         z = np.asarray(z)
         test = self._subset(z)
@@ -220,9 +222,10 @@ class HuberT(RobustNorm):
 
         Returns
         -------
-        array
-            psi(z) = z      for |z| <= t
-            psi(z) = sign(z)*t for |z| > t
+        psi : array
+            psi(z) = z      for \|z\| <= t
+
+            psi(z) = sign(z)*t for \|z\| > t
         """
         z = np.asarray(z)
         test = self._subset(z)
@@ -241,9 +244,10 @@ class HuberT(RobustNorm):
 
         Returns
         -------
-        array
-            weights(z) = 1          for |z| <= t
-            weights(z) = t/|z|      for |z| > t
+        weights : array
+            weights(z) = 1          for \|z\| <= t
+
+            weights(z) = t/\|z\|      for \|z\| > t
         """
         z = np.asarray(z)
         test = self._subset(z)
@@ -291,8 +295,8 @@ class RamsayE(RobustNorm):
 
         Returns
         -------
-        array
-            rho(z) = a**-2 * (1 - exp(-a*|z|)*(1 + a*|z|))
+        rho : array
+            rho(z) = a**-2 * (1 - exp(-a*\|z\|)*(1 + a*\|z\|))
         """
         z = np.asarray(z)
         return (1 - np.exp(-self.a * np.fabs(z)) *
@@ -311,8 +315,8 @@ class RamsayE(RobustNorm):
 
         Returns
         -------
-        array
-            psi(z) = z*exp(-a*|z|)
+        psi : array
+            psi(z) = z*exp(-a*\|z\|)
         """
         z = np.asarray(z)
         return z * np.exp(-self.a * np.fabs(z))
@@ -330,8 +334,8 @@ class RamsayE(RobustNorm):
 
         Returns
         -------
-        array
-            weights(z) = exp(-a*|z|)
+        weights : array
+            weights(z) = exp(-a*\|z\|)
         """
 
         z = np.asarray(z)
@@ -386,9 +390,10 @@ class AndrewWave(RobustNorm):
 
         Returns
         -------
-        array
-            rho(z) = a*(1-cos(z/a))     for |z| <= a*pi
-            rho(z) = 2*a                for |z| > a*pi
+        rho : array
+            rho(z) = a*(1-cos(z/a))     for \|z\| <= a*pi
+
+            rho(z) = 2*a                for \|z\| > a*pi
         """
 
         a = self.a
@@ -410,9 +415,10 @@ class AndrewWave(RobustNorm):
 
         Returns
         -------
-        array
-            psi(z) = sin(z/a)       for |z| <= a*pi
-            psi(z) = 0              for |z| > a*pi
+        psi : array
+            psi(z) = sin(z/a)       for \|z\| <= a*pi
+
+            psi(z) = 0              for \|z\| > a*pi
         """
 
         a = self.a
@@ -433,14 +439,10 @@ class AndrewWave(RobustNorm):
 
         Returns
         -------
-        array
+        weights : array
+            weights(z) = sin(z/a)/(z/a)     for \|z\| <= a*pi
 
-        Notes
-        -----
-        The weighting function for Andrews wave is defined as ::
-
-            weights(z) = sin(z/a)/(z/a)     for |z| <= a*pi
-            weights(z) = 0                  for |z| > a*pi
+            weights(z) = 0                  for \|z\| > a*pi
         """
         a = self.a
         z = np.asarray(z)
@@ -497,9 +499,10 @@ class TrimmedMean(RobustNorm):
 
         Returns
         -------
-        array
-            rho(z) = (1/2.)*z**2    for |z| <= c
-            rho(z) = 0              for |z| > c
+        rho : array
+            rho(z) = (1/2.)*z**2    for \|z\| <= c
+
+            rho(z) = 0              for \|z\| > c
         """
 
         z = np.asarray(z)
@@ -519,9 +522,10 @@ class TrimmedMean(RobustNorm):
 
         Returns
         -------
-        array
-            psi(z) = z              for |z| <= c
-            psi(z) = 0              for |z| > c
+        psi : array
+            psi(z) = z              for \|z\| <= c
+
+            psi(z) = 0              for \|z\| > c
 
         """
         z = np.asarray(z)
@@ -541,9 +545,10 @@ class TrimmedMean(RobustNorm):
 
         Returns
         -------
-        array
-            weights(z) = 1             for |z| <= c
-            weights(z) = 0             for |z| > c
+        weights : array
+            weights(z) = 1             for \|z\| <= c
+
+            weights(z) = 0             for \|z\| > c
 
         """
         z = np.asarray(z)
@@ -605,11 +610,14 @@ class Hampel(RobustNorm):
 
         Returns
         -------
-        array
-            rho(z) = (1/2.)*z**2                    for |z| <= a
-            rho(z) = a*|z| - 1/2.*a**2              for a < |z| <= b
-            rho(z) = a*(c*|z|-(1/2.)*z**2)/(c-b)    for b < |z| <= c
-            rho(z) = a*(b + c - a)                  for |z| > c
+        rho : array
+            rho(z) = (1/2.)*z**2                    for \|z\| <= a
+
+            rho(z) = a*\|z\| - 1/2.*a**2              for a < \|z\| <= b
+
+            rho(z) = a*(c*\|z\|-(1/2.)*z**2)/(c-b)    for b < \|z\| <= c
+
+            rho(z) = a*(b + c - a)                  for \|z\| > c
         """
 
         z = np.fabs(z)
@@ -634,11 +642,14 @@ class Hampel(RobustNorm):
 
         Returns
         -------
-        array
-            psi(z) = z                            for |z| <= a
-            psi(z) = a*sign(z)                    for a < |z| <= b
-            psi(z) = a*sign(z)*(c - |z|)/(c-b)    for b < |z| <= c
-            psi(z) = 0                            for |z| > c
+        psi : array
+            psi(z) = z                            for \|z\| <= a
+
+            psi(z) = a*sign(z)                    for a < \|z\| <= b
+
+            psi(z) = a*sign(z)*(c - \|z\|)/(c-b)    for b < \|z\| <= c
+
+            psi(z) = 0                            for \|z\| > c
         """
         z = np.asarray(z)
         a = self.a; b = self.b; c = self.c
@@ -663,11 +674,14 @@ class Hampel(RobustNorm):
 
         Returns
         -------
-        array
-            weights(z) = 1                            for |z| <= a
-            weights(z) = a/|z|                        for a < |z| <= b
-            weights(z) = a*(c - |z|)/(|z|*(c-b))      for b < |z| <= c
-            weights(z) = 0                            for |z| > c
+        weights : array
+            weights(z) = 1                            for \|z\| <= a
+
+            weights(z) = a/\|z\|                        for a < \|z\| <= b
+
+            weights(z) = a*(c - \|z\|)/(\|z\|*(c-b))      for b < \|z\| <= c
+
+            weights(z) = 0                            for \|z\| > c
 
         """
         z = np.asarray(z)
@@ -720,9 +734,10 @@ class TukeyBiweight(RobustNorm):
 
         Returns
         -------
-        array
-            rho(z) = -(1 - (z/c)**2)**3 * c**2/6.   for |z| <= R
-            rho(z) = 0                              for |z| > R
+        rho : array
+            rho(z) = -(1 - (z/c)**2)**3 * c**2/6.   for \|z\| <= R
+
+            rho(z) = 0                              for \|z\| > R
         """
         subset = self._subset(z)
         return -(1 - (z / self.c)**2)**3 * subset * self.c**2 / 6.
@@ -740,9 +755,10 @@ class TukeyBiweight(RobustNorm):
 
         Returns
         -------
-        array
-            psi(z) = z*(1 - (z/c)**2)**2        for |z| <= R
-            psi(z) = 0                           for |z| > R
+        psi : array
+            psi(z) = z*(1 - (z/c)**2)**2        for \|z\| <= R
+
+            psi(z) = 0                           for \|z\| > R
         """
 
         z = np.asarray(z)
@@ -763,9 +779,10 @@ class TukeyBiweight(RobustNorm):
 
         Returns
         -------
-        array
-            psi(z) = (1 - (z/c)**2)**2          for |z| <= R
-            psi(z) = 0                          for |z| > R
+        weights : array
+            psi(z) = (1 - (z/c)**2)**2          for \|z\| <= R
+
+            psi(z) = 0                          for \|z\| > R
         """
 
         subset = self._subset(z)
@@ -783,7 +800,7 @@ class TukeyBiweight(RobustNorm):
         return subset*((1 - (z/self.c)**2)**2 - (4*z**2/self.c**2) *\
                     (1-(z/self.c)**2))
 
-def estimate_location(a, scale, norm=HuberT(), axis=0, initial=None,
+def estimate_location(a, scale, norm=None, axis=0, initial=None,
                       maxiter=30, tol=1.0e-06):
     """
     M-estimator of location using self.norm and a current
@@ -816,6 +833,8 @@ def estimate_location(a, scale, norm=HuberT(), axis=0, initial=None,
     mu : array
         Estimate of location
     """
+    if norm is None:
+        norm = HuberT()
 
     if initial is None:
         mu = np.median(a, axis)

@@ -51,7 +51,7 @@ class SUR(object):
         RHS array stacked next to each other in columns.
     history : dict
         Contains the history of fitting the model. Probably not of interest
-        if the model is fit with `igls`=False.
+        if the model is fit with `igls` = False.
     iterations : int
         The number of iterations until convergence if the model is fit
         iteratively.
@@ -59,7 +59,7 @@ class SUR(object):
         The number of observations of the equations.
     normalized_cov_params : array
         sum(p_{m}) x sum(p_{m}) array
-        :math:`\\left[X^{T}\\left(\\Sigma^{-1}\\otimes\\boldsymbol{I}\\right)X\\right]^{-1}
+        :math:`\\left[X^{T}\\left(\\Sigma^{-1}\\otimes\\boldsymbol{I}\\right)X\\right]^{-1}`
     pinv_wexog : array
         The pseudo-inverse of the `wexog`
     sigma : array
@@ -73,23 +73,16 @@ class SUR(object):
     wexog : array
         M*nobs x sum(p_{m}) array of the whitened exogenous variables.
 
-    Methods
-    -------
-    initialize
-    fit
-    predict
-    whiten
-
     Notes
     -----
     All individual equations are assumed to be well-behaved, homoeskedastic
-    iid errors.  This is basically just an extension of GLS, using sparse
-    matrices.
+    iid errors.  This is basically an extension of GLS, using sparse matrices.
 
     .. math:: \\Sigma=\\left[\\begin{array}{cccc}
-\\sigma_{11} & \\sigma_{12} & \\cdots & \\sigma_{1M}\\
-\\sigma_{21} & \\sigma_{22} &  & \\sigma_{2M}\\
-\\vdots &  & \\ddots\\
+              \\sigma_{11} & \\sigma_{12} & \\cdots & \\sigma_{1M}\\\\
+              \\sigma_{21} & \\sigma_{22} & \\cdots & \\sigma_{2M}\\\\
+              \\vdots & \\vdots & \\ddots & \\vdots\\\\
+              \\sigma_{M1} & \\sigma_{M2} & \\cdots & \\sigma_{MM}\\end{array}\\right]
 
     References
     ----------
@@ -201,7 +194,7 @@ exogenous variables.  Got length %s" % len(sys))
         Returns
         -------
         If X is the exogenous RHS of the system.
-        np.dot(np.kron(cholsigmainv,np.eye(M)),np.diag(X))
+        ``np.dot(np.kron(cholsigmainv,np.eye(M)),np.diag(X))``
 
         If X is the endogenous LHS of the system.
 

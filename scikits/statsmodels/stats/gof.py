@@ -34,25 +34,27 @@ def powerdiscrepancy(o, e, lambd=0.0, axis=0, ddof=0):
 
     Parameters
     ----------
-      o : Iterable of observed values
-      e : Iterable of expeted values
-      lambd : float or string
-         * float : exponent `a` for power discrepancy
-         * 'loglikeratio': a = 0
-         * 'freeman_tukey': a = -0.5
-         * 'pearson': a = 1   (standard chisquare test statistic)
-         * 'modified_loglikeratio': a = -1
-         * 'cressie_read': a = 2/3
-         * 'neyman' : a = -2 (Neyman-modified chisquare, reference from a book?)
-      axis : int
-         axis for observations of one series
-      ddof : int
-         degrees of freedom correction,
+    o : Iterable
+        Observed values
+    e : Iterable
+        Expected values
+    lambd : float or string
+        * float : exponent `a` for power discrepancy
+        * 'loglikeratio': a = 0
+        * 'freeman_tukey': a = -0.5
+        * 'pearson': a = 1   (standard chisquare test statistic)
+        * 'modified_loglikeratio': a = -1
+        * 'cressie_read': a = 2/3
+        * 'neyman' : a = -2 (Neyman-modified chisquare, reference from a book?)
+    axis : int
+        axis for observations of one series
+    ddof : int
+        degrees of freedom correction,
 
     Returns
     -------
-      D_obs : Discrepancy of observed values
-      pvalue : pvalue
+    D_obs : Discrepancy of observed values
+    pvalue : pvalue
 
 
     References
@@ -97,10 +99,8 @@ def powerdiscrepancy(o, e, lambd=0.0, axis=0, ddof=0):
 
     >>> powerdiscrepancy(np.column_stack((observed,2*observed)), expected, lambd=2/3.0, axis=0)
     (array([[ 2.89714546,  5.79429093]]), array([[ 0.57518277,  0.21504648]]))
-    >>> powerdiscrepancy(np.column_stack((observed,2*observed)), 10*expected, lambd=2/3.0, axis=0)
-    Traceback (most recent call last):
-      ...
-    ValueError: observed and expected need to have the samenumber of observations, or e needs to add to 1
+    >>> powerdiscrepancy(np.column_stack((observed,2*observed)), expected, lambd=2/3.0, axis=0)
+    (array([[ 2.89714546,  5.79429093]]), array([[ 0.57518277,  0.21504648]]))
     >>> powerdiscrepancy(np.column_stack((2*observed,2*observed)), expected, lambd=2/3.0, axis=0)
     (array([[ 5.79429093,  5.79429093]]), array([[ 0.21504648,  0.21504648]]))
     >>> powerdiscrepancy(np.column_stack((2*observed,2*observed)), 20*expected, lambd=2/3.0, axis=0)

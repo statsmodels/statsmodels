@@ -371,7 +371,6 @@ def arma_impulse_response(ar, ma, nobs=100):
     -------
     ir : array, 1d
         impulse response function with nobs elements
-    `
 
     Notes
     -----
@@ -387,25 +386,27 @@ def arma_impulse_response(ar, ma, nobs=100):
     Examples
     --------
     AR(1)
+
     >>> arma_impulse_response([1.0, -0.8], [1.], nobs=10)
     array([ 1.        ,  0.8       ,  0.64      ,  0.512     ,  0.4096    ,
             0.32768   ,  0.262144  ,  0.2097152 ,  0.16777216,  0.13421773])
 
     this is the same as
+
     >>> 0.8**np.arange(10)
     array([ 1.        ,  0.8       ,  0.64      ,  0.512     ,  0.4096    ,
             0.32768   ,  0.262144  ,  0.2097152 ,  0.16777216,  0.13421773])
 
     MA(2)
+
     >>> arma_impulse_response([1.0], [1., 0.5, 0.2], nobs=10)
     array([ 1. ,  0.5,  0.2,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ])
 
     ARMA(1,2)
+
     >>> arma_impulse_response([1.0, -0.8], [1., 0.5, 0.2], nobs=10)
     array([ 1.        ,  1.3       ,  1.24      ,  0.992     ,  0.7936    ,
             0.63488   ,  0.507904  ,  0.4063232 ,  0.32505856,  0.26004685])
-
-
     '''
     impulse = np.zeros(nobs)
     impulse[0] = 1.

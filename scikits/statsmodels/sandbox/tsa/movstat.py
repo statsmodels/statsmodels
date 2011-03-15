@@ -1,23 +1,21 @@
-
 '''using scipy signal and numpy correlate to calculate some time series
 statistics
 
 original developer notes
-------------------------
 
 see also scikits.timeseries  (movstat is partially inspired by it)
-(added 2009-08-29:
+added 2009-08-29
 timeseries moving stats are in c, autocorrelation similar to here
 I thought I saw moving stats somewhere in python, maybe not)
 
 
-TODO:
+TODO
 
 moving statistics
-* filters don't handle boundary conditions nicely (correctly ?)
-  e.g. minimum order filter uses 0 for out of bounds value
-  -> append and prepend with last resp. first value
-* enhance for nd arrays, with axis = 0
+- filters don't handle boundary conditions nicely (correctly ?)
+e.g. minimum order filter uses 0 for out of bounds value
+-> append and prepend with last resp. first value
+- enhance for nd arrays, with axis = 0
 
 
 
@@ -40,7 +38,7 @@ True
 origin = 1)[0]==ndimage.filters.correlate(x,[1,1,1],origin = 1))
 
 
-update:
+update
 2009-09-06: cosmetic changes, rearrangements
 '''
 

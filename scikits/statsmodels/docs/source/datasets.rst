@@ -1,4 +1,4 @@
-.. _dataset:
+.. _datasets:
 
 The Datasets Package
 ====================

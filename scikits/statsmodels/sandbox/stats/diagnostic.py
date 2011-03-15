@@ -618,20 +618,23 @@ het_goldfeldquandt.__doc__ = het_goldfeldquandt2.run.__doc__
 
 
 def neweywestcov(resid, x):
-    ''' did not run  yet
-    from regstats2
-    if idx(29) % HAC (Newey West)
-     L = round(4*(nobs/100)^(2/9));
-     % L = nobs^.25; % as an alternative
-     hhat = repmat(residuals',p,1).*X';
-     xuux = hhat*hhat';
-     for l = 1:L;
-        za = hhat(:,(l+1):nobs)*hhat(:,1:nobs-l)';
-        w = 1 - l/(L+1);
-        xuux = xuux + w*(za+za');
-     end
-     d = struct;
-     d.covb = xtxi*xuux*xtxi;
+    '''
+    Did not run yet
+
+    from regstats2 ::
+
+        if idx(29) % HAC (Newey West)
+        L = round(4*(nobs/100)^(2/9));
+        % L = nobs^.25; % as an alternative
+        hhat = repmat(residuals',p,1).*X';
+        xuux = hhat*hhat';
+        for l = 1:L;
+            za = hhat(:,(l+1):nobs)*hhat(:,1:nobs-l)';
+            w = 1 - l/(L+1);
+            xuux = xuux + w*(za+za');
+        end
+        d = struct;
+        d.covb = xtxi*xuux*xtxi;
     '''
     nobs = resid.shape[0]   #TODO: check this can only be 1d
     nlags = int(round(4*(nobs/100.)**(2/9.)))

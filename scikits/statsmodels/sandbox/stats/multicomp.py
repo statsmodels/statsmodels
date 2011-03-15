@@ -302,14 +302,14 @@ def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
     -----
     all corrected pvalues now tested against R.
     insufficient "cosmetic" tests yet
-    new procedure 'fdr_gbs' not verified yet,
-        p-values derived from scratch not reference
+    new procedure 'fdr_gbs' not verified yet, p-values derived from scratch not
+    reference
 
     All procedures that are included, control FWER or FDR in the independent
     case, and most are robust in the positively correlated case.
 
     fdr_gbs: high power, fdr control for independent case and only small
-        violation in positively correlated case
+    violation in positively correlated case
 
 
     there will be API changes.
@@ -703,8 +703,8 @@ def mcfdr(nrepl=100, nobs=50, ntests=10, ntrue=6, mu=0.5, alpha=0.05, rho=0.):
 def randmvn(rho, size=(1, 2), standardize=False):
     '''create random draws from equi-correlated multivariate normal distribution
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     rho : float
         correlation coefficient
     size : tuple of int

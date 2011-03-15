@@ -262,3 +262,8 @@ How to Add a Dataset
 ~~~~~~~~~~~~~~~~~~~~
 
 See the :ref:`notes on adding a dataset <add_data>`.
+
+statsmodels organization
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+See the :ref:`Internal Class Guide <model>`.
