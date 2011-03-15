@@ -371,7 +371,6 @@ def arma_impulse_response(ar, ma, nobs=100):
     -------
     ir : array, 1d
         impulse response function with nobs elements
-    `
 
     Notes
     -----
@@ -387,25 +386,27 @@ def arma_impulse_response(ar, ma, nobs=100):
     Examples
     --------
     AR(1)
+
     >>> arma_impulse_response([1.0, -0.8], [1.], nobs=10)
     array([ 1.        ,  0.8       ,  0.64      ,  0.512     ,  0.4096    ,
             0.32768   ,  0.262144  ,  0.2097152 ,  0.16777216,  0.13421773])
 
     this is the same as
+
     >>> 0.8**np.arange(10)
     array([ 1.        ,  0.8       ,  0.64      ,  0.512     ,  0.4096    ,
             0.32768   ,  0.262144  ,  0.2097152 ,  0.16777216,  0.13421773])
 
     MA(2)
+
     >>> arma_impulse_response([1.0], [1., 0.5, 0.2], nobs=10)
     array([ 1. ,  0.5,  0.2,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ])
 
     ARMA(1,2)
+
     >>> arma_impulse_response([1.0, -0.8], [1., 0.5, 0.2], nobs=10)
     array([ 1.        ,  1.3       ,  1.24      ,  0.992     ,  0.7936    ,
             0.63488   ,  0.507904  ,  0.4063232 ,  0.32505856,  0.26004685])
-
-
     '''
     impulse = np.zeros(nobs)
     impulse[0] = 1.
@@ -693,12 +694,13 @@ class ArmaProcess(object):
         self.macoefs = self.ma[1:]
         self.arpoly = np.polynomial.Polynomial(self.ar)
         self.mapoly = np.polynomial.Polynomial(self.ma)
+        self.nobs = nobs
 
     @classmethod
     def from_coeffs(cls, arcoefs, macoefs, nobs=None):
         '''create ArmaProcess instance from coefficients of the lag-polynomials
         '''
-        return cls(np.r_[1,-arcoefs], np.r_[1,-macoefs], nobs=nobs)
+        return cls(np.r_[1, -arcoefs], np.r_[1, macoefs], nobs=nobs)
 
     @classmethod
     def from_estimation(cls, model_results, nobs=None):
@@ -707,7 +709,7 @@ class ArmaProcess(object):
         arcoefs = model_results.params[:model_results.nar]
         macoefs = model_results.params[model_results.nar:
                                        model_results.nar+model_results.nma]
-        return cls(np.r_[1,-arcoefs], np.r_[1,-macoefs], nobs=nobs)
+        return cls(np.r_[1, -arcoefs], np.r_[1, macoefs], nobs=nobs)
 
     def __mul__(self, oth):
         if isinstance(oth, self.__class__):
@@ -793,7 +795,7 @@ class ArmaProcess(object):
              True if autoregressive roots are outside unit circle
 
         '''
-        if np.abs(self.ar_roots()) > 1:
+        if np.all(np.abs(self.ar_roots())) > 1:
             return True
         else:
             return False
@@ -807,7 +809,7 @@ class ArmaProcess(object):
              True if moving average roots are outside unit circle
 
         '''
-        if np.abs(self.ma_roots()) > 1:
+        if np.all(np.abs(self.ma_roots())) > 1:
             return True
         else:
             return False
@@ -897,7 +899,7 @@ class ArmaProcess(object):
 
 
 
-__all__ = ['ARIMA', 'arma_acf', 'arma_acovf', 'arma_generate_sample',
+__all__ = ['arma_acf', 'arma_acovf', 'arma_generate_sample',
            'arma_impulse_response', 'arma2ar', 'arma2ma', 'deconvolve',
            'lpol2index', 'index2lpol']
 

@@ -253,7 +253,7 @@ def var_loglike(resid, omega, nobs):
 
     Returns
     -------
-    loglike : float
+    llf : float
         The value of the loglikelihood function for a VAR(p) model
 
     Notes
@@ -704,6 +704,7 @@ class VARResults(VARProcess):
         intercept = self.params[0]
         coefs = reshaped.swapaxes(1, 2).copy()
 
+        #TODO: this looks like it's thrown away after creation
         VARProcess.__init__(self, coefs, intercept, sigma_u,
                             names=names)
 
@@ -724,10 +725,16 @@ class VARResults(VARProcess):
         return self.nobs - self.df_model
 
     @cache_readonly
+    def fittedvalues(self):
+        """The predicted insample values of the response variables of the model.
+        """
+        return np.dot(self.ys_lagged, self.params)
+
+    @cache_readonly
     def resid(self):
         """Residuals of response variable resulting from estimated coefficients
         """
-        return self.y[self.p:] - np.dot(self.ys_lagged, self.params)
+        return self.y[self.p:] - self.fittedvalues #np.dot(self.ys_lagged, self.params)
 
     @cache_readonly
     def sigma_u_mle(self):
@@ -795,7 +802,7 @@ class VARResults(VARProcess):
         return 2 * chain_dot(D_Kinv, sigxsig, D_Kinv.T)
 
     @cache_readonly
-    def loglike(self):
+    def llf(self):
         "Compute VAR(p) loglikelihood"
         return var_loglike(self.resid, self.sigma_u_mle, self.nobs)
 
@@ -808,7 +815,8 @@ class VARResults(VARProcess):
 
     bse = stderr  # statsmodels interface?
 
-    def t(self):
+    @cache_readonly
+    def tvalues(self):
         """Compute t-statistics. Use Student-t(T - Kp - 1) = t(df_resid) to test
         significance.
         """
@@ -818,7 +826,7 @@ class VARResults(VARProcess):
     def pvalues(self):
         """Two-sided p-values for model coefficients from Student t-distribution
         """
-        return stats.t.sf(np.abs(self.t()), self.df_resid)*2
+        return stats.t.sf(np.abs(self.tvalues), self.df_resid)*2
 
     def plot_forecast(self, steps, alpha=0.05, plot_stderr=True):
         """

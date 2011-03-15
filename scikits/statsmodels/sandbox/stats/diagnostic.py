@@ -134,7 +134,7 @@ class CompareJ(object):
         #yhat_z = results_z.fittedvalues
         res_zx = sm.OLS(y, np.column_stack((yhat_x, z))).fit()
         self.res_zx = res_zx  #for testing
-        tstat = res_zx.t()[0]  #use tstat instead after renaming
+        tstat = res_zx.tvalues[0]
         pval = res_zx.pvalues[0]
         if attach:
             self.res_zx = res_zx
@@ -309,9 +309,9 @@ def het_breushpagan(resid, x, exog=None):
     The tests the hypothesis that the residual variance does not depend on
     the variables in x in the form
 
-    :math:`\sigma_i = \\sigma * f(\\alpha_0 + \\alpha z_i)`
+    :math: \sigma_i = \\sigma * f(\\alpha_0 + \\alpha z_i)
 
-    Homoscedasticity implies that :math:`\\alpha=0`
+    Homoscedasticity implies that $\alpha=0$
 
 
     Parameters
@@ -405,7 +405,7 @@ def het_white(y, x, retres=False):
     lmpval = stats.chi2.sf(lm, nvars-1)
     return lm, lmpval, fval, fpval
 
-def het_goldfeldquandt(y, x, idx, split=None, retres=False):
+def het_goldfeldquandt2(y, x, idx, split=None, retres=False):
     '''test whether variance is the same in 2 subsamples
 
     Parameters
@@ -453,7 +453,7 @@ def het_goldfeldquandt(y, x, idx, split=None, retres=False):
     ran sanity check
     '''
     x = np.asarray(x)
-    y = np.asarray(y)**2
+    y = np.asarray(y)
     nobs, nvars = x.shape
     if split is None:
         split = nobs//2
@@ -611,27 +611,30 @@ class HetGoldfeldQuandt(object):
     def __call__(self, y, x, idx=None, split=None):
         return self.run(y, x, idx=idx, split=split, attach=False)
 
-het_goldfeldquandt2 = HetGoldfeldQuandt()
-het_goldfeldquandt2.__doc__ = het_goldfeldquandt2.run.__doc__
+het_goldfeldquandt = HetGoldfeldQuandt()
+het_goldfeldquandt.__doc__ = het_goldfeldquandt.run.__doc__
 
 
 
 
 def neweywestcov(resid, x):
-    ''' did not run  yet
-    from regstats2
-    if idx(29) % HAC (Newey West)
-     L = round(4*(nobs/100)^(2/9));
-     % L = nobs^.25; % as an alternative
-     hhat = repmat(residuals',p,1).*X';
-     xuux = hhat*hhat';
-     for l = 1:L;
-        za = hhat(:,(l+1):nobs)*hhat(:,1:nobs-l)';
-        w = 1 - l/(L+1);
-        xuux = xuux + w*(za+za');
-     end
-     d = struct;
-     d.covb = xtxi*xuux*xtxi;
+    '''
+    Did not run yet
+
+    from regstats2 ::
+
+        if idx(29) % HAC (Newey West)
+        L = round(4*(nobs/100)^(2/9));
+        % L = nobs^.25; % as an alternative
+        hhat = repmat(residuals',p,1).*X';
+        xuux = hhat*hhat';
+        for l = 1:L;
+            za = hhat(:,(l+1):nobs)*hhat(:,1:nobs-l)';
+            w = 1 - l/(L+1);
+            xuux = xuux + w*(za+za');
+        end
+        d = struct;
+        d.covb = xtxi*xuux*xtxi;
     '''
     nobs = resid.shape[0]   #TODO: check this can only be 1d
     nlags = int(round(4*(nobs/100.)**(2/9.)))

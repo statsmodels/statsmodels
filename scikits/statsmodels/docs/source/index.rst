@@ -100,13 +100,13 @@ Table of Contents
    rlm
    discretemod
    tsa
-   var
    stats
    tools
    miscmodels
    internal
    gmm
    distributions
+   datasets
    sandbox
 
 

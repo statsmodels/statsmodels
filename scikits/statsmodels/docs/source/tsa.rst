@@ -63,7 +63,7 @@ Time Series Properties
    stattools.pacf_ols
    stattools.ccovf
    stattools.ccf
-   stattools.pergram
+   stattools.periodogram
    stattools.adfuller
    stattools.q_stat
    stattools.grangercausalitytests
@@ -89,8 +89,8 @@ ARMA and Kalman Filter
 .. autosummary::
    :toctree: generated/
 
-   arima.ARMA
-   arima.ARMAResults
+   arima_model.ARMA
+   arima_model.ARMAResults
    kalmanf.kalmanfilter.KalmanFilter
 
 .. currentmodule:: scikits.statsmodels.tsa
@@ -153,6 +153,16 @@ TSA Tools
 
 Vector Autogressive Processes (VAR)
 """""""""""""""""""""""""""""""""""
+
+.. autosummary::
+   :toctree: generated/
+
+   vector_ar.varmod.VAR
+   vector_ar.varmod.VARProcess
+   vector_ar.varmod.VARResults
+   vector_ar.irf.IRAnalysis
+   vector_ar.varmod.FEVD
+   vector_ar.dynamic.DynamicVAR
 
 .. seealso:: :ref:`VAR documentation <var>`
 

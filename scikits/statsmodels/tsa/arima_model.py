@@ -521,17 +521,22 @@ class ARMAResults(LikelihoodModelResults):
 
     @cache_readonly
     def llf(self):
-        #TODO: needs to carry a method attribute to see which one to use
         return self.model.loglike(self.params)
 
     @cache_readonly
     def bse(self):
-        #TODO: see note above
+        params = self.params
         if not fast_kalman or self.model.method == "css":
-            return np.sqrt(np.diag(-inv(approx_hess_cs(self.params,
+            if len(params) == 1: # can't take an inverse
+                return np.sqrt(-1./approx_hess_cs(params,
+                    self.model.loglike, epsilon=1e-5))
+            return np.sqrt(np.diag(-inv(approx_hess_cs(params,
                 self.model.loglike, epsilon=1e-5))))
         else:
-            return np.sqrt(np.diag(-inv(approx_hess(self.params,
+            if len(params) == 1:
+                return np.sqrt(-1./approx_hess(params,
+                    self.model.loglike, epsilon=1e-3)[0])
+            return np.sqrt(np.diag(-inv(approx_hess(params,
                 self.model.loglike, epsilon=1e-3)[0])))
 
 
@@ -542,9 +547,6 @@ class ARMAResults(LikelihoodModelResults):
             return -inv(approx_hess_cs(x0, func))
         else:
             return -inv(approx_hess(x0, func, epsilon=1e-3)[0])
-
-    def t(self):    # overwrites t() because there is no cov_params
-        return self.params/self.bse
 
     @cache_readonly
     def aic(self):
@@ -642,7 +644,7 @@ class ARMAResults(LikelihoodModelResults):
     def pvalues(self):
         # TODO: is this correct for ARMA?
         df_resid = self.nobs - (self.k+self.q+self.p)
-        return t.sf(np.abs(self.t()), df_resid) * 2
+        return t.sf(np.abs(self.tvalues), df_resid) * 2
 
 
 if __name__ == "__main__":

@@ -24,7 +24,7 @@ ols_resid = sm.OLS(data.endog, data.exog).fit().resid
 # on the lagged residuals
 
 resid_fit = sm.OLS(ols_resid[1:], sm.add_constant(ols_resid[:-1])).fit()
-print resid_fit.t(0)
+print resid_fit.tvalues[0]
 print resid_fit.pvalues[0]
 # While we don't have strong evidence that the errors follow an AR(1)
 # process we continue

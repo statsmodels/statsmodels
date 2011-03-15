@@ -1,4 +1,3 @@
-
 .. _model:
 
 
@@ -37,5 +36,5 @@ define some common methods.
    ResultMixin
    GenericLikelihoodModelResults
 
-.. inheritance-diagram:: scikits.statsmodels.base.model scikits.statsmodels.discrete.discretemod scikits.statsmodels.regression.linear_model scikits.statsmodels.miscmodels.count
+.. inheritance-diagram:: scikits.statsmodels.base.model scikits.statsmodels.discrete.discrete_model scikits.statsmodels.regression.linear_model scikits.statsmodels.miscmodels.count
    :parts: 3

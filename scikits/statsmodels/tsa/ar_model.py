@@ -603,7 +603,7 @@ class AR(LikelihoodModel):
                     fit = AR(endog_tmp).fit(maxlag=lag, method=method,
                             full_output=full_output, trend=trend,
                             maxiter=maxiter, disp=disp)
-                    if np.abs(fit.t(-1)) >= stop:
+                    if np.abs(fit.tvalues[-1]) >= stop:
                         bestlag = lag
                         break
             laglen = bestlag
@@ -686,7 +686,7 @@ class ARResults(LikelihoodModelResults):
 
     Returns
     -------
-    ** Attributes **
+    **Attributes**
 
     aic : float
         Akaike Information Criterion using Lutkephol's definition.
@@ -694,13 +694,13 @@ class ARResults(LikelihoodModelResults):
     avobs : float
         The number of available observations `nobs` - `laglen`
     bic : float
-        Bayes Information Criterion :math:
+        Bayes Information Criterion
         :math:`\\log(\\sigma) + (1+laglen)*\\log(avobs)/avobs`
     bse : array
         The standard errors of the estimated parameters. If `method` is 'cmle',
         then the standard errors that are returned are the OLS standard errors
-        of the coefficients. If the `method` is 'mle' then they are computed using
-        the numerical Hessian.
+        of the coefficients. If the `method` is 'mle' then they are computed
+        using the numerical Hessian.
     fittedvalues : array
         The in-sample predicted values of the fitted AR model. The `laglen`
         initial values are computed via the Kalman Filter if the model is
@@ -713,7 +713,7 @@ class ARResults(LikelihoodModelResults):
     laglen : float
         Lag length. Sometimes used as `p` in the docs.
     llf : float
-        The loglikelihood of the model evaluated at `params'. See `AR.loglike`
+        The loglikelihood of the model evaluated at `params`. See `AR.loglike`
     model : AR model instance
         A reference to the fitted AR model.
     nobs : float
@@ -790,13 +790,10 @@ class ARResults(LikelihoodModelResults):
             hess = approx_hess_cs(self.params, self.model.loglike)
             return np.sqrt(np.diag(-np.linalg.inv(hess)))
 
-    def t(self):    # overwrite t()
-        return self.params/self.bse
-
     @cache_readonly
     def pvalues(self):
         if self.model.method == "cmle": # uses asymptotics so norm
-            return norm.sf(np.abs(self.t()))*2
+            return norm.sf(np.abs(self.tvalues))*2
 
     @cache_readonly
     def aic(self):
