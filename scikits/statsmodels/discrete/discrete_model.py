@@ -194,18 +194,6 @@ class Poisson(DiscreteModel):
         A reference to the exogenous design.
     nobs : float
         The number of observations of the model.
-
-    Methods
-    -------
-    cdf
-    fit
-    hessian
-    information
-    initialize
-    loglike
-    pdf
-    predict
-    score
     """
 
     def cdf(self, X):
@@ -397,18 +385,6 @@ class Logit(DiscreteModel):
         A reference to the exogenous design.
     nobs : float
         The number of observations of the model.
-
-    Methods
-    --------
-    cdf
-    fit
-    hessian
-    information
-    initialize
-    loglike
-    pdf
-    predict
-    score
     """
 
     def cdf(self, X):
@@ -578,18 +554,6 @@ class Probit(DiscreteModel):
         A reference to the exogenous design.
     nobs : float
         The number of observations of the model.
-
-    Methods
-    --------
-    cdf
-    fit
-    hessian
-    information
-    initialize
-    loglike
-    pdf
-    predict
-    score
     """
 
     def cdf(self, X):
@@ -703,8 +667,10 @@ class Probit(DiscreteModel):
         Notes
         -----
         .. math:: \\frac{\\partial^{2}\\ln L}{\\partial\\beta\\partial\\beta^{\\prime}}=-\lambda_{i}\\left(\\lambda_{i}+x_{i}^{\\prime}\\beta\\right)x_{i}x_{i}^{\\prime}
+
         where
         .. math:: \\lambda_{i}=\\frac{q_{i}\\phi\\left(q_{i}x_{i}^{\\prime}\\beta\\right)}{\\Phi\\left(q_{i}x_{i}^{\\prime}\\beta\\right)}
+
         and :math:`q=2y-1`
         """
         X = self.exog
@@ -765,16 +731,16 @@ class MNLogit(DiscreteModel):
 
     Attributes
     ----------
+    endog : array
+        A reference to the endogenous response variable
+    exog : array
+        A reference to the exogenous design.
     J : float
         The number of choices for the endogenous variable. Note that this
         is zero-indexed.
     K : float
         The actual number of parameters for the exogenous design.  Includes
         the constant if the design has one.
-    endog : array
-        A reference to the endogenous response variable
-    exog : array
-        A reference to the exogenous design.
     names : dict
         A dictionary mapping the column number in `wendog` to the variables
         in `endog`.
@@ -785,18 +751,6 @@ class MNLogit(DiscreteModel):
         Each column of j is a dummy variable indicating the category of
         each observation. See `names` for a dictionary mapping each column to
         its category.
-
-    Methods
-    --------
-    cdf
-    fit
-    hessian
-    information
-    initialize
-    loglike
-    pdf
-    predict
-    score
 
     Notes
     -----
@@ -885,6 +839,7 @@ class MNLogit(DiscreteModel):
         Notes
         ------
         .. math:: \\ln L=\\sum_{i=1}^{n}\\sum_{j=0}^{J}d_{ij}\\ln\\left(\\frac{\\exp\\left(\\beta_{j}^{\\prime}x_{i}\\right)}{\\sum_{k=0}^{J}\\exp\\left(\\beta_{k}^{\\prime}x_{i}\\right)}\\right)
+
         where :math:`d_{ij}=1` if individual `i` chose alternative `j` and 0
         if not.
         """
@@ -938,7 +893,7 @@ class MNLogit(DiscreteModel):
         .. math:: \\frac{\\partial^{2}\\ln L}{\\partial\\beta_{j}\\partial\\beta_{l}}=-\\sum_{i=1}^{n}\\frac{\\exp\\left(\\beta_{j}^{\\prime}x_{i}\\right)}{\\sum_{k=0}^{J}\\exp\\left(\\beta_{k}^{\\prime}x_{i}\\right)}\\left[\\boldsymbol{1}\\left(j=l\\right)-\\frac{\\exp\\left(\\beta_{l}^{\\prime}x_{i}\\right)}{\\sum_{k=0}^{J}\\exp\\left(\\beta_{k}^{\\prime}x_{i}\\right)}\\right]x_{i}x_{l}^{\\prime}
 
         where
-        :math:`\boldsymbol{1}\left(j=l\right)` equals 1 if `j` = `l` and 0
+        :math:`\\boldsymbol{1}\\left(j=l\\right)` equals 1 if `j` = `l` and 0
         otherwise.
 
         The actual Hessian matrix has J**2 * K x K elements. Our Hessian
@@ -1208,13 +1163,6 @@ class DiscreteResults(LikelihoodModelResults):
         with degrees of freedom `df_model`.
     prsquared : float
         McFadden's pseudo-R-squared. 1 - (`llf`/`llnull`)
-
-    Methods
-    -------
-    margeff
-        Get marginal effects of the fitted model.
-    conf_int
-
     """
 
     def __init__(self, model, mlefit):
@@ -1323,21 +1271,23 @@ class DiscreteResults(LikelihoodModelResults):
         ----------
         at : str, optional
             Options are:
-            'overall', The average of the marginal effects at each observation.
-            'mean', The marginal effects at the mean of each regressor.
-            'median', The marginal effects at the median of each regressor.
-            'zero', The marginal effects at zero for each regressor.
-            'all', The marginal effects at each observation.
+            - 'overall', The average of the marginal effects at each observation.
+            - 'mean', The marginal effects at the mean of each regressor.
+            - 'median', The marginal effects at the median of each regressor.
+            - 'zero', The marginal effects at zero for each regressor.
+            - 'all', The marginal effects at each observation.
+
             Note that if `exog` is specified, then marginal effects for all
             variables not specified by `exog` are calculated using the `at`
             option.
         method : str, optional
-            'dydx' - dy/dx - No transformation is made and marginal effects
-                are returned.  This is the default.
-            'eyex' - estimate elasticities of variables in `exog` --
-                d(lny)/d(lnx)
-            'dyex' - estimate semielasticity -- dy/d(lnx)
-            'eydx' - estimate semeilasticity -- d(lny)/dx
+            - 'dydx' - dy/dx - No transformation is made and marginal effects
+              are returned.  This is the default.
+            - 'eyex' - estimate elasticities of variables in `exog` --
+              d(lny)/d(lnx)
+            - 'dyex' - estimate semielasticity -- dy/d(lnx)
+            - 'eydx' - estimate semeilasticity -- d(lny)/dx
+
             Note that tranformations are done after each observation is
             calculated.  Semi-elasticities for binary variables are computed
             using the midpoint method. 'dyex' and 'eyex' do not make sense

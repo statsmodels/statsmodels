@@ -220,8 +220,8 @@ class HuberScale(object):
 
     where the Huber function is
 
-    chi(x) = (x**2)/2       for |x| < d
-    chi(x) = (d**2)/2       for |x| >= d
+    chi(x) = (x**2)/2       for \|x\| < d
+    chi(x) = (d**2)/2       for \|x\| >= d
 
     and the Huber constant h = (n-p)/n*(d**2 + (1-d**2)*\
             scipy.stats.norm.cdf(d) - .5 - d*sqrt(2*pi)*exp(-0.5*d**2)

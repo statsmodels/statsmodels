@@ -14,12 +14,6 @@ class Link(object):
     A generic link function for one-parameter exponential family.
 
     `Link` does nothing, but lays out the methods expected of any subclass.
-
-    Methods
-    --------
-    call
-    inverse
-    deriv
     """
 
     def __call__(self, p):
@@ -72,12 +66,6 @@ class Link(object):
 class Logit(Link):
     """
     The logit transform
-
-    Methods
-    -------
-    call
-    inverse
-    derivative
 
     Notes
     -----
@@ -178,20 +166,13 @@ class logit(Logit):
     pass
 
 class Power(Link):
-
     """
     The power transform
 
     Parameters
     ----------
     power : float
-        The exponent of the power tranform
-
-    Methods
-    -------
-    call
-    inverse
-    derivative
+        The exponent of the power transform
 
     Notes
     -----
@@ -243,7 +224,7 @@ class Power(Link):
 
         Notes
         -----
-        g^(-1)(`z`) = `z`**(1/`power`)
+        g^(-1)(z`) = `z`**(1/`power`)
         """
         return np.power(z, 1. / self.power)
 
@@ -274,7 +255,7 @@ class inverse_power(Power):
 
     Notes
     -----
-    g(`p`) = 1 / `p`
+    g(p) = 1/p
 
     Alias of statsmodels.family.links.Power(power=-1.)
     """
@@ -302,7 +283,7 @@ class inverse_squared(Power):
 
     Notes
     -----
-    g(`p`) = 1 / `p`**2
+    g(`p`) = 1/(`p`\ \*\*2)
 
     Alias of statsmodels.family.links.Power(power=2.)
     """
@@ -326,19 +307,10 @@ class Log(Link):
     """
     The log transform
 
-    Methods
-    -------
-    call
-    inverse
-    derivative
-
     Notes
     -----
     call and derivative call a private method _clean to trim the data by
-    1e-10 so that p is in (0,1)
-
-    Alias of Log:
-    log = Log()
+    1e-10 so that p is in (0,1). log is an alias of Log.
     """
 
     tol = 1.0e-10
@@ -383,7 +355,7 @@ class Log(Link):
 
         Notes
         -----
-        g^(-1)(z) = exp(z)
+        g^{-1}(z) = exp(z)
         """
         return np.exp(z)
 
@@ -430,12 +402,6 @@ class CDFLink(Logit):
     ----------
     dbn : scipy.stats distribution
         Default is dbn=scipy.stats.norm
-
-    Methods
-    -------
-    call
-    inverse
-    derivative
 
     Notes
     -----
@@ -545,12 +511,6 @@ class CLogLog(Logit):
     CLogLog inherits from Logit in order to have access to its _clean method
     for the link and its derivative.
 
-    Methods
-    -------
-    call
-    inverse
-    derivative
-
     Notes
     -----
     CLogLog is untested.
@@ -641,12 +601,6 @@ class NegativeBinomial(object):
         Alpha is the ancillary parameter of the Negative Binomial link function.
         It is assumed to be nonstochastic.  The default value is 1. Permissible
         values are usually assumed to be in (.01,2).
-
-    Methods
-    -------
-    call
-    inverse
-    derivative
     '''
 
     tol = 1.0e-10

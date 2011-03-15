@@ -21,25 +21,27 @@ class Arma(GenericLikelihoodModel):  #switch to generic mle
     univariate Autoregressive Moving Average model, conditional on initial values
 
     The ARMA model is estimated either with conditional Least Squares or with
-    conditional Maximum Likelihood. The implementation is using scipy.filter.lfilter
-    which makes it faster than the Kalman Filter Implementation. The Kalman Filter
-    Implementation however uses the exact Maximum Likelihood and will be more
-    accurate, statistically more efficent in small samples.
+    conditional Maximum Likelihood. The implementation is
+    using scipy.filter.lfilter which makes it faster than the Kalman Filter
+    Implementation. The Kalman Filter Implementation however uses the exact
+    Maximum Likelihood and will be more accurate, statistically more efficent
+    in small samples.
 
     In large samples conditional LS, conditional MLE and exact MLE should be very
     close to each other, they are equivalent asymptotically.
 
-    Note:
+    Notes
+    -----
     this can subclass TSMLEModel
 
     TODO:
-    - CondLS return raw estimation results
-    - needs checking that there is no wrong state retained, when running fit several times
-        with different options
-    - still needs consistent order options.
-    - Currently assumes that the mean is zero, no mean or effect of exogenous variables
-        are included in the estimation.
 
+    - CondLS return raw estimation results
+    - needs checking that there is no wrong state retained, when running fit
+      several times with different options
+    - still needs consistent order options.
+    - Currently assumes that the mean is zero, no mean or effect of exogenous
+      variables are included in the estimation.
 
     """
 
@@ -72,8 +74,6 @@ class Arma(GenericLikelihoodModel):  #switch to generic mle
         #errorsest = signal.lfilter(rhoy, rhoe, self.endog, zi=zi)[0] #zi is also returned
         errorsest = signal.lfilter(ar, ma, self.endog)
         return errorsest
-
-
 
     def loglike(self, params):
         """
@@ -161,24 +161,25 @@ class Arma(GenericLikelihoodModel):  #switch to generic mle
 
         Parameters
         ----------
-            order : sequence
-                p,d,q where p is the number of AR lags, d is the number of
-                differences to induce stationarity, and q is the number of
-                MA lags to estimate.
-            method : str {"ls", "ssm"}
-                Method of estimation.  LS is conditional least squares.
-                SSM is state-space model and the Kalman filter is used to
-                maximize the exact likelihood.
-            rhoy0, rhoe0 : array_like (optional)
-                starting values for estimation
+        order : sequence
+            p,d,q where p is the number of AR lags, d is the number of
+            differences to induce stationarity, and q is the number of
+            MA lags to estimate.
+        method : str {"ls", "ssm"}
+            Method of estimation.  LS is conditional least squares.
+            SSM is state-space model and the Kalman filter is used to
+            maximize the exact likelihood.
+        rhoy0, rhoe0 : array_like (optional)
+            starting values for estimation
 
         Returns
         -------
-            rh, cov_x, infodict, mesg, ier : output of scipy.optimize.leastsq
-            rh :
-                estimate of lag parameters, concatenated [rhoy, rhoe]
-            cov_x :
-                unscaled (!) covariance matrix of coefficient estimates
+        (rh, cov_x, infodict, mesg, ier) : output of scipy.optimize.leastsq
+
+        rh :
+            estimate of lag parameters, concatenated [rhoy, rhoe]
+        cov_x :
+            unscaled (!) covariance matrix of coefficient estimates
         '''
         if not hasattr(order, '__iter__'):
             raise ValueError("order must be an iterable sequence.  Got type \

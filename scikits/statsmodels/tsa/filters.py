@@ -31,7 +31,7 @@ def fftconvolveinv(in1, in2, mode="full"):
     copied from scipy.signal.signaltools, but here used to try out inverse filter
     doesn't work or I can't get it to work
 
-     2010-10-23:
+    2010-10-23:
     looks ok to me for 1d,
     from results below with padded data array (fftp)
     but it doesn't work for multidimensional inverse filter (fftn)
@@ -72,6 +72,7 @@ def fftconvolve3(in1, in2=None, in3=None, mode="full"):
     """Convolve two N-dimensional arrays using FFT. See convolve.
 
     for use with arma  (old version: in1=num in2=den in3=data
+
     * better for consistency with other functions in1=data in2=num in3=den
     * note in2 and in3 need to have consistent dimension/shape
       since I'm using max of in2, in3 shapes and not the sum

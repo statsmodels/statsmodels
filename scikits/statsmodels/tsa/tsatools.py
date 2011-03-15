@@ -81,7 +81,7 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
         that is the name of the column containing the variable. Or `col` can
         be an int of the zero-based column index. If it's a 1d array `col`
         can be None.
-    lagmat : int
+    lags : int
         The number of lags desired.
     drop : bool
         Whether to keep the contemporaneous variable for the data.
@@ -251,7 +251,7 @@ def lagmat(x, maxlag, trim='forward', original='ex'):
     original : str {'ex','sep','in'}
         * 'ex' : drops the original array returning only the lagged values.
         * 'in' : returns the original array and the lagged values as a single
-        array.
+          array.
         * 'sep' : returns a tuple (original array, lagged values). The original
                   array is truncated to have the same number of rows as
                   the returned lagmat.
@@ -344,7 +344,7 @@ def lagmat2ds(x, maxlag0, maxlagex=None, dropex=0, trim='forward'):
     dropex : int (default is 0)
         exclude first dropex lags from other variables
         for all variables, except the first, lags from dropex to maxlagex are
-            included
+        included
     trim : string
         * 'forward' : trim invalid observations in front
         * 'backward' : trim invalid initial observations

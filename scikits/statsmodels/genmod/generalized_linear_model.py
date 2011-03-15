@@ -81,27 +81,6 @@ class GLM(LikelihoodModel):
     weights : array
         The value of the weights after the last iteration of fit.
 
-    Methods
-    -------
-    estimate_scale
-        Estimates the dispersion / scale of the model.
-    fit
-        Fits the model using iteratively reweighted least squares.
-    information
-        Returns the Fisher information matrix.  Not yet implemented.
-    initialize
-        (Re)initialize the design.  Resets history and number of iterations.
-    loglike
-        Returns the loglikelihood at `params` for a given distribution family.
-    newton
-        Used to fit the model via Newton-Raphson.  Not yet implemented.
-    predict
-        Returns the linear predictor of the model.
-    score
-        Returns the score matrix of the model.  Not yet implemented.
-
-
-
     Examples
     --------
     >>> import scikits.statsmodels.api as sm
@@ -513,28 +492,6 @@ class GLMResults(LikelihoodModelResults):
         See GLM.fit and GLM.estimate_scale for more information.
     stand_errors : array
         The standard errors of the fitted GLM.   #TODO still named bse
-
-    Methods
-    -------
-    conf_int
-        Returns the confidence intervals for the parameter estimates.  See
-        statsmodels.model.LikelihoodModelResults.conf_int for more information.
-        Note that the confidence interval for the GLMs are based on the
-        standard normal distribution.
-    cov_params
-        Returns the estimated covariance matrix scaled by `scale`.
-    f_test
-        Compute an F test / F contrast for a contrast matrix.
-        See statsmodels.model.LikelihoodModelResults.f_test for more
-        information.  Note that the f_test method for GLMs is untested.
-    t
-        Return the t-values for the parameter estimates.  Note that the
-        z values are more appropriate for GLMs.  A convenenience function
-        is not yet implemented for z values.
-    t_test
-        t test linear restrictions for the model.
-        See statsmodels.model.LikelihoodModelResults.t_test for more
-        information.  Note that t_test for GLMS is untested.
 
     See Also
     --------

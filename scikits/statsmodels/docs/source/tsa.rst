@@ -154,6 +154,16 @@ TSA Tools
 Vector Autogressive Processes (VAR)
 """""""""""""""""""""""""""""""""""
 
+.. autosummary::
+   :toctree: generated/
+
+   vector_ar.varmod.VAR
+   vector_ar.varmod.VARProcess
+   vector_ar.varmod.VARResults
+   vector_ar.irf.IRAnalysis
+   vector_ar.varmod.FEVD
+   vector_ar.dynamic.DynamicVAR
+
 .. seealso:: :ref:`VAR documentation <var>`
 
 VARMA Process

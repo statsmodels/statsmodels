@@ -24,38 +24,6 @@ class Family(object):
     variance : a variance function
         Measures the variance as a function of the mean probabilities.
         See the individual families for the default variance function.
-
-    Methods
-    -------
-    deviance
-        Returns the deviance function of a (Y,mu) pair for a model.
-        Deviance is usually defined as twice the loglikelihood ratio of a
-        fitted model.
-        Deviance = sum_i(2loglike(Y_i,Y_i) - 2loglike(Y_i,mu_i)) / scale
-        Where loglike is defined for each family.
-    resid_dev
-        Returns the deviance residuals for a fitted model.
-        `resid_dev` is defined for each family.
-    fitted
-        Returns the fitted values based on the linear predictor of the model.
-        Calls the inverse of the link function.
-    loglike
-        The loglikelihood function.  `loglike` is defined for each family.
-    predict
-        The linear predictors based on a given `mu`.  Returns the link's call
-        method.
-    resid_anscombe
-        The Anscombe residuals.  `resid_anscombe` is defined for each family.
-        In general, the Anscombe residuals are defined as
-        `resid_anscombe` =
-            (A(Y_i) - A(mu_hat_i))/(A'(mu_hat_i)*sqrt(V(mu_hat_i)))
-            where A(.) = integral(dmu/V^(1/3)(mu)) and
-            V is the variance function.
-    starting_mu
-        The value of mu at the start of the IRLS algorithm.
-    weights
-        The weighting function used in the IRLS algorithm.
-        `weights` = 1 / (link'(mu)**2 * variance(mu))
     """
 #TODO: change these class attributes, use valid somewhere...
     valid = [-np.inf, np.inf]
@@ -100,7 +68,7 @@ class Family(object):
 
     #link property for each family
     #pointer to link instance
-    link = property(_getlink, _setlink)
+    link = property(_getlink, _setlink, doc="Link function for family")
 
     def __init__(self, link, variance):
         self.link = link()
@@ -145,7 +113,7 @@ class Family(object):
             The weights for the IRLS steps
 
         Notes
-        ---------
+        -----
         `w` = 1 / (link'(`mu`)**2 * variance(`mu`))
         """
         return 1. / (self.link.deriv(mu)**2 * self.variance(mu))
@@ -265,7 +233,7 @@ class Family(object):
 
         See also
         --------
-        statsmodesl.family.family.Family docstring and the `resid_anscombe` for
+        statsmodels.families.family.Family docstring and the `resid_anscombe` for
         the individual families for more information.
         """
         raise NotImplementedError
@@ -277,33 +245,21 @@ class Poisson(Family):
     Parameters
     ----------
     link : a link instance, optional
-        The default link for the Poisson family is the log link.
-        Available links are log, identity, and sqrt.
-        See statsmodels.family.links for more information.
+        The default link for the Poisson family is the log link. Available
+        links are log, identity, and sqrt. See statsmodels.family.links for
+        more information.
 
     Attributes
     ----------
     link : a link instance
         The link function of the Poisson instance.
     variance : varfuncs instance
-        `variance` is an instance of statsmodels.family.varfuncs.mu
-    valid (class attribute) : list
-        A list contained the domain for the Poisson family.
-
-    Methods
-    -------
-    resid_dev
-        Returns the deviance residuals for the Poisson family.
-    deviance
-        Returns the value of the deviance function for the Poisson family.
-    loglike
-        Returns the value of the loglikelihood function for the Poisson family.
-    resid_anscombe
-        Returns the Anscombe residuals for the Poisson family.
+        `variance` is an instance of
+        statsmodels.genmod.families.family.varfuncs.mu
 
     See also
     --------
-    statsmodels.family.family.Family
+    statsmodels.genmod.families.family.Family
     """
 
     links = [L.log, L.identity, L.sqrt]
@@ -359,7 +315,7 @@ class Poisson(Family):
         -----
         If a constant term is included it is defined as
 
-        `deviance` = 2*sum_i(Y*log(Y/mu))
+        :math:`deviance = 2*\\sum_{i}(Y*\\log(Y/\\mu))`
         '''
         if np.any(Y==0):
             retarr = np.zeros(Y.shape)
@@ -416,7 +372,7 @@ class Poisson(Family):
 
         Notes
         -----
-        `resid_anscombe` = (3/2.)*(`Y`**(2/3.) - `mu`**(2/3.))/`mu`**(1/6.)
+        resid_anscombe = :math:`(3/2.)*(Y^{2/3.} - \\mu**(2/3.))/\\mu^{1/6.}`
         """
         return (3/2.)*(Y**(2/3.)-mu**(2/3.))/mu**(1/6.)
 
@@ -439,20 +395,9 @@ class Gaussian(Family):
     variance : varfunc instance
         `variance` is an instance of statsmodels.family.varfuncs.constant
 
-    Methods
-    -------
-    resid_dev
-        Returns the deviance residuals for the Gaussian family.
-    deviance
-        Returns the value of the deviance function for the Gaussian family.
-    loglike
-        Returns the value of the loglikelihood function for the Gaussian family.
-    resid_anscombe
-        Returns the Anscombe residuals for the Gaussian family.
-
     See also
     --------
-    statsmodels.family.family.Family
+    statsmodels.genmod.families.family.Family
     """
 
     links = [L.log, L.identity, L.inverse_power]
@@ -595,20 +540,9 @@ class Gamma(Family):
     variance : varfunc instance
         `variance` is an instance of statsmodels.family.varfuncs.mu_squared
 
-    Methods
-    -------
-    resid_dev
-        Returns the deviance residuals for the Gamma family.
-    deviance
-        Returns the value of the deviance function for the Gamma family.
-    loglike
-        Returns the value of the loglikelihood function for the Gamma family.
-    resid_anscombe
-        Returns the Anscombe residuals for the Gamma family.
-
     See also
     --------
-    statsmodels.family.family.Family
+    statsmodels.genmod.families.family.Family
     """
 
     links = [L.log, L.identity, L.inverse_power]
@@ -753,24 +687,9 @@ class Binomial(Family):
     variance : varfunc instance
         `variance` is an instance of statsmodels.family.varfuncs.binary
 
-    Methods
-    -------
-    resid_dev
-        Returns the deviance residuals for the Binomial family.
-    deviance
-        Returns the value of the deviance function for the Binomial family.
-    initialize
-        This function is specific to the Binomial family.  It initializes
-        the data given by endog.  See Binomial.initialize for more information.
-    loglike
-        Returns the value of the loglikelihood function for the Binomial
-        family.
-    resid_anscombe
-        Returns the Anscombe residuals for the Binomial family.
-
     See also
     --------
-    statsmodels.family.family.Family
+    statsmodels.genmod.families.family.Family
 
     Notes
     -----
@@ -1014,22 +933,9 @@ class InverseGaussian(Family):
     variance : varfunc instance
         `variance` is an instance of statsmodels.family.varfuncs.mu_cubed
 
-    Methods
-    -------
-    resid_dev
-        Returns the deviance residuals for the inverse Gaussian family.
-    deviance
-        Returns the value of the deviance function for the inverse
-        Gaussian family.
-    loglike
-        Returns the value of the loglikelihood function for the
-        inverse Gaussian family.
-    resid_anscombe
-        Returns the Anscombe residuals for the inverse Gaussian family.
-
     See also
     --------
-    statsmodels.family.family.Family
+    statsmodels.genmod.families.family.Family
 
     Notes
     -----
@@ -1165,22 +1071,9 @@ class NegativeBinomial(Family):
     variance : varfunc instance
         `variance` is an instance of statsmodels.family.varfuncs.nbinom
 
-    Methods
-    -------
-    resid_dev
-        Returns the deviance residuals for the megative binomial family.
-    deviance
-        Returns the value of the deviance function for the negative binomial
-        family.
-    loglike
-        Returns the value of the loglikelihood function for the negative
-        binomial family.
-    resid_anscombe
-        Returns the Anscombe residuals for the negative binomial family.
-
     See also
     --------
-    statsmodels.family.family.Family
+    scikits.statsmodels.genmod.families.family.Family
 
     Notes
     -----
@@ -1234,11 +1127,14 @@ class NegativeBinomial(Family):
         `deviance` = sum(piecewise)
 
         where piecewise is defined as
-        if Y_i == 0:
-            piecewise_i = 2*log(1+alpha*mu)/alpha
-        if Y_i == 0:
-            piecewise_i = 2*Y*log(Y/mu)-2/alpha*(1+alpha*Y)*\
-                    log((1+alpha*Y)/(1+alpha*mu))
+
+        if :math:`Y_{i} == 0:`
+
+        piecewise_i = :math:`2\\log\\left(1+\\alpha*\\mu\\right)/\\alpha`
+
+        if :math:`Y_{i} > 0`:
+
+        piecewise_i = :math:`2 Y \\log(Y/\\mu)-2/\\alpha(1+\\alpha Y)*\\log((1+\\alpha Y)/(1+\\alpha\\mu))`
         """
         iszero = np.equal(Y,0)
         notzero = 1 - iszero
@@ -1272,11 +1168,11 @@ class NegativeBinomial(Family):
         `resid_dev` = sign(Y-mu) * sqrt(piecewise)
 
         where piecewise is defined as
-        if Y_i == 0:
-            piecewise_i = 2*log(1+alpha*mu)/alpha
-        if Y_i == 0:
-            piecewise_i = 2*Y*log(Y/mu)-2/alpha*(1+alpha*Y)*\
-                    log((1+alpha*Y)/(1+alpha*mu))
+        if :math:`Y_i = 0`:
+        :math:`piecewise_i = 2*log(1+alpha*mu)/alpha`
+
+        if :math:`Y_i > 0`:
+        :math:`piecewise_i = 2*Y*log(Y/\\mu)-2/\\alpha*(1+\\alpha*Y)*log((1+\\alpha*Y)/(1+\\alpha*\\mu))`
         '''
         iszero = np.equal(Y,0)
         notzero = 1 - iszero
