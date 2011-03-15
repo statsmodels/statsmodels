@@ -134,7 +134,7 @@ class CompareJ(object):
         #yhat_z = results_z.fittedvalues
         res_zx = sm.OLS(y, np.column_stack((yhat_x, z))).fit()
         self.res_zx = res_zx  #for testing
-        tstat = res_zx.t()[0]  #use tstat instead after renaming
+        tstat = res_zx.tvalues[0]
         pval = res_zx.pvalues[0]
         if attach:
             self.res_zx = res_zx
@@ -309,9 +309,9 @@ def het_breushpagan(resid, x, exog=None):
     The tests the hypothesis that the residual variance does not depend on
     the variables in x in the form
 
-    :math:`\sigma_i = \\sigma * f(\\alpha_0 + \\alpha z_i)`
+    :math: \sigma_i = \\sigma * f(\\alpha_0 + \\alpha z_i)
 
-    Homoscedasticity implies that :math:`\\alpha=0`
+    Homoscedasticity implies that $\alpha=0$
 
 
     Parameters

@@ -3,7 +3,7 @@ from numpy.testing import assert_almost_equal, assert_equal
 import scikits.statsmodels.sandbox.tsa.fftarma as fa
 from scikits.statsmodels.tsa.descriptivestats import TsaDescriptive
 from scikits.statsmodels.tsa.arma_mle import Arma
-from scikits.statsmodels.tsa.arima import ARMA
+from scikits.statsmodels.tsa.arima_model import ARMA
 from results import results_arma
 import os
 try:
@@ -121,7 +121,7 @@ class CheckArmaResults(object):
 
     decimal_t = DECIMAL_2 # only 2 decimal places in gretl output
     def test_tvalues(self):
-        assert_almost_equal(self.res1.t(), self.res2.tvalues, self.decimal_t)
+        assert_almost_equal(self.res1.tvalues, self.res2.tvalues, self.decimal_t)
 
     decimal_sigma2 = DECIMAL_4
     def test_sigma2(self):

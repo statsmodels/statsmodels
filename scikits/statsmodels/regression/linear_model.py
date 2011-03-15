@@ -375,7 +375,7 @@ class WLS(GLS):
     >>> results = wls_model.fit()
     >>> results.params
     array([ 0.0952381 ,  2.91666667])
-    >>> results.t()
+    >>> results.tvalues
     array([ 0.35684428,  2.0652652 ])
     <T test: effect=2.9166666666666674, sd=1.4122480109543243, t=2.0652651970780505, p=0.046901390323708769, df_denom=5>
     >>> print results.f_test([1,0])
@@ -497,7 +497,7 @@ class OLS(WLS):
     >>> # or results = model.results
     >>> results.params
     array([ 0.25      ,  2.14285714])
-    >>> results.t()
+    >>> results.tvales
     array([ 0.98019606,  1.87867287])
     >>> print results.t_test([0,1])
     <T test: effect=2.1428571428571423, sd=1.1406228159050935, t=1.8786728732554485, p=0.059539737780605395, df_denom=5>
@@ -566,7 +566,7 @@ class GLSAR(GLS):
     AR coefficients: [-0.61893842 -0.88152263]
     >>> results.params
     array([ 1.58747943, -0.56145497])
-    >>> results.t()
+    >>> results.tvalues
     array([ 30.796394  ,  -2.66543144])
     >>> print results.t_test([0,1])
     <T test: effect=-0.56145497223945595, sd=0.21064318655324663, t=-2.6654314408481032, p=0.022296117189135045, df_denom=5>
@@ -983,7 +983,7 @@ class RegressionResults(LikelihoodModelResults):
 
     @cache_readonly
     def pvalues(self):
-        return stats.t.sf(np.abs(self.t()), self.df_resid)*2
+        return stats.t.sf(np.abs(self.tvalues), self.df_resid)*2
 
     @cache_readonly
     def llf(self):
@@ -1284,7 +1284,7 @@ class RegressionResults(LikelihoodModelResults):
 
         part2data = zip([self.params[i] for i in range(len(xname))],
                         [self.bse[i] for i in range(len(xname))],
-                        [self.t()[i] for i in range(len(xname))],
+                        [self.tvalues[i] for i in range(len(xname))],
                         [self.pvalues[i] for i in range(len(xname))])
         part2header = ('coefficient', 'std. error', 't-statistic', 'prob.')
         part2stubs = xname

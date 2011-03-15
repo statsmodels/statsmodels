@@ -603,7 +603,7 @@ class AR(LikelihoodModel):
                     fit = AR(endog_tmp).fit(maxlag=lag, method=method,
                             full_output=full_output, trend=trend,
                             maxiter=maxiter, disp=disp)
-                    if np.abs(fit.t(-1)) >= stop:
+                    if np.abs(fit.tvalues[-1]) >= stop:
                         bestlag = lag
                         break
             laglen = bestlag
@@ -790,13 +790,10 @@ class ARResults(LikelihoodModelResults):
             hess = approx_hess_cs(self.params, self.model.loglike)
             return np.sqrt(np.diag(-np.linalg.inv(hess)))
 
-    def t(self):    # overwrite t()
-        return self.params/self.bse
-
     @cache_readonly
     def pvalues(self):
         if self.model.method == "cmle": # uses asymptotics so norm
-            return norm.sf(np.abs(self.t()))*2
+            return norm.sf(np.abs(self.tvalues))*2
 
     @cache_readonly
     def aic(self):

@@ -67,6 +67,132 @@ def add_trend(X, trend="c", prepend=False):
                 in trendarr.dtype.names], usemask=false, asrecarray=return_rec)
     return X
 
+def add_lag(x, col=None, lags=1, drop=False, insert=True):
+    """
+    Returns an array with lags included given an array.
+
+    Parameters
+    ----------
+    x : array
+        An array or NumPy ndarray subclass. Can be either a 1d or 2d array with
+        observations in columns.
+    col : 'string', int, or None
+        If data is a structured array or a recarray, `col` can be a string
+        that is the name of the column containing the variable. Or `col` can
+        be an int of the zero-based column index. If it's a 1d array `col`
+        can be None.
+    lagmat : int
+        The number of lags desired.
+    drop : bool
+        Whether to keep the contemporaneous variable for the data.
+    insert : bool or int
+        If True, inserts the lagged values after `col`. If False, appends
+        the data. If int inserts the lags at int.
+
+    Returns
+    -------
+    array : ndarray
+        Array with lags
+
+    Examples
+    --------
+
+    >>> import scikits.statsmodels.api as sm
+    >>> data = sm.datasets.macrodata.load()
+    >>> data = data.data[['year','quarter','realgdp','cpi']]
+    >>> data = sm.tsa.add_lag(data, 'realgdp', lags=2)
+
+    Notes
+    -----
+    Trims the array both forward and backward, so that the array returned
+    so that the length of the returned array is len(`X`) - lags. The lags are
+    returned in increasing order, ie., t-1,t-2,...,t-lags
+    """
+    if x.dtype.names:
+        names = x.dtype.names
+        if not col and np.squeeze(x).ndim > 1:
+            raise IndexError, "col is None and the input array is not 1d"
+        elif len(names) == 1:
+            col = names[0]
+        if isinstance(col, int):
+            col = x.dtype.names[col]
+        contemp = x[col]
+
+        # make names for lags
+        tmp_names = [col + '_'+'L(%i)' % i for i in range(1,lags+1)]
+        ndlags = lagmat(contemp, maxlag=lags, trim='Both')
+
+        # get index for return
+        if insert is True:
+            ins_idx = names.index(col) + 1
+        elif insert is False:
+            ins_idx = len(names) + 1
+        else: # insert is an int
+            if insert > len(names):
+                raise Warning("insert > number of variables, inserting at the"+
+                              " last position")
+            ins_idx = insert
+
+        first_names = list(names[:ins_idx])
+        last_names = list(names[ins_idx:])
+
+        if drop:
+            if col in first_names:
+                first_names.pop(first_names.index(col))
+            else:
+                last_names.pop(last_names.index(col))
+
+        if first_names: # only do this if x isn't "empty"
+            first_arr = nprf.append_fields(x[first_names][lags:],tmp_names,
+                        ndlags.T, usemask=False)
+        else:
+            first_arr = np.zeros(len(x)-lags, dtype=zip(tmp_names,
+                (x[col].dtype,)*lags))
+            for i,name in enumerate(tmp_names):
+                first_arr[name] = ndlags[:,i]
+        if last_names:
+            return nprf.append_fields(first_arr, last_names,
+                    [x[name][lags:] for name in last_names], usemask=False)
+        else: # lags for last variable
+            return first_arr
+
+    else: # we have an ndarray
+
+        if x.ndim == 1: # make 2d if 1d
+            x = x[:,None]
+        if col is None:
+            col = 0
+
+        # handle negative index
+        if col < 0:
+            col = x.shape[1] + col
+
+        contemp = x[:,col]
+
+        if insert is True:
+            ins_idx = col + 1
+        elif insert is False:
+            ins_idx = x.shape[1]
+        else:
+            if insert < 0: # handle negative index
+                insert = x.shape[1] + insert + 1
+            if insert > x.shape[1]:
+                insert = x.shape[1]
+                raise Warning("insert > number of variables, inserting at the"+
+                              " last position")
+            ins_idx = insert
+
+        ndlags = lagmat(contemp, lags, trim='Both')
+        first_cols = range(ins_idx)
+        last_cols = range(ins_idx,x.shape[1])
+        if drop:
+            if col in first_cols:
+                first_cols.pop(first_cols.index(col))
+            else:
+                last_cols.pop(last_cols.index(col))
+        return np.column_stack((x[lags:,first_cols],ndlags,
+                    x[lags:,last_cols]))
+
 def detrend(x, order=1, axis=0):
     '''detrend an array with a trend of given order along axis 0 or 1
 

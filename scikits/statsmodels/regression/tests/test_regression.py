@@ -300,14 +300,14 @@ class TestTtest(object):
 #        self.R_Results = RModel(data.endog, data.exog, r.lm).robj
 
     def test_tvalue(self):
-        assert_almost_equal(self.Ttest.tvalue, self.res1.t(), DECIMAL_4)
+        assert_almost_equal(self.Ttest.tvalue, self.res1.tvalues, DECIMAL_4)
 
     def test_sd(self):
         assert_almost_equal(self.Ttest.sd, self.res1.bse, DECIMAL_4)
 
     def test_pvalue(self):
         assert_almost_equal(self.Ttest.pvalue,
-                student_t.sf(np.abs(self.res1.t()),self.res1.model.df_resid),
+                student_t.sf(np.abs(self.res1.tvalues),self.res1.model.df_resid),
                     DECIMAL_4)
 
     def test_df_denom(self):
@@ -401,7 +401,7 @@ class TestGLS(object):
         assert_almost_equal(self.res1.scale, self.res2.scale, DECIMAL_4)
 
     def test_tvalues(self):
-        assert_almost_equal(self.res1.t(), self.res2.t, DECIMAL_4)
+        assert_almost_equal(self.res1.tvalues, self.res2.tvalues, DECIMAL_4)
 
     def test_standarderrors(self):
         assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL_4)

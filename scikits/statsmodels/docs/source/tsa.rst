@@ -63,7 +63,7 @@ Time Series Properties
    stattools.pacf_ols
    stattools.ccovf
    stattools.ccf
-   stattools.pergram
+   stattools.periodogram
    stattools.adfuller
    stattools.q_stat
    stattools.grangercausalitytests
@@ -89,8 +89,8 @@ ARMA and Kalman Filter
 .. autosummary::
    :toctree: generated/
 
-   arima.ARMA
-   arima.ARMAResults
+   arima_model.ARMA
+   arima_model.ARMAResults
    kalmanf.kalmanfilter.KalmanFilter
 
 .. currentmodule:: scikits.statsmodels.tsa

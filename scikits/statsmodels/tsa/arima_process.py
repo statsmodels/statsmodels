@@ -794,7 +794,7 @@ class ArmaProcess(object):
              True if autoregressive roots are outside unit circle
 
         '''
-        if np.abs(self.ar_roots()) > 1:
+        if np.all(np.abs(self.ar_roots())) > 1:
             return True
         else:
             return False
@@ -808,7 +808,7 @@ class ArmaProcess(object):
              True if moving average roots are outside unit circle
 
         '''
-        if np.abs(self.ma_roots()) > 1:
+        if np.all(np.abs(self.ma_roots())) > 1:
             return True
         else:
             return False

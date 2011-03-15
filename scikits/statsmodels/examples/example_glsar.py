@@ -37,7 +37,7 @@ if 0 in examples:
     model0if = GLSAR(Y, X, 2)
     res = model0if.iterative_fit(6)
     print 'iterativefit beta', res.params
-    results.t() # is this correct? it does equal params/bse
+    results.tvalues # is this correct? it does equal params/bse
     # but isn't the same as the AR example (which was wrong in the first place..)
     print results.t_test([0,1])  # are sd and t correct? vs
     print results.f_test(np.eye(2))
