@@ -280,6 +280,14 @@ class VAR(object):
 
     .. math:: y_t = A_1 y_{t-1} + \ldots + A_p y_{t-p} + u_t
 
+    Parameters
+    ----------
+    endog : np.ndarray (structured or homogeneous) or DataFrame
+    names : array-like
+        must match number of columns of endog
+    dates : array-like
+        must match number of rows of endog
+
     Notes
     -----
     **References**
@@ -381,7 +389,7 @@ class VAR(object):
         omega = sse / df_resid
 
         return VARResults(y, z, params, omega, lags, names=self.names,
-                          dates=self.dates, model=self)
+                          trendorder=trendorder, dates=self.dates, model=self)
 
     def select_order(self, maxlags=None, verbose=True):
         """
@@ -698,7 +706,8 @@ class VARResults(VARProcess):
         # Initialize VARProcess parent class
         # construct coefficient matrices
         # Each matrix needs to be transposed
-        reshaped = self.params[1:].reshape((lag_order, neqs, neqs))
+        reshaped = self.params[self.trendorder:]
+        reshaped = reshaped.reshape((lag_order, neqs, neqs))
 
         # Need to transpose each coefficient matrix
         intercept = self.params[0]
