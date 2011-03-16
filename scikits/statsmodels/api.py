@@ -21,4 +21,8 @@ if os.path.exists(chmpath):
         p = Popen(chmpath, shell=True)
 
 
+del os
+del chmpath
+
+
 
