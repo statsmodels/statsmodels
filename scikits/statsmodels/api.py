@@ -11,3 +11,14 @@ import tsa
 from __init__ import test
 from version import __version__
 from info import __doc__
+
+import os
+
+chmpath = os.path.join(os.path.dirname(__file__),'docs\\build\\htmlhelp\\statsmodelsdoc.chm')
+if os.path.exists(chmpath):
+    def open_help():
+        from subprocess import Popen
+        p = Popen(chmpath, shell=True)
+
+
+
