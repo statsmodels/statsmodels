@@ -567,8 +567,8 @@ class VARProcess(object):
         return util.acf_to_acorr(self.acf(nlags=nlags))
 
     def plot_acorr(self, nlags=10, linewidth=8):
-        "Plot autocorrelation function"
-        plotting.plot_acorr(self.acorr(nlags=nlags), linewidth=linewidth)
+        "Plot theoretical autocorrelation function"
+        plotting.plot_full_acorr(self.acorr(nlags=nlags), linewidth=linewidth)
 
     def forecast(self, y, steps):
         """Produce linear minimum MSE forecasts for desired number of steps
@@ -743,7 +743,51 @@ class VARResults(VARProcess):
     def resid(self):
         """Residuals of response variable resulting from estimated coefficients
         """
-        return self.y[self.p:] - self.fittedvalues #np.dot(self.ys_lagged, self.params)
+        return self.y[self.p:] - self.fittedvalues
+
+    def sample_acov(self, nlags=1):
+        return _compute_acov(self.y[self.p:], nlags=nlags)
+
+    def sample_acorr(self, nlags=1):
+        acovs = self.sample_acov(nlags=nlags)
+        return _acovs_to_acorrs(acovs)
+
+    def plot_sample_acorr(self, nlags=10, linewidth=8):
+        "Plot theoretical autocorrelation function"
+        plotting.plot_full_acorr(self.sample_acorr(nlags=nlags),
+                                 linewidth=linewidth)
+
+    def resid_acov(self, nlags=1):
+        """
+        Compute centered sample autocovariance (including lag 0)
+
+        Parameters
+        ----------
+        nlags : int
+
+        Returns
+        -------
+        """
+        return _compute_acov(self.resid, nlags=nlags)
+
+    def resid_acorr(self, nlags=1):
+        """
+        Compute sample autocorrelation (including lag 0)
+
+        Parameters
+        ----------
+        nlags : int
+
+        Returns
+        -------
+        """
+        acovs = self.resid_acov(nlags=nlags)
+        return _acovs_to_acorrs(acovs)
+
+    @cache_readonly
+    def resid_corr(self):
+        "Centered residual correlation matrix"
+        return self.resid_acorr(0)[0]
 
     @cache_readonly
     def sigma_u_mle(self):
@@ -1042,12 +1086,34 @@ class VARResults(VARProcess):
 
         return results
 
-    def test_whiteness(self):
+    def test_whiteness(self, nlags=10, plot=True, linewidth=8):
         """
-        Test white noise assumption
-        """
+        Test white noise assumption. Sample (Y) autocorrelations are compared
+        with the standard :math:`2 / \sqrt(T)` bounds.
 
-        pass
+        Parameters
+        ----------
+        plot : boolean, default True
+            Plot autocorrelations with 2 / sqrt(T) bounds
+        """
+        acorrs = self.sample_acorr(nlags)
+        bound = 2 / np.sqrt(self.nobs)
+
+        # TODO: this probably needs some UI work
+
+        if (np.abs(acorrs) > bound).any():
+            print ('FAIL: Some autocorrelations exceed %.4f bound. '
+                   'See plot' % bound)
+        else:
+            print 'PASS: No autocorrelations exceed %.4f bound' % bound
+
+        if plot:
+            fig = plotting.plot_full_acorr(acorrs[1:],
+                                           xlabel=np.arange(1, nlags+1),
+                                           err_bound=bound,
+                                           linewidth=linewidth)
+            fig.suptitle(r"ACF plots with $2 / \sqrt{T}$ bounds "
+                         "for testing whiteness assumption")
 
     def test_normality(self):
         """
@@ -1211,6 +1277,24 @@ class FEVD(object):
 
 #-------------------------------------------------------------------------------
 
+def _compute_acov(x, nlags=1):
+    x = x - x.mean(0)
+
+    result = []
+    for lag in xrange(nlags + 1):
+        if lag > 0:
+            r = np.dot(x[lag:].T, x[:-lag])
+        else:
+            r = np.dot(x.T, x)
+
+        result.append(r)
+
+    return np.array(result) / len(x)
+
+def _acovs_to_acorrs(acovs):
+    sd = np.sqrt(np.diag(acovs[0]))
+    return acovs / np.outer(sd, sd)
+
 if __name__ == '__main__':
     import scikits.statsmodels.api as sm
     from scikits.statsmodels.tsa.vector_ar.util import parse_lutkepohl_data
@@ -1225,6 +1309,8 @@ if __name__ == '__main__':
     adj_data = np.diff(np.log(data), axis=0)
     # est = VAR(adj_data, p=2, dates=dates[1:], names=names)
     model = VAR(adj_data[:-16], dates=dates[1:-16], names=names)
+    # model = VAR(adj_data[:-16], dates=dates[1:-16], names=names)
+
     est = model.fit(maxlags=2)
     irf = est.irf()
 
@@ -1240,6 +1326,7 @@ if __name__ == '__main__':
     # data = data.view((float, 4))
     """
 
+    '''
     mdata = sm.datasets.macrodata.load().data
     mdata2 = mdata[['realgdp','realcons','realinv']]
     names = mdata2.dtype.names
@@ -1254,3 +1341,4 @@ if __name__ == '__main__':
     model = VAR(df)
     est = model.fit(maxlags=2)
     irf = est.irf()
+    '''

@@ -97,7 +97,8 @@ def plot_with_error(y, error, x=None, axes=None, value_fmt='k',
         plot_action(y - q * error, error_fmt)
         plot_action(y + q * error, error_fmt)
 
-def plot_acorr(acf, fontsize=8, linewidth=8):
+def plot_full_acorr(acorr, fontsize=8, linewidth=8, xlabel=None,
+                    err_bound=None):
     """
 
     Parameters
@@ -109,24 +110,38 @@ def plot_acorr(acf, fontsize=8, linewidth=8):
     config = MPLConfigurator()
     config.set_fontsize(fontsize)
 
-    lags, k, k = acf.shape
-    acorr = util.acf_to_acorr(acf)
-    plt.figure(figsize=(10, 10))
-    xs = np.arange(lags)
+    k = acorr.shape[1]
+    fig, axes = plt.subplots(k, k, figsize=(10, 10), squeeze=False)
 
     for i in range(k):
         for j in range(k):
-            ax = plt.subplot(k, k, i * k + j + 1)
-            ax.vlines(xs, [0], acorr[:, i, j], lw=linewidth)
+            ax = axes[i][j]
+            acorr_plot(acorr[:, i, j], linewidth=linewidth,
+                       xlabel=xlabel, ax=ax)
 
-            ax.axhline(0, color='k')
-            ax.set_ylim([-1, 1])
-
-            # hack?
-            ax.set_xlim([-1, xs[-1] + 1])
+            if err_bound is not None:
+                ax.axhline(err_bound, color='k', linestyle='--')
+                ax.axhline(-err_bound, color='k', linestyle='--')
 
     adjust_subplots()
     config.revert()
+
+    return fig
+
+def acorr_plot(acorr, linewidth=8, xlabel=None, ax=None):
+    if ax is None:
+        ax = plt.gca()
+
+    if xlabel is None:
+        xlabel = np.arange(len(acorr))
+
+    ax.vlines(xlabel, [0], acorr, lw=linewidth)
+
+    ax.axhline(0, color='k')
+    ax.set_ylim([-1, 1])
+
+    # hack?
+    ax.set_xlim([-1, xlabel[-1] + 1])
 
 def plot_acorr_with_error():
     pass

@@ -140,10 +140,10 @@ class VARSummary(object):
 
         Xnames = self.model.coef_names
 
-        data = zip(model.params.ravel(),
-                   model.stderr.ravel(),
-                   model.tvalues.ravel(),
-                   model.pvalues.ravel())
+        data = zip(model.params.T.ravel(),
+                   model.stderr.T.ravel(),
+                   model.tvalues.T.ravel(),
+                   model.pvalues.T.ravel())
 
         header = ('coefficient','std. error','t-stat','prob')
 
@@ -166,12 +166,8 @@ class VARSummary(object):
         buf = StringIO()
         names = self.model.names
 
-        resid_cov = np.cov(self.model.resid, rowvar=0)
-        rdiag = np.sqrt(np.diag(resid_cov))
-        resid_corr = resid_cov / np.outer(rdiag, rdiag)
-
         print >> buf, "Correlation matrix of residuals"
-        print >> buf, pprint_matrix(resid_corr, names, names)
+        print >> buf, pprint_matrix(self.model.resid_corr, names, names)
 
         return buf.getvalue()
 
