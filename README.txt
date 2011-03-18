@@ -2,7 +2,7 @@
 Installation from sources
 =========================
 
-In the directory example (the same as the file you are reading now), just do:
+In the top directory (the same as the file you are reading now), just do:
 
 python setup.py install
 

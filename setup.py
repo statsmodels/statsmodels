@@ -13,16 +13,54 @@ several categories of statistical models. These currently include linear
 regression models, OLS, GLS, WLS and GLS with AR(p) errors, generalized
 linear models for six distribution families, M-estimators for robust
 linear models, and regression with discrete dependent variables, Logit,
-Probit, MNLogit, Poisson, based on maximum likelihood estimators.
-An extensive list of result statistics are avalable for each estimation
-problem.
+Probit, MNLogit, Poisson, based on maximum likelihood estimators,
+timeseries models, ARMA, AR and VAR. An extensive list of result statistics
+are avalable for each estimation problem. Statsmodels also contains
+descriptive statistics, a wide range of statistical tests and more.
 
 We welcome feedback:
-mailing list at http://groups.google.com/group/pystatsmodels  or
-our bug tracker at https://bugs.launchpad.net/statsmodels
+mailing list at `<http://groups.google.com/group/pystatsmodels>`_  or
+our bug tracker at `<https://bugs.launchpad.net/statsmodels>`_
 
 For updated versions between releases, we recommend our repository at
-http://code.launchpad.net/statsmodels
+`<http://code.launchpad.net/statsmodels>`_ We will move to github in the
+near future.
+
+Main changes for 0.3.0
+----------------------
+
+*Changes that break backwards compatability*
+
+* main import path is now scikits.statsmodels.api
+* sandbox/output.py -> iolib/table.py
+* lib/io.py -> iolib/foreign.py (stata data format reader available from iolib)
+* family -> families
+* families.links.inverse -> families.links.inverse_power
+* Datasets' Load class is now load function.
+* regression.py -> regression/linear_model.py
+* discretemod.py -> discrete/discrete_model.py
+* rlm.py -> robust/robust_linear_model.py
+* glm.py -> genmod/generalized_linear_model.py
+* model.py -> base/model.py
+
+*main changes*
+
+* Numerous bugfixes.
+* Time Series Analysis model (tsa)
+* VAR (tsa.VAR)
+* ARMA models for time series. (tsa.AR)
+  -optionally uses Cython for Kalman Filtering
+* Improved maximum likelihood framework.
+* Refactor of the datasets sub-package.
+* Removed RPy dependency for running the test suite.
+* Refactored the test suite.
+* Refactored codebase/directory structure.
+* Support for offset and exposure in GLM.
+* Removed data_weights argument to GLM.fit for Binomial models.
+* New statistical tests, especially diagnostic and specification tests
+* Multiple test correction
+* General Method of Moment framework in sandbox
+* and other additions
 
 Main Changes in 0.2.0
 ---------------------

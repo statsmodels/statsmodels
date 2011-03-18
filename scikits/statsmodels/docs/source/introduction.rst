@@ -115,6 +115,7 @@ Various models that are work in progress where the time to inclusion in
 statsmodels proper will depend on the available developer time and interests:
 
 Bayesian dynamic linear models (Wes)
+
 more kalman filter based time series analysis (Skipper)
 
 New models (roughly in order of completeness):
@@ -144,8 +145,25 @@ import paths which will make future enhancements less interuptive.
 Although there is no quarantee yet on API stability, we try to keep changes
 that require adjustments by existing users to a minimal level.
 
+Financial Support
+-----------------
 
-Josef Perktold and Skipper Seabold
-Wes McKinney
-Mike Crow
-Vincent Davis
+We are grateful for the financial support that we obtained for the
+developement of scikits.statsmodels:
+
+ Google `www.google.com <http://www.google.com/>`_ : two Google Summer of Code,
+ GSOC 2009 and GSOC 2010
+
+ AQR `www.aqr.com <http://www.aqr.com/>`_ : financial sponsor for the work on
+ Vector Autoregressive Models (VAR) by Wes McKinney
+
+We would also like to thank our hosting providers, `launchpad
+<http://launchpad.net/>`_ for the public code repository, `sourceforge
+<http://sourceforge.net/>`_ for hosting our documentation and `python.org
+<http://python.org>`_ for making our downloads available on pypi.
+
+
+Josef Perktold and Skipper Seabold,
+Wes McKinney,
+Mike Crow,
+Vincent Davis,

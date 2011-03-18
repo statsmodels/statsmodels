@@ -3,9 +3,10 @@ Requirements
 
 To run correctly, scipy models requires the following:
 
-        -python (>= 2.4): http://www.python.org tested with 2.5 and 2.6
+        -python (>= 2.5): http://www.python.org tested with 2.5 and 2.6
         -numpy (>= 1.3.0) ?(>= 1.2.1) not tested http://www.scipy.org/Numpy
-        -scipy (>= 0.7) http://www.scipy.org/
+         tested with 1.5.1
+        -scipy (>= 0.7 ?) http://www.scipy.org/ tested with 0.8 and 0.9
         -setuptools (easy_install):
         http://peak.telecommunity.com/DevCenter/EasyInstall
 
@@ -16,13 +17,15 @@ apt-get install python python-setuptools python-numpy python-scipy
 Optional Requirements:
 ----------------------
 
-matplotlib: used in examples http://pypi.python.org/pypi/matplotlib
-rpy: used in tests http://pypi.python.org/pypi/rpy
-in sandbox: numdifftools
+matplotlib: http://pypi.python.org/pypi/matplotlib required to build
+  sphinx documentation, for plot methods and it is used in examples
+numdifftools: http://pypi.python.org/pypi/numdifftools used in the sandbox
 
 Installing
 -----------
-Once in the statsmodels directory do:
+
+Download and extract the source distribution, or branch from the repository.
+In the statsmodels directory do:
 
 python setup.py install
 
