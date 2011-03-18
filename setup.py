@@ -18,7 +18,7 @@ An extensive list of result statistics are avalable for each estimation
 problem.
 
 We welcome feedback:
-mailing list at http://groups.google.com/group/pystatsmodels?hl=en  or
+mailing list at http://groups.google.com/group/pystatsmodels  or
 our bug tracker at https://bugs.launchpad.net/statsmodels
 
 For updated versions between releases, we recommend our repository at
@@ -65,7 +65,7 @@ DISTNAME = 'scikits.statsmodels'
 DESCRIPTION = 'Statistical computations and models for use with SciPy'
 LONG_DESCRIPTION = descr
 MAINTAINER = 'Skipper Seabold, Josef Perktold'
-MAINTAINER_EMAIL =''
+MAINTAINER_EMAIL ='pystatsmodels@googlegroups.com'
 URL = ''
 LICENSE = 'BSD License'
 DOWNLOAD_URL = ''
