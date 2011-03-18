@@ -74,8 +74,8 @@ def _autolag(mod, endog, exog, startlag, maxlag, method, modargs=(),
         stop = 1.6448536269514722
         for lag in range(maxlag,startlag-1,-1):
             print lag
-            print results[lag].t()
-            icbest = np.abs(results[lag].t(-1))
+            print results[lag].values
+            icbest = np.abs(results[lag].tvalues[-1])
             print icbest
             if np.abs(icbest) >= stop:
                 bestlag = lag
@@ -217,7 +217,7 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
         resols = OLS(xdshort, add_trend(xdall[:,:usedlag+1], regression)).fit()
     else:
         resols = OLS(xdshort, xdall[:,:usedlag+1]).fit()
-    adfstat = resols.t(0)
+    adfstat = resols.tvalues[0]
 #    adfstat = (resols.params[0]-1.0)/resols.bse[0]
     # the "asymptotically correct" z statistic is obtained as
     # nobs/(1-np.sum(resols.params[1:-(trendorder+1)])) (resols.params[0] - 1)
@@ -569,54 +569,31 @@ def ccf(x, y, unbiased=True):
     return cvf / (np.std(x) * np.std(y))
 
 
-def pergram(X, kernel='bartlett', log=True):
+def periodogram(X):
     """
-    Returns the (log) periodogram for the natural frequency of X
+    Returns the periodogram for the natural frequency of X
 
     Parameters
     ----------
-    X
-    M : int
-        Should this be hardcoded?
-    kernel : str, optional
+    X : array-like
+        Array for which the periodogram is desired.
 
-    Notes
-    -----
-    The autocovariances are normalized by len(X).
-    The frequencies are calculated as
-    If len(X) is odd M = (len(X) - 1)/2 else M = len(X)/2. Either way
-        freq[i] = 2*[i+1]/T and len(freq) == M
+    Returns
+    -------
+    pgram : array
+        1./len(X) * np.abs(np.fft.fft(X))**2
+
 
     References
     ----------
-    Based on Lutkepohl; Hamilton.
-
-    Notes
-    -----
-    Doesn't look right yet.
+    Brockwell and Davis.
     """
-    #JP: this should use covf and fft for speed and accuracy for longer time series
-    #should also return the implied frequencies
-    X = np.asarray(X).squeeze()
-    nobs = len(X)
-    M = np.floor(nobs/2.)
-    acov = np.zeros(M+1)
-    acov[0] = np.var(X)
-    Xbar = X.mean()
-    for i in range(1,int(M+1)):
-        acov[i] = np.dot(X[i:] - Xbar,X[:-i] - Xbar)
-    acov /= nobs
-    #    #TODO: make a list to check window
-#    ell = np.r_[1,np.arange(1,M+1)*np.pi/nobs]
-    if kernel == "bartlett":
-        w = 1 - np.arange(M+1.)/M   #JP removed integer division
+    X = np.asarray(X)
+#    if kernel == "bartlett":
+#        w = 1 - np.arange(M+1.)/M   #JP removed integer division
 
-#    weights = exec('signal.'+window+'(M='str(M)')')
-    j = np.arange(1,M+1.)
-    ell = np.linspace(0,np.pi,M)
-    pergr = np.zeros_like(ell)
-    for i,L in enumerate(ell):  #todo: vectorize
-        pergr[i] = 1/(2*np.pi)*acov[0] + 2 * np.sum(w[1:]*acov[1:]*np.cos(L*j))
+    pergr = 1./len(X) * np.abs(np.fft.fft(X))**2
+    pergr[0] = 0. # what are the implications of this?
     return pergr
 
 #copied from nitime and scikits\statsmodels\sandbox\tsa\examples\try_ld_nitime.py
@@ -780,7 +757,7 @@ def grangercausalitytests(x, maxlag, addconst=True):
 
 
 __all__ = ['acovf', 'acf', 'pacf', 'pacf_yw', 'pacf_ols', 'ccovf', 'ccf',
-           'pergram', 'q_stat']
+           'periodogram', 'q_stat']
 
 if __name__=="__main__":
     import scikits.statsmodels.api as sm

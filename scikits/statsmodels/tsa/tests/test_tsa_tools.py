@@ -3,7 +3,7 @@
 '''
 
 import numpy as np
-from numpy.testing import assert_array_almost_equal
+from numpy.testing import assert_array_almost_equal, assert_equal
 import scikits.statsmodels.api as sm
 import scikits.statsmodels.tsa.stattools as tsa
 import scikits.statsmodels.tsa.tsatools as tools
@@ -76,6 +76,126 @@ def test_vech():
                     [4, 5, 6],
                     [7, 8, 9]])
     assert(np.array_equal(vech(arr), [1, 4, 7, 5, 8, 9]))
+
+
+def test_add_lag_insert():
+    data = sm.datasets.macrodata.load().data[['year','quarter','realgdp','cpi']]
+    nddata = data.view((float,4))
+    lagmat = sm.tsa.lagmat(nddata[:,2],3,trim='Both')
+    results = np.column_stack((nddata[3:,:3],lagmat,nddata[3:,-1]))
+    lag_data = sm.tsa.add_lag(data, 'realgdp', 3)
+    assert_equal(lag_data.view((float,len(lag_data.dtype.names))), results)
+
+def test_add_lag_noinsert():
+    data = sm.datasets.macrodata.load().data[['year','quarter','realgdp','cpi']]
+    nddata = data.view((float,4))
+    lagmat = sm.tsa.lagmat(nddata[:,2],3,trim='Both')
+    results = np.column_stack((nddata[3:,:],lagmat))
+    lag_data = sm.tsa.add_lag(data, 'realgdp', 3, insert=False)
+    assert_equal(lag_data.view((float,len(lag_data.dtype.names))), results)
+
+def test_add_lag_noinsert_atend():
+    data = sm.datasets.macrodata.load().data[['year','quarter','realgdp','cpi']]
+    nddata = data.view((float,4))
+    lagmat = sm.tsa.lagmat(nddata[:,-1],3,trim='Both')
+    results = np.column_stack((nddata[3:,:],lagmat))
+    lag_data = sm.tsa.add_lag(data, 'cpi', 3, insert=False)
+    assert_equal(lag_data.view((float,len(lag_data.dtype.names))), results)
+    # should be the same as insert
+    lag_data2 = sm.tsa.add_lag(data, 'cpi', 3, insert=True)
+    assert_equal(lag_data2.view((float,len(lag_data2.dtype.names))), results)
+
+def test_add_lag_ndarray():
+    data = sm.datasets.macrodata.load().data[['year','quarter','realgdp','cpi']]
+    nddata = data.view((float,4))
+    lagmat = sm.tsa.lagmat(nddata[:,2],3,trim='Both')
+    results = np.column_stack((nddata[3:,:3],lagmat,nddata[3:,-1]))
+    lag_data = sm.tsa.add_lag(nddata, 2, 3)
+    assert_equal(lag_data, results)
+
+def test_add_lag_noinsert_ndarray():
+    data = sm.datasets.macrodata.load().data[['year','quarter','realgdp','cpi']]
+    nddata = data.view((float,4))
+    lagmat = sm.tsa.lagmat(nddata[:,2],3,trim='Both')
+    results = np.column_stack((nddata[3:,:],lagmat))
+    lag_data = sm.tsa.add_lag(nddata, 2, 3, insert=False)
+    assert_equal(lag_data, results)
+
+def test_add_lag_noinsertatend_ndarray():
+    data = sm.datasets.macrodata.load().data[['year','quarter','realgdp','cpi']]
+    nddata = data.view((float,4))
+    lagmat = sm.tsa.lagmat(nddata[:,-1],3,trim='Both')
+    results = np.column_stack((nddata[3:,:],lagmat))
+    lag_data = sm.tsa.add_lag(nddata, 3, 3, insert=False)
+    assert_equal(lag_data, results)
+    # should be the same as insert also check negative col number
+    lag_data2 = sm.tsa.add_lag(nddata, -1, 3, insert=True)
+    assert_equal(lag_data2, results)
+
+def test_add_lag1d():
+    data = np.random.randn(100)
+    lagmat = sm.tsa.lagmat(data,3,trim='Both')
+    results = np.column_stack((data[3:],lagmat))
+    lag_data = sm.tsa.add_lag(data, lags=3, insert=True)
+    assert_equal(results, lag_data)
+
+    # add index
+    data = data[:,None]
+    lagmat = sm.tsa.lagmat(data,3,trim='Both') # test for lagmat too
+    results = np.column_stack((data[3:],lagmat))
+    lag_data = sm.tsa.add_lag(data,lags=3, insert=True)
+    assert_equal(results, lag_data)
+
+def test_add_lag1d_drop():
+    data = np.random.randn(100)
+    lagmat = sm.tsa.lagmat(data,3,trim='Both')
+    lag_data = sm.tsa.add_lag(data, lags=3, drop=True, insert=True)
+    assert_equal(lagmat, lag_data)
+
+    # no insert, should be the same
+    lag_data = sm.tsa.add_lag(data, lags=3, drop=True, insert=False)
+    assert_equal(lagmat, lag_data)
+
+def test_add_lag1d_struct():
+    data = np.zeros(100, dtype=[('variable',float)])
+    nddata = np.random.randn(100)
+    data['variable'] = nddata
+
+    lagmat = sm.tsa.lagmat(nddata,3,trim='Both', original='in')
+    lag_data = sm.tsa.add_lag(data, 'variable', lags=3, insert=True)
+    assert_equal(lagmat, lag_data.view((float,4)))
+
+    lag_data = sm.tsa.add_lag(data, 'variable', lags=3, insert=False)
+    assert_equal(lagmat, lag_data.view((float,4)))
+
+    lag_data = sm.tsa.add_lag(data, lags=3, insert=True)
+    assert_equal(lagmat, lag_data.view((float,4)))
+
+def test_add_lag_1d_drop_struct():
+    data = np.zeros(100, dtype=[('variable',float)])
+    nddata = np.random.randn(100)
+    data['variable'] = nddata
+
+    lagmat = sm.tsa.lagmat(nddata,3,trim='Both')
+    lag_data = sm.tsa.add_lag(data, lags=3, drop=True)
+    assert_equal(lagmat, lag_data.view((float,3)))
+
+def test_add_lag_drop_insert():
+    data = sm.datasets.macrodata.load().data[['year','quarter','realgdp','cpi']]
+    nddata = data.view((float,4))
+    lagmat = sm.tsa.lagmat(nddata[:,2],3,trim='Both')
+    results = np.column_stack((nddata[3:,:2],lagmat,nddata[3:,-1]))
+    lag_data = sm.tsa.add_lag(data, 'realgdp', 3, drop=True)
+    assert_equal(lag_data.view((float,len(lag_data.dtype.names))), results)
+
+def test_add_lag_drop_noinsert():
+    data = sm.datasets.macrodata.load().data[['year','quarter','realgdp','cpi']]
+    nddata = data.view((float,4))
+    lagmat = sm.tsa.lagmat(nddata[:,2],3,trim='Both')
+    results = np.column_stack((nddata[3:,np.array([0,1,3])],lagmat))
+    lag_data = sm.tsa.add_lag(data, 'realgdp', 3, insert=False, drop=True)
+    assert_equal(lag_data.view((float,len(lag_data.dtype.names))), results)
+
 
 if __name__ == '__main__':
     #running them directly

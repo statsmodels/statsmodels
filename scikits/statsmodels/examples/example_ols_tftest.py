@@ -58,7 +58,7 @@ npt.assert_almost_equal(res.fvalue, Ftest0.fvalue, decimal=9)
 ttest0 = res.t_test(R[0,:])
 print repr((ttest0.tvalue, ttest0.pvalue))
 
-betatval = res.t()
+betatval = res.tvalues
 betatval[0]
 npt.assert_almost_equal(betatval[0], ttest0.tvalue, decimal=15)
 

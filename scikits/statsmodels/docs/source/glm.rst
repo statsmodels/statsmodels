@@ -50,8 +50,6 @@ Results Class
 Families
 ^^^^^^^^
 
-
-
 The distribution families currently implemented are
 
 .. currentmodule:: scikits.statsmodels.genmod.families.family

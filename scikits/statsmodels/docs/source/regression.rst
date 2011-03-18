@@ -21,8 +21,9 @@ depending on the assumption on :math:`\Sigma`, we have currently four classes av
 
 * GLS : generalized least squares for arbitrary covariance :math:`\Sigma`
 * OLS : ordinary least squares for i.i.d. errors :math:`\Sigma=\textbf{I}`
-* WLS : weighted least squares for heteroskedastic errors :math:`\text{diag}\left(\Sigma\right)`
-* GLSAR : feasible generalized least squares with autocorrelated AR(p) errors :math:`\Sigma=\Sigma\left(\rho\right)`
+* WLS : weighted least squares for heteroskedastic errors :math:`\text{diag}\left  (\Sigma\right)`
+* GLSAR : feasible generalized least squares with autocorrelated AR(p) errors
+  :math:`\Sigma=\Sigma\left(\rho\right)`
 
 All regression models define the same methods and follow the same structure,
 and can be used in a similar fashion. Some of them contain additional model
@@ -87,17 +88,17 @@ wendog : array
 References
 ^^^^^^^^^^
 
-General reference for regression models:
+General reference for regression models::
 
-D. C. Montgomery and E.A. Peck. "Introduction to Linear Regression
-    Analysis." 2nd. Ed., Wiley, 1992.
+    D.C. Montgomery and E.A. Peck. "Introduction to Linear Regression
+        Analysis." 2nd. Ed., Wiley, 1992.
 
-Econometrics references for regression models:
+Econometrics references for regression models::
 
-R. Davidson and J.G. MacKinnon.  "Econometric Theory and Methods," Oxford,
-    2004.
+    R. Davidson and J.G. MacKinnon. "Econometric Theory and Methods," Oxford,
+        2004.
 
-W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
+    W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
 
 Examples
 --------

@@ -3,9 +3,12 @@ trunk for 0.3.0
 
 *Changes that break backwards compatability*
 
-* main import path is now scikits.statsmodels.api
+Added api.py for importing. So the new convention for importing is ::
+
+import scikits.statsmodels.api as sm
+
 * sandbox/output.py -> iolib/table.py
-* lib/io.py -> iolib/foreign.py (stata data format reader available from iolib)
+* lib/io.py -> iolib/foreign.py (Now contains Stata .dta format reader)
 * family -> families
 * families.links.inverse -> families.links.inverse_power
 * Datasets' Load class is now load function.
@@ -14,16 +17,20 @@ trunk for 0.3.0
 * rlm.py -> robust/robust_linear_model.py
 * glm.py -> genmod/generalized_linear_model.py
 * model.py -> base/model.py
+* t() method -> tvalues attribute
 
-*main changes*
+*main changes and additions*
 
 * Numerous bugfixes.
 * Time Series Analysis model (tsa)
-* VAR (tsa.VAR)
-* ARMA models for time series. (tsa.AR)
-  -optionally uses Cython for Kalman Filtering
-* Improved maximum likelihood framework.
+  - Vector Autoregression Models VAR (tsa.VAR)
+  - Autogressive Models AR (tsa.AR)
+  - Autoregressive Moving Average Models ARMA (tsa.ARMA) :
+      optionally uses Cython for Kalman Filtering
+      use setup.py install with option --with-cython
+* Improved maximum likelihood framework uses all available scipy.optimize solvers
 * Refactor of the datasets sub-package.
+* Added Nile River dataset.
 * Removed RPy dependency for running the test suite.
 * Refactored the test suite.
 * Refactored codebase/directory structure.
@@ -32,8 +39,8 @@ trunk for 0.3.0
 * New statistical tests, especially diagnostic and specification tests
 * Multiple test correction
 * General Method of Moment framework in sandbox
+* Improved documentation
 * and other additions
-
 
 
 trunk for 0.2.0

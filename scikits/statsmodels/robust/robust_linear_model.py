@@ -44,23 +44,6 @@ class RLM(LikelihoodModel):
         TrimmedMean, Hampel, and TukeyBiweight.  The default is HuberT().
         See scikits.statsmodels.robust.norms for more information.
 
-
-    Methods
-    -------
-    deviance
-        Returns the (unnormalized) log-likelihood of the model
-    fit
-        Fits the model.  Returns an RLMResults class.
-    information
-        Not yet implemented.
-    newton
-        Not yet implemented.
-    results
-        A property that returns an RLMResults class.  Equivalent to calling
-        fit with the default arguments.
-    score
-        Not yet implemented.
-
     Notes
     -----
 
@@ -276,28 +259,30 @@ class RLMResults(LikelihoodModelResults):
     """
     Class to contain RLM results
 
+    Returns
+    -------
     **Attributes**
 
     bcov_scaled : array
         p x p scaled covariance matrix specified in the model fit method.
         The default is H1. H1 is defined as
-        k**2 * (1/df_resid*sum(M.psi(sresid)**2)*scale**2)/
-        ((1/nobs*sum(M.psi_deriv(sresid)))**2) * (X.T X)^(-1)
+        ``k**2 * (1/df_resid*sum(M.psi(sresid)**2)*scale**2)/
+        ((1/nobs*sum(M.psi_deriv(sresid)))**2) * (X.T X)^(-1)``
 
-        where k = 1 + (df_model +1)/nobs * var_psiprime/m**2
-        where m = mean(M.psi_deriv(sresid)) and
-        var_psiprime = var(M.psi_deriv(sresid))
+        where ``k = 1 + (df_model +1)/nobs * var_psiprime/m**2``
+        where ``m = mean(M.psi_deriv(sresid))`` and
+        ``var_psiprime = var(M.psi_deriv(sresid))``
 
         H2 is defined as
-        k * (1/df_resid) * sum(M.psi(sresid)**2) *scale**2/
-        ((1/nobs)*sum(M.psi_deriv(sresid)))*W_inv
+        ``k * (1/df_resid) * sum(M.psi(sresid)**2) *scale**2/
+        ((1/nobs)*sum(M.psi_deriv(sresid)))*W_inv``
 
         H3 is defined as
-        1/k * (1/df_resid * sum(M.psi(sresid)**2)*scale**2 *
-        (W_inv X.T X W_inv))
+        ``1/k * (1/df_resid * sum(M.psi(sresid)**2)*scale**2 *
+        (W_inv X.T X W_inv))``
 
-        where k is defined as above and
-        W_inv = (M.psi_deriv(sresid) exog.T exog)^(-1)
+        where `k` is defined as above and
+        ``W_inv = (M.psi_deriv(sresid) exog.T exog)^(-1)``
 
         See the technical documentation for cleaner formulae.
     bcov_unscaled : array

@@ -35,7 +35,7 @@ class CheckModelResults(object):
         assert_almost_equal(self.res1.conf_int(), self.res2.conf_int, DECIMAL_4)
 
     def test_zstat(self):
-        assert_almost_equal(self.res1.t(), self.res2.z, DECIMAL_4)
+        assert_almost_equal(self.res1.tvalues, self.res2.z, DECIMAL_4)
 
     def pvalues(self):
         assert_almost_equal(self.res1.pvalues, self.res2.pvalues, DECIMAL_4)

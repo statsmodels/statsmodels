@@ -78,32 +78,14 @@ class GLS(LikelihoodModel):
         The number of observations n.
     normalized_cov_params : array
         p x p array :math:`(X^{T}\Sigma^{-1}X)^{-1}`
+    results : RegressionResults instance
+        A property that returns the RegressionResults class if fit.
     sigma : array
         `sigma` is the n x n covariance structure of the error terms.
     wexog : array
         Design matrix whitened by `cholsigmainv`
     wendog : array
         Response variable whitened by `cholsigmainv`
-
-    Methods
-    -------
-    fit
-       Solves the least squares minimization.
-    information
-        Fisher information matrix.  Not yet implemented
-    initialize
-        (Re)-initialize a model.
-    loglike
-        Obtain the loglikelihood for a given set of parameters.
-    newton
-        Used to solve the maximum likelihood problem.
-    predict
-        Returns the fitted values given the parameters and exogenous design.
-    score
-        Score function.
-    whiten
-        Returns the input premultiplied by cholsigmainv
-
 
     Notes
     -----
@@ -246,19 +228,6 @@ Should be of length %s, if sigma is a 1d array" % nobs)
         self._results = lfit
         return lfit
 
-    @property
-    def results(self):
-        """
-        A property that returns a RegressionResults class.
-
-        Notes
-        -----
-        Calls fit, if it has not already been called.
-        """
-        if self._results is None:
-            self._results = self.fit()
-        return self._results
-
     def predict(self, exog, params=None):
         """
         Return linear predicted values from a design matrix.
@@ -309,7 +278,7 @@ Should be of length %s, if sigma is a 1d array" % nobs)
         -----
         The loglikelihood function for the normal distribution is
 
-        .. math:: -\frac{n}{2}\text{\ensuremath{\log}}\left(Y-\hat{Y}\right)-\frac{n}{2}\left(1+\log\left(\frac{2\pi}{n}\right)\right)-\frac{1}{2}\text{log}\left(\left|\Sigma\right|\right)\]
+        .. math:: -\\frac{n}{2}\\log\\left(Y-\\hat{Y}\\right)-\\frac{n}{2}\\left(1+\\log\\left(\\frac{2\\pi}{n}\\right)\\right)-\\frac{1}{2}\\log\\left(\\left|\\Sigma\\right|\\right)
 
         Y and Y-hat are whitened.
 
@@ -375,7 +344,7 @@ class WLS(GLS):
     >>> results = wls_model.fit()
     >>> results.params
     array([ 0.0952381 ,  2.91666667])
-    >>> results.t()
+    >>> results.tvalues
     array([ 0.35684428,  2.0652652 ])
     <T test: effect=2.9166666666666674, sd=1.4122480109543243, t=2.0652651970780505, p=0.046901390323708769, df_denom=5>
     >>> print results.f_test([1,0])
@@ -446,9 +415,9 @@ class WLS(GLS):
 
         Notes
         --------
-        .. math:: -\frac{n}{2}\text{\ensuremath{\log}}\left(Y-\hat{Y}\right)-\frac{n}{2}\left(1+\log\left(\frac{2\pi}{n}\right)\right)-\frac{1}{2}\text{log}\left(\left|W\right|\right)\]
+        .. math:: -\\frac{n}{2}\\log\\left(Y-\\hat{Y}\\right)-\\frac{n}{2}\\left(1+\\log\\left(\\frac{2\\pi}{n}\\right)\\right)-\\frac{1}{2}log\\left(\\left|W\\right|\\right)
 
-        W is treated as a diagonal matrix for the purposes of the formula.
+        where :math:`W` is a diagonal matrix
         """
         nobs2 = self.nobs / 2.0
         SSR = ss(self.wendog - np.dot(self.wexog,params))
@@ -497,7 +466,7 @@ class OLS(WLS):
     >>> # or results = model.results
     >>> results.params
     array([ 0.25      ,  2.14285714])
-    >>> results.t()
+    >>> results.tvales
     array([ 0.98019606,  1.87867287])
     >>> print results.t_test([0,1])
     <T test: effect=2.1428571428571423, sd=1.1406228159050935, t=1.8786728732554485, p=0.059539737780605395, df_denom=5>
@@ -566,7 +535,7 @@ class GLSAR(GLS):
     AR coefficients: [-0.61893842 -0.88152263]
     >>> results.params
     array([ 1.58747943, -0.56145497])
-    >>> results.t()
+    >>> results.tvalues
     array([ 30.796394  ,  -2.66543144])
     >>> print results.t_test([0,1])
     <T test: effect=-0.56145497223945595, sd=0.21064318655324663, t=-2.6654314408481032, p=0.022296117189135045, df_denom=5>
@@ -983,7 +952,7 @@ class RegressionResults(LikelihoodModelResults):
 
     @cache_readonly
     def pvalues(self):
-        return stats.t.sf(np.abs(self.t()), self.df_resid)*2
+        return stats.t.sf(np.abs(self.tvalues), self.df_resid)*2
 
     @cache_readonly
     def llf(self):
@@ -1110,38 +1079,39 @@ class RegressionResults(LikelihoodModelResults):
         return f_value, p_value, df_diff
 
     def compare_lr_test(self, restricted):
-        '''use likelihood ratio test to test whether restricted model is correct
+        '''
+        Likelihood ratio test to test whether restricted model is correct
 
         Parameters
         ----------
         restricted : Result instance
-            The restricted model is assumed to be nested in the current model. The
-            result instance of the restricted model is required to have two attributes,
-            residual sum of squares, `ssr`, residual degrees of freedom, `df_resid`.
+            The restricted model is assumed to be nested in the current model.
+            The result instance of the restricted model is required to have two
+            attributes, residual sum of squares, `ssr`, residual degrees of
+            freedom, `df_resid`.
 
         Returns
         -------
         lr_stat : float
-            likelihood ratio, chisquare distributed with df_diff degrees of freedom
+            likelihood ratio, chisquare distributed with df_diff degrees of
+            freedom
         p_value : float
             p-value of the test statistic
         df_diff : int
-            degrees of freedom of the restriction, i.e. difference in df between models
+            degrees of freedom of the restriction, i.e. difference in df between
+            models
 
         Notes
         -----
-        See mailing list discussion October 17,
+        .. math:: D=-2\\log\\left(\\frac{\\mathcal{L}_{null}}{\\mathcal{L}_{alternative}}\\right)
 
-           \begin{align} D & = -2(\ln(\text{likelihood for null
-            model}) - \ln(\text{likelihood for alternative model})) \\ & =
-            -2\ln\left( \frac{\text{likelihood for null model}}{\text{likelihood
-            for alternative model}} \right). \end{align}
-
-        is distributed as chisquare with df equal to difference in number of parameters
-        or equivalently difference in residual degrees of freedom
+        where :math:`\mathcal{L}` is the likelihood of the model. With :math:`D`
+        distributed as chisquare with df equal to difference in number of
+        parameters or equivalently difference in residual degrees of freedom
 
         TODO: put into separate function, needs tests
         '''
+#        See mailing list discussion October 17,
         llf_full = self.llf
         llf_restr = restricted.llf
         df_full = self.df_resid
@@ -1284,7 +1254,7 @@ class RegressionResults(LikelihoodModelResults):
 
         part2data = zip([self.params[i] for i in range(len(xname))],
                         [self.bse[i] for i in range(len(xname))],
-                        [self.t()[i] for i in range(len(xname))],
+                        [self.tvalues[i] for i in range(len(xname))],
                         [self.pvalues[i] for i in range(len(xname))])
         part2header = ('coefficient', 'std. error', 't-statistic', 'prob.')
         part2stubs = xname
