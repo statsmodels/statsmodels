@@ -298,8 +298,10 @@ class VAR(object):
     .fit() method returns VARResults object
     """
     def __init__(self, endog, names=None, dates=None):
-        (self.y, self.names,
+        (self.endog, self.names,
          self.dates) = data_util.interpret_data(endog, names, dates)
+
+        self.y = self.endog #keep alias for now
         self.nobs, self.neqs = self.y.shape
 
     def fit(self, maxlags=None, method='ols', ic=None, trend='c',
@@ -691,12 +693,12 @@ class VARResults(VARProcess):
     """
     _model_type = 'VAR'
 
-    def __init__(self, y, ys_lagged, params, sigma_u, lag_order,
+    def __init__(self, endog, endog_lagged, params, sigma_u, lag_order,
                  model=None, trendorder=1, names=None, dates=None):
 
         self.model = model
-        self.y = y
-        self.ys_lagged = ys_lagged
+        self.y = self.endog = endog  #keep alias for now
+        self.ys_lagged = self.endog_lagged = endog_lagged #keep alias for now
         self.dates = dates
 
         self.totobs, neqs = self.y.shape
