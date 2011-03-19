@@ -347,6 +347,9 @@ class VAR(object):
             lags = selections[ic]
             if verbose:
                 print 'Using %d based on %s criterion' %  (lags, ic)
+        else:
+            if lags is None:
+                lags = 1
 
         return self._estimate_var(lags, trend=trend)
 
