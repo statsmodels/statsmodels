@@ -10,18 +10,16 @@ Background
 Scipy.stats.models was originally written by Jonathan Taylor.
 For some time it was part of scipy but then removed from it. During
 the Google Summer of Code 2009, stats.models was corrected, tested and
-enhanced.
-
-Now, we are releasing it as a standalone package in the scikits
-namespace as :mod:`scikits.statsmodels` to gain some experience with
-actual usage of it. This scikits.statsmodels is intended to be eventually
-re-included in scipy.
+enhanced and released as a new package. Since then we have continued to
+improve the existing models and added new statistical methods.
 
 
 Current Status
 --------------
 
-statsmodels is a pure python package.
+statsmodels 0.3 is a pure python package, with one optional cython based
+extension. However, future releases will depend on cython generated
+extensions.
 
 statsmodels includes:
 
@@ -33,70 +31,139 @@ statsmodels includes:
   * discretemod: regression with discrete dependent variables, Logit, Probit,
     MNLogit, Poisson, based on maximum likelihood estimators
   * datasets: for examples and tests
+  * univariate time series analysis: AR, ARIMA
+  * vector autoregressive models
+  * descriptive statistics and process models for time series analysis
+  * diagnostics and specification tests
+  * additional statistical tests and functions for multiple testing
+  * miscellaneous models
 
-The other code which we didn't have enough time to verify and fix
-was moved to a sandbox folder. The formula framework is not used any
-more (in the verified code). The sandbox also contains models and functions
-that we are currently developing, partially unfinished and not fully tested.
+statsmodels contains a sandbox folder, which includes some of the original
+stats.models code that has not yet been rewritten and tested. The sandbox also
+contains models and functions that we are currently developing. This code is
+in various stages of development from early stages to almost unfinished, but
+not sufficiently tested or with an API that is still in flux. Some of the code
+in the advanced state covers among others GARCH models, general method of
+moments (GMM) estimators, kernel regression and kernel density estimation, and
+various extensions to scipy.stats.distributions.
 
-Compared to the original code, the class structure and some of the
-method arguments have changed. Additional estimation
-results, e.g. test statistics have been included.
-
-Most importantly, most results have been verified with at least one
-other statistical package: R, Stata or SAS. The guiding principal for the
-rewrite was that all numbers have to be verified, even if we don't manage
-to cover everything. There are a few remaining issues, that we hope to
-clear up soon. Not all parts of the code have been tested for unexpected
-inputs and been made robust against them. Additionally, many of the tests
-call rpy to compare the results directly with R. We use an extended
-wrapper for R models in the test suite. This provides greater flexibility
-writing new test cases, but will eventually be replaced by hard coded
-expected results.
-
-The code is written for plain NumPy arrays.
+The code is written for plain NumPy arrays so that statsmodels can be used
+as a library for any kind of data structure users might have. However, in
+order to make the data handling easier, some time series specific models
+rely on pandas, and we have plans to integrate pandas in future releases of
+statsmodels.
 
 We have also included several datasets from the public domain and by
-permission for the tests and examples.  The datasets follow
-fairly closely David Cournapeau's datasets proposal in
-scikits.learn, with some small modifications. The datasets
-are set up so that it is easy to add more datasets.
+permission for the tests and examples. The datasets are set up so that it is
+easy to add more datasets.
+
+Testing
+-------
+
+Most results have been verified with at least one other statistical package: R,
+Stata or SAS. The guiding principal for the initial rewrite and for continued
+development is that all numbers have to be verified. Some statistical
+methods are tested with Monte Carlo studies. While we strife to follow this
+test driven approach, there is no guarantee that the code is bug-free and
+always works. Some auxilliary function are still insufficiently tested, some
+edge cases might not be correctly taken into account, and the possibility of
+numerical problems is inherent to many of the statistical models. We
+especially appreciate any help and reports for these kind of problems so we
+can keep improving the existing models.
+
+
+
 
 Looking Forward
 ---------------
 
-We are distributing statsmodels as a standalone package to gain
-experience with the API, and to allow us to make changes without
-being committed to backwards compatibility. It will also give us
-the opportunity to find and kill some remaining bugs, and fill
-some holes in our test suite. However, statsmodels is intended
-to become part of scipy after some maturing of the package.
-
-Summer 2009, there was a discussion on the nipy
-mailing list on the structure of the API and about possible
-additional methods for the model classes. We would like
-to invite everyone to give statsmodels a test drive and report
-comments and possibilities for improvement and bugs to the
-scipy-user or statsmodels mailing lists or file tickets on our
+We would like to invite everyone to give statsmodels a test drive, use it and
+report comments, possibilities for improvement and bugs to the statsmodels
+mailing list http://groups.google.com/group/pystatsmodels or file tickets on our
 bug tracker at https://bugs.launchpad.net/statsmodels
 
-The development repository is at http://code.launchpad.net/statsmodels .
+The development repository is currently at http://code.launchpad.net/statsmodels
+but will move to github in the near future.
+
+Our plans for the future include improving the coverage of statistical
+models, methods and tests that any basic statistics package should provide.
+But the main direction for the expansion of statsmodels depends on the
+requirements and interests of the developers and contributers.
+
+The current maintainers are mostly interested in econometrics and time series
+analysis, but we would like to invite any users or developers to contribute
+their own extensions to existing models or new models. To speed up
+improvements that are waiting in the sandbox, any help with providing test
+cases, reviewing or improving the code would be very appreciated.
+
+Planned Extensions
+~~~~~~~~~~~~~~~~~~
+
+Two big changes that are planned for the next release will improve the
+usability of statsmodels especially for interactive work.
+* Metainformation about data and models: Currently the models essentially
+  use no information about the design matrix and just treat it as numpy
+  array.
+* Merge Pandas into statsmodels which will provide a data structure and
+  improved handling of time series data, together with additional time series
+  specific models. (Wes McKinney)
+* Formulas similar to R: This will provide a faster way to interactively
+  define models and contrast matrices, and will provide additional
+  information especially for categorical variables. (Nathaniel Smith)
+
+Various models that are work in progress where the time to inclusion in
+statsmodels proper will depend on the available developer time and interests:
+
+Bayesian dynamic linear models (Wes)
+
+more kalman filter based time series analysis (Skipper)
+
+New models (roughly in order of completeness):
+general method of moments (GMM) estimators, kernel regression,
+kernel density estimation, various extensions to scipy.stats.distributions,
+GARCH models, copulas, system of equation models, panel data models,
+more discrete choice models, mixed effects models, survival models.
+
+New tests: multiple comparison, more diagnostics and outlier tests, additional
+non-parametric tests
+
+Resampling approaches like bootstrap and permutation for tests and estimator
+statistics.
 
 
-We would also like to use statsmodels, or projects related to it, as
-a staging ground for new models. The current maintainers
-are mostly interested in econometrics and time series analysis,
-but we would like to invite any users or developers to contribute
-their own extensions to existing models or new models.
-statsmodels also contains some additional models in a sandbox folder.
-Those models were part of the original stats.models, but there was not
-enough time during GSOC 2009 to test, correct and refactor them. Any
-help to clean them up and bring them towards our testing standards
-would be very appreciated. Whether additional models are included in
-scipy or remain separate can be discussed as they mature.
+Code Stability
+~~~~~~~~~~~~~~
 
-statsmodels is distributed under the same license as scipy (BSD) so
-it can be readily integrated into scipy.
+The existing models are mostly settled in their user interface and we do not
+expect many changes anymore. One area that will need adjustment is how
+formulas and meta information are included. New models that have just been
+included might require adjustments as we gain more experience and obtain
+feedback by users. As we expand the range of models, we keep improving the
+framework for different estimators and statistical tests, so further changes
+will be necessary. In 0.3 we reorganized the internal location of the code and
+import paths which will make future enhancements less interuptive.
+Although there is no quarantee yet on API stability, we try to keep changes
+that require adjustments by existing users to a minimal level.
 
-Josef Perktold and Skipper Seabold
+Financial Support
+-----------------
 
+We are grateful for the financial support that we obtained for the
+developement of scikits.statsmodels:
+
+ Google `www.google.com <http://www.google.com/>`_ : two Google Summer of Code,
+ GSOC 2009 and GSOC 2010
+
+ AQR `www.aqr.com <http://www.aqr.com/>`_ : financial sponsor for the work on
+ Vector Autoregressive Models (VAR) by Wes McKinney
+
+We would also like to thank our hosting providers, `launchpad
+<http://launchpad.net/>`_ for the public code repository, `sourceforge
+<http://sourceforge.net/>`_ for hosting our documentation and `python.org
+<http://python.org>`_ for making our downloads available on pypi.
+
+
+Josef Perktold and Skipper Seabold,
+Wes McKinney,
+Mike Crow,
+Vincent Davis,
