@@ -1029,7 +1029,10 @@ class VARResults(VARProcess):
         Notes
         -----
         Null hypothesis is that there is no Granger-causality for the indicated
-        variables
+        variables. The degrees of freedom in the F-test are based on the
+        number of variables in the VAR system, that is, degrees of freedom
+        are equal to the number of equations in the VAR times degree of freedom
+        of a single equation.
 
         Returns
         -------
