@@ -7,38 +7,40 @@ Added api.py for importing. So the new convention for importing is ::
 
 import scikits.statsmodels.api as sm
 
-Other changes ::
+* sandbox/output.py -> iolib/table.py
+* lib/io.py -> iolib/foreign.py (Now contains Stata .dta format reader)
+* family -> families
+* families.links.inverse -> families.links.inverse_power
+* Datasets' Load class is now load function.
+* regression.py -> regression/linear_model.py
+* discretemod.py -> discrete/discrete_model.py
+* rlm.py -> robust/robust_linear_model.py
+* glm.py -> genmod/generalized_linear_model.py
+* model.py -> base/model.py
+* t() method -> tvalues attribute
 
-sandbox/output.py -> iolib/table.py
-lib/io.py -> iolib/foreign.py (Now contains Stata .dta format reader)
-family -> families
-families.links.inverse -> families.links.inverse_power
-Datasets' Load class is now load function.
-regression.py -> regression/linear_model.py
-discretemod.py -> discrete/discrete_model.py
-rlm.py -> robust/robust_linear_model.py
-glm.py -> genmod/generalized_linear_model.py
-model.py -> base/model.py
-t() method -> tvalues attribute
+*main changes and additions*
 
-*Main additions*
-Numerous bugfixes
-Time Series Analysis model (tsa)
-    Vector Autoregression Models VAR (tsa.VAR)
-    Autogressive Models AR (tsa.AR)
-    Autoregressive Moving Average Models ARMA (tsa.ARMA)
-      -optionally uses Cython for Kalman Filtering
+* Numerous bugfixes.
+* Time Series Analysis model (tsa)
+  - Vector Autoregression Models VAR (tsa.VAR)
+  - Autogressive Models AR (tsa.AR)
+  - Autoregressive Moving Average Models ARMA (tsa.ARMA) :
+      optionally uses Cython for Kalman Filtering
       use setup.py install with option --with-cython
-Improved maximum likelihood framework uses all available scipy.optimize solvers
-Refactor of the datasets sub-package.
-Added Nile River dataset.
-Removed RPy dependency for running the test suite.
-Refactored the test suite.
-Refactored codebase/directory structure.
-Support for offest and exposure in GLM.
-Removed data_weights argument to GLM.fit for Binomial models.
-Improved documentation
-
+* Improved maximum likelihood framework uses all available scipy.optimize solvers
+* Refactor of the datasets sub-package.
+* Added Nile River dataset.
+* Removed RPy dependency for running the test suite.
+* Refactored the test suite.
+* Refactored codebase/directory structure.
+* Support for offset and exposure in GLM.
+* Removed data_weights argument to GLM.fit for Binomial models.
+* New statistical tests, especially diagnostic and specification tests
+* Multiple test correction
+* General Method of Moment framework in sandbox
+* Improved documentation
+* and other additions
 
 
 trunk for 0.2.0
