@@ -65,6 +65,28 @@ def maxabs(x):
 
 
 class IV2SLS(LikelihoodModel):
+    '''
+    class for instrumental variables estimation using Two-Stage Least-Squares
+
+
+    Parameters
+    ----------
+    endog: array 1d
+       endogenous variable
+    exog : array
+       explanatory variables
+    instruments : array
+       instruments for explanatory variables, needs to contain those exog
+       variables that are not instrumented out
+
+    Notes
+    -----
+    All variables in exog are instrumented in the calculations. If variables
+    in exog are not supposed to be instrumented out, then these variables
+    need also to be included in the instrument array.
+
+
+    '''
 
     def __init__(self, endog, exog, instrument=None):
         self.instrument = instrument
@@ -82,13 +104,29 @@ class IV2SLS(LikelihoodModel):
         pass
 
     def fit(self):
+        '''estimate model using 2SLS IV regression
+
+        Returns
+        -------
+        results : instance of RegressionResults
+           regression result
+
+        Notes
+        -----
+        This returns a generic RegressioResults instance as defined for the
+        linear models.
+
+        Parameter estimates and covariance are correct, but other results
+        haven't been tested yet, to seee whether they apply without changes.
+
+        '''
         #Greene 5th edt., p.78 section 5.4
         #move this maybe
         y,x,z = self.endog, self.exog, self.instrument
         ztz = np.dot(z.T, z)
         ztx = np.dot(z.T, x)
         self.xhatparams = xhatparams = np.linalg.solve(ztz, ztx)
-        print 'x.T.shape, xhatparams.shape', x.shape, xhatparams.shape
+        #print 'x.T.shape, xhatparams.shape', x.shape, xhatparams.shape
         F = xhat = np.dot(z, xhatparams)
         FtF = np.dot(F.T, F)
         self.xhatprod = FtF  #store for Housman specification test
@@ -187,25 +225,15 @@ class GMM(object):
         this is mainly if additional variables need to be stored for the
         calculations of the moment conditions
 
-    Attributes
-    ----------
+    Returns
+    -------
+    *Attributes*
     results : instance of GMMResults
         currently just a storage class for params and cov_params without it's
         own methods
     bse : property
         return bse
 
-
-    Methods
-    -------
-    fit
-    cov_params
-
-    other methods
-
-    fititer
-    fitgmm
-    calc_weightmatrix
 
 
     Notes
@@ -245,6 +273,12 @@ class GMM(object):
 
         For estimation with more options use fititer method.
 
+        Parameters
+        ----------
+        start : array (optional)
+            starting value for parameters ub minimization. If None then
+            fitstart method is called for the starting values
+
         Returns
         -------
         results : instance of GMMResults
@@ -252,9 +286,12 @@ class GMM(object):
 
         Notes
         -----
-        this function attaches the estimated parameters, params, the
+        This function attaches the estimated parameters, params, the
         weighting matrix of the final iteration, weights, and the value
-        of the GMM objective function, jval to results
+        of the GMM objective function, jval to results. The results are
+        attached to this instance and also returned.
+
+        fititer is called with maxiter=10
 
 
         '''
@@ -275,8 +312,11 @@ class GMM(object):
 
         Parameters
         ----------
-        momcond : function
-            needs to return (nobs, nmoms) array
+        start : array_like
+            starting values for minimization
+        weights : array
+            weighting matrix for moment conditions. If weights is None, then
+            the identity matrix is used
 
 
         Returns
@@ -288,7 +328,7 @@ class GMM(object):
         -----
         todo: add fixed parameter option, not here ???
 
-        added factorial
+        uses scipy.optimize.fmin
 
         '''
 ##        if not fixed is None:  #fixed not defined in this version
@@ -396,8 +436,8 @@ class GMM(object):
             value
         method : 'momcov', anything else
             If method='momcov' is cov then the matrix is calculated as simple
-            covariance of the moment conditions. For anything else, the
-            uncentered moments are used. (The latter is not recommended.)
+            covariance of the moment conditions. For anything else, a
+            constant cutoff window of length 5 is used.
         wargs : tuple
             parameters that are required by some kernel methods to
             estimate the long-run covariance. Not used yet.
@@ -409,7 +449,10 @@ class GMM(object):
             condition
 
 
+        Notes
+        -----
 
+        currently a constant cutoff window is used
         TODO: implement long-run cov estimators, kernel-based
 
         Newey-West
@@ -565,7 +608,7 @@ class NonlinearIVGMM(GMM):
     Class for linear instrumental variables estimation with homoscedastic
     errors
 
-    currently mainly a test case, doesn't exploit linear structure
+    currently mainly a test case, not checked yet
 
     '''
 
@@ -584,15 +627,24 @@ class NonlinearIVGMM(GMM):
 def spec_hausman(params_e, params_i, cov_params_e, cov_params_i, dof=None):
     '''Hausmans specification test
 
-    (params_e, cov_params_e) :
+    Parameters
+    ----------
+    params_e : array
         efficient and consistent under Null hypothesis,
         inconsistent under alternative hypothesis
-
-    params_i, cov_params_i
+    params_i: array
         consistent under Null hypothesis,
         consistent under alternative hypothesis
+    cov_params_e : array, 2d
+        covariance matrix of parameter estimates for params_e
+    cov_params_i : array, 2d
+        covariance matrix of parameter estimates for params_i
 
     example instrumental variables OLS estimator is `e`, IV estimator is `i`
+
+
+    Notes
+    -----
 
     Todos,Issues
     - check dof calculations and verify for linear case
