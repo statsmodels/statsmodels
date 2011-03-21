@@ -1,6 +1,7 @@
 from scikits.statsmodels.tsa.stattools import (adfuller, acf, pacf_ols, pacf_yw,
-                                               pacf)
+                                               pacf, grangercausalitytests)
 
+import numpy as np
 from numpy.testing import assert_almost_equal
 from numpy import genfromtxt#, concatenate
 from scikits.statsmodels.datasets import macrodata
@@ -180,6 +181,23 @@ class TestPACF(CheckCorrGram):
         pacfyw = pacf(self.x, nlags=40, method="yw")
         pacfld = pacf(self.x, nlags=40, method="ldu")
         assert_almost_equal(pacfyw, pacfld, DECIMAL_8)
+
+
+
+def test_grangercausality():
+    # some example data
+    mdata = macrodata.load().data
+    mdata = mdata[['realgdp','realcons']]
+    data = mdata.view((float,2))
+    data = np.diff(np.log(data), axis=0)
+
+    #R: lmtest:grangertest
+    r_result = [0.243097, 0.7844328, 195, 2]  #f_test
+    gr = grangercausalitytests(data[:,1::-1], 2, verbose=False)
+    assert_almost_equal(r_result, gr[2][0]['ssr_ftest'], decimal=7)
+    assert_almost_equal(gr[2][0]['params_ftest'], gr[2][0]['ssr_ftest'],
+                        decimal=7)
+
 
 if __name__=="__main__":
     import nose

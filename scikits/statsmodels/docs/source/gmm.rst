@@ -20,3 +20,25 @@ either for a given weighting matrix or iteratively by alternating between estima
 the optimal weighting matrix and estimating the parameters. Implementing models with
 different moment conditions is done by subclassing GMM. In the minimal implementation
 only the moment conditions, `momcond` have to be defined.
+
+.. currentmodule:: scikits.statsmodels.sandbox.regression.gmm
+
+
+Module Reference
+""""""""""""""""
+
+.. autosummary::
+   :toctree: generated/
+
+   GMM
+   GMMResults
+   IV2SLS
+
+not sure what the status is on the following
+
+.. autosummary::
+   :toctree: generated/
+
+   IVGMM
+   NonlinearIVGMM
+   DistQuantilesGMM

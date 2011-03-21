@@ -170,7 +170,7 @@ def varinversefilter(ar, nobs, version=1):
     arinv[0,:,:] = ar[0]
     arinv[1:nlags,:,:] = -ar[1:]
     if version == 1:
-        for i in range(nlags+1,nobs+1):
+        for i in range(2,nobs+1):
             tmp = np.zeros((nvars,nvars))
             for p in range(1,nlags):
                 tmp += np.dot(-ar[p],arinv[i-p,:,:])
@@ -324,8 +324,8 @@ def ar2lhs(ar):
 
 
 
-class Var(object):
-    '''
+class _Var(object):
+    '''obsolete VAR class, use tsa.VAR instead, for internal use only
 
 
     Example
