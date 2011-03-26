@@ -36,7 +36,7 @@ mat = np.array
 try:
     import pandas.util.testing as test
     st = test.set_trace
-except:
+except ImportError:
     pass
 
 #-------------------------------------------------------------------------------
