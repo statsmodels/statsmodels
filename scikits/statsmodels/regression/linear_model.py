@@ -1312,9 +1312,9 @@ class RegressionResults(LikelihoodModelResults):
             return part1.as_csv() + '\n' + part2.as_csv() + '\n' + \
                    part3L.as_csv()
         elif returns == 'latex':
-            print('not avalible yet')
-        elif returns == html:
-            print('not avalible yet')
+            print('not available yet')
+        elif returns == 'html':
+            print('not available yet')
 
 if __name__ == "__main__":
     import scikits.statsmodels.api as sm
