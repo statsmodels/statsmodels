@@ -46,7 +46,7 @@ class TestPoissonMLE(Compare):
         data_endog = np.random.poisson(np.exp(xbeta))
 
         #estimate discretemod.Poisson as benchmark
-        self.res_discrete = Poisson(data_endog, data_exog).fit()
+        self.res_discrete = Poisson(data_endog, data_exog).fit(disp=0)
 
         mod_glm = sm.GLM(data_endog, data_exog, family=sm.families.Poisson())
         self.res_glm = mod_glm.fit()
@@ -54,7 +54,7 @@ class TestPoissonMLE(Compare):
         #estimate generic MLE
         self.mod = PoissonGMLE(data_endog, data_exog)
         self.res = self.mod.fit(start_params=0.9 * self.res_discrete.params,
-                                method='nm')
+                                method='nm', disp=0)
 
 
 
@@ -73,7 +73,7 @@ class TestPoissonOffset(Compare):
         data_endog = np.random.poisson(np.exp(xbeta))
 
         #estimate discretemod.Poisson as benchmark
-        self.res_discrete = Poisson(data_endog, data_exog).fit()
+        self.res_discrete = Poisson(data_endog, data_exog).fit(disp=0)
 
         mod_glm = sm.GLM(data_endog, data_exog, family=sm.families.Poisson())
         self.res_glm = mod_glm.fit()
@@ -85,7 +85,7 @@ class TestPoissonOffset(Compare):
         #self.res = PoissonOffsetGMLE(data_endog, data_exog[:,1:], offset=offset).fit(start_params = np.ones(6)/2., method='nm')
         modo = PoissonOffsetGMLE(data_endog, data_exog[:,1:], offset=offset)
         self.res = modo.fit(start_params = 0.9*self.res_discrete.params[1:],
-                            method='nm')
+                            method='nm', disp=0)
 
 
 
@@ -114,7 +114,7 @@ class TestPoissonZi(Compare):
         data_endog = np.random.poisson(np.exp(xbeta))
 
         #estimate discretemod.Poisson as benchmark
-        self.res_discrete = Poisson(data_endog, data_exog).fit()
+        self.res_discrete = Poisson(data_endog, data_exog).fit(disp=0)
 
         mod_glm = sm.GLM(data_endog, data_exog, family=sm.families.Poisson())
         self.res_glm = mod_glm.fit()
@@ -125,7 +125,7 @@ class TestPoissonZi(Compare):
         offset = self.res_discrete.params[0] * data_exog[:,0]  #1d ???
         self.res = PoissonZiGMLE(data_endog, data_exog[:,1:],offset=offset).fit(
                             start_params=np.r_[0.9*self.res_discrete.params[1:],10],
-                            method='nm')
+                            method='nm', disp=0)
 
 
 
