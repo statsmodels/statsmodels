@@ -12,10 +12,11 @@ write_file = open(write_file_path, 'w')
 
 for line in read_file:
     if 'longtable}{LL' in line:
-        line = line.replace('longtable}{LL', 'longtable}{ll')
+        line = line.replace('longtable}{LL', 'longtable}{|l|l|')
     write_file.write(line)
 
 read_file.close()
 write_file.close()
 
+os.remove(read_file_path)
 os.rename(write_file_path, read_file_path)
