@@ -33,8 +33,11 @@ import scikits.statsmodels.tools.data as data_util
 
 mat = np.array
 
-import pandas.util.testing as test
-st = test.set_trace
+try:
+    import pandas.util.testing as test
+    st = test.set_trace
+except:
+    pass
 
 #-------------------------------------------------------------------------------
 # VAR process routines
