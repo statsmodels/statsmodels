@@ -311,7 +311,7 @@ def het_breushpagan(resid, x, exog=None):
 
     :math: \sigma_i = \\sigma * f(\\alpha_0 + \\alpha z_i)
 
-    Homoscedasticity implies that $\alpha=0$
+    Homoscedasticity implies that $\\alpha=0$
 
 
     Parameters
