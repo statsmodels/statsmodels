@@ -1,8 +1,11 @@
 import numpy as np
 import scikits.statsmodels.tsa.vector_ar.util as util
 
-import matplotlib.pyplot as plt
-import matplotlib as mpl
+try:
+    import matplotlib.pyplot as plt
+    import matplotlib as mpl
+except ImportError:
+    pass
 
 class MPLConfigurator(object):
 
