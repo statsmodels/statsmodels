@@ -159,8 +159,7 @@ def configuration(parent_package='', top_path=None, package_name=DISTNAME):
     config.add_data_dir('scikits/statsmodels/genmod/tests')
     config.add_data_dir('scikits/statsmodels/regression/tests')
     config.add_data_dir('scikits/statsmodels/robust/tests')
-    config.add_data_dir('scikits/statsmodels/tsa/var/tests')
-    config.add_data_files('scikits/statsmodels/tsa/vector_ar/tests/results/vars_results.npz')
+    config.add_data_dir('scikits/statsmodels/tsa/vector_ar/tests')
     config.add_data_files('scikits/statsmodels/docs/build/htmlhelp/statsmodelsdoc.chm')
     config.add_data_files('scikits/statsmodels/iolib/tests/results/macrodata.npy')
     vardatafiles = [os.path.join(r,d) for r,ds,f in \
