@@ -33,8 +33,11 @@ import scikits.statsmodels.tools.data as data_util
 
 mat = np.array
 
-import pandas.util.testing as test
-st = test.set_trace
+try:
+    import pandas.util.testing as test
+    st = test.set_trace
+except ImportError:
+    pass
 
 #-------------------------------------------------------------------------------
 # VAR process routines
@@ -298,8 +301,10 @@ class VAR(object):
     .fit() method returns VARResults object
     """
     def __init__(self, endog, names=None, dates=None):
-        (self.y, self.names,
+        (self.endog, self.names,
          self.dates) = data_util.interpret_data(endog, names, dates)
+
+        self.y = self.endog #keep alias for now
         self.nobs, self.neqs = self.y.shape
 
     def fit(self, maxlags=None, method='ols', ic=None, trend='c',
@@ -347,6 +352,9 @@ class VAR(object):
             lags = selections[ic]
             if verbose:
                 print 'Using %d based on %s criterion' %  (lags, ic)
+        else:
+            if lags is None:
+                lags = 1
 
         return self._estimate_var(lags, trend=trend)
 
@@ -688,12 +696,12 @@ class VARResults(VARProcess):
     """
     _model_type = 'VAR'
 
-    def __init__(self, y, ys_lagged, params, sigma_u, lag_order,
+    def __init__(self, endog, endog_lagged, params, sigma_u, lag_order,
                  model=None, trendorder=1, names=None, dates=None):
 
         self.model = model
-        self.y = y
-        self.ys_lagged = ys_lagged
+        self.y = self.endog = endog  #keep alias for now
+        self.ys_lagged = self.endog_lagged = endog_lagged #keep alias for now
         self.dates = dates
 
         self.totobs, neqs = self.y.shape
@@ -1024,7 +1032,10 @@ class VARResults(VARProcess):
         Notes
         -----
         Null hypothesis is that there is no Granger-causality for the indicated
-        variables
+        variables. The degrees of freedom in the F-test are based on the
+        number of variables in the VAR system, that is, degrees of freedom
+        are equal to the number of equations in the VAR times degree of freedom
+        of a single equation.
 
         Returns
         -------

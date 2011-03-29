@@ -16,7 +16,7 @@ import os
 
 chmpath = os.path.join(os.path.dirname(__file__),'docs\\build\\htmlhelp\\statsmodelsdoc.chm')
 if os.path.exists(chmpath):
-    def open_help():
+    def open_help(chmpath=chmpath):
         from subprocess import Popen
         p = Popen(chmpath, shell=True)
 

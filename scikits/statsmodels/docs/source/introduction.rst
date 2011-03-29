@@ -101,6 +101,7 @@ Planned Extensions
 
 Two big changes that are planned for the next release will improve the
 usability of statsmodels especially for interactive work.
+
 * Metainformation about data and models: Currently the models essentially
   use no information about the design matrix and just treat it as numpy
   array.

@@ -668,15 +668,12 @@ def levinson_durbin(s, nlags=10, isacov=False):
 
 
 
-def grangercausalitytests(x, maxlag, addconst=True):
+def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
     '''four tests for granger causality of 2 timeseries
 
-    this is a proof-of concept implementation
-    not cleaned up, has some duplicate calculations,
-    memory intensive - builds full lag array for variables
-    prints results
-    not verified with other packages,
-    all four tests give similar results (1 and 4 identical)
+    all four tests give similar results
+    `params_ftest` and `ssr_ftest` are equivalent based of F test which is identical to
+    lmtest:grangertest in R
 
     Parameters
     ----------
@@ -686,15 +683,25 @@ def grangercausalitytests(x, maxlag, addconst=True):
     maxlag : integer
         the Granger causality test results are calculated for all lags up to
         maxlag
+    verbose : bool
+        print results if true
 
     Returns
     -------
-    None : no returns
-        all test results are currently printed
+    results : dictionary
+        all test results, dictionary keys are the number of lags. For each
+        lag the values are a tuple, with the first element a dictionary with
+        teststatistic, pvalues, degrees of freedom, the second element are
+        the OLS estimation results for the restricted model, the unrestricted
+        model and the restriction (contrast) matrix for the parameter f_test.
 
     Notes
     -----
-    TODO: convert to function that returns and compare with other packages
+    TODO: convert to class and attach results properly
+
+    'params_ftest', 'ssr_ftest' are based on F test
+
+    'ssr_chi2test', 'lrtest' are based on chi-square test
 
     '''
     from scipy import stats # lazy import
@@ -702,8 +709,10 @@ def grangercausalitytests(x, maxlag, addconst=True):
     resli = {}
 
     for mlg in range(1, maxlag+1):
-        print '\nGranger Causality'
-        print 'number of lags (no zero)', mlg
+        result = {}
+        if verbose:
+            print '\nGranger Causality'
+            print 'number of lags (no zero)', mlg
         mxlg = mlg #+ 1 # Note number of lags starting at zero in lagmat
 
         # create lagmat of both time series
@@ -728,18 +737,24 @@ def grangercausalitytests(x, maxlag, addconst=True):
 
         # Granger Causality test using ssr (F statistic)
         fgc1 = (res2down.ssr-res2djoint.ssr)/res2djoint.ssr/(mxlg)*res2djoint.df_resid
-        print 'ssr based F test:         F=%-8.4f, p=%-8.4f, df_denom=%d, df_num=%d' % \
+        if verbose:
+            print 'ssr based F test:         F=%-8.4f, p=%-8.4f, df_denom=%d, df_num=%d' % \
               (fgc1, stats.f.sf(fgc1, mxlg, res2djoint.df_resid), res2djoint.df_resid, mxlg)
+        result['ssr_ftest'] = (fgc1, stats.f.sf(fgc1, mxlg, res2djoint.df_resid), res2djoint.df_resid, mxlg)
 
         # Granger Causality test using ssr (ch2 statistic)
         fgc2 = res2down.nobs*(res2down.ssr-res2djoint.ssr)/res2djoint.ssr
-        print 'ssr based chi2 test:   chi2=%-8.4f, p=%-8.4f, df=%d' %  \
+        if verbose:
+            print 'ssr based chi2 test:   chi2=%-8.4f, p=%-8.4f, df=%d' %  \
               (fgc2, stats.chi2.sf(fgc2, mxlg), mxlg)
+        result['ssr_chi2test'] = (fgc2, stats.chi2.sf(fgc2, mxlg), mxlg)
 
         #likelihood ratio test pvalue:
         lr = -2*(res2down.llf-res2djoint.llf)
-        print 'likelihood ratio test: chi2=%-8.4f, p=%-8.4f, df=%d' %  \
+        if verbose:
+            print 'likelihood ratio test: chi2=%-8.4f, p=%-8.4f, df=%d' %  \
               (lr, stats.chi2.sf(lr, mxlg), mxlg)
+        result['lrtest'] = (lr, stats.chi2.sf(lr, mxlg), mxlg)
 
         # F test that all lag coefficients of exog are zero
         rconstr = np.column_stack((np.zeros((mxlg-1,mxlg-1)), np.eye(mxlg-1, mxlg-1),\
@@ -747,10 +762,14 @@ def grangercausalitytests(x, maxlag, addconst=True):
         rconstr = np.column_stack((np.zeros((mxlg,mxlg)), np.eye(mxlg, mxlg),\
                                    np.zeros((mxlg, 1))))
         ftres = res2djoint.f_test(rconstr)
-        print 'parameter F test:         F=%-8.4f, p=%-8.4f, df_denom=%d, df_num=%d' % \
+        if verbose:
+            print 'parameter F test:         F=%-8.4f, p=%-8.4f, df_denom=%d, df_num=%d' % \
               (ftres.fvalue, ftres.pvalue, ftres.df_denom, ftres.df_num)
+        result['params_ftest'] = (np.squeeze(ftres.fvalue)[()],
+                                  np.squeeze(ftres.pvalue)[()],
+                                  ftres.df_denom, ftres.df_num)
 
-        resli[mxlg] = [res2down, res2djoint, rconstr]
+        resli[mxlg] = (result, [res2down, res2djoint, rconstr])
 
     return resli
 

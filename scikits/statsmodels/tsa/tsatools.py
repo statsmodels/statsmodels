@@ -124,7 +124,7 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
 
         # get index for return
         if insert is True:
-            ins_idx = names.index(col) + 1
+            ins_idx = list(names).index(col) + 1
         elif insert is False:
             ins_idx = len(names) + 1
         else: # insert is an int

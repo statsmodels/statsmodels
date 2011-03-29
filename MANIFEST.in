@@ -26,6 +26,6 @@ include scikits/statsmodels/docs/Makefile
 #include scikits/statsmodels/docs GLM*
 
 #missed files:  .npz, .npy
-include scikits/statsmodels/sandbox/tsa/tests/results/vars_results.npz
-include scikits/statsmodels/sandbox/iolib/tests/results/*
+include scikits/statsmodels/tsa/vector_ar/tests/results/vars_results.npz
+include scikits/statsmodels/iolib/tests/results/*
 global-exclude *~ *.swp  *.pyc *.bak

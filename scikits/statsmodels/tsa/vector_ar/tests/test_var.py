@@ -139,7 +139,10 @@ _monkeypatched_mpl = False
 _draw_function = None
 
 def _suppress_plots():
-    import matplotlib.pyplot as plt
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError:
+        raise nose.SkipTest
 
     # global _monkeypatched_mpl, _draw_function
     # if not _monkeypatched_mpl:

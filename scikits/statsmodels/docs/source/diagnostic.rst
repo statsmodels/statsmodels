@@ -1,4 +1,4 @@
-
+.. _diagnostics:
 
 Regression Diagnostics and Specification Tests
 ==============================================
