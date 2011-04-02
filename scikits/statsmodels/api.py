@@ -7,7 +7,8 @@ from .genmod import families
 import robust
 from .robust.robust_linear_model import RLM
 from .discrete.discrete_model import Poisson, Logit, Probit, MNLogit
-import tsa.api as tsa
+import tsa.api
+tsa = tsa.api
 from __init__ import test
 from version import __version__
 from info import __doc__
