@@ -39,6 +39,7 @@ class ARMA(LikelihoodModel):
         else:
             k_exog = 0
         self.k_exog = k_exog
+        self.nobs = endog.shape[0] #TODO: remove when names are sorted
 
     def _fit_start_params(self, order):
         """

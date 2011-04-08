@@ -42,6 +42,7 @@ class AR(LikelihoodModel):
         self.endog = endog  # overwrite endog
         if exog is not None:
             raise ValueError("Exogenous variables are not supported for AR.")
+        self.nobs = endog.shape[0] #TODO: remove once names are changed
 
     def initialize(self):
         pass
@@ -174,7 +175,7 @@ class AR(LikelihoodModel):
             return np.array([])
 
         y = self.endog.copy()
-        nobs = int(self.nobs)
+        nobs = int(self.endog.shape[0])
 
         if start < 0:
             start = nobs + start # convert negative indexing
