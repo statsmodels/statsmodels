@@ -3,7 +3,8 @@ from scipy.stats import t, norm
 from scipy import optimize
 from scikits.statsmodels.tools.tools import recipr
 from scikits.statsmodels.stats.contrast import ContrastResults
-from scikits.statsmodels.tools.decorators import resettable_cache, cache_readonly
+from scikits.statsmodels.tools.decorators import (resettable_cache,
+                                                        cache_readonly)
 
 class Model(object):
     """
