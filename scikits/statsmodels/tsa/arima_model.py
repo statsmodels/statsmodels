@@ -80,7 +80,7 @@ class ARMA(LikelihoodModel):
             if p != 0:
                 armod = AR(endog).fit(ic='bic', trend='nc')
                 arcoefs_tmp = armod.params
-                p_tmp = armod.laglen
+                p_tmp = armod.k_ar
                 resid = endog[p_tmp:] - np.dot(lagmat(endog, p_tmp,
                                 trim='both'), arcoefs_tmp)
                 X = np.column_stack((lagmat(endog,p,'both')[p_tmp+(q-p):],
