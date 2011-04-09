@@ -15,7 +15,8 @@ from scikits.statsmodels.tools.decorators import (resettable_cache,
         cache_readonly, cache_writable)
 from scikits.statsmodels.tools.compatibility import np_slogdet
 from scikits.statsmodels.sandbox.regression.numdiff import approx_fprime
-from scikits.statsmodels.sandbox.regression.numdiff import approx_hess
+from scikits.statsmodels.sandbox.regression.numdiff import (approx_hess,
+        approx_hess_cs)
 
 
 __all__ = ['AR']
@@ -42,7 +43,6 @@ class AR(LikelihoodModel):
         self.endog = endog  # overwrite endog
         if exog is not None:
             raise ValueError("Exogenous variables are not supported for AR.")
-        self.nobs = endog.shape[0] #TODO: remove once names are changed
 
     def initialize(self):
         pass
@@ -315,7 +315,7 @@ class AR(LikelihoodModel):
         return Vpinv
 
 
-    def loglike(self, params, other=False):
+    def loglike(self, params):
         """
         The loglikelihood of an AR(p) process
 
@@ -350,13 +350,12 @@ class AR(LikelihoodModel):
         #TODO: Math is on Hamilton ~pp 124-5
         #will need to be amended for inclusion of exogenous variables
         nobs = self.nobs
-        avobs = self.avobs
         Y = self.Y
         X = self.X
         if self.method == "cmle":
             ssr = sumofsq(Y.squeeze()-np.dot(X,params))
-            sigma2 = ssr/avobs
-            return -avobs/2 * (np.log(2*np.pi) + np.log(sigma2)) -\
+            sigma2 = ssr/nobs
+            return -nobs/2 * (np.log(2*np.pi) + np.log(sigma2)) -\
                     ssr/(2*sigma2)
         endog = self.endog
         k_ar = self.k_ar
@@ -395,8 +394,6 @@ class AR(LikelihoodModel):
         logdet = np_slogdet(Vpinv)[1] #TODO: add check for singularity
         loglike = -1/2.*(nobs*(np.log(2*np.pi) + np.log(sigma2)) - \
                 logdet + diffpVpinv/sigma2 + ssr/sigma2)
-        if other:
-            return ssr
         return loglike
 
     def _R(self):
@@ -564,7 +561,7 @@ class AR(LikelihoodModel):
         if method not in ['cmle','yw','mle']:
             raise ValueError("Method %s not recognized" % method)
         self.method = method
-        nobs = self.nobs
+        nobs = len(self.endog) # overwritten if method is 'cmle'
         if maxlag is None:
             maxlag = int(round(12*(nobs/100.)**(1/4.)))
 
@@ -611,8 +608,6 @@ class AR(LikelihoodModel):
 
         # change to what was chosen by fit method
         self.k_ar = k_ar
-        avobs = nobs - k_ar
-        self.avobs = avobs
 
         # redo estimation for best lag
         # make LHS
@@ -622,14 +617,15 @@ class AR(LikelihoodModel):
         k_trend = self.k_trend
         self.Y = Y
         self.X = X
-        self.df_resid = avobs - k_ar - k_trend # for compatiblity
-                                                # with Model code
+
         if solver:
             solver = solver.lower()
         if method == "cmle":     # do OLS
             arfit = OLS(Y,X).fit()
             params = arfit.params
+            self.nobs = nobs - k_ar
         if method == "mle":
+            self.nobs = nobs
             if not start_params:
                 start_params = OLS(Y,X).fit().params
                 start_params = self._invtransparams(start_params)
@@ -691,12 +687,10 @@ class ARResults(LikelihoodModelResults):
 
     aic : float
         Akaike Information Criterion using Lutkephol's definition.
-        :math:`log(sigma) + 2*(1+k_ar)/avobs`
-    avobs : float
-        The number of available observations `nobs` - `k_ar`
+        :math:`log(sigma) + 2*(1+k_ar)/nobs`
     bic : float
         Bayes Information Criterion
-        :math:`\\log(\\sigma) + (1+k_ar)*\\log(avobs)/avobs`
+        :math:`\\log(\\sigma) + (1+k_ar)*\\log(nobs)/nobs`
     bse : array
         The standard errors of the estimated parameters. If `method` is 'cmle',
         then the standard errors that are returned are the OLS standard errors
@@ -708,7 +702,7 @@ class ARResults(LikelihoodModelResults):
         fit by `mle`.
     fpe : float
         Final prediction error using Lutkepohl's definition
-        ((nobs+k_trend)/(avobs-k_ar-k_trend))*sigma
+        ((n_totobs+k_trend)/(n_totobs-k_ar-k_trend))*sigma
     hqic : float
         Hannan-Quinn Information Criterion.
     k_ar : float
@@ -720,7 +714,9 @@ class ARResults(LikelihoodModelResults):
     model : AR model instance
         A reference to the fitted AR model.
     nobs : float
-        The number of observations. Sometimes `n` in the docs.
+        The number of available observations `nobs` - `k_ar`
+    n_totobs : float
+        The number of total observations in `endog`. Sometimes `n` in the docs.
     params : array
         The fitted parameters of the model.
     pvalues : array
@@ -748,23 +744,26 @@ class ARResults(LikelihoodModelResults):
                 scale)
         self._cache = resettable_cache()
         self.nobs = model.nobs
-        self.avobs = model.avobs
+        n_totobs = len(model.endog)
+        self.n_totobs = n_totobs
         self.X = model.X # copy?
         self.Y = model.Y
-        self.k_ar = model.k_ar
+        k_ar = model.k_ar
+        self.k_ar = k_ar
         k_trend = model.k_trend
         self.k_trend = k_trend
         trendorder = None
         if k_trend > 0:
             trendorder = k_trend - 1
         self.trendorder = 1
+        self.df_resid = n_totobs - k_ar - k_trend #TODO: cmle vs mle?
 
     @cache_writable()
     def sigma2(self):
         #TODO: allow for DOF correction if exog is included
         model = self.model
         if model.method == "cmle": # do DOF correction
-            return 1./self.avobs * sumofsq(self.resid)
+            return 1./self.nobs * sumofsq(self.resid)
         else: # we need to calculate the ssr for the pre-sample
               # see loglike for details
             lagstart = self.k_trend #TODO: handle exog
@@ -788,48 +787,47 @@ class ARResults(LikelihoodModelResults):
         if self.model.method == "cmle": # uses different scale/sigma definition
             resid = self.resid
             ssr = np.dot(resid,resid)
-            ols_scale = ssr/(self.avobs - self.k_ar - self.k_trend)
+            ols_scale = ssr/(self.nobs - self.k_ar - self.k_trend)
             return np.sqrt(np.diag(self.cov_params(scale=ols_scale)))
         else:
-            hess = approx_hess_cs(self.params, self.model.loglike)
-            return np.sqrt(np.diag(-np.linalg.inv(hess)))
+            hess = approx_hess(self.params, self.model.loglike)
+            return np.sqrt(np.diag(-np.linalg.inv(hess[0])))
 
     @cache_readonly
     def pvalues(self):
-        if self.model.method == "cmle": # uses asymptotics so norm
-            return norm.sf(np.abs(self.tvalues))*2
+        return norm.sf(np.abs(self.tvalues))*2
 
     @cache_readonly
     def aic(self):
         #JP: this is based on loglike with dropped constant terms ?
 # Lutkepohl
-#        return np.log(self.sigma2) + 1./self.model.avobs * self.k_ar
+#        return np.log(self.sigma2) + 1./self.model.nobs * self.k_ar
 # Include constant as estimated free parameter and double the loss
-        return np.log(self.sigma2) + 2 * (1 + self.k_ar)/self.avobs
+        return np.log(self.sigma2) + 2 * (1 + self.k_ar)/self.nobs
 # Stata defintion
-#        avobs = self.avobs
-#        return -2 * self.llf/avobs + 2 * (self.k_ar+self.k_trend)/avobs
+#        nobs = self.nobs
+#        return -2 * self.llf/nobs + 2 * (self.k_ar+self.k_trend)/nobs
 
     @cache_readonly
     def hqic(self):
-        avobs = self.avobs
+        nobs = self.nobs
 # Lutkepohl
-#        return np.log(self.sigma2)+ 2 * np.log(np.log(avobs))/avobs * self.k_ar
+#        return np.log(self.sigma2)+ 2 * np.log(np.log(nobs))/nobs * self.k_ar
 # R uses all estimated parameters rather than just lags
-        return np.log(self.sigma2) + 2 * np.log(np.log(avobs))/avobs * \
+        return np.log(self.sigma2) + 2 * np.log(np.log(nobs))/nobs * \
                 (1 + self.k_ar)
 # Stata
-#        avobs = self.avobs
-#        return -2 * self.llf/avobs + 2 * np.log(np.log(avobs))/avobs * \
+#        nobs = self.nobs
+#        return -2 * self.llf/nobs + 2 * np.log(np.log(nobs))/nobs * \
 #                (self.k_ar + self.k_trend)
 
     @cache_readonly
     def fpe(self):
-        avobs = self.avobs
+        nobs = self.nobs
         k_ar = self.k_ar
         k_trend = self.k_trend
 #Lutkepohl
-        return ((avobs+k_ar+k_trend)/(avobs-k_ar-k_trend))*self.sigma2
+        return ((nobs+k_ar+k_trend)/(nobs-k_ar-k_trend))*self.sigma2
 
     @cache_readonly
     def llf(self):
@@ -837,13 +835,13 @@ class ARResults(LikelihoodModelResults):
 
     @cache_readonly
     def bic(self):
-        avobs = self.avobs
+        nobs = self.nobs
 # Lutkepohl
-#        return np.log(self.sigma2) + np.log(avobs)/avobs * self.k_ar
+#        return np.log(self.sigma2) + np.log(nobs)/nobs * self.k_ar
 # Include constant as est. free parameter
-        return np.log(self.sigma2) + (1 + self.k_ar) * np.log(avobs)/avobs
+        return np.log(self.sigma2) + (1 + self.k_ar) * np.log(nobs)/nobs
 # Stata
-#        return -2 * self.llf/avobs + np.log(avobs)/avobs * (self.k_ar + \
+#        return -2 * self.llf/nobs + np.log(nobs)/nobs * (self.k_ar + \
 #                self.k_trend)
 
     @cache_readonly
