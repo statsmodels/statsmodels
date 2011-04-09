@@ -39,7 +39,6 @@ class ARMA(LikelihoodModel):
         else:
             k_exog = 0
         self.k_exog = k_exog
-        self.nobs = endog.shape[0] #TODO: remove when names are sorted
 
     def _fit_start_params(self, order):
         """
@@ -227,9 +226,9 @@ class ARMA(LikelihoodModel):
         errors = lfilter(b,a, y, zi=zi)[0][k_ar:]
 
         ssr = np.dot(errors,errors)
-        sigma2 = ssr/(nobs-k_ar)
+        sigma2 = ssr/nobs
         self.sigma2 = sigma2
-        llf = -(nobs-k_ar)/2.*(log(2*pi) + log(sigma2)) - ssr/(2*sigma2)
+        llf = -nobs/2.*(log(2*pi) + log(sigma2)) - ssr/(2*sigma2)
         return llf
 
     def fit(self, order, start_params=None, trend='c', method = "css-mle",
@@ -319,6 +318,7 @@ class ARMA(LikelihoodModel):
         endog = self.endog
         exog = self.exog
         k_exog = self.k_exog
+        self.nobs = len(endog) # this is overwritten if method is 'css'
 
         # handle exogenous variables
         k_trend = 1 # overwritten if no constant
@@ -334,14 +334,7 @@ class ARMA(LikelihoodModel):
         if trend == 'nc':
             k_trend = 0
         self.k_trend = k_trend
-#TODO: remove below after bug-testing
-#        if exog is not None:    # exog only
-#            k = exog.shape[1]
-#        else:   # no exogenous variables
-#            k = 0
-#            exog = None # set back so can rerun model
         self.exog = exog    # overwrites original exog from __init__
-#        self.k = k
         k = k_trend + k_exog
 
 
@@ -352,6 +345,7 @@ class ARMA(LikelihoodModel):
         if method.lower() == 'css':
             loglike = lambda params: -self.loglike_css(params)
             self.loglike = self.loglike_css
+            self.nobs = len(endog) - k_ar #nobs for CSS excludes pre-sample
 
         if start_params is not None:
             start_params = np.asarray(start_params)
@@ -394,7 +388,7 @@ class ARMA(LikelihoodModel):
 
         self.transparams = False # set to false so methods don't expect transf.
 
-        normalized_cov_params = None
+        normalized_cov_params = None #TODO: fix this
 
         return ARMAResults(self, params, normalized_cov_params)
 
@@ -471,8 +465,13 @@ class ARMAResults(LikelihoodModelResults):
     model : ARMA instance
         A reference to the model that was fit.
     nobs : float
-        The number of observations in the model. This includes all
-        observations, even pre-sample values of the model is fit using ‘css’.
+        The number of observations used to fit the model. If the model is fit
+        using exact maximum likelihood this is equal to the total number of
+        observations, `n_totobs`. If the model is fit using conditional
+        maximum likelihood this is equal to `n_totobs` - `k_ar`.
+    n_totobs : float
+        The total number of observations for `endog`. This includes all
+        observations, even pre-sample values if the model is fit using ‘css’.
     params : array
         The parameters of the model. The order of variables is the trend
         coefficients and the `k_exog` exognous coefficients, then the
@@ -499,23 +498,21 @@ class ARMAResults(LikelihoodModelResults):
     _cache = {}
 
 #TODO: use this for docstring when we fix nobs issue
-#    nobs : float
-#        The number of observations used to fit the model. If the model is fit
-#        using exact maximum likelihood this is equal to the total number of
-#        observations, `n_totobs`. If the model is fit using conditional
-#        maximum likelihood this is equal to `n_totobs` - `k_ar`.
+
 
     def __init__(self, model, params, normalized_cov_params=None, scale=1.):
         super(ARMAResults, self).__init__(model, params, normalized_cov_params,
                 scale)
         self.sigma2 = model.sigma2
-        self.nobs = model.nobs
+        nobs = model.nobs
+        self.nobs = nobs
         k_exog = model.k_exog
         self.k_exog = k_exog
         k_trend = model.k_trend
         self.k_trend = k_trend
         k_ar = model.k_ar
         self.k_ar = k_ar
+        self.n_totobs = len(model.endog)
         k_ma = model.k_ma
         self.k_ma = k_ma
         df_model = k_exog + k_trend + k_ar + k_ma
@@ -587,16 +584,11 @@ class ARMAResults(LikelihoodModelResults):
     @cache_readonly
     def bic(self):
         nobs = self.nobs
-        k_ar = self.k_ar
-        if self.model.method == "css":
-            nobs -= k_ar
         return -2*self.llf + np.log(nobs)*(self.df_model+1)
 
     @cache_readonly
     def hqic(self):
         nobs = self.nobs
-        if self.model.method == "css":
-            nobs -= self.k_ar
         return -2*self.llf + 2*(self.df_model+1)*np.log(np.log(nobs))
 
     @cache_readonly
