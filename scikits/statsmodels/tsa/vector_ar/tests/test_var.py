@@ -14,11 +14,11 @@ import sys
 import numpy as np
 
 import scikits.statsmodels.api as sm
-import scikits.statsmodels.tsa.vector_ar.varmod as model
+import scikits.statsmodels.tsa.vector_ar.var_model as model
 import scikits.statsmodels.tsa.vector_ar.util as util
 import scikits.statsmodels.tools.data as data_util
 reload(model)
-from scikits.statsmodels.tsa.vector_ar.varmod import VAR
+from scikits.statsmodels.tsa.vector_ar.var_model import VAR
 
 from numpy.testing import assert_almost_equal, assert_equal
 

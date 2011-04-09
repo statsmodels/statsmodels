@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 from scikits.statsmodels.tools.decorators import cache_readonly
 
-import varmod as _model
+import var_model as _model
 import util
 import plotting
 

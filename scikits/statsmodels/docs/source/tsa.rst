@@ -111,8 +111,8 @@ Vector Autogressive Processes (VAR)
 .. autosummary::
    :toctree: generated/
 
-   vector_ar.varmod.VAR
-   vector_ar.varmod.VARResults
+   vector_ar.var_model.VAR
+   vector_ar.var_model.VARResults
    vector_ar.dynamic.DynamicVAR
 
 .. seealso:: :ref:`VAR documentation <var>`
@@ -128,11 +128,11 @@ estimation are available for vector autoregressive processes.
 .. autosummary::
    :toctree: generated/
 
-   vector_ar.varmod.VAR
-   vector_ar.varmod.VARProcess
-   vector_ar.varmod.VARResults
+   vector_ar.var_model.VAR
+   vector_ar.var_model.VARProcess
+   vector_ar.var_model.VARResults
    vector_ar.irf.IRAnalysis
-   vector_ar.varmod.FEVD
+   vector_ar.var_model.FEVD
    vector_ar.dynamic.DynamicVAR
 
 .. seealso:: :ref:`VAR documentation <var>`
