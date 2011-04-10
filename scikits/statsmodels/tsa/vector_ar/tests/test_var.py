@@ -106,7 +106,9 @@ class RResults(object):
     """
 
     def __init__(self):
-        data = np.load(resultspath + 'vars_results.npz')
+        #data = np.load(resultspath + 'vars_results.npz')
+        from .results.results_var_data import var_results
+        data = var_results.__dict__
 
         self.names = data['coefs'].dtype.names
         self.params = data['coefs'].view((float, len(self.names)))
