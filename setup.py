@@ -97,6 +97,13 @@ models, time series analysis, and information and entropy econometrics in the
 sandbox. This code is often merged into trunk as it becomes more robust.
 
 
+Note for Mac Users
+------------------
+
+We obtained a report of test failures where the required precision of the
+test seems too high. Since the precision on both Windows and Linux is higher,
+we would appreciate any reports of whether some test fail or not.
+
 """
 import os
 import sys
