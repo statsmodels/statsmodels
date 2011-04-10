@@ -471,7 +471,7 @@ class ARMAResults(LikelihoodModelResults):
         maximum likelihood this is equal to `n_totobs` - `k_ar`.
     n_totobs : float
         The total number of observations for `endog`. This includes all
-        observations, even pre-sample values if the model is fit using ‘css’.
+        observations, even pre-sample values if the model is fit using `css`.
     params : array
         The parameters of the model. The order of variables is the trend
         coefficients and the `k_exog` exognous coefficients, then the

@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*-
+
+
+
 __all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'load']
 
 """World Fertility Survey: Fiji"""
@@ -7,7 +11,7 @@ __docformat__ = 'restructuredtext'
 COPYRIGHT   = """Available for use in academic research.  See SOURCE."""
 TITLE       = """Title of the dataset"""
 SOURCE      = """
-The source data was obtained from Germán Rodríguez's web site at Princeton
+The source data was obtained from GermÃ¡n RodrÃ­guez's web site at Princeton
 http://data.princeton.edu/wws509/datasets/#ceb, with the following refernce.
 
 Little, R. J. A. (1978). Generalized Linear Models for Cross-Classified Data
