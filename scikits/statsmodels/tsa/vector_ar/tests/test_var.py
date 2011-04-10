@@ -14,11 +14,11 @@ import sys
 import numpy as np
 
 import scikits.statsmodels.api as sm
-import scikits.statsmodels.tsa.vector_ar.varmod as model
+import scikits.statsmodels.tsa.vector_ar.var_model as model
 import scikits.statsmodels.tsa.vector_ar.util as util
 import scikits.statsmodels.tools.data as data_util
 reload(model)
-from scikits.statsmodels.tsa.vector_ar.varmod import VAR
+from scikits.statsmodels.tsa.vector_ar.var_model import VAR
 
 from numpy.testing import assert_almost_equal, assert_equal
 
@@ -139,15 +139,15 @@ _monkeypatched_mpl = False
 _draw_function = None
 
 def _suppress_plots():
-    try:
-        import matplotlib.pyplot as plt
-    except ImportError:
-        raise nose.SkipTest
-
+    # try:
+    #     import matplotlib.pyplot as plt
+    # except ImportError:
+    #     raise nose.SkipTest
     # global _monkeypatched_mpl, _draw_function
     # if not _monkeypatched_mpl:
     #     _draw_function = plt.draw_if_interactive
     #     plt.draw_if_interactive = lambda *args, **kwargs: None
+    pass
 
 def _unsuppress_plots():
     # import matplotlib.pyplot as plt
@@ -159,13 +159,14 @@ def close_plots():
     # plt.close('all')
     pass
 
-def check_for_matplotlib():
+def have_matplotlib():
     try:
         import matplotlib
         if matplotlib.__version__ < '1':
             raise
+        return True
     except:
-        raise nose.SkipTest
+        return False
 
 class CheckIRF(object):
 
@@ -186,7 +187,9 @@ class CheckIRF(object):
             assert_almost_equal(ref_irfs, res_irfs)
 
     def test_plot_irf(self):
-        check_for_matplotlib()
+        if not have_matplotlib():
+            raise nose.SkipTest
+
         self.irf.plot()
         self.irf.plot(plot_stderr=False)
 
@@ -199,7 +202,9 @@ class CheckIRF(object):
         close_plots()
 
     def test_plot_cum_effects(self):
-        check_for_matplotlib()
+        if not have_matplotlib():
+            raise nose.SkipTest
+
         self.irf.plot_cum_effects()
         self.irf.plot_cum_effects(plot_stderr=False)
         self.irf.plot_cum_effects(impulse=0, response=1)
@@ -216,7 +221,9 @@ class CheckFEVD(object):
     # FEVD tests
 
     def test_fevd_plot(self):
-        check_for_matplotlib()
+        if not have_matplotlib():
+            raise nose.SkipTest
+
         self.fevd.plot()
         close_plots()
 
@@ -398,22 +405,30 @@ class TestVARResults(CheckIRF, CheckFEVD):
         point, lower, upper = self.res.forecast_interval(y, 5)
 
     def test_plot_sim(self):
-        check_for_matplotlib()
+        if not have_matplotlib():
+            raise nose.SkipTest
+
         self.res.plotsim(steps=100)
         close_plots()
 
     def test_plot(self):
-        check_for_matplotlib()
+        if not have_matplotlib():
+            raise nose.SkipTest
+
         self.res.plot()
         close_plots()
 
     def test_plot_acorr(self):
-        check_for_matplotlib()
+        if not have_matplotlib():
+            raise nose.SkipTest
+
         self.res.plot_acorr()
         close_plots()
 
     def test_plot_forecast(self):
-        check_for_matplotlib()
+        if not have_matplotlib():
+            raise nose.SkipTest
+
         self.res.plot_forecast(5)
         close_plots()
 
@@ -463,15 +478,20 @@ def get_lutkepohl_data(name='e2'):
     lut_data = basepath + '/tsa/vector_ar/data/'
     path = lut_data + '%s.dat' % name
 
+    return util.parse_lutkepohl_data(path)
+
+def have_pandas():
     try:
         import pandas as _
+        return True
     except ImportError:
-        raise nose.SkipTest
-
-    return util.parse_lutkepohl_data(path)
+        return False
 
 def test_lutkepohl_parse():
     files = ['e%d' % i for i in range(1, 7)]
+
+    if not have_pandas():
+        raise nose.SkipTest
 
     for f in files:
         get_lutkepohl_data(f)
@@ -483,6 +503,9 @@ class TestVARResultsLutkepohl(object):
 
     def __init__(self):
         self.p = 2
+
+        if not have_pandas():
+            return
 
         sdata, dates = get_lutkepohl_data('e1')
 
@@ -497,6 +520,9 @@ class TestVARResultsLutkepohl(object):
         self.lut = E1_Results()
 
     def test_approx_mse(self):
+        if not have_pandas():
+            raise nose.SkipTest
+
         # 3.5.18, p. 99
         mse2 = np.array([[25.12, .580, 1.300],
                          [.580, 1.581, .586],
@@ -506,18 +532,27 @@ class TestVARResultsLutkepohl(object):
                             DECIMAL_3)
 
     def test_irf_stderr(self):
+        if not have_pandas():
+            raise nose.SkipTest
+
         irf_stderr = self.irf.stderr(orth=False)
         for i in range(1, 1 + len(self.lut.irf_stderr)):
             assert_almost_equal(np.round(irf_stderr[i], 3),
                                 self.lut.irf_stderr[i-1])
 
     def test_cum_irf_stderr(self):
+        if not have_pandas():
+            raise nose.SkipTest
+
         stderr = self.irf.cum_effect_stderr(orth=False)
         for i in range(1, 1 + len(self.lut.cum_irf_stderr)):
             assert_almost_equal(np.round(stderr[i], 3),
                                 self.lut.cum_irf_stderr[i-1])
 
     def test_lr_effect_stderr(self):
+        if not have_pandas():
+            raise nose.SkipTest
+
         stderr = self.irf.lr_effect_stderr(orth=False)
         orth_stderr = self.irf.lr_effect_stderr(orth=True)
         assert_almost_equal(np.round(stderr, 3), self.lut.lr_stderr)

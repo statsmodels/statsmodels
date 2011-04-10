@@ -305,7 +305,7 @@ class VAR(object):
          self.dates) = data_util.interpret_data(endog, names, dates)
 
         self.y = self.endog #keep alias for now
-        self.nobs, self.neqs = self.y.shape
+        self.neqs = self.endog.shape[1]
 
     def fit(self, maxlags=None, method='ols', ic=None, trend='c',
             verbose=False):
@@ -356,6 +356,8 @@ class VAR(object):
             if lags is None:
                 lags = 1
 
+        self.nobs = len(self.endog) - lags
+
         return self._estimate_var(lags, trend=trend)
 
     def _estimate_var(self, lags, offset=0, trend='c'):
@@ -367,7 +369,7 @@ class VAR(object):
         trend : string or None
             As per above
         """
-        trendorder = util.get_trendorder(trend)
+        k_trend = util.get_trendorder(trend) #NOTE: trendorder should be polynomial order
 
         if offset < 0: # pragma: no cover
             raise ValueError('offset must be >= 0')
@@ -391,13 +393,13 @@ class VAR(object):
 
         avobs = len(y_sample)
 
-        df_resid = avobs - (self.neqs * lags + trendorder)
+        df_resid = avobs - (self.neqs * lags + k_trend)
 
         sse = np.dot(resid.T, resid)
         omega = sse / df_resid
 
         return VARResults(y, z, params, omega, lags, names=self.names,
-                          trendorder=trendorder, dates=self.dates, model=self)
+                          trend=trend, dates=self.dates, model=self)
 
     def select_order(self, maxlags=None, verbose=True):
         """
@@ -451,7 +453,7 @@ class VARProcess(object):
     **Attributes**:
     """
     def __init__(self, coefs, intercept, sigma_u, names=None):
-        self.p = len(coefs)
+        self.k_ar = len(coefs)
         self.neqs = coefs.shape[1]
         self.coefs = coefs
         self.intercept = intercept
@@ -464,7 +466,7 @@ class VARProcess(object):
 
     def __str__(self):
         output = ('VAR(%d) process for %d-dimensional response y_t'
-                  % (self.p, self.neqs))
+                  % (self.k_ar, self.neqs))
         output += '\nstable: %s' % self.is_stable()
         output += '\nmean: %s' % self.mean()
 
@@ -669,61 +671,101 @@ class VARProcess(object):
 class VARResults(VARProcess):
     """Estimate VAR(p) process with fixed number of lags
 
+    Parameters
+    ----------
+    endog : array
+    endog_lagged : array
+    params : array
+    sigma_u : array
+    lag_order : int
+    model : VAR model instance
+    trend : str {'nc', 'c', 'ct'}
+    names : array-like
+        List of names of the endogenous variables in order of appearance in `endog`.
+    dates
+
+
     Returns
     -------
     **Attributes**
-    k : int
-        Number of variables (equations)
-    p : int
-        Order of VAR process
-    T : Number of model observations (len(data) - p)
-    y : ndarray (K x T)
-        Observed data
-    names : ndarray (K)
-        variables names
-
-    df_model : int
-    df_resid : int
-
+    aic
+    bic
+    bse
     coefs : ndarray (p x K x K)
         Estimated A_i matrices, A_i = coefs[i-1]
-    intercept : ndarray (K)
+    coef_names
+    cov_params
+    dates
+    detomega
+    df_model : int
+    df_resid : int
+    endog
+    endog_lagged
+    fittedvalues
+    fpe
+    intercept
+    info_criteria
+    k_ar : int
+    k_trend : int
+    llf
+    model
+    names
+    neqs : int
+        Number of variables (equations)
+    nobs : int
+    n_totobs : int
+    params
+    k_ar : int
+        Order of VAR process
     params : ndarray (Kp + 1) x K
         A_i matrices and intercept in stacked form [int A_1 ... A_p]
-
+    pvalues
+    names : list
+        variables names
+    resid
     sigma_u : ndarray (K x K)
         Estimate of white noise process variance Var[u_t]
+    sigma_u_mle
+    stderr
+    trenorder
+    tvalues
+    y :
+    ys_lagged
     """
     _model_type = 'VAR'
 
     def __init__(self, endog, endog_lagged, params, sigma_u, lag_order,
-                 model=None, trendorder=1, names=None, dates=None):
+                 model=None, trend='c', names=None, dates=None):
 
         self.model = model
         self.y = self.endog = endog  #keep alias for now
         self.ys_lagged = self.endog_lagged = endog_lagged #keep alias for now
         self.dates = dates
 
-        self.totobs, neqs = self.y.shape
-        self.nobs = self.totobs  - lag_order
+        self.n_totobs, neqs = self.y.shape
+        self.nobs = self.n_totobs  - lag_order
+        k_trend = util.get_trendorder(trend)
+        if k_trend > 0: # make this the polynomial trend order
+            trendorder = k_trend - 1
+        else:
+            trendorder = None
+        self.k_trend = k_trend
         self.trendorder = trendorder
 
-        self.coef_names = util.make_lag_names(names, lag_order, trendorder)
+        self.coef_names = util.make_lag_names(names, lag_order, k_trend)
         self.params = params
 
         # Initialize VARProcess parent class
         # construct coefficient matrices
         # Each matrix needs to be transposed
-        reshaped = self.params[self.trendorder:]
+        reshaped = self.params[self.k_trend:]
         reshaped = reshaped.reshape((lag_order, neqs, neqs))
 
         # Need to transpose each coefficient matrix
         intercept = self.params[0]
         coefs = reshaped.swapaxes(1, 2).copy()
 
-        #TODO: this looks like it's thrown away after creation
-        VARProcess.__init__(self, coefs, intercept, sigma_u,
-                            names=names)
+        super(VARResults, self).__init__(coefs, intercept, sigma_u, names=names)
 
     def plot(self):
         """Plot input time series
@@ -734,7 +776,7 @@ class VARResults(VARProcess):
     def df_model(self):
         """Number of estimated parameters, including the intercept / trends
         """
-        return self.neqs * self.p + self.trendorder
+        return self.neqs * self.k_ar + self.k_trend
 
     @property
     def df_resid(self):
@@ -751,10 +793,10 @@ class VARResults(VARProcess):
     def resid(self):
         """Residuals of response variable resulting from estimated coefficients
         """
-        return self.y[self.p:] - self.fittedvalues
+        return self.y[self.k_ar:] - self.fittedvalues
 
     def sample_acov(self, nlags=1):
-        return _compute_acov(self.y[self.p:], nlags=nlags)
+        return _compute_acov(self.y[self.k_ar:], nlags=nlags)
 
     def sample_acorr(self, nlags=1):
         acovs = self.sample_acov(nlags=nlags)
@@ -893,7 +935,7 @@ class VARResults(VARProcess):
         """
         Plot forecast
         """
-        mid, lower, upper = self.forecast_interval(self.y[-self.p:], steps,
+        mid, lower, upper = self.forecast_interval(self.y[-self.k_ar:], steps,
                                                    alpha=alpha)
         plotting.plot_var_forc(self.y, mid, lower, upper, names=self.names,
                                plot_stderr=plot_stderr)
@@ -961,7 +1003,7 @@ class VARResults(VARProcess):
         upper = np.zeros((1, self.df_model))
         upper[0,0] = 1
 
-        lower_dim = self.neqs * (self.p - 1)
+        lower_dim = self.neqs * (self.k_ar - 1)
         I = np.eye(lower_dim)
         lower = np.column_stack((np.zeros((lower_dim, 1)), I,
                                  np.zeros((lower_dim, self.neqs))))
@@ -1044,13 +1086,13 @@ class VARResults(VARProcess):
         if isinstance(variables, (basestring, int, np.integer)):
             variables = [variables]
 
-        k, p = self.neqs, self.p
+        k, p = self.neqs, self.k_ar
 
         # number of restrictions
-        N = len(variables) * self.p
+        N = len(variables) * self.k_ar
 
         # Make restriction matrix
-        C = np.zeros((N, k ** 2 * self.p + k), dtype=float)
+        C = np.zeros((N, k ** 2 * p + k), dtype=float)
 
         eq_index = self.get_eq_index(equation)
         vinds = mat([self.get_eq_index(v) for v in variables])
@@ -1190,8 +1232,8 @@ class VARResults(VARProcess):
         "information criteria for lagorder selection"
         nobs = self.nobs
         neqs = self.neqs
-        lag_order = self.p
-        free_params = lag_order * neqs ** 2 + neqs * self.trendorder
+        lag_order = self.k_ar
+        free_params = lag_order * neqs ** 2 + neqs * self.k_trend
 
         ld = util.get_logdet(self.sigma_u_mle)
 

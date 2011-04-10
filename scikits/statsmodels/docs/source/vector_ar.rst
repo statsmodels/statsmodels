@@ -1,4 +1,4 @@
-.. currentmodule:: scikits.statsmodels.tsa.vector_ar.varmod
+.. currentmodule:: scikits.statsmodels.tsa.vector_ar.var_model
 
 .. _var:
 
@@ -454,10 +454,10 @@ Class Reference
 .. autosummary::
    :toctree: generated/
 
-   varmod.VAR
-   varmod.VARProcess
-   varmod.VARResults
+   var_model.VAR
+   var_model.VARProcess
+   var_model.VARResults
    irf.IRAnalysis
-   varmod.FEVD
+   var_model.FEVD
    dynamic.DynamicVAR
 

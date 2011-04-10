@@ -31,33 +31,24 @@ for other types of data (e.g., in the learn scikit or scipy itself).
 Organization
 ------------
 
-A preliminary set of datasets is available at the following address:
+Each dataset is a directory in the `datasets` directory and defines a python
+package (e.g. has the __init__.py file). Each package is expected to define the
+function load, returning the corresponding data. For example, to access datasets
+data1, you should be able to do::
 
-http://projects.scipy.org/scipy/scikits/browser/trunk/learn/scikits/learn/datasets
+  >>> from scikits.statsmodels.datasets.data1 import load
+  >>> d = load() # -> d is a Dataset object, see below
 
-or
-
-http://bazaar.launchpad.net/~scipystats/statsmodels/trunk/files/head:/scikits/statsmodels/datasets/
-
-Each dataset is a directory and defines a python package (e.g. has the
-__init__.py file). Each package is expected to define the function load,
-returning the corresponding data. For example, to access datasets data1, you
-should be able to do:
-
->>> from scikits.statsmodels.datasets.data1 import load
->>> d = Load() # -> d contains the data as an ndarray
-
-load is expected to return the dataset object in the format most commonly used
-in tests and examples as a plain ndarray.  Load can do whatever it wants:
-fetching data from a file (python script, csv file, etc...), from the internet,
-etc.  However, it is strongly recommended that each dataset directory contain a
-csv file with the dataset and its variables in the same form as returned by
-load so that the dataset can easily be loaded into other statistical packages.
-In addition, an optional (though recommended) sub-directory src should contain
-the dataset in its original form if it was "cleaned" (ie., variable
-transformations) in order to put it into the format needed for statsmodels.
-Some special variables must be defined for each package, containing a
-Python string:
+The `load` function is expected to return the `Dataset` object, which has certain
+common attributes that make it readily usable in tests and examples. Load can do
+whatever it wants: fetching data from a file (python script, csv file, etc...),
+from the internet, etc.  However, it is strongly recommended that each dataset
+directory contain a csv file with the dataset and its variables in the same form
+as returned by load so that the dataset can easily be loaded into other
+statistical packages.  In addition, an optional (though recommended) sub-directory
+src should contain the dataset in its original form if it was "cleaned" (ie.,
+variable transformations) in order to put it into the format needed for statsmodels.
+Some special variables must be defined for each package, containing a Python string:
 
     - COPYRIGHT: copyright informations
     - SOURCE: where the data are coming from
@@ -65,13 +56,14 @@ Python string:
     - DESCLONG: long description
     - NOTE: some notes on the datasets.
 
-See datasest/data_template.py for more information.
+See `datasets/data_template.py` for more information.
 
 Format of the data
 ------------------
 
-Here, I suggest a common practice for the returned value by the load function.
-Instead of using classes to provide meta-data, the Bunch pattern is used.
+This is strongly suggested a practice for the `Dataset` object returned by the
+load function.  Instead of using classes to provide meta-data, the Bunch pattern
+is used.
 
 ::
 
@@ -80,30 +72,36 @@ Instead of using classes to provide meta-data, the Bunch pattern is used.
         dict.__init__(self,kw)
         self.__dict__ = self
 
-'Reference <http://code.activestate.com/recipes/52308-the-simple-but-handy-collector-of-a-bunch-of-named/>`_
+See this `Reference <http://code.activestate.com/recipes/52308-the-simple-but-handy-collector-of-a-bunch-of-named/>`_
+
+In practice, you can use ::
+
+  >>> from scikits.statsmodels.datasets import Dataset
+
+as the default collector as in `datasets/data_template.py`.
 
 The advantage of the Bunch pattern is that it preserves look-up by attribute.
-Some attributes are mandatory. The key goals are:
+The key goals are:
 
-        - For people who just want the data, there is no extra burden
-        - For people who need more, they can easily extract what they need from
-          the returned values. Higher level abstractions can be built easily
-          from this model.
-        - All possible dataset should fit into this model.
+    - For people who just want the data, there is no extra burden
+    - For people who need more, they can easily extract what they need from
+      the returned values. Higher level abstractions can be built easily
+      from this model.
+    - All possible datasets should fit into this model.
 
 For the datasets to be useful in the statsmodels scikits the Dataset object
 returned by load has the following conventions and attributes:
 
     - Calling the object itself returns the plain ndarray of the full dataset.
-    - 'data': A recarray containing the actual data.  It is assumed
-        that all of the data can safely be cast to a float at this point.
-    - 'raw_data': This is the plain ndarray version of 'data'.
-    - 'names': this returns data.dtype.names so that name[i] is the i-th
-        column in 'raw_data'.
-    - 'endog': this value is provided for convenience in tests and examples
-    - 'exog': this value is provided for convenience in tests and examples
-    - 'endog_name': the name of the endog attribute
-    - 'exog_name': the names of the exog attribute
+    - `data`: A recarray containing the actual data.  It is assumed
+      that all of the data can safely be cast to a float at this point.
+    - `raw_data`: This is the plain ndarray version of 'data'.
+    - `names`: this returns data.dtype.names so that name[i] is the i-th
+      column in 'raw_data'.
+    - `endog`: this value is provided for convenience in tests and examples
+    - `exog`: this value is provided for convenience in tests and examples
+    - `endog_name`: the name of the endog attribute
+    - `exog_name`: the names of the exog attribute
 
 
 This contains enough information to get all useful information through
@@ -114,16 +112,7 @@ may be useful for other packages.
 Adding a dataset
 ----------------
 
-Create a directory in the `datasets` directory that is the same as the name of
-the dataset.  This directory should contain a .csv file of the dataset and the
-optional `src` directory that can contain the original dataset if it is in a
-different format than .csv or if the .csv file alters the original dataset in
-any way.  Then copy template_data into the new dataset directory, rename it
-to data.py and edit it as needed for the new dataset.  This includes the
-meta-data and the loading of the actual data.  Note that the meta-data and
-copyright section is *not* optional and must be filled in for a dataset to be
-included.  Lastly, edit datasets\__init__.py to import the new dataset into
-the datasets namespace.
+See the :ref:`notes on adding a dataset <add_data>`.
 
 
 Example Usage
@@ -131,8 +120,8 @@ Example Usage
 
 ::
 
-  from scikits.statsmodels import datasets
-  data = datasets.longley.load()
+  >>> from scikits.statsmodels import datasets
+  >>> data = datasets.longley.load()
 
 
 Remaining problems:
@@ -153,8 +142,7 @@ Remaining problems:
 Current implementation
 ----------------------
 
-An implementation following the above design is available in
-scikits.statsmodels.datasets.
+An implementation following the above design is available in `statsmodels`.
 
 
 Note
@@ -163,4 +151,5 @@ Note
 Although the datasets package emerged from the learn package, we try to keep it
 independant from everything else, that is once we agree on the remaining
 problems and where the package should go, it can easily be put elsewhere
-without too much trouble.
+without too much trouble. If there is interest in re-using the datasets package,
+please contact the developers on the `mailing list <http://groups.google.com/group/pystatsmodels?hl=en>`_.

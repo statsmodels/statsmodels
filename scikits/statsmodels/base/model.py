@@ -3,7 +3,8 @@ from scipy.stats import t, norm
 from scipy import optimize
 from scikits.statsmodels.tools.tools import recipr
 from scikits.statsmodels.stats.contrast import ContrastResults
-from scikits.statsmodels.tools.decorators import resettable_cache, cache_readonly
+from scikits.statsmodels.tools.decorators import (resettable_cache,
+                                                        cache_readonly)
 
 class Model(object):
     """
@@ -63,7 +64,6 @@ class Model(object):
             self.endog_names = ['y%d' % (i+1) for i in range(endog.shape[1])]
         self.endog = endog
         self.exog = exog
-        self.nobs = float(self.endog.shape[0])
 
     def fit(self):
         """
@@ -1393,7 +1393,7 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
         #self.df_resid = model.df_resid
         self.endog = model.endog
         self.exog = model.exog
-        self.nobs = model.nobs
+        self.nobs = model.endog.shape[0]
         self._cache = resettable_cache()
         self.__dict__.update(mlefit.__dict__)
 

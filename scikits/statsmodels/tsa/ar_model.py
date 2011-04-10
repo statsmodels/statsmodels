@@ -15,7 +15,8 @@ from scikits.statsmodels.tools.decorators import (resettable_cache,
         cache_readonly, cache_writable)
 from scikits.statsmodels.tools.compatibility import np_slogdet
 from scikits.statsmodels.sandbox.regression.numdiff import approx_fprime
-from scikits.statsmodels.sandbox.regression.numdiff import approx_hess
+from scikits.statsmodels.sandbox.regression.numdiff import (approx_hess,
+        approx_hess_cs)
 
 
 __all__ = ['AR']
@@ -54,7 +55,7 @@ class AR(LikelihoodModel):
         ---------
         Jones(1980)
         """
-        p,k = self.laglen, self.trendorder # need to include exog here?
+        p,k = self.k_ar, self.k_trend # need to include exog here?
         newparams = params.copy() # no copy below now?
         newparams[k:k+p] = ((1-np.exp(-params[k:k+p]))/
                             (1+np.exp(-params[k:k+p]))).copy()
@@ -73,7 +74,7 @@ class AR(LikelihoodModel):
         """
         Inverse of the Jones reparameterization
         """
-        p,k = self.laglen, self.trendorder
+        p,k = self.k_ar, self.k_trend
         newparams = start_params.copy()
         arcoefs = newparams[k:k+p].copy()
         # AR coeffs
@@ -99,7 +100,7 @@ class AR(LikelihoodModel):
         if self._results is None:
             raise ValueError("You must fit the model first")
 
-        k = self.trendorder
+        k = self.k_trend
 
         # build system matrices
         T_mat = self._T(params)
@@ -140,8 +141,8 @@ class AR(LikelihoodModel):
             Zero-indexed observation number at which to start forecasting, ie.,
             the first forecast is start.  If start==-1, forecasting starts from
             the end of the sample.  If the model is fit using 'cmle' or 'yw',
-            `start` cannot be less than `laglen`.  If `start` < `laglen` for
-            'cmle' and 'yw', then `start` is set equal to `laglen`.
+            `start` cannot be less than `k_ar`.  If `start` < `k_ar` for
+            'cmle' and 'yw', then `start` is set equal to `k_ar`.
         method : string {'dynamic', 'static'}
             If method is 'dynamic', then fitted values are used in place of
             observed 'endog' to make forecasts.  If 'static', observed 'endog'
@@ -174,14 +175,14 @@ class AR(LikelihoodModel):
             return np.array([])
 
         y = self.endog.copy()
-        nobs = int(self.nobs)
+        nobs = int(self.endog.shape[0])
 
         if start < 0:
             start = nobs + start # convert negative indexing
 
         params = self._results.params
-        p = self.laglen
-        k = self.trendorder
+        p = self.k_ar
+        k = self.k_trend
         method = self.method
         if method != 'mle':
             if start == 0:
@@ -314,7 +315,7 @@ class AR(LikelihoodModel):
         return Vpinv
 
 
-    def loglike(self, params, other=False):
+    def loglike(self, params):
         """
         The loglikelihood of an AR(p) process
 
@@ -349,16 +350,15 @@ class AR(LikelihoodModel):
         #TODO: Math is on Hamilton ~pp 124-5
         #will need to be amended for inclusion of exogenous variables
         nobs = self.nobs
-        avobs = self.avobs
         Y = self.Y
         X = self.X
         if self.method == "cmle":
             ssr = sumofsq(Y.squeeze()-np.dot(X,params))
-            sigma2 = ssr/avobs
-            return -avobs/2 * (np.log(2*np.pi) + np.log(sigma2)) -\
+            sigma2 = ssr/nobs
+            return -nobs/2 * (np.log(2*np.pi) + np.log(sigma2)) -\
                     ssr/(2*sigma2)
         endog = self.endog
-        laglen = self.laglen
+        k_ar = self.k_ar
 
         if isinstance(params,tuple):
             # broyden (all optimize.nonlin return a tuple until rewrite commit)
@@ -369,17 +369,17 @@ class AR(LikelihoodModel):
             params = self._transparams(params)
 
         # get mean and variance for pre-sample lags
-        yp = endog[:laglen]
-        lagstart = self.trendorder
+        yp = endog[:k_ar]
+        lagstart = self.k_trend
         exog = self.exog
         if exog is not None:
             lagstart += exog.shape[1]
-#            xp = exog[:laglen]
-        if self.trendorder == 1 and lagstart == 1:
-            c = [params[0]] * laglen # constant-only no exogenous variables
+#            xp = exog[:k_ar]
+        if self.k_trend == 1 and lagstart == 1:
+            c = [params[0]] * k_ar # constant-only no exogenous variables
         else:   #TODO: this isn't right
                 #NOTE: when handling exog just demean and proceed as usual.
-            c = np.dot(X[:laglen, :lagstart], params[:lagstart])
+            c = np.dot(X[:k_ar, :lagstart], params[:lagstart])
         mup = np.asarray(c/(1-np.sum(params[lagstart:])))
         diffp = yp-mup[:,None]
 
@@ -394,15 +394,13 @@ class AR(LikelihoodModel):
         logdet = np_slogdet(Vpinv)[1] #TODO: add check for singularity
         loglike = -1/2.*(nobs*(np.log(2*np.pi) + np.log(sigma2)) - \
                 logdet + diffpVpinv/sigma2 + ssr/sigma2)
-        if other:
-            return ssr
         return loglike
 
     def _R(self):
         """
         Private method for obtaining fitted presample values via Kalman filter.
         """
-        p = self.laglen
+        p = self.k_ar
         R_mat = zeros((p,1))
         R_mat[0] = 1
         return R_mat
@@ -415,8 +413,8 @@ class AR(LikelihoodModel):
         --------
         scikits.statsmodels.tsa.kalmanf.ARMA
         """
-        p = self.laglen
-        k = self.trendorder
+        p = self.k_ar
+        k = self.k_trend
         T_mat = zeros((p,p))
         T_mat[:,0] = params[k:]
         T_mat[:-1,1:] = identity(p-1)
@@ -454,7 +452,7 @@ class AR(LikelihoodModel):
         loglike = self.loglike
         return approx_hess(params, loglike)[0]
 
-    def _stackX(self, laglen, trend):
+    def _stackX(self, k_ar, trend):
         """
         Private method to build the RHS matrix for estimation.
 
@@ -462,21 +460,21 @@ class AR(LikelihoodModel):
         """
         endog = self.endog
         exog = self.exog
-        X = lagmat(endog, maxlag=laglen, trim='both')
+        X = lagmat(endog, maxlag=k_ar, trim='both')
         if exog is not None:
-            X = np.column_stack((exog[laglen:,:], X))
+            X = np.column_stack((exog[k_ar:,:], X))
         # Handle trend terms
         if trend == 'c':
-            trendorder = 1
+            k_trend = 1
         elif trend == 'nc':
-            trendorder = 0
+            k_trend = 0
         elif trend == 'ct':
-            trendorder = 2
+            k_trend = 2
         elif trend == 'ctt':
-            trendorder = 3
+            k_trend = 3
         if trend != 'nc':
             X = add_trend(X,prepend=True, trend=trend)
-        self.trendorder = trendorder
+        self.k_trend = k_trend
         return X
 
     def fit(self, maxlag=None, method='cmle', ic=None, trend='c',
@@ -563,13 +561,13 @@ class AR(LikelihoodModel):
         if method not in ['cmle','yw','mle']:
             raise ValueError("Method %s not recognized" % method)
         self.method = method
-        nobs = self.nobs
+        nobs = len(self.endog) # overwritten if method is 'cmle'
         if maxlag is None:
             maxlag = int(round(12*(nobs/100.)**(1/4.)))
 
         endog = self.endog
         exog = self.exog
-        laglen = maxlag # stays this if ic is None
+        k_ar = maxlag # stays this if ic is None
 
         # select lag length
         if ic is not None:
@@ -579,9 +577,9 @@ class AR(LikelihoodModel):
             # make Y and X with same nobs to compare ICs
             Y = endog[maxlag:]
             self.Y = Y  # attach to get correct fit stats
-            X = self._stackX(maxlag, trend) # sets trendorder
+            X = self._stackX(maxlag, trend) # sets k_trend
             self.X = X
-            startlag = self.trendorder # trendorder set in _stackX
+            startlag = self.k_trend # k_trend set in _stackX
             if exog is not None:
                 startlag += exog.shape[1] # add dim happens in super?
             startlag = max(1,startlag) # handle if startlag is 0
@@ -606,35 +604,34 @@ class AR(LikelihoodModel):
                     if np.abs(fit.tvalues[-1]) >= stop:
                         bestlag = lag
                         break
-            laglen = bestlag
+            k_ar = bestlag
 
         # change to what was chosen by fit method
-        self.laglen = laglen
-        avobs = nobs - laglen
-        self.avobs = avobs
+        self.k_ar = k_ar
 
         # redo estimation for best lag
         # make LHS
-        Y = endog[laglen:,:]
+        Y = endog[k_ar:,:]
         # make lagged RHS
-        X = self._stackX(laglen, trend) # sets self.trendorder
-        trendorder = self.trendorder
+        X = self._stackX(k_ar, trend) # sets self.k_trend
+        k_trend = self.k_trend
         self.Y = Y
         self.X = X
-        self.df_resid = avobs - laglen - trendorder # for compatiblity
-                                                # with Model code
+
         if solver:
             solver = solver.lower()
         if method == "cmle":     # do OLS
             arfit = OLS(Y,X).fit()
             params = arfit.params
+            self.nobs = nobs - k_ar
         if method == "mle":
+            self.nobs = nobs
             if not start_params:
                 start_params = OLS(Y,X).fit().params
                 start_params = self._invtransparams(start_params)
             loglike = lambda params : -self.loglike(params)
             if solver == None:  # use limited memory bfgs
-                bounds = [(None,)*2]*(laglen+trendorder)
+                bounds = [(None,)*2]*(k_ar+k_trend)
                 mlefit = optimize.fmin_l_bfgs_b(loglike, start_params,
                     approx_grad=True, m=30, pgtol = 1e-7, factr=1e3,
                     bounds=bounds, iprint=1)
@@ -690,34 +687,36 @@ class ARResults(LikelihoodModelResults):
 
     aic : float
         Akaike Information Criterion using Lutkephol's definition.
-        :math:`log(sigma) + 2*(1+laglen)/avobs`
-    avobs : float
-        The number of available observations `nobs` - `laglen`
+        :math:`log(sigma) + 2*(1+k_ar)/nobs`
     bic : float
         Bayes Information Criterion
-        :math:`\\log(\\sigma) + (1+laglen)*\\log(avobs)/avobs`
+        :math:`\\log(\\sigma) + (1+k_ar)*\\log(nobs)/nobs`
     bse : array
         The standard errors of the estimated parameters. If `method` is 'cmle',
         then the standard errors that are returned are the OLS standard errors
         of the coefficients. If the `method` is 'mle' then they are computed
         using the numerical Hessian.
     fittedvalues : array
-        The in-sample predicted values of the fitted AR model. The `laglen`
+        The in-sample predicted values of the fitted AR model. The `k_ar`
         initial values are computed via the Kalman Filter if the model is
         fit by `mle`.
     fpe : float
         Final prediction error using Lutkepohl's definition
-        ((nobs+trendorder)/(avobs-laglen-trendorder))*sigma
+        ((n_totobs+k_trend)/(n_totobs-k_ar-k_trend))*sigma
     hqic : float
         Hannan-Quinn Information Criterion.
-    laglen : float
+    k_ar : float
         Lag length. Sometimes used as `p` in the docs.
+    k_trend : float
+        The number of trend terms included. 'nc'=0, 'c'=1.
     llf : float
         The loglikelihood of the model evaluated at `params`. See `AR.loglike`
     model : AR model instance
         A reference to the fitted AR model.
     nobs : float
-        The number of observations. Sometimes `n` in the docs.
+        The number of available observations `nobs` - `k_ar`
+    n_totobs : float
+        The number of total observations in `endog`. Sometimes `n` in the docs.
     params : array
         The fitted parameters of the model.
     pvalues : array
@@ -731,15 +730,11 @@ class ARResults(LikelihoodModelResults):
         Same as sigma2
     sigma2 : float
         The variance of the innovations (residuals).
-    trendorder : float
-        The order of the trend. 'nc'=0, 'c'=1.
+    trendorder : int
+        The polynomial order of the trend. 'nc' = None, 'c' or 't' = 0, 'ct' = 1,
+        etc.
     tvalues : array
         The t-values associated with `params`.
-
-
-    Notes
-    -----
-    I
     """
 
     _cache = {} # for scale setter
@@ -749,22 +744,30 @@ class ARResults(LikelihoodModelResults):
                 scale)
         self._cache = resettable_cache()
         self.nobs = model.nobs
-        self.avobs = model.avobs
+        n_totobs = len(model.endog)
+        self.n_totobs = n_totobs
         self.X = model.X # copy?
         self.Y = model.Y
-        self.laglen = model.laglen
-        self.trendorder = model.trendorder
+        k_ar = model.k_ar
+        self.k_ar = k_ar
+        k_trend = model.k_trend
+        self.k_trend = k_trend
+        trendorder = None
+        if k_trend > 0:
+            trendorder = k_trend - 1
+        self.trendorder = 1
+        self.df_resid = n_totobs - k_ar - k_trend #TODO: cmle vs mle?
 
     @cache_writable()
     def sigma2(self):
         #TODO: allow for DOF correction if exog is included
         model = self.model
         if model.method == "cmle": # do DOF correction
-            return 1./self.avobs * sumofsq(self.resid)
+            return 1./self.nobs * sumofsq(self.resid)
         else: # we need to calculate the ssr for the pre-sample
               # see loglike for details
-            lagstart = self.trendorder #TODO: handle exog
-            p = self.laglen
+            lagstart = self.k_trend #TODO: handle exog
+            p = self.k_ar
             params = self.params
             meany = params[0]/(1-params[lagstart:].sum())
             pre_resid = model.endog[:p] - meany
@@ -784,48 +787,47 @@ class ARResults(LikelihoodModelResults):
         if self.model.method == "cmle": # uses different scale/sigma definition
             resid = self.resid
             ssr = np.dot(resid,resid)
-            ols_scale = ssr/(self.avobs - self.laglen - self.trendorder)
+            ols_scale = ssr/(self.nobs - self.k_ar - self.k_trend)
             return np.sqrt(np.diag(self.cov_params(scale=ols_scale)))
         else:
-            hess = approx_hess_cs(self.params, self.model.loglike)
-            return np.sqrt(np.diag(-np.linalg.inv(hess)))
+            hess = approx_hess(self.params, self.model.loglike)
+            return np.sqrt(np.diag(-np.linalg.inv(hess[0])))
 
     @cache_readonly
     def pvalues(self):
-        if self.model.method == "cmle": # uses asymptotics so norm
-            return norm.sf(np.abs(self.tvalues))*2
+        return norm.sf(np.abs(self.tvalues))*2
 
     @cache_readonly
     def aic(self):
         #JP: this is based on loglike with dropped constant terms ?
 # Lutkepohl
-#        return np.log(self.sigma2) + 1./self.model.avobs * self.laglen
+#        return np.log(self.sigma2) + 1./self.model.nobs * self.k_ar
 # Include constant as estimated free parameter and double the loss
-        return np.log(self.sigma2) + 2 * (1 + self.laglen)/self.avobs
+        return np.log(self.sigma2) + 2 * (1 + self.k_ar)/self.nobs
 # Stata defintion
-#        avobs = self.avobs
-#        return -2 * self.llf/avobs + 2 * (self.laglen+self.trendorder)/avobs
+#        nobs = self.nobs
+#        return -2 * self.llf/nobs + 2 * (self.k_ar+self.k_trend)/nobs
 
     @cache_readonly
     def hqic(self):
-        avobs = self.avobs
+        nobs = self.nobs
 # Lutkepohl
-#        return np.log(self.sigma2)+ 2 * np.log(np.log(avobs))/avobs * self.laglen
+#        return np.log(self.sigma2)+ 2 * np.log(np.log(nobs))/nobs * self.k_ar
 # R uses all estimated parameters rather than just lags
-        return np.log(self.sigma2) + 2 * np.log(np.log(avobs))/avobs * \
-                (1 + self.laglen)
+        return np.log(self.sigma2) + 2 * np.log(np.log(nobs))/nobs * \
+                (1 + self.k_ar)
 # Stata
-#        avobs = self.avobs
-#        return -2 * self.llf/avobs + 2 * np.log(np.log(avobs))/avobs * \
-#                (self.laglen + self.trendorder)
+#        nobs = self.nobs
+#        return -2 * self.llf/nobs + 2 * np.log(np.log(nobs))/nobs * \
+#                (self.k_ar + self.k_trend)
 
     @cache_readonly
     def fpe(self):
-        avobs = self.avobs
-        laglen = self.laglen
-        trendorder = self.trendorder
+        nobs = self.nobs
+        k_ar = self.k_ar
+        k_trend = self.k_trend
 #Lutkepohl
-        return ((avobs+laglen+trendorder)/(avobs-laglen-trendorder))*self.sigma2
+        return ((nobs+k_ar+k_trend)/(nobs-k_ar-k_trend))*self.sigma2
 
     @cache_readonly
     def llf(self):
@@ -833,14 +835,14 @@ class ARResults(LikelihoodModelResults):
 
     @cache_readonly
     def bic(self):
-        avobs = self.avobs
+        nobs = self.nobs
 # Lutkepohl
-#        return np.log(self.sigma2) + np.log(avobs)/avobs * self.laglen
+#        return np.log(self.sigma2) + np.log(nobs)/nobs * self.k_ar
 # Include constant as est. free parameter
-        return np.log(self.sigma2) + (1 + self.laglen) * np.log(avobs)/avobs
+        return np.log(self.sigma2) + (1 + self.k_ar) * np.log(nobs)/nobs
 # Stata
-#        return -2 * self.llf/avobs + np.log(avobs)/avobs * (self.laglen + \
-#                self.trendorder)
+#        return -2 * self.llf/nobs + np.log(nobs)/nobs * (self.k_ar + \
+#                self.k_trend)
 
     @cache_readonly
     def resid(self):
@@ -848,7 +850,7 @@ class ARResults(LikelihoodModelResults):
         model = self.model
         endog = model.endog.squeeze()
         if model.method == "cmle": # elimate pre-sample
-            return endog[self.laglen:] - self.fittedvalues
+            return endog[self.k_ar:] - self.fittedvalues
         else:
             return model.endog.squeeze() - self.fittedvalues
 
