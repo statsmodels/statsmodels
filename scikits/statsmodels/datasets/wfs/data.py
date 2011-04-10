@@ -104,7 +104,7 @@ def load():
     """
     filepath = dirname(abspath(__file__))
 ##### EDIT THE FOLLOWING TO POINT TO DatasetName.csv #####
-    data = recfromtxt(filepath + '/wfs.csv', delimiter=",",
+    data = recfromtxt(open(filepath + '/wfs.csv', 'rb'), delimiter=",",
             names=True, dtype=float, usecols=(1,2,3,4,6))
     names = ["totchild"] +  list(data.dtype.names)
 ##### SET THE INDEX #####

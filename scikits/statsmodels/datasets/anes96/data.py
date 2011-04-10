@@ -136,7 +136,7 @@ def load():
         See DATASET_PROPOSAL.txt for more information.
     """
     filepath = dirname(abspath(__file__))
-    data = recfromtxt(filepath + '/anes96.csv', delimiter="\t",
+    data = recfromtxt(open(filepath + '/anes96.csv',"rb"), delimiter="\t",
             names = True, dtype=float)
     names = list(data.dtype.names)
     endog = array(data[names[5]], dtype=float)

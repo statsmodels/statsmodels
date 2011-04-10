@@ -83,7 +83,7 @@ def load():
         See DATASET_PROPOSAL.txt for more information.
     """
     filepath = dirname(abspath(__file__))
-    data = recfromtxt(filepath + '/ccard.csv', delimiter=",",
+    data = recfromtxt(open(filepath + '/ccard.csv', 'rb'), delimiter=",",
             names=True, dtype=float)
     names = list(data.dtype.names)
     endog = array(data[names[0]], dtype=float)

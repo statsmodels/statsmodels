@@ -109,7 +109,7 @@ def load():
     The macrodata Dataset instance does not contain endog and exog attributes.
     """
     filepath = dirname(abspath(__file__))
-    data = recfromtxt(filepath + '/macrodata.csv', delimiter=",", names=True,
+    data = recfromtxt(open(filepath + '/macrodata.csv', 'rb'), delimiter=",", names=True,
             dtype=float)
     names = data.dtype.names
     dataset = Dataset(data=data, names=names)

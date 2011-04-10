@@ -121,7 +121,7 @@ def load():
             "PCTCHRT","PCTYRRND","PERMINTE_AVYRSEXP","PERMINTE_AVSAL",
             "AVYRSEXP_AVSAL","PERSPEN_PTRATIO","PERSPEN_PCTAF","PTRATIO_PCTAF",
             "PERMINTE_AVYRSEXP_AVSAL","PERSPEN_PTRATIO_PCTAF"]
-    data = recfromtxt(filepath + '/star98.csv', delimiter=",",
+    data = recfromtxt(open(filepath + '/star98.csv',"rb"), delimiter=",",
             names=names, skip_header=1, dtype=float)
     names = list(data.dtype.names)
     # endog = (successes, failures)
