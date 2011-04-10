@@ -7,6 +7,9 @@ Added api.py for importing. So the new convention for importing is ::
 
 import scikits.statsmodels.api as sm
 
+Importing from modules directly now avoids unnecessary imports and increases
+the import speed if a library or user only needs specific functions.
+
 * sandbox/output.py -> iolib/table.py
 * lib/io.py -> iolib/foreign.py (Now contains Stata .dta format reader)
 * family -> families
@@ -17,7 +20,7 @@ import scikits.statsmodels.api as sm
 * rlm.py -> robust/robust_linear_model.py
 * glm.py -> genmod/generalized_linear_model.py
 * model.py -> base/model.py
-* t() method -> tvalues attribute
+* t() method -> tvalues attribute (t() still exists but raises a warning)
 
 *main changes and additions*
 
