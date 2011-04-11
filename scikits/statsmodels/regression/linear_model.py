@@ -211,14 +211,16 @@ Should be of length %s, if sigma is a 1d array" % nobs)
         to solve the least squares minimization.
 
         """
-        pinv_wexog = np.linalg.pinv(self.wexog)
-        self.normalized_cov_params = np.dot(pinv_wexog,
-                                         np.transpose(pinv_wexog))
+        if ((not hasattr(self, 'pinv_wexog')) or
+            (not hasattr(self, 'normalized_cov_params'))):
+            self.pinv_wexog = pinv_wexog = np.linalg.pinv(self.wexog)
+            self.normalized_cov_params = np.dot(pinv_wexog,
+                                             np.transpose(pinv_wexog))
         exog = self.wexog
         endog = self.wendog
-        self.pinv_wexog = pinv_wexog
+
         if method == "pinv":
-            beta = np.dot(pinv_wexog, endog)
+            beta = np.dot(self.pinv_wexog, endog)
         elif method == "qr":
             Q,R = np.linalg.qr(exog)
             beta = np.linalg.solve(R,np.dot(Q.T,endog))
