@@ -97,12 +97,21 @@ models, time series analysis, and information and entropy econometrics in the
 sandbox. This code is often merged into trunk as it becomes more robust.
 
 
+Windows Help
+------------
+The source distribution for Windows includes a htmlhelp file (statsmodels.chm).
+This can be opened from the python interpreter ::
+
+>>> import scikits.statsmodels.api as sm
+>>> sm.open_help()
+
+
 Note for Mac Users
 ------------------
 
 We obtained a report of test failures where the required precision of the
 test seems too high. Since the precision on both Windows and Linux is higher,
-we would appreciate any reports of whether some test fail or not.
+we would appreciate any reports of whether test on Mac fail or not.
 
 """
 import os
