@@ -220,7 +220,7 @@ def categorical(data, col=None, dictnames=False, drop=False):
             raise IndexError("The index %s is not understood" % col)
 
 #TODO: add an axis argument to this for sysreg
-def add_constant(data, prepend=True):
+def add_constant(data, prepend=False):
     '''
     This appends a column of ones to an array if prepend==False.
 
