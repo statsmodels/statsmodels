@@ -21,7 +21,7 @@ DECIMAL_2 = 2
 DECIMAL_1 = 1
 
 current_path = os.path.dirname(os.path.abspath(__file__))
-y_arma = np.genfromtxt(current_path + '/results/y_arma_data.csv',
+y_arma = np.genfromtxt(open(current_path + '/results/y_arma_data.csv', "rb"),
         delimiter=",", skip_header=1, dtype=float)
 
 

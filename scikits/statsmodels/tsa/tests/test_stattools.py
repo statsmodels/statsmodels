@@ -111,7 +111,7 @@ class CheckCorrGram(object):
     x = data.data['realgdp']
     filename = os.path.dirname(os.path.abspath(__file__))+\
             "/results/results_corrgram.csv"
-    results = genfromtxt(filename, delimiter=",", names=True,dtype=float)
+    results = genfromtxt(open(filename, "rb"), delimiter=",", names=True,dtype=float)
 
     #not needed: add 1. for lag zero
     #self.results['acvar'] = np.concatenate(([1.], self.results['acvar']))

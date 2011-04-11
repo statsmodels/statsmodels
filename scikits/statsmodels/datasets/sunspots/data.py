@@ -47,7 +47,7 @@ def load():
     attribute defined.
     """
     filepath = dirname(abspath(__file__))
-    data = recfromtxt(filepath + '/sunspots.csv', delimiter=",",
+    data = recfromtxt(open(filepath + '/sunspots.csv', 'rb'), delimiter=",",
             names=True, dtype=float, usecols=(1))
     names = list(data.dtype.names)
     endog = array(data[names[0]], dtype=float)

@@ -63,7 +63,7 @@ def load():
     """
     filepath = dirname(abspath(__file__))
 ##### EDIT THE FOLLOWING TO POINT TO DatasetName.csv #####
-    data = recfromtxt(filepath + '/randhie.csv', delimiter=",",
+    data = recfromtxt(open(filepath + '/randhie.csv',"rb"), delimiter=",",
             names=True, dtype=float)
     names = list(data.dtype.names)
     endog = array(data[names[0]]).astype(float)

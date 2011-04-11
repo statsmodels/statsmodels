@@ -48,7 +48,7 @@ def load():
         See DATASET_PROPOSAL.txt for more information.
     """
     filepath = dirname(abspath(__file__))
-    data = recfromtxt(filepath+'/longley.csv', delimiter=",", names=True,
+    data = recfromtxt(open(filepath+'/longley.csv',"rb"), delimiter=",", names=True,
             dtype=float, usecols=(1,2,3,4,5,6,7))
     names = list(data.dtype.names)
     endog = array(data[names[0]], dtype=float)

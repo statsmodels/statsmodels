@@ -15,7 +15,7 @@ linear models for six distribution families, M-estimators for robust
 linear models, and regression with discrete dependent variables, Logit,
 Probit, MNLogit, Poisson, based on maximum likelihood estimators,
 timeseries models, ARMA, AR and VAR. An extensive list of result statistics
-are avalable for each estimation problem. Statsmodels also contains
+are available for each estimation problem. Statsmodels also contains
 descriptive statistics, a wide range of statistical tests and more.
 
 We welcome feedback:
@@ -24,16 +24,22 @@ our bug tracker at `<https://bugs.launchpad.net/statsmodels>`_
 
 For updated versions between releases, we recommend our repository at
 `<http://code.launchpad.net/statsmodels>`_ We will move to github in the
-near future.
+near future `<https://github.com/statsmodels>`_
 
 Main changes for 0.3.0
 ----------------------
 
-*Changes that break backwards compatability*
+*Changes that break backwards compatibility*
 
-* main import path is now scikits.statsmodels.api
+Added api.py for importing. So the new convention for importing is ::
+
+import scikits.statsmodels.api as sm
+
+Importing from modules directly now avoids unnecessary imports and increases
+the import speed if a library or user only needs specific functions.
+
 * sandbox/output.py -> iolib/table.py
-* lib/io.py -> iolib/foreign.py (stata data format reader available from iolib)
+* lib/io.py -> iolib/foreign.py (Now contains Stata .dta format reader)
 * family -> families
 * families.links.inverse -> families.links.inverse_power
 * Datasets' Load class is now load function.
@@ -42,16 +48,20 @@ Main changes for 0.3.0
 * rlm.py -> robust/robust_linear_model.py
 * glm.py -> genmod/generalized_linear_model.py
 * model.py -> base/model.py
+* t() method -> tvalues attribute (t() still exists but raises a warning)
 
-*main changes*
+*main changes and additions*
 
 * Numerous bugfixes.
 * Time Series Analysis model (tsa)
-* VAR (tsa.VAR)
-* ARMA models for time series. (tsa.AR)
-  -optionally uses Cython for Kalman Filtering
-* Improved maximum likelihood framework.
+  - Vector Autoregression Models VAR (tsa.VAR)
+  - Autogressive Models AR (tsa.AR)
+  - Autoregressive Moving Average Models ARMA (tsa.ARMA) :
+      optionally uses Cython for Kalman Filtering
+      use setup.py install with option --with-cython
+* Improved maximum likelihood framework uses all available scipy.optimize solvers
 * Refactor of the datasets sub-package.
+* Added Nile River dataset.
 * Removed RPy dependency for running the test suite.
 * Refactored the test suite.
 * Refactored codebase/directory structure.
@@ -60,7 +70,9 @@ Main changes for 0.3.0
 * New statistical tests, especially diagnostic and specification tests
 * Multiple test correction
 * General Method of Moment framework in sandbox
+* Improved documentation
 * and other additions
+
 
 Main Changes in 0.2.0
 ---------------------
@@ -84,6 +96,22 @@ We are continuing to work on support for systems of equations models, panel data
 models, time series analysis, and information and entropy econometrics in the
 sandbox. This code is often merged into trunk as it becomes more robust.
 
+
+Windows Help
+------------
+The source distribution for Windows includes a htmlhelp file (statsmodels.chm).
+This can be opened from the python interpreter ::
+
+>>> import scikits.statsmodels.api as sm
+>>> sm.open_help()
+
+
+Note for Mac Users
+------------------
+
+We obtained a report of test failures where the required precision of the
+test seems too high. Since the precision on both Windows and Linux is higher,
+we would appreciate any reports of whether test on Mac fail or not.
 
 """
 import os

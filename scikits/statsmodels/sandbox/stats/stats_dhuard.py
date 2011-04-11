@@ -146,7 +146,8 @@ def empiricalcdf(data, method='Hazen'):
     elif method == 'gringorten':
         cdf = (i-.44)/(N+.12)
     else:
-        raise 'Unknown method. Choose among Weibull, Hazen, Chegodayev, Cunnane, Gringorten and California.'
+        raise ValueError('Unknown method. Choose among Weibull, Hazen,'
+                         'Chegodayev, Cunnane, Gringorten and California.')
 
     return cdf
 
@@ -208,7 +209,8 @@ class HistDist(object):
         elif method == 'gringorten':
             cdf = (i-.44)/(N+.12)
         else:
-            raise 'Unknown method. Choose among Weibull, Hazen, Chegodayev, Cunnane, Gringorten and California.'
+            raise ValueError('Unknown method. Choose among Weibull, Hazen,'
+                             'Chegodayev, Cunnane, Gringorten and California.')
 
         return cdf
 

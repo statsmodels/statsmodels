@@ -25,7 +25,8 @@ import scikits.statsmodels.tools.tools as tools
 from scikits.statsmodels.tools.decorators import (resettable_cache,
         cache_readonly)
 from scikits.statsmodels.regression.linear_model import OLS
-from scipy import stats, factorial, special, optimize # opt just for nbin
+from scipy import stats, special, optimize # opt just for nbin
+from scipy.misc import factorial
 #import numdifftools as nd #This will be removed when all have analytic hessians
 
 #TODO: add options for the parameter covariance/variance
