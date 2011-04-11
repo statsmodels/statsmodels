@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-
-
 __all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'load']
 
 """World Fertility Survey: Fiji"""
