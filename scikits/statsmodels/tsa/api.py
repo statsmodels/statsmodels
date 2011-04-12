@@ -7,6 +7,7 @@ try:
     from .vector_ar.dynamic import DynamicVAR
 except:
     pass
+import filters
 import tsatools
 from .tsatools import (add_trend, detrend, lagmat, lagmat2ds, add_lag)
 import interp

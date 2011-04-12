@@ -59,6 +59,7 @@ the import speed if a library or user only needs specific functions.
   - Autoregressive Moving Average Models ARMA (tsa.ARMA) :
       optionally uses Cython for Kalman Filtering
       use setup.py install with option --with-cython
+  - Baxter-King band-pass filter (tsa.filters.baxter_king)
 * Improved maximum likelihood framework uses all available scipy.optimize solvers
 * Refactor of the datasets sub-package.
 * Added Nile River dataset.
@@ -188,6 +189,7 @@ def configuration(parent_package='', top_path=None, package_name=DISTNAME):
     config.add_data_dir('scikits/statsmodels/regression/tests')
     config.add_data_dir('scikits/statsmodels/robust/tests')
     config.add_data_dir('scikits/statsmodels/tsa/vector_ar/tests')
+    config.add_data_dir('scikits/statsmodels/tsa/filters/tests')
     config.add_data_files('scikits/statsmodels/docs/build/htmlhelp/statsmodelsdoc.chm')
     config.add_data_files('scikits/statsmodels/iolib/tests/results/macrodata.npy')
     vardatafiles = [os.path.join(r,d) for r,ds,f in \
