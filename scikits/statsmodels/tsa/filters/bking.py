@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.signal import fftconvolve
 
-def baxter_king(X, low_freq=6, high_freq=32, K=12):
+def baxter_king(X, low=6, high=32, K=12):
     """
     Baxter-King bandpass filter
 
@@ -9,15 +9,15 @@ def baxter_king(X, low_freq=6, high_freq=32, K=12):
     ----------
     X : array-like
         A 1 or 2d ndarray. If 2d, variables are assumed to be in columns.
-    low_freq : int
-        Filter frequencies below `low_freq`, ie., Baxter and King suggest that
+    low : int
+        Minimum period for oscillations, ie., Baxter and King suggest that
         the Burns-Mitchell U.S. business cycle has 6 for quarterly data and
         1.5 for annual data.
-    high_freq : int
-        Filter frequencies above `high_freq`, ie., the BK suggest that the U.S.
+    high : int
+        Maximum period for oscillations BK suggest that the U.S.
         business cycle has 32 for quarterly data and 8 for annual data.
     K : int
-        Maximum lag-length, Baxter and King propose a truncation lag-length
+        Lead-lag length of the filter. Baxter and King propose a truncation length
         of 12 for quarterly data and 3 for annual data.
 
     Returns
@@ -54,11 +54,11 @@ def baxter_king(X, low_freq=6, high_freq=32, K=12):
 #TODO: allow windowing functions to correct for Gibb's Phenomenon?
 # adjust bweights (symmetrically) by below before demeaning
 # Lancosz Sigma Factors np.sinc(2*j/(2.*K+1))
-    if low_freq < 2:
-        raise ValueError("low_freq cannot be less than 2")
+    if low < 2:
+        raise ValueError("low cannot be less than 2")
     X = np.asarray(X)
-    omega_1 = 2.*np.pi/high_freq # convert from freq. to periodicity
-    omega_2 = 2.*np.pi/low_freq
+    omega_1 = 2.*np.pi/high # convert from freq. to periodicity
+    omega_2 = 2.*np.pi/low
     bweights = np.zeros(2*K+1)
     bweights[K] = (omega_2 - omega_1)/np.pi # weight at zero freq.
     j = np.arange(1,int(K)+1)
