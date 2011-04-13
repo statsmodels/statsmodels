@@ -17,8 +17,8 @@ def baxter_king(X, low=6, high=32, K=12):
         Maximum period for oscillations BK suggest that the U.S.
         business cycle has 32 for quarterly data and 8 for annual data.
     K : int
-        Lead-lag length of the filter. Baxter and King propose a truncation length
-        of 12 for quarterly data and 3 for annual data.
+        Lead-lag length of the filter. Baxter and King propose a truncation
+        length of 12 for quarterly data and 3 for annual data.
 
     Returns
     -------
@@ -26,23 +26,23 @@ def baxter_king(X, low=6, high=32, K=12):
         Cyclical component of X
 
     References
-    ----------
+    ---------- ::
     Baxter, M. and R. G. King. "Measuring Business Cycles: Approximate
-        Band-Pass Filters for Economic Time Series." `Review of Economics and
-        Statistics`, 1999, 81(4), 575-593.
+        Band-Pass Filters for Economic Time Series." *Review of Economics and
+        Statistics*, 1999, 81(4), 575-593.
 
     Notes
     -----
     Returns a centered weighted moving average of the original series. Where
-    the weights a[j] are computed
+    the weights a[j] are computed ::
 
-    a[j] = b[j] + theta, for j = 0, +/-1, +/-2, ... +/- K
-    b[0] = (omega_2 - omega_1)/pi
-    b[j] = 1/(pi*j)(sin(omega_2*j)-sin(omega_1*j), for j = +/-1, +/-2,...
+      a[j] = b[j] + theta, for j = 0, +/-1, +/-2, ... +/- K
+      b[0] = (omega_2 - omega_1)/pi
+      b[j] = 1/(pi*j)(sin(omega_2*j)-sin(omega_1*j), for j = +/-1, +/-2,...
 
-    and theta is a normalizing constant
+    and theta is a normalizing constant ::
 
-    theta = -sum(b)/(2K+1)
+      theta = -sum(b)/(2K+1)
 
     Examples
     --------
@@ -51,6 +51,7 @@ def baxter_king(X, low=6, high=32, K=12):
     >>> X = dta.data['realinv']
     >>> Y = sm.tsa.filters.baxter_king(X, 6, 24, 12)
     """
+#TODO: change the docstring to ..math::?
 #TODO: allow windowing functions to correct for Gibb's Phenomenon?
 # adjust bweights (symmetrically) by below before demeaning
 # Lancosz Sigma Factors np.sinc(2*j/(2.*K+1))
