@@ -729,6 +729,8 @@ class RegressionResults(LikelihoodModelResults):
         Aikake's information criteria :math:`-2llf + 2(df_model+1)`
     bic
         Bayes' information criteria :math:`-2llf + \log(n)(df_model+1)`
+    bse
+        The standard errors of the parameter estimates.
     pinv_wexog
         See specific model class docstring
     centered_tss
@@ -834,8 +836,6 @@ class RegressionResults(LikelihoodModelResults):
         often called the standard error of the regression.
     ssr
         Sum of squared (whitened) residuals.
-    stand_errors
-        The standard errors of the parameter estimates.
     uncentered_tss
         Uncentered sum of squares.  Sum of the squared values of the
         (whitened) endogenous response variable.
