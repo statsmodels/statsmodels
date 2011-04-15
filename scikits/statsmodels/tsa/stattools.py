@@ -773,10 +773,56 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
 
     return resli
 
+def coint(y1, y2, regression="c"):
+    """
+    This is a simple cointegration test. Uses unit-root test on residuals to test for cointegrat     ed relationship
+
+    See Hamilton (1994) 19.2
+
+    Parameters
+    ----------
+    y1 : array_like, 1d
+        first element in cointegrating vector
+    y2 : array_like
+        remaining elements in cointegrating vector
+    c : str {'c'}
+        Included in regression
+        * 'c' : Constant
+
+    Returns
+    -------
+    coint_t : float
+        t-statistic of unit-root test on residuals
+    pvalue : float
+        MacKinnon's approximate p-value based on MacKinnon (1994)
+    crit_value : dict
+        Critical values for the test statistic at the 1 %, 5 %, and 10 % levels.
+
+    P-Values (regression surface approximation)
+    MacKinnon, J.G. 1994.  "Approximate asymptotic distribution functions for
+        unit-root and cointegration tests.  `Journal of Business and Economic
+        Statistics` 12, 167-76.
+
+    """
+    regression = regression.lower()
+    if regression not in ['c','nc','ct','ctt']:
+        raise ValueError("regression option %s not understood") % regression
+    y1 = np.asarray(y1)
+    y2 = np.asarray(y2)
+    if regression == 'c':
+        y2 = sm.tools.add_constant(y2)
+    st1_resid = sm.OLS(y1, y2).fit().resid #stage one residuals
+    lgresid_cons=sm.tools.add_constant(st1_resid[0:-1])
+    uroot_reg = sm.OLS(st1_resid[1:], lgresid_const).fit()
+    coint_t = (uroot_reg.params[0]-1)/uroot_reg.bse[0]
+    pvalue = mackinnonp(coint_t, regression="c", N=1, lags=None)
+    crit_value = mackinnoncrit(N=1, regression="c", nobs=len(y1))
+    return coint_t, pvalue, crit_value
+
 
 
 __all__ = ['acovf', 'acf', 'pacf', 'pacf_yw', 'pacf_ols', 'ccovf', 'ccf',
-           'periodogram', 'q_stat']
+           'periodogram', 'q_stat', 'coint']
 
 if __name__=="__main__":
     import scikits.statsmodels.api as sm
