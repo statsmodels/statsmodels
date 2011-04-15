@@ -815,7 +815,7 @@ def coint(y1, y2, regression="c"):
     lgresid_cons=sm.tools.add_constant(st1_resid[0:-1])
     uroot_reg = sm.OLS(st1_resid[1:], lgresid_const).fit()
     coint_t = (uroot_reg.params[0]-1)/uroot_reg.bse[0]
-    pvalue = mackinnonp(coint_t, regression="c", N=1, lags=None)
+    pvalue = mackinnonp(coint_t, regression="c", N=2, lags=None)
     crit_value = mackinnoncrit(N=1, regression="c", nobs=len(y1))
     return coint_t, pvalue, crit_value
 

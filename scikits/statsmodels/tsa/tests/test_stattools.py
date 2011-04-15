@@ -191,7 +191,7 @@ class CheckCoint(object):
     levels = ['1%', '5%', '10%']
     data = macrodata.load()
     y1 = data.data['realcons']
-    y2 = sm.tools.add_constant(data.data['realgdp'])
+    y2 = data.data['realgdp']
 
     def test_tstat(self):
         assert_almost_equal(self.coint_t,self.teststat, DECIMAL_5)
