@@ -1,4 +1,4 @@
-from scikits.statsmodels.tsa.tests_stattools import CheckCoint, TestCoint_t
+from scikits.statsmodels.tsa.tests.test_stattools import CheckCoint, TestCoint_t
 
 
 #test whether t-test for cointegration equals that produced by Stata

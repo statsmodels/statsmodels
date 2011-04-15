@@ -810,10 +810,10 @@ def coint(y1, y2, regression="c"):
     y1 = np.asarray(y1)
     y2 = np.asarray(y2)
     if regression == 'c':
-        y2 = sm.tools.add_constant(y2)
-    st1_resid = sm.OLS(y1, y2).fit().resid #stage one residuals
-    lgresid_cons=sm.tools.add_constant(st1_resid[0:-1])
-    uroot_reg = sm.OLS(st1_resid[1:], lgresid_const).fit()
+        y2 = add_constant(y2)
+    st1_resid = OLS(y1, y2).fit().resid #stage one residuals
+    lgresid_cons = add_constant(st1_resid[0:-1])
+    uroot_reg = OLS(st1_resid[1:], lgresid_cons).fit()
     coint_t = (uroot_reg.params[0]-1)/uroot_reg.bse[0]
     pvalue = mackinnonp(coint_t, regression="c", N=2, lags=None)
     crit_value = mackinnoncrit(N=1, regression="c", nobs=len(y1))

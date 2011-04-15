@@ -194,14 +194,14 @@ class CheckCoint(object):
     y2 = data.data['realgdp']
 
     def test_tstat(self):
-        assert_almost_equal(self.coint_t,self.teststat, DECIMAL_5)
+        assert_almost_equal(self.coint_t,self.teststat, DECIMAL_4)
 
 class TestCoint_t(CheckCoint):
     """
     Get AR(1) parameter on residuals
     """
     def __init__(self):
-        self.coint_t = coint(y1, y2, regression ="c")[0]
+        self.coint_t = coint(self.y1, self.y2, regression ="c")[0]
         self.teststat = -1.8208817
 
 
