@@ -1,5 +1,5 @@
 from scikits.statsmodels.tsa.stattools import (adfuller, acf, pacf_ols, pacf_yw,
-                                               pacf, grangercausalitytests)
+                                               pacf, grangercausalitytests, coint)
 
 import numpy as np
 from numpy.testing import assert_almost_equal
@@ -182,6 +182,27 @@ class TestPACF(CheckCorrGram):
         pacfld = pacf(self.x, nlags=40, method="ldu")
         assert_almost_equal(pacfyw, pacfld, DECIMAL_8)
 
+class CheckCoint(object):
+    """
+    Test Cointegration Test Results for 2-variable system
+
+    Test values taken from Stata
+    """
+    levels = ['1%', '5%', '10%']
+    data = macrodata.load()
+    y1 = data.data['realcons']
+    y2 = sm.tools.add_constant(data.data['realgdp'])
+
+    def test_tstat(self):
+        assert_almost_equal(self.coint_t,self.teststat, DECIMAL_5)
+
+class TestCoint_t(CheckCoint):
+    """
+    Get AR(1) parameter on residuals
+    """
+    def __init__(self):
+        self.coint_t = coint(y1, y2, regression ="c")[0]
+        self.teststat = -1.8208817
 
 
 def test_grangercausality():
@@ -197,6 +218,7 @@ def test_grangercausality():
     assert_almost_equal(r_result, gr[2][0]['ssr_ftest'], decimal=7)
     assert_almost_equal(gr[2][0]['params_ftest'], gr[2][0]['ssr_ftest'],
                         decimal=7)
+
 
 
 if __name__=="__main__":
