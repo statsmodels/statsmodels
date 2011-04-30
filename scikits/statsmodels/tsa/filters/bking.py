@@ -9,11 +9,11 @@ def baxter_king(X, low=6, high=32, K=12):
     ----------
     X : array-like
         A 1 or 2d ndarray. If 2d, variables are assumed to be in columns.
-    low : int
+    low : float
         Minimum period for oscillations, ie., Baxter and King suggest that
         the Burns-Mitchell U.S. business cycle has 6 for quarterly data and
         1.5 for annual data.
-    high : int
+    high : float
         Maximum period for oscillations BK suggest that the U.S.
         business cycle has 32 for quarterly data and 8 for annual data.
     K : int
