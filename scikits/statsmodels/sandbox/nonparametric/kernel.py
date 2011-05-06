@@ -19,9 +19,59 @@ http://fedc.wiwi.hu-berlin.de/xplore/ebooks/html/anr/anrhtmlframe62.html
 # pylint: disable-msg=E1101
 # pylint: disable-msg=E0611
 
+import math
 import numpy as np
 import scipy.integrate
 from numpy import exp, multiply, square, divide, subtract, inf
+
+class NdKernel(object):
+    """Generic N-dimensial kernel
+    Can be constructed from either
+    a) a list of n kernels which will be treated as
+    indepent marginals on a gaussian copula (specified by H)
+    or b) a single univariate kernel which will be applied radially to the
+    mahalanobis distance defined by H.
+
+    In the case of the Gaussian these are both equivalent, and the second constructiong
+    is prefered.
+    """
+    def __init__(self, n, kernels = None, H = None):
+        if kernels is None:
+            kernels = Gaussian()
+
+        self._kernels = kernels
+
+        if H is None:
+            H = np.matrix( np.identity(len(kernels)))
+
+        self._H = H
+        self._Hrootinv = np.linalg.cholesky( H.I )
+
+    def getH(self):
+        """Getter for kernel bandwidth, H"""
+        return self._H
+    def setH(self, value):
+        """Setter for kernel bandwidth, H"""
+        self._H = value
+    H = property(getH, setH, doc="Kernel bandwidth matrix")
+
+    def density(self, xs, x):
+        n = len(xs)
+        #xs = self.inDomain( xs, xs, x )[0]
+
+        if len(xs)>0:  ## Need to do product of marginal distributions
+            w = np.sum([self(self._Hrootinv * (xx-x) ) for xx in xs])/n
+            return w
+        else:
+            return np.nan
+
+    def _kernweight(self, x ):
+        """returns the kernel weight for the independent multivariate kernel"""
+        if isinstance( self._kernels, CustomKernel ):
+            ## Radial case
+            d = math.sqrt( x.T * x )
+            return self._kernels( d )
+
 
 class CustomKernel(object):
     """
@@ -97,6 +147,19 @@ class CustomKernel(object):
                 return (xs, ys)
             else:
                 return ([], [])
+
+    def density(self, xs, x):
+        """Returns the kernel density estimate for point x based on x-values
+        xs
+        """
+        n = len(xs)
+        xs = self.inDomain( xs, xs, x )[0]
+
+        if len(xs)>0:
+            w = np.sum([self((xx-x)/self.h) for xx in xs])/n
+            return w
+        else:
+            return np.nan
 
     def smooth(self, xs, ys, x):
         """Returns the kernel smoothing estimate for point x based on x-values
@@ -184,16 +247,6 @@ class CustomKernel(object):
         Does the same as weight if the function is normalised
         """
         return self._shape(x)
-
-
-# pylint: disable-msg=R0903
-class DefaultKernel(CustomKernel):
-    """Represents the default kernel - should not be used directly
-    This contains no functionality and acts as a placeholder for the consuming
-    function.
-    """
-    pass
-# pylint: enable-msg=R0903
 
 class Uniform(CustomKernel):
     def __init__(self, h=1.0):
