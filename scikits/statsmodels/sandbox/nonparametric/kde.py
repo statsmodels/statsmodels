@@ -12,16 +12,45 @@ http://en.wikipedia.org/wiki/Kernel_%28statistics%29
 Silverman, B.W.  Density Estimation for Statistics and Data Anaylsis.
 """
 import numpy as np
-#class KDensity(object):
-#    def __init__(self, X, kernel="epa" bwidth=""):
+import bandwidths #TODO: change to absolute import
 
-#def subset(x, limit):
-#    """
-#    Returns selector for X, given limit.
-#
-#    """
-    #TODO: finish docstring.
-#    return np.
+
+#### Convenience Functions to be moved to kerneltools ####
+
+def forrt(X,m=None):
+    """
+    RFFT with order like Munro (1976) FORTT routine.
+    """
+    if m is None:
+        m = len(X)
+    y = np.fft.rfft(X,m)/m
+    return np.r_[y.real,y[1:-1].imag]
+
+def revrt(X,m=None):
+    """
+    Inverse of forrt. Equivalent to Munro (1976) REVRT routine.
+    """
+    if m is None:
+        m = len(X)
+    y = X[:m/2+1] + np.r_[0,X[m/2+1:],0]*1j
+    return np.fft.irfft(y)*m
+
+def silverman_transform(X, bw, RANGE):
+    """
+    Transform density estimate (Gaussian Kernel only) according to Silverman AS 176.
+
+    Notes
+    -----
+    Underflow is intentional as a dampener.
+    """
+    M = len(X)
+    J = np.arange(M/2+1)
+    FAC1 = 2*(np.pi*bw/RANGE)**2
+    JFAC = J**2*FAC1
+    BC = 1 - 1./3 * (J*1./M*np.pi)**2
+    FAC = np.exp(-JFAC)/BC
+    SMOOTH = np.r_[FAC,FAC[1:-1]] * X
+    return SMOOTH
 
 def linbin(X,a,b,M, trunc=1):
     """
@@ -42,7 +71,6 @@ def linbin(X,a,b,M, trunc=1):
 
     return gcnts
 
-#This is much faster, might be able to speed it up still?
 def counts(x,v):
     """
     Counts the number of elements of x that fall within v
@@ -52,30 +80,36 @@ def counts(x,v):
     Using np.digitize and np.bincount
     """
     idx = np.digitize(x,v)
-    return np.bincount(idx, minlength=len(v))
-
-#def counts(x,v):
-#    """
-#    Counts the number of elements of x that fall within v
-#
-#    Notes
-#    -----
-#    Flattens both x and v.
-#    """
-#    x = x.flatten()
-#    v = v.flatten()
-#    c = []
-#    nv = np.r_[-np.inf,v]
-#    for i in range(1,len(nv)):
-#        t = np.sum(np.logical_and(x<=nv[i],x>nv[i-1]))
-#        c.append(t)
-#    return np.asarray(c)
+    try: # numpy 1.6
+        return np.bincount(idx, minlength=len(v))
+    except:
+        bc = np.bincount(idx)
+        return np.r_[bc,np.zeros(len(v)-len(bc))]
 
 
 def kdesum(x,axis=0):
     return np.asarray([np.sum(x[i] - x, axis) for i in range(len(x))])
 
-def kdensity(X, kernel="epa", bw=None, weights=None, gridsize=None, axis=0, clip=(-np.inf,np.inf), cut=3):
+# global dict?
+bandwidth_funcs = dict(scott=bandwidths.bw_scott,silverman=bandwidths.bw_silverman)
+
+def select_bandwidth(X, bw, kernel):
+    """
+    Selects bandwidth
+    """
+    bw = bw.lower()
+    if bw not in ["scott","silverman"]:
+        raise ValueError("Bandwidth %s not understood" % bw)
+    if kernel == "gauss":
+        return bandwidth_funcs[bw](X)
+    else:
+        raise ValueError("Only Gaussian Kernels are currently supported")
+
+
+#### Kernel Density Estimators ####
+
+def kdensity(X, kernel="gauss", bw=None, weights=None, gridsize=None, axis=0,
+        clip=(-np.inf,np.inf), cut=3):
     """
     Rosenblatz-Parzen univariate kernel desnity estimator
 
@@ -151,7 +185,8 @@ def kdensity(X, kernel="epa", bw=None, weights=None, gridsize=None, axis=0, clip
 #TODO: need to check this
 #    return k.mean(1),k
 
-def kdensityf(X, kernel="epa", bw=None, weights=None, gridsize=None, clip=(-np.inf,np.inf), cut=3):
+def kdensityfft(X, kernel="gauss", bw="scott", adjust=1, weights=None, gridsize=None,
+        clip=(-np.inf,np.inf), cut=3):
     """
     Rosenblatz-Parzen univariate kernel desnity estimator
 
@@ -167,98 +202,75 @@ def kdensityf(X, kernel="epa", bw=None, weights=None, gridsize=None, clip=(-np.i
         "par" for Parzen
         "rect" for rectangular
         "tri" for triangular
-    bw : str, int
-        If None, the bandwidth uses the rule of thumb for the given kernel.
-        ie., h = c*nobs**(-1/5.) where c = (see Racine 2.6)
-        gridsize : int
+        ONLY GAUSSIAN IS CURRENTLY IMPLEMENTED.
+    bw : str, float
+        "scott" - 1.059 * A * nobs ** (-1/5.), where A is min(std(X),IQR/1.34)
+        "silverman" - .9 * A * nobs ** (-1/5.), where A is min(std(X),IQR/1.34)
+        If a float is given, it is the bandwidth.
+    adjust : float
+        An adjustment factor for the bw. Bandwidth becomes bw * adjust.
+    gridsize : int
         If gridsize is None, min(len(X), 512) is used.  Note that this number
         is rounded up to the next highest power of 2.
+    cut : float
+        Defines the length of the grid past the lowest and highest values of X so that
+        the kernel goes to zero. The end points are -/+ cut*bw*{X.min() or X.max()}
 
     Notes
     -----
+    Only the default kernel is implemented.
     Weights aren't implemented yet.
     Uses FFT.
-    Should actually only work for 1 column.
-    DOesn't work yet
+    Should only work for 1 column for now
     """
     X = np.asarray(X)
     X = X[np.logical_and(X>clip[0], X<clip[1])] # won't work for two columns.
                                                 # will affect underlying data?
+    try:
+        bw = float(bw)
+    except:
+        bw = select_bandwidth(X, bw, kernel) # will cross-val fit this pattern?
+    bw *= adjust
+
     nobs = float(len(X)) # after trim
-    if bw == None:
-        if kernel.lower() == "gauss":
-            c = 1.0592 * np.std(X, ddof=1)
-        if kernel.lower() == "epa":
-            c = 1.0487 * np.std(X, ddof=1) # is this correct?
-#TODO: can use windows from scipy.signal?
-        bw = c * nobs**(-1/5.)
 
-
+    # 1 Make grid and discretize the data
     if gridsize == None:
         gridsize = np.max((nobs,512.))
-    # round gridsize up to the next power of 2
-    gridsize = 2**np.ceil(np.log2(gridsize))
+    gridsize = 2**np.ceil(np.log2(gridsize)) # round to next power of 2
 
-    # Discretize the data on an M-element grid over [a,b] to find the weight seq.
-    # define grid
-    grid,delta = np.linspace(np.min(X)-cut*bw,np.max(X)+cut*bw,gridsize,retstep=True)
-    RANGE = np.max(X)+cut*bw - np.min(X)-cut*bw
-    # sort the data
-    X.sort(0)
-    # how fine is the data vis-a-vis the grid?
-    count = counts(X,grid)
+    a = np.min(X)-cut*bw
+    b = np.max(X)+cut*bw
+    grid,delta = np.linspace(a,b,gridsize,retstep=True)
+    RANGE = b-a
 
-    # make a weights array
+# This is the Silverman binning function, but I believe it's buggy (SS)
+
 # weighting according to Silverman
-    wt = np.zeros_like(grid)    #xi_{k} in Silverman
-    j = 0
-    for k in range(int(gridsize-1)):
-        if count[k]>0: # there are points of X in the grid here
-            Xingrid = X[j:j+count[k]] # get all these points
-            # get weights at grid[k],grid[k+1]
-            wt[k] += np.sum(grid[k+1]-Xingrid)
-            wt[k+1] += np.sum(Xingrid-grid[k])
-            j += count[k]
-    wt /= (nobs)*delta**2 # normalize wt to sum to 1/delta
+#    count = counts(X,grid)
+#    binned = np.zeros_like(grid)    #xi_{k} in Silverman
+#    j = 0
+#    for k in range(int(gridsize-1)):
+#        if count[k]>0: # there are points of X in the grid here
+#            Xingrid = X[j:j+count[k]] # get all these points
+#            # get weights at grid[k],grid[k+1]
+#            binned[k] += np.sum(grid[k+1]-Xingrid)
+#            binned[k+1] += np.sum(Xingrid-grid[k])
+#            j += count[k]
+#    binned /= (nobs)*delta**2 # normalize binned to sum to 1/delta
 
-# Weights according to Hall and Jones
-# still use count
-#    wt = np.zeros_like(grid[:gridsize/2])
+#NOTE: THE ABOVE IS WRONG, JUST TRY WITH LINEAR BINNING
+    binned = linbin(X,a,b,gridsize)/(delta*nobs)
 
+    # step 2 compute FFT of the weights, using Munro (1976) FFT convention
+    y = forrt(binned)
 
-#    print nobs
-#    print len(wt)
-    assert np.allclose(np.sum(wt), 1/delta)
+    # step 3 and 4 for optimal bw compute zstar and the density estimate f
+    # don't have to redo the above if just changing bw, ie., for cross val
 
-    # step 2 compute FFT of the weights
-#    y = np.fft.rfft(wt) # RFFT uses opposite sign vs. Silverman and doesn't
-                        # normalize by len(wt)
-# so Silverman's definition corresponds to
-    y = np.fft.irfft(wt, n = gridsize)
-#    y = np.fft.ifft(wt, n = gridsize)
-    # put in order expected
-    # see Monro (1976) AS 97 (FORRT) real parts first then the imaginary parts.
-    # brute force
-    #   don't have to reorder if you use irfft
-#    y_neworder = np.zeros_like(grid)
-#    for i in range(int(gridsize)):
-#        if i <= gridsize/2:
-#            y_neworder[i] = np.real(y[i])
-#        else:
-#            y_neworder[i] = np.imag(y[i-(gridsize/2)])
-
-    ell = np.arange(-gridsize/2.,gridsize/2.)
-    s = 2*ell*np.pi/RANGE
-
-    # step 3 and 4 for optimal bandwidt compute zstar and the density estimate f
-#   3.59
-
-# if use irfft then you don't have to reorder
-    zstar = np.exp(-.5*bw**2*s**2)*y
-#    zstar = np.exp(-.5*bw**2*s**2)*y_neworder
-    f = np.fft.rfft(zstar)
-# and given the defintion in Silverman and numpy then f should be
-#    f = np.real(np.fft.fft(zstar))
+#NOTE: I believe this is kernel specific, so needs to be replaced for generality
+    zstar = silverman_transform(y, bw, RANGE)
+    f = revrt(zstar)
     return f
 
 if __name__ == "__main__":
@@ -266,51 +278,43 @@ if __name__ == "__main__":
     np.random.seed(12345)
     xi = np.random.randn(100)
     f,k = kdensity(xi, kernel="gauss", bw=.372735)
-    f2 = kdensityf(xi, kernel="gauss")
+    f2 = kdensityfft(xi, kernel="gauss", bw="silverman")
 
-# do Fourier method by hand
-    X = xi.copy()
-    nobs = len(X)
-#    c = 1.0592 * np.std(X, axis=0, ddof=1)
-    c = .9 * np.std(X, axis=0, ddof=1)
-    bw = c * nobs ** -.2
-    gridsize = 512
-    cut = 3
-    a,b = X.min() - cut*bw, X.max()+cut*bw
-    grid,delta = np.linspace(a,b,gridsize,retstep=True)
-    wt = np.zeros_like(grid)    #xi_{k} in Silverman
-    j = 0
-    count = counts(X,grid)
-    RANGE = np.max(X)+cut*bw - np.min(X)-cut*bw
-    for k in range(int(gridsize-1)):
-        if count[k]>0: # there are points of X in the grid here
-            Xingrid = X[j:j+count[k]] # get all these points
-            # get weights at grid[k],grid[k+1]
-            wt[k] += np.sum(grid[k+1]-Xingrid)
-            wt[k+1] += np.sum(Xingrid-grid[k])
-            j += count[k]
-    wt /= (nobs)*delta**2 # normalize wt to sum to 1/delta
-    y = np.fft.ifft(wt, n = gridsize)
-    ell = np.arange(-gridsize/2.,gridsize/2.)
-    s = 2*ell*np.pi/RANGE
-    zstar = np.exp(-.5*bw**2*s**2)*y
-    f2 = np.fft.fft(zstar)
+# do some checking vs. silverman algo.
+# you need denes.f, http://lib.stat.cmu.edu/apstat/176
+#NOTE: I (SS) made some changes to the Fortran
+# and the FFT stuff from Munro http://lib.stat.cmu.edu/apstat/97o
+# then compile everything and link to denest with f2py
+#Make pyf file as usual, then compile shared object
+#f2py denest.f -m denest2 -h denest.pyf
+#edit pyf
+#-c flag makes it available to other programs, fPIC builds a shared library
+#/usr/bin/gfortran -Wall -c -fPIC fft.f
+#f2py -c denest.pyf ./fft.o denest.f
 
+    try:
+        from denest2 import denest
+        a = -3.4884382032045504
+        b = 4.3671504686785605
+        RANGE = b - a
+        bw = bandwidths.bw_silverman(xi)
 
+        ft,smooth,ifault,weights,smooth1 = denest(xi,a,b,bw,np.zeros(512),np.zeros(512),0,
+                np.zeros(512), np.zeros(512))
+# We use a different binning algo, so only accurate up to 3 decimal places
+        np.testing.assert_almost_equal(f2, smooth, 3)
+#NOTE: for debugging
+#        y2 = forrt(weights)
+#        RJ = np.arange(512/2+1)
+#        FAC1 = 2*(np.pi*bw/RANGE)**2
+#        RJFAC = RJ**2*FAC1
+#        BC = 1 - RJFAC/(6*(bw/((b-a)/M))**2)
+#        FAC = np.exp(-RJFAC)/BC
+#        SMOOTH = np.r_[FAC,FAC[1:-1]] * y2
 
-"""
-    # Hall and Jones example
-    c = [4,2,1,2,0,0,0,0]
-    kappa = [7,5,2,0,0,0,2,5]
+#        dens = revrt(SMOOTH)
 
-    C = np.fft.fft(c)
-    K = np.fft.fft(kappa)
-    F_tilde = C*K
-    f_tilde = np.fft.ifft(F_tilde)
-    # only keep first 4 because last 4 have wrap-around error
-    f = f_tilde[:4]
-    # this is our density estimate.
-    # can this be done with fftconvolve?
-    #from scipy import signal
-#TODO: note that scipy.fftpack looks to be more "standard" notation
-"""
+    except:
+#        ft = np.loadtxt('./ft_silver.csv')
+#        smooth = np.loadtxt('./smooth_silver.csv')
+        print "Didn't get the estimates from the Silverman algorithm"
