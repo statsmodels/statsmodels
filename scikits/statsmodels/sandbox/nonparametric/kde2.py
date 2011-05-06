@@ -1,42 +1,69 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-import kernel
+import kernel as kernels
+import bandwidths as bw
 
-class KernelEstimate(object):
-    def __init__(self, x, Kernel = None, H = None):
-        xshape= np.shape(x)
-        if len(xshape) == 1:
-            n = 1
-        else:
-            n = xshape[1]
-        print "%s dimensions" % n
-        if Kernel is None:
-            Kernel = kernel.Gaussian()
-        if n > 1:
-            if isinstance( Kernel, kernel.CustomKernel ):
-                if H is None:
-                    H = np.matrix(np.identity(n))
-                Kernel = kernel.NdKernel( n, kernels = Kernel, H = H )
-        self._kernel = Kernel
-        self.n = n
+#TODO: should this be a function?
+class KDE(object):
+    """
+    Kernel Density Estimator
+
+    Parameters
+    ----------
+    x : array-like
+        N-dimensional array from which the density is to be estimated
+    kernel : Kernel Class
+        Should be a class from *
+
+    """
+    #TODO: amend docs for Nd case?
+    def __init__(self, x, kernel = None):
+
+        x = np.asarray(x)
+
+        if x.ndim == 1:
+            x = x[:,None]
+
+        nobs, n_series = x.shape
+#        print "%s dimensions" % n_series
+
+        if kernel is None:
+            kernel = kernels.Gaussian() # no meaningful bandwidth yet
+
+        if n_series > 1:
+            if isinstance( kernel, kernels.CustomKernel ):
+                kernel = kernels.NdKernel(n_series, kernels = kernel)
+        self.kernel = kernel
+        self.n = n_series # TODO change attribute
         self.x = x
 
     def density(self, x):
-        return self._kernel.density(self.x, x)
+        return self.kernel.density(self.x, x)
 
-    def __call__(self, x):
+    def __call__(self, x, h = "scott"):
         return np.array([self.density(xx) for xx in x])
 
+    def evaluate(self, x, h = "silverman"):
+        density = self.kernel.density
+        return np.array([density(xx) for xx in x])
+
 if __name__ == "__main__":
-    PLOT = False
+    PLOT = True
     from numpy import random
     import matplotlib.pyplot as plt
+    import bandwidths as bw
+
     # 1 D case
     random.seed(142)
     x = random.standard_t(4.2, size = 50)
-    kern = kernel.Gaussian()
-    kde = KernelEstimate( x, kern)
+    h = bw.bw_silverman(x)
+    #NOTE: try to do it with convolution
+    support = np.linspace(-10,10,512)
+
+
+    kern = kernels.Gaussian(h = h)
+    kde = KDE( x, kern)
     print kde.density(1.015469)
     print 0.2034675
     Xs = np.arange(-10,10,0.1)
@@ -50,13 +77,13 @@ if __name__ == "__main__":
         plt.show()
 
     # 2 D case
-    from scikits.statsmodels.sandbox.nonparametric.testdata import kdetest
-    x = zip(kdetest.faithfulData["eruptions"], kdetest.faithfulData["waiting"])
-    x = np.array(x)
-    H = kdetest.Hpi
-    kern = kernel.NdKernel( 2 )
-    kde = KernelEstimate( x, kern )
-    print kde.density( np.matrix( [1,2 ]).T )
+#    from scikits.statsmodels.sandbox.nonparametric.testdata import kdetest
+#    x = zip(kdetest.faithfulData["eruptions"], kdetest.faithfulData["waiting"])
+#    x = np.array(x)
+#    H = kdetest.Hpi
+#    kern = kernel.NdKernel( 2 )
+#    kde = KernelEstimate( x, kern )
+#    print kde.density( np.matrix( [1,2 ]).T )
 
 
     # 5 D case

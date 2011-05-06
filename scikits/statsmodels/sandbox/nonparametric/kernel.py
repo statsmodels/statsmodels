@@ -26,6 +26,14 @@ from numpy import exp, multiply, square, divide, subtract, inf
 
 class NdKernel(object):
     """Generic N-dimensial kernel
+
+    Parameters
+    ----------
+    n : int
+        The number of series for kernel estimates
+    kernels : list
+        kernels
+
     Can be constructed from either
     a) a list of n kernels which will be treated as
     indepent marginals on a gaussian copula (specified by H)
@@ -42,7 +50,7 @@ class NdKernel(object):
         self._kernels = kernels
 
         if H is None:
-            H = np.matrix( np.identity(len(kernels)))
+            H = np.matrix( np.identity(n))
 
         self._H = H
         self._Hrootinv = np.linalg.cholesky( H.I )
@@ -50,9 +58,11 @@ class NdKernel(object):
     def getH(self):
         """Getter for kernel bandwidth, H"""
         return self._H
+
     def setH(self, value):
         """Setter for kernel bandwidth, H"""
         self._H = value
+
     H = property(getH, setH, doc="Kernel bandwidth matrix")
 
     def density(self, xs, x):
@@ -314,9 +324,7 @@ class Biweight(CustomKernel):
 
         if len(xs) > 0:
             fittedvals = np.array([self.smooth(xs, ys, xx) for xx in xs])
-            rs = square(
-                subtract(ys, fittedvals)
-            )
+            rs = square(subtract(ys, fittedvals))
             w = np.sum(square(subtract(1.0, square(divide(subtract(xs, x),
                                                         self.h)))))
             v = np.sum(multiply(rs, square(subtract(1, square(divide(
