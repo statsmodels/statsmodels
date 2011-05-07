@@ -12,8 +12,15 @@ http://en.wikipedia.org/wiki/Kernel_%28statistics%29
 Silverman, B.W.  Density Estimation for Statistics and Data Anaylsis.
 """
 import numpy as np
+import kernel as kernels
 import bandwidths #TODO: change to absolute import
 
+#### Kernels Switch for estimators ####
+
+kernel_switch = dict(gauss=kernels.Gaussian, epa=kernels.Epanechnikov,
+                    uni=kernels.Uniform, tri=kernels.Triangular,
+                    biw=kernels.Biweight, triw=kernels.Triweight,
+                    cos=kernels.Cosine)
 
 #### Convenience Functions to be moved to kerneltools ####
 
@@ -73,7 +80,7 @@ def linbin(X,a,b,M, trunc=1):
 
 def counts(x,v):
     """
-    Counts the number of elements of x that fall within v
+    Counts the number of elements of x that fall within the grid points v
 
     Notes
     -----
@@ -105,11 +112,39 @@ def select_bandwidth(X, bw, kernel):
     else:
         raise ValueError("Only Gaussian Kernels are currently supported")
 
+#### Kernel Density Estimator Class ###
 
-#### Kernel Density Estimators ####
+#TODO: should be able to extend to multivariate, change signature
+class KDE(object):
+    def __init__(self, endog):
+        self.endog = np.asarray(endog)
 
-def kdensity(X, kernel="gauss", bw=None, weights=None, gridsize=None, axis=0,
-        clip=(-np.inf,np.inf), cut=3, retgrid=True):
+    def fit(kernel="gauss", bw="scott", fft=True, weights=None, gridsize=None,
+            adjust=1, clip=(-np.inf, np.inf), cut=3):
+        try:
+            bw = float(bw)
+            self.bw_method = "user-given"
+        except:
+            self.bw_method = bw
+        endog = self.endog
+
+        if fft:
+            density, grid, bw = kdensityfft(endog, kernel=kernel, bw=bw,
+                    adjust=adjust, weights=weights, gridsize=gridsize,
+                    clip=clip, cut=cut)
+        else:
+            density, grid, bw = kdensityfft(endog, kernel=kernel, bw=bw,
+                    adjust=adjust, weights=weights, gridsize=gridsize,
+                    clip=clip, cut=cut)
+        self.density = density
+        self.support = grid
+        self.bw = bw
+
+
+#### Kernel Density Estimator Functions ####
+
+def kdensity(X, kernel="gauss", bw="scott", weights=None, gridsize=None,
+                adjust=1, axis=0, clip=(-np.inf,np.inf), cut=3, retgrid=True):
     """
     Rosenblatz-Parzen univariate kernel desnity estimator
 
@@ -117,76 +152,81 @@ def kdensity(X, kernel="gauss", bw=None, weights=None, gridsize=None, axis=0,
     ----------
     X : array-like
     kernel : str
-        "bi" for biweight
-        "cos" for cosine
-        "epa" for Epanechnikov, default
-        "epa2" for alternative Epanechnikov
-        "gauss" for Gaussian.
-        "par" for Parzen
-        "rect" for rectangular
-        "tri" for triangular
-    bw : str, int
-        If None, the bandwidth uses the rule of thumb for the given kernel.
-        ie., h = c*nobs**(-1/5.) where c = (see Racine 2.6)
-        gridsize : int
-        If gridsize is None, min(len(X), 512) is used.  Note that this number
-        is rounded up to the next highest power of 2.
+        The Kernel to be used. Choices are
+        - "biw" for biweight
+        - "cos" for cosine
+        - "epa" for Epanechnikov
+        - "gauss" for Gaussian.
+        - "tri" for triangular
+        - "triw" for triweight
+        - "uni" for uniform
+    bw : str, float
+        "scott" - 1.059 * A * nobs ** (-1/5.), where A is min(std(X),IQR/1.34)
+        "silverman" - .9 * A * nobs ** (-1/5.), where A is min(std(X),IQR/1.34)
+        If a float is given, it is the bandwidth.
+    gridsize : int
+        If gridsize is None, max(len(X), 50) is used.
+    cut : float
+        Defines the length of the grid past the lowest and highest values of X
+        so that the kernel goes to zero. The end points are
+        -/+ cut*bw*{min(X) or max(X)}
+
 
     Notes
     -----
+    Creates an intermediate (`gridsize` x `gridsize`) array. Use FFT for a more
+    computationally efficient version.
     Weights aren't implemented yet.
-    Does not use FFT.
-    Should actually only work for 1 column.
     """
     X = np.asarray(X)
     if X.ndim == 1:
         X = X[:,None]
-    X = X[np.logical_and(X>clip[0], X<clip[1])] # won't work for two columns.
-                                                # will affect underlying data?
+    X = X[np.logical_and(X>clip[0], X<clip[1])]
+
     nobs = float(len(X)) # after trim
 
     # if bw is None, select optimal bandwidth for kernel
-    if bw == None:
-        if kernel.lower() == "gauss":
-            c = 1.0592 * np.std(X, axis=axis, ddof=1)
-        if kernel.lower() == "epa":
-            c = 1.0487 * np.std(X, axis=axis, ddof=1) # is this correct?
-#TODO: can use windows from scipy.signal?
-        h = c * nobs**(-1/5.)
-    else:
-        h = bw
+    try:
+        bw = float(bw)
+    except:
+        bw = select_bandwidth(X, bw, kernel)
+    bw *= adjust
 
     if gridsize == None:
-        gridsize = np.max((nobs,512.))
-    # round gridsize up to the next power of 2
-    gridsize = 2**np.ceil(np.log2(gridsize))
-    # define mesh
-    grid = np.linspace(np.min(X,axis) - cut*bw,np.max(X,axis)+cut*bw,gridsize)
-    # this will fail for not 1 column
-    if grid.ndim == 1:
-        grid = grid[:,None]
+        gridsize = max(nobs,50) # don't need to resize if no FFT
 
-    k = (X.T - grid)/h  # uses broadcasting
+    a = np.min(X,axis) - cut*bw
+    b = np.max(X,axis) + cut*bw
+    grid = np.linspace(a, b, gridsize)
+
+    k = (X.T - grid[:,None])/bw  # uses broadcasting
+
+    # instantiate kernel class
+    kern = kernel_switch[kernel](h=bw)
+    k = kern(k) # estimate density
+    k[k<0] = 0 # get rid of any negative values
+
 # res = np.repeat(x,n).reshape(m,n).T - np.repeat(xi,m).reshape(n,m))/h
-    if kernel.lower() == "epa":
-        k = np.zeros_like(grid) + np.less_equal(np.abs(k),
-                np.sqrt(5)) * 3/(4*np.sqrt(5)) * (1-.2*k**2)
-#        k = (.15/np.sqrt(5))*(5-k**2)/h
-#        k[k<0] = 0
-    if kernel.lower() == "gauss":
-        k = 1/np.sqrt(2*np.pi)*np.exp(-.5*k**2)
-#        k = np.clip(k,1e12,0)
-#TODO:
-    if weights == None:
-        q = nobs
-        q = 1
+#    if kernel.lower() == "epa":
+#        k = np.zeros_like(grid) + np.less_equal(np.abs(k),
+#                np.sqrt(5)) * 3/(4*np.sqrt(5)) * (1-.2*k**2)
+##        k = (.15/np.sqrt(5))*(5-k**2)/h
+##        k[k<0] = 0
+#    if kernel.lower() == "gauss":
+#        k = 1/np.sqrt(2*np.pi)*np.exp(-.5*k**2)
+##        k = np.clip(k,1e12,0)
+##        kern = kernels.Gaussian(h=bw)
+##        k = kern(k)
+
+    if weights == None: #TODO: observation weights should go before estimation
         weights = 1
+
+#    dens = np.mean(1/bw*weights*k,1)
+    dens = np.mean(k,1)/bw
     if retgrid:
-        return np.mean(1/(q*h)*weights*k,1),k/(q*h)*weights, grid
+        return dens, grid, bw
     else:
-        return np.mean(1/(q*h)*weights*k,1),k/(q*h)*weights
-#TODO: need to check this
-#    return k.mean(1),k
+        return dens, bw
 
 def kdensityfft(X, kernel="gauss", bw="scott", adjust=1, weights=None, gridsize=None,
         clip=(-np.inf,np.inf), cut=3, retgrid=True):
@@ -216,8 +256,9 @@ def kdensityfft(X, kernel="gauss", bw="scott", adjust=1, weights=None, gridsize=
         If gridsize is None, min(len(X), 512) is used.  Note that this number
         is rounded up to the next highest power of 2.
     cut : float
-        Defines the length of the grid past the lowest and highest values of X so that
-        the kernel goes to zero. The end points are -/+ cut*bw*{X.min() or X.max()}
+        Defines the length of the grid past the lowest and highest values of X
+        so that the kernel goes to zero. The end points are
+        -/+ cut*bw*{X.min() or X.max()}
 
     Notes
     -----
@@ -275,16 +316,16 @@ def kdensityfft(X, kernel="gauss", bw="scott", adjust=1, weights=None, gridsize=
     zstar = silverman_transform(y, bw, RANGE)
     f = revrt(zstar)
     if retgrid:
-        return f, grid
+        return f, grid, bw
     else:
-        return f
+        return f, bw
 
 if __name__ == "__main__":
     import numpy as np
     np.random.seed(12345)
     xi = np.random.randn(100)
-    f,k,grid = kdensity(xi, kernel="gauss", bw=.372735, retgrid=True)
-    f2 = kdensityfft(xi, kernel="gauss", bw="silverman",retgrid=False)
+    f,grid, bw1 = kdensity(xi, kernel="gauss", bw=.372735, retgrid=True)
+    f2, bw2 = kdensityfft(xi, kernel="gauss", bw="silverman",retgrid=False)
 
 # do some checking vs. silverman algo.
 # you need denes.f, http://lib.stat.cmu.edu/apstat/176
