@@ -58,6 +58,13 @@ def mixture_rvs(prob, size, dist, kwargs=None):
         loc = kwargs[i].get('loc',0)
         scale = kwargs[i].get('scale',1)
         args = kwargs[i].get('args',())
-        sample[sample_idx] = dist[i].rvs(loc=loc,scale=scale,args=args,
+        sample[sample_idx] = dist[i].rvs(*args, loc=loc,scale=scale,
             size=sample_size)
     return sample
+
+if __name__ == "__main__":
+    from scipy import stats
+    obs_dist = mixture_rvs([.25,.75], size=10000, dist=[stats.norm, stats.beta],
+                kwargs = (dict(loc=-1,scale=.5),dict(loc=1,scale=1,args=(1,.5))))
+
+
