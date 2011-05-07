@@ -109,7 +109,7 @@ def select_bandwidth(X, bw, kernel):
 #### Kernel Density Estimators ####
 
 def kdensity(X, kernel="gauss", bw=None, weights=None, gridsize=None, axis=0,
-        clip=(-np.inf,np.inf), cut=3):
+        clip=(-np.inf,np.inf), cut=3, retgrid=True):
     """
     Rosenblatz-Parzen univariate kernel desnity estimator
 
@@ -181,12 +181,15 @@ def kdensity(X, kernel="gauss", bw=None, weights=None, gridsize=None, axis=0,
         q = nobs
         q = 1
         weights = 1
-    return np.mean(1/(q*h)*weights*k,1),k/(q*h)*weights
+    if retgrid:
+        return np.mean(1/(q*h)*weights*k,1),k/(q*h)*weights, grid
+    else:
+        return np.mean(1/(q*h)*weights*k,1),k/(q*h)*weights
 #TODO: need to check this
 #    return k.mean(1),k
 
 def kdensityfft(X, kernel="gauss", bw="scott", adjust=1, weights=None, gridsize=None,
-        clip=(-np.inf,np.inf), cut=3):
+        clip=(-np.inf,np.inf), cut=3, retgrid=True):
     """
     Rosenblatz-Parzen univariate kernel desnity estimator
 
@@ -271,14 +274,17 @@ def kdensityfft(X, kernel="gauss", bw="scott", adjust=1, weights=None, gridsize=
 #NOTE: I believe this is kernel specific, so needs to be replaced for generality
     zstar = silverman_transform(y, bw, RANGE)
     f = revrt(zstar)
-    return f
+    if retgrid:
+        return f, grid
+    else:
+        return f
 
 if __name__ == "__main__":
     import numpy as np
     np.random.seed(12345)
     xi = np.random.randn(100)
-    f,k = kdensity(xi, kernel="gauss", bw=.372735)
-    f2 = kdensityfft(xi, kernel="gauss", bw="silverman")
+    f,k,grid = kdensity(xi, kernel="gauss", bw=.372735, retgrid=True)
+    f2 = kdensityfft(xi, kernel="gauss", bw="silverman",retgrid=False)
 
 # do some checking vs. silverman algo.
 # you need denes.f, http://lib.stat.cmu.edu/apstat/176
