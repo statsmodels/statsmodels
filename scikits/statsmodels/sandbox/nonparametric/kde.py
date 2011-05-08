@@ -246,30 +246,26 @@ def kdensity(X, kernel="gauss", bw="scott", weights=None, gridsize=None,
     b = np.max(X,axis=0) + cut*bw
     grid = np.linspace(a, b, gridsize)
 
-    k = (X.T - grid[:,None])/bw  # uses broadcasting
+    k = (X.T - grid[:,None])/bw  # uses broadcasting to make a gridsize x nobs
 
     # instantiate kernel class
     kern = kernel_switch[kernel](h=bw)
-    k = kern(k) # estimate density
-    k[k<0] = 0 # get rid of any negative values
+    # truncate to domain
+    if kern.domain is not None: # won't work for piecewise kernels like parzen
+        z_lo, z_high = kern.domain
+        domain_mask = (k < z_lo) | (k > z_high)
+        k = kern(k) # estimate density
+        k[domain_mask] = 0
+    else:
+        k = kern(k) # estimate density
 
-# res = np.repeat(x,n).reshape(m,n).T - np.repeat(xi,m).reshape(n,m))/h
-#    if kernel.lower() == "epa":
-#        k = np.zeros_like(grid) + np.less_equal(np.abs(k),
-#                np.sqrt(5)) * 3/(4*np.sqrt(5)) * (1-.2*k**2)
-##        k = (.15/np.sqrt(5))*(5-k**2)/h
-##        k[k<0] = 0
-#    if kernel.lower() == "gauss":
-#        k = 1/np.sqrt(2*np.pi)*np.exp(-.5*k**2)
-##        k = np.clip(k,1e12,0)
-##        kern = kernels.Gaussian(h=bw)
-##        k = kern(k)
+    k[k<0] = 0 # get rid of any negative values, do we need this?
 
-    if weights == None: #TODO: observation weights should go before estimation
+    if weights == None: #TODO: finish this
         weights = 1
 
-#    dens = np.mean(1/bw*weights*k,1)
     dens = np.mean(k,1)/bw
+
     if retgrid:
         return dens, grid, bw
     else:

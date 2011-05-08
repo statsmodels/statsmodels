@@ -45,21 +45,21 @@ class TestKDETriangular(CheckKDE):
         cls.res1 = res1
         cls.res_density = KDEResults["tri_d"]
 
-#class TestKDEBiweight(CheckKDE):
-#    @classmethod
-#    def setupClass(cls):
-#        res1 = KDE(Xi)
-#        res1.fit(kernel="biw", fft=False, bw="silverman")
-#        cls.res1 = res1
-#        cls.res_density = KDEResults["biw_d"]
+class TestKDEBiweight(CheckKDE):
+    @classmethod
+    def setupClass(cls):
+        res1 = KDE(Xi)
+        res1.fit(kernel="biw", fft=False, bw="silverman")
+        cls.res1 = res1
+        cls.res_density = KDEResults["biw_d"]
 
-#class TestKDECosine(CheckKDE):
-#    @classmethod
-#    def setupClass(cls):
-#        res1 = KDE(Xi)
-#        res1.fit(kernel="cos", fft=False, bw="silverman")
-#        cls.res1 = res1
-#        cls.res_density = KDEResults["cos_d"]
+class TestKDECosine(CheckKDE):
+    @classmethod
+    def setupClass(cls):
+        res1 = KDE(Xi)
+        res1.fit(kernel="cos", fft=False, bw="silverman")
+        cls.res1 = res1
+        cls.res_density = KDEResults["cos_d"]
 
 #class TestKDEGaussFFT(CheckKDE):
 #    @classmethod
