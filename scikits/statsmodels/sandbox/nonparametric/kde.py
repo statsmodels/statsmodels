@@ -17,7 +17,7 @@ import bandwidths #TODO: change to absolute import
 
 #### Kernels Switch for estimators ####
 
-kernel_switch = dict(gauss=kernels.Gaussian, epa=kernels.Epanechnikov,
+kernel_switch = dict(gau=kernels.Gaussian, epa=kernels.Epanechnikov,
                     uni=kernels.Uniform, tri=kernels.Triangular,
                     biw=kernels.Biweight, triw=kernels.Triweight,
                     cos=kernels.Cosine)
@@ -42,22 +42,21 @@ def revrt(X,m=None):
     y = X[:m/2+1] + np.r_[0,X[m/2+1:],0]*1j
     return np.fft.irfft(y)*m
 
-def silverman_transform(X, bw, RANGE):
+def silverman_transform(bw, M, RANGE):
     """
-    Transform density estimate (Gaussian Kernel only) according to Silverman AS 176.
+    FFT of Gaussian kernel following to Silverman AS 176.
 
     Notes
     -----
     Underflow is intentional as a dampener.
     """
-    M = len(X)
     J = np.arange(M/2+1)
     FAC1 = 2*(np.pi*bw/RANGE)**2
     JFAC = J**2*FAC1
     BC = 1 - 1./3 * (J*1./M*np.pi)**2
     FAC = np.exp(-JFAC)/BC
-    SMOOTH = np.r_[FAC,FAC[1:-1]] * X
-    return SMOOTH
+    kern_est = np.r_[FAC,FAC[1:-1]]
+    return kern_est
 
 def linbin(X,a,b,M, trunc=1):
     """
@@ -107,20 +106,62 @@ def select_bandwidth(X, bw, kernel):
     bw = bw.lower()
     if bw not in ["scott","silverman"]:
         raise ValueError("Bandwidth %s not understood" % bw)
-    if kernel == "gauss":
-        return bandwidth_funcs[bw](X)
-    else:
-        raise ValueError("Only Gaussian Kernels are currently supported")
+#TODO: uncomment checks when we have non-rule of thumb bandwidths for diff. kernels
+#    if kernel == "gauss":
+    return bandwidth_funcs[bw](X)
+#    else:
+#        raise ValueError("Only Gaussian Kernels are currently supported")
 
 #### Kernel Density Estimator Class ###
 
-#TODO: should be able to extend to multivariate, change signature
+#TODO: should be able to extend to multivariate
 class KDE(object):
+    """
+    Kernel Density Estimator
+
+    Parameters
+    ----------
+    endog : array-like
+        The variable for which the density estimate is desired.
+    """
     def __init__(self, endog):
         self.endog = np.asarray(endog)
 
-    def fit(kernel="gauss", bw="scott", fft=True, weights=None, gridsize=None,
-            adjust=1, clip=(-np.inf, np.inf), cut=3):
+    def fit(self, kernel="gau", bw="scott", fft=True, weights=None, gridsize=None,
+            adjust=1, cut=3, clip=(-np.inf, np.inf)):
+        """
+        Attach the density estimate to the KDE class.
+
+        Parameters
+        ----------
+        kernel : str
+            The Kernel to be used. Choices are
+            - "biw" for biweight
+            - "cos" for cosine
+            - "epa" for Epanechnikov
+            - "gauss" for Gaussian.
+            - "tri" for triangular
+            - "triw" for triweight
+            - "uni" for uniform
+        bw : str, float
+            "scott" - 1.059 * A * nobs ** (-1/5.), where A is
+                    min(std(X),IQR/1.34)
+            "silverman" - .9 * A * nobs ** (-1/5.), where A is
+                    min(std(X),IQR/1.34)
+            If a float is given, it is the bandwidth.
+        fft : bool
+            Whether or not to use FFT. FFT implementation is more
+            computationally efficient. However, only the Gaussian kernel
+            is implemented.
+        gridsize : int
+            If gridsize is None, max(len(X), 50) is used.
+        cut : float
+            Defines the length of the grid past the lowest and highest values
+            of X so that the kernel goes to zero. The end points are
+            -/+ cut*bw*{min(X) or max(X)}
+        adjust : float
+            An adjustment factor for the bw. Bandwidth becomes bw * adjust.
+        """
         try:
             bw = float(bw)
             self.bw_method = "user-given"
@@ -129,11 +170,16 @@ class KDE(object):
         endog = self.endog
 
         if fft:
+            if kernel != "gau":
+                from warnings import warn
+                msg = "Only Gaussian kernel is available for FFT. Using "
+                mgs += "kernel ='gau'"
+                warn(msg)
             density, grid, bw = kdensityfft(endog, kernel=kernel, bw=bw,
                     adjust=adjust, weights=weights, gridsize=gridsize,
                     clip=clip, cut=cut)
         else:
-            density, grid, bw = kdensityfft(endog, kernel=kernel, bw=bw,
+            density, grid, bw = kdensity(endog, kernel=kernel, bw=bw,
                     adjust=adjust, weights=weights, gridsize=gridsize,
                     clip=clip, cut=cut)
         self.density = density
@@ -144,13 +190,14 @@ class KDE(object):
 #### Kernel Density Estimator Functions ####
 
 def kdensity(X, kernel="gauss", bw="scott", weights=None, gridsize=None,
-                adjust=1, axis=0, clip=(-np.inf,np.inf), cut=3, retgrid=True):
+                adjust=1, clip=(-np.inf,np.inf), cut=3, retgrid=True):
     """
     Rosenblatz-Parzen univariate kernel desnity estimator
 
     Parameters
     ----------
     X : array-like
+        The variable for which the density estimate is desired.
     kernel : str
         The Kernel to be used. Choices are
         - "biw" for biweight
@@ -195,8 +242,8 @@ def kdensity(X, kernel="gauss", bw="scott", weights=None, gridsize=None,
     if gridsize == None:
         gridsize = max(nobs,50) # don't need to resize if no FFT
 
-    a = np.min(X,axis) - cut*bw
-    b = np.max(X,axis) + cut*bw
+    a = np.min(X,axis=0) - cut*bw
+    b = np.max(X,axis=0) + cut*bw
     grid = np.linspace(a, b, gridsize)
 
     k = (X.T - grid[:,None])/bw  # uses broadcasting
@@ -228,14 +275,15 @@ def kdensity(X, kernel="gauss", bw="scott", weights=None, gridsize=None,
     else:
         return dens, bw
 
-def kdensityfft(X, kernel="gauss", bw="scott", adjust=1, weights=None, gridsize=None,
-        clip=(-np.inf,np.inf), cut=3, retgrid=True):
+def kdensityfft(X, kernel="gauss", bw="scott", weights=None, gridsize=None,
+        adjust=1, clip=(-np.inf,np.inf), cut=3, retgrid=True):
     """
     Rosenblatz-Parzen univariate kernel desnity estimator
 
     Parameters
     ----------
     X : array-like
+        The variable for which the density estimate is desired.
     kernel : str
         "bi" for biweight
         "cos" for cosine
@@ -262,10 +310,23 @@ def kdensityfft(X, kernel="gauss", bw="scott", adjust=1, weights=None, gridsize=
 
     Notes
     -----
-    Only the default kernel is implemented.
-    Weights aren't implemented yet.
-    Uses FFT.
-    Should only work for 1 column for now
+    Only the default kernel is implemented. Weights aren't implemented yet.
+    This follows Silverman (1982) with changes suggested by Jones and Lotwick
+    (1984). However, the discretization step is replaced by linear binning
+    of Fan and Marron (1994).
+
+    References
+    ---------- ::
+
+    Fan, J. and J.S. Marron. (1994) `Fast implementations of nonparametric
+        curve estimators`. Journal of Computational and Graphical Statistics.
+        3.1, 35-56.
+    Jones, M.C. and H.W. Lotwick. (1984) `Remark AS R50: A Remark on Algorithm
+        AS 176. Kernal Density Estimation Using the Fast Fourier Transform`.
+        Journal of the Royal Statistical Society. Series C. 33.1, 120-2.
+    Silverman, B.W. (1982) `Algorithm AS 176. Kernel density estimation using
+        the Fast Fourier Transform. Journal of the Royal Statistical Society.
+        Series C. 31.2, 93-9.
     """
     X = np.asarray(X)
     X = X[np.logical_and(X>clip[0], X<clip[1])] # won't work for two columns.
@@ -312,8 +373,10 @@ def kdensityfft(X, kernel="gauss", bw="scott", adjust=1, weights=None, gridsize=
     # step 3 and 4 for optimal bw compute zstar and the density estimate f
     # don't have to redo the above if just changing bw, ie., for cross val
 
-#NOTE: I believe this is kernel specific, so needs to be replaced for generality
-    zstar = silverman_transform(y, bw, RANGE)
+#NOTE: silverman_transform is the closed form solution of the FFT of the
+#gaussian kernel. Not yet sure how to generalize it.
+    zstar = silverman_transform(bw, nobs, RANGE)*y # 3.49 in Silverman
+                                                   # 3.50 w Gaussian kernel
     f = revrt(zstar)
     if retgrid:
         return f, grid, bw
