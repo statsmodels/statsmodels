@@ -634,6 +634,21 @@ class GLSAR(GLS):
                 _X[(i+1):,:] = _X[(i+1):,:] - self.rho[i] * X[0:-(i+1),:]
                 return _X[self.order:,:]
 
+def NewGLS(GLS):
+    # this new gls method is attempting to get around the computational
+    # issue of needing to recompute np.pinv(x) when multiple response
+    # are computed on mass scale
+    def __init__(self,endog,exog,sigma=None):
+        super(NewGLS,self).__init__(endog,exog,sigma)
+    def initialize(self,**kwargs):
+        attrs = kwargs.keys()
+        NewCLS = copy(self)
+        for attr in attrs:
+            if getattr(self, attr) is not None:
+                setattr(NewCLS, attr, Kwargs[attr])
+        return NewCLS
+
+
 
 def yule_walker(X, order=1, method="unbiased", df=None, inv=False, demean=True):
     """
