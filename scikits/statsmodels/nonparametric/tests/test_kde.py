@@ -2,7 +2,7 @@ import os
 import numpy.testing as npt
 import numpy as np
 from scikits.statsmodels.sandbox.distributions.mixture_rvs import mixture_rvs
-from scikits.statsmodels.sandbox.nonparametric.kde import KDE
+from scikits.statsmodels.nonparametric.kde import KDE
 from scipy import stats
 
 # get results from Stata

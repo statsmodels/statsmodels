@@ -12,8 +12,8 @@ http://en.wikipedia.org/wiki/Kernel_%28statistics%29
 Silverman, B.W.  Density Estimation for Statistics and Data Anaylsis.
 """
 import numpy as np
-import kernels
-import bandwidths #TODO: change to absolute import
+from scikits.statsmodels.sandbox.nonparametric import kernels
+import bandwidths
 
 #### Kernels Switch for estimators ####
 
