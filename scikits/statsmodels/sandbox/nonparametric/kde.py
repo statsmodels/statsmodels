@@ -173,8 +173,9 @@ class KDE(object):
             if kernel != "gau":
                 from warnings import warn
                 msg = "Only Gaussian kernel is available for FFT. Using "
-                mgs += "kernel ='gau'"
+                msg += "kernel ='gau'"
                 warn(msg)
+                kernel = 'gau'
             density, grid, bw = kdensityfft(endog, kernel=kernel, bw=bw,
                     adjust=adjust, weights=weights, gridsize=gridsize,
                     clip=clip, cut=cut)
@@ -271,8 +272,8 @@ def kdensity(X, kernel="gauss", bw="scott", weights=None, gridsize=None,
     else:
         return dens, bw
 
-def kdensityfft(X, kernel="gauss", bw="scott", weights=None, gridsize=None,
-        adjust=1, clip=(-np.inf,np.inf), cut=3, retgrid=True):
+def kdensityfft(X, kernel="gau", bw="scott", weights=None, gridsize=None,
+        adjust=1, at=None, clip=(-np.inf,np.inf), cut=3, retgrid=True):
     """
     Rosenblatz-Parzen univariate kernel desnity estimator
 
@@ -281,24 +282,28 @@ def kdensityfft(X, kernel="gauss", bw="scott", weights=None, gridsize=None,
     X : array-like
         The variable for which the density estimate is desired.
     kernel : str
+        ONLY GAUSSIAN IS CURRENTLY IMPLEMENTED.
         "bi" for biweight
         "cos" for cosine
         "epa" for Epanechnikov, default
         "epa2" for alternative Epanechnikov
-        "gauss" for Gaussian.
+        "gau" for Gaussian.
         "par" for Parzen
         "rect" for rectangular
         "tri" for triangular
-        ONLY GAUSSIAN IS CURRENTLY IMPLEMENTED.
     bw : str, float
         "scott" - 1.059 * A * nobs ** (-1/5.), where A is min(std(X),IQR/1.34)
         "silverman" - .9 * A * nobs ** (-1/5.), where A is min(std(X),IQR/1.34)
         If a float is given, it is the bandwidth.
+    gridsize : int
+        If gridsize is None, min(len(X), 512) is used. Note that this number
+        is rounded up to the next highest power of 2.
     adjust : float
         An adjustment factor for the bw. Bandwidth becomes bw * adjust.
-    gridsize : int
-        If gridsize is None, min(len(X), 512) is used.  Note that this number
-        is rounded up to the next highest power of 2.
+    at : array-like
+        Points at which to evaluate the density. Use this if you do not want
+        the evenly spaced grid defined by gridsize. `at` and `gridsize` should
+        not be used together.
     cut : float
         Defines the length of the grid past the lowest and highest values of X
         so that the kernel goes to zero. The end points are
@@ -345,8 +350,8 @@ def kdensityfft(X, kernel="gauss", bw="scott", weights=None, gridsize=None,
     grid,delta = np.linspace(a,b,gridsize,retstep=True)
     RANGE = b-a
 
+#TODO: Fix this?
 # This is the Silverman binning function, but I believe it's buggy (SS)
-
 # weighting according to Silverman
 #    count = counts(X,grid)
 #    binned = np.zeros_like(grid)    #xi_{k} in Silverman
@@ -371,7 +376,7 @@ def kdensityfft(X, kernel="gauss", bw="scott", weights=None, gridsize=None,
 
 #NOTE: silverman_transform is the closed form solution of the FFT of the
 #gaussian kernel. Not yet sure how to generalize it.
-    zstar = silverman_transform(bw, nobs, RANGE)*y # 3.49 in Silverman
+    zstar = silverman_transform(bw, gridsize, RANGE)*y # 3.49 in Silverman
                                                    # 3.50 w Gaussian kernel
     f = revrt(zstar)
     if retgrid:

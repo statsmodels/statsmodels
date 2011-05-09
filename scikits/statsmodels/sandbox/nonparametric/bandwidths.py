@@ -1,6 +1,6 @@
 import numpy as np
 from scipy import percentile
-from scipy.stats import norm
+#from scipy.stats import norm
 
 def _select_sigma(X, axis=0):
     """
@@ -10,7 +10,8 @@ def _select_sigma(X, axis=0):
     ----------
     Silverman (1986) p.47
     """
-    normalize = norm.ppf(.75) - norm.ppf(.25)
+#    normalize = norm.ppf(.75) - norm.ppf(.25)
+    normalize = 1.349
     IQR = np.subtract.reduce(percentile(X, [75,25],
                              axis=axis), axis=axis)/normalize
     return np.minimum(np.std(X, axis=axis, ddof=1), IQR)
