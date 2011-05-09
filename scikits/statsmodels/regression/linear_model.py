@@ -636,8 +636,8 @@ class GLSAR(GLS):
 
 def NewGLS(GLS):
     # this new gls method is attempting to get around the computational
-    # issue of needing to recompute np.pinv(x) when multiple response
-    # are computed on mass scale
+    # issue of needing to recompute np.pinv(x) when multiple endogenous response equations
+    # are estimated
     def __init__(self,endog,exog,sigma=None):
         super(NewGLS,self).__init__(endog,exog,sigma)
     def initialize(self,**kwargs):
