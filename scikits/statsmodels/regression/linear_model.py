@@ -643,7 +643,7 @@ class NewGLS(GLS):
         super(NewGLS,self).__init__(endog,exog,sigma)
     def initialize1(self,**kwargs):
         attrs = kwargs.keys()
-        NewCLS = deepcopy(self)
+        NewCLS = copy(self)
         for attr in attrs:
             if getattr(self, attr) is not None:
                 setattr(NewCLS, attr, kwargs[attr])
