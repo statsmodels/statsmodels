@@ -12,7 +12,7 @@ http://en.wikipedia.org/wiki/Kernel_%28statistics%29
 Silverman, B.W.  Density Estimation for Statistics and Data Anaylsis.
 """
 import numpy as np
-from scipy import integrate
+from scipy import integrate, stats
 from scikits.statsmodels.sandbox.nonparametric import kernels
 from scikits.statsmodels.tools.decorators import (cache_readonly,
                                                     resettable_cache)
@@ -194,6 +194,13 @@ class KDE(object):
         endog = self.endog
         #TODO: below could run into integr problems, cf. stats.dist._entropy
         return -integrate.quad(entr, a,b, args=(endog,))[0]
+
+    @cache_readonly
+    def icdf(self):
+        _checkisfit(self)
+        gridsize = len(self.density)
+        return stats.mstats.mquantiles(self.endog, np.linspace(0,1,
+                    gridsize))
 
 
 #### Kernel Density Estimator Functions ####
