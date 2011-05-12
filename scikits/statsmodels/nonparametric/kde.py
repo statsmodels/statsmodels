@@ -80,7 +80,8 @@ class KDE(object):
         fft : bool
             Whether or not to use FFT. FFT implementation is more
             computationally efficient. However, only the Gaussian kernel
-            is implemented.
+            is implemented. If FFT is False, then a 'nobs' x 'gridsize'
+            intermediate array is created.
         gridsize : int
             If gridsize is None, max(len(X), 50) is used.
         cut : float
@@ -197,11 +198,30 @@ class KDE(object):
 
     @cache_readonly
     def icdf(self):
+        """
+        Inverse Cumulative Distribution (Quantile) Function
+
+        Notes
+        -----
+        Will not work if fit has not been called. Uses
+        `scipy.stats.mstats.mquantiles`.
+        """
         _checkisfit(self)
         gridsize = len(self.density)
         return stats.mstats.mquantiles(self.endog, np.linspace(0,1,
                     gridsize))
 
+    def evaluate(self, point):
+        """
+        Evaluate density at a single point.
+
+        Paramters
+        ---------
+        point : float
+            Point at which to evaluate the density.
+        """
+        _checkisfit(self)
+        return self.kernel.density(self.endog, point)
 
 #### Kernel Density Estimator Functions ####
 
@@ -237,7 +257,7 @@ def kdensity(X, kernel="gauss", bw="scott", weights=None, gridsize=None,
 
     Notes
     -----
-    Creates an intermediate (`gridsize` x `gridsize`) array. Use FFT for a more
+    Creates an intermediate (`nobs` x `gridsize`) array. Use FFT for a more
     computationally efficient version.
     Weights aren't implemented yet.
     """
