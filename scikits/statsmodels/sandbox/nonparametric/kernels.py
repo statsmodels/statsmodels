@@ -166,7 +166,8 @@ class CustomKernel(object):
         xs = self.inDomain( xs, xs, x )[0]
 
         if len(xs)>0:
-            w = np.sum([self((xx-x)/self.h) for xx in xs])/n
+            h = self.h
+            w = 1/h * np.mean(self((xs-x)/h))
             return w
         else:
             return np.nan
@@ -179,7 +180,8 @@ class CustomKernel(object):
         xs, ys = self.inDomain(xs, ys, x)
 
         if len(xs)>0:
-            w = np.sum([self((xx-x)/self.h) for xx in xs])
+            w = np.sum(self((xs-x)/self.h))
+            #TODO: change the below to broadcasting when shape is sorted
             v = np.sum([yy*self((xx-x)/self.h) for xx, yy in zip(xs, ys)])
             return v / w
         else:
@@ -193,7 +195,7 @@ class CustomKernel(object):
         if len(xs) > 0:
             fittedvals = np.array([self.smooth(xs, ys, xx) for xx in xs])
             sqresid = square( subtract(ys, fittedvals) )
-            w = np.sum([self((xx-x)/self.h) for xx in xs])
+            w = np.sum(self((xs-x)/self.h))
             v = np.sum([rr*self((xx-x)/self.h) for xx, rr in zip(xs, sqresid)])
             return v / w
         else:
@@ -209,7 +211,7 @@ class CustomKernel(object):
             sqresid = square(
                 subtract(ys, fittedvals)
             )
-            w = np.sum([self((xx-x)/self.h) for xx in xs])
+            w = np.sum(self((xs-x)/self.h))
             v = np.sum([rr*self((xx-x)/self.h) for xx, rr in zip(xs, sqresid)])
             var = v / w
             sd = np.sqrt(var)

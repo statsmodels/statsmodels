@@ -12,8 +12,12 @@ http://en.wikipedia.org/wiki/Kernel_%28statistics%29
 Silverman, B.W.  Density Estimation for Statistics and Data Anaylsis.
 """
 import numpy as np
+from scipy import integrate
 from scikits.statsmodels.sandbox.nonparametric import kernels
+from scikits.statsmodels.tools.decorators import (cache_readonly,
+                                                    resettable_cache)
 import bandwidths
+from kdetools import (forrt, revrt, silverman_transform, linbin, counts)
 
 #### Kernels Switch for estimators ####
 
@@ -21,96 +25,6 @@ kernel_switch = dict(gau=kernels.Gaussian, epa=kernels.Epanechnikov,
                     uni=kernels.Uniform, tri=kernels.Triangular,
                     biw=kernels.Biweight, triw=kernels.Triweight,
                     cos=kernels.Cosine)
-
-#### Convenience Functions to be moved to kerneltools ####
-
-def forrt(X,m=None):
-    """
-    RFFT with order like Munro (1976) FORTT routine.
-    """
-    if m is None:
-        m = len(X)
-    y = np.fft.rfft(X,m)/m
-    return np.r_[y.real,y[1:-1].imag]
-
-def revrt(X,m=None):
-    """
-    Inverse of forrt. Equivalent to Munro (1976) REVRT routine.
-    """
-    if m is None:
-        m = len(X)
-    y = X[:m/2+1] + np.r_[0,X[m/2+1:],0]*1j
-    return np.fft.irfft(y)*m
-
-def silverman_transform(bw, M, RANGE):
-    """
-    FFT of Gaussian kernel following to Silverman AS 176.
-
-    Notes
-    -----
-    Underflow is intentional as a dampener.
-    """
-    J = np.arange(M/2+1)
-    FAC1 = 2*(np.pi*bw/RANGE)**2
-    JFAC = J**2*FAC1
-    BC = 1 - 1./3 * (J*1./M*np.pi)**2
-    FAC = np.exp(-JFAC)/BC
-    kern_est = np.r_[FAC,FAC[1:-1]]
-    return kern_est
-
-def linbin(X,a,b,M, trunc=1):
-    """
-    Linear Binning as described in Fan and Marron (1994)
-    """
-    gcnts = np.zeros(M)
-    delta = (b-a)/(M-1)
-
-    for x in X:
-        lxi = ((x - a)/delta) # +1
-        li = int(lxi)
-        rem = lxi - li
-        if li > 1 and li < M:
-            gcnts[li] = gcnts[li] + 1-rem
-            gcnts[li+1] = gcnts[li+1] + rem
-        if li > M and trunc == 0:
-            gcnts[M] = gncts[M] + 1
-
-    return gcnts
-
-def counts(x,v):
-    """
-    Counts the number of elements of x that fall within the grid points v
-
-    Notes
-    -----
-    Using np.digitize and np.bincount
-    """
-    idx = np.digitize(x,v)
-    try: # numpy 1.6
-        return np.bincount(idx, minlength=len(v))
-    except:
-        bc = np.bincount(idx)
-        return np.r_[bc,np.zeros(len(v)-len(bc))]
-
-
-def kdesum(x,axis=0):
-    return np.asarray([np.sum(x[i] - x, axis) for i in range(len(x))])
-
-# global dict?
-bandwidth_funcs = dict(scott=bandwidths.bw_scott,silverman=bandwidths.bw_silverman)
-
-def select_bandwidth(X, bw, kernel):
-    """
-    Selects bandwidth
-    """
-    bw = bw.lower()
-    if bw not in ["scott","silverman"]:
-        raise ValueError("Bandwidth %s not understood" % bw)
-#TODO: uncomment checks when we have non-rule of thumb bandwidths for diff. kernels
-#    if kernel == "gauss":
-    return bandwidth_funcs[bw](X)
-#    else:
-#        raise ValueError("Only Gaussian Kernels are currently supported")
 
 #### Kernel Density Estimator Class ###
 
@@ -124,11 +38,13 @@ class KDE(object):
     endog : array-like
         The variable for which the density estimate is desired.
     """
+    _cache = resettable_cache()
+
     def __init__(self, endog):
         self.endog = np.asarray(endog)
 
-    def fit(self, kernel="gau", bw="scott", fft=True, weights=None, gridsize=None,
-            adjust=1, cut=3, clip=(-np.inf, np.inf)):
+    def fit(self, kernel="gau", bw="scott", fft=True, weights=None,
+            gridsize=None, adjust=1, cut=3, clip=(-np.inf, np.inf)):
         """
         Attach the density estimate to the KDE class.
 
@@ -186,6 +102,37 @@ class KDE(object):
         self.density = density
         self.support = grid
         self.bw = bw
+        self.kernel = kernel_switch[kernel](h=bw) # we instantiate twice,
+                                                # should this passed to funcs?
+
+    @cache_readonly
+    def cdf(self):
+        """
+        Evaluates and attaches the cdf.
+
+        Notes
+        -----
+        Will not work if fit has not been called.
+        """
+        try:
+            density = self.density
+        except: #TODO: should we just fit with default args, or allow arg
+                #      passing for fit to cdf
+            raise ValueError("Call fit to fit the density first")
+        kern = self.kernel
+        if kern.domain is None: # TODO: test for grid point at domain bound
+            a,b = -np.inf,np.inf
+        else:
+            a,b = kern.domain
+        func = lambda x,s: kern.density(s,x)
+
+        support = self.support
+        support = np.r_[a,support]
+        gridsize = len(support)
+        endog = self.endog
+        probs = [integrate.quad(func, support[i-1], support[i],
+                    args=endog)[0] for i in xrange(1,gridsize)]
+        return np.cumsum(probs)
 
 
 #### Kernel Density Estimator Functions ####
@@ -237,7 +184,7 @@ def kdensity(X, kernel="gauss", bw="scott", weights=None, gridsize=None,
     try:
         bw = float(bw)
     except:
-        bw = select_bandwidth(X, bw, kernel)
+        bw = bandwidths.select_bandwidth(X, bw, kernel)
     bw *= adjust
 
     if gridsize == None:
@@ -335,7 +282,7 @@ def kdensityfft(X, kernel="gau", bw="scott", weights=None, gridsize=None,
     try:
         bw = float(bw)
     except:
-        bw = select_bandwidth(X, bw, kernel) # will cross-val fit this pattern?
+        bw = bandwidths.select_bandwidth(X, bw, kernel) # will cross-val fit this pattern?
     bw *= adjust
 
     nobs = float(len(X)) # after trim
