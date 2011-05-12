@@ -82,3 +82,21 @@ def bw_silverman(x, axis=0):
 ## Plug-In Methods ##
 
 ## Least Squares Cross-Validation ##
+
+## Helper Functions ##
+
+bandwidth_funcs = dict(scott=bw_scott,silverman=bw_silverman)
+
+def select_bandwidth(X, bw, kernel):
+    """
+    Selects bandwidth
+    """
+    bw = bw.lower()
+    if bw not in ["scott","silverman"]:
+        raise ValueError("Bandwidth %s not understood" % bw)
+#TODO: uncomment checks when we have non-rule of thumb bandwidths for diff. kernels
+#    if kernel == "gauss":
+    return bandwidth_funcs[bw](X)
+#    else:
+#        raise ValueError("Only Gaussian Kernels are currently supported")
+

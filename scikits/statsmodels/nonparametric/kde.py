@@ -26,9 +26,15 @@ kernel_switch = dict(gau=kernels.Gaussian, epa=kernels.Epanechnikov,
                     biw=kernels.Biweight, triw=kernels.Triweight,
                     cos=kernels.Cosine)
 
+def _checkisfit(self):
+    try:
+        self.density
+    except:
+        raise ValueError("Call fit to fit the density first")
+
+
 #### Kernel Density Estimator Class ###
 
-#TODO: should be able to extend to multivariate
 class KDE(object):
     """
     Kernel Density Estimator
@@ -37,6 +43,12 @@ class KDE(object):
     ----------
     endog : array-like
         The variable for which the density estimate is desired.
+
+    Notes
+    -----
+    If cdf, sf, cumhazard, or entropy are computed, they are computed based on
+    the definition of the kernel rather than the FFT approximation, even if
+    the density is fit with FFT = True.
     """
     _cache = resettable_cache()
 
@@ -108,17 +120,14 @@ class KDE(object):
     @cache_readonly
     def cdf(self):
         """
-        Evaluates and attaches the cdf.
+        Returns the cumulative distribution function evaluated at the support.
 
         Notes
         -----
         Will not work if fit has not been called.
         """
-        try:
-            density = self.density
-        except: #TODO: should we just fit with default args, or allow arg
-                #      passing for fit to cdf
-            raise ValueError("Call fit to fit the density first")
+        _checkisfit(self)
+        density = self.density
         kern = self.kernel
         if kern.domain is None: # TODO: test for grid point at domain bound
             a,b = -np.inf,np.inf
@@ -133,6 +142,58 @@ class KDE(object):
         probs = [integrate.quad(func, support[i-1], support[i],
                     args=endog)[0] for i in xrange(1,gridsize)]
         return np.cumsum(probs)
+
+    @cache_readonly
+    def cumhazard(self):
+        """
+        Returns the hazard function evaluated at the support.
+
+        Notes
+        -----
+        Will not work if fit has not been called.
+
+        """
+        _checkisfit(self)
+        return -np.log(self.sf)
+
+    @cache_readonly
+    def sf(self):
+        """
+        Returns the survival function evaluated at the support.
+
+        Notes
+        -----
+        Will not work if fit has not been called.
+        """
+        _checkisfit(self)
+        return 1 - self.cdf
+
+    @cache_readonly
+    def entropy(self):
+        """
+        Returns the differential entropy evaluated at the support
+
+        Notes
+        -----
+        Will not work if fit has not been called. 1e-12 is added to each
+        probability to ensure that log(0) is not called.
+        """
+        _checkisfit(self)
+
+        def entr(x,s):
+            pdf = kern.density(s,x)
+            return pdf*np.log(pdf+1e-12)
+
+        pdf = self.density
+        kern = self.kernel
+
+        if kern.domain is not None:
+            a,b = self.domain
+        else:
+            a,b = -np.inf,np.inf
+        endog = self.endog
+        #TODO: below could run into integr problems, cf. stats.dist._entropy
+        return -integrate.quad(entr, a,b, args=(endog,))[0]
 
 
 #### Kernel Density Estimator Functions ####
