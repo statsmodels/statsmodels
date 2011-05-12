@@ -20,8 +20,10 @@ def test_genfromdta():
 #    to ndarray 2710.349 (csv) -> 2510.2491 (stata) -> 2710.34912109375
 #    (dta/ndarray)
     curdir = os.path.dirname(os.path.abspath(__file__))
-    res2 = np.load(curdir+'/results/macrodata.npy')
-    res2 = res2.view((float,len(res2[0])))
+    #res2 = np.load(curdir+'/results/macrodata.npy')
+    #res2 = res2.view((float,len(res2[0])))
+    from results.macrodata import macrodata_result
+    res2 = macrodata_result.view((float,len(macrodata_result[0])))
     res1 = sm.iolib.genfromdta(curdir+'/../../datasets/macrodata/macrodata.dta')
     res1 = res1.view((float,len(res1[0])))
     assert_array_almost_equal(res1, res2, DECIMAL_3)

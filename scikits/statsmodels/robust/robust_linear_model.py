@@ -223,7 +223,7 @@ class RLM(LikelihoodModel):
             self.cov = cov.upper()
         conv = conv.lower()
         if not conv in ["weights","coefs","dev","resid"]:
-            raise ValueeError("Convergence argument %s not understood" \
+            raise ValueError("Convergence argument %s not understood" \
                 % conv)
         self.scale_est = scale_est
         wls_results = WLS(self.endog, self.exog).fit()

@@ -7,14 +7,17 @@ from .genmod import families
 import robust
 from .robust.robust_linear_model import RLM
 from .discrete.discrete_model import Poisson, Logit, Probit, MNLogit
-import tsa.api as tsa
+from .tsa import api as tsa
+#import tsa.api
+#tsa = tsa.api
 from __init__ import test
 from version import __version__
 from info import __doc__
 
 import os
 
-chmpath = os.path.join(os.path.dirname(__file__),'docs\\build\\htmlhelp\\statsmodelsdoc.chm')
+chmpath = os.path.join(os.path.dirname(__file__),
+                       'docs\\build\\htmlhelp\\statsmodelsdoc.chm')
 if os.path.exists(chmpath):
     def open_help(chmpath=chmpath):
         from subprocess import Popen

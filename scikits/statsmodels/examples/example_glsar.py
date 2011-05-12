@@ -79,6 +79,7 @@ if 1 in examples:
 
     for i in range(5):
         mod1.iterative_fit(1)
+        mod1.fit()
         print mod1.rho
         print mod1.results.params
 

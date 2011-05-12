@@ -10,7 +10,7 @@ def add_trend(X, trend="c", prepend=False):
     ----------
     X : array-like
         Original array of data.
-    trend : str {"c","ct","ctt"}
+    trend : str {"c","t","ct","ctt"}
         "c" add constant only
         "t" add trend only
         "ct" add constant and linear trend

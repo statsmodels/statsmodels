@@ -51,6 +51,7 @@ Potential problems for Python 3
 from __future__ import division, with_statement
 try: #accommodate Python 3
     from itertools import izip as zip
+    pass  #JP: try to avoid empty try with 2to3
 except ImportError:
     pass
 from itertools import cycle

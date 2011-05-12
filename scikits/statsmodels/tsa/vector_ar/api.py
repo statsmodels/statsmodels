@@ -1,4 +1,4 @@
 # pylint: disable=W0611
 
-from .varmod import VAR
+from .var_model import VAR
 from .dynamic import DynamicVAR

@@ -157,6 +157,9 @@ class TestOLS(CheckRegressionResults):
         cls.res1 = res1
         cls.res2 = res2
 
+        res_qr = OLS(data.endog, data.exog).fit(method="qr")
+        cls.res_qr = res_qr
+
 
 #  Robust error tests.  Compare values computed with SAS
     def test_HC0_errors(self):
@@ -182,6 +185,17 @@ class TestOLS(CheckRegressionResults):
         assert_almost_equal(self.res1.HC3_se[:-1],
                 self.res2.HC3_se[:-1], DECIMAL_4)
         assert_approx_equal(self.res1.HC3_se[-1], self.res2.HC3_se[-1])
+
+    def test_qr_params(self):
+        assert_almost_equal(self.res1.params,
+                self.res_qr.params, 7)
+
+    def test_qr_normalized_cov_params(self):
+        #todo: need assert_close
+        assert_almost_equal(np.ones_like(self.res1.normalized_cov_params),
+                self.res1.normalized_cov_params /
+                self.res_qr.normalized_cov_params, 5)
+
 
 class TestFtest(object):
     """

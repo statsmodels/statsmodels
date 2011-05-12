@@ -148,7 +148,7 @@ from scipy.fftpack import fft, ifft, ifftshift, fft2, ifft2, fftn, \
      ifftn, fftfreq
 from numpy import product,array
 
-from scikits.statsmodels.tsa.filters import fftconvolveinv as fftconvolve
+from scikits.statsmodels.tsa.filters.filtertools import fftconvolveinv as fftconvolve
 #copied/moved to statsmodels.tsa.filters
 def fftconvolve_old(in1, in2, in3=None, mode="full"):
     """Convolve two N-dimensional arrays using FFT. See convolve.

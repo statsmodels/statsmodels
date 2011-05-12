@@ -83,7 +83,7 @@ from scipy import linalg
 # method with a few of the penalty functions.
 
 
-def dentonm(indicator, benchmark, freq="aq", **kwarg):
+def dentonm(indicator, benchmark, freq="aq", **kwargs):
     """
     Modified Denton's method to convert low-frequency to high-frequency data.
 
@@ -91,13 +91,13 @@ def dentonm(indicator, benchmark, freq="aq", **kwarg):
 
     Parameters
     ----------
-    benchmark : array-like
-        The higher frequency benchmark.  A 1d or 2d data series in columns.
-        If 2d, then M series are assumed.
     indicator
         A low-frequency indicator series.  It is assumed that there are no
         pre-sample indicators.  Ie., the first indicators line up with
         the first benchmark.
+    benchmark : array-like
+        The higher frequency benchmark.  A 1d or 2d data series in columns.
+        If 2d, then M series are assumed.
     freq : str {"aq","qm", "other"}
         "aq" - Benchmarking an annual series to quarterly.
         "mq" - Benchmarking a quarterly series to monthly.
@@ -246,7 +246,7 @@ if __name__ == "__main__":
                           102.7, 101.5, 100.5, 103.0, 103.5, 101.5])
     # two annual observations
     benchmark = np.array([4000.,4161.4])
-    x_imf = denton_bench(indicator, benchmark, freq="aq")
+    x_imf = dentonm(indicator, benchmark, freq="aq")
 
     imf_stata = np.array([969.8, 998.4, 1018.3, 1013.4, 1007.2, 1042.9,
                                 1060.3, 1051.0, 1040.6, 1066.5, 1071.7, 1051.0])
@@ -255,7 +255,7 @@ if __name__ == "__main__":
     # Denton example
     zQ = np.array([50,100,150,100] * 5)
     Y = np.array([500,400,300,400,500])
-    x_denton = denton_bench(zQ, Y, freq="aq")
+    x_denton = dentonm(zQ, Y, freq="aq")
     x_stata = np.array([64.334796,127.80616,187.82379,120.03526,56.563894,
                     105.97568,147.50144,89.958987,40.547201,74.445963,
                     108.34473,76.66211,42.763347,94.14664,153.41596,

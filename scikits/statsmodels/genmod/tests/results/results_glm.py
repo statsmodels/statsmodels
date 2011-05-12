@@ -683,7 +683,7 @@ class Lbw(object):
         # data set up for data not in datasets
         filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
             "stata_lbw_glm.csv")
-        data=np.recfromcsv(filename, converters={4: lambda s: s.strip("\"")})
+        data=np.recfromcsv(open(filename, 'rb'), converters={4: lambda s: s.strip(b"\"")})
         data = categorical(data, col='race', drop=True)
         self.endog = data.low
         design = np.column_stack((data['age'], data['lwt'],
@@ -791,7 +791,7 @@ class Cancer(object):
     def __init__(self):
         filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
             "stata_cancer_glm.csv")
-        data = np.recfromcsv(filename)
+        data = np.recfromcsv(open(filename, 'rb'))
         self.endog = data.studytime
         design = np.column_stack((data.age,data.drug))
         design = categorical(design, col=1, drop=True)
@@ -1135,7 +1135,7 @@ class InvGauss(object):
         # set up data #
         filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
             "inv_gaussian.csv")
-        data=np.genfromtxt(filename, delimiter=",", dtype=float)[1:]
+        data=np.genfromtxt(open(filename, 'rb'), delimiter=",", dtype=float)[1:]
         self.endog = data[:5000,0]
         self.exog = data[:5000,1:]
         self.exog = add_constant(self.exog)
@@ -2174,7 +2174,7 @@ class Medpar1(object):
     def __init__(self):
         filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
             "stata_medpar1_glm.csv")
-        data = np.recfromcsv(filename, converters ={1: lambda s: s.strip("\"")})
+        data = np.recfromcsv(open(filename, 'rb'), converters ={1: lambda s: s.strip(b"\"")})
         self.endog = data.los
         design = np.column_stack((data.admitype, data.codes))
         design = categorical(design, col=0, drop=True)
@@ -2189,7 +2189,7 @@ class InvGaussLog(Medpar1):
         super(InvGaussLog, self).__init__()
         filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
             "medparlogresids.csv")
-        self.resids = np.genfromtxt(filename, delimiter=",")
+        self.resids = np.genfromtxt(open(filename, 'rb'), delimiter=",")
         self.null_deviance = 335.1539777981053 # from R, Rpy bug
         self.params = np.array([ 0.09927544, -0.19161722,  1.05712336])
         self.bse = np.array([ 0.00600728,  0.02632126,  0.04915765])
@@ -2952,7 +2952,7 @@ class InvGaussIdentity(Medpar1):
         self.bse = np.array([ 0.02586783,  0.13830023,  0.20834864])
         filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
             "igaussident_resids.csv")
-        self.resids = np.genfromtxt(filename, delimiter=",")
+        self.resids = np.genfromtxt(open(filename, 'rb'), delimiter=",")
         self.null_deviance = 335.1539777981053  # from R, Rpy bug
         self.df_null = 3675
         self.deviance = 305.33661191013988

@@ -26,7 +26,7 @@ class BaseIRAnalysis(object):
     def __init__(self, model, P=None, periods=10, order=None):
         self.model = model
         self.periods = periods
-        self.neqs, self.lags, self.T  = model.neqs, model.p, model.nobs
+        self.neqs, self.lags, self.T  = model.neqs, model.k_ar, model.nobs
 
         self.order = order
 

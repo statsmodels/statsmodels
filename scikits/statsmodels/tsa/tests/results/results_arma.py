@@ -5,21 +5,21 @@ import os
 from numpy import genfromtxt
 
 current_path = os.path.dirname(os.path.abspath(__file__))
-yhat_mle = genfromtxt(current_path+"/yhat_exact_nc.csv", delimiter=",", skip_header = 1, dtype=float)
+yhat_mle = genfromtxt(open(current_path+"/yhat_exact_nc.csv", "rb"), delimiter=",", skip_header = 1, dtype=float)
 
-yhat_css = genfromtxt(current_path+"/yhat_css_nc.csv", delimiter=",", skip_header = 1, dtype=float)
+yhat_css = genfromtxt(open(current_path+"/yhat_css_nc.csv", "rb"), delimiter=",", skip_header = 1, dtype=float)
 
-yhatc_mle = genfromtxt(current_path+"/yhat_exact_c.csv", delimiter=",", skip_header = 1, dtype=float)
+yhatc_mle = genfromtxt(open(current_path+"/yhat_exact_c.csv", "rb"), delimiter=",", skip_header = 1, dtype=float)
 
-yhatc_css = genfromtxt(current_path+"/yhat_css_c.csv", delimiter=",", skip_header = 1, dtype=float)
+yhatc_css = genfromtxt(open(current_path+"/yhat_css_c.csv", "rb"), delimiter=",", skip_header = 1, dtype=float)
 
-resids_mle = genfromtxt(current_path+"/resids_exact_nc.csv", delimiter=",", skip_header = 1, dtype=float)
+resids_mle = genfromtxt(open(current_path+"/resids_exact_nc.csv", "rb"), delimiter=",", skip_header = 1, dtype=float)
 
-resids_css = genfromtxt(current_path+"/resids_css_nc.csv", delimiter=",", skip_header = 1, dtype=float)
+resids_css = genfromtxt(open(current_path+"/resids_css_nc.csv", "rb"), delimiter=",", skip_header = 1, dtype=float)
 
-residsc_mle = genfromtxt(current_path+"/resids_exact_c.csv", delimiter=",", skip_header = 1, dtype=float)
+residsc_mle = genfromtxt(open(current_path+"/resids_exact_c.csv", "rb"), delimiter=",", skip_header = 1, dtype=float)
 
-residsc_css = genfromtxt(current_path+"/resids_css_c.csv", delimiter=",", skip_header = 1, dtype=float)
+residsc_css = genfromtxt(open(current_path+"/resids_css_c.csv", "rb"), delimiter=",", skip_header = 1, dtype=float)
 
 
 class Y_arma11(object):

@@ -211,17 +211,29 @@ Should be of length %s, if sigma is a 1d array" % nobs)
         to solve the least squares minimization.
 
         """
-        pinv_wexog = np.linalg.pinv(self.wexog)
-        self.normalized_cov_params = np.dot(pinv_wexog,
-                                         np.transpose(pinv_wexog))
+
         exog = self.wexog
         endog = self.wendog
-        self.pinv_wexog = pinv_wexog
+
         if method == "pinv":
-            beta = np.dot(pinv_wexog, endog)
+            if ((not hasattr(self, 'pinv_wexog')) or
+                (not hasattr(self, 'normalized_cov_params'))):
+                self.pinv_wexog = pinv_wexog = np.linalg.pinv(self.wexog)
+                self.normalized_cov_params = np.dot(pinv_wexog,
+                                                 np.transpose(pinv_wexog))
+            beta = np.dot(self.pinv_wexog, endog)
+
         elif method == "qr":
-            Q,R = np.linalg.qr(exog)
+            if ((not hasattr(self, '_exog_Q')) or
+                (not hasattr(self, 'normalized_cov_params'))):
+                Q, R = np.linalg.qr(exog)
+                self._exog_Q, self._exog_R = Q, R
+                self.normalized_cov_params = np.linalg.inv(np.dot(R.T, R))
+            else:
+                Q, R = self._exog_Q, self._exog_R
+
             beta = np.linalg.solve(R,np.dot(Q.T,endog))
+
             # no upper triangular solve routine in numpy/scipy?
         lfit = RegressionResults(self, beta,
                        normalized_cov_params=self.normalized_cov_params)
@@ -717,6 +729,8 @@ class RegressionResults(LikelihoodModelResults):
         Aikake's information criteria :math:`-2llf + 2(df_model+1)`
     bic
         Bayes' information criteria :math:`-2llf + \log(n)(df_model+1)`
+    bse
+        The standard errors of the parameter estimates.
     pinv_wexog
         See specific model class docstring
     centered_tss
@@ -822,8 +836,6 @@ class RegressionResults(LikelihoodModelResults):
         often called the standard error of the regression.
     ssr
         Sum of squared (whitened) residuals.
-    stand_errors
-        The standard errors of the parameter estimates.
     uncentered_tss
         Uncentered sum of squares.  Sum of the squared values of the
         (whitened) endogenous response variable.

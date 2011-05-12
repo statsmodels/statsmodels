@@ -30,7 +30,8 @@ Issues
 """
 
 import numpy as np
-from scipy import stats, factorial
+from scipy import stats
+from scipy.misc import factorial
 import scikits.statsmodels.api as sm
 from scikits.statsmodels.base.model import GenericLikelihoodModel
 

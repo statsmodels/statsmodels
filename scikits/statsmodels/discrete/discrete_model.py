@@ -25,7 +25,8 @@ import scikits.statsmodels.tools.tools as tools
 from scikits.statsmodels.tools.decorators import (resettable_cache,
         cache_readonly)
 from scikits.statsmodels.regression.linear_model import OLS
-from scipy import stats, factorial, special, optimize # opt just for nbin
+from scipy import stats, special, optimize # opt just for nbin
+from scipy.misc import factorial
 #import numdifftools as nd #This will be removed when all have analytic hessians
 
 #TODO: add options for the parameter covariance/variance
@@ -192,8 +193,6 @@ class Poisson(DiscreteModel):
         A reference to the endogenous response variable
     exog : array
         A reference to the exogenous design.
-    nobs : float
-        The number of observations of the model.
     """
 
     def cdf(self, X):
@@ -383,8 +382,6 @@ class Logit(DiscreteModel):
         A reference to the endogenous response variable
     exog : array
         A reference to the exogenous design.
-    nobs : float
-        The number of observations of the model.
     """
 
     def cdf(self, X):
@@ -552,8 +549,6 @@ class Probit(DiscreteModel):
         A reference to the endogenous response variable
     exog : array
         A reference to the exogenous design.
-    nobs : float
-        The number of observations of the model.
     """
 
     def cdf(self, X):
@@ -744,8 +739,6 @@ class MNLogit(DiscreteModel):
     names : dict
         A dictionary mapping the column number in `wendog` to the variables
         in `endog`.
-    nobs : float
-        The number of observations of the model.
     wendog : array
         An n x j array where j is the number of unique categories in `endog`.
         Each column of j is a dummy variable indicating the category of
@@ -772,7 +765,7 @@ class MNLogit(DiscreteModel):
         self.J = float(wendog.shape[1])
         self.K = float(self.exog.shape[1])
         self.df_model *= (self.J-1) # for each J - 1 equation.
-        self.df_resid = self.nobs - self.df_model - (self.J-1)
+        self.df_resid = self.exog.shape[0] - self.df_model - (self.J-1)
 
 
     def _eXB(self, params, exog=None):
@@ -792,7 +785,7 @@ class MNLogit(DiscreteModel):
         if exog == None:
             exog = self.exog
         eXB = np.exp(np.dot(params.reshape(-1, exog.shape[1]), exog.T))
-        eXB = np.vstack((np.ones((1, self.nobs)), eXB))
+        eXB = np.vstack((np.ones((1, exog.shape[0])), eXB))
         return eXB
 
     def pdf(self, eXB):
@@ -1171,8 +1164,8 @@ class DiscreteResults(LikelihoodModelResults):
         self.model = model
         self.df_model = model.df_model
         self.df_resid = model.df_resid
-        self.nobs = model.nobs
         self._cache = resettable_cache()
+        self.nobs = model.exog.shape[0]
         self.__dict__.update(mlefit.__dict__)
 
     @cache_readonly
@@ -1204,7 +1197,7 @@ class DiscreteResults(LikelihoodModelResults):
     def llnull(self):
         model = self.model # will this use a new instance?
 #TODO: what parameters to pass to fit?
-        null = model.__class__(model.endog, np.ones(model.nobs)).fit(disp=0)
+        null = model.__class__(model.endog, np.ones(self.nobs)).fit(disp=0)
         return null.llf
 
     @cache_readonly

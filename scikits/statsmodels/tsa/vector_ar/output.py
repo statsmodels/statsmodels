@@ -148,7 +148,7 @@ class VARSummary(object):
         header = ('coefficient','std. error','t-stat','prob')
 
         buf = StringIO()
-        dim = k * model.p + model.trendorder
+        dim = k * model.k_ar + model.k_trend
         for i in range(k):
             section = "Results for equation %s" % model.names[i]
             print >> buf, section

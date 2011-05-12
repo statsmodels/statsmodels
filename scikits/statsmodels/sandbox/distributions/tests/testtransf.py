@@ -123,6 +123,7 @@ class Test_Transf2(object):
                                 err_msg='moment '+d1.name+d2.name)
             s1 = d1.stats(moments='mvsk')
             s2 = d2.stats(moments='mvsk')
+            #stats(moments='k') prints warning for lognormalg
             assert_almost_equal(s1[:2], s2[:2],
                                 err_msg='stats '+d1.name+d2.name)
             assert_almost_equal(s1[2:], s2[2:],

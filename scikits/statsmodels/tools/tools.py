@@ -224,7 +224,7 @@ def add_constant(data, prepend=False):
     '''
     This appends a column of ones to an array if prepend==False.
 
-    For nadarrays it checks to make sure a constant is not already included.
+    For ndarrays it checks to make sure a constant is not already included.
     If there is at least one column of ones then the original array is
     returned.  Does not check for a constant if a structured or recarray is
     given.
@@ -241,7 +241,19 @@ def add_constant(data, prepend=False):
     data : array
         The original array with a constant (column of ones) as the first or
         last column.
+
+    Notes
+    -----
+
+    .. WARNING::
+       The default of prepend will be changed to True in the next release of
+       statsmodels. We recommend to use an explicit prepend in any permanent
+       code.
+
     '''
+    import warnings
+    warnings.warn("The default of `prepend` will be changed to True in the "
+                  "next release, use explicit prepend", FutureWarning)
     if not data.dtype.names:
         data = np.asarray(data)
         if np.any(data[0]==1):

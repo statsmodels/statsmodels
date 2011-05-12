@@ -594,11 +594,11 @@ class KalmanFilter(object):
         #TODO: this won't work for time-varying parameters
         paramsdtype = params.dtype
         y = arma_model.endog.copy().astype(paramsdtype)
-        k = arma_model.k
+        k = arma_model.k_exog + arma_model.k_trend
         nobs = arma_model.nobs
-        p = arma_model.p
-        q = arma_model.q
-        r = arma_model.r
+        k_ar = arma_model.k_ar
+        k_ma = arma_model.k_ma
+        k_lags = arma_model.k_lags
 
         if arma_model.transparams:
             newparams = arma_model._transparams(params)
@@ -609,18 +609,20 @@ class KalmanFilter(object):
             y -= dot(arma_model.exog, newparams[:k])
 
         # system matrices
-        Z_mat = KalmanFilter.Z(r)
+        Z_mat = KalmanFilter.Z(k_lags)
         m = Z_mat.shape[1] # r
-        R_mat = KalmanFilter.R(newparams, r, k, q, p)
-        T_mat = KalmanFilter.T(newparams, r, k, p)
+        R_mat = KalmanFilter.R(newparams, k_lags, k, k_ma, k_ar)
+        T_mat = KalmanFilter.T(newparams, k_lags, k, k_ar)
 
         if fast_kalman:
             if issubdtype(paramsdtype, float):
                 loglike, sigma2 =  kalman_loglike.kalman_loglike_double(y, k,
-                                        p, q, r, int(nobs), Z_mat, R_mat, T_mat)
+                                        k_ar, k_ma, k_lags, int(nobs), Z_mat,
+                                        R_mat, T_mat)
             elif issubdtype(paramsdtype, complex):
                 loglike, sigma2 =  kalman_loglike.kalman_loglike_complex(y, k,
-                                        p, q, r, int(nobs), Z_mat, R_mat, T_mat)
+                                        k_ar, k_ma, k_lags, int(nobs), Z_mat,
+                                        R_mat, T_mat)
             else:
                 raise TypeError("This dtype %s is not supported\n\
 Please files a bug report." % paramsdtype)
@@ -634,7 +636,7 @@ Please files a bug report." % paramsdtype)
            # w/ kappa some large value say 1e7, but DK recommends not doing this
             # for a diffuse prior
             # Note that we enforce stationarity
-            Q_0 = Q_0.reshape(r,r,order='F')
+            Q_0 = Q_0.reshape(k_lags,k_lags,order='F')
             P = Q_0
             sigma2 = 0
             loglikelihood = 0
