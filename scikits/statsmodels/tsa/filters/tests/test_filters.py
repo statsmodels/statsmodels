@@ -1,7 +1,7 @@
 from numpy.testing import assert_almost_equal
 from numpy import array, column_stack
 from scikits.statsmodels.datasets import macrodata
-from scikits.statsmodels.tsa.filters import baxter_king, hpfilter, cffilter
+from scikits.statsmodels.tsa.filters import bkfilter, hpfilter, cffilter
 
 def test_bking1d():
     """
@@ -44,7 +44,7 @@ def test_bking1d():
                 59.35707, 67.06026, 91.87247, 124.4591, 151.2402, 163.0648,
                 154.6432])
     X = macrodata.load().data['realinv']
-    Y = baxter_king(X, 6, 32, 12)
+    Y = bkfilter(X, 6, 32, 12)
     assert_almost_equal(Y,bking_results,4)
 
 def test_bking2d():
@@ -113,7 +113,7 @@ def test_bking2d():
         [151.2402,.9644226], [163.0648,.6865934], [154.6432,.0115685]])
 
     X = macrodata.load().data[['realinv','cpi']].view((float,2))
-    Y = baxter_king(X, 6, 32, 12)
+    Y = bkfilter(X, 6, 32, 12)
     assert_almost_equal(Y,bking_results,4)
 
 def test_hpfilter():
