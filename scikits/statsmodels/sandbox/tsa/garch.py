@@ -1024,7 +1024,7 @@ def loglike_GARCH11(params, y):
     return llvalues.sum(), llvalues, ht
 
 from scikits.statsmodels.tsa.filters import miso_lfilter
-#copied to statsmodels.tsa.filters
+#copied to statsmodels.tsa.filters.filtertools
 def miso_lfilter_old(ar, ma, x, useic=False): #[0.1,0.1]):
     '''
     use nd convolution to merge inputs,

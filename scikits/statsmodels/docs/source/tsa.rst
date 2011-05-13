@@ -178,10 +178,12 @@ Other Time Series Filters
 .. autosummary::
    :toctree: generated/
 
+   filters.baxter_king
+   filters.hpfilter
    filters.arfilter
-   filters.fftconvolve3
-   filters.fftconvolveinv
    filters.miso_lfilter
+   filters.filtertools.fftconvolve3
+   filters.filtertools.fftconvolveinv
 
 
 TSA Tools
