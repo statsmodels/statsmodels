@@ -162,12 +162,14 @@ class CustomKernel(object):
         """Returns the kernel density estimate for point x based on x-values
         xs
         """
-        n = len(xs)
+        xs = np.asarray(xs)
+        n = len(xs) # before inDomain?
         xs = self.inDomain( xs, xs, x )[0]
-
+        if xs.ndim == 1:
+            xs = xs[:,None]
         if len(xs)>0:
             h = self.h
-            w = 1/h * np.mean(self((xs-x)/h))
+            w = 1/h * np.mean(self((xs-x)/h), axis=0)
             return w
         else:
             return np.nan
