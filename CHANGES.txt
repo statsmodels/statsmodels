@@ -37,7 +37,7 @@ the import speed if a library or user only needs specific functions.
 
 * Improved maximum likelihood framework uses all available scipy.optimize solvers
 * Refactor of the datasets sub-package.
-* Added Nile River dataset.
+* Added more datasets for examples.
 * Removed RPy dependency for running the test suite.
 * Refactored the test suite.
 * Refactored codebase/directory structure.
