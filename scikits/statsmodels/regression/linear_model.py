@@ -39,7 +39,6 @@ from scikits.statsmodels.base.model import (LikelihoodModel,
 from scikits.statsmodels.tools.tools import add_constant, rank, recipr
 from scikits.statsmodels.tools.decorators import (resettable_cache,
         cache_readonly, cache_writable)
-from copy import copy, deepcopy
 
 class GLS(LikelihoodModel):
     """
@@ -634,22 +633,6 @@ class GLSAR(GLS):
             for i in range(self.order):
                 _X[(i+1):,:] = _X[(i+1):,:] - self.rho[i] * X[0:-(i+1),:]
                 return _X[self.order:,:]
-
-class NewGLS(GLS):
-    # this new gls method is attempting to get around the computational
-    # issue of needing to recompute np.pinv(x) when multiple endogenous response equations
-    # are estimated
-    def __init__(self,endog,exog,sigma=None):
-        super(NewGLS,self).__init__(endog,exog,sigma)
-    def initialize1(self,**kwargs):
-        attrs = kwargs.keys()
-        NewCLS = copy(self)
-        for attr in attrs:
-            if getattr(self, attr) is not None:
-                setattr(NewCLS, attr, kwargs[attr])
-        return NewCLS
-
-
 
 def yule_walker(X, order=1, method="unbiased", df=None, inv=False, demean=True):
     """
