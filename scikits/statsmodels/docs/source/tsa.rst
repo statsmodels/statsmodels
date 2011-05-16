@@ -178,9 +178,10 @@ Other Time Series Filters
 .. autosummary::
    :toctree: generated/
 
-   filters.baxter_king
+   filters.bkfilter
    filters.hpfilter
    filters.arfilter
+   filters.cffilter
    filters.miso_lfilter
    filters.filtertools.fftconvolve3
    filters.filtertools.fftconvolveinv
