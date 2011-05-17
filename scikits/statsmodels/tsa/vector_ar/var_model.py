@@ -767,6 +767,12 @@ class VARResults(VARProcess):
 
         super(VARResults, self).__init__(coefs, intercept, sigma_u, names=names)
 
+    def reorder(self,order=None):
+        if len(order) != len(names):
+            raise
+
+        pass
+
     def plot(self):
         """Plot input time series
         """
