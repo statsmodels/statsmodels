@@ -1,7 +1,7 @@
 '''density estimation based on orthogonal polynomials
 
 
-Author: SJosef Perktold
+Author: Josef Perktold
 Created: 2011-05017
 License: BSD
 
@@ -11,10 +11,13 @@ other versions need normalization
 
 TODO:
 
-* check fourier case again
+* check fourier case again:  base is orthonormal,
+  but needs offsetfact = 0 and doesn't integrate to 1, rescaled looks good
 * not implemented methods:
   - add bonafide density correction
-  - add transformation to domain of polynomial base
+  - add transformation to domain of polynomial base DONE
+    possible problem what is the behavior at the boundary,
+    offsetfact requires more work, check different cases, add as option
 * convert examples to test cases
 * organize poly classes in separate module, check new numpy.polynomials,
   polyvander
@@ -42,6 +45,8 @@ class FPoly(object):
 
     def __init__(self, order):
         self.order = order
+        self.domain = (0, 1)
+        self.intdomain = self.domain
 
     def __call__(self, x):
         if self.order == 0:
@@ -56,6 +61,8 @@ class ChebyTPoly(object):
         self.order = order
         from scipy.special import legendre, hermitenorm, chebyt
         self.poly = chebyt(order)
+        self.domain = (-1, 1)
+        self.intdomain = (-1+1e-6, 1-1e-6)
 
     def __call__(self, x):
         if self.order == 0:
@@ -149,6 +156,9 @@ class DensityOrthoPoly(object):
         if not polybase is None:
             self.polybase = polybase
             self.polys = polys = [polybase(i) for i in range(order)]
+        self.offsetfac = 0.05
+        self._corfactor = 1
+        self._corshift = 0
 
 
     def fit(self, x, polybase=None, order=5, limits=None):
@@ -158,9 +168,23 @@ class DensityOrthoPoly(object):
         if polybase is None:
             polys = self.polys[:order]
         else:
+            self.polybase = polybase
             self.polys = polys = [polybase(i) for i in range(order)]
 
-        x = self._transform(x, limits=None)
+
+        xmin, xmax = x.min(), x.max()
+        if limits is None:
+            self.offset = offset = (xmax - xmin) * self.offsetfac
+            limits = self.limits = (xmin - offset, xmax + offset)
+
+        interval_length = limits[1] - limits[0]
+        xinterval = xmax - xmin
+        # need to cover (half-)open intervalls
+        self.shrink = 1. / interval_length #xinterval/interval_length
+        offset = (interval_length - xinterval ) / 2.
+        self.shift = xmin - offset
+
+        self.x = x = self._transform(x)
 
         coeffs = [(p(x)).mean() for p in polys]
         self.coeffs = coeffs
@@ -183,15 +207,36 @@ class DensityOrthoPoly(object):
 
     def _verify(self):
         '''check for bona fide density correction NotImplementedYet'''
-        pass
+        #watch out for circular/recursive usage
+        #integrate.quad(lambda x: p(x)**2, -1,1)
+        intdomain = self.limits #self.polys[0].intdomain
+        self._corfactor = 1./integrate.quad(self.evaluate, *intdomain)[0]
+        #self._corshift = 0
+        #self._corfactor
+        return self._corfactor
+
+
 
     def _correction(self, x):
         '''bona fide density correction NotImplementedYet'''
+        if self._corfactor != 1:
+            x *= self._corfactor
+
+        if self._corshift != 0:
+            x += self._corfactor
+
         return x
 
-    def _transform(self, x, limits=None):
+    def _transform(self, x): # limits=None):
         '''transform to domain of density, NotImplementedYet'''
-        return x
+        #domain = np.array([0.02, -0.02]) + self.polys[0].domain
+        domain = self.polys[0].domain
+        #class doesn't have domain  self.polybase.domain[0] AttributeError
+        ilen = (domain[1] - domain[0])#*(1-self.offsetfac * 2)
+        shift = self.shift - domain[0]/self.shrink/ilen #*(1-self.offsetfac) #check
+        shrink = self.shrink * ilen
+        #return x
+        return (x - shift) * shrink
 
 
 def density_orthopoly(x, polybase, order=5, xeval=None):
@@ -219,7 +264,10 @@ def density_orthopoly(x, polybase, order=5, xeval=None):
 
 
 if __name__ == '__main__':
-    nobs = 10000
+
+    examples = ['fourier']
+
+    nobs = 1000
 
     #np.random.seed(12345)
     obs_dist = mixture_rvs([1/3.,2/3.], size=nobs, dist=[stats.norm, stats.norm],
@@ -267,6 +315,34 @@ if __name__ == '__main__':
         print integrate.quad(lambda x: p(x)**2, -1,1)
 
     dop = DensityOrthoPoly().fit(obs_dist, ChebyTPoly, order=20)
+    grid = np.linspace(obs_dist.min(), obs_dist.max())
     xf = dop(grid)
-    print np.max(np.abs(xf - f_hat0))
+    print 'np.max(np.abs(xf - f_hat0))', np.max(np.abs(xf - f_hat0))
+    dopint = integrate.quad(dop, *dop.limits)[0]
+    print 'dop F integral', dopint
+    doplot = 1
+    if doplot:
+        plt.figure()
+        plt.hist(obs_dist, bins=50, normed=True, color='red')
+        plt.plot(grid, xf, lw=2, color='black')
+        #plt.show()
+
+    if "fourier" in examples:
+        dop = DensityOrthoPoly()
+        dop.offsetfac = 0
+        dop = dop.fit(obs_dist, FPoly, order=20)
+        grid = np.linspace(obs_dist.min(), obs_dist.max())
+        xf = dop(grid)
+        print np.max(np.abs(xf - f_hat0))
+        dopint = integrate.quad(dop, *dop.limits)[0]
+        print 'dop F integral', dopint
+        doplot = 1
+        if doplot:
+            plt.figure()
+            plt.hist(obs_dist, bins=50, normed=True, color='red')
+            plt.plot(grid, xf/dopint, lw=2, color='black')
+            plt.show()
+
+        #check orthonormality:
+        print np.max(np.abs(inner_cont(dop.polys[:5], 0, 1)[0] -np.eye(5)))
 
