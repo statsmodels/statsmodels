@@ -741,6 +741,7 @@ class VARResults(VARProcess):
         self.y = self.endog = endog  #keep alias for now
         self.ys_lagged = self.endog_lagged = endog_lagged #keep alias for now
         self.dates = dates
+        self.lag_order = lag_order
 
         self.n_totobs, neqs = self.y.shape
         self.nobs = self.n_totobs  - lag_order
@@ -768,10 +769,33 @@ class VARResults(VARProcess):
         super(VARResults, self).__init__(coefs, intercept, sigma_u, names=names)
 
     def reorder(self,order=None):
-        if len(order) != len(names):
-            raise
-
-        pass
+        """Reorder variables in for structural specification
+        """
+        if len(order) != len(self.names):
+            raise ValueError("Reorder specification length should match number of endogenous variables")
+       #This would convert order to list of integers
+        if order[0] is str:
+            raise NotImplementedError("Ordering by string not yet implemented")
+        endog_new = np.zeros([np.size(self.endog,0),np.size(self.endog,1)])
+        endog_lagged_new = np.zeros([np.size(self.endog_lagged,0),
+                                     np.size(self.endog_lagged,1)])
+        params_new_inc = np.zeros([np.size(self.params,0),np.size(self.params,1)])
+        sigma_u_new_inc = np.zeros([np.size(self.sigma_u,0),np.size(self.sigma_u,1)])
+        namesnew = []
+        for i, c in enumerate(order):
+            endog_new[:,i] = self.endog[:,c]
+            endog_lagged_new[:,i] = self.endog_lagged[:,c]
+            for j in range(self.lag_order):
+                params_new_inc[j*i+1,:] = self.params[j*c+1,:]
+            sigma_u_new_inc[i,:] = self.sigma_u[c,:]
+            namesnew.append(self.names[c])
+        for i, c in enumerate(order):
+            params_new[:,i] = params_new_inc[:,c]
+            sigma_u_new[:,i] = sigma_u_new_inc[:,c]
+        return VARResults(endog=endog_new, endog_lagged=endog_lagged_new,
+                          params=params_new, sigma_u=sigma_u_new, lag_order=lag_order,
+                          model=model, trend='c', names=names_new,
+                          data=data)
 
     def plot(self):
         """Plot input time series
