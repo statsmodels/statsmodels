@@ -40,11 +40,8 @@ enhancements:
 
 from scipy import stats
 import numpy as np
-import matplotlib.pyplot as plt
-from scikits.statsmodels.sandbox.distributions.mixture_rvs import mixture_rvs
-##from scikits.statsmodels.sandbox.nonparametric.kde import (kdensity,
-##                                                           kdensityfft)
-##from scikits.statsmodels.sandbox.nonparametric import bandwidths
+
+
 
 sqr2 = np.sqrt(2.)
 
@@ -272,6 +269,8 @@ def is_orthonormal_cont(polys, lower, upper, rtol=0, atol=1e-08):
                 return False
     return True
 
+
+
 #new versions
 
 
@@ -428,6 +427,9 @@ if __name__ == '__main__':
 
     nobs = 10000
 
+    import matplotlib.pyplot as plt
+    from scikits.statsmodels.sandbox.distributions.mixture_rvs import mixture_rvs
+
     #np.random.seed(12345)
     obs_dist = mixture_rvs([1/3.,2/3.], size=nobs, dist=[stats.norm, stats.norm],
                    kwargs = (dict(loc=-1,scale=.5),dict(loc=1,scale=.75)))
@@ -543,3 +545,8 @@ if __name__ == '__main__':
     htpolys = [hermite(i) for i in range(5)]
     innt = inner_cont(htpolys, -10, 10)[0]
     print (innt*100000).astype(int)
+
+    polysc = [chebyt(i) for i in range(4)]
+    r, e = inner_cont(polysc, -1, 1, weight=lambda x: (1-x*x)**(-1/2.))
+    print np.max(np.abs(r - np.diag(np.diag(r))))
+
