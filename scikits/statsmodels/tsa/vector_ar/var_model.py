@@ -274,6 +274,42 @@ def var_loglike(resid, omega, nobs):
     part2 = - (nobs / 2) * (logdet + neqs)
     return part1 + part2
 
+def reordered(self, order):
+    #Create new arrays to hold rearranged results from .fit()
+    endog_new = np.zeros([np.size(self.endog,0),np.size(self.endog,1)])
+    endog_lagged_new = np.zeros([np.size(self.endog_lagged,0),
+                                 np.size(self.endog_lagged,1)])
+    params_new_inc, params_new = [np.zeros([np.size(self.params,0),
+                                       np.size(self.params,1)])
+                                  for i in range(2)]
+    sigma_u_new_inc, sigma_u_new = [np.zeros([np.size(self.sigma_u,0),
+                                            np.size(self.sigma_u,1)])
+                                    for i in range(2)]
+    names_new = []
+
+    #Rearrange elements and fill in new arrays
+    k = self.k_trend
+    for i, c in enumerate(order):
+        endog_new[:,i] = self.endog[:,c]
+        if k > 0:
+            params_new_inc[0,i] = self.params[0,i]
+            endog_lagged_new[:,0] = self.endog_lagged[:,0]
+        for j in range(self.lag_order):
+            params_new_inc[i+j*self.lag_order+k,:] = (
+             self.params[c+j*self.lag_order+k,:])
+            endog_lagged_new[:,i+j*self.lag_order+k] = (
+             self.endog_lagged[:,c+j*self.lag_order+k])
+        sigma_u_new_inc[i,:] = self.sigma_u[c,:]
+        names_new.append(self.names[c])
+    for i, c in enumerate(order):
+        params_new[:,i] = params_new_inc[:,c]
+        sigma_u_new[:,i] = sigma_u_new_inc[:,c]
+
+    return VARResults(endog=endog_new, endog_lagged=endog_lagged_new,
+                      params=params_new, sigma_u=sigma_u_new,
+                      lag_order=self.lag_order, model=self.model,
+                      trend='c', names=names_new, dates=self.dates)
+
 #-------------------------------------------------------------------------------
 # VARProcess class: for known or unknown VAR process
 
@@ -1052,53 +1088,20 @@ class VARResults(VARProcess):
         """
         return FEVD(self, P=var_decomp, periods=periods)
 
-    def reorder(self,order=None):
+    def reorder(self, order=None):
         """Reorder variables for structural specification
         """
-        if len(order) != len(self.names):
+        if order == None:
+            raise ValueError("No order given")
+        if len(order) != len(self.params[0,:]):
             raise ValueError("Reorder specification length should match number of endogenous variables")
        #This convert order to list of integers if given as strings
-        if order[0] is str:
+        if type(order[0]) is str:
             order_new = []
             for i, nam in enumerate(order):
-                order_new[i] = names.index(order[i])
+                order_new.append(self.names.index(order[i]))
             order = order_new
-
-        #Create new arrays to hold rearranged results from .fit()
-        endog_new = np.zeros([np.size(self.endog,0),np.size(self.endog,1)])
-        endog_lagged_new = np.zeros([np.size(self.endog_lagged,0),
-                                     np.size(self.endog_lagged,1)])
-        params_new_inc, params_new = [np.zeros([np.size(self.params,0),
-                                               np.size(self.params,1)])
-                                      for i in range(2)]
-        sigma_u_new_inc, sigma_u_new = [np.zeros([np.size(self.sigma_u,0),
-                                                np.size(self.sigma_u,1)])
-                                        for i in range(2)]
-        names_new = []
-
-        #Rearrange elements and fill in new arrays
-        k = self.k_trend
-        for i, c in enumerate(order):
-            endog_new[:,i] = self.endog[:,c]
-            if k > 0:
-                params_new_inc[0,i] = self.params[0,i]
-                endog_lagged_new[:,0] = self.endog_lagged[:,0]
-            for j in range(self.lag_order):
-                params_new_inc[i+j*self.lag_order+k,:] = (
-                 self.params[c+j*self.lag_order+k,:])
-                endog_lagged_new[:,i+j*self.lag_order+k] = (
-                 self.endog_lagged[:,c+j*self.lag_order+k])
-            sigma_u_new_inc[i,:] = self.sigma_u[c,:]
-            names_new.append(self.names[c])
-        for i, c in enumerate(order):
-            params_new[:,i] = params_new_inc[:,c]
-            sigma_u_new[:,i] = sigma_u_new_inc[:,c]
-
-        return VARResults(endog=endog_new, endog_lagged=endog_lagged_new,
-                          params=params_new, sigma_u=sigma_u_new,
-                          lag_order=self.lag_order, model=self.model,
-                          trend='c', names=names_new, dates=self.dates)
-
+        return reordered(self, order)
 
 #-------------------------------------------------------------------------------
 # VAR Diagnostics: Granger-causality, whiteness of residuals, normality, etc.
