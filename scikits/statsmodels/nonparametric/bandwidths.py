@@ -1,5 +1,11 @@
 import numpy as np
-from scipy import percentile
+try:
+    from numpy import percentile
+except ImportError:
+    no_percentile = True
+
+
+
 #from scipy.stats import norm
 
 def _select_sigma(X, axis=0):
