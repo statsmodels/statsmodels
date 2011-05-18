@@ -39,7 +39,7 @@ def mixture_rvs(prob, size, dist, kwargs=None):
 
     >>> from scipy import stats
     >>> prob = [.75,.25]
-    >>> Y = mixture(prob, 5000, dist=[stats.norm, stats.norm], kwargs =
+    >>> Y = mixture_rvs(prob, 5000, dist=[stats.norm, stats.norm], kwargs =
                 (dict(loc=-1,scale=.5),dict(loc=1,scale=.5)))
     """
     if len(prob) != len(dist):
@@ -61,3 +61,91 @@ def mixture_rvs(prob, size, dist, kwargs=None):
         sample[sample_idx] = dist[i].rvs(loc=loc,scale=scale,args=args,
             size=sample_size)
     return sample
+
+
+class MixtureDistribution(object):
+    '''univariate mixture distribution
+
+    for simple case for now (unbound support)
+    does not yet inherit from scipy.stats.distributions
+
+    adding pdf to mixture_rvs, some restrictions on broadcasting
+    '''
+
+    #def __init__(self, prob, size, dist, kwargs=None):
+
+    def rvs(self, prob, size, dist, kwargs=None):
+        return mixture_rvs(prob, size, dist, kwargs=kwargs)
+
+
+    def pdf(self, x, prob, dist, kwargs=None):
+        """
+        Sample from a mixture of distributions.
+
+        Parameters
+        ----------
+        prob : array-like
+            Probability of sampling from each distribution in dist
+        size : int
+            The length of the returned sample.
+        dist : array-like
+            An iterable of distributions objects from scipy.stats.
+        kwargs : tuple of dicts, optional
+            A tuple of dicts.  Each dict in kwargs can have keys loc, scale, and
+            args to be passed to the respective distribution in dist.  If not
+            provided, the distribution defaults are used.
+
+        Examples
+        --------
+        Say we want 5000 random variables from mixture of normals with two
+        distributions norm(-1,.5) and norm(1,.5) and we want to sample from the
+        first with probability .75 and the second with probability .25.
+
+        >>> from scipy import stats
+        >>> prob = [.75,.25]
+        >>> Y = mixture.pdf(x, prob, dist=[stats.norm, stats.norm], kwargs =
+                    (dict(loc=-1,scale=.5),dict(loc=1,scale=.5)))
+        """
+        if len(prob) != len(dist):
+            raise ValueError("You must provide as many probabilities as distributions")
+        if not np.allclose(np.sum(prob), 1):
+            raise ValueError("prob does not sum to 1")
+
+        if kwargs is None:
+            kwargs = ({},)*len(prob)
+
+        for i in range(len(prob)):
+            loc = kwargs[i].get('loc',0)
+            scale = kwargs[i].get('scale',1)
+            args = kwargs[i].get('args',())
+            if i == 0:  #assume all broadcast the same as the first dist
+                pdf_ = prob[i] * dist[i].pdf(x, args=args, loc=loc, scale=scale)
+            else:
+                pdf_ += prob[i] * dist[i].pdf(x, args=args, loc=loc, scale=scale)
+        return pdf_
+
+if __name__ == '__main__':
+
+    from scipy import stats
+
+    nobs = 10000
+    mix = MixtureDistribution()
+##    mrvs = mixture_rvs([1/3.,2/3.], size=nobs, dist=[stats.norm, stats.norm],
+##                   kwargs = (dict(loc=-1,scale=.5),dict(loc=1,scale=.75)))
+
+    mix_kwds = (dict(loc=-1,scale=.25),dict(loc=1,scale=.75))
+    mrvs = mix.rvs([1/3.,2/3.], size=nobs, dist=[stats.norm, stats.norm],
+                   kwargs=mix_kwds)
+
+    grid = np.linspace(-4,4, 100)
+    mpdf = mix.pdf(grid, [1/3.,2/3.], dist=[stats.norm, stats.norm],
+                   kwargs=mix_kwds)
+
+    doplot = 1
+    if doplot:
+        import matplotlib.pyplot as plt
+        plt.figure()
+        plt.hist(mrvs, bins=50, normed=True, color='red')
+        plt.title('histogram of sample and pdf')
+        plt.plot(grid, mpdf, lw=2, color='black')
+        plt.show()
