@@ -1,3 +1,5 @@
+
+import numpy as np
 from numpy import (dot, eye, diag_indices, zeros, column_stack, ones, diag,
         asarray, r_)
 from numpy.linalg import inv, solve

@@ -9,7 +9,7 @@ from scipy import stats
 
 curdir = os.path.dirname(os.path.abspath(__file__))
 rfname = os.path.join(curdir,'results','results_kde.csv')
-print rfname
+#print rfname
 KDEResults = np.genfromtxt(rfname, delimiter=",", names=True)
 
 # setup test data
