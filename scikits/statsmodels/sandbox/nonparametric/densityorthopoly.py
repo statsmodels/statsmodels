@@ -423,23 +423,26 @@ def density_orthopoly(x, polybase, order=5, xeval=None):
 
 if __name__ == '__main__':
 
-    examples = ['chebyt', 'fourier', 'hermite']#[1:]
+    examples = ['chebyt', 'fourier', 'hermite']#[2]
 
     nobs = 10000
 
     import matplotlib.pyplot as plt
-    from scikits.statsmodels.sandbox.distributions.mixture_rvs import mixture_rvs
+    from scikits.statsmodels.sandbox.distributions.mixture_rvs import (
+                                                mixture_rvs, MixtureDistribution)
 
     #np.random.seed(12345)
+##    obs_dist = mixture_rvs([1/3.,2/3.], size=nobs, dist=[stats.norm, stats.norm],
+##                   kwargs = (dict(loc=-1,scale=.5),dict(loc=1,scale=.75)))
+    mix_kwds = (dict(loc=-0.5,scale=.5),dict(loc=1,scale=.2))
     obs_dist = mixture_rvs([1/3.,2/3.], size=nobs, dist=[stats.norm, stats.norm],
-                   kwargs = (dict(loc=-1,scale=.5),dict(loc=1,scale=.75)))
-    obs_dist = mixture_rvs([1/3.,2/3.], size=nobs, dist=[stats.norm, stats.norm],
-                   kwargs = (dict(loc=-0.5,scale=.5),dict(loc=1,scale=.2)))
+                   kwargs=mix_kwds)
+    mix = MixtureDistribution()
 
     #obs_dist = np.random.randn(nobs)/4. #np.sqrt(2)
 
 
-    if "chebyt" in examples: # needed for Cheby example below
+    if "chebyt_" in examples: # needed for Cheby example below
         #obs_dist = np.clip(obs_dist, -2, 2)/2.01
         #chebyt [0,1]
         obs_dist = obs_dist[(obs_dist>-2) & (obs_dist<2)]/2.0 #/4. + 2/4.0
@@ -486,11 +489,15 @@ if __name__ == '__main__':
         print 'np.max(np.abs(xf - f_hat0))', np.max(np.abs(xf - f_hat0))
         dopint = integrate.quad(dop, *dop.limits)[0]
         print 'dop F integral', dopint
+        mpdf = mix.pdf(grid, [1/3.,2/3.], dist=[stats.norm, stats.norm],
+                   kwargs=mix_kwds)
+
         doplot = 1
         if doplot:
             plt.figure()
             plt.hist(obs_dist, bins=50, normed=True, color='red')
             plt.plot(grid, xf, lw=2, color='black')
+            plt.plot(grid, mpdf, lw=2, color='green')
             plt.title('using Chebychev polynomials')
             #plt.show()
 
@@ -503,12 +510,16 @@ if __name__ == '__main__':
         print np.max(np.abs(xf - f_hat0))
         dopint = integrate.quad(dop, *dop.limits)[0]
         print 'dop F integral', dopint
+        mpdf = mix.pdf(grid, [1/3.,2/3.], dist=[stats.norm, stats.norm],
+                   kwargs=mix_kwds)
+
         doplot = 1
         if doplot:
             plt.figure()
             plt.hist(obs_dist, bins=50, normed=True, color='red')
             plt.title('using Fourier polynomials')
             plt.plot(grid, xf, lw=2, color='black')
+            plt.plot(grid, mpdf, lw=2, color='green')
             #plt.show()
 
         #check orthonormality:
@@ -523,11 +534,16 @@ if __name__ == '__main__':
         print np.max(np.abs(xf - f_hat0))
         dopint = integrate.quad(dop, *dop.limits)[0]
         print 'dop F integral', dopint
+
+        mpdf = mix.pdf(grid, [1/3.,2/3.], dist=[stats.norm, stats.norm],
+                   kwargs=mix_kwds)
+
         doplot = 1
         if doplot:
             plt.figure()
             plt.hist(obs_dist, bins=50, normed=True, color='red')
             plt.plot(grid, xf, lw=2, color='black')
+            plt.plot(grid, mpdf, lw=2, color='green')
             plt.title('using Hermite polynomials')
             plt.show()
 
@@ -542,6 +558,7 @@ if __name__ == '__main__':
     print np.max(np.abs(inn - np.eye(5)))
     print (inn*100000).astype(int)
 
+    from scipy.special import hermite, chebyt
     htpolys = [hermite(i) for i in range(5)]
     innt = inner_cont(htpolys, -10, 10)[0]
     print (innt*100000).astype(int)

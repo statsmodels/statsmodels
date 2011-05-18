@@ -80,7 +80,7 @@ class MixtureDistribution(object):
 
     def pdf(self, x, prob, dist, kwargs=None):
         """
-        Sample from a mixture of distributions.
+        pdf a mixture of distributions.
 
         Parameters
         ----------
@@ -124,6 +124,55 @@ class MixtureDistribution(object):
                 pdf_ += prob[i] * dist[i].pdf(x, args=args, loc=loc, scale=scale)
         return pdf_
 
+    def cdf(self, x, prob, dist, kwargs=None):
+        """
+        cdf of a mixture of distributions.
+
+        Parameters
+        ----------
+        prob : array-like
+            Probability of sampling from each distribution in dist
+        size : int
+            The length of the returned sample.
+        dist : array-like
+            An iterable of distributions objects from scipy.stats.
+        kwargs : tuple of dicts, optional
+            A tuple of dicts.  Each dict in kwargs can have keys loc, scale, and
+            args to be passed to the respective distribution in dist.  If not
+            provided, the distribution defaults are used.
+
+        Examples
+        --------
+        Say we want 5000 random variables from mixture of normals with two
+        distributions norm(-1,.5) and norm(1,.5) and we want to sample from the
+        first with probability .75 and the second with probability .25.
+
+        >>> from scipy import stats
+        >>> prob = [.75,.25]
+        >>> Y = mixture.pdf(x, prob, dist=[stats.norm, stats.norm], kwargs =
+                    (dict(loc=-1,scale=.5),dict(loc=1,scale=.5)))
+        """
+        if len(prob) != len(dist):
+            raise ValueError("You must provide as many probabilities as distributions")
+        if not np.allclose(np.sum(prob), 1):
+            raise ValueError("prob does not sum to 1")
+
+        if kwargs is None:
+            kwargs = ({},)*len(prob)
+
+        for i in range(len(prob)):
+            loc = kwargs[i].get('loc',0)
+            scale = kwargs[i].get('scale',1)
+            args = kwargs[i].get('args',())
+            if i == 0:  #assume all broadcast the same as the first dist
+                cdf_ = prob[i] * dist[i].cdf(x, args=args, loc=loc, scale=scale)
+            else:
+                cdf_ += prob[i] * dist[i].cdf(x, args=args, loc=loc, scale=scale)
+        return cdf_
+
+
+
+
 if __name__ == '__main__':
 
     from scipy import stats
@@ -140,6 +189,8 @@ if __name__ == '__main__':
     grid = np.linspace(-4,4, 100)
     mpdf = mix.pdf(grid, [1/3.,2/3.], dist=[stats.norm, stats.norm],
                    kwargs=mix_kwds)
+    mcdf = mix.cdf(grid, [1/3.,2/3.], dist=[stats.norm, stats.norm],
+                   kwargs=mix_kwds)
 
     doplot = 1
     if doplot:
@@ -148,4 +199,10 @@ if __name__ == '__main__':
         plt.hist(mrvs, bins=50, normed=True, color='red')
         plt.title('histogram of sample and pdf')
         plt.plot(grid, mpdf, lw=2, color='black')
+
+        plt.figure()
+        plt.hist(mrvs, bins=50, normed=True, cumulative=True, color='red')
+        plt.title('histogram of sample and pdf')
+        plt.plot(grid, mcdf, lw=2, color='black')
+
         plt.show()
