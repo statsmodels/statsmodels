@@ -9,6 +9,7 @@ from scipy import stats
 
 curdir = os.path.dirname(os.path.abspath(__file__))
 rfname = os.path.join(curdir,'results','results_kde.csv')
+print rfname
 KDEResults = np.genfromtxt(rfname, delimiter=",", names=True)
 
 # setup test data
@@ -63,6 +64,19 @@ class TestKDEBiweight(CheckKDE):
 #        res1.fit(kernel="cos", fft=False, bw="silverman")
 #        cls.res1 = res1
 #        cls.res_density = KDEResults["cos_d"]
+
+#weighted estimates taken from matlab so we can allow len(weights) != gridsize
+class TestKdeWeights(CheckKDE):
+    @classmethod
+    def setupClass(cls):
+        res1 = KDE(Xi)
+        weights = np.linspace(1,100,200)
+        res1.fit(kernel="gau", gridsize=50, weights=weights, fft=False,
+                    bw="silverman")
+        cls.res1 = res1
+        rfname = os.path.join(curdir,'results','results_kde_weights.csv')
+        cls.res_density = np.genfromtxt(rfname, skip_header=1)
+
 
 class TestKDEGaussFFT(CheckKDE):
     @classmethod

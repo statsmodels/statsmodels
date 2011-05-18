@@ -100,11 +100,11 @@ class KDE(object):
 
         if fft:
             if kernel != "gau":
-                from warnings import warn
-                msg = "Only Gaussian kernel is available for FFT. Using "
-                msg += "kernel ='gau'"
-                warn(msg)
-                kernel = 'gau'
+                msg = "Only gaussian kernel is available for fft"
+                raise NotImplementedError(msg)
+            if weights is not None:
+                msg = "Weights are not implemented for fft"
+                raise NotImplementedError(msg)
             density, grid, bw = kdensityfft(endog, kernel=kernel, bw=bw,
                     adjust=adjust, weights=weights, gridsize=gridsize,
                     clip=clip, cut=cut)
@@ -226,7 +226,7 @@ class KDE(object):
 #### Kernel Density Estimator Functions ####
 
 def kdensity(X, kernel="gauss", bw="scott", weights=None, gridsize=None,
-                adjust=1, clip=(-np.inf,np.inf), cut=3, retgrid=True):
+             adjust=1, clip=(-np.inf,np.inf), cut=3, retgrid=True):
     """
     Rosenblatz-Parzen univariate kernel desnity estimator
 
@@ -247,26 +247,56 @@ def kdensity(X, kernel="gauss", bw="scott", weights=None, gridsize=None,
         "scott" - 1.059 * A * nobs ** (-1/5.), where A is min(std(X),IQR/1.34)
         "silverman" - .9 * A * nobs ** (-1/5.), where A is min(std(X),IQR/1.34)
         If a float is given, it is the bandwidth.
+    weights : array or None
+        Optional  weights. If the X value is clipped, then this weight is
+        also dropped.
     gridsize : int
         If gridsize is None, max(len(X), 50) is used.
+    adjust : float
+        An adjustment factor for the bw. Bandwidth becomes bw * adjust.
+    clip : tuple
+        Observations in X that are outside of the range given by clip are
+        dropped. The number of observations in X is then shortened.
     cut : float
         Defines the length of the grid past the lowest and highest values of X
         so that the kernel goes to zero. The end points are
         -/+ cut*bw*{min(X) or max(X)}
+    retgrid : bool
+        Whether or not to return the grid over which the density is estimated.
 
+    Returns
+    -------
+    density : array
+        The densities estimated at the grid points.
+    grid : array, optional
+        The grid points at which the density is estimated.
 
     Notes
     -----
-    Creates an intermediate (`nobs` x `gridsize`) array. Use FFT for a more
+    Creates an intermediate (`gridsize` x `nobs`) array. Use FFT for a more
     computationally efficient version.
-    Weights aren't implemented yet.
     """
     X = np.asarray(X)
     if X.ndim == 1:
         X = X[:,None]
-    X = X[np.logical_and(X>clip[0], X<clip[1])]
+    clip_x = np.logical_and(X>clip[0], X<clip[1])
+    X = X[clip_x]
 
     nobs = float(len(X)) # after trim
+
+    if gridsize == None:
+        gridsize = max(nobs,50) # don't need to resize if no FFT
+
+        # handle weights
+    if weights is None:
+        weights = np.ones(nobs)
+        q = nobs
+    else:
+        if len(weights) != len(clip_x):
+            msg = "The length of the weights must be the same as the given X."
+            raise ValueError(msg)
+        weights = weights[clip_x.squeeze()]
+        q = weights.sum()
 
     # if bw is None, select optimal bandwidth for kernel
     try:
@@ -274,9 +304,6 @@ def kdensity(X, kernel="gauss", bw="scott", weights=None, gridsize=None,
     except:
         bw = bandwidths.select_bandwidth(X, bw, kernel)
     bw *= adjust
-
-    if gridsize == None:
-        gridsize = max(nobs,50) # don't need to resize if no FFT
 
     a = np.min(X,axis=0) - cut*bw
     b = np.max(X,axis=0) + cut*bw
@@ -297,10 +324,7 @@ def kdensity(X, kernel="gauss", bw="scott", weights=None, gridsize=None,
 
     k[k<0] = 0 # get rid of any negative values, do we need this?
 
-    if weights == None: #TODO: finish this
-        weights = 1
-
-    dens = np.mean(k,1)/bw
+    dens = np.dot(k,weights)/(q*bw)
 
     if retgrid:
         return dens, grid, bw
@@ -308,7 +332,7 @@ def kdensity(X, kernel="gauss", bw="scott", weights=None, gridsize=None,
         return dens, bw
 
 def kdensityfft(X, kernel="gau", bw="scott", weights=None, gridsize=None,
-        adjust=1, at=None, clip=(-np.inf,np.inf), cut=3, retgrid=True):
+                adjust=1, clip=(-np.inf,np.inf), cut=3, retgrid=True):
     """
     Rosenblatz-Parzen univariate kernel desnity estimator
 
@@ -330,26 +354,40 @@ def kdensityfft(X, kernel="gau", bw="scott", weights=None, gridsize=None,
         "scott" - 1.059 * A * nobs ** (-1/5.), where A is min(std(X),IQR/1.34)
         "silverman" - .9 * A * nobs ** (-1/5.), where A is min(std(X),IQR/1.34)
         If a float is given, it is the bandwidth.
+    weights : array or None
+        WEIGHTS ARE NOT CURRENTLY IMPLEMENTED.
+        Optional  weights. If the X value is clipped, then this weight is
+        also dropped.
     gridsize : int
-        If gridsize is None, min(len(X), 512) is used. Note that this number
-        is rounded up to the next highest power of 2.
+        If gridsize is None, min(len(X), 512) is used. Note that the provided
+        number is rounded up to the next highest power of 2.
     adjust : float
         An adjustment factor for the bw. Bandwidth becomes bw * adjust.
-    at : array-like
-        Points at which to evaluate the density. Use this if you do not want
-        the evenly spaced grid defined by gridsize. `at` and `gridsize` should
-        not be used together.
+        clip : tuple
+        Observations in X that are outside of the range given by clip are
+        dropped. The number of observations in X is then shortened.
     cut : float
         Defines the length of the grid past the lowest and highest values of X
         so that the kernel goes to zero. The end points are
         -/+ cut*bw*{X.min() or X.max()}
+    retgrid : bool
+        Whether or not to return the grid over which the density is estimated.
+
+    Returns
+    -------
+    density : array
+        The densities estimated at the grid points.
+    grid : array, optional
+        The grid points at which the density is estimated.
 
     Notes
     -----
     Only the default kernel is implemented. Weights aren't implemented yet.
     This follows Silverman (1982) with changes suggested by Jones and Lotwick
     (1984). However, the discretization step is replaced by linear binning
-    of Fan and Marron (1994).
+    of Fan and Marron (1994). This should be extended to accept the parts
+    that are dependent only on the data to speed things up for
+    cross-validation.
 
     References
     ---------- ::
