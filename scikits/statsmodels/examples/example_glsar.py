@@ -74,14 +74,15 @@ y1 = np.dot(X1,beta) + noise
 if 1 in examples:
     print '\nExample 1: iterative_fit and repeated calls'
     mod1 = GLSAR(y1, X1, 1)
-    print mod1.results.params
+    res = mod1.iterative_fit()
+    print mod1._results.params
     print mod1.rho
 
     for i in range(5):
         mod1.iterative_fit(1)
-        mod1.fit()
+#        mod1.fit()
         print mod1.rho
-        print mod1.results.params
+        print mod1._results.params
 
 if 2 in examples:
     print '\nExample 2: iterative fitting of first model'
@@ -93,7 +94,7 @@ if 2 in examples:
         #print mod0.pinv_wexog.sum()
         mod0.iterative_fit(1)
         print 'rho', mod0.rho
-        parnew = mod0.results.params
+        parnew = mod0._results.params
         print 'params', parnew
         print 'params change in iteration', parnew - parold
         parold = parnew
