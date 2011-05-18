@@ -195,7 +195,8 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
         q = 0
 
     # make the aggregator matrix
-    B = block_diag(*(ones((k,1)),)*m)
+    #B = block_diag(*(ones((k,1)),)*m)
+    B = np.kron(np.eye(m), ones((k,1)))
 
     # following the IMF paper, we can do
     Zinv = diag(1./indicator.squeeze()[:n])
