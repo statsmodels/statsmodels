@@ -8,6 +8,7 @@ Created: 2011-05017
 License: BSD
 
 2 versions work: based on Fourier, FPoly, and chebychev T, ChebyTPoly
+also hermite polynomials, HPoly, works
 other versions need normalization
 
 
@@ -15,6 +16,8 @@ TODO:
 
 * check fourier case again:  base is orthonormal,
   but needs offsetfact = 0 and doesn't integrate to 1, rescaled looks good
+* hermite: works but DensityOrthoPoly requires currently finite bounds
+  I use it with offsettfactor 0.5 in example
 * not implemented methods:
   - add bonafide density correction
   - add transformation to domain of polynomial base DONE
@@ -44,7 +47,7 @@ from scikits.statsmodels.sandbox.distributions.mixture_rvs import mixture_rvs
 sqr2 = np.sqrt(2.)
 
 class FPoly(object):
-    '''
+    '''Orthonormal (for weight=1) Fourier Polynomial on [0,1]
 
     orthonormal polynomial but density needs corfactor that I don't see what
     it is analytically
@@ -69,7 +72,7 @@ class FPoly(object):
             return sqr2 * np.cos(np.pi * self.order * x)
 
 class F2Poly(object):
-    '''
+    '''Orthogonal (for weight=1) Fourier Polynomial on [0,pi]
 
     is orthogonal but first component doesn't square-integrate to 1
     final result seems to need a correction factor of sqrt(pi)
@@ -86,6 +89,7 @@ class F2Poly(object):
         self.order = order
         self.domain = (0, np.pi)
         self.intdomain = self.domain
+        self.offsetfactor = 0
 
     def __call__(self, x):
         if self.order == 0:
@@ -94,13 +98,20 @@ class F2Poly(object):
             return sqr2 * np.cos(self.order * x) / np.sqrt(np.pi)
 
 class ChebyTPoly(object):
+    '''Orthonormal (for weight=1) Chebychev Polynomial on (-1,1)
+
+
+    '''
 
     def __init__(self, order):
         self.order = order
-        from scipy.special import legendre, hermitenorm, chebyt
+        from scipy.special import chebyt
         self.poly = chebyt(order)
         self.domain = (-1, 1)
         self.intdomain = (-1+1e-6, 1-1e-6)
+        #not sure if I need this, in integration nans are possible  on the boundary
+        self.offsetfactor = 0.05  #
+
 
     def __call__(self, x):
         if self.order == 0:
@@ -110,9 +121,6 @@ class ChebyTPoly(object):
             return self.poly(x) / (1-x**2)**(1/4.) /np.sqrt(np.pi) *np.sqrt(2)
 
 
-##        elif self.order == 1:
-##            return self.poly(x)/ (1-x**2)**(1/4.) /np.sqrt(np.pi) *np.sqrt(2) #*4
-
 
 from scipy.misc import factorial
 from scipy import special
@@ -120,34 +128,61 @@ from scipy import special
 logpi2 = np.log(np.pi)/2
 
 class HPoly(object):
+    '''Orthonormal (for weight=1) Hermite Polynomial, uses finite bounds
 
+    for current use with DensityOrthoPoly domain is defined as [-6,6]
+
+    '''
     def __init__(self, order):
         self.order = order
-        from scipy.special import legendre, hermitenorm, chebyt, hermite
+        from scipy.special import hermite
         self.poly = hermite(order)
         self.domain = (-6, +6)
+        self.offsetfactor = 0.5  # note this is
 
     def __call__(self, x):
         k = self.order
-        #lnfact = -(k/2.)*np.log(2.) - 0.5*special.gammaln(k+1) - logpi4 - x*x/2.
-        #following Hall:
-        #lnfact = -(k/2.)*(k*np.log(2.) + special.gammaln(k+1) + logpi2) - x*x/2
-        lnfact = -(1./2)*(k*np.log(2.) + special.gammaln(k+1) + logpi2) - x*x/2
-        #lnfact = -x*x/4.
 
-        fact = np.exp(lnfact) #*(-1)**k
-        #fact = np.sqrt(fact)
-        if self.order < 0:
-            return np.ones_like(x) * fact
-        else:
-            return self.poly(x) * fact
+        lnfact = -(1./2)*(k*np.log(2.) + special.gammaln(k+1) + logpi2) - x*x/2
+        fact = np.exp(lnfact)
+
+        return self.poly(x) * fact
 
 def polyvander(x, polybase, order=5):
     polyarr = np.column_stack([polybase(i)(x) for i in range(order)])
     return polyarr
 
-def inner_cont(polys, lower, upper):
-    '''inner product of continuous function
+def inner_cont(polys, lower, upper, weight=None):
+    '''inner product of continuous function (with weight=1)
+
+    Parameters
+    ----------
+    polys : list of callables
+        polynomial instances
+    lower : float
+        lower integration limit
+    upper : float
+        upper integration limit
+    weight : callable or None
+        weighting function
+
+    Returns
+    -------
+    innp : ndarray
+        symmetric 2d square array with innerproduct of all function pairs
+    err : ndarray
+        numerical error estimate from scipy.integrate.quad, same dimension as innp
+
+    Examples
+    --------
+    >>> from scipy.special import chebyt
+    >>> polys = [chebyt(i) for i in range(4)]
+    >>> r, e = inner_cont(polys, -1, 1)
+    >>> r
+    array([[ 2.        ,  0.        , -0.66666667,  0.        ],
+           [ 0.        ,  0.66666667,  0.        , -0.4       ],
+           [-0.66666667,  0.        ,  0.93333333,  0.        ],
+           [ 0.        , -0.4       ,  0.        ,  0.97142857]])
 
     '''
     n_polys = len(polys)
@@ -159,7 +194,11 @@ def inner_cont(polys, lower, upper):
         for j in range(i+1):
             p1 = polys[i]
             p2 = polys[j]
-            innp, err = integrate.quad(lambda x: p1(x)*p2(x), lower, upper)
+            if not weight is None:
+                innp, err = integrate.quad(lambda x: p1(x)*p2(x)*weight(x),
+                                       lower, upper)
+            else:
+                innp, err = integrate.quad(lambda x: p1(x)*p2(x), lower, upper)
             innerprod[i,j] = innp
             interr[i,j] = err
             if not i == j:
@@ -169,7 +208,7 @@ def inner_cont(polys, lower, upper):
     return innerprod, interr
 
 
-def is_orthonormal_cont(polys, lower, upper, rtol=0, atol=1e-14):
+def is_orthonormal_cont(polys, lower, upper, rtol=0, atol=1e-08):
     '''check whether functions are orthonormal
 
     Parameters
@@ -180,6 +219,37 @@ def is_orthonormal_cont(polys, lower, upper, rtol=0, atol=1e-14):
     -------
     is_orthonormal : bool
         is False if the innerproducts are not close to 0 or 1
+
+    Notes
+    -----
+    this stops as soon as the first deviation from orthonormality is found.
+
+    Examples
+    --------
+    >>> from scipy.special import chebyt
+    >>> polys = [chebyt(i) for i in range(4)]
+    >>> r, e = inner_cont(polys, -1, 1)
+    >>> r
+    array([[ 2.        ,  0.        , -0.66666667,  0.        ],
+           [ 0.        ,  0.66666667,  0.        , -0.4       ],
+           [-0.66666667,  0.        ,  0.93333333,  0.        ],
+           [ 0.        , -0.4       ,  0.        ,  0.97142857]])
+    >>> is_orthonormal_cont(polys, -1, 1, atol=1e-6)
+    False
+
+    >>> polys = [ChebyTPoly(i) for i in range(4)]
+    >>> r, e = inner_cont(polys, -1, 1)
+    >>> r
+    array([[  1.00000000e+00,   0.00000000e+00,  -9.31270888e-14,
+              0.00000000e+00],
+           [  0.00000000e+00,   1.00000000e+00,   0.00000000e+00,
+             -9.47850712e-15],
+           [ -9.31270888e-14,   0.00000000e+00,   1.00000000e+00,
+              0.00000000e+00],
+           [  0.00000000e+00,  -9.47850712e-15,   0.00000000e+00,
+              1.00000000e+00]])
+    >>> is_orthonormal_cont(polys, -1, 1, atol=1e-6)
+    True
 
     '''
     for i in range(len(polys)):
@@ -196,6 +266,13 @@ def is_orthonormal_cont(polys, lower, upper, rtol=0, atol=1e-14):
 
 
 class DensityOrthoPoly(object):
+    '''Univariate density estimation by orthonormal series expansion
+
+
+    Uses an orthonormal polynomial basis to approximate a univariate density.
+
+
+    '''
 
     def __init__(self, polybase=None, order=5):
         if not polybase is None:
@@ -251,9 +328,15 @@ class DensityOrthoPoly(object):
         return self.evaluate(xeval)
 
     def _verify(self):
-        '''check for bona fide density correction NotImplementedYet'''
+        '''check for bona fide density correction
+
+        currently only checks that density integrates to 1
+
+`       non-negativity - NotImplementedYet
+        '''
         #watch out for circular/recursive usage
-        #integrate.quad(lambda x: p(x)**2, -1,1)
+
+        #evaluate uses domain of data, we stay offset away from bounds
         intdomain = self.limits #self.polys[0].intdomain
         self._corfactor = 1./integrate.quad(self.evaluate, *intdomain)[0]
         #self._corshift = 0
@@ -263,27 +346,40 @@ class DensityOrthoPoly(object):
 
 
     def _correction(self, x):
-        '''bona fide density correction NotImplementedYet'''
+        '''bona fide density correction
+
+        affine shift of density to make it into a proper density
+
+        '''
         if self._corfactor != 1:
             x *= self._corfactor
 
         if self._corshift != 0:
-            x += self._corfactor
+            x += self._corshift
 
         return x
 
     def _transform(self, x): # limits=None):
-        '''transform to domain of density, NotImplementedYet'''
-        #domain = np.array([0.02, -0.02]) + self.polys[0].domain
-        domain = self.polys[0].domain
+        '''transform observation to the domain of the density
+
+
+        uses shrink and shift attribute which are set in fit to stay
+
+
+        '''
+
+        #use domain from first instance
         #class doesn't have domain  self.polybase.domain[0] AttributeError
-        ilen = (domain[1] - domain[0])#*(1-self.offsetfac * 2)
-        shift = self.shift - domain[0]/self.shrink/ilen #*(1-self.offsetfac) #check
+        domain = self.polys[0].domain
+
+        ilen = (domain[1] - domain[0])
+        shift = self.shift - domain[0]/self.shrink/ilen
         shrink = self.shrink * ilen
-        #return x
+
         return (x - shift) * shrink
 
 
+#old version as a simple function
 def density_orthopoly(x, polybase, order=5, xeval=None):
     from scipy.special import legendre, hermitenorm, chebyt, chebyu, hermite
     #polybase = legendre  #chebyt #hermitenorm#
@@ -310,7 +406,7 @@ def density_orthopoly(x, polybase, order=5, xeval=None):
 
 if __name__ == '__main__':
 
-    examples = ['fourier', 'hermite'][1]
+    examples = ['chebyt', 'fourier', 'hermite']#[1:]
 
     nobs = 10000
 
@@ -322,71 +418,78 @@ if __name__ == '__main__':
 
     #obs_dist = np.random.randn(nobs)/4. #np.sqrt(2)
 
-    #obs_dist = np.clip(obs_dist, -2, 2)/2.01
-    #chebyt [0,1]
-    obs_dist = obs_dist[(obs_dist>-2) & (obs_dist<2)]/2.0 #/4. + 2/4.0
-    #fourier [0,1]
-    #obs_dist = obs_dist[(obs_dist>-2) & (obs_dist<2)]/4. + 2/4.0
-    f_hat, grid, coeffs, polys = density_orthopoly(obs_dist, ChebyTPoly, order=20, xeval=None)
-    #f_hat /= f_hat.sum() * (grid.max() - grid.min())/len(grid)
-    f_hat0 = f_hat
-    from scipy import integrate
-    fint = integrate.trapz(f_hat, grid)# dx=(grid.max() - grid.min())/len(grid))
-    #f_hat -= fint/2.
-    print 'f_hat.min()', f_hat.min()
-    f_hat = (f_hat - f_hat.min()) #/ f_hat.max() - f_hat.min
-    fint2 = integrate.trapz(f_hat, grid)# dx=(grid.max() - grid.min())/len(grid))
-    print 'fint2', fint, fint2
-    f_hat /= fint2
 
-    # note that this uses a *huge* grid by default
-    #f_hat, grid = kdensityfft(emp_dist, kernel="gauss", bw="scott")
+    if "chebyt" in examples: # needed for Cheby example below
+        #obs_dist = np.clip(obs_dist, -2, 2)/2.01
+        #chebyt [0,1]
+        obs_dist = obs_dist[(obs_dist>-2) & (obs_dist<2)]/2.0 #/4. + 2/4.0
+        #fourier [0,1]
+        #obs_dist = obs_dist[(obs_dist>-2) & (obs_dist<2)]/4. + 2/4.0
+        f_hat, grid, coeffs, polys = density_orthopoly(obs_dist, ChebyTPoly, order=20, xeval=None)
+        #f_hat /= f_hat.sum() * (grid.max() - grid.min())/len(grid)
+        f_hat0 = f_hat
+        from scipy import integrate
+        fint = integrate.trapz(f_hat, grid)# dx=(grid.max() - grid.min())/len(grid))
+        #f_hat -= fint/2.
+        print 'f_hat.min()', f_hat.min()
+        f_hat = (f_hat - f_hat.min()) #/ f_hat.max() - f_hat.min
+        fint2 = integrate.trapz(f_hat, grid)# dx=(grid.max() - grid.min())/len(grid))
+        print 'fint2', fint, fint2
+        f_hat /= fint2
 
-    # check the plot
+        # note that this uses a *huge* grid by default
+        #f_hat, grid = kdensityfft(emp_dist, kernel="gauss", bw="scott")
 
-    doplot = 0
-    if doplot:
-        plt.hist(obs_dist, bins=50, normed=True, color='red')
-        plt.plot(grid, f_hat, lw=2, color='black')
-        plt.plot(grid, f_hat0, lw=2, color='g')
-        plt.show()
-    # See attached
+        # check the plot
 
-    for i,p in enumerate(polys[:5]):
-        for j,p2 in enumerate(polys[:5]):
-            print i,j,integrate.quad(lambda x: p(x)*p2(x), -1,1)[0]
+        doplot = 0
+        if doplot:
+            plt.hist(obs_dist, bins=50, normed=True, color='red')
+            plt.plot(grid, f_hat, lw=2, color='black')
+            plt.plot(grid, f_hat0, lw=2, color='g')
+            plt.show()
 
-    for p in polys:
-        print integrate.quad(lambda x: p(x)**2, -1,1)
+        for i,p in enumerate(polys[:5]):
+            for j,p2 in enumerate(polys[:5]):
+                print i,j,integrate.quad(lambda x: p(x)*p2(x), -1,1)[0]
 
-    dop = DensityOrthoPoly().fit(obs_dist, ChebyTPoly, order=20)
-    grid = np.linspace(obs_dist.min(), obs_dist.max())
-    xf = dop(grid)
-    print 'np.max(np.abs(xf - f_hat0))', np.max(np.abs(xf - f_hat0))
-    dopint = integrate.quad(dop, *dop.limits)[0]
-    print 'dop F integral', dopint
-    doplot = 0
-    if doplot:
-        plt.figure()
-        plt.hist(obs_dist, bins=50, normed=True, color='red')
-        plt.plot(grid, xf, lw=2, color='black')
-        #plt.show()
+        for p in polys:
+            print integrate.quad(lambda x: p(x)**2, -1,1)
+
+
+    #examples using the new class
+
+    if "chebyt" in examples:
+        dop = DensityOrthoPoly().fit(obs_dist, ChebyTPoly, order=20)
+        grid = np.linspace(obs_dist.min(), obs_dist.max())
+        xf = dop(grid)
+        print 'np.max(np.abs(xf - f_hat0))', np.max(np.abs(xf - f_hat0))
+        dopint = integrate.quad(dop, *dop.limits)[0]
+        print 'dop F integral', dopint
+        doplot = 1
+        if doplot:
+            plt.figure()
+            plt.hist(obs_dist, bins=50, normed=True, color='red')
+            plt.plot(grid, xf, lw=2, color='black')
+            plt.title('using Chebychev polynomials')
+            #plt.show()
 
     if "fourier" in examples:
         dop = DensityOrthoPoly()
         dop.offsetfac = 0.5
-        dop = dop.fit(obs_dist, F2Poly, order=20)
+        dop = dop.fit(obs_dist, F2Poly, order=30)
         grid = np.linspace(obs_dist.min(), obs_dist.max())
         xf = dop(grid)
         print np.max(np.abs(xf - f_hat0))
         dopint = integrate.quad(dop, *dop.limits)[0]
         print 'dop F integral', dopint
-        doplot = 0
+        doplot = 1
         if doplot:
             plt.figure()
             plt.hist(obs_dist, bins=50, normed=True, color='red')
+            plt.title('using Fourier polynomials')
             plt.plot(grid, xf, lw=2, color='black')
-            plt.show()
+            #plt.show()
 
         #check orthonormality:
         print np.max(np.abs(inner_cont(dop.polys[:5], 0, 1)[0] -np.eye(5)))
@@ -405,10 +508,14 @@ if __name__ == '__main__':
             plt.figure()
             plt.hist(obs_dist, bins=50, normed=True, color='red')
             plt.plot(grid, xf, lw=2, color='black')
+            plt.title('using Hermite polynomials')
             plt.show()
 
         #check orthonormality:
         print np.max(np.abs(inner_cont(dop.polys[:5], 0, 1)[0] -np.eye(5)))
+
+
+    #check orthonormality
 
     hpolys = [HPoly(i) for i in range(5)]
     inn = inner_cont(hpolys, -6, 6)[0]
