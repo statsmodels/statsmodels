@@ -1053,13 +1053,18 @@ class VARResults(VARProcess):
         return FEVD(self, P=var_decomp, periods=periods)
 
     def reorder(self,order=None):
-        """Reorder variables in for structural specification
+        """Reorder variables for structural specification
         """
         if len(order) != len(self.names):
             raise ValueError("Reorder specification length should match number of endogenous variables")
-       #This would convert order to list of integers
+       #This convert order to list of integers if given as strings
         if order[0] is str:
-            raise NotImplementedError("Ordering by string not yet implemented")
+            order_new = []
+            for i, nam in enumerate(order):
+                order_new[i] = names.index(order[i])
+            order = order_new
+
+        #Create new arrays to hold rearranged results from .fit()
         endog_new = np.zeros([np.size(self.endog,0),np.size(self.endog,1)])
         endog_lagged_new = np.zeros([np.size(self.endog_lagged,0),
                                      np.size(self.endog_lagged,1)])
@@ -1071,13 +1076,13 @@ class VARResults(VARProcess):
                                         for i in range(2)]
         names_new = []
 
+        #Rearrange elements and fill in new arrays
         k = self.k_trend
-
         for i, c in enumerate(order):
             endog_new[:,i] = self.endog[:,c]
             if k > 0:
-                params_new_inc[0:,i] = self.params[0:,i]
-                endog_lagged_new[:,0] = endog_lagged_new
+                params_new_inc[0,i] = self.params[0,i]
+                endog_lagged_new[:,0] = self.endog_lagged[:,0]
             for j in range(self.lag_order):
                 params_new_inc[i+j*self.lag_order+k,:] = (
                  self.params[c+j*self.lag_order+k,:])
