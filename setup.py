@@ -192,6 +192,7 @@ def configuration(parent_package='', top_path=None, package_name=DISTNAME):
     config.add_data_dir('scikits/statsmodels/tsa/filters/tests')
     config.add_data_files('scikits/statsmodels/docs/build/htmlhelp/statsmodelsdoc.chm')
     config.add_data_files('scikits/statsmodels/iolib/tests/results/macrodata.npy')
+    config.add_data_dir('scikits/statsmodels/nonparametric/tests')
     vardatafiles = [os.path.join(r,d) for r,ds,f in \
                     os.walk('scikits/statsmodels/tsa/vector_ar/data')
                     for d in f if not os.path.splitext(d)[1] in ['.py',
@@ -210,6 +211,13 @@ def configuration(parent_package='', top_path=None, package_name=DISTNAME):
                            '.do', '.pyc', '.swp']]
     for f in tsaresultsfiles:
         config.add_data_files(f)
+    kderesultsfiles = [os.path.join(r,d) for r,ds,f in \
+                os.walk('scikits/statsmodels/nonparametric/tests/results') for \
+                       d in f if not os.path.splitext(d)[1] in ['.py',
+                           '.do', '.pyc', '.swp']]
+    for f in kderesultsfiles:
+        config.add_data_files(f)
+
 
     if compile_cython:
         config.add_extension('tsa/kalmanf/kalman_loglike',
