@@ -20,10 +20,12 @@ TODO:
   I use it with offsettfactor 0.5 in example
 * not implemented methods:
   - add bonafide density correction
-  - add transformation to domain of polynomial base DONE
-    possible problem what is the behavior at the boundary,
+  - add transformation to domain of polynomial base - DONE
+    possible problem: what is the behavior at the boundary,
     offsetfact requires more work, check different cases, add as option
+    moved to polynomial class by default, as attribute
 * convert examples to test cases
+* need examples with large density on boundary, beta ?
 * organize poly classes in separate module, check new numpy.polynomials,
   polyvander
 * MISE measures, order selection, ...
@@ -101,6 +103,14 @@ class ChebyTPoly(object):
     '''Orthonormal (for weight=1) Chebychev Polynomial on (-1,1)
 
 
+    Notes
+    -----
+    integration requires to stay away from boundary, offsetfactor > 0
+    maybe this implies that we cannot use it for densities that are > 0 at
+    boundary ???
+
+    or maybe there is a mistake close to the boundary, sometimes integration works.
+
     '''
 
     def __init__(self, order):
@@ -110,7 +120,7 @@ class ChebyTPoly(object):
         self.domain = (-1, 1)
         self.intdomain = (-1+1e-6, 1-1e-6)
         #not sure if I need this, in integration nans are possible  on the boundary
-        self.offsetfactor = 0.05  #
+        self.offsetfactor = 0.01  #required for integration
 
 
     def __call__(self, x):
@@ -272,13 +282,17 @@ class DensityOrthoPoly(object):
     Uses an orthonormal polynomial basis to approximate a univariate density.
 
 
+    currently all arguments can be given to fit, I might change it to requiring
+    arguments in __init__ instead.
     '''
 
     def __init__(self, polybase=None, order=5):
         if not polybase is None:
             self.polybase = polybase
             self.polys = polys = [polybase(i) for i in range(order)]
-        self.offsetfac = 0.05
+        #try:
+        #self.offsetfac = 0.05
+        #self.offsetfac = polys[0].offsetfactor #polys maybe not defined yet
         self._corfactor = 1
         self._corshift = 0
 
@@ -292,6 +306,10 @@ class DensityOrthoPoly(object):
         else:
             self.polybase = polybase
             self.polys = polys = [polybase(i) for i in range(order)]
+
+        #move to init ?
+        if not hasattr(self, 'offsetfac'):
+            self.offsetfac = polys[0].offsetfactor
 
 
         xmin, xmax = x.min(), x.max()
