@@ -294,11 +294,9 @@ def reordered(self, order):
         if k > 0:
             params_new_inc[0,i] = self.params[0,i]
             endog_lagged_new[:,0] = self.endog_lagged[:,0]
-        for j in range(self.lag_order):
-            params_new_inc[i+j*self.lag_order+k,:] = (
-             self.params[c+j*self.lag_order+k,:])
-            endog_lagged_new[:,i+j*self.lag_order+k] = (
-             self.endog_lagged[:,c+j*self.lag_order+k])
+        for j in range(self.k_ar):
+            params_new_inc[i+j*self.k_ar+k,:] = self.params[c+j*self.k_ar+k,:]
+            endog_lagged_new[:,i+j*self.k_ar+k] = self.endog_lagged[:,c+j*self.k_ar+k]
         sigma_u_new_inc[i,:] = self.sigma_u[c,:]
         names_new.append(self.names[c])
     for i, c in enumerate(order):
@@ -307,7 +305,7 @@ def reordered(self, order):
 
     return VARResults(endog=endog_new, endog_lagged=endog_lagged_new,
                       params=params_new, sigma_u=sigma_u_new,
-                      lag_order=self.lag_order, model=self.model,
+                      lag_order=self.k_ar, model=self.model,
                       trend='c', names=names_new, dates=self.dates)
 
 #-------------------------------------------------------------------------------
@@ -777,7 +775,6 @@ class VARResults(VARProcess):
         self.y = self.endog = endog  #keep alias for now
         self.ys_lagged = self.endog_lagged = endog_lagged #keep alias for now
         self.dates = dates
-        self.lag_order = lag_order
 
         self.n_totobs, neqs = self.y.shape
         self.nobs = self.n_totobs  - lag_order
