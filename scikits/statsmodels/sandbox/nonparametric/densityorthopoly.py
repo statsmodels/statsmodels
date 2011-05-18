@@ -1,3 +1,5 @@
+# -*- coding: cp1252 -*-
+# some cut and paste characters are not ASCII
 '''density estimation based on orthogonal polynomials
 
 
@@ -42,6 +44,18 @@ from scikits.statsmodels.sandbox.distributions.mixture_rvs import mixture_rvs
 sqr2 = np.sqrt(2.)
 
 class FPoly(object):
+    '''
+
+    orthonormal polynomial but density needs corfactor that I don't see what
+    it is analytically
+
+    parameterization on [0,1] from
+
+    Sam Efromovich: Orthogonal series density estimation,
+    2010 John Wiley & Sons, Inc. WIREs Comp Stat 2010 2 467–476
+
+
+    '''
 
     def __init__(self, order):
         self.order = order
@@ -54,6 +68,30 @@ class FPoly(object):
         else:
             return sqr2 * np.cos(np.pi * self.order * x)
 
+class F2Poly(object):
+    '''
+
+    is orthogonal but first component doesn't square-integrate to 1
+    final result seems to need a correction factor of sqrt(pi)
+    _corfactor = sqrt(pi) from integrating the density
+
+    Parameterization on [0, pi] from
+
+    Peter Hall, Cross-Validation and the Smoothing of Orthogonal Series Density
+    Estimators, JOURNAL OF MULTIVARIATE ANALYSIS 21, 189-206 (1987)
+
+    '''
+
+    def __init__(self, order):
+        self.order = order
+        self.domain = (0, np.pi)
+        self.intdomain = self.domain
+
+    def __call__(self, x):
+        if self.order == 0:
+            return np.ones_like(x) / np.sqrt(np.pi)
+        else:
+            return sqr2 * np.cos(self.order * x) / np.sqrt(np.pi)
 
 class ChebyTPoly(object):
 
@@ -79,20 +117,27 @@ class ChebyTPoly(object):
 from scipy.misc import factorial
 from scipy import special
 
-logpi4 = np.log(np.pi)/4
+logpi2 = np.log(np.pi)/2
 
 class HPoly(object):
 
     def __init__(self, order):
         self.order = order
-        from scipy.special import legendre, hermitenorm, chebyt, hermitenorm
-        self.poly = hermitenorm(order)
+        from scipy.special import legendre, hermitenorm, chebyt, hermite
+        self.poly = hermite(order)
+        self.domain = (-6, +6)
 
     def __call__(self, x):
         k = self.order
-        lnfact = -(k/2.)*np.log(2.) - 0.5*special.gammaln(k+1) - logpi4# - x*x/2.
+        #lnfact = -(k/2.)*np.log(2.) - 0.5*special.gammaln(k+1) - logpi4 - x*x/2.
+        #following Hall:
+        #lnfact = -(k/2.)*(k*np.log(2.) + special.gammaln(k+1) + logpi2) - x*x/2
+        lnfact = -(1./2)*(k*np.log(2.) + special.gammaln(k+1) + logpi2) - x*x/2
+        #lnfact = -x*x/4.
+
         fact = np.exp(lnfact) #*(-1)**k
-        if self.order == 0:
+        #fact = np.sqrt(fact)
+        if self.order < 0:
             return np.ones_like(x) * fact
         else:
             return self.poly(x) * fact
@@ -265,9 +310,9 @@ def density_orthopoly(x, polybase, order=5, xeval=None):
 
 if __name__ == '__main__':
 
-    examples = ['fourier']
+    examples = ['fourier', 'hermite'][1]
 
-    nobs = 1000
+    nobs = 10000
 
     #np.random.seed(12345)
     obs_dist = mixture_rvs([1/3.,2/3.], size=nobs, dist=[stats.norm, stats.norm],
@@ -275,7 +320,7 @@ if __name__ == '__main__':
     obs_dist = mixture_rvs([1/3.,2/3.], size=nobs, dist=[stats.norm, stats.norm],
                    kwargs = (dict(loc=-0.5,scale=.5),dict(loc=1,scale=.2)))
 
-    #obs_dist = np.random.randn(nobs)/2 #np.sqrt(2)
+    #obs_dist = np.random.randn(nobs)/4. #np.sqrt(2)
 
     #obs_dist = np.clip(obs_dist, -2, 2)/2.01
     #chebyt [0,1]
@@ -320,7 +365,7 @@ if __name__ == '__main__':
     print 'np.max(np.abs(xf - f_hat0))', np.max(np.abs(xf - f_hat0))
     dopint = integrate.quad(dop, *dop.limits)[0]
     print 'dop F integral', dopint
-    doplot = 1
+    doplot = 0
     if doplot:
         plt.figure()
         plt.hist(obs_dist, bins=50, normed=True, color='red')
@@ -329,8 +374,27 @@ if __name__ == '__main__':
 
     if "fourier" in examples:
         dop = DensityOrthoPoly()
+        dop.offsetfac = 0.5
+        dop = dop.fit(obs_dist, F2Poly, order=20)
+        grid = np.linspace(obs_dist.min(), obs_dist.max())
+        xf = dop(grid)
+        print np.max(np.abs(xf - f_hat0))
+        dopint = integrate.quad(dop, *dop.limits)[0]
+        print 'dop F integral', dopint
+        doplot = 0
+        if doplot:
+            plt.figure()
+            plt.hist(obs_dist, bins=50, normed=True, color='red')
+            plt.plot(grid, xf, lw=2, color='black')
+            plt.show()
+
+        #check orthonormality:
+        print np.max(np.abs(inner_cont(dop.polys[:5], 0, 1)[0] -np.eye(5)))
+
+    if "hermite" in examples:
+        dop = DensityOrthoPoly()
         dop.offsetfac = 0
-        dop = dop.fit(obs_dist, FPoly, order=20)
+        dop = dop.fit(obs_dist, HPoly, order=20)
         grid = np.linspace(obs_dist.min(), obs_dist.max())
         xf = dop(grid)
         print np.max(np.abs(xf - f_hat0))
@@ -340,9 +404,17 @@ if __name__ == '__main__':
         if doplot:
             plt.figure()
             plt.hist(obs_dist, bins=50, normed=True, color='red')
-            plt.plot(grid, xf/dopint, lw=2, color='black')
+            plt.plot(grid, xf, lw=2, color='black')
             plt.show()
 
         #check orthonormality:
         print np.max(np.abs(inner_cont(dop.polys[:5], 0, 1)[0] -np.eye(5)))
 
+    hpolys = [HPoly(i) for i in range(5)]
+    inn = inner_cont(hpolys, -6, 6)[0]
+    print np.max(np.abs(inn - np.eye(5)))
+    print (inn*100000).astype(int)
+
+    htpolys = [hermite(i) for i in range(5)]
+    innt = inner_cont(htpolys, -10, 10)[0]
+    print (innt*100000).astype(int)
