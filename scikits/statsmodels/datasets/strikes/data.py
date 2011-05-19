@@ -49,7 +49,7 @@ def load():
     """
     filepath = dirname(abspath(__file__))
 ##### EDIT THE FOLLOWING TO POINT TO DatasetName.csv #####
-    data = recfromtxt(filepath + '/strikes.csv', delimiter=",",
+    data = recfromtxt(open(filepath + '/strikes.csv', 'rb'), delimiter=",",
             names=True, dtype=float)
     names = list(data.dtype.names)
 ##### SET THE INDEX #####

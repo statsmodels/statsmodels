@@ -28,7 +28,7 @@ from scipy.special import gammaln as sps_gammaln
 def chi2_pdf(self, x, df):
     '''pdf of chi-square distribution'''
     #from scipy.stats.distributions
-    Px = x**(df/2.0-1)*exp(-x/2.0)
+    Px = x**(df/2.0-1)*np.exp(-x/2.0)
     Px /= special.gamma(df/2.0)* 2**(df/2.0)
     return Px
 
@@ -45,8 +45,11 @@ def chi_logpdf(x, df):
 
 def funbgh(s, a, b, R, df):
     sqrt_df = np.sqrt(df+0.5)
-    return np.exp(chi_logpdf(s,df) + np.log(mvstdnormcdf(s*a/sqrt_df, s*b/sqrt_df, R,
-                                         maxpts=1000000, abseps=1e-6)))
+    ret = chi_logpdf(s,df)
+    ret += np_log(mvstdnormcdf(s*a/sqrt_df, s*b/sqrt_df, R,
+                                         maxpts=1000000, abseps=1e-6))
+    ret = np_exp(ret)
+    return  ret
 
 def funbgh2(s, a, b, R, df):
     n = len(a)
@@ -115,63 +118,6 @@ def multivariate_t_rvs(m, S, df=np.inf, n=1):
     return m + z/np.sqrt(x)[:,None]   # same output format as random.multivariate_normal
 
 
-from numpy.testing import assert_almost_equal
-def test_mvn_mvt():
-    corr_equal = np.asarray([[1.0, 0.5, 0.5],[0.5,1,0.5],[0.5,0.5,1]])
-    a = -1 * np.ones(3)
-    b = 3 * np.ones(3)
-    df = 4
-    #result from R, mvtnorm with option
-    #algorithm = GenzBretz(maxpts = 100000, abseps = 0.000001, releps = 0)
-    #     or higher
-    probmvt_R = 0.60414   #reported error approx. 7.5e-06
-    probmvn_R = 0.673970  #reported error approx. 6.4e-07
-    assert_almost_equal(probmvt_R, mvstdtprob(a, b, corr_equal, df), 4)
-    assert_almost_equal(probmvn_R, mvstdnormcdf(a, b, corr_equal, abseps=1e-5), 4)
-
-    mvn_high = mvstdnormcdf(a, b, corr_equal, abseps=1e-8, maxpts=10000000)
-    assert_almost_equal(probmvn_R, mvn_high, 5)
-    #this still barely fails sometimes at 6 why?? error is -7.2627419411830374e-007
-    #>>> 0.67396999999999996 - 0.67397072627419408
-    #-7.2627419411830374e-007
-    #>>> assert_almost_equal(0.67396999999999996, 0.67397072627419408, 6)
-    #Fail
-
-
-    corr2 = corr_equal.copy()
-    corr2[2,1] = -0.5
-    R2 = corr2  #alias, partial refactoring
-    probmvn_R = 0.6472497 #reported error approx. 7.7e-08
-    probmvt_R = 0.5881863 #highest reported error up to approx. 1.99e-06
-    assert_almost_equal(mvstdtprob(a, b, R2, df), probmvt_R, 4)
-    assert_almost_equal(mvstdnormcdf(a, b, R2, abseps=1e-5), probmvn_R, 4)
-
-    #from -inf
-    #print 'from -inf'
-    a2 = a.copy()
-    a2[:] = -np.inf
-    probmvn_R = 0.9961141 #using higher precision in R, error approx. 6.866163e-07
-    probmvt_R = 0.9522146 #using higher precision in R, error approx. 1.6e-07
-    assert_almost_equal(mvstdtprob(a2, b, R2, df), probmvt_R, 4)
-    assert_almost_equal(mvstdnormcdf(a2, b, R2, maxpts=100000, abseps=1e-5), probmvn_R, 4)
-
-    #from 0 to inf
-    #print '0 inf'
-    probmvn_R = 0.1666667 #error approx. 6.1e-08
-    probmvt_R = 0.1666667 #error approx. 8.2e-08
-    assert_almost_equal(mvstdtprob(np.zeros(3), -a2, R2, df), probmvt_R, 4)
-    assert_almost_equal(mvstdnormcdf(np.zeros(3), -a2, R2, maxpts=100000,
-                                     abseps=1e-5), probmvn_R, 4)
-
-    #unequal integration bounds
-    #print "ue"
-    a3 = np.array([0.5, -0.5, 0.5])
-    probmvn_R = 0.06910487 #using higher precision in R, error approx. 3.5e-08
-    probmvt_R = 0.05797867 #using higher precision in R, error approx. 5.8e-08
-    assert_almost_equal(mvstdtprob(a3, a3+1, R2, df), probmvt_R, 4)
-    assert_almost_equal(mvstdnormcdf(a3, a3+1, R2, maxpts=100000, abseps=1e-5),
-                        probmvn_R, 4)
-
 
 
 if __name__ == '__main__':
@@ -198,7 +144,6 @@ if __name__ == '__main__':
 
     df=4
     print mvstdtprob(a, b, R, df)
-    test_mvn_mvt()
 
     S = np.array([[1.,.5],[.5,1.]])
     print multivariate_t_rvs([10.,20.], S, 2, 5)
