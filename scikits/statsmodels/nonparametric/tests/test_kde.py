@@ -10,7 +10,7 @@ from scipy import stats
 curdir = os.path.dirname(os.path.abspath(__file__))
 rfname = os.path.join(curdir,'results','results_kde.csv')
 #print rfname
-KDEResults = np.genfromtxt(rfname, delimiter=",", names=True)
+KDEResults = np.genfromtxt(open(rfname, 'rb'), delimiter=",", names=True)
 
 # setup test data
 
@@ -75,7 +75,7 @@ class TestKdeWeights(CheckKDE):
                     bw="silverman")
         cls.res1 = res1
         rfname = os.path.join(curdir,'results','results_kde_weights.csv')
-        cls.res_density = np.genfromtxt(rfname, skip_header=1)
+        cls.res_density = np.genfromtxt(open(rfname, 'rb'), skip_header=1)
 
 
 class TestKDEGaussFFT(CheckKDE):
@@ -86,7 +86,7 @@ class TestKDEGaussFFT(CheckKDE):
         res1.fit(kernel="gau", fft=True, bw="silverman")
         cls.res1 = res1
         rfname2 = os.path.join(curdir,'results','results_kde_fft.csv')
-        cls.res_density = np.genfromtxt(rfname2)
+        cls.res_density = np.genfromtxt(open(rfname2, 'rb'))
 
 
 if __name__ == "__main__":
