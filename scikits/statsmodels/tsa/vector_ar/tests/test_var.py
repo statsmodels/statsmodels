@@ -434,6 +434,30 @@ class TestVARResults(CheckIRF, CheckFEVD):
         self.res.plot_forecast(5)
         close_plots()
 
+    def test_reorder(self):
+        #manually reorder
+        data = self.data.view((float,3))
+        names = self.names
+        data2 = np.append(np.append(data[:,2,None], data[:,0,None], axis=1), data[:,1,None], axis=1)
+        names2 = []
+        names2.append(names[2])
+        names2.append(names[0])
+        names2.append(names[1])
+        res2 = VAR(data2,names=names2).fit(maxlags=self.p)
+
+        #use reorder function
+        res3 = self.res.reorder(['realinv','realgdp', 'realcons'])
+
+        #check if the main results match
+        print "Params"
+        assert_almost_equal(res2.params, res3.params)
+        print "Sigma_u"
+        assert_almost_equal(res2.sigma_u, res3.sigma_u)
+        print "BIC"
+        assert_almost_equal(res2.bic, res3.bic)
+        print "Stderr"
+        assert_almost_equal(res2.stderr, res3.stderr)
+
 class E1_Results(object):
     """
     Results from Lutkepohl (2005) using E2 dataset
