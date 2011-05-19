@@ -2,12 +2,12 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
+from scikits.statsmodels.iolib.table import SimpleTable
 
 class KaplanMeier(object):
 
-    def __init__(self, data, endog, exog, censoring=None):
+    def __init__(self, data, endog, exog=None, censoring=None):
     #TODO: optional choice of left or right continuous?
-    #TODO: default exog=None, for single curve
         if censoring == None:
             #TODO: change self.fit to accept censoring=None
             #instead of adding all ones?
@@ -16,12 +16,17 @@ class KaplanMeier(object):
             self.censoring = len(data[0]) - 1
         else:
             self.censoring = censoring
+        if exog == None:
+            exog_vec = np.ones_like(data[:,endog])
+            data = np.c_[data,exog_vec]
+            self.exog = len(data) - 1
+        else:
+            self.exog = exog
         self.data = data
         self.endog = endog
-        self.exog = exog
 
     def fit(self):
-        #TODO: calculate standard errors
+        #TODO: calculate hazard?
         #TODO: check multiple censored observations at one time
         #TODO: check non-int values for exog (strings)
         groups = np.unique(self.data[:,self.exog])
@@ -51,7 +56,10 @@ class KaplanMeier(object):
             tEvent = t[events != 0]
             events = events[events != 0]
             survival = np.cumprod(1-events/n)
-            results.append(survival)
+            var = ((survival*survival) *
+                   np.cumsum(events/(n*(n-events))))
+            se = np.sqrt(var)
+            results.append(np.array([survival,se]))
             ts.append(t)
             tEvents.append(tEvent)
             censorings.append(censored)
@@ -65,7 +73,7 @@ class KaplanMeier(object):
     def plot(self):
         for g in range(len(self.groups)):
             x = np.repeat(self.tEvents[g], 2)
-            y = np.repeat(self.results[g], 2)
+            y = np.repeat(self.results[g][0], 2)
             if self.ts[g][-1] in self.tEvents[g]:
                 x = np.r_[0,x]
                 y = np.r_[1,1,y[:-1]]
@@ -73,11 +81,21 @@ class KaplanMeier(object):
                 x = np.r_[0,x,self.ts[g][-1]]
                 y = np.r_[1,1,y]
             plt.plot(x,y)
-        #TODO: set max y above 1
+        plt.ylim(ymax=1.05)
+        plt.ylabel('Survival')
+        plt.xlabel('Time')
         #TODO: tick marks for censoring
         #TODO: check plotting for multiple censored observations
         #at one time (formula for distance between tick marks?)
-        plt.show()
-    #TODO: show_results method to display results
+
+    def summary(self):
+        for g in range(len(self.groups)):
+            myTitle = ('exog = ' + str(self.groups[g]) + '\n')
+            table = np.transpose(self.results[g])
+            table = np.c_[np.transpose(self.tEvents[g]),table]
+            table = SimpleTable(table, headers=['Time','Survival','Std. Err'],
+                                title = myTitle)
+            print(table)
+
     #TODO: Log Rank Test?
     #TODO: show_life_tables method?
