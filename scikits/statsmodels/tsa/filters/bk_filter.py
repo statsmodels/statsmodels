@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.signal import fftconvolve
 
-def baxter_king(X, low=6, high=32, K=12):
+def bkfilter(X, low=6, high=32, K=12):
     """
     Baxter-King bandpass filter
 
