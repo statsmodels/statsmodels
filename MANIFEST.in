@@ -1,4 +1,4 @@
-include *.txt *.py *.csv
+global-include *.csv *.txt
 #scikits*.*
 include MANIFEST.in
 
