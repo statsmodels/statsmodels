@@ -20,13 +20,14 @@ Quickstart for the impatient
 
 **License:** Simplified BSD
 
-**Requirements:** python 2.5. to 2.7 (there are only a few 2.4 incompatibilities) and
-  recent releases of numpy (>=1.3) and scipy (>=0.7)
-  earlier versions of numpy and scipy might work but not tested
+**Requirements:** python >= 2.5, tested with 2.5., 2.6, 2.7 and 3.2
+  recent releases of numpy (>=1.4) and scipy (>=0.7)
+  (tested with numpy 1.4.1, 1.5.1 and 1.6.0, scipy 0.7.2, 0.8.0, 0.9.0)
   Optional: Many of the examples use matplotlib, and some sandbox functions
   have additional dependencies
 
 **Repository:** http://code.launchpad.net/statsmodels
+(will move to github)
 
 **Documentation:** http://statsmodels.sourceforge.net/
     and in the docs/build folder
@@ -36,6 +37,7 @@ Quickstart for the impatient
 **Mailing List:** http://groups.google.com/group/pystatsmodels?hl=en
 
 **Bug Tracker:**  https://bugs.launchpad.net/statsmodels
+(might change)
 
 **Development:** See our :doc:`developer's page <developernotes>`.
 
@@ -54,7 +56,7 @@ or get the source from pypi, sourceforge, or from the launchpad repository and
 
 **Note:**
 Due to our infrequent official releases, we want to point out that the trunk
-branch in the launchpad repository will have the most recent code and is
+branch in the public repository will have the most recent code and is
 usually stable, tested, and fine for daily use.
 
 **Usage:**
