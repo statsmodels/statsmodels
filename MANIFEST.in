@@ -3,9 +3,9 @@ global-include *.csv *.txt
 include MANIFEST.in
 
 #exclude scikits/statsmodels/docs/build/htmlhelp*
-exclude build/* 
-exclude dist/*
-exclude tools/*
+recursive-exclude build *
+recursive-exclude dist *
+recursive-exclude tools *
 
 graft scikits/statsmodels/datasets
 graft scikits/statsmodels/tests
