@@ -41,7 +41,7 @@ statsmodels includes:
 statsmodels contains a sandbox folder, which includes some of the original
 stats.models code that has not yet been rewritten and tested. The sandbox also
 contains models and functions that we are currently developing. This code is
-in various stages of development from early stages to almost unfinished, but
+in various stages of development from early stages to almost finished, but
 not sufficiently tested or with an API that is still in flux. Some of the code
 in the advanced state covers among others GARCH models, general method of
 moments (GMM) estimators, kernel regression and kernel density estimation, and
@@ -54,7 +54,7 @@ rely on pandas, and we have plans to integrate pandas in future releases of
 statsmodels.
 
 We have also included several datasets from the public domain and by
-permission for the tests and examples. The datasets are set up so that it is
+permission for tests and examples. The datasets are set up so that it is
 easy to add more datasets.
 
 Testing
@@ -77,7 +77,7 @@ can keep improving the existing models.
 Looking Forward
 ---------------
 
-We would like to invite everyone to give statsmodels a test drive, use it and
+We would like to invite everyone to give statsmodels a test drive, use it, and
 report comments, possibilities for improvement and bugs to the statsmodels
 mailing list http://groups.google.com/group/pystatsmodels or file tickets on our
 bug tracker at https://bugs.launchpad.net/statsmodels
@@ -92,7 +92,7 @@ requirements and interests of the developers and contributers.
 
 The current maintainers are mostly interested in econometrics and time series
 analysis, but we would like to invite any users or developers to contribute
-their own extensions to existing models or new models. To speed up
+their own extensions to existing models, or new models. To speed up
 improvements that are waiting in the sandbox, any help with providing test
 cases, reviewing or improving the code would be very appreciated.
 
@@ -117,7 +117,7 @@ statsmodels proper will depend on the available developer time and interests:
 
 Bayesian dynamic linear models (Wes)
 
-more kalman filter based time series analysis (Skipper)
+more Kalman filter based time series analysis (Skipper)
 
 New models (roughly in order of completeness):
 general method of moments (GMM) estimators, kernel regression,
@@ -142,8 +142,8 @@ included might require adjustments as we gain more experience and obtain
 feedback by users. As we expand the range of models, we keep improving the
 framework for different estimators and statistical tests, so further changes
 will be necessary. In 0.3 we reorganized the internal location of the code and
-import paths which will make future enhancements less interuptive.
-Although there is no quarantee yet on API stability, we try to keep changes
+import paths which will make future enhancements less interruptive.
+Although there is no guarantee yet on API stability, we try to keep changes
 that require adjustments by existing users to a minimal level.
 
 Financial Support
