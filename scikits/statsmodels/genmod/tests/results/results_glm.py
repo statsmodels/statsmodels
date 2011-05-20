@@ -6,6 +6,7 @@ Stata may be because Stata uses ML by default unless you specifically ask for
 IRLS.
 """
 import numpy as np
+from scikits.statsmodels.compatnp.py3k import asbytes
 import glm_test_resids
 import os
 from scikits.statsmodels.api import add_constant, categorical
@@ -683,7 +684,7 @@ class Lbw(object):
         # data set up for data not in datasets
         filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
             "stata_lbw_glm.csv")
-        data=np.recfromcsv(open(filename, 'rb'), converters={4: lambda s: s.strip(b"\"")})
+        data=np.recfromcsv(open(filename, 'rb'), converters={4: lambda s: s.strip(asbytes("\""))})
         data = categorical(data, col='race', drop=True)
         self.endog = data.low
         design = np.column_stack((data['age'], data['lwt'],
@@ -2174,7 +2175,7 @@ class Medpar1(object):
     def __init__(self):
         filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
             "stata_medpar1_glm.csv")
-        data = np.recfromcsv(open(filename, 'rb'), converters ={1: lambda s: s.strip(b"\"")})
+        data = np.recfromcsv(open(filename, 'rb'), converters ={1: lambda s: s.strip(asbytes("\""))})
         self.endog = data.los
         design = np.column_stack((data.admitype, data.codes))
         design = categorical(design, col=0, drop=True)
