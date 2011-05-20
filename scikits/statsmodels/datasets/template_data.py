@@ -27,7 +27,7 @@ Variable name definitions:
 Any other useful information that does not fit into the above categories.
 """
 
-from numpy import recfromtxt, column_stack, array
+import numpy as np
 from scikits.statsmodels.datasets import Dataset
 from os.path import dirname, abspath
 
@@ -42,14 +42,14 @@ def load():
     """
     filepath = dirname(abspath(__file__))
 ##### EDIT THE FOLLOWING TO POINT TO DatasetName.csv #####
-    data = recfromtxt(filepath + '/DatasetName.csv', delimiter=",",
+    data = np.recfromtxt(open(filepath + '/DatasetName.csv', 'rb'), delimiter=",",
             names=True, dtype=float)
     names = list(data.dtype.names)
 ##### SET THE INDEX #####
-    endog = array(data[names[0]], dtype=float)
+    endog = np.array(data[names[0]], dtype=float)
     endog_name = names[0]
 ##### SET THE INDEX #####
-    exog = column_stack(data[i] for i in names[1:]).astype(float)
+    exog = np.column_stack(data[i] for i in names[1:]).astype(float)
     exog_name = names[1:]
     dataset = Dataset(data=data, names=names, endog=endog, exog=exog,
             endog_name = endog_name, exog_name=exog_name)
