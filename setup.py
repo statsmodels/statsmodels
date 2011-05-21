@@ -93,6 +93,20 @@ Main Changes in 0.2.0
   -RLM.fitted_values -> RLM.fittedvalues
   -GLMResults.resid_dev -> GLMResults.resid_deviance
 
+
+Python 3
+--------
+
+scikits.statsmodels has been ported and tested for Python 3.2. Python 3
+version of the code can be obtained by running 2to3.py over the entire
+statsmodels source. The numerical core of statsmodels worked almost without
+changes, however there can be problems with data input and plotting.
+The STATA file reader and writer in iolib.foreign has not been ported yet.
+And there are still some problems with the matplotlib version for Python 3
+that was used in testing. Running the test suite with Python 3.2 shows some
+errors related to foreign and matplotlib.
+
+
 Sandbox
 -------
 
@@ -135,8 +149,8 @@ DOWNLOAD_URL = ''
 MAJ = 0
 MIN = 3
 REV = 0
-DEV = True #False
-QUALIFIER = '' #'b2dev'
+DEV = False
+QUALIFIER = 'rc1' #'b2dev'
 
 classifiers = [ 'Development Status :: 4 - Beta',
               'Environment :: Console',
