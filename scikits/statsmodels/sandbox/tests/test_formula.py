@@ -9,8 +9,22 @@ import numpy.random as R
 import numpy.linalg as L
 from numpy.testing import *
 
-from scikits.statsmodels.sandbox import formula #, contrast #, utils
-from scikits.statsmodels.sandbox import contrast_old as contrast
+import sys, nose
+
+#automatic conversion with 2to3 makes mistakes in formula, changes
+#"if type(self.name) is types.StringType"  to  "if type(self.name) is bytes"
+try:
+    from scikits.statsmodels.sandbox import formula #, contrast #, utils
+    from scikits.statsmodels.sandbox import contrast_old as contrast
+except:
+    if sys.version_info[0] >= 3:
+        raise nose.SkipTest('No tests here')
+    else:
+        raise
+
+def setup():
+    if sys.version_info[0] >= 3:
+        raise nose.SkipTest('No tests here')
 
 class TestTerm(TestCase):
 

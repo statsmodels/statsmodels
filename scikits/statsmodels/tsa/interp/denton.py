@@ -1,7 +1,9 @@
+
+import numpy as np
 from numpy import (dot, eye, diag_indices, zeros, column_stack, ones, diag,
         asarray, r_)
 from numpy.linalg import inv, solve
-from scipy.linalg import block_diag
+#from scipy.linalg import block_diag
 from scipy import linalg
 
 #def denton(indicator, benchmark, freq="aq", **kwarg):
@@ -195,7 +197,8 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
         q = 0
 
     # make the aggregator matrix
-    B = block_diag(*(ones((k,1)),)*m)
+    #B = block_diag(*(ones((k,1)),)*m)
+    B = np.kron(np.eye(m), ones((k,1)))
 
     # following the IMF paper, we can do
     Zinv = diag(1./indicator.squeeze()[:n])

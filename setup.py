@@ -60,9 +60,12 @@ the import speed if a library or user only needs specific functions.
       optionally uses Cython for Kalman Filtering
       use setup.py install with option --with-cython
   - Baxter-King band-pass filter (tsa.filters.baxter_king)
+  - Hodrick-Prescott filter (tsa.filters.hpfilter)
+  - Christiano-Fitzgerald filter (tsa.filters.cffilter)
+
 * Improved maximum likelihood framework uses all available scipy.optimize solvers
 * Refactor of the datasets sub-package.
-* Added Nile River dataset.
+* Added more datasets for examples.
 * Removed RPy dependency for running the test suite.
 * Refactored the test suite.
 * Refactored codebase/directory structure.
@@ -87,8 +90,22 @@ Main Changes in 0.2.0
 * Improved support for maximum likelihood estimation.
 * bugfixes
 * renames for more consistency
-  RLM.fitted_values -> RLM.fittedvalues
-  GLMResults.resid_dev -> GLMResults.resid_deviance
+  -RLM.fitted_values -> RLM.fittedvalues
+  -GLMResults.resid_dev -> GLMResults.resid_deviance
+
+
+Python 3
+--------
+
+scikits.statsmodels has been ported and tested for Python 3.2. Python 3
+version of the code can be obtained by running 2to3.py over the entire
+statsmodels source. The numerical core of statsmodels worked almost without
+changes, however there can be problems with data input and plotting.
+The STATA file reader and writer in iolib.foreign has not been ported yet.
+And there are still some problems with the matplotlib version for Python 3
+that was used in testing. Running the test suite with Python 3.2 shows some
+errors related to foreign and matplotlib.
+
 
 Sandbox
 -------
@@ -105,14 +122,6 @@ This can be opened from the python interpreter ::
 
 >>> import scikits.statsmodels.api as sm
 >>> sm.open_help()
-
-
-Note for Mac Users
-------------------
-
-We obtained a report of test failures where the required precision of the
-test seems too high. Since the precision on both Windows and Linux is higher,
-we would appreciate any reports of whether test on Mac fail or not.
 
 """
 import os
@@ -140,8 +149,8 @@ DOWNLOAD_URL = ''
 MAJ = 0
 MIN = 3
 REV = 0
-DEV = True #False
-QUALIFIER = '' #'b2dev'
+DEV = False
+QUALIFIER = 'rc1' #'b2dev'
 
 classifiers = [ 'Development Status :: 4 - Beta',
               'Environment :: Console',
@@ -182,6 +191,7 @@ def configuration(parent_package='', top_path=None, package_name=DISTNAME):
     config.add_data_files('scikits/__init__.py')
     config.add_data_dir('scikits/statsmodels/tests')
     config.add_data_dir('scikits/statsmodels/examples')
+    config.add_data_dir('scikits/statsmodels/sandbox/examples')
     config.add_data_dir('scikits/statsmodels/docs')
     config.add_data_dir('scikits/statsmodels/iolib/tests')
     config.add_data_dir('scikits/statsmodels/discrete/tests')

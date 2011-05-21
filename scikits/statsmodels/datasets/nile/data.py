@@ -40,7 +40,7 @@ def load():
     """
     filepath = dirname(abspath(__file__))
 ##### EDIT THE FOLLOWING TO POINT TO DatasetName.csv #####
-    data = recfromtxt(filepath + '/nile.csv', delimiter=",",
+    data = recfromtxt(open(filepath + '/nile.csv', 'rb'), delimiter=",",
             names=True, dtype=float, usecols=(1))
     names = list(data.dtype.names)
 ##### SET THE INDEX #####
