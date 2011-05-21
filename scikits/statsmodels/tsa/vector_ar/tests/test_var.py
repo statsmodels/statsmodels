@@ -449,13 +449,9 @@ class TestVARResults(CheckIRF, CheckFEVD):
         res3 = self.res.reorder(['realinv','realgdp', 'realcons'])
 
         #check if the main results match
-        print "Params"
         assert_almost_equal(res2.params, res3.params)
-        print "Sigma_u"
         assert_almost_equal(res2.sigma_u, res3.sigma_u)
-        print "BIC"
         assert_almost_equal(res2.bic, res3.bic)
-        print "Stderr"
         assert_almost_equal(res2.stderr, res3.stderr)
 
 class E1_Results(object):

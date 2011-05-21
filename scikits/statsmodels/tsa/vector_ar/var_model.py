@@ -288,6 +288,7 @@ def _reordered(self, order):
                                   for i in range(2)]
     sigma_u_new_inc, sigma_u_new = [np.zeros([np.size(sigma_u,0), np.size(sigma_u,1)])
                                     for i in range(2)]
+    num_end = len(self.params[0])
     names_new = []
 
     #Rearrange elements and fill in new arrays
@@ -297,9 +298,9 @@ def _reordered(self, order):
         if k > 0:
             params_new_inc[0,i] = params[0,i]
             endog_lagged_new[:,0] = endog_lagged[:,0]
-        for j in range(self.k_ar):
-            params_new_inc[i+j*k_ar+k,:] = self.params[c+j*k_ar+k,:]
-            endog_lagged_new[:,i+j*k_ar+k] = endog_lagged[:,c+j*self.k_ar+k]
+        for j in range(k_ar):
+            params_new_inc[i+j*num_end+k,:] = self.params[c+j*num_end+k,:]
+            endog_lagged_new[:,i+j*num_end+k] = endog_lagged[:,c+j*num_end+k]
         sigma_u_new_inc[i,:] = sigma_u[c,:]
         names_new.append(names[c])
     for i, c in enumerate(order):
