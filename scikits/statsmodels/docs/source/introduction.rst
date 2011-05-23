@@ -57,6 +57,18 @@ We have also included several datasets from the public domain and by
 permission for tests and examples. The datasets are set up so that it is
 easy to add more datasets.
 
+Python 3
+--------
+
+scikits.statsmodels has been ported and tested for Python 3.2. Python 3
+version of the code can be obtained by running 2to3.py over the entire
+statsmodels source. The numerical core of statsmodels worked almost without
+changes, however there can be problems with data input and plotting.
+The STATA file reader and writer in iolib.foreign has not been ported yet.
+And there are still some problems with the matplotlib version for Python 3
+that was used in testing. Running the test suite with Python 3.2 shows some
+errors related to foreign and matplotlib.
+
 Testing
 -------
 
