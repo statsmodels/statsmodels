@@ -540,7 +540,7 @@ def asquare(cdfvals, axis=0):
     # I would need to overwrite rvs, fit and cdf depending on fixed parameters
 
     #def bootstrap(self, distr, args=(), kwds={}, nobs=200, nrep=1000,
-def bootstrap(distr, args=(), nobs=200, nrep=100, value=None):
+def bootstrap(distr, args=(), nobs=200, nrep=100, value=None, batch_size=None):
     '''Monte Carlo (or parametric bootstrap) p-values for gof
 
     currently hardcoded for A^2 only
@@ -557,16 +557,70 @@ def bootstrap(distr, args=(), nobs=200, nrep=100, value=None):
     #rvs_kwds = {'size':(nobs, nrep)}
     #rvs_kwds.update(kwds)
 
+
+    #it will be better to build a separate batch function that calls bootstrap
+    #keep batch if value is true, but batch iterate from outside if stat is returned
+    if (not batch_size is None):
+        n_batch = int(np.ceil(nrep/float(batch_size)))
+        count = 0
+        for irep in xrange(n_batch):
+            rvs = distr.rvs(args, **{'size':(batch_size, nobs)})
+            params = distr.fit_vec(rvs, axis=1)
+            params = map(lambda x: np.expand_dims(x, 1), params)
+            cdfvals = np.sort(distr.cdf(rvs, params), axis=1)
+            stat = asquare(cdfvals, axis=1)
+            if value is None:           #return all bootstrap results
+                stat_sorted = np.sort(stat)
+                #yield stat_sorted
+
+            else:                       #calculate and return specific p-value
+                count += (stat >= value).sum()
+        if not value is None:
+            return count / float(n_batch * batch_size)
+
+
+
+    #rvs = distr.rvs(args, **kwds)  #extension to distribution kwds ?
+    rvs = distr.rvs(args, **{'size':(nrep, nobs)})
+    params = distr.fit_vec(rvs, axis=1)
+    params = map(lambda x: np.expand_dims(x, 1), params)
+    cdfvals = np.sort(distr.cdf(rvs, params), axis=1)
+    stat = asquare(cdfvals, axis=1)
     if value is None:           #return all bootstrap results
-        #rvs = distr.rvs(args, **kwds)  #extension to distribution kwds ?
-        rvs = distr.rvs(args, **{'size':(nobs, nrep)})
-        params = distr.fit_vec(rvs, axis=0)
-        cdfvals = np.sort(distr.cdf(rvs, params), axis=0)
-        stat = asquare(cdfvals, axis=0)
         stat_sorted = np.sort(stat)
         return stat_sorted
     else:                       #calculate and return specific p-value
-        raise NotImplementedError
+        return (stat >= value).mean()
+
+
+
+def bootstrap2(value, distr, args=(), nobs=200, nrep=100):
+    '''Monte Carlo (or parametric bootstrap) p-values for gof
+
+    currently hardcoded for A^2 only
+
+    non vectorized, loops over all parametric bootstrap replications and calculates
+    and returns specific p-value,
+
+    rename function to less generic
+
+    '''
+    #signature similar to kstest ?
+    #delegate to fn ?
+
+    #rvs_kwds = {'size':(nobs, nrep)}
+    #rvs_kwds.update(kwds)
+
+
+    count = 0
+    for irep in xrange(nrep):
+        #rvs = distr.rvs(args, **kwds)  #extension to distribution kwds ?
+        rvs = distr.rvs(args, **{'size':nobs})
+        params = distr.fit_vec(rvs)
+        cdfvals = np.sort(distr.cdf(rvs, params))
+        stat = asquare(cdfvals, axis=0)
+        count += (stat >= value)
+    return count * 1. / nrep
 
 
 class NewNorm(object):
@@ -574,7 +628,7 @@ class NewNorm(object):
     '''
 
     def fit_vec(self, x, axis=0):
-        return x.mean(0), x.std(0)
+        return x.mean(axis), x.std(axis)
 
     def cdf(self, x, args):
         return distributions.norm.cdf(x, loc=args[0], scale=args[1])
@@ -625,5 +679,14 @@ if __name__ == '__main__':
     quantindex = np.floor(nrep * np.array([0.99, 0.95, 0.9])).astype(int)
     print bt[quantindex]
 
-
+    #the bootstrap results match Stephens pretty well for nobs=100, but not so well for
+    #large (1000) or small (20) nobs
+    '''
+    >>> np.array([15.0, 10.0, 5.0, 2.5, 1.0])/100.  #Stephens
+    array([ 0.15 ,  0.1  ,  0.05 ,  0.025,  0.01 ])
+    >>> nobs = 100
+    >>> [bootstrap(NewNorm(), args=(0,1), nobs=nobs, nrep=10000, value=c/ (1 + 4./nobs - 25./nobs**2)) for c in [0.576, 0.656, 0.787, 0.918, 1.092]]
+    [0.1545, 0.10009999999999999, 0.049000000000000002, 0.023, 0.0104]
+    >>>
+    '''
 
