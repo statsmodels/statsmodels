@@ -550,6 +550,8 @@ def bootstrap(distr, args=(), nobs=200, nrep=100, value=None, batch_size=None):
 
     rename function to less generic
 
+    this works also with nrep=1
+
     '''
     #signature similar to kstest ?
     #delegate to fn ?
@@ -561,6 +563,8 @@ def bootstrap(distr, args=(), nobs=200, nrep=100, value=None, batch_size=None):
     #it will be better to build a separate batch function that calls bootstrap
     #keep batch if value is true, but batch iterate from outside if stat is returned
     if (not batch_size is None):
+        if value is None:
+            raise ValueError('using batching requires a value')
         n_batch = int(np.ceil(nrep/float(batch_size)))
         count = 0
         for irep in xrange(n_batch):
@@ -569,28 +573,20 @@ def bootstrap(distr, args=(), nobs=200, nrep=100, value=None, batch_size=None):
             params = map(lambda x: np.expand_dims(x, 1), params)
             cdfvals = np.sort(distr.cdf(rvs, params), axis=1)
             stat = asquare(cdfvals, axis=1)
-            if value is None:           #return all bootstrap results
-                stat_sorted = np.sort(stat)
-                #yield stat_sorted
-
-            else:                       #calculate and return specific p-value
-                count += (stat >= value).sum()
-        if not value is None:
-            return count / float(n_batch * batch_size)
-
-
-
-    #rvs = distr.rvs(args, **kwds)  #extension to distribution kwds ?
-    rvs = distr.rvs(args, **{'size':(nrep, nobs)})
-    params = distr.fit_vec(rvs, axis=1)
-    params = map(lambda x: np.expand_dims(x, 1), params)
-    cdfvals = np.sort(distr.cdf(rvs, params), axis=1)
-    stat = asquare(cdfvals, axis=1)
-    if value is None:           #return all bootstrap results
-        stat_sorted = np.sort(stat)
-        return stat_sorted
-    else:                       #calculate and return specific p-value
-        return (stat >= value).mean()
+            count += (stat >= value).sum()
+        return count / float(n_batch * batch_size)
+    else:
+        #rvs = distr.rvs(args, **kwds)  #extension to distribution kwds ?
+        rvs = distr.rvs(args, **{'size':(nrep, nobs)})
+        params = distr.fit_vec(rvs, axis=1)
+        params = map(lambda x: np.expand_dims(x, 1), params)
+        cdfvals = np.sort(distr.cdf(rvs, params), axis=1)
+        stat = asquare(cdfvals, axis=1)
+        if value is None:           #return all bootstrap results
+            stat_sorted = np.sort(stat)
+            return stat_sorted
+        else:                       #calculate and return specific p-value
+            return (stat >= value).mean()
 
 
 
@@ -689,4 +685,21 @@ if __name__ == '__main__':
     [0.1545, 0.10009999999999999, 0.049000000000000002, 0.023, 0.0104]
     >>>
     '''
+
+    #test equality of loop, vectorized, batch-vectorized
+    np.random.seed(8765679)
+    resu1 = bootstrap(NewNorm(), args=(0,1), nobs=nobs, nrep=100,
+                      value=0.576/(1 + 4./nobs - 25./nobs**2))
+    np.random.seed(8765679)
+    tmp = [bootstrap(NewNorm(), args=(0,1), nobs=nobs, nrep=1) for _ in range(100)]
+    resu2 = (np.array(tmp) > 0.576/(1 + 4./nobs - 25./nobs**2)).mean()
+    np.random.seed(8765679)
+    tmp = [bootstrap(NewNorm(), args=(0,1), nobs=nobs, nrep=1,
+                     value=0.576/ (1 + 4./nobs - 25./nobs**2),
+                     batch_size=10) for _ in range(10)]
+    resu3 = np.array(resu).mean()
+    from numpy.testing import assert_almost_equal, assert_array_almost_equal
+    assert_array_almost_equal(resu1, resu2, 15)
+    assert_array_almost_equal(resu2, resu3, 15)
+
 
