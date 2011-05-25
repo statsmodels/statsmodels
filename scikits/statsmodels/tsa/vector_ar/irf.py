@@ -177,6 +177,40 @@ class IRAnalysis(BaseIRAnalysis):
 
         return covs
 
+    def cov_MC(self, orth=False, repl=1000, T=500):
+        """
+        Compute Monte Carlo standard errors assuming normally distributed
+
+        Notes
+        -----
+        Lutkepohl Appendix D
+
+        Returns
+        ------
+        """
+        if orth:
+            raise NotImplementedError("Orthgonalized Monte Carlo standard errors not yet available")
+        #use mean for starting value
+        model = self.model
+        neqs = model.neqs
+        mean = model.mean()
+        k_ar = model.k_ar
+        coefs = model.coefs
+        sigma_u = model.sigma_u
+
+        init = np.zeros((T,neqs))
+        P = np.linalg.cholesky(sigma_u)
+        for i in range(k_ar):
+            init[:,i] = mean()
+        for i in range(repl):
+            shocks = np.zeros((T,neqs))
+            new_pth = init
+            for t in range(T-4):
+	        shocks[t] = np.dot(P,np.random.normal(size=(neqs,1,None)))
+                new_pth[t+k_ar] =
+            #now use shocks and params to generate new path
+
+
     @cache_readonly
     def G(self):
         # Gi matrices as defined on p. 111
