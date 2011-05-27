@@ -197,17 +197,17 @@ class IRAnalysis(BaseIRAnalysis):
         k_ar = model.k_ar
         coefs = model.coefs
         sigma_u = model.sigma_u
+        intercept = model.intercept
 
         init = np.zeros((T,neqs))
         P = np.linalg.cholesky(sigma_u)
         for i in range(k_ar):
             init[:,i] = mean()
         for i in range(repl):
-            shocks = np.zeros((T,neqs))
-            new_pth = init
-            for t in range(T-4):
-	        shocks[t] = np.dot(P,np.random.normal(size=(neqs,1,None)))
-                new_pth[t+k_ar] =
+            #this needs to be changed once new function in place
+            sim = util.varsim(coefs, intercept, sigma_u, steps=T)
+
+
             #now use shocks and params to generate new path
 
 
