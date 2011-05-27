@@ -190,9 +190,8 @@ if __name__ == '__main__':
 
     print 'Results with MC class'
     mc1 = StatTestMC(normalnoisesim, lb)
-    #mc1.run(1000, statindices=[0,1])
     mc1.run(1000, statindices=range(8))
-    #print mc1.histogram(1, critval=[0.01, 0.025, 0.05, 0.1, 0.975])
+    print mc1.histogram(1, critval=[0.01, 0.025, 0.05, 0.1, 0.975])
     print mc1.quantiles(1)
-    #print mc1.quantiles(0)
-    #print mc1.histogram(0)
+    print mc1.quantiles(0)
+    print mc1.histogram(0)
