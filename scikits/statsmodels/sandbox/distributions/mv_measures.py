@@ -49,6 +49,27 @@ def mutualinfo_kde(y, x, normed=True):
     else:
         return mi
 
+def mutualinfo_kde_2sample(y, x, normed=True):
+    '''mutual information of two random variables estimated with kde
+
+    '''
+    nobs = len(x)
+    x = np.asarray(x, float)
+    y = np.asarray(y, float)
+    #yx = np.vstack((y,x))
+    kde_x = gaussian_kde(x.T)(x.T)
+    kde_y = gaussian_kde(y.T)(x.T)
+    #kde_yx = gaussian_kde(yx)(yx)
+
+    mi_obs = np.log(kde_x) - np.log(kde_y)
+    if len(mi_obs) != nobs: raise
+    mi = mi_obs.mean()
+    if normed:
+        mi_normed = np.sqrt(1. - np.exp(-2 * mi))
+        return mi_normed
+    else:
+        return mi
+
 def mutualinfo_binned(y, x, bins, normed=True):
     '''mutual information of two random variables estimated with kde
 
