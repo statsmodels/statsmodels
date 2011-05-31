@@ -97,11 +97,11 @@ def plot_with_error(y, error, x=None, axes=None, value_fmt='k',
 
     #changed this
     if error is not None:
-        if stderr_type = 'asym':
+        if stderr_type == 'asym':
             q = util.norm_signif_level(alpha)
             plot_action(y - q * error, error_fmt)
             plot_action(y + q * error, error_fmt)
-        if stderr_type = 'mc':
+        if stderr_type == 'mc':
             plot_action(error[0], error_fmt)
             plot_action(error[1], error_fmt)
 
@@ -200,15 +200,14 @@ def irf_grid_plot(values, stderr, impcol, rescol, names, title,
 
         # HACK?
         if stderr is not None:
-            if stderr == 'asym':
+            if stderr_type == 'asym':
                 sig = np.sqrt(stderr[:, j * k + i, j * k + i])
                 plot_with_error(values[:, i, j], sig, x=rng, axes=ax,
-                            alpha=signif, value_fmt='b')
-            if stderr == 'mc':
-                errs = stderr[0][:, j * k + i, j * k + i],
-                       stderr[1][:, j *k + i, j * k +i]
+                            alpha=signif, value_fmt='b', stderr_type='asym')
+            if stderr_type == 'mc':
+                errs = stderr[0][:, i, j], stderr[1][:, i, j]
                 plot_with_error(values[:, i, j], errs, x=rng, axes=ax,
-                            alpha=signif, value_fmt='b')
+                            alpha=signif, value_fmt='b', stderr_type='mc')
         else:
             plot_with_error(values[:, i, j], None, x=rng, axes=ax,
                             value_fmt='b')

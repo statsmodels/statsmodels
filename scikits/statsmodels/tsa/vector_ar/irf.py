@@ -12,7 +12,7 @@ from scipy import stats
 
 from scikits.statsmodels.tools.decorators import cache_readonly
 from scikits.statsmodels.tools.tools import chain_dot
-from scikits.statsmodels.tsa.vector_ar.var_model import VAR
+#from scikits.statsmodels.tsa.api import VAR
 
 import scikits.statsmodels.tsa.tsatools as tsa
 import scikits.statsmodels.tsa.vector_ar.plotting as plotting
@@ -96,6 +96,7 @@ class BaseIRAnalysis(object):
             Number of replications for monte carlo standard errors
         """
         periods = self.periods
+        model = self.model
 
         if orth:
             title = 'Impulse responses (orthogonalized)'
@@ -104,13 +105,13 @@ class BaseIRAnalysis(object):
             title = 'Impulse responses'
             irfs = self.irfs
 
-        if stderr_type not in ['asymp','mc']:
+        if stderr_type not in ['asym','mc']:
             raise TypeError
         else:
             if stderr_type == 'asym':
                 stderr = self.cov(orth=orth)
             if stderr_type == 'mc':
-                stderr = self.stderr(orth=orth, repl=1000, T=periods, signif=signif)
+                stderr = self.cov_mc(orth=orth, repl=1000, signif=signif)
 
         #try:
         #    stderr = self.cov(orth=orth)
@@ -123,7 +124,7 @@ class BaseIRAnalysis(object):
         plotting.irf_grid_plot(irfs, stderr, impulse, response,
                                self.model.names, title, signif=signif,
                                subplot_params=subplot_params,
-                               plot_params=plot_params)
+                               plot_params=plot_params, stderr_type=stderr_type)
 
     def plot_cum_effects(self, orth=False, impulse=None, response=None,
                          signif=0.05, plot_params=None,
@@ -152,7 +153,7 @@ class BaseIRAnalysis(object):
         plotting.irf_grid_plot(cum_effects, stderr, impulse, response,
                                self.model.names, title, signif=signif,
                                hlines=lr_effects, subplot_params=subplot_params,
-                               plot_params=plot_params)
+                               plot_params=plot_params, stderr_type='asym')
 
 class IRAnalysis(BaseIRAnalysis):
     """
@@ -199,44 +200,13 @@ class IRAnalysis(BaseIRAnalysis):
 
         return covs
 
-    def stderr_MC(self, orth=False, repl=1000, T=500, signif=0.05):
+    def cov_mc(self, orth=False, repl=1000, signif=0.05):
         """
-        Compute Monte Carlo standard errors assuming normally distributed
-
-        Notes
-        -----
-        Lutkepohl Appendix D
-
-        Returns
-        ------
-        Tuple of lower and upper arrays of ma_rep standard errors
-
+        IRF Monte Carlo standard errors
         """
-        if orth:
-            raise NotImplementedError("Orthogonalized MC standard errors not available")
-        #use mean for starting value
         model = self.model
-        neqs = model.neqs
-        mean = model.mean()
-        k_ar = model.k_ar
-        coefs = model.coefs
-        sigma_u = model.sigma_u
-        intercept = model.intercept
-
-        #init = np.zeros((T,neqs))
-        #P = np.linalg.cholesky(sigma_u)
-        #for i in range(k_ar):
-        #    init[:,i] = mean()
-        ma_coll = np.zeros(T, neqs, neqs, repl)
-        for i in range(repl):
-            sim = util.varsim(coefs, intercept, sigma_u, steps=T)
-            ma_coll[:,:,:,i] = VAR(sim).fit().ma_rep(maxn=T)
-        #now sort
-        ma_sort = np.sort(ma_coll, axis=0)
-        index = round(signif/2*1000),round((1-signif/2)*1000)
-        lower = ma_sort[:, :, :, index[0]-1]
-        upper = ma_sort[:, :, :, index[1]-1]
-        return lower, upper
+        periods = self.periods
+        return self.model.stderr_MC(orth=orth, repl=repl, T=periods, signif=signif)
 
     @cache_readonly
     def G(self):
