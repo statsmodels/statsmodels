@@ -8,8 +8,11 @@ import numpy as np
 import numpy.linalg as la
 import scipy.linalg as L
 
+from scipy import stats
+
 from scikits.statsmodels.tools.decorators import cache_readonly
 from scikits.statsmodels.tools.tools import chain_dot
+from scikits.statsmodels.tsa.vector_ar.var_model import VAR
 
 import scikits.statsmodels.tsa.tsatools as tsa
 import scikits.statsmodels.tsa.vector_ar.plotting as plotting
@@ -64,7 +67,8 @@ class BaseIRAnalysis(object):
         raise NotImplementedError
 
     def plot(self, orth=False, impulse=None, response=None, signif=0.05,
-             plot_params=None, subplot_params=None, plot_stderr=True):
+             plot_params=None, subplot_params=None, plot_stderr=True,
+             stderr_type='asym', repl=1000):
         """
         Plot impulse responses
 
@@ -82,7 +86,17 @@ class BaseIRAnalysis(object):
             To pass to subplot plotting funcions. Example: if fonts are too big,
             pass {'fontsize' : 8} or some number to your taste.
         plot_params : dict
+
+        plot_stderr: bool, default True
+            Plot standard impulse response error bands
+        stderr_type: string
+            'asym': default, computes asymptotic standard errors
+            'mc': monte carlo standard errors (use rpl)
+        repl: int, default 1000
+            Number of replications for monte carlo standard errors
         """
+        periods = self.periods
+
         if orth:
             title = 'Impulse responses (orthogonalized)'
             irfs = self.orth_irfs
@@ -90,13 +104,21 @@ class BaseIRAnalysis(object):
             title = 'Impulse responses'
             irfs = self.irfs
 
-        try:
-            stderr = self.cov(orth=orth)
-        except NotImplementedError: # pragma: no cover
-            stderr = None
+        if stderr_type not in ['asymp','mc']:
+            raise TypeError
+        else:
+            if stderr_type == 'asym':
+                stderr = self.cov(orth=orth)
+            if stderr_type == 'mc':
+                stderr = self.stderr(orth=orth, repl=1000, T=periods, signif=signif)
 
-        if not plot_stderr:
-            stderr = None
+        #try:
+        #    stderr = self.cov(orth=orth)
+        #except NotImplementedError: # pragma: no cover
+        #    stderr = None
+
+        #if not plot_stderr:
+        #    stderr = None
 
         plotting.irf_grid_plot(irfs, stderr, impulse, response,
                                self.model.names, title, signif=signif,
@@ -177,7 +199,7 @@ class IRAnalysis(BaseIRAnalysis):
 
         return covs
 
-    def cov_MC(self, orth=False, repl=1000, T=500):
+    def stderr_MC(self, orth=False, repl=1000, T=500, signif=0.05):
         """
         Compute Monte Carlo standard errors assuming normally distributed
 
@@ -187,9 +209,11 @@ class IRAnalysis(BaseIRAnalysis):
 
         Returns
         ------
+        Tuple of lower and upper arrays of ma_rep standard errors
+
         """
         if orth:
-            raise NotImplementedError("Orthgonalized Monte Carlo standard errors not yet available")
+            raise NotImplementedError("Orthogonalized MC standard errors not available")
         #use mean for starting value
         model = self.model
         neqs = model.neqs
@@ -199,17 +223,20 @@ class IRAnalysis(BaseIRAnalysis):
         sigma_u = model.sigma_u
         intercept = model.intercept
 
-        init = np.zeros((T,neqs))
-        P = np.linalg.cholesky(sigma_u)
-        for i in range(k_ar):
-            init[:,i] = mean()
+        #init = np.zeros((T,neqs))
+        #P = np.linalg.cholesky(sigma_u)
+        #for i in range(k_ar):
+        #    init[:,i] = mean()
+        ma_coll = np.zeros(T, neqs, neqs, repl)
         for i in range(repl):
-            #this needs to be changed once new function in place
             sim = util.varsim(coefs, intercept, sigma_u, steps=T)
-
-
-            #now use shocks and params to generate new path
-
+            ma_coll[:,:,:,i] = VAR(sim).fit().ma_rep(maxn=T)
+        #now sort
+        ma_sort = np.sort(ma_coll, axis=0)
+        index = round(signif/2*1000),round((1-signif/2)*1000)
+        lower = ma_sort[:, :, :, index[0]-1]
+        upper = ma_sort[:, :, :, index[1]-1]
+        return lower, upper
 
     @cache_readonly
     def G(self):

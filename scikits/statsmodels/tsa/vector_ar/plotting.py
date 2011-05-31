@@ -78,7 +78,7 @@ def plot_var_forc(prior, forc, err_upper, err_lower,
                'upper right')
 
 def plot_with_error(y, error, x=None, axes=None, value_fmt='k',
-                    error_fmt='k--', alpha=0.05):
+                    error_fmt='k--', alpha=0.05, stderr_type = 'asym'):
     """
     Make plot with optional error bars
 
@@ -95,10 +95,15 @@ def plot_with_error(y, error, x=None, axes=None, value_fmt='k',
     plot_action = lambda y, fmt: axes.plot(x, y, fmt)
     plot_action(y, value_fmt)
 
+    #changed this
     if error is not None:
-        q = util.norm_signif_level(alpha)
-        plot_action(y - q * error, error_fmt)
-        plot_action(y + q * error, error_fmt)
+        if stderr_type = 'asym':
+            q = util.norm_signif_level(alpha)
+            plot_action(y - q * error, error_fmt)
+            plot_action(y + q * error, error_fmt)
+        if stderr_type = 'mc':
+            plot_action(error[0], error_fmt)
+            plot_action(error[1], error_fmt)
 
 def plot_full_acorr(acorr, fontsize=8, linewidth=8, xlabel=None,
                     err_bound=None):
@@ -161,7 +166,7 @@ def adjust_subplots(**kwds):
 
 def irf_grid_plot(values, stderr, impcol, rescol, names, title,
                   signif=0.05, hlines=None, subplot_params=None,
-                  plot_params=None, figsize=(10,10)):
+                  plot_params=None, figsize=(10,10), stderr_type='asym'):
     """
     Reusable function to make flexible grid plots of impulse responses and
     comulative effects
@@ -195,8 +200,14 @@ def irf_grid_plot(values, stderr, impcol, rescol, names, title,
 
         # HACK?
         if stderr is not None:
-            sig = np.sqrt(stderr[:, j * k + i, j * k + i])
-            plot_with_error(values[:, i, j], sig, x=rng, axes=ax,
+            if stderr == 'asym':
+                sig = np.sqrt(stderr[:, j * k + i, j * k + i])
+                plot_with_error(values[:, i, j], sig, x=rng, axes=ax,
+                            alpha=signif, value_fmt='b')
+            if stderr == 'mc':
+                errs = stderr[0][:, j * k + i, j * k + i],
+                       stderr[1][:, j *k + i, j * k +i]
+                plot_with_error(values[:, i, j], errs, x=rng, axes=ax,
                             alpha=signif, value_fmt='b')
         else:
             plot_with_error(values[:, i, j], None, x=rng, axes=ax,
