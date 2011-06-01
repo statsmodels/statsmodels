@@ -8,8 +8,11 @@ import numpy as np
 import numpy.linalg as la
 import scipy.linalg as L
 
+from scipy import stats
+
 from scikits.statsmodels.tools.decorators import cache_readonly
 from scikits.statsmodels.tools.tools import chain_dot
+#from scikits.statsmodels.tsa.api import VAR
 
 import scikits.statsmodels.tsa.tsatools as tsa
 import scikits.statsmodels.tsa.vector_ar.plotting as plotting
@@ -64,7 +67,8 @@ class BaseIRAnalysis(object):
         raise NotImplementedError
 
     def plot(self, orth=False, impulse=None, response=None, signif=0.05,
-             plot_params=None, subplot_params=None, plot_stderr=True):
+             plot_params=None, subplot_params=None, plot_stderr=True,
+             stderr_type='asym', repl=1000):
         """
         Plot impulse responses
 
@@ -82,7 +86,18 @@ class BaseIRAnalysis(object):
             To pass to subplot plotting funcions. Example: if fonts are too big,
             pass {'fontsize' : 8} or some number to your taste.
         plot_params : dict
+
+        plot_stderr: bool, default True
+            Plot standard impulse response error bands
+        stderr_type: string
+            'asym': default, computes asymptotic standard errors
+            'mc': monte carlo standard errors (use rpl)
+        repl: int, default 1000
+            Number of replications for monte carlo standard errors
         """
+        periods = self.periods
+        model = self.model
+
         if orth:
             title = 'Impulse responses (orthogonalized)'
             irfs = self.orth_irfs
@@ -90,18 +105,26 @@ class BaseIRAnalysis(object):
             title = 'Impulse responses'
             irfs = self.irfs
 
-        try:
-            stderr = self.cov(orth=orth)
-        except NotImplementedError: # pragma: no cover
-            stderr = None
+        if stderr_type not in ['asym','mc']:
+            raise TypeError
+        else:
+            if stderr_type == 'asym':
+                stderr = self.cov(orth=orth)
+            if stderr_type == 'mc':
+                stderr = self.cov_mc(orth=orth, repl=1000, signif=signif)
 
-        if not plot_stderr:
-            stderr = None
+        #try:
+        #    stderr = self.cov(orth=orth)
+        #except NotImplementedError: # pragma: no cover
+        #    stderr = None
+
+        #if not plot_stderr:
+        #    stderr = None
 
         plotting.irf_grid_plot(irfs, stderr, impulse, response,
                                self.model.names, title, signif=signif,
                                subplot_params=subplot_params,
-                               plot_params=plot_params)
+                               plot_params=plot_params, stderr_type=stderr_type)
 
     def plot_cum_effects(self, orth=False, impulse=None, response=None,
                          signif=0.05, plot_params=None,
@@ -130,7 +153,7 @@ class BaseIRAnalysis(object):
         plotting.irf_grid_plot(cum_effects, stderr, impulse, response,
                                self.model.names, title, signif=signif,
                                hlines=lr_effects, subplot_params=subplot_params,
-                               plot_params=plot_params)
+                               plot_params=plot_params, stderr_type='asym')
 
 class IRAnalysis(BaseIRAnalysis):
     """
@@ -177,39 +200,13 @@ class IRAnalysis(BaseIRAnalysis):
 
         return covs
 
-    def cov_MC(self, orth=False, repl=1000, T=500):
+    def cov_mc(self, orth=False, repl=1000, signif=0.05):
         """
-        Compute Monte Carlo standard errors assuming normally distributed
-
-        Notes
-        -----
-        Lutkepohl Appendix D
-
-        Returns
-        ------
+        IRF Monte Carlo standard errors
         """
-        if orth:
-            raise NotImplementedError("Orthgonalized Monte Carlo standard errors not yet available")
-        #use mean for starting value
         model = self.model
-        neqs = model.neqs
-        mean = model.mean()
-        k_ar = model.k_ar
-        coefs = model.coefs
-        sigma_u = model.sigma_u
-
-        init = np.zeros((T,neqs))
-        P = np.linalg.cholesky(sigma_u)
-        for i in range(k_ar):
-            init[:,i] = mean()
-        for i in range(repl):
-            shocks = np.zeros((T,neqs))
-            new_pth = init
-            for t in range(T-4):
-	        shocks[t] = np.dot(P,np.random.normal(size=(neqs,1,None)))
-                new_pth[t+k_ar] =
-            #now use shocks and params to generate new path
-
+        periods = self.periods
+        return self.model.stderr_MC(orth=orth, repl=repl, T=periods, signif=signif)
 
     @cache_readonly
     def G(self):

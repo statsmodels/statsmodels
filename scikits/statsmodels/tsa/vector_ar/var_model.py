@@ -995,6 +995,45 @@ class VARResults(VARProcess):
         omegas = self._omega_forc_cov(steps)
         return mse + omegas / self.nobs
 
+    #Monte Carlo irf standard errors
+    def stderr_MC(self, orth=False, repl=1000, T=25, signif=0.05):
+        """
+        Compute Monte Carlo standard errors assuming normally distributed
+
+        Notes
+        -----
+        Lutkepohl Appendix D
+
+        Returns
+        ------
+        Tuple of lower and upper arrays of ma_rep monte carlo standard errors
+
+        """
+        if orth:
+            raise NotImplementedError("Orthogonalized MC standard errors not available")
+        #use mean for starting value
+        neqs = self.neqs
+        mean = self.mean()
+        k_ar = self.k_ar
+        coefs = self.coefs
+        sigma_u = self.sigma_u
+        intercept = self.intercept
+        disc = 500
+
+        #Right now the errors are WAY too big, something is wrong
+
+        ma_coll = np.zeros([T+1, neqs, neqs, repl])
+        for i in range(repl):
+            #discard first hundred to eliminate correct for starting bias
+            sim = util.varsim(coefs, intercept, sigma_u, steps=T+disc)
+            sim = sim[disc:]
+            ma_coll[:,:,:,i] = VAR(sim).fit(maxlags=k_ar).ma_rep(maxn=T)
+        ma_sort = np.sort(ma_coll, axis=3) #sort to get quantiles
+        index = round(signif/2*repl),round((1-signif/2)*repl)
+        lower = ma_sort[:, :, :, index[0]-1]
+        upper = ma_sort[:, :, :, index[1]-1]
+        return lower, upper
+
     def _omega_forc_cov(self, steps):
         # Approximate MSE matrix \Omega(h) as defined in Lut p97
         G = self._zz
