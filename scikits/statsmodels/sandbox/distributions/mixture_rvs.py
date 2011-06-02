@@ -86,8 +86,6 @@ class MixtureDistribution(object):
         ----------
         prob : array-like
             Probability of sampling from each distribution in dist
-        size : int
-            The length of the returned sample.
         dist : array-like
             An iterable of distributions objects from scipy.stats.
         kwargs : tuple of dicts, optional
