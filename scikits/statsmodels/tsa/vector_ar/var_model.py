@@ -1018,9 +1018,7 @@ class VARResults(VARProcess):
         coefs = self.coefs
         sigma_u = self.sigma_u
         intercept = self.intercept
-        disc = 500
-
-        #Right now the errors are WAY too big, something is wrong
+        disc = 500 #number of simulated observations to discard
 
         ma_coll = np.zeros([T+1, neqs, neqs, repl])
         for i in range(repl):

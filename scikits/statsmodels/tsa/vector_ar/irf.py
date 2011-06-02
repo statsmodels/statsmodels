@@ -113,17 +113,8 @@ class BaseIRAnalysis(object):
             if stderr_type == 'asym':
                 stderr = self.cov(orth=orth)
             if stderr_type == 'mc':
-                stderr = self.cov_mc(orth=orth, repl=1000,
+                stderr = self.cov_mc(orth=orth, repl=repl,
                                      signif=signif, seed=seed)
-
-        #try:
-        #    stderr = self.cov(orth=orth)
-        #except NotImplementedError: # pragma: no cover
-        #    stderr = None
-
-        #if not plot_stderr:
-        #    stderr = None
-
         plotting.irf_grid_plot(irfs, stderr, impulse, response,
                                self.model.names, title, signif=signif,
                                subplot_params=subplot_params,
