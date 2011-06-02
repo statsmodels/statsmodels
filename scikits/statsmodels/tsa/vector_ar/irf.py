@@ -68,7 +68,7 @@ class BaseIRAnalysis(object):
 
     def plot(self, orth=False, impulse=None, response=None, signif=0.05,
              plot_params=None, subplot_params=None, plot_stderr=True,
-             stderr_type='asym', repl=1000):
+             stderr_type='asym', repl=1000, seed=None):
         """
         Plot impulse responses
 
@@ -94,6 +94,8 @@ class BaseIRAnalysis(object):
             'mc': monte carlo standard errors (use rpl)
         repl: int, default 1000
             Number of replications for monte carlo standard errors
+        seed: int
+            np.random.seed for Monte Carlo replications
         """
         periods = self.periods
         model = self.model
@@ -111,7 +113,8 @@ class BaseIRAnalysis(object):
             if stderr_type == 'asym':
                 stderr = self.cov(orth=orth)
             if stderr_type == 'mc':
-                stderr = self.cov_mc(orth=orth, repl=1000, signif=signif)
+                stderr = self.cov_mc(orth=orth, repl=1000,
+                                     signif=signif, seed=seed)
 
         #try:
         #    stderr = self.cov(orth=orth)
@@ -200,13 +203,14 @@ class IRAnalysis(BaseIRAnalysis):
 
         return covs
 
-    def cov_mc(self, orth=False, repl=1000, signif=0.05):
+    def cov_mc(self, orth=False, repl=1000, signif=0.05, seed=None):
         """
         IRF Monte Carlo standard errors
         """
         model = self.model
         periods = self.periods
-        return self.model.stderr_MC(orth=orth, repl=repl, T=periods, signif=signif)
+        return self.model.stderr_MC(orth=orth, repl=repl,
+                                    T=periods, signif=signif, seed=seed)
 
     @cache_readonly
     def G(self):

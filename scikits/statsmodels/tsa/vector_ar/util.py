@@ -170,11 +170,13 @@ def acf_to_acorr(acf):
     return acf / np.sqrt(np.outer(diag, diag))
 
 
-def varsim(coefs, intercept, sig_u, steps=100, initvalues=None):
+def varsim(coefs, intercept, sig_u, steps=100, initvalues=None, seed=None):
     """
     Simulate simple VAR(p) process with known coefficients, intercept, white
     noise covariance, etc.
     """
+    if seed is not None:
+        np.random.seed(seed=seed)
     from numpy.random import multivariate_normal as rmvnorm
     p, k, k = coefs.shape
     ugen = rmvnorm(np.zeros(len(sig_u)), sig_u, steps)
