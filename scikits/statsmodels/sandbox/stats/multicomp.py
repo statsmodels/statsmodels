@@ -1420,16 +1420,18 @@ def contrast_diff_mean(nm):
     '''
     return np.eye(nm) - np.ones((nm,nm))/nm
 
-def tukey_pvalues(std_range, df):
+def tukey_pvalues(std_range, nm, df):
+    #corrected but very slow with warnings about integration
     from scikits.statsmodels.sandbox.distributions.multivariate import mvstdtprob
-    nm = len(std_range)
+    #nm = len(std_range)
     contr = contrast_allpairs(nm)
     corr = np.dot(contr, contr.T)/2.
-    tstat = std_range / np.sqrt(2)
+    tstat = std_range / np.sqrt(2) * np.ones(corr.shape[0]) #need len of all pairs
     return multicontrast_pvalues(tstat, corr, df=df)
 
 def test_tukey_pvalues():
-    res = tukey_pvalues(3.649*np.ones(3), 16)
+    #testcase with 3 is not good because all pairs has also 3*(3-1)/2=3 elements
+    res = tukey_pvalues(3.649, 3, 16) #3.649*np.ones(3), 16)
     assert_almost_equal(0.05, res[0], 3)
     assert_almost_equal(0.05*np.ones(3), res[1], 3)
 
@@ -1932,3 +1934,4 @@ if __name__ == '__main__':
     print 'fdr_gbs', multipletests(pvals, alpha=0.05, method='fdr_gbs')
     #multicontrast_pvalues(tstat, tcorr, df)
     test_tukey_pvalues()
+    tukey_pvalues(3.649, 3, 16)
