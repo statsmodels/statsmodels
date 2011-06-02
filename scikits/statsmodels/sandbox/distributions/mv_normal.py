@@ -19,37 +19,141 @@ from scikits.statsmodels.sandbox.distributions.multivariate import (
                 mvstdtprob, mvstdnormcdf)
 
 def expect_mc(dist, func=lambda x: 1, size=50000):
-    def fun(x):
-        return func(x) * dist.pdf(x)
-    rvs = dist.rvs(size=size)
-    return fun(rvs).mean(0)
-
-def expect_mc_bounds(dist, func=lambda x: 1, size=50000, lower=None, upper=None,
-                     overfact=1.2):
     '''calculate expected value of function by Monte Carlo integration
+
+    Parameters
+    ----------
+    dist : distribution instance
+        needs to have rvs defined as a method for drawing random numbers
+    func : callable
+        function for which expectation is calculated, this function needs to
+        be vectorized, integration is over axis=0
+    size : int
+        number of random samples to use in the Monte Carlo integration,
+
 
     Notes
     -----
     this doesn't batch
 
-    not checked yet
+    Returns
+    -------
+    expected value : ndarray
+        return of function func integrated over axis=0 by MonteCarlo, this will
+        have the same shape as the return of func without axis=0
+
+    Examples
+    --------
+
+    integrate probability that both observations are negative
+
+    >>> mvn = mve.MVNormal([0,0],2.)
+    >>> mve.expect_mc(mvn, lambda x: (x<np.array([0,0])).all(-1), size=100000)
+    0.25306000000000001
 
     '''
     def fun(x):
-        return func(x) * dist.pdf(x)
+        return func(x) # * dist.pdf(x)
+    rvs = dist.rvs(size=size)
+    return fun(rvs).mean(0)
+
+def expect_mc_bounds(dist, func=lambda x: 1, size=50000, lower=None, upper=None,
+                     conditional=False, overfact=1.2):
+    '''calculate expected value of function by Monte Carlo integration
+
+    Parameters
+    ----------
+    dist : distribution instance
+        needs to have rvs defined as a method for drawing random numbers
+    func : callable
+        function for which expectation is calculated, this function needs to
+        be vectorized, integration is over axis=0
+    size : int
+        minimum number of random samples to use in the Monte Carlo integration,
+        the actual number used can be larger because of oversampling.
+    lower : None or array_like
+        lower integration bounds, if None, then it is set to -inf
+    upper : None or array_like
+        upper integration bounds, if None, then it is set to +inf
+    conditional : bool
+        If true, then the expectation is conditional on being in within
+        [lower, upper] bounds, otherwise it is unconditional
+    overfact : float
+        oversampling factor, the actual number of random variables drawn in
+        each attempt are overfact * remaining draws. Extra draws are also
+        used in the integration.
+
+
+    Notes
+    -----
+    this doesn't batch
+
+    Returns
+    -------
+    expected value : ndarray
+        return of function func integrated over axis=0 by MonteCarlo, this will
+        have the same shape as the return of func without axis=0
+
+    Examples
+    --------
+    >>> mvn = mve.MVNormal([0,0],2.)
+    >>> mve.expect_mc_bounds(mvn, lambda x: np.ones(x.shape[0]),
+                                lower=[-10,-10],upper=[0,0])
+    0.24990416666666668
+
+    get 3 marginal moments with one integration
+
+    >>> mvn = mve.MVNormal([0,0],1.)
+    >>> mve.expect_mc_bounds(mvn, lambda x: np.dstack([x, x**2, x**3, x**4]),
+        lower=[-np.inf,-np.inf], upper=[np.inf,np.inf])
+    array([[  2.88629497e-03,   9.96706297e-01,  -2.51005344e-03,
+              2.95240921e+00],
+           [ -5.48020088e-03,   9.96004409e-01,  -2.23803072e-02,
+              2.96289203e+00]])
+    >>> from scipy import stats
+    >>> [stats.norm.moment(i) for i in [1,2,3,4]]
+    [0.0, 1.0, 0.0, 3.0]
+
+
+    '''
+    #call rvs once to find length of random vector
+    rvsdim = dist.rvs(size=1).shape[-1]
+    if lower is None:
+        lower = -np.inf * np.ones(rvsdim)
+    else:
+        lower = np.asarray(lower)
+    if upper is None:
+        upper = np.inf * np.ones(rvsdim)
+    else:
+        upper = np.asarray(upper)
+
+    def fun(x):
+        return func(x) # * dist.pdf(x)
 
     rvsli = []
-    remain = size
+    used = 0 #remain = size  #inplace changes size
+    total = 0
     while True:
-        rvs = dist.rvs(size=int(size * overfact))
-        rvsok = rvs[(rvs >= lower) & (rvs <= upper)]
+        remain = size - used  #just a temp variable
+        rvs = dist.rvs(size=int(remain * overfact))
+        total += int(size * overfact)
+
+        rvsok = rvs[((rvs >= lower) & (rvs <= upper)).all(-1)]
         #if rvsok.ndim == 1: #possible shape problems if only 1 random vector
         rvsok = np.atleast_2d(rvsok)
-        remain -= rvsok.shape[0]
-        rvsli.append(rvsok[:remain])
-        if remain <= 0: break
+        used += rvsok.shape[0]
+
+        rvsli.append(rvsok)   #[:remain]) use extras instead
+        print used
+        if used >= size: break
     rvs = np.vstack(rvsli)
-    return fun(rvs).mean(0)
+    print rvs.shape
+    assert used == rvs.shape[0] #saftey check
+    mean_conditional = fun(rvs).mean(0)
+    if conditional:
+        return mean_conditional
+    else:
+        return mean_conditional * (used * 1. / total)
 
 
 def bivariate_normal(x, mu, cov):
@@ -500,7 +604,7 @@ class MVNormal(MVElliptical):
     def cdf(self, x, **kwds):
         '''TODO: test the normalization in here or use non-standardized cdf'''
         lower = -np.inf * np.ones_like(x)
-        return mvstdnormcdf(lower, self.standardize(upper), self.corr, **kwds)
+        return mvstdnormcdf(lower, self.standardize(x), self.corr, **kwds)
 
     @property
     def cov(self):
@@ -546,7 +650,7 @@ class MVT(MVElliptical):
     def cdf(self, x, **kwds):
         '''TODO: test the normalization in here'''
         lower = -np.inf * np.ones_like(x)
-        return mvstdtcdf(lower, self.standardize(upper), self.corr, df, **kwds)
+        return mvstdtcdf(lower, self.standardize(x), self.corr, df, **kwds)
 
     @property
     def cov(self):
