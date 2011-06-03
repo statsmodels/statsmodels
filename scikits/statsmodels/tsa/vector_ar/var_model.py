@@ -412,7 +412,7 @@ class VAR(object):
         selections : dict {info_crit -> selected_order}
         """
         if maxlags is None:
-            maxlags = int(round(12*(self.nobs/100.)**(1/4.)))
+            maxlags = int(round(12*(len(self.endog)/100.)**(1/4.)))
 
         ics = defaultdict(list)
         for p in range(maxlags + 1):
