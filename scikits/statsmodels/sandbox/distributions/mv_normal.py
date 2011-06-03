@@ -7,16 +7,30 @@ Created on Sat May 28 15:38:23 2011
 
 @author: Josef Perktold
 
-TODO: rename again,
-    after adding t distribution, cov doesn't make sense for Sigma    DONE
-    I kept the original MVNormal0 class as reference, can be deleted
+TODO:
+* renaming,
+    - after adding t distribution, cov doesn't make sense for Sigma    DONE
+    - should mean also be renamed to mu, if there will be distributions
+      with mean != mu
+* not sure about corner cases
+    - behavior with (almost) singular sigma or transforms
+    - df <= 2, is everything correct if variance is not finite or defined ?
+* check to return possibly univariate distribution for marginals or conditional
+    distributions, does univariate special case work?
+* are all the extra transformation methods useful outside of testing ?
+* new methods marginal, conditional, ... just added, typos ?
+
+I kept the original MVNormal0 class as reference, can be deleted
+
+
+
 
 """
 
 import numpy as np
 
 from scikits.statsmodels.sandbox.distributions.multivariate import (
-                mvstdtprob, mvstdnormcdf)
+                mvstdtprob, mvstdnormcdf, mvnormcdf)
 
 def expect_mc(dist, func=lambda x: 1, size=50000):
     '''calculate expected value of function by Monte Carlo integration
@@ -50,6 +64,18 @@ def expect_mc(dist, func=lambda x: 1, size=50000):
     >>> mvn = mve.MVNormal([0,0],2.)
     >>> mve.expect_mc(mvn, lambda x: (x<np.array([0,0])).all(-1), size=100000)
     0.25306000000000001
+
+    get tail probabilities of marginal distribution (should be 0.1)
+
+    >>> c = stats.norm.isf(0.05, scale=np.sqrt(2.))
+    >>> expect_mc(mvn, lambda x: (np.abs(x)>np.array([c, c])), size=100000)
+    array([ 0.09969,  0.0986 ])
+
+    or calling the method
+
+    >>> mvn.expect_mc(lambda x: (np.abs(x)>np.array([c, c])), size=100000)
+    array([ 0.09937,  0.10075])
+
 
     '''
     def fun(x):
@@ -242,6 +268,7 @@ class MVElliptical(object):
 
 
     def __init__(self, mean, sigma, *args, **kwds):
+        self.extra_args = []
         self.mean = mean
         self.sigma = sigma = np.asarray(sigma)
         sigma = np.squeeze(sigma)
@@ -314,6 +341,10 @@ class MVElliptical(object):
         '''
         raise NotImplementedError
 
+    def affine_transformed(self, shift, scale_matrix):
+        #implemented in subclass at least for now
+        raise NotImplementedError
+
     def whiten(self, x):
         """
         whiten the data by linear transformation
@@ -383,6 +414,67 @@ class MVElliptical(object):
         '''
         return self.whiten(x - self.mean)
 
+    def standardized(self):
+        return self.affine_transform(-self.mu, self.cholsigmainv)
+
+
+    def normalize(self, x):
+        '''normalize the random variable, i.e. subtract mean and rescale
+
+        The distribution will have zero mean and covariance equal to correlation
+
+        Parameters
+        -----------
+        x : array-like, 1d or 2d
+            Data to be whitened, if 2d then each row contains an independent
+            sample of the multivariate random vector
+
+        Returns
+        -------
+        (x - self.mean)/outer(std, std)
+
+        Notes
+        -----
+
+
+        See Also
+        --------
+        whiten : rescale random variable, standardize without subtracting mean.
+
+
+        '''
+        std_ = np.atleast_2d(self.std)
+        return (x - self.mean)/std/std.T
+
+    def normalized(self, demeaned=True):
+        '''return a normalized distribution where cov=corr
+
+        if demeaned is True, then mean will be set to zero
+
+        '''
+        if demeaned:
+            mean_new = np.zeros_like(self.mean)
+        else:
+            mean_new = self.mean / self.std
+        sigma_new = self.corr
+        args = [getattr(self, ea) for ea in self.extra_args]
+        return self.__class__(mean_new, sigma_new, *args)
+
+    def normalized2(self, demeaned=True):
+        '''return a normalized distribution where cov=corr
+
+
+
+        second implementation for testing affine transformation
+        '''
+        if demeaned:
+            shift = -self.mu
+        else:
+            shift = self.mu * (1. / self.std - 1.)
+        return self.affine_transform(shift, self.cholsigmainv)
+
+
+
     @property
     def std(self):
         '''standard deviation, square root of diagonal elements of cov
@@ -396,6 +488,17 @@ class MVElliptical(object):
         return self.cov / np.outer(self.std, self.std)
 
     expect_mc = expect_mc
+
+    def marginal(self, indices):
+        '''return marginal distribution for variables given by indices
+
+        this should be correct for normal and t distribution
+
+        '''
+        mean_new = self.mean[indices]
+        sigma_new = self.sigma[indices[:,None], indices]
+        args = [getattr(self, ea) for ea in self.extra_args]
+        return self.__class__(mean_new, sigma_new, *args)
 
 
 #parts taken from linear_model, but heavy adjustments
@@ -549,6 +652,8 @@ class MVNormal(MVElliptical):
     of the data
 
     '''
+    __name__ == 'Multivariate Normal Distribution'
+
 
     def rvs(self, size=1):
         '''random variable
@@ -603,14 +708,57 @@ class MVNormal(MVElliptical):
 
     def cdf(self, x, **kwds):
         '''TODO: test the normalization in here or use non-standardized cdf'''
-        lower = -np.inf * np.ones_like(x)
-        return mvstdnormcdf(lower, self.standardize(x), self.corr, **kwds)
+        #lower = -np.inf * np.ones_like(x)
+        #return mvstdnormcdf(lower, self.standardize(x), self.corr, **kwds)
+        return mvnormcdf(x, self.mean, self.cov, **kwds)
 
     @property
     def cov(self):
         '''covariance matrix'''
         return self.sigma
 
+    def affine_transformed(self, shift, scale_matrix):
+        '''return distribution of an affine transform
+
+        '''
+        B = scale_matrix  #tmp variable
+        mean_new = np.dot(B, self.mean) + shift
+        sigma_new = np.dot(np.dot(B, self.sigma), B.T)
+        return MVNormal(mean_new, sigma_new)
+
+    def conditional(self, indices, values):
+        '''return conditional distribution
+
+        indices are the variables to keep, the complement is the conditioning
+        set
+        values are the values of the conditioning variables
+
+        e
+
+    \bar{\mu} = \mu_1 + \Sigma_{12} \Sigma_{22}^{-1} \left( a - \mu_2 \right)
+
+and covariance matrix
+
+    \overline{\Sigma} = \Sigma_{11} - \Sigma_{12} \Sigma_{22}^{-1} \Sigma_{21}.
+
+T
+        '''
+        keep = indices
+        given = [i for i in range(nvars) if not i in keep]
+        sigmakk = self.sigma[keep[:, None], keep]
+        sigmagg = self.sigma[given[:, None], given]
+        sigmakg = self.sigma[keep[:, None], given]
+        sigmagk = self.sigma[given[:, None], keep]
+
+
+        sigma_new = sigmakk - np.dot(sigmakg, np.linalg.solve(sigmagg, sigmagk))
+        mean_new = self.mean[keep] +  \
+            np.dot(sigmakg, np.linalg.solve(sigmagg, values-self.mean[given]))
+
+        #or
+        sig = np.linalg.solve(sigmagg, sigmagk).T
+        mean_new = self.mean[keep] + np.dot(sigmakg, values-self.mean[given])
+        sigma_new = sigmakk - np.dot(sigmakg, sig)
 
 
 from scipy import special
@@ -621,11 +769,23 @@ sps_gamln = special.gammaln
 
 class MVT(MVElliptical):
 
+    __name__ == 'Multivariate Student T Distribution'
+
     def __init__(self, mean, sigma, df):
+        self.extra_args = ['df']
         self.df = df
         super(MVT, self).__init__(mean, sigma)
 
     def rvs(self, size=1):
+        '''random variables with Student T distribution
+
+
+        generated as a chi-square mixture of multivariate normal random
+        variables.
+        does this require df>2 ?
+
+
+        '''
         from multivariate import multivariate_t_rvs
         return multivariate_t_rvs(self.mean, self.sigma, df=self.df, n=size)
 
@@ -650,7 +810,8 @@ class MVT(MVElliptical):
     def cdf(self, x, **kwds):
         '''TODO: test the normalization in here'''
         lower = -np.inf * np.ones_like(x)
-        return mvstdtcdf(lower, self.standardize(x), self.corr, df, **kwds)
+        raise "this is still wrong"
+        return mvstdtcdf(lower, x, self.corr, df, **kwds)
 
     @property
     def cov(self):
@@ -659,6 +820,29 @@ class MVT(MVElliptical):
         else:
             return self.df / (self.df - 2.) * self.sigma
 
+    def affine_transformed(self, shift, scale_matrix):
+        '''return distribution of an affine transform
+
+        for full rank scale_matrix only
+
+        check is eigvals<=0, so there are possible problems for cases with
+        positive eigenvalues close to zero.
+
+        see: http://www.statlect.com/mcdstu1.htm
+
+        I'm not sure about general case
+
+        full rank method could also be in elliptical
+
+        '''
+        B = scale_matrix  #tmp variable
+        if not B.shape == (self.nvar, self.nvar):
+            if (np.linalg.eigvals(B) <= 0).any():
+                raise ValueError('affine transform has to be full rank')
+
+        mean_new = np.dot(B, self.mean) + shift
+        sigma_new = np.dot(np.dot(B, self.sigma), B.T)
+        return MVT(mean_new, sigma_new, self.df)
 
 def quad2d(func=lambda x: 1, lower=(-10,-10), upper=(10,10)):
     def fun(x, y):
