@@ -6,6 +6,9 @@ import numpy as np
 import scikits.statsmodels.api as sm
 from scikits.statsmodels.sandbox.sysreg import *
 
+#for Python 3 compatibility
+from scikits.statsmodels.compatnp.py3k import asbytes
+
 # Seemingly Unrelated Regressions (SUR) Model
 
 # This example uses the subset of the Grunfeld data in Greene's Econometric
@@ -15,6 +18,9 @@ grun_data = sm.datasets.grunfeld.load()
 
 firms = ['General Motors', 'Chrysler', 'General Electric', 'Westinghouse',
         'US Steel']
+#for Python 3 compatibility
+firms = map(asbytes, firms)
+
 grun_exog = grun_data.exog
 grun_endog = grun_data.endog
 

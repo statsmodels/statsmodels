@@ -1,7 +1,7 @@
 trunk for 0.3.0
 ---------------
 
-*Changes that break backwards compatability*
+*Changes that break backwards compatibility*
 
 Added api.py for importing. So the new convention for importing is ::
 
