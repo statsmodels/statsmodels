@@ -18,6 +18,7 @@ TODO:
 * check to return possibly univariate distribution for marginals or conditional
     distributions, does univariate special case work?
 * are all the extra transformation methods useful outside of testing ?
+  - looks like I have some mixup in definitions of standardize, normalize
 * new methods marginal, conditional, ... just added, typos ?
 
 I kept the original MVNormal0 class as reference, can be deleted
@@ -269,7 +270,7 @@ class MVElliptical(object):
 
     def __init__(self, mean, sigma, *args, **kwds):
         self.extra_args = []
-        self.mean = mean
+        self.mean = np.asarray(mean)
         self.sigma = sigma = np.asarray(sigma)
         sigma = np.squeeze(sigma)
         self.nvars = nvars = len(mean)
@@ -444,7 +445,7 @@ class MVElliptical(object):
 
         '''
         std_ = np.atleast_2d(self.std)
-        return (x - self.mean)/std/std.T
+        return (x - self.mean)/std_ #/std_.T
 
     def normalized(self, demeaned=True):
         '''return a normalized distribution where cov=corr
@@ -468,10 +469,10 @@ class MVElliptical(object):
         second implementation for testing affine transformation
         '''
         if demeaned:
-            shift = -self.mu
+            shift = -self.mean
         else:
-            shift = self.mu * (1. / self.std - 1.)
-        return self.affine_transform(shift, self.cholsigmainv)
+            shift = self.mean * (1. / self.std - 1.)
+        return self.affine_transformed(shift, self.cholsigmainv)
 
 
 
@@ -733,7 +734,7 @@ class MVNormal(MVElliptical):
         set
         values are the values of the conditioning variables
 
-        e
+
 
     \bar{\mu} = \mu_1 + \Sigma_{12} \Sigma_{22}^{-1} \left( a - \mu_2 \right)
 
@@ -743,8 +744,9 @@ and covariance matrix
 
 T
         '''
-        keep = indices
-        given = [i for i in range(nvars) if not i in keep]
+        #indices need to be nd arrays for broadcasting
+        keep = np.asarray(indices)
+        given = np.asarray([i for i in range(self.nvars) if not i in keep])
         sigmakk = self.sigma[keep[:, None], keep]
         sigmagg = self.sigma[given[:, None], given]
         sigmakg = self.sigma[keep[:, None], given]
@@ -755,10 +757,12 @@ T
         mean_new = self.mean[keep] +  \
             np.dot(sigmakg, np.linalg.solve(sigmagg, values-self.mean[given]))
 
-        #or
-        sig = np.linalg.solve(sigmagg, sigmagk).T
-        mean_new = self.mean[keep] + np.dot(sigmakg, values-self.mean[given])
-        sigma_new = sigmakk - np.dot(sigmakg, sig)
+#        #or
+#        sig = np.linalg.solve(sigmagg, sigmagk).T
+#        mean_new = self.mean[keep] + np.dot(sigmakg, values-self.mean[given])
+#        sigma_new = sigmakk - np.dot(sigmakg, sig)
+        return MVNormal(mean_new, sigma_new)
+
 
 
 from scipy import special
