@@ -16,15 +16,26 @@ TODO:
     - behavior with (almost) singular sigma or transforms
     - df <= 2, is everything correct if variance is not finite or defined ?
 * check to return possibly univariate distribution for marginals or conditional
-    distributions, does univariate special case work?
+    distributions, does univariate special case work? seems ok for conditional
 * are all the extra transformation methods useful outside of testing ?
   - looks like I have some mixup in definitions of standardize, normalize
 * new methods marginal, conditional, ... just added, typos ?
+  - largely tested for MVNormal, not yet for MVT
+* conditional: reusing, vectorizing, should we reuse a projection matrix or
+  allow for a vectorized, conditional_mean similar to OLS.predict
+* add additional things similar to LikelihoodModelResults? quadratic forms,
+  F distribution, and others ???
+* add Delta method for nonlinear functions here, current function is hidden
+  somewhere in miscmodels
+* raise ValueErrors for wrong input shapes, currently only partially checked
+
 
 I kept the original MVNormal0 class as reference, can be deleted
 
 
-
+See Also
+--------
+sandbox/examples/ex_mvelliptical.py
 
 """
 
@@ -416,7 +427,7 @@ class MVElliptical(object):
         return self.whiten(x - self.mean)
 
     def standardized(self):
-        return self.affine_transform(-self.mu, self.cholsigmainv)
+        return self.affine_transformed(-self.mean, self.cholsigmainv)
 
 
     def normalize(self, x):
@@ -459,6 +470,7 @@ class MVElliptical(object):
             mean_new = self.mean / self.std
         sigma_new = self.corr
         args = [getattr(self, ea) for ea in self.extra_args]
+        print 'args', args
         return self.__class__(mean_new, sigma_new, *args)
 
     def normalized2(self, demeaned=True):
@@ -472,7 +484,9 @@ class MVElliptical(object):
             shift = -self.mean
         else:
             shift = self.mean * (1. / self.std - 1.)
-        return self.affine_transformed(shift, self.cholsigmainv)
+        return self.affine_transformed(shift, np.diag(1. / self.std))
+        #the following "standardizes" cov instead
+        #return self.affine_transformed(shift, self.cholsigmainv)
 
 
 
@@ -776,9 +790,9 @@ class MVT(MVElliptical):
     __name__ == 'Multivariate Student T Distribution'
 
     def __init__(self, mean, sigma, df):
-        self.extra_args = ['df']
-        self.df = df
         super(MVT, self).__init__(mean, sigma)
+        self.extra_args = ['df']  #overwrites extra_args of super
+        self.df = df
 
     def rvs(self, size=1):
         '''random variables with Student T distribution
@@ -814,8 +828,12 @@ class MVT(MVElliptical):
     def cdf(self, x, **kwds):
         '''TODO: test the normalization in here'''
         lower = -np.inf * np.ones_like(x)
-        raise "this is still wrong"
-        return mvstdtcdf(lower, x, self.corr, df, **kwds)
+        #raise "this is still wrong"
+        std_sigma = np.sqrt(np.diag(self.sigma))
+        upper = (x - self.mean)/std_sigma
+        return mvstdtprob(lower, upper, self.corr, self.df, **kwds)
+        #mvstdtcdf doesn't exist yet
+        #return mvstdtcdf(lower, x, self.corr, df, **kwds)
 
     @property
     def cov(self):
@@ -840,13 +858,14 @@ class MVT(MVElliptical):
 
         '''
         B = scale_matrix  #tmp variable
-        if not B.shape == (self.nvar, self.nvar):
+        if not B.shape == (self.nvars, self.nvars):
             if (np.linalg.eigvals(B) <= 0).any():
                 raise ValueError('affine transform has to be full rank')
 
         mean_new = np.dot(B, self.mean) + shift
         sigma_new = np.dot(np.dot(B, self.sigma), B.T)
         return MVT(mean_new, sigma_new, self.df)
+
 
 def quad2d(func=lambda x: 1, lower=(-10,-10), upper=(10,10)):
     def fun(x, y):

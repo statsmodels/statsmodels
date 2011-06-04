@@ -32,6 +32,7 @@ xliarr = np.asarray(xli).T[None,:, :]
 
 for a in xli:
     print mvn3.cdf(a),
+
 print
 print (x<np.array(xli[0])).all(-1).mean(0)
 print (x[...,None]<xliarr).all(1).mean(0)
@@ -50,9 +51,9 @@ assert_array_almost_equal(mvn3n.cov, xn_cov, decimal=2)
 assert_array_almost_equal(np.zeros(3), xn.mean(0), decimal=2)
 
 mvn3n2 = mvn3.normalized2()
-#assert_array_almost_equal(mvn3n.cov, mvn3n2.cov, decimal=2)
-#mistake: "normalized2" standardizes
-assert_array_almost_equal(np.eye(3), mvn3n2.cov, decimal=2)
+assert_array_almost_equal(mvn3n.cov, mvn3n2.cov, decimal=2)
+#mistake: "normalized2" standardizes - FIXED
+#assert_array_almost_equal(np.eye(3), mvn3n2.cov, decimal=2)
 
 xs = mvn3.standardize(x)
 xs_cov = np.cov(xn, rowvar=0)
@@ -68,4 +69,46 @@ print mv2m.cov
 mv2c = mvn3.conditional(np.array([0,1]), [0])
 print mv2c.mean
 print mv2c.cov
+
+mv2c = mvn3.conditional(np.array([0]), [0, 0])
+print mv2c.mean
+print mv2c.cov
+
+import scikits.statsmodels.api as sm
+
+mod = sm.OLS(x[:,0], sm.add_constant(x[:,1:], prepend=True))
+res = mod.fit()
+print res.model.predict(np.array([1,0,0]))
+mv2c = mvn3.conditional(np.array([0]), [0, 0])
+print mv2c.mean
+mv2c = mvn3.conditional(np.array([0]), [1, 1])
+print res.model.predict(np.array([1,1,1]))
+print mv2c.mean
+
+#the following wrong input doesn't raise an exception but produces wrong numbers
+#mv2c = mvn3.conditional(np.array([0]), [[1, 1],[2,2]])
+
+mvt3 = mvd.MVT(mu, cov3, 4)
+xt = mvt3.rvs(size=100000)
+assert_array_almost_equal(mvt3.cov, np.cov(xt, rowvar=0), decimal=1)
+mvt3s = mvt3.standardized()
+mvt3n = mvt3.normalized()
+
+xts = mvt3.standardize(x)
+xts_cov = np.cov(xts, rowvar=0)
+xtn = mvt3.normalize(x)
+xtn_cov = np.cov(xtn, rowvar=0)
+#watch out cov is not the same as sigma for t distribution, what's right here?
+#FAIL
+#assert_array_almost_equal(mvt3.corr, xtn_cov, decimal=1)
+#assert_array_almost_equal(mvt3s.cov, xts_cov, decimal=1)
+
+a = [0.0, 1.0, 1.5]
+print mvt3.cdf(a)
+print (xt<np.array(a)).all(-1).mean(0)
+print 'R', 0.3026741 # "error": 0.0004832187
+a = [0.0, 0.5, 1.0]
+print mvt3.cdf(a)
+print (xt<np.array(a)).all(-1).mean(0)
+print 'R', 0.1946621 # "error": 0.0002524817
 
