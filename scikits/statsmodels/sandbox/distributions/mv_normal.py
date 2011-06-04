@@ -50,6 +50,96 @@ See Also
 --------
 sandbox/examples/ex_mvelliptical.py
 
+Examples
+--------
+
+>>> import numpy as np
+>>> import scikits.statsmodels.sandbox.distributions.mv_normal as mvd
+>>>
+>>> from numpy.testing import assert_array_almost_equal
+>>>
+>>> cov3 = np.array([[ 1.  ,  0.5 ,  0.75],
+...                    [ 0.5 ,  1.5 ,  0.6 ],
+...                    [ 0.75,  0.6 ,  2.  ]])
+
+>>> mu = np.array([-1, 0.0, 2.0])
+
+multivariate normal distribution
+--------------------------------
+
+>>> mvn3 = mvd.MVNormal(mu, cov3)
+>>> mvn3.rvs(size=3)
+array([[-0.08559948, -1.0319881 ,  1.76073533],
+       [ 0.30079522,  0.55859618,  4.16538667],
+       [-1.36540091, -1.50152847,  3.87571161]])
+
+>>> mvn3.std
+array([ 1.        ,  1.22474487,  1.41421356])
+>>> a = [0.0, 1.0, 1.5]
+>>> mvn3.pdf(a)
+0.013867410439318712
+>>> mvn3.cdf(a)
+0.31163181123730122
+
+Monte Carlo integration
+
+>>> mvn3.expect_mc(lambda x: (x<a).all(-1), size=100000)
+0.30958999999999998
+>>> mvn3.expect_mc(lambda x: (x<a).all(-1), size=1000000)
+0.31197399999999997
+
+multivariate t distribution
+---------------------------
+
+>>> mvt3 = mvd.MVT(mu, cov3, 4)
+>>> mvt3.rvs(size=4)
+array([[-0.94185437,  0.3933273 ,  2.40005487],
+       [ 0.07563648,  0.06655433,  7.90752238],
+       [ 1.06596474,  0.32701158,  2.03482886],
+       [ 3.80529746,  7.0192967 ,  8.41899229]])
+
+>>> mvt3.pdf(a)
+0.010402959362646937
+>>> mvt3.cdf(a)
+0.30269483623249821
+>>> mvt3.expect_mc(lambda x: (x<a).all(-1), size=1000000)
+0.30271199999999998
+
+>>> mvt3.cov
+array([[ 2. ,  1. ,  1.5],
+       [ 1. ,  3. ,  1.2],
+       [ 1.5,  1.2,  4. ]])
+>>> mvt3.corr
+array([[ 1.        ,  0.40824829,  0.53033009],
+       [ 0.40824829,  1.        ,  0.34641016],
+       [ 0.53033009,  0.34641016,  1.        ]])
+
+get normalized distribution
+
+>>> mvt3n = mvt3.normalized()
+>>> mvt3n.sigma
+array([[ 1.        ,  0.40824829,  0.53033009],
+       [ 0.40824829,  1.        ,  0.34641016],
+       [ 0.53033009,  0.34641016,  1.        ]])
+>>> mvt3n.cov
+array([[ 2.        ,  0.81649658,  1.06066017],
+       [ 0.81649658,  2.        ,  0.69282032],
+       [ 1.06066017,  0.69282032,  2.        ]])
+
+What's currently there?
+
+>>> [i for i in dir(mvn3) if not i[0]=='_']
+['affine_transformed', 'cdf', 'cholsigmainv', 'conditional', 'corr', 'cov',
+'expect_mc', 'extra_args', 'logdetsigma', 'logpdf', 'marginal', 'mean',
+'normalize', 'normalized', 'normalized2', 'nvars', 'pdf', 'rvs', 'sigma',
+'sigmainv', 'standardize', 'standardized', 'std', 'std_sigma', 'whiten']
+
+>>> [i for i in dir(mvt3) if not i[0]=='_']
+['affine_transformed', 'cdf', 'cholsigmainv', 'corr', 'cov', 'df', 'expect_mc',
+'extra_args', 'logdetsigma', 'logpdf', 'marginal', 'mean', 'normalize',
+'normalized', 'normalized2', 'nvars', 'pdf', 'rvs', 'sigma', 'sigmainv',
+'standardize', 'standardized', 'std', 'std_sigma', 'whiten']
+
 """
 
 import numpy as np
@@ -523,7 +613,6 @@ class MVElliptical(object):
             mean_new = self.mean / self.std_sigma
         sigma_new = self.corr
         args = [getattr(self, ea) for ea in self.extra_args]
-        print 'args', args
         return self.__class__(mean_new, sigma_new, *args)
 
     def normalized2(self, demeaned=True):
