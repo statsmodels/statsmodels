@@ -22,6 +22,8 @@ cov3 = np.array([[ 1.  ,  0.5 ,  0.75],
 
 mu = np.array([-1, 0.0, 2.0])
 
+#************** multivariate normal distribution ***************
+
 mvn3 = mvd.MVNormal(mu, cov3)
 
 #compare with random sample
@@ -34,9 +36,14 @@ xli = [[2., 1., 1.5],
 
 xliarr = np.asarray(xli).T[None,:, :]
 
-for a in xli:
-    print mvn3.cdf(a),
+#from R session
+#pmvnorm(lower=-Inf,upper=(x[0,.]-mu)/sqrt(diag(cov3)),mean=rep(0,3),corr3)
+r_cdf = [0.3222292, 0.3414643, 0.5450594, 0.3116296]
+r_cdf_errors = [1.715116e-05, 1.590284e-05, 5.356471e-05, 3.567548e-05]
+n_cdf = [mvn3.cdf(a) for a in xli]
+assert_array_almost_equal(r_cdf, n_cdf, decimal=4)
 
+print n_cdf
 print
 print (x<np.array(xli[0])).all(-1).mean(0)
 print (x[...,None]<xliarr).all(1).mean(0)
@@ -92,13 +99,17 @@ print mv2c.mean
 #the following wrong input doesn't raise an exception but produces wrong numbers
 #mv2c = mvn3.conditional(np.array([0]), [[1, 1],[2,2]])
 
+#************** multivariate t distribution ***************
+
 mvt3 = mvd.MVT(mu, cov3, 4)
 xt = mvt3.rvs(size=100000)
 assert_array_almost_equal(mvt3.cov, np.cov(xt, rowvar=0), decimal=1)
 mvt3s = mvt3.standardized()
 mvt3n = mvt3.normalized()
 
-assert_array_almost_equal(mvt3.corr, mvt3n.sigma, decimal=1)
+#the following should be equal or correct up to numerical precision of float
+assert_array_almost_equal(mvt3.corr, mvt3n.sigma, decimal=15)
+assert_array_almost_equal(mvt3n.corr, mvt3n.sigma, decimal=15)
 assert_array_almost_equal(np.eye(3), mvt3s.sigma, decimal=15)
 
 xts = mvt3.standardize(xt)
@@ -108,6 +119,7 @@ xtn_cov = np.cov(xtn, rowvar=0)
 xtn_corr = np.corrcoef(xtn, rowvar=0)
 
 assert_array_almost_equal(mvt3n.mean, xtn.mean(0), decimal=2)
+#the following might fail sometimes (random test), add seed in tests
 assert_array_almost_equal(mvt3n.corr, xtn_corr, decimal=2)
 #watch out cov is not the same as sigma for t distribution, what's right here?
 #normalize by sigma or by cov ? now normalized by sigma
