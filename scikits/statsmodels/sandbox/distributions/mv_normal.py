@@ -29,6 +29,15 @@ TODO:
   somewhere in miscmodels
 * raise ValueErrors for wrong input shapes, currently only partially checked
 
+* quantile method (ppf for equal bounds for multiple testing) is missing
+  http://svitsrv25.epfl.ch/R-doc/library/mvtnorm/html/qmvt.html seems to use
+  just a root finder for inversion of cdf
+
+* normalize has ambiguous definition, and mixing it up in different versions
+  std from sigma or std from cov ?
+  I would like to get what I need for mvt-cdf, or not
+  univariate standard t distribution has scale=1 but std>1
+  FIXED: add std_sigma, and normalize uses std_sigma
 
 I kept the original MVNormal0 class as reference, can be deleted
 
@@ -455,7 +464,7 @@ class MVElliptical(object):
 
 
         '''
-        std_ = np.atleast_2d(self.std)
+        std_ = np.atleast_2d(self.std_sigma)
         return (x - self.mean)/std_ #/std_.T
 
     def normalized(self, demeaned=True):
@@ -467,7 +476,7 @@ class MVElliptical(object):
         if demeaned:
             mean_new = np.zeros_like(self.mean)
         else:
-            mean_new = self.mean / self.std
+            mean_new = self.mean / self.std_sigma
         sigma_new = self.corr
         args = [getattr(self, ea) for ea in self.extra_args]
         print 'args', args
@@ -483,8 +492,8 @@ class MVElliptical(object):
         if demeaned:
             shift = -self.mean
         else:
-            shift = self.mean * (1. / self.std - 1.)
-        return self.affine_transformed(shift, np.diag(1. / self.std))
+            shift = self.mean * (1. / self.std_sigma - 1.)
+        return self.affine_transformed(shift, np.diag(1. / self.std_sigma))
         #the following "standardizes" cov instead
         #return self.affine_transformed(shift, self.cholsigmainv)
 
@@ -495,6 +504,12 @@ class MVElliptical(object):
         '''standard deviation, square root of diagonal elements of cov
         '''
         return np.sqrt(np.diag(self.cov))
+
+    @property
+    def std_sigma(self):
+        '''standard deviation, square root of diagonal elements of sigma
+        '''
+        return np.sqrt(np.diag(self.sigma))
 
 
     @property

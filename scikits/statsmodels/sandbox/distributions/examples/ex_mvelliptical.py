@@ -5,6 +5,10 @@
 Created on Fri Jun 03 16:00:26 2011
 
 @author: josef
+
+
+for comparison I used R mvtnorm version 0.9-96
+
 """
 
 import numpy as np
@@ -94,21 +98,37 @@ assert_array_almost_equal(mvt3.cov, np.cov(xt, rowvar=0), decimal=1)
 mvt3s = mvt3.standardized()
 mvt3n = mvt3.normalized()
 
-xts = mvt3.standardize(x)
+assert_array_almost_equal(mvt3.corr, mvt3n.sigma, decimal=1)
+assert_array_almost_equal(np.eye(3), mvt3s.sigma, decimal=15)
+
+xts = mvt3.standardize(xt)
 xts_cov = np.cov(xts, rowvar=0)
-xtn = mvt3.normalize(x)
+xtn = mvt3.normalize(xt)
 xtn_cov = np.cov(xtn, rowvar=0)
+xtn_corr = np.corrcoef(xtn, rowvar=0)
+
+assert_array_almost_equal(mvt3n.mean, xtn.mean(0), decimal=2)
+assert_array_almost_equal(mvt3n.corr, xtn_corr, decimal=2)
 #watch out cov is not the same as sigma for t distribution, what's right here?
-#FAIL
-#assert_array_almost_equal(mvt3.corr, xtn_cov, decimal=1)
-#assert_array_almost_equal(mvt3s.cov, xts_cov, decimal=1)
+#normalize by sigma or by cov ? now normalized by sigma
+assert_array_almost_equal(mvt3n.cov, xtn_cov, decimal=1)
+assert_array_almost_equal(mvt3s.cov, xts_cov, decimal=1)
 
 a = [0.0, 1.0, 1.5]
-print mvt3.cdf(a)
+mvt3_cdf0 = mvt3.cdf(a)
+print mvt3_cdf0
 print (xt<np.array(a)).all(-1).mean(0)
 print 'R', 0.3026741 # "error": 0.0004832187
+print 'R', 0.3026855 # error 3.444375e-06   with smaller abseps
+print 'diff', mvt3_cdf0 - 0.3026855
 a = [0.0, 0.5, 1.0]
-print mvt3.cdf(a)
+mvt3_cdf1 = mvt3.cdf(a)
+print mvt3_cdf1
 print (xt<np.array(a)).all(-1).mean(0)
 print 'R', 0.1946621 # "error": 0.0002524817
+print 'R', 0.1946217 # "error:"2.748699e-06    with smaller abseps
+print 'diff', mvt3_cdf1 - 0.1946217
+
+assert_array_almost_equal(mvt3_cdf0, 0.3026855, decimal=5)
+assert_array_almost_equal(mvt3_cdf1, 0.1946217, decimal=5)
 
