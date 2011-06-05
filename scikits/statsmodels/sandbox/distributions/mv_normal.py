@@ -53,6 +53,9 @@ sandbox/examples/ex_mvelliptical.py
 Examples
 --------
 
+Note, several parts of these examples are random and the numbers will not be
+(exactly) the same.
+
 >>> import numpy as np
 >>> import scikits.statsmodels.sandbox.distributions.mv_normal as mvd
 >>>
