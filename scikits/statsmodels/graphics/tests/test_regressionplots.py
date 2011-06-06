@@ -6,7 +6,8 @@ import numpy as np
 import nose
 
 import scikits.statsmodels.api as sm
-from scikits.statsmodels.graphics.regressionplots import (plot_fit)
+from scikits.statsmodels.graphics.regressionplots import (plot_fit, plot_ccpr,
+                  plot_partregress, plot_regress_exog )
 
 try:
     import matplotlib.pyplot as plt  #makes plt available for test functions
@@ -42,6 +43,7 @@ class TestPlot(object):
 
     def test_plot_fit(self):
         res = self.res
+
         fig = plot_fit(res, 0, y_true=None)
 
         x0 = res.model.exog[:, 0]
@@ -57,3 +59,19 @@ class TestPlot(object):
         np.testing.assert_equal(yf, px2)
 
         plt.close(fig)
+
+    def test_plot_oth(self):
+        #just test that they run
+        res = self.res
+        endog = res.model.endog
+        exog = res.model.exog
+
+        plot_fit(res, 0, y_true=None)
+        plot_partregress(endog, exog, exog_idx=[0,1])
+        plot_regress_exog(res, exog_idx=[0])
+        plot_ccpr(res, exog_idx=[0])
+        plot_ccpr(res, exog_idx=[0,1])
+
+        plt.close('all')
+
+

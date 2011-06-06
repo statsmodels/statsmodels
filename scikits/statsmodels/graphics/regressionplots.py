@@ -101,25 +101,25 @@ def plot_regress_exog(res, exog_idx):
     x1 = res.model.exog[:,exog_idx]
 
 
-    fig2 = plt.figure()
+    fig = plt.figure()
 
-    ax = fig2.add_subplot(2,2,1)
+    ax = fig.add_subplot(2,2,1)
     #namestr = ' for %s' % self.name if self.name else ''
     plt.plot(x1, res.model.endog, 'o')
     ax.set_title('endog versus exog', fontsize='small')# + namestr)
 
-    ax = fig2.add_subplot(2,2,2)
+    ax = fig.add_subplot(2,2,2)
     #namestr = ' for %s' % self.name if self.name else ''
     ax.plot(x1, res.resid, 'o')
     ax.axhline(y=0)
     ax.set_title('residuals versus exog', fontsize='small')# + namestr)
 
-    ax = fig2.add_subplot(2,2,3)
+    ax = fig.add_subplot(2,2,3)
     #namestr = ' for %s' % self.name if self.name else ''
     plt.plot(x1, res.fittedvalues, 'o')
     ax.set_title('Fitted versus exog', fontsize='small')# + namestr)
 
-    ax = fig2.add_subplot(2,2,4)
+    ax = fig.add_subplot(2,2,4)
     #namestr = ' for %s' % self.name if self.name else ''
     plt.plot(x1, res.fittedvalues + res.resid, 'o')
     ax.set_title('Fitted plus residuals versus exog', fontsize='small')# + namestr)
@@ -154,7 +154,11 @@ def _partial_regression(endog, exog_i, exog_others):
     return res1c, (res1a, res1b)
 
 
-def plot_partregress_ax(ax, endog, exog_i, exog_others, varname=''):
+def plot_partregress_ax(ax, endog, exog_i, exog_others, varname='',
+                        title_fontsize=None):
+    '''partial regression plot attached to axis
+
+    '''
 
     #namestr = ' for %s' % self.name if self.name else ''
     res1a = sm.OLS(endog, exog_others).fit()
@@ -162,7 +166,8 @@ def plot_partregress_ax(ax, endog, exog_i, exog_others, varname=''):
     plt.plot(res1b.resid, res1a.resid, 'o')
     res1c = sm.OLS(res1a.resid, res1b.resid).fit()
     plt.plot(res1b.resid, res1c.fittedvalues, '-', color='k')
-    ax.set_title('Partial Regression plot %s' % varname)# + namestr)
+    ax.set_title('Partial Regression plot %s' % varname,
+                 fontsize=title_fontsize)# + namestr)
     return ax
 
 
@@ -171,9 +176,10 @@ def plot_partregress(endog, exog, exog_idx=None, grid=None):
 
     see http://www.itl.nist.gov/div898/software/dataplot/refman1/auxillar/partregr.htm
     '''
+    import scikits.statsmodels.api as sm  #import only OLS and add_constant
 
     #maybe add option for using wendog, wexog instead
-    y = res.model.endog
+    y = endog
 
     if not grid is None:
         nrows, ncols = grid
@@ -181,27 +187,30 @@ def plot_partregress(endog, exog, exog_idx=None, grid=None):
         if len(exog_idx) > 2:
             nrows = int(np.ceil(len(exog_idx)/2.))
             ncols = 2
+            title_fontsize = 'small'
         else:
             nrows = len(exog_idx)
             ncols = 1
+            title_fontsize = None
 
-    k_vars = res.model.exog.shape[1]
+    k_vars = exog.shape[1]
     #this function doesn't make sense if k_vars=1
 
-    fig5 = plt.figure()
+    fig = plt.figure()
 
     for i,idx in enumerate(exog_idx):
         others = range(k_vars)
         others.pop(idx)
         exog_others = exog[:, others]
-        ax = fig5.add_subplot(nrows, ncols, i+1)
+        ax = fig.add_subplot(nrows, ncols, i+1)
         #namestr = ' for %s' % self.name if self.name else ''
         res1a = sm.OLS(y, exog_others).fit()
         res1b = sm.OLS(exog[:, idx], exog_others).fit()
         plt.plot(res1b.resid, res1a.resid, 'o')
         res1c = sm.OLS(res1a.resid, res1b.resid).fit()
         plt.plot(res1b.resid, res1c.fittedvalues, '-', color='k')
-        ax.set_title('Partial Regression plot %d' % idx)# + namestr)
+        ax.set_title('Partial Regression plot %d' % idx,
+                     fontsize=title_fontsize)# + namestr)
 
     return fig
 
@@ -259,7 +268,7 @@ def plot_ccpr(res, exog_idx=None, grid=None):
 
     for i,idx in enumerate(exog_idx):
         ax = fig.add_subplot(nrows, ncols, i+1)
-        plot_ccpr_single(ax, res, exog_idx=idx)
+        plot_ccpr_ax(ax, res, exog_idx=idx)
 
     return fig
 
@@ -409,7 +418,7 @@ if __name__ == '__main__':
 
         #print res.summary()
 
-    doplots = 0
+    doplots = 1
     if doplots:
         plot_fit(res, 0, y_true=None)
         plot_partregress(y, exog0, exog_idx=[0,1])
