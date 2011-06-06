@@ -11,10 +11,32 @@ update
 
 from scikits.statsmodels.sandbox.regression.predstd import wls_prediction_std
 
-def plot_fit(res, exog_idx, y_true=None):
+def plot_fit(res, exog_idx, y_true=None, ax=None):
     '''plot fit against one regressor
 
     check for which other models than OLS this also works, use model.name
+
+    This plots four graphs in a 2 by 2 figure: 'endog versus exog',
+    'residuals versus exog', 'fitted versus exog' and
+    'fitted plus residual versus exog'
+
+    Parameters
+    ----------
+    res : result instance
+        result instance with resid, model.endog and model.exog as attributes
+    exog_idx : int
+        index of regressor in exog matrix
+    y_true : array_like
+        (optional) If this is not None, then the array is added to the plot
+
+    Returns
+    -------
+    fig : matplotlib figure instance
+
+    Notes
+    -----
+    This is currently very simple, no options or varnames yet.
+
     '''
     import matplotlib.pyplot as plt
 
@@ -22,26 +44,53 @@ def plot_fit(res, exog_idx, y_true=None):
     y = res.model.endog
     x1 = res.model.exog[:, exog_idx]
 
-    #plt.figure()
-    plt.plot(x1, y, 'bo')
+    if ax is None:
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        fig_or_ax = fig
+    else:
+        fig_or_ax = ax
+
+    ax.plot(x1, y, 'bo')
     if not y_true is None:
-        plt.plot(x1, y_true, 'b-')
+        ax.plot(x1, y_true, 'b-')
         title = 'fitted versus regressor %d, blue: true,   black: OLS' % exog_idx
     else:
         title = 'fitted versus regressor %d, blue: observed, black: OLS' % exog_idx
 
     prstd, iv_l, iv_u = wls_prediction_std(res)
-    plt.plot(x1, res.fittedvalues, 'k-') #'k-o')
+    ax.plot(x1, res.fittedvalues, 'k-') #'k-o')
     #plt.plot(x1, iv_u, 'r--')
     #plt.plot(x1, iv_l, 'r--')
-    plt.fill_between(x1, iv_l, iv_u, alpha=0.1, color='k')
-    plt.title(title)
+    ax.fill_between(x1, iv_l, iv_u, alpha=0.1, color='k')
+    ax.set_title(title)
+
+    return fig_or_ax
 
 
 
 
 def plot_regress_exog(res, exog_idx):
     '''plot regression results against one regressor
+
+    This plots four graphs in a 2 by 2 figure: 'endog versus exog',
+    'residuals versus exog', 'fitted versus exog' and
+    'fitted plus residual versus exog'
+
+    Parameters
+    ----------
+    res : result instance
+        result instance with resid, model.endog and model.exog as attributes
+    exog_idx : int
+        index of regressor in exog matrix
+
+    Returns
+    -------
+    fig : matplotlib figure instance
+
+    Notes
+    -----
+    This is currently very simple, no options or varnames yet.
 
     '''
 
@@ -63,7 +112,7 @@ def plot_regress_exog(res, exog_idx):
     #namestr = ' for %s' % self.name if self.name else ''
     ax.plot(x1, res.resid, 'o')
     ax.axhline(y=0)
-    ax.set_title('residuals exog', fontsize='small')# + namestr)
+    ax.set_title('residuals versus exog', fontsize='small')# + namestr)
 
     ax = fig2.add_subplot(2,2,3)
     #namestr = ' for %s' % self.name if self.name else ''
@@ -75,6 +124,47 @@ def plot_regress_exog(res, exog_idx):
     plt.plot(x1, res.fittedvalues + res.resid, 'o')
     ax.set_title('Fitted plus residuals versus exog', fontsize='small')# + namestr)
 
+    return fig
+
+def _partial_regression(endog, exog_i, exog_others):
+    '''partial regression
+
+    regress endog on exog_i conditional on exog_others
+
+    uses OLS
+
+    Parameters
+    ----------
+    endog : array_like
+    exog : array_like
+    exog_others : array_like
+
+    Returns
+    -------
+    res1c : OLS results instance
+
+    (res1a, res1b) : tuple of OLS results instances
+         results from regression of endog on exog_others and of exog_i on
+         exog_others
+
+    '''
+    res1a = sm.OLS(endog, exog_others).fit()
+    res1b = sm.OLS(exog_i, exog_others).fit()
+    res1c = sm.OLS(res1a.resid, res1b.resid).fit()
+    return res1c, (res1a, res1b)
+
+
+def plot_partregress_ax(ax, endog, exog_i, exog_others, varname=''):
+
+    #namestr = ' for %s' % self.name if self.name else ''
+    res1a = sm.OLS(endog, exog_others).fit()
+    res1b = sm.OLS(exog_i, exog_others).fit()
+    plt.plot(res1b.resid, res1a.resid, 'o')
+    res1c = sm.OLS(res1a.resid, res1b.resid).fit()
+    plt.plot(res1b.resid, res1c.fittedvalues, '-', color='k')
+    ax.set_title('Partial Regression plot %s' % varname)# + namestr)
+    return ax
+
 
 def plot_partregress(endog, exog, exog_idx=None, grid=None):
     '''plot partial regression for a set of regressors
@@ -82,11 +172,9 @@ def plot_partregress(endog, exog, exog_idx=None, grid=None):
     see http://www.itl.nist.gov/div898/software/dataplot/refman1/auxillar/partregr.htm
     '''
 
-
     #maybe add option for using wendog, wexog instead
     y = res.model.endog
 
-    #x1 = res.exog[exog_idx]
     if not grid is None:
         nrows, ncols = grid
     else:
@@ -96,7 +184,6 @@ def plot_partregress(endog, exog, exog_idx=None, grid=None):
         else:
             nrows = len(exog_idx)
             ncols = 1
-
 
     k_vars = res.model.exog.shape[1]
     #this function doesn't make sense if k_vars=1
@@ -116,10 +203,12 @@ def plot_partregress(endog, exog, exog_idx=None, grid=None):
         plt.plot(res1b.resid, res1c.fittedvalues, '-', color='k')
         ax.set_title('Partial Regression plot %d' % idx)# + namestr)
 
+    return fig
 
 
-def plot_ccpr(res, exog_idx=None):
-    '''plto CCPR against 1 regressor
+
+def plot_ccpr_ax(ax, res, exog_idx=None):
+    '''plot CCPR against 1 regressor
 
     see http://www.itl.nist.gov/div898/software/dataplot/refman1/auxillar/ccpr.htm
 
@@ -127,19 +216,52 @@ def plot_ccpr(res, exog_idx=None):
 
     x1 = res.model.exog[:,exog_idx]
 
-    fig6 = plt.figure()
-    ax = fig6.add_subplot(1,1,1)
+    #fig = plt.figure()
+    #ax = fig.add_subplot(1,1,1)
     #namestr = ' for %s' % self.name if self.name else ''
     x1beta = x1*res.params[1]
-##    x2beta = x2*res.params[2]
     ax.plot(x1, x1beta + res.resid, 'o')
     ax.plot(x1, x1beta, '-')
     ax.set_title('X_%d beta_%d plus residuals versus exog (CCPR)' % (
                                                 exog_idx, exog_idx))
-##    ax = fig6.add_subplot(2,1,2)
-##    plt.plot(x2, x2beta + res.resid, 'o')
-##    plt.plot(x2, x2beta, '-')
 
+    #return fig
+
+
+def plot_ccpr(res, exog_idx=None, grid=None):
+    '''generate CCPR plot against a set of regressor
+
+    Generates a CCPR (component and component-plus-residual) plot
+
+    Partial residual plots are formed as:
+
+        Res + Betahat(i)*Xi versus Xi
+
+    and CCPR adds
+
+        Betahat(i)*Xi versus Xi
+
+    see http://www.itl.nist.gov/div898/software/dataplot/refman1/auxillar/ccpr.htm
+
+    '''
+
+    if not grid is None:
+        nrows, ncols = grid
+    else:
+        if len(exog_idx) > 2:
+            nrows = int(np.ceil(len(exog_idx)/2.))
+            ncols = 2
+        else:
+            nrows = len(exog_idx)
+            ncols = 1
+
+    fig = plt.figure()
+
+    for i,idx in enumerate(exog_idx):
+        ax = fig.add_subplot(nrows, ncols, i+1)
+        plot_ccpr_single(ax, res, exog_idx=idx)
+
+    return fig
 
 
 if __name__ == '__main__':
@@ -252,7 +374,7 @@ if __name__ == '__main__':
     plot_fit(res, 0, y_true=None)
     plot_partregress(y, exog0, exog_idx=[0,1])
     plot_regress_exog(res, exog_idx=[0])
-    plot_ccpr(res, exog_idx=0)
-    plot_ccpr(res, exog_idx=1)
+    plot_ccpr(res, exog_idx=[0])
+    plot_ccpr(res, exog_idx=[0,1])
 
     plt.show()
