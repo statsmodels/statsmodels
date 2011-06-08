@@ -1018,18 +1018,19 @@ class VARResults(VARProcess):
         coefs = self.coefs
         sigma_u = self.sigma_u
         intercept = self.intercept
+        df_model = self.df_model
         disc = 500 #number of simulated observations to discard
 
-        ma_coll = np.zeros([T+1, neqs, neqs, repl])
+        ma_coll = np.zeros((repl, T+1, neqs, neqs))
         for i in range(repl):
             #discard first hundred to eliminate correct for starting bias
             sim = util.varsim(coefs, intercept, sigma_u, steps=T+disc)
             sim = sim[disc:]
-            ma_coll[:,:,:,i] = VAR(sim).fit(maxlags=k_ar).ma_rep(maxn=T)
-        ma_sort = np.sort(ma_coll, axis=3) #sort to get quantiles
-        index = round(signif/2*repl),round((1-signif/2)*repl)
-        lower = ma_sort[:, :, :, index[0]-1]
-        upper = ma_sort[:, :, :, index[1]-1]
+            ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).ma_rep(maxn=T)
+        ma_sort = np.sort(ma_coll, axis=0) #sort to get quantiles
+        index = round(signif/2*repl)-1,round((1-signif/2)*repl)-1
+        lower = ma_sort[index[0],:, :, :]/np.sqrt(T-k_ar)
+        upper = ma_sort[index[1],:, :, :]/np.sqrt(T-k_ar)
         return lower, upper
 
     def _omega_forc_cov(self, steps):

@@ -204,6 +204,7 @@ def irf_grid_plot(values, stderr, impcol, rescol, names, title,
                 sig = np.sqrt(stderr[:, j * k + i, j * k + i])
                 plot_with_error(values[:, i, j], sig, x=rng, axes=ax,
                             alpha=signif, value_fmt='b', stderr_type='asym')
+            #this needs to change, just experimenting with size
             if stderr_type == 'mc':
                 errs = stderr[0][:, i, j], stderr[1][:, i, j]
                 plot_with_error(values[:, i, j], errs, x=rng, axes=ax,
