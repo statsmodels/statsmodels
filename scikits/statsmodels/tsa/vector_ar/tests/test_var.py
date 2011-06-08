@@ -367,6 +367,10 @@ class TestVARResults(CheckIRF, CheckFEVD):
         result = self.model.fit(10, ic='aic', verbose=True)
         result = self.model.fit(10, ic='fpe', verbose=True)
 
+        # bug
+        model = VAR(self.model.endog)
+        model.select_order()
+
     def test_is_stable(self):
         # may not necessarily be true for other datasets
         assert(self.res.is_stable(verbose=True))
