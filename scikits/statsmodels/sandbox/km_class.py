@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 
 class KAPLAN_MEIER(object):
     def __init__(self, data, timesIn, groupIn, censoringIn):
+        raise RuntimeError('Newer version of Kaplan-Meier class available in survival2.py')
         #store the inputs
         self.data = data
         self.timesIn = timesIn
