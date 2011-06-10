@@ -107,7 +107,7 @@ class RResults(object):
 
     def __init__(self):
         #data = np.load(resultspath + 'vars_results.npz')
-        from .results.results_var_data import var_results
+        from results.results_var_data import var_results
         data = var_results.__dict__
 
         self.names = data['coefs'].dtype.names
@@ -135,31 +135,23 @@ class RResults(object):
 
         self.causality = data['causality']
 
-# half-baked attempt to suppress plotting
-
-_monkeypatched_mpl = False
-_draw_function = None
-
-def _suppress_plots():
-    # try:
-    #     import matplotlib.pyplot as plt
-    # except ImportError:
-    #     raise nose.SkipTest
-    # global _monkeypatched_mpl, _draw_function
-    # if not _monkeypatched_mpl:
-    #     _draw_function = plt.draw_if_interactive
-    #     plt.draw_if_interactive = lambda *args, **kwargs: None
-    pass
-
-def _unsuppress_plots():
-    # import matplotlib.pyplot as plt
-    # plt.draw_if_interactive = _draw_function
-    pass
-
 def close_plots():
-    # import matplotlib.pyplot as plt
-    # plt.close('all')
-    pass
+    try:
+        import matplotlib.pyplot as plt
+        plt.close('all')
+    except ImportError:
+        pass
+
+_orig_stdout = None
+
+def setup_module():
+    global _orig_stdout
+    _orig_stdout = sys.stdout
+    sys.stdout = StringIO()
+
+def teardown_module():
+    sys.stdout = _orig_stdout
+    close_plots()
 
 def have_matplotlib():
     try:
@@ -244,31 +236,22 @@ class CheckFEVD(object):
 
 class TestVARResults(CheckIRF, CheckFEVD):
 
-    def __init__(self):
-        self.p = 2
+    @classmethod
+    def setupClass(cls):
+        cls.p = 2
 
-        self.data = get_macrodata()
-        self.model = VAR(self.data)
-        self.names = self.model.names
+        cls.data = get_macrodata()
+        cls.model = VAR(cls.data)
+        cls.names = cls.model.names
 
-        self.ref = RResults()
-        self.k = len(self.ref.names)
-        self.res = self.model.fit(maxlags=self.p)
+        cls.ref = RResults()
+        cls.k = len(cls.ref.names)
+        cls.res = cls.model.fit(maxlags=cls.p)
 
-        self.irf = self.res.irf(self.ref.nirfs)
-        self.nahead = self.ref.nahead
+        cls.irf = cls.res.irf(cls.ref.nirfs)
+        cls.nahead = cls.ref.nahead
 
-        self.fevd = self.res.fevd()
-
-    def test_aaamonkeypatches(self):
-        sys.stdout = StringIO()
-
-        _suppress_plots()
-
-    def test_zzzundomonkeypatches(self):
-        sys.stdout = sys.__stdout__
-
-        _unsuppress_plots()
+        cls.fevd = cls.res.fevd()
 
     def test_constructor(self):
         # make sure this works with no names

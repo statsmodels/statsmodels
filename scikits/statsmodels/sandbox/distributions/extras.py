@@ -63,6 +63,7 @@ class SkewNorm_gen(distributions.rv_continuous):
     class follows scipy.stats.distributions pattern
     but with __init__
 
+
     '''
     def __init__(self):
         #super(SkewNorm_gen,self).__init__(
@@ -93,8 +94,9 @@ class SkewNorm_gen(distributions.rv_continuous):
         #skip for now to force moment integration as check
         pass
 
+skewnorm = SkewNorm_gen()
 def example_n():
-    skewnorm = SkewNorm_gen()
+
     print skewnorm.pdf(1,0), stats.norm.pdf(1), skewnorm.pdf(1,0) - stats.norm.pdf(1)
     print skewnorm.pdf(1,1000), stats.chi.pdf(1,1), skewnorm.pdf(1,1000) - stats.chi.pdf(1,1)
     print skewnorm.pdf(-1,-1000), stats.chi.pdf(1,1), skewnorm.pdf(-1,-1000) - stats.chi.pdf(1,1)
@@ -485,8 +487,9 @@ def examples_normexpand():
     print mc2mvsk(normexpan.cnt)
     print normexpan.mvsk
 
-
-    mc, mnc = mvsk2m(dmvsk)
+    from scikits.statsmodels.stats.momenthelpers import mvsk2mnc, mnc2mc
+    mnc = mvsk2mnc(dmvsk)
+    mc = mnc2mc(mnc)
     print 'central moments'
     print mc
     print 'non-central moments'
@@ -543,7 +546,7 @@ from scipy import integrate # for scipy 0.6.0
 
 from scipy import stats, info
 from scipy.stats import distributions
-import numpy as np
+
 
 def get_u_argskwargs(**kwargs):
     #Todo: What's this? wrong spacing, used in Transf_gen TransfTwo_gen
@@ -582,6 +585,11 @@ class Transf_gen(distributions.rv_continuous):
 
         super(Transf_gen,self).__init__(a=a, b=b, name = name,
                                 longname = longname, extradoc = extradoc)
+
+    def _rvs(self, *args, **kwargs):
+        self.kls._size = self._size
+        return self.funcinv(self.kls._rvs(*args))
+
 
     def _cdf(self,x,*args, **kwargs):
         #print args
@@ -656,13 +664,14 @@ class ExpTransf_gen(distributions.rv_continuous):
             a = kwargs['a']
         else:
             a = 0
-        super(ExpTransf_gen,self).__init__(a=0, name = 'Log transformed distribution')
+        super(ExpTransf_gen,self).__init__(a=0, name = name)
         self.kls = kls
     def _cdf(self,x,*args):
+        pass
         #print args
-        return self.kls._cdf(np.log(x),*args)
+        return self.kls.cdf(np.log(x),*args)
     def _ppf(self, q, *args):
-        return np.exp(self.kls._ppf(q,*args))
+        return np.exp(self.kls.ppf(q,*args))
 
 class LogTransf_gen(distributions.rv_continuous):
     '''Distribution based on log/exp transformation
@@ -729,10 +738,15 @@ def examples_transf():
 
     print 'Results for loglaplace'
     loglaplaceg = LogTransf_gen(stats.laplace)
-    print loglaplaceg._cdf(2,10)
-    print stats.loglaplace.cdf(2,10)
+    print loglaplaceg._cdf(2)
+    print stats.loglaplace.cdf(2,1)
     loglaplaceexpg = ExpTransf_gen(stats.laplace)
-    print loglaplaceexpg._cdf(2,10)
+    print loglaplaceexpg._cdf(2)
+    stats.loglaplace.cdf(3,3)
+    #0.98148148148148151
+    loglaplaceexpg._cdf(3,0,1./3)
+    #0.98148148148148151
+
 
 
 
@@ -1215,4 +1229,5 @@ def mvnormcdf(upper, mu, cov, lower=None,  **kwds):
     return mvstdnormcdf(lower, upper, corr, **kwds)
 
 
-
+if __name__ == '__main__':
+    examples_transf()
