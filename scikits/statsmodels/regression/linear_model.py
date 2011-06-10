@@ -634,7 +634,6 @@ class GLSAR(GLS):
                 _X[(i+1):,:] = _X[(i+1):,:] - self.rho[i] * X[0:-(i+1),:]
                 return _X[self.order:,:]
 
-
 def yule_walker(X, order=1, method="unbiased", df=None, inv=False, demean=True):
     """
     Estimate AR(p) parameters from a sequence X using Yule-Walker equation.

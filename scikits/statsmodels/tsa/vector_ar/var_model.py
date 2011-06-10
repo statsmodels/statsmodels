@@ -268,6 +268,44 @@ def var_loglike(resid, omega, nobs):
     part2 = - (nobs / 2) * (logdet + neqs)
     return part1 + part2
 
+def _reordered(self, order):
+    #Create new arrays to hold rearranged results from .fit()
+    endog = self.endog
+    endog_lagged = self.endog_lagged
+    params = self.params
+    sigma_u = self.sigma_u
+    names = self.names
+    k_ar = self.k_ar
+    endog_new = np.zeros([np.size(endog,0),np.size(endog,1)])
+    endog_lagged_new = np.zeros([np.size(endog_lagged,0), np.size(endog_lagged,1)])
+    params_new_inc, params_new = [np.zeros([np.size(params,0), np.size(params,1)])
+                                  for i in range(2)]
+    sigma_u_new_inc, sigma_u_new = [np.zeros([np.size(sigma_u,0), np.size(sigma_u,1)])
+                                    for i in range(2)]
+    num_end = len(self.params[0])
+    names_new = []
+
+    #Rearrange elements and fill in new arrays
+    k = self.k_trend
+    for i, c in enumerate(order):
+        endog_new[:,i] = self.endog[:,c]
+        if k > 0:
+            params_new_inc[0,i] = params[0,i]
+            endog_lagged_new[:,0] = endog_lagged[:,0]
+        for j in range(k_ar):
+            params_new_inc[i+j*num_end+k,:] = self.params[c+j*num_end+k,:]
+            endog_lagged_new[:,i+j*num_end+k] = endog_lagged[:,c+j*num_end+k]
+        sigma_u_new_inc[i,:] = sigma_u[c,:]
+        names_new.append(names[c])
+    for i, c in enumerate(order):
+        params_new[:,i] = params_new_inc[:,c]
+        sigma_u_new[:,i] = sigma_u_new_inc[:,c]
+
+    return VARResults(endog=endog_new, endog_lagged=endog_lagged_new,
+                      params=params_new, sigma_u=sigma_u_new,
+                      lag_order=self.k_ar, model=self.model,
+                      trend='c', names=names_new, dates=self.dates)
+
 #-------------------------------------------------------------------------------
 # VARProcess class: for known or unknown VAR process
 
@@ -957,6 +995,43 @@ class VARResults(VARProcess):
         omegas = self._omega_forc_cov(steps)
         return mse + omegas / self.nobs
 
+    #Monte Carlo irf standard errors
+    def stderr_MC(self, orth=False, repl=1000, T=25, signif=0.05, seed=None):
+        """
+        Compute Monte Carlo standard errors assuming normally distributed
+
+        Notes
+        -----
+        Lutkepohl Appendix D
+
+        Returns
+        ------
+        Tuple of lower and upper arrays of ma_rep monte carlo standard errors
+
+        """
+        if orth:
+            raise NotImplementedError("Orthogonalized MC standard errors not available")
+        #use mean for starting value
+        neqs = self.neqs
+        mean = self.mean()
+        k_ar = self.k_ar
+        coefs = self.coefs
+        sigma_u = self.sigma_u
+        intercept = self.intercept
+        disc = 500 #number of simulated observations to discard
+
+        ma_coll = np.zeros([T+1, neqs, neqs, repl])
+        for i in range(repl):
+            #discard first hundred to eliminate correct for starting bias
+            sim = util.varsim(coefs, intercept, sigma_u, steps=T+disc)
+            sim = sim[disc:]
+            ma_coll[:,:,:,i] = VAR(sim).fit(maxlags=k_ar).ma_rep(maxn=T)
+        ma_sort = np.sort(ma_coll, axis=3) #sort to get quantiles
+        index = round(signif/2*repl),round((1-signif/2)*repl)
+        lower = ma_sort[:, :, :, index[0]-1]
+        upper = ma_sort[:, :, :, index[1]-1]
+        return lower, upper
+
     def _omega_forc_cov(self, steps):
         # Approximate MSE matrix \Omega(h) as defined in Lut p97
         G = self._zz
@@ -1044,6 +1119,19 @@ class VARResults(VARProcess):
         fevd : FEVD instance
         """
         return FEVD(self, P=var_decomp, periods=periods)
+
+    def reorder(self, order):
+        """Reorder variables for structural specification
+        """
+        if len(order) != len(self.params[0,:]):
+            raise ValueError("Reorder specification length should match number of endogenous variables")
+       #This convert order to list of integers if given as strings
+        if type(order[0]) is str:
+            order_new = []
+            for i, nam in enumerate(order):
+                order_new.append(self.names.index(order[i]))
+            order = order_new
+        return _reordered(self, order)
 
 #-------------------------------------------------------------------------------
 # VAR Diagnostics: Granger-causality, whiteness of residuals, normality, etc.

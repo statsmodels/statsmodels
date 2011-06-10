@@ -8,8 +8,11 @@ import numpy as np
 import numpy.linalg as la
 import scipy.linalg as L
 
+from scipy import stats
+
 from scikits.statsmodels.tools.decorators import cache_readonly
 from scikits.statsmodels.tools.tools import chain_dot
+#from scikits.statsmodels.tsa.api import VAR
 
 import scikits.statsmodels.tsa.tsatools as tsa
 import scikits.statsmodels.tsa.vector_ar.plotting as plotting
@@ -64,7 +67,8 @@ class BaseIRAnalysis(object):
         raise NotImplementedError
 
     def plot(self, orth=False, impulse=None, response=None, signif=0.05,
-             plot_params=None, subplot_params=None, plot_stderr=True):
+             plot_params=None, subplot_params=None, plot_stderr=True,
+             stderr_type='asym', repl=1000, seed=None):
         """
         Plot impulse responses
 
@@ -82,7 +86,20 @@ class BaseIRAnalysis(object):
             To pass to subplot plotting funcions. Example: if fonts are too big,
             pass {'fontsize' : 8} or some number to your taste.
         plot_params : dict
+
+        plot_stderr: bool, default True
+            Plot standard impulse response error bands
+        stderr_type: string
+            'asym': default, computes asymptotic standard errors
+            'mc': monte carlo standard errors (use rpl)
+        repl: int, default 1000
+            Number of replications for monte carlo standard errors
+        seed: int
+            np.random.seed for Monte Carlo replications
         """
+        periods = self.periods
+        model = self.model
+
         if orth:
             title = 'Impulse responses (orthogonalized)'
             irfs = self.orth_irfs
@@ -90,18 +107,18 @@ class BaseIRAnalysis(object):
             title = 'Impulse responses'
             irfs = self.irfs
 
-        try:
-            stderr = self.cov(orth=orth)
-        except NotImplementedError: # pragma: no cover
-            stderr = None
-
-        if not plot_stderr:
-            stderr = None
-
+        if stderr_type not in ['asym','mc']:
+            raise TypeError
+        else:
+            if stderr_type == 'asym':
+                stderr = self.cov(orth=orth)
+            if stderr_type == 'mc':
+                stderr = self.cov_mc(orth=orth, repl=repl,
+                                     signif=signif, seed=seed)
         plotting.irf_grid_plot(irfs, stderr, impulse, response,
                                self.model.names, title, signif=signif,
                                subplot_params=subplot_params,
-                               plot_params=plot_params)
+                               plot_params=plot_params, stderr_type=stderr_type)
 
     def plot_cum_effects(self, orth=False, impulse=None, response=None,
                          signif=0.05, plot_params=None,
@@ -130,7 +147,7 @@ class BaseIRAnalysis(object):
         plotting.irf_grid_plot(cum_effects, stderr, impulse, response,
                                self.model.names, title, signif=signif,
                                hlines=lr_effects, subplot_params=subplot_params,
-                               plot_params=plot_params)
+                               plot_params=plot_params, stderr_type='asym')
 
 class IRAnalysis(BaseIRAnalysis):
     """
@@ -176,6 +193,15 @@ class IRAnalysis(BaseIRAnalysis):
             covs[i] = chain_dot(Gi, self.cov_a, Gi.T)
 
         return covs
+
+    def cov_mc(self, orth=False, repl=1000, signif=0.05, seed=None):
+        """
+        IRF Monte Carlo standard errors
+        """
+        model = self.model
+        periods = self.periods
+        return self.model.stderr_MC(orth=orth, repl=repl,
+                                    T=periods, signif=signif, seed=seed)
 
     @cache_readonly
     def G(self):
