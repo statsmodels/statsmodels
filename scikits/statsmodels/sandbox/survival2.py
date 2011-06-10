@@ -286,7 +286,7 @@ class KaplanMeier(object):
             c = self.censorings[g]
             csurvival = survival[c != 0]
             ct = t[c != 0]
-            if list(ct) != []:
+            if len(ct) != 0:
                 plt.vlines(ct,csurvival+0.02,csurvival-0.02)
         x = np.repeat(t[e != 0], 2)
         y = np.repeat(survival[e != 0], 2)
