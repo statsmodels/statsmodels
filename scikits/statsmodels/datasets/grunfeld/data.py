@@ -58,7 +58,7 @@ def load():
     firm (ie., there is no reference dummy)
     """
     filepath = dirname(abspath(__file__))
-    data = recfromtxt(filepath + '/grunfeld.csv', delimiter=",",
+    data = recfromtxt(open(filepath + '/grunfeld.csv','rb'), delimiter=",",
             names=True, dtype="f8,f8,f8,a17,f8")
     names = list(data.dtype.names)
     endog = array(data[names[0]], dtype=float)
