@@ -106,13 +106,13 @@ class KaplanMeier(object):
         >>> km2.fit()
 
         km2 will estimate a survival curve for each value of industrial
-        production, the columnof dta with index one (1).
+        production, the column of dta with index one (1).
 
         With censoring:
 
         >>> censoring = np.ones_like(dta[:,0])
         >>> censoring[dta[:,0] > 80] = 0
-        >>> dta = np.c_[dta,np.transpose(censoring)]
+        >>> dta = np.c_[dta,censoring]
         >>> dta[range(5),:]
         array([[  7.00000000e+00,   1.13800000e-02,   1.00000000e+00],
                [  9.00000000e+00,   1.13800000e-02,   1.00000000e+00],
@@ -125,27 +125,46 @@ class KaplanMeier(object):
 
         Test for difference of survival curves
 
-        >>> log_rank = km3.test_diff([0,1])
+        >>> log_rank = km3.test_diff([0.0645,-0.03957])
 
         The zeroth element of log_rank is the chi-square test statistic
-        for the difference between the survival curves for exog = 1
-        and exog = 0, the index one element is the degrees of freedom for
+        for the difference between the survival curves for exog = 0.0645
+        and exog = -0.03957, the index one element is the degrees of freedom for
         the test, and the index two element is the p-value for the test
 
-        >>> wilcoxon = km3.test_diff([0,1], rho=1)
+        Groups with nan names
 
-        wilcoxon is the equivalent information as logg_rank, but for the
-        Peto and Peto modification to the Gehan-Wilcoxon test.
+        >>> groups = np.ones_like(dta[:,1])
+        >>> groups = groups.astype('S4')
+        >>> groups[dta[:,1] > 0] = 'high'
+        >>> groups[dta[:,1] <= 0] = 'low'
+        >>> dta = dta.astype('S4')
+        >>> dta[:,1] = groups
+        >>> dta[range(5),:]
+        array([['7.0', 'high', '1.0'],
+               ['9.0', 'high', '1.0'],
+               ['13.0', 'high', '1.0'],
+               ['14.0', 'high', '1.0'],
+               ['26.0', 'high', '1.0']],
+              dtype='|S4')
+        >>> km4 = KaplanMeier(dta,0,exog=1,censoring=2)
+        >>> km4.fit()
+
     """
 
     def __init__(self, data, endog, exog=None, censoring=None):
-    #TODO: optional choice of left or right continuous?
         self.censoring = censoring
         self.exog = exog
-        self.data = data
+        if data.dtype == float or data.dtype == int:
+            self.data = data[~np.isnan(data).any(1)]
+        else:
+            self.data = data
         self.endog = endog
 
     def fit(self):
+        """
+        Calculate the Kaplan-Meier estimator of the survival function
+        """
         self.results = []
         self.ts = []
         self.censorings = []
@@ -155,40 +174,46 @@ class KaplanMeier(object):
         else:
             groups = np.unique(self.data[:,self.exog])
             self.groups = groups
-            #TODO: vectorize loop?
             for g in groups:
                 group = self.data[self.data[:,self.exog] == g]
                 self.fitting_proc(group)
 
     def plot(self):
+        """
+        Plot the estimated survival curves. After using this method
+        do
+
+        plt.show()
+
+        to display the plot
+        """
         if self.exog == None:
             self.plotting_proc(0)
         else:
-            #TODO: vectorize loop?
             for g in range(len(self.groups)):
                 self.plotting_proc(g)
         plt.ylim(ymax=1.05)
         plt.ylabel('Survival')
         plt.xlabel('Time')
-        #TODO: check plotting for multiple censored observations
-        #at one time (formula for distance between tick marks?)
 
     def summary(self):
+        """
+        Print a set of tables containing the estimates of the survival
+        function, and its standard errors
+        """
         if self.exog == None:
             self.summary_proc(0)
         else:
-            #TODO: vectorize loop?
             for g in range(len(self.groups)):
                 self.summary_proc(g)
 
     def fitting_proc(self, group):
-        #TODO: calculate hazard?
-        #TODO: check multiple censored observations at one time
-        #TODO: check non-int values for exog (strings)
-        #TODO: implement fitting with np.in1d?
-        t = group[:,self.endog]
+        """
+        For internal use
+        """
+        t = ((group[:,self.endog]).astype(float)).astype(int)
         if self.censoring == None:
-            events = np.bincount(t.astype(int))
+            events = np.bincount(t)
             t = np.unique(t)
             events = events[:,list(t)]
             events = events.astype(float)
@@ -196,10 +221,10 @@ class KaplanMeier(object):
             eventsSum = np.r_[0,eventsSum]
             n = len(group) - eventsSum[:-1]
         else:
-            censoring = group[:,self.censoring]
+            censoring = ((group[:,self.censoring]).astype(float)).astype(int)
             reverseCensoring = -1*(censoring - 1)
-            events = np.bincount(t.astype(int),censoring)
-            censored = np.bincount(t.astype(int),reverseCensoring)
+            events = np.bincount(t,censoring)
+            censored = np.bincount(t,reverseCensoring)
             t = np.unique(t)
             censored = censored[:,list(t)]
             censored = censored.astype(float)
@@ -218,9 +243,11 @@ class KaplanMeier(object):
         (self.results).append(np.array([survival,se]))
         (self.ts).append(t)
         (self.event).append(events)
-        #TODO: save less data?
 
     def plotting_proc(self, g):
+        """
+        For internal use
+        """
         survival = self.results[g][0]
         t = self.ts[g]
         e = (self.event)[g]
@@ -240,6 +267,9 @@ class KaplanMeier(object):
         plt.plot(x,y)
 
     def summary_proc(self, g):
+        """
+        For internal use
+        """
         if self.exog != None:
             myTitle = ('exog = ' + str(self.groups[g]) + '\n')
         else:
@@ -250,7 +280,7 @@ class KaplanMeier(object):
                             title = myTitle)
         print(table)
 
-    def test_diff(self, groups, rho=0):
+    def test_diff(self, groups, rho=None, weight=None):
 
         """
         test_diff(groups, rho=0)
@@ -266,8 +296,11 @@ class KaplanMeier(object):
         rho: compute the test statistic with weight S(t)^rho, where
         S(t) is the pooled estimate for the Kaplan-Meier survival function.
         If rho = 0, this is the logrank test, if rho = 0, this is the
-
         Peto and Peto modification to the Gehan-Wilcoxon test.
+
+        weight: User specified function that accepts as its sole arguement
+        an array of times, and returns an array of weights for each time
+        to be used in the test
 
         Returns
         -------
@@ -287,23 +320,37 @@ class KaplanMeier(object):
         >>> dta = dta.values()[-1]
         >>> censoring = np.ones_like(dta[:,0])
         >>> censoring[dta[:,0] > 80] = 0
-        >>> dta = np.c_[dta,np.transpose(censoring)]
+        >>> dta = np.c_[dta,censoring]
         >>> km = KaplanMeier(dta,0,exog=1,censoring=2)
         >>> km.fit()
 
         Test for difference of survival curves
 
-        >>> log_rank = km.test_diff([0,1])
+        >>> log_rank = km3.test_diff([0.0645,-0.03957])
 
         The zeroth element of log_rank is the chi-square test statistic
-        for the difference between the survival curves for exog = 1
-        and exog = 0, the index one element is the degrees of freedom for
-        the test, and the index two element is the p-value for the test
+        for the difference between the survival curves using the log rank test
+        for exog = 0.0645 and exog = -0.03957, the index one element
+        is the degrees of freedom for the test, and the index two element
+        is the p-value for the test
 
-        >>> wilcoxon = km.test_diff([0,1], rho=1)
+        >>> wilcoxon = km.test_diff([0.0645,-0.03957], rho=1)
 
-        wilcoxon is the equivalent information as logg_rank, but for the
+        wilcoxon is the equivalent information as log_rank, but for the
         Peto and Peto modification to the Gehan-Wilcoxon test.
+
+        User specified weight functions
+
+        >>> log_rank = km3.test_diff([0.0645,-0.03957], weight=np.ones_like)
+
+        This is equivalent to the log rank test
+
+        More than two groups
+
+        >>> log_rank = km.test_diff([0.0645,-0.03957,0.01138])
+
+        The test can be performed with arbitrarily many groups, so long as
+        they are all in the column exog
         """
         groups = np.asarray(groups)
         if self.exog == None:
@@ -311,19 +358,31 @@ class KaplanMeier(object):
 
         elif (np.in1d(groups,self.groups)).all():
             data = self.data[np.in1d(self.data[:,self.exog],groups)]
-            t = data[:,self.endog]
+            t = ((data[:,self.endog]).astype(float)).astype(int)
             tind = np.unique(t)
             NK = []
             N = []
             D = []
             Z = []
-            s = KaplanMeier(data,self.endog,censoring=self.censoring)
-            s.fit()
-            s = (s.results[0][0]) ** (rho)
+            if rho != None and weight != None:
+                raise ValueError("Must use either rho or weights, not both")
+
+            elif rho != None:
+                s = KaplanMeier(data,self.endog,censoring=self.censoring)
+                s.fit()
+                s = (s.results[0][0]) ** (rho)
+                s = np.r_[1,s[:-1]]
+
+            elif weight != None:
+                s = weight(tind)
+
+            else:
+                s = np.ones_like(tind)
+
             if self.censoring == None:
                 for g in groups:
-                    dk = np.bincount((t[data[:,self.exog] == g]).astype(int))
-                    d = np.bincount(t.astype(int))
+                    dk = np.bincount((t[data[:,self.exog] == g]))
+                    d = np.bincount(t)
                     if np.max(tind) != len(dk):
                         dif = np.max(tind) - len(dk) + 1
                         dk = np.r_[dk,[0]*dif]
@@ -337,22 +396,26 @@ class KaplanMeier(object):
                     dSum = np.r_[0,dSum]
                     nk = len(data[data[:,self.exog] == g]) - dkSum[:-1]
                     n = len(data) - dSum[:-1]
+                    d = d[n>1]
+                    dk = dk[n>1]
+                    nk = nk[n>1]
+                    n = n[n>1]
+                    s = s[n>1]
                     ek = (nk * d)/(n)
-                    O.append(np.sum(dk))
-                    E.append(np.sum(ek))
+                    Z.append(np.sum(s * (dk - ek)))
                     NK.append(nk)
                     N.append(n)
                     D.append(d)
             else:
                 for g in groups:
-                    censoring = data[:,self.censoring]
+                    censoring = ((data[:,self.censoring]).astype(float)).astype(int)
                     reverseCensoring = -1*(censoring - 1)
-                    censored = np.bincount(t.astype(int),reverseCensoring)
-                    ck = np.bincount((t[self.data[:,self.exog] == g]).astype(int),
-                                     reverseCensoring[self.data[:,self.exog] == g])
-                    dk = np.bincount((t[data[:,self.exog] == g]).astype(int),
+                    censored = np.bincount(t,reverseCensoring)
+                    ck = np.bincount((t[data[:,self.exog] == g]),
+                                     reverseCensoring[data[:,self.exog] == g])
+                    dk = np.bincount((t[data[:,self.exog] == g]),
                                      censoring[data[:,self.exog] == g])
-                    d = np.bincount(t.astype(int),censoring)
+                    d = np.bincount(t,censoring)
                     if np.max(tind) != len(dk):
                         dif = np.max(tind) - len(dk) + 1
                         dk = np.r_[dk,[0]*dif]
@@ -391,13 +454,12 @@ class KaplanMeier(object):
             D = np.array(D)
             NK = np.array(NK)
             sigma = -1 * np.dot((NK/N) * ((N - D)/(N - 1)) * D
-                                * np.array([s]*len(D))
+                                * np.array([(s ** 2)]*len(D))
                             ,np.transpose(NK/N))
             np.fill_diagonal(sigma, np.diagonal(np.dot((NK/N)
                                                   * ((N - D)/(N - 1)) * D
-                                                       * np.array([s]*len(D))
+                                                       * np.array([(s ** 2)]*len(D))
                                                   ,np.transpose(1 - (NK/N)))))
-
             chisq = np.dot(np.transpose(Z),np.dot(la.pinv(sigma), Z))
             df = len(groups) - 1
             return np.array([chisq, df, stats.chi2.sf(chisq,df)])
