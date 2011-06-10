@@ -1,7 +1,9 @@
 #Kaplan-Meier Estimator
 
 import numpy as np
+import numpy.linalg as la
 import matplotlib.pyplot as plt
+from scipy import stats
 from scikits.statsmodels.iolib.table import SimpleTable
 
 class KaplanMeier(object):
@@ -167,6 +169,7 @@ class KaplanMeier(object):
         #TODO: calculate hazard?
         #TODO: check multiple censored observations at one time
         #TODO: check non-int values for exog (strings)
+        #TODO: implement fitting with np.in1d?
         t = group[:,self.endog]
         if self.censoring == None:
             events = np.bincount(t.astype(int))
@@ -231,5 +234,101 @@ class KaplanMeier(object):
                             title = myTitle)
         print(table)
 
-    #TODO: Log Rank Test?
-    #TODO: show_life_tables method?
+    def logrank(self, groups):
+        groups = np.asarray(groups)
+        if self.exog == None:
+            raise ValueError("Need an exogenous variable for logrank test")
+
+        elif (np.in1d(groups,self.groups)).all():
+            data = self.data[np.in1d(self.data[:,self.exog],groups)]
+            t = data[:,self.endog]
+            tind = np.unique(t)
+            O = []
+            E = []
+            NK = []
+            N = []
+            D = []
+            if self.censoring == None:
+                for g in groups:
+                    dk = np.bincount((t[data[:,self.exog] == g]).astype(int))
+                    d = np.bincount(t.astype(int))
+                    if np.max(tind) != len(dk):
+                        dif = np.max(tind) - len(dk) + 1
+                        dk = np.r_[dk,[0]*dif]
+                    dk = dk[:,list(tind)]
+                    d = d[:,list(tind)]
+                    dk = dk.astype(float)
+                    d = d.astype(float)
+                    dkSum = np.cumsum(dk)
+                    dSum = np.cumsum(d)
+                    dkSum = np.r_[0,dkSum]
+                    dSum = np.r_[0,dSum]
+                    nk = len(data[data[:,self.exog] == g]) - dkSum[:-1]
+                    n = len(data) - dSum[:-1]
+                    ek = (nk * d)/(n)
+                    O.append(np.sum(dk))
+                    E.append(np.sum(ek))
+                    NK.append(nk)
+                    N.append(n)
+                    D.append(d)
+            else:
+                for g in groups:
+                    censoring = data[:,self.censoring]
+                    reverseCensoring = -1*(censoring - 1)
+                    censored = np.bincount(t.astype(int),reverseCensoring)
+                    ck = np.bincount((t[self.data[:,self.exog] == g]).astype(int),
+                                     reverseCensoring[self.data[:,self.exog] == g])
+                    dk = np.bincount((t[data[:,self.exog] == g]).astype(int),
+                                     censoring[data[:,self.exog] == g])
+                    d = np.bincount(t.astype(int),censoring)
+                    if np.max(tind) != len(dk):
+                        dif = np.max(tind) - len(dk) + 1
+                        dk = np.r_[dk,[0]*dif]
+                        ck = np.r_[ck,[0]*dif]
+                    dk = dk[:,list(tind)]
+                    ck = ck[:,list(tind)]
+                    d = d[:,list(tind)]
+                    dk = dk.astype(float)
+                    d = d.astype(float)
+                    ck = ck.astype(float)
+                    dkSum = np.cumsum(dk)
+                    dSum = np.cumsum(d)
+                    ck = np.cumsum(ck)
+                    ck = np.r_[0,ck]
+                    dkSum = np.r_[0,dkSum]
+                    dSum = np.r_[0,dSum]
+                    censored = censored[:,list(tind)]
+                    censored = censored.astype(float)
+                    censoredSum = np.cumsum(censored)
+                    censoredSum = np.r_[0,censoredSum]
+                    nk = (len(data[data[:,self.exog] == g]) - dkSum[:-1]
+                          - ck[:-1])
+                    n = len(data) - dSum[:-1] - censoredSum[:-1]
+                    d = d[n>1]
+                    dk = dk[n>1]
+                    nk = nk[n>1]
+                    n = n[n>1]
+                    ek = (nk * d)/(n)
+                    O.append(np.sum(dk))
+                    E.append(np.sum(ek))
+                    NK.append(nk)
+                    N.append(n)
+                    D.append(d)
+            E = np.array(E)
+            O = np.array(O)
+            N = np.array(N)
+            D = np.array(D)
+            NK = np.array(NK)
+            sigma = -1 * np.dot((NK/N) * ((N - D)/(N - 1)) * D
+                            ,np.transpose(NK/N))
+            np.fill_diagonal(sigma, np.diagonal(np.dot((NK/N)
+                                                  * ((N - D)/(N - 1)) * D
+                                                  ,np.transpose(1 - (NK/N)))))
+
+            Z = O - E
+            self.variance = sigma
+            chisq = np.dot(np.transpose(Z),np.dot(la.pinv(sigma), Z))
+            df = len(groups) -1
+            return np.array([chisq, df, stats.chi2.sf(chisq,df)])
+        else:
+            raise ValueError("groups must be in column exog")
