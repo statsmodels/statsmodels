@@ -55,6 +55,69 @@ class KaplanMeier(object):
         summary: Display the results of fit in a table. Gives results
             for all (including censored) times
 
+        Examples
+        --------
+        >>> import scikits.statsmodels.api as sm
+        >>> import matplotlib.pyplot as plt
+        >>> import numpy as np
+        >>> from scikits.statsmodels.sandbox.survival2 import KaplanMeier
+        >>> dta = sm.datasets.strikes.load()
+        >>> dta = dta.values()[-1]
+        >>> dta[:,range(5)]
+        array([[  7.00000000e+00,   1.13800000e-02],
+               [  9.00000000e+00,   1.13800000e-02],
+               [  1.30000000e+01,   1.13800000e-02],
+               [  1.40000000e+01,   1.13800000e-02],
+               [  2.60000000e+01,   1.13800000e-02]])
+        >>> km = KaplanMeier(dta,0)
+        >>> km.fit()
+        >>> km.plot()
+
+        Doing
+
+        >>> km.summary()
+
+        will display a table of the estimated survival and standard errors
+        for each time. The first few lines are
+
+                  Kaplan-Meier Curve
+        =====================================
+         Time     Survival        Std. Err
+        -------------------------------------
+         1.0   0.983870967742 0.0159984306572
+         2.0   0.91935483871  0.0345807888235
+         3.0   0.854838709677 0.0447374942184
+         4.0   0.838709677419 0.0467104592871
+         5.0   0.822580645161 0.0485169952543
+
+        Doing
+
+        >>> plt.show()
+
+        will plot the survival curve
+
+        Mutliple survival curves:
+
+        >>> km2 = KaplanMeier(dta,0,exog=1)
+        >>> km2.fit()
+
+        km2 will estimate a survival curve for each value of industrial
+        production, the columnof dta with index one (1).
+
+        With censoring:
+
+        >>> censoring = np.ones_like(dta[:,0])
+        >>> censoring[dta[:,0] > 80] = 0
+        >>> dta = np.c_[dta,np.transpose(censoring)]
+        >>> dta[range(5),:]
+        array([[  7.00000000e+00,   1.13800000e-02,   1.00000000e+00],
+               [  9.00000000e+00,   1.13800000e-02,   1.00000000e+00],
+               [  1.30000000e+01,   1.13800000e-02,   1.00000000e+00],
+               [  1.40000000e+01,   1.13800000e-02,   1.00000000e+00],
+               [  2.60000000e+01,   1.13800000e-02,   1.00000000e+00]])
+
+        >>> km3 = KaplanMeier(dta,0,exog=1,censoring=2)
+        >>> km3.fit()
     """
 
     def __init__(self, data, endog, exog=None, censoring=None):
