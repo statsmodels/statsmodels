@@ -18,7 +18,7 @@ import numpy as np
 from scipy import integrate, stats, special
 from scipy.stats import chi,chi2
 
-from extras import mvnormcdf, mvstdnormcdf
+from extras import mvnormcdf, mvstdnormcdf, mvnormcdf
 
 from numpy import exp as np_exp
 from numpy import log as np_log
