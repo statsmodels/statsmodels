@@ -153,13 +153,43 @@ class KaplanMeier(object):
     """
 
     def __init__(self, data, endog, exog=None, censoring=None):
-        self.censoring = censoring
         self.exog = exog
+        self.censoring = censoring
+        cols = [endog]
+        self.endog = 0
+        if exog != None:
+            cols.append(exog)
+            self.exog = 1
+        if censoring != None:
+            cols.append(censoring)
+            if exog != None:
+                self.censoring = 2
+            else:
+                self.censoring = 1
+        data = data[:,cols]
         if data.dtype == float or data.dtype == int:
             self.data = data[~np.isnan(data).any(1)]
         else:
+            t = (data[:,self.endog]).astype(float)
+            if exog != None:
+                evec = data[:,self.exog]
+                evec = evec[~np.isnan(t)]
+            if censoring != None:
+                cvec = (data[:,self.censoring]).astype(float)
+                cvec = cvec[~np.isnan(t)]
+            t = t[~np.isnan(t)]
+            if censoring != None:
+                t = t[~np.isnan(cvec)]
+                if exog != None:
+                    evec = evec[~np.isnan(cvec)]
+                cvec = cvec[~np.isnan(cvec)]
+            cols = [t]
+            if exog != None:
+                cols.append(evec)
+            if censoring != None:
+                cols.append(cvec)
+            data = (np.array(cols)).transpose()
             self.data = data
-        self.endog = endog
 
     def fit(self):
         """
@@ -187,6 +217,7 @@ class KaplanMeier(object):
 
         to display the plot
         """
+        plt.figure()
         if self.exog == None:
             self.plotting_proc(0)
         else:
