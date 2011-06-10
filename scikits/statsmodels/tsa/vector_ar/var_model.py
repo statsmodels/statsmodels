@@ -1029,8 +1029,8 @@ class VARResults(VARProcess):
             ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).ma_rep(maxn=T)
         ma_sort = np.sort(ma_coll, axis=0) #sort to get quantiles
         index = round(signif/2*repl)-1,round((1-signif/2)*repl)-1
-        lower = ma_sort[index[0],:, :, :]/np.sqrt(T-k_ar)
-        upper = ma_sort[index[1],:, :, :]/np.sqrt(T-k_ar)
+        lower = ma_sort[index[0],:, :, :]
+        upper = ma_sort[index[1],:, :, :]
         return lower, upper
 
     def _omega_forc_cov(self, steps):
