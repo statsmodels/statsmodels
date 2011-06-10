@@ -6,7 +6,56 @@ from scikits.statsmodels.iolib.table import SimpleTable
 
 class KaplanMeier(object):
 
-    #TODO: docstring
+    """
+    KaplanMeier(...)
+        KaplanMeier(data, endog, exog=None, censoring=None)
+
+        Create an object of class KaplanMeier for estimating
+        Kaplan-Meier survival curves.
+
+        Parameters
+        ----------
+        data: array_like
+            An array, with observations in each row, and
+            variables in the columns
+
+        endog: index (starting at zero) of the column
+            containing the endogenous variable (time)
+
+        exog: index of the column containing the exogenous
+            variable (must be catagorical). If exog = None, this
+            is equivalent to a single survival curve
+
+        censoring: index of the column containing an indicator
+            of whether an observation is an event, or a censored
+            observation, with 0 for censored, and 1 for an event
+
+        Attributes
+        -----------
+        censorings: List of censorings associated with each unique
+            time, at each value of exog
+
+        events: List of the number of events at each unique time
+            for each value of exog
+
+        results: List of arrays containing estimates of the value
+            value of the survival function and its standard error
+            at each unique time, for each value of exog
+
+        ts: List of unique times for each value of exog
+
+        Methods
+        -------
+        fit: Calcuate the Kaplan-Meier estimates of the survival
+            function and its standard error at each time, for each
+            value of exog
+
+        plot: Plot the survival curves using matplotlib.plyplot
+
+        summary: Display the results of fit in a table. Gives results
+            for all (including censored) times
+
+    """
 
     def __init__(self, data, endog, exog=None, censoring=None):
     #TODO: optional choice of left or right continuous?
@@ -79,6 +128,7 @@ class KaplanMeier(object):
             eventsSum = np.cumsum(events)
             eventsSum = np.r_[0,eventsSum]
             n = len(group) - eventsSum[:-1] - censoredSum[:-1]
+            (self.censorings).append(censored)
         survival = np.cumprod(1-events/n)
         var = ((survival*survival) *
                np.cumsum(events/(n*(n-events))))
@@ -86,17 +136,17 @@ class KaplanMeier(object):
         (self.results).append(np.array([survival,se]))
         (self.ts).append(t)
         (self.event).append(events)
-        (self.censorings).append(censored)
         #TODO: save less data?
 
     def plotting_proc(self, g):
         survival = self.results[g][0]
-        c = self.censorings[g]
         t = self.ts[g]
-        csurvival = survival[c != 0]
-        ct = t[c != 0]
-        e = self.event[g]
-        plt.vlines(ct,csurvival+0.02,csurvival-0.02)
+        e = (self.event)[g]
+        if self.censoring != None:
+            c = self.censorings[g]
+            csurvival = survival[c != 0]
+            ct = t[c != 0]
+            plt.vlines(ct,csurvival+0.02,csurvival-0.02)
         x = np.repeat(t[e != 0], 2)
         y = np.repeat(survival[e != 0], 2)
         if self.ts[g][-1] in t[e != 0]:
@@ -111,7 +161,7 @@ class KaplanMeier(object):
         if self.exog != None:
             myTitle = ('exog = ' + str(self.groups[g]) + '\n')
         else:
-            myTitle = "Kaplan Meier Curve"
+            myTitle = "Kaplan-Meier Curve"
         table = np.transpose(self.results[g])
         table = np.c_[np.transpose(self.ts[g]),table]
         table = SimpleTable(table, headers=['Time','Survival','Std. Err'],
