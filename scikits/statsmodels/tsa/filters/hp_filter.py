@@ -1,7 +1,7 @@
 from scipy import sparse
 from scipy.sparse import dia_matrix, eye as speye
 from scipy.sparse.linalg import spsolve
-from numpy import asarray, array, repeat
+import numpy as np
 
 def hpfilter(X, lamb=1600):
     """
@@ -59,14 +59,14 @@ def hpfilter(X, lamb=1600):
         Filter for the Frequency of Observations." `The Review of Economics and
         Statistics`, 84(2), 371-80.
     """
-    X = asarray(X)
+    X = np.asarray(X)
     if X.ndim > 1:
         X = X.squeeze()
     nobs = len(X)
     I = speye(nobs,nobs)
-    offsets = array([0,1,2])
-    data = repeat([[1],[-2],[1]], nobs, axis=1)
-    K = dia_matrix((data,offsets), shape=(nobs-2,nobs))
+    offsets = np.array([0,1,2])
+    data = np.repeat([[1],[-2],[1]], nobs, axis=1)
+    K = dia_matrix((data, offsets), shape=(nobs-2,nobs))
     trend = spsolve(I+lamb*K.T.dot(K), X)
     cycle = X-trend
     return cycle, trend
