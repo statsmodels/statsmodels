@@ -57,6 +57,8 @@ class KaplanMeier(object):
         summary: Display the results of fit in a table. Gives results
             for all (including censored) times
 
+        test_diff: Test for difference between survival curves
+
         Examples
         --------
         >>> import scikits.statsmodels.api as sm
@@ -120,6 +122,20 @@ class KaplanMeier(object):
 
         >>> km3 = KaplanMeier(dta,0,exog=1,censoring=2)
         >>> km3.fit()
+
+        Test for difference of survival curves
+
+        >>> log_rank = km3.test_diff([0,1])
+
+        The zeroth element of log_rank is the chi-square test statistic
+        for the difference between the survival curves for exog = 1
+        and exog = 0, the index one element is the degrees of freedom for
+        the test, and the index two element is the p-value for the test
+
+        >>> wilcoxon = km3.test_diff([0,1], rho=1)
+
+        wilcoxon is the equivalent information as logg_rank, but for the
+        Peto and Peto modification to the Gehan-Wilcoxon test.
     """
 
     def __init__(self, data, endog, exog=None, censoring=None):
@@ -234,7 +250,61 @@ class KaplanMeier(object):
                             title = myTitle)
         print(table)
 
-    def logrank(self, groups):
+    def test_diff(self, groups, rho=0):
+
+        """
+        test_diff(groups, rho=0)
+
+        Test for difference between survival curves
+
+        Parameters
+        ----------
+        groups: A list of the values for exog to test for difference.
+        tests the null hypothesis that the survival curves for all
+        values of exog in groups are equal
+
+        rho: compute the test statistic with weight S(t)^rho, where
+        S(t) is the pooled estimate for the Kaplan-Meier survival function.
+        If rho = 0, this is the logrank test, if rho = 0, this is the
+
+        Peto and Peto modification to the Gehan-Wilcoxon test.
+
+        Returns
+        -------
+        An array whose zeroth element is the chi-square test statistic for
+        the global null hypothesis, that all survival curves are equal,
+        the index one element is degrees of freedom for the test, and the
+        index two element is the p-value for the test.
+
+        Examples
+        --------
+
+        >>> import scikits.statsmodels.api as sm
+        >>> import matplotlib.pyplot as plt
+        >>> import numpy as np
+        >>> from scikits.statsmodels.sandbox.survival2 import KaplanMeier
+        >>> dta = sm.datasets.strikes.load()
+        >>> dta = dta.values()[-1]
+        >>> censoring = np.ones_like(dta[:,0])
+        >>> censoring[dta[:,0] > 80] = 0
+        >>> dta = np.c_[dta,np.transpose(censoring)]
+        >>> km = KaplanMeier(dta,0,exog=1,censoring=2)
+        >>> km.fit()
+
+        Test for difference of survival curves
+
+        >>> log_rank = km.test_diff([0,1])
+
+        The zeroth element of log_rank is the chi-square test statistic
+        for the difference between the survival curves for exog = 1
+        and exog = 0, the index one element is the degrees of freedom for
+        the test, and the index two element is the p-value for the test
+
+        >>> wilcoxon = km.test_diff([0,1], rho=1)
+
+        wilcoxon is the equivalent information as logg_rank, but for the
+        Peto and Peto modification to the Gehan-Wilcoxon test.
+        """
         groups = np.asarray(groups)
         if self.exog == None:
             raise ValueError("Need an exogenous variable for logrank test")
@@ -243,11 +313,13 @@ class KaplanMeier(object):
             data = self.data[np.in1d(self.data[:,self.exog],groups)]
             t = data[:,self.endog]
             tind = np.unique(t)
-            O = []
-            E = []
             NK = []
             N = []
             D = []
+            Z = []
+            s = KaplanMeier(data,self.endog,censoring=self.censoring)
+            s.fit()
+            s = (s.results[0][0]) ** (rho)
             if self.censoring == None:
                 for g in groups:
                     dk = np.bincount((t[data[:,self.exog] == g]).astype(int))
@@ -308,27 +380,26 @@ class KaplanMeier(object):
                     dk = dk[n>1]
                     nk = nk[n>1]
                     n = n[n>1]
+                    s = s[n>1]
                     ek = (nk * d)/(n)
-                    O.append(np.sum(dk))
-                    E.append(np.sum(ek))
+                    Z.append(np.sum(s * (dk - ek)))
                     NK.append(nk)
                     N.append(n)
                     D.append(d)
-            E = np.array(E)
-            O = np.array(O)
+            Z = np.array(Z)
             N = np.array(N)
             D = np.array(D)
             NK = np.array(NK)
             sigma = -1 * np.dot((NK/N) * ((N - D)/(N - 1)) * D
+                                * np.array([s]*len(D))
                             ,np.transpose(NK/N))
             np.fill_diagonal(sigma, np.diagonal(np.dot((NK/N)
                                                   * ((N - D)/(N - 1)) * D
+                                                       * np.array([s]*len(D))
                                                   ,np.transpose(1 - (NK/N)))))
 
-            Z = O - E
-            self.variance = sigma
             chisq = np.dot(np.transpose(Z),np.dot(la.pinv(sigma), Z))
-            df = len(groups) -1
+            df = len(groups) - 1
             return np.array([chisq, df, stats.chi2.sf(chisq,df)])
         else:
             raise ValueError("groups must be in column exog")
