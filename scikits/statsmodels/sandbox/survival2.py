@@ -63,7 +63,7 @@ class KaplanMeier(object):
         >>> from scikits.statsmodels.sandbox.survival2 import KaplanMeier
         >>> dta = sm.datasets.strikes.load()
         >>> dta = dta.values()[-1]
-        >>> dta[:,range(5)]
+        >>> dta[range(5),:]
         array([[  7.00000000e+00,   1.13800000e-02],
                [  9.00000000e+00,   1.13800000e-02],
                [  1.30000000e+01,   1.13800000e-02],
