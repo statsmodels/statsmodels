@@ -996,7 +996,7 @@ class VARResults(VARProcess):
         return mse + omegas / self.nobs
 
     #Monte Carlo irf standard errors
-    def stderr_MC(self, orth=False, repl=1000, T=25, signif=0.05, seed=None):
+    def stderr_MC(self, orth=False, repl=1000, T=10, signif=0.05, seed=None):
         """
         Compute Monte Carlo standard errors assuming normally distributed
 
