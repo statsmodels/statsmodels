@@ -192,33 +192,6 @@ def varsim(coefs, intercept, sig_u, steps=100, initvalues=None, seed=None):
 
     return result
 
-def varsim_alt(coefs, intercept, sig_u, steps=100, initvalues=None, seed=None):
-    """
-    Simulate simple VAR(p) process with known coefficients, intercept, white
-    noise covariance, etc.
-    """
-    from numpy.random import normal as norm
-    if seed is not None:
-        np.random.seed(seed=seed)
-    P = cholesky(sig_u)
-    p, k, k = coefs.shape
-    ugen = np.zeros((k, steps))
-    for i in range(k):
-        ugen[i] = norm(0,1,steps)
-    for m in range(steps):
-        ugen[:,m] = np.dot(P,ugen[:,m])
-    ugen = np.transpose(ugen)
-    result = np.zeros((steps, k))
-    result[p:] = intercept + ugen[p:]
-
-    # add in AR terms
-    for t in xrange(p, steps):
-        ygen = result[t]
-        for j in xrange(p):
-            ygen += np.dot(coefs[j], result[t-j-1])
-
-    return result
-
 def get_index(lst, name):
     try:
         result = lst.index(name)
