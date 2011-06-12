@@ -996,9 +996,9 @@ class VARResults(VARProcess):
         return mse + omegas / self.nobs
 
     #Monte Carlo irf standard errors
-    def stderr_MC(self, orth=False, repl=1000, T=25, signif=0.05, seed=None):
+    def stderr_MC_irf(self, orth=False, repl=1000, T=10, signif=0.05, seed=None):
         """
-        Compute Monte Carlo standard errors assuming normally distributed
+        Compute Monte Carlo standard errors assuming normally distributed for impulse response functions
 
         Notes
         -----
@@ -1019,13 +1019,13 @@ class VARResults(VARProcess):
         sigma_u = self.sigma_u
         intercept = self.intercept
         df_model = self.df_model
+        nobs = self.nobs
         disc = 100 #number of simulated observations to discard
-        obs = 500 #number of observations
 
         ma_coll = np.zeros((repl, T+1, neqs, neqs))
         for i in range(repl):
             #discard first hundred to eliminate correct for starting bias
-            sim = util.varsim(coefs, intercept, sigma_u, steps=obs+disc)
+            sim = util.varsim(coefs, intercept, sigma_u, steps=nobs+disc)
             sim = sim[disc:]
             ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).ma_rep(maxn=T)
         ma_sort = np.sort(ma_coll, axis=0) #sort to get quantiles
