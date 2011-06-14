@@ -1,5 +1,6 @@
 Developer's Notes
 -----------------
+.. TODO these are intended for developers, we should have separate docs for patches/ pull requests
 
 Mission Statement
 =================
@@ -30,217 +31,183 @@ Testing
 ~~~~~~~
 We strive to follow a `Test Driven Development (TDD) <http://en.wikipedia.org/wiki/Test-driven_development>`_ pattern.
 All models or statistical functions that are added to the main code base are
-tested versus an existing statistical package.  The test results can be
-generated at run time using R via RPy or can be obtained from another
+tested versus an existing statistical package.  All test results are currently obtained from another
 statistical package and hard coded.
 .. TODO: link to examples of both of these in the test folder
 
-Launchpad
-=========
-Statsmodels code base is hosted on `Launchpad <https://launchpad.net/>`_. To
-contribute you will need to `sign up for a Launchpad account <https://login.launchpad.net/vRDLGvcCNXXjP3F1/+new_account>`_.
+Github
+======
+Statsmodels code base is hosted on `Github <https://www.github.com/>`_. To
+contribute you will need to `sign up for a Github account <https://github.com/signup/free>`_.
 
-**Repository:** http://code.launchpad.net/statsmodels
+**Repository:** https://github.com/statsmodels/statsmodels
 
 **Bug Tracker:**  https://bugs.launchpad.net/statsmodels
 
-Version Control and Bzr
+Version Control and Git
 =======================
-We use the `Bazaar distributed version control system <http://bazaar.canonical.com/en/>`_.  Learning Bazaar (bzr) can be one of the biggest hurdles to
-contributing to an open source project, but it is necessary and in the end
-makes us all more productive.  Distributed version control systems allow many
-people to work together on the same project.  In a nutshell, it allows you to
-make changes to the code independent of others who may also be working on the
-code and allows you to easily `merge` your changes together in the main
-`trunk` branch of the code.  Version control systems also keeps a complete
-history of all `revisions` to the code, so you can easily `revert` changes or
-see when a change was made, by whom, and why.
+We use `Git <http://git-scm.com/>`_ for development. Version control systems such as git allow many
+people to work together on the same project.  In a nutshell, it allows you to make changes to the 
+code independent of others who may also be working on the code and allows you to easily contribute 
+your changes to the codebase. It also keeps a complete history of all changes to the code, so you can 
+easily undo changes or see when a change was made, by whom, and why.
 
+There are already a lot of great resources for learning to use git in addition to the comprehensive
+`github help pages<http://help.github.com/>`__. Two of the best are `NumPy's documentation <http://docs.scipy.org/doc/numpy/dev/index.html>`__ and 
+Matthew Brett's `Pydagogue <http://matthew-brett.github.com/pydagogue/>`__. The below is the bare minimum taken from these resources and applied to working with statsmodels. 
+You would do well to have a look at these other resources for more information.
 
-Get Bzr
+Getting Started with Git
+~~~~~~~~~~~~~~~~~~~~~~~~
+Instructions for installing git, setting up your SSH key, and configuring git can be found here::
+
+`Linux users <http://help.github.com/linux-set-up-git/>`__.
+`Windows users <http://help.github.com/win-set-up-git/>`__.
+`Mac users <http://help.github.com/mac-set-up-git/>`__.
+
+Forking
 ~~~~~~~
-Everyone can obtain bzr from their main page `here <http://wiki.bazaar.canonical.com/Download>`__.
+After setting up git, you will need your own fork to work on the code. Go to the `statsmodels project page <https://github.com/statsmodels/statsmodels>`__ and hit the fork button. Then you should be taken
+to your fork's page. You will want to clone your fork to your machine: ::
+
+    git clone git@github.com:your-user-name/statsmodels.git statsmodels-yourname
+    cd statsmodels-yourname
+    git remote add upstream git://github.com/statsmodels/statsmodels.git
+
+The first line will create a directory, `statsmodels-yourname`, but you can name it whatever you want.
+The last line connects your repository to the upstream statsmodels repository. The name `upstream` is
+arbitrary here. Notice that you use git:// instead of git@. You want to connect to the read-only 
+URL. You can use this periodically to update your local code with changes in the upstream.
+
+Create a Branch
+~~~~~~~~~~~~~~~
+Now you are ready to make some changes to the code. You will want to do this in a feature branch. You
+want your master branch to remain clean. You always want it to reflect production-ready code. So you
+will want to make changes in features branches. For example::
+
+    git branch shiny-new-feature
+    git checkout shiny-new-feature
+    
+Doing::
+    
+    git branch
+
+will give something like::
+
+    * shiny-new-feature
+      master
+
+to indicate that you are now on the `shiny-new-feature` branch.
+
+Making changes
+~~~~~~~~~~~~~~
+
+Hack away. Make any changes that you want. Now you've made your changes. Say you've changed the file
+`foo.py`. You can see your changes typing::
+
+    git status
+
+This will give something like::
+
+    # On branch shiny-new-feature
+    # Changes not staged for commit:
+    #   (use "git add <file>..." to update what will be committed)
+    #   (use "git checkout -- <file>..." to discard changes in working directory)
+    #
+    #       modified:   relative/path/to/foo.py
+    #
+    no changes added to commit (use "git add" and/or "git commit -a")
+
+Before you can commit these changes, you have to `add`, or `stage`, the changes. You can do this by 
+typing::
+
+    git add path/to/foo.py
+
+Then check the status to make sure your commit looks okay::
+
+    git status
+
+should give something like::
+
+    # On branch shiny-new-feature
+    # Changes to be committed:
+    #   (use "git reset HEAD <file>..." to unstage)
+    #
+    #       modified:   /relative/path/to/foo.py
+    #
 
 
-Linux users
-^^^^^^^^^^^
-bzr should be included in your distribution's repository.
-On \*Ubuntu: ::
+Pushing your changes
+~~~~~~~~~~~~~~~~~~~~
 
-    sudo apt-get install bzr
+At any time you can push your feature branch (and any changes) to your repository by::
+
+    git push origin shiny-new-feature
+
+Here `origin` is the default name given to your remote repository. You can see the remote repositories
+by::
+    
+    git remote -v
+
+If you added the upstream repository as described above you will see something like::
+
+    origin  git@github.com:yourname/statsmodels.git (fetch)
+    origin  git@github.com:yourname/statsmodels.git (push)
+    upstream        git://github.com/statsmodels/statsmodels.git (fetch)
+    upstream        git://github.com/statsmodels/statsmodels.git (push)
+
+Before you push any commits, however, it is *highly* recommended that you make sure what you are 
+pushing makes sense. You can review your change history by::
+
+    git log --oneline --graph
+
+It pays to take care of things locally before you push them to github.
+
+Pull Requests
+~~~~~~~~~~~~~
+When you are ready to ask for a code review, we recommend that you file a pull request. Before you 
+do so you should check your changeset yourself. You can do this by using
+`compare view <https://github.com/blog/612-introducing-github-compare-view>`__ on github. 
+
+#. Navigate to your repository on github.
+#. Click on `Branch List`
+#. Click on the `Compare` button for your feature branch, `shiny-new-feature`.
+#. Select the `base` and `compare` branches, if necessary. This will be `master` and 
+   `shiny-new-feature`, respectively.
+#. From here you will see a nice overview of your changes. If anything is amiss, you can fix it.
+
+If everything looks good you are read to make a `pull request <http://help.github.com/send-pull-requests/>`__.
+
+#. Navigate to your repository on github.
+#. Click on the `Pull Request` button.
+#. You can then click on `Commits` and `Files Changed` to make sure everything looks okay one last time.
+#. Write a description of your changes in the `Preview Discussion` tab.
+#. Click `Send Pull Request`.
+
+Your request will then be reviewed. If you need to go back and make more changes, you can make them
+in your branch and push them to github and the pull request will be automatically updated.
 
 
-Windows users
-^^^^^^^^^^^^^
-Windows users can follow the download instructions `here <http://wiki.bazaar.canonical.com/WindowsDownloads>`__.
+Advanced Topics
+~~~~~~~~~~~~~~~
 
-Mac Users
-^^^^^^^^^
-Mac users can follow the download instructions `here <http://wiki.bazaar.canonical.com/MacOSXBundle>`__.
+Merging vs. Rebasing
+^^^^^^^^^^^^^^^^^^^^
 
-
-Branching
-~~~~~~~~~
-The next thing you are going to want to do is create a branch to make changes
-to the code.
-
-
-What is a branch?
+Deleting branches
 ^^^^^^^^^^^^^^^^^
-You can think of a branch as your own personal copy of the code (repository)
-in which you are going to make your changes.
 
+.. TODO I'm not positive this is how this works. But I *think* if you have the upstream changes 
+.. in your master then it *should* be okay to delete and -d goes through without a hitch
 
-Why branch?
-^^^^^^^^^^^
-Having a branch of the code allows you to make changes independent of the main
-code, but it still maintains a relationship with the main source code.  For
-instance, it is easy to keep up with changes in the main trunk while you are
-working in your branch, and when your changes are made you can propose to merge
-your work back into the trunk easily.
+Once your feature branch is accepted into upstream, you might want to get rid of it. First you'll want 
+to merge upstream master into your branch. That way git will know that it can safely delete your branch.
 
+Git for Bzr Users
+~~~~~~~~~~~~~~~~~
 
-How to branch
-^^^^^^^^^^^^^
-Given that you have already created a Launchpad account following the link
-above, the next step is to create an SSH key.  Follow the instructions `here <https://help.launchpad.net/YourAccount/CreatingAnSSHKeyPair>`__.
-If it is not obvious what your launchpad name is you can get and set it `here <https://launchpad.net/people/+me/+edit>`__.
-We refer to this below as "yourname"
-
-The next step is to tell bzr who you are.  Using your name and e-mail address
-type: ::
-
-    > bzr whoami "John Doe <john.doe@gmail.com>"
-
-Check this step by typing: ::
-
-    > bzr whoami
-
-Now you are ready to create and check out a branch.
-
-If you want to register your branch manually on Launchpad go to `https://code.launchpad.net/statsmodels <https://code.launchpad.net/statsmodels>`__
-and click on Register a branch.  Fill in a name (I will use test-branch).
-Click the Hosted radio button.  Choose a status, and click Register Branch.
-You will be taken to the branch's web page and there will be a command to
-"Update this branch" that shows: ::
-
-    > bzr push lp:~yourname/statsmodels/test-branch
-
-We will come back to this.
-
-Alternatively, you can just create your branch from the command line.  This will
-be explained below.
-
-The next step is to get the main trunk branch in order to work in.  I will put
-the main trunk into a folder called test-branch.  To do this from the folder
-where you want the branch type: ::
-
-    > bzr branch lp:statsmodels test-branch
-
-Now make some changes to the code.  In this case, I will cd to
-test-branch/scikits/statsmodels/ and create an empty file called dummy.py.  You
-have to tell bzr to put dummy.py under version control by: ::
-
-    > bzr add dummy.py
-    adding scikits/statsmodels/dummy.py
-
-We can see what changes are made versus the "parent location" of the branch
-(which is still the trunk in this case) by typing (st is short for status): ::
-
-    > bzr st
-    added:
-      scikits/statsmodels/dummy.py
-
-Next we have to `commit` our changes.  This is how we keep up with what changed
-and why.  Committing a change makes a note in the revision history log.  Type: ::
-
-    > bzr commit -m "Added the dummy.py file as an example"
-
-Commits are best done in small increments, so commit often.  We have now
-committed our changes locally.  This is fine.  You can continue working and
-then commit more changes if you wish.  Eventually you will want to `push` your
-changes to Launchpad.  Since this will be the first time pushing we have to tell
-bzr that we want to push to a different directory than where we
-branched the code from and to use ssh.  If you followed the manual registration
-of the branch on Launchpad instructions above, you have to tell bzr that you
-are pushing to an already existing location.  We also want to tell bzr that we
-are using ssh.  This can be accomplished by typing: ::
-
-    > bzr push bzr+ssh://yourname@bazaar.launchpad.net/~yourname/statsmodels/test-branch --use-existing-dir --remember
-
-If you did not register your branch beforehand, you type almost the exact same
-thing: ::
-
-    > bzr push bzr+ssh://yourname@bazaar.launchpad.net/~yourname/statsmodels/test-branch --remember
-
-And bzr will automatically register the branch for you.  You can also tell
-bzr your launchpad login by typing: ::
-
-    > bzr launchpad-login yourname
-
-You only need to do this once, then the command above simply becomes: ::
-
-    > bzr push lp:~yourname/statsmodels/test-branch --remember
-
-From now on, you can simply do: ::
-
-    > bzr commit -m "Specific and informative comment about changes"
-    > bzr push
-
-And you are good.  I often work on multiple computers.  When I make and push
-changes from one and return to another, I have to type: ::
-
-    > bzr pull
-
-And it will pull down all of the changes from your branch.
-
-The last thing to know is that you will want to keep track of changes in trunk.
-To do this type: ::
-
-    > bzr merge lp:statsmodels
-    > bzr commit -m"Merged with trunk"
-    > bzr push
-
-That's basically it.  You should be up and running with bzr now.
-
-
-A few helpful commands
-^^^^^^^^^^^^^^^^^^^^^^
-
-The following a few helpful bzr commands with some common usage:
-
-Commit new changes with a note: ::
-
-    > bzr commit -m "Note"
-
-Push new commits: ::
-
-    > bzr push
-
-Pull from remembered location: ::
-
-    > bzr pull
-
-See the status of changes of new files: ::
-
-    > bzr st
-
-Get diff of current branch versus trunk.  Note that you must be in a folder of
-the version controlled branch: ::
-
-    > bzr diff --old lp:statsmodels
-
-Get diff versus existing remembered location: ::
-
-    > bzr diff
-
-Get help for any command.  For diff, for example, type: ::
-
-    > bzr diff --help
-
-There are plenty of resources out there to help you through some more
-advanced features of bzr.  Note also that the people #bzr on irc.freenode.net
-have always been quite helpful in my experience.
+Git cheat sheet
+~~~~~~~~~~~~~~~
 
 Mailing List
 ============
