@@ -1009,9 +1009,6 @@ class VARResults(VARProcess):
         Tuple of lower and upper arrays of ma_rep monte carlo standard errors
 
         """
-        if orth:
-            raise NotImplementedError("Orthogonalized MC standard errors not available")
-        #use mean for starting value
         neqs = self.neqs
         mean = self.mean()
         k_ar = self.k_ar
@@ -1023,14 +1020,25 @@ class VARResults(VARProcess):
         disc = 100 #number of simulated observations to discard
 
         ma_coll = np.zeros((repl, T+1, neqs, neqs))
-        for i in range(repl):
-            #discard first hundred to eliminate correct for starting bias
-            sim = util.varsim(coefs, intercept, sigma_u, steps=nobs+disc)
-            sim = sim[disc:]
-            if cum == True:
-                ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).ma_rep(maxn=T).cumsum(axis=0)
-            if cum == False:
-                ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).ma_rep(maxn=T)
+        if orth == False:
+            for i in range(repl):
+                #discard first hundred to eliminate correct for starting bias
+                sim = util.varsim(coefs, intercept, sigma_u, steps=nobs+disc)
+                sim = sim[disc:]
+                if cum == True:
+                    ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).ma_rep(maxn=T).cumsum(axis=0)
+                if cum == False:
+                    ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).ma_rep(maxn=T)
+        if orth == True:
+            for i in range(repl):
+                #discard first hundred to eliminate correct for starting bias
+                sim = util.varsim(coefs, intercept, sigma_u, steps=nobs+disc)
+                sim = sim[disc:]
+                if cum == True:
+                    ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).orth_ma_rep(maxn=T).cumsum(axis=0)
+                if cum == False:
+                    ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).orth_ma_rep(maxn=T)
+ 
         ma_sort = np.sort(ma_coll, axis=0) #sort to get quantiles
         index = round(signif/2*repl)-1,round((1-signif/2)*repl)-1
         lower = ma_sort[index[0],:, :, :]
