@@ -1,3 +1,5 @@
+:orphan:
+
 .. currentmodule:: scikits.statsmodels.tsa.vector_ar.var_model
 
 .. _var:

@@ -92,10 +92,9 @@ Looking Forward
 We would like to invite everyone to give statsmodels a test drive, use it, and
 report comments, possibilities for improvement and bugs to the statsmodels
 mailing list http://groups.google.com/group/pystatsmodels or file tickets on our
-bug tracker at https://bugs.launchpad.net/statsmodels
+issue tracker at https://github.com/statsmodels/statsmodels/issues
 
-The development repository is currently at http://code.launchpad.net/statsmodels
-but will move to github in the near future.
+The source code is available from https://github.com/statsmodels/statsmodels.
 
 Our plans for the future include improving the coverage of statistical
 models, methods and tests that any basic statistics package should provide.
@@ -170,8 +169,8 @@ developement of scikits.statsmodels:
  AQR `www.aqr.com <http://www.aqr.com/>`_ : financial sponsor for the work on
  Vector Autoregressive Models (VAR) by Wes McKinney
 
-We would also like to thank our hosting providers, `launchpad
-<http://launchpad.net/>`_ for the public code repository, `sourceforge
+We would also like to thank our hosting providers, `github
+<http://github.com/>`_ for the public code repository, `sourceforge
 <http://sourceforge.net/>`_ for hosting our documentation and `python.org
 <http://python.org>`_ for making our downloads available on pypi.
 

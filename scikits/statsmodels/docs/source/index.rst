@@ -1,68 +1,22 @@
-.. statsmodels documentation master file, created by
-   sphinx-quickstart on Sat Aug 22 00:38:34 2009.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 .. :tocdepth: 2
 
-Welcome to statsmodels's documentation!
-=======================================
+Welcome to Statsmodels's Documentation
+======================================
 
-:mod:`scikits.statsmodels` is a pure python package that provides classes and
-functions for the estimation of several categories of statistical models. These
-currently include linear regression models, OLS, GLS, WLS and GLS with AR(p)
-errors, generalized linear models for six distribution families and
-M-estimators for robust linear models. An extensive list of result statistics
-are avalable for each estimation problem
+:mod:`scikits.statsmodels` is a Python module that provides classes and functions for the estimation 
+of many different statistical models, as well as for conducting statistical tests, and statistical 
+data exploration. An extensive list of result statistics are avalable for each estimator. 
+The results are tested against existing statistical packages to ensure that they are correct. The 
+pacakge is released under the open source Simplied BSD (2-clause) license. The online documentation
+is hosted at `sourceforge <http://statsmodels.sourceforge.net/>`__. 
 
-Quickstart for the impatient
-----------------------------
-
-**License:** Simplified BSD
-
-**Requirements:** python >= 2.5, tested with 2.5., 2.6, 2.7 and 3.2
-  recent releases of numpy (>=1.4) and scipy (>=0.7)
-  (tested with numpy 1.4.1, 1.5.1 and 1.6.0, scipy 0.7.2, 0.8.0, 0.9.0)
-  Optional: Many of the examples use matplotlib, and some sandbox functions
-  have additional dependencies
-
-**Repository:** http://code.launchpad.net/statsmodels
-(will move to github)
-
-**Documentation:** http://statsmodels.sourceforge.net/
-    and in the docs/build folder
-
-**Pypi:** http://pypi.python.org/pypi/scikits.statsmodels
-
-**Mailing List:** http://groups.google.com/group/pystatsmodels?hl=en
-
-**Bug Tracker:**  https://bugs.launchpad.net/statsmodels
-(might change)
-
-**Development:** See our :doc:`developer's page <developernotes>`.
-
-**Installation:**
-
-::
-
-  easy_install scikits.statsmodels
-
-or get the source from pypi, sourceforge, or from the launchpad repository and
-
-::
-
-  setup.py install  or, if this does not work, try
-  setup.py build install
-
-**Note:**
-Due to our infrequent official releases, we want to point out that the trunk
-branch in the public repository will have the most recent code and is
-usually stable, tested, and fine for daily use.
-
-**Usage:**
+Getting Started
+---------------
 
 Get the data, run the estimation, and look at the results.
-For example, here is a minimal ordinary least squares case ::
+For example, here is a minimal ordinary least squares example
+
+.. code-block:: python
 
   import numpy as np
   import scikits.statsmodels.api as sm
@@ -92,7 +46,7 @@ Table of Contents
 
    introduction
    related
-   developernotes
+   dev/index
 
 .. toctree::
    :maxdepth: 2
@@ -105,12 +59,16 @@ Table of Contents
    stats
    tools
    miscmodels
-   internal
+   dev/internal
    gmm
    distributions
    datasets
    sandbox
 
+Related Projects
+----------------
+
+See our :ref:`related projects page <related>`.
 
 Indices and tables
 ------------------
@@ -118,4 +76,3 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-

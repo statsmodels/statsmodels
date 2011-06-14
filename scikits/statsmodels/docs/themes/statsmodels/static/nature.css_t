@@ -10,16 +10,53 @@
  */
  
 @import url("basic.css");
+
+/* -- header -- */
+
+div.header {
+    background-color: #1162f6;
+}
+
+div.headerwrap {
+    min-width: 1030px;
+/*    min-height: 115px;
+    margin-left: auto;
+    margin-right: auto;*/
+}
+
+
+/*div.navbar ul { 
+    list-style-type: none;
+    background-color: #ffffff;
+    margin-left: 230px;
+    text-align: right;
+    position: absolute;
+    right: 105px;
+    top: 103px;
+}*/
+
+/*div.navbar li {
+    display: inline;
+    background-color: #1162fc;
+    color: #ffffff;
+    border-bottom-right-radius: 30px;
+    border-bottom-left-radius: 30px;
+    padding: 0px 15px
+}*/
  
 /* -- page layout ----------------------------------------------------------- */
  
 body {
     font-family: Arial, sans-serif;
     font-size: 100%;
-    background-color: #111;
+/*    background-color: #3366CC;
+    background-color: #1162f6; */
+    background-color: #3399ff;
     color: #555;
-    margin: 0;
+    margin: 0 80px;
     padding: 0;
+    min-width: 740px;
+    letter-spacing: -.01em;
 }
 
 div.documentwrapper {
@@ -37,10 +74,12 @@ hr {
  
 div.document {
     background-color: #eee;
+    min-width: 1030px;
 }
  
 div.body {
-    background-color: #ffffff;
+    background-color: #f8f8ff;
+    min-width: 740px;
     color: #3E4349;
     padding: 0 30px 30px 30px;
     font-size: 0.9em;
@@ -60,11 +99,15 @@ div.footer a {
 }
  
 div.related {
-    background-color: #6BA81E;
+/*    background-color: #6BA81E;*/
+    background-color: #1162f6;
     line-height: 32px;
     color: #fff;
     text-shadow: 0px 1px 0 #444;
     font-size: 0.9em;
+    border-top: 1px solid white;
+    border-bottom: 1px solid white;
+    min-width: 1030px;
 }
  
 div.related a {
@@ -74,6 +117,7 @@ div.related a {
 div.sphinxsidebar {
     font-size: 0.75em;
     line-height: 1.5em;
+    word-wrap: break-word;
 }
 
 div.sphinxsidebarwrapper{
@@ -103,7 +147,7 @@ div.sphinxsidebar h3 a {
  
 div.sphinxsidebar p {
     color: #888;
-    padding: 5px 20px;
+    padding: 5px 15px;
 }
  
 div.sphinxsidebar p.topless {
@@ -126,7 +170,7 @@ div.sphinxsidebar input {
 }
 
 div.sphinxsidebar input[type=text]{
-    margin-left: 20px;
+    margin-left: 15px;
 }
  
 /* -- body styles ----------------------------------------------------------- */
@@ -156,12 +200,12 @@ div.body h6 {
     text-shadow: 0px 1px 0 white
 }
  
-div.body h1 { border-top: 20px solid white; margin-top: 0; font-size: 200%; }
-div.body h2 { font-size: 150%; background-color: #C8D5E3; }
-div.body h3 { font-size: 120%; background-color: #D8DEE3; }
-div.body h4 { font-size: 110%; background-color: #D8DEE3; }
-div.body h5 { font-size: 100%; background-color: #D8DEE3; }
-div.body h6 { font-size: 100%; background-color: #D8DEE3; }
+div.body h1 { border-top: 20px solid #f8f8ff; margin-top: 0; font-size: 200%; word-wrap: break-word }
+div.body h2 { font-size: 150%; background-color: #C8D5E3; border-radius : 30px; }
+div.body h3 { font-size: 120%; background-color: #D8DEE3; border-radius : 30px; }
+div.body h4 { font-size: 110%; background-color: #D8DEE3; border-radius : 30px; }
+div.body h5 { font-size: 100%; background-color: #D8DEE3; border-radius : 30px; }
+div.body h6 { font-size: 100%; background-color: #D8DEE3; border-radius : 30px; }
  
 a.headerlink {
     color: #c60f0f;

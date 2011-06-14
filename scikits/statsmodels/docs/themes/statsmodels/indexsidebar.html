@@ -1,0 +1,27 @@
+<h3>Download</h3>
+
+{% if 'dev' in version %}
+
+<p>This documentation is for version <b>{{ version }}</b>, which is not
+released yet. Grab the source code from github to install this version.</p>
+
+{% else %}
+
+<p>This documentation is for the <b>{{ release }}</b> release. You can install it with:</p>
+<pre style="margin:0px 1px">easy_install -U scikits.statsmodels</pre>
+<p>Or get it from the <a href="http://pypi.python.org/pypi/scikits.statsmodels">Python Package Index</a>.
+Documentation for the current development version is <a href="http://statsmodels.sourceforge.net/devel/">here</a>.</p>
+
+{% endif %}
+
+<h3>Participate</h3>
+<div style="font-size:1em;padding:5px 15px 0px 15px">Join the <a href="http://groups.google.com/group/pystatsmodels">Google Group</a>:</div>
+<form action="http://groups.google.com/group/pystatsmodels/boxsubscribe">
+    <input type="text" name="email" value="yourname@domain.com" /><br />
+  <input type="submit" name="sub" value="Subscribe" style="margin-left:15px"/>
+</form>
+<p style="font-size:1em">
+    Grab the souce from <a href="https://github.com/statsmodels/statsmodels/">Github</a>. 
+    Report bugs to the <a href="https://github.com/statsmodels/statsmodels/issues">Issue Tracker</a>. 
+    Have a look at our <a href="{{ pathto('dev/index') }}">Developer Page</a>.
+</p>

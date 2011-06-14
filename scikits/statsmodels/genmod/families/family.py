@@ -251,9 +251,9 @@ class Poisson(Family):
 
     Attributes
     ----------
-    link : a link instance
+    Poisson.link : a link instance
         The link function of the Poisson instance.
-    variance : varfuncs instance
+    Poisson.variance : varfuncs instance
         `variance` is an instance of
         statsmodels.genmod.families.family.varfuncs.mu
 
@@ -390,9 +390,9 @@ class Gaussian(Family):
 
     Attributes
     ----------
-    link : a link instance
+    Gaussian.link : a link instance
         The link function of the Gaussian instance
-    variance : varfunc instance
+    Gaussian.variance : varfunc instance
         `variance` is an instance of statsmodels.family.varfuncs.constant
 
     See also
@@ -535,9 +535,9 @@ class Gamma(Family):
 
     Attributes
     ----------
-    link : a link instance
+    Gamma.link : a link instance
         The link function of the Gamma instance
-    variance : varfunc instance
+    Gamma.variance : varfunc instance
         `variance` is an instance of statsmodels.family.varfuncs.mu_squared
 
     See also
@@ -682,9 +682,9 @@ class Binomial(Family):
 
     Attributes
     ----------
-    link : a link instance
+    Binomial.link : a link instance
         The link function of the Binomial instance
-    variance : varfunc instance
+    Binomial.variance : varfunc instance
         `variance` is an instance of statsmodels.family.varfuncs.binary
 
     See also
@@ -928,9 +928,9 @@ class InverseGaussian(Family):
 
     Attributes
     ----------
-    link : a link instance
+    InverseGaussian.link : a link instance
         The link function of the inverse Gaussian instance
-    variance : varfunc instance
+    InverseGaussian.variance : varfunc instance
         `variance` is an instance of statsmodels.family.varfuncs.mu_cubed
 
     See also
@@ -1066,9 +1066,9 @@ class NegativeBinomial(Family):
 
     Attributes
     ----------
-    link : a link instance
+    NegativeBinomial.link : a link instance
         The link function of the negative binomial instance
-    variance : varfunc instance
+    NegativeBinomial.variance : varfunc instance
         `variance` is an instance of statsmodels.family.varfuncs.nbinom
 
     See also
