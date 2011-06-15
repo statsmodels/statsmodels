@@ -29,7 +29,7 @@ class BaseIRAnalysis(object):
     def __init__(self, model, P=None, periods=10, order=None):
         self.model = model
         self.periods = periods
-        self.neqs, self.lags, self.T  = model.neqs, model.k_ar, model.nobs
+        self.neqs, self.lags, self.T = model.neqs, model.k_ar, model.nobs
 
         self.order = order
 
@@ -107,7 +107,7 @@ class BaseIRAnalysis(object):
             title = 'Impulse responses'
             irfs = self.irfs
 
-        if stderr_type not in ['asym','mc']:
+        if stderr_type not in ['asym', 'mc']:
             raise ValueError("Error type must be either 'asym' or 'mc'")
         else:
             if stderr_type == 'asym':
@@ -340,13 +340,10 @@ class IRAnalysis(BaseIRAnalysis):
         model = self.model
         periods = self.periods
         return model.irf_stderr_mc(orth=orth, repl=repl,
-                                    T=periods, signif=signif, seed=seed, burn=burn, cum=True)
- 
- 
+                                    T=periods, signif=signif, seed=seed, burn=burn, cum=True) 
 
     def lr_effect_cov(self, orth=False):
         """
-
         Returns
         -------
 
