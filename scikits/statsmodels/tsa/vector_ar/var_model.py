@@ -775,7 +775,7 @@ class VARResults(VARProcess):
         self.dates = dates
 
         self.n_totobs, neqs = self.y.shape
-        self.nobs = self.n_totobs  - lag_order
+        self.nobs = self.n_totobs - lag_order
         k_trend = util.get_trendorder(trend)
         if k_trend > 0: # make this the polynomial trend order
             trendorder = k_trend - 1
@@ -996,7 +996,8 @@ class VARResults(VARProcess):
         return mse + omegas / self.nobs
 
     #Monte Carlo irf standard errors
-    def stderr_mc_irf(self, orth=False, repl=1000, T=10, signif=0.05, seed=None, burn=100, cum=False):
+    def irf_stderr_mc(self, orth=False, repl=1000, T=10, 
+                      signif=0.05, seed=None, burn=100, cum=False):
         """
         Compute Monte Carlo standard errors assuming normally distributed for impulse response functions
 
@@ -1017,7 +1018,7 @@ class VARResults(VARProcess):
         intercept = self.intercept
         df_model = self.df_model
         nobs = self.nobs
-         
+
         ma_coll = np.zeros((repl, T+1, neqs, neqs))
         if orth == False:
             for i in range(repl):
@@ -1037,7 +1038,7 @@ class VARResults(VARProcess):
                     ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).orth_ma_rep(maxn=T).cumsum(axis=0)
                 if cum == False:
                     ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).orth_ma_rep(maxn=T)
- 
+
         ma_sort = np.sort(ma_coll, axis=0) #sort to get quantiles
         index = round(signif/2*repl)-1,round((1-signif/2)*repl)-1
         lower = ma_sort[index[0],:, :, :]
@@ -1530,5 +1531,4 @@ if __name__ == '__main__':
     est = model.fit(maxlags=2)
     irf = est.irf()
     '''
-
 

@@ -108,7 +108,7 @@ class BaseIRAnalysis(object):
             irfs = self.irfs
 
         if stderr_type not in ['asym','mc']:
-            raise TypeError
+            raise ValueError("Error type must be either 'asym' or 'mc'")
         else:
             if stderr_type == 'asym':
                 stderr = self.cov(orth=orth)
@@ -230,7 +230,7 @@ class IRAnalysis(BaseIRAnalysis):
         """
         model = self.model
         periods = self.periods
-        return model.stderr_mc_irf(orth=orth, repl=repl,
+        return model.irf_stderr_mc(orth=orth, repl=repl,
                                     T=periods, signif=signif, seed=seed, burn=burn, cum=False)
 
     @cache_readonly
@@ -339,7 +339,7 @@ class IRAnalysis(BaseIRAnalysis):
         """
         model = self.model
         periods = self.periods
-        return model.stderr_mc_irf(orth=orth, repl=repl,
+        return model.irf_stderr_mc(orth=orth, repl=repl,
                                     T=periods, signif=signif, seed=seed, burn=burn, cum=True)
  
  
