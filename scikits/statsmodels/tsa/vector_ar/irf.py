@@ -230,7 +230,7 @@ class IRAnalysis(BaseIRAnalysis):
         """
         model = self.model
         periods = self.periods
-        return model.stderr_MC_irf(orth=orth, repl=repl,
+        return model.stderr_mc_irf(orth=orth, repl=repl,
                                     T=periods, signif=signif, seed=seed, cum=False)
 
     @cache_readonly
@@ -339,7 +339,7 @@ class IRAnalysis(BaseIRAnalysis):
         """
         model = self.model
         periods = self.periods
-        return model.stderr_MC_irf(orth=orth, repl=repl,
+        return model.stderr_mc_irf(orth=orth, repl=repl,
                                     T=periods, signif=signif, seed=seed, cum=True)
  
  
