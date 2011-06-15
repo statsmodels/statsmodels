@@ -996,7 +996,7 @@ class VARResults(VARProcess):
         return mse + omegas / self.nobs
 
     #Monte Carlo irf standard errors
-    def stderr_mc_irf(self, orth=False, repl=1000, T=10, signif=0.05, seed=None, cum=False):
+    def stderr_mc_irf(self, orth=False, repl=1000, T=10, signif=0.05, seed=None, burn=100, cum=False):
         """
         Compute Monte Carlo standard errors assuming normally distributed for impulse response functions
 
@@ -1017,14 +1017,13 @@ class VARResults(VARProcess):
         intercept = self.intercept
         df_model = self.df_model
         nobs = self.nobs
-        disc = 100 #number of simulated observations to discard
-
+         
         ma_coll = np.zeros((repl, T+1, neqs, neqs))
         if orth == False:
             for i in range(repl):
                 #discard first hundred to eliminate correct for starting bias
-                sim = util.varsim(coefs, intercept, sigma_u, steps=nobs+disc)
-                sim = sim[disc:]
+                sim = util.varsim(coefs, intercept, sigma_u, steps=nobs+burn)
+                sim = sim[burn:]
                 if cum == True:
                     ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).ma_rep(maxn=T).cumsum(axis=0)
                 if cum == False:
@@ -1032,8 +1031,8 @@ class VARResults(VARProcess):
         if orth == True:
             for i in range(repl):
                 #discard first hundred to eliminate correct for starting bias
-                sim = util.varsim(coefs, intercept, sigma_u, steps=nobs+disc)
-                sim = sim[disc:]
+                sim = util.varsim(coefs, intercept, sigma_u, steps=nobs+burn)
+                sim = sim[burn:]
                 if cum == True:
                     ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).orth_ma_rep(maxn=T).cumsum(axis=0)
                 if cum == False:

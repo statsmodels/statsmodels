@@ -224,14 +224,14 @@ class IRAnalysis(BaseIRAnalysis):
 
         return covs
 
-    def cov_mc(self, orth=False, repl=1000, signif=0.05, seed=None):
+    def cov_mc(self, orth=False, repl=1000, signif=0.05, seed=None, burn=100):
         """
         IRF Monte Carlo standard errors
         """
         model = self.model
         periods = self.periods
         return model.stderr_mc_irf(orth=orth, repl=repl,
-                                    T=periods, signif=signif, seed=seed, cum=False)
+                                    T=periods, signif=signif, seed=seed, burn=burn, cum=False)
 
     @cache_readonly
     def G(self):
@@ -333,14 +333,14 @@ class IRAnalysis(BaseIRAnalysis):
 
         return covs
 
-    def cum_effect_cov_mc(self, orth=False, repl=1000, signif=0.05, seed=None):
+    def cum_effect_cov_mc(self, orth=False, repl=1000, signif=0.05, seed=None, burn=100):
         """
         IRF Monte Carlo standard errors
         """
         model = self.model
         periods = self.periods
         return model.stderr_mc_irf(orth=orth, repl=repl,
-                                    T=periods, signif=signif, seed=seed, cum=True)
+                                    T=periods, signif=signif, seed=seed, burn=burn, cum=True)
  
  
 
