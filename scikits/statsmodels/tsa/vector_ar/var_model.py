@@ -999,11 +999,29 @@ class VARResults(VARProcess):
     def irf_stderr_mc(self, orth=False, repl=1000, T=10, 
                       signif=0.05, seed=None, burn=100, cum=False):
         """
-        Compute Monte Carlo standard errors assuming normally distributed for impulse response functions
+        Compute Monte Carlo integrated standard errors assuming normally 
+        distributed for impulse response functions
+
+        Parameters
+        ----------
+        orth: bool, default False
+            Compute orthoganalized impulse response error bands
+        repl: int
+            number of Monte Carlo replications to perform
+        T: int, default 10
+            number of impulse response periods
+        signif: float (0 < signif <1)
+            Significance level for error bars, defaults to 95% CI
+        seed: int
+            np.random.seed for replications
+        burn: int
+            number of initial observations to discard for simulation
+        cum: bool, default False
+            produce cumulative irf error bands
 
         Notes
         -----
-        Lutkepohl Appendix D
+        Lutkepohl (2005) Appendix D
 
         Returns
         ------

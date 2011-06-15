@@ -226,7 +226,7 @@ class IRAnalysis(BaseIRAnalysis):
 
     def cov_mc(self, orth=False, repl=1000, signif=0.05, seed=None, burn=100):
         """
-        IRF Monte Carlo standard errors
+        IRF Monte Carlo integrated standard errors
         """
         model = self.model
         periods = self.periods
@@ -335,7 +335,7 @@ class IRAnalysis(BaseIRAnalysis):
 
     def cum_effect_cov_mc(self, orth=False, repl=1000, signif=0.05, seed=None, burn=100):
         """
-        IRF Monte Carlo standard errors
+        IRF Monte Carlo integrated standard errors of cumulative effect
         """
         model = self.model
         periods = self.periods
