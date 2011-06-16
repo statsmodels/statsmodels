@@ -1024,7 +1024,7 @@ class VARResults(VARProcess):
         Lutkepohl (2005) Appendix D
 
         Returns
-        ------
+        -------
         Tuple of lower and upper arrays of ma_rep monte carlo standard errors
 
         """
