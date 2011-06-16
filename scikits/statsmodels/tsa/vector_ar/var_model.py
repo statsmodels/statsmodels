@@ -999,7 +999,7 @@ class VARResults(VARProcess):
     def irf_errband_mc(self, orth=False, repl=1000, T=10, 
                       signif=0.05, seed=None, burn=100, cum=False):
         """
-        Compute Monte Carlo integrated standard errors assuming normally 
+        Compute Monte Carlo integrated error bands assuming normally 
         distributed for impulse response functions
 
         Parameters
