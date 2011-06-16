@@ -113,7 +113,7 @@ class BaseIRAnalysis(object):
             if stderr_type == 'asym':
                 stderr = self.cov(orth=orth)
             if stderr_type == 'mc':
-                stderr = self.cov_mc(orth=orth, repl=repl,
+                stderr = self.errband_mc(orth=orth, repl=repl,
                                      signif=signif, seed=seed)
         plotting.irf_grid_plot(irfs, stderr, impulse, response,
                                self.model.names, title, signif=signif,
@@ -169,7 +169,7 @@ class BaseIRAnalysis(object):
             if stderr_type == 'asym':
                 stderr = self.cum_effect_cov(orth=orth)
             if stderr_type == 'mc':
-                stderr = self.cum_effect_cov_mc(orth=orth, repl=repl,
+                stderr = self.cum_errband_mc(orth=orth, repl=repl,
                                                 signif=signif, seed=seed)
         if not plot_stderr:
             stderr = None
@@ -224,13 +224,13 @@ class IRAnalysis(BaseIRAnalysis):
 
         return covs
 
-    def cov_mc(self, orth=False, repl=1000, signif=0.05, seed=None, burn=100):
+    def errband_mc(self, orth=False, repl=1000, signif=0.05, seed=None, burn=100):
         """
-        IRF Monte Carlo integrated standard errors
+        IRF Monte Carlo integrated error bands
         """
         model = self.model
         periods = self.periods
-        return model.irf_stderr_mc(orth=orth, repl=repl,
+        return model.irf_errband_mc(orth=orth, repl=repl,
                                     T=periods, signif=signif, seed=seed, burn=burn, cum=False)
 
     @cache_readonly
@@ -333,13 +333,14 @@ class IRAnalysis(BaseIRAnalysis):
 
         return covs
 
-    def cum_effect_cov_mc(self, orth=False, repl=1000, signif=0.05, seed=None, burn=100):
+    def cum_errband_mc(self, orth=False, repl=1000, 
+                          signif=0.05, seed=None, burn=100):
         """
-        IRF Monte Carlo integrated standard errors of cumulative effect
+        IRF Monte Carlo integrated error bands of cumulative effect
         """
         model = self.model
         periods = self.periods
-        return model.irf_stderr_mc(orth=orth, repl=repl,
+        return model.irf_errband_mc(orth=orth, repl=repl,
                                     T=periods, signif=signif, seed=seed, burn=burn, cum=True) 
 
     def lr_effect_cov(self, orth=False):
