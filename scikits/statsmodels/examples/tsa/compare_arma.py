@@ -2,7 +2,7 @@ print "Battle of the dueling ARMAs"
 
 from time import time
 from scikits.statsmodels.tsa.arma_mle import Arma
-from scikits.statsmodels.tsa import ARMA
+from scikits.statsmodels.tsa.api import ARMA
 import numpy as np
 
 y_arma22 = np.loadtxt(r'C:\Josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\tsa\y_arma22.txt')

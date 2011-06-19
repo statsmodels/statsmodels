@@ -43,7 +43,7 @@ rescmt = modct.fit_mle(order=(1,1), start_params=[-0.4,0.4, 10, 1.],maxiter=500,
 print rescmt.params
 
 
-from scikits.statsmodels.tsa.arima import ARMA
+from scikits.statsmodels.tsa.arima_model import ARMA
 mkf = ARMA(x)
 ##rkf = mkf.fit((1,1))
 ##rkf.params
@@ -67,6 +67,7 @@ print 'mle', resmle22.params
 f = mod22.forecast()
 f3 = mod22.forecast3(start=900)[-20:]
 
-print y[-10:]
+print y_arma22[-10:]
 print f[-20:]
 print f3[-109:-90]
+plt.show()
