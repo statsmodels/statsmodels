@@ -22,9 +22,9 @@ sig = 1
 fig = plt.figure(figsize=(8, 13))
 fig.suptitle('ARMA: Autocorrelation (left) and Partial Autocorrelation (right)')
 subplotcount = 1
-nrows = 9
-for arcoef in arcoefs[:]:
-    for macoef in macoefs[:]:
+nrows = 4
+for arcoef in arcoefs[:-1]:
+    for macoef in macoefs[:-1]:
         ar = np.r_[1., -arcoef]
         ma = np.r_[1.,  macoef]
 
@@ -73,4 +73,4 @@ for ax in axs: #[::2]:#[:,1].flat:
 
 
 
-#plt.show()
+plt.show()
