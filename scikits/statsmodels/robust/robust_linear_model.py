@@ -22,6 +22,7 @@ from scikits.statsmodels.base.model import (LikelihoodModel,
         LikelihoodModelResults)
 from scikits.statsmodels.tools.decorators import (cache_readonly,
         resettable_cache)
+from scipy.stats import norm
 
 __all__ = ['RLM']
 
@@ -310,6 +311,9 @@ class RLMResults(LikelihoodModelResults):
         The coefficients of the fitted model
     pinv_wexog : array
         See RLM.pinv_wexog
+    pvalues : array
+        The p values associated with `tvalues`. Note that `tvalues` are assumed to be distributed
+        standard normal rather than Student's t.
     resid : array
         The residuals of the fitted model.  endog - fittedvalues
     scale : float
@@ -320,6 +324,9 @@ class RLMResults(LikelihoodModelResults):
         fit before the IRLS iterations.
     sresid : array
         The scaled residuals.
+    tvalues : array
+        The "t-statistics" of params. These are defined as params/bse where bse are taken
+        from the robust covariance matrix specified in the argument to fit.
     weights : array
         The reported weights are determined by passing the scaled residuals
         from the last weighted least squares fit in the IRLS algortihm.
@@ -391,7 +398,19 @@ class RLMResults(LikelihoodModelResults):
                     *np.dot(np.dot(W_inv, np.dot(model.exog.T,model.exog)),\
                     W_inv)
 
-        #TODO: make the t-values (or whatever) based on these
+    def t(self):
+        """
+        Deprecated method to return t-values. Use tvalues attribute instead.
+        """
+        import warnings
+        warnings.warn("t will be removed in the next release. Use attribute "
+                "tvalues instead", FutureWarning)
+        return self.tvalues
+
+    @cache_readonly
+    def pvalues(self):
+        return norm.sf(np.abs(self.tvalues))*2
+
     @cache_readonly
     def bse(self):
         return np.sqrt(np.diag(self.bcov_scaled))
@@ -416,7 +435,7 @@ if __name__=="__main__":
     605, 688, 215, 255, 462, 448, 776, 200, 132, 36, 770, 140, 810, 450, 635,
     150]])
     exog = exog.T
-    exog = add_constant(exog)
+    exog = sm.add_constant(exog)
 
 #    model_ols = models.regression.OLS(endog, exog)
 #    results_ols = model_ols.fit()
