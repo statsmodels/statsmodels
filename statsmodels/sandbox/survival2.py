@@ -435,8 +435,10 @@ class CoxPH(LikelihoodModel):
     def covariance(self, b):
         return la.pinv(self.information(b))
 
-    def fit(self):
-        results = super(CoxPH, self).fit()
+    def fit(self, start_params=None, method='newton', maxiter=100,
+            full_output=1,disp=1, fargs=(), callback=None, retall=0, **kwargs):
+        results = super(CoxPH, self).fit(start_params, method, maxiter,
+            full_output,disp, fargs, callback, retall, **kwargs)
         return CoxResults(self, results.params,
                                self.covariance(results.params))
 
@@ -774,31 +776,53 @@ class KMResults(LikelihoodModelResults):
         print(table)
 
 class CoxResults(LikelihoodModelResults):
+
     """
     Results for cox proportional hazard models
     """
 
-    def test_diff(self, coeffs=True, global_=True,
-                  methods=("wald", "score", "likelihood ratio")):
+    def test_coefficients(self, method="wald"):
         ##Need to check values for tests
         params = self.params
         model = self.model
         cov_params = self.normalized_cov_params
-        returns = []
-        if coeffs:
+        ##Other methods (e.g. score?)
+        if method == "wald":
             se = 1/(np.sqrt(np.diagonal(model.information(params))))
             z = params/se
-            returns.append(np.c_[params,se,z,2 * stats.norm.sf(np.abs(z), 0, 1)])
-        if global_:
-            globals_ = []
-            if "wald" in methods:
-                (globals_.append((np.dot(((params) ** 2),
-                                       model.information(params)))))
-            if "score" in methods:
-                (globals_.append(((np.dot(((model).score(np.zeros_like(params)))** 2,
-                                          cov_params)))))
-            if "likelihood ratio" in methods:
-                (globals_.append((2 * (model.loglike(params)
-                            - model.loglike(np.zeros_like(params))))))
-            returns.append(globals_)
-        return returns
+        return np.c_[params,se,z,2 * stats.norm.sf(np.abs(z), 0, 1)]
+
+    def wald_test(self):
+        ##Need to check values for tests
+        params = self.params
+        model = self.model
+        cov_params = self.normalized_cov_params
+        return np.dot(((params) ** 2), model.information(params))
+
+    def score_test(self):
+        ##Need to check values for tests
+        params = self.params
+        model = self.model
+        cov_params = self.normalized_cov_params
+        return (np.dot(((model).score(np.zeros_like(params)))** 2, cov_params))
+
+    def likelihood_ratio_test(self, restricted="zeros"):
+        ##Need to check values for tests
+        params = self.params
+        model = self.model
+        if restricted == "zeros":
+            return (2 * (model.loglike(params)
+                         - model.loglike(np.zeros_like(params))))
+        elif isinstance(restricted, CoxResults):
+            restricted = restricted.model.loglike(restricted.params)
+            return 2 * (model.loglike(params) - restricted)
+        else:
+            raise ValueError('''restricted must be either CoxResults instance, or
+                             "zeros"''')
+
+    def conf_int(self, alpha=.05, cols=None, method='default', exp=True):
+        ##Need to check values
+        CI = super(CoxResults, self).conf_int(alpha, cols, method)
+        if exp:
+            CI = np.exp(CI)
+        return CI
