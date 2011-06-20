@@ -144,6 +144,12 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
 
     Notes
     -----
+    The null hypothesis of the Augmented Dickey-Fuller is that there is a unit
+    root, with the alternative that there is no unit root. If the pvalue is
+    above a critical size, then we cannot reject that there is a unit root.
+
+    The p-values are obtained through regression surface approximation from
+    MacKinnon 1994, but using the updated 2010 tables.
     If the p-value is close to significant, then the critical values should be
     used to judge whether to accept or reject the null.
 
@@ -669,8 +675,8 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
     '''four tests for granger causality of 2 timeseries
 
     all four tests give similar results
-    `params_ftest` and `ssr_ftest` are equivalent based of F test which is identical to
-    lmtest:grangertest in R
+    `params_ftest` and `ssr_ftest` are equivalent based of F test which is
+    identical to lmtest:grangertest in R
 
     Parameters
     ----------
@@ -695,6 +701,13 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
     Notes
     -----
     TODO: convert to class and attach results properly
+
+    The Null hypothesis for grangercausalitytests is that the time series in
+    the second column, x2, Granger causes the time series in the first column,
+    x1. This means that past values of x2 have a statistically significant
+    effect on the current value of x1, taking also past values of x1 into
+    account, as regressors. We reject the null hypothesis of x2 Granger
+    causing x1 if the pvalues are below a desired size of the test.
 
     'params_ftest', 'ssr_ftest' are based on F test
 
@@ -770,6 +783,64 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
 
     return resli
 
+def coint(y1, y2, regression="c"):
+    """
+    This is a simple cointegration test. Uses unit-root test on residuals to
+    test for cointegrated relationship
+
+    See Hamilton (1994) 19.2
+
+    Parameters
+    ----------
+    y1 : array_like, 1d
+        first element in cointegrating vector
+    y2 : array_like
+        remaining elements in cointegrating vector
+    c : str {'c'}
+        Included in regression
+        * 'c' : Constant
+
+    Returns
+    -------
+    coint_t : float
+        t-statistic of unit-root test on residuals
+    pvalue : float
+        MacKinnon's approximate p-value based on MacKinnon (1994)
+    crit_value : dict
+        Critical values for the test statistic at the 1 %, 5 %, and 10 % levels.
+
+
+    Notes
+    -----
+    The Null hypothesis is that there is no cointegration, the alternative
+    hypothesis is that there is cointegrating relationship. If the pvalue is
+    small, below a critical size, then we can reject the hypothesis that there
+    is no cointegrating relationship.
+
+    P-values are obtained through regression surface approximation from
+    MacKinnon 1994.
+
+    References
+    ----------
+    MacKinnon, J.G. 1994.  "Approximate asymptotic distribution functions for
+        unit-root and cointegration tests.  `Journal of Business and Economic
+        Statistics` 12, 167-76.
+
+    """
+    regression = regression.lower()
+    if regression not in ['c','nc','ct','ctt']:
+        raise ValueError("regression option %s not understood") % regression
+    y1 = np.asarray(y1)
+    y2 = np.asarray(y2)
+    if regression == 'c':
+        y2 = add_constant(y2)
+    st1_resid = OLS(y1, y2).fit().resid #stage one residuals
+    lgresid_cons = add_constant(st1_resid[0:-1])
+    uroot_reg = OLS(st1_resid[1:], lgresid_cons).fit()
+    coint_t = (uroot_reg.params[0]-1)/uroot_reg.bse[0]
+    pvalue = mackinnonp(coint_t, regression="c", N=2, lags=None)
+    crit_value = mackinnoncrit(N=1, regression="c", nobs=len(y1))
+    return coint_t, pvalue, crit_value
 
 
 __all__ = ['acovf', 'acf', 'pacf', 'pacf_yw', 'pacf_ols', 'ccovf', 'ccf',
