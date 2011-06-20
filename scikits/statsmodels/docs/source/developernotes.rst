@@ -60,6 +60,7 @@ You would do well to have a look at these other resources for more information.
 Getting Started with Git
 ~~~~~~~~~~~~~~~~~~~~~~~~
 Instructions for installing git, setting up your SSH key, and configuring git can be found here::
+<<<<<<< HEAD
 
 `Linux users <http://help.github.com/linux-set-up-git/>`__.
 `Windows users <http://help.github.com/win-set-up-git/>`__.
@@ -210,7 +211,6 @@ Then you can just do::
     git -d shiny-new-feature
  
 Make sure you use a lower-case -d. That way, git will complain if your feature branch has not actually been merged.
-
 
 Git for Bzr Users
 ~~~~~~~~~~~~~~~~~
