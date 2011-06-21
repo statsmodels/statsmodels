@@ -10,10 +10,6 @@ The results are tested against existing statistical packages to ensure that they
 pacakge is released under the open source Simplied BSD (2-clause) license. The online documentation
 is hosted at `sourceforge <http://statsmodels.sourceforge.net/>`__. 
 
-
-You can contanct us on our 
-`mailing list <http://groups.google.com/group/pystatsmodels?hl=en>`__.
-
 Installation
 ------------
 
