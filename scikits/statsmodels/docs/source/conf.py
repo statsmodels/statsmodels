@@ -297,7 +297,8 @@ epub_copyright = u'2009-2011, Josef Perktold, Skipper Seabold, Jonathan Taylor, 
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'numpy' : ('http://docs.scipy.org/doc/numpy/', None),
-                       'python' : ('http://docs.python.org/3.2', None)}
+                       'python' : ('http://docs.python.org/3.2', None),
+                       'pydagogue' : ('http://matthew-brett.github.com/pydagogue/', None)}
 
 from os.path import dirname, abspath
 plot_basedir = dirname(dirname(os.path.abspath(__file__)))
