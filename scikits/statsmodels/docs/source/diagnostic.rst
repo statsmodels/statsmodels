@@ -1,4 +1,5 @@
 :orphan:
+
 .. _diagnostics:
 
 Regression Diagnostics and Specification Tests
