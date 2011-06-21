@@ -69,7 +69,7 @@ Optional Dependencies
 ~~~~~~~~~~~~~~~~~~~~~
 
 * `Matplotlib <http://matplotlib.sourceforge.net/>`__ is needed for plotting functions and running many of the examples. 
-* `Nose <http://www.somethingaboutorange.com/mrl/projects/nose/>`__. is required to run the test suite.
+* `Nose <http://www.somethingaboutorange.com/mrl/projects/nose/>`__ is required to run the test suite.
 
 Getting Involved
 ----------------
