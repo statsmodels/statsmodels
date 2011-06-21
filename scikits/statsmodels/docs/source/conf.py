@@ -60,23 +60,10 @@ autoclass_content = 'class'
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
-import scikits.statsmodels.api as sm
-version = '0.3.0'
+from scikits.statsmodels.version import version, full_version
+version = version
 # The full version, including alpha/beta/rc tags.
-release = '0.3.0'
-try:
-    import subprocess
-    retcode = subprocess.check_call("bzr revno", shell=True,
-            stdout=subprocess.PIPE)
-    if retcode == 0:
-        revno = subprocess.Popen("bzr revno", shell=True,
-                stdout=subprocess.PIPE).communicate()[0]
-        revno = revno.rstrip()
-        release += " rev " + revno
-    else:
-        raise Exception
-except:
-    pass
+release = full_version
 
 # set inheritance_graph_attrs
 # you need graphviz installed to use this
