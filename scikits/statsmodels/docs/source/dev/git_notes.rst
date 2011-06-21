@@ -1,39 +1,5 @@
-Developer's Notes
------------------
-.. TODO these are intended for developers, we should have separate docs for patches/ pull requests
-
-Mission Statement
-=================
-Statsmodels is a python package for statistical modelling that is released under
-the `BSD license <http://www.opensource.org/licenses/bsd-license.php>`_.
-
-Design
-~~~~~~
-.. TODO perhaps a flow chart would be the best presentation here?
-
-For the most part, statsmodels is an object-oriented library of statistical
-models.  Our working definition of a statistical model is an object that has
-both endogenous and exogenous data defined as well as a statistical
-relationship.  In place of endogenous and exogenous one can often substitute
-the terms left hand side (LHS) and right hand side (RHS), dependent and
-independent variables, regressand and regressors, outcome and design, response
-variable and explanatory variable, respectively.  The usage is quite often
-domain specific; however, we have chosen to use `endog` and `exog` almost
-exclusively, since the principal developers of statsmodels have a background
-in econometrics, and this feels most natural.  This means that all of the
-models are objects with `endog` and `exog` defined, though in some cases
-`exog` is None for convenience (for instance, with an autoregressive process).
-Each object also defines a `fit` (or similar) method that returns a
-model-specific results object.  In addition there are some functions, e.g. for
-statistical tests or convenience functions.
-
-Testing
-~~~~~~~
-We strive to follow a `Test Driven Development (TDD) <http://en.wikipedia.org/wiki/Test-driven_development>`_ pattern.
-All models or statistical functions that are added to the main code base are
-tested versus an existing statistical package.  All test results are currently obtained from another
-statistical package and hard coded.
-.. TODO: link to examples of both of these in the test folder
+Working with the Statsmodels Code
+---------------------------------
 
 Github
 ======
@@ -53,14 +19,13 @@ your changes to the codebase. It also keeps a complete history of all changes to
 easily undo changes or see when a change was made, by whom, and why.
 
 There are already a lot of great resources for learning to use git in addition to the comprehensive
-`github help pages<http://help.github.com/>`__. Two of the best are `NumPy's documentation <http://docs.scipy.org/doc/numpy/dev/index.html>`__ and 
+`github help pages <http://help.github.com/>`__. Two of the best are `NumPy's documentation <http://docs.scipy.org/doc/numpy/dev/index.html>`__ and 
 Matthew Brett's `Pydagogue <http://matthew-brett.github.com/pydagogue/>`__. The below is the bare minimum taken from these resources and applied to working with statsmodels. 
 You would do well to have a look at these other resources for more information.
 
 Getting Started with Git
 ~~~~~~~~~~~~~~~~~~~~~~~~
 Instructions for installing git, setting up your SSH key, and configuring git can be found here::
-<<<<<<< HEAD
 
 `Linux users <http://help.github.com/linux-set-up-git/>`__.
 `Windows users <http://help.github.com/win-set-up-git/>`__.
@@ -164,6 +129,8 @@ pushing makes sense. You can review your change history by::
 
 It pays to take care of things locally before you push them to github.
 
+.. _pull-requests:
+
 Pull Requests
 ~~~~~~~~~~~~~
 When you are ready to ask for a code review, we recommend that you file a pull request. Before you 
@@ -188,14 +155,28 @@ If everything looks good you are read to make a `pull request <http://help.githu
 Your request will then be reviewed. If you need to go back and make more changes, you can make them
 in your branch and push them to github and the pull request will be automatically updated.
 
+One last thing to note. If there has been a lot of work in upstream/master since you started your 
+patch, you might want to rebase. Read on for some notes on :ref:`merge-vs-rebase`.
+
 
 Advanced Topics
 ~~~~~~~~~~~~~~~
 
+.. _merge-vs-rebase:
+
 Merging vs. Rebasing
 ^^^^^^^^^^^^^^^^^^^^
+Again, this is a topic that has been discussed at great length and with considerable more expertise 
+than I can offer. This section will provide some resources for further reading and some advice. The 
+focus, though, will be for those who wish to submit pull requests for a feature branch. For these 
+cases rebase should be preferred.
 
-Deleting branches
+One great place to start learning about rebase is :ref:`rebasing without tears <pydagogue:actual-rebase>`. 
+In particular, `heed the warnings <http://matthew-brett.github.com/pydagogue/rebase_without_tears.html#safety>`__. Namely, **always make a new branch before doing a rebase**. This is good general advice for
+working with git. I would also add **never use rebase on work that has already been published**. If 
+another developer is using your work, don't rebase!!
+
+Deleting Branches
 ^^^^^^^^^^^^^^^^^
 
 Once your feature branch is accepted into upstream, you might want to get rid of it. First you'll want 
@@ -215,31 +196,19 @@ Make sure you use a lower-case -d. That way, git will complain if your feature b
 Git for Bzr Users
 ~~~~~~~~~~~~~~~~~
 
-Git cheat sheet
+git pull != bzr pull
+
+git pull = git fetch + git merge
+
+Of course, you could 
+
+git pull --rebase = git fetch + git rebase
+
+
+    
+Git Cheat Sheet
 ~~~~~~~~~~~~~~~
 
-Mailing List
-============
-
-Most of our developer conversations take place on our psystatsmodels
-google group mailing list.
-
-**Mailing List:** http://groups.google.com/group/pystatsmodels?hl=en
-
-Related Projects
-================
-
-See our :doc:`related projects page <related>`.
-
-Getting Involved and Road Map
-=============================
-
-How to Add a Dataset
-~~~~~~~~~~~~~~~~~~~~
-
-See the :ref:`notes on adding a dataset <add_data>`.
-
-statsmodels organization
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-See the :ref:`Internal Class Guide <model>`.
+.. todo::
+    
+    Fill in as needed.
