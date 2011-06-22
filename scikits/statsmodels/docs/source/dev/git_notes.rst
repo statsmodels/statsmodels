@@ -68,7 +68,10 @@ to indicate that you are now on the `shiny-new-feature` branch.
 Making changes
 ~~~~~~~~~~~~~~
 
-Hack away. Make any changes that you want. Now you've made your changes. Say you've changed the file
+Hack away. Make any changes that you want. Well, not any changes. Keep the work in your branch 
+completel confined to one speficic topic, bugfix, or feature implementation. You can work across
+multiple files and have many commits, but the changes should all be related to the feature of the 
+feature branch, whatever that may be. Now you've made your changes. Say you've changed the file
 `foo.py`. You can see your changes typing::
 
     git status
@@ -102,7 +105,6 @@ should give something like::
     #       modified:   /relative/path/to/foo.py
     #
 
-
 Pushing your changes
 ~~~~~~~~~~~~~~~~~~~~
 
@@ -123,11 +125,12 @@ If you added the upstream repository as described above you will see something l
     upstream        git://github.com/statsmodels/statsmodels.git (push)
 
 Before you push any commits, however, it is *highly* recommended that you make sure what you are 
-pushing makes sense. You can review your change history by::
+pushing makes sense and looks clean. You can review your change history by::
 
     git log --oneline --graph
 
-It pays to take care of things locally before you push them to github.
+It pays to take care of things locally before you push them to github. So when in doubt, don't push. 
+Also see the advice on keeping your history clean in :ref:`merge-vs-rebase`.
 
 .. _pull-requests:
 
@@ -156,8 +159,10 @@ Your request will then be reviewed. If you need to go back and make more changes
 in your branch and push them to github and the pull request will be automatically updated.
 
 One last thing to note. If there has been a lot of work in upstream/master since you started your 
-patch, you might want to rebase. Read on for some notes on :ref:`merge-vs-rebase`.
-
+patch, you might want to rebase. However, you can probably get away with not rebasing if these changes
+are unrelated to the work you have done in the `shiny-new-feature` branch. If you can avoid it, then 
+don't rebase. If you have to, try to do it once and when you are at the end of your changes. Read on 
+for some notes on :ref:`merge-vs-rebase`.
 
 Advanced Topics
 ~~~~~~~~~~~~~~~
@@ -176,6 +181,11 @@ In particular, `heed the warnings <http://matthew-brett.github.com/pydagogue/reb
 working with git. I would also add **never use rebase on work that has already been published**. If 
 another developer is using your work, don't rebase!!
 
+As for merging, **never merge from trunk into your feature branch**. You will, however, want to check
+that your work will merge cleanly into trunk. This will help out the reviewers. You can do this 
+in your local repository by merging your work into your master (or any branch that tracks remote 
+master) and :ref:`run-tests`.
+
 Deleting Branches
 ^^^^^^^^^^^^^^^^^
 
@@ -191,21 +201,32 @@ Then you can just do::
 
     git -d shiny-new-feature
  
-Make sure you use a lower-case -d. That way, git will complain if your feature branch has not actually been merged.
+Make sure you use a lower-case -d. That way, git will complain if your feature branch has not actually
+been merged. The branch will still exist on github however. To delete the branch on github, do::
+
+    git push origin :shiny-new-feature branch
 
 Git for Bzr Users
 ~~~~~~~~~~~~~~~~~
 
-git pull != bzr pull
+::
 
-git pull = git fetch + git merge
+    git pull != bzr pull
 
-Of course, you could 
+::
 
-git pull --rebase = git fetch + git rebase
+    git pull = git fetch + git merge
 
+Of course, you could::
 
-    
+    git pull --rebase = git fetch + git rebase
+
+::
+
+    git merge != bzr merge
+    git merge == bzr merge + bzr commit 
+    git merge --no-commit == bzr merge
+ 
 Git Cheat Sheet
 ~~~~~~~~~~~~~~~
 

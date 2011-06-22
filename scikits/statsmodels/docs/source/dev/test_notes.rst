@@ -13,6 +13,21 @@ Introduction to Nose
 ~~~~~~~~~~~~~~~~~~~~
 Like many packages, statsmodels uses the `Nose testing system <http://somethingaboutorange.com/mrl/projects/nose/>`__ and the convenient extensions in `numpy.testing <http://docs.scipy.org/doc/numpy/reference/routines.testing.html>`__. Nose itself is an extension of :mod:`Python's unittest <python:unittest>`. Nose will find any file, directory, function, or class name that matches the regular expression ``(?:^|[b_./-])[Tt]est``. This is mainly functions that begin with test* and classes that begin with Test*.
 
+.. _run-tests:
+
+Running the Test Suite
+~~~~~~~~~~~~~~~~~~~~~~
+
+You can run all the tests by::
+
+    >>> import scikits.statsmodels.api as sm
+    >>> sm.test()
+
+You can test submodules by::
+
+    >>> sm.discrete.test()
+
+
 How To Write A Test
 ~~~~~~~~~~~~~~~~~~~
 NumPy provides a good introduction to unit testing with Nose and NumPy extensions `here <https://github.com/numpy/numpy/blob/master/doc/TESTS.rst.txt>`__. It is worth a read for some more details. 
