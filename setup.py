@@ -218,7 +218,6 @@ if not release:
         FULLVERSION += '.dev-' + GIT_REVISION[:7]
     else:
         FULLVERSION += QUALIFIER
-        VERSION += QUALIFIER
 
     a = open(filename, 'w')
     try:
