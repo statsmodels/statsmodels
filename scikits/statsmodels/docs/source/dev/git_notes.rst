@@ -176,7 +176,11 @@ than I can offer. This section will provide some resources for further reading a
 focus, though, will be for those who wish to submit pull requests for a feature branch. For these 
 cases rebase should be preferred.
 
-One great place to start learning about rebase is :ref:`rebasing without tears <pydagogue:actual-rebase>`. 
+A rebase replays commits from one branch on top of another branch to preserve a linear history. Recall
+that your commits were tested against a (possibly) older version of master from which you started
+your branch, so if you rebase, you could introduce bugs. However, if you have only a few 
+commits, this might not be such a concern. One great place to start learning about rebase is 
+:ref:`rebasing without tears <pydagogue:actual-rebase>`. 
 In particular, `heed the warnings <http://matthew-brett.github.com/pydagogue/rebase_without_tears.html#safety>`__. Namely, **always make a new branch before doing a rebase**. This is good general advice for
 working with git. I would also add **never use rebase on work that has already been published**. If 
 another developer is using your work, don't rebase!!
