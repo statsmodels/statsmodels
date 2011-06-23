@@ -9,9 +9,14 @@ from scipy.optimize import fmin_ncg
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.base.model import LikelihoodModel, LikelihoodModelResults
 
+dta =  np.genfromtxt('RossiLimited.txt')
+dta2 = np.genfromtxt('amlData.txt', delimiter=',')
+
 ##Need to update all docstrings
 
 class Survival(object):
+
+    ##Add handling for non-integer times
 
     """
     Survival(...)
@@ -230,6 +235,8 @@ class KaplanMeier(object):
 
     """
 
+    ##Add stratification
+
     def __init__(self, surv, exog=None, data=None):
         censoring = surv.censoring
         times = surv.times
@@ -352,13 +359,16 @@ class KaplanMeier(object):
         (self.event).append(events)
 
 class CoxPH(LikelihoodModel):
+
     ##Add efron fitting, and other methods
+    ##Add stratification
 
     """
     Fit a cox proportional harzard model from survival data
     """
 
-    def __init__(self, surv, exog, data=None):
+    def __init__(self, surv, exog, data=None, ties="efron"):
+        self.ties = ties
         censoring = surv.censoring
         times = surv.times
         if data is not None:
@@ -395,39 +405,121 @@ class CoxPH(LikelihoodModel):
         self.exog = (exog[~np.isnan(exog).any(1)]).astype(float)
         self.df_resid = len(exog) - 1
         self.confint_dist = stats.norm
+        times = self.times
+        d = np.bincount(times,self.censoring)
+        times = np.unique(times)
+        d = d[:,list(times)]
+        self.d = (np.c_[times, d]).astype(float)
 
     def loglike(self, b):
-        thetas = np.exp(np.dot(self.exog, b))
-        ind = self.censoring == 1
-        ti = self.times[ind]
-        logL = (np.dot(self.exog[ind], b)).sum()
-        for t in ti:
-            logL -= np.log((thetas[self.times >= t]).sum())
+        ties = self.ties
+        exog = self.exog
+        times = self.times
+        censoring = self.censoring
+        d = self.d
+        BX = np.dot(exog, b)
+        thetas = np.exp(BX)
+        d = d[d[:,1] != 0]
+        c_idx = censoring == 1
+        if ties == "efron":
+            logL = 0
+            for t in d[:,0]:
+                ind = (c_idx) * (times == t)
+                tied = d[d[:,0] == t][0][1]
+                logL += ((np.dot(exog[ind], b)).sum()
+                         - (np.log((thetas[times >= t]).sum()
+                                   - ((np.arange(tied))/tied)
+                                   * (thetas[ind]).sum()).sum()))
+        if ties == "breslow":
+            logL = (BX[c_idx]).sum()
+            for t in d[:,0]:
+                logL -= ((np.log((thetas[times >= t]).sum()))
+                         * d[d[:,0] == t][0][1])
         return logL
 
     def score(self, b):
-        thetas = np.exp(np.dot(self.exog, b))
-        ind = self.censoring == 1
-        ti = self.times[ind]
-        score = (self.exog[ind]).sum(0)
-        for t in ti:
-            ind = self.times >= t
-            thetaj = thetas[ind]
-            Xj = self.exog[ind]
-            score -= (np.dot(thetaj, Xj))/(thetaj.sum())
+        ties = self.ties
+        exog = self.exog
+        times = self.times
+        censoring = self.censoring
+        d = self.d
+        BX = np.dot(exog, b)
+        thetas = np.exp(BX)
+        d = d[d[:,1] != 0]
+        c_idx = censoring == 1
+        if ties == "efron":
+            score = 0
+            for t in d[:,0]:
+                ind = (c_idx) * (times == t)
+                ind2 = times >= t
+                thetaj = thetas[ind2]
+                Xj = exog[ind2]
+                thetai = thetas[ind]
+                Xi = exog[ind]
+                tied = d[d[:,0] == t][0][1]
+                num1 = np.dot(thetaj, Xj)
+                num2 = np.dot(thetai, Xi)
+                de1 = thetaj.sum()
+                de2 = thetai.sum()
+                score += Xi.sum(0)
+                for i in range(int(tied)):
+                    c = i/tied
+                    score -= (num1 - c * num2) / (de1 - c * de2)
+        elif ties == "breslow":
+            score = (exog[c_idx]).sum(0)
+            for t in d[:,0]:
+                ind = times >= t
+                thetaj = thetas[ind]
+                Xj = exog[ind]
+                if ties == "breslow":
+                    score -= ((np.dot(thetaj, Xj))/(thetaj.sum()) *
+                              d[d[:,0] == t][0][1])
         return score
 
     def hessian(self, b):
-        thetas = np.exp(np.dot(self.exog, b))
-        ti = self.times[self.censoring == 1]
+        ties = self.ties
+        exog = self.exog
+        times = self.times
+        censoring = self.censoring
+        d = self.d
+        BX = np.dot(exog, b)
+        thetas = np.exp(BX)
+        d = d[d[:,1] != 0]
         hess = 0
-        for t in ti:
-            ind = self.times >= t
-            thetaj = thetas[ind]
-            Xj = self.exog[ind]
-            thetaX = np.mat(np.dot(thetaj, Xj))
-            hess += (((np.dot(Xj.T, (Xj * thetaj[:,np.newaxis])))/(thetaj.sum()))
-                     - ((np.array(thetaX.T * thetaX))/((thetaj.sum())**2)))
+
+        if ties == "efron":
+            c_idx = censoring == 1
+            for t in d[:,0]:
+                ind = (c_idx) * (times == t)
+                ind2 = times >= t
+                thetaj = thetas[ind2]
+                Xj = exog[ind2]
+                thetai = thetas[ind]
+                Xi = exog[ind]
+                thetaXj = np.dot(thetaj, Xj)
+                thetaXi = np.dot(thetai, Xi)
+                tied = d[d[:,0] == t][0][1]
+                num1 = np.dot(Xj.T, (Xj * thetaj[:,np.newaxis]))
+                num2 = np.dot(Xi.T, (Xi * thetai[:,np.newaxis]))
+                de1 = thetaj.sum()
+                de2 = thetai.sum()
+                for i in range(int(tied)):
+                    c = i/tied
+                    num3 = (thetaXj - c * thetaXi)
+                    de = de1 - c * de2
+                    hess += (((num1 - c * num2) / (de)) -
+                             (np.dot(num3[:,np.newaxis], num3[np.newaxis,:])
+                              / (de**2)))
+        elif ties == "breslow":
+            for t in d[:,0]:
+                ind = times >= t
+                thetaj = thetas[ind]
+                Xj = exog[ind]
+                thetaX = np.mat(np.dot(thetaj, Xj))
+                ##Save more variables to avoid recalulation?
+                hess += ((((np.dot(Xj.T, (Xj * thetaj[:,np.newaxis])))/(thetaj.sum()))
+                         - ((np.array(thetaX.T * thetaX))/((thetaj.sum())**2))) *
+                         d[d[:,0] == t][0][1])
         return -hess
 
     def information(self, b):
@@ -827,3 +919,11 @@ class CoxResults(LikelihoodModelResults):
         if exp:
             CI = np.exp(CI)
         return CI
+
+surv = Survival(1,censoring=2,data=dta)
+cox = CoxPH(surv, exog=list(range(3,5)), data=dta)
+cox2 = CoxPH(surv, exog=list(range(3,5)), data=dta,ties="breslow")
+b = np.array(np.zeros_like(cox.exog[0]))
+b2 = np.array([-0.3279001, -0.0714828])
+surv2 = Survival(1, censoring=2, data=dta2)
+km = KaplanMeier(surv2, exog=3, data=dta2)
