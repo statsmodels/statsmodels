@@ -120,15 +120,11 @@ Releasing
 
     ISRELEASED = True
 
-   If it's a release candidate then change to, for example::
-
-    ISRELEASED = True
-    QUALIFIER = 'rc1'
-
 #. Tag the release. For example::
 
     git tag -a v0.3.0rc1 -m "Version 0.3.0 Release Candidate 1" 7b2fb295a421b83a90b04180c8a1678cf9a6ed0d
 
+#. What else...
 
 Commit Comments
 ---------------

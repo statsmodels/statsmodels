@@ -150,7 +150,6 @@ MAJ = 0
 MIN = 3
 REV = 0
 ISRELEASED = True
-QUALIFIER = 'rc1' #NOTE: if not a release candidate, just leave blank
 VERSION = '%d.%d.%d' % (MAJ,MIN,REV)
 
 classifiers = [ 'Development Status :: 4 - Beta',
@@ -216,8 +215,6 @@ if not release:
 
     if not ISRELEASED:
         FULLVERSION += '.dev-' + GIT_REVISION[:7]
-    else:
-        FULLVERSION += QUALIFIER
 
     a = open(filename, 'w')
     try:
