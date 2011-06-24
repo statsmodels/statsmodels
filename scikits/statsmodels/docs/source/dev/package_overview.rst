@@ -3,8 +3,8 @@ Package Overview
 
 Mission Statement
 ~~~~~~~~~~~~~~~~~
-Statsmodels is a python package for statistical modelling that is released under
-the `BSD license <http://www.opensource.org/licenses/bsd-license.php>`_.
+Statsmodels is a Python package for statistical modelling that is released under
+the `simplified BSD license <http://www.opensource.org/licenses/bsd-license.php>`_.
 
 Design
 ~~~~~~

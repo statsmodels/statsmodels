@@ -56,6 +56,7 @@ The distribution families currently implemented are
 
 .. autosummary::
    :toctree: generated/
+   :template: autosummary/glmfamilies.rst
 
    Family
    Binomial
@@ -75,7 +76,7 @@ available link functions can be obtained by
 
 ::
 
-    >>> sm.families.family.<familyname>.available ?
+    >>> sm.families.family.<familyname>.links
 
 .. currentmodule:: scikits.statsmodels.genmod.families.links
 

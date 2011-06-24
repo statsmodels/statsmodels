@@ -5,12 +5,58 @@
     :license: BSD
     #}
 {% extends "basic/layout.html" %}
+{% set reldelim1 = ' |' %}
 
+{% block sidebarlogo %}{% endblock %} {# override to not display, we keep the "logo" at the very top #}
+
+{% if pagename == 'index' %}
+    {% set title = 'StatsModels: Statistics in Python' %}
+{% endif %}
+
+
+{% block rootrellink %}
+        <li>Download</li> &nbsp;|&nbsp;
+        <li>Support</li> &nbsp;|&nbsp;
+        <li>Bugs</li> &nbsp;|&nbsp;
+        <li>Develop</li> &nbsp;|&nbsp;
+        <li>Examples</li> &nbsp;|&nbsp;
+{% endblock %}
+
+{# Render the Header with Banner #}
+
+{% block header %}
+<div class="headerwrap">
+    <div class = "header">
+        {% if logo %}
+        <a href = "{{ pathto('index') }}">
+<img src="{{pathto('_static/statsmodels_hybi_banner.png', 1) }}" alt="Logo" 
+    style="padding-left: 15px"/></a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{#{% block document %}
+<div class="navbar">
+    <ul>
+        <li>Download</li>
+        <li>Support</li>
+        <li>Bugs</li>
+        <li>Develop</li>
+        <li>Examples</li>
+    </ul>
+</div>
+{{ super() }}
+{% endblock %}#}
+
+{#{% block document %}
 {% block relbaritems %}
     {% if pagename != 'index' %}
 {{ title }}
     {% endif %}
-{% endblock %}
+    {% endblock %}
+    {{ super() }}
+    {% endblock %}#}
 
-
+{#{% block relbar1 %}{% endblock %} #}
 {% block relbar2 %}{% endblock %}           

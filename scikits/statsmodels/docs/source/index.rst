@@ -16,9 +16,9 @@ Installation
 Using setuptools
 ~~~~~~~~~~~~~~~~
 
-To obtain the latest released version of statsmodels using `setuptools <http://pypi.python.org/pypi/setuptools>__`::
+To obtain the latest released version of statsmodels using `setuptools <http://pypi.python.org/pypi/setuptools>`__::
 
-    easy_install scikits.statsmodels
+    easy_install -U scikits.statsmodels
 
 Or follow `this link to our PyPI page <http://pypi.python.org/pypi/scikits.statsmodels>`__.
 
@@ -66,16 +66,6 @@ Optional Dependencies
 
 * `Matplotlib <http://matplotlib.sourceforge.net/>`__ is needed for plotting functions and running many of the examples. 
 * `Nose <http://www.somethingaboutorange.com/mrl/projects/nose/>`__ is required to run the test suite.
-
-Getting Involved
-----------------
-
-* Join us on our `Mailing List <http://groups.google.com/group/pystatsmodels?hl=en>`__ 
-  to ask user questions or discuss development.
-* Report bugs on our `Bug Tracker <https://bugs.launchpad.net/statsmodels>`__.
-* Found a bug and want to contribute a patch? Want to contribute a new model 
-  or some statistical tests? What to get involved in code development? 
-  Have a look out our :doc:`dev/index`.
 
 Getting Started
 ---------------

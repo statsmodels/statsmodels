@@ -28,10 +28,8 @@ sys.path.insert(0, os.path.abspath('../sphinxext'))
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest',
               'sphinx.ext.intersphinx', 'sphinx.ext.todo',
-              'sphinx.ext.pngmath', 'sphinx.ext.ifconfig',
-              'sphinx.ext.viewcode', 'sphinx.ext.autosummary',
-              'sphinx.ext.coverage', 'sphinx.ext.inheritance_diagram',
-              'matplotlib.sphinxext.only_directives',
+              'sphinx.ext.pngmath', 'sphinx.ext.viewcode', 'sphinx.ext.autosummary',
+              'sphinx.ext.inheritance_diagram',
               'matplotlib.sphinxext.plot_directive',
               'numpy_ext.numpydoc']
 
@@ -61,9 +59,9 @@ autoclass_content = 'class'
 # built documents.
 #
 from scikits.statsmodels.version import version, full_version
-version = version
-# The full version, including alpha/beta/rc tags.
-release = full_version
+release = version
+# The full version, including dev tag.
+version = full_version
 
 # set inheritance_graph_attrs
 # you need graphviz installed to use this
@@ -89,7 +87,7 @@ inheritance_graph_attrs = dict(size='""', ratio="compress", fontsize=14,
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = []
+exclude_patterns = ['*/autosummary/class.rst', '*/autosummary/glmfamilies.rst']
 
 # The reST default role (used for this markup: `text`) to use for all documents.
 #default_role = None
@@ -136,7 +134,7 @@ html_theme_path = ['../themes']
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-#html_logo = None
+html_logo = 'images/statsmodels_hybi_banner.png'
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
@@ -157,14 +155,14 @@ html_theme_path = ['../themes']
 #html_use_smartypants = True
 
 # Custom sidebar templates, maps document names to template names.
-#html_sidebars = {}
+html_sidebars = {'index' : ['indexsidebar.html','searchbox.html']}
 
 # Additional templates that should be rendered to pages, maps page names to
 # template names.
 #html_additional_pages = {}
 
 # If false, no module index is generated.
-#html_domain_indices = True
+html_domain_indices = False
 
 # If false, no index is generated.
 #html_use_index = True
