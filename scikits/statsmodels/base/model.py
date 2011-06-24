@@ -629,17 +629,15 @@ class GenericLikelihoodModel(LikelihoodModel):
 class Results(object):
     """
     Class to contain model results
+
+    Parameters
+    ----------
+    model : class instance
+        the previously specified model instance
+    params : array
+        parameter estimates from the fit model
     """
     def __init__(self, model, params, **kwd):
-        """create instance of Results class
-
-        Parameters
-        ----------
-        model : class instance
-            the previously specified model instance
-        params : array
-            parameter estimates from the fit model
-        """
         self.__dict__.update(kwd)
         self.initialize(model, params, **kwd)
 
@@ -649,145 +647,145 @@ class Results(object):
 #TODO: public method?
 
 class LikelihoodModelResults(Results):
+    """
+    Class to contain results from likelihood models
+
+    Parameters
+    -----------
+    model : LikelihoodModel instance or subclass instance
+        LikelihoodModelResults holds a reference to the model that is fit.
+    params : 1d array_like
+        parameter estimates from estimated model
+    normalized_cov_params : 2d array
+       Normalized (before scaling) covariance of params. (dot(X.T,X))**-1
+    scale : float
+        For (some subset of models) scale will typically be the
+        mean square error from the estimated model (sigma^2)
+
+    Returns
+    -------
+    **Attributes**
+    mle_retvals : dict
+        Contains the values returned from the chosen optimization method if
+        full_output is True during the fit.  Available only if the model
+        is fit by maximum likelihood.  See notes below for the output from
+        the different methods.
+    mle_settings : dict
+        Contains the arguments passed to the chosen optimization method.
+        Available if the model is fit by maximum likelihood.  See
+        LikelihoodModel.fit for more information.
+    model : model instance
+        LikelihoodResults contains a reference to the model that is fit.
+    params : ndarray
+        The parameters estimated for the model.
+    scale : float
+        The scaling factor of the model given during instantiation.
+    tvalues : array
+        The t-values of the standard errors.
+
+
+    Notes
+    --------
+    The covariance of params is given by scale times normalized_cov_params.
+
+    Return values by solver if full_ouput is True during fit:
+
+        'newton'
+            fopt : float
+                The value of the (negative) loglikelihood at its
+                minimum.
+            iterations : int
+                Number of iterations performed.
+            score : ndarray
+                The score vector at the optimum.
+            Hessian : ndarray
+                The Hessian at the optimum.
+            warnflag : int
+                1 if maxiter is exceeded. 0 if successful convergence.
+            converged : bool
+                True: converged. False: did not converge.
+            allvecs : list
+                List of solutions at each iteration.
+        'nm'
+            fopt : float
+                The value of the (negative) loglikelihood at its
+                minimum.
+            iterations : int
+                Number of iterations performed.
+            warnflag : int
+                1: Maximum number of function evaluations made.
+                2: Maximum number of iterations reached.
+            converged : bool
+                True: converged. False: did not converge.
+            allvecs : list
+                List of solutions at each iteration.
+        'bfgs'
+            fopt : float
+                Value of the (negative) loglikelihood at its minimum.
+            gopt : float
+                Value of gradient at minimum, which should be near 0.
+            Hinv : ndarray
+                value of the inverse Hessian matrix at minimum.  Note
+                that this is just an approximation and will often be
+                different from the value of the analytic Hessian.
+            fcalls : int
+                Number of calls to loglike.
+            gcalls : int
+                Number of calls to gradient/score.
+            warnflag : int
+                1: Maximum number of iterations exceeded. 2: Gradient
+                and/or function calls are not changing.
+            converged : bool
+                True: converged.  False: did not converge.
+            allvecs : list
+                Results at each iteration.
+        'powell'
+            fopt : float
+                Value of the (negative) loglikelihood at its minimum.
+            direc : ndarray
+                Current direction set.
+            iterations : int
+                Number of iterations performed.
+            fcalls : int
+                Number of calls to loglike.
+            warnflag : int
+                1: Maximum number of function evaluations. 2: Maximum number
+                of iterations.
+            converged : bool
+                True : converged. False: did not converge.
+            allvecs : list
+                Results at each iteration.
+        'cg'
+            fopt : float
+                Value of the (negative) loglikelihood at its minimum.
+            fcalls : int
+                Number of calls to loglike.
+            gcalls : int
+                Number of calls to gradient/score.
+            warnflag : int
+                1: Maximum number of iterations exceeded. 2: Gradient and/
+                or function calls not changing.
+            converged : bool
+                True: converged. False: did not converge.
+            allvecs : list
+                Results at each iteration.
+        'ncg'
+            fopt : float
+                Value of the (negative) loglikelihood at its minimum.
+            fcalls : int
+                Number of calls to loglike.
+            gcalls : int
+                Number of calls to gradient/score.
+            hcalls : int
+                Number of calls to hessian.
+            warnflag : int
+                1: Maximum number of iterations exceeded.
+            converged : bool
+                True: converged. False: did not converge.
+            allvecs : list
+                Results at each iteration.
+        """
     def __init__(self, model, params, normalized_cov_params=None, scale=1.):
-        """
-        Class to contain results from likelihood models
-
-        Parameters
-        -----------
-        model : LikelihoodModel instance or subclass instance
-            LikelihoodModelResults holds a reference to the model that is fit.
-        params : 1d array_like
-            parameter estimates from estimated model
-        normalized_cov_params : 2d array
-           Normalized (before scaling) covariance of params. (dot(X.T,X))**-1
-        scale : float
-            For (some subset of models) scale will typically be the
-            mean square error from the estimated model (sigma^2)
-
-        Returns
-        -------
-        **Attributes**
-        mle_retvals : dict
-            Contains the values returned from the chosen optimization method if
-            full_output is True during the fit.  Available only if the model
-            is fit by maximum likelihood.  See notes below for the output from
-            the different methods.
-        mle_settings : dict
-            Contains the arguments passed to the chosen optimization method.
-            Available if the model is fit by maximum likelihood.  See
-            LikelihoodModel.fit for more information.
-        model : model instance
-            LikelihoodResults contains a reference to the model that is fit.
-        params : ndarray
-            The parameters estimated for the model.
-        scale : float
-            The scaling factor of the model given during instantiation.
-        tvalues : array
-            The t-values of the standard errors.
-
-
-        Notes
-        --------
-        The covariance of params is given by scale times normalized_cov_params.
-
-        Return values by solver if full_ouput is True during fit:
-
-            'newton'
-                fopt : float
-                    The value of the (negative) loglikelihood at its
-                    minimum.
-                iterations : int
-                    Number of iterations performed.
-                score : ndarray
-                    The score vector at the optimum.
-                Hessian : ndarray
-                    The Hessian at the optimum.
-                warnflag : int
-                    1 if maxiter is exceeded. 0 if successful convergence.
-                converged : bool
-                    True: converged. False: did not converge.
-                allvecs : list
-                    List of solutions at each iteration.
-            'nm'
-                fopt : float
-                    The value of the (negative) loglikelihood at its
-                    minimum.
-                iterations : int
-                    Number of iterations performed.
-                warnflag : int
-                    1: Maximum number of function evaluations made.
-                    2: Maximum number of iterations reached.
-                converged : bool
-                    True: converged. False: did not converge.
-                allvecs : list
-                    List of solutions at each iteration.
-            'bfgs'
-                fopt : float
-                    Value of the (negative) loglikelihood at its minimum.
-                gopt : float
-                    Value of gradient at minimum, which should be near 0.
-                Hinv : ndarray
-                    value of the inverse Hessian matrix at minimum.  Note
-                    that this is just an approximation and will often be
-                    different from the value of the analytic Hessian.
-                fcalls : int
-                    Number of calls to loglike.
-                gcalls : int
-                    Number of calls to gradient/score.
-                warnflag : int
-                    1: Maximum number of iterations exceeded. 2: Gradient
-                    and/or function calls are not changing.
-                converged : bool
-                    True: converged.  False: did not converge.
-                allvecs : list
-                    Results at each iteration.
-            'powell'
-                fopt : float
-                    Value of the (negative) loglikelihood at its minimum.
-                direc : ndarray
-                    Current direction set.
-                iterations : int
-                    Number of iterations performed.
-                fcalls : int
-                    Number of calls to loglike.
-                warnflag : int
-                    1: Maximum number of function evaluations. 2: Maximum number
-                    of iterations.
-                converged : bool
-                    True : converged. False: did not converge.
-                allvecs : list
-                    Results at each iteration.
-            'cg'
-                fopt : float
-                    Value of the (negative) loglikelihood at its minimum.
-                fcalls : int
-                    Number of calls to loglike.
-                gcalls : int
-                    Number of calls to gradient/score.
-                warnflag : int
-                    1: Maximum number of iterations exceeded. 2: Gradient and/
-                    or function calls not changing.
-                converged : bool
-                    True: converged. False: did not converge.
-                allvecs : list
-                    Results at each iteration.
-            'ncg'
-                fopt : float
-                    Value of the (negative) loglikelihood at its minimum.
-                fcalls : int
-                    Number of calls to loglike.
-                gcalls : int
-                    Number of calls to gradient/score.
-                hcalls : int
-                    Number of calls to hessian.
-                warnflag : int
-                    1: Maximum number of iterations exceeded.
-                converged : bool
-                    True: converged. False: did not converge.
-                allvecs : list
-                    Results at each iteration.
-        """
         super(LikelihoodModelResults, self).__init__(model, params)
         self.normalized_cov_params = normalized_cov_params
         self.scale = scale
