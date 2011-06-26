@@ -4,13 +4,10 @@ import numpy as np
 import numpy.linalg as la
 import matplotlib.pyplot as plt
 from scipy import stats
-from scipy.optimize import fmin_ncg
 
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.base.model import LikelihoodModel, LikelihoodModelResults
-
-dta =  np.genfromtxt('RossiLimited.txt')
-dta2 = np.genfromtxt('amlData.txt', delimiter=',')
+import itertools
 
 ##Need to update all docstrings
 
@@ -240,71 +237,107 @@ class KaplanMeier(object):
     def __init__(self, surv, exog=None, data=None):
         censoring = surv.censoring
         times = surv.times
-        if not exog is None:
-            if not data is None:
+        if exog is not None:
+            if data is not None:
                 data = np.asarray(data)
                 if data.ndim != 2:
                     raise ValueError("Data array must be 2d")
                 exog = data[:,exog]
             else:
-                if type(exog) == int:
-                    raise ValueError("""int exog must be column in data, which was not
-                                    provided""")
                 exog = np.asarray(exog)
-            if exog.dtype == float or exog.dtype == int:
-                if not censoring is None:
-                    data = np.c_[times,censoring,exog]
-                    data = data[~np.isnan(data).any(1)]
-                    self.times = (data[:,0]).astype(int)
-                    self.censoring = (data[:,1]).astype(int)
-                    self.exog = data[:,2]
-                else:
-                    data = np.c_[times,exog]
-                    data = data[~np.isnan(data).any(1)]
-                    self.times = (data[:,0]).astype(int)
-                    self.exog = data[:,1]
+        if exog is None:
+            self.exog = None
+            if censoring != None:
+                data = np.c_[times,censoring]
+                data = data[~np.isnan(data).any(1)]
+                self.times = (data[:,0]).astype(int)
+                self.censoring = (data[:,1]).astype(int)
                 del(data)
             else:
-                exog = exog[~np.isnan(times)]
-            if not censoring is None:
+                self.times = times[~np.isnan(times)]
+        elif exog.dtype == float or exog.dtype == int:
+            if censoring != None:
+                data = np.c_[times,censoring,exog]
+                data = data[~np.isnan(data).any(1)]
+                self.times = (data[:,0]).astype(int)
+                self.censoring = (data[:,1]).astype(int)
+                self.exog = data[:,2:]
+            else:
+                data = np.c_[times,exog]
+                data = data[~np.isnan(data).any(1)]
+                self.times = (data[:,0]).astype(int)
+                self.exog = data[:,1:]
+            del(data)
+        else:
+            exog = exog[~np.isnan(times)]
+            if censoring is not None:
                 censoring = censoring[~np.isnan(times)]
             times = times[~np.isnan(times)]
-            if  not censoring is None:
-                self.times = (times[~np.isnan(censoring)]).astype(int)
-                self.exog = exog[~np.isnan(censoring)]
-                self.censoring = (censoring[~np.isnan(censoring)]).astype(int)
-                self.df_resid = len(self.exog) - 1
+            if censoring is not None:
+                times = (times[~np.isnan(censoring)]).astype(int)
+                exog = exog[~np.isnan(censoring)]
+                censoring = (censoring[~np.isnan(censoring)]).astype(int)
+            if exog.ndim == 2:
+                self.times = (times[~np.isnan(exog).any(1)]).astype(int)
+                self.censoring = (censoring[~np.isnan(exog).any(1)]).astype(int)
+                self.exog = (exog[~np.isnan(exog).any(1)]).astype(float)
+            else:
+                self.times = (times[~np.isnan(exog)]).astype(int)
+                self.censoring = (censoring[~np.isnan(exog)]).astype(int)
+                self.exog = (exog[~np.isnan(exog)]).astype(float)
+        if exog is not None:
+            self.df_resid = len(exog) - 1
         else:
-            self.exog = None
-            data = np.c_[times,censoring]
-            data = data[~np.isnan(data).any(1)]
-            self.times = (data[:,0]).astype(int)
-            self.censoring = (data[:,1]).astype(int)
-            del(data)
+            self.df_resid = 1
 
     def fit(self, CI_transform="log-log", force_CI_0_1=True):
         """
         Calculate the Kaplan-Meier estimator of the survival function
         """
+        exog = self.exog
+        censoring = self.censoring
+        times = self.times
         self.results = []
         self.ts = []
         self.censorings = []
         self.event = []
         self.params = np.array([])
         self.normalized_cov_params = np.array([])
-        if self.exog is None:
-            self._fitting_proc(self.times, self.censoring, CI_transform,
+        if exog is None:
+            self.groups = None
+            self._fitting_proc(times, censoring, CI_transform,
                               force_CI_0_1)
         else:
-            groups = np.unique(self.exog)
-            self.groups = groups
-            for g in groups:
-                t = (self.times[self.exog == g])
-                if not self.censoring is None:
-                    censoring = (self.censoring[self.exog == g])
-                else:
-                    censoring = None
-                self._fitting_proc(t, censoring, CI_transform, force_CI_0_1)
+            if exog.ndim == 2 and len(exog[0]) != 1:
+                groups = np.unique(exog)
+                groups = itertools.combinations(groups, len(exog[0]))
+                groups = [i for i in groups]
+                groups = np.array(groups)
+                self.groups = 1
+                for g in groups:
+                    ind = np.product(exog == g, axis=1) == 1
+                    if ind.any():
+                        t = times[ind]
+                        if censoring is not None:
+                            c = censoring[ind]
+                        else:
+                            c = None
+                        self._fitting_proc(t, c, CI_transform, force_CI_0_1)
+                        if self.groups is 1:
+                            self.groups = g
+                        else:
+                            self.groups = np.c_[self.groups, g]
+                self.groups = self.groups.T
+            else:
+                groups = np.unique(self.exog)
+                self.groups = groups
+                for g in groups:
+                    t = (times[exog[:,0] == g])
+                    if not censoring is None:
+                        c = (censoring[exog[:,0] == g])
+                    else:
+                        c = None
+                    self._fitting_proc(t, c, CI_transform, force_CI_0_1)
         return KMResults(self, self.params, self.normalized_cov_params)
 
     def _fitting_proc(self, t, censoring, CI_transform, force_CI):
@@ -393,16 +426,21 @@ class CoxPH(LikelihoodModel):
             del(data)
         else:
             exog = exog[~np.isnan(times)]
-        if censoring is not None:
-            censoring = censoring[~np.isnan(times)]
-        times = times[~np.isnan(times)]
-        if censoring is not None:
-            times = (times[~np.isnan(censoring)]).astype(int)
-            exog = exog[~np.isnan(censoring)]
-            censoring = (censoring[~np.isnan(censoring)]).astype(int)
-        self.times = (times[~np.isnan(exog).any(1)]).astype(int)
-        self.censoring = (censoring[~np.isnan(exog).any(1)]).astype(int)
-        self.exog = (exog[~np.isnan(exog).any(1)]).astype(float)
+            if censoring is not None:
+                censoring = censoring[~np.isnan(times)]
+            times = times[~np.isnan(times)]
+            if censoring is not None:
+                times = (times[~np.isnan(censoring)]).astype(int)
+                exog = exog[~np.isnan(censoring)]
+                censoring = (censoring[~np.isnan(censoring)]).astype(int)
+            if exog.ndim == 2:
+                self.times = (times[~np.isnan(exog).any(1)]).astype(int)
+                self.censoring = (censoring[~np.isnan(exog).any(1)]).astype(int)
+                self.exog = (exog[~np.isnan(exog).any(1)]).astype(float)
+            else:
+                self.times = (times[~np.isnan(exog)]).astype(int)
+                self.censoring = (censoring[~np.isnan(exog)]).astype(int)
+                self.exog = (exog[~np.isnan(exog)]).astype(float)
         self.df_resid = len(exog) - 1
         self.confint_dist = stats.norm
         times = self.times
@@ -543,6 +581,8 @@ class KMResults(LikelihoodModelResults):
     """
     Results for a Kaplan-Meier model
     """
+
+    ##Add handling for stratification
 
     def __init__(self, model, params, normalized_cov_params=None, scale=1.0):
         super(KMResults, self).__init__(model, params, normalized_cov_params,
@@ -778,7 +818,9 @@ class KMResults(LikelihoodModelResults):
             event = self.event[ind]
             r = KMResults(self.model, results[0], results[1])
             r.results = results
-            r.ts = ts
+            ##Need to check
+            r.ts = []
+            r.ts.append(ts)
             r.censoring = censoring
             r.censorings = censorings
             r.event = event
@@ -865,8 +907,8 @@ class KMResults(LikelihoodModelResults):
                                 title = myTitle)
         else:
             myTitle = "Kaplan-Meier Curve"
-            table = np.transpose(self.results)
-            table = np.c_[self.ts,table]
+            table = np.transpose(self.results[0])
+            table = np.c_[self.ts[0],table]
             table = SimpleTable(table, headers=['Time','Survival','Std. Err',
                                                 'Lower 95% CI', 'Upper 95% CI'],
                                 title = myTitle)
@@ -920,10 +962,3 @@ class CoxResults(LikelihoodModelResults):
             CI = np.exp(CI)
         return CI
 
-surv = Survival(1,censoring=2,data=dta)
-cox = CoxPH(surv, exog=list(range(3,5)), data=dta)
-cox2 = CoxPH(surv, exog=list(range(3,5)), data=dta,ties="breslow")
-b = np.array(np.zeros_like(cox.exog[0]))
-b2 = np.array([-0.3279001, -0.0714828])
-surv2 = Survival(1, censoring=2, data=dta2)
-km = KaplanMeier(surv2, exog=3, data=dta2)
