@@ -26,14 +26,17 @@ from email.MIMEText import MIMEText
 #cwd = "/home/skipper/statsmodels/0.3-devel/tools"
 script = os.path.abspath(sys.argv[0])
 dname = os.path.dirname(script)
+gname = 'statsmodels-readonly'
+gitdname = os.path.join(dname, gname)
 os.chdir(dname)
 
-# hard-coded branches
-stable_trunk = 'statsmodels'
-devel = 'statsmodels/0.3-devel'
-last_release = 'statsmodels/releases'
-branches = {'trunk' : stable_trunk, 'devel' : devel, 'released' : last_release}
-#branches = {'trunk' : stable_trunk}
+# hard-coded git branch names
+repo = 'git://github.com/statsmodels/statsmodels.git'
+stable_trunk = 'master'
+last_release = 'v0.3.0rc1'
+#branches = [stable_trunk, last_release]
+#NOTE: just update the releases by hand
+branches = [stable_trunk]
 
 # virtual environment directory
 virtual_dir = 'BUILDENV'
@@ -61,7 +64,6 @@ def create_virtualenv():
     # make a virtualenv for installation if it doesn't exist
     # and easy_install sphinx
     if not os.path.exists(virtual_dir):
-        # something is broken in ubuntu's new cron stuff
         retcode = subprocess.call(['/usr/local/bin/virtualenv', virtual_dir])
         if retcode != 0:
             msg = """There was a problem creating the virtualenv"""
@@ -71,6 +73,21 @@ def create_virtualenv():
             msg = """There was a problem installing sphinx"""
             raise Exception(msg)
 
+def create_update_gitdir():
+    """
+    Creates a directory for local repo if it doesn't exist, updates repo otherwise.
+    """
+    if not os.path.exists(gitdname):
+        retcode = subprocess.call(['git clone', repo])
+        if retcode != 0:
+            msg = """There was a problem cloning the repo"""
+            raise Exception(msg)
+    else:
+        os.chdir(gitdname)
+        retcode = subprocess.call('git pull')
+        if retcode != 0:
+            msg = """There was a problem pulling from the repo."""
+            raise Exception(msg)
 
 def getdirs():
     """
@@ -96,28 +113,10 @@ def newdir(dirs):
     newdir = newdir.pop()
     return newdir
 
-def get_branch(branch, lp_name):
+def install_branch(branch):
     """
-    Branches branch_name from launchpad.
-
-    Returns the name of the new branch directory.
+    Installs the branch in a virtualenv.
     """
-    dirs = getdirs()
-    retcode = subprocess.call(["bzr", "branch", "lp:"+lp_name,
-        os.path.join(dname,branch)])
-    if retcode != 0:
-        msg = """Could not create branch %s.""" % branch
-        raise Exception(msg)
-    nd = newdir(dirs)
-    return nd
-
-
-def install_branch(branch_dir):
-    """
-    Installs the new branch in a virtualenv.
-    """
-    #    old_cwd = os.getcwd()
-    old_cwd = dname
 
     # if it's already in the virtualenv, remove it
     ver = '.'.join(map(str,(sys.version_info.major,sys.version_info.minor)))
@@ -127,27 +126,32 @@ def install_branch(branch_dir):
         if 'scikits.statsmodels' in f:
             shutil.rmtree(os.path.join(sitepack, f))
 
-    os.chdir(branch_dir)
+    # checkout the branch
+    os.chdir(gitdname)
+    retcode = subprocess.call('git checkout' + branch)
+    if retcode != 0:
+        msg = """Could not checkout out branch %s""" % branch
+        raise Exception(msg)
+
+    # build and install
     retcode = subprocess.call([virtual_python, 'setup.py', 'build'])
     if retcode != 0:
-        msg = """ Could not build branch %s""" % branch_dir
+        msg = """ Could not build branch %s""" % branch
         raise Exception(msg)
-    retcode = subprocess.call([virtual_python, os.path.join(dname, branch_dir,
+    retcode = subprocess.call([virtual_python, os.path.join(gitdname,
         'setup.py'), 'install'])
     if retcode != 0:
         os.chdir(dname)
-        msg = """Could not install branch %s""" % branch_dir
+        msg = """Could not install branch %s""" % branch
         raise Exception(msg)
     os.chdir(dname)
 
-def build_docs(new_branch_dir):
+def build_docs(branch):
     """
-    Changes into new_branch_dir and builds the docs using sphinx in the
+    Changes into gitdname and builds the docs using sphinx in the
     BUILDENV virtualenv
     """
-    #    old_cwd = os.getcwd()
-    old_cwd = dname
-    os.chdir(os.path.join(dname, new_branch_dir,'scikits','statsmodels','docs'))
+    os.chdir(os.path.join(gitdname,'scikits','statsmodels','docs'))
     sphinx_dir = os.path.join(virtual_dir,'bin')
     #NOTE: don't use make.py, just use make and specify which sphinx
     #    retcode = subprocess.call([virtual_python,'make.py','html',
@@ -155,52 +159,57 @@ def build_docs(new_branch_dir):
     retcode = subprocess.call(['make','html',
         'SPHINXBUILD='+sphinx_dir+'/sphinx-build'])
     if retcode != 0:
-        os.chdir(old_cwd)
-        msg = """Could not build the html docs for branch %s""" % new_branch_dir
+        os.chdir(dname)
+        msg = """Could not build the html docs for branch %s""" % branch
         raise Exception(msg)
-    os.chdir(old_cwd)
+    os.chdir(dname)
 
-def build_pdf(new_branch_dir):
+def build_pdf(branch):
     """
     Changes into new_branch_dir and builds the docs using sphinx in the
     BUILDENV virtualenv
     """
-    old_cwd = dname
-    os.chdir(os.path.join(dname,new_branch_dir,'scikits','statsmodels','docs'))
+    os.chdir(os.path.join(gitdname,'scikits','statsmodels','docs'))
     sphinx_dir = os.path.join(virtual_dir,'bin')
     retcode = subprocess.call(['make','latexpdf',
         'SPHINXBUILD='+sphinx_dir+'/sphinx-build'])
     if retcode != 0:
         os.chdir(old_cwd)
-        msg = """Could not build the pdf docs for branch %s""" % new_branch_dir
+        msg = """Could not build the pdf docs for branch %s""" % branch
         raise Exception(msg)
-    os.chdir(old_cwd)
+    os.chdir(dname)
 
-def upload_docs(branch, new_branch_dir):
+def upload_docs(branch):
+    if branch == 'master':
+        remote_dir = 'devel'
+    else:
+        remote_dir = ''
     #    old_cwd = os.getcwd()
-    old_cwd = dname
-    os.chdir(os.path.join(dname, new_branch_dir,'scikits','statsmodels','docs'))
+    os.chdir(os.path.join(gitdname,'scikits','statsmodels','docs'))
     retcode = subprocess.call(['rsync', '-avPr' ,'-e ssh', 'build/html/',
-        'jseabold,statsmodels@web.sourceforge.net:htdocs/'+branch])
+        'jseabold,statsmodels@web.sourceforge.net:htdocs/'+remote_dir])
     if retcode != 0:
         os.chdir(old_cwd)
-        msg = """Could not upload html to %s for branch %s""" % (branch,
-                new_branch_dir)
+        msg = """Could not upload html to %s for branch %s""" % (remote_dir, branch)
         raise Exception(msg)
-    os.chdir(old_cwd)
+    os.chdir(dname)
 
-def upload_pdf(branch, new_branch_dir):
-    old_cwd = dname
+#TODO: upload pdf is not tested
+def upload_pdf(branch):
+    if branch == 'master':
+        remote_dir = 'devel'
+    else:
+        remote_dir = ''
     os.chdir(os.path.join(dname, new_branch_dir,'scikits','statsmodels','docs'))
     retcode = subprocess.call(['rsync', '-avPr', '-e ssh',
         'build/latex/statsmodels.pdf',
-        'jseabold,statsmodels@web.sourceforge.net:htdocs/'+branch+'pdf/'])
+        'jseabold,statsmodels@web.sourceforge.net:htdocs/'+remote_dir+'pdf/'])
     if retcode != 0:
         os.chdir(old_cwd)
-        msg = """Could not upload pdf to %s for branch %s""" % (branch+'/pdf',
-                new_branch_dir)
+        msg = """Could not upload pdf to %s for branch %s""" % (remote_dir+'/pdf',
+                branch)
         raise Exception(msg)
-    os.chdir(old_cwd)
+    os.chdir(dname)
 
 
 def email_me(status='ok'):
@@ -232,39 +241,19 @@ def email_me(status='ok'):
 # get branch, install in virtualenv, build the docs, upload, and cleanup
 msg = ''
 for branch in branches:
-    os.chdir(dname)
     try:
-        # get directories to restore after done
-        dirs = getdirs()
-
         #create virtualenv
         create_virtualenv()
-        new_branch_dir = get_branch(branch, branches[branch])
-#        newdirectory = newdir(dirs)
-        install_branch(new_branch_dir)
-        build_docs(new_branch_dir)
-        print "happens below"
-        upload_docs(branch, new_branch_dir)
-
-        #TODO: should this just go into the branch and update it instead of
-        #downloading the whole thing each time?
-
+        create_update_gitdir()
+        install_branch(branch)
+        build_docs(branch)
+        upload_docs(branch)
 #        build_pdf(new_branch_dir)
 #        upload_pdf(branch, new_branch_dir)
     except Exception as status:
         msg += status.args[0] + '\n'
-    try:
-        shutil.rmtree(os.path.join(dname,new_branch_dir))
-    except:
-        pass
-
 
 if msg == '': # if it doesn't something went wrong and was caught above
     email_me()
 else:
     email_me(msg)
-
-
-
-
-
