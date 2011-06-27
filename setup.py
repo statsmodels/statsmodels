@@ -126,7 +126,7 @@ This can be opened from the python interpreter ::
 """
 import os
 import sys
-
+import subprocess
 import setuptools
 from numpy.distutils.core import setup
 import numpy
@@ -149,8 +149,8 @@ DOWNLOAD_URL = ''
 MAJ = 0
 MIN = 3
 REV = 0
-DEV = False
-QUALIFIER = 'rc1' #'b2dev'
+ISRELEASED = True
+VERSION = '%d.%d.%d' % (MAJ,MIN,REV)
 
 classifiers = [ 'Development Status :: 4 - Beta',
               'Environment :: Console',
@@ -161,25 +161,78 @@ classifiers = [ 'Development Status :: 4 - Beta',
               'License :: OSI Approved :: BSD License',
               'Topic :: Scientific/Engineering']
 
-def build_ver_str():
-    return '%d.%d.%d' % (MAJ,MIN,REV)
+# Return the git revision as a string
+def git_version():
+    def _minimal_ext_cmd(cmd):
+        # construct minimal environment
+        env = {}
+        for k in ['SYSTEMROOT', 'PATH']:
+            v = os.environ.get(k)
+            if v is not None:
+                env[k] = v
+        # LANGUAGE is used on win32
+        env['LANGUAGE'] = 'C'
+        env['LANG'] = 'C'
+        env['LC_ALL'] = 'C'
+        out = subprocess.Popen(cmd, stdout = subprocess.PIPE, env=env).communicate()[0]
+        return out
 
-def fbuild_fver_str():
-    if DEV:
-        return build_ver_str() + 'dev'
+    try:
+        out = _minimal_ext_cmd(['git', 'rev-parse', 'HEAD'])
+        GIT_REVISION = out.strip().decode('ascii')
+    except OSError:
+        GIT_REVISION = "Unknown"
+
+    return GIT_REVISION
+
+def write_version_py(filename='scikits/statsmodels/version.py'):
+    cnt = """
+# THIS FILE IS GENERATED FROM SETUP.PY
+short_version = '%(version)s'
+version = '%(version)s'
+full_version = '%(full_version)s'
+git_revision = '%(git_revision)s'
+release = %(isrelease)s
+
+if not release:
+    version = full_version
+"""
+    # Adding the git rev number needs to be done inside write_version_py(),
+    # otherwise the import of numpy.version messes up the build under Python 3.
+    FULLVERSION = VERSION
+    if os.path.exists('.git'):
+        GIT_REVISION = git_version()
+    elif os.path.exists(filename):
+        # must be a source distribution, use existing version file
+        try:
+            from scikits.statsmodels.version import git_revision as GIT_REVISION
+        except ImportError:
+            raise ImportError("Unable to import git_revision. Try removing " \
+                              "scikits/statsmodels/version.py and the build directory " \
+                              "before building.")
     else:
-        return build_ver_str() + QUALIFIER
+        GIT_REVISION = "Unknown"
 
-VERSION = build_ver_str()
+    if not ISRELEASED:
+        FULLVERSION += '.dev-' + GIT_REVISION[:7]
+
+    a = open(filename, 'w')
+    try:
+        a.write(cnt % {'version': VERSION,
+                       'full_version' : FULLVERSION,
+                       'git_revision' : GIT_REVISION,
+                       'isrelease': str(ISRELEASED)})
+    finally:
+        a.close()
 
 def configuration(parent_package='', top_path=None, package_name=DISTNAME):
-    #if os.path.exists('MANIFEST'): os.remove('MANIFEST')
+    #if os.path.fexists('MANIFEST'): os.remove('MANIFEST')
 
     from numpy.distutils.misc_util import Configuration
     config = Configuration(None, parent_package, top_path,
                            namespace_packages = ['scikits'],
                            name = DISTNAME,
-                           version = fbuild_fver_str(),
+                           version = VERSION,
                            maintainer  = MAINTAINER,
                            maintainer_email = MAINTAINER_EMAIL,
                            description = DESCRIPTION,
@@ -249,7 +302,7 @@ def configuration(parent_package='', top_path=None, package_name=DISTNAME):
     return config
 
 if __name__ == "__main__":
-
+    write_version_py()
     setup(configuration = configuration,
         #name = DISTNAME,
         #install_requires = 'numpy',

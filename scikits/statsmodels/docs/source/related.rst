@@ -1,3 +1,5 @@
+.. _related:
+
 .. currentmodule:: scikits.statsmodels
 
 
