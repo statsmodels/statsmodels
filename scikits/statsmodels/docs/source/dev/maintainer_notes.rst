@@ -65,6 +65,16 @@ dots with log and also for using :ref:`dots with diff <pydagogue:git-diff-dots>`
 Cherry-Picking
 ~~~~~~~~~~~~~~
 
+Say you are interested in some commit in another branch, but want to leave the other ones for now.
+You can do this with a cherry-pick. Use `git log --oneline` to find the commit that you want to 
+cherry-pick. Say you want commit `dd9ff35` from the `shiny-new-feature` branch. You want to apply
+this commit to master. You simply do::
+
+    git checkout master
+    git cherry-pick dd9ff35
+
+And that's all. This commit is now applied as a new commit in master.
+
 .. _ff-no-ff:
 
 Merging: To Fast-Forward or Not To Fast-Forward
