@@ -18,8 +18,8 @@ div.header {
 }
 
 div.headerwrap {
-/*    min-width: 740px;
-    min-height: 115px;
+    min-width: 1030px;
+/*    min-height: 115px;
     margin-left: auto;
     margin-right: auto;*/
 }
@@ -55,6 +55,8 @@ body {
     color: #555;
     margin: 0 80px;
     padding: 0;
+    min-width: 740px;
+    letter-spacing: -.01em;
 }
 
 div.documentwrapper {
@@ -72,11 +74,12 @@ hr {
  
 div.document {
     background-color: #eee;
+    min-width: 1030px;
 }
  
 div.body {
     background-color: #f8f8ff;
-    min-width: 800px;
+    min-width: 740px;
     color: #3E4349;
     padding: 0 30px 30px 30px;
     font-size: 0.9em;
@@ -104,6 +107,7 @@ div.related {
     font-size: 0.9em;
     border-top: 1px solid white;
     border-bottom: 1px solid white;
+    min-width: 1030px;
 }
  
 div.related a {
@@ -113,6 +117,7 @@ div.related a {
 div.sphinxsidebar {
     font-size: 0.75em;
     line-height: 1.5em;
+    word-wrap: break-word;
 }
 
 div.sphinxsidebarwrapper{
@@ -195,7 +200,7 @@ div.body h6 {
     text-shadow: 0px 1px 0 white
 }
  
-div.body h1 { border-top: 20px solid #f8f8ff; margin-top: 0; font-size: 200%; }
+div.body h1 { border-top: 20px solid #f8f8ff; margin-top: 0; font-size: 200%; word-wrap: break-word }
 div.body h2 { font-size: 150%; background-color: #C8D5E3; border-radius : 30px; }
 div.body h3 { font-size: 120%; background-color: #D8DEE3; border-radius : 30px; }
 div.body h4 { font-size: 110%; background-color: #D8DEE3; border-radius : 30px; }
