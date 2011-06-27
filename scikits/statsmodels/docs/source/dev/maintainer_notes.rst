@@ -23,6 +23,8 @@ If you need to push changes from others, you can link to their repository by doi
 The rest of the below assumes you are on your or someone else's branch with the changes you
 want to push upstream.
 
+.. _rebasing:
+
 Rebasing
 ~~~~~~~~
 
@@ -33,6 +35,8 @@ If there are only a few commits, you can rebase to keep a linear history::
 
 Rebasing will not automatically close the pull request however, if there is one, 
 so don't forget to do this.
+
+.. _merging:
 
 Merging
 ~~~~~~~
@@ -61,6 +65,13 @@ shows the log of commits excluding those that can be reached from upstream-rw/ma
 including those that can be reached from current HEAD. That is, those changes unique to this 
 branch versus upstream-rw/master. See :ref:`Pydagogue <pydagogue:git-log-dots>` for more on using
 dots with log and also for using :ref:`dots with diff <pydagogue:git-diff-dots>`.
+
+Push Your Feature Branch
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+All the changes look good? You can push your feature branch after :ref:`merging` or :ref:`rebasing` by::
+
+    git push upstream-rw shiny-new-feature:master
 
 Cherry-Picking
 ~~~~~~~~~~~~~~
@@ -134,7 +145,7 @@ Releasing
 
     git tag -a v0.3.0rc1 -m "Version 0.3.0 Release Candidate 1" 7b2fb295a421b83a90b04180c8a1678cf9a6ed0d
 
-#. What else...
+#. What else...?
 
 Commit Comments
 ---------------
