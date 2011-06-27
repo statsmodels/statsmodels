@@ -3,12 +3,8 @@ Working with the Statsmodels Code
 
 Github
 ======
-Statsmodels code base is hosted on `Github <https://www.github.com/>`_. To
+Statsmodels code base is hosted on `Github <https://www.github.com/statsmodels/statsmodels>`_. To
 contribute you will need to `sign up for a Github account <https://github.com/signup/free>`_.
-
-**Repository:** https://github.com/statsmodels/statsmodels
-
-**Bug Tracker:**  https://bugs.launchpad.net/statsmodels
 
 Version Control and Git
 =======================
