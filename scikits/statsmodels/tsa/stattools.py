@@ -73,10 +73,7 @@ def _autolag(mod, endog, exog, startlag, maxlag, method, modargs=(),
 #        stop = stats.norm.ppf(.95)
         stop = 1.6448536269514722
         for lag in range(maxlag,startlag-1,-1):
-            print lag
-            print results[lag].values
             icbest = np.abs(results[lag].tvalues[-1])
-            print icbest
             if np.abs(icbest) >= stop:
                 bestlag = lag
                 icbest = icbest
