@@ -1064,7 +1064,7 @@ class VARResults(VARProcess):
         return lower, upper
 
     def irf_resim(self, orth=False, repl=1000, T=10, 
-                      signif=0.05, seed=None, burn=100, cum=False):
+                      seed=None, burn=100, cum=False):
         
         """
         Simulates impulse response function, returning an array of simulations.
