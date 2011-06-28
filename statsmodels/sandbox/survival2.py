@@ -286,6 +286,8 @@ class KaplanMeier(object):
                 self.censoring = (censoring[~np.isnan(exog)]).astype(int)
                 self.exog = (exog[~np.isnan(exog)]).astype(float)
         if exog is not None:
+            if self.exog.ndim == 2 and len(self.exog[0]) == 1:
+                self.exog = self.exog[:,0]
             self.df_resid = len(exog) - 1
         else:
             self.df_resid = 1
@@ -308,13 +310,20 @@ class KaplanMeier(object):
             self._fitting_proc(times, censoring, CI_transform,
                               force_CI_0_1)
         else:
-            if exog.ndim == 2 and len(exog[0]) != 1:
-                groups = np.unique(exog)
-                groups = itertools.combinations(groups, len(exog[0]))
-                groups = [i for i in groups]
-                groups = np.array(groups)
-                self.groups = 1
+            ##Can remove second part of condition?
+            if exog.ndim == 2:
+                groups = stats._support.unique(exog)
+                self.groups = groups
+                ##ncols = len(exog[0])
+                ##groups = np.unique(exog)
+                ##groups = np.repeat(groups, ncols)
+                ##need different iterator for rows with repeats?
+                ##groups = itertools.permutations(groups, ncols)
+                ##groups = [i for i in groups]
+                ##groups = np.array(groups)
+                ##self.groups = 1
                 for g in groups:
+                    ##stats.adm for testing?
                     ind = np.product(exog == g, axis=1) == 1
                     if ind.any():
                         t = times[ind]
@@ -323,18 +332,18 @@ class KaplanMeier(object):
                         else:
                             c = None
                         self._fitting_proc(t, c, CI_transform, force_CI_0_1)
-                        if self.groups is 1:
-                            self.groups = g
-                        else:
-                            self.groups = np.c_[self.groups, g]
-                self.groups = self.groups.T
+                        ##if self.groups is 1:
+                            ##self.groups = g
+                        ##else:
+                            ##self.groups = np.c_[self.groups, g]
+                ##self.groups = self.groups.T
             else:
                 groups = np.unique(self.exog)
                 self.groups = groups
                 for g in groups:
-                    t = (times[exog[:,0] == g])
+                    t = (times[exog == g])
                     if not censoring is None:
-                        c = (censoring[exog[:,0] == g])
+                        c = (censoring[exog == g])
                     else:
                         c = None
                     self._fitting_proc(t, c, CI_transform, force_CI_0_1)
@@ -401,6 +410,7 @@ class CoxPH(LikelihoodModel):
     """
 
     def __init__(self, surv, exog, data=None, ties="efron"):
+        self.surv = surv
         self.ties = ties
         censoring = surv.censoring
         times = surv.times
@@ -448,12 +458,85 @@ class CoxPH(LikelihoodModel):
         times = np.unique(times)
         d = d[:,list(times)]
         self.d = (np.c_[times, d]).astype(float)
+        self.strata = None
+
+    def stratify(self, stratas, copy=True):
+
+        """
+        Create a CoxPH object to fit a model with stratification
+
+        Parameters
+        ----------
+        strata: list of indicies columns of the matrix of exogenous variables
+        that are to be included as strata. All other columns will be included
+        as unstratified variables
+
+        copy: logical value indicating whether a new CoxPH object sould be
+        returned, or if the current object should be overwritten
+        """
+
+        exog = self.exog
+        strata = exog[:,stratas]
+        exog = exog.compress(stratas, axis=1)
+        if strata.ndim == 1:
+            groups = np.unique(strata)
+        elif strata.ndim == 2:
+            groups = stats._support.unique(strata)
+        if copy:
+            model = CoxPH(self.surv, exog, ties=self.ties)
+            model.strata_groups = groups
+            model.strata = strata
+            return model
+        else:
+            self.strata_groups = strata
+            self.strata = strata
+            self.exog = exog
 
     def loglike(self, b):
-        ties = self.ties
         exog = self.exog
         times = self.times
         censoring = self.censoring
+        d = self.d
+        if self.strata is None:
+            self._str_exog = exog
+            self._str_times = times
+            self._str_d = d
+            if censoring is not None:
+                self._str_censoring = censoring
+            return self._loglike_proc(b)
+        else:
+            logL = 1
+            for g in self.strata_groups:
+                ind = np.product(self.strata == g, axis=1) == 1
+                self._str_exog = exog[ind]
+                self._str_times = times[ind]
+                #self._str_d = d[ind]
+                if censoring is not None:
+                    self._str_censoring = censoring[ind]
+                logL *= self._loglike_proc(b)
+            return logL
+
+    def _loglike_proc(self, b):
+
+        """
+        Calculate the value of the log-likelihood at estimates of the
+        parameters
+
+        Parameters:
+        ------------
+
+        b: vector of parameter estimates
+
+        Returns
+        -------
+
+        value of log-likelihood as a float
+        """
+
+        ties = self.ties
+        exog = self._str_exog
+        times = self._str_times
+        censoring = self._str_censoring
         d = self.d
         BX = np.dot(exog, b)
         thetas = np.exp(BX)
@@ -476,6 +559,22 @@ class CoxPH(LikelihoodModel):
         return logL
 
     def score(self, b):
+
+        """
+        Calculate the score vector of the log-likelihood at estimates of the
+        parameters
+
+        Parameters:
+        ------------
+
+        b: vector of parameter estimates
+
+        Returns
+        -------
+
+        value of score as 1d array
+        """
+
         ties = self.ties
         exog = self.exog
         times = self.times
@@ -515,6 +614,22 @@ class CoxPH(LikelihoodModel):
         return score
 
     def hessian(self, b):
+
+        """
+        Calculate the hessian matrix of the log-likelihoos at estimates of the
+        parameters
+
+        Parameters:
+        ------------
+
+        b: vector of parameter estimates
+
+        Returns
+        -------
+
+        value of hessian as 2d array
+        """
+
         ties = self.ties
         exog = self.exog
         times = self.times
@@ -668,14 +783,25 @@ class KMResults(LikelihoodModelResults):
         The test can be performed with arbitrarily many groups, so long as
         they are all in the column exog
         """
+
+        ##Fix with strata
+
         groups = np.asarray(groups)
         exog = self.exog
+        pooled = self.groups
         if exog is None:
             raise ValueError("Need an exogenous variable for tests")
 
         elif (np.in1d(groups,self.groups)).all():
-            ind = np.in1d(exog,groups)
-            t = self.times[ind]
+            if pooled.ndim == 1:
+                ind = np.in1d(exog,groups)
+                t = self.times[ind]
+            else:
+                ind = 0
+                for g in groups:
+                    ##More elegant method, append times?
+                    ind += np.product(exog == g, axis=1)
+                t = self.times[ind > 0]
             if not self.censoring is None:
                 censoring = self.censoring[ind]
             else:
@@ -702,9 +828,13 @@ class KMResults(LikelihoodModelResults):
                 s = np.ones_like(tind)
 
             if censoring is None:
+                ##Update with stratification
                 for g in groups:
                     n = len(t)
-                    exog_idx = self.exog == g
+                    if pooled.ndim == 1:
+                        exog_idx = exog == g
+                    else:
+                        exog_idx = (np.product(exog == g, axis=1)).astype(bool)
                     dk = np.bincount(t[exog_idx])
                     d = np.bincount(t)
                     if np.max(tind) != len(dk):
@@ -732,8 +862,11 @@ class KMResults(LikelihoodModelResults):
                     D.append(d)
             else:
                 for g in groups:
-                    exog_idx = self.exog == g
-                    reverseCensoring = -1*(censoring - 1)
+                    if pooled.ndim == 1:
+                        exog_idx = exog == g
+                    else:
+                        exog_idx = (np.product(exog == g, axis=1)).astype(bool)
+                    reverseCensoring = -1*(censoring - 1) 
                     censored = np.bincount(t,reverseCensoring)
                     ck = np.bincount(t[exog_idx],
                                      reverseCensoring[exog_idx])
@@ -760,7 +893,7 @@ class KMResults(LikelihoodModelResults):
                     censored = censored.astype(float)
                     censoredSum = np.cumsum(censored)
                     censoredSum = np.r_[0,censoredSum]
-                    nk = (len(self.exog[self.exog == g]) - dkSum[:-1]
+                    nk = (len(exog[exog_idx]) - dkSum[:-1]
                           - ck[:-1])
                     n = len(censoring) - dSum[:-1] - censoredSum[:-1]
                     d = d[n>1]
@@ -773,6 +906,14 @@ class KMResults(LikelihoodModelResults):
                     NK.append(nk)
                     N.append(n)
                     D.append(d)
+                    self.nk = nk
+                    self.d=d
+                    self.n = n
+                    self.dk = dk
+                    self.ek = ek
+                    self.testEx = exog
+                    self.g = g
+                    self.ein = exog_idx
             Z = np.array(Z)
             N = np.array(N)
             D = np.array(D)
@@ -786,6 +927,11 @@ class KMResults(LikelihoodModelResults):
                                                   ,np.transpose(1 - (NK/N)))))
             chisq = np.dot(np.transpose(Z),np.dot(la.pinv(sigma), Z))
             df = len(groups) - 1
+            self.var = sigma
+            self.N = N
+            self.D = D
+            self.NK = NK
+            self.Z = Z
             return np.array([chisq, df, stats.chi2.sf(chisq,df)])
         else:
             raise ValueError("groups must be in column exog")
@@ -878,7 +1024,7 @@ class KMResults(LikelihoodModelResults):
             upper = self.results[g][3]
             lower = np.repeat(lower[e != 0], 2)
             upper = np.repeat(upper[e != 0], 2)
-        if self.ts[g][-1] in t[e != 0]:
+        if self.ts[g][-1] in t:
             t = np.r_[0,t]
             s = np.r_[1,1,s[:-1]]
             if confidence_band:
