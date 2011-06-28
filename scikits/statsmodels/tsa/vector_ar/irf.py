@@ -233,6 +233,31 @@ class IRAnalysis(BaseIRAnalysis):
         return model.irf_errband_mc(orth=orth, repl=repl,
                                     T=periods, signif=signif, seed=seed, burn=burn, cum=False)
 
+    def err_band_sz1(self, orth=False, repl=1000, seed=None, burn=100)
+        """
+        IRF Sims-Zha error band method 1
+
+        Reference
+        ---------
+        Sims, Christoper A., and Tao Zha. 1999. “Error Bands for Impulse Response.” Econometrica 67: 1113-1155.
+        """
+        model = self.model
+        periods = self.periods
+        irfs = self.irfs
+        neqs = self.neqs
+
+        ma_coll = model.irf_resim(orth=orth, repl=repl, T=periods, seed=None,
+                                  burn, cum=False, cum=False)
+        #still need to finish this
+        #take draws and calculate covariance matrix
+        cov_hold = np.zeros((neqs, neqs, periods, periods))
+        for i in range(neqs):
+            for j in range(neqs):
+                cov_hold[i,j,:,:] = np.cov(irfs[:,i,j])
+        
+        eigva, eigvec = la.eig(cov_hold)
+         
+
     @cache_readonly
     def G(self):
         # Gi matrices as defined on p. 111

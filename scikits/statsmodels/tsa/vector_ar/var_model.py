@@ -1063,6 +1063,70 @@ class VARResults(VARProcess):
         upper = ma_sort[index[1],:, :, :]
         return lower, upper
 
+    def irf_resim(self, orth=False, repl=1000, T=10, 
+                      signif=0.05, seed=None, burn=100, cum=False):
+        
+        """
+        Simulates impulse response function, returning an array of simulations.
+        Used for Sims-Zha error band calculation.
+
+        Parameters
+        ----------
+        orth: bool, default False
+            Compute orthoganalized impulse response error bands
+        repl: int
+            number of Monte Carlo replications to perform
+        T: int, default 10
+            number of impulse response periods
+        signif: float (0 < signif <1)
+            Significance level for error bars, defaults to 95% CI
+        seed: int
+            np.random.seed for replications
+        burn: int
+            number of initial observations to discard for simulation
+        cum: bool, default False
+            produce cumulative irf error bands
+
+        Notes
+        -----
+        Sims, Christoper A., and Tao Zha. 1999. “Error Bands for Impulse Response.” Econometrica 67: 1113-1155.        
+
+        Returns
+        -------
+        Array of simulated impulse response functions
+
+        """
+        neqs = self.neqs
+        mean = self.mean()
+        k_ar = self.k_ar
+        coefs = self.coefs
+        sigma_u = self.sigma_u
+        intercept = self.intercept
+        df_model = self.df_model
+        nobs = self.nobs
+
+        ma_coll = np.zeros((repl, T+1, neqs, neqs))
+        if orth == False:
+            for i in range(repl):
+                #discard first hundred to eliminate correct for starting bias
+                sim = util.varsim(coefs, intercept, sigma_u, steps=nobs+burn)
+                sim = sim[burn:]
+                if cum == True:
+                    ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).ma_rep(maxn=T).cumsum(axis=0)
+                if cum == False:
+                    ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).ma_rep(maxn=T)
+        if orth == True:
+            for i in range(repl):
+                #discard first hundred to eliminate correct for starting bias
+                sim = util.varsim(coefs, intercept, sigma_u, steps=nobs+burn)
+                sim = sim[burn:]
+                if cum == True:
+                    ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).orth_ma_rep(maxn=T).cumsum(axis=0)
+                if cum == False:
+                    ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).orth_ma_rep(maxn=T)
+        return ma_coll
+
+
     def _omega_forc_cov(self, steps):
         # Approximate MSE matrix \Omega(h) as defined in Lut p97
         G = self._zz
