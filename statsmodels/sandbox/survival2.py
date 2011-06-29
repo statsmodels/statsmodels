@@ -10,6 +10,7 @@ from statsmodels.base.model import LikelihoodModel, LikelihoodModelResults
 import itertools
 
 ##Need to update all docstrings
+##Use assume unique for np.in1d?
 
 class Survival(object):
 
@@ -409,7 +410,7 @@ class CoxPH(LikelihoodModel):
     Fit a cox proportional harzard model from survival data
     """
 
-    def __init__(self, surv, exog, data=None, ties="efron"):
+    def __init__(self, surv, exog, data=None, ties="efron", strata=None):
         self.surv = surv
         self.ties = ties
         censoring = surv.censoring
@@ -451,14 +452,19 @@ class CoxPH(LikelihoodModel):
                 self.times = (times[~np.isnan(exog)]).astype(int)
                 self.censoring = (censoring[~np.isnan(exog)]).astype(int)
                 self.exog = (exog[~np.isnan(exog)]).astype(float)
-        self.df_resid = len(exog) - 1
-        self.confint_dist = stats.norm
+        if strata is not None:
+            self.stratify(strata, copy=False)
+        else:
+            self.strata = None
+        ##Not need for stratification?
+        ##List of ds for stratification?
         times = self.times
         d = np.bincount(times,self.censoring)
         times = np.unique(times)
         d = d[:,list(times)]
         self.d = (np.c_[times, d]).astype(float)
-        self.strata = None
+        self.df_resid = len(self.exog) - 1
+        self.confint_dist = stats.norm
 
     def stratify(self, stratas, copy=True):
 
@@ -477,46 +483,24 @@ class CoxPH(LikelihoodModel):
 
         exog = self.exog
         strata = exog[:,stratas]
-        exog = exog.compress(stratas, axis=1)
+        #exog = exog.compress(stratas, axis=1)
         if strata.ndim == 1:
             groups = np.unique(strata)
         elif strata.ndim == 2:
             groups = stats._support.unique(strata)
         if copy:
-            model = CoxPH(self.surv, exog, ties=self.ties)
-            model.strata_groups = groups
-            model.strata = strata
+            model = CoxPH(self.surv, exog, ties=self.ties, strata=stratas)
+            ##redundent in some cases?
+            #model.exog = exog.compress(stratas, axis=1)
+            #model.strata_groups = groups
+            #model.strata = strata
             return model
         else:
-            self.strata_groups = strata
+            self.strata_groups = groups
             self.strata = strata
-            self.exog = exog
+            self.exog = exog.compress(stratas, axis=1)
 
     def loglike(self, b):
-        exog = self.exog
-        times = self.times
-        censoring = self.censoring
-        d = self.d
-        if self.strata is None:
-            self._str_exog = exog
-            self._str_times = times
-            self._str_d = d
-            if censoring is not None:
-                self._str_censoring = censoring
-            return self._loglike_proc(b)
-        else:
-            logL = 1
-            for g in self.strata_groups:
-                ind = np.product(self.strata == g, axis=1) == 1
-                self._str_exog = exog[ind]
-                self._str_times = times[ind]
-                #self._str_d = d[ind]
-                if censoring is not None:
-                    self._str_censoring = censoring[ind]
-                logL *= self._loglike_proc(b)
-            return logL
-
-    def _loglike_proc(self, b):
 
         """
         Calculate the value of the log-likelihood at estimates of the
@@ -533,11 +517,58 @@ class CoxPH(LikelihoodModel):
         value of log-likelihood as a float
         """
 
+        exog = self.exog
+        times = self.times
+        censoring = self.censoring
+        d = self.d
+        if self.strata is None:
+            self._str_exog = exog
+            self._str_times = times
+            self._str_d = d
+            if censoring is not None:
+                self._str_censoring = censoring
+            return self._loglike_proc(b)
+        else:
+            logL = 0
+            for g in self.strata_groups:
+                ind = np.product(self.strata == g, axis=1) == 1
+                self._str_exog = exog[ind]
+                _str_times = times[ind]
+                self._str_times = _str_times
+                if censoring is not None:
+                    _str_censoring = censoring[ind]
+                    self._str_censoring = _str_censoring
+                ds = np.bincount(_str_times,_str_censoring)
+                _str_times = np.unique(_str_times)
+                ds = ds[:,list(_str_times)]
+                self._str_d = (np.c_[_str_times, ds]).astype(float)
+                #self._str_d = d[np.in1d(d[:,0], _str_times)]
+                logL += self._loglike_proc(b)
+            return logL
+
+    def _loglike_proc(self, b):
+
+        """
+        Calculate the value of the log-likelihood at estimates of the
+        parameters for each strata
+
+        Parameters:
+        ------------
+
+        b: vector of parameter estimates
+
+        Returns
+        -------
+        
+        value of log-likelihood for strata as a float
+
+        """
+
         ties = self.ties
         exog = self._str_exog
         times = self._str_times
         censoring = self._str_censoring
-        d = self.d
+        d = self._str_d
         BX = np.dot(exog, b)
         thetas = np.exp(BX)
         d = d[d[:,1] != 0]
