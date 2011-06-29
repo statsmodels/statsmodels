@@ -248,20 +248,26 @@ class IRAnalysis(BaseIRAnalysis):
         neqs = self.neqs
         irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,
                                    burn=100)
-
-        #still need to finish this
-        #take draws and calculate covariance matrix
-        cov_hold = np.zeros((neqs, neqs, periods, periods))
+ 
+        cov_hold = np.zeros((neqs, neqs, periods+1, periods+1))
         for i in range(neqs):
             for j in range(neqs):
-                    cov_hold[i,j,:,:] = np.cov(irf_resim[:,1:,i,j],rowvar=0)
-        eigva = np.zeros((neqs, neqs, periods, periods))
-        eigvec = np.zeros((neqs, neqs, periods, periods))
+                cov_hold[i,j,:,:] = np.cov(irf_resim[:,:,i,j],rowvar=0)
+
+        W = np.zeros((neqs, neqs, periods+1, periods+1))
+        eigva = np.zeros((neqs, neqs, periods+1, 1))
+        k = np.zeros((neqs, neqs))
 
         for i in range(neqs):
             for j in range(neqs):
-                eigva_hold, eigvec[i,j,:,:] = la.eig(cov_hold[i,j,:,:])
-                eigva[i,j,:,:] = np.diag(eigva_hold, 0)
+                eigva[i,j,:,0], W[i,j,:,:] = la.eigh(cov_hold[i,j,:,:])
+                k[i,j] = argmax(eigva[i,j,:,0])
+                
+        # here take the kth column of W, which we determine by using the largest eigenvalue
+        for i in range(neqs);
+            for j in range(neqs):
+                lower[:,i,j] = irfs[:,i,j] + W[i,j,:,k[i,j]]*max(eigva[i,j,:,0])
+                upper[:,i,j] = irfs[:,i,j] - W[i,j,:,k[i,j]]*max(eigva[i,j,:,0])
 
     @cache_readonly
     def G(self):
