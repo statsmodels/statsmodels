@@ -230,10 +230,11 @@ class IRAnalysis(BaseIRAnalysis):
         """
         model = self.model
         periods = self.periods
-        return model.irf_errband_mc(orth=orth, repl=repl,
-                                    T=periods, signif=signif, seed=seed, burn=burn, cum=False)
+        return model.irf_errband_mc(orth=orth, repl=repl, 
+                                    T=periods, signif=signif, seed=seed, 
+                                    burn=burn, cum=False)
 
-    def err_band_sz1(self, orth=False, repl=1000, seed=None, burn=100)
+    def err_band_sz1(self, orth=False, repl=1000, seed=None, burn=100):
         """
         IRF Sims-Zha error band method 1
 
@@ -245,18 +246,22 @@ class IRAnalysis(BaseIRAnalysis):
         periods = self.periods
         irfs = self.irfs
         neqs = self.neqs
+        irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,
+                                   burn=100)
 
-        ma_coll = model.irf_resim(orth=orth, repl=repl, T=periods, seed=None,
-                                  burn, cum=False, cum=False)
         #still need to finish this
         #take draws and calculate covariance matrix
         cov_hold = np.zeros((neqs, neqs, periods, periods))
         for i in range(neqs):
             for j in range(neqs):
-                cov_hold[i,j,:,:] = np.cov(irfs[:,i,j])
-        
-        eigva, eigvec = la.eig(cov_hold)
-         
+                    cov_hold[i,j,:,:] = np.cov(irf_resim[:,1:,i,j],rowvar=0)
+        eigva = np.zeros((neqs, neqs, periods, periods))
+        eigvec = np.zeros((neqs, neqs, periods, periods))
+
+        for i in range(neqs):
+            for j in range(neqs):
+                eigva_hold, eigvec[i,j,:,:] = la.eig(cov_hold[i,j,:,:])
+                eigva[i,j,:,:] = np.diag(eigva_hold, 0)
 
     @cache_readonly
     def G(self):
