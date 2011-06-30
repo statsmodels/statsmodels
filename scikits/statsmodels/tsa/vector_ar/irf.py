@@ -93,7 +93,7 @@ class BaseIRAnalysis(object):
             'asym': default, computes asymptotic standard errors
             'mc': monte carlo standard errors (use rpl)
         repl: int, default 1000
-            Number of replications for monte carlo standard errors
+            Number of replications for Monte Carlo and Sims-Zha standard errors
         seed: int
             np.random.seed for Monte Carlo replications
         """
@@ -107,14 +107,18 @@ class BaseIRAnalysis(object):
             title = 'Impulse responses'
             irfs = self.irfs
 
-        if stderr_type not in ['asym', 'mc']:
-            raise ValueError("Error type must be either 'asym' or 'mc'")
+        if stderr_type not in ['asym', 'mc', 'sz1']:
+            raise ValueError("Error type must be either 'asym', 'mc', or 'sz1'")
         else:
             if stderr_type == 'asym':
                 stderr = self.cov(orth=orth)
             if stderr_type == 'mc':
                 stderr = self.errband_mc(orth=orth, repl=repl,
                                      signif=signif, seed=seed)
+            if stderr_type == 'sz1':
+                stderr = self.err_band_sz1(orth=orth, repl=repl,
+                                           signif=signif, seed=seed)
+
         plotting.irf_grid_plot(irfs, stderr, impulse, response,
                                self.model.names, title, signif=signif,
                                subplot_params=subplot_params,
@@ -266,8 +270,10 @@ class IRAnalysis(BaseIRAnalysis):
         # here take the kth column of W, which we determine by using the largest eigenvalue
         for i in range(neqs);
             for j in range(neqs):
-                lower[:,i,j] = irfs[:,i,j] + W[i,j,:,k[i,j]]*max(eigva[i,j,:,0])
-                upper[:,i,j] = irfs[:,i,j] - W[i,j,:,k[i,j]]*max(eigva[i,j,:,0])
+                lower[:,i,j] = irfs[:,i,j] + W[i,j,:,k[i,j]]*np.sqrt(max(eigva[i,j,:,0]))
+                upper[:,i,j] = irfs[:,i,j] - W[i,j,:,k[i,j]]*np.sqrt(max(eigva[i,j,:,0]))
+
+        return lower, upper
 
     @cache_readonly
     def G(self):
