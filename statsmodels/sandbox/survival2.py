@@ -405,6 +405,9 @@ class CoxPH(LikelihoodModel):
 
     ##Add efron fitting, and other methods
     ##Add stratification
+    ##Handling for time-dependent covariates
+    ##Handling for time-dependent coefficients
+    ##Interactions
 
     """
     Fit a cox proportional harzard model from survival data
@@ -521,6 +524,7 @@ class CoxPH(LikelihoodModel):
         times = self.times
         censoring = self.censoring
         d = self.d
+        #test in the actual functions (e.g. loglike)?
         if self.strata is None:
             self._str_exog = exog
             self._str_times = times
@@ -824,8 +828,6 @@ class KMResults(LikelihoodModelResults):
         they are all in the column exog
         """
 
-        ##Fix with strata
-
         groups = np.asarray(groups)
         exog = self.exog
         pooled = self.groups
@@ -841,9 +843,12 @@ class KMResults(LikelihoodModelResults):
                 for g in groups:
                     ##More elegant method, append times?
                     ind += np.product(exog == g, axis=1)
-                t = self.times[ind > 0]
+                ind = ind > 0
+                t = self.times[ind]
+                self.t_idx = ind
             if not self.censoring is None:
                 censoring = self.censoring[ind]
+                self.cen = censoring
             else:
                 censoring = None
             del(ind)
@@ -876,6 +881,7 @@ class KMResults(LikelihoodModelResults):
                     else:
                         exog_idx = (np.product(exog == g, axis=1)).astype(bool)
                     dk = np.bincount(t[exog_idx])
+                    ##Save d (same for all?)
                     d = np.bincount(t)
                     if np.max(tind) != len(dk):
                         dif = np.max(tind) - len(dk) + 1
@@ -954,6 +960,7 @@ class KMResults(LikelihoodModelResults):
                     self.testEx = exog
                     self.g = g
                     self.ein = exog_idx
+                    self.t = t
             Z = np.array(Z)
             N = np.array(N)
             D = np.array(D)
