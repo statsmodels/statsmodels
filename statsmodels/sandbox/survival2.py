@@ -7,7 +7,7 @@ from scipy import stats
 
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.base.model import LikelihoodModel, LikelihoodModelResults
-import itertools
+
 
 ##Need to update all docstrings
 ##Use assume unique for np.in1d?
@@ -500,7 +500,7 @@ class CoxPH(LikelihoodModel):
             self.strata = strata
             self.exog = exog.compress(stratas, axis=1)
 
-    def loglike(self, b):
+    def _stratify_func(self, b, f):
 
         """
         Calculate the value of the log-likelihood at estimates of the
@@ -527,10 +527,11 @@ class CoxPH(LikelihoodModel):
             self._str_d = d
             if censoring is not None:
                 self._str_censoring = censoring
-            return self._loglike_proc(b)
+            return f(b)
         else:
             logL = 0
             for g in self.strata_groups:
+                ##Save ind instead of _str_ vars (handle d?)?
                 ind = np.product(self.strata == g, axis=1) == 1
                 self._str_exog = exog[ind]
                 _str_times = times[ind]
@@ -543,8 +544,17 @@ class CoxPH(LikelihoodModel):
                 ds = ds[:,list(_str_times)]
                 self._str_d = (np.c_[_str_times, ds]).astype(float)
                 #self._str_d = d[np.in1d(d[:,0], _str_times)]
-                logL += self._loglike_proc(b)
+                logL += f(b)
             return logL
+
+    def loglike(self, b):
+        return self._stratify_func(b, self._loglike_proc)
+
+    def score(self, b):
+        return self._stratify_func(b, self._score_proc)
+
+    def hessian(self, b):
+        return self._stratify_func(b, self._hessian_proc)
 
     def _loglike_proc(self, b):
 
@@ -588,9 +598,8 @@ class CoxPH(LikelihoodModel):
                 logL -= ((np.log((thetas[times >= t]).sum()))
                          * d[d[:,0] == t][0][1])
         return logL
-
-    def score(self, b):
-
+    
+    def _score_proc(self, b):
         """
         Calculate the score vector of the log-likelihood at estimates of the
         parameters
@@ -607,10 +616,10 @@ class CoxPH(LikelihoodModel):
         """
 
         ties = self.ties
-        exog = self.exog
-        times = self.times
-        censoring = self.censoring
-        d = self.d
+        exog = self._str_exog
+        times = self._str_times
+        censoring = self._str_censoring
+        d = self._str_d
         BX = np.dot(exog, b)
         thetas = np.exp(BX)
         d = d[d[:,1] != 0]
@@ -644,7 +653,7 @@ class CoxPH(LikelihoodModel):
                               d[d[:,0] == t][0][1])
         return score
 
-    def hessian(self, b):
+    def _hessian_proc(self, b):
 
         """
         Calculate the hessian matrix of the log-likelihoos at estimates of the
@@ -662,10 +671,10 @@ class CoxPH(LikelihoodModel):
         """
 
         ties = self.ties
-        exog = self.exog
-        times = self.times
-        censoring = self.censoring
-        d = self.d
+        exog = self._str_exog
+        times = self._str_times
+        censoring = self._str_censoring
+        d = self._str_d
         BX = np.dot(exog, b)
         thetas = np.exp(BX)
         d = d[d[:,1] != 0]
