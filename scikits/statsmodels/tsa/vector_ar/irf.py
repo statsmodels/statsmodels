@@ -255,16 +255,16 @@ class IRAnalysis(BaseIRAnalysis):
         q = util.norm_signif_level(signif)
  
         cov_hold = np.zeros((neqs, neqs, periods+1, periods+1))
-        for i in range(neqs):
-            for j in range(neqs):
+        for i in xrange(neqs):
+            for j in xrange(neqs):
                 cov_hold[i,j,:,:] = np.cov(irf_resim[:,:,i,j],rowvar=0)
 
         W = np.zeros((neqs, neqs, periods+1, periods+1))
         eigva = np.zeros((neqs, neqs, periods+1, 1))
         k = np.zeros((neqs, neqs))
 
-        for i in range(neqs):
-            for j in range(neqs):
+        for i in xrange(neqs):
+            for j in xrange(neqs):
                 eigva[i,j,:,0], W[i,j,:,:] = la.eigh(cov_hold[i,j,:,:])
                 k[i,j] = np.argmax(eigva[i,j,:,0])
                 
@@ -272,8 +272,8 @@ class IRAnalysis(BaseIRAnalysis):
         lower = np.zeros(np.shape(irfs))
         upper = np.zeros(np.shape(irfs))
 
-        for i in range(neqs):
-            for j in range(neqs):
+        for i in xrange(neqs):
+            for j in xrange(neqs):
                 lower[:,i,j] = irfs[:,i,j] + W[i,j,:,k[i,j]]*q*np.sqrt(max(eigva[i,j,:,0]))
                 upper[:,i,j] = irfs[:,i,j] - W[i,j,:,k[i,j]]*q*np.sqrt(max(eigva[i,j,:,0]))
 
