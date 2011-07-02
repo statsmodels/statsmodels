@@ -238,7 +238,7 @@ class IRAnalysis(BaseIRAnalysis):
                                     T=periods, signif=signif, seed=seed, 
                                     burn=burn, cum=False)
 
-    def err_band_sz1(self, orth=False, repl=1000, seed=None, burn=100):
+    def err_band_sz1(self, orth=False, repl=1000, signif=0.05, seed=None, burn=100):
         """
         IRF Sims-Zha error band method 1
 
@@ -252,6 +252,7 @@ class IRAnalysis(BaseIRAnalysis):
         neqs = self.neqs
         irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,
                                    burn=100)
+        q = util.norm_signif_level(alpha)
  
         cov_hold = np.zeros((neqs, neqs, periods+1, periods+1))
         for i in range(neqs):
@@ -268,10 +269,10 @@ class IRAnalysis(BaseIRAnalysis):
                 k[i,j] = argmax(eigva[i,j,:,0])
                 
         # here take the kth column of W, which we determine by using the largest eigenvalue
-        for i in range(neqs);
+        for i in range(neqs):
             for j in range(neqs):
-                lower[:,i,j] = irfs[:,i,j] + W[i,j,:,k[i,j]]*np.sqrt(max(eigva[i,j,:,0]))
-                upper[:,i,j] = irfs[:,i,j] - W[i,j,:,k[i,j]]*np.sqrt(max(eigva[i,j,:,0]))
+                lower[:,i,j] = irfs[:,i,j] + W[i,j,:,k[i,j]]*q*np.sqrt(max(eigva[i,j,:,0]))
+                upper[:,i,j] = irfs[:,i,j] - W[i,j,:,k[i,j]]*q*np.sqrt(max(eigva[i,j,:,0]))
 
         return lower, upper
 
