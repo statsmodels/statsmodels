@@ -252,7 +252,7 @@ class IRAnalysis(BaseIRAnalysis):
         neqs = self.neqs
         irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,
                                    burn=100)
-        q = util.norm_signif_level(alpha)
+        q = util.norm_signif_level(signif)
  
         cov_hold = np.zeros((neqs, neqs, periods+1, periods+1))
         for i in range(neqs):
@@ -266,9 +266,12 @@ class IRAnalysis(BaseIRAnalysis):
         for i in range(neqs):
             for j in range(neqs):
                 eigva[i,j,:,0], W[i,j,:,:] = la.eigh(cov_hold[i,j,:,:])
-                k[i,j] = argmax(eigva[i,j,:,0])
+                k[i,j] = np.argmax(eigva[i,j,:,0])
                 
         # here take the kth column of W, which we determine by using the largest eigenvalue
+        lower = np.zeros(np.shape(irfs))
+        upper = np.zeros(np.shape(irfs))
+
         for i in range(neqs):
             for j in range(neqs):
                 lower[:,i,j] = irfs[:,i,j] + W[i,j,:,k[i,j]]*q*np.sqrt(max(eigva[i,j,:,0]))
