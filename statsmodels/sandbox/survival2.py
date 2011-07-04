@@ -15,6 +15,7 @@ from statsmodels.base.model import LikelihoodModel, LikelihoodModelResults
 class Survival(object):
 
     ##Add handling for non-integer times
+    ##Allow vector inputs
 
     """
     Survival(...)
@@ -58,7 +59,7 @@ class Survival(object):
     """
 
     def __init__(self, time1, time2=None, censoring=None, data=None):
-        if not data is None:
+        if data is not None:
             data = np.asarray(data)
             if censoring is None:
                 self.censoring = None
@@ -72,7 +73,7 @@ class Survival(object):
         else:
             time1 = (np.asarray(time1)).astype(int)
             if not time2 is None:
-                time2 = (np.array(time2)).astype(int)
+                time2 = (np.asarray(time2)).astype(int)
                 self.times = time2 - time1
             else:
                 self.times = time1
@@ -401,6 +402,57 @@ class KaplanMeier(object):
         (self.ts).append(t)
         (self.event).append(events)
 
+def get_td(data, ntd, td, td_times, censoring=None, times=None):
+
+    ##Check results
+    ##Add lag
+    ##Do without data?
+    ##For arbitrarily many td vars
+
+    ntd = data[:,ntd]
+    td = data[:,td]
+    ##ind2 = np.isnan(td)
+    ind = ~np.isnan(td)
+    ##?
+    ##del(td)
+    rep = ind.sum(1)
+    #d1_rep = len(td)
+    #ind = ~np.isnan(td)
+    td_times = np.repeat(td_times[:,np.newaxis], len(td), axis=1)
+    ##start = np.copy(td_times)
+    ##start[ind2.T] = 0
+    ##del(ind2)
+    td = td.flatten()
+    ind = ~np.isnan(td)
+    #return td_times, ind
+    #start = np.c_[np.zeros_like(tddta[:,0]), tddta[:,1:]]
+    td = td[ind]
+    td_times = td_times.flatten('F')[ind]
+    start = np.r_[0,td_times[:-1]]
+    start[start > td_times] = 0
+    ntd = np.repeat(ntd, rep, axis=0)
+    if censoring is not None:
+        censoring = data[:,censoring]
+        times = data[:,times]
+        censoring = np.repeat(censoring, rep)
+        times = np.repeat(times, rep)
+        #censoring = censoring.flatten('F')#[ind]
+        #times = times.flatten('F')#[ind]
+        ind = ((td_times == times) * censoring) != 0
+        censoring[ind] = 1
+        censoring[~ind] = 0
+        return np.c_[start, td_times, censoring, ntd, td]
+    ##del(ind)
+    ##del(rep)
+    #td_times = np.repeat(td_times, rep, axis=0)
+    ##del(rep)
+    ##use td?
+    ##td = np.repeat(td, rep, axis=0)
+    ##data = np.repeat(data, rep, axis=0)
+    ##return np.hstack((td_times[:,np.newaxis], ntd, td))
+    else:
+        return np.c_[start, td_times, ntd, td]
+
 class CoxPH(LikelihoodModel):
 
     ##Add efron fitting, and other methods
@@ -408,6 +460,7 @@ class CoxPH(LikelihoodModel):
     ##Handling for time-dependent covariates
     ##Handling for time-dependent coefficients
     ##Interactions
+    ##Add residuals
 
     """
     Fit a cox proportional harzard model from survival data
