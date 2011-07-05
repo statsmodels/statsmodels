@@ -107,8 +107,8 @@ class BaseIRAnalysis(object):
             title = 'Impulse responses'
             irfs = self.irfs
 
-        if stderr_type not in ['asym', 'mc', 'sz1']:
-            raise ValueError("Error type must be either 'asym', 'mc', or 'sz1'")
+        if stderr_type not in ['asym', 'mc', 'sz1', 'sz2']:
+            raise ValueError("Error type must be either 'asym', 'mc','sz1', or 'sz2'")
         else:
             if stderr_type == 'asym':
                 stderr = self.cov(orth=orth)
@@ -118,6 +118,10 @@ class BaseIRAnalysis(object):
             if stderr_type == 'sz1':
                 stderr = self.err_band_sz1(orth=orth, repl=repl,
                                            signif=signif, seed=seed)
+            if stderr_type == 'sz2':
+                stderr = self.err_band_sz2(orth=orth, repl=repl,
+                                           signif=signif, seed=seed)
+
 
         plotting.irf_grid_plot(irfs, stderr, impulse, response,
                                self.model.names, title, signif=signif,
@@ -240,7 +244,7 @@ class IRAnalysis(BaseIRAnalysis):
 
     def err_band_sz1(self, orth=False, repl=1000, signif=0.05, seed=None, burn=100):
         """
-        IRF Sims-Zha error band method 1
+        IRF Sims-Zha error band method 1. Assumes symmetric error bands around mean.
 
         Reference
         ---------
@@ -254,6 +258,69 @@ class IRAnalysis(BaseIRAnalysis):
                                    burn=100)
         q = util.norm_signif_level(signif)
  
+        W, eigva, k =self._eigval_decomp(irf_resim) 
+                
+        # here take the kth column of W, which we determine by finding the largest eigenvalue of the covaraince matrix
+        lower = np.zeros(np.shape(irfs))
+        upper = np.zeros(np.shape(irfs))
+ 
+        for i in xrange(neqs):
+            for j in xrange(neqs):
+                lower[:,i,j] = irfs[:,i,j] + W[i,j,:,k[i,j]]*q*np.sqrt(max(eigva[i,j,:,0]))
+                upper[:,i,j] = irfs[:,i,j] - W[i,j,:,k[i,j]]*q*np.sqrt(max(eigva[i,j,:,0]))
+
+        return lower, upper
+
+    def err_band_sz2(self, orth=False, repl=1000, signif=0.05, seed=None, burn=100):
+        """
+        IRF Sims-Zha error band method 1. Doe not assume symmetric error bands around mean.
+
+        Reference
+        ---------
+        Sims, Christoper A., and Tao Zha. 1999. “Error Bands for Impulse Response.” Econometrica 67: 1113-1155.
+        """
+        model = self.model
+        periods = self.periods
+        irfs = self.irfs
+        neqs = self.neqs
+        irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,
+                                   burn=100)
+
+        W, eigva, k = self._eigval_decomp(irf_resim)
+
+        gamma = np.zeros((repl, neqs, neqs))
+        for p in xrange(repl):
+            for i in xrange(neqs):
+                for j in xrange(neqs):
+                    gamma[p,i,j] = np.dot(W[i,j,k[i,j],:], irf_resim[p,:,i,j])
+
+        gamma_sort = np.sort(gamma, axis=0) #sort to get quantiles
+
+        lower = np.zeros(np.shape(irfs))
+        upper = np.zeros(np.shape(irfs))
+        
+        index = round(signif/2*repl)-1,round((1-signif/2)*repl)-1
+        for i in xrange(neqs):
+            for j in xrange(neqs):
+                gamma_add = gamma_sort[index[0],i,j] * W[i,j,:,k[i,j]]
+                lower[:,i,j] = irfs[:,i,j] + gamma_add
+                gamma_add = gamma_sort[index[1],i,j] * W[i,j,:,k[i,j]]
+                upper[:,i,j] = irfs[:,i,j] + gamma_add
+        return lower, upper
+
+    #method used repeatedly in Sims-Zha error bands
+    def _eigval_decomp(self, irf_resim):
+        """
+        Returns
+        -------
+        W: array of eigenvectors
+        eigva: list of eigenvalues 
+        k: matrix indicating column # of largest eigenvalue for each c_i,j
+
+        """
+        neqs = self.neqs
+        periods = self.periods
+
         cov_hold = np.zeros((neqs, neqs, periods+1, periods+1))
         for i in xrange(neqs):
             for j in xrange(neqs):
@@ -267,18 +334,8 @@ class IRAnalysis(BaseIRAnalysis):
             for j in xrange(neqs):
                 eigva[i,j,:,0], W[i,j,:,:] = la.eigh(cov_hold[i,j,:,:])
                 k[i,j] = np.argmax(eigva[i,j,:,0])
-                
-        # here take the kth column of W, which we determine by using the largest eigenvalue
-        lower = np.zeros(np.shape(irfs))
-        upper = np.zeros(np.shape(irfs))
-
-        for i in xrange(neqs):
-            for j in xrange(neqs):
-                lower[:,i,j] = irfs[:,i,j] + W[i,j,:,k[i,j]]*q*np.sqrt(max(eigva[i,j,:,0]))
-                upper[:,i,j] = irfs[:,i,j] - W[i,j,:,k[i,j]]*q*np.sqrt(max(eigva[i,j,:,0]))
-
-        return lower, upper
-
+        return W, eigva, k
+ 
     @cache_readonly
     def G(self):
         # Gi matrices as defined on p. 111
