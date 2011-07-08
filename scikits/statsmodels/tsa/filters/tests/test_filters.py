@@ -325,7 +325,7 @@ def test_hpfilter():
         [-3.331152428080622485e+02,1.332345624280806260e+04]])
     dta = macrodata.load().data['realgdp']
     res = column_stack((hpfilter(dta,1600)))
-    assert_almost_equal(res,hpfilt_res,8)
+    assert_almost_equal(res,hpfilt_res,6)
 
 def test_cfitz_filter():
     """
