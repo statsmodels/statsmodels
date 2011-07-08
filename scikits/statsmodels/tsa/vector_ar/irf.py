@@ -241,10 +241,23 @@ class IRAnalysis(BaseIRAnalysis):
         return model.irf_errband_mc(orth=orth, repl=repl, 
                                     T=periods, signif=signif, seed=seed, 
                                     burn=burn, cum=False)
-
-    def err_band_sz1(self, orth=False, repl=1000, signif=0.05, seed=None, burn=100):
+    def err_band_sz1(self, orth=False, repl=1000, signif=0.05, seed=None, burn=100, component=None):
         """
         IRF Sims-Zha error band method 1. Assumes symmetric error bands around mean.
+        Parameters
+        ----------
+        orth : bool, default False
+            Compute orthogonalized impulse responses
+        repl : int, default 1000
+            Number of MC replications
+        signif : float (0 < signif < 1)
+            Significance level for error bars, defaults to 95% CI
+        seed : int, default None
+            np.random seed
+        burn : int, default 100
+            Number of initial simulated obs to discard
+        component : neqs x neqs array, default to largest for each
+            Index of column of eigenvector/value to use for each error band
 
         Reference
         ---------
@@ -258,7 +271,13 @@ class IRAnalysis(BaseIRAnalysis):
                                    burn=100)
         q = util.norm_signif_level(signif)
  
-        W, eigva, k =self._eigval_decomp(irf_resim) 
+        W, eigva, k =self.eigval_decomp(irf_resim)
+
+        if component != None:
+            if np.shape(component) != (neqs,neqs):
+                raise ValueError("Component array must be " + str(neqs) + " x " + str(neqs))
+            else: 
+                k = component
                 
         # here take the kth column of W, which we determine by finding the largest eigenvalue of the covaraince matrix
         lower = np.zeros(np.shape(irfs))
@@ -271,9 +290,23 @@ class IRAnalysis(BaseIRAnalysis):
 
         return lower, upper
 
-    def err_band_sz2(self, orth=False, repl=1000, signif=0.05, seed=None, burn=100):
+    def err_band_sz2(self, orth=False, repl=1000, signif=0.05, seed=None, burn=100, component=None):
         """
         IRF Sims-Zha error band method 1. Doe not assume symmetric error bands around mean.
+        Parameters
+        ----------
+        orth : bool, default False
+            Compute orthogonalized impulse responses
+        repl : int, default 1000
+            Number of MC replications
+        signif : float (0 < signif < 1)
+            Significance level for error bars, defaults to 95% CI
+        seed : int, default None
+            np.random seed
+        burn : int, default 100
+            Number of initial simulated obs to discard
+        component : neqs x neqs array, default to largest for each
+            Index of column of eigenvector/value to use for each error band
 
         Reference
         ---------
@@ -286,7 +319,13 @@ class IRAnalysis(BaseIRAnalysis):
         irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,
                                    burn=100)
 
-        W, eigva, k = self._eigval_decomp(irf_resim)
+        W, eigva, k = self.eigval_decomp(irf_resim)
+
+        if component != None:
+            if np.shape(component) != (neqs,neqs):
+                raise ValueError("Component array must be " + str(neqs) + " x " + str(neqs))
+            else: 
+                k = component
 
         gamma = np.zeros((repl, neqs, neqs))
         for p in xrange(repl):
@@ -302,14 +341,16 @@ class IRAnalysis(BaseIRAnalysis):
         index = round(signif/2*repl)-1,round((1-signif/2)*repl)-1
         for i in xrange(neqs):
             for j in xrange(neqs):
-                gamma_add = gamma_sort[index[0],i,j] * W[i,j,:,k[i,j]]
+                #gamma_add = gamma_sort[index[0],i,j] * W[i,j,:,k[i,j]]
+                gamma_add = gamma_sort[index[0],i,j] * np.ones((periods+1,1))
                 lower[:,i,j] = irfs[:,i,j] + gamma_add
-                gamma_add = gamma_sort[index[1],i,j] * W[i,j,:,k[i,j]]
+                #gamma_add = gamma_sort[index[1],i,j] * W[i,j,:,k[i,j]]
+                gamma_add = gamma_sort[index[1],i,j] * np.ones((periods+1,1))
                 upper[:,i,j] = irfs[:,i,j] + gamma_add
         return lower, upper
 
     #method used repeatedly in Sims-Zha error bands
-    def _eigval_decomp(self, irf_resim):
+    def eigval_decomp(self, irf_resim):
         """
         Returns
         -------
@@ -335,7 +376,7 @@ class IRAnalysis(BaseIRAnalysis):
                 eigva[i,j,:,0], W[i,j,:,:] = la.eigh(cov_hold[i,j,:,:])
                 k[i,j] = np.argmax(eigva[i,j,:,0])
         return W, eigva, k
- 
+
     @cache_readonly
     def G(self):
         # Gi matrices as defined on p. 111
