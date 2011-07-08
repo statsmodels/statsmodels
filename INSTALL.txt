@@ -1,36 +1,73 @@
-Requirements
--------------
+Dependencies
+------------
 
-To run correctly, scipy models requires the following:
+Python >= 2.5
+NumPy >= 1.4.0 
+SciPy >= 0.7
 
-        -python (>= 2.5): http://www.python.org tested with 2.5 and 2.6
-        -numpy (>= 1.3.0) ?(>= 1.2.1) not tested http://www.scipy.org/Numpy
-         tested with 1.5.1
-        -scipy (>= 0.7 ?) http://www.scipy.org/ tested with 0.8 and 0.9
-        -setuptools (easy_install):
-        http://peak.telecommunity.com/DevCenter/EasyInstall
+Optional Dependencies
+---------------------
 
-On (X)ubuntu you can get the packages through
+Matplotlib is needed for plotting functionality and running many of the examples
 
-apt-get install python python-setuptools python-numpy python-scipy
+http://matplotlib.sourceforge.net/
 
-Optional Requirements:
+To build the documentation you will need Sphinx
+
+http://sphinx.pocoo.org/
+
+The documentation is available online as mentioned below.
+
+To run the test suite you will need nose
+
+http://somethingaboutorange.com/mrl/projects/nose/
+
+
+Easy Install
+------------
+
+To get the latest release using easy_install you need setuptools (easy_install)
+
+http://peak.telecommunity.com/DevCenter/EasyInstall
+
+Then you can do (with proper permissions)
+
+easy_install -U scikits.statsmodels
+
+Ubuntu
+------
+
+On (X)ubuntu you can get dependencies through
+
+sudo apt-get install python python-setuptools python-numpy python-scipy
+
+And you may install with easy_install or from source as mentioned below.
+
+Installing from Source
 ----------------------
 
-matplotlib: http://pypi.python.org/pypi/matplotlib required to build
-  sphinx documentation, for plot methods and it is used in examples
-numdifftools: http://pypi.python.org/pypi/numdifftools used in the sandbox
+Download and extract the source distribution from PyPI or github
 
-Installing
------------
+PyPI: http://pypi.python.org/pypi/scikits.statsmodels
+Github: https://github.com/statsmodels/statsmodels/archives/master
 
-Download and extract the source distribution, or branch from the repository.
-In the statsmodels directory do:
+Or clone the bleeding edge code from our repository on github at
+
+https://github.com/statsmodels/statsmodels
+
+In the statsmodels directory do (with proper permissions)
 
 python setup.py install
 
-numpy 1.4.0 seems to require:
-python setup.py build install
+For the 0.3.0 release, there is some code written using Cython. If you have
+a C compiler, you can do
 
-alternatively since statsmodels is a pure python package, it can be added
-to the python path directly without installation
+python setup.py --with-cython
+python setup.py install
+
+Documentation
+-------------
+
+You may find more information about the project and installation in our documentation
+
+http://statsmodels.sourceforge.net/
