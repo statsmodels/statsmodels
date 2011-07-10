@@ -327,12 +327,12 @@ class IRAnalysis(BaseIRAnalysis):
             else: 
                 k = component
 
-        gamma = np.zeros((repl, neqs, neqs))
+        gamma = np.zeros((repl, periods+1, neqs, neqs))
         for p in xrange(repl):
             for i in xrange(neqs):
                 for j in xrange(neqs):
-                    gamma[p,i,j] = np.dot(W[i,j,k[i,j],:], irf_resim[p,:,i,j])
-
+                    gamma[p,:,i,j] = W[i,j,k[i,j],:] * irf_resim[p,:,i,j]
+ 
         gamma_sort = np.sort(gamma, axis=0) #sort to get quantiles
 
         lower = np.zeros(np.shape(irfs))
@@ -341,11 +341,9 @@ class IRAnalysis(BaseIRAnalysis):
         index = round(signif/2*repl)-1,round((1-signif/2)*repl)-1
         for i in xrange(neqs):
             for j in xrange(neqs):
-                #gamma_add = gamma_sort[index[0],i,j] * W[i,j,:,k[i,j]]
-                gamma_add = gamma_sort[index[0],i,j] * np.ones((periods+1,1))
+                gamma_add = gamma_sort[index[0],:,i,j]
                 lower[:,i,j] = irfs[:,i,j] + gamma_add
-                #gamma_add = gamma_sort[index[1],i,j] * W[i,j,:,k[i,j]]
-                gamma_add = gamma_sort[index[1],i,j] * np.ones((periods+1,1))
+                gamma_add = gamma_sort[index[1],:,i,j]
                 upper[:,i,j] = irfs[:,i,j] + gamma_add
         return lower, upper
 
