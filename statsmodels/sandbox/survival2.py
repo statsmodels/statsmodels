@@ -1,4 +1,4 @@
-#Kaplan-Meier Estimator
+#Survival Analysis
 
 import numpy as np
 import numpy.linalg as la
@@ -14,6 +14,7 @@ from statsmodels.base.model import LikelihoodModel, LikelihoodModelResults
 
 class Survival(object):
 
+    ##Distinguish type of censoring (will fix cox with td covars?)
     ##Add handling for non-integer times
     ##Allow vector inputs
 
@@ -66,16 +67,21 @@ class Survival(object):
             else:
                 self.censoring = (data[:,censoring]).astype(int)
             if time2 is None:
+                self.type = "exact"
                 self.times = (data[:,time1]).astype(int)
             else:
-                self.times = (((data[:,time2]).astype(int))
-                              - ((data[:,time1]).astype(int)))
+                self.type = "interval"
+                self.start = data[:,time1].astype(int)
+                self.end = data[:,time2].astype(int)
+
         else:
             time1 = (np.asarray(time1)).astype(int)
-            if not time2 is None:
-                time2 = (np.asarray(time2)).astype(int)
-                self.times = time2 - time1
+            if time2 is not None:
+                self.type = "interval"
+                self.start = time1
+                self.end = (np.asarray(time2)).astype(int)
             else:
+                self.type = "exact"
                 self.times = time1
             if censoring is None:
                 self.censoring == None
@@ -429,7 +435,10 @@ def get_td(data, ntd, td, td_times, censoring=None, times=None):
     td = td[ind]
     td_times = td_times.flatten('F')[ind]
     start = np.r_[0,td_times[:-1]]
-    start[start > td_times] = 0
+    ##at 14472, supposed to be double (0,1) for times, but get
+    ##(0,1) then (1,1)
+    ##Does the >= solve the underlying problem?
+    start[start >= td_times] = 0
     ntd = np.repeat(ntd, rep, axis=0)
     if censoring is not None:
         censoring = data[:,censoring]
@@ -470,7 +479,14 @@ class CoxPH(LikelihoodModel):
         self.surv = surv
         self.ties = ties
         censoring = surv.censoring
-        times = surv.times
+        if surv.type == "exact":
+            self.ttype = "exact"
+            times = surv.times
+        elif surv.type == "interval":
+            self.ttype = "interval"
+            ##Just for testing, may need to change
+            times = np.c_[surv.start,surv.end]
+            self.test = times
         if data is not None:
             data = np.asarray(data)
             if data.ndim != 2:
@@ -479,12 +495,17 @@ class CoxPH(LikelihoodModel):
         else:
             exog = np.asarray(exog)
         if exog.dtype == float or exog.dtype == int:
-            if censoring != None:
+            if censoring is not None:
                 data = np.c_[times,censoring,exog]
                 data = data[~np.isnan(data).any(1)]
-                self.times = (data[:,0]).astype(int)
-                self.censoring = (data[:,1]).astype(int)
-                self.exog = data[:,2:]
+                if surv.type == "exact":
+                    self.times = (data[:,0]).astype(int)
+                    self.censoring = (data[:,1]).astype(int)
+                    self.exog = data[:,2:]
+                elif surv.type == "interval":
+                    self.times = data[:,0:2].astype(int)
+                    self.censoring = (data[:,2]).astype(int)
+                    self.exog = data[:,3:]
             else:
                 data = np.c_[times,exog]
                 data = data[~np.isnan(data).any(1)]
@@ -492,10 +513,14 @@ class CoxPH(LikelihoodModel):
                 self.exog = data[:,1:]
             del(data)
         else:
-            exog = exog[~np.isnan(times)]
+            if surv.type == "interval":
+                ind = ~np.isnan(times).any(1)
+            elif surv.type == "exact":
+                ind = ~np.isnan(times)
+            exog = exog[ind]
             if censoring is not None:
-                censoring = censoring[~np.isnan(times)]
-            times = times[~np.isnan(times)]
+                censoring = censoring[ind]
+            times = times[ind]
             if censoring is not None:
                 times = (times[~np.isnan(censoring)]).astype(int)
                 exog = exog[~np.isnan(censoring)]
@@ -514,11 +539,20 @@ class CoxPH(LikelihoodModel):
             self.strata = None
         ##Not need for stratification?
         ##List of ds for stratification?
-        times = self.times
-        d = np.bincount(times,self.censoring)
-        times = np.unique(times)
-        d = d[:,list(times)]
-        self.d = (np.c_[times, d]).astype(float)
+        ##?
+        if surv.type == "interval":
+            ##np.unique for times, then add on a column in d
+            ##with 0,times[:-1] as its elements
+            ##times = self.times[:,1]
+            self.d = stats._support.unique(self.times)
+        ##if surv.type == "interval":
+                ##times = np.c_[np.r_[0,times[:-1]],times]
+        elif surv.type == "exact":
+            times = self.times
+            d = np.bincount(times,self.censoring)
+            times = np.unique(times)
+            d = d[:,list(times)]
+            self.d = (np.c_[times, d]).astype(float)
         self.df_resid = len(self.exog) - 1
         self.confint_dist = stats.norm
 
@@ -557,22 +591,6 @@ class CoxPH(LikelihoodModel):
             self.exog = exog.compress(stratas, axis=1)
 
     def _stratify_func(self, b, f):
-
-        """
-        Calculate the value of the log-likelihood at estimates of the
-        parameters
-
-        Parameters:
-        ------------
-
-        b: vector of parameter estimates
-
-        Returns
-        -------
-
-        value of log-likelihood as a float
-        """
-
         exog = self.exog
         times = self.times
         censoring = self.censoring
@@ -631,6 +649,7 @@ class CoxPH(LikelihoodModel):
 
         """
 
+        ttype = self.ttype
         ties = self.ties
         exog = self._str_exog
         times = self._str_times
@@ -642,18 +661,46 @@ class CoxPH(LikelihoodModel):
         c_idx = censoring == 1
         if ties == "efron":
             logL = 0
-            for t in d[:,0]:
-                ind = (c_idx) * (times == t)
-                tied = d[d[:,0] == t][0][1]
-                logL += ((np.dot(exog[ind], b)).sum()
-                         - (np.log((thetas[times >= t]).sum()
-                                   - ((np.arange(tied))/tied)
-                                   * (thetas[ind]).sum()).sum()))
+            if ttype == "exact":
+                for t in range(len(d[:,0])):
+                    ind = (c_idx) * (times == d[t,0])
+                    tied = d[t,1]
+                    logL += ((np.dot(exog[ind], b)).sum()
+                             - (np.log((thetas[times >= d[t,0]]).sum()
+                                       - ((np.arange(tied))/tied)
+                                       * (thetas[ind]).sum()).sum()))
+            elif ttype == "interval":
+                for t in d:
+                    tind = np.product(times == t, axis=1).astype(bool)
+                    if tind.any():
+                        ##self.ti = tind
+                        ind = (c_idx) * (tind)
+                        if ind.any():
+                            ##self.i = ind
+                            tied = np.sum(ind)
+                            risk = ((times[:,1] >= t[1])
+                                    * (t[0] >= times[:,0])).astype(bool)
+                            ##self.test = tied
+                            logL += ((np.dot(exog[ind], b)).sum()
+                                     - (np.log((thetas[risk]).sum()
+                                               - ((np.arange(tied))/tied)
+                                               * (thetas[risk]).sum()).sum()))
         if ties == "breslow":
             logL = (BX[c_idx]).sum()
-            for t in d[:,0]:
-                logL -= ((np.log((thetas[times >= t]).sum()))
-                         * d[d[:,0] == t][0][1])
+            if ttype == "exact":
+                for t in range(len(d[:,0])):
+                    logL -= ((np.log((thetas[times >= d[t,0]]).sum()))
+                             * d[t,1])
+            elif ttype == "interval":
+                for t in d:
+                    tind = np.product(times == t, axis=1).astype(bool)
+                    if tind.any():
+                        ind = (c_idx) * (tind)
+                        if ind.any():
+                            logL -= (np.sum(ind) *
+                            (np.log(thetas[((times[:,1] >= t[1]) *
+                                            (t[0] >= times[:,0])
+                                            ).astype(bool)].sum())))
         return logL
     
     def _score_proc(self, b):
@@ -932,6 +979,7 @@ class KMResults(LikelihoodModelResults):
                     if pooled.ndim == 1:
                         exog_idx = exog == g
                     else:
+                        ##use .any(1)? no need all along axis=1
                         exog_idx = (np.product(exog == g, axis=1)).astype(bool)
                     dk = np.bincount(t[exog_idx])
                     ##Save d (same for all?)
