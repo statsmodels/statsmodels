@@ -34,14 +34,15 @@ Then you can do (with proper permissions)
 
 easy_install -U scikits.statsmodels
 
-Ubuntu
-------
+Ubuntu/Debian
+-------------
 
 On (X)ubuntu you can get dependencies through
 
 sudo apt-get install python python-setuptools python-numpy python-scipy
 
-And you may install with easy_install or from source as mentioned below.
+You may install with easy_install, from source as mentioned below, or 
+from the NeuroDebian repository: http://neuro.debian.net
 
 Installing from Source
 ----------------------
@@ -68,6 +69,7 @@ python setup.py install
 Documentation
 -------------
 
-You may find more information about the project and installation in our documentation
+You may find more information about the project and installation in our 
+documentation
 
 http://statsmodels.sourceforge.net/
