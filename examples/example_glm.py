@@ -36,18 +36,19 @@ from matplotlib import pyplot as plt
 data = sm.datasets.star98.load()
 data.exog = sm.add_constant(data.exog)
 
-print """The response variable is (success, failure).  Eg., the first
-observation is """, data.endog[0]
-print"""Giving a total number of trials for this observation of
-""", data.endog[0].sum()
+# The response variable is (success, failure).  Eg., the first
+# observation is
+print data.endog[0]
+# Giving a total number of trials for this observation of
+print data.endog[0].sum()
 
 glm_binom = sm.GLM(data.endog, data.exog, family=sm.families.Binomial())
 
 binom_results = glm_binom.fit()
-print """The fitted values are
-""", binom_results.params
-print """The corresponding t-values are
-""", binom_results.tvalues
+# The fitted values are
+print binom_results.params
+# The corresponding t-values are
+print binom_results.tvalues
 
 # It is common in GLMs with interactions to compare first differences.
 # We are interested in the difference of the impact of the explanatory variable
@@ -64,8 +65,11 @@ means75[0] = lowinc_75per = stats.scoreatpercentile(data.exog[:,0], 75)
 resp_25 = glm_binom.predict(means25)
 resp_75 = glm_binom.predict(means75)
 diff = resp_75 - resp_25
-print """The interquartile first difference for the percentage of low income
-households in a school district is %2.4f %%""" % (diff*100)
+#.. print """The interquartile first difference for the percentage of low income
+#.. households in a school district is %2.4f %%""" % (diff*100)
+# The interquartile first difference for the percentage of low income
+# households in a school district is
+print diff*100
 
 means0 = means.copy()
 means100 = means.copy()
@@ -120,12 +124,12 @@ plt.plot([y.min(),y.max()],[y.min(),y.max()],'r--')
 plt.title('Normal - Quantile Plot')
 plt.ylabel('Deviance Residuals Quantiles')
 plt.xlabel('Quantiles of N(0,1)')
-# in branch *-skipper
-#from statsmodels.sandbox import graphics
-#img = graphics.qqplot(res)
+#.. in branch *-skipper
+#.. from scikits.statsmodels.sandbox import graphics
+#.. img = graphics.qqplot(res)
 
-#plt.show()
-#plt.close('all')
+#.. plt.show()
+#.. plt.close('all')
 
 
 ### Example for using GLM Gamma for a proportional count response
