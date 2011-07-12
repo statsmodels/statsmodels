@@ -19,18 +19,29 @@ Existing Discussions:
 
 Existing Code:
 
- * `Jonathan Taylor's Formula Framework <https://github.com/statsmodels/statsmodels/blob/master/scikits/statsmodels/sandbox/formula.py>`__
+* `Jonathan Taylor's Formula <https://github.com/jonathan-taylor/formula>`__
    Explain me.
- * `Nathaniel Smith's Charlton <https://github.com/charlton>`__
+* `Nathaniel Smith's Charlton <https://github.com/charlton>`__
    Explain me.
 
 Statistics
 ^^^^^^^^^^
 
-Bootstrapping, Jackknifing, Sampling framework.
+Bootstrapping, Jackknifing, Re-sampling framework.
 
 Sandbox
 ^^^^^^^
+
+We currently have a large amount code in the sandbox. The medium term goal
+is to move much of this to feature branches as it gets worked on and remove
+the sandbox folder. Many of these models and functions are close to done, 
+however, and we welcome any and all contributions to complete them, including
+refactoring, documentation, and tests.
+
+.. toctree::
+   :maxdepth: 4
+
+   ../sandbox
 
 .. _todo:
 
