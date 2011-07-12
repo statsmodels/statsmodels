@@ -34,8 +34,8 @@ For example, here is a minimal ordinary least squares example
   # look at the results
   print results.summary()
 
-  and look at `dir(results)` to see some of the results
-  that are available
+Have a look at `dir(results)` to see available results. Attributes are 
+described in `results.__doc__` and results methods have their own docstrings.
 
 
 Table of Contents
