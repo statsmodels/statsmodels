@@ -290,9 +290,10 @@ class IRAnalysis(BaseIRAnalysis):
 
         return lower, upper
 
-    def err_band_sz2(self, orth=False, repl=1000, signif=0.05, seed=None, burn=100, component=None):
+    def err_band_sz2(self, orth=False, repl=1000, signif=0.05, 
+                     seed=None, burn=100, component=None):
         """
-        IRF Sims-Zha error band method 1. Doe not assume symmetric error bands around mean.
+        IRF Sims-Zha error band method 2. Do not assume symmetric error bands around mean.
         Parameters
         ----------
         orth : bool, default False
@@ -318,6 +319,78 @@ class IRAnalysis(BaseIRAnalysis):
         neqs = self.neqs
         irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,
                                    burn=100)
+
+        W, eigva, k = self.eigval_decomp(irf_resim)
+
+        if component != None:
+            if np.shape(component) != (neqs,neqs):
+                raise ValueError("Component array must be " + str(neqs) + " x " + str(neqs))
+            else: 
+                k = component
+
+        gamma = np.zeros((repl, periods+1, neqs, neqs))
+        for p in xrange(repl):
+            for i in xrange(neqs):
+                for j in xrange(neqs):
+                    gamma[p,:,i,j] = W[i,j,k[i,j],:] * irf_resim[p,:,i,j]
+ 
+        gamma_sort = np.sort(gamma, axis=0) #sort to get quantiles
+
+        lower = np.zeros(np.shape(irfs))
+        upper = np.zeros(np.shape(irfs))
+        
+        index = round(signif/2*repl)-1,round((1-signif/2)*repl)-1
+        for i in xrange(neqs):
+            for j in xrange(neqs):
+                gamma_add = gamma_sort[index[0],:,i,j]
+                lower[:,i,j] = irfs[:,i,j] + gamma_add
+                gamma_add = gamma_sort[index[1],:,i,j]
+                upper[:,i,j] = irfs[:,i,j] + gamma_add
+        return lower, upper
+
+    def err_band_sz3(self, orth=False, repl=1000, signif=0.05, 
+                     seed=None, burn=100, component=None):
+        """
+        IRF Sims-Zha error band method 3. Do not assume symmetric error bands around mean.
+        Parameters
+        ----------
+        orth : bool, default False
+            Compute orthogonalized impulse responses
+        repl : int, default 1000
+            Number of MC replications
+        signif : float (0 < signif < 1)
+            Significance level for error bars, defaults to 95% CI
+        seed : int, default None
+            np.random seed
+        burn : int, default 100
+            Number of initial simulated obs to discard
+        component : neqs x neqs array, default to largest for each
+            Index of column of eigenvector/value to use for each error band
+
+        Reference
+        ---------
+        Sims, Christoper A., and Tao Zha. 1999. “Error Bands for Impulse Response.” Econometrica 67: 1113-1155.
+        """
+        model = self.model
+        periods = self.periods
+        irfs = self.irfs
+        neqs = self.neqs
+        irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,
+                                   burn=100)
+
+        per_tot = periods + 1
+
+        #stack responses to get covariance across variable not just 
+        stack = np.zeros((repl, (periods+1)*neqs**2))
+
+        #stack left to right, up and down
+
+        for p in range(repl):
+            c = 0
+            for i in range(neqs):
+                for j in range(neqs):
+                    stack[p,:] = np.ravel(np.rollaxis(irf_resim[p,:,i,j],2,1).T)
+                    c+=1
 
         W, eigva, k = self.eigval_decomp(irf_resim)
 
