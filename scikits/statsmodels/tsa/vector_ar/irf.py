@@ -107,8 +107,8 @@ class BaseIRAnalysis(object):
             title = 'Impulse responses'
             irfs = self.irfs
 
-        if stderr_type not in ['asym', 'mc', 'sz1', 'sz2']:
-            raise ValueError("Error type must be either 'asym', 'mc','sz1', or 'sz2'")
+        if stderr_type not in ['asym', 'mc', 'sz1', 'sz2','sz3']:
+            raise ValueError("Error type must be either 'asym', 'mc','sz1','sz2', or 'sz3'")
         else:
             if stderr_type == 'asym':
                 stderr = self.cov(orth=orth)
@@ -121,7 +121,9 @@ class BaseIRAnalysis(object):
             if stderr_type == 'sz2':
                 stderr = self.err_band_sz2(orth=orth, repl=repl,
                                            signif=signif, seed=seed)
-
+            if stderr_type == 'sz3':
+                stderr = self.err_band_sz3(orth=orth, repl=repl,
+                                           signif=signif, seed=seed)
 
         plotting.irf_grid_plot(irfs, stderr, impulse, response,
                                self.model.names, title, signif=signif,
@@ -293,7 +295,7 @@ class IRAnalysis(BaseIRAnalysis):
     def err_band_sz2(self, orth=False, repl=1000, signif=0.05, 
                      seed=None, burn=100, component=None):
         """
-        IRF Sims-Zha error band method 2. Do not assume symmetric error bands around mean.
+        IRF Sims-Zha error band method 2. Does not assume symmetric error bands around mean.
         Parameters
         ----------
         orth : bool, default False
@@ -320,7 +322,7 @@ class IRAnalysis(BaseIRAnalysis):
         irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,
                                    burn=100)
 
-        W, eigva, k = self.eigval_decomp(irf_resim)
+        W, eigva, k = self.eigval_decomp_SZ(irf_resim)
 
         if component != None:
             if np.shape(component) != (neqs,neqs):
@@ -351,7 +353,7 @@ class IRAnalysis(BaseIRAnalysis):
     def err_band_sz3(self, orth=False, repl=1000, signif=0.05, 
                      seed=None, burn=100, component=None):
         """
-        IRF Sims-Zha error band method 3. Do not assume symmetric error bands around mean.
+        IRF Sims-Zha error band method 3. Does not assume symmetric error bands around mean.
         Parameters
         ----------
         orth : bool, default False
@@ -371,28 +373,6 @@ class IRAnalysis(BaseIRAnalysis):
         ---------
         Sims, Christoper A., and Tao Zha. 1999. “Error Bands for Impulse Response.” Econometrica 67: 1113-1155.
         """
-        model = self.model
-        periods = self.periods
-        irfs = self.irfs
-        neqs = self.neqs
-        irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,
-                                   burn=100)
-
-        per_tot = periods + 1
-
-        #stack responses to get covariance across variable not just 
-        stack = np.zeros((repl, (periods+1)*neqs**2))
-
-        #stack left to right, up and down
-
-        for p in range(repl):
-            c = 0
-            for i in range(neqs):
-                for j in range(neqs):
-                    stack[p,:] = np.ravel(np.rollaxis(irf_resim[p,:,i,j],2,1).T)
-                    c+=1
-
-        W, eigva, k = self.eigval_decomp(irf_resim)
 
         if component != None:
             if np.shape(component) != (neqs,neqs):
@@ -400,11 +380,37 @@ class IRAnalysis(BaseIRAnalysis):
             else: 
                 k = component
 
+        model = self.model
+        periods = self.periods
+        irfs = self.irfs
+        neqs = self.neqs
+        irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,
+                                   burn=100)
+        per_tot = periods + 1
+
+        stack = np.zeros((repl, (periods+1)*neqs**2))
+
+        #stack left to right, up and down
+
+        for p in range(repl):
+            for i in range(neqs):
+                for j in range(neqs):
+                    stack[p,:] = np.ravel(np.rollaxis(irf_resim[p,:,:,:],2,1).T)
+
+        stack_cov = np.cov(stack,rowvar=0) 
+        W, eigva, k = util.eigval_decomp(stack_cov)
+
         gamma = np.zeros((repl, periods+1, neqs, neqs))
         for p in xrange(repl):
+            c=0
             for i in xrange(neqs):
                 for j in xrange(neqs):
-                    gamma[p,:,i,j] = W[i,j,k[i,j],:] * irf_resim[p,:,i,j]
+                    if c != neqs**2-1:
+                        gamma[p,:,i,j] = W[k,c*per_tot:(c+1)*per_tot] * irf_resim[p,:,i,j]
+                        c+=1
+                    if c == neqs**2-1:
+                        gamma[p,:,i,j] = W[k,c*per_tot:] * irf_resim[p,:,i,j]
+
  
         gamma_sort = np.sort(gamma, axis=0) #sort to get quantiles
 
@@ -420,8 +426,7 @@ class IRAnalysis(BaseIRAnalysis):
                 upper[:,i,j] = irfs[:,i,j] + gamma_add
         return lower, upper
 
-    #method used repeatedly in Sims-Zha error bands
-    def eigval_decomp(self, irf_resim):
+    def _eigval_decomp_SZ(self, irf_resim):
         """
         Returns
         -------
@@ -444,8 +449,7 @@ class IRAnalysis(BaseIRAnalysis):
 
         for i in xrange(neqs):
             for j in xrange(neqs):
-                eigva[i,j,:,0], W[i,j,:,:] = la.eigh(cov_hold[i,j,:,:])
-                k[i,j] = np.argmax(eigva[i,j,:,0])
+                eigva[i,j,:,0], W[i,j,:,:], k[i,j] = util.eigval_decomp(cov_hold[i,j,:,:])
         return W, eigva, k
 
     @cache_readonly

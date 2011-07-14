@@ -4,6 +4,7 @@ Miscellaneous utility code for VAR estimation
 
 import numpy as np
 import scipy.stats as stats
+import scipy.linalg as la
 
 import scikits.statsmodels.tsa.tsatools as tsa
 from scipy.linalg import cholesky
@@ -200,4 +201,16 @@ def get_index(lst, name):
             raise
         result = name
     return result
-
+    #method used repeatedly in Sims-Zha error bands
+def eigval_decomp(sym_array):
+    """
+    Returns
+    -------
+    W: array of eigenvectors
+    eigva: list of eigenvalues 
+    k: largest eigenvector
+    """
+    #check if symmetric
+    eigva, W = la.eig(sym_array)
+    k = np.argmax(eigva)
+    return W, eigva, k
