@@ -842,7 +842,6 @@ def coint(y1, y2, regression="c"):
     crit_value = mackinnoncrit(N=1, regression="c", nobs=len(y1))
     return coint_t, pvalue, crit_value
 
-
 __all__ = ['acovf', 'acf', 'pacf', 'pacf_yw', 'pacf_ols', 'ccovf', 'ccf',
            'periodogram', 'q_stat']
 
