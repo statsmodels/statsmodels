@@ -38,24 +38,34 @@ class ModelData(object):
         self.endog = yarr
         self.exog = xarr
 
-    def attach_column_labels(self, result):
+    def wrap_output(self, obj, how='columns'):
+        if how == 'columns':
+            return self.attach_columns(obj)
+        elif how == 'rows':
+            return self.attach_rows(obj)
+        elif how == 'cov':
+            return self.attach_cov(obj)
+        else:
+            return obj
+
+    def attach_columns(self, result):
         return result
 
-    def attach_cov_labels(self, result):
+    def attach_cov(self, result):
         return result
 
-    def attach_row_labels(self, result):
+    def attach_rows(self, result):
         return result
 
 class PandasData(ModelData):
 
-    def _attach_column_labels(self, result):
+    def attach_columns(self, result):
         return Series(result, index=self.xnames)
 
-    def _attach_cov_labels(self, result):
+    def attach_cov(self, result):
         return DataFrame(result, index=self.xnames, columns=self.xnames)
 
-    def _attach_row_labels(self, result):
+    def attach_rows(self, result):
         return Series(result, index=self.row_labels)
 
 def _get_row_labels(exog):
@@ -71,7 +81,7 @@ def _get_names(data):
         pass
 
     if isinstance(data, DataFrame):
-        return data.columns
+        return list(data.columns)
 
     return None
 
@@ -506,6 +516,24 @@ available'
         self._results = mlefit
         return mlefit
 
+def _fit_mle_newton():
+    pass
+
+def _fit_mle_bfgs():
+    pass
+
+def _fit_mle_nm():
+    pass
+
+def _fit_mle_cg():
+    pass
+
+def _fit_mle_ncg():
+    pass
+
+def _fit_mle_powell():
+    pass
+
 #TODO: the below is unfinished
 class GenericLikelihoodModel(LikelihoodModel):
     """
@@ -564,7 +592,11 @@ class GenericLikelihoodModel(LikelihoodModel):
         if hessian:
             self.hessian = hessian
         self.confint_dist = norm
-        if not exog is None:  #this won't work for ru2nmnl, maybe np.ndim of a dict?
+
+        # TODO: data structures?
+
+        # this won't work for ru2nmnl, maybe np.ndim of a dict?
+        if exog is not None:
             #try:
             self.nparams = self.df_model = exog.shape[1] if np.ndim(exog)==2 else 1
         super(GenericLikelihoodModel, self).__init__(endog, exog)
@@ -733,6 +765,7 @@ class Results(object):
     def initialize(self, model, params, **kwd):
         self.params = params
         self.model = model
+
 #TODO: public method?
 
 class LikelihoodModelResults(Results):
