@@ -840,11 +840,6 @@ def coint(y1, y2, regression="c"):
     pvalue = mackinnonp(coint_t, regression="c", N=2, lags=None)
     crit_value = mackinnoncrit(N=1, regression="c", nobs=len(y1))
     return coint_t, pvalue, crit_value
-<<<<<<< HEAD
-
-=======
->>>>>>> 30ba882... DOC: tsa/stattools.py improve docstrings in tests / add coint function
-
 
 __all__ = ['acovf', 'acf', 'pacf', 'pacf_yw', 'pacf_ols', 'ccovf', 'ccf',
            'periodogram', 'q_stat', 'coint']
