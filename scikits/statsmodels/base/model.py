@@ -160,6 +160,14 @@ class Model(object):
     endog = property(fget=_get_endog, fset=_set_endog)
     exog = property(fget=_get_exog, fset=_set_exog)
 
+    @property
+    def endog_names(self):
+        return self._data.ynames
+
+    @property
+    def exog_names(self):
+        return self._data.xnames
+
     def fit(self):
         """
         Fit a model to data.
