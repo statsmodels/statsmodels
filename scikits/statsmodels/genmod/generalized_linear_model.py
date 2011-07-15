@@ -187,42 +187,42 @@ class GLM(LikelihoodModel):
     '''
 
     def __init__(self, endog, exog, family=None, offset=None, exposure=None):
-        endog = np.asarray(endog)
-        exog = np.asarray(exog)
-        if endog.shape[0] != len(exog):
-            msg = "Size of endog (%s) does not match the shape of exog (%s)"
-            raise ValueError(msg % (endog.size, len(exog)))
-        if family is None:
-            family = families.Gaussian()
-        if offset is not None:
-            offset = np.asarray(offset)
-            if offset.shape[0] != endog.shape[0]:
-                raise ValueError("offset is not the same length as endog")
-            self.offset = offset
-        if exposure is not None:
-            exposure = np.log(exposure)
-            if exposure.shape[0] != endog.shape[0]:
-                raise ValueError("exposure is not the same length as endog")
-            self.exposure = exposure
-        self.endog = endog
-        self.exog = exog
-        self.family = family
-        self.initialize()
-
+        super(GLM, self).__init__(endog, exog)
+        self._sanitize_inputs(family, offset, exposure)
 
     def initialize(self):
         """
         Initialize a generalized linear model.
         """
-#TODO: intended for public use?
-        self.history = { 'fittedvalues' : [], 'params' : [np.inf],
-                         'deviance' : [np.inf]}
+        #TODO: intended for public use?
+        self.history = {'fittedvalues' : [],
+                        'params' : [np.inf],
+                        'deviance' : [np.inf]}
+
         self.iteration = 0
         self.pinv_wexog = np.linalg.pinv(self.exog)
         self.normalized_cov_params = np.dot(self.pinv_wexog,
                                         np.transpose(self.pinv_wexog))
+
         self.df_model = rank(self.exog)-1
         self.df_resid = self.exog.shape[0] - rank(self.exog)
+
+    def _sanitize_inputs(self, family, offset, exposure):
+        if family is None:
+            family = families.Gaussian()
+        self.family = family
+
+        if offset is not None:
+            offset = np.asarray(offset)
+            if offset.shape[0] != self.endog.shape[0]:
+                raise ValueError("offset is not the same length as endog")
+            self.offset = offset
+
+        if exposure is not None:
+            exposure = np.log(exposure)
+            if exposure.shape[0] != self.endog.shape[0]:
+                raise ValueError("exposure is not the same length as endog")
+            self.exposure = exposure
 
     def score(self, params):
         """
@@ -395,7 +395,7 @@ returned a nan.  This could be a boundary problem and should be reported.")
                     self.iteration < maxiter):
             self.weights = data_weights*self.family.weights(mu)
             wlsendog = eta + self.family.link.deriv(mu) * (self.endog-mu) \
-                 - offset
+                - offset
             wls_results = WLS(wlsendog, wlsexog, self.weights).fit()
             eta = np.dot(self.exog, wls_results.params) + offset
             mu = self.family.fitted(eta)

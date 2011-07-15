@@ -6,6 +6,110 @@ from scikits.statsmodels.stats.contrast import ContrastResults
 from scikits.statsmodels.tools.decorators import (resettable_cache,
                                                         cache_readonly)
 
+from pandas import DataFrame, Series
+from pandas.core.generic import PandasGeneric
+
+class ModelData(object):
+    """
+
+    """
+    def __init__(self, endog, exog=None):
+        # for consistent outputs if endog is (n,1)
+        yarr = np.asarray(endog).squeeze()
+
+        xarr = None
+        xnames = None
+        if not exog is None:
+            xarr = np.asarray(exog)
+            if xarr.ndim == 1:
+                xarr = xarr[:, None]
+            if xarr.ndim != 2:
+                raise ValueError("exog is not 1d or 2d")
+            if yarr.shape[0] != xarr.shape[0]:
+                raise ValueError("endog and exog matrices are not aligned.")
+
+            xnames = _get_names(exog)
+            if not xnames:
+                xnames = _make_exog_names(xarr)
+
+        self.row_labels = _get_row_labels(exog)
+        self.xnames = xnames
+        self.ynames = _make_endog_names(endog)
+        self.endog = yarr
+        self.exog = xarr
+
+    def attach_column_labels(self, result):
+        return result
+
+    def attach_cov_labels(self, result):
+        return result
+
+    def attach_row_labels(self, result):
+        return result
+
+class PandasData(ModelData):
+
+    def _attach_column_labels(self, result):
+        return Series(result, index=self.xnames)
+
+    def _attach_cov_labels(self, result):
+        return DataFrame(result, index=self.xnames, columns=self.xnames)
+
+    def _attach_row_labels(self, result):
+        return Series(result, index=self.row_labels)
+
+def _get_row_labels(exog):
+    try:
+        return exog.index
+    except AttributeError:
+        return None
+
+def _get_names(data):
+    try:
+        return data.dtype.names
+    except AttributeError:
+        pass
+
+    if isinstance(data, DataFrame):
+        return data.columns
+
+    return None
+
+def _is_structured_array(data):
+    return isinstance(data, np.ndarray) and data.dtype.names is not None
+
+def _make_endog_names(endog):
+    if endog.ndim == 1 or endog.shape[1] == 1:
+        ynames = ['y']
+    else: # for VAR
+        ynames = ['y%d' % (i+1) for i in range(endog.shape[1])]
+
+    return ynames
+
+def _make_exog_names(exog):
+    exog_var = exog.var(0)
+    if (exog_var == 0).any():
+        # assumes one constant in first or last position
+        # avoid exception if more than one constant
+        const_idx = exog_var.argmin()
+        if const_idx == exog.shape[1] - 1:
+            exog_names = ['x%d' % i for i in range(1,exog.shape[1])]
+            exog_names += ['const']
+        else:
+            exog_names = ['x%d' % i for i in range(exog.shape[1])]
+            exog_names[const_idx] = 'const'
+    else:
+        exog_names = ['x%d' % i for i in range(exog.shape[1])]
+
+    return exog_names
+
+def _handle_data(endog, exog):
+    klass = PandasData
+    if isinstance(endog, PandasGeneric) or isinstance(exog, PandasGeneric):
+        klass = PandasData
+
+    return klass(endog, exog=exog)
+
 class Model(object):
     """
     A (predictive) statistical model. The class Model itself is not to be used.
@@ -29,41 +133,22 @@ class Model(object):
     _results = None
 
     def __init__(self, endog, exog=None):
-        endog = np.asarray(endog)
-        endog = np.squeeze(endog) # for consistent outputs if endog is (n,1)
+        self._data = _handle_data(endog, exog)
 
-##        # not sure if we want type conversion, needs tests with integers
-##        if np.issubdtype(endog.dtype, int):
-##            endog = endog.astype(float)
-##        if np.issubdtype(exog.dtype, int):
-##            endog = exog.astype(float)
-        if not exog is None:
-            exog = np.asarray(exog)
-            if exog.ndim == 1:
-                exog = exog[:,None]
-            if exog.ndim != 2:
-                raise ValueError("exog is not 1d or 2d")
-            if endog.shape[0] != exog.shape[0]:
-                raise ValueError("endog and exog matrices are not aligned.")
-            if np.any(exog.var(0) == 0):
-                # assumes one constant in first or last position
-                # avoid exception if more than one constant
-                const_idx = np.where(exog.var(0) == 0)[0][0].item()
-                if const_idx == exog.shape[1] - 1:
-                    exog_names = ['x%d' % i for i in range(1,exog.shape[1])]
-                    exog_names += ['const']
-                else:
-                    exog_names = ['x%d' % i for i in range(exog.shape[1])]
-                    exog_names[const_idx] = 'const'
-                self.exog_names = exog_names
-            else:
-                self.exog_names = ['x%d' % i for i in range(exog.shape[1])]
-        if endog.ndim == 1 or endog.shape[1] == 1:
-            self.endog_names = ['y']
-        else: # for VAR
-            self.endog_names = ['y%d' % (i+1) for i in range(endog.shape[1])]
-        self.endog = endog
-        self.exog = exog
+    def _get_endog(self):
+        return self._data.endog
+
+    def _set_endog(self, endog):
+        self._data.endog = endog
+
+    def _get_exog(self):
+        return self._data.exog
+
+    def _set_exog(self, exog):
+        self._data.exog = exog
+
+    endog = property(fget=_get_endog, fset=_set_endog)
+    exog = property(fget=_get_exog, fset=_set_exog)
 
     def fit(self):
         """
@@ -230,9 +315,11 @@ class LikelihoodModel(Model):
         if method.lower() not in methods:
             raise ValueError, "Unknown fit method %s" % method
         method = method.lower()
-#TODO: separate args from nonarg taking score and hessian, ie.,
-# user-supplied and numerically evaluated
-# estimate frprime doesn't take args in most (any?) of the optimize function
+
+        # TODO: separate args from nonarg taking score and hessian, ie.,
+        # user-supplied and numerically evaluated estimate frprime doesn't take
+        # args in most (any?) of the optimize function
+
         f = lambda params, *args: -self.loglike(params, *args)
         score = lambda params: -self.score(params)
         try:
@@ -263,8 +350,8 @@ class LikelihoodModel(Model):
             if iterations == maxiter:
                 warnflag = 1
                 if disp:
-                    print "Warning: Maximum number of iterations has been \
-exceeded."
+                    print ("Warning: Maximum number of iterations has been "
+                           "exceeded.")
                     print "         Current function value: %f" % fval
                     print "         Iterations: %d" % iterations
             else:
@@ -274,12 +361,14 @@ exceeded."
                     print "         Current function value: %f" % fval
                     print "         Iterations %d" % iterations
             if full_output:
-                xopt, fopt, niter, gopt, hopt = (newparams, f(newparams, *fargs),
-                    iterations, score(newparams), hess(newparams))
+                (xopt, fopt, niter,
+                 gopt, hopt) = (newparams, f(newparams, *fargs),
+                                iterations, score(newparams),
+                                hess(newparams))
                 converged = not warnflag
                 retvals = {'fopt' : fopt, 'iterations' : niter, 'score' : gopt,
-                        'Hessian' : hopt, 'warnflag' : warnflag,
-                        'converged' : converged}
+                           'Hessian' : hopt, 'warnflag' : warnflag,
+                           'converged' : converged}
                 if retall:
                     retvals.update({'allvecs' : history})
             else:
@@ -299,8 +388,8 @@ exceeded."
                     xopt, fopt, niter, fcalls, warnflag, allvecs = retvals
                 converged = not warnflag
                 retvals = {'fopt' : fopt, 'iterations' : niter,
-                    'fcalls' : fcalls, 'warnflag' : warnflag,
-                    'converged' : converged}
+                           'fcalls' : fcalls, 'warnflag' : warnflag,
+                           'converged' : converged}
                 if retall:
                     retvals.update({'allvecs' : allvecs})
         elif method == 'bfgs':
@@ -1294,19 +1383,18 @@ class ResultMixin(object):
         mean : array
             mean of parameter estimates over bootstrap replications
         std : array
-            standard deviation of parameter estimates over bootstrap replications
+            standard deviation of parameter estimates over bootstrap
+            replications
 
         Notes
         -----
-        This was mainly written to compare estimators of the standard errors
-        of the parameter estimates.
-        It uses independent random sampling from the original endog and exog, and
-        therefore is only correct if observations are independently distributed.
+        This was mainly written to compare estimators of the standard errors of
+        the parameter estimates.  It uses independent random sampling from the
+        original endog and exog, and therefore is only correct if observations
+        are independently distributed.
 
-        This will be moved to apply only to models with independently distributed
-        observations.
-
-
+        This will be moved to apply only to models with independently
+        distributed observations.
         '''
         results = []
         print self.model.__class__

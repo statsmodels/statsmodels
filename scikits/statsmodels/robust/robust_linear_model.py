@@ -19,7 +19,7 @@ from scikits.statsmodels.regression.linear_model import WLS, GLS
 import norms
 import scale
 from scikits.statsmodels.base.model import (LikelihoodModel,
-        LikelihoodModelResults)
+        LikelihoodModelResults, _handle_data)
 from scikits.statsmodels.tools.decorators import (cache_readonly,
         resettable_cache)
 from scipy.stats import norm
@@ -113,8 +113,7 @@ class RLM(LikelihoodModel):
 
     def __init__(self, endog, exog, M=norms.HuberT()):
         self.M = M
-        self.endog = np.asarray(endog)
-        self.exog = np.asarray(exog)
+        self._data = _handle_data(endog, exog)
         self._initialize()
 
     def _initialize(self):
