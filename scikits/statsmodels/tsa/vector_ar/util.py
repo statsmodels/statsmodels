@@ -210,7 +210,8 @@ def eigval_decomp(sym_array):
     eigva: list of eigenvalues 
     k: largest eigenvector
     """
-    #check if symmetric
+    #check if symmetric, do not include shock period
+    #DO NOT USE!!!
     eigva, W = la.eig(sym_array)
     k = np.argmax(eigva)
     return W, eigva, k

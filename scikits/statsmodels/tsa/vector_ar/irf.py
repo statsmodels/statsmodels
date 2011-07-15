@@ -322,7 +322,7 @@ class IRAnalysis(BaseIRAnalysis):
         irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,
                                    burn=100)
 
-        W, eigva, k = self.eigval_decomp_SZ(irf_resim)
+        W, eigva, k = self._eigval_decomp_SZ(irf_resim)
 
         if component != None:
             if np.shape(component) != (neqs,neqs):
@@ -334,7 +334,7 @@ class IRAnalysis(BaseIRAnalysis):
         for p in xrange(repl):
             for i in xrange(neqs):
                 for j in xrange(neqs):
-                    gamma[p,:,i,j] = W[i,j,k[i,j],:] * irf_resim[p,:,i,j]
+                    gamma[p,1:,i,j] = W[i,j,k[i,j],:] * irf_resim[p,1:,i,j]
  
         gamma_sort = np.sort(gamma, axis=0) #sort to get quantiles
 
@@ -386,18 +386,16 @@ class IRAnalysis(BaseIRAnalysis):
         neqs = self.neqs
         irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,
                                    burn=100)
-        per_tot = periods + 1
-
-        stack = np.zeros((repl, (periods+1)*neqs**2))
+        stack = np.zeros((repl, periods*neqs**2))
 
         #stack left to right, up and down
 
         for p in range(repl):
             for i in range(neqs):
                 for j in range(neqs):
-                    stack[p,:] = np.ravel(np.rollaxis(irf_resim[p,:,:,:],2,1).T)
+                    stack[p,:] = np.ravel(np.rollaxis(irf_resim[p,1:,:,:],2,1).T)
 
-        stack_cov = np.cov(stack,rowvar=0) 
+        stack_cov = np.cov(stack,rowvar=0)
         W, eigva, k = util.eigval_decomp(stack_cov)
 
         gamma = np.zeros((repl, periods+1, neqs, neqs))
@@ -406,12 +404,11 @@ class IRAnalysis(BaseIRAnalysis):
             for i in xrange(neqs):
                 for j in xrange(neqs):
                     if c != neqs**2-1:
-                        gamma[p,:,i,j] = W[k,c*per_tot:(c+1)*per_tot] * irf_resim[p,:,i,j]
+                        gamma[p,1:,i,j] = W[k,c*periods:(c+1)*periods] * irf_resim[p,1:,i,j]
                         c+=1
                     if c == neqs**2-1:
-                        gamma[p,:,i,j] = W[k,c*per_tot:] * irf_resim[p,:,i,j]
+                        gamma[p,1:,i,j] = W[k,c*periods:] * irf_resim[p,1:,i,j]
 
- 
         gamma_sort = np.sort(gamma, axis=0) #sort to get quantiles
 
         lower = np.zeros(np.shape(irfs))
@@ -437,19 +434,19 @@ class IRAnalysis(BaseIRAnalysis):
         """
         neqs = self.neqs
         periods = self.periods
-
-        cov_hold = np.zeros((neqs, neqs, periods+1, periods+1))
+        
+        cov_hold = np.zeros((neqs, neqs, periods, periods))
         for i in xrange(neqs):
             for j in xrange(neqs):
-                cov_hold[i,j,:,:] = np.cov(irf_resim[:,:,i,j],rowvar=0)
-
-        W = np.zeros((neqs, neqs, periods+1, periods+1))
-        eigva = np.zeros((neqs, neqs, periods+1, 1))
+                cov_hold[i,j,:,:] = np.cov(irf_resim[:,1:,i,j],rowvar=0)
+ 
+        W = np.zeros((neqs, neqs, periods, periods))
+        eigva = np.zeros((neqs, neqs, periods, 1))
         k = np.zeros((neqs, neqs))
-
+        
         for i in xrange(neqs):
             for j in xrange(neqs):
-                eigva[i,j,:,0], W[i,j,:,:], k[i,j] = util.eigval_decomp(cov_hold[i,j,:,:])
+                W[i,j,:,:], eigva[i,j,:,0], k[i,j] = util.eigval_decomp(cov_hold[i,j,:,:])
         return W, eigva, k
 
     @cache_readonly
