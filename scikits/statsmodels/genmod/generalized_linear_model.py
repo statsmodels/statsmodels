@@ -480,7 +480,7 @@ class GLMResults(LikelihoodModelResults):
         Working residuals.  The working residuals are defined as
         `resid_response`/link'(`mu`).  See statsmodels.family.links for the
         derivatives of the link functions.  They are defined analytically.
-    scale : array
+    scale : float
         The estimate of the scale / dispersion for the model fit.
         See GLM.fit and GLM.estimate_scale for more information.
     stand_errors : array
@@ -716,11 +716,11 @@ class GLMResults(LikelihoodModelResults):
         conf_int calculated from normal dist.
         """
         import time as Time
-        from scikits.statsmodels.iolib import SimpleTable
-        from scikits.statsmodels.stats.stattools import jarque_bera, omni_normtest, durbin_watson
+        from scikits.statsmodels.iolib.table import SimpleTable
+        from scikits.statsmodels.stats.stattools import (jarque_bera,
+                omni_normtest, durbin_watson)
 
-        if yname is None:
-            yname = 'Y'
+        yname = 'Y'
         if xname is None:
             xname = ['x%d' % i for i in range(self.model.exog.shape[1])]
 

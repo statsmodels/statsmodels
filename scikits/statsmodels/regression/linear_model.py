@@ -211,6 +211,7 @@ Should be of length %s, if sigma is a 1d array" % nobs)
         to solve the least squares minimization.
 
         """
+        import scikits.statsmodels.interface.wrapper as wrapper
 
         exog = self.wexog
         endog = self.wendog
@@ -237,7 +238,8 @@ Should be of length %s, if sigma is a 1d array" % nobs)
             # no upper triangular solve routine in numpy/scipy?
         lfit = RegressionResults(self, beta,
                        normalized_cov_params=self.normalized_cov_params)
-        return lfit
+
+        return wrapper.RegressionResultsWrapper(lfit)
 
     def predict(self, params, exog=None):
         """
@@ -260,8 +262,6 @@ Should be of length %s, if sigma is a 1d array" % nobs)
         """
         #JP: this doesn't look correct for GLMAR
         #SS: it needs its own predict method
-        if not self._results and params is None:
-            raise ValueError("If the model has not been fit, then you must specify the params argument.")
         if exog is None:
             exog = self.exog
         return np.dot(exog, params)

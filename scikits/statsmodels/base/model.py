@@ -25,9 +25,6 @@ class ModelData(object):
                 xarr = xarr[:, None]
             if xarr.ndim != 2:
                 raise ValueError("exog is not 1d or 2d")
-            if yarr.shape[0] != xarr.shape[0]:
-                raise ValueError("endog and exog matrices are not aligned.")
-
             xnames = _get_names(exog)
             if not xnames:
                 xnames = _make_exog_names(xarr)
@@ -37,6 +34,13 @@ class ModelData(object):
         self.ynames = _make_endog_names(endog)
         self.endog = yarr
         self.exog = xarr
+
+        self._check_integrity()
+
+    def _check_integrity(self):
+        if self.exog is not None:
+            if len(self.exog) != len(self.endog):
+                raise ValueError("endog and exog matrices are not aligned.")
 
     def wrap_output(self, obj, how='columns'):
         if how == 'columns':
@@ -114,7 +118,7 @@ def _make_exog_names(exog):
     return exog_names
 
 def _handle_data(endog, exog):
-    klass = PandasData
+    klass = ModelData
     if isinstance(endog, PandasGeneric) or isinstance(exog, PandasGeneric):
         klass = PandasData
 
@@ -144,21 +148,23 @@ class Model(object):
 
     def __init__(self, endog, exog=None):
         self._data = _handle_data(endog, exog)
+        self.exog = self._data.exog
+        self.endog = self._data.exog
 
-    def _get_endog(self):
-        return self._data.endog
+    # def _get_endog(self):
+    #     return self._data.endog
 
-    def _set_endog(self, endog):
-        self._data.endog = endog
+    # def _set_endog(self, endog):
+    #     self._data.endog = endog
 
-    def _get_exog(self):
-        return self._data.exog
+    # def _get_exog(self):
+    #     return self._data.exog
 
-    def _set_exog(self, exog):
-        self._data.exog = exog
+    # def _set_exog(self, exog):
+    #     self._data.exog = exog
 
-    endog = property(fget=_get_endog, fset=_set_endog)
-    exog = property(fget=_get_exog, fset=_set_exog)
+    # endog = property(fget=_get_endog, fset=_set_endog)
+    # exog = property(fget=_get_exog, fset=_set_exog)
 
     @property
     def endog_names(self):
