@@ -197,11 +197,11 @@ if __name__ == "__main__":
     write_version_py()
     setup(configuration = configuration,
         #name = DISTNAME,
-        #install_requires = 'numpy',
-        namespace_packages = ['scikits'],
-        packages = setuptools.find_packages(),
-        include_package_data = True,
-        test_suite="nose.collector",
-        zip_safe = False, # the package can not run out of an .egg file bc of
-                          # nose tests
-        classifiers = classifiers)
+          install_requires = ['pandas >= 0.3.0'],
+          namespace_packages = ['scikits'],
+          packages = setuptools.find_packages(),
+          include_package_data = True,
+          test_suite="nose.collector",
+          zip_safe = False, # the package can not run out of an .egg file bc of
+          # nose tests
+          classifiers = classifiers)
