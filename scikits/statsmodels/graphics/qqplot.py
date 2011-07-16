@@ -28,8 +28,18 @@ def qqplot(data, dist=stats.norm,*args, **kwargs):
     >>> data.exog = sm.add_constant(data.exog)
     >>> mod_fit = sm.OLS(data.endog, data.exog).fit()
     >>> res = mod_fit.resid
-    >>> sm.qqplot(res)
+    >>> fig = sm.qqplot(res)
     >>> plt.show()
+    >>> plt.close(fig)
+    >>> #qqplot against quantiles of t distribution with 4 df
+    >>> import scipy.stats as stats
+    >>> fig = sm.qqplot(res, stats.t, 4)
+    >>> plt.show()
+    >>> plt.close(fig)
+    >>> #qqplot against same as above, but with mean 3 and sd 10
+    >>> fig = sm.qqplot(res, stats.t, 4, loc=3,scale=10)
+    >>> plt.show()
+    >>> plt.close(fig)
 
     Notes
     -----
