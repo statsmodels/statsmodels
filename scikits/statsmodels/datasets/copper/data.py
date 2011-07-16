@@ -8,35 +8,35 @@ COPYRIGHT   = """Used with express permission from the original author,
 who retains all rights."""
 TITLE       = "World Copper Market 1951-1975 Dataset"
 SOURCE      = """
-Jeff Gill's `Generalized Linear Models: A Unifited Approach
+Jeff Gill's `Generalized Linear Models: A Unified Approach`
 
 http://jgill.wustl.edu/research/books.html
 """
 
 DESCRSHORT  = """World Copper Market 1951-1975"""
 
-DESCRLONG   = """
-This data describes the world copper market from 1951 through 1975.  In an
+DESCRLONG   = """This data describes the world copper market from 1951 through 1975.  In an
 example, in Gill, the outcome variable (of a 2 stage estimation) is the world
 consumption of copper for the 25 years.  The explanatory variables are the
 world consumption of copper in 1000 metric tons, the constant dollar adjusted
 price of copper, the price of a substitute, aluminum, an index of real per
 capita income base 1970, an annual measure of manufacturer inventory change,
 and a time trend.
-
-The original source files are included in /copper/src/
 """
 
 NOTE = """
-Number of Observations: 25
-Number of Variables: 6
-Variable name definitions:
-    WORLDCONSUMPTION : World consumption of copper (in 1000 metric tons)
-    COPPERPRICE : Constant dollar adjusted price of copper
-    INCOMEINDEX : An index of real per capita income (base 1970)
-    ALUMPRICE : The price of aluminum
-    INVENTORYINDEX : A measure of annual manufacturer inventory trend
-    TIME : A time trend
+Number of Observations - 25
+
+Number of Variables - 6
+
+Variable name definitions::
+
+    WORLDCONSUMPTION - World consumption of copper (in 1000 metric tons)
+    COPPERPRICE - Constant dollar adjusted price of copper
+    INCOMEINDEX - An index of real per capita income (base 1970)
+    ALUMPRICE - The price of aluminum
+    INVENTORYINDEX - A measure of annual manufacturer inventory trend
+    TIME - A time trend
 
 Years are included in the data file though not returned by load.
 """

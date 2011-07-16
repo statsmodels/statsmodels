@@ -1,13 +1,12 @@
-__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'load']
+"""Grunfeld (1950) Investment Data"""
 
-"""Grunfeld Investment Data"""
+__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'load']
 
 __docformat__ = 'restructuredtext'
 
 COPYRIGHT   = """This is public domain."""
-TITLE       = "Grunfeld Investment Data"
-SOURCE      = """
-This is the well-known Grunfeld (1950) Investment Data.
+TITLE       = __doc__
+SOURCE      = """This is the Grunfeld (1950) Investment Data.
 
 The source for the data was the original 11-firm data set from Grunfeld's Ph.D.
 thesis recreated by Kleiber and Zeileis (2008) "The Grunfeld Data at 50".
@@ -22,17 +21,19 @@ DESCRSHORT  = """Grunfeld (1950) Investment Data for 11 U.S. Firms."""
 
 DESCRLONG   = DESCRSHORT
 
-NOTE        = """
-Number of observations: 220 (20 years for 11 firms)
-Number of variables: 5
-Variables name definitions:
-    invest - Gross investment in 1947 dollars
-    value - Market value as of Dec. 31 in 1947 dollars
+NOTE        = """Number of observations - 220 (20 years for 11 firms)
+
+Number of variables - 5
+
+Variables name definitions::
+
+    invest  - Gross investment in 1947 dollars
+    value   - Market value as of Dec. 31 in 1947 dollars
     capital - Stock of plant and equipment in 1947 dollars
-    firm - General Motors, US Steel, General Electric, Chrysler,
-        Atlantic Refining, IBM, Union Oil, Westinghouse, Goodyear,
-        Diamond Match, American Steel
-    year - 1935 - 1954
+    firm    - General Motors, US Steel, General Electric, Chrysler,
+              Atlantic Refining, IBM, Union Oil, Westinghouse, Goodyear,
+              Diamond Match, American Steel
+    year    - 1935 - 1954
 
 Note that raw_data has firm expanded to dummy variables, since it is a
 string categorical variable.

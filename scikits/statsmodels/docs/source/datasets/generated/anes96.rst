@@ -1,23 +1,14 @@
-"""American National Election Survey 1996"""
+American National Election Survey 1996
+======================================
 
-__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'load']
+Description
+-----------
 
+This data is a subset of the American National Election Studies of 1996.
 
-__docformat__ = 'restructuredtext'
+Notes
+-----
 
-COPYRIGHT   = """This is public domain."""
-TITLE       = __doc__
-SOURCE      = """
-http://www.electionstudies.org/
-
-The American National Election Studies.
-"""
-
-DESCRSHORT  = """This data is a subset of the American National Election Studies of 1996."""
-
-DESCRLONG   = DESCRSHORT
-
-NOTE        = """
 Number of observations - 944
 Numner of variables - 10
 
@@ -84,28 +75,17 @@ Variables name definitions::
             leanings from "Left" to "Right".
         DoleLR  - Respondents impression of Bob Dole's political leanings
             from "Left" to "Right".
-"""
 
-from numpy import recfromtxt, column_stack, array
-from scikits.statsmodels.datasets import Dataset
-from os.path import dirname, abspath
 
-def load():
-    """Load the anes96 data and returns a Dataset class.
+Source
+------
 
-    Returns
-    -------
-    Dataset instance:
-        See DATASET_PROPOSAL.txt for more information.
-    """
-    filepath = dirname(abspath(__file__))
-    data = recfromtxt(open(filepath + '/anes96.csv',"rb"), delimiter="\t",
-            names = True, dtype=float)
-    names = list(data.dtype.names)
-    endog = array(data[names[5]], dtype=float)
-    endog_name = names[5]
-    exog = column_stack(data[i] for i in names[0:5]+names[6:]).astype(float)
-    exog_name = names[0:5]+names[6:]
-    dataset = Dataset(data=data, names=names, endog=endog, exog=exog,
-            endog_name = endog_name, exog_name=exog_name)
-    return dataset
+http://www.electionstudies.org/
+
+The American National Election Studies.
+
+
+Copyright
+---------
+
+This is public domain.

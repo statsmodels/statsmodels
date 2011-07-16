@@ -3,12 +3,12 @@
 Welcome to Statsmodels's Documentation
 ======================================
 
-:mod:`scikits.statsmodels` is a Python module that provides classes and functions for the estimation 
-of many different statistical models, as well as for conducting statistical tests, and statistical 
-data exploration. An extensive list of result statistics are avalable for each estimator. 
-The results are tested against existing statistical packages to ensure that they are correct. The 
+:mod:`scikits.statsmodels` is a Python module that provides classes and functions for the estimation
+of many different statistical models, as well as for conducting statistical tests, and statistical
+data exploration. An extensive list of result statistics are avalable for each estimator.
+The results are tested against existing statistical packages to ensure that they are correct. The
 pacakge is released under the open source Simplied BSD (2-clause) license. The online documentation
-is hosted at `sourceforge <http://statsmodels.sourceforge.net/>`__. 
+is hosted at `sourceforge <http://statsmodels.sourceforge.net/>`__.
 
 Getting Started
 ---------------
@@ -62,7 +62,7 @@ Table of Contents
    dev/internal
    gmm
    distributions
-   datasets
+   datasets/index
    sandbox
 
 Related Projects

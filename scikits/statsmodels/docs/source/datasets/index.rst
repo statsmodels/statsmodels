@@ -10,6 +10,15 @@ The idea for a datasets package was originally proposed by David Cournapeau and
 can be found :ref:`here <dataset_proposal>` with updates by me (Skipper
 Seabold).
 
+Available Datasets
+~~~~~~~~~~~~~~~~~~
+
+.. toctree::
+   :maxdepth: 1
+   :glob:
+
+   generated/*
+
 Main Usage
 ~~~~~~~~~~
 

@@ -1,12 +1,12 @@
-__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'load']
+"""Spector and Mazzeo (1980) - Program Effectiveness Data"""
 
-"""Spector and Mazzeo (1980) - Program Effectiveness"""
+__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'load']
 
 __docformat__ = 'restructuredtext'
 
 COPYRIGHT   = """Used with express permission of the original author, who
 retains all rights. """
-TITLE       = "Spector and Mazzeo (1980) - Program Effectiveness Data"
+TITLE       = __doc__
 SOURCE      = """
 http://pages.stern.nyu.edu/~wgreene/Text/econometricanalysis.htm
 
@@ -15,19 +15,22 @@ though permission was obtained from the original researcher, Dr. Lee Spector,
 Professor of Economics, Ball State University."""
 
 DESCRSHORT  = """Experimental data on the effectiveness of the personalized
-system of instruction (PSI)program"""
+system of instruction (PSI) program"""
 
 DESCRLONG   = DESCRSHORT
 
 NOTE        = """
-Number of Observations: 32
-Number of Variables: 4
-Variable name definitions:
+Number of Observations - 32
+
+Number of Variables - 4
+
+Variable name definitions::
+
     Grade - binary variable indicating whether or not a student's grade
-        improved.  1 indicates an improvement.
-    TUCE - Test score on economics test
-    PSI - participation in program
-    GPA - Student's grade point average
+            improved.  1 indicates an improvement.
+    TUCE  - Test score on economics test
+    PSI   - participation in program
+    GPA   - Student's grade point average
 """
 
 from numpy import recfromtxt, column_stack, array

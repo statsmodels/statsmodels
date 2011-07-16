@@ -1,21 +1,21 @@
-__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'load']
+"""RAND Health Insurance Experiment Data"""
 
-"""Name of dataset."""
+__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'load']
 
 __docformat__ = 'restructuredtext'
 
 COPYRIGHT   = """This is in the public domain."""
-TITLE       = ""
+TITLE       = __doc__
 SOURCE      = """
 The data was collected by the RAND corporation as part of the Health
 Insurance Experiment (HIE).
 
 http://www.rand.org/health/projects/hie/
 
-This data was used in
+This data was used in::
 
-Cameron, A.C. amd Trivedi, P.K. 2005.  `Microeconometrics: Methods
-    and Applications,` Cambridge: New York.
+    Cameron, A.C. amd Trivedi, P.K. 2005.  `Microeconometrics: Methods
+        and Applications,` Cambridge: New York.
 
 And was obtained from: <http://cameron.econ.ucdavis.edu/mmabook/mmadata.html>
 
@@ -29,20 +29,21 @@ DESCRSHORT  = """The RAND Co. Health Insurance Experiment Data"""
 DESCRLONG   = """"""
 
 NOTE        = """
-Number of observations: 20,190
-Number of variables: 10
-Variable name definitions:
-    mdvis : Number of outpatient visits to an MD
-    lncoins : ln(coinsurance + 1), 0 <= coninsurance <= 100
-    idp : 1 if individual deductible plan, 0 otherwise
-    lpi : ln(max(1, annual participation incentive payment))
-    fmde : 0 if idp = 1; ln(max(1, MDE/(0.01 coinsurance))) otherwise
-    physlm : 1 if the person has a physical limitation
-    disea : number of chronic diseases
-    hlthg : 1 if self-rated health is good
-    hlthf : 1 if self-rated health is fair
-    hlthp : 1 if self-rated health is poor
-            (Omitted category is excellent self-rated health)
+Number of observations - 20,190
+Number of variables - 10
+Variable name definitions::
+
+    mdvis   - Number of outpatient visits to an MD
+    lncoins - ln(coinsurance + 1), 0 <= coninsurance <= 100
+    idp     - 1 if individual deductible plan, 0 otherwise
+    lpi     - ln(max(1, annual participation incentive payment))
+    fmde    - 0 if idp = 1; ln(max(1, MDE/(0.01 coinsurance))) otherwise
+    physlm  - 1 if the person has a physical limitation
+    disea   - number of chronic diseases
+    hlthg   - 1 if self-rated health is good
+    hlthf   - 1 if self-rated health is fair
+    hlthp   - 1 if self-rated health is poor
+    (Omitted category is excellent self-rated health)
 """
 
 from numpy import recfromtxt, column_stack, array

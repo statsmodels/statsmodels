@@ -1,12 +1,12 @@
-__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'load']
-
 """Bill Greene's credit scoring data."""
+
+__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'load']
 
 __docformat__ = 'restructuredtext'
 
 COPYRIGHT   = """Used with express permission of the original author, who
 retains all rights."""
-TITLE       = """Greene's credit scoring data"""
+TITLE       = __doc__
 SOURCE      = """
 William Greene's `Econometric Analysis`
 
@@ -17,18 +17,13 @@ http://pages.stern.nyu.edu/~wgreene/Text/econometricanalysis.htm
 DESCRSHORT  = """William Greene's credit scoring data"""
 
 DESCRLONG   = """More information on this data can be found on the
-homepage for Greene's `Econometric Analysis`.
-
-http://pages.stern.nyu.edu/~wgreene/Text/econometricanalysis.htm
+homepage for Greene's `Econometric Analysis`. See source.
 """
 
 NOTE        = """
-Number of observations: 72
-Number of variables: 5
-Variable name definitions:
-    See the web page in source for more information on the variables.
-
-The original dataset can be found in the datasets/ccard/src/ folder.
+Number of observations - 72
+Number of variables - 5
+Variable name definitions - See Source for more information on the variables.
 """
 
 from numpy import recfromtxt, column_stack, array
