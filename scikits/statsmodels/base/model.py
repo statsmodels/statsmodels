@@ -149,7 +149,7 @@ class Model(object):
     def __init__(self, endog, exog=None):
         self._data = _handle_data(endog, exog)
         self.exog = self._data.exog
-        self.endog = self._data.exog
+        self.endog = self._data.endog
 
     # def _get_endog(self):
     #     return self._data.endog

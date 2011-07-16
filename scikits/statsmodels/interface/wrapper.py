@@ -5,6 +5,7 @@ import numpy as np
 
 from scikits.statsmodels.regression.linear_model import RegressionResults, OLS
 from scikits.statsmodels.robust.robust_linear_model import RLMResults
+from scikits.statsmodels.discrete.discrete_model import DiscreteResults
 from scikits.statsmodels.genmod.generalized_linear_model import GLMResults
 from pandas import DataFrame
 
@@ -65,6 +66,11 @@ class RegressionResultsWrapper(ResultsWrapper):
         'cov_params' : 'cov'
     }
 
+class DiscreteResultsWrapper(RegressionResultsWrapper):
+    _wrap_methods = {
+        'cov_params' : 'cov'
+    }
+
 class RLMResultsWrapper(RegressionResultsWrapper):
     _wrap_methods = {
         'cov_params' : 'cov'
@@ -101,6 +107,7 @@ def populate_wrapper(klass, wrapping):
         setattr(klass, meth, wrapper)
 
 populate_wrapper(RegressionResultsWrapper, RegressionResults)
+populate_wrapper(DiscreteResultsWrapper, DiscreteResults)
 populate_wrapper(RLMResultsWrapper, RLMResults)
 populate_wrapper(GLMResultsWrapper, GLMResults)
 

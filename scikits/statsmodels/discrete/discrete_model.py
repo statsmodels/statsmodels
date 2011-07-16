@@ -132,6 +132,8 @@ class DiscreteModel(LikelihoodModel):
         The rest of the docstring is from
         scikits.statsmodels.LikelihoodModel.fit
         """
+        import scikits.statsmodels.interface.wrapper as wrapper
+
         if start_params is None and isinstance(self, MNLogit):
             start_params = np.zeros((self.exog.shape[1]*\
                     (self.wendog.shape[1]-1)))
@@ -141,7 +143,8 @@ class DiscreteModel(LikelihoodModel):
         if isinstance(self, MNLogit):
             mlefit.params = mlefit.params.reshape(-1, self.exog.shape[1])
         discretefit = DiscreteResults(self, mlefit)
-        return discretefit
+        return wrapper.DiscreteResultsWrapper(discretefit)
+
     fit.__doc__ += LikelihoodModel.fit.__doc__
 
     def predict(self, params, exog=None, linear=False):
@@ -324,40 +327,6 @@ class Poisson(DiscreteModel):
         L = np.exp(np.dot(X,params))
         return -np.dot(L*X.T, X)
 
-#    def fit(self, start_params=None, maxiter=35, method='newton',
-#            tol=1e-08):
-#        """
-#        Fits the Poisson model.
-#
-#        Parameters
-#        ----------
-#        start_params : array-like, optional
-#            The default is a 0 vector.
-#        maxiter : int, optional
-#            Maximum number of iterations.  The default is 35.
-#        method : str, optional
-#            `method` can be 'newton', 'ncg', 'bfgs'. The default is 'newton'.
-#        tol : float, optional
-#            The convergence tolerance for the solver.  The default is
-#            1e-08.
-#
-#        Returns
-#        --------
-#        DiscreteResults object
-#
-#        See also
-#        --------
-#        scikits.statsmodels.model.LikelihoodModel
-#        scikits.statsmodels.sandbox.discretemod.DiscreteResults
-#        scipy.optimize
-#        """
-#
-#        mlefit = super(Poisson, self).fit(start_params=start_params,
-#            maxiter=maxiter, method=method, tol=tol)
-#        params = mlefit.params
-#        mlefit = DiscreteResults(self, params, self.hessian(params))
-#        return mlefit
-
 class NbReg(DiscreteModel):
     pass
 
@@ -493,39 +462,6 @@ class Logit(DiscreteModel):
         X = self.exog
         L = self.cdf(np.dot(X,params))
         return -np.dot(L*(1-L)*X.T,X)
-
-#    def fit(self, start_params=None, maxiter=35, method='newton',
-#            tol=1e-08):
-#        """
-#        Fits the binary logit model.
-#
-#        Parameters
-#        ----------
-#        start_params : array-like, optional
-#            The default is a 0 vector.
-#        maxiter : int, optional
-#            Maximum number of iterations.  The default is 35.
-#        method : str, optional
-#            `method` can be 'newton', 'ncg', 'bfgs'. The default is 'newton'.
-#        tol : float, optional
-#            The convergence tolerance for the solver.  The default is
-#            1e-08.
-#
-#        Returns
-#        --------
-#        DiscreteResults object
-#
-#        See also
-#        --------
-#        scikits.statsmodels.model.LikelihoodModel
-#        scikits.statsmodels.sandbox.discretemod.DiscreteResults
-#        scipy.optimize
-#        """
-#        mlefit = super(Logit, self).fit(start_params=start_params,
-#            maxiter=maxiter, method=method, tol=tol)
-#        params = mlefit.params
-#        mlefit = DiscreteResults(self, params, self.hessian(params))
-#        return mlefit
 
 
 class Probit(DiscreteModel):
@@ -671,39 +607,6 @@ class Probit(DiscreteModel):
         q = 2*self.endog - 1
         L = q*self.pdf(q*XB)/self.cdf(q*XB)
         return np.dot(-L*(L+XB)*X.T,X)
-
-#    def fit(self, start_params=None, maxiter=35, method='newton',
-#            tol=1e-08):
-#        """
-#        Fits the binary probit model.
-#
-#        Parameters
-#        ----------
-#        start_params : array-like, optional
-#            The default is a 0 vector.
-#        maxiter : int, optional
-#            Maximum number of iterations.  The default is 35.
-#        method : str, optional
-#            `method` can be 'newton', 'ncg', 'bfgs'. The default is 'newton'.
-#        tol : float, optional
-#            The convergence tolerance for the solver.  The default is
-#            1e-08.
-#
-#        Returns
-#        --------
-#        DiscreteResults object
-#
-#        See also
-#        --------
-#        scikits.statsmodels.model.LikelihoodModel
-#        scikits.statsmodels.sandbox.discretemod.DiscreteResults
-#        scipy.optimize
-#        """
-#        mlefit = super(Probit, self).fit(start_params=start_params,
-#            maxiter=maxiter, method=method, tol=tol)
-#        params = mlefit.params
-#        mlefit = DiscreteResults(self, params, self.hessian(params))
-#        return mlefit
 
 
 class MNLogit(DiscreteModel):
@@ -911,35 +814,6 @@ class MNLogit(DiscreteModel):
         H = np.transpose(H.reshape(J,J,K,K), (0,2,1,3)).reshape(J*K,J*K)
         return H
 
-#    def fit(self, start_params=None, maxiter=35, method='newton',
-#            tol=1e-08):
-#        """
-#        Fits the multinomial logit model.
-#
-#        Parameters
-#        ----------
-#        start_params : array-like, optional
-#            The default is a 0 vector.
-#        maxiter : int, optional
-#            Maximum number of iterations.  The default is 35.
-#        method : str, optional
-#            `method` can be 'newton', 'ncg', 'bfgs'. The default is 'newton'.
-#        tol : float, optional
-#            The convergence tolerance for the solver.  The default is
-#            1e-08.
-#
-#        Notes
-#        -----
-#        The reference category is always the first column of `wendog` for now.
-#        """
-#        if start_params == None:
-#            start_params = np.zeros((self.exog.shape[1]*\
-#                    (self.wendog.shape[1]-1)))
-#        mlefit = super(MNLogit, self).fit(start_params=start_params,
-#                maxiter=maxiter, method=method, tol=tol)
-#        params = mlefit.params.reshape(-1, self.exog.shape[1])
-#        mlefit = DiscreteResults(self, params, self.hessian(params))
-#        return mlefit
 
 #TODO: Weibull can replaced by a survival analsysis function
 # like stat's streg (The cox model as well)
@@ -1096,8 +970,8 @@ class NBin(DiscreteModel):
 
 
     def fit(self, start_params=None, maxiter=35, method='bfgs', tol=1e-08):
-#        start_params = [0]*(self.exog.shape[1])+[1]
-# Use poisson fit as first guess.
+        # start_params = [0]*(self.exog.shape[1])+[1]
+        # Use poisson fit as first guess.
         start_params = Poisson(self.endog, self.exog).fit(disp=0).params
         start_params = np.r_[start_params, 0.1]
         mlefit = super(NegBinTwo, self).fit(start_params=start_params,
