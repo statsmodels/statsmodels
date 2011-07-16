@@ -1,11 +1,11 @@
-__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'load']
-
 """Yearly sunspots data 1700-2008"""
+
+__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'load']
 
 __docformat__ = 'restructuredtext'
 
 COPYRIGHT   = """This data is public domain."""
-TITLE       = ""
+TITLE       = __doc__
 SOURCE      = """
 http://www.ngdc.noaa.gov/stp/SOLAR/ftpsunspotnumber.html
 
@@ -19,10 +19,11 @@ Geophysical Data Center."""
 DESCRLONG   = DESCRSHORT
 
 NOTE        = """
-Number of Observations: 309 (Annual 1700 - 2008)
-Number of Variables: 1
-Variable name definitions:
-    SUNACTIVITY : Number of sunspots for each year
+Number of Observations - 309 (Annual 1700 - 2008)
+Number of Variables - 1
+Variable name definitions::
+
+    SUNACTIVITY - Number of sunspots for each year
 
 The data file contains a 'YEAR' variable that is not returned by load.
 """

@@ -1,20 +1,20 @@
 #! /usr/bin/env python
+"""U.S. Strike Duration Data"""
 
 __all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'load']
-
-"""U.S. Strike Duration Data"""
 
 __docformat__ = 'restructuredtext'
 
 COPYRIGHT   = """This is public domain."""
-TITLE       = """U.S. Strike Duration Data"""
+TITLE       = __doc__
 SOURCE      = """
-This is a subset of the data used in Kennan (1985). It was originally published by
-the Bureau of Labor Statistics.
+This is a subset of the data used in Kennan (1985). It was originally
+published by the Bureau of Labor Statistics.
 
-Kennan, J. 1985. "The duration of contract strikes in US manufacturing. `Journal of
-    Econometrics` 28.1, 5-28.
+::
 
+    Kennan, J. 1985. "The duration of contract strikes in US manufacturing.
+        `Journal of Econometrics` 28.1, 5-28.
 """
 
 DESCRSHORT  = """Contains data on the length of strikes in US manufacturing and
@@ -27,11 +27,14 @@ seasonal issues."""
 
 #suggested notes
 NOTE        = """
-Number of observations: 62
-Number of variables: 2
-Variable name definitions:
-            - duration : duration of the strike in days
-            - iprod : unanticipated industrial production
+Number of observations - 62
+
+Number of variables - 2
+
+Variable name definitions::
+
+            duration - duration of the strike in days
+            iprod - unanticipated industrial production
 """
 
 from numpy import recfromtxt, column_stack, array

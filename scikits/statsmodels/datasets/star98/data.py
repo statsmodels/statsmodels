@@ -8,7 +8,7 @@ COPYRIGHT   = """Used with express permission from the original author,
 who retains all rights."""
 TITLE       = "Star98 Educational Dataset"
 SOURCE      = """
-Jeff Gill's `Generalized Linear Models: A Unifited Approach`
+Jeff Gill's `Generalized Linear Models: A Unified Approach`
 
 http://jgill.wustl.edu/research/books.html
 """
@@ -23,32 +23,33 @@ the level of the unified school district and consists of 303 cases.  The
 binary response variable represents the number of 9th graders scoring
 over the national median value on the mathematics exam.
 
-The original source files and information are included in /star98/src/
-
 The data used in this example is only a subset of the original source.
 """
 
 NOTE        = """
-Number of Observations: 303 (counties in California).
-Number of Variables: 13 and 8 interaction terms.
-Definition of variables names:
-    NABOVE - Total number of students above the national median for the math
-        section.
-    NBELOW - Total number of students below the national median for the math
-        section.
-    LOWINC - Percentage of low income students
+Number of Observations - 303 (counties in California).
+
+Number of Variables - 13 and 8 interaction terms.
+
+Definition of variables names::
+
+    NABOVE   - Total number of students above the national median for the math
+               section.
+    NBELOW   - Total number of students below the national median for the math
+               section.
+    LOWINC   - Percentage of low income students
     PERASIAN - Percentage of Asian student
     PERBLACK - Percentage of black students
-    PERHISP - Percentage of Hispanic students
+    PERHISP  - Percentage of Hispanic students
     PERMINTE - Percentage of minority teachers
     AVYRSEXP - Sum of teachers' years in educational service divided by the
-        number of teachers.
-    AVSALK - Total salary budget including benefits divided by the number of
-        full-time teachers (in thousands)
+               number of teachers.
+    AVSALK   - Total salary budget including benefits divided by the number of
+               full-time teachers (in thousands)
     PERSPENK - Per-pupil spending (in thousands)
-    PTRATIO - Pupil-teacher ratio.
-    PCTAF - Percentage of students taking UC/CSU prep courses
-    PCTCHRT - Percentage of charter schools
+    PTRATIO  - Pupil-teacher ratio.
+    PCTAF    - Percentage of students taking UC/CSU prep courses
+    PCTCHRT  - Percentage of charter schools
     PCTYRRND - Percentage of year-round schools
 
     The below variables are interaction terms of the variables defined above.

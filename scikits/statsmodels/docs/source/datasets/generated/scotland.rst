@@ -1,20 +1,10 @@
-__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'load']
+Taxation Powers Vote for the Scottish Parliamant 1997
+=====================================================
 
-"""Taxation Powers Vote for the Scottish Parliament 1997 dataset."""
+Description
+-----------
 
-__docformat__ = 'restructuredtext'
 
-COPYRIGHT   = """Used with express permission from the original author,
-who retains all rights."""
-TITLE       = "Taxation Powers Vote for the Scottish Parliamant 1997"
-SOURCE      = """
-Jeff Gill's `Generalized Linear Models: A Unified Approach`
-
-http://jgill.wustl.edu/research/books.html
-"""
-DESCRSHORT  = """Taxation Powers' Yes Vote for Scottish Parliamanet-1997"""
-
-DESCRLONG   = """
 This data is based on the example in Gill and describes the proportion of
 voters who voted Yes to grant the Scottish Parliament taxation powers.
 The data are divided into 32 council districts.  This example's explanatory
@@ -27,9 +17,11 @@ between female unemployment and the council tax.
 
 The original source files and variable information are included in
 /scotland/src/
-"""
 
-NOTE        = """
+
+Notes
+-----
+
 Number of Observations - 32 (1 for each Scottish district)
 
 Number of Variables - 8
@@ -49,30 +41,18 @@ Variable name definitions::
 
 Council district names are included in the data file, though are not returned
 by load.
-"""
 
-from numpy import recfromtxt, column_stack, array
-from scikits.statsmodels.datasets import Dataset
-from os.path import dirname, abspath
 
-def load():
-    """
-    Load the Scotvote data and returns a Dataset instance.
+Source
+------
 
-    Returns
-    -------
-    Dataset instance:
-        See DATASET_PROPOSAL.txt for more information.
-    """
-    filepath = dirname(abspath(__file__))
-    data = recfromtxt(open(filepath + '/scotvote.csv',"rb"), delimiter=",",
-            names=True, dtype=float, usecols=(1,2,3,4,5,6,7,8))
-    names = list(data.dtype.names)
-    endog = array(data[names[0]], dtype=float)
-    endog_name = names[0]
-    exog = column_stack(data[i] for i in names[1:]).astype(float)
-    exog_name = names[1:]
-    dataset = Dataset(data=data, names=names, endog=endog, exog=exog,
-            endog_name = endog_name, exog_name=exog_name)
-    return dataset
+Jeff Gill's `Generalized Linear Models: A Unified Approach`
 
+http://jgill.wustl.edu/research/books.html
+
+
+Copyright
+---------
+
+Used with express permission from the original author,
+who retains all rights.

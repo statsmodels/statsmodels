@@ -1,19 +1,21 @@
-__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'load']
-
 """Longley dataset"""
+
+__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'load']
 
 __docformat__ = 'restructuredtext'
 
 COPYRIGHT   = """This is public domain."""
-TITLE       = "Longley dataset"
+TITLE       = __doc__
 SOURCE      = """
 The classic 1967 Longley Data
 
 http://www.itl.nist.gov/div898/strd/lls/data/Longley.shtml
 
-Longley, J.W. (1967) "An Appraisal of Least Squares Programs for the Electronic
-    Comptuer from the Point of View of the User."  Journal of the American
-    Statistical Association.  62.319, 819-41.
+::
+
+    Longley, J.W. (1967) "An Appraisal of Least Squares Programs for the
+        Electronic Comptuer from the Point of View of the User."  Journal of
+        the American Statistical Association.  62.319, 819-41.
 """
 
 DESCRSHORT  = """"""
@@ -23,15 +25,19 @@ variables that are known to be highly collinear.  It has been used to appraise
 the accuracy of least squares routines."""
 
 NOTE        = """
-Number of Observations: 16
-Number of Variables: 6
-Variable name definitions: TOTEMP : Total Employment
-                           GNPDEFL : GNP deflator
-                           GNP : GNP
-                           UNEMP : Number of unemployed
-                           ARMED : Size of armed forces
-                           POP : Population
-                           YEAR : Year (1947 - 1962)
+Number of Observations - 16
+
+Number of Variables - 6
+
+Variable name definitions::
+
+        TOTEMP - Total Employment
+        GNPDEFL - GNP deflator
+        GNP - GNP
+        UNEMP - Number of unemployed
+        ARMED - Size of armed forces
+        POP - Population
+        YEAR - Year (1947 - 1962)
 """
 
 from numpy import recfromtxt, array, column_stack
