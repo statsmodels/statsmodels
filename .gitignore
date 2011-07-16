@@ -34,3 +34,6 @@ marks.bzr
 # Mac droppings
 .DS_Store
 help
+
+# Project specific
+scikits/statsmodels/version.py
