@@ -28,34 +28,39 @@ class Survival(object):
         Parameters
         -----------
 
-        censoring: index of the column containing an indicator
-            of whether an observation is an event, or a censored
-            observation, with 0 for censored, and 1 for an event
+        censoring: int or array-like
+                index of the column containing an indicator
+                of whether an observation is an event, or a censored
+                observation, with 0 for censored, and 1 for an event
 
-        data: array_like
-            An array, with observations in each row, and
-            variables in the columns
+        data: array-like
+                An array, with observations in each row, and
+                variables in the columns
 
-        time1 : if time2=None, index of comlumn containing the duration
-            that the suject survivals and remains uncensored (e.g. observed
-            survival time), if time2 is not None, then time1 is the index of
-            a column containing start times for the observation of each subject
-            (e.g. oberved survival time is end time minus start time)
+        time1: int or array-like
+                if time2=None, index of comlumn containing the
+                duration that the suject survivals and remains
+                uncensored (e.g. observed survival time), if
+                time2 is not None, then time1 is the index of
+                a column containing start times for the
+                observation of each subject(e.g. oberved survival
+                time is end time minus start time)
 
-        time2: index of column containing end times for each observation
+        time2: int or array-like
+                index of column containing end times for each observation
 
         Attributes
         -----------
 
-        times: vectore of survival times
+        times: vector of survival times
 
         censoring: vector of censoring indicators
 
         Examples
         ---------
 
-        see other survival analysis functions for examples of usage with those
-        functions
+        see other survival analysis functions for examples
+        of usage with those functions
 
     """
 
@@ -241,6 +246,8 @@ class KaplanMeier(object):
     """
 
     ##Add stratification
+
+    ##update usage with Survival for changes to Survival
 
     def __init__(self, surv, exog=None, data=None):
         censoring = surv.censoring
@@ -472,7 +479,60 @@ class CoxPH(LikelihoodModel):
     ##Add residuals
 
     """
+    CoxPH(surv, exog, data=None, ties=["efron", "breslow"], strata=None)
+
     Fit a cox proportional harzard model from survival data
+
+    Parameters
+    ----------
+
+    surv: Survival object
+            Survival object with the desired times and censoring
+
+    exog: int or array-like
+            if data is not None, index or list of indicies of data
+            for the columns of the desired exogenous variables
+            if data is None, then a 2d array of the desired
+            exogenous variables
+
+    data: array-like
+            optional array from which the exogenous variables will
+            be selected from the indicies given as exog
+
+    ties: string
+            A string indicating the method used to handle ties
+
+    strata: array-like
+            optional, if a stratified cox model is desired.
+            list of indicies of columns of the matrix of exogenous
+            variables that are to be included as strata. All other
+            columns will be included as unstratified variables
+
+    Attributes:
+    -----------
+
+    surv: The initial survival object given to CoxPH
+
+    ties: String indicating how to handle ties
+
+    censoring: Vector of censoring indicators
+
+    ttype: String indicating the type of censoring
+
+    exog: The 2d array of exogenous variables
+
+    strata: Indicator of how, if at all, the model is stratified
+
+    d:  For exact times, a 2d array, whose first column is the
+        unique times, and whose second column is the number of ties
+        at that time. For interval times, a 2d array where each
+        row is one of the unique intervals
+
+    Examples
+    --------
+
+    References
+    ----------
     """
 
     def __init__(self, surv, exog, data=None, ties="efron", strata=None):
@@ -559,16 +619,27 @@ class CoxPH(LikelihoodModel):
     def stratify(self, stratas, copy=True):
 
         """
+        stratify(stratas, copy=True}
+
         Create a CoxPH object to fit a model with stratification
 
         Parameters
         ----------
-        strata: list of indicies columns of the matrix of exogenous variables
+        stratas: list of indicies columns of the matrix of exogenous variables
         that are to be included as strata. All other columns will be included
         as unstratified variables
 
         copy: logical value indicating whether a new CoxPH object sould be
         returned, or if the current object should be overwritten
+
+        Returns
+        -------
+
+        if copy is true, returns an object of class CoxPH, if copy is False
+        modifies existing cox model, and returns nothing
+
+        Examples
+        --------
         """
 
         exog = self.exog
@@ -591,6 +662,28 @@ class CoxPH(LikelihoodModel):
             self.exog = exog.compress(stratas, axis=1)
 
     def _stratify_func(self, b, f):
+
+        """
+        _stratify_func(self, b, f)
+
+        apply loglike, score, or hessian for all strata of the model
+
+        Parameters
+        ----------
+
+        b: array-like
+            vector of parameters at which the function is to be evaluated
+
+        f: function
+            the function to evaluate the parameters at Either loglike,
+            score, or hessian
+
+        Returns
+        -------
+
+        Value of the function evaluated at b
+        """
+
         exog = self.exog
         times = self.times
         censoring = self.censoring
@@ -623,19 +716,75 @@ class CoxPH(LikelihoodModel):
             return logL
 
     def loglike(self, b):
+
+        """
+        loglike(b)
+
+        Calculate the value of the log-likelihood at estimates of the
+        parameters for all strata
+
+        Parameters:
+        ------------
+
+        b: vector of parameter estimates
+
+        Returns
+        -------
+
+        value of log-likelihood as a float
+        """
+
         return self._stratify_func(b, self._loglike_proc)
 
     def score(self, b):
+
+        """
+        score(b)
+
+        Calculate the value of the score function at estimates of the
+        parameters for all strata
+
+        Parameters:
+        ------------
+
+        b: vector of parameter estimates
+
+        Returns
+        -------
+
+        value of score function as an array of floats
+        """
+
         return self._stratify_func(b, self._score_proc)
 
     def hessian(self, b):
+
+        """
+        hessian(b)
+
+        Calculate the value of the hessian at estimates of the
+        parameters for all strata
+
+        Parameters:
+        ------------
+
+        b: vector of parameter estimates
+
+        Returns
+        -------
+
+        value of hessian for strata as an array of floats
+        """
+
         return self._stratify_func(b, self._hessian_proc)
 
     def _loglike_proc(self, b):
 
         """
+        _loglike_proc(b)
+
         Calculate the value of the log-likelihood at estimates of the
-        parameters for each strata
+        parameters for a single strata
 
         Parameters:
         ------------
@@ -681,12 +830,20 @@ class CoxPH(LikelihoodModel):
                             risk = ((times[:,1] >= t[1])
                                     * (t[0] >= times[:,0])).astype(bool)
                             ##self.test = tied
-                            logL += ((np.dot(exog[ind], b)).sum()
+                            term = ((np.dot(exog[ind], b)).sum()
                                      - (np.log((thetas[risk]).sum()
                                                - ((np.arange(tied))/tied)
-                                               * (thetas[risk]).sum()).sum()))
-        if ties == "breslow":
-            logL = (BX[c_idx]).sum()
+                                               * (thetas[(risk * ind).astype(bool)
+                                                         ]).sum()).sum()))
+                            test = np.arange(tied)
+                            test2 = thetas[(risk * ind).astype(bool)
+                                                         ]
+                            logL += ((np.dot(exog[ind], b)).sum()
+                                     - tied * (np.log((thetas[risk]).sum())))
+                                        #       - ((np.arange(tied))/tied)
+                                         #      * (thetas[ind]).sum()).sum()))
+        elif ties == "breslow":
+            logL = 0#(BX[c_idx]).sum()
             if ttype == "exact":
                 for t in range(len(d[:,0])):
                     logL -= ((np.log((thetas[times >= d[t,0]]).sum()))
@@ -694,19 +851,22 @@ class CoxPH(LikelihoodModel):
             elif ttype == "interval":
                 for t in d:
                     tind = np.product(times == t, axis=1).astype(bool)
+                    ##Take out condition?
                     if tind.any():
                         ind = (c_idx) * (tind)
                         if ind.any():
-                            logL -= (np.sum(ind) *
-                            (np.log(thetas[((times[:,1] >= t[1]) *
-                                            (t[0] >= times[:,0])
-                                            ).astype(bool)].sum())))
+                            logL -= 0#(np.sum(ind) *
+                            #(np.log(thetas[((times[:,1] >= t[1]) *
+                                            #(t[0] >= times[:,0])
+                                            #).astype(bool)].sum())))
         return logL
     
     def _score_proc(self, b):
         """
+        _score_proc(b)
+
         Calculate the score vector of the log-likelihood at estimates of the
-        parameters
+        parameters for a single strata
 
         Parameters:
         ------------
@@ -716,7 +876,8 @@ class CoxPH(LikelihoodModel):
         Returns
         -------
 
-        value of score as 1d array
+        value of score for strata as 1d array
+
         """
 
         ties = self.ties
@@ -760,8 +921,10 @@ class CoxPH(LikelihoodModel):
     def _hessian_proc(self, b):
 
         """
-        Calculate the hessian matrix of the log-likelihoos at estimates of the
-        parameters
+        _hessian_proc(b)
+
+        Calculate the hessian matrix of the log-likelihood at estimates of the
+        parameters for a single strata
 
         Parameters:
         ------------
@@ -771,7 +934,8 @@ class CoxPH(LikelihoodModel):
         Returns
         -------
 
-        value of hessian as 2d array
+        value of hessian for strata as 2d array
+
         """
 
         ties = self.ties
@@ -820,9 +984,43 @@ class CoxPH(LikelihoodModel):
         return -hess
 
     def information(self, b):
+
+        """
+        information(b)
+
+        Calculate the Fisher information matrix at estimates of the
+        parameters
+
+        Parameters
+        ----------
+
+        b: estimates of the model parameters
+
+        Returns
+        -------
+
+        information matrix as 2d array
+        """
         return -self.hessian(b)
 
     def covariance(self, b):
+
+        """
+        covariance(b)
+
+        Calculate the covariance matrix at estimates of the
+        parameters
+
+        Parameters
+        ----------
+
+        b: estimates of the model parameters
+
+        Returns
+        -------
+
+        covariance matrix as 2d array
+        """
         return la.pinv(self.information(b))
 
     def fit(self, start_params=None, method='newton', maxiter=100,
