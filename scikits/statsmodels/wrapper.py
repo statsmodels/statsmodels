@@ -3,18 +3,13 @@ import types
 
 import numpy as np
 
-from scikits.statsmodels.regression.linear_model import RegressionResults, OLS
-from scikits.statsmodels.robust.robust_linear_model import RLMResults
-from scikits.statsmodels.discrete.discrete_model import DiscreteResults
-from scikits.statsmodels.genmod.generalized_linear_model import GLMResults
-from pandas import DataFrame
-
 class ResultsWrapper(object):
     _wrap_attrs = {}
     _wrap_methods = {}
 
     def __init__(self, results):
         self._results = results
+        self.__doc__ = results.__doc__
 
     def __dir__(self):
         return [x for x in dir(self._results)]
@@ -23,8 +18,8 @@ class ResultsWrapper(object):
         get = lambda name: object.__getattribute__(self, name)
         results = get('_results')
 
-        if attr == '__class__':
-            return type(results)
+        # if attr == '__class__':
+        #     return type(results)
 
         try:
             return get(attr)
@@ -39,57 +34,11 @@ class ResultsWrapper(object):
 
         return obj
 
-class RegressionResultsWrapper(ResultsWrapper):
-
-    _wrap_attrs = {
-        'params' : 'columns',
-        'chisq' : 'columns',
-        'bse' : 'columns',
-        'pvalues' : 'columns',
-        'tvalues' : 'columns',
-        'resid' : 'rows',
-        'sresid' : 'rows',
-        'weights' : 'rows',
-        'fittedvalues' : 'rows',
-        'wresid' : 'rows',
-        'normalized_cov_params' : 'cov',
-        'bcov_unscaled' : 'cov',
-        'bcov_scaled' : 'cov',
-        'HC0_se' : 'columns',
-        'HC1_se' : 'columns',
-        'HC2_se' : 'columns',
-        'HC3_se' : 'columns'
-    }
-
-    _wrap_methods = {
-        'norm_resid' : 'rows',
-        'cov_params' : 'cov'
-    }
-
-class DiscreteResultsWrapper(RegressionResultsWrapper):
-    _wrap_methods = {
-        'cov_params' : 'cov'
-    }
-
-class RLMResultsWrapper(RegressionResultsWrapper):
-    _wrap_methods = {
-        'cov_params' : 'cov'
-    }
-
-class GLMResultsWrapper(RegressionResultsWrapper):
-    _wrap_attrs = RegressionResultsWrapper._wrap_attrs.copy()
-
-    _wrap_attrs.update({
-            'resid_anscombe' : 'rows',
-            'resid_deviance' : 'rows',
-            'resid_pearson' : 'rows',
-            'resid_response' : 'rows',
-            'resid_working' : 'rows'
-     })
-
-    _wrap_methods = {
-        'cov_params' : 'cov'
-    }
+def union_dicts(*dicts):
+    result = {}
+    for d in dicts:
+        result.update(d)
+    return result
 
 def make_wrapper(func, how):
     @functools.wraps(func)
@@ -102,28 +51,26 @@ def make_wrapper(func, how):
 
 def populate_wrapper(klass, wrapping):
     for meth, how in klass._wrap_methods.iteritems():
+        if not hasattr(wrapping, meth):
+            continue
+
         func = getattr(wrapping, meth)
         wrapper = make_wrapper(func, how)
         setattr(klass, meth, wrapper)
 
-populate_wrapper(RegressionResultsWrapper, RegressionResults)
-populate_wrapper(DiscreteResultsWrapper, DiscreteResults)
-populate_wrapper(RLMResultsWrapper, RLMResults)
-populate_wrapper(GLMResultsWrapper, GLMResults)
-
 if __name__ == '__main__':
     import scikits.statsmodels.api as sm
+    from pandas import DataFrame
     data = sm.datasets.longley.load()
-
     df = DataFrame(data.exog, columns=data.exog_name)
     y = data.endog
-
     # data.exog = sm.add_constant(data.exog)
     df['intercept'] = 1.
     olsresult = sm.OLS(y, df).fit()
     rlmresult = sm.RLM(y, df).fit()
-    olswrap = RegressionResultsWrapper(olsresult)
-    rlmwrap = RLMResultsWrapper(rlmresult)
+
+    # olswrap = RegressionResultsWrapper(olsresult)
+    # rlmwrap = RLMResultsWrapper(rlmresult)
 
     data = sm.datasets.wfs.load()
     # get offset
@@ -142,5 +89,4 @@ if __name__ == '__main__':
 
     endog = np.round(data.endog)
     mod = sm.GLM(endog, exog, family=sm.families.Poisson()).fit()
-
-    glmwrap = GLMResultsWrapper(mod)
+    # glmwrap = GLMResultsWrapper(mod)

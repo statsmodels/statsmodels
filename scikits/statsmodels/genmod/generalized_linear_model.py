@@ -21,17 +21,18 @@ McCullagh, P. and Nelder, J.A.  1989.  "Generalized Linear Models." 2nd ed.
 import numpy as np
 import families
 from scikits.statsmodels.tools.tools import rank
-from scikits.statsmodels.regression.linear_model import WLS
-from scikits.statsmodels.base.model import (LikelihoodModel,
-        LikelihoodModelResults)
 from scikits.statsmodels.tools.decorators import (cache_readonly,
         resettable_cache)
+
+import scikits.statsmodels.base.model as base
+import scikits.statsmodels.regression.linear_model as lm
+import scikits.statsmodels.wrapper as wrap
 
 from scipy.stats import t
 
 __all__ = ['GLM']
 
-class GLM(LikelihoodModel):
+class GLM(base.LikelihoodModel):
     '''
     Generalized Linear Models class
 
@@ -396,7 +397,7 @@ returned a nan.  This could be a boundary problem and should be reported.")
             self.weights = data_weights*self.family.weights(mu)
             wlsendog = eta + self.family.link.deriv(mu) * (self.endog-mu) \
                 - offset
-            wls_results = WLS(wlsendog, wlsexog, self.weights).fit()
+            wls_results = lm.WLS(wlsendog, wlsexog, self.weights).fit()
             eta = np.dot(self.exog, wls_results.params) + offset
             mu = self.family.fitted(eta)
             self._update_history(wls_results, mu)
@@ -404,10 +405,11 @@ returned a nan.  This could be a boundary problem and should be reported.")
             self.iteration += 1
         self.mu = mu
         glm_results = GLMResults(self, wls_results.params,
-                wls_results.normalized_cov_params, self.scale)
-        return glm_results
+                                 wls_results.normalized_cov_params,
+                                 self.scale)
+        return GLMResultsWrapper(glm_results)
 
-class GLMResults(LikelihoodModelResults):
+class GLMResults(base.LikelihoodModelResults):
     '''
     Class to contain GLM results.
 
@@ -553,16 +555,16 @@ class GLMResults(LikelihoodModelResults):
     def null(self):
         endog = self._endog
         model = self.model
-        exog = np.ones((len(endog),1))
+        exog = np.ones((len(endog), 1))
         if hasattr(model, 'offset'):
             return GLM(endog, exog, offset=model.offset,
-                family=self.family).fit().mu
+                       family=self.family).fit().mu
         elif hasattr(model, 'exposure'):
             return GLM(endog, exog, exposure=model.exposure,
                     family=self.family).fit().mu
         else:
-            return WLS(endog, exog,
-                weights=self._data_weights).fit().fittedvalues
+            wls_model = lm.WLS(endog, exog, weights=self._data_weights)
+            return wls_model.fit().fittedvalues
 
     @cache_readonly
     def deviance(self):
@@ -899,6 +901,19 @@ class GLMResults(LikelihoodModelResults):
             print('not avalible yet')
         elif returns == html:
             print('not avalible yet')
+
+
+class GLMResultsWrapper(lm.RegressionResultsWrapper):
+    _attrs = {
+        'resid_anscombe' : 'rows',
+        'resid_deviance' : 'rows',
+        'resid_pearson' : 'rows',
+        'resid_response' : 'rows',
+        'resid_working' : 'rows'
+    }
+    _wrap_attrs = wrap.union_dicts(lm.RegressionResultsWrapper._wrap_attrs,
+                                   _attrs)
+wrap.populate_wrapper(GLMResultsWrapper, GLMResults)
 
 if __name__ == "__main__":
     import scikits.statsmodels.api as sm

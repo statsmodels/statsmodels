@@ -14,19 +14,20 @@ R Venables, B Ripley. 'Modern Applied Statistics in S'  Springer, New York,
     2002.
 """
 import numpy as np
-from scikits.statsmodels.tools.tools import rank
-from scikits.statsmodels.regression.linear_model import WLS, GLS
-import norms
-import scale
-from scikits.statsmodels.base.model import (LikelihoodModel,
-        LikelihoodModelResults, _handle_data)
+import scipy.stats as stats
+
 from scikits.statsmodels.tools.decorators import (cache_readonly,
-        resettable_cache)
-from scipy.stats import norm
+                                                  resettable_cache)
+from scikits.statsmodels.tools.tools import rank
+import scikits.statsmodels.regression.linear_model as lm
+import scikits.statsmodels.robust.norms as norms
+import scikits.statsmodels.robust.scale as scale
+import scikits.statsmodels.base.model as base
+import scikits.statsmodels.wrapper as wrap
 
 __all__ = ['RLM']
 
-class RLM(LikelihoodModel):
+class RLM(base.LikelihoodModel):
     """
     Robust Linear Models
 
@@ -113,7 +114,7 @@ class RLM(LikelihoodModel):
 
     def __init__(self, endog, exog, M=norms.HuberT()):
         self.M = M
-        super(LikelihoodModel, self).__init__(endog, exog)
+        super(base.LikelihoodModel, self).__init__(endog, exog)
         self._initialize()
 
     def _initialize(self):
@@ -217,8 +218,6 @@ class RLM(LikelihoodModel):
         results : object
             scikits.statsmodels.rlm.RLMresults
         """
-        import scikits.statsmodels.interface.wrapper as wrapper
-
         if not cov.upper() in ["H1","H2","H3"]:
             raise ValueError("Covariance matrix %s not understood" % cov)
         else:
@@ -228,7 +227,7 @@ class RLM(LikelihoodModel):
             raise ValueError("Convergence argument %s not understood" \
                 % conv)
         self.scale_est = scale_est
-        wls_results = WLS(self.endog, self.exog).fit()
+        wls_results = lm.WLS(self.endog, self.exog).fit()
         if not init:
             self.scale = self._estimate_scale(wls_results.resid)
         self._update_history(wls_results)
@@ -247,8 +246,8 @@ class RLM(LikelihoodModel):
 #            self.weights = self.M.weights((self.endog - \
 #                    wls_results.fittedvalues)/self.scale)
             self.weights = self.M.weights(wls_results.resid/self.scale)
-            wls_results = WLS(self.endog, self.exog,
-                                    weights=self.weights).fit()
+            wls_results = lm.WLS(self.endog, self.exog,
+                                 weights=self.weights).fit()
             if update_scale is True:
                 self.scale = self._estimate_scale(wls_results.resid)
             self._update_history(wls_results)
@@ -263,9 +262,9 @@ class RLM(LikelihoodModel):
         #doing the next causes exception
         #self.cov = self.scale_est = None #reset for additional fits
         #iteration and history could contain wrong state with repeated fit
-        return wrapper.RLMResultsWrapper(results)
+        return RLMResultsWrapper(results)
 
-class RLMResults(LikelihoodModelResults):
+class RLMResults(base.LikelihoodModelResults):
     """
     Class to contain RLM results
 
@@ -418,7 +417,7 @@ class RLMResults(LikelihoodModelResults):
 
     @cache_readonly
     def pvalues(self):
-        return norm.sf(np.abs(self.tvalues))*2
+        return stats.norm.sf(np.abs(self.tvalues))*2
 
     @cache_readonly
     def bse(self):
@@ -489,6 +488,9 @@ parameters, then the fit options might not be the correct ones anymore .'''
 
         return smry
 
+class RLMResultsWrapper(lm.RegressionResultsWrapper):
+    pass
+wrap.populate_wrapper(RLMResultsWrapper, RLMResults)
 
 if __name__=="__main__":
 #NOTE: This is to be removed
