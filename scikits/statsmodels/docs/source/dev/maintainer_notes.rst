@@ -33,7 +33,7 @@ If there are only a few commits, you can rebase to keep a linear history::
     git fetch upstream-rw
     git rebase upstream-rw/master
 
-Rebasing will not automatically close the pull request however, if there is one, 
+Rebasing will not automatically close the pull request however, if there is one,
 so don't forget to do this.
 
 .. _merging:
@@ -60,9 +60,9 @@ repository::
 This shows the history in a compact way of the current branch. This::
 
     git log -p upstream-rw/master..
-    
-shows the log of commits excluding those that can be reached from upstream-rw/master, and 
-including those that can be reached from current HEAD. That is, those changes unique to this 
+
+shows the log of commits excluding those that can be reached from upstream-rw/master, and
+including those that can be reached from current HEAD. That is, those changes unique to this
 branch versus upstream-rw/master. See :ref:`Pydagogue <pydagogue:git-log-dots>` for more on using
 dots with log and also for using :ref:`dots with diff <pydagogue:git-diff-dots>`.
 
@@ -77,7 +77,7 @@ Cherry-Picking
 ~~~~~~~~~~~~~~
 
 Say you are interested in some commit in another branch, but want to leave the other ones for now.
-You can do this with a cherry-pick. Use `git log --oneline` to find the commit that you want to 
+You can do this with a cherry-pick. Use `git log --oneline` to find the commit that you want to
 cherry-pick. Say you want commit `dd9ff35` from the `shiny-new-feature` branch. You want to apply
 this commit to master. You simply do::
 
@@ -91,7 +91,7 @@ And that's all. This commit is now applied as a new commit in master.
 Merging: To Fast-Forward or Not To Fast-Forward
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-By default, `git merge` is a fast-forward merge. What does this mean, and when do you want to avoid 
+By default, `git merge` is a fast-forward merge. What does this mean, and when do you want to avoid
 this?
 
 .. figure:: images/git_merge.png
@@ -99,13 +99,13 @@ this?
    :scale: 100%
    :align: center
 
-   (souce `nvie.com <http://nvie.com>`__, post `"A successful Git branchind model" <http://nvie.com/posts/a-successful-git-branching-model/>`__)
+   (source `nvie.com <http://nvie.com>`__, post `"A successful Git branching model" <http://nvie.com/posts/a-successful-git-branching-model/>`__)
 
-The fast-forward merge does not create a merge commit. This means that the existence of the feature 
-branch is lost in the history. The fast-forward is the default for Git basically because branches are 
-cheap and, therefore, *usually* short-lived. If on the other hand, you have a long-lived feature 
-branch or are following an iterative workflow on the feature branch (i.e. merge into master, then 
-go back to feature branch and add more commits), then it makes sense to include only the merge 
+The fast-forward merge does not create a merge commit. This means that the existence of the feature
+branch is lost in the history. The fast-forward is the default for Git basically because branches are
+cheap and, therefore, *usually* short-lived. If on the other hand, you have a long-lived feature
+branch or are following an iterative workflow on the feature branch (i.e. merge into master, then
+go back to feature branch and add more commits), then it makes sense to include only the merge
 in the main branch, rather than all the intermediate commits of the feature branch, so you should
 use::
 
@@ -122,8 +122,8 @@ copy of the main repo::
     git fetch contrib-name
     git merge contrib-name/shiny-new-feature
 
-Check that the merge applies cleanly and the history looks good. Edit the merge message. Add a short 
-explanation of what the branch did along with a 'Closes gh-XXX.' string. This will auto-close the pull 
+Check that the merge applies cleanly and the history looks good. Edit the merge message. Add a short
+explanation of what the branch did along with a 'Closes gh-XXX.' string. This will auto-close the pull
 request and link the ticket and closing commit. To automatically close the issue, you can use any of::
 
     gh-XXX
