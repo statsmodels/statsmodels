@@ -507,6 +507,7 @@ class CoxPH(LikelihoodModel):
             list of indicies of columns of the matrix of exogenous
             variables that are to be included as strata. All other
             columns will be included as unstratified variables
+            (see documentation for statify method)
 
     Attributes:
     -----------
@@ -533,6 +534,11 @@ class CoxPH(LikelihoodModel):
 
     References
     ----------
+
+    D. R. Cox. "Regression Models and Life-Tables",
+        Journal of the Royal Statistical Society. Series B (Methodological)
+        Vol. 34, No. 2 (1972), pp. 187-220
+
     """
 
     def __init__(self, surv, exog, data=None, ties="efron", strata=None):
@@ -619,15 +625,16 @@ class CoxPH(LikelihoodModel):
     def stratify(self, stratas, copy=True):
 
         """
-        stratify(stratas, copy=True}
-
+        stratify(stratas, copy=True})
+        
         Create a CoxPH object to fit a model with stratification
 
         Parameters
         ----------
-        stratas: list of indicies columns of the matrix of exogenous variables
-        that are to be included as strata. All other columns will be included
-        as unstratified variables
+        stratas: list of indicies of columns of the matrix
+        of exogenous variables that are to be included as
+        strata. All other columns will be included as unstratified
+        variables
 
         copy: logical value indicating whether a new CoxPH object sould be
         returned, or if the current object should be overwritten
@@ -640,6 +647,14 @@ class CoxPH(LikelihoodModel):
 
         Examples
         --------
+
+        References
+        ----------
+
+        Lisa Borsi, Marc Lickes & Lovro Soldo. "The Stratified Cox Procedure",
+            http://stat.ethz.ch/education/semesters/ss2011/seminar/contents/presentation_5.pdf
+            2011
+
         """
 
         exog = self.exog
@@ -1412,16 +1427,40 @@ class CoxResults(LikelihoodModelResults):
     Results for cox proportional hazard models
     """
 
-    def test_coefficients(self, method="wald"):
+    def test_coefficients(self):
+
+        """
+        test_coefficients()
+
+        test whether the coefficients for each exogenous variable
+        are significantly different from zero
+
+        Returns
+        -------
+
+        An array, where each row represents a coefficient.
+        The first column is the coefficient, the second is
+        the standard error of the coefficient, the third
+        is the z-score, and the fourth is the p-value.
+
+        """
         params = self.params
         model = self.model
         ##Other methods (e.g. score?)
-        if method == "wald":
-            se = 1/(np.sqrt(np.diagonal(model.information(params))))
-            z = params/se
+        ##if method == "wald":
+        se = 1/(np.sqrt(np.diagonal(model.information(params))))
+        z = params/se
         return np.c_[params,se,z,2 * stats.norm.sf(np.abs(z), 0, 1)]
 
     def wald_test(self, restricted=None):
+
+        """
+        wald_test()
+
+        Calculate the wald statistic for a hypothesis test
+        against the global null
+
+        """
         if restricted is None:
             restricted = self.model.start_params
         params = self.params
@@ -1430,6 +1469,15 @@ class CoxResults(LikelihoodModelResults):
                       , params - restricted)
 
     def score_test(self, restricted=None):
+
+        """
+        score_test()
+
+        Calculate the score statistic for a hypothesis test
+        against the global null
+
+        """
+
         if restricted is None:
             restricted = self.model.start_params
         model = self.model
@@ -1438,6 +1486,15 @@ class CoxResults(LikelihoodModelResults):
         return np.dot(np.dot(score, cov), score)
 
     def likelihood_ratio_test(self, restricted=None):
+
+        """
+        likelihood_ratio_test()
+
+        Calculate the likelihood ratio for a hypothesis test
+        against the global null
+
+        """
+
         if restricted is None:
             restricted = self.model.start_params
         params = self.params
@@ -1449,6 +1506,30 @@ class CoxResults(LikelihoodModelResults):
             return 2 * (model.loglike(params) - model.loglike(restricted))
 
     def conf_int(self, alpha=.05, cols=None, method='default', exp=True):
+
+        """
+        conf_int(self, alpha=.05, cols=None, method='default', exp=True)
+
+        Calculate confidence intervals for the model parameters
+
+        Parameters
+        ----------
+
+        exp: logical value, indicating whether the confidence
+            intervals for the exponentiated parameters
+
+        see documentation for LikelihoodModel for other
+        parameters
+
+        Returns
+        -------
+
+        An array, each row representing a parameter, where
+        the first column gives the lower confidence limit
+        and the second column gives the upper confidence
+        limit
+
+        """
         CI = super(CoxResults, self).conf_int(alpha, cols, method)
         if exp:
             CI = np.exp(CI)
