@@ -8,9 +8,10 @@ from pandas import DataFrame, Series
 
 class ModelData(object):
     """
-
+    Class responsible for handling input data and extracting metadata into the
+    appropriate form
     """
-    def __init__(self, endog, exog=None):
+    def __init__(self, endog, exog=None, **kwds):
         self._orig_endog = endog
         self._orig_exog = exog
         (self.endog, self.exog, self.ynames,
@@ -101,11 +102,22 @@ class PandasData(ModelData):
     def attach_rows(self, result):
         return Series(result, index=self.row_labels)
 
+
+_la = None
+def _lazy_import_larry():
+    global _la
+    import la
+    _la = la
+
+
 class LarryData(ModelData):
     """
     Data handling class which knows how to reattach pandas metadata to model
     results
     """
+    def __init__(self, endog, exog=None, **kwds):
+        _lazy_import_larry()
+        super(LarryData, self).__init__(endog, exog=exog, **kwds)
 
     def _get_yarr(self, endog):
         try:
@@ -128,16 +140,13 @@ class LarryData(ModelData):
         return None
 
     def attach_columns(self, result):
-        import la
-        return la.larry(result, [self.xnames])
+        return _la.larry(result, [self.xnames])
 
     def attach_cov(self, result):
-        import la
-        return la.larry(result, [self.xnames, self.xnames])
+        return _la.larry(result, [self.xnames, self.xnames])
 
     def attach_rows(self, result):
-        import la
-        return la.larry(result, [self.row_labels])
+        return _la.larry(result, [self.row_labels])
 
 def _get_row_labels(exog):
     try:
