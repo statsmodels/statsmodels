@@ -141,11 +141,18 @@ Releasing
 
     ISRELEASED = True
 
-#. Tag the release. For example::
+#. Tag the release. For a release candidate, for example::
 
-    git tag -a v0.3.0rc1 -m "Version 0.3.0 Release Candidate 1" 7b2fb295a421b83a90b04180c8a1678cf9a6ed0d
+    git tag -a v0.3.0rc1 -m "Version 0.3.0 Release Candidate 1" 7b2fb29
 
-#. What else...?
+#. Upload the source distribution to PyPI::
+
+    python setup.py sdist --formats=gztar,zip register upload
+
+#. Make an announcment
+
+#. Profit
+
 
 Commit Comments
 ---------------
