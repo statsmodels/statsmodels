@@ -36,21 +36,6 @@ class Model(object):
         self.exog = self._data.exog
         self.endog = self._data.endog
 
-    # def _get_endog(self):
-    #     return self._data.endog
-
-    # def _set_endog(self, endog):
-    #     self._data.endog = endog
-
-    # def _get_exog(self):
-    #     return self._data.exog
-
-    # def _set_exog(self, exog):
-    #     self._data.exog = exog
-
-    # endog = property(fget=_get_endog, fset=_set_endog)
-    # exog = property(fget=_get_exog, fset=_set_exog)
-
     @property
     def endog_names(self):
         return self._data.ynames

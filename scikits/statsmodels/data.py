@@ -1,40 +1,71 @@
-import numpy as np
+"""
+Base tools for handling various kinds of data structures, attaching metadata to
+results, and doing data cleaning
+"""
 
+import numpy as np
 from pandas import DataFrame, Series
-from pandas.core.generic import PandasGeneric
 
 class ModelData(object):
     """
 
     """
     def __init__(self, endog, exog=None):
-        # for consistent outputs if endog is (n,1)
-        yarr = np.asarray(endog).squeeze()
+        self._orig_endog = endog
+        self._orig_exog = exog
+        (self.endog, self.exog, self.ynames,
+         self.xnames, self.row_labels) = self._convert_endog_exog()
+        self._check_integrity()
 
+    def _convert_endog_exog(self):
+        endog = self._orig_endog
+        exog = self._orig_exog
+
+        # for consistent outputs if endog is (n,1)
+        yarr = self._get_yarr(endog)
         xarr = None
-        xnames = None
-        if not exog is None:
-            xarr = np.asarray(exog)
+        if exog is not None:
+            xarr = self._get_xarr(exog)
             if xarr.ndim == 1:
                 xarr = xarr[:, None]
             if xarr.ndim != 2:
                 raise ValueError("exog is not 1d or 2d")
-            xnames = _get_names(exog)
+
+        if exog is not None:
+            xnames = self._get_names(exog)
             if not xnames:
                 xnames = _make_exog_names(xarr)
 
-        self.row_labels = _get_row_labels(exog)
-        self.xnames = xnames
-        self.ynames = _make_endog_names(endog)
-        self.endog = yarr
-        self.exog = xarr
+        ynames = _make_endog_names(endog)
 
-        self._check_integrity()
+        if exog is not None:
+            row_labels = _get_row_labels(exog)
+        else:
+            row_labels = _get_row_labels(endog)
+
+        return yarr, xarr, ynames, xnames, row_labels
+
+    def _get_names(self, exog):
+        try:
+            return exog.dtype.names
+        except AttributeError:
+            pass
+
+        if isinstance(exog, DataFrame):
+            return list(exog.columns)
+
+        return None
+
+    def _get_yarr(self, endog):
+        return np.asarray(endog).squeeze()
+
+    def _get_xarr(self, exog):
+        return np.asarray(exog)
 
     def _check_integrity(self):
         if self.exog is not None:
             if len(self.exog) != len(self.endog):
-                raise ValueError("endog and exog matrices are not aligned.")
+                raise ValueError("endog and exog matrices are different sizes")
 
     def wrap_output(self, obj, how='columns'):
         if how == 'columns':
@@ -56,6 +87,10 @@ class ModelData(object):
         return result
 
 class PandasData(ModelData):
+    """
+    Data handling class which knows how to reattach pandas metadata to model
+    results
+    """
 
     def attach_columns(self, result):
         return Series(result, index=self.xnames)
@@ -66,22 +101,49 @@ class PandasData(ModelData):
     def attach_rows(self, result):
         return Series(result, index=self.row_labels)
 
+class LarryData(ModelData):
+    """
+    Data handling class which knows how to reattach pandas metadata to model
+    results
+    """
+
+    def _get_yarr(self, endog):
+        try:
+            return endog.x
+        except AttributeError:
+            return np.asarray(endog).squeeze()
+
+    def _get_xarr(self, exog):
+        try:
+            return exog.x
+        except AttributeError:
+            return np.asarray(exog)
+
+    def _get_names(self, exog):
+        try:
+            return exog.label[1]
+        except Exception:
+            pass
+
+        return None
+
+    def attach_columns(self, result):
+        import la
+        return la.larry(result, [self.xnames])
+
+    def attach_cov(self, result):
+        import la
+        return la.larry(result, [self.xnames, self.xnames])
+
+    def attach_rows(self, result):
+        import la
+        return la.larry(result, [self.row_labels])
+
 def _get_row_labels(exog):
     try:
         return exog.index
     except AttributeError:
         return None
-
-def _get_names(data):
-    try:
-        return data.dtype.names
-    except AttributeError:
-        pass
-
-    if isinstance(data, DataFrame):
-        return list(data.columns)
-
-    return None
 
 def _is_structured_array(data):
     return isinstance(data, np.ndarray) and data.dtype.names is not None
@@ -112,8 +174,30 @@ def _make_exog_names(exog):
     return exog_names
 
 def handle_data(endog, exog):
-    klass = ModelData
-    if isinstance(endog, PandasGeneric) or isinstance(exog, PandasGeneric):
+    """
+    Given inputs
+    """
+    if _is_using_pandas(endog, exog):
         klass = PandasData
+    elif _is_using_ndarray(endog, exog):
+        klass = ModelData
+    elif _is_using_larry(endog, exog):
+        klass = LarryData
+    else:
+        raise ValueError('unrecognized data structures: %s / %s' %
+                         (type(endog), type(exog)))
 
     return klass(endog, exog=exog)
+
+def _is_using_ndarray(endog, exog):
+    return (isinstance(endog, np.ndarray) and
+            (isinstance(exog, np.ndarray) or exog is None))
+
+def _is_using_pandas(endog, exog):
+    from pandas.core.generic import PandasGeneric
+    return (isinstance(endog, PandasGeneric) or
+            isinstance(exog, PandasGeneric))
+
+def _is_using_larry(endog, exog):
+    import la
+    return isinstance(endog, la.larry) or isinstance(exog, la.larry)
