@@ -1,9 +1,14 @@
+import inspect
 import functools
 import types
 
 import numpy as np
 
 class ResultsWrapper(object):
+    """
+    Class which wraps a statsmodels estimation Results class and steps in to
+    reattach metadata to results (if available)
+    """
     _wrap_attrs = {}
     _wrap_methods = {}
 
@@ -17,9 +22,6 @@ class ResultsWrapper(object):
     def __getattribute__(self, attr):
         get = lambda name: object.__getattribute__(self, name)
         results = get('_results')
-
-        # if attr == '__class__':
-        #     return type(results)
 
         try:
             return get(attr)
@@ -46,6 +48,13 @@ def make_wrapper(func, how):
         results = object.__getattribute__(self, '_results')
         data = results.model._data
         return data.wrap_output(func(results, *args, **kwargs), how)
+
+    argspec = inspect.getargspec(func)
+    formatted = inspect.formatargspec(argspec.args, varargs=argspec.varargs,
+                                      defaults=argspec.defaults)
+
+    wrapper.__doc__ = "%s%s\n%s" % (func.im_func.func_name, formatted,
+                                    wrapper.__doc__)
 
     return wrapper
 

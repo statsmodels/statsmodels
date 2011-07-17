@@ -32,6 +32,7 @@ class ModelData(object):
             if xarr.ndim != 2:
                 raise ValueError("exog is not 1d or 2d")
 
+        xnames = None
         if exog is not None:
             xnames = self._get_names(exog)
             if not xnames:
