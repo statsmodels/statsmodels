@@ -44,7 +44,7 @@ print "wald test"
 print "test stat:", wald
 print "df:", df
 print "p-value:", pval
-##respective function are also available for score
+##respective functions are also available for score
 ##and likelihood-ratio tests
 con_int = results.conf_int()
 print "confidence intervals for parameters"
