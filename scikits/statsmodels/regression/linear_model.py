@@ -212,8 +212,6 @@ Should be of length %s, if sigma is a 1d array" % nobs)
         to solve the least squares minimization.
 
         """
-        import scikits.statsmodels.interface.wrapper as wrapper
-
         exog = self.wexog
         endog = self.wendog
 

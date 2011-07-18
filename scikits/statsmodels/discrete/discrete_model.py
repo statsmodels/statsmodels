@@ -134,8 +134,6 @@ class DiscreteModel(base.LikelihoodModel):
         The rest of the docstring is from
         scikits.statsmodels.LikelihoodModel.fit
         """
-        import scikits.statsmodels.interface.wrapper as wrapper
-
         if start_params is None and isinstance(self, MNLogit):
             start_params = np.zeros((self.exog.shape[1]*\
                     (self.wendog.shape[1]-1)))
