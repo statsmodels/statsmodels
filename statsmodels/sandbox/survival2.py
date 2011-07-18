@@ -19,9 +19,6 @@ class Survival(object):
     ##Allow vector inputs
 
     """
-    Survival(...)
-        Survival(data, time1, time2=None, censoring=None)
-
         Create an object to store survival data for precessing
         by other survival analysis functions
 
@@ -97,9 +94,6 @@ class Survival(object):
 class KaplanMeier(object):
 
     """
-    KaplanMeier(...)
-        KaplanMeier(data, endog, exog=None, censoring=None)
-
         Create an object of class KaplanMeier for estimating
         Kaplan-Meier survival curves.
 
@@ -479,8 +473,6 @@ class CoxPH(LikelihoodModel):
     ##Add residuals
 
     """
-    CoxPH(surv, exog, data=None, ties=["efron", "breslow"], strata=None)
-
     Fit a cox proportional harzard model from survival data
 
     Parameters
@@ -625,8 +617,6 @@ class CoxPH(LikelihoodModel):
     def stratify(self, stratas, copy=True):
 
         """
-        stratify(stratas, copy=True})
-        
         Create a CoxPH object to fit a model with stratification
 
         Parameters
@@ -674,13 +664,13 @@ class CoxPH(LikelihoodModel):
         else:
             self.strata_groups = groups
             self.strata = strata
+            ##Need to check compress with 1-element stratas and
+            ##None boolean strafying vectors
             self.exog = exog.compress(stratas, axis=1)
 
     def _stratify_func(self, b, f):
 
         """
-        _stratify_func(self, b, f)
-
         apply loglike, score, or hessian for all strata of the model
 
         Parameters
@@ -733,8 +723,6 @@ class CoxPH(LikelihoodModel):
     def loglike(self, b):
 
         """
-        loglike(b)
-
         Calculate the value of the log-likelihood at estimates of the
         parameters for all strata
 
@@ -754,8 +742,6 @@ class CoxPH(LikelihoodModel):
     def score(self, b):
 
         """
-        score(b)
-
         Calculate the value of the score function at estimates of the
         parameters for all strata
 
@@ -775,8 +761,6 @@ class CoxPH(LikelihoodModel):
     def hessian(self, b):
 
         """
-        hessian(b)
-
         Calculate the value of the hessian at estimates of the
         parameters for all strata
 
@@ -796,8 +780,6 @@ class CoxPH(LikelihoodModel):
     def _loglike_proc(self, b):
 
         """
-        _loglike_proc(b)
-
         Calculate the value of the log-likelihood at estimates of the
         parameters for a single strata
 
@@ -878,8 +860,6 @@ class CoxPH(LikelihoodModel):
     
     def _score_proc(self, b):
         """
-        _score_proc(b)
-
         Calculate the score vector of the log-likelihood at estimates of the
         parameters for a single strata
 
@@ -936,8 +916,6 @@ class CoxPH(LikelihoodModel):
     def _hessian_proc(self, b):
 
         """
-        _hessian_proc(b)
-
         Calculate the hessian matrix of the log-likelihood at estimates of the
         parameters for a single strata
 
@@ -1001,8 +979,6 @@ class CoxPH(LikelihoodModel):
     def information(self, b):
 
         """
-        information(b)
-
         Calculate the Fisher information matrix at estimates of the
         parameters
 
@@ -1021,8 +997,6 @@ class CoxPH(LikelihoodModel):
     def covariance(self, b):
 
         """
-        covariance(b)
-
         Calculate the covariance matrix at estimates of the
         parameters
 
@@ -1071,8 +1045,6 @@ class KMResults(LikelihoodModelResults):
     def test_diff(self, groups, rho=None, weight=None):
 
         """
-        test_diff(groups, rho=0)
-
         Test for difference between survival curves
 
         Parameters
@@ -1428,10 +1400,7 @@ class CoxResults(LikelihoodModelResults):
     """
 
     def test_coefficients(self):
-
         """
-        test_coefficients()
-
         test whether the coefficients for each exogenous variable
         are significantly different from zero
 
@@ -1448,12 +1417,11 @@ class CoxResults(LikelihoodModelResults):
         model = self.model
         ##Other methods (e.g. score?)
         ##if method == "wald":
-        se = 1/(np.sqrt(np.diagonal(model.information(params))))
+        se = np.sqrt(np.diagonal(model.covariance(params)))
         z = params/se
         return np.c_[params,se,z,2 * stats.norm.sf(np.abs(z), 0, 1)]
 
     def wald_test(self, restricted=None):
-
         """
         wald_test()
 
