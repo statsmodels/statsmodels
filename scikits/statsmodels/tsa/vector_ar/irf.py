@@ -68,7 +68,7 @@ class BaseIRAnalysis(object):
 
     def plot(self, orth=False, impulse=None, response=None, signif=0.05,
              plot_params=None, subplot_params=None, plot_stderr=True,
-             stderr_type='asym', repl=1000, seed=None):
+             stderr_type='asym', repl=1000, seed=None, component=None):
         """
         Plot impulse responses
 
@@ -96,6 +96,7 @@ class BaseIRAnalysis(object):
             Number of replications for Monte Carlo and Sims-Zha standard errors
         seed: int
             np.random.seed for Monte Carlo replications
+        component: array or vector of principal component indices
         """
         periods = self.periods
         model = self.model
@@ -117,13 +118,16 @@ class BaseIRAnalysis(object):
                                      signif=signif, seed=seed)
             if stderr_type == 'sz1':
                 stderr = self.err_band_sz1(orth=orth, repl=repl,
-                                           signif=signif, seed=seed)
+                                           signif=signif, seed=seed,
+                                           component=component)
             if stderr_type == 'sz2':
                 stderr = self.err_band_sz2(orth=orth, repl=repl,
-                                           signif=signif, seed=seed)
+                                           signif=signif, seed=seed,
+                                           component=component)
             if stderr_type == 'sz3':
                 stderr = self.err_band_sz3(orth=orth, repl=repl,
-                                           signif=signif, seed=seed)
+                                           signif=signif, seed=seed,
+                                           component=component)
 
         plotting.irf_grid_plot(irfs, stderr, impulse, response,
                                self.model.names, title, signif=signif,
@@ -260,6 +264,8 @@ class IRAnalysis(BaseIRAnalysis):
             Number of initial simulated obs to discard
         component : neqs x neqs array, default to largest for each
             Index of column of eigenvector/value to use for each error band
+            Note: period of impulse (t=0) is not included when computing 
+                  principle component
 
         Reference
         ---------
@@ -278,6 +284,8 @@ class IRAnalysis(BaseIRAnalysis):
         if component != None:
             if np.shape(component) != (neqs,neqs):
                 raise ValueError("Component array must be " + str(neqs) + " x " + str(neqs))
+            if np.argmax(component) >= neqs*periods:
+                raise ValueError("Atleast one of the components does not exist")
             else: 
                 k = component
                 
@@ -310,6 +318,8 @@ class IRAnalysis(BaseIRAnalysis):
             Number of initial simulated obs to discard
         component : neqs x neqs array, default to largest for each
             Index of column of eigenvector/value to use for each error band
+            Note: period of impulse (t=0) is not included when computing 
+                  principle component
 
         Reference
         ---------
@@ -327,6 +337,8 @@ class IRAnalysis(BaseIRAnalysis):
         if component != None:
             if np.shape(component) != (neqs,neqs):
                 raise ValueError("Component array must be " + str(neqs) + " x " + str(neqs))
+            if np.argmax(component) >= neqs*periods:
+                raise ValueError("Atleast one of the components does not exist")
             else: 
                 k = component
 
@@ -354,6 +366,7 @@ class IRAnalysis(BaseIRAnalysis):
                      seed=None, burn=100, component=None):
         """
         IRF Sims-Zha error band method 3. Does not assume symmetric error bands around mean.
+
         Parameters
         ----------
         orth : bool, default False
@@ -366,19 +379,15 @@ class IRAnalysis(BaseIRAnalysis):
             np.random seed
         burn : int, default 100
             Number of initial simulated obs to discard
-        component : neqs x neqs array, default to largest for each
+        component : vector length neqs, default to largest for each
             Index of column of eigenvector/value to use for each error band
+            Note: period of impulse (t=0) is not included when computing 
+                  principle component
 
         Reference
         ---------
         Sims, Christoper A., and Tao Zha. 1999. “Error Bands for Impulse Response.” Econometrica 67: 1113-1155.
         """
-
-        if component != None:
-            if np.shape(component) != (neqs,neqs):
-                raise ValueError("Component array must be " + str(neqs) + " x " + str(neqs))
-            else: 
-                k = component
 
         model = self.model
         periods = self.periods
@@ -398,6 +407,14 @@ class IRAnalysis(BaseIRAnalysis):
         W = np.zeros((neqs, periods*neqs, periods*neqs))
         eigva = np.zeros((neqs, periods*neqs))
         k = np.zeros((neqs))
+
+        if component != None:
+            if np.size(component) != (neqs):
+                raise ValueError("Component array must be of length " + str(neqs))
+            if np.argmax(component) >= neqs*periods:
+                raise ValueError("Atleast one of the components does not exist")
+            else: 
+                k = component
 
         for i in xrange(neqs):
             stack_cov[i] = np.cov(stack[i],rowvar=0)
