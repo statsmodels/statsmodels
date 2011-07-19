@@ -273,7 +273,7 @@ class IRAnalysis(BaseIRAnalysis):
                                    burn=100)
         q = util.norm_signif_level(signif)
  
-        W, eigva, k =self.eigval_decomp(irf_resim)
+        W, eigva, k =self._eigval_decomp_SZ(irf_resim)
 
         if component != None:
             if np.shape(component) != (neqs,neqs):
@@ -282,13 +282,13 @@ class IRAnalysis(BaseIRAnalysis):
                 k = component
                 
         # here take the kth column of W, which we determine by finding the largest eigenvalue of the covaraince matrix
-        lower = np.zeros(np.shape(irfs))
-        upper = np.zeros(np.shape(irfs))
+        lower = np.copy(irfs)
+        upper = np.copy(irfs)
  
         for i in xrange(neqs):
             for j in xrange(neqs):
-                lower[:,i,j] = irfs[:,i,j] + W[i,j,:,k[i,j]]*q*np.sqrt(max(eigva[i,j,:,0]))
-                upper[:,i,j] = irfs[:,i,j] - W[i,j,:,k[i,j]]*q*np.sqrt(max(eigva[i,j,:,0]))
+                lower[1:,i,j] = irfs[1:,i,j] + W[i,j,:,k[i,j]]*q*np.sqrt(max(eigva[i,j,:,0]))
+                upper[1:,i,j] = irfs[1:,i,j] - W[i,j,:,k[i,j]]*q*np.sqrt(max(eigva[i,j,:,0]))
 
         return lower, upper
 
@@ -338,8 +338,8 @@ class IRAnalysis(BaseIRAnalysis):
  
         gamma_sort = np.sort(gamma, axis=0) #sort to get quantiles
 
-        lower = np.zeros(np.shape(irfs))
-        upper = np.zeros(np.shape(irfs))
+        lower = np.copy(irfs)
+        upper = np.copy(irfs)
         
         index = round(signif/2*repl)-1,round((1-signif/2)*repl)-1
         for i in xrange(neqs):
@@ -411,8 +411,8 @@ class IRAnalysis(BaseIRAnalysis):
 
         gamma_sort = np.sort(gamma, axis=0) #sort to get quantiles
 
-        lower = np.zeros(np.shape(irfs))
-        upper = np.zeros(np.shape(irfs))
+        lower = np.copy(irfs)
+        upper = np.copy(irfs)
         
         index = round(signif/2*repl)-1,round((1-signif/2)*repl)-1
         for i in xrange(neqs):

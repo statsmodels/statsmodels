@@ -1107,6 +1107,8 @@ class VARResults(VARProcess):
 
         ma_coll = np.zeros((repl, T+1, neqs, neqs))
         if orth == False:
+            if seed is not None:
+                np.random.seed(seed=seed)
             for i in range(repl):
                 #discard first hundred to eliminate correct for starting bias
                 sim = util.varsim(coefs, intercept, sigma_u, steps=nobs+burn)
@@ -1116,6 +1118,8 @@ class VARResults(VARProcess):
                 if cum == False:
                     ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).ma_rep(maxn=T)
         if orth == True:
+            if seed is not None:
+                np.random.seed(seed=seed)
             for i in range(repl):
                 #discard first hundred to eliminate correct for starting bias
                 sim = util.varsim(coefs, intercept, sigma_u, steps=nobs+burn)

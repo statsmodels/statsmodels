@@ -4,7 +4,8 @@ Miscellaneous utility code for VAR estimation
 
 import numpy as np
 import scipy.stats as stats
-import scipy.linalg as la
+import scipy.linalg as L
+import scipy.linalg.decomp as decomp
 
 import scikits.statsmodels.tsa.tsatools as tsa
 from scipy.linalg import cholesky
@@ -211,7 +212,6 @@ def eigval_decomp(sym_array):
     k: largest eigenvector
     """
     #check if symmetric, do not include shock period
-    #DO NOT USE!!!
-    eigva, W = la.eig(sym_array)
+    eigva, W = decomp.eig(sym_array, left=True, right=False)
     k = np.argmax(eigva)
     return W, eigva, k
