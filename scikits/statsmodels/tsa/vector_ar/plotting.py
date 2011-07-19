@@ -101,7 +101,7 @@ def plot_with_error(y, error, x=None, axes=None, value_fmt='k',
             q = util.norm_signif_level(alpha)
             plot_action(y - q * error, error_fmt)
             plot_action(y + q * error, error_fmt)
-        if stderr_type == 'mc' or 'sz1' or 'sz2':
+        if stderr_type == 'mc' or 'sz1' or 'sz2' or 'sz3':
             plot_action(error[0], error_fmt)
             plot_action(error[1], error_fmt)
 

@@ -386,28 +386,31 @@ class IRAnalysis(BaseIRAnalysis):
         neqs = self.neqs
         irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,
                                    burn=100)
-        stack = np.zeros((repl, periods*neqs**2))
+        stack = np.zeros((neqs, repl, periods*neqs))
 
         #stack left to right, up and down
 
-        for p in range(repl):
-            for i in range(neqs):
-                for j in range(neqs):
-                    stack[p,:] = np.ravel(np.rollaxis(irf_resim[p,1:,:,:],2,1).T)
+        for p in xrange(repl):
+            for i in xrange(neqs):
+                stack[i, p,:] = np.ravel(irf_resim[p,1:,:,i].T)
 
-        stack_cov = np.cov(stack,rowvar=0)
-        W, eigva, k = util.eigval_decomp(stack_cov)
+        stack_cov=np.zeros((neqs, periods*neqs, periods*neqs))
+        W = np.zeros((neqs, periods*neqs, periods*neqs))
+        eigva = np.zeros((neqs, periods*neqs))
+        k = np.zeros((neqs))
+
+        for i in xrange(neqs):
+            stack_cov[i] = np.cov(stack[i],rowvar=0)
+            W[i], eigva[i], k[i] = util.eigval_decomp(stack_cov[i])
 
         gamma = np.zeros((repl, periods+1, neqs, neqs))
         for p in xrange(repl):
             c=0
-            for i in xrange(neqs):
-                for j in xrange(neqs):
-                    if c != neqs**2-1:
-                        gamma[p,1:,i,j] = W[k,c*periods:(c+1)*periods] * irf_resim[p,1:,i,j]
-                        c+=1
-                    if c == neqs**2-1:
-                        gamma[p,1:,i,j] = W[k,c*periods:] * irf_resim[p,1:,i,j]
+            for j in xrange(neqs):
+                for i in xrange(neqs):
+                        gamma[p,1:,i,j] = W[j,k[j],i*periods:(i+1)*periods] * irf_resim[p,1:,i,j]
+                        if i == neqs-1: 
+                            gamma[p,1:,i,j] = W[j,k[j],i*periods:] * irf_resim[p,1:,i,j]
 
         gamma_sort = np.sort(gamma, axis=0) #sort to get quantiles
 
@@ -417,10 +420,8 @@ class IRAnalysis(BaseIRAnalysis):
         index = round(signif/2*repl)-1,round((1-signif/2)*repl)-1
         for i in xrange(neqs):
             for j in xrange(neqs):
-                gamma_add = gamma_sort[index[0],:,i,j]
-                lower[:,i,j] = irfs[:,i,j] + gamma_add
-                gamma_add = gamma_sort[index[1],:,i,j]
-                upper[:,i,j] = irfs[:,i,j] + gamma_add
+                lower[:,i,j] = irfs[:,i,j] + gamma_sort[index[0],:,i,j]
+                upper[:,i,j] = irfs[:,i,j] + gamma_sort[index[1],:,i,j]
         return lower, upper
 
     def _eigval_decomp_SZ(self, irf_resim):
