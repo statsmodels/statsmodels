@@ -4,7 +4,7 @@ please download and install it from http://pypi.python.org/pypi/setuptools
 """
 
 descr = """
-Statsmodels is a python package that provides a complement to scipy for
+Statsmodels is a Python package that provides a complement to scipy for
 statistical computations including descriptive statistics and
 estimation of statistical models.
 
@@ -16,15 +16,14 @@ linear models, and regression with discrete dependent variables, Logit,
 Probit, MNLogit, Poisson, based on maximum likelihood estimators,
 timeseries models, ARMA, AR and VAR. An extensive list of result statistics
 are available for each estimation problem. Statsmodels also contains
-descriptive statistics, a wide range of statistical tests and more.
+descriptive statistics, a wide range of statistical tests, tools for density
+estimation and more.
 
-We welcome feedback:
-mailing list at `<http://groups.google.com/group/pystatsmodels>`_  or
-our bug tracker at `<https://bugs.launchpad.net/statsmodels>`_
+We welcome feedback on our mailing list http://groups.google.com/group/pystatsmodels.
+Report problems on our bug tracker https://github.com/statsmodels/statsmodels/issues.
 
-For updated versions between releases, we recommend our repository at
-`<http://code.launchpad.net/statsmodels>`_ We will move to github in the
-near future `<https://github.com/statsmodels>`_
+For updated versions between releases, we recommend our repository on github
+https://github.com/statsmodels/statsmodels.
 
 Main changes for 0.3.0
 ----------------------
@@ -122,7 +121,6 @@ This can be opened from the python interpreter ::
 
 >>> import scikits.statsmodels.api as sm
 >>> sm.open_help()
-
 """
 import os
 import sys
@@ -142,7 +140,7 @@ DESCRIPTION = 'Statistical computations and models for use with SciPy'
 LONG_DESCRIPTION = descr
 MAINTAINER = 'Skipper Seabold, Josef Perktold'
 MAINTAINER_EMAIL ='pystatsmodels@googlegroups.com'
-URL = ''
+URL = 'http://statsmodels.sourceforge.net/'
 LICENSE = 'BSD License'
 DOWNLOAD_URL = ''
 
