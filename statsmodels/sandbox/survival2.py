@@ -647,6 +647,7 @@ class CoxPH(LikelihoodModel):
 
         """
 
+        stratas = np.asarray(stratas)
         exog = self.exog
         strata = exog[:,stratas]
         #exog = exog.compress(stratas, axis=1)
@@ -665,8 +666,9 @@ class CoxPH(LikelihoodModel):
             self.strata_groups = groups
             self.strata = strata
             ##Need to check compress with 1-element stratas and
-            ##None boolean strafying vectors
-            self.exog = exog.compress(stratas, axis=1)
+            ##non-boolean strafying vectors
+            self.exog = exog.compress(~np.in1d(np.arange(len(exog[0])),
+                                               stratas), axis=1)
 
     def _stratify_func(self, b, f):
 
@@ -702,10 +704,14 @@ class CoxPH(LikelihoodModel):
                 self._str_censoring = censoring
             return f(b)
         else:
+            strata = self.strata
             logL = 0
             for g in self.strata_groups:
                 ##Save ind instead of _str_ vars (handle d?)?
-                ind = np.product(self.strata == g, axis=1) == 1
+                if strata.ndim == 2:
+                    ind = np.product(strata == g, axis=1) == 1
+                else:
+                    ind = strata == g
                 self._str_exog = exog[ind]
                 _str_times = times[ind]
                 self._str_times = _str_times
