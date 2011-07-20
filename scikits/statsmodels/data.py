@@ -204,9 +204,9 @@ def _is_using_ndarray(endog, exog):
             (isinstance(exog, np.ndarray) or exog is None))
 
 def _is_using_pandas(endog, exog):
-    from pandas.core.generic import PandasGeneric
-    return (isinstance(endog, PandasGeneric) or
-            isinstance(exog, PandasGeneric))
+    from pandas import Series, DataFrame, WidePanel
+    klasses = (Series, DataFrame, WidePanel)
+    return (isinstance(endog, klasses) or isinstance(exog, klasses))
 
 def _is_using_larry(endog, exog):
     import la
