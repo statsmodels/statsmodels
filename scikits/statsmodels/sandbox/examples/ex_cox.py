@@ -66,7 +66,6 @@ print test_coeffs
 ##otherwise. We can create an indicator variable "expressed", that
 ##represents whether the first gene in the dataset is "expressed"
 
-surv = Survival(0, censoring=1, data=darray)
 gene1 = exog[:,0]
 expressed = gene1 > gene1.mean()
 ##replacing the column for th first gene with the indicatore variable
