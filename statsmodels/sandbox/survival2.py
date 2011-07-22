@@ -533,7 +533,9 @@ class CoxPH(LikelihoodModel):
 
     """
 
-    def __init__(self, surv, exog, data=None, ties="efron", strata=None):
+    def __init__(self, surv, exog, data=None, ties="efron", strata=None,
+                 names=None):
+        self.names = names
         self.surv = surv
         self.ties = ties
         censoring = surv.censoring
@@ -613,6 +615,7 @@ class CoxPH(LikelihoodModel):
             self.d = (np.c_[times, d]).astype(float)
         self.df_resid = len(self.exog) - 1
         self.confint_dist = stats.norm
+        self.exog_mean = self.exog.mean(axis=0)
 
     def stratify(self, stratas, copy=True):
 
@@ -650,13 +653,15 @@ class CoxPH(LikelihoodModel):
         stratas = np.asarray(stratas)
         exog = self.exog
         strata = exog[:,stratas]
+        names = self.names[:,stratas]
         #exog = exog.compress(stratas, axis=1)
         if strata.ndim == 1:
             groups = np.unique(strata)
         elif strata.ndim == 2:
             groups = stats._support.unique(strata)
         if copy:
-            model = CoxPH(self.surv, exog, ties=self.ties, strata=stratas)
+            model = CoxPH(self.surv, exog, ties=self.ties, strata=stratas,
+                          names=names)
             ##redundent in some cases?
             #model.exog = exog.compress(stratas, axis=1)
             #model.strata_groups = groups
@@ -665,6 +670,7 @@ class CoxPH(LikelihoodModel):
         else:
             self.strata_groups = groups
             self.strata = strata
+            self.names = names
             ##Need to check compress with 1-element stratas and
             ##non-boolean strafying vectors
             self.exog = exog.compress(~np.in1d(np.arange(len(exog[0])),
@@ -1027,7 +1033,8 @@ class CoxPH(LikelihoodModel):
         results = super(CoxPH, self).fit(start_params, method, maxiter,
             full_output,disp, fargs, callback, retall, **kwargs)
         return CoxResults(self, results.params,
-                               self.covariance(results.params))
+                               self.covariance(results.params),
+                          names=self.names)
 
 class KMResults(LikelihoodModelResults):
     """
@@ -1404,6 +1411,47 @@ class CoxResults(LikelihoodModelResults):
     """
     Results for cox proportional hazard models
     """
+
+    def __init__(self, model, params, normalized_cov_params=None, scale=1.0,
+                 names=None):
+        super(CoxResults, self).__init__(model, params, normalized_cov_params,
+                                        scale)
+        self.names = names
+        self.exog_mean = model.exog_mean
+
+    def summary(self):
+
+        """
+        Print a set of tables that summarize the Cox model
+        """
+
+        params = self.params
+        names = self.names
+        coeffs = np.c_[names, self.test_coefficients()]
+        coeffs = SimpleTable(coeffs, headers=['variable','parameter',
+                                              'standard error', 'z-score',
+                                              'p-value'],
+                             title='Coefficients')
+        CI = np.c_[names, params, np.exp(params), self.conf_int(exp=False),
+                   self.conf_int()]
+        ##Shorten table (two tables?)
+        CI = SimpleTable(CI, headers=['variable','parameter','exp(param)',
+                                      'lower 95 CI', 'upper 95 CI',
+                                      'lower 95 CI (exp)', 'upper 95 CI (exp)'
+                                      ], title="Confidence Intervals")
+        tests = np.array([self.wald_test(), self.score_test(),
+                         self.likelihood_ratio_test()])
+        tests = np.c_[np.array(['wald', 'score', 'likelihood ratio']),
+                      tests, stats.chi2.sf(tests, len(params))]
+        tests = SimpleTable(tests, headers=['test', 'test stat', 'p-value'],
+                            title="Tests for Global Null")
+        print(coeffs)
+        print(CI)
+        print(tests)
+
+    def plot(self, vector='mean', CI_band=False):
+        model = self.model
+        ##use KaplanMeier?
 
     def test_coefficients(self):
         """
