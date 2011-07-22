@@ -1,20 +1,24 @@
 import numpy as np
 from scipy import stats
 
-def qqplot(data, dist=stats.norm,*args, **kwargs):
+def qqplot(data, dist=stats.norm, *args, **kwargs):
     """
-    qqplot of the quantiles of x versus the ppf of a distribution.
+    qqplot of the quantiles of x versus the quantiles/ppf of a distribution. 
+    
+    Can take arguments specifying the parameters for dist or fit them
+    automatically. (See fit under kwargs.)
 
     Parameters
     ----------
     data : array-like
         1d data array
-    dist : scipy.stats.distribution
+    dist : A scipy.stats or scikits.statsmodels distribution
         Compare x against dist. The default
         is scipy.stats.distributions.norm (a standard normal).
     args : Additional arguments needed to use the ppf function for dist.
-    kwargs : named arguments loc and scale, for use in dist. Default
-        is loc=0 and scale=1.
+    kwargs : named arguments fit, loc and scale. Unless fit=True, loc and
+        scale are passed to dist.for use in dist. Default is loc=0 and scale=1.
+        But if fit is True, then the parameters for dist are fit automatically. 
 
     Returns
     -------
@@ -40,10 +44,15 @@ def qqplot(data, dist=stats.norm,*args, **kwargs):
     >>> fig = sm.qqplot(res, stats.t, 4, loc=3,scale=10)
     >>> plt.show()
     >>> plt.close(fig)
-
+    >>> #automatically determine parameters for t dist
+    >>> #including the loc and scale
+    >>> fig = sm.qqplot(res, stats.t, fit=True)
+    >>> plt.show()
+    >>> plt.close(fig)
     Notes
     -----
-    Depends on matplotlib.
+    Depends on matplotlib. If fit=True then the parameters are fit using 
+    the distribution's fit( ) method. 
 
     """
     try:
@@ -51,26 +60,34 @@ def qqplot(data, dist=stats.norm,*args, **kwargs):
     except:
         raise ImportError("matplotlib not installed")
 
-    is_dist = isinstance(dist, stats.rv_continuous) or isinstance(
-        dist, stats.rv_discrete)
-
-    if not is_dist:
+    if not hasattr(dist, 'ppf'):
         raise ValueError("dist must be a scipy.stats distribution")
 
     nobs = data.shape[0]
-     
-    if args or kwargs:
-      loc = kwargs.get('loc',0)
-      scale = kwargs.get('scale',1)
-      dist = dist(*args,loc=loc, scale=scale)
+    
+    fit = kwargs.get('fit',False)
+    if fit:
+        fit_params = dist.fit(data)
+        loc = fit_params[-2]
+        scale = fit_params[-1]
+        if len(fit_params)>2:
+            dist = dist(*fit_params[:-2], loc= loc, scale=scale)
+        else:
+            dist = dist(loc = loc, scale= scale)
+    elif args or kwargs:
+        loc = kwargs.get('loc',0)
+        scale = kwargs.get('scale',1)
+        dist = dist(*args,loc=loc, scale=scale)
 
     try:
-        theoretical_quantiles = dist.ppf(np.linspace(0,1,nobs+1)[1:])
+        theoretical_quantiles = dist.ppf(np.linspace(0,1,nobs+2)[1:-1])
     except:
         raise ValueError('scipy.stats distribution requires more parameters')
 
     sample_quantiles = np.array(data, copy=True)
     sample_quantiles.sort()
+    
+    print dist.args
 
     plt.plot(theoretical_quantiles, sample_quantiles, 'bo')
     xlabel = "Theoretical Quantiles"
