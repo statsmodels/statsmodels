@@ -9,8 +9,7 @@ from statsmodels.iolib.table import SimpleTable
 from statsmodels.base.model import LikelihoodModel, LikelihoodModelResults
 
 
-##Need to update all docstrings
-##Use assume unique for np.in1d?
+dta = np.genfromtxt("ovarian_cancer_data.txt")
 
 class Survival(object):
 
@@ -92,6 +91,9 @@ class Survival(object):
 
 
 class KaplanMeier(object):
+
+    ##Rework interface and data structures?
+    ##survival attribute?
 
     """
         Create an object of class KaplanMeier for estimating
@@ -1449,10 +1451,158 @@ class CoxResults(LikelihoodModelResults):
         print(CI)
         print(tests)
 
-    def plot(self, vector='mean', CI_band=False):
-        model = self.model
-        ##use KaplanMeier?
+    def baseline(self, return_times=False):
 
+        ##As function of t?
+        ##Save baseline after first use? and check in other methods
+        ##with hasattr?
+
+        """
+        estimate the baseline survival function
+
+        Parameters
+        ----------
+
+        return_times: logical
+            indicator of whether times should also be returned
+
+        Returns
+        -------
+
+        array of predicted baseline survival probabilities
+        at the observed times. If return_times is true, then
+        an array whose first column is the times, and whose
+        second column is the vaseline survival associated with that
+        time
+        """
+
+        model = self.model
+        baseline = KaplanMeier(model.surv)
+        baseline = baseline.fit()
+        if return_times:
+            times = baseline.ts[0]
+            baseline = baseline.results[0][0]
+            return np.c_[times, baseline]
+        else:
+            baseline = baseline.results[0][0]
+            return baseline
+
+    def predict(self, X, t, coerce_0_1=True):
+
+        ##As function of t?
+        ##t='all' and matrix?
+        ##t= arbitrary array of times?
+
+        """
+        estimate the survival probability with a given vector
+        of covariates
+
+        Parameters
+        ----------
+
+        X: array-like
+            matrix of covariate vectors. If t='all', must be
+            only a single vector
+
+        t: non-negative int or "all"
+            time(s) at which to predict. If t="all", then
+            predict at all the observed times
+
+        Returns
+        -------
+
+        array of predicted survival probabilities
+        """
+
+        if t == 'all':
+            if X.ndim != 1:
+                raise ValueError("If t='all' X must 1d")
+            else:
+                baseline = self.baseline()
+                if coerce_0_1:
+                    ret = baseline * np.exp(np.dot(X, self.params))
+                    ret[ret > 1] = 1
+                    return ret
+                else:
+                    return baseline * np.exp(np.dot(X, self.params))
+        elif type(t) == int:
+            baseline = self.baseline(return_times=True)
+            if coerce_0_1:
+                ret = (baseline[baseline[:,0] <= t][-1][0]
+                    * np.exp(np.dot(X, self.params)))
+                ret[ret > 1] = 1
+                return ret
+            else:
+                return (baseline[baseline[:,0] <= t][-1][0]
+                        * np.exp(np.dot(X, self.params)))
+
+    def plot(self, vector='mean', CI_band=False, coerce_0_1=True):
+
+        ##Add CI bands
+
+        """
+        Plot the estimated survival curve for a given
+        covariate vector
+
+        Parameters
+        ----------
+
+        vector: array-like or 'mean'
+            A vector of covariates. vector='mean' will use the mean
+            vector
+
+        CI_band: logical
+            indicator of whether to plot confidence bands for the survival
+            curve
+
+        coerce_0_1: logical
+            indicator of whether the values for the survival curve should
+            be coerced to fit in the interval [0,1]
+        """
+
+        if vector == 'mean':
+            vector = self.exog_mean
+        model = self.model
+        km = KaplanMeier(model.surv)
+        km = km.fit()
+        km.results[0][0] = self.predict(vector, 'all', coerce_0_1)
+        km.plot()
+
+    def plot_baseline(self, CI_band=False):
+
+        """
+        Plot the estimated baseline survival curve
+
+        Parameters
+        ----------
+
+        vector: array-like or 'mean'
+            A vector of covariates. vector='mean' will use the mean
+            vector
+
+        CI_band: logical
+            indicator of whether to plot confidence bands for the survival
+            curve
+        """
+
+        baseline = KaplanMeier(self.model.surv)
+        baseline = baseline.fit()
+        baseline.plot(CI_band)
+
+    def baseline_object(self):
+
+        """
+        Get the KaplanMeier object that represents the baseline
+        survival function
+
+        Returns
+        -------
+
+        KaplanMeier object
+        """
+
+        return KaplanMeier(self.model.surv)
+        
     def test_coefficients(self):
         """
         test whether the coefficients for each exogenous variable
