@@ -13,6 +13,7 @@ from cStringIO import StringIO
 
 import numpy as np
 import numpy.linalg as npl
+import numpy.ma as ma
 from numpy.linalg import cholesky as chol, solve
 import scipy.stats as stats
 import scipy.linalg as L
@@ -98,6 +99,27 @@ def is_stable(coefs, verbose=False):
             print val
 
     return (np.abs(eigs) <= 1).all()
+
+def gen_masks(A, B, neqs):
+    """
+    Generates masks of A, B arrays that mask unknown elements
+    """
+
+    #tried using ma.maskedequal() function without much success
+
+    A_mask = np.zeros_like(A, dtype=bool)
+    if A is not None:
+        for i in xrange(neqs):
+            for j in xrange(neqs):
+                if A[i,j] == 'E':
+                    A_mask[i,j] = True
+
+    B_mask = np.zeros_like(A, dtype=bool)
+    if B is not None:
+        for i in xrange(neqs):
+            for j in xrange(neqs):
+                if B[i,j] == 'E':
+                    B_mask[i,j] = True
 
 def var_acf(coefs, sig_u, nlags=None):
     """
@@ -305,6 +327,12 @@ def _reordered(self, order):
                       params=params_new, sigma_u=sigma_u_new,
                       lag_order=self.k_ar, model=self.model,
                       trend='c', names=names_new, dates=self.dates)
+
+def svar_ckerr(svar_type, A, B):
+    if A is None and (svar_type == 'A' or svar_type == 'AB'):
+        raise ValueError('SVAR of type A or AB but A array not given.')
+    if B is None and (svar_type == 'B' or svar_type == 'AB'):
+        raise ValueError('SVAR of type B or AB but B array not given.')
 
 #-------------------------------------------------------------------------------
 # VARProcess class: for known or unknown VAR process
@@ -1454,6 +1482,279 @@ class VARResults(VARProcess):
     def bic(self):
         "Bayesian a.k.a. Schwarz info criterion"
         return self.info_criteria['bic']
+
+class SVAR(VAR);
+    """
+    Fit VAR and then estimate structural components of A and B, defined:
+
+    .. math:: Ay_t = A_1 y_{t-1} + \ldots + A_p y_{t-p} + B\varepsilon_t
+    
+    Parameters
+    ----------
+    endog : np.ndarray (structured or homogenous) or Dataframe
+    names : array-like 
+        must match number of columns or endog
+    dates : array-like
+        must match number of rows of endog
+    svar_type : string
+        "A" - estimate structural parameters of A matrix, B assumed = I
+        "B" - estimate structural parameters of B matrix, A assumed = I
+        "AB" - estimate structural parameters indicated in both A and
+                B matrix
+    A : neqs x neqs np.ndarray with unknown parameters marked with 'E'
+    B : neqs x neqs np.ndarry with unknown parameters marked with 'E'
+
+    Notes
+    -----
+    **References**
+    Hamilton (1994) Time Series Analysis
+
+    Returns
+    -------
+    .fit() methdo return SVARResults object
+    """
+    #def fit()
+    #...
+    def __init__(self, endog, names=None, dates=None, 
+                 svar_type, A=None, B=None):
+        (self.endog, self.names,
+         self.dates) = data_util.interpret_data(endog, names, dates)
+
+        self.y = self.endog #keep alias for now
+        self.neqs = self.endog.shape[1]
+
+        types = ['A', 'B', 'AB']
+        if svar_type not in types:
+            raise ValueError('SVAR type not recognized, must be in ' + str(types))
+
+    def fit(self, maxlags=None, method='ols', ic=None, trend='c',
+            verbose=False, s_method='mle'):
+        """
+        Fit the VAR model
+
+        Parameters
+        ----------
+        maxlags : int
+            Maximum number of lags to check for order selection, defaults to
+            12 * (nobs/100.)**(1./4), see select_order function
+        method : {'ols'}
+            Estimation method to use
+        ic : {'aic', 'fpe', 'hqic', 'bic', None}
+            Information criterion to use for VAR order selection.
+            aic : Akaike
+            fpe : Final prediction error
+            hqic : Hannan-Quinn
+            bic : Bayesian a.k.a. Schwarz
+        verbose : bool, default False
+            Print order selection output to the screen
+        trend, str {"c", "ct", "ctt", "nc"}
+            "c" - add constant
+            "ct" - constant and trend
+            "ctt" - constant, linear and quadratic trend
+            "nc" - co constant, no trend
+            Note that these are prepended to the columns of the dataset.
+        s_method : {'mle'}
+            Estimation method for structural parameters
+
+        Notes
+        -----
+        Lutkepohl pp. 146-153
+
+        Returns
+        -------
+        est : VARResults
+        """
+        lags = maxlags
+
+        if ic is not None:
+            selections = self.select_order(maxlags=maxlags, verbose=verbose)
+            if ic not in selections:
+                raise Exception("%s not recognized, must be among %s"
+                                % (ic, sorted(selections)))
+            lags = selections[ic]
+            if verbose:
+                print 'Using %d based on %s criterion' %  (lags, ic)
+        else:
+            if lags is None:
+                lags = 1
+
+        self.nobs = len(self.endog) - lags
+
+        return self._estimate_svar(lags, trend=trend)
+
+        def _estimate_svar(self,lags, offset=0, trend='c')
+        """
+        lags : int
+        offset : int
+            Periods to drop from beginning-- for order selection so it's an
+            apples-to-apples comparison
+        trend : string or None
+            As per above
+        """
+        k_trend = util.get_trendorder(trend) #NOTE: trendorder should be polynomial order
+
+        if offset < 0: # pragma: no cover
+            raise ValueError('offset must be >= 0')
+
+        y = self.y[offset:]
+
+        z = util.get_var_endog(y, lags, trend=trend)
+        y_sample = y[lags:]
+
+        # Lutkepohl p75, about 5x faster than stated formula
+        params = np.linalg.lstsq(z, y_sample)[0]
+        resid = y_sample - np.dot(z, params)
+
+        # Unbiased estimate of covariance matrix $\Sigma_u$ of the white noise
+        # process $u$
+        # equivalent definition
+        # .. math:: \frac{1}{T - Kp - 1} Y^\prime (I_T - Z (Z^\prime Z)^{-1}
+        # Z^\prime) Y
+        # Ref: Lutkepohl p.75
+        # df_resid right now is T - Kp - 1, which is a suggested correction
+
+        avobs = len(y_sample)
+
+        df_resid = avobs - (self.neqs * lags + k_trend)
+
+        sse = np.dot(resid.T, resid)
+        omega = sse / df_resid
+
+        #This is where the SVAR components are initiliazed
+        A = self.A
+        B = self.B
+        neqs = self.neqs
+        svar_type = self.svar_type
+
+        if A is None:
+            A = np.identity(neqs)
+        if B is None:
+            B = np.identity(neqs)
+
+        A_mask, B_mask = gen_masks(A, B, neqs)
+
+        svar_ckerr(svar_type, A, B)
+
+        #here, can grab parameter information, pass into likelihood, and perform
+        # maximization to solve for unknown components of A, B
+
+        return SVARResults(y, z, params, omega, lags, names=self.names,
+                          trend=trend, dates=self.dates, model=self
+                          A=A, A_mask=A_mask, B=B, B_mask=B_mask)
+        #move these to SVARREsults class
+        def check_rank():
+
+        def check_order()
+
+class SVARProcess(VARProcess):
+
+
+class SVARResults(SVAR, VARResults):
+    """Estimate VAR(p) process with fixed number of lags
+
+    Parameters
+    ----------
+    endog : array
+    endog_lagged : array
+    params : array
+    sigma_u : array
+    lag_order : int
+    model : VAR model instance
+    trend : str {'nc', 'c', 'ct'}
+    names : array-like
+        List of names of the endogenous variables in order of appearance in `endog`.
+    dates
+
+
+    Returns
+    -------
+    **Attributes**
+    aic
+    bic
+    bse
+    coefs : ndarray (p x K x K)
+        Estimated A_i matrices, A_i = coefs[i-1]
+    coef_names
+    cov_params
+    dates
+    detomega
+    df_model : int
+    df_resid : int
+    endog
+    endog_lagged
+    fittedvalues
+    fpe
+    intercept
+    info_criteria
+    k_ar : int
+    k_trend : int
+    llf
+    model
+    names
+    neqs : int
+        Number of variables (equations)
+    nobs : int
+    n_totobs : int
+    params
+    k_ar : int
+        Order of VAR process
+    params : ndarray (Kp + 1) x K
+        A_i matrices and intercept in stacked form [int A_1 ... A_p]
+    pvalues
+    names : list
+        variables names
+    resid
+    sigma_u : ndarray (K x K)
+        Estimate of white noise process variance Var[u_t]
+    sigma_u_mle
+    stderr
+    trenorder
+    tvalues
+    y :
+    ys_lagged
+    """
+    _model_type = 'VAR'
+
+    def __init__(self, endog, endog_lagged, params, sigma_u, lag_order,
+                 model=None, trend='c', names=None, dates=None, 
+                 A=A, A_mask=A_mask, B=B, B_mask=B_mask):
+
+        self.model = model
+        self.y = self.endog = endog  #keep alias for now
+        self.ys_lagged = self.endog_lagged = endog_lagged #keep alias for now
+        self.dates = dates
+
+        self.n_totobs, neqs = self.y.shape
+        self.nobs = self.n_totobs - lag_order
+        k_trend = util.get_trendorder(trend)
+        if k_trend > 0: # make this the polynomial trend order
+            trendorder = k_trend - 1
+        else:
+            trendorder = None
+        self.k_trend = k_trend
+        self.trendorder = trendorder
+
+        self.coef_names = util.make_lag_names(names, lag_order, k_trend)
+        self.params = params
+
+        # Initialize VARProcess parent class
+        # construct coefficient matrices
+        # Each matrix needs to be transposed
+        reshaped = self.params[self.k_trend:]
+        reshaped = reshaped.reshape((lag_order, neqs, neqs))
+
+        # Need to transpose each coefficient matrix
+        intercept = self.params[0]
+        coefs = reshaped.swapaxes(1, 2).copy()
+
+        #Add SVAR components
+        self.A = A
+        self.A_mask = A_mask
+        self.B = B
+        self.B_mask = B_mask
+
+        SVARProcess.__init__(self, coefs, intercept, sigma_u, names=names, 
+                                   A=A, A_mask=A_mask, B=B, B_mask=B_mask)
 
 class FEVD(object):
     """
