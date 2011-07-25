@@ -1582,6 +1582,7 @@ class SVAR(VAR);
 
         return self._estimate_svar(lags, trend=trend)
 
+
         def _estimate_svar(self,lags, offset=0, trend='c')
         """
         lags : int
@@ -1647,6 +1648,55 @@ class SVAR(VAR);
         def check_order()
 
 class SVARProcess(VARProcess):
+    """
+    Class represents a known SVAR(p) process
+
+    Parameters
+    ----------
+    coefs : ndarray (p x k x k)
+    intercept : ndarray (length k)
+    sigma_u : ndarray (k x k)
+    names : sequence (length k)
+    A : neqs x neqs np.ndarray with unknown parameters marked with 'E'
+    A_mask : neqs x neqs mask array with known parameters masked
+    B : neqs x neqs np.ndarry with unknown parameters marked with 'E'
+    B_mask : neqs x neqs mask array with known parameters masked
+
+    Returns
+    -------
+    **Attributes**:
+    """
+    def __init__(self, coefs, intercept, sigma_u, names=None,
+                 A=A, A_mask=A_mask, B=B, B_mask=B_mask):
+        self.k_ar = len(coefs)
+        self.neqs = coefs.shape[1]
+        self.coefs = coefs
+        self.intercept = intercept
+        self.sigma_u = sigma_u
+        self.names = names
+        #Add SVAR components
+        #change 
+        # assum starting values for iteration are 0
+        self.A = A
+        self.A_mask = A_mask
+        self.B = B
+        self.B_mask = B_mask
+
+    def orth_ma_rep(self, maxn=10, P=None):
+        """
+
+        Unavailable for SVAR
+
+        """
+        raise NotImplementedError
+
+    def ma_rep(self, maxn=10):
+        """
+        
+        Unavailable for SVAR
+
+        """
+        raise NotImplementedError
 
 
 class SVARResults(SVAR, VARResults):
@@ -1747,14 +1797,46 @@ class SVARResults(SVAR, VARResults):
         intercept = self.params[0]
         coefs = reshaped.swapaxes(1, 2).copy()
 
-        #Add SVAR components
-        self.A = A
-        self.A_mask = A_mask
-        self.B = B
-        self.B_mask = B_mask
-
         SVARProcess.__init__(self, coefs, intercept, sigma_u, names=names, 
                                    A=A, A_mask=A_mask, B=B, B_mask=B_mask)
+        #need to define AB_mask, A_val, B_val
+        self.A_val, self.B_val = _gen_ABval(A,B)
+        if A is not None:
+            for i in xrange(neqs)
+        self.A_val = 
+
+    def svar_likelihood(self, AB_mask, A=A_val, B=B_val ):
+
+        nobs = self.nobs
+        neqs = self.neqs
+        sigma_u = self.sigma_u
+        trc_in = np.dot(np.dot(np.dot(A.T,npl.inv(B)),A),sigma_u)
+        likl = (-(nobs * neqs / 2) * np.log(2 * np.pi)
+                + (nobs / 2) * np.log(npl.det(A)**2)
+                - (nobs / 2) * np.log(npl.det(B))
+                - (nobs / 2) * np.trace(trc_in))
+        return likl
+
+    def _gen_ABval(self):
+        A_val = np.zeros_like(A, dtype=float)
+        B_val = np.zeros_like(B, dytpe=float)
+        if A is not None:
+            for i in xrange(neqs):
+                for j in xrange(neqs):
+                    if A[i,j] == 'E':
+                        A_val[i,j] = 0
+                    else:
+                        A_val[i,j] = A[i,j]
+        if B is not None:
+            for i in xrange(neqs):
+                for j in xrange(neqs):
+                    if B[i,j] == 'E':
+                        B_val[i,j] = 0
+                    else:
+                        B_val[i,j] = B[i,j]
+        return A_val, B_val
+
+        
 
 class FEVD(object):
     """
