@@ -386,13 +386,14 @@ class StepFunction:
         _y = np.asarray(y)
 
         if _x.shape != _y.shape:
-            raise ValueError('in StepFunction: x and y do not have the same \
-shape')
+            msg = "x and y do not have the same shape"
+            raise ValueError(msg)
         if len(_x.shape) != 1:
-            raise ValueError('in StepFunction: x and y must be 1-dimensional')
+            msg = 'x and y must be 1-dimensional'
+            raise ValueError(msg)
 
-        self.x = np.hstack([[-np.inf], _x])
-        self.y = np.hstack([[ival], _y])
+        self.x = np.r_[-np.inf, _x]
+        self.y = np.r_[ival, _y]
 
         if not sorted:
             asort = np.argsort(self.x)
@@ -420,9 +421,8 @@ def ECDF(values):
     """
     x = np.array(values, copy=True)
     x.sort()
-    x.shape = np.product(x.shape,axis=0)
-    n = x.shape[0]
-    y = (np.arange(n) + 1.) / n
+    nobs = len(x)
+    y = np.linspace(1./nobs,1,nobs)
     return StepFunction(x, y)
 
 def monotone_fn_inverter(fn, x, vectorized=True, **keywords):
