@@ -3,7 +3,7 @@ Empirical CDF Functions
 """
 import numpy as np
 
-class StepFunction:
+class StepFunction(object):
     """
     A basic step function.
 
@@ -64,7 +64,7 @@ class StepFunction:
         _shape = tind.shape
         return self.y[tind]
 
-def ecdf(x):
+class ECDF(StepFunction):
     """
     Return the Empirical CDF of an array as a step function.
 
@@ -77,11 +77,17 @@ def ecdf(x):
     -------
     Empirical CDF as a step function.
     """
-    x = np.array(x, copy=True)
-    x.sort()
-    nobs = len(x)
-    y = np.linspace(1./nobs,1,nobs)
-    return StepFunction(x, y)
+    def __init__(self, x):
+        step = True
+        if step: #TODO: make this an arg and have a linear interpolation option?
+            x = np.array(x, copy=True)
+            x.sort()
+            nobs = len(x)
+            y = np.linspace(1./nobs,1,nobs)
+            super(ECDF, self).__init__(x, y)
+        else:
+            pass
+            #interpolate.interp1d(x,y,drop_errors=False,fill_values=ival)
 
 def monotone_fn_inverter(fn, x, vectorized=True, **keywords):
     """
