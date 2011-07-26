@@ -70,6 +70,30 @@ def lowess(x,y, frac = 2./3, it = 3):
     Cleveland, W.S. (1979) "Robust Locally Weighted Regression 
     and Smoothing Scatterplots". Journal of the American Statistical 
     Association 74 (368): 829-836.
+
+
+    Examples
+    --------
+    The below allows a comparison between how different the fits from 
+    lowess for different values of frac can be.
+    
+    >>> import numpy as np
+    >>> import scikits.statsmodels.api as sm
+    >>> x = np.random.uniform(low = -2*np.pi, high = 2*np.pi, size=500)
+    >>> y = np.sin(x) + np.random.normal(size=len(x))
+    >>> z = lowess(x, y)
+    >>> w = lowess(x, y, frac=1./3)
+
+    This gives a similar comparison for when it is 0 vs not. 
+    
+    >>> import numpy as np
+    >>> import scipy.stats as stats
+    >>> import scikits.statsmodels.api as sm
+    >>> x = np.random.uniform(low = -2*np.pi, high = 2*np.pi, size=500)
+    >>> y = np.sin(x) + stats.cauchy.rvs(size=len(x))
+    >>> z = lowess(x, y, frac= 1./3, it=0)
+    >>> w = lowess(x, y, frac=1./3)
+
     """
 
 
