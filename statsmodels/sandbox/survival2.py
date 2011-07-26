@@ -19,6 +19,8 @@ class Survival(object):
     ##Allow vector inputs
 
     """
+    Survival(time1, time2=None, censoring=None, data=None)
+
         Create an object to store survival data for precessing
         by other survival analysis functions
 
@@ -49,9 +51,14 @@ class Survival(object):
         Attributes
         -----------
 
-        times: vector of survival times
+        times: array
+            vector of survival times
 
-        censoring: vector of censoring indicators
+        censoring: array
+            vector of censoring indicators
+
+        ttype: str
+            indicator of what type of censoring occurs
 
         Examples
         ---------
@@ -97,57 +104,69 @@ class KaplanMeier(object):
     ##survival attribute?
 
     """
+
+    KaplanMeier(surv, exog=None, data=None)
+
         Create an object of class KaplanMeier for estimating
         Kaplan-Meier survival curves.
 
         Parameters
         ----------
-        data: array_like
+
+        data: array-like
             An array, with observations in each row, and
             variables in the columns
 
-        surv: Survival object containing desire times and censoring
+        surv: Survival object
+            Survival object containing desire times and censoring
 
-        endog: index (starting at zero) of the column
-            containing the endogenous variable (time)
+        endog: int or array-like
+            index (starting at zero) of the column
+            containing the endogenous variable (time),
+            or if endog is an array, an array of times
+            (in this case, data should be none)
 
-        exog: index of the column containing the exogenous
+        exog: int or array-like
+            index of the column containing the exogenous
             variable (must be catagorical). If exog = None, this
             is equivalent to a single survival curve. Alternatively,
             this can be a vector of exogenous variables index in the same
             manner as data provided either from data or surv
+            or if exog is an array, an array of exogenous variables
+            (in this case, data should be none)
 
-        censoring: index of the column containing an indicator
+        censoring: int or array-like
+            index of the column containing an indicator
             of whether an observation is an event, or a censored
             observation, with 0 for censored, and 1 for an event
-
+            or if censoring is an array, an array of censoring
+            indicators (in this case, data should be none)
 
         Attributes
         -----------
-        censorings: List of censorings associated with each unique
+
+        censorings: array
+            List of censorings associated with each unique
             time, at each value of exog
 
-        events: List of the number of events at each unique time
+        events: array
+            List of the number of events at each unique time
             for each value of exog
 
-        results: List of arrays containing estimates of the value
+        results: array
+            List of arrays containing estimates of the value
             value of the survival function and its standard error
             at each unique time, for each value of exog
 
-        ts: List of unique times for each value of exog
+        ts: array
+            List of unique times for each value of exog
 
         Methods
         -------
+
         fit: Calcuate the Kaplan-Meier estimates of the survival
             function and its standard error at each time, for each
             value of exog
-
-        plot: Plot the survival curves using matplotlib.plyplot
-
-        summary: Display the results of fit in a table. Gives results
-            for all (including censored) times
-
-        test_diff: Test for difference between survival curves
 
         Examples
         --------
@@ -164,12 +183,14 @@ class KaplanMeier(object):
                [  1.40000000e+01,   1.13800000e-02],
                [  2.60000000e+01,   1.13800000e-02]])
         >>> km = KaplanMeier(dta,0)
-        >>> km.fit()
-        >>> km.plot()
+        >>> results = km.fit()
+        >>> results.plot()
+
+        results is a KMResults object
 
         Doing
 
-        >>> km.summary()
+        >>> results.summary()
 
         will display a table of the estimated survival and standard errors
         for each time. The first few lines are
@@ -193,7 +214,7 @@ class KaplanMeier(object):
         Mutliple survival curves:
 
         >>> km2 = KaplanMeier(dta,0,exog=1)
-        >>> km2.fit()
+        >>> results2 = km2.fit()
 
         km2 will estimate a survival curve for each value of industrial
         production, the column of dta with index one (1).
@@ -211,11 +232,11 @@ class KaplanMeier(object):
                [  2.60000000e+01,   1.13800000e-02,   1.00000000e+00]])
 
         >>> km3 = KaplanMeier(dta,0,exog=1,censoring=2)
-        >>> km3.fit()
+        >>> results3 = km3.fit()
 
         Test for difference of survival curves
 
-        >>> log_rank = km3.test_diff([0.0645,-0.03957])
+        >>> log_rank = results3.test_diff([0.0645,-0.03957])
 
         The zeroth element of log_rank is the chi-square test statistic
         for the difference between the survival curves for exog = 0.0645
@@ -238,8 +259,8 @@ class KaplanMeier(object):
                ['26.0', 'high', '1.0']],
               dtype='|S4')
         >>> km4 = KaplanMeier(dta,0,exog=1,censoring=2)
-        >>> km4.fit()
-
+        >>> results4 = km4.fit()
+        
     """
 
     ##Add stratification
@@ -248,7 +269,12 @@ class KaplanMeier(object):
 
     def __init__(self, surv, exog=None, data=None):
         censoring = surv.censoring
-        times = surv.times
+        ttype  = surv.type
+        self.ttype = ttype
+        if ttype == 'exact':
+            times = surv.times
+        if ttype == 'interval':
+            times = surv.end - surv.start
         if exog is not None:
             if data is not None:
                 data = np.asarray(data)
@@ -307,7 +333,28 @@ class KaplanMeier(object):
     def fit(self, CI_transform="log-log", force_CI_0_1=True):
 
         """
-        Calculate the Kaplan-Meier estimator of the survival function
+        fit(CI_transform="log-log", force_CI_0_1=True)
+
+            Calculate the Kaplan-Meier estimator of the survival function
+
+            Parameters
+            ----------
+
+            CI_transform: string. Either "log" or "log-log"
+                The type of transformation used to keep the
+                confidence interval in the interval [0,1].
+                "log" applies the natural logarithm,
+                "log-log" applies log(-log(x))
+
+            force_CI_0_1: logical
+                indicator of whether confidence interval values
+                that fall outside of [0,1] should be forced to
+                one of the endpoints
+
+            Returns
+            -------
+
+            KMResults object for the estimated survival curve(s)
         """
 
         exog = self.exog
@@ -365,7 +412,37 @@ class KaplanMeier(object):
 
     def _fitting_proc(self, t, censoring, CI_transform, force_CI):
         """
-        For internal use
+
+        _fitting_proc(t, censoring, CI_transform, force_CI)
+
+            Fit one of the curves in the model
+
+            Parameters
+            ----------
+            t: array
+                vector of times (for one group only)
+
+            censoring: array
+                vector of censoring indicators (for one group only)
+
+            CI_transform: string. Either "log" or "log-log"
+                The type of transformation used to keep the
+                confidence interval in the interval [0,1].
+                "log" applies the natural logarithm,
+                "log-log" applies log(-log(x))
+
+            force_CI_0_1: logical
+                indicator of whether confidence interval values
+                that fall outside of [0,1] should be forced to
+                one of the endpoints
+
+            Returns
+            -------
+
+            None, but adds values to attributes of the object
+            That are part of the results of the model for the given
+            group
+
         """
         if censoring is None:
             n = len(t)
@@ -414,35 +491,77 @@ class KaplanMeier(object):
         (self.ts).append(t)
         (self.event).append(events)
 
-def get_td(data, ntd, td, td_times, censoring=None, times=None):
+def get_td(data, ntd, td, td_times, censoring=None, times=None,
+           ntd_names=None, td_name=None):
 
+    ##Add names
     ##Check results
     ##Add lag
     ##Do without data?
     ##For arbitrarily many td vars
 
+    """
+
+    get_td(data, ntd, td, td_times, censoring=None, times=None,
+           ntd_names=None, td_name=None)
+
+        For fitting a Cox model with a time-dependent covariate.
+        Split the data into intervals over which the covariate
+        is constant
+
+        Parameters
+        ----------
+
+        data: array
+            array containing the all variables to be used
+
+        ntd: list
+            list of indicies in data of the non-time-dependent
+            covariates
+
+        td: list
+            list of indicies of the time-dependent covariate in data.
+            Each column identified in data is interpreted as the value
+            of the covariate at a secific time (specified by td_times)
+
+        td_times: array
+            array of times associated with each column identified by td
+
+        censoring: int
+            index of the censoring indicator in data
+
+        times: int
+            only need if censoring is not none. Index of times for
+            the original observations that occur in data
+
+        ntd_names: array
+            array of names for the non-time-dependent variables.
+            This is useful, since the ordering of the variables
+            is not preserved
+
+        td_name: array (containing only one element)
+            array containing the name of the newly created time-dependent
+            variable
+
+        Returns
+        -------
+
+        If no names are given, a 2d array containing the data in
+        time-dependent format. If names are given, the first return is
+        the same as previous, and the second return is an array of names
+
+    """
+
     ntd = data[:,ntd]
     td = data[:,td]
-    ##ind2 = np.isnan(td)
     ind = ~np.isnan(td)
-    ##?
-    ##del(td)
     rep = ind.sum(1)
-    #d1_rep = len(td)
-    #ind = ~np.isnan(td)
     td_times = np.repeat(td_times[:,np.newaxis], len(td), axis=1)
-    ##start = np.copy(td_times)
-    ##start[ind2.T] = 0
-    ##del(ind2)
     td = td.flatten()
     ind = ~np.isnan(td)
-    #return td_times, ind
-    #start = np.c_[np.zeros_like(tddta[:,0]), tddta[:,1:]]
     td = td[ind]
     td_times = td_times.flatten('F')[ind]
     start = np.r_[0,td_times[:-1]]
-    ##at 14472, supposed to be double (0,1) for times, but get
-    ##(0,1) then (1,1)
     ##Does the >= solve the underlying problem?
     start[start >= td_times] = 0
     ntd = np.repeat(ntd, rep, axis=0)
@@ -451,22 +570,21 @@ def get_td(data, ntd, td, td_times, censoring=None, times=None):
         times = data[:,times]
         censoring = np.repeat(censoring, rep)
         times = np.repeat(times, rep)
-        #censoring = censoring.flatten('F')#[ind]
-        #times = times.flatten('F')#[ind]
         ind = ((td_times == times) * censoring) != 0
         censoring[ind] = 1
         censoring[~ind] = 0
-        return np.c_[start, td_times, censoring, ntd, td]
-    ##del(ind)
-    ##del(rep)
-    #td_times = np.repeat(td_times, rep, axis=0)
-    ##del(rep)
-    ##use td?
-    ##td = np.repeat(td, rep, axis=0)
-    ##data = np.repeat(data, rep, axis=0)
-    ##return np.hstack((td_times[:,np.newaxis], ntd, td))
+        if ntd_names is not None:
+            return (np.c_[start,td_times,censoring,ntd,td],
+                    np.r_[np.array(['start','end','censoring'])
+                          ,ntd_names,td_name])
+        else:
+            return np.c_[start,td_times,censoring,ntd,td]
     else:
-        return np.c_[start, td_times, ntd, td]
+        if ntd_names is not None:
+            return (np.c_[start, td_times, ntd, td],
+                    np.r_[np.array(['start','end']),ntd_names,td_name])
+        else:
+            return np.c_[start, td_times, ntd, td]
 
 class CoxPH(LikelihoodModel):
 
@@ -479,64 +597,68 @@ class CoxPH(LikelihoodModel):
     ##function for using different ttype when fitting?
 
     """
-    Fit a cox proportional harzard model from survival data
 
-    Parameters
-    ----------
+    CoxPH(surv, exog, data=None, ties="efron", strata=None,
+                 names=None)
 
-    surv: Survival object
-            Survival object with the desired times and censoring
+        Fit a cox proportional harzard model from survival data
 
-    exog: int or array-like
-            if data is not None, index or list of indicies of data
-            for the columns of the desired exogenous variables
-            if data is None, then a 2d array of the desired
-            exogenous variables
+        Parameters
+        ----------
 
-    data: array-like
-            optional array from which the exogenous variables will
-            be selected from the indicies given as exog
+        surv: Survival object
+                Survival object with the desired times and censoring
 
-    ties: string
-            A string indicating the method used to handle ties
+        exog: int or array-like
+                if data is not None, index or list of indicies of data
+                for the columns of the desired exogenous variables
+                if data is None, then a 2d array of the desired
+                exogenous variables
 
-    strata: array-like
-            optional, if a stratified cox model is desired.
-            list of indicies of columns of the matrix of exogenous
-            variables that are to be included as strata. All other
-            columns will be included as unstratified variables
-            (see documentation for statify method)
+        data: array-like
+                optional array from which the exogenous variables will
+                be selected from the indicies given as exog
 
-    Attributes:
-    -----------
+        ties: string
+                A string indicating the method used to handle ties
 
-    surv: The initial survival object given to CoxPH
+        strata: array-like
+                optional, if a stratified cox model is desired.
+                list of indicies of columns of the matrix of exogenous
+                variables that are to be included as strata. All other
+                columns will be included as unstratified variables
+                (see documentation for statify method)
 
-    ties: String indicating how to handle ties
+        Attributes:
+        -----------
 
-    censoring: Vector of censoring indicators
+        surv: The initial survival object given to CoxPH
 
-    ttype: String indicating the type of censoring
+        ties: String indicating how to handle ties
 
-    exog: The 2d array of exogenous variables
+        censoring: Vector of censoring indicators
 
-    strata: Indicator of how, if at all, the model is stratified
+        ttype: String indicating the type of censoring
 
-    d:  For exact times, a 2d array, whose first column is the
-        unique times, and whose second column is the number of ties
-        at that time. For interval times, a 2d array where each
-        row is one of the unique intervals
+        exog: The 2d array of exogenous variables
 
-    Examples
-    --------
+        strata: Indicator of how, if at all, the model is stratified
 
-    References
-    ----------
+        d:  For exact times, a 2d array, whose first column is the
+            unique times, and whose second column is the number of ties
+            at that time. For interval times, a 2d array where each
+            row is one of the unique intervals
 
-    D. R. Cox. "Regression Models and Life-Tables",
-        Journal of the Royal Statistical Society. Series B (Methodological)
-        Vol. 34, No. 2 (1972), pp. 187-220
+        Examples
+        --------
 
+        References
+        ----------
+
+        D. R. Cox. "Regression Models and Life-Tables",
+            Journal of the Royal Statistical Society. Series B (Methodological)
+            Vol. 34, No. 2 (1972), pp. 187-220
+        
     """
 
     def __init__(self, surv, exog, data=None, ties="efron", strata=None,
@@ -626,34 +748,37 @@ class CoxPH(LikelihoodModel):
     def stratify(self, stratas, copy=True):
 
         """
-        Create a CoxPH object to fit a model with stratification
 
-        Parameters
-        ----------
-        stratas: list of indicies of columns of the matrix
-        of exogenous variables that are to be included as
-        strata. All other columns will be included as unstratified
-        variables
+        stratify(stratas, copy=True)
 
-        copy: logical value indicating whether a new CoxPH object sould be
-        returned, or if the current object should be overwritten
+            Create a CoxPH object to fit a model with stratification
 
-        Returns
-        -------
+            Parameters
+            ----------
+            stratas: list of indicies of columns of the matrix
+            of exogenous variables that are to be included as
+            strata. All other columns will be included as unstratified
+            variables
 
-        if copy is true, returns an object of class CoxPH, if copy is False
-        modifies existing cox model, and returns nothing
+            copy: logical value indicating whether a new CoxPH object sould be
+            returned, or if the current object should be overwritten
 
-        Examples
-        --------
+            Returns
+            -------
 
-        References
-        ----------
+            if copy is true, returns an object of class CoxPH, if copy is False
+            modifies existing cox model, and returns nothing
 
-        Lisa Borsi, Marc Lickes & Lovro Soldo. "The Stratified Cox Procedure",
-            http://stat.ethz.ch/education/semesters/ss2011/seminar/contents/presentation_5.pdf
-            2011
+            Examples
+            --------
 
+            References
+            ----------
+
+            Lisa Borsi, Marc Lickes & Lovro Soldo. "The Stratified Cox Procedure",
+                http://stat.ethz.ch/education/semesters/ss2011/seminar/contents/presentation_5.pdf
+                2011
+            
         """
 
         stratas = np.asarray(stratas)
@@ -685,22 +810,26 @@ class CoxPH(LikelihoodModel):
     def _stratify_func(self, b, f):
 
         """
-        apply loglike, score, or hessian for all strata of the model
 
-        Parameters
-        ----------
+        _stratify_func(b, f)
 
-        b: array-like
-            vector of parameters at which the function is to be evaluated
+            apply loglike, score, or hessian for all strata of the model
 
-        f: function
-            the function to evaluate the parameters at Either loglike,
-            score, or hessian
+            Parameters
+            ----------
 
-        Returns
-        -------
+            b: array-like
+                vector of parameters at which the function is to be evaluated
 
-        Value of the function evaluated at b
+            f: function
+                the function to evaluate the parameters at Either loglike,
+                score, or hessian
+
+            Returns
+            -------
+
+            Value of the function evaluated at b
+
         """
 
         exog = self.exog
@@ -741,18 +870,22 @@ class CoxPH(LikelihoodModel):
     def loglike(self, b):
 
         """
-        Calculate the value of the log-likelihood at estimates of the
-        parameters for all strata
 
-        Parameters:
-        ------------
+        loglike(b)
+        
+            Calculate the value of the log-likelihood at estimates of the
+            parameters for all strata
 
-        b: vector of parameter estimates
+            Parameters:
+            ------------
 
-        Returns
-        -------
+            b: vector of parameter estimates
 
-        value of log-likelihood as a float
+            Returns
+            -------
+
+            value of log-likelihood as a float
+
         """
 
         return self._stratify_func(b, self._loglike_proc)
@@ -760,18 +893,22 @@ class CoxPH(LikelihoodModel):
     def score(self, b):
 
         """
-        Calculate the value of the score function at estimates of the
-        parameters for all strata
 
-        Parameters:
-        ------------
+        score(b)
+        
+            Calculate the value of the score function at estimates of the
+            parameters for all strata
 
-        b: vector of parameter estimates
+            Parameters:
+            ------------
 
-        Returns
-        -------
+            b: vector of parameter estimates
 
-        value of score function as an array of floats
+            Returns
+            -------
+
+            value of score function as an array of floats
+
         """
 
         return self._stratify_func(b, self._score_proc)
@@ -779,18 +916,22 @@ class CoxPH(LikelihoodModel):
     def hessian(self, b):
 
         """
-        Calculate the value of the hessian at estimates of the
-        parameters for all strata
 
-        Parameters:
-        ------------
+        hessian(b)
+        
+            Calculate the value of the hessian at estimates of the
+            parameters for all strata
 
-        b: vector of parameter estimates
+            Parameters:
+            ------------
 
-        Returns
-        -------
+            b: vector of parameter estimates
 
-        value of hessian for strata as an array of floats
+            Returns
+            -------
+
+            value of hessian for strata as an array of floats
+
         """
 
         return self._stratify_func(b, self._hessian_proc)
@@ -798,18 +939,21 @@ class CoxPH(LikelihoodModel):
     def _loglike_proc(self, b):
 
         """
-        Calculate the value of the log-likelihood at estimates of the
-        parameters for a single strata
 
-        Parameters:
-        ------------
-
-        b: vector of parameter estimates
-
-        Returns
-        -------
+        _loglike_proc(b)
         
-        value of log-likelihood for strata as a float
+            Calculate the value of the log-likelihood at estimates of the
+            parameters for a single strata
+
+            Parameters:
+            ------------
+
+            b: vector of parameter estimates
+
+            Returns
+            -------
+
+            value of log-likelihood for strata as a float
 
         """
 
@@ -875,18 +1019,21 @@ class CoxPH(LikelihoodModel):
     
     def _score_proc(self, b):
         """
-        Calculate the score vector of the log-likelihood at estimates of the
-        parameters for a single strata
 
-        Parameters:
-        ------------
+        _score_proc(b)
+        
+            Calculate the score vector of the log-likelihood at estimates of the
+            parameters for a single strata
 
-        b: vector of parameter estimates
+            Parameters:
+            ------------
 
-        Returns
-        -------
+            b: vector of parameter estimates
 
-        value of score for strata as 1d array
+            Returns
+            -------
+
+            value of score for strata as 1d array
 
         """
 
@@ -967,18 +1114,21 @@ class CoxPH(LikelihoodModel):
     def _hessian_proc(self, b):
 
         """
-        Calculate the hessian matrix of the log-likelihood at estimates of the
-        parameters for a single strata
 
-        Parameters:
-        ------------
+        _hessian_proc(b)
+        
+            Calculate the hessian matrix of the log-likelihood at estimates of the
+            parameters for a single strata
 
-        b: vector of parameter estimates
+            Parameters:
+            ------------
 
-        Returns
-        -------
+            b: vector of parameter estimates
 
-        value of hessian for strata as 2d array
+            Returns
+            -------
+
+            value of hessian for strata as 2d array
 
         """
         
@@ -1075,36 +1225,44 @@ class CoxPH(LikelihoodModel):
     def information(self, b):
 
         """
-        Calculate the Fisher information matrix at estimates of the
-        parameters
 
-        Parameters
-        ----------
+        information(b)
 
-        b: estimates of the model parameters
+            Calculate the Fisher information matrix at estimates of the
+            parameters
 
-        Returns
-        -------
+            Parameters
+            ----------
 
-        information matrix as 2d array
+            b: estimates of the model parameters
+
+            Returns
+            -------
+
+            information matrix as 2d array
+
         """
         return -self.hessian(b)
 
     def covariance(self, b):
 
         """
-        Calculate the covariance matrix at estimates of the
-        parameters
 
-        Parameters
-        ----------
+        covariance(b)
 
-        b: estimates of the model parameters
+            Calculate the covariance matrix at estimates of the
+            parameters
 
-        Returns
-        -------
+            Parameters
+            ----------
 
-        covariance matrix as 2d array
+            b: estimates of the model parameters
+
+            Returns
+            -------
+
+            covariance matrix as 2d array
+
         """
         return la.pinv(self.information(b))
 
@@ -1122,7 +1280,21 @@ class CoxPH(LikelihoodModel):
 
 class KMResults(LikelihoodModelResults):
     """
-    Results for a Kaplan-Meier model
+
+    KMResults(model, params, normalized_cov_params=None, scale=1.0)
+
+        Results for a Kaplan-Meier model
+
+        Methods
+        -------
+
+        plot: Plot the survival curves using matplotlib.plyplot
+
+        summary: Display the results of fit in a table. Gives results
+        for all (including censored) times
+
+        test_diff: Test for difference between survival curves
+
     """
 
     ##Add handling for stratification
@@ -1142,72 +1314,79 @@ class KMResults(LikelihoodModelResults):
     def test_diff(self, groups, rho=None, weight=None):
 
         """
-        Test for difference between survival curves
 
-        Parameters
-        ----------
-        groups: A list of the values for exog to test for difference.
-        tests the null hypothesis that the survival curves for all
-        values of exog in groups are equal
+        test_diff(self, groups, rho=None, weight=None)
+        
+            Test for difference between survival curves
 
-        rho: compute the test statistic with weight S(t)^rho, where
-        S(t) is the pooled estimate for the Kaplan-Meier survival function.
-        If rho = 0, this is the logrank test, if rho = 0, this is the
-        Peto and Peto modification to the Gehan-Wilcoxon test.
+            Parameters
+            ----------
+            groups: list
+                A list of the values for exog to test for difference.
+                tests the null hypothesis that the survival curves for all
+                values of exog in groups are equal
 
-        weight: User specified function that accepts as its sole arguement
-        an array of times, and returns an array of weights for each time
-        to be used in the test
+            rho: int in [0,1]
+                compute the test statistic with weight S(t)^rho, where
+                S(t) is the pooled estimate for the Kaplan-Meier survival function.
+                If rho = 0, this is the logrank test, if rho = 0, this is the
+                Peto and Peto modification to the Gehan-Wilcoxon test.
 
-        Returns
-        -------
-        An array whose zeroth element is the chi-square test statistic for
-        the global null hypothesis, that all survival curves are equal,
-        the index one element is degrees of freedom for the test, and the
-        index two element is the p-value for the test.
+            weight: function
+                User specified function that accepts as its sole arguement
+                an array of times, and returns an array of weights for each time
+                to be used in the test
 
-        Examples
-        --------
+            Returns
+            -------
+            An array whose zeroth element is the chi-square test statistic for
+            the global null hypothesis, that all survival curves are equal,
+            the index one element is degrees of freedom for the test, and the
+            index two element is the p-value for the test.
 
-        >>> import statsmodels.api as sm
-        >>> import matplotlib.pyplot as plt
-        >>> import numpy as np
-        >>> from statsmodels.sandbox.survival2 import KaplanMeier
-        >>> dta = sm.datasets.strikes.load()
-        >>> dta = dta.values()[-1]
-        >>> censoring = np.ones_like(dta[:,0])
-        >>> censoring[dta[:,0] > 80] = 0
-        >>> dta = np.c_[dta,censoring]
-        >>> km = KaplanMeier(dta,0,exog=1,censoring=2)
-        >>> km.fit()
+            Examples
+            --------
 
-        Test for difference of survival curves
+            >>> import scikits.statsmodels.api as sm
+            >>> import matplotlib.pyplot as plt
+            >>> import numpy as np
+            >>> from scikits.statsmodels.sandbox.survival2 import KaplanMeier
+            >>> dta = sm.datasets.strikes.load()
+            >>> dta = dta.values()[-1]
+            >>> censoring = np.ones_like(dta[:,0])
+            >>> censoring[dta[:,0] > 80] = 0
+            >>> dta = np.c_[dta,censoring]
+            >>> km = KaplanMeier(dta,0,exog=1,censoring=2)
+            >>> results = km.fit()
 
-        >>> log_rank = km3.test_diff([0.0645,-0.03957])
+            Test for difference of survival curves
 
-        The zeroth element of log_rank is the chi-square test statistic
-        for the difference between the survival curves using the log rank test
-        for exog = 0.0645 and exog = -0.03957, the index one element
-        is the degrees of freedom for the test, and the index two element
-        is the p-value for the test
+            >>> log_rank = results.test_diff([0.0645,-0.03957])
 
-        >>> wilcoxon = km.test_diff([0.0645,-0.03957], rho=1)
+            The zeroth element of log_rank is the chi-square test statistic
+            for the difference between the survival curves using the log rank test
+            for exog = 0.0645 and exog = -0.03957, the index one element
+            is the degrees of freedom for the test, and the index two element
+            is the p-value for the test
 
-        wilcoxon is the equivalent information as log_rank, but for the
-        Peto and Peto modification to the Gehan-Wilcoxon test.
+            >>> wilcoxon = results.test_diff([0.0645,-0.03957], rho=1)
 
-        User specified weight functions
+            wilcoxon is the equivalent information as log_rank, but for the
+            Peto and Peto modification to the Gehan-Wilcoxon test.
 
-        >>> log_rank = km3.test_diff([0.0645,-0.03957], weight=np.ones_like)
+            User specified weight functions
 
-        This is equivalent to the log rank test
+            >>> log_rank = results.test_diff([0.0645,-0.03957], weight=np.ones_like)
 
-        More than two groups
+            This is equivalent to the log rank test
 
-        >>> log_rank = km.test_diff([0.0645,-0.03957,0.01138])
+            More than two groups
 
-        The test can be performed with arbitrarily many groups, so long as
-        they are all in the column exog
+            >>> log_rank = results.test_diff([0.0645,-0.03957,0.01138])
+
+            The test can be performed with arbitrarily many groups, so long as
+            they are all in the column exog
+
         """
 
         groups = np.asarray(groups)
@@ -1368,18 +1547,23 @@ class KMResults(LikelihoodModelResults):
 
     def isolate_curve(self, exog):
         """
-        Get results for one curve from a model that fits mulitple survival
-        curves
 
-        Parameters
-        ----------
+        isolate_curve(exog)
 
-        exog: The value of that exogenous variable for the curve to be
-        isolated.
+            Get results for one curve from a model that fits mulitple survival
+            curves
 
-        returns
-        --------
-        A SurvivalResults object for the isolated curve
+            Parameters
+            ----------
+
+            exog: The value of that exogenous variable for the curve to be
+            isolated.
+
+            returns
+            --------
+
+            A SurvivalResults object for the isolated curve
+
         """
 
         exogs = self.exog
@@ -1406,12 +1590,22 @@ class KMResults(LikelihoodModelResults):
 
     def plot(self, confidence_band=False):
         """
-        Plot the estimated survival curves. After using this method
-        do
 
-        plt.show()
+        plot(confidence_band=False)
 
-        to display the plot
+            Plot the estimated survival curves. After using this method
+            do
+
+            plt.show()
+
+            to display the plot
+
+            Parameters
+            ----------
+
+            confidence_band: logical
+                indicator of whether confidence bands should be plotted
+
         """
         plt.figure()
         if self.exog is None:
@@ -1436,7 +1630,20 @@ class KMResults(LikelihoodModelResults):
 
     def _plotting_proc(self, g, confidence_band):
         """
-        For internal use
+
+        _plotting_proc(self, g, confidence_band)
+
+            plot the survival curve for a given group
+
+            Parameters
+            ----------
+
+            g: int
+                index of the group whose curve is to be plotted
+
+            confidence_band: logical
+                indicator of whether confidence bands should be plotted
+
         """
         survival = self.results[g][0]
         t = self.ts[g]
@@ -1472,7 +1679,17 @@ class KMResults(LikelihoodModelResults):
 
     def _summary_proc(self, g):
         """
-        For internal use
+
+        _summary_proc(self, g)
+
+            display the summary of the survival curve for the given group
+
+            Parameters
+            ----------
+
+            g: int
+                index of the group to be summarized
+
         """
         if self.exog is not None:
             myTitle = ('exog = ' + str(self.groups[g]) + '\n')
@@ -1493,7 +1710,31 @@ class KMResults(LikelihoodModelResults):
 class CoxResults(LikelihoodModelResults):
 
     """
-    Results for cox proportional hazard models
+
+    CoxResults(model, params, normalized_cov_params=None, scale=1.0,
+                 names=None)
+
+        Results for cox proportional hazard models
+
+        Attributes
+        ----------
+
+        model: CoxPH instance
+            the model that was fit
+
+        params: array
+            estimate of the parameters
+
+        normalized_cov_params: array
+            variance-covariance matrix evaluated at params
+
+        scale: see LikelihoodModelResults
+
+        exog_mean: array
+            mean vector of the exogenous variables
+
+        names: array
+            array of names for the exogenous variables
     """
 
     def __init__(self, model, params, normalized_cov_params=None, scale=1.0,
@@ -1506,7 +1747,11 @@ class CoxResults(LikelihoodModelResults):
     def summary(self):
 
         """
-        Print a set of tables that summarize the Cox model
+
+        summary()
+
+            Print a set of tables that summarize the Cox model
+
         """
 
         params = self.params
@@ -1540,22 +1785,26 @@ class CoxResults(LikelihoodModelResults):
         ##with hasattr?
 
         """
-        estimate the baseline survival function
 
-        Parameters
-        ----------
+        baseline(return_times=False)
 
-        return_times: logical
-            indicator of whether times should also be returned
+            estimate the baseline survival function
 
-        Returns
-        -------
+            Parameters
+            ----------
 
-        array of predicted baseline survival probabilities
-        at the observed times. If return_times is true, then
-        an array whose first column is the times, and whose
-        second column is the vaseline survival associated with that
-        time
+            return_times: logical
+                indicator of whether times should also be returned
+
+            Returns
+            -------
+
+            array of predicted baseline survival probabilities
+            at the observed times. If return_times is true, then
+            an array whose first column is the times, and whose
+            second column is the vaseline survival associated with that
+            time
+
         """
 
         model = self.model
@@ -1576,24 +1825,28 @@ class CoxResults(LikelihoodModelResults):
         ##t= arbitrary array of times?
 
         """
-        estimate the survival probability with a given vector
-        of covariates
 
-        Parameters
-        ----------
+        predict(X, t, coerce_0_1=True)
 
-        X: array-like
-            matrix of covariate vectors. If t='all', must be
-            only a single vector
+            estimate the survival probability with a given vector
+            of covariates
 
-        t: non-negative int or "all"
-            time(s) at which to predict. If t="all", then
-            predict at all the observed times
+            Parameters
+            ----------
 
-        Returns
-        -------
+            X: array-like
+                matrix of covariate vectors. If t='all', must be
+                only a single vector
 
-        array of predicted survival probabilities
+            t: non-negative int or "all"
+                time(s) at which to predict. If t="all", then
+                predict at all the observed times
+
+            Returns
+            -------
+
+            array of predicted survival probabilities
+
         """
 
         if t == 'all':
@@ -1623,23 +1876,27 @@ class CoxResults(LikelihoodModelResults):
         ##Add CI bands
 
         """
-        Plot the estimated survival curve for a given
-        covariate vector
 
-        Parameters
-        ----------
+        plot(vector='mean', CI_band=False, coerce_0_1=True)
 
-        vector: array-like or 'mean'
-            A vector of covariates. vector='mean' will use the mean
-            vector
+            Plot the estimated survival curve for a given
+            covariate vector
 
-        CI_band: logical
-            indicator of whether to plot confidence bands for the survival
-            curve
+            Parameters
+            ----------
 
-        coerce_0_1: logical
-            indicator of whether the values for the survival curve should
-            be coerced to fit in the interval [0,1]
+            vector: array-like or 'mean'
+                A vector of covariates. vector='mean' will use the mean
+                vector
+
+            CI_band: logical
+                indicator of whether to plot confidence bands for the survival
+                curve
+
+            coerce_0_1: logical
+                indicator of whether the values for the survival curve should
+                be coerced to fit in the interval [0,1]
+
         """
 
         if vector == 'mean':
@@ -1653,18 +1910,22 @@ class CoxResults(LikelihoodModelResults):
     def plot_baseline(self, CI_band=False):
 
         """
-        Plot the estimated baseline survival curve
 
-        Parameters
-        ----------
+        plot_baseline(CI_band=False)
 
-        vector: array-like or 'mean'
-            A vector of covariates. vector='mean' will use the mean
-            vector
+            Plot the estimated baseline survival curve
 
-        CI_band: logical
-            indicator of whether to plot confidence bands for the survival
-            curve
+            Parameters
+            ----------
+
+            vector: array-like or 'mean'
+                A vector of covariates. vector='mean' will use the mean
+                vector
+
+            CI_band: logical
+                indicator of whether to plot confidence bands for the survival
+                curve
+
         """
 
         baseline = KaplanMeier(self.model.surv)
@@ -1674,29 +1935,36 @@ class CoxResults(LikelihoodModelResults):
     def baseline_object(self):
 
         """
-        Get the KaplanMeier object that represents the baseline
-        survival function
 
-        Returns
-        -------
+        baseline_object()
 
-        KaplanMeier object
+            Get the KaplanMeier object that represents the baseline
+            survival function
+
+            Returns
+            -------
+
+            KaplanMeier object
+
         """
 
         return KaplanMeier(self.model.surv)
         
     def test_coefficients(self):
         """
-        test whether the coefficients for each exogenous variable
-        are significantly different from zero
 
-        Returns
-        -------
+        test_coefficients()
 
-        An array, where each row represents a coefficient.
-        The first column is the coefficient, the second is
-        the standard error of the coefficient, the third
-        is the z-score, and the fourth is the p-value.
+            test whether the coefficients for each exogenous variable
+            are significantly different from zero
+
+            Returns
+            -------
+
+            An array, where each row represents a coefficient.
+            The first column is the coefficient, the second is
+            the standard error of the coefficient, the third
+            is the z-score, and the fourth is the p-value.
 
         """
         params = self.params
@@ -1709,10 +1977,11 @@ class CoxResults(LikelihoodModelResults):
 
     def wald_test(self, restricted=None):
         """
+
         wald_test()
 
-        Calculate the wald statistic for a hypothesis test
-        against the global null
+            Calculate the wald statistic for a hypothesis test
+            against the global null
 
         """
         if restricted is None:
@@ -1725,10 +1994,11 @@ class CoxResults(LikelihoodModelResults):
     def score_test(self, restricted=None):
 
         """
+
         score_test()
 
-        Calculate the score statistic for a hypothesis test
-        against the global null
+            Calculate the score statistic for a hypothesis test
+            against the global null
 
         """
 
@@ -1742,10 +2012,11 @@ class CoxResults(LikelihoodModelResults):
     def likelihood_ratio_test(self, restricted=None):
 
         """
+
         likelihood_ratio_test()
 
-        Calculate the likelihood ratio for a hypothesis test
-        against the global null
+            Calculate the likelihood ratio for a hypothesis test
+            against the global null
 
         """
 
@@ -1762,27 +2033,28 @@ class CoxResults(LikelihoodModelResults):
     def conf_int(self, alpha=.05, cols=None, method='default', exp=True):
 
         """
+
         conf_int(self, alpha=.05, cols=None, method='default', exp=True)
 
-        Calculate confidence intervals for the model parameters
+            Calculate confidence intervals for the model parameters
 
-        Parameters
-        ----------
+            Parameters
+            ----------
 
-        exp: logical value, indicating whether the confidence
-            intervals for the exponentiated parameters
+            exp: logical value, indicating whether the confidence
+                intervals for the exponentiated parameters
 
-        see documentation for LikelihoodModel for other
-        parameters
+            see documentation for LikelihoodModel for other
+            parameters
 
-        Returns
-        -------
+            Returns
+            -------
 
-        An array, each row representing a parameter, where
-        the first column gives the lower confidence limit
-        and the second column gives the upper confidence
-        limit
-
+            An array, each row representing a parameter, where
+            the first column gives the lower confidence limit
+            and the second column gives the upper confidence
+            limit
+        
         """
         CI = super(CoxResults, self).conf_int(alpha, cols, method)
         if exp:
