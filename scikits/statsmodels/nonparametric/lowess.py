@@ -137,7 +137,6 @@ def initial_fit(xcpy, ycpy, k, n):
     X = np.ones((k,2))
     fitted = np.zeros(n)
 
-    #beta = np.array([0,1])
     for i in xrange(n):
         
         left_width = xcpy[i] - xcpy[nn_indices[0]]
@@ -242,7 +241,9 @@ def update_nn(x, cur_nn,i):
 
 def tricube(t):
     """
-    The tricube function applied to a numpy array
+    The tricube function applied to a numpy array.
+    The tricube function is (1-abs(t)**3)**3.
+    All operations are in place, and nothing is returned.
     """
     #t = (1-np.abs(t)**3)**3
     np.absolute(t, out=t)
@@ -254,6 +255,7 @@ def tricube(t):
 def mycube(t):
     """
     Fast matrix cube
+    All operations are in place, and nothing is returned.
     """
     #t **= 3
     t2 = t*t
@@ -261,7 +263,9 @@ def mycube(t):
 
 def bisquare(t):
     """
-    The bisquare function applied to a numpy array
+    The bisquare function applied to a numpy array.
+    The bisquare function is (1-t**2)**2. 
+    All operations are in place, and nothing is returned.
     """
     #t = (1-t**2)**2
     t *= t
