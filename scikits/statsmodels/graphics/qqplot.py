@@ -61,7 +61,7 @@ def qqplot(data, dist=stats.norm, *args, **kwargs):
         raise ImportError("matplotlib not installed")
 
     if not hasattr(dist, 'ppf'):
-        raise ValueError("dist must be a scipy.stats distribution")
+        raise ValueError("distribution must have a ppf method")
 
     nobs = data.shape[0]
     
@@ -87,7 +87,6 @@ def qqplot(data, dist=stats.norm, *args, **kwargs):
     sample_quantiles = np.array(data, copy=True)
     sample_quantiles.sort()
     
-    print dist.args
 
     plt.plot(theoretical_quantiles, sample_quantiles, 'bo')
     xlabel = "Theoretical Quantiles"
