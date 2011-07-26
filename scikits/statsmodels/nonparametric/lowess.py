@@ -128,9 +128,9 @@ def lowess(x,y, frac = 2./3, it = 3):
 
 
 def initial_fit(xcpy, ycpy, k, n):
-   """
-   The initial weighted local linear regression for lowess.
-   """
+    """
+    The initial weighted local linear regression for lowess.
+    """
     weights = np.zeros((k,1), dtype = xcpy.dtype)
     nn_indices = [0,k]
     
