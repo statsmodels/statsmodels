@@ -20,6 +20,7 @@ import scipy.linalg as L
 
 from scikits.statsmodels.tools.decorators import cache_readonly
 from scikits.statsmodels.tools.tools import chain_dot
+from scikits.statsmodels.base.model import GenericLikelihoodModel as glik
 from scikits.statsmodels.tsa.tsatools import vec, unvec
 
 from scikits.statsmodels.tsa.vector_ar.irf import IRAnalysis
@@ -1644,8 +1645,10 @@ class SVAR(VAR);
                           A=A, A_mask=A_mask, B=B, B_mask=B_mask)
         #move these to SVARREsults class
         def check_rank():
+            return NonImplementedError
 
-        def check_order()
+        def check_order():
+            return NonImplementedError
 
 class SVARProcess(VARProcess):
     """
@@ -1750,7 +1753,7 @@ class SVARResults(SVAR, VARResults):
         Order of VAR process
     params : ndarray (Kp + 1) x K
         A_i matrices and intercept in stacked form [int A_1 ... A_p]
-    pvalues
+    pvalue
     names : list
         variables names
     resid
@@ -1799,14 +1802,36 @@ class SVARResults(SVAR, VARResults):
 
         SVARProcess.__init__(self, coefs, intercept, sigma_u, names=names, 
                                    A=A, A_mask=A_mask, B=B, B_mask=B_mask)
+
         #need to define AB_mask, A_val, B_val
         self.A_val, self.B_val = _gen_ABval(A,B)
-        if A is not None:
-            for i in xrange(neqs)
-        self.A_val = 
+        
+        if A is not None and B is not None:
+            self.AB_mask = np.append(A_val[A_mask],B_val[B_mask])
+        elif A is not None and B is None:
+            self.AB_mask = A_val[A_mask]
+        elif A is None and B is not None:
+            self.AB_mask = B_val[B_mask]
 
-    def svar_likelihood(self, AB_mask, A=A_val, B=B_val ):
 
+        A_solve, B_solve = _solve_AB #this will solve for structual parameters
+    
+    def _solve_AB(self, A_mask):
+        """
+
+        Solves for MLE estimate of structural parameters
+
+        """
+        f = self.svar_likelihood
+        AB_mask = self.AB_mask
+        mod = glik(AB_mask, loglik=svar_likelihood:
+        
+
+
+    def svar_likelihood(self, AB_mask):
+
+        A_mask = self.A_mask
+        B_mask = self.B_mask
         nobs = self.nobs
         neqs = self.neqs
         sigma_u = self.sigma_u
@@ -1836,7 +1861,30 @@ class SVARResults(SVAR, VARResults):
                         B_val[i,j] = B[i,j]
         return A_val, B_val
 
-        
+
+class SVARMLE(LikelihoodModel):
+    """
+    Method to solve MLE of structural parameter
+    """
+    def __init__(self, A, B, A_mask, B_mask, A_val, B_val, sigma_u):
+        self.A = A
+        self.A_mask = A_mask
+        self.B_mask = B_mask
+        self.A_val = A_val
+        self.B_val = B_val
+        if A is not None and B is not None:
+            self.AB_mask = np.append(A_val[A_mask],B_val[B_mask])
+        elif A is not None and B is None:
+            self.AB_mask = A_val[A_mask]
+        elif A is None and B is not None:
+            self.AB_mask = B_val[B_mask]
+
+    def likelihood(self, AB_mask):
+        return -self.svar_likelihood(AB_mask)
+
+    def solve(self, AB_mask):
+    
+    
 
 class FEVD(object):
     """
