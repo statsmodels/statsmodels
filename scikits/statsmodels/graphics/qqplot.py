@@ -1,7 +1,8 @@
 import numpy as np
 from scipy import stats
 
-def qqplot(data, dist=stats.norm, distargs = (), loc=0, scale =1, fit=False):
+def qqplot(data, dist=stats.norm, distargs = (), loc=0, scale =1, fit=False,
+                line = False):
     """
     qqplot of the quantiles of x versus the quantiles/ppf of a distribution. 
     
@@ -26,6 +27,8 @@ def qqplot(data, dist=stats.norm, distargs = (), loc=0, scale =1, fit=False):
         If fit is false, loc, scale, and distargs are passed to the 
         distribution. If fit is True then the parameters for dist
         are fit automatically using dist.fit.
+    line : boolean
+        If line is True a 45 degree line is drawn on the graph
 
     Returns
     -------
@@ -72,7 +75,6 @@ def qqplot(data, dist=stats.norm, distargs = (), loc=0, scale =1, fit=False):
 
     nobs = data.shape[0]
     
-    fit = kwargs.get('fit',False)
     if fit:
         fit_params = dist.fit(data)
         loc = fit_params[-2]
@@ -81,15 +83,13 @@ def qqplot(data, dist=stats.norm, distargs = (), loc=0, scale =1, fit=False):
             dist = dist(*fit_params[:-2], loc= loc, scale=scale)
         else:
             dist = dist(loc = loc, scale= scale)
-    elif args or kwargs:
-        loc = kwargs.get('loc',0)
-        scale = kwargs.get('scale',1)
-        dist = dist(*args,loc=loc, scale=scale)
+    elif distargs 
+        dist = dist(*distargs,loc=loc, scale=scale)
 
     try:
         theoretical_quantiles = dist.ppf(np.linspace(0,1,nobs+2)[1:-1])
     except:
-        raise ValueError('scipy.stats distribution requires more parameters')
+        raise ValueError('distribution requires more parameters')
 
     sample_quantiles = np.array(data, copy=True)
     sample_quantiles.sort()
