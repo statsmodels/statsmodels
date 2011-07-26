@@ -1,7 +1,7 @@
 import numpy as np
 from scipy import stats
 
-def qqplot(data, dist=stats.norm, *args, **kwargs):
+def qqplot(data, dist=stats.norm, distargs = (), loc=0, scale =1, fit=False):
     """
     qqplot of the quantiles of x versus the quantiles/ppf of a distribution. 
     
@@ -15,10 +15,17 @@ def qqplot(data, dist=stats.norm, *args, **kwargs):
     dist : A scipy.stats or scikits.statsmodels distribution
         Compare x against dist. The default
         is scipy.stats.distributions.norm (a standard normal).
-    args : Additional arguments needed to use the ppf function for dist.
-    kwargs : named arguments fit, loc and scale. Unless fit=True, loc and
-        scale are passed to dist.for use in dist. Default is loc=0 and scale=1.
-        But if fit is True, then the parameters for dist are fit automatically. 
+    distargs : tuple
+        A tuple of arguments passed to dist to specify it fully
+        so dist.ppf may be called. 
+    loc : float
+        Location parameter for dist
+    scale : float
+        Scale parameter for dist
+    fit : boolean
+        If fit is false, loc, scale, and distargs are passed to the 
+        distribution. If fit is True then the parameters for dist
+        are fit automatically using dist.fit.
 
     Returns
     -------
