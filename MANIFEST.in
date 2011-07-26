@@ -19,7 +19,7 @@ recursive-include docs/sphinxext *
 recursive-exclude docs/build *
 #recursive-include docs/build/html *
 recursive-exclude docs/build/htmlhelp *
-include docs/build/htmlhelp/statsmodelsdoc.chm
+include scikits/statsmodels/statsmodelsdoc.chm
 include docs/make.bat
 include docs/Makefile
 #include docs mak*

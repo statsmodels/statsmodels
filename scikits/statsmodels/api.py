@@ -18,8 +18,7 @@ from .graphics import api as graphics
 
 import os
 
-chmpath = os.path.join(os.path.dirname(__file__),
-                       'docs\\build\\htmlhelp\\statsmodelsdoc.chm')
+chmpath = os.path.join(os.path.dirname(__file__), 'statsmodelsdoc.chm')
 if os.path.exists(chmpath):
     def open_help(chmpath=chmpath):
         from subprocess import Popen
