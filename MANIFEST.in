@@ -2,7 +2,7 @@ global-include *.csv *.py *.txt *.pyx *.c
 #scikits*.*
 include MANIFEST.in
 
-#exclude scikits/statsmodels/docs/build/htmlhelp*
+#exclude docs/build/htmlhelp*
 recursive-exclude build *
 recursive-exclude dist *
 recursive-exclude tools *
@@ -13,17 +13,17 @@ graft scikits/statsmodels/sandbox/regression/data
 graft scikits/statsmodels/sandbox/tests
 graft scikits/statsmodels/sandbox/tsa/examples
 graft scikits/statsmodels/tsa/vector_ar/data
-recursive-include scikits/statsmodels/docs/source *
-exclude scikits/statsmodels/docs/source/generated/*
-recursive-include scikits/statsmodels/docs/sphinxext *
-recursive-exclude scikits/statsmodels/docs/build *
-#recursive-include scikits/statsmodels/docs/build/html *
-recursive-exclude scikits/statsmodels/docs/build/htmlhelp *
-include scikits/statsmodels/docs/build/htmlhelp/statsmodelsdoc.chm
-include scikits/statsmodels/docs/make.bat
-include scikits/statsmodels/docs/Makefile
-#include scikits/statsmodels/docs mak*
-#include scikits/statsmodels/docs GLM*
+recursive-include docs/source *
+exclude docs/source/generated/*
+recursive-include docs/sphinxext *
+recursive-exclude docs/build *
+#recursive-include docs/build/html *
+recursive-exclude docs/build/htmlhelp *
+include docs/build/htmlhelp/statsmodelsdoc.chm
+include docs/make.bat
+include docs/Makefile
+#include docs mak*
+#include docs GLM*
 
 #missed files:  .npz, .npy
 include scikits/statsmodels/tsa/vector_ar/tests/results/vars_results.npz
