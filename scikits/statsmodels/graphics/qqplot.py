@@ -1,8 +1,8 @@
 import numpy as np
 from scipy import stats
 
-def qqplot(data, dist=stats.norm, distargs = (), loc=0, scale =1, fit=False,
-                line = False):
+def qqplot(data, dist=stats.norm, distargs=(), loc=0, scale=1, fit=False,
+                line=False):
     """
     qqplot of the quantiles of x versus the quantiles/ppf of a distribution. 
     
@@ -54,7 +54,7 @@ def qqplot(data, dist=stats.norm, distargs = (), loc=0, scale =1, fit=False,
     >>> plt.show()
     >>> plt.close(fig)
     >>> #qqplot against same as above, but with mean 3 and sd 10
-    >>> fig = sm.qqplot(res, stats.t, distargs = (4,), loc=3,scale=10)
+    >>> fig = sm.qqplot(res, stats.t, distargs=(4,), loc=3, scale=10)
     >>> plt.show()
     >>> plt.close(fig)
     >>> #automatically determine parameters for t dist
@@ -85,12 +85,12 @@ def qqplot(data, dist=stats.norm, distargs = (), loc=0, scale =1, fit=False,
         if len(fit_params)>2:
             dist = dist(*fit_params[:-2], loc = 0, scale = 1)
         else:
-            dist = dist(loc = 0, scale= 1)
+            dist = dist(loc=0, scale=1)
     elif distargs or loc != 0 or scale != 1: 
-        dist = dist(*distargs,loc=loc, scale=scale)
+        dist = dist(*distargs, **dict(loc=loc, scale=scale))
 
     try:
-        theoretical_quantiles = dist.ppf(np.linspace(0,1,nobs+2)[1:-1])
+        theoretical_quantiles = dist.ppf(np.linspace(0, 1, nobs+2)[1:-1])
     except:
         raise ValueError('distribution requires more parameters')
 
@@ -101,6 +101,8 @@ def qqplot(data, dist=stats.norm, distargs = (), loc=0, scale =1, fit=False,
         sample_quantiles /= scale
     
 
+    ax = plt.gca()
+    ax.set_xmargin(0.02)
     plt.plot(theoretical_quantiles, sample_quantiles, 'bo')
     if line:
         end_pts = zip(plt.xlim(), plt.ylim())
@@ -111,6 +113,9 @@ def qqplot(data, dist=stats.norm, distargs = (), loc=0, scale =1, fit=False,
     plt.xlabel(xlabel)
     ylabel = "Sample Quantiles"
     plt.ylabel(ylabel)
+   
+    
+    
     return plt.gcf()
 
 
