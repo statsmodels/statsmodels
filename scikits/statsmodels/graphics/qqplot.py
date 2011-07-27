@@ -26,9 +26,12 @@ def qqplot(data, dist=stats.norm, distargs = (), loc=0, scale =1, fit=False,
     fit : boolean
         If fit is false, loc, scale, and distargs are passed to the 
         distribution. If fit is True then the parameters for dist
-        are fit automatically using dist.fit.
+        are fit automatically using dist.fit. The quantiles are formed 
+        from the standardized data, after subtracting the fitted loc
+        and dividing by the fitted scale. (This ensures that if
+        line is True the line will be meaningful.)
     line : boolean
-        If line is True a 45 degree line is drawn on the graph
+        If True a 45 degree line is drawn on the graph
 
     Returns
     -------
@@ -47,16 +50,16 @@ def qqplot(data, dist=stats.norm, distargs = (), loc=0, scale =1, fit=False,
     >>> plt.close(fig)
     >>> #qqplot against quantiles of t distribution with 4 df
     >>> import scipy.stats as stats
-    >>> fig = sm.qqplot(res, stats.t, 4)
+    >>> fig = sm.qqplot(res, stats.t, distargs=(4,))
     >>> plt.show()
     >>> plt.close(fig)
     >>> #qqplot against same as above, but with mean 3 and sd 10
-    >>> fig = sm.qqplot(res, stats.t, 4, loc=3,scale=10)
+    >>> fig = sm.qqplot(res, stats.t, distargs = (4,), loc=3,scale=10)
     >>> plt.show()
     >>> plt.close(fig)
     >>> #automatically determine parameters for t dist
     >>> #including the loc and scale
-    >>> fig = sm.qqplot(res, stats.t, fit=True)
+    >>> fig = sm.qqplot(res, stats.t, fit=True, line=True)
     >>> plt.show()
     >>> plt.close(fig)
     Notes
@@ -80,10 +83,10 @@ def qqplot(data, dist=stats.norm, distargs = (), loc=0, scale =1, fit=False,
         loc = fit_params[-2]
         scale = fit_params[-1]
         if len(fit_params)>2:
-            dist = dist(*fit_params[:-2], loc= loc, scale=scale)
+            dist = dist(*fit_params[:-2], loc = 0, scale = 1)
         else:
-            dist = dist(loc = loc, scale= scale)
-    elif distargs 
+            dist = dist(loc = 0, scale= 1)
+    elif distargs or loc != 0 or scale != 1: 
         dist = dist(*distargs,loc=loc, scale=scale)
 
     try:
@@ -93,9 +96,17 @@ def qqplot(data, dist=stats.norm, distargs = (), loc=0, scale =1, fit=False,
 
     sample_quantiles = np.array(data, copy=True)
     sample_quantiles.sort()
+    if fit:
+        sample_quantiles -= loc
+        sample_quantiles /= scale
     
 
     plt.plot(theoretical_quantiles, sample_quantiles, 'bo')
+    if line:
+        end_pts = zip(plt.xlim(), plt.ylim())
+        end_pts[0] = max(end_pts[0])
+        end_pts[1] = min(end_pts[1])
+        plt.plot(end_pts, end_pts, 'r-') 
     xlabel = "Theoretical Quantiles"
     plt.xlabel(xlabel)
     ylabel = "Sample Quantiles"
