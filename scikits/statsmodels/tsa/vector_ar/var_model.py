@@ -17,6 +17,7 @@ import numpy.ma as ma
 from numpy.linalg import cholesky as chol, solve
 import scipy.stats as stats
 import scipy.linalg as L
+from scipy import optimize
 
 from scikits.statsmodels.tools.decorators import cache_readonly
 from scikits.statsmodels.tools.tools import chain_dot
@@ -121,6 +122,7 @@ def gen_masks(A, B, neqs):
             for j in xrange(neqs):
                 if B[i,j] == 'E':
                     B_mask[i,j] = True
+    return A_mask, B_mask
 
 def var_acf(coefs, sig_u, nlags=None):
     """
@@ -1330,12 +1332,12 @@ class VARResults(VARProcess):
             raise Exception('kind %s not recognized' % kind)
 
         pvalue = dist.sf(statistic)
-        crit_value = dist.ppf(1 - signif)
+        crit_initue = dist.ppf(1 - signif)
 
-        conclusion = 'fail to reject' if statistic < crit_value else 'reject'
+        conclusion = 'fail to reject' if statistic < crit_initue else 'reject'
         results = {
             'statistic' : statistic,
-            'crit_value' : crit_value,
+            'crit_initue' : crit_initue,
             'pvalue' : pvalue,
             'df' : df,
             'conclusion' : conclusion,
@@ -1412,7 +1414,7 @@ class VARResults(VARProcess):
 
         results = {
             'statistic' : lam_omni,
-            'crit_value' : crit_omni,
+            'crit_initue' : crit_omni,
             'pvalue' : omni_pvalue,
             'df' : self.neqs * 2,
             'conclusion' : conclusion,
@@ -1484,7 +1486,8 @@ class VARResults(VARProcess):
         "Bayesian a.k.a. Schwarz info criterion"
         return self.info_criteria['bic']
 
-class SVAR(VAR);
+class SVAR(VAR):
+
     """
     Fit VAR and then estimate structural components of A and B, defined:
 
@@ -1514,10 +1517,9 @@ class SVAR(VAR);
     -------
     .fit() methdo return SVARResults object
     """
-    #def fit()
-    #...
-    def __init__(self, endog, names=None, dates=None, 
-                 svar_type, A=None, B=None):
+
+    def __init__(self, endog, svar_type, names=None, dates=None, 
+                  A=None, B=None):
         (self.endog, self.names,
          self.dates) = data_util.interpret_data(endog, names, dates)
 
@@ -1526,7 +1528,12 @@ class SVAR(VAR);
 
         types = ['A', 'B', 'AB']
         if svar_type not in types:
-            raise ValueError('SVAR type not recognized, must be in ' + str(types))
+            raise ValueError('SVAR type not recognized, must be in ' 
+                             + str(types))
+        self.svar_type = svar_type
+        self.A = A
+        self.B = B
+
 
     def fit(self, maxlags=None, method='ols', ic=None, trend='c',
             verbose=False, s_method='mle'):
@@ -1583,8 +1590,7 @@ class SVAR(VAR);
 
         return self._estimate_svar(lags, trend=trend)
 
-
-        def _estimate_svar(self,lags, offset=0, trend='c')
+    def _estimate_svar(self,lags, offset=0, trend='c'):
         """
         lags : int
         offset : int
@@ -1641,14 +1647,14 @@ class SVAR(VAR);
         # maximization to solve for unknown components of A, B
 
         return SVARResults(y, z, params, omega, lags, names=self.names,
-                          trend=trend, dates=self.dates, model=self
+                          trend=trend, dates=self.dates, model=self,
                           A=A, A_mask=A_mask, B=B, B_mask=B_mask)
         #move these to SVARREsults class
         def check_rank():
-            return NonImplementedError
+            return NotImplementedError
 
         def check_order():
-            return NonImplementedError
+            return NotImplementedError
 
 class SVARProcess(VARProcess):
     """
@@ -1669,8 +1675,7 @@ class SVARProcess(VARProcess):
     -------
     **Attributes**:
     """
-    def __init__(self, coefs, intercept, sigma_u, names=None,
-                 A=A, A_mask=A_mask, B=B, B_mask=B_mask):
+    def __init__(self, coefs, intercept, sigma_u, names=None):
         self.k_ar = len(coefs)
         self.neqs = coefs.shape[1]
         self.coefs = coefs
@@ -1679,11 +1684,6 @@ class SVARProcess(VARProcess):
         self.names = names
         #Add SVAR components
         #change 
-        # assum starting values for iteration are 0
-        self.A = A
-        self.A_mask = A_mask
-        self.B = B
-        self.B_mask = B_mask
 
     def orth_ma_rep(self, maxn=10, P=None):
         """
@@ -1766,18 +1766,18 @@ class SVARResults(SVAR, VARResults):
     y :
     ys_lagged
     """
-    _model_type = 'VAR'
+    _model_type = 'SVAR'
 
     def __init__(self, endog, endog_lagged, params, sigma_u, lag_order,
                  model=None, trend='c', names=None, dates=None, 
-                 A=A, A_mask=A_mask, B=B, B_mask=B_mask):
+                 A=None, A_mask=None, B=None, B_mask=None):
 
         self.model = model
         self.y = self.endog = endog  #keep alias for now
         self.ys_lagged = self.endog_lagged = endog_lagged #keep alias for now
         self.dates = dates
 
-        self.n_totobs, neqs = self.y.shape
+        self.n_totobs, self.neqs = self.y.shape
         self.nobs = self.n_totobs - lag_order
         k_trend = util.get_trendorder(trend)
         if k_trend > 0: # make this the polynomial trend order
@@ -1789,103 +1789,157 @@ class SVARResults(SVAR, VARResults):
 
         self.coef_names = util.make_lag_names(names, lag_order, k_trend)
         self.params = params
+        self.sigma_u = sigma_u
 
         # Initialize VARProcess parent class
         # construct coefficient matrices
         # Each matrix needs to be transposed
         reshaped = self.params[self.k_trend:]
-        reshaped = reshaped.reshape((lag_order, neqs, neqs))
+        reshaped = reshaped.reshape((lag_order, self.neqs, self.neqs))
 
         # Need to transpose each coefficient matrix
         intercept = self.params[0]
         coefs = reshaped.swapaxes(1, 2).copy()
 
-        SVARProcess.__init__(self, coefs, intercept, sigma_u, names=names, 
-                                   A=A, A_mask=A_mask, B=B, B_mask=B_mask)
+        #need to define AB_mask, A_init, B_init
+        self.A = A
+        self.B = B
+        self.A_mask = A_mask
+        self.B_mask = B_mask
 
-        #need to define AB_mask, A_val, B_val
-        self.A_val, self.B_val = _gen_ABval(A,B)
+        self.A_init, self.B_init= self._gen_ABval()
         
-        if A is not None and B is not None:
-            self.AB_mask = np.append(A_val[A_mask],B_val[B_mask])
-        elif A is not None and B is None:
-            self.AB_mask = A_val[A_mask]
-        elif A is None and B is not None:
-            self.AB_mask = B_val[B_mask]
+        self.AB_mask = self._gen_AB_mask()
 
+        #this will solve for structual parameters
+        #self._A_solve, self.B_solve = self._solve_AB() 
 
-        A_solve, B_solve = _solve_AB #this will solve for structual parameters
-    
-    def _solve_AB(self, A_mask):
+    def solve_AB(self):
         """
 
         Solves for MLE estimate of structural parameters
 
         """
-        f = self.svar_likelihood
-        AB_mask = self.AB_mask
-        mod = glik(AB_mask, loglik=svar_likelihood:
-        
-
-
-    def svar_likelihood(self, AB_mask):
-
+        A_solve = self.A_init.copy()
+        B_solve = self.B_init.copy()
         A_mask = self.A_mask
         B_mask = self.B_mask
+        A_len = len(A_solve[A_mask])
+        B_len = len(B_solve[B_mask])
+
+        f = self.nsvar_loglike
+        AB_mask = self.AB_mask
+        #try manually inserting scipy.optimize
+        retvals = optimize.fmin(f, AB_mask, xtol=1e-8)
+
+        A_solve[A_mask] = retvals[:A_len]
+        B_solve[B_mask] = retvals[A_len:A_len+B_len]
+        
+        #mod = glik(start_params=AB_mask, loglik=f)
+        #mod.fit(method='nm', maxiter=1000)
+        return A_solve, B_solve
+    
+    def nsvar_loglike(self, AB_mask):
+        return -self.svar_loglike(AB_mask)
+
+    def svar_loglike(self, AB_mask):
+        
+        A = self.A
+        B = self.B
+        A_val= self.A_init.copy()
+        B_val= self.B_init.copy()
+        A_mask = self.A_mask
+        B_mask = self.B_mask
+        A_len = len(A_val[A_mask])
+        B_len = len(B_val[B_mask])
+        if A is not None:
+            A_val[A_mask] = np.copy(AB_mask[:A_len])
+        if B is not None:
+            B_val[B_mask] = np.copy(AB_mask[A_len:A_len+B_len])
+      
         nobs = self.nobs
         neqs = self.neqs
         sigma_u = self.sigma_u
-        trc_in = np.dot(np.dot(np.dot(A.T,npl.inv(B)),A),sigma_u)
-        likl = (-(nobs * neqs / 2) * np.log(2 * np.pi)
-                + (nobs / 2) * np.log(npl.det(A)**2)
-                - (nobs / 2) * np.log(npl.det(B))
-                - (nobs / 2) * np.trace(trc_in))
+        trc_in = np.dot(np.dot(np.dot(A_val,npl.inv(B_val)),A_val),sigma_u)
+        likl = (-(nobs * neqs / 2.0) * np.log(2 * np.pi)
+                + (nobs / 2.0) * np.log(npl.det(A_val)**2)
+                - (nobs / 2.0) * np.log(npl.det(B_val))
+                - (nobs / 2.0) * np.trace(trc_in))
         return likl
 
     def _gen_ABval(self):
-        A_val = np.zeros_like(A, dtype=float)
-        B_val = np.zeros_like(B, dytpe=float)
+        #assume mle guesses for svar params are equal to 0
+        neqs = self.neqs
+        A = self.A
+        B = self.B
+
         if A is not None:
+            A_init = np.zeros_like(A, dtype=float)
             for i in xrange(neqs):
                 for j in xrange(neqs):
                     if A[i,j] == 'E':
-                        A_val[i,j] = 0
+                        A_init[i,j] = 1
                     else:
-                        A_val[i,j] = A[i,j]
+                        A_init[i,j] = A[i,j]
+        else:
+            A_init = np.identity(len(A))
+
         if B is not None:
+            B_init = np.zeros_like(B, dtype=float)
             for i in xrange(neqs):
                 for j in xrange(neqs):
                     if B[i,j] == 'E':
-                        B_val[i,j] = 0
+                        B_init[i,j] = 1
                     else:
-                        B_val[i,j] = B[i,j]
-        return A_val, B_val
+                        B_init[i,j] = B[i,j]
+        else:
+            B_init = np.identity(len(B))
+
+        return A_init, B_init
+
+    def _gen_AB_mask(self):
+        """
+        Generates mask summarizing both A and B parameters to be estimated
+        """
+        A = self.A
+        B = self.B
+        A_mask = self.A_mask
+        B_mask = self.B_mask
+        A_init = self.A_init
+        B_init = self.B_init
+
+        if A is not None and B is not None:
+            AB_mask = np.append(A_init[A_mask],B_init[B_mask])
+        elif A is not None and B is None:
+            AB_mask = A_init[A_mask]
+        elif A is None and B is not None:
+            AB_mask = B_init[B_mask]
+        
+        return AB_mask
 
 
+
+'''
 class SVARMLE(LikelihoodModel):
     """
     Method to solve MLE of structural parameter
     """
-    def __init__(self, A, B, A_mask, B_mask, A_val, B_val, sigma_u):
+    def __init__(self, A, B, A_mask, B_mask, A_init, B_init, sigma_u):
         self.A = A
         self.A_mask = A_mask
         self.B_mask = B_mask
-        self.A_val = A_val
-        self.B_val = B_val
+        self.A_init = A_init
+        self.B_init = B_init
         if A is not None and B is not None:
-            self.AB_mask = np.append(A_val[A_mask],B_val[B_mask])
+            self.AB_mask = np.append(A_init[A_mask],B_init[B_mask])
         elif A is not None and B is None:
-            self.AB_mask = A_val[A_mask]
+            self.AB_mask = A_init[A_mask]
         elif A is None and B is not None:
-            self.AB_mask = B_val[B_mask]
+            self.AB_mask = B_init[B_mask]
 
     def likelihood(self, AB_mask):
         return -self.svar_likelihood(AB_mask)
-
-    def solve(self, AB_mask):
-    
-    
-
+'''
 class FEVD(object):
     """
     Compute and plot Forecast error variance decomposition and asymptotic
