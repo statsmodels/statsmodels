@@ -1830,7 +1830,9 @@ class SVARResults(SVAR, VARResults):
         f = self.nsvar_loglike
         AB_mask = self.AB_mask
         #try manually inserting scipy.optimize
-        retvals = optimize.fmin(f, AB_mask, xtol=1e-8)
+        retvals = optimize.fmin(f, AB_mask, xtol=1e-8,
+                                maxiter=10000, retall=True,
+                               full_output=True)
 
         A_solve[A_mask] = retvals[:A_len]
         B_solve[B_mask] = retvals[A_len:A_len+B_len]
@@ -1878,7 +1880,7 @@ class SVARResults(SVAR, VARResults):
             for i in xrange(neqs):
                 for j in xrange(neqs):
                     if A[i,j] == 'E':
-                        A_init[i,j] = 1
+                        A_init[i,j] = 0.5
                     else:
                         A_init[i,j] = A[i,j]
         else:
@@ -1889,7 +1891,7 @@ class SVARResults(SVAR, VARResults):
             for i in xrange(neqs):
                 for j in xrange(neqs):
                     if B[i,j] == 'E':
-                        B_init[i,j] = 1
+                        B_init[i,j] = 0.5
                     else:
                         B_init[i,j] = B[i,j]
         else:
