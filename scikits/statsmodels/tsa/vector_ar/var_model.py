@@ -1649,12 +1649,6 @@ class SVAR(VAR):
         return SVARResults(y, z, params, omega, lags, names=self.names,
                           trend=trend, dates=self.dates, model=self,
                           A=A, A_mask=A_mask, B=B, B_mask=B_mask)
-        #move these to SVARREsults class
-        def check_rank():
-            return NotImplementedError
-
-        def check_order():
-            return NotImplementedError
 
 class SVARProcess(VARProcess):
     """
@@ -1702,7 +1696,7 @@ class SVARProcess(VARProcess):
         raise NotImplementedError
 
 
-class SVARResults(SVAR, VARResults):
+class SVARResults(SVARProcess, VARResults):
     """Estimate VAR(p) process with fixed number of lags
 
     Parameters
@@ -1814,10 +1808,21 @@ class SVARResults(SVAR, VARResults):
         #this will solve for structual parameters
         #self._A_solve, self.B_solve = self._solve_AB() 
 
-    def solve_AB(self):
+    def solve_AB(self, override=False):
         """
 
         Solves for MLE estimate of structural parameters
+
+        Parameters
+        ----------
+
+        override : bool, default False
+            If True, returns estimates even if fails rank
+            or order condition
+
+        Returns
+        -------
+        A_solve, B_solve: ML solutions for A, B matrices
 
         """
         A_solve = self.A_init.copy()
@@ -1830,7 +1835,7 @@ class SVARResults(SVAR, VARResults):
         f = self.nsvar_loglike
         AB_mask = self.AB_mask
         #try manually inserting scipy.optimize
-        retvals = optimize.fmin(f, AB_mask, xtol=1e-8,
+        retvals = optimize.fmin(f, AB_mask, xtol=1e-6,
                                 maxiter=10000, retall=True,
                                full_output=True)
 
@@ -1839,6 +1844,12 @@ class SVARResults(SVAR, VARResults):
         
         #mod = glik(start_params=AB_mask, loglik=f)
         #mod.fit(method='nm', maxiter=1000)
+        
+        J = self._compute_J(A_solve, B_solve)
+
+        
+
+
         return A_solve, B_solve
     
     def nsvar_loglike(self, AB_mask):
@@ -1919,7 +1930,73 @@ class SVARResults(SVAR, VARResults):
         
         return AB_mask
 
+    def _compute_J(self, A_solve, B_solve):
 
+        #first compute appropriate duplication matrix
+        # taken from Magnus and Neudecker (1980), 
+        #"The Elimination Matrix: Some Lemmas and Applications
+        # the creation of the D_n matrix follows MN (1980) directly, 
+        #while the rest follows Hamilton (1994)
+
+        neqs = self.neqs
+        sigma_u = self.sigma_u
+        A = self.A
+        B = self.B
+        A_mask = self.A_mask
+        B_mask = self.B_mask
+
+        #first generate duplication matrix, see MN (1980) for notation
+
+        D_nT=np.zeros([(1.0/2)*(neqs)*(neqs+1),neqs**2])
+
+        j=0
+        for j in xrange(neqs):
+            i=j
+            while j <= i < neqs:
+                u=np.zeros([(1.0/2)*neqs*(neqs+1),1])
+                u[(j)*neqs+(i+1)-(1.0/2)*(j+1)*j-1]=1 
+                Tij=np.zeros([neqs,neqs])
+                Tij[i,j]=1
+                Tij[j,i]=1
+                D_nT=D_nT+np.dot(u,(Tij.ravel('F')[:,None]).T)
+                i=i+1
+            j=j+1
+
+        D_n=D_nT.T
+        D_pl=npl.pinv(D_n)
+
+        #generate S_B
+        S_B = np.zeros((neqs**2, len(A[A_mask])))
+        S_D = np.zeros((neqs**2, len(B[B_mask])))
+
+        j = 0
+        j_d = 0
+        A_vec = np.ravel(A, order='F')
+        B_vec = np.ravel(B, order='F')
+        for k in xrange(neqs**2):
+            if A_vec[k] == 'E':
+                S_B[k,j] = -1
+                j += 1
+            if B_vec[k] == 'E':
+                S_D[k,j_d] = 1
+                j_d +=1
+
+        #now compute J
+        invA = np.inv(A)
+        J_p1i = np.dot(np.dot(D_pl, np.kron(sigma_u, invA)), S_B)
+        J_p1 = -2.0 * J_p1i 
+        J_p2 = np.dot(np.dot(D_pl, np.kron(invA, invA)), S_D)
+
+        J = np.append(J_p1, axis=1)
+
+        return J
+
+        
+    def check_rank():
+        return NotImplementedError
+
+    def check_order():
+        return NotImplementedError
 
 '''
 class SVARMLE(LikelihoodModel):

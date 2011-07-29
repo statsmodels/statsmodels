@@ -215,3 +215,23 @@ def eigval_decomp(sym_array):
     eigva, W = decomp.eig(sym_array, left=True, right=False)
     k = np.argmax(eigva)
     return W, eigva, k
+
+def vech(A):
+    """
+    Simple vech operator
+    Returns
+    -------
+    vechvec: vector of all elements on and below diagonal
+    """
+
+def vech(A):
+    length=A.shape[1]
+    vechvec=[]
+    for i in xrange(length):
+        b=i
+        while b < length:
+            vechvec.append(A[b,i])
+            b=b+1
+    vechvec=np.asarray(vechvec)
+    return vechvec
+
