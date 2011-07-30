@@ -1823,20 +1823,21 @@ class CoxResults(LikelihoodModelResults):
         ##As function of t?
         ##t='all' and matrix?
         ##t= arbitrary array of times?
-
+        ##Remove coerce_0_1
+        
         """
 
         predict(X, t, coerce_0_1=True)
-
-            estimate the survival probability with a given vector
-            of covariates
+        
+            estimate the hazard with a given vector of covariates
 
             Parameters
             ----------
 
             X: array-like
                 matrix of covariate vectors. If t='all', must be
-                only a single vector
+                only a single vector, or 'all'. If 'all' predict
+                with the entire design matrix.
 
             t: non-negative int or "all"
                 time(s) at which to predict. If t="all", then
@@ -1850,31 +1851,46 @@ class CoxResults(LikelihoodModelResults):
         """
 
         if t == 'all':
-            if X.ndim != 1:
-                raise ValueError("If t='all' X must 1d")
-            else:
+            if X == 'all':
+                X = self.model.exog
+                times = self.model.times
+                tind = np.unique(times)
+                times = np.bincount(times)
+                times = times[tind]
                 baseline = self.baseline()
+                baseline = np.repeat(baseline, times)
                 if coerce_0_1:
-                    ret = baseline * np.exp(np.dot(X, self.params))
+                    ret = -np.log(baseline) * np.exp(np.dot(X, self.params))
                     ret[ret > 1] = 1
                     return ret
                 else:
-                    return baseline * np.exp(np.dot(X, self.params))
+                    return -np.log(baseline) * np.exp(np.dot(X, self.params))
+            elif X.ndim != 1:
+                raise ValueError("If t='all' X must be 1d or 'all'")
+            else:
+                baseline = self.baseline()
+                if coerce_0_1:
+                    ret = -np.log(baseline) * np.exp(np.dot(X, self.params))
+                    ret[ret > 1] = 1
+                    return ret
+                else:
+                    return -np.log(baseline) * np.exp(np.dot(X, self.params))
         elif type(t) == int:
             baseline = self.baseline(return_times=True)
             if coerce_0_1:
-                ret = (baseline[baseline[:,0] <= t][-1][0]
+                ret = (-np.log(baseline[baseline[:,0] <= t][-1][0])
                     * np.exp(np.dot(X, self.params)))
                 ret[ret > 1] = 1
                 return ret
             else:
-                return (baseline[baseline[:,0] <= t][-1][0]
+                return (-np.log(baseline[baseline[:,0] <= t][-1][0])
                         * np.exp(np.dot(X, self.params)))
 
     def plot(self, vector='mean', CI_band=False, coerce_0_1=True):
 
         ##Add CI bands
-
+        ##Update with predict
+        
         """
 
         plot(vector='mean', CI_band=False, coerce_0_1=True)
@@ -1967,6 +1983,7 @@ class CoxResults(LikelihoodModelResults):
             is the z-score, and the fourth is the p-value.
 
         """
+
         params = self.params
         model = self.model
         ##Other methods (e.g. score?)
@@ -1984,6 +2001,7 @@ class CoxResults(LikelihoodModelResults):
             against the global null
 
         """
+
         if restricted is None:
             restricted = self.model.start_params
         params = self.params
@@ -2056,8 +2074,30 @@ class CoxResults(LikelihoodModelResults):
             limit
         
         """
+
         CI = super(CoxResults, self).conf_int(alpha, cols, method)
         if exp:
             CI = np.exp(CI)
         return CI
 
+    def diagnostics(self):
+
+        """
+
+        diagnostics()
+
+            initialized diagnostics for a fitted Cox model
+
+        """
+
+        ##Other residuals
+        ##Plots
+        ##Tests
+
+        censoring = self.model.censoring
+        hazard = self.predict('all','all',False)
+        mart = censoring - hazard
+        self.martingale_resid = mart
+        self.deviance_resid = (np.sign(mart) *
+                               np.sqrt(2 * (-mart - censoring *
+                                            np.log(censoring - mart))))
