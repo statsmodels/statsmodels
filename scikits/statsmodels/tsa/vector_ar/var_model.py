@@ -1507,6 +1507,10 @@ class SVAR(VAR):
                 B matrix
     A : neqs x neqs np.ndarray with unknown parameters marked with 'E'
     B : neqs x neqs np.ndarry with unknown parameters marked with 'E'
+    A_guess : neqs x neqs np.ndarray guess of A
+        if A is None, then A_guess will be ignored
+    B_guess : neqs x neqs np.ndarray guess of B
+        if B is None, then B_guess will be ignored
 
     Notes
     -----
@@ -1519,7 +1523,7 @@ class SVAR(VAR):
     """
 
     def __init__(self, endog, svar_type, names=None, dates=None, 
-                  A=None, B=None):
+                  A=None, B=None, A_guess=None, B_guess=None):
         (self.endog, self.names,
          self.dates) = data_util.interpret_data(endog, names, dates)
 
@@ -1533,6 +1537,8 @@ class SVAR(VAR):
         self.svar_type = svar_type
         self.A = A
         self.B = B
+        self.A_guess = A_guess
+        self.B_guess = B_guess
 
 
     def fit(self, maxlags=None, method='ols', ic=None, trend='c',
@@ -1631,6 +1637,8 @@ class SVAR(VAR):
         #This is where the SVAR components are initiliazed
         A = self.A
         B = self.B
+        A_guess = self.A_guess
+        B_guess = self.B_guess
         neqs = self.neqs
         svar_type = self.svar_type
 
@@ -1648,7 +1656,8 @@ class SVAR(VAR):
 
         return SVARResults(y, z, params, omega, lags, names=self.names,
                           trend=trend, dates=self.dates, model=self,
-                          A=A, A_mask=A_mask, B=B, B_mask=B_mask)
+                          A=A, A_mask=A_mask, A_guess=A_guess,
+                            B=B, B_mask=B_mask, B_guess=B_guess)
 
 class SVARProcess(VARProcess):
     """
@@ -1764,7 +1773,8 @@ class SVARResults(SVARProcess, VARResults):
 
     def __init__(self, endog, endog_lagged, params, sigma_u, lag_order,
                  model=None, trend='c', names=None, dates=None, 
-                 A=None, A_mask=None, B=None, B_mask=None):
+                 A=None, A_mask=None, A_guess=None, 
+                 B=None, B_mask=None, B_guess=None):
 
         self.model = model
         self.y = self.endog = endog  #keep alias for now
@@ -1800,6 +1810,8 @@ class SVARResults(SVARProcess, VARResults):
         self.B = B
         self.A_mask = A_mask
         self.B_mask = B_mask
+        self.A_guess = A_guess
+        self.B_guess = B_guess
 
         self.A_init, self.B_init= self._gen_ABval()
         
@@ -1817,8 +1829,8 @@ class SVARResults(SVARProcess, VARResults):
         ----------
 
         override : bool, default False
-            If True, returns estimates even if fails rank
-            or order condition
+            If True, returns estimates of A and B without checking
+            order or rank condition
 
         Returns
         -------
@@ -1836,19 +1848,15 @@ class SVARResults(SVARProcess, VARResults):
         AB_mask = self.AB_mask
         #try manually inserting scipy.optimize
         retvals = optimize.fmin(f, AB_mask, xtol=1e-6,
-                                maxiter=10000, retall=True,
-                               full_output=True)
+                                maxiter=10000)
 
         A_solve[A_mask] = retvals[:A_len]
         B_solve[B_mask] = retvals[A_len:A_len+B_len]
-        
-        #mod = glik(start_params=AB_mask, loglik=f)
-        #mod.fit(method='nm', maxiter=1000)
-        
-        J = self._compute_J(A_solve, B_solve)
 
-        
-
+        if override == False:
+            J = self._compute_J(A_solve, B_solve)
+            self.check_order(J)
+            self.check_rank(J)
 
         return A_solve, B_solve
     
@@ -1881,32 +1889,41 @@ class SVARResults(SVARProcess, VARResults):
         return likl
 
     def _gen_ABval(self):
-        #assume mle guesses for svar params are equal to 0
+        #assume mle guesses for svar params are equal to 0.5 
+        #when not given
         neqs = self.neqs
         A = self.A
         B = self.B
+        A = self.A_guess
+        B = self.B_guess
 
         if A is not None:
-            A_init = np.zeros_like(A, dtype=float)
-            for i in xrange(neqs):
-                for j in xrange(neqs):
-                    if A[i,j] == 'E':
-                        A_init[i,j] = 0.5
-                    else:
-                        A_init[i,j] = A[i,j]
+            if A_guess is None:
+                A_init = np.zeros_like(A, dtype=float)
+                for i in xrange(neqs):
+                    for j in xrange(neqs):
+                        if A[i,j] == 'E':
+                            A_init[i,j] = 0.5
+                        else:
+                            A_init[i,j] = A[i,j]
+            else:
+                A_init = A_guess
         else:
-            A_init = np.identity(len(A))
+            A_init = np.identity(neqs)
 
         if B is not None:
-            B_init = np.zeros_like(B, dtype=float)
-            for i in xrange(neqs):
-                for j in xrange(neqs):
-                    if B[i,j] == 'E':
-                        B_init[i,j] = 0.5
-                    else:
-                        B_init[i,j] = B[i,j]
+            if B_guess is None:
+                B_init = np.zeros_like(B, dtype=float)
+                for i in xrange(neqs):
+                    for j in xrange(neqs):
+                        if B[i,j] == 'E':
+                            B_init[i,j] = 0.5
+                        else:
+                            B_init[i,j] = B[i,j]
+            else:
+                B_init = B_guess
         else:
-            B_init = np.identity(len(B))
+            B_init = np.identity(neqs)
 
         return A_init, B_init
 
@@ -1949,7 +1966,6 @@ class SVARResults(SVARProcess, VARResults):
 
         D_nT=np.zeros([(1.0/2)*(neqs)*(neqs+1),neqs**2])
 
-        j=0
         for j in xrange(neqs):
             i=j
             while j <= i < neqs:
@@ -1960,7 +1976,6 @@ class SVARResults(SVARProcess, VARResults):
                 Tij[j,i]=1
                 D_nT=D_nT+np.dot(u,(Tij.ravel('F')[:,None]).T)
                 i=i+1
-            j=j+1
 
         D_n=D_nT.T
         D_pl=npl.pinv(D_n)
@@ -1991,12 +2006,16 @@ class SVARResults(SVARProcess, VARResults):
 
         return J
 
-        
-    def check_rank():
-        return NotImplementedError
+    def check_order(self, J):
+        if np.size(J, axis=0) < np.size(J, axis=1):
+            raise ValueError("Order condition not met: "
+                             "solution may not be unique")
 
-    def check_order():
-        return NotImplementedError
+    def check_rank(self, J):
+        rank = npl.matrix_rank(J)
+        if rank < np.size(J, axis=1):
+            raise ValueError("Rank condition not met: "
+                             "solution may not be unique.")
 
 '''
 class SVARMLE(LikelihoodModel):
