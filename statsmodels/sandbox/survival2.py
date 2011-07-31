@@ -1817,8 +1817,8 @@ class CoxResults(LikelihoodModelResults):
         else:
             baseline = baseline.results[0][0]
             return baseline
-
-    def predict(self, X, t, coerce_0_1=True):
+        
+    def predict(self, X, t):
 
         ##As function of t?
         ##t='all' and matrix?
@@ -1850,45 +1850,26 @@ class CoxResults(LikelihoodModelResults):
 
         """
 
+        if X == 'all':
+            X = self.model.exog
+            times = self.model.times
+            tind = np.unique(times)
+            times = np.bincount(times)
+            times = times[tind]
+            baseline = self.baseline(t != 'all')
+            baseline = np.repeat(baseline, times, axis=0)
+        else:
+            baseline = self.baseline(rett)
         if t == 'all':
-            if X == 'all':
-                X = self.model.exog
-                times = self.model.times
-                tind = np.unique(times)
-                times = np.bincount(times)
-                times = times[tind]
-                baseline = self.baseline()
-                baseline = np.repeat(baseline, times)
-                if coerce_0_1:
-                    ret = -np.log(baseline) * np.exp(np.dot(X, self.params))
-                    ret[ret > 1] = 1
-                    return ret
-                else:
-                    return -np.log(baseline) * np.exp(np.dot(X, self.params))
-            elif X.ndim != 1:
-                raise ValueError("If t='all' X must be 1d or 'all'")
-            else:
-                baseline = self.baseline()
-                if coerce_0_1:
-                    ret = -np.log(baseline) * np.exp(np.dot(X, self.params))
-                    ret[ret > 1] = 1
-                    return ret
-                else:
-                    return -np.log(baseline) * np.exp(np.dot(X, self.params))
-        elif type(t) == int:
-            baseline = self.baseline(return_times=True)
-            if coerce_0_1:
-                ret = (-np.log(baseline[baseline[:,0] <= t][-1][0])
+            return -np.log(baseline) * np.exp(np.dot(X, self.params))
+        else:
+            return (-np.log(baseline[baseline[:,0] <= t][-1][0])
                     * np.exp(np.dot(X, self.params)))
-                ret[ret > 1] = 1
-                return ret
-            else:
-                return (-np.log(baseline[baseline[:,0] <= t][-1][0])
-                        * np.exp(np.dot(X, self.params)))
-
-    def plot(self, vector='mean', CI_band=False, coerce_0_1=True):
+        
+    def plot(self, vector='mean', CI_band=False):
 
         ##Add CI bands
+        ##Adjust CI bands for coeff variance
         ##Update with predict
         
         """
@@ -1920,7 +1901,7 @@ class CoxResults(LikelihoodModelResults):
         model = self.model
         km = KaplanMeier(model.surv)
         km = km.fit()
-        km.results[0][0] = self.predict(vector, 'all', coerce_0_1)
+        km.results[0][0] = self.predict(vector, 'all')
         km.plot()
 
     def plot_baseline(self, CI_band=False):
@@ -2094,10 +2075,82 @@ class CoxResults(LikelihoodModelResults):
         ##Plots
         ##Tests
 
-        censoring = self.model.censoring
-        hazard = self.predict('all','all',False)
+        model = self.model
+        censoring = model.censoring
+        hazard = self.predict('all','all')
         mart = censoring - hazard
         self.martingale_resid = mart
         self.deviance_resid = (np.sign(mart) *
                                np.sqrt(2 * (-mart - censoring *
                                             np.log(censoring - mart))))
+        self.phat = 1 - np.exp(-hazard)
+        ind = censoring != 0
+        exog = model.exog
+        events = exog[ind]
+        event_times = np.unique(model.times[ind])
+        residuals = np.empty((1,len(self.params)))
+        for i in range(len(event_times)):
+            t = event_times[i]
+            phat = 1 - np.exp(-self.predict('all',t))
+            ind = event_times <= t
+            self.phat = phat
+            self.test = np.dot(phat[ind],exog[ind])
+            self.test2 = events[i]
+            residuals = np.r_[residuals,events[i] -
+                              np.dot(phat[ind],exog[ind])[:,np.newaxis]]
+        self.schoenfeld_resid = residuals[1:,:]
+        print("diagnostics initialized")
+
+    ##For plots, add spline
+    def martingale_plot(self, covariate):
+
+        """
+
+        martingale_plot(covariate)
+
+            Plot the martingale residuals against a covariate
+            (Must call diagnostics method first)
+
+            Parameters
+            ----------
+
+            covariate: int
+                index of the covariate to be plotted
+
+            do
+
+            plt.show()
+
+            To display a plot with the covariate values on the
+            horizontal axis, and the martingale residuals for each
+            observation on the vertical axis
+
+        """
+
+        plt.plot(self.model.exog[:,covariate], self.martingale_resid,
+                 marker='o', linestyle='None')
+
+    def deviance_plot(self):
+
+        """
+
+        deviance_plot()
+
+            plot an index plot of the deviance residuals
+            (must call diagnostics method first)
+
+            do
+
+            plt.show()
+
+            To display a plot with the index of the observation on the
+            horizontal axis, and the deviance residuals for each
+            observation on the vertical axis
+
+        """
+
+        dev = self.deviance_resid
+        plt.plot(np.arange(1,len(dev)+1), dev, marker='o', linestyle='None')
+
+    def scheonfeld_plot(self):
+        pass
