@@ -125,21 +125,25 @@ class BaseIRAnalysis(object):
             if stderr_type == 'asym':
                 stderr = self.cov(orth=orth)
             if stderr_type == 'mc':
-                stderr = self.errband_mc(orth=orth, repl=repl,
-                                     signif=signif, seed=seed)
+                stderr = self.errband_mc(orth=orth, svar=svar, 
+                                         repl=repl, signif=signif, 
+                                         seed=seed)
             if stderr_type == 'sz1':
-                stderr = self.err_band_sz1(orth=orth, repl=repl,
-                                           signif=signif, seed=seed,
+                stderr = self.err_band_sz1(orth=orth, svar=svar, 
+                                           repl=repl, signif=signif, 
+                                           seed=seed,
                                            component=component)
             if stderr_type == 'sz2':
-                stderr = self.err_band_sz2(orth=orth, repl=repl,
-                                           signif=signif, seed=seed,
+                stderr = self.err_band_sz2(orth=orth, svar=svar, 
+                                           repl=repl, signif=signif, 
+                                           seed=seed, 
                                            component=component)
             if stderr_type == 'sz3':
-                stderr = self.err_band_sz3(orth=orth, repl=repl,
-                                           signif=signif, seed=seed,
+                stderr = self.err_band_sz3(orth=orth, svar=svar, 
+                                           repl=repl, signif=signif, 
+                                           seed=seed, 
                                            component=component)
-
+            
         plotting.irf_grid_plot(irfs, stderr, impulse, response,
                                self.model.names, title, signif=signif,
                                subplot_params=subplot_params,
@@ -249,16 +253,18 @@ class IRAnalysis(BaseIRAnalysis):
 
         return covs
 
-    def errband_mc(self, orth=False, repl=1000, signif=0.05, seed=None, burn=100):
+    def errband_mc(self, orth=False, svar=False, repl=1000, 
+                   signif=0.05, seed=None, burn=100):
         """
         IRF Monte Carlo integrated error bands
         """
         model = self.model
         periods = self.periods
-        return model.irf_errband_mc(orth=orth, repl=repl, 
+        return model.irf_errband_mc(orth=orth, svar=svar, repl=repl, 
                                     T=periods, signif=signif, seed=seed, 
                                     burn=burn, cum=False)
-    def err_band_sz1(self, orth=False, repl=1000, signif=0.05, seed=None, burn=100, component=None):
+    def err_band_sz1(self, orth=False, svar=False, repl=1000,
+                     signif=0.05, seed=None, burn=100, component=None):
         """
         IRF Sims-Zha error band method 1. Assumes symmetric error bands around mean.
         Parameters
@@ -286,7 +292,9 @@ class IRAnalysis(BaseIRAnalysis):
         model = self.model
         periods = self.periods
         if orth:
-            orth_irfs = self.orth_irfs
+            irfs = self.orth_irfs
+        elif svar:
+            irfs = self.svar_irfs
         else:
             irfs = self.irfs
         neqs = self.neqs
@@ -305,21 +313,12 @@ class IRAnalysis(BaseIRAnalysis):
                 k = component
                 
         # here take the kth column of W, which we determine by finding the largest eigenvalue of the covaraince matrix
-        if orth:
-            lower = np.copy(orth_irfs)
-            upper = np.copy(orth_irfs)
-            for i in xrange(neqs):
-                for j in xrange(neqs):
-                    lower[1:,i,j] = orth_irfs[1:,i,j] + W[i,j,:,k[i,j]]*q*np.sqrt(eigva[i,j,k[i,j]])
-                    upper[1:,i,j] = orth_irfs[1:,i,j] - W[i,j,:,k[i,j]]*q*np.sqrt(eigva[i,j,k[i,j]])
- 
-        else:
-            lower = np.copy(irfs)
-            upper = np.copy(irfs)
-            for i in xrange(neqs):
-                for j in xrange(neqs):
-                    lower[1:,i,j] = irfs[1:,i,j] + W[i,j,:,k[i,j]]*q*np.sqrt(eigva[i,j,k[i,j]])
-                    upper[1:,i,j] = irfs[1:,i,j] - W[i,j,:,k[i,j]]*q*np.sqrt(eigva[i,j,k[i,j]])
+        lower = np.copy(irfs)
+        upper = np.copy(irfs)
+        for i in xrange(neqs):
+            for j in xrange(neqs):
+                lower[1:,i,j] = irfs[1:,i,j] + W[i,j,:,k[i,j]]*q*np.sqrt(eigva[i,j,k[i,j]])
+                upper[1:,i,j] = irfs[1:,i,j] - W[i,j,:,k[i,j]]*q*np.sqrt(eigva[i,j,k[i,j]])
         
        
         return lower, upper
@@ -352,7 +351,9 @@ class IRAnalysis(BaseIRAnalysis):
         model = self.model
         periods = self.periods
         if orth:
-            orth_irfs = self.orth_irfs
+            irfs = self.orth_irfs
+        elif svar:
+            irfs = self.svar_irfs
         else:
             irfs = self.irfs
         neqs = self.neqs
@@ -378,21 +379,13 @@ class IRAnalysis(BaseIRAnalysis):
         gamma_sort = np.sort(gamma, axis=0) #sort to get quantiles
         indx = round(signif/2*repl)-1,round((1-signif/2)*repl)-1
 
-        if orth:
-            lower = np.copy(orth_irfs)
-            upper = np.copy(orth_irfs)
-            for i in xrange(neqs):
-                for j in xrange(neqs):
-                    lower[:,i,j] = orth_irfs[:,i,j] + gamma_sort[indx[0],:,i,j]
-                    upper[:,i,j] = orth_irfs[:,i,j] + gamma_sort[indx[1],:,i,j]
- 
-        else:
-            lower = np.copy(irfs)
-            upper = np.copy(irfs)
-            for i in xrange(neqs):
-                for j in xrange(neqs):
-                    lower[:,i,j] = irfs[:,i,j] + gamma_sort[indx[0],:,i,j]
-                    upper[:,i,j] = irfs[:,i,j] + gamma_sort[indx[1],:,i,j]
+        lower = np.copy(irfs)
+        upper = np.copy(irfs)
+        for i in xrange(neqs):
+            for j in xrange(neqs):
+                lower[:,i,j] = irfs[:,i,j] + gamma_sort[indx[0],:,i,j]
+                upper[:,i,j] = irfs[:,i,j] + gamma_sort[indx[1],:,i,j]
+
         return lower, upper
 
     def err_band_sz3(self, orth=False, repl=1000, signif=0.05, 
@@ -425,7 +418,9 @@ class IRAnalysis(BaseIRAnalysis):
         model = self.model
         periods = self.periods
         if orth:
-            orth_irfs = self.orth_irfs
+            irfs = self.orth_irfs
+        elif svar:
+            irfs = self.svar_irfs
         else:
             irfs = self.irfs
         neqs = self.neqs
@@ -469,20 +464,13 @@ class IRAnalysis(BaseIRAnalysis):
         gamma_sort = np.sort(gamma, axis=0) #sort to get quantiles
         indx = round(signif/2*repl)-1,round((1-signif/2)*repl)-1
 
-        if orth:
-            lower = np.copy(orth_irfs)
-            upper = np.copy(orth_irfs)
-            for i in xrange(neqs):
-                for j in xrange(neqs):
-                    lower[:,i,j] = orth_irfs[:,i,j] + gamma_sort[indx[0],:,i,j]
-                    upper[:,i,j] = orth_irfs[:,i,j] + gamma_sort[indx[1],:,i,j]
-        else:
-            lower = np.copy(irfs)
-            upper = np.copy(irfs)
-            for i in xrange(neqs):
-                for j in xrange(neqs):
-                    lower[:,i,j] = irfs[:,i,j] + gamma_sort[indx[0],:,i,j]
-                    upper[:,i,j] = irfs[:,i,j] + gamma_sort[indx[1],:,i,j]
+        lower = np.copy(irfs)
+        upper = np.copy(irfs)
+        for i in xrange(neqs):
+            for j in xrange(neqs):
+                lower[:,i,j] = irfs[:,i,j] + gamma_sort[indx[0],:,i,j]
+                upper[:,i,j] = irfs[:,i,j] + gamma_sort[indx[1],:,i,j]
+                
         return lower, upper
 
     def _eigval_decomp_SZ(self, irf_resim):

@@ -1071,6 +1071,7 @@ class VARResults(VARProcess):
         ma_coll = np.zeros((repl, T+1, neqs, neqs))
         sim = util.varsim(coefs, intercept, sigma_u, steps=nobs+burn)
         sim = sim[burn:]
+
         if orth == True:
             for i in range(repl):
                 #discard first hundred to eliminate correct for starting bias
@@ -1078,7 +1079,7 @@ class VARResults(VARProcess):
                     ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).orth_ma_rep(maxn=T).cumsum(axis=0)
                 if cum == False:
                     ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).orth_ma_rep(maxn=T)
-        if svar == True:
+        elif svar == True:
             for i in range(repl):
                 #discard first hundred to eliminate correct for starting bias
                 if cum == True:
@@ -1086,7 +1087,7 @@ class VARResults(VARProcess):
                 if cum == False:
                     ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).svar_ma_rep(maxn=T)
 
-        if orth == False:
+        else orth == False:
             for i in range(repl):
                 #discard first hundred to eliminate correct for starting bias
                 if cum == True:
