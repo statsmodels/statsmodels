@@ -116,7 +116,7 @@ def gen_masks(A, B, neqs):
                 if A[i,j] == 'E':
                     A_mask[i,j] = True
 
-    B_mask = np.zeros_like(A, dtype=bool)
+    B_mask = np.zeros_like(B, dtype=bool)
     if B is not None:
         for i in xrange(neqs):
             for j in xrange(neqs):
@@ -1069,24 +1069,30 @@ class VARResults(VARProcess):
         nobs = self.nobs
 
         ma_coll = np.zeros((repl, T+1, neqs, neqs))
-        if orth == False:
-            for i in range(repl):
-                #discard first hundred to eliminate correct for starting bias
-                sim = util.varsim(coefs, intercept, sigma_u, steps=nobs+burn)
-                sim = sim[burn:]
-                if cum == True:
-                    ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).ma_rep(maxn=T).cumsum(axis=0)
-                if cum == False:
-                    ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).ma_rep(maxn=T)
+        sim = util.varsim(coefs, intercept, sigma_u, steps=nobs+burn)
+        sim = sim[burn:]
         if orth == True:
             for i in range(repl):
                 #discard first hundred to eliminate correct for starting bias
-                sim = util.varsim(coefs, intercept, sigma_u, steps=nobs+burn)
-                sim = sim[burn:]
                 if cum == True:
                     ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).orth_ma_rep(maxn=T).cumsum(axis=0)
                 if cum == False:
                     ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).orth_ma_rep(maxn=T)
+        if svar == True:
+            for i in range(repl):
+                #discard first hundred to eliminate correct for starting bias
+                if cum == True:
+                    ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).svar_ma_rep(maxn=T).cumsum(axis=0)
+                if cum == False:
+                    ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).svar_ma_rep(maxn=T)
+
+        if orth == False:
+            for i in range(repl):
+                #discard first hundred to eliminate correct for starting bias
+                if cum == True:
+                    ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).ma_rep(maxn=T).cumsum(axis=0)
+                if cum == False:
+                    ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).ma_rep(maxn=T)
 
         ma_sort = np.sort(ma_coll, axis=0) #sort to get quantiles
         index = round(signif/2*repl)-1,round((1-signif/2)*repl)-1
@@ -1642,17 +1648,16 @@ class SVAR(VAR):
         neqs = self.neqs
         svar_type = self.svar_type
 
+        #COME BACK TO THIS
+
         if A is None:
-            A = np.identity(neqs)
+            A_guess = np.identity(neqs)
         if B is None:
-            B = np.identity(neqs)
+            B_guess = np.identity(neqs)
 
         A_mask, B_mask = gen_masks(A, B, neqs)
 
         svar_ckerr(svar_type, A, B)
-
-        #here, can grab parameter information, pass into likelihood, and perform
-        # maximization to solve for unknown components of A, B
 
         return SVARResults(y, z, params, omega, lags, names=self.names,
                           trend=trend, dates=self.dates, model=self,
@@ -1696,17 +1701,22 @@ class SVARProcess(VARProcess):
         """
         raise NotImplementedError
 
-    def ma_rep(self, maxn=10):
+    def svar_ma_rep(self, A, B, maxn=10):
         """
+
+        Compute Structural MA coefficient matrices using MLE 
+        of A, B
+
+        """
+        A, B = self.solve_AB()
+        P = np.dot(A, np.sqrt(B))
         
-        Unavailable for SVAR
-
-        """
-        raise NotImplementedError
-
+        ma_mats = self.ma_rep(maxn=maxn)
+        return mat([np.dot(coefs, P) for coefs in ma_mats])
 
 class SVARResults(SVARProcess, VARResults):
-    """Estimate VAR(p) process with fixed number of lags
+    """
+    Estimate VAR(p) process with fixed number of lags
 
     Parameters
     ----------
@@ -1795,8 +1805,6 @@ class SVARResults(SVARProcess, VARResults):
         self.params = params
         self.sigma_u = sigma_u
 
-        # Initialize VARProcess parent class
-        # construct coefficient matrices
         # Each matrix needs to be transposed
         reshaped = self.params[self.k_trend:]
         reshaped = reshaped.reshape((lag_order, self.neqs, self.neqs))
@@ -1813,12 +1821,9 @@ class SVARResults(SVARProcess, VARResults):
         self.A_guess = A_guess
         self.B_guess = B_guess
 
-        self.A_init, self.B_init= self._gen_ABval()
+        self.A_init, self.B_init = self._gen_ABval()
         
         self.AB_mask = self._gen_AB_mask()
-
-        #this will solve for structual parameters
-        #self._A_solve, self.B_solve = self._solve_AB() 
 
     def solve_AB(self, override=False):
         """
@@ -1857,6 +1862,8 @@ class SVARResults(SVARProcess, VARResults):
             J = self._compute_J(A_solve, B_solve)
             self.check_order(J)
             self.check_rank(J)
+        else:
+            print "Order/rank conditions have not been checked"
 
         return A_solve, B_solve
     
@@ -1864,7 +1871,7 @@ class SVARResults(SVARProcess, VARResults):
         return -self.svar_loglike(AB_mask)
 
     def svar_loglike(self, AB_mask):
-        
+
         A = self.A
         B = self.B
         A_val= self.A_init.copy()
@@ -1873,6 +1880,7 @@ class SVARResults(SVARProcess, VARResults):
         B_mask = self.B_mask
         A_len = len(A_val[A_mask])
         B_len = len(B_val[B_mask])
+
         if A is not None:
             A_val[A_mask] = np.copy(AB_mask[:A_len])
         if B is not None:
@@ -1881,12 +1889,28 @@ class SVARResults(SVARProcess, VARResults):
         nobs = self.nobs
         neqs = self.neqs
         sigma_u = self.sigma_u
-        trc_in = np.dot(np.dot(np.dot(A_val,npl.inv(B_val)),A_val),sigma_u)
+        trc_in = np.dot(np.dot(np.dot(A_val.T,npl.inv(B_val)),
+                               A_val),sigma_u)
         likl = (-(nobs * neqs / 2.0) * np.log(2 * np.pi)
                 + (nobs / 2.0) * np.log(npl.det(A_val)**2)
                 - (nobs / 2.0) * np.log(npl.det(B_val))
                 - (nobs / 2.0) * np.trace(trc_in))
         return likl
+
+    def irf(self, periods=10, var_order=None):
+        """
+        Analyze structural impulse responses to shocks in system
+
+        Parameters
+        ----------
+        periods : int
+        
+        Returns
+        -------
+        irf : IRAnalysis
+        """
+        P = self.solve_AB()
+        return IRAnalysis(self, P=P, periods=periods)
 
     def _gen_ABval(self):
         #assume mle guesses for svar params are equal to 0.5 
@@ -1894,8 +1918,8 @@ class SVARResults(SVARProcess, VARResults):
         neqs = self.neqs
         A = self.A
         B = self.B
-        A = self.A_guess
-        B = self.B_guess
+        A_guess = self.A_guess
+        B_guess = self.B_guess
 
         if A is not None:
             if A_guess is None:
@@ -1997,12 +2021,12 @@ class SVARResults(SVARProcess, VARResults):
                 j_d +=1
 
         #now compute J
-        invA = np.inv(A)
+        invA = npl.inv(A_solve)
         J_p1i = np.dot(np.dot(D_pl, np.kron(sigma_u, invA)), S_B)
         J_p1 = -2.0 * J_p1i 
         J_p2 = np.dot(np.dot(D_pl, np.kron(invA, invA)), S_D)
 
-        J = np.append(J_p1, axis=1)
+        J = np.append(J_p1, J_p2, axis=1)
 
         return J
 
