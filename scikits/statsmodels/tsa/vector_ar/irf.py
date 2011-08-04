@@ -26,7 +26,7 @@ class BaseIRAnalysis(object):
     able to handle known and estimated processes
     """
 
-    def __init__(self, model, P=None, periods=10, order=None):
+    def __init__(self, model, P=None, periods=10, order=None, svar=False):
         self.model = model
         self.periods = periods
         self.neqs, self.lags, self.T = model.neqs, model.k_ar, model.nobs
@@ -48,17 +48,26 @@ class BaseIRAnalysis(object):
 
         self.P = P
 
+        self.svar = svar
+
         self.irfs = model.ma_rep(periods)
-        self.orth_irfs = model.orth_ma_rep(periods)
-        self.svar_irfs = model.svar_ma_rep(periods)
+        if svar:
+            self.svar_irfs = model.svar_ma_rep(periods, P=P)
+        else:
+            self.orth_irfs = model.orth_ma_rep(periods)
 
         self.cum_effects = self.irfs.cumsum(axis=0)
-        self.orth_cum_effects = self.orth_irfs.cumsum(axis=0)
-        self.svar_cum_effects = self.svar_ma_rep.cumsum(axis=0)
+        if svar:
+            self.svar_cum_effects = self.svar_irfs.cumsum(axis=0)
+        else:
+            self.orth_cum_effects = self.orth_irfs.cumsum(axis=0)
 
         self.lr_effects = model.long_run_effects()
-        self.orth_lr_effects = np.dot(model.long_run_effects(), P)
-        self.svar_lr_effects = np.dot(model.long_run_effects(), P)
+        if svar:
+            self.svar_lr_effects = np.dot(model.long_run_effects(), P)
+        else:
+            self.orth_lr_effects = np.dot(model.long_run_effects(), P)
+
 
         # auxiliary stuff
         self._A = util.comp_matrix(model.coefs)
@@ -69,7 +78,7 @@ class BaseIRAnalysis(object):
     def cum_effect_cov(self, *args, **kwargs):
         raise NotImplementedError
 
-    def plot(self, orth=False, svar=False, impulse=None, response=None, 
+    def plot(self, orth=False, impulse=None, response=None, 
              signif=0.05, plot_params=None, subplot_params=None, 
              plot_stderr=True, stderr_type='asym', repl=1000, 
              seed=None, component=None):
@@ -104,6 +113,7 @@ class BaseIRAnalysis(object):
         """
         periods = self.periods
         model = self.model
+        svar = self.svar
 
         if orth and svar:
             raise ValueError("For SVAR system, set orth=False")
@@ -113,7 +123,7 @@ class BaseIRAnalysis(object):
             irfs = self.orth_irfs
         elif svar:
             title = 'Impulse responses (structural)'
-            irfs = self.svar_ma_rep
+            irfs = self.svar_irfs
         else:
             title = 'Impulse responses'
             irfs = self.irfs
@@ -221,9 +231,9 @@ class IRAnalysis(BaseIRAnalysis):
     -----
     Using Lutkepohl (2005) notation
     """
-    def __init__(self, model, P=None, periods=10, order=None):
+    def __init__(self, model, P=None, periods=10, order=None, svar=False):
         BaseIRAnalysis.__init__(self, model, P=P, periods=periods,
-                                order=order)
+                                order=order, svar=svar)
 
         self.cov_a = model._cov_alpha
         self.cov_sig = model._cov_sigma

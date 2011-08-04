@@ -1087,7 +1087,7 @@ class VARResults(VARProcess):
                 if cum == False:
                     ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).svar_ma_rep(maxn=T)
 
-        else orth == False:
+        else: 
             for i in range(repl):
                 #discard first hundred to eliminate correct for starting bias
                 if cum == True:
@@ -1702,15 +1702,16 @@ class SVARProcess(VARProcess):
         """
         raise NotImplementedError
 
-    def svar_ma_rep(self, A, B, maxn=10):
+    def svar_ma_rep(self, maxn=10, P=None):
         """
 
         Compute Structural MA coefficient matrices using MLE 
         of A, B
 
         """
-        A, B = self.solve_AB()
-        P = np.dot(A, np.sqrt(B))
+        if P is None:
+            A, B = self.solve_AB()
+            P = np.dot(A, np.sqrt(B))
         
         ma_mats = self.ma_rep(maxn=maxn)
         return mat([np.dot(coefs, P) for coefs in ma_mats])
@@ -1814,6 +1815,9 @@ class SVARResults(SVARProcess, VARResults):
         intercept = self.params[0]
         coefs = reshaped.swapaxes(1, 2).copy()
 
+        super(SVARResults, self).__init__(coefs, intercept, 
+                                          sigma_u, names=names)
+
         #need to define AB_mask, A_init, B_init
         self.A = A
         self.B = B
@@ -1910,8 +1914,10 @@ class SVARResults(SVARProcess, VARResults):
         -------
         irf : IRAnalysis
         """
-        P = self.solve_AB()
-        return IRAnalysis(self, P=P, periods=periods)
+        A, B = self.solve_AB()
+        P = np.dot(A, np.sqrt(B))
+
+        return IRAnalysis(self, P=P, periods=periods, svar=True)
 
     def _gen_ABval(self):
         #assume mle guesses for svar params are equal to 0.5 
