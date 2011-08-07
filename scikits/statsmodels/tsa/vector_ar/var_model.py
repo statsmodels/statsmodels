@@ -21,7 +21,8 @@ from scipy import optimize
 
 from scikits.statsmodels.tools.decorators import cache_readonly
 from scikits.statsmodels.tools.tools import chain_dot
-from scikits.statsmodels.base.model import GenericLikelihoodModel as glik
+from scikits.statsmodels.base.model import LikelihoodModel
+#from scikits.statsmodels.base.model import GenericLikelihoodModel as glik
 from scikits.statsmodels.tsa.tsatools import vec, unvec
 
 from scikits.statsmodels.tsa.vector_ar.irf import IRAnalysis
@@ -1716,7 +1717,7 @@ class SVARProcess(VARProcess):
         ma_mats = self.ma_rep(maxn=maxn)
         return mat([np.dot(coefs, P) for coefs in ma_mats])
 
-class SVARResults(SVARProcess, VARResults):
+class SVARResults(LikelihoodModel, SVARProcess, VARResults):
     """
     Estimate VAR(p) process with fixed number of lags
 
@@ -1815,8 +1816,8 @@ class SVARResults(SVARProcess, VARResults):
         intercept = self.params[0]
         coefs = reshaped.swapaxes(1, 2).copy()
 
-        super(SVARResults, self).__init__(coefs, intercept, 
-                                          sigma_u, names=names)
+        SVARProcess.__init__(self, coefs, intercept, sigma_u, 
+                             names=names)
 
         #need to define AB_mask, A_init, B_init
         self.A = A
@@ -1830,7 +1831,11 @@ class SVARResults(SVARProcess, VARResults):
         
         self.AB_mask = self._gen_AB_mask()
 
-    def solve_AB(self, override=False):
+        LikelihoodModel.__init__(self, self.AB_mask)
+        
+
+    def solve_AB(self, override=False, solver='nm', maxiter=500, 
+                 full_output=False, disp=False, callback=None):
         """
 
         Solves for MLE estimate of structural parameters
@@ -1841,6 +1846,25 @@ class SVARResults(SVARProcess, VARResults):
         override : bool, default False
             If True, returns estimates of A and B without checking
             order or rank condition
+        solver : str or None, optional
+            Solver to be used. The default is 'nm' (Nelder-Mead). Other
+            choices are 'bfgs', 'newton' (Newton-Raphson), 'cg'
+            conjugate, 'ncg' (non-conjugate gradient), and 'powell'.
+        maxiter : int, optional
+            The maximum number of function evaluations. Default is 35.
+        tol : float
+            The convergence tolerance.  Default is 1e-08.
+        full_output : bool, optional
+            If True, all output from solver will be available in
+            the Results object's mle_retvals attribute.  Output is dependent
+            on the solver.  See Notes for more information.
+        disp : bool, optional
+            If True, convergence information is printed.  For the default
+            l_bfgs_b solver, disp controls the frequency of the output during
+            the iterations. disp < 0 means no output in this case.
+        callback : function, optional
+            Called after each iteration as callback(xk) where xk is the current
+            parameter vector.
 
         Returns
         -------
@@ -1854,27 +1878,28 @@ class SVARResults(SVARProcess, VARResults):
         A_len = len(A_solve[A_mask])
         B_len = len(B_solve[B_mask])
 
-        f = self.nsvar_loglike
+        self.loglike = self.svar_loglike
         AB_mask = self.AB_mask
         #try manually inserting scipy.optimize
-        retvals = optimize.fmin(f, AB_mask, xtol=1e-6,
-                                maxiter=10000)
+        #retvals = optimize.fmin(f, AB_mask, xtol=1e-6,
+        #                        maxiter=10000)
+        retvals = LikelihoodModel.fit(self, AB_mask, method=solver,
+                    maxiter=maxiter, full_output=full_output,
+                    disp=disp, callback=callback)
 
-        A_solve[A_mask] = retvals[:A_len]
-        B_solve[B_mask] = retvals[A_len:A_len+B_len]
+        return retvals
+#        A_solve[A_mask] = retvals[:A_len]
+#        B_solve[B_mask] = retvals[A_len:A_len+B_len]
 
-        if override == False:
-            J = self._compute_J(A_solve, B_solve)
-            self.check_order(J)
-            self.check_rank(J)
-        else:
-            print "Order/rank conditions have not been checked"
+#        if override == False:
+#            J = self._compute_J(A_solve, B_solve)
+#            self.check_order(J)
+#            self.check_rank(J)
+#        else:
+#            print "Order/rank conditions have not been checked"
 
-        return A_solve, B_solve
+#        return A_solve, B_solve
     
-    def nsvar_loglike(self, AB_mask):
-        return -self.svar_loglike(AB_mask)
-
     def svar_loglike(self, AB_mask):
 
         A = self.A

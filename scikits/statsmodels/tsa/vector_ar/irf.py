@@ -128,8 +128,10 @@ class BaseIRAnalysis(object):
             title = 'Impulse responses'
             irfs = self.irfs
         
+        if plot_stderr == False:
+            stderr = None
 
-        if stderr_type not in ['asym', 'mc', 'sz1', 'sz2','sz3']:
+        elif stderr_type not in ['asym', 'mc', 'sz1', 'sz2','sz3']:
             raise ValueError("Error type must be either 'asym', 'mc','sz1','sz2', or 'sz3'")
         else:
             if stderr_type == 'asym':
