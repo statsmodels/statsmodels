@@ -1880,25 +1880,25 @@ class SVARResults(LikelihoodModel, SVARProcess, VARResults):
 
         self.loglike = self.svar_loglike
         AB_mask = self.AB_mask
-        #try manually inserting scipy.optimize
-        #retvals = optimize.fmin(f, AB_mask, xtol=1e-6,
-        #                        maxiter=10000)
+
         retvals = LikelihoodModel.fit(self, AB_mask, method=solver,
                     maxiter=maxiter, full_output=full_output,
-                    disp=disp, callback=callback)
+                    disp=disp, callback=callback).params
 
-        return retvals
-#        A_solve[A_mask] = retvals[:A_len]
-#        B_solve[B_mask] = retvals[A_len:A_len+B_len]
+        A_solve[A_mask] = retvals[:A_len]
+        B_solve[B_mask] = retvals[A_len:A_len+B_len]
 
-#        if override == False:
-#            J = self._compute_J(A_solve, B_solve)
-#            self.check_order(J)
-#            self.check_rank(J)
-#        else:
-#            print "Order/rank conditions have not been checked"
+        if override == False:
+            J = self._compute_J(A_solve, B_solve)
+            self.check_order(J)
+            self.check_rank(J)
+        else:
+            print "Order/rank conditions have not been checked"
 
-#        return A_solve, B_solve
+        return A_solve, B_solve
+
+    def nsvar_loglike(self,AB_mask):
+        return -self.svar_loglike(AB_mask)
     
     def svar_loglike(self, AB_mask):
 
@@ -1915,7 +1915,7 @@ class SVARResults(LikelihoodModel, SVARProcess, VARResults):
             A_val[A_mask] = np.copy(AB_mask[:A_len])
         if B is not None:
             B_val[B_mask] = np.copy(AB_mask[A_len:A_len+B_len])
-      
+
         nobs = self.nobs
         neqs = self.neqs
         sigma_u = self.sigma_u
@@ -1923,7 +1923,7 @@ class SVARResults(LikelihoodModel, SVARProcess, VARResults):
                                A_val),sigma_u)
         likl = (-(nobs * neqs / 2.0) * np.log(2 * np.pi)
                 + (nobs / 2.0) * np.log(npl.det(A_val)**2)
-                - (nobs / 2.0) * np.log(npl.det(B_val))
+                - (nobs / 2.0) * np.log(npl.det(B_val)))
                 - (nobs / 2.0) * np.trace(trc_in))
         return likl
 
