@@ -1888,7 +1888,7 @@ class SVARResults(LikelihoodModel, SVARProcess, VARResults):
         A_solve[A_mask] = retvals[:A_len]
         B_solve[B_mask] = retvals[A_len:A_len+B_len]
 
-        if override == False:
+        if override == False: 
             J = self._compute_J(A_solve, B_solve)
             self.check_order(J)
             self.check_rank(J)
@@ -1897,7 +1897,7 @@ class SVARResults(LikelihoodModel, SVARProcess, VARResults):
 
         return A_solve, B_solve
 
-    def nsvar_loglike(self,AB_mask):
+    def nsvar_loglike(self, AB_mask):
         return -self.svar_loglike(AB_mask)
     
     def svar_loglike(self, AB_mask):
@@ -1910,21 +1910,26 @@ class SVARResults(LikelihoodModel, SVARProcess, VARResults):
         B_mask = self.B_mask
         A_len = len(A_val[A_mask])
         B_len = len(B_val[B_mask])
-
+        
         if A is not None:
-            A_val[A_mask] = np.copy(AB_mask[:A_len])
+            A_val[A_mask] = AB_mask[:A_len].copy()
         if B is not None:
-            B_val[B_mask] = np.copy(AB_mask[A_len:A_len+B_len])
+            B_val[B_mask] = AB_mask[A_len:A_len+B_len].copy()
 
         nobs = self.nobs
         neqs = self.neqs
         sigma_u = self.sigma_u
-        trc_in = np.dot(np.dot(np.dot(A_val.T,npl.inv(B_val)),
-                               A_val),sigma_u)
+        trc_in = np.dot(np.dot(np.dot(A_val.T, npl.inv(B_val)),
+                               A_val), sigma_u)
+
         likl = (-(nobs * neqs / 2.0) * np.log(2 * np.pi)
-                + (nobs / 2.0) * np.log(npl.det(A_val)**2)
-                - (nobs / 2.0) * np.log(npl.det(B_val)))
-                - (nobs / 2.0) * np.trace(trc_in))
+                        
+                        + (nobs / 2.0) * np.log(npl.det(A_val)**2)
+                        
+                        - (nobs / 2.0) * np.log(npl.det(B_val))
+                        
+                        - (nobs / 2.0) * np.trace(trc_in))
+
         return likl
 
     def irf(self, periods=10, var_order=None):
