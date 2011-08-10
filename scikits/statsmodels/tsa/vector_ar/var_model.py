@@ -1919,14 +1919,17 @@ class SVARResults(LikelihoodModel, SVARProcess, VARResults):
         nobs = self.nobs
         neqs = self.neqs
         sigma_u = self.sigma_u
+
         trc_in = np.dot(np.dot(np.dot(A_val.T, npl.inv(B_val)),
                                A_val), sigma_u)
+        sign, b_logdet = npl.slogdet(B_val)
+        b_slogdet = sign * b_logdet 
 
         likl = (-(nobs * neqs / 2.0) * np.log(2 * np.pi)
                         
                         + (nobs / 2.0) * np.log(npl.det(A_val)**2)
                         
-                        - (nobs / 2.0) * np.log(npl.det(B_val))
+                        - (nobs / 2.0) * b_slogdet
                         
                         - (nobs / 2.0) * np.trace(trc_in))
 
@@ -1964,7 +1967,7 @@ class SVARResults(LikelihoodModel, SVARProcess, VARResults):
                 for i in xrange(neqs):
                     for j in xrange(neqs):
                         if A[i,j] == 'E':
-                            A_init[i,j] = 0.5
+                            A_init[i,j] = np.random.randn()
                         else:
                             A_init[i,j] = A[i,j]
             else:
@@ -1978,7 +1981,7 @@ class SVARResults(LikelihoodModel, SVARProcess, VARResults):
                 for i in xrange(neqs):
                     for j in xrange(neqs):
                         if B[i,j] == 'E':
-                            B_init[i,j] = 0.5
+                            B_init[i,j] = np.abs(np.random.randn())
                         else:
                             B_init[i,j] = B[i,j]
             else:
