@@ -22,7 +22,7 @@ from scipy import optimize
 from scikits.statsmodels.tools.decorators import cache_readonly
 from scikits.statsmodels.tools.tools import chain_dot
 from scikits.statsmodels.base.model import LikelihoodModel
-#from scikits.statsmodels.base.model import GenericLikelihoodModel as glik
+#from scikits.statsmodels.base.model import GenericLikelihoodModel
 from scikits.statsmodels.tsa.tsatools import vec, unvec
 
 from scikits.statsmodels.tsa.vector_ar.irf import IRAnalysis
@@ -1494,7 +1494,7 @@ class VARResults(VARProcess):
         "Bayesian a.k.a. Schwarz info criterion"
         return self.info_criteria['bic']
 
-class SVAR(VAR):
+class SVAR(LikelihoodModel, VAR):
 
     """
     Fit VAR and then estimate structural components of A and B, defined:
@@ -1550,9 +1550,10 @@ class SVAR(VAR):
 
 
     def fit(self, maxlags=None, method='ols', ic=None, trend='c',
-            verbose=False, s_method='mle'):
+            verbose=False, s_method='mle', solver="nm",
+            override=False, maxiter=100):
         """
-        Fit the VAR model
+        Fit the SVAR model and solve for structural parameters
 
         Parameters
         ----------
@@ -1577,14 +1578,22 @@ class SVAR(VAR):
             Note that these are prepended to the columns of the dataset.
         s_method : {'mle'}
             Estimation method for structural parameters
+        solver : {'nm'}
+            Solution method
+        override : bool, default False
+            If True, returns estimates of A and B without checking
+            order or rank condition
+        maxiter : int, default 100
+            Number of iterations to perform in solution method
 
         Notes
         -----
         Lutkepohl pp. 146-153
+        Hamilton pp. 324-336
 
         Returns
         -------
-        est : VARResults
+        est : SVARResults
         """
         lags = maxlags
 
@@ -1602,9 +1611,11 @@ class SVAR(VAR):
 
         self.nobs = len(self.endog) - lags
 
-        return self._estimate_svar(lags, trend=trend)
+        return self._estimate_svar(lags, trend=trend, solver=solver,
+                                   override=override, maxiter=maxiter)
 
-    def _estimate_svar(self,lags, offset=0, trend='c'):
+    def _estimate_svar(self,lags, offset=0, trend='c', solver="nm",
+                       override=False, maxiter=100):
         """
         lags : int
         offset : int
@@ -1641,6 +1652,7 @@ class SVAR(VAR):
 
         sse = np.dot(resid.T, resid)
         omega = sse / df_resid
+        self.sigma_u = omega
 
         #This is where the SVAR components are initiliazed
         A = self.A
@@ -1650,257 +1662,42 @@ class SVAR(VAR):
         neqs = self.neqs
         svar_type = self.svar_type
 
-        #COME BACK TO THIS
-
         if A is None:
             A_guess = np.identity(neqs)
         if B is None:
             B_guess = np.identity(neqs)
 
-        A_mask, B_mask = gen_masks(A, B, neqs)
+        self.A_mask, self.B_mask = gen_masks(A, B, neqs)
 
         svar_ckerr(svar_type, A, B)
 
-        return SVARResults(y, z, params, omega, lags, names=self.names,
-                          trend=trend, dates=self.dates, model=self,
-                          A=A, A_mask=A_mask, A_guess=A_guess,
-                            B=B, B_mask=B_mask, B_guess=B_guess)
-
-class SVARProcess(VARProcess):
-    """
-    Class represents a known SVAR(p) process
-
-    Parameters
-    ----------
-    coefs : ndarray (p x k x k)
-    intercept : ndarray (length k)
-    sigma_u : ndarray (k x k)
-    names : sequence (length k)
-    A : neqs x neqs np.ndarray with unknown parameters marked with 'E'
-    A_mask : neqs x neqs mask array with known parameters masked
-    B : neqs x neqs np.ndarry with unknown parameters marked with 'E'
-    B_mask : neqs x neqs mask array with known parameters masked
-
-    Returns
-    -------
-    **Attributes**:
-    """
-    def __init__(self, coefs, intercept, sigma_u, names=None):
-        self.k_ar = len(coefs)
-        self.neqs = coefs.shape[1]
-        self.coefs = coefs
-        self.intercept = intercept
-        self.sigma_u = sigma_u
-        self.names = names
-        #Add SVAR components
-        #change 
-
-    def orth_ma_rep(self, maxn=10, P=None):
-        """
-
-        Unavailable for SVAR
-
-        """
-        raise NotImplementedError
-
-    def svar_ma_rep(self, maxn=10, P=None):
-        """
-
-        Compute Structural MA coefficient matrices using MLE 
-        of A, B
-
-        """
-        if P is None:
-            A, B = self.solve_AB()
-            P = np.dot(A, np.sqrt(B))
-        
-        ma_mats = self.ma_rep(maxn=maxn)
-        return mat([np.dot(coefs, P) for coefs in ma_mats])
-
-class SVARResults(LikelihoodModel, SVARProcess, VARResults):
-    """
-    Estimate VAR(p) process with fixed number of lags
-
-    Parameters
-    ----------
-    endog : array
-    endog_lagged : array
-    params : array
-    sigma_u : array
-    lag_order : int
-    model : VAR model instance
-    trend : str {'nc', 'c', 'ct'}
-    names : array-like
-        List of names of the endogenous variables in order of appearance in `endog`.
-    dates
-
-
-    Returns
-    -------
-    **Attributes**
-    aic
-    bic
-    bse
-    coefs : ndarray (p x K x K)
-        Estimated A_i matrices, A_i = coefs[i-1]
-    coef_names
-    cov_params
-    dates
-    detomega
-    df_model : int
-    df_resid : int
-    endog
-    endog_lagged
-    fittedvalues
-    fpe
-    intercept
-    info_criteria
-    k_ar : int
-    k_trend : int
-    llf
-    model
-    names
-    neqs : int
-        Number of variables (equations)
-    nobs : int
-    n_totobs : int
-    params
-    k_ar : int
-        Order of VAR process
-    params : ndarray (Kp + 1) x K
-        A_i matrices and intercept in stacked form [int A_1 ... A_p]
-    pvalue
-    names : list
-        variables names
-    resid
-    sigma_u : ndarray (K x K)
-        Estimate of white noise process variance Var[u_t]
-    sigma_u_mle
-    stderr
-    trenorder
-    tvalues
-    y :
-    ys_lagged
-    """
-    _model_type = 'SVAR'
-
-    def __init__(self, endog, endog_lagged, params, sigma_u, lag_order,
-                 model=None, trend='c', names=None, dates=None, 
-                 A=None, A_mask=None, A_guess=None, 
-                 B=None, B_mask=None, B_guess=None):
-
-        self.model = model
-        self.y = self.endog = endog  #keep alias for now
-        self.ys_lagged = self.endog_lagged = endog_lagged #keep alias for now
-        self.dates = dates
-
-        self.n_totobs, self.neqs = self.y.shape
-        self.nobs = self.n_totobs - lag_order
-        k_trend = util.get_trendorder(trend)
-        if k_trend > 0: # make this the polynomial trend order
-            trendorder = k_trend - 1
-        else:
-            trendorder = None
-        self.k_trend = k_trend
-        self.trendorder = trendorder
-
-        self.coef_names = util.make_lag_names(names, lag_order, k_trend)
-        self.params = params
-        self.sigma_u = sigma_u
-
-        # Each matrix needs to be transposed
-        reshaped = self.params[self.k_trend:]
-        reshaped = reshaped.reshape((lag_order, self.neqs, self.neqs))
-
-        # Need to transpose each coefficient matrix
-        intercept = self.params[0]
-        coefs = reshaped.swapaxes(1, 2).copy()
-
-        SVARProcess.__init__(self, coefs, intercept, sigma_u, 
-                             names=names)
-
-        #need to define AB_mask, A_init, B_init
-        self.A = A
-        self.B = B
-        self.A_mask = A_mask
-        self.B_mask = B_mask
-        self.A_guess = A_guess
-        self.B_guess = B_guess
-
         self.A_init, self.B_init = self._gen_ABval()
-        
+
         self.AB_mask = self._gen_AB_mask()
 
         LikelihoodModel.__init__(self, self.AB_mask)
+        #GenericLikelihoodModel.__init__(self, self.AB_mask)
+
+
+        self.A_solve, self.B_solve = self._solve_AB(override=override,
+                                                    solver=solver,
+                                                    maxiter=maxiter)
         
+        return SVARResults(y, z, params, omega, lags, names=self.names,
+                           trend=trend, dates=self.dates, model=self,
+                           AB_mask=self.AB_mask, A_solve=self.A_solve,
+                           B_solve=self.B_solve)
 
-    def solve_AB(self, override=False, solver='nm', maxiter=500, 
-                 full_output=False, disp=False, callback=None):
-        """
-
-        Solves for MLE estimate of structural parameters
-
-        Parameters
-        ----------
-
-        override : bool, default False
-            If True, returns estimates of A and B without checking
-            order or rank condition
-        solver : str or None, optional
-            Solver to be used. The default is 'nm' (Nelder-Mead). Other
-            choices are 'bfgs', 'newton' (Newton-Raphson), 'cg'
-            conjugate, 'ncg' (non-conjugate gradient), and 'powell'.
-        maxiter : int, optional
-            The maximum number of function evaluations. Default is 35.
-        tol : float
-            The convergence tolerance.  Default is 1e-08.
-        full_output : bool, optional
-            If True, all output from solver will be available in
-            the Results object's mle_retvals attribute.  Output is dependent
-            on the solver.  See Notes for more information.
-        disp : bool, optional
-            If True, convergence information is printed.  For the default
-            l_bfgs_b solver, disp controls the frequency of the output during
-            the iterations. disp < 0 means no output in this case.
-        callback : function, optional
-            Called after each iteration as callback(xk) where xk is the current
-            parameter vector.
-
-        Returns
-        -------
-        A_solve, B_solve: ML solutions for A, B matrices
-
-        """
-        A_solve = self.A_init.copy()
-        B_solve = self.B_init.copy()
-        A_mask = self.A_mask
-        B_mask = self.B_mask
-        A_len = len(A_solve[A_mask])
-        B_len = len(B_solve[B_mask])
-
-        self.loglike = self.svar_loglike
-        AB_mask = self.AB_mask
-
-        retvals = LikelihoodModel.fit(self, AB_mask, method=solver,
-                    maxiter=maxiter, full_output=full_output,
-                    disp=disp, callback=callback).params
-
-        A_solve[A_mask] = retvals[:A_len]
-        B_solve[B_mask] = retvals[A_len:A_len+B_len]
-
-        if override == False: 
-            J = self._compute_J(A_solve, B_solve)
-            self.check_order(J)
-            self.check_rank(J)
-        else:
-            print "Order/rank conditions have not been checked"
-
-        return A_solve, B_solve
-
-    def nsvar_loglike(self, AB_mask):
-        return -self.svar_loglike(AB_mask)
-    
     def svar_loglike(self, AB_mask):
+        """
+        Loglikelihood for SVAR model
+
+        Notes
+        -----
+        This method assumes that the autoregressive parameters are
+        first estimated, then likelihood with structural parameters
+        is calculated
+        """
 
         A = self.A
         B = self.B
@@ -1935,22 +1732,57 @@ class SVARResults(LikelihoodModel, SVARProcess, VARResults):
 
         return likl
 
-    def irf(self, periods=10, var_order=None):
+    def _solve_AB(self, override=False, solver='nm', maxiter=500):
         """
-        Analyze structural impulse responses to shocks in system
+
+        Solves for MLE estimate of structural parameters
 
         Parameters
         ----------
-        periods : int
-        
+
+        override : bool, default False
+            If True, returns estimates of A and B without checking
+            order or rank condition
+        solver : str or None, optional
+            Solver to be used. The default is 'nm' (Nelder-Mead). Other
+            choices are 'bfgs', 'newton' (Newton-Raphson), 'cg'
+            conjugate, 'ncg' (non-conjugate gradient), and 'powell'.
+        maxiter : int, optional
+            The maximum number of function evaluations. Default is 35.
+
         Returns
         -------
-        irf : IRAnalysis
-        """
-        A, B = self.solve_AB()
-        P = np.dot(A, np.sqrt(B))
+        A_solve, B_solve: ML solutions for A, B matrices
 
-        return IRAnalysis(self, P=P, periods=periods, svar=True)
+        """
+        A_solve = self.A_init.copy()
+        B_solve = self.B_init.copy()
+        A_mask = self.A_mask
+        B_mask = self.B_mask
+        A_len = len(A_solve[A_mask])
+        B_len = len(B_solve[B_mask])
+
+        AB_mask = self.AB_mask
+
+        self.loglike = self.svar_loglike
+
+        #retvals = GenericLikelihoodModel.fit(self, AB_mask, 
+        #            method=solver, maxiter=maxiter).params
+
+        retvals = LikelihoodModel.fit(self, AB_mask, 
+                    method=solver, maxiter=maxiter).params
+
+        A_solve[A_mask] = retvals[:A_len]
+        B_solve[B_mask] = retvals[A_len:A_len+B_len]
+
+        if override == False: 
+            J = self._compute_J(A_solve, B_solve)
+            self.check_order(J)
+            self.check_rank(J)
+        else:
+            print "Order/rank conditions have not been checked"
+
+        return A_solve, B_solve
 
     def _gen_ABval(self):
         #assume mle guesses for svar params are equal to 0.5 
@@ -2036,7 +1868,7 @@ class SVARResults(LikelihoodModel, SVARProcess, VARResults):
                 u=np.zeros([(1.0/2)*neqs*(neqs+1),1])
                 u[(j)*neqs+(i+1)-(1.0/2)*(j+1)*j-1]=1 
                 Tij=np.zeros([neqs,neqs])
-                Tij[i,j]=1
+                Tij[i,j]=1 
                 Tij[j,i]=1
                 D_nT=D_nT+np.dot(u,(Tij.ravel('F')[:,None]).T)
                 i=i+1
@@ -2081,27 +1913,184 @@ class SVARResults(LikelihoodModel, SVARProcess, VARResults):
             raise ValueError("Rank condition not met: "
                              "solution may not be unique.")
 
-'''
-class SVARMLE(LikelihoodModel):
+class SVARProcess(VARProcess):
     """
-    Method to solve MLE of structural parameter
-    """
-    def __init__(self, A, B, A_mask, B_mask, A_init, B_init, sigma_u):
-        self.A = A
-        self.A_mask = A_mask
-        self.B_mask = B_mask
-        self.A_init = A_init
-        self.B_init = B_init
-        if A is not None and B is not None:
-            self.AB_mask = np.append(A_init[A_mask],B_init[B_mask])
-        elif A is not None and B is None:
-            self.AB_mask = A_init[A_mask]
-        elif A is None and B is not None:
-            self.AB_mask = B_init[B_mask]
+    Class represents a known SVAR(p) process
 
-    def likelihood(self, AB_mask):
-        return -self.svar_likelihood(AB_mask)
-'''
+    Parameters
+    ----------
+    coefs : ndarray (p x k x k)
+    intercept : ndarray (length k)
+    sigma_u : ndarray (k x k)
+    names : sequence (length k)
+    A : neqs x neqs np.ndarray with unknown parameters marked with 'E'
+    A_mask : neqs x neqs mask array with known parameters masked
+    B : neqs x neqs np.ndarry with unknown parameters marked with 'E'
+    B_mask : neqs x neqs mask array with known parameters masked
+
+    Returns
+    -------
+    **Attributes**:
+    """
+    def __init__(self, coefs, intercept, sigma_u, A_solve, B_solve, 
+                 names=None):
+        self.k_ar = len(coefs)
+        self.neqs = coefs.shape[1]
+        self.coefs = coefs
+        self.intercept = intercept
+        self.sigma_u = sigma_u
+        self.A_solve = A_solve
+        self.B_solve = B_solve
+        self.names = names
+
+    def orth_ma_rep(self, maxn=10, P=None):
+
+        """
+
+        Unavailable for SVAR
+
+        """
+        raise NotImplementedError
+
+    def svar_ma_rep(self, maxn=10, P=None):
+        """
+
+        Compute Structural MA coefficient matrices using MLE 
+        of A, B
+
+        """
+        if P is None:
+            A_solve = self.A_solve
+            B_solve = self.B_solve
+            P = np.dot(A_solve, np.sqrt(B_solve))
+        
+        ma_mats = self.ma_rep(maxn=maxn)
+        return mat([np.dot(coefs, P) for coefs in ma_mats])
+
+class SVARResults(SVARProcess, VARResults):
+    """
+    Estimate VAR(p) process with fixed number of lags
+
+    Parameters
+    ----------
+    endog : array
+    endog_lagged : array
+    params : array
+    sigma_u : array
+    lag_order : int
+    model : VAR model instance
+    trend : str {'nc', 'c', 'ct'}
+    names : array-like
+        List of names of the endogenous variables in order of appearance in `endog`.
+    dates
+
+
+    Returns
+    -------
+    **Attributes**
+    aic
+    bic
+    bse
+    coefs : ndarray (p x K x K)
+        Estimated A_i matrices, A_i = coefs[i-1]
+    coef_names
+    cov_params
+    dates
+    detomega
+    df_model : int
+    df_resid : int
+    endog
+    endog_lagged
+    fittedvalues
+    fpe
+    intercept
+    info_criteria
+    k_ar : int
+    k_trend : int
+    llf
+    model
+    names
+    neqs : int
+        Number of variables (equations)
+    nobs : int
+    n_totobs : int
+    params
+    k_ar : int
+        Order of VAR process
+    params : ndarray (Kp + 1) x K
+        A_i matrices and intercept in stacked form [int A_1 ... A_p]
+    pvalue
+    names : list
+        variables names
+    resid
+    sigma_u : ndarray (K x K)
+        Estimate of white noise process variance Var[u_t]
+    sigma_u_mle
+    stderr
+    trenorder
+    tvalues
+    y :
+    ys_lagged
+    """
+
+    _model_type = 'SVAR'
+
+    def __init__(self, endog, endog_lagged, params, sigma_u, lag_order,
+                 AB_mask=None, A_solve=None, B_solve=None, model=None, 
+                 trend='c', names=None, dates=None):
+
+        self.model = model
+        self.y = self.endog = endog  #keep alias for now
+        self.ys_lagged = self.endog_lagged = endog_lagged #keep alias for now
+        self.dates = dates
+
+        self.n_totobs, self.neqs = self.y.shape
+        self.nobs = self.n_totobs - lag_order
+        k_trend = util.get_trendorder(trend)
+        if k_trend > 0: # make this the polynomial trend order
+            trendorder = k_trend - 1
+        else:
+            trendorder = None
+        self.k_trend = k_trend
+        self.trendorder = trendorder
+
+        self.coef_names = util.make_lag_names(names, lag_order, k_trend)
+        self.params = params
+        self.sigma_u = sigma_u
+
+        # Each matrix needs to be transposed
+        reshaped = self.params[self.k_trend:]
+        reshaped = reshaped.reshape((lag_order, self.neqs, self.neqs))
+
+        # Need to transpose each coefficient matrix
+        intercept = self.params[0]
+        coefs = reshaped.swapaxes(1, 2).copy()
+
+        #SVAR components
+        self.A_solve = A_solve
+        self.B_solve = B_solve
+
+        SVARProcess.__init__(self, coefs, intercept, sigma_u, A_solve,
+                             B_solve, names=names)
+
+    def irf(self, periods=10, var_order=None):
+        """
+        Analyze structural impulse responses to shocks in system
+
+        Parameters
+        ----------
+        periods : int
+        
+        Returns
+        -------
+        irf : IRAnalysis
+        """
+        A_solve = self.A_solve
+        B_solve = self.B_solve
+        P = np.dot(A_solve, np.sqrt(B_solve))
+
+        return IRAnalysis(self, P=P, periods=periods, svar=True)
+
 class FEVD(object):
     """
     Compute and plot Forecast error variance decomposition and asymptotic
