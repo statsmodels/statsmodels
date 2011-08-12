@@ -21,8 +21,8 @@ from scipy import optimize
 
 from scikits.statsmodels.tools.decorators import cache_readonly
 from scikits.statsmodels.tools.tools import chain_dot
-from scikits.statsmodels.base.model import LikelihoodModel
-#from scikits.statsmodels.base.model import GenericLikelihoodModel
+#from scikits.statsmodels.base.model import LikelihoodModel
+from scikits.statsmodels.base.model import GenericLikelihoodModel
 from scikits.statsmodels.tsa.tsatools import vec, unvec
 
 from scikits.statsmodels.tsa.vector_ar.irf import IRAnalysis
@@ -102,28 +102,6 @@ def is_stable(coefs, verbose=False):
             print val
 
     return (np.abs(eigs) <= 1).all()
-
-def gen_masks(A, B, neqs):
-    """
-    Generates masks of A, B arrays that mask unknown elements
-    """
-
-    #tried using ma.maskedequal() function without much success
-
-    A_mask = np.zeros_like(A, dtype=bool)
-    if A is not None:
-        for i in xrange(neqs):
-            for j in xrange(neqs):
-                if A[i,j] == 'E':
-                    A_mask[i,j] = True
-
-    B_mask = np.zeros_like(B, dtype=bool)
-    if B is not None:
-        for i in xrange(neqs):
-            for j in xrange(neqs):
-                if B[i,j] == 'E':
-                    B_mask[i,j] = True
-    return A_mask, B_mask
 
 def var_acf(coefs, sig_u, nlags=None):
     """
@@ -1494,7 +1472,7 @@ class VARResults(VARProcess):
         "Bayesian a.k.a. Schwarz info criterion"
         return self.info_criteria['bic']
 
-class SVAR(LikelihoodModel, VAR):
+class SVAR(GenericLikelihoodModel, VAR):
 
     """
     Fit VAR and then estimate structural components of A and B, defined:
@@ -1551,7 +1529,7 @@ class SVAR(LikelihoodModel, VAR):
 
     def fit(self, maxlags=None, method='ols', ic=None, trend='c',
             verbose=False, s_method='mle', solver="nm",
-            override=False, maxiter=100):
+            override=False, maxiter=500, maxfun=500):
         """
         Fit the SVAR model and solve for structural parameters
 
@@ -1583,8 +1561,10 @@ class SVAR(LikelihoodModel, VAR):
         override : bool, default False
             If True, returns estimates of A and B without checking
             order or rank condition
-        maxiter : int, default 100
+        maxiter : int, default 500
             Number of iterations to perform in solution method
+        maxfun : int
+            Number of function evaluations to perform
 
         Notes
         -----
@@ -1612,10 +1592,11 @@ class SVAR(LikelihoodModel, VAR):
         self.nobs = len(self.endog) - lags
 
         return self._estimate_svar(lags, trend=trend, solver=solver,
-                                   override=override, maxiter=maxiter)
+                                   override=override, maxiter=maxiter,
+                                   maxfun=maxfun)
 
-    def _estimate_svar(self,lags, offset=0, trend='c', solver="nm",
-                       override=False, maxiter=100):
+    def _estimate_svar(self, lags, maxiter, maxfun, offset=0, trend='c', 
+                       solver="nm", override=False):
         """
         lags : int
         offset : int
@@ -1662,26 +1643,21 @@ class SVAR(LikelihoodModel, VAR):
         neqs = self.neqs
         svar_type = self.svar_type
 
-        if A is None:
-            A_guess = np.identity(neqs)
-        if B is None:
-            B_guess = np.identity(neqs)
-
-        self.A_mask, self.B_mask = gen_masks(A, B, neqs)
+        self.A_mask, self.B_mask = self._gen_masks()
 
         svar_ckerr(svar_type, A, B)
+        
+        self.A_init, self.B_init = self._gen_AB_init()
 
-        self.A_init, self.B_init = self._gen_ABval()
-
+        #this AB_mask list is also the initial guess for the solution
         self.AB_mask = self._gen_AB_mask()
-
-        LikelihoodModel.__init__(self, self.AB_mask)
-        #GenericLikelihoodModel.__init__(self, self.AB_mask)
-
+        
+        GenericLikelihoodModel.__init__(self, self.AB_mask)
 
         self.A_solve, self.B_solve = self._solve_AB(override=override,
                                                     solver=solver,
-                                                    maxiter=maxiter)
+                                                    maxiter=maxiter,
+                                                    maxfun=maxfun)
         
         return SVARResults(y, z, params, omega, lags, names=self.names,
                            trend=trend, dates=self.dates, model=self,
@@ -1732,9 +1708,8 @@ class SVAR(LikelihoodModel, VAR):
 
         return likl
 
-    def _solve_AB(self, override=False, solver='nm', maxiter=500):
+    def _solve_AB(self, maxiter, maxfun, override=False, solver='nm'):
         """
-
         Solves for MLE estimate of structural parameters
 
         Parameters
@@ -1748,30 +1723,31 @@ class SVAR(LikelihoodModel, VAR):
             choices are 'bfgs', 'newton' (Newton-Raphson), 'cg'
             conjugate, 'ncg' (non-conjugate gradient), and 'powell'.
         maxiter : int, optional
-            The maximum number of function evaluations. Default is 35.
+            The maximum number of iterations. Default is 500.
+        maxfun : int, optional
+            The maximum number of function evalutions.
 
         Returns
         -------
         A_solve, B_solve: ML solutions for A, B matrices
 
         """
+        
         A_solve = self.A_init.copy()
         B_solve = self.B_init.copy()
         A_mask = self.A_mask
         B_mask = self.B_mask
         A_len = len(A_solve[A_mask])
         B_len = len(B_solve[B_mask])
-
+        
         AB_mask = self.AB_mask
 
         self.loglike = self.svar_loglike
 
-        #retvals = GenericLikelihoodModel.fit(self, AB_mask, 
-        #            method=solver, maxiter=maxiter).params
-
-        retvals = LikelihoodModel.fit(self, AB_mask, 
-                    method=solver, maxiter=maxiter).params
-
+        retvals = GenericLikelihoodModel.fit(self, AB_mask, 
+                    method=solver, maxiter=maxiter, 
+                    maxfun=maxfun).params
+        
         A_solve[A_mask] = retvals[:A_len]
         B_solve[B_mask] = retvals[A_len:A_len+B_len]
 
@@ -1783,49 +1759,75 @@ class SVAR(LikelihoodModel, VAR):
             print "Order/rank conditions have not been checked"
 
         return A_solve, B_solve
+        
+    def _gen_masks(self):
+        """
+        Generates masks of A, B arrays that mask unknown elements
+        """
+        neqs = self.neqs
+        A = self.A
+        B = self.B
 
-    def _gen_ABval(self):
-        #assume mle guesses for svar params are equal to 0.5 
-        #when not given
+        A_mask = np.zeros((neqs,neqs), dtype=bool)
+        if A is not None:
+            for i in xrange(neqs):
+                for j in xrange(neqs):
+                    if A[i,j] == 'E':
+                        A_mask[i,j] = True
+
+        B_mask = np.zeros((neqs,neqs), dtype=bool)
+        if B is not None:
+            for i in xrange(neqs):
+                for j in xrange(neqs):
+                    if B[i,j] == 'E':
+                        B_mask[i,j] = True
+        return A_mask, B_mask
+
+    def _gen_AB_init(self):
+        #assume mle guesses for svar params are normally distributed
+        #but random for A and uniformly distributed for B
         neqs = self.neqs
         A = self.A
         B = self.B
         A_guess = self.A_guess
         B_guess = self.B_guess
+        svar_type = self.svar_type
 
-        if A is not None:
-            if A_guess is None:
-                A_init = np.zeros_like(A, dtype=float)
-                for i in xrange(neqs):
-                    for j in xrange(neqs):
-                        if A[i,j] == 'E':
-                            A_init[i,j] = np.random.randn()
-                        else:
-                            A_init[i,j] = A[i,j]
-            else:
-                A_init = A_guess
-        else:
+        if (A_guess is None and (svar_type == 'AB' 
+                                 or svar_type == 'A')):
+            A_init = np.zeros_like(A, dtype=float)
+            for i in xrange(neqs):
+                for j in xrange(neqs):
+                    if A[i,j] == 'E':
+                        A_init[i,j] = np.random.randn()
+                    else:
+                        A_init[i,j] = A[i,j]
+        elif A_guess is None:
             A_init = np.identity(neqs)
-
-        if B is not None:
-            if B_guess is None:
-                B_init = np.zeros_like(B, dtype=float)
-                for i in xrange(neqs):
-                    for j in xrange(neqs):
-                        if B[i,j] == 'E':
-                            B_init[i,j] = np.abs(np.random.randn())
-                        else:
-                            B_init[i,j] = B[i,j]
-            else:
-                B_init = B_guess
         else:
+            A_init = A_guess.copy()
+
+
+        if (B_guess is None and (svar_type =='AB' 
+                                 or svar_type == 'B')):
+            B_init = np.zeros_like(B, dtype=float)
+            for i in xrange(neqs):
+                for j in xrange(neqs):
+                    if B[i,j] == 'E':
+                        B_init[i,j] = np.random.uniform()
+                    else:
+                        B_init[i,j] = B[i,j]
+        elif B_guess is None:
             B_init = np.identity(neqs)
+        else:
+            B_init = B_guess.copy()
 
         return A_init, B_init
 
     def _gen_AB_mask(self):
         """
         Generates mask summarizing both A and B parameters to be estimated
+
         """
         A = self.A
         B = self.B
@@ -1877,20 +1879,23 @@ class SVAR(LikelihoodModel, VAR):
         D_pl=npl.pinv(D_n)
 
         #generate S_B
-        S_B = np.zeros((neqs**2, len(A[A_mask])))
-        S_D = np.zeros((neqs**2, len(B[B_mask])))
+        S_B = np.zeros((neqs**2, len(A_solve[A_mask])))
+        S_D = np.zeros((neqs**2, len(B_solve[B_mask])))
 
         j = 0
         j_d = 0
-        A_vec = np.ravel(A, order='F')
-        B_vec = np.ravel(B, order='F')
-        for k in xrange(neqs**2):
-            if A_vec[k] == 'E':
-                S_B[k,j] = -1
-                j += 1
-            if B_vec[k] == 'E':
-                S_D[k,j_d] = 1
-                j_d +=1
+        if A is not None:
+            A_vec = np.ravel(A, order='F')
+            for k in xrange(neqs**2):
+                if A_vec[k] == 'E':
+                    S_B[k,j] = -1
+                    j += 1
+        if B is not None:
+            B_vec = np.ravel(B, order='F')
+            for k in xrange(neqs**2):
+                if B_vec[k] == 'E':
+                    S_D[k,j_d] = 1
+                    j_d +=1
 
         #now compute J
         invA = npl.inv(A_solve)
@@ -2069,6 +2074,7 @@ class SVARResults(SVARProcess, VARResults):
         #SVAR components
         self.A_solve = A_solve
         self.B_solve = B_solve
+        self.AB_mask = AB_mask
 
         SVARProcess.__init__(self, coefs, intercept, sigma_u, A_solve,
                              B_solve, names=names)
