@@ -21,8 +21,8 @@ from scipy import optimize
 
 from scikits.statsmodels.tools.decorators import cache_readonly
 from scikits.statsmodels.tools.tools import chain_dot
-#from scikits.statsmodels.base.model import LikelihoodModel
-from scikits.statsmodels.base.model import GenericLikelihoodModel
+from scikits.statsmodels.base.model import LikelihoodModel
+#from scikits.statsmodels.base.model import GenericLikelihoodModel
 from scikits.statsmodels.tsa.tsatools import vec, unvec
 
 from scikits.statsmodels.tsa.vector_ar.irf import IRAnalysis
@@ -1472,7 +1472,7 @@ class VARResults(VARProcess):
         "Bayesian a.k.a. Schwarz info criterion"
         return self.info_criteria['bic']
 
-class SVAR(GenericLikelihoodModel, VAR):
+class SVAR(LikelihoodModel, VAR):
 
     """
     Fit VAR and then estimate structural components of A and B, defined:
@@ -1526,6 +1526,19 @@ class SVAR(GenericLikelihoodModel, VAR):
         self.A_guess = A_guess
         self.B_guess = B_guess
 
+        #This is where the SVAR components are initiliazed
+        self.A_mask, self.B_mask = self._gen_masks()
+
+        svar_ckerr(svar_type, A, B)
+        
+        self.A_init, self.B_init = self._gen_AB_init()
+
+        #this AB_mask vector is also the initial guess for the solution
+        self.AB_mask = self._gen_AB_mask()
+
+        super(SVAR, self).__init__(self.AB_mask)
+
+        self.endog = self.y
 
     def fit(self, maxlags=None, method='ols', ic=None, trend='c',
             verbose=False, s_method='mle', solver="nm",
@@ -1591,6 +1604,7 @@ class SVAR(GenericLikelihoodModel, VAR):
 
         self.nobs = len(self.endog) - lags
 
+
         return self._estimate_svar(lags, trend=trend, solver=solver,
                                    override=override, maxiter=maxiter,
                                    maxfun=maxfun)
@@ -1635,34 +1649,15 @@ class SVAR(GenericLikelihoodModel, VAR):
         omega = sse / df_resid
         self.sigma_u = omega
 
-        #This is where the SVAR components are initiliazed
-        A = self.A
-        B = self.B
-        A_guess = self.A_guess
-        B_guess = self.B_guess
-        neqs = self.neqs
-        svar_type = self.svar_type
-
-        self.A_mask, self.B_mask = self._gen_masks()
-
-        svar_ckerr(svar_type, A, B)
-        
-        self.A_init, self.B_init = self._gen_AB_init()
-
-        #this AB_mask list is also the initial guess for the solution
-        self.AB_mask = self._gen_AB_mask()
-        
-        GenericLikelihoodModel.__init__(self, self.AB_mask)
-
-        self.A_solve, self.B_solve = self._solve_AB(override=override,
+        A_solve, B_solve = self._solve_AB(override=override,
                                                     solver=solver,
                                                     maxiter=maxiter,
                                                     maxfun=maxfun)
         
         return SVARResults(y, z, params, omega, lags, names=self.names,
                            trend=trend, dates=self.dates, model=self,
-                           AB_mask=self.AB_mask, A_solve=self.A_solve,
-                           B_solve=self.B_solve)
+                           AB_mask=self.AB_mask, A_solve=A_solve,
+                           B_solve=B_solve)
 
     def svar_loglike(self, AB_mask):
         """
@@ -1672,7 +1667,7 @@ class SVAR(GenericLikelihoodModel, VAR):
         -----
         This method assumes that the autoregressive parameters are
         first estimated, then likelihood with structural parameters
-        is calculated
+        is estimated
         """
 
         A = self.A
@@ -1744,9 +1739,10 @@ class SVAR(GenericLikelihoodModel, VAR):
 
         self.loglike = self.svar_loglike
 
-        retvals = GenericLikelihoodModel.fit(self, AB_mask, 
+        retvals = super(SVAR, self).fit(start_params=AB_mask, 
                     method=solver, maxiter=maxiter, 
-                    maxfun=maxfun).params
+                    maxfun=maxfun, full_output=True,
+                    retall=True).params
         
         A_solve[A_mask] = retvals[:A_len]
         B_solve[B_mask] = retvals[A_len:A_len+B_len]
