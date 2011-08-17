@@ -1536,9 +1536,7 @@ class SVAR(LikelihoodModel, VAR):
         #this AB_mask vector is also the initial guess for the solution
         self.AB_mask = self._gen_AB_mask()
 
-        super(SVAR, self).__init__(self.AB_mask)
-
-        self.endog = self.y
+        super(SVAR, self).__init__(endog)
 
     def fit(self, maxlags=None, method='ols', ic=None, trend='c',
             verbose=False, s_method='mle', solver="nm",
@@ -1659,7 +1657,7 @@ class SVAR(LikelihoodModel, VAR):
                            AB_mask=self.AB_mask, A_solve=A_solve,
                            B_solve=B_solve)
 
-    def svar_loglike(self, AB_mask):
+    def loglike(self, AB_mask):
         """
         Loglikelihood for SVAR model
 
@@ -1698,8 +1696,9 @@ class SVAR(LikelihoodModel, VAR):
                         + (nobs / 2.0) * np.log(npl.det(A_val)**2)
                         
                         - (nobs / 2.0) * b_slogdet
-                        
+                       
                         - (nobs / 2.0) * np.trace(trc_in))
+        
 
         return likl
 
@@ -1733,19 +1732,8 @@ class SVAR(LikelihoodModel, VAR):
         A_mask = self.A_mask
         B_mask = self.B_mask
         A_len = len(A_solve[A_mask])
-        B_len = len(B_solve[B_mask])
         
         AB_mask = self.AB_mask
-
-        self.loglike = self.svar_loglike
-
-        retvals = super(SVAR, self).fit(start_params=AB_mask, 
-                    method=solver, maxiter=maxiter, 
-                    maxfun=maxfun, full_output=True,
-                    retall=True).params
-        
-        A_solve[A_mask] = retvals[:A_len]
-        B_solve[B_mask] = retvals[A_len:A_len+B_len]
 
         if override == False: 
             J = self._compute_J(A_solve, B_solve)
@@ -1753,6 +1741,14 @@ class SVAR(LikelihoodModel, VAR):
             self.check_rank(J)
         else:
             print "Order/rank conditions have not been checked"
+
+        retvals = super(SVAR, self).fit(start_params=AB_mask, 
+                    method=solver, maxiter=maxiter, 
+                    maxfun=maxfun).params
+        
+        A_solve[A_mask] = retvals[:A_len]
+        B_solve[B_mask] = retvals[A_len:]
+
 
         return A_solve, B_solve
         
