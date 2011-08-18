@@ -1528,9 +1528,9 @@ class SVAR(LikelihoodModel):
         self.A_guess = A_guess
         self.B_guess = B_guess
 
-        #This is where the SVAR components are initiliazed
-        self.A_mask = A == 'E'
-        self.B_mask = B == 'E'
+        #This is where the SVAR components are initialiazed
+        self.A_mask = np.logical_or(A == 'E', A == 'e')
+        self.B_mask = np.logical_or(B == 'E', B == 'e')
 
         svar_ckerr(svar_type, A, B)
 
