@@ -1008,10 +1008,10 @@ class VARResults(VARProcess):
         return mse + omegas / self.nobs
 
     #Monte Carlo irf standard errors
-    def irf_errband_mc(self, orth=False, repl=1000, T=10, 
+    def irf_errband_mc(self, orth=False, repl=1000, T=10,
                       signif=0.05, seed=None, burn=100, cum=False):
         """
-        Compute Monte Carlo integrated error bands assuming normally 
+        Compute Monte Carlo integrated error bands assuming normally
         distributed for impulse response functions
 
         Parameters
@@ -1068,7 +1068,7 @@ class VARResults(VARProcess):
                 if cum == False:
                     ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).svar_ma_rep(maxn=T)
 
-        else: 
+        else:
             for i in range(repl):
                 #discard first hundred to eliminate correct for starting bias
                 if cum == True:
@@ -1082,9 +1082,9 @@ class VARResults(VARProcess):
         upper = ma_sort[index[1],:, :, :]
         return lower, upper
 
-    def irf_resim(self, orth=False, repl=1000, T=10, 
+    def irf_resim(self, orth=False, repl=1000, T=10,
                       seed=None, burn=100, cum=False):
-        
+
         """
         Simulates impulse response function, returning an array of simulations.
         Used for Sims-Zha error band calculation.
@@ -1108,7 +1108,7 @@ class VARResults(VARProcess):
 
         Notes
         -----
-        Sims, Christoper A., and Tao Zha. 1999. “Error Bands for Impulse Response.” Econometrica 67: 1113-1155.        
+        Sims, Christoper A., and Tao Zha. 1999. “Error Bands for Impulse Response.” Econometrica 67: 1113-1155.
 
         Returns
         -------
@@ -1480,11 +1480,11 @@ class SVAR(LikelihoodModel):
     Fit VAR and then estimate structural components of A and B, defined:
 
     .. math:: Ay_t = A_1 y_{t-1} + \ldots + A_p y_{t-p} + B\varepsilon_t
-    
+
     Parameters
     ----------
     endog : np.ndarray (structured or homogenous) or Dataframe
-    names : array-like 
+    names : array-like
         must match number of columns or endog
     dates : array-like
         must match number of rows of endog
@@ -1510,7 +1510,7 @@ class SVAR(LikelihoodModel):
     .fit() methdo return SVARResults object
     """
 
-    def __init__(self, endog, svar_type, names=None, dates=None, 
+    def __init__(self, endog, svar_type, names=None, dates=None,
                   A=None, B=None, A_guess=None, B_guess=None):
         (self.endog, self.names,
          self.dates) = data_util.interpret_data(endog, names, dates)
@@ -1520,7 +1520,7 @@ class SVAR(LikelihoodModel):
 
         types = ['A', 'B', 'AB']
         if svar_type not in types:
-            raise ValueError('SVAR type not recognized, must be in ' 
+            raise ValueError('SVAR type not recognized, must be in '
                              + str(types))
         self.svar_type = svar_type
         self.A = A
@@ -1532,7 +1532,7 @@ class SVAR(LikelihoodModel):
         self.A_mask, self.B_mask = self._gen_masks()
 
         svar_ckerr(svar_type, A, B)
-        
+
         self.A_init, self.B_init = self._gen_AB_init()
 
         #this AB_mask vector is also the initial guess for the solution
@@ -1610,7 +1610,7 @@ class SVAR(LikelihoodModel):
                                    override=override, maxiter=maxiter,
                                    maxfun=maxfun)
 
-    def _estimate_svar(self, lags, maxiter, maxfun, offset=0, trend='c', 
+    def _estimate_svar(self, lags, maxiter, maxfun, offset=0, trend='c',
                        solver="nm", override=False):
         """
         lags : int
@@ -1654,7 +1654,7 @@ class SVAR(LikelihoodModel):
                                                     solver=solver,
                                                     maxiter=maxiter,
                                                     maxfun=maxfun)
-        
+
         return SVARResults(y, z, params, omega, lags, names=self.names,
                            trend=trend, dates=self.dates, model=self,
                            AB_mask=self.AB_mask, A_solve=A_solve,
@@ -1679,7 +1679,7 @@ class SVAR(LikelihoodModel):
         B_mask = self.B_mask
         A_len = len(A_val[A_mask])
         B_len = len(B_val[B_mask])
-        
+
         if A is not None:
             A_val[A_mask] = AB_mask[:A_len].copy()
         if B is not None:
@@ -1693,16 +1693,16 @@ class SVAR(LikelihoodModel):
                                       npl.inv(B_val)), A_val), sigma_u)
 
         sign, b_logdet = npl.slogdet(B_val)
-        b_slogdet = sign * b_logdet 
+        b_slogdet = sign * b_logdet
 
         likl = (-(nobs * neqs / 2.0) * np.log(2 * np.pi)
-                        
+
                         + (nobs / 2.0) * np.log(npl.det(A_val)**2)
-                        
+
                         - (nobs / 2.0) * b_slogdet
 
                         - (nobs / 2.0) * np.trace(trc_in))
-        
+
 
         return likl
 
@@ -1753,32 +1753,32 @@ class SVAR(LikelihoodModel):
         A_solve, B_solve: ML solutions for A, B matrices
 
         """
-        
+
         A_solve = self.A_init.copy()
         B_solve = self.B_init.copy()
         A_mask = self.A_mask
         B_mask = self.B_mask
         A_len = len(A_solve[A_mask])
-        
+
         AB_mask = self.AB_mask
 
-        if override == False: 
+        if override == False:
             J = self._compute_J(A_solve, B_solve)
             self.check_order(J)
             self.check_rank(J)
         else:
             print "Order/rank conditions have not been checked"
 
-        retvals = super(SVAR, self).fit(start_params=AB_mask, 
-                    method=solver, maxiter=maxiter, 
+        retvals = super(SVAR, self).fit(start_params=AB_mask,
+                    method=solver, maxiter=maxiter,
                     maxfun=maxfun, ftol=1e-20).params
-        
+
         A_solve[A_mask] = retvals[:A_len]
         B_solve[B_mask] = retvals[A_len:]
 
 
         return A_solve, B_solve
-        
+
     def _gen_masks(self):
         """
         Generates masks of A, B arrays that mask unknown elements
@@ -1812,14 +1812,14 @@ class SVAR(LikelihoodModel):
         B_guess = self.B_guess
         svar_type = self.svar_type
 
-        if (A_guess is None and (svar_type == 'AB' 
+        if (A_guess is None and (svar_type == 'AB'
                                  or svar_type == 'A')):
             A_init = np.zeros_like(A, dtype=float)
             for i in xrange(neqs):
                 for j in xrange(neqs):
                     if A[i,j] == 'E':
                         A_init[i,j] = np.random.randn()
-                        #A_init[i,j] = 0.1 
+                        #A_init[i,j] = 0.1
                     else:
                         A_init[i,j] = A[i,j]
         elif A_guess is None:
@@ -1828,7 +1828,7 @@ class SVAR(LikelihoodModel):
             A_init = A_guess.copy()
 
 
-        if (B_guess is None and (svar_type =='AB' 
+        if (B_guess is None and (svar_type =='AB'
                                  or svar_type == 'B')):
             B_init = np.zeros_like(B, dtype=float)
             for i in xrange(neqs):
@@ -1863,15 +1863,15 @@ class SVAR(LikelihoodModel):
             AB_mask = A_init[A_mask]
         elif A is None and B is not None:
             AB_mask = B_init[B_mask]
-        
+
         return AB_mask
 
     def _compute_J(self, A_solve, B_solve):
 
         #first compute appropriate duplication matrix
-        # taken from Magnus and Neudecker (1980), 
+        # taken from Magnus and Neudecker (1980),
         #"The Elimination Matrix: Some Lemmas and Applications
-        # the creation of the D_n matrix follows MN (1980) directly, 
+        # the creation of the D_n matrix follows MN (1980) directly,
         #while the rest follows Hamilton (1994)
 
         neqs = self.neqs
@@ -1889,9 +1889,9 @@ class SVAR(LikelihoodModel):
             i=j
             while j <= i < neqs:
                 u=np.zeros([(1.0/2)*neqs*(neqs+1),1])
-                u[(j)*neqs+(i+1)-(1.0/2)*(j+1)*j-1]=1 
+                u[(j)*neqs+(i+1)-(1.0/2)*(j+1)*j-1]=1
                 Tij=np.zeros([neqs,neqs])
-                Tij[i,j]=1 
+                Tij[i,j]=1
                 Tij[j,i]=1
                 D_nT=D_nT+np.dot(u,(Tij.ravel('F')[:,None]).T)
                 i=i+1
@@ -1921,7 +1921,7 @@ class SVAR(LikelihoodModel):
         #now compute J
         invA = npl.inv(A_solve)
         J_p1i = np.dot(np.dot(D_pl, np.kron(sigma_u, invA)), S_B)
-        J_p1 = -2.0 * J_p1i 
+        J_p1 = -2.0 * J_p1i
         J_p2 = np.dot(np.dot(D_pl, np.kron(invA, invA)), S_D)
 
         J = np.append(J_p1, J_p2, axis=1)
@@ -1958,7 +1958,7 @@ class SVARProcess(VARProcess):
     -------
     **Attributes**:
     """
-    def __init__(self, coefs, intercept, sigma_u, A_solve, B_solve, 
+    def __init__(self, coefs, intercept, sigma_u, A_solve, B_solve,
                  names=None):
         self.k_ar = len(coefs)
         self.neqs = coefs.shape[1]
@@ -1981,7 +1981,7 @@ class SVARProcess(VARProcess):
     def svar_ma_rep(self, maxn=10, P=None):
         """
 
-        Compute Structural MA coefficient matrices using MLE 
+        Compute Structural MA coefficient matrices using MLE
         of A, B
 
         """
@@ -1989,7 +1989,7 @@ class SVARProcess(VARProcess):
             A_solve = self.A_solve
             B_solve = self.B_solve
             P = np.dot(A_solve, np.sqrt(B_solve))
-        
+
         ma_mats = self.ma_rep(maxn=maxn)
         return mat([np.dot(coefs, P) for coefs in ma_mats])
 
@@ -2062,7 +2062,7 @@ class SVARResults(SVARProcess, VARResults):
     _model_type = 'SVAR'
 
     def __init__(self, endog, endog_lagged, params, sigma_u, lag_order,
-                 AB_mask=None, A_solve=None, B_solve=None, model=None, 
+                 AB_mask=None, A_solve=None, B_solve=None, model=None,
                  trend='c', names=None, dates=None):
 
         self.model = model
@@ -2107,7 +2107,7 @@ class SVARResults(SVARProcess, VARResults):
         Parameters
         ----------
         periods : int
-        
+
         Returns
         -------
         irf : IRAnalysis
