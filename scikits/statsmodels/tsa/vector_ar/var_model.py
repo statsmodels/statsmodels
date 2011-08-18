@@ -1790,32 +1790,24 @@ class SVAR(LikelihoodModel):
         B_guess = self.B_guess
         svar_type = self.svar_type
 
-        if (A_guess is None and (svar_type == 'AB'
-                                 or svar_type == 'A')):
+        if (A_guess is None and (svar_type == 'AB'or svar_type == 'A')):
             A_init = np.zeros_like(A, dtype=float)
-            for i in xrange(neqs):
-                for j in xrange(neqs):
-                    if A[i,j] == 'E':
-                        A_init[i,j] = np.random.randn()
-                        #A_init[i,j] = 0.1
-                    else:
-                        A_init[i,j] = A[i,j]
+            A_mask = self.A_mask
+            n_maskeda = A_mask.sum()
+            A_init[A_mask] = np.random.randn(n_maskeda)
+            A_init[~A_mask] = A[~A_mask]
         elif A_guess is None:
             A_init = np.identity(neqs)
         else:
             A_init = A_guess.copy()
 
-
         if (B_guess is None and (svar_type =='AB'
                                  or svar_type == 'B')):
             B_init = np.zeros_like(B, dtype=float)
-            for i in xrange(neqs):
-                for j in xrange(neqs):
-                    if B[i,j] == 'E':
-                        B_init[i,j] = np.random.uniform()
-                        #B_init[i,j] = 0.1
-                    else:
-                        B_init[i,j] = B[i,j]
+            B_mask = self.B_mask
+            n_maskedb = B_mask.sum()
+            B_init[B_mask] = np.random.uniform(size=n_maskedb)
+            B_init[~B_mask] = B[~B_mask]
         elif B_guess is None:
             B_init = np.identity(neqs)
         else:
