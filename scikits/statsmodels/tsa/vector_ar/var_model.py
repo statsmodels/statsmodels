@@ -1529,7 +1529,8 @@ class SVAR(LikelihoodModel):
         self.B_guess = B_guess
 
         #This is where the SVAR components are initiliazed
-        self.A_mask, self.B_mask = self._gen_masks()
+        self.A_mask = A == 'E'
+        self.B_mask = B == 'E'
 
         svar_ckerr(svar_type, A, B)
 
@@ -1778,29 +1779,6 @@ class SVAR(LikelihoodModel):
 
 
         return A_solve, B_solve
-
-    def _gen_masks(self):
-        """
-        Generates masks of A, B arrays that mask unknown elements
-        """
-        neqs = self.neqs
-        A = self.A
-        B = self.B
-
-        A_mask = np.zeros((neqs,neqs), dtype=bool)
-        if A is not None:
-            for i in xrange(neqs):
-                for j in xrange(neqs):
-                    if A[i,j] == 'E':
-                        A_mask[i,j] = True
-
-        B_mask = np.zeros((neqs,neqs), dtype=bool)
-        if B is not None:
-            for i in xrange(neqs):
-                for j in xrange(neqs):
-                    if B[i,j] == 'E':
-                        B_mask[i,j] = True
-        return A_mask, B_mask
 
     def _gen_AB_init(self):
         #assume mle guesses for svar params are normally distributed
