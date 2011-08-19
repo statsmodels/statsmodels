@@ -24,6 +24,8 @@ from scikits.statsmodels.tools.tools import chain_dot
 from scikits.statsmodels.base.model import LikelihoodModel
 #from scikits.statsmodels.base.model import GenericLikelihoodModel
 from scikits.statsmodels.tsa.tsatools import vec, unvec
+from scikits.statsmodels.sandbox.regression.numdiff import (approx_hess,
+                                                        approx_fprime)
 
 from scikits.statsmodels.tsa.vector_ar.irf import IRAnalysis
 from scikits.statsmodels.tsa.vector_ar.output import VARSummary
@@ -1472,7 +1474,7 @@ class VARResults(VARProcess):
         "Bayesian a.k.a. Schwarz info criterion"
         return self.info_criteria['bic']
 
-class SVAR(LikelihoodModel, VAR):
+class SVAR(LikelihoodModel):
 
     """
     Fit VAR and then estimate structural components of A and B, defined:
@@ -1567,8 +1569,9 @@ class SVAR(LikelihoodModel, VAR):
             Note that these are prepended to the columns of the dataset.
         s_method : {'mle'}
             Estimation method for structural parameters
-        solver : {'nm'}
+        solver : {'nm', 'newton', 'bfgs', 'cg', 'ncg', 'powell'}
             Solution method
+            See scikits.statsmodels.base for details
         override : bool, default False
             If True, returns estimates of A and B without checking
             order or rank condition
@@ -1686,8 +1689,9 @@ class SVAR(LikelihoodModel, VAR):
         neqs = self.neqs
         sigma_u = self.sigma_u
 
-        trc_in = np.dot(np.dot(np.dot(A_val.T, npl.inv(B_val)),
-                               A_val), sigma_u)
+        trc_in = np.dot(np.dot(np.dot(np.dot(A_val.T, npl.inv(B_val.T)),
+                                      npl.inv(B_val)), A_val), sigma_u)
+
         sign, b_logdet = npl.slogdet(B_val)
         b_slogdet = sign * b_logdet 
 
@@ -1696,11 +1700,34 @@ class SVAR(LikelihoodModel, VAR):
                         + (nobs / 2.0) * np.log(npl.det(A_val)**2)
                         
                         - (nobs / 2.0) * b_slogdet
-                       
+
                         - (nobs / 2.0) * np.trace(trc_in))
         
 
         return likl
+
+    def score(self, AB_mask):
+        """
+        Return the gradient of the loglike at AB_mask.
+
+        Parameters
+        ----------
+        AB_mask : unknown values of A and B matrix concatenated
+
+        Notes
+        -----
+        Return numerical gradient
+        """
+        loglike = self.loglike
+        return approx_fprime(AB_mask, loglike, epsilon=1e-8)
+
+
+    def hessian(self, AB_mask):
+        """
+        Returns numerical hessian.
+        """
+        loglike = self.loglike
+        return approx_hess(AB_mask, loglike)[0]
 
     def _solve_AB(self, maxiter, maxfun, override=False, solver='nm'):
         """
@@ -1744,7 +1771,7 @@ class SVAR(LikelihoodModel, VAR):
 
         retvals = super(SVAR, self).fit(start_params=AB_mask, 
                     method=solver, maxiter=maxiter, 
-                    maxfun=maxfun).params
+                    maxfun=maxfun, ftol=1e-20).params
         
         A_solve[A_mask] = retvals[:A_len]
         B_solve[B_mask] = retvals[A_len:]
@@ -1792,6 +1819,7 @@ class SVAR(LikelihoodModel, VAR):
                 for j in xrange(neqs):
                     if A[i,j] == 'E':
                         A_init[i,j] = np.random.randn()
+                        #A_init[i,j] = 0.1 
                     else:
                         A_init[i,j] = A[i,j]
         elif A_guess is None:
@@ -1807,6 +1835,7 @@ class SVAR(LikelihoodModel, VAR):
                 for j in xrange(neqs):
                     if B[i,j] == 'E':
                         B_init[i,j] = np.random.uniform()
+                        #B_init[i,j] = 0.1
                     else:
                         B_init[i,j] = B[i,j]
         elif B_guess is None:
