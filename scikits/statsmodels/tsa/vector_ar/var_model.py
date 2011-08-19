@@ -1525,6 +1525,7 @@ class SVAR(LikelihoodModel):
         self.svar_type = svar_type
         self.A = A
         self.B = B
+        #TODO: check that the guesses are conformable to A and B
         self.A_guess = A_guess
         self.B_guess = B_guess
 
@@ -1690,19 +1691,14 @@ class SVAR(LikelihoodModel):
         neqs = self.neqs
         sigma_u = self.sigma_u
 
-        trc_in = np.dot(np.dot(np.dot(np.dot(A_val.T, npl.inv(B_val.T)),
-                                      npl.inv(B_val)), A_val), sigma_u)
-
-        sign, b_logdet = npl.slogdet(B_val)
+        W = np.dot(npl.inv(B_val),A_val)
+        trc_in = np.dot(np.dot(W.T,W),sigma_u)
+        sign, b_logdet = npl.slogdet(B_val**2)
         b_slogdet = sign * b_logdet
 
-        likl = (-(nobs * neqs / 2.0) * np.log(2 * np.pi)
-
-                        + (nobs / 2.0) * np.log(npl.det(A_val)**2)
-
-                        - (nobs / 2.0) * b_slogdet
-
-                        - (nobs / 2.0) * np.trace(trc_in))
+        likl = -nobs/2. * (neqs * np.log(2 * np.pi) - \
+                np.log(npl.det(A_val)**2) + b_slogdet + \
+                np.trace(trc_in))
 
 
         return likl
