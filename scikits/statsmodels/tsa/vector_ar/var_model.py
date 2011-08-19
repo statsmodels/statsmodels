@@ -1495,10 +1495,6 @@ class SVAR(LikelihoodModel):
                 B matrix
     A : neqs x neqs np.ndarray with unknown parameters marked with 'E'
     B : neqs x neqs np.ndarry with unknown parameters marked with 'E'
-    A_guess : neqs x neqs np.ndarray guess of A
-        if A is None, then A_guess will be ignored
-    B_guess : neqs x neqs np.ndarray guess of B
-        if B is None, then B_guess will be ignored
 
     Notes
     -----
@@ -1511,7 +1507,7 @@ class SVAR(LikelihoodModel):
     """
 
     def __init__(self, endog, svar_type, names=None, dates=None,
-                  A=None, B=None, A_guess=None, B_guess=None):
+                  A=None, B=None):
         (self.endog, self.names,
          self.dates) = data_util.interpret_data(endog, names, dates)
 
@@ -1523,33 +1519,45 @@ class SVAR(LikelihoodModel):
             raise ValueError('SVAR type not recognized, must be in '
                              + str(types))
         self.svar_type = svar_type
-        self.A = A
-        self.B = B
-        #TODO: check that the guesses are conformable to A and B
-        self.A_guess = A_guess
-        self.B_guess = B_guess
 
-        #This is where the SVAR components are initialiazed
-        self.A_mask = np.logical_or(A == 'E', A == 'e')
-        self.B_mask = np.logical_or(B == 'E', B == 'e')
+        #Initialize SVAR masks
+        A_mask = np.logical_or(A == 'E', A == 'e')
+        self.A_mask = A_mask
+        B_mask = np.logical_or(B == 'E', B == 'e')
+        self.B_mask = B_mask
+
 
         svar_ckerr(svar_type, A, B)
 
-        self.A_init, self.B_init = self._gen_AB_init()
+        # convert A and B to numeric
+        #TODO: change this when masked support is better or with formula
+        #integration
+        Anum = np.zeros_like(A, dtype=float)
+        Anum[~A_mask] = A[~A_mask]
+        Anum[A_mask] = np.nan
+        self.A = Anum
 
-        #this AB_mask vector is also the initial guess for the solution
-        self.AB_mask = self._gen_AB_mask()
+        Bnum = np.zeros_like(B, dtype=float)
+        Bnum[~B_mask] = B[~B_mask]
+        Bnum[B_mask] = np.nan
+        self.B = Bnum
 
         super(SVAR, self).__init__(endog)
 
-    def fit(self, maxlags=None, method='ols', ic=None, trend='c',
-            verbose=False, s_method='mle', solver="nm",
+    def fit(self, A_guess=None, B_guess=None, maxlags=None, method='ols',
+            ic=None, trend='c', verbose=False, s_method='mle', solver="nm",
             override=False, maxiter=500, maxfun=500):
         """
         Fit the SVAR model and solve for structural parameters
 
         Parameters
         ----------
+        A_guess : array-like, optional
+            A vector of starting values for all parameters to be estimated
+            in A.
+        B_guess : array-like, optional
+            A vector of starting values for all parameters to be estimated
+            in B.
         maxlags : int
             Maximum number of lags to check for order selection, defaults to
             12 * (nobs/100.)**(1./4), see select_order function
@@ -1607,34 +1615,56 @@ class SVAR(LikelihoodModel):
 
         self.nobs = len(self.endog) - lags
 
+        # initialize starting parameters
+        start_params = self._get_init_params(A_guess, B_guess)
 
-        return self._estimate_svar(lags, trend=trend, solver=solver,
+        return self._estimate_svar(start_params, lags, trend=trend, solver=solver,
                                    override=override, maxiter=maxiter,
                                    maxfun=maxfun)
 
-    def _estimate_svar(self, lags, maxiter, maxfun, offset=0, trend='c',
-                       solver="nm", override=False):
+
+    def _get_init_params(self, A_guess, B_guess):
+        """
+        Returns either the given starting or .1 if none are given.
+        """
+
+        var_type = self.svar_type.lower()
+
+        if var_type in ['ab', 'a']:
+            n_masked_a = self.A_mask.sum()
+            if A_guess is None:
+                A_guess = np.array([.1]*n_masked_a)
+            else:
+                if len(A_guess) != n_masked_a:
+                    msg = 'len(A_guess) = %s, there are %s parameters in A'
+                    raise ValueError(msg % (len(A_guess), n_masked_a))
+
+        if var_type in ['ab', 'b']:
+            n_masked_b = self.B_mask.sum()
+            if B_guess is None:
+                B_guess = np.array([.1]*n_masked_b)
+            else:
+                if len(B_guess) != n_masked_b:
+                    msg = 'len(B_guess) = %s, there are %s parameters in B'
+                    raise ValueError(msg % (len(B_guess), n_masked_b))
+
+        return np.r_[A_guess, B_guess]
+
+    def _estimate_svar(self, start_params, lags, maxiter, maxfun,
+                       trend='c', solver="nm", override=False):
         """
         lags : int
-        offset : int
-            Periods to drop from beginning-- for order selection so it's an
-            apples-to-apples comparison
         trend : string or None
             As per above
         """
-        k_trend = util.get_trendorder(trend) #NOTE: trendorder should be polynomial order
-
-        if offset < 0: # pragma: no cover
-            raise ValueError('offset must be >= 0')
-
-        y = self.y[offset:]
-
+        k_trend = util.get_trendorder(trend)
+        y = self.endog
         z = util.get_var_endog(y, lags, trend=trend)
         y_sample = y[lags:]
 
         # Lutkepohl p75, about 5x faster than stated formula
-        params = np.linalg.lstsq(z, y_sample)[0]
-        resid = y_sample - np.dot(z, params)
+        var_params = np.linalg.lstsq(z, y_sample)[0]
+        resid = y_sample - np.dot(z, var_params)
 
         # Unbiased estimate of covariance matrix $\Sigma_u$ of the white noise
         # process $u$
@@ -1649,20 +1679,20 @@ class SVAR(LikelihoodModel):
         df_resid = avobs - (self.neqs * lags + k_trend)
 
         sse = np.dot(resid.T, resid)
+        #TODO: should give users the option to use a dof correction or not
         omega = sse / df_resid
         self.sigma_u = omega
 
-        A_solve, B_solve = self._solve_AB(override=override,
+        A, B = self._solve_AB(start_params, override=override,
                                                     solver=solver,
                                                     maxiter=maxiter,
                                                     maxfun=maxfun)
 
-        return SVARResults(y, z, params, omega, lags, names=self.names,
+        return SVARResults(y, z, var_params, omega, lags, names=self.names,
                            trend=trend, dates=self.dates, model=self,
-                           AB_mask=self.AB_mask, A_solve=A_solve,
-                           B_solve=B_solve)
+                           A=A, B=B)
 
-    def loglike(self, AB_mask):
+    def loglike(self, params):
         """
         Loglikelihood for SVAR model
 
@@ -1673,31 +1703,30 @@ class SVAR(LikelihoodModel):
         is estimated
         """
 
+        #TODO: this doesn't look robust if A or B is None
         A = self.A
         B = self.B
-        A_val= self.A_init.copy()
-        B_val= self.B_init.copy()
         A_mask = self.A_mask
         B_mask = self.B_mask
-        A_len = len(A_val[A_mask])
-        B_len = len(B_val[B_mask])
+        A_len = len(A[A_mask])
+        B_len = len(B[B_mask])
 
         if A is not None:
-            A_val[A_mask] = AB_mask[:A_len].copy()
+            A[A_mask] = params[:A_len]
         if B is not None:
-            B_val[B_mask] = AB_mask[A_len:A_len+B_len].copy()
+            B[B_mask] = params[A_len:A_len+B_len]
 
         nobs = self.nobs
         neqs = self.neqs
         sigma_u = self.sigma_u
 
-        W = np.dot(npl.inv(B_val),A_val)
+        W = np.dot(npl.inv(B),A)
         trc_in = np.dot(np.dot(W.T,W),sigma_u)
-        sign, b_logdet = npl.slogdet(B_val**2)
+        sign, b_logdet = npl.slogdet(B**2)
         b_slogdet = sign * b_logdet
 
         likl = -nobs/2. * (neqs * np.log(2 * np.pi) - \
-                np.log(npl.det(A_val)**2) + b_slogdet + \
+                np.log(npl.det(A)**2) + b_slogdet + \
                 np.trace(trc_in))
 
 
@@ -1726,7 +1755,8 @@ class SVAR(LikelihoodModel):
         loglike = self.loglike
         return approx_hess(AB_mask, loglike)[0]
 
-    def _solve_AB(self, maxiter, maxfun, override=False, solver='nm'):
+    def _solve_AB(self, start_params, maxiter, maxfun, override=False,
+            solver='nm'):
         """
         Solves for MLE estimate of structural parameters
 
@@ -1750,87 +1780,33 @@ class SVAR(LikelihoodModel):
         A_solve, B_solve: ML solutions for A, B matrices
 
         """
-
-        A_solve = self.A_init.copy()
-        B_solve = self.B_init.copy()
+        #TODO: this could stand a refactor
         A_mask = self.A_mask
         B_mask = self.B_mask
-        A_len = len(A_solve[A_mask])
+        A = self.A
+        B = self.B
+        A_len = len(A[A_mask])
 
-        AB_mask = self.AB_mask
+        A[A_mask] = start_params[:A_len]
+        B[B_mask] = start_params[A_len:]
 
         if override == False:
-            J = self._compute_J(A_solve, B_solve)
+            J = self._compute_J(A, B)
             self.check_order(J)
             self.check_rank(J)
-        else:
+        else: #TODO: change to a warning?
             print "Order/rank conditions have not been checked"
 
-        retvals = super(SVAR, self).fit(start_params=AB_mask,
+        retvals = super(SVAR, self).fit(start_params=start_params,
                     method=solver, maxiter=maxiter,
                     maxfun=maxfun, ftol=1e-20).params
 
-        A_solve[A_mask] = retvals[:A_len]
-        B_solve[B_mask] = retvals[A_len:]
 
 
-        return A_solve, B_solve
+        A[A_mask] = retvals[:A_len]
+        B[B_mask] = retvals[A_len:]
 
-    def _gen_AB_init(self):
-        #assume mle guesses for svar params are normally distributed
-        #but random for A and uniformly distributed for B
-        neqs = self.neqs
-        A = self.A
-        B = self.B
-        A_guess = self.A_guess
-        B_guess = self.B_guess
-        svar_type = self.svar_type
-
-        if (A_guess is None and (svar_type == 'AB'or svar_type == 'A')):
-            A_init = np.zeros_like(A, dtype=float)
-            A_mask = self.A_mask
-            n_maskeda = A_mask.sum()
-            A_init[A_mask] = np.random.randn(n_maskeda)
-            A_init[~A_mask] = A[~A_mask]
-        elif A_guess is None:
-            A_init = np.identity(neqs)
-        else:
-            A_init = A_guess.copy()
-
-        if (B_guess is None and (svar_type =='AB'
-                                 or svar_type == 'B')):
-            B_init = np.zeros_like(B, dtype=float)
-            B_mask = self.B_mask
-            n_maskedb = B_mask.sum()
-            B_init[B_mask] = np.random.uniform(size=n_maskedb)
-            B_init[~B_mask] = B[~B_mask]
-        elif B_guess is None:
-            B_init = np.identity(neqs)
-        else:
-            B_init = B_guess.copy()
-
-        return A_init, B_init
-
-    def _gen_AB_mask(self):
-        """
-        Generates mask summarizing both A and B parameters to be estimated
-
-        """
-        A = self.A
-        B = self.B
-        A_mask = self.A_mask
-        B_mask = self.B_mask
-        A_init = self.A_init
-        B_init = self.B_init
-
-        if A is not None and B is not None:
-            AB_mask = np.append(A_init[A_mask],B_init[B_mask])
-        elif A is not None and B is None:
-            AB_mask = A_init[A_mask]
-        elif A is None and B is not None:
-            AB_mask = B_init[B_mask]
-
-        return AB_mask
+        return A, B
 
     def _compute_J(self, A_solve, B_solve):
 
@@ -2028,7 +2004,7 @@ class SVARResults(SVARProcess, VARResults):
     _model_type = 'SVAR'
 
     def __init__(self, endog, endog_lagged, params, sigma_u, lag_order,
-                 AB_mask=None, A_solve=None, B_solve=None, model=None,
+                 A=None, B=None, model=None,
                  trend='c', names=None, dates=None):
 
         self.model = model
@@ -2059,12 +2035,13 @@ class SVARResults(SVARProcess, VARResults):
         coefs = reshaped.swapaxes(1, 2).copy()
 
         #SVAR components
-        self.A_solve = A_solve
-        self.B_solve = B_solve
-        self.AB_mask = AB_mask
+        #TODO: if you define these here, you don't also have to define
+        #them in SVAR process, but I left them for now -ss
+        self.A = A
+        self.B = B
 
-        SVARProcess.__init__(self, coefs, intercept, sigma_u, A_solve,
-                             B_solve, names=names)
+        super(SVARResults, self).__init__(coefs, intercept, sigma_u, A,
+                             B, names=names)
 
     def irf(self, periods=10, var_order=None):
         """
