@@ -1520,14 +1520,22 @@ class SVAR(LikelihoodModel):
                              + str(types))
         self.svar_type = svar_type
 
-        #Initialize SVAR masks
-        A_mask = np.logical_or(A == 'E', A == 'e')
-        self.A_mask = A_mask
-        B_mask = np.logical_or(B == 'E', B == 'e')
-        self.B_mask = B_mask
-
-
         svar_ckerr(svar_type, A, B)
+
+        #initialize A, B as I if not given
+        #Initialize SVAR masks
+        if A is None:
+            A = np.identity(self.neqs)
+            self.A_mask = A_mask = np.zeros_like(A, dtype=bool)
+        else:
+            A_mask = np.logical_or(A == 'E', A == 'e')
+            self.A_mask = A_mask
+        if B is None:
+            B = np.identity(self.neqs)
+            self.B_mask = B_mask = np.zeros_like(B, dtype=bool)
+        else:
+            B_mask = np.logical_or(B == 'E', B == 'e')
+            self.B_mask = B_mask
 
         # convert A and B to numeric
         #TODO: change this when masked support is better or with formula
