@@ -172,7 +172,7 @@ def git_version():
         env['LANGUAGE'] = 'C'
         env['LANG'] = 'C'
         env['LC_ALL'] = 'C'
-        out = subprocess.Popen(cmd, stdout = subprocess.PIPE, env=env,
+        out = subprocess.Popen(" ".join(cmd), stdout = subprocess.PIPE, env=env,
                                shell=True).communicate()[0]
         return out
 
