@@ -172,7 +172,8 @@ def git_version():
         env['LANGUAGE'] = 'C'
         env['LANG'] = 'C'
         env['LC_ALL'] = 'C'
-        out = subprocess.Popen(cmd, stdout = subprocess.PIPE, env=env).communicate()[0]
+        out = subprocess.Popen(cmd, stdout = subprocess.PIPE, env=env,
+                               shell=True).communicate()[0]
         return out
 
     try:
@@ -198,30 +199,36 @@ if not release:
     # Adding the git rev number needs to be done inside write_version_py(),
     # otherwise the import of numpy.version messes up the build under Python 3.
     FULLVERSION = VERSION
+    dowrite = True
     if os.path.exists('.git'):
         GIT_REVISION = git_version()
     elif os.path.exists(filename):
         # must be a source distribution, use existing version file
         try:
             from scikits.statsmodels.version import git_revision as GIT_REVISION
+            print "debug import success GIT_REVISION", GIT_REVISION
         except ImportError:
-            raise ImportError("Unable to import git_revision. Try removing " \
-                              "scikits/statsmodels/version.py and the build directory " \
-                              "before building.")
+            dowrite = False
+            #changed: if we are not in a git repository then don't update version.py
+##            raise ImportError("Unable to import git_revision. Try removing " \
+##                              "scikits/statsmodels/version.py and the build directory " \
+##                              "before building.")
     else:
         GIT_REVISION = "Unknown"
 
     if not ISRELEASED:
         FULLVERSION += '.dev-' + GIT_REVISION[:7]
 
-    a = open(filename, 'w')
-    try:
-        a.write(cnt % {'version': VERSION,
-                       'full_version' : FULLVERSION,
-                       'git_revision' : GIT_REVISION,
-                       'isrelease': str(ISRELEASED)})
-    finally:
-        a.close()
+
+    if dowrite:
+        a = open(filename, 'w')
+        try:
+            a.write(cnt % {'version': VERSION,
+                           'full_version' : FULLVERSION,
+                           'git_revision' : GIT_REVISION,
+                           'isrelease': str(ISRELEASED)})
+        finally:
+            a.close()
 
 def configuration(parent_package='', top_path=None, package_name=DISTNAME):
     #if os.path.fexists('MANIFEST'): os.remove('MANIFEST')
