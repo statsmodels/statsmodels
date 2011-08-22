@@ -890,29 +890,29 @@ Log likelihood   = -76.94564525                    BIC             =  10.20398
 ------------------------------------------------------------------------------
 """
 
-
+    #NOTE: wfs dataset has been removed due to a licensing issue
     # example of using offset
-    data = sm.datasets.wfs.load()
+    #data = sm.datasets.wfs.load()
     # get offset
-    offset = np.log(data.exog[:,-1])
-    exog = data.exog[:,:-1]
+    #offset = np.log(data.exog[:,-1])
+    #exog = data.exog[:,:-1]
 
     # convert dur to dummy
-    exog = sm.tools.categorical(exog, col=0, drop=True)
+    #exog = sm.tools.categorical(exog, col=0, drop=True)
     # drop reference category
     # convert res to dummy
-    exog = sm.tools.categorical(exog, col=0, drop=True)
+    #exog = sm.tools.categorical(exog, col=0, drop=True)
     # convert edu to dummy
-    exog = sm.tools.categorical(exog, col=0, drop=True)
+    #exog = sm.tools.categorical(exog, col=0, drop=True)
     # drop reference categories and add intercept
-    exog = sm.add_constant(exog[:,[1,2,3,4,5,7,8,10,11,12]])
+    #exog = sm.add_constant(exog[:,[1,2,3,4,5,7,8,10,11,12]])
 
-    endog = np.round(data.endog)
-    mod = sm.GLM(endog, exog, family=sm.families.Poisson()).fit()
+    #endog = np.round(data.endog)
+    #mod = sm.GLM(endog, exog, family=sm.families.Poisson()).fit()
 
-    res1 = GLM(endog, exog, family=sm.families.Poisson(),
-                            offset=offset).fit(tol=1e-12, maxiter=250)
-    exposuremod = GLM(endog, exog, family=sm.families.Poisson(),
-                            exposure = data.exog[:,-1]).fit(tol=1e-12,
+    #res1 = GLM(endog, exog, family=sm.families.Poisson(),
+    #                        offset=offset).fit(tol=1e-12, maxiter=250)
+    #exposuremod = GLM(endog, exog, family=sm.families.Poisson(),
+    #                        exposure = data.exog[:,-1]).fit(tol=1e-12,
                                                         maxiter=250)
-    assert(np.all(res1.params == exposuremod.params))
+    #assert(np.all(res1.params == exposuremod.params))

@@ -5,4 +5,4 @@ Datasets module
 from datautils import Dataset
 import anes96, committee, ccard, copper, cpunish, grunfeld, longley, \
         macrodata, randhie, scotland, spector, stackloss, star98, sunspots, \
-        wfs, nile, strikes
+        nile, strikes
