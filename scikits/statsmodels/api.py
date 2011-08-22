@@ -10,7 +10,7 @@ from .discrete.discrete_model import Poisson, Logit, Probit, MNLogit
 from .tsa import api as tsa
 import nonparametric
 from __init__ import test
-import version
+from . import version
 from info import __doc__
 
 import os
