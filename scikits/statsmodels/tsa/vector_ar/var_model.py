@@ -1553,8 +1553,8 @@ class SVAR(LikelihoodModel):
         super(SVAR, self).__init__(endog)
 
     def fit(self, A_guess=None, B_guess=None, maxlags=None, method='ols',
-            ic=None, trend='c', verbose=False, s_method='mle', solver="nm",
-            override=False, maxiter=500, maxfun=500):
+            ic=None, trend='c', verbose=False, s_method='mle', 
+            solver="bfgs", override=False, maxiter=500, maxfun=500):
         """
         Fit the SVAR model and solve for structural parameters
 
@@ -1626,9 +1626,9 @@ class SVAR(LikelihoodModel):
         # initialize starting parameters
         start_params = self._get_init_params(A_guess, B_guess)
 
-        return self._estimate_svar(start_params, lags, trend=trend, solver=solver,
-                                   override=override, maxiter=maxiter,
-                                   maxfun=maxfun)
+        return self._estimate_svar(start_params, lags, trend=trend, 
+                                   solver=solver, override=override,
+                                   maxiter=maxiter, maxfun=maxfun)
 
 
     def _get_init_params(self, A_guess, B_guess):
@@ -1638,23 +1638,27 @@ class SVAR(LikelihoodModel):
 
         var_type = self.svar_type.lower()
 
+        n_masked_a = self.A_mask.sum()
         if var_type in ['ab', 'a']:
-            n_masked_a = self.A_mask.sum()
             if A_guess is None:
                 A_guess = np.array([.1]*n_masked_a)
             else:
                 if len(A_guess) != n_masked_a:
                     msg = 'len(A_guess) = %s, there are %s parameters in A'
                     raise ValueError(msg % (len(A_guess), n_masked_a))
+        else:
+            A_guess = []
 
+        n_masked_b = self.B_mask.sum()
         if var_type in ['ab', 'b']:
-            n_masked_b = self.B_mask.sum()
             if B_guess is None:
                 B_guess = np.array([.1]*n_masked_b)
             else:
                 if len(B_guess) != n_masked_b:
                     msg = 'len(B_guess) = %s, there are %s parameters in B'
                     raise ValueError(msg % (len(B_guess), n_masked_b))
+        else:
+            B_guess = []
 
         return np.r_[A_guess, B_guess]
 
@@ -1764,7 +1768,7 @@ class SVAR(LikelihoodModel):
         return approx_hess(AB_mask, loglike)[0]
 
     def _solve_AB(self, start_params, maxiter, maxfun, override=False,
-            solver='nm'):
+            solver='bfgs'):
         """
         Solves for MLE estimate of structural parameters
 
@@ -1826,8 +1830,6 @@ class SVAR(LikelihoodModel):
 
         neqs = self.neqs
         sigma_u = self.sigma_u
-        A = self.A
-        B = self.B
         A_mask = self.A_mask
         B_mask = self.B_mask
 
@@ -1855,16 +1857,16 @@ class SVAR(LikelihoodModel):
 
         j = 0
         j_d = 0
-        if A is not None:
-            A_vec = np.ravel(A, order='F')
+        if len(A_solve[A_mask]) is not 0:
+            A_vec = np.ravel(A_mask, order='F')
             for k in xrange(neqs**2):
-                if A_vec[k] == 'E':
+                if A_vec[k] == True:
                     S_B[k,j] = -1
                     j += 1
-        if B is not None:
-            B_vec = np.ravel(B, order='F')
+        if len(B_solve[B_mask]) is not 0:
+            B_vec = np.ravel(B_mask, order='F')
             for k in xrange(neqs**2):
-                if B_vec[k] == 'E':
+                if B_vec[k] == True:
                     S_D[k,j_d] = 1
                     j_d +=1
 
