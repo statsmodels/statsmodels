@@ -1940,7 +1940,7 @@ class SVARProcess(VARProcess):
         if P is None:
             A_solve = self.A_solve
             B_solve = self.B_solve
-            P = np.dot(A_solve, np.sqrt(B_solve))
+            P = np.dot(npl.inv(A_solve), B_solve)
 
         ma_mats = self.ma_rep(maxn=maxn)
         return mat([np.dot(coefs, P) for coefs in ma_mats])
@@ -2065,9 +2065,9 @@ class SVARResults(SVARProcess, VARResults):
         -------
         irf : IRAnalysis
         """
-        A_solve = self.A_solve
-        B_solve = self.B_solve
-        P = np.dot(A_solve, np.sqrt(B_solve))
+        A = self.A
+        B= self.B
+        P = np.dot(npl.inv(A), B)
 
         return IRAnalysis(self, P=P, periods=periods, svar=True)
 
