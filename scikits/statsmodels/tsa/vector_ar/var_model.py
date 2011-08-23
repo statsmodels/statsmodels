@@ -1009,7 +1009,8 @@ class VARResults(VARProcess):
 
     #Monte Carlo irf standard errors
     def irf_errband_mc(self, orth=False, repl=1000, T=10,
-                      signif=0.05, seed=None, burn=100, cum=False):
+                      signif=0.05, seed=None, burn=100, cum=False,
+                      svar=False):
         """
         Compute Monte Carlo integrated error bands assuming normally
         distributed for impulse response functions
@@ -1057,24 +1058,52 @@ class VARResults(VARProcess):
             for i in range(repl):
                 #discard first hundred to eliminate correct for starting bias
                 if cum == True:
-                    ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).orth_ma_rep(maxn=T).cumsum(axis=0)
+                    ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).\
+                                        orth_ma_rep(maxn=T).cumsum(axis=0)
                 if cum == False:
-                    ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).orth_ma_rep(maxn=T)
+                    ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).\
+                                        orth_ma_rep(maxn=T)
         elif svar == True:
+            #create A, B for estimation
+            A = self.A
+            B = self.B
+            A_mask = self.A_mask
+            B_mask = self.B_mask
+            A_pass = np.zeros_like(A, dtype='|S1')
+            B_pass = np.zeros_like(B, dtype='|S1')
+            A_pass[~A_mask] = A[~A_mask]
+            B_pass[~B_mask] = B[~B_mask]
+            A_pass[A_mask] = 'E'
+            B_pass[B_mask] = 'E'
+            if A_mask.sum() == 0:
+                s_type = 'B'
+            elif B_mask.sum() == 0:
+                s_type = 'A'
+            else: 
+                s_type = 'AB'
+
+
             for i in range(repl):
                 #discard first hundred to eliminate correct for starting bias
                 if cum == True:
-                    ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).svar_ma_rep(maxn=T).cumsum(axis=0)
+                    ma_coll[i] = SVAR(sim, svar_type=s_type, A=A_pass, 
+                                            B=B_pass).fit(maxlags=k_ar).\
+                                            svar_ma_rep(maxn=T).\
+                                            cumsum(axis=0)
                 if cum == False:
-                    ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).svar_ma_rep(maxn=T)
+                    ma_coll[i] = SVAR(sim, svar_type=s_type, A=A_pass, 
+                                      B=B_pass).fit(maxlags=k_ar).\
+                                      svar_ma_rep(maxn=T)
 
         else:
             for i in range(repl):
                 #discard first hundred to eliminate correct for starting bias
                 if cum == True:
-                    ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).ma_rep(maxn=T).cumsum(axis=0)
+                    ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).\
+                                        ma_rep(maxn=T).cumsum(axis=0)
                 if cum == False:
-                    ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).ma_rep(maxn=T)
+                    ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).\
+                                        ma_rep(maxn=T)
 
         ma_sort = np.sort(ma_coll, axis=0) #sort to get quantiles
         index = round(signif/2*repl)-1,round((1-signif/2)*repl)-1
@@ -1699,10 +1728,12 @@ class SVAR(LikelihoodModel):
                                                     solver=solver,
                                                     maxiter=maxiter,
                                                     maxfun=maxfun)
+        A_mask = self.A_mask
+        B_mask = self.B_mask
 
         return SVARResults(y, z, var_params, omega, lags, names=self.names,
                            trend=trend, dates=self.dates, model=self,
-                           A=A, B=B)
+                           A=A, B=B, A_mask=A_mask, B_mask=B_mask)
 
     def loglike(self, params):
         """
@@ -2014,7 +2045,7 @@ class SVARResults(SVARProcess, VARResults):
     _model_type = 'SVAR'
 
     def __init__(self, endog, endog_lagged, params, sigma_u, lag_order,
-                 A=None, B=None, model=None,
+                 A=None, B=None, A_mask=None, B_mask=None, model=None,
                  trend='c', names=None, dates=None):
 
         self.model = model
@@ -2049,6 +2080,8 @@ class SVARResults(SVARProcess, VARResults):
         #them in SVAR process, but I left them for now -ss
         self.A = A
         self.B = B
+        self.A_mask = A_mask
+        self.B_mask = B_mask
 
         super(SVARResults, self).__init__(coefs, intercept, sigma_u, A,
                              B, names=names)
