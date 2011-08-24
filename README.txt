@@ -5,8 +5,8 @@ Statsmodels is a Python package that provides a complement to scipy for
 statistical computations including descriptive statistics and
 estimation of statistical models.
 
-Main Feautures
-==============
+Main Features
+=============
 
 * regression: Generalized least squares (including weighted least squares and
   least squares with autoregressive errors), ordinary least squares.
@@ -97,7 +97,8 @@ Discussion and Development
 All chatter will take place on the or scipy-user mailing list. We are very
 interested in receiving feedback about usability, suggestions for improvements,
 and bug reports via the mailing list or the bug tracker at
-https://bugs.launchpad.net/statsmodels.
+
+https://github.com/statsmodels/statsmodels/issues
 
 There is also a google group at
 
