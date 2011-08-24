@@ -1,5 +1,14 @@
-trunk for 0.3.0
----------------
+Release History
+===============
+
+0.3.1
+-----
+
+* Removed academic-only WFS dataset.
+* Fix easy_install issue on Windows.
+
+0.3.0
+-----
 
 *Changes that break backwards compatibility*
 
@@ -50,8 +59,8 @@ the import speed if a library or user only needs specific functions.
 * and other additions
 
 
-trunk for 0.2.0
----------------
+0.2.0
+-----
 
 *main changes*
 
