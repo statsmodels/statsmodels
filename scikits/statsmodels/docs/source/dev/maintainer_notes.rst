@@ -141,6 +141,14 @@ Releasing
 
     ISRELEASED = True
 
+#. Clean the working tree with::
+
+    git clean -xdf
+
+   But you might want to do a dry-run first::
+
+    git clean -xdfn
+
 #. Tag the release. For a release candidate, for example::
 
     git tag -a v0.3.0rc1 -m "Version 0.3.0 Release Candidate 1" 7b2fb29
