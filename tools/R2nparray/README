@@ -1,0 +1,3 @@
+To install run in the parent of this directory
+
+    R CMD INSTALL R2nparray

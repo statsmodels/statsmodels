@@ -1,0 +1,10 @@
+Package: R2nparray
+Version: 0.1
+Date: 2011-08-23
+Title: R to Numpy Arrays
+Author: Skipper Seabold <jsseabold@gmail.com>
+Maintainer: Skipper Seabold <jsseabold@gmail.com>
+Description: Writes R matrices, vectors, and scalars to a file as numpy arrays
+License: BSD
+URL: http://www.github.com/statsmodels/statsmodels
+Repository: github
