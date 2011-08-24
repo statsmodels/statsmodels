@@ -1,21 +1,12 @@
-=========================
-Installation from sources
-=========================
+What it is
+==========
 
-In the top directory (the same as the file you are reading now), just do:
+Statsmodels is under the scikits namespace as scikits.statsmodels. Statsmodels is a
+pure python package that requires numpy and scipy. It offers a convenient
+interface for fitting parameterized statistical models with growing support
+for displaying univariate and multivariate summary statistics, regression summaries,
+and (postestimation) statistical tests.
 
-python setup.py install
-
-See INSTALL.txt for requirements or
-
-http://statsmodels.sourceforge.net/
-
-For more information.
-
-
-=============
-Release Notes
-=============
 
 Background
 ==========
@@ -24,14 +15,6 @@ The statsmodels code was started by Jonathan Taylor and was formerly included
 as part of scipy. It was taken up to be tested, corrected, and extended as part
 of the Google Summer of Code 2009.
 
-What it is
-==========
-
-Statsmodels under the scikits namespace as scikits.statsmodels. Statsmodels is a
-pure python package that requires numpy and scipy. It offers a convenient
-interface for fitting parameterized statistical models with growing support
-for displaying univariate and multivariate summary statistics, regression summaries,
-and (postestimation) statistical tests.
 
 Main Feautures
 ==============
@@ -53,6 +36,7 @@ There is also experimental code for systems of equations regression,
 time series models, and information theoretic measures.  None of this code
 is considered "production ready".
 
+
 Where to get it
 ===============
 
@@ -61,7 +45,7 @@ up to date code in the trunk branch. Experimental code will also be hosted here
 in different branches and merged to trunk often.  We try to make sure that the
 trunk code is always stable.
 
-https://code.launchpad.net/statsmodels
+https://www.github.com/statsmodels/statsmodels
 
 Source download of stable tags will be on SourceForge.
 
@@ -71,10 +55,26 @@ or
 
 PyPi: http://pypi.python.org/pypi/scikits.statsmodels/
 
+
+Installation from sources
+=========================
+
+In the top directory, just do::
+
+python setup.py install
+
+See INSTALL.txt for requirements or
+
+http://statsmodels.sourceforge.net/
+
+For more information.
+
+
 License
 =======
 
 Simplified BSD
+
 
 Documentation
 =============
@@ -90,6 +90,7 @@ Our blog will continue to be updated as we make progress on the code.
 
 http://scipystats.blogspot.com
 
+
 Windows Help
 ============
 The source distribution for Windows includes a htmlhelp file (statsmodels.chm).
@@ -97,6 +98,7 @@ This can be opened from the python interpreter ::
 
 >>> import scikits.statsmodels.api as sm
 >>> sm.open_help()
+
 
 Discussion and Development
 ==========================
@@ -112,6 +114,7 @@ http://groups.google.com/group/pystatsmodels
 
 to discuss development and design issues that are deemed to be too specialized
 for the scipy-dev/user list.
+
 
 Python 3
 ========
