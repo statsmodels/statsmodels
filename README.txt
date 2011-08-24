@@ -1,49 +1,40 @@
 What it is
 ==========
 
-Statsmodels is under the scikits namespace as scikits.statsmodels. Statsmodels is a
-pure python package that requires numpy and scipy. It offers a convenient
-interface for fitting parameterized statistical models with growing support
-for displaying univariate and multivariate summary statistics, regression summaries,
-and (postestimation) statistical tests.
-
-
-Background
-==========
-
-The statsmodels code was started by Jonathan Taylor and was formerly included
-as part of scipy. It was taken up to be tested, corrected, and extended as part
-of the Google Summer of Code 2009.
-
+Statsmodels is a Python package that provides a complement to scipy for
+statistical computations including descriptive statistics and
+estimation of statistical models.
 
 Main Feautures
 ==============
 
 * regression: Generalized least squares (including weighted least squares and
-least squares with autoregressive errors), ordinary least squares.
+  least squares with autoregressive errors), ordinary least squares.
 * glm: Generalized linear models with support for all of the one-parameter
-exponential family distributions.
+  exponential family distributions.
 * discrete choice models: Poisson, probit, logit, multinomial logit
 * rlm: Robust linear models with support for several M-estimators.
+* tsa: Time series analysis models, including ARMA, AR, VAR
+* nonparametric : (Univariate) kernel density estimators
 * datasets: Datasets to be distributed and used for examples and in testing.
 * PyDTA: Tools for reading Stata *.dta files into numpy arrays.
-
-There is also a sandbox which contains code for generalized additive models
-(untested), mixed effects models, cox proportional hazards model (both are
-untested and still dependent on the nipy formula framework), generating
-descriptive statistics, and printing table output to ascii, latex, and html.
-There is also experimental code for systems of equations regression,
-time series models, and information theoretic measures.  None of this code
-is considered "production ready".
+* stats: a wide range of statistical tests
+* sandbox : There is also a sandbox which contains code for generalized additive 
+  models (untested), mixed effects models, cox proportional hazards model (both
+  are untested and still dependent on the nipy formula framework), generating
+  descriptive statistics, and printing table output to ascii, latex, and html.
+  There is also experimental code for systems of equations regression,
+  time series models, panel data estimators and information theoretic measures.  
+  None of this code is considered "production ready".
 
 
 Where to get it
 ===============
 
-Development branches will be on LaunchPad. This is where to go to get the most
-up to date code in the trunk branch. Experimental code will also be hosted here
-in different branches and merged to trunk often.  We try to make sure that the
-trunk code is always stable.
+Development branches will be on Github. This is where to go to get the most
+up to date code in the trunk branch. Experimental code is hosted here
+in branches and in developer forks. This code is merged to master often. We 
+try to make sure that the master branch is always stable.
 
 https://www.github.com/statsmodels/statsmodels
 
