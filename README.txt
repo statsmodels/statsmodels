@@ -90,6 +90,13 @@ Our blog will continue to be updated as we make progress on the code.
 
 http://scipystats.blogspot.com
 
+Windows Help
+============
+The source distribution for Windows includes a htmlhelp file (statsmodels.chm).
+This can be opened from the python interpreter ::
+
+>>> import scikits.statsmodels.api as sm
+>>> sm.open_help()
 
 Discussion and Development
 ==========================
@@ -105,3 +112,15 @@ http://groups.google.com/group/pystatsmodels
 
 to discuss development and design issues that are deemed to be too specialized
 for the scipy-dev/user list.
+
+Python 3
+========
+
+scikits.statsmodels has been ported and tested for Python 3.2. Python 3
+version of the code can be obtained by running 2to3.py over the entire
+statsmodels source. The numerical core of statsmodels worked almost without
+changes, however there can be problems with data input and plotting.
+The STATA file reader and writer in iolib.foreign has not been ported yet.
+And there are still some problems with the matplotlib version for Python 3
+that was used in testing. Running the test suite with Python 3.2 shows some
+errors related to foreign and matplotlib.
