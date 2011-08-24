@@ -15,10 +15,13 @@ if "--with-cython" in sys.argv:
     compile_cython = 1
     sys.argv.remove('--with-cython')
 
+curdir = os.path.abspath(os.path.dirname(__file__))
+README = open(os.path.join(curdir, "README.txt")).read()
+CHANGES = open(os.path.join(curdir, "CHANGES.txt")).read()
 
 DISTNAME = 'scikits.statsmodels'
 DESCRIPTION = 'Statistical computations and models for use with SciPy'
-LONG_DESCRIPTION = descr
+LONG_DESCRIPTION = README + '\n\n' + CHANGES
 MAINTAINER = 'Skipper Seabold, Josef Perktold'
 MAINTAINER_EMAIL ='pystatsmodels@googlegroups.com'
 URL = 'http://statsmodels.sourceforge.net/'
