@@ -30,7 +30,7 @@ DOWNLOAD_URL = ''
 
 MAJ = 0
 MIN = 3
-REV = 0
+REV = 1
 ISRELEASED = True
 VERSION = '%d.%d.%d' % (MAJ,MIN,REV)
 
