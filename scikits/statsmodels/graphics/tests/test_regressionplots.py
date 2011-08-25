@@ -73,5 +73,13 @@ class TestPlot(object):
         plot_ccpr(res, exog_idx=[0,1])
 
         plt.close('all')
-
-
+    
+    @np.testing.dec.skipif(not have_matplotlib) 
+    def test_qqplot(self):
+      #just test that it runs
+      data = sm.datasets.longley.load()
+      data.exog = sm.add_constant(data.exog)
+      mod_fit = sm.OLS(data.endog, data.exog).fit()
+      res = mod_fit.resid
+      fig = sm.qqplot(res)
+      plt.close(fig)

@@ -12,6 +12,7 @@ import nonparametric
 from __init__ import test
 from . import version
 from info import __doc__
+from graphics.qqplot import qqplot
 
 import os
 
