@@ -32,10 +32,10 @@ def qqplot(data, dist=stats.norm, distargs=(), loc=0, scale=1, a=0, fit=False,
         distribution. If fit is True then the parameters for dist
         are fit automatically using dist.fit. The quantiles are formed
         from the standardized data, after subtracting the fitted loc
-        and dividing by the fitted scale. (This ensures that if
-        line is True the line will be meaningful.)
+        and dividing by the fitted scale.
     line : boolean
-        If True a 45 degree line is drawn on the graph
+        If True a reference line is drawn on the graph. The default is to
+        fit a line via OLS regression.
 
     Returns
     -------
@@ -112,10 +112,10 @@ def qqplot(data, dist=stats.norm, distargs=(), loc=0, scale=1, a=0, fit=False,
     ax.set_xmargin(0.02)
     plt.plot(theoretical_quantiles, sample_quantiles, 'bo')
     if line:
-        end_pts = zip(plt.xlim(), plt.ylim())
-        end_pts[0] = max(end_pts[0])
-        end_pts[1] = min(end_pts[1])
-        plt.plot(end_pts, end_pts, 'r-')
+        m,b = sample_quantiles.std(), sample_quantiles.mean()
+        ref_line = theoretical_quantiles*m + b
+        plt.plot(theoretical_quantiles, ref_line, 'r-')
+
     xlabel = "Theoretical Quantiles"
     plt.xlabel(xlabel)
     ylabel = "Sample Quantiles"
