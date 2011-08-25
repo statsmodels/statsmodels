@@ -1,7 +1,7 @@
 import numpy as np
 from scipy import stats
 
-def qqplot(data, dist=stats.norm, distargs=(), loc=0, scale=1, fit=False,
+def qqplot(data, dist=stats.norm, distargs=(), loc=0, scale=1, a=0, fit=False,
                 line=False):
     """
     qqplot of the quantiles of x versus the quantiles/ppf of a distribution.
@@ -21,6 +21,10 @@ def qqplot(data, dist=stats.norm, distargs=(), loc=0, scale=1, fit=False,
         so dist.ppf may be called.
     loc : float
         Location parameter for dist
+    a : float
+        Offset for the plotting position of the expected order statistic.
+        The plotting positions are calculated as (i - a)/(nobs - 2*a + 1)
+        for i in range(0,nobs+1)
     scale : float
         Scale parameter for dist
     fit : boolean
@@ -89,8 +93,11 @@ def qqplot(data, dist=stats.norm, distargs=(), loc=0, scale=1, fit=False,
     elif distargs or loc != 0 or scale != 1:
         dist = dist(*distargs, **dict(loc=loc, scale=scale))
 
+    #about 10x faster than plotting_position
+    plotting_pos = lambda n, a : (np.arange(1.,n+1) - a)/(n- 2*a + 1)
+
     try:
-        theoretical_quantiles = dist.ppf(np.linspace(0, 1, nobs+2)[1:-1])
+        theoretical_quantiles = dist.ppf(plotting_pos(nobs, a))
     except:
         raise ValueError('distribution requires more parameters')
 
