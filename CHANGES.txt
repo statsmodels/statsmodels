@@ -12,9 +12,9 @@ Release History
 
 *Changes that break backwards compatibility*
 
-Added api.py for importing. So the new convention for importing is ::
+Added api.py for importing. So the new convention for importing is::
 
-import scikits.statsmodels.api as sm
+    import scikits.statsmodels.api as sm
 
 Importing from modules directly now avoids unnecessary imports and increases
 the import speed if a library or user only needs specific functions.
@@ -31,15 +31,16 @@ the import speed if a library or user only needs specific functions.
 * model.py -> base/model.py
 * t() method -> tvalues attribute (t() still exists but raises a warning)
 
-*main changes and additions*
+*Main changes and additions*
 
 * Numerous bugfixes.
 * Time Series Analysis model (tsa)
+
   - Vector Autoregression Models VAR (tsa.VAR)
   - Autogressive Models AR (tsa.AR)
-  - Autoregressive Moving Average Models ARMA (tsa.ARMA) :
-      optionally uses Cython for Kalman Filtering
-      use setup.py install with option --with-cython
+  - Autoregressive Moving Average Models ARMA (tsa.ARMA)
+    optionally uses Cython for Kalman Filtering
+    use setup.py install with option --with-cython
   - Baxter-King band-pass filter (tsa.filters.bkfilter)
   - Hodrick-Prescott filter (tsa.filters.hpfilter)
   - Christiano-Fitzgerald filter (tsa.filters.cffilter)
@@ -62,7 +63,7 @@ the import speed if a library or user only needs specific functions.
 0.2.0
 -----
 
-*main changes*
+*Main changes*
 
  * renames for more consistency
    RLM.fitted_values -> RLM.fittedvalues
@@ -71,28 +72,30 @@ the import speed if a library or user only needs specific functions.
    lazy calculations, convert attributes to properties with _cache
  * fix tests to run without rpy
  * expanded examples in examples directory
- * add PyDTA to lib.io -- functions for reading Stata *.dta binary files
+ * add PyDTA to lib.io -- functions for reading Stata .dta binary files
    and converting
    them to numpy arrays
  * made tools.categorical much more robust
  * add_constant now takes a prepend argument
  * fix GLS to work with only a one column design
 
-*new*
+*New*
 
  * add four new datasets
-    - A dataset from the American National Election Studies (1996)
-    - Grunfeld (1950) investment data
-    - Spector and Mazzeo (1980) program effectiveness data
-    - A US macroeconomic dataset
+
+   - A dataset from the American National Election Studies (1996)
+   - Grunfeld (1950) investment data
+   - Spector and Mazzeo (1980) program effectiveness data
+   - A US macroeconomic dataset
  * add four new Maximum Likelihood Estimators for models with a discrete
    dependent variables with examples
-    - Logit
-    - Probit
-    - MNLogit (multinomial logit)
-    - Poisson
 
-*sandbox*
+   - Logit
+   - Probit
+   - MNLogit (multinomial logit)
+   - Poisson
+
+*Sandbox*
 
  * add qqplot in sandbox.graphics
  * add sandbox.tsa (time series analysis) and sandbox.regression (anova)

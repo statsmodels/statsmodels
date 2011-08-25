@@ -17,9 +17,9 @@ Main Features
 * tsa: Time series analysis models, including ARMA, AR, VAR
 * nonparametric : (Univariate) kernel density estimators
 * datasets: Datasets to be distributed and used for examples and in testing.
-* PyDTA: Tools for reading Stata *.dta files into numpy arrays.
+* PyDTA: Tools for reading Stata .dta files into numpy arrays.
 * stats: a wide range of statistical tests
-* sandbox : There is also a sandbox which contains code for generalized additive 
+* sandbox: There is also a sandbox which contains code for generalized additive 
   models (untested), mixed effects models, cox proportional hazards model (both
   are untested and still dependent on the nipy formula framework), generating
   descriptive statistics, and printing table output to ascii, latex, and html.
@@ -52,7 +52,7 @@ Installation from sources
 
 In the top directory, just do::
 
-python setup.py install
+    python setup.py install
 
 See INSTALL.txt for requirements or
 
