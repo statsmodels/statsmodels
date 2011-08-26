@@ -13,7 +13,7 @@ from scikits.statsmodels.sandbox.regression.numdiff import approx_fprime, \
         approx_hess, approx_hess_cs
 from scikits.statsmodels.tsa.arima_process import arma2ma
 from scikits.statsmodels.tsa.kalmanf import KalmanFilter
-from scipy.stats import t
+from scipy.stats import t, norm
 from scipy.signal import lfilter
 try:
     from kalmanf import kalman_loglike
@@ -671,7 +671,7 @@ class ARMAResults(LikelihoodModelResults):
         df_resid = self.df_resid
         return t.sf(np.abs(self.tvalues), df_resid) * 2
 
-    def forecast(self, steps=1, exog=None):
+    def forecast(self, steps=1, exog=None, alpha=.05):
         """
         Out-of-sample forecasts
 
@@ -684,6 +684,8 @@ class ARMAResults(LikelihoodModelResults):
             If the model is an ARMAX, you must provide out of sample
             values for the exogenous variables. This should not include
             the constant.
+        alpha : float
+            The confidence intervals for the forecasts are (1 - alpha) %
 
         Returns
         -------
@@ -691,6 +693,8 @@ class ARMAResults(LikelihoodModelResults):
             Array of out of sample forecasts
         stderr : array
             Array of the standard error of the forecasts.
+        conf_int : array
+            2d array of the confidence interval for the forecast
         """
         k_trend, k_exog = self.k_trend, self.k_exog
         if exog is None and k_exog > 0:
@@ -699,8 +703,12 @@ class ARMAResults(LikelihoodModelResults):
         q, p = self.k_ma, self.k_ar
         maparams, arparams = self.maparams[::-1], self.arparams[::-1]
 
-        resid = np.zeros(2*q)
-        resid[:q] = self.resid[-q:] #only need last q
+        if q:
+            resid = np.zeros(2*q)
+            resid[:q] = self.resid[-q:] #only need last q
+        else:
+            i = -1 # since we don't run first loop below
+
         y = self.model.endog
         if k_trend == 1:
             mu = self.params[0] * (1-arparams.sum()) # use expectation
@@ -714,7 +722,8 @@ class ARMAResults(LikelihoodModelResults):
 
 
         endog = np.zeros(p+steps-1)
-        endog[:p] = y[-p:] #only need p
+        if p:
+            endog[:p] = y[-p:] #only need p
 
         forecast = np.zeros(steps)
         for i in range(q):
@@ -739,9 +748,12 @@ class ARMAResults(LikelihoodModelResults):
                          np.r_[1, maparams[::-1]], nobs=steps)
 
 
-        stderr = np.sqrt(sigma2 * np.cumsum(ma_rep**2))
+        fcasterr = np.sqrt(sigma2 * np.cumsum(ma_rep**2))
 
-        return forecast, stderr
+        const = norm.ppf(1 - alpha/2.)
+        conf_int = np.c_[forecast - const*fcasterr, forecast + const*fcasterr]
+
+        return forecast, fcasterr, conf_int
 
 
 if __name__ == "__main__":
