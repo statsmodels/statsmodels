@@ -128,13 +128,23 @@ class CheckArmaResults(object):
         assert_almost_equal(self.res1.sigma2, self.res2.sigma2,
                 self.decimal_sigma2)
 
+class CheckForecast(object):
+    def test_forecast(self):
+        assert_almost_equal(self.res1.forecast_res, self.res2.forecast,
+                DECIMAL_4)
+
+    def test_forecasterr(self):
+        assert_almost_equal(self.res1.forecast_err, self.res2.forecasterr,
+                DECIMAL_4)
 
 #NOTE: Ok
-class Test_Y_ARMA11_NoConst(CheckArmaResults):
+class Test_Y_ARMA11_NoConst(CheckArmaResults, CheckForecast):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,0]
         cls.res1 = ARMA(endog).fit(order=(1,1), trend='nc', disp=-1)
+        (cls.res1.forecast_res, cls.res1.forecast_err,
+                confint) = cls.res1.forecast(10)
         cls.res2 = results_arma.Y_arma11()
 
 #NOTE: Ok
@@ -149,11 +159,13 @@ class Test_Y_ARMA14_NoConst(CheckArmaResults):
 
 
 #NOTE: Ok
-class Test_Y_ARMA41_NoConst(CheckArmaResults):
+class Test_Y_ARMA41_NoConst(CheckArmaResults, CheckForecast):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,2]
         cls.res1 = ARMA(endog).fit(order=(4,1), trend='nc', disp=-1)
+        (cls.res1.forecast_res, cls.res1.forecast_err,
+                confint) = cls.res1.forecast(10)
         cls.res2 = results_arma.Y_arma41()
         cls.decimal_maroots = DECIMAL_3
 
@@ -168,11 +180,13 @@ class Test_Y_ARMA22_NoConst(CheckArmaResults):
             cls.decimal_t -= 1
 
 #NOTE: Ok
-class Test_Y_ARMA50_NoConst(CheckArmaResults):
+class Test_Y_ARMA50_NoConst(CheckArmaResults, CheckForecast):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,4]
         cls.res1 = ARMA(endog).fit(order=(5,0), trend='nc', disp=-1)
+        (cls.res1.forecast_res, cls.res1.forecast_err,
+                confint) = cls.res1.forecast(10)
         cls.res2 = results_arma.Y_arma50()
 
 #NOTE: Ok
@@ -186,11 +200,13 @@ class Test_Y_ARMA02_NoConst(CheckArmaResults):
             cls.decimal_t -= 1
 
 #NOTE: Ok
-class Test_Y_ARMA11_Const(CheckArmaResults):
+class Test_Y_ARMA11_Const(CheckArmaResults, CheckForecast):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,6]
         cls.res1 = ARMA(endog).fit(order=(1,1), trend="c", disp=-1)
+        (cls.res1.forecast_res, cls.res1.forecast_err,
+                confint) = cls.res1.forecast(10)
         cls.res2 = results_arma.Y_arma11c()
 
 #NOTE: OK
@@ -205,11 +221,13 @@ class Test_Y_ARMA14_Const(CheckArmaResults):
             cls.decimal_cov_params -= 1
 
 #NOTE: Ok
-class Test_Y_ARMA41_Const(CheckArmaResults):
+class Test_Y_ARMA41_Const(CheckArmaResults, CheckForecast):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,8]
         cls.res1 = ARMA(endog).fit(order=(4,1), trend="c", disp=-1)
+        (cls.res1.forecast_res, cls.res1.forecast_err,
+                confint) = cls.res1.forecast(10)
         cls.res2 = results_arma.Y_arma41c()
         cls.decimal_cov_params = DECIMAL_3
         cls.decimal_fittedvalues = DECIMAL_3
@@ -229,11 +247,13 @@ class Test_Y_ARMA22_Const(CheckArmaResults):
             cls.decimal_t = 0
 
 #NOTE: Ok
-class Test_Y_ARMA50_Const(CheckArmaResults):
+class Test_Y_ARMA50_Const(CheckArmaResults, CheckForecast):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,10]
         cls.res1 = ARMA(endog).fit(order=(5,0), trend="c", disp=-1)
+        (cls.res1.forecast_res, cls.res1.forecast_err,
+                confint) = cls.res1.forecast(10)
         cls.res2 = results_arma.Y_arma50c()
 
 #NOTE: Ok

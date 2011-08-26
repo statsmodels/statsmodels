@@ -21,6 +21,8 @@ residsc_mle = genfromtxt(open(current_path+"/resids_exact_c.csv", "rb"), delimit
 
 residsc_css = genfromtxt(open(current_path+"/resids_css_c.csv", "rb"), delimiter=",", skip_header = 1, dtype=float)
 
+forecast_results = genfromtxt(open(current_path+"/results_arma_forecasts.csv",
+                        "rb"), names=True, delimiter=",", dtype=float)
 
 class Y_arma11(object):
     def __init__(self, method="mle"):
@@ -40,6 +42,8 @@ class Y_arma11(object):
             self.sigma2 = 0.994743350844 ** 2
             self.cov_params = [[   0.0017704,   -0.0010612],
                                   [-0.0010612, 0.0037119 ]]
+            self.forecast = forecast_results['fc11']
+            self.forecasterr = forecast_results['fe11']
         elif method =="css":
             self.params = [0.791515576984, 0.383078056824]
             self.aic = 710.994047176570
@@ -153,6 +157,8 @@ class Y_arma41(object):
             self.pvalues = [1.10e-18, 0.0010, 0.4626, 5.48e-15, 0.7769]
             self.tvalues = [8.824, -3.279, -.7345, 7.815, .2833]
             self.sigma2 = 0.911409665692 ** 2
+            self.forecast = forecast_results['fc41']
+            self.forecasterr = forecast_results['fe41']
         elif method =="css":
             self.params = [0.868370308475, -0.459433478113, -0.086098063077,
                     0.635050245511, 0.033645204508]
@@ -270,6 +276,8 @@ class Y_arma50(object):
             self.pvalues = [7.51e-31, 4.42e-05, 2.38e-05, 0.0034, 0.1584]
             self.tvalues = [11.55, -4.084, 4.226, 2.929, -1.410]
             self.sigma2 = 0.938374940397 ** 2
+            self.forecast = forecast_results['fc50']
+            self.forecasterr = forecast_results['fe50']
         elif method =="css":
 #NOTE: some results use x-12 arima because gretl uses LS estimates for AR CSS
             self.params = [0.725706505843, -0.305501865989, 0.320719417706,
@@ -363,6 +371,8 @@ class Y_arma11c(object):
             self.pvalues = [1.04e-70, 5.02e-33, 2.35e-9]
             self.tvalues = [17.78, 11.97, 5.971]
             self.sigma2 = 1.039168068701 ** 2
+            self.forecast = forecast_results['fc11c']
+            self.forecasterr = forecast_results['fe11c']
         elif method =="css":
 #            self.params = [1.625462134333, 0.666386002049, 0.409512270580]
 #NOTE: gretl gives the intercept not the mean, x-12-arima and R agree with us
@@ -489,6 +499,8 @@ class Y_arma41c(object):
             self.pvalues = [0.7024, 7.50e-34, 0.0036,  0.0009, 1.77e-43, 0.0193]
             self.tvalues = [0.3821, 12.13, -2.909, -3.306, 13.83, 2.340]
             self.sigma2 = 0.915487643192 ** 2
+            self.forecast = forecast_results['fc41c']
+            self.forecasterr = forecast_results['fe41c']
         elif method =="css":
 #            self.params = [-0.077068926631, 0.763816531155, -0.270949972390,
 #                    -0.284496499726, 0.757135838677, 0.225247299659]
@@ -620,6 +632,8 @@ class Y_arma50c(object):
                     0.0060]
             self.tvalues = [14.33, 12.11, -3.993, 3.283, 3.659, -2.750]
             self.sigma2 = 0.973930886014 ** 2
+            self.forecast = forecast_results['fc50c']
+            self.forecasterr = forecast_results['fe50c']
         elif method =="css":
 #NOTE: params, bse, cov_params, tvalues from R
 #likelihood based results from x-12 arima

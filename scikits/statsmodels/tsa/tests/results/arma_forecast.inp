@@ -1,0 +1,32 @@
+open \
+  /home/skipper/statsmodels/statsmodels-git/scikits/statsmodels/tsa/tests/results/y_arma_data.csv
+setobs 12 1980:01 --time-series
+dataset addobs 10
+
+# (0,0)
+arima 1 0 1 ; 1 --nc
+fcast 2000:11 2001:08 
+
+# (4,1)
+arima 4 0 1 ; 3 --nc
+fcast 2000:11 2001:08 
+
+# (5,0)
+arima 5 0 0 ; 5 --nc
+fcast 2000:11 2001:08
+
+# (1,1) c
+arima 1 0 1 ; 7
+fcast 2000:11 2001:08 
+
+# (4,1) c
+arima 4 0 1 ; 9 
+fcast 2000:11 2001:08
+
+# (5,0) c
+arima 5 0 0 ; 11
+fcast 2000:11 2001:08
+
+smpl 2000:11 2001:08
+#store '/home/skipper/statsmodels/statsmodels-git/scikits/statsmodels/tsa/tests/results/results_arma_forecasts.csv' fc11 fe11 fc41 fe41 fc50 fe50 fc11c fe11c fc41c fe41c fc50c fe50c --omit-obs
+# no way to capture errors as far as I can tell
