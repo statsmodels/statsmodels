@@ -11,6 +11,7 @@ from scikits.statsmodels.tsa.tsatools import lagmat, add_trend
 from scikits.statsmodels.tsa.ar_model import AR
 from scikits.statsmodels.sandbox.regression.numdiff import approx_fprime, \
         approx_hess, approx_hess_cs
+from scikits.statsmodels.tsa.arima_process import arma2ma
 from scikits.statsmodels.tsa.kalmanf import KalmanFilter
 from scipy.stats import t
 from scipy.signal import lfilter
@@ -669,6 +670,78 @@ class ARMAResults(LikelihoodModelResults):
     #TODO: same for conditional and unconditional?
         df_resid = self.df_resid
         return t.sf(np.abs(self.tvalues), df_resid) * 2
+
+    def forecast(self, steps=1, exog=None):
+        """
+        Out-of-sample forecasts
+
+        Parameters
+        ----------
+        steps : int
+            The number of out of sample forecasts from the end of the
+            sample.
+        exog : array
+            If the model is an ARMAX, you must provide out of sample
+            values for the exogenous variables. This should not include
+            the constant.
+
+        Returns
+        -------
+        forecast : array
+            Array of out of sample forecasts
+        stderr : array
+            Array of the standard error of the forecasts.
+        """
+        k_trend, k_exog = self.k_trend, self.k_exog
+        if exog is None and k_exog > 0:
+            raise ValueError("You must provide exog for ARMAX")
+
+        q, p = self.k_ma, self.k_ar
+        maparams, arparams = self.maparams[::-1], self.arparams[::-1]
+
+        resid = np.zeros(2*q)
+        resid[:q] = self.resid[-q:] #only need last q
+        y = self.model.endog
+        if k_trend == 1:
+            mu = self.params[0] * (1-arparams.sum()) # use expectation
+                                                     # not constant
+            mu = np.array([mu]*steps) # repeat it so you can slice if exog
+        else:
+            mu = np.zeros(steps)
+
+        if k_exog > 0:
+            mu += np.dot(self.params[k_trend:k_exog+k_trend], exog)
+
+
+        endog = np.zeros(p+steps-1)
+        endog[:p] = y[-p:] #only need p
+
+        forecast = np.zeros(steps)
+        for i in range(q):
+            fcast = mu[i] + np.dot(arparams,endog[i:i+p]) + \
+                          np.dot(maparams,resid[i:i+q])
+            forecast[i] = fcast
+            endog[i+p] = fcast
+
+        for i in range(i+1,steps-1):
+            fcast = mu[i] + np.dot(arparams,endog[i:i+p])
+            forecast[i] = fcast
+            endog[i+p] = fcast
+
+        #need to do one more without updating endog
+        forecast[-1] = mu[-1] + np.dot(arparams,endog[steps-1:])
+
+        #take care of exogenous
+
+        # compute the standard errors
+        sigma2 = self.sigma2
+        ma_rep = arma2ma(np.r_[1,-arparams[::-1]],
+                         np.r_[1, maparams[::-1]], nobs=steps)
+
+
+        stderr = np.sqrt(sigma2 * np.cumsum(ma_rep**2))
+
+        return forecast, stderr
 
 
 if __name__ == "__main__":
