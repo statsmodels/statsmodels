@@ -29,7 +29,7 @@ class TestSVAR(object):
     def test_A(self):
         assert_almost_equal(self.res1.A, self.res2.A, DECIMAL_6)
     def test_B(self):
-        assert_almost_equal(self.res1.B, self.res2.B, DECIMAL_6))
+        assert_almost_equal(self.res1.B, self.res2.B, DECIMAL_6)
 
 
 
