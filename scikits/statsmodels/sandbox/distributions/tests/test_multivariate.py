@@ -158,7 +158,7 @@ class TestMVDistributions(object):
         mvt31 = MVT(mu3, cov3, 1)
         assert_almost_equal(mvt31.pdf(cov3),
             [0.0007276818698165781, 0.0009980625182293658, 0.0027661422056214652],
-            decimal=18)
+            decimal=17)
 
         mvt = MVT(mu3, cov3, 3)
         assert_almost_equal(mvt.pdf(cov3),
