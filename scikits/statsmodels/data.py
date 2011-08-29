@@ -38,7 +38,9 @@ class ModelData(object):
             if not xnames:
                 xnames = _make_exog_names(xarr)
 
-        ynames = _make_endog_names(endog)
+        ynames = self._get_names(endog)
+        if not ynames:
+            ynames = _make_endog_names(endog)
 
         if exog is not None:
             row_labels = _get_row_labels(exog)
@@ -47,14 +49,14 @@ class ModelData(object):
 
         return yarr, xarr, ynames, xnames, row_labels
 
-    def _get_names(self, exog):
+    def _get_names(self, arr):
         try:
-            return exog.dtype.names
+            return arr.dtype.names
         except AttributeError:
             pass
 
-        if isinstance(exog, DataFrame):
-            return list(exog.columns)
+        if isinstance(arr, DataFrame):
+            return list(arr.columns)
 
         return None
 
