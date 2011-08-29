@@ -453,6 +453,46 @@ def commutation_matrix(p, q):
     indices = np.arange(p * q).reshape((p, q), order='F')
     return K.take(indices.ravel(), axis=0)
 
+def _ar_transparams(params):
+    """
+    Transforms params to induce stationarity/invertability.
+
+    Reference
+    ---------
+    Jones(1980)
+    """
+    newparams = ((1-np.exp(-params))/
+                (1+np.exp(-params))).copy()
+    tmp = ((1-np.exp(-params))/
+               (1+np.exp(-params))).copy()
+    for j in range(1,len(params)):
+        a = newparams[j]
+        for kiter in range(j):
+            tmp[kiter] -= a * newparams[j-kiter-1]
+        newparams[:j] = tmp[:j]
+    return newparams
+
+def _ar_invtransparams(params):
+    """
+    Inverse of the Jones reparameterization
+    """
+    # AR coeffs
+    tmp = params.copy()
+    for j in range(len(params)-1,0,-1):
+        a = params[j]
+        for kiter in range(j):
+            tmp[kiter] = (params[kiter] + a * params[j-kiter-1])/\
+                    (1-a**2)
+        params[:j] = tmp[:j]
+    invarcoefs = -np.log((1-params)/(1+params))
+    return invarcoefs
+
+
+
+
+def _ma_transparams(params):
+    pass
+
 __all__ = ['lagmat', 'lagmat2ds','add_trend', 'duplication_matrix',
            'elimination_matrix', 'commutation_matrix',
            'vec', 'vech', 'unvec', 'unvech']

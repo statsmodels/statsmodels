@@ -8,7 +8,8 @@ from numpy.linalg import inv
 from scipy import optimize
 from scipy.stats import t, norm, ss as sumofsq
 from scikits.statsmodels.regression.linear_model import OLS
-from scikits.statsmodels.tsa.tsatools import lagmat, add_trend
+from scikits.statsmodels.tsa.tsatools import (lagmat, add_trend,
+                _ar_transparams, _ar_invtransparams)
 import scikits.statsmodels.tsa.base.tsa_model as tsbase
 import scikits.statsmodels.base.model as base
 from scikits.statsmodels.tools.decorators import (resettable_cache,
@@ -57,19 +58,9 @@ class AR(tsbase.TimeSeriesModel):
         ---------
         Jones(1980)
         """
-        p,k = self.k_ar, self.k_trend # need to include exog here?
-        newparams = params.copy() # no copy below now?
-        newparams[k:k+p] = ((1-np.exp(-params[k:k+p]))/
-                            (1+np.exp(-params[k:k+p]))).copy()
-        tmp = ((1-np.exp(-params[k:k+p]))/
-               (1+np.exp(-params[k:k+p]))).copy()
-
-        # levinson-durbin to get pacf
-        for j in range(1,p):
-            a = newparams[k+j]
-            for kiter in range(j):
-                tmp[kiter] -= a * newparams[k+j-kiter-1]
-            newparams[k:k+j] = tmp[:j]
+        p,k = self.k_ar, self.k_trend # need to include exog here
+        newparams = params.copy()
+        newparams[k:k+p] = _ar_transparams(params[k:k+p].copy())
         return newparams
 
     def _invtransparams(self, start_params):
@@ -78,17 +69,7 @@ class AR(tsbase.TimeSeriesModel):
         """
         p,k = self.k_ar, self.k_trend
         newparams = start_params.copy()
-        arcoefs = newparams[k:k+p].copy()
-        # AR coeffs
-        tmp = arcoefs.copy()
-        for j in range(p-1,0,-1):
-            a = arcoefs[j]
-            for kiter in range(j):
-                tmp[kiter] = (arcoefs[kiter] + a * arcoefs[j-kiter-1])/\
-                        (1-a**2)
-            arcoefs[:j] = tmp[:j]
-        invarcoefs = -np.log((1-arcoefs)/(1+arcoefs))
-        newparams[k:k+p] = invarcoefs
+        newparams[k:k+p] = _ar_invtransparams(start_params[k:k+p].copy())
         return newparams
 
     def _presample_fit(self, params, start, p, y, predictedvalues):
