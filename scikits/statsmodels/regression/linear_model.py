@@ -1482,10 +1482,13 @@ class RegressionResultsWrapper(wrap.ResultsWrapper):
     _wrap_attrs = wrap.union_dicts(base.LikelihoodResultsWrapper._attrs,
                                    _attrs)
 
-    _wrap_methods = {
+    _methods = {
         'norm_resid' : 'rows',
-        'cov_params' : 'cov'
     }
+
+    _wrap_methods = wrap.union_dicts(
+                        base.LikelihoodResultsWrapper._wrap_methods,
+                        _methods)
 wrap.populate_wrapper(RegressionResultsWrapper,
                       RegressionResults)
 
