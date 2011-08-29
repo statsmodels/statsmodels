@@ -7,7 +7,9 @@ from numpy.linalg import inv, pinv
 from scikits.statsmodels.base.model import (LikelihoodModel,
         LikelihoodModelResults, GenericLikelihoodModel)
 from scikits.statsmodels.regression.linear_model import yule_walker, GLS
-from scikits.statsmodels.tsa.tsatools import lagmat, add_trend
+from scikits.statsmodels.tsa.tsatools import (lagmat, add_trend,
+        _ar_transparams, _ar_invtransparams, _ma_transparams,
+        _ma_invtransparams)
 from scikits.statsmodels.tsa.ar_model import AR
 from scikits.statsmodels.sandbox.regression.numdiff import approx_fprime, \
         approx_hess, approx_hess_cs
@@ -140,30 +142,11 @@ class ARMA(LikelihoodModel):
 
         # AR Coeffs
         if k_ar != 0:
-            newparams[k:k+k_ar] = ((1-exp(-params[k:k+k_ar]))/\
-                                    (1+exp(-params[k:k+k_ar]))).copy()
-            tmp = ((1-exp(-params[k:k+k_ar]))/(1+exp(-params[k:k+k_ar]))).copy()
-
-            # levinson-durbin to get pacf
-            for j in range(1,k_ar):
-                a = newparams[k+j]
-                for kiter in range(j):
-                    tmp[kiter] -= a * newparams[k+j-kiter-1]
-                newparams[k:k+j] = tmp[:j]
+            newparams[k:k+k_ar] = _ar_transparams(params[k:k+k_ar].copy())
 
         # MA Coeffs
         if k_ma != 0:
-            newparams[k+k_ar:] = ((1-exp(-params[k+k_ar:k+k_ar+k_ma]))/\
-                             (1+exp(-params[k+k_ar:k+k_ar+k_ma]))).copy()
-            tmp = ((1-exp(-params[k+k_ar:k+k_ar+k_ma]))/\
-                        (1+exp(-params[k+k_ar:k+k_ar+k_ma]))).copy()
-
-            # levinson-durbin to get macf
-            for j in range(1,k_ma):
-                b = newparams[k+k_ar+j]
-                for kiter in range(j):
-                    tmp[kiter] += b * newparams[k+k_ar+j-kiter-1]
-                newparams[k+k_ar:k+k_ar+j] = tmp[:j]
+            newparams[k+k_ar:] = _ma_transparams(params[k+k_ar:].copy())
         return newparams
 
     def _invtransparams(self, start_params):
@@ -177,24 +160,11 @@ class ARMA(LikelihoodModel):
         macoefs = newparams[k+k_ar:]
         # AR coeffs
         if k_ar != 0:
-            tmp = arcoefs.copy()
-            for j in range(k_ar-1,0,-1):
-                a = arcoefs[j]
-                for kiter in range(j):
-                    tmp[kiter] = (arcoefs[kiter]+a*arcoefs[j-kiter-1])/(1-a**2)
-                arcoefs[:j] = tmp[:j]
-            invarcoefs = -log((1-arcoefs)/(1+arcoefs))
-            newparams[k:k+k_ar] = invarcoefs
+            newparams[k:k+k_ar] = _ar_invtransparams(arcoefs)
+
         # MA coeffs
         if k_ma != 0:
-            tmp = macoefs.copy()
-            for j in range(k_ma-1,0,-1):
-                b = macoefs[j]
-                for kiter in range(j):
-                    tmp[kiter] = (macoefs[kiter]-b *macoefs[j-kiter-1])/(1-b**2)
-                macoefs[:j] = tmp[:j]
-            invmacoefs = -log((1-macoefs)/(1+macoefs))
-            newparams[k+k_ar:k+k_ar+k_ma] = invmacoefs
+            newparams[k+k_ar:k+k_ar+k_ma] = _ma_invtransparams(macoefs)
         return newparams
 
     def loglike_kalman(self, params):
