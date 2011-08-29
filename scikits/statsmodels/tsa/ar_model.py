@@ -9,20 +9,21 @@ from scipy import optimize
 from scipy.stats import t, norm, ss as sumofsq
 from scikits.statsmodels.regression.linear_model import OLS
 from scikits.statsmodels.tsa.tsatools import lagmat, add_trend
-from scikits.statsmodels.base.model import (LikelihoodModelResults,
-        LikelihoodModel)
+import scikits.statsmodels.tsa.base.tsa_model as tsbase
+import scikits.statsmodels.base.model as base
 from scikits.statsmodels.tools.decorators import (resettable_cache,
         cache_readonly, cache_writable)
 from scikits.statsmodels.tools.compatibility import np_slogdet
 from scikits.statsmodels.sandbox.regression.numdiff import approx_fprime
 from scikits.statsmodels.sandbox.regression.numdiff import (approx_hess,
         approx_hess_cs)
+import scikits.statsmodels.wrapper as wrap
 
 
 __all__ = ['AR']
 
 
-class AR(LikelihoodModel):
+class AR(tsbase.TimeSeriesModel):
     """
     Autoregressive AR(p) Model
 
@@ -34,13 +35,14 @@ class AR(LikelihoodModel):
         Exogenous variables. Note that exogenous variables are not yet
         supported for AR.
     """
-    def __init__(self, endog, exog=None):
-        super(AR, self).__init__(endog, exog)
+    def __init__(self, endog, exog=None, dates=None):
+        super(AR, self).__init__(endog, exog, dates)
+        endog = self.endog # original might not have been an ndarray
         if endog.ndim == 1:
             endog = endog[:,None]
+            self.endog = endog  # to get shapes right
         elif endog.ndim > 1 and endog.shape[1] != 1:
             raise ValueError("Only the univariate case is implemented")
-        self.endog = endog  # overwrite endog
         if exog is not None:
             raise ValueError("Exogenous variables are not supported for AR.")
 
@@ -654,12 +656,11 @@ class AR(LikelihoodModel):
         pinv_exog = np.linalg.pinv(X)
         normalized_cov_params = np.dot(pinv_exog, pinv_exog.T)
         arfit = ARResults(self, params, normalized_cov_params)
-        return arfit
+        return ARResultsWrapper(arfit)
 
-    fit.__doc__ += LikelihoodModel.fit.__doc__
+    fit.__doc__ += base.LikelihoodModel.fit.__doc__
 
-
-class ARResults(LikelihoodModelResults):
+class ARResults(tsbase.TimeSeriesModelResults):
     """
     Class to hold results from fitting an AR model.
 
@@ -750,7 +751,8 @@ class ARResults(LikelihoodModelResults):
         if k_trend > 0:
             trendorder = k_trend - 1
         self.trendorder = 1
-        self.df_resid = n_totobs - k_ar - k_trend #TODO: cmle vs mle?
+        #TODO: cmle vs mle?
+        self.df_resid = self.model.df_resid = n_totobs - k_ar - k_trend
 
     @cache_writable()
     def sigma2(self):
@@ -860,6 +862,18 @@ class ARResults(LikelihoodModelResults):
     def fittedvalues(self):
         return self.model.predict(self.params)
 
+class ARResultsWrapper(wrap.ResultsWrapper):
+    _attrs = {
+            'roots' : 'columns'
+            }
+    _wrap_attrs = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._attrs,
+                                    _attrs)
+    #_methods = {'conf_int' : 'columns'} #TODO: can't handle something like this yet
+    _methods = {'conf_int' : 'columns'}
+    _wrap_methods = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_methods,
+                                     _methods)
+wrap.populate_wrapper(ARResultsWrapper, ARResults)
+
 
 if __name__ == "__main__":
     import scikits.statsmodels.api as sm
@@ -903,6 +917,13 @@ if __name__ == "__main__":
 #    print """For higher lag lengths ours quickly fills up memory and starts
 #thrashing the swap.  Should we include talkbox C code or Cythonize the
 #Levinson recursion algorithm?"""
+
+    ## Try with a pandas series
+    import pandas
+    dates = np.arange(1700,1700+len(sunspots.endog))
+    sunspots = pandas.TimeSeries(sunspots.endog, index=dates)
+    mod = AR(sunspots)
+
 
 # some data for an example in Box Jenkins
     IBM = np.asarray([460,457,452,459,462,459,463,479,493,490.])
