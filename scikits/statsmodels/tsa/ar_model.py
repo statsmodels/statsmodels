@@ -18,6 +18,7 @@ from scikits.statsmodels.tools.compatibility import np_slogdet
 from scikits.statsmodels.sandbox.regression.numdiff import approx_fprime
 from scikits.statsmodels.sandbox.regression.numdiff import (approx_hess,
         approx_hess_cs)
+from scikits.statsmodels.tsa.kalmanf.kalmanfilter import KalmanFilter
 import scikits.statsmodels.wrapper as wrap
 
 
@@ -83,8 +84,8 @@ class AR(tsbase.TimeSeriesModel):
         k = self.k_trend
 
         # build system matrices
-        T_mat = self._T(params)
-        R_mat = self._R()
+        T_mat = KalmanFilter.T(params, p, k, p)
+        R_mat = KalmanFilter.R(params, p, k, 0, p)
 
         # Initial State mean and variance
         alpha = np.zeros((p,1))
@@ -373,30 +374,6 @@ class AR(tsbase.TimeSeriesModel):
         loglike = -1/2.*(nobs*(np.log(2*np.pi) + np.log(sigma2)) - \
                 logdet + diffpVpinv/sigma2 + ssr/sigma2)
         return loglike
-
-    def _R(self):
-        """
-        Private method for obtaining fitted presample values via Kalman filter.
-        """
-        p = self.k_ar
-        R_mat = zeros((p,1))
-        R_mat[0] = 1
-        return R_mat
-
-    def _T(self, params):
-        """
-        Private method for obtaining fitted presample values via Kalman filter.
-
-        See also
-        --------
-        scikits.statsmodels.tsa.kalmanf.ARMA
-        """
-        p = self.k_ar
-        k = self.k_trend
-        T_mat = zeros((p,p))
-        T_mat[:,0] = params[k:]
-        T_mat[:-1,1:] = identity(p-1)
-        return T_mat
 
     def score(self, params):
         """
