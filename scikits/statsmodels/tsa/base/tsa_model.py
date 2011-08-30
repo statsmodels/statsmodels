@@ -4,11 +4,20 @@ import scikits.statsmodels.base.wrapper as wrap
 #TODO: how to handle the docs with the additional parameters?
 class TimeSeriesModel(base.LikelihoodModel):
     def __init__(self, endog, exog=None, dates=None):
-        #        self._data = _data = smdata.handle_data(endog, exog)
-        #self.exog = _data.exog
-        #self.endog = _data.endog
         super(TimeSeriesModel, self).__init__(endog, exog)
         self.dates = dates or self._data.row_labels
+
+    def _get_exog_names(self):
+        return self._data.xnames
+
+    def _set_exog_names(self, vals):
+        if not isinstance(vals, list):
+            vals = [vals]
+        self._data.xnames = vals
+
+    #overwrite with writable property for (V)AR models
+    exog_names = property(_get_exog_names, _set_exog_names)
+
 
 #NOTE: this is just a stub for now, overwrite what we need to higher up
 # and bring methods from child classes up as well.
@@ -20,7 +29,7 @@ class TimeSeriesModelResults(base.LikelihoodModelResults):
 
 class TimeSeriesResultsWrapper(wrap.ResultsWrapper):
     _attrs = {}
-    _wrap_attrs = wrap.union_dicts(base.LikelihoodResultsWrapper._attrs,
+    _wrap_attrs = wrap.union_dicts(base.LikelihoodResultsWrapper._wrap_attrs,
                                     _attrs)
     _methods = {}
     _wrap_methods = wrap.union_dicts(base.LikelihoodResultsWrapper._wrap_methods,
