@@ -39,7 +39,7 @@ from scikits.statsmodels.tools.tools import (add_constant, rank,
 from scikits.statsmodels.tools.decorators import (resettable_cache,
         cache_readonly, cache_writable)
 import scikits.statsmodels.base.model as base
-import scikits.statsmodels.wrapper as wrap
+import scikits.statsmodels.base.wrapper as wrap
 
 class GLS(base.LikelihoodModel):
     """

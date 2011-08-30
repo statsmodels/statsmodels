@@ -26,7 +26,7 @@ from scikits.statsmodels.tools.decorators import (cache_readonly,
 
 import scikits.statsmodels.base.model as base
 import scikits.statsmodels.regression.linear_model as lm
-import scikits.statsmodels.wrapper as wrap
+import scikits.statsmodels.base.wrapper as wrap
 
 from scipy.stats import t
 

@@ -29,7 +29,7 @@ from scikits.statsmodels.tools.decorators import (resettable_cache,
 
 import scikits.statsmodels.base.model as base
 import scikits.statsmodels.regression.linear_model as lm
-import scikits.statsmodels.wrapper as wrap
+import scikits.statsmodels.base.wrapper as wrap
 
 #TODO: add options for the parameter covariance/variance
 # ie., OIM, EIM, and BHHH see Green 21.4

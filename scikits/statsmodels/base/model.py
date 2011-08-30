@@ -1,11 +1,12 @@
 import numpy as np
 from scipy import optimize, stats
 from scikits.statsmodels.data import handle_data
+from scikits.statsmodels.base.data import handle_data
 from scikits.statsmodels.tools.tools import recipr
 from scikits.statsmodels.stats.contrast import ContrastResults
 from scikits.statsmodels.tools.decorators import (resettable_cache,
                                                   cache_readonly)
-import scikits.statsmodels.wrapper as wrap
+import scikits.statsmodels.base.wrapper as wrap
 
 import scipy.stats as stats
 

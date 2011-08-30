@@ -19,7 +19,7 @@ from scikits.statsmodels.sandbox.regression.numdiff import approx_fprime
 from scikits.statsmodels.sandbox.regression.numdiff import (approx_hess,
         approx_hess_cs)
 from scikits.statsmodels.tsa.kalmanf.kalmanfilter import KalmanFilter
-import scikits.statsmodels.wrapper as wrap
+import scikits.statsmodels.base.wrapper as wrap
 
 
 __all__ = ['AR']

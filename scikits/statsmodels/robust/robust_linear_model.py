@@ -23,7 +23,7 @@ import scikits.statsmodels.regression.linear_model as lm
 import scikits.statsmodels.robust.norms as norms
 import scikits.statsmodels.robust.scale as scale
 import scikits.statsmodels.base.model as base
-import scikits.statsmodels.wrapper as wrap
+import scikits.statsmodels.base.wrapper as wrap
 
 __all__ = ['RLM']
 

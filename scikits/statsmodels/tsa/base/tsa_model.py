@@ -1,5 +1,5 @@
 import scikits.statsmodels.base.model as base
-import scikits.statsmodels.wrapper as wrap
+import scikits.statsmodels.base.wrapper as wrap
 
 #TODO: how to handle the docs with the additional parameters?
 class TimeSeriesModel(base.LikelihoodModel):
