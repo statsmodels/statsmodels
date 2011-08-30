@@ -379,7 +379,7 @@ def _fit_mle_nm(f, score, start_params, fargs, kwargs, disp=True,
 
 def _fit_mle_cg(f, score, start_params, fargs, kwargs, disp=True,
                 maxiter=100, callback=None, retall=False,
-                    full_output=True):
+                full_output=True, hess=None):
     gtol = kwargs.setdefault('gtol', 1.0000000000000001e-05)
     norm = kwargs.setdefault('norm', np.Inf)
     epsilon = kwargs.setdefault('epsilon', 1.4901161193847656e-08)
