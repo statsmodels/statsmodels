@@ -539,10 +539,6 @@ class ARMAResults(LikelihoodModelResults):
         params = self.params
         hess = self.model.hessian(params)
         return -inv(hess)
-#        if not fast_kalman or self.model.method == "css":
-#            return -inv(approx_hess_cs(x0, func))
-#        else:
-#            return -inv(approx_hess(x0, func, epsilon=1e-3)[0])
 
     @cache_readonly
     def aic(self):
