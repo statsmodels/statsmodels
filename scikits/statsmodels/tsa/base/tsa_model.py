@@ -20,9 +20,11 @@ class TimeSeriesModelResults(base.LikelihoodModelResults):
 
 class TimeSeriesResultsWrapper(wrap.ResultsWrapper):
     _attrs = {}
-    _wrap_attrs = base.LikelihoodResultsWrapper._attrs.update(_attrs)
+    _wrap_attrs = wrap.union_dicts(base.LikelihoodResultsWrapper._attrs,
+                                    _attrs)
     _methods = {}
-    _wrap_methods = base.LikelihoodResultsWrapper._wrap_methods.update(methods)
+    _wrap_methods = wrap.union_dicts(base.LikelihoodResultsWrapper._wrap_methods,
+                                     _methods)
 wrap.populate_wrapper(TimeSeriesResultsWrapper,
                       TimeSeriesModelResults)
 
