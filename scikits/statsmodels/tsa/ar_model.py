@@ -270,7 +270,7 @@ class AR(tsbase.TimeSeriesModel):
                         predictedvalues[i-p:i][::-1]] * params)
         return predictedvalues
 
-    def _presample_varcov(self, params, lagstart):
+    def _presample_varcov(self, params):
         """
         Returns the inverse of the presample variance-covariance.
 
@@ -278,18 +278,18 @@ class AR(tsbase.TimeSeriesModel):
         -----
         See Hamilton p. 125
         """
-        # get inv(Vp) Hamilton 5.3.7
-        params0 = np.r_[-1, params[lagstart:]]
-
-        p = len(params) - lagstart
+        k = self.k_trend # amend for exog
+        p = self.k_ar
         p1 = p+1
+
+        # get inv(Vp) Hamilton 5.3.7
+        params0 = np.r_[-1, params[k:]]
+
         Vpinv = np.zeros((p,p), dtype=params.dtype)
-        for i in range(lagstart,p1):
-            for j in range(lagstart,p1):
-                if i <= j and j <= p:
-                    part1 = np.sum(params0[:i] * params0[j-i:j])
-                    part2 = np.sum(params0[p1-j:p1+i-j]*params0[p1-i:])
-                    Vpinv[i-1,j-1] = part1 - part2
+        for i in range(k,p1):
+            Vpinv[i-1,i-1:] = np.correlate(params0, params0[:i])[:-1]
+            Vpinv[i-1,i-1:] -= np.correlate(params0[-i:], params0)[:-1]
+
         Vpinv = Vpinv + Vpinv.T - np.diag(Vpinv.diagonal())
         return Vpinv
 
@@ -363,7 +363,7 @@ class AR(tsbase.TimeSeriesModel):
         diffp = yp-mup[:,None]
 
         # get inv(Vp) Hamilton 5.3.7
-        Vpinv = self._presample_varcov(params, lagstart)
+        Vpinv = self._presample_varcov(params)
 
         diffpVpinv = np.dot(np.dot(diffp.T,Vpinv),diffp).item()
         ssr = sumofsq(Y.squeeze() -np.dot(X,params))
@@ -726,7 +726,7 @@ class ARResults(tsbase.TimeSeriesModelResults):
             meany = params[0]/(1-params[lagstart:].sum())
             pre_resid = model.endog[:p] - meany
             # get presample var-cov
-            Vpinv = model._presample_varcov(params, lagstart)
+            Vpinv = model._presample_varcov(params)
             diffpVpinv = np.dot(np.dot(pre_resid.T,Vpinv),pre_resid).item()
             ssr = sumofsq(self.resid[p:]) # in-sample ssr
 
