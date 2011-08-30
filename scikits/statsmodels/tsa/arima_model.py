@@ -11,9 +11,9 @@ from scikits.statsmodels.tsa.tsatools import (lagmat, add_trend,
         _ar_transparams, _ar_invtransparams, _ma_transparams,
         _ma_invtransparams)
 from scikits.statsmodels.tsa.ar_model import AR
-from scikits.statsmodels.sandbox.regression.numdiff import approx_fprime, \
-        approx_hess, approx_hess_cs
 from scikits.statsmodels.tsa.arima_process import arma2ma
+from scikits.statsmodels.sandbox.regression.numdiff import (approx_fprime,
+        approx_fprime_cs, approx_hess, approx_hess_cs)
 from scikits.statsmodels.tsa.kalmanf import KalmanFilter
 from scipy.stats import t, norm
 from scipy.signal import lfilter
@@ -105,10 +105,10 @@ class ARMA(LikelihoodModel):
         This is a numerical approximation.
         """
         loglike = self.loglike
-        if self.transparams:
-            params = self._invtransparams(params)
+        #if self.transparams:
+        #    params = self._invtransparams(params)
 #        return approx_fprime(params, loglike, epsilon=1e-5)
-        return approx_fprime_cs(params, loglike, epsilon=1e-5)
+        return approx_fprime_cs(params, loglike)
 
     def hessian(self, params):
         """
@@ -119,10 +119,13 @@ class ARMA(LikelihoodModel):
         This is a numerical approximation.
         """
         loglike = self.loglike
-        if self.transparams:
-            params = self._invtransparams(params)
-#        return approx_hess_cs(params, loglike, epsilon=1e-5)
-        return approx_hess(params, loglike, epsilon=1e-5)
+        #if self.transparams:
+        #    params = self._invtransparams(params)
+        if not fast_kalman or self.model.method == "css":
+            return approx_hess_cs(params, loglike, epsilon=1e-5)
+        else:
+            return approx_hess(params, self.model.loglike, epsilon=1e-3)[0]
+
 
     def _transparams(self, params):
         """
@@ -527,26 +530,19 @@ class ARMAResults(LikelihoodModelResults):
     @cache_readonly
     def bse(self):
         params = self.params
-        if not fast_kalman or self.model.method == "css":
-            if len(params) == 1: # can't take an inverse
-                return np.sqrt(-1./approx_hess_cs(params,
-                    self.model.loglike, epsilon=1e-5))
-            return np.sqrt(np.diag(-inv(approx_hess_cs(params,
-                self.model.loglike, epsilon=1e-5))))
-        else:
-            if len(params) == 1:
-                return np.sqrt(-1./approx_hess(params,
-                    self.model.loglike, epsilon=1e-3)[0])
-            return np.sqrt(np.diag(-inv(approx_hess(params,
-                self.model.loglike, epsilon=1e-3)[0])))
+        hess = self.model.hessian(params)
+        if len(params) == 1: # can't take an inverse
+            return np.sqrt(-1./hess)
+        return np.sqrt(np.diag(-inv(hess)))
 
     def cov_params(self): # add scale argument?
-        func = self.model.loglike
-        x0 = self.params
-        if not fast_kalman or self.model.method == "css":
-            return -inv(approx_hess_cs(x0, func))
-        else:
-            return -inv(approx_hess(x0, func, epsilon=1e-3)[0])
+        params = self.params
+        hess = self.model.hessian(params)
+        return -inv(hess)
+#        if not fast_kalman or self.model.method == "css":
+#            return -inv(approx_hess_cs(x0, func))
+#        else:
+#            return -inv(approx_hess(x0, func, epsilon=1e-3)[0])
 
     @cache_readonly
     def aic(self):
