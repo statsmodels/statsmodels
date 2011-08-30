@@ -136,8 +136,9 @@ def categorical(data, col=None, dictnames=False, drop=False, ):
             raise IndexError("col is None and the input array is not 1d")
         if isinstance(col, int):
             col = data.dtype.names[col]
-        if col is None and len(data.dtype.names) == 1:
+        if col is None and data.dtype.names and len(data.dtype.names) == 1:
             col = data.dtype.names[0]
+
         tmp_arr = np.unique(data[col])
 
         # if the cols are shape (#,) vs (#,1) need to add an axis and flip
