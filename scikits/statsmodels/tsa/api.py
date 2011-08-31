@@ -1,7 +1,7 @@
 from .ar_model import AR
 from .arima_model import ARMA
 import vector_ar as var
-from .vector_ar.var_model import VAR
+from .vector_ar.var_model import VAR, SVAR
 try:
     import pandas
     from .vector_ar.dynamic import DynamicVAR
