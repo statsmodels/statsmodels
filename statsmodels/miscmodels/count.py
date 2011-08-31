@@ -77,7 +77,7 @@ class NonlinearDeltaCov(object):
 
     def wald(self, value):
         m = self.expected()
-        v = self.cov()
+        v = np.atleast_2d(self.cov())
         df = np.size(m)
         diff = m - value
         lmstat = np.dot(np.dot(diff.T, np.linalg.inv(v)), diff)
@@ -259,12 +259,13 @@ if __name__ == '__main__':
     data_endog = np.random.poisson(np.exp(xbeta))
     #print data_endog
 
-    modp = MyPoisson(data_endog, data_exog)
+    modp = PoissonGMLE(data_endog, data_exog)
     resp = modp.fit()
     print resp.params
     print resp.bse
 
-    from statsmodels.discretemod import Poisson
+
+    from statsmodels.discrete.discrete_model import Poisson
     resdp = Poisson(data_endog, data_exog).fit()
     print '\ncompare with discretemod'
     print 'compare params'
