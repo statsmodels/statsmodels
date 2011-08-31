@@ -395,8 +395,6 @@ class AR(tsbase.TimeSeriesModel):
         Returns numerical gradient.
         """
         loglike = self.loglike
-#NOTE: always calculate at out of bounds params for estimation
-#TODO: allow for user-specified epsilon?
         return approx_fprime(params, loglike, epsilon=1e-8)
 
 
@@ -428,6 +426,22 @@ class AR(tsbase.TimeSeriesModel):
         return X
 
     def select_order(self, maxlag, ic):
+        """
+        Select the lag order according to the information criterion.
+
+        Parameters
+        ----------
+        maxlag : int
+            The highest lag length tried. See `AR.fit`.
+        ic : str {'aic','bic','hic','t-stat'}
+            Criterion used for selecting the optimal lag length.
+            See `AR.fit`.
+
+        Returns
+        -------
+        bestlag : int
+            Best lag according to IC.
+        """
         endog = self.endog
         trend = self.trend
 
@@ -607,13 +621,13 @@ class AR(tsbase.TimeSeriesModel):
                 params = self._transparams(params)
                 self.transparams = False # turn off now for other results
 
-# don't use yw, because we can't estimate the constant
-#        elif method == "yw":
-#            params, omega = yule_walker(endog, order=maxlag,
-#                    method="mle", demean=False)
-            # how to handle inference after Yule-Walker?
-#            self.params = params #TODO: don't attach here
-#            self.omega = omega
+        # don't use yw, because we can't estimate the constant
+        #elif method == "yw":
+        #    params, omega = yule_walker(endog, order=maxlag,
+        #            method="mle", demean=False)
+           # how to handle inference after Yule-Walker?
+        #    self.params = params #TODO: don't attach here
+        #    self.omega = omega
 
         pinv_exog = np.linalg.pinv(X)
         normalized_cov_params = np.dot(pinv_exog, pinv_exog.T)
@@ -748,33 +762,33 @@ class ARResults(tsbase.TimeSeriesModelResults):
     @cache_readonly
     def aic(self):
         #JP: this is based on loglike with dropped constant terms ?
-# Lutkepohl
-#        return np.log(self.sigma2) + 1./self.model.nobs * self.k_ar
-# Include constant as estimated free parameter and double the loss
+        # Lutkepohl
+        #return np.log(self.sigma2) + 1./self.model.nobs * self.k_ar
+        # Include constant as estimated free parameter and double the loss
         return np.log(self.sigma2) + 2 * (1 + self.k_ar)/self.nobs
-# Stata defintion
-#        nobs = self.nobs
-#        return -2 * self.llf/nobs + 2 * (self.k_ar+self.k_trend)/nobs
+        # Stata defintion
+        #nobs = self.nobs
+        #return -2 * self.llf/nobs + 2 * (self.k_ar+self.k_trend)/nobs
 
     @cache_readonly
     def hqic(self):
         nobs = self.nobs
-# Lutkepohl
-#        return np.log(self.sigma2)+ 2 * np.log(np.log(nobs))/nobs * self.k_ar
-# R uses all estimated parameters rather than just lags
+        # Lutkepohl
+        # return np.log(self.sigma2)+ 2 * np.log(np.log(nobs))/nobs * self.k_ar
+        # R uses all estimated parameters rather than just lags
         return np.log(self.sigma2) + 2 * np.log(np.log(nobs))/nobs * \
                 (1 + self.k_ar)
-# Stata
-#        nobs = self.nobs
-#        return -2 * self.llf/nobs + 2 * np.log(np.log(nobs))/nobs * \
-#                (self.k_ar + self.k_trend)
+        # Stata
+        #nobs = self.nobs
+        #return -2 * self.llf/nobs + 2 * np.log(np.log(nobs))/nobs * \
+        #        (self.k_ar + self.k_trend)
 
     @cache_readonly
     def fpe(self):
         nobs = self.nobs
         k_ar = self.k_ar
         k_trend = self.k_trend
-#Lutkepohl
+        #Lutkepohl
         return ((nobs+k_ar+k_trend)/(nobs-k_ar-k_trend))*self.sigma2
 
     @cache_readonly
@@ -784,13 +798,13 @@ class ARResults(tsbase.TimeSeriesModelResults):
     @cache_readonly
     def bic(self):
         nobs = self.nobs
-# Lutkepohl
-#        return np.log(self.sigma2) + np.log(nobs)/nobs * self.k_ar
-# Include constant as est. free parameter
+        # Lutkepohl
+        #return np.log(self.sigma2) + np.log(nobs)/nobs * self.k_ar
+        # Include constant as est. free parameter
         return np.log(self.sigma2) + (1 + self.k_ar) * np.log(nobs)/nobs
-# Stata
-#        return -2 * self.llf/nobs + np.log(nobs)/nobs * (self.k_ar + \
-#                self.k_trend)
+        # Stata
+        # return -2 * self.llf/nobs + np.log(nobs)/nobs * (self.k_ar + \
+        #       self.k_trend)
 
     @cache_readonly
     def resid(self):
@@ -802,9 +816,9 @@ class ARResults(tsbase.TimeSeriesModelResults):
         else:
             return model.endog.squeeze() - self.fittedvalues
 
-#    def ssr(self):
-#        resid = self.resid
-#        return np.dot(resid, resid)
+    #def ssr(self):
+    #    resid = self.resid
+    #    return np.dot(resid, resid)
 
     @cache_readonly
     def roots(self):
