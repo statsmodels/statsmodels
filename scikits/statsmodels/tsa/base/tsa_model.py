@@ -162,9 +162,9 @@ class TimeSeriesModel(base.LikelihoodModel):
 
         else:
             nobs = len(self.endog)
-            if end > len(nobs):
-                new_end = nobs - 1
-                out_of_sample = end - new_end # nobs
+            if end > nobs:
+                out_of_sample = end - nobs
+                end = nobs
 
         return end, out_of_sample
 
