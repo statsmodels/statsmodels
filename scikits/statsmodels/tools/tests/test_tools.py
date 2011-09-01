@@ -10,6 +10,28 @@ from scikits.statsmodels.tools import tools
 
 class TestTools(TestCase):
 
+    def test_add_constant_list(self):
+        x = range(1,5)
+        x = tools.add_constant(x, prepend=True)
+        y = np.asarray([[1,1,1,1],[1,2,3,4.]]).T
+        assert_equal(x, y)
+
+    def test_add_constant_1d(self):
+        x = np.arange(1,5)
+        x = tools.add_constant(x, prepend=True)
+        y = np.asarray([[1,1,1,1],[1,2,3,4.]]).T
+        assert_equal(x, y)
+
+    def test_add_constant_has_constant1d(self):
+        x = np.ones(5)
+        x = tools.add_constant(x)
+        assert_equal(x, np.ones(5))
+
+    def test_add_constant_has_constant2d(self):
+        x = np.asarray([[1,1,1,1],[1,2,3,4.]])
+        y = tools.add_constant(x)
+        assert_equal(x,y)
+
     def test_recipr(self):
         X = np.array([[2,1],[-1,0]])
         Y = tools.recipr(X)
