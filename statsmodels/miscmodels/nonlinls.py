@@ -158,12 +158,12 @@ class NonlinearLS(Model):  #or subclass a model
         else:
             weights = np.sqrt(self.weights)
             if X.ndim == 1:
-                return X * np.sqrt(weights)
+                return X * weights
             elif X.ndim == 2:
-                if np.shape(self.weights) == ():
-                    whitened = np.sqrt(weights)*X
+                if np.shape(weights) == ():
+                    whitened = weights*X
                 else:
-                    whitened = np.sqrt(weights)[:,None]*X
+                    whitened = weights[:,None]*X
                 return whitened
 
     def predict(self, exog, params=None):
