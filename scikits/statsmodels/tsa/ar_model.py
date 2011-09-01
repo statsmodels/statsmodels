@@ -105,7 +105,7 @@ class AR(tsbase.TimeSeriesModel):
             alpha = dot(T_mat, alpha) + dot(K,v_mat)
             L = T_mat - dot(K,Z_mat)
             P = dot(dot(T_mat, P), L.T) + dot(R_mat, R_mat.T)
-#            P[0,0] += 1 # for MA part, R_mat.R_mat.T above
+    #            P[0,0] += 1 # for MA part, R_mat.R_mat.T above
             predictedvalues[i+1-start] = dot(Z_mat,alpha)
 
     def _get_predict_start(self, start):
@@ -115,6 +115,13 @@ class AR(tsbase.TimeSeriesModel):
             else: # can't do presample fit for cmle
                 start = self.k_ar
             return start
+
+        if self.method == 'cmle':
+            k_ar = self.k_ar
+            if start > len(self.endog):
+                raise ValueError("Start must be <= len(endog)")
+            if start < k_ar:
+                raise ValueError("Start must be >= k_ar")
 
         return super(AR, self)._get_predict_start(start)
 
@@ -165,8 +172,10 @@ class AR(tsbase.TimeSeriesModel):
         start = self._get_predict_start(start) # will be an index of a date
         end, out_of_sample = self._get_predict_end(end)
 
-        if end <= start:
+        if end < start:
             raise ValueError("end is before start")
+        if end == start + out_of_sample:
+            return np.array([])
 
         k_ar = self.k_ar
         y = self.endog[:k_ar]
@@ -176,7 +185,7 @@ class AR(tsbase.TimeSeriesModel):
         method = self.method
 
 
-        predictedvalues = np.zeros(end-start + max(out_of_sample,1))
+        predictedvalues = np.zeros(end-start + out_of_sample)
 
         # fit pre-sample
         if method == 'mle': # use Kalman Filter to get initial values
@@ -185,7 +194,7 @@ class AR(tsbase.TimeSeriesModel):
 
             # modifies predictedvalues in place
             if start < k_ar:
-                self._presample_fit(params, start, k_ar, min(k_ar-1, end),
+                self._presample_fit(params, start, k_ar, min(k_ar-1, end-1),
                         y-mu, predictedvalues)
                 predictedvalues[:k_ar-start] += mu
 
@@ -197,13 +206,9 @@ class AR(tsbase.TimeSeriesModel):
         fittedvalues = dot(self.X, params)
 
         pv_start = max(k_ar - start, 0)
-        #TODO: better way to do pv_end?
-        adj = 1
-        if out_of_sample:
-            adj = 0
-        pv_end = min(len(predictedvalues), end+adj)
         fv_start = max(start - k_ar, 0)
-        fv_end = end - k_ar + 1
+        pv_end = min(len(predictedvalues), len(fittedvalues) - fv_start)
+        fv_end = min(len(predictedvalues) + fv_start, len(fittedvalues))
         predictedvalues[pv_start:pv_end] = fittedvalues[fv_start:fv_end]
 
         if not out_of_sample:
@@ -557,6 +562,7 @@ class AR(tsbase.TimeSeriesModel):
             arfit = OLS(Y,X).fit()
             params = arfit.params
             self.nobs = nobs - k_ar
+            self.sigma2 = arfit.ssr/arfit.nobs #needed for predict fcasterr
         if method == "mle":
             self.nobs = nobs
             if not start_params:

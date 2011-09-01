@@ -91,21 +91,21 @@ class ARResultsOLS(object):
             # n=-1, start=100
             self.FVOLSnneg1start100 = fv[100-9:]
             # n = 200, start = 0
-            self.FVOLSn200start0 = fv[:200]
+            self.FVOLSn200start0 = fv[:191]
             # n = 200, start = 200
             self.FVOLSn200start200 = np.hstack((fv[200-9:],pv[:100-9]))
             # n = 200, start = -109 use above
             self.FVOLSn200startneg109 = self.FVOLSn200start200
             # n = 100, start = 325, post-sample forecasting
-            self.FVOLSn100start325 = pv[16:]
+            self.FVOLSn100start325 = pv
             # n = 301, start = 9
             self.FVOLSn301start9 = np.hstack((fv,pv[0]))
             # n = 301, start = 0
             self.FVOLSn301start0 = self.FVOLSn301start9
             # n = 4, start = 312
-            self.FVOLSn4start312 = pv[3:7]
+            self.FVOLSn4start312 = pv[:7]
             # n = 15, start = 312
-            self.FVOLSn15start312 = pv[3:18]
+            self.FVOLSn15start312 = pv[:18]
 
 
         elif not constant:
@@ -146,21 +146,21 @@ class ARResultsOLS(object):
             # n=-1, start=100
             self.FVOLSnneg1start100 = fv[100-9:]
             # n = 200, start = 0
-            self.FVOLSn200start0 = fv[:200]
+            self.FVOLSn200start0 = fv[:191]
             # n = 200, start = 200
             self.FVOLSn200start200 = np.hstack((fv[200-9:],pv[:100-9]))
             # n = 200, start = -109 use above
             self.FVOLSn200startneg109 = self.FVOLSn200start200
             # n = 100, start = 325, post-sample forecasting
-            self.FVOLSn100start325 = pv[16:]
+            self.FVOLSn100start325 = pv
             # n = 301, start = 9
             self.FVOLSn301start9 = np.hstack((fv,pv[0]))
             # n = 301, start = 0
             self.FVOLSn301start0 = self.FVOLSn301start9
             # n = 4, start = 312
-            self.FVOLSn4start312 = pv[3:7]
+            self.FVOLSn4start312 = pv[:7]
             # n = 15, start = 312
-            self.FVOLSn15start312 = pv[3:18]
+            self.FVOLSn15start312 = pv[:18]
 
 
 class ARResultsMLE(object):
