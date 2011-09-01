@@ -758,10 +758,6 @@ class ARResults(tsbase.TimeSeriesModelResults):
         return ((nobs+k_ar+k_trend)/(nobs-k_ar-k_trend))*self.sigma2
 
     @cache_readonly
-    def llf(self):
-        return self.model.loglike(self.params)
-
-    @cache_readonly
     def bic(self):
         nobs = self.nobs
         # Lutkepohl

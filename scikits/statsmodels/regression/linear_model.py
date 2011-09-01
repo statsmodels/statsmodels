@@ -962,10 +962,6 @@ class RegressionResults(base.LikelihoodModelResults):
         return stats.t.sf(np.abs(self.tvalues), self.df_resid)*2
 
     @cache_readonly
-    def llf(self):
-        return self.model.loglike(self.params)
-
-    @cache_readonly
     def aic(self):
         return -2 * self.llf + 2 * (self.df_model + 1)
 
