@@ -26,6 +26,7 @@ from scikits.statsmodels.tsa.vector_ar import util
 __all__ = ['AR']
 
 
+
 class AR(tsbase.TimeSeriesModel):
     """
     Autoregressive AR(p) Model
@@ -37,8 +38,8 @@ class AR(tsbase.TimeSeriesModel):
     date : array-like
         Dates of the endogenous variable.
     """
-    def __init__(self, endog, dates=None):
-        super(AR, self).__init__(endog, None, dates)
+    def __init__(self, endog, dates=None, freq=None):
+        super(AR, self).__init__(endog, None, dates, freq)
         endog = self.endog # original might not have been an ndarray
         if endog.ndim == 1:
             endog = endog[:,None]
@@ -73,7 +74,7 @@ class AR(tsbase.TimeSeriesModel):
         newparams[k:k+p] = _ar_invtransparams(start_params[k:k+p].copy())
         return newparams
 
-    def _presample_fit(self, params, start, p, y, predictedvalues):
+    def _presample_fit(self, params, start, p, end, y, predictedvalues):
         """
         Return the pre-sample predicted values using the Kalman Filter
 
@@ -95,7 +96,7 @@ class AR(tsbase.TimeSeriesModel):
         Q_0 = Q_0.reshape(p,p, order='F') #TODO: order might need to be p+k
         P = Q_0
         Z_mat = KalmanFilter.Z(p)
-        for i in xrange(start,p): #iterate p-1 times to fit presample
+        for i in xrange(start,end): #iterate p-1 times to fit presample
             v_mat = y[i] - dot(Z_mat,alpha)
             F_mat = dot(dot(Z_mat, P), Z_mat.T)
             Finv = 1./F_mat # inv. always scalar
@@ -106,10 +107,19 @@ class AR(tsbase.TimeSeriesModel):
             P = dot(dot(T_mat, P), L.T) + dot(R_mat, R_mat.T)
 #            P[0,0] += 1 # for MA part, R_mat.R_mat.T above
             predictedvalues[i+1-start] = dot(Z_mat,alpha)
-        return predictedvalues
 
-    def predict(self, params, n=-1, start=0, method='dynamic', resid=False,
-            confint=False):
+    def _get_predict_start(self, start):
+        if start is None:
+            if self.method == 'mle':
+                start = 0
+            else: # can't do presample fit for cmle
+                start = self.k_ar
+            return start
+
+        return super(AR, self)._get_predict_start(start)
+
+
+    def predict(self, start=None, end=None, method='dynamic', confint=False):
         """
         Returns in-sample prediction or forecasts.
 
@@ -130,8 +140,6 @@ class AR(tsbase.TimeSeriesModel):
             If method is 'dynamic', then fitted values are used in place of
             observed 'endog' to make forecasts.  If 'static', observed 'endog'
             are used.
-        resid : bool
-            Whether or not to return the residuals.
         confint : bool, float
             Whether to return confidence intervals.  If `confint` == True,
             95 % confidence intervals are returned.  Else if `confint` is a
@@ -151,121 +159,73 @@ class AR(tsbase.TimeSeriesModel):
         values. The exact initial Kalman Filter is used. See Durbin and Koopman
         in the references for more information.
         """
-        if n == 0 or (n==-1 and start==-1):
-            return np.array([])
+        if self._results is None:
+            raise ValueError("You must fit the model first")
 
-        y = self.endog.copy()
+        start = self._get_predict_start(start) # will be an index of a date
+        end, out_of_sample = self._get_predict_end(end)
+
+        if end <= start:
+            raise ValueError("end is before start")
+
+        k_ar = self.k_ar
+        y = self.endog[:k_ar]
         nobs = int(self.endog.shape[0])
-
-        if start < 0:
-            start = nobs + start # convert negative indexing
-
-        p = self.k_ar
-        k = self.k_trend
+        params = self._results.params
+        k_trend = self.k_trend
         method = self.method
-        if method != 'mle':
-            if start == 0:
-                start = p # can't do presample fit for != 'mle'
 
-        if n == -1:
-            if start != -1 and start < nobs:
-                predictedvalues = np.zeros((nobs-start))
-                n = nobs-start
-            else:
-                return np.array([])
-        else:
-            predictedvalues = zeros((n))
 
-        mu = 0 # overwritten for 'mle' with constant or exog
+        predictedvalues = np.zeros(end-start + max(out_of_sample,1))
+
+        # fit pre-sample
         if method == 'mle': # use Kalman Filter to get initial values
-            if k:
-                mu = params[0]/(1-np.sum(params[k:]))
-                y -= mu
-            predictedvalues = self._presample_fit(params, start, p, y,
-                    predictedvalues)
+            if k_trend:
+                mu = params[0]/(1-np.sum(params[k_trend:]))
 
-        if start < p and (n > p - start or n == -1):
-            if n == -1:
-                predictedvalues[p-start:] = dot(self.X, params)
-            elif n-(p-start) <= nobs-p:
-                predictedvalues[p-start:] = dot(self.X,
-                        params)[:nobs-(p-start)] #start:nobs-p?
-            else:
-                predictedvalues[p-start:nobs-(p-start)] = dot(self.X,
-                        params) # maybe p-start) - 1?
-            predictedvalues[start:p] += mu # does nothing if no constant
-        elif start <= nobs:
-            if n <= nobs-start:
-                predictedvalues[:] = dot(self.X,
-#                        params)[start:n+start]
-                        params)[start-p:n+start-p]
-            else: # right now this handles when start == p only?
-                predictedvalues[:nobs-start] = dot(self.X,
-                        params)[start-p:]
-        else:
-#            predictedvalues[:nobs-start] - dot(self.X,params)[p:]
-            pass
+            # modifies predictedvalues in place
+            if start < k_ar:
+                self._presample_fit(params, start, k_ar, min(k_ar-1, end),
+                        y-mu, predictedvalues)
+                predictedvalues[:k_ar-start] += mu
 
-        if start + n > nobs:
-            endog = self.endog
-            if start < nobs:
-                if n-(nobs-start) < p:
-                    endrange = n
-                else:
-                    endrange = nobs-start+p
-                for i in range(nobs-start,endrange):
-                # mixture of static/dynamic
-                    predictedvalues[i] = np.sum(np.r_[[1]*k,
-                        predictedvalues[nobs-start:i][::-1],
-                        atleast_1d(endog[-p+i-nobs+start:][::-1].squeeze())] *\
-                                params)
-                # dynamic forecasts
-                for i in range(nobs-start+p,n):
-                    predictedvalues[i] = np.sum(np.r_[[1]*k,
-                        predictedvalues[i-p:i][::-1]] * params)
-            else: # start > nobs
-# if start < nobs + p?
-                tmp = np.zeros((start-nobs)) # still calc interim values
-# this is only the range for
-                if start-nobs < p:
-                    endrange = start-nobs
-                else:
-                    endrange = p
-                for i in range(endrange):
-                    # mixed static/dynamic
-                    tmp[i] = np.sum(np.r_[[1]*k, tmp[:i][::-1],
-                            atleast_1d(endog[-p+i:][::-1].squeeze())] * params)
-                for i in range(p,start-nobs):
-                    tmp[i] = np.sum(np.r_[[1]*k, tmp[i-p:i][::-1]] * params)
-                if start - nobs > p:
-                    for i in range(p):
-                        # mixed tmp/actual
-                        predictedvalues[i] = np.sum(np.r_[[1]*k,
-                            predictedvalues[:i][::-1],
-                            atleast_1d(tmp[-p+i:][::-1].squeeze())] * params)
-                else:
-                    endtmp = len(tmp)
-                    if n < p:
-                        endrange = n
-                    else:
-                        endrange = p-endtmp
-                    for i in range(endrange):
-                        # mixed endog/tmp/actual
-                        predictedvalues[i] = np.sum(np.r_[[1]*k,
-                            predictedvalues[:i][::-1],
-                            atleast_1d(tmp[-p+i:][::-1].squeeze()),
-                            atleast_1d(endog[-\
-                            (p-i-endtmp):][::-1].squeeze())] * params)
-                    if n > endrange:
-                        for i in range(endrange,p):
-                            # mixed tmp/actual
-                            predictedvalues[i] = np.sum(np.r_[[1]*k,
-                                predictedvalues[:i][::-1],
-                                atleast_1d(tmp[-p+i:][::-1].squeeze())] * \
-                                    params)
-                for i in range(p,n):
-                    predictedvalues[i] = np.sum(np.r_[[1]*k,
-                        predictedvalues[i-p:i][::-1]] * params)
+        if end < k_ar:
+            return predictedvalues
+
+        # fit in-sample
+        # just do the whole thing and then truncate
+        fittedvalues = dot(self.X, params)
+
+        pv_start = max(k_ar - start, 0)
+        #TODO: better way to do pv_end?
+        adj = 1
+        if out_of_sample:
+            adj = 0
+        pv_end = min(len(predictedvalues), end+adj)
+        fv_start = max(start - k_ar, 0)
+        fv_end = end - k_ar + 1
+        predictedvalues[pv_start:pv_end] = fittedvalues[fv_start:fv_end]
+
+        if not out_of_sample:
+            return predictedvalues
+
+        # fit out of sample
+        endog = np.r_[self.endog[-k_ar:], [[0]]*out_of_sample]
+        params = params.copy()
+        mu = params[:k_trend] or 0
+        params = params[k_trend:][::-1]
+
+
+        for i in range(out_of_sample):
+            fcast = mu + np.dot(params, endog[i:i+k_ar])
+            predictedvalues[-out_of_sample+i] = fcast
+            endog[i+k_ar] = fcast
+
+        from scikits.statsmodels.tsa.arima_process import arma2ma
+        ma_rep = arma2ma(np.r_[1,-params[::-1]], [1], out_of_sample)
+        fcasterr = np.sqrt(self.sigma2 * np.cumsum(ma_rep**2))
+        #TODO: return this too
+
         return predictedvalues
 
     def _presample_varcov(self, params):
@@ -885,9 +845,24 @@ if __name__ == "__main__":
 
     ## Try with a pandas series
     import pandas
+    import scikits.timeseries as ts
+    d1 = ts.Date(year=1700, freq='A')
+    #NOTE: have to have yearBegin offset for annual data until parser rewrite
+    #should this be up to the user, or should it be done in TSM init?
+    ts_dr = ts.date_array(start_date=d1, length=len(sunspots.endog))
+    pandas_dr = pandas.DateRange(start=d1.datetime,
+                    periods=len(sunspots.endog), timeRule='A@DEC')
+    pandas_dr = pandas_dr.shift(-1, pandas.datetools.yearBegin)
+
+
+
     dates = np.arange(1700,1700+len(sunspots.endog))
-    sunspots = pandas.TimeSeries(sunspots.endog, index=dates)
-    mod = AR(sunspots)
+    dates = ts.date_array(dates, freq='A')
+    #sunspots = pandas.TimeSeries(sunspots.endog, index=dates)
+    sunspots = pandas.TimeSeries(sunspots.endog, index=pandas_dr)
+
+    mod = AR(sunspots, freq='A')
+    res = mod.fit(method='mle', maxlag=9)
 
 
 # some data for an example in Box Jenkins
