@@ -1252,7 +1252,8 @@ class LikelihoodResultsWrapper(wrap.ResultsWrapper):
 
     _wrap_attrs = _attrs
     _wrap_methods = {
-        'cov_params' : 'cov'
+        'cov_params' : 'cov',
+        'conf_int' : 'columns'
     }
 
 wrap.populate_wrapper(LikelihoodResultsWrapper,

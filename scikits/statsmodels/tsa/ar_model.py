@@ -795,8 +795,7 @@ class ARResultsWrapper(wrap.ResultsWrapper):
     _attrs = {}
     _wrap_attrs = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_attrs,
                                     _attrs)
-    #_methods = {'conf_int' : 'columns'} #TODO: can't handle something like this yet
-    _methods = {'conf_int' : 'columns'}
+    _methods = {}
     _wrap_methods = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_methods,
                                      _methods)
 wrap.populate_wrapper(ARResultsWrapper, ARResults)

@@ -15,12 +15,11 @@ class ModelData(object):
         self._orig_endog = endog
         self._orig_exog = exog
         (self.endog, self.exog, self.ynames,
-         self.xnames, self.row_labels) = self._convert_endog_exog()
+         self.xnames, self.row_labels) = self._convert_endog_exog(endog,
+                 exog)
         self._check_integrity()
 
-    def _convert_endog_exog(self):
-        endog = self._orig_endog
-        exog = self._orig_exog
+    def _convert_endog_exog(self, endog, exog):
 
         # for consistent outputs if endog is (n,1)
         yarr = self._get_yarr(endog)
@@ -78,6 +77,8 @@ class ModelData(object):
             return self.attach_rows(obj)
         elif how == 'cov':
             return self.attach_cov(obj)
+        elif how == 'dates':
+            return self.attach_dates(obj)
         else:
             return obj
 
@@ -90,6 +91,9 @@ class ModelData(object):
     def attach_rows(self, result):
         return result
 
+    def attach_date(self, result):
+        return result
+
 class PandasData(ModelData):
     """
     Data handling class which knows how to reattach pandas metadata to model
@@ -97,13 +101,19 @@ class PandasData(ModelData):
     """
 
     def attach_columns(self, result):
-        return Series(result, index=self.xnames)
+        if result.squeeze().ndim == 1:
+            return Series(result, index=self.xnames)
+        else:
+            return DataFrame(result, index=self.xnames)
 
     def attach_cov(self, result):
         return DataFrame(result, index=self.xnames, columns=self.xnames)
 
     def attach_rows(self, result):
         return Series(result, index=self.row_labels)
+
+    def attach_dates(self, result):
+        return TimeSeries(result, index=self.predict_dates)
 
 
 _la = None
@@ -143,13 +153,20 @@ class LarryData(ModelData):
         return None
 
     def attach_columns(self, result):
-        return _la.larry(result, [self.xnames])
+        if result.ndim == 1:
+            return _la.larry(result, [self.xnames])
+        else:
+            shape = results.shape
+            return _la.larray(result, [self.xnames, range(shape[1])])
 
     def attach_cov(self, result):
         return _la.larry(result, [self.xnames, self.xnames])
 
     def attach_rows(self, result):
         return _la.larry(result, [self.row_labels])
+
+    def attach_dates(self, result):
+        return _la.larray(result, [self.predict_dates])
 
 def _get_row_labels(exog):
     try:
@@ -211,5 +228,8 @@ def _is_using_pandas(endog, exog):
     return (isinstance(endog, klasses) or isinstance(exog, klasses))
 
 def _is_using_larry(endog, exog):
-    import la
-    return isinstance(endog, la.larry) or isinstance(exog, la.larry)
+    try:
+        import la
+        return isinstance(endog, la.larry) or isinstance(exog, la.larry)
+    except ImportError:
+        return False
