@@ -127,6 +127,7 @@ class NonlinearLS(Model):  #or subclass a model
     def __init__(self, endog=None, exog=None, weights=None, sigma=None):
         self.endog = endog
         self.exog = exog
+        self.nobs = len(endog) #check
         if not sigma is None:
             sigma = np.asarray(sigma)
             if sigma.ndim < 2:
@@ -135,9 +136,9 @@ class NonlinearLS(Model):  #or subclass a model
             else:
                 raise ValueError('correlated errors are not handled yet')
         else:
-            self.weights = None
+            self.weights = weights
 
-    #copied from WLS
+    #copied from WLS, for univariate y the argument X is always 1d
     def whiten(self, X):
         """
         Whitener for WLS model, multiplies each column by sqrt(self.weights)
@@ -170,6 +171,39 @@ class NonlinearLS(Model):  #or subclass a model
         #copied from GLS, Model has different signature
         return self._predict(params)
 
+    #from WLS
+    def loglike_(self, params):
+        nobs2 = self.nobs / 2.0
+        #SSR = ss(self.wendog - np.dot(self.wexog,params))
+        SSR = self.errorsumsquares(params)
+        llf = -np.log(SSR) * nobs2      # concentrated likelihood
+        llf -= (1+np.log(np.pi/nobs2))*nobs2  # with constant
+##        if not self.weights is None:    #FIXME: is this a robust-enough check?
+##            llf -= .5*np.log(np.multiply.reduce(1/self.weights)) # with weights
+        return llf
+
+    #Greene p.495
+    def loglike(self, params):
+        '''concentrated log-likelihood
+        '''
+        nobs2 = self.nobs / 2.0
+        #SSR = ss(self.wendog - np.dot(self.wexog,params))
+        SSR = self.errorsumsquares(params)
+        llf = -(1 + np.log(2*np.pi) + np.log(SSR/self.nobs)) * self.nobs * 0.5
+        return llf
+
+    def loglike_bak(self, params):
+        from scipy import stats
+        if self.weights is None:
+            weights = 1.
+        else:
+            weights = np.sqrt(self.weights)
+        llf = stats.norm.logpdf(self.geterrors(params)/np.sqrt(self._results.scale))
+        #I'm cheating here, scale is not known during estimation
+        #doesn't work for MLE
+        #I just need it for result statistics
+        #use concentrated likelihood instead
+        return llf.sum()
 
     def _predict(self, params):
         pass
@@ -185,8 +219,11 @@ class NonlinearLS(Model):  #or subclass a model
                 weights = np.sqrt(self.weights)
         return weights * (self.endog - self._predict(params))
 
-    def errorsumsquares(self, params):
-        return (self.geterrors(params)**2).sum()
+    def errorsumsquares(self, params, weights=None):
+        '''ess
+
+        '''
+        return (self.geterrors(params, weights=None)**2).sum()
 
 
     def fit(self, start_value=None, nparams=None, **kw):
@@ -226,8 +263,9 @@ class NonlinearLS(Model):  #or subclass a model
         else:
             pcov = None
 
-        self.df_resid = len(ydata)-len(p0)
-        self.df_model = len(p0)
+        #WLS uses float
+        self.df_resid = len(ydata)-len(p0) * 1.
+        self.df_model = len(p0) - 1.  #TODO:subtract, constant remove, just for testing
         fitres = Results()
         fitres.params = popt
         fitres.pcov = pcov
@@ -313,6 +351,8 @@ class Myfunc(NonlinearLS):
 ##        return a*np.exp(-b*x) + c
 
     def _predict(self, params):
+        '''this needs exog for predict with new values, unfortunately
+        '''
         x = self.exog
         a, b, c = params
         return a*np.exp(-b*x) + c
