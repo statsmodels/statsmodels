@@ -173,3 +173,4 @@ Prefix commit messages in the master branch of the main shared repository with t
     CMP: Compiled code issues, regenerating C code with Cython, etc.
     REL: Release related commit
     TST: Change to a test, adding a test. Only used if not directly related to a bug.
+    REF: Refactoring changes
