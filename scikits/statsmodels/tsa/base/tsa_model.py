@@ -1,5 +1,6 @@
 import scikits.statsmodels.base.model as base
 import scikits.statsmodels.base.wrapper as wrap
+from scikits.statsmodels.tsa.base.tsa_data import tsa_handle_data
 from numpy import arange
 from pandas import Index
 import datetime
@@ -61,6 +62,8 @@ class TimeSeriesModel(base.LikelihoodModel):
     def __init__(self, endog, exog=None, dates=None, freq=None):
         super(TimeSeriesModel, self).__init__(endog, exog)
         self._init_dates(dates, freq)
+        self._data.dates = dates
+        self._data.freq = freq
 
     def _init_dates(self, dates, freq):
         if dates is None:
@@ -72,8 +75,8 @@ class TimeSeriesModel(base.LikelihoodModel):
                 raise ValueError("Currently, you need to give freq if dates "
                         "are used.")
             dates = Index(dates)
-        self.dates = dates
-        self.freq = _check_freq(freq) #TODO: drop if can get info from dates
+        self._data.dates = dates
+        self._data.freq = _check_freq(freq) #TODO: drop if can get info from dates
         #TODO: still gonna need some more sophisticated handling here
 
 
@@ -110,7 +113,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         Start can be a string, see scikits.timeseries.parser.DateTimeFromString
         or an integer if dates is None.
         """
-        dates = self.dates
+        dates = self._data.dates
         if dates is not None:
             if not isinstance(start, str):
                 raise ValueError("start should be a string if dates is not "
@@ -141,7 +144,7 @@ class TimeSeriesModel(base.LikelihoodModel):
             end = len(self.endog)
             return end, out_of_sample
 
-        dates = self.dates
+        dates = self._data.dates
         if dates is not None:
             if not isinstance(end, str):
                 raise ValueError("end should be a string if dates is not "
@@ -154,7 +157,7 @@ class TimeSeriesModel(base.LikelihoodModel):
             except KeyError as err: # end is greater than dates[-1]...probably
                 if end > len(self.endog):
                     end = len(self.endog)
-                    freq = self.freq
+                    freq = self._data.freq
                     out_of_sample = _idx_from_dates(dates[-1], dtend,
                                             freq)
                 else:
@@ -169,12 +172,9 @@ class TimeSeriesModel(base.LikelihoodModel):
         return end, out_of_sample
 
 
-
-#NOTE: this is just a stub for now, overwrite what we need to higher up
-# and bring methods from child classes up as well.
 class TimeSeriesModelResults(base.LikelihoodModelResults):
     def __init__(self, model, params, normalized_cov_params, scale=1.):
-        self.dates = model.dates
+        self._data = model._data
         super(TimeSeriesModelResults,
                 self).__init__(model, params, normalized_cov_params, scale)
 
@@ -182,7 +182,7 @@ class TimeSeriesResultsWrapper(wrap.ResultsWrapper):
     _attrs = {}
     _wrap_attrs = wrap.union_dicts(base.LikelihoodResultsWrapper._wrap_attrs,
                                     _attrs)
-    _methods = {}
+    _methods = {'predict' : 'dates'}
     _wrap_methods = wrap.union_dicts(base.LikelihoodResultsWrapper._wrap_methods,
                                      _methods)
 wrap.populate_wrapper(TimeSeriesResultsWrapper,
