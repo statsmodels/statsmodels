@@ -4,8 +4,8 @@ from scikits.statsmodels.tools.decorators import (cache_readonly,
 from scipy import optimize
 from numpy import dot, identity, kron, log, zeros, pi, exp, eye, abs, empty
 from numpy.linalg import inv, pinv
-from scikits.statsmodels.base.model import (LikelihoodModel,
-        LikelihoodModelResults, GenericLikelihoodModel)
+import scikits.statsmodels.base.model as base
+import scikits.statsmodels.tsa.base.tsa_model as tsbase
 from scikits.statsmodels.regression.linear_model import yule_walker, GLS
 from scikits.statsmodels.tsa.tsatools import (lagmat, add_trend,
         _ar_transparams, _ar_invtransparams, _ma_transparams,
@@ -23,7 +23,7 @@ try:
 except:
     fast_kalman = 0
 
-class ARMA(LikelihoodModel):
+class ARMA(tsbase.TimeSeriesModel):
     """
     Autoregressive Moving Average ARMA(p,q) Model
 
@@ -107,7 +107,7 @@ class ARMA(LikelihoodModel):
         loglike = self.loglike
         #if self.transparams:
         #    params = self._invtransparams(params)
-#        return approx_fprime(params, loglike, epsilon=1e-5)
+        #return approx_fprime(params, loglike, epsilon=1e-5)
         return approx_fprime_cs(params, loglike)
 
     def hessian(self, params):
@@ -121,10 +121,10 @@ class ARMA(LikelihoodModel):
         loglike = self.loglike
         #if self.transparams:
         #    params = self._invtransparams(params)
-        if not fast_kalman or self.model.method == "css":
+        if not fast_kalman or self.method == "css":
             return approx_hess_cs(params, loglike, epsilon=1e-5)
         else:
-            return approx_hess(params, self.model.loglike, epsilon=1e-3)[0]
+            return approx_hess(params, self.loglike, epsilon=1e-3)[0]
 
 
     def _transparams(self, params):
@@ -169,6 +169,78 @@ class ARMA(LikelihoodModel):
         if k_ma != 0:
             newparams[k+k_ar:k+k_ar+k_ma] = _ma_invtransparams(macoefs)
         return newparams
+
+    def _get_predict_start(self, start):
+        # do some defaults
+        if start is None:
+            if 'mle' in self.method:
+                start = 0
+            else:
+                start = self.k_ar
+
+        if 'mle' not in self.method:
+            if start < self.k_ar:
+                raise ValueError("Start must be >= k_ar")
+
+        return super(ARMA, self)._get_predict_start(start)
+
+    def geterrors(self, start=None, end=None):
+        self._check_is_fit()
+
+        #start = self._get_predict_start(start) # will be an index of a date
+        #end, out_of_sample = self._get_predict_end(end)
+
+        params = self._results.params
+
+
+        if 'mle' in self.method:
+            (y, k, nobs, k_ar, k_ma, k_lags, newparams, Z_mat, m, R_mat,
+            T_mat, paramsdtype) = KalmanFilter._init_kalman_state(params, self)
+            errors = KalmanFilter.geterrors(y,k,k_ar,k_ma, k_lags, nobs,
+                    Z_mat, m, R_mat, T_mat, paramsdtype)[0]
+        else:
+            y = self.endog.copy()
+            k = self.k_exog + self.k_trend
+            if k > 0:
+                y -= dot(self.exog, params[:k])
+
+            k_ar = self.k_ar
+            k_ma = self.k_ma
+
+            results = self._results
+            arparams, maparams = results.arparams, results.maparams
+            b,a = np.r_[1,-arparams], np.r_[1,maparams]
+            zi = zeros((max(k_ar, k_ma)))
+            for i in range(k_ar):
+                zi[i] = sum(-b[:i+1][::-1]*y[:i+1])
+            e = lfilter(b,a,y,zi=zi)
+            errors = e[0][k_ar:]
+        return errors.squeeze()
+
+    def predict(self, start=None, end=None, method='static', confint=False,
+            fcasterr=False):
+        """
+        """
+        self._check_is_fit()
+
+        start = self._get_predict_start(start) # will be an index of a date
+        end, out_of_sample = self._get_predict_end(end)
+
+        if end < start:
+            raise ValueError("end is before start")
+        if end == start + out_of_sample:
+            return np.array([])
+
+        k_ar = self.k_ar
+        y = self.endog[:k_ar]
+        nobs = int(self.endog.shape[0])
+        params = self._results.params
+        k_trend = self.k_trend
+        method = self.method
+
+        predictedvalues = np.zeros(end+1-start + out_of_sample)
+
+
 
     def loglike_kalman(self, params):
         """
@@ -363,13 +435,14 @@ class ARMA(LikelihoodModel):
         self.transparams = False # set to false so methods don't expect transf.
 
         normalized_cov_params = None #TODO: fix this
+        armafit = ARMAResults(self, params, normalized_cov_params)
+        self._results = armafit
+        return armafit
 
-        return ARMAResults(self, params, normalized_cov_params)
-
-    fit.__doc__ += LikelihoodModel.fit.__doc__
+    fit.__doc__ += base.LikelihoodModel.fit.__doc__
 
 
-class ARMAResults(LikelihoodModelResults):
+class ARMAResults(tsbase.TimeSeriesModelResults):
     """
     Class to hold results from fitting an ARMA model.
 
@@ -574,58 +647,9 @@ class ARMAResults(LikelihoodModelResults):
 #            fv += dot(exog, self.params[:k])
         return fv
 
-#TODO: make both of these get errors into functions or methods?
     @cache_readonly
     def resid(self):
-        model = self.model
-        params = self.params
-        y = model.endog.copy()
-
-        #demean for exog != None
-        k = model.k_exog + model.k_trend
-        if k > 0:
-            y -= dot(model.exog, params[:k])
-
-        k_lags = model.k_lags
-        k_ar = model.k_ar
-        k_ma = model.k_ma
-
-        if self.model.method != "css":
-            #TODO: move get errors to cython-ized Kalman filter
-            nobs = self.nobs
-
-            Z_mat = KalmanFilter.Z(k_lags)
-            m = Z_mat.shape[1]
-            R_mat = KalmanFilter.R(params, k_lags, k, k_ma, k_ar)
-            T_mat = KalmanFilter.T(params, k_lags, k, k_ar)
-
-            #initial state and its variance
-            alpha = zeros((m,1))
-            Q_0 = dot(inv(identity(m**2)-kron(T_mat,T_mat)),
-                                dot(R_mat,R_mat.T).ravel('F'))
-            Q_0 = Q_0.reshape(k_lags,k_lags,order='F')
-            P = Q_0
-
-            resids = empty((nobs,1), dtype=params.dtype)
-            for i in xrange(int(nobs)):
-                # Predict
-                v_mat = y[i] - dot(Z_mat,alpha) # one-step forecast error
-                resids[i] = v_mat
-                F_mat = dot(dot(Z_mat, P), Z_mat.T)
-                Finv = 1./F_mat # always scalar for univariate series
-                K = dot(dot(dot(T_mat,P),Z_mat.T),Finv) # Kalman Gain Matrix
-                # update state
-                alpha = dot(T_mat, alpha) + dot(K,v_mat)
-                L = T_mat - dot(K,Z_mat)
-                P = dot(dot(T_mat, P), L.T) + dot(R_mat, R_mat.T)
-        else:
-            b,a = np.r_[1,-params[k:k+k_ar]], np.r_[1,params[k+k_ar:]]
-            zi = np.zeros((max(k_ar,k_ma)))
-            for i in range(k_ar):
-                zi[i] = sum(-b[:i+1][::-1] * y[:i+1])
-            e = lfilter(b,a, y, zi=zi)
-            resids = e[0][k_ar:]
-        return resids.squeeze()
+        return self.model.geterrors()
 
     @cache_readonly
     def pvalues(self):
