@@ -573,8 +573,8 @@ class AR(tsbase.TimeSeriesModel):
             if solver == None:  # use limited memory bfgs
                 bounds = [(None,)*2]*(k_ar+k)
                 mlefit = optimize.fmin_l_bfgs_b(loglike, start_params,
-                    approx_grad=True, m=30, pgtol = 1e-7, factr=1e3,
-                    bounds=bounds, iprint=1)
+                    approx_grad=True, m=12, pgtol=1e-8, factr=1e2,
+                    bounds=bounds, iprint=disp)
                 self.mlefit = mlefit
                 params = mlefit[0]
             else:
