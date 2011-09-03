@@ -1134,6 +1134,16 @@ class RegressionResults(LikelihoodModelResults):
 
         return lrstat, lr_pvalue, lrdf
 
+
+    def summary2(self, yname=None, xname=None, title=0, alpha=.05,
+                returns='print'):
+        """
+        This is for testing the new summary setup
+        """
+        from iolib import summaries as smry
+        return smry(self, yname=None, xname=None, title=0, alpha=.05, returns='print')
+
+
     def summary(self, yname=None, xname=None, returns='text'):
         """returns a string that summarizes the regression results
 
@@ -1331,8 +1341,8 @@ if __name__ == "__main__":
     import scikits.statsmodels.api as sm
     data = sm.datasets.longley.load()
     data.exog = add_constant(data.exog)
-    ols_results = OLS(data.endog, data.exog).results
-    gls_results = GLS(data.endog, data.exog).results
+    ols_results = OLS(data.endog, data.exog).fit() #results
+    gls_results = GLS(data.endog, data.exog).fit() #results
     print(ols_results.summary())
     tables = ols_results.summary(returns='tables')
     csv = ols_results.summary(returns='csv')
