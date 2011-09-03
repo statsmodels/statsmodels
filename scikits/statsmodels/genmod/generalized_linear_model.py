@@ -407,6 +407,7 @@ returned a nan.  This could be a boundary problem and should be reported.")
         glm_results = GLMResults(self, wls_results.params,
                                  wls_results.normalized_cov_params,
                                  self.scale)
+        self._results = glm_results
         return GLMResultsWrapper(glm_results)
 
 class GLMResults(base.LikelihoodModelResults):
@@ -497,10 +498,6 @@ class GLMResults(base.LikelihoodModelResults):
     def __init__(self, model, params, normalized_cov_params, scale):
         super(GLMResults, self).__init__(model, params,
                 normalized_cov_params=normalized_cov_params, scale=scale)
-        self.model._results = self.model.results = self # TODO: get rid of this
-                                                      # since results isn't a
-                                                      # property for GLM
-        # above is needed for model.predict
         self.family = model.family
         self._endog = model.endog
         self.nobs = model.endog.shape[0]

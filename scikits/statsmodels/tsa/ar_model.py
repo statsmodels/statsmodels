@@ -167,8 +167,7 @@ class AR(tsbase.TimeSeriesModel):
         values. The exact initial Kalman Filter is used. See Durbin and Koopman
         in the references for more information.
         """
-        if self._results is None:
-            raise ValueError("You must fit the model first")
+        self._check_is_fit()
 
         start = self._get_predict_start(start) # will be an index of a date
         end, out_of_sample = self._get_predict_end(end)
