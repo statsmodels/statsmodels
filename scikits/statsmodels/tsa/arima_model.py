@@ -198,6 +198,8 @@ class ARMA(tsbase.TimeSeriesModel):
             T_mat, paramsdtype) = KalmanFilter._init_kalman_state(params, self)
             errors = KalmanFilter.geterrors(y,k,k_ar,k_ma, k_lags, nobs,
                     Z_mat, m, R_mat, T_mat, paramsdtype)
+            if isinstance(errors, tuple):
+                errors = errors[0] # non-cython version returns a tuple
         else:
             y = self.endog.copy()
             k = self.k_exog + self.k_trend
