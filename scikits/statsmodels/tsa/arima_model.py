@@ -197,7 +197,7 @@ class ARMA(tsbase.TimeSeriesModel):
             (y, k, nobs, k_ar, k_ma, k_lags, newparams, Z_mat, m, R_mat,
             T_mat, paramsdtype) = KalmanFilter._init_kalman_state(params, self)
             errors = KalmanFilter.geterrors(y,k,k_ar,k_ma, k_lags, nobs,
-                    Z_mat, m, R_mat, T_mat, paramsdtype)[0]
+                    Z_mat, m, R_mat, T_mat, paramsdtype)
         else:
             y = self.endog.copy()
             k = self.k_exog + self.k_trend

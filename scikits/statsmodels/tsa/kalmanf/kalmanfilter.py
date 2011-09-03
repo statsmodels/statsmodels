@@ -574,11 +574,14 @@ class KalmanFilter(object):
                   paramsdtype):
         """
         Returns just the errors of the Kalman Filter
+
+        Note that if fast_kalman isn't available this returns the errors,
+        F, and loglikelihood for use in loglike.
         """
         if fast_kalman:
             if issubdtype(paramsdtype, float):
                 return kalman_loglike.kalman_filter_double(y, k, k_ar, k_ma,
-                                    k_lags, int(nobs), Z_mat, R_mat, T_Mat)[0]
+                                    k_lags, int(nobs), Z_mat, R_mat, T_mat)[0]
             elif issubdtype(paramsdtype, complex):
                 return kalman_loglike.kalman_filter_complex(y, k, k_ar, k_ma,
                                     k_lags, int(nobs), Z_mat, R_mat, T_mat)[0]
