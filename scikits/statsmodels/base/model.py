@@ -893,7 +893,7 @@ class LikelihoodModelResults(Results):
         if _cov.ndim == 2:
             _cov = np.diag(_cov)
         _t = _params * recipr(np.sqrt(_cov))
-# repicr drops precision for MNLogit?
+    # repicr drops precision for MNLogit?
         _t = _params / np.sqrt(_cov)
         return _t
 
@@ -982,7 +982,7 @@ class LikelihoodModelResults(Results):
         if r_matrix is None and column is None:
             return self.normalized_cov_params * scale
 
-#TODO: make sure this works as needed for GLMs
+    #TODO: make sure this works as needed for GLMs
     def t_test(self, r_matrix, q_matrix=None, scale=None):
         """
         Compute a tcontrast/t-test for a row vector array of the form Rb = q
@@ -1062,7 +1062,7 @@ class LikelihoodModelResults(Results):
         return ContrastResults(effect=_effect, t=_t, sd=_sd,
                 df_denom=self.model.df_resid)
 
-#TODO: untested for GLMs?
+    #TODO: untested for GLMs?
     def f_test(self, r_matrix, q_matrix=None, scale=1.0, invcov=None):
         """
         Compute an Fcontrast/F-test for a contrast matrix.
