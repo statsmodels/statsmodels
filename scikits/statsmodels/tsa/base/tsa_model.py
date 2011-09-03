@@ -147,7 +147,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                     raise err
             self._make_predict_dates() # attaches self._data.predict_dates
 
-        if isinstance(end, int) and dates is not None:
+        elif isinstance(end, int) and dates is not None:
             try:
                 self._data.predict_end = dates[end]
             except IndexError as err:
@@ -159,7 +159,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                         out_of_sample, freq)
             self._make_predict_dates()
 
-        else:
+        elif isinstance(end, int):
             nobs = len(self.endog) - 1 # is an index
             if end > nobs:
                 out_of_sample = end - nobs
