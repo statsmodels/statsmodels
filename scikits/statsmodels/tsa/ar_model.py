@@ -117,10 +117,7 @@ class AR(tsbase.TimeSeriesModel):
                 start = self.k_ar
 
         if self.method == 'cmle':
-            k_ar = self.k_ar
-            if start > len(self.endog):
-                raise ValueError("Start must be <= len(endog)")
-            if start < k_ar:
+            if start < self.k_ar:
                 raise ValueError("Start must be >= k_ar")
 
         return super(AR, self)._get_predict_start(start)
