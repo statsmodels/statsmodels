@@ -4,7 +4,7 @@ results, and doing data cleaning
 """
 
 import numpy as np
-from pandas import DataFrame, Series
+from pandas import DataFrame, Series, TimeSeries
 
 class ModelData(object):
     """

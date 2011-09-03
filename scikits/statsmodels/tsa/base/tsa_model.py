@@ -1,47 +1,28 @@
+import scikits.timeseries as ts
 import scikits.statsmodels.base.model as base
 import scikits.statsmodels.base.wrapper as wrap
+from scikits.statsmodels.tsa.base import datetools
 from scikits.statsmodels.tsa.base.tsa_data import tsa_handle_data
-from numpy import arange
+from numpy import arange, asarray
 from pandas import Index
 import datetime
 
-_freq = ['B','D','W','M','A']
+_freqs = ['B','D','W','M','A', 'Q']
+
+_freq_to_pandas = {'B' : 'WEEKDAY',
+                   'D' : None,
+                   'W' : None,
+                   'M' : None,
+                   'A' : 'A@DEC',
+                   'Q' : 'Q@MAR'}
 
 def _check_freq(freq):
-    if freq and freq not in _freq:
+    if freq and freq not in _freqs:
         raise ValueError("freq %s not understood" % freq)
     return freq
 
-#TODO: where should this live?
-def _idx_from_dates(d1, d2, freq):
-    """
-    rd should be a dateutil.relativedelta instance
-    freq should be in _freq
 
-    Note that it rounds down the index.
-    """
-    if freq == 'A':
-        idx = d2.year - d1.year
-    if freq == 'D':
-        idx = (d2 - d1).days
-    if freq == 'W':
-        idx = (d2 - d1).days // 7
-    if freq == 'M':
-        idx = (d2.year - d1.year) * 12 + d2.month - d1.month
-    if freq == 'B':
-        # business days left in first week
-        wk1 = max(0, 4 - d1.weekday())
-
-        # business days used in last week
-        wk2 = min(4, d2.weekday()) + 1
-
-        d1 += datetime.timedelta(days=wk1+2)
-        d2 -= datetime.timedelta(days=wk2)
-        idx = (d2 - d1).days // 7 + wk1 + wk2
-
-    return idx
-
-
+#REPLACE frequencies with either timeseries or pandas conventions
 class TimeSeriesModel(base.LikelihoodModel):
     """
     Timeseries model base class
@@ -51,19 +32,18 @@ class TimeSeriesModel(base.LikelihoodModel):
     endog
     exog
     dates
-    freq : str {'B','D','W','M','A'}
+    freq : str {'B','D','W','M','A', 'Q'}
         'B' - business day, ie., Mon. - Fri.
         'D' - daily
         'W' - weekly
         'M' - monthly
         'A' - annual
+        'Q' - quarterly
 
     """
     def __init__(self, endog, exog=None, dates=None, freq=None):
         super(TimeSeriesModel, self).__init__(endog, exog)
         self._init_dates(dates, freq)
-        self._data.dates = dates
-        self._data.freq = freq
 
     def _init_dates(self, dates, freq):
         if dates is None:
@@ -72,6 +52,9 @@ class TimeSeriesModel(base.LikelihoodModel):
             if not isinstance(dates[0], datetime.datetime):
                 raise ValueError("dates must be of type datetime ")
             if not freq:
+                #if isinstance(dates, DateRange):
+                #    freq = datetools.inferTimeRule(dates)
+                #else:
                 raise ValueError("Currently, you need to give freq if dates "
                         "are used.")
             dates = Index(dates)
@@ -97,13 +80,7 @@ class TimeSeriesModel(base.LikelihoodModel):
 
         Uses scikits.timeseries.parsers.DateTimeFromString
         """
-        #TODO: either copy over parsers, put it in pandas, or add
-        #dependency
-        try:
-            from scikits.timeseries.parser import DateTimeFromString
-        except:
-            raise ImportError("Need scikits.timeseries.")
-        return DateTimeFromString(date)
+        return datetools.date_parser(date)
 
     def _get_predict_start(self, start):
         """
@@ -114,21 +91,27 @@ class TimeSeriesModel(base.LikelihoodModel):
         or an integer if dates is None.
         """
         dates = self._data.dates
-        if dates is not None:
-            if not isinstance(start, str):
-                raise ValueError("start should be a string if dates is not "
-                                 "None")
+        if isinstance(start, str):
+            if dates is None:
+                raise ValueError("Got a string for start and dates is None")
             try:
                 dtstart = self._str_to_date(start)
+                self._data.predict_start = dtstart
                 start = dates.indexMap[dtstart] # NOTE: are these consistent?
             except ImportError as err: # make sure timeseries isn't the prob
+                                       #TODO: can remove eventually
                 raise ImportError(err)
             except:
-                raise ValueError("Start must be in dates. Got %s" % str(start))
+                raise ValueError("Start must be in dates. Got %s | %s" %
+                        (str(start), str(dtstart)))
 
-        else:
-            if start > len(self.endog):
+        if isinstance(start, int) and dates is not None:
+            if start >= len(dates):
                 raise ValueError("Start must be <= len(endog)")
+            self._data.predict_start = dates[start]
+
+        if start >= len(self.endog):
+            raise ValueError("Start must be <= len(endog)")
 
         return start
 
@@ -141,35 +124,61 @@ class TimeSeriesModel(base.LikelihoodModel):
 
         out_of_sample = 0 # will be overwritten if needed
         if end is None:
-            end = len(self.endog)
+            end = len(self.endog) - 1
             return end, out_of_sample
 
         dates = self._data.dates
-        if dates is not None:
-            if not isinstance(end, str):
-                raise ValueError("end should be a string if dates is not "
-                                 "None")
+        if isinstance(end, str):
+            if dates is None:
+                raise ValueError("Got a string for end and dates is None")
             try:
                 dtend = self._str_to_date(end)
-                end = dates.indexMap[dtend] # NOTE: are these consistent?
+                self._data.predict_end = dtend
+                end = dates.indexMap[dtend]
             except ImportError as err: # make sure timeseries isn't the prob
                 raise ImportError(err)
             except KeyError as err: # end is greater than dates[-1]...probably
-                if end > len(self.endog):
-                    end = len(self.endog)
+                if int(end) > len(self.endog) - 1:
+                    end = len(self.endog) - 1
                     freq = self._data.freq
-                    out_of_sample = _idx_from_dates(dates[-1], dtend,
+                    out_of_sample = datetools._idx_from_dates(dates[-1], dtend,
                                             freq)
                 else:
                     raise err
+            self._make_predict_dates() # attaches self._data.predict_dates
+
+        if isinstance(end, int) and dates is not None:
+            try:
+                self._data.predict_end = dates[end]
+            except IndexError as err:
+                nobs = len(self.endog) - 1 # as an index
+                out_of_sample = end - nobs
+                end = nobs
+                freq = self._data.freq
+                self._data.predict_end = datetools._date_from_idx(dates[-1],
+                        out_of_sample, freq)
+            self._make_predict_dates()
 
         else:
-            nobs = len(self.endog)
+            nobs = len(self.endog) - 1 # is an index
             if end > nobs:
                 out_of_sample = end - nobs
                 end = nobs
 
         return end, out_of_sample
+
+    def _make_predict_dates(self):
+        data = self._data
+        dtstart = data.predict_start
+        dtend = data.predict_end
+        freq = data.freq
+        #pandas_freq = _freq_to_pandas[freq]
+        dates = ts.date_array(start_date=dtstart, end_date=dtend,
+                                freq=freq).toordinal().astype(int)
+        self._data.predict_dates = asarray(
+                [datetime.datetime.fromordinal(i) for i in dates])
+        #pandas.DateRange(dtstart, dtend,
+        #might be able to use pandas, but might have to make some more offsets?
 
 
 class TimeSeriesModelResults(base.LikelihoodModelResults):
