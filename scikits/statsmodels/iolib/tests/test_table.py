@@ -155,59 +155,67 @@ stub R2 C2  40.95038  40.65765
             print(desired)
             self.assertEqual(actual, desired)
 
-    def optional_regression_summary(self):
-        """ little luck getting this test to pass (It should?), can be used for
-        visual testing of the regression.summary table
-        """
-        from test_regression import TestOLS
-        import time
-        from string import Template
-        t = time.localtime()
-        desired = Template(
-'''     Summary of Regression Results
+def test_regression_summary():
+    #little luck getting this test to pass (It should?), can be used for
+    #visual testing of the regression.summary table
+    #fixed, might fail at minute changes
+    from scikits.statsmodels.regression.tests.test_regression  import TestOLS
+    #from test_regression import TestOLS
+    import time
+    from string import Template
+    t = time.localtime()
+    desired = Template(
+'''     Summary of Regression Results     
 =======================================
-| Dependent Variable:                Y|
+| Dependent Variable:            ['y']|
 | Model:                           OLS|
 | Method:                Least Squares|
 | Date:               $XXcurrentXdateXX|
 | Time:                       $XXtimeXXX|
-| obs:                            16.0|
+| # obs:                          16.0|
 | Df residuals:                    9.0|
 | Df model:                        6.0|
-=============================================================================
-|               | coefficient  |  std. error  | t-statistic  |    prob.     |
------------------------------------------------------------------------------
-| X.0           |      15.0619 |      84.9149 |      0.1774  |    0.8631    |
-| X.1           |   -0.0358192 |    0.0334910 |      -1.070  |    0.3127    |
-| X.2           |     -2.02023 |     0.488400 |      -4.136  |   0.002535   |
-| X.3           |     -1.03323 |     0.214274 |      -4.822  |  0.0009444   |
-| X.4           |   -0.0511041 |     0.226073 |     -0.2261  |    0.8262    |
-| X.5           |      1829.15 |      455.478 |       4.016  |   0.003037   |
-| X.6           | -3.48226e+06 |      890420. |      -3.911  |   0.003560   |
-=============================================================================
-|                        Models stats                       Residual stats  |
------------------------------------------------------------------------------
-| R-squared:                 0.995479   Durbin-Watson:            2.55949   |
-| Adjusted R-squared:        0.992465   Omnibus:                 0.748615   |
-| F-statistic:                330.285   Prob(Omnibus):           0.687765   |
-| Prob (F-statistic):     4.98403e-10   JB:                      0.352773   |
-| Log likelihood:            -109.617   Prob(JB):                0.838294   |
-| AIC criterion:              233.235   Skew:                    0.419984   |
-| BIC criterion:              238.643   Kurtosis:                 2.43373   |
------------------------------------------------------------------------------'''
+==============================================================================
+|                   coefficient     std. error    t-statistic          prob. |
+------------------------------------------------------------------------------
+| x1                      15.06          84.91         0.1774         0.8631 |
+| x2                   -0.03582        0.03349        -1.0695         0.3127 |
+| x3                     -2.020         0.4884        -4.1364         0.0025 |
+| x4                     -1.033         0.2143        -4.8220         0.0009 |
+| x5                   -0.05110         0.2261        -0.2261         0.8262 |
+| x6                      1829.          455.5         4.0159         0.0030 |
+| const              -3.482e+06      8.904e+05        -3.9108         0.0036 |
+==============================================================================
+|                          Models stats                      Residual stats  |
+------------------------------------------------------------------------------
+| R-squared:                     0.9955   Durbin-Watson:              2.559  |
+| Adjusted R-squared:            0.9925   Omnibus:                   0.7486  |
+| F-statistic:                    330.3   Prob(Omnibus):             0.6878  |
+| Prob (F-statistic):         4.984e-10   JB:                        0.3528  |
+| Log likelihood:                -109.6   Prob(JB):                  0.8383  |
+| AIC criterion:                  233.2   Skew:                      0.4200  |
+| BIC criterion:                  238.6   Kurtosis:                   2.434  |
+------------------------------------------------------------------------------'''
 ).substitute(XXcurrentXdateXX = str(time.strftime("%a, %d %b %Y",t)),
              XXtimeXXX = str(time.strftime("%H:%M:%S",t)))
-        desired = str(desired)
-        aregression = TestOLS()
-        results = aregression.res1
-        r_summary = str(results.summary())
-        print('###')
-        print(r_summary)
-        print('###')
-        print(desired)
-        print('###')
+    desired = str(desired)
+    aregression = TestOLS()
+    TestOLS.setupClass()
+    results = aregression.res1
+    r_summary = str(results.summary())
+
+##    print('###')
+##    print(r_summary)
+##    print('###')
+##    print(desired)
+##    print('###')
+    actual = r_summary
+    import numpy as np
+    np.testing.assert_(actual == desired)
+        
 
 if __name__ == "__main__":
-    unittest.main()
+    #unittest.main()
+    pass
 
 
