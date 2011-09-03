@@ -222,6 +222,8 @@ class ARMA(tsbase.TimeSeriesModel):
         """
         """
         self._check_is_fit()
+        results = self._results
+        method = self.method
 
         start = self._get_predict_start(start) # will be an index of a date
         end, out_of_sample = self._get_predict_end(end)
@@ -232,14 +234,24 @@ class ARMA(tsbase.TimeSeriesModel):
             return np.array([])
 
         k_ar = self.k_ar
-        y = self.endog[:k_ar]
-        nobs = int(self.endog.shape[0])
-        params = self._results.params
-        k_trend = self.k_trend
-        method = self.method
+
 
         predictedvalues = np.zeros(end+1-start + out_of_sample)
+        fittedvalues = results.fittedvalues #get them all then trim
 
+        fv_start = start
+        if 'mle' not in method:
+            fv_start -= k_ar # start is in terms of endog index
+        pv_end = min(len(predictedvalues), len(fittedvalues) - fv_start)
+        fv_end = min(len(fittedvalues), end+1)
+
+        predictedvalues[:pv_end] = fittedvalues[fv_start:fv_end]
+
+        # do out of sample fitting
+        #params = results.params
+        #k_trend = self.k_trend
+
+        return predictedvalues
 
 
     def loglike_kalman(self, params):
