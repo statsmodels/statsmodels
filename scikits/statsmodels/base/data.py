@@ -91,7 +91,7 @@ class ModelData(object):
     def attach_rows(self, result):
         return result
 
-    def attach_date(self, result):
+    def attach_dates(self, result):
         return result
 
 class PandasData(ModelData):
