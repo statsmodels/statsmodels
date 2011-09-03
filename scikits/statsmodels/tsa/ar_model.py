@@ -96,7 +96,7 @@ class AR(tsbase.TimeSeriesModel):
         Q_0 = Q_0.reshape(p,p, order='F') #TODO: order might need to be p+k
         P = Q_0
         Z_mat = KalmanFilter.Z(p)
-        for i in xrange(start,end): #iterate p-1 times to fit presample
+        for i in xrange(end): #iterate p-1 times to fit presample
             v_mat = y[i] - dot(Z_mat,alpha)
             F_mat = dot(dot(Z_mat, P), Z_mat.T)
             Finv = 1./F_mat # inv. always scalar
@@ -106,7 +106,8 @@ class AR(tsbase.TimeSeriesModel):
             L = T_mat - dot(K,Z_mat)
             P = dot(dot(T_mat, P), L.T) + dot(R_mat, R_mat.T)
     #            P[0,0] += 1 # for MA part, R_mat.R_mat.T above
-            predictedvalues[i+1-start] = dot(Z_mat,alpha)
+            if i >= start-1: #only record if we ask for it
+                predictedvalues[i+1-start] = dot(Z_mat,alpha)
 
     def _get_predict_start(self, start):
         if start is None:
@@ -114,7 +115,6 @@ class AR(tsbase.TimeSeriesModel):
                 start = 0
             else: # can't do presample fit for cmle
                 start = self.k_ar
-            return start
 
         if self.method == 'cmle':
             k_ar = self.k_ar
@@ -126,7 +126,8 @@ class AR(tsbase.TimeSeriesModel):
         return super(AR, self)._get_predict_start(start)
 
 
-    def predict(self, start=None, end=None, method='dynamic', confint=False):
+    def predict(self, start=None, end=None, method='static', confint=False,
+                fcasterr=False):
         """
         Returns in-sample prediction or forecasts.
 
@@ -185,7 +186,7 @@ class AR(tsbase.TimeSeriesModel):
         method = self.method
 
 
-        predictedvalues = np.zeros(end-start + out_of_sample)
+        predictedvalues = np.zeros(end+1-start + out_of_sample)
 
         # fit pre-sample
         if method == 'mle': # use Kalman Filter to get initial values
@@ -194,7 +195,7 @@ class AR(tsbase.TimeSeriesModel):
 
             # modifies predictedvalues in place
             if start < k_ar:
-                self._presample_fit(params, start, k_ar, min(k_ar-1, end-1),
+                self._presample_fit(params, start, k_ar, min(k_ar-1, end),
                         y-mu, predictedvalues)
                 predictedvalues[:k_ar-start] += mu
 
@@ -208,8 +209,9 @@ class AR(tsbase.TimeSeriesModel):
         pv_start = max(k_ar - start, 0)
         fv_start = max(start - k_ar, 0)
         pv_end = min(len(predictedvalues), len(fittedvalues) - fv_start)
-        fv_end = min(len(predictedvalues) + fv_start, len(fittedvalues))
-        predictedvalues[pv_start:pv_end] = fittedvalues[fv_start:fv_end]
+        #fv_end = min(len(fittedvalues), len(fittedvalues) - end)
+        fv_end = min(len(fittedvalues), end-k_ar+1)
+        predictedvalues[pv_start:pv_end+pv_start] = fittedvalues[fv_start:fv_end]
 
         if not out_of_sample:
             return predictedvalues
@@ -791,6 +793,10 @@ class ARResults(tsbase.TimeSeriesModelResults):
     def fittedvalues(self):
         return self.model.predict(self.params)
 
+    def predict(self, start=None, end=None, method='dynamic',
+            confint=False):
+        return self.model.predict(start, end, method, confint)
+
 class ARResultsWrapper(wrap.ResultsWrapper):
     _attrs = {}
     _wrap_attrs = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_attrs,
@@ -850,17 +856,23 @@ if __name__ == "__main__":
     d1 = ts.Date(year=1700, freq='A')
     #NOTE: have to have yearBegin offset for annual data until parser rewrite
     #should this be up to the user, or should it be done in TSM init?
+    #NOTE: not anymore, it's end of year now
     ts_dr = ts.date_array(start_date=d1, length=len(sunspots.endog))
     pandas_dr = pandas.DateRange(start=d1.datetime,
                     periods=len(sunspots.endog), timeRule='A@DEC')
-    pandas_dr = pandas_dr.shift(-1, pandas.datetools.yearBegin)
+    #pandas_dr = pandas_dr.shift(-1, pandas.datetools.yearBegin)
 
 
 
     dates = np.arange(1700,1700+len(sunspots.endog))
     dates = ts.date_array(dates, freq='A')
     #sunspots = pandas.TimeSeries(sunspots.endog, index=dates)
-    sunspots = pandas.TimeSeries(sunspots.endog, index=pandas_dr)
+
+    #NOTE: pandas only does business days for dates it looks like
+    import datetime
+    dt_dates = np.asarray(map(datetime.datetime.fromordinal,
+                ts_dr.toordinal().astype(int)))
+    sunspots = pandas.TimeSeries(sunspots.endog, index=dt_dates)
 
     mod = AR(sunspots, freq='A')
     res = mod.fit(method='mle', maxlag=9)
