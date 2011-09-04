@@ -13,9 +13,13 @@ class Describe(object):
 
     dataset : can be either a structured or ndarray (Larry?), observations in
               rows, variables in columns.
+
+    
     '''
     def __init__(self, dataset):
         self.dataset = dataset
+
+        #better if this is initially a list to define order, or use an ordered dict
         # First position is the function
         # Second position is the tuple/list of column names/numbers
         # third is are the results in order of the columns
@@ -26,13 +30,14 @@ class Describe(object):
             min = [np.min, None, None],
             max = [np.max, None, None],
             ptp = [np.ptp, None, None],
+            var = [np.var, None, None],
             mode_val = [self._mode_val, None, None],
             mode_bin = [self._mode_bin, None, None],
             median = [np.median, None, None],
             skew = [stats.skew, None, None],
             uss = [stats.ss, None, None],
             kurtosis = [stats.kurtosis, None, None],
-            percentiles = [self._percentiles, None, None],
+            percentiles = [self._percentiles, None, None], #BUG: not single value
             #sign_test_M = [self.sign_test_m, None, None],
             #sign_test_P = [self.sign_test_p, None, None]
         )
@@ -104,12 +109,15 @@ class Describe(object):
         prints a table of summary statistics and stores the stats.
         stats: The desired statistics, A list[] or 'basic' or 'all' are options
                'basic' = ('obs', 'mean', 'std', 'min', 'max')
-               'All' = ('obs', 'mean', 'std', 'min', 'max', 'ptp', 'var', 'mode',
+               'all' = ('obs', 'mean', 'std', 'min', 'max', 'ptp', 'var', 'mode',
                         'meadian', 'skew', 'uss', 'kurtosis', 'percentiles')
-        Columns: The columns/variables to report the statistics, defualt is 'all'
+        Columns: The columns/variables to report the statistics, default is 'all'
                  structured array: specify the column names
                                 summary(stats='basic', columns=['alpha', 'beta'])
                 standard array: Specifiy column numbers (NEED TO TEST)
+
+        percentiles currently broken
+        mode requires mode_val and mode_bin separately
         """
         if self._arraytype == None:
             self._array_typer()
@@ -118,12 +126,39 @@ class Describe(object):
         if stats == 'basic':
             stats = ('obs', 'mean', 'std', 'min', 'max')
         elif stats == 'all':
-            stats = self.univariate.keys()
+            #stats = self.univariate.keys()
+            #dict doesn't keep an order, use full list instead
+            stats = ['obs', 'mean', 'std', 'min', 'max', 'ptp', 'var', 'mode_val', 'mode_bin',
+                        'median', 'uss', 'skew', 'kurtosis', 'percentiles']
         else:
             for astat in stats:
                 pass
                 #assert astat in self.univariate
 
+        #hack around percentiles multiple output
+
+        #bad naming
+        import scipy.stats
+        #BUG: the following has all per the same per=99
+##        perdict = dict(('perc_%2d'%per, [lambda x: scipy.stats.scoreatpercentile(x, per),
+##                                         None, None])
+##                        for per in (1,5,10,25,50,75,90,95,99))
+
+        def _fun(per):
+            return lambda x: scipy.stats.scoreatpercentile(x, per)
+
+        perdict = dict(('perc_%02d'%per, [_fun(per), None, None])
+                       for per in (1,5,10,25,50,75,90,95,99))
+
+        if 'percentiles' in stats:
+            self.univariate.update(perdict)
+            idx = stats.index('percentiles')
+            stats[idx:idx+1] = sorted(perdict.keys())
+        
+
+        
+        #JP: this doesn't allow a change in sequence, sequence in stats is ignored
+        #this is just an if condition
         if any([aitem[1] for aitem in self.univariate.items() if aitem[0] in stats]):
             if columns == 'all':
                 self._columns_list = []
@@ -303,4 +338,6 @@ if __name__ == "__main__":
     print(t1.summary(stats=noperc))
     print(t1.summary())
     print(t1.summary( orientation='varcols'))
+    print(t1.summary(stats=['mean', 'median', 'min', 'max'], orientation=('varcols')))
+    print(t1.summary(stats='all'))
     
