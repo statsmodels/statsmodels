@@ -598,9 +598,18 @@ class GLMResults(LikelihoodModelResults):
     def bic(self):
         return self.deviance - self.df_resid*np.log(self.nobs)
 
+    def summary2(self, yname=None, xnames=None, title=0, alpha=.05,
+                returns='print'):
+        """
+        This is for testing the new summary setup
+        """
+        from scikits.statsmodels.iolib.summary import summary as smry
+        return smry(self, yname=yname, xname=xnames, title=0, alpha=.05, returns='print')
+
+
 #TODO: write summary method to use output.py in sandbox
     def summary(self, yname=None, xname=None, title='Generalized linear model',
-                returns='print'):
+                returns='text'):
         """
         Print a table of results or returns SimpleTable() instance which
         summarizes the Generalized linear model results.
@@ -658,8 +667,8 @@ class GLMResults(LikelihoodModelResults):
         conf_int calculated from normal dist.
         """
         import time as Time
-        from iolib import SimpleTable
-        from stattools import jarque_bera, omni_normtest, durbin_watson
+        from scikits.statsmodels.iolib import SimpleTable
+        from scikits.statsmodels.stats.stattools import jarque_bera, omni_normtest, durbin_watson
 
         if yname is None:
             yname = 'Y'

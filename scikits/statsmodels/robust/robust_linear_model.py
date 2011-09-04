@@ -419,6 +419,15 @@ class RLMResults(LikelihoodModelResults):
     def chisq(self):
         return (self.params/self.bse)**2
 
+    def summary(self, yname=None, xnames=None, title=0, alpha=.05,
+                returns='print'):
+        """
+        This is for testing the new summary setup
+        """
+        from scikits.statsmodels.iolib.summary import summary as smry
+        return smry(self, yname=yname, xname=xnames, title=0, alpha=.05, returns='print')
+
+
 if __name__=="__main__":
 #NOTE: This is to be removed
 #Delivery Time Data is taken from Montgomery and Peck
