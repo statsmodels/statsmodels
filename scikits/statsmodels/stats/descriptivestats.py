@@ -99,7 +99,7 @@ class Describe(object):
             Not sure of dtype'+str(self.dataset[col][0])
 
     #@property
-    def summary(self, stats='basic', columns='all'):
+    def summary(self, stats='basic', columns='all', orientation='auto'):
         """
         prints a table of summary statistics and stores the stats.
         stats: The desired statistics, A list[] or 'basic' or 'all' are options
@@ -121,7 +121,8 @@ class Describe(object):
             stats = self.univariate.keys()
         else:
             for astat in stats:
-                assert astat in self.univariate
+                pass
+                #assert astat in self.univariate
 
         if any([aitem[1] for aitem in self.univariate.items() if aitem[0] in stats]):
             if columns == 'all':
@@ -155,22 +156,33 @@ class Describe(object):
                 else:
                     calc[1] = ['Col '+str(col) for col in self._columns_list]
                     calc[2] = [calc[0](self.dataset[:,col]) for col in self._columns_list]
-            return self.print_summary(stats)
+            return self.print_summary(stats, orientation=orientation)
         else:
-            return self.print_summary(stats)
+            return self.print_summary(stats, orientation=orientation)
 
-    def print_summary(self, stats):
+    def print_summary(self, stats, orientation='auto'):
 #TODO: need to specify a table formating for the numbers, using defualt
         title = 'Summary Statistics'
         header = stats
         stubs = self.univariate['obs'][1]
         data = [[self.univariate[astat][2][col] for astat in stats] for col in
-                                range(len(self.univariate['obs'][2]))]
+                                range(len(self.univariate['obs'][2]))] 
+
+        if (orientation == 'varcols') or \
+           (orientation == 'auto' and len(stubs) < len(header)):
+            #swap rows and columns
+            data = map(lambda *row: list(row), *data)
+            header, stubs = stubs, header
+
+        part_fmt = dict(data_fmts = ["%#8.4g"]*(len(header)-1))       
         table = SimpleTable(data,
                             header,
                             stubs,
-                            title=title,)
+                            title=title,
+                            txt_fmt = part_fmt)
+
         return table
+
 
     def sign_test(samp,mu0=0):
         '''
@@ -281,4 +293,14 @@ class TestSimpleTable(unittest.TestCase):
         print(t1.summary(stats='all'))
 
 if __name__ == "__main__":
-    unittest.main()
+    #unittest.main()
+    t1 = Describe(data4)
+    #print(t1.summary(stats='all'))
+    noperc = ['obs', 'mean', 'std', 'min', 'max', 'ptp', #'mode',  #'var', 
+                        'median', 'skew', 'uss', 'kurtosis']
+    #TODO: mode var raise exception,
+    #TODO: percentile writes list in cell (?), huge wide format
+    print(t1.summary(stats=noperc))
+    print(t1.summary())
+    print(t1.summary( orientation='varcols'))
+    
