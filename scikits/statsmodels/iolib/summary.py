@@ -54,7 +54,8 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
     conf_int calculated from normal dist.
     """
     import time as time
-    from iolib import SimpleTable, gen_fmt, summaries
+    from scikits.statsmodels.iolib.table import SimpleTable
+    from scikits.statsmodels.iolib.tableformatting import gen_fmt #, summaries
     
     
     
@@ -76,9 +77,15 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
     if title==0:
         title = model_types[self.model.__class__.__name__]
     if yname is None:
+        try:
             yname = self.model.endog_names
+        except AttributeError:
+            yname = 'y'
     if xname is None:
+        try:
             xname = self.model.exog_names
+        except AttributeError:
+            xname = ['var_%d' % i for i in range(len(self.params))]
     time_now = time.localtime()
     time_of_day = [time.strftime("%H:%M:%S", time_now)]
     date = time.strftime("%a, %d %b %Y", time_now)
@@ -87,8 +94,11 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
     nobs = self.nobs
     df_model = self.df_model
     df_resid = self.df_resid
+
+    
     
     #General part of the summary table, Applicable to all? models
+    #------------------------------------------------------------
     gen_title = title
     gen_header = None
     gen_stubs_left = ('Model type:',
@@ -128,6 +138,7 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
     general_table = gen_table_left
     
     #Parameters part of the summary table
+    #------------------------------------
     stats = {'OLS' : self.t(),
             'GLS' : self.t(),
             'GLSAR' : self.t(),
@@ -175,6 +186,16 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
                                   title = None,
                                   txt_fmt = gen_fmt,
                                   )
+
+    #special table
+    #-------------
+    #TODO: exists in linear_model, what about other models
+    #residual diagnostics
+
+
+    #output options
+    #--------------
+    #TODO: JP the rest needs to be fixed, similar to summary in linear_model
                                   
     def ols_printer():
         """
@@ -189,6 +210,8 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
         """
         pass
     def glm_printer():
+        table = str(general_table)+'\n'+str(parameter_table)
+        return table
         pass
     
     printers  = {'OLS': ols_printer,
@@ -196,7 +219,11 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
                 }
     
     if returns=='print':
-        return printers[modeltype]()
+        try:
+            return printers[modeltype]()
+        except KeyError:
+            return printers['OLS']()
+            
         
 
 
