@@ -278,7 +278,7 @@ class ARMA(tsbase.TimeSeriesModel):
             newparams = params
         if k > 0:
             y -= dot(self.exog, newparams[:k])
-# the order of p determines how many zeros errors to set for lfilter
+    # the order of p determines how many zeros errors to set for lfilter
         b,a = np.r_[1,-newparams[k:k+k_ar]], np.r_[1,newparams[k+k_ar:]]
         zi = np.zeros((max(k_ar,k_ma)), dtype=params.dtype)
         for i in range(k_ar):
@@ -589,14 +589,14 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
     def maroots(self):
         return np.roots(np.r_[1,self.maparams])**-1
 
-#    @cache_readonly
-#    def arfreq(self):
-#        return (np.log(arroots/abs(arroots))/(2j*pi)).real
+    #@cache_readonly
+    #def arfreq(self):
+    #    return (np.log(arroots/abs(arroots))/(2j*pi)).real
 
-#NOTE: why don't root finding functions work well?
-#    @cache_readonly
-#    def mafreq(eslf):
-#        return
+    #NOTE: why don't root finding functions work well?
+    #@cache_readonly
+    #def mafreq(eslf):
+    #    return
 
 
     @cache_readonly
