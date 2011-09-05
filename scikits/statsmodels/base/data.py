@@ -110,7 +110,9 @@ class PandasData(ModelData):
         return DataFrame(result, index=self.xnames, columns=self.xnames)
 
     def attach_rows(self, result):
-        return Series(result, index=self.row_labels)
+        # assumes if len(row_labels) > len(result) it's bc it was truncated
+        # at the front, for AR lags, for example
+        return Series(result, index=self.row_labels[-len(result):])
 
     def attach_dates(self, result):
         return TimeSeries(result, index=self.predict_dates)
@@ -163,7 +165,7 @@ class LarryData(ModelData):
         return _la.larry(result, [self.xnames, self.xnames])
 
     def attach_rows(self, result):
-        return _la.larry(result, [self.row_labels])
+        return _la.larry(result, [self.row_labels[-len(result):]])
 
     def attach_dates(self, result):
         return _la.larray(result, [self.predict_dates])
