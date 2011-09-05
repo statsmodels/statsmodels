@@ -1,8 +1,8 @@
-import scikits.timeseries as ts
+from scikits.timeseries import Date, date_array, TimeSeries
 import scikits.statsmodels.base.model as base
+from scikits.statsmodels.base import data
 import scikits.statsmodels.base.wrapper as wrap
 from scikits.statsmodels.tsa.base import datetools
-from scikits.statsmodels.tsa.base.tsa_data import tsa_handle_data
 from numpy import arange, asarray
 from pandas import Index
 import datetime
@@ -48,13 +48,16 @@ class TimeSeriesModel(base.LikelihoodModel):
     def _init_dates(self, dates, freq):
         if dates is None:
             dates = self._data.row_labels
+
         if dates is not None:
-            if not isinstance(dates[0], datetime.datetime):
-                raise ValueError("dates must be of type datetime ")
+            if not isinstance(dates[0], (datetime.datetime,Date)):
+                raise ValueError("dates must be of type datetime or "
+                                 "scikits.timeseries.Date")
             if not freq:
                 #if isinstance(dates, DateRange):
                 #    freq = datetools.inferTimeRule(dates)
-                #else:
+                #elif isinstance(dates, TimeSeries):
+                #    freq = dates.freqstr
                 raise ValueError("Currently, you need to give freq if dates "
                         "are used.")
             dates = Index(dates)
@@ -173,7 +176,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         dtend = data.predict_end
         freq = data.freq
         #pandas_freq = _freq_to_pandas[freq]
-        dates = ts.date_array(start_date=dtstart, end_date=dtend,
+        dates = date_array(start_date=dtstart, end_date=dtend,
                                 freq=freq).toordinal().astype(int)
         self._data.predict_dates = asarray(
                 [datetime.datetime.fromordinal(i) for i in dates])
@@ -210,7 +213,7 @@ if __name__ == "__main__":
              for x in data.data[['year','quarter']]]
     try:
         import scikits.timeseries as ts
-        ts_dates = ts.date_array(start_date = ts.Date(year=1959,quarter=1,freq='Q'),
+        ts_dates = date_array(start_date = Date(year=1959,quarter=1,freq='Q'),
                              length=len(data.data))
     except:
         pass

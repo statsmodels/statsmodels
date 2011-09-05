@@ -5,6 +5,7 @@ results, and doing data cleaning
 
 import numpy as np
 from pandas import DataFrame, Series, TimeSeries
+from scikits.timeseries import time_series
 
 class ModelData(object):
     """
@@ -42,11 +43,14 @@ class ModelData(object):
             ynames = _make_endog_names(endog)
 
         if exog is not None:
-            row_labels = _get_row_labels(exog)
+            row_labels = self._get_row_labels(exog)
         else:
-            row_labels = _get_row_labels(endog)
+            row_labels = self._get_row_labels(endog)
 
         return yarr, xarr, ynames, xnames, row_labels
+
+    def _get_row_labels(self, arr):
+        return None
 
     def _get_names(self, arr):
         try:
@@ -100,6 +104,9 @@ class PandasData(ModelData):
     results
     """
 
+    def _get_row_labels(self, arr):
+        return arr.index
+
     def attach_columns(self, result):
         if result.squeeze().ndim == 1:
             return Series(result, index=self.xnames)
@@ -116,6 +123,25 @@ class PandasData(ModelData):
 
     def attach_dates(self, result):
         return TimeSeries(result, index=self.predict_dates)
+
+class TimeSeriesData(ModelData):
+    """
+    Data handling class which returns scikits.timeseries model results
+    """
+    def _get_row_labels(self, arr):
+        return arr.dates
+
+    #def attach_columns(self, result):
+    #    return recarray?
+
+    #def attach_cov(self, result):
+    #    return recarray?
+
+    def attach_rows(self, result):
+        return time_series(result, dates = self.row_labels[-len(result):])
+
+    def attach_dates(self, result):
+        return time_series(result, dates = self.predict_dates)
 
 
 _la = None
@@ -154,6 +180,9 @@ class LarryData(ModelData):
 
         return None
 
+    def _get_row_labels(self, arr):
+        return arr.label[0]
+
     def attach_columns(self, result):
         if result.ndim == 1:
             return _la.larry(result, [self.xnames])
@@ -169,12 +198,6 @@ class LarryData(ModelData):
 
     def attach_dates(self, result):
         return _la.larray(result, [self.predict_dates])
-
-def _get_row_labels(exog):
-    try:
-        return exog.index
-    except AttributeError:
-        return None
 
 def _is_structured_array(data):
     return isinstance(data, np.ndarray) and data.dtype.names is not None
@@ -210,10 +233,13 @@ def handle_data(endog, exog):
     """
     if _is_using_pandas(endog, exog):
         klass = PandasData
-    elif _is_using_ndarray(endog, exog):
-        klass = ModelData
     elif _is_using_larry(endog, exog):
         klass = LarryData
+    elif _is_using_timeseries(endog, exog):
+        klass = TimeSeriesData
+    # keep this check last
+    elif _is_using_ndarray(endog, exog):
+        klass = ModelData
     else:
         raise ValueError('unrecognized data structures: %s / %s' %
                          (type(endog), type(exog)))
@@ -235,3 +261,7 @@ def _is_using_larry(endog, exog):
         return isinstance(endog, la.larry) or isinstance(exog, la.larry)
     except ImportError:
         return False
+
+def _is_using_timeseries(endog, exog):
+    from scikits.timeseries import TimeSeries as tsTimeSeries
+    return isinstance(endog, tsTimeSeries) or isinstance(exog, tsTimeSeries)
