@@ -701,7 +701,7 @@ class GLMResults(LikelihoodModelResults):
         resid_working = self.resid_working
         scale = self.scale
 #TODO   #stand_errors = self.stand_errors
-        stand_errors = [' ' for x in range(len(self.params))]
+        stand_errors = self.bse  #[' ' for x in range(len(self.params))]
 #Added note about conf_int
         pvalues = self.pvalues
         conf_int = self.conf_int()
@@ -715,7 +715,7 @@ class GLMResults(LikelihoodModelResults):
         table_1l_fmt = dict(
             data_fmts = ["%s", "%s", "%s", "%s", "%s"],
             empty_cell = '',
-            colwidths = 17,
+            colwidths = 15,
             colsep='   ',
             row_pre = '  ',
             row_post = '  ',
@@ -730,11 +730,11 @@ class GLMResults(LikelihoodModelResults):
             stubs_align = "l",
             fmt = 'txt'
             )
-        # Note table_1l_fmt over rides the below formating.
+        # Note table_1l_fmt over rides the below formating. in extend_right? JP
         table_1r_fmt = dict(
-            data_fmts = ["%s", "%s", "%s", "%s", "%S"],
+            data_fmts = ["%s", "%s", "%s", "%s", "%1s"],
             empty_cell = '',
-            colwidths = 16,
+            colwidths = 12,
             colsep='   ',
             row_pre = '',
             row_post = '',
@@ -756,7 +756,7 @@ class GLMResults(LikelihoodModelResults):
             #data_fmts = ["%#10.4g","%#6.4f", "%#6.4f"],
             #data_fmts = ["%#15.4F","%#15.4F","%#15.4F","%#14.4G"],
             empty_cell = '',
-            colwidths = 14,
+            colwidths = 13,
             colsep=' ',
             row_pre = '  ',
             row_post = '   ',
@@ -819,9 +819,9 @@ class GLMResults(LikelihoodModelResults):
         'Conf. Interval')
         table_2stubs = xname
         table_2data = zip(["%#6.4f" % (params[i]) for i in range(len(xname))],
-                          [stand_errors[i] for i in range(len(xname))],
+                          ["%#6.4f" % stand_errors[i] for i in range(len(xname))],
                           ["%#6.4f" % (t[i]) for i in range(len(xname))],
-                          ["""[%#6.3f, %#6.3f]""" % tuple(conf_int[i]) for i in
+                          [""" [%#6.3f, %#6.3f]""" % tuple(conf_int[i]) for i in
                                                              range(len(xname))])
 
 
