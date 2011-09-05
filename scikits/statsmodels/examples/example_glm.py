@@ -145,3 +145,7 @@ X = sm.add_constant(X)
 lny = np.exp(-(.03*x + .0001*x**2 - 1.0)) + .001 * np.random.rand(nobs2)
 gauss_log = sm.GLM(lny, X, family=sm.families.Gaussian(sm.families.links.log))
 gauss_log_results = gauss_log.fit()
+
+
+#check summary
+print binom_results.summary()

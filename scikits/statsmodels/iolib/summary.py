@@ -55,7 +55,7 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
     """
     import time as time
     from scikits.statsmodels.iolib.table import SimpleTable
-    from scikits.statsmodels.iolib.tableformatting import gen_fmt #, summaries
+    from scikits.statsmodels.iolib.tableformatting import gen_fmt, fmt_2 #, summaries
     
     
     
@@ -99,18 +99,28 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
     
     #General part of the summary table, Applicable to all? models
     #------------------------------------------------------------
+    #TODO: define this generically, overwrite in model classes
+    #replace definition of stubs data by single list
+    #e.g.
+    gen_left =   [('Model type:', [modeltype]),
+                  ('Date:', [date]),
+                  ('Dependent Variable:', yname), #What happens with multiple names?
+                  ('df model', [df_model])
+                  ]
+    gen_stubs_left, gen_data_left = map(None, *gen_left) #transpose row col
+    
     gen_title = title
     gen_header = None
-    gen_stubs_left = ('Model type:',
-                      'Date:',
-                      'Dependent Variable:',
-                      'df model'
-                  )
-    gen_data_left = [[modeltype],
-                     [date],
-                     yname, #What happens with multiple names?
-                     [df_model]
-                     ]
+##    gen_stubs_left = ('Model type:',
+##                      'Date:',
+##                      'Dependent Variable:',
+##                      'df model'
+##                  )
+##    gen_data_left = [[modeltype],
+##                     [date],
+##                     yname, #What happens with multiple names?
+##                     [df_model]
+##                     ]
     gen_table_left = SimpleTable(gen_data_left,
                                  gen_header,
                                  gen_stubs_left,
@@ -139,7 +149,8 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
     
     #Parameters part of the summary table
     #------------------------------------
-    stats = {'OLS' : self.t(),
+    #Note: this is not necessary since we standardized names, only t versus normal
+    tstats = {'OLS' : self.t(),
             'GLS' : self.t(),
             'GLSAR' : self.t(),
             'WLS' : self.t(),
@@ -161,8 +172,8 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
          'GLS'   : ['coef', 'std err', 't', 'P>|t|', alp + ' Conf. Interval'],
          'GLSAR' : ['coef', 'std err', 't', 'P>|t|', alp + ' Conf. Interval'],
          'WLS'   : ['coef', 'std err', 't', 'P>|t|', alp + ' Conf. Interval'],
-         'GLM'   : ['coef', 'std err', 'z', 'P>|z|', alp + ' Conf. Interval'],    
-         'RLM'   : ['coef', 'std err', 't', 'P>|t|', alp + ' Conf. Interval']
+         'GLM'   : ['coef', 'std err', 't', 'P>|t|', alp + ' Conf. Interval'], #glm uses t-distribution   
+         'RLM'   : ['coef', 'std err', 'z', 'P>|z|', alp + ' Conf. Interval']  #checke z
                    }
     params_stubs = xname
     params = self.params
@@ -173,7 +184,7 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
     prob_stat = prob_stats[modeltype]
     
     # Simpletable should be able to handle the formating
-    params_data = zip(["%#6.4f" % (params[i]) for i in exog_len],
+    params_data = zip(["%#6.4g" % (params[i]) for i in exog_len],
                        ["%#6.4f" % (std_err[i]) for i in exog_len],
                        ["%#6.4f" % (stat[i]) for i in exog_len],
                        ["%#6.4f" % (prob_stat[i]) for i in exog_len],
@@ -184,7 +195,7 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
                                   param_header[modeltype],
                                   params_stubs,
                                   title = None,
-                                  txt_fmt = gen_fmt,
+                                  txt_fmt = fmt_2, #gen_fmt,
                                   )
 
     #special table
