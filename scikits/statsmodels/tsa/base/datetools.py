@@ -171,7 +171,6 @@ def dates_from_range(start, end=None, length=None):
     Parameters
     ----------
     start : strdates = sm.tsa.datetools.date_range('1960m1', length=nobs)
-arma_mod = sm.tsa.ARMA(y, dates=dates, freq='m')
         The first abbreviated date, for instance, '1965q1' or '1965m1'
     end : str, optional
         The last abbreviated date if length is None.
