@@ -558,7 +558,7 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
     """
     _cache = {}
 
-#TODO: use this for docstring when we fix nobs issue
+    #TODO: use this for docstring when we fix nobs issue
 
 
     def __init__(self, model, params, normalized_cov_params=None, scale=1.):
@@ -655,10 +655,10 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         fv = endog - self.resid
         # add deterministic part back in
         k = self.k_exog + self.k_trend
-#TODO: this needs to be commented out for MLE with constant
+    #TODO: this needs to be commented out for MLE with constant
 
-#        if k != 0:
-#            fv += dot(exog, self.params[:k])
+    #    if k != 0:
+    #        fv += dot(exog, self.params[:k])
         return fv
 
     @cache_readonly
