@@ -6,10 +6,12 @@ from numpy import dot, identity, kron, log, zeros, pi, exp, eye, abs, empty
 from numpy.linalg import inv, pinv
 import scikits.statsmodels.base.model as base
 import scikits.statsmodels.tsa.base.tsa_model as tsbase
+import scikits.statsmodels.base.wrapper as wrap
 from scikits.statsmodels.regression.linear_model import yule_walker, GLS
 from scikits.statsmodels.tsa.tsatools import (lagmat, add_trend,
         _ar_transparams, _ar_invtransparams, _ma_transparams,
         _ma_invtransparams)
+from scikits.statsmodels.tsa.vector_ar import util
 from scikits.statsmodels.tsa.ar_model import AR
 from scikits.statsmodels.tsa.arima_process import arma2ma
 from scikits.statsmodels.sandbox.regression.numdiff import (approx_fprime,
@@ -35,8 +37,8 @@ class ARMA(tsbase.TimeSeriesModel):
         An optional arry of exogenous variables. This should *not* include a
         constant or trend. You can specify this in the `fit` method.
     """
-    def __init__(self, endog, exog=None):
-        super(ARMA, self).__init__(endog, exog)
+    def __init__(self, endog, exog=None, dates=None, freq=None):
+        super(ARMA, self).__init__(endog, exog, dates, freq)
         if exog is not None:
             k_exog = exog.shape[1]  # number of exog. variables excl. const
         else:
@@ -395,6 +397,18 @@ class ARMA(tsbase.TimeSeriesModel):
             k_trend = 0
         self.k_trend = k_trend
         self.exog = exog    # overwrites original exog from __init__
+        exog_names = self.exog_names or []
+        if len(exog_names) != k_trend + k_ma + k_ar + k_exog:
+            if exog is not None:
+                exog_names = self._data._get_names(exog[:,k_trend:]) or []
+            else:
+                exog_names = []
+            ar_lag_names = util.make_lag_names(self.endog_names, k_ar, k_trend)
+            ar_lag_names[k_trend:] = [''.join(('ar.', i))
+                                      for i in ar_lag_names[k_trend:]]
+            ma_lag_names = util.make_lag_names(self.endog_names, k_ma, 0)
+            ma_lag_names = [''.join(('ma.', i)) for i in ma_lag_names]
+            self.exog_names = ar_lag_names + ma_lag_names + exog_names
         k = k_trend + k_exog
 
 
@@ -451,7 +465,7 @@ class ARMA(tsbase.TimeSeriesModel):
         normalized_cov_params = None #TODO: fix this
         armafit = ARMAResults(self, params, normalized_cov_params)
         self._results = armafit
-        return armafit
+        return ARMAResultsWrapper(armafit)
 
     fit.__doc__ += base.LikelihoodModel.fit.__doc__
 
@@ -755,6 +769,15 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
 
         return forecast, fcasterr, conf_int
 
+class ARMAResultsWrapper(wrap.ResultsWrapper):
+    _attrs = {}
+    _wrap_attrs = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_attrs,
+                                    _attrs)
+    _methods = {}
+    _wrap_methods = wrap.union_dicts(
+                        tsbase.TimeSeriesResultsWrapper._wrap_methods,
+                        _methods)
+wrap.populate_wrapper(ARMAResultsWrapper, ARMAResults)
 
 if __name__ == "__main__":
     import numpy as np
