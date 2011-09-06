@@ -6,6 +6,8 @@ results, and doing data cleaning
 import numpy as np
 from pandas import DataFrame, Series, TimeSeries
 from scikits.timeseries import time_series
+from scikits.statsmodels.tools.decorators import (resettable_cache,
+                cache_readonly, cache_writable)
 
 class ModelData(object):
     """
@@ -15,10 +17,9 @@ class ModelData(object):
     def __init__(self, endog, exog=None, **kwds):
         self._orig_endog = endog
         self._orig_exog = exog
-        (self.endog, self.exog, self.ynames,
-         self.xnames, self.row_labels) = self._convert_endog_exog(endog,
-                 exog)
+        self.endog, self.exog = self._convert_endog_exog(endog, exog)
         self._check_integrity()
+        self._cache = resettable_cache()
 
     def _convert_endog_exog(self, endog, exog):
 
@@ -32,22 +33,34 @@ class ModelData(object):
             if xarr.ndim != 2:
                 raise ValueError("exog is not 1d or 2d")
 
-        xnames = None
+        return yarr, xarr
+
+    @cache_writable()
+    def ynames(self):
+        endog = self.endog
+        ynames = self._get_names(endog)
+        if not ynames:
+            ynames = _make_endog_names(endog)
+        return ynames
+
+    @cache_writable()
+    def xnames(self):
+        exog = self.exog
         if exog is not None:
             xnames = self._get_names(exog)
             if not xnames:
                 xnames = _make_exog_names(xarr)
+        return xnames
 
-        ynames = self._get_names(endog)
-        if not ynames:
-            ynames = _make_endog_names(endog)
-
+    @cache_readonly
+    def row_labels(self):
+        exog = self._orig_exog
         if exog is not None:
             row_labels = self._get_row_labels(exog)
         else:
+            endog = self._orig_endog
             row_labels = self._get_row_labels(endog)
-
-        return yarr, xarr, ynames, xnames, row_labels
+        return row_labels
 
     def _get_row_labels(self, arr):
         return None
