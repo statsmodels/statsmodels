@@ -50,7 +50,8 @@ class ModelData(object):
             xnames = self._get_names(exog)
             if not xnames:
                 xnames = _make_exog_names(xarr)
-        return xnames
+            return xnames
+        return None
 
     @cache_readonly
     def row_labels(self):
