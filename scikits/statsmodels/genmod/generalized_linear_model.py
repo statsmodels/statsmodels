@@ -29,6 +29,7 @@ import scikits.statsmodels.regression.linear_model as lm
 import scikits.statsmodels.base.wrapper as wrap
 
 from scipy.stats import t
+from scikits.statsmodels.tools.sm_warnings import PerfectPredictionWarning
 
 __all__ = ['GLM']
 
@@ -403,6 +404,11 @@ returned a nan.  This could be a boundary problem and should be reported.")
             self._update_history(wls_results, mu)
             self.scale = self.estimate_scale(mu)
             self.iteration += 1
+            if endog.squeeze().ndim == 1 and np.allclose(mu - endog, 0):
+                from warnings import warn
+                msg = "Perfect separation detected, results not available"
+                warn(msg, PerfectPredictionWarning)
+                return None
         self.mu = mu
         glm_results = GLMResults(self, wls_results.params,
                                  wls_results.normalized_cov_params,
@@ -714,9 +720,8 @@ class GLMResults(base.LikelihoodModelResults):
         conf_int calculated from normal dist.
         """
         import time as Time
-        from scikits.statsmodels.iolib.table import SimpleTable
-        from scikits.statsmodels.stats.stattools import (jarque_bera,
-                omni_normtest, durbin_watson)
+        from scikits.iolib import SimpleTable
+        from stattools import jarque_bera, omni_normtest, durbin_watson
 
         yname = 'Y'
         if xname is None:
