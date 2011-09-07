@@ -237,19 +237,18 @@ Should be of length %s, if sigma is a 1d array" % nobs)
             # no upper triangular solve routine in numpy/scipy?
         lfit = RegressionResults(self, beta,
                        normalized_cov_params=self.normalized_cov_params)
-        self._results = lfit
         return lfit
 
-    def predict(self, exog, params=None):
+    def predict(self, params, exog=None):
         """
         Return linear predicted values from a design matrix.
 
         Parameters
         ----------
-        exog : array-like
-            Design / exogenous data
         params : array-like, optional after fit has been called
             Parameters of a linear model
+        exog : array-like, optional.
+            Design / exogenous data. Model exog is used if None.
 
         Returns
         -------
@@ -261,12 +260,11 @@ Should be of length %s, if sigma is a 1d array" % nobs)
         """
         #JP: this doesn't look correct for GLMAR
         #SS: it needs its own predict method
-        if self._results is None and params is None:
+        if not self._results and params is None:
             raise ValueError("If the model has not been fit, then you must specify the params argument.")
-        if self._results is not None:
-            return np.dot(exog, self._results.params)
-        else:
-            return np.dot(exog, params)
+        if exog is None:
+            exog = self.exog
+        return np.dot(exog, params)
 
     def loglike(self, params):
         """
@@ -876,17 +874,17 @@ class RegressionResults(LikelihoodModelResults):
 
     @cache_readonly
     def fittedvalues(self):
-        return self.model.predict(self.model.exog, self.params)
+        return self.model.predict(self.params, self.model.exog)
 
     @cache_readonly
     def wresid(self):
-        return self.model.wendog - self.model.predict(self.model.wexog,
-                self.params)
+        return self.model.wendog - self.model.predict(self.params,
+                self.model.wexog)
 
     @cache_readonly
     def resid(self):
-        return self.model.endog - self.model.predict(self.model.exog,
-                self.params)
+        return self.model.endog - self.model.predict(self.params,
+                self.model.exog)
 
 #    def _getscale(self):
 #        val = self._cache.get("scale", None)

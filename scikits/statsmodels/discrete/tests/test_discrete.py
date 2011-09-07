@@ -174,7 +174,7 @@ class TestProbitNewton(CheckModelResults):
         cls.res2 = res2
 
     def test_predict(self):
-        assert_almost_equal(self.res1.model.predict(self.res1.model.exog),
+        assert_almost_equal(self.res1.model.predict(self.res1.params),
                 self.res2.predict, DECIMAL_4)
 
     def test_resid(self):

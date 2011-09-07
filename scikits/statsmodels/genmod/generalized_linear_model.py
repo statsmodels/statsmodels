@@ -308,16 +308,16 @@ class GLM(LikelihoodModel):
             raise ValueError("Scale %s with type %s not understood" %\
                 (self.scaletype, type(self.scaletype)))
 
-    def predict(self, exog, params=None, linear=False):
+    def predict(self, params, exog=None, linear=False):
         """
         Return predicted values for a design matrix
 
         Parameters
         ----------
-        exog : array-like
-            Design / exogenous data
-        params : array-like, optional after fit has been called
+        params : array-like
             Parameters / coefficients of a GLM.
+        exog : array-like, optional
+            Design / exogenous data. Is exog is None, model exog is used.
         linear : bool
             If True, returns the linear predicted values.  If False,
             returns the value of the inverse of the model's link function at
@@ -326,16 +326,9 @@ class GLM(LikelihoodModel):
         Returns
         -------
         An array of fitted values
-
-        Notes
-        -----
-        If the model as not yet been fit, params is not optional.
         """
-        if self._results is None and params is None:
-            raise ValueError("If the model has not been fit, then you must \
-specify the params argument.")
-        if self._results is not None:
-            params = self.results.params
+        if exog is None:
+            exog = self.exog
         if linear:
             return np.dot(exog, params)
         else:

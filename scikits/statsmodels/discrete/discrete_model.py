@@ -144,10 +144,14 @@ class DiscreteModel(LikelihoodModel):
         return discretefit
     fit.__doc__ += LikelihoodModel.fit.__doc__
 
-    def predict(self, exog=None, linear=False):
+    def predict(self, params, exog=None, linear=False):
         """
         Predict response variable of a model given exogenous variables.
 
+        Parameters
+        ----------
+        params : array-like
+            Fitted parameters of the model.
         exog : array-like
             1d or 2d array of exogenous values.  If not supplied, the
             whole exog attribute of the model is used.
@@ -159,19 +163,13 @@ class DiscreteModel(LikelihoodModel):
         -------
         array
             Fitted values at exog.
-
-        Notes
-        -----
-        You must fit the model first.
         """
-        if self._results is None:
-            raise ValueError("You must fit the model first")
         if exog is None:
             exog = self.exog
         if not linear:
-            return self.cdf(np.dot(exog, self._results.params))
+            return self.cdf(np.dot(exog, params))
         else:
-            return np.dot(exog, self._results.params)
+            return np.dot(exog, params)
 
 
 class Poisson(DiscreteModel):
@@ -1211,7 +1209,7 @@ class DiscreteResults(LikelihoodModelResults):
 #TODO: is this common to all models?  logit uses Pearson, should have options
 #These are the deviance residuals
         M = 1
-        p = model.predict()
+        p = model.predict(self.params)
         Y_0 = np.where(exog==0)
         Y_M = np.where(exog == M)
         res = np.zeros_like(endog)
