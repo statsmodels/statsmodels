@@ -26,8 +26,8 @@ from scikits.statsmodels.base.model import (LikelihoodModel,
         LikelihoodModelResults)
 from scikits.statsmodels.tools.decorators import (cache_readonly,
         resettable_cache)
-
 from scipy.stats import t
+from scikits.statsmodels.tools.sm_warnings import PerfectPredictionWarning
 
 __all__ = ['GLM']
 
@@ -409,6 +409,11 @@ returned a nan.  This could be a boundary problem and should be reported.")
             self._update_history(wls_results, mu)
             self.scale = self.estimate_scale(mu)
             self.iteration += 1
+            if endog.squeeze().ndim == 1 and np.allclose(mu - endog, 0):
+                from warnings import warn
+                msg = "Perfect separation detected, results not available"
+                warn(msg, PerfectPredictionWarning)
+                return None
         self.mu = mu
         glm_results = GLMResults(self, wls_results.params,
                 wls_results.normalized_cov_params, self.scale)
@@ -658,7 +663,7 @@ class GLMResults(LikelihoodModelResults):
         conf_int calculated from normal dist.
         """
         import time as Time
-        from iolib import SimpleTable
+        from scikits.iolib import SimpleTable
         from stattools import jarque_bera, omni_normtest, durbin_watson
 
         if yname is None:
