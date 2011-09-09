@@ -24,7 +24,11 @@ from scipy.misc import factorial
 
 import scikits.statsmodels.tools.tools as tools
 from scikits.statsmodels.tools.decorators import (resettable_cache,
-                                                  cache_readonly)
+        cache_readonly)
+from scikits.statsmodels.regression.linear_model import OLS
+from scipy import stats, special, optimize # opt just for nbin
+from scipy.misc import factorial
+from scikits.statsmodels.tools.sm_warnings import PerfectPredictionWarning
 #import numdifftools as nd #This will be removed when all have analytic hessians
 
 import scikits.statsmodels.base.model as base
@@ -126,6 +130,15 @@ class DiscreteModel(base.LikelihoodModel):
         """
         raise NotImplementedError
 
+    def _check_perfect_pred(self, params):
+        endog = self.endog
+        fittedvalues = self.cdf(np.dot(self.exog, params))
+        if np.allclose(fittedvalues - endog, 0):
+            #from warnings import warn
+            msg = "Perfect separation detected, results not available"
+            #warn(msg, PerfectPredictionWarning)
+            raise Exception(msg)
+
     def fit(self, start_params=None, method='newton', maxiter=35, full_output=1,
             disp=1, callback=None, **kwargs):
         """
@@ -134,6 +147,8 @@ class DiscreteModel(base.LikelihoodModel):
         The rest of the docstring is from
         scikits.statsmodels.LikelihoodModel.fit
         """
+        if callback is None and not isinstance(self, MNLogit):
+            callback = self._check_perfect_pred
         if start_params is None and isinstance(self, MNLogit):
             start_params = np.zeros((self.exog.shape[1]*\
                     (self.wendog.shape[1]-1)))
