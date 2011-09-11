@@ -16,9 +16,9 @@ except ImportError:
 
 __docformat__ = "restructuredtext en"
 
-from table import Cell, Row, SimpleTable
-from table import default_latex_fmt
-from table import default_html_fmt
+from scikits.statsmodels.iolib.table import Cell, Row, SimpleTable
+from scikits.statsmodels.iolib.table import default_latex_fmt
+from scikits.statsmodels.iolib.table import default_html_fmt
 
 ltx_fmt1 = default_latex_fmt.copy()
 html_fmt1 = default_html_fmt.copy()
