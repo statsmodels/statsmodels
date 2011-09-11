@@ -311,7 +311,7 @@ def summary_top(self, title=None, gleft=None, gright=None, yname=None, xname=Non
                   ('df model', [df_model])
                   ]
 
-    gen_right_ = [('Method:', [model_methods[modeltype]]), #[modeltype]),
+    gen_right_ = [('Method:', [model_methods.get(modeltype)]), #[modeltype]),
                   ('Time:', time_of_day),
                   ('Number of Obs:', [nobs]),
                   ('df resid', [df_resid])
@@ -395,10 +395,10 @@ def summary_params(self, yname=None, xname=None, alpha=.05, use_t=True):
     alp = str((1-alpha)*100)+'%'
     if use_t:
         param_header = ['coef', 'std err', 't', 'P>|t|',
-                        alp + ' Conf. Interval']
+                        alp + ' Conf. Int.']
     else:
         param_header = ['coef', 'std err', 'z', 'P>|z|',
-                        alp + ' Conf. Interval']
+                        alp + ' Conf. Int.']
 
     
     _, xname = _getnames(self, yname=yname, xname=xname)
@@ -411,8 +411,8 @@ def summary_params(self, yname=None, xname=None, alpha=.05, use_t=True):
     # alternative would be to use format in fmt_2
     params_data = zip(["%#6.4g" % (params[i]) for i in exog_idx],
                        ["%#6.4f" % (std_err[i]) for i in exog_idx],
-                       ["%#6.4f" % (tvalues[i]) for i in exog_idx],
-                       ["%#6.4f" % (pvalues[i]) for i in exog_idx],
+                       ["%#6.3f" % (tvalues[i]) for i in exog_idx],
+                       ["%#5.3f" % (pvalues[i]) for i in exog_idx],
                        ["""(%#6.3f, %#6.3f)""" % tuple(conf_int[i]) for i in \
                                                              exog_idx]
                       )
