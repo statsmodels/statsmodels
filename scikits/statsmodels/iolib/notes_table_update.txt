@@ -8,4 +8,5 @@ table.py :
 
 test_table.py :
     renamed to test_table_econpy.py in parallel to test_table.py
+    change import paths in test_table_econpy.py
     currently too many differences to maintain merge
