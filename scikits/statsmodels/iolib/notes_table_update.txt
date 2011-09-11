@@ -1,0 +1,11 @@
+updating table.py from econpy
+=============================
+
+table.py : 
+    reformat tabs to 4 spaces
+    adjust import path in docstrings
+    currently insufficient tests for backwards compatibility, might break silently
+
+test_table.py :
+    renamed to test_table_econpy.py in parallel to test_table.py
+    currently too many differences to maintain merge
