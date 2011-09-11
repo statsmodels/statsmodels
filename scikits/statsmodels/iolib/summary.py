@@ -1,5 +1,11 @@
+
+
+from scikits.statsmodels.iolib.table import SimpleTable
+from scikits.statsmodels.iolib.tableformatting import gen_fmt, fmt_2
+
+
 def summary(self, yname=None, xname=None, title=0, alpha=.05,
-            returns='print'):
+            returns='text', model_info=None):
     """
     Parameters
     -----------
@@ -54,8 +60,6 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
     conf_int calculated from normal dist.
     """
     import time as time
-    from scikits.statsmodels.iolib.table import SimpleTable
-    from scikits.statsmodels.iolib.tableformatting import gen_fmt, fmt_2 #, summaries
     
     
     
@@ -180,13 +184,13 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
     conf_int = self.conf_int(alpha)
     std_err = self.bse
     exog_len = xrange(len(xname))
-    stat = stats[modeltype]
+    tstat = tstats[modeltype]
     prob_stat = prob_stats[modeltype]
     
     # Simpletable should be able to handle the formating
     params_data = zip(["%#6.4g" % (params[i]) for i in exog_len],
                        ["%#6.4f" % (std_err[i]) for i in exog_len],
-                       ["%#6.4f" % (stat[i]) for i in exog_len],
+                       ["%#6.4f" % (tstat[i]) for i in exog_len],
                        ["%#6.4f" % (prob_stat[i]) for i in exog_len],
                        ["""(%#6.3f, %#6.3f)""" % tuple(conf_int[i]) for i in \
                                                              exog_len]
@@ -234,14 +238,224 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
             return printers[modeltype]()
         except KeyError:
             return printers['OLS']()
-            
+
+def _getnames(self, yname=None, xname=None):
+    '''extract names from model or construct names
+    '''
+    if yname is None:
+        try:
+            yname = self.model.endog_names
+        except AttributeError:
+            yname = 'y'
+    if xname is None:
+        try:
+            xname = self.model.exog_names
+        except AttributeError:
+            xname = ['var_%d' % i for i in range(len(self.params))]
+
+    return yname, xname
+
+
+
+def summary_top(self, title=None, gleft=None, gright=None, yname=None, xname=None):
+    '''generate top table(s)
+
+
+    TODO: this still uses predefined model_methods
+    ? allow gleft, gright to be 1 element tuples instead of filling with None?
+
+    '''
+
+    import time as time
+
+    #TODO Make sure all self.model.__class__.__name__ are listed    
+    model_types = {'OLS' : 'Ordinary least squares',
+                   'GLS' : 'Generalized least squares',
+                   'GLSAR' : 'Generalized least squares with AR(p)',
+                   'WLS' : 'Weigthed least squares',
+                   'RLM' : 'Robust linear model',
+                   'GLM' : 'Generalized linear model'
+                   }
+    model_methods = {'OLS' : 'Least Squares',
+                   'GLS' : 'Least Squares',
+                   'GLSAR' : 'Least Squares',
+                   'WLS' : 'Least Squares',
+                   'RLM' : '?',
+                   'GLM' : '?'
+                   }
+    if title is None:
+        title = model_types[self.model.__class__.__name__]
+
+    yname, xname = _getnames(self, yname=yname, xname=xname)
+    
+    time_now = time.localtime()
+    time_of_day = [time.strftime("%H:%M:%S", time_now)]
+    date = time.strftime("%a, %d %b %Y", time_now)
+    
+    modeltype = self.model.__class__.__name__
+    #dist_family = self.model.family.__class__.__name__
+    nobs = self.nobs
+    df_model = self.df_model
+    df_resid = self.df_resid
+
+    
+    
+    #General part of the summary table, Applicable to all? models
+    #------------------------------------------------------------
+    #TODO: define this generically, overwrite in model classes
+    #replace definition of stubs data by single list
+    #e.g.
+    gen_left_ =   [('Model type:', [modeltype]),
+                  ('Date:', [date]),
+                  ('Dependent Variable:', yname), #What happens with multiple names?
+                  ('df model', [df_model])
+                  ]
+
+    gen_right_ = [('Method:', [model_methods[modeltype]]), #[modeltype]),
+                  ('Time:', time_of_day),
+                  ('Number of Obs:', [nobs]),
+                  ('df resid', [df_resid])
+                  ]
+
+    gen_title = title
+    gen_header = None
+
+    if gleft is None :
+        gen_left = gen_left_
+    else:
+        gl = dict(gen_left_ + gen_right_)
+        gen_left = []
+        for item, value in gleft:
+            if value is None:
+                value = gl.get(item)  #adds None if not a key
+            gen_left.append((item, value))
+    
+
+    if gright is None :
+        gen_right = gen_right_
+    else:
+        gr = dict(gen_left_ + gen_right_)
+        gen_right = []
+        for item, value in gright:
+            if value is None:
+                value = gr.get(item)  #adds None if not a key
+            gen_right.append((item, value))
+
+    if gen_right:
+        if len(gen_right) < len(gen_left):
+            #fill up with blank lines to same length
+            gen_right += [(' ', ' ')] * (len(gen_left) - len(gen_right))
+        elif len(gen_right) > len(gen_left):
+            #fill up with blank lines to same length, just to keep it symmetric
+            gen_left += [(' ', ' ')] * (len(gen_right) - len(gen_left))
+        gen_stubs_right, gen_data_right = map(None, *gen_right) #transpose row col            
+        gen_table_right = SimpleTable(gen_data_right,
+                                      gen_header,
+                                      gen_stubs_right,
+                                      title = gen_title,
+                                      txt_fmt = gen_fmt
+                                      )
+    else:
+        gen_table_right = []  #because .extend_right seems to work with []
+
+
+    #moved below so that we can pad if needed to match length of gen_right
+    gen_stubs_left, gen_data_left = map(None, *gen_left) #transpose row col
+    gen_table_left = SimpleTable(gen_data_left,
+                                 gen_header,
+                                 gen_stubs_left,
+                                 title = gen_title,
+                                 txt_fmt = gen_fmt
+                                 )
         
 
+    gen_table_left.extend_right(gen_table_right)
+    general_table = gen_table_left
 
-#if __name__ == "__main__":
-    #import scikits.statsmodels as sm
-    #data = sm.datasets.longley.load()
-    #data.exog = add_constant(data.exog)
-    #ols_results = OLS(data.endog, data.exog).results
+    return general_table #, gen_table_left, gen_table_right
+
+
+def summary_params(self, yname=None, xname=None, alpha=.05, use_t=True):
+    
+    #Parameters part of the summary table
+    #------------------------------------
+    #Note: this is not necessary since we standardized names, only t versus normal
+
+    params = self.params
+    
+    
+    std_err = self.bse
+    tvalues = self.tvalues  #is this sometimes called zvalues
+    pvalues = self.pvalues
+    conf_int = self.conf_int(alpha)
+    
+
+    #Dictionary to store the header names for the parameter part of the 
+    #summary table. look up by modeltype
+    alp = str((1-alpha)*100)+'%'
+    if use_t:
+        param_header = ['coef', 'std err', 't', 'P>|t|',
+                        alp + ' Conf. Interval']
+    else:
+        param_header = ['coef', 'std err', 'z', 'P>|z|',
+                        alp + ' Conf. Interval']
+
+    
+    _, xname = _getnames(self, yname=yname, xname=xname)
+    
+    params_stubs = xname
+
+    exog_idx = xrange(len(xname))
+    
+    # Simpletable should be able to handle the formating
+    # alternative would be to use format in fmt_2
+    params_data = zip(["%#6.4g" % (params[i]) for i in exog_idx],
+                       ["%#6.4f" % (std_err[i]) for i in exog_idx],
+                       ["%#6.4f" % (tvalues[i]) for i in exog_idx],
+                       ["%#6.4f" % (pvalues[i]) for i in exog_idx],
+                       ["""(%#6.3f, %#6.3f)""" % tuple(conf_int[i]) for i in \
+                                                             exog_idx]
+                      )
+    parameter_table = SimpleTable(params_data,
+                                  param_header,
+                                  params_stubs,
+                                  title = None,
+                                  txt_fmt = fmt_2, #gen_fmt,
+                                  )
+
+    return parameter_table
+
+
+def summary_return(tables, return_fmt='text'):
+    ########  Return Summary Tables ########
+        # join table parts then print
+    if return_fmt == 'text':
+        return '\n'.join(map(str, tables))
+    elif return_fmt == 'tables':
+        return tables
+    elif return_fmt == 'csv':
+        return '\n'.join(map(lambda x: x.as_csv, tables))
+    elif return_fmt == 'latex':
+        #TODO: insert \hline after updating SimpleTable
+        import copy
+        table = copy.deepcopy(tables[0])
+        for part in tables[1:]:
+            table.extend(part)
+        return table.as_latex_tabular()                
+    elif return_fmt == 'html':
+        import copy
+        table = copy.deepcopy(tables[0])
+        for part in tables[1:]:
+            table.extend(part)
+        return table.as_html
+    else:
+        raise ValueError('available output formats are text, csv, latex, html')
+
+
+if __name__ == "__main__":
+    import scikits.statsmodels.api as sm
+    data = sm.datasets.longley.load()
+    data.exog = sm.add_constant(data.exog)
+    res = sm.OLS(data.endog, data.exog).fit()
     #summary(
   

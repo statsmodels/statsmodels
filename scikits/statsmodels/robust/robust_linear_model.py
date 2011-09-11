@@ -419,7 +419,42 @@ class RLMResults(LikelihoodModelResults):
     def chisq(self):
         return (self.params/self.bse)**2
 
-    def summary(self, yname=None, xnames=None, title=0, alpha=.05,
+    def summary(self, yname=None, xname=None, title=0, alpha=.05,
+                return_fmt='text'):
+        """
+        This is for testing the new summary setup
+        """
+        from scikits.statsmodels.iolib.summary import (summary_top,
+                                            summary_params, summary_return)
+
+##        left = [(i, None) for i in (
+##                        'Dependent Variable:',
+##                        'Model type:',
+##                        'Method:',
+##			'Date:',
+##                        'Time:',
+##                        'Number of Obs:',
+##                        'df resid',
+##		        'df model',
+##                         )]
+        left = [('Dependent Variable:', None),
+                 ('Model type:', None),
+                 ('Method:', ['IRLS']),
+                 ('Date:', None),
+                 ('Time:', None),
+                 ('Number of Obs:', None),
+                 ('df resid', None),
+                 ('df model', None)]
+        
+        top = summary_top(self, gleft=left, gright=[],
+                          yname=yname, xname=xname,
+                          title="Robust Linear Model")
+        par = summary_params(self, yname=yname, xname=xname, alpha=.05,
+                             use_t=False)
+
+        return summary_return([top, par], return_fmt=return_fmt)
+
+    def summary2(self, yname=None, xnames=None, title=0, alpha=.05,
                 returns='print'):
         """
         This is for testing the new summary setup
