@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.stats import t, norm
-from scipy import optimize
+from scipy import optimize, stats
 from scikits.statsmodels.tools.tools import recipr
 from scikits.statsmodels.stats.contrast import ContrastResults
 from scikits.statsmodels.tools.decorators import (resettable_cache,
@@ -862,6 +862,10 @@ class LikelihoodModelResults(Results):
         Return the t-statistic for a given parameter estimate.
         """
         return self.params / self.bse
+
+    @cache_readonly
+    def pvalues(self):
+        return stats.t.sf(np.abs(self.tvalues), self.df_resid)*2
 
 
 
