@@ -1429,6 +1429,39 @@ class DiscreteResults(LikelihoodModelResults):
         self.margfx = effects
         return effects
 
+    def summary(self, yname=None, xname=None, title=None, alpha=.05,
+                return_fmt='text'):
+        """
+        This is for testing the new summary setup
+        """
+        from scikits.statsmodels.iolib.summary import (summary_top,
+                                            summary_params, summary_return)
+
+
+        left = [('Dependent Variable:', None),
+                 ('Model:', [self.model.__class__.__name__]),
+                 ('Method:', ['MLE']),
+                 ('Date:', None),
+                 ('Time:', None)
+                  ]
+
+        right = [('Number of Obs:', None),
+                 ('df resid', None),
+                 ('df model', None),
+                 ('PR-squared:', ["%#6.4g" % self.prsquared]),
+                 ('Log-Likelihood:', ["%#6.4g" % self.llf]),
+                 ('LL-Null:', ["%#6.4g" % self.llnull]),
+                 ('llr p-value:', ["%#6.4g" % self.llr_pvalue])
+                 ]
+        
+        top = summary_top(self, gleft=left, gright=right,
+                          yname=yname, xname=xname,
+                          title="Discrete Model")
+        par = summary_params(self, yname=yname, xname=xname, alpha=.05,
+                             use_t=True)
+
+        return summary_return([top, par], return_fmt=return_fmt)
+
 if __name__=="__main__":
     import numpy as np
     import scikits.statsmodels.api as sm

@@ -598,14 +598,39 @@ class GLMResults(LikelihoodModelResults):
     def bic(self):
         return self.deviance - self.df_resid*np.log(self.nobs)
 
-    def summary2(self, yname=None, xnames=None, title=0, alpha=.05,
-                returns='print'):
+    def summary2(self, yname=None, xname=None, title=0, alpha=.05,
+                return_fmt='text'):
         """
         This is for testing the new summary setup
         """
-        from scikits.statsmodels.iolib.summary import summary as smry
-        return smry(self, yname=yname, xname=xnames, title=0, alpha=.05, returns='print')
+        from scikits.statsmodels.iolib.summary import (summary_top,
+                                            summary_params, summary_return)
 
+
+        left = [('Dependent Variable:', None),
+                 ('Model Family:', [self.family.__class__.__name__]),
+                 ('Link Function:', [self.family.link.__class__.__name__]),
+                 ('Method:', ['IRLS']),
+                 ('Date:', None),
+                 ('Time:', None)
+                  ]
+
+        right = [('Number of Obs:', None),
+                 ('df resid', None),
+                 ('df model', None),
+                 ('Scale:', [self.scale]),
+                 ('Log-Likelihood:', [self.llf]),
+                 ('Deviance:', [self.deviance]),
+                 ('Pearson chi2:', [self.pearson_chi2])
+                 ]
+        
+        top = summary_top(self, gleft=left, gright=right,
+                          yname=yname, xname=xname,
+                          title="Generalized Linear Model")
+        par = summary_params(self, yname=yname, xname=xname, alpha=.05,
+                             use_t=True)
+
+        return summary_return([top, par], return_fmt=return_fmt)
 
 #TODO: write summary method to use output.py in sandbox
     def summary(self, yname=None, xname=None, title='Generalized linear model',
