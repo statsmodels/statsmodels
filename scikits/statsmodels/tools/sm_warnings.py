@@ -1,1 +1,0 @@
-class PerfectPredictionWarning(Warning): pass

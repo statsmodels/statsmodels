@@ -8,7 +8,7 @@ from numpy.testing import *
 import scikits.statsmodels.api as sm
 from scikits.statsmodels.genmod.generalized_linear_model import GLM
 from scikits.statsmodels.tools.tools import add_constant
-from scikits.statsmodels.tools.sm_warnings import PerfectPredictionWarning
+from scikits.statsmodels.tools.sm_exceptions import PerfectSeparationError
 from nose import SkipTest
 
 # Test Precisions
@@ -479,7 +479,7 @@ def test_prefect_pred():
     y = y[y != 2]
     X = add_constant(X, prepend=True)
     glm = GLM(y, X, family=sm.families.Binomial())
-    assert_warns(PerfectPredictionWarning, glm.fit)
+    assert_raises(PerfectSeparationError, glm.fit)
 
 
 def test_attribute_writable_resettable():
