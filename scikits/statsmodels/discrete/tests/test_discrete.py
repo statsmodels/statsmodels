@@ -15,6 +15,7 @@ import scikits.statsmodels.api as sm
 from sys import platform
 from nose import SkipTest
 from results.results_discrete import Spector
+from scikits.statsmodels.tools.sm_exceptions import PerfectSeparationError
 
 DECIMAL_4 = 4
 DECIMAL_3 = 3
@@ -323,8 +324,7 @@ def test_perfect_prediction():
     y = y[y != 2]
     X = sm.add_constant(X, prepend=True)
     mod = Logit(y,X)
-    #assert_raises(PerfectPredictionWarning, mod.fit)
-    assert_raises(Exception, mod.fit)
+    assert_raises(PerfectSeparationError, mod.fit)
     
 
 
