@@ -37,7 +37,7 @@ class ModelData(object):
 
     @cache_writable()
     def ynames(self):
-        endog = self.endog
+        endog = self._orig_endog
         ynames = self._get_names(endog)
         if not ynames:
             ynames = _make_endog_names(endog)
@@ -45,11 +45,11 @@ class ModelData(object):
 
     @cache_writable()
     def xnames(self):
-        exog = self.exog
+        exog = self._orig_exog
         if exog is not None:
             xnames = self._get_names(exog)
             if not xnames:
-                xnames = _make_exog_names(xarr)
+                xnames = _make_exog_names(exog)
             return xnames
         return None
 
