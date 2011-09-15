@@ -28,6 +28,8 @@ import scikits.statsmodels.tsa.tsatools as tsa
 import scikits.statsmodels.tsa.vector_ar.output as output
 import scikits.statsmodels.tsa.vector_ar.plotting as plotting
 import scikits.statsmodels.tsa.vector_ar.util as util
+import scikits.statsmodels.tsa.base.tsa_model as tsbase
+import scikits.statsmodels.base.wrapper as wrap
 
 import scikits.statsmodels.tools.data as data_util
 
@@ -309,7 +311,7 @@ def _reordered(self, order):
 #-------------------------------------------------------------------------------
 # VARProcess class: for known or unknown VAR process
 
-class VAR(object):
+class VAR(tsbase.TimeSeriesModel):
     r"""
     Fit VAR(p) process and do lag order selection
 
@@ -332,10 +334,8 @@ class VAR(object):
     -------
     .fit() method returns VARResults object
     """
-    def __init__(self, endog, names=None, dates=None):
-        (self.endog, self.names,
-         self.dates) = data_util.interpret_data(endog, names, dates)
-
+    def __init__(self, endog, dates=None, freq=None):
+        super(VAR, self).__init__(endog, None, dates, freq)
         self.y = self.endog #keep alias for now
         self.neqs = self.endog.shape[1]
 
@@ -430,8 +430,9 @@ class VAR(object):
         sse = np.dot(resid.T, resid)
         omega = sse / df_resid
 
-        return VARResults(y, z, params, omega, lags, names=self.names,
-                          trend=trend, dates=self.dates, model=self)
+        varfit = VARResults(y, z, params, omega, lags, names=self.endog_names,
+                          trend=trend, dates=self._data.dates, model=self)
+        return VARResultsWrapper(varfit)
 
     def select_order(self, maxlags=None, verbose=True):
         """
@@ -1357,6 +1358,16 @@ class VARResults(VARProcess):
     def bic(self):
         "Bayesian a.k.a. Schwarz info criterion"
         return self.info_criteria['bic']
+
+class VARResultsWrapper(wrap.ResultsWrapper):
+    _attrs = {}
+    _wrap_attrs = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_attrs,
+                                    _attrs)
+    _methods = {}
+    _wrap_methods = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_methods,
+                                     _methods)
+    _wrap_methods.pop('cov_params') # not yet a method in VARResults
+wrap.populate_wrapper(VARResultsWrapper, VARResults)
 
 class FEVD(object):
     """
