@@ -388,6 +388,8 @@ class VAR(tsbase.TimeSeriesModel):
             if lags is None:
                 lags = 1
 
+        k_trend = util.get_trendorder(trend)
+        self.exog_names = util.make_lag_names(self.endog_names, lags, k_trend)
         self.nobs = len(self.endog) - lags
 
         return self._estimate_var(lags, trend=trend)
@@ -785,7 +787,9 @@ class VARResults(VARProcess):
         self.k_trend = k_trend
         self.trendorder = trendorder
 
-        self.coef_names = util.make_lag_names(names, lag_order, k_trend)
+        #TODO: deprecate coef_names
+        self.coef_names = self.exog_names = util.make_lag_names(names,
+                                                lag_order, k_trend)
         self.params = params
 
         # Initialize VARProcess parent class
@@ -1360,7 +1364,11 @@ class VARResults(VARProcess):
         return self.info_criteria['bic']
 
 class VARResultsWrapper(wrap.ResultsWrapper):
-    _attrs = {}
+    _attrs = {'bse' : 'columns_eq', 'cov_params' : 'cov',
+              'params' : 'columns_eq', 'pvalues' : 'columns_eq',
+              'tvalues' : 'columns_eq', 'sigma_u' : 'cov_eq',
+              'sigma_u_mle' : 'cov_eq',
+              'stderr' : 'columns_eq'}
     _wrap_attrs = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_attrs,
                                     _attrs)
     _methods = {}

@@ -97,13 +97,23 @@ class ModelData(object):
             return self.attach_cov(obj)
         elif how == 'dates':
             return self.attach_dates(obj)
+        elif how == 'columns_eq':
+            return self.attach_columns_eq(obj)
+        elif how == 'cov_eq':
+            return self.attach_cov_eq(obj)
         else:
             return obj
 
     def attach_columns(self, result):
         return result
 
+    def attach_columns_eq(self, result):
+        return result
+
     def attach_cov(self, result):
+        return result
+
+    def attach_cov_eq(self, result):
         return result
 
     def attach_rows(self, result):
@@ -124,16 +134,26 @@ class PandasData(ModelData):
     def attach_columns(self, result):
         if result.squeeze().ndim == 1:
             return Series(result, index=self.xnames)
-        else:
+        else: # for e.g., confidence intervals
             return DataFrame(result, index=self.xnames)
+
+    def attach_columns_eq(self, result):
+        return DataFrame(result, index=self.xnames, columns=self.ynames)
 
     def attach_cov(self, result):
         return DataFrame(result, index=self.xnames, columns=self.xnames)
 
+    def attach_cov_eq(self, result):
+        return DataFrame(result, index=self.ynames, columns=self.ynames)
+
     def attach_rows(self, result):
         # assumes if len(row_labels) > len(result) it's bc it was truncated
         # at the front, for AR lags, for example
-        return Series(result, index=self.row_labels[-len(result):])
+        if result.squeeze().ndim == 1:
+            return Series(result, index=self.row_labels[-len(result):])
+        else: # this is for VAR results, may not be general enough
+            return DataFrame(result, index=self.row_labels[-len(result):],
+                                columns=self.ynames)
 
     def attach_dates(self, result):
         return TimeSeries(result, index=self.predict_dates)
@@ -204,8 +224,14 @@ class LarryData(ModelData):
             shape = results.shape
             return _la.larray(result, [self.xnames, range(shape[1])])
 
+    def attach_columns_eq(self, result):
+        return _la.larray(result, [self.xnames], [self.xnames])
+
     def attach_cov(self, result):
-        return _la.larry(result, [self.xnames, self.xnames])
+        return _la.larry(result, [self.xnames], [self.xnames])
+
+    def attach_cov_eq(self, result):
+        return _la.larray(result, [self.ynames], [self.ynames])
 
     def attach_rows(self, result):
         return _la.larry(result, [self.row_labels[-len(result):]])
