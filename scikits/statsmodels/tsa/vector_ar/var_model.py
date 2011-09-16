@@ -1376,8 +1376,8 @@ class VARResults(VARProcess):
         arr = np.zeros((p,p))
         arr[:neqs,:] = np.column_stack(self.coefs)
         arr[neqs:,:-neqs] = np.eye(p-neqs)
-        roots = np.linalg.eig(arr)[0]
-        idx = np.argsort(np.abs(roots))[::-1]
+        roots = np.linalg.eig(arr)[0]**-1
+        idx = np.argsort(np.abs(roots))[::-1] # sort by reverse modulus
         return roots[idx]
 
 class VARResultsWrapper(wrap.ResultsWrapper):
