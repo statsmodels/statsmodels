@@ -758,6 +758,11 @@ class VARResults(VARProcess):
     names : list
         variables names
     resid
+    roots : array
+        The roots of the VAR process are the solution to
+        (I - coefs[0]*z - coefs[1]*z**2 ... - coefs[p-1]*z**k_ar) = 0.
+        Note that the inverse roots are returned, and stability requires that
+        the roots lie outside the unit circle.
     sigma_u : ndarray (K x K)
         Estimate of white noise process variance Var[u_t]
     sigma_u_mle
@@ -1362,6 +1367,18 @@ class VARResults(VARProcess):
     def bic(self):
         "Bayesian a.k.a. Schwarz info criterion"
         return self.info_criteria['bic']
+
+    @cache_readonly
+    def roots(self):
+        neqs = self.neqs
+        k_ar = self.k_ar
+        p = neqs * k_ar
+        arr = np.zeros((p,p))
+        arr[:neqs,:] = np.column_stack(self.coefs)
+        arr[neqs:,:-neqs] = np.eye(p-neqs)
+        roots = np.linalg.eig(arr)[0]
+        idx = np.argsort(np.abs(roots))[::-1]
+        return roots[idx]
 
 class VARResultsWrapper(wrap.ResultsWrapper):
     _attrs = {'bse' : 'columns_eq', 'cov_params' : 'cov',
