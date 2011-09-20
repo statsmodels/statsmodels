@@ -1208,19 +1208,33 @@ class RegressionResults(LikelihoodModelResults):
                        ('Kurtosis:', ["%#6.3f" % kurtosis])]
 
 
-        
-        top = summary_top(self, gleft=topleft, gright=diagn_left, #[],
+        from scikits.statsmodels.iolib.summary import Summary
+        smry = Summary()
+        smry.add_table_2cols(self, gleft=topleft, gright=diagn_left, #[],
                           yname=yname, xname=xname,
-                          title=self.model.__class__.__name__ + ' ' +
+                          title=self.model.__class__.__name__ + ' ' + \
                           "Regression Results")
-        par = summary_params(self, yname=yname, xname=xname, alpha=.05,
+        smry.add_table_params(self, yname=yname, xname=xname, alpha=.05,
                              use_t=False)
         
-        diagn = summary_top(self, gleft=diagn_left, gright=diagn_right,
+        smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
                           yname=yname, xname=xname,
-                          title="Linear Model")
+                          title="")
 
-        return summary_return([top, par, diagn], return_fmt=return_fmt)
+        return smry
+
+#        top = summary_top(self, gleft=topleft, gright=diagn_left, #[],
+#                          yname=yname, xname=xname,
+#                          title=self.model.__class__.__name__ + ' ' +
+#                          "Regression Results")
+#        par = summary_params(self, yname=yname, xname=xname, alpha=.05,
+#                             use_t=False)
+#        
+#        diagn = summary_top(self, gleft=diagn_left, gright=diagn_right,
+#                          yname=yname, xname=xname,
+#                          title="Linear Model")
+#
+#        return summary_return([top, par, diagn], return_fmt=return_fmt)
 
 
     def summary(self, yname=None, xname=None, returns='text'):
