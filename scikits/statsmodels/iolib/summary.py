@@ -192,7 +192,7 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
                        ["%#6.4f" % (std_err[i]) for i in exog_len],
                        ["%#6.4f" % (tstat[i]) for i in exog_len],
                        ["%#6.4f" % (prob_stat[i]) for i in exog_len],
-                       ["""(%#6.3f, %#6.3f)""" % tuple(conf_int[i]) for i in \
+                       ["(%#5g, %#5g)" % tuple(conf_int[i]) for i in \
                                                              exog_len]
                       )
     parameter_table = SimpleTable(params_data,
@@ -413,7 +413,7 @@ def summary_params(self, yname=None, xname=None, alpha=.05, use_t=True):
                        ["%#6.4f" % (std_err[i]) for i in exog_idx],
                        ["%#6.3f" % (tvalues[i]) for i in exog_idx],
                        ["%#5.3f" % (pvalues[i]) for i in exog_idx],
-                       ["""(%#6.3f, %#6.3f)""" % tuple(conf_int[i]) for i in \
+                       ["""(%#6.3g, %#6.3g)""" % tuple(conf_int[i]) for i in \
                                                              exog_idx]
                       )
     parameter_table = SimpleTable(params_data,

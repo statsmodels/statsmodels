@@ -1134,14 +1134,93 @@ class RegressionResults(LikelihoodModelResults):
 
         return lrstat, lr_pvalue, lrdf
 
-
+    
     def summary2(self, yname=None, xname=None, title=0, alpha=.05,
-                returns='print'):
+                return_fmt='text'):
         """
         This is for testing the new summary setup
         """
-        from iolib import summaries as smry
-        return smry(self, yname=None, xname=None, title=0, alpha=.05, returns='print')
+        from scikits.statsmodels.iolib.summary import (summary_top,
+                                            summary_params, summary_return)
+
+##        left = [(i, None) for i in (
+##                        'Dependent Variable:',
+##                        'Model type:',
+##                        'Method:',
+##            'Date:',
+##                        'Time:',
+##                        'Number of Obs:',
+##                        'df resid',
+##                'df model',
+##                         )]
+        topleft = [('Dependent Variable:', None),
+                 ('Model type:', None),
+                 ('Method:', ['Least Squares']),
+                 ('Date:', None),
+                 ('Time:', None),
+                 ('Number of Obs:', None),
+                 ('Df residuals:', [self.df_resid]), #None),
+                 ('Df model:', [self.df_model])] #None)]
+        #TODO: this breaks if it's not identically spelled
+
+        #import where we need it (for now)
+        from scikits.statsmodels.stats.stattools import (jarque_bera,
+                omni_normtest, durbin_watson)
+        JB, JBpv, skew, kurtosis = jarque_bera(self.wresid)
+        omni, omnipv = omni_normtest(self.wresid)
+                
+        diagn_left_header = ['Models stats'] #TODO not used yet
+        diagn_right_header = ['Residual stats']
+#        diagn_left = [('R-squared:', [self.rsquared]),
+#                       ('Adjusted R-squared:', [self.rsquared_adj]),
+#                       ('F-statistic:', [self.fvalue] ),
+#                       ('Prob (F-statistic):', [self.f_pvalue]),
+#                       ('Log likelihood:', [self.llf]),
+#                       ('AIC criterion:', [self.aic]),
+#                       ('BIC criterion:', [self.bic])]
+#        
+#        diagn_right = [('Durbin-Watson:', [durbin_watson(self.wresid)]),
+#                       ('Omnibus:', [omni]),
+#                       ('Prob(Omnibus):', [omnipv]),
+#                       ('JB:', [JB]),
+#                       ('Prob(JB):', [JBpv]),
+#                       ('Skew:', [skew]),
+#                       ('Kurtosis:', [kurtosis])]
+        
+        #TODO: requiring list/iterable is a bit annoying
+        
+        #need more control over formatting
+        
+        diagn_left = [('R-squared:', ["%#6.3f" % self.rsquared]),
+                       ('Adjusted R-squared:', ["%#6.3f" % self.rsquared_adj]),
+                       ('F-statistic:', ["%#6.3g" % self.fvalue] ),
+                       ('Prob (F-statistic):', ["%#6.3g" % self.f_pvalue]),
+                       ('Log likelihood:', ["%#6.3g" % self.llf]),
+                       ('AIC:', ["%#6.3g" % self.aic]),
+                       ('BIC:', ["%#6.3g" % self.bic])]
+        
+        diagn_right = [('Durbin-Watson:', ["%#6.3f" % durbin_watson(self.wresid)]),
+                       ('Omnibus:', ["%#6.3f" % omni]),
+                       ('Prob(Omnibus):', ["%#6.3f" % omnipv]),
+                       ('JB:', ["%#6.3f" % JB]),
+                       ('Prob(JB):', ["%#6.3g" % JBpv]),
+                       ('Skew:', ["%#6.3f" % skew]),
+                       ('Kurtosis:', ["%#6.3f" % kurtosis])]
+
+
+        
+        top = summary_top(self, gleft=topleft, gright=diagn_left, #[],
+                          yname=yname, xname=xname,
+                          title=self.model.__class__.__name__ + ' ' +
+                          "Regression Results")
+        par = summary_params(self, yname=yname, xname=xname, alpha=.05,
+                             use_t=False)
+        
+        diagn = summary_top(self, gleft=diagn_left, gright=diagn_right,
+                          yname=yname, xname=xname,
+                          title="Linear Model")
+
+        return summary_return([top, par, diagn], return_fmt=return_fmt)
 
 
     def summary(self, yname=None, xname=None, returns='text'):
@@ -1286,7 +1365,7 @@ class RegressionResults(LikelihoodModelResults):
                             title=None,
                             txt_fmt = part2_fmt)
 
-        self.summary2 = part2
+        #self.summary2 = part2
         ########  summary Part 3   #######
 
         part3Lheader = ['Models stats']
