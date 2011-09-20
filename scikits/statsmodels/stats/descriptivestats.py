@@ -5,6 +5,28 @@ from scipy import stats
 from scikits.statsmodels.iolib.table import SimpleTable
 
 
+def _kurtosis(a):
+    '''wrapper for scipy.stats.kurtosis that returns nan instead of raising Error
+
+    missing options
+    '''
+    try:
+        res = stats.kurtosis(a)
+    except ValueError:
+        res = np.nan
+    return res
+
+def _skew(a):
+    '''wrapper for scipy.stats.skew that returns nan instead of raising Error
+
+    missing options
+    '''
+    try:
+        res = stats.skew(a)
+    except ValueError:
+        res = np.nan
+    return res
+
 class Describe(object):
     '''
     Calculates descriptive statistics for data.
