@@ -413,7 +413,7 @@ def summary_params(self, yname=None, xname=None, alpha=.05, use_t=True):
                        ["%#6.4f" % (std_err[i]) for i in exog_idx],
                        ["%#6.3f" % (tvalues[i]) for i in exog_idx],
                        ["%#5.3f" % (pvalues[i]) for i in exog_idx],
-                       ["""(%#6.3g, %#6.3g)""" % tuple(conf_int[i]) for i in \
+                       ["(%#6.3g, %#6.3g)" % tuple(conf_int[i]) for i in \
                                                              exog_idx]
                       )
     parameter_table = SimpleTable(params_data,
@@ -451,6 +451,38 @@ def summary_return(tables, return_fmt='text'):
     else:
         raise ValueError('available output formats are text, csv, latex, html')
 
+
+class Summary(object):
+    def __init__(self):
+        self.tables = []
+        
+    def __str__(self):
+        return self.as_text()
+    
+    def __repr__(self):
+        #return '<' + str(type(self)) + '>\n"""\n' + self.__str__() + '\n"""'
+        return str(type(self)) + '\n"""\n' + self.__str__() + '\n"""'
+    
+    def add_table_2cols(self, res,  title=None, gleft=None, gright=None, 
+                            yname=None, xname=None):
+        table = summary_top(res, title=title, gleft=gleft, gright=gright, 
+                            yname=yname, xname=xname)
+        self.tables.append(table)
+        
+    def add_table_params(self, res, yname=None, xname=None, alpha=.05, use_t=True):
+        table = summary_params(res, yname=yname, xname=xname, alpha=alpha, 
+                               use_t=use_t)
+        self.tables.append(table)
+        
+    def as_text(self):
+        return summary_return(self.tables, return_fmt='text')
+    
+    def as_latex(self):
+        return summary_return(self.tables, return_fmt='latex')
+    
+    def as_csv(self):
+        return summary_return(self.tables, return_fmt='csv')
+        
 
 if __name__ == "__main__":
     import scikits.statsmodels.api as sm

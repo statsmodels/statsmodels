@@ -50,4 +50,7 @@ if __name__ == '__main__':
 
     #print results.summary2(return_fmt='latex')
     #print results.summary2(return_fmt='csv')
+    
+    smry = olsres.summary2()
+    
 
