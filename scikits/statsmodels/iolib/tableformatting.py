@@ -1,6 +1,6 @@
 """
 Summary Table formating
-This is here to help keep the formating consistant across the different models
+This is here to help keep the formating consistent across the different models
 """
 
 gen_fmt = dict(
@@ -11,7 +11,7 @@ gen_fmt = dict(
         row_pre = '  ',
         row_post = '  ',
         table_dec_above='=',
-        table_dec_below='',
+        table_dec_below=None,
         header_dec_below=None,
         header_fmt = '%s',
         stub_fmt = '%s',
@@ -31,7 +31,7 @@ fmt_1_right = dict(
         row_pre = '',
         row_post = '',
         table_dec_above='=',
-        table_dec_below='',
+        table_dec_below=None,
         header_dec_below=None,
         header_fmt = '%s',
         stub_fmt = '%s',
