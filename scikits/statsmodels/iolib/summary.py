@@ -257,7 +257,7 @@ def _getnames(self, yname=None, xname=None):
 
 
 
-def summary_top(self, title=None, gleft=None, gright=None, yname=None, xname=None):
+def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=None):
     '''generate top table(s)
 
 
@@ -268,7 +268,7 @@ def summary_top(self, title=None, gleft=None, gright=None, yname=None, xname=Non
 
     import time as time
 
-    #TODO Make sure all self.model.__class__.__name__ are listed    
+    #TODO Make sure all results.model.__class__.__name__ are listed    
     model_types = {'OLS' : 'Ordinary least squares',
                    'GLS' : 'Generalized least squares',
                    'GLSAR' : 'Generalized least squares with AR(p)',
@@ -284,19 +284,19 @@ def summary_top(self, title=None, gleft=None, gright=None, yname=None, xname=Non
                    'GLM' : '?'
                    }
     if title is None:
-        title = model_types[self.model.__class__.__name__]
+        title = model_types[results.model.__class__.__name__]
 
-    yname, xname = _getnames(self, yname=yname, xname=xname)
+    yname, xname = _getnames(results, yname=yname, xname=xname)
     
     time_now = time.localtime()
     time_of_day = [time.strftime("%H:%M:%S", time_now)]
     date = time.strftime("%a, %d %b %Y", time_now)
     
-    modeltype = self.model.__class__.__name__
-    #dist_family = self.model.family.__class__.__name__
-    nobs = self.nobs
-    df_model = self.df_model
-    df_resid = self.df_resid
+    modeltype = results.model.__class__.__name__
+    #dist_family = results.model.family.__class__.__name__
+    nobs = results.nobs
+    df_model = results.df_model
+    df_resid = results.df_resid
 
     
     
@@ -375,19 +375,19 @@ def summary_top(self, title=None, gleft=None, gright=None, yname=None, xname=Non
     return general_table #, gen_table_left, gen_table_right
 
 
-def summary_params(self, yname=None, xname=None, alpha=.05, use_t=True):
+def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True):
     
     #Parameters part of the summary table
     #------------------------------------
     #Note: this is not necessary since we standardized names, only t versus normal
 
-    params = self.params
+    params = results.params
     
     
-    std_err = self.bse
-    tvalues = self.tvalues  #is this sometimes called zvalues
-    pvalues = self.pvalues
-    conf_int = self.conf_int(alpha)
+    std_err = results.bse
+    tvalues = results.tvalues  #is this sometimes called zvalues
+    pvalues = results.pvalues
+    conf_int = results.conf_int(alpha)
     
 
     #Dictionary to store the header names for the parameter part of the 
@@ -401,7 +401,7 @@ def summary_params(self, yname=None, xname=None, alpha=.05, use_t=True):
                         alp + ' Conf. Int.']
 
     
-    _, xname = _getnames(self, yname=yname, xname=xname)
+    _, xname = _getnames(results, yname=yname, xname=xname)
     
     params_stubs = xname
 
@@ -434,7 +434,7 @@ def summary_return(tables, return_fmt='text'):
     elif return_fmt == 'tables':
         return tables
     elif return_fmt == 'csv':
-        return '\n'.join(map(lambda x: x.as_csv, tables))
+        return '\n'.join(map(lambda x: x.as_csv(), tables))
     elif return_fmt == 'latex':
         #TODO: insert \hline after updating SimpleTable
         import copy
