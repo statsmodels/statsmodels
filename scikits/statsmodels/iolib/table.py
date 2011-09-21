@@ -733,12 +733,12 @@ default_txt_fmt = dict(
 
 default_csv_fmt = dict(
         fmt = 'csv',
-        table_dec_above = '',
-        table_dec_below = '',
+        table_dec_above = None, #'',
+        table_dec_below = None, #'',
         #basic row formatting
         row_pre = '',
         row_post = '',
-        header_dec_below = '',
+        header_dec_below = None, #'',
         row_dec_below = None,
         title_align = '',
         data_aligns = "l",
