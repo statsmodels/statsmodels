@@ -1153,7 +1153,7 @@ class RegressionResults(LikelihoodModelResults):
 ##                        'df resid',
 ##                'df model',
 ##                         )]
-        topleft = [('Dependent Variable:', None),
+        top_left = [('Dep. Variable:', None),
                  ('Model type:', None),
                  ('Method:', ['Least Squares']),
                  ('Date:', None),
@@ -1191,26 +1191,31 @@ class RegressionResults(LikelihoodModelResults):
         
         #need more control over formatting
         
-        diagn_left = [('R-squared:', ["%#6.3f" % self.rsquared]),
-                       ('Adjusted R-squared:', ["%#6.3f" % self.rsquared_adj]),
-                       ('F-statistic:', ["%#6.3g" % self.fvalue] ),
+        top_right = [('R-squared:', ["%#6.3f" % self.rsquared]),
+                       ('Adj. R-squared:', ["%#6.3f" % self.rsquared_adj]),
+                       ('F-statistic:', ["%#6.4g" % self.fvalue] ),
                        ('Prob (F-statistic):', ["%#6.3g" % self.f_pvalue]),
-                       ('Log likelihood:', ["%#6.3g" % self.llf]),
-                       ('AIC:', ["%#6.3g" % self.aic]),
-                       ('BIC:', ["%#6.3g" % self.bic])]
+                       ('Log likelihood:', ["%#6.4g" % self.llf]),
+                       ('AIC:', ["%#6.4g" % self.aic]),
+                       ('BIC:', ["%#6.4g" % self.bic])]
         
         diagn_right = [('Durbin-Watson:', ["%#6.3f" % durbin_watson(self.wresid)]),
-                       ('Omnibus:', ["%#6.3f" % omni]),
-                       ('Prob(Omnibus):', ["%#6.3f" % omnipv]),
                        ('JB:', ["%#6.3f" % JB]),
-                       ('Prob(JB):', ["%#6.3g" % JBpv]),
+                       ('Prob(JB):', ["%#6.3g" % JBpv]) #force length
+                       ]
+        
+        diagn_left = [('Omnibus:', ["%#6.3f" % omni]),
+                       ('Prob(Omnibus):', ["%#6.3f" % omnipv]),
                        ('Skew:', ["%#6.3f" % skew]),
-                       ('Kurtosis:', ["%#6.3f" % kurtosis])]
-
+                       ('Kurtosis:', ["%#6.3f" % kurtosis])
+                       ]
+        
+        #top_right = [('%-22s' % ('   '+k), v) for k,v in top_right]
+        #diagn_right = [('%-22s' % ('   '+k), v) for k,v in diagn_right]
 
         from scikits.statsmodels.iolib.summary import Summary
         smry = Summary()
-        smry.add_table_2cols(self, gleft=topleft, gright=diagn_left, #[],
+        smry.add_table_2cols(self, gleft=top_left, gright=top_right, #[],
                           yname=yname, xname=xname,
                           title=self.model.__class__.__name__ + ' ' + \
                           "Regression Results")
