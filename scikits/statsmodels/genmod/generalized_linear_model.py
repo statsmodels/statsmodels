@@ -607,7 +607,7 @@ class GLMResults(LikelihoodModelResults):
                                             summary_params, summary_return)
 
 
-        left = [('Dependent Variable:', None),
+        top_left = [('Dep. Variable:', None),
                  ('Model Family:', [self.family.__class__.__name__]),
                  ('Link Function:', [self.family.link.__class__.__name__]),
                  ('Method:', ['IRLS']),
@@ -615,22 +615,37 @@ class GLMResults(LikelihoodModelResults):
                  ('Time:', None)
                   ]
 
-        right = [('Number of Obs:', None),
+        top_right = [('Number of Obs:', None),
                  ('df resid', None),
                  ('df model', None),
                  ('Scale:', [self.scale]),
-                 ('Log-Likelihood:', [self.llf]),
-                 ('Deviance:', [self.deviance]),
-                 ('Pearson chi2:', [self.pearson_chi2])
+                 ('Log-Likelihood:', ["%#6.3g" % self.llf]),
+                 ('Deviance:', ["%#6.3g" % self.deviance]),
+                 ('Pearson chi2:', ["%#6.3g" % self.pearson_chi2])
                  ]
         
-        top = summary_top(self, gleft=left, gright=right,
+        from scikits.statsmodels.iolib.summary import Summary
+        smry = Summary()
+        smry.add_table_2cols(self, gleft=top_left, gright=top_right, #[],
                           yname=yname, xname=xname,
-                          title="Generalized Linear Model")
-        par = summary_params(self, yname=yname, xname=xname, alpha=.05,
-                             use_t=True)
+                          title=self.model.__class__.__name__ + ' ' + \
+                          "Regression Results")
+        smry.add_table_params(self, yname=yname, xname=xname, alpha=.05,
+                             use_t=False)
+        
+#        smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
+#                          yname=yname, xname=xname,
+#                          title="")
 
-        return summary_return([top, par], return_fmt=return_fmt)
+        return smry
+        
+#        top = summary_top(self, gleft=left, gright=right,
+#                          yname=yname, xname=xname,
+#                          title="Generalized Linear Model")
+#        par = summary_params(self, yname=yname, xname=xname, alpha=.05,
+#                             use_t=True)
+#
+#        return summary_return([top, par], return_fmt=return_fmt)
 
 #TODO: write summary method to use output.py in sandbox
     def summary(self, yname=None, xname=None, title='Generalized linear model',

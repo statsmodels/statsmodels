@@ -1438,29 +1438,37 @@ class DiscreteResults(LikelihoodModelResults):
                                             summary_params, summary_return)
 
 
-        left = [('Dependent Variable:', None),
-                 ('Model:', [self.model.__class__.__name__]),
-                 ('Method:', ['MLE']),
-                 ('Date:', None),
-                 ('Time:', None)
-                  ]
+        top_left = [('Dep. Variable:', None),
+                     ('Model:', [self.model.__class__.__name__]),
+                     ('Method:', ['MLE']),
+                     ('Date:', None),
+                     ('Time:', None)
+                      ]
 
-        right = [('Number of Obs:', None),
-                 ('df resid', None),
-                 ('df model', None),
-                 ('PR-squared:', ["%#6.4g" % self.prsquared]),
-                 ('Log-Likelihood:', ["%#6.4g" % self.llf]),
-                 ('LL-Null:', ["%#6.4g" % self.llnull]),
-                 ('llr p-value:', ["%#6.4g" % self.llr_pvalue])
-                 ]
+        top_right = [('Number of Obs:', None),
+                     ('df resid', None),
+                     ('df model', None),
+                     ('PR-squared:', ["%#6.4g" % self.prsquared]),
+                     ('Log-Likelihood:', ["%#6.4g" % self.llf]),
+                     ('LL-Null:', ["%#6.4g" % self.llnull]),
+                     ('llr p-value:', ["%#6.4g" % self.llr_pvalue])
+                     ]
         
-        top = summary_top(self, gleft=left, gright=right,
+        #boiler plate
+        from scikits.statsmodels.iolib.summary import Summary
+        smry = Summary()
+        smry.add_table_2cols(self, gleft=top_left, gright=top_right, #[],
                           yname=yname, xname=xname,
-                          title="Discrete Model")
-        par = summary_params(self, yname=yname, xname=xname, alpha=.05,
-                             use_t=True)
+                          title=self.model.__class__.__name__ + ' ' + \
+                          "Regression Results")
+        smry.add_table_params(self, yname=yname, xname=xname, alpha=.05,
+                             use_t=False)
+        
+#        smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
+#                          yname=yname, xname=xname,
+#                          title="")
 
-        return summary_return([top, par], return_fmt=return_fmt)
+        return smry   
 
 if __name__=="__main__":
     import numpy as np

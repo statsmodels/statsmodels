@@ -437,22 +437,40 @@ class RLMResults(LikelihoodModelResults):
 ##                        'df resid',
 ##		        'df model',
 ##                         )]
-        left = [('Dependent Variable:', None),
+        top_left = [('Dep. Variable:', None),
                  ('Model type:', None),
                  ('Method:', ['IRLS']),
                  ('Date:', None),
                  ('Time:', None),
                  ('Number of Obs:', None),
                  ('df resid', None),
-                 ('df model', None)]
+                 ('df model', None)
+                 ]
+        top_right = []
         
-        top = summary_top(self, gleft=left, gright=[],
+        #boiler plate
+        from scikits.statsmodels.iolib.summary import Summary
+        smry = Summary()
+        smry.add_table_2cols(self, gleft=top_left, gright=top_right, #[],
                           yname=yname, xname=xname,
-                          title="Robust Linear Model")
-        par = summary_params(self, yname=yname, xname=xname, alpha=.05,
+                          title=self.model.__class__.__name__ + ' ' + \
+                          "Regression Results")
+        smry.add_table_params(self, yname=yname, xname=xname, alpha=.05,
                              use_t=False)
+        
+#        smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
+#                          yname=yname, xname=xname,
+#                          title="")
 
-        return summary_return([top, par], return_fmt=return_fmt)
+        return smry        
+        
+#        top = summary_top(self, gleft=left, gright=[],
+#                          yname=yname, xname=xname,
+#                          title="Robust Linear Model")
+#        par = summary_params(self, yname=yname, xname=xname, alpha=.05,
+#                             use_t=False)
+#
+#        return summary_return([top, par], return_fmt=return_fmt)
 
     def summary2(self, yname=None, xnames=None, title=0, alpha=.05,
                 returns='print'):
