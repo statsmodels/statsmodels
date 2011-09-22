@@ -1,8 +1,24 @@
 
 
 from scikits.statsmodels.iolib.table import SimpleTable
-from scikits.statsmodels.iolib.tableformatting import gen_fmt, fmt_2
+from scikits.statsmodels.iolib.tableformatting import (gen_fmt, fmt_2, 
+                                                fmt_params, fmt_base, fmt_2cols)
 
+def forg(x, prec=3):
+    if prec == 3:
+    #for 3 decimals
+        if (abs(x) >= 1e4) or (abs(x) < 1e-4):
+            return '%9.3g' % x
+        else:
+            return '%9.3f' % x
+    elif prec == 4:
+        if (abs(x) >= 1e4) or (abs(x) < 1e-4):
+            return '%10.4g' % x
+        else:
+            return '%10.4f' % x
+    else:
+        raise NotImplementedError
+        
 
 def summary(self, yname=None, xname=None, title=0, alpha=.05,
             returns='text', model_info=None):
@@ -308,7 +324,10 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
     gen_left_ =   [('Model type:', [modeltype]),
                   ('Date:', [date]),
                   ('Dependent Variable:', yname), #What happens with multiple names?
-                  ('df model', [df_model])
+                  ('Dep. Variable:', yname),  #TODO: for testing, remove
+                  ('df model', [df_model]),
+                  ('df model', [df_model]),
+                  #('Log-likelihood:', ["%#6.3g" % results.llf]) #doesn't exist for RLM - exception
                   ]
 
     gen_right_ = [('Method:', [model_methods.get(modeltype)]), #[modeltype]),
@@ -348,12 +367,17 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
         elif len(gen_right) > len(gen_left):
             #fill up with blank lines to same length, just to keep it symmetric
             gen_left += [(' ', ' ')] * (len(gen_right) - len(gen_left))
+            
+        #padding in SimpleTable doesn't work like I want
+        #force extra spacing and exact string length in right table
+        gen_right = [('%-21s' % ('  '+k), v) for k,v in gen_right]
+        
         gen_stubs_right, gen_data_right = map(None, *gen_right) #transpose row col            
         gen_table_right = SimpleTable(gen_data_right,
                                       gen_header,
                                       gen_stubs_right,
                                       title = gen_title,
-                                      txt_fmt = gen_fmt
+                                      txt_fmt = fmt_2cols #gen_fmt
                                       )
     else:
         gen_table_right = []  #because .extend_right seems to work with []
@@ -365,7 +389,7 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
                                  gen_header,
                                  gen_stubs_left,
                                  title = gen_title,
-                                 txt_fmt = gen_fmt
+                                 txt_fmt = fmt_2cols #gen_fmt
                                  )
         
 
@@ -374,6 +398,7 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
 
     return general_table #, gen_table_left, gen_table_right
 
+ 
 
 def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True):
     
@@ -395,10 +420,10 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True):
     alp = str((1-alpha)*100)+'%'
     if use_t:
         param_header = ['coef', 'std err', 't', 'P>|t|',
-                        alp + ' Conf. Int.']
+                        '[' + alp + ' Conf. Int.]']
     else:
         param_header = ['coef', 'std err', 'z', 'P>|z|',
-                        alp + ' Conf. Int.']
+                        '[' + alp + ' Conf. Int.]']
 
     
     _, xname = _getnames(results, yname=yname, xname=xname)
@@ -409,18 +434,42 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True):
     
     # Simpletable should be able to handle the formating
     # alternative would be to use format in fmt_2
-    params_data = zip(["%#6.4g" % (params[i]) for i in exog_idx],
-                       ["%#6.4f" % (std_err[i]) for i in exog_idx],
-                       ["%#6.3f" % (tvalues[i]) for i in exog_idx],
-                       ["%#5.3f" % (pvalues[i]) for i in exog_idx],
-                       ["(%#6.3g, %#6.3g)" % tuple(conf_int[i]) for i in \
-                                                             exog_idx]
+    
+    #center confidence intervals if they are unequal lengths
+#    confint = ["(%#6.3g, %#6.3g)" % tuple(conf_int[i]) for i in \
+#                                                             exog_idx]
+    confint = ["%s %s" % tuple(map(forg,conf_int[i])) for i in \
+                                                             exog_idx]    
+    len_ci = map(len, confint)
+    max_ci = max(len_ci)
+    min_ci = min(len_ci)
+
+    if min_ci < max_ci:
+        confint = [ci.center(max_ci) for ci in confint]
+        
+        
+#    params_data = zip(["%#6.4g" % (params[i]) for i in exog_idx],
+#                       ["%#6.4f" % (std_err[i]) for i in exog_idx],
+#                       ["%#6.3f" % (tvalues[i]) for i in exog_idx],
+#                       ["%#6.3f" % (pvalues[i]) for i in exog_idx],
+#                       confint
+##                       ["(%#6.3g, %#6.3g)" % tuple(conf_int[i]) for i in \
+##                                                             exog_idx]
+#                      )
+    
+    params_data = zip([forg(params[i], prec=4) for i in exog_idx],
+                       [forg(std_err[i]) for i in exog_idx],
+                       [forg(tvalues[i]) for i in exog_idx],
+                       ["%#6.3f" % (pvalues[i]) for i in exog_idx],
+                       confint
+#                       ["(%#6.3g, %#6.3g)" % tuple(conf_int[i]) for i in \
+#                                                             exog_idx]
                       )
     parameter_table = SimpleTable(params_data,
                                   param_header,
                                   params_stubs,
                                   title = None,
-                                  txt_fmt = fmt_2, #gen_fmt,
+                                  txt_fmt = fmt_params #gen_fmt #fmt_2, #gen_fmt,
                                   )
 
     return parameter_table
@@ -430,7 +479,9 @@ def summary_return(tables, return_fmt='text'):
     ########  Return Summary Tables ########
         # join table parts then print
     if return_fmt == 'text':
-        return '\n'.join(map(str, tables))
+        strdrop = lambda x: str(x).rsplit('\n',1)[0]  
+        #convert to string drop last line 
+        return '\n'.join(map(strdrop, tables[:-1]) + [str(tables[-1])])
     elif return_fmt == 'tables':
         return tables
     elif return_fmt == 'csv':
@@ -439,6 +490,7 @@ def summary_return(tables, return_fmt='text'):
         #TODO: insert \hline after updating SimpleTable
         import copy
         table = copy.deepcopy(tables[0])
+        del table[-1]
         for part in tables[1:]:
             table.extend(part)
         return table.as_latex_tabular()                
