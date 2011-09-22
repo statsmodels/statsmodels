@@ -221,6 +221,8 @@ class SimpleTable(list):
         self._add_headers_stubs(headers, stubs)
     def __str__(self):
         return self.as_text()
+    def __repr__(self):
+        return str(type(self))
     def _add_headers_stubs(self, headers, stubs):
         """Return None.  Adds headers and stubs to table,
         if these were provided at initialization.
