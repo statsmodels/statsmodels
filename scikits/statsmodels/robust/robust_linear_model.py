@@ -254,6 +254,13 @@ class RLM(LikelihoodModel):
             self.iteration += 1
         results = RLMResults(self, wls_results.params,
                             self.normalized_cov_params, self.scale)
+
+        results.fit_options = dict(cov=cov.upper(), scale_est=scale_est,
+                                   norm=self.M.__class__.__name__, conv=conv)
+        #norm is not changed in fit, no old state
+        self.cov = self.scale_est = None #reset for additional fits
+        #iteration and history could contain wrong state with repeated fit
+
         return results
 
 class RLMResults(LikelihoodModelResults):
@@ -438,15 +445,20 @@ class RLMResults(LikelihoodModelResults):
 ##		        'df model',
 ##                         )]
         top_left = [('Dep. Variable:', None),
-                 ('Model type:', None),
-                 ('Method:', ['IRLS']),
-                 ('Date:', None),
-                 ('Time:', None),
-                 ('Number of Obs:', None),
-                 ('df resid', None),
-                 ('df model', None)
-                 ]
-        top_right = []
+                    ('Model type:', None),
+                    ('Method:', ['IRLS']),
+                    #TODO: the next two might not have correct state - fixed
+                    ('Norm:', [self.fit_options['norm']]),
+                    ('Scale Est.:', [self.fit_options['scale_est']]),
+                    ('Cov Type:', [self.fit_options['cov']]),
+                    ('Date:', None),
+                    ('Time:', None),
+                    ('No. iterations:', ["%d" % self.model.iteration]), #stale state?
+                    ]
+        top_right = [('Number of Obs:', None),
+                     ('df resid', None),
+                     ('df model', None)
+                     ]
         
         #boiler plate
         from scikits.statsmodels.iolib.summary import Summary
