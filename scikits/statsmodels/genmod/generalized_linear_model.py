@@ -608,21 +608,22 @@ class GLMResults(LikelihoodModelResults):
 
 
         top_left = [('Dep. Variable:', None),
-                 ('Model Family:', [self.family.__class__.__name__]),
-                 ('Link Function:', [self.family.link.__class__.__name__]),
-                 ('Method:', ['IRLS']),
-                 ('Date:', None),
-                 ('Time:', None)
-                  ]
+                    ('Model Family:', [self.family.__class__.__name__]),
+                    ('Link Function:', [self.family.link.__class__.__name__]),
+                    ('Method:', ['IRLS']),
+                    ('Date:', None),
+                    ('Time:', None),
+                    ('No. iterations:', ["%d" % self.model.iteration]),
+                    ]
 
         top_right = [('Number of Obs:', None),
-                 ('df resid', None),
-                 ('df model', None),
-                 ('Scale:', [self.scale]),
-                 ('Log-Likelihood:', ["%#6.3g" % self.llf]),
-                 ('Deviance:', ["%#6.3g" % self.deviance]),
-                 ('Pearson chi2:', ["%#6.3g" % self.pearson_chi2])
-                 ]
+                     ('df resid', None),
+                     ('df model', None),
+                     ('Scale:', [self.scale]),
+                     ('Log-Likelihood:', ["%#6.3g" % self.llf]),
+                     ('Deviance:', ["%#6.3g" % self.deviance]),
+                     ('Pearson chi2:', ["%#6.3g" % self.pearson_chi2])
+                     ]
         
         from scikits.statsmodels.iolib.summary import Summary
         smry = Summary()
