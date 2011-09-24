@@ -449,7 +449,6 @@ class RLMResults(LikelihoodModelResults):
         top_left = [('Dep. Variable:', None),
                     ('Model type:', None),
                     ('Method:', ['IRLS']),
-                    #TODO: the next two might not have correct state - fixed
                     ('Norm:', [self.fit_options['norm']]),
                     ('Scale Est.:', [self.fit_options['scale_est']]),
                     ('Cov Type:', [self.fit_options['cov']]),
@@ -461,38 +460,34 @@ class RLMResults(LikelihoodModelResults):
                      ('df resid', None),
                      ('df model', None)
                      ]
+
+        if not title is None:
+            title = "Robust linear Model Regression Results"
         
         #boiler plate
         from scikits.statsmodels.iolib.summary import Summary
         smry = Summary()
         smry.add_table_2cols(self, gleft=top_left, gright=top_right, #[],
-                          yname=yname, xname=xname,
-                          title=self.model.__class__.__name__ + ' ' + \
-                          "Regression Results")
+                          yname=yname, xname=xname, title=title)
         smry.add_table_params(self, yname=yname, xname=xname, alpha=.05,
                              use_t=False)
-        
+
+        #diagnostic table is not used yet
 #        smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
 #                          yname=yname, xname=xname,
 #                          title="")
 
-        return smry        
-        
-#        top = summary_top(self, gleft=left, gright=[],
-#                          yname=yname, xname=xname,
-#                          title="Robust Linear Model")
-#        par = summary_params(self, yname=yname, xname=xname, alpha=.05,
-#                             use_t=False)
-#
-#        return summary_return([top, par], return_fmt=return_fmt)
+#add warnings/notes, added to text format only
+        etext =[]
+        wstr = \
+'''If the model instance has been used for another fit with different fit
+parameters, then the fit options might not be the correct ones anymore .'''
+        etext.append(wstr)
 
-    def summary2(self, yname=None, xnames=None, title=0, alpha=.05,
-                returns='print'):
-        """
-        This is for testing the new summary setup
-        """
-        from scikits.statsmodels.iolib.summary import summary as smry
-        return smry(self, yname=yname, xname=xnames, title=0, alpha=.05, returns='print')
+        if etext:
+            smry.add_extra_txt(etext)        
+
+        return smry        
 
 
 if __name__=="__main__":
