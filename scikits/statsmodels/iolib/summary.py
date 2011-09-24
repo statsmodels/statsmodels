@@ -507,6 +507,7 @@ def summary_return(tables, return_fmt='text'):
 class Summary(object):
     def __init__(self):
         self.tables = []
+        self.extra_txt = None
         
     def __str__(self):
         return self.as_text()
@@ -526,8 +527,14 @@ class Summary(object):
                                use_t=use_t)
         self.tables.append(table)
         
+    def add_extra_txt(self, etext):
+        self.extra_txt = '\n'.join(etext)
+        
     def as_text(self):
-        return summary_return(self.tables, return_fmt='text')
+        txt = summary_return(self.tables, return_fmt='text')
+        if not self.extra_txt is None:
+            txt = txt + '\n\n' + self.extra_txt
+        return txt
     
     def as_latex(self):
         return summary_return(self.tables, return_fmt='latex')
