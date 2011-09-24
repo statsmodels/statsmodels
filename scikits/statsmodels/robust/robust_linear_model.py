@@ -258,7 +258,9 @@ class RLM(LikelihoodModel):
         results.fit_options = dict(cov=cov.upper(), scale_est=scale_est,
                                    norm=self.M.__class__.__name__, conv=conv)
         #norm is not changed in fit, no old state
-        self.cov = self.scale_est = None #reset for additional fits
+        
+        #doing the next causes exception
+        #self.cov = self.scale_est = None #reset for additional fits
         #iteration and history could contain wrong state with repeated fit
 
         return results
