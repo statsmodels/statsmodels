@@ -31,4 +31,4 @@ andrew_results = andrew_mod.fit(scale_est=sm.robust.scale.HuberScale(), cov="H3"
 print andrew_results.params
 
 print hub_results.summary(yname='y',
-                          xnames=['var_%d' % i for i in range(len(hub_results.params))])
+                          xname=['var_%d' % i for i in range(len(hub_results.params))])
