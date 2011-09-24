@@ -283,6 +283,8 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
     '''
 
     import time as time
+    
+    needed_values = [k for k,v in gleft + gright if v is None]
 
     #TODO Make sure all results.model.__class__.__name__ are listed    
     model_types = {'OLS' : 'Ordinary least squares',
@@ -308,7 +310,11 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
     time_of_day = [time.strftime("%H:%M:%S", time_now)]
     date = time.strftime("%a, %d %b %Y", time_now)
     
-    modeltype = results.model.__class__.__name__
+    #skip default items that might not be defined for model
+    if 'Model type:' in needed_values:
+        modeltype = results.model.__class__.__name__
+    else:
+        modeltype =''
     #dist_family = results.model.family.__class__.__name__
     nobs = results.nobs
     df_model = results.df_model
@@ -505,6 +511,21 @@ def summary_return(tables, return_fmt='text'):
 
 
 class Summary(object):
+    '''class to hold tables for result summary presentation
+    
+    Construction does not take any parameters. Tables and text can be added
+    with the add_... methods.
+    
+    Attributes
+    ----------
+    tables : list of tables
+        Contains the list of SimpleTable instances, horizontally concatenated
+        tables are not saved separately.
+    extra_txt : string
+        extra lines that are added to the text output, used for warnings and
+        explanations.
+    
+    '''
     def __init__(self):
         self.tables = []
         self.extra_txt = None
@@ -518,28 +539,115 @@ class Summary(object):
     
     def add_table_2cols(self, res,  title=None, gleft=None, gright=None, 
                             yname=None, xname=None):
+        '''add a double table, 2 tables with one column merged horizontally
+        
+        Parameters
+        ----------
+        res : results instance
+            some required information is directly taken from the result 
+            instance
+        title : string or None
+            if None, then a default title is used.
+            ?how did I do no title?
+        gleft : list of tuples
+            elements for the left table, tuples are (name, value) pairs
+            If gleft is None, then a default table is created 
+        gright : list of tuples or None
+            elements for the right table, tuples are (name, value) pairs
+        yname : string or None
+            optional name for the endogenous variable, default is "y"
+        xname : list of strings or None
+            optional names for the exogenous variables, default is "var_xx"
+            
+        Returns
+        -------
+        None : tables are attached
+        
+        '''
+        
         table = summary_top(res, title=title, gleft=gleft, gright=gright, 
                             yname=yname, xname=xname)
         self.tables.append(table)
         
-    def add_table_params(self, res, yname=None, xname=None, alpha=.05, use_t=True):
+    def add_table_params(self, res, yname=None, xname=None, alpha=.05, 
+                         use_t=True):
+        '''create and add a table for the parameter estimates
+        
+        Parameters
+        ----------
+        res : results instance
+            some required information is directly taken from the result 
+            instance
+        yname : string or None
+            optional name for the endogenous variable, default is "y"
+        xname : list of strings or None
+            optional names for the exogenous variables, default is "var_xx"
+        alpha : float
+            significance level for the confidence intervals
+        use_t : bool
+            indicator whether the p-values are based on the Student-t
+            distribution (if True) or on the normal distribution (if False)
+            
+        Returns
+        -------
+        None : table is attached
+        
+        '''
         table = summary_params(res, yname=yname, xname=xname, alpha=alpha, 
                                use_t=use_t)
         self.tables.append(table)
         
     def add_extra_txt(self, etext):
+        '''add additional text that will be added at the end in text format
+        
+        Parameters
+        ----------
+        etext : string
+            string with lines that are added to the text output.
+        
+        '''
         self.extra_txt = '\n'.join(etext)
         
     def as_text(self):
+        '''return tables as string
+        
+        Returns
+        -------
+        txt : string
+            summary tables and extra text as one string
+        
+        '''
         txt = summary_return(self.tables, return_fmt='text')
         if not self.extra_txt is None:
             txt = txt + '\n\n' + self.extra_txt
         return txt
     
     def as_latex(self):
+        '''return tables as string
+        
+        Returns
+        -------
+        latex : string
+            summary tables and extra text as string of Latex
+        
+        Notes
+        -----
+        This currently merges tables with different number of columns.
+        It is recommended to use `as_latex_tabular` directly on the individual
+        tables.
+        
+        '''
         return summary_return(self.tables, return_fmt='latex')
     
     def as_csv(self):
+        '''return tables as string
+        
+        Returns
+        -------
+        latex : string
+            concatenated summary tables in comma delimited format
+
+        '''
         return summary_return(self.tables, return_fmt='csv')
         
 
