@@ -598,16 +598,36 @@ class GLMResults(LikelihoodModelResults):
     def bic(self):
         return self.deviance - self.df_resid*np.log(self.nobs)
 
-    def summary2(self, yname=None, xname=None, title=0, alpha=.05,
-                return_fmt='text'):
-        """
-        This is for testing the new summary setup
-        """
-        from scikits.statsmodels.iolib.summary import (summary_top,
-                                            summary_params, summary_return)
+    def summary(self, yname=None, xname=None, title=None, alpha=.05):
+        """Summarize the Regression Results
+        
+        Parameters
+        -----------
+        yname : string, optional
+            Default is `y`
+        xname : list of strings, optional
+            Default is `var_##` for ## in p the number of regressors
+        title : string, optional
+            Title for the top table. If not None, then this replaces the 
+            default title
+        alpha : float
+            significance level for the confidence intervals
 
+        Returns
+        -------
+        smry : Summary instance
+            this holds the summary tables and text, which can be printed or 
+            converted to various output formats.
+            
+        See Also
+        --------
+        scikits.statsmodels.iolib.summary.Summary : class to hold summary 
+            results
+        
+        """
 
         top_left = [('Dep. Variable:', None),
+                    ('Model type:', None),
                     ('Model Family:', [self.family.__class__.__name__]),
                     ('Link Function:', [self.family.link.__class__.__name__]),
                     ('Method:', ['IRLS']),
@@ -624,32 +644,27 @@ class GLMResults(LikelihoodModelResults):
                      ('Deviance:', ["%#6.3g" % self.deviance]),
                      ('Pearson chi2:', ["%#6.3g" % self.pearson_chi2])
                      ]
-        
+
+        if title is None:
+            title = "Generalized linear Model Regression Results"
+
+        #create summary tables        
         from scikits.statsmodels.iolib.summary import Summary
         smry = Summary()
         smry.add_table_2cols(self, gleft=top_left, gright=top_right, #[],
-                          yname=yname, xname=xname,
-                          title=self.model.__class__.__name__ + ' ' + \
-                          "Regression Results")
+                          yname=yname, xname=xname, title=title)
         smry.add_table_params(self, yname=yname, xname=xname, alpha=.05,
                              use_t=False)
         
+        #diagnostic table is not used yet:
 #        smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
 #                          yname=yname, xname=xname,
 #                          title="")
 
         return smry
-        
-#        top = summary_top(self, gleft=left, gright=right,
-#                          yname=yname, xname=xname,
-#                          title="Generalized Linear Model")
-#        par = summary_params(self, yname=yname, xname=xname, alpha=.05,
-#                             use_t=True)
-#
-#        return summary_return([top, par], return_fmt=return_fmt)
 
-#TODO: write summary method to use output.py in sandbox
-    def summary(self, yname=None, xname=None, title='Generalized linear model',
+
+    def summary_old(self, yname=None, xname=None, title='Generalized linear model',
                 returns='text'):
         """
         Print a table of results or returns SimpleTable() instance which

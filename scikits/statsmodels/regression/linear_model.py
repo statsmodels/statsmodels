@@ -1135,33 +1135,33 @@ class RegressionResults(LikelihoodModelResults):
         return lrstat, lr_pvalue, lrdf
 
     
-    def summary2(self, yname=None, xname=None, title=0, alpha=.05,
-                return_fmt='text'):
-        """
-        This is for testing the new summary setup
-        """
-        from scikits.statsmodels.iolib.summary import (summary_top,
-                                            summary_params, summary_return)
+    def summary(self, yname=None, xname=None, title=None, alpha=.05):
+        """Summarize the Regression Results
+        
+        Parameters
+        -----------
+        yname : string, optional
+            Default is `y`
+        xname : list of strings, optional
+            Default is `var_##` for ## in p the number of regressors
+        title : string, optional
+            Title for the top table. If not None, then this replaces the 
+            default title
+        alpha : float
+            significance level for the confidence intervals
 
-##        left = [(i, None) for i in (
-##                        'Dependent Variable:',
-##                        'Model type:',
-##                        'Method:',
-##            'Date:',
-##                        'Time:',
-##                        'Number of Obs:',
-##                        'df resid',
-##                'df model',
-##                         )]
-        top_left = [('Dep. Variable:', None),
-                 ('Model type:', None),
-                 ('Method:', ['Least Squares']),
-                 ('Date:', None),
-                 ('Time:', None),
-                 ('Number of Obs:', None),
-                 ('Df residuals:', [self.df_resid]), #None),
-                 ('Df model:', [self.df_model])] #None)]
-        #TODO: this breaks if it's not identically spelled
+        Returns
+        -------
+        smry : Summary instance
+            this holds the summary tables and text, which can be printed or 
+            converted to various output formats.
+            
+        See Also
+        --------
+        scikits.statsmodels.iolib.summary.Summary : class to hold summary 
+            results
+        
+        """
 
         #TODO: import where we need it (for now), add as cached attributes
         from scikits.statsmodels.stats.stattools import (jarque_bera,
@@ -1169,6 +1169,7 @@ class RegressionResults(LikelihoodModelResults):
         jb, jbpv, skew, kurtosis = jarque_bera(self.wresid)
         omni, omnipv = omni_normtest(self.wresid)
         
+        #TODO: reuse condno from somewhere else ?
         #condno = np.linalg.cond(np.dot(self.wexog.T, self.wexog))
         wexog = self.model.wexog
         eigvals = np.linalg.linalg.eigvalsh(np.dot(wexog.T, wexog))
@@ -1178,60 +1179,55 @@ class RegressionResults(LikelihoodModelResults):
         self.diagn = dict(jb=jb, jbpv=jbpv, skew=skew, kurtosis=kurtosis, 
                           omni=omni, omnipv=omnipv, condno=condno, 
                           mineigval=eigvals[0])
-        
-        #TODO: reuse condno from somewhere else ?
-                
-        diagn_left_header = ['Models stats'] #TODO not used yet
-        diagn_right_header = ['Residual stats']
-#        diagn_left = [('R-squared:', [self.rsquared]),
-#                       ('Adjusted R-squared:', [self.rsquared_adj]),
-#                       ('F-statistic:', [self.fvalue] ),
-#                       ('Prob (F-statistic):', [self.f_pvalue]),
-#                       ('Log likelihood:', [self.llf]),
-#                       ('AIC criterion:', [self.aic]),
-#                       ('BIC criterion:', [self.bic])]
-#        
-#        diagn_right = [('Durbin-Watson:', [durbin_watson(self.wresid)]),
-#                       ('Omnibus:', [omni]),
-#                       ('Prob(Omnibus):', [omnipv]),
-#                       ('JB:', [JB]),
-#                       ('Prob(JB):', [JBpv]),
-#                       ('Skew:', [skew]),
-#                       ('Kurtosis:', [kurtosis])]
+
+#        #TODO not used yet
+#        diagn_left_header = ['Models stats'] 
+#        diagn_right_header = ['Residual stats']
         
         #TODO: requiring list/iterable is a bit annoying
-        
         #need more control over formatting
+        #TODO: default don't work if it's not identically spelled
         
+        top_left = [('Dep. Variable:', None),
+                    ('Model type:', None),
+                    ('Method:', ['Least Squares']),
+                    ('Date:', None),
+                    ('Time:', None),
+                    ('Number of Obs:', None),
+                    ('Df residuals:', [self.df_resid]), #None), #TODO: spelling
+                    ('Df model:', [self.df_model]) #None)]
+                    ]
+
         top_right = [('R-squared:', ["%#6.3f" % self.rsquared]),
-                       ('Adj. R-squared:', ["%#6.3f" % self.rsquared_adj]),
-                       ('F-statistic:', ["%#6.4g" % self.fvalue] ),
-                       ('Prob (F-statistic):', ["%#6.3g" % self.f_pvalue]),
-                       ('Log likelihood:', ["%#6.4g" % self.llf]),
-                       ('AIC:', ["%#6.4g" % self.aic]),
-                       ('BIC:', ["%#6.4g" % self.bic])]
+                     ('Adj. R-squared:', ["%#6.3f" % self.rsquared_adj]),
+                     ('F-statistic:', ["%#6.4g" % self.fvalue] ),
+                     ('Prob (F-statistic):', ["%#6.3g" % self.f_pvalue]),
+                     ('Log likelihood:', ["%#6.4g" % self.llf]),
+                     ('AIC:', ["%#6.4g" % self.aic]),
+                     ('BIC:', ["%#6.4g" % self.bic])
+                     ]
         
+        diagn_left = [('Omnibus:', ["%#6.3f" % omni]),
+                      ('Prob(Omnibus):', ["%#6.3f" % omnipv]),
+                      ('Skew:', ["%#6.3f" % skew]),
+                      ('Kurtosis:', ["%#6.3f" % kurtosis])
+                      ]
+
         diagn_right = [('Durbin-Watson:', ["%#6.3f" % durbin_watson(self.wresid)]),
                        ('JB:', ["%#6.3f" % jb]),
                        ('Prob(JB):', ["%#6.3g" % jbpv]),
                        ('cond.no.', ["%#6.3g" % condno])
                        ]
-        
-        diagn_left = [('Omnibus:', ["%#6.3f" % omni]),
-                       ('Prob(Omnibus):', ["%#6.3f" % omnipv]),
-                       ('Skew:', ["%#6.3f" % skew]),
-                       ('Kurtosis:', ["%#6.3f" % kurtosis])
-                       ]
-        
-        #top_right = [('%-22s' % ('   '+k), v) for k,v in top_right]
-        #diagn_right = [('%-22s' % ('   '+k), v) for k,v in diagn_right]
 
+
+        if title is None:
+            title = self.model.__class__.__name__ + ' ' + "Regression Results"
+
+        #create summary table instance
         from scikits.statsmodels.iolib.summary import Summary
         smry = Summary()
-        smry.add_table_2cols(self, gleft=top_left, gright=top_right, #[],
-                          yname=yname, xname=xname,
-                          title=self.model.__class__.__name__ + ' ' + \
-                          "Regression Results")
+        smry.add_table_2cols(self, gleft=top_left, gright=top_right,
+                          yname=yname, xname=xname, title=title)
         smry.add_table_params(self, yname=yname, xname=xname, alpha=.05,
                              use_t=False)
         
@@ -1239,17 +1235,18 @@ class RegressionResults(LikelihoodModelResults):
                           yname=yname, xname=xname,
                           title="")
         
-        #add warnings/notes
+        #add warnings/notes, added to text format only
         etext =[]
         if eigvals[0] < 1e-10:
             wstr = \
-'''The smallest eigenvalue, %6.3g. This might indicate that there are
-strong multicollinearity problems or that the design matrix is singular.''' % eigvals[0]
+'''The smallest eigenvalue is %6.3g. This might indicate that there are
+strong multicollinearity problems or that the design matrix is singular.''' \
+                    % eigvals[0]
             etext.append(wstr)          
-        elif condno > 1:  #for testing set to 1, increase to large number
+        elif condno > 1000:  #TODO: what is recommended
             wstr = \
 '''The condition number is large, %6.3g. This might indicate that there are
-strong multicollinearity problems.''' % condno
+strong multicollinearity or other numerical problems.''' % condno
             etext.append(wstr)
 
         if etext:
@@ -1271,7 +1268,7 @@ strong multicollinearity problems.''' % condno
 #        return summary_return([top, par, diagn], return_fmt=return_fmt)
 
 
-    def summary(self, yname=None, xname=None, returns='text'):
+    def summary_old(self, yname=None, xname=None, returns='text'):
         """returns a string that summarizes the regression results
 
         Parameters

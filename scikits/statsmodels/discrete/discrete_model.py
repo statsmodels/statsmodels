@@ -1429,14 +1429,33 @@ class DiscreteResults(LikelihoodModelResults):
         self.margfx = effects
         return effects
 
-    def summary(self, yname=None, xname=None, title=None, alpha=.05,
-                return_fmt='text'):
-        """
-        This is for testing the new summary setup
-        """
-        from scikits.statsmodels.iolib.summary import (summary_top,
-                                            summary_params, summary_return)
+    def summary(self, yname=None, xname=None, title=None, alpha=.05):
+        """Summarize the Regression Results
+        
+        Parameters
+        -----------
+        yname : string, optional
+            Default is `y`
+        xname : list of strings, optional
+            Default is `var_##` for ## in p the number of regressors
+        title : string, optional
+            Title for the top table. If not None, then this replaces the 
+            default title
+        alpha : float
+            significance level for the confidence intervals
 
+        Returns
+        -------
+        smry : Summary instance
+            this holds the summary tables and text, which can be printed or 
+            converted to various output formats.
+            
+        See Also
+        --------
+        scikits.statsmodels.iolib.summary.Summary : class to hold summary 
+            results
+        
+        """
 
         top_left = [('Dep. Variable:', None),
                      ('Model:', [self.model.__class__.__name__]),
@@ -1456,16 +1475,18 @@ class DiscreteResults(LikelihoodModelResults):
                      ('LLR p-value:', ["%#6.4g" % self.llr_pvalue])
                      ]
         
+        if title is None:
+            title = self.model.__class__.__name__ + ' ' + "Regression Results"
+        
         #boiler plate
         from scikits.statsmodels.iolib.summary import Summary
         smry = Summary()
         smry.add_table_2cols(self, gleft=top_left, gright=top_right, #[],
-                          yname=yname, xname=xname,
-                          title=self.model.__class__.__name__ + ' ' + \
-                          "Regression Results")
+                          yname=yname, xname=xname, title=title)
         smry.add_table_params(self, yname=yname, xname=xname, alpha=.05,
                              use_t=False)
-        
+ 
+        #diagnostic table not used yet
 #        smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
 #                          yname=yname, xname=xname,
 #                          title="")
