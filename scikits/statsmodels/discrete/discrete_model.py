@@ -1470,6 +1470,30 @@ class DiscreteResults(LikelihoodModelResults):
 #                          yname=yname, xname=xname,
 #                          title="")
 
+        #TODO: attach only to binary models
+        if self.model.__class__.__name__ in ['Logit', 'Probit']:
+            absprederror = np.abs(self.model.endog - self.fittedvalues)
+            predclose_sum = (absprederror < 1e-4).sum()
+            predclose_frac = predclose_sum / len(self.fittedvalues)
+            
+            #add warnings/notes
+            etext =[]
+            if predclose_sum == len(self.fittedvalues): #nobs?
+                wstr = \
+'''Complete Separation: The results show that there is complete separation.
+In this case the Maximum Likelihood Estimator does not exist and the parameters
+are not identified.''' % eigvals[0]
+                etext.append(wstr)          
+            elif predclose_frac > 0.1:  #TODO: get better diagnosis 
+                wstr = \
+'''Possibly complete quasi-separation: A fraction %f4.2 of observations can be
+perfectly predicted. This might indicate that there is complete 
+quasi-separation. In this case some parameters will not be identified.''' % predclose_frac
+                etext.append(wstr)
+
+            if etext:
+                smry.add_extra_txt(etext)
+
         return smry   
 
 if __name__=="__main__":

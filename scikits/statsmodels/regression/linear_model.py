@@ -1163,11 +1163,23 @@ class RegressionResults(LikelihoodModelResults):
                  ('Df model:', [self.df_model])] #None)]
         #TODO: this breaks if it's not identically spelled
 
-        #import where we need it (for now)
+        #TODO: import where we need it (for now), add as cached attributes
         from scikits.statsmodels.stats.stattools import (jarque_bera,
                 omni_normtest, durbin_watson)
-        JB, JBpv, skew, kurtosis = jarque_bera(self.wresid)
+        jb, jbpv, skew, kurtosis = jarque_bera(self.wresid)
         omni, omnipv = omni_normtest(self.wresid)
+        
+        #condno = np.linalg.cond(np.dot(self.wexog.T, self.wexog))
+        wexog = self.model.wexog
+        eigvals = np.linalg.linalg.eigvalsh(np.dot(wexog.T, wexog))
+        eigvals = np.sort(eigvals) #in increasing order
+        condno = eigvals[-1]/eigvals[0]
+        
+        self.diagn = dict(jb=jb, jbpv=jbpv, skew=skew, kurtosis=kurtosis, 
+                          omni=omni, omnipv=omnipv, condno=condno, 
+                          mineigval=eigvals[0])
+        
+        #TODO: reuse condno from somewhere else ?
                 
         diagn_left_header = ['Models stats'] #TODO not used yet
         diagn_right_header = ['Residual stats']
@@ -1200,8 +1212,9 @@ class RegressionResults(LikelihoodModelResults):
                        ('BIC:', ["%#6.4g" % self.bic])]
         
         diagn_right = [('Durbin-Watson:', ["%#6.3f" % durbin_watson(self.wresid)]),
-                       ('JB:', ["%#6.3f" % JB]),
-                       ('Prob(JB):', ["%#6.3g" % JBpv]) #force length
+                       ('JB:', ["%#6.3f" % jb]),
+                       ('Prob(JB):', ["%#6.3g" % jbpv]),
+                       ('cond.no.', ["%#6.3g" % condno])
                        ]
         
         diagn_left = [('Omnibus:', ["%#6.3f" % omni]),
@@ -1225,6 +1238,22 @@ class RegressionResults(LikelihoodModelResults):
         smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
                           yname=yname, xname=xname,
                           title="")
+        
+        #add warnings/notes
+        etext =[]
+        if eigvals[0] < 1e-10:
+            wstr = \
+'''The smallest eigenvalue, %6.3g. This might indicate that there are
+strong multicollinearity problems or that the design matrix is singular.''' % eigvals[0]
+            etext.append(wstr)          
+        elif condno > 1:  #for testing set to 1, increase to large number
+            wstr = \
+'''The condition number is large, %6.3g. This might indicate that there are
+strong multicollinearity problems.''' % condno
+            etext.append(wstr)
+
+        if etext:
+            smry.add_extra_txt(etext)
 
         return smry
 
