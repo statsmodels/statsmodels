@@ -1466,12 +1466,12 @@ class DiscreteResults(LikelihoodModelResults):
                      ('converged:', ["%s" % self.mle_retvals['converged']])
                       ]
 
-        top_right = [('Number of Obs:', None),
-                     ('df resid', None),
-                     ('df model', None),
+        top_right = [('No. Observations:', None),
+                     ('Df Residuals:', None),
+                     ('Df Model:', None),
                      ('Pseudo R-squ.:', ["%#6.4g" % self.prsquared]),
-                     ('Log-Likelihood:', ["%#6.4g" % self.llf]),
-                     ('LL-Null:', ["%#6.4g" % self.llnull]),
+                     ('Log-Likelihood:', None),
+                     ('LL-Null:', ["%#8.5g" % self.llnull]),
                      ('LLR p-value:', ["%#6.4g" % self.llr_pvalue])
                      ]
         

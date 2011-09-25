@@ -447,18 +447,18 @@ class RLMResults(LikelihoodModelResults):
 ##		        'df model',
 ##                         )]
         top_left = [('Dep. Variable:', None),
-                    ('Model type:', None),
+                    ('Model:', None),
                     ('Method:', ['IRLS']),
                     ('Norm:', [self.fit_options['norm']]),
                     ('Scale Est.:', [self.fit_options['scale_est']]),
                     ('Cov Type:', [self.fit_options['cov']]),
                     ('Date:', None),
                     ('Time:', None),
-                    ('No. iterations:', ["%d" % self.model.iteration]), #stale state?
+                    ('No. Iterations:', ["%d" % self.model.iteration]), #stale state?
                     ]
-        top_right = [('Number of Obs:', None),
-                     ('df resid', None),
-                     ('df model', None)
+        top_right = [('No. Observations:', None),
+                     ('Df Residuals:', None),
+                     ('Df Model:', None)
                      ]
 
         if not title is None:
