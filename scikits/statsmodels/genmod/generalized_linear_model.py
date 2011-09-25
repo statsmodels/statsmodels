@@ -627,21 +627,21 @@ class GLMResults(LikelihoodModelResults):
         """
 
         top_left = [('Dep. Variable:', None),
-                    ('Model type:', None),
+                    ('Model:', None),
                     ('Model Family:', [self.family.__class__.__name__]),
                     ('Link Function:', [self.family.link.__class__.__name__]),
                     ('Method:', ['IRLS']),
                     ('Date:', None),
                     ('Time:', None),
-                    ('No. iterations:', ["%d" % self.model.iteration]),
+                    ('No. Iterations:', ["%d" % self.model.iteration]),
                     ]
 
-        top_right = [('Number of Obs:', None),
-                     ('df resid', None),
-                     ('df model', None),
+        top_right = [('No. Observations:', None),
+                     ('Df Residuals:', None),
+                     ('Df Model:', None),
                      ('Scale:', [self.scale]),
-                     ('Log-Likelihood:', ["%#6.3g" % self.llf]),
-                     ('Deviance:', ["%#6.3g" % self.deviance]),
+                     ('Log-Likelihood:', None),
+                     ('Deviance:', ["%#8.5g" % self.deviance]),
                      ('Pearson chi2:', ["%#6.3g" % self.pearson_chi2])
                      ]
 

@@ -1189,22 +1189,22 @@ class RegressionResults(LikelihoodModelResults):
         #TODO: default don't work if it's not identically spelled
         
         top_left = [('Dep. Variable:', None),
-                    ('Model type:', None),
+                    ('Model:', None),
                     ('Method:', ['Least Squares']),
                     ('Date:', None),
                     ('Time:', None),
-                    ('Number of Obs:', None),
-                    ('Df residuals:', [self.df_resid]), #None), #TODO: spelling
-                    ('Df model:', [self.df_model]) #None)]
+                    ('No. Observations:', None),
+                    ('Df Residuals:', None), #[self.df_resid]), #TODO: spelling
+                    ('Df Model:', None), #[self.df_model])
                     ]
 
-        top_right = [('R-squared:', ["%#6.3f" % self.rsquared]),
-                     ('Adj. R-squared:', ["%#6.3f" % self.rsquared_adj]),
-                     ('F-statistic:', ["%#6.4g" % self.fvalue] ),
+        top_right = [('R-squared:', ["%#8.3f" % self.rsquared]),
+                     ('Adj. R-squared:', ["%#8.3f" % self.rsquared_adj]),
+                     ('F-statistic:', ["%#8.4g" % self.fvalue] ),
                      ('Prob (F-statistic):', ["%#6.3g" % self.f_pvalue]),
-                     ('Log likelihood:', ["%#6.4g" % self.llf]),
-                     ('AIC:', ["%#6.4g" % self.aic]),
-                     ('BIC:', ["%#6.4g" % self.bic])
+                     ('Log-Likelihood:', None), #["%#6.4g" % self.llf]),
+                     ('AIC:', ["%#8.4g" % self.aic]),
+                     ('BIC:', ["%#8.4g" % self.bic])
                      ]
         
         diagn_left = [('Omnibus:', ["%#6.3f" % omni]),
@@ -1213,10 +1213,10 @@ class RegressionResults(LikelihoodModelResults):
                       ('Kurtosis:', ["%#6.3f" % kurtosis])
                       ]
 
-        diagn_right = [('Durbin-Watson:', ["%#6.3f" % durbin_watson(self.wresid)]),
-                       ('JB:', ["%#6.3f" % jb]),
-                       ('Prob(JB):', ["%#6.3g" % jbpv]),
-                       ('cond.no.', ["%#6.3g" % condno])
+        diagn_right = [('Durbin-Watson:', ["%#8.3f" % durbin_watson(self.wresid)]),
+                       ('Jarque-Bera (JB):', ["%#8.3f" % jb]),
+                       ('Prob(JB):', ["%#8.3g" % jbpv]),
+                       ('Cond. No.', ["%#8.3g" % condno])
                        ]
 
 

@@ -281,91 +281,86 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
     ? allow gleft, gright to be 1 element tuples instead of filling with None?
 
     '''
-
-    import time as time
+    #change of names ?
+    gen_left, gen_right = gleft, gright
     
-    needed_values = [k for k,v in gleft + gright if v is None]
-
-    #TODO Make sure all results.model.__class__.__name__ are listed    
-    model_types = {'OLS' : 'Ordinary least squares',
-                   'GLS' : 'Generalized least squares',
-                   'GLSAR' : 'Generalized least squares with AR(p)',
-                   'WLS' : 'Weigthed least squares',
-                   'RLM' : 'Robust linear model',
-                   'GLM' : 'Generalized linear model'
-                   }
-    model_methods = {'OLS' : 'Least Squares',
-                   'GLS' : 'Least Squares',
-                   'GLSAR' : 'Least Squares',
-                   'WLS' : 'Least Squares',
-                   'RLM' : '?',
-                   'GLM' : '?'
-                   }
-    if title is None:
-        title = model_types[results.model.__class__.__name__]
-
-    yname, xname = _getnames(results, yname=yname, xname=xname)
-    
+    #time and names are always included
+    import time
     time_now = time.localtime()
     time_of_day = [time.strftime("%H:%M:%S", time_now)]
     date = time.strftime("%a, %d %b %Y", time_now)
     
-    #skip default items that might not be defined for model
-    if 'Model type:' in needed_values:
-        modeltype = results.model.__class__.__name__
-    else:
-        modeltype =''
-    #dist_family = results.model.family.__class__.__name__
-    nobs = results.nobs
-    df_model = results.df_model
-    df_resid = results.df_resid
-
+    yname, xname = _getnames(results, yname=yname, xname=xname)
     
-    
-    #General part of the summary table, Applicable to all? models
-    #------------------------------------------------------------
-    #TODO: define this generically, overwrite in model classes
-    #replace definition of stubs data by single list
-    #e.g.
-    gen_left_ =   [('Model type:', [modeltype]),
-                  ('Date:', [date]),
-                  ('Dependent Variable:', yname), #What happens with multiple names?
-                  ('Dep. Variable:', yname),  #TODO: for testing, remove
-                  ('df model', [df_model]),
-                  ('df model', [df_model]),
-                  #('Log-likelihood:', ["%#6.3g" % results.llf]) #doesn't exist for RLM - exception
-                  ]
+    #create dictionary with default
+    #use lambdas because some values raise exception if they are not available
+    #alternate spellings are commented out to force unique labels
+    default_items = dict([
+          ('Dependent Variable:', lambda: [yname]),
+          ('Dep. Variable:', lambda: [yname]),
+          ('Model:', lambda: [results.model.__class__.__name__]),
+          #('Model type:', lambda: [results.model.__class__.__name__]),
+          ('Date:', lambda: [date]),
+          ('Time:', lambda: time_of_day),
+          ('Number of Obs:', lambda: [results.nobs]),
+          #('No. of Observations:', lambda: ["%#6d" % results.nobs]),
+          ('No. Observations:', lambda: ["%#6d" % results.nobs]),
+          #('Df model:', lambda: [results.df_model]),
+          ('Df Model:', lambda: ["%#6d" % results.df_model]),
+          #TODO: check when we have non-integer df
+          ('Df Residuals:', lambda: ["%#6d" % results.df_resid]), 
+          #('Df resid:', lambda: [results.df_resid]),
+          #('df resid:', lambda: [results.df_resid]), #check capitalization
+          ('Log-Likelihood:', lambda: ["%#8.5g" % results.llf]) #doesn't exist for RLM - exception
+          #('Method:', lambda: [???]), #no default for this
+          ])
 
-    gen_right_ = [('Method:', [model_methods.get(modeltype)]), #[modeltype]),
-                  ('Time:', time_of_day),
-                  ('Number of Obs:', [nobs]),
-                  ('df resid', [df_resid])
-                  ]
+    if title is None:
+        title = results.model.__class__.__name__ + 'Regression Results'
+
+    if gen_left is None:
+        #default: General part of the summary table, Applicable to all? models
+        gen_left = [('Dep. Variable:', None),
+                    ('Model type:', None),
+                    ('Date:', None),
+                    ('No. Observations:', None)
+                    ('Df model:', None),
+                    ('Df resid:', None)]
+        
+        try:
+            llf = results.llf
+            gen_left.append(('Log-Likelihood', None))
+        except: #AttributeError, NotImplementedError
+            pass
+    
+        gen_right = []
+
 
     gen_title = title
     gen_header = None
 
-    if gleft is None :
-        gen_left = gen_left_
-    else:
-        gl = dict(gen_left_ + gen_right_)
-        gen_left = []
-        for item, value in gleft:
-            if value is None:
-                value = gl.get(item)  #adds None if not a key
-            gen_left.append((item, value))
-    
+    #needed_values = [k for k,v in gleft + gright if v is None] #not used anymore
+    #replace missing (None) values with default values
+    gen_left_ = []
+    for item, value in gen_left:
+        if value is None:
+            value = default_items[item]()  #let KeyErrors raise exception
+        gen_left_.append((item, value))
+    gen_left = gen_left_
 
-    if gright is None :
+    if gen_right:
+        gen_right_ = []
+        for item, value in gen_right:
+            if value is None:
+                value = default_items[item]()  #let KeyErrors raise exception
+            gen_right_.append((item, value))
         gen_right = gen_right_
-    else:
-        gr = dict(gen_left_ + gen_right_)
-        gen_right = []
-        for item, value in gright:
-            if value is None:
-                value = gr.get(item)  #adds None if not a key
-            gen_right.append((item, value))
 
+    #check
+    missing_values = [k for k,v in gen_left + gen_right if v is None]
+    assert missing_values == [], missing_values
+
+    #pad both tables to equal number of rows
     if gen_right:
         if len(gen_right) < len(gen_left):
             #fill up with blank lines to same length
@@ -386,16 +381,18 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
                                       txt_fmt = fmt_2cols #gen_fmt
                                       )
     else:
-        gen_table_right = []  #because .extend_right seems to work with []
+        gen_table_right = []  #because .extend_right seems works with []
 
 
     #moved below so that we can pad if needed to match length of gen_right
-    gen_stubs_left, gen_data_left = map(None, *gen_left) #transpose row col
+    #transpose rows and columns, `unzip`
+    gen_stubs_left, gen_data_left = map(None, *gen_left) 
+    
     gen_table_left = SimpleTable(gen_data_left,
                                  gen_header,
                                  gen_stubs_left,
                                  title = gen_title,
-                                 txt_fmt = fmt_2cols #gen_fmt
+                                 txt_fmt = fmt_2cols
                                  )
         
 
@@ -437,14 +434,12 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True):
     params_stubs = xname
 
     exog_idx = xrange(len(xname))
-    
-    # Simpletable should be able to handle the formating
-    # alternative would be to use format in fmt_2
+
     
     #center confidence intervals if they are unequal lengths
 #    confint = ["(%#6.3g, %#6.3g)" % tuple(conf_int[i]) for i in \
 #                                                             exog_idx]
-    confint = ["%s %s" % tuple(map(forg,conf_int[i])) for i in \
+    confint = ["%s %s" % tuple(map(forg, conf_int[i])) for i in \
                                                              exog_idx]    
     len_ci = map(len, confint)
     max_ci = max(len_ci)
@@ -453,7 +448,7 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True):
     if min_ci < max_ci:
         confint = [ci.center(max_ci) for ci in confint]
         
-        
+    #explicit f/g formatting, now uses forg, f or g depending on values
 #    params_data = zip(["%#6.4g" % (params[i]) for i in exog_idx],
 #                       ["%#6.4f" % (std_err[i]) for i in exog_idx],
 #                       ["%#6.3f" % (tvalues[i]) for i in exog_idx],
