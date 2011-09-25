@@ -4,8 +4,13 @@ from scikits.statsmodels.miscmodels.nonlinls import NonlinearLS
 
 class Myfunc(NonlinearLS):
 
-    def _predict(self, params):
-        x0, x1 = self.exog.T
+    def _predict(self, params, exog=None):
+        if exog is None:
+            x = self.exog
+        else:
+            x = exog
+
+        x0, x1 = x.T #x[:,0], x[:,1]
         a, b, c = params
         return a + b*x0 + c*x1
 

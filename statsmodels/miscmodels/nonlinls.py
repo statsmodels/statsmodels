@@ -32,6 +32,12 @@ class NonLinearLSResults(RegressionResults):
 #        return self.model.wendog - self.model.predict(self.model.wexog,
 #                self.params)
 
+    #included here because of changes to predict as in circular branch
+    @cache_readonly
+    def resid(self):
+        return self.model.endog - self.model.predict(self.params,
+                                                     self.model.exog)
+
 
 ##def getjaccov(retval, n):
 ##    '''calculate something and raw covariance matrix from return of optimize.leastsq
@@ -167,9 +173,12 @@ class NonlinearLS(Model):  #or subclass a model
                     whitened = weights[:,None]*X
                 return whitened
 
-    def predict(self, exog, params=None):
+    def predict(self, params, exog=None):
         #copied from GLS, Model has different signature
-        return self._predict(params)
+        #adjusted to match circular branch
+        if exog is None:
+            exog = self.exog
+        return self._predict(params, exog)
 
     #from WLS
     def loglike_(self, params):
@@ -205,19 +214,20 @@ class NonlinearLS(Model):  #or subclass a model
         #use concentrated likelihood instead
         return llf.sum()
 
-    def _predict(self, params):
+    def _predict(self, params, exog):
         pass
 
     def start_value(self):
         return None
 
     def geterrors(self, params, weights=None):
+        #TODO: we could do weighting of endog and fittedvalues separately
         if weights is None:
             if self.weights is None:
-                return self.endog - self._predict(params)
+                return self.endog - self._predict(params, self.exog)
             else:
                 weights = np.sqrt(self.weights)
-        return weights * (self.endog - self._predict(params))
+        return weights * (self.endog - self._predict(params, self.exog))
 
     def errorsumsquares(self, params, weights=None):
         '''ess
@@ -350,10 +360,17 @@ class Myfunc(NonlinearLS):
 ##        a, b, c = params
 ##        return a*np.exp(-b*x) + c
 
-    def _predict(self, params):
+    def _predict(self, params, exog=None):
         '''this needs exog for predict with new values, unfortunately
+
+        make exog required - not now - I would need args in jac and leastsq
         '''
-        x = self.exog
+        #needs boilerplate, self.exog, for now
+        if exog is None:
+            x = self.exog
+        else:
+            x = exog
+
         a, b, c = params
         return a*np.exp(-b*x) + c
 
