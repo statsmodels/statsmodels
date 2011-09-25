@@ -124,7 +124,7 @@ class test_SimpleTable(unittest.TestCase):
             tbl = SimpleTable(table1data, test1header, test1stubs, txt_fmt=txt_fmt1)
             tbl[1][1].data = np.nan
             tbl.label_cells(custom_labeller)
-            print([[c.datatype for c in row] for row in tbl])
+            #print([[c.datatype for c in row] for row in tbl])
             desired = """
 *****************************
 *       * header1 * header2 *
@@ -134,8 +134,8 @@ class test_SimpleTable(unittest.TestCase):
 *****************************
 """
             actual = '\n%s\n' % tbl.as_text(missing='--')
-            print(actual)
-            print(desired)
+            #print(actual)
+            #print(desired)
             self.assertEqual(actual, desired)
 
 if __name__=="__main__":
