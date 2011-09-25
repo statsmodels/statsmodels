@@ -1493,17 +1493,18 @@ class DiscreteResults(LikelihoodModelResults):
 
         #TODO: attach only to binary models
         if self.model.__class__.__name__ in ['Logit', 'Probit']:
-            absprederror = np.abs(self.model.endog - self.fittedvalues)
+            fittedvalues = self.model.cdf(self.fittedvalues)
+            absprederror = np.abs(self.model.endog - fittedvalues)
             predclose_sum = (absprederror < 1e-4).sum()
-            predclose_frac = predclose_sum / len(self.fittedvalues)
+            predclose_frac = predclose_sum / len(fittedvalues)
             
             #add warnings/notes
             etext =[]
-            if predclose_sum == len(self.fittedvalues): #nobs?
+            if predclose_sum == len(fittedvalues): #nobs?
                 wstr = \
 '''Complete Separation: The results show that there is complete separation.
 In this case the Maximum Likelihood Estimator does not exist and the parameters
-are not identified.''' % eigvals[0]
+are not identified.'''
                 etext.append(wstr)          
             elif predclose_frac > 0.1:  #TODO: get better diagnosis 
                 wstr = \
