@@ -49,7 +49,7 @@ def test_regression_summary():
     aregression = TestOLS()
     TestOLS.setupClass()
     results = aregression.res1
-    r_summary = str(results.summary())
+    r_summary = str(results.summary_old())
 
 ##    print('###')
 ##    print(r_summary)
