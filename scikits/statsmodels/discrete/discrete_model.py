@@ -1484,7 +1484,7 @@ class DiscreteResults(LikelihoodModelResults):
         smry.add_table_2cols(self, gleft=top_left, gright=top_right, #[],
                           yname=yname, xname=xname, title=title)
         smry.add_table_params(self, yname=yname, xname=xname, alpha=.05,
-                             use_t=False)
+                             use_t=True)
  
         #diagnostic table not used yet
 #        smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
