@@ -10,7 +10,7 @@ class Myfunc(NonlinearLS):
         else:
             x = exog
 
-        x0, x1 = x.T #x[:,0], x[:,1]
+        x0, x1 = x[:,0], x[:,1]
         a, b, c = params
         return a + b*x0 + c*x1
 

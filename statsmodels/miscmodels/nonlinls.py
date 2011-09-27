@@ -12,14 +12,6 @@ from statsmodels.base.model import Model
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.regression.linear_model import RegressionResults
 
-class Results(object):
-    '''just a dummy placeholder for now
-    most results from RegressionResults can be used here
-
-    still used while testing
-    '''
-    pass
-
 class NonLinearLSResults(RegressionResults):
     '''just a dummy placeholder for now
     most results from RegressionResults can be used here
@@ -33,10 +25,14 @@ class NonLinearLSResults(RegressionResults):
 #                self.params)
 
     #included here because of changes to predict as in circular branch
+    #TODO: both resid and fittedvalues can be deleted again later
     @cache_readonly
     def resid(self):
         return self.model.endog - self.model.predict(self.params,
                                                      self.model.exog)
+    @cache_readonly
+    def fittedvalues(self):
+        return self.model.predict(self.params, self.model.exog)
 
 
 ##def getjaccov(retval, n):
@@ -276,10 +272,11 @@ class NonlinearLS(Model):  #or subclass a model
         #WLS uses float
         self.df_resid = len(ydata)-len(p0) * 1.
         self.df_model = len(p0) - 1.  #TODO:subtract, constant remove, just for testing
-        fitres = Results()
-        fitres.params = popt
-        fitres.pcov = pcov
-        fitres.rawres = res
+        #drop old Result instance
+#        fitres = Results()
+#        fitres.params = popt
+#        fitres.pcov = pcov
+#        fitres.rawres = res
 ##        self.wendog = self.endog  #add weights
 ##        self.wexog = self.jac_predict(popt)
         self.wendog = self.whiten(self.endog)  #add weights
@@ -306,7 +303,7 @@ class NonlinearLS(Model):  #or subclass a model
         lfit = NonLinearLSResults(self, beta,
                        normalized_cov_params=self.normalized_cov_params)
 
-        lfit.fitres = fitres   #mainly for testing
+#        lfit.fitres = fitres   #mainly for testing
         self._results = lfit
         return lfit
 
