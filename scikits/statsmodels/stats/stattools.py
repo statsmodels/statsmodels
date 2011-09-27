@@ -44,6 +44,16 @@ def omni_normtest(resids, axis=0):
     -------
     Chi^2 score, two-tail probability
     """
+    #TODO: change to exception in summary branch and catch in summary()
+    #behavior changed between scipy 0.9 and 0.10
+    resids = np.asarray(resids)
+    n = resids.shape[axis]
+    if n < 8:
+        return np.nan, np.nan
+        raise ValueError(
+            "skewtest is not valid with less than 8 observations; %i samples"
+            " were given." % int(n))
+        
     return stats.normaltest(resids, axis=0)
 
 def jarque_bera(resids):
@@ -73,7 +83,7 @@ def jarque_bera(resids):
     kurtosis = 3 + stats.kurtosis(resids)
 
     # Calculate the Jarque-Bera test for normality
-    JB = (resids.shape[0]/6) * (skew**2 + (1/4)*(kurtosis-3)**2)
+    JB = (resids.shape[0]/6.) * (skew**2 + (1/4.)*(kurtosis-3)**2)
     JBpv = stats.chi2.sf(JB,2);
 
     return JB, JBpv, skew, kurtosis
