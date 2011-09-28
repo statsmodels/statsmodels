@@ -155,59 +155,9 @@ stub R2 C2  40.95038  40.65765
             print(desired)
             self.assertEqual(actual, desired)
 
-    def optional_regression_summary(self):
-        """ little luck getting this test to pass (It should?), can be used for
-        visual testing of the regression.summary table
-        """
-        from test_regression import TestOLS
-        import time
-        from string import Template
-        t = time.localtime()
-        desired = Template(
-'''     Summary of Regression Results
-=======================================
-| Dependent Variable:                Y|
-| Model:                           OLS|
-| Method:                Least Squares|
-| Date:               $XXcurrentXdateXX|
-| Time:                       $XXtimeXXX|
-| obs:                            16.0|
-| Df residuals:                    9.0|
-| Df model:                        6.0|
-=============================================================================
-|               | coefficient  |  std. error  | t-statistic  |    prob.     |
------------------------------------------------------------------------------
-| X.0           |      15.0619 |      84.9149 |      0.1774  |    0.8631    |
-| X.1           |   -0.0358192 |    0.0334910 |      -1.070  |    0.3127    |
-| X.2           |     -2.02023 |     0.488400 |      -4.136  |   0.002535   |
-| X.3           |     -1.03323 |     0.214274 |      -4.822  |  0.0009444   |
-| X.4           |   -0.0511041 |     0.226073 |     -0.2261  |    0.8262    |
-| X.5           |      1829.15 |      455.478 |       4.016  |   0.003037   |
-| X.6           | -3.48226e+06 |      890420. |      -3.911  |   0.003560   |
-=============================================================================
-|                        Models stats                       Residual stats  |
------------------------------------------------------------------------------
-| R-squared:                 0.995479   Durbin-Watson:            2.55949   |
-| Adjusted R-squared:        0.992465   Omnibus:                 0.748615   |
-| F-statistic:                330.285   Prob(Omnibus):           0.687765   |
-| Prob (F-statistic):     4.98403e-10   JB:                      0.352773   |
-| Log likelihood:            -109.617   Prob(JB):                0.838294   |
-| AIC criterion:              233.235   Skew:                    0.419984   |
-| BIC criterion:              238.643   Kurtosis:                 2.43373   |
------------------------------------------------------------------------------'''
-).substitute(XXcurrentXdateXX = str(time.strftime("%a, %d %b %Y",t)),
-             XXtimeXXX = str(time.strftime("%H:%M:%S",t)))
-        desired = str(desired)
-        aregression = TestOLS()
-        results = aregression.res1
-        r_summary = str(results.summary())
-        print('###')
-        print(r_summary)
-        print('###')
-        print(desired)
-        print('###')
 
 if __name__ == "__main__":
-    unittest.main()
+    #unittest.main()
+    pass
 
 

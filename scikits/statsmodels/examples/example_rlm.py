@@ -29,3 +29,6 @@ print hub_results2.bse
 andrew_mod = sm.RLM(data.endog, data.exog, M=sm.robust.norms.AndrewWave())
 andrew_results = andrew_mod.fit(scale_est=sm.robust.scale.HuberScale(), cov="H3")
 print andrew_results.params
+
+print hub_results.summary(yname='y',
+                          xname=['var_%d' % i for i in range(len(hub_results.params))])

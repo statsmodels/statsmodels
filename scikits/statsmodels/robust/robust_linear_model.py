@@ -254,6 +254,15 @@ class RLM(LikelihoodModel):
             self.iteration += 1
         results = RLMResults(self, wls_results.params,
                             self.normalized_cov_params, self.scale)
+
+        results.fit_options = dict(cov=cov.upper(), scale_est=scale_est,
+                                   norm=self.M.__class__.__name__, conv=conv)
+        #norm is not changed in fit, no old state
+        
+        #doing the next causes exception
+        #self.cov = self.scale_est = None #reset for additional fits
+        #iteration and history could contain wrong state with repeated fit
+
         return results
 
 class RLMResults(LikelihoodModelResults):
@@ -418,6 +427,68 @@ class RLMResults(LikelihoodModelResults):
     @cache_readonly
     def chisq(self):
         return (self.params/self.bse)**2
+
+    def summary(self, yname=None, xname=None, title=0, alpha=.05,
+                return_fmt='text'):
+        """
+        This is for testing the new summary setup
+        """
+        from scikits.statsmodels.iolib.summary import (summary_top,
+                                            summary_params, summary_return)
+
+##        left = [(i, None) for i in (
+##                        'Dependent Variable:',
+##                        'Model type:',
+##                        'Method:',
+##			'Date:',
+##                        'Time:',
+##                        'Number of Obs:',
+##                        'df resid',
+##		        'df model',
+##                         )]
+        top_left = [('Dep. Variable:', None),
+                    ('Model:', None),
+                    ('Method:', ['IRLS']),
+                    ('Norm:', [self.fit_options['norm']]),
+                    ('Scale Est.:', [self.fit_options['scale_est']]),
+                    ('Cov Type:', [self.fit_options['cov']]),
+                    ('Date:', None),
+                    ('Time:', None),
+                    ('No. Iterations:', ["%d" % self.model.iteration]), #stale state?
+                    ]
+        top_right = [('No. Observations:', None),
+                     ('Df Residuals:', None),
+                     ('Df Model:', None)
+                     ]
+
+        if not title is None:
+            title = "Robust linear Model Regression Results"
+        
+        #boiler plate
+        from scikits.statsmodels.iolib.summary import Summary
+        smry = Summary()
+        smry.add_table_2cols(self, gleft=top_left, gright=top_right, #[],
+                          yname=yname, xname=xname, title=title)
+        smry.add_table_params(self, yname=yname, xname=xname, alpha=.05,
+                             use_t=False)
+
+        #diagnostic table is not used yet
+#        smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
+#                          yname=yname, xname=xname,
+#                          title="")
+
+#add warnings/notes, added to text format only
+        etext =[]
+        wstr = \
+'''If the model instance has been used for another fit with different fit
+parameters, then the fit options might not be the correct ones anymore .'''
+        etext.append(wstr)
+
+        if etext:
+            smry.add_extra_txt(etext)        
+
+        return smry        
+
 
 if __name__=="__main__":
 #NOTE: This is to be removed

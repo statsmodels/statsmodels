@@ -1134,7 +1134,141 @@ class RegressionResults(LikelihoodModelResults):
 
         return lrstat, lr_pvalue, lrdf
 
-    def summary(self, yname=None, xname=None, returns='text'):
+    
+    def summary(self, yname=None, xname=None, title=None, alpha=.05):
+        """Summarize the Regression Results
+        
+        Parameters
+        -----------
+        yname : string, optional
+            Default is `y`
+        xname : list of strings, optional
+            Default is `var_##` for ## in p the number of regressors
+        title : string, optional
+            Title for the top table. If not None, then this replaces the 
+            default title
+        alpha : float
+            significance level for the confidence intervals
+
+        Returns
+        -------
+        smry : Summary instance
+            this holds the summary tables and text, which can be printed or 
+            converted to various output formats.
+            
+        See Also
+        --------
+        scikits.statsmodels.iolib.summary.Summary : class to hold summary 
+            results
+        
+        """
+
+        #TODO: import where we need it (for now), add as cached attributes
+        from scikits.statsmodels.stats.stattools import (jarque_bera,
+                omni_normtest, durbin_watson)
+        jb, jbpv, skew, kurtosis = jarque_bera(self.wresid)
+        omni, omnipv = omni_normtest(self.wresid)
+        
+        #TODO: reuse condno from somewhere else ?
+        #condno = np.linalg.cond(np.dot(self.wexog.T, self.wexog))
+        wexog = self.model.wexog
+        eigvals = np.linalg.linalg.eigvalsh(np.dot(wexog.T, wexog))
+        eigvals = np.sort(eigvals) #in increasing order
+        condno = eigvals[-1]/eigvals[0]
+        
+        self.diagn = dict(jb=jb, jbpv=jbpv, skew=skew, kurtosis=kurtosis, 
+                          omni=omni, omnipv=omnipv, condno=condno, 
+                          mineigval=eigvals[0])
+
+#        #TODO not used yet
+#        diagn_left_header = ['Models stats'] 
+#        diagn_right_header = ['Residual stats']
+        
+        #TODO: requiring list/iterable is a bit annoying
+        #need more control over formatting
+        #TODO: default don't work if it's not identically spelled
+        
+        top_left = [('Dep. Variable:', None),
+                    ('Model:', None),
+                    ('Method:', ['Least Squares']),
+                    ('Date:', None),
+                    ('Time:', None),
+                    ('No. Observations:', None),
+                    ('Df Residuals:', None), #[self.df_resid]), #TODO: spelling
+                    ('Df Model:', None), #[self.df_model])
+                    ]
+
+        top_right = [('R-squared:', ["%#8.3f" % self.rsquared]),
+                     ('Adj. R-squared:', ["%#8.3f" % self.rsquared_adj]),
+                     ('F-statistic:', ["%#8.4g" % self.fvalue] ),
+                     ('Prob (F-statistic):', ["%#6.3g" % self.f_pvalue]),
+                     ('Log-Likelihood:', None), #["%#6.4g" % self.llf]),
+                     ('AIC:', ["%#8.4g" % self.aic]),
+                     ('BIC:', ["%#8.4g" % self.bic])
+                     ]
+        
+        diagn_left = [('Omnibus:', ["%#6.3f" % omni]),
+                      ('Prob(Omnibus):', ["%#6.3f" % omnipv]),
+                      ('Skew:', ["%#6.3f" % skew]),
+                      ('Kurtosis:', ["%#6.3f" % kurtosis])
+                      ]
+
+        diagn_right = [('Durbin-Watson:', ["%#8.3f" % durbin_watson(self.wresid)]),
+                       ('Jarque-Bera (JB):', ["%#8.3f" % jb]),
+                       ('Prob(JB):', ["%#8.3g" % jbpv]),
+                       ('Cond. No.', ["%#8.3g" % condno])
+                       ]
+
+
+        if title is None:
+            title = self.model.__class__.__name__ + ' ' + "Regression Results"
+
+        #create summary table instance
+        from scikits.statsmodels.iolib.summary import Summary
+        smry = Summary()
+        smry.add_table_2cols(self, gleft=top_left, gright=top_right,
+                          yname=yname, xname=xname, title=title)
+        smry.add_table_params(self, yname=yname, xname=xname, alpha=.05,
+                             use_t=True)
+        
+        smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
+                          yname=yname, xname=xname,
+                          title="")
+        
+        #add warnings/notes, added to text format only
+        etext =[]
+        if eigvals[0] < 1e-10:
+            wstr = \
+'''The smallest eigenvalue is %6.3g. This might indicate that there are
+strong multicollinearity problems or that the design matrix is singular.''' \
+                    % eigvals[0]
+            etext.append(wstr)          
+        elif condno > 1000:  #TODO: what is recommended
+            wstr = \
+'''The condition number is large, %6.3g. This might indicate that there are
+strong multicollinearity or other numerical problems.''' % condno
+            etext.append(wstr)
+
+        if etext:
+            smry.add_extra_txt(etext)
+
+        return smry
+
+#        top = summary_top(self, gleft=topleft, gright=diagn_left, #[],
+#                          yname=yname, xname=xname,
+#                          title=self.model.__class__.__name__ + ' ' +
+#                          "Regression Results")
+#        par = summary_params(self, yname=yname, xname=xname, alpha=.05,
+#                             use_t=False)
+#        
+#        diagn = summary_top(self, gleft=diagn_left, gright=diagn_right,
+#                          yname=yname, xname=xname,
+#                          title="Linear Model")
+#
+#        return summary_return([top, par, diagn], return_fmt=return_fmt)
+
+
+    def summary_old(self, yname=None, xname=None, returns='text'):
         """returns a string that summarizes the regression results
 
         Parameters
@@ -1276,7 +1410,7 @@ class RegressionResults(LikelihoodModelResults):
                             title=None,
                             txt_fmt = part2_fmt)
 
-        self.summary2 = part2
+        #self.summary2 = part2
         ########  summary Part 3   #######
 
         part3Lheader = ['Models stats']
@@ -1331,8 +1465,8 @@ if __name__ == "__main__":
     import scikits.statsmodels.api as sm
     data = sm.datasets.longley.load()
     data.exog = add_constant(data.exog)
-    ols_results = OLS(data.endog, data.exog).results
-    gls_results = GLS(data.endog, data.exog).results
+    ols_results = OLS(data.endog, data.exog).fit() #results
+    gls_results = GLS(data.endog, data.exog).fit() #results
     print(ols_results.summary())
     tables = ols_results.summary(returns='tables')
     csv = ols_results.summary(returns='csv')

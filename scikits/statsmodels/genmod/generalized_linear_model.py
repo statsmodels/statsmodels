@@ -598,9 +598,74 @@ class GLMResults(LikelihoodModelResults):
     def bic(self):
         return self.deviance - self.df_resid*np.log(self.nobs)
 
-#TODO: write summary method to use output.py in sandbox
-    def summary(self, yname=None, xname=None, title='Generalized linear model',
-                returns='print'):
+    def summary(self, yname=None, xname=None, title=None, alpha=.05):
+        """Summarize the Regression Results
+        
+        Parameters
+        -----------
+        yname : string, optional
+            Default is `y`
+        xname : list of strings, optional
+            Default is `var_##` for ## in p the number of regressors
+        title : string, optional
+            Title for the top table. If not None, then this replaces the 
+            default title
+        alpha : float
+            significance level for the confidence intervals
+
+        Returns
+        -------
+        smry : Summary instance
+            this holds the summary tables and text, which can be printed or 
+            converted to various output formats.
+            
+        See Also
+        --------
+        scikits.statsmodels.iolib.summary.Summary : class to hold summary 
+            results
+        
+        """
+
+        top_left = [('Dep. Variable:', None),
+                    ('Model:', None),
+                    ('Model Family:', [self.family.__class__.__name__]),
+                    ('Link Function:', [self.family.link.__class__.__name__]),
+                    ('Method:', ['IRLS']),
+                    ('Date:', None),
+                    ('Time:', None),
+                    ('No. Iterations:', ["%d" % self.model.iteration]),
+                    ]
+
+        top_right = [('No. Observations:', None),
+                     ('Df Residuals:', None),
+                     ('Df Model:', None),
+                     ('Scale:', [self.scale]),
+                     ('Log-Likelihood:', None),
+                     ('Deviance:', ["%#8.5g" % self.deviance]),
+                     ('Pearson chi2:', ["%#6.3g" % self.pearson_chi2])
+                     ]
+
+        if title is None:
+            title = "Generalized Linear Model Regression Results"
+
+        #create summary tables        
+        from scikits.statsmodels.iolib.summary import Summary
+        smry = Summary()
+        smry.add_table_2cols(self, gleft=top_left, gright=top_right, #[],
+                          yname=yname, xname=xname, title=title)
+        smry.add_table_params(self, yname=yname, xname=xname, alpha=.05,
+                             use_t=True)
+        
+        #diagnostic table is not used yet:
+#        smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
+#                          yname=yname, xname=xname,
+#                          title="")
+
+        return smry
+
+
+    def summary_old(self, yname=None, xname=None, title='Generalized linear model',
+                returns='text'):
         """
         Print a table of results or returns SimpleTable() instance which
         summarizes the Generalized linear model results.
@@ -658,8 +723,8 @@ class GLMResults(LikelihoodModelResults):
         conf_int calculated from normal dist.
         """
         import time as Time
-        from iolib import SimpleTable
-        from stattools import jarque_bera, omni_normtest, durbin_watson
+        from scikits.statsmodels.iolib import SimpleTable
+        from scikits.statsmodels.stats.stattools import jarque_bera, omni_normtest, durbin_watson
 
         if yname is None:
             yname = 'Y'
@@ -692,7 +757,7 @@ class GLMResults(LikelihoodModelResults):
         resid_working = self.resid_working
         scale = self.scale
 #TODO   #stand_errors = self.stand_errors
-        stand_errors = [' ' for x in range(len(self.params))]
+        stand_errors = self.bse  #[' ' for x in range(len(self.params))]
 #Added note about conf_int
         pvalues = self.pvalues
         conf_int = self.conf_int()
@@ -706,7 +771,7 @@ class GLMResults(LikelihoodModelResults):
         table_1l_fmt = dict(
             data_fmts = ["%s", "%s", "%s", "%s", "%s"],
             empty_cell = '',
-            colwidths = 17,
+            colwidths = 15,
             colsep='   ',
             row_pre = '  ',
             row_post = '  ',
@@ -721,11 +786,11 @@ class GLMResults(LikelihoodModelResults):
             stubs_align = "l",
             fmt = 'txt'
             )
-        # Note table_1l_fmt over rides the below formating.
+        # Note table_1l_fmt over rides the below formating. in extend_right? JP
         table_1r_fmt = dict(
-            data_fmts = ["%s", "%s", "%s", "%s", "%S"],
+            data_fmts = ["%s", "%s", "%s", "%s", "%1s"],
             empty_cell = '',
-            colwidths = 16,
+            colwidths = 12,
             colsep='   ',
             row_pre = '',
             row_post = '',
@@ -747,7 +812,7 @@ class GLMResults(LikelihoodModelResults):
             #data_fmts = ["%#10.4g","%#6.4f", "%#6.4f"],
             #data_fmts = ["%#15.4F","%#15.4F","%#15.4F","%#14.4G"],
             empty_cell = '',
-            colwidths = 14,
+            colwidths = 13,
             colsep=' ',
             row_pre = '  ',
             row_post = '   ',
@@ -810,9 +875,9 @@ class GLMResults(LikelihoodModelResults):
         'Conf. Interval')
         table_2stubs = xname
         table_2data = zip(["%#6.4f" % (params[i]) for i in range(len(xname))],
-                          [stand_errors[i] for i in range(len(xname))],
+                          ["%#6.4f" % stand_errors[i] for i in range(len(xname))],
                           ["%#6.4f" % (t[i]) for i in range(len(xname))],
-                          ["""[%#6.3f, %#6.3f]""" % tuple(conf_int[i]) for i in
+                          [""" [%#6.3f, %#6.3f]""" % tuple(conf_int[i]) for i in
                                                              range(len(xname))])
 
 

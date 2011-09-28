@@ -1429,6 +1429,95 @@ class DiscreteResults(LikelihoodModelResults):
         self.margfx = effects
         return effects
 
+    def summary(self, yname=None, xname=None, title=None, alpha=.05):
+        """Summarize the Regression Results
+        
+        Parameters
+        -----------
+        yname : string, optional
+            Default is `y`
+        xname : list of strings, optional
+            Default is `var_##` for ## in p the number of regressors
+        title : string, optional
+            Title for the top table. If not None, then this replaces the 
+            default title
+        alpha : float
+            significance level for the confidence intervals
+
+        Returns
+        -------
+        smry : Summary instance
+            this holds the summary tables and text, which can be printed or 
+            converted to various output formats.
+            
+        See Also
+        --------
+        scikits.statsmodels.iolib.summary.Summary : class to hold summary 
+            results
+        
+        """
+
+        top_left = [('Dep. Variable:', None),
+                     ('Model:', [self.model.__class__.__name__]),
+                     ('Method:', ['MLE']),
+                     ('Date:', None),
+                     ('Time:', None),
+                     ('No. iterations:', ["%d" % self.mle_retvals['iterations']]),
+                     ('converged:', ["%s" % self.mle_retvals['converged']])
+                      ]
+
+        top_right = [('No. Observations:', None),
+                     ('Df Residuals:', None),
+                     ('Df Model:', None),
+                     ('Pseudo R-squ.:', ["%#6.4g" % self.prsquared]),
+                     ('Log-Likelihood:', None),
+                     ('LL-Null:', ["%#8.5g" % self.llnull]),
+                     ('LLR p-value:', ["%#6.4g" % self.llr_pvalue])
+                     ]
+        
+        if title is None:
+            title = self.model.__class__.__name__ + ' ' + "Regression Results"
+        
+        #boiler plate
+        from scikits.statsmodels.iolib.summary import Summary
+        smry = Summary()
+        smry.add_table_2cols(self, gleft=top_left, gright=top_right, #[],
+                          yname=yname, xname=xname, title=title)
+        smry.add_table_params(self, yname=yname, xname=xname, alpha=.05,
+                             use_t=True)
+ 
+        #diagnostic table not used yet
+#        smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
+#                          yname=yname, xname=xname,
+#                          title="")
+
+        #TODO: attach only to binary models
+        if self.model.__class__.__name__ in ['Logit', 'Probit']:
+            fittedvalues = self.model.cdf(self.fittedvalues)
+            absprederror = np.abs(self.model.endog - fittedvalues)
+            predclose_sum = (absprederror < 1e-4).sum()
+            predclose_frac = predclose_sum / len(fittedvalues)
+            
+            #add warnings/notes
+            etext =[]
+            if predclose_sum == len(fittedvalues): #nobs?
+                wstr = \
+'''Complete Separation: The results show that there is complete separation.
+In this case the Maximum Likelihood Estimator does not exist and the parameters
+are not identified.'''
+                etext.append(wstr)          
+            elif predclose_frac > 0.1:  #TODO: get better diagnosis 
+                wstr = \
+'''Possibly complete quasi-separation: A fraction %f4.2 of observations can be
+perfectly predicted. This might indicate that there is complete 
+quasi-separation. In this case some parameters will not be identified.''' % predclose_frac
+                etext.append(wstr)
+
+            if etext:
+                smry.add_extra_txt(etext)
+
+        return smry   
+
 if __name__=="__main__":
     import numpy as np
     import scikits.statsmodels.api as sm
