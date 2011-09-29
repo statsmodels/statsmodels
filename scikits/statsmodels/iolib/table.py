@@ -22,7 +22,7 @@ Each item in your rectangular iterable will become the data
 of a single Cell.  In principle, items can be any object,
 not just numbers and strings.  However, default conversion
 during table production is by simple string interpolation.
-(So you cannot have a tuple as a data item *and* rely on 
+(So you cannot have a tuple as a data item *and* rely on
 the default conversion.)
 
 A SimpleTable allows only one column (the first) of stubs at
@@ -56,7 +56,7 @@ Us the SimpleTable's `label_cells` method to do this.  ::
     def mylabeller(cell):
         if cell.data is np.nan:
             return 'missing'
-    
+
     mytable.label_cells(mylabeller)
     print(mytable.as_text(missing='-'))
 
@@ -132,7 +132,7 @@ def csv2st(csvfile, headers=False, stubs=False, title=None):
 
 class SimpleTable(list):
     """Produce a simple ASCII, CSV, HTML, or LaTeX table from a
-    *rectangular* (2d!) array of data, not necessarily numerical. 
+    *rectangular* (2d!) array of data, not necessarily numerical.
     Directly supports at most one header row,
     which should be the length of data[0].
     Directly supports at most one stubs column,
@@ -156,7 +156,7 @@ class SimpleTable(list):
         with open('c:/temp/temp.tex','w') as fh:
             fh.write( tbl.as_latex_tabular() )
     """
-    def __init__(self, data, headers=None, stubs=None, title='', 
+    def __init__(self, data, headers=None, stubs=None, title='',
         datatypes=None,
         csv_fmt=None, txt_fmt=None, ltx_fmt=None, html_fmt=None,
         celltype= None, rowtype=None,
@@ -488,7 +488,7 @@ class Row(list):
         """
         Return None. Adds row-instance specific formatting
         for the specified output format.
-        Example: myrow.add_format('txt', row_dec_below='+-') 
+        Example: myrow.add_format('txt', row_dec_below='+-')
         """
         output_format = get_output_format(output_format)
         if output_format not in self.special_fmts:
@@ -500,7 +500,7 @@ class Row(list):
         """
         _Cell = self._Cell
         if not isinstance(stub, _Cell):
-            stub = stub 
+            stub = stub
             stub = _Cell(stub, datatype='stub', row=self)
         self.insert(loc, stub)
     def _get_fmt(self, output_format, **fmt_dict):
@@ -683,8 +683,8 @@ class Cell(object):
 #END class Cell
 
 
-        
-            
+
+
 
 #########  begin: default formats for SimpleTable  ##############
 """ Some formatting suggestions:
@@ -700,7 +700,7 @@ class Cell(object):
 
         data_fmts = ["%#0.6g","%#0.6g","%#0.4g","%#0.4g"],
         colwidths = 14,
-        data_aligns = "r", 
+        data_aligns = "r",
 """
 default_txt_fmt = dict(
         fmt = 'txt',

@@ -36,7 +36,7 @@ class Describe(object):
     dataset : can be either a structured or ndarray (Larry?), observations in
               rows, variables in columns.
 
-    
+
     '''
     def __init__(self, dataset):
         self.dataset = dataset
@@ -176,9 +176,9 @@ class Describe(object):
             self.univariate.update(perdict)
             idx = stats.index('percentiles')
             stats[idx:idx+1] = sorted(perdict.keys())
-        
 
-        
+
+
         #JP: this doesn't allow a change in sequence, sequence in stats is ignored
         #this is just an if condition
         if any([aitem[1] for aitem in self.univariate.items() if aitem[0] in stats]):
@@ -223,7 +223,7 @@ class Describe(object):
         header = stats
         stubs = self.univariate['obs'][1]
         data = [[self.univariate[astat][2][col] for astat in stats] for col in
-                                range(len(self.univariate['obs'][2]))] 
+                                range(len(self.univariate['obs'][2]))]
 
         if (orientation == 'varcols') or \
            (orientation == 'auto' and len(stubs) < len(header)):
@@ -231,7 +231,7 @@ class Describe(object):
             data = map(lambda *row: list(row), *data)
             header, stubs = stubs, header
 
-        part_fmt = dict(data_fmts = ["%#8.4g"]*(len(header)-1))       
+        part_fmt = dict(data_fmts = ["%#8.4g"]*(len(header)-1))
         table = SimpleTable(data,
                             header,
                             stubs,
@@ -353,7 +353,7 @@ if __name__ == "__main__":
     #unittest.main()
     t1 = Describe(data4)
     #print(t1.summary(stats='all'))
-    noperc = ['obs', 'mean', 'std', 'min', 'max', 'ptp', #'mode',  #'var', 
+    noperc = ['obs', 'mean', 'std', 'min', 'max', 'ptp', #'mode',  #'var',
                         'median', 'skew', 'uss', 'kurtosis']
     #TODO: mode var raise exception,
     #TODO: percentile writes list in cell (?), huge wide format
@@ -362,4 +362,4 @@ if __name__ == "__main__":
     print(t1.summary( orientation='varcols'))
     print(t1.summary(stats=['mean', 'median', 'min', 'max'], orientation=('varcols')))
     print(t1.summary(stats='all'))
-    
+

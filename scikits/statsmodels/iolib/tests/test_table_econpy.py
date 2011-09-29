@@ -40,7 +40,7 @@ txt_fmt1 = dict(
     data_aligns = "r",
     stubs_align = "l",
     fmt = 'txt'
-)       
+)
 cell0data = 0.0000
 cell1data = 1
 row0data = [cell0data, cell1data]
@@ -107,10 +107,10 @@ class test_SimpleTable(unittest.TestCase):
     <td></td>    <th>header1</th> <th>header2</th>
 </tr>
 <tr>
-  <th>stub1</th>   <td>0.0</td>      <td>1</td>   
+  <th>stub1</th>   <td>0.0</td>      <td>1</td>
 </tr>
 <tr>
-  <th>stub2</th>    <td>2</td>     <td>3.333</td> 
+  <th>stub2</th>    <td>2</td>     <td>3.333</td>
 </tr>
 </table>
 """
