@@ -4,7 +4,7 @@ import numpy as np
 from numpy.testing import assert_almost_equal
 from scikits.statsmodels.stats.stattools import (omni_normtest, jarque_bera,
                             durbin_watson)
-from scikits.statsmodels.stats.adnorm import ad_normal                         
+from scikits.statsmodels.stats.adnorm import ad_normal
 
 
 #a random array, rounded to 4 decimals
@@ -13,7 +13,37 @@ x = np.array([-0.1184, -1.3403,  0.0063, -0.612 , -0.3869, -0.2313, -2.8485,
        -1.4423,  1.2489,  0.9182, -0.2331, -0.6182,  0.183 ])
 
 
+def test_durbin_watson():
+    #benchmark values from R car::durbinWatsonTest(x)
+    #library("car")
+    #> durbinWatsonTest(x)
+    #[1] 1.95298958377419
+    #> durbinWatsonTest(x**2)
+    #[1] 1.848802400319998
+    #> durbinWatsonTest(x[2:20]+0.5*x[1:19])
+    #[1] 1.09897993228779
+    #> durbinWatsonTest(x[2:20]+0.8*x[1:19])
+    #[1] 0.937241876707273
+    #> durbinWatsonTest(x[2:20]+0.9*x[1:19])
+    #[1] 0.921488912587806
+    st_R = 1.95298958377419
+    assert_almost_equal(durbin_watson(x), st_R, 14)
+
+    st_R = 1.848802400319998
+    assert_almost_equal(durbin_watson(x**2), st_R, 15)
+
+    st_R = 1.09897993228779
+    assert_almost_equal(durbin_watson(x[1:]+0.5*x[:-1]), st_R, 15)
+
+    st_R = 0.937241876707273
+    assert_almost_equal(durbin_watson(x[1:]+0.8*x[:-1]), st_R, 15)
+
+    st_R = 0.921488912587806
+    assert_almost_equal(durbin_watson(x[1:]+0.9*x[:-1]), st_R, 15)
+
+
 def test_omni_normtest():
+    #tests against R fBasics
     from scipy import stats
     st_pv_R = np.array(
               [[3.994138321207883, -1.129304302161460,  1.648881473704978],
@@ -41,8 +71,9 @@ def test_omni_normtest():
 
     kt = stats.kurtosistest(x2)
     assert_almost_equal(kt, st_pv_R[:,2], 15)
-    
+
 def test_jarque_bera():
+    #tests against R fBasics
     st_pv_R = np.array([1.9662677226861689, 0.3741367669648314])
     jb = jarque_bera(x)[:2]
     assert_almost_equal(jb, st_pv_R, 14)
@@ -60,9 +91,10 @@ def test_jarque_bera():
     assert_almost_equal(jb, st_pv_R, 15)
 
 def test_shapiro():
+    #tests against R fBasics
     #testing scipy.stats
     from scipy.stats import shapiro
-    
+
     st_pv_R = np.array([0.939984787255526, 0.239621898000460])
     sh = shapiro(x)
     assert_almost_equal(sh, st_pv_R, 6)
@@ -80,9 +112,9 @@ def test_shapiro():
     st_pv_R = np.array([0.818361863493919373, 0.001644620895206969 ])
     sh = shapiro(np.exp(-x**2))
     assert_almost_equal(sh, st_pv_R, 6)
-    
+
 def test_adnorm():
-    #not run yet
+    #tests against R fBasics
     st_pv = []
     st_pv_R = np.array([0.5867235358882148, 0.1115380760041617])
     ad = ad_normal(x)
@@ -110,6 +142,7 @@ def test_adnorm():
 
 
 if __name__ == '__main__':
+    test_durbin_watson()
     test_omni_normtest()
     test_jarque_bera()
     test_shapiro()
