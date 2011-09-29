@@ -127,13 +127,15 @@ class AR(LikelihoodModel):
             predictedvalues[i+1-start] = dot(Z_mat,alpha)
         return predictedvalues
 
-    def predict(self, n=-1, start=0, method='dynamic', resid=False,
+    def predict(self, params, n=-1, start=0, method='dynamic', resid=False,
             confint=False):
         """
         Returns in-sample prediction or forecasts.
 
         Parameters
-        -----------
+        ----------
+        params : array
+            The fitted model parameters.
         n : int
             Number of periods after start to forecast.  If n==-1, returns in-
             sample forecast starting at `start`.
@@ -168,9 +170,6 @@ class AR(LikelihoodModel):
         values. The exact initial Kalman Filter is used. See Durbin and Koopman
         in the references for more information.
         """
-        if self._results is None:
-            raise ValueError("You must fit the model first")
-
         if n == 0 or (n==-1 and start==-1):
             return np.array([])
 
@@ -659,7 +658,6 @@ class AR(LikelihoodModel):
         pinv_exog = np.linalg.pinv(X)
         normalized_cov_params = np.dot(pinv_exog, pinv_exog.T)
         arfit = ARResults(self, params, normalized_cov_params)
-        self._results = arfit
         return arfit
 
     fit.__doc__ += LikelihoodModel.fit.__doc__
@@ -864,7 +862,7 @@ class ARResults(LikelihoodModelResults):
 
     @cache_readonly
     def fittedvalues(self):
-        return self.model.predict()
+        return self.model.predict(self.params)
 
 
 if __name__ == "__main__":
