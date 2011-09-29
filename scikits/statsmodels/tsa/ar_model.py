@@ -97,9 +97,6 @@ class AR(LikelihoodModel):
         -----
         See predict method for how to use start and p.
         """
-        if self._results is None:
-            raise ValueError("You must fit the model first")
-
         k = self.k_trend
 
         # build system matrices
@@ -179,7 +176,6 @@ class AR(LikelihoodModel):
         if start < 0:
             start = nobs + start # convert negative indexing
 
-        params = self._results.params
         p = self.k_ar
         k = self.k_trend
         method = self.method
