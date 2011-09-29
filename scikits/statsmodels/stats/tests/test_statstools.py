@@ -133,7 +133,7 @@ def test_adnorm():
 
     st_pv_R = np.array([1.4599014654282669312, 0.0006380009232897535])
     ad = ad_normal(np.exp(-x**2))
-    assert_almost_equal(ad, st_pv_R, 15)
+    assert_almost_equal(ad, st_pv_R, 14)
     st_pv.append(st_pv_R)
 
     ad = ad_normal(np.column_stack((x,x**2, np.log(x**2),np.exp(-x**2))).T,

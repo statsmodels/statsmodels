@@ -38,8 +38,8 @@ def test_regression_summary():
 | R-squared:                     0.9955   Durbin-Watson:              2.559  |
 | Adjusted R-squared:            0.9925   Omnibus:                   0.7486  |
 | F-statistic:                    330.3   Prob(Omnibus):             0.6878  |
-| Prob (F-statistic):         4.984e-10   JB:                        0.3528  |
-| Log likelihood:                -109.6   Prob(JB):                  0.8383  |
+| Prob (F-statistic):         4.984e-10   JB:                        0.6841  |
+| Log likelihood:                -109.6   Prob(JB):                  0.7103  |
 | AIC criterion:                  233.2   Skew:                      0.4200  |
 | BIC criterion:                  238.6   Kurtosis:                   2.434  |
 ------------------------------------------------------------------------------'''
@@ -58,6 +58,15 @@ def test_regression_summary():
 ##    print('###')
     actual = r_summary
     import numpy as np
+    actual = '\n'.join((line.rstrip() for line in actual.split('\n')))
+#    print len(actual), len(desired)
+#    print repr(actual)
+#    print repr(desired)
+#    counter = 0
+#    for c1,c2 in zip(actual, desired):
+#        if not c1==c2 and counter<20: 
+#            print c1,c2
+#            counter += 1
     np.testing.assert_(actual == desired)
 
 
