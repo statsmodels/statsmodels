@@ -1431,7 +1431,7 @@ class DiscreteResults(LikelihoodModelResults):
 
     def summary(self, yname=None, xname=None, title=None, alpha=.05):
         """Summarize the Regression Results
-        
+
         Parameters
         -----------
         yname : string, optional
@@ -1439,7 +1439,7 @@ class DiscreteResults(LikelihoodModelResults):
         xname : list of strings, optional
             Default is `var_##` for ## in p the number of regressors
         title : string, optional
-            Title for the top table. If not None, then this replaces the 
+            Title for the top table. If not None, then this replaces the
             default title
         alpha : float
             significance level for the confidence intervals
@@ -1447,14 +1447,14 @@ class DiscreteResults(LikelihoodModelResults):
         Returns
         -------
         smry : Summary instance
-            this holds the summary tables and text, which can be printed or 
+            this holds the summary tables and text, which can be printed or
             converted to various output formats.
-            
+
         See Also
         --------
-        scikits.statsmodels.iolib.summary.Summary : class to hold summary 
+        scikits.statsmodels.iolib.summary.Summary : class to hold summary
             results
-        
+
         """
 
         top_left = [('Dep. Variable:', None),
@@ -1474,10 +1474,10 @@ class DiscreteResults(LikelihoodModelResults):
                      ('LL-Null:', ["%#8.5g" % self.llnull]),
                      ('LLR p-value:', ["%#6.4g" % self.llr_pvalue])
                      ]
-        
+
         if title is None:
             title = self.model.__class__.__name__ + ' ' + "Regression Results"
-        
+
         #boiler plate
         from scikits.statsmodels.iolib.summary import Summary
         smry = Summary()
@@ -1485,7 +1485,7 @@ class DiscreteResults(LikelihoodModelResults):
                           yname=yname, xname=xname, title=title)
         smry.add_table_params(self, yname=yname, xname=xname, alpha=.05,
                              use_t=True)
- 
+
         #diagnostic table not used yet
 #        smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
 #                          yname=yname, xname=xname,
@@ -1497,7 +1497,7 @@ class DiscreteResults(LikelihoodModelResults):
             absprederror = np.abs(self.model.endog - fittedvalues)
             predclose_sum = (absprederror < 1e-4).sum()
             predclose_frac = predclose_sum / len(fittedvalues)
-            
+
             #add warnings/notes
             etext =[]
             if predclose_sum == len(fittedvalues): #nobs?
@@ -1505,18 +1505,18 @@ class DiscreteResults(LikelihoodModelResults):
 '''Complete Separation: The results show that there is complete separation.
 In this case the Maximum Likelihood Estimator does not exist and the parameters
 are not identified.'''
-                etext.append(wstr)          
-            elif predclose_frac > 0.1:  #TODO: get better diagnosis 
+                etext.append(wstr)
+            elif predclose_frac > 0.1:  #TODO: get better diagnosis
                 wstr = \
 '''Possibly complete quasi-separation: A fraction %f4.2 of observations can be
-perfectly predicted. This might indicate that there is complete 
+perfectly predicted. This might indicate that there is complete
 quasi-separation. In this case some parameters will not be identified.''' % predclose_frac
                 etext.append(wstr)
 
             if etext:
                 smry.add_extra_txt(etext)
 
-        return smry   
+        return smry
 
 if __name__=="__main__":
     import numpy as np

@@ -4,8 +4,8 @@ from scipy import stats
 def qqplot(data, dist=stats.norm, distargs=(), loc=0, scale=1, fit=False,
                 line=False):
     """
-    qqplot of the quantiles of x versus the quantiles/ppf of a distribution. 
-    
+    qqplot of the quantiles of x versus the quantiles/ppf of a distribution.
+
     Can take arguments specifying the parameters for dist or fit them
     automatically. (See fit under kwargs.)
 
@@ -18,15 +18,15 @@ def qqplot(data, dist=stats.norm, distargs=(), loc=0, scale=1, fit=False,
         is scipy.stats.distributions.norm (a standard normal).
     distargs : tuple
         A tuple of arguments passed to dist to specify it fully
-        so dist.ppf may be called. 
+        so dist.ppf may be called.
     loc : float
         Location parameter for dist
     scale : float
         Scale parameter for dist
     fit : boolean
-        If fit is false, loc, scale, and distargs are passed to the 
+        If fit is false, loc, scale, and distargs are passed to the
         distribution. If fit is True then the parameters for dist
-        are fit automatically using dist.fit. The quantiles are formed 
+        are fit automatically using dist.fit. The quantiles are formed
         from the standardized data, after subtracting the fitted loc
         and dividing by the fitted scale. (This ensures that if
         line is True the line will be meaningful.)
@@ -64,8 +64,8 @@ def qqplot(data, dist=stats.norm, distargs=(), loc=0, scale=1, fit=False,
     >>> plt.close(fig)
     Notes
     -----
-    Depends on matplotlib. If fit=True then the parameters are fit using 
-    the distribution's fit( ) method. 
+    Depends on matplotlib. If fit=True then the parameters are fit using
+    the distribution's fit( ) method.
 
     """
     try:
@@ -77,7 +77,7 @@ def qqplot(data, dist=stats.norm, distargs=(), loc=0, scale=1, fit=False,
         raise ValueError("distribution must have a ppf method")
 
     nobs = data.shape[0]
-    
+
     if fit:
         fit_params = dist.fit(data)
         loc = fit_params[-2]
@@ -86,7 +86,7 @@ def qqplot(data, dist=stats.norm, distargs=(), loc=0, scale=1, fit=False,
             dist = dist(*fit_params[:-2], loc = 0, scale = 1)
         else:
             dist = dist(loc=0, scale=1)
-    elif distargs or loc != 0 or scale != 1: 
+    elif distargs or loc != 0 or scale != 1:
         dist = dist(*distargs, **dict(loc=loc, scale=scale))
 
     try:
@@ -99,7 +99,7 @@ def qqplot(data, dist=stats.norm, distargs=(), loc=0, scale=1, fit=False,
     if fit:
         sample_quantiles -= loc
         sample_quantiles /= scale
-    
+
 
     ax = plt.gca()
     ax.set_xmargin(0.02)
@@ -108,14 +108,14 @@ def qqplot(data, dist=stats.norm, distargs=(), loc=0, scale=1, fit=False,
         end_pts = zip(plt.xlim(), plt.ylim())
         end_pts[0] = max(end_pts[0])
         end_pts[1] = min(end_pts[1])
-        plt.plot(end_pts, end_pts, 'r-') 
+        plt.plot(end_pts, end_pts, 'r-')
     xlabel = "Theoretical Quantiles"
     plt.xlabel(xlabel)
     ylabel = "Sample Quantiles"
     plt.ylabel(ylabel)
-   
-    
-    
+
+
+
     return plt.gcf()
 
 

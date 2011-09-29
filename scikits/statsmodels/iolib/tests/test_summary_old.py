@@ -12,7 +12,7 @@ def test_regression_summary():
     from string import Template
     t = time.localtime()
     desired = Template(
-'''     Summary of Regression Results     
+'''     Summary of Regression Results
 =======================================
 | Dependent Variable:            ['y']|
 | Model:                           OLS|
@@ -59,7 +59,7 @@ def test_regression_summary():
     actual = r_summary
     import numpy as np
     np.testing.assert_(actual == desired)
-        
+
 
 if __name__ == '__main__':
     test_regression_summary()

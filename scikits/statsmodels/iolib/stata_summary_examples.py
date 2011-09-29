@@ -26,7 +26,7 @@
 """
 . glm totemp gnpdefl gnp unemp armed pop year
 
-Iteration 0:   log likelihood = -109.61744  
+Iteration 0:   log likelihood = -109.61744
 
 Generalized linear models                          No. of obs      =        16
 Optimization     : ML                              Residual df     =         9

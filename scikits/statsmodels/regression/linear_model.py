@@ -1134,10 +1134,10 @@ class RegressionResults(LikelihoodModelResults):
 
         return lrstat, lr_pvalue, lrdf
 
-    
+
     def summary(self, yname=None, xname=None, title=None, alpha=.05):
         """Summarize the Regression Results
-        
+
         Parameters
         -----------
         yname : string, optional
@@ -1145,7 +1145,7 @@ class RegressionResults(LikelihoodModelResults):
         xname : list of strings, optional
             Default is `var_##` for ## in p the number of regressors
         title : string, optional
-            Title for the top table. If not None, then this replaces the 
+            Title for the top table. If not None, then this replaces the
             default title
         alpha : float
             significance level for the confidence intervals
@@ -1153,14 +1153,14 @@ class RegressionResults(LikelihoodModelResults):
         Returns
         -------
         smry : Summary instance
-            this holds the summary tables and text, which can be printed or 
+            this holds the summary tables and text, which can be printed or
             converted to various output formats.
-            
+
         See Also
         --------
-        scikits.statsmodels.iolib.summary.Summary : class to hold summary 
+        scikits.statsmodels.iolib.summary.Summary : class to hold summary
             results
-        
+
         """
 
         #TODO: import where we need it (for now), add as cached attributes
@@ -1168,26 +1168,26 @@ class RegressionResults(LikelihoodModelResults):
                 omni_normtest, durbin_watson)
         jb, jbpv, skew, kurtosis = jarque_bera(self.wresid)
         omni, omnipv = omni_normtest(self.wresid)
-        
+
         #TODO: reuse condno from somewhere else ?
         #condno = np.linalg.cond(np.dot(self.wexog.T, self.wexog))
         wexog = self.model.wexog
         eigvals = np.linalg.linalg.eigvalsh(np.dot(wexog.T, wexog))
         eigvals = np.sort(eigvals) #in increasing order
         condno = eigvals[-1]/eigvals[0]
-        
-        self.diagn = dict(jb=jb, jbpv=jbpv, skew=skew, kurtosis=kurtosis, 
-                          omni=omni, omnipv=omnipv, condno=condno, 
+
+        self.diagn = dict(jb=jb, jbpv=jbpv, skew=skew, kurtosis=kurtosis,
+                          omni=omni, omnipv=omnipv, condno=condno,
                           mineigval=eigvals[0])
 
 #        #TODO not used yet
-#        diagn_left_header = ['Models stats'] 
+#        diagn_left_header = ['Models stats']
 #        diagn_right_header = ['Residual stats']
-        
+
         #TODO: requiring list/iterable is a bit annoying
         #need more control over formatting
         #TODO: default don't work if it's not identically spelled
-        
+
         top_left = [('Dep. Variable:', None),
                     ('Model:', None),
                     ('Method:', ['Least Squares']),
@@ -1206,7 +1206,7 @@ class RegressionResults(LikelihoodModelResults):
                      ('AIC:', ["%#8.4g" % self.aic]),
                      ('BIC:', ["%#8.4g" % self.bic])
                      ]
-        
+
         diagn_left = [('Omnibus:', ["%#6.3f" % omni]),
                       ('Prob(Omnibus):', ["%#6.3f" % omnipv]),
                       ('Skew:', ["%#6.3f" % skew]),
@@ -1230,11 +1230,11 @@ class RegressionResults(LikelihoodModelResults):
                           yname=yname, xname=xname, title=title)
         smry.add_table_params(self, yname=yname, xname=xname, alpha=.05,
                              use_t=True)
-        
+
         smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
                           yname=yname, xname=xname,
                           title="")
-        
+
         #add warnings/notes, added to text format only
         etext =[]
         if eigvals[0] < 1e-10:
@@ -1242,7 +1242,7 @@ class RegressionResults(LikelihoodModelResults):
 '''The smallest eigenvalue is %6.3g. This might indicate that there are
 strong multicollinearity problems or that the design matrix is singular.''' \
                     % eigvals[0]
-            etext.append(wstr)          
+            etext.append(wstr)
         elif condno > 1000:  #TODO: what is recommended
             wstr = \
 '''The condition number is large, %6.3g. This might indicate that there are
@@ -1260,7 +1260,7 @@ strong multicollinearity or other numerical problems.''' % condno
 #                          "Regression Results")
 #        par = summary_params(self, yname=yname, xname=xname, alpha=.05,
 #                             use_t=False)
-#        
+#
 #        diagn = summary_top(self, gleft=diagn_left, gright=diagn_right,
 #                          yname=yname, xname=xname,
 #                          title="Linear Model")

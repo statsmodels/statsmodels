@@ -21,7 +21,7 @@ gen_fmt = dict(
         stubs_align = "l",
         fmt = 'txt'
         )
-        # Note table_1l_fmt over rides the below formating unless it is not 
+        # Note table_1l_fmt over rides the below formating unless it is not
         # appended to table_1l
 fmt_1_right = dict(
         data_fmts = ["%s", "%s", "%s", "%s", "%s"],
@@ -86,7 +86,7 @@ import copy
 fmt_2cols = copy.deepcopy(fmt_base)
 
 fmt2 = dict(
-            data_fmts = ["%18s", "-%19s", "%18s", "%19s"], #TODO: 
+            data_fmts = ["%18s", "-%19s", "%18s", "%19s"], #TODO:
             colsep=' ',
             colwidths = 18,
             stub_fmt = '-%21s',

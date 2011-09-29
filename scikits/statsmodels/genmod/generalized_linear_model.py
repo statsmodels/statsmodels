@@ -600,7 +600,7 @@ class GLMResults(LikelihoodModelResults):
 
     def summary(self, yname=None, xname=None, title=None, alpha=.05):
         """Summarize the Regression Results
-        
+
         Parameters
         -----------
         yname : string, optional
@@ -608,7 +608,7 @@ class GLMResults(LikelihoodModelResults):
         xname : list of strings, optional
             Default is `var_##` for ## in p the number of regressors
         title : string, optional
-            Title for the top table. If not None, then this replaces the 
+            Title for the top table. If not None, then this replaces the
             default title
         alpha : float
             significance level for the confidence intervals
@@ -616,14 +616,14 @@ class GLMResults(LikelihoodModelResults):
         Returns
         -------
         smry : Summary instance
-            this holds the summary tables and text, which can be printed or 
+            this holds the summary tables and text, which can be printed or
             converted to various output formats.
-            
+
         See Also
         --------
-        scikits.statsmodels.iolib.summary.Summary : class to hold summary 
+        scikits.statsmodels.iolib.summary.Summary : class to hold summary
             results
-        
+
         """
 
         top_left = [('Dep. Variable:', None),
@@ -648,14 +648,14 @@ class GLMResults(LikelihoodModelResults):
         if title is None:
             title = "Generalized Linear Model Regression Results"
 
-        #create summary tables        
+        #create summary tables
         from scikits.statsmodels.iolib.summary import Summary
         smry = Summary()
         smry.add_table_2cols(self, gleft=top_left, gright=top_right, #[],
                           yname=yname, xname=xname, title=title)
         smry.add_table_params(self, yname=yname, xname=xname, alpha=.05,
                              use_t=True)
-        
+
         #diagnostic table is not used yet:
 #        smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
 #                          yname=yname, xname=xname,

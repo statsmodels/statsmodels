@@ -4,7 +4,7 @@
 '''
 
 if __name__ == '__main__':
-    
+
     from scikits.statsmodels.regression.tests.test_regression  import TestOLS
 
     #def mytest():
@@ -30,7 +30,7 @@ if __name__ == '__main__':
     r_summary = str(results.summary())
     print r_summary
     print '\n\n'
-    
+
     probres = results
 
     from scikits.statsmodels.robust.tests.test_rlm  import TestHampel
@@ -54,10 +54,10 @@ if __name__ == '__main__':
 
     #print results.summary2(return_fmt='latex')
     #print results.summary2(return_fmt='csv')
-    
+
     smry = olsres.summary()
     print smry.as_csv()
-    
+
 #    import matplotlib.pyplot as plt
 #    plt.plot(rlmres.model.endog,'o')
 #    plt.plot(rlmres.fittedvalues,'-')

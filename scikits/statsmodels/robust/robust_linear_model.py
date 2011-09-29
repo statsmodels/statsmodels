@@ -258,7 +258,7 @@ class RLM(LikelihoodModel):
         results.fit_options = dict(cov=cov.upper(), scale_est=scale_est,
                                    norm=self.M.__class__.__name__, conv=conv)
         #norm is not changed in fit, no old state
-        
+
         #doing the next causes exception
         #self.cov = self.scale_est = None #reset for additional fits
         #iteration and history could contain wrong state with repeated fit
@@ -463,7 +463,7 @@ class RLMResults(LikelihoodModelResults):
 
         if not title is None:
             title = "Robust linear Model Regression Results"
-        
+
         #boiler plate
         from scikits.statsmodels.iolib.summary import Summary
         smry = Summary()
@@ -485,9 +485,9 @@ parameters, then the fit options might not be the correct ones anymore .'''
         etext.append(wstr)
 
         if etext:
-            smry.add_extra_txt(etext)        
+            smry.add_extra_txt(etext)
 
-        return smry        
+        return smry
 
 
 if __name__=="__main__":

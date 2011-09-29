@@ -53,7 +53,7 @@ def omni_normtest(resids, axis=0):
         raise ValueError(
             "skewtest is not valid with less than 8 observations; %i samples"
             " were given." % int(n))
-        
+
     return stats.normaltest(resids, axis=0)
 
 def jarque_bera(resids):

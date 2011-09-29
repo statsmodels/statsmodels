@@ -1,7 +1,7 @@
 updating table.py from econpy
 =============================
 
-table.py : 
+table.py :
     reformat tabs to 4 spaces
     adjust import path in docstrings
     currently insufficient tests for backwards compatibility, might break silently
