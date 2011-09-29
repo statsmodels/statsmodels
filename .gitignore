@@ -39,6 +39,7 @@ marks.bzr
 *.log.py
 # Egg metadata
 ./*.egg-info
+*.egg-info/
 # The shelf plugin uses this dir
 ./.shelf
 # Mac droppings
