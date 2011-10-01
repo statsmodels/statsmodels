@@ -45,7 +45,7 @@ def adf20(x):
 print adf20(np.random.randn(100))
 
 mc2 = StatTestMC(randwalksim, adf20)
-mc2.run(1000, statindices=[0,1])
+mc2.run(10000, statindices=[0,1])
 frac = [0.01, 0.05, 0.1]
 #bug
 crit = np.array([-3.4996365338407074, -2.8918307730370025, -2.5829283377617176])[:,None]
@@ -60,3 +60,10 @@ print mc2.summary_cdf([0], frac, crit,
 
 print mc2.quantiles([0])
 print mc2.cdf(crit, [0])
+
+doplot=1
+if doplot:
+    import matplotlib.pyplot as plt
+    mc1.plot_hist([3],stats.chi2([4]).pdf)
+    plt.title('acorr_ljungbox - MC versus chi2')
+    plt.show()
