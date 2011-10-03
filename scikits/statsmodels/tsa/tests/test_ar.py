@@ -111,25 +111,26 @@ class TestARMLEConstant(object):
 
     def test_predict(self):
         model = self.res1.model
-        assert_almost_equal(model.predict(), self.res2.FVMLEdefault,
+        params = self.res1.params
+        assert_almost_equal(model.predict(params), self.res2.FVMLEdefault,
                 DECIMAL_4)
-        assert_almost_equal(model.predict(start=9, end=308),
+        assert_almost_equal(model.predict(params, start=9, end=308),
                 self.res2.FVMLEstart9end308, DECIMAL_4)
-        assert_almost_equal(model.predict(start=100, end=308),
+        assert_almost_equal(model.predict(params, start=100, end=308),
                 self.res2.FVMLEstart100end308, DECIMAL_4)
-        assert_almost_equal(model.predict(start=0, end=200),
+        assert_almost_equal(model.predict(params, start=0, end=200),
                 self.res2.FVMLEstart0end200, DECIMAL_4)
-        assert_almost_equal(model.predict(start=200, end=333),
+        assert_almost_equal(model.predict(params, start=200, end=333),
                 self.res2.FVMLEstart200end334, DECIMAL_4)
-        assert_almost_equal(model.predict(start=308, end=333),
+        assert_almost_equal(model.predict(params, start=308, end=333),
                 self.res2.FVMLEstart308end334, DECIMAL_4)
-        assert_almost_equal(model.predict(start=9,end=309),
+        assert_almost_equal(model.predict(params, start=9,end=309),
                 self.res2.FVMLEstart9end309, DECIMAL_4)
-        assert_almost_equal(model.predict(end=301),
+        assert_almost_equal(model.predict(params, end=301),
                 self.res2.FVMLEstart0end301, DECIMAL_4)
-        assert_almost_equal(model.predict(start=4, end=312),
+        assert_almost_equal(model.predict(params, start=4, end=312),
                 self.res2.FVMLEstart4end312, DECIMAL_4)
-        assert_almost_equal(model.predict(start=2, end=7),
+        assert_almost_equal(model.predict(params, start=2, end=7),
                 self.res2.FVMLEstart2end7, DECIMAL_4)
 
 class TestAutolagAR(object):
