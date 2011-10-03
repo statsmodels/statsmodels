@@ -31,8 +31,6 @@ import scikits.statsmodels.tsa.vector_ar.util as util
 import scikits.statsmodels.tsa.base.tsa_model as tsbase
 import scikits.statsmodels.base.wrapper as wrap
 
-import scikits.statsmodels.tools.data as data_util
-
 mat = np.array
 
 #-------------------------------------------------------------------------------
@@ -339,6 +337,50 @@ class VAR(tsbase.TimeSeriesModel):
         self.y = self.endog #keep alias for now
         self.neqs = self.endog.shape[1]
 
+    def _get_predict_start(self, start, k_ar):
+        if start is None:
+            start = k_ar
+        return super(VAR, self)._get_predict_start(start)
+
+    def predict(self, params, start=None, end=None, lags=1, trend='c'):
+        """
+        Returns in-sample predictions or forecasts
+        """
+        start = self._get_predict_start(start, lags)
+        end, out_of_sample = self._get_predict_end(end)
+
+        if end < start:
+            raise ValueError("end is before start")
+        if end == start + out_of_sample:
+            return np.array([])
+
+        k_trend = util.get_trendorder(trend)
+        k = self.neqs
+        k_ar = lags
+
+        predictedvalues = np.zeros((end + 1 - start + out_of_sample, k))
+        if k_trend != 0:
+            intercept = params[:k_trend]
+            predictedvalues += intercept
+
+        y = self.y
+        X = util.get_var_endog(y, lags, trend=trend)
+        fittedvalues = np.dot(X, params)
+
+        fv_start = start - k_ar
+        pv_end = min(len(predictedvalues), len(fittedvalues) - fv_start)
+        fv_end = min(len(fittedvalues), end-k_ar+1)
+        predictedvalues[:pv_end] = fittedvalues[fv_start:fv_end]
+
+        if not out_of_sample:
+            return predictedvalues
+
+        # fit out of sample
+        y = y[-k_ar:]
+        coefs = params[k_trend:].reshape((k_ar, k, k)).swapaxes(1,2)
+        predictedvalues[pv_end:] = forecast(y, coefs, intercept, out_of_sample)
+        return predictedvalues
+
     def fit(self, maxlags=None, method='ols', ic=None, trend='c',
             verbose=False):
         """
@@ -388,7 +430,7 @@ class VAR(tsbase.TimeSeriesModel):
             if lags is None:
                 lags = 1
 
-        k_trend = util.get_trendorder(trend)
+        self.k_trend = k_trend = util.get_trendorder(trend)
         self.exog_names = util.make_lag_names(self.endog_names, lags, k_trend)
         self.nobs = len(self.endog) - lags
 
@@ -403,7 +445,7 @@ class VAR(tsbase.TimeSeriesModel):
         trend : string or None
             As per above
         """
-        k_trend = util.get_trendorder(trend) #NOTE: trendorder should be polynomial order
+        k_trend = self.k_trend
 
         if offset < 0: # pragma: no cover
             raise ValueError('offset must be >= 0')
