@@ -139,9 +139,11 @@ def date_range_str(start, end=None, length=None):
     elif length:
         yr2 = yr1 + length // annual_freq
         offset2 = length % annual_freq
-    years = np.repeat(range(yr1, yr2), annual_freq).tolist()
-    years = np.r_[years, [str(yr2)]*offset2]
-    offset = np.tile(np.arange(1, annual_freq+1), yr2-yr1)
+    years = np.repeat(range(yr1+1, yr2), annual_freq).tolist()
+    years = np.r_[[str(yr1)]*(annual_freq+1-offset1), years] # tack on first year
+    years = np.r_[years, [str(yr2)]*offset2] # tack on last year
+    offset = np.tile(np.arange(1, annual_freq+1), yr2-yr1-1)
+    offset = np.r_[np.arange(offset1, annual_freq+1).astype('a2'), offset]
     offset = np.r_[offset, np.arange(1,offset2+1).astype('a2')]
     date_arr_range = [''.join([i,split,j]) for i,j in zip(years, offset)]
     return date_arr_range
