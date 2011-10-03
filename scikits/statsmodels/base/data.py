@@ -42,7 +42,7 @@ class ModelData(object):
         ynames = self._get_names(endog)
         if not ynames:
             ynames = _make_endog_names(endog)
-        return ynames
+        return list(ynames)
 
     @cache_writable()
     def xnames(self):
@@ -51,7 +51,7 @@ class ModelData(object):
             xnames = self._get_names(exog)
             if not xnames:
                 xnames = _make_exog_names(exog)
-            return xnames
+            return list(xnames)
         return None
 
     @cache_readonly
