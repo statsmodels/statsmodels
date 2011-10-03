@@ -186,14 +186,10 @@ class ARMA(tsbase.TimeSeriesModel):
 
         return super(ARMA, self)._get_predict_start(start)
 
-    def geterrors(self, start=None, end=None):
-        self._check_is_fit()
+    def geterrors(self, params, start=None, end=None):
 
         #start = self._get_predict_start(start) # will be an index of a date
         #end, out_of_sample = self._get_predict_end(end)
-
-        params = self._results.params
-
 
         if 'mle' in self.method:
             (y, k, nobs, k_ar, k_ma, k_lags, newparams, Z_mat, m, R_mat,
@@ -677,7 +673,7 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
 
     @cache_readonly
     def resid(self):
-        return self.model.geterrors()
+        return self.model.geterrors(self.params)
 
     @cache_readonly
     def pvalues(self):
