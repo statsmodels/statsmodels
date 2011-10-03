@@ -332,8 +332,15 @@ class VAR(tsbase.TimeSeriesModel):
     -------
     .fit() method returns VARResults object
     """
-    def __init__(self, endog, dates=None, freq=None):
+    def __init__(self, endog, dates=None, names=None, freq=None):
         super(VAR, self).__init__(endog, None, dates, freq)
+        if names is not None:
+            import warnings
+            warnings.warn("The names argument is deprecated and will be "
+                    "removed in the next release.", FutureWarning)
+            self.names = names
+        else:
+            self.names = self.endog_names
         self.y = self.endog #keep alias for now
         self.neqs = self.endog.shape[1]
 
@@ -430,7 +437,7 @@ class VAR(tsbase.TimeSeriesModel):
             if lags is None:
                 lags = 1
 
-        self.k_trend = k_trend = util.get_trendorder(trend)
+        k_trend = util.get_trendorder(trend)
         self.exog_names = util.make_lag_names(self.endog_names, lags, k_trend)
         self.nobs = len(self.endog) - lags
 
@@ -445,7 +452,8 @@ class VAR(tsbase.TimeSeriesModel):
         trend : string or None
             As per above
         """
-        k_trend = self.k_trend
+        # have to do this again because select_order doesn't call fit
+        self.k_trend = k_trend = util.get_trendorder(trend)
 
         if offset < 0: # pragma: no cover
             raise ValueError('offset must be >= 0')
