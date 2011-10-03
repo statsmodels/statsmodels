@@ -123,8 +123,8 @@ class AR(tsbase.TimeSeriesModel):
         return super(AR, self)._get_predict_start(start)
 
 
-    def predict(self, start=None, end=None, method='static', confint=False,
-                fcasterr=False):
+    def predict(self, params, start=None, end=None, method='static',
+                      confint=False, fcasterr=False):
         """
         Returns in-sample prediction or forecasts.
 
@@ -164,8 +164,6 @@ class AR(tsbase.TimeSeriesModel):
         values. The exact initial Kalman Filter is used. See Durbin and Koopman
         in the references for more information.
         """
-        self._check_is_fit()
-
         start = self._get_predict_start(start) # will be an index of a date
         end, out_of_sample = self._get_predict_end(end)
 
@@ -177,7 +175,6 @@ class AR(tsbase.TimeSeriesModel):
         k_ar = self.k_ar
         y = self.endog[:k_ar]
         nobs = int(self.endog.shape[0])
-        params = self._results.params
         k_trend = self.k_trend
         method = self.method
 
