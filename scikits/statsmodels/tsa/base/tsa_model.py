@@ -141,7 +141,7 @@ class TimeSeriesModel(base.LikelihoodModel):
             except ImportError as err: # make sure timeseries isn't the prob
                 raise ImportError(err)
             except KeyError as err: # end is greater than dates[-1]...probably
-                if int(end) > len(self.endog) - 1:
+                if dtend > self._data.dates[-1]:
                     end = len(self.endog) - 1
                     freq = self._data.freq
                     out_of_sample = datetools._idx_from_dates(dates[-1], dtend,
