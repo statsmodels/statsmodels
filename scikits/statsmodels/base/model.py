@@ -1,6 +1,5 @@
 import numpy as np
 from scipy import optimize, stats
-from scikits.statsmodels.data import handle_data
 from scikits.statsmodels.base.data import handle_data
 from scikits.statsmodels.tools.tools import recipr
 from scikits.statsmodels.stats.contrast import ContrastResults
