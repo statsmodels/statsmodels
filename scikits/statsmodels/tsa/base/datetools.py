@@ -131,6 +131,14 @@ def date_range_str(start, end=None, length=None):
     elif re.search(_q_pattern, start, flags):
         annual_freq = 4
         split = 'q'
+    elif re.search(_y_pattern, start, flags):
+        annual_freq = 1
+        start += 'a1' # hack
+        if end:
+            end += 'a0'
+        split = 'a'
+    else:
+        raise ValueError("Date %s not understood" % start)
     yr1, offset1 = map(int, start.replace(":","").split(split))
     if end is not None:
         end = end.lower()
@@ -142,10 +150,13 @@ def date_range_str(start, end=None, length=None):
     years = np.repeat(range(yr1+1, yr2), annual_freq).tolist()
     years = np.r_[[str(yr1)]*(annual_freq+1-offset1), years] # tack on first year
     years = np.r_[years, [str(yr2)]*offset2] # tack on last year
-    offset = np.tile(np.arange(1, annual_freq+1), yr2-yr1-1)
-    offset = np.r_[np.arange(offset1, annual_freq+1).astype('a2'), offset]
-    offset = np.r_[offset, np.arange(1,offset2+1).astype('a2')]
-    date_arr_range = [''.join([i,split,j]) for i,j in zip(years, offset)]
+    if split != 'a':
+        offset = np.tile(np.arange(1, annual_freq+1), yr2-yr1-1)
+        offset = np.r_[np.arange(offset1, annual_freq+1).astype('a2'), offset]
+        offset = np.r_[offset, np.arange(1,offset2+1).astype('a2')]
+        date_arr_range = [''.join([i,split,j]) for i,j in zip(years, offset)]
+    else:
+        date_arr_range = years.tolist()
     return date_arr_range
 
 def dates_from_str(dates):
