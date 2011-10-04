@@ -135,7 +135,7 @@ def date_range_str(start, end=None, length=None):
         annual_freq = 1
         start += 'a1' # hack
         if end:
-            end += 'a0'
+            end += 'a1'
         split = 'a'
     else:
         raise ValueError("Date %s not understood" % start)
