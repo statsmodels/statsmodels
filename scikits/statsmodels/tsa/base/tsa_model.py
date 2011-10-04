@@ -128,7 +128,6 @@ class TimeSeriesModel(base.LikelihoodModel):
         out_of_sample = 0 # will be overwritten if needed
         if end is None:
             end = len(self.endog) - 1
-            return end, out_of_sample
 
         dates = self._data.dates
         if isinstance(end, str):
