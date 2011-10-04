@@ -123,8 +123,7 @@ class AR(tsbase.TimeSeriesModel):
         return super(AR, self)._get_predict_start(start)
 
 
-    def predict(self, params, start=None, end=None, method='static',
-                      confint=False, fcasterr=False):
+    def predict(self, params, start=None, end=None, method='static'):
         """
         Returns in-sample prediction or forecasts.
 
@@ -132,31 +131,22 @@ class AR(tsbase.TimeSeriesModel):
         ----------
         params : array
             The fitted model parameters.
-        n : int
-            Number of periods after start to forecast.  If n==-1, returns in-
-            sample forecast starting at `start`.
-        start : int
+        start : int, str, or datetime
             Zero-indexed observation number at which to start forecasting, ie.,
-            the first forecast is start.  If start==-1, forecasting starts from
-            the end of the sample.  If the model is fit using 'cmle' or 'yw',
-            `start` cannot be less than `k_ar`.  If `start` < `k_ar` for
-            'cmle' and 'yw', then `start` is set equal to `k_ar`.
+            the first forecast is start. Can also be a date string to
+            parse or a datetime type.
+        end : int, str, or datetime
+            Zero-indexed observation number at which to end forecasting, ie.,
+            the first forecast is start. Can also be a date string to
+            parse or a datetime type.
         method : string {'dynamic', 'static'}
             If method is 'dynamic', then fitted values are used in place of
             observed 'endog' to make forecasts.  If 'static', observed 'endog'
-            are used.
-        confint : bool, float
-            Whether to return confidence intervals.  If `confint` == True,
-            95 % confidence intervals are returned.  Else if `confint` is a
-            float, then it is assumed to be the alpha value of the confidence
-            interval.  That is confint == .05 returns a 95% confidence
-            interval, and .10 would return a 90% confidence interval.
+            are used. Only 'static' is currently implemented.
 
         Returns
         -------
         predicted values : array
-        residuals : array, optional
-        confidence intervals : array, optional
 
         Notes
         -----
@@ -220,11 +210,6 @@ class AR(tsbase.TimeSeriesModel):
             fcast = mu + np.dot(params, endog[i:i+k_ar])
             predictedvalues[-out_of_sample+i] = fcast
             endog[i+k_ar] = fcast
-
-        from scikits.statsmodels.tsa.arima_process import arma2ma
-        ma_rep = arma2ma(np.r_[1,-params[::-1]], [1], out_of_sample)
-        fcasterr = np.sqrt(self.sigma2 * np.cumsum(ma_rep**2))
-        #TODO: return this too
 
         return predictedvalues
 
@@ -786,9 +771,33 @@ class ARResults(tsbase.TimeSeriesModelResults):
     def fittedvalues(self):
         return self.model.predict(self.params)
 
-    def predict(self, start=None, end=None, method='dynamic',
-            confint=False):
-        return self.model.predict(start, end, method, confint)
+    def predict(self, start=None, end=None, method='static'):
+        params = self.params
+        predictedvalues =  self.model.predict(params, start, end, method)
+        return predictedvalues
+
+        #start = self.model._get_predict_start(start)
+        #end, out_of_sample = self.model._get_predict_end(end)
+
+        ##TODO: return forecast errors and confidence intervals
+        #from scikits.statsmodels.tsa.arima_process import arma2ma
+        #ma_rep = arma2ma(np.r_[1,-params[::-1]], [1], out_of_sample)
+        #fcasterr = np.sqrt(self.sigma2 * np.cumsum(ma_rep**2))
+
+
+    preddoc = AR.predict.__doc__.split('\n')
+    extra_doc = """        confint : bool, float
+            Whether to return confidence intervals.  If `confint` == True,
+            95 % confidence intervals are returned.  Else if `confint` is a
+            float, then it is assumed to be the alpha value of the confidence
+            interval.  That is confint == .05 returns a 95% confidence
+            interval, and .10 would return a 90% confidence interval.""".split('\n')
+    #ret_doc = """
+    #    fcasterr : array-like
+    #    confint : array-like
+    #"""
+    predict.__doc__ = '\n'.join(preddoc[:5] + preddoc[7:20] + extra_doc +
+            preddoc[20:])
 
 class ARResultsWrapper(wrap.ResultsWrapper):
     _attrs = {}
@@ -867,7 +876,10 @@ if __name__ == "__main__":
                 ts_dr.toordinal().astype(int)))
     sunspots = pandas.TimeSeries(sunspots.endog, index=dt_dates)
 
+    #NOTE: pandas can't handle pre-1900 dates
     mod = AR(sunspots, freq='A')
+    #NOTE: If you use timeseries, predict is buggy
+    #mod = AR(sunspots.values, dates=ts_dr, freq='A')
     res = mod.fit(method='mle', maxlag=9)
 
 
