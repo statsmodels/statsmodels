@@ -25,6 +25,54 @@ try:
 except:
     fast_kalman = 0
 
+def _unpack_params(params, order, k_trend, k_exog, reverse=False):
+    p, q = order
+    k = k_trend + k_exog
+    maparams = params[k+p:]
+    arparams = params[k:k+p]
+    trend = params[:k_trend]
+    exparams = params[k_trend:k]
+    if reverse:
+        return trend, exparams, arparams[::-1], maparams[::-1]
+    return trend, exparams, arparams, maparams
+
+def _unpack_order(order):
+    k_ar, k_ma, k = order
+    k_lags = max(k_ar, k_ma+1)
+    return k_ar, k_ma, order, k_lags
+
+def _make_arma_names(data, k_trend, order):
+    k_ar, k_ma = order
+    exog = data.exog
+    if exog is not None:
+        exog_names = data._get_names(data._orig_exog) or []
+    else:
+        exog_names = []
+    ar_lag_names = util.make_lag_names(data.ynames, k_ar, 0)
+    ar_lag_names = [''.join(('ar.', i))
+                              for i in ar_lag_names]
+    ma_lag_names = util.make_lag_names(data.ynames, k_ma, 0)
+    ma_lag_names = [''.join(('ma.', i)) for i in ma_lag_names]
+    trend_name = util.make_lag_names('', 0, k_trend)
+    exog_names = trend_name + exog_names + ar_lag_names + ma_lag_names
+    return exog_names
+
+def _make_arma_exog(endog, exog, trend):
+    k_trend = 1 # overwritten if no constant
+    if exog is None and trend == 'c':   # constant only
+        exog = np.ones((len(endog),1))
+    elif exog is not None and trend == 'c': # constant plus exogenous
+        exog = add_trend(exog, trend='c', prepend=True)
+    elif exog is not None and trend == 'nc':
+        # make sure it's not holding constant from last run
+        if exog.var() == 0:
+            exog = None
+        k_trend = 0
+    if trend == 'nc':
+        k_trend = 0
+    return k_trend, exog
+
+
 class ARMA(tsbase.TimeSeriesModel):
     """
     Autoregressive Moving Average ARMA(p,q) Model
@@ -45,7 +93,7 @@ class ARMA(tsbase.TimeSeriesModel):
             k_exog = 0
         self.k_exog = k_exog
 
-    def _fit_start_params(self, order):
+    def _fit_start_params_hr(self, order):
         """
         Get starting parameters for fit.
 
@@ -98,6 +146,23 @@ class ARMA(tsbase.TimeSeriesModel):
             start_params[k:k+p] = arcoefs
         return start_params
 
+    def _fit_start_params(self, order, method):
+        if method != 'css-mle': # use Hannan-Rissanen to get start params
+            start_params = self._fit_start_params_hr(order)
+        else: # use CSS to get start params
+            func = lambda params: -self.loglike_css(params)
+            #start_params = [.1]*(k_ar+k_ma+k_exog) # different one for k?
+            start_params = self._fit_start_params_hr(order)
+            if self.transparams:
+                start_params = self._invtransparams(start_params)
+            bounds = [(None,)*2]*sum(order)
+            mlefit = optimize.fmin_l_bfgs_b(func, start_params,
+                        approx_grad=True, m=12, pgtol=1e-7, factr=1e3,
+                        bounds = bounds, iprint=-1)
+            start_params = self._transparams(mlefit[0])
+        return start_params
+
+
     def score(self, params):
         """
         Compute the score function at params.
@@ -137,7 +202,7 @@ class ARMA(tsbase.TimeSeriesModel):
         ---------
         Jones(1980)
         """
-        k_ar,k_ma = self.k_ar, self.k_ma
+        k_ar, k_ma = self.k_ar, self.k_ma
         k = self.k_exog + self.k_trend
         newparams = np.zeros_like(params)
 
@@ -158,7 +223,7 @@ class ARMA(tsbase.TimeSeriesModel):
         """
         Inverse of the Jones reparameterization
         """
-        k_ar,k_ma = self.k_ar, self.k_ma
+        k_ar, k_ma = self.k_ar, self.k_ma
         k = self.k_exog + self.k_trend
         newparams = start_params.copy()
         arcoefs = newparams[k:k+k_ar]
@@ -186,19 +251,34 @@ class ARMA(tsbase.TimeSeriesModel):
 
         return super(ARMA, self)._get_predict_start(start)
 
-    def geterrors(self, params, start=None, end=None):
+    def geterrors(self, params):
+        """
+        Get the errors of the ARMA process.
+
+        Parameters
+        ----------
+        params : array-like
+            The fitted ARMA parameters
+        order : array-like
+            3 item iterable, with the number of AR, MA, and exogenous
+            parameters, including the trend
+        """
 
         #start = self._get_predict_start(start) # will be an index of a date
         #end, out_of_sample = self._get_predict_end(end)
+        params = np.asarray(params)
+        k_ar, k_ma = self.k_ar, self.k_ma
+        k = self.k_exog + self.k_trend
 
-        if 'mle' in self.method:
+
+        if 'mle' in self.method: # use KalmanFilter to get errors
             (y, k, nobs, k_ar, k_ma, k_lags, newparams, Z_mat, m, R_mat,
             T_mat, paramsdtype) = KalmanFilter._init_kalman_state(params, self)
             errors = KalmanFilter.geterrors(y,k,k_ar,k_ma, k_lags, nobs,
                     Z_mat, m, R_mat, T_mat, paramsdtype)
             if isinstance(errors, tuple):
                 errors = errors[0] # non-cython version returns a tuple
-        else:
+        else: # use scipy.signal.lfilter
             y = self.endog.copy()
             k = self.k_exog + self.k_trend
             if k > 0:
@@ -207,8 +287,11 @@ class ARMA(tsbase.TimeSeriesModel):
             k_ar = self.k_ar
             k_ma = self.k_ma
 
-            results = self._results
-            arparams, maparams = results.arparams, results.maparams
+
+            (trendparams, exparams,
+             arparams, maparams) = _unpack_params(params, (k_ar, k_ma),
+                                        self.k_trend, self.k_exog,
+                                        reverse=False)
             b,a = np.r_[1,-arparams], np.r_[1,maparams]
             zi = zeros((max(k_ar, k_ma)))
             for i in range(k_ar):
@@ -217,13 +300,82 @@ class ARMA(tsbase.TimeSeriesModel):
             errors = e[0][k_ar:]
         return errors.squeeze()
 
-    def predict(self, start=None, end=None, method='static', confint=False,
-            fcasterr=False):
+    def _predict_out_of_sample(self, params, steps, errors, exog=None):
+        p = self.k_ar
+        q = self.k_ma
+        k_exog = self.k_exog
+        k_trend = self.k_trend
+        (trendparam, exparams,
+         arparams, maparams) = _unpack_params(params, (p,q), k_trend,
+                                    k_exog, reverse=True)
+
+        if exog is None and k_exog > 0:
+            raise ValueError("You must provide exog for ARMAX")
+
+        if q:
+            i = 0 # in case q == steps == 1
+            resid = np.zeros(2*q)
+            resid[:q] = errors[-q:] #only need last q
+        else:
+            i = -1 # since we don't run first loop below
+
+        y = self.endog
+        if k_trend == 1:
+            mu = trendparam * (1-arparams.sum()) # use expectation
+                                                     # not constant
+            mu = np.array([mu]*steps) # repeat it so you can slice if exog
+        else:
+            mu = np.zeros(steps)
+
+        if k_exog > 0: # add exogenous process to constant
+            mu += np.dot(exparams, exog)
+
+        endog = np.zeros(p+steps-1)
+        if p:
+            endog[:p] = y[-p:] #only need p
+
+        forecast = np.zeros(steps)
+        for i in range(min(q,steps-1)):
+            fcast = mu[i] + np.dot(arparams,endog[i:i+p]) + \
+                          np.dot(maparams,resid[i:i+q])
+            forecast[i] = fcast
+            endog[i+p] = fcast
+
+        for i in range(i+1,steps-1):
+            fcast = mu[i] + np.dot(arparams,endog[i:i+p])
+            forecast[i] = fcast
+            endog[i+p] = fcast
+
+        #need to do one more without updating endog
+        forecast[-1] = mu[-1] + np.dot(arparams,endog[steps-1:])
+        return forecast
+
+    def predict(self, params, start=None, end=None, exog=None):
         """
+        In-sample and out-of-sample prediction.
+
+        Parameters
+        ----------
+        params : array-like
+            The fitted parameters of the model.
+        start : int, str, or datetime
+            Zero-indexed observation number at which to start forecasting, ie.,
+            the first forecast is start. Can also be a date string to
+            parse or a datetime type.
+        end : int, str, or datetime
+            Zero-indexed observation number at which to end forecasting, ie.,
+            the first forecast is start. Can also be a date string to
+            parse or a datetime type.
+        exog : array-like, optional
+            If the model is an ARMAX and out-of-sample forecasting is
+            requestion, exog must be given.
+
+        Notes
+        ------
+        Consider using the results prediction.
         """
-        self._check_is_fit()
-        results = self._results
         method = self.method
+        #params = np.asarray(params)
 
         start = self._get_predict_start(start) # will be an index of a date
         end, out_of_sample = self._get_predict_end(end)
@@ -235,9 +387,11 @@ class ARMA(tsbase.TimeSeriesModel):
 
         k_ar = self.k_ar
 
-
         predictedvalues = np.zeros(end+1-start + out_of_sample)
-        fittedvalues = results.fittedvalues #get them all then trim
+        endog = self.endog
+        resid = self.geterrors(params)
+        # this does pre- and in-sample fitting
+        fittedvalues = endog - resid #get them all then trim
 
         fv_start = start
         if 'mle' not in method:
@@ -246,11 +400,12 @@ class ARMA(tsbase.TimeSeriesModel):
         fv_end = min(len(fittedvalues), end+1)
 
         predictedvalues[:pv_end] = fittedvalues[fv_start:fv_end]
+        if out_of_sample == 0:
+            return predictedvalues
 
         # do out of sample fitting
-        #params = results.params
-        #k_trend = self.k_trend
-
+        predictedvalues[pv_end:] = self._predict_out_of_sample(params,
+                out_of_sample, resid, exog)
         return predictedvalues
 
 
@@ -288,6 +443,17 @@ class ARMA(tsbase.TimeSeriesModel):
         self.sigma2 = sigma2
         llf = -nobs/2.*(log(2*pi) + log(sigma2)) - ssr/(2*sigma2)
         return llf
+
+    def _set_loglike(self, method):
+        if method in ['mle','css-mle']:
+            loglike = lambda params: -self.loglike_kalman(params)
+            self.loglike = self.loglike_kalman
+        if method == 'css':
+            loglike = lambda params: -self.loglike_css(params)
+            self.loglike = self.loglike_css
+            self.nobs = len(self.endog) - self.k_ar #excludes pre-sample
+        return loglike
+
 
     def fit(self, order, start_params=None, trend='c', method = "css-mle",
             transparams=True, solver=None, maxiter=35, full_output=1,
@@ -367,73 +533,37 @@ class ARMA(tsbase.TimeSeriesModel):
 
         self.method = method.lower()
 
-        # get model order
-        k_ar,k_ma = map(int,order)
-        k_lags = max(k_ar,k_ma+1)
-        self.k_ar = k_ar
-        self.k_ma = k_ma
-        self.k_lags = k_lags
-        endog = self.endog
-        exog = self.exog
+        # get model order and constants
+        self.k_ar = k_ar = int(order[0])
+        self.k_ma = k_ma = int(order[1])
+        self.k_lags = k_lags = max(k_ar,k_ma+1)
+        endog, exog = self.endog, self.exog
         k_exog = self.k_exog
         self.nobs = len(endog) # this is overwritten if method is 'css'
 
-        # handle exogenous variables
-        k_trend = 1 # overwritten if no constant
-        if exog is None and trend == 'c':   # constant only
-            exog = np.ones((len(endog),1))
-        elif exog is not None and trend == 'c': # constant plus exogenous
-            exog = add_trend(exog, trend='c', prepend=True)
-        elif exog is not None and trend == 'nc':
-            # make sure it's not holding constant from last run
-            if exog.var() == 0:
-                exog = None
-            k_trend = 0
-        if trend == 'nc':
-            k_trend = 0
+        # (re)set trend and handle exogenous variables
+        # always pass original exog
+        k_trend, exog = _make_arma_exog(endog, self._data.exog, trend)
+
         self.k_trend = k_trend
         self.exog = exog    # overwrites original exog from __init__
-        exog_names = self.exog_names or []
-        if len(exog_names) != k_trend + k_ma + k_ar + k_exog:
-            if exog is not None:
-                exog_names = self._data._get_names(exog[:,k_trend:]) or []
-            else:
-                exog_names = []
-            ar_lag_names = util.make_lag_names(self.endog_names, k_ar, k_trend)
-            ar_lag_names[k_trend:] = [''.join(('ar.', i))
-                                      for i in ar_lag_names[k_trend:]]
-            ma_lag_names = util.make_lag_names(self.endog_names, k_ma, 0)
-            ma_lag_names = [''.join(('ma.', i)) for i in ma_lag_names]
-            self.exog_names = ar_lag_names + ma_lag_names + exog_names
+
+        # (re)set names for this model
+        self.exog_names = _make_arma_names(self._data, k_trend, order)
+
         k = k_trend + k_exog
 
 
         # choose objective function
-        if method.lower() in ['mle','css-mle']:
-            loglike = lambda params: -self.loglike_kalman(params)
-            self.loglike = self.loglike_kalman
-        if method.lower() == 'css':
-            loglike = lambda params: -self.loglike_css(params)
-            self.loglike = self.loglike_css
-            self.nobs = len(endog) - k_ar #nobs for CSS excludes pre-sample
+        method = method.lower()
+        # this sets self.loglike based on method, and adjusts self.nobs for css
+        loglike = self._set_loglike(method)
 
         if start_params is not None:
             start_params = np.asarray(start_params)
 
-        else:
-            if method.lower() != 'css-mle': # use Hannan-Rissanen start_params
-                start_params = self._fit_start_params((k_ar,k_ma,k))
-            else:   # use Hannan-Rissanen to get CSS start_params
-                func = lambda params: -self.loglike_css(params)
-                #start_params = [.1]*(k_ar+k_ma+k_exog) # different one for k?
-                start_params = self._fit_start_params((k_ar,k_ma,k))
-                if transparams:
-                    start_params = self._invtransparams(start_params)
-                bounds = [(None,)*2]*(k_ar+k_ma+k)
-                mlefit = optimize.fmin_l_bfgs_b(func, start_params,
-                            approx_grad=True, m=12, pgtol=1e-7, factr=1e3,
-                            bounds = bounds, iprint=-1)
-                start_params = self._transparams(mlefit[0])
+        else: # estimate starting parameters
+            start_params = self._fit_start_params((k_ar,k_ma,k), method)
 
         if transparams: # transform initial parameters to ensure invertibility
             start_params = self._invtransparams(start_params)
@@ -460,11 +590,9 @@ class ARMA(tsbase.TimeSeriesModel):
 
         normalized_cov_params = None #TODO: fix this
         armafit = ARMAResults(self, params, normalized_cov_params)
-        self._results = armafit
         return ARMAResultsWrapper(armafit)
 
     fit.__doc__ += base.LikelihoodModel.fit.__doc__
-
 
 class ARMAResults(tsbase.TimeSeriesModelResults):
     """
@@ -681,6 +809,26 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         df_resid = self.df_resid
         return t.sf(np.abs(self.tvalues), df_resid) * 2
 
+    def predict(self, start=None, end=None, exog=None):
+        """
+        In-sample and out-of-sample prediction.
+
+        Parameters
+        ----------
+        start : int, str, or datetime
+            Zero-indexed observation number at which to start forecasting, ie.,
+            the first forecast is start. Can also be a date string to
+            parse or a datetime type.
+        end : int, str, or datetime
+            Zero-indexed observation number at which to end forecasting, ie.,
+            the first forecast is start. Can also be a date string to
+            parse or a datetime type.
+        exog : array-like, optional
+            If the model is an ARMAX and out-of-sample forecasting is
+            requestion, exog must be given.
+        """
+        self.model.predict(self.params, start, end, exog)
+
     def forecast(self, steps=1, exog=None, alpha=.05):
         """
         Out-of-sample forecasts
@@ -706,56 +854,15 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         conf_int : array
             2d array of the confidence interval for the forecast
         """
-        k_trend, k_exog = self.k_trend, self.k_exog
-        if exog is None and k_exog > 0:
-            raise ValueError("You must provide exog for ARMAX")
 
-        q, p = self.k_ma, self.k_ar
-        maparams, arparams = self.maparams[::-1], self.arparams[::-1]
-
-        if q:
-            resid = np.zeros(2*q)
-            resid[:q] = self.resid[-q:] #only need last q
-        else:
-            i = -1 # since we don't run first loop below
-
-        y = self.model.endog
-        if k_trend == 1:
-            mu = self.params[0] * (1-arparams.sum()) # use expectation
-                                                     # not constant
-            mu = np.array([mu]*steps) # repeat it so you can slice if exog
-        else:
-            mu = np.zeros(steps)
-
-        if k_exog > 0:
-            mu += np.dot(self.params[k_trend:k_exog+k_trend], exog)
-
-
-        endog = np.zeros(p+steps-1)
-        if p:
-            endog[:p] = y[-p:] #only need p
-
-        forecast = np.zeros(steps)
-        for i in range(q):
-            fcast = mu[i] + np.dot(arparams,endog[i:i+p]) + \
-                          np.dot(maparams,resid[i:i+q])
-            forecast[i] = fcast
-            endog[i+p] = fcast
-
-        for i in range(i+1,steps-1):
-            fcast = mu[i] + np.dot(arparams,endog[i:i+p])
-            forecast[i] = fcast
-            endog[i+p] = fcast
-
-        #need to do one more without updating endog
-        forecast[-1] = mu[-1] + np.dot(arparams,endog[steps-1:])
-
-        #take care of exogenous
-
+        arparams = self.arparams
+        maparams = self.maparams
+        forecast = self.model._predict_out_of_sample(self.params,
+                steps, self.resid, exog)
         # compute the standard errors
         sigma2 = self.sigma2
-        ma_rep = arma2ma(np.r_[1,-arparams[::-1]],
-                         np.r_[1, maparams[::-1]], nobs=steps)
+        ma_rep = arma2ma(np.r_[1,-arparams],
+                         np.r_[1, maparams], nobs=steps)
 
 
         fcasterr = np.sqrt(sigma2 * np.cumsum(ma_rep**2))
