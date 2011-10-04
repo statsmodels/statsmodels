@@ -1,0 +1,231 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sat Oct 01 13:16:49 2011
+
+Author: Josef Perktold
+License: BSD-3
+
+pvalues for Lilliefors test are based on formula and table in
+
+An Analytic Approximation to the Distribution of Lilliefors's Test Statistic for Normality
+Author(s): Gerard E. Dallal and Leland WilkinsonSource: The American Statistician, Vol. 40, No. 4 (Nov., 1986), pp. 294-296Published by: American Statistical AssociationStable URL: http://www.jstor.org/stable/2684607 .
+
+
+"""
+
+import numpy as np
+from scipy.interpolate import interp1d
+from scipy import stats
+
+def ksstat(x, cdf, alternative='two_sided', args=()):
+    """
+    Calculate statistic for the Kolmogorov-Smirnov test for goodness of fit
+
+    This performs a test of the distribution G(x) of an observed
+    random variable against a given distribution F(x). Under the null
+    hypothesis the two distributions are identical, G(x)=F(x). The
+    alternative hypothesis can be either 'two_sided' (default), 'less'
+    or 'greater'. The KS test is only valid for continuous distributions.
+
+    Parameters
+    ----------
+    x : array_like, 1d
+        array of observations
+    cdf : string or callable
+        string: name of a distribution in scipy.stats
+        callable: function to evaluate cdf
+    alternative : 'two_sided' (default), 'less' or 'greater'
+        defines the alternative hypothesis (see explanation)
+    args : tuple, sequence
+        distribution parameters for call to cdf
+
+
+    Returns
+    -------
+    D : float
+        KS test statistic, either D, D+ or D-
+
+    Notes
+    -----
+
+    In the one-sided test, the alternative is that the empirical
+    cumulative distribution function of the random variable is "less"
+    or "greater" than the cumulative distribution function F(x) of the
+    hypothesis, G(x)<=F(x), resp. G(x)>=F(x).
+
+    """
+    nobs = float(len(x))
+
+    if isinstance(cdf, basestring):
+        cdf = getattr(stats.distributions, cdf).cdf
+    elif hasattr(cdf, 'cdf'):
+        cdf = getattr(cdf, 'cdf')
+
+    x = np.sort(x)
+    cdfvals = cdf(x, *args)
+
+    if alternative in ['two_sided', 'greater']:
+        Dplus = (np.arange(1.0, nobs+1)/nobs - cdfvals).max()
+        if alternative == 'greater':
+            return Dplus
+
+    if alternative in ['two_sided', 'less']:
+        Dmin = (cdfvals - np.arange(0.0, nobs)/nobs).max()
+        if alternative == 'less':
+            return Dmin
+
+    D = np.max([Dplus,Dmin])
+    return D
+
+def kstest_normal(x, pvalmethod='approx'):
+    '''Lillifors test for normality,
+
+    Kolmogorov Smirnov test with estimated mean and variance
+
+    '''
+
+    x = np.asarray(x)
+    z = (x-x.mean())/x.std(ddof=1)
+    nobs = len(z)
+
+    d_ks = ksstat(z, stats.norm.cdf, alternative='two_sided')
+
+    if pvalmethod == 'approx':
+        pval = pval_lf(d_ks, nobs)
+    elif pvalmethod == 'table':
+        pval = pval_lftable(d_ks, nobs)
+    return d_ks, pval
+
+
+lillifors = kstest_normal
+
+
+
+tble = '''\
+00 20 15 10 05 01 .1
+4 .303 .321 .346 .376 .413 .433
+5 .289 .303 .319 .343 .397 .439
+6 .269 .281 .297 .323 .371 .424
+7 .252 .264 .280 .304 .351 .402
+8 .239 .250 .265 .288 .333 .384
+9 .227 .238 .252 .274 .317 .365
+10 .217 .228 .241 .262 .304 .352
+11 .208 .218 .231 .251 .291 .338
+12 .200 .210 .222 .242 .281 .325
+13 .193 .202 .215 .234 .271 .314
+14 .187 .196 .208 .226 .262 .305
+15 .181 .190 .201 .219 .254 .296
+16 .176 .184 .195 .213 .247 .287
+17 .171 .179 .190 .207 .240 .279
+18 .167 .175 .185 .202 .234 .273
+19 .163 .170 .181 .197 .228 .266
+20 .159 .166 .176 .192 .223 .260
+25 .143 .150 .159 .173 .201 .236
+30 .131 .138 .146 .159 .185 .217
+40 .115 .120 .128 .139 .162 .189
+100 .074 .077 .082 .089 .104 .122
+400 .037 .039 .041 .045 .052 .061
+900 .025 .026 .028 .030 .035 .042'''
+
+parr = np.array([line.split() for line in tble.split('\n')],float)
+size = parr[1:,0]
+alpha = parr[0,1:] / 100.
+crit = parr[1:, 1:]
+
+alpha = np.array([ 0.2  ,  0.15 ,  0.1  ,  0.05 ,  0.01 ,  0.001])
+size = np.array([ 4,   5,   6,   7,   8,   9,  10,  11,  12,  13,  14,  15,
+                 16,  17,  18,  19,  20,  25,  30,  40, 100, 400, 900], float)
+
+#critical values, rows are by sample size, columns are by alpha
+crit_lf = np.array(   [[303, 321, 346, 376, 413, 433],
+                       [289, 303, 319, 343, 397, 439],
+                       [269, 281, 297, 323, 371, 424],
+                       [252, 264, 280, 304, 351, 402],
+                       [239, 250, 265, 288, 333, 384],
+                       [227, 238, 252, 274, 317, 365],
+                       [217, 228, 241, 262, 304, 352],
+                       [208, 218, 231, 251, 291, 338],
+                       [200, 210, 222, 242, 281, 325],
+                       [193, 202, 215, 234, 271, 314],
+                       [187, 196, 208, 226, 262, 305],
+                       [181, 190, 201, 219, 254, 296],
+                       [176, 184, 195, 213, 247, 287],
+                       [171, 179, 190, 207, 240, 279],
+                       [167, 175, 185, 202, 234, 273],
+                       [163, 170, 181, 197, 228, 266],
+                       [159, 166, 176, 192, 223, 260],
+                       [143, 150, 159, 173, 201, 236],
+                       [131, 138, 146, 159, 185, 217],
+                       [115, 120, 128, 139, 162, 189],
+                       [ 74,  77,  82,  89, 104, 122],
+                       [ 37,  39,  41,  45,  52,  61],
+                       [ 25,  26,  28,  30,  35,  42]]) / 1000.
+
+#original Lilliefors paper
+crit_greater30 = lambda n: np.array([0.736, 0.768, 0.805, 0.886, 1.031])/np.sqrt(n)
+alpha_greater30 = np.array([ 0.2  ,  0.15 ,  0.1  ,  0.05 ,  0.01 ,  0.001])
+
+
+n_alpha = 6
+polyn = [interp1d(size, crit[:,i]) for i in range(n_alpha)]
+
+def critpolys(n):
+    return np.array([p(n) for p in polyn])
+
+def pval_lftable(x, n):
+    #returns extrem probabilities, 0.001 and 0.2, for out of range
+    critvals = critpolys(n)
+    if x < critvals[0]:
+        return alpha[0]
+    elif x > critvals[-1]:
+        return alpha[-1]
+    else:
+        return interp1d(critvals, alpha)(x)
+
+for n in [19, 19.5, 20, 21, 25]:
+    print critpolys(n)
+
+print pval_lftable(0.166, 20)
+print pval_lftable(0.166, 21)
+
+def pval_lf(Dmax, n):
+    #todo: check boundaries, valid range for n and Dmax
+    if n>100:
+        Dmax *= (n/100.)**0.49
+        n = 100
+    pval = np.exp(-7.01256*Dmax**2 *(n + 2.78019)
+                + 2.99587 * Dmax * np.sqrt(n + 2.78019) - 0.122119
+                + 0.974598/np.sqrt(n) + 1.67997/n)
+    return pval
+
+print 'n=25:', '.103 .052 .010'
+print [pval_lf(x, 25) for x in [.159, .173, .201, .236]]
+
+print 'n=10', '.103 .050 .009'
+print [pval_lf(x, 10) for x in [.241, .262, .304, .352]]
+
+
+print 'n=400', '.104 .050 .011'
+print [pval_lf(x, 400) for x in crit[-2,2:-1]]
+print 'n=900', '.093 .054 .011'
+print [pval_lf(x, 900) for x in crit[-1,2:-1]]
+print [pval_lftable(x, 400) for x in crit[-2,:]]
+print [pval_lftable(x, 300) for x in crit[-3,:]]
+
+xx = np.random.randn(40)
+print kstest_normal(xx)
+
+xx2 = np.array([ 1.138, -0.325, -1.461, -0.441, -0.005, -0.957, -1.52 ,  0.481,
+        0.713,  0.175, -1.764, -0.209, -0.681,  0.671,  0.204,  0.403,
+       -0.165,  1.765,  0.127, -1.261, -0.101,  0.527,  1.114, -0.57 ,
+       -1.172,  0.697,  0.146,  0.704,  0.422,  0.63 ,  0.661,  0.025,
+        0.177,  0.578,  0.945,  0.211,  0.153,  0.279,  0.35 ,  0.396])
+
+( 1.138, -0.325, -1.461, -0.441, -0.005, -0.957, -1.52 ,  0.481,
+        0.713,  0.175, -1.764, -0.209, -0.681,  0.671,  0.204,  0.403,
+       -0.165,  1.765,  0.127, -1.261, -0.101,  0.527,  1.114, -0.57 ,
+       -1.172,  0.697,  0.146,  0.704,  0.422,  0.63 ,  0.661,  0.025,
+        0.177,  0.578,  0.945,  0.211,  0.153,  0.279,  0.35 ,  0.396)
+r_lillieTest = [0.15096827429598147, 0.02225473302348436]
+print kstest_normal(xx2), np.array(kstest_normal(xx2)) - r_lillieTest
+print kstest_normal(xx2, 'table')
