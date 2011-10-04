@@ -120,7 +120,7 @@ class test_SimpleTable(unittest.TestCase):
         actual = '\n'.join((line.rstrip() for line in actual.split('\n')))
         #print(actual)
         #print(desired)
-        print len(actual), len(desired)
+        #print len(actual), len(desired)
         self.assertEqual(actual, desired)
     def test_customlabel(self):
         """Limited test of custom custom labeling"""
