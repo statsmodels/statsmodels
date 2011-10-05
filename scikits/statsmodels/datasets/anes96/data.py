@@ -101,6 +101,17 @@ def load():
     data = _get_data()
     return du.process_recarray(data, endog_idx=5, dtype=float)
 
+def load_pandas():
+    """Load the anes96 data and returns a Dataset class.
+
+    Returns
+    -------
+    Dataset instance:
+        See DATASET_PROPOSAL.txt for more information.
+    """
+    data = _get_data()
+    return du.process_recarray_pandas(data, endog_idx=5, dtype=float)
+
 def _get_data():
     filepath = dirname(abspath(__file__))
     data = recfromtxt(open(filepath + '/anes96.csv',"rb"), delimiter="\t",

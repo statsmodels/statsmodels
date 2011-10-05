@@ -33,8 +33,8 @@ Variable name definitions::
     GPA   - Student's grade point average
 """
 
-from numpy import recfromtxt, column_stack, array
-from scikits.statsmodels.tools import Dataset
+import numpy as np
+import scikits.statsmodels.tools.datautils as du
 from os.path import dirname, abspath
 
 def load():
@@ -46,15 +46,24 @@ def load():
     Dataset instance:
         See DATASET_PROPOSAL.txt for more information.
     """
+    data = _get_data()
+    return du.process_recarray(data, endog_idx=3, dtype=float)
+
+def load_pandas():
+    """
+    Load the Spector dataset and returns a Dataset class instance.
+
+    Returns
+    -------
+    Dataset instance:
+        See DATASET_PROPOSAL.txt for more information.
+    """
+    data = _get_data()
+    return du.process_recarray_pandas(data, endog_idx=3, dtype=float)
+
+def _get_data():
     filepath = dirname(abspath(__file__))
 ##### EDIT THE FOLLOWING TO POINT TO DatasetName.csv #####
-    data = recfromtxt(open(filepath + '/spector.csv',"rb"), delimiter=" ",
-            names=True, dtype=float, usecols=(1,2,3,4))
-    names = list(data.dtype.names)
-    endog = array(data[names[3]], dtype=float)
-    endog_name = names[3]
-    exog = column_stack(data[i] for i in names[:3]).astype(float)
-    exog_name = names[:3]
-    dataset = Dataset(data=data, names=names, endog=endog, exog=exog,
-            endog_name = endog_name, exog_name=exog_name)
-    return dataset
+    data = np.recfromtxt(open(filepath + '/spector.csv',"rb"), delimiter=" ",
+                         names=True, dtype=float, usecols=(1,2,3,4))
+    return data

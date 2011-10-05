@@ -33,7 +33,7 @@ Variable name definitions::
 """
 
 from numpy import recfromtxt, column_stack, array
-from scikits.statsmodels.tools import Dataset
+import scikits.statsmodels.tools.datautils as du
 from os.path import dirname, abspath
 
 def load():
@@ -45,14 +45,23 @@ def load():
     Dataset instance:
         See DATASET_PROPOSAL.txt for more information.
     """
+    data = _get_data()
+    return du.process_recarray_pandas(data, endog_idx=0, dtype=float)
+
+def load_pandas():
+    """
+    Load the stack loss data and returns a Dataset class instance.
+
+    Returns
+    --------
+    Dataset instance:
+        See DATASET_PROPOSAL.txt for more information.
+    """
+    data = _get_data()
+    return du.process_recarray_pandas(data, endog_idx=0, dtype=float)
+
+def _get_data():
     filepath = dirname(abspath(__file__))
     data = recfromtxt(open(filepath + '/stackloss.csv',"rb"), delimiter=",",
             names=True, dtype=float)
-    names = list(data.dtype.names)
-    endog = array(data[names[0]], dtype=float)
-    endog_name = names[0]
-    exog = column_stack(data[i] for i in names[1:]).astype(float)
-    exog_name = names[1:]
-    dataset = Dataset(data=data, names=names, endog=endog, exog=exog,
-            endog_name = endog_name, exog_name=exog_name)
-    return dataset
+    return data
