@@ -42,7 +42,7 @@ Years are included in the data file though not returned by load.
 """
 
 from numpy import recfromtxt, column_stack, array
-from scikits.statsmodels.datasets import Dataset
+from scikits.statsmodels.tools.datautils import Dataset
 from os.path import dirname, abspath
 
 def load():
@@ -54,14 +54,23 @@ def load():
     Dataset instance:
         See DATASET_PROPOSAL.txt for more information.
     """
+    data = _get_data()
+
+    names = list(data.dtype.names)
+    endog_name = names[0]
+    exog_name = names[1:]
+
+    endog = array(data[names[0]], dtype=float)
+    exog = column_stack(data[i] for i in names[1:]).astype(float)
+    dataset = Dataset(data=data, names=names, endog=endog, exog=exog,
+                      endog_name = endog_name, exog_name=exog_name)
+    return dataset
+
+def _get_data():
     filepath = dirname(abspath(__file__))
     data = recfromtxt(open(filepath + '/copper.csv', 'rb'), delimiter=",",
-            names=True, dtype=float, usecols=(1,2,3,4,5,6))
-    names = list(data.dtype.names)
-    endog = array(data[names[0]], dtype=float)
-    endog_name = names[0]
-    exog = column_stack(data[i] for i in names[1:]).astype(float)
-    exog_name = names[1:]
-    dataset = Dataset(data=data, names=names, endog=endog, exog=exog,
-            endog_name = endog_name, exog_name=exog_name)
-    return dataset
+                      names=True, dtype=float, usecols=(1,2,3,4,5,6))
+    return data
+
+def load_pandas():
+    pass

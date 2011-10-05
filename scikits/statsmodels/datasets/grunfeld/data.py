@@ -40,8 +40,7 @@ string categorical variable.
 """
 
 from numpy import recfromtxt, column_stack, array
-from scikits.statsmodels.datasets import Dataset
-from scikits.statsmodels.tools import categorical
+from scikits.statsmodels.tools import Dataset, categorical
 from os.path import dirname, abspath
 
 def load():
