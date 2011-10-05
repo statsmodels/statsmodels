@@ -30,16 +30,16 @@ def test_durbin_watson():
     assert_almost_equal(durbin_watson(x), st_R, 14)
 
     st_R = 1.848802400319998
-    assert_almost_equal(durbin_watson(x**2), st_R, 15)
+    assert_almost_equal(durbin_watson(x**2), st_R, 14)
 
     st_R = 1.09897993228779
-    assert_almost_equal(durbin_watson(x[1:]+0.5*x[:-1]), st_R, 15)
+    assert_almost_equal(durbin_watson(x[1:]+0.5*x[:-1]), st_R, 14)
 
     st_R = 0.937241876707273
-    assert_almost_equal(durbin_watson(x[1:]+0.8*x[:-1]), st_R, 15)
+    assert_almost_equal(durbin_watson(x[1:]+0.8*x[:-1]), st_R, 14)
 
     st_R = 0.921488912587806
-    assert_almost_equal(durbin_watson(x[1:]+0.9*x[:-1]), st_R, 15)
+    assert_almost_equal(durbin_watson(x[1:]+0.9*x[:-1]), st_R, 14)
 
 
 def test_omni_normtest():
@@ -53,10 +53,10 @@ def test_omni_normtest():
     assert_almost_equal(nt, st_pv_R[:,0], 14)
 
     st = stats.skewtest(x)
-    assert_almost_equal(st, st_pv_R[:,1], 15)
+    assert_almost_equal(st, st_pv_R[:,1], 14)
 
     kt = stats.kurtosistest(x)
-    assert_almost_equal(kt, st_pv_R[:,2], 15)
+    assert_almost_equal(kt, st_pv_R[:,2], 14)
 
     st_pv_R = np.array(
               [[34.523210399523926,  4.429509162503833,  3.860396220444025],
@@ -67,10 +67,10 @@ def test_omni_normtest():
     assert_almost_equal(nt, st_pv_R[:,0], 14)
 
     st = stats.skewtest(x2)
-    assert_almost_equal(st, st_pv_R[:,1], 15)
+    assert_almost_equal(st, st_pv_R[:,1], 14)
 
     kt = stats.kurtosistest(x2)
-    assert_almost_equal(kt, st_pv_R[:,2], 15)
+    assert_almost_equal(kt, st_pv_R[:,2], 14)
 
 def test_jarque_bera():
     #tests against R fBasics
@@ -88,7 +88,7 @@ def test_jarque_bera():
 
     st_pv_R = np.array([2.6489315748495761, 0.2659449923067881])
     jb = jarque_bera(np.exp(-x**2))[:2]
-    assert_almost_equal(jb, st_pv_R, 15)
+    assert_almost_equal(jb, st_pv_R, 14)
 
 def test_shapiro():
     #tests against R fBasics
