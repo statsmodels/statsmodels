@@ -599,8 +599,8 @@ class GLSAR(GLS):
             results = self.fit()
             self.rho, _ = yule_walker(results.resid,
                                       order=self.order, df=None)
-        self._results = self.fit() #final estimate
-        return self._results # add missing return
+        results = self.fit() #final estimate
+        return results # add missing return
 
     def whiten(self, X):
         """

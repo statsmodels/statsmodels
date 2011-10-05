@@ -29,8 +29,6 @@ class Model(object):
     will change as well.
     """
 
-    _results = None
-
     def __init__(self, endog, exog=None):
         self._data = handle_data(endog, exog)
         self.exog = self._data.exog
@@ -274,7 +272,6 @@ available'
                           'retall' : retall}
         optim_settings.update(kwargs)
         mlefit.mle_settings = optim_settings
-        self._results = mlefit
         return mlefit
 
 def _fit_mle_newton(f, score, start_params, fargs, kwargs, disp=True,

@@ -407,7 +407,6 @@ returned a nan.  This could be a boundary problem and should be reported.")
         glm_results = GLMResults(self, wls_results.params,
                                  wls_results.normalized_cov_params,
                                  self.scale)
-        self._results = glm_results
         return GLMResultsWrapper(glm_results)
 
 class GLMResults(base.LikelihoodModelResults):
