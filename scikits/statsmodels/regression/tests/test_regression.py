@@ -597,8 +597,11 @@ def test_bad_size():
 if __name__=="__main__":
 
     import nose
-    run_module_suite()
-    #nose.runmodule(argv=[__file__,'-vvs','-x'], exit=False) #, '--pdb'
+    # run_module_suite()
+    nose.runmodule(argv=[__file__,'-vvs','-x','--pdb', '--pdb-failure'],
+                   exit=False)
+
+    # nose.runmodule(argv=[__file__,'-vvs','-x'], exit=False) #, '--pdb'
 
 
 

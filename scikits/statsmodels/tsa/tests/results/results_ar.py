@@ -91,21 +91,21 @@ class ARResultsOLS(object):
             # n=-1, start=100
             self.FVOLSnneg1start100 = fv[100-9:]
             # n = 200, start = 0
-            self.FVOLSn200start0 = fv[:200]
+            self.FVOLSn200start0 = fv[:192]
             # n = 200, start = 200
-            self.FVOLSn200start200 = np.hstack((fv[200-9:],pv[:100-9]))
+            self.FVOLSn200start200 = np.hstack((fv[200-9:],pv[:101-9]))
             # n = 200, start = -109 use above
             self.FVOLSn200startneg109 = self.FVOLSn200start200
             # n = 100, start = 325, post-sample forecasting
-            self.FVOLSn100start325 = pv[16:]
+            self.FVOLSn100start325 = np.hstack((fv[-1],pv))
             # n = 301, start = 9
-            self.FVOLSn301start9 = np.hstack((fv,pv[0]))
+            self.FVOLSn301start9 = np.hstack((fv,pv[:2]))
             # n = 301, start = 0
-            self.FVOLSn301start0 = self.FVOLSn301start9
+            self.FVOLSdefault = fv
             # n = 4, start = 312
-            self.FVOLSn4start312 = pv[3:7]
+            self.FVOLSn4start312 = np.hstack((fv[-1],pv[:8]))
             # n = 15, start = 312
-            self.FVOLSn15start312 = pv[3:18]
+            self.FVOLSn15start312 = np.hstack((fv[-1],pv[:19]))
 
 
         elif not constant:
@@ -146,21 +146,21 @@ class ARResultsOLS(object):
             # n=-1, start=100
             self.FVOLSnneg1start100 = fv[100-9:]
             # n = 200, start = 0
-            self.FVOLSn200start0 = fv[:200]
+            self.FVOLSn200start0 = fv[:192]
             # n = 200, start = 200
-            self.FVOLSn200start200 = np.hstack((fv[200-9:],pv[:100-9]))
+            self.FVOLSn200start200 = np.hstack((fv[200-9:],pv[:101-9]))
             # n = 200, start = -109 use above
             self.FVOLSn200startneg109 = self.FVOLSn200start200
             # n = 100, start = 325, post-sample forecasting
-            self.FVOLSn100start325 = pv[16:]
+            self.FVOLSn100start325 = np.hstack((fv[-1],pv))
             # n = 301, start = 9
-            self.FVOLSn301start9 = np.hstack((fv,pv[0]))
+            self.FVOLSn301start9 = np.hstack((fv,pv[:2]))
             # n = 301, start = 0
-            self.FVOLSn301start0 = self.FVOLSn301start9
+            self.FVOLSdefault = fv
             # n = 4, start = 312
-            self.FVOLSn4start312 = pv[3:7]
+            self.FVOLSn4start312 = np.hstack((fv[-1],pv[:8]))
             # n = 15, start = 312
-            self.FVOLSn15start312 = pv[3:18]
+            self.FVOLSn15start312 = np.hstack((fv[-1],pv[:19]))
 
 
 class ARResultsMLE(object):
@@ -177,8 +177,30 @@ class ARResultsMLE(object):
             filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                 "ARMLEConstantPredict.csv")
             predictresults = np.loadtxt(filename, delimiter=",")
-            pv = predictresults[:,0]
-            rmse = predictresults[:,1]
+            year = predictresults[:,0]
+            pv = predictresults[:,1]
+
+            # cases - in sample predict
+            # start = 0 (fitted values)
+            self.FVMLEdefault = pv[:309]
+            # start=9
+            self.FVMLEstart9end308 = pv[9:309]
+            # start=100, end=309
+            self.FVMLEstart100end308 = pv[100:309]
+            # start = 0, end
+            self.FVMLEstart0end200 = pv[:201]
+            # n = 200, start = 200
+            self.FVMLEstart200end334 = pv[200:]
+            # start = 309, end=334 post-sample forecasting
+            self.FVMLEstart308end334 = pv[308:]
+            # end = 310, start = 9
+            self.FVMLEstart9end309 = pv[9:310]
+            # end = 301, start = 0
+            self.FVMLEstart0end301 = pv[:302]
+            # end = 312, start = 4
+            self.FVMLEstart4end312 = pv[4:313]
+            # end = 7, start = 2
+            self.FVMLEstart2end7 = pv[2:8]
 
 
         else:

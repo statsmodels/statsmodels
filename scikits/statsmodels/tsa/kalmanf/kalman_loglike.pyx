@@ -15,7 +15,7 @@ cdef extern from "math.h":
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-def kalman_loglike_double(ndarray[DOUBLE, ndim=1] y,
+def kalman_filter_double(ndarray[DOUBLE, ndim=1] y,
                    unsigned int k, unsigned int p, unsigned int q,
                   unsigned int r, unsigned int nobs,
                    ndarray[DOUBLE, ndim=2] Z_mat,
@@ -56,15 +56,12 @@ def kalman_loglike_double(ndarray[DOUBLE, ndim=1] y,
         v_mat = y[i] - dot(Z_mat,alpha)
         v[i] = v_mat
         alpha = dot(T_mat, alpha) + dot(K, v_mat)
-    sigma2 = 1./nobs * sum(v**2 / F)
-    loglike = -.5 *(loglikelihood + nobs*log(sigma2))
-    loglike -= nobs/2. * (log(2*pi) + 1)
-    return loglike, sigma2
+    return v, F, loglikelihood
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-def kalman_loglike_complex(ndarray[COMPLEX128, ndim=1] y,
+def kalman_filter_complex(ndarray[COMPLEX128, ndim=1] y,
                    unsigned int k, unsigned int p, unsigned int q,
                   unsigned int r, unsigned int nobs,
                    ndarray[DOUBLE, ndim=2] Z_mat,
@@ -105,6 +102,39 @@ def kalman_loglike_complex(ndarray[COMPLEX128, ndim=1] y,
         v_mat = y[i] - dot(Z_mat,alpha)
         v[i] = v_mat
         alpha = dot(T_mat, alpha) + dot(K, v_mat)
+    return v,F,loglikelihood
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
+def kalman_loglike_double(ndarray[DOUBLE, ndim=1] y,
+                   unsigned int k, unsigned int p, unsigned int q,
+                  unsigned int r, unsigned int nobs,
+                   ndarray[DOUBLE, ndim=2] Z_mat,
+                   ndarray[DOUBLE, ndim=2] R_mat,
+                   ndarray[DOUBLE, ndim=2] T_mat):
+    """
+    Cython version of the Kalman filter recursions for an ARMA process.
+    """
+    v, F, loglikelihood = kalman_filter_double(y,k,p,q,r,nobs,Z_mat,R_mat,T_mat)
+    sigma2 = 1./nobs * sum(v**2 / F)
+    loglike = -.5 *(loglikelihood + nobs*log(sigma2))
+    loglike -= nobs/2. * (log(2*pi) + 1)
+    return loglike, sigma2
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
+def kalman_loglike_complex(ndarray[COMPLEX128, ndim=1] y,
+                   unsigned int k, unsigned int p, unsigned int q,
+                  unsigned int r, unsigned int nobs,
+                   ndarray[DOUBLE, ndim=2] Z_mat,
+                   ndarray[COMPLEX128, ndim=2] R_mat,
+                   ndarray[COMPLEX128, ndim=2] T_mat):
+    """
+    Cython version of the Kalman filter recursions for an ARMA process.
+    """
+    v,F,loglikelihood = kalman_filter_complex(y,k,p,q,r,nobs,Z_mat,R_mat,T_mat)
     sigma2 = 1./nobs * sum(v**2 / F)
     loglike = -.5 *(loglikelihood + nobs*log(sigma2))
     loglike -= nobs/2. * (log(2*pi) + 1)

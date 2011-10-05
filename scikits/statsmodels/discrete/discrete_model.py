@@ -19,15 +19,17 @@ W. Greene. `Econometric Analysis`. Prentice Hall, 5th. edition. 2003.
 __all__ = ["Poisson","Logit","Probit","MNLogit"]
 
 import numpy as np
-from scikits.statsmodels.base.model import (LikelihoodModel,
-        LikelihoodModelResults)
-import scikits.statsmodels.tools.tools as tools
-from scikits.statsmodels.tools.decorators import (resettable_cache,
-        cache_readonly)
-from scikits.statsmodels.regression.linear_model import OLS
 from scipy import stats, special, optimize # opt just for nbin
 from scipy.misc import factorial
+
+import scikits.statsmodels.tools.tools as tools
+from scikits.statsmodels.tools.decorators import (resettable_cache,
+                                                  cache_readonly)
 #import numdifftools as nd #This will be removed when all have analytic hessians
+
+import scikits.statsmodels.base.model as base
+import scikits.statsmodels.regression.linear_model as lm
+import scikits.statsmodels.base.wrapper as wrap
 
 #TODO: add options for the parameter covariance/variance
 # ie., OIM, EIM, and BHHH see Green 21.4
@@ -92,7 +94,7 @@ def _iscount(X):
     remainder -= dummy
     return remainder
 
-class DiscreteModel(LikelihoodModel):
+class DiscreteModel(base.LikelihoodModel):
     """
     Abstract class for discrete choice models.
 
@@ -141,8 +143,9 @@ class DiscreteModel(LikelihoodModel):
         if isinstance(self, MNLogit):
             mlefit.params = mlefit.params.reshape(-1, self.exog.shape[1])
         discretefit = DiscreteResults(self, mlefit)
-        return discretefit
-    fit.__doc__ += LikelihoodModel.fit.__doc__
+        return DiscreteResultsWrapper(discretefit)
+
+    fit.__doc__ += base.LikelihoodModel.fit.__doc__
 
     def predict(self, params, exog=None, linear=False):
         """
@@ -324,40 +327,6 @@ class Poisson(DiscreteModel):
         L = np.exp(np.dot(X,params))
         return -np.dot(L*X.T, X)
 
-#    def fit(self, start_params=None, maxiter=35, method='newton',
-#            tol=1e-08):
-#        """
-#        Fits the Poisson model.
-#
-#        Parameters
-#        ----------
-#        start_params : array-like, optional
-#            The default is a 0 vector.
-#        maxiter : int, optional
-#            Maximum number of iterations.  The default is 35.
-#        method : str, optional
-#            `method` can be 'newton', 'ncg', 'bfgs'. The default is 'newton'.
-#        tol : float, optional
-#            The convergence tolerance for the solver.  The default is
-#            1e-08.
-#
-#        Returns
-#        --------
-#        DiscreteResults object
-#
-#        See also
-#        --------
-#        scikits.statsmodels.model.LikelihoodModel
-#        scikits.statsmodels.sandbox.discretemod.DiscreteResults
-#        scipy.optimize
-#        """
-#
-#        mlefit = super(Poisson, self).fit(start_params=start_params,
-#            maxiter=maxiter, method=method, tol=tol)
-#        params = mlefit.params
-#        mlefit = DiscreteResults(self, params, self.hessian(params))
-#        return mlefit
-
 class NbReg(DiscreteModel):
     pass
 
@@ -493,39 +462,6 @@ class Logit(DiscreteModel):
         X = self.exog
         L = self.cdf(np.dot(X,params))
         return -np.dot(L*(1-L)*X.T,X)
-
-#    def fit(self, start_params=None, maxiter=35, method='newton',
-#            tol=1e-08):
-#        """
-#        Fits the binary logit model.
-#
-#        Parameters
-#        ----------
-#        start_params : array-like, optional
-#            The default is a 0 vector.
-#        maxiter : int, optional
-#            Maximum number of iterations.  The default is 35.
-#        method : str, optional
-#            `method` can be 'newton', 'ncg', 'bfgs'. The default is 'newton'.
-#        tol : float, optional
-#            The convergence tolerance for the solver.  The default is
-#            1e-08.
-#
-#        Returns
-#        --------
-#        DiscreteResults object
-#
-#        See also
-#        --------
-#        scikits.statsmodels.model.LikelihoodModel
-#        scikits.statsmodels.sandbox.discretemod.DiscreteResults
-#        scipy.optimize
-#        """
-#        mlefit = super(Logit, self).fit(start_params=start_params,
-#            maxiter=maxiter, method=method, tol=tol)
-#        params = mlefit.params
-#        mlefit = DiscreteResults(self, params, self.hessian(params))
-#        return mlefit
 
 
 class Probit(DiscreteModel):
@@ -671,39 +607,6 @@ class Probit(DiscreteModel):
         q = 2*self.endog - 1
         L = q*self.pdf(q*XB)/self.cdf(q*XB)
         return np.dot(-L*(L+XB)*X.T,X)
-
-#    def fit(self, start_params=None, maxiter=35, method='newton',
-#            tol=1e-08):
-#        """
-#        Fits the binary probit model.
-#
-#        Parameters
-#        ----------
-#        start_params : array-like, optional
-#            The default is a 0 vector.
-#        maxiter : int, optional
-#            Maximum number of iterations.  The default is 35.
-#        method : str, optional
-#            `method` can be 'newton', 'ncg', 'bfgs'. The default is 'newton'.
-#        tol : float, optional
-#            The convergence tolerance for the solver.  The default is
-#            1e-08.
-#
-#        Returns
-#        --------
-#        DiscreteResults object
-#
-#        See also
-#        --------
-#        scikits.statsmodels.model.LikelihoodModel
-#        scikits.statsmodels.sandbox.discretemod.DiscreteResults
-#        scipy.optimize
-#        """
-#        mlefit = super(Probit, self).fit(start_params=start_params,
-#            maxiter=maxiter, method=method, tol=tol)
-#        params = mlefit.params
-#        mlefit = DiscreteResults(self, params, self.hessian(params))
-#        return mlefit
 
 
 class MNLogit(DiscreteModel):
@@ -911,35 +814,6 @@ class MNLogit(DiscreteModel):
         H = np.transpose(H.reshape(J,J,K,K), (0,2,1,3)).reshape(J*K,J*K)
         return H
 
-#    def fit(self, start_params=None, maxiter=35, method='newton',
-#            tol=1e-08):
-#        """
-#        Fits the multinomial logit model.
-#
-#        Parameters
-#        ----------
-#        start_params : array-like, optional
-#            The default is a 0 vector.
-#        maxiter : int, optional
-#            Maximum number of iterations.  The default is 35.
-#        method : str, optional
-#            `method` can be 'newton', 'ncg', 'bfgs'. The default is 'newton'.
-#        tol : float, optional
-#            The convergence tolerance for the solver.  The default is
-#            1e-08.
-#
-#        Notes
-#        -----
-#        The reference category is always the first column of `wendog` for now.
-#        """
-#        if start_params == None:
-#            start_params = np.zeros((self.exog.shape[1]*\
-#                    (self.wendog.shape[1]-1)))
-#        mlefit = super(MNLogit, self).fit(start_params=start_params,
-#                maxiter=maxiter, method=method, tol=tol)
-#        params = mlefit.params.reshape(-1, self.exog.shape[1])
-#        mlefit = DiscreteResults(self, params, self.hessian(params))
-#        return mlefit
 
 #TODO: Weibull can replaced by a survival analsysis function
 # like stat's streg (The cox model as well)
@@ -1096,8 +970,8 @@ class NBin(DiscreteModel):
 
 
     def fit(self, start_params=None, maxiter=35, method='bfgs', tol=1e-08):
-#        start_params = [0]*(self.exog.shape[1])+[1]
-# Use poisson fit as first guess.
+        # start_params = [0]*(self.exog.shape[1])+[1]
+        # Use poisson fit as first guess.
         start_params = Poisson(self.endog, self.exog).fit(disp=0).params
         start_params = np.r_[start_params, 0.1]
         mlefit = super(NegBinTwo, self).fit(start_params=start_params,
@@ -1109,7 +983,7 @@ class NBin(DiscreteModel):
 
 #class DiscreteResults(object):
 #TODO: these need to return z scores
-class DiscreteResults(LikelihoodModelResults):
+class DiscreteResults(base.LikelihoodModelResults):
     """
     A results class for the discrete dependent variable models.
 
@@ -1175,11 +1049,6 @@ class DiscreteResults(LikelihoodModelResults):
             return bse.reshape(self.params.shape)
 
     @cache_readonly
-    def llf(self):
-        model = self.model
-        return model.loglike(self.params)
-
-    @cache_readonly
     def prsquared(self):
         return 1 - self.llf/self.llnull
 
@@ -1240,11 +1109,12 @@ class DiscreteResults(LikelihoodModelResults):
     def conf_int(self, alpha=.05, cols=None):
         if hasattr(self.model, "J"):
             confint = super(DiscreteResults, self).conf_int(alpha=alpha,
-                    cols=cols)
-            return confint.transpose(0,2,1).reshape(self.model.J-1,self.model.K,2)
+                                                            cols=cols)
+            return confint.transpose(0,2,1).reshape(self.model.J-1,
+                                                    self.model.K, 2)
         else:
             return super(DiscreteResults, self).conf_int(alpha=alpha, cols=cols)
-    conf_int.__doc__ = LikelihoodModelResults.conf_int.__doc__
+    conf_int.__doc__ = base.LikelihoodModelResults.conf_int.__doc__
 
     @cache_readonly
     def tvalues(self):
@@ -1262,7 +1132,8 @@ class DiscreteResults(LikelihoodModelResults):
         ----------
         at : str, optional
             Options are:
-            - 'overall', The average of the marginal effects at each observation.
+            - 'overall', The average of the marginal effects at each
+              observation.
             - 'mean', The marginal effects at the mean of each regressor.
             - 'median', The marginal effects at the median of each regressor.
             - 'zero', The marginal effects at zero for each regressor.
@@ -1515,6 +1386,9 @@ quasi-separation. In this case some parameters will not be identified.''' % pred
                 smry.add_extra_txt(etext)
 
         return smry
+class DiscreteResultsWrapper(lm.RegressionResultsWrapper):
+    pass
+wrap.populate_wrapper(DiscreteResultsWrapper, DiscreteResults)
 
 if __name__=="__main__":
     import numpy as np

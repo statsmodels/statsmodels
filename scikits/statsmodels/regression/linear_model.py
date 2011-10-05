@@ -34,13 +34,14 @@ import numpy as np
 from scipy.linalg import norm, toeplitz, lstsq, calc_lwork
 from scipy import stats
 from scipy.stats.stats import ss
-from scikits.statsmodels.base.model import (LikelihoodModel,
-        LikelihoodModelResults)
-from scikits.statsmodels.tools.tools import add_constant, rank, recipr
+from scikits.statsmodels.tools.tools import (add_constant, rank,
+                                             recipr, chain_dot)
 from scikits.statsmodels.tools.decorators import (resettable_cache,
         cache_readonly, cache_writable)
+import scikits.statsmodels.base.model as base
+import scikits.statsmodels.base.wrapper as wrap
 
-class GLS(LikelihoodModel):
+class GLS(base.LikelihoodModel):
     """
     Generalized least squares model with a general covariance structure.
 
@@ -211,7 +212,6 @@ Should be of length %s, if sigma is a 1d array" % nobs)
         to solve the least squares minimization.
 
         """
-
         exog = self.wexog
         endog = self.wendog
 
@@ -237,7 +237,7 @@ Should be of length %s, if sigma is a 1d array" % nobs)
             # no upper triangular solve routine in numpy/scipy?
         lfit = RegressionResults(self, beta,
                        normalized_cov_params=self.normalized_cov_params)
-        return lfit
+        return RegressionResultsWrapper(lfit)
 
     def predict(self, params, exog=None):
         """
@@ -260,8 +260,6 @@ Should be of length %s, if sigma is a 1d array" % nobs)
         """
         #JP: this doesn't look correct for GLMAR
         #SS: it needs its own predict method
-        if not self._results and params is None:
-            raise ValueError("If the model has not been fit, then you must specify the params argument.")
         if exog is None:
             exog = self.exog
         return np.dot(exog, params)
@@ -712,7 +710,7 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False, demean=True):
     else:
         return rho, np.sqrt(sigmasq)
 
-class RegressionResults(LikelihoodModelResults):
+class RegressionResults(base.LikelihoodModelResults):
     """
     This class summarizes the fit of a linear regression model.
 
@@ -964,10 +962,6 @@ class RegressionResults(LikelihoodModelResults):
         return stats.t.sf(np.abs(self.tvalues), self.df_resid)*2
 
     @cache_readonly
-    def llf(self):
-        return self.model.loglike(self.params)
-
-    @cache_readonly
     def aic(self):
         return -2 * self.llf + 2 * (self.df_model + 1)
 
@@ -1014,9 +1008,11 @@ class RegressionResults(LikelihoodModelResults):
         See statsmodels.RegressionResults
         """
         if self._HC2_se is None:
-            h=np.diag(np.dot(np.dot(self.model.exog, self.normalized_cov_params),
-                    self.model.exog.T)) # probably could be optimized
-            self.het_scale= self.resid**2/(1-h)
+            # probably could be optimized
+            h = np.diag(chain_dot(self.model.exog,
+                                  self.normalized_cov_params,
+                                  self.model.exog.T))
+            self.het_scale = self.resid**2/(1-h)
             self.cov_HC2 = self._HCCM(self.het_scale)
             self._HC2_se = np.sqrt(np.diag(self.cov_HC2))
         return self._HC2_se
@@ -1027,9 +1023,10 @@ class RegressionResults(LikelihoodModelResults):
         See statsmodels.RegressionResults
         """
         if self._HC3_se is None:
-            h=np.diag(np.dot(np.dot(self.model.exog,
-                self.normalized_cov_params),self.model.exog.T))
             # above probably could be optimized to only calc the diag
+            h = np.diag(chain_dot(self.model.exog,
+                                  self.normalized_cov_params,
+                                  self.model.exog.T))
             self.het_scale=(self.resid/(1-h))**2
             self.cov_HC3 = self._HCCM(self.het_scale)
             self._HC3_se = np.sqrt(np.diag(self.cov_HC3))
@@ -1049,19 +1046,20 @@ class RegressionResults(LikelihoodModelResults):
         This method is untested
         """
         if not hasattr(self, 'resid'):
-            raise ValueError('need normalized residuals to estimate standard\
- deviation')
+            raise ValueError('need normalized residuals to estimate standard '
+                             'deviation')
         return self.wresid * recipr(np.sqrt(self.scale))
 
     def compare_f_test(self, restricted):
         '''use F test to test whether restricted model is correct
 
-        Parameters
+        Parametersnorm
         ----------
         restricted : Result instance
-            The restricted model is assumed to be nested in the current model. The
-            result instance of the restricted model is required to have two attributes,
-            residual sum of squares, `ssr`, residual degrees of freedom, `df_resid`.
+            The restricted model is assumed to be nested in the current
+            model. The result instance of the restricted model is required to
+            have two attributes, residual sum of squares, `ssr`, residual
+            degrees of freedom, `df_resid`.
 
         Returns
         -------
@@ -1070,7 +1068,8 @@ class RegressionResults(LikelihoodModelResults):
         p_value : float
             p-value of the test statistic
         df_diff : int
-            degrees of freedom of the restriction, i.e. difference in df between models
+            degrees of freedom of the restriction, i.e. difference in df between
+            models
 
         Notes
         -----
@@ -1112,7 +1111,9 @@ class RegressionResults(LikelihoodModelResults):
 
         Notes
         -----
-        .. math:: D=-2\\log\\left(\\frac{\\mathcal{L}_{null}}{\\mathcal{L}_{alternative}}\\right)
+
+        .. math:: D=-2\\log\\left(\\frac{\\mathcal{L}_{null}}
+        {\\mathcal{L}_{alternative}}\\right)
 
         where :math:`\mathcal{L}` is the likelihood of the model. With :math:`D`
         distributed as chisquare with df equal to difference in number of
@@ -1458,6 +1459,35 @@ strong multicollinearity or other numerical problems.''' % condno
             print('not available yet')
         elif returns == 'html':
             print('not available yet')
+
+class RegressionResultsWrapper(wrap.ResultsWrapper):
+
+    _attrs = {
+        'chisq' : 'columns',
+        'sresid' : 'rows',
+        'weights' : 'rows',
+        'wresid' : 'rows',
+        'bcov_unscaled' : 'cov',
+        'bcov_scaled' : 'cov',
+        'HC0_se' : 'columns',
+        'HC1_se' : 'columns',
+        'HC2_se' : 'columns',
+        'HC3_se' : 'columns'
+    }
+
+    _wrap_attrs = wrap.union_dicts(base.LikelihoodResultsWrapper._attrs,
+                                   _attrs)
+
+    _methods = {
+        'norm_resid' : 'rows',
+    }
+
+    _wrap_methods = wrap.union_dicts(
+                        base.LikelihoodResultsWrapper._wrap_methods,
+                        _methods)
+wrap.populate_wrapper(RegressionResultsWrapper,
+                      RegressionResults)
+
 
 if __name__ == "__main__":
     import scikits.statsmodels.api as sm

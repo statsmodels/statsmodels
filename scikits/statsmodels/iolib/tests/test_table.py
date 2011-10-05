@@ -151,8 +151,6 @@ stub R2 C2  40.95038  40.65765
 </table>
 """
             actual = '\n%s\n' % tbl.as_html()
-            print(actual)
-            print(desired)
             self.assertEqual(actual, desired)
 
 

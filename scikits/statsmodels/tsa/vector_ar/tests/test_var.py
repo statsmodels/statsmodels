@@ -523,7 +523,8 @@ class TestVARResultsLutkepohl(object):
         adj_data = np.diff(np.log(data), axis=0)
         # est = VAR(adj_data, p=2, dates=dates[1:], names=names)
 
-        self.model = VAR(adj_data[:-16], dates=dates[1:-16], names=names)
+        self.model = VAR(adj_data[:-16], dates=dates[1:-16], names=names,
+                freq='Q')
         self.res = self.model.fit(maxlags=self.p)
         self.irf = self.res.irf(10)
         self.lut = E1_Results()

@@ -14,19 +14,20 @@ R Venables, B Ripley. 'Modern Applied Statistics in S'  Springer, New York,
     2002.
 """
 import numpy as np
-from scikits.statsmodels.tools.tools import rank
-from scikits.statsmodels.regression.linear_model import WLS, GLS
-import norms
-import scale
-from scikits.statsmodels.base.model import (LikelihoodModel,
-        LikelihoodModelResults)
+import scipy.stats as stats
+
 from scikits.statsmodels.tools.decorators import (cache_readonly,
-        resettable_cache)
-from scipy.stats import norm
+                                                  resettable_cache)
+from scikits.statsmodels.tools.tools import rank
+import scikits.statsmodels.regression.linear_model as lm
+import scikits.statsmodels.robust.norms as norms
+import scikits.statsmodels.robust.scale as scale
+import scikits.statsmodels.base.model as base
+import scikits.statsmodels.base.wrapper as wrap
 
 __all__ = ['RLM']
 
-class RLM(LikelihoodModel):
+class RLM(base.LikelihoodModel):
     """
     Robust Linear Models
 
@@ -113,8 +114,7 @@ class RLM(LikelihoodModel):
 
     def __init__(self, endog, exog, M=norms.HuberT()):
         self.M = M
-        self.endog = np.asarray(endog)
-        self.exog = np.asarray(exog)
+        super(base.LikelihoodModel, self).__init__(endog, exog)
         self._initialize()
 
     def _initialize(self):
@@ -146,8 +146,8 @@ class RLM(LikelihoodModel):
         """
         Returns the (unnormalized) log-likelihood from the M estimator.
         """
-        return self.M((self.endog - tmp_results.fittedvalues)/\
-                    tmp_results.scale).sum()
+        return self.M((self.endog - tmp_results.fittedvalues) /
+                          tmp_results.scale).sum()
 
     def _update_history(self, tmp_results):
         self.history['deviance'].append(self.deviance(tmp_results))
@@ -227,7 +227,7 @@ class RLM(LikelihoodModel):
             raise ValueError("Convergence argument %s not understood" \
                 % conv)
         self.scale_est = scale_est
-        wls_results = WLS(self.endog, self.exog).fit()
+        wls_results = lm.WLS(self.endog, self.exog).fit()
         if not init:
             self.scale = self._estimate_scale(wls_results.resid)
         self._update_history(wls_results)
@@ -246,8 +246,8 @@ class RLM(LikelihoodModel):
 #            self.weights = self.M.weights((self.endog - \
 #                    wls_results.fittedvalues)/self.scale)
             self.weights = self.M.weights(wls_results.resid/self.scale)
-            wls_results = WLS(self.endog, self.exog,
-                                    weights=self.weights).fit()
+            wls_results = lm.WLS(self.endog, self.exog,
+                                 weights=self.weights).fit()
             if update_scale is True:
                 self.scale = self._estimate_scale(wls_results.resid)
             self._update_history(wls_results)
@@ -262,10 +262,9 @@ class RLM(LikelihoodModel):
         #doing the next causes exception
         #self.cov = self.scale_est = None #reset for additional fits
         #iteration and history could contain wrong state with repeated fit
+        return RLMResultsWrapper(results)
 
-        return results
-
-class RLMResults(LikelihoodModelResults):
+class RLMResults(base.LikelihoodModelResults):
     """
     Class to contain RLM results
 
@@ -418,7 +417,7 @@ class RLMResults(LikelihoodModelResults):
 
     @cache_readonly
     def pvalues(self):
-        return norm.sf(np.abs(self.tvalues))*2
+        return stats.norm.sf(np.abs(self.tvalues))*2
 
     @cache_readonly
     def bse(self):
@@ -489,6 +488,9 @@ parameters, then the fit options might not be the correct ones anymore .'''
 
         return smry
 
+class RLMResultsWrapper(lm.RegressionResultsWrapper):
+    pass
+wrap.populate_wrapper(RLMResultsWrapper, RLMResults)
 
 if __name__=="__main__":
 #NOTE: This is to be removed

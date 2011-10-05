@@ -21,17 +21,18 @@ McCullagh, P. and Nelder, J.A.  1989.  "Generalized Linear Models." 2nd ed.
 import numpy as np
 import families
 from scikits.statsmodels.tools.tools import rank
-from scikits.statsmodels.regression.linear_model import WLS
-from scikits.statsmodels.base.model import (LikelihoodModel,
-        LikelihoodModelResults)
 from scikits.statsmodels.tools.decorators import (cache_readonly,
         resettable_cache)
+
+import scikits.statsmodels.base.model as base
+import scikits.statsmodels.regression.linear_model as lm
+import scikits.statsmodels.base.wrapper as wrap
 
 from scipy.stats import t
 
 __all__ = ['GLM']
 
-class GLM(LikelihoodModel):
+class GLM(base.LikelihoodModel):
     '''
     Generalized Linear Models class
 
@@ -187,42 +188,42 @@ class GLM(LikelihoodModel):
     '''
 
     def __init__(self, endog, exog, family=None, offset=None, exposure=None):
-        endog = np.asarray(endog)
-        exog = np.asarray(exog)
-        if endog.shape[0] != len(exog):
-            msg = "Size of endog (%s) does not match the shape of exog (%s)"
-            raise ValueError(msg % (endog.size, len(exog)))
-        if family is None:
-            family = families.Gaussian()
-        if offset is not None:
-            offset = np.asarray(offset)
-            if offset.shape[0] != endog.shape[0]:
-                raise ValueError("offset is not the same length as endog")
-            self.offset = offset
-        if exposure is not None:
-            exposure = np.log(exposure)
-            if exposure.shape[0] != endog.shape[0]:
-                raise ValueError("exposure is not the same length as endog")
-            self.exposure = exposure
-        self.endog = endog
-        self.exog = exog
-        self.family = family
-        self.initialize()
-
+        super(GLM, self).__init__(endog, exog)
+        self._sanitize_inputs(family, offset, exposure)
 
     def initialize(self):
         """
         Initialize a generalized linear model.
         """
-#TODO: intended for public use?
-        self.history = { 'fittedvalues' : [], 'params' : [np.inf],
-                         'deviance' : [np.inf]}
+        #TODO: intended for public use?
+        self.history = {'fittedvalues' : [],
+                        'params' : [np.inf],
+                        'deviance' : [np.inf]}
+
         self.iteration = 0
         self.pinv_wexog = np.linalg.pinv(self.exog)
         self.normalized_cov_params = np.dot(self.pinv_wexog,
                                         np.transpose(self.pinv_wexog))
+
         self.df_model = rank(self.exog)-1
         self.df_resid = self.exog.shape[0] - rank(self.exog)
+
+    def _sanitize_inputs(self, family, offset, exposure):
+        if family is None:
+            family = families.Gaussian()
+        self.family = family
+
+        if offset is not None:
+            offset = np.asarray(offset)
+            if offset.shape[0] != self.endog.shape[0]:
+                raise ValueError("offset is not the same length as endog")
+            self.offset = offset
+
+        if exposure is not None:
+            exposure = np.log(exposure)
+            if exposure.shape[0] != self.endog.shape[0]:
+                raise ValueError("exposure is not the same length as endog")
+            self.exposure = exposure
 
     def score(self, params):
         """
@@ -395,8 +396,8 @@ returned a nan.  This could be a boundary problem and should be reported.")
                     self.iteration < maxiter):
             self.weights = data_weights*self.family.weights(mu)
             wlsendog = eta + self.family.link.deriv(mu) * (self.endog-mu) \
-                 - offset
-            wls_results = WLS(wlsendog, wlsexog, self.weights).fit()
+                - offset
+            wls_results = lm.WLS(wlsendog, wlsexog, self.weights).fit()
             eta = np.dot(self.exog, wls_results.params) + offset
             mu = self.family.fitted(eta)
             self._update_history(wls_results, mu)
@@ -404,10 +405,12 @@ returned a nan.  This could be a boundary problem and should be reported.")
             self.iteration += 1
         self.mu = mu
         glm_results = GLMResults(self, wls_results.params,
-                wls_results.normalized_cov_params, self.scale)
-        return glm_results
+                                 wls_results.normalized_cov_params,
+                                 self.scale)
+        self._results = glm_results
+        return GLMResultsWrapper(glm_results)
 
-class GLMResults(LikelihoodModelResults):
+class GLMResults(base.LikelihoodModelResults):
     '''
     Class to contain GLM results.
 
@@ -480,7 +483,7 @@ class GLMResults(LikelihoodModelResults):
         Working residuals.  The working residuals are defined as
         `resid_response`/link'(`mu`).  See statsmodels.family.links for the
         derivatives of the link functions.  They are defined analytically.
-    scale : array
+    scale : float
         The estimate of the scale / dispersion for the model fit.
         See GLM.fit and GLM.estimate_scale for more information.
     stand_errors : array
@@ -495,10 +498,6 @@ class GLMResults(LikelihoodModelResults):
     def __init__(self, model, params, normalized_cov_params, scale):
         super(GLMResults, self).__init__(model, params,
                 normalized_cov_params=normalized_cov_params, scale=scale)
-        self.model._results = self.model.results = self # TODO: get rid of this
-                                                      # since results isn't a
-                                                      # property for GLM
-        # above is needed for model.predict
         self.family = model.family
         self._endog = model.endog
         self.nobs = model.endog.shape[0]
@@ -553,16 +552,16 @@ class GLMResults(LikelihoodModelResults):
     def null(self):
         endog = self._endog
         model = self.model
-        exog = np.ones((len(endog),1))
+        exog = np.ones((len(endog), 1))
         if hasattr(model, 'offset'):
             return GLM(endog, exog, offset=model.offset,
-                family=self.family).fit().mu
+                       family=self.family).fit().mu
         elif hasattr(model, 'exposure'):
             return GLM(endog, exog, exposure=model.exposure,
                     family=self.family).fit().mu
         else:
-            return WLS(endog, exog,
-                weights=self._data_weights).fit().fittedvalues
+            wls_model = lm.WLS(endog, exog, weights=self._data_weights)
+            return wls_model.fit().fittedvalues
 
     @cache_readonly
     def deviance(self):
@@ -716,11 +715,11 @@ class GLMResults(LikelihoodModelResults):
         conf_int calculated from normal dist.
         """
         import time as Time
-        from scikits.statsmodels.iolib import SimpleTable
-        from scikits.statsmodels.stats.stattools import jarque_bera, omni_normtest, durbin_watson
+        from scikits.statsmodels.iolib.table import SimpleTable
+        from scikits.statsmodels.stats.stattools import (jarque_bera,
+                omni_normtest, durbin_watson)
 
-        if yname is None:
-            yname = 'Y'
+        yname = 'Y'
         if xname is None:
             xname = ['x%d' % i for i in range(self.model.exog.shape[1])]
 
@@ -899,6 +898,19 @@ class GLMResults(LikelihoodModelResults):
             print('not avalible yet')
         elif returns == html:
             print('not avalible yet')
+
+
+class GLMResultsWrapper(lm.RegressionResultsWrapper):
+    _attrs = {
+        'resid_anscombe' : 'rows',
+        'resid_deviance' : 'rows',
+        'resid_pearson' : 'rows',
+        'resid_response' : 'rows',
+        'resid_working' : 'rows'
+    }
+    _wrap_attrs = wrap.union_dicts(lm.RegressionResultsWrapper._wrap_attrs,
+                                   _attrs)
+wrap.populate_wrapper(GLMResultsWrapper, GLMResults)
 
 if __name__ == "__main__":
     import scikits.statsmodels.api as sm

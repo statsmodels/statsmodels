@@ -46,8 +46,8 @@ class Contrast(object):
     This class is used to construct contrast matrices in regression models.
 
     They are specified by a (term, design) pair.  The term, T, is a linear
-    combination of columns of the design matrix. The matrix attribute of Contrast
-    is a contrast matrix C so that
+    combination of columns of the design matrix. The matrix attribute of
+    Contrast is a contrast matrix C so that
 
     colspan(dot(D, C)) = colspan(dot(D, dot(pinv(D), T)))
 

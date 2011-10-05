@@ -453,6 +453,93 @@ def commutation_matrix(p, q):
     indices = np.arange(p * q).reshape((p, q), order='F')
     return K.take(indices.ravel(), axis=0)
 
+def _ar_transparams(params):
+    """
+    Transforms params to induce stationarity/invertability.
+
+    Parameters
+    ----------
+    params : array
+        The AR coefficients
+
+    Reference
+    ---------
+    Jones(1980)
+    """
+    newparams = ((1-np.exp(-params))/
+                (1+np.exp(-params))).copy()
+    tmp = ((1-np.exp(-params))/
+               (1+np.exp(-params))).copy()
+    for j in range(1,len(params)):
+        a = newparams[j]
+        for kiter in range(j):
+            tmp[kiter] -= a * newparams[j-kiter-1]
+        newparams[:j] = tmp[:j]
+    return newparams
+
+def _ar_invtransparams(params):
+    """
+    Inverse of the Jones reparameterization
+
+    Parameters
+    ----------
+    params : array
+        The transformed AR coefficients
+    """
+    # AR coeffs
+    tmp = params.copy()
+    for j in range(len(params)-1,0,-1):
+        a = params[j]
+        for kiter in range(j):
+            tmp[kiter] = (params[kiter] + a * params[j-kiter-1])/\
+                    (1-a**2)
+        params[:j] = tmp[:j]
+    invarcoefs = -np.log((1-params)/(1+params))
+    return invarcoefs
+
+def _ma_transparams(params):
+    """
+    Transforms params to induce stationarity/invertability.
+
+    Parameters
+    ----------
+    params : array
+        The ma coeffecients of an (AR)MA model.
+
+    Reference
+    ---------
+    Jones(1980)
+    """
+    newparams = ((1-np.exp(-params))/(1+np.exp(-params))).copy()
+    tmp = ((1-np.exp(-params))/(1+np.exp(-params))).copy()
+
+    # levinson-durbin to get macf
+    for j in range(1,len(params)):
+        b = newparams[j]
+        for kiter in range(j):
+            tmp[kiter] += b * newparams[j-kiter-1]
+        newparams[:j] = tmp[:j]
+    return newparams
+
+def _ma_invtransparams(macoefs):
+    """
+    Inverse of the Jones reparameterization
+
+    Parameters
+    ----------
+    params : array
+        The transformed MA coefficients
+    """
+    tmp = macoefs.copy()
+    for j in range(len(macoefs)-1,0,-1):
+        b = macoefs[j]
+        for kiter in range(j):
+            tmp[kiter] = (macoefs[kiter]-b *macoefs[j-kiter-1])/(1-b**2)
+        macoefs[:j] = tmp[:j]
+    invmacoefs = -np.log((1-macoefs)/(1+macoefs))
+    return invmacoefs
+
+
 __all__ = ['lagmat', 'lagmat2ds','add_trend', 'duplication_matrix',
            'elimination_matrix', 'commutation_matrix',
            'vec', 'vech', 'unvec', 'unvech']

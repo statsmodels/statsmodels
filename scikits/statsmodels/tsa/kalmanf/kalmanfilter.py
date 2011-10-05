@@ -570,62 +570,24 @@ class KalmanFilter(object):
         return arr
 
     @classmethod
-    def loglike(cls, params, arma_model):
+    def geterrors(cls, y, k, k_ar, k_ma, k_lags, nobs, Z_mat, m, R_mat, T_mat,
+                  paramsdtype):
         """
-        The loglikelihood for an ARMA model using the Kalman Filter recursions.
+        Returns just the errors of the Kalman Filter
 
-        Parameters
-        ----------
-        params : array
-            The coefficients of the ARMA model, assumed to be in the order of
-            trend variables and `k` exogenous coefficients, the `p` AR
-            coefficients, then the `q` MA coefficients.
-        arma_model : `scikits.statsmodels.tsa.arima.ARMA` instance
-            A reference to the ARMA model instance.
-
-        Notes
-        -----
-        This works for both real valued and complex valued parameters. The
-        complex values being used to compute the numerical derivative. If
-        available will use a Cython version of the Kalman Filter.
+        Note that if fast_kalman isn't available this returns the errors,
+        F, and loglikelihood for use in loglike.
         """
-        #TODO: see section 3.4.6 in Harvey for computing the derivatives in the
-        # recursion itself.
-        #TODO: this won't work for time-varying parameters
-        paramsdtype = params.dtype
-        y = arma_model.endog.copy().astype(paramsdtype)
-        k = arma_model.k_exog + arma_model.k_trend
-        nobs = arma_model.nobs
-        k_ar = arma_model.k_ar
-        k_ma = arma_model.k_ma
-        k_lags = arma_model.k_lags
-
-        if arma_model.transparams:
-            newparams = arma_model._transparams(params)
-        else:
-            newparams = params  # don't need a copy if not modified.
-
-        if k > 0:
-            y -= dot(arma_model.exog, newparams[:k])
-
-        # system matrices
-        Z_mat = KalmanFilter.Z(k_lags)
-        m = Z_mat.shape[1] # r
-        R_mat = KalmanFilter.R(newparams, k_lags, k, k_ma, k_ar)
-        T_mat = KalmanFilter.T(newparams, k_lags, k, k_ar)
-
         if fast_kalman:
             if issubdtype(paramsdtype, float):
-                loglike, sigma2 =  kalman_loglike.kalman_loglike_double(y, k,
-                                        k_ar, k_ma, k_lags, int(nobs), Z_mat,
-                                        R_mat, T_mat)
+                return kalman_loglike.kalman_filter_double(y, k, k_ar, k_ma,
+                                    k_lags, int(nobs), Z_mat, R_mat, T_mat)[0]
             elif issubdtype(paramsdtype, complex):
-                loglike, sigma2 =  kalman_loglike.kalman_loglike_complex(y, k,
-                                        k_ar, k_ma, k_lags, int(nobs), Z_mat,
-                                        R_mat, T_mat)
+                return kalman_loglike.kalman_filter_complex(y, k, k_ar, k_ma,
+                                    k_lags, int(nobs), Z_mat, R_mat, T_mat)[0]
             else:
-                raise TypeError("This dtype %s is not supported\n\
-Please files a bug report." % paramsdtype)
+                raise TypeError("dtype %s is not supported "
+                                "Please file a bug report" % paramsdtype)
         else:
             # initial state and its variance
             alpha = zeros((m,1)) # if constant (I-T)**-1 * c
@@ -665,6 +627,79 @@ Please files a bug report." % paramsdtype)
                 v_mat = y[i] - dot(Z_mat, alpha)
                 v[i] = v_mat
                 alpha = dot(T_mat, alpha) + dot(K, v_mat)
+        return v, F, loglikelihood
+
+    @classmethod
+    def _init_kalman_state(cls, params, arma_model):
+        """
+        Returns the system matrices and other info needed for the
+        Kalman Filter recursions
+        """
+        paramsdtype = params.dtype
+        y = arma_model.endog.copy().astype(paramsdtype)
+        k = arma_model.k_exog + arma_model.k_trend
+        nobs = arma_model.nobs
+        k_ar = arma_model.k_ar
+        k_ma = arma_model.k_ma
+        k_lags = arma_model.k_lags
+
+        if arma_model.transparams:
+            newparams = arma_model._transparams(params)
+        else:
+            newparams = params  # don't need a copy if not modified.
+
+        if k > 0:
+            y -= dot(arma_model.exog, newparams[:k])
+
+        # system matrices
+        Z_mat = cls.Z(k_lags)
+        m = Z_mat.shape[1] # r
+        R_mat = cls.R(newparams, k_lags, k, k_ma, k_ar)
+        T_mat = cls.T(newparams, k_lags, k, k_ar)
+        return (y, k, nobs, k_ar, k_ma, k_lags,
+               newparams, Z_mat, m, R_mat, T_mat, paramsdtype)
+
+    @classmethod
+    def loglike(cls, params, arma_model):
+        """
+        The loglikelihood for an ARMA model using the Kalman Filter recursions.
+
+        Parameters
+        ----------
+        params : array
+            The coefficients of the ARMA model, assumed to be in the order of
+            trend variables and `k` exogenous coefficients, the `p` AR
+            coefficients, then the `q` MA coefficients.
+        arma_model : `scikits.statsmodels.tsa.arima.ARMA` instance
+            A reference to the ARMA model instance.
+
+        Notes
+        -----
+        This works for both real valued and complex valued parameters. The
+        complex values being used to compute the numerical derivative. If
+        available will use a Cython version of the Kalman Filter.
+        """
+        #TODO: see section 3.4.6 in Harvey for computing the derivatives in the
+        # recursion itself.
+        #TODO: this won't work for time-varying parameters
+        (y, k, nobs, k_ar, k_ma, k_lags, newparams, Z_mat, m, R_mat, T_mat,
+                paramsdtype) = cls._init_kalman_state(params, arma_model)
+
+        if fast_kalman:
+            if issubdtype(paramsdtype, float):
+                loglike, sigma2 =  kalman_loglike.kalman_loglike_double(y, k,
+                                        k_ar, k_ma, k_lags, int(nobs), Z_mat,
+                                        R_mat, T_mat)
+            elif issubdtype(paramsdtype, complex):
+                loglike, sigma2 =  kalman_loglike.kalman_loglike_complex(y, k,
+                                        k_ar, k_ma, k_lags, int(nobs), Z_mat,
+                                        R_mat, T_mat)
+            else:
+                raise TypeError("This dtype %s is not supported "
+                                " Please files a bug report." % paramsdtype)
+        else:
+            v,F, loglikelihood = cls.geterrors(y, k, k_ar, k_ma, k_lags, nobs,
+                Z_mat, m, R_mat, T_mat, paramsdtype)
             sigma2 = 1./nobs * np.sum(v**2 / F)
             loglike = -.5 *(loglikelihood + nobs*log(sigma2))
             loglike -= nobs/2. * (log(2*pi) + 1)

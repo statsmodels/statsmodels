@@ -28,8 +28,8 @@ import scikits.statsmodels.tsa.tsatools as tsa
 import scikits.statsmodels.tsa.vector_ar.output as output
 import scikits.statsmodels.tsa.vector_ar.plotting as plotting
 import scikits.statsmodels.tsa.vector_ar.util as util
-
-import scikits.statsmodels.tools.data as data_util
+import scikits.statsmodels.tsa.base.tsa_model as tsbase
+import scikits.statsmodels.base.wrapper as wrap
 
 mat = np.array
 
@@ -309,7 +309,7 @@ def _reordered(self, order):
 #-------------------------------------------------------------------------------
 # VARProcess class: for known or unknown VAR process
 
-class VAR(object):
+class VAR(tsbase.TimeSeriesModel):
     r"""
     Fit VAR(p) process and do lag order selection
 
@@ -332,12 +332,61 @@ class VAR(object):
     -------
     .fit() method returns VARResults object
     """
-    def __init__(self, endog, names=None, dates=None):
-        (self.endog, self.names,
-         self.dates) = data_util.interpret_data(endog, names, dates)
-
+    def __init__(self, endog, dates=None, names=None, freq=None):
+        super(VAR, self).__init__(endog, None, dates, freq)
+        if names is not None:
+            import warnings
+            warnings.warn("The names argument is deprecated and will be "
+                    "removed in the next release.", FutureWarning)
+            self.names = names
+        else:
+            self.names = self.endog_names
         self.y = self.endog #keep alias for now
         self.neqs = self.endog.shape[1]
+
+    def _get_predict_start(self, start, k_ar):
+        if start is None:
+            start = k_ar
+        return super(VAR, self)._get_predict_start(start)
+
+    def predict(self, params, start=None, end=None, lags=1, trend='c'):
+        """
+        Returns in-sample predictions or forecasts
+        """
+        start = self._get_predict_start(start, lags)
+        end, out_of_sample = self._get_predict_end(end)
+
+        if end < start:
+            raise ValueError("end is before start")
+        if end == start + out_of_sample:
+            return np.array([])
+
+        k_trend = util.get_trendorder(trend)
+        k = self.neqs
+        k_ar = lags
+
+        predictedvalues = np.zeros((end + 1 - start + out_of_sample, k))
+        if k_trend != 0:
+            intercept = params[:k_trend]
+            predictedvalues += intercept
+
+        y = self.y
+        X = util.get_var_endog(y, lags, trend=trend)
+        fittedvalues = np.dot(X, params)
+
+        fv_start = start - k_ar
+        pv_end = min(len(predictedvalues), len(fittedvalues) - fv_start)
+        fv_end = min(len(fittedvalues), end-k_ar+1)
+        predictedvalues[:pv_end] = fittedvalues[fv_start:fv_end]
+
+        if not out_of_sample:
+            return predictedvalues
+
+        # fit out of sample
+        y = y[-k_ar:]
+        coefs = params[k_trend:].reshape((k_ar, k, k)).swapaxes(1,2)
+        predictedvalues[pv_end:] = forecast(y, coefs, intercept, out_of_sample)
+        return predictedvalues
 
     def fit(self, maxlags=None, method='ols', ic=None, trend='c',
             verbose=False):
@@ -388,6 +437,8 @@ class VAR(object):
             if lags is None:
                 lags = 1
 
+        k_trend = util.get_trendorder(trend)
+        self.exog_names = util.make_lag_names(self.endog_names, lags, k_trend)
         self.nobs = len(self.endog) - lags
 
         return self._estimate_var(lags, trend=trend)
@@ -401,7 +452,8 @@ class VAR(object):
         trend : string or None
             As per above
         """
-        k_trend = util.get_trendorder(trend) #NOTE: trendorder should be polynomial order
+        # have to do this again because select_order doesn't call fit
+        self.k_trend = k_trend = util.get_trendorder(trend)
 
         if offset < 0: # pragma: no cover
             raise ValueError('offset must be >= 0')
@@ -430,8 +482,9 @@ class VAR(object):
         sse = np.dot(resid.T, resid)
         omega = sse / df_resid
 
-        return VARResults(y, z, params, omega, lags, names=self.names,
-                          trend=trend, dates=self.dates, model=self)
+        varfit = VARResults(y, z, params, omega, lags, names=self.endog_names,
+                          trend=trend, dates=self._data.dates, model=self)
+        return VARResultsWrapper(varfit)
 
     def select_order(self, maxlags=None, verbose=True):
         """
@@ -755,6 +808,11 @@ class VARResults(VARProcess):
     names : list
         variables names
     resid
+    roots : array
+        The roots of the VAR process are the solution to
+        (I - coefs[0]*z - coefs[1]*z**2 ... - coefs[p-1]*z**k_ar) = 0.
+        Note that the inverse roots are returned, and stability requires that
+        the roots lie outside the unit circle.
     sigma_u : ndarray (K x K)
         Estimate of white noise process variance Var[u_t]
     sigma_u_mle
@@ -784,7 +842,9 @@ class VARResults(VARProcess):
         self.k_trend = k_trend
         self.trendorder = trendorder
 
-        self.coef_names = util.make_lag_names(names, lag_order, k_trend)
+        #TODO: deprecate coef_names
+        self.coef_names = self.exog_names = util.make_lag_names(names,
+                                                lag_order, k_trend)
         self.params = params
 
         # Initialize VARProcess parent class
@@ -1357,6 +1417,32 @@ class VARResults(VARProcess):
     def bic(self):
         "Bayesian a.k.a. Schwarz info criterion"
         return self.info_criteria['bic']
+
+    @cache_readonly
+    def roots(self):
+        neqs = self.neqs
+        k_ar = self.k_ar
+        p = neqs * k_ar
+        arr = np.zeros((p,p))
+        arr[:neqs,:] = np.column_stack(self.coefs)
+        arr[neqs:,:-neqs] = np.eye(p-neqs)
+        roots = np.linalg.eig(arr)[0]**-1
+        idx = np.argsort(np.abs(roots))[::-1] # sort by reverse modulus
+        return roots[idx]
+
+class VARResultsWrapper(wrap.ResultsWrapper):
+    _attrs = {'bse' : 'columns_eq', 'cov_params' : 'cov',
+              'params' : 'columns_eq', 'pvalues' : 'columns_eq',
+              'tvalues' : 'columns_eq', 'sigma_u' : 'cov_eq',
+              'sigma_u_mle' : 'cov_eq',
+              'stderr' : 'columns_eq'}
+    _wrap_attrs = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_attrs,
+                                    _attrs)
+    _methods = {}
+    _wrap_methods = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_methods,
+                                     _methods)
+    _wrap_methods.pop('cov_params') # not yet a method in VARResults
+wrap.populate_wrapper(VARResultsWrapper, VARResults)
 
 class FEVD(object):
     """

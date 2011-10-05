@@ -45,28 +45,28 @@ class TestAROLSConstant(CheckAR):
                 DECIMAL_4)
         assert_almost_equal(model.predict(params),self.res2.FVOLSnneg1start9,
                 DECIMAL_4)
-        assert_almost_equal(model.predict(params, n=-1,start=100),
+        assert_almost_equal(model.predict(params, start=100),
                 self.res2.FVOLSnneg1start100, DECIMAL_4)
-        assert_almost_equal(model.predict(params, n=200,start=0),
+        assert_almost_equal(model.predict(params, start=9, end=200),
                 self.res2.FVOLSn200start0, DECIMAL_4)
-        assert_almost_equal(model.predict(params, n=200,start=200),
+        assert_almost_equal(model.predict(params, start=200, end=400),
                 self.res2.FVOLSn200start200, DECIMAL_4)
-        assert_almost_equal(model.predict(params, n=200,start=-109),
-                self.res2.FVOLSn200startneg109, DECIMAL_4)
-        assert_almost_equal(model.predict(params, n=100,start=325),
+        #assert_almost_equal(model.predict(params, n=200,start=-109),
+        #        self.res2.FVOLSn200startneg109, DECIMAL_4)
+        assert_almost_equal(model.predict(params, start=308, end=424),
                 self.res2.FVOLSn100start325, DECIMAL_4)
-        assert_almost_equal(model.predict(params, n=301,start=9),
+        assert_almost_equal(model.predict(params, start=9, end=310),
                 self.res2.FVOLSn301start9, DECIMAL_4)
-        assert_almost_equal(model.predict(params, n=301,start=0),
-                self.res2.FVOLSn301start0, DECIMAL_4)
-        assert_almost_equal(model.predict(params, n=4,start=312),
+        assert_almost_equal(model.predict(params),
+                self.res2.FVOLSdefault, DECIMAL_4)
+        assert_almost_equal(model.predict(params, start=308, end=316),
                 self.res2.FVOLSn4start312, DECIMAL_4)
-        assert_almost_equal(model.predict(params, n=15,start=312),
+        assert_almost_equal(model.predict(params, start=308, end=327),
                 self.res2.FVOLSn15start312, DECIMAL_4)
 
 
 class TestAROLSNoConstant(CheckAR):
-    """
+    """f
     Test AR fit by OLS without a constant.
     """
     @classmethod
@@ -82,30 +82,56 @@ class TestAROLSNoConstant(CheckAR):
                 DECIMAL_4)
         assert_almost_equal(model.predict(params),self.res2.FVOLSnneg1start9,
                 DECIMAL_4)
-        assert_almost_equal(model.predict(params, n=-1,start=100),
+        assert_almost_equal(model.predict(params, start=100),
                 self.res2.FVOLSnneg1start100, DECIMAL_4)
-        assert_almost_equal(model.predict(params, n=200,start=0),
+        assert_almost_equal(model.predict(params, start=9, end=200),
                 self.res2.FVOLSn200start0, DECIMAL_4)
-        assert_almost_equal(model.predict(params, n=200,start=200),
+        assert_almost_equal(model.predict(params, start=200, end=400),
                 self.res2.FVOLSn200start200, DECIMAL_4)
-        assert_almost_equal(model.predict(params, n=200,start=-109),
-                self.res2.FVOLSn200startneg109, DECIMAL_4)
-        assert_almost_equal(model.predict(params, n=100,start=325),
+        #assert_almost_equal(model.predict(params, n=200,start=-109),
+        #        self.res2.FVOLSn200startneg109, DECIMAL_4)
+        assert_almost_equal(model.predict(params, start=308,end=424),
                 self.res2.FVOLSn100start325, DECIMAL_4)
-        assert_almost_equal(model.predict(params, n=301,start=9),
+        assert_almost_equal(model.predict(params, start=9, end=310),
                 self.res2.FVOLSn301start9, DECIMAL_4)
-        assert_almost_equal(model.predict(params, n=301,start=0),
-                self.res2.FVOLSn301start0, DECIMAL_4)
-        assert_almost_equal(model.predict(params, n=4,start=312),
+        assert_almost_equal(model.predict(params),
+                self.res2.FVOLSdefault, DECIMAL_4)
+        assert_almost_equal(model.predict(params, start=308, end=316),
                 self.res2.FVOLSn4start312, DECIMAL_4)
-        assert_almost_equal(model.predict(params, n=15,start=312),
+        assert_almost_equal(model.predict(params, start=308, end=327),
                 self.res2.FVOLSn15start312, DECIMAL_4)
 
-#class TestARMLEConstant(CheckAR):
-#    @classmethod
-#    def setupClass(cls):
-#        data = sm.datasets.sunspots.load()
-#        cls.res1 = AR(data.endog).fit(maxlag=9,method="mle", disp=0)
+        #class TestARMLEConstant(CheckAR):
+class TestARMLEConstant(object):
+    @classmethod
+    def setupClass(cls):
+        data = sm.datasets.sunspots.load()
+        cls.res1 = AR(data.endog).fit(maxlag=9,method="mle", disp=-1)
+        cls.res2 = results_ar.ARResultsMLE(constant=True)
+
+    def test_predict(self):
+        model = self.res1.model
+        params = self.res1.params
+        assert_almost_equal(model.predict(params), self.res2.FVMLEdefault,
+                DECIMAL_4)
+        assert_almost_equal(model.predict(params, start=9, end=308),
+                self.res2.FVMLEstart9end308, DECIMAL_4)
+        assert_almost_equal(model.predict(params, start=100, end=308),
+                self.res2.FVMLEstart100end308, DECIMAL_4)
+        assert_almost_equal(model.predict(params, start=0, end=200),
+                self.res2.FVMLEstart0end200, DECIMAL_4)
+        assert_almost_equal(model.predict(params, start=200, end=333),
+                self.res2.FVMLEstart200end334, DECIMAL_4)
+        assert_almost_equal(model.predict(params, start=308, end=333),
+                self.res2.FVMLEstart308end334, DECIMAL_4)
+        assert_almost_equal(model.predict(params, start=9,end=309),
+                self.res2.FVMLEstart9end309, DECIMAL_4)
+        assert_almost_equal(model.predict(params, end=301),
+                self.res2.FVMLEstart0end301, DECIMAL_4)
+        assert_almost_equal(model.predict(params, start=4, end=312),
+                self.res2.FVMLEstart4end312, DECIMAL_4)
+        assert_almost_equal(model.predict(params, start=2, end=7),
+                self.res2.FVMLEstart2end7, DECIMAL_4)
 
 class TestAutolagAR(object):
     @classmethod
