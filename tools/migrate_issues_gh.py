@@ -213,7 +213,7 @@ launchpad = Launchpad.login_with('statsmodels', 'production')
 project = launchpad.projects[PROJECT_NAME]
 # Note: by default, this will give us all bugs except duplicates and those
 # with status "won't fix" or 'invalid'
-bug_tasks = project.searchTasks()
+bug_tasks = project.searchTasks(status=lp_status)
 
 bugs = {}
 for bt in list(bug_tasks):
@@ -258,13 +258,14 @@ def format_message(num, m):
 
 # Config
 user = 'wesm'
-token= 'YOUR TOKEN HERE'
+token= '12efaff85b8e17f63ee835c5632b8cf0'
 
-repo = 'statsmodels/BugsTest'
+repo = 'statsmodels/statsmodels'
 #repo = 'ipython/ipython'
 
 # Skip bugs with this status:
-to_skip = set([u'fix_committed', u'incomplete'])
+# to_skip = set([u'fix_committed', u'incomplete'])
+to_skip = set()
 
 # Only label these importance levels:
 gh_importances = set([u'critical', u'high', u'low', u'medium', u'wishlist'])
@@ -346,6 +347,9 @@ for n, bug_id in enumerate(bids):
         comment = format_message(num+1, message)
         gh.issues.comment(repo, issue.number, comment)
         time.sleep(0.5) # soft sleep after each message to prevent gh block
+
+    if bug.status in ['fix_committed', 'fix_released', 'invalid']:
+        gh.issues.close(repo, issue.number)
 
     # too many fast requests and gh will block us, so sleep for a while
     # I just eyeballed these values by trial and error.
