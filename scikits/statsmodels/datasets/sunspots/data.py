@@ -29,6 +29,8 @@ The data file contains a 'YEAR' variable that is not returned by load.
 """
 
 from numpy import recfromtxt, column_stack, array
+from pandas import Series
+
 from scikits.statsmodels.tools import Dataset
 from os.path import dirname, abspath
 
@@ -47,13 +49,23 @@ def load():
     data, raw_data, and endog are all the same variable.  There is no exog
     attribute defined.
     """
-    filepath = dirname(abspath(__file__))
-    data = recfromtxt(open(filepath + '/sunspots.csv', 'rb'), delimiter=",",
-            names=True, dtype=float, usecols=(1))
-    names = list(data.dtype.names)
-    endog = array(data[names[0]], dtype=float)
-    endog_name = names
-    dataset = Dataset(data=data, names=names, endog=endog,
-            endog_name=endog_name)
+    data = _get_data()
+    endog_name = 'SUNACTIVITY'
+    endog = array(data[endog_name], dtype=float)
+    dataset = Dataset(data=data, names=[endog_name], endog=endog,
+                      endog_name=endog_name)
     return dataset
 
+def load_pandas():
+    data = _get_data()
+    # TODO: time series
+    endog = Series(data['SUNACTIVITY'], index=data['YEAR'].astype(int))
+    dataset = Dataset(data=data, names=list(data.dtype.names),
+                      endog=endog, endog_name='volume')
+    return dataset
+
+def _get_data():
+    filepath = dirname(abspath(__file__))
+    data = recfromtxt(open(filepath + '/sunspots.csv', 'rb'), delimiter=",",
+            names=True, dtype=float)
+    return data

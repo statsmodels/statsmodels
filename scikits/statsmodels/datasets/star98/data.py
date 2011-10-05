@@ -65,7 +65,7 @@ Definition of variables names::
 """
 
 from numpy import recfromtxt, column_stack, array
-from scikits.statsmodels.tools import Dataset
+import scikits.statsmodels.tools.datautils as du
 from os.path import dirname, abspath
 
 def load():
@@ -77,6 +77,15 @@ def load():
     Load instance:
         a class of the data with array attrbutes 'endog' and 'exog'
     """
+    data = _get_data()
+    return du.process_recarray(data, endog_idx=[0, 1], dtype=float)
+
+def load_pandas():
+    data = _get_data()
+    return du.process_recarray_pandas(data, endog_idx=['NABOVE', 'NBELOW'],
+                                      dtype=float)
+
+def _get_data():
     filepath = dirname(abspath(__file__))
 ##### EDIT THE FOLLOWING TO POINT TO DatasetName.csv #####
     names = ["NABOVE","NBELOW","LOWINC","PERASIAN","PERBLACK","PERHISP",
@@ -86,15 +95,10 @@ def load():
             "PERMINTE_AVYRSEXP_AVSAL","PERSPEN_PTRATIO_PCTAF"]
     data = recfromtxt(open(filepath + '/star98.csv',"rb"), delimiter=",",
             names=names, skip_header=1, dtype=float)
-    names = list(data.dtype.names)
-    # endog = (successes, failures)
-    NABOVE = array(data[names[1]]).astype(float) # successes
-    NBELOW = array(data[names[0]]).astype(float) \
-                - array(data[names[1]]).astype(float) # now its failures
-    endog = column_stack((NABOVE,NBELOW))
-    endog_name = names[:2]
-    exog = column_stack(data[i] for i in names[2:]).astype(float)
-    exog_name = names[2:]
-    dataset = Dataset(data=data, names=names, endog=endog, exog=exog,
-            endog_name = endog_name, exog_name=exog_name)
-    return dataset
+    nabove = data['NABOVE'].copy()
+    nbelow = data['NBELOW'].copy()
+
+    data['NABOVE'] = nbelow # successes
+    data['NBELOW'] = nbelow - nabove # now failures
+
+    return data

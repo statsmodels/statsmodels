@@ -26,6 +26,8 @@ Any other useful information that does not fit into the above categories.
 """
 
 from numpy import recfromtxt, column_stack, array
+from pandas import Series
+
 from scikits.statsmodels.tools import Dataset
 from os.path import dirname, abspath
 
@@ -38,17 +40,23 @@ def load():
     Dataset instance:
         See DATASET_PROPOSAL.txt for more information.
     """
-    filepath = dirname(abspath(__file__))
-##### EDIT THE FOLLOWING TO POINT TO DatasetName.csv #####
-    data = recfromtxt(open(filepath + '/nile.csv', 'rb'), delimiter=",",
-            names=True, dtype=float, usecols=(1))
     names = list(data.dtype.names)
-##### SET THE INDEX #####
-    endog = array(data[names[0]], dtype=float)
-    endog_name = names[0]
-##### SET THE INDEX #####
-#    exog = column_stack(data[i] for i in names[1:]).astype(float)
-#    exog_name = names[1:]
-    dataset = Dataset(data=data, names=names, endog=endog,
-            endog_name = endog_name)
+    endog_name = 'volume'
+    endog = array(data[endog_name], dtype=float)
+    dataset = Dataset(data=data, names=[endog_name], endog=endog,
+                      endog_name = endog_name)
     return dataset
+
+def load_pandas():
+    data = _get_data()
+    # TODO: time series
+    endog = Series(data['volume'], index=data['year'].astype(int))
+    dataset = Dataset(data=data, names=list(data.dtype.names),
+                      endog=endog, endog_name='volume')
+    return dataset
+
+def _get_data():
+    filepath = dirname(abspath(__file__))
+    data = recfromtxt(open(filepath + '/nile.csv', 'rb'), delimiter=",",
+            names=True, dtype=float)
+    return data

@@ -47,8 +47,10 @@ Variable name definitions::
 """
 
 from numpy import recfromtxt, column_stack, array
-from scikits.statsmodels.tools import Dataset
+import scikits.statsmodels.tools.datautils as du
 from os.path import dirname, abspath
+
+PATH = '%s/%s' % (dirname(abspath(__file__)), 'randhie.csv')
 
 def load():
     """
@@ -62,15 +64,26 @@ def load():
     Load instance:
         a class of the data with array attrbutes 'endog' and 'exog'
     """
+    data = _get_data()
+    return du.process_recarray(data, endog_idx=0, dtype=float)
+
+def load_pandas():
+    """
+    Loads the RAND HIE data and returns a Dataset class.
+
+    ----------
+    endog - structured array of response variable, mdvis
+    exog - strucutured array of design
+
+    Returns
+    Load instance:
+        a class of the data with array attrbutes 'endog' and 'exog'
+    """
+    from pandas import read_csv
+    data = read_csv(PATH)
+    return du.process_recarray_pandas(data, endog_idx=0)
+
+def _get_data():
     filepath = dirname(abspath(__file__))
-##### EDIT THE FOLLOWING TO POINT TO DatasetName.csv #####
-    data = recfromtxt(open(filepath + '/randhie.csv',"rb"), delimiter=",",
-            names=True, dtype=float)
-    names = list(data.dtype.names)
-    endog = array(data[names[0]]).astype(float)
-    endog_name = names[0]
-    exog = data[list(names[1:])]
-    exog_name = names[1:]
-    dataset = Dataset(data=data, names=names, endog=endog, exog=exog,
-            endog_name = endog_name, exog_name=exog_name)
-    return dataset
+    data = recfromtxt(open(PATH, "rb"), delimiter=",", names=True, dtype=float)
+    return data

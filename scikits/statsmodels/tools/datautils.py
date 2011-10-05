@@ -21,24 +21,41 @@ class Dataset(dict):
 
 def process_recarray(data, endog_idx=0, dtype=None):
     names = list(data.dtype.names)
-    endog = array(data[names[0]], dtype=dtype)
-    endog_name = names[0]
 
-    exog = column_stack(data[i] for i in names[1:])
+    if isinstance(endog_idx, int):
+        endog = array(data[names[endog_idx]], dtype=dtype)
+        endog_name = names[endog_idx]
+        endog_idx = [endog_idx]
+    else:
+        endog_name = [names[i] for i in endog_idx]
+        endog = np.column_stack(data[field] for field in endog_name)
+
+    exog_name = [names[i] for i in xrange(len(names))
+                 if i not in endog_idx]
+
+    exog = np.column_stack(data[field] for field in exog_name)
+
     if dtype:
-        exog = exog.astype(float)
+        endog = endog.astype(dtype)
+        exog = exog.astype(dtype)
 
-    exog_name = names[1:]
     dataset = Dataset(data=data, names=names, endog=endog, exog=exog,
                       endog_name=endog_name, exog_name=exog_name)
 
     return dataset
 
 def process_recarray_pandas(data, endog_idx=0, dtype=None):
-    names = list(data.dtype.names)
-    endog_name = names[endog_idx]
     exog = DataFrame(data, dtype=dtype)
-    endog = exog.pop(endog_name)
+    names = list(exog.columns)
+
+    if isinstance(endog_idx, int):
+        endog_name = names[endog_idx]
+        endog = exog.pop(endog_name)
+    else:
+        endog = exog.ix[:, endog_idx]
+        endog_name = list(endog.columns)
+        exog = exog.drop(endog_name, axis=1)
+
     exog_name = list(exog.columns)
     dataset = Dataset(data=data, names=names, endog=endog, exog=exog,
                       endog_name = endog_name, exog_name=exog_name)
