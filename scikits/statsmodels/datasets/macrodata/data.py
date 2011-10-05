@@ -57,6 +57,8 @@ Variable name definitions::
 """
 
 from numpy import recfromtxt, column_stack, array
+from pandas import DataFrame
+
 from scikits.statsmodels.tools import Dataset
 from os.path import dirname, abspath
 
@@ -73,9 +75,18 @@ def load():
     -----
     The macrodata Dataset instance does not contain endog and exog attributes.
     """
-    filepath = dirname(abspath(__file__))
-    data = recfromtxt(open(filepath + '/macrodata.csv', 'rb'), delimiter=",", names=True,
-            dtype=float)
+    data = _get_data()
     names = data.dtype.names
     dataset = Dataset(data=data, names=names)
     return dataset
+
+def load_pandas():
+    dataset = load()
+    dataset.data = DataFrame(dataset.data)
+    return dataset
+
+def _get_data():
+    filepath = dirname(abspath(__file__))
+    data = recfromtxt(open(filepath + '/macrodata.csv', 'rb'), delimiter=",",
+                      names=True, dtype=float)
+    return data
