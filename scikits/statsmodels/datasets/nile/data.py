@@ -26,7 +26,7 @@ Any other useful information that does not fit into the above categories.
 """
 
 from numpy import recfromtxt, column_stack, array
-from scikits.statsmodels.datasets import Dataset
+from scikits.statsmodels.tools import Dataset
 from os.path import dirname, abspath
 
 def load():

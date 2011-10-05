@@ -27,7 +27,7 @@ Variable name definitions - See Source for more information on the variables.
 """
 
 from numpy import recfromtxt, column_stack, array
-from scikits.statsmodels.datasets import Dataset
+from scikits.statsmodels.tools.datautils import Dataset
 from os.path import dirname, abspath
 
 def load():
