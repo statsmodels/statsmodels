@@ -283,7 +283,7 @@ class TestPoissonNewton(CheckModelResults):
     def setupClass(cls):
         from results.results_discrete import RandHIE
         data = sm.datasets.randhie.load()
-        exog = sm.add_constant(data.exog.view((float,9)))
+        exog = sm.add_constant(data.exog)
         cls.res1 = Poisson(data.endog, exog).fit(method='newton', disp=0)
         res2 = RandHIE()
         res2.poisson()

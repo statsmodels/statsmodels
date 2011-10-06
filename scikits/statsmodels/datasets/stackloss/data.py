@@ -46,7 +46,7 @@ def load():
         See DATASET_PROPOSAL.txt for more information.
     """
     data = _get_data()
-    return du.process_recarray_pandas(data, endog_idx=0, dtype=float)
+    return du.process_recarray(data, endog_idx=0, dtype=float)
 
 def load_pandas():
     """

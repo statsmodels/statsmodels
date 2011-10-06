@@ -19,7 +19,7 @@ class Dataset(dict):
     def __repr__(self):
         return str(self.__class__)
 
-def process_recarray(data, endog_idx=0, dtype=None):
+def process_recarray(data, endog_idx=0, stack=True, dtype=None):
     names = list(data.dtype.names)
 
     if isinstance(endog_idx, int):
@@ -28,12 +28,19 @@ def process_recarray(data, endog_idx=0, dtype=None):
         endog_idx = [endog_idx]
     else:
         endog_name = [names[i] for i in endog_idx]
-        endog = np.column_stack(data[field] for field in endog_name)
+
+        if stack:
+            endog = np.column_stack(data[field] for field in endog_name)
+        else:
+            endog = data[endog_name]
 
     exog_name = [names[i] for i in xrange(len(names))
                  if i not in endog_idx]
 
-    exog = np.column_stack(data[field] for field in exog_name)
+    if stack:
+        exog = np.column_stack(data[field] for field in exog_name)
+    else:
+        exog = data[exog_name]
 
     if dtype:
         endog = endog.astype(dtype)

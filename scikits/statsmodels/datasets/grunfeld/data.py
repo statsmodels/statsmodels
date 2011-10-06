@@ -40,7 +40,8 @@ string categorical variable.
 """
 
 from numpy import recfromtxt, column_stack, array
-from scikits.statsmodels.tools import Dataset, categorical
+from scikits.statsmodels.tools import categorical
+import scikits.statsmodels.tools.datautils as du
 from os.path import dirname, abspath
 
 def load():
@@ -57,16 +58,35 @@ def load():
     raw_data has the firm variable expanded to dummy variables for each
     firm (ie., there is no reference dummy)
     """
+    data = _get_data()
+    raw_data = categorical(data, col='firm', drop=True)
+    ds = du.process_recarray(data, endog_idx=0, stack=False)
+    ds.raw_data = raw_data
+    return ds
+
+def load_pandas():
+    """
+    Loads the Grunfeld data and returns a Dataset class.
+
+    Returns
+    -------
+    Dataset instance:
+        See DATASET_PROPOSAL.txt for more information.
+
+    Notes
+    -----
+    raw_data has the firm variable expanded to dummy variables for each
+    firm (ie., there is no reference dummy)
+    """
+    from pandas import DataFrame
+    data = _get_data()
+    raw_data = categorical(data, col='firm', drop=True)
+    ds = du.process_recarray_pandas(data, endog_idx=0)
+    ds.raw_data = DataFrame(raw_data)
+    return ds
+
+def _get_data():
     filepath = dirname(abspath(__file__))
     data = recfromtxt(open(filepath + '/grunfeld.csv','rb'), delimiter=",",
             names=True, dtype="f8,f8,f8,a17,f8")
-    names = list(data.dtype.names)
-    endog = array(data[names[0]], dtype=float)
-    endog_name = names[0]
-    exog = data[list(names[1:])]
-    exog_name = list(names[1:])
-    dataset = Dataset(data=data, names=names, endog=endog, exog=exog,
-            endog_name=endog_name, exog_name=exog_name)
-    raw_data = categorical(data, col='firm', drop=True)
-    dataset.raw_data = raw_data
-    return dataset
+    return data
