@@ -95,10 +95,12 @@ def _get_data():
             "PERMINTE_AVYRSEXP_AVSAL","PERSPEN_PTRATIO_PCTAF"]
     data = recfromtxt(open(filepath + '/star98.csv',"rb"), delimiter=",",
             names=names, skip_header=1, dtype=float)
+
+    # careful now
     nabove = data['NABOVE'].copy()
     nbelow = data['NBELOW'].copy()
 
     data['NABOVE'] = nbelow # successes
-    data['NBELOW'] = nbelow - nabove # now failures
+    data['NBELOW'] = nabove - nbelow # now failures
 
     return data

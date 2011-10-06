@@ -57,8 +57,8 @@ def load():
     Loads the RAND HIE data and returns a Dataset class.
 
     ----------
-    endog - structured array of response variable, mdvis
-    exog - strucutured array of design
+    endog - response variable, mdvis
+    exog - design
 
     Returns
     Load instance:
@@ -72,8 +72,8 @@ def load_pandas():
     Loads the RAND HIE data and returns a Dataset class.
 
     ----------
-    endog - structured array of response variable, mdvis
-    exog - strucutured array of design
+    endog - response variable, mdvis
+    exog - design
 
     Returns
     Load instance:

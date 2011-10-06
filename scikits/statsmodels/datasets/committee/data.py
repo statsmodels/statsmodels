@@ -62,12 +62,12 @@ def load():
     data = _get_data()
     return du.process_recarray(data, endog_idx=0, dtype=float)
 
+def load_pandas():
+    data = _get_data()
+    return du.process_recarray_pandas(data, endog_idx=0, dtype=float)
+
 def _get_data():
     filepath = dirname(abspath(__file__))
     data = recfromtxt(open(filepath + '/committee.csv', 'rb'), delimiter=",",
             names=True, dtype=float, usecols=(1,2,3,4,5,6))
     return data
-
-def load_pandas():
-    data = _get_data()
-    return du.process_recarray_pandas(data, endog_idx=0, dtype=float)
