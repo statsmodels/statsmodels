@@ -1,8 +1,5 @@
 """American National Election Survey 1996"""
 
-__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'load']
-
-
 __docformat__ = 'restructuredtext'
 
 COPYRIGHT   = """This is public domain."""

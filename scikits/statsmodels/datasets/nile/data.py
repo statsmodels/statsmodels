@@ -1,5 +1,3 @@
-__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'load']
-
 """Name of dataset."""
 
 __docformat__ = 'restructuredtext'
@@ -26,7 +24,7 @@ Any other useful information that does not fit into the above categories.
 """
 
 from numpy import recfromtxt, column_stack, array
-from pandas import Series
+from pandas import Series, DataFrame
 
 from scikits.statsmodels.tools import Dataset
 from os.path import dirname, abspath
@@ -40,18 +38,19 @@ def load():
     Dataset instance:
         See DATASET_PROPOSAL.txt for more information.
     """
+    data = _get_data()
     names = list(data.dtype.names)
     endog_name = 'volume'
     endog = array(data[endog_name], dtype=float)
     dataset = Dataset(data=data, names=[endog_name], endog=endog,
-                      endog_name = endog_name)
+                      endog_name=endog_name)
     return dataset
 
 def load_pandas():
-    data = _get_data()
+    data = DataFrame(_get_data())
     # TODO: time series
     endog = Series(data['volume'], index=data['year'].astype(int))
-    dataset = Dataset(data=data, names=list(data.dtype.names),
+    dataset = Dataset(data=data, names=list(data.columns),
                       endog=endog, endog_name='volume')
     return dataset
 

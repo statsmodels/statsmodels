@@ -1,7 +1,5 @@
 """US Capital Punishment dataset."""
 
-__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'load']
-
 __docformat__ = 'restructuredtext'
 
 COPYRIGHT   = """Used with express permission from the original author,

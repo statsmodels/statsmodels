@@ -1,7 +1,5 @@
 """Yearly sunspots data 1700-2008"""
 
-__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'load']
-
 __docformat__ = 'restructuredtext'
 
 COPYRIGHT   = """This data is public domain."""
@@ -29,7 +27,7 @@ The data file contains a 'YEAR' variable that is not returned by load.
 """
 
 from numpy import recfromtxt, column_stack, array
-from pandas import Series
+from pandas import Series, DataFrame
 
 from scikits.statsmodels.tools import Dataset
 from os.path import dirname, abspath
@@ -57,10 +55,10 @@ def load():
     return dataset
 
 def load_pandas():
-    data = _get_data()
+    data = DataFrame(_get_data())
     # TODO: time series
     endog = Series(data['SUNACTIVITY'], index=data['YEAR'].astype(int))
-    dataset = Dataset(data=data, names=list(data.dtype.names),
+    dataset = Dataset(data=data, names=list(data.columns),
                       endog=endog, endog_name='volume')
     return dataset
 

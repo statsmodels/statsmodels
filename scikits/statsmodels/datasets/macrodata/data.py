@@ -1,8 +1,5 @@
 """United States Macroeconomic data"""
 
-__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'load']
-
-
 __docformat__ = 'restructuredtext'
 
 COPYRIGHT   = """This is public domain."""

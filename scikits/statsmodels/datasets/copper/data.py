@@ -1,5 +1,3 @@
-__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'load']
-
 """World Copper Prices 1951-1975 dataset."""
 
 __docformat__ = 'restructuredtext'

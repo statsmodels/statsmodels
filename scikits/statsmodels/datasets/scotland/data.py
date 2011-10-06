@@ -1,5 +1,3 @@
-__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'load']
-
 """Taxation Powers Vote for the Scottish Parliament 1997 dataset."""
 
 __docformat__ = 'restructuredtext'
