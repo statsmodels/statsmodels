@@ -1,7 +1,5 @@
 """Spector and Mazzeo (1980) - Program Effectiveness Data"""
 
-__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'load']
-
 __docformat__ = 'restructuredtext'
 
 COPYRIGHT   = """Used with express permission of the original author, who

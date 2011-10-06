@@ -52,16 +52,17 @@ def process_recarray(data, endog_idx=0, stack=True, dtype=None):
     return dataset
 
 def process_recarray_pandas(data, endog_idx=0, dtype=None):
-    exog = DataFrame(data, dtype=dtype)
-    names = list(exog.columns)
+    data = DataFrame(data, dtype=dtype)
+    names = list(data.columns)
 
     if isinstance(endog_idx, int):
         endog_name = names[endog_idx]
-        endog = exog.pop(endog_name)
+        endog = data[endog_name]
+        exog = data.drop([endog_name], axis=1)
     else:
-        endog = exog.ix[:, endog_idx]
+        endog = data.ix[:, endog_idx]
         endog_name = list(endog.columns)
-        exog = exog.drop(endog_name, axis=1)
+        exog = data.drop(endog_name, axis=1)
 
     exog_name = list(exog.columns)
     dataset = Dataset(data=data, names=names, endog=endog, exog=exog,

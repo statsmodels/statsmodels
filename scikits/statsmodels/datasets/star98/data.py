@@ -1,5 +1,3 @@
-__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'load']
-
 """Star98 Educational Testing dataset."""
 
 __docformat__ = 'restructuredtext'

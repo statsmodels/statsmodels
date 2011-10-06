@@ -1,7 +1,5 @@
 """First 100 days of the US House of Representatives 1995"""
 
-__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'load']
-
 __docformat__ = 'restructuredtext'
 
 COPYRIGHT   = """Used with express permission from the original author,

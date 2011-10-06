@@ -1,7 +1,5 @@
 """Bill Greene's credit scoring data."""
 
-__all__ = ['COPYRIGHT','TITLE','SOURCE','DESCRSHORT','DESCRLONG','NOTE', 'load']
-
 __docformat__ = 'restructuredtext'
 
 COPYRIGHT   = """Used with express permission of the original author, who
