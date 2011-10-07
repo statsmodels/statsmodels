@@ -3,8 +3,6 @@ import time
 import numpy as np
 from numpy import genfromtxt, array
 
-from pandas import DataFrame
-
 class Dataset(dict):
     def __init__(self, **kw):
         dict.__init__(self,kw)
@@ -52,6 +50,8 @@ def process_recarray(data, endog_idx=0, stack=True, dtype=None):
     return dataset
 
 def process_recarray_pandas(data, endog_idx=0, dtype=None):
+    from pandas import DataFrame
+
     data = DataFrame(data, dtype=dtype)
     names = list(data.columns)
 
