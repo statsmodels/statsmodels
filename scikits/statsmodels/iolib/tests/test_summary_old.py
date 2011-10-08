@@ -14,7 +14,7 @@ def test_regression_summary():
     desired = Template(
 '''     Summary of Regression Results
 =======================================
-| Dependent Variable:            ['y']|
+| Dependent Variable:                y|
 | Model:                           OLS|
 | Method:                Least Squares|
 | Date:               $XXcurrentXdateXX|
@@ -64,7 +64,7 @@ def test_regression_summary():
 #    print repr(desired)
 #    counter = 0
 #    for c1,c2 in zip(actual, desired):
-#        if not c1==c2 and counter<20: 
+#        if not c1==c2 and counter<20:
 #            print c1,c2
 #            counter += 1
     np.testing.assert_(actual == desired)

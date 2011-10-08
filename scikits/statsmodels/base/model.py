@@ -7,7 +7,6 @@ from scikits.statsmodels.tools.decorators import (resettable_cache,
                                                   cache_readonly)
 import scikits.statsmodels.base.wrapper as wrap
 
-import scipy.stats as stats
 
 class Model(object):
     """

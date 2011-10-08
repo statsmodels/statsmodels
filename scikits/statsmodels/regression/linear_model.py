@@ -31,7 +31,7 @@ __docformat__ = 'restructuredtext en'
 __all__ = ['GLS', 'WLS', 'OLS', 'GLSAR']
 
 import numpy as np
-from scipy.linalg import norm, toeplitz, lstsq, calc_lwork
+from scipy.linalg import toeplitz
 from scipy import stats
 from scipy.stats.stats import ss
 from scikits.statsmodels.tools.tools import (add_constant, rank,
