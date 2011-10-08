@@ -42,7 +42,11 @@ class ModelData(object):
         ynames = self._get_names(endog)
         if not ynames:
             ynames = _make_endog_names(endog)
-        return list(ynames)
+
+        if len(ynames) == 1:
+            return ynames[0]
+        else:
+            return list(ynames)
 
     @cache_writable()
     def xnames(self):
@@ -68,15 +72,15 @@ class ModelData(object):
         return None
 
     def _get_names(self, arr):
-        try:
-            return arr.dtype.names
-        except AttributeError:
-            pass
-
         if isinstance(arr, DataFrame):
             return list(arr.columns)
         elif isinstance(arr, Series):
-            return arr.name
+            return [arr.name]
+        else:
+            try:
+                return arr.dtype.names
+            except AttributeError:
+                pass
 
         return None
 

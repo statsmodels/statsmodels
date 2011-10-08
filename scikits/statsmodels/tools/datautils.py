@@ -66,5 +66,5 @@ def process_recarray_pandas(data, endog_idx=0, dtype=None):
 
     exog_name = list(exog.columns)
     dataset = Dataset(data=data, names=names, endog=endog, exog=exog,
-                      endog_name = endog_name, exog_name=exog_name)
+                      endog_name=endog_name, exog_name=exog_name)
     return dataset
