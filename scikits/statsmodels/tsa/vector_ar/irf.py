@@ -78,9 +78,9 @@ class BaseIRAnalysis(object):
     def cum_effect_cov(self, *args, **kwargs):
         raise NotImplementedError
 
-    def plot(self, orth=False, impulse=None, response=None, 
-             signif=0.05, plot_params=None, subplot_params=None, 
-             plot_stderr=True, stderr_type='asym', repl=1000, 
+    def plot(self, orth=False, impulse=None, response=None,
+             signif=0.05, plot_params=None, subplot_params=None,
+             plot_stderr=True, stderr_type='asym', repl=1000,
              seed=None, component=None):
         """
         Plot impulse responses
@@ -116,9 +116,9 @@ class BaseIRAnalysis(object):
         svar = self.svar
 
         # temporary until fixed
-        if svar and plot_stderr:
-            raise NotImplementedError('Error bands not yet available'
-                                      ' for SVAR')
+        #if svar and plot_stderr:
+        #   raise NotImplementedError('Error bands not yet available'
+        #                              ' for SVAR')
 
         if orth and svar:
             raise ValueError("For SVAR system, set orth=False")
@@ -132,7 +132,7 @@ class BaseIRAnalysis(object):
         else:
             title = 'Impulse responses'
             irfs = self.irfs
-        
+
         if plot_stderr == False:
             stderr = None
 
@@ -142,25 +142,25 @@ class BaseIRAnalysis(object):
             if stderr_type == 'asym':
                 stderr = self.cov(orth=orth)
             if stderr_type == 'mc':
-                stderr = self.errband_mc(orth=orth, svar=svar, 
-                                         repl=repl, signif=signif, 
+                stderr = self.errband_mc(orth=orth, svar=svar,
+                                         repl=repl, signif=signif,
                                          seed=seed)
             if stderr_type == 'sz1':
-                stderr = self.err_band_sz1(orth=orth, svar=svar, 
-                                           repl=repl, signif=signif, 
+                stderr = self.err_band_sz1(orth=orth, svar=svar,
+                                           repl=repl, signif=signif,
                                            seed=seed,
                                            component=component)
             if stderr_type == 'sz2':
-                stderr = self.err_band_sz2(orth=orth, svar=svar, 
-                                           repl=repl, signif=signif, 
-                                           seed=seed, 
+                stderr = self.err_band_sz2(orth=orth, svar=svar,
+                                           repl=repl, signif=signif,
+                                           seed=seed,
                                            component=component)
             if stderr_type == 'sz3':
-                stderr = self.err_band_sz3(orth=orth, svar=svar, 
-                                           repl=repl, signif=signif, 
-                                           seed=seed, 
+                stderr = self.err_band_sz3(orth=orth, svar=svar,
+                                           repl=repl, signif=signif,
+                                           seed=seed,
                                            component=component)
-            
+
         plotting.irf_grid_plot(irfs, stderr, impulse, response,
                                self.model.names, title, signif=signif,
                                subplot_params=subplot_params,
@@ -270,15 +270,15 @@ class IRAnalysis(BaseIRAnalysis):
 
         return covs
 
-    def errband_mc(self, orth=False, svar=False, repl=1000, 
+    def errband_mc(self, orth=False, svar=False, repl=1000,
                    signif=0.05, seed=None, burn=100):
         """
         IRF Monte Carlo integrated error bands
         """
         model = self.model
         periods = self.periods
-        return model.irf_errband_mc(orth=orth, svar=svar, repl=repl, 
-                                    T=periods, signif=signif, seed=seed, 
+        return model.irf_errband_mc(orth=orth, svar=svar, repl=repl,
+                                    T=periods, signif=signif, seed=seed,
                                     burn=burn, cum=False)
     def err_band_sz1(self, orth=False, svar=False, repl=1000,
                      signif=0.05, seed=None, burn=100, component=None):
@@ -298,7 +298,7 @@ class IRAnalysis(BaseIRAnalysis):
             Number of initial simulated obs to discard
         component : neqs x neqs array, default to largest for each
             Index of column of eigenvector/value to use for each error band
-            Note: period of impulse (t=0) is not included when computing 
+            Note: period of impulse (t=0) is not included when computing
                   principle component
 
         Reference
@@ -318,7 +318,7 @@ class IRAnalysis(BaseIRAnalysis):
         irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,
                                    burn=100)
         q = util.norm_signif_level(signif)
- 
+
         W, eigva, k =self._eigval_decomp_SZ(irf_resim)
 
         if component != None:
@@ -326,9 +326,9 @@ class IRAnalysis(BaseIRAnalysis):
                 raise ValueError("Component array must be " + str(neqs) + " x " + str(neqs))
             if np.argmax(component) >= neqs*periods:
                 raise ValueError("Atleast one of the components does not exist")
-            else: 
+            else:
                 k = component
-                
+
         # here take the kth column of W, which we determine by finding the largest eigenvalue of the covaraince matrix
         lower = np.copy(irfs)
         upper = np.copy(irfs)
@@ -336,11 +336,11 @@ class IRAnalysis(BaseIRAnalysis):
             for j in xrange(neqs):
                 lower[1:,i,j] = irfs[1:,i,j] + W[i,j,:,k[i,j]]*q*np.sqrt(eigva[i,j,k[i,j]])
                 upper[1:,i,j] = irfs[1:,i,j] - W[i,j,:,k[i,j]]*q*np.sqrt(eigva[i,j,k[i,j]])
-        
-       
+
+
         return lower, upper
 
-    def err_band_sz2(self, orth=False, repl=1000, signif=0.05, 
+    def err_band_sz2(self, orth=False, repl=1000, signif=0.05,
                      seed=None, burn=100, component=None):
         """
         IRF Sims-Zha error band method 2. Does not assume symmetric error bands around mean.
@@ -358,7 +358,7 @@ class IRAnalysis(BaseIRAnalysis):
             Number of initial simulated obs to discard
         component : neqs x neqs array, default to largest for each
             Index of column of eigenvector/value to use for each error band
-            Note: period of impulse (t=0) is not included when computing 
+            Note: period of impulse (t=0) is not included when computing
                   principle component
 
         Reference
@@ -384,7 +384,7 @@ class IRAnalysis(BaseIRAnalysis):
                 raise ValueError("Component array must be " + str(neqs) + " x " + str(neqs))
             if np.argmax(component) >= neqs*periods:
                 raise ValueError("Atleast one of the components does not exist")
-            else: 
+            else:
                 k = component
 
         gamma = np.zeros((repl, periods+1, neqs, neqs))
@@ -392,7 +392,7 @@ class IRAnalysis(BaseIRAnalysis):
             for i in xrange(neqs):
                 for j in xrange(neqs):
                     gamma[p,1:,i,j] = W[i,j,k[i,j],:] * irf_resim[p,1:,i,j]
- 
+
         gamma_sort = np.sort(gamma, axis=0) #sort to get quantiles
         indx = round(signif/2*repl)-1,round((1-signif/2)*repl)-1
 
@@ -405,7 +405,7 @@ class IRAnalysis(BaseIRAnalysis):
 
         return lower, upper
 
-    def err_band_sz3(self, orth=False, repl=1000, signif=0.05, 
+    def err_band_sz3(self, orth=False, repl=1000, signif=0.05,
                      seed=None, burn=100, component=None):
         """
         IRF Sims-Zha error band method 3. Does not assume symmetric error bands around mean.
@@ -424,7 +424,7 @@ class IRAnalysis(BaseIRAnalysis):
             Number of initial simulated obs to discard
         component : vector length neqs, default to largest for each
             Index of column of eigenvector/value to use for each error band
-            Note: period of impulse (t=0) is not included when computing 
+            Note: period of impulse (t=0) is not included when computing
                   principle component
 
         Reference
@@ -461,7 +461,7 @@ class IRAnalysis(BaseIRAnalysis):
                 raise ValueError("Component array must be of length " + str(neqs))
             if np.argmax(component) >= neqs*periods:
                 raise ValueError("Atleast one of the components does not exist")
-            else: 
+            else:
                 k = component
 
         #compute for eigen decomp for each stack
@@ -475,7 +475,7 @@ class IRAnalysis(BaseIRAnalysis):
             for j in xrange(neqs):
                 for i in xrange(neqs):
                         gamma[p,1:,i,j] = W[j,k[j],i*periods:(i+1)*periods] * irf_resim[p,1:,i,j]
-                        if i == neqs-1: 
+                        if i == neqs-1:
                             gamma[p,1:,i,j] = W[j,k[j],i*periods:] * irf_resim[p,1:,i,j]
 
         gamma_sort = np.sort(gamma, axis=0) #sort to get quantiles
@@ -487,7 +487,7 @@ class IRAnalysis(BaseIRAnalysis):
             for j in xrange(neqs):
                 lower[:,i,j] = irfs[:,i,j] + gamma_sort[indx[0],:,i,j]
                 upper[:,i,j] = irfs[:,i,j] + gamma_sort[indx[1],:,i,j]
-                
+
         return lower, upper
 
     def _eigval_decomp_SZ(self, irf_resim):
@@ -495,22 +495,22 @@ class IRAnalysis(BaseIRAnalysis):
         Returns
         -------
         W: array of eigenvectors
-        eigva: list of eigenvalues 
+        eigva: list of eigenvalues
         k: matrix indicating column # of largest eigenvalue for each c_i,j
 
         """
         neqs = self.neqs
         periods = self.periods
-        
+
         cov_hold = np.zeros((neqs, neqs, periods, periods))
         for i in xrange(neqs):
             for j in xrange(neqs):
                 cov_hold[i,j,:,:] = np.cov(irf_resim[:,1:,i,j],rowvar=0)
- 
+
         W = np.zeros((neqs, neqs, periods, periods))
         eigva = np.zeros((neqs, neqs, periods, 1))
         k = np.zeros((neqs, neqs))
-        
+
         for i in xrange(neqs):
             for j in xrange(neqs):
                 W[i,j,:,:], eigva[i,j,:,0], k[i,j] = util.eigval_decomp(cov_hold[i,j,:,:])
@@ -616,7 +616,7 @@ class IRAnalysis(BaseIRAnalysis):
 
         return covs
 
-    def cum_errband_mc(self, orth=False, repl=1000, 
+    def cum_errband_mc(self, orth=False, repl=1000,
                           signif=0.05, seed=None, burn=100):
         """
         IRF Monte Carlo integrated error bands of cumulative effect
@@ -624,7 +624,7 @@ class IRAnalysis(BaseIRAnalysis):
         model = self.model
         periods = self.periods
         return model.irf_errband_mc(orth=orth, repl=repl,
-                                    T=periods, signif=signif, seed=seed, burn=burn, cum=True) 
+                                    T=periods, signif=signif, seed=seed, burn=burn, cum=True)
 
     def lr_effect_cov(self, orth=False):
         """

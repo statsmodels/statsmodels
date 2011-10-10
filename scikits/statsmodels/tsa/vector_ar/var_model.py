@@ -1051,12 +1051,12 @@ class VARResults(VARProcess):
         nobs = self.nobs
 
         ma_coll = np.zeros((repl, T+1, neqs, neqs))
-        sim = util.varsim(coefs, intercept, sigma_u, steps=nobs+burn)
-        sim = sim[burn:]
 
         if orth == True:
             for i in range(repl):
                 #discard first hundred to eliminate correct for starting bias
+                sim = util.varsim(coefs, intercept, sigma_u, steps=nobs+burn)
+                sim = sim[burn:]
                 if cum == True:
                     ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).\
                                         orth_ma_rep(maxn=T).cumsum(axis=0)
@@ -1079,25 +1079,29 @@ class VARResults(VARProcess):
                 s_type = 'B'
             elif B_mask.sum() == 0:
                 s_type = 'A'
-            else: 
+            else:
                 s_type = 'AB'
 
 
             for i in range(repl):
                 #discard first hundred to eliminate correct for starting bias
+                sim = util.varsim(coefs, intercept, sigma_u, steps=nobs+burn)
+                sim = sim[burn:]
                 if cum == True:
-                    ma_coll[i] = SVAR(sim, svar_type=s_type, A=A_pass, 
+                    ma_coll[i] = SVAR(sim, svar_type=s_type, A=A_pass,
                                             B=B_pass).fit(maxlags=k_ar).\
                                             svar_ma_rep(maxn=T).\
                                             cumsum(axis=0)
                 if cum == False:
-                    ma_coll[i] = SVAR(sim, svar_type=s_type, A=A_pass, 
+                    ma_coll[i] = SVAR(sim, svar_type=s_type, A=A_pass,
                                       B=B_pass).fit(maxlags=k_ar).\
                                       svar_ma_rep(maxn=T)
 
         else:
             for i in range(repl):
                 #discard first hundred to eliminate correct for starting bias
+                sim = util.varsim(coefs, intercept, sigma_u, steps=nobs+burn)
+                sim = sim[burn:]
                 if cum == True:
                     ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).\
                                         ma_rep(maxn=T).cumsum(axis=0)
@@ -1582,7 +1586,7 @@ class SVAR(LikelihoodModel):
         super(SVAR, self).__init__(endog)
 
     def fit(self, A_guess=None, B_guess=None, maxlags=None, method='ols',
-            ic=None, trend='c', verbose=False, s_method='mle', 
+            ic=None, trend='c', verbose=False, s_method='mle',
             solver="bfgs", override=False, maxiter=500, maxfun=500):
         """
         Fit the SVAR model and solve for structural parameters
@@ -1655,7 +1659,7 @@ class SVAR(LikelihoodModel):
         # initialize starting parameters
         start_params = self._get_init_params(A_guess, B_guess)
 
-        return self._estimate_svar(start_params, lags, trend=trend, 
+        return self._estimate_svar(start_params, lags, trend=trend,
                                    solver=solver, override=override,
                                    maxiter=maxiter, maxfun=maxfun)
 

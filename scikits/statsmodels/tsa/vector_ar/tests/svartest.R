@@ -1,7 +1,8 @@
 library("vars")
 
 #data <- read.csv("/home/skipper/statsmodels/statsmodels-skipper/scikits/statsmodels/datasets/macrodata/macrodata.csv")
-data <- read.csv("/home/bart/statsmodels/scikits/statsmodels/datasets/macrodata/macrodata.csv")
+#data <- read.csv("/home/bart/statsmodels/scikits/statsmodels/datasets/macrodata/macrodata.csv")
+data <- read.csv("C:\\statsmodels\\statsmodels-bartbkr\\scikits\\statsmodels\\datasets\\macrodata\\macrodata.csv")
 names <- colnames(data)
 data <- log(data[c('realgdp','realcons','realinv')])
 data <- sapply(data, diff)
@@ -18,6 +19,6 @@ amat[3,3] <- 1
 bmat <- diag(3)
 diag(bmat) <- NA
 svar <- SVAR(var, estmethod = 'scoring', Bmat=bmat, Amat=amat)
-#plot(irf(svar, n.ahead=30, impulse = 'realgdp'))
+plot(irf(svar, n.ahead=30, impulse = 'realgdp'))
 #myirf <- plot(irf(myvar, impulse = "realgdp", response = c("realgdp", "realcons", "realinv"), boot=TRUE, n.ahead=30, ci=0.95))
 #plot.irf()
