@@ -9,7 +9,8 @@ if __name__ == '__main__':
 
     import scikits.statsmodels.api as sm
     from scikits.statsmodels.api import OLS
-    from scikits.statsmodels.datasets.longley import load
+    #from scikits.statsmodels.datasets.longley import load
+    from scikits.statsmodels.datasets.stackloss import load
     from scikits.statsmodels.iolib.table import (SimpleTable, default_txt_fmt,
                             default_latex_fmt, default_html_fmt)
     import numpy as np
@@ -17,13 +18,15 @@ if __name__ == '__main__':
     data = load()
     data.exog = sm.tools.add_constant(data.exog)
 
-    print '\n longley OLS leave 1 out'
+    resols = sm.OLS(data.endog, data.exog).fit()
+
+    print '\n OLS leave 1 out'
     for inidx, outidx in cross_val.LeaveOneOut(len(data.endog)):
         res = sm.OLS(data.endog[inidx], data.exog[inidx,:]).fit()
         print data.endog[outidx], res.model.predict(res.params, data.exog[outidx,:]),
         print data.endog[outidx] - res.model.predict(res.params, data.exog[outidx,:])
 
-    print '\n longley OLS leave 2 out'
+    print '\n OLS leave 2 out'
     resparams = []
     for inidx, outidx in cross_val.LeavePOut(len(data.endog), 2):
         res = sm.OLS(data.endog[inidx], data.exog[inidx,:]).fit()
@@ -34,7 +37,7 @@ if __name__ == '__main__':
     resparams = np.array(resparams)
     print resparams
 
-    doplots = 0
+    doplots = 1
     if doplots:
         import matplotlib.pyplot as plt
         from matplotlib.font_manager import FontProperties
