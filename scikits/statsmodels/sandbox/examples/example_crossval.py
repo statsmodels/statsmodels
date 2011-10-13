@@ -1,3 +1,9 @@
+
+import numpy as np
+
+from scikits.statsmodels.sandbox.tools import cross_val
+
+
 if __name__ == '__main__':
     #A: josef-pktd
 
@@ -11,20 +17,24 @@ if __name__ == '__main__':
     data = load()
     data.exog = sm.tools.add_constant(data.exog)
 
-    for inidx, outidx in LeaveOneOut(len(data.endog)):
+    print '\n longley OLS leave 1 out'
+    for inidx, outidx in cross_val.LeaveOneOut(len(data.endog)):
         res = sm.OLS(data.endog[inidx], data.exog[inidx,:]).fit()
-        print data.endog[outidx], res.model.predict(data.exog[outidx,:]),
-        print data.endog[outidx] - res.model.predict(data.exog[outidx,:])
+        print data.endog[outidx], res.model.predict(res.params, data.exog[outidx,:]),
+        print data.endog[outidx] - res.model.predict(res.params, data.exog[outidx,:])
 
+    print '\n longley OLS leave 2 out'
     resparams = []
-    for inidx, outidx in LeavePOut(len(data.endog), 2):
+    for inidx, outidx in cross_val.LeavePOut(len(data.endog), 2):
         res = sm.OLS(data.endog[inidx], data.exog[inidx,:]).fit()
         #print data.endog[outidx], res.model.predict(data.exog[outidx,:]),
         #print ((data.endog[outidx] - res.model.predict(data.exog[outidx,:]))**2).sum()
         resparams.append(res.params)
 
     resparams = np.array(resparams)
-    doplots = 1
+    print resparams
+
+    doplots = 0
     if doplots:
         import matplotlib.pyplot as plt
         from matplotlib.font_manager import FontProperties
@@ -41,11 +51,12 @@ if __name__ == '__main__':
             plt.subplot(4, 2, i+1)
             plt.hist(resparams[:,i], bins = 10)
             #plt.title("Leave2out parameter estimates")
+        plt.show()
 
 
 
 
-    for inidx, outidx in KStepAhead(20,2):
+    for inidx, outidx in cross_val.KStepAhead(20,2):
         #note the following were broken because KStepAhead returns now a slice by default
         print inidx
         print np.ones(20)[inidx].sum(), np.arange(20)[inidx][-4:]

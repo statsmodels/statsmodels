@@ -191,7 +191,7 @@ class KFold(object):
     def __iter__(self):
         n = self.n
         k = self.k
-        j = np.ceil(n/k)
+        j = int(np.ceil(n/k))
 
         for i in xrange(k):
             test_index  = np.zeros(n, dtype=np.bool)
@@ -346,7 +346,7 @@ class KStepAhead(object):
         self.n = n
         self.k = k
         if start is None:
-            start = np.trunc(n*0.25) # pick something arbitrary
+            start = int(np.trunc(n*0.25)) # pick something arbitrary
         self.start = start
         self.kall = kall
         self.return_slice = return_slice
