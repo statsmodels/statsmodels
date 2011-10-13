@@ -19,6 +19,4 @@ amat[3,3] <- 1
 bmat <- diag(3)
 diag(bmat) <- NA
 svar <- SVAR(var, estmethod = 'scoring', Bmat=bmat, Amat=amat)
-plot(irf(svar, n.ahead=30, impulse = 'realgdp'))
-#myirf <- plot(irf(myvar, impulse = "realgdp", response = c("realgdp", "realcons", "realinv"), boot=TRUE, n.ahead=30, ci=0.95))
-#plot.irf()
+plot(irf(svar, n.ahead=30, impulse = 'realgdp', runs=100))

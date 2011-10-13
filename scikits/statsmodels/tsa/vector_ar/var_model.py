@@ -1084,8 +1084,9 @@ class VARResults(VARProcess):
 
 
             for i in range(repl):
-                #discard first hundred to eliminate correct for starting bias
-                sim = util.varsim(coefs, intercept, sigma_u, steps=nobs+burn)
+                #discard first hundred to correct for starting bias
+                sim = util.varsim(coefs, intercept, sigma_u,
+                        steps=nobs+burn)
                 sim = sim[burn:]
                 if cum == True:
                     ma_coll[i] = SVAR(sim, svar_type=s_type, A=A_pass,
@@ -1099,8 +1100,9 @@ class VARResults(VARProcess):
 
         else:
             for i in range(repl):
-                #discard first hundred to eliminate correct for starting bias
-                sim = util.varsim(coefs, intercept, sigma_u, steps=nobs+burn)
+                #discard first hundred to correct for starting bias
+                sim = util.varsim(coefs, intercept, sigma_u,
+                        steps=nobs+burn)
                 sim = sim[burn:]
                 if cum == True:
                     ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).\
