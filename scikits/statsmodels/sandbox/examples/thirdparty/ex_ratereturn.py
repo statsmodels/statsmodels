@@ -21,6 +21,8 @@ import scikits.statsmodels.api as sm
 import scikits.statsmodels.sandbox as sb
 import scikits.statsmodels.sandbox.tools as sbtools
 
+from scikits.statsmodels.graphics.correlation import plot_corr
+
 try:
     rrdm = pickle.load(file('dj30rr','rb'))
 except Exception: #blanket for any unpickling error
@@ -31,7 +33,6 @@ ticksym = rrdm.columns.tolist()
 rr = rrdm.values[1:400]
 
 rrcorr = np.corrcoef(rr, rowvar=0)
-
 
 
 plot_corr(rrcorr, xnames=ticksym)
@@ -54,6 +55,6 @@ plt.matshow(residcorr)
 plt.imshow(residcorr, cmap=plt.cm.jet, interpolation='nearest',
            extent=(0,30,0,30), vmin=-1.0, vmax=1.0)
 plt.colorbar()
-#plt.show()
+plt.show()
 #plt.close('all')
 
