@@ -136,7 +136,9 @@ if has_sklearn:
     print diffsabs
     fig.savefig('corrmatrix_sklearn.png', dpi=120)
 
-    fig2 = plot_corr_grid(corrli+[residcorr], ncols=3, titles=titles+['pca', 'pca-residual'])
+    fig2 = plot_corr_grid(corrli+[residcorr], ncols=3,
+                          titles=titles+['pca', 'pca-residual'],
+                          xnames=[], ynames=[])
     fig2.savefig('corrmatrix_sklearn_2.png', dpi=120)
 
 plt.show()
