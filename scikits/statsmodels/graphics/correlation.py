@@ -18,19 +18,22 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
     dcorr : ndarray
         correlation matrix
     xnames : None or list of strings
-        labels for x axis
+        labels for x axis. If None, then the matplotlib defaults are used. If
+        it is an empty list, [], then not ticks and labels are added.
     ynames : None or list of strings
-        labels for y axis
+        labels for y axis. If None, then the matplotlib defaults are used. If
+        it is an empty list, [], then not ticks and labels are added.
     title : None or string
         title for figure. If None, then default is added. If title='', then no
         title is added
     normcolor : bool
         If false (default), then the color coding range corresponds to the
-        lowest and highest correlation. If true, then the color range is
-        normalized to (-1, 1).
+        lowest and highest correlation (automatic choice by matplotlib).
+        If true, then the color range is normalized to (-1, 1). If this is a
+        tuple of two numbers, then they define the range for the color bar.
     ax: None or axis instance
         If ax is None, then a figure is created. If an axis instance is given,
-        then the only the main plot but not the colorbar is created.
+        then only the main plot but not the colorbar is created.
 
     Returns
     -------
@@ -65,6 +68,9 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
         ax.set_yticks(np.arange(nvars)+0.5)
         ax.set_yticklabels(ynames[::-1], minor=True, fontsize='small',
                            horizontalalignment='right')
+    elif ynames == []:
+        ax.set_yticks([])
+
     if xnames:
         ax.set_xticks(np.arange(nvars)+0.5)
         ax.set_xticklabels(xnames, minor=True, fontsize='small',rotation=45,
@@ -73,6 +79,8 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
         #TODO: check if this is redundant
         plt.setp( ax.get_xticklabels(), fontsize='small', rotation=45,
                  horizontalalignment='right')
+    elif xnames == []:
+        ax.set_xticks([])
 
     if not title == '':
         ax.set_title(title)
@@ -83,14 +91,41 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
     else:
         return ax
 
-def plot_corr_grid(dcorrs, titles=None, ncols=2, normcolor=False):
-    '''greate a grid of correlation plots
+def plot_corr_grid(dcorrs, titles=None, ncols=2, normcolor=False, xnames=None,
+                   ynames=None):
+    '''create a grid of correlation plots
 
-    dcorrs: list, iterable
+    Parameters
+    ----------
+    dcorrs : list, iterable of ndarrays
         list of correlation matrices
     titles : None or iterable of strings
         list of titles for the subplots
+    ncols : int
+        number of columns in the subplot grid. Layout is designed for two or
+        three columns.
+    normcolor : bool or tuple
+        If false (default), then the color coding range corresponds to the
+        lowest and highest correlation (automatic choice by matplotlib).
+        If true, then the color range is normalized to (-1, 1). If this is a
+        tuple of two numbers, then they define the range for the color bar.
+    xnames : None or list of strings
+        labels for x axis. If None, then the matplotlib defaults are used. If
+        it is an empty list, [], then not ticks and labels are added.
+    ynames : None or list of strings
+        labels for y axis. If None, then the matplotlib defaults are used. If
+        it is an empty list, [], then not ticks and labels are added.
+
+    Returns
+    -------
+    fig : matplotlib figure instance
+
+    Notes
+    -----
+    possible extension for options, suppress labels except first column and
+    last row.
     '''
+
     if not titles:
         titles = [None]*len(dcorrs)
     nrows = int(np.ceil(len(dcorrs) / float(ncols)))
@@ -98,7 +133,7 @@ def plot_corr_grid(dcorrs, titles=None, ncols=2, normcolor=False):
     fig = plt.figure()
     for i, c in enumerate(dcorrs):
         ax = fig.add_subplot(nrows, ncols, i+1)
-        plot_corr(c, xnames=None, title=titles[i],
+        plot_corr(c, xnames=xnames, ynames=ynames, title=titles[i],
               normcolor=normcolor, axis=ax)
 
     #images = [c for ax in fig.axes for c in ax.get_children() if isinstance(c, mpl.image.AxesImage)]
