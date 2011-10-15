@@ -1,6 +1,11 @@
 
 import numpy as np
 
+try:
+    import matplotlib.pyplot as plt
+except ImportError:
+    print "plots not available without matplotlib"
+
 
 def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
               axis=None):
@@ -33,7 +38,6 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
 
 
     '''
-    import matplotlib.pyplot as plt
 
     nvars = dcorr.shape[0]
     #dcorr[range(nvars), range(nvars)] = np.nan
@@ -79,3 +83,30 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
     else:
         return ax
 
+def plot_corr_grid(dcorrs, titles=None, ncols=2, normcolor=False):
+    '''greate a grid of correlation plots
+
+    dcorrs: list, iterable
+        list of correlation matrices
+    titles : None or iterable of strings
+        list of titles for the subplots
+    '''
+    if not titles:
+        titles = [None]*len(dcorrs)
+    nrows = int(np.ceil(len(dcorrs) / float(ncols)))
+
+    fig = plt.figure()
+    for i, c in enumerate(dcorrs):
+        ax = fig.add_subplot(nrows, ncols, i+1)
+        plot_corr(c, xnames=None, title=titles[i],
+              normcolor=normcolor, axis=ax)
+
+    #images = [c for ax in fig.axes for c in ax.get_children() if isinstance(c, mpl.image.AxesImage)]
+    images = [i for ax in fig.axes for i in ax.images ]
+    fig.subplots_adjust(bottom=0.1, left=0.09, right=0.9, top=0.9)
+    if ncols <=2:
+        cax = fig.add_axes([0.9, 0.1, 0.025, 0.8])
+    else:
+        cax = fig.add_axes([0.92, 0.1, 0.025, 0.8])
+    fig.colorbar(images[0], cax=cax)
+    return fig
