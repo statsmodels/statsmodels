@@ -21,7 +21,7 @@ import scikits.statsmodels.api as sm
 import scikits.statsmodels.sandbox as sb
 import scikits.statsmodels.sandbox.tools as sbtools
 
-from scikits.statsmodels.graphics.correlation import plot_corr
+from scikits.statsmodels.graphics.correlation import plot_corr, plot_corr_grid
 
 try:
     rrdm = pickle.load(file('dj30rr','rb'))
@@ -135,6 +135,9 @@ if has_sklearn:
     print '\nmaxabs'
     print diffsabs
     fig.savefig('corrmatrix_sklearn.png', dpi=120)
+
+    fig2 = plot_corr_grid(corrli+[residcorr], ncols=3, titles=titles+['pca', 'pca-residual'])
+    fig2.savefig('corrmatrix_sklearn_2.png', dpi=120)
 
 plt.show()
 #plt.close('all')
