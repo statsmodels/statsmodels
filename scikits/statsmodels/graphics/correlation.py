@@ -1,3 +1,8 @@
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+
 def plot_corr(rrcorr, xnames=None, ynames=None, title=None, normcolor=False):
     nvars = rrcorr.shape[0]
     #rrcorr[range(nvars), range(nvars)] = np.nan
