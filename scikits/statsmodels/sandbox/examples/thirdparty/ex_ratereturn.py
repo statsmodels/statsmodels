@@ -61,14 +61,14 @@ plt.colorbar()
 normcolor = (0,1) #False #True
 fig = plt.figure()
 ax = fig.add_subplot(2,2,1)
-plot_corr(rrcorr, xnames=ticksym, normcolor=normcolor, axis=ax)
+plot_corr(rrcorr, xnames=ticksym, normcolor=normcolor, ax=ax)
 ax2 = fig.add_subplot(2,2,3)
 #pcacorr = np.corrcoef(xred, rowvar=0)
 plot_corr(pcacorr, xnames=ticksym, title='Correlation PCA',
-          normcolor=normcolor, axis=ax2)
+          normcolor=normcolor, ax=ax2)
 ax3 = fig.add_subplot(2,2,4)
 plot_corr(residcorr, xnames=ticksym, title='Correlation Residuals',
-          normcolor=normcolor, axis=ax3)
+          normcolor=normcolor, ax=ax3)
 
 import matplotlib as mpl
 images = [c for ax in fig.axes for c in ax.get_children() if isinstance(c, mpl.image.AxesImage)]
@@ -119,7 +119,7 @@ if has_sklearn:
     #for i, c in enumerate([np.cov(rr, rowvar=0), cov_lw, cov_oas, cov_mcd]):
         ax = fig.add_subplot(2,2,i+1)
         plot_corr(c, xnames=None, title=titles[i],
-              normcolor=normcolor, axis=ax)
+              normcolor=normcolor, ax=ax)
 
     images = [c for ax in fig.axes for c in ax.get_children() if isinstance(c, mpl.image.AxesImage)]
     fig. subplots_adjust(bottom=0.1, right=0.9, top=0.9)
@@ -141,6 +141,6 @@ if has_sklearn:
                           xnames=[], ynames=[])
     fig2.savefig('corrmatrix_sklearn_2.png', dpi=120)
 
-plt.show()
+#plt.show()
 #plt.close('all')
 

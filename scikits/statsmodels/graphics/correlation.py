@@ -1,4 +1,12 @@
+'''correlation plots
 
+Author: Josef Perktold
+License: BSD-3
+
+example for usage with different options in
+statsmodels\sandbox\examples\thirdparty\ex_ratereturn.py
+
+'''
 import numpy as np
 
 try:
@@ -8,7 +16,7 @@ except ImportError:
 
 
 def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
-              axis=None):
+              ax=None):
     '''plot correlation of many variables in a tight color grid
 
     This creates a new figure
@@ -56,11 +64,12 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
     else:
         vmin, vmax = None, None
 
-    if axis is None:
+    if ax is None:
         fig = plt.figure()
         ax = fig.add_subplot(111)
+        axis = False
     else:
-        ax = axis
+        axis = True
 
     axim = ax.imshow(dcorr, cmap=plt.cm.jet, interpolation='nearest',
                      extent=(0,30,0,30), vmin=vmin, vmax=vmax)
@@ -134,7 +143,7 @@ def plot_corr_grid(dcorrs, titles=None, ncols=2, normcolor=False, xnames=None,
     for i, c in enumerate(dcorrs):
         ax = fig.add_subplot(nrows, ncols, i+1)
         plot_corr(c, xnames=xnames, ynames=ynames, title=titles[i],
-              normcolor=normcolor, axis=ax)
+              normcolor=normcolor, ax=ax)
 
     #images = [c for ax in fig.axes for c in ax.get_children() if isinstance(c, mpl.image.AxesImage)]
     images = [i for ax in fig.axes for i in ax.images ]
