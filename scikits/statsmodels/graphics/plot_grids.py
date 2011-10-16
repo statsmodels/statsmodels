@@ -3,6 +3,11 @@
 Author: Josef Perktold
 License: BSD-3
 
+TODO: update script to use sharex, sharey, and visible=False
+    see http://www.scipy.org/Cookbook/Matplotlib/Multiple_Subplots_with_One_Axis_Label
+    for sharex I need to have the ax of the last_row when editing the earlier
+    rows. Or you axes_grid1, imagegrid
+    http://matplotlib.sourceforge.net/mpl_toolkits/axes_grid/users/overview.html
 '''
 
 import numpy as np
@@ -18,7 +23,7 @@ def make_ellipse(mean, cov, ax, level=0.95, color=None):
     angle = 180 * angle / np.pi # convert to degrees
     v = 2 * np.sqrt(v * stats.chi2.ppf(level, 2)) #get size corresponding to level
     ell = mpl.patches.Ellipse(mean[:2], v[0], v[1], 180 + angle,
-                              facecolor='none', 
+                              facecolor='none',
                               edgecolor=color,
                               #ls='dashed',  #for debugging
                               lw=1.5)
@@ -52,7 +57,7 @@ def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
         ax_last=None
         for j in range(i):
             #print i,j, i*(nvars-1)+j+1
-            ax = fig.add_subplot(nvars-1, nvars-1, (i-1)*(nvars-1)+j+1) 
+            ax = fig.add_subplot(nvars-1, nvars-1, (i-1)*(nvars-1)+j+1)
 ##                                 #sharey=ax_last) #sharey doesn't allow empty ticks?
 ##            if j == 0:
 ##                print 'new ax_last', j
