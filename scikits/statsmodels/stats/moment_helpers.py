@@ -148,4 +148,26 @@ def mnc2mc(args):
 
     #TODO: no return, did it get lost in cut-paste?
 
-## end moment helpers
+def cov2corr(cov):
+    '''convert covariance matrix to correlation matrix
+
+    Parameter
+    ---------
+    cov : array_like, 2d
+        covariance matrix, see Notes
+
+    Returns
+    -------
+    corr : ndarray (subclass)
+        correlation matrix
+
+    Notes
+    -----
+    This function does not convert subclasses of ndarrays. This requires
+    that division is defined elementwise. np.ma.array and np.matrix are allowed.
+
+    '''
+    cov = np.asanyarray(cov)
+    std_ = np.sqrt(np.diag(cov))
+    corr = cov / np.outer(std_, std_)
+    return corr
