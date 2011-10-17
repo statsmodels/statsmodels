@@ -20,7 +20,7 @@ def add_indep(x, varnames, dtype=None):
 
     nvars_orig = len(x)
     nobs = len(x[0])
-    print 'nobs, nvars_orig', nobs, nvars_orig
+    #print 'nobs, nvars_orig', nobs, nvars_orig
     if not dtype:
         dtype = np.asarray(x[0]).dtype
     xout = np.zeros((nobs, nvars_orig), dtype=dtype)
@@ -30,10 +30,10 @@ def add_indep(x, varnames, dtype=None):
     varnames_dropped = []
     keepindx = []
     for (xi, ni) in zip(x, varnames):
-        print xi.shape, xout.shape
+        #print xi.shape, xout.shape
         xout[:,count] = xi
         rank_new = smrank(xout)
-        print rank_new
+        #print rank_new
         if  rank_new > rank_old:
             varnames_new.append(ni)
             rank_old = rank_new
