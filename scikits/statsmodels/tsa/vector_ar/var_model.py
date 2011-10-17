@@ -1088,15 +1088,47 @@ class VARResults(VARProcess):
                 sim = util.varsim(coefs, intercept, sigma_u,
                         steps=nobs+burn)
                 sim = sim[burn:]
+                g_list = []
                 if cum == True:
-                    ma_coll[i] = SVAR(sim, svar_type=s_type, A=A_pass,
-                                            B=B_pass).fit(maxlags=k_ar).\
-                                            svar_ma_rep(maxn=T).\
-                                            cumsum(axis=0)
-                if cum == False:
-                    ma_coll[i] = SVAR(sim, svar_type=s_type, A=A_pass,
-                                      B=B_pass).fit(maxlags=k_ar).\
-                                      svar_ma_rep(maxn=T)
+                    if i < 10:
+                        sol = SVAR(sim, svar_type=s_type, A=A_pass,
+                                   B=B_pass).fit(maxlags=k_ar)
+                        g_list.append(np.append(sol.A[sol.A_mask].\
+                                                tolist(),
+                                                sol.B[sol.B_mask].\
+                                                tolist()))
+                        ma_coll[i] = sol.svar_ma_rep(maxn=T).cumsum(axis=0)
+                    elif i >= 10:
+                        if i = 10:
+                            mean_AB = np.mean(g_list, axis = 0)
+                            split = len(A_pass[A_mask])
+                            opt_A = mean_AB[:split]
+                            opt_A = mean_AB[split:]
+                        ma_coll[i] = SVAR(sim, svar_type=s_type, A=A_pass,
+                                     B=B_pass).fit(maxlags=k_ar,
+                                     A_guess = opt_A, B_guess = opt_B).
+                                     svar_ma_rep(maxn=T).cumsum(axis=0)
+
+
+                elif cum == False:
+                    if i < 10:
+                        sol = SVAR(sim, svar_type=s_type, A=A_pass,
+                                   B=B_pass).fit(maxlags=k_ar)
+                        g_list.append(np.append(sol.A[sol.A_mask].\
+                                                tolist(),
+                                                sol.B[sol.B_mask].\
+                                                tolist()))
+                        ma_coll[i] = sol.svar_ma_rep(maxn=T)
+                    elif i >= 10:
+                        if i = 10:
+                            mean_AB = np.mean(g_list, axis = 0)
+                            split = len(A_pass[A_mask])
+                            opt_A = mean_AB[:split]
+                            opt_A = mean_AB[split:]
+                        ma_coll[i] = SVAR(sim, svar_type=s_type, A=A_pass,
+                                     B=B_pass).fit(maxlags=k_ar,
+                                     A_guess = opt_A, B_guess = opt_B).
+                                     svar_ma_rep(maxn=T)
 
         else:
             for i in range(repl):
