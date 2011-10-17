@@ -4,10 +4,12 @@ contains:
 
 * conversion between central and non-central moments, skew, kurtosis and
   cummulants
+* cov2corr : convert covariance matrix to correlation matrix
 
 
+Author: Josef Perktold
+License: BSD-3
 
-Author: josef-pktd
 '''
 
 import numpy as np
@@ -95,6 +97,12 @@ def mnc2cum(_mnc):
     return kappa[1:]
 
 
+def mc2cum(mc):
+    '''just chained because I have still the test case
+    '''
+    return mnc2cum(mc2mnc(mc))
+
+
 def mvsk2mc(args):
     '''convert mean, variance, skew, kurtosis to central moments'''
     mu,sig2,sk,kur = args
@@ -137,14 +145,15 @@ def mnc2mvsk(args):
 
     return mc2mvsk((mc, mc2, mc3, mc4))
 
-def mnc2mc(args):
-    '''convert four non-central moments to central moments
-    '''
-    mnc, mnc2, mnc3, mnc4 = args
-    mc = mnc
-    mc2 = mnc2 - mnc*mnc
-    mc3 = mnc3 - (3*mc*mc2+mc**3) # 3rd central moment
-    mc4 = mnc4 - (4*mc*mc3+6*mc*mc*mc2+mc**4)
+#def mnc2mc(args):
+#    '''convert four non-central moments to central moments
+#    '''
+#    mnc, mnc2, mnc3, mnc4 = args
+#    mc = mnc
+#    mc2 = mnc2 - mnc*mnc
+#    mc3 = mnc3 - (3*mc*mc2+mc**3) # 3rd central moment
+#    mc4 = mnc4 - (4*mc*mc3+6*mc*mc*mc2+mc**4)
+#    return mc, mc2, mc
 
     #TODO: no return, did it get lost in cut-paste?
 
