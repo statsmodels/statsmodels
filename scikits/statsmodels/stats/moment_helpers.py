@@ -19,14 +19,14 @@ import scipy
 
 ## start moment helpers
 
-def mc2mnc(_mc):
+def mc2mnc(mc):
     '''convert central to non-central moments, uses recursive formula
     optionally adjusts first moment to return mean
 
     '''
-    n = len(_mc)
-    mean = _mc[0]
-    mc = [1] + list(_mc)    # add zero moment = 1
+    n = len(mc)
+    mean = mc[0]
+    mc = [1] + list(mc)    # add zero moment = 1
     mc[1] = 0  # define central mean as zero for formula
     mnc = [1, mean] # zero and first raw moments
     for nn,m in enumerate(mc[2:]):
@@ -38,14 +38,14 @@ def mc2mnc(_mc):
     return mnc[1:]
 
 
-def mnc2mc(_mnc, wmean = True):
+def mnc2mc(mnc, wmean = True):
     '''convert non-central to central moments, uses recursive formula
     optionally adjusts first moment to return mean
 
     '''
-    n = len(_mnc)
-    mean = _mnc[0]
-    mnc = [1] + list(_mnc)    # add zero moment = 1
+    n = len(mnc)
+    mean = mnc[0]
+    mnc = [1] + list(mnc)    # add zero moment = 1
     mu = [] #np.zeros(n+1)
     for n,m in enumerate(mnc):
         mu.append(0)
@@ -57,7 +57,7 @@ def mnc2mc(_mnc, wmean = True):
     return mu[1:]
 
 
-def cum2mc(_kappa):
+def cum2mc(kappa):
     '''convert non-central moments to cumulants
     recursive formula produces as many cumulants as moments
 
@@ -69,24 +69,25 @@ def cum2mc(_kappa):
 
     '''
     mc = [1,0.0] #_kappa[0]]  #insert 0-moment and mean
-    kappa = [1] + list(_kappa)
+    kappa0 = kappa[0]
+    kappa = [1] + list(kappa)
     for nn,m in enumerate(kappa[2:]):
         n = nn+2
         mc.append(0)
         for k in range(n-1):
             mc[n] += scipy.comb(n-1,k,exact=1) * kappa[n-k]*mc[k]
 
-    mc[1] = _kappa[0] # insert mean as first moments by convention
+    mc[1] = kappa0 # insert mean as first moments by convention
     return mc[1:]
 
 
-def mnc2cum(_mnc):
+def mnc2cum(mnc):
     '''convert non-central moments to cumulants
     recursive formula produces as many cumulants as moments
 
     http://en.wikipedia.org/wiki/Cumulant#Cumulants_and_moments
     '''
-    mnc = [1] + list(_mnc)
+    mnc = [1] + list(mnc)
     kappa = [1]
     for nn,m in enumerate(mnc[1:]):
         n = nn+1
