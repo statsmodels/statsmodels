@@ -1099,7 +1099,7 @@ class VARResults(VARProcess):
                                                 tolist()))
                         ma_coll[i] = sol.svar_ma_rep(maxn=T).cumsum(axis=0)
                     elif i >= 10:
-                        if i = 10:
+                        if i == 10:
                             mean_AB = np.mean(g_list, axis = 0)
                             split = len(A_pass[A_mask])
                             opt_A = mean_AB[:split]
