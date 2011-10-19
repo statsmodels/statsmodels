@@ -1009,8 +1009,7 @@ class VARResults(VARProcess):
 
     #Monte Carlo irf standard errors
     def irf_errband_mc(self, orth=False, repl=1000, T=10,
-                      signif=0.05, seed=None, burn=100, cum=False,
-                      svar=False):
+                       signif=0.05, seed=None, burn=100, cum=False):
         """
         Compute Monte Carlo integrated error bands assuming normally
         distributed for impulse response functions
@@ -1063,73 +1062,6 @@ class VARResults(VARProcess):
                 if cum == False:
                     ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).\
                                         orth_ma_rep(maxn=T)
-        elif svar == True:
-            #create A, B for estimation
-            A = self.A
-            B = self.B
-            A_mask = self.A_mask
-            B_mask = self.B_mask
-            A_pass = np.zeros_like(A, dtype='|S1')
-            B_pass = np.zeros_like(B, dtype='|S1')
-            A_pass[~A_mask] = A[~A_mask]
-            B_pass[~B_mask] = B[~B_mask]
-            A_pass[A_mask] = 'E'
-            B_pass[B_mask] = 'E'
-            if A_mask.sum() == 0:
-                s_type = 'B'
-            elif B_mask.sum() == 0:
-                s_type = 'A'
-            else:
-                s_type = 'AB'
-
-
-            for i in range(repl):
-                #discard first hundred to correct for starting bias
-                sim = util.varsim(coefs, intercept, sigma_u,
-                        steps=nobs+burn)
-                sim = sim[burn:]
-                g_list = []
-                if cum == True:
-                    if i < 10:
-                        sol = SVAR(sim, svar_type=s_type, A=A_pass,
-                                   B=B_pass).fit(maxlags=k_ar)
-                        g_list.append(np.append(sol.A[sol.A_mask].\
-                                                tolist(),
-                                                sol.B[sol.B_mask].\
-                                                tolist()))
-                        ma_coll[i] = sol.svar_ma_rep(maxn=T).cumsum(axis=0)
-                    elif i >= 10:
-                        if i == 10:
-                            mean_AB = np.mean(g_list, axis = 0)
-                            split = len(A_pass[A_mask])
-                            opt_A = mean_AB[:split]
-                            opt_A = mean_AB[split:]
-                        ma_coll[i] = SVAR(sim, svar_type=s_type, A=A_pass,
-                                     B=B_pass).fit(maxlags=k_ar,
-                                     A_guess = opt_A, B_guess = opt_B).
-                                     svar_ma_rep(maxn=T).cumsum(axis=0)
-
-
-                elif cum == False:
-                    if i < 10:
-                        sol = SVAR(sim, svar_type=s_type, A=A_pass,
-                                   B=B_pass).fit(maxlags=k_ar)
-                        g_list.append(np.append(sol.A[sol.A_mask].\
-                                                tolist(),
-                                                sol.B[sol.B_mask].\
-                                                tolist()))
-                        ma_coll[i] = sol.svar_ma_rep(maxn=T)
-                    elif i >= 10:
-                        if i = 10:
-                            mean_AB = np.mean(g_list, axis = 0)
-                            split = len(A_pass[A_mask])
-                            opt_A = mean_AB[:split]
-                            opt_A = mean_AB[split:]
-                        ma_coll[i] = SVAR(sim, svar_type=s_type, A=A_pass,
-                                     B=B_pass).fit(maxlags=k_ar,
-                                     A_guess = opt_A, B_guess = opt_B).
-                                     svar_ma_rep(maxn=T)
-
         else:
             for i in range(repl):
                 #discard first hundred to correct for starting bias
@@ -1142,6 +1074,117 @@ class VARResults(VARProcess):
                 if cum == False:
                     ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).\
                                         ma_rep(maxn=T)
+
+        ma_sort = np.sort(ma_coll, axis=0) #sort to get quantiles
+        index = round(signif/2*repl)-1,round((1-signif/2)*repl)-1
+        lower = ma_sort[index[0],:, :, :]
+        upper = ma_sort[index[1],:, :, :]
+        return lower, upper
+
+    def sirf_errband_mc(self, orth=False, repl=1000, T=10,
+                        signif=0.05, seed=None, burn=100, cum=False):
+        """
+        Compute Monte Carlo integrated error bands assuming normally
+        distributed for impulse response functions
+
+        Parameters
+        ----------
+        orth: bool, default False
+            Compute orthoganalized impulse response error bands
+        repl: int
+            number of Monte Carlo replications to perform
+        T: int, default 10
+            number of impulse response periods
+        signif: float (0 < signif <1)
+            Significance level for error bars, defaults to 95% CI
+        seed: int
+            np.random.seed for replications
+        burn: int
+            number of initial observations to discard for simulation
+        cum: bool, default False
+            produce cumulative irf error bands
+
+        Notes
+        -----
+        Lutkepohl (2005) Appendix D
+
+        Returns
+        -------
+        Tuple of lower and upper arrays of ma_rep monte carlo standard errors
+
+        """
+        neqs = self.neqs
+        mean = self.mean()
+        k_ar = self.k_ar
+        coefs = self.coefs
+        sigma_u = self.sigma_u
+        intercept = self.intercept
+        df_model = self.df_model
+        nobs = self.nobs
+
+        ma_coll = np.zeros((repl, T+1, neqs, neqs))
+        A = self.A
+        B = self.B
+        A_mask = self.A_mask
+        B_mask = self.B_mask
+        A_pass = np.zeros_like(A, dtype='|S1')
+        B_pass = np.zeros_like(B, dtype='|S1')
+        A_pass[~A_mask] = A[~A_mask]
+        B_pass[~B_mask] = B[~B_mask]
+        A_pass[A_mask] = 'E'
+        B_pass[B_mask] = 'E'
+        if A_mask.sum() == 0:
+            s_type = 'B'
+        elif B_mask.sum() == 0:
+            s_type = 'A'
+        else:
+            s_type = 'AB'
+        g_list = []
+
+
+        for i in range(repl):
+            #discard first hundred to correct for starting bias
+            sim = util.varsim(coefs, intercept, sigma_u,
+                    steps=nobs+burn)
+            sim = sim[burn:]
+            if cum == True:
+                if i < 10:
+                    sol = SVAR(sim, svar_type=s_type, A=A_pass,
+                               B=B_pass).fit(maxlags=k_ar)
+                    g_list.append(np.append(sol.A[sol.A_mask].\
+                                            tolist(),
+                                            sol.B[sol.B_mask].\
+                                            tolist()))
+                    ma_coll[i] = sol.svar_ma_rep(maxn=T).cumsum(axis=0)
+                elif i >= 10:
+                    if i == 10:
+                        mean_AB = np.mean(g_list, axis = 0)
+                        split = len(A_pass[A_mask])
+                        opt_A = mean_AB[:split]
+                        opt_A = mean_AB[split:]
+                    ma_coll[i] = SVAR(sim, svar_type=s_type, A=A_pass,
+                                 B=B_pass).fit(maxlags=k_ar,\
+                                 A_guess=opt_A, B_guess=opt_B).\
+                                 svar_ma_rep(maxn=T).cumsum(axis=0)
+
+
+            elif cum == False:
+                if i < 10:
+                    sol = SVAR(sim, svar_type=s_type, A=A_pass,
+                               B=B_pass).fit(maxlags=k_ar)
+                    g_list.append(np.append(sol.A[A_mask].tolist(),
+                                            sol.B[B_mask].tolist()))
+                    ma_coll[i] = sol.svar_ma_rep(maxn=T)
+                elif i >= 10:
+                    if i == 10:
+                        mean_AB = np.mean(g_list, axis = 0)
+                        split = len(A[A_mask])
+                        opt_A = mean_AB[:split]
+                        opt_B = mean_AB[split:]
+                    ma_coll[i] = SVAR(sim, svar_type=s_type, A=A_pass,
+                                 B=B_pass).fit(maxlags=k_ar,\
+                                 A_guess = opt_A, B_guess = opt_B).\
+                                 svar_ma_rep(maxn=T)
 
         ma_sort = np.sort(ma_coll, axis=0) #sort to get quantiles
         index = round(signif/2*repl)-1,round((1-signif/2)*repl)-1

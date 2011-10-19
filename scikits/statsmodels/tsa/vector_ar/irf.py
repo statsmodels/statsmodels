@@ -277,9 +277,14 @@ class IRAnalysis(BaseIRAnalysis):
         """
         model = self.model
         periods = self.periods
-        return model.irf_errband_mc(orth=orth, svar=svar, repl=repl,
-                                    T=periods, signif=signif, seed=seed,
-                                    burn=burn, cum=False)
+        if svar == True:
+            return model.sirf_errband_mc(orth=orth, repl=repl, T=periods,
+                                        signif=signif, seed=seed,
+                                        burn=burn, cum=False)
+        else:
+            return model.irf_errband_mc(orth=orth, repl=repl, T=periods,
+                                        signif=signif, seed=seed,
+                                        burn=burn, cum=False)
     def err_band_sz1(self, orth=False, svar=False, repl=1000,
                      signif=0.05, seed=None, burn=100, component=None):
         """
