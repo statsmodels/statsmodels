@@ -100,7 +100,7 @@ def date_parser(timestr, parserinfo=None, **kwargs):
         month, day = 12, 31
         year = int(timestr)
     else:
-        return pandas_datetools.parser.parse(timestr, parserinfo, kwargs)
+        return pandas_datetools.parser.parse(timestr, parserinfo, **kwargs)
 
     return datetime.datetime(year, month, day)
 
