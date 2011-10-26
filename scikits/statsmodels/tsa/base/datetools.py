@@ -183,12 +183,18 @@ def dates_from_range(start, end=None, length=None):
 
     Parameters
     ----------
-    start : strdates = sm.tsa.datetools.date_range('1960m1', length=nobs)
+    start : str
         The first abbreviated date, for instance, '1965q1' or '1965m1'
     end : str, optional
         The last abbreviated date if length is None.
     length : int, optional
         The length of the returned array of end is None.
+
+    Example
+    -------
+    >>> import scikits.statsmodels.api as sm
+    >>> dates = sm.tsa.datetools.date_range('1960m1', length=nobs)
+
 
     Returns
     -------
