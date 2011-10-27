@@ -409,13 +409,17 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True):
     #------------------------------------
     #Note: this is not necessary since we standardized names, only t versus normal
 
-    params = results.params
-
-
-    std_err = results.bse
-    tvalues = results.tvalues  #is this sometimes called zvalues
-    pvalues = results.pvalues
-    conf_int = results.conf_int(alpha)
+    if isinstance(results, tuple):
+        #for multivariate endog
+        #TODO: check whether I don't want to refactor this
+        #we need to give parameter alpha to conf_int
+        results, params, std_err, tvalues, pvalues, conf_int = results
+    else:
+        params = results.params
+        std_err = results.bse
+        tvalues = results.tvalues  #is this sometimes called zvalues
+        pvalues = results.pvalues
+        conf_int = results.conf_int(alpha)
 
 
     #Dictionary to store the header names for the parameter part of the
