@@ -12,8 +12,7 @@ def add_indep(x, varnames, dtype=None):
     If x is an ndarray, then each column is assumed to represent a variable with
     observations in rows.
     '''
-
-
+    #TODO: this needs tests for subclasses
 
     if isinstance(x, np.ndarray) and x.ndim == 2:
         x = x.T

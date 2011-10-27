@@ -2,8 +2,6 @@
 
 contains:
 
-* conversion between central and non-central moments, skew, kurtosis and
-  cummulants
 * goodness-of-fit tests
   - powerdiscrepancy
   - gof_chisquare_discrete
@@ -11,7 +9,7 @@ contains:
 
 
 
-Author: josef-pktd
+Author: Josef Perktold (josef-pktd)
 '''
 
 import numpy as np
@@ -21,7 +19,7 @@ from scipy import stats
 
 
 # copied from regression/stats.utils
-def powerdiscrepancy(o, e, lambd=0.0, axis=0, ddof=0):
+def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
     """Calculates power discrepancy, a class of goodness-of-fit tests
     as a measure of discrepancy between observed and expected data.
 
@@ -112,8 +110,8 @@ def powerdiscrepancy(o, e, lambd=0.0, axis=0, ddof=0):
 
 
     """
-    o = np.array(o)
-    e = np.array(e)
+    o = np.array(observed)
+    e = np.array(expected)
 
     if np.isfinite(lambd) == True:  # check whether lambd is a number
         a = lambd
@@ -166,7 +164,6 @@ def powerdiscrepancy(o, e, lambd=0.0, axis=0, ddof=0):
 
 #todo: need also binning for continuous distribution
 #      and separated binning function to be used for powerdiscrepancy
-
 
 def gof_chisquare_discrete(distfn, arg, rvs, alpha, msg):
     '''perform chisquare test for random sample of a discrete distribution
