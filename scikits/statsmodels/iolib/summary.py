@@ -403,7 +403,8 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
 
 
 
-def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True):
+def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
+                   skip_header=False):
 
     #Parameters part of the summary table
     #------------------------------------
@@ -431,6 +432,9 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True):
     else:
         param_header = ['coef', 'std err', 'z', 'P>|z|',
                         '[' + alp + ' Conf. Int.]']
+
+    if skip_header:
+        param_header = None
 
 
     _, xname = _getnames(results, yname=yname, xname=xname)

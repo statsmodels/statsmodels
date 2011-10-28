@@ -26,12 +26,16 @@ from scikits.statsmodels.iolib.summary2d import (
 exog_names = [anes_data.exog_name[i] for i in [0, 2]+range(5,8)] + ['const']
 endog_names = [anes_data.endog_name+'_%d' % i for i in np.unique(mlogit_res.model.endog)[1:]]
 print '\n\nMultinomial'
-print  summary_params_2d(mlogit_res, below=['bse','tvalues'], 
+print  summary_params_2d(mlogit_res, below=['bse','tvalues'],
                          endog_names=endog_names, exog_names=exog_names)
 tables, table_all = summary_params_2dflat(mlogit_res,
-                                          endog_names=endog_names, 
-                                          exog_names=exog_names)
+                                          endog_names=endog_names,
+                                          exog_names=exog_names,
+                                          skip_headers2=False)
 print '\n\n'
 print table_all
 print '\n\n'
 print '\n'.join((str(t) for t in tables))
+
+from scikits.statsmodels.iolib.summary2d import extend
+at = extend(tables)
