@@ -1062,6 +1062,7 @@ class VARResults(VARProcess):
                 if cum == False:
                     ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).\
                                         orth_ma_rep(maxn=T)
+
         else:
             for i in range(repl):
                 #discard first hundred to correct for starting bias
