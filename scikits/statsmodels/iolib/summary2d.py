@@ -49,7 +49,8 @@ def summary_params_2d(res, below=None, endog_names=None, exog_names=None):
 
 
 
-def summary_params_2dflat(result, endog_names=None, exog_names=None, alpha=0.95):
+def summary_params_2dflat(result, endog_names=None, exog_names=None, alpha=0.95,
+                          skip_headers2=True):
 
     res = result
     if endog_names is None:
@@ -60,22 +61,84 @@ def summary_params_2dflat(result, endog_names=None, exog_names=None, alpha=0.95)
     n_equ = res.params.shape[0]
     tables = []
     for row in range(n_equ):
-        restup = res, res.params[row], res.bse[row], res.tvalues[row], res.pvalues[row], res.conf_int(alpha)[row]
-        tble = summary_params(restup, yname=endog_names[row], 
-                              xname=exog_names, alpha=.05, use_t=True)
+        restup = (res, res.params[row], res.bse[row], res.tvalues[row],
+                  res.pvalues[row], res.conf_int(alpha)[row])
+
+        if skip_headers2:
+            skiph = (row != 0)
+        else:
+            skiph = False
+        tble = summary_params(restup, yname=endog_names[row],
+                              xname=exog_names, alpha=.05, use_t=True,
+                              skip_header=skiph)
+
         tables.append(tble)
-    from copy import deepcopy
-    table_all = deepcopy(tables[0])
-    for t in tables[1:]:
-        table_all.extend(t)
-    
-    #TODO: make function argument?
+
+    #put here for testing, but get's lost in append
     for i in range(len(endog_names)):
         tables[i].title = endog_names[i]
+
+#    for table in tables[:-1]:
+#        r1 = table[-1]
+#        r1.add_format('txt', row_dec_below='-')
+
+
+    from copy import deepcopy
+    table_all = deepcopy(tables[0])
+    t = table_all
+    t[0][0].data = t.title
+    t[0][0].data = t.title
+    t[0][0]._datatype = None
+    t[0][0].row = t[0][1].row
+    cheat = 1
+    for ii, t in enumerate(tables[1:]): #[1:]:
+        t = deepcopy(t)
+        if cheat:
+            t[0][0].data = t.title
+            t[0][0]._datatype = None
+            t[0][0].row = t[0][1].row
+            for c in t[0][1:]:
+                c.data = ''
+        #if ii > 0:
+        r1 = table_all[-1]
+        r1.add_format('txt', row_dec_below='-')
+        table_all.extend(t)
+
+    table_all.title = None
+
 
     return tables, table_all
 
 
+def extend(tables, keep_headers=True):
+    from copy import deepcopy
+#    table_all = deepcopy(tables[0])
+#    #t = table_all
+#    table_all[0][0].data = table_all.title
+#    table_all[0][0].data = table_all.title
+#    table_all[0][0]._datatype = None
+#    table_all[0][0].row = table_all[0][1].row
+
+
+    for ii, t in enumerate(tables[:]): #[1:]:
+        t = deepcopy(t)
+        #cheat:
+        t[0][0].data = t.title
+        t[0][0]._datatype = None
+        t[0][0].row = t[0][1].row
+        if not keep_headers and (ii > 0):
+            for c in t[0][1:]:
+                c.data = ''
+
+        if ii == 0:
+            table_all = t
+        else:
+            r1 = table_all[-1]
+            r1.add_format('txt', row_dec_below='-')
+            table_all.extend(t)
+
+    table_all.title = None
+    return table_all
 
 #from scikits.statsmodels.iolib.summary import Summary
 #smry = Summary()
