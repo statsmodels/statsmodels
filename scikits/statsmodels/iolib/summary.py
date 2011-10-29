@@ -408,6 +408,30 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
 
 def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
                    skip_header=False):
+    '''create a summary table for the parameters
+
+    Parameters
+    ----------
+    res : results instance
+        some required information is directly taken from the result
+        instance
+    yname : string or None
+        optional name for the endogenous variable, default is "y"
+    xname : list of strings or None
+        optional names for the exogenous variables, default is "var_xx"
+    alpha : float
+        significance level for the confidence intervals
+    use_t : bool
+        indicator whether the p-values are based on the Student-t
+        distribution (if True) or on the normal distribution (if False)
+    skip_headers : bool
+        If false (default), then the header row is added. If true, then no
+        header row is added.
+
+    Returns
+    -------
+    params_table : SimpleTable instance
+    '''
 
     #Parameters part of the summary table
     #------------------------------------
@@ -570,6 +594,9 @@ def summary_params_2dflat(result, endog_names=None, exog_names=None, alpha=0.95,
         names for columns of the parameter array (exog)
     alpha : float
         level for confidence intervals, default 0.95
+    use_t : bool
+        indicator whether the p-values are based on the Student-t
+        distribution (if True) or on the normal distribution (if False)
     keep_headers : bool
         If true (default), then sub-tables keep their headers. If false, then
         only the first headers are kept, the other headerse are blanked out
