@@ -26,16 +26,33 @@ from scikits.statsmodels.iolib.summary2d import (
 exog_names = [anes_data.exog_name[i] for i in [0, 2]+range(5,8)] + ['const']
 endog_names = [anes_data.endog_name+'_%d' % i for i in np.unique(mlogit_res.model.endog)[1:]]
 print '\n\nMultinomial'
-print  summary_params_2d(mlogit_res, below=['bse','tvalues'],
+print  summary_params_2d(mlogit_res, extras=['bse','tvalues'],
                          endog_names=endog_names, exog_names=exog_names)
 tables, table_all = summary_params_2dflat(mlogit_res,
                                           endog_names=endog_names,
                                           exog_names=exog_names,
-                                          skip_headers2=False)
+                                          keep_headers=True)
+tables, table_all = summary_params_2dflat(mlogit_res,
+                                          endog_names=endog_names,
+                                          exog_names=exog_names,
+                                          keep_headers=False)
 print '\n\n'
 print table_all
 print '\n\n'
 print '\n'.join((str(t) for t in tables))
 
-from scikits.statsmodels.iolib.summary2d import extend
-at = extend(tables)
+from scikits.statsmodels.iolib.summary2d import table_extend
+at = table_extend(tables)
+print at
+
+''' #trying pickle
+import pickle #, copy
+
+#copy.deepcopy(mlogit_res)  #raises exception: AttributeError: 'ResettableCache' object has no attribute '_resetdict'
+mnl_res = mlogit_mod.fit(method='bfgs', maxiter=100)
+mnl_res.cov_params()
+#mnl_res.model.endog = None
+#mnl_res.model.exog = None
+pickle.dump(mnl_res, open('mnl_res.dump', 'w'))
+mnl_res_l = pickle.load(open('mnl_res.dump', 'r'))
+'''
