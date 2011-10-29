@@ -585,9 +585,17 @@ def summary_params_2dflat(result, endog_names=None, exog_names=None, alpha=0.95,
     '''
 
     res = result
-    if endog_names is None:
-        endog_names = ['endog_%d' % i for i in
+    if not isinstance(endog_names, list):
+        #this might be specific to multinomial logit type, move?
+        if endog_names is None:
+            endog_basename = 'endog'
+        else:
+            endog_basename = endog_names
+        endog_names = [endog_basename + '_%d' % i for i in
                             np.unique(res.model.endog)[1:]]
+    else:
+        if not len(endog_names) == res.params.shape[0]:
+            raise ValueError('endog_names has wrong length')
 
     res = result
     n_equ = res.params.shape[0]

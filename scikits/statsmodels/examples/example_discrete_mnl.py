@@ -47,7 +47,9 @@ print at
 
 print '\n\n'
 print mlogit_res.summary()
-#print mlogit_res.summary(yname=['PID'])
+print mlogit_res.summary(yname='PID')
+#the following is supposed to raise ValueError
+#mlogit_res.summary(yname=['PID'])
 
 ''' #trying pickle
 import pickle #, copy
