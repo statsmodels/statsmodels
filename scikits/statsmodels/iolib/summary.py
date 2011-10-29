@@ -1,8 +1,11 @@
 
 
+import numpy as np
 from scikits.statsmodels.iolib.table import SimpleTable
 from scikits.statsmodels.iolib.tableformatting import (gen_fmt, fmt_2,
                                                 fmt_params, fmt_base, fmt_2cols)
+#from scikits.statsmodels.iolib.summary2d import summary_params_2dflat
+#from summary2d import summary_params_2dflat
 
 def forg(x, prec=3):
     if prec == 3:
@@ -771,8 +774,17 @@ class Summary(object):
         None : table is attached
 
         '''
-        table = summary_params(res, yname=yname, xname=xname, alpha=alpha,
-                               use_t=use_t)
+        if res.params.ndim == 1:
+            table = summary_params(res, yname=yname, xname=xname, alpha=alpha,
+                                   use_t=use_t)
+        elif res.params.ndim == 2:
+#            _, table = summary_params_2dflat(res, yname=yname, xname=xname,
+#                                             alpha=alpha, use_t=use_t)
+            _, table = summary_params_2dflat(res, endog_names=yname,
+                                             exog_names=xname,
+                                             alpha=alpha, use_t=use_t)
+        else:
+            raise ValueError('params has to be 1d or 2d')
         self.tables.append(table)
 
     def add_extra_txt(self, etext):

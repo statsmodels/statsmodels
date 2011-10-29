@@ -20,7 +20,7 @@ mlogit_res = mlogit_mod.fit(method='bfgs', maxiter=100)
 #mlogit_res = mlogit_mod.fit(method='ncg') # this takes forever
 
 
-from scikits.statsmodels.iolib.summary2d import (
+from scikits.statsmodels.iolib.summary import (
                         summary_params_2d, summary_params_2dflat)
 
 exog_names = [anes_data.exog_name[i] for i in [0, 2]+range(5,8)] + ['const']
@@ -41,9 +41,13 @@ print table_all
 print '\n\n'
 print '\n'.join((str(t) for t in tables))
 
-from scikits.statsmodels.iolib.summary2d import table_extend
+from scikits.statsmodels.iolib.summary import table_extend
 at = table_extend(tables)
 print at
+
+print '\n\n'
+print mlogit_res.summary()
+#print mlogit_res.summary(yname=['PID'])
 
 ''' #trying pickle
 import pickle #, copy
