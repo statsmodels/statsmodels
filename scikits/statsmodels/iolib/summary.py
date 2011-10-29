@@ -540,6 +540,7 @@ def summary_params_2d(result, extras=None, endog_names=None, exog_names=None,
 
     '''
     if endog_names is None:
+        #TODO: note the [1:] is specific to current MNLogit
         endog_names = ['endog_%d' % i for i in
                             np.unique(result.model.endog)[1:]]
     if exog_names is None:
@@ -575,8 +576,6 @@ def summary_params_2d(result, extras=None, endog_names=None, exog_names=None,
                              title=title,
 #                             data_fmts = ["%s"]),
                              txt_fmt = txt_fmt)
-
-
 
 
 def summary_params_2dflat(result, endog_names=None, exog_names=None, alpha=0.95,
@@ -618,11 +617,13 @@ def summary_params_2dflat(result, endog_names=None, exog_names=None, alpha=0.95,
             endog_basename = 'endog'
         else:
             endog_basename = endog_names
-        endog_names = [endog_basename + '_%d' % i for i in
+        #TODO: note, the [1:] is specific to current MNLogit
+        endog_names = [endog_basename + '=%d' % i for i in
                             np.unique(res.model.endog)[1:]]
-    else:
-        if not len(endog_names) == res.params.shape[0]:
-            raise ValueError('endog_names has wrong length')
+
+    #check if we have the right length of names
+    if not len(endog_names) == res.params.shape[0]:
+        raise ValueError('endog_names has wrong length')
 
     res = result
     n_equ = res.params.shape[0]
