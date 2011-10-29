@@ -579,7 +579,7 @@ def summary_params_2d(result, extras=None, endog_names=None, exog_names=None,
 
 
 def summary_params_2dflat(result, endog_names=None, exog_names=None, alpha=0.95,
-                          use_t=True, keep_headers=True):
+                          use_t=True, keep_headers=True, endog_cols=False):
                           #skip_headers2=True):
     '''summary table for parameters that are 2d, e.g. multi-equation models
 
@@ -599,6 +599,10 @@ def summary_params_2dflat(result, endog_names=None, exog_names=None, alpha=0.95,
     keep_headers : bool
         If true (default), then sub-tables keep their headers. If false, then
         only the first headers are kept, the other headerse are blanked out
+    endog_cols : bool
+        If false (default) then params and other result statistics have
+        equations by rows. If true, then equations are assumed to be in columns.
+        Not implemented yet.
 
     Returns
     -------
@@ -611,6 +615,13 @@ def summary_params_2dflat(result, endog_names=None, exog_names=None, alpha=0.95,
     '''
 
     res = result
+
+    #TODO: VAR and maybe maybe SUR or similar have equation in columns
+    #doesn't work yet, I will need to transpose all attributes
+    #VAR doesn't have conf_int
+    if endog_cols:
+        params = res.params.T
+
     if not isinstance(endog_names, list):
         #this might be specific to multinomial logit type, move?
         if endog_names is None:
