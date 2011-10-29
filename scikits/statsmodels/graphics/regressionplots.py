@@ -11,6 +11,8 @@ update
 
 '''
 
+import numpy as np
+
 from scikits.statsmodels.sandbox.regression.predstd import wls_prediction_std
 
 def plot_fit(res, exog_idx, y_true=None, ax=None):
