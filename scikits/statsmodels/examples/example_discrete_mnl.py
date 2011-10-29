@@ -51,6 +51,9 @@ print mlogit_res.summary(yname='PID')
 #the following is supposed to raise ValueError
 #mlogit_res.summary(yname=['PID'])
 
+endog_names = [anes_data.endog_name+'=%d' % i for i in np.unique(mlogit_res.model.endog)[1:]]
+print mlogit_res.summary(yname='PID', yname_list=endog_names, xname=exog_names)
+
 ''' #trying pickle
 import pickle #, copy
 
