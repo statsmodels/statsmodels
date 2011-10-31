@@ -12,15 +12,14 @@ def add_indep(x, varnames, dtype=None):
     If x is an ndarray, then each column is assumed to represent a variable with
     observations in rows.
     '''
-
-
+    #TODO: this needs tests for subclasses
 
     if isinstance(x, np.ndarray) and x.ndim == 2:
         x = x.T
 
     nvars_orig = len(x)
     nobs = len(x[0])
-    print 'nobs, nvars_orig', nobs, nvars_orig
+    #print 'nobs, nvars_orig', nobs, nvars_orig
     if not dtype:
         dtype = np.asarray(x[0]).dtype
     xout = np.zeros((nobs, nvars_orig), dtype=dtype)
@@ -30,10 +29,10 @@ def add_indep(x, varnames, dtype=None):
     varnames_dropped = []
     keepindx = []
     for (xi, ni) in zip(x, varnames):
-        print xi.shape, xout.shape
+        #print xi.shape, xout.shape
         xout[:,count] = xi
         rank_new = smrank(xout)
-        print rank_new
+        #print rank_new
         if  rank_new > rank_old:
             varnames_new.append(ni)
             rank_old = rank_new

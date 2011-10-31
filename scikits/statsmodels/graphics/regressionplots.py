@@ -1,24 +1,25 @@
 '''Partial Regression plot and residual plots to find misspecification
 
 
-Author: josef-pktd
+Author: Josef Perktold
+License: BSD-3
 Created: 2011-01-23
 
 update
 2011-06-05 : start to convert example to usable functions
+2011-10-27 : docstrings
 
 '''
+
+import numpy as np
 
 from scikits.statsmodels.sandbox.regression.predstd import wls_prediction_std
 
 def plot_fit(res, exog_idx, y_true=None, ax=None):
     '''plot fit against one regressor
 
-    check for which other models than OLS this also works, use model.name
-
-    This plots four graphs in a 2 by 2 figure: 'endog versus exog',
-    'residuals versus exog', 'fitted versus exog' and
-    'fitted plus residual versus exog'
+    This creates one graph with the scatterplot of observed values compared to
+    fitted values.
 
     Parameters
     ----------
@@ -28,10 +29,15 @@ def plot_fit(res, exog_idx, y_true=None, ax=None):
         index of regressor in exog matrix
     y_true : array_like
         (optional) If this is not None, then the array is added to the plot
+    ax : None or matplotlib axis instance
+        If ax is given then the plot is attached to it, otherwise a new figure
+        is created and returned.
 
     Returns
     -------
-    fig : matplotlib figure instance
+    fig_or_ax : matplotlib figure or axis instance
+        If ax was given as parameter then the plot is attached to it, otherwise
+        a new figure is created. Either the figure or the given axis is returned.
 
     Notes
     -----
@@ -43,6 +49,9 @@ def plot_fit(res, exog_idx, y_true=None, ax=None):
     #maybe add option for wendog, wexog
     y = res.model.endog
     x1 = res.model.exog[:, exog_idx]
+    x1_argsort = np.argsort(x1)
+    y = y[x1_argsort]
+    x1 = x1[x1_argsort]
 
     if ax is None:
         fig = plt.figure()
@@ -53,16 +62,16 @@ def plot_fit(res, exog_idx, y_true=None, ax=None):
 
     ax.plot(x1, y, 'bo')
     if not y_true is None:
-        ax.plot(x1, y_true, 'b-')
+        ax.plot(x1, y_true[x1_argsort], 'b-')
         title = 'fitted versus regressor %d, blue: true,   black: OLS' % exog_idx
     else:
         title = 'fitted versus regressor %d, blue: observed, black: OLS' % exog_idx
 
     prstd, iv_l, iv_u = wls_prediction_std(res)
-    ax.plot(x1, res.fittedvalues, 'k-') #'k-o')
+    ax.plot(x1, res.fittedvalues[x1_argsort], 'k-') #'k-o')
     #plt.plot(x1, iv_u, 'r--')
     #plt.plot(x1, iv_l, 'r--')
-    ax.fill_between(x1, iv_l, iv_u, alpha=0.1, color='k')
+    ax.fill_between(x1, iv_l[x1_argsort], iv_u[x1_argsort], alpha=0.1, color='k')
     ax.set_title(title)
 
     return fig_or_ax
@@ -158,6 +167,26 @@ def plot_partregress_ax(ax, endog, exog_i, exog_others, varname='',
                         title_fontsize=None):
     '''partial regression plot attached to axis
 
+    Parameters
+    ----------
+    ax : matplotlib axis instance
+    endog : ndarray
+       endogenous or response variable
+    exog_i : ndarray
+        exogenous, explanatory variable
+    exog_others : ndarray
+        other exogenous, explanatory variables, the effect of these variables
+        will be removed by OLS regression
+
+    varname : str
+        name of the variable used in the title
+
+    Return
+    ------
+    ax : matplotlib axis instance with attached plot
+        TODO: this should change ?
+
+
     '''
 
     #namestr = ' for %s' % self.name if self.name else ''
@@ -174,8 +203,44 @@ def plot_partregress_ax(ax, endog, exog_i, exog_others, varname='',
 def plot_partregress(endog, exog, exog_idx=None, grid=None):
     '''plot partial regression for a set of regressors
 
+    Parameters
+    ----------
+    endog : ndarray
+        endogenous or response variable
+    exog : ndarray
+        exogenous, regressor variables
+    exog_idx : None or list of int
+        (column) indices of the exog used in the plot
+    grid : None or tuple of int (nrows, ncols)
+        If grid is given, then it is used for the arrangement of the subplots.
+        If grid is None, then ncol is one, if there are only 2 subplots, and
+        the number of columns is two otherwise.
+
+    Return
+    ------
+    fig : matplotlib figure instance
+
+
+    Notes
+    -----
+    A subplot is created for each explanatory variable given by exog_idx.
+    The partial regression plot shows the relationship between the response
+    and the given explanatory variable after removing the effect of all other
+    explanatory variables in exog.
+
+
+    See Also
+    --------
+    plot_partregress_ax
+    plot_ccpr
+
+
+    References
+    ----------
     see http://www.itl.nist.gov/div898/software/dataplot/refman1/auxillar/partregr.htm
+
     '''
+
     import scikits.statsmodels.api as sm  #import only OLS and add_constant
 
     #maybe add option for using wendog, wexog instead
@@ -203,6 +268,7 @@ def plot_partregress(endog, exog, exog_idx=None, grid=None):
         others.pop(idx)
         exog_others = exog[:, others]
         ax = fig.add_subplot(nrows, ncols, i+1)
+        #TODO: this should use the ax version
         #namestr = ' for %s' % self.name if self.name else ''
         res1a = sm.OLS(y, exog_others).fit()
         res1b = sm.OLS(exog[:, idx], exog_others).fit()
@@ -219,6 +285,26 @@ def plot_partregress(endog, exog, exog_idx=None, grid=None):
 def plot_ccpr_ax(ax, res, exog_idx=None):
     '''plot CCPR against 1 regressor
 
+    Parameters
+    ----------
+    ax : matplotlib axis instance
+    res : result instance
+        uses exog and params of the result instance
+    exog_idx : int
+        (column) index of the exog used in the plot
+
+    Return
+    ------
+    None : plot is attached to ax
+        TODO: this should change ?
+
+    See Also
+    --------
+    plot_ccpr
+
+
+    References
+    ----------
     see http://www.itl.nist.gov/div898/software/dataplot/refman1/auxillar/ccpr.htm
 
     '''
@@ -242,6 +328,24 @@ def plot_ccpr(res, exog_idx=None, grid=None):
 
     Generates a CCPR (component and component-plus-residual) plot
 
+    Parameters
+    ----------
+    res : result instance
+        uses exog and params of the result instance
+    exog_idx : None or list of int
+        (column) indices of the exog used in the plot
+    grid : None or tuple of int (nrows, ncols)
+        If grid is given, then it is used for the arrangement of the subplots.
+        If grid is None, then ncol is one, if there are only 2 subplots, and
+        the number of columns is two otherwise.
+
+    Return
+    ------
+    fig : matplotlib figure instance
+
+
+    Notes
+    -----
     Partial residual plots are formed as:
 
         Res + Betahat(i)*Xi versus Xi
@@ -250,6 +354,14 @@ def plot_ccpr(res, exog_idx=None, grid=None):
 
         Betahat(i)*Xi versus Xi
 
+
+    See Also
+    --------
+    plot_ccpr_ax
+
+
+    References
+    ----------
     see http://www.itl.nist.gov/div898/software/dataplot/refman1/auxillar/ccpr.htm
 
     '''
@@ -421,6 +533,7 @@ if __name__ == '__main__':
     doplots = 1
     if doplots:
         plot_fit(res, 0, y_true=None)
+        plot_fit(res, 1, y_true=None)
         plot_partregress(y, exog0, exog_idx=[0,1])
         plot_regress_exog(res, exog_idx=[0])
         plot_ccpr(res, exog_idx=[0])

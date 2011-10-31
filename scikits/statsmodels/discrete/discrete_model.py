@@ -1298,7 +1298,8 @@ class DiscreteResults(base.LikelihoodModelResults):
         self.margfx = effects
         return effects
 
-    def summary(self, yname=None, xname=None, title=None, alpha=.05):
+    def summary(self, yname=None, xname=None, title=None, alpha=.05,
+                yname_list=None):
         """Summarize the Regression Results
 
         Parameters
@@ -1331,7 +1332,7 @@ class DiscreteResults(base.LikelihoodModelResults):
                      ('Method:', ['MLE']),
                      ('Date:', None),
                      ('Time:', None),
-                     ('No. iterations:', ["%d" % self.mle_retvals['iterations']]),
+#                     ('No. iterations:', ["%d" % self.mle_retvals['iterations']]),
                      ('converged:', ["%s" % self.mle_retvals['converged']])
                       ]
 
@@ -1352,7 +1353,9 @@ class DiscreteResults(base.LikelihoodModelResults):
         smry = Summary()
         smry.add_table_2cols(self, gleft=top_left, gright=top_right, #[],
                           yname=yname, xname=xname, title=title)
-        smry.add_table_params(self, yname=yname, xname=xname, alpha=.05,
+        if yname_list is None:
+            yname_list = yname
+        smry.add_table_params(self, yname=yname_list, xname=xname, alpha=.05,
                              use_t=True)
 
         #diagnostic table not used yet

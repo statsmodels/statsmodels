@@ -1,8 +1,11 @@
 
 
+import numpy as np
 from scikits.statsmodels.iolib.table import SimpleTable
 from scikits.statsmodels.iolib.tableformatting import (gen_fmt, fmt_2,
                                                 fmt_params, fmt_base, fmt_2cols)
+#from scikits.statsmodels.iolib.summary2d import summary_params_2dflat
+#from summary2d import summary_params_2dflat
 
 def forg(x, prec=3):
     if prec == 3:
@@ -403,19 +406,48 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
 
 
 
-def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True):
+def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
+                   skip_header=False):
+    '''create a summary table for the parameters
+
+    Parameters
+    ----------
+    res : results instance
+        some required information is directly taken from the result
+        instance
+    yname : string or None
+        optional name for the endogenous variable, default is "y"
+    xname : list of strings or None
+        optional names for the exogenous variables, default is "var_xx"
+    alpha : float
+        significance level for the confidence intervals
+    use_t : bool
+        indicator whether the p-values are based on the Student-t
+        distribution (if True) or on the normal distribution (if False)
+    skip_headers : bool
+        If false (default), then the header row is added. If true, then no
+        header row is added.
+
+    Returns
+    -------
+    params_table : SimpleTable instance
+    '''
 
     #Parameters part of the summary table
     #------------------------------------
     #Note: this is not necessary since we standardized names, only t versus normal
 
-    params = results.params
-
-
-    std_err = results.bse
-    tvalues = results.tvalues  #is this sometimes called zvalues
-    pvalues = results.pvalues
-    conf_int = results.conf_int(alpha)
+    if isinstance(results, tuple):
+        #for multivariate endog
+        #TODO: check whether I don't want to refactor this
+        #we need to give parameter alpha to conf_int
+        results, params, std_err, tvalues, pvalues, conf_int = results
+    else:
+        params = results.params
+        std_err = results.bse
+        tvalues = results.tvalues  #is this sometimes called zvalues
+        pvalues = results.pvalues
+        conf_int = results.conf_int(alpha)
 
 
     #Dictionary to store the header names for the parameter part of the
@@ -427,6 +459,9 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True):
     else:
         param_header = ['coef', 'std err', 'z', 'P>|z|',
                         '[' + alp + ' Conf. Int.]']
+
+    if skip_header:
+        param_header = None
 
 
     _, xname = _getnames(results, yname=yname, xname=xname)
@@ -474,6 +509,204 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True):
                                   )
 
     return parameter_table
+
+def summary_params_2d(result, extras=None, endog_names=None, exog_names=None,
+                      title=None):
+    '''create summary table of regression parameters with several equations
+
+    This allows interleaving of parameters with bse and/or tvalues
+
+    Parameter
+    ---------
+    result : result instance
+        the result instance with params and attributes in extras
+    extras : list of strings
+        additional attributes to add below a parameter row, e.g. bse or tvalues
+    endog_names : None or list of strings
+        names for rows of the parameter array (multivariate endog)
+    exog_names : None or list of strings
+        names for columns of the parameter array (exog)
+    alpha : float
+        level for confidence intervals, default 0.95
+    title : None or string
+
+    Returns
+    -------
+    tables : list of SimpleTable
+        this contains a list of all seperate Subtables
+    table_all : SimpleTable
+        the merged table with results concatenated for each row of the parameter
+        array
+
+    '''
+    if endog_names is None:
+        #TODO: note the [1:] is specific to current MNLogit
+        endog_names = ['endog_%d' % i for i in
+                            np.unique(result.model.endog)[1:]]
+    if exog_names is None:
+        exog_names = ['var%d' %i for i in range(len(result.params))]
+
+    #TODO: check formatting options with different values
+    #res_params = [['%10.4f'%item for item in row] for row in result.params]
+    res_params = [[forg(item, prec=4) for item in row] for row in result.params]
+    if extras: #not None or non-empty
+        #maybe this should be a simple triple loop instead of list comprehension?
+        #below_list = [[['%10s' % ('('+('%10.3f'%v).strip()+')')
+        extras_list = [[['%10s' % ('(' + forg(v, prec=3).strip() + ')')
+                                for v in col]
+                                for col in getattr(result, what)]
+                                for what in extras
+                                ]
+        data = zip(res_params, *extras_list)
+        data = [i for j in data for i in j]  #flatten
+        stubs = zip(endog_names, *[['']*len(endog_names)]*len(extras))
+        stubs = [i for j in stubs for i in j] #flatten
+        #return SimpleTable(data, headers=exog_names, stubs=stubs)
+    else:
+        data = res_params
+        stubs = endog_names
+#        return SimpleTable(data, headers=exog_names, stubs=stubs,
+#                       data_fmts=['%10.4f'])
+
+    import copy
+    txt_fmt = copy.deepcopy(fmt_params)
+    txt_fmt.update(dict(data_fmts = ["%s"]*result.params.shape[1]))
+    return SimpleTable(data, headers=exog_names,
+                             stubs=stubs,
+                             title=title,
+#                             data_fmts = ["%s"]),
+                             txt_fmt = txt_fmt)
+
+
+def summary_params_2dflat(result, endog_names=None, exog_names=None, alpha=0.95,
+                          use_t=True, keep_headers=True, endog_cols=False):
+                          #skip_headers2=True):
+    '''summary table for parameters that are 2d, e.g. multi-equation models
+
+    Parameter
+    ---------
+    result : result instance
+        the result instance with params, bse, tvalues and conf_int
+    endog_names : None or list of strings
+        names for rows of the parameter array (multivariate endog)
+    exog_names : None or list of strings
+        names for columns of the parameter array (exog)
+    alpha : float
+        level for confidence intervals, default 0.95
+    use_t : bool
+        indicator whether the p-values are based on the Student-t
+        distribution (if True) or on the normal distribution (if False)
+    keep_headers : bool
+        If true (default), then sub-tables keep their headers. If false, then
+        only the first headers are kept, the other headerse are blanked out
+    endog_cols : bool
+        If false (default) then params and other result statistics have
+        equations by rows. If true, then equations are assumed to be in columns.
+        Not implemented yet.
+
+    Returns
+    -------
+    tables : list of SimpleTable
+        this contains a list of all seperate Subtables
+    table_all : SimpleTable
+        the merged table with results concatenated for each row of the parameter
+        array
+
+    '''
+
+    res = result
+
+    #TODO: VAR and maybe maybe SUR or similar have equation in columns
+    #doesn't work yet, I will need to transpose all attributes
+    #VAR doesn't have conf_int
+    if endog_cols:
+        params = res.params.T
+
+    if not isinstance(endog_names, list):
+        #this might be specific to multinomial logit type, move?
+        if endog_names is None:
+            endog_basename = 'endog'
+        else:
+            endog_basename = endog_names
+        #TODO: note, the [1:] is specific to current MNLogit
+        endog_names = [endog_basename + '=%d' % i for i in
+                            np.unique(res.model.endog)[1:]]
+
+    #check if we have the right length of names
+    if not len(endog_names) == res.params.shape[0]:
+        raise ValueError('endog_names has wrong length')
+
+    res = result
+    n_equ = res.params.shape[0]
+    tables = []
+    for row in range(n_equ):
+        restup = (res, res.params[row], res.bse[row], res.tvalues[row],
+                  res.pvalues[row], res.conf_int(alpha)[row])
+
+        #not used anymore in current version
+#        if skip_headers2:
+#            skiph = (row != 0)
+#        else:
+#            skiph = False
+        skiph = False
+        tble = summary_params(restup, yname=endog_names[row],
+                              xname=exog_names, alpha=.05, use_t=use_t,
+                              skip_header=skiph)
+
+        tables.append(tble)
+
+    #add titles, they will be moved to header lines in table_extend
+    for i in range(len(endog_names)):
+        tables[i].title = endog_names[i]
+
+    table_all = table_extend(tables, keep_headers=keep_headers)
+
+    return tables, table_all
+
+
+def table_extend(tables, keep_headers=True):
+    '''extend a list of SimpleTables, adding titles to header of subtables
+
+    This function returns the merged table as a deepcopy, in contrast to the
+    SimpleTable extend method.
+
+    Parameter
+    ---------
+    tables : list of SimpleTable instances
+    keep_headers : bool
+        If true, then all headers are kept. If falls, then the headers of
+        subtables are blanked out.
+
+    Returns
+    -------
+    table_all : SimpleTable
+        merged tables as a single SimpleTable instance
+
+    '''
+    from copy import deepcopy
+    for ii, t in enumerate(tables[:]): #[1:]:
+        t = deepcopy(t)
+
+        #move title to first cell of header
+        #TODO: check if we have multiline headers
+        if t[0].datatype == 'header':
+            t[0][0].data = t.title
+            t[0][0]._datatype = None
+            t[0][0].row = t[0][1].row
+            if not keep_headers and (ii > 0):
+                for c in t[0][1:]:
+                    c.data = ''
+
+        #add separating line and extend tables
+        if ii == 0:
+            table_all = t
+        else:
+            r1 = table_all[-1]
+            r1.add_format('txt', row_dec_below='-')
+            table_all.extend(t)
+
+    table_all.title = None
+    return table_all
 
 
 def summary_return(tables, return_fmt='text'):
@@ -588,8 +821,17 @@ class Summary(object):
         None : table is attached
 
         '''
-        table = summary_params(res, yname=yname, xname=xname, alpha=alpha,
-                               use_t=use_t)
+        if res.params.ndim == 1:
+            table = summary_params(res, yname=yname, xname=xname, alpha=alpha,
+                                   use_t=use_t)
+        elif res.params.ndim == 2:
+#            _, table = summary_params_2dflat(res, yname=yname, xname=xname,
+#                                             alpha=alpha, use_t=use_t)
+            _, table = summary_params_2dflat(res, endog_names=yname,
+                                             exog_names=xname,
+                                             alpha=alpha, use_t=use_t)
+        else:
+            raise ValueError('params has to be 1d or 2d')
         self.tables.append(table)
 
     def add_extra_txt(self, etext):

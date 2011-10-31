@@ -188,7 +188,7 @@ class TestOLS(CheckRegressionResults):
 
     def test_qr_params(self):
         assert_almost_equal(self.res1.params,
-                self.res_qr.params, 7)
+                self.res_qr.params, 6)
 
     def test_qr_normalized_cov_params(self):
         #todo: need assert_close
