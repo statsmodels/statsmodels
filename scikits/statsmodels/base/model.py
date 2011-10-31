@@ -6,6 +6,7 @@ from scikits.statsmodels.stats.contrast import ContrastResults
 from scikits.statsmodels.tools.decorators import (resettable_cache,
                                                   cache_readonly)
 import scikits.statsmodels.base.wrapper as wrap
+from scikits.statsmodels.sandbox.regression.numdiff import approx_fprime1
 
 
 class Model(object):
@@ -53,6 +54,7 @@ class Model(object):
         the model has not been fit, then fit is called.
         """
         raise NotImplementedError
+
 
 class LikelihoodModel(Model):
     """
@@ -194,19 +196,20 @@ class LikelihoodModel(Model):
                 start_direc : ndarray
                     Initial direction set.
                 """
-        Hinv = None # JP error if full_output=0, Hinv not defined
+        Hinv = None  # JP error if full_output=0, Hinv not defined
         methods = ['newton', 'nm', 'bfgs', 'powell', 'cg', 'ncg']
         if start_params is None:
             if hasattr(self, 'start_params'):
                 start_params = self.start_params
             elif self.exog is not None:
-                start_params = [0]*self.exog.shape[1] # fails for shape (K,)?
+                # fails for shape (K,)?
+                start_params = [0] * self.exog.shape[1]
             else:
-                raise ValueError("If exog is None, then start_params should be "
-                                 "specified")
+                raise ValueError("If exog is None, then start_params should "
+                                 "be specified")
 
         if method.lower() not in methods:
-            raise ValueError, "Unknown fit method %s" % method
+            raise ValueError("Unknown fit method %s" % method)
         method = method.lower()
 
         # TODO: separate args from nonarg taking score and hessian, ie.,
@@ -221,12 +224,12 @@ class LikelihoodModel(Model):
             hess = None
 
         fit_funcs = {
-            'newton' : _fit_mle_newton,
-            'nm' : _fit_mle_nm, # Nelder-Mead
-            'bfgs' : _fit_mle_bfgs,
-            'cg' : _fit_mle_cg,
-            'ncg' : _fit_mle_ncg,
-            'powell' : _fit_mle_powell
+            'newton': _fit_mle_newton,
+            'nm': _fit_mle_nm,  # Nelder-Mead
+            'bfgs': _fit_mle_bfgs,
+            'cg': _fit_mle_cg,
+            'ncg': _fit_mle_ncg,
+            'powell': _fit_mle_powell
         }
 
         if method == 'newton':
@@ -250,12 +253,12 @@ class LikelihoodModel(Model):
             Hinv = np.linalg.inv(-retvals['Hessian'])
         else:
             try:
-                Hinv = np.linalg.inv(-1*self.hessian(xopt))
+                Hinv = np.linalg.inv(-1 * self.hessian(xopt))
             except:
                 #might want custom warning ResultsWarning? NumericalWarning?
                 from warnings import warn
-                warndoc= 'Inverting hessian failed, no bse or cov_params \
-available'
+                warndoc = ('Inverting hessian failed, no bse or '
+                           'cov_params available')
                 warn(warndoc, Warning)
                 Hinv = None
 
@@ -265,13 +268,14 @@ available'
         #TODO: hardcode scale?
         if isinstance(retvals, dict):
             mlefit.mle_retvals = retvals
-        optim_settings = {'optimizer' : method, 'start_params' : start_params,
-                          'maxiter' : maxiter, 'full_output' : full_output,
-                          'disp' : disp, 'fargs' : fargs, 'callback' : callback,
-                          'retall' : retall}
+        optim_settings = {'optimizer': method, 'start_params': start_params,
+                          'maxiter': maxiter, 'full_output': full_output,
+                          'disp': disp, 'fargs': fargs, 'callback': callback,
+                          'retall': retall}
         optim_settings.update(kwargs)
         mlefit.mle_settings = optim_settings
         return mlefit
+
 
 def _fit_mle_newton(f, score, start_params, fargs, kwargs, disp=True,
                     maxiter=100, callback=None, retall=False,
@@ -293,7 +297,7 @@ def _fit_mle_newton(f, score, start_params, fargs, kwargs, disp=True,
         if callback is not None:
             callback(newparams)
         iterations += 1
-    fval = f(newparams, *fargs) # this is the negative likelihood
+    fval = f(newparams, *fargs)  # this is the negative likelihood
     if iterations == maxiter:
         warnflag = 1
         if disp:
@@ -313,15 +317,16 @@ def _fit_mle_newton(f, score, start_params, fargs, kwargs, disp=True,
                         iterations, score(newparams),
                         hess(newparams))
         converged = not warnflag
-        retvals = {'fopt' : fopt, 'iterations' : niter, 'score' : gopt,
-                   'Hessian' : hopt, 'warnflag' : warnflag,
-                   'converged' : converged}
+        retvals = {'fopt': fopt, 'iterations': niter, 'score': gopt,
+                   'Hessian': hopt, 'warnflag': warnflag,
+                   'converged': converged}
         if retall:
-            retvals.update({'allvecs' : history})
+            retvals.update({'allvecs': history})
     else:
         retvals = newparams
 
     return xopt, retvals
+
 
 def _fit_mle_bfgs(f, score, start_params, fargs, kwargs, disp=True,
                     maxiter=100, callback=None, retall=False,
@@ -340,13 +345,14 @@ def _fit_mle_bfgs(f, score, start_params, fargs, kwargs, disp=True,
             (xopt, fopt, gopt, Hinv, fcalls,
              gcalls, warnflag, allvecs) = retvals
         converged = not warnflag
-        retvals = {'fopt' : fopt, 'gopt' : gopt, 'Hinv' : Hinv,
-                'fcalls' : fcalls, 'gcalls' : gcalls, 'warnflag' :
-                warnflag, 'converged' : converged}
+        retvals = {'fopt': fopt, 'gopt': gopt, 'Hinv': Hinv,
+                'fcalls': fcalls, 'gcalls': gcalls, 'warnflag':
+                warnflag, 'converged': converged}
         if retall:
-            retvals.update({'allvecs' : allvecs})
+            retvals.update({'allvecs': allvecs})
 
     return xopt, retvals
+
 
 def _fit_mle_nm(f, score, start_params, fargs, kwargs, disp=True,
                 maxiter=100, callback=None, retall=False,
@@ -364,13 +370,14 @@ def _fit_mle_nm(f, score, start_params, fargs, kwargs, disp=True,
         else:
             xopt, fopt, niter, fcalls, warnflag, allvecs = retvals
         converged = not warnflag
-        retvals = {'fopt' : fopt, 'iterations' : niter,
-                   'fcalls' : fcalls, 'warnflag' : warnflag,
-                   'converged' : converged}
+        retvals = {'fopt': fopt, 'iterations': niter,
+                   'fcalls': fcalls, 'warnflag': warnflag,
+                   'converged': converged}
         if retall:
-            retvals.update({'allvecs' : allvecs})
+            retvals.update({'allvecs': allvecs})
 
     return xopt, retvals
+
 
 def _fit_mle_cg(f, score, start_params, fargs, kwargs, disp=True,
                 maxiter=100, callback=None, retall=False,
@@ -388,12 +395,13 @@ def _fit_mle_cg(f, score, start_params, fargs, kwargs, disp=True,
         else:
             xopt, fopt, fcalls, gcalls, warnflag, allvecs = retvals
         converged = not warnflag
-        retvals = {'fopt' : fopt, 'fcalls' : fcalls, 'gcalls' : gcalls,
-                   'warnflag' : warnflag, 'converged' : converged}
+        retvals = {'fopt': fopt, 'fcalls': fcalls, 'gcalls': gcalls,
+                   'warnflag': warnflag, 'converged': converged}
         if retall:
-            retvals.update({'allvecs' : allvecs})
+            retvals.update({'allvecs': allvecs})
 
     return xopt, retvals
+
 
 def _fit_mle_ncg(f, score, start_params, fargs, kwargs, disp=True,
                  maxiter=100, callback=None, retall=False,
@@ -413,13 +421,14 @@ def _fit_mle_ncg(f, score, start_params, fargs, kwargs, disp=True,
             xopt, fopt, fcalls, gcalls, hcalls, warnflag, allvecs =\
                 retvals
         converged = not warnflag
-        retvals = {'fopt' : fopt, 'fcalls' : fcalls, 'gcalls' : gcalls,
-                   'hcalls' : hcalls, 'warnflag' : warnflag,
-                   'converged' : converged}
+        retvals = {'fopt': fopt, 'fcalls': fcalls, 'gcalls': gcalls,
+                   'hcalls': hcalls, 'warnflag': warnflag,
+                   'converged': converged}
         if retall:
-            retvals.update({'allvecs' : allvecs})
+            retvals.update({'allvecs': allvecs})
 
     return xopt, retvals
+
 
 def _fit_mle_powell(f, score, start_params, fargs, kwargs, disp=True,
                     maxiter=100, callback=None, retall=False,
@@ -440,13 +449,14 @@ def _fit_mle_powell(f, score, start_params, fargs, kwargs, disp=True,
             xopt, fopt, direc, niter, fcalls, warnflag, allvecs =\
                 retvals
         converged = not warnflag
-        retvals = {'fopt' : fopt, 'direc' : direc, 'iterations' : niter,
-                   'fcalls' : fcalls, 'warnflag' : warnflag,
-                   'converged' : converged}
+        retvals = {'fopt': fopt, 'direc': direc, 'iterations': niter,
+                   'fcalls': fcalls, 'warnflag': warnflag,
+                   'converged': converged}
         if retall:
-            retvals.update({'allvecs' : allvecs})
+            retvals.update({'allvecs': allvecs})
 
     return xopt, retvals
+
 
 #TODO: the below is unfinished
 class GenericLikelihoodModel(LikelihoodModel):
@@ -469,12 +479,12 @@ class GenericLikelihoodModel(LikelihoodModel):
     Optimization method that require a likelihood function, a score/gradient,
     and a Hessian is 'newton'
 
-    If they are not overwritten by a subclass, then numerical gradient, Jacobian
-    and Hessian of the log-likelihood are caclulated by numerical forward
-    differentiation. This might results in some cases in precision problems, and
-    the Hessian might not be positive definite. Even if the Hessian is not
-    positive definite the covariance matrix of the parameter estimates based on
-    the outer product of the Jacobian might still be valid.
+    If they are not overwritten by a subclass, then numerical gradient,
+    Jacobian and Hessian of the log-likelihood are caclulated by numerical
+    forward differentiation. This might results in some cases in precision
+    problems, and the Hessian might not be positive definite. Even if the
+    Hessian is not positive definite the covariance matrix of the parameter
+    estimates based on the outer product of the Jacobian might still be valid.
 
 
     Examples
@@ -512,13 +522,13 @@ class GenericLikelihoodModel(LikelihoodModel):
         # this won't work for ru2nmnl, maybe np.ndim of a dict?
         if exog is not None:
             #try:
-            self.nparams = self.df_model = exog.shape[1] if np.ndim(exog)==2 else 1
+            self.nparams = self.df_model = (exog.shape[1]
+                                            if np.ndim(exog) == 2 else 1)
         super(GenericLikelihoodModel, self).__init__(endog, exog)
 
     #this is redundant and not used when subclassing
     def initialize(self):
         if not self.score:  # right now score is not optional
-            from scikits.statsmodels.sandbox.regression.numdiff import approx_fprime1
             self.score = approx_fprime1
             if not self.hessian:
                 pass
@@ -560,7 +570,6 @@ class GenericLikelihoodModel(LikelihoodModel):
     def reduceparams(self, params):
         return params[self.fixed_paramsmask]
 
-
     def loglike(self, params):
         return self.loglikeobs(params).sum(0)
 
@@ -574,7 +583,6 @@ class GenericLikelihoodModel(LikelihoodModel):
         '''
         Gradient of log-likelihood evaluated at params
         '''
-        from scikits.statsmodels.sandbox.regression.numdiff import approx_fprime1
         return approx_fprime1(params, self.loglike, epsilon=1e-4).ravel()
 
     def jac(self, params, **kwds):
@@ -583,7 +591,6 @@ class GenericLikelihoodModel(LikelihoodModel):
         observation.
         '''
         kwds.setdefault('epsilon', 1e-4)
-        from scikits.statsmodels.sandbox.regression.numdiff import approx_fprime1
         return approx_fprime1(params, self.loglikeobs, **kwds)
 
     def hessian(self, params):
@@ -591,7 +598,8 @@ class GenericLikelihoodModel(LikelihoodModel):
         Hessian of log-likelihood evaluated at params
         '''
         from scikits.statsmodels.sandbox.regression.numdiff import approx_hess
-        return approx_hess(params, self.loglike)[0]  #need options for hess (epsilon)
+        # need options for hess (epsilon)
+        return approx_hess(params, self.loglike)[0]
 
     def fit(self, start_params=None, method='nm', maxiter=500, full_output=1,
             disp=1, callback=None, retall=0, **kwargs):
@@ -607,9 +615,11 @@ class GenericLikelihoodModel(LikelihoodModel):
             else:
                 start_params = 0.1 * np.ones(self.nparams)
 
-        mlefit = super(GenericLikelihoodModel, self).fit(start_params=start_params,
-                method=method, maxiter=maxiter, full_output=full_output,
-                disp=disp, callback=callback, **kwargs)
+        fit_method = super(GenericLikelihoodModel, self).fit
+        mlefit = fit_method(start_params=start_params,
+                            method=method, maxiter=maxiter,
+                            full_output=full_output,
+                            disp=disp, callback=callback, **kwargs)
         genericmlefit = GenericLikelihoodModelResults(self, mlefit)
         return genericmlefit
     #fit.__doc__ += LikelihoodModel.fit.__doc__
@@ -680,8 +690,8 @@ class Results(object):
         self.params = params
         self.model = model
 
-#TODO: public method?
 
+#TODO: public method?
 class LikelihoodModelResults(Results):
     """
     Class to contain results from likelihood models
@@ -901,7 +911,7 @@ class LikelihoodModelResults(Results):
 
     @cache_readonly
     def pvalues(self):
-        return stats.t.sf(np.abs(self.tvalues), self.df_resid)*2
+        return stats.t.sf(np.abs(self.tvalues), self.df_resid) * 2
 
     def cov_params(self, r_matrix=None, column=None, scale=None, other=None):
         """
@@ -962,7 +972,7 @@ class LikelihoodModelResults(Results):
             if column.shape == ():
                 return self.normalized_cov_params[column, column] * scale
             else:
-                return self.normalized_cov_params[column][:,column] * scale
+                return self.normalized_cov_params[column][:, column] * scale
         elif r_matrix is not None:
             r_matrix = np.asarray(r_matrix)
             if r_matrix.shape == ():
@@ -1036,7 +1046,7 @@ class LikelihoodModelResults(Results):
             raise ValueError('Need covariance of parameters for computing '
                              'T statistics')
         if num_params != self.params.shape[0]:
-            raise ValueError, 'r_matrix and params are not aligned'
+            raise ValueError('r_matrix and params are not aligned')
         if q_matrix is None:
             q_matrix = np.zeros(num_ttests)
         else:
@@ -1053,9 +1063,9 @@ class LikelihoodModelResults(Results):
             _sd = np.sqrt(np.diag(self.cov_params(r_matrix=r_matrix)))
         else:
             _sd = np.sqrt(self.cov_params(r_matrix=r_matrix))
-        _t = (_effect-q_matrix) * recipr(_sd)
+        _t = (_effect - q_matrix) * recipr(_sd)
         return ContrastResults(effect=_effect, t=_t, sd=_sd,
-                df_denom=self.model.df_resid)
+                               df_denom=self.model.df_resid)
 
     #TODO: untested for GLMs?
     def f_test(self, r_matrix, q_matrix=None, scale=1.0, invcov=None):
@@ -1100,7 +1110,8 @@ class LikelihoodModelResults(Results):
         significantly different from zero.
 
         >>> print results.f_test(A)
-        <F contrast: F=330.28533923463488, p=4.98403052872e-10, df_denom=9, df_num=6>
+        <F contrast: F=330.28533923463488, p=4.98403052872e-10,
+         df_denom=9, df_num=6>
 
         Compare this to
 
@@ -1116,7 +1127,8 @@ class LikelihoodModelResults(Results):
         are equal.
 
         >>> print results.f_test(B)
-        <F contrast: F=9.740461873303655, p=0.00560528853174, df_denom=9, df_num=2>
+        <F contrast: F=9.740461873303655, p=0.00560528853174, df_denom=9,
+         df_num=2>
 
         See also
         --------
@@ -1131,21 +1143,21 @@ class LikelihoodModelResults(Results):
             raise ValueError('need covariance of parameters for computing '
                              'F statistics')
 
-        cparams = np.dot(r_matrix, self.params[:,None])
-        J = float(r_matrix.shape[0]) # number of restrictions
+        cparams = np.dot(r_matrix, self.params[:, None])
+        J = float(r_matrix.shape[0])  # number of restrictions
         if q_matrix is None:
             q_matrix = np.zeros(J)
         else:
             q_matrix = np.asarray(q_matrix)
         if q_matrix.ndim == 1:
-            q_matrix = q_matrix[:,None]
+            q_matrix = q_matrix[:, None]
             if q_matrix.shape[0] != J:
                 raise ValueError("r_matrix and q_matrix must have the same "
                                  "number of rows")
         Rbq = cparams - q_matrix
         if invcov is None:
             invcov = np.linalg.inv(self.cov_params(r_matrix=r_matrix))
-        F = np.dot(np.dot(Rbq.T,invcov),Rbq)/J
+        F = np.dot(np.dot(Rbq.T, invcov), Rbq) / J
         return ContrastResults(F=F, df_denom=self.model.df_resid,
                     df_num=invcov.shape[0])
 
@@ -1210,49 +1222,46 @@ class LikelihoodModelResults(Results):
             dist = stats.norm
         else:
             dist = stats.t
-        if cols is None and dist == stats.t:
-            lower = self.params - dist.ppf(1-alpha/2,self.model.df_resid) *\
-                    bse
-            upper = self.params + dist.ppf(1-alpha/2,self.model.df_resid) *\
-                    bse
-        elif cols is None and dist == stats.norm:
-            lower = self.params - dist.ppf(1-alpha/2) * bse
-            upper = self.params + dist.ppf(1-alpha/2) * bse
-        elif cols is not None and dist == stats.t:
+
+        if dist == stats.t:
+            q = dist.ppf(1 - alpha / 2, self.model.df_resid)
+        elif dist == stats.norm:
+            q = dist.ppf(1 - alpha / 2)
+
+        if cols is None:
+            lower = self.params - q * bse
+            upper = self.params + q * bse
+        else:
             cols = np.asarray(cols)
-            lower = self.params[cols] - dist.ppf(1-\
-                        alpha/2,self.model.df_resid) * bse[cols]
-            upper = self.params[cols] + dist.ppf(1-\
-                        alpha/2,self.model.df_resid) * bse[cols]
-        elif cols is not None and dist == stats.norm:
-            cols = np.asarray(cols)
-            lower = self.params[cols] - dist.ppf(1-alpha/2) * bse[cols]
-            upper = self.params[cols] + dist.ppf(1-alpha/2) * bse[cols]
-        return np.asarray(zip(lower,upper))
+            lower = self.params[cols] - q * bse[cols]
+            upper = self.params[cols] + q * bse[cols]
+        return np.asarray(zip(lower, upper))
 
     @cache_readonly
     def llf(self):
         return self.model.loglike(self.params)
 
+
 class LikelihoodResultsWrapper(wrap.ResultsWrapper):
     _attrs = {
-        'params' : 'columns',
-        'bse' : 'columns',
-        'pvalues' : 'columns',
-        'tvalues' : 'columns',
-        'resid' : 'rows',
-        'fittedvalues' : 'rows',
-        'normalized_cov_params' : 'cov',
+        'params': 'columns',
+        'bse': 'columns',
+        'pvalues': 'columns',
+        'tvalues': 'columns',
+        'resid': 'rows',
+        'fittedvalues': 'rows',
+        'normalized_cov_params': 'cov',
     }
 
     _wrap_attrs = _attrs
     _wrap_methods = {
-        'cov_params' : 'cov',
-        'conf_int' : 'columns'
+        'cov_params': 'cov',
+        'conf_int': 'columns'
     }
 
 wrap.populate_wrapper(LikelihoodResultsWrapper,
                       LikelihoodModelResults)
+
 
 class ResultMixin(object):
 
@@ -1264,11 +1273,11 @@ class ResultMixin(object):
             if hasattr(self, 'hasconst'):
                 hasconst = self.hasconst
             else:
-                hasconst = 1 #default assumption
+                # default assumption
+                hasconst = 1
             return self.df_model + hasconst
         else:
             return self.params.size
-
 
     @cache_readonly
     def aic(self):
@@ -1370,12 +1379,11 @@ class ResultMixin(object):
         print self.model.__class__
         hascloneattr = True if hasattr(self, 'cloneattr') else False
         for i in xrange(nrep):
-            rvsind = np.random.randint(self.nobs-1, size=self.nobs )
+            rvsind = np.random.randint(self.nobs - 1, size=self.nobs)
             #this needs to set startparam and get other defining attributes
             #need a clone method on model
             fitmod = self.model.__class__(self.endog[rvsind],
-                                          self.exog[rvsind,:]
-                                          )
+                                          self.exog[rvsind, :])
             if hascloneattr:
                 for attr in self.model.cloneattr:
                     setattr(fitmod, attr, getattr(self.model, attr))
@@ -1456,7 +1464,3 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
         self.nobs = model.endog.shape[0]
         self._cache = resettable_cache()
         self.__dict__.update(mlefit.__dict__)
-
-
-
-
