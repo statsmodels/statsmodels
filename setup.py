@@ -29,7 +29,7 @@ LICENSE = 'BSD License'
 DOWNLOAD_URL = ''
 
 MAJ = 0
-MIN = 3
+MIN = 4
 REV = 0
 ISRELEASED = False
 VERSION = '%d.%d.%d' % (MAJ,MIN,REV)
