@@ -1,0 +1,1 @@
+class PerfectSeparationError(Exception): pass

@@ -2,12 +2,13 @@
 
 Test functions for models.GLM
 """
-
+import os
 import numpy as np
 from numpy.testing import *
 import scikits.statsmodels.api as sm
 from scikits.statsmodels.genmod.generalized_linear_model import GLM
 from scikits.statsmodels.tools.tools import add_constant
+from scikits.statsmodels.tools.sm_exceptions import PerfectSeparationError
 from nose import SkipTest
 
 # Test Precisions
@@ -467,6 +468,18 @@ class TestGlmPoissonOffset(CheckModelResults):
         cls.res1.params[-1] += np.log(100) # add exposure back in to param
                                             # to make the results the same
         cls.res2 = Cpunish()
+
+def test_prefect_pred():
+    cur_dir = os.path.dirname(os.path.abspath(__file__))
+    iris = np.genfromtxt(os.path.join(cur_dir, 'results', 'iris.csv'),
+                    delimiter=",", skip_header=1)
+    y = iris[:,-1]
+    X = iris[:,:-1]
+    X = X[y != 2]
+    y = y[y != 2]
+    X = add_constant(X, prepend=True)
+    glm = GLM(y, X, family=sm.families.Binomial())
+    assert_raises(PerfectSeparationError, glm.fit)
 
 
 def test_attribute_writable_resettable():

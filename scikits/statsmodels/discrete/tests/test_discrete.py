@@ -7,7 +7,7 @@ DECIMAL_3 is used because it seems that there is a loss of precision
 in the Stata *.dta -> *.csv output, NOT the estimator for the Poisson
 tests.
 """
-
+import os
 import numpy as np
 from numpy.testing import *
 from scikits.statsmodels.discrete.discrete_model import *
@@ -15,6 +15,7 @@ import scikits.statsmodels.api as sm
 from sys import platform
 from nose import SkipTest
 from results.results_discrete import Spector
+from scikits.statsmodels.tools.sm_exceptions import PerfectSeparationError
 
 DECIMAL_4 = 4
 DECIMAL_3 = 3
@@ -311,6 +312,20 @@ class TestMNLogitNewtonBaseZero(CheckModelResults):
         assert_equal(self.res1.model.K, self.res2.K)
 
 
+def test_perfect_prediction():
+    cur_dir = os.path.dirname(os.path.abspath(__file__))
+    iris_dir = os.path.join(cur_dir, '..', '..', 'genmod', 'tests', 'results')
+    iris_dir = os.path.abspath(iris_dir)
+    iris = np.genfromtxt(os.path.join(iris_dir, 'iris.csv'), delimiter=",",
+                            skip_header=1)
+    y = iris[:,-1]
+    X = iris[:,:-1]
+    X = X[y != 2]
+    y = y[y != 2]
+    X = sm.add_constant(X, prepend=True)
+    mod = Logit(y,X)
+    assert_raises(PerfectSeparationError, mod.fit)
+    
 
 
 if __name__ == "__main__":
