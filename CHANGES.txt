@@ -1,6 +1,12 @@
 Release History
 ===============
 
+trunk for 0.4.0
+---------------
+* tools.tools.ECDF -> distributions.ECDF
+* tools.tools.monotone_fn_inverter -> distributions.monotone_fn_inverter
+* tools.tools.StepFunction -> distributions.StepFunction
+
 0.3.1
 -----
 

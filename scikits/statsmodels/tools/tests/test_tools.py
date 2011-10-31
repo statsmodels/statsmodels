@@ -62,20 +62,6 @@ class TestTools(TestCase):
         self.assertEquals(Y.shape, (40,8))
         self.assertEquals(tools.rank(Y), 8)
 
-    def test_StepFunction(self):
-        x = np.arange(20)
-        y = np.arange(20)
-        f = tools.StepFunction(x, y)
-        assert_almost_equal(f( np.array([[3.2,4.5],[24,-3.1]]) ), [[ 3, 4], [19, 0]])
-
-    def test_StepFunctionBadShape(self):
-        x = np.arange(20)
-        y = np.arange(21)
-        self.assertRaises(ValueError, tools.StepFunction, x, y)
-        x = np.zeros((2, 2))
-        y = np.zeros((2, 2))
-        self.assertRaises(ValueError, tools.StepFunction, x, y)
-
 class TestCategoricalNumerical(object):
     #TODO: use assert_raises to check that bad inputs are taken care of
     def __init__(self):
