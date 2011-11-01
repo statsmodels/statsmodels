@@ -75,7 +75,10 @@ class ModelData(object):
         if isinstance(arr, DataFrame):
             return list(arr.columns)
         elif isinstance(arr, Series):
-            return [arr.name]
+            if arr.name:
+                return [arr.name]
+            else:
+                return
         else:
             try:
                 return arr.dtype.names
