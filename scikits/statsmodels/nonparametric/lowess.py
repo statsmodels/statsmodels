@@ -173,7 +173,7 @@ def __lowess_initial_fit(x_copy, y_copy, k, n):
                                 x_copy[nn_indices[0]:nn_indices[1]], 
                             x_copy[i], width)
         __lowess_tricube(weights[i,:])
-        np.sqrt(weights[i,:], out=weights[i,:])
+        weights[i,:] = np.sqrt(weights[i,:])
 
         X[:,1] = x_copy[nn_indices[0]:nn_indices[1]]
         y_i = weights[i,:] * y_copy[nn_indices[0]:nn_indices[1]]
@@ -251,7 +251,7 @@ def __lowess_robustify_fit(x_copy, y_copy, fitted, weights, k, n):
     residual_weights = np.copy(y_copy)
     residual_weights.shape = (n,)
     residual_weights -= fitted
-    np.absolute(residual_weights, out=residual_weights)
+    residual_weights = np.absolute(residual_weights)#, out=residual_weights)
     s = np.median(residual_weights)
     residual_weights /= (6*s)
     too_big = residual_weights>=1
@@ -328,9 +328,9 @@ def __lowess_tricube(t):
     Nothing
     """
     #t = (1-np.abs(t)**3)**3
-    np.absolute(t, out=t)
-    __lowess_mycube(t)
-    np.negative(t, out = t)
+    t[:] = np.absolute(t) #, out=t) #numpy version?
+    _lowess_mycube(t)
+    t[:] = np.negative(t) #, out = t)
     t += 1
     __lowess_mycube(t)
 
@@ -369,7 +369,7 @@ def __lowess_bisquare(t):
     """
     #t = (1-t**2)**2
     t *= t
-    np.negative(t, out=t)
+    t[:] = np.negative(t) #, out=t)
     t += 1
     t *= t
 
