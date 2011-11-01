@@ -9,8 +9,7 @@ who generate a smooth fit of a set of (x,y) pairs.
 # pylint: disable-msg=E1101
 
 import numpy as np
-import numpy.linalg as L
-import kernel
+import kernels
 #import numbers
 #from scipy.linalg import solveh_banded
 #from scipy.optimize import golden
@@ -30,7 +29,7 @@ class KernelSmoother(object):
     """
     def __init__(self, x, y, Kernel = None):
         if Kernel is None:
-            Kernel = kernel.Gaussian()
+            Kernel = kernels.Gaussian()
         self.Kernel = Kernel
         self.x = np.array(x)
         self.y = np.array(y)
@@ -169,7 +168,7 @@ class PolySmoother(object):
         _y = y * _w#[:,None]
         #self.coef = np.dot(L.pinv(X).T, _y[:,None])
         #self.coef = np.dot(L.pinv(X), _y)
-        self.coef = L.lstsq(X, _y)[0]
+        self.coef = np.linalg.lstsq(X, _y)[0]
 
 
 
@@ -177,7 +176,7 @@ class PolySmoother(object):
 
 
 if __name__ == "__main__":
-    from scikits.statsmodels.sandbox import smoothers as s
+    from scikits.statsmodels.sandbox.nonparametric import smoothers as s
     import matplotlib.pyplot as plt
     from numpy import sin, array, random
 
@@ -186,8 +185,8 @@ if __name__ == "__main__":
     x = random.normal(size = 250)
     y = array([sin(i*5)/i + 2*i + (3+i)*random.normal() for i in x])
 
-    K = s.kernel.Biweight(0.25)
-    K2 = s.kernel.CustomKernel(lambda x: (1 - x*x)**2, 0.25, domain = [-1.0,
+    K = s.kernels.Biweight(0.25)
+    K2 = s.kernels.CustomKernel(lambda x: (1 - x*x)**2, 0.25, domain = [-1.0,
                                1.0])
 
     KS = s.KernelSmoother(x, y, K)
@@ -226,22 +225,37 @@ if __name__ == "__main__":
     fig = plt.figure()
     ax = fig.add_subplot(221)
     ax.plot(x, y, "+")
-    ax.plot(KSx, KSy, "o")
+    ax.plot(KSx, KSy, "-o")
     ax.set_ylim(-20, 30)
     ax2 = fig.add_subplot(222)
-    ax2.plot(KSx, KVar, "o")
+    ax2.plot(KSx, KVar, "-o")
 
     ax3 = fig.add_subplot(223)
     ax3.plot(x, y, "+")
-    ax3.plot(KSx, KS2y, "o")
+    ax3.plot(KSx, KS2y, "-o")
     ax3.set_ylim(-20, 30)
     ax4 = fig.add_subplot(224)
-    ax4.plot(KSx, K2Var, "o")
+    ax4.plot(KSx, K2Var, "-o")
 
     fig2 = plt.figure()
     ax5 = fig2.add_subplot(111)
     ax5.plot(x, y, "+")
-    ax5.plot(KSConfIntx, KSConfInty, "o")
+    ax5.plot(KSConfIntx, KSConfInty, "-o")
+
+    from scikits.statsmodels.nonparametric import lowess as lo
+    ys = lo.lowess(y, x)
+    ax5.plot(ys[:,0], ys[:,1], 'b-')
+    ys2 = lo.lowess(y, x, frac=0.25)
+    ax5.plot(ys2[:,0], ys2[:,1], 'b--', lw=2)
+
+    xind = np.argsort(x)
+    pmod = s.PolySmoother(5, x[xind])
+    pmod.fit(y[xind])
+
+    yp = pmod(x[xind])
+    ax5.plot(x[xind], yp, 'k-')
+    ax5.set_title('Kernel regression, lowess - blue, polysmooth - black')
+
     #plt.show()
 
 
