@@ -1113,7 +1113,7 @@ class RegressionResults(base.LikelihoodModelResults):
         -----
 
         .. math:: D=-2\\log\\left(\\frac{\\mathcal{L}_{null}}
-        {\\mathcal{L}_{alternative}}\\right)
+           {\\mathcal{L}_{alternative}}\\right)
 
         where :math:`\mathcal{L}` is the likelihood of the model. With :math:`D`
         distributed as chisquare with df equal to difference in number of
