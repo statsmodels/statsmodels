@@ -7,23 +7,25 @@ Author: Josef
 
 mainly script for checking Kernel Regression
 """
+import numpy as np
 
 if __name__ == "__main__":
-    from scikits.statsmodels.sandbox.nonparametric import smoothers as s
+    #from scikits.statsmodels.sandbox.nonparametric import smoothers as s
+    from scikits.statsmodels.sandbox.nonparametric import smoothers, kernels
     import matplotlib.pyplot as plt
-    from numpy import sin, array, random
+    #from numpy import sin, array, random
 
     import time
-    random.seed(500)
-    x = random.normal(size = 250)
-    y = array([sin(i*5)/i + 2*i + (3+i)*random.normal() for i in x])
+    np.random.seed(500)
+    x = np.random.normal(size = 250)
+    y = np.array([np.sin(i*5)/i + 2*i + (3+i)*np.random.normal() for i in x])
 
-    K = s.kernels.Biweight(0.25)
-    K2 = s.kernels.CustomKernel(lambda x: (1 - x*x)**2, 0.25, domain = [-1.0,
+    K = kernels.Biweight(0.25)
+    K2 = kernels.CustomKernel(lambda x: (1 - x*x)**2, 0.25, domain = [-1.0,
                                1.0])
 
-    KS = s.KernelSmoother(x, y, K)
-    KS2 = s.KernelSmoother(x, y, K2)
+    KS = smoothers.KernelSmoother(x, y, K)
+    KS2 = smoothers.KernelSmoother(x, y, K2)
 
 
     KSx = np.arange(-3, 3, 0.1)
@@ -81,8 +83,9 @@ if __name__ == "__main__":
     ys2 = lo.lowess(y, x, frac=0.25)
     ax5.plot(ys2[:,0], ys2[:,1], 'b--', lw=2)
 
+    #need to sort for matplolib plot ?
     xind = np.argsort(x)
-    pmod = s.PolySmoother(5, x[xind])
+    pmod = smoothers.PolySmoother(5, x[xind])
     pmod.fit(y[xind])
 
     yp = pmod(x[xind])
