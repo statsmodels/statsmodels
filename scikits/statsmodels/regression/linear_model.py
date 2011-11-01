@@ -1053,7 +1053,7 @@ class RegressionResults(base.LikelihoodModelResults):
     def compare_f_test(self, restricted):
         '''use F test to test whether restricted model is correct
 
-        Parametersnorm
+        Parameters
         ----------
         restricted : Result instance
             The restricted model is assumed to be nested in the current
