@@ -8,8 +8,56 @@ from scikits.statsmodels.tools.decorators import (resettable_cache,
 import scikits.statsmodels.base.wrapper as wrap
 from scikits.statsmodels.sandbox.regression.numdiff import approx_fprime1
 
+def _get_file_obj(fname, mode):
+    """
+    Light wrapper to handle strings and let files (anything else) pass through
+    """
+    if np.lib._iotools._is_string_like(fname):
+        fh = open(fname, mode)
+    return fh
 
-class Model(object):
+class Pickleable(object):
+
+    def clone(self):
+        pass
+
+    def save(self, fname):
+        """
+        Save the object to file via pickling.
+
+        Parameters
+        ---------
+        fname : str
+            Filename to pickle to
+        """
+        import cPickle as pickle
+        fout = _get_file_obj(fname, 'wb')
+        pickle.dump(self, fout, protocol=-1)
+
+    @classmethod
+    def load(self, fname):
+        """
+        Load a previously saved object from file
+
+        Parameters
+        ----------
+        fname : str
+            Filename to unpickle
+
+        Notes
+        -----
+        This method can be used to load *both* models and results.
+        """
+        import cPickle as pickle
+        fin = _get_file_obj(fname, 'rb')
+        return pickle.load(fin)
+
+    def __getstate__(self):
+        if hasattr(self, '_cache'):
+            self._cache.clear() # just clear cached values from results
+        return self.__dict__
+
+class Model(Pickleable):
     """
     A (predictive) statistical model. The class Model itself is not to be used.
 
@@ -671,7 +719,7 @@ class GenericLikelihoodModel(LikelihoodModel):
         return np.sqrt(np.diag(self.covjac))
 
 
-class Results(object):
+class Results(Pickleable):
     """
     Class to contain model results
 

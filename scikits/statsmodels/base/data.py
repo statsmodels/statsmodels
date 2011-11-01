@@ -22,6 +22,12 @@ class ModelData(object):
         self._check_integrity()
         self._cache = resettable_cache()
 
+    # pickleability
+
+    def __getstate__(self):
+        self._cache.clear()
+        return self.__dict__
+
     def _convert_endog_exog(self, endog, exog):
 
         # for consistent outputs if endog is (n,1)
