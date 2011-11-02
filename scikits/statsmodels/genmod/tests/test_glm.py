@@ -2,6 +2,7 @@
 
 Test functions for models.GLM
 """
+import tempfile
 import os
 import numpy as np
 from numpy.testing import *
@@ -101,6 +102,13 @@ class CheckModelResults(object):
     def test_fittedvalues(self):
         assert_almost_equal(self.res1.fittedvalues, self.res2.fittedvalues,
                 self.decimal_fittedvalues)
+
+    def test_pickle(self): # just test it works
+        tmpdir = tempfile.mkdtemp(prefix='pickle')
+        self.res1.save(tmpdir+'/res.pkl')
+        res = self.res1.load(tmpdir+'/res.pkl')
+        self.res1.model.save(tmpdir+'/mod.pkl')
+        mod = self.res1.model.load(tmpdir+'/mod.pkl')
 
 class TestGlmGaussian(CheckModelResults):
     def __init__(self):

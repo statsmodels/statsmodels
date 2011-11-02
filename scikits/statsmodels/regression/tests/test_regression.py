@@ -1,6 +1,8 @@
 """
 Test functions for models.regression
 """
+import tempfile
+
 import numpy as np
 from numpy.testing import *
 from scipy.linalg import toeplitz
@@ -143,6 +145,12 @@ class CheckRegressionResults(object):
         assert_almost_equal(self.res1.resid, self.res2.resid,
             self.decimal_resids)
 
+    def test_pickle(self): # just test it works
+        tmpdir = tempfile.mkdtemp(prefix='pickle')
+        self.res1.save(tmpdir+'/res.pkl')
+        res = self.res1.load(tmpdir+'/res.pkl')
+        self.res1.model.save(tmpdir+'/mod.pkl')
+        mod = self.res1.model.load(tmpdir+'/mod.pkl')
 #TODO: test fittedvalues and what else?
 
 class TestOLS(CheckRegressionResults):

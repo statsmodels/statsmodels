@@ -1,7 +1,7 @@
 """
 Test functions for sm.rlm
 """
-
+import tempfile
 from numpy.testing import *
 import scikits.statsmodels.api as sm
 from scikits.statsmodels.robust.robust_linear_model import RLM
@@ -68,6 +68,13 @@ class CheckRlmResults(object):
                 self.decimal_bcov_scaled)
         assert_almost_equal(self.res1.h3, self.res2.h3,
                 self.decimal_bcov_scaled)
+
+    def test_pickle(self): # just test it works
+        tmpdir = tempfile.mkdtemp(prefix='pickle')
+        self.res1.save(tmpdir+'/res.pkl')
+        res = self.res1.load(tmpdir+'/res.pkl')
+        self.res1.model.save(tmpdir+'/mod.pkl')
+        mod = self.res1.model.load(tmpdir+'/mod.pkl')
 
 #TODO: figure out how to handle in results
 #    def test_tvalues(self):

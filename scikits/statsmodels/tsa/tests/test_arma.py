@@ -1,3 +1,4 @@
+import tempfile
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
 import scikits.statsmodels.sandbox.tsa.fftarma as fa
@@ -127,6 +128,13 @@ class CheckArmaResults(object):
     def test_sigma2(self):
         assert_almost_equal(self.res1.sigma2, self.res2.sigma2,
                 self.decimal_sigma2)
+
+    def test_pickle(self): # just test it works
+        tmpdir = tempfile.mkdtemp(prefix='pickle')
+        self.res1.save(tmpdir+'/res.pkl')
+        res = self.res1.load(tmpdir+'/res.pkl')
+        self.res1.model.save(tmpdir+'/mod.pkl')
+        mod = self.res1.model.load(tmpdir+'/mod.pkl')
 
 class CheckForecast(object):
     def test_forecast(self):

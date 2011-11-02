@@ -7,6 +7,7 @@ DECIMAL_3 is used because it seems that there is a loss of precision
 in the Stata *.dta -> *.csv output, NOT the estimator for the Poisson
 tests.
 """
+import tempfile
 import os
 import numpy as np
 from numpy.testing import *
@@ -77,6 +78,13 @@ class CheckModelResults(object):
 
     def test_bic(self):
         assert_almost_equal(self.res1.bic, self.res2.bic, DECIMAL_3)
+
+    def test_pickle(self): # just test it works
+        tmpdir = tempfile.mkdtemp(prefix='pickle')
+        self.res1.save(tmpdir+'/res.pkl')
+        res = self.res1.load(tmpdir+'/res.pkl')
+        self.res1.model.save(tmpdir+'/mod.pkl')
+        mod = self.res1.model.load(tmpdir+'/mod.pkl')
 
 class CheckMargEff(object):
     """
@@ -325,7 +333,7 @@ def test_perfect_prediction():
     X = sm.add_constant(X, prepend=True)
     mod = Logit(y,X)
     assert_raises(PerfectSeparationError, mod.fit)
-    
+
 
 
 if __name__ == "__main__":

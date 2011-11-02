@@ -1,6 +1,7 @@
 """
 Test AR Model
 """
+import tempfile
 import scikits.statsmodels.api as sm
 from scikits.statsmodels.tsa.ar_model import AR
 from numpy.testing import assert_almost_equal, assert_equal
@@ -27,6 +28,13 @@ class CheckAR(object):
 
     def test_fpe(self):
         assert_almost_equal(self.res1.fpe, self.res2.fpe, DECIMAL_6)
+
+    def test_pickle(self): # just test it works
+        tmpdir = tempfile.mkdtemp(prefix='pickle')
+        self.res1.save(tmpdir+'/res.pkl')
+        res = self.res1.load(tmpdir+'/res.pkl')
+        self.res1.model.save(tmpdir+'/mod.pkl')
+        mod = self.res1.model.load(tmpdir+'/mod.pkl')
 
 class TestAROLSConstant(CheckAR):
     """
