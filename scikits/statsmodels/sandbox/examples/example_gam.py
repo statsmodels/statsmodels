@@ -6,14 +6,14 @@ Note: uncomment plt.show() to display graphs
 
 
 # convert to script for testing, so we get interactive variable access
-example = 3  # 1,2 or 3
+example = 1  # 1,2 or 3
 
 import numpy as np
 import numpy.random as R
 from scikits.statsmodels.sandbox.gam import AdditiveModel
 from scikits.statsmodels.sandbox.gam import Model as GAM #?
 from scikits.statsmodels.genmod.families import family
-from scikits.statsmodels.genmod.glm import GLM
+from scikits.statsmodels.genmod.generalized_linear_model import GLM
 
 standardize = lambda x: (x - x.mean()) / x.std()
 demean = lambda x: (x - x.mean())
