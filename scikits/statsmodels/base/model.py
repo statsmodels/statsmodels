@@ -12,14 +12,15 @@ def _get_file_obj(fname, mode):
     """
     Light wrapper to handle strings and let files (anything else) pass through
     """
-    if np.lib._iotools._is_string_like(fname):
+    from numpy.lib._iotools import _is_string_like
+    if _is_string_like(fname):
         fh = open(fname, mode)
     return fh
 
 class Pickleable(object):
-
-    def clone(self):
-        pass
+    """
+    Provides a save and load methods for models and nonwrapped results
+    """
 
     def save(self, fname):
         """
@@ -321,6 +322,7 @@ class LikelihoodModel(Model):
                           'disp': disp, 'fargs': fargs, 'callback': callback,
                           'retall': retall}
         optim_settings.update(kwargs)
+        del optim_settings['callback'] # this isn't pickleable
         mlefit.mle_settings = optim_settings
         return mlefit
 
