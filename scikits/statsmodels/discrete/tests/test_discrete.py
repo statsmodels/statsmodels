@@ -78,6 +78,16 @@ class CheckModelResults(object):
     def test_bic(self):
         assert_almost_equal(self.res1.bic, self.res2.bic, DECIMAL_3)
 
+    def test_predict(self):
+        assert_almost_equal(self.res1.model.predict(self.res1.params),
+                            self.res2.phat, DECIMAL_4)
+
+    def test_predict_xb(self):
+        assert_almost_equal(self.res1.model.predict(self.res1.params,
+                            linear=True),
+                            self.res2.yhat, DECIMAL_4)
+
+
 class CheckMargEff(object):
     """
     Test marginal effects (margeff) and its options
@@ -174,9 +184,9 @@ class TestProbitNewton(CheckModelResults):
         res2.probit()
         cls.res2 = res2
 
-    def test_predict(self):
-        assert_almost_equal(self.res1.model.predict(self.res1.params),
-                self.res2.predict, DECIMAL_4)
+    #def test_predict(self):
+    #    assert_almost_equal(self.res1.model.predict(self.res1.params),
+    #            self.res2.predict, DECIMAL_4)
 
     def test_resid(self):
         assert_almost_equal(self.res1.resid, self.res2.resid, DECIMAL_4)
@@ -325,7 +335,7 @@ def test_perfect_prediction():
     X = sm.add_constant(X, prepend=True)
     mod = Logit(y,X)
     assert_raises(PerfectSeparationError, mod.fit)
-    
+
 
 
 if __name__ == "__main__":
