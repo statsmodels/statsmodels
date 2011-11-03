@@ -1,6 +1,16 @@
 """
 Generalized additive models
 
+
+
+Requirements for smoothers
+--------------------------
+
+smooth(y, weights=xxx) : ? no return ?
+predict(x=None) : smoothed values, fittedvalues or for new exog
+df_fit() : degress of freedom of fit ?
+
+
 """
 
 # JP:
@@ -20,13 +30,16 @@ from scikits.statsmodels.genmod.families import family
 from scikits.statsmodels.sandbox.nonparametric.smoothers import PolySmoother as SmoothingSpline   # relative import
 from scikits.statsmodels.genmod.generalized_linear_model import GLM
 
+
 def default_smoother(x):
-    _x = x.copy()
-    _x.sort()
+#    _x = x.copy()
+#    _x.sort()
+    _x = np.sort(x)
     n = x.shape[0]
     # taken form smooth.spline in R
 
-    if n < 50:
+    #if n < 50:
+    if n < 500:
         nknots = n
     else:
         a1 = np.log(50) / np.log(2)
@@ -41,11 +54,11 @@ def default_smoother(x):
             nknots = 2**(a3 + (a4 - a3) * (n - 800)/2400.)
         else:
             nknots = 200 + (n - 3200.)**0.2
-        knots = _x[np.linspace(0, n-1, nknots).astype(np.int32)]
+    knots = _x[np.linspace(0, n-1, nknots).astype(np.int32)]
 
     s = SmoothingSpline(knots, x=x.copy())
-    s.gram(d=2)
-    s.target_df = 5
+#    s.gram(d=2)
+#    s.target_df = 5
     return s
 
 class Offset(object):
@@ -59,65 +72,101 @@ class Offset(object):
 
 class Results(object):
 
-    def __init__(self, Y, alpha, design, smoothers, family, offset):
+    def __init__(self, Y, alpha, exog, smoothers, family, offset):
         self.Y = Y
         self.alpha = alpha
         self.smoothers = smoothers
         self.offset = offset
         self.family = family
-        self.design = design
+        self.exog = exog
         self.offset = offset
-        self.mu = self(design)
+        self.mu = self(exog)
 
-    def __call__(self, design):
-        return self.family.link.inverse(self.predict(design))
+    def __call__(self, exog):
+        '''expected value ? check new GLM, same as mu for given exog
+        '''
+        return self.family.link.inverse(self.predict(exog))
 
-    def predict(self, design):
-        return np.sum(self.smoothed(design), axis=0) + self.alpha
+    def predict(self, exog):
+        '''predict response, sum of smoothed components
+        TODO: What's this in the case of GLM, corresponds to X*beta ?
+        '''
+        #note: sum is here over axis=0,
+        #TODO: transpose in smoothed and sum over axis=1
+        return np.sum(self.smoothed(exog), axis=0) + self.alpha
 
-    def smoothed(self, design):
-        return np.array([self.smoothers[i]() + self.offset[i] for i in range(design.shape[1])])
+    def smoothed(self, exog):
+        '''get smoothed prediction for each component
+
+        '''
+        return np.array([self.smoothers[i].predict() + self.offset[i]
+                         for i in range(exog.shape[1])])
 
 class AdditiveModel(object):
+    '''additive model with non-parametric, smoothed components
 
-    def __init__(self, design, smoothers=None, weights=None):
-        self.design = design
+    Parameters
+    ----------
+    '''
+
+    def __init__(self, exog, smoothers=None, weights=None):
+        self.exog = exog
         if not weights is None:
             self.weights = weights
         else:
-            self.weights = np.ones(self.design.shape[0])
+            self.weights = np.ones(self.exog.shape[0])
 
-        self.smoothers = smoothers or [default_smoother(design[:,i]) for i in range(design.shape[1])]
-        for i in range(design.shape[1]):
+        self.smoothers = smoothers or [default_smoother(exog[:,i]) for i in range(exog.shape[1])]
+        for i in range(exog.shape[1]):
             self.smoothers[i].df = 10
         self.family = family.Gaussian()
 
-    def __iter__(self):
+    def _iter__(self):
+        '''initialize iteration ?, should be removed
+
+        '''
         self.iter = 0
         self.dev = np.inf
         return self
 
     def next(self):
-        _results = self.results; Y = self.results.Y
-        mu = _results.predict(self.design)
-        offset = np.zeros(self.design.shape[1], np.float64)
+        '''internal calculation for one fit iteration
+        '''
+        _results = self.results
+        Y = self.results.Y
+        mu = _results.predict(self.exog)
+        #TODO offset is not used ?
+        offset = np.zeros(self.exog.shape[1], np.float64)
         alpha = (Y * self.weights).sum() / self.weights.sum()
-        for i in range(self.design.shape[1]):
-            tmp = self.smoothers[i]()
+        for i in range(self.exog.shape[1]):
+            tmp = self.smoothers[i].predict()
+            #TODO: check what smooth needs to do
             self.smoothers[i].smooth(Y - alpha - mu + tmp,
                                      weights=self.weights)
-            tmp2 = self.smoothers[i]()
+            tmp2 = self.smoothers[i].predict()
             offset[i] = -(tmp2*self.weights).sum() / self.weights.sum()
             mu += tmp2 - tmp
 
         #print self.iter
         #self.iter += 1 #missing incrementing of iter counter NOT
-        return Results(Y, alpha, self.design, self.smoothers, self.family, offset)
+        return Results(Y, alpha, self.exog, self.smoothers, self.family, offset)
 
     def cont(self, tol=1.0e-04):
+        '''condition to continue iteration loop
+
+        Parameters
+        ----------
+        tol
+
+        Returns
+        -------
+        cont : bool
+            If true, then iteration should be continued.
+
+        '''
         self.iter += 1 #moved here to always count, not necessary
         print self.iter,
-        curdev = (((self.results.Y - self.results.predict(self.design))**2) * self.weights).sum()
+        curdev = (((self.results.Y - self.results.predict(self.exog))**2) * self.weights).sum()
 
         if self.iter > 30: #kill it, no max iterationoption
             return False
@@ -130,27 +179,29 @@ class AdditiveModel(object):
         return True
 
     def df_resid(self):
-        return self.results.Y.shape[0] - np.array([self.smoothers[i].df_fit() for i in range(self.design.shape[1])]).sum()
+        return self.results.Y.shape[0] - np.array([self.smoothers[i].df_fit() for i in range(self.exog.shape[1])]).sum()
 
     def estimate_scale(self):
-        return ((self.results.Y - self.results(self.design))**2).sum() / self.df_resid()
+        #TODO: remove use of self.results.__call__
+        return ((self.results.Y - self.results(self.exog))**2).sum() / self.df_resid()
 
     def fit(self, Y):
-        iter(self)  # what does this do? anything?
+        #iter(self)  # what does this do? anything?
+        self._iter__()
         mu = 0
         alpha = (Y * self.weights).sum() / self.weights.sum()
 
-        offset = np.zeros(self.design.shape[1], np.float64)
+        offset = np.zeros(self.exog.shape[1], np.float64)
 
-        for i in range(self.design.shape[1]):
+        for i in range(self.exog.shape[1]):
             self.smoothers[i].smooth(Y - alpha - mu,
                                      weights=self.weights)
-            tmp = self.smoothers[i]()
+            tmp = self.smoothers[i].predict()
             offset[i] = (tmp * self.weights).sum() / self.weights.sum()
             tmp -= tmp.sum()
             mu += tmp
 
-        self.results = Results(Y, alpha, self.design, self.smoothers, self.family, offset)
+        self.results = Results(Y, alpha, self.exog, self.smoothers, self.family, offset)
 
         while self.cont():
             self.results = self.next()
@@ -158,30 +209,42 @@ class AdditiveModel(object):
         return self.results
 
 class Model(GLM, AdditiveModel):
+#class Model(AdditiveModel):
+    #TODO: what does GLM do? Is it actually used ?
+    #only used in __init__, dropping it doesn't change results
+    #but where gets family attached now? - weird, it's Gaussian in this case now
+    #also where is the link defined?
+    #AdditiveModel overwrites family and sets it to Gaussian
 
     niter = 2
 
-#    def __init__(self, design, smoothers=None, family=family.Gaussian()):
-#        GLM.__init__(self, design, family=family)
-#        AdditiveModel.__init__(self, design, smoothers=smoothers)
+#    def __init__(self, exog, smoothers=None, family=family.Gaussian()):
+#        GLM.__init__(self, exog, family=family)
+#        AdditiveModel.__init__(self, exog, smoothers=smoothers)
 #        self.family = family
     def __init__(self, endog, exog, smoothers=None, family=family.Gaussian()):
-        GLM.__init__(self, endog, exog, family=family)
+        print family
+        self.family = family
+        #TODO: inconsistent super __init__
         AdditiveModel.__init__(self, exog, smoothers=smoothers)
+        GLM.__init__(self, endog, exog, family=family)
+        print self.family
 
     def next(self):
         _results = self.results; Y = _results.Y
         if np.isnan(self.weights).all(): print "nanweights1"
-        _results.mu = self.family.link.inverse(_results.predict(self.design))
+        _results.mu = self.family.link.inverse(_results.predict(self.exog))
         weights = self.family.weights(_results.mu)
         if np.isnan(weights).all():
             self.weights = weights
             print "nanweights2"
-        Z = _results.predict(self.design) + self.family.link.deriv(_results.mu) * (Y - _results.mu)
-        m = AdditiveModel(self.design, smoothers=self.smoothers, weights=self.weights)
+        Z = _results.predict(self.exog) + self.family.link.deriv(_results.mu) * (Y - _results.mu)
+        m = AdditiveModel(self.exog, smoothers=self.smoothers, weights=self.weights)
+
+        #TODO: I don't know what the next two lines do, Z, Y ? which is endog?
         _results = m.fit(Z)
         _results.Y = Y
-        _results.mu = self.family.link.inverse(_results.predict(self.design))
+        _results.mu = self.family.link.inverse(_results.predict(self.exog))
         self.iter += 1
         self.results = _results
 
@@ -200,12 +263,15 @@ class Model(GLM, AdditiveModel):
     def fit(self, Y):
         self.Y = np.asarray(Y, np.float64)
 
-        iter(self)
+        #iter(self)
+        self._iter__()
+
+        #TODO code duplication with next?
         alpha = self.Y.mean()
         Z = self.family.link(alpha) + self.family.link.deriv(alpha) * (Y - alpha)
-        m = AdditiveModel(self.design, smoothers=self.smoothers)
+        m = AdditiveModel(self.exog, smoothers=self.smoothers)
         self.results = m.fit(Z)
-        self.results.mu = self.family.link.inverse(self.results.predict(self.design))
+        self.results.mu = self.family.link.inverse(self.results.predict(self.exog))
         self.results.Y = Y
 
         while self.cont():
