@@ -124,7 +124,7 @@ class PolySmoother(object):
         return self.N - self.order - 1
 
     def __init__(self, order, x=None):
-        order = 3 # set this because we get knots instead of order
+        order = 4 # set this because we get knots instead of order
         self.order = order
 
         #print order, x.shape
@@ -134,6 +134,10 @@ class PolySmoother(object):
             self.X = np.array([x**i for i in range(order+1)]).T
 
     def __call__(self, x=None):
+        return self.predict(x=x)
+
+
+    def predict(self, x=None):
 
         if x is not None:
             if x.ndim > 1: x=x[0,:]
