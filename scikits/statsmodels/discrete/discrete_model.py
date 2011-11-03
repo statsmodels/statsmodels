@@ -349,7 +349,6 @@ class Poisson(CountModel):
         The parameter `X` is :math:`X\\beta` in the above formula.
         """
         y = self.endog
-#        xb = np.dot(self.exog, params)
         return stats.poisson.cdf(y, np.exp(X))
 
     def pdf(self, X):
@@ -378,7 +377,6 @@ class Poisson(CountModel):
         The parameter `X` is :math:`X\\beta` in the above formula.
         """
         y = self.endog
-#        xb = np.dot(self.exog,params)
         return stats.poisson.pmf(y, np.exp(X))
 
     def loglike(self, params):
@@ -990,9 +988,9 @@ class NBin(CountModel):
     """
     Negative Binomial model.
     """
-#    def pdf(self, X, alpha):
-#        a1 = alpha**-1
-#        term1 = special.gamma(X + a1)/(special.agamma(X+1)*special.gamma(a1))
+    #def pdf(self, X, alpha):
+    #    a1 = alpha**-1
+    #    term1 = special.gamma(X + a1)/(special.agamma(X+1)*special.gamma(a1))
 
     def check_inputs(self, offset, exposure):
         if offset is not None or exposure is not None:
@@ -1097,7 +1095,6 @@ class NBin(CountModel):
 
 ### Results Class ###
 
-#class DiscreteResults(object):
 #TODO: these need to return z scores
 class DiscreteResults(base.LikelihoodModelResults):
     """
@@ -1147,8 +1144,8 @@ class DiscreteResults(base.LikelihoodModelResults):
     """
 
     def __init__(self, model, mlefit):
-#        super(DiscreteResults, self).__init__(model, params,
-#                np.linalg.inv(-hessian), scale=1.)
+        #super(DiscreteResults, self).__init__(model, params,
+        #        np.linalg.inv(-hessian), scale=1.)
         self.model = model
         self.df_model = model.df_model
         self.df_resid = model.df_resid
@@ -1179,7 +1176,7 @@ class DiscreteResults(base.LikelihoodModelResults):
     @cache_readonly
     def llnull(self):
         model = self.model # will this use a new instance?
-#TODO: what parameters to pass to fit?
+        #TODO: what parameters to pass to fit?
         null = model.__class__(model.endog, np.ones(self.nobs)).fit(disp=0)
         return null.llf
 
@@ -1188,11 +1185,11 @@ class DiscreteResults(base.LikelihoodModelResults):
         model = self.model
         endog = model.endog
         exog = model.exog
-#        M = # of individuals that share a covariate pattern
-# so M[i] = 2 for i = the two individuals who share a covariate pattern
-# use unique row pattern?
-#TODO: is this common to all models?  logit uses Pearson, should have options
-#These are the deviance residuals
+        #        M = # of individuals that share a covariate pattern
+        # so M[i] = 2 for i = the two individuals who share a covariate pattern
+        # use unique row pattern?
+        #TODO: is this common to all models?  logit uses Pearson, should have options
+        #These are the deviance residuals
         M = 1
         p = model.predict(self.params)
         Y_0 = np.where(exog==0)
@@ -1297,11 +1294,11 @@ class DiscreteResults(base.LikelihoodModelResults):
         When using after Poisson, returns the expected number of events
         per period, assuming that the model is loglinear.
         """
-#TODO:
-#        factor : None or dictionary, optional
-#            If a factor variable is present (it must be an integer, though
-#            of type float), then `factor` may be a dict with the zero-indexed
-#            column of the factor and the value should be the base-outcome.
+        #TODO:
+        #factor : None or dictionary, optional
+        #    If a factor variable is present (it must be an integer, though
+        #    of type float), then `factor` may be a dict with the zero-indexed
+        #    column of the factor and the value should be the base-outcome.
 
         # check arguments
         if at not in ['overall','mean','median','zero','all']:
@@ -1397,15 +1394,15 @@ class DiscreteResults(base.LikelihoodModelResults):
                     exog1[:,i] += 1
                     effect0 = model.cdf(np.dot(exog0, params))
                     effect1 = model.cdf(np.dot(exog1, params))
-#TODO: compute discrete elasticity correctly
-#Stata doesn't use the midpoint method or a weighted average.
-#Check elsewhere
+            #TODO: compute discrete elasticity correctly
+            #Stata doesn't use the midpoint method or a weighted average.
+            #Check elsewhere
                     if 'ey' in method:
-#                        #TODO: don't know if this is theoretically correct
+                        #TODO: don't know if this is theoretically correct
                         fittedvalues0 = np.dot(exog0,params)
                         fittedvalues1 = np.dot(exog1,params)
-#                        weight1 = model.exog[:,i].mean()
-#                        weight0 = 1 - weight1
+                        #weight1 = model.exog[:,i].mean()
+                        #weight0 = 1 - weight1
                         wfv = (.5*model.cdf(fittedvalues1) + \
                                 .5*model.cdf(fittedvalues0))
                         effects[i] = ((effect1 - effect0)/wfv).mean()
@@ -1449,7 +1446,7 @@ class DiscreteResults(base.LikelihoodModelResults):
                      ('Method:', ['MLE']),
                      ('Date:', None),
                      ('Time:', None),
-#                     ('No. iterations:', ["%d" % self.mle_retvals['iterations']]),
+                     #('No. iterations:', ["%d" % self.mle_retvals['iterations']]),
                      ('converged:', ["%s" % self.mle_retvals['converged']])
                       ]
 
@@ -1476,9 +1473,9 @@ class DiscreteResults(base.LikelihoodModelResults):
                              use_t=True)
 
         #diagnostic table not used yet
-#        smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
-#                          yname=yname, xname=xname,
-#                          title="")
+        #smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
+        #                   yname=yname, xname=xname,
+        #                   title="")
 
         #TODO: attach only to binary models
         if self.model.__class__.__name__ in ['Logit', 'Probit']:
