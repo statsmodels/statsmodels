@@ -1286,7 +1286,7 @@ strong multicollinearity or other numerical problems.''' % condno
         >>> import scikits.statsmodels.api as sm
         >>> data = sm.datasets.longley.load()
         >>> data.exog = sm.add_constant(data.exog)
-        >>> ols_results = sm.OLS(data.endog, data.exog).results
+        >>> ols_results = sm.OLS(data.endog, data.exog).fit()
         >>> print ols_results.summary()
         ...
 
