@@ -329,12 +329,15 @@ class GLM(base.LikelihoodModel):
         -------
         An array of fitted values
         """
+        offset = getattr(self, 'offset', 0)
+        exposure = getattr(self, 'exposure', 0)
         if exog is None:
             exog = self.exog
         if linear:
-            return np.dot(exog, params)
+            return np.dot(exog, params) + offset + exposure
         else:
-            return self.family.fitted(np.dot(exog, params))
+            return self.family.fitted(np.dot(exog, params) + exposure + \
+                                                             offset)
 
     def fit(self, maxiter=100, method='IRLS', tol=1e-8, scale=None):
         '''
