@@ -3,9 +3,15 @@ Release History
 
 trunk for 0.4.0
 ---------------
+*Changes that break backwards compatibility*
+
+* For consistency with other multi-equation models, the parameters of MNLogit
+  are now transposed.
+
 * tools.tools.ECDF -> distributions.ECDF
 * tools.tools.monotone_fn_inverter -> distributions.monotone_fn_inverter
 * tools.tools.StepFunction -> distributions.StepFunction
+
 
 0.3.1
 -----
