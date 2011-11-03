@@ -1487,22 +1487,23 @@ class DiscreteResults(base.LikelihoodModelResults):
             #add warnings/notes
             etext =[]
             if predclose_sum == len(fittedvalues): #nobs?
-                wstr = \
-'''Complete Separation: The results show that there is complete separation.
-In this case the Maximum Likelihood Estimator does not exist and the parameters
-are not identified.'''
+                wstr = "Complete Separation: The results show that there is"
+                wstr += "complete separation.\n"
+                wstr += "In this case the Maximum Likelihood Estimator does "
+                wstr += "not exist and the parameters\n"
+                wstr += "are not identified."
                 etext.append(wstr)
             elif predclose_frac > 0.1:  #TODO: get better diagnosis
-                wstr = \
-'''Possibly complete quasi-separation: A fraction %f4.2 of observations can be
-perfectly predicted. This might indicate that there is complete
-quasi-separation. In this case some parameters will not be identified.''' % predclose_frac
+                wstr = "Possibly complete quasi-separation: A fraction "
+                wstr += "%4.2f of observations can be\n" % predclose_frac
+                wstr += "perfectly predicted. This might indicate that there "
+                wstr += "is complete\nquasi-separation. In this case some "
+                wstr += "parameters will not be identified."
                 etext.append(wstr)
-
             if etext:
                 smry.add_extra_txt(etext)
-
         return smry
+
 class DiscreteResultsWrapper(lm.RegressionResultsWrapper):
     pass
 wrap.populate_wrapper(DiscreteResultsWrapper, DiscreteResults)
