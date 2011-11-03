@@ -258,16 +258,43 @@ class MultinomialModel(DiscreteModel):
     #            return eXB/eXB.sum(1)[:,None]
 
 class CountModel(DiscreteModel):
-    def predict(self, params, exog=None, linear=False):
+    def __init__(self, endog, exog, offset=None, exposure=None):
+        super(CountModel, self).__init__(endog, exog)
+        self._check_inputs(offset, exposure) # attaches if needed
+
+    def _check_inputs(self, offset, exposure):
+        if offset is not None:
+            offset = np.asarray(offset)
+            if offset.shape[0] != self.endog.shape[0]:
+                raise ValueError("offset is not the same length as endog")
+            self.offset = offset
+
+        if exposure is not None:
+            exposure = np.log(exposure)
+            if exposure.shape[0] != self.endog.shape[0]:
+                raise ValueError("exposure is not the same length as endog")
+            self.exposure = exposure
+
+    def predict(self, params, exog=None, exposure=None, offset=None, linear=False):
         """
         Predict response variable of a count model given exogenous variables.
         """
         #TODO: add offset tp
         if exog is None:
             exog = self.exog
-        if not linear:
-            return np.exp(np.dot(exog, params)) # not cdf
+            offset = getattr(self, 'offset', 0)
+            exposure = getattr(self, 'exposure', 0)
+
         else:
+            if exposure is None:
+                exposure = 0
+            if offset is None:
+                offset = 0
+
+        if not linear:
+            return np.exp(np.dot(exog, params) + exposure + offset) # not cdf
+        else:
+            return np.dot(exog, params) + exposure + offset
             return super(CountModel, self).predict(params, exog, linear)
 
 class OrderedModel(DiscreteModel):
@@ -371,7 +398,9 @@ class Poisson(CountModel):
         --------
         .. math :: \\ln L=\\sum_{i=1}^{n}\\left[-\\lambda_{i}+y_{i}x_{i}^{\\prime}\\beta-\\ln y_{i}!\\right]
         """
-        XB = np.dot(self.exog, params)
+        offset = getattr(self, "offset", 0)
+        exposure = getattr(self, "exposure", 0)
+        XB = np.dot(self.exog, params) + offset + exposure
         endog = self.endog
         return np.sum(-np.exp(XB) +  endog*XB - np.log(factorial(endog)))
 
@@ -396,9 +425,10 @@ class Poisson(CountModel):
 
         .. math:: \\ln\\lambda_{i}=X\\beta
         """
-
+        offset = getattr(self, "offset", 0)
+        exposure = getattr(self, "exposure", 0)
         X = self.exog
-        L = np.exp(np.dot(X,params))
+        L = np.exp(np.dot(X,params) + offset + exposure)
         return np.dot(self.endog - L,X)
 
     def hessian(self, params):
@@ -423,8 +453,10 @@ class Poisson(CountModel):
         .. math:: \\ln\\lambda_{i}=X\\beta
 
         """
+        offset = getattr(self, "offset", 0)
+        exposure = getattr(self, "exposure", 0)
         X = self.exog
-        L = np.exp(np.dot(X,params))
+        L = np.exp(np.dot(X,params) + exposure + offset)
         return -np.dot(L*X.T, X)
 
 class NbReg(DiscreteModel):
@@ -961,6 +993,10 @@ class NBin(CountModel):
 #    def pdf(self, X, alpha):
 #        a1 = alpha**-1
 #        term1 = special.gamma(X + a1)/(special.agamma(X+1)*special.gamma(a1))
+
+    def check_inputs(self, offset, exposure):
+        if offset is not None or exposure is not None:
+            raise ValueError("offset and exposure not implemented yet")
 
     def loglike(self, params):
         """
