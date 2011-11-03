@@ -98,6 +98,8 @@ def _iscount(X):
     remainder -= dummy
     return remainder
 
+#### Private Model Classes ####
+
 class DiscreteModel(base.LikelihoodModel):
     """
     Abstract class for discrete choice models.
@@ -150,11 +152,14 @@ class DiscreteModel(base.LikelihoodModel):
         if start_params is None and isinstance(self, MNLogit):
             start_params = np.zeros((self.exog.shape[1]*\
                     (self.wendog.shape[1]-1)))
+        elif isinstance(self, MNLogit):
+            start_params = np.asarray(start_params)
         mlefit = super(DiscreteModel, self).fit(start_params=start_params,
                 method=method, maxiter=maxiter, full_output=full_output,
                 disp=disp, callback=callback, **kwargs)
         if isinstance(self, MNLogit):
-            mlefit.params = mlefit.params.reshape(-1, self.exog.shape[1])
+            mlefit.params = mlefit.params.reshape(self.exog.shape[1], -1,
+                    order='F')
         discretefit = DiscreteResults(self, mlefit)
         return DiscreteResultsWrapper(discretefit)
 
@@ -187,8 +192,90 @@ class DiscreteModel(base.LikelihoodModel):
         else:
             return np.dot(exog, params)
 
+class BinaryModel(DiscreteModel):
+    def predict(self, params, exog=None, linear=False):
+        """
+        Predict response variable of a model given exogenous variables.
 
-class Poisson(DiscreteModel):
+        Parameters
+        ----------
+        params : array-like
+            Fitted parameters of the model.
+        exog : array-like
+            1d or 2d array of exogenous values.  If not supplied, the
+            whole exog attribute of the model is used.
+        linear : bool, optional
+            If True, returns the linear predictor dot(exog,params).  Else,
+            returns the value of the cdf at the linear predictor.
+
+        Returns
+        -------
+        array
+            Fitted values at exog.
+        """
+        if exog is None:
+            exog = self.exog
+        if not linear:
+            return self.cdf(np.dot(exog, params))
+        else:
+            return np.dot(exog, params)
+
+class MultinomialModel(DiscreteModel):
+    def predict(self, params, exog=None, linear=False):
+        """
+        Predict response variable of a model given exogenous variables.
+
+        Parameters
+        ----------
+        params : array-like
+            2d array of fitted parameters of the model. Should be in the
+            order returned from the model.
+        exog : array-like
+            1d or 2d array of exogenous values.  If not supplied, the
+            whole exog attribute of the model is used.
+        linear : bool, optional
+            If True, returns the linear predictor dot(exog,params).  Else,
+            returns the value of the cdf at the linear predictor.
+
+        Notes
+        -----
+        Column 0 is the base case, the rest conform to the rows of params
+        shifted up one for the base case.
+        """
+        if exog is None: # do here to accomodate user-given exog
+            exog = self.exog
+        pred = super(MultinomialModel, self).predict(params, exog, linear)
+        if linear:
+            pred = np.column_stack((np.zeros(len(exog)), pred))
+        return pred
+    #        if exog is None:
+    #            exog = self.exog
+    #        if linear:
+    #            XB = np.dot(exog, params)
+    #            return np.column_stack((np.zeros(len(XB)),XB))
+    #        else:
+    #            eXB = self._eXB(params, exog)
+    #            return eXB/eXB.sum(1)[:,None]
+
+class CountModel(DiscreteModel):
+    def predict(self, params, exog=None, linear=False):
+        """
+        Predict response variable of a count model given exogenous variables.
+        """
+        #TODO: add offset tp
+        if exog is None:
+            exog = self.exog
+        if not linear:
+            return np.exp(np.dot(exog, params)) # not cdf
+        else:
+            return super(CountModel, self).predict(params, exog, linear)
+
+class OrderedModel(DiscreteModel):
+    pass
+
+#### Public Model Classes ####
+
+class Poisson(CountModel):
     """
     Poisson model for count data
 
@@ -343,7 +430,7 @@ class Poisson(DiscreteModel):
 class NbReg(DiscreteModel):
     pass
 
-class Logit(DiscreteModel):
+class Logit(BinaryModel):
     """
     Binary choice logit model
 
@@ -477,7 +564,7 @@ class Logit(DiscreteModel):
         return -np.dot(L*(1-L)*X.T,X)
 
 
-class Probit(DiscreteModel):
+class Probit(BinaryModel):
     """
     Binary choice Probit model
 
@@ -622,7 +709,7 @@ class Probit(DiscreteModel):
         return np.dot(-L*(L+XB)*X.T,X)
 
 
-class MNLogit(DiscreteModel):
+class MNLogit(MultinomialModel):
     """
     Multinomial logit model
 
@@ -681,54 +768,32 @@ class MNLogit(DiscreteModel):
         self.df_model *= (self.J-1) # for each J - 1 equation.
         self.df_resid = self.exog.shape[0] - self.df_model - (self.J-1)
 
-
-    def _eXB(self, params, exog=None):
-        """
-        A private method used by the cdf.
-
-        Returns
-        -------
-        :math:`\exp(\beta_{j}^{\prime}x_{i})`
-
-        where :math:`j = 0,1,...,J`
-
-        Notes
-        -----
-        A row of ones is appended for the dropped category.
-        """
-        if exog == None:
-            exog = self.exog
-        eXB = np.exp(np.dot(params.reshape(-1, exog.shape[1]), exog.T))
-        eXB = np.vstack((np.ones((1, exog.shape[0])), eXB))
-        return eXB
-
     def pdf(self, eXB):
         """
         NotImplemented
         """
         pass
 
-    def cdf(self, eXB):
+    def cdf(self, X):
         """
         Multinomial logit cumulative distribution function.
 
         Parameters
         ----------
-        eXB : array
-            The exponential predictor of the model exp(XB).
+        X : array
+            The linear predictor of the model XB.
 
         Returns
         --------
-        The cdf evaluated at `eXB`.
+        The cdf evaluated at `XB`.
 
         Notes
         -----
         In the multinomial logit model.
         .. math:: \\frac{\\exp\\left(\\beta_{j}^{\\prime}x_{i}\\right)}{\\sum_{k=0}^{J}\\exp\\left(\\beta_{k}^{\\prime}x_{i}\\right)}
         """
-        num = eXB
-        denom = eXB.sum(axis=0)
-        return num/denom[None,:]
+        eXB = np.column_stack((np.ones(len(X)), np.exp(X)))
+        return eXB/eXB.sum(1)[:,None]
 
     def loglike(self, params):
         """
@@ -750,10 +815,10 @@ class MNLogit(DiscreteModel):
         where :math:`d_{ij}=1` if individual `i` chose alternative `j` and 0
         if not.
         """
+        params = params.reshape(self.K, -1, order='F')
         d = self.wendog
-        eXB = self._eXB(params)
-        logprob = np.log(self.cdf(eXB))
-        return (d.T * logprob).sum()
+        logprob = np.log(self.cdf(np.dot(self.exog,params)))
+        return np.sum(d * logprob)
 
     def score(self, params):
         """
@@ -778,9 +843,11 @@ class MNLogit(DiscreteModel):
         In the multinomial model ths score matrix is K x J-1 but is returned
         as a flattened array to work with the solvers.
         """
-        eXB = self._eXB(params)
-        firstterm = self.wendog[:,1:].T - self.cdf(eXB)[1:,:]
-        return np.dot(firstterm, self.exog).flatten()
+        params = params.reshape(self.K, -1, order='F')
+        firstterm = self.wendog[:,1:] - self.cdf(np.dot(self.exog,
+                                                  params))[:,1:]
+        #NOTE: might need to switch terms if params is reshaped
+        return np.dot(firstterm.T, self.exog).flatten()
 
     def hessian(self, params):
         """
@@ -809,9 +876,9 @@ class MNLogit(DiscreteModel):
         This implementation does not take advantage of the symmetry of
         the Hessian and could probably be refactored for speed.
         """
+        params = params.reshape(self.K, -1, order='F')
         X = self.exog
-        eXB = self._eXB(params)
-        pr = self.cdf(eXB)
+        pr = self.cdf(np.dot(X,params))
         partials = []
         J = self.wendog.shape[1] - 1
         K = self.exog.shape[1]
@@ -819,9 +886,9 @@ class MNLogit(DiscreteModel):
             for j in range(J): # this loop assumes we drop the first col.
                 if i == j:
                     partials.append(\
-                        -np.dot((pr[i+1,:]*(1-pr[j+1,:]))[None,:]*X.T,X))
+                        -np.dot(((pr[:,i+1]*(1-pr[:,j+1]))[:,None]*X).T,X))
                 else:
-                    partials.append(-np.dot(pr[i+1,:]*-pr[j+1,:][None,:]*X.T,X))
+                    partials.append(-np.dot(((pr[:,i+1]*-pr[:,j+1])[:,None]*X).T,X))
         H = np.array(partials)
         # the developer's notes on multinomial should clear this math up
         H = np.transpose(H.reshape(J,J,K,K), (0,2,1,3)).reshape(J*K,J*K)
@@ -887,7 +954,7 @@ class MNLogit(DiscreteModel):
 #        return mlefit
 #
 
-class NBin(DiscreteModel):
+class NBin(CountModel):
     """
     Negative Binomial model.
     """
@@ -1059,7 +1126,7 @@ class DiscreteResults(base.LikelihoodModelResults):
         if self.params.ndim == 1 or self.params.shape[1] == 1:
             return bse
         else:
-            return bse.reshape(self.params.shape)
+            return bse.reshape(self.params.shape, order='F')
 
     @cache_readonly
     def prsquared(self):
@@ -1124,7 +1191,8 @@ class DiscreteResults(base.LikelihoodModelResults):
             confint = super(DiscreteResults, self).conf_int(alpha=alpha,
                                                             cols=cols)
             return confint.transpose(0,2,1).reshape(self.model.J-1,
-                                                    self.model.K, 2)
+                                                    self.model.K, 2,
+                                                    order='F')
         else:
             return super(DiscreteResults, self).conf_int(alpha=alpha, cols=cols)
     conf_int.__doc__ = base.LikelihoodModelResults.conf_int.__doc__
@@ -1133,7 +1201,7 @@ class DiscreteResults(base.LikelihoodModelResults):
     def tvalues(self):
         if hasattr(self.model, "J"): # for MNLogit
             column = range(int(self.model.K))
-            return self.params/self.bse[:,column]
+            return self.params/self.bse[column,:]
         else:
             return super(DiscreteResults, self).tvalues
 
