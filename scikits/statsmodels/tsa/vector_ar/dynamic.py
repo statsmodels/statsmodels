@@ -1,7 +1,6 @@
 # pylint: disable=W0201
 
 import numpy as np
-import matplotlib.pyplot as plt
 
 from scikits.statsmodels.tools.decorators import cache_readonly
 
@@ -235,6 +234,8 @@ class DynamicVAR(object):
         ----------
         steps :
         """
+        import matplotlib.pyplot as plt
+
         fig, axes = plt.subplots(figsize=figsize, nrows=self.neqs,
                                  sharex=True)
 

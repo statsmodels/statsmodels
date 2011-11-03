@@ -1,12 +1,6 @@
 import numpy as np
 import scikits.statsmodels.tsa.vector_ar.util as util
 
-try:
-    import matplotlib.pyplot as plt
-    import matplotlib as mpl
-except ImportError:
-    pass
-
 class MPLConfigurator(object):
 
     def __init__(self):
@@ -17,6 +11,7 @@ class MPLConfigurator(object):
             action()
 
     def set_fontsize(self, size):
+        import matplotlib as mpl
         old_size = mpl.rcParams['font.size']
         mpl.rcParams['font.size'] = size
 
@@ -32,6 +27,7 @@ def plot_mts(Y, names=None, index=None):
     """
     Plot multiple time series
     """
+    import matplotlib.pyplot as plt
 
     k = Y.shape[1]
     rows, cols = k, 1
@@ -52,6 +48,8 @@ def plot_mts(Y, names=None, index=None):
 
 def plot_var_forc(prior, forc, err_upper, err_lower,
                   index=None, names=None, plot_stderr=True):
+    import matplotlib.pyplot as plt
+
     n, k = prior.shape
     rows, cols = k, 1
 
@@ -88,6 +86,8 @@ def plot_with_error(y, error, x=None, axes=None, value_fmt='k',
     error : array or None
 
     """
+    import matplotlib.pyplot as plt
+
     if axes is None:
         axes = plt.gca()
 
@@ -115,6 +115,8 @@ def plot_full_acorr(acorr, fontsize=8, linewidth=8, xlabel=None,
 
 
     """
+    import matplotlib.pyplot as plt
+
     config = MPLConfigurator()
     config.set_fontsize(fontsize)
 
@@ -137,6 +139,8 @@ def plot_full_acorr(acorr, fontsize=8, linewidth=8, xlabel=None,
     return fig
 
 def acorr_plot(acorr, linewidth=8, xlabel=None, ax=None):
+    import matplotlib.pyplot as plt
+
     if ax is None:
         ax = plt.gca()
 
@@ -155,6 +159,8 @@ def plot_acorr_with_error():
     pass
 
 def adjust_subplots(**kwds):
+    import matplotlib.pyplot as plt
+
     passed_kwds = dict(bottom=0.05, top=0.925,
                        left=0.05, right=0.95,
                        hspace=0.2)
@@ -175,6 +181,8 @@ def irf_grid_plot(values, stderr, impcol, rescol, names, title,
     stderr : T x k x k
     hlines : k x k
     """
+    import matplotlib.pyplot as plt
+
     if subplot_params is None:
         subplot_params = {}
     if plot_params is None:
