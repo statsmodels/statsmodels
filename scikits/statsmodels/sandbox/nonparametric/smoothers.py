@@ -93,6 +93,10 @@ class PolySmoother(object):
     Fit based on weighted least squares.
 
     The x values can be specified at instantiation or when called.
+
+    This is a 3 liner with OLS or WLS, see test.
+    It's here as a test smoother for GAM
+
     """
     #JP: heavily adjusted to work as plugin replacement for bspline
     #   smoother in gam.py  initalized by function default_smoother
@@ -111,7 +115,9 @@ class PolySmoother(object):
         #print order, x.shape
         self.coef = np.zeros((order+1,), np.float64)
         if x is not None:
-            if x.ndim > 1: x=x[0,:]
+            if x.ndim > 1:
+                print 'Warning: 2d x detected in PolySmoother init, shape:', x.shape
+                x=x[0,:] #check orientation
             self.X = np.array([x**i for i in range(order+1)]).T
 
     def df_fit(self):
@@ -151,7 +157,9 @@ class PolySmoother(object):
 
         if x is not None:
             #if x.ndim > 1: x=x[0,:]  #why this this should select column not row
-            if x.ndim > 1: x=x[:,0]  #TODO: check and clean this up
+            if x.ndim > 1:
+                print 'Warning: 2d x detected in PolySmoother predict, shape:', x.shape
+                x=x[:,0]  #TODO: check and clean this up
             X = np.array([(x**i) for i in range(self.order+1)])
         else: X = self.X
         #return np.squeeze(np.dot(X.T, self.coef))
@@ -174,7 +182,9 @@ class PolySmoother(object):
             if not hasattr(self, "X"):
                 raise ValueError("x needed to fit PolySmoother")
         else:
-            if x.ndim > 1: x=x[0,:]
+            if x.ndim > 1: 
+                print 'Warning: 2d x detected in PolySmoother predict, shape:', x.shape
+                #x=x[0,:] #TODO: check orientation, row or col
             self.X = np.array([(x**i) for i in range(self.order+1)]).T
         #print _w.shape
 
