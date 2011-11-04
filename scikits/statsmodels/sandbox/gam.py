@@ -6,7 +6,7 @@ Generalized additive models
 Requirements for smoothers
 --------------------------
 
-smooth(y, weights=xxx) : ? no return ?
+smooth(y, weights=xxx) : ? no return ? alias for fit
 predict(x=None) : smoothed values, fittedvalues or for new exog
 df_fit() : degress of freedom of fit ?
 
