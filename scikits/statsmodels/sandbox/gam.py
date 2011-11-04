@@ -56,7 +56,9 @@ def default_smoother(x):
             nknots = 200 + (n - 3200.)**0.2
     knots = _x[np.linspace(0, n-1, nknots).astype(np.int32)]
 
-    s = SmoothingSpline(knots, x=x.copy())
+    #s = SmoothingSpline(knots, x=x.copy())
+    order = 3 #what about knots? need smoother *args or **kwds
+    s = SmoothingSpline(order, x=x.copy())
 #    s.gram(d=2)
 #    s.target_df = 5
     return s
