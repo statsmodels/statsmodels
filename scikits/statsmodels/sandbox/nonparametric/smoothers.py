@@ -104,7 +104,22 @@ class PolySmoother(object):
     #          and additional results (OLS on polynomial of x (x is 1d?))
 
 
+    def __init__(self, order, x=None):
+        #order = 4 # set this because we get knots instead of order
+        self.order = order
+
+        #print order, x.shape
+        self.coef = np.zeros((order+1,), np.float64)
+        if x is not None:
+            if x.ndim > 1: x=x[0,:]
+            self.X = np.array([x**i for i in range(order+1)]).T
+
     def df_fit(self):
+        '''alias of df_model for backwards compatibility
+        '''
+        return self.df_model()
+
+    def df_model(self):
         """
         Degrees of freedom used in the fit.
         """
@@ -115,6 +130,11 @@ class PolySmoother(object):
         pass
 
     def smooth(self,*args, **kwds):
+        '''alias for fit,  for backwards compatibility,
+
+        do we need it with different behavior than fit?
+
+        '''
         return self.fit(*args, **kwds)
 
     def df_resid(self):
@@ -122,16 +142,6 @@ class PolySmoother(object):
         Residual degrees of freedom from last fit.
         """
         return self.N - self.order - 1
-
-    def __init__(self, order, x=None):
-        order = 4 # set this because we get knots instead of order
-        self.order = order
-
-        #print order, x.shape
-        self.coef = np.zeros((order+1,), np.float64)
-        if x is not None:
-            if x.ndim > 1: x=x[0,:]
-            self.X = np.array([x**i for i in range(order+1)]).T
 
     def __call__(self, x=None):
         return self.predict(x=x)
