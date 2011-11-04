@@ -6,7 +6,7 @@ Note: uncomment plt.show() to display graphs
 
 
 # convert to script for testing, so we get interactive variable access
-example = 3  # 1,2 or 3
+example = 2 #3  # 1,2 or 3
 
 import numpy as np
 import numpy.random as R
@@ -22,7 +22,8 @@ np.random.seed(987654)
 standardize = lambda x: (x - x.mean()) / x.std()
 demean = lambda x: (x - x.mean())
 nobs = 150
-lb, ub = -1., 1.
+#lb, ub = -1., 1. for Poisson
+lb, ub = -0.75, 0.75 #for Binomial
 x1 = R.uniform(lb, ub, nobs)   #R.standard_normal(nobs)
 x1 = np.linspace(lb, ub, nobs)
 x1.sort()
@@ -55,13 +56,17 @@ import scipy.stats, time
 if example == 2:
     print "binomial"
     f = family.Binomial()
-    b = np.asarray([scipy.stats.bernoulli.rvs(p) for p in f.link.inverse(y)])
+    #b = np.asarray([scipy.stats.bernoulli.rvs(p) for p in f.link.inverse(y)])
+    b = np.asarray([scipy.stats.bernoulli.rvs(p) for p in f.link.inverse(z)])
     b.shape = y.shape
     m = GAM(b, d, family=f)
     toc = time.time()
     m.fit(b)
     tic = time.time()
     print tic-toc
+    #for plotting
+    yp = f.link.inverse(y)
+    p = b
 
 
 if example == 3:
@@ -78,6 +83,7 @@ if example == 3:
     tic = time.time()
     print tic-toc
 
+if example > 1:
     y_pred = m.results.mu #m.results.predict(d)
     plt.figure()
     plt.subplot(2,2,1)

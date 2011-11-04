@@ -73,6 +73,9 @@ class Offset(object):
 class Results(object):
 
     def __init__(self, Y, alpha, exog, smoothers, family, offset):
+        self.nobs, self.k_vars = exog.shape  #assumes exog is 2d
+        #weird: If I put the previous line after the definition of self.mu,
+        #    then the attributed don't get added
         self.Y = Y
         self.alpha = alpha
         self.smoothers = smoothers
@@ -80,9 +83,17 @@ class Results(object):
         self.family = family
         self.exog = exog
         self.offset = offset
-        self.mu = self(exog)
+        self.mu = self.linkinverse(exog)  #TODO: remove __call__
+
+
 
     def __call__(self, exog):
+        '''expected value ? check new GLM, same as mu for given exog
+        maybe remove this
+        '''
+        return self.linkinverse(exog)
+
+    def linkinverse(self, exog):  #TODO what's the name in GLM
         '''expected value ? check new GLM, same as mu for given exog
         '''
         return self.family.link.inverse(self.predict(exog))
@@ -93,13 +104,27 @@ class Results(object):
         '''
         #note: sum is here over axis=0,
         #TODO: transpose in smoothed and sum over axis=1
-        return np.sum(self.smoothed(exog), axis=0) + self.alpha
+
+        #BUG: there is some inconsistent orientation somewhere
+        #temporary hack, won't work for 1d
+        #print dir(self)
+        print 'self.nobs, self.k_vars', self.nobs, self.k_vars
+        exog_smoothed = self.smoothed(exog)
+        print 'exog_smoothed.shape', exog_smoothed.shape
+        if exog_smoothed.shape[0] == self.k_vars:
+            return np.sum(self.smoothed(exog), axis=0) + self.alpha
+        if exog_smoothed.shape[1] == self.k_vars:
+            return np.sum(exog_smoothed, axis=1) + self.alpha
+        else:
+            raise ValueError('shape mismatch in predict')
 
     def smoothed(self, exog):
         '''get smoothed prediction for each component
 
         '''
-        return np.array([self.smoothers[i].predict() + self.offset[i]
+        #bug: with exog in predict I get a shape error
+        print 'smoothed', exog.shape, self.smoothers[0].predict(exog).shape
+        return np.array([self.smoothers[i].predict(exog) + self.offset[i]
                          for i in range(exog.shape[1])])
 
 class AdditiveModel(object):
@@ -165,7 +190,8 @@ class AdditiveModel(object):
 
         '''
         self.iter += 1 #moved here to always count, not necessary
-        print self.iter,
+        print self.iter, self.results.Y.shape,
+        print self.results.predict(self.exog).shape, self.weights.shape
         curdev = (((self.results.Y - self.results.predict(self.exog))**2) * self.weights).sum()
 
         if self.iter > 30: #kill it, no max iterationoption

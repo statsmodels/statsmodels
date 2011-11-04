@@ -79,10 +79,10 @@ if example == 3:
     print tic-toc
 
 
-plt.figure(num=1)
+plt.figure()
 plt.plot(x1, standardize(m.smoothers[0](x1)), 'r')
 plt.plot(x1, standardize(f1(x1)), linewidth=2)
-plt.figure(num=2)
+plt.figure()
 plt.plot(x2, standardize(m.smoothers[1](x2)), 'r')
 plt.plot(x2, standardize(f2(x2)), linewidth=2)
 
