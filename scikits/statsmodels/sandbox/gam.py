@@ -191,7 +191,8 @@ class AdditiveModel(object):
             if bad:
                 print Y, alpha, mu, tmp
                 raise
-            self.smoothers[i].smooth(Y - alpha - mu + tmp,
+            #self.smoothers[i].smooth(Y - alpha - mu + tmp,
+            self.smoothers[i].smooth(Y - mu + tmp,
                                      weights=self.weights)
             tmp2 = self.smoothers[i].predict() #fittedvalues of previous smooth/fit
             self.results.offset[i] = -(tmp2*self.weights).sum() / self.weights.sum()
