@@ -1,4 +1,3 @@
-from scikits.timeseries import Date, date_array, TimeSeries
 import scikits.statsmodels.base.model as base
 from scikits.statsmodels.base import data
 import scikits.statsmodels.base.wrapper as wrap
@@ -20,7 +19,6 @@ def _check_freq(freq):
     if freq and freq not in _freqs:
         raise ValueError("freq %s not understood" % freq)
     return freq
-
 
 #REPLACE frequencies with either timeseries or pandas conventions
 class TimeSeriesModel(base.LikelihoodModel):
@@ -50,6 +48,10 @@ class TimeSeriesModel(base.LikelihoodModel):
             dates = self._data.row_labels
 
         if dates is not None:
+            try:
+                from scikits.timeseries import Date
+            except ImportError:
+                Date = None
             if not isinstance(dates[0], (datetime.datetime,Date)):
                 raise ValueError("dates must be of type datetime or "
                                  "scikits.timeseries.Date")
@@ -170,6 +172,10 @@ class TimeSeriesModel(base.LikelihoodModel):
         return end, out_of_sample
 
     def _make_predict_dates(self):
+        try:
+            from scikits.timeseries import date_array
+        except ImportError:
+            self._data.predict_dates = None
         data = self._data
         dtstart = data.predict_start
         dtend = data.predict_end
@@ -181,7 +187,6 @@ class TimeSeriesModel(base.LikelihoodModel):
                 [datetime.datetime.fromordinal(i) for i in dates])
         #pandas.DateRange(dtstart, dtend,
         #might be able to use pandas, but might have to make some more offsets?
-
 
 class TimeSeriesModelResults(base.LikelihoodModelResults):
     def __init__(self, model, params, normalized_cov_params, scale=1.):

@@ -1,7 +1,6 @@
 import re
 import datetime
 from pandas import datetools as pandas_datetools
-import scikits.timeseries as ts
 import numpy as np
 
 #TODO: unify all the frequency information
@@ -12,7 +11,8 @@ def _date_from_idx(d1, idx, freq):
     index distance of how far the next date should be from d1. Ie., 1 gives
     the next date from d1 at freq.
     """
-    tsd1 = ts.Date(freq, datetime=d1)
+    from scikits.timeseries import Date
+    tsd1 = Date(freq, datetime=d1)
     tsd2 = datetime.datetime.fromordinal((tsd1 + idx).toordinal())
     return tsd2
 
@@ -25,8 +25,9 @@ def _idx_from_dates(d1, d2, freq):
     Note that it rounds down the index if the date is before the next date at
     freq.
     """
-    d1 = ts.Date(freq, datetime=d1)
-    d2 = ts.Date(freq, datetime=d2)
+    from scikits.timeseries import Date
+    d1 = Date(freq, datetime=d1)
+    d2 = Date(freq, datetime=d2)
     return d2 - d1
 
 _quarter_to_day = {
