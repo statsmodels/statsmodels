@@ -19,20 +19,20 @@ from scikits.statsmodels.sandbox.gam import Model as GAM #?
 from scikits.statsmodels.genmod.families import family
 from scikits.statsmodels.genmod.generalized_linear_model import GLM
 
-np.random.seed(8765993) 
+np.random.seed(8765993)
 #seed is chosen for nice result, not randomly
-#other seeds are pretty off in the prediction
+#other seeds are pretty off in the prediction or end in overflow
 
 #DGP: simple polynomial
 order = 3
 sigma_noise = 0.1
 nobs = 1000
-lb, ub = -0.75, 1#0.75 #2.5
+lb, ub = -0.75, 3#1.5#0.75 #2.5
 x1 = np.linspace(lb, ub, nobs)
-x2 = np.sin(3*x1)
+x2 = np.sin(2*x1)
 x = np.column_stack((x1/x1.max()*0.5, 1.*x2))
 exog = (x[:,:,None]**np.arange(order+1)[None, None, :]).reshape(nobs, -1)
-y_true = exog.sum(1) / 4. 
+y_true = exog.sum(1) / 4.
 z = y_true #alias check
 d = x
 y = y_true + sigma_noise * np.random.randn(nobs)
@@ -68,18 +68,21 @@ if example == 3:
     m.fit(p)
     tic = time.time()
     print tic-toc
-    
+
 for ss in m.smoothers:
-    print ss.params 
+    print ss.params
 
 if example > 1:
     import matplotlib.pyplot as plt
     plt.figure()
+    for i in np.array(m.history[2:15:3]): plt.plot(i.T)
+
+    plt.figure()
     plt.plot(exog)
-    plt.plot(y, lw=2)
+    #plt.plot(p, '.', lw=2)
     plt.plot(y_true, lw=2)
-    
-    y_pred = m.results.mu + m.results.alpha #m.results.predict(d)
+
+    y_pred = m.results.mu # + m.results.alpha #m.results.predict(d)
     plt.figure()
     plt.subplot(2,2,1)
     plt.plot(p, '.')
@@ -99,5 +102,5 @@ if example > 1:
         plt.legend(loc='upper left')
         plt.title('gam.GAM Poisson ' + ii)
         counter += 1
-        
+
     plt.show()

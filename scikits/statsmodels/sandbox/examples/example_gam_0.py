@@ -17,30 +17,40 @@ from scikits.statsmodels.sandbox.gam import Model as GAM #?
 from scikits.statsmodels.genmod import families
 from scikits.statsmodels.genmod.generalized_linear_model import GLM
 
-np.random.seed(987654)
+#np.random.seed(987654)
 
 standardize = lambda x: (x - x.mean()) / x.std()
 demean = lambda x: (x - x.mean())
-nobs = 150
-#lb, ub = -1., 1. for Poisson
-lb, ub = -0.75, 0.75 #for Binomial
+nobs = 500
+lb, ub = -1., 1. #for Poisson
+#lb, ub = -0.75, 2 #0.75 #for Binomial
 x1 = R.uniform(lb, ub, nobs)   #R.standard_normal(nobs)
 x1 = np.linspace(lb, ub, nobs)
 x1.sort()
-x2 = R.uniform(lb, ub, nobs)   #R.standard_normal(nobs)
+x2 = R.uniform(lb, ub, nobs)   #
+#x2 = R.standard_normal(nobs)
 x2.sort()
+#x2 = np.cos(x2)
+x2 = x2 + np.exp(x2/2.)
+#x2 = np.log(x2-x2.min()+0.1)
 y = 0.5 * R.uniform(lb, ub, nobs)   #R.standard_normal((nobs,))
 
-f1 = lambda x1: (x1 - 0.5 * x1**2 + 5 - 0.75 * x1**3) # + 0.1 * np.exp(-x1/4.))
-f2 = lambda x2: (x2 + 2* x2**2) # - 0.75 * np.exp(x2))
+f1 = lambda x1: (2*x1 - 0.5 * x1**2  - 0.75 * x1**3) # + 0.1 * np.exp(-x1/4.))
+f2 = lambda x2: (x2 - 1* x2**2) # - 0.75 * np.exp(x2))
 z = standardize(f1(x1)) + standardize(f2(x2))
 z = standardize(z) + 1 # 0.1
 #try this
-z = f1(x1) + f2(x2) - 4
-z = demean(z)
+z = f1(x1) + f2(x2)
+#z = demean(z)
+z -= np.median(z)
+print'z.std()', z.std()
+#z = standardize(z) + 0.2
+# with standardize I get better values, but I don't know what the true params are
 print z.mean(), z.min(), z.max()
 
-y += z
+#y += z  #noise
+y = z
+
 d = np.array([x1,x2]).T
 
 
@@ -56,6 +66,7 @@ import scipy.stats, time
 
 if example == 2:
     print "binomial"
+    mod_name = 'Binomial'
     f = families.Binomial()
     #b = np.asarray([scipy.stats.bernoulli.rvs(p) for p in f.link.inverse(y)])
     b = np.asarray([scipy.stats.bernoulli.rvs(p) for p in f.link.inverse(z)])
@@ -85,14 +96,14 @@ if example == 3:
     print tic-toc
 
 if example > 1:
-    y_pred = m.results.mu + m.results.alpha#m.results.predict(d)
+    y_pred = m.results.mu# + m.results.alpha#m.results.predict(d)
     plt.figure()
     plt.subplot(2,2,1)
     plt.plot(p, '.')
     plt.plot(yp, 'b-', label='true')
     plt.plot(y_pred, 'r-', label='GAM')
     plt.legend(loc='upper left')
-    plt.title('gam.GAM Poisson')
+    plt.title('gam.GAM ' + mod_name)
 
     counter = 2
     for ii, xx in zip(['z', 'x1', 'x2'], [z, x1, x2]):
@@ -100,10 +111,10 @@ if example > 1:
         #plt.figure()
         plt.subplot(2, 2, counter)
         plt.plot(xx[sortidx], p[sortidx], '.')
-        plt.plot(xx[sortidx], yp[sortidx], 'b-', label='true')
-        plt.plot(xx[sortidx], y_pred[sortidx], 'r-', label='GAM')
+        plt.plot(xx[sortidx], yp[sortidx], 'b.', label='true')
+        plt.plot(xx[sortidx], y_pred[sortidx], 'r.', label='GAM')
         plt.legend(loc='upper left')
-        plt.title('gam.GAM Poisson ' + ii)
+        plt.title('gam.GAM ' + mod_name + ' ' + ii)
         counter += 1
 
 #    counter = 2
