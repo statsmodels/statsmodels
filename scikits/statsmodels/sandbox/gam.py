@@ -26,7 +26,7 @@ df_fit() : degress of freedom of fit ?
 
 import numpy as np
 
-from scikits.statsmodels.genmod.families import family
+from scikits.statsmodels.genmod import families
 from scikits.statsmodels.sandbox.nonparametric.smoothers import PolySmoother as SmoothingSpline   # relative import
 from scikits.statsmodels.genmod.generalized_linear_model import GLM
 
@@ -57,6 +57,7 @@ def default_smoother(x):
     knots = _x[np.linspace(0, n-1, nknots).astype(np.int32)]
 
     #s = SmoothingSpline(knots, x=x.copy())
+    #when I set order=2, I get nans in the GAM prediction
     order = 3 #what about knots? need smoother *args or **kwds
     s = SmoothingSpline(order, x=x.copy())
 #    s.gram(d=2)
@@ -110,9 +111,9 @@ class Results(object):
         #BUG: there is some inconsistent orientation somewhere
         #temporary hack, won't work for 1d
         #print dir(self)
-        print 'self.nobs, self.k_vars', self.nobs, self.k_vars
+        #print 'self.nobs, self.k_vars', self.nobs, self.k_vars
         exog_smoothed = self.smoothed(exog)
-        print 'exog_smoothed.shape', exog_smoothed.shape
+        #print 'exog_smoothed.shape', exog_smoothed.shape
         if exog_smoothed.shape[0] == self.k_vars:
             return np.sum(self.smoothed(exog), axis=0) + self.alpha
         if exog_smoothed.shape[1] == self.k_vars:
@@ -125,18 +126,26 @@ class Results(object):
 
         '''
         #bug: with exog in predict I get a shape error
-        print 'smoothed', exog.shape, self.smoothers[0].predict(exog).shape
-        return np.array([self.smoothers[i].predict(exog) + self.offset[i]
-                         for i in range(exog.shape[1])])
+        #print 'smoothed', exog.shape, self.smoothers[0].predict(exog).shape
+        #there was a mistake exog didn't have column index i
+        return np.array([self.smoothers[i].predict(exog[:,i]) + self.offset[i]
+                         for i in range(exog.shape[1])]).T
 
 class AdditiveModel(object):
     '''additive model with non-parametric, smoothed components
 
     Parameters
     ----------
+    exog : ndarray
+    smoothers : None or list of smoother instances
+        smoother instances not yet checked
+    weights : None or ndarray
+    family : None or family instance
+        I think only used because of shared results with GAM and subclassing.
+        If None, then Gaussian is used.
     '''
 
-    def __init__(self, exog, smoothers=None, weights=None):
+    def __init__(self, exog, smoothers=None, weights=None, family=None):
         self.exog = exog
         if not weights is None:
             self.weights = weights
@@ -146,7 +155,11 @@ class AdditiveModel(object):
         self.smoothers = smoothers or [default_smoother(exog[:,i]) for i in range(exog.shape[1])]
         for i in range(exog.shape[1]):
             self.smoothers[i].df = 10
-        self.family = family.Gaussian()
+        if family is None:
+            self.family = families.Gaussian()
+        else:
+            self.family = family
+        #self.family = families.Gaussian()
 
     def _iter__(self):
         '''initialize iteration ?, should be removed
@@ -158,20 +171,32 @@ class AdditiveModel(object):
 
     def next(self):
         '''internal calculation for one fit iteration
+
+        BUG: I think this does not improve, what is supposed to improve
+            offset doesn't seem to be used, neither an old alpha
+            The smoothers keep coef/params from previous iteration
         '''
         _results = self.results
         Y = self.results.Y
         mu = _results.predict(self.exog)
-        #TODO offset is not used ?
+        #TODO offset is never used ?
         offset = np.zeros(self.exog.shape[1], np.float64)
         alpha = (Y * self.weights).sum() / self.weights.sum()
         for i in range(self.exog.shape[1]):
             tmp = self.smoothers[i].predict()
             #TODO: check what smooth needs to do
+            #smooth (alias for fit, fit given x to new y and attach
+            #print 'next shape', (Y - alpha - mu + tmp).shape
+            bad = np.isnan(Y - alpha - mu + tmp).any()
+            if bad:
+                print Y, alpha, mu, tmp
+                raise
             self.smoothers[i].smooth(Y - alpha - mu + tmp,
                                      weights=self.weights)
-            tmp2 = self.smoothers[i].predict()
-            offset[i] = -(tmp2*self.weights).sum() / self.weights.sum()
+            tmp2 = self.smoothers[i].predict() #fittedvalues of previous smooth/fit
+            self.results.offset[i] = -(tmp2*self.weights).sum() / self.weights.sum()
+            #self.offset used in smoothed
+            print self.smoothers[i].params
             mu += tmp2 - tmp
 
         #print self.iter
@@ -207,13 +232,22 @@ class AdditiveModel(object):
         return True
 
     def df_resid(self):
+        '''degrees of freedom of residuals, ddof is sum of all smoothers df
+        '''
         return self.results.Y.shape[0] - np.array([self.smoothers[i].df_fit() for i in range(self.exog.shape[1])]).sum()
 
     def estimate_scale(self):
+        '''estimate standard deviation of residuals
+        '''
         #TODO: remove use of self.results.__call__
         return ((self.results.Y - self.results(self.exog))**2).sum() / self.df_resid()
 
     def fit(self, Y):
+        '''fit the model to a given endogenous variable Y
+
+        This needs to change for consistency with statsmodels
+
+        '''
         #iter(self)  # what does this do? anything?
         self._iter__()
         mu = 0
@@ -242,7 +276,9 @@ class Model(GLM, AdditiveModel):
     #only used in __init__, dropping it doesn't change results
     #but where gets family attached now? - weird, it's Gaussian in this case now
     #also where is the link defined?
-    #AdditiveModel overwrites family and sets it to Gaussian
+    #AdditiveModel overwrites family and sets it to Gaussian - corrected
+
+    #I think both GLM and AdditiveModel subclassing is only used in __init__
 
     niter = 2
 
@@ -250,27 +286,42 @@ class Model(GLM, AdditiveModel):
 #        GLM.__init__(self, exog, family=family)
 #        AdditiveModel.__init__(self, exog, smoothers=smoothers)
 #        self.family = family
-    def __init__(self, endog, exog, smoothers=None, family=family.Gaussian()):
+    def __init__(self, endog, exog, smoothers=None, family=families.Gaussian()):
         print family
-        self.family = family
+        #self.family = family
         #TODO: inconsistent super __init__
-        AdditiveModel.__init__(self, exog, smoothers=smoothers)
+        AdditiveModel.__init__(self, exog, smoothers=smoothers, family=family)
         GLM.__init__(self, endog, exog, family=family)
         print self.family
 
     def next(self):
-        _results = self.results; Y = _results.Y
-        if np.isnan(self.weights).all(): print "nanweights1"
-        _results.mu = self.family.link.inverse(_results.predict(self.exog))
+        _results = self.results
+        Y = _results.Y
+        if np.isnan(self.weights).all():
+            print "nanweights1"
+
+        #_results.mu = self.family.link.inverse(_results.predict(self.exog))
+        eta = _results.predict(self.exog)
+        _results.mu = self.family.fitted(eta)
         weights = self.family.weights(_results.mu)
         if np.isnan(weights).all():
             self.weights = weights
             print "nanweights2"
-        Z = _results.predict(self.exog) + self.family.link.deriv(_results.mu) * (Y - _results.mu)
-        m = AdditiveModel(self.exog, smoothers=self.smoothers, weights=self.weights)
+        self.weights = weights
+        print 'deriv isnan', np.isnan(self.family.link.deriv(_results.mu)).any()
+
+        #Z = _results.predict(self.exog) + \
+        Z = _results.predict(self.exog) + \
+               self.family.link.deriv(_results.mu) * (Y - _results.mu) #- _results.alpha #?added alpha
+
+        m = AdditiveModel(self.exog, smoothers=self.smoothers,
+                          weights=self.weights, family=self.family)
 
         #TODO: I don't know what the next two lines do, Z, Y ? which is endog?
+        #Y is original endog, Z is endog for the next step in the iterative solver
+
         _results = m.fit(Z)
+        self.history.append([Z, _results.predict(self.exog)])
         _results.Y = Y
         _results.mu = self.family.link.inverse(_results.predict(self.exog))
         self.iter += 1
@@ -286,10 +337,15 @@ class Model(GLM, AdditiveModel):
         if Y is None:
             Y = self.Y
         resid = Y - self.results.mu
-        return (np.power(resid, 2) / self.family.variance(self.results.mu)).sum() / AdditiveModel.df_resid(self)
+        return (np.power(resid, 2) / self.family.variance(self.results.mu)).sum() \
+                    / self.df_resid   #TODO check this
+                   #/ AdditiveModel.df_resid(self)  #what is the class doing here?
+
 
     def fit(self, Y):
         self.Y = np.asarray(Y, np.float64)
+
+        self.history = []
 
         #iter(self)
         self._iter__()
@@ -297,7 +353,7 @@ class Model(GLM, AdditiveModel):
         #TODO code duplication with next?
         alpha = self.Y.mean()
         Z = self.family.link(alpha) + self.family.link.deriv(alpha) * (Y - alpha)
-        m = AdditiveModel(self.exog, smoothers=self.smoothers)
+        m = AdditiveModel(self.exog, smoothers=self.smoothers, family=self.family)
         self.results = m.fit(Z)
         self.results.mu = self.family.link.inverse(self.results.predict(self.exog))
         self.results.Y = Y
