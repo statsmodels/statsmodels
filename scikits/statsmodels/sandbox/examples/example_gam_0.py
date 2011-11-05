@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 
 from scikits.statsmodels.sandbox.gam import AdditiveModel
 from scikits.statsmodels.sandbox.gam import Model as GAM #?
-from scikits.statsmodels.genmod.families import family
+from scikits.statsmodels.genmod import families
 from scikits.statsmodels.genmod.generalized_linear_model import GLM
 
 np.random.seed(987654)
@@ -37,6 +37,7 @@ z = standardize(f1(x1)) + standardize(f2(x2))
 z = standardize(z) + 1 # 0.1
 #try this
 z = f1(x1) + f2(x2) - 4
+z = demean(z)
 print z.mean(), z.min(), z.max()
 
 y += z
@@ -55,7 +56,7 @@ import scipy.stats, time
 
 if example == 2:
     print "binomial"
-    f = family.Binomial()
+    f = families.Binomial()
     #b = np.asarray([scipy.stats.bernoulli.rvs(p) for p in f.link.inverse(y)])
     b = np.asarray([scipy.stats.bernoulli.rvs(p) for p in f.link.inverse(z)])
     b.shape = y.shape
@@ -71,7 +72,7 @@ if example == 2:
 
 if example == 3:
     print "Poisson"
-    f = family.Poisson()
+    f = families.Poisson()
     #y = y/y.max() * 3
     yp = f.link.inverse(z)
     #p = np.asarray([scipy.stats.poisson.rvs(p) for p in f.link.inverse(y)], float)
@@ -84,7 +85,7 @@ if example == 3:
     print tic-toc
 
 if example > 1:
-    y_pred = m.results.mu #m.results.predict(d)
+    y_pred = m.results.mu + m.results.alpha#m.results.predict(d)
     plt.figure()
     plt.subplot(2,2,1)
     plt.plot(p, '.')
