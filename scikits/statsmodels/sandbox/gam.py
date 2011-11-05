@@ -86,7 +86,7 @@ class Results(object):
         self.family = family
         self.exog = exog
         self.offset = offset
-        self.mu = self.linkinverse(exog)  #TODO: remove __call__
+        self.mu = self.linkinversepredict(exog)  #TODO: remove __call__
 
 
 
@@ -94,9 +94,9 @@ class Results(object):
         '''expected value ? check new GLM, same as mu for given exog
         maybe remove this
         '''
-        return self.linkinverse(exog)
+        return self.linkinversepredict(exog)
 
-    def linkinverse(self, exog):  #TODO what's the name in GLM
+    def linkinversepredict(self, exog):  #TODO what's the name in GLM
         '''expected value ? check new GLM, same as mu for given exog
         '''
         return self.family.link.inverse(self.predict(exog))

@@ -27,12 +27,16 @@ np.random.seed(8765993)
 order = 3
 sigma_noise = 0.1
 nobs = 1000
-lb, ub = -0.75, 3#1.5#0.75 #2.5
+#lb, ub = -0.75, 3#1.5#0.75 #2.5
+lb, ub = -3.5, 3
 x1 = np.linspace(lb, ub, nobs)
 x2 = np.sin(2*x1)
-x = np.column_stack((x1/x1.max()*0.5, 1.*x2))
+x = np.column_stack((x1/x1.max()*1, 1.*x2))
 exog = (x[:,:,None]**np.arange(order+1)[None, None, :]).reshape(nobs, -1)
-y_true = exog.sum(1) / 4.
+idx = range((order+1)*2)
+del idx[order+1]
+exog_reduced = exog[:,idx]  #remove duplicate constant
+y_true = exog.sum(1) #/ 4.
 z = y_true #alias check
 d = x
 y = y_true + sigma_noise * np.random.randn(nobs)
@@ -42,6 +46,7 @@ example = 3
 if example == 2:
     print "binomial"
     f = family.Binomial()
+    mu_true = f.link.inverse(z)
     #b = np.asarray([scipy.stats.bernoulli.rvs(p) for p in f.link.inverse(y)])
     b = np.asarray([stats.bernoulli.rvs(p) for p in f.link.inverse(z)])
     b.shape = y.shape
@@ -96,11 +101,13 @@ if example > 1:
         sortidx = np.argsort(xx)
         #plt.figure()
         plt.subplot(2, 2, counter)
-        plt.plot(xx[sortidx], p[sortidx], '.')
-        plt.plot(xx[sortidx], yp[sortidx], 'b-', label='true')
-        plt.plot(xx[sortidx], y_pred[sortidx], 'r-', label='GAM')
+        plt.plot(xx[sortidx], p[sortidx], 'k.', alpha=0.5)
+        plt.plot(xx[sortidx], yp[sortidx], 'b.', label='true')
+        plt.plot(xx[sortidx], y_pred[sortidx], 'r.', label='GAM')
         plt.legend(loc='upper left')
         plt.title('gam.GAM Poisson ' + ii)
         counter += 1
+
+    res = GLM(p, exog_reduced, family=f).fit()
 
     plt.show()
