@@ -5,7 +5,6 @@ results, and doing data cleaning
 
 import numpy as np
 from pandas import DataFrame, Series, TimeSeries
-from scikits.timeseries import time_series
 from scikits.statsmodels.tools.decorators import (resettable_cache,
                 cache_readonly, cache_writable)
 import scikits.statsmodels.tools.data as data_util
@@ -186,9 +185,11 @@ class TimeSeriesData(ModelData):
     #    return recarray?
 
     def attach_rows(self, result):
+        from scikits.timeseries import time_series
         return time_series(result, dates = self.row_labels[-len(result):])
 
     def attach_dates(self, result):
+        from scikits.timeseries import time_series
         return time_series(result, dates = self.predict_dates)
 
 
