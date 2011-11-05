@@ -129,6 +129,9 @@ class Results(object):
         #print 'smoothed', exog.shape, self.smoothers[0].predict(exog).shape
         #there was a mistake exog didn't have column index i
         return np.array([self.smoothers[i].predict(exog[:,i]) + self.offset[i]
+        #shouldn't be a mistake because exog[:,i] is attached to smoother, but
+        #it is for different exog
+        #return np.array([self.smoothers[i].predict() + self.offset[i]
                          for i in range(exog.shape[1])]).T
 
 class AdditiveModel(object):
@@ -301,9 +304,9 @@ class Model(GLM, AdditiveModel):
         if np.isnan(self.weights).all():
             print "nanweights1"
 
-        #_results.mu = self.family.link.inverse(_results.predict(self.exog))
-        eta = _results.predict(self.exog)
-        _results.mu = self.family.fitted(eta)
+        _results.mu = self.family.link.inverse(_results.predict(self.exog))
+        #eta = _results.predict(self.exog)
+        #_results.mu = self.family.fitted(eta)
         weights = self.family.weights(_results.mu)
         if np.isnan(weights).all():
             self.weights = weights
@@ -353,7 +356,9 @@ class Model(GLM, AdditiveModel):
 
         #TODO code duplication with next?
         alpha = self.Y.mean()
-        Z = self.family.link(alpha) + self.family.link.deriv(alpha) * (Y - alpha)
+        mu0 = self.family.starting_mu(Y)
+        #Z = self.family.link(alpha) + self.family.link.deriv(alpha) * (Y - alpha)
+        Z = self.family.link(alpha) + self.family.link.deriv(alpha) * (Y - mu0)
         m = AdditiveModel(self.exog, smoothers=self.smoothers, family=self.family)
         self.results = m.fit(Z)
         self.results.mu = self.family.link.inverse(self.results.predict(self.exog))

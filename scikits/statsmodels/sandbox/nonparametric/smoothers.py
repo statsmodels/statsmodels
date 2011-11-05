@@ -158,7 +158,7 @@ class PolySmoother(object):
         if x is not None:
             #if x.ndim > 1: x=x[0,:]  #why this this should select column not row
             if x.ndim > 1:
-                #print 'Warning: 2d x detected in PolySmoother predict, shape:', x.shape
+                print 'Warning: 2d x detected in PolySmoother predict, shape:', x.shape
                 x=x[:,0]  #TODO: check and clean this up
             X = np.array([(x**i) for i in range(self.order+1)])
         else: X = self.X
