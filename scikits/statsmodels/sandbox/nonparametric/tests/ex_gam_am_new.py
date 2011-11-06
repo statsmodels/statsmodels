@@ -1,8 +1,14 @@
 # -*- coding: utf-8 -*-
-"""
+"""Example for gam.AdditiveModel and PolynomialSmoother
+
+This example was written as a test case.
+The data generating process is chosen so the parameters are well identified
+and estimated.
+
 Created on Fri Nov 04 13:45:43 2011
 
-@author: josef
+Author: Josef Perktold
+
 """
 
 import time
