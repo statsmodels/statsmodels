@@ -131,7 +131,7 @@ class TestAdditiveModel(BaseAM, CheckAM):
         slopes = [i for ss in m.smoothers for i in ss.params[1:]]
 
         const = res_gam.alpha + sum([ss.params[1] for ss in m.smoothers])
-        print const, slopes
+        #print const, slopes
         res1.params = np.array([const] + slopes)
 
 

@@ -52,8 +52,9 @@ from scikits.statsmodels.genmod import families
 from scikits.statsmodels.sandbox.nonparametric.smoothers import PolySmoother
 from scikits.statsmodels.genmod.generalized_linear_model import GLM
 
+DEBUG = False
 
-def default_smoother(x):
+def default_smoother(x, s_arg=None):
     '''
 
     '''
@@ -83,8 +84,11 @@ def default_smoother(x):
 
     #s = SmoothingSpline(knots, x=x.copy())
     #when I set order=2, I get nans in the GAM prediction
-    order = 3 #what about knots? need smoother *args or **kwds
-    s = PolySmoother(order, x=x.copy())
+    if s_arg is None:
+        order = 3 #what about knots? need smoother *args or **kwds
+    else:
+        order = s_arg
+    s = PolySmoother(order, x=x.copy())  #TODO: change order, why copy?
 #    s.gram(d=2)
 #    s.target_df = 5
     return s
@@ -140,6 +144,9 @@ class Results(object):
         exog_smoothed = self.smoothed(exog)
         #print 'exog_smoothed.shape', exog_smoothed.shape
         if exog_smoothed.shape[0] == self.k_vars:
+            import warnings
+            warnings.warn("old orientation, colvars, will go away",
+                          FutureWarning)
             return np.sum(self.smoothed(exog), axis=0) + self.alpha
         if exog_smoothed.shape[1] == self.k_vars:
             return np.sum(exog_smoothed, axis=1) + self.alpha
@@ -216,7 +223,7 @@ class AdditiveModel(object):
             #smooth (alias for fit, fit given x to new y and attach
             #print 'next shape', (Y - alpha - mu + tmp).shape
             bad = np.isnan(Y - alpha - mu + tmp).any()
-            if bad:
+            if bad: #temporary assert while debugging
                 print Y, alpha, mu, tmp
                 raise
             #self.smoothers[i].smooth(Y - alpha - mu + tmp,
@@ -225,7 +232,8 @@ class AdditiveModel(object):
             tmp2 = self.smoothers[i].predict() #fittedvalues of previous smooth/fit
             self.results.offset[i] = -(tmp2*self.weights).sum() / self.weights.sum()
             #self.offset used in smoothed
-            print self.smoothers[i].params
+            if DEBUG:
+                print self.smoothers[i].params
             mu += tmp2 - tmp
 
         #print self.iter
@@ -246,8 +254,9 @@ class AdditiveModel(object):
 
         '''
         self.iter += 1 #moved here to always count, not necessary
-        print self.iter, self.results.Y.shape,
-        print self.results.predict(self.exog).shape, self.weights.shape
+        if DEBUG:
+            print self.iter, self.results.Y.shape,
+            print self.results.predict(self.exog).shape, self.weights.shape
         curdev = (((self.results.Y - self.results.predict(self.exog))**2) * self.weights).sum()
 
         if self.iter > 30: #kill it, no max iterationoption
@@ -316,12 +325,11 @@ class Model(GLM, AdditiveModel):
 #        AdditiveModel.__init__(self, exog, smoothers=smoothers)
 #        self.family = family
     def __init__(self, endog, exog, smoothers=None, family=families.Gaussian()):
-        print family
         #self.family = family
         #TODO: inconsistent super __init__
         AdditiveModel.__init__(self, exog, smoothers=smoothers, family=family)
         GLM.__init__(self, endog, exog, family=family)
-        print self.family
+        assert self.family is family  #make sure we got the right family
 
     def next(self):
         _results = self.results
@@ -337,7 +345,8 @@ class Model(GLM, AdditiveModel):
             self.weights = weights
             print "nanweights2"
         self.weights = weights
-        print 'deriv isnan', np.isnan(self.family.link.deriv(_results.mu)).any()
+        if DEBUG:
+            print 'deriv isnan', np.isnan(self.family.link.deriv(_results.mu)).any()
 
         #Z = _results.predict(self.exog) + \
         Z = _results.predict(self.exog) + \
