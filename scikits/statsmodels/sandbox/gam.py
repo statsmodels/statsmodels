@@ -11,6 +11,27 @@ predict(x=None) : smoothed values, fittedvalues or for new exog
 df_fit() : degress of freedom of fit ?
 
 
+Notes
+-----
+- using PolySmoother works for AdditiveModel, and GAM with Poisson and Binomial
+- testfailure with Gamma, no other families tested
+- there is still an indeterminacy in the split up of the constant across
+  components (smoothers) and alpha, sum, i.e. constant, looks good.
+  - role of offset, that I haven't tried to figure out yet
+
+Refactoring
+-----------
+currently result is attached to model instead of other way around
+split up Result in class for AdditiveModel and for GAM,
+subclass GLMResults, needs verification that result statistics are appropriate
+how much inheritance, double inheritance?
+renamings and cleanup
+interface to other smoothers, scipy splines
+
+basic unittests as support for refactoring exist, but we should have a test
+case for gamma and the others. Advantage of PolySmoother is that we can
+benchmark against the parametric GLM results.
+
 """
 
 # JP:
@@ -23,15 +44,19 @@ df_fit() : degress of freedom of fit ?
 # fixed some of the dimension problems in PolySmoother,
 #       now graph for example looks good
 # NOTE: example script is now in examples folder
+#update: I did some of the above, see module docstring
 
 import numpy as np
 
 from scikits.statsmodels.genmod import families
-from scikits.statsmodels.sandbox.nonparametric.smoothers import PolySmoother as SmoothingSpline   # relative import
+from scikits.statsmodels.sandbox.nonparametric.smoothers import PolySmoother
 from scikits.statsmodels.genmod.generalized_linear_model import GLM
 
 
 def default_smoother(x):
+    '''
+
+    '''
 #    _x = x.copy()
 #    _x.sort()
     _x = np.sort(x)
@@ -59,7 +84,7 @@ def default_smoother(x):
     #s = SmoothingSpline(knots, x=x.copy())
     #when I set order=2, I get nans in the GAM prediction
     order = 3 #what about knots? need smoother *args or **kwds
-    s = SmoothingSpline(order, x=x.copy())
+    s = PolySmoother(order, x=x.copy())
 #    s.gram(d=2)
 #    s.target_df = 5
     return s

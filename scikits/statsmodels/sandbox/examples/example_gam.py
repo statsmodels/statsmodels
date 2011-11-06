@@ -1,12 +1,9 @@
-'''example for checking how far GAM work, GAM is incompletely fixed
+'''original example for checking how far GAM works
 
 Note: uncomment plt.show() to display graphs
 '''
-#FIXME problems calling GLM, 3rd parameter missing
 
-
-# convert to script for testing, so we get interactive variable access
-example = 1  # 1,2 or 3
+example = 2  # 1,2 or 3
 
 import numpy as np
 import numpy.random as R

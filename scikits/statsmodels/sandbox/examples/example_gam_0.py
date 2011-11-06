@@ -1,11 +1,13 @@
-'''example for checking how far GAM work, GAM is incompletely fixed
+'''first examples for gam and PolynomialSmoother used for debugging
+
+This example was written as a test case.
+The data generating process is chosen so the parameters are well identified
+and estimated.
+
 
 Note: uncomment plt.show() to display graphs
 '''
-#FIXME problems calling GLM, 3rd parameter missing
 
-
-# convert to script for testing, so we get interactive variable access
 example = 2 #3  # 1,2 or 3
 
 import numpy as np
@@ -152,7 +154,7 @@ plt.plot(x2, standardize(f2(x2)), linewidth=2)
 
 
 
-plt.show()
+#plt.show()
 
 
 

@@ -1,8 +1,13 @@
 # -*- coding: utf-8 -*-
-"""
+"""Example for GAM with Poisson Model and PolynomialSmoother
+
+This example was written as a test case.
+The data generating process is chosen so the parameters are well identified
+and estimated.
+
 Created on Fri Nov 04 13:45:43 2011
 
-@author: josef
+Author: Josef Perktold
 """
 
 import time
@@ -109,5 +114,22 @@ if example > 1:
         counter += 1
 
     res = GLM(p, exog_reduced, family=f).fit()
+
+    #plot component, compared to true component
+    x1 = x[:,0]
+    x2 = x[:,1]
+    f1 = exog[:,:order+1].sum(1) - 1 #take out constant
+    f2 = exog[:,order+1:].sum(1) - 1
+    plt.figure()
+    #Note: need to correct for constant which is indeterminatedly distributed
+    #plt.plot(x1, m.smoothers[0](x1)-m.smoothers[0].params[0]+1, 'r')
+    #better would be subtract f(0) m.smoothers[0](np.array([0]))
+    plt.plot(x1, f1, linewidth=2)
+    plt.plot(x1, m.smoothers[0](x1)-m.smoothers[0].params[0], 'r')
+
+    plt.figure()
+    plt.plot(x2, f2, linewidth=2)
+    plt.plot(x2, m.smoothers[1](x2)-m.smoothers[1].params[0], 'r')
+
 
     plt.show()

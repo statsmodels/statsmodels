@@ -1,9 +1,25 @@
 # -*- coding: utf-8 -*-
-"""
+"""Tests for gam.AdditiveModel and GAM with Polynomials compared to OLS and GLM
+
+
 Created on Sat Nov 05 14:16:07 2011
 
 Author: Josef Perktold
 License: BSD
+
+
+Notes
+-----
+
+TODO: TestGAMGamma: has test failure (GLM looks good),
+        adding log-link didn't help
+TODO: TestGAMNegativeBinomial: rvs generation doesn't work,
+        nbinom needs 2 parameters
+TODO: TestGAMGaussianLogLink: test failure,
+        but maybe precision issue, not completely off
+
+missing: Tests with non-default link
+
 """
 
 import numpy as np
@@ -13,7 +29,7 @@ from scipy import stats
 
 from scikits.statsmodels.sandbox.gam import AdditiveModel
 from scikits.statsmodels.sandbox.gam import Model as GAM #?
-from scikits.statsmodels.genmod.families import family
+from scikits.statsmodels.genmod.families import family, links
 from scikits.statsmodels.genmod.generalized_linear_model import GLM
 from scikits.statsmodels.regression.linear_model import OLS
 
@@ -135,13 +151,15 @@ class BaseGAM(BaseAM, CheckGAM):
         m = GAM(y_obs, x, family=f)  #TODO: y_obs is twice __init__ and fit
         m.fit(y_obs)
         res_gam = m.results
+        self.res_gam = res_gam   #attached for debugging
+        self.mod_gam = m   #attached for debugging
 
         res_glm = GLM(y_obs, exog, family=f).fit()
 
         #Note: there still are some naming inconsistencies
         self.res1 = res1 = Dummy() #for gam model
         #res2 = Dummy() #for benchmark
-        self.res2 = res2 = res_glm  #reuse existing ols results, will add additional
+        self.res2 = res2 = res_glm  #reuse existing glm results, will add additional
 
         #eta in GLM terminology
         res2.y_pred = res_glm.model.predict(res_glm.params, exog, linear=True)
@@ -152,7 +170,7 @@ class BaseGAM(BaseAM, CheckGAM):
         res2.mu_pred = res_glm.model.predict(res_glm.params, exog, linear=False)
         res1.mu_pred = res_gam.mu
 
-
+        #parameters
         slopes = [i for ss in m.smoothers for i in ss.params[1:]]
         const = res_gam.alpha + sum([ss.params[1] for ss in m.smoothers])
         res1.params = np.array([const] + slopes)
@@ -178,12 +196,45 @@ class TestGAMBinomial(BaseGAM):
 
         self.init()
 
+class _estGAMGaussianLogLink(BaseGAM):
+    #test failure, but maybe precision issue, not completely off
+
+    def __init__(self):
+        super(self.__class__, self).__init__() #initialize DGP
+
+        self.family =  family.Gaussian(links.log)
+        self.rvs = stats.norm.rvs
+
+        self.init()
+
+
+class TestGAMGamma(BaseGAM):
+
+    def __init__(self):
+        super(self.__class__, self).__init__() #initialize DGP
+
+        self.family =  family.Gamma(links.log)
+        self.rvs = stats.gamma.rvs
+
+        self.init()
+
+class _estGAMNegativeBinomial(BaseGAM):
+    #rvs generation doesn't work, nbinom needs 2 parameters
+
+    def __init__(self):
+        super(self.__class__, self).__init__() #initialize DGP
+
+        self.family =  family.NegativeBinomial()
+        self.rvs = stats.nbinom.rvs
+
+        self.init()
+
 if __name__ == '__main__':
     t1 = TestAdditiveModel()
     t1.test_predict()
     t1.test_params()
 
-    for tt in [TestGAMPoisson, TestGAMBinomial]:
+    for tt in [TestGAMPoisson, TestGAMBinomial]: #, TestGAMGaussianLogLink]: #, TestGAMNegativeBinomial]:#TestGAMGamma]:
         tt = tt()
         tt.test_predict()
         tt.test_params()
