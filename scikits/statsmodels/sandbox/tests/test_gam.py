@@ -25,6 +25,14 @@ class CheckAM(object):
 
     def test_predict(self):
         assert_almost_equal(self.res1.y_pred,
+                            self.res2.y_pred, decimal=2)
+        assert_almost_equal(self.res1.y_predshort,
+                            self.res2.y_pred[:10], decimal=2)
+
+
+    def _est_fitted(self):
+        #check definition of fitted in GLM: eta or mu
+        assert_almost_equal(self.res1.y_pred,
                             self.res2.fittedvalues, decimal=2)
         assert_almost_equal(self.res1.y_predshort,
                             self.res2.fittedvalues[:10], decimal=2)
@@ -34,6 +42,9 @@ class CheckAM(object):
         #constant is far off in example 4 versus 2
         assert_almost_equal(self.res1.params[1:],
                             self.res2.params[1:], decimal=2)
+        #constant
+        assert_almost_equal(self.res1.params[1],
+                            self.res2.params[1], decimal=2)
 
     def _est_df(self):
         #not used yet, copied from PolySmoother tests
@@ -41,8 +52,16 @@ class CheckAM(object):
         assert_equal(self.res_ps.def_fit(), self.res2.df_model) #alias
         assert_equal(self.res_ps.def_resid(), self.res2.df_resid)
 
+class CheckGAM(CheckAM):
 
-class BaseGAM(object):
+    def test_mu(self):
+        assert_almost_equal(self.res1.mu_pred,
+                            self.res2.mu_pred, decimal=2)
+#        assert_almost_equal(self.res1.y_predshort,
+#                            self.res2.y_pred[:10], decimal=2)
+
+
+class BaseAM(object):
 
     def __init__(self):
 
@@ -66,7 +85,7 @@ class BaseGAM(object):
 
 
 
-class TestAdditiveModel(BaseGAM, CheckAM):
+class TestAdditiveModel(BaseAM, CheckAM):
 
     def __init__(self):
         super(self.__class__, self).__init__() #initialize DGP
@@ -90,7 +109,7 @@ class TestAdditiveModel(BaseGAM, CheckAM):
         self.res2 = res2 = res_ols  #reuse existing ols results, will add additional
 
         res1.y_pred = res_gam.predict(x)
-        res2.y_pred = m.results.predict(x)
+        res2.y_pred = res_ols.model.predict(res_ols.params, exog)
         res1.y_predshort = res_gam.predict(x[:10])
 
         slopes = [i for ss in m.smoothers for i in ss.params[1:]]
@@ -100,11 +119,75 @@ class TestAdditiveModel(BaseGAM, CheckAM):
         res1.params = np.array([const] + slopes)
 
 
+class BaseGAM(BaseAM, CheckGAM):
+
+    def init(self):
+        nobs = self.nobs
+        y_true, x, exog = self.y_true, self.x, self.exog
+
+        f = self.family
+
+        self.mu_true = mu_true = f.link.inverse(y_true)
+
+        np.random.seed(8765993)
+        #y_obs = np.asarray([stats.poisson.rvs(p) for p in mu], float)
+        y_obs = self.rvs(mu_true) #this should work
+        m = GAM(y_obs, x, family=f)  #TODO: y_obs is twice __init__ and fit
+        m.fit(y_obs)
+        res_gam = m.results
+
+        res_glm = GLM(y_obs, exog, family=f).fit()
+
+        #Note: there still are some naming inconsistencies
+        self.res1 = res1 = Dummy() #for gam model
+        #res2 = Dummy() #for benchmark
+        self.res2 = res2 = res_glm  #reuse existing ols results, will add additional
+
+        #eta in GLM terminology
+        res2.y_pred = res_glm.model.predict(res_glm.params, exog, linear=True)
+        res1.y_pred = res_gam.predict(x)
+        res1.y_predshort = res_gam.predict(x[:10]) #, linear=True)
+
+        #mu
+        res2.mu_pred = res_glm.model.predict(res_glm.params, exog, linear=False)
+        res1.mu_pred = res_gam.mu
+
+
+        slopes = [i for ss in m.smoothers for i in ss.params[1:]]
+        const = res_gam.alpha + sum([ss.params[1] for ss in m.smoothers])
+        res1.params = np.array([const] + slopes)
+
+
+class TestGAMPoisson(BaseGAM):
+
+    def __init__(self):
+        super(self.__class__, self).__init__() #initialize DGP
+
+        self.family =  family.Poisson()
+        self.rvs = stats.poisson.rvs
+
+        self.init()
+
+class TestGAMBinomial(BaseGAM):
+
+    def __init__(self):
+        super(self.__class__, self).__init__() #initialize DGP
+
+        self.family =  family.Binomial()
+        self.rvs = stats.bernoulli.rvs
+
+        self.init()
 
 if __name__ == '__main__':
     t1 = TestAdditiveModel()
     t1.test_predict()
     t1.test_params()
+
+    for tt in [TestGAMPoisson, TestGAMBinomial]:
+        tt = tt()
+        tt.test_predict()
+        tt.test_params()
+        tt.test_mu
 
 
 
