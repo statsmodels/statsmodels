@@ -18,7 +18,12 @@ TODO: TestGAMNegativeBinomial: rvs generation doesn't work,
 TODO: TestGAMGaussianLogLink: test failure,
         but maybe precision issue, not completely off
 
-missing: Tests with non-default link
+one possible change
+~~~~~~~~~~~~~~~~~~~
+add average, integral based tests, instead of or additional to sup
+    * for example mean squared error for mu and eta (predict, fittedvalues)
+      or mean absolute error, what's the scale for this? required precision?
+    * this will also work for real non-parametric tests
 
 """
 
@@ -64,9 +69,9 @@ class CheckAM(object):
 
     def _est_df(self):
         #not used yet, copied from PolySmoother tests
-        assert_equal(self.res_ps.def_model(), self.res2.df_model)
-        assert_equal(self.res_ps.def_fit(), self.res2.df_model) #alias
-        assert_equal(self.res_ps.def_resid(), self.res2.df_resid)
+        assert_equal(self.res_ps.df_model(), self.res2.df_model)
+        assert_equal(self.res_ps.df_fit(), self.res2.df_model) #alias
+        assert_equal(self.res_ps.df_resid(), self.res2.df_resid)
 
 class CheckGAM(CheckAM):
 
@@ -150,7 +155,7 @@ class BaseGAM(BaseAM, CheckGAM):
         #y_obs = np.asarray([stats.poisson.rvs(p) for p in mu], float)
         y_obs = self.rvs(mu_true) #this should work
         m = GAM(y_obs, x, family=f)  #TODO: y_obs is twice __init__ and fit
-        m.fit(y_obs)
+        m.fit(y_obs) #, maxiter=1000)
         res_gam = m.results
         self.res_gam = res_gam   #attached for debugging
         self.mod_gam = m   #attached for debugging
@@ -198,7 +203,13 @@ class TestGAMBinomial(BaseGAM):
         self.init()
 
 class _estGAMGaussianLogLink(BaseGAM):
-    #test failure, but maybe precision issue, not completely off
+    #test failure, but maybe precision issue, not far off
+    #>>> np.mean(np.abs(tt.res2.mu_pred - tt.mu_true))
+    #0.80409736263199649
+    #>>> np.mean(np.abs(tt.res2.mu_pred - tt.mu_true))/tt.mu_true.mean()
+    #0.023258245077813208
+    #>>> np.mean((tt.res2.mu_pred - tt.mu_true)**2)/tt.mu_true.mean()
+    #0.022989403735692578
 
     def __init__(self):
         super(self.__class__, self).__init__() #initialize DGP
@@ -236,7 +247,7 @@ if __name__ == '__main__':
     t1.test_predict()
     t1.test_params()
 
-    for tt in [TestGAMPoisson, TestGAMBinomial]: #, TestGAMGaussianLogLink]: #, TestGAMNegativeBinomial]:#TestGAMGamma]:
+    for tt in [TestGAMPoisson, TestGAMBinomial, _estGAMGaussianLogLink]: #, TestGAMNegativeBinomial]:#TestGAMGamma]:
         tt = tt()
         tt.test_predict()
         tt.test_params()
