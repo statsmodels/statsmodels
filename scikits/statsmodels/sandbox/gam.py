@@ -188,8 +188,11 @@ class AdditiveModel(object):
             self.weights = np.ones(self.exog.shape[0])
 
         self.smoothers = smoothers or [default_smoother(exog[:,i]) for i in range(exog.shape[1])]
+
+        #TODO: why do we set here df, refactoring temporary?
         for i in range(exog.shape[1]):
             self.smoothers[i].df = 10
+
         if family is None:
             self.family = families.Gaussian()
         else:
@@ -235,12 +238,14 @@ class AdditiveModel(object):
             if DEBUG:
                 print self.smoothers[i].params
             mu += tmp2 - tmp
-
+        #change setting offset here: tests still pass, offset equal to constant
+        #in component ??? what's the effect of offset
+        offset = self.results.offset
         #print self.iter
         #self.iter += 1 #missing incrementing of iter counter NOT
         return Results(Y, alpha, self.exog, self.smoothers, self.family, offset)
 
-    def cont(self, tol=1.0e-04):
+    def cont(self):
         '''condition to continue iteration loop
 
         Parameters
@@ -259,9 +264,9 @@ class AdditiveModel(object):
             print self.results.predict(self.exog).shape, self.weights.shape
         curdev = (((self.results.Y - self.results.predict(self.exog))**2) * self.weights).sum()
 
-        if self.iter > 30: #kill it, no max iterationoption
+        if self.iter > self.maxiter: #kill it, no max iterationoption
             return False
-        if np.fabs((self.dev - curdev) / curdev) < tol:
+        if np.fabs((self.dev - curdev) / curdev) < self.rtol:
             self.dev = curdev
             return False
 
@@ -280,12 +285,14 @@ class AdditiveModel(object):
         #TODO: remove use of self.results.__call__
         return ((self.results.Y - self.results(self.exog))**2).sum() / self.df_resid()
 
-    def fit(self, Y):
+    def fit(self, Y, rtol=1.0e-06, maxiter=30):
         '''fit the model to a given endogenous variable Y
 
         This needs to change for consistency with statsmodels
 
         '''
+        self.rtol = rtol
+        self.maxiter = maxiter
         #iter(self)  # what does this do? anything?
         self._iter__()
         mu = 0
@@ -306,6 +313,10 @@ class AdditiveModel(object):
         while self.cont():
             self.results = self.next()
 
+        if self.iter >= self.maxiter:
+            import warnings
+            warnings.warn('maximum number of iterations reached')
+
         return self.results
 
 class Model(GLM, AdditiveModel):
@@ -318,7 +329,7 @@ class Model(GLM, AdditiveModel):
 
     #I think both GLM and AdditiveModel subclassing is only used in __init__
 
-    niter = 2
+    #niter = 2
 
 #    def __init__(self, exog, smoothers=None, family=family.Gaussian()):
 #        GLM.__init__(self, exog, family=family)
@@ -380,7 +391,11 @@ class Model(GLM, AdditiveModel):
                    #/ AdditiveModel.df_resid(self)  #what is the class doing here?
 
 
-    def fit(self, Y):
+    def fit(self, Y, rtol=1.0e-06, maxiter=30):
+
+        self.rtol = rtol
+        self.maxiter = maxiter
+
         self.Y = np.asarray(Y, np.float64)
 
         self.history = []
@@ -402,5 +417,8 @@ class Model(GLM, AdditiveModel):
             self.results = self.next()
             self.scale = self.results.scale = self.estimate_scale()
 
+        if self.iter >= self.maxiter:
+            import warnings
+            warnings.warn('maximum number of iterations reached')
 
         return self.results
