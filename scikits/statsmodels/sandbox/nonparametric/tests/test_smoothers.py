@@ -28,9 +28,9 @@ class CheckSmoother(object):
 
     def test_df(self):
         #TODO: make into attributes
-        assert_equal(self.res_ps.def_model(), self.res2.df_model)
-        assert_equal(self.res_ps.def_fit(), self.res2.df_model) #alias
-        assert_equal(self.res_ps.def_resid(), self.res2.df_resid)
+        assert_equal(self.res_ps.df_model(), self.res2.df_model+1) #with const
+        assert_equal(self.res_ps.df_fit(), self.res2.df_model+1) #alias
+        assert_equal(self.res_ps.df_resid(), self.res2.df_resid)
 
 
 
