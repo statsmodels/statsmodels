@@ -4,28 +4,127 @@ from scipy import stats
 #from scikits.statsmodels.iolib.table import SimpleTable
 from scikits.statsmodels.iolib.table import SimpleTable
 
-
-def _kurtosis(a):
+def _kurtosis(a, axis=0):
     '''wrapper for scipy.stats.kurtosis that returns nan instead of raising Error
 
     missing options
     '''
     try:
-        res = stats.kurtosis(a)
+        res = stats.kurtosis(a, axis=axis)
     except ValueError:
         res = np.nan
     return res
 
-def _skew(a):
+def _skew(a, axis=0):
     '''wrapper for scipy.stats.skew that returns nan instead of raising Error
 
     missing options
     '''
     try:
-        res = stats.skew(a)
+        res = stats.skew(a, axis=axis)
     except ValueError:
         res = np.nan
     return res
+
+def _default_names(ncols):
+    return ["X.%d" % i for i in range(1,ncols+1)]
+
+#TODO: make these nan-aware
+
+def _describe_basic(data, axis=0):
+    """
+    Returns a 2d array where columns are ['obs', 'mean', 'std', 'min', 'max']
+    """
+    nobs = np.sum(~np.isnan(data), axis=axis)
+    mean = np.mean(data, axis=axis)
+    std = np.std(data, axis=axis)
+    min_ = np.min(data, axis=axis)
+    max_ = np.max(data, axis=axis)
+    return np.column_stack((nobs, mean, std, min_, max_))
+
+def _describe_all(data, nvars, axis=0):
+    """
+    Returns a 2d array where the columns are the  ['obs', 'mean', 'std', 'min',
+    'max', 'ptp', 'var', 'mode_val', 'skew', 'kurtosis', 'percentiles']
+
+    """
+    basic_stats = _describe_basic(data)
+    ptp = np.ptp(data, axis=axis)
+    var = np.var(data, axis=axis)
+    mode_val, mode_count = stats.mode(data, axis=axis) #inconsis. return shape
+    skew = _skew(data, axis=axis)
+    kurtosis = _kurtosis(data, axis=axis)
+    percentiles = np.transpose([stats.scoreatpercentile(data, per) for per in
+                                (1,5,10,25,50,75,90,95,99)])
+    return np.column_stack((basic_stats, ptp, var, mode_val.T,
+                            skew, kurtosis, percentiles))
+
+def _univariate_long_desc(data, title, stubs):
+    """
+    Makes a SimpleTable for all statistics for each variable.
+    """
+    part_fmt = dict(data_fmts = ["%#8.4g"])
+
+    left_stub = stubs[:10]
+    left_data = data[:10,None]
+
+    left_table = SimpleTable(left_data, header = '', stubs=left_stub,
+                             title=title, txt_fmt = part_fmt)
+
+    right_stub = ["1%","5%","10%","25%","50%","75%","90%","95%","99%"]
+    right_table = SimpleTable(data[10:,None], stubs=right_stub,
+                              txt_fmt=part_fmt, headers=['Percentiles'])
+    left_table.extend_right(right_table)
+    return left_table
+
+def describe(data, stats='basic'):
+    """
+    Returns a SimpleTable of descriptive statistics
+
+    Parameters
+    ----------
+    data : array-like
+        1d or 2d array of data. Variables are assumed to be in columns
+    stats : str {'basic', 'all'}
+        Whether to output basic statistics or all available statistics.
+
+    Returns
+    -------
+    res : SimpleTable, list
+        Returns a SimpleTable for 'basic' statistics or a list of SimpleTable
+        instance for 'all' statistics for each variable.
+    """
+    data = np.asarray(data)
+    if data.ndim == 1:
+        data = data[:,None]
+    title = 'Summary Statistics'
+
+    # returns basic statistics
+    if stats == 'basic':
+        stubs = _default_names(data.shape[1])
+        header = ('obs', 'mean', 'std', 'min', 'max')
+        stats = _describe_basic(data)
+        part_fmt = dict(data_fmts = ["%#8.4g"]*(len(header)-1))
+        return SimpleTable(stats, header, stubs, title=title, txt_fmt = part_fmt)
+
+    # builds and returns longer statistics
+    elif stats == 'all':
+        nvars = data.shape[1]
+        stubs = ['obs', 'mean', 'std', 'min', 'max', 'ptp', 'var', 'mode_val',
+                 'skew', 'kurtosis', 'percentiles']
+        titles = _default_names(nvars)
+        stats = _describe_all(data, nvars)
+        table = []
+        data = _describe_all(data, nvars)
+        for i in range(nvars):
+            table.append(_univariate_long_desc(data[i], title=titles[i],
+                         stubs=stubs))
+        return table
+
+    else: # handle this case here
+        raise ValueError("stats must be basic or all")
+
+######## Refactor is above here #############
 
 class Describe(object):
     '''
@@ -63,6 +162,7 @@ class Describe(object):
             #sign_test_M = [self.sign_test_m, None, None],
             #sign_test_P = [self.sign_test_p, None, None]
         )
+
 #TODO: Basic stats for strings
         #self.strings = dict(
             #unique = [np.unique, None, None],
@@ -83,8 +183,10 @@ class Describe(object):
         p = [stats.scoreatpercentile(x,per) for per in
              (1,5,10,25,50,75,90,95,99)]
         return p
+
     def _mode_val(self,x):
         return stats.mode(x)[0][0]
+
     def _mode_bin(self,x):
         return stats.mode(x)[1][0]
 
@@ -184,7 +286,7 @@ class Describe(object):
         if any([aitem[1] for aitem in self.univariate.items() if aitem[0] in stats]):
             if columns == 'all':
                 self._columns_list = []
-                if self._arraytype == 'sctruct':
+                if self._arraytype == 'struct':
                     self._columns_list = self.dataset.dtype.names
                     #self._columns_list = [col for col in self.dataset.dtype.names if
                             #(self._is_dtype_like(col)=='number')]
@@ -200,7 +302,7 @@ class Describe(object):
 
             columstypes = self.dataset.dtype
 #TODO: do we need to make sure they dtype is float64 ?
-            for  astat in stats:
+            for astat in stats:
                 calc = self.univariate[astat]
                 if self._arraytype == 'sctruct':
                     calc[1] =  self._columns_list
@@ -363,3 +465,7 @@ if __name__ == "__main__":
     print(t1.summary(stats=['mean', 'median', 'min', 'max'], orientation=('varcols')))
     print(t1.summary(stats='all'))
 
+    # alternative code
+    print describe(data4)
+    for i in describe(data4, 'all'):
+        print i
