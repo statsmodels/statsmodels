@@ -51,12 +51,14 @@ def _describe_all(data, nvars, axis=0):
     basic_stats = _describe_basic(data)
     ptp = np.ptp(data, axis=axis)
     var = np.var(data, axis=axis)
-    mode_val, mode_count = stats.mode(data, axis=axis) #inconsis. return shape
+    #NOTE: Only do this for integer types (?)
+    #mode_val, mode_count = stats.mode(data, axis=axis) #inconsis. return shape
     skew = _skew(data, axis=axis)
     kurtosis = _kurtosis(data, axis=axis)
+    uss = stats.ss(data, axis=axis)
     percentiles = np.transpose([stats.scoreatpercentile(data, per) for per in
                                 (1,5,10,25,50,75,90,95,99)])
-    return np.column_stack((basic_stats, ptp, var, mode_val.T,
+    return np.column_stack((basic_stats, ptp, var, uss,
                             skew, kurtosis, percentiles))
 
 def _univariate_long_desc(data, title, stubs):
@@ -110,7 +112,7 @@ def describe(data, stats='basic'):
     # builds and returns longer statistics
     elif stats == 'all':
         nvars = data.shape[1]
-        stubs = ['obs', 'mean', 'std', 'min', 'max', 'ptp', 'var', 'mode_val',
+        stubs = ['obs', 'mean', 'std', 'min', 'max', 'ptp', 'var', 'uss',
                  'skew', 'kurtosis', 'percentiles']
         titles = _default_names(nvars)
         stats = _describe_all(data, nvars)
