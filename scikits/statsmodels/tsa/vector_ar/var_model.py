@@ -1048,7 +1048,7 @@ class VARResults(VARProcess):
         intercept = self.intercept
         df_model = self.df_model
         nobs = self.nobs
-
+        g_list = []
         ma_coll = np.zeros((repl, T+1, neqs, neqs))
 
         if orth == True:
@@ -1219,7 +1219,7 @@ class VARResults(VARProcess):
 
         Notes
         -----
-        Sims, Christoper A., and Tao Zha. 1999. “Error Bands for Impulse Response.” Econometrica 67: 1113-1155.
+        Sims, Christoper A., and Tao Zha. 1999. "Error Bands for Impulse Response." Econometrica 67: 1113-1155.
 
         Returns
         -------
@@ -1585,7 +1585,38 @@ class VARResults(VARProcess):
         "Bayesian a.k.a. Schwarz info criterion"
         return self.info_criteria['bic']
 
+<<<<<<< HEAD
 class SVAR(LikelihoodModel):
+=======
+    @cache_readonly
+    def roots(self):
+        neqs = self.neqs
+        k_ar = self.k_ar
+        p = neqs * k_ar
+        arr = np.zeros((p,p))
+        arr[:neqs,:] = np.column_stack(self.coefs)
+        arr[neqs:,:-neqs] = np.eye(p-neqs)
+        roots = np.linalg.eig(arr)[0]**-1
+        idx = np.argsort(np.abs(roots))[::-1] # sort by reverse modulus
+        return roots[idx]
+
+class VARResultsWrapper(wrap.ResultsWrapper):
+    _attrs = {'bse' : 'columns_eq', 'cov_params' : 'cov',
+              'params' : 'columns_eq', 'pvalues' : 'columns_eq',
+              'tvalues' : 'columns_eq', 'sigma_u' : 'cov_eq',
+              'sigma_u_mle' : 'cov_eq',
+              'stderr' : 'columns_eq'}
+    _wrap_attrs = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_attrs,
+                                    _attrs)
+    _methods = {}
+    _wrap_methods = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_methods,
+                                     _methods)
+    _wrap_methods.pop('cov_params') # not yet a method in VARResults
+wrap.populate_wrapper(VARResultsWrapper, VARResults)
+
+#class SVAR(tsbase.TimeSeriesModel, LikelihoodModel):
+class SVAR(tsbase.TimeSeriesModel):
+>>>>>>> c9f4b79... Fixed bugs, updated example
 
     """
     Fit VAR and then estimate structural components of A and B, defined:
@@ -1618,9 +1649,17 @@ class SVAR(LikelihoodModel):
     """
 
     def __init__(self, endog, svar_type, names=None, dates=None,
-                  A=None, B=None):
-        (self.endog, self.names,
-         self.dates) = data_util.interpret_data(endog, names, dates)
+                freq=None, A=None, B=None):
+        super(SVAR, self).__init__(endog, None, dates, freq)
+        if names is not None:
+            import warnings
+            warnings.warn("The names argument is deprecated and will be "
+                    "removed in the next release.", FutureWarning)
+            self.names = names
+        else:
+            self.names = self.endog_names
+        #(self.endog, self.names,
+        # self.dates) = data_util.interpret_data(endog, names, dates)
 
         self.y = self.endog #keep alias for now
         self.neqs = self.endog.shape[1]
@@ -1661,7 +1700,9 @@ class SVAR(LikelihoodModel):
         Bnum[B_mask] = np.nan
         self.B = Bnum
 
-        super(SVAR, self).__init__(endog)
+        #LikelihoodModel.__init__(self, endog)
+
+        #super(SVAR, self).__init__(endog)
 
     def fit(self, A_guess=None, B_guess=None, maxlags=None, method='ols',
             ic=None, trend='c', verbose=False, s_method='mle',
@@ -1813,10 +1854,10 @@ class SVAR(LikelihoodModel):
         A_mask = self.A_mask
         B_mask = self.B_mask
 
-        return SVARResults(y, z, var_params, omega, lags, names=self.names,
-                           trend=trend, dates=self.dates, model=self,
+        return SVARResults(y, z, var_params, omega, lags,
+                            names=self.endog_names, trend=trend,
+                            dates=self._data.dates, model=self,
                            A=A, B=B, A_mask=A_mask, B_mask=B_mask)
-
     def loglike(self, params):
         """
         Loglikelihood for SVAR model
