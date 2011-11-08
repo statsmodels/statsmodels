@@ -1109,7 +1109,7 @@ class VARResults(VARProcess):
         intercept = self.intercept
         df_model = self.df_model
         nobs = self.nobs
-
+        g_list = []
         ma_coll = np.zeros((repl, T+1, neqs, neqs))
 
         if orth == True:
@@ -1148,7 +1148,6 @@ class VARResults(VARProcess):
                 sim = util.varsim(coefs, intercept, sigma_u,
                         steps=nobs+burn)
                 sim = sim[burn:]
-                g_list = []
                 if cum == True:
                     if i < 10:
                         sol = SVAR(sim, svar_type=s_type, A=A_pass,
@@ -1163,7 +1162,7 @@ class VARResults(VARProcess):
                             mean_AB = np.mean(g_list, axis = 0)
                             split = len(A_pass[A_mask])
                             opt_A = mean_AB[:split]
-                            opt_A = mean_AB[split:]
+                            opt_B = mean_AB[split:]
                         ma_coll[i] = SVAR(sim, svar_type=s_type, \
                                      A=A_pass, B=B_pass).\
                                      fit(maxlags=k_ar, A_guess = opt_A,\
@@ -1185,8 +1184,8 @@ class VARResults(VARProcess):
                             mean_AB = np.mean(g_list, axis = 0)
                             split = len(A_pass[A_mask])
                             opt_A = mean_AB[:split]
-                            opt_A = mean_AB[split:]
-                        ma_coll[i] = SVAR(sim, svar_type=s_type, 
+                            opt_B = mean_AB[split:]
+                        ma_coll[i] = SVAR(sim, svar_type=s_type,
                                      A=A_pass, B=B_pass).\
                                      fit(maxlags=k_ar, A_guess = opt_A,\
                                      B_guess = opt_B).\
@@ -1237,7 +1236,7 @@ class VARResults(VARProcess):
 
         Notes
         -----
-        Sims, Christoper A., and Tao Zha. 1999. “Error Bands for Impulse Response.” Econometrica 67: 1113-1155.
+        Sims, Christoper A., and Tao Zha. 1999. "Error Bands for Impulse Response." Econometrica 67: 1113-1155.
 
         Returns
         -------
@@ -1629,7 +1628,8 @@ class VARResultsWrapper(wrap.ResultsWrapper):
     _wrap_methods.pop('cov_params') # not yet a method in VARResults
 wrap.populate_wrapper(VARResultsWrapper, VARResults)
 
-class SVAR(LikelihoodModel):
+#class SVAR(tsbase.TimeSeriesModel, LikelihoodModel):
+class SVAR(tsbase.TimeSeriesModel):
 
     """
     Fit VAR and then estimate structural components of A and B, defined:
@@ -1662,9 +1662,17 @@ class SVAR(LikelihoodModel):
     """
 
     def __init__(self, endog, svar_type, names=None, dates=None,
-                  A=None, B=None):
-        (self.endog, self.names,
-         self.dates) = data_util.interpret_data(endog, names, dates)
+                freq=None, A=None, B=None):
+        super(SVAR, self).__init__(endog, None, dates, freq)
+        if names is not None:
+            import warnings
+            warnings.warn("The names argument is deprecated and will be "
+                    "removed in the next release.", FutureWarning)
+            self.names = names
+        else:
+            self.names = self.endog_names
+        #(self.endog, self.names,
+        # self.dates) = data_util.interpret_data(endog, names, dates)
 
         self.y = self.endog #keep alias for now
         self.neqs = self.endog.shape[1]
@@ -1705,7 +1713,9 @@ class SVAR(LikelihoodModel):
         Bnum[B_mask] = np.nan
         self.B = Bnum
 
-        super(SVAR, self).__init__(endog)
+        #LikelihoodModel.__init__(self, endog)
+
+        #super(SVAR, self).__init__(endog)
 
     def fit(self, A_guess=None, B_guess=None, maxlags=None, method='ols',
             ic=None, trend='c', verbose=False, s_method='mle',
@@ -1857,10 +1867,10 @@ class SVAR(LikelihoodModel):
         A_mask = self.A_mask
         B_mask = self.B_mask
 
-        return SVARResults(y, z, var_params, omega, lags, names=self.names,
-                           trend=trend, dates=self.dates, model=self,
+        return SVARResults(y, z, var_params, omega, lags,
+                            names=self.endog_names, trend=trend,
+                            dates=self._data.dates, model=self,
                            A=A, B=B, A_mask=A_mask, B_mask=B_mask)
-
     def loglike(self, params):
         """
         Loglikelihood for SVAR model

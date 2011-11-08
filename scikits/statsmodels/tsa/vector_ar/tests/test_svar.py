@@ -30,6 +30,3 @@ class TestSVAR(object):
         assert_almost_equal(self.res1.A, self.res2.A, DECIMAL_6)
     def test_B(self):
         assert_almost_equal(self.res1.B, self.res2.B, DECIMAL_6)
-
-
-
