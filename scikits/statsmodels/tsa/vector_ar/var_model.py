@@ -1048,7 +1048,7 @@ class VARResults(VARProcess):
         intercept = self.intercept
         df_model = self.df_model
         nobs = self.nobs
-        g_list = []
+
         ma_coll = np.zeros((repl, T+1, neqs, neqs))
 
         if orth == True:
@@ -1585,9 +1585,6 @@ class VARResults(VARProcess):
         "Bayesian a.k.a. Schwarz info criterion"
         return self.info_criteria['bic']
 
-<<<<<<< HEAD
-class SVAR(LikelihoodModel):
-=======
     @cache_readonly
     def roots(self):
         neqs = self.neqs
@@ -1616,8 +1613,6 @@ wrap.populate_wrapper(VARResultsWrapper, VARResults)
 
 #class SVAR(tsbase.TimeSeriesModel, LikelihoodModel):
 class SVAR(tsbase.TimeSeriesModel):
->>>>>>> c9f4b79... Fixed bugs, updated example
-
     """
     Fit VAR and then estimate structural components of A and B, defined:
 
