@@ -166,6 +166,13 @@ class Results(object):
         #return np.array([self.smoothers[i].predict() + self.offset[i]
                          for i in range(exog.shape[1])]).T
 
+    def smoothed_demeaned(self, exog):
+        components = self.smoothed(exog)
+        means = components.mean(0)
+        constant = means.sum() + self.alpha
+        components_demeaned = components - means
+        return components_demeaned, constant
+
 class AdditiveModel(object):
     '''additive model with non-parametric, smoothed components
 

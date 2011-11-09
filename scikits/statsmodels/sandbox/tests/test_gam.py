@@ -137,7 +137,7 @@ class BaseAM(object):
 
         #DGP: simple polynomial
         order = 3
-        nobs = 100
+        nobs = 200
         lb, ub = -3.5, 3
         x1 = np.linspace(lb, ub, nobs)
         x2 = np.sin(2*x1)
@@ -205,9 +205,9 @@ class BaseGAM(BaseAM, CheckGAM):
 
         np.random.seed(8765993)
         #y_obs = np.asarray([stats.poisson.rvs(p) for p in mu], float)
-        y_obs = scale * self.rvs(mu_true) #this should work
+        y_obs = self.rvs(mu_true, scale=scale, size=nobs) #this should work
         m = GAM(y_obs, x, family=f)  #TODO: y_obs is twice __init__ and fit
-        m.fit(y_obs, maxiter=1000)
+        m.fit(y_obs, maxiter=100)
         res_gam = m.results
         self.res_gam = res_gam   #attached for debugging
         self.mod_gam = m   #attached for debugging
@@ -268,7 +268,7 @@ class _estGAMGaussianLogLink(BaseGAM):
 
         self.family =  family.Gaussian(links.log)
         self.rvs = stats.norm.rvs
-        self.scale = 0.1
+        self.scale = 5
 
         self.init()
 
@@ -305,6 +305,3 @@ if __name__ == '__main__':
         tt.test_predict()
         tt.test_params()
         tt.test_mu
-
-
-
