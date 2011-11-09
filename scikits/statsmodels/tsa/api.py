@@ -1,7 +1,8 @@
 from .ar_model import AR
 from .arima_model import ARMA
 import vector_ar as var
-from .vector_ar.var_model import VAR, SVAR
+from .vector_ar.var_model import VAR
+from .vector_ar.svar_model import SVAR
 from .vector_ar.dynamic import DynamicVAR
 import filters
 import tsatools
