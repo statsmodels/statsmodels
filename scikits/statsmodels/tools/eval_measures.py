@@ -205,19 +205,20 @@ def aic_sigma(sigma2, nobs, df_modelwc, islog=False):
     Notes
     -----
     A constant has been dropped in comparison to the loglikelihood base
-    information criteria. These should be used to compare for comparable models.
+    information criteria. The information criteria should be used to compare
+    only comparable models.
 
     For example, AIC is defined in terms of the loglikelihood as
 
-    -2 llf - 2 k
+    -2 llf + 2 k
 
     in terms of sigma_hat
 
-    log(sigma_hat^2) - 2 k / n
+    log(sigma_hat^2) + 2 k / n
 
     in terms of the determinant of Sigma_hat
 
-    log(|sigma_hat|) - 2 k / n
+    log(|sigma_hat|) + 2 k / n
 
     Note: In our definition we do not divide by n in the log-likelihood
     version.
