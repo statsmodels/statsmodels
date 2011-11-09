@@ -13,17 +13,13 @@ from cStringIO import StringIO
 
 import numpy as np
 import numpy.linalg as npl
-import numpy.ma as ma
 from numpy.linalg import cholesky as chol, solve
 import scipy.stats as stats
 import scipy.linalg as L
-from scipy import optimize
 
 from scikits.statsmodels.tools.decorators import cache_readonly
 from scikits.statsmodels.tools.tools import chain_dot
 from scikits.statsmodels.tsa.tsatools import vec, unvec
-from scikits.statsmodels.sandbox.regression.numdiff import (approx_hess,
-                                                        approx_fprime)
 
 from scikits.statsmodels.tsa.vector_ar.irf import IRAnalysis
 from scikits.statsmodels.tsa.vector_ar.output import VARSummary
@@ -309,12 +305,6 @@ def _reordered(self, order):
                       params=params_new, sigma_u=sigma_u_new,
                       lag_order=self.k_ar, model=self.model,
                       trend='c', names=names_new, dates=self.dates)
-
-def svar_ckerr(svar_type, A, B):
-    if A is None and (svar_type == 'A' or svar_type == 'AB'):
-        raise ValueError('SVAR of type A or AB but A array not given.')
-    if B is None and (svar_type == 'B' or svar_type == 'AB'):
-        raise ValueError('SVAR of type B or AB but B array not given.')
 
 #-------------------------------------------------------------------------------
 # VARProcess class: for known or unknown VAR process
@@ -705,6 +695,7 @@ class VARProcess(object):
         forc_upper = point_forecast + q * sigma
 
         return point_forecast, forc_lower, forc_upper
+
 
 #-------------------------------------------------------------------------------
 # VARResults class

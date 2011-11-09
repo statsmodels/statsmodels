@@ -15,7 +15,7 @@ from scikits.statsmodels.sandbox.regression.numdiff import (approx_hess,
                                                         approx_fprime)
 
 from scikits.statsmodels.tsa.vector_ar.irf import IRAnalysis
-from scikits.statsmodels.tsa.vector_ar.var_model import VARProcess,
+from scikits.statsmodels.tsa.vector_ar.var_model import VARProcess, \
                                                         VARResults
 
 import scikits.statsmodels.tsa.vector_ar.util as util
