@@ -1040,30 +1040,24 @@ class VARResults(VARProcess):
 
         ma_coll = np.zeros((repl, T+1, neqs, neqs))
 
-        if orth == True:
-            for i in range(repl):
-                #discard first hundred to eliminate correct for starting bias
-                sim = util.varsim(coefs, intercept, sigma_u, steps=nobs+burn)
-                sim = sim[burn:]
-                if cum == True:
-                    ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).\
-                                        orth_ma_rep(maxn=T).cumsum(axis=0)
-                if cum == False:
-                    ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).\
-                                        orth_ma_rep(maxn=T)
+        if (orth == True and cum == True):
+            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
+                              orth_ma_rep(maxn=T).cumsum(axis=0)
+        elif (orth == True and cum == False):
+            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
+                              orth_ma_rep(maxn=T)
+        elif (orth == False and cum == True):
+            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
+                              ma_rep(maxn=T).cumsum(axis=0)
+        elif (orth == False and cum == False):
+            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
+                              ma_rep(maxn=T)
 
-        else:
-            for i in range(repl):
-                #discard first hundred to correct for starting bias
-                sim = util.varsim(coefs, intercept, sigma_u,
-                        steps=nobs+burn)
-                sim = sim[burn:]
-                if cum == True:
-                    ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).\
-                                        ma_rep(maxn=T).cumsum(axis=0)
-                if cum == False:
-                    ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).\
-                                        ma_rep(maxn=T)
+        for i in range(repl):
+            #discard first hundred to eliminate correct for starting bias
+            sim = util.varsim(coefs, intercept, sigma_u, steps=nobs+burn)
+            sim = sim[burn:]
+            ma_coll[i,:,:,:] = fill_coll(sim)
 
         ma_sort = np.sort(ma_coll, axis=0) #sort to get quantiles
         index = round(signif/2*repl)-1,round((1-signif/2)*repl)-1
@@ -1112,30 +1106,30 @@ class VARResults(VARProcess):
         intercept = self.intercept
         df_model = self.df_model
         nobs = self.nobs
+        if seed is not None:
+            np.random.seed(seed=seed)
 
         ma_coll = np.zeros((repl, T+1, neqs, neqs))
-        if orth == False:
-            if seed is not None:
-                np.random.seed(seed=seed)
-            for i in range(repl):
-                #discard first hundred to eliminate correct for starting bias
-                sim = util.varsim(coefs, intercept, sigma_u, steps=nobs+burn)
-                sim = sim[burn:]
-                if cum == True:
-                    ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).ma_rep(maxn=T).cumsum(axis=0)
-                if cum == False:
-                    ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).ma_rep(maxn=T)
-        if orth == True:
-            if seed is not None:
-                np.random.seed(seed=seed)
-            for i in range(repl):
-                #discard first hundred to eliminate correct for starting bias
-                sim = util.varsim(coefs, intercept, sigma_u, steps=nobs+burn)
-                sim = sim[burn:]
-                if cum == True:
-                    ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).orth_ma_rep(maxn=T).cumsum(axis=0)
-                if cum == False:
-                    ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).orth_ma_rep(maxn=T)
+
+        if (orth == True and cum == True):
+            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
+                              orth_ma_rep(maxn=T).cumsum(axis=0)
+        elif (orth == True and cum == False):
+            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
+                              orth_ma_rep(maxn=T)
+        elif (orth == False and cum == True):
+            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
+                              ma_rep(maxn=T).cumsum(axis=0)
+        elif (orth == False and cum == False):
+            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
+                              ma_rep(maxn=T)
+
+        for i in range(repl):
+            #discard first hundred to eliminate correct for starting bias
+            sim = util.varsim(coefs, intercept, sigma_u, steps=nobs+burn)
+            sim = sim[burn:]
+            ma_coll[i,:,:,:] = fill_coll(sim)
+
         return ma_coll
 
 

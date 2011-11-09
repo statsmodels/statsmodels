@@ -115,11 +115,6 @@ class BaseIRAnalysis(object):
         model = self.model
         svar = self.svar
 
-        # temporary until fixed
-        #if svar and plot_stderr:
-        #   raise NotImplementedError('Error bands not yet available'
-        #                              ' for SVAR')
-
         if orth and svar:
             raise ValueError("For SVAR system, set orth=False")
 
