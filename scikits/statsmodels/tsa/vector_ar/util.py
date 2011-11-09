@@ -4,6 +4,8 @@ Miscellaneous utility code for VAR estimation
 
 import numpy as np
 import scipy.stats as stats
+import scipy.linalg as L
+import scipy.linalg.decomp as decomp
 
 import scikits.statsmodels.tsa.tsatools as tsa
 from scipy.linalg import cholesky
@@ -200,4 +202,36 @@ def get_index(lst, name):
             raise
         result = name
     return result
+    #method used repeatedly in Sims-Zha error bands
+def eigval_decomp(sym_array):
+    """
+    Returns
+    -------
+    W: array of eigenvectors
+    eigva: list of eigenvalues 
+    k: largest eigenvector
+    """
+    #check if symmetric, do not include shock period
+    eigva, W = decomp.eig(sym_array, left=True, right=False)
+    k = np.argmax(eigva)
+    return W, eigva, k
+
+def vech(A):
+    """
+    Simple vech operator
+    Returns
+    -------
+    vechvec: vector of all elements on and below diagonal
+    """
+
+def vech(A):
+    length=A.shape[1]
+    vechvec=[]
+    for i in xrange(length):
+        b=i
+        while b < length:
+            vechvec.append(A[b,i])
+            b=b+1
+    vechvec=np.asarray(vechvec)
+    return vechvec
 
