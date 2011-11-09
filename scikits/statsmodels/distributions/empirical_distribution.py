@@ -112,8 +112,8 @@ class ECDF(StepFunction):
             y = np.linspace(1./nobs,1,nobs)
             super(ECDF, self).__init__(x, y, side=side, sorted=True)
         else:
-            pass
-            #interpolate.interp1d(x,y,drop_errors=False,fill_values=ival)
+            from scipy import interpolate
+            return interpolate.interp1d(x,y,drop_errors=False,fill_values=ival)
 
 def monotone_fn_inverter(fn, x, vectorized=True, **keywords):
     """
