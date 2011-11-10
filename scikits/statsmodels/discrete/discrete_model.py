@@ -593,7 +593,6 @@ class Logit(BinaryModel):
         L = self.cdf(np.dot(X,params))
         return -np.dot(L*(1-L)*X.T,X)
 
-
 class Probit(BinaryModel):
     """
     Binary choice Probit model
@@ -737,7 +736,6 @@ class Probit(BinaryModel):
         q = 2*self.endog - 1
         L = q*self.pdf(q*XB)/self.cdf(q*XB)
         return np.dot(-L*(L+XB)*X.T,X)
-
 
 class MNLogit(MultinomialModel):
     """
