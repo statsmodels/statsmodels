@@ -3,7 +3,7 @@ Test SVAR estimation
 """
 
 import scikits.statsmodels.api as sm
-from scikits.statsmodels.tsa.vector_ar.var_model import SVAR
+from scikits.statsmodels.tsa.vector_ar.svar_model import SVAR
 from numpy.testing import assert_almost_equal, assert_equal
 from results import results_svar
 import numpy as np
