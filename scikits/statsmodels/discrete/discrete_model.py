@@ -36,6 +36,17 @@ import scikits.statsmodels.base.wrapper as wrap
 #TODO: add options for the parameter covariance/variance
 # ie., OIM, EIM, and BHHH see Green 21.4
 
+#### margeff helper functions ####
+
+def _check_margeff_args(at, method):
+    """
+    Checks valid options for margeff
+    """
+    if at not in ['overall','mean','median','zero','all']:
+        raise ValueError("%s not a valid option for `at`." % at)
+    if method not in ['dydx','eyex','dyex','eydx']:
+        raise ValueError("method is not understood.  Got %s" % method)
+
 def _check_discrete_args(at, method):
     """
     Checks the arguments for margeff if the exogenous variables are discrete.
@@ -96,6 +107,22 @@ def _iscount(X):
     remainder -= dummy
     return remainder
 
+def _get_margeff_exog(exog, at, atexog, ind):
+    if atexog is not None: # user supplied
+        if not isinstance(atexog, dict):
+            raise ValueError("atexog should be a dict not %s"\
+                    % type(atexog))
+        for key in atexog:
+            exog[:,key] = atexog[key]
+    if at == 'mean':
+        exog = np.atleast_2d(exog.mean(0))
+    elif at == 'median':
+        exog = np.atleast_2d(np.median(exog, axis=0))
+    elif at == 'zero':
+        exog = np.zeros((1,exog.shape[1]))
+        exog[0,~ind] = 1
+    return exog
+
 #### Private Model Classes ####
 
 class DiscreteModel(base.LikelihoodModel):
@@ -152,37 +179,15 @@ class DiscreteModel(base.LikelihoodModel):
         mlefit = super(DiscreteModel, self).fit(start_params=start_params,
                 method=method, maxiter=maxiter, full_output=full_output,
                 disp=disp, callback=callback, **kwargs)
-        discretefit = DiscreteResults(self, mlefit)
-        return DiscreteResultsWrapper(discretefit)
+        return mlefit # up to subclasses to wrap results
 
     fit.__doc__ += base.LikelihoodModel.fit.__doc__
 
     def predict(self, params, exog=None, linear=False):
         """
         Predict response variable of a model given exogenous variables.
-
-        Parameters
-        ----------
-        params : array-like
-            Fitted parameters of the model.
-        exog : array-like
-            1d or 2d array of exogenous values.  If not supplied, the
-            whole exog attribute of the model is used.
-        linear : bool, optional
-            If True, returns the linear predictor dot(exog,params).  Else,
-            returns the value of the cdf at the linear predictor.
-
-        Returns
-        -------
-        array
-            Fitted values at exog.
         """
-        if exog is None:
-            exog = self.exog
-        if not linear:
-            return self.cdf(np.dot(exog, params))
-        else:
-            return np.dot(exog, params)
+        raise NotImplementedError
 
 class BinaryModel(DiscreteModel):
     def predict(self, params, exog=None, linear=False):
@@ -212,7 +217,16 @@ class BinaryModel(DiscreteModel):
         else:
             return np.dot(exog, params)
 
-class MultinomialModel(DiscreteModel):
+    def fit(self, start_params=None, method='newton', maxiter=35,
+            full_output=1, disp=1, callback=None, **kwargs):
+        bnryfit = super(BinaryModel, self).fit(start_params=start_params,
+                method=method, maxiter=maxiter, full_output=full_output,
+                disp=disp, callback=callback, **kwargs)
+        discretefit = BinaryResults(self, bnryfit)
+        return BinaryResultsWrapper(discretefit)
+    fit.__doc__ = DiscreteModel.fit.__doc__
+
+class MultinomialModel(BinaryModel):
     def predict(self, params, exog=None, linear=False):
         """
         Predict response variable of a model given exogenous variables.
@@ -275,11 +289,11 @@ class CountModel(DiscreteModel):
                 raise ValueError("exposure is not the same length as endog")
             self.exposure = exposure
 
+    #TODO: is this only for Poisson? or also Negative Binomial?
     def predict(self, params, exog=None, exposure=None, offset=None, linear=False):
         """
         Predict response variable of a count model given exogenous variables.
         """
-        #TODO: add offset tp
         if exog is None:
             exog = self.exog
             offset = getattr(self, 'offset', 0)
@@ -296,6 +310,15 @@ class CountModel(DiscreteModel):
         else:
             return np.dot(exog, params) + exposure + offset
             return super(CountModel, self).predict(params, exog, linear)
+
+    def fit(self, start_params=None, method='newton', maxiter=35,
+            full_output=1, disp=1, callback=None, **kwargs):
+        cntfit = super(CountModel, self).fit(start_params=start_params,
+                method=method, maxiter=maxiter, full_output=full_output,
+                disp=disp, callback=callback, **kwargs)
+        discretefit = CountResults(self, cntfit)
+        return CountResultsWrapper(discretefit)
+    fit.__doc__ = DiscreteModel.fit.__doc__
 
 class OrderedModel(DiscreteModel):
     pass
@@ -1262,11 +1285,6 @@ class DiscreteResults(base.LikelihoodModelResults):
         #    of type float), then `factor` may be a dict with the zero-indexed
         #    column of the factor and the value should be the base-outcome.
 
-        # check arguments
-        if at not in ['overall','mean','median','zero','all']:
-            raise ValueError("%s not a valid option for `at`." % at)
-        if method not in ['dydx','eyex','dyex','eydx']:
-            raise ValueError("method is not understood.  Got %s" % method)
 
 
         # get local variables
@@ -1277,6 +1295,7 @@ class DiscreteResults(base.LikelihoodModelResults):
         exog = model.exog.copy() # copy because values are changed
         ind = exog.var(0) != 0 # index for non-constants
 
+        _check_margeff_args(at, method)
 
         # handle discrete exogenous variables
         if dummy:
@@ -1286,25 +1305,11 @@ class DiscreteResults(base.LikelihoodModelResults):
             _check_discrete_args(at, method)
             count_ind = _iscount(exog)
 
-
         # get the exogenous variables
-        if atexog is not None: # user supplied
-            if not isinstance(atexog, dict):
-                raise ValueError("atexog should be a dict not %s"\
-                        % type(atexog))
-            for key in atexog:
-                exog[:,key] = atexog[key]
-        if at == 'mean':
-            exog = np.atleast_2d(exog.mean(0))
-        elif at == 'median':
-            exog = np.atleast_2d(np.median(exog, axis=0))
-        elif at == 'zero':
-            exog = np.zeros((1,params.shape[0]))
-            exog[0,~ind] = 1
+        exog = _get_margeff_exog(exog, at, atexog, ind)
 
-        # get linear fitted values #TODO: just go ahead and get yhat?
-        fittedvalues = np.dot(exog, params) #TODO: add a predict method
-                                            # that takes an exog kwd
+        # get linear fitted values
+        fittedvalues = self.model.predict(params, exog, linear=True)
 
         # group 1 probit, logit, logistic, cloglog, heckprob, xtprobit
         if isinstance(model, (Probit, Logit)):
@@ -1314,7 +1319,7 @@ class DiscreteResults(base.LikelihoodModelResults):
         #TODO
         # group 3 poisson, nbreg, zip, zinb
         elif isinstance(model, (Poisson)):
-            effects = np.exp(fittedvalues)[:,None]*params[None,:]
+            effects = self.model.predict(params, exog)[:,None]*params[None,:]
 
         if 'ex' in method:
             effects *= exog
@@ -1466,18 +1471,33 @@ class DiscreteResults(base.LikelihoodModelResults):
                 smry.add_extra_txt(etext)
         return smry
 
-class DiscreteResultsWrapper(lm.RegressionResultsWrapper):
-    pass
-wrap.populate_wrapper(DiscreteResultsWrapper, DiscreteResults)
+#class DiscreteResultsWrapper(lm.RegressionResultsWrapper):
+#    pass
+#wrap.populate_wrapper(DiscreteResultsWrapper, DiscreteResults)
+
 
 class OrderedResults(DiscreteResults):
     pass
 
+class OrderedResultsWrapper(lm.RegressionResultsWrapper):
+    pass
+wrap.populate_wrapper(OrderedResultsWrapper, OrderedResults)
+
+
 class CountResults(DiscreteResults):
     pass
 
+class CountResultsWrapper(lm.RegressionResultsWrapper):
+    pass
+wrap.populate_wrapper(CountResultsWrapper, CountResults)
+
+
 class BinaryResults(DiscreteResults):
     pass
+
+class BinaryResultsWrapper(lm.RegressionResultsWrapper):
+    pass
+wrap.populate_wrapper(BinaryResultsWrapper, BinaryResults)
 
 class MultinomialResults(DiscreteResults):
     @cache_readonly
