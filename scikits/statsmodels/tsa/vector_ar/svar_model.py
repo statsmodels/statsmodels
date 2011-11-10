@@ -29,6 +29,7 @@ def svar_ckerr(svar_type, A, B):
     if B is None and (svar_type == 'B' or svar_type == 'AB'):
 
         raise ValueError('SVAR of type B or AB but B array not given.')
+
 class SVAR(tsbase.TimeSeriesModel):
 
     """
@@ -271,6 +272,7 @@ class SVAR(tsbase.TimeSeriesModel):
                             names=self.endog_names, trend=trend,
                             dates=self._data.dates, model=self,
                            A=A, B=B, A_mask=A_mask, B_mask=B_mask)
+
     def loglike(self, params):
         """
         Loglikelihood for SVAR model
@@ -378,7 +380,7 @@ class SVAR(tsbase.TimeSeriesModel):
 
         retvals = super(SVAR, self).fit(start_params=start_params,
                     method=solver, maxiter=maxiter,
-                    maxfun=maxfun, ftol=1e-20).params
+                    maxfun=maxfun, ftol=1e-20, disp=0).params
 
 
 
