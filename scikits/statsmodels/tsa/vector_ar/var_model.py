@@ -1363,12 +1363,12 @@ class VARResults(VARProcess):
             raise Exception('kind %s not recognized' % kind)
 
         pvalue = dist.sf(statistic)
-        crit_initue = dist.ppf(1 - signif)
+        crit_value = dist.ppf(1 - signif)
 
-        conclusion = 'fail to reject' if statistic < crit_initue else 'reject'
+        conclusion = 'fail to reject' if statistic < crit_value else 'reject'
         results = {
             'statistic' : statistic,
-            'crit_initue' : crit_initue,
+            'crit_value' : crit_value,
             'pvalue' : pvalue,
             'df' : df,
             'conclusion' : conclusion,
@@ -1445,7 +1445,7 @@ class VARResults(VARProcess):
 
         results = {
             'statistic' : lam_omni,
-            'crit_initue' : crit_omni,
+            'crit_omni' : crit_omni,
             'pvalue' : omni_pvalue,
             'df' : self.neqs * 2,
             'conclusion' : conclusion,
