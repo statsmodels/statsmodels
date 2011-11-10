@@ -858,6 +858,36 @@ class RegressionResults(base.LikelihoodModelResults):
 ##    def __repr__(self):
 ##        print self.summary()
 
+    def conf_int(self, alpha=.05, cols=None):
+        """
+        Returns the confidence interval of the fitted parameters.
+
+        Parameters
+        ----------
+        alpha : float, optional
+            The `alpha` level for the confidence interval.
+            ie., The default `alpha` = .05 returns a 95% confidence interval.
+        cols : array-like, optional
+            `cols` specifies which confidence intervals to return
+
+        Notes
+        -----
+        The confidence interval is based on Student's t-distribution.
+        """
+        bse = self.bse
+        params = self.params
+        dist = stats.t
+        q = dist.ppf(1 - alpha / 2, self.df_resid)
+
+        if cols is None:
+            lower = self.params - q * bse
+            upper = self.params + q * bse
+        else:
+            cols = np.asarray(cols)
+            lower = params[cols] - q * bse[cols]
+            upper = params[cols] + q * bse[cols]
+        return np.asarray(zip(lower, upper))
+
     @cache_readonly
     def df_resid(self):
         return self.model.df_resid
