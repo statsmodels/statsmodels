@@ -37,6 +37,8 @@ import scikits.statsmodels.base.wrapper as wrap
 # ie., OIM, EIM, and BHHH see Green 21.4
 
 #### margeff helper functions ####
+#NOTE: todo marginal effects for group 2
+# group 2 oprobit, ologit, gologit, mlogit, biprobit
 
 def _check_margeff_args(at, method):
     """
@@ -189,6 +191,12 @@ class DiscreteModel(base.LikelihoodModel):
         """
         raise NotImplementedError
 
+    def _derivative(self, params, exog=None):
+        """
+        This should implement the derivative of the non-linear function
+        """
+        raise NotImplementedError
+
 class BinaryModel(DiscreteModel):
     def predict(self, params, exog=None, linear=False):
         """
@@ -225,6 +233,16 @@ class BinaryModel(DiscreteModel):
         discretefit = BinaryResults(self, bnryfit)
         return BinaryResultsWrapper(discretefit)
     fit.__doc__ = DiscreteModel.fit.__doc__
+
+    def _derivative(self, params, exog=None):
+        """
+        For computing marginal effects.
+        """
+        #note, this form should be appropriate for
+        ## group 1 probit, logit, logistic, cloglog, heckprob, xtprobit
+        if exog == None:
+            exog = self.exog
+        return np.dot(self.pdf(np.dot(exog, params))[:,None], params[None,:])
 
 class MultinomialModel(BinaryModel):
     def predict(self, params, exog=None, linear=False):
@@ -289,7 +307,7 @@ class CountModel(DiscreteModel):
                 raise ValueError("exposure is not the same length as endog")
             self.exposure = exposure
 
-    #TODO: is this only for Poisson? or also Negative Binomial?
+    #TODO: are these two methods only for Poisson? or also Negative Binomial?
     def predict(self, params, exog=None, exposure=None, offset=None, linear=False):
         """
         Predict response variable of a count model given exogenous variables.
@@ -310,6 +328,14 @@ class CountModel(DiscreteModel):
         else:
             return np.dot(exog, params) + exposure + offset
             return super(CountModel, self).predict(params, exog, linear)
+
+    def _derivative(self, params, exog=None):
+        """
+        """
+        # group 3 poisson, nbreg, zip, zinb
+        if exog == None:
+            exog = self.exog
+        return self.predict(params, exog)[:,None] * params[None,:]
 
     def fit(self, start_params=None, method='newton', maxiter=35,
             full_output=1, disp=1, callback=None, **kwargs):
@@ -423,6 +449,7 @@ class Poisson(CountModel):
         exposure = getattr(self, "exposure", 0)
         XB = np.dot(self.exog, params) + offset + exposure
         endog = self.endog
+        #np.sum(stats.poisson.logpmf(endog, np.exp(XB)))
         return np.sum(-np.exp(XB) +  endog*XB - np.log(factorial(endog)))
 
     def score(self, params):
@@ -1311,15 +1338,8 @@ class DiscreteResults(base.LikelihoodModelResults):
         # get linear fitted values
         fittedvalues = self.model.predict(params, exog, linear=True)
 
-        # group 1 probit, logit, logistic, cloglog, heckprob, xtprobit
-        if isinstance(model, (Probit, Logit)):
-            effects = np.dot(model.pdf(fittedvalues)[:,None],
-                    params[None,:])
-        # group 2 oprobit, ologit, gologit, mlogit, biprobit
-        #TODO
-        # group 3 poisson, nbreg, zip, zinb
-        elif isinstance(model, (Poisson)):
-            effects = self.model.predict(params, exog)[:,None]*params[None,:]
+        # get base marginal effects, handled by sub-classes
+        effects = self.model._derivative(params, exog)
 
         if 'ex' in method:
             effects *= exog
@@ -1498,6 +1518,7 @@ class BinaryResults(DiscreteResults):
 class BinaryResultsWrapper(lm.RegressionResultsWrapper):
     pass
 wrap.populate_wrapper(BinaryResultsWrapper, BinaryResults)
+
 
 class MultinomialResults(DiscreteResults):
     @cache_readonly
