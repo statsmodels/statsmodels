@@ -29,8 +29,6 @@ from scikits.statsmodels.regression.linear_model import OLS
 from scipy import stats, special, optimize # opt just for nbin
 from scipy.misc import factorial
 from scikits.statsmodels.tools.sm_exceptions import PerfectSeparationError
-#import numdifftools as nd #This will be removed when all have analytic hessians
-
 import scikits.statsmodels.base.model as base
 import scikits.statsmodels.regression.linear_model as lm
 import scikits.statsmodels.base.wrapper as wrap
@@ -147,19 +145,13 @@ class DiscreteModel(base.LikelihoodModel):
         The rest of the docstring is from
         scikits.statsmodels.LikelihoodModel.fit
         """
-        if callback is None and not isinstance(self, MNLogit):
+        if callback is None:
             callback = self._check_perfect_pred
-        if start_params is None and isinstance(self, MNLogit):
-            start_params = np.zeros((self.exog.shape[1]*\
-                    (self.wendog.shape[1]-1)))
-        elif isinstance(self, MNLogit):
-            start_params = np.asarray(start_params)
+        else:
+            pass # make a function factory to have multiple call-backs
         mlefit = super(DiscreteModel, self).fit(start_params=start_params,
                 method=method, maxiter=maxiter, full_output=full_output,
                 disp=disp, callback=callback, **kwargs)
-        if isinstance(self, MNLogit):
-            mlefit.params = mlefit.params.reshape(self.exog.shape[1], -1,
-                    order='F')
         discretefit = DiscreteResults(self, mlefit)
         return DiscreteResultsWrapper(discretefit)
 
@@ -248,14 +240,22 @@ class MultinomialModel(DiscreteModel):
         if linear:
             pred = np.column_stack((np.zeros(len(exog)), pred))
         return pred
-    #        if exog is None:
-    #            exog = self.exog
-    #        if linear:
-    #            XB = np.dot(exog, params)
-    #            return np.column_stack((np.zeros(len(XB)),XB))
-    #        else:
-    #            eXB = self._eXB(params, exog)
-    #            return eXB/eXB.sum(1)[:,None]
+
+    def fit(self, start_params=None, method='newton', maxiter=35, full_output=1,
+            disp=1, callback=None, **kwargs):
+        if start_params is None:
+            start_params = np.zeros((self.K * (self.J-1)))
+        else:
+            start_params = np.asarray(start_params)
+        callback = lambda x : None # placeholder until check_perfect_pred
+        # skip calling super to handle results from LikelihoodModel
+        mnfit = base.LikelihoodModel.fit(self, start_params = start_params,
+                method=method, maxiter=maxiter, full_output=full_output,
+                disp=disp, callback=callback, **kwargs)
+        mnfit.params = mnfit.params.reshape(self.K, -1, order='F')
+        mnfit = MultinomialResults(self, mnfit)
+        return MultinomialResultsWrapper(mnfit)
+    fit.__doc__ = DiscreteModel.fit.__doc__
 
 class CountModel(DiscreteModel):
     def __init__(self, endog, exog, offset=None, exposure=None):
@@ -1095,7 +1095,6 @@ class NBin(CountModel):
 
 ### Results Class ###
 
-#TODO: these need to return z scores
 class DiscreteResults(base.LikelihoodModelResults):
     """
     A results class for the discrete dependent variable models.
@@ -1154,14 +1153,6 @@ class DiscreteResults(base.LikelihoodModelResults):
         self.__dict__.update(mlefit.__dict__)
 
     @cache_readonly
-    def bse(self):
-        bse = np.sqrt(np.diag(self.cov_params()))
-        if self.params.ndim == 1 or self.params.shape[1] == 1:
-            return bse
-        else:
-            return bse.reshape(self.params.shape, order='F')
-
-    @cache_readonly
     def prsquared(self):
         return 1 - self.llf/self.llnull
 
@@ -1175,7 +1166,7 @@ class DiscreteResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def llnull(self):
-        model = self.model # will this use a new instance?
+        model = self.model
         #TODO: what parameters to pass to fit?
         null = model.__class__(model.endog, np.ones(self.nobs)).fit(disp=0)
         return null.llf
@@ -1199,44 +1190,17 @@ class DiscreteResults(base.LikelihoodModelResults):
                 endog*np.sqrt(2*M*np.abs(np.log(p)))
         return res
 
-
     @cache_readonly
     def fittedvalues(self):
         return np.dot(self.model.exog, self.params)
 
     @cache_readonly
     def aic(self):
-        if hasattr(self.model, "J"):
-            return -2*(self.llf - (self.df_model+self.model.J-1))
-        else:
-            return -2*(self.llf - (self.df_model+1))
+        return -2*(self.llf - (self.df_model+1))
 
     @cache_readonly
     def bic(self):
-        if hasattr(self.model, "J"):
-            return -2*self.llf + np.log(self.nobs)*\
-                    (self.df_model+self.model.J-1)
-        else:
-            return -2*self.llf + np.log(self.nobs)*(self.df_model+1)
-
-    def conf_int(self, alpha=.05, cols=None):
-        if hasattr(self.model, "J"):
-            confint = super(DiscreteResults, self).conf_int(alpha=alpha,
-                                                            cols=cols)
-            return confint.transpose(0,2,1).reshape(self.model.J-1,
-                                                    self.model.K, 2,
-                                                    order='F')
-        else:
-            return super(DiscreteResults, self).conf_int(alpha=alpha, cols=cols)
-    conf_int.__doc__ = base.LikelihoodModelResults.conf_int.__doc__
-
-    @cache_readonly
-    def tvalues(self):
-        if hasattr(self.model, "J"): # for MNLogit
-            column = range(int(self.model.K))
-            return self.params/self.bse[column,:]
-        else:
-            return super(DiscreteResults, self).tvalues
+        return -2*self.llf + np.log(self.nobs)*(self.df_model+1)
 
     def margeff(self, at='overall', method='dydx', atexog=None, dummy=False,
             count=False):
@@ -1507,6 +1471,40 @@ class DiscreteResults(base.LikelihoodModelResults):
 class DiscreteResultsWrapper(lm.RegressionResultsWrapper):
     pass
 wrap.populate_wrapper(DiscreteResultsWrapper, DiscreteResults)
+
+class OrderedResults(DiscreteResults):
+    pass
+
+class CountResults(DiscreteResults):
+    pass
+
+class BinaryResults(DiscreteResults):
+    pass
+
+class MultinomialResults(DiscreteResults):
+    @cache_readonly
+    def bse(self):
+        bse = np.sqrt(np.diag(self.cov_params()))
+        return bse.reshape(self.params.shape, order='F')
+
+    @cache_readonly
+    def aic(self):
+        return -2*(self.llf - (self.df_model+self.model.J-1))
+
+    @cache_readonly
+    def bic(self):
+        return -2*self.llf + np.log(self.nobs)*(self.df_model+self.model.J-1)
+
+    def conf_int(self, alpha=.05, cols=None):
+        confint = super(DiscreteResults, self).conf_int(alpha=alpha,
+                                                            cols=cols)
+        return confint.transpose(0,2,1).reshape(self.model.J-1,
+                                                    self.model.K, 2,
+                                                    order='F')
+
+class MultinomialResultsWrapper(lm.RegressionResultsWrapper):
+    pass
+wrap.populate_wrapper(MultinomialResultsWrapper, MultinomialResults)
 
 if __name__=="__main__":
     import numpy as np
