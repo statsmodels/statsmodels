@@ -749,6 +749,7 @@ class VARProcess(object):
 
         return point_forecast, forc_lower, forc_upper
 
+
 #-------------------------------------------------------------------------------
 # VARResults class
 
@@ -833,7 +834,7 @@ class VARResults(VARProcess):
         self.dates = dates
 
         self.n_totobs, neqs = self.y.shape
-        self.nobs = self.n_totobs  - lag_order
+        self.nobs = self.n_totobs - lag_order
         k_trend = util.get_trendorder(trend)
         if k_trend > 0: # make this the polynomial trend order
             trendorder = k_trend - 1
@@ -1056,22 +1057,38 @@ class VARResults(VARProcess):
         return mse + omegas / self.nobs
 
     #Monte Carlo irf standard errors
-    def stderr_MC_irf(self, orth=False, repl=1000, T=10, signif=0.05, seed=None):
+    def irf_errband_mc(self, orth=False, repl=1000, T=10,
+                       signif=0.05, seed=None, burn=100, cum=False):
         """
-        Compute Monte Carlo standard errors assuming normally distributed for impulse response functions
+        Compute Monte Carlo integrated error bands assuming normally
+        distributed for impulse response functions
+
+        Parameters
+        ----------
+        orth: bool, default False
+            Compute orthoganalized impulse response error bands
+        repl: int
+            number of Monte Carlo replications to perform
+        T: int, default 10
+            number of impulse response periods
+        signif: float (0 < signif <1)
+            Significance level for error bars, defaults to 95% CI
+        seed: int
+            np.random.seed for replications
+        burn: int
+            number of initial observations to discard for simulation
+        cum: bool, default False
+            produce cumulative irf error bands
 
         Notes
         -----
-        Lutkepohl Appendix D
+        Lutkepohl (2005) Appendix D
 
         Returns
-        ------
+        -------
         Tuple of lower and upper arrays of ma_rep monte carlo standard errors
 
         """
-        if orth:
-            raise NotImplementedError("Orthogonalized MC standard errors not available")
-        #use mean for starting value
         neqs = self.neqs
         mean = self.mean()
         k_ar = self.k_ar
@@ -1080,19 +1097,101 @@ class VARResults(VARProcess):
         intercept = self.intercept
         df_model = self.df_model
         nobs = self.nobs
-        disc = 100 #number of simulated observations to discard
 
         ma_coll = np.zeros((repl, T+1, neqs, neqs))
+
+        if (orth == True and cum == True):
+            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
+                              orth_ma_rep(maxn=T).cumsum(axis=0)
+        elif (orth == True and cum == False):
+            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
+                              orth_ma_rep(maxn=T)
+        elif (orth == False and cum == True):
+            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
+                              ma_rep(maxn=T).cumsum(axis=0)
+        elif (orth == False and cum == False):
+            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
+                              ma_rep(maxn=T)
+
         for i in range(repl):
             #discard first hundred to eliminate correct for starting bias
-            sim = util.varsim(coefs, intercept, sigma_u, steps=nobs+disc)
-            sim = sim[disc:]
-            ma_coll[i,:,:,:] = VAR(sim).fit(maxlags=k_ar).ma_rep(maxn=T)
+            sim = util.varsim(coefs, intercept, sigma_u, steps=nobs+burn)
+            sim = sim[burn:]
+            ma_coll[i,:,:,:] = fill_coll(sim)
+
         ma_sort = np.sort(ma_coll, axis=0) #sort to get quantiles
         index = round(signif/2*repl)-1,round((1-signif/2)*repl)-1
         lower = ma_sort[index[0],:, :, :]
         upper = ma_sort[index[1],:, :, :]
         return lower, upper
+
+    def irf_resim(self, orth=False, repl=1000, T=10,
+                      seed=None, burn=100, cum=False):
+
+        """
+        Simulates impulse response function, returning an array of simulations.
+        Used for Sims-Zha error band calculation.
+
+        Parameters
+        ----------
+        orth: bool, default False
+            Compute orthoganalized impulse response error bands
+        repl: int
+            number of Monte Carlo replications to perform
+        T: int, default 10
+            number of impulse response periods
+        signif: float (0 < signif <1)
+            Significance level for error bars, defaults to 95% CI
+        seed: int
+            np.random.seed for replications
+        burn: int
+            number of initial observations to discard for simulation
+        cum: bool, default False
+            produce cumulative irf error bands
+
+        Notes
+        -----
+        Sims, Christoper A., and Tao Zha. 1999. "Error Bands for Impulse Response." Econometrica 67: 1113-1155.
+
+        Returns
+        -------
+        Array of simulated impulse response functions
+
+        """
+        neqs = self.neqs
+        mean = self.mean()
+        k_ar = self.k_ar
+        coefs = self.coefs
+        sigma_u = self.sigma_u
+        intercept = self.intercept
+        df_model = self.df_model
+        nobs = self.nobs
+        if seed is not None:
+            np.random.seed(seed=seed)
+
+        ma_coll = np.zeros((repl, T+1, neqs, neqs))
+
+        if (orth == True and cum == True):
+            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
+                              orth_ma_rep(maxn=T).cumsum(axis=0)
+        elif (orth == True and cum == False):
+            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
+                              orth_ma_rep(maxn=T)
+        elif (orth == False and cum == True):
+            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
+                              ma_rep(maxn=T).cumsum(axis=0)
+        elif (orth == False and cum == False):
+            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
+                              ma_rep(maxn=T)
+
+        for i in range(repl):
+            #discard first hundred to eliminate correct for starting bias
+            sim = util.varsim(coefs, intercept, sigma_u, steps=nobs+burn)
+            sim = sim[burn:]
+            ma_coll[i,:,:,:] = fill_coll(sim)
+
+        return ma_coll
+
 
     def _omega_forc_cov(self, steps):
         # Approximate MSE matrix \Omega(h) as defined in Lut p97
@@ -1264,12 +1363,12 @@ class VARResults(VARProcess):
             raise Exception('kind %s not recognized' % kind)
 
         pvalue = dist.sf(statistic)
-        crit_value = dist.ppf(1 - signif)
+        crit_initue = dist.ppf(1 - signif)
 
-        conclusion = 'fail to reject' if statistic < crit_value else 'reject'
+        conclusion = 'fail to reject' if statistic < crit_initue else 'reject'
         results = {
             'statistic' : statistic,
-            'crit_value' : crit_value,
+            'crit_initue' : crit_initue,
             'pvalue' : pvalue,
             'df' : df,
             'conclusion' : conclusion,
@@ -1346,7 +1445,7 @@ class VARResults(VARProcess):
 
         results = {
             'statistic' : lam_omni,
-            'crit_value' : crit_omni,
+            'crit_initue' : crit_omni,
             'pvalue' : omni_pvalue,
             'df' : self.neqs * 2,
             'conclusion' : conclusion,
@@ -1606,3 +1705,4 @@ if __name__ == '__main__':
     est = model.fit(maxlags=2)
     irf = est.irf()
     '''
+
