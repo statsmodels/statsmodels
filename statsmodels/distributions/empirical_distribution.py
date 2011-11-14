@@ -3,6 +3,33 @@ Empirical CDF Functions
 """
 import numpy as np
 
+def _conf_set(F, alpha=.05):
+    r"""
+    Constructs a Dvoretzky-Kiefer-Wolfowitz confidence band for the eCDF.
+
+    Parameters
+    ----------
+    F : array-like
+        The empirical distributions
+    alpha : float
+        Set alpha for a (1 - alpha) % confidence band.
+
+    Notes
+    -----
+    Based on the DKW inequality.
+
+    ..math:: P \left( \sup_x \left| F(x) - \hat(F)_n(X) \right| > \epsilon \right) \leq 2e^{-2n\epsilon^2}
+
+    References
+    ----------
+    Wasserman, L. 2006. `All of Nonparametric Statistics`. Springer.
+    """
+    nobs = len(F)
+    epsilon = np.sqrt(np.log(2./alpha) / (2 * nobs))
+    lower = np.clip(F - epsilon, 0, 1)
+    upper = np.clip(F + epsilon, 0, 1)
+    return lower, upper
+
 class StepFunction(object):
     """
     A basic step function.
@@ -133,4 +160,24 @@ def monotone_fn_inverter(fn, x, vectorized=True, **keywords):
     a = np.argsort(y)
 
     return interp1d(y[a], x[a])
+
+if __name__ == "__main__":
+    #TODO: Make sure everything is correctly aligned and make a plotting
+    # function
+    import matplotlib.pyplot as plt
+    import urllib
+    nerve_data = urllib.urlopen('http://www.statsci.org/data/general/nerve.txt')
+    nerve_data = np.loadtxt(nerve_data)
+    x = nerve_data / 50. # was in 1/50 seconds
+    cdf = ECDF(x)
+    x.sort()
+    F = cdf(x)
+    plt.step(x, F)
+    lower, upper = _conf_set(F)
+    plt.step(x, lower, 'r')
+    plt.step(x, upper, 'r')
+    plt.xlim(0, 1.5)
+    plt.ylim(0, 1.05)
+    plt.vlines(x, 0, .05)
+    plt.show()
 
