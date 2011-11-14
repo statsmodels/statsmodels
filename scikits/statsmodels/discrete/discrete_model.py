@@ -1491,34 +1491,14 @@ class DiscreteResults(base.LikelihoodModelResults):
                 smry.add_extra_txt(etext)
         return smry
 
-#class DiscreteResultsWrapper(lm.RegressionResultsWrapper):
-#    pass
-#wrap.populate_wrapper(DiscreteResultsWrapper, DiscreteResults)
-
+class CountResults(DiscreteResults):
+    pass
 
 class OrderedResults(DiscreteResults):
     pass
 
-class OrderedResultsWrapper(lm.RegressionResultsWrapper):
-    pass
-wrap.populate_wrapper(OrderedResultsWrapper, OrderedResults)
-
-
-class CountResults(DiscreteResults):
-    pass
-
-class CountResultsWrapper(lm.RegressionResultsWrapper):
-    pass
-wrap.populate_wrapper(CountResultsWrapper, CountResults)
-
-
 class BinaryResults(DiscreteResults):
     pass
-
-class BinaryResultsWrapper(lm.RegressionResultsWrapper):
-    pass
-wrap.populate_wrapper(BinaryResultsWrapper, BinaryResults)
-
 
 class MultinomialResults(DiscreteResults):
     @cache_readonly
@@ -1541,9 +1521,24 @@ class MultinomialResults(DiscreteResults):
                                                     self.model.K, 2,
                                                     order='F')
 
+#### Results Wrappers ####
+
+class OrderedResultsWrapper(lm.RegressionResultsWrapper):
+    pass
+wrap.populate_wrapper(OrderedResultsWrapper, OrderedResults)
+
+class CountResultsWrapper(lm.RegressionResultsWrapper):
+    pass
+wrap.populate_wrapper(CountResultsWrapper, CountResults)
+
+class BinaryResultsWrapper(lm.RegressionResultsWrapper):
+    pass
+wrap.populate_wrapper(BinaryResultsWrapper, BinaryResults)
+
 class MultinomialResultsWrapper(lm.RegressionResultsWrapper):
     pass
 wrap.populate_wrapper(MultinomialResultsWrapper, MultinomialResults)
+
 
 if __name__=="__main__":
     import numpy as np
