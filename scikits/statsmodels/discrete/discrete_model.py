@@ -104,7 +104,8 @@ def _iscount(X):
     array([ True, False, False,  True,  True], dtype=bool)
     """
     X = np.asarray(X)
-    remainder = np.all(X % 1. == 0, axis = 0)
+    remainder = np.logical_and(np.all(X % 1. == 0, axis = 0),
+                               X.var(0) != 0)
     dummy = _isdummy(X)
     remainder -= dummy
     return remainder
@@ -124,6 +125,56 @@ def _get_margeff_exog(exog, at, atexog, ind):
         exog = np.zeros((1,exog.shape[1]))
         exog[0,~ind] = 1
     return exog
+
+def _get_count_effects(effects, exog, count_ind, method, model, params):
+    for i, tf in enumerate(count_ind):
+        if tf == True:
+            exog0 = exog.copy()
+            effect0 = model.predict(params, exog0)
+            wf1 = model.predict
+            exog0[:,i] += 1
+            effect1 = model.predict(params, exog0)
+    #TODO: compute discrete elasticity correctly
+    #Stata doesn't use the midpoint method or a weighted average.
+    #Check elsewhere
+            if 'ey' in method:
+                pass
+                ##TODO: don't know if this is theoretically correct
+                #fittedvalues0 = np.dot(exog0,params)
+                #fittedvalues1 = np.dot(exog1,params)
+                #weight1 = model.exog[:,i].mean()
+                #weight0 = 1 - weight1
+                #wfv = (.5*model.cdf(fittedvalues1) + \
+                        #        .5*model.cdf(fittedvalues0))
+                #effects[i] = ((effect1 - effect0)/wfv).mean()
+            effects[i] = (effect1 - effect0).mean()
+    return effects
+
+
+def _get_dummy_effects(effects, exog, dummy_ind, method, model, params):
+    for i, tf in enumerate(dummy_ind):
+        if tf == True:
+            exog0 = exog.copy() # only copy once, can we avoid a copy?
+            exog0[:,i] = 0
+            effect0 = model.predict(params, exog0)
+            #fittedvalues0 = np.dot(exog0,params)
+            exog0[:,i] = 1
+            effect1 = model.predict(params, exog0)
+            if 'ey' in method:
+                effect0 = np.log(effect0)
+                effect1 = np.log(effect1)
+            effects[i] = (effect1 - effect0).mean() # mean for overall
+    return effects
+
+def _effects_at(effects, at, ind):
+    if at == 'all':
+        effects = effects[:,ind]
+    elif at == 'overall':
+        effects = effects.mean(0)[ind]
+    else:
+        effects = effects[0,ind]
+    return effects
+
 
 #### Private Model Classes ####
 
@@ -191,7 +242,7 @@ class DiscreteModel(base.LikelihoodModel):
         """
         raise NotImplementedError
 
-    def _derivative(self, params, exog=None):
+    def _derivative_params(self, params, exog=None):
         """
         This should implement the derivative of the non-linear function
         """
@@ -234,7 +285,7 @@ class BinaryModel(DiscreteModel):
         return BinaryResultsWrapper(discretefit)
     fit.__doc__ = DiscreteModel.fit.__doc__
 
-    def _derivative(self, params, exog=None):
+    def _derivative_params(self, params, exog=None):
         """
         For computing marginal effects.
         """
@@ -329,7 +380,7 @@ class CountModel(DiscreteModel):
             return np.dot(exog, params) + exposure + offset
             return super(CountModel, self).predict(params, exog, linear)
 
-    def _derivative(self, params, exog=None):
+    def _derivative_params(self, params, exog=None):
         """
         """
         # group 3 poisson, nbreg, zip, zinb
@@ -1312,8 +1363,6 @@ class DiscreteResults(base.LikelihoodModelResults):
         #    of type float), then `factor` may be a dict with the zero-indexed
         #    column of the factor and the value should be the base-outcome.
 
-
-
         # get local variables
         model = self.model
         params = self.params
@@ -1335,65 +1384,24 @@ class DiscreteResults(base.LikelihoodModelResults):
         # get the exogenous variables
         exog = _get_margeff_exog(exog, at, atexog, ind)
 
-        # get linear fitted values
-        fittedvalues = self.model.predict(params, exog, linear=True)
-
         # get base marginal effects, handled by sub-classes
-        effects = self.model._derivative(params, exog)
+        effects = model._derivative_params(params, exog)
 
         if 'ex' in method:
             effects *= exog
-        if 'dy' in method:
-            if at == 'all':
-                effects = effects[:,ind]
-            elif at == 'overall':
-                effects = effects.mean(0)[ind]
-            else:
-                effects = effects[0,ind]
         if 'ey' in method:
-            effects /= model.cdf(fittedvalues[:,None])
-            if at == 'all':
-                effects = effects[:,ind]
-            elif at == 'overall':
-                effects = effects.mean(0)[ind]
-            else:
-                effects = effects[0,ind]
+            effects /= model.predict(params, exog)[:,None]
+
+        effects = _effects_at(effects, at, ind)
+
         if dummy == True:
-            for i, tf in enumerate(dummy_ind):
-                if tf == True:
-                    exog0 = exog.copy()
-                    exog0[:,i] = 0
-                    fittedvalues0 = np.dot(exog0,params)
-                    exog1 = exog.copy()
-                    exog1[:,i] = 1
-                    fittedvalues1 = np.dot(exog1, params)
-                    effect0 = model.cdf(fittedvalues0)
-                    effect1 = model.cdf(fittedvalues1)
-                    if 'ey' in method:
-                        effect0 = np.log(effect0)
-                        effect1 = np.log(effect1)
-                    effects[i] = (effect1 - effect0).mean() # mean for overall
+            effects = _get_dummy_effects(effects, exog, dummy_ind, method,
+                                         model, params)
+
         if count == True:
-            for i, tf in enumerate(count_ind):
-                if tf == True:
-                    exog0 = exog.copy()
-                    exog1 = exog.copy()
-                    exog1[:,i] += 1
-                    effect0 = model.cdf(np.dot(exog0, params))
-                    effect1 = model.cdf(np.dot(exog1, params))
-            #TODO: compute discrete elasticity correctly
-            #Stata doesn't use the midpoint method or a weighted average.
-            #Check elsewhere
-                    if 'ey' in method:
-                        #TODO: don't know if this is theoretically correct
-                        fittedvalues0 = np.dot(exog0,params)
-                        fittedvalues1 = np.dot(exog1,params)
-                        #weight1 = model.exog[:,i].mean()
-                        #weight0 = 1 - weight1
-                        wfv = (.5*model.cdf(fittedvalues1) + \
-                                .5*model.cdf(fittedvalues0))
-                        effects[i] = ((effect1 - effect0)/wfv).mean()
-                    effects[i] = (effect1 - effect0).mean()
+            effects = _get_count_effects(effects, exog, count_ind, method,
+                                         model, params)
+
         # Set standard error of the marginal effects by Delta method.
         self.margfx_se = None
         self.margfx = effects
