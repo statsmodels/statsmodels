@@ -242,7 +242,7 @@ class DiscreteModel(base.LikelihoodModel):
         """
         raise NotImplementedError
 
-    def _derivative_params(self, params, exog=None):
+    def _derivative_exog(self, params, exog=None):
         """
         This should implement the derivative of the non-linear function
         """
@@ -285,7 +285,7 @@ class BinaryModel(DiscreteModel):
         return BinaryResultsWrapper(discretefit)
     fit.__doc__ = DiscreteModel.fit.__doc__
 
-    def _derivative_params(self, params, exog=None):
+    def _derivative_exog(self, params, exog=None):
         """
         For computing marginal effects.
         """
@@ -380,7 +380,7 @@ class CountModel(DiscreteModel):
             return np.dot(exog, params) + exposure + offset
             return super(CountModel, self).predict(params, exog, linear)
 
-    def _derivative_params(self, params, exog=None):
+    def _derivative_exog(self, params, exog=None):
         """
         """
         # group 3 poisson, nbreg, zip, zinb
@@ -1385,7 +1385,7 @@ class DiscreteResults(base.LikelihoodModelResults):
         exog = _get_margeff_exog(exog, at, atexog, ind)
 
         # get base marginal effects, handled by sub-classes
-        effects = model._derivative_params(params, exog)
+        effects = model._derivative_exog(params, exog)
 
         if 'ex' in method:
             effects *= exog
