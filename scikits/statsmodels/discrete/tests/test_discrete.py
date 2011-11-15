@@ -228,7 +228,7 @@ class TestProbitCG(CheckModelResults):
         res2.probit()
         cls.res2 = res2
         cls.res1 = Probit(data.endog, data.exog).fit(method="cg",
-            disp=0, maxiter=250)
+            disp=0, maxiter=500)
 
 class TestProbitNCG(CheckModelResults):
     @classmethod
@@ -325,7 +325,7 @@ def test_perfect_prediction():
     X = sm.add_constant(X, prepend=True)
     mod = Logit(y,X)
     assert_raises(PerfectSeparationError, mod.fit)
-    
+
 
 
 if __name__ == "__main__":
