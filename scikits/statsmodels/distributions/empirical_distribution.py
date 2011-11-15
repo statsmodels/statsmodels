@@ -20,11 +20,14 @@ class StepFunction(object):
         is 0.
     sorted : bool
         Default is False.
+    side : {'left', 'right'}, optional
+        Default is 'left'. Defines the shape of the intervals constituting the
+        steps. 'right' correspond to [a, b) intervals and 'left' to (a, b].
 
     Examples
     --------
     >>> import numpy as np
-    >>> from scikits.statsmodels.tools import StepFunction
+    >>> from scikits.statsmodels.distributions.empirical_distribution import StepFunction
     >>>
     >>> x = np.arange(20)
     >>> y = np.arange(20)
@@ -35,9 +38,20 @@ class StepFunction(object):
     >>> print f([[3.2,4.5],[24,-3.1]])
     [[  3.   4.]
      [ 19.   0.]]
+    >>> f2 = StepFunction(x, y, side='right')
+    >>>
+    >>> print f(3.0)
+    2.0
+    >>> print f2(3.0)
+    3.0
     """
 
-    def __init__(self, x, y, ival=0., sorted=False):
+    def __init__(self, x, y, ival=0., sorted=False, side='left'):
+
+        if side.lower() not in ['right', 'left']:
+            msg = "side can take the values 'right' or 'left'"
+            raise ValueError(msg)
+        self.side = side
 
         _x = np.asarray(x)
         _y = np.asarray(y)
@@ -60,8 +74,7 @@ class StepFunction(object):
 
     def __call__(self, time):
 
-        tind = np.searchsorted(self.x, time) - 1
-        _shape = tind.shape
+        tind = np.searchsorted(self.x, time, self.side) - 1
         return self.y[tind]
 
 class ECDF(StepFunction):
@@ -72,19 +85,32 @@ class ECDF(StepFunction):
     ----------
     x : array-like
         Observations
+    side : {'left', 'right'}, optional
+        Default is 'right'. Defines the shape of the intervals constituting the
+        steps. 'right' correspond to [a, b) intervals and 'left' to (a, b].
 
     Returns
     -------
     Empirical CDF as a step function.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from scikits.statsmodels.distributions.empirical_distribution import ECDF
+    >>>
+    >>> ecdf = ECDF([3, 3, 1, 4])
+    >>>
+    >>> ecdf([3, 55, 0.5, 1.5])
+    array([ 0.75,  1.  ,  0.  ,  0.25])
     """
-    def __init__(self, x):
+    def __init__(self, x, side='right'):
         step = True
         if step: #TODO: make this an arg and have a linear interpolation option?
             x = np.array(x, copy=True)
             x.sort()
             nobs = len(x)
             y = np.linspace(1./nobs,1,nobs)
-            super(ECDF, self).__init__(x, y)
+            super(ECDF, self).__init__(x, y, side=side, sorted=True)
         else:
             pass
             #interpolate.interp1d(x,y,drop_errors=False,fill_values=ival)
