@@ -1097,7 +1097,7 @@ class NBin(CountModel):
     #    a1 = alpha**-1
     #    term1 = special.gamma(X + a1)/(special.agamma(X+1)*special.gamma(a1))
 
-    def check_inputs(self, offset, exposure):
+    def _check_inputs(self, offset, exposure):
         if offset is not None or exposure is not None:
             raise ValueError("offset and exposure not implemented yet")
 
