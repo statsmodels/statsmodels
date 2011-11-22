@@ -19,15 +19,13 @@ W. Greene. `Econometric Analysis`. Prentice Hall, 5th. edition. 2003.
 __all__ = ["Poisson","Logit","Probit","MNLogit"]
 
 import numpy as np
+from scipy.special import gammaln
 from scipy import stats, special, optimize # opt just for nbin
-from scipy.misc import factorial
-
 import scikits.statsmodels.tools.tools as tools
 from scikits.statsmodels.tools.decorators import (resettable_cache,
         cache_readonly)
 from scikits.statsmodels.regression.linear_model import OLS
 from scipy import stats, special, optimize # opt just for nbin
-from scipy.misc import factorial
 from scikits.statsmodels.tools.sm_exceptions import PerfectSeparationError
 import scikits.statsmodels.base.model as base
 import scikits.statsmodels.regression.linear_model as lm
@@ -507,7 +505,7 @@ class Poisson(CountModel):
         XB = np.dot(self.exog, params) + offset + exposure
         endog = self.endog
         #np.sum(stats.poisson.logpmf(endog, np.exp(XB)))
-        return np.sum(-np.exp(XB) +  endog*XB - np.log(factorial(endog)))
+        return np.sum(-np.exp(XB) +  endog*XB - gammaln(endog+1))
 
     def score(self, params):
         """
