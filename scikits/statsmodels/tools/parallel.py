@@ -1,9 +1,14 @@
-"""Parralle util function
-"""
+'''Parallel utility function using joblib
 
-# Author: Alexandre Gramfort <gramfort@nmr.mgh.harvard.edu>
-#
-# License: Simplified BSD
+copied from https://github.com/mne-tools/mne-python
+
+Author: Alexandre Gramfort <gramfort@nmr.mgh.harvard.edu>
+License: Simplified BSD
+
+changes for statsmodels (Josef Perktold)
+- try import from joblib directly, (doesn't import all of sklearn)
+
+'''
 
 
 def parallel_func(func, n_jobs, verbose=5):
@@ -30,7 +35,11 @@ def parallel_func(func, n_jobs, verbose=5):
         Number of jobs >= 0
     """
     try:
-        from sklearn.externals.joblib import Parallel, delayed
+        try:
+            from joblib import Parallel, delayed
+        except ImportError:
+            from sklearn.externals.joblib import Parallel, delayed
+
         parallel = Parallel(n_jobs, verbose=verbose)
         my_func = delayed(func)
 
