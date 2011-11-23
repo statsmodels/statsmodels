@@ -10,6 +10,10 @@ pvalues for Lilliefors test are based on formula and table in
 An Analytic Approximation to the Distribution of Lilliefors's Test Statistic for Normality
 Author(s): Gerard E. Dallal and Leland WilkinsonSource: The American Statistician, Vol. 40, No. 4 (Nov., 1986), pp. 294-296Published by: American Statistical AssociationStable URL: http://www.jstor.org/stable/2684607 .
 
+On the Kolmogorov-Smirnov Test for Normality with Mean and Variance
+Unknown
+Hubert W. Lilliefors
+Journal of the American Statistical Association, Vol. 62, No. 318. (Jun., 1967), pp. 399-402.
 
 """
 
@@ -21,8 +25,8 @@ def ksstat(x, cdf, alternative='two_sided', args=()):
     """
     Calculate statistic for the Kolmogorov-Smirnov test for goodness of fit
 
-    This performs a test of the distribution G(x) of an observed
-    random variable against a given distribution F(x). Under the null
+    This calculates the test statistic for a test of the distribution G(x) of an observed
+    variable against a given distribution F(x). Under the null
     hypothesis the two distributions are identical, G(x)=F(x). The
     alternative hypothesis can be either 'two_sided' (default), 'less'
     or 'greater'. The KS test is only valid for continuous distributions.
@@ -45,6 +49,10 @@ def ksstat(x, cdf, alternative='two_sided', args=()):
     D : float
         KS test statistic, either D, D+ or D-
 
+    See Also
+    --------
+    scipy.stats.kstest
+
     Notes
     -----
 
@@ -52,6 +60,10 @@ def ksstat(x, cdf, alternative='two_sided', args=()):
     cumulative distribution function of the random variable is "less"
     or "greater" than the cumulative distribution function F(x) of the
     hypothesis, G(x)<=F(x), resp. G(x)>=F(x).
+
+    In contrast to scipy.stats.kstest, this function only calculates the
+    statistic which can be used either as distance measure or to implement
+    case specific p-values.
 
     """
     nobs = float(len(x))
@@ -77,10 +89,87 @@ def ksstat(x, cdf, alternative='two_sided', args=()):
     D = np.max([Dplus,Dmin])
     return D
 
+
+#new version with tabledist
+#--------------------------
+
+def get_lilliefors_table():
+    #function just to keep things together
+    from tabledist import TableDist
+    #for this test alpha is sf probability, i.e. right tail probability
+
+    alpha = np.array([ 0.2  ,  0.15 ,  0.1  ,  0.05 ,  0.01 ,  0.001])[::-1]
+    size = np.array([ 4,   5,   6,   7,   8,   9,  10,  11,  12,  13,  14,  15,
+                     16,  17,  18,  19,  20,  25,  30,  40, 100, 400, 900], float)
+
+    #critical values, rows are by sample size, columns are by alpha
+    crit_lf = np.array(   [[303, 321, 346, 376, 413, 433],
+                           [289, 303, 319, 343, 397, 439],
+                           [269, 281, 297, 323, 371, 424],
+                           [252, 264, 280, 304, 351, 402],
+                           [239, 250, 265, 288, 333, 384],
+                           [227, 238, 252, 274, 317, 365],
+                           [217, 228, 241, 262, 304, 352],
+                           [208, 218, 231, 251, 291, 338],
+                           [200, 210, 222, 242, 281, 325],
+                           [193, 202, 215, 234, 271, 314],
+                           [187, 196, 208, 226, 262, 305],
+                           [181, 190, 201, 219, 254, 296],
+                           [176, 184, 195, 213, 247, 287],
+                           [171, 179, 190, 207, 240, 279],
+                           [167, 175, 185, 202, 234, 273],
+                           [163, 170, 181, 197, 228, 266],
+                           [159, 166, 176, 192, 223, 260],
+                           [143, 150, 159, 173, 201, 236],
+                           [131, 138, 146, 159, 185, 217],
+                           [115, 120, 128, 139, 162, 189],
+                           [ 74,  77,  82,  89, 104, 122],
+                           [ 37,  39,  41,  45,  52,  61],
+                           [ 25,  26,  28,  30,  35,  42]])[:,::-1] / 1000.
+
+
+    lf = TableDist(alpha, size, crit_lf)
+
+    return lf
+
+lillifors_table = get_lilliefors_table()
+
+
 def kstest_normal(x, pvalmethod='approx'):
     '''Lillifors test for normality,
 
     Kolmogorov Smirnov test with estimated mean and variance
+
+    Parameters
+    ----------
+    x : array_like, 1d
+        data series, sample
+    pvalmethod : 'approx', 'table'
+        'approx' uses the approximation formula of Dalal and Wilkinson,
+        valid for pvalues < 0.1. If the pvalue is larger than 0.1, then the
+        result of `table` is returned
+
+        'table' uses the table from Dalal and Wilkinson, which is available
+        for pvalues between 0.001 and 0.2, and the formula of Lilliefors for
+        large n (n>900). Values in the table are linearly interpolated.
+        Values outside the range will be returned as bounds, 0.2 for large and
+        0.001 for small pvalues.
+
+    Returns
+    -------
+    ksstat : float
+        Kolmogorov-Smirnov test statistic with estimated mean and variance.
+    pvalue : float
+        If the pvalue is lower than some threshold, e.g. 0.05, then we can
+        reject the Null hypothesis that the sample comes from a normal
+        distribution
+
+    Notes
+    -----
+     Reported power to distinguish normal from some other distributions is lower
+    than with the Anderson-Darling test.
+
+    could be vectorized
 
     '''
 
@@ -93,13 +182,17 @@ def kstest_normal(x, pvalmethod='approx'):
     if pvalmethod == 'approx':
         pval = pval_lf(d_ks, nobs)
     elif pvalmethod == 'table':
-        pval = pval_lftable(d_ks, nobs)
+        #pval = pval_lftable(d_ks, nobs)
+        pval = lillifors_table.prob(d_ks, nobs)
+
     return d_ks, pval
 
 
 lillifors = kstest_normal
 
 
+#old version:
+#------------
 
 tble = '''\
 00 20 15 10 05 01 .1
@@ -189,6 +282,39 @@ print pval_lftable(0.166, 20)
 print pval_lftable(0.166, 21)
 
 def pval_lf(Dmax, n):
+    '''approximate pvalues for Lilliefors test of normality
+
+    This is only valid for pvalues smaller than 0.1 which is not checked in
+    this function.
+
+    Parameters
+    ----------
+    Dmax : array_like
+        two-sided Kolmogorov-Smirnov test statistic
+    n : int or float
+        sample size
+
+    Returns
+    -------
+    p-value : float or ndarray
+        pvalue according to approximation formula of Dallal and Wilkinson.
+
+    Notes
+    -----
+    This is mainly a helper function where the calling code should dispatch
+    on bound violations. Therefore it doesn't check whether the pvalue is in
+    the valid range.
+
+    Precision for the pvalues is around 2 to 3 decimals. This approximation is
+    also used by other statistical packages (e.g. R:fBasics) but might not be
+    the most precise available.
+
+    References
+    ----------
+    DallalWilkinson1986
+
+    '''
+
     #todo: check boundaries, valid range for n and Dmax
     if n>100:
         Dmax *= (n/100.)**0.49

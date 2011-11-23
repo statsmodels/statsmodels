@@ -25,6 +25,17 @@ class TableDist(object):
 
     currently only 1 extra parameter, e.g. sample size
 
+    Parameters
+    ----------
+    alpha : array_like, 1d
+        probabiliy in the table, could be either sf (right tail) or cdf (left
+        tail)
+    size : array_like, 1d
+        second paramater in the table
+    crit_table : array_like, 2d
+        array with critical values for sample size in rows and probability in
+        columns
+
     Notes
     -----
     size and alpha should be increasing
@@ -50,18 +61,49 @@ class TableDist(object):
         #fix this, interp needs increasing
         self.poly2d = interp2d(size, alpha, crit_table)
         xs, xa = np.meshgrid(self.size.astype(float), self.alpha)
-        self.polyrbf = Rbf(xs.ravel(),xa.ravel(),crit_lf.T.ravel(),function='linear')
+        self.polyrbf = Rbf(xs.ravel(), xa.ravel(), self.crit_table.T.ravel(),function='linear')
 
 
     def _critvals(self, n):
+        '''rows of the table, linearly interpolated for given sample size
+
+        Parameter
+        ---------
+        n : float
+            sample size, second parameter of the table
+
+        Returns
+        -------
+        critv : ndarray, 1d
+            critical values (ppf) corresponding to a row of the table
+
+        Notes
+        -----
+        This is used in two step interpolation, or if we want to know the
+        critical values for all alphas for any sample size that we can obtain
+        through interpolation
+
+        '''
         return np.array([p(n) for p in self.polyn])
 
     def prob(self, x, n):
-        '''find pvalues by interpolation
+        '''find pvalues by interpolation, eiter cdf(x) or sf(x)
 
         returns extrem probabilities, 0.001 and 0.2, for out of range
 
-        not vectorized
+        Parameters
+        ----------
+        x : array_like
+            observed value, assumed to follow the distribution in the table
+        n : float
+            sample size, second parameter of the table
+
+        Returns
+        -------
+        prob : arraylike
+            This is the probability for each value of x, the p-value in
+            underlying distribution is for a statistical test.
+
         '''
         critv = self._critvals(n)
         alpha = self.alpha
@@ -100,7 +142,8 @@ class TableDist(object):
 
             return probs
 
-    def crit(self, prob, n):
+
+    def crit2(self, prob, n):
         '''returns interpolated quantiles, similar to ppf or isf
 
         this can be either cdf or sf depending on the table, twosided?
@@ -110,10 +153,24 @@ class TableDist(object):
         '''
         return self.poly2d(n, prob)
 
-    def crit2(self, prob, n):
-        '''no bound checking yet
+
+    def crit(self, prob, n):
+        '''returns interpolated quantiles, similar to ppf or isf
 
         use two sequential 1d interpolation, first by n then by prob
+
+        Parameter
+        ---------
+        prob : array_like
+            probabilities corresponding to the definition of table columns
+        n : int or float
+            sample size, second parameter of the table
+
+        Returns
+        -------
+        ppf : array_like
+            critical values with same shape as prob
+
         '''
         prob = np.asarray(prob)
         alpha = self.alpha
@@ -137,9 +194,23 @@ class TableDist(object):
         return quantile
 
     def crit3(self, prob, n):
-        '''no bound checking yet
+        '''returns interpolated quantiles, similar to ppf or isf
 
-        uses Rbf
+        uses Rbf to interpolate critical values as function of `prob` and `n`
+
+        Parameter
+        ---------
+        prob : array_like
+            probabilities corresponding to the definition of table columns
+        n : int or float
+            sample size, second parameter of the table
+
+        Returns
+        -------
+        ppf : array_like
+            critical values with same shape as prob, returns nan for arguments
+            that are outside of the table bounds
+
         '''
         prob = np.asarray(prob)
         alpha = self.alpha
