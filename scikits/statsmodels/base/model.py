@@ -911,7 +911,7 @@ class LikelihoodModelResults(Results):
 
     @cache_readonly
     def pvalues(self):
-        return stats.t.sf(np.abs(self.tvalues), self.df_resid) * 2
+        return stats.norm.sf(np.abs(self.tvalues)) * 2
 
     def cov_params(self, r_matrix=None, column=None, scale=None, other=None):
         """
@@ -1209,24 +1209,13 @@ class LikelihoodModelResults(Results):
 
         Notes
         -----
-        The confidence interval is based on Student's t distribution for all
-        models except RLM and GLM, which uses the standard normal distribution.
-
+        The confidence interval is based on the standard normal distribution.
+        Models wish to use a different distribution should overwrite this
+        method.
         """
         bse = self.bse
-        #TODO: simplify structure, DRY
-        if hasattr(self.model, 'confint_dist'):
-            dist = self.model.confint_dist
-        elif type(self).__name__ in ['RLMResults', 'GLMResults',
-                                     'DiscreteResults']:
-            dist = stats.norm
-        else:
-            dist = stats.t
-
-        if dist == stats.t:
-            q = dist.ppf(1 - alpha / 2, self.model.df_resid)
-        elif dist == stats.norm:
-            q = dist.ppf(1 - alpha / 2)
+        dist = stats.norm
+        q = dist.ppf(1 - alpha / 2)
 
         if cols is None:
             lower = self.params - q * bse

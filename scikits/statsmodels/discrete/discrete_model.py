@@ -19,24 +19,33 @@ W. Greene. `Econometric Analysis`. Prentice Hall, 5th. edition. 2003.
 __all__ = ["Poisson","Logit","Probit","MNLogit"]
 
 import numpy as np
+from scipy.special import gammaln
 from scipy import stats, special, optimize # opt just for nbin
-from scipy.misc import factorial
-
 import scikits.statsmodels.tools.tools as tools
 from scikits.statsmodels.tools.decorators import (resettable_cache,
         cache_readonly)
 from scikits.statsmodels.regression.linear_model import OLS
 from scipy import stats, special, optimize # opt just for nbin
-from scipy.misc import factorial
 from scikits.statsmodels.tools.sm_exceptions import PerfectSeparationError
-#import numdifftools as nd #This will be removed when all have analytic hessians
-
 import scikits.statsmodels.base.model as base
 import scikits.statsmodels.regression.linear_model as lm
 import scikits.statsmodels.base.wrapper as wrap
 
 #TODO: add options for the parameter covariance/variance
 # ie., OIM, EIM, and BHHH see Green 21.4
+
+#### margeff helper functions ####
+#NOTE: todo marginal effects for group 2
+# group 2 oprobit, ologit, gologit, mlogit, biprobit
+
+def _check_margeff_args(at, method):
+    """
+    Checks valid options for margeff
+    """
+    if at not in ['overall','mean','median','zero','all']:
+        raise ValueError("%s not a valid option for `at`." % at)
+    if method not in ['dydx','eyex','dyex','eydx']:
+        raise ValueError("method is not understood.  Got %s" % method)
 
 def _check_discrete_args(at, method):
     """
@@ -93,10 +102,79 @@ def _iscount(X):
     array([ True, False, False,  True,  True], dtype=bool)
     """
     X = np.asarray(X)
-    remainder = np.all(X % 1. == 0, axis = 0)
+    remainder = np.logical_and(np.all(X % 1. == 0, axis = 0),
+                               X.var(0) != 0)
     dummy = _isdummy(X)
     remainder -= dummy
     return remainder
+
+def _get_margeff_exog(exog, at, atexog, ind):
+    if atexog is not None: # user supplied
+        if not isinstance(atexog, dict):
+            raise ValueError("atexog should be a dict not %s"\
+                    % type(atexog))
+        for key in atexog:
+            exog[:,key] = atexog[key]
+    if at == 'mean':
+        exog = np.atleast_2d(exog.mean(0))
+    elif at == 'median':
+        exog = np.atleast_2d(np.median(exog, axis=0))
+    elif at == 'zero':
+        exog = np.zeros((1,exog.shape[1]))
+        exog[0,~ind] = 1
+    return exog
+
+def _get_count_effects(effects, exog, count_ind, method, model, params):
+    for i, tf in enumerate(count_ind):
+        if tf == True:
+            exog0 = exog.copy()
+            effect0 = model.predict(params, exog0)
+            wf1 = model.predict
+            exog0[:,i] += 1
+            effect1 = model.predict(params, exog0)
+    #TODO: compute discrete elasticity correctly
+    #Stata doesn't use the midpoint method or a weighted average.
+    #Check elsewhere
+            if 'ey' in method:
+                pass
+                ##TODO: don't know if this is theoretically correct
+                #fittedvalues0 = np.dot(exog0,params)
+                #fittedvalues1 = np.dot(exog1,params)
+                #weight1 = model.exog[:,i].mean()
+                #weight0 = 1 - weight1
+                #wfv = (.5*model.cdf(fittedvalues1) + \
+                        #        .5*model.cdf(fittedvalues0))
+                #effects[i] = ((effect1 - effect0)/wfv).mean()
+            effects[i] = (effect1 - effect0).mean()
+    return effects
+
+
+def _get_dummy_effects(effects, exog, dummy_ind, method, model, params):
+    for i, tf in enumerate(dummy_ind):
+        if tf == True:
+            exog0 = exog.copy() # only copy once, can we avoid a copy?
+            exog0[:,i] = 0
+            effect0 = model.predict(params, exog0)
+            #fittedvalues0 = np.dot(exog0,params)
+            exog0[:,i] = 1
+            effect1 = model.predict(params, exog0)
+            if 'ey' in method:
+                effect0 = np.log(effect0)
+                effect1 = np.log(effect1)
+            effects[i] = (effect1 - effect0).mean() # mean for overall
+    return effects
+
+def _effects_at(effects, at, ind):
+    if at == 'all':
+        effects = effects[:,ind]
+    elif at == 'overall':
+        effects = effects.mean(0)[ind]
+    else:
+        effects = effects[0,ind]
+    return effects
+
+
+#### Private Model Classes ####
 
 class DiscreteModel(base.LikelihoodModel):
     """
@@ -145,21 +223,30 @@ class DiscreteModel(base.LikelihoodModel):
         The rest of the docstring is from
         scikits.statsmodels.LikelihoodModel.fit
         """
-        if callback is None and not isinstance(self, MNLogit):
+        if callback is None:
             callback = self._check_perfect_pred
-        if start_params is None and isinstance(self, MNLogit):
-            start_params = np.zeros((self.exog.shape[1]*\
-                    (self.wendog.shape[1]-1)))
+        else:
+            pass # make a function factory to have multiple call-backs
         mlefit = super(DiscreteModel, self).fit(start_params=start_params,
                 method=method, maxiter=maxiter, full_output=full_output,
                 disp=disp, callback=callback, **kwargs)
-        if isinstance(self, MNLogit):
-            mlefit.params = mlefit.params.reshape(-1, self.exog.shape[1])
-        discretefit = DiscreteResults(self, mlefit)
-        return DiscreteResultsWrapper(discretefit)
+        return mlefit # up to subclasses to wrap results
 
     fit.__doc__ += base.LikelihoodModel.fit.__doc__
 
+    def predict(self, params, exog=None, linear=False):
+        """
+        Predict response variable of a model given exogenous variables.
+        """
+        raise NotImplementedError
+
+    def _derivative_exog(self, params, exog=None):
+        """
+        This should implement the derivative of the non-linear function
+        """
+        raise NotImplementedError
+
+class BinaryModel(DiscreteModel):
     def predict(self, params, exog=None, linear=False):
         """
         Predict response variable of a model given exogenous variables.
@@ -187,8 +274,139 @@ class DiscreteModel(base.LikelihoodModel):
         else:
             return np.dot(exog, params)
 
+    def fit(self, start_params=None, method='newton', maxiter=35,
+            full_output=1, disp=1, callback=None, **kwargs):
+        bnryfit = super(BinaryModel, self).fit(start_params=start_params,
+                method=method, maxiter=maxiter, full_output=full_output,
+                disp=disp, callback=callback, **kwargs)
+        discretefit = BinaryResults(self, bnryfit)
+        return BinaryResultsWrapper(discretefit)
+    fit.__doc__ = DiscreteModel.fit.__doc__
 
-class Poisson(DiscreteModel):
+    def _derivative_exog(self, params, exog=None):
+        """
+        For computing marginal effects.
+        """
+        #note, this form should be appropriate for
+        ## group 1 probit, logit, logistic, cloglog, heckprob, xtprobit
+        if exog == None:
+            exog = self.exog
+        return np.dot(self.pdf(np.dot(exog, params))[:,None], params[None,:])
+
+class MultinomialModel(BinaryModel):
+    def predict(self, params, exog=None, linear=False):
+        """
+        Predict response variable of a model given exogenous variables.
+
+        Parameters
+        ----------
+        params : array-like
+            2d array of fitted parameters of the model. Should be in the
+            order returned from the model.
+        exog : array-like
+            1d or 2d array of exogenous values.  If not supplied, the
+            whole exog attribute of the model is used.
+        linear : bool, optional
+            If True, returns the linear predictor dot(exog,params).  Else,
+            returns the value of the cdf at the linear predictor.
+
+        Notes
+        -----
+        Column 0 is the base case, the rest conform to the rows of params
+        shifted up one for the base case.
+        """
+        if exog is None: # do here to accomodate user-given exog
+            exog = self.exog
+        pred = super(MultinomialModel, self).predict(params, exog, linear)
+        if linear:
+            pred = np.column_stack((np.zeros(len(exog)), pred))
+        return pred
+
+    def fit(self, start_params=None, method='newton', maxiter=35, full_output=1,
+            disp=1, callback=None, **kwargs):
+        if start_params is None:
+            start_params = np.zeros((self.K * (self.J-1)))
+        else:
+            start_params = np.asarray(start_params)
+        callback = lambda x : None # placeholder until check_perfect_pred
+        # skip calling super to handle results from LikelihoodModel
+        mnfit = base.LikelihoodModel.fit(self, start_params = start_params,
+                method=method, maxiter=maxiter, full_output=full_output,
+                disp=disp, callback=callback, **kwargs)
+        mnfit.params = mnfit.params.reshape(self.K, -1, order='F')
+        mnfit = MultinomialResults(self, mnfit)
+        return MultinomialResultsWrapper(mnfit)
+    fit.__doc__ = DiscreteModel.fit.__doc__
+
+class CountModel(DiscreteModel):
+    def __init__(self, endog, exog, offset=None, exposure=None):
+        super(CountModel, self).__init__(endog, exog)
+        self._check_inputs(offset, exposure) # attaches if needed
+
+    def _check_inputs(self, offset, exposure):
+        if offset is not None:
+            offset = np.asarray(offset)
+            if offset.shape[0] != self.endog.shape[0]:
+                raise ValueError("offset is not the same length as endog")
+            self.offset = offset
+
+        if exposure is not None:
+            exposure = np.log(exposure)
+            if exposure.shape[0] != self.endog.shape[0]:
+                raise ValueError("exposure is not the same length as endog")
+            self.exposure = exposure
+
+    #TODO: are these two methods only for Poisson? or also Negative Binomial?
+    def predict(self, params, exog=None, exposure=None, offset=None, linear=False):
+        """
+        Predict response variable of a count model given exogenous variables.
+
+        Notes
+        -----
+        If exposure is specified, then it will be logged by the method.
+        The user does not need to log it first.
+        """
+        #TODO: add offset tp
+        if exog is None:
+            exog = self.exog
+            offset = getattr(self, 'offset', 0)
+            exposure = getattr(self, 'exposure', 0)
+
+        else:
+            if exposure is None:
+                exposure = 0
+            else:
+                exposure = np.log(exposure)
+
+        if not linear:
+            return np.exp(np.dot(exog, params) + exposure + offset) # not cdf
+        else:
+            return np.dot(exog, params) + exposure + offset
+            return super(CountModel, self).predict(params, exog, linear)
+
+    def _derivative_exog(self, params, exog=None):
+        """
+        """
+        # group 3 poisson, nbreg, zip, zinb
+        if exog == None:
+            exog = self.exog
+        return self.predict(params, exog)[:,None] * params[None,:]
+
+    def fit(self, start_params=None, method='newton', maxiter=35,
+            full_output=1, disp=1, callback=None, **kwargs):
+        cntfit = super(CountModel, self).fit(start_params=start_params,
+                method=method, maxiter=maxiter, full_output=full_output,
+                disp=disp, callback=callback, **kwargs)
+        discretefit = CountResults(self, cntfit)
+        return CountResultsWrapper(discretefit)
+    fit.__doc__ = DiscreteModel.fit.__doc__
+
+class OrderedModel(DiscreteModel):
+    pass
+
+#### Public Model Classes ####
+
+class Poisson(CountModel):
     """
     Poisson model for count data
 
@@ -235,7 +453,6 @@ class Poisson(DiscreteModel):
         The parameter `X` is :math:`X\\beta` in the above formula.
         """
         y = self.endog
-#        xb = np.dot(self.exog, params)
         return stats.poisson.cdf(y, np.exp(X))
 
     def pdf(self, X):
@@ -264,7 +481,6 @@ class Poisson(DiscreteModel):
         The parameter `X` is :math:`X\\beta` in the above formula.
         """
         y = self.endog
-#        xb = np.dot(self.exog,params)
         return stats.poisson.pmf(y, np.exp(X))
 
     def loglike(self, params):
@@ -284,9 +500,12 @@ class Poisson(DiscreteModel):
         --------
         .. math :: \\ln L=\\sum_{i=1}^{n}\\left[-\\lambda_{i}+y_{i}x_{i}^{\\prime}\\beta-\\ln y_{i}!\\right]
         """
-        XB = np.dot(self.exog, params)
+        offset = getattr(self, "offset", 0)
+        exposure = getattr(self, "exposure", 0)
+        XB = np.dot(self.exog, params) + offset + exposure
         endog = self.endog
-        return np.sum(-np.exp(XB) +  endog*XB - np.log(factorial(endog)))
+        #np.sum(stats.poisson.logpmf(endog, np.exp(XB)))
+        return np.sum(-np.exp(XB) +  endog*XB - gammaln(endog+1))
 
     def score(self, params):
         """
@@ -309,9 +528,10 @@ class Poisson(DiscreteModel):
 
         .. math:: \\ln\\lambda_{i}=X\\beta
         """
-
+        offset = getattr(self, "offset", 0)
+        exposure = getattr(self, "exposure", 0)
         X = self.exog
-        L = np.exp(np.dot(X,params))
+        L = np.exp(np.dot(X,params) + offset + exposure)
         return np.dot(self.endog - L,X)
 
     def hessian(self, params):
@@ -336,14 +556,16 @@ class Poisson(DiscreteModel):
         .. math:: \\ln\\lambda_{i}=X\\beta
 
         """
+        offset = getattr(self, "offset", 0)
+        exposure = getattr(self, "exposure", 0)
         X = self.exog
-        L = np.exp(np.dot(X,params))
+        L = np.exp(np.dot(X,params) + exposure + offset)
         return -np.dot(L*X.T, X)
 
 class NbReg(DiscreteModel):
     pass
 
-class Logit(DiscreteModel):
+class Logit(BinaryModel):
     """
     Binary choice logit model
 
@@ -476,8 +698,7 @@ class Logit(DiscreteModel):
         L = self.cdf(np.dot(X,params))
         return -np.dot(L*(1-L)*X.T,X)
 
-
-class Probit(DiscreteModel):
+class Probit(BinaryModel):
     """
     Binary choice Probit model
 
@@ -621,8 +842,7 @@ class Probit(DiscreteModel):
         L = q*self.pdf(q*XB)/self.cdf(q*XB)
         return np.dot(-L*(L+XB)*X.T,X)
 
-
-class MNLogit(DiscreteModel):
+class MNLogit(MultinomialModel):
     """
     Multinomial logit model
 
@@ -681,54 +901,32 @@ class MNLogit(DiscreteModel):
         self.df_model *= (self.J-1) # for each J - 1 equation.
         self.df_resid = self.exog.shape[0] - self.df_model - (self.J-1)
 
-
-    def _eXB(self, params, exog=None):
-        """
-        A private method used by the cdf.
-
-        Returns
-        -------
-        :math:`\exp(\beta_{j}^{\prime}x_{i})`
-
-        where :math:`j = 0,1,...,J`
-
-        Notes
-        -----
-        A row of ones is appended for the dropped category.
-        """
-        if exog == None:
-            exog = self.exog
-        eXB = np.exp(np.dot(params.reshape(-1, exog.shape[1]), exog.T))
-        eXB = np.vstack((np.ones((1, exog.shape[0])), eXB))
-        return eXB
-
     def pdf(self, eXB):
         """
         NotImplemented
         """
         pass
 
-    def cdf(self, eXB):
+    def cdf(self, X):
         """
         Multinomial logit cumulative distribution function.
 
         Parameters
         ----------
-        eXB : array
-            The exponential predictor of the model exp(XB).
+        X : array
+            The linear predictor of the model XB.
 
         Returns
         --------
-        The cdf evaluated at `eXB`.
+        The cdf evaluated at `XB`.
 
         Notes
         -----
         In the multinomial logit model.
         .. math:: \\frac{\\exp\\left(\\beta_{j}^{\\prime}x_{i}\\right)}{\\sum_{k=0}^{J}\\exp\\left(\\beta_{k}^{\\prime}x_{i}\\right)}
         """
-        num = eXB
-        denom = eXB.sum(axis=0)
-        return num/denom[None,:]
+        eXB = np.column_stack((np.ones(len(X)), np.exp(X)))
+        return eXB/eXB.sum(1)[:,None]
 
     def loglike(self, params):
         """
@@ -750,10 +948,10 @@ class MNLogit(DiscreteModel):
         where :math:`d_{ij}=1` if individual `i` chose alternative `j` and 0
         if not.
         """
+        params = params.reshape(self.K, -1, order='F')
         d = self.wendog
-        eXB = self._eXB(params)
-        logprob = np.log(self.cdf(eXB))
-        return (d.T * logprob).sum()
+        logprob = np.log(self.cdf(np.dot(self.exog,params)))
+        return np.sum(d * logprob)
 
     def score(self, params):
         """
@@ -778,9 +976,11 @@ class MNLogit(DiscreteModel):
         In the multinomial model ths score matrix is K x J-1 but is returned
         as a flattened array to work with the solvers.
         """
-        eXB = self._eXB(params)
-        firstterm = self.wendog[:,1:].T - self.cdf(eXB)[1:,:]
-        return np.dot(firstterm, self.exog).flatten()
+        params = params.reshape(self.K, -1, order='F')
+        firstterm = self.wendog[:,1:] - self.cdf(np.dot(self.exog,
+                                                  params))[:,1:]
+        #NOTE: might need to switch terms if params is reshaped
+        return np.dot(firstterm.T, self.exog).flatten()
 
     def hessian(self, params):
         """
@@ -809,9 +1009,9 @@ class MNLogit(DiscreteModel):
         This implementation does not take advantage of the symmetry of
         the Hessian and could probably be refactored for speed.
         """
+        params = params.reshape(self.K, -1, order='F')
         X = self.exog
-        eXB = self._eXB(params)
-        pr = self.cdf(eXB)
+        pr = self.cdf(np.dot(X,params))
         partials = []
         J = self.wendog.shape[1] - 1
         K = self.exog.shape[1]
@@ -819,9 +1019,9 @@ class MNLogit(DiscreteModel):
             for j in range(J): # this loop assumes we drop the first col.
                 if i == j:
                     partials.append(\
-                        -np.dot((pr[i+1,:]*(1-pr[j+1,:]))[None,:]*X.T,X))
+                        -np.dot(((pr[:,i+1]*(1-pr[:,j+1]))[:,None]*X).T,X))
                 else:
-                    partials.append(-np.dot(pr[i+1,:]*-pr[j+1,:][None,:]*X.T,X))
+                    partials.append(-np.dot(((pr[:,i+1]*-pr[:,j+1])[:,None]*X).T,X))
         H = np.array(partials)
         # the developer's notes on multinomial should clear this math up
         H = np.transpose(H.reshape(J,J,K,K), (0,2,1,3)).reshape(J*K,J*K)
@@ -887,13 +1087,17 @@ class MNLogit(DiscreteModel):
 #        return mlefit
 #
 
-class NBin(DiscreteModel):
+class NBin(CountModel):
     """
     Negative Binomial model.
     """
-#    def pdf(self, X, alpha):
-#        a1 = alpha**-1
-#        term1 = special.gamma(X + a1)/(special.agamma(X+1)*special.gamma(a1))
+    #def pdf(self, X, alpha):
+    #    a1 = alpha**-1
+    #    term1 = special.gamma(X + a1)/(special.agamma(X+1)*special.gamma(a1))
+
+    def _check_inputs(self, offset, exposure):
+        if offset is not None or exposure is not None:
+            raise ValueError("offset and exposure not implemented yet")
 
     def loglike(self, params):
         """
@@ -994,8 +1198,6 @@ class NBin(DiscreteModel):
 
 ### Results Class ###
 
-#class DiscreteResults(object):
-#TODO: these need to return z scores
 class DiscreteResults(base.LikelihoodModelResults):
     """
     A results class for the discrete dependent variable models.
@@ -1044,22 +1246,14 @@ class DiscreteResults(base.LikelihoodModelResults):
     """
 
     def __init__(self, model, mlefit):
-#        super(DiscreteResults, self).__init__(model, params,
-#                np.linalg.inv(-hessian), scale=1.)
+        #super(DiscreteResults, self).__init__(model, params,
+        #        np.linalg.inv(-hessian), scale=1.)
         self.model = model
         self.df_model = model.df_model
         self.df_resid = model.df_resid
         self._cache = resettable_cache()
         self.nobs = model.exog.shape[0]
         self.__dict__.update(mlefit.__dict__)
-
-    @cache_readonly
-    def bse(self):
-        bse = np.sqrt(np.diag(self.cov_params()))
-        if self.params.ndim == 1 or self.params.shape[1] == 1:
-            return bse
-        else:
-            return bse.reshape(self.params.shape)
 
     @cache_readonly
     def prsquared(self):
@@ -1075,8 +1269,8 @@ class DiscreteResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def llnull(self):
-        model = self.model # will this use a new instance?
-#TODO: what parameters to pass to fit?
+        model = self.model
+        #TODO: what parameters to pass to fit?
         null = model.__class__(model.endog, np.ones(self.nobs)).fit(disp=0)
         return null.llf
 
@@ -1085,11 +1279,11 @@ class DiscreteResults(base.LikelihoodModelResults):
         model = self.model
         endog = model.endog
         exog = model.exog
-#        M = # of individuals that share a covariate pattern
-# so M[i] = 2 for i = the two individuals who share a covariate pattern
-# use unique row pattern?
-#TODO: is this common to all models?  logit uses Pearson, should have options
-#These are the deviance residuals
+        #        M = # of individuals that share a covariate pattern
+        # so M[i] = 2 for i = the two individuals who share a covariate pattern
+        # use unique row pattern?
+        #TODO: is this common to all models?  logit uses Pearson, should have options
+        #These are the deviance residuals
         M = 1
         p = model.predict(self.params)
         Y_0 = np.where(exog==0)
@@ -1099,43 +1293,17 @@ class DiscreteResults(base.LikelihoodModelResults):
                 endog*np.sqrt(2*M*np.abs(np.log(p)))
         return res
 
-
     @cache_readonly
     def fittedvalues(self):
         return np.dot(self.model.exog, self.params)
 
     @cache_readonly
     def aic(self):
-        if hasattr(self.model, "J"):
-            return -2*(self.llf - (self.df_model+self.model.J-1))
-        else:
-            return -2*(self.llf - (self.df_model+1))
+        return -2*(self.llf - (self.df_model+1))
 
     @cache_readonly
     def bic(self):
-        if hasattr(self.model, "J"):
-            return -2*self.llf + np.log(self.nobs)*\
-                    (self.df_model+self.model.J-1)
-        else:
-            return -2*self.llf + np.log(self.nobs)*(self.df_model+1)
-
-    def conf_int(self, alpha=.05, cols=None):
-        if hasattr(self.model, "J"):
-            confint = super(DiscreteResults, self).conf_int(alpha=alpha,
-                                                            cols=cols)
-            return confint.transpose(0,2,1).reshape(self.model.J-1,
-                                                    self.model.K, 2)
-        else:
-            return super(DiscreteResults, self).conf_int(alpha=alpha, cols=cols)
-    conf_int.__doc__ = base.LikelihoodModelResults.conf_int.__doc__
-
-    @cache_readonly
-    def tvalues(self):
-        if hasattr(self.model, "J"): # for MNLogit
-            column = range(int(self.model.K))
-            return self.params/self.bse[:,column]
-        else:
-            return super(DiscreteResults, self).tvalues
+        return -2*self.llf + np.log(self.nobs)*(self.df_model+1)
 
     def margeff(self, at='overall', method='dydx', atexog=None, dummy=False,
             count=False):
@@ -1193,18 +1361,11 @@ class DiscreteResults(base.LikelihoodModelResults):
         When using after Poisson, returns the expected number of events
         per period, assuming that the model is loglinear.
         """
-#TODO:
-#        factor : None or dictionary, optional
-#            If a factor variable is present (it must be an integer, though
-#            of type float), then `factor` may be a dict with the zero-indexed
-#            column of the factor and the value should be the base-outcome.
-
-        # check arguments
-        if at not in ['overall','mean','median','zero','all']:
-            raise ValueError("%s not a valid option for `at`." % at)
-        if method not in ['dydx','eyex','dyex','eydx']:
-            raise ValueError("method is not understood.  Got %s" % method)
-
+        #TODO:
+        #factor : None or dictionary, optional
+        #    If a factor variable is present (it must be an integer, though
+        #    of type float), then `factor` may be a dict with the zero-indexed
+        #    column of the factor and the value should be the base-outcome.
 
         # get local variables
         model = self.model
@@ -1214,6 +1375,7 @@ class DiscreteResults(base.LikelihoodModelResults):
         exog = model.exog.copy() # copy because values are changed
         ind = exog.var(0) != 0 # index for non-constants
 
+        _check_margeff_args(at, method)
 
         # handle discrete exogenous variables
         if dummy:
@@ -1223,89 +1385,27 @@ class DiscreteResults(base.LikelihoodModelResults):
             _check_discrete_args(at, method)
             count_ind = _iscount(exog)
 
-
         # get the exogenous variables
-        if atexog is not None: # user supplied
-            if not isinstance(atexog, dict):
-                raise ValueError("atexog should be a dict not %s"\
-                        % type(atexog))
-            for key in atexog:
-                exog[:,key] = atexog[key]
-        if at == 'mean':
-            exog = np.atleast_2d(exog.mean(0))
-        elif at == 'median':
-            exog = np.atleast_2d(np.median(exog, axis=0))
-        elif at == 'zero':
-            exog = np.zeros((1,params.shape[0]))
-            exog[0,~ind] = 1
+        exog = _get_margeff_exog(exog, at, atexog, ind)
 
-        # get linear fitted values #TODO: just go ahead and get yhat?
-        fittedvalues = np.dot(exog, params) #TODO: add a predict method
-                                            # that takes an exog kwd
-
-        # group 1 probit, logit, logistic, cloglog, heckprob, xtprobit
-        if isinstance(model, (Probit, Logit)):
-            effects = np.dot(model.pdf(fittedvalues)[:,None],
-                    params[None,:])
-        # group 2 oprobit, ologit, gologit, mlogit, biprobit
-        #TODO
-        # group 3 poisson, nbreg, zip, zinb
-        elif isinstance(model, (Poisson)):
-            effects = np.exp(fittedvalues)[:,None]*params[None,:]
+        # get base marginal effects, handled by sub-classes
+        effects = model._derivative_exog(params, exog)
 
         if 'ex' in method:
             effects *= exog
-        if 'dy' in method:
-            if at == 'all':
-                effects = effects[:,ind]
-            elif at == 'overall':
-                effects = effects.mean(0)[ind]
-            else:
-                effects = effects[0,ind]
         if 'ey' in method:
-            effects /= model.cdf(fittedvalues[:,None])
-            if at == 'all':
-                effects = effects[:,ind]
-            elif at == 'overall':
-                effects = effects.mean(0)[ind]
-            else:
-                effects = effects[0,ind]
+            effects /= model.predict(params, exog)[:,None]
+
+        effects = _effects_at(effects, at, ind)
+
         if dummy == True:
-            for i, tf in enumerate(dummy_ind):
-                if tf == True:
-                    exog0 = exog.copy()
-                    exog0[:,i] = 0
-                    fittedvalues0 = np.dot(exog0,params)
-                    exog1 = exog.copy()
-                    exog1[:,i] = 1
-                    fittedvalues1 = np.dot(exog1, params)
-                    effect0 = model.cdf(fittedvalues0)
-                    effect1 = model.cdf(fittedvalues1)
-                    if 'ey' in method:
-                        effect0 = np.log(effect0)
-                        effect1 = np.log(effect1)
-                    effects[i] = (effect1 - effect0).mean() # mean for overall
+            effects = _get_dummy_effects(effects, exog, dummy_ind, method,
+                                         model, params)
+
         if count == True:
-            for i, tf in enumerate(count_ind):
-                if tf == True:
-                    exog0 = exog.copy()
-                    exog1 = exog.copy()
-                    exog1[:,i] += 1
-                    effect0 = model.cdf(np.dot(exog0, params))
-                    effect1 = model.cdf(np.dot(exog1, params))
-#TODO: compute discrete elasticity correctly
-#Stata doesn't use the midpoint method or a weighted average.
-#Check elsewhere
-                    if 'ey' in method:
-#                        #TODO: don't know if this is theoretically correct
-                        fittedvalues0 = np.dot(exog0,params)
-                        fittedvalues1 = np.dot(exog1,params)
-#                        weight1 = model.exog[:,i].mean()
-#                        weight0 = 1 - weight1
-                        wfv = (.5*model.cdf(fittedvalues1) + \
-                                .5*model.cdf(fittedvalues0))
-                        effects[i] = ((effect1 - effect0)/wfv).mean()
-                    effects[i] = (effect1 - effect0).mean()
+            effects = _get_count_effects(effects, exog, count_ind, method,
+                                         model, params)
+
         # Set standard error of the marginal effects by Delta method.
         self.margfx_se = None
         self.margfx = effects
@@ -1345,7 +1445,7 @@ class DiscreteResults(base.LikelihoodModelResults):
                      ('Method:', ['MLE']),
                      ('Date:', None),
                      ('Time:', None),
-#                     ('No. iterations:', ["%d" % self.mle_retvals['iterations']]),
+                     #('No. iterations:', ["%d" % self.mle_retvals['iterations']]),
                      ('converged:', ["%s" % self.mle_retvals['converged']])
                       ]
 
@@ -1372,9 +1472,9 @@ class DiscreteResults(base.LikelihoodModelResults):
                              use_t=True)
 
         #diagnostic table not used yet
-#        smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
-#                          yname=yname, xname=xname,
-#                          title="")
+        #smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
+        #                   yname=yname, xname=xname,
+        #                   title="")
 
         #TODO: attach only to binary models
         if self.model.__class__.__name__ in ['Logit', 'Probit']:
@@ -1386,25 +1486,71 @@ class DiscreteResults(base.LikelihoodModelResults):
             #add warnings/notes
             etext =[]
             if predclose_sum == len(fittedvalues): #nobs?
-                wstr = \
-'''Complete Separation: The results show that there is complete separation.
-In this case the Maximum Likelihood Estimator does not exist and the parameters
-are not identified.'''
+                wstr = "Complete Separation: The results show that there is"
+                wstr += "complete separation.\n"
+                wstr += "In this case the Maximum Likelihood Estimator does "
+                wstr += "not exist and the parameters\n"
+                wstr += "are not identified."
                 etext.append(wstr)
             elif predclose_frac > 0.1:  #TODO: get better diagnosis
-                wstr = \
-'''Possibly complete quasi-separation: A fraction %f4.2 of observations can be
-perfectly predicted. This might indicate that there is complete
-quasi-separation. In this case some parameters will not be identified.''' % predclose_frac
+                wstr = "Possibly complete quasi-separation: A fraction "
+                wstr += "%4.2f of observations can be\n" % predclose_frac
+                wstr += "perfectly predicted. This might indicate that there "
+                wstr += "is complete\nquasi-separation. In this case some "
+                wstr += "parameters will not be identified."
                 etext.append(wstr)
-
             if etext:
                 smry.add_extra_txt(etext)
-
         return smry
-class DiscreteResultsWrapper(lm.RegressionResultsWrapper):
+
+class CountResults(DiscreteResults):
     pass
-wrap.populate_wrapper(DiscreteResultsWrapper, DiscreteResults)
+
+class OrderedResults(DiscreteResults):
+    pass
+
+class BinaryResults(DiscreteResults):
+    pass
+
+class MultinomialResults(DiscreteResults):
+    @cache_readonly
+    def bse(self):
+        bse = np.sqrt(np.diag(self.cov_params()))
+        return bse.reshape(self.params.shape, order='F')
+
+    @cache_readonly
+    def aic(self):
+        return -2*(self.llf - (self.df_model+self.model.J-1))
+
+    @cache_readonly
+    def bic(self):
+        return -2*self.llf + np.log(self.nobs)*(self.df_model+self.model.J-1)
+
+    def conf_int(self, alpha=.05, cols=None):
+        confint = super(DiscreteResults, self).conf_int(alpha=alpha,
+                                                            cols=cols)
+        return confint.transpose(0,2,1).reshape(self.model.J-1,
+                                                    self.model.K, 2,
+                                                    order='F')
+
+#### Results Wrappers ####
+
+class OrderedResultsWrapper(lm.RegressionResultsWrapper):
+    pass
+wrap.populate_wrapper(OrderedResultsWrapper, OrderedResults)
+
+class CountResultsWrapper(lm.RegressionResultsWrapper):
+    pass
+wrap.populate_wrapper(CountResultsWrapper, CountResults)
+
+class BinaryResultsWrapper(lm.RegressionResultsWrapper):
+    pass
+wrap.populate_wrapper(BinaryResultsWrapper, BinaryResults)
+
+class MultinomialResultsWrapper(lm.RegressionResultsWrapper):
+    pass
+wrap.populate_wrapper(MultinomialResultsWrapper, MultinomialResults)
+
 
 if __name__=="__main__":
     import numpy as np
