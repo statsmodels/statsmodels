@@ -33,6 +33,14 @@ def parallel_func(func, n_jobs, verbose=5):
         func if not parallel or delayed(func)
     n_jobs: int
         Number of jobs >= 0
+
+    Examples
+    --------
+    >>> from math import sqrt
+    >>> from scikits.statsmodels.tools.parallel import parallel_func
+    >>> parallel, p_func, n_jobs = parallel_func(sqrt, n_jobs=-1, verbose=0)
+    >>> print n_jobs
+    >>> parallel(p_func(i**2) for i in range(10))
     """
     try:
         try:
