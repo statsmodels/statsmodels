@@ -283,7 +283,9 @@ class IRAnalysis(BaseIRAnalysis):
     def err_band_sz1(self, orth=False, svar=False, repl=1000,
                      signif=0.05, seed=None, burn=100, component=None):
         """
-        IRF Sims-Zha error band method 1. Assumes symmetric error bands around mean.
+        IRF Sims-Zha error band method 1. Assumes symmetric error bands around
+        mean.
+
         Parameters
         ----------
         orth : bool, default False
@@ -303,7 +305,8 @@ class IRAnalysis(BaseIRAnalysis):
 
         Reference
         ---------
-        Sims, Christoper A., and Tao Zha. 1999. “Error Bands for Impulse Response.” Econometrica 67: 1113-1155.
+        Sims, Christopher A., and Tao Zha. 1999. "Error Bands for Impulse
+        Response". Econometrica 67: 1113-1155.
         """
 
         model = self.model
@@ -363,7 +366,8 @@ class IRAnalysis(BaseIRAnalysis):
 
         Reference
         ---------
-        Sims, Christoper A., and Tao Zha. 1999. “Error Bands for Impulse Response.” Econometrica 67: 1113-1155.
+        Sims, Christopher A., and Tao Zha. 1999. "Error Bands for Impulse
+        Response". Econometrica 67: 1113-1155.
         """
         model = self.model
         periods = self.periods
@@ -429,7 +433,8 @@ class IRAnalysis(BaseIRAnalysis):
 
         Reference
         ---------
-        Sims, Christoper A., and Tao Zha. 1999. “Error Bands for Impulse Response.” Econometrica 67: 1113-1155.
+        Sims, Christopher A., and Tao Zha. 1999. "Error Bands for Impulse
+        Response". Econometrica 67: 1113-1155.
         """
 
         model = self.model

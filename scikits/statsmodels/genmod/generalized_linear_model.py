@@ -662,8 +662,8 @@ class GLMResults(base.LikelihoodModelResults):
         return smry
 
 
-    def summary_old(self, yname=None, xname=None, title='Generalized linear model',
-                returns='text'):
+    def summary_old(self, yname=None, xname=None,
+                    title='Generalized linear model', returns='text'):
         """
         Print a table of results or returns SimpleTable() instance which
         summarizes the Generalized linear model results.
@@ -695,7 +695,8 @@ class GLMResults(base.LikelihoodModelResults):
 
         Option :
         returns='csv'
-                returns a string of csv of the results, to import into a spreadsheet
+                returns a string of csv of the results, to import into a
+                spreadsheet
 
         Option :
         returns='latex'
@@ -721,8 +722,7 @@ class GLMResults(base.LikelihoodModelResults):
         conf_int calculated from normal dist.
         """
         import time as Time
-        from iolib import SimpleTable
-        from stattools import jarque_bera, omni_normtest, durbin_watson
+        from scikits.statsmodels.iolib import SimpleTable
 
         yname = 'Y'
         if xname is None:
@@ -733,32 +733,16 @@ class GLMResults(base.LikelihoodModelResults):
         #xname = xname
         time = Time.localtime()
         dist_family = self.model.family.__class__.__name__
-        aic = self.aic
-        bic = self.bic
-        deviance = self.deviance
         df_model = self.df_model
         df_resid = self.df_resid
-        fittedvalues = self.fittedvalues
         llf = self.llf
-        mu = self.mu
         nobs = self.nobs
-        normalized_cov_params = self.normalized_cov_params
-        null_deviance = self.null_deviance
         params = self.params
-        pearson_chi2 = self.pearson_chi2
-        pinv_wexog = self.pinv_wexog
-        resid_anscombe = self.resid_anscombe
-        resid_deviance = self.resid_deviance
-        resid_pearson = self.resid_pearson
-        resid_response = self.resid_response
-        resid_working = self.resid_working
         scale = self.scale
 #TODO   #stand_errors = self.stand_errors
         stand_errors = self.bse  #[' ' for x in range(len(self.params))]
 #Added note about conf_int
-        pvalues = self.pvalues
         conf_int = self.conf_int()
-        cov_params = self.cov_params()
         #f_test() = self.f_test()
         t = self.tvalues
         #t_test = self.t_test()
