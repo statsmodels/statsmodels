@@ -1,6 +1,7 @@
 import numpy as np
 from numpy.testing import assert_almost_equal
-import scikits.statsmodels.api as sm
+#import scikits.statsmodels.api as sm
+from scikits.statsmodels.nonparametric.lowess import lowess
 
 
 class  TestLowess(object):
@@ -40,7 +41,7 @@ class  TestLowess(object):
                                    [ 18.        ,  17.26380699],
                                    [ 19.        ,  18.0466769 ]])
 
-        actual_lowess = sm.nonparametric.lowess(y,x)
+        actual_lowess = lowess(y,x)
 
         assert_almost_equal(expected_lowess, actual_lowess)
 
@@ -103,8 +104,8 @@ class  TestLowess(object):
                                            [ 19.        ,  19.31714769]])
                                             
         
-        actual_lowess_no_iter = sm.nonparametric.lowess(y,x,it=0)
-        actual_lowess_3_iter = sm.nonparametric.lowess(y,x,it=3)
+        actual_lowess_no_iter = lowess(y,x,it=0)
+        actual_lowess_3_iter = lowess(y,x,it=3)
 
         assert_almost_equal(expected_lowess_no_iter, actual_lowess_no_iter)
         assert_almost_equal(expected_lowess_3_iter, actual_lowess_3_iter)
@@ -204,8 +205,8 @@ class  TestLowess(object):
                                        [  5.84986210e+00,  -5.42520396e-01],
                                        [  6.28318548e+00,  -3.23807686e-01]])
 
-        actual_lowess_23 = sm.nonparametric.lowess(y,x,frac=2./3)
-        actual_lowess_15 = sm.nonparametric.lowess(y,x,frac=1./5)
+        actual_lowess_23 = lowess(y,x,frac=2./3)
+        actual_lowess_15 = lowess(y,x,frac=1./5)
 
         assert_almost_equal(expected_lowess_23, actual_lowess_23)
         assert_almost_equal(expected_lowess_15, actual_lowess_15)

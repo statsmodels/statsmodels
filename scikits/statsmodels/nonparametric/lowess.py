@@ -1,5 +1,5 @@
 """
-Univariate lowess function, like in R. 
+Univariate lowess function, like in R.
 
 References
 ----------
@@ -15,7 +15,7 @@ from scipy.linalg import lstsq
 def lowess(endog, exog, frac = 2./3, it = 3):
     """
     LOWESS (Locally Weighted Scatterplot Smoothing)
-    
+
     A lowess function that outs smoothed estimates of endog
     at the given exog values from points (exog, endog)
 
@@ -27,9 +27,9 @@ def lowess(endog, exog, frac = 2./3, it = 3):
         The x-values of the observed points
     frac: float
         Between 0 and 1. The fraction of the data used
-        when estimating each y-value. 
+        when estimating each y-value.
     it: int
-        The number of residual-based reweightings 
+        The number of residual-based reweightings
         to perform.
 
     Returns
@@ -37,28 +37,28 @@ def lowess(endog, exog, frac = 2./3, it = 3):
     out: numpy array
         A numpy array with two columns. The first column
         is the sorted x values and the second column the
-        associated estimated y-values. 
+        associated estimated y-values.
 
     Notes
     -----
     This lowess function implements the algorithm given in the
-    reference below using local linear estimates. 
+    reference below using local linear estimates.
 
     Suppose the input data has N points. The algorithm works by
-    estimating the true y_i by taking the frac*N closest points 
+    estimating the true y_i by taking the frac*N closest points
     to (x_i,y_i) based on their x values and estimating y_i
     using a weighted linear regression. The weight for (x_j,y_j)
-    is __lowess_tricube function applied to |x_i-x_j|. 
-    
+    is _lowess_tricube function applied to |x_i-x_j|.
+
     If iter>0, then further weighted local linear regressions
     are performed, where the weights are the same as above
-    times the __lowess_bisquare function of the residuals. Each iteration
+    times the _lowess_bisquare function of the residuals. Each iteration
     takes approximately the same amount of time as the original fit,
-    so these iterations are expensive. They are most useful when 
-    the noise has extremely heavy tails, such as Cauchy noise. 
+    so these iterations are expensive. They are most useful when
+    the noise has extremely heavy tails, such as Cauchy noise.
     Noise with less heavy-tails, such as t-distributions with df>2,
-    are less problematic. The weights downgrade the influence of 
-    points with large residuals. In the extreme case, points whose 
+    are less problematic. The weights downgrade the influence of
+    points with large residuals. In the extreme case, points whose
     residuals are larger than 6 times the median absolute residual
     are given weight 0.
 
@@ -68,16 +68,16 @@ def lowess(endog, exog, frac = 2./3, it = 3):
 
     References
     ----------
-    Cleveland, W.S. (1979) "Robust Locally Weighted Regression 
-    and Smoothing Scatterplots". Journal of the American Statistical 
+    Cleveland, W.S. (1979) "Robust Locally Weighted Regression
+    and Smoothing Scatterplots". Journal of the American Statistical
     Association 74 (368): 829-836.
 
 
     Examples
     --------
-    The below allows a comparison between how different the fits from 
+    The below allows a comparison between how different the fits from
     lowess for different values of frac can be.
-    
+
     >>> import numpy as np
     >>> import scikits.statsmodels.api as sm
     >>> from sm.nonparametric import lowess
@@ -86,8 +86,8 @@ def lowess(endog, exog, frac = 2./3, it = 3):
     >>> z = lowess(y,x)
     >>> w = lowess(y,x, frac=1./3)
 
-    This gives a similar comparison for when it is 0 vs not. 
-    
+    This gives a similar comparison for when it is 0 vs not.
+
     >>> import numpy as np
     >>> import scipy.stats as stats
     >>> import scikits.statsmodels.api as sm
@@ -112,17 +112,17 @@ def lowess(endog, exog, frac = 2./3, it = 3):
 
     n = exog.shape[0]
     fitted = np.zeros(n)
-    
+
     k = int(frac * n)
 
     index_array = np.argsort(exog)
-    x_copy = np.array(exog[index_array], dtype ='float32')
+    x_copy = np.array(exog[index_array]) #, dtype ='float32')
     y_copy = endog[index_array]
 
-    fitted, weights = __lowess_initial_fit(x_copy, y_copy, k, n)
+    fitted, weights = _lowess_initial_fit(x_copy, y_copy, k, n)
 
     for i in xrange(it):
-        __lowess_robustify_fit(x_copy, y_copy, fitted, 
+        _lowess_robustify_fit(x_copy, y_copy, fitted,
                                             weights, k, n)
 
     out = np.array([x_copy, fitted]).T
@@ -131,10 +131,10 @@ def lowess(endog, exog, frac = 2./3, it = 3):
     return out
 
 
-def __lowess_initial_fit(x_copy, y_copy, k, n):
+def _lowess_initial_fit(x_copy, y_copy, k, n):
     """
     The initial weighted local linear regression for lowess.
- 
+
     Parameters
     ----------
     x_copy : 1-d ndarray
@@ -146,11 +146,11 @@ def __lowess_initial_fit(x_copy, y_copy, k, n):
         each estimated point
     n : int
         The total number of points
-    
+
     Returns
     -------
     fitted : 1-d ndarray
-        The fitted y-values 
+        The fitted y-values
     weights : 2-d ndarray
         An n by k array. The contribution to the weights in the
         local linear fit coming from the distances between the
@@ -164,31 +164,29 @@ def __lowess_initial_fit(x_copy, y_copy, k, n):
     fitted = np.zeros(n)
 
     for i in xrange(n):
-        
+        #note: all _lowess functions are inplace, no return
         left_width = x_copy[i] - x_copy[nn_indices[0]]
         right_width = x_copy[nn_indices[1]-1] - x_copy[i]
         width = max(left_width, right_width)
-        
-        __lowess_wt_standardize(weights[i,:], 
-                                x_copy[nn_indices[0]:nn_indices[1]], 
+        _lowess_wt_standardize(weights[i,:],
+                                x_copy[nn_indices[0]:nn_indices[1]],
                             x_copy[i], width)
-        __lowess_tricube(weights[i,:])
-        np.sqrt(weights[i,:], out=weights[i,:])
+        _lowess_tricube(weights[i,:])
+        weights[i,:] = np.sqrt(weights[i,:])
 
         X[:,1] = x_copy[nn_indices[0]:nn_indices[1]]
         y_i = weights[i,:] * y_copy[nn_indices[0]:nn_indices[1]]
-        
+
         beta = lstsq(weights[i,:].reshape(k,1) * X, y_i)[0]
-    
         fitted[i] = beta[0] + beta[1]*x_copy[i]
-        
-        __lowess_update_nn(x_copy, nn_indices, i+1)
-    
+
+        _lowess_update_nn(x_copy, nn_indices, i+1)
+
 
     return fitted, weights
 
 
-def __lowess_wt_standardize(weights, new_entries, x_copy_i, width):
+def _lowess_wt_standardize(weights, new_entries, x_copy_i, width):
     """
     The initial phase of creating the weights.
     Subtract the current x_i and divide by the width.
@@ -203,10 +201,10 @@ def __lowess_wt_standardize(weights, new_entries, x_copy_i, width):
         x[i], the i'th point in the (sorted) x values
     width : float
         The maximum distance between x[i] and any point in new_entries
-    
+
     Returns
     -------
-    Nothing. The modifications are made to weight in place. 
+    Nothing. The modifications are made to weight in place.
 
     """
     weights[:] = new_entries
@@ -215,12 +213,12 @@ def __lowess_wt_standardize(weights, new_entries, x_copy_i, width):
 
 
 
-def __lowess_robustify_fit(x_copy, y_copy, fitted, weights, k, n):
+def _lowess_robustify_fit(x_copy, y_copy, fitted, weights, k, n):
     """
     Additional weighted local linear regressions, performed if
     iter>0. They take into account the sizes of the residuals,
     to eliminate the effect of extreme outliers.
- 
+
     Parameters
     ----------
     x_copy : 1-d ndarray
@@ -247,20 +245,20 @@ def __lowess_robustify_fit(x_copy, y_copy, fitted, weights, k, n):
     """
     nn_indices = [0,k]
     X = np.ones((k,2))
-    
+
     residual_weights = np.copy(y_copy)
     residual_weights.shape = (n,)
     residual_weights -= fitted
-    np.absolute(residual_weights, out=residual_weights)
+    residual_weights = np.absolute(residual_weights)#, out=residual_weights)
     s = np.median(residual_weights)
     residual_weights /= (6*s)
     too_big = residual_weights>=1
-    __lowess_bisquare(residual_weights)
+    _lowess_bisquare(residual_weights)
     residual_weights[too_big] = 0
-    
+
 
     for i in xrange(n):
-        
+
         total_weights = weights[i,:] * residual_weights[nn_indices[0]:
                                                         nn_indices[1]]
 
@@ -269,16 +267,16 @@ def __lowess_robustify_fit(x_copy, y_copy, fitted, weights, k, n):
         total_weights.shape = (k,1)
 
         beta = lstsq(total_weights * X, y_i)[0]
-    
+
         fitted[i] = beta[0] + beta[1] * x_copy[i]
-        
-        __lowess_update_nn(x_copy, nn_indices, i+1)
-    
+
+        _lowess_update_nn(x_copy, nn_indices, i+1)
 
 
 
 
-def __lowess_update_nn(x, cur_nn,i):
+
+def _lowess_update_nn(x, cur_nn,i):
     """
     Update the endpoints of the nearest neighbors to
     the ith point.
@@ -297,7 +295,7 @@ def __lowess_update_nn(x, cur_nn,i):
 
     Returns
     -------
-    Nothing. It modifies cur_nn in place. 
+    Nothing. It modifies cur_nn in place.
 
     """
     while True:
@@ -312,11 +310,11 @@ def __lowess_update_nn(x, cur_nn,i):
         else:
             break
 
-def __lowess_tricube(t):
+def _lowess_tricube(t):
     """
     The _tricube function applied to a numpy array.
     The tricube function is (1-abs(t)**3)**3.
-    
+
     Parameters
     ----------
     t : ndarray
@@ -328,16 +326,16 @@ def __lowess_tricube(t):
     Nothing
     """
     #t = (1-np.abs(t)**3)**3
-    np.absolute(t, out=t)
-    __lowess_mycube(t)
-    np.negative(t, out = t)
+    t[:] = np.absolute(t) #, out=t) #numpy version?
+    _lowess_mycube(t)
+    t[:] = np.negative(t) #, out = t)
     t += 1
-    __lowess_mycube(t)
+    _lowess_mycube(t)
 
-def __lowess_mycube(t):
+def _lowess_mycube(t):
     """
     Fast matrix cube
-    
+
     Parameters
     ----------
     t : ndarray
@@ -346,17 +344,17 @@ def __lowess_mycube(t):
     Returns
     -------
     Nothing
-    
+
     """
     #t **= 3
     t2 = t*t
     t *= t2
 
-def __lowess_bisquare(t):
+def _lowess_bisquare(t):
     """
     The bisquare function applied to a numpy array.
-    The bisquare function is (1-t**2)**2. 
-    
+    The bisquare function is (1-t**2)**2.
+
     Parameters
     ----------
     t : ndarray
@@ -365,11 +363,11 @@ def __lowess_bisquare(t):
     Returns
     -------
     Nothing
-    
+
     """
     #t = (1-t**2)**2
     t *= t
-    np.negative(t, out=t)
+    t[:] = np.negative(t) #, out=t)
     t += 1
     t *= t
 
