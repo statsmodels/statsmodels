@@ -9,8 +9,7 @@ who generate a smooth fit of a set of (x,y) pairs.
 # pylint: disable-msg=E1101
 
 import numpy as np
-import numpy.linalg as L
-import kernel
+import kernels
 #import numbers
 #from scipy.linalg import solveh_banded
 #from scipy.optimize import golden
@@ -30,7 +29,7 @@ class KernelSmoother(object):
     """
     def __init__(self, x, y, Kernel = None):
         if Kernel is None:
-            Kernel = kernel.Gaussian()
+            Kernel = kernels.Gaussian()
         self.Kernel = Kernel
         self.x = np.array(x)
         self.y = np.array(y)
@@ -94,6 +93,10 @@ class PolySmoother(object):
     Fit based on weighted least squares.
 
     The x values can be specified at instantiation or when called.
+
+    This is a 3 liner with OLS or WLS, see test.
+    It's here as a test smoother for GAM
+
     """
     #JP: heavily adjusted to work as plugin replacement for bspline
     #   smoother in gam.py  initalized by function default_smoother
@@ -105,7 +108,24 @@ class PolySmoother(object):
     #          and additional results (OLS on polynomial of x (x is 1d?))
 
 
+    def __init__(self, order, x=None):
+        #order = 4 # set this because we get knots instead of order
+        self.order = order
+
+        #print order, x.shape
+        self.coef = np.zeros((order+1,), np.float64)
+        if x is not None:
+            if x.ndim > 1:
+                print 'Warning: 2d x detected in PolySmoother init, shape:', x.shape
+                x=x[0,:] #check orientation
+            self.X = np.array([x**i for i in range(order+1)]).T
+
     def df_fit(self):
+        '''alias of df_model for backwards compatibility
+        '''
+        return self.df_model()
+
+    def df_model(self):
         """
         Degrees of freedom used in the fit.
         """
@@ -116,6 +136,11 @@ class PolySmoother(object):
         pass
 
     def smooth(self,*args, **kwds):
+        '''alias for fit,  for backwards compatibility,
+
+        do we need it with different behavior than fit?
+
+        '''
         return self.fit(*args, **kwds)
 
     def df_resid(self):
@@ -124,20 +149,17 @@ class PolySmoother(object):
         """
         return self.N - self.order - 1
 
-    def __init__(self, order, x=None):
-        order = 3 # set this because we get knots instead of order
-        self.order = order
-
-        #print order, x.shape
-        self.coef = np.zeros((order+1,), np.float64)
-        if x is not None:
-            if x.ndim > 1: x=x[0,:]
-            self.X = np.array([x**i for i in range(order+1)]).T
-
     def __call__(self, x=None):
+        return self.predict(x=x)
+
+
+    def predict(self, x=None):
 
         if x is not None:
-            if x.ndim > 1: x=x[0,:]
+            #if x.ndim > 1: x=x[0,:]  #why this this should select column not row
+            if x.ndim > 1:
+                print 'Warning: 2d x detected in PolySmoother predict, shape:', x.shape
+                x=x[:,0]  #TODO: check and clean this up
             X = np.array([(x**i) for i in range(self.order+1)])
         else: X = self.X
         #return np.squeeze(np.dot(X.T, self.coef))
@@ -160,7 +182,9 @@ class PolySmoother(object):
             if not hasattr(self, "X"):
                 raise ValueError("x needed to fit PolySmoother")
         else:
-            if x.ndim > 1: x=x[0,:]
+            if x.ndim > 1: 
+                print 'Warning: 2d x detected in PolySmoother predict, shape:', x.shape
+                #x=x[0,:] #TODO: check orientation, row or col
             self.X = np.array([(x**i) for i in range(self.order+1)]).T
         #print _w.shape
 
@@ -169,80 +193,14 @@ class PolySmoother(object):
         _y = y * _w#[:,None]
         #self.coef = np.dot(L.pinv(X).T, _y[:,None])
         #self.coef = np.dot(L.pinv(X), _y)
-        self.coef = L.lstsq(X, _y)[0]
+        self.coef = np.linalg.lstsq(X, _y)[0]
+        self.params = np.squeeze(self.coef)
 
 
 
 
 
 
-if __name__ == "__main__":
-    from scikits.statsmodels.sandbox import smoothers as s
-    import matplotlib.pyplot as plt
-    from numpy import sin, array, random
-
-    import time
-    random.seed(500)
-    x = random.normal(size = 250)
-    y = array([sin(i*5)/i + 2*i + (3+i)*random.normal() for i in x])
-
-    K = s.kernel.Biweight(0.25)
-    K2 = s.kernel.CustomKernel(lambda x: (1 - x*x)**2, 0.25, domain = [-1.0,
-                               1.0])
-
-    KS = s.KernelSmoother(x, y, K)
-    KS2 = s.KernelSmoother(x, y, K2)
-
-
-    KSx = np.arange(-3, 3, 0.1)
-    start = time.time()
-    KSy = KS.conf(KSx)
-    KVar = KS.std(KSx)
-    print time.time() - start    # This should be significantly quicker...
-    start = time.time()          #
-    KS2y = KS2.conf(KSx)         #
-    K2Var = KS2.std(KSx)         #
-    print time.time() - start    # ...than this.
-
-    KSConfIntx, KSConfInty = KS.conf(15)
-
-    print "Norm const should be 0.9375"
-    print K2.norm_const
-
-    print "L2 Norms Should Match:"
-    print K.L2Norm
-    print K2.L2Norm
-
-    print "Fit values should match:"
-    #print zip(KSy, KS2y)
-    print KSy[28]
-    print KS2y[28]
-
-    print "Var values should match:"
-    #print zip(KVar, K2Var)
-    print KVar[39]
-    print K2Var[39]
-
-    fig = plt.figure()
-    ax = fig.add_subplot(221)
-    ax.plot(x, y, "+")
-    ax.plot(KSx, KSy, "o")
-    ax.set_ylim(-20, 30)
-    ax2 = fig.add_subplot(222)
-    ax2.plot(KSx, KVar, "o")
-
-    ax3 = fig.add_subplot(223)
-    ax3.plot(x, y, "+")
-    ax3.plot(KSx, KS2y, "o")
-    ax3.set_ylim(-20, 30)
-    ax4 = fig.add_subplot(224)
-    ax4.plot(KSx, K2Var, "o")
-
-    fig2 = plt.figure()
-    ax5 = fig2.add_subplot(111)
-    ax5.plot(x, y, "+")
-    ax5.plot(KSConfIntx, KSConfInty, "o")
-    #plt.show()
 
 
 
