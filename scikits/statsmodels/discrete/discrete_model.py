@@ -184,7 +184,7 @@ class DiscreteModel(base.LikelihoodModel):
     call signature expected of child classes in addition to those of
     scikits.statsmodels.model.LikelihoodModel.
     """
-    def __init___(endog, exog):
+    def __init___(self, endog, exog):
         super(DiscreteModel, self).__init__(endog, exog)
 
     def initialize(self):
