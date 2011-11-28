@@ -1487,7 +1487,7 @@ class DiscreteResults(base.LikelihoodModelResults):
         if yname_list is None:
             yname_list = yname
         smry.add_table_params(self, yname=yname_list, xname=xname, alpha=.05,
-                             use_t=True)
+                             use_t=False)
 
         #diagnostic table not used yet
         #smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
