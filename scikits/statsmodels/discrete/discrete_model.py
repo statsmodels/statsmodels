@@ -215,8 +215,8 @@ class DiscreteModel(base.LikelihoodModel):
             msg = "Perfect separation detected, results not available"
             raise PerfectSeparationError(msg)
 
-    def fit(self, start_params=None, method='newton', maxiter=35, full_output=1,
-            disp=1, callback=None, **kwargs):
+    def fit(self, start_params=None, method='newton', maxiter=35,
+            full_output=1, disp=1, callback=None, **kwargs):
         """
         Fit the model using maximum likelihood.
 
@@ -322,8 +322,8 @@ class MultinomialModel(BinaryModel):
             pred = np.column_stack((np.zeros(len(exog)), pred))
         return pred
 
-    def fit(self, start_params=None, method='newton', maxiter=35, full_output=1,
-            disp=1, callback=None, **kwargs):
+    def fit(self, start_params=None, method='newton', maxiter=35,
+            full_output=1, disp=1, callback=None, **kwargs):
         if start_params is None:
             start_params = np.zeros((self.K * (self.J-1)))
         else:
@@ -357,7 +357,8 @@ class CountModel(DiscreteModel):
             self.exposure = exposure
 
     #TODO: are these two methods only for Poisson? or also Negative Binomial?
-    def predict(self, params, exog=None, exposure=None, offset=None, linear=False):
+    def predict(self, params, exog=None, exposure=None, offset=None,
+                linear=False):
         """
         Predict response variable of a count model given exogenous variables.
 
