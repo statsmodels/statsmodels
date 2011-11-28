@@ -294,16 +294,6 @@ class BinaryModel(DiscreteModel):
         return np.dot(self.pdf(np.dot(exog, params))[:,None], params[None,:])
 
 class MultinomialModel(BinaryModel):
-    def _maybe_convert_ynames_int(self, ynames):
-        # see if they're integers
-        try:
-            for i in ynames:
-                if ynames[i] % 1 == 0:
-                    ynames[i] = str(int(ynames[i]))
-        except TypeError:
-            pass
-        return ynames
-
     def initialize(self):
         """
         Preprocesses the data for MNLogit.
@@ -315,18 +305,12 @@ class MultinomialModel(BinaryModel):
         #This is also a "whiten" method as used in other models (eg regression)
         wendog, ynames = tools.categorical(self.endog, drop=True,
                 dictnames=True)
-
+        self._ynames_map = ynames
         self.wendog = wendog    # don't drop first category
         self.J = float(wendog.shape[1])
         self.K = float(self.exog.shape[1])
         self.df_model *= (self.J-1) # for each J - 1 equation.
         self.df_resid = self.exog.shape[0] - self.df_model - (self.J-1)
-        yname = self._data.ynames
-        ynames = self._maybe_convert_ynames_int(ynames)
-        # use range below to ensure sortedness
-        ynames = [ynames[key] for key in range(int(self.J))]
-        ynames = ['.'.join([yname, name]) for name in ynames]
-        self.ynames = ynames
 
 
     def predict(self, params, exog=None, linear=False):
@@ -1323,6 +1307,13 @@ class DiscreteResults(base.LikelihoodModelResults):
     def bic(self):
         return -2*self.llf + np.log(self.nobs)*(self.df_model+1)
 
+    def _get_endog_name(self, yname, yname_list):
+        if yname is None:
+            yname = self.model.endog_names
+        if yname_list is None:
+            yname_list = self.model.endog_names
+        return yname, yname_list
+
     def margeff(self, at='overall', method='dydx', atexog=None, dummy=False,
             count=False):
         """Get marginal effects of the fitted model.
@@ -1482,10 +1473,11 @@ class DiscreteResults(base.LikelihoodModelResults):
         #boiler plate
         from scikits.statsmodels.iolib.summary import Summary
         smry = Summary()
+        yname, yname_list = self._get_endog_name(yname, yname_list)
+        # for top of table
         smry.add_table_2cols(self, gleft=top_left, gright=top_right, #[],
                           yname=yname, xname=xname, title=title)
-        if yname_list is None:
-            yname_list = yname
+        # for parameters, etc
         smry.add_table_params(self, yname=yname_list, xname=xname, alpha=.05,
                              use_t=False)
 
@@ -1493,33 +1485,8 @@ class DiscreteResults(base.LikelihoodModelResults):
         #smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
         #                   yname=yname, xname=xname,
         #                   title="")
-
-        #TODO: attach only to binary models
-        if self.model.__class__.__name__ in ['Logit', 'Probit']:
-            fittedvalues = self.model.cdf(self.fittedvalues)
-            absprederror = np.abs(self.model.endog - fittedvalues)
-            predclose_sum = (absprederror < 1e-4).sum()
-            predclose_frac = predclose_sum / len(fittedvalues)
-
-            #add warnings/notes
-            etext =[]
-            if predclose_sum == len(fittedvalues): #nobs?
-                wstr = "Complete Separation: The results show that there is"
-                wstr += "complete separation.\n"
-                wstr += "In this case the Maximum Likelihood Estimator does "
-                wstr += "not exist and the parameters\n"
-                wstr += "are not identified."
-                etext.append(wstr)
-            elif predclose_frac > 0.1:  #TODO: get better diagnosis
-                wstr = "Possibly complete quasi-separation: A fraction "
-                wstr += "%4.2f of observations can be\n" % predclose_frac
-                wstr += "perfectly predicted. This might indicate that there "
-                wstr += "is complete\nquasi-separation. In this case some "
-                wstr += "parameters will not be identified."
-                etext.append(wstr)
-            if etext:
-                smry.add_extra_txt(etext)
         return smry
+
 
 class CountResults(DiscreteResults):
     pass
@@ -1528,9 +1495,60 @@ class OrderedResults(DiscreteResults):
     pass
 
 class BinaryResults(DiscreteResults):
-    pass
+    def summary(self, yname=None, xname=None, title=None, alpha=.05,
+                yname_list=None):
+        smry = super(BinaryResults, self).summary(yname, xname, title, alpha,
+                     yname_list)
+        fittedvalues = self.model.cdf(self.fittedvalues)
+        absprederror = np.abs(self.model.endog - fittedvalues)
+        predclose_sum = (absprederror < 1e-4).sum()
+        predclose_frac = predclose_sum / len(fittedvalues)
+
+        #add warnings/notes
+        etext = []
+        if predclose_sum == len(fittedvalues): #nobs?
+            wstr = "Complete Separation: The results show that there is"
+            wstr += "complete separation.\n"
+            wstr += "In this case the Maximum Likelihood Estimator does "
+            wstr += "not exist and the parameters\n"
+            wstr += "are not identified."
+            etext.append(wstr)
+        elif predclose_frac > 0.1:  #TODO: get better diagnosis
+            wstr = "Possibly complete quasi-separation: A fraction "
+            wstr += "%4.2f of observations can be\n" % predclose_frac
+            wstr += "perfectly predicted. This might indicate that there "
+            wstr += "is complete\nquasi-separation. In this case some "
+            wstr += "parameters will not be identified."
+            etext.append(wstr)
+        if etext:
+            smry.add_extra_txt(etext)
+        return smry
+    summary.__doc__ = DiscreteResults.summary.__doc__
 
 class MultinomialResults(DiscreteResults):
+    def _maybe_convert_ynames_int(self, ynames):
+        # see if they're integers
+        try:
+            for i in ynames:
+                if ynames[i] % 1 == 0:
+                    ynames[i] = str(int(ynames[i]))
+        except TypeError:
+            pass
+        return ynames
+
+    def _get_endog_name(self, yname, yname_list):
+        model = self.model
+        if yname is None:
+            yname = model.endog_names
+        if yname_list is None:
+            ynames = model._ynames_map
+            ynames = self._maybe_convert_ynames_int(ynames)
+            # use range below to ensure sortedness
+            ynames = [ynames[key] for key in range(int(model.J))]
+            ynames = ['='.join([yname, name]) for name in ynames]
+            yname_list = ynames[1:] # assumes first variable is dropped
+        return yname, yname_list
+
     @cache_readonly
     def bse(self):
         bse = np.sqrt(np.diag(self.cov_params()))
