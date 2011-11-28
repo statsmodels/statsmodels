@@ -1547,9 +1547,7 @@ class MultinomialResults(DiscreteResults):
     def conf_int(self, alpha=.05, cols=None):
         confint = super(DiscreteResults, self).conf_int(alpha=alpha,
                                                             cols=cols)
-        return confint.transpose(0,2,1).reshape(self.model.J-1,
-                                                    self.model.K, 2,
-                                                    order='F')
+        return confint.transpose(2,0,1)
 
 #### Results Wrappers ####
 
