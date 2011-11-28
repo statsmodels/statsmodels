@@ -616,11 +616,8 @@ def summary_params_2dflat(result, endog_names=None, exog_names=None, alpha=0.95,
 
     res = result
 
-    #TODO: VAR and maybe maybe SUR or similar have equation in columns
-    #doesn't work yet, I will need to transpose all attributes
     #VAR doesn't have conf_int
-    if endog_cols:
-        params = res.params.T
+    #params = res.params.T # this is a convention for multi-eq models
 
     if not isinstance(endog_names, list):
         #this might be specific to multinomial logit type, move?
@@ -629,19 +626,17 @@ def summary_params_2dflat(result, endog_names=None, exog_names=None, alpha=0.95,
         else:
             endog_basename = endog_names
         #TODO: note, the [1:] is specific to current MNLogit
-        endog_names = [endog_basename + '=%d' % i for i in
-                            np.unique(res.model.endog)[1:]]
+        endog_names = res.model.endog_names[1:]
 
     #check if we have the right length of names
     if not len(endog_names) == res.params.shape[0]:
         raise ValueError('endog_names has wrong length')
 
-    res = result
-    n_equ = res.params.shape[0]
+    n_equ = res.params.shape[1]
     tables = []
-    for row in range(n_equ):
-        restup = (res, res.params[row], res.bse[row], res.tvalues[row],
-                  res.pvalues[row], res.conf_int(alpha)[row])
+    for eq in range(n_equ):
+        restup = (res, res.params[:,eq], res.bse[:,eq], res.tvalues[:,eq],
+                  res.pvalues[:,eq], res.conf_int(alpha)[:,eq])
 
         #not used anymore in current version
 #        if skip_headers2:
@@ -649,7 +644,7 @@ def summary_params_2dflat(result, endog_names=None, exog_names=None, alpha=0.95,
 #        else:
 #            skiph = False
         skiph = False
-        tble = summary_params(restup, yname=endog_names[row],
+        tble = summary_params(restup, yname=endog_names[eq],
                               xname=exog_names, alpha=.05, use_t=use_t,
                               skip_header=skiph)
 

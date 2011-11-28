@@ -325,8 +325,8 @@ class MultinomialModel(BinaryModel):
         ynames = self._maybe_convert_ynames_int(ynames)
         # use range below to ensure sortedness
         ynames = [ynames[key] for key in range(int(self.J))]
-        ynames = ['.'.join([yname, name]) for name in ynames]
-        self.ynames = ynames
+        ynames = ['='.join([yname, name]) for name in ynames]
+        self._data.ynames = ynames
 
 
     def predict(self, params, exog=None, linear=False):
@@ -1484,8 +1484,12 @@ class DiscreteResults(base.LikelihoodModelResults):
         smry = Summary()
         smry.add_table_2cols(self, gleft=top_left, gright=top_right, #[],
                           yname=yname, xname=xname, title=title)
+
         if yname_list is None:
-            yname_list = yname
+            yname_list = self.model.endog_names
+            if len(yname_list) > 1: # for MNLogit
+                yname_list = yname_list[1:] #NOTE: assumes 1st var dropped
+
         smry.add_table_params(self, yname=yname_list, xname=xname, alpha=.05,
                              use_t=False)
 
