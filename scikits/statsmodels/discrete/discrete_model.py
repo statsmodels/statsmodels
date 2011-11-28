@@ -294,16 +294,6 @@ class BinaryModel(DiscreteModel):
         return np.dot(self.pdf(np.dot(exog, params))[:,None], params[None,:])
 
 class MultinomialModel(BinaryModel):
-    def _maybe_convert_ynames_int(self, ynames):
-        # see if they're integers
-        try:
-            for i in ynames:
-                if ynames[i] % 1 == 0:
-                    ynames[i] = str(int(ynames[i]))
-        except TypeError:
-            pass
-        return ynames
-
     def initialize(self):
         """
         Preprocesses the data for MNLogit.
@@ -315,18 +305,12 @@ class MultinomialModel(BinaryModel):
         #This is also a "whiten" method as used in other models (eg regression)
         wendog, ynames = tools.categorical(self.endog, drop=True,
                 dictnames=True)
-
+        self._ynames_map = ynames
         self.wendog = wendog    # don't drop first category
         self.J = float(wendog.shape[1])
         self.K = float(self.exog.shape[1])
         self.df_model *= (self.J-1) # for each J - 1 equation.
         self.df_resid = self.exog.shape[0] - self.df_model - (self.J-1)
-        yname = self._data.ynames
-        ynames = self._maybe_convert_ynames_int(ynames)
-        # use range below to ensure sortedness
-        ynames = [ynames[key] for key in range(int(self.J))]
-        ynames = ['='.join([yname, name]) for name in ynames]
-        self._data.ynames = ynames
 
 
     def predict(self, params, exog=None, linear=False):
@@ -1323,8 +1307,12 @@ class DiscreteResults(base.LikelihoodModelResults):
     def bic(self):
         return -2*self.llf + np.log(self.nobs)*(self.df_model+1)
 
-    def _get_endog_name(self):
-        return self.model.endog_names
+    def _get_endog_name(self, yname, yname_list):
+        if yname is None:
+            yname = self.model.endog_names
+        if yname_list is None:
+            yname_list = self.model.endog_names
+        return yname, yname_list
 
     def margeff(self, at='overall', method='dydx', atexog=None, dummy=False,
             count=False):
@@ -1485,13 +1473,11 @@ class DiscreteResults(base.LikelihoodModelResults):
         #boiler plate
         from scikits.statsmodels.iolib.summary import Summary
         smry = Summary()
+        yname, yname_list = self._get_endog_name(yname, yname_list)
+        # for top of table
         smry.add_table_2cols(self, gleft=top_left, gright=top_right, #[],
                           yname=yname, xname=xname, title=title)
-
-        yname_list = yname
-        if yname_list is None:
-            yname_list = self._get_endog_name()
-
+        # for parameters, etc
         smry.add_table_params(self, yname=yname_list, xname=xname, alpha=.05,
                              use_t=False)
 
@@ -1540,8 +1526,28 @@ class BinaryResults(DiscreteResults):
     summary.__doc__ = DiscreteResults.summary.__doc__
 
 class MultinomialResults(DiscreteResults):
-    def _get_endog_name(self):
-        return self.model.endog_names[1:] #NOTE: assumes 1st var dropped
+    def _maybe_convert_ynames_int(self, ynames):
+        # see if they're integers
+        try:
+            for i in ynames:
+                if ynames[i] % 1 == 0:
+                    ynames[i] = str(int(ynames[i]))
+        except TypeError:
+            pass
+        return ynames
+
+    def _get_endog_name(self, yname, yname_list):
+        model = self.model
+        if yname is None:
+            yname = model.endog_names
+        if yname_list is None:
+            ynames = model._ynames_map
+            ynames = self._maybe_convert_ynames_int(ynames)
+            # use range below to ensure sortedness
+            ynames = [ynames[key] for key in range(int(model.J))]
+            ynames = ['='.join([yname, name]) for name in ynames]
+            yname_list = ynames[1:] # assumes first variable is dropped
+        return yname, yname_list
 
     @cache_readonly
     def bse(self):
