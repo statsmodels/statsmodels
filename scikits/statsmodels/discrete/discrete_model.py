@@ -1323,6 +1323,9 @@ class DiscreteResults(base.LikelihoodModelResults):
     def bic(self):
         return -2*self.llf + np.log(self.nobs)*(self.df_model+1)
 
+    def _get_endog_name(self):
+        return self.model.endog_names
+
     def margeff(self, at='overall', method='dydx', atexog=None, dummy=False,
             count=False):
         """Get marginal effects of the fitted model.
@@ -1485,10 +1488,9 @@ class DiscreteResults(base.LikelihoodModelResults):
         smry.add_table_2cols(self, gleft=top_left, gright=top_right, #[],
                           yname=yname, xname=xname, title=title)
 
+        yname_list = yname
         if yname_list is None:
-            yname_list = self.model.endog_names
-            if len(yname_list) > 1: # for MNLogit
-                yname_list = yname_list[1:] #NOTE: assumes 1st var dropped
+            yname_list = self._get_endog_name()
 
         smry.add_table_params(self, yname=yname_list, xname=xname, alpha=.05,
                              use_t=False)
@@ -1497,33 +1499,8 @@ class DiscreteResults(base.LikelihoodModelResults):
         #smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
         #                   yname=yname, xname=xname,
         #                   title="")
-
-        #TODO: attach only to binary models
-        if self.model.__class__.__name__ in ['Logit', 'Probit']:
-            fittedvalues = self.model.cdf(self.fittedvalues)
-            absprederror = np.abs(self.model.endog - fittedvalues)
-            predclose_sum = (absprederror < 1e-4).sum()
-            predclose_frac = predclose_sum / len(fittedvalues)
-
-            #add warnings/notes
-            etext =[]
-            if predclose_sum == len(fittedvalues): #nobs?
-                wstr = "Complete Separation: The results show that there is"
-                wstr += "complete separation.\n"
-                wstr += "In this case the Maximum Likelihood Estimator does "
-                wstr += "not exist and the parameters\n"
-                wstr += "are not identified."
-                etext.append(wstr)
-            elif predclose_frac > 0.1:  #TODO: get better diagnosis
-                wstr = "Possibly complete quasi-separation: A fraction "
-                wstr += "%4.2f of observations can be\n" % predclose_frac
-                wstr += "perfectly predicted. This might indicate that there "
-                wstr += "is complete\nquasi-separation. In this case some "
-                wstr += "parameters will not be identified."
-                etext.append(wstr)
-            if etext:
-                smry.add_extra_txt(etext)
         return smry
+
 
 class CountResults(DiscreteResults):
     pass
@@ -1532,9 +1509,40 @@ class OrderedResults(DiscreteResults):
     pass
 
 class BinaryResults(DiscreteResults):
-    pass
+    def summary(self, yname=None, xname=None, title=None, alpha=.05,
+                yname_list=None):
+        smry = super(BinaryResults, self).summary(yname, xname, title, alpha,
+                     yname_list)
+        fittedvalues = self.model.cdf(self.fittedvalues)
+        absprederror = np.abs(self.model.endog - fittedvalues)
+        predclose_sum = (absprederror < 1e-4).sum()
+        predclose_frac = predclose_sum / len(fittedvalues)
+
+        #add warnings/notes
+        etext = []
+        if predclose_sum == len(fittedvalues): #nobs?
+            wstr = "Complete Separation: The results show that there is"
+            wstr += "complete separation.\n"
+            wstr += "In this case the Maximum Likelihood Estimator does "
+            wstr += "not exist and the parameters\n"
+            wstr += "are not identified."
+            etext.append(wstr)
+        elif predclose_frac > 0.1:  #TODO: get better diagnosis
+            wstr = "Possibly complete quasi-separation: A fraction "
+            wstr += "%4.2f of observations can be\n" % predclose_frac
+            wstr += "perfectly predicted. This might indicate that there "
+            wstr += "is complete\nquasi-separation. In this case some "
+            wstr += "parameters will not be identified."
+            etext.append(wstr)
+        if etext:
+            smry.add_extra_txt(etext)
+        return smry
+    summary.__doc__ = DiscreteResults.summary.__doc__
 
 class MultinomialResults(DiscreteResults):
+    def _get_endog_name(self):
+        return self.model.endog_names[1:] #NOTE: assumes 1st var dropped
+
     @cache_readonly
     def bse(self):
         bse = np.sqrt(np.diag(self.cov_params()))
