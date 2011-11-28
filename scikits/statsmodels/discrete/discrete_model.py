@@ -294,6 +294,16 @@ class BinaryModel(DiscreteModel):
         return np.dot(self.pdf(np.dot(exog, params))[:,None], params[None,:])
 
 class MultinomialModel(BinaryModel):
+    def _maybe_convert_ynames_int(self, ynames):
+        # see if they're integers
+        try:
+            for i in ynames:
+                if ynames[i] % 1 == 0:
+                    ynames[i] = str(int(ynames[i]))
+        except TypeError:
+            pass
+        return ynames
+
     def initialize(self):
         """
         Preprocesses the data for MNLogit.
@@ -301,15 +311,23 @@ class MultinomialModel(BinaryModel):
         Turns the endogenous variable into an array of dummies and assigns
         J and K.
         """
-        super(MNLogit, self).initialize()
+        super(MultinomialModel, self).initialize()
         #This is also a "whiten" method as used in other models (eg regression)
-        wendog, self.names = tools.categorical(self.endog, drop=True,
+        wendog, ynames = tools.categorical(self.endog, drop=True,
                 dictnames=True)
+
         self.wendog = wendog    # don't drop first category
         self.J = float(wendog.shape[1])
         self.K = float(self.exog.shape[1])
         self.df_model *= (self.J-1) # for each J - 1 equation.
         self.df_resid = self.exog.shape[0] - self.df_model - (self.J-1)
+        yname = self._data.ynames
+        ynames = self._maybe_convert_ynames_int(ynames)
+        # use range below to ensure sortedness
+        ynames = [ynames[key] for key in range(int(self.J))]
+        ynames = ['.'.join([yname, name]) for name in ynames]
+        self.ynames = ynames
+
 
     def predict(self, params, exog=None, linear=False):
         """
