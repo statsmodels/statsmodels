@@ -8,7 +8,6 @@ License: BSD-3
 
 Notes
 ------
-This still depends on formulas, but I think they can be kicked out.
 
 It's pretty slow if the model is misspecified, in my first example convergence
 in loglike is not reached within 2000 iterations. Added stop criteria based
@@ -21,9 +20,7 @@ example.
 
 import numpy as np
 import numpy.linalg as L
-#import nipy
 
-from scikits.statsmodels.sandbox.formula import Formula, I
 
 class Unit(object):
     """
@@ -38,31 +35,35 @@ class Unit(object):
 
     Journal of the American Statistical Association,
     Vol. 82, No. 397. (Mar., 1987), pp. 97-105.
+
+
+    Parameters
+    ----------
+    endog : ndarray, (nobs,)
+        response, endogenous variable
+    exog_fe : ndarray, (nobs, k_vars_fe)
+        explanatory variables as regressors or fixed effects,
+        should include exog_re to correct mean of random
+        coefficients, see Notes
+    exog_re : ndarray, (nobs, k_vars_re)
+        explanatory variables or random effects or coefficients
+
+    Notes
+    -----
+    If the exog_re variables are not included in exog_fe, then the
+    mean of the random constants or coefficients are not centered.
+    The covariance matrix of the random parameter estimates are not
+    centered in this case. (That's how it looks to me. JP)
+
     """
 
-    def __getitem__(self, item):
-        return self.dict[item]
 
-    def __setitem__(self, item, value):
-        self.dict[item] = value
+    def __init__(self, endog, exog_fe, exog_re):
 
-    def __init__(self, dict_):
-        self.dict = dict_ # don't use build in names
-
-    def __call__(self, formula, **extra):
-        """
-        Return the corresponding design matrix from formula,
-        perform a check whether formula just has an intercept in it, in
-        which case the number of rows must be computed.
-        """
-        if hasattr(self, 'n') and 'nrow' not in extra:
-            extra['nrow'] = self.n
-        return formula(namespace=self.dict, **extra)
-
-    def design(self, formula, **extra):
-        v = np.transpose(self(formula, **extra))
-        self.n = v.shape[0]
-        return v
+        self.Y = endog
+        self.X = exog_fe
+        self.Z = exog_re
+        self.n = endog.shape[0]
 
     def _compute_S(self, D, sigma):
         """covariance of observations (nobs_i, nobs_i)  (JP check)
@@ -243,35 +244,21 @@ class Mixed(object):
 
     """
 
-    def __init__(self, units, response, fixed=I, random=I):
+    def __init__(self, units):
         self.units = units
         self.m = len(self.units)
 
-        self.fixed = Formula(fixed)
-        self.random = Formula(random)
-        self.response = Formula(response)
-
-        self.N = 0
-        for unit in self.units:
-            #NOTES
-            #JP: attach design matrices to units, after that the formulas are essentially redundant
-            #e.g. unit.design(random) is transpose of unit(random) "call"
-            unit.Y = np.squeeze(unit.design(self.response)) # response is just 'y'
-            unit.X = unit.design(self.fixed)
-            unit.Z = unit.design(self.random)
-            self.N += unit.X.shape[0]
+        self.N = sum(unit.X.shape[0] for unit in self.units)
 
         # Determine size of fixed effects
-
-        d = self.units[0].design(self.fixed)
+        d = self.units[0].X
         self.p = d.shape[1]  # d.shape = p
         self.a = np.zeros(self.p, np.float64)
 
         # Determine size of D, and sensible initial estimates
         # of sigma and D
-        d = self.units[0].design(self.random)
-        self.q = d.shape[1]  # d.shape = q
-
+        d = self.units[0].Z
+        self.q = d.shape[1]  # Z.shape = q
         self.D = np.zeros((self.q,)*2, np.float64)
         self.sigma = 1.
 
@@ -492,57 +479,5 @@ class Mixed(object):
         self.iterations = i
 
 if __name__ == '__main__':
-    import numpy.random as R
-    R.seed(54321)
-    nsubj = 400
-    units  = []
-
-    n = 3
-
-    from scikits.statsmodels.sandbox.formula import Term
-    fixed = Term('f')
-    random = Term('r')
-    response = Term('y')
-
-    nx = 4
-    #nz = 2
-    beta = np.ones(nx)
-    for i in range(nsubj):
-        #created as observation in columns
-        d = np.random.standard_normal()
-        X = np.random.standard_normal((nx,n))
-        Z = X[0:2]
-        #Y = R.standard_normal((n,)) + d * 4
-        Y = np.dot(X.T, beta) + d * 4
-        units.append(Unit({'f':X, 'r':Z, 'y':Y}))
-
-    #m = Mixed(units, response)#, fixed, random)
-    m = Mixed(units, response, fixed, random)
-    #m = Mixed(units, response, fixed + random, random)
-    m.initialize()
-    m.fit()
-    #print dir(m)
-    #print vars(m)
-    print 'estimates for fixed effects'
-    print m.a
-    bfixed_cov = m.cov_fixed()
-    print 'beta fixed standard errors'
-    print np.sqrt(np.diag(bfixed_cov))
-
-
-
-
-    a = Unit({})
-    a['x'] = np.array([2,3])
-    a['y'] = np.array([3,4])
-
-    x = Term('x')
-    y = Term('y')
-
-    fixed = x + y + x * y
-    random = Formula(x)
-
-    a.X = a.design(fixed)
-    a.Z = a.design(random)
-
-    print help(a._compute_S)
+    #see examples/ex_mixed_lls_1.py
+    pass
