@@ -19,11 +19,6 @@ if 'ex1' in examples:
 
     nobs_i = 4 #number of observations per unit
 
-    from scikits.statsmodels.sandbox.formula import Term
-    fixed = Term('f')
-    random = Term('r')
-    response = Term('y')
-
     nx = 4  #number fixed effects
     nz = 2 ##number fixed effects
     beta = np.ones(nx)
@@ -35,23 +30,25 @@ if 'ex1' in examples:
         gamma_re = gamma + 0.2 * np.random.standard_normal(nz) #random effect/coefficient
         gamma_re_true.append(gamma_re)
         if i > 20: nobs_i = 6
-        X = np.random.standard_normal((nx, nobs_i)) #.T
-        Z = np.random.standard_normal((nz-1, nobs_i)) #.T
-        Z = np.vstack((np.ones(nobs_i), Z)) #eps sig_e
+        X = np.random.standard_normal((nx, nobs_i)).T
+        Z = np.random.standard_normal((nz-1, nobs_i)).T
+        Z = np.column_stack((np.ones(nobs_i), Z)) #eps sig_e
         noise = 0.1 * np.random.randn(nobs_i)
         #Y = R.standard_normal((n,)) + d * 4
-        Y = np.dot(X.T, beta) + np.dot(Z.T, gamma_re) + noise
+        Y = np.dot(X, beta) + np.dot(Z, gamma_re) + noise
         #Y = np.dot(X, beta) + d * 1.
-        X = np.vstack((X,Z))  #necessary to force mean of RE to zero !?
-        units.append(Unit({'f':X, 'r':Z, 'y':Y}))
+        X = np.hstack((X,Z))  #necessary to force mean of RE to zero !?
+        print X.shape,
+        unit = Unit(Y, X, Z)
+        units.append(unit)
 
     #m = Mixed(units, response)#, fixed, random)
-    m = Mixed(units, response, fixed, random)
+    m = Mixed(units) #, response, fixed, random)
     #m = Mixed(units, response, fixed + random, random)
     import time
     t0 = time.time()
     m.initialize()
-    m.fit(niter=2000, rtol=1.0e-5, params_rtol=1e-6, params_atol=1e-6)
+    m.fit(maxiter=2000, rtol=1.0e-5, params_rtol=1e-6, params_atol=1e-6)
     t1 = time.time()
     print 'time for initialize and fit', t1-t0
     print 'number of iterations', m.iterations
@@ -115,3 +112,5 @@ if 'ex1' in examples:
     print 'mean_abs_perc  ', mean_abs_perc
     print 'median_abs_perc', median_abs_perc
     print 'rmse_perc (std)', rmse_perc
+    from numpy.testing import assert_almost_equal
+    assert_almost_equal(rmse_perc, [ 34.14783884,  11.6031684 ], decimal=8)
