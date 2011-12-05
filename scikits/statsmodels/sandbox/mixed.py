@@ -21,6 +21,8 @@ example.
 import numpy as np
 import numpy.linalg as L
 
+from scikits.statsmodels.base.model import LikelihoodModelResults
+
 
 class Unit(object):
     """
@@ -173,7 +175,7 @@ class Unit(object):
         return - 2 * self.logL(ML=ML)
 
 
-class Mixed(object):
+class OneWayMixed(object):
 
     """
     Model for
@@ -220,7 +222,8 @@ class Mixed(object):
 
     Notes
     -----
-    this does not yet return a result instance
+    Fit returns a result instance, but not all results that use the inherited
+    methods have been checked.
 
     Parameters need to change: drop formula and we require a naming convention for
     the units (currently Y,X,Z). - endog, exog_fe, endog_re ?
@@ -249,16 +252,19 @@ class Mixed(object):
         self.m = len(self.units)
 
         self.N = sum(unit.X.shape[0] for unit in self.units)
+        self.n_units = self.N     #alias for now
 
         # Determine size of fixed effects
         d = self.units[0].X
         self.p = d.shape[1]  # d.shape = p
+        self.k_exog_fe = self.p   #alias for now
         self.a = np.zeros(self.p, np.float64)
 
         # Determine size of D, and sensible initial estimates
         # of sigma and D
         d = self.units[0].Z
         self.q = d.shape[1]  # Z.shape = q
+        self.k_exog_re = self.q   #alias for now
         self.D = np.zeros((self.q,)*2, np.float64)
         self.sigma = 1.
 
@@ -336,7 +342,7 @@ class Mixed(object):
         """
         return self.Sinv
 
-    #----------- alias (JP)
+    #----------- alias (JP)   move to results class ?
 
     def cov_random(self):
         """
@@ -429,6 +435,8 @@ class Mixed(object):
             D += np.multiply.outer(unit.b, unit.b)
             t += L.pinv(np.dot(unit.Z.T, unit.Z))
 
+        #TODO: JP added df_resid check
+        self.df_resid = (self.N - (self.m - 1) * self.q - self.p)
         sigmasq /= (self.N - (self.m - 1) * self.q - self.p)
         self.sigma = np.sqrt(sigmasq)
         self.D = (D - sigmasq * t) / self.m
@@ -477,6 +485,78 @@ class Mixed(object):
             print 'Warning: maximum number of iterations reached'
 
         self.iterations = i
+
+        results = OneWayMixedResults(self)
+        #compatibility functions for fixed effects/exog
+        results.scale = 1
+        results.normalized_cov_params = self.cov_params()
+        return results
+
+
+class OneWayMixedResults(LikelihoodModelResults):
+    '''Results class for OneWayMixed models
+
+    '''
+    def __init__(self, model):
+        self.model = model
+        self.params = model.params
+
+    @property
+    def params_random_units(self):
+        return self.model.params_random_units
+
+    def cov_random(self):
+        return self.model.cov_random()
+
+    def mean_random(self, idx='lastexog'):
+        if idx == 'lastexog':
+            meanr = self.params[self.model.k_exog_re:]
+        elif type(idx) == list:
+            if not len(idx) == self.model.k_exog_re:
+                raise ValueError
+            else:
+                meanr = self.params[idx]
+        else:
+            meanr = np.zeros(self.model.k_exog_re)
+
+        return meanr
+
+    def std_random(self):
+        return np.sqrt(np.diag(self.cov_random()))
+
+    def plot_random_univariate(self, bins=None):
+        #outsource this
+        import matplotlib.pyplot as plt
+        from scipy.stats import norm as normal
+        fig = plt.figure()
+        k = self.model.k_exog_re
+        if k > 3:
+            rows, cols = int(np.ceil(5 * 0.5)), 2
+        else:
+            rows, cols = k, 1
+        if bins is None:
+            #bins = self.model.n_units // 20    #TODO: just roughly, check
+            bins = np.sqrt(self.model.n_units)
+
+        for ii in range(k):
+            ax = fig.add_subplot(rows, cols, ii)
+            freq, bins, _ = ax.hist(self.params_random_units[:,ii], bins=bins, normed=True)
+            points = np.linspace(bins[0], bins[-1], 200)
+            loc = self.mean_random()[ii]
+            scale = self.std_random()[ii]
+            #ax.plot(points, normal.pdf(points, loc=loc, scale=scale))
+            #loc of sample is approx. zero, with Z appended to X
+            #alternative, add fixed  to mean
+            ax.plot(points, normal.pdf(points, scale=scale))
+
+
+        #next is only temporarily here
+        fig2 = plt.figure()
+        ax = fig2.add_subplot(1,1,1)
+        re1, re2 = self.params_random_units.T
+        ax.plot(re1, re2, 'o', alpha=0.75)
+        return fig, fig2
+
 
 if __name__ == '__main__':
     #see examples/ex_mixed_lls_1.py
