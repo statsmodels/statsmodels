@@ -7,14 +7,14 @@ Author: Josef Perktold
 
 import numpy as np
 
-from scikits.statsmodels.sandbox.mixed import Mixed, Unit
+from scikits.statsmodels.sandbox.mixed import OneWayMixed, Unit
 
 examples = ['ex1']
 
 if 'ex1' in examples:
     #np.random.seed(54321)
     np.random.seed(978326)
-    nsubj = 100   #400 is too slow for testing, 38seconds for 100 iterations
+    nsubj = 2000   #400 is too slow for testing, 38seconds for 100 iterations
     units  = []
 
     nobs_i = 4 #number of observations per unit
@@ -38,17 +38,17 @@ if 'ex1' in examples:
         Y = np.dot(X, beta) + np.dot(Z, gamma_re) + noise
         #Y = np.dot(X, beta) + d * 1.
         X = np.hstack((X,Z))  #necessary to force mean of RE to zero !?
-        print X.shape,
+        #print X.shape,
         unit = Unit(Y, X, Z)
         units.append(unit)
 
     #m = Mixed(units, response)#, fixed, random)
-    m = Mixed(units) #, response, fixed, random)
+    m = OneWayMixed(units) #, response, fixed, random)
     #m = Mixed(units, response, fixed + random, random)
     import time
     t0 = time.time()
     m.initialize()
-    m.fit(maxiter=2000, rtol=1.0e-5, params_rtol=1e-6, params_atol=1e-6)
+    res = m.fit(maxiter=100, rtol=1.0e-5, params_rtol=1e-6, params_atol=1e-6)
     t1 = time.time()
     print 'time for initialize and fit', t1-t0
     print 'number of iterations', m.iterations
@@ -113,4 +113,18 @@ if 'ex1' in examples:
     print 'median_abs_perc', median_abs_perc
     print 'rmse_perc (std)', rmse_perc
     from numpy.testing import assert_almost_equal
-    assert_almost_equal(rmse_perc, [ 34.14783884,  11.6031684 ], decimal=8)
+    #assert is for n_units=100
+    #assert_almost_equal(rmse_perc, [ 34.14783884,  11.6031684 ], decimal=8)
+
+    #now returns res
+    print res.tvalues
+    print res.pvalues
+    print res.t_test([1,-1,0,0,0,0])
+    print 'test mean of both random effects variables is zero'
+    print res.f_test([[0,0,0,0,1,0], [0,0,0,0,0,1]])
+    plots = res.plot_random_univariate()
+    import matplotlib.pyplot as plt
+    plt.show()
+
+
+
