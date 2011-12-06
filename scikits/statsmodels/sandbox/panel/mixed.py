@@ -570,7 +570,8 @@ class OneWayMixedResults(LikelihoodModelResults):
             rows, cols = k, 1
         if bins is None:
             #bins = self.model.n_units // 20    #TODO: just roughly, check
-            bins = np.sqrt(self.model.n_units)
+           # bins = np.sqrt(self.model.n_units)
+            bins = 5 + 2 * self.model.n_units**(1./3.)
 
         if use_loc:
             loc = self.mean_random()
@@ -638,25 +639,33 @@ class OneWayMixedResults(LikelihoodModelResults):
         return ax_or_fig
 
     def plot_scatter_all_pairs(self, title=None):
-        #note I have written this already as helper function, get it
-        import matplotlib.pyplot as plt
-        #from scipy.stats import norm as normal
-        fig = plt.figure()
-        k = self.model.k_exog_re
-        n_plots = k * (k - 1) // 2
-        if n_plots > 3:
-            rows, cols = int(np.ceil(n_plots * 0.5)), 2
-        else:
-            rows, cols = n_plots, 1
+        from scikits.statsmodels.graphics.plot_grids import scatter_ellipse
+        if self.model.k_exog_re < 2:
+            raise ValueError('less than two variables available')
 
-        count = 1
-        for ii in range(k):
-            for jj in range(ii):
-                ax = fig.add_subplot(rows, cols, count)
-                self.plot_scatter_pairs(ii, jj, title=None, ax=ax)
-                count += 1
+        return scatter_ellipse(self.params_random_units,
+                               ell_kwds={'color':'r'})
+                               #ell_kwds not implemented yet
 
-        return fig
+#        #note I have written this already as helper function, get it
+#        import matplotlib.pyplot as plt
+#        #from scipy.stats import norm as normal
+#        fig = plt.figure()
+#        k = self.model.k_exog_re
+#        n_plots = k * (k - 1) // 2
+#        if n_plots > 3:
+#            rows, cols = int(np.ceil(n_plots * 0.5)), 2
+#        else:
+#            rows, cols = n_plots, 1
+#
+#        count = 1
+#        for ii in range(k):
+#            for jj in range(ii):
+#                ax = fig.add_subplot(rows, cols, count)
+#                self.plot_scatter_pairs(ii, jj, title=None, ax=ax)
+#                count += 1
+#
+#        return fig
 
 
 if __name__ == '__main__':

@@ -56,10 +56,10 @@ examples = ['ex1']
 if 'ex1' in examples:
     #np.random.seed(54321)
     #np.random.seed(978326)
-    nsubj = 2000
+    nsubj = 200
     units  = []
 
-    nobs_i = 4 #number of observations per unit, changed below
+    nobs_i = 8 #number of observations per unit, changed below
 
     nx = 1  #number fixed effects
     nz = nobs_i - 1 ##number random effects
@@ -204,7 +204,7 @@ if 'ex1' in examples:
     print res.t_test(rmat)
     print 'test mean of both random effects variables is zero'
     print res.f_test(rmat)
-    plots = res.plot_random_univariate(bins=50)
+    plots = res.plot_random_univariate() #(bins=50)
     fig = res.plot_scatter_all_pairs()
     #fig = res.plot_scatter_pairs(0, 1) #no pairs
     import matplotlib.pyplot as plt
