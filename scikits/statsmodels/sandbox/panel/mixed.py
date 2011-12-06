@@ -565,7 +565,7 @@ class OneWayMixedResults(LikelihoodModelResults):
         fig = plt.figure()
         k = self.model.k_exog_re
         if k > 3:
-            rows, cols = int(np.ceil(5 * 0.5)), 2
+            rows, cols = int(np.ceil(k * 0.5)), 2
         else:
             rows, cols = k, 1
         if bins is None:
@@ -636,6 +636,27 @@ class OneWayMixedResults(LikelihoodModelResults):
         ax_or_fig = ax
 
         return ax_or_fig
+
+    def plot_scatter_all_pairs(self, title=None):
+        #note I have written this already as helper function, get it
+        import matplotlib.pyplot as plt
+        #from scipy.stats import norm as normal
+        fig = plt.figure()
+        k = self.model.k_exog_re
+        n_plots = k * (k - 1) // 2
+        if n_plots > 3:
+            rows, cols = int(np.ceil(n_plots * 0.5)), 2
+        else:
+            rows, cols = n_plots, 1
+
+        count = 1
+        for ii in range(k):
+            for jj in range(ii):
+                ax = fig.add_subplot(rows, cols, count)
+                self.plot_scatter_pairs(ii, jj, title=None, ax=ax)
+                count += 1
+
+        return fig
 
 
 if __name__ == '__main__':
