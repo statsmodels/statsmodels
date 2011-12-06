@@ -22,7 +22,7 @@ import numpy as np
 import numpy.linalg as L
 
 from scikits.statsmodels.base.model import LikelihoodModelResults
-
+from scikits.statsmodels.tools.decorators import cache_readonly
 
 class Unit(object):
     """
@@ -229,6 +229,7 @@ class OneWayMixed(object):
     the units (currently Y,X,Z). - endog, exog_fe, endog_re ?
 
     logL does not include constant, e.g. sqrt(pi)
+    llf is for MLE not for REML
 
 
     convergence criteria for iteration
@@ -250,9 +251,10 @@ class OneWayMixed(object):
     def __init__(self, units):
         self.units = units
         self.m = len(self.units)
+        self.n_units = self.m
 
         self.N = sum(unit.X.shape[0] for unit in self.units)
-        self.n_units = self.N     #alias for now
+        self.nobs = self.N     #alias for now
 
         # Determine size of fixed effects
         d = self.units[0].X
@@ -367,10 +369,6 @@ class OneWayMixed(object):
     def params_random_units(self):
         '''random coefficients for each unit
 
-        JP: I think, there is no restriction on the kvars in Z, the random effects
-        design matrix, for each unit to be the same, maybe for D? yes there is.
-        I let it raise an exception for now if it cannot be converted to array.
-
         '''
         return np.array([unit.b for unit in self.units])
 
@@ -389,7 +387,7 @@ class OneWayMixed(object):
         standard errors of estimated coefficients for exogeneous variables (fixed)
 
         '''
-        np.sqrt(np.diag(self.cov_params()))
+        return np.sqrt(np.diag(self.cov_params()))
 
     #----------- end alias
 
@@ -398,6 +396,7 @@ class OneWayMixed(object):
 
         '''
         return -2 * self.logL(ML=ML)
+
 
     def logL(self, ML=False):
         """
@@ -490,6 +489,7 @@ class OneWayMixed(object):
         #compatibility functions for fixed effects/exog
         results.scale = 1
         results.normalized_cov_params = self.cov_params()
+
         return results
 
 
@@ -498,8 +498,17 @@ class OneWayMixedResults(LikelihoodModelResults):
 
     '''
     def __init__(self, model):
+        #TODO: check, change initialization to more standard pattern
         self.model = model
         self.params = model.params
+
+
+    #need to overwrite this because we don't have a standard
+    #model.loglike yet
+    #TODO: what todo about REML loglike, logL is not normalized
+    @cache_readonly
+    def llf(self):
+        return self.model.logL(ML=True)
 
     @property
     def params_random_units(self):
@@ -510,10 +519,10 @@ class OneWayMixedResults(LikelihoodModelResults):
 
     def mean_random(self, idx='lastexog'):
         if idx == 'lastexog':
-            meanr = self.params[self.model.k_exog_re:]
+            meanr = self.params[-self.model.k_exog_re:]
         elif type(idx) == list:
             if not len(idx) == self.model.k_exog_re:
-                raise ValueError
+                raise ValueError('length of idx different from k_exog_re')
             else:
                 meanr = self.params[idx]
         else:
@@ -524,7 +533,32 @@ class OneWayMixedResults(LikelihoodModelResults):
     def std_random(self):
         return np.sqrt(np.diag(self.cov_random()))
 
-    def plot_random_univariate(self, bins=None):
+    def plot_random_univariate(self, bins=None, use_loc=True):
+        '''create plot of marginal distribution of random effects
+
+        Parameters
+        ----------
+        bins : int or bin edges
+            option for bins in matplotlibs hist method. Current default is not
+            very sophisticated. All distributions use the same setting for
+            bins.
+        use_loc : bool
+            If True, then the distribution with mean given by the fixed
+            effect is used.
+
+        Returns
+        -------
+        fig : matplotlib figure instance
+            figure with subplots
+
+        Notes
+        -----
+        What can make this fancier?
+
+        Bin edges will not make sense if loc or scale differ across random
+        effect distributions.
+
+        '''
         #outsource this
         import matplotlib.pyplot as plt
         from scipy.stats import norm as normal
@@ -538,24 +572,70 @@ class OneWayMixedResults(LikelihoodModelResults):
             #bins = self.model.n_units // 20    #TODO: just roughly, check
             bins = np.sqrt(self.model.n_units)
 
+        if use_loc:
+            loc = self.mean_random()
+        else:
+            loc = [0]*k
+
+        scale = self.std_random()
+
         for ii in range(k):
             ax = fig.add_subplot(rows, cols, ii)
-            freq, bins, _ = ax.hist(self.params_random_units[:,ii], bins=bins, normed=True)
-            points = np.linspace(bins[0], bins[-1], 200)
-            loc = self.mean_random()[ii]
-            scale = self.std_random()[ii]
+
+            freq, bins_, _ = ax.hist(loc[ii] + self.params_random_units[:,ii],
+                                    bins=bins, normed=True)
+            points = np.linspace(bins_[0], bins_[-1], 200)
+
             #ax.plot(points, normal.pdf(points, loc=loc, scale=scale))
             #loc of sample is approx. zero, with Z appended to X
             #alternative, add fixed  to mean
-            ax.plot(points, normal.pdf(points, scale=scale))
+            ax.set_title('Random Effect %d Marginal Distribution' % ii)
+            ax.plot(points,
+                    normal.pdf(points, loc=loc[ii], scale=scale[ii]),
+                    'r')
 
+        return fig
 
-        #next is only temporarily here
-        fig2 = plt.figure()
-        ax = fig2.add_subplot(1,1,1)
-        re1, re2 = self.params_random_units.T
+    def plot_scatter_pairs(self, idx1, idx2, title=None, ax=None):
+        '''create scatter plot of two random effects
+
+        Parameters
+        ----------
+        idx1, idx2 : int
+            indices of the two random effects to display, corresponding to
+            columns of exog_re
+        title : None or string
+            If None, then a default title is added
+        ax : None or matplotlib axis instance
+            If None, then a figure with one axis is created and returned.
+            If ax is not None, then the scatter plot is created on it, and
+            this axis instance is returned.
+
+        Returns
+        -------
+        ax_or_fig : axis or figure instance
+            see ax parameter
+
+        Notes
+        -----
+        Still needs ellipse from estimated parameters
+
+        '''
+        import matplotlib.pyplot as plt
+        if ax is None:
+            fig = plt.figure()
+            ax = fig.add_subplot(1,1,1)
+            ax_or_fig = fig
+
+        re1 = self.params_random_units[:,idx1]
+        re2 = self.params_random_units[:,idx2]
         ax.plot(re1, re2, 'o', alpha=0.75)
-        return fig, fig2
+        if title is None:
+            title = 'Random Effects %d and %d' % (idx1, idx2)
+        ax.set_title(title)
+        ax_or_fig = ax
+
+        return ax_or_fig
 
 
 if __name__ == '__main__':
