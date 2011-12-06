@@ -14,7 +14,7 @@ effects and random coefficients, and uses OneWayMixed to estimate it.
 
 import numpy as np
 
-from scikits.statsmodels.sandbox.mixed import OneWayMixed, Unit
+from scikits.statsmodels.sandbox.panel.mixed import OneWayMixed, Unit
 
 examples = ['ex1']
 
