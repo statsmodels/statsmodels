@@ -1,8 +1,15 @@
 # -*- coding: utf-8 -*-
-"""
+"""Example using OneWayMixed
+
+
 Created on Sat Dec 03 10:15:55 2011
 
 Author: Josef Perktold
+
+This example constructs a linear model with individual specific random
+effects and random coefficients, and uses OneWayMixed to estimate it.
+
+
 """
 
 import numpy as np
@@ -14,37 +21,53 @@ examples = ['ex1']
 if 'ex1' in examples:
     #np.random.seed(54321)
     np.random.seed(978326)
-    nsubj = 2000   #400 is too slow for testing, 38seconds for 100 iterations
+    nsubj = 2000
     units  = []
 
-    nobs_i = 4 #number of observations per unit
+    nobs_i = 4 #number of observations per unit, changed below
 
     nx = 4  #number fixed effects
-    nz = 2 ##number fixed effects
+    nz = 2 ##number random effects
     beta = np.ones(nx)
     gamma = 0.5 * np.ones(nz)   #mean of random effect
     gamma[0] = 0
     gamma_re_true = []
     for i in range(nsubj):
-        #created as observation in columns
-        gamma_re = gamma + 0.2 * np.random.standard_normal(nz) #random effect/coefficient
+        #create data for one unit
+
+        #random effect/coefficient
+        gamma_re = gamma + 0.2 * np.random.standard_normal(nz)
+        #store true parameter for checking
         gamma_re_true.append(gamma_re)
-        if i > 20: nobs_i = 6
-        X = np.random.standard_normal((nx, nobs_i)).T
-        Z = np.random.standard_normal((nz-1, nobs_i)).T
-        Z = np.column_stack((np.ones(nobs_i), Z)) #eps sig_e
-        noise = 0.1 * np.random.randn(nobs_i)
-        #Y = R.standard_normal((n,)) + d * 4
+
+        #for testing unbalanced case, let's change nobs per unit
+        if i > nsubj//4:
+            nobs_i = 6
+
+        #generate exogenous variables
+        X = np.random.standard_normal((nobs_i, nx))
+        Z = np.random.standard_normal((nobs_i, nz-1))
+        Z = np.column_stack((np.ones(nobs_i), Z))
+
+        noise = 0.1 * np.random.randn(nobs_i) #sig_e = 0.1
+
+        #generate endogenous variable
         Y = np.dot(X, beta) + np.dot(Z, gamma_re) + noise
-        #Y = np.dot(X, beta) + d * 1.
-        X = np.hstack((X,Z))  #necessary to force mean of RE to zero !?
-        #print X.shape,
+
+        #add random effect design matrix also to fixed effects to
+        #capture the mean
+        #this seems to be necessary to force mean of RE to zero !?
+        #(It's not required for estimation but interpretation of random
+        #effects covariance matrix changes - still need to check details.
+        X = np.hstack((X,Z))
+
+        #create units and append to list
         unit = Unit(Y, X, Z)
         units.append(unit)
 
-    #m = Mixed(units, response)#, fixed, random)
-    m = OneWayMixed(units) #, response, fixed, random)
-    #m = Mixed(units, response, fixed + random, random)
+
+    m = OneWayMixed(units)
+
     import time
     t0 = time.time()
     m.initialize()
@@ -65,13 +88,14 @@ if 'ex1' in examples:
     b_re = m.params_random_units
     print 'RE mean:', b_re.mean(0)
     print 'RE columns std', b_re.std(0)
-    print 'np.cov(b_re, rowvar=0)'
+    print 'np.cov(b_re, rowvar=0), sample statistic'
     print np.cov(b_re, rowvar=0)
     print 'std of above'
     print np.sqrt(np.diag(np.cov(b_re, rowvar=0)))
     print 'm.cov_random()'
     print m.cov_random()
     print 'std of above'
+    print res.std_random()
     print np.sqrt(np.diag(m.cov_random()))
 
     print '\n(non)convergence of llf'
@@ -113,18 +137,19 @@ if 'ex1' in examples:
     print 'median_abs_perc', median_abs_perc
     print 'rmse_perc (std)', rmse_perc
     from numpy.testing import assert_almost_equal
-    #assert is for n_units=100
+    #assert is for n_units=100 in original example
+    #I changed random number generation, so this won't work anymore
     #assert_almost_equal(rmse_perc, [ 34.14783884,  11.6031684 ], decimal=8)
 
     #now returns res
+    print res.llf  #based on MLE, does not include constant
     print res.tvalues
     print res.pvalues
     print res.t_test([1,-1,0,0,0,0])
     print 'test mean of both random effects variables is zero'
     print res.f_test([[0,0,0,0,1,0], [0,0,0,0,0,1]])
-    plots = res.plot_random_univariate()
+    plots = res.plot_random_univariate(bins=50)
+    fig = res.plot_scatter_pairs(0, 1)
     import matplotlib.pyplot as plt
+
     plt.show()
-
-
-
