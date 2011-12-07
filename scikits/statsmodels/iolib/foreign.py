@@ -136,6 +136,24 @@ class StataReader(object):
     _col_sizes = ()
     _has_string_data = False
     _missing_values = False
+    #type          code
+    #--------------------
+    #str1        1 = 0x01
+    #str2        2 = 0x02
+    #...
+    #str244    244 = 0xf4
+    #byte      251 = 0xfb  (sic)
+    #int       252 = 0xfc
+    #long      253 = 0xfd
+    #float     254 = 0xfe
+    #double    255 = 0xff
+    #--------------------
+    #NOTE: the byte type seems to be reserved for categorical variables
+    # with a label, but the underlying variable is -127 to 100
+    # we're going to drop the label and cast to int
+    DTYPE_MAP = dict(zip(range(1,245), ['a' + str(i) for i in range(1,245)]) + \
+                    [(251, np.int16),(252, np.int32),(253, int),
+                        (254, np.float32), (255, np.float64)])
     TYPE_MAP = range(251)+list('bhlfd')
     MISSING_VALUES = { 'b': (-127,100), 'h': (-32767, 32740), 'l':
             (-2147483647, 2147483620), 'f': (-1.701e+38, +1.701e+38), 'd':
@@ -293,8 +311,9 @@ incorrect." % self._header['ds_format'])
         self._header['time_stamp'] = self._null_terminate(self._file.read(18))
 
         # parse descriptors
-        self._header['typlist'] = [self.TYPE_MAP[ord(self._file.read(1))] \
-                for i in range(nvar)]
+        typlist =[ord(self._file.read(1)) for i in range(nvar)]
+        self._header['typlist'] = [self.TYPE_MAP[typ] for typ in typlist]
+        self._header['dtyplist'] = [self.DTYPE_MAP[typ] for typ in typlist]
         self._header['varlist'] = [self._null_terminate(self._file.read(33)) \
                 for i in range(nvar)]
         self._header['srtlist'] = unpack(byteorder+('h'*(nvar+1)),
@@ -373,7 +392,7 @@ incorrect." % self._header['ds_format'])
                 self._file.read(self._col_size(i))),
                 range(self._header['nvar']))
 
-def genfromdta(fname, excludelist=None, missing_flt=-999., missing_str=""):
+def genfromdta(fname, missing_flt=-999., missing_str=""):
     """
     Returns an ndarray from a Stata .dta file.
 
@@ -381,17 +400,17 @@ def genfromdta(fname, excludelist=None, missing_flt=-999., missing_str=""):
     ----------
     fname : str or filehandle
         Stata .dta file.
-    missing_values
-    excludelist
-    missing_flt
-    missing_str
+    missing_flt : numeric
+        The numeric value to replace missing values with. Will be used for
+        any numeric value.
+    missing_str : str
+        The string to replace missing values with for string variables.
 
     Notes
     ------
-    If the parser encounters a format that it doesn't understand, then it will
-    convert to string.  This may be the case with date formats.
+    Date types will be returned as their numeric value in Stata. A date
+    parser is not written yet.
     """
-#TODO: extend to get data from online
     if isinstance(fname, basestring):
         fhd = StataReader(open(fname, 'rb'), missing_values=False)
     elif not hasattr(fname, 'read'):
@@ -403,10 +422,9 @@ def genfromdta(fname, excludelist=None, missing_flt=-999., missing_str=""):
 #                                    deletechars=deletechars,
 #                                    case_sensitive=case_sensitive)
 
-
-#TODO: does this need to handle the byteorder?
+    #TODO: This needs to handle the byteorder?
     header = fhd.file_headers()
-#    types = header['typlist'] # typemap in StataReader?
+    types = header['dtyplist']
     nobs = header['nobs']
     numvars = header['nvar']
     varnames = header['varlist']
@@ -416,83 +434,24 @@ def genfromdta(fname, excludelist=None, missing_flt=-999., missing_str=""):
     data = np.zeros((nobs,numvars))
     stata_dta = fhd.dataset()
 
-    # build dtype from stata formats
-    # see http://www.stata.com/help.cgi?format
-    # This converts all of these to float64
-    # all time and strings are converted to strings
-    #TODO: put these notes in the docstring
-    #TODO: need to write a time parser
-    to_flt = ['g','e','f','h','gc','fc', 'x', 'l'] # how to deal with x
-                                                   # and double-precision
-    to_str = ['s']
-    if 1:#    if not convert_time: #time parser not written
-        to_str.append('t')
-    flt_or_str = lambda x: ((x.lower()[-1] in to_str and 's') or \
-            (x.lower()[-1] in to_flt and 'f8')) or 's'
-    #TODO: this is surely not the best way to handle data types
-    convert_missing = {'f8' : missing_flt, 's' : missing_str}
-    #TODO: needs to be made more flexible when change types
-    fmt = [_.split('.')[-1] for _ in header['fmtlist']]
-    remove_comma = [fmt.index(_) for _ in fmt if 'c' in _]
-    for i in range(len(fmt)): # remove commas and convert any time types to 't'
-        if 't' in fmt[i]:
-            fmt[i] = 't'
-        if i in remove_comma:
-            fmt[i] = fmt[i][:-1] # needs to be changed if time doesn't req.
-                                 # loop
-    formats = map(flt_or_str, fmt)
-# have to go through the whole file first to find string lengths?
-#TODO: this is going to be miserably slow
-# have a closer look at numpy.genfromtxt and revisit this
-    first_list = []
+    # key is given by np.issctype
+    convert_missing = {
+            True : missing_flt,
+            False : missing_str}
+
+    dt = np.dtype(zip(varnames, types))
+    data = np.zeros((nobs), dtype=dt) # init final array
+
     for rownum,line in enumerate(stata_dta):
-        # doesn't handle missing value objects
-        # Untested for commas and string missing
+        # doesn't handle missing value objects, just casts
         # None will only work without missing value object.
-        if None in line and not remove_comma:
-            for val in line:
-                if val is None:
-                    line[line.index(val)] = convert_missing[\
-                            formats[line.index(val)]]
-        if None in line and remove_comma:
+        if None in line:# and not remove_comma:
             for i,val in enumerate(line):
                 if val is None:
-                    line[i] = convert_missing[formats[i]]
-                elif i in remove_comma:
-                    try: # sometimes a format, say gc is read as a float or int
-                        #TODO: I'm actually not sure now that comma formats
-                        # are read as strings.
-                        line[i] = ''.join(line[i].split(','))
-                    except:
-                        line[j] = str(line[j])
-                    if formats[i] == 'f8':
-                        line[i] = float(line[i])
-        if remove_comma and not None in line:
-            for j in remove_comma:
-                try: # sometimes a format, say gc is read as a float or int
-                    line[j] = ''.join(line[j].split(','))
-                except:
-                    line[j] = str(line[j])
-                if formats[j] == 'f8': # change when change f8
-                    line[j] = float(line[j])
+                    line[i] = convert_missing[np.issctype(types[i])]
+        data[rownum] = tuple(line)
 
-        first_list.append(line)
-#TODO: add informative error message similar to genfromtxt
-# Get string lengths
-    strcolidx = []
-    if 's' in formats:
-        for col,type in enumerate(formats):
-            if type == 's':
-                strcolidx.append(col)
-        for i in strcolidx:
-            formats[i] = "a%i" % max(len(str(row[i])) for row in first_list)
-    dt = zip(varnames, formats) # make dtype again
-    dt = easy_dtype(dt)
-    data = np.zeros((nobs), dtype=dt) # init final array
-    for i,row in enumerate(first_list):
-        data[i] = tuple(row)
-
-#TODO: make it possible to return plain array if all 'f8' for example
+    #TODO: make it possible to return plain array if all 'f8' for example
     return data
 
 def savetxt(fname, X, names=None, fmt='%.18e', delimiter=' '):

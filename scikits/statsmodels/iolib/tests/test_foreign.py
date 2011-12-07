@@ -22,11 +22,10 @@ def test_genfromdta():
     curdir = os.path.dirname(os.path.abspath(__file__))
     #res2 = np.load(curdir+'/results/macrodata.npy')
     #res2 = res2.view((float,len(res2[0])))
-    from results.macrodata import macrodata_result
-    res2 = macrodata_result.view((float,len(macrodata_result[0])))
+    from results.macrodata import macrodata_result as res2
     res1 = sm.iolib.genfromdta(curdir+'/../../datasets/macrodata/macrodata.dta')
-    res1 = res1.view((float,len(res1[0])))
-    assert_array_almost_equal(res1, res2, DECIMAL_3)
+    #res1 = res1.view((float,len(res1[0])))
+    assert_array_equal(res1 == res2, True)
 
 if __name__ == "__main__":
     import nose

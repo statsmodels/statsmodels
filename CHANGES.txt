@@ -3,6 +3,10 @@ Release History
 
 trunk for 0.4.0
 ---------------
+
+* Fix bugs in genfromdta. Convert Stata .dta format to structured array 
+  preserving all types. Conversion is also much faster now.
+
 *Changes that break backwards compatibility*
 
 * For consistency with other multi-equation models, the parameters of MNLogit
