@@ -17,6 +17,8 @@ from nose import SkipTest
 from results.results_discrete import Spector
 from scikits.statsmodels.tools.sm_exceptions import PerfectSeparationError
 
+DECIMAL_14 = 14
+DECIMAL_10 = 10
 DECIMAL_4 = 4
 DECIMAL_3 = 3
 DECIMAL_2 = 2
@@ -86,6 +88,17 @@ class CheckModelResults(object):
         assert_almost_equal(self.res1.model.predict(self.res1.params,
                             linear=True),
                             self.res2.yhat, DECIMAL_4)
+
+    def test_loglikeobs(self):
+        #basic cross check
+        llobssum = self.res1.model.loglikeobs(self.res1.params).sum()
+        assert_almost_equal(llobssum, self.res1.llf, DECIMAL_14)
+
+    def test_jac(self):
+        #basic cross check
+        jacsum = self.res1.model.jac(self.res1.params).sum(0)
+        score = self.res1.model.score(self.res1.params)
+        assert_almost_equal(jacsum, score, DECIMAL_10) #Poisson has low precision ?
 
 
 class CheckMargEff(object):
