@@ -1,10 +1,10 @@
 import numpy as np
 import scikits.statsmodels.base.model as base
 import scikits.statsmodels.base.wrapper as wrap
-from scipy.stats import norm
 from scikits.statsmodels.tools.decorators import cache_readonly
 from scikits.statsmodels.sandbox.regression.numdiff import (approx_hess_cs,
     approx_fprime_cs, approx_hess, approx_fprime)
+from scipy.stats import norm
 
 #TODO: clean-up estimation, delete webuse, write specific results class,
 #      figure out good separation for params and scale, can't concentrate
@@ -37,6 +37,8 @@ class Tobit(base.LikelihoodModel):
         left_idx = endog <= left # do we need to attach these?
         right_idx = endog >= right
         self._left_endog = endog[left_idx]
+        self.n_lcens = left_idx.sum()
+        self.n_rcens = right_idx.sum()
         self._right_endog = endog[right_idx]
         self._left_exog = exog[left_idx]
         self._right_exog = exog[right_idx]
@@ -83,7 +85,7 @@ class Tobit(base.LikelihoodModel):
 
     def hessian(self, params):
         loglike = self.loglike
-        return approx_hess(params, loglike, epsilon=1e-5)[0]
+        return approx_hess(params, loglike, epsilon=1e-4)[0]
 
     def loglike(self, params): #NOTE: these needs sigma as last parameter
         sigma = params[-1]
@@ -134,30 +136,59 @@ class Tobit(base.LikelihoodModel):
             start_params[-1] = np.log(start_params[-1])
         mlefit = super(Tobit, self).fit(start_params=start_params, **kwargs)
         self._transparams = False
-        sigma = np.exp(mlefit.params[-1])
-        mlefit.scale = mlefit.params[-1] = sigma
-        mlefit.model_params = mlefit.params[:-1]
         return TobitResults(self, mlefit)
 
 class TobitResults(base.LikelihoodModelResults):
     def __init__(self, model, mlefit):
         self.model = model
-        #self._full_params = np.r_[mlefit.params, mlefit.scale]
+        # re-parameterize from exponential
+        sigma = np.exp(mlefit.params[-1])
+        mlefit.params[-1] = sigma
+        self.model_params = mlefit.params[:-1]
         self.__dict__.update(mlefit.__dict__)
+        self.scale = sigma # overwrite from mlefit
+        self._model_stats() # attach model statistics
+
+    def _model_stats(self):
+        model = self.model
+        exog = model.exog
+        self.nobs = nobs = exog.shape[0]
+        self.n_lcens = model.n_lcens
+        self.n_rcens = model.n_rcens
+        self.n_ucens = nobs - self.n_lcens - self.n_rcens
+        self.k_constant = k_constant = int(np.any(exog.var(0) == 0))
+        self.k_params = k_params = exog.shape[1] - k_constant
+        self.k_ancillary = 1 # number of ancillary parameters, sigma here
+        self.df_model = k_params - self.k_constant
+        self.df_resid = nobs - self.df_model
 
     def cov_params(self):
         hess = self.model.hessian(self.params)
         return np.linalg.inv(-hess)
 
-    #@cache_readonly
-    #def tvalues(self):
-        #    return self._full_params / self.bse
+    @cache_readonly
+    def chi2(self):
+        return 2 * (self.llf-self.llnull)
 
-    #@cache_readonly
-    #def bse(self):
-    #    covar = self.cov_params()
-    #    bse = np.sqrt(np.diag(covar))
-    #    return bse
+    @cache_readonly
+    def chi2_pvalue(self):
+        from scipy.stats import chi2
+        #NOTE: df == number of restrictions
+        return chi2.sf(self.chi2, self.df_model)
+
+    @cache_readonly
+    def llnull(self):
+        endog = self.model.endog
+        left = self.model.left
+        right = self.model.right
+        res = Tobit(endog, np.ones_like(endog), left=left,
+                     right=right).fit(method='bfgs', disp=0)
+        try:
+            assert not res.mle_retvals['warnflag']
+        except:
+            raise AssertionError("Null Likelihood did not converge. Please "
+                    "report.")
+        return res.llf
 
 def webuse(data, baseurl='http://www.stata-press.com/data/r11/'):
     """
@@ -192,6 +223,7 @@ if __name__ == "__main__":
     import scikits.statsmodels.api as sm
     dta = webuse('auto')
     df = pandas.DataFrame.from_records(dta)
+    df['rep78'] = df['rep78'].astype(float)
     df.ix[df['rep78'] == -999, 'rep78'] = np.nan
     df['weight'] = df['weight'].astype(float) #TODO: fix StataReader for ints
     exog = sm.add_constant(df['weight'] / 1000, prepend=True)
@@ -213,9 +245,10 @@ if __name__ == "__main__":
     # replicate Fair's results
     data = sm.datasets.fair.load()
     endog = data.endog
-    exog = sm.add_constant(data.exog, prepend=True)
+    exog = sm.add_constant(data.exog, prepend=False)
     mod = Tobit(endog, exog, left=0, right=False).fit(method='bfgs')
-    #NOTE: newton is really sensitive to start_params
+    #NOTE: newton's method doesn't work well, I think this is due to the
+    #Hessian approximation
     #fair_mod = Tobit(endog, exog, left=0, right=False).fit(method='newton')
     #cov = np.linalg.inv(-approx_hess(mod.params, mod.model.loglike)[0])
     #bse = np.sqrt(np.diag(np.linalg.inv(-approx_hess(mod.params,
