@@ -113,6 +113,14 @@ def fboxplot_pointwise(data, xdata=None, wfactor=1.5, ax=None):
 def fboxplot(data, xdata=None, wfactor=1.5, ax=None):
     """Plot functional boxplot.
 
+    A functional boxplot is the analog of a boxplot for functional data.
+    Functional data is any type of data that varies over a continuum, i.e.
+    curves, probabillity distributions, seasonal data, etc.
+
+    The data is first ordered, the order statistic used here is `banddepth`.
+    Plotted are then the "most central" curve, the envelope of the 50% central
+    region, the maximum non-outlying envelope and the outlier curves.
+
     Parameters
     ----------
     data : sequence of ndarrays or 2-D ndarray
@@ -135,10 +143,12 @@ def fboxplot(data, xdata=None, wfactor=1.5, ax=None):
     Returns
     -------
     fig : Matplotlib figure instance
-        The created figure.  Only returned if `ax` is None (default).
+        The created figure.  If `ax` is not None, the returned value for `fig`
+        is None.
 
     See Also
     --------
+    banddepth
 
     Notes
     -----
@@ -205,6 +215,12 @@ def fboxplot(data, xdata=None, wfactor=1.5, ax=None):
 
 def banddepth(data, method='MBD'):
     """Calculate the band depth for a set of functional curves.
+
+    Band depth is an order statistic for functional data (see `fboxplot`), with
+    a higher band depth indicating larger "centrality".  In analog to scalar
+    data, the functional curve with highest band depth is called the median
+    curve, and the band made up from the first N/2 of N curves are the 50%
+    central region.
 
     Parameters
     ----------
