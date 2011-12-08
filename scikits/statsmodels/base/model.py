@@ -323,7 +323,7 @@ def _fit_mle_newton(f, score, start_params, fargs, kwargs, disp=True,
         if retall:
             retvals.update({'allvecs': history})
     else:
-        retvals = newparams
+        return newparams
 
     return xopt, retvals
 
