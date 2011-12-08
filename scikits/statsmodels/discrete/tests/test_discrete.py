@@ -321,9 +321,9 @@ class TestMNLogitNewtonBaseZero(CheckModelResults):
     def test_k(self):
         assert_equal(self.res1.model.K, self.res2.K)
 
-    def test_ynames(self):
-        assert_equal(self.res1.model.ynames,
-                     ['y.0', 'y.1', 'y.2', 'y.3', 'y.4', 'y.5', 'y.6'])
+    def test_endog_names(self):
+        assert_equal(self.res1._get_endog_name(None,None)[1],
+                     ['y=1', 'y=2', 'y=3', 'y=4', 'y=5', 'y=6'])
 
 
 def test_perfect_prediction():
