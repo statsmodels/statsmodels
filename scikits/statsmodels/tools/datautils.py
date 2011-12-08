@@ -17,7 +17,7 @@ class Dataset(dict):
     def __repr__(self):
         return str(self.__class__)
 
-def process_recarray(data, endog_idx=0, stack=True, dtype=None):
+def process_recarray(data, endog_idx=0, exog_idx=None, stack=True, dtype=None):
     names = list(data.dtype.names)
 
     if isinstance(endog_idx, int):
@@ -32,8 +32,11 @@ def process_recarray(data, endog_idx=0, stack=True, dtype=None):
         else:
             endog = data[endog_name]
 
-    exog_name = [names[i] for i in xrange(len(names))
+    if exog_idx is None:
+        exog_name = [names[i] for i in xrange(len(names))
                  if i not in endog_idx]
+    else:
+        exog_name = [names[i] for i in exog_idx]
 
     if stack:
         exog = np.column_stack(data[field] for field in exog_name)
@@ -49,22 +52,30 @@ def process_recarray(data, endog_idx=0, stack=True, dtype=None):
 
     return dataset
 
-def process_recarray_pandas(data, endog_idx=0, dtype=None):
+def process_recarray_pandas(data, endog_idx=0, exog_idx=None, dtype=None):
     from pandas import DataFrame
 
     data = DataFrame(data, dtype=dtype)
-    names = list(data.columns)
+    names = data.columns
 
     if isinstance(endog_idx, int):
         endog_name = names[endog_idx]
         endog = data[endog_name]
-        exog = data.drop([endog_name], axis=1)
+        if exog_idx is None:
+            exog = data.drop([endog_name], axis=1)
+        else:
+            exog = data.filter(names[exog_idx])
     else:
         endog = data.ix[:, endog_idx]
         endog_name = list(endog.columns)
-        exog = data.drop(endog_name, axis=1)
+        if exog_idx is None:
+            exog = data.drop(endog_name, axis=1)
+        elif isinstance(exog_idx, int):
+            exog = data.filter([names[exog_idx]])
+        else:
+            exog = data.filter(names[exog_idx])
 
     exog_name = list(exog.columns)
-    dataset = Dataset(data=data, names=names, endog=endog, exog=exog,
+    dataset = Dataset(data=data, names=list(names), endog=endog, exog=exog,
                       endog_name=endog_name, exog_name=exog_name)
     return dataset
