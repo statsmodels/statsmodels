@@ -64,6 +64,7 @@ class Tobit(base.LikelihoodModel):
             dLdB_left = dLdSigma_left = 0
 
         right_exog = self._right_exog
+        if right_exog.size > 0:
             scaled_right_exog = (np.dot(right_exog,
                                             params) - self.right) / sigma
             part1 = norm.pdf(scaled_right_exog)/norm.cdf(scaled_right_exog)
