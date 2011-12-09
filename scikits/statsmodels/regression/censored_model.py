@@ -10,6 +10,25 @@ from scipy.stats import norm
 #      figure out good separation for params and scale, can't concentrate
 #      likelihood, generalize margins from discrete for use here as well
 
+#class LogLike(object):
+#    """
+#    The Loglikelihood parametrization due to Olsen (1978).
+#
+#    Concentrates out \sigma and will allow easier score and hessian
+#    calculations. The results are similar to truncated regression cf.
+#    Greene 19.3.3, 7th edition.
+#    """
+def loglike_olsen_left(params, self, left=0):
+    theta = params[-1]
+    gamma = params[:-1]
+    center_endog = self._center_endog * theta
+    center_exog = self._center_exog
+    llf_center = -.5 * np.sum((np.log(2*np.pi) - np.log(theta**2) + \
+                 (center_endog - np.dot(center_exog, gamma))**2))
+    left_exog = self._left_exog
+    llf_left = np.sum(np.log(norm.cdf(left*theta - np.dot(left_exog, gamma))))
+    return -(llf_center + llf_left)
+
 class Tobit(base.LikelihoodModel):
     def __init__(self, endog, exog, left=True, right=True):
         super(Tobit, self).__init__(endog, exog)
@@ -88,30 +107,37 @@ class Tobit(base.LikelihoodModel):
         loglike = self.loglike
         return approx_hess(params, loglike, epsilon=1e-4)[0]
 
+    def _loglike_left(self, params, sigma):
+        left_exog = (self.left - np.dot(self._left_exog, params)) / sigma
+        left_like = np.sum(norm.logcdf(left_exog))
+            # can get overflow from the above if cdf is very small
+            # seems to mean bad starting values, but might need a check
+            #if np.isinf(left_like) and left_like < 0:
+            #    left_like = -1e4
+        return left_like
+
+    def _loglike_right(self, params, sigma):
+        right_exog = (np.dot(self._right_exog, params) - self.right) / sigma
+        right_like = np.sum(norm.logcdf(right_exog))
+        #if np.isinf(right_like) and left_like < 0:
+        #    left_like = -1e4
+        return right_like
+
+
     def loglike(self, params): #NOTE: these needs sigma as last parameter
         sigma = params[-1]
         if self._transparams:
             sigma = np.exp(sigma)
         params = params[:-1]
 
-        left_exog = self._left_exog
-        if left_exog.size > 0:
-            left_exog = (self.left - np.dot(left_exog, params)) / sigma
-            left_like = np.sum(norm.logcdf(left_exog))
-            # can get overflow from the above if cdf is very small
-            # seems to mean bad starting values, but might need a check
-            #if np.isinf(left_like) and left_like < 0:
-            #    left_like = -1e4
-        else:
-            left_like = 0
-        right_exog = self._right_exog
-        if right_exog.size > 0:
-            right_exog = (np.dot(right_exog, params) - self.right) / sigma
-            right_like = np.sum(norm.logcdf(right_exog))
-            #if np.isinf(right_like) and left_like < 0:
-            #    left_like = -1e4
-        else:
-            right_like = 0
+        left_like = 0
+        if self._left_exog.size:
+            left_like = self._loglike_left(params, sigma)
+
+        right_like = 0
+        if self._right_exog.size:
+            right_like = self._loglike_right(params, sigma)
+
         center_endog = self._center_endog
         center_exog = self._center_exog
         center_like = np.sum(norm.logpdf((center_endog - np.dot(center_exog,
@@ -229,7 +255,15 @@ if __name__ == "__main__":
     df['weight'] = df['weight'].astype(float) #TODO: fix StataReader for ints
     exog = sm.add_constant(df['weight'] / 1000, prepend=True)
     endog = df['mpg']
-    #mod = Tobit(endog, exog, left=17, right=False).fit(method='bfgs')
+    auto_mod = Tobit(endog, exog, left=17, right=False).fit(method='bfgs')
+
+    #check olsen reparams for non-zero censoring
+    self = auto_mod.model
+    gamma = auto_mod.model_params / auto_mod.scale
+    theta = 1 / auto_mod.scale
+    params = np.r_[gamma, theta]
+    loglike_olsen_left(params, self)
+
 
     #bse = np.sqrt(np.diag(np.linalg.inv(-approx_hess(np.r_[mod.params,
     #                np.log(mod.scale)], mod.model.loglike)[0])))
