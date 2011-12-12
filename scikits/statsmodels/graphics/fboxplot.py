@@ -110,7 +110,7 @@ def fboxplot_pointwise(data, xdata=None, wfactor=1.5, ax=None):
     return fig
 
 
-def fboxplot(data, xdata=None, wfactor=1.5, ax=None):
+def fboxplot(data, xdata=None, labels=None, wfactor=1.5, ax=None):
     """Plot functional boxplot.
 
     A functional boxplot is the analog of a boxplot for functional data.
@@ -133,6 +133,9 @@ def fboxplot(data, xdata=None, wfactor=1.5, ax=None):
         The independent variable for the data.  If not given, it is assumed to
         be an array of integers 0..N with N the length of the vectors in
         `data`.
+    labels : sequence of scalar or str, optional
+        The labels or identifiers of the curves in `data`.  If given, outliers
+        are labeled in the plot.
     wfactor : float, optional
         Factor by which the central 50% region is multiplied to find the outer
         region (analog of "whiskers" of a classical boxplot).
@@ -208,7 +211,11 @@ def fboxplot(data, xdata=None, wfactor=1.5, ax=None):
             ix_outliers.append(ii)
 
     for ii in ix_outliers:
-        ax.plot(xdata, data[ii, :])
+        label = str(labels[ii]) if labels is not None else None
+        ax.plot(xdata, data[ii, :], label=label)
+
+    if labels is not None:
+        ax.legend()
 
     return fig, depth_ix
 
