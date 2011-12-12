@@ -198,15 +198,14 @@ if 'ex1' in examples:
     print 'llf', res.llf  #based on MLE, does not include constant
     print 'tvalues', res.tvalues
     print 'pvalues', res.pvalues
-    #rmat = np.zeros(nx+nz+1)  #+1 because of full time_dummies in x
     rmat = np.zeros(len(res.params))
     rmat[-nz:] = 1
+    print 't_test mean of random effects variables are zero'
     print res.t_test(rmat)
-    print 'test mean of both random effects variables is zero'
+    print 'f_test mean of both random effects variables is zero (joint hypothesis)'
     print res.f_test(rmat)
     plots = res.plot_random_univariate() #(bins=50)
     fig = res.plot_scatter_all_pairs()
-    #fig = res.plot_scatter_pairs(0, 1) #no pairs
     import matplotlib.pyplot as plt
 
     plt.show()
