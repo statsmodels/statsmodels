@@ -7,7 +7,7 @@ from scipy import stats
 from scipy.misc import factorial
 
 
-__all__ = ['fboxplot']
+__all__ = ['fboxplot', 'banddepth']
 
 
 def fboxplot_pointwise(data, xdata=None, wfactor=1.5, ax=None):
@@ -93,20 +93,6 @@ def fboxplot_pointwise(data, xdata=None, wfactor=1.5, ax=None):
     # Central 50% region
     ax.fill_between(xdata, lower, upper, color='g', alpha=0.5) #(0.5, 0.5, 0.5))
 
-    ## Find outliers.  Uncomment to see why this doesn't work well.
-    #ix_outliers = []
-    #for ii in range(data.shape[0]):
-    #    if np.any(data[ii, :] > upper_fence) or np.any(data[ii, :] < lower_fence):
-    #        ix_outliers.append(ii)
-
-    #for ii in ix_outliers:
-    #    ax.plot(xdata, data[ii, :])
-
-    # DEBUG
-    ax.plot(xdata, middle, 'b')
-    ax.plot(xdata, lower, 'r')
-    ax.plot(xdata, upper, 'k')
-
     return fig
 
 
@@ -168,10 +154,8 @@ def fboxplot(data, xdata=None, labels=None, wfactor=1.5, ax=None):
 
     """
     # TODO:
-    # - color curves sensibly (increasing color yellow-red over all outliers?)
-    # - add labels input, optionally plot labels
-    # - add examples, tests
-    # - find good data set to demonstrate functionality
+    # - add tests
+    # - factor out part of the algorithm if useful by itself
     try:
         import matplotlib.pyplot as plt
     except:
@@ -192,32 +176,46 @@ def fboxplot(data, xdata=None, labels=None, wfactor=1.5, ax=None):
     depth = banddepth(data, method='MBD')
     depth_ix = np.argsort(depth)[::-1]
     middle = data[depth_ix[0], :]
-    lower = data[depth_ix[0:data.shape[0]//2], :].min(axis=0)
-    upper = data[depth_ix[0:data.shape[0]//2], :].max(axis=0)
+    ix_IQR = data.shape[0] // 2
+    lower = data[depth_ix[0:ix_IQR], :].min(axis=0)
+    upper = data[depth_ix[0:ix_IQR], :].max(axis=0)
 
-    # Outer region
-    lower_fence = middle - (middle - lower) * wfactor
-    upper_fence = middle + (upper - middle) * wfactor
-    ax.fill_between(xdata, lower_fence, upper_fence, color=(0.75,0.75,0.75))
-    # Central 50% region
-    ax.fill_between(xdata, lower, upper, color=(0.5,0.5,0.5))
-    # Plot median curve
-    ax.plot(xdata, middle, 'k-', lw=2)
+    # Determine region for outlier detection
+    inner_median = np.median(data[depth_ix[0:ix_IQR], :], axis=0)
+    lower_fence = inner_median - (inner_median - lower) * wfactor
+    upper_fence = inner_median + (upper - inner_median) * wfactor
 
     # Find outliers.
     ix_outliers = []
+    ix_nonout = []
     for ii in range(data.shape[0]):
         if np.any(data[ii, :] > upper_fence) or np.any(data[ii, :] < lower_fence):
             ix_outliers.append(ii)
+        else:
+            ix_nonout.append(ii)
 
-    for ii in ix_outliers:
-        label = str(labels[ii]) if labels is not None else None
-        ax.plot(xdata, data[ii, :], label=label)
+    # Plot envelope of all non-outlying data
+    lower_nonout = data[ix_nonout, :].min(axis=0)
+    upper_nonout = data[ix_nonout, :].max(axis=0)
+    ax.fill_between(xdata, lower_nonout, upper_nonout, color=(0.75,0.75,0.75))
+
+    # Plot central 50% region
+    ax.fill_between(xdata, lower, upper, color=(0.5,0.5,0.5))
+
+    # Plot median curve
+    ax.plot(xdata, middle, 'k-', lw=2)
+
+    # Plot outliers
+    for ii, ix in enumerate(ix_outliers):
+        label = str(labels[ix]) if labels is not None else None
+        ax.plot(xdata, data[ix, :],
+                color=plt.cm.rainbow(float(ii) / (len(ix_outliers)-1)),
+                label=label)
 
     if labels is not None:
         ax.legend()
 
-    return fig, depth_ix
+    return fig, depth, depth_ix
 
 
 def banddepth(data, method='MBD'):
@@ -331,7 +329,7 @@ if __name__ == '__main__':
     # Create a plot
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    _, ix = fboxplot(data, wfactor=2, ax=ax)
+    _, _, ix = fboxplot(data, wfactor=2, ax=ax)
     ax.set_xlabel(r'$t$')
     ax.text(100, 0.16, r'$(1-c_i)\{a_{1i}sin(t)+a_{2i}cos(t)\}$')
     ax.set_ylabel(r'$y(t)$')
