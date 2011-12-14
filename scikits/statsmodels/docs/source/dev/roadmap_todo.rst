@@ -25,8 +25,11 @@ Existing Discussions:
 Existing Implementations:
 
 * `Jonathan Taylor's Formula <https://github.com/jonathan-taylor/formula>`__
+
   * `Forked to statsmodels repository <https://github.com/statsmodels/formula>`__
 * `Nathaniel Smith's Charlton <https://github.com/charlton>`__
+
+  * `Forked to statsmodels repository <https://github.com/statsmodels/charlton>`__
 
 Open questions:
 
@@ -36,7 +39,7 @@ Open questions:
 Core Development
 ^^^^^^^^^^^^^^^^
 
-* Refactoring models structure. Make sure `<http://en.wikipedia.org/wiki/Don%27t_repeat_yourself>__ DRY` is respected.http://en.wikipedia.org/wiki/Don%27t_repeat_yourself
+* Refactoring models structure. Make sure `DRY <http://en.wikipedia.org/wiki/Don%27t_repeat_yourself>`__ is respected.
 
 Statistics
 ^^^^^^^^^^
