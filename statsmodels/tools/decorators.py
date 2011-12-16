@@ -1,5 +1,8 @@
 from numpy.testing import *
 import warnings
+from functools import wraps
+from contextlib import contextmanager
+import inspect
 
 __all__ = ['resettable_cache','cache_readonly', 'cache_writable']
 
@@ -149,7 +152,6 @@ class cache_writable(_cache_readonly):
                                        cachename=self.cachename,
                                        resetlist=self.resetlist)
 
-
 #this has been copied from nitime a long time ago
 #TODO: ceck whether class has change in nitime
 class OneTimeProperty(object):
@@ -189,6 +191,112 @@ class OneTimeProperty(object):
         #print "** auto_attr - loading '%s'" % self.name  # dbg
         setattr(obj, self.name, val)
         return val
+
+### Decorators for Transforming Inputs to Functions ###
+
+def make_doc(func, wrapper):
+    """
+    Preserves the documentation of a decorated method.
+    """
+    argspec = inspect.getargspec(func)
+    formatted = inspect.formatargspec(argspec.args, varargs=argspec.varargs,
+                        defaults=argspec.defaults)
+    return "%s%s\n%s" % (func.func_name, formatted, wrapper.__doc__)
+
+# use a factory to make the decorators
+
+class GenericTransform(object):
+    """
+    Instances of this class are a decorator that transform args[0] before
+    running the decorated method.
+    """
+    def __init__(self, transform):
+        self.transform = transform
+
+    def __call__(self, func):
+        transform = self.transform
+        @wraps(func)
+        def wrapper(self, *args, **kwargs):
+            if self._transparams:
+                params = transform(args[0])
+                args = (params,) + args[1:]
+            return func(self, *args, **kwargs)
+        wrapper.__doc__ = make_doc(func, wrapper)
+        return wrapper
+
+
+def transform_factory(transform):
+    """
+    Returns a decorate that performs transform on args[0] before running
+    the decorated method.
+
+    Examples
+    --------
+    >>> transform = transform_factory(lambda x: x**2)
+    @transform
+    def loglike(params):
+        pass
+    """
+    return GenericTransform(transform)
+
+
+# allow the decorator to explicitly take the transformation function
+
+class transform2(object):
+    """
+    Decorator that that runs `func` on args[0] before running the decorated
+    method.
+    """
+    def __init__(self, func):
+        self.transform = func
+
+    def __call__(self, func, *args, **kwargs):
+        transform = self.transform
+        @wraps(func)
+        def wrapper(self, *args, **kwargs):
+            if self._transparams:
+                params = transform(args[0])
+                args = (params,) + args[1:]
+            return func(self, *args, **kwargs)
+        wrapper.__doc__ = make_doc(func, wrapper)
+        return wrapper
+
+def set_transform(func):
+    """
+    Decorator that sets _transparams to True, runs the decorated method,
+    then turns _transparams to False
+    """
+    @contextmanager
+    def transparams(self):
+        self._transparams = True
+        yield
+        self._transparams = False
+
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        with transparams(self):
+            return func(self, *args, **kwargs)
+    wrapper.__doc__ = make_doc(func, wrapper)
+    return wrapper
+
+def unset_transform(func):
+    """
+    Decorator that sets _transparams to False, runs the decorated method,
+    then turns _transparams to True
+    """
+    @contextmanager
+    def transparams(self):
+        self._transparams = False
+        yield
+        self._transparams = True
+
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        with transparams(self):
+            return func(self, *args, **kwargs)
+    wrapper.__doc__ = make_doc(func, wrapper)
+    return wrapper
+
 
 
 if __name__ == "__main__":
@@ -262,3 +370,42 @@ if __name__ == "__main__":
     assert_equal(ex._cache, dict(b=1, c=0, d=1, e=None, f=None))
     ex.d = 5
     assert_equal(ex._cache, dict(b=1, c=0, d=5, e=None, f=None))
+
+    # tests transform decorators
+
+    def _olsen_reparam(params):
+        """
+        Go from true parameters to gamma and theta of Olsen
+
+        gamma = beta/sigma
+        theta = 1/sigma
+        """
+        beta, sigma  = params[:-1], params[-1]
+        theta = 1./sigma
+        gamma = beta/sigma
+        return gamma, theta
+
+    class A(object):
+
+        self._transformation = _olsen_reparam
+
+        _transform = transform_factory(_olsen_reparam)
+
+        #@transform2(_olsen_reparam)
+        @_transform
+        def loglike(self, params, extra=None):
+            """
+            I am the help of the loglike
+            """
+            return params
+
+        @set_transform
+        def fit(self, params):
+            """
+            I am the help of the fit function.
+            """
+            params = self.loglike(params)
+            return params
+
+    a = A()
+    assert len(a.fit(np.array([1,2,3])) == 2)
