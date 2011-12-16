@@ -30,15 +30,26 @@ version 2:
 
 S = sum (x*u) dot (x*u)' = sum x*u*u'*x'  where sum here can aggregate
 over observations or groups. u is regression residual.
-For cluster robust standard errors, we first sum (x*w) over other groups
-(including time) and then take the dot product (sum of outer products)
-For HAC by clusters, we first sum over groups for each time period, and then
-use HAC on the group sums of (x*w).
 
 x is (nobs, k_var)
 u is (nobs, 1)
 x*u is (nobs, k_var)
 
+
+For cluster robust standard errors, we first sum (x*w) over other groups
+(including time) and then take the dot product (sum of outer products)
+
+S = sum_g(x*u)' dot sum_g(x*u)
+For HAC by clusters, we first sum over groups for each time period, and then
+use HAC on the group sums of (x*w).
+If we have several groups, we have to sum first over all relevant groups, and
+then take the outer product sum. This can be done by summing using indicator
+functions or matrices or with explicit loops. Alternatively we calculate
+separate covariance matrices for each group, sum them and subtract the
+duplicate counted intersection.
+
+Not checked in details yet: degrees of freedom or small sample correction
+factors, see (two) references (?)
 
 
 This is the general case for MLE and GMM also
@@ -54,6 +65,12 @@ West or similar are on the covariance matrix of the moment conditions
 quasi-MLE: MLE with mis-specified model where parameter estimates are
 fine (consistent ?) but cov_params needs to be adjusted similar or
 same as in sandwiches. (I didn't go through any details yet.)
+
+TODO
+----
+* small sample correction factors
+* automatic lag-length selection for Newey-West HAC
+* get consistent notation, varies by paper, S, scale, sigma?
 
 """
 
@@ -273,6 +290,40 @@ def S_crosssection(x, group):
     categorical group, can also be the product/intersection of groups
 
     '''
-    x_group_sums = group_sums(x, group)
+    x_group_sums = group_sums(x, group).T  #TODO: why transposed
 
     return S_white_simple(x_group_sums)
+
+#not sure anymore: group here is the other group?
+def cov_crosssection(self, group):
+    #TODO: currently used version of groupsums requires 2d resid
+    scale = S_crosssection(self.resid[:,None], group)
+    scale = np.squeeze(scale)
+    c = _HCCM1(self, scale)
+    bse = np.sqrt(np.diag(c))
+    return c, bse
+
+def cov_crosssection2(self, group):
+    #TODO: currently used version of groupsums requires 2d resid
+    xu = self.model.exog * self.resid[:, None]
+    scale = S_crosssection(xu, group)
+
+    c = _HCCM2(self, scale)
+    bse = np.sqrt(np.diag(c))
+    return c, bse
+
+def cov_white_simple(self):
+    xu = self.model.exog * self.resid[:, None]
+    sigma = S_white_simple(xu)
+
+    c = _HCCM2(self, sigma)  #add bread to sandwich
+    bse = np.sqrt(np.diag(c))
+    return c, bse
+
+def cov_hac_simple(self, nlags=1, weights_func=weights_bartlett):
+    xu = self.model.exog * self.resid[:, None]
+    sigma = S_hac_simple(xu, nlags=nlags, weights_func=weights_func)
+
+    c = _HCCM2(self, sigma)
+    bse = np.sqrt(np.diag(c))
+    return c, bse
