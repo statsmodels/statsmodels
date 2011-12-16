@@ -5,7 +5,13 @@ Author: Josef Perktold
 
 """
 
+import numpy as np
+
 import scikits.statsmodels.api as sm
+
+import scikits.statsmodels.sandbox.panel.sandwich_covariance as sw
+import scikits.statsmodels.sandbox.panel.sandwich_covariance_generic as swg
+
 
 nobs = 100
 kvars = 4 #including constant
@@ -18,7 +24,8 @@ endog = y_true + sigma * np.random.randn(nobs)
 
 self = sm.OLS(endog, exog).fit()
 
-print HC3_se(self)
+print self.HC3_se
+print sw.se_cov(sw.cov_HC3(self))
 
 groups = np.repeat(np.arange(5), 20)
 
