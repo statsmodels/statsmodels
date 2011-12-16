@@ -1,7 +1,8 @@
 import numpy as np
 import scikits.statsmodels.base.model as base
 import scikits.statsmodels.base.wrapper as wrap
-from scikits.statsmodels.tools.decorators import cache_readonly
+from scikits.statsmodels.tools.decorators import (cache_readonly, transform2,
+            set_transform, unset_transform)
 from scikits.statsmodels.sandbox.regression.numdiff import (approx_hess_cs,
     approx_fprime_cs, approx_hess, approx_fprime)
 from scipy.stats import norm
@@ -29,7 +30,7 @@ def _olsen_reparam(params):
     beta, sigma  = params[:-1], params[-1]
     theta = 1./sigma
     gamma = beta/sigma
-    return gamma, theta
+    return np.r_[gamma, theta]
 
 def _reparam_olsen(params):
     """
@@ -41,13 +42,65 @@ def _reparam_olsen(params):
     gamma, theta  = params[:-1], params[-1]
     sigma = 1./theta
     beta = gamma/theta
-    return beta, sigma
+    return np.r_[beta, sigma]
 
 def dlogcdf(X):
     """
     Returns a _2d_ array norm.pdf(X)/norm.cdf(X)
     """
     return (norm.pdf(X)/norm.cdf(X))
+
+def _null_params(model):
+    """
+    Returns maximum liklihood estimates of the null (constant-only model)
+    """
+    endog = model.endog
+    left = model.left
+    right = model.right
+    res = Tobit(endog, np.ones_like(endog), left=left,
+                right=right).fit(method='bfgs', start_params = [1.,1.],
+                        disp=0)
+    k_zeros = model.exog.shape[1] - 1
+    params = np.r_[[0] * k_zeros, res.params]
+    print "start params: ", params
+    params = _olsen_reparam(params)
+    params[-1] = np.log(params[-1])
+    return params
+
+def _olsmle_params(model):
+    """
+    Does OLS on full endog and exog then scales the estimates by the
+    number of non-limit observations.
+
+    Notes
+    -----
+    This is just a cute trick based on an "empirical regularity" reported in
+    Greene 7th edition.
+    """
+    ols_res = sm.OLS(model.endog, model.exog).fit()
+    params = ols_res.params
+    #sigma = np.log(ols_res.scale ** .5)
+    sigma = ols_res.scale ** .5
+    start_params = _olsen_reparam()
+    theta = 1/ols_res.scale ** .5
+    n_goodobs = len(self._center_endog)
+    params = params/n_goonobs
+    return _olsen_reparam(np.r_[params, sigma])
+
+def _ols_params(model):
+    """
+    Does OLS on uncensored endog and exog and returns the parameters.
+
+    Notes
+    -----
+    Shouldn't use this because consistency for Tobit is only guaranteed
+    if the estimator for the starting values is consistent. Cf. Olsen's and
+    Amemiya's papers.
+    """
+    pass
+
+_start_param_funcs = {'null' : _null_params, 'olsmle' : _olsmle_params,
+                'ols' : _ols_params}
 
 class Tobit(base.LikelihoodModel):
     def __init__(self, endog, exog, left=True, right=True):
@@ -145,11 +198,10 @@ class Tobit(base.LikelihoodModel):
         #loglike = self.loglike
         #return approx_fprime(params, loglike)
 
+    @transform2(_olsen_reparam)
     def _score_left(self, params):
-        if self._transparams: # given true parameters, re-params to Olsen
-            gamma, theta = _olsen_reparam(params)
-        else: # given olsen parameterization
-            gamma, theta = params[:-1], params[-1]
+        return approx_fprime(params, self.loglike)
+        gamma, theta = params[:-1], np.exp(params[-1])
 
         # score for gamma
         left, left_exog = self.left, self._left_exog
@@ -168,7 +220,13 @@ class Tobit(base.LikelihoodModel):
         dLdTheta = theta_center + theta_left
         return np.r_[dLdGamma, dLdTheta]
 
+    @transform2(_olsen_reparam)
     def hessian(self, params):
+        # this is the hessian for left-censored at zero
+        #gamma, theta = params[:-1], params[-1]
+        #predicted = -np.dot(self.exog, gamma)
+        #fF = norm.pdf(predicted)/norm.cdf(predicted)
+        #D = fF * (-predicted - fF)
         loglike = self.loglike
         return approx_hess(params, loglike, epsilon=1e-8)[0]
 
@@ -188,11 +246,9 @@ class Tobit(base.LikelihoodModel):
         #    left_like = -1e4
         return right_like
 
+    @transform2(_olsen_reparam)
     def _loglike_olsen_left(self, params):
-        if self._transparams:
-            gamma, theta = _olsen_reparam(params)
-        else:
-            gamma, theta = params[:-1], params[-1]
+        gamma, theta = params[:-1], np.exp(params[-1])
 
         left, left_exog = self.left, self._left_exog
         llf_left = np.sum(norm.logcdf(left*theta - np.dot(left_exog, gamma)))
@@ -203,11 +259,10 @@ class Tobit(base.LikelihoodModel):
                      (center_endog - np.dot(center_exog, gamma))**2))
         return llf_center + llf_left
 
+    @transform2(_olsen_reparam)
     def _loglike_olsen_right(self, params):
-        if self._transparams:
-            gamma, theta = _olsen_reparam(params)
-        else:
-            gamma, theta = params[:-1], params[-1]
+        gamma, theta = params[:-1], params[-1]
+
         right = self.right
         center_endog = self._center_endog * theta
         center_exog = self._center_exog
@@ -238,50 +293,42 @@ class Tobit(base.LikelihoodModel):
         llf = left_like + right_like + center_like
         return llf
 
-    def _get_start_params(self):
+    def _get_start_params(self, method='null'):
         """
         Get starting parameters from an OLS estimation
+
+        Parameters
+        ----------
+        method : str {'null', 'olsmle', 'ols'}
+            The method to use to get the starting values. It is recommended
+            to use the default. See the private functions _null_params,
+            _olsmle_params, and _ols_params for more information.
         """
-        # use ols as starting values, should scale them by observations
-        ols_res = sm.OLS(self._center_endog, self._center_exog).fit()
-        params = ols_res.params
-        sigma = np.log(ols_res.scale ** .5)
-        sigma = ols_res.scale ** .5
-        theta = 1/ols_res.scale ** .5
-        nobs = len(self._center_endog)
-        params = params/nobs
-        start_params = np.r_[params/sigma, theta]
+        return _start_param_funcs[method](self)
 
-        #use null model as starting values
-        #endog = self.endog
-        #left = self.left
-        #right = self.right
-        #res = Tobit(endog, np.ones_like(endog), left=left, right=right).fit(method='bfgs', start_params = [1,1])
-
-        #params = np.r_[ols_res.params, ols_res.scale ** .5]
-        #NOTE: is this a local minimum??
-        #params = np.r_[[0] * 8,res.params]
-        #gamma, theta = _olsen_reparam(params)
-        #start_params = np.r_[gamma, theta]
-        return start_params
-
-    def fit(self, start_params = None, **kwargs):
-        self._transparams = False # working with reparameterized
+    @unset_transform # likelihood expects not to transform
+    def fit(self, start_params = None, method='newton', **kwargs):
+        """
+        Notes
+        -----
+        It is not recommended to change the default solver or starting
+        parameters. Please report performance issues to the developers.
+        """
         if start_params is None:
             start_params = self._get_start_params()
-        #else:
-        #    start_params[-1] = np.log(start_params[-1])
-        mlefit = super(Tobit, self).fit(start_params=start_params, **kwargs)
-        self._transparams = True # will now get true params
+        mlefit = super(Tobit, self).fit(start_params=start_params,
+                        method=method, **kwargs)
         return TobitResults(self, mlefit)
 
 class TobitResults(base.LikelihoodModelResults):
     def __init__(self, model, mlefit):
         self.model = model
+        params = mlefit.params
         # re-parameterize from exponential
-        #sigma = np.exp(mlefit.params[-1])
+        params[-1] = np.exp(params[-1])
         # re-parameterize from Olsen
-        beta, sigma = _reparam_olsen(mlefit.params)
+        params = _reparam_olsen(params)
+        beta, sigma = params[:-1], params[-1]
         self.model_params = beta
         mlefit.params = np.r_[beta, sigma]
         self.__dict__.update(mlefit.__dict__)
