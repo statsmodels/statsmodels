@@ -33,12 +33,24 @@ assert_almost_equal(sw.se_cov(sw.cov_hc1(self)), self.HC1_se, 15)
 assert_almost_equal(sw.se_cov(sw.cov_hc2(self)), self.HC2_se, 15)
 assert_almost_equal(sw.se_cov(sw.cov_hc3(self)), self.HC3_se, 15)
 print self.HC0_se
-print sw.cov_hac_simple(self, nlags=0)[1]
+print sw.cov_hac_simple(self, nlags=0, use_correction=False)[1]
 #test White as HAC with nlags=0, same as nlags=1 ?
-assert_almost_equal(sw.cov_hac_simple(self, nlags=0)[1], self.HC0_se, 15)
-print sw.cov_white_simple(self)[1]
+bse_hac0 = sw.cov_hac_simple(self, nlags=0, use_correction=False)[1]
+assert_almost_equal(bse_hac0, self.HC0_se, 15)
+print bse_hac0
+#test White as HAC with nlags=0, same as nlags=1 ?
+bse_hac0c = sw.cov_hac_simple(self, nlags=0, use_correction=True)[1]
+assert_almost_equal(bse_hac0c, self.HC1_se, 15)
+
+bse_w = sw.cov_white_simple(self, use_correction=False)[1]
+print bse_w
 #test White
-assert_almost_equal(sw.cov_white_simple(self)[1], self.HC0_se, 15)
+assert_almost_equal(bse_w, self.HC0_se, 15)
+
+bse_wc = sw.cov_white_simple(self, use_correction=True)[1]
+print bse_wc
+#test White
+assert_almost_equal(bse_wc, self.HC1_se, 15)
 
 
 groups = np.repeat(np.arange(5), 20)
