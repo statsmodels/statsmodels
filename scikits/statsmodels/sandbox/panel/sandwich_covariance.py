@@ -11,7 +11,7 @@ License: BSD-3
 Notes
 -----
 
-for calculating it we have two versions
+for calculating it, we have two versions
 
 version 1: use pinv
 pinv(x) scale pinv(x)   used currently in linear_model, with scale is
@@ -139,109 +139,172 @@ def se_cov(cov):
 
 '''
 
-def _HCCM(self, scale):
+def _HCCM(results, scale):
     '''
     sandwich with pinv(x) * diag(scale) * pinv(x).T
 
     where pinv(x) = (X'X)^(-1) X
     and scale is (nobs,)
     '''
-    H = np.dot(self.model.pinv_wexog,
-        scale[:,None]*self.model.pinv_wexog.T)
+    H = np.dot(results.model.pinv_wexog,
+        scale[:,None]*results.model.pinv_wexog.T)
     return H
 
-def cov_HC0(self):
+def cov_HC0(results):
     """
     See statsmodels.RegressionResults
     """
 
-    het_scale = self.resid**2 # or whitened residuals? only OLS?
-    cov_HC0_ = _HCCM(self, het_scale)
+    het_scale = results.resid**2 # or whitened residuals? only OLS?
+    cov_HC0_ = _HCCM(results, het_scale)
 
     return cov_HC0_
 
-def cov_HC1(self):
+def cov_HC1(results):
     """
     See statsmodels.RegressionResults
     """
 
-    het_scale = self.nobs/(self.df_resid)*(self.resid**2)
-    cov_HC1_ = _HCCM(self, het_scale)
+    het_scale = results.nobs/(results.df_resid)*(results.resid**2)
+    cov_HC1_ = _HCCM(results, het_scale)
     return cov_HC1_
 
-def cov_HC2(self):
+def cov_HC2(results):
     """
     See statsmodels.RegressionResults
     """
 
     # probably could be optimized
-    h = np.diag(chain_dot(self.model.exog,
-                          self.normalized_cov_params,
-                          self.model.exog.T))
-    het_scale = self.resid**2/(1-h)
-    cov_HC2_ = _HCCM(self, het_scale)
+    h = np.diag(chain_dot(results.model.exog,
+                          results.normalized_cov_params,
+                          results.model.exog.T))
+    het_scale = results.resid**2/(1-h)
+    cov_HC2_ = _HCCM(results, het_scale)
     return cov_HC2_
 
-def cov_HC3(self):
+def cov_HC3(results):
     """
     See statsmodels.RegressionResults
     """
 
     # above probably could be optimized to only calc the diag
-    h = np.diag(chain_dot(self.model.exog,
-                          self.normalized_cov_params,
-                          self.model.exog.T))
-    het_scale=(self.resid/(1-h))**2
-    cov_HC3_ = _HCCM(self, het_scale)
+    h = np.diag(chain_dot(results.model.exog,
+                          results.normalized_cov_params,
+                          results.model.exog.T))
+    het_scale=(results.resid/(1-h))**2
+    cov_HC3_ = _HCCM(results, het_scale)
     return cov_HC3_
 
 #---------------------------------------
 
 
-def _HCCM1(self, scale):
+def _HCCM1(results, scale):
     '''
     sandwich with pinv(x) * scale * pinv(x).T
 
     where pinv(x) = (X'X)^(-1) X
     and scale is (nobs, nobs), or (nobs,) with diagonal matrix diag(scale)
+
+    Parameters
+    ----------
+    results : result instance
+       need to contain regression results, uses results.model.pinv_wexog
+    scale : ndarray (nobs,) or (nobs, nobs)
+       scale matrix, treated as diagonal matrix if scale is one-dimensional
+
+    Returns
+    -------
+    H : ndarray (k_vars, k_vars)
+        robust covariance matrix for the parameter estimates
+
     '''
     if scale.ndim == 1:
-        H = np.dot(self.model.pinv_wexog,
-                   scale[:,None]*self.model.pinv_wexog.T)
+        H = np.dot(results.model.pinv_wexog,
+                   scale[:,None]*results.model.pinv_wexog.T)
     else:
-        H = np.dot(self.model.pinv_wexog,
-                   np.dot(scale, self.model.pinv_wexog.T))
+        H = np.dot(results.model.pinv_wexog,
+                   np.dot(scale, results.model.pinv_wexog.T))
     return H
 
-def _HCCM2(self, scale):
+def _HCCM2(results, scale):
     '''
     sandwich with (X'X)^(-1) * scale * (X'X)^(-1)
 
     scale is (kvars, kvars)
-    this uses self.normalized_cov_params for (X'X)^(-1)
+    this uses results.normalized_cov_params for (X'X)^(-1)
+
+    Parameters
+    ----------
+    results : result instance
+       need to contain regression results, uses results.normalized_cov_params
+    scale : ndarray (k_vars, k_vars)
+       scale matrix
+
+    Returns
+    -------
+    H : ndarray (k_vars, k_vars)
+        robust covariance matrix for the parameter estimates
 
     '''
     if scale.ndim == 1:
         scale = scale[:,None]
 
-    xxi = self.normalized_cov_params
+    xxi = results.normalized_cov_params
     H = np.dot(xxi, scale).dot(xxi.T)
     return H
 
 #TODO: other kernels, move ?
 def weights_bartlett(nlags):
+    '''Bartlett weights for HAC
+
+    this will be moved to another module
+
+    Parameters
+    ----------
+    nlags : int
+       highest lag in the kernel window
+
+    Returns
+    -------
+    kernel : ndarray, (nlags+1,)
+        weights for Bartlett kernel
+
+    '''
+
     #with lag zero
     return 1 - np.arange(nlags+1)/(nlags+1.)
 
 
 def S_hac_simple(x, nlags=None, weights_func=weights_bartlett):
-    '''HAC (Newey, West) with first axis consecutive time periods,
+    '''inner covariance matrix for HAC (Newey, West) sandwich
 
-    uses Bartlett weights
+    assumes we have a single time series with zero axis consecutive, equal
+    spaced time periods
 
+
+    Parameters
+    ----------
+    x : ndarray (nobs,) or (nobs, k_var)
+        data, for HAC this is array of x_i * u_i
+    nlags : int or None
+        highest lag to include in kernel window. If None, then
+        nlags = floor[4(T/100)^(2/9)] is used.
+    weights_func : callable
+        weights_func is called with nlags as argument to get the kernel
+        weights. default are Bartlett weights
+
+    Returns
+    -------
+    S : ndarray, (k_vars, k_vars)
+        inner covariance matrix for sandwich
+
+    Notes
+    -----
     used by cov_hac_simple
 
     verified only for nlags=0, which is just White, through cov_hac_simple
+
+    options might change when other kernels besides Bartlett are available.
 
     '''
 
@@ -262,7 +325,22 @@ def S_hac_simple(x, nlags=None, weights_func=weights_bartlett):
     return S
 
 def S_white_simple(x):
-    '''
+    '''inner covariance matrix for White heteroscedastistity sandwich
+
+
+    Parameters
+    ----------
+    x : ndarray (nobs,) or (nobs, k_var)
+        data, for HAC this is array of x_i * u_i
+
+    Returns
+    -------
+    S : ndarray, (k_vars, k_vars)
+        inner covariance matrix for sandwich
+
+    Notes
+    -----
+    this is just dot(X.T, X)
 
     '''
     if x.ndim == 1:
@@ -271,9 +349,9 @@ def S_white_simple(x):
     return np.dot(x.T, x)
 
 
-#TODO: remove, copied to tools/grouputils
+
 def group_sums(x, group):
-    '''simple bincount version, again
+    '''sum x for each group, simple bincount version, again
 
     group : array, integer
         assumed to be consecutive integers
@@ -281,22 +359,42 @@ def group_sums(x, group):
     no dtype checking because I want to raise in that case
 
     uses loop over columns of x
+
+    #TODO: remove this, already copied to tools/grouputils
     '''
 
     return np.array([np.bincount(group, weights=x[:,col])
                             for col in range(x.shape[1])])
 
 
-def S_hac_groupsum(x, time, nlags=1, weights_func=weights_bartlett):
-    '''HAC over group sums, where group is non-time dimension
+def S_hac_groupsum(x, time, nlags=None, weights_func=weights_bartlett):
+    '''inner covariance matrix for HAC over group sums sandwich
 
-    assumes we have complete equal spaced time periods.
-    number of time periods per group need not be the same, but we need
+    This assumes we have complete equal spaced time periods.
+    The number of time periods per group need not be the same, but we need
     at least one observation for each time period
 
-    I guess for a single categorical group only, or a everything else but time
+    For a single categorical group only, or a everything else but time
     dimension. This first aggregates x over groups for each time period, then
     applies HAC on the sum per period.
+
+    Parameters
+    ----------
+    x : ndarray (nobs,) or (nobs, k_var)
+        data, for HAC this is array of x_i * u_i
+    time : ndarray, (nobs,)
+        timeindes, assumed to be integers range(n_periods)
+    nlags : int or None
+        highest lag to include in kernel window. If None, then
+        nlags = floor[4(T/100)^(2/9)] is used.
+    weights_func : callable
+        weights_func is called with nlags as argument to get the kernel
+        weights. default are Bartlett weights
+
+    Returns
+    -------
+    S : ndarray, (k_vars, k_vars)
+        inner covariance matrix for sandwich
 
 
     not verified
@@ -315,7 +413,7 @@ def S_hac_groupsum(x, time, nlags=1, weights_func=weights_bartlett):
 
 
 def S_crosssection(x, group):
-    ''' check this, aggregated over groups, White on group sums
+    '''inner covariance matrix for White on group sums sandwich
 
     I guess for a single categorical group only,
     categorical group, can also be the product/intersection of groups
@@ -328,42 +426,81 @@ def S_crosssection(x, group):
     return S_white_simple(x_group_sums)
 
 
-def cov_crosssection_0(self, group):
+def cov_crosssection_0(results, group):
     '''this one is still wrong, use cov_cluster instead'''
 
     #TODO: currently used version of groupsums requires 2d resid
-    scale = S_crosssection(self.resid[:,None], group)
+    scale = S_crosssection(results.resid[:,None], group)
     scale = np.squeeze(scale)
-    c = _HCCM1(self, scale)
+    c = _HCCM1(results, scale)
     bse = np.sqrt(np.diag(c))
     return c, bse
 
-def cov_cluster(self, group, use_correction=True):
+def cov_cluster(results, group, use_correction=True):
     '''cluster robust covariance matrix
 
-    calculates sandwich covariance matrix for a single cluster, grouped
+    Calculates sandwich covariance matrix for a single cluster, i.e. grouped
     variables.
 
-    same result as Stata in UCLA example
-    slightly different than Peterson
+    Parameters
+    ----------
+    results : result instance
+       result of a regression, uses results.model.exog and results.resid
+       TODO: this should use wexog instead
+    use_correction : bool
+       If true (default), then the small sample correction factor is used.
+
+    Returns
+    -------
+    cov : ndarray, (k_vars, k_vars)
+        cluster robust covariance matrix for parameter estimates
+    bse : ndarray, (k_vars,)
+        standard errors, this will be dropped
+
+    Notes
+    -----
+    same result as Stata in UCLA example and same as Peterson
 
     '''
     #TODO: currently used version of groupsums requires 2d resid
-    xu = self.model.exog * self.resid[:, None]
+    xu = results.model.exog * results.resid[:, None]
     scale = S_crosssection(xu, group)
 
-    nobs, k_vars = self.model.exog.shape
+    nobs, k_vars = results.model.exog.shape
     n_groups = len(np.unique(group)) #replace with stored group attributes if available
     if use_correction:
         corr_fact = (n_groups / (n_groups - 1.)) * ((nobs-1.) / float(nobs - k_vars))
     else:
         corr_fact = 1.
-    c = corr_fact * _HCCM2(self, scale)
+    c = corr_fact * _HCCM2(results, scale)
     bse = np.sqrt(np.diag(c))
     return c, bse
 
-def cov_cluster_2groups(self, group, group2=None):
+def cov_cluster_2groups(results, group, group2=None):
     '''cluster robust covariance matrix for two groups/clusters
+
+    Parameters
+    ----------
+    results : result instance
+       result of a regression, uses results.model.exog and results.resid
+       TODO: this should use wexog instead
+    use_correction : bool
+       If true (default), then the small sample correction factor is used.
+
+    Returns
+    -------
+    cov_both : ndarray, (k_vars, k_vars)
+        cluster robust covariance matrix for parameter estimates, for both
+        clusters
+    cov_0 : ndarray, (k_vars, k_vars)
+        cluster robust covariance matrix for parameter estimates for first
+        cluster
+    cov_1 : ndarray, (k_vars, k_vars)
+        cluster robust covariance matrix for parameter estimates for second
+        cluster
+
+    Notes
+    -----
 
     verified against Peterson's table, (4 decimal print precision)
     '''
@@ -380,10 +517,12 @@ def cov_cluster_2groups(self, group, group2=None):
         group = (group0, group1)
 
 
-    cov0 = cov_cluster(self, group0)[0]  #get still bse returned also
-    cov1 = cov_cluster(self, group1)[0]
+    cov0 = cov_cluster(results, group0)[0]  #get still bse returned also
+    cov1 = cov_cluster(results, group1)[0]
+
     group_intersection = Group(group)
-    cov01 = cov_cluster(self, group_intersection.group_int)[0]
+    #cov of cluster formed by intersection of two groups
+    cov01 = cov_cluster(results, group_intersection.group_int)[0]
 
     #robust cov matrix for union of groups
     cov_both = cov0 + cov1 - cov01
@@ -392,30 +531,82 @@ def cov_cluster_2groups(self, group, group2=None):
     return cov_both, cov0, cov1
 
 
-def cov_white_simple(self):
+def cov_white_simple(results):
     '''
     heteroscedasticity robust covariance matrix (White)
 
+    Parameters
+    ----------
+    results : result instance
+       result of a regression, uses results.model.exog and results.resid
+       TODO: this should use wexog instead
+
+    Returns
+    -------
+    cov : ndarray, (k_vars, k_vars)
+        heteroscedasticity robust covariance matrix for parameter estimates
+    bse : ndarray, (k_vars,)
+        standard errors, this will be dropped
+
+    Notes
+    -----
+    This produces the same result as cov_HC0, and does not include any small
+    sample correction.
+
     verified (against LinearRegressionResults and Peterson)
 
+    See Also
+    --------
+    cov_hc1, cov_hc2, cov_hc3 : heteroscedasticity robust covariance matrices
+        with small sample corrections
+
     '''
-    xu = self.model.exog * self.resid[:, None]
+    xu = results.model.exog * results.resid[:, None]
     sigma = S_white_simple(xu)
 
-    c = _HCCM2(self, sigma)  #add bread to sandwich
+    c = _HCCM2(results, sigma)  #add bread to sandwich
     bse = np.sqrt(np.diag(c))
     return c, bse
 
-def cov_hac_simple(self, nlags=None, weights_func=weights_bartlett):
+
+def cov_hac_simple(results, nlags=None, weights_func=weights_bartlett):
     '''
     heteroscedasticity and autocorrelation robust covariance matrix (Newey-West)
 
+    Assumes we have a single time series with zero axis consecutive, equal
+    spaced time periods
+
+
+    Parameters
+    ----------
+    results : result instance
+       result of a regression, uses results.model.exog and results.resid
+       TODO: this should use wexog instead
+    nlags : int or None
+        highest lag to include in kernel window. If None, then
+        nlags = floor[4(T/100)^(2/9)] is used.
+    weights_func : callable
+        weights_func is called with nlags as argument to get the kernel
+        weights. default are Bartlett weights
+
+    Returns
+    -------
+    cov : ndarray, (k_vars, k_vars)
+        HAC robust covariance matrix for parameter estimates
+    bse : ndarray, (k_vars,)
+        standard errors, this will be dropped
+
+
+    Notes
+    -----
     verified only for nlags=0, which is just White
 
+    options might change when other kernels besides Bartlett are available.
+
     '''
-    xu = self.model.exog * self.resid[:, None]
+    xu = results.model.exog * results.resid[:, None]
     sigma = S_hac_simple(xu, nlags=nlags, weights_func=weights_func)
 
-    c = _HCCM2(self, sigma)
+    c = _HCCM2(results, sigma)
     bse = np.sqrt(np.diag(c))
     return c, bse
