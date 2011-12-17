@@ -69,8 +69,15 @@ same as in sandwiches. (I didn't go through any details yet.)
 TODO
 ----
 * small sample correction factors
-* automatic lag-length selection for Newey-West HAC
+* automatic lag-length selection for Newey-West HAC,
+  -> added: nlag = floor[4(T/100)^(2/9)]  Reference: xtscc paper, Newey-West
+     note this will not be optimal in the panel context, see Peterson
 * get consistent notation, varies by paper, S, scale, sigma?
+
+
+References
+----------
+
 
 """
 
@@ -221,20 +228,28 @@ def _HCCM2(self, scale):
     H = np.dot(xxi, scale).dot(xxi.T)
     return H
 
-
+#TODO: other kernels, move ?
 def weights_bartlett(nlags):
     #with lag zero
     return 1 - np.arange(nlags+1)/(nlags+1.)
 
-def S_hac_simple(x, nlags=1, weights_func=weights_bartlett):
+
+def S_hac_simple(x, nlags=None, weights_func=weights_bartlett):
     '''HAC (Newey, West) with first axis consecutive time periods,
 
     uses Bartlett weights
+
+    used by cov_hac_simple
+
+    verified only for nlags=0, which is just White, through cov_hac_simple
 
     '''
 
     if x.ndim == 1:
         x = x[:,None]
+    n_periods = x.shape[0]
+    if nlags is None:
+        nlags = np.floor[4 * (n_periods / 100.)**(2./9.)]
 
     weights = weights_func(nlags)
 
@@ -247,12 +262,16 @@ def S_hac_simple(x, nlags=1, weights_func=weights_bartlett):
     return S
 
 def S_white_simple(x):
+    '''
+
+    '''
     if x.ndim == 1:
         x = x[:,None]
 
     return np.dot(x.T, x)
 
 
+#TODO: remove, copied to tools/grouputils
 def group_sums(x, group):
     '''simple bincount version, again
 
@@ -275,7 +294,18 @@ def S_hac_groupsum(x, time, nlags=1, weights_func=weights_bartlett):
     number of time periods per group need not be the same, but we need
     at least one observation for each time period
 
-    I guess for a single categorical group only
+    I guess for a single categorical group only, or a everything else but time
+    dimension. This first aggregates x over groups for each time period, then
+    applies HAC on the sum per period.
+
+
+    not verified
+
+    Reference
+    ---------
+    Daniel Hoechle, xtscc paper
+    Driscoll and Kraay
+
     '''
     #needs groupsums
 
@@ -290,6 +320,8 @@ def S_crosssection(x, group):
     I guess for a single categorical group only,
     categorical group, can also be the product/intersection of groups
 
+    This is used by cov_cluster and indirectly verified
+
     '''
     x_group_sums = group_sums(x, group).T  #TODO: why transposed
 
@@ -297,7 +329,7 @@ def S_crosssection(x, group):
 
 
 def cov_crosssection_0(self, group):
-    '''this one is wrong'''
+    '''this one is still wrong, use cov_cluster instead'''
 
     #TODO: currently used version of groupsums requires 2d resid
     scale = S_crosssection(self.resid[:,None], group)
@@ -361,6 +393,12 @@ def cov_cluster_2groups(self, group, group2=None):
 
 
 def cov_white_simple(self):
+    '''
+    heteroscedasticity robust covariance matrix (White)
+
+    verified (against LinearRegressionResults and Peterson)
+
+    '''
     xu = self.model.exog * self.resid[:, None]
     sigma = S_white_simple(xu)
 
@@ -368,7 +406,13 @@ def cov_white_simple(self):
     bse = np.sqrt(np.diag(c))
     return c, bse
 
-def cov_hac_simple(self, nlags=1, weights_func=weights_bartlett):
+def cov_hac_simple(self, nlags=None, weights_func=weights_bartlett):
+    '''
+    heteroscedasticity and autocorrelation robust covariance matrix (Newey-West)
+
+    verified only for nlags=0, which is just White
+
+    '''
     xu = self.model.exog * self.resid[:, None]
     sigma = S_hac_simple(xu, nlags=nlags, weights_func=weights_func)
 
