@@ -78,6 +78,7 @@ import numpy as np
 from numpy.testing import assert_almost_equal
 
 from scikits.statsmodels.tools.tools import (chain_dot)
+from scikits.statsmodels.tools.grouputils import Group
 
 
 def se_cov(cov):
@@ -294,8 +295,10 @@ def S_crosssection(x, group):
 
     return S_white_simple(x_group_sums)
 
-#not sure anymore: group here is the other group?
-def cov_crosssection(self, group):
+
+def cov_crosssection_0(self, group):
+    '''this one is wrong'''
+
     #TODO: currently used version of groupsums requires 2d resid
     scale = S_crosssection(self.resid[:,None], group)
     scale = np.squeeze(scale)
@@ -303,14 +306,59 @@ def cov_crosssection(self, group):
     bse = np.sqrt(np.diag(c))
     return c, bse
 
-def cov_crosssection2(self, group):
+def cov_cluster(self, group, use_correction=True):
+    '''cluster robust covariance matrix
+
+    calculates sandwich covariance matrix for a single cluster, grouped
+    variables.
+
+    same result as Stata in UCLA example
+    slightly different than Peterson
+
+    '''
     #TODO: currently used version of groupsums requires 2d resid
     xu = self.model.exog * self.resid[:, None]
     scale = S_crosssection(xu, group)
 
-    c = _HCCM2(self, scale)
+    nobs, k_vars = self.model.exog.shape
+    n_groups = len(np.unique(group)) #replace with stored group attributes if available
+    if use_correction:
+        corr_fact = (n_groups / (n_groups - 1.)) * ((nobs-1.) / float(nobs - k_vars))
+    else:
+        corr_fact = 1.
+    c = corr_fact * _HCCM2(self, scale)
     bse = np.sqrt(np.diag(c))
     return c, bse
+
+def cov_cluster_2groups(self, group, group2=None):
+    '''cluster robust covariance matrix for two groups/clusters
+
+    verified against Peterson's table, (4 decimal print precision)
+    '''
+
+    if group2 is None:
+        if group.ndim !=2 or group.shape[1] != 2:
+            raise ValueError('if group2 is not given, then groups needs to be ' +
+                             'an array with two columns')
+        group0 = group[:, 0]
+        group1 = group[:, 1]
+    else:
+        group0 = group
+        group1 = group2
+        group = (group0, group1)
+
+
+    cov0 = cov_cluster(self, group0)[0]  #get still bse returned also
+    cov1 = cov_cluster(self, group1)[0]
+    group_intersection = Group(group)
+    cov01 = cov_cluster(self, group_intersection.group_int)[0]
+
+    #robust cov matrix for union of groups
+    cov_both = cov0 + cov1 - cov01
+
+    #return all three (for now?)
+    return cov_both, cov0, cov1
+
 
 def cov_white_simple(self):
     xu = self.model.exog * self.resid[:, None]

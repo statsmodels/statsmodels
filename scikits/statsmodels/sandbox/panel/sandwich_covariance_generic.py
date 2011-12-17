@@ -10,6 +10,8 @@ No spatial example, continuous is interpreted as time
 Created on Wed Nov 30 08:20:44 2011
 
 Author: Josef Perktold
+License: BSD-3
+
 """
 
 import numpy as np
@@ -88,3 +90,4 @@ def S_white(x, d):
     '''
     r = np.ones(d.shape[1])  #only points on diagonal
     return aggregate_cov(x, d, r=r, weights=None)
+

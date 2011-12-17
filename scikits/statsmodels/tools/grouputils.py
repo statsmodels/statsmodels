@@ -22,6 +22,8 @@ what if a category level has zero elements? This can happen with subset
 
 Not all methods and options have been tried out yet after refactoring
 
+need more efficient loop if groups are sorted
+
 """
 
 import numpy as np
@@ -169,7 +171,7 @@ class Group(object):
 
     def __init__(self, group, name=''):
 
-        self.group = np.asarray(group)
+        #self.group = np.asarray(group)   #TODO: use checks in combine_indices
         self.name = name
         uni, uni_idx, uni_inv = combine_indices(group)
 
