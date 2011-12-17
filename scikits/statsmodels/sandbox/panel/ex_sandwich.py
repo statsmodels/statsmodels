@@ -26,12 +26,12 @@ endog = y_true + sigma * np.random.randn(nobs)
 self = sm.OLS(endog, exog).fit()
 
 print self.HC3_se
-print sw.se_cov(sw.cov_HC3(self))
+print sw.se_cov(sw.cov_hc3(self))
 #test standalone refactoring
-assert_almost_equal(sw.se_cov(sw.cov_HC0(self)), self.HC0_se, 15)
-assert_almost_equal(sw.se_cov(sw.cov_HC1(self)), self.HC1_se, 15)
-assert_almost_equal(sw.se_cov(sw.cov_HC2(self)), self.HC2_se, 15)
-assert_almost_equal(sw.se_cov(sw.cov_HC3(self)), self.HC3_se, 15)
+assert_almost_equal(sw.se_cov(sw.cov_hc0(self)), self.HC0_se, 15)
+assert_almost_equal(sw.se_cov(sw.cov_hc1(self)), self.HC1_se, 15)
+assert_almost_equal(sw.se_cov(sw.cov_hc2(self)), self.HC2_se, 15)
+assert_almost_equal(sw.se_cov(sw.cov_hc3(self)), self.HC3_se, 15)
 print self.HC0_se
 print sw.cov_hac_simple(self, nlags=0)[1]
 #test White as HAC with nlags=0, same as nlags=1 ?
