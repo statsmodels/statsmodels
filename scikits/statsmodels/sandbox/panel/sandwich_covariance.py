@@ -620,3 +620,64 @@ def cov_hac_simple(results, nlags=None, weights_func=weights_bartlett):
     c = _HCCM2(results, sigma)
     bse = np.sqrt(np.diag(c))
     return c, bse
+
+#---------------------- use time lags corrected for groups
+#the following were copied from a different experimental script,
+#groupidx is tuple, observations assumed to be stacked by group member and
+#sorted by time, equal number of periods is not required, but equal spacing is.
+#I think this is pure within group HAC: apply HAC to each group member
+#separately
+
+def lagged_groups(x, lag, groupidx):
+    '''
+    assumes sorted by time, groupidx is tuple of start and end values
+    not optimized, just to get a working version, loop over groups
+    '''
+    out0 = []
+    out_lagged = []
+    for l,u in groupidx:
+        out0.append(x[l+lag:u])
+        out_lagged.append(x[l:u-lag])
+
+    #return out0, out_lagged
+    return np.vstack(out0), np.vstack(out_lagged)
+
+
+
+def S_nw_panel(xw, weights, groupidx):
+    '''HAC for panel data
+
+    no denominator nobs used
+
+    no reference for this, just accounting for time indices
+    '''
+    nlags = len(weights)
+
+    S = weights[0] * np.dot(xw.T, xw)  #weights just for completeness
+    for lag in range(1, nlags):
+        xw0, xwlag = lagged_groups(xw, lag, groupidx)
+        s = np.dot(xw0.T, xwlag)
+        S += weights[lag] * (s + s.T)
+    return S
+
+
+def cov_nw_panel(self, nlags, groupidx):
+    '''
+
+    groupidx is list of tuple
+    '''
+    if nlags == 0: #so we can reproduce HC0 White
+        weights = [1, 0]  #to avoid the scalar check in hac_nw
+    else:
+        weights = weights_bartlett(nlags)
+
+    xw = (self.model.exog * self.resid[:,None])
+
+    S_hac = S_nw_panel(xw, weights, groupidx)
+    cov_hac = _HCCM2(self, S_hac)
+    return cov_hac
+
+#c = cov_nw_panel(self, 0, groupidx)
+#assert_almost_equal(np.sqrt(np.diag(c)), self.HC0_se, decimal=14)
+
+#------------------------
