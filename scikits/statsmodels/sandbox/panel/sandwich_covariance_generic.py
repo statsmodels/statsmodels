@@ -10,6 +10,8 @@ No spatial example, continuous is interpreted as time
 Created on Wed Nov 30 08:20:44 2011
 
 Author: Josef Perktold
+License: BSD-3
+
 """
 
 import numpy as np
