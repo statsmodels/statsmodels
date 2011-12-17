@@ -68,10 +68,11 @@ same as in sandwiches. (I didn't go through any details yet.)
 
 TODO
 ----
-* small sample correction factors
+* small sample correction factors, Done for cluster, not yet for HAC
 * automatic lag-length selection for Newey-West HAC,
   -> added: nlag = floor[4(T/100)^(2/9)]  Reference: xtscc paper, Newey-West
      note this will not be optimal in the panel context, see Peterson
+* HAC should maybe return the chosen nlags
 * get consistent notation, varies by paper, S, scale, sigma?
 
 
@@ -84,7 +85,6 @@ References
 import numpy as np
 from numpy.testing import assert_almost_equal
 
-from scikits.statsmodels.tools.tools import (chain_dot)
 from scikits.statsmodels.tools.grouputils import Group
 
 
@@ -92,6 +92,16 @@ def se_cov(cov):
     '''get standard deviation from covariance matrix
 
     just a shorthand function np.sqrt(np.diag(cov))
+
+    Parameters
+    ----------
+    cov : array_like, square
+        covariance matrix
+
+    Returns
+    -------
+    std : ndarray
+        standard deviation from diagonal of cov
 
     '''
     return np.sqrt(np.diag(cov))
@@ -150,26 +160,26 @@ def _HCCM(results, scale):
         scale[:,None]*results.model.pinv_wexog.T)
     return H
 
-def cov_HC0(results):
+def cov_hc0(results):
     """
     See statsmodels.RegressionResults
     """
 
     het_scale = results.resid**2 # or whitened residuals? only OLS?
-    cov_HC0_ = _HCCM(results, het_scale)
+    cov_hc0_ = _HCCM(results, het_scale)
 
-    return cov_HC0_
+    return cov_hc0_
 
-def cov_HC1(results):
+def cov_hc1(results):
     """
     See statsmodels.RegressionResults
     """
 
     het_scale = results.nobs/(results.df_resid)*(results.resid**2)
-    cov_HC1_ = _HCCM(results, het_scale)
-    return cov_HC1_
+    cov_hc1_ = _HCCM(results, het_scale)
+    return cov_hc1_
 
-def cov_HC2(results):
+def cov_hc2(results):
     """
     See statsmodels.RegressionResults
     """
@@ -179,10 +189,10 @@ def cov_HC2(results):
                           results.normalized_cov_params,
                           results.model.exog.T))
     het_scale = results.resid**2/(1-h)
-    cov_HC2_ = _HCCM(results, het_scale)
-    return cov_HC2_
+    cov_hc2_ = _HCCM(results, het_scale)
+    return cov_hc2_
 
-def cov_HC3(results):
+def cov_hc3(results):
     """
     See statsmodels.RegressionResults
     """
@@ -192,8 +202,8 @@ def cov_HC3(results):
                           results.normalized_cov_params,
                           results.model.exog.T))
     het_scale=(results.resid/(1-h))**2
-    cov_HC3_ = _HCCM(results, het_scale)
-    return cov_HC3_
+    cov_hc3_ = _HCCM(results, het_scale)
+    return cov_hc3_
 
 #---------------------------------------
 
@@ -550,7 +560,7 @@ def cov_white_simple(results):
 
     Notes
     -----
-    This produces the same result as cov_HC0, and does not include any small
+    This produces the same result as cov_hc0, and does not include any small
     sample correction.
 
     verified (against LinearRegressionResults and Peterson)
