@@ -74,6 +74,7 @@ TODO
      note this will not be optimal in the panel context, see Peterson
 * HAC should maybe return the chosen nlags
 * get consistent notation, varies by paper, S, scale, sigma?
+* replace diag(hat_matrix) calculations in cov_hc2, cov_hc3
 
 
 References
@@ -185,9 +186,9 @@ def cov_hc2(results):
     """
 
     # probably could be optimized
-    h = np.diag(chain_dot(results.model.exog,
-                          results.normalized_cov_params,
-                          results.model.exog.T))
+    h = np.diag(np.dot(results.model.exog,
+                          np.dot(results.normalized_cov_params,
+                          results.model.exog.T)))
     het_scale = results.resid**2/(1-h)
     cov_hc2_ = _HCCM(results, het_scale)
     return cov_hc2_
@@ -198,9 +199,9 @@ def cov_hc3(results):
     """
 
     # above probably could be optimized to only calc the diag
-    h = np.diag(chain_dot(results.model.exog,
-                          results.normalized_cov_params,
-                          results.model.exog.T))
+    h = np.diag(np.dot(results.model.exog,
+                          np.dot(results.normalized_cov_params,
+                          results.model.exog.T)))
     het_scale=(results.resid/(1-h))**2
     cov_hc3_ = _HCCM(results, het_scale)
     return cov_hc3_
@@ -478,15 +479,16 @@ def cov_cluster(results, group, use_correction=True):
 
     nobs, k_vars = results.model.exog.shape
     n_groups = len(np.unique(group)) #replace with stored group attributes if available
-    if use_correction:
-        corr_fact = (n_groups / (n_groups - 1.)) * ((nobs-1.) / float(nobs - k_vars))
-    else:
-        corr_fact = 1.
-    c = corr_fact * _HCCM2(results, scale)
-    bse = np.sqrt(np.diag(c))
-    return c, bse
 
-def cov_cluster_2groups(results, group, group2=None):
+    cov_c = _HCCM2(results, scale)
+
+    if use_correction:
+        cov_c *= n_groups / (n_groups - 1.) * ((nobs-1.) / float(nobs - k_vars))
+
+    bse_c = np.sqrt(np.diag(cov_c))
+    return cov_c, bse_c
+
+def cov_cluster_2groups(results, group, group2=None, use_correction=True):
     '''cluster robust covariance matrix for two groups/clusters
 
     Parameters
@@ -527,12 +529,15 @@ def cov_cluster_2groups(results, group, group2=None):
         group = (group0, group1)
 
 
-    cov0 = cov_cluster(results, group0)[0]  #get still bse returned also
-    cov1 = cov_cluster(results, group1)[0]
+    cov0 = cov_cluster(results, group0, use_correction=use_correction)[0]
+    #[0] because we get still also returns bse
+    cov1 = cov_cluster(results, group1, use_correction=use_correction)[0]
 
     group_intersection = Group(group)
     #cov of cluster formed by intersection of two groups
-    cov01 = cov_cluster(results, group_intersection.group_int)[0]
+    cov01 = cov_cluster(results,
+                        group_intersection.group_int,
+                        use_correction=use_correction)[0]
 
     #robust cov matrix for union of groups
     cov_both = cov0 + cov1 - cov01
@@ -541,7 +546,7 @@ def cov_cluster_2groups(results, group, group2=None):
     return cov_both, cov0, cov1
 
 
-def cov_white_simple(results):
+def cov_white_simple(results, use_correction=True):
     '''
     heteroscedasticity robust covariance matrix (White)
 
@@ -574,12 +579,19 @@ def cov_white_simple(results):
     xu = results.model.exog * results.resid[:, None]
     sigma = S_white_simple(xu)
 
-    c = _HCCM2(results, sigma)  #add bread to sandwich
-    bse = np.sqrt(np.diag(c))
-    return c, bse
+    cov_w = _HCCM2(results, sigma)  #add bread to sandwich
+
+    if use_correction:
+        nobs, k_vars = results.model.exog.shape
+        cov_w *= nobs / float(nobs - k_vars)
+
+    bse_w = np.sqrt(np.diag(cov_w))
+
+    return cov_w, bse_w
 
 
-def cov_hac_simple(results, nlags=None, weights_func=weights_bartlett):
+def cov_hac_simple(results, nlags=None, weights_func=weights_bartlett,
+                   use_correction=True):
     '''
     heteroscedasticity and autocorrelation robust covariance matrix (Newey-West)
 
@@ -610,6 +622,7 @@ def cov_hac_simple(results, nlags=None, weights_func=weights_bartlett):
     Notes
     -----
     verified only for nlags=0, which is just White
+    just guessing on correction factor, need reference
 
     options might change when other kernels besides Bartlett are available.
 
@@ -617,9 +630,15 @@ def cov_hac_simple(results, nlags=None, weights_func=weights_bartlett):
     xu = results.model.exog * results.resid[:, None]
     sigma = S_hac_simple(xu, nlags=nlags, weights_func=weights_func)
 
-    c = _HCCM2(results, sigma)
-    bse = np.sqrt(np.diag(c))
-    return c, bse
+    cov_hac = _HCCM2(results, sigma)
+
+    if use_correction:
+        nobs, k_vars = results.model.exog.shape
+        cov_hac *= nobs / float(nobs - k_vars)
+
+    bse_hac = np.sqrt(np.diag(cov_hac))
+
+    return cov_hac, bse_hac
 
 #---------------------- use time lags corrected for groups
 #the following were copied from a different experimental script,
@@ -661,7 +680,7 @@ def S_nw_panel(xw, weights, groupidx):
     return S
 
 
-def cov_nw_panel(self, nlags, groupidx):
+def cov_nw_panel(results, nlags, groupidx, use_correction=True):
     '''
 
     groupidx is list of tuple
@@ -671,13 +690,16 @@ def cov_nw_panel(self, nlags, groupidx):
     else:
         weights = weights_bartlett(nlags)
 
-    xw = (self.model.exog * self.resid[:,None])
+    xw = (results.model.exog * results.resid[:,None])
 
     S_hac = S_nw_panel(xw, weights, groupidx)
-    cov_hac = _HCCM2(self, S_hac)
+    cov_hac = _HCCM2(results, S_hac)
+    if use_correction:
+        nobs, k_vars = results.model.exog.shape
+        cov_hac *= nobs / float(nobs - k_vars)
     return cov_hac
 
-#c = cov_nw_panel(self, 0, groupidx)
-#assert_almost_equal(np.sqrt(np.diag(c)), self.HC0_se, decimal=14)
+#c = cov_nw_panel(results, 0, groupidx)
+#assert_almost_equal(np.sqrt(np.diag(c)), results.HC0_se, decimal=14)
 
 #------------------------
