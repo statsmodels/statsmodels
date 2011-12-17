@@ -10,7 +10,8 @@ from scipy.misc import factorial
 __all__ = ['fboxplot', 'banddepth']
 
 
-def fboxplot(data, xdata=None, labels=None, wfactor=1.5, ax=None):
+def fboxplot(data, xdata=None, labels=None, method='MBD', wfactor=1.5,
+             ax=None):
     """Plot functional boxplot.
 
     A functional boxplot is the analog of a boxplot for functional data.
@@ -18,8 +19,8 @@ def fboxplot(data, xdata=None, labels=None, wfactor=1.5, ax=None):
     curves, probabillity distributions, seasonal data, etc.
 
     The data is first ordered, the order statistic used here is `banddepth`.
-    Plotted are then the "most central" curve, the envelope of the 50% central
-    region, the maximum non-outlying envelope and the outlier curves.
+    Plotted are then the median curve, the envelope of the 50% central region,
+    the maximum non-outlying envelope and the outlier curves.
 
     Parameters
     ----------
@@ -36,6 +37,8 @@ def fboxplot(data, xdata=None, labels=None, wfactor=1.5, ax=None):
     labels : sequence of scalar or str, optional
         The labels or identifiers of the curves in `data`.  If given, outliers
         are labeled in the plot.
+    method : {'MBD', 'BD2'}, optional
+        The method to use to calculate the band depth.  Default is 'MBD'.
     wfactor : float, optional
         Factor by which the central 50% region is multiplied to find the outer
         region (analog of "whiskers" of a classical boxplot).
@@ -48,6 +51,13 @@ def fboxplot(data, xdata=None, labels=None, wfactor=1.5, ax=None):
     fig : Matplotlib figure instance
         The created figure.  If `ax` is not None, the returned value for `fig`
         is None.
+    depth : ndarray
+        1-D array containing the calculated band depths of the curves.
+    ix_depth : ndarray
+        1-D array of indices needed to order curves (or `depth`) from most to
+        least central curve.
+    ix_outliers : ndarray
+        1-D array of indices of outlying curves in `data`.
 
     See Also
     --------
@@ -55,6 +65,16 @@ def fboxplot(data, xdata=None, labels=None, wfactor=1.5, ax=None):
 
     Notes
     -----
+    The median curve is the curve with the highest band depth.
+
+    Outliers are defined as curves that fall outside the band created by
+    multiplying the central region by `wfactor`.  Note that the range over
+    which they fall outside this band doesn't matter, a single data point
+    outside the band is enough.  If the data is noisy, smoothing may therefore
+    be required.
+
+    The non-outlying region is defined as the band made up of all the
+    non-outlying curves.
 
     References
     ----------
@@ -89,8 +109,6 @@ def fboxplot(data, xdata=None, labels=None, wfactor=1.5, ax=None):
     >>> plt.show()
 
     """
-    # TODO:
-    # - factor out part of the algorithm if useful by itself
     try:
         import matplotlib.pyplot as plt
     except:
@@ -101,6 +119,9 @@ def fboxplot(data, xdata=None, labels=None, wfactor=1.5, ax=None):
     if xdata is None:
         xdata = np.arange(data.shape[1])
 
+    if method not in ['MBD', 'BD2']:
+        raise ValueError("Unknown value for parameter `method`.")
+
     if ax is None:
         fig = plt.figure()
         ax = fig.add_subplot(111)
@@ -108,15 +129,15 @@ def fboxplot(data, xdata=None, labels=None, wfactor=1.5, ax=None):
         fig = None
 
     # Inner area is 25%-75% region of band-depth ordered curves.
-    depth = banddepth(data, method='MBD')
-    depth_ix = np.argsort(depth)[::-1]
-    middle = data[depth_ix[0], :]
+    depth = banddepth(data, method=method)
+    ix_depth = np.argsort(depth)[::-1]
+    middle = data[ix_depth[0], :]
     ix_IQR = data.shape[0] // 2
-    lower = data[depth_ix[0:ix_IQR], :].min(axis=0)
-    upper = data[depth_ix[0:ix_IQR], :].max(axis=0)
+    lower = data[ix_depth[0:ix_IQR], :].min(axis=0)
+    upper = data[ix_depth[0:ix_IQR], :].max(axis=0)
 
     # Determine region for outlier detection
-    inner_median = np.median(data[depth_ix[0:ix_IQR], :], axis=0)
+    inner_median = np.median(data[ix_depth[0:ix_IQR], :], axis=0)
     lower_fence = inner_median - (inner_median - lower) * wfactor
     upper_fence = inner_median + (upper - inner_median) * wfactor
 
@@ -128,6 +149,8 @@ def fboxplot(data, xdata=None, labels=None, wfactor=1.5, ax=None):
             ix_outliers.append(ii)
         else:
             ix_nonout.append(ii)
+
+    ix_outliers = np.asarray(ix_outliers)
 
     # Plot envelope of all non-outlying data
     lower_nonout = data[ix_nonout, :].min(axis=0)
@@ -150,7 +173,7 @@ def fboxplot(data, xdata=None, labels=None, wfactor=1.5, ax=None):
     if labels is not None:
         ax.legend()
 
-    return fig, depth, depth_ix
+    return fig, depth, ix_depth, ix_outliers
 
 
 def banddepth(data, method='MBD'):
@@ -236,5 +259,4 @@ def banddepth(data, method='MBD'):
         depth.append(float(res) / normfactor)
 
     return np.asarray(depth)
-
 

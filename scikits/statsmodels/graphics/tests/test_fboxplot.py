@@ -73,13 +73,15 @@ def test_fboxplot():
     # Create a plot
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    _, depth, depth_ix = fboxplot(data, wfactor=2, ax=ax)
+    _, depth, ix_depth, ix_outliers = fboxplot(data, wfactor=2, ax=ax)
     ax.set_xlabel(r'$t$')
     ax.text(100, 0.16, r'$(1-c_i)\{a_{1i}sin(t)+a_{2i}cos(t)\}+...$')
     ax.set_ylabel(r'$y(t)$')
 
-    expected_ix = np.array([13, 4, 15, 19, 8, 6, 3, 16, 9, 7, 1, 5, 2,
+    ix_expected = np.array([13, 4, 15, 19, 8, 6, 3, 16, 9, 7, 1, 5, 2,
                             12, 17, 11, 14, 10, 0, 18])
-    assert_equal(depth_ix, expected_ix)
+    assert_equal(ix_depth, ix_expected)
+    ix_expected2 = np.array([2, 11, 17, 18])
+    assert_equal(ix_outliers, ix_expected2)
 
     plt.close(fig)
