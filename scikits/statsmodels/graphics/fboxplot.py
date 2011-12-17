@@ -65,7 +65,15 @@ def fboxplot(data, xdata=None, labels=None, wfactor=1.5, ax=None):
 
     Examples
     --------
+    Load the El Nino dataset.  Consists of 60 years worth of Pacific Ocean sea
+    surface temperature data.
+
     >>> data = sm.datasets.elnino.load()
+
+    Create a functional boxplot.  We see that the years 1982-83 and 1997-98 are
+    outliers; these are the years where El Nino (a climate pattern
+    characterized by warming up of the sea surface and higher air pressures)
+    occurred with unusual intensity.
 
     >>> fig = plt.figure()
     >>> ax = fig.add_subplot(111)
@@ -82,7 +90,6 @@ def fboxplot(data, xdata=None, labels=None, wfactor=1.5, ax=None):
 
     """
     # TODO:
-    # - add tests
     # - factor out part of the algorithm if useful by itself
     try:
         import matplotlib.pyplot as plt
@@ -152,7 +159,7 @@ def banddepth(data, method='MBD'):
     Band depth is an order statistic for functional data (see `fboxplot`), with
     a higher band depth indicating larger "centrality".  In analog to scalar
     data, the functional curve with highest band depth is called the median
-    curve, and the band made up from the first N/2 of N curves are the 50%
+    curve, and the band made up from the first N/2 of N curves is the 50%
     central region.
 
     Parameters
@@ -162,7 +169,7 @@ def banddepth(data, method='MBD'):
         The first axis is the function index, the second axis the one along
         which the function is defined.  So ``data[0, :]`` is the first
         functional curve.
-    method : {'BD2', 'MBD'}, optional
+    method : {'MBD', 'BD2'}, optional
         Whether to use the original band depth (with J=2) of [1]_ or the
         modified band depth.  See Notes for details.
 
@@ -205,8 +212,8 @@ def banddepth(data, method='MBD'):
 
     def _band_mod(x1, x2, curve):
         xb = np.vstack([x1, x2])
-        res = np.logical_and(curve > xb.min(axis=0),
-                             curve < xb.max(axis=0))
+        res = np.logical_and(curve >= xb.min(axis=0),
+                             curve <= xb.max(axis=0))
         return np.sum(res) / float(res.size)
 
     if method == 'BD2':
@@ -231,34 +238,3 @@ def banddepth(data, method='MBD'):
     return np.asarray(depth)
 
 
-def testfunc_harm(t):
-    # Constant, 0 with p=0.9, 1 with p=1 - for creating outliers
-    ci = int(np.random.random() > 0.9)
-    a1i = np.random.random() * 0.05
-    a2i = np.random.random() * 0.05
-    b1i = (0.15 - 0.1) * np.random.random() + 0.1
-    b2i = (0.15 - 0.1) * np.random.random() + 0.1
-
-    func = (1 - ci) * (a1i * np.sin(t) + a2i * np.cos(t)) + \
-           ci * (b1i * np.sin(t) + b2i * np.cos(t))
-
-    return func
-
-
-if __name__ == '__main__':
-    import matplotlib.pyplot as plt
-
-    # Some basic test data, Model 6 from Sun and Genton.
-    t = np.linspace(0, 2 * np.pi, 250)
-    data = []
-    for ii in range(40):
-        data.append(testfunc_harm(t))
-
-    # Create a plot
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    _, _, ix = fboxplot(data, wfactor=2, ax=ax)
-    ax.set_xlabel(r'$t$')
-    ax.text(100, 0.16, r'$(1-c_i)\{a_{1i}sin(t)+a_{2i}cos(t)\}$')
-    ax.set_ylabel(r'$y(t)$')
-    plt.show()
