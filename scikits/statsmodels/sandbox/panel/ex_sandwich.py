@@ -47,7 +47,22 @@ idx = np.nonzero(np.diff(groups))[0].tolist()
 groupidx = zip([0]+idx, idx+[len(groups)])
 ngroups = len(groupidx)
 
-print sw.cov_crosssection2(self, groups)[1]
+print sw.cov_cluster(self, groups)[1]
 #two strange looking corner cases BUG?
-print sw.cov_crosssection2(self, np.ones(len(endog), int))[1]
-print sw.cov_crosssection(self, np.arange(len(endog)))[1]
+print sw.cov_cluster(self, np.ones(len(endog), int), use_correction=False)[1]
+print sw.cov_crosssection_0(self, np.arange(len(endog)))[1]
+#these results are close to simple (no group) white, 50 groups 2 obs each
+groups = np.repeat(np.arange(50), 100//50)
+print sw.cov_cluster(self, groups)[1]
+#2 groups with 50 obs each, what was the interpretation again?
+groups = np.repeat(np.arange(2), 100//2)
+print sw.cov_cluster(self, groups)[1]
+
+"http://www.kellogg.northwestern.edu/faculty/petersen/htm/papers/se/test_data.txt"
+'''
+test <- read.table(
+      url(paste("http://www.kellogg.northwestern.edu/",
+            "faculty/petersen/htm/papers/se/",
+            "test_data.txt",sep="")),
+    col.names=c("firmid", "year", "x", "y"))
+'''
