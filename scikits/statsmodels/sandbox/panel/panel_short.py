@@ -17,7 +17,7 @@ not run yet
 
 import numpy as np
 from scikits.statsmodels.regression.linear_model import OLS
-from scikits.statsmodels.tools.grouputils import Group
+from scikits.statsmodels.tools.grouputils import Group, GroupSorted
 
 #not used
 class Unit(object):
@@ -35,11 +35,30 @@ def sum_outer_product_loop(x, group_iter):
     '''
 
     mom = 0
-    for g in group_iter:
+    for g in group_iter():
         x_g = x[g]
+        #print 'x_g.shape', x_g.shape
         mom += np.outer(x_g, x_g)
 
     return mom
+
+def sum_outer_product_balanced(x, n_groups):
+    '''sum outerproduct dot(x_i, x_i.T) over individuals
+
+    where x_i is (nobs_i, 1), and result is (nobs_i, nobs_i)
+
+    reshape-dot version, for x.ndim=1 only
+
+    '''
+    xrs = x.reshape(-1, n_groups, order='F')
+    return np.dot(xrs, xrs.T)  #should be (nobs_i, nobs_i)
+
+    #x.reshape(n_groups, nobs_i,  k_vars) #, order='F')
+    #... ? this is getting 3-dimensional  dot, tensordot?
+    #needs (n_groups, k_vars, k_vars) array with sum over groups
+    #NOT
+    #I only need this for x is 1d, i.e. residual
+
 
 def whiten_individuals_loop(x, transform, group_iter):
     '''apply linear transform for each individual
@@ -50,11 +69,11 @@ def whiten_individuals_loop(x, transform, group_iter):
     #Note: figure out dimension of transformed variable
     #so we can pre-allocate
     x_new = []
-    for g in group_iter:
+    for g in group_iter():
         x_g = x[g]
         x_new.append(np.dot(transform, x_g))
 
-    return np.vstack(x_new)  #or np.array(x_new) #check shape
+    return np.concatenate(x_new) #np.vstack(x_new)  #or np.array(x_new) #check shape
 
 
 
@@ -70,9 +89,9 @@ class ShortPanelGLS(object):
     def __init__(self, endog, exog, group):
         self.endog = endog
         self.exog = exog
-        self.group = Group(group)
+        self.group = GroupSorted(group)
         self.n_groups = self.group.n_groups
-        self.nobs_group
+        #self.nobs_group =   #list for unbalanced?
 
     def fit_ols(self):
         self.res_pooled = OLS(self.endog, self.exog).fit()
@@ -94,6 +113,7 @@ class ShortPanelGLS(object):
         self.cholsigmainv_i = np.linalg.cholesky(np.linalg.pinv(sigma_i)).T
         wendog = self.whiten_groups(self.endog, self.cholsigmainv_i)
         wexog = self.whiten_groups(self.exog, self.cholsigmainv_i)
+        print wendog.shape, wexog.shape
         self.res1 = OLS(wendog, wexog).fit()
         return self.res1
 
