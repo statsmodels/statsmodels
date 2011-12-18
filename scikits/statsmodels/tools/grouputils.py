@@ -178,6 +178,8 @@ class Group(object):
         #TODO: rename these to something easier to remember
         self.group_int, self.uni_idx, self.uni = uni, uni_idx, uni_inv
 
+        self.n_groups = len(self.uni)
+
         #put this here so they can be overwritten before calling labels
         self.separator = '.'
         self.prefix = self.name
@@ -226,9 +228,19 @@ class Group(object):
     def group_sums(self, x, use_bincount=True):
         return group_sums(x, self.group_int, use_bincount=use_bincount)
 
+class GroupSorted(Group):
 
+    def __init__(self, group, name=''):
+        super(self.__class__, self).__init__(group, name=name)
 
+        idx = (np.nonzero(np.diff(group))[0]+1).tolist()
+        self.groupidx = groupidx = zip([0]+idx, idx+[len(group)])
 
+        ngroups = len(groupidx)
+
+    def group_iter(self):
+        for low, upp in self.groupidx:
+            yield slice(low, upp)
 
 
 if __name__ == '__main__':
