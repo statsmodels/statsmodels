@@ -47,7 +47,7 @@ class PanelSample(object):
 
         self.exog = exog
         self.y_true = exog.sum(1)  #all coefficients equal 1
-        if seed is not None:
+        if seed is None:
             seed = np.random.randint(0, 999999)
 
         self.seed = seed
@@ -104,6 +104,7 @@ if __name__ == '__main__':
 #                      corr_args=([1, -0.95],))
     dgp = PanelSample(nobs, k_vars, n_groups, corr_structure=cs.corr_arma,
                       corr_args=([1], [1., -0.9],))
+    print 'seed', dgp.seed
     y = dgp.generate_panel()
     noise = y - dgp.y_true
     print np.corrcoef(y.reshape(-1,n_groups, order='F'))
@@ -132,4 +133,8 @@ if __name__ == '__main__':
     import scikits.statsmodels.sandbox.panel.sandwich_covariance as sw
     print sw.cov_cluster(mod.res_pooled, dgp.groups.astype(int))[1]
     #not bad, pretty close to panel estimator
+    #and with Newey-West Hac
+    print sw.se_cov(sw.cov_nw_panel(mod.res_pooled, 5, mod.group.groupidx))
+    #too small, assuming no bugs,
+    #see Peterson assuming it refers to same kind of model
     print dgp.cov
