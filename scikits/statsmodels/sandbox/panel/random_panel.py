@@ -1,0 +1,91 @@
+# -*- coding: utf-8 -*-
+"""Generate a random process with panel structure
+
+Created on Sat Dec 17 22:15:27 2011
+
+Author: Josef Perktold
+
+
+
+"""
+
+import numpy as np
+import correlation_structures as cs
+
+
+class PanelSample(object):
+    '''data generating process for panel with within correlation
+
+    allows various within correlation structures, but no random intercept yet
+
+    '''
+
+    def __init__(self, nobs, k_vars, n_groups, exog=None,
+                 corr_structure=np.eye, corr_args=(), scale=1, seed=None):
+
+
+        nobs_i = nobs//n_groups
+        nobs = nobs_i * n_groups  #make balanced
+        self.nobs = nobs
+        self.nobs_i = nobs_i
+        self.n_groups = n_groups
+        self.k_vars = k_vars
+        self.corr_structure = corr_structure
+
+        self.group_indices = np.arange(n_groups+1) * nobs_i #check +1
+
+        if exog is None:
+            t = np.repeat(np.linspace(-1,1,nobs_i), n_groups)
+            exog = t[:,None]**np.arange(k_vars)
+
+        self.exog = exog
+        self.y_true = exog.sum(1)  #all coefficients equal 1
+        if seed is not None:
+            seed = np.random.randint(0, 999999)
+
+        self.seed = seed
+        self.random_state = np.random.RandomState(seed)
+
+        #this makes overwriting difficult, move to method?
+        self.std = scale * np.ones(nobs_i)
+        corr = self.corr_structure(nobs_i, *corr_args)
+        self.cov = cs.corr2cov(corr, self.std)
+        self.group_means = np.zeros(n_groups)
+
+
+
+    def generate_panel(self):
+        '''
+        generate endog for a random panel dataset with within correlation
+
+        '''
+
+        random = self.random_state
+
+        noise = np.empty(self.nobs, np.float64)
+        noise.fill(np.nan)
+        for ii in range(self.n_groups):
+            #print ii,
+            idx, idxupp = self.group_indices[ii:ii+2]
+            #print idx, idxupp
+            mean_i = self.group_means[ii]
+            noise[idx:idxupp] = random.multivariate_normal(
+                                    mean_i * np.ones(self.nobs_i), self.cov)
+
+        endog = self.y_true + noise
+        return endog
+
+
+if __name__ == '__main__':
+
+    nobs = 1000
+    nobs_i = 5
+    n_groups = nobs // nobs_i
+    k_vars = 3
+
+    dgp = PanelSample(nobs, k_vars, n_groups, corr_structure=cs.corr_equi,
+                      corr_args=(0.6,))
+    y = dgp.generate_panel()
+    noise = y - dgp.y_true
+    print np.corrcoef(y.reshape(-1,n_groups, order='F'))
+    print np.corrcoef(noise.reshape(-1,n_groups, order='F'))
