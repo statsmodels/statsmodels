@@ -79,7 +79,26 @@ TODO
 
 References
 ----------
+John C. Driscoll and Aart C. Kraay, “Consistent Covariance Matrix Estimation
+with Spatially Dependent Panel Data,” Review of Economics and Statistics 80,
+no. 4 (1998): 549-560.
 
+Daniel Hoechle, "Robust Standard Errors for Panel Regressions with
+Cross-Sectional Dependence", The Stata Journal
+
+Mitchell A. Petersen, “Estimating Standard Errors in Finance Panel Data
+Sets: Comparing Approaches,” Review of Financial Studies 22, no. 1
+(January 1, 2009): 435 -480.
+
+A. Colin Cameron, Jonah B. Gelbach, and Douglas L. Miller, “Robust Inference
+With Multiway Clustering,” Journal of Business and Economic Statistics 29
+(April 2011): 238-249.
+
+
+not used yet:
+A.C. Cameron, J.B. Gelbach, and D.L. Miller, “Bootstrap-based improvements
+for inference with clustered errors,” The Review of Economics and
+Statistics 90, no. 3 (2008): 414–427.
 
 """
 
