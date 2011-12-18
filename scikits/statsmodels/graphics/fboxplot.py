@@ -7,11 +7,34 @@ from scipy import stats
 from scipy.misc import factorial
 
 
-__all__ = ['fboxplot', 'banddepth']
+__all__ = ['fboxplot', 'rainbowplot', 'banddepth']
 
 
-def fboxplot(data, xdata=None, labels=None, method='MBD', wfactor=1.5,
-             ax=None):
+# TODO: rename to functional, add graphics/api.py
+
+
+def _import_mpl():
+    try:
+        import matplotlib.pyplot as plt
+    except:
+        raise ImportError("Matplotlib is not found.")
+
+    return plt
+
+
+def _create_mpl_ax(ax):
+    if ax is None:
+        plt = _import_mpl()
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+    else:
+        fig = None
+
+    return fig, ax
+
+
+def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
+             wfactor=1.5, ax=None):
     """Plot functional boxplot.
 
     A functional boxplot is the analog of a boxplot for functional data.
@@ -37,6 +60,9 @@ def fboxplot(data, xdata=None, labels=None, method='MBD', wfactor=1.5,
     labels : sequence of scalar or str, optional
         The labels or identifiers of the curves in `data`.  If given, outliers
         are labeled in the plot.
+    depth : ndarray, optional
+        A 1-D array of band depths for `data`, or equivalent order statistic.
+        If not given, it will be calculated through `banddepth`.
     method : {'MBD', 'BD2'}, optional
         The method to use to calculate the band depth.  Default is 'MBD'.
     wfactor : float, optional
@@ -61,7 +87,7 @@ def fboxplot(data, xdata=None, labels=None, method='MBD', wfactor=1.5,
 
     See Also
     --------
-    banddepth
+    banddepth, rainbowplot
 
     Notes
     -----
@@ -88,6 +114,8 @@ def fboxplot(data, xdata=None, labels=None, method='MBD', wfactor=1.5,
     Load the El Nino dataset.  Consists of 60 years worth of Pacific Ocean sea
     surface temperature data.
 
+    >>> import matplotlib.pyplot as plt
+    >>> import scikits.statsmodels.api as sm
     >>> data = sm.datasets.elnino.load()
 
     Create a functional boxplot.  We see that the years 1982-83 and 1997-98 are
@@ -97,8 +125,8 @@ def fboxplot(data, xdata=None, labels=None, method='MBD', wfactor=1.5,
 
     >>> fig = plt.figure()
     >>> ax = fig.add_subplot(111)
-    >>> res = fboxplot(data.raw_data[:, 1:], wfactor=2.58,
-                   labels=data.raw_data[:, 0].astype(int), ax=ax)
+    >>> res = sm.fboxplot(data.raw_data[:, 1:], wfactor=2.58,
+                          labels=data.raw_data[:, 0].astype(int), ax=ax)
 
     >>> ax.set_xlabel("Month of the year")
     >>> ax.set_ylabel("Sea surface temperature (C)")
@@ -109,29 +137,26 @@ def fboxplot(data, xdata=None, labels=None, method='MBD', wfactor=1.5,
     >>> plt.show()
 
     """
-    try:
-        import matplotlib.pyplot as plt
-    except:
-        raise ImportError("Matplotlib is not found.")
+    plt = _import_mpl()
+    fig, ax = _create_mpl_ax(ax)
 
     data = np.asarray(data)
-
     if xdata is None:
         xdata = np.arange(data.shape[1])
 
-    if method not in ['MBD', 'BD2']:
-        raise ValueError("Unknown value for parameter `method`.")
+    # Calculate band depth if required.
+    if depth is None:
+        if method not in ['MBD', 'BD2']:
+            raise ValueError("Unknown value for parameter `method`.")
 
-    if ax is None:
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
+        depth = banddepth(data, method=method)
     else:
-        fig = None
+        if depth.size != data.shape[0]:
+            raise ValueError("Provided `depth` array is not of correct size.")
 
     # Inner area is 25%-75% region of band-depth ordered curves.
-    depth = banddepth(data, method=method)
     ix_depth = np.argsort(depth)[::-1]
-    middle = data[ix_depth[0], :]
+    median_curve = data[ix_depth[0], :]
     ix_IQR = data.shape[0] // 2
     lower = data[ix_depth[0:ix_IQR], :].min(axis=0)
     upper = data[ix_depth[0:ix_IQR], :].max(axis=0)
@@ -161,7 +186,7 @@ def fboxplot(data, xdata=None, labels=None, method='MBD', wfactor=1.5,
     ax.fill_between(xdata, lower, upper, color=(0.5,0.5,0.5))
 
     # Plot median curve
-    ax.plot(xdata, middle, 'k-', lw=2)
+    ax.plot(xdata, median_curve, 'k-', lw=2)
 
     # Plot outliers
     for ii, ix in enumerate(ix_outliers):
@@ -170,10 +195,117 @@ def fboxplot(data, xdata=None, labels=None, method='MBD', wfactor=1.5,
                 color=plt.cm.rainbow(float(ii) / (len(ix_outliers)-1)),
                 label=label)
 
+    for ix in ix_nonout:
+        ax.plot(xdata, data[ix, :], 'k-', lw=0.5)
+
     if labels is not None:
         ax.legend()
 
     return fig, depth, ix_depth, ix_outliers
+
+
+def rainbowplot(data, xdata=None, depth=None, method='MBD', ax=None,
+                 cmap=None):
+    """Create a rainbow plot for a set of curves.
+
+    A rainbow plot contains line plots of all curves in the dataset, colored in
+    order of functional depth.  The median curve is shown in black.
+
+    Parameters
+    ----------
+    data : sequence of ndarrays or 2-D ndarray
+        The vectors of functions to create a functional boxplot from.  If a
+        sequence of 1-D arrays, these should all be the same size.
+        The first axis is the function index, the second axis the one along
+        which the function is defined.  So ``data[0, :]`` is the first
+        functional curve.
+    xdata : ndarray, optional
+        The independent variable for the data.  If not given, it is assumed to
+        be an array of integers 0..N with N the length of the vectors in
+        `data`.
+    depth : ndarray, optional
+        A 1-D array of band depths for `data`, or equivalent order statistic.
+        If not given, it will be calculated through `banddepth`.
+    method : {'MBD', 'BD2'}, optional
+        The method to use to calculate the band depth.  Default is 'MBD'.
+    ax : Matplotlib AxesSubplot instance, optional
+        If given, this subplot is used to plot in instead of a new figure being
+        created.
+    cmap : Matplotlib LinearSegmentedColormap instance, optional
+        The colormap used to color curves with.  Default is a rainbow colormap,
+        with red used for the most central and purple for the least central
+        curves.
+
+    Returns
+    -------
+    fig : Matplotlib figure instance
+        The created figure.  If `ax` is not None, the returned value for `fig`
+        is None.
+
+    See Also
+    --------
+    banddepth, fboxplot
+
+    References
+    ----------
+    [1] R.J. Hyndman and H.L. Shang, "Rainbow Plots, Bagplots, and Boxplots for
+        Functional Data", vol. 19, pp. 29-25, 2010.
+
+    Examples
+    --------
+    Load the El Nino dataset.  Consists of 60 years worth of Pacific Ocean sea
+    surface temperature data.
+
+    >>> import matplotlib.pyplot as plt
+    >>> import scikits.statsmodels.api as sm
+    >>> data = sm.datasets.elnino.load()
+
+    Create a rainbow plot:
+
+    >>> fig = plt.figure()
+    >>> ax = fig.add_subplot(111)
+    >>> res = sm.rainbowplot(data.raw_data[:, 1:], ax=ax)
+
+    >>> ax.set_xlabel("Month of the year")
+    >>> ax.set_ylabel("Sea surface temperature (C)")
+    >>> ax.set_xticks(np.arange(13, step=3) - 1)
+    >>> ax.set_xticklabels(["", "Mar", "Jun", "Sep", "Dec"])
+    >>> ax.set_xlim([-0.2, 11.2])
+    >>> plt.show()
+
+    """
+    plt = _import_mpl()
+    fig, ax = _create_mpl_ax(ax)
+
+    data = np.asarray(data)
+    if xdata is None:
+        xdata = np.arange(data.shape[1])
+
+    # Calculate band depth if required.
+    if depth is None:
+        if method not in ['MBD', 'BD2']:
+            raise ValueError("Unknown value for parameter `method`.")
+
+        depth = banddepth(data, method=method)
+    else:
+        if depth.size != data.shape[0]:
+            raise ValueError("Provided `depth` array is not of correct size.")
+
+    if cmap is None:
+        cmap = plt.cm.rainbow_r
+
+    ix_depth = np.argsort(depth)[::-1]
+
+    # Plot all curves, colored by depth
+    num_curves = data.shape[0]
+    for ii in range(num_curves):
+        ax.plot(xdata, data[ix_depth[ii], :], c=cmap(ii / (num_curves - 1.)))
+
+    # Plot the median curve
+    median_curve = data[ix_depth[0], :]
+    ax.plot(xdata, median_curve, 'k-', lw=2)
+
+    return fig
 
 
 def banddepth(data, method='MBD'):
