@@ -83,7 +83,7 @@ class ShortPanelGLS(object):
     assumes data is stacked by individuals, panel is balanced and
     within correlation structure is identical across individuals.
 
-
+    It looks like this can just inherit GLS and overwrite whiten
     '''
 
     def __init__(self, endog, exog, group):
