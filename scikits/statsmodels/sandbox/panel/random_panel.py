@@ -6,6 +6,12 @@ Created on Sat Dec 17 22:15:27 2011
 Author: Josef Perktold
 
 
+Notes
+-----
+* written with unbalanced panels in mind, but not flexible enough yet
+* need more shortcuts and options for balanced panel
+* need to add random intercept or coefficients
+* only one-way (repeated measures) so far
 
 """
 
@@ -92,8 +98,12 @@ if __name__ == '__main__':
     n_groups = nobs // nobs_i
     k_vars = 3
 
-    dgp = PanelSample(nobs, k_vars, n_groups, corr_structure=cs.corr_equi,
-                      corr_args=(0.6,))
+#    dgp = PanelSample(nobs, k_vars, n_groups, corr_structure=cs.corr_equi,
+#                      corr_args=(0.6,))
+#    dgp = PanelSample(nobs, k_vars, n_groups, corr_structure=cs.corr_ar,
+#                      corr_args=([1, -0.95],))
+    dgp = PanelSample(nobs, k_vars, n_groups, corr_structure=cs.corr_arma,
+                      corr_args=([1], [1., -0.9],))
     y = dgp.generate_panel()
     noise = y - dgp.y_true
     print np.corrcoef(y.reshape(-1,n_groups, order='F'))
@@ -105,7 +115,7 @@ if __name__ == '__main__':
     print res.params
     print res.bse
     #Now what?
-    #res.resid is of transformed mode
+    #res.resid is of transformed model
     #np.corrcoef(res.resid.reshape(-1,n_groups, order='F'))
     y_pred = np.dot(mod.exog, res.params)
     resid = y - y_pred
@@ -122,3 +132,4 @@ if __name__ == '__main__':
     import scikits.statsmodels.sandbox.panel.sandwich_covariance as sw
     print sw.cov_cluster(mod.res_pooled, dgp.groups.astype(int))[1]
     #not bad, pretty close to panel estimator
+    print dgp.cov

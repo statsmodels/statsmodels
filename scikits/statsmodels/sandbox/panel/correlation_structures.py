@@ -40,10 +40,13 @@ def corr_equi(k_vars, rho):
 def corr_ar(k_vars, ar):
     '''create autoregressive correlation matrix
 
+    This might be MA, not AR, process if used for residual process - check
+
     Parameters
     ----------
     ar : array_like, 1d
         AR lag-polynomial including 1 for lag 0
+
 
     '''
     from scipy.linalg import toeplitz
@@ -60,6 +63,8 @@ def corr_arma(k_vars, ar, ma):
 
     converts arma to autoregressive lag-polynomial with k_var lags
 
+    ar and arma might need to be switched for generating residual process
+
     Parameters
     ----------
     ar : array_like, 1d
@@ -69,9 +74,9 @@ def corr_arma(k_vars, ar, ma):
 
     '''
     from scipy.linalg import toeplitz
-    from scikits.statsmodels.tsa.arma_process import arma2ar
+    from scikits.statsmodels.tsa.arima_process import arma2ar
 
-    ar = arma2ar(ar, ma, nobs=k_vars)
+    ar = arma2ar(ar, ma, nobs=k_vars)[:k_vars]  #bug in arma2ar
 
     return toeplitz(ar)
 
