@@ -10,9 +10,6 @@ from scipy.misc import factorial
 __all__ = ['fboxplot', 'rainbowplot', 'banddepth']
 
 
-# TODO: rename to functional, add graphics/api.py
-
-
 def _import_mpl():
     try:
         import matplotlib.pyplot as plt
@@ -391,4 +388,3 @@ def banddepth(data, method='MBD'):
         depth.append(float(res) / normfactor)
 
     return np.asarray(depth)
-

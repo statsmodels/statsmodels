@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.testing import assert_allclose, dec, assert_equal
 
-from scikits.statsmodels.graphics.fboxplot import \
+from scikits.statsmodels.graphics.functional import \
             banddepth, fboxplot, rainbowplot
 
 
