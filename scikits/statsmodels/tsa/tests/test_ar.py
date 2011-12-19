@@ -3,7 +3,7 @@ Test AR Model
 """
 import scikits.statsmodels.api as sm
 from scikits.statsmodels.tsa.ar_model import AR
-from numpy.testing import assert_almost_equal, assert_equal
+from numpy.testing import assert_almost_equal, assert_equal, assert_allclose
 from results import results_ar
 import numpy as np
 import numpy.testing as npt
@@ -120,10 +120,10 @@ class TestARMLEConstant(object):
                 self.res2.FVMLEstart100end308, DECIMAL_4)
         assert_almost_equal(model.predict(params, start=0, end=200),
                 self.res2.FVMLEstart0end200, DECIMAL_4)
-        assert_almost_equal(model.predict(params, start=200, end=333),
-                self.res2.FVMLEstart200end334, DECIMAL_4)
-        assert_almost_equal(model.predict(params, start=308, end=333),
-                self.res2.FVMLEstart308end334, DECIMAL_4)
+        assert_allclose(model.predict(params, start=200, end=333),
+                        self.res2.FVMLEstart200end334, rtol=0, atol=2e-4)
+        assert_allclose(model.predict(params, start=308, end=333),
+                        self.res2.FVMLEstart308end334, rtol=0, atol=2e-4)
         assert_almost_equal(model.predict(params, start=9,end=309),
                 self.res2.FVMLEstart9end309, DECIMAL_4)
         assert_almost_equal(model.predict(params, end=301),
