@@ -13,9 +13,8 @@ License: BSD-3
 '''
 
 import numpy as np
-#fix these imports
-import scipy
-#from scipy import stats   #not used here
+from scipy.misc import comb
+
 
 ## start moment helpers
 
@@ -33,7 +32,7 @@ def mc2mnc(mc):
         n=nn+2
         mnc.append(0)
         for k in range(n+1):
-            mnc[n] += scipy.comb(n,k,exact=1) * mc[k] * mean**(n-k)
+            mnc[n] += comb(n,k,exact=1) * mc[k] * mean**(n-k)
 
     return mnc[1:]
 
@@ -49,9 +48,9 @@ def mnc2mc(mnc, wmean = True):
     mu = [] #np.zeros(n+1)
     for n,m in enumerate(mnc):
         mu.append(0)
-        #[scipy.comb(n-1,k,exact=1) for k in range(n)]
+        #[comb(n-1,k,exact=1) for k in range(n)]
         for k in range(n+1):
-            mu[n] += (-1)**(n-k) * scipy.comb(n,k,exact=1) * mnc[k] * mean**(n-k)
+            mu[n] += (-1)**(n-k) * comb(n,k,exact=1) * mnc[k] * mean**(n-k)
     if wmean:
         mu[1] = mean
     return mu[1:]
@@ -75,7 +74,7 @@ def cum2mc(kappa):
         n = nn+2
         mc.append(0)
         for k in range(n-1):
-            mc[n] += scipy.comb(n-1,k,exact=1) * kappa[n-k]*mc[k]
+            mc[n] += comb(n-1,k,exact=1) * kappa[n-k]*mc[k]
 
     mc[1] = kappa0 # insert mean as first moments by convention
     return mc[1:]
@@ -93,7 +92,7 @@ def mnc2cum(mnc):
         n = nn+1
         kappa.append(m)
         for k in range(1,n):
-            kappa[n] -= scipy.comb(n-1,k-1,exact=1) * kappa[k]*mnc[n-k]
+            kappa[n] -= comb(n-1,k-1,exact=1) * kappa[k]*mnc[n-k]
 
     return kappa[1:]
 
@@ -115,6 +114,7 @@ def mvsk2mc(args):
     cnt[3] = (kur+3.0) * sig2**2.0
     return tuple(cnt)
 
+
 def mvsk2mnc(args):
     '''convert mean, variance, skew, kurtosis to non-central moments'''
     mc, mc2, skew, kurt = args
@@ -126,6 +126,7 @@ def mvsk2mnc(args):
     mnc4 = mc4+4*mc*mc3+6*mc*mc*mc2+mc**4
     return (mnc, mnc2, mnc3, mnc4)
 
+
 def mc2mvsk(args):
     '''convert central moments to mean, variance, skew, kurtosis
     '''
@@ -133,6 +134,7 @@ def mc2mvsk(args):
     skew = np.divide(mc3, mc2**1.5)
     kurt = np.divide(mc4, mc2**2.0) - 3.0
     return (mc, mc2, skew, kurt)
+
 
 def mnc2mvsk(args):
     '''convert central moments to mean, variance, skew, kurtosis
@@ -146,6 +148,7 @@ def mnc2mvsk(args):
 
     return mc2mvsk((mc, mc2, mc3, mc4))
 
+
 #def mnc2mc(args):
 #    '''convert four non-central moments to central moments
 #    '''
@@ -157,6 +160,7 @@ def mnc2mvsk(args):
 #    return mc, mc2, mc
 
     #TODO: no return, did it get lost in cut-paste?
+
 
 def cov2corr(cov):
     '''convert covariance matrix to correlation matrix
