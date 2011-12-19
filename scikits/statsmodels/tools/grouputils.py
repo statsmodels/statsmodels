@@ -16,13 +16,18 @@ changes: add Group class
 Notes
 ~~~~~
 
+This reverses the class I used before, where the class was for the data and
+the group was auxiliary. Here, it is only the group, no data is kept.
+
 sparse_dummies needs checking for corner cases, e.g.
 what if a category level has zero elements? This can happen with subset
     selection even if the original groups where defined as arange.
 
 Not all methods and options have been tried out yet after refactoring
 
-need more efficient loop if groups are sorted
+need more efficient loop if groups are sorted -> see GroupSorted.group_iter
+
+
 
 """
 
@@ -120,7 +125,8 @@ def dummy_sparse(groups):
     groups: ndarray, int, 1d (nobs,)
         an array of group indicators for each observation. Group levels are assumed
         to be defined as consecutive integers, i.e. range(n_groups) where
-        n_groups is the number of group levels.
+        n_groups is the number of group levels. A group level with no
+        observations for it will still produce a column of zeros.
 
     Returns
     -------
@@ -186,6 +192,10 @@ class Group(object):
         if self.prefix:
             self.prefix = self.prefix + '='
 
+    #cache decorator
+    def counts(self):
+        return np.bincount(self.group_int)
+
     #cache_decorator
     def labels(self):
         #is this only needed for product of groups (intersection)?
@@ -228,6 +238,13 @@ class Group(object):
     def group_sums(self, x, use_bincount=True):
         return group_sums(x, self.group_int, use_bincount=use_bincount)
 
+    def group_demean(self, x, use_bincount=True):
+        means_g = group_demean(x/float(nobs), self.group_int,
+                               use_bincount=use_bincount)
+        x_demeaned = x - means_g[self.group_int]  #check reverse_index?
+        return x_demeaned, means_g
+
+
 class GroupSorted(Group):
 
     def __init__(self, group, name=''):
@@ -241,6 +258,28 @@ class GroupSorted(Group):
     def group_iter(self):
         for low, upp in self.groupidx:
             yield slice(low, upp)
+
+    def lag_indices(self, lag):
+        '''return the index array for lagged values
+
+        Warning: if k is larger then the number of observations for an
+        individual, then no values for that individual are returned.
+
+        TODO: for the unbalanced case, I should get the same truncation for
+        the array with lag=0. From the return of lag_idx we wouldn't know
+        which individual is missing.
+
+        TODO: do I want the full equivalent of lagmat in tsa?
+        maxlag or lag or lags.
+
+        not tested yet
+
+        '''
+        lag_idx = np.asarray(self.groupidx)[:,1] - lag   #asarray or already?
+        mask_ok = (low <= lag_idx)
+        #still an observation that belongs to the same individual
+
+        return lag_idx[mask_ok]
 
 
 if __name__ == '__main__':
