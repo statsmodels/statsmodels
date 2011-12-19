@@ -446,7 +446,7 @@ def arma2ar(ar, ma, nobs=100):
     --------
 
     '''
-    return arma_impulse_response(ma, ar, nobs=100)
+    return arma_impulse_response(ma, ar, nobs=nobs)
 
 
 #moved from sandbox.tsa.try_fi
