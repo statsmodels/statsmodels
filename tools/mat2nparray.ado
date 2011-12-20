@@ -1,5 +1,5 @@
-capture program drop mat2array
-program define mat2array 
+capture program drop mat2nparray
+program define mat2nparray 
     version 11.2
     syntax namelist(min=1), SAVing(str) [ Format(str) APPend REPlace ]
     if "`format'"=="" local format "%16.0g"
