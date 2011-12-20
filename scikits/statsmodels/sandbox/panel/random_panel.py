@@ -69,6 +69,9 @@ class PanelSample(object):
 
         random = self.random_state
 
+        nobs_i = self.nobs_i
+        n_groups = self.n_groups
+
         use_balanced = True
         if use_balanced: #much faster for balanced case
             noise = np.random.multivariate_normal(np.zeros(nobs_i),
