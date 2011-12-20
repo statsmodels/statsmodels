@@ -25,13 +25,13 @@ def _create_mpl_ax(ax):
         fig = plt.figure()
         ax = fig.add_subplot(111)
     else:
-        fig = None
+        fig = ax.figure
 
     return fig, ax
 
 
 def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
-             wfactor=1.5, ax=None):
+             wfactor=1.5, ax=None, plot_opts={}):
     """Plot functional boxplot.
 
     A functional boxplot is the analog of a boxplot for functional data.
@@ -68,12 +68,23 @@ def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
     ax : Matplotlib AxesSubplot instance, optional
         If given, this subplot is used to plot in instead of a new figure being
         created.
+    plot_opts : dict, optional
+        A dictionary with plotting options.  Any of the following can be
+        provided, if not present in `plot_opts` the defaults will be used::
+
+          - 'cmap_outliers', a Matplotlib LinearSegmentedColormap instance.
+          - 'c_inner', valid MPL color. Color of the central 50% region
+          - 'c_outer', valid MPL color. Color of the non-outlying region
+          - 'c_median', valid MPL color. Color of the median.
+          - 'lw_outliers', scalar.  Linewidth for drawing outlier curves.
+          - 'lw_median', scalar.  Linewidth for drawing the median curve.
+          - 'draw_nonout', bool.  If True, also draw non-outlying curves.
 
     Returns
     -------
     fig : Matplotlib figure instance
-        The created figure.  If `ax` is not None, the returned value for `fig`
-        is None.
+        If `ax` is None, the created figure.  Otherwise the figure to which
+        `ax` is connected.
     depth : ndarray
         1-D array containing the calculated band depths of the curves.
     ix_depth : ndarray
@@ -122,8 +133,9 @@ def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
 
     >>> fig = plt.figure()
     >>> ax = fig.add_subplot(111)
-    >>> res = sm.fboxplot(data.raw_data[:, 1:], wfactor=2.58,
-                          labels=data.raw_data[:, 0].astype(int), ax=ax)
+    >>> res = sm.graphics.fboxplot(data.raw_data[:, 1:], wfactor=2.58,
+    ...                            labels=data.raw_data[:, 0].astype(int),
+    ...                            ax=ax)
 
     >>> ax.set_xlabel("Month of the year")
     >>> ax.set_ylabel("Sea surface temperature (C)")
@@ -136,6 +148,10 @@ def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
     """
     plt = _import_mpl()
     fig, ax = _create_mpl_ax(ax)
+
+    if plot_opts.get('cmap_outliers') is None:
+        from matplotlib.cm import rainbow_r
+        plot_opts['cmap_outliers'] = rainbow_r
 
     data = np.asarray(data)
     if xdata is None:
@@ -177,23 +193,28 @@ def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
     # Plot envelope of all non-outlying data
     lower_nonout = data[ix_nonout, :].min(axis=0)
     upper_nonout = data[ix_nonout, :].max(axis=0)
-    ax.fill_between(xdata, lower_nonout, upper_nonout, color=(0.75,0.75,0.75))
+    ax.fill_between(xdata, lower_nonout, upper_nonout,
+                    color=plot_opts.get('c_outer', (0.75,0.75,0.75)))
 
     # Plot central 50% region
-    ax.fill_between(xdata, lower, upper, color=(0.5,0.5,0.5))
+    ax.fill_between(xdata, lower, upper,
+                    color=plot_opts.get('c_inner', (0.5,0.5,0.5)))
 
     # Plot median curve
-    ax.plot(xdata, median_curve, 'k-', lw=2)
+    ax.plot(xdata, median_curve, color=plot_opts.get('c_median', 'k'),
+            lw=plot_opts.get('lw_median', 2))
 
     # Plot outliers
+    cmap = plot_opts.get('cmap_outliers')
     for ii, ix in enumerate(ix_outliers):
         label = str(labels[ix]) if labels is not None else None
         ax.plot(xdata, data[ix, :],
-                color=plt.cm.rainbow(float(ii) / (len(ix_outliers)-1)),
-                label=label)
+                color=cmap(float(ii) / (len(ix_outliers)-1)), label=label,
+                lw=plot_opts.get('lw_outliers', 1))
 
-    for ix in ix_nonout:
-        ax.plot(xdata, data[ix, :], 'k-', lw=0.5)
+    if plot_opts.get('draw_nonout', False):
+        for ix in ix_nonout:
+            ax.plot(xdata, data[ix, :], 'k-', lw=0.5)
 
     if labels is not None:
         ax.legend()
@@ -236,8 +257,8 @@ def rainbowplot(data, xdata=None, depth=None, method='MBD', ax=None,
     Returns
     -------
     fig : Matplotlib figure instance
-        The created figure.  If `ax` is not None, the returned value for `fig`
-        is None.
+        If `ax` is None, the created figure.  Otherwise the figure to which
+        `ax` is connected.
 
     See Also
     --------
@@ -261,7 +282,7 @@ def rainbowplot(data, xdata=None, depth=None, method='MBD', ax=None,
 
     >>> fig = plt.figure()
     >>> ax = fig.add_subplot(111)
-    >>> res = sm.rainbowplot(data.raw_data[:, 1:], ax=ax)
+    >>> res = sm.graphics.rainbowplot(data.raw_data[:, 1:], ax=ax)
 
     >>> ax.set_xlabel("Month of the year")
     >>> ax.set_ylabel("Sea surface temperature (C)")
@@ -273,6 +294,10 @@ def rainbowplot(data, xdata=None, depth=None, method='MBD', ax=None,
     """
     plt = _import_mpl()
     fig, ax = _create_mpl_ax(ax)
+
+    if cmap is None:
+        from matplotlib.cm import rainbow_r
+        cmap = rainbow_r
 
     data = np.asarray(data)
     if xdata is None:
@@ -287,9 +312,6 @@ def rainbowplot(data, xdata=None, depth=None, method='MBD', ax=None,
     else:
         if depth.size != data.shape[0]:
             raise ValueError("Provided `depth` array is not of correct size.")
-
-    if cmap is None:
-        cmap = plt.cm.rainbow_r
 
     ix_depth = np.argsort(depth)[::-1]
 
