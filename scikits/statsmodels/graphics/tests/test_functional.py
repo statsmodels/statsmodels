@@ -1,5 +1,5 @@
 import numpy as np
-from numpy.testing import assert_allclose, dec, assert_equal
+from numpy.testing import dec, assert_equal, assert_almost_equal
 
 from scikits.statsmodels.graphics.functional import \
             banddepth, fboxplot, rainbowplot
@@ -22,7 +22,7 @@ def test_banddepth_BD2():
     data = np.asarray([y1, y2, y3, y4])
     depth = banddepth(data, method='BD2')
     expected_depth = [0.5, 5./6, 5./6, 0.5]
-    assert_allclose(depth, expected_depth)
+    assert_almost_equal(depth, expected_depth)
 
     ## Plot to visualize why we expect this output
     #fig = plt.figure()
@@ -44,7 +44,7 @@ def test_banddepth_MBD():
     data = np.asarray([y1, y2, y3, y4])
     depth = banddepth(data, method='MBD')
     expected_depth = [5./6, (2*(0.75-3./8)+3)/6, 3.5/6, (2*3./8+3)/6]
-    assert_allclose(depth, expected_depth, rtol=5e-4)
+    assert_almost_equal(depth, expected_depth, decimal=4)
 
 
 @dec.skipif(not have_matplotlib)
