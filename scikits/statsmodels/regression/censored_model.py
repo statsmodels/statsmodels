@@ -22,14 +22,14 @@ from scipy.stats import norm
 
 def _olsen_reparam(params):
     """
-    Go from true parameters to gamma and theta of Olsen
+    Go from true parameters to gamma and theta of Olsen.
 
     gamma = beta/sigma
     theta = 1/sigma
     """
     beta, sigma  = params[:-1], params[-1]
     theta = 1./sigma
-    gamma = beta/sigma
+    gamma = beta*theta
     return np.r_[gamma, theta]
 
 def _reparam_olsen(params):
@@ -41,7 +41,7 @@ def _reparam_olsen(params):
     """
     gamma, theta  = params[:-1], params[-1]
     sigma = 1./theta
-    beta = gamma/theta
+    beta = gamma*sigma
     return np.r_[beta, sigma]
 
 def dlogcdf(X):
@@ -57,14 +57,13 @@ def _null_params(model):
     endog = model.endog
     left = model.left
     right = model.right
-    res = Tobit(endog, np.ones_like(endog), left=left,
-                right=right).fit(method='bfgs', start_params = [1.,1.],
+    res = Tobit2(endog, np.ones_like(endog), left=left,
+                right=right).fit(method='bfgs', start_params = [0.,endog.std()],
                         disp=0)
     k_zeros = model.exog.shape[1] - 1
     params = np.r_[[0] * k_zeros, res.params]
-    print "start params: ", params
-    params = _olsen_reparam(params)
     params[-1] = np.log(params[-1])
+    #params = _olsen_reparam(params)
     return params
 
 def _olsmle_params(model):
@@ -79,13 +78,11 @@ def _olsmle_params(model):
     """
     ols_res = sm.OLS(model.endog, model.exog).fit()
     params = ols_res.params
-    #sigma = np.log(ols_res.scale ** .5)
     sigma = ols_res.scale ** .5
-    start_params = _olsen_reparam()
-    theta = 1/ols_res.scale ** .5
     n_goodobs = len(self._center_endog)
     params = params/n_goonobs
-    return _olsen_reparam(np.r_[params, sigma])
+    #return _olsen_reparam(np.r_[params, sigma])
+    return np.r_[params, np.log(sigma)]
 
 def _ols_params(model):
     """
@@ -102,7 +99,15 @@ def _ols_params(model):
 _start_param_funcs = {'null' : _null_params, 'olsmle' : _olsmle_params,
                 'ols' : _ols_params}
 
-class Tobit(base.LikelihoodModel):
+def _exponentiate_sigma(params):
+    params = params.copy() # do this or it gets modified several times
+    params[-1] = np.exp(params[-1])
+    return params
+
+#####        End Helper Functions        #####
+
+
+class Tobit1(base.LikelihoodModel):
     def __init__(self, endog, exog, left=True, right=True):
         super(Tobit, self).__init__(endog, exog)
         # set up censoring
@@ -145,63 +150,37 @@ class Tobit(base.LikelihoodModel):
         """
         left, right = self.left, self.right
         if np.isfinite(left) and np.isinf(right): # left-censored
-            self.loglike = self._loglike_olsen_left
-            self.score = self._score_left
-            #self.hessian = self._hessian_left
+            self.loglike_ = self._loglike_olsen_left
+            self.score_ = self._score_left
+            self.hessian_ = self._hessian_left_olsen
         elif np.isinf(left) and np.isfinite(right): # right-censored
-            self.loglike = self._loglike_right
+            self.loglike_ = self._loglike_right
             #self.score = self._score_right
             #self.hessian = self._hessian_right
         else: # left and right censored
-            self.loglike = self._loglike_both
+            self.loglike_ = self._loglike_both
             #self.score = self._score_both
             #self.hessian = self._hessian_both
 
-    #def score(self, params):
-        #NOTE: it might be easier to just use the numerical differentiation
-        #they're almost exactly the same here
-        # reparam for olsen
-        #sigma = 1/params[-1]
-        #params = params[:-1]/params[-1]
-        #sigma = params[-1]
-        #if self._transparams:
-        #    sigma = np.exp(sigma)
-        #params = params[:-1]
+    #implemented here, so we don't have to repeat reparams stuff
+    #@transform2(_olsen_reparam)
+    def loglike(self, params):
+        params = params.copy()
+        params[-1] = np.exp(params[-1])
+        params = _olsen_reparam(params)
+        return self.loglike_(params)
 
-        #left_exog = self._left_exog
-        #if left_exog.size > 0:
-        #    scaled_left_exog = (self.left - np.dot(left_exog, params)) / sigma
-        #    part1 = norm.pdf(scaled_left_exog)/norm.cdf(scaled_left_exog)
-        #    dLdB_left = -np.sum(left_exog/sigma * part1[:,None], axis=0)
-        #    dLdSigma_left = -np.sum(part1 * scaled_left_exog, axis=0)
-        #else:
-        #    dLdB_left = dLdSigma_left = 0
+    def score(self, params):
+        params = params.copy()
+        params[-1] = np.exp(params[-1])
+        params = _olsen_reparam(params)
+        return self.score_(params)
 
-        #right_exog = self._right_exog
-        #if right_exog.size > 0:
-        #    scaled_right_exog = (np.dot(right_exog,
-        #                                    params) - self.right) / sigma
-        #    part1 = norm.pdf(scaled_right_exog)/norm.cdf(scaled_right_exog)
-        #    dLdB_right = np.sum(right_exog/sigma * part1[:,None], axis=0)
-        #    dLdSigma_right = -np.sum(scaled_right_exog*part1, axis=0)
-        #else:
-        #    dLdB_right = dLdSigma_right = 0
 
-        #endog = self._center_endog
-        #exog = self._center_exog
-        #scaled_center_exog = (endog - np.dot(exog, params))/sigma
-        #dLdB_center = np.sum(exog/sigma * scaled_center_exog[:,None], axis=0)
-        #dLdSigma_center = np.sum(scaled_center_exog**2 - 1, axis=0)
-        #dLdparams = dLdB_left + dLdB_right + dLdB_center
-        #dLdsigma = dLdSigma_left + dLdSigma_right + dLdSigma_center
-        #return np.r_[dLdparams, dLdsigma]
-        #loglike = self.loglike
-        #return approx_fprime(params, loglike)
-
-    @transform2(_olsen_reparam)
+    #@transform2(_olsen_reparam)
     def _score_left(self, params):
-        return approx_fprime(params, self.loglike)
-        gamma, theta = params[:-1], np.exp(params[-1])
+        #return approx_fprime(params, self.loglike)
+        gamma, theta = params[:-1], params[-1]
 
         # score for gamma
         left, left_exog = self.left, self._left_exog
@@ -220,7 +199,7 @@ class Tobit(base.LikelihoodModel):
         dLdTheta = theta_center + theta_left
         return np.r_[dLdGamma, dLdTheta]
 
-    @transform2(_olsen_reparam)
+    #@transform2(_olsen_reparam)
     def hessian(self, params):
         # this is the hessian for left-censored at zero
         #gamma, theta = params[:-1], params[-1]
@@ -228,7 +207,52 @@ class Tobit(base.LikelihoodModel):
         #fF = norm.pdf(predicted)/norm.cdf(predicted)
         #D = fF * (-predicted - fF)
         loglike = self.loglike
-        return approx_hess(params, loglike, epsilon=1e-8)[0]
+        return approx_hess(params, loglike, epsilon=1e-4)[0]
+
+    def _hessian_left_olsen(self, params):
+        gamma, theta = params[:-1], params[-1]
+
+        # get set up
+        center_endog = self._center_endog
+        center_exog = self._center_exog
+        left, left_exog = self.left, self._left_exog
+        left_resid = left*theta - np.dot(left_exog, gamma)
+        dlncdf = dlogcdf(left_resid)[:,None]
+
+        # dLdGamma2 for uncensored
+        dLdGamma2_center = -np.dot(center_exog.T, center_exog)
+        # dLdGamma2 for censored
+        dLdGamma2_left = np.dot((left_exog * dlncdf * (left_resid[:,None] + dlncdf)).T,
+                left_exog)
+        # dLdGamma2
+        dLdGamma2 = dLdGamma2_center - dLdGamma2_left
+
+        # dLdGammadTheta for uncensored
+        dLdGammadTheta_center = np.dot(center_exog.T, center_endog)
+        # dLdGammadTheta for censored
+        dLdGammadTheta_left = np.dot((dlncdf * left * (left_resid[:,None] + dlncdf)).T,
+                                left_exog)
+        # dLdGammadTheta
+        dLdGammadTheta = dLdGammadTheta_center + dLdGammadTheta_left
+
+
+        # dLdTheta2 for uncensored
+        dLdTheta2_center = -(np.dot(center_endog, center_endog) - \
+                            len(center_endog)/theta**2)
+        # dLdTheta2 for censored
+        dLdTheta2_left = np.sum(dlncdf * left ** 2 * ( 1 - dlncdf))
+        dLdTheta2 = dLdTheta2_center + dLdTheta2_left
+
+        # put it all together
+        k = center_exog.shape[1] + 1
+        hess = np.zeros((k,k))
+        hess[:-1,:-1] = dLdGamma2
+        hess[-1,:-1] = dLdGammadTheta
+        hess[:-1,-1] = dLdGammadTheta
+        hess[-1,-1] = dLdTheta2
+        return hess
+
+
 
     def _loglike_left(self, params, sigma):
         left_exog = (self.left - np.dot(self._left_exog, params)) / sigma
@@ -246,9 +270,8 @@ class Tobit(base.LikelihoodModel):
         #    left_like = -1e4
         return right_like
 
-    @transform2(_olsen_reparam)
     def _loglike_olsen_left(self, params):
-        gamma, theta = params[:-1], np.exp(params[-1])
+        gamma, theta = params[:-1], params[-1]
 
         left, left_exog = self.left, self._left_exog
         llf_left = np.sum(norm.logcdf(left*theta - np.dot(left_exog, gamma)))
@@ -259,7 +282,6 @@ class Tobit(base.LikelihoodModel):
                      (center_endog - np.dot(center_exog, gamma))**2))
         return llf_center + llf_left
 
-    @transform2(_olsen_reparam)
     def _loglike_olsen_right(self, params):
         gamma, theta = params[:-1], params[-1]
 
@@ -272,26 +294,26 @@ class Tobit(base.LikelihoodModel):
         llf_right = np.sum(norm.logcdf(np.dot(right_exog, gamma)-right*theta))
         return llf_right + llf_center
 
-    def loglike_(self, params): #NOTE: these needs sigma as last parameter
-        sigma = params[-1]
-        if self._transparams:
-            sigma = np.exp(sigma)
-        params = params[:-1]
+    #def loglike_(self, params): #NOTE: these needs sigma as last parameter
+    #    sigma = params[-1]
+    #    if self._transparams:
+    #        sigma = np.exp(sigma)
+    #    params = params[:-1]
 
-        left_like = 0
-        if self._left_exog.size:
-            left_like = self._loglike_left(params, sigma)
+    #    left_like = 0
+    #    if self._left_exog.size:
+    #        left_like = self._loglike_left(params, sigma)
 
-        right_like = 0
-        if self._right_exog.size:
-            right_like = self._loglike_right(params, sigma)
+    #    right_like = 0
+    #    if self._right_exog.size:
+    #        right_like = self._loglike_right(params, sigma)
 
-        center_endog = self._center_endog
-        center_exog = self._center_exog
-        center_like = np.sum(norm.logpdf((center_endog - np.dot(center_exog,
-                                   params)) / sigma) - np.log(sigma))
-        llf = left_like + right_like + center_like
-        return llf
+    #    center_endog = self._center_endog
+    #    center_exog = self._center_exog
+    #    center_like = np.sum(norm.logpdf((center_endog - np.dot(center_exog,
+    #                               params)) / sigma) - np.log(sigma))
+    #    llf = left_like + right_like + center_like
+    #    return llf
 
     def _get_start_params(self, method='null'):
         """
@@ -306,7 +328,7 @@ class Tobit(base.LikelihoodModel):
         """
         return _start_param_funcs[method](self)
 
-    @unset_transform # likelihood expects not to transform
+    #@unset_transform # likelihood expects not to transform
     def fit(self, start_params = None, method='newton', **kwargs):
         """
         Notes
@@ -320,6 +342,190 @@ class Tobit(base.LikelihoodModel):
                         method=method, **kwargs)
         return TobitResults(self, mlefit)
 
+class Tobit2(base.LikelihoodModel):
+    def __init__(self, endog, exog, left=True, right=True):
+        super(Tobit2, self).__init__(endog, exog)
+        self._transparams = False
+        # set up censoring
+        self._init_censored(left, right)
+        self._set_loglike()
+
+    def _init_censored(self, left, right):
+        if left is False and right is False:
+            raise ValueError("Must give a censoring level on the right or "
+                             "left.")
+        endog = self.endog
+        exog = self.exog
+        if left is True:
+            left = self.endog.min()
+        elif left is False:
+            left = -np.inf
+        if right is True:
+            right = self.endog.max()
+        elif right is False:
+            right = np.inf
+        self.left, self.right = left, right
+
+        # do this all here, so that we only have to do the indexing once
+        left_idx = endog <= left # do we need to attach these?
+        right_idx = endog >= right
+        self._left_endog = endog[left_idx]
+        self.n_lcens = left_idx.sum()
+        self.n_rcens = right_idx.sum()
+        self._right_endog = endog[right_idx]
+        self._left_exog = exog[left_idx]
+        self._right_exog = exog[right_idx]
+        center_idx = ~np.logical_or(left_idx, right_idx)
+        self._center_endog = endog[center_idx]
+        self._center_exog = exog[center_idx]
+
+    def _set_loglike(self):
+        """
+        Use this so we don't have a lot of if checks in each loglike call
+        """
+        left, right = self.left, self.right
+        if np.isfinite(left) and np.isinf(right): # left-censored
+            self._loglike = lambda params,sigma : self._loglike_left(params,
+                                                                     sigma) + \
+                                                  self._loglike_right(params,
+                                                                     sigma)
+            self._score = self._score_left
+            #self.hessian_ = self._hessian_left
+        elif np.isinf(left) and np.isfinite(right): # right-censored
+            self._loglike = self._loglike_right
+            #self._score = self._score_right
+            #self.hessian = self._hessian_right
+        else: # left and right censored
+            self._loglike = self._loglike_both
+            #self._score = self._score_both
+            #self.hessian = self._hessian_both
+
+    @transform2(_exponentiate_sigma) # keeps std. dev. positive
+    def loglike(self, params):
+        """
+        needs sigma as last parameter
+        """
+        params, sigma = params[:-1], params[-1]
+        return self._loglike(params, sigma)
+
+    @transform2(_exponentiate_sigma)
+    def score(self, params):
+        params, sigma = params[:-1], params[-1]
+        return self._score(params, sigma)
+
+    def hessian(self, params):
+        # this is the hessian for left-censored at zero
+        loglike = self.loglike
+        return approx_hess(params, loglike, epsilon=1e-4)[0]
+
+    def _get_score_left(self, params, sigma):
+        left_exog = self._left_exog
+        resid_left = (self.left - np.dot(left_exog, params)) / sigma
+        dlncdf = dlogcdf(resid_left)
+        dLdB_left = -np.sum(left_exog/sigma * dlncdf[:,None], axis=0)
+        dLdSigma_left = -np.sum(dlncdf * resid_left, axis=0)
+        score_l = np.r_[dLdB_left, dLdSigma_left]
+        return score_l
+
+    def _get_loglike_left(self, params, sigma):
+        left_exog = (self.left - np.dot(self._left_exog, params)) / sigma
+        left_like = np.sum(norm.logcdf(left_exog))
+        # can get overflow from the above if cdf is very small
+        # seems to mean bad starting values, but might need a check
+        #if np.isinf(left_like) and left_like < 0:
+        #    left_like = -1e4
+        return left_like
+
+    def _score_left(self, params, sigma):
+        score_l = self._get_score_left(params, sigma)
+        score_c = self._get_score_center(params, sigma)
+        return score_l + score_c
+
+    def _loglike_left(self, params, sigma):
+        llf_l = self._get_loglike_left(params, sigma)
+        llf_r = self._get_loglike_right(params, sigma)
+        return llf_l + llf_r
+
+    def _get_score_right(self, params, sigma):
+        right_resid = (np.dot(right_exog, params) - self.right) / sigma
+        dlncdf = dlogcdf(right_resid)
+        dLdB_right = np.sum(right_exog/sigma * dlncdf[:,None], axis=0)
+        dLdSigma_right = -np.sum(right_resid*dlncdf, axis=0)
+        return np.r_[dLdB_right, dLdSigma_right]
+
+    def _get_loglike_right(self, params, sigma):
+        right_exog = (np.dot(self._right_exog, params) - self.right) / sigma
+        right_like = np.sum(norm.logcdf(right_exog))
+        #if np.isinf(right_like) and left_like < 0:
+        #    left_like = -1e4
+        return right_like
+
+    def _score_right(self, params, sigma):
+        score_r = self._get_score_right(params, sigma)
+        score_c = self._get_score_center(params, sigma)
+        return score_r + score_c
+
+    def _loglike_right(self, params, sigma):
+        llf_r = self._get_loglike_right(params, sigma)
+        llf_c = self._get_loglike_center(params, sigma)
+        return llf_r + llf_c
+
+    def _get_score_center(self, params, sigma):
+        endog = self._center_endog
+        exog = self._center_exog
+        scaled_center_exog = (endog - np.dot(exog, params))/sigma
+        dLdB_center = np.sum(exog/sigma * scaled_center_exog[:,None], axis=0)
+        dLdSigma_center = np.sum(scaled_center_exog**2 - 1, axis=0)
+        return np.r_[dLdB_center, dLdSigma_center]
+
+    def _get_loglike_center(self, params, sigma):
+         center_endog = self._center_endog
+         center_exog = self._center_exog
+         center_like = np.sum(norm.logpdf((center_endog - np.dot(center_exog,
+                                    params)) / sigma) - np.log(sigma))
+         return center_like
+
+    def _score_both(self, params, sigma):
+        score_l = self._get_score_left(params, sigma)
+        score_r = self._get_score_right(params, sigma)
+        score_c = self._get_score_center(params, sigma)
+        return score_l + score_r + score_c
+
+    def _loglike_both(self, params, sigma):
+        llf_l = self._get_loglike_left(params, sigma)
+        llf_r = self._get_loglike_right(params, sigma)
+        llf_c = self._get_loglike_center(params, sigma)
+        return llf_l + llf_r + llf_c
+
+    def _get_start_params(self, method='null'):
+        """
+        Get starting parameters from an OLS estimation
+
+        Parameters
+        ----------
+        method : str {'null', 'olsmle', 'ols'}
+            The method to use to get the starting values. It is recommended
+            to use the default. See the private functions _null_params,
+            _olsmle_params, and _ols_params for more information.
+        """
+        return _start_param_funcs[method](self)
+
+    @set_transform # likelihood expects not to transform
+    def fit(self, start_params = None, method='newton', **kwargs):
+        """
+        Notes
+        -----
+        It is not recommended to change the default solver or starting
+        parameters. Please report performance issues to the developers.
+        """
+        if start_params is None:
+            start_params = self._get_start_params()
+        else:
+            start_params = np.copy(start_params)
+        mlefit = super(Tobit2, self).fit(start_params=start_params,
+                        method=method, **kwargs)
+        return TobitResults(self, mlefit)
+
 class TobitResults(base.LikelihoodModelResults):
     def __init__(self, model, mlefit):
         self.model = model
@@ -327,7 +533,7 @@ class TobitResults(base.LikelihoodModelResults):
         # re-parameterize from exponential
         params[-1] = np.exp(params[-1])
         # re-parameterize from Olsen
-        params = _reparam_olsen(params)
+        #params = _reparam_olsen(params)
         beta, sigma = params[:-1], params[-1]
         self.model_params = beta
         mlefit.params = np.r_[beta, sigma]
@@ -458,18 +664,19 @@ if __name__ == "__main__":
 
     # ok
     print 'Newton'
-    mod1 = Tobit(endog, exog, left=0, right=False).fit(method='newton')
+    mod1 = Tobit2(endog, exog, left=0, right=False).fit(method='newton',
+            retall=1)
 
-    # nooooooooo
-    print 'NM'
-    mod2 = Tobit(endog, exog, left=0, right=False).fit(method='nm',
-                    maxiter=1500)
+    print 'NM' # this doesn't work well,
+    mod2 = Tobit2(endog, exog, left=0, right=False).fit(method='nm',
+                    maxiter=10000, maxfun=10000, ftol=1e-12, xtol=1e-12)
     print 'BFGS'
-    mod3 = Tobit(endog, exog, left=0, right=False).fit(method='bfgs')
+    mod3 = Tobit2(endog, exog, left=0, right=False).fit(method='bfgs')
     print 'Powell'
-    mod4 = Tobit(endog, exog, left=0, right=False).fit(method='powell')
+    mod4 = Tobit2(endog, exog, left=0, right=False).fit(method='powell',
+                        xtol=1e-8, ftol=1e-8)
     print 'CG'
-    mod5 = Tobit(endog, exog, left=0, right=False).fit(method='cg',
+    mod5 = Tobit2(endog, exog, left=0, right=False).fit(method='cg',
                                 maxiter=1000)
     print 'NCG'
-    mod6 = Tobit(endog, exog, left=0, right=False).fit(method='ncg')
+    mod6 = Tobit2(endog, exog, left=0, right=False).fit(method='ncg')
