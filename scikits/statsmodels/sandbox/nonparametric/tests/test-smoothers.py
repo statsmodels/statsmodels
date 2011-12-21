@@ -60,4 +60,5 @@ if doplot:
     plt.plot(y_predw, '-', label='poly -w')
     plt.legend(loc='upper left')
 
-    plt.show()
+    plt.close()
+    #plt.show()
