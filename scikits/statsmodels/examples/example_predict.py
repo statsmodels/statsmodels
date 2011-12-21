@@ -30,7 +30,7 @@ print olsres.bse
 # use predict method of model class, not in the results class
 # (we had a discussion but it is still in the model)
 
-ypred = olsmod.predict(X) # predict insample
+ypred = olsmod.predict(X) # predict insample   #TODO: refactoring bug
 
 # create a new sample of explanatory variables Xnew, predict and plot
 
