@@ -599,6 +599,7 @@ class GLSAR(GLS):
             results = self.fit()
             self.rho, _ = yule_walker(results.resid,
                                       order=self.order, df=None)
+        #why not another call to self.initialize
         results = self.fit() #final estimate
         return results # add missing return
 
