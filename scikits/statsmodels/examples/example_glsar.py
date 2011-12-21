@@ -33,7 +33,7 @@ if 0 in examples:
         model = GLSAR(Y, X, rho)
 
     par0 = results.params
-    print par0
+    print 'params fit', par0
     model0if = GLSAR(Y, X, 2)
     res = model0if.iterative_fit(6)
     print 'iterativefit beta', res.params
@@ -75,14 +75,14 @@ if 1 in examples:
     print '\nExample 1: iterative_fit and repeated calls'
     mod1 = GLSAR(y1, X1, 1)
     res = mod1.iterative_fit()
-    print mod1._results.params
+    print res.params
     print mod1.rho
-
+    mod1 = GLSAR(y1, X1, 2)
     for i in range(5):
-        mod1.iterative_fit(1)
+        res1 = mod1.iterative_fit(2)
 #        mod1.fit()
         print mod1.rho
-        print mod1._results.params
+        print res1.params
 
 if 2 in examples:
     print '\nExample 2: iterative fitting of first model'
@@ -92,10 +92,10 @@ if 2 in examples:
     for i in range(5):
         #print mod0.wexog.sum()
         #print mod0.pinv_wexog.sum()
-        mod0.iterative_fit(1)
-        print 'rho', mod0.rho
-        parnew = mod0._results.params
-        print 'params', parnew
+        res0 = mod0.iterative_fit(1)
+        print 'rho', mod0.rho,
+        parnew = res0.params
+        print 'params', parnew,
         print 'params change in iteration', parnew - parold
         parold = parnew
 
@@ -145,3 +145,10 @@ if 5 in examples:
     rhoyw, sigmayw = yule_walker(Y, order = 1)
     print rhoyw, sigmayw
     npt.assert_array_almost_equal(model3a.rho, rhoyw, 15)
+    for i in range(6):
+        model3b = GLSAR(Y, rho=0.1)
+        print i, model3b.iterative_fit(i).params, model3b.rho
+
+    model3b = GLSAR(Y, rho=0.1)
+    for i in range(6):
+        print i, model3b.iterative_fit(2).params, model3b.rho
