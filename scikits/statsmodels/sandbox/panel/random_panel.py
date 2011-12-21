@@ -46,7 +46,12 @@ class PanelSample(object):
             exog = t[:,None]**np.arange(k_vars)
 
         self.exog = exog
-        self.y_true = exog.sum(1)  #all coefficients equal 1
+        #self.y_true = exog.sum(1)  #all coefficients equal 1,
+        #moved to make random coefficients
+        #initialize
+        self.y_true = None
+        self.beta = None
+
         if seed is None:
             seed = np.random.randint(0, 999999)
 
@@ -60,6 +65,12 @@ class PanelSample(object):
         self.group_means = np.zeros(n_groups)
 
 
+    def get_y_true(self):
+        if self.beta is None:
+            self.y_true = self.exog.sum(1)
+        else:
+            self.y_true = np.dot(self.exog, self.beta)
+
 
     def generate_panel(self):
         '''
@@ -68,6 +79,9 @@ class PanelSample(object):
         '''
 
         random = self.random_state
+
+        if self.y_true is None:
+            self.get_y_true()
 
         nobs_i = self.nobs_i
         n_groups = self.n_groups

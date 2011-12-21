@@ -11,6 +11,8 @@ open issues
 * GLS, does this really work this way
 * None of inherited results have been checked yet,
   I'm not sure if any need to be adjusted or if only interpretation changes
+  One question is which results are based on likelihood (residuals) and which
+  are based on "posterior" as for example bse and cov_params
 
 * helper functions to construct priors?
 * increasing penalization for ordered regressors, e.g. polynomials
@@ -167,7 +169,7 @@ if __name__ == '__main__':
     #plt.show()
 
     #example 3
-    nobs = 200
+    nobs = 600
     nobs_i = 20
     n_groups = nobs // nobs_i
     k_vars = 3
@@ -182,7 +184,8 @@ if __name__ == '__main__':
     res_ols = sm.OLS(y, X).fit()
     R = np.c_[np.zeros((n_groups, k_vars-1)), np.eye(n_groups)]
     r = np.zeros(n_groups)
-    R = np.c_[np.zeros((n_groups-1, k_vars)), np.eye(n_groups-1)]
+    R = np.c_[np.zeros((n_groups-1, k_vars)),
+              np.eye(n_groups-1)-1./n_groups * np.ones((n_groups-1, n_groups-1))]
     r = np.zeros(n_groups-1)
     R[:, k_vars-1] = -1
 
