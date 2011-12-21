@@ -1,2 +1,2 @@
 from .functional import fboxplot, rainbowplot
-from .qqplot import qqplot
+from .gofplots import qqplot
