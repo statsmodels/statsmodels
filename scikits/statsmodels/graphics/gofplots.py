@@ -3,6 +3,10 @@ from scipy import stats
 from scikits.statsmodels.regression.linear_model import OLS
 from scikits.statsmodels.tools.tools import add_constant
 
+
+__all__ = ['qqplot']
+
+
 def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
                 line=False):
     """
@@ -130,6 +134,7 @@ def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
     plt.ylabel(ylabel)
 
     return plt.gcf()
+
 
 def qqline(ax, line, x=None, y=None, dist=None, fmt='r-'):
     """
