@@ -3,12 +3,14 @@ from scipy import stats
 from scikits.statsmodels.regression.linear_model import OLS
 from scikits.statsmodels.tools.tools import add_constant
 
+from . import utils
+
 
 __all__ = ['qqplot']
 
 
 def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
-                line=False):
+                line=False, ax=None):
     """
     qqplot of the quantiles of x versus the quantiles/ppf of a distribution.
 
@@ -49,47 +51,52 @@ def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
         None = by default no reference line is added to the plot.
         If True a reference line is drawn on the graph. The default is to
         fit a line via OLS regression.
+    ax : Matplotlib AxesSubplot instance, optional
+        If given, this subplot is used to plot in instead of a new figure being
+        created.
 
     Returns
     -------
-    matplotlib figure.
+    fig : Matplotlib figure instance
+        If `ax` is None, the created figure.  Otherwise the figure to which
+        `ax` is connected.
 
     Examples
     --------
     >>> import scikits.statsmodels.api as sm
     >>> from matplotlib import pyplot as plt
+
     >>> data = sm.datasets.longley.load()
     >>> data.exog = sm.add_constant(data.exog)
     >>> mod_fit = sm.OLS(data.endog, data.exog).fit()
     >>> res = mod_fit.resid
     >>> fig = sm.qqplot(res)
     >>> plt.show()
-    >>> plt.close(fig)
-    >>> #qqplot against quantiles of t distribution with 4 df
+
+    qqplot against quantiles of t-distribution with 4 degrees of freedom:
+
     >>> import scipy.stats as stats
     >>> fig = sm.qqplot(res, stats.t, distargs=(4,))
     >>> plt.show()
-    >>> plt.close(fig)
-    >>> #qqplot against same as above, but with mean 3 and sd 10
+
+    qqplot against same as above, but with mean 3 and std 10:
+
     >>> fig = sm.qqplot(res, stats.t, distargs=(4,), loc=3, scale=10)
     >>> plt.show()
-    >>> plt.close(fig)
-    >>> #automatically determine parameters for t dist
-    >>> #including the loc and scale
+
+    Automatically determine parameters for t distribution including the
+    loc and scale:
+
     >>> fig = sm.qqplot(res, stats.t, fit=True, line='45')
     >>> plt.show()
-    >>> plt.close(fig)
 
     Notes
     -----
-    Depends on matplotlib. If fit=True then the parameters are fit using
-    the distribution's fit( ) method.
+    Depends on matplotlib. If `fit` is True then the parameters are fit using
+    the distribution's fit() method.
 
     """
-    try:
-        from matplotlib import pyplot as plt
-    except:
-        raise ImportError("matplotlib not installed")
+    fig, ax = utils.create_mpl_ax(ax)
 
     if not hasattr(dist, 'ppf'):
         raise ValueError("distribution must have a ppf method")
@@ -120,20 +127,19 @@ def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
         sample_quantiles /= scale
 
 
-    ax = plt.gca()
     ax.set_xmargin(0.02)
-    plt.plot(theoretical_quantiles, sample_quantiles, 'bo')
+    ax.plot(theoretical_quantiles, sample_quantiles, 'bo')
     if line:
         if line not in ['r','q','45','s']:
             msg = "%s option for line not understood" % line
             raise ValueError(msg)
-        qqline(ax, line, theoretical_quantiles, sample_quantiles, dist)
-    xlabel = "Theoretical Quantiles"
-    plt.xlabel(xlabel)
-    ylabel = "Sample Quantiles"
-    plt.ylabel(ylabel)
 
-    return plt.gcf()
+        qqline(ax, line, theoretical_quantiles, sample_quantiles, dist)
+
+    ax.set_xlabel("Theoretical Quantiles")
+    ax.set_ylabel("Sample Quantiles")
+
+    return fig
 
 
 def qqline(ax, line, x=None, y=None, dist=None, fmt='r-'):
