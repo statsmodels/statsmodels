@@ -98,23 +98,37 @@ class GLSHet(WLS):
         maxiter : integer, optional
             the number of iterations
 
+
+        Notes
+        -----
+        maxiter=1: returns the estimated based on given weights
+        maxiter=2: performs a second estimation with the updated weights,
+                   this is 2-step estimation
+        maciter>2: iteratively estimate and update the weights
+
         TODO:
         the maxiter counting looks wrong,
         3 is the first that estimates with an updated weight matrix ???
+        silly mistake initialize instead of calling initialize()
         """
-#TODO: update this after going through example.
+
         res_resid = None
         for i in range(maxiter-1):
+            #pinv_wexog is cached
             if hasattr(self, 'pinv_wexog'):
                 del self.pinv_wexog
+
             self.initialize()
             results = self.fit()
             res_resid = OLS(self.link(results.resid**2), self.exog_var).fit()
             self.weights = 1./self.linkinv(res_resid.fittedvalues)
             self.weights /= self.weights.max()
+            print 'in iter', i, self.weights.var()
         #why not another call to self.initialize - not done in GLSAR
-        del self.pinv_wexog
-        self.initialize
+        if hasattr(self, 'pinv_wexog'):
+            del self.pinv_wexog
+        print 'initialize last time'
+        self.initialize()
         results = self.fit() #final estimate
         #note results is the wrapper, results._results is the results instance
         results._results.results_residual_regression = res_resid
