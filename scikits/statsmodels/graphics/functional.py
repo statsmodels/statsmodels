@@ -6,28 +6,10 @@ import numpy as np
 from scipy import stats
 from scipy.misc import factorial
 
+from . import utils
+
 
 __all__ = ['fboxplot', 'rainbowplot', 'banddepth']
-
-
-def _import_mpl():
-    try:
-        import matplotlib.pyplot as plt
-    except:
-        raise ImportError("Matplotlib is not found.")
-
-    return plt
-
-
-def _create_mpl_ax(ax):
-    if ax is None:
-        plt = _import_mpl()
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-    else:
-        fig = ax.figure
-
-    return fig, ax
 
 
 def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
@@ -146,8 +128,7 @@ def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
     >>> plt.show()
 
     """
-    plt = _import_mpl()
-    fig, ax = _create_mpl_ax(ax)
+    fig, ax = utils.create_mpl_ax(ax)
 
     if plot_opts.get('cmap_outliers') is None:
         from matplotlib.cm import rainbow_r
@@ -292,8 +273,7 @@ def rainbowplot(data, xdata=None, depth=None, method='MBD', ax=None,
     >>> plt.show()
 
     """
-    plt = _import_mpl()
-    fig, ax = _create_mpl_ax(ax)
+    fig, ax = utils.create_mpl_ax(ax)
 
     if cmap is None:
         from matplotlib.cm import rainbow_r
