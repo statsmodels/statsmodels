@@ -9,15 +9,12 @@ statsmodels\sandbox\examples\thirdparty\ex_ratereturn.py
 '''
 import numpy as np
 
-try:
-    import matplotlib.pyplot as plt
-except ImportError:
-    print "plots not available without matplotlib"
+from . import utils
 
 
 def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
               ax=None):
-    '''plot correlation of many variables in a tight color grid
+    """Plot correlation of many variables in a tight color grid.
 
     This creates a new figure
 
@@ -39,19 +36,27 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
         lowest and highest correlation (automatic choice by matplotlib).
         If true, then the color range is normalized to (-1, 1). If this is a
         tuple of two numbers, then they define the range for the color bar.
-    ax: None or axis instance
-        If ax is None, then a figure is created. If an axis instance is given,
-        then only the main plot but not the colorbar is created.
+    ax : Matplotlib AxesSubplot instance, optional
+        If `ax` is None, then a figure is created. If an axis instance is
+        given, then only the main plot but not the colorbar is created.
 
     Returns
     -------
-    fig_or_ax : matplotlib figure or axis instance
+    fig : Matplotlib figure instance
+        If `ax` is None, the created figure.  Otherwise the figure to which
+        `ax` is connected.
 
+    """
+    if ax is None:
+        create_colorbar = True
+    else:
+        create_colorbar = True
 
-    '''
+    fig, ax = utils.create_mpl_ax(ax)
+    from matplotlib import cm
+    from matplotlib.artist import setp
 
     nvars = dcorr.shape[0]
-    #dcorr[range(nvars), range(nvars)] = np.nan
 
     if (ynames is None) and (not xnames is None):
         ynames = xnames
@@ -64,14 +69,7 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
     else:
         vmin, vmax = None, None
 
-    if ax is None:
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        axis = False
-    else:
-        axis = True
-
-    axim = ax.imshow(dcorr, cmap=plt.cm.jet, interpolation='nearest',
+    axim = ax.imshow(dcorr, cmap=cm.jet, interpolation='nearest',
                      extent=(0,30,0,30), vmin=vmin, vmax=vmax)
     if ynames:
         ax.set_yticks(np.arange(nvars)+0.5)
@@ -82,27 +80,27 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
 
     if xnames:
         ax.set_xticks(np.arange(nvars)+0.5)
-        ax.set_xticklabels(xnames, minor=True, fontsize='small',rotation=45,
+        ax.set_xticklabels(xnames, minor=True, fontsize='small', rotation=45,
                            horizontalalignment='right')
         #some keywords don't work in previous line ?
         #TODO: check if this is redundant
-        plt.setp( ax.get_xticklabels(), fontsize='small', rotation=45,
-                 horizontalalignment='right')
+        setp(ax.get_xticklabels(), fontsize='small', rotation=45,
+             horizontalalignment='right')
     elif xnames == []:
         ax.set_xticks([])
 
     if not title == '':
         ax.set_title(title)
 
-    if axis is None:
+    if create_colorbar:
         fig.colorbar(axim)
-        return fig
-    else:
-        return ax
+
+    return fig
+
 
 def plot_corr_grid(dcorrs, titles=None, ncols=2, normcolor=False, xnames=None,
-                   ynames=None):
-    '''create a grid of correlation plots
+                   ynames=None, fig=None):
+    """Create a grid of correlation plots.
 
     Parameters
     ----------
@@ -124,33 +122,41 @@ def plot_corr_grid(dcorrs, titles=None, ncols=2, normcolor=False, xnames=None,
     ynames : None or list of strings
         labels for y axis. If None, then the matplotlib defaults are used. If
         it is an empty list, [], then not ticks and labels are added.
+    fig : Matplotlib figure instance, optional
+        If given, this figure is simply returned.  Otherwise a new figure is
+        created.
 
     Returns
     -------
-    fig : matplotlib figure instance
+    fig : Matplotlib figure instance
+        If `ax` is None, the created figure.  Otherwise the figure to which
+        `ax` is connected.
 
     Notes
     -----
-    possible extension for options, suppress labels except first column and
+    Possible extension for options, suppress labels except first column and
     last row.
-    '''
+
+    """
+    fig = utils.create_mpl_fig(fig)
 
     if not titles:
         titles = [None]*len(dcorrs)
+
     nrows = int(np.ceil(len(dcorrs) / float(ncols)))
 
-    fig = plt.figure()
     for i, c in enumerate(dcorrs):
         ax = fig.add_subplot(nrows, ncols, i+1)
         plot_corr(c, xnames=xnames, ynames=ynames, title=titles[i],
-              normcolor=normcolor, ax=ax)
+                  normcolor=normcolor, ax=ax)
 
-    #images = [c for ax in fig.axes for c in ax.get_children() if isinstance(c, mpl.image.AxesImage)]
     images = [i for ax in fig.axes for i in ax.images ]
     fig.subplots_adjust(bottom=0.1, left=0.09, right=0.9, top=0.9)
     if ncols <=2:
         cax = fig.add_axes([0.9, 0.1, 0.025, 0.8])
     else:
         cax = fig.add_axes([0.92, 0.1, 0.025, 0.8])
+
     fig.colorbar(images[0], cax=cax)
+
     return fig
