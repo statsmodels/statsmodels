@@ -20,7 +20,7 @@ import numpy as np
 from numpy.testing import assert_almost_equal
 
 from scikits.statsmodels.regression.linear_model import OLS, WLS, GLS
-from scikits.statsmodels.regression.feasible_gls import GLSHet2
+from scikits.statsmodels.regression.feasible_gls import GLSHet, GLSHet2
 
 examples = ['ex1']
 
@@ -46,11 +46,19 @@ if 'ex1' in examples:
     print 'OLS stddev of beta'
     print res_ols.bse
     print '\nWLS'
-    res1 = GLSHet2(y2, X2, exog_var=w).fit()
+    mod0 = GLSHet2(y2, X2, exog_var=w)
+    res0 = mod0.fit()
+    mod1 = GLSHet(y2, X2, exog_var=w)
+    res1 = mod1.iterative_fit(3)
     print 'WLS beta estimates'
     print res1.params
+    print res0.params
     print 'WLS stddev of beta'
     print res1.bse
+    #compare with previous version GLSHet2, refactoring check
+    assert_almost_equal(res1.params, np.array([ 0.37642521,  1.51447662]))
+    #this fails ???  more iterations? different starting weights?
+
 
     print res1.model.weights/res1.model.weights.max()
     #why is the error so small in the estimated weights ?
