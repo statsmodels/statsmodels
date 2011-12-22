@@ -113,23 +113,24 @@ class GLSHet(WLS):
         """
 
         res_resid = None
-        for i in range(maxiter-1):
+        for i in range(maxiter):
             #pinv_wexog is cached
             if hasattr(self, 'pinv_wexog'):
                 del self.pinv_wexog
 
             self.initialize()
             results = self.fit()
-            res_resid = OLS(self.link(results.resid**2), self.exog_var).fit()
-            self.weights = 1./self.linkinv(res_resid.fittedvalues)
-            self.weights /= self.weights.max()
-            print 'in iter', i, self.weights.var()
+            if not i == maxiter-1:  #skip for last iteration
+                res_resid = OLS(self.link(results.resid**2), self.exog_var).fit()
+                self.weights = 1./self.linkinv(res_resid.fittedvalues)
+                self.weights /= self.weights.max()  #not required
+                print 'in iter', i, self.weights.var()
         #why not another call to self.initialize - not done in GLSAR
-        if hasattr(self, 'pinv_wexog'):
-            del self.pinv_wexog
-        print 'initialize last time'
-        self.initialize()
-        results = self.fit() #final estimate
+#        if hasattr(self, 'pinv_wexog'):
+#            del self.pinv_wexog
+#        print 'initialize last time'
+#        self.initialize()
+#        results = self.fit() #final estimate
         #note results is the wrapper, results._results is the results instance
         results._results.results_residual_regression = res_resid
         return results
