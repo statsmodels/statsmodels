@@ -50,7 +50,7 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
     if ax is None:
         create_colorbar = True
     else:
-        create_colorbar = True
+        create_colorbar = False
 
     fig, ax = utils.create_mpl_ax(ax)
     from matplotlib import cm
