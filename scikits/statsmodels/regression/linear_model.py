@@ -148,7 +148,7 @@ Should be of length %s, if sigma is a 1d array" % nobs)
         super(GLS, self).__init__(endog, exog)
 
     def initialize(self):
-        print "calling initialize, now whitening"  #for debugging
+        #print "calling initialize, now whitening"  #for debugging
         self.wexog = self.whiten(self.exog)
         self.wendog = self.whiten(self.endog)
         # overwrite nobs from class Model:
@@ -219,7 +219,7 @@ Should be of length %s, if sigma is a 1d array" % nobs)
         if method == "pinv":
             if ((not hasattr(self, 'pinv_wexog')) or
                 (not hasattr(self, 'normalized_cov_params'))):
-                print "recalculating pinv"   #for debugging
+                #print "recalculating pinv"   #for debugging
                 self.pinv_wexog = pinv_wexog = np.linalg.pinv(self.wexog)
                 self.normalized_cov_params = np.dot(pinv_wexog,
                                                  np.transpose(pinv_wexog))
