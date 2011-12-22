@@ -17,7 +17,8 @@ from scikits.statsmodels.sandbox.regression.predstd import wls_prediction_std
 from . import utils
 
 
-__all__ = ['plot_fit', 'plot_regress_exog', 'plot_partregress', 'plot_ccpr']
+__all__ = ['plot_fit', 'plot_regress_exog', 'plot_partregress', 'plot_ccpr',
+           'plot_regress_exog']
 
 
 def plot_fit(res, exog_idx, y_true=None, ax=None):
