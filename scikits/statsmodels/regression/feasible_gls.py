@@ -118,13 +118,16 @@ class GLSHet(WLS):
             if hasattr(self, 'pinv_wexog'):
                 del self.pinv_wexog
 
-            self.initialize()
+            #self.initialize()  #move down
+            print 'wls self',
             results = self.fit()
             if not i == maxiter-1:  #skip for last iteration
+                print 'ols',
                 res_resid = OLS(self.link(results.resid**2), self.exog_var).fit()
                 self.weights = 1./self.linkinv(res_resid.fittedvalues)
                 self.weights /= self.weights.max()  #not required
                 print 'in iter', i, self.weights.var()
+                self.initialize()
         #why not another call to self.initialize - not done in GLSAR
 #        if hasattr(self, 'pinv_wexog'):
 #            del self.pinv_wexog
@@ -134,7 +137,18 @@ class GLSHet(WLS):
         #note results is the wrapper, results._results is the results instance
         results._results.results_residual_regression = res_resid
         return results
-
+''' result to check that we don't have redundant initialize() or pinv
+>>> mod1 = GLSHet(y2, X2, exog_var=w)
+calling initialize, now whitening
+>>> mod1.iterative_fit(2)
+wls self recalculating pinv
+ols calling initialize, now whitening
+recalculating pinv
+in iter 0 0.135
+calling initialize, now whitening
+wls self recalculating pinv
+<scikits.statsmodels.regression.linear_model.RegressionResultsWrapper object at 0x050C8B30>
+'''
 
 
 if __name__ == '__main__':

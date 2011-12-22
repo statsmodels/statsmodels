@@ -48,6 +48,7 @@ if 'ex1' in examples:
     print '\nWLS'
     mod0 = GLSHet2(y2, X2, exog_var=w)
     res0 = mod0.fit()
+    print 'new version'
     mod1 = GLSHet(y2, X2, exog_var=w)
     res1 = mod1.iterative_fit(2)
     print 'WLS beta estimates'
