@@ -26,7 +26,7 @@ examples = ['ex1']
 
 if 'ex1' in examples:
     #from tut_ols_wls
-    nsample = 100
+    nsample = 1000
     sig = 0.5
     x1 = np.linspace(0, 20, nsample)
     X = np.c_[x1, (x1-5)**2, np.ones(nsample)]
@@ -34,11 +34,12 @@ if 'ex1' in examples:
     beta = [0.5, -0.015, 1.]
     y_true2 = np.dot(X, beta)
     w = np.ones(nsample)
-    w[nsample*6//10:] = 4
+    w[nsample*6//10:] = 4  #Note this is the squared value
     #y2[:nsample*6/10] = y_true2[:nsample*6/10] + sig*1. * np.random.normal(size=nsample*6/10)
     #y2[nsample*6/10:] = y_true2[nsample*6/10:] + sig*4. * np.random.normal(size=nsample*4/10)
-    y2 = y_true2 + sig*w* np.random.normal(size=nsample)
+    y2 = y_true2 + sig*np.sqrt(w)* np.random.normal(size=nsample)
     X2 = X[:,[0,2]]
+    X2 = X
 
     res_ols = OLS(y2, X2).fit()
     print 'OLS beta estimates'
@@ -73,13 +74,45 @@ if 'ex1' in examples:
     #Note weighted mean is zero:
     #(res1.model.weights * res1.resid).mean()
 
-    import matplotlib.pyplot as plt
-    plt.figure()
-    plt.plot(x1, y2, 'o')
-    plt.plot(x1, y_true2, 'b-', label='true')
-    plt.plot(x1, res1.fittedvalues, 'r-', label='fwls')
-    plt.plot(x1, res_ols.fittedvalues, '--', label='ols')
-    plt.legend()
+    doplots = False
+    if doplots:
+        import matplotlib.pyplot as plt
+        plt.figure()
+        plt.plot(x1, y2, 'o')
+        plt.plot(x1, y_true2, 'b-', label='true')
+        plt.plot(x1, res1.fittedvalues, 'r-', label='fwls')
+        plt.plot(x1, res_ols.fittedvalues, '--', label='ols')
+        plt.legend()
+
+    #z = (w[:,None] == [1,4]).astype(float) #dummy variable
+    z = (w[:,None] == np.unique(w)).astype(float) #dummy variable
+    mod2 = GLSHet(y2, X2, exog_var=z)
+    res2 = mod2.iterative_fit(2)
+    print res2.params
+
+    import scikits.statsmodels.api as sm
+    z = sm.add_constant(w, prepend=True)
+    mod3 = GLSHet(y2, X2, exog_var=z)
+    res3 = mod3.iterative_fit(8)
+    print res3.params
+    print "np.array(res3.model.history['ols_params'])"
+
+    print np.array(res3.model.history['ols_params'])
+    print "np.array(res3.model.history['self_params'])"
+    print np.array(res3.model.history['self_params'])
+
+    print np.unique(res2.model.weights) #for discrete z only, only a few uniques
+    print np.unique(res3.model.weights)
+
+    if doplots:
+        plt.figure()
+        plt.plot(x1, y2, 'o')
+        plt.plot(x1, y_true2, 'b-', label='true')
+        plt.plot(x1, res1.fittedvalues, '-', label='fwls1')
+        plt.plot(x1, res2.fittedvalues, '-', label='fwls2')
+        plt.plot(x1, res3.fittedvalues, '-', label='fwls3')
+        plt.plot(x1, res_ols.fittedvalues, '--', label='ols')
+        plt.legend()
 
 
-    plt.show()
+        plt.show()
