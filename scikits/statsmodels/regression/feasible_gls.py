@@ -108,7 +108,9 @@ class GLSHet(WLS):
 
         """
 
-        res_resid = None
+        import collections
+        self.history = collections.defaultdict(list)
+        res_resid = None  #if maxiter < 2 no updating
         for i in range(maxiter):
             #pinv_wexog is cached
             if hasattr(self, 'pinv_wexog'):
@@ -116,11 +118,14 @@ class GLSHet(WLS):
 
             #print 'wls self',
             results = self.fit()
+            self.history['self_params'].append(results.params)
             if not i == maxiter-1:  #skip for last iteration, could break instead
                 #print 'ols',
+                self.results_old = results #for debugging
                 res_resid = OLS(self.link(results.resid**2), self.exog_var).fit()
+                self.history['ols_params'].append(res_resid.params)
                 self.weights = 1./self.linkinv(res_resid.fittedvalues)
-                self.weights /= self.weights.max()  #not required
+                #self.weights /= self.weights.max()  #not required
                 #print 'in iter', i, self.weights.var()
                 self.initialize()
 
