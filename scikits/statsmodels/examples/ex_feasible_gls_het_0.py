@@ -21,33 +21,46 @@ from numpy.testing import assert_almost_equal
 
 from scikits.statsmodels.regression.linear_model import OLS, WLS, GLS
 from scikits.statsmodels.regression.feasible_gls import GLSHet, GLSHet2
+from scikits.statsmodels.tools.tools import add_constant
 
 examples = ['ex1']
 
 if 'ex1' in examples:
-    #from tut_ols_wls
-    nsample = 500
+    nsample = 300  #different pattern last graph with 100 or 200 or 500
     sig = 0.5
-    x1 = np.linspace(0, 10, nsample)
-    #X = np.c_[x1, (x1-5)**2, np.ones(nsample)]
+
     np.random.seed(9876789) #9876543)
     X = np.random.randn(nsample, 3)
     X = np.column_stack((np.ones((nsample,1)), X))
     beta = [1, 0.5, -0.5, 1.]
     y_true2 = np.dot(X, beta)
-    w = np.ones(nsample)
-    w[nsample*6//10:] = 9  #Note this is the squared value
-    w0 = w  #save for use below
-    w = 1+x1/x1.max() * 3
+
+
+    x1 = np.linspace(0, 1, nsample)
+    gamma = np.array([1, 3.])
+    #with slope 3 instead of two, I get negative weights, Not correct
+    #   - was misspecified, but the negative weights are still possible with identity link
+    #gamma /= gamma.sum()   #normalize assuming x1.max is 1
+    z_true = add_constant(x1, prepend=True)
+
+    winv = np.dot(z_true, gamma)
     het_params = sig**2 * np.array([1, 3.])  # for squared
-    weights_dgp = 1/w
-    weights_dgp /= weights_dgp.max()
+    sig2_het = sig**2 * winv
+
+    weights_dgp = 1/winv
+    weights_dgp /= weights_dgp.max()  #should be already normalized - NOT check normalization
     #y2[:nsample*6/10] = y_true2[:nsample*6/10] + sig*1. * np.random.normal(size=nsample*6/10)
-    #y2[nsample*6/10:] = y_true2[nsample*6/10:] + sig*4. * np.random.normal(size=nsample*4/10)
-    noise = sig*np.sqrt(w)* np.random.normal(size=nsample)
+    z0 = np.zeros(nsample)
+    z0[(nsample * 5)//10:] = 1   #dummy for 2 halfs of sample
+    z0 = add_constant(z0, prepend=True)
+
+    z1 = add_constant(x1, prepend=True)
+
+    noise = np.sqrt(sig2_het) * np.random.normal(size=nsample)
     y2 = y_true2 + noise
+
     X2 = X[:,[0,2]]  #misspecified, missing regressor in main equation
-    X2 = X
+    X2 = X  #correctly specigied
 
     res_ols = OLS(y2, X2).fit()
     print 'OLS beta estimates'
@@ -55,10 +68,10 @@ if 'ex1' in examples:
     print 'OLS stddev of beta'
     print res_ols.bse
     print '\nWLS'
-    mod0 = GLSHet2(y2, X2, exog_var=w)
+    mod0 = GLSHet2(y2, X2, exog_var=winv)
     res0 = mod0.fit()
     print 'new version'
-    mod1 = GLSHet(y2, X2, exog_var=w)
+    mod1 = GLSHet(y2, X2, exog_var=winv)
     res1 = mod1.iterative_fit(2)
     print 'WLS beta estimates'
     print res1.params
@@ -72,7 +85,7 @@ if 'ex1' in examples:
 
     print res1.model.weights/res1.model.weights.max()
     #why is the error so small in the estimated weights ?
-    assert_almost_equal(res1.model.weights/res1.model.weights.max(), 1./w, 14)
+    assert_almost_equal(res1.model.weights/res1.model.weights.max(), weights_dgp, 14)
     print 'residual regression params'
     print res1.results_residual_regression.params
     print 'scale of model ?'
@@ -94,15 +107,16 @@ if 'ex1' in examples:
 
     #the next only works if w has finite support, discrete/categorical
     #z = (w[:,None] == [1,4]).astype(float) #dummy variable
-    z = (w0[:,None] == np.unique(w0)).astype(float) #dummy variable
-    mod2 = GLSHet(y2, X2, exog_var=z)
+    #z = (w0[:,None] == np.unique(w0)).astype(float) #dummy variable
+    #changed z0 contains dummy and constant
+    mod2 = GLSHet(y2, X2, exog_var=z0)
     res2 = mod2.iterative_fit(3)
     print res2.params
 
     import scikits.statsmodels.api as sm
     #z = sm.add_constant(w, prepend=True)
     z = sm.add_constant(x1/x1.max(), prepend=True)
-    mod3 = GLSHet(y2, X2, exog_var=z)#, link=sm.families.links.log())
+    mod3 = GLSHet(y2, X2, exog_var=z1)#, link=sm.families.links.log())
     res3 = mod3.iterative_fit(20)
     error_var_3 = res3.mse_resid/res3.model.weights
     print res3.params
@@ -132,14 +146,15 @@ if 'ex1' in examples:
         plt.legend()
 
         plt.figure()
+        plt.ylim(0, 5)
         res_e2 = OLS(noise**2, z).fit()
-        plt.plot(noise**2, 'bo')
-        plt.plot(res_e2.fittedvalues, label='ols for noise**2')
+        plt.plot(noise**2, 'bo', alpha=0.5, label='dgp error**2')
+        plt.plot(res_e2.fittedvalues, lw=2, label='ols for noise**2')
         #plt.plot(res3.model.weights, label='GLSHet weights')
-        plt.plot(error_var_3, label='GLSHet error var')
-        plt.plot(res3.resid**2, 'ro', label='resid squared')
+        plt.plot(error_var_3, lw=2, label='GLSHet error var')
+        plt.plot(res3.resid**2, 'ro', alpha=0.5, label='resid squared')
         #plt.plot(weights_dgp, label='DGP weights')
-        plt.plot(sig**2 * w, label='DGP error var')
+        plt.plot(sig**2 * winv, lw=2, label='DGP error var')
         plt.legend()
 
 
