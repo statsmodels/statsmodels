@@ -186,7 +186,7 @@ class GLSHet(WLS):
             #pinv_wexog is cached
             if hasattr(self, 'pinv_wexog'):
                 del self.pinv_wexog
-            self.initialize()
+            #self.initialize()
             #print 'wls self',
             results = self.fit()
             self.history['self_params'].append(results.params)
@@ -199,6 +199,7 @@ class GLSHet(WLS):
                 #update weights
                 self.weights = 1./self.linkinv(res_resid.fittedvalues)
                 self.weights /= self.weights.max()  #not required
+                self.weights[self.weights < 1e-14] = 1e-14  #clip
                 #print 'in iter', i, self.weights.var() #debug, do weights change
                 self.initialize()
 
