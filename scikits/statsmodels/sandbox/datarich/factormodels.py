@@ -115,7 +115,8 @@ class FactorModelUnivariate(object):
                 for inidx, outidx in cv_iter:
                     res_l1o = sm.OLS(y0[inidx], fact[inidx,:]).fit()
                     #print data.endog[outidx], res.model.predict(data.exog[outidx,:]),
-                    prederr2 += (y0[outidx] - res_l1o.model.predict(fact[outidx,:]))**2.
+                    prederr2 += (y0[outidx] -
+                                 res_l1o.model.predict(res_l1o.params, fact[outidx,:]))**2.
             else:
                 prederr2 = np.nan
 

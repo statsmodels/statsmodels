@@ -212,7 +212,7 @@ def runstest_2samp(x, y=None, groups=None):
     xargsort = np.argsort(x)
     #check for ties
     x_sorted = x[xargsort]
-    x_diff = np.diff(x)
+    x_diff = np.diff(x)   #TODO: check should this use x_sorted
     if x_diff.min() == 0:
         print 'ties detected'   #replace with warning
         x_mindiff = x_diff[x_diff > 0].min()
