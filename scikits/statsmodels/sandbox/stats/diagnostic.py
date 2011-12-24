@@ -257,7 +257,7 @@ def acorr_lm(x, maxlag=None, autolag='AIC', store=False):
 
     xdiff = np.diff(x)
     #
-    xdall = lagmat(x[:-1,None], maxlag, trim='both')
+    xdall = lagmat(x[:,None], maxlag, trim='both')
     nobs = xdall.shape[0]
     xdall = np.c_[np.ones((nobs,1)), xdall]
     xshort = x[-nobs:]
@@ -293,14 +293,14 @@ def acorr_lm(x, maxlag=None, autolag='AIC', store=False):
     lm = nobs * resols.rsquared
     lmpval = stats.chi2.sf(lm, usedlag)
     # Note: degrees of freedom for LM test is nvars minus constant = usedlags
-    return fval, fpval, lm, lmpval
+    #return fval, fpval, lm, lmpval
 
     if store:
         resstore.resols = resols
         resstore.usedlag = usedlag
         return fval, fpval, lm, lmpval, resstore
     else:
-        return fval, fpval, lm, lmpval
+        return fval, fpval, lm, lmpval, resstore
 
 
 def het_breushpagan(resid, x, exog=None):
@@ -353,6 +353,7 @@ def het_breushpagan(resid, x, exog=None):
     This is calculated using the generic formula for LM test using $R^2$
     (Greene, section 17.6) and not with the explicit formula
     (Greene, section 11.4.3).
+    The degrees of freedom for the p-value assume x is full rank.
 
     References
     ----------
@@ -387,6 +388,8 @@ def het_white(y, x, retres=False):
     ----------
 
     Greene section 11.4.1 5th edition p. 222
+    now test statistic reproduces Greene 5th, example 11.3
+
     '''
     x = np.asarray(x)
     y = np.asarray(y)
@@ -402,7 +405,12 @@ def het_white(y, x, retres=False):
     fpval = resols.f_pvalue
     lm = nobs * resols.rsquared
     # Note: degrees of freedom for LM test is nvars minus constant
-    lmpval = stats.chi2.sf(lm, nvars-1)
+    #degrees of freedom take possible reduced rank in exog into account
+    #df_model checks the rank to determine df
+    from scikits.statsmodels.tools.tools import rank
+    #extra calculation that can be removed:
+    assert resols.df_model == rank(exog) - 1
+    lmpval = stats.chi2.sf(lm, resols.df_model)
     return lm, lmpval, fval, fpval
 
 def het_goldfeldquandt2(y, x, idx, split=None, retres=False):
@@ -608,6 +616,7 @@ class HetGoldfeldQuandt(object):
         except AttributeError:
             return repr(self)
 
+    #TODO: missing the alternative option in call
     def __call__(self, y, x, idx=None, split=None):
         return self.run(y, x, idx=idx, split=split, attach=False)
 
