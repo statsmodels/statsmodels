@@ -593,7 +593,7 @@ class TestContrastTools(object):
                                [1, 0],
                                [0, 1],
                                [0, 1]]), ['gender_F', 'gender_M'])
-        res_d, res_label = dummy_1d(x, varname='gender')
+        res_d, res_labels = dummy_1d(x, varname='gender')
         assert_equal(res_d, d)
         assert_equal(res_labels, labels)
 
@@ -613,7 +613,7 @@ class TestContrastTools(object):
         for ii in range(5):
             np.testing.assert_equal(res_cp[ii], res_t[ii], err_msg=str(ii))
 
-    def test_dummy_limits():
+    def test_dummy_limits(self):
         b,e = dummy_limits(self.d1)
         assert_equal(b, np.array([0, 4, 8]))
         assert_equal(e, np.array([ 4,  8, 12]))
@@ -624,6 +624,8 @@ class TestContrastTools(object):
 if __name__ == '__main__':
     tt = TestContrastTools()
     tt.test_contrast_product()
+    tt.test_dummy_1d()
+    tt.test_dummy_limits()
 
     import scikits.statsmodels.api as sm
 
@@ -711,7 +713,7 @@ if __name__ == '__main__':
 
     #testing for no interaction effect
     R_noint = np.hstack((np.zeros((2,4)), np.eye(2)))
-    inter_direct = resols_full_dropf.tval[-2:]
+    inter_direct = resols_full_dropf.tvalues[-2:]
     inter_transf = resols_full_full.t_test(transf_f_df.inv_dot_right(R_noint)).tvalue
     print np.max(np.abs((inter_direct - inter_transf)))
 
