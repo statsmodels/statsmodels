@@ -389,7 +389,7 @@ def het_white(y, x, retres=False):
     Greene section 11.4.1 5th edition p. 222
     '''
     x = np.asarray(x)
-    y = np.asarray(y)**2
+    y = np.asarray(y)
     if x.ndim == 1:
         raise ValueError('x should have constant and at least one more variable')
     nobs, nvars0 = x.shape
