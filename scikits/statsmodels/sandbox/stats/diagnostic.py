@@ -300,7 +300,7 @@ def acorr_lm(x, maxlag=None, autolag='AIC', store=False):
         resstore.usedlag = usedlag
         return fval, fpval, lm, lmpval, resstore
     else:
-        return fval, fpval, lm, lmpval, resstore
+        return fval, fpval, lm, lmpval
 
 
 def het_breushpagan(resid, x, exog=None):
