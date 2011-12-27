@@ -13,22 +13,26 @@ TODO: update script to use sharex, sharey, and visible=False
 
 import numpy as np
 from scipy import stats
-import matplotlib as mpl
 
 from . import utils
 
 
-def make_ellipse(mean, cov, ax, level=0.95, color=None):
+__all__ = ['scatter_ellipse']
+
+
+def _make_ellipse(mean, cov, ax, level=0.95, color=None):
+    """Support function for scatter_ellipse."""
+    from matplotlib.patches import Ellipse
+
     v, w = np.linalg.eigh(cov)
     u = w[0] / np.linalg.norm(w[0])
     angle = np.arctan(u[1]/u[0])
     angle = 180 * angle / np.pi # convert to degrees
     v = 2 * np.sqrt(v * stats.chi2.ppf(level, 2)) #get size corresponding to level
-    ell = mpl.patches.Ellipse(mean[:2], v[0], v[1], 180 + angle,
-                              facecolor='none',
-                              edgecolor=color,
-                              #ls='dashed',  #for debugging
-                              lw=1.5)
+    ell = Ellipse(mean[:2], v[0], v[1], 180 + angle, facecolor='none',
+                  edgecolor=color,
+                  #ls='dashed',  #for debugging
+                  lw=1.5)
     ell.set_clip_box(ax.bbox)
     ell.set_alpha(0.5)
     ax.add_artist(ell)
@@ -106,7 +110,7 @@ def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
             if np.isscalar(level):
                 level = [level]
             for alpha in level:
-                make_ellipse(dmean[idx], dcov[idx[:,None], idx], ax, level=alpha,
+                _make_ellipse(dmean[idx], dcov[idx[:,None], idx], ax, level=alpha,
                          color='k')
 
             if add_titles:
