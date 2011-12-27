@@ -232,7 +232,7 @@ def plot_partregress(endog, exog, exog_idx=None, grid=None, fig=None):
     Return
     ------
     fig : Matplotlib figure instance
-        If `ax` is None, the created figure.  Otherwise the figure to which
+        If `fig` is None, the created figure.  Otherwise the figure to which
         `ax` is connected.
 
     Notes
