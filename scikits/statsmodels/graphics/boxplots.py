@@ -10,7 +10,7 @@ from scipy.stats import gaussian_kde
 from . import utils
 
 
-__all__ = ['violinplot']
+__all__ = ['violinplot', 'beanplot']
 
 
 def violinplot(data, ax=None, labels=None, positions=None, show_boxplot=True,
@@ -61,6 +61,7 @@ def violinplot(data, ax=None, labels=None, positions=None, show_boxplot=True,
 
     See Also
     --------
+    beanplot : Bean plot, builds on `violinplot`.
     matplotlib.pyplot.boxplot : Standard boxplot.
 
     Notes
@@ -152,6 +153,11 @@ def violinplot(data, ax=None, labels=None, positions=None, show_boxplot=True,
     if show_boxplot:
         ax.boxplot(data, notch=1, positions=positions, vert=1)
 
+    # Set xticks and limits.
+    ax.set_xlim([np.min(positions) - 0.5, np.max(positions) + 0.5])
+    ax.set_xticks(positions)
+
+    # Set labels on horizontal axis.
     label_fontsize = plot_opts.get('label_fontsize')
     label_rotation = plot_opts.get('label_rotation')
     if label_fontsize or label_rotation:
@@ -168,6 +174,121 @@ def violinplot(data, ax=None, labels=None, positions=None, show_boxplot=True,
 
         if label_rotation:
             setp(xticknames, rotation=label_rotation)
+
+    return fig
+
+
+def beanplot(data, ax=None, labels=None, positions=None, plot_opts={}):
+    """Make a bean plot of each dataset in the `data` sequence.
+
+    A bean plot is a combination of a `violinplot` (kernel density estimate of
+    the probability density function per point) with a line-scatter plot of all
+    individual data points.
+
+    Parameters
+    ----------
+    data : sequence of ndarrays
+        Data arrays, one array per value in `positions`.
+    ax : Matplotlib AxesSubplot instance, optional
+        If given, this subplot is used to plot in instead of a new figure being
+        created.
+    labels : list of str, optional
+        Tick labels for the horizontal axis.  If not given, integers
+        ``1..len(data)`` are used.
+    positions : array_like, optional
+        Position array, used as the horizontal axis of the plot.  If not given,
+        spacing of the violins will be equidistant.
+    plot_opts : dict, optional
+        A dictionary with plotting options.  All the options for `violinplot`
+        can be specified, they will simply be passed to `violinplot`.  Options
+        specific to `beanplot` are:
+
+          - 'bean_color', MPL color.  Color of bean plot lines.  Default is 'k'.
+          - 'bean_size', scalar.  Line length as a fraction of maximum length.
+                Default is 0.5.
+          - 'bean_lw', scalar.  Linewidth, default is 0.5.
+          - 'bean_show_mean', bool.  If True (default), show mean as a line.
+          - 'bean_show_median', bool.  If True (default), show median as a
+                marker.
+          - 'bean_mean_color', MPL color.  Color of mean line.  Default is 'b'.
+          - 'bean__mean_lw', scalar.  Linewidth of mean line, default is 2.
+          - 'bean_median_color', MPL color.  Color of median marker.  Default
+                is 'r'.
+          - 'bean_median_marker', MPL marker.  Marker type, default is '+'.
+
+    Returns
+    -------
+    fig : Matplotlib figure instance
+        If `ax` is None, the created figure.  Otherwise the figure to which
+        `ax` is connected.
+
+    See Also
+    --------
+    violinplot : Violin plot, also used internally in `beanplot`.
+    matplotlib.pyplot.boxplot : Standard boxplot.
+
+    References
+    ----------
+    P. Kampstra, "Beanplot: A Boxplot Alternative for Visual Comparison of
+    Distributions", J. Stat. Soft., Vol. 28, pp. 1-9, 2008.
+
+    Examples
+    --------
+    We use the American National Election Survey 1996 dataset, which has Party
+    Identification of respondents as independent variable and (among other
+    data) age as dependent variable.
+
+    >>> data = sm.datasets.anes96.load_pandas()
+    >>> party_ID = np.arange(7)
+    >>> labels = ["Strong Democrat", "Weak Democrat", "Independent-Democrat",
+    ...           "Independent-Indpendent", "Independent-Republican",
+    ...           "Weak Republican", "Strong Republican"]
+
+    Group age by party ID, and create a violin plot with it:
+
+    >>> plt.rcParams['figure.subplot.bottom'] = 0.23  # keep labels visible
+    >>> age = [data.exog['age'][data.endog == id] for id in party_ID]
+    >>> fig = plt.figure()
+    >>> ax = fig.add_subplot(111)
+    >>> sm.graphics.beanplot(age, ax=ax, labels=labels,
+    ...                      plot_opts={'cutoff_val':5, 'cutoff_type':'abs',
+    ...                                 'label_fontsize':'small',
+    ...                                 'label_rotation':30})
+    >>> ax.set_xlabel("Party identification of respondent.")
+    >>> ax.set_ylabel("Age")
+    >>> plt.show()
+
+    """
+    fig, ax = utils.create_mpl_ax(ax)
+
+    if positions is None:
+        positions = np.arange(len(data)) + 1
+
+    violinplot(data, ax=ax, labels=labels, positions=positions,
+               show_boxplot=False, plot_opts=plot_opts)
+
+    # Determine available horizontal space for each individual violin.
+    pos_span = np.max(positions) - np.min(positions)
+    width = np.min([0.15 * np.max([pos_span, 1.]),
+                    plot_opts.get('bean_size', 0.5) / 2.])
+
+    for pos_data, pos in zip(data, positions):
+        # Draw bean lines.
+        ax.hlines(pos_data, pos - width, pos + width,
+                  lw=plot_opts.get('bean_lw', 0.5),
+                  color=plot_opts.get('bean_color', 'k'))
+
+        # Draw mean line.
+        if plot_opts.get('bean_show_mean', True):
+             ax.hlines(np.mean(pos_data), pos - width, pos + width,
+                       lw=plot_opts.get('bean_mean_lw', 2.),
+                       color=plot_opts.get('bean_mean_color', 'b'))
+
+        # Draw median marker.
+        if plot_opts.get('bean_show_median', True):
+            ax.plot(pos, np.median(pos_data),
+                    marker=plot_opts.get('bean_median_marker', '+'),
+                    color=plot_opts.get('bean_median_color', 'r'))
 
     return fig
 

@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.testing import dec
 
-from scikits.statsmodels.graphics.boxplots import violinplot
+from scikits.statsmodels.graphics.boxplots import violinplot, beanplot
 from scikits.statsmodels.datasets import anes96
 
 
@@ -13,7 +13,8 @@ except:
 
 
 @dec.skipif(not have_matplotlib)
-def test_violinplot():
+def test_violinplot_beanplot():
+    """Test violinplot and beanplot with the same dataset."""
     data = anes96.load_pandas()
     party_ID = np.arange(7)
     labels = ["Strong Democrat", "Weak Democrat", "Independent-Democrat",
@@ -24,10 +25,19 @@ def test_violinplot():
 
     fig = plt.figure()
     ax = fig.add_subplot(111)
-
     violinplot(age, ax=ax, labels=labels,
                plot_opts={'cutoff_val':5, 'cutoff_type':'abs',
                           'label_fontsize':'small',
                           'label_rotation':30})
+
+    plt.close(fig)
+
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    beanplot(age, ax=ax, labels=labels,
+             plot_opts={'cutoff_val':5, 'cutoff_type':'abs',
+                        'label_fontsize':'small',
+                        'label_rotation':30})
 
     plt.close(fig)
