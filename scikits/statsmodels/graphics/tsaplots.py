@@ -1,78 +1,70 @@
+"""Correlation plot functions."""
 
 
 import numpy as np
 
+from . import utils
+
 
 #copied/moved from sandbox/tsa/example_arma.py
-def plotacf(ax, corr, lags=None, usevlines=True, **kwargs):
-    """
-    Plot the auto or cross correlation.
-    lags on horizontal and correlations on vertical axis
+def plotacf(corr, ax=None, lags=None, use_vlines=True, **kwargs):
+    """ Plot the auto or cross correlation.
 
-    Note: adjusted from matplotlib's pltxcorr
+    Plots lags on the horizontal and the correlations on vertical axis.
 
     Parameters
     ----------
-    ax : matplotlib axis or plt
-        ax can be matplotlib.pyplot or an axis of a figure
-    lags : array or None
-        array of lags used on horizontal axis,
-        if None, then np.arange(len(corr)) is used
-    corr : array
-        array of values used on vertical axis
-    usevlines : boolean
-        If true, then vertical lines and markers are plotted. If false,
-        only 'o' markers are plotted
-    **kwargs : optional parameters for plot and axhline
-        these are directly passed on to the matplotlib functions
+    corr : array_like
+        Array of correlation values, used on the vertical axis.
+    ax : Matplotlib AxesSubplot instance, optional
+        If given, this subplot is used to plot in instead of a new figure being
+        created.
+    lags : array_like, optional
+        Array of lag values, used on horizontal axis.
+        If not given, ``lags=np.arange(len(corr))`` is used.
+    use_vlines : bool, optional
+        If True, vertical lines and markers are plotted.
+        If False, only markers are plotted.  The default marker is 'o'; it can
+        be overridden with a ``marker`` kwarg.
+    **kwargs : kwargs, optional
+        Optional keyword arguments that are directly passed on to the
+        Matplotlib ``plot`` and ``axhline`` functions.
 
     Returns
     -------
-    a : matplotlib.pyplot.plot
-        contains markers
-    b : matplotlib.collections.LineCollection
-        returned only if vlines is true, contains vlines
-    c : instance of matplotlib.lines.Line2D
-        returned only if vlines is true, contains axhline ???
-
-    Data are plotted as ``plot(lags, c, **kwargs)``
-
-    The default *linestyle* is *None* and the default *marker* is
-    'o', though these can be overridden with keyword args.
-
-    If *usevlines* is *True*:
-
-       :func:`~matplotlib.pyplot.vlines`
-       rather than :func:`~matplotlib.pyplot.plot` is used to draw
-       vertical lines from the origin to the xcorr.  Otherwise the
-       plotstyle is determined by the kwargs, which are
-       :class:`~matplotlib.lines.Line2D` properties.
+    fig : Matplotlib figure instance
+        If `ax` is None, the created figure.  Otherwise the figure to which
+        `ax` is connected.
 
     See Also
     --------
-
     :func:`~matplotlib.pyplot.xcorr`
     :func:`~matplotlib.pyplot.acorr`
     mpl_examples/pylab_examples/xcorr_demo.py
 
-    """
+    Notes
+    -----
+    Adapted from matplotlib's `xcorr`.
 
+    Data are plotted as ``plot(lags, corr, **kwargs)``
+
+    """
+    fig, ax = utils.create_mpl_ax(ax)
+
+    corr = np.asarray(corr)
     if lags is None:
         lags = np.arange(len(corr))
     else:
         if len(lags) != len(corr):
-            raise ValueError('lags and corr must be equal length')
+            raise ValueError('lags and corr must be of equal length')
 
-    if usevlines:
-        b = ax.vlines(lags, [0], corr, **kwargs)
-        c = ax.axhline(**kwargs)
-        kwargs.setdefault('marker', 'o')
-        kwargs.setdefault('linestyle', 'None')
-        a = ax.plot(lags, corr, **kwargs)
-    else:
-        kwargs.setdefault('marker', 'o')
-        kwargs.setdefault('linestyle', 'None')
-        a, = ax.plot(lags, corr, **kwargs)
-        b = c = None
-    return a, b, c
+    if use_vlines:
+        ax.vlines(lags, [0], corr, **kwargs)
+        ax.axhline(**kwargs)
+
+    kwargs.setdefault('marker', 'o')
+    kwargs.setdefault('linestyle', 'None')
+    ax.plot(lags, corr, **kwargs)
+
+    return fig
 

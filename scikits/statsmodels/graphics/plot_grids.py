@@ -10,37 +10,74 @@ TODO: update script to use sharex, sharey, and visible=False
     http://matplotlib.sourceforge.net/mpl_toolkits/axes_grid/users/overview.html
 '''
 
+
 import numpy as np
 from scipy import stats
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
 
-def make_ellipse(mean, cov, ax, level=0.95, color=None):
+from . import utils
+
+
+__all__ = ['scatter_ellipse']
+
+
+def _make_ellipse(mean, cov, ax, level=0.95, color=None):
+    """Support function for scatter_ellipse."""
+    from matplotlib.patches import Ellipse
+
     v, w = np.linalg.eigh(cov)
     u = w[0] / np.linalg.norm(w[0])
     angle = np.arctan(u[1]/u[0])
     angle = 180 * angle / np.pi # convert to degrees
     v = 2 * np.sqrt(v * stats.chi2.ppf(level, 2)) #get size corresponding to level
-    ell = mpl.patches.Ellipse(mean[:2], v[0], v[1], 180 + angle,
-                              facecolor='none',
-                              edgecolor=color,
-                              #ls='dashed',  #for debugging
-                              lw=1.5)
+    ell = Ellipse(mean[:2], v[0], v[1], 180 + angle, facecolor='none',
+                  edgecolor=color,
+                  #ls='dashed',  #for debugging
+                  lw=1.5)
     ell.set_clip_box(ax.bbox)
     ell.set_alpha(0.5)
     ax.add_artist(ell)
 
 
 def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
-                    plot_kwds=None, add_titles=False, keep_ticks=False):
-    '''create a grid of scatter plots with confidence ellipses
+                    plot_kwds=None, add_titles=False, keep_ticks=False,
+                    fig=None):
+    """Create a grid of scatter plots with confidence ellipses.
 
     ell_kwds, plot_kdes not used yet
 
     looks ok with 5 or 6 variables, too crowded with 8, too empty with 1
 
-    '''
+    Parameters
+    ----------
+    data : array_like
+        Input data.
+    level : scalar, optional
+        Default is 0.9.
+    varnames : list of str, optional
+        Variable names.  Used for y-axis labels, and if `add_titles` is True
+        also for titles.  If not given, integers 1..data.shape[1] are used.
+    ell_kwds : dict, optional
+        UNUSED
+    plot_kwds : dict, optional
+        UNUSED
+    add_titles : bool, optional
+        Whether or not to add titles to each subplot.  Default is False.
+        Titles are constructed from `varnames`.
+    keep_ticks : bool, optional
+        If False (default), remove all axis ticks.
+    fig : Matplotlib figure instance, optional
+        If given, this figure is simply returned.  Otherwise a new figure is
+        created.
+
+    Return
+    ------
+    fig : Matplotlib figure instance
+        If `fig` is None, the created figure.  Otherwise `fig` itself.
+
+    """
+    fig = utils.create_mpl_fig(fig)
+    import matplotlib.ticker as mticker
+
     data = np.asanyarray(data)  #needs mean and cov
     nvars = data.shape[1]
     if varnames is None:
@@ -49,8 +86,6 @@ def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
 
     dmean = data.mean(0)
     dcov = np.cov(data, rowvar=0)
-
-    fig = plt.figure()
 
     for i in range(1, nvars):
         #print '---'
@@ -65,7 +100,7 @@ def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
 ##                ax.set_ylabel(varnames[i])
             #TODO: make sure we have same xlim and ylim
 
-            formatter = ticker.FormatStrFormatter('% 3.1f')
+            formatter = mticker.FormatStrFormatter('% 3.1f')
             ax.yaxis.set_major_formatter(formatter)
             ax.xaxis.set_major_formatter(formatter)
 
@@ -75,7 +110,7 @@ def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
             if np.isscalar(level):
                 level = [level]
             for alpha in level:
-                make_ellipse(dmean[idx], dcov[idx[:,None], idx], ax, level=alpha,
+                _make_ellipse(dmean[idx], dcov[idx[:,None], idx], ax, level=alpha,
                          color='k')
 
             if add_titles:
@@ -84,7 +119,7 @@ def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
                 if not keep_ticks:
                     ax.set_yticks([])
                 else:
-                    ax.yaxis.set_major_locator(ticker.MaxNLocator(3))
+                    ax.yaxis.set_major_locator(mticker.MaxNLocator(3))
             else:
                 ax.set_ylabel(varnames[i])
             if ax.is_last_row():
@@ -93,7 +128,7 @@ def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
                 if not keep_ticks:
                     ax.set_xticks([])
                 else:
-                    ax.xaxis.set_major_locator(ticker.MaxNLocator(3))
+                    ax.xaxis.set_major_locator(mticker.MaxNLocator(3))
 
             dcorr = np.corrcoef(data, rowvar=0)
             dc = dcorr[idx[:,None], idx]
@@ -113,8 +148,6 @@ def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
             xt = xlim[0] + 0.1 * (xlim[1] - xlim[0])
             ax.text(xt, yt, '$\\rho=%0.2f$'% dc[1,0])
 
-    import matplotlib.ticker as mticker
-
     for ax in fig.axes:
         if ax.is_last_row(): # or ax.is_first_col():
             ax.xaxis.set_major_locator(mticker.MaxNLocator(3))
@@ -122,8 +155,4 @@ def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
            ax.yaxis.set_major_locator(mticker.MaxNLocator(3))
 
     return fig
-
-if __name__ == '__main__':
-    pass
-
 
