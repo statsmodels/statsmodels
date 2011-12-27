@@ -90,13 +90,13 @@ class SVAR(tsbase.TimeSeriesModel):
         #Initialize SVAR masks
         if A is None:
             A = np.identity(self.neqs)
-            self.A_mask = A_mask = np.zeros_like(A, dtype=bool)
+            self.A_mask = A_mask = np.zeros(A.shape, dtype=bool)
         else:
             A_mask = np.logical_or(A == 'E', A == 'e')
             self.A_mask = A_mask
         if B is None:
             B = np.identity(self.neqs)
-            self.B_mask = B_mask = np.zeros_like(B, dtype=bool)
+            self.B_mask = B_mask = np.zeros(B.shape, dtype=bool)
         else:
             B_mask = np.logical_or(B == 'E', B == 'e')
             self.B_mask = B_mask
@@ -104,12 +104,12 @@ class SVAR(tsbase.TimeSeriesModel):
         # convert A and B to numeric
         #TODO: change this when masked support is better or with formula
         #integration
-        Anum = np.zeros_like(A, dtype=float)
+        Anum = np.zeros(A.shape, dtype=float)
         Anum[~A_mask] = A[~A_mask]
         Anum[A_mask] = np.nan
         self.A = Anum
 
-        Bnum = np.zeros_like(B, dtype=float)
+        Bnum = np.zeros(B.shape, dtype=float)
         Bnum[~B_mask] = B[~B_mask]
         Bnum[B_mask] = np.nan
         self.B = Bnum
@@ -688,8 +688,8 @@ class SVARResults(SVARProcess, VARResults):
         B = self.B
         A_mask = self.A_mask
         B_mask = self.B_mask
-        A_pass = np.zeros_like(A, dtype='|S1')
-        B_pass = np.zeros_like(B, dtype='|S1')
+        A_pass = np.zeros(A.shape, dtype='|S1')
+        B_pass = np.zeros(B.shape, dtype='|S1')
         A_pass[~A_mask] = A[~A_mask]
         B_pass[~B_mask] = B[~B_mask]
         A_pass[A_mask] = 'E'
