@@ -35,7 +35,7 @@ for arcoef in arcoefs[:-1]:
         acf = armaprocess.acf(20)[:20]
         pacf = armaprocess.pacf(20)[:20]
         ax = fig.add_subplot(nrows, 2, subplotcount)
-        plotacf(ax, acf)
+        plotacf(acf, ax=ax)
 ##        ax.set_title('Autocorrelation \nar=%s, ma=%rs' % (ar, ma),
 ##                     size='xx-small')
         ax.text(0.7, 0.6, 'ar =%s \nma=%s' % (ar, ma),
@@ -45,7 +45,7 @@ for arcoef in arcoefs[:-1]:
         ax.set_xlim(-1,20)
         subplotcount +=1
         ax = fig.add_subplot(nrows, 2, subplotcount)
-        plotacf(ax, pacf)
+        plotacf(pacf, ax=ax)
 ##        ax.set_title('Partial Autocorrelation \nar=%s, ma=%rs' % (ar, ma),
 ##                     size='xx-small')
         ax.text(0.7, 0.6, 'ar =%s \nma=%s' % (ar, ma),
