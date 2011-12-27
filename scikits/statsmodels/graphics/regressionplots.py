@@ -13,6 +13,7 @@ update
 
 import numpy as np
 
+from scikits.statsmodels.regression.linear_model import OLS
 from scikits.statsmodels.sandbox.regression.predstd import wls_prediction_std
 from . import utils
 
@@ -156,10 +157,10 @@ def _partial_regression(endog, exog_i, exog_others):
          exog_others
 
     """
-    #FIXME: broken, sm not available.  This function doesn't appear to be used.
-    res1a = sm.OLS(endog, exog_others).fit()
-    res1b = sm.OLS(exog_i, exog_others).fit()
-    res1c = sm.OLS(res1a.resid, res1b.resid).fit()
+    #FIXME: This function doesn't appear to be used.
+    res1a = OLS(endog, exog_others).fit()
+    res1b = OLS(exog_i, exog_others).fit()
+    res1c = OLS(res1a.resid, res1b.resid).fit()
 
     return res1c, (res1a, res1b)
 
@@ -194,9 +195,6 @@ def plot_partregress_ax(endog, exog_i, exog_others, varname='',
     plot_partregress : Plot partial regression for a set of regressors.
 
     """
-    #FIXME: OLS should be imported at top of this module, and not from api.
-    from scikits.statsmodels.api import OLS
-
     fig, ax = utils.create_mpl_ax(ax)
 
     res1a = OLS(endog, exog_others).fit()
@@ -232,8 +230,7 @@ def plot_partregress(endog, exog, exog_idx=None, grid=None, fig=None):
     Return
     ------
     fig : Matplotlib figure instance
-        If `fig` is None, the created figure.  Otherwise the figure to which
-        `ax` is connected.
+        If `fig` is None, the created figure.  Otherwise `fig` itself.
 
     Notes
     -----
