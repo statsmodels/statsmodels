@@ -42,6 +42,24 @@ ax.set_xlabel("Party identification of respondent.")
 ax.set_ylabel("Age")
 ax.set_title("US national election '96 - Age & Party Identification")
 
-# Show both plots.
+# Create a jitter plot.
+fig3 = plt.figure()
+ax = fig3.add_subplot(111)
+
+sm.graphics.beanplot(age, ax=ax, labels=labels, jitter=True,
+                    plot_opts={'cutoff_val':5, 'cutoff_type':'abs',
+                               'label_fontsize':'small',
+                               'label_rotation':30,
+                               'violin_fc':(0.8, 0.8, 0.8),
+                               'jitter_marker':'.',
+                               'jitter_marker_size':3,
+                               'bean_color':'#FF6F00',
+                               'bean_mean_color':'#009D91'})
+
+ax.set_xlabel("Party identification of respondent.")
+ax.set_ylabel("Age")
+ax.set_title("US national election '96 - Age & Party Identification")
+
+# Show all plots.
 plt.show()
 
