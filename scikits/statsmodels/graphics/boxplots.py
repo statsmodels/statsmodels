@@ -13,8 +13,8 @@ from . import utils
 __all__ = ['violinplot', 'beanplot']
 
 
-def violinplot(data, ax=None, labels=None, positions=None, show_boxplot=True,
-               plot_opts={}):
+def violinplot(data, ax=None, labels=None, positions=None, side='both',
+               show_boxplot=True, plot_opts={}):
     """Make a violin plot of each dataset in the `data` sequence.
 
     A violin plot is a boxplot combined with a kernel density estimate of the
@@ -33,6 +33,12 @@ def violinplot(data, ax=None, labels=None, positions=None, show_boxplot=True,
     positions : array_like, optional
         Position array, used as the horizontal axis of the plot.  If not given,
         spacing of the violins will be equidistant.
+    side : {'both', 'left', 'right'}, optional
+        How to plot the violin.  Default is 'both'.  The 'left', 'right'
+        options can be used to create asymmetric violin plots.
+    show_boxplot : bool, optional
+        Whether or not to show normal box plots on top of the violins.
+        Default is True.
     plot_opts : dict, optional
         A dictionary with plotting options.  Any of the following can be
         provided, if not present in `plot_opts` the defaults will be used::
@@ -127,7 +133,8 @@ def violinplot(data, ax=None, labels=None, positions=None, show_boxplot=True,
 
     # Plot violins.
     for pos_data, pos in zip(data, positions):
-        xvals, violin = _single_violin(ax, pos, pos_data, width, plot_opts)
+        xvals, violin = _single_violin(ax, pos, pos_data, width, side,
+                                       plot_opts)
 
     if show_boxplot:
         ax.boxplot(data, notch=1, positions=positions, vert=1)
@@ -138,7 +145,7 @@ def violinplot(data, ax=None, labels=None, positions=None, show_boxplot=True,
     return fig
 
 
-def _single_violin(ax, pos, pos_data, width, plot_opts):
+def _single_violin(ax, pos, pos_data, width, side, plot_opts):
     """"""
 
     def _violin_range(pos_data, plot_opts):
@@ -166,8 +173,18 @@ def _single_violin(ax, pos, pos_data, width, plot_opts):
     violin = kde.evaluate(xvals)
     violin = width * violin / violin.max()
 
+    if side == 'both':
+        envelope_l, envelope_r = (-violin + pos, violin + pos)
+    elif side == 'right':
+        envelope_l, envelope_r = (pos, violin + pos)
+    elif side == 'left':
+        envelope_l, envelope_r = (-violin + pos, pos)
+    else:
+        msg = "`side` parameter should be one of {'left', 'right', 'both'}."
+        raise ValueError(msg)
+
     # Draw the violin.
-    ax.fill_betweenx(xvals, -violin + pos, violin + pos,
+    ax.fill_betweenx(xvals, envelope_l, envelope_r,
                      facecolor=plot_opts.get('violin_fc', 'y'),
                      edgecolor=plot_opts.get('violin_ec', 'k'),
                      lw=plot_opts.get('violin_lw', 1),
@@ -203,8 +220,8 @@ def _set_ticks_labels(ax, data, labels, positions, plot_opts):
     return
 
 
-def beanplot(data, ax=None, labels=None, positions=None, jitter=False,
-             plot_opts={}):
+def beanplot(data, ax=None, labels=None, positions=None, side='both',
+             jitter=False, plot_opts={}):
     """Make a bean plot of each dataset in the `data` sequence.
 
     A bean plot is a combination of a `violinplot` (kernel density estimate of
@@ -224,6 +241,9 @@ def beanplot(data, ax=None, labels=None, positions=None, jitter=False,
     positions : array_like, optional
         Position array, used as the horizontal axis of the plot.  If not given,
         spacing of the violins will be equidistant.
+    side : {'both', 'left', 'right'}, optional
+        How to plot the violin.  Default is 'both'.  The 'left', 'right'
+        options can be used to create asymmetric violin plots.
     jitter : bool, optional
         If True, jitter markers within violin instead of plotting regular lines
         around the center.  This can be useful if the data is very dense.
@@ -249,6 +269,7 @@ def beanplot(data, ax=None, labels=None, positions=None, jitter=False,
                 Default is 'o'.
           - 'jitter_marker_size', int.  Marker size.  Default is 4.
           - 'jitter_fc', MPL color.  Jitter marker face color.  Default is None.
+          - 'bean_legend_text', str.  If given, add a legend with given text.
 
     Returns
     -------
@@ -303,26 +324,31 @@ def beanplot(data, ax=None, labels=None, positions=None, jitter=False,
     width = np.min([0.15 * np.max([pos_span, 1.]),
                     plot_opts.get('bean_size', 0.5) / 2.])
 
+    legend_txt = plot_opts.get('bean_legend_text', None)
     for pos_data, pos in zip(data, positions):
         # Draw violins.
-        xvals, violin = _single_violin(ax, pos, pos_data, width, plot_opts)
+        xvals, violin = _single_violin(ax, pos, pos_data, width, side, plot_opts)
 
         if jitter:
             # Draw data points at random coordinates within violin envelope.
-            jitter_envelope = np.interp(pos_data, xvals, violin)
-            jitter_coord = pos + jitter_envelope * \
-                           np.random.uniform(low=-1., high=1.,
-                                             size=pos_data.size)
+            jitter_coord = pos + _jitter_envelope(pos_data, xvals, violin, side)
             ax.plot(jitter_coord, pos_data, ls='',
                     marker=plot_opts.get('jitter_marker', 'o'),
                     ms=plot_opts.get('jitter_marker_size', 4),
                     mec=plot_opts.get('bean_color', 'k'),
-                    mew=1, mfc=plot_opts.get('jitter_fc', 'none'))
+                    mew=1, mfc=plot_opts.get('jitter_fc', 'none'),
+                    label=legend_txt)
         else:
             # Draw bean lines.
             ax.hlines(pos_data, pos - width, pos + width,
                       lw=plot_opts.get('bean_lw', 0.5),
-                      color=plot_opts.get('bean_color', 'k'))
+                      color=plot_opts.get('bean_color', 'k'),
+                      label=legend_txt)
+
+        # Show legend if required.
+        if legend_txt is not None:
+            _show_legend(ax)
+            legend_txt = None  # ensure we get one entry per call to beanplot
 
         # Draw mean line.
         if plot_opts.get('bean_show_mean', True):
@@ -340,4 +366,35 @@ def beanplot(data, ax=None, labels=None, positions=None, jitter=False,
     _set_ticks_labels(ax, data, labels, positions, plot_opts)
 
     return fig
+
+
+def _jitter_envelope(pos_data, xvals, violin, side):
+    """Determine envelope for jitter markers."""
+    if side == 'both':
+        low, high = (-1., 1.)
+    elif side == 'right':
+        low, high = (0, 1.)
+    elif side == 'left':
+        low, high = (-1., 0)
+    else:
+        raise ValueError("`side` input incorrect: %s" % side)
+
+    jitter_envelope = np.interp(pos_data, xvals, violin)
+    jitter_coord = jitter_envelope * np.random.uniform(low=low, high=high,
+                                                       size=pos_data.size)
+
+    return jitter_coord
+
+
+def _show_legend(ax):
+    """Utility function to show legend."""
+    leg = ax.legend(loc=1, shadow=True, fancybox=True, labelspacing=0.2,
+                    borderpad=0.15)
+    ltext  = leg.get_texts()
+    llines = leg.get_lines()
+    frame  = leg.get_frame()
+
+    from matplotlib.artist import setp
+    setp(ltext, fontsize='small')
+    setp(llines, linewidth=1)
 
