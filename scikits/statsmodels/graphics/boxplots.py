@@ -69,11 +69,19 @@ def violinplot(data, ax=None, labels=None, positions=None, show_boxplot=True,
     The appearance of violins can be customized with `plot_opts`.  If
     customization of boxplot elements is required, set `show_boxplot` to False
     and plot it on top of the violins by calling the Matplotlib `boxplot`
-    function directly.
+    function directly.  For example::
+
+        violinplot(data, ax=ax, show_boxplot=False)
+        ax.boxplot(data, sym='cv', whis=2.5)
 
     It can happen that the axis labels or tick labels fall outside the plot
-    area.  With Matplotlib 1.1 or higher, this can easily be fixed by calling
-    ``ax.tight_layout()``.  With older Matplotlib
+    area, especially with rotated labels on the horizontal axis.  With
+    Matplotlib 1.1 or higher, this can easily be fixed by calling
+    ``ax.tight_layout()``.  With older Matplotlib one has to use ``plt.rc`` or
+    ``plt.rcParams`` to fix this, for example::
+
+        plt.rc('figure.subplot', bottom=0.25)
+        violinplot(data, ax=ax)
 
     References
     ----------
