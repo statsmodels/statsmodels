@@ -7,7 +7,7 @@ import numpy.lib.recfunctions as nprf
 import numpy.linalg as L
 from scipy.interpolate import interp1d
 from scipy.linalg import svdvals
-from scikits.statsmodels.distributions import (ECDF, monotone_fn_inverter, 
+from scikits.statsmodels.distributions import (ECDF, monotone_fn_inverter,
                                                StepFunction)
 
 def _make_dictnames(tmp_arr, offset=0):
@@ -347,13 +347,13 @@ def fullrank(X, r=None):
         value.append(V[:,order[i]])
     return np.asarray(np.transpose(value)).astype(np.float64)
 
-StepFunction = np.deprecate(StepFunction, 
+StepFunction = np.deprecate(StepFunction,
                 old_name = 'scikits.statsmodels.tools.tools.StepFunction',
                 new_name = 'scikits.statsmodels.distributions.StepFunction')
-monotone_fn_inverter = np.deprecate(monotone_fn_inverter, 
+monotone_fn_inverter = np.deprecate(monotone_fn_inverter,
                 old_name = 'scikits.statsmodels.tools.tools.monotone_fn_inverter',
                 new_name = 'scikits.statsmodels.distributions.monotone_fn_inverter')
-ECDF = np.deprecate(ECDF, 
+ECDF = np.deprecate(ECDF,
                 old_name = 'scikits.statsmodels.tools.tools.ECDF',
                 new_name = 'scikits.statsmodels.distributions.ECDF')
 
@@ -403,3 +403,35 @@ def chain_dot(*arrs):
     """
     return reduce(lambda x, y: np.dot(y, x), arrs[::-1])
 
+def webuse(data, baseurl='http://www.stata-press.com/data/r11/'):
+    """
+    Parameters
+    ----------
+    data : str
+        Name of dataset to fetch.
+
+    Returns
+    -------
+    dta : Record Array
+        A record array containing the Stata dataset.
+
+    Examples
+    --------
+    >>> dta = webuse('auto')
+
+    Notes
+    -----
+    Make sure baseurl has trailing forward slash. Doesn't do any
+    error checking in response URLs.
+    """
+    # lazy imports
+    import pandas
+    from scikits.statsmodels.iolib import genfromdta
+    from urllib2 import urlopen
+    from urlparse import urljoin
+    from StringIO import StringIO
+
+    url = urljoin(baseurl, data+'.dta')
+    dta = urlopen(url)
+    dta = StringIO(dta.read()) # make it truly file-like
+    return genfromdta(dta)
