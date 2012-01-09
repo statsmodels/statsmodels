@@ -12,6 +12,15 @@ program define mat2nparray
     foreach mat of local namelist {
         mkarray `mat' `myfile' `format'
     }
+    file write `myfile' "class Bunch(dict):" _n
+    file write `myfile' "    def __init__(self, **kw):" _n
+    file write `myfile' "        dict.__init__(self, kw)" _n
+    file write `myfile' "        self.__dict__  = self" _n _n _n
+    file write `myfile' "results = Bunch("
+    foreach mat of local namelist {
+        file write `myfile' "`mat'=`mat', "
+    }
+    file write `myfile' ")" _n _n
 file close `myfile'
 end
 
