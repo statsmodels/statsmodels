@@ -57,7 +57,7 @@ def _null_params(model):
     endog = model.endog
     left = model.left
     right = model.right
-    res = Tobit2(endog, np.ones_like(endog), left=left,
+    res = Tobit(endog, np.ones_like(endog), left=left,
                 right=right).fit(method='bfgs', start_params = [0.,endog.std()],
                         disp=0)
     k_zeros = model.exog.shape[1] - 1
@@ -342,9 +342,81 @@ class Tobit1(base.LikelihoodModel):
                         method=method, **kwargs)
         return TobitResults(self, mlefit)
 
-class Tobit2(base.LikelihoodModel):
-    def __init__(self, endog, exog, left=True, right=True):
-        super(Tobit2, self).__init__(endog, exog)
+#####       Tobit Log-likelihood functions    #####
+
+def _loglike_uncens_obs(self, params, sigma):
+    """
+    Compute the loglikelihood for the uncensored observations only.
+    """
+    center_endog = self._center_endog
+    center_exog = self._center_exog
+    center_like = np.sum(norm.logpdf((center_endog - np.dot(center_exog,
+                                    params)) / sigma) - np.log(sigma))
+    return center_like
+
+def _score_uncens_obs(self, params, sigma):
+    """
+    Computes the score for the uncensored observations only.
+    """
+    endog = self._center_endog
+    exog = self._center_exog
+    scaled_center_exog = (endog - np.dot(exog, params))/sigma
+    dLdB_center = np.sum(exog/sigma * scaled_center_exog[:,None], axis=0)
+    dLdSigma_center = np.sum(scaled_center_exog**2 - 1, axis=0)
+    return np.r_[dLdB_center, dLdSigma_center]
+
+    #####       Left-censored stuff
+
+def _loglike_left_cens_obs(self, params, sigma):
+    """
+    Computes the log-likelihood for the left-censored observations only.
+    """
+    left_exog = (self.left - np.dot(self._left_exog, params)) / sigma
+    left_like = np.sum(norm.logcdf(left_exog))
+    # can get overflow from the above if cdf is very small
+    # seems to mean bad starting values, but might need a check
+    #if np.isinf(left_like) and left_like < 0:
+    #    left_like = -1e4
+    return left_like
+
+def _score_left_cens_obs(self, params, sigma):
+    """
+    Computes the score for the left-censored observations only
+    """
+    left_exog = self._left_exog
+    resid_left = (self.left - np.dot(left_exog, params)) / sigma
+    dlncdf = dlogcdf(resid_left)
+    dLdB_left = -np.sum(left_exog/sigma * dlncdf[:,None], axis=0)
+    dLdSigma_left = -np.sum(dlncdf * resid_left, axis=0)
+    score_l = np.r_[dLdB_left, dLdSigma_left]
+    return score_l
+
+
+    #####       Right-censored stuff
+
+def _loglike_right_cens_obs(self, params, sigma):
+    """
+    Computes the log-likelihood for the right-censored observations only.
+    """
+    right_exog = (np.dot(self._right_exog, params) - self.right) / sigma
+    right_like = np.sum(norm.logcdf(right_exog))
+    #if np.isinf(right_like) and left_like < 0:
+    #    left_like = -1e4
+    return right_like
+
+def _score_right_cens_obs(self, params, sigma):
+    right_exog = self._right_exog
+    right_resid = (np.dot(right_exog, params) - self.right) / sigma
+    dlncdf = dlogcdf(right_resid)
+    dLdB_right = np.sum(right_exog/sigma * dlncdf[:,None], axis=0)
+    dLdSigma_right = -np.sum(right_resid*dlncdf, axis=0)
+    return np.r_[dLdB_right, dLdSigma_right]
+
+#### Model classes
+
+class Tobit(base.LikelihoodModel):
+    def __init__(self, endog, exog, left=True, right=False):
+        super(Tobit, self).__init__(endog, exog)
         self._transparams = False
         # set up censoring
         self._init_censored(left, right)
@@ -385,19 +457,16 @@ class Tobit2(base.LikelihoodModel):
         """
         left, right = self.left, self.right
         if np.isfinite(left) and np.isinf(right): # left-censored
-            self._loglike = lambda params,sigma : self._loglike_left(params,
-                                                                     sigma) + \
-                                                  self._loglike_right(params,
-                                                                     sigma)
+            self._loglike = self._loglike_left
             self._score = self._score_left
             #self.hessian_ = self._hessian_left
         elif np.isinf(left) and np.isfinite(right): # right-censored
             self._loglike = self._loglike_right
-            #self._score = self._score_right
+            self._score = self._score_right
             #self.hessian = self._hessian_right
         else: # left and right censored
             self._loglike = self._loglike_both
-            #self._score = self._score_both
+            self._score = self._score_both
             #self.hessian = self._hessian_both
 
     @transform2(_exponentiate_sigma) # keeps std. dev. positive
@@ -418,84 +487,40 @@ class Tobit2(base.LikelihoodModel):
         loglike = self.loglike
         return approx_hess(params, loglike, epsilon=1e-4)[0]
 
-    def _get_score_left(self, params, sigma):
-        left_exog = self._left_exog
-        resid_left = (self.left - np.dot(left_exog, params)) / sigma
-        dlncdf = dlogcdf(resid_left)
-        dLdB_left = -np.sum(left_exog/sigma * dlncdf[:,None], axis=0)
-        dLdSigma_left = -np.sum(dlncdf * resid_left, axis=0)
-        score_l = np.r_[dLdB_left, dLdSigma_left]
-        return score_l
-
-    def _get_loglike_left(self, params, sigma):
-        left_exog = (self.left - np.dot(self._left_exog, params)) / sigma
-        left_like = np.sum(norm.logcdf(left_exog))
-        # can get overflow from the above if cdf is very small
-        # seems to mean bad starting values, but might need a check
-        #if np.isinf(left_like) and left_like < 0:
-        #    left_like = -1e4
-        return left_like
-
     def _score_left(self, params, sigma):
-        score_l = self._get_score_left(params, sigma)
-        score_c = self._get_score_center(params, sigma)
-        return score_l + score_c
+        score_l = _score_left_cens_obs(self, params, sigma)
+        score_u = _score_uncens_obs(self, params, sigma)
+        return score_l + score_u
 
     def _loglike_left(self, params, sigma):
-        llf_l = self._get_loglike_left(params, sigma)
-        llf_r = self._get_loglike_right(params, sigma)
-        return llf_l + llf_r
-
-    def _get_score_right(self, params, sigma):
-        right_resid = (np.dot(right_exog, params) - self.right) / sigma
-        dlncdf = dlogcdf(right_resid)
-        dLdB_right = np.sum(right_exog/sigma * dlncdf[:,None], axis=0)
-        dLdSigma_right = -np.sum(right_resid*dlncdf, axis=0)
-        return np.r_[dLdB_right, dLdSigma_right]
-
-    def _get_loglike_right(self, params, sigma):
-        right_exog = (np.dot(self._right_exog, params) - self.right) / sigma
-        right_like = np.sum(norm.logcdf(right_exog))
-        #if np.isinf(right_like) and left_like < 0:
-        #    left_like = -1e4
-        return right_like
+        """
+        Computes the log-likelihood for the left-censored model.
+        """
+        llf_l = _loglike_left_cens_obs(self, params, sigma)
+        llf_u = _loglike_uncens_obs(self, params, sigma)
+        return llf_l + llf_u
 
     def _score_right(self, params, sigma):
-        score_r = self._get_score_right(params, sigma)
-        score_c = self._get_score_center(params, sigma)
-        return score_r + score_c
+        score_r = _score_right_cens_obs(self, params, sigma)
+        score_u = _score_uncens_obs(self, params, sigma)
+        return score_r + score_u
 
     def _loglike_right(self, params, sigma):
-        llf_r = self._get_loglike_right(params, sigma)
-        llf_c = self._get_loglike_center(params, sigma)
-        return llf_r + llf_c
-
-    def _get_score_center(self, params, sigma):
-        endog = self._center_endog
-        exog = self._center_exog
-        scaled_center_exog = (endog - np.dot(exog, params))/sigma
-        dLdB_center = np.sum(exog/sigma * scaled_center_exog[:,None], axis=0)
-        dLdSigma_center = np.sum(scaled_center_exog**2 - 1, axis=0)
-        return np.r_[dLdB_center, dLdSigma_center]
-
-    def _get_loglike_center(self, params, sigma):
-         center_endog = self._center_endog
-         center_exog = self._center_exog
-         center_like = np.sum(norm.logpdf((center_endog - np.dot(center_exog,
-                                    params)) / sigma) - np.log(sigma))
-         return center_like
+        llf_r = _loglike_right_cens_obs(self, params, sigma)
+        llf_u = _loglike_uncens_obs(self, params, sigma)
+        return llf_r + llf_u
 
     def _score_both(self, params, sigma):
-        score_l = self._get_score_left(params, sigma)
-        score_r = self._get_score_right(params, sigma)
-        score_c = self._get_score_center(params, sigma)
-        return score_l + score_r + score_c
+        score_l = _score_left_cens_obs(self, params, sigma)
+        score_r = _score_right_cens_obs(self, params, sigma)
+        score_u = _score_uncens_obs(self, params, sigma)
+        return score_l + score_r + score_u
 
     def _loglike_both(self, params, sigma):
-        llf_l = self._get_loglike_left(params, sigma)
-        llf_r = self._get_loglike_right(params, sigma)
-        llf_c = self._get_loglike_center(params, sigma)
-        return llf_l + llf_r + llf_c
+        llf_l = _loglike_left_cens_obs(self, params, sigma)
+        llf_r = _loglike_right_cens_obs(self, params, sigma)
+        llf_u = _loglike_uncens_obs(self, params, sigma)
+        return llf_l + llf_r + llf_u
 
     def _get_start_params(self, method='null'):
         """
@@ -510,19 +535,25 @@ class Tobit2(base.LikelihoodModel):
         """
         return _start_param_funcs[method](self)
 
-    @set_transform # likelihood expects not to transform
+    @set_transform
     def fit(self, start_params = None, method='newton', **kwargs):
         """
+        Fit the Tobit model
+
+        Parameters
+        ----------
+
         Notes
         -----
         It is not recommended to change the default solver or starting
-        parameters. Please report performance issues to the developers.
+        parameters.
         """
         if start_params is None:
             start_params = self._get_start_params()
         else:
             start_params = np.copy(start_params)
-        mlefit = super(Tobit2, self).fit(start_params=start_params,
+
+        mlefit = super(Tobit, self).fit(start_params=start_params,
                         method=method, **kwargs)
         return TobitResults(self, mlefit)
 
@@ -551,7 +582,7 @@ class TobitResults(base.LikelihoodModelResults):
         self.k_constant = k_constant = int(np.any(exog.var(0) == 0))
         self.k_params = k_params = exog.shape[1] - k_constant
         self.k_ancillary = 1 # number of ancillary parameters, sigma here
-        self.df_model = k_params - self.k_constant
+        self.df_model = k_params - self.k_constant + 1 # for sigma
         self.df_resid = nobs - self.df_model
 
     def cov_params(self):
@@ -664,19 +695,20 @@ if __name__ == "__main__":
 
     # ok
     print 'Newton'
-    mod1 = Tobit2(endog, exog, left=0, right=False).fit(method='newton',
+    mod1 = Tobit(endog, exog, left=0, right=False).fit(method='newton',
             retall=1)
 
     print 'NM' # this doesn't work well,
-    mod2 = Tobit2(endog, exog, left=0, right=False).fit(method='nm',
+    mod2 = Tobit(endog, exog, left=0, right=False).fit(method='nm',
                     maxiter=10000, maxfun=10000, ftol=1e-12, xtol=1e-12)
     print 'BFGS'
-    mod3 = Tobit2(endog, exog, left=0, right=False).fit(method='bfgs')
+    mod3 = Tobit(endog, exog, left=0, right=False).fit(method='bfgs',
+                        maxiter=250)
     print 'Powell'
-    mod4 = Tobit2(endog, exog, left=0, right=False).fit(method='powell',
+    mod4 = Tobit(endog, exog, left=0, right=False).fit(method='powell',
                         xtol=1e-8, ftol=1e-8)
     print 'CG'
-    mod5 = Tobit2(endog, exog, left=0, right=False).fit(method='cg',
+    mod5 = Tobit(endog, exog, left=0, right=False).fit(method='cg',
                                 maxiter=1000)
     print 'NCG'
-    mod6 = Tobit2(endog, exog, left=0, right=False).fit(method='ncg')
+    mod6 = Tobit(endog, exog, left=0, right=False).fit(method='ncg')
