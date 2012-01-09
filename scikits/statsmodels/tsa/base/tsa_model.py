@@ -82,8 +82,6 @@ class TimeSeriesModel(base.LikelihoodModel):
     def _str_to_date(self, date):
         """
         Takes a string and returns a datetime object
-
-        Uses scikits.timeseries.parsers.DateTimeFromString
         """
         return datetools.date_parser(date)
 
@@ -92,8 +90,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         Returns the index of the given start date. Subclasses should define
         default behavior for start = None. That isn't handled here.
 
-        Start can be a string, see scikits.timeseries.parser.DateTimeFromString
-        or an integer if dates is None.
+        Start can be a string or an integer if self._data.dates is None.
         """
         dates = self._data.dates
         if isinstance(start, str):
