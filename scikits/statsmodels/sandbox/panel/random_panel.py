@@ -110,7 +110,7 @@ class PanelSample(object):
 
 if __name__ == '__main__':
 
-    nobs = 1000
+    nobs = 10000
     nobs_i = 5
     n_groups = nobs // nobs_i
     k_vars = 3
@@ -127,8 +127,8 @@ if __name__ == '__main__':
     print np.corrcoef(y.reshape(-1,n_groups, order='F'))
     print np.corrcoef(noise.reshape(-1,n_groups, order='F'))
 
-    from panel_short import ShortPanelGLS
-    mod = ShortPanelGLS(y, dgp.exog, dgp.groups)
+    from panel_short import ShortPanelGLS, ShortPanelGLS2
+    mod = ShortPanelGLS2(y, dgp.exog, dgp.groups)
     res = mod.fit()
     print res.params
     print res.bse
@@ -155,3 +155,22 @@ if __name__ == '__main__':
     #too small, assuming no bugs,
     #see Peterson assuming it refers to same kind of model
     print dgp.cov
+
+    mod2 = ShortPanelGLS(y, dgp.exog, dgp.groups)
+    res2 = mod2.fit_iterative(2)
+    print res2.params
+    print res2.bse
+    #both implementations produce the same results:
+    from numpy.testing import assert_almost_equal
+    assert_almost_equal(res.params, res2.params, decimal=14)
+    assert_almost_equal(res.bse, res2.bse, decimal=14)
+    mod5 = ShortPanelGLS(y, dgp.exog, dgp.groups)
+    res5 = mod5.fit_iterative(5)
+    print res2.params
+    print res2.bse
+    #fitting once is the same as OLS
+    mod1 = ShortPanelGLS(y, dgp.exog, dgp.groups)
+    res1 = mod5.fit_iterative(1)
+    res_ols = mod1._fit_ols()
+    assert_almost_equal(res1.params, res_ols.params, decimal=14)
+    assert_almost_equal(res1.bse, res_ols.bse, decimal=14)
