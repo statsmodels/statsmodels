@@ -323,6 +323,10 @@ if __name__ == '__main__':
     ppfemp=interpolate.UnivariateSpline(np.sort(empiricalcdf(x)),np.sort(x),k=3, s=0.03)
     ppfe = ppfemp(cdf_ongrid)
     plt.plot(ppfe, cdf_ongrid)
+
+    print 'negative density'
+    print '(np.diff(ppfs)).min()', (np.diff(ppfs)).min()
+    print '(np.diff(cdf_ongrid)).min()', (np.diff(cdf_ongrid)).min()
     #plt.show()
 
 
