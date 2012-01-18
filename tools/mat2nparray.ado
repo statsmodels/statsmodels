@@ -1,6 +1,6 @@
 capture program drop mat2nparray
 program define mat2nparray 
-    version 11.2
+    version 11.0
     syntax namelist(min=1), SAVing(str) [ Format(str) APPend REPlace ]
     if "`format'"=="" local format "%16.0g"
     local saving: subinstr local saving "." ".", count(local ext)
