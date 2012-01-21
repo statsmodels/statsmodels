@@ -45,6 +45,49 @@ class CheckTobit(object):
     def test_df_resid(self):
         npt.assert_equal(self.res1.df_resid, self.res2.df_resid)
 
+    decimal_xb = 4
+    def test_predict_xb(self):
+        npt.assert_almost_equal(self.res1.predict(), self.res2.predict_xb, 
+                                self.decimal_xb)
+
+    decimal_e = 4
+    def test_predict_e(self):
+        npt.assert_almost_equal(self.res1.predict(typ='e(-inf,inf)'),
+                                self.res2.predict_e, self.decimal_e)
+        npt.assert_almost_equal(self.res1.predict(typ='e(0,inf)'),
+                                self.res2.predict_ea, self.decimal_e)
+        npt.assert_almost_equal(self.res1.predict(typ='e(-inf,2)'),
+                                self.res2.predict_eb, self.decimal_e)
+        npt.assert_almost_equal(self.res1.predict(typ='e(0,2)'),
+                                self.res2.predict_eab, self.decimal_e)
+        npt.assert_almost_equal(self.res1.predict(typ='e(1,inf)'),                                self.res2.predict_ea1, self.decimal_e)
+
+    decimal_ystar = 4
+    def test_predict_ystar(self):
+        npt.assert_almost_equal(self.res1.predict(typ='ystar(-inf,inf)'),
+                                self.res2.predict_ystar, self.decimal_ystar)
+        npt.assert_almost_equal(self.res1.predict(typ='ystar(0,inf)'),
+                                self.res2.predict_ystara, self.decimal_ystar)
+        npt.assert_almost_equal(self.res1.predict(typ='ystar(-inf,2)'),
+                                self.res2.predict_ystarb, self.decimal_ystar)
+        npt.assert_almost_equal(self.res1.predict(typ='ystar(0,2)'),
+                                self.res2.predict_ystarab, self.decimal_ystar)
+        npt.assert_almost_equal(self.res1.predict(typ='ystar(1,inf)'),
+                                self.res2.predict_ystara1, self.decimal_ystar)
+
+    decimal_pr = 4
+    def test_predict_pr(self):
+        npt.assert_almost_equal(self.res1.predict(typ='pr(-inf,inf)'),
+                                self.res2.predict_pr, self.decimal_pr)
+        npt.assert_almost_equal(self.res1.predict(typ='pr(0,inf)'),
+                                self.res2.predict_pra, self.decimal_pr)
+        npt.assert_almost_equal(self.res1.predict(typ='pr(-inf,2)'),
+                                self.res2.predict_prb, self.decimal_pr)
+        npt.assert_almost_equal(self.res1.predict(typ='pr(0,2)'),
+                                self.res2.predict_prab, self.decimal_pr)
+        npt.assert_almost_equal(self.res1.predict(typ='pr(1,inf)'),
+                                self.res2.predict_pra1, self.decimal_pr)
+
 class TestTobit(CheckTobit):
     """
     Test left-censored Tobit
@@ -79,6 +122,7 @@ class TestTobitBFGS(TestTobit):
         data.exog = sm.add_constant(data.exog)
         cls.res1 = Tobit(data.endog, data.exog, left=0).fit(method='bfgs',
                 disp=0)
+        cls.predict_xb = 3
         cls.decimal_bse = 3
         cls.decimal_cov_params = 3
         cls.attach_results()
@@ -103,7 +147,11 @@ class TestTobitCG(TestTobit):
                 disp=0, maxiter=1000)
         cls.decimal_bse = 3
         cls.decimal_params = 3
+        cls.decimal_xb = 3
         cls.decimal_cov_params = 3
+        cls.decimal_e = 3
+        cls.decimal_ystar = 3
+        cls.decimal_pr = 3
         cls.attach_results()
 
 

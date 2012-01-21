@@ -31,17 +31,41 @@ predict predict_stdp, stdp
 bigmat predict_stdp, mat(predic_stdp)
 * calculates Pr(a < xb + u < b), the probability that y|x would be
 * observed in the interval (a,b). Takes inf and neg. inf
-predict predict_pr, pr(0,2)
+predict predict_pr, pr(.,.)
+predict predict_pra, pr(0,.)
+predict predict_prb, pr(.,2)
+predict predict_prab, pr(0,2)
+predict predict_pra1, pr(1,.)
 bigmat predict_pr, mat(predict_pr)
+bigmat predict_pra, mat(predict_pra)
+bigmat predict_prb, mat(predict_prb)
+bigmat predict_prab, mat(predict_prab)
+bigmat predict_pra1, mat(predict_pra1)
 * calculates E(xb + u | a < xb + u < b), the expected value of y|x
 * conditional on y|x being in the interval (a,b), meaning that y|x is
 * censored. 
-predict predict_e, e(0, 2)
+predict predict_e, e(., .)
+predict predict_ea, e(0, .)
+predict predict_eb, e(., 2)
+predict predict_eab, e(0, 2)
+predict predict_ea1, e(1, .)
 bigmat predict_e, mat(predict_e)
+bigmat predict_ea, mat(predict_ea)
+bigmat predict_eb, mat(predict_eb)
+bigmat predict_eab, mat(predict_eab)
+bigmat predict_ea1, mat(predict_ea1)
 * calculates E(y*), where y* = a if xb + u < a, y* = b if
 * xb + u > b, and y* = xb+u otherwise, meaning that y* is truncated.
-predict predict_ystar, ystar(0, 2)
+predict predict_ystar, ystar(., .)
+predict predict_ystara, ystar(0, .)
+predict predict_ystarb, ystar(., 2)
+predict predict_ystarab, ystar(0, 2)
+predict predict_ystara1, ystar(1, .)
 bigmat predict_ystar, mat(predict_ystar)
+bigmat predict_ystara, mat(predict_ystara)
+bigmat predict_ystarb, mat(predict_ystarb)
+bigmat predict_ystarab, mat(predict_ystarab)
+bigmat predict_ystara1, mat(predict_ystara1)
 * calculates equation-level score variables.
 * The first new variable will contain the derivative of the log
 * likelihood with respect to the regression equation.
@@ -50,7 +74,7 @@ bigmat predict_ystar, mat(predict_ystar)
 predict score_params score_sigma, scores
 bigmat score_params score_sigma, mat(score)
 
-mat2nparray cov_params llf llnull n_lcens n_rcens n_ucens chi2 df_model df_resid params bse predict_xb predict_e predict_pr predict_ystar score, saving("/home/skipper/statsmodels/statsmodels/scikits/statsmodels/regression/tests/results/tobit_left") replace
+mat2nparray cov_params llf llnull n_lcens n_rcens n_ucens chi2 df_model df_resid params bse predict_xb predict_e predict_ea predict_eb predict_eab predict_ea1 predict_pr predict_pra predict_prb predict_prab predict_pra1 predict_ystar predict_ystara predict_ystarb predict_ystarab predict_ystara1 score, saving("/home/skipper/statsmodels/statsmodels/scikits/statsmodels/regression/tests/results/tobit_left") replace
 
 ** FAKE MODEL TO TEST RIGHT CENSORING
 insheet using "/home/skipper/statsmodels/statsmodels/scikits/statsmodels/datasets/fair/fair.csv", double clear
@@ -87,17 +111,41 @@ predict predict_stdp, stdp
 bigmat predict_stdp, mat(predict_stdp)
 * calculates Pr(a < xb + u < b), the probability that y|x would be
 * observed in the interval (a,b). Takes inf and neg. inf
-predict predict_pr, pr(.5,1.5)
-bigmat predict_stdp, mat(predict_stdp)
+predict predict_pr, pr(.,.)
+predict predict_pra, pr(0,.)
+predict predict_prb, pr(.,2)
+predict predict_prab, pr(0,2)
+predict predict_pra1, pr(1,.)
+bigmat predict_pr, mat(predict_pr)
+bigmat predict_pra, mat(predict_pra)
+bigmat predict_prb, mat(predict_prb)
+bigmat predict_prab, mat(predict_prab)
+bigmat predict_pra1, mat(predict_pra1)
 * calculates E(xb + u | a < xb + u < b), the expected value of y|x
 * conditional on y|x being in the interval (a,b), meaning that y|x is
 * censored. 
-predict predict_e, e(.5, 1.5)
+predict predict_e, e(., .)
+predict predict_ea, e(0, .)
+predict predict_eb, e(., 2)
+predict predict_eab, e(0, 2)
+predict predict_ea1, e(1, .)
 bigmat predict_e, mat(predict_e)
+bigmat predict_ea, mat(predict_ea)
+bigmat predict_eb, mat(predict_eb)
+bigmat predict_eab, mat(predict_eab)
+bigmat predict_ea1, mat(predict_ea1)
 * calculates E(y*), where y* = a if xb + u < a, y* = b if
 * xb + u > b, and y* = xb+u otherwise, meaning that y* is truncated.
-predict predict_ystar, ystar(.5, 1.5)
+predict predict_ystar, ystar(., .)
+predict predict_ystara, ystar(0, .)
+predict predict_ystarb, ystar(., 2)
+predict predict_ystarab, ystar(0, 2)
+predict predict_ystara1, ystar(1, .)
 bigmat predict_ystar, mat(predict_ystar)
+bigmat predict_ystara, mat(predict_ystara)
+bigmat predict_ystarb, mat(predict_ystarb)
+bigmat predict_ystarab, mat(predict_ystarab)
+bigmat predict_ystara1, mat(predict_ystara1)
 * calculates equation-level score variables.
 * The first new variable will contain the derivative of the log
 * likelihood with respect to the regression equation.
@@ -106,7 +154,7 @@ bigmat predict_ystar, mat(predict_ystar)
 predict score_params score_sigma, scores
 bigmat score_params score_sigma, mat(score)
 
-mat2nparray cov_params llf llnull n_lcens n_rcens n_ucens chi2 df_model df_resid params bse predict_xb predict_stdp predict_e predict_ystar score, saving("/home/skipper/statsmodels/statsmodels/scikits/statsmodels/regression/tests/results/tobit_right") replace
+mat2nparray cov_params llf llnull n_lcens n_rcens n_ucens chi2 df_model df_resid params bse predict_xb predict_e predict_ea predict_eb predict_eab predict_ea1 predict_pr predict_pra predict_prb predict_prab predict_pra1 predict_ystar predict_ystara predict_ystarb predict_ystarab predict_ystara1 score, saving("/home/skipper/statsmodels/statsmodels/scikits/statsmodels/regression/tests/results/tobit_right") replace
 
 
 ** FAKE MODEL TO TEST lower and upper censoring
@@ -144,17 +192,41 @@ predict predict_stdp, stdp
 bigmat predict_stdp, mat(predict_stdp)
 * calculates Pr(a < xb + u < b), the probability that y|x would be
 * observed in the interval (a,b). Takes inf and neg. inf
-predict predict_pr, pr(.5,1.5)
+predict predict_pr, pr(.,.)
+predict predict_pra, pr(0,.)
+predict predict_prb, pr(.,2)
+predict predict_prab, pr(0,2)
+predict predict_pra1, pr(1,.)
 bigmat predict_pr, mat(predict_pr)
+bigmat predict_pra, mat(predict_pra)
+bigmat predict_prb, mat(predict_prb)
+bigmat predict_prab, mat(predict_prab)
+bigmat predict_pra1, mat(predict_pra1)
 * calculates E(xb + u | a < xb + u < b), the expected value of y|x
 * conditional on y|x being in the interval (a,b), meaning that y|x is
 * censored. 
-predict predict_e, e(.5, 1.5)
+predict predict_e, e(., .)
+predict predict_ea, e(0, .)
+predict predict_eb, e(., 2)
+predict predict_eab, e(0, 2)
+predict predict_ea1, e(1, .)
 bigmat predict_e, mat(predict_e)
+bigmat predict_ea, mat(predict_ea)
+bigmat predict_eb, mat(predict_eb)
+bigmat predict_eab, mat(predict_eab)
+bigmat predict_ea1, mat(predict_ea1)
 * calculates E(y*), where y* = a if xb + u < a, y* = b if
 * xb + u > b, and y* = xb+u otherwise, meaning that y* is truncated.
-predict predict_ystar, ystar(.5, 1.5)
+predict predict_ystar, ystar(., .)
+predict predict_ystara, ystar(0, .)
+predict predict_ystarb, ystar(., 2)
+predict predict_ystarab, ystar(0, 2)
+predict predict_ystara1, ystar(1, .)
 bigmat predict_ystar, mat(predict_ystar)
+bigmat predict_ystara, mat(predict_ystara)
+bigmat predict_ystarb, mat(predict_ystarb)
+bigmat predict_ystarab, mat(predict_ystarab)
+bigmat predict_ystara1, mat(predict_ystara1)
 * calculates equation-level score variables.
 * The first new variable will contain the derivative of the log
 * likelihood with respect to the regression equation.
@@ -163,4 +235,4 @@ bigmat predict_ystar, mat(predict_ystar)
 predict score_params score_sigma, scores
 bigmat score_params score_sigma, mat(score)
 
-mat2nparray cov_params llf llnull n_lcens n_rcens n_ucens chi2 df_model df_resid params bse predict_xb predict_stdp predict_e predict_ystar score, saving("/home/skipper/statsmodels/statsmodels/scikits/statsmodels/regression/tests/results/tobit_both") replace
+mat2nparray cov_params llf llnull n_lcens n_rcens n_ucens chi2 df_model df_resid params bse predict_xb predict_e predict_ea predict_eb predict_eab predict_ea1 predict_pr predict_pra predict_prb predict_prab predict_pra1 predict_ystar predict_ystara predict_ystarb predict_ystarab predict_ystara1 score, saving("/home/skipper/statsmodels/statsmodels/scikits/statsmodels/regression/tests/results/tobit_both") replace
