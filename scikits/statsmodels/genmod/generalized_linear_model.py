@@ -658,8 +658,8 @@ class GLMResults(LikelihoodModelResults):
         conf_int calculated from normal dist.
         """
         import time as Time
-        from iolib import SimpleTable
-        from stattools import jarque_bera, omni_normtest, durbin_watson
+        from scikits.statsmodels.iolib import SimpleTable
+        from scikits.statsmodels.stats.stattools import jarque_bera, omni_normtest, durbin_watson
 
         if yname is None:
             yname = 'Y'
