@@ -525,6 +525,25 @@ def _score_right_cens_obs(self, params, sigma):
 
 class Tobit(base.LikelihoodModel):
     """
+    Tobit model for limited dependent variable regression.
+
+    Parameters
+    ----------
+    endog : array-like
+        Endogenous variable
+    exog : array-like
+        Exogenous variable(s)
+    left : bool or float
+        If True, censoring is assumed to be at the lowest value of endog.
+        If False, no censoring in the left tail of the distribution.
+        If a floating point value is given, this is the censoring level on
+        the left.
+    right : bool or float
+        If True, censoring is assumed to be at the highest value of endog.
+        If False, no censoring in the right tail of the distribution.
+        If a floating point value is given, this is the censoring level on 
+        the right.
+
     Notes
     -----
     ystar is the observed variable, that proxies for the unobserved latent
@@ -591,7 +610,9 @@ class Tobit(base.LikelihoodModel):
     @transform2(_exponentiate_sigma) # keeps std. dev. positive
     def loglike(self, params):
         """
-        needs sigma as last parameter
+        Notes
+        -----
+        Assumes sigma is the last parameter
         """
         params, sigma = params[:-1], params[-1]
         return self._loglike(params, sigma)
@@ -625,6 +646,9 @@ class Tobit(base.LikelihoodModel):
         return score_r + score_u
 
     def _loglike_right(self, params, sigma):
+        """
+        Computes the log-likelihood for the right-censored model.
+        """
         llf_r = _loglike_right_cens_obs(self, params, sigma)
         llf_u = _loglike_uncens_obs(self, params, sigma)
         return llf_r + llf_u
