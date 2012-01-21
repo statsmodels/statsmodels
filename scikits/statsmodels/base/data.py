@@ -318,5 +318,9 @@ def _is_using_larry(endog, exog):
         return False
 
 def _is_using_timeseries(endog, exog):
-    from scikits.timeseries import TimeSeries as tsTimeSeries
-    return isinstance(endog, tsTimeSeries) or isinstance(exog, tsTimeSeries)
+    try:
+        from scikits.timeseries import TimeSeries as tsTimeSeries
+        return isinstance(endog, tsTimeSeries) or isinstance(exog, tsTimeSeries)
+    except ImportError:
+        # if there is no deprecated scikits.timeseries, it is safe to say NO
+        return False
