@@ -44,11 +44,41 @@ def _reparam_olsen(params):
     beta = gamma*sigma
     return np.r_[beta, sigma]
 
-def dlogcdf(X):
+def inverse_mills_above(X):
     """
-    Returns a _2d_ array norm.pdf(X)/norm.cdf(X)
+    Return the inverse Mills ratio for truncation from below.
+
+    Parameters
+    ----------
+    X : array
+        Argument to inverse Mills ratio
+        
+    Returns
+    -------
+    imr : array
+        norm.pdf(X)/norm.cdf(X)
     """
-    return (norm.pdf(X)/norm.cdf(X))
+    return (-norm.pdf(X)/norm.cdf(X))
+
+def inverse_mills_below(X):
+    """
+    Return the inverse Mills ratio for truncation from above.
+
+    Parameters
+    ----------
+    X : array
+        Argument to inverse Mills ratio
+        
+    Returns
+    -------
+    imr : array
+        norm.pdf(X)/norm.cdf(X)
+
+    Notes
+    -----
+    This is also the hazard function for the standard normal distribution.
+    """
+    return norm.pdf(X)/(1-norm.cdf(X))
 
 def _null_params(model):
     """
@@ -99,6 +129,88 @@ def _ols_params(model):
 _start_param_funcs = {'null' : _null_params, 'olsmle' : _olsmle_params,
                 'ols' : _ols_params}
 
+def _predict_xb(model, ab_args, params, sigma, exog):
+    """
+    """
+    return np.dot(exog, params)
+
+def _predict_pr(model, ab_args, params, sigma, exog):
+    """
+    Probability of being uncensored.
+    """
+    a,b = ab_args
+    mu = _predict_xb(model, (), params, sigma, exog)
+    return norm.cdf((mu - a)/sigma) - norm.cdf((mu - b)/sigma)
+
+def _predict_e(model, ab_args, params, sigma, exog):
+    """
+    Conditional on being uncensored
+    """
+    a,b = ab_args
+    mu = _predict_xb(model, (), params, sigma, exog)
+    if np.isfinite(a) and np.isfinite(b):
+        alpha_a = (a-mu)/sigma
+        alpha_b = (b-mu)/sigma
+        return mu + sigma * (norm.pdf(alpha_a) - norm.pdf(alpha_b))/ \
+                 (norm.cdf(alpha_b) - norm.cdf(alpha_a))
+    elif np.isfinite(a): # from below only
+        alpha = (a - mu)/sigma
+        return mu + sigma * inverse_mills_below(alpha)
+    elif np.isfinite(b): # from above only
+        alpha = (b - mu)/sigma
+        return mu + sigma * inverse_mills_above(alpha)
+    else: # both infinite
+        return mu
+
+def _predict_ystar(model, ab_args, params, sigma, exog):
+    """
+    Unconditional expected value
+    """
+    a,b = ab_args
+    e = _predict_e(model, ab_args, params, sigma, exog)
+    pr = _predict_pr(model, ab_args, params, sigma, exog)
+    if np.isfinite(a) and np.isfinite(b): 
+        pra = _predict_pr(model, (-np.inf,a), params, sigma, exog)
+        return pr * e + pra * a + (1 - pr - pra) * b
+    elif np.isfinite(a):
+        return e*pr + (1-pr) * a
+    elif np.isfinite(b):
+        return e*pr + (1-pr) * b
+    else:    
+        return _predict_xb(model, (), params, sigma, exog)
+
+_predict_funcs = dict(xb    = _predict_xb, 
+                      pr    = _predict_pr,
+                      e     = _predict_e,
+                      ystar = _predict_ystar)
+
+def _clean_type(typ):
+    args = ()
+    if typ == 'xb':
+        return typ, args
+
+    import re
+    # match a,b
+    ab_pattern = "\(.*,.*\)"
+    ab = re.search(ab_pattern, typ)
+    if ab:
+        ab = ab.group()[1:-1] # drop parens
+        args = tuple(map(float, ab.split(",")))
+
+    # match the predict type
+    pr_pattern = "^pr"
+    e_pattern = "^e"
+    ystar_pattern = "^ystar"
+
+    if re.search(pr_pattern, typ):
+        return "pr", args
+    elif re.search(e_pattern, typ):
+        return "e", args
+    elif re.search(ystar_pattern, typ):
+        return "ystar", args
+    else:
+        raise ValueError("Predict type %s not understood" % typ)
+
 def _exponentiate_sigma(params):
     params = params.copy() # do this or it gets modified several times
     params[-1] = np.exp(params[-1])
@@ -107,7 +219,9 @@ def _exponentiate_sigma(params):
 #####        End Helper Functions        #####
 
 
-class Tobit1(base.LikelihoodModel):
+##### Tobit Model in transformed parameter space #####
+
+class TobitOlsen(base.LikelihoodModel):
     def __init__(self, endog, exog, left=True, right=True):
         super(Tobit, self).__init__(endog, exog)
         # set up censoring
@@ -184,8 +298,8 @@ class Tobit1(base.LikelihoodModel):
 
         # score for gamma
         left, left_exog = self.left, self._left_exog
-        dlncdf = dlogcdf(left*theta - np.dot(left_exog, gamma))
-        gamma_left = np.dot(left_exog.T, dlncdf)
+        imr = -inverse_mills_above(left*theta - np.dot(left_exog, gamma))
+        gamma_left = np.dot(left_exog.T, imr)
 
         center_endog = self._center_endog * theta
         center_exog = self._center_exog
@@ -194,7 +308,7 @@ class Tobit1(base.LikelihoodModel):
         dLdGamma = gamma_center - gamma_left
 
         # score for theta
-        theta_left = np.sum(left * dlncdf)
+        theta_left = np.sum(left * imr)
         theta_center = np.sum(1/theta - center_resid * self._center_endog)
         dLdTheta = theta_center + theta_left
         return np.r_[dLdGamma, dLdTheta]
@@ -217,12 +331,12 @@ class Tobit1(base.LikelihoodModel):
         center_exog = self._center_exog
         left, left_exog = self.left, self._left_exog
         left_resid = left*theta - np.dot(left_exog, gamma)
-        dlncdf = dlogcdf(left_resid)[:,None]
+        imr = -inverse_mills_above(left_resid)[:,None]
 
         # dLdGamma2 for uncensored
         dLdGamma2_center = -np.dot(center_exog.T, center_exog)
         # dLdGamma2 for censored
-        dLdGamma2_left = np.dot((left_exog * dlncdf * (left_resid[:,None] + dlncdf)).T,
+        dLdGamma2_left = np.dot((left_exog * imr * (left_resid[:,None] + imr)).T,
                 left_exog)
         # dLdGamma2
         dLdGamma2 = dLdGamma2_center - dLdGamma2_left
@@ -230,7 +344,7 @@ class Tobit1(base.LikelihoodModel):
         # dLdGammadTheta for uncensored
         dLdGammadTheta_center = np.dot(center_exog.T, center_endog)
         # dLdGammadTheta for censored
-        dLdGammadTheta_left = np.dot((dlncdf * left * (left_resid[:,None] + dlncdf)).T,
+        dLdGammadTheta_left = np.dot((imr * left * (left_resid[:,None] + imr)).T,
                                 left_exog)
         # dLdGammadTheta
         dLdGammadTheta = dLdGammadTheta_center + dLdGammadTheta_left
@@ -240,7 +354,7 @@ class Tobit1(base.LikelihoodModel):
         dLdTheta2_center = -(np.dot(center_endog, center_endog) - \
                             len(center_endog)/theta**2)
         # dLdTheta2 for censored
-        dLdTheta2_left = np.sum(dlncdf * left ** 2 * ( 1 - dlncdf))
+        dLdTheta2_left = np.sum(imr * left ** 2 * ( 1 - imr))
         dLdTheta2 = dLdTheta2_center + dLdTheta2_left
 
         # put it all together
@@ -371,12 +485,9 @@ def _loglike_left_cens_obs(self, params, sigma):
     """
     Computes the log-likelihood for the left-censored observations only.
     """
-    left_exog = (self.left - np.dot(self._left_exog, params)) / sigma
-    left_like = np.sum(norm.logcdf(left_exog))
+    alpha = (self.left - np.dot(self._left_exog, params)) / sigma
+    left_like = np.sum(norm.logcdf(alpha))
     # can get overflow from the above if cdf is very small
-    # seems to mean bad starting values, but might need a check
-    #if np.isinf(left_like) and left_like < 0:
-    #    left_like = -1e4
     return left_like
 
 def _score_left_cens_obs(self, params, sigma):
@@ -384,10 +495,10 @@ def _score_left_cens_obs(self, params, sigma):
     Computes the score for the left-censored observations only
     """
     left_exog = self._left_exog
-    resid_left = (self.left - np.dot(left_exog, params)) / sigma
-    dlncdf = dlogcdf(resid_left)
-    dLdB_left = -np.sum(left_exog/sigma * dlncdf[:,None], axis=0)
-    dLdSigma_left = -np.sum(dlncdf * resid_left, axis=0)
+    alpha = (self.left - np.dot(left_exog, params)) / sigma
+    imr = -inverse_mills_above(alpha)
+    dLdB_left = -np.sum(left_exog/sigma * imr[:,None], axis=0)
+    dLdSigma_left = -np.sum(imr * alpha, axis=0)
     score_l = np.r_[dLdB_left, dLdSigma_left]
     return score_l
 
@@ -398,23 +509,31 @@ def _loglike_right_cens_obs(self, params, sigma):
     """
     Computes the log-likelihood for the right-censored observations only.
     """
-    right_exog = (np.dot(self._right_exog, params) - self.right) / sigma
-    right_like = np.sum(norm.logcdf(right_exog))
-    #if np.isinf(right_like) and left_like < 0:
-    #    left_like = -1e4
+    alpha = (np.dot(self._right_exog, params) - self.right) / sigma
+    right_like = np.sum(norm.logcdf(alpha))
     return right_like
 
 def _score_right_cens_obs(self, params, sigma):
     right_exog = self._right_exog
-    right_resid = (np.dot(right_exog, params) - self.right) / sigma
-    dlncdf = dlogcdf(right_resid)
-    dLdB_right = np.sum(right_exog/sigma * dlncdf[:,None], axis=0)
-    dLdSigma_right = -np.sum(right_resid*dlncdf, axis=0)
+    alpha = (np.dot(right_exog, params) - self.right) / sigma
+    imr = -inverse_mills_above(alpha)
+    dLdB_right = np.sum(right_exog/sigma * imr[:,None], axis=0)
+    dLdSigma_right = -np.sum(alpha * imr, axis=0)
     return np.r_[dLdB_right, dLdSigma_right]
 
 #### Model classes
 
 class Tobit(base.LikelihoodModel):
+    """
+    Notes
+    -----
+    ystar is the observed variable, that proxies for the unobserved latent
+    variable y.
+
+              y, if a < y < b
+    ystar = { a, if y <= a
+              b, if y >= b
+    """
     def __init__(self, endog, exog, left=True, right=False):
         super(Tobit, self).__init__(endog, exog)
         self._transparams = False
@@ -535,6 +654,44 @@ class Tobit(base.LikelihoodModel):
         """
         return _start_param_funcs[method](self)
 
+    def predict(self, params, exog=None, typ='xb'):
+        """
+        Use the Tobit model for prediction
+
+        Parameters
+        ----------
+        params : array
+            The parameters of the model and sigma. The last number in params 
+            should be sigma, the standard deviation of the model.
+        exog : array, optional
+            The exogenous variables at which to predict. The default is the
+            given exog for the model.
+        typ : str {'xb', 'pr(a,b)', 'e(a,b)', 'ystar(a,b)'}, optional
+            The type of prediction to make.
+            'xb'         - linear prediction
+            'pr(a,b)'    - Probability that a < y < b. Where y is the latent
+                           unobserved variable. a and b may be replaced 
+                           by floats in the string. a and b may be replaced by
+                           -inf or inf, respectively. If (a,b) is omitted 
+                           entirely, they are inferred from the model.
+            'e(a,b)'     - The expectation of y given a < y < b. Where y is the
+                           latent unobserved variable. a and b may be replaced 
+                           by floats in the string. a and b may be replaced by
+                           -inf or inf, respectively. If (a,b) is omitted 
+                           entirely, they are inferred from the model.
+            'ystar(a,b)' - Expectation of the observed variable ystar where
+                           ystar = max(a, min(y,b)). a and b may be replaced by
+                           -inf or inf, respectively. If (a,b) is omitted 
+                           entirely, they are inferred from the model.
+        """
+        typ, ab_args = _clean_type(typ)
+        params, sigma = params[:-1], params[-1]
+        if exog == None:
+            exog = self.exog
+        if not ab_args:
+            ab_args = (self.left, self.right)
+        return _predict_funcs[typ](self, ab_args, params, sigma, exog)
+
     @set_transform
     def fit(self, start_params = None, method='newton', **kwargs):
         """
@@ -612,6 +769,11 @@ class TobitResults(base.LikelihoodModelResults):
             raise AssertionError("Null Likelihood did not converge. Please "
                     "report.")
         return res.llf
+
+    def predict(self, exog=None, typ='xb'):
+        return self.model.predict(self.params, exog, typ)
+    #TODO: fix this to remove params, we need a general solution here
+    predict.__doc__ = Tobit.predict.__doc__
 
 def webuse(data, baseurl='http://www.stata-press.com/data/r11/'):
     """
