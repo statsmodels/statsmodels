@@ -3,6 +3,14 @@ import datetime
 from pandas import datetools as pandas_datetools
 import numpy as np
 
+_freq_to_pandas = {'B' : pandas_datetools.Week(weekday=4),
+                   'D' : pandas_datetools.day,
+                   'W' : pandas_datetools.Week(), # can replace with week when
+                                                  # bug is fixed upstream
+                   'M' : pandas_datetools.monthEnd,
+                   'A' : pandas_datetools.yearEnd,
+                   'Q' : pandas_datetools.quarterEnd}
+
 #TODO: unify all the frequency information
 def _date_from_idx(d1, idx, freq):
     """
@@ -11,11 +19,7 @@ def _date_from_idx(d1, idx, freq):
     index distance of how far the next date should be from d1. Ie., 1 gives
     the next date from d1 at freq.
     """
-    from scikits.timeseries import Date
-    tsd1 = Date(freq, datetime=d1)
-    tsd2 = datetime.datetime.fromordinal((tsd1 + idx).toordinal())
-    return tsd2
-
+    return d1 + idx * _freq_to_pandas[freq]
 
 def _idx_from_dates(d1, d2, freq):
     """
@@ -25,10 +29,8 @@ def _idx_from_dates(d1, d2, freq):
     Note that it rounds down the index if the date is before the next date at
     freq.
     """
-    from scikits.timeseries import Date
-    d1 = Date(freq, datetime=d1)
-    d2 = Date(freq, datetime=d2)
-    return d2 - d1
+    from pandas import DateRange
+    return len(DateRange(d1, d2, offset = _freq_to_pandas[freq])) - 1
 
 _quarter_to_day = {
         "1" : (3, 31),

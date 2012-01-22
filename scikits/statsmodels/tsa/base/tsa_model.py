@@ -9,13 +9,7 @@ import datetime
 
 _freqs = ['B','D','W','M','A', 'Q']
 
-_freq_to_pandas = {'B' : 'W@FRI',
-                   'D' : pandas_datetools.day,
-                   'W' : pandas_datetools.Week(), # can replace with week when
-                                                  # bug is fixed upstream
-                   'M' : pandas_datetools.monthEnd,
-                   'A' : pandas_datetools.yearEnd,
-                   'Q' : pandas_datetools.quarterEnd}
+_freq_to_pandas = datetools._freq_to_pandas
 
 def _check_freq(freq):
     if freq and freq not in _freqs:
