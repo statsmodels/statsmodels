@@ -3,10 +3,10 @@ import datetime
 from pandas import datetools as pandas_datetools
 import numpy as np
 
+#NOTE: All of these frequencies assume end of period (except wrt time)
 _freq_to_pandas = {'B' : pandas_datetools.BDay(1),
                    'D' : pandas_datetools.day,
-                   'W' : pandas_datetools.Week(), # can replace with week when
-                                                  # bug is fixed upstream
+                   'W' : pandas_datetools.Week(weekday=6),
                    'M' : pandas_datetools.monthEnd,
                    'A' : pandas_datetools.yearEnd,
                    'Q' : pandas_datetools.quarterEnd}
@@ -17,6 +17,11 @@ def _date_from_idx(d1, idx, freq):
     d1 is the datetime of the last date in the series. idx is the
     index distance of how far the next date should be from d1. Ie., 1 gives
     the next date from d1 at freq.
+
+    Notes
+    -----
+    This does not do any rounding to make sure that d1 is actually on the
+    offset. For now, this needs to be taken care of before you get here.
     """
     return d1 + idx * _freq_to_pandas[freq]
 
@@ -25,8 +30,11 @@ def _idx_from_dates(d1, d2, freq):
     Returns an index offset from datetimes d1 and d2. d1 is expected to be the
     last date in a date series and d2 is the out of sample date.
 
-    Note that it rounds down the index if the date is before the next date at
-    freq.
+    Notes
+    -----
+    Rounds down the index if the end date is before the next date at freq.
+    Does not check the start date to see whether it is on the offest but
+    assumes that it is.
     """
     from pandas import DateRange
     return len(DateRange(d1, d2, offset = _freq_to_pandas[freq])) - 1
