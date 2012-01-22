@@ -87,12 +87,12 @@ class ModelData(object):
         return None
 
     def _get_yarr(self, endog):
-        if data_util.is_structured_ndarray(endog):
+        if data_util._is_structured_ndarray(endog):
             endog = data_util.struct_to_ndarray(endog)
         return np.asarray(endog).squeeze()
 
     def _get_xarr(self, exog):
-        if data_util.is_structured_ndarray(exog):
+        if data_util._is_structured_ndarray(exog):
             exog = data_util.struct_to_ndarray(exog)
         return np.asarray(exog)
 
@@ -254,9 +254,6 @@ class LarryData(ModelData):
     def attach_dates(self, result):
         return _la.larray(result, [self.predict_dates])
 
-def _is_structured_array(data):
-    return isinstance(data, np.ndarray) and data.dtype.names is not None
-
 def _make_endog_names(endog):
     if endog.ndim == 1 or endog.shape[1] == 1:
         ynames = ['y']
@@ -286,41 +283,17 @@ def handle_data(endog, exog):
     """
     Given inputs
     """
-    if _is_using_pandas(endog, exog):
+    if data_util._is_using_pandas(endog, exog):
         klass = PandasData
-    elif _is_using_larry(endog, exog):
+    elif data_util._is_using_larry(endog, exog):
         klass = LarryData
-    elif _is_using_timeseries(endog, exog):
+    elif data_util._is_using_timeseries(endog, exog):
         klass = TimeSeriesData
     # keep this check last
-    elif _is_using_ndarray(endog, exog):
+    elif data_util._is_using_ndarray(endog, exog):
         klass = ModelData
     else:
         raise ValueError('unrecognized data structures: %s / %s' %
                          (type(endog), type(exog)))
 
     return klass(endog, exog=exog)
-
-def _is_using_ndarray(endog, exog):
-    return (isinstance(endog, np.ndarray) and
-            (isinstance(exog, np.ndarray) or exog is None))
-
-def _is_using_pandas(endog, exog):
-    from pandas import Series, DataFrame, WidePanel
-    klasses = (Series, DataFrame, WidePanel)
-    return (isinstance(endog, klasses) or isinstance(exog, klasses))
-
-def _is_using_larry(endog, exog):
-    try:
-        import la
-        return isinstance(endog, la.larry) or isinstance(exog, la.larry)
-    except ImportError:
-        return False
-
-def _is_using_timeseries(endog, exog):
-    try:
-        from scikits.timeseries import TimeSeries as tsTimeSeries
-        return isinstance(endog, tsTimeSeries) or isinstance(exog, tsTimeSeries)
-    except ImportError:
-        # if there is no deprecated scikits.timeseries, it is safe to say NO
-        return False

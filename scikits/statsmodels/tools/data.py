@@ -27,7 +27,7 @@ def is_data_frame(obj):
 
     return isinstance(obj, pn.DataFrame)
 
-def is_structured_ndarray(obj):
+def _is_structured_ndarray(obj):
     return isinstance(obj, np.ndarray) and obj.dtype.names is not None
 
 def interpret_data(data, colnames=None, rownames=None):
@@ -80,3 +80,27 @@ def interpret_data(data, colnames=None, rownames=None):
 
 def struct_to_ndarray(arr):
     return arr.view((float, len(arr.dtype.names)))
+
+def _is_using_ndarray(endog, exog):
+    return (isinstance(endog, np.ndarray) and
+            (isinstance(exog, np.ndarray) or exog is None))
+
+def _is_using_pandas(endog, exog):
+    from pandas import Series, DataFrame, WidePanel
+    klasses = (Series, DataFrame, WidePanel)
+    return (isinstance(endog, klasses) or isinstance(exog, klasses))
+
+def _is_using_larry(endog, exog):
+    try:
+        import la
+        return isinstance(endog, la.larry) or isinstance(exog, la.larry)
+    except ImportError:
+        return False
+
+def _is_using_timeseries(endog, exog):
+    try:
+        from scikits.timeseries import TimeSeries as tsTimeSeries
+        return isinstance(endog, tsTimeSeries) or isinstance(exog, tsTimeSeries)
+    except ImportError:
+        # if there is no deprecated scikits.timeseries, it is safe to say NO
+        return False
