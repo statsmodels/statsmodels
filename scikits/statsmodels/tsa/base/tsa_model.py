@@ -4,16 +4,18 @@ import scikits.statsmodels.base.wrapper as wrap
 from scikits.statsmodels.tsa.base import datetools
 from numpy import arange, asarray
 from pandas import Index
+from pandas import datetools as pandas_datetools
 import datetime
 
 _freqs = ['B','D','W','M','A', 'Q']
 
-_freq_to_pandas = {'B' : 'WEEKDAY',
-                   'D' : None,
-                   'W' : None,
-                   'M' : None,
-                   'A' : 'A@DEC',
-                   'Q' : 'Q@MAR'}
+_freq_to_pandas = {'B' : 'W@FRI',
+                   'D' : pandas_datetools.day,
+                   'W' : pandas_datetools.Week(), # can replace with week when
+                                                  # bug is fixed upstream
+                   'M' : pandas_datetools.monthEnd,
+                   'A' : pandas_datetools.yearEnd,
+                   'Q' : pandas_datetools.quarterEnd}
 
 def _check_freq(freq):
     if freq and freq not in _freqs:
@@ -169,21 +171,14 @@ class TimeSeriesModel(base.LikelihoodModel):
         return end, out_of_sample
 
     def _make_predict_dates(self):
-        try:
-            from scikits.timeseries import date_array
-        except ImportError:
-            self._data.predict_dates = None
+        from pandas import DateRange
         data = self._data
         dtstart = data.predict_start
         dtend = data.predict_end
         freq = data.freq
-        #pandas_freq = _freq_to_pandas[freq]
-        dates = date_array(start_date=dtstart, end_date=dtend,
-                                freq=freq).toordinal().astype(int)
-        self._data.predict_dates = asarray(
-                [datetime.datetime.fromordinal(i) for i in dates])
-        #pandas.DateRange(dtstart, dtend,
-        #might be able to use pandas, but might have to make some more offsets?
+        pandas_freq = _freq_to_pandas[freq]
+        dates = DateRange(dtstart, dtend, offset = pandas_freq).values
+        self._data.predict_dates = dates
 
 class TimeSeriesModelResults(base.LikelihoodModelResults):
     def __init__(self, model, params, normalized_cov_params, scale=1.):
