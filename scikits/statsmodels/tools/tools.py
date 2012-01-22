@@ -9,6 +9,8 @@ from scipy.interpolate import interp1d
 from scipy.linalg import svdvals
 from scikits.statsmodels.distributions import (ECDF, monotone_fn_inverter,
                                                StepFunction)
+from scikits.statsmodels.tools.data import _is_using_pandas
+from pandas import DataFrame
 
 def _make_dictnames(tmp_arr, offset=0):
     """
@@ -222,14 +224,44 @@ def categorical(data, col=None, dictnames=False, drop=False, ):
         else:
             raise IndexError("The index %s is not understood" % col)
 
+def _series_add_constant(data, prepend):
+    const = np.ones_like(data)
+    const.name = 'const'
+    if not prepend:
+        results = DataFrame([data, const]).T
+        results.columns = [data.name, 'const']
+    else:
+        results = DataFrame([const, data]).T
+        results.columns = ['const', data.name]
+    return results
+
+def _dataframe_add_constant(data, prepend):
+    # check for const.
+    if np.any(data.var(0) == 1):
+        return data
+    if prepend:
+        data.insert(0, 'const', 1)
+    else:
+        data['const'] = 1
+    return data
+
+def _pandas_add_constant(data, prepend):
+    from pandas import Series
+    if isinstance(data, Series):
+        return _series_add_constant(data, prepend)
+    else:
+        return _dataframe_add_constant(data, prepend)
+
+
 #TODO: add an axis argument to this for sysreg
 def add_constant(data, prepend=False):
     '''
     This appends a column of ones to an array if prepend==False.
 
-    For ndarrays it checks to make sure a constant is not already included.
-    If there is at least one column of ones then the original array is
-    returned.  Does not check for a constant if a structured or recarray is
+    For ndarrays and pandas.DataFrames, checks to make sure a constant is not
+    already included. If there is at least one column of ones then the
+    original object is returned.  Does not check for a constant if a structured
+    or recarray is
     given.
 
     Parameters
@@ -253,11 +285,15 @@ def add_constant(data, prepend=False):
        statsmodels. We recommend to use an explicit prepend in any permanent
        code.
     '''
-    data = np.asarray(data)
     if not prepend:
         import warnings
         warnings.warn("The default of `prepend` will be changed to True in the "
                   "next release, use explicit prepend", FutureWarning)
+    if _is_using_pandas(data, None):
+        # work on a copy
+        return _pandas_add_constant(data.copy(), prepend)
+    else:
+        data = np.asarray(data)
     if not data.dtype.names:
         var0 = data.var(0) == 0
         if np.any(var0):
