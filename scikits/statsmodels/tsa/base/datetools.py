@@ -3,7 +3,7 @@ import datetime
 from pandas import datetools as pandas_datetools
 import numpy as np
 
-_freq_to_pandas = {'B' : pandas_datetools.Week(weekday=4),
+_freq_to_pandas = {'B' : pandas_datetools.BDay(1),
                    'D' : pandas_datetools.day,
                    'W' : pandas_datetools.Week(), # can replace with week when
                                                   # bug is fixed upstream
