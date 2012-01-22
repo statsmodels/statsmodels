@@ -11,7 +11,6 @@ _freq_to_pandas = {'B' : pandas_datetools.BDay(1),
                    'A' : pandas_datetools.yearEnd,
                    'Q' : pandas_datetools.quarterEnd}
 
-#TODO: unify all the frequency information
 def _date_from_idx(d1, idx, freq):
     """
     Returns the date from an index beyond the end of a date series.
