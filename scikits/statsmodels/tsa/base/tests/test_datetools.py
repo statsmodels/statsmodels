@@ -2,7 +2,7 @@ from datetime import datetime
 import numpy.testing as npt
 from scikits.statsmodels.tsa.base.datetools import (_date_from_idx,
                 _idx_from_dates, date_parser, date_range_str, dates_from_str,
-                dates_from_range)
+                dates_from_range, _infer_freq, _freq_to_pandas)
 
 def test_date_from_idx():
     d1 = datetime(2008, 12, 31)
@@ -47,3 +47,30 @@ def test_regex_matching_quarter():
     npt.assert_equal(date_parser(t2), result)
     npt.assert_equal(date_parser(t3), result)
     npt.assert_equal(date_parser(t4), result)
+
+def test_infer_freq():
+    from pandas import DateRange
+    d1 = datetime(2008, 12, 31)
+    d2 = datetime(2012, 9, 30)
+
+    b = DateRange(d1, d2, offset=_freq_to_pandas['B']).values
+    d = DateRange(d1, d2, offset=_freq_to_pandas['D']).values
+    w = DateRange(d1, d2, offset=_freq_to_pandas['W']).values
+    m = DateRange(d1, d2, offset=_freq_to_pandas['M']).values
+    a = DateRange(d1, d2, offset=_freq_to_pandas['A']).values
+    q = DateRange(d1, d2, offset=_freq_to_pandas['Q']).values
+
+    npt.assert_string_equal(_infer_freq(b), 'B')
+    npt.assert_string_equal(_infer_freq(d), 'D')
+    npt.assert_string_equal(_infer_freq(w), 'W')
+    npt.assert_string_equal(_infer_freq(m), 'M')
+    npt.assert_string_equal(_infer_freq(a), 'A')
+    npt.assert_string_equal(_infer_freq(q), 'Q')
+    npt.assert_string_equal(_infer_freq(b[2:4]), 'B')
+    npt.assert_string_equal(_infer_freq(b[:2]), 'D')
+    npt.assert_string_equal(_infer_freq(d[:2]), 'D')
+    npt.assert_string_equal(_infer_freq(w[:2]), 'W')
+    npt.assert_string_equal(_infer_freq(m[:2]), 'M')
+    npt.assert_string_equal(_infer_freq(a[:2]), 'A')
+    npt.assert_string_equal(_infer_freq(q[:2]), 'Q')
+
