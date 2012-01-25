@@ -135,9 +135,17 @@ class ARMA(tsbase.TimeSeriesModel):
                 p_tmp = armod.k_ar
                 resid = endog[p_tmp:] - np.dot(lagmat(endog, p_tmp,
                                 trim='both'), arcoefs_tmp)
-                X = np.column_stack((lagmat(endog,p,'both')[p_tmp+(q-p):],
-                    lagmat(resid,q,'both'))) # stack ar lags and resids
-                coefs = GLS(endog[p_tmp+q:], X).fit().params
+                if p < p_tmp + q:
+                    endog_start = p_tmp + q - p
+                    resid_start = 0
+                else:
+                    endog_start = 0
+                    resid_start = p - p_tmp - q
+                lag_endog = lagmat(endog, p, 'both')[endog_start:]
+                lag_resid = lagmat(resid, q, 'both')[resid_start:]
+                # stack ar lags and resids
+                X = np.column_stack((lag_endog, lag_resid))
+                coefs = GLS(endog[max(p_tmp+q,p):], X).fit().params
                 start_params[k:k+p+q] = coefs
             else:
                 start_params[k+p:k+p+q] = yule_walker(endog, order=q)[0]
