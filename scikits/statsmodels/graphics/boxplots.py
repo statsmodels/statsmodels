@@ -165,6 +165,7 @@ def _single_violin(ax, pos, pos_data, width, side, plot_opts):
         x_upper = kde.dataset.max() + s
         return np.linspace(x_lower, x_upper, 100)
 
+    pos_data = np.asarray(pos_data)
     # Kernel density estimate for data at this position.
     kde = gaussian_kde(pos_data)
 

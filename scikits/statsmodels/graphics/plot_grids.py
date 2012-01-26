@@ -111,7 +111,7 @@ def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
                 level = [level]
             for alpha in level:
                 _make_ellipse(dmean[idx], dcov[idx[:,None], idx], ax, level=alpha,
-                         color='k')
+                         **ell_kwds_)
 
             if add_titles:
                 ax.set_title('%s-%s' % (varnames[i], varnames[j]))
