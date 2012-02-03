@@ -41,6 +41,9 @@ class ContrastResults(object):
                    (`self.effect`, `self.sd`, `self.tvalue`, `self.pvalue`,
                            self.df_denom)
 
+    def __repr__(self):
+        return str(self.__class__) + '\n' + self.__str__()
+
 class Contrast(object):
     """
     This class is used to construct contrast matrices in regression models.
