@@ -290,7 +290,8 @@ def handle_data(endog, exog):
     elif data_util._is_using_timeseries(endog, exog):
         klass = TimeSeriesData
     # keep this check last
-    elif data_util._is_using_ndarray(endog, exog):
+    elif (data_util._is_using_ndarray(endog, exog) or
+            data_util._is_array_like(endog, exog)):
         klass = ModelData
     else:
         raise ValueError('unrecognized data structures: %s / %s' %

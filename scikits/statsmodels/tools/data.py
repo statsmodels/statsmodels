@@ -104,3 +104,11 @@ def _is_using_timeseries(endog, exog):
     except ImportError:
         # if there is no deprecated scikits.timeseries, it is safe to say NO
         return False
+
+def _is_array_like(endog, exog):
+    try: # do it like this in case of mixed types, ie., ndarray and list
+        endog = np.asarray(endog)
+        exog = np.asarray(exog)
+        return True
+    except:
+        return False
