@@ -4,4 +4,4 @@ from scikits.statsmodels.sandbox.stats.diagnostic import (
     compare_cox, compare_j, het_breushpagan, HetGoldfeldQuandt,
     het_goldfeldquandt,
     het_white, recursive_olsresiduals, acorr_breush_godfrey,
-    linear_harvey_collier)
+    linear_harvey_collier, linear_rainbow)
