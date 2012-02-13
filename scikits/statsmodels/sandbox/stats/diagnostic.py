@@ -125,7 +125,7 @@ class CompareJ(object):
         if not np.allclose(results_x.model.endog, results_z.model.endog):
             raise ValueError('endogenous variables in models are not the same')
         nobs = results_x.model.endog.shape[0]
-        y = results_x.model.exog
+        y = results_x.model.endog
         x = results_x.model.exog
         z = results_z.model.exog
         #sigma2_x = results_x.ssr/nobs
@@ -142,7 +142,7 @@ class CompareJ(object):
             self.teststat = tstat
             self.pvalue = pval
 
-        return tsta, pval
+        return tstat, pval
 
     def __call__(self, results_x, results_z):
         return self.run(results_x, results_z, attach=False)
@@ -226,7 +226,7 @@ def acorr_ljungbox(x, lags=None, boxpierce=False):
     if not boxpierce:
         return qljungbox, pval
     else:
-        qboxpierce = nobs * np.cumsum(acfx[1:maxlag+1]**2)[lags]
+        qboxpierce = nobs * np.cumsum(acfx[1:maxlag+1]**2)[lags-1]
         pvalbp = stats.chi2.sf(qboxpierce, lags)
         return qljungbox, pval, qboxpierce, pvalbp
 
@@ -302,8 +302,63 @@ def acorr_lm(x, maxlag=None, autolag='AIC', store=False):
     else:
         return fval, fpval, lm, lmpval
 
+def acorr_breush_godfrey(results, nlags=None, store=False):
+    '''Lagrange Multiplier tests for autocorrelation
 
-def het_breushpagan(resid, x, exog=None):
+    not checked yet, copied from unitrood_adf with adjustments
+    check array shapes because of the addition of the constant.
+    written/copied without reference
+    This is not Breush-Godfrey. BG adds lags of residual to exog in the
+    design matrix for the auxiliary regression with residuals as endog,
+    see Greene 12.7.1.
+
+    Notes
+    -----
+    If x is calculated as y^2 for a time series y, then this test corresponds
+    to the Engel test for autoregressive conditional heteroscedasticity (ARCH).
+    TODO: get details and verify
+
+    '''
+
+    x = np.concatenate((np.zeros(nlags), results.resid))
+    exog_old = results.model.exog
+    x = np.asarray(x)
+    nobs = x.shape[0]
+    if nlags is None:
+        #for adf from Greene referencing Schwert 1989
+        nlags = 12. * np.power(nobs/100., 1/4.)#nobs//4  #TODO: check default, or do AIC/BIC
+
+
+    #xdiff = np.diff(x)
+    #
+    xdall = lagmat(x[:,None], nlags, trim='both')
+    nobs = xdall.shape[0]
+    xdall = np.c_[np.ones((nobs,1)), xdall]
+    xshort = x[-nobs:]
+    exog = np.column_stack((exog_old, xdall))
+    k_vars = exog.shape[1]
+
+    if store: resstore = ResultsStore()
+
+    resols = sm.OLS(xshort, exog).fit()
+    ft = resols.f_test(np.eye(nlags, k_vars, k_vars - nlags))
+    fval = ft.fvalue
+    fpval = ft.pvalue
+    fval = np.squeeze(fval)[()]   #TODO: fix this in ContrastResults
+    fpval = np.squeeze(fpval)[()]
+    lm = nobs * resols.rsquared
+    lmpval = stats.chi2.sf(lm, nlags)
+    # Note: degrees of freedom for LM test is nvars minus constant = usedlags
+    #return fval, fpval, lm, lmpval
+
+    if store:
+        resstore.resols = resols
+        resstore.usedlag = nlags
+        return fval, fpval, lm, lmpval, resstore
+    else:
+        return fval, fpval, lm, lmpval
+
+def het_breushpagan(resid, x):
     '''Lagrange Multiplier Heteroscedasticity Test by Breush-Pagan
 
     The tests the hypothesis that the residual variance does not depend on
@@ -362,8 +417,6 @@ def het_breushpagan(resid, x, exog=None):
     Breush, Pagan article
 
     '''
-    if not exog is None:
-        resid = sm.OLS(y, exog).fit()
 
     x = np.asarray(x)
     y = np.asarray(resid)**2
