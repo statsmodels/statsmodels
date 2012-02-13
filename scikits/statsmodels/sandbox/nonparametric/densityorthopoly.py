@@ -486,7 +486,7 @@ if __name__ == '__main__':
         dop = DensityOrthoPoly().fit(obs_dist, ChebyTPoly, order=20)
         grid = np.linspace(obs_dist.min(), obs_dist.max())
         xf = dop(grid)
-        print 'np.max(np.abs(xf - f_hat0))', np.max(np.abs(xf - f_hat0))
+        #print 'np.max(np.abs(xf - f_hat0))', np.max(np.abs(xf - f_hat0))
         dopint = integrate.quad(dop, *dop.limits)[0]
         print 'dop F integral', dopint
         mpdf = mix.pdf(grid, [1/3.,2/3.], dist=[stats.norm, stats.norm],
@@ -507,7 +507,7 @@ if __name__ == '__main__':
         dop = dop.fit(obs_dist, F2Poly, order=30)
         grid = np.linspace(obs_dist.min(), obs_dist.max())
         xf = dop(grid)
-        print np.max(np.abs(xf - f_hat0))
+        #print np.max(np.abs(xf - f_hat0))
         dopint = integrate.quad(dop, *dop.limits)[0]
         print 'dop F integral', dopint
         mpdf = mix.pdf(grid, [1/3.,2/3.], dist=[stats.norm, stats.norm],
@@ -531,7 +531,7 @@ if __name__ == '__main__':
         dop = dop.fit(obs_dist, HPoly, order=20)
         grid = np.linspace(obs_dist.min(), obs_dist.max())
         xf = dop(grid)
-        print np.max(np.abs(xf - f_hat0))
+        #print np.max(np.abs(xf - f_hat0))
         dopint = integrate.quad(dop, *dop.limits)[0]
         print 'dop F integral', dopint
 
