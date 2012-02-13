@@ -676,7 +676,14 @@ class HetGoldfeldQuandt(object):
 het_goldfeldquandt = HetGoldfeldQuandt()
 het_goldfeldquandt.__doc__ = het_goldfeldquandt.run.__doc__
 
+def linear_harvey_collier(res):
+    #I think this has different ddof than
+    #B.H. Baltagi, Econometrics, 2011, chapter 8
+    #but it matches Gretl and R:lmtest, pvalue at decimal=13
+    rr = recursive_olsresiduals(res, skip=3, alpha=0.95)
+    from scipy import stats
 
+    return stats.ttest_1samp(rr[3][3:], 0)
 
 
 def neweywestcov(resid, x):
@@ -903,12 +910,16 @@ def recursive_olsresiduals(olsresults, skip=None, lamda=0.0, alpha=0.95):
     #rcusumci = np.sqrt(np.arange(skip,nobs+1))*np.array([[-1.],[+1.]])*stats.norm.sf(0.025)
     if alpha == 0.95:
         a = 0.948 #for alpha=0.95
-    else:
+    elif alpha == 0.99:
         a = 1.143 #for alpha=0.99
+    elif alpha == 0.90:
+        a = 0.850
+    else:
+        raise ValueError('alpha can only be 0.9, 0.95 or 0.99')
 
     #following taken from Ploberger,
     crit = a*np.sqrt(nrr)
-    rcusumci = (a*np.sqrt(nrr) + a*np.arange(0,nobs-skip)/np.sqrt(nrr)) * np.array([[-1.],[+1.]])
+    rcusumci = (a*np.sqrt(nrr) + 2*a*np.arange(0,nobs-skip)/np.sqrt(nrr)) * np.array([[-1.],[+1.]])
     return rresid, rparams, rypred, rresid_standardized, rresid_scaled, rcusum, rcusumci
 
 

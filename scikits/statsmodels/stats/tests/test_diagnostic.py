@@ -82,6 +82,8 @@ def notyet_atst():
     harvey_collier_2 = dict(stat=0.7516918462158783, df=199,
                           pvalue=0.4531244858006127, distr='t')
 
+
+
     ##################################
 
 
@@ -233,6 +235,7 @@ class TestDiagnosticG(object):
 
 
     def test_harvey_collier(self):
+
         #> hc = harvtest(fm, order.by = NULL, data = list())
         #> mkhtest_f(hc, 'harvey_collier', 't')
         harvey_collier = dict(statistic=0.494432160939874, pvalue=0.6215491310408242, parameters=(198), distr='t')
@@ -240,6 +243,10 @@ class TestDiagnosticG(object):
         #> hc2 = harvtest(fm, order.by=ggdp , data = list())
         #> mkhtest_f(hc2, 'harvey_collier_2', 't')
         harvey_collier_2 = dict(statistic=1.42104628340473, pvalue=0.1568762892441689, parameters=(198), distr='t')
+
+        hc = smsdia.linear_harvey_collier(self.res)
+        compare_t_est(hc, harvey_collier, decimal=(12, 12))
+
 
     def test_rainbow(self):
         #rainbow test
