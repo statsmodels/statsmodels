@@ -9,6 +9,8 @@ License: BSD-3
 currently all tests are against R
 
 """
+import os
+
 import numpy as np
 
 from numpy.testing import assert_almost_equal, assert_equal, assert_approx_equal
@@ -22,6 +24,7 @@ import scikits.statsmodels.stats.diagnostic as smdia
 import scikits.statsmodels.sandbox.stats.diagnostic as smsdia
 import local_scripts.outliers_influence as oi
 
+cur_dir = os.path.abspath(os.path.dirname(__file__))
 
 def compare_t_est(sp, sp_dict, decimal=(14, 14)):
     assert_almost_equal(sp[0], sp_dict['statistic'], decimal=decimal[0])
@@ -328,7 +331,7 @@ class TestDiagnosticG(object):
         res = self.res
         #this test is slow
         import json
-        fp = file(r"E:\Josef\eclipsegworkspace\statsmodels-git\local_scripts\local_scripts\influence_lsdiag_R.json")
+        fp = file(os.path.join(cur_dir,"results/influence_lsdiag_R.json"))
         lsdiag = json.load(fp)
 
         #basic
@@ -355,10 +358,10 @@ class TestDiagnosticG(object):
                             lsdiag['stud.res'], decimal=14)
 
         import pandas
-        fn = r"E:\Josef\eclipsegworkspace\statsmodels-git\local_scripts\local_scripts\influence_measures_R.csv"
+        fn = os.path.join(cur_dir,"results/influence_measures_R.csv")
         infl_r = pandas.read_csv(fn, index_col=0)
         conv = lambda s: 1 if s=='TRUE' else 0
-        fn = r"E:\Josef\eclipsegworkspace\statsmodels-git\local_scripts\local_scripts\influence_measures_bool_R.csv"
+        fn = os.path.join(cur_dir,"results/influence_measures_bool_R.csv")
         #not used yet:
         #infl_bool_r  = pandas.read_csv(fn, index_col=0,
         #                                converters=dict(zip(range(7),[conv]*7)))
