@@ -348,7 +348,7 @@ def S_hac_simple(x, nlags=None, weights_func=weights_bartlett):
 
     S = weights[0] * np.dot(x.T, x)  #weights[0] just for completeness, is 1
 
-    for lag in range(1, nlags):
+    for lag in range(1, nlags+1):
         s = np.dot(x[lag:].T, x[:-lag])
         S += weights[lag] * (s + s.T)
 
@@ -692,7 +692,7 @@ def S_nw_panel(xw, weights, groupidx):
     nlags = len(weights)
 
     S = weights[0] * np.dot(xw.T, xw)  #weights just for completeness
-    for lag in range(1, nlags):
+    for lag in range(1, nlags+1):
         xw0, xwlag = lagged_groups(xw, lag, groupidx)
         s = np.dot(xw0.T, xwlag)
         S += weights[lag] * (s + s.T)
