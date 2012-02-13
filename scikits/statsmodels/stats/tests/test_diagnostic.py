@@ -23,7 +23,7 @@ import scikits.statsmodels.sandbox.stats.diagnostic as smsdia
 import local_scripts.outliers_influence as oi
 
 
-def compare_test(sp, sp_dict, decimal=(14, 14)):
+def compare_t_est(sp, sp_dict, decimal=(14, 14)):
     assert_almost_equal(sp[0], sp_dict['statistic'], decimal=decimal[0])
     assert_almost_equal(sp[1], sp_dict['pvalue'], decimal=decimal[1])
 
@@ -69,7 +69,7 @@ def notyet_atst():
                           pvalue=2.154956842194898e-33, distr='f')
 
     gq = smsdia.het_goldfeldquandt(endog, exog, split=0.5)
-    compare_test(gq, het_gq_greater, decimal=(13, 14))
+    compare_t_est(gq, het_gq_greater, decimal=(13, 14))
     assert_equal(gq[-1], 'increasing')
 
 
@@ -163,16 +163,18 @@ class TestDiagnosticG(object):
         endogg, exogg = self.endog, self.exog
         #tests
         gq = smsdia.het_goldfeldquandt(endogg, exogg, split=0.5)
-        compare_test(gq, het_gq_greater, decimal=(14, 14))
+        compare_t_est(gq, het_gq_greater, decimal=(14, 14))
         assert_equal(gq[-1], 'increasing')
         #TODO other options ???
 
     def test_het_breush_pagan(self):
+        res = self.res
+
         bptest = dict(statistic=0.709924388395087, pvalue=0.701199952134347,
                       parameters=(2,), distr='f')
 
-        bp = smsdia.het_breushpagan(res_ols.resid, res_ols.model.exog)
-        compare_test(bp, bptest, decimal=(13, 13))
+        bp = smsdia.het_breushpagan(res.resid, res.model.exog)
+        compare_t_est(bp, bptest, decimal=(13, 13))
 
 
 
@@ -222,9 +224,9 @@ class TestDiagnosticG(object):
         ljung_box_bp_4df2 = dict(statistic=5.12462932741681, pvalue=0.0771260128929921, parameters=(2,), distr='chi2')
 
 
-        lb, lbpval, bp, bppval = smsdia.acorr_ljungbox(res_ols.resid, 4, boxpierce=True)
-        compare_test([lb[-1], lbpval[-1]], ljung_box_4, decimal=(13, 14))
-        compare_test([bp[-1], bppval[-1]], ljung_box_bp_4, decimal=(13, 14))
+        lb, lbpval, bp, bppval = smsdia.acorr_ljungbox(res.resid, 4, boxpierce=True)
+        compare_t_est([lb[-1], lbpval[-1]], ljung_box_4, decimal=(13, 14))
+        compare_t_est([bp[-1], bppval[-1]], ljung_box_bp_4, decimal=(13, 14))
 
 
     def test_harvey_collier(self):
@@ -236,7 +238,7 @@ class TestDiagnosticG(object):
         #> mkhtest_f(hc2, 'harvey_collier_2', 't')
         harvey_collier_2 = dict(statistic=1.42104628340473, pvalue=0.1568762892441689, parameters=(198), distr='t')
 
-    def test_rainbow():
+    def test_rainbow(self):
         #rainbow test
         #> rt = raintest(fm)
         #> mkhtest_f(rt, 'raintest', 'f')
@@ -323,6 +325,7 @@ class TestDiagnosticG(object):
                    0.0000462387010349, 13.72583, 1.319536115230356e-30)]
 
     def test_influence(self):
+        res = self.res
         #this test is slow
         import json
         fp = file(r"E:\Josef\eclipsegworkspace\statsmodels-git\local_scripts\local_scripts\influence_lsdiag_R.json")
@@ -330,11 +333,11 @@ class TestDiagnosticG(object):
 
         #basic
         assert_almost_equal(lsdiag['cov.scaled'],
-                            res_ols.cov_params().ravel(), decimal=14)
+                            res.cov_params().ravel(), decimal=14)
         assert_almost_equal(lsdiag['cov.unscaled'],
-                            res_ols.normalized_cov_params.ravel(), decimal=14)
+                            res.normalized_cov_params.ravel(), decimal=14)
 
-        infl = oi.Influence(self.res)
+        infl = oi.Influence(res)
 
         c0, c1 = infl.cooks_distance() #TODO: what's c1
 
