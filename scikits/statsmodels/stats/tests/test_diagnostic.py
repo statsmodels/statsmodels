@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-
-"""
+"""Tests for Regression Diagnostics and Specification Tests
 
 Created on Thu Feb 09 13:19:47 2012
 
 Author: Josef Perktold
+License: BSD-3
+
+currently all tests are against R
+
 """
 import numpy as np
 
@@ -24,60 +28,60 @@ def compare_test(sp, sp_dict, decimal=(14, 14)):
     assert_almost_equal(sp[1], sp_dict['pvalue'], decimal=decimal[1])
 
 
+def notyet_atst():
+    d = macrodata.load().data
 
-d = macrodata.load().data
+    realinv = d['realinv']
+    realgdp = d['realgdp']
+    realint = d['realint']
+    endog = realinv
+    exog = add_constant(np.c_[realgdp, realint],prepend=True)
+    res_ols1 = OLS(endog, exog).fit()
 
-realinv = d['realinv']
-realgdp = d['realgdp']
-realint = d['realint']
-endog = realinv
-exog = add_constant(np.c_[realgdp, realint],prepend=True)
-res_ols1 = OLS(endog, exog).fit()
+    #growth rates
+    gs_l_realinv = 400 * np.diff(np.log(d['realinv']))
+    gs_l_realgdp = 400 * np.diff(np.log(d['realgdp']))
+    lint = d['realint'][:-1]
+    tbilrate = d['tbilrate'][:-1]
 
-#growth rates
-gs_l_realinv = 400 * np.diff(np.log(d['realinv']))
-gs_l_realgdp = 400 * np.diff(np.log(d['realgdp']))
-lint = d['realint'][:-1]
-tbilrate = d['tbilrate'][:-1]
+    endogg = gs_l_realinv
+    exogg = add_constant(np.c_[gs_l_realgdp, lint], prepend=True)
+    exogg2 = add_constant(np.c_[gs_l_realgdp, tbilrate], prepend=True)
 
-endogg = gs_l_realinv
-exogg = add_constant(np.c_[gs_l_realgdp, lint], prepend=True)
-exogg2 = add_constant(np.c_[gs_l_realgdp, tbilrate], prepend=True)
+    res_ols = OLS(endogg, exogg).fit()
+    res_ols2 = OLS(endogg, exogg2).fit()
 
-res_ols = OLS(endogg, exogg).fit()
-res_ols2 = OLS(endogg, exogg2).fit()
+    #the following were done accidentally with res_ols1 in R, with original Greene data
 
-#the following were done accidentally with res_ols1 in R, with original Greene data
+    params = np.array([-272.3986041341653, 0.1779455206941112, 0.2149432424658157])
+    cov_hac_4 = np.array([1321.569466333051, -0.2318836566017612, 37.01280466875694, -0.2318836566017614, 4.602339488102263e-05, -0.0104687835998635, 37.012804668757, -0.0104687835998635, 21.16037144168061]).reshape(3,3, order='F')
+    cov_hac_10 = np.array([2027.356101193361, -0.3507514463299015, 54.81079621448568, -0.350751446329901, 6.953380432635583e-05, -0.01268990195095196, 54.81079621448564, -0.01268990195095195, 22.92512402151113]).reshape(3,3, order='F')
 
-params = np.array([-272.3986041341653, 0.1779455206941112, 0.2149432424658157])
-cov_hac_4 = np.array([1321.569466333051, -0.2318836566017612, 37.01280466875694, -0.2318836566017614, 4.602339488102263e-05, -0.0104687835998635, 37.012804668757, -0.0104687835998635, 21.16037144168061]).reshape(3,3, order='F')
-cov_hac_10 = np.array([2027.356101193361, -0.3507514463299015, 54.81079621448568, -0.350751446329901, 6.953380432635583e-05, -0.01268990195095196, 54.81079621448564, -0.01268990195095195, 22.92512402151113]).reshape(3,3, order='F')
+    #goldfeld-quandt
+    het_gq_greater = dict(statistic=13.20512768685082, df1=99, df2=98,
+                          pvalue=1.246141976112324e-30, distr='f')
+    het_gq_less = dict(statistic=13.20512768685082, df1=99, df2=98, pvalue=1.)
+    het_gq_2sided = dict(statistic=13.20512768685082, df1=99, df2=98,
+                          pvalue=1.246141976112324e-30, distr='f')
 
-#goldfeld-quandt
-het_gq_greater = dict(statistic=13.20512768685082, df1=99, df2=98,
-                      pvalue=1.246141976112324e-30, distr='f')
-het_gq_less = dict(statistic=13.20512768685082, df1=99, df2=98, pvalue=1.)
-het_gq_2sided = dict(statistic=13.20512768685082, df1=99, df2=98,
-                      pvalue=1.246141976112324e-30, distr='f')
+    #goldfeld-quandt, fraction = 0.5
+    het_gq_greater_2 = dict(statistic=87.1328934692124, df1=48, df2=47,
+                          pvalue=2.154956842194898e-33, distr='f')
 
-#goldfeld-quandt, fraction = 0.5
-het_gq_greater_2 = dict(statistic=87.1328934692124, df1=48, df2=47,
-                      pvalue=2.154956842194898e-33, distr='f')
-
-gq = smsdia.het_goldfeldquandt(endog, exog, split=0.5)
-compare_test(gq, het_gq_greater, decimal=(13, 14))
-assert_equal(gq[-1], 'increasing')
+    gq = smsdia.het_goldfeldquandt(endog, exog, split=0.5)
+    compare_test(gq, het_gq_greater, decimal=(13, 14))
+    assert_equal(gq[-1], 'increasing')
 
 
-harvey_collier = dict(stat=2.28042114041313, df=199,
-                      pvalue=0.02364236161988260, distr='t')
-#hc = harvtest(fm, order.by=ggdp , data = list())
-harvey_collier_2 = dict(stat=0.7516918462158783, df=199,
-                      pvalue=0.4531244858006127, distr='t')
+    harvey_collier = dict(stat=2.28042114041313, df=199,
+                          pvalue=0.02364236161988260, distr='t')
+    #hc = harvtest(fm, order.by=ggdp , data = list())
+    harvey_collier_2 = dict(stat=0.7516918462158783, df=199,
+                          pvalue=0.4531244858006127, distr='t')
 
-##################################
+    ##################################
 
-self = res_ols
+
 
 class TestDiagnosticG(object):
 
