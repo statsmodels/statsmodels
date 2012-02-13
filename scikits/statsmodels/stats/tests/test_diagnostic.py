@@ -269,6 +269,10 @@ class TestDiagnosticG(object):
         #> mkhtest_f(rt, 'raintest_order_gdp', 'f')
         raintest_order_gdp = dict(statistic=1.749346160513353, pvalue=0.002896131042494884, parameters=(101, 98), distr='f')
 
+        rb = smsdia.linear_rainbow(self.res)
+        compare_t_est(rb, raintest, decimal=(13, 14))
+        rb = smsdia.linear_rainbow(self.res, frac=0.4)
+        compare_t_est(rb, raintest_fraction_04, decimal=(13, 14))
 
 
     def test_compare_lr(self):

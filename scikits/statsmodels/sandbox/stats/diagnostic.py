@@ -685,6 +685,24 @@ def linear_harvey_collier(res):
 
     return stats.ttest_1samp(rr[3][3:], 0)
 
+def linear_rainbow(res, frac = 0.5):
+
+
+    nobs = res.nobs
+    endog = res.model.endog
+    exog = res.model.exog
+    lowidx = np.ceil(0.5 * (1 - frac) * nobs).astype(int)
+    uppidx = np.floor(lowidx + frac * nobs).astype(int)
+    mi_sl = slice(lowidx, uppidx)
+    res_mi = sm.OLS(endog[mi_sl], exog[mi_sl]).fit()
+    nobs_mi = res_mi.model.endog.shape[0]
+    ss_mi = res_mi.ssr
+    ss = res.ssr
+    fstat = (ss - ss_mi) / (nobs-nobs_mi) / ss_mi  * res_mi.df_resid
+    from scipy import stats
+    pval = stats.f.sf(fstat, nobs - nobs_mi, res_mi.df_resid)
+    return fstat, pval
+
 
 def neweywestcov(resid, x):
     '''
