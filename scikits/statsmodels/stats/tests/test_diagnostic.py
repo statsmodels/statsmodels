@@ -20,8 +20,8 @@ from scikits.statsmodels.tools.tools import add_constant
 from scikits.statsmodels.datasets import macrodata
 
 import scikits.statsmodels.sandbox.panel.sandwich_covariance as sw
-import scikits.statsmodels.stats.diagnostic as smdia
-import scikits.statsmodels.sandbox.stats.diagnostic as smsdia
+import scikits.statsmodels.stats.diagnostic as smsdia
+#import scikits.statsmodels.sandbox.stats.diagnostic as smsdia
 import local_scripts.outliers_influence as oi
 
 cur_dir = os.path.abspath(os.path.dirname(__file__))
