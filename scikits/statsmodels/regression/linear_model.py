@@ -1213,7 +1213,7 @@ class RegressionResults(base.LikelihoodModelResults):
         wexog = self.model.wexog
         eigvals = np.linalg.linalg.eigvalsh(np.dot(wexog.T, wexog))
         eigvals = np.sort(eigvals) #in increasing order
-        condno = eigvals[-1]/eigvals[0]
+        condno = np.sqrt(eigvals[-1]/eigvals[0])
 
         self.diagn = dict(jb=jb, jbpv=jbpv, skew=skew, kurtosis=kurtosis,
                           omni=omni, omnipv=omnipv, condno=condno,
