@@ -918,8 +918,10 @@ def recursive_olsresiduals(olsresults, skip=None, lamda=0.0, alpha=0.95):
 
     rresid_scaled = rresid/np.sqrt(rvarraw)   #this is N(0,sigma2) distributed
     nrr = nobs-skip
-    sigma2 = rresid_scaled[skip-1:].var(ddof=1)  #var or sum of squares ?
+    #sigma2 = rresid_scaled[skip-1:].var(ddof=1)  #var or sum of squares ?
             #Greene has var, jplv and Ploberger have sum of squares (Ass.:mean=0)
+    #Gretl uses: by reverse engineering matching their numbers
+    sigma2 = rresid_scaled[skip:].var(ddof=1)
     rresid_standardized = rresid_scaled/np.sqrt(sigma2) #N(0,1) distributed
     rcusum = rresid_standardized[skip-1:].cumsum()
     #confidence interval points in Greene p136 looks strange. Cleared up
