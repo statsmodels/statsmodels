@@ -948,9 +948,6 @@ def breaks_hansen(olsresults):
     ----------
     olsresults : instance of RegressionResults
         uses only endog and exog
-    skip : int or None
-        number of observations to use for initial OLS, if None then skip is
-        set equal to the number of regressors (columns in exog)
 
     Returns
     -------
@@ -969,6 +966,8 @@ def breaks_hansen(olsresults):
 
     According to Greene, distribution of test statistics depends on nvar but
     not on nobs.
+
+    Test statistic is verified against R:strucchange
 
     References
     ----------
@@ -994,9 +993,29 @@ def breaks_hansen(olsresults):
 def breaks_cusumolsresid(olsresidual, ddof=0):
     '''cusum test for parameter stability based on ols residuals
 
+    Parameters
+    ----------
+    olsresiduals : ndarray
+        array of residuals from an OLS estimation
+    ddof : int
+        number of parameters in the OLS estimation, used as degrees of freedom
+        correction for error variance.
+
+    Returns
+    -------
+    sup_b : float
+        test statistic, maximum of absolute value of scaled cumulative OLS
+        residuals
+    pval : float
+        Probability of observing the data under the null hypothesis of no
+        structural change, based on asymptotic distribution which is a Brownian
+        Bridge
+    crit: list
+        tabulated critical values, for alpha = 1%, 5% and 10%
 
     Notes
     -----
+    tested agains R:strucchange
 
     Not clear: Assumption 2 in Ploberger, Kramer assumes that exog x have
     asymptotically zero mean, x.mean(0) = [1, 0, 0, ..., 0]
