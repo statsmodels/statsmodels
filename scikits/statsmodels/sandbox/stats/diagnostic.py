@@ -2,14 +2,26 @@
 """Various Statistical Tests
 
 
-Warning: Work in progress
+Author: josef-pktd
+License: BSD-3
+
+Notes
+-----
+almost fully verified against R or Gretl
 
 TODO
+* refactor to store intermediate results
 * how easy is it to attach a test that is a class to a result instance,
   for example CompareCox as a method compare_cox(self, other) ?
+* StatTestMC has been moved and should be deleted
 
-Author: josef-pktd
-License: BSD
+missing:
+
+* pvalues for breaks_hansen
+* additional options, compare with R, check where ddof is appropriate
+* new tests: breaks_ap, newer breaks tests
+
+
 """
 
 import numpy as np
