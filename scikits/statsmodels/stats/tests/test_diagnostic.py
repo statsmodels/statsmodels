@@ -350,6 +350,18 @@ class TestDiagnosticG(object):
         cs_ols = smsdia.breaks_cusumolsresid(self.res.resid, ddof=k_vars) #
         compare_t_est(cs_ols, cusum_ols, decimal=(12, 12))
 
+    def test_breaks_hansen(self):
+        #> sc = sctest(ginv ~ ggdp + lint, type="Nyblom-Hansen")
+        #> mkhtest(sc, 'breaks_nyblom_hansen', 'BB')
+        breaks_nyblom_hansen = dict(statistic=1.0300792740544484,
+                                    pvalue=0.1136087530212015,
+                                    parameters=(), distr='BB')
+
+        bh = smsdia.breaks_hansen(self.res)
+        assert_almost_equal(bh[0], breaks_nyblom_hansen['statistic'],
+                            decimal=14)
+        #TODO: breaks_hansen doesn't return pvalues
+
 
 
 
