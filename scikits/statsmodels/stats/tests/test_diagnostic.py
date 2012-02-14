@@ -338,6 +338,23 @@ class TestDiagnosticG(object):
                   ('M2 + fit(M1)-exp(fit(M2))',  0.000634664704814,
                    0.0000462387010349, 13.72583, 1.319536115230356e-30)]
 
+
+    def test_cusum_ols(self):
+        #R library(strucchange)
+        #> sc = sctest(ginv ~ ggdp + lint, type="OLS-CUSUM")
+        #> mkhtest(sc, 'cusum_ols', 'BB')
+        cusum_ols = dict(statistic=1.055750610401214, pvalue=0.2149567397376543,
+                         parameters=(), distr='BB') #Brownian Bridge
+
+        k_vars=3
+        cs_ols = smsdia.breaks_cusumolsresid(self.res.resid, ddof=k_vars) #
+        compare_t_est(cs_ols, cusum_ols, decimal=(12, 12))
+
+
+
+
+
+
     def test_influence(self):
         res = self.res
         #this test is slow
