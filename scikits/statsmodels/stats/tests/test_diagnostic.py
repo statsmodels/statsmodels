@@ -363,7 +363,7 @@ class TestDiagnosticG(object):
         #TODO: breaks_hansen doesn't return pvalues
 
 
-    def recursive_residuals(self):
+    def test_recursive_residuals(self):
 
         reccumres_standardize = np.array([-2.151, -3.748, -3.114, -3.096,
         -1.865, -2.230, -1.194, -3.500, -3.638, -4.447, -4.602, -4.631, -3.999,
@@ -391,7 +391,8 @@ class TestDiagnosticG(object):
 
         rr = smsdia.recursive_olsresiduals(self.res, skip=3, alpha=0.95)
         assert_equal(np.round(rr[5][1:], 3), reccumres_standardize) #extra zero in front
-        assert_equal(np.round(rr[3][4:], 3), np.diff(reccumres_standardize))
+        #assert_equal(np.round(rr[3][4:], 3), np.diff(reccumres_standardize))
+        assert_almost_equal(rr[3][4:], np.diff(reccumres_standardize),3)
         assert_almost_equal(rr[4][3:].std(ddof=1), 10.7242, decimal=4)
 
         #regression number, visually checked with graph from gretl
@@ -402,11 +403,21 @@ class TestDiagnosticG(object):
         lb, ub = rr[6]
         assert_almost_equal(ub[:5], ub0, decimal=7)
         assert_almost_equal(lb[:5], -ub0, decimal=7)
-        assert_almost_equal(ub[5:], ub1, decimal=7)
-        assert_almost_equal(lb[5:], -ub1, decimal=7)
+        assert_almost_equal(ub[-5:], ub1, decimal=7)
+        assert_almost_equal(lb[-5:], -ub1, decimal=7)
 
-
-
+        #test a few values with explicit OLS
+        endog = self.res.model.endog
+        exog = self.res.model.exog
+        params = []
+        ypred = []
+        for i in range(3,10):
+            resi = OLS(endog[:i], exog[:i]).fit()
+            ypred.append(resi.model.predict(resi.params, exog[i]))
+            params.append(resi.params)
+        assert_almost_equal(rr[2][3:10], ypred, decimal=12)
+        assert_almost_equal(rr[0][3:10], endog[3:10] - ypred, decimal=12)
+        assert_almost_equal(rr[1][2:9], params, decimal=12)
 
 
     def test_influence(self):
