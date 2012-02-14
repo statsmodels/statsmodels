@@ -7,7 +7,11 @@ License: BSD-3
 
 Notes
 -----
-almost fully verified against R or Gretl
+Almost fully verified against R or Gretl, not all options are the same.
+In many cases of Lagrange multiplier tests both the LM test and the F test is
+returned. In some but not all cases, R has the option to choose the test
+statistic. Some alternative test statistic results have not been verified.
+
 
 TODO
 * refactor to store intermediate results
@@ -19,7 +23,9 @@ missing:
 
 * pvalues for breaks_hansen
 * additional options, compare with R, check where ddof is appropriate
-* new tests: breaks_ap, newer breaks tests
+* new tests:
+  - breaks_ap, more recent breaks tests
+  - specification tests against nonparametric alternatives
 
 
 """
@@ -167,7 +173,6 @@ compare_j.__doc__ = CompareJ.__doc__
 def acorr_ljungbox(x, lags=None, boxpierce=False):
     '''Ljung-Box test for no autocorrelation
 
-
     Parameters
     ----------
     x : array_like, 1d
@@ -245,18 +250,42 @@ def acorr_ljungbox(x, lags=None, boxpierce=False):
 def acorr_lm(x, maxlag=None, autolag='AIC', store=False):
     '''Lagrange Multiplier tests for autocorrelation
 
-    not checked yet, copied from unitrood_adf with adjustments
-    check array shapes because of the addition of the constant.
-    written/copied without reference
-    This is not Breush-Godfrey. BG adds lags of residual to exog in the
-    design matrix for the auxiliary regression with residuals as endog,
-    see Greene 12.7.1.
+    This is a generic Lagrange Multiplier test for autocorrelation. I don't
+    have a reference for it, but it returns Engle's ARCH test if x is the
+    squared residual array. A variation on it with additional exogenous
+    variables is the Breush-Godfrey autocorrelation test.
 
-    Notes
-    -----
-    If x is calculated as y^2 for a time series y, then this test corresponds
-    to the Engel test for autoregressive conditional heteroscedasticity (ARCH).
-    TODO: get details and verify
+    Parameters
+    ----------
+    resid : ndarray, (nobs,)
+        residuals from an estimation, or time series
+    maxlag : int
+        highest lag to use
+    autolag : None or string
+        If None, then a fixed number of lags given by maxlag is used.
+    store : bool
+        If true then the intermediate results are also returned
+
+    Returns
+    -------
+    lm : float
+        Lagrange multiplier test statistic
+    lmpval : float
+        p-value for Lagrange multiplier test
+    fval : float
+        fstatistic for F test, alternative version of the same test based on
+        F test for the parameter restriction
+    fpval : float
+        pvalue for F test
+    resstore : instance (optional)
+        a class instance that holds intermediate results. Only returned if
+        store=True
+
+    See Also
+    --------
+    het_arch
+    acorr_breush_godfrey
+    acorr_ljung_box
 
     '''
 
@@ -312,7 +341,7 @@ def acorr_lm(x, maxlag=None, autolag='AIC', store=False):
         resstore.usedlag = usedlag
         return fval, fpval, lm, lmpval, resstore
     else:
-        return fval, fpval, lm, lmpval
+        return lm, lmpval, fval, fpval
 
 def het_arch(resid, maxlag=None, autolag=None, store=False, ddof=0):
     '''Enlge's Test for Autoregressive Conditional Heteroscedasticity (ARCH)
@@ -332,8 +361,26 @@ def het_arch(resid, maxlag=None, autolag=None, store=False, ddof=0):
         If the residuals are from a regression, or ARMA estimation, then there
         are recommendations to correct the degrees of freedom by the number
         of parameters that have been estimated, for example ddof=p+a for an
-        ARMA(p,q)
+        ARMA(p,q) (need reference, based on discussion on R finance mailinglist)
 
+    Returns
+    -------
+    lm : float
+        Lagrange multiplier test statistic
+    lmpval : float
+        p-value for Lagrange multiplier test
+    fval : float
+        fstatistic for F test, alternative version of the same test based on
+        F test for the parameter restriction
+    fpval : float
+        pvalue for F test
+    resstore : instance (optional)
+        a class instance that holds intermediate results. Only returned if
+        store=True
+
+    Notes
+    -----
+    verified agains R:FinTS::ArchTest
 
     '''
 
@@ -341,20 +388,41 @@ def het_arch(resid, maxlag=None, autolag=None, store=False, ddof=0):
 
 
 def acorr_breush_godfrey(results, nlags=None, store=False):
-    '''Lagrange Multiplier tests for autocorrelation
+    '''Lagrange Multiplier tests for residual autocorrelation
 
-    not checked yet, copied from unitrood_adf with adjustments
-    check array shapes because of the addition of the constant.
-    written/copied without reference
-    This is not Breush-Godfrey. BG adds lags of residual to exog in the
-    design matrix for the auxiliary regression with residuals as endog,
-    see Greene 12.7.1.
+    Parameters
+    ----------
+    results : Result instance
+        Estimation results for which the residuals are tested for serial
+        correlation
+    nlags : int
+        Number of lags to include in the auxiliary regression. (nlags is
+        highest lag)
+
+        Returns
+    -------
+    lm : float
+        Lagrange multiplier test statistic
+    lmpval : float
+        p-value for Lagrange multiplier test
+    fval : float
+        fstatistic for F test, alternative version of the same test based on
+        F test for the parameter restriction
+    fpval : float
+        pvalue for F test
+    resstore : instance (optional)
+        a class instance that holds intermediate results. Only returned if
+        store=True
 
     Notes
     -----
-    If x is calculated as y^2 for a time series y, then this test corresponds
-    to the Engel test for autoregressive conditional heteroscedasticity (ARCH).
-    TODO: get details and verify
+    BG adds lags of residual to exog in the design matrix for the auxiliary
+    regression with residuals as endog,
+    see Greene 12.7.1.
+
+    References
+    ----------
+    Greene Econometrics, 5th edition
 
     '''
 
@@ -392,11 +460,11 @@ def acorr_breush_godfrey(results, nlags=None, store=False):
     if store:
         resstore.resols = resols
         resstore.usedlag = nlags
-        return fval, fpval, lm, lmpval, resstore
+        return lm, lmpval, fval, fpval, resstore
     else:
-        return fval, fpval, lm, lmpval
+        return lm, lmpval, fval, fpval
 
-def het_breushpagan(resid, x):
+def het_breushpagan(resid, exog_het):
     '''Lagrange Multiplier Heteroscedasticity Test by Breush-Pagan
 
     The tests the hypothesis that the residual variance does not depend on
@@ -414,7 +482,8 @@ def het_breushpagan(resid, x):
         If an array is given in exog, then the residuals are calculated by
         the an OLS regression or resid on exog. In this case resid should
         contain the dependent variable. Exog can be the same as x.
-    x : array_like, (nobs, nvars)
+        TODO: I dropped the exog option, should I add it back?
+    exog_het : array_like, (nobs, nvars)
         This contains variables that might create data dependent
         heteroscedasticity.
 
@@ -456,7 +525,7 @@ def het_breushpagan(resid, x):
 
     '''
 
-    x = np.asarray(x)
+    x = np.asarray(exog_het)
     y = np.asarray(resid)**2
     nobs, nvars = x.shape
     resols = sm.OLS(y, x).fit()
@@ -504,7 +573,7 @@ def het_white(y, x, retres=False):
     lmpval = stats.chi2.sf(lm, resols.df_model)
     return lm, lmpval, fval, fpval
 
-def het_goldfeldquandt2(y, x, idx, split=None, retres=False):
+def _het_goldfeldquandt2_old(y, x, idx, split=None, retres=False):
     '''test whether variance is the same in 2 subsamples
 
     Parameters
@@ -609,8 +678,8 @@ class HetGoldfeldQuandt(object):
         index at which sample is split.
         If 0<split<1 then split is interpreted as fraction of the observations
         in the first sample
-    drop :
-    alternative :
+    drop : TODO: check
+    alternative : TODO: check
 
     Returns
     -------
@@ -680,8 +749,6 @@ class HetGoldfeldQuandt(object):
         else:
             raise ValueError('invalid alternative')
 
-
-
         if attach:
             res = self
             res.__doc__ = 'Test Results for Goldfeld-Quandt test of heterogeneity'
@@ -715,6 +782,29 @@ het_goldfeldquandt = HetGoldfeldQuandt()
 het_goldfeldquandt.__doc__ = het_goldfeldquandt.run.__doc__
 
 def linear_harvey_collier(res):
+    '''Harvey Collier test for linearity
+
+    The Null hypothesis is that the regression is correctly modeled as linear.
+
+    Parameters
+    ----------
+    res : Result instance
+
+    Returns
+    -------
+    tvalue : float
+        test statistic, based on ttest_1sample
+    pvalue : float
+        pvalue of the test
+
+    Notes
+    -----
+    TODO: add sort_by option
+
+    This test is a t-test that the mean of the recursive ols residuals is zero.
+    Calculating the recursive residuals might take some time for large samples.
+
+    '''
     #I think this has different ddof than
     #B.H. Baltagi, Econometrics, 2011, chapter 8
     #but it matches Gretl and R:lmtest, pvalue at decimal=13
@@ -724,7 +814,23 @@ def linear_harvey_collier(res):
     return stats.ttest_1samp(rr[3][3:], 0)
 
 def linear_rainbow(res, frac = 0.5):
+    '''Rainbow test for linearity
 
+    The Null hypothesis is that the regression is correctly modelled as linear.
+    The alternative for which the power might be large are convex, check
+
+    Parameters
+    ----------
+    res : Result instance
+
+    Returns
+    -------
+    fstat : float
+        test statistic based of F test
+    pvalue : float
+        pvalue of the test
+
+    '''
 
     nobs = res.nobs
     endog = res.model.endog
@@ -742,7 +848,7 @@ def linear_rainbow(res, frac = 0.5):
     return fstat, pval
 
 
-def neweywestcov(resid, x):
+def _neweywestcov(resid, x):
     '''
     Did not run yet
 
@@ -776,7 +882,7 @@ def neweywestcov(resid, x):
 
 
 
-def recursive_olsresiduals2(olsresults, skip):
+def _recursive_olsresiduals2(olsresults, skip):
     '''this is my original version based on Greene and references
 
     keep for now for comparison and benchmarking

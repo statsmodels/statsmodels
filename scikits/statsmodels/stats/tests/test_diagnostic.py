@@ -196,11 +196,15 @@ class TestDiagnosticG(object):
         #> library(FinTS)
         #> at = ArchTest(residuals(fm), lags=4)
         #> mkhtest(at, 'archtest_4', 'chi2')
-        archtest_4 = dict(statistic=3.43473400836259, pvalue=0.487871315392619, parameters=(4,), distr='chi2')
+        archtest_4 = dict(statistic=3.43473400836259,
+                          pvalue=0.487871315392619, parameters=(4,),
+                          distr='chi2')
 
         #> at = ArchTest(residuals(fm), lags=12)
         #> mkhtest(at, 'archtest_12', 'chi2')
-        archtest_12 = dict(statistic=8.648320999014171, pvalue=0.732638635007718, parameters=(12,), distr='chi2')
+        archtest_12 = dict(statistic=8.648320999014171,
+                           pvalue=0.732638635007718, parameters=(12,),
+                           distr='chi2')
 
         at4 = smsdia.het_arch(self.res.resid, maxlag=4)
         at12 = smsdia.het_arch(self.res.resid, maxlag=12)
