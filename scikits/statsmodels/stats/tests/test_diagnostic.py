@@ -208,8 +208,8 @@ class TestDiagnosticG(object):
 
         at4 = smsdia.het_arch(self.res.resid, maxlag=4)
         at12 = smsdia.het_arch(self.res.resid, maxlag=12)
-        compare_t_est(at4[-2:], archtest_4, decimal=(13, 14))
-        compare_t_est(at12[-2:], archtest_12, decimal=(13, 14))
+        compare_t_est(at4[:2], archtest_4, decimal=(13, 14))
+        compare_t_est(at12[:2], archtest_12, decimal=(13, 14))
 
     def test_acorr_breush_godfrey(self):
         res = self.res
@@ -222,8 +222,8 @@ class TestDiagnosticG(object):
         breushgodfrey_c = dict(statistic=4.771042651230007, pvalue=0.3116067133066697, parameters=(4,), distr='chi2')
 
         bg = smsdia.acorr_breush_godfrey(res, nlags=4)
-        bg_r = [breushgodfrey_f['statistic'], breushgodfrey_f['pvalue'],
-                breushgodfrey_c['statistic'], breushgodfrey_c['pvalue']]
+        bg_r = [breushgodfrey_c['statistic'], breushgodfrey_c['pvalue'],
+                breushgodfrey_f['statistic'], breushgodfrey_f['pvalue']]
         assert_almost_equal(bg, bg_r, decimal=13)
 
     def test_acorr_ljung_box(self):
