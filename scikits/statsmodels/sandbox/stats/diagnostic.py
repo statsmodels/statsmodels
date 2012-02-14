@@ -314,6 +314,32 @@ def acorr_lm(x, maxlag=None, autolag='AIC', store=False):
     else:
         return fval, fpval, lm, lmpval
 
+def het_arch(resid, maxlag=None, autolag=None, store=False, ddof=0):
+    '''Enlge's Test for Autoregressive Conditional Heteroscedasticity (ARCH)
+
+    Parameters
+    ----------
+    resid : ndarray, (nobs,)
+        residuals from an estimation, or time series
+    maxlag : int
+        highest lag to use
+    autolag : None or string
+        If None, then a fixed number of lags given by maxlag is used.
+    store : bool
+        If true then the intermediate results are also returned
+    ddof : int
+        Not Implemented Yet
+        If the residuals are from a regression, or ARMA estimation, then there
+        are recommendations to correct the degrees of freedom by the number
+        of parameters that have been estimated, for example ddof=p+a for an
+        ARMA(p,q)
+
+
+    '''
+
+    return acorr_lm(resid**2, maxlag=maxlag, autolag=autolag, store=False)
+
+
 def acorr_breush_godfrey(results, nlags=None, store=False):
     '''Lagrange Multiplier tests for autocorrelation
 
