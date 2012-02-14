@@ -991,7 +991,7 @@ def breaks_hansen(olsresults):
     #TODO: get critical values from Bruce Hansens' 1992 paper
     return H, crit95, ft, s
 
-def breaks_cusumolsresid(olsresidual):
+def breaks_cusumolsresid(olsresidual, ddof=0):
     '''cusum test for parameter stability based on ols residuals
 
 
@@ -1014,7 +1014,11 @@ def breaks_cusumolsresid(olsresidual):
 
     '''
     resid = olsresidual.ravel()
+    nobs = len(resid)
     nobssigma2 = (resid**2).sum()
+    if ddof > 0:
+        print 'ddof', ddof, 1. / (nobs - ddof) * nobs
+        nobssigma2 = nobssigma2 / (nobs - ddof) * nobs
     #B is asymptotically a Brownian Bridge
     B = resid.cumsum()/np.sqrt(nobssigma2) # use T*sigma directly
     sup_b = np.abs(B).max() #asymptotically distributed as standard Brownian Bridge
