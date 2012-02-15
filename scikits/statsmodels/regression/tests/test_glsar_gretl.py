@@ -28,27 +28,7 @@ def compare_ftest(contrast_res, other, decimal=(5,4)):
     assert_equal(contrast_res.df_denom, other[3])
     assert_equal("f", other[4])
 
-def linear_lm(resid, exog, func=None):
-    '''
-    assume first column is integer
 
-    if func is None, then squares are used:
-
-    no nan check for the transformed variables yet
-    '''
-    from scipy import stats
-
-    if func is None:
-        func = lambda x: np.power(x, 2)
-
-    exog_aux = np.column_stack((exog, func(exog[:,1:])))
-
-    nobs, k_vars = exog.shape
-    ls = OLS(resid, exog_aux).fit()
-    ftest = ls.f_test(np.eye(k_vars - 1, k_vars * 2 - 1, k_vars))
-    lm = nobs * ls.rsquared
-    lm_pval = stats.chi2.sf(lm, k_vars - 1)
-    return lm, lm_pval, ftest
 
 class TestGLSARGretl(object):
 
