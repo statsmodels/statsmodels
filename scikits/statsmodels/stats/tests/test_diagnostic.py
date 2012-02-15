@@ -208,7 +208,7 @@ class TestDiagnosticG(object):
 
         at4 = smsdia.het_arch(self.res.resid, maxlag=4)
         at12 = smsdia.het_arch(self.res.resid, maxlag=12)
-        compare_t_est(at4[:2], archtest_4, decimal=(13, 14))
+        compare_t_est(at4[:2], archtest_4, decimal=(12, 13))
         compare_t_est(at12[:2], archtest_12, decimal=(13, 14))
 
     def test_acorr_breush_godfrey(self):

@@ -71,15 +71,15 @@ class TestGLSARGretl(object):
         exogg = add_constant(np.c_[gs_l_realgdp, d['realint'][:-1]],prepend=True)
 
         res_ols = OLS(endogg, exogg).fit()
-        print res_ols.params
+        #print res_ols.params
 
         mod_g1 = GLSAR(endogg, exogg, rho=-0.108136)
         res_g1 = mod_g1.fit()
-        print res_g1.params
+        #print res_g1.params
 
         mod_g2 = GLSAR(endogg, exogg, rho=-0.108136)   #-0.1335859) from R
         res_g2 = mod_g2.iterative_fit(maxiter=5)
-        print res_g2.params
+        #print res_g2.params
 
 
         rho = -0.108136
@@ -141,8 +141,8 @@ class TestGLSARGretl(object):
 
         #arch
         sm_arch = smsdia.acorr_lm(res.wresid**2, maxlag=4, autolag=None)
-        assert_almost_equal(sm_arch[-2], arch_4[0], decimal=4)
-        assert_almost_equal(sm_arch[-1], arch_4[1], decimal=6)
+        assert_almost_equal(sm_arch[0], arch_4[0], decimal=4)
+        assert_almost_equal(sm_arch[1], arch_4[1], decimal=6)
 
         #tests
         res = res_g2 #with estimated rho
@@ -173,8 +173,8 @@ class TestGLSARGretl(object):
 
         #arch
         sm_arch = smsdia.acorr_lm(res.wresid**2, maxlag=4, autolag=None)
-        assert_almost_equal(sm_arch[-2], arch_4[0], decimal=1)
-        assert_almost_equal(sm_arch[-1], arch_4[1], decimal=2)
+        assert_almost_equal(sm_arch[0], arch_4[0], decimal=1)
+        assert_almost_equal(sm_arch[1], arch_4[1], decimal=2)
 
 
 
@@ -399,15 +399,15 @@ class TestGLSARGretl(object):
 
         #arch
         sm_arch = smsdia.acorr_lm(res.resid**2, maxlag=4, autolag=None)
-        assert_almost_equal(sm_arch[-2], arch_4[0], decimal=5)
-        assert_almost_equal(sm_arch[-1], arch_4[1], decimal=6)
+        assert_almost_equal(sm_arch[0], arch_4[0], decimal=5)
+        assert_almost_equal(sm_arch[1], arch_4[1], decimal=6)
 
         vif2 = [oi.variance_inflation_factor(res.model.exog, k) for k in [1,2]]
 
         infl = oi.Influence(res_ols)
-        print np.max(np.abs(lev['DFFITS'] - infl.dffits[0]))
-        print np.max(np.abs(lev['leverage'] - infl.hat_matrix_diag))
-        print np.max(np.abs(lev['influence'] - infl.influence))  #just added this based on Gretl
+        #print np.max(np.abs(lev['DFFITS'] - infl.dffits[0]))
+        #print np.max(np.abs(lev['leverage'] - infl.hat_matrix_diag))
+        #print np.max(np.abs(lev['influence'] - infl.influence))  #just added this based on Gretl
 
         #just rough test, low decimal in Gretl output,
         assert_almost_equal(lev['residual'], res.resid, decimal=3)
