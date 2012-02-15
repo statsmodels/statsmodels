@@ -170,6 +170,22 @@ class TestDiagnosticG(object):
         gq = smsdia.het_goldfeldquandt(endogg, exogg, split=0.5)
         compare_t_est(gq, het_gq_greater, decimal=(14, 14))
         assert_equal(gq[-1], 'increasing')
+
+        gq = smsdia.het_goldfeldquandt(endogg, exogg, split=0.5,
+                                       alternative='decreasing')
+        compare_t_est(gq, het_gq_less, decimal=(14, 14))
+        assert_equal(gq[-1], 'decreasing')
+
+        gq = smsdia.het_goldfeldquandt(endogg, exogg, split=0.5,
+                                       alternative='two-sided')
+        compare_t_est(gq, het_gq_two_sided, decimal=(14, 14))
+        assert_equal(gq[-1], 'two-sided')
+
+        #TODO: forcing the same split as R 202-90-90-1=21
+        gq = smsdia.het_goldfeldquandt(endogg, exogg, split=90, drop=21,
+                                       alternative='two-sided')
+        compare_t_est(gq, het_gq_two_sided_01, decimal=(14, 14))
+        assert_equal(gq[-1], 'two-sided')
         #TODO other options ???
 
     def test_het_breush_pagan(self):

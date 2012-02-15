@@ -32,7 +32,6 @@ missing:
 
 import numpy as np
 from scipy import stats
-import scikits.statsmodels.api as sm
 from scikits.statsmodels.regression.linear_model import OLS
 from scikits.statsmodels.tools.tools import add_constant
 from scikits.statsmodels.tsa.stattools import acf, adfuller
@@ -85,9 +84,9 @@ class CompareCox(object):
         sigma2_z = results_z.ssr/nobs
         yhat_x = results_x.fittedvalues
         yhat_z = results_z.fittedvalues
-        res_dx = sm.OLS(yhat_x, z).fit()
+        res_dx = OLS(yhat_x, z).fit()
         err_zx = res_dx.resid
-        res_xzx = sm.OLS(err_zx, x).fit()
+        res_xzx = OLS(err_zx, x).fit()
         err_xzx = res_xzx.resid
 
         sigma2_zx = sigma2_x + np.dot(err_zx.T, err_zx)/nobs
@@ -152,7 +151,7 @@ class CompareJ(object):
         #sigma2_z = results_z.ssr/nobs
         yhat_x = results_x.fittedvalues
         #yhat_z = results_z.fittedvalues
-        res_zx = sm.OLS(y, np.column_stack((yhat_x, z))).fit()
+        res_zx = OLS(y, np.column_stack((yhat_x, z))).fit()
         self.res_zx = res_zx  #for testing
         tstat = res_zx.tvalues[0]
         pval = res_zx.pvalues[0]
@@ -312,7 +311,7 @@ def acorr_lm(x, maxlag=None, autolag='AIC', store=False):
         #Note: I use the same number of observations to have comparable IC
         results = {}
         for mlag in range(1,maxlag):
-            results[mlag] = sm.OLS(xshort, xdall[:,:mlag+1]).fit()
+            results[mlag] = OLS(xshort, xdall[:,:mlag+1]).fit()
 
         if autolag.lower() == 'aic':
             bestic, icbestlag = max((v.aic,k) for k,v in results.iteritems())
@@ -330,7 +329,7 @@ def acorr_lm(x, maxlag=None, autolag='AIC', store=False):
     else:
         usedlag = maxlag
 
-    resols = sm.OLS(xshort, xdall[:,:usedlag+1]).fit()
+    resols = OLS(xshort, xdall[:,:usedlag+1]).fit()
     fval = resols.fvalue
     fpval = resols.f_pvalue
     lm = nobs * resols.rsquared
@@ -448,7 +447,7 @@ def acorr_breush_godfrey(results, nlags=None, store=False):
 
     if store: resstore = ResultsStore()
 
-    resols = sm.OLS(xshort, exog).fit()
+    resols = OLS(xshort, exog).fit()
     ft = resols.f_test(np.eye(nlags, k_vars, k_vars - nlags))
     fval = ft.fvalue
     fpval = ft.pvalue
@@ -530,7 +529,7 @@ def het_breushpagan(resid, exog_het):
     x = np.asarray(exog_het)
     y = np.asarray(resid)**2
     nobs, nvars = x.shape
-    resols = sm.OLS(y, x).fit()
+    resols = OLS(y, x).fit()
     fval = resols.fvalue
     fpval = resols.f_pvalue
     lm = nobs * resols.rsquared
@@ -562,7 +561,7 @@ def het_white(y, x, retres=False):
     exog = x[:,i0]*x[:,i1]
     nobs, nvars = exog.shape
     assert nvars == nvars0*(nvars0-1)/2. + nvars0
-    resols = sm.OLS(y**2, exog).fit()
+    resols = OLS(y**2, exog).fit()
     fval = resols.fvalue
     fpval = resols.f_pvalue
     lm = nobs * resols.rsquared
@@ -633,8 +632,8 @@ def _het_goldfeldquandt2_old(y, x, idx, split=None, retres=False):
     xsortind = np.argsort(x[:,idx])
     y = y[xsortind]
     x = x[xsortind,:]
-    resols1 = sm.OLS(y[:split], x[:split]).fit()
-    resols2 = sm.OLS(y[split:], x[split:]).fit()
+    resols1 = OLS(y[:split], x[:split]).fit()
+    resols2 = OLS(y[split:], x[split:]).fit()
     fval = resols1.mse_resid/resols2.mse_resid
     if fval>1:
         fpval = stats.f.sf(fval, resols1.df_resid, resols2.df_resid)
@@ -680,8 +679,17 @@ class HetGoldfeldQuandt(object):
         index at which sample is split.
         If 0<split<1 then split is interpreted as fraction of the observations
         in the first sample
-    drop : TODO: check
-    alternative : TODO: check
+    drop : None, float or int
+        If this is not None, then observation are dropped from the middle part
+        of the sorted series. If 0<split<1 then split is interpreted as fraction
+        of the number of observations to be dropped.
+        Note: Currently, observations are dropped between split and
+        split+drop, where split and drop are the indices (given by rounding if
+        specified as fraction). The first sample is [0:split], the second
+        sample is [split+drop:]
+    alternative : string, 'increasing', 'decreasing' or 'two-sided'
+        default is increasing. This specifies the alternative for the p-value
+        calculation.
 
     Returns
     -------
@@ -697,20 +705,14 @@ class HetGoldfeldQuandt(object):
 
     Notes
     -----
+    The Null hypothesis is that the variance in the two sub-samples are the
+    same. The alternative hypothesis, can be increasing, i.e. the variance in
+    the second sample is larger than in the first, or decreasing or two-sided.
 
-    TODO:
-    add resultinstance - DONE
-    maybe add drop-middle as option
-    maybe allow for several breaks
-
-    recommendation for users: use this function as pattern for more flexible
-        split in tests, e.g. drop middle.
-
-    can do Chow test for structural break in same way
-
-    ran sanity check
-    now identical to R, why did I have y**2?
+    Results are identical R, but the drop option is defined differently.
+    (sorting by idx not tested yet)
     '''
+    #TODO: can do Chow test for structural break in same way
     def run(self, y, x, idx=None, split=None, drop=None,
             alternative='increasing', attach=True):
         '''see class docstring'''
@@ -721,6 +723,7 @@ class HetGoldfeldQuandt(object):
             split = nobs//2
         elif (0<split) and (split<1):
             split = int(nobs*split)
+
         if drop is None:
             start2 = split
         elif (0<drop) and (drop<1):
@@ -732,16 +735,17 @@ class HetGoldfeldQuandt(object):
             xsortind = np.argsort(x[:,idx])
             y = y[xsortind]
             x = x[xsortind,:]
-        resols1 = sm.OLS(y[:split], x[:split]).fit()
-        resols2 = sm.OLS(y[start2:], x[start2:]).fit()
+
+        resols1 = OLS(y[:split], x[:split]).fit()
+        resols2 = OLS(y[start2:], x[start2:]).fit()
         fval = resols2.mse_resid/resols1.mse_resid
         #if fval>1:
         if alternative.lower() in ['i', 'inc', 'increasing']:
             fpval = stats.f.sf(fval, resols1.df_resid, resols2.df_resid)
             ordering = 'increasing'
         elif alternative.lower() in ['d', 'dec', 'decreasing']:
-            fval = 1./fval;
-            fpval = stats.f.sf(fval, resols2.df_resid, resols1.df_resid)
+            fval = fval;
+            fpval = stats.f.sf(1./fval, resols2.df_resid, resols1.df_resid)
             ordering = 'decreasing'
         elif alternative.lower() in ['2', '2-sided', 'two-sided']:
             fpval_sm = stats.f.cdf(fval, resols2.df_resid, resols1.df_resid)
@@ -777,8 +781,10 @@ class HetGoldfeldQuandt(object):
             return repr(self)
 
     #TODO: missing the alternative option in call
-    def __call__(self, y, x, idx=None, split=None):
-        return self.run(y, x, idx=idx, split=split, attach=False)
+    def __call__(self, y, x, idx=None, split=None, drop=None,
+                 alternative='increasing'):
+        return self.run(y, x, idx=idx, split=split, drop=drop, attach=False,
+                        alternative=alternative)
 
 het_goldfeldquandt = HetGoldfeldQuandt()
 het_goldfeldquandt.__doc__ = het_goldfeldquandt.run.__doc__
@@ -840,7 +846,7 @@ def linear_rainbow(res, frac = 0.5):
     lowidx = np.ceil(0.5 * (1 - frac) * nobs).astype(int)
     uppidx = np.floor(lowidx + frac * nobs).astype(int)
     mi_sl = slice(lowidx, uppidx)
-    res_mi = sm.OLS(endog[mi_sl], exog[mi_sl]).fit()
+    res_mi = OLS(endog[mi_sl], exog[mi_sl]).fit()
     nobs_mi = res_mi.model.endog.shape[0]
     ss_mi = res_mi.ssr
     ss = res.ssr
@@ -1502,7 +1508,7 @@ if __name__ == '__main__':
     #this is just a syntax check:
     print neweywestcov(y, x)
 
-    resols1 = sm.OLS(y, x).fit()
+    resols1 = OLS(y, x).fit()
     print neweywestcov(resols1.resid, x)
     print resols1.cov_params()
     print resols1.HC0_se
