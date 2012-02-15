@@ -453,6 +453,34 @@ class TestDiagnosticG(object):
         assert_almost_equal(rr[0][3:10], endog[3:10] - ypred, decimal=12)
         assert_almost_equal(rr[1][2:9], params, decimal=12)
 
+    def test_normality(self):
+        res = self.res
+
+        #> library(nortest) #Lilliefors (Kolmogorov-Smirnov) normality test
+        #> lt = lillie.test(residuals(fm))
+        #> mkhtest(lt, "lillifors", "-")
+        lillifors1 = dict(statistic=0.0723390908786589, pvalue=0.01204113540102896, parameters=(), distr='-')
+
+        #> lt = lillie.test(residuals(fm)**2)
+        #> mkhtest(lt, "lillifors", "-")
+        lillifors2 = dict(statistic=0.301311621898024, pvalue=1.004305736618051e-51, parameters=(), distr='-')
+
+        #> lt = lillie.test(residuals(fm)[1:20])
+        #> mkhtest(lt, "lillifors", "-")
+        lillifors3 = dict(statistic=0.1333956004203103, pvalue=0.4618672180799566, parameters=(), distr='-')
+
+        import scikits.statsmodels.stats.lilliefors as sml
+        lf1 = sml.lillifors(res.resid)
+        lf2 = sml.lillifors(res.resid**2)
+        lf3 = sml.lillifors(res.resid[:20])
+
+        compare_t_est(lf1, lillifors1, decimal=(15, 15))
+        compare_t_est(lf2, lillifors2, decimal=(15, 15)) #pvalue very small
+        assert_approx_equal(lf2[1], lillifors2['pvalue'], significant=10)
+        compare_t_est(lf3, lillifors3, decimal=(15, 1))  #R uses different approximation
+
+
+
 
     def test_influence(self):
         res = self.res

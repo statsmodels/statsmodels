@@ -263,6 +263,7 @@ tble = '''\
 400 .037 .039 .041 .045 .052 .061
 900 .025 .026 .028 .030 .035 .042'''
 
+'''
 parr = np.array([line.split() for line in tble.split('\n')],float)
 size = parr[1:,0]
 alpha = parr[0,1:] / 100.
@@ -357,3 +358,4 @@ xx2 = np.array([ 1.138, -0.325, -1.461, -0.441, -0.005, -0.957, -1.52 ,  0.481,
 r_lillieTest = [0.15096827429598147, 0.02225473302348436]
 print kstest_normal(xx2), np.array(kstest_normal(xx2)) - r_lillieTest
 print kstest_normal(xx2, 'table')
+'''
