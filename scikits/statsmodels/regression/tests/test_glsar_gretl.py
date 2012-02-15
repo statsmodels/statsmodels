@@ -16,8 +16,8 @@ from scikits.statsmodels.tools.tools import add_constant
 from scikits.statsmodels.datasets import macrodata
 
 import scikits.statsmodels.sandbox.panel.sandwich_covariance as sw
-import scikits.statsmodels.stats.diagnostic as smdia
-import scikits.statsmodels.sandbox.stats.diagnostic as smsdia
+import scikits.statsmodels.stats.diagnostic as smsdia
+#import scikits.statsmodels.sandbox.stats.diagnostic as smsdia
 import scikits.statsmodels.stats.outliers_influence as oi
 
 
@@ -27,8 +27,6 @@ def compare_ftest(contrast_res, other, decimal=(5,4)):
     assert_equal(contrast_res.df_num, other[2])
     assert_equal(contrast_res.df_denom, other[3])
     assert_equal("f", other[4])
-
-
 
 class TestGLSARGretl(object):
 
@@ -120,7 +118,8 @@ class TestGLSARGretl(object):
         #assert_almost_equal(res.durbin_watson, result_gretl_g1['dw'][1], decimal=7) #TODO
 
         #arch
-        sm_arch = smsdia.acorr_lm(res.wresid**2, maxlag=4, autolag=None)
+        #sm_arch = smsdia.acorr_lm(res.wresid**2, maxlag=4, autolag=None)
+        sm_arch = smsdia.het_arch(res.wresid, maxlag=4)
         assert_almost_equal(sm_arch[0], arch_4[0], decimal=4)
         assert_almost_equal(sm_arch[1], arch_4[1], decimal=6)
 
@@ -152,7 +151,8 @@ class TestGLSARGretl(object):
         compare_ftest(c, reset_2_3, decimal=(2,4))
 
         #arch
-        sm_arch = smsdia.acorr_lm(res.wresid**2, maxlag=4, autolag=None)
+        #sm_arch = smsdia.acorr_lm(res.wresid**2, maxlag=4, autolag=None)
+        sm_arch = smsdia.het_arch(res.wresid, maxlag=4)
         assert_almost_equal(sm_arch[0], arch_4[0], decimal=1)
         assert_almost_equal(sm_arch[1], arch_4[1], decimal=2)
 
@@ -366,7 +366,7 @@ class TestGLSARGretl(object):
         c = oi.reset_ramsey(res, degree=3)
         compare_ftest(c, reset_2_3, decimal=(6,5))
 
-        linear_sq = linear_lm(res.resid, res.model.exog)
+        linear_sq = smsdia.linear_lm(res.resid, res.model.exog)
         assert_almost_equal(linear_sq[0], linear_squares[0], decimal=6)
         assert_almost_equal(linear_sq[1], linear_squares[1], decimal=7)
 
@@ -378,7 +378,8 @@ class TestGLSARGretl(object):
         assert_almost_equal(hw[:2], het_white[:2], 6)
 
         #arch
-        sm_arch = smsdia.acorr_lm(res.resid**2, maxlag=4, autolag=None)
+        #sm_arch = smsdia.acorr_lm(res.resid**2, maxlag=4, autolag=None)
+        sm_arch = smsdia.het_arch(res.resid, maxlag=4)
         assert_almost_equal(sm_arch[0], arch_4[0], decimal=5)
         assert_almost_equal(sm_arch[1], arch_4[1], decimal=6)
 

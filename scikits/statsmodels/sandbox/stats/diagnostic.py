@@ -33,6 +33,8 @@ missing:
 import numpy as np
 from scipy import stats
 import scikits.statsmodels.api as sm
+from scikits.statsmodels.regression.linear_model import OLS
+from scikits.statsmodels.tools.tools import add_constant
 from scikits.statsmodels.tsa.stattools import acf, adfuller
 from scikits.statsmodels.tsa.tsatools import lagmat
 
@@ -846,13 +848,40 @@ def linear_rainbow(res, frac = 0.5):
     from scipy import stats
     pval = stats.f.sf(fstat, nobs - nobs_mi, res_mi.df_resid)
     return fstat, pval
+
 def linear_lm(resid, exog, func=None):
-    '''
-    assume first column is integer
+    '''Lagrange multiplier test for linearity against functional alternative
 
-    if func is None, then squares are used:
+    limitations: Assumes currently that the first column is integer.
+    Currently it doesn't check whether the transformed variables contain NaNs,
+    for example log of negative number.
 
-    no nan check for the transformed variables yet
+    Parameters
+    ----------
+    resid : ndarray
+        residuals of a regression
+    exog : ndarray
+        exogenous variables for which linearity is tested
+    func : callable
+        If func is None, then squares are used. func needs to take an array
+        of exog and return an array of transformed variables.
+
+    Returns
+    -------
+    lm : float
+       Lagrange multiplier test statistic
+    lm_pval : float
+       p-value of Lagrange multiplier tes
+    ftest : ContrastResult instance
+       the results from the F test variant of this test
+
+    Notes
+    -----
+    written to match Gretl's linearity test.
+    The test runs an auxilliary regression of the residuals on the combined
+    original and transformed regressors.
+    The Null hypothesis is that the linear specification is correct.
+
     '''
     from scipy import stats
 
