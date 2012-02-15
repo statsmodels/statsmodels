@@ -67,7 +67,7 @@ def anderson_statistic(x, dist='norm', fit=True, params=(), axis=0):
     return A2
 
 
-def ad_normal(x, axis=0):
+def normal_ad(x, axis=0):
     '''Anderson-Darling test for normal distribution unknown mean and variance
 
     Parameter
@@ -127,7 +127,7 @@ if __name__ == '__main__':
            -0.2167,  0.4153,  1.8492, -0.3706,  0.9726, -0.1501, -0.0337,
            -1.4423,  1.2489,  0.9182, -0.2331, -0.6182,  0.183 ])
     r_res = np.array([0.58672353588821502, 0.1115380760041617])
-    ad2, pval = ad_normal(x)
+    ad2, pval = normal_ad(x)
     print ad2, pval
     print r_res - [ad2, pval]
 

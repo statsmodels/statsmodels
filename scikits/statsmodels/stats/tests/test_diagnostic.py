@@ -479,7 +479,23 @@ class TestDiagnosticG(object):
         assert_approx_equal(lf2[1], lillifors2['pvalue'], significant=10)
         compare_t_est(lf3, lillifors3, decimal=(15, 1))  #R uses different approximation
 
+        #> ad = ad.test(residuals(fm))
+        #> mkhtest(ad, "ad3", "-")
+        adr1 = dict(statistic=1.602209621518313, pvalue=0.0003937979149362316, parameters=(), distr='-')
 
+        #> ad = ad.test(residuals(fm)**2)
+        #> mkhtest(ad, "ad3", "-")
+        adr2 = dict(statistic=np.inf, pvalue=np.nan, parameters=(), distr='-')
+
+        #> ad = ad.test(residuals(fm)[1:20])
+        #> mkhtest(ad, "ad3", "-")
+        adr3 = dict(statistic=0.3017073732210775, pvalue=0.5443499281265933, parameters=(), distr='-')
+
+        import scikits.statsmodels.stats.adnorm as smad
+        ad1 = smad.normal_ad(res.resid)
+        compare_t_est(ad1, adr1, decimal=(14, 18))
+        assert_(np.isinf(adr2[1]))
+        compare_t_est(ad3, adr3, decimal=(14, 14))
 
 
     def test_influence(self):
