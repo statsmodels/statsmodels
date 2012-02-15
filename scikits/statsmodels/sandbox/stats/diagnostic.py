@@ -71,10 +71,37 @@ class CompareCox(object):
 
 
     def run(self, results_x, results_z, attach=True):
+        '''run Cox test for non-nested models
+
+        Parameters
+        ----------
+        results_x : Result instance
+            result instance of first model
+        results_z : Result instance
+            result instance of second model
+        attach : bool
+            If true, then the intermediate results are attached to the instance.
+
+        Returns
+        -------
+        tstat : float
+            t statistic for the test that including the fitted values of the
+            first model in the second model has no effect.
+        pvalue : float
+            two-sided pvalue for the t statistic
+
+        Notes
+        -----
+        Tests of non-nested hypothesis might not provide unambiguous answers.
+        The test should be performed in both directions and it is possible
+        that both or neither test rejects. see ??? for more information.
+
+        References
+        ----------
+        ???
+
         '''
 
-        see class docstring (for now)
-        '''
         if not np.allclose(results_x.model.endog, results_z.model.endog):
             raise ValueError('endogenous variables in models are not the same')
         nobs = results_x.model.endog.shape[0]
@@ -137,9 +164,35 @@ class CompareJ(object):
 
 
     def run(self, results_x, results_z, attach=True):
-        '''
+        '''run J-test for non-nested models
 
-        see class docstring (for now)
+        Parameters
+        ----------
+        results_x : Result instance
+            result instance of first model
+        results_z : Result instance
+            result instance of second model
+        attach : bool
+            If true, then the intermediate results are attached to the instance.
+
+        Returns
+        -------
+        tstat : float
+            t statistic for the test that including the fitted values of the
+            first model in the second model has no effect.
+        pvalue : float
+            two-sided pvalue for the t statistic
+
+        Notes
+        -----
+        Tests of non-nested hypothesis might not provide unambiguous answers.
+        The test should be performed in both directions and it is possible
+        that both or neither test rejects. see ??? for more information.
+
+        References
+        ----------
+        ???
+
         '''
         if not np.allclose(results_x.model.endog, results_z.model.endog):
             raise ValueError('endogenous variables in models are not the same')
@@ -206,7 +259,7 @@ def acorr_ljungbox(x, lags=None, boxpierce=False):
     autocorrelation function. Ljung-Box test is reported to have better
     small sample properties.
 
-    could be extended to work with more than one series
+    TODO: could be extended to work with more than one series
     1d or nd ? axis ? ravel ?
     needs more testing
 
@@ -389,7 +442,7 @@ def het_arch(resid, maxlag=None, autolag=None, store=False, ddof=0):
 
 
 def acorr_breush_godfrey(results, nlags=None, store=False):
-    '''Lagrange Multiplier tests for residual autocorrelation
+    '''Breush Godfrey Lagrange Multiplier tests for residual autocorrelation
 
     Parameters
     ----------
@@ -399,8 +452,11 @@ def acorr_breush_godfrey(results, nlags=None, store=False):
     nlags : int
         Number of lags to include in the auxiliary regression. (nlags is
         highest lag)
+    store : bool
+        If store is true, then an additional class instance that contains
+        intermediate results is returned.
 
-        Returns
+    Returns
     -------
     lm : float
         Lagrange multiplier test statistic
@@ -466,7 +522,7 @@ def acorr_breush_godfrey(results, nlags=None, store=False):
         return lm, lmpval, fval, fpval
 
 def het_breushpagan(resid, exog_het):
-    '''Lagrange Multiplier Heteroscedasticity Test by Breush-Pagan
+    '''Breush-Pagan Lagrange Multiplier test for heteroscedasticity
 
     The tests the hypothesis that the residual variance does not depend on
     the variables in x in the form
@@ -536,8 +592,31 @@ def het_breushpagan(resid, exog_het):
     # Note: degrees of freedom for LM test is nvars minus constant
     return lm, stats.chi2.sf(lm, nvars-1), fval, fpval
 
-def het_white(y, x, retres=False):
-    '''Lagrange Multiplier Heteroscedasticity Test by White
+def het_white(resid, exog, retres=False):
+    '''White's Lagrange Multiplier Test for Heteroscedasticity
+
+    Parameters
+    ----------
+    resid : array_like
+        residuals, square of it is used as endogenous variable
+    exog : array_like
+        possible explanatory variables for variance, squares and interaction
+        terms are included in the auxilliary regression.
+    resstore : instance (optional)
+        a class instance that holds intermediate results. Only returned if
+        store=True
+
+    Returns
+    -------
+    lm : float
+        lagrange multiplier statistic
+    lm_pvalue :float
+        p-value of lagrange multiplier test
+    fvalue : float
+        f-statistic of the hypothesis that the error variance does not depend
+        on x. This is an alternative test variant not the original LM test.
+    f_pvalue : float
+        p-value for the f-statistic
 
     Notes
     -----
@@ -547,13 +626,12 @@ def het_white(y, x, retres=False):
 
     References
     ----------
-
     Greene section 11.4.1 5th edition p. 222
     now test statistic reproduces Greene 5th, example 11.3
 
     '''
-    x = np.asarray(x)
-    y = np.asarray(y)
+    x = np.asarray(exog)
+    y = np.asarray(resid)
     if x.ndim == 1:
         raise ValueError('x should have constant and at least one more variable')
     nobs, nvars0 = x.shape
