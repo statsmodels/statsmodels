@@ -17,12 +17,15 @@ def test_cov_cluster_2groups():
     #comparing cluster robust standard errors to Peterson
     #requires Petersen's test_data
     #http://www.kellogg.northwestern.edu/faculty/petersen/htm/papers/se/test_data.txt
-    pet = np.genfromtxt("test_data.txt")
+    import os
+    cur_dir = os.path.abspath(os.path.dirname(__file__))
+    fpath = os.path.join(cur_dir,"test_data.txt")
+    pet = np.genfromtxt(fpath)
     endog = pet[:,-1]
     group = pet[:,0].astype(int)
     time = pet[:,1].astype(int)
-    exog = sm.add_constant(pet[:,2], prepend=True)
-    res = sm.OLS(endog, exog).fit()
+    exog = add_constant(pet[:,2], prepend=True)
+    res = OLS(endog, exog).fit()
 
     cov01, covg, covt = sw.cov_cluster_2groups(res, group, group2=time)
 
@@ -36,10 +39,10 @@ def test_cov_cluster_2groups():
     bse_0 = sw.se_cov(covg)
     bse_1 = sw.se_cov(covt)
     bse_01 = sw.se_cov(cov01)
-    print res.HC0_se, bse_petw - res.HC0_se
-    print bse_0, bse_0 - bse_pet0
-    print bse_1, bse_1 - bse_pet1
-    print bse_01, bse_01 - bse_pet01
+    #print res.HC0_se, bse_petw - res.HC0_se
+    #print bse_0, bse_0 - bse_pet0
+    #print bse_1, bse_1 - bse_pet1
+    #print bse_01, bse_01 - bse_pet01
     assert_almost_equal(bse_petw, res.HC0_se, decimal=4)
     assert_almost_equal(bse_0, bse_pet0, decimal=4)
     assert_almost_equal(bse_1, bse_pet1, decimal=4)
