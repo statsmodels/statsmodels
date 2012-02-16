@@ -1073,8 +1073,10 @@ def _recursive_olsresiduals2(olsresults, skip):
     a = 1.143 #for alpha=0.99  =0.948 for alpha=0.95
     #following taken from Ploberger,
     crit = a*np.sqrt(nrr)
-    rcusumci = (a*np.sqrt(nrr) + a*np.arange(0,nobs-skip)/np.sqrt(nrr)) * np.array([[-1.],[+1.]])
-    return rresid, rparams, rypred, rresid_standardized, rresid_scaled, rcusum, rcusumci
+    rcusumci = (a*np.sqrt(nrr) + a*np.arange(0,nobs-skip)/np.sqrt(nrr)) \
+                  * np.array([[-1.],[+1.]])
+    return (rresid, rparams, rypred, rresid_standardized, rresid_scaled,
+            rcusum, rcusumci)
 
 
 def recursive_olsresiduals(olsresults, skip=None, lamda=0.0, alpha=0.95):
@@ -1127,7 +1129,10 @@ def recursive_olsresiduals(olsresults, skip=None, lamda=0.0, alpha=0.95):
     BigJudge 5.5.2b for formula for inverse(X'X) updating
     Greene section 7.5.2
 
-    Brown, R. L., J. Durbin, and J. M. Evans. “Techniques for Testing the Constancy of Regression Relationships over Time.” Journal of the Royal Statistical Society. Series B (Methodological) 37, no. 2 (1975): 149-192.
+    Brown, R. L., J. Durbin, and J. M. Evans. “Techniques for Testing the
+    Constancy of Regression Relationships over Time.”
+    Journal of the Royal Statistical Society. Series B (Methodological) 37,
+    no. 2 (1975): 149-192.
 
     '''
 
@@ -1216,8 +1221,10 @@ def recursive_olsresiduals(olsresults, skip=None, lamda=0.0, alpha=0.95):
 
     #following taken from Ploberger,
     crit = a*np.sqrt(nrr)
-    rcusumci = (a*np.sqrt(nrr) + 2*a*np.arange(0,nobs-skip)/np.sqrt(nrr)) * np.array([[-1.],[+1.]])
-    return rresid, rparams, rypred, rresid_standardized, rresid_scaled, rcusum, rcusumci
+    rcusumci = (a*np.sqrt(nrr) + 2*a*np.arange(0,nobs-skip)/np.sqrt(nrr)) \
+                 * np.array([[-1.],[+1.]])
+    return (rresid, rparams, rypred, rresid_standardized, rresid_scaled,
+            rcusum, rcusumci)
 
 
 def breaks_hansen(olsresults):
@@ -1348,7 +1355,8 @@ def breaks_cusumolsresid(olsresidual, ddof=0):
 #    B = resid.cumsum()/np.sqrt(nobssigma2) # use T*sigma directly
 #    nobs = len(resid)
 #    denom = 1. + 2. * np.arange(nobs)/(nobs-1.) #not sure about limits
-#    sup_b = np.abs(B/denom).max() #asymptotically distributed as standard Brownian Bridge
+#    sup_b = np.abs(B/denom).max()
+#    #asymptotically distributed as standard Brownian Bridge
 #    crit = [(1,1.63), (5, 1.36), (10, 1.22)]
 #    #Note stats.kstwobign.isf(0.1) is distribution of sup.abs of Brownian Bridge
 #    #>>> stats.kstwobign.isf([0.01,0.05,0.1])
@@ -1371,8 +1379,8 @@ def breaks_AP(endog, exog, skip):
 
     alternative: B Hansen loops over breakpoints only once and updates
         x'x and xe'xe
-    update: Andrews is based on GMM estimation not OLS, LM test statistic is easy
-       to compute because it only requires full sample GMM estimate (p.837)
+    update: Andrews is based on GMM estimation not OLS, LM test statistic is
+       easy to compute because it only requires full sample GMM estimate (p.837)
        with GMM the test has much wider applicability than just OLS
 
 
@@ -1578,16 +1586,16 @@ if __name__ == '__main__':
     print het_breushpagan(y,x)
     print het_white(y,x)
 
-    f,p = het_goldfeldquandt(y,x, 1)
-    print f, p
+    f, fp, fo = het_goldfeldquandt(y,x, 1)
+    print f, fp
     resgq = het_goldfeldquandt(y,x, 1, retres=True)
     print resgq
 
     #this is just a syntax check:
-    print neweywestcov(y, x)
+    print _neweywestcov(y, x)
 
     resols1 = OLS(y, x).fit()
-    print neweywestcov(resols1.resid, x)
+    print _neweywestcov(resols1.resid, x)
     print resols1.cov_params()
     print resols1.HC0_se
     print resols1.cov_HC0
