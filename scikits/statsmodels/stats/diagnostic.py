@@ -5,3 +5,6 @@ from scikits.statsmodels.sandbox.stats.diagnostic import (
     het_goldfeldquandt, het_arch,
     het_white, recursive_olsresiduals, acorr_breush_godfrey,
     linear_harvey_collier, linear_rainbow, linear_lm)
+
+from .lilliefors import kstest_normal, lillifors
+from .adnorm import normal_ad
