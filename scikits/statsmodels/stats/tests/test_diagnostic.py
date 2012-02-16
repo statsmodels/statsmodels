@@ -13,7 +13,8 @@ import os
 
 import numpy as np
 
-from numpy.testing import assert_almost_equal, assert_equal, assert_approx_equal
+from numpy.testing import (assert_, assert_almost_equal, assert_equal,
+                           assert_approx_equal)
 
 from scikits.statsmodels.regression.linear_model import OLS, GLSAR
 from scikits.statsmodels.tools.tools import add_constant
@@ -522,10 +523,9 @@ class TestDiagnosticG(object):
         lillifors3 = dict(statistic=0.1333956004203103,
                           pvalue=0.4618672180799566, parameters=(), distr='-')
 
-        import scikits.statsmodels.stats.lilliefors as sml
-        lf1 = sml.lillifors(res.resid)
-        lf2 = sml.lillifors(res.resid**2)
-        lf3 = sml.lillifors(res.resid[:20])
+        lf1 = smsdia.lillifors(res.resid)
+        lf2 = smsdia.lillifors(res.resid**2)
+        lf3 = smsdia.lillifors(res.resid[:20])
 
         compare_t_est(lf1, lillifors1, decimal=(15, 15))
         compare_t_est(lf2, lillifors2, decimal=(15, 15)) #pvalue very small
@@ -547,10 +547,11 @@ class TestDiagnosticG(object):
         adr3 = dict(statistic=0.3017073732210775, pvalue=0.5443499281265933,
                     parameters=(), distr='-')
 
-        import scikits.statsmodels.stats.adnorm as smad
-        ad1 = smad.normal_ad(res.resid)
+        ad1 = smsdia.normal_ad(res.resid)
         compare_t_est(ad1, adr1, decimal=(14, 18))
-        assert_(np.isinf(adr2[1]))
+        ad2 = smsdia.normal_ad(res.resid**2)
+        assert_(np.isinf(ad2[0]))
+        ad3 = smsdia.normal_ad(res.resid[:20])
         compare_t_est(ad3, adr3, decimal=(14, 14))
 
 
