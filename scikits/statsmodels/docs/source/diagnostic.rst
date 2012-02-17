@@ -35,13 +35,13 @@ error variance, i.e. errors are homoscedastic. The tests differ in which kind
 of heteroscedasticity is considered as alternative hypothesis. They also vary
 in the power of the test for different types of heteroscedasticity.
 
-het_breushpagan (scikits.sandbox.tools.stattools) :
+:py:func:`het_breushpagan <scikits.statsmodels.stats.diagnostic.het_breushpagan>`
     Lagrange Multiplier Heteroscedasticity Test by Breush-Pagan
 
-het_white (scikits.sandbox.tools.stattools) :
+:py:func:`het_white <scikits.statsmodels.stats.diagnostic.het_white>`
     Lagrange Multiplier Heteroscedasticity Test by White
 
-het_goldfeldquandt (scikits.sandbox.tools.stattools) :
+:py:func:`het_goldfeldquandt <scikits.statsmodels.stats.diagnostic.het_goldfeldquandt>`
     test whether variance is the same in 2 subsamples
 
 
@@ -51,21 +51,36 @@ Autocorrelation Tests
 This group of test whether the regression residuals are not autocorrelated.
 They assume that observations are ordered by time.
 
-durbin_watson (scikits.stattools) :
+:py:func:`durbin_watson <scikits.statsmodels.stats.diagnostic.durbin_watson>`
   - Durbin-Watson test for no autocorrelation of residuals
   - printed with summary()
 
-acorr_ljungbox (scikits.sandbox.tools.stattools) :
+:py:func:`acorr_ljungbox <scikits.statsmodels.stats.diagnostic.acorr_ljungbox>`
   - Ljung-Box test for no autocorrelation of residuals
   - also returns Box-Pierce statistic
 
-acorr_lm
-  - Lagrange Multiplier tests for autocorrelation
-  - not checked yet, might not make sense
+:py:func:`acorr_breush_godfrey <scikits.statsmodels.stats.diagnostic.acorr_breush_godfrey>`
+  - Breush-Pagan test for no autocorrelation of residuals
+
 
 missing
-  - Breush-Godfrey test, in stata and Greene 12.7.1
-  -
+  - ?
+
+
+Non-Linearity Tests
+-------------------
+
+:py:func:`linear_harvey_collier <scikits.statsmodels.stats.diagnostic.linear_harvey_collier>`
+  - Multiplier test for Null hypothesis that linear specification is
+    correct
+
+:py:func:`acorr_linear_rainbow <scikits.statsmodels.stats.diagnostic.acorr_linear_rainbow>`
+  - Multiplier test for Null hypothesis that linear specification is
+    correct.
+
+:py:func:`acorr_linear_lm <scikits.statsmodels.stats.diagnostic.acorr_linear_lm>`
+  - Lagrange Multiplier test for Null hypothesis that linear specification is
+    correct. This tests against specific functional alternatives.
 
 
 Tests for Structural Change, Parameter Stability
@@ -89,37 +104,83 @@ missing
 Unknown Change Point
 ^^^^^^^^^^^^^^^^^^^^
 
-(Note: considerable cleaning still required)
-
-recursive_olsresiduals(olsresults, skip=None, lamda=0.0, alpha=0.95):
-  - calculate recursive ols with residuals and cusum test statistic
-
-breaks_cusumolsresid :
+:py:func:`breaks_cusumolsresid <scikits.statsmodels.stats.diagnostic.breaks_cusumolsresid>`
   - cusum test for parameter stability based on ols residuals
 
-breaks_hansen :
+:py:func:`breaks_hansen <scikits.statsmodels.stats.diagnostic.breaks_hansen>`
   - test for model stability, breaks in parameters for ols, Hansen 1992
+
+:py:func:`recursive_olsresiduals <scikits.statsmodels.stats.diagnostic.recursive_olsresiduals>`
+  Calculate recursive ols with residuals and cusum test statistic. This is
+  currently mainly helper function for recursive residual based tests.
+  However, since it uses recursive updating and doesn't estimate separate
+  problems it should be also quite efficient as expanding OLS function.
 
 missing
   - supLM, expLM, aveLM  (Andrews, Andrews/Ploberger)
   - R-structchange also has musum (moving cumulative sum tests)
+  - test on recursive parameter estimates, which are there?
+
 
 Mutlicollinearity Tests
 --------------------------------
 
-conditionnum (scikits.statsmodels.stattools) -- needs test vs Stata --
-cf Grene (3rd ed.) pp 57-8
-numpy.linalg.cond (for more general condition numbers, but no behind
-the scenes help for design preparation)
+conditionnum (scikits.statsmodels.stattools)
+  - -- needs test vs Stata --
+  - cf Grene (3rd ed.) pp 57-8
 
-missing
-  - Variance Inflation Factors
-    (with some links to other tests here: http://www.stata.com/help.cgi?vif)
+numpy.linalg.cond
+  - (for more general condition numbers, but no behind the scenes help for
+    design preparation)
 
-Outlier Diagnosis
------------------
+Variance Inflation Factors
+  This is currently together with influence and outlier measures
+  (with some links to other tests here: http://www.stata.com/help.cgi?vif)
 
-  - robust regression results
+
+Normality and Distribution Tests
+--------------------------------
+
+:py:func:`jarque_bera <scikits.statsmodels.stats.tools.jarque_bera>`
+  - printed with summary()
+  - test for normal distribution of residuals
+
+Normality tests in scipy stats
+  need to find list again
+
+:py:func:`omni_normtest <scikits.statsmodels.stats.tools.omni_normtest>`
+  - test for normal distribution of residuals
+  - printed with summary()
+
+:py:func:`normal_ad <scikits.statsmodels.stats.diagnostic.normal_ad>`
+  - Anderson Darling test for normality with estimated mean and variance
+
+:py:func:`kstest_normal <scikits.statsmodels.stats.diagnostic.kstest_normal>` :py:func:`lillifors <scikits.statsmodels.stats.diagnostic.lillifors>`
+  Lillifors test for normality, this is a Kolmogorov-Smirnov tes with for
+  normality with estimated mean and variance. lillifors is an alias for
+  kstest_normal
+
+qqplot, scipy.stats.probplot
+
+other goodness-of-fit tests for distributions in scipy.stats and enhancements
+  - kolmogorov-smirnov
+  - anderson : Anderson-Darling
+  - likelihood-ratio, ...
+  - chisquare tests, powerdiscrepancy : needs wrapping (for binning)
+
+
+Outlier and Influence Diagnostic Measures
+-----------------------------------------
+
+These measures try to identify observations that are outliers, with large
+residual, or observations that have a large influence on the regression
+estimates. Robust Regression, RLM, can be used to both estimate in an outlier
+robust way as well as identify outlier. The advantage of RLM that the
+estimation results are not strongly influenced even if there are many
+outliers, while most of the other measures are better in identifying
+individual outliers and might not be able to identify groups of outliers.
+
+robust regression results RLM
     example from example_rlm.py ::
 
         import scikits.statsmodels.api as sm
@@ -136,42 +197,34 @@ Outlier Diagnosis
     And the weights give an idea of how much a particular observation is
     down-weighted according to the scaling asked for.
 
-missing :
-   - Cook's Distance
-     http://en.wikipedia.org/wiki/Cook%27s_distance (with some other links)
+:py:class:`Influence <scikits.statsmodels.stats.outliers_influence.Influence>`
+   Class in stats.outliers_influence, most standard measures for outliers
+   and influence are available as methods or attributes given a fitted
+   OLS model. This is mainly written for OLS, some but not all measures
+   are also valid for other models.
+   Some of these statistics can be calculated from an OLS results instance,
+   others require that an OLS is estimated for each left out variable.
 
-
-Normality and Distribution Tests
---------------------------------
-
-jarque_bera (scikits.stats.tools) :
-  - printed with summary()
-  - test for normal distribution of residuals
-
-omni_normtest (scikits.stats.tools) :
-  - printed with summary()
-  - test for normal distribution of residuals
-
-qqplot, scipy.stats.probplot
-
-other goodness-of-fit tests for distributions in scipy.stats and enhancements
-  - kolmogorov-smirnov
-  - anderson : Anderson-Darling
-  - likelihood-ratio, ...
-  - chisquare tests, powerdiscrepancy : needs wrapping (for binning)
-
-
-Non-Linearity Tests
--------------------
-
-nothing yet ???
+   resid_press
+   resid_studentized_external
+   resid_studentized_internal
+   ess_press
+   hat_matrix_diag
+   cooks_distance - Cook's Distance `Wikipedia <http://en.wikipedia.org/wiki/Cook%27s_distance>`_ (with some other links)
+   cov_ratio
+   dfbetas
+   dffits
+   dffits_internal
+   det_cov_params_not_obsi
+   params_not_obsi
+   sigma2_not_obsi
 
 
 
 Unit Root Tests
 ---------------
 
-unitroot_adf
-  - Augmented Dickey-Fuller test for unit roots
+:py:func:`unitroot_adf <scikits.statsmodels.stats.diagnostic.unitroot_adf>`
+  - same as adfuller but with different signature
 
 

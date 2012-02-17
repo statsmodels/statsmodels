@@ -33,29 +33,38 @@ Residual Diagnostics and Specification Tests
    jarque_bera
    omni_normtest
 
-.. currentmodule:: scikits.statsmodels.sandbox.stats.diagnostic
+.. currentmodule:: scikits.statsmodels.stats.diagnostic
 
 .. autosummary::
    :toctree: generated/
 
    acorr_ljungbox
-   acorr_lm
+   acorr_breush_godfrey
+
+   HetGoldfeldQuandt
+   het_goldfeldquandt
+   het_breushpagan
+   het_white
+   het_arch
+
+   linear_harvey_collier
+   linear_rainbow
+   linear_lm
 
    breaks_cusumolsresid
    breaks_hansen
-   CompareCox
-   CompareJ
-   compare_cox
-   compare_j
-   het_breushpagan
-   HetGoldfeldQuandt
-   het_goldfeldquandt
-   het_goldfeldquandt2
-   het_white
-   unitroot_adf
-   neweywestcov
    recursive_olsresiduals
-   recursive_olsresiduals2
+
+   CompareCox
+   compare_cox
+   CompareJ
+   compare_j
+
+   unitroot_adf
+
+   normal_ad
+   kstest_normal
+   lillifors
 
 See also the notes on :ref:`notes on regression diagnostics <diagnostics>`
 
@@ -75,7 +84,14 @@ Goodness of Fit Tests and Measures
    gof_chisquare_discrete
    gof_binning_discrete
 
+.. currentmodule:: scikits.statsmodels.stats.diagnostic
 
+.. autosummary::
+   :toctree: generated/
+
+   normal_ad
+   kstest_normal
+   lillifors
 
 Non-Parametric Tests
 --------------------

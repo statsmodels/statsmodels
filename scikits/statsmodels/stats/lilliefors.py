@@ -191,7 +191,6 @@ def kstest_normal(x, pvalmethod='approx'):
         'approx' uses the approximation formula of Dalal and Wilkinson,
         valid for pvalues < 0.1. If the pvalue is larger than 0.1, then the
         result of `table` is returned
-
         'table' uses the table from Dalal and Wilkinson, which is available
         for pvalues between 0.001 and 0.2, and the formula of Lilliefors for
         large n (n>900). Values in the table are linearly interpolated.
@@ -209,7 +208,7 @@ def kstest_normal(x, pvalmethod='approx'):
 
     Notes
     -----
-     Reported power to distinguish normal from some other distributions is lower
+    Reported power to distinguish normal from some other distributions is lower
     than with the Anderson-Darling test.
 
     could be vectorized
