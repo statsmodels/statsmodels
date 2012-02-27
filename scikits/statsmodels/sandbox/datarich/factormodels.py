@@ -115,7 +115,8 @@ class FactorModelUnivariate(object):
                 for inidx, outidx in cv_iter:
                     res_l1o = sm.OLS(y0[inidx], fact[inidx,:]).fit()
                     #print data.endog[outidx], res.model.predict(data.exog[outidx,:]),
-                    prederr2 += (y0[outidx] - res_l1o.model.predict(fact[outidx,:]))**2.
+                    prederr2 += (y0[outidx] -
+                                 res_l1o.model.predict(res_l1o.params, fact[outidx,:]))**2.
             else:
                 prederr2 = np.nan
 
@@ -183,6 +184,9 @@ if __name__ == '__main__':
         y0 = ytrue + 0.1*np.random.normal(size=ytrue.shape)
 
         mod = FactorModelUnivariate(y0, x0)
+        print mod.summary_find_nfact()
+        print "with cross validation - slower"
+        mod.fit_find_nfact(maxfact=None, skip_crossval=False, cv_iter=None)
         print mod.summary_find_nfact()
 
 

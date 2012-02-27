@@ -84,6 +84,14 @@ def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
         #assuming single digit, nvars<=10  else use 'var%2d'
         varnames = ['var%d' % i for i in range(nvars)]
 
+    plot_kwds_ = dict(ls='none', marker='.', color='k', alpha=0.5)
+    if plot_kwds:
+        plot_kwds_.update(plot_kwds)
+
+    ell_kwds_= dict(color='k')
+    if ell_kwds:
+        ell_kwds_.update(ell_kwds)
+
     dmean = data.mean(0)
     dcov = np.cov(data, rowvar=0)
 
@@ -105,13 +113,13 @@ def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
             ax.xaxis.set_major_formatter(formatter)
 
             idx = np.array([j,i])
-            ax.plot(*data[:,idx].T, ls='none', marker='.', color='k', alpha=0.5)
+            ax.plot(*data[:,idx].T, **plot_kwds_)
 
             if np.isscalar(level):
                 level = [level]
             for alpha in level:
-                _make_ellipse(dmean[idx], dcov[idx[:,None], idx], ax, level=alpha,
-                         color='k')
+                make_ellipse(dmean[idx], dcov[idx[:,None], idx], ax, level=alpha,
+                         **ell_kwds_)
 
             if add_titles:
                 ax.set_title('%s-%s' % (varnames[i], varnames[j]))
