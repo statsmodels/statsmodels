@@ -22,7 +22,7 @@ __all__ = ['plot_fit', 'plot_regress_exog', 'plot_partregress', 'plot_ccpr',
            'plot_regress_exog']
 
 
-def plot_fit(res, exog_idx, y_true=None, ax=None):
+def plot_fit(res, exog_idx, exog_name='', y_true=None, ax=None, fontsize='small'):
     """Plot fit against one regressor.
 
     This creates one graph with the scatterplot of observed values compared to
@@ -53,6 +53,9 @@ def plot_fit(res, exog_idx, y_true=None, ax=None):
     """
     fig, ax = utils.create_mpl_ax(ax)
 
+    if exog_name == '':
+        exog_name = 'variable %d' % exog_idx
+
     #maybe add option for wendog, wexog
     y = res.model.endog
     x1 = res.model.exog[:, exog_idx]
@@ -60,26 +63,26 @@ def plot_fit(res, exog_idx, y_true=None, ax=None):
     y = y[x1_argsort]
     x1 = x1[x1_argsort]
 
-    ax.plot(x1, y, 'bo')
+    ax.plot(x1, y, 'bo', label='observed')
     if not y_true is None:
-        ax.plot(x1, y_true[x1_argsort], 'b-')
-        title = 'fitted versus regressor %d, blue: true,   black: OLS' % exog_idx
+        ax.plot(x1, y_true[x1_argsort], 'b-', label='true')
+        title = 'fitted versus regressor %s' % exog_name
     else:
-        title = 'fitted versus regressor %d, blue: observed, black: OLS' % exog_idx
+        title = 'fitted versus regressor %s' % exog_name
 
     prstd, iv_l, iv_u = wls_prediction_std(res)
-    ax.plot(x1, res.fittedvalues[x1_argsort], 'k-') #'k-o')
+    ax.plot(x1, res.fittedvalues[x1_argsort], 'k-', label='fitted') #'k-o')
     #ax.plot(x1, iv_u, 'r--')
     #ax.plot(x1, iv_l, 'r--')
     ax.fill_between(x1, iv_l[x1_argsort], iv_u[x1_argsort], alpha=0.1, color='k')
-    ax.set_title(title)
+    ax.set_title(title, fontsize=fontsize)
 
     return fig
 
 
 
 
-def plot_regress_exog(res, exog_idx, fig=None):
+def plot_regress_exog(res, exog_idx, exog_name='', fig=None):
     """Plot regression results against one regressor.
 
     This plots four graphs in a 2 by 2 figure: 'endog versus exog',
@@ -105,7 +108,11 @@ def plot_regress_exog(res, exog_idx, fig=None):
     This is currently very simple, no options or varnames yet.
 
     """
+
     fig = utils.create_mpl_fig(fig)
+
+    if exog_name == '':
+        exog_name = 'variable %d' % exog_idx
 
     #maybe add option for wendog, wexog
     #y = res.endog
@@ -131,6 +138,8 @@ def plot_regress_exog(res, exog_idx, fig=None):
     #namestr = ' for %s' % self.name if self.name else ''
     ax.plot(x1, res.fittedvalues + res.resid, 'o')
     ax.set_title('Fitted plus residuals versus exog', fontsize='small')# + namestr)
+
+    fig.suptitle('Regression Plots for %s' % exog_name)
 
     return fig
 
