@@ -4,6 +4,7 @@
 Created on Sun Jan 29 11:16:09 2012
 
 Author: Josef Perktold
+License: BSD-3
 """
 
 from collections import defaultdict
@@ -103,7 +104,7 @@ def variance_inflation_factor(exog, exog_idx):
 
 
 class Influence(object):
-    '''
+    '''class to calculate outlier and influence measures for OLS result
     '''
 
     def __init__(self, results):
@@ -160,13 +161,15 @@ class Influence(object):
     @cache_readonly
     def resid_studentized_internal(self):
         '''this uses sigma from original estimate
+
+        does not require leave one out loop
         '''
         return self.get_resid_studentized_external(sigma=None)
         #return self.results.resid / self.sigma_est
 
     @cache_readonly
     def resid_studentized_external(self):
-        '''this uses sigma from original estimate
+        '''this uses sigma from leave-one-out estimates
 
         requires leave one out loop for observations
         '''
