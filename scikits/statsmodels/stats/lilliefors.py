@@ -134,6 +134,49 @@ def get_lilliefors_table():
 
 lillifors_table = get_lilliefors_table()
 
+def pval_lf(Dmax, n):
+    '''approximate pvalues for Lilliefors test of normality
+
+    This is only valid for pvalues smaller than 0.1 which is not checked in
+    this function.
+
+    Parameters
+    ----------
+    Dmax : array_like
+        two-sided Kolmogorov-Smirnov test statistic
+    n : int or float
+        sample size
+
+    Returns
+    -------
+    p-value : float or ndarray
+        pvalue according to approximation formula of Dallal and Wilkinson.
+
+    Notes
+    -----
+    This is mainly a helper function where the calling code should dispatch
+    on bound violations. Therefore it doesn't check whether the pvalue is in
+    the valid range.
+
+    Precision for the pvalues is around 2 to 3 decimals. This approximation is
+    also used by other statistical packages (e.g. R:fBasics) but might not be
+    the most precise available.
+
+    References
+    ----------
+    DallalWilkinson1986
+
+    '''
+
+    #todo: check boundaries, valid range for n and Dmax
+    if n>100:
+        Dmax *= (n/100.)**0.49
+        n = 100
+    pval = np.exp(-7.01256*Dmax**2 *(n + 2.78019)
+                + 2.99587 * Dmax * np.sqrt(n + 2.78019) - 0.122119
+                + 0.974598/np.sqrt(n) + 1.67997/n)
+    return pval
+
 
 def kstest_normal(x, pvalmethod='approx'):
     '''Lillifors test for normality,
@@ -148,7 +191,6 @@ def kstest_normal(x, pvalmethod='approx'):
         'approx' uses the approximation formula of Dalal and Wilkinson,
         valid for pvalues < 0.1. If the pvalue is larger than 0.1, then the
         result of `table` is returned
-
         'table' uses the table from Dalal and Wilkinson, which is available
         for pvalues between 0.001 and 0.2, and the formula of Lilliefors for
         large n (n>900). Values in the table are linearly interpolated.
@@ -166,7 +208,7 @@ def kstest_normal(x, pvalmethod='approx'):
 
     Notes
     -----
-     Reported power to distinguish normal from some other distributions is lower
+    Reported power to distinguish normal from some other distributions is lower
     than with the Anderson-Darling test.
 
     could be vectorized
@@ -220,6 +262,7 @@ tble = '''\
 400 .037 .039 .041 .045 .052 .061
 900 .025 .026 .028 .030 .035 .042'''
 
+'''
 parr = np.array([line.split() for line in tble.split('\n')],float)
 size = parr[1:,0]
 alpha = parr[0,1:] / 100.
@@ -281,48 +324,7 @@ for n in [19, 19.5, 20, 21, 25]:
 print pval_lftable(0.166, 20)
 print pval_lftable(0.166, 21)
 
-def pval_lf(Dmax, n):
-    '''approximate pvalues for Lilliefors test of normality
 
-    This is only valid for pvalues smaller than 0.1 which is not checked in
-    this function.
-
-    Parameters
-    ----------
-    Dmax : array_like
-        two-sided Kolmogorov-Smirnov test statistic
-    n : int or float
-        sample size
-
-    Returns
-    -------
-    p-value : float or ndarray
-        pvalue according to approximation formula of Dallal and Wilkinson.
-
-    Notes
-    -----
-    This is mainly a helper function where the calling code should dispatch
-    on bound violations. Therefore it doesn't check whether the pvalue is in
-    the valid range.
-
-    Precision for the pvalues is around 2 to 3 decimals. This approximation is
-    also used by other statistical packages (e.g. R:fBasics) but might not be
-    the most precise available.
-
-    References
-    ----------
-    DallalWilkinson1986
-
-    '''
-
-    #todo: check boundaries, valid range for n and Dmax
-    if n>100:
-        Dmax *= (n/100.)**0.49
-        n = 100
-    pval = np.exp(-7.01256*Dmax**2 *(n + 2.78019)
-                + 2.99587 * Dmax * np.sqrt(n + 2.78019) - 0.122119
-                + 0.974598/np.sqrt(n) + 1.67997/n)
-    return pval
 
 print 'n=25:', '.103 .052 .010'
 print [pval_lf(x, 25) for x in [.159, .173, .201, .236]]
@@ -355,3 +357,4 @@ xx2 = np.array([ 1.138, -0.325, -1.461, -0.441, -0.005, -0.957, -1.52 ,  0.481,
 r_lillieTest = [0.15096827429598147, 0.02225473302348436]
 print kstest_normal(xx2), np.array(kstest_normal(xx2)) - r_lillieTest
 print kstest_normal(xx2, 'table')
+'''

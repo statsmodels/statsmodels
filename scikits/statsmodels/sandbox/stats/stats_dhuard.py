@@ -317,10 +317,17 @@ if __name__ == '__main__':
 
     ppfs = ppfintp(cdf_ongrid)
     plt.plot(ppfs, cdf_ongrid)
-    ppfemp=interpolate.InterpolatedUnivariateSpline(np.sort(empiricalcdf(x)),np.sort(x),k=3)
+    #ppfemp=interpolate.InterpolatedUnivariateSpline(np.sort(empiricalcdf(x)),np.sort(x),k=3)
+    #Don't use interpolating splines for function approximation
+    #with s=0.03 the spline is monotonic at the evaluated values
+    ppfemp=interpolate.UnivariateSpline(np.sort(empiricalcdf(x)),np.sort(x),k=3, s=0.03)
     ppfe = ppfemp(cdf_ongrid)
     plt.plot(ppfe, cdf_ongrid)
 
+    print 'negative density'
+    print '(np.diff(ppfs)).min()', (np.diff(ppfs)).min()
+    print '(np.diff(cdf_ongrid)).min()', (np.diff(cdf_ongrid)).min()
+    #plt.show()
 
 
 

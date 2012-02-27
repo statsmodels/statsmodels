@@ -4,7 +4,7 @@ import numpy as np
 from numpy.testing import assert_almost_equal
 from scikits.statsmodels.stats.stattools import (omni_normtest, jarque_bera,
                             durbin_watson)
-from scikits.statsmodels.stats.adnorm import ad_normal
+from scikits.statsmodels.stats.adnorm import normal_ad
 
 
 #a random array, rounded to 4 decimals
@@ -117,26 +117,26 @@ def test_adnorm():
     #tests against R fBasics
     st_pv = []
     st_pv_R = np.array([0.5867235358882148, 0.1115380760041617])
-    ad = ad_normal(x)
+    ad = normal_ad(x)
     assert_almost_equal(ad, st_pv_R, 14)
     st_pv.append(st_pv_R)
 
     st_pv_R = np.array([2.976266267594575e+00, 8.753003709960645e-08])
-    ad = ad_normal(x**2)
+    ad = normal_ad(x**2)
     assert_almost_equal(ad, st_pv_R, 13)
     st_pv.append(st_pv_R)
 
     st_pv_R = np.array([0.4892557856308528, 0.1968040759316307])
-    ad = ad_normal(np.log(x**2))
+    ad = normal_ad(np.log(x**2))
     assert_almost_equal(ad, st_pv_R, 14)
     st_pv.append(st_pv_R)
 
     st_pv_R = np.array([1.4599014654282669312, 0.0006380009232897535])
-    ad = ad_normal(np.exp(-x**2))
+    ad = normal_ad(np.exp(-x**2))
     assert_almost_equal(ad, st_pv_R, 14)
     st_pv.append(st_pv_R)
 
-    ad = ad_normal(np.column_stack((x,x**2, np.log(x**2),np.exp(-x**2))).T,
+    ad = normal_ad(np.column_stack((x,x**2, np.log(x**2),np.exp(-x**2))).T,
                    axis=1)
     assert_almost_equal(ad, np.column_stack(st_pv), 14)
 

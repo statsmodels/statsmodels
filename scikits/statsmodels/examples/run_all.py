@@ -8,7 +8,7 @@ uncomment plt.show() to show all plot windows
 
 '''
 
-stop_on_error = True
+stop_on_error = False #True
 
 
 filelist = ['example_glsar.py', 'example_wls.py', 'example_gls.py',
@@ -17,6 +17,12 @@ filelist = ['example_glsar.py', 'example_wls.py', 'example_gls.py',
             'example_discrete.py', 'example_predict.py',
             'example_ols_table.py',
             'tut_ols.py', 'tut_ols_rlm.py', 'tut_ols_wls.py']
+
+#temporarily disable show
+plt_show = plt.show
+def noop(*args):
+    pass
+plt.show = noop
 
 cont = raw_input("""Are you sure you want to run all of the examples?
 This is done mainly to check that they are up to date.
@@ -34,6 +40,8 @@ if 'y' in cont.lower():
             print "**********************" + "*"*len(run_all_f)
             if stop_on_error:
                 raise
-#plt.show()
-#plt.close('all')
-#close doesn't work because I never get here without closing plots manually
+
+#reenable show after closing windows
+plt.close('all')
+plt.show = plt_show
+plt.show()

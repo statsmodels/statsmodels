@@ -148,6 +148,7 @@ Should be of length %s, if sigma is a 1d array" % nobs)
         super(GLS, self).__init__(endog, exog)
 
     def initialize(self):
+        #print "calling initialize, now whitening"  #for debugging
         self.wexog = self.whiten(self.exog)
         self.wendog = self.whiten(self.endog)
         # overwrite nobs from class Model:
@@ -218,6 +219,7 @@ Should be of length %s, if sigma is a 1d array" % nobs)
         if method == "pinv":
             if ((not hasattr(self, 'pinv_wexog')) or
                 (not hasattr(self, 'normalized_cov_params'))):
+                #print "recalculating pinv"   #for debugging
                 self.pinv_wexog = pinv_wexog = np.linalg.pinv(self.wexog)
                 self.normalized_cov_params = np.dot(pinv_wexog,
                                                  np.transpose(pinv_wexog))
@@ -395,6 +397,7 @@ class WLS(GLS):
         -------
         sqrt(weights)*X
         """
+        #print self.weights.var()
         X = np.asarray(X)
         if X.ndim == 1:
             return X * np.sqrt(self.weights)
@@ -563,6 +566,7 @@ class GLSAR(GLS):
     GLSAR is considered to be experimental.
     """
     def __init__(self, endog, exog=None, rho=1):
+        #this looks strange, interpreting rho as order if it is int
         if isinstance(rho, np.int):
             self.order = rho
             self.rho = np.zeros(self.order, np.float64)
@@ -595,10 +599,16 @@ class GLSAR(GLS):
         """
 #TODO: update this after going through example.
         for i in range(maxiter-1):
+            if hasattr(self, 'pinv_wexog'):
+                del self.pinv_wexog
             self.initialize()
             results = self.fit()
             self.rho, _ = yule_walker(results.resid,
                                       order=self.order, df=None)
+        #why not another call to self.initialize
+        if hasattr(self, 'pinv_wexog'):
+            del self.pinv_wexog
+        self.initialize()
         results = self.fit() #final estimate
         return results # add missing return
 
@@ -1203,7 +1213,7 @@ class RegressionResults(base.LikelihoodModelResults):
         wexog = self.model.wexog
         eigvals = np.linalg.linalg.eigvalsh(np.dot(wexog.T, wexog))
         eigvals = np.sort(eigvals) #in increasing order
-        condno = eigvals[-1]/eigvals[0]
+        condno = np.sqrt(eigvals[-1]/eigvals[0])
 
         self.diagn = dict(jb=jb, jbpv=jbpv, skew=skew, kurtosis=kurtosis,
                           omni=omni, omnipv=omnipv, condno=condno,

@@ -2,19 +2,38 @@
 """Various Statistical Tests
 
 
-Warning: Work in progress
+Author: josef-pktd
+License: BSD-3
+
+Notes
+-----
+Almost fully verified against R or Gretl, not all options are the same.
+In many cases of Lagrange multiplier tests both the LM test and the F test is
+returned. In some but not all cases, R has the option to choose the test
+statistic. Some alternative test statistic results have not been verified.
+
 
 TODO
+* refactor to store intermediate results
 * how easy is it to attach a test that is a class to a result instance,
   for example CompareCox as a method compare_cox(self, other) ?
+* StatTestMC has been moved and should be deleted
 
-Author: josef-pktd
-License: BSD
+missing:
+
+* pvalues for breaks_hansen
+* additional options, compare with R, check where ddof is appropriate
+* new tests:
+  - breaks_ap, more recent breaks tests
+  - specification tests against nonparametric alternatives
+
+
 """
 
 import numpy as np
 from scipy import stats
-import scikits.statsmodels.api as sm
+from scikits.statsmodels.regression.linear_model import OLS
+from scikits.statsmodels.tools.tools import add_constant
 from scikits.statsmodels.tsa.stattools import acf, adfuller
 from scikits.statsmodels.tsa.tsatools import lagmat
 
@@ -52,10 +71,37 @@ class CompareCox(object):
 
 
     def run(self, results_x, results_z, attach=True):
+        '''run Cox test for non-nested models
+
+        Parameters
+        ----------
+        results_x : Result instance
+            result instance of first model
+        results_z : Result instance
+            result instance of second model
+        attach : bool
+            If true, then the intermediate results are attached to the instance.
+
+        Returns
+        -------
+        tstat : float
+            t statistic for the test that including the fitted values of the
+            first model in the second model has no effect.
+        pvalue : float
+            two-sided pvalue for the t statistic
+
+        Notes
+        -----
+        Tests of non-nested hypothesis might not provide unambiguous answers.
+        The test should be performed in both directions and it is possible
+        that both or neither test rejects. see ??? for more information.
+
+        References
+        ----------
+        ???
+
         '''
 
-        see class docstring (for now)
-        '''
         if not np.allclose(results_x.model.endog, results_z.model.endog):
             raise ValueError('endogenous variables in models are not the same')
         nobs = results_x.model.endog.shape[0]
@@ -65,9 +111,9 @@ class CompareCox(object):
         sigma2_z = results_z.ssr/nobs
         yhat_x = results_x.fittedvalues
         yhat_z = results_z.fittedvalues
-        res_dx = sm.OLS(yhat_x, z).fit()
+        res_dx = OLS(yhat_x, z).fit()
         err_zx = res_dx.resid
-        res_xzx = sm.OLS(err_zx, x).fit()
+        res_xzx = OLS(err_zx, x).fit()
         err_xzx = res_xzx.resid
 
         sigma2_zx = sigma2_x + np.dot(err_zx.T, err_zx)/nobs
@@ -118,21 +164,47 @@ class CompareJ(object):
 
 
     def run(self, results_x, results_z, attach=True):
-        '''
+        '''run J-test for non-nested models
 
-        see class docstring (for now)
+        Parameters
+        ----------
+        results_x : Result instance
+            result instance of first model
+        results_z : Result instance
+            result instance of second model
+        attach : bool
+            If true, then the intermediate results are attached to the instance.
+
+        Returns
+        -------
+        tstat : float
+            t statistic for the test that including the fitted values of the
+            first model in the second model has no effect.
+        pvalue : float
+            two-sided pvalue for the t statistic
+
+        Notes
+        -----
+        Tests of non-nested hypothesis might not provide unambiguous answers.
+        The test should be performed in both directions and it is possible
+        that both or neither test rejects. see ??? for more information.
+
+        References
+        ----------
+        ???
+
         '''
         if not np.allclose(results_x.model.endog, results_z.model.endog):
             raise ValueError('endogenous variables in models are not the same')
         nobs = results_x.model.endog.shape[0]
-        y = results_x.model.exog
+        y = results_x.model.endog
         x = results_x.model.exog
         z = results_z.model.exog
         #sigma2_x = results_x.ssr/nobs
         #sigma2_z = results_z.ssr/nobs
         yhat_x = results_x.fittedvalues
         #yhat_z = results_z.fittedvalues
-        res_zx = sm.OLS(y, np.column_stack((yhat_x, z))).fit()
+        res_zx = OLS(y, np.column_stack((yhat_x, z))).fit()
         self.res_zx = res_zx  #for testing
         tstat = res_zx.tvalues[0]
         pval = res_zx.pvalues[0]
@@ -142,7 +214,7 @@ class CompareJ(object):
             self.teststat = tstat
             self.pvalue = pval
 
-        return tsta, pval
+        return tstat, pval
 
     def __call__(self, results_x, results_z):
         return self.run(results_x, results_z, attach=False)
@@ -154,7 +226,6 @@ compare_j.__doc__ = CompareJ.__doc__
 
 def acorr_ljungbox(x, lags=None, boxpierce=False):
     '''Ljung-Box test for no autocorrelation
-
 
     Parameters
     ----------
@@ -188,7 +259,7 @@ def acorr_ljungbox(x, lags=None, boxpierce=False):
     autocorrelation function. Ljung-Box test is reported to have better
     small sample properties.
 
-    could be extended to work with more than one series
+    TODO: could be extended to work with more than one series
     1d or nd ? axis ? ravel ?
     needs more testing
 
@@ -226,25 +297,49 @@ def acorr_ljungbox(x, lags=None, boxpierce=False):
     if not boxpierce:
         return qljungbox, pval
     else:
-        qboxpierce = nobs * np.cumsum(acfx[1:maxlag+1]**2)[lags]
+        qboxpierce = nobs * np.cumsum(acfx[1:maxlag+1]**2)[lags-1]
         pvalbp = stats.chi2.sf(qboxpierce, lags)
         return qljungbox, pval, qboxpierce, pvalbp
 
 def acorr_lm(x, maxlag=None, autolag='AIC', store=False):
     '''Lagrange Multiplier tests for autocorrelation
 
-    not checked yet, copied from unitrood_adf with adjustments
-    check array shapes because of the addition of the constant.
-    written/copied without reference
-    This is not Breush-Godfrey. BG adds lags of residual to exog in the
-    design matrix for the auxiliary regression with residuals as endog,
-    see Greene 12.7.1.
+    This is a generic Lagrange Multiplier test for autocorrelation. I don't
+    have a reference for it, but it returns Engle's ARCH test if x is the
+    squared residual array. A variation on it with additional exogenous
+    variables is the Breush-Godfrey autocorrelation test.
 
-    Notes
-    -----
-    If x is calculated as y^2 for a time series y, then this test corresponds
-    to the Engel test for autoregressive conditional heteroscedasticity (ARCH).
-    TODO: get details and verify
+    Parameters
+    ----------
+    resid : ndarray, (nobs,)
+        residuals from an estimation, or time series
+    maxlag : int
+        highest lag to use
+    autolag : None or string
+        If None, then a fixed number of lags given by maxlag is used.
+    store : bool
+        If true then the intermediate results are also returned
+
+    Returns
+    -------
+    lm : float
+        Lagrange multiplier test statistic
+    lmpval : float
+        p-value for Lagrange multiplier test
+    fval : float
+        fstatistic for F test, alternative version of the same test based on
+        F test for the parameter restriction
+    fpval : float
+        pvalue for F test
+    resstore : instance (optional)
+        a class instance that holds intermediate results. Only returned if
+        store=True
+
+    See Also
+    --------
+    het_arch
+    acorr_breush_godfrey
+    acorr_ljung_box
 
     '''
 
@@ -257,7 +352,7 @@ def acorr_lm(x, maxlag=None, autolag='AIC', store=False):
 
     xdiff = np.diff(x)
     #
-    xdall = lagmat(x[:-1,None], maxlag, trim='both')
+    xdall = lagmat(x[:,None], maxlag, trim='both')
     nobs = xdall.shape[0]
     xdall = np.c_[np.ones((nobs,1)), xdall]
     xshort = x[-nobs:]
@@ -269,7 +364,7 @@ def acorr_lm(x, maxlag=None, autolag='AIC', store=False):
         #Note: I use the same number of observations to have comparable IC
         results = {}
         for mlag in range(1,maxlag):
-            results[mlag] = sm.OLS(xshort, xdall[:,:mlag+1]).fit()
+            results[mlag] = OLS(xshort, xdall[:,:mlag+1]).fit()
 
         if autolag.lower() == 'aic':
             bestic, icbestlag = max((v.aic,k) for k,v in results.iteritems())
@@ -287,24 +382,147 @@ def acorr_lm(x, maxlag=None, autolag='AIC', store=False):
     else:
         usedlag = maxlag
 
-    resols = sm.OLS(xshort, xdall[:,:usedlag+1]).fit()
+    resols = OLS(xshort, xdall[:,:usedlag+1]).fit()
     fval = resols.fvalue
     fpval = resols.f_pvalue
     lm = nobs * resols.rsquared
     lmpval = stats.chi2.sf(lm, usedlag)
     # Note: degrees of freedom for LM test is nvars minus constant = usedlags
-    return fval, fpval, lm, lmpval
+    #return fval, fpval, lm, lmpval
 
     if store:
         resstore.resols = resols
         resstore.usedlag = usedlag
         return fval, fpval, lm, lmpval, resstore
     else:
-        return fval, fpval, lm, lmpval
+        return lm, lmpval, fval, fpval
+
+def het_arch(resid, maxlag=None, autolag=None, store=False, ddof=0):
+    '''Enlge's Test for Autoregressive Conditional Heteroscedasticity (ARCH)
+
+    Parameters
+    ----------
+    resid : ndarray, (nobs,)
+        residuals from an estimation, or time series
+    maxlag : int
+        highest lag to use
+    autolag : None or string
+        If None, then a fixed number of lags given by maxlag is used.
+    store : bool
+        If true then the intermediate results are also returned
+    ddof : int
+        Not Implemented Yet
+        If the residuals are from a regression, or ARMA estimation, then there
+        are recommendations to correct the degrees of freedom by the number
+        of parameters that have been estimated, for example ddof=p+a for an
+        ARMA(p,q) (need reference, based on discussion on R finance mailinglist)
+
+    Returns
+    -------
+    lm : float
+        Lagrange multiplier test statistic
+    lmpval : float
+        p-value for Lagrange multiplier test
+    fval : float
+        fstatistic for F test, alternative version of the same test based on
+        F test for the parameter restriction
+    fpval : float
+        pvalue for F test
+    resstore : instance (optional)
+        a class instance that holds intermediate results. Only returned if
+        store=True
+
+    Notes
+    -----
+    verified agains R:FinTS::ArchTest
+
+    '''
+
+    return acorr_lm(resid**2, maxlag=maxlag, autolag=autolag, store=False)
 
 
-def het_breushpagan(resid, x, exog=None):
-    '''Lagrange Multiplier Heteroscedasticity Test by Breush-Pagan
+def acorr_breush_godfrey(results, nlags=None, store=False):
+    '''Breush Godfrey Lagrange Multiplier tests for residual autocorrelation
+
+    Parameters
+    ----------
+    results : Result instance
+        Estimation results for which the residuals are tested for serial
+        correlation
+    nlags : int
+        Number of lags to include in the auxiliary regression. (nlags is
+        highest lag)
+    store : bool
+        If store is true, then an additional class instance that contains
+        intermediate results is returned.
+
+    Returns
+    -------
+    lm : float
+        Lagrange multiplier test statistic
+    lmpval : float
+        p-value for Lagrange multiplier test
+    fval : float
+        fstatistic for F test, alternative version of the same test based on
+        F test for the parameter restriction
+    fpval : float
+        pvalue for F test
+    resstore : instance (optional)
+        a class instance that holds intermediate results. Only returned if
+        store=True
+
+    Notes
+    -----
+    BG adds lags of residual to exog in the design matrix for the auxiliary
+    regression with residuals as endog,
+    see Greene 12.7.1.
+
+    References
+    ----------
+    Greene Econometrics, 5th edition
+
+    '''
+
+    x = np.concatenate((np.zeros(nlags), results.resid))
+    exog_old = results.model.exog
+    x = np.asarray(x)
+    nobs = x.shape[0]
+    if nlags is None:
+        #for adf from Greene referencing Schwert 1989
+        nlags = 12. * np.power(nobs/100., 1/4.)#nobs//4  #TODO: check default, or do AIC/BIC
+
+
+    #xdiff = np.diff(x)
+    #
+    xdall = lagmat(x[:,None], nlags, trim='both')
+    nobs = xdall.shape[0]
+    xdall = np.c_[np.ones((nobs,1)), xdall]
+    xshort = x[-nobs:]
+    exog = np.column_stack((exog_old, xdall))
+    k_vars = exog.shape[1]
+
+    if store: resstore = ResultsStore()
+
+    resols = OLS(xshort, exog).fit()
+    ft = resols.f_test(np.eye(nlags, k_vars, k_vars - nlags))
+    fval = ft.fvalue
+    fpval = ft.pvalue
+    fval = np.squeeze(fval)[()]   #TODO: fix this in ContrastResults
+    fpval = np.squeeze(fpval)[()]
+    lm = nobs * resols.rsquared
+    lmpval = stats.chi2.sf(lm, nlags)
+    # Note: degrees of freedom for LM test is nvars minus constant = usedlags
+    #return fval, fpval, lm, lmpval
+
+    if store:
+        resstore.resols = resols
+        resstore.usedlag = nlags
+        return lm, lmpval, fval, fpval, resstore
+    else:
+        return lm, lmpval, fval, fpval
+
+def het_breushpagan(resid, exog_het):
+    '''Breush-Pagan Lagrange Multiplier test for heteroscedasticity
 
     The tests the hypothesis that the residual variance does not depend on
     the variables in x in the form
@@ -321,7 +539,8 @@ def het_breushpagan(resid, x, exog=None):
         If an array is given in exog, then the residuals are calculated by
         the an OLS regression or resid on exog. In this case resid should
         contain the dependent variable. Exog can be the same as x.
-    x : array_like, (nobs, nvars)
+        TODO: I dropped the exog option, should I add it back?
+    exog_het : array_like, (nobs, nvars)
         This contains variables that might create data dependent
         heteroscedasticity.
 
@@ -353,6 +572,7 @@ def het_breushpagan(resid, x, exog=None):
     This is calculated using the generic formula for LM test using $R^2$
     (Greene, section 17.6) and not with the explicit formula
     (Greene, section 11.4.3).
+    The degrees of freedom for the p-value assume x is full rank.
 
     References
     ----------
@@ -361,21 +581,42 @@ def het_breushpagan(resid, x, exog=None):
     Breush, Pagan article
 
     '''
-    if not exog is None:
-        resid = sm.OLS(y, exog).fit()
 
-    x = np.asarray(x)
+    x = np.asarray(exog_het)
     y = np.asarray(resid)**2
     nobs, nvars = x.shape
-    resols = sm.OLS(y, x).fit()
+    resols = OLS(y, x).fit()
     fval = resols.fvalue
     fpval = resols.f_pvalue
     lm = nobs * resols.rsquared
     # Note: degrees of freedom for LM test is nvars minus constant
     return lm, stats.chi2.sf(lm, nvars-1), fval, fpval
 
-def het_white(y, x, retres=False):
-    '''Lagrange Multiplier Heteroscedasticity Test by White
+def het_white(resid, exog, retres=False):
+    '''White's Lagrange Multiplier Test for Heteroscedasticity
+
+    Parameters
+    ----------
+    resid : array_like
+        residuals, square of it is used as endogenous variable
+    exog : array_like
+        possible explanatory variables for variance, squares and interaction
+        terms are included in the auxilliary regression.
+    resstore : instance (optional)
+        a class instance that holds intermediate results. Only returned if
+        store=True
+
+    Returns
+    -------
+    lm : float
+        lagrange multiplier statistic
+    lm_pvalue :float
+        p-value of lagrange multiplier test
+    fvalue : float
+        f-statistic of the hypothesis that the error variance does not depend
+        on x. This is an alternative test variant not the original LM test.
+    f_pvalue : float
+        p-value for the f-statistic
 
     Notes
     -----
@@ -385,11 +626,12 @@ def het_white(y, x, retres=False):
 
     References
     ----------
-
     Greene section 11.4.1 5th edition p. 222
+    now test statistic reproduces Greene 5th, example 11.3
+
     '''
-    x = np.asarray(x)
-    y = np.asarray(y)**2
+    x = np.asarray(exog)
+    y = np.asarray(resid)
     if x.ndim == 1:
         raise ValueError('x should have constant and at least one more variable')
     nobs, nvars0 = x.shape
@@ -397,15 +639,20 @@ def het_white(y, x, retres=False):
     exog = x[:,i0]*x[:,i1]
     nobs, nvars = exog.shape
     assert nvars == nvars0*(nvars0-1)/2. + nvars0
-    resols = sm.OLS(y**2, exog).fit()
+    resols = OLS(y**2, exog).fit()
     fval = resols.fvalue
     fpval = resols.f_pvalue
     lm = nobs * resols.rsquared
     # Note: degrees of freedom for LM test is nvars minus constant
-    lmpval = stats.chi2.sf(lm, nvars-1)
+    #degrees of freedom take possible reduced rank in exog into account
+    #df_model checks the rank to determine df
+    from scikits.statsmodels.tools.tools import rank
+    #extra calculation that can be removed:
+    assert resols.df_model == rank(exog) - 1
+    lmpval = stats.chi2.sf(lm, resols.df_model)
     return lm, lmpval, fval, fpval
 
-def het_goldfeldquandt2(y, x, idx, split=None, retres=False):
+def _het_goldfeldquandt2_old(y, x, idx, split=None, retres=False):
     '''test whether variance is the same in 2 subsamples
 
     Parameters
@@ -463,8 +710,8 @@ def het_goldfeldquandt2(y, x, idx, split=None, retres=False):
     xsortind = np.argsort(x[:,idx])
     y = y[xsortind]
     x = x[xsortind,:]
-    resols1 = sm.OLS(y[:split], x[:split]).fit()
-    resols2 = sm.OLS(y[split:], x[split:]).fit()
+    resols1 = OLS(y[:split], x[:split]).fit()
+    resols2 = OLS(y[split:], x[split:]).fit()
     fval = resols1.mse_resid/resols2.mse_resid
     if fval>1:
         fpval = stats.f.sf(fval, resols1.df_resid, resols2.df_resid)
@@ -510,8 +757,17 @@ class HetGoldfeldQuandt(object):
         index at which sample is split.
         If 0<split<1 then split is interpreted as fraction of the observations
         in the first sample
-    drop :
-    alternative :
+    drop : None, float or int
+        If this is not None, then observation are dropped from the middle part
+        of the sorted series. If 0<split<1 then split is interpreted as fraction
+        of the number of observations to be dropped.
+        Note: Currently, observations are dropped between split and
+        split+drop, where split and drop are the indices (given by rounding if
+        specified as fraction). The first sample is [0:split], the second
+        sample is [split+drop:]
+    alternative : string, 'increasing', 'decreasing' or 'two-sided'
+        default is increasing. This specifies the alternative for the p-value
+        calculation.
 
     Returns
     -------
@@ -527,20 +783,14 @@ class HetGoldfeldQuandt(object):
 
     Notes
     -----
+    The Null hypothesis is that the variance in the two sub-samples are the
+    same. The alternative hypothesis, can be increasing, i.e. the variance in
+    the second sample is larger than in the first, or decreasing or two-sided.
 
-    TODO:
-    add resultinstance - DONE
-    maybe add drop-middle as option
-    maybe allow for several breaks
-
-    recommendation for users: use this function as pattern for more flexible
-        split in tests, e.g. drop middle.
-
-    can do Chow test for structural break in same way
-
-    ran sanity check
-    now identical to R, why did I have y**2?
+    Results are identical R, but the drop option is defined differently.
+    (sorting by idx not tested yet)
     '''
+    #TODO: can do Chow test for structural break in same way
     def run(self, y, x, idx=None, split=None, drop=None,
             alternative='increasing', attach=True):
         '''see class docstring'''
@@ -551,6 +801,7 @@ class HetGoldfeldQuandt(object):
             split = nobs//2
         elif (0<split) and (split<1):
             split = int(nobs*split)
+
         if drop is None:
             start2 = split
         elif (0<drop) and (drop<1):
@@ -562,16 +813,17 @@ class HetGoldfeldQuandt(object):
             xsortind = np.argsort(x[:,idx])
             y = y[xsortind]
             x = x[xsortind,:]
-        resols1 = sm.OLS(y[:split], x[:split]).fit()
-        resols2 = sm.OLS(y[start2:], x[start2:]).fit()
+
+        resols1 = OLS(y[:split], x[:split]).fit()
+        resols2 = OLS(y[start2:], x[start2:]).fit()
         fval = resols2.mse_resid/resols1.mse_resid
         #if fval>1:
         if alternative.lower() in ['i', 'inc', 'increasing']:
             fpval = stats.f.sf(fval, resols1.df_resid, resols2.df_resid)
             ordering = 'increasing'
         elif alternative.lower() in ['d', 'dec', 'decreasing']:
-            fval = 1./fval;
-            fpval = stats.f.sf(fval, resols2.df_resid, resols1.df_resid)
+            fval = fval;
+            fpval = stats.f.sf(1./fval, resols2.df_resid, resols1.df_resid)
             ordering = 'decreasing'
         elif alternative.lower() in ['2', '2-sided', 'two-sided']:
             fpval_sm = stats.f.cdf(fval, resols2.df_resid, resols1.df_resid)
@@ -580,8 +832,6 @@ class HetGoldfeldQuandt(object):
             ordering = 'two-sided'
         else:
             raise ValueError('invalid alternative')
-
-
 
         if attach:
             res = self
@@ -608,16 +858,130 @@ class HetGoldfeldQuandt(object):
         except AttributeError:
             return repr(self)
 
-    def __call__(self, y, x, idx=None, split=None):
-        return self.run(y, x, idx=idx, split=split, attach=False)
+    #TODO: missing the alternative option in call
+    def __call__(self, y, x, idx=None, split=None, drop=None,
+                 alternative='increasing'):
+        return self.run(y, x, idx=idx, split=split, drop=drop, attach=False,
+                        alternative=alternative)
 
 het_goldfeldquandt = HetGoldfeldQuandt()
 het_goldfeldquandt.__doc__ = het_goldfeldquandt.run.__doc__
 
+def linear_harvey_collier(res):
+    '''Harvey Collier test for linearity
 
+    The Null hypothesis is that the regression is correctly modeled as linear.
 
+    Parameters
+    ----------
+    res : Result instance
 
-def neweywestcov(resid, x):
+    Returns
+    -------
+    tvalue : float
+        test statistic, based on ttest_1sample
+    pvalue : float
+        pvalue of the test
+
+    Notes
+    -----
+    TODO: add sort_by option
+
+    This test is a t-test that the mean of the recursive ols residuals is zero.
+    Calculating the recursive residuals might take some time for large samples.
+
+    '''
+    #I think this has different ddof than
+    #B.H. Baltagi, Econometrics, 2011, chapter 8
+    #but it matches Gretl and R:lmtest, pvalue at decimal=13
+    rr = recursive_olsresiduals(res, skip=3, alpha=0.95)
+    from scipy import stats
+
+    return stats.ttest_1samp(rr[3][3:], 0)
+
+def linear_rainbow(res, frac = 0.5):
+    '''Rainbow test for linearity
+
+    The Null hypothesis is that the regression is correctly modelled as linear.
+    The alternative for which the power might be large are convex, check
+
+    Parameters
+    ----------
+    res : Result instance
+
+    Returns
+    -------
+    fstat : float
+        test statistic based of F test
+    pvalue : float
+        pvalue of the test
+
+    '''
+
+    nobs = res.nobs
+    endog = res.model.endog
+    exog = res.model.exog
+    lowidx = np.ceil(0.5 * (1 - frac) * nobs).astype(int)
+    uppidx = np.floor(lowidx + frac * nobs).astype(int)
+    mi_sl = slice(lowidx, uppidx)
+    res_mi = OLS(endog[mi_sl], exog[mi_sl]).fit()
+    nobs_mi = res_mi.model.endog.shape[0]
+    ss_mi = res_mi.ssr
+    ss = res.ssr
+    fstat = (ss - ss_mi) / (nobs-nobs_mi) / ss_mi  * res_mi.df_resid
+    from scipy import stats
+    pval = stats.f.sf(fstat, nobs - nobs_mi, res_mi.df_resid)
+    return fstat, pval
+
+def linear_lm(resid, exog, func=None):
+    '''Lagrange multiplier test for linearity against functional alternative
+
+    limitations: Assumes currently that the first column is integer.
+    Currently it doesn't check whether the transformed variables contain NaNs,
+    for example log of negative number.
+
+    Parameters
+    ----------
+    resid : ndarray
+        residuals of a regression
+    exog : ndarray
+        exogenous variables for which linearity is tested
+    func : callable
+        If func is None, then squares are used. func needs to take an array
+        of exog and return an array of transformed variables.
+
+    Returns
+    -------
+    lm : float
+       Lagrange multiplier test statistic
+    lm_pval : float
+       p-value of Lagrange multiplier tes
+    ftest : ContrastResult instance
+       the results from the F test variant of this test
+
+    Notes
+    -----
+    written to match Gretl's linearity test.
+    The test runs an auxilliary regression of the residuals on the combined
+    original and transformed regressors.
+    The Null hypothesis is that the linear specification is correct.
+
+    '''
+    from scipy import stats
+
+    if func is None:
+        func = lambda x: np.power(x, 2)
+
+    exog_aux = np.column_stack((exog, func(exog[:,1:])))
+
+    nobs, k_vars = exog.shape
+    ls = OLS(resid, exog_aux).fit()
+    ftest = ls.f_test(np.eye(k_vars - 1, k_vars * 2 - 1, k_vars))
+    lm = nobs * ls.rsquared
+    lm_pval = stats.chi2.sf(lm, k_vars - 1)
+    return lm, lm_pval, ftest
+
+def _neweywestcov(resid, x):
     '''
     Did not run yet
 
@@ -651,7 +1015,7 @@ def neweywestcov(resid, x):
 
 
 
-def recursive_olsresiduals2(olsresults, skip):
+def _recursive_olsresiduals2(olsresults, skip):
     '''this is my original version based on Greene and references
 
     keep for now for comparison and benchmarking
@@ -709,8 +1073,10 @@ def recursive_olsresiduals2(olsresults, skip):
     a = 1.143 #for alpha=0.99  =0.948 for alpha=0.95
     #following taken from Ploberger,
     crit = a*np.sqrt(nrr)
-    rcusumci = (a*np.sqrt(nrr) + a*np.arange(0,nobs-skip)/np.sqrt(nrr)) * np.array([[-1.],[+1.]])
-    return rresid, rparams, rypred, rresid_standardized, rresid_scaled, rcusum, rcusumci
+    rcusumci = (a*np.sqrt(nrr) + a*np.arange(0,nobs-skip)/np.sqrt(nrr)) \
+                  * np.array([[-1.],[+1.]])
+    return (rresid, rparams, rypred, rresid_standardized, rresid_scaled,
+            rcusum, rcusumci)
 
 
 def recursive_olsresiduals(olsresults, skip=None, lamda=0.0, alpha=0.95):
@@ -763,7 +1129,10 @@ def recursive_olsresiduals(olsresults, skip=None, lamda=0.0, alpha=0.95):
     BigJudge 5.5.2b for formula for inverse(X'X) updating
     Greene section 7.5.2
 
-    Brown, R. L., J. Durbin, and J. M. Evans. “Techniques for Testing the Constancy of Regression Relationships over Time.” Journal of the Royal Statistical Society. Series B (Methodological) 37, no. 2 (1975): 149-192.
+    Brown, R. L., J. Durbin, and J. M. Evans. “Techniques for Testing the
+    Constancy of Regression Relationships over Time.”
+    Journal of the Royal Statistical Society. Series B (Methodological) 37,
+    no. 2 (1975): 149-192.
 
     '''
 
@@ -831,8 +1200,10 @@ def recursive_olsresiduals(olsresults, skip=None, lamda=0.0, alpha=0.95):
 
     rresid_scaled = rresid/np.sqrt(rvarraw)   #this is N(0,sigma2) distributed
     nrr = nobs-skip
-    sigma2 = rresid_scaled[skip-1:].var(ddof=1)  #var or sum of squares ?
+    #sigma2 = rresid_scaled[skip-1:].var(ddof=1)  #var or sum of squares ?
             #Greene has var, jplv and Ploberger have sum of squares (Ass.:mean=0)
+    #Gretl uses: by reverse engineering matching their numbers
+    sigma2 = rresid_scaled[skip:].var(ddof=1)
     rresid_standardized = rresid_scaled/np.sqrt(sigma2) #N(0,1) distributed
     rcusum = rresid_standardized[skip-1:].cumsum()
     #confidence interval points in Greene p136 looks strange. Cleared up
@@ -841,13 +1212,19 @@ def recursive_olsresiduals(olsresults, skip=None, lamda=0.0, alpha=0.95):
     #rcusumci = np.sqrt(np.arange(skip,nobs+1))*np.array([[-1.],[+1.]])*stats.norm.sf(0.025)
     if alpha == 0.95:
         a = 0.948 #for alpha=0.95
-    else:
+    elif alpha == 0.99:
         a = 1.143 #for alpha=0.99
+    elif alpha == 0.90:
+        a = 0.850
+    else:
+        raise ValueError('alpha can only be 0.9, 0.95 or 0.99')
 
     #following taken from Ploberger,
     crit = a*np.sqrt(nrr)
-    rcusumci = (a*np.sqrt(nrr) + a*np.arange(0,nobs-skip)/np.sqrt(nrr)) * np.array([[-1.],[+1.]])
-    return rresid, rparams, rypred, rresid_standardized, rresid_scaled, rcusum, rcusumci
+    rcusumci = (a*np.sqrt(nrr) + 2*a*np.arange(0,nobs-skip)/np.sqrt(nrr)) \
+                 * np.array([[-1.],[+1.]])
+    return (rresid, rparams, rypred, rresid_standardized, rresid_scaled,
+            rcusum, rcusumci)
 
 
 def breaks_hansen(olsresults):
@@ -857,9 +1234,6 @@ def breaks_hansen(olsresults):
     ----------
     olsresults : instance of RegressionResults
         uses only endog and exog
-    skip : int or None
-        number of observations to use for initial OLS, if None then skip is
-        set equal to the number of regressors (columns in exog)
 
     Returns
     -------
@@ -878,6 +1252,8 @@ def breaks_hansen(olsresults):
 
     According to Greene, distribution of test statistics depends on nvar but
     not on nobs.
+
+    Test statistic is verified against R:strucchange
 
     References
     ----------
@@ -900,12 +1276,32 @@ def breaks_hansen(olsresults):
     #TODO: get critical values from Bruce Hansens' 1992 paper
     return H, crit95, ft, s
 
-def breaks_cusumolsresid(olsresidual):
+def breaks_cusumolsresid(olsresidual, ddof=0):
     '''cusum test for parameter stability based on ols residuals
 
+    Parameters
+    ----------
+    olsresiduals : ndarray
+        array of residuals from an OLS estimation
+    ddof : int
+        number of parameters in the OLS estimation, used as degrees of freedom
+        correction for error variance.
+
+    Returns
+    -------
+    sup_b : float
+        test statistic, maximum of absolute value of scaled cumulative OLS
+        residuals
+    pval : float
+        Probability of observing the data under the null hypothesis of no
+        structural change, based on asymptotic distribution which is a Brownian
+        Bridge
+    crit: list
+        tabulated critical values, for alpha = 1%, 5% and 10%
 
     Notes
     -----
+    tested agains R:strucchange
 
     Not clear: Assumption 2 in Ploberger, Kramer assumes that exog x have
     asymptotically zero mean, x.mean(0) = [1, 0, 0, ..., 0]
@@ -923,7 +1319,11 @@ def breaks_cusumolsresid(olsresidual):
 
     '''
     resid = olsresidual.ravel()
+    nobs = len(resid)
     nobssigma2 = (resid**2).sum()
+    if ddof > 0:
+        print 'ddof', ddof, 1. / (nobs - ddof) * nobs
+        nobssigma2 = nobssigma2 / (nobs - ddof) * nobs
     #B is asymptotically a Brownian Bridge
     B = resid.cumsum()/np.sqrt(nobssigma2) # use T*sigma directly
     sup_b = np.abs(B).max() #asymptotically distributed as standard Brownian Bridge
@@ -955,7 +1355,8 @@ def breaks_cusumolsresid(olsresidual):
 #    B = resid.cumsum()/np.sqrt(nobssigma2) # use T*sigma directly
 #    nobs = len(resid)
 #    denom = 1. + 2. * np.arange(nobs)/(nobs-1.) #not sure about limits
-#    sup_b = np.abs(B/denom).max() #asymptotically distributed as standard Brownian Bridge
+#    sup_b = np.abs(B/denom).max()
+#    #asymptotically distributed as standard Brownian Bridge
 #    crit = [(1,1.63), (5, 1.36), (10, 1.22)]
 #    #Note stats.kstwobign.isf(0.1) is distribution of sup.abs of Brownian Bridge
 #    #>>> stats.kstwobign.isf([0.01,0.05,0.1])
@@ -978,8 +1379,8 @@ def breaks_AP(endog, exog, skip):
 
     alternative: B Hansen loops over breakpoints only once and updates
         x'x and xe'xe
-    update: Andrews is based on GMM estimation not OLS, LM test statistic is easy
-       to compute because it only requires full sample GMM estimate (p.837)
+    update: Andrews is based on GMM estimation not OLS, LM test statistic is
+       easy to compute because it only requires full sample GMM estimate (p.837)
        with GMM the test has much wider applicability than just OLS
 
 
@@ -1185,16 +1586,16 @@ if __name__ == '__main__':
     print het_breushpagan(y,x)
     print het_white(y,x)
 
-    f,p = het_goldfeldquandt(y,x, 1)
-    print f, p
+    f, fp, fo = het_goldfeldquandt(y,x, 1)
+    print f, fp
     resgq = het_goldfeldquandt(y,x, 1, retres=True)
     print resgq
 
     #this is just a syntax check:
-    print neweywestcov(y, x)
+    print _neweywestcov(y, x)
 
-    resols1 = sm.OLS(y, x).fit()
-    print neweywestcov(resols1.resid, x)
+    resols1 = OLS(y, x).fit()
+    print _neweywestcov(resols1.resid, x)
     print resols1.cov_params()
     print resols1.HC0_se
     print resols1.cov_HC0
