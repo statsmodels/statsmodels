@@ -527,6 +527,32 @@ class Poisson(CountModel):
         #np.sum(stats.poisson.logpmf(endog, np.exp(XB)))
         return np.sum(-np.exp(XB) +  endog*XB - gammaln(endog+1))
 
+    def loglikeobs(self, params):
+        """
+        Loglikelihood for observations of Poisson model
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model.
+
+        Returns
+        -------
+        The log likelihood for each observation of the model evaluated at `params`
+
+        Notes
+        --------
+        .. math :: \\ln L=\\sum_{i=1}^{n}\\left[-\\lambda_{i}+y_{i}x_{i}^{\\prime}\\beta-\\ln y_{i}!\\right]
+        """
+        offset = getattr(self, "offset", 0)
+        exposure = getattr(self, "exposure", 0)
+        XB = np.dot(self.exog, params) + offset + exposure
+        endog = self.endog
+        #np.sum(stats.poisson.logpmf(endog, np.exp(XB)))
+        return -np.exp(XB) +  endog*XB - gammaln(endog+1)
+
+
+
     def score(self, params):
         """
         Poisson model score (gradient) vector of the log-likelihood
@@ -552,7 +578,34 @@ class Poisson(CountModel):
         exposure = getattr(self, "exposure", 0)
         X = self.exog
         L = np.exp(np.dot(X,params) + offset + exposure)
-        return np.dot(self.endog - L,X)
+        return np.dot(self.endog - L, X)
+
+    def jac(self, params):
+        """
+        Poisson model Jacobian of the log-likelihood for each observation
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model
+
+        Returns
+        -------
+        The score vector of the model evaluated at `params`
+
+        Notes
+        -----
+        .. math:: \\frac{\\partial\\ln L}{\\partial\\beta}=\\sum_{i=1}^{n}\\left(y_{i}-\\lambda_{i}\\right)x_{i}
+
+        where the loglinear model is assumed
+
+        .. math:: \\ln\\lambda_{i}=X\\beta
+        """
+        offset = getattr(self, "offset", 0)
+        exposure = getattr(self, "exposure", 0)
+        X = self.exog
+        L = np.exp(np.dot(X,params) + offset + exposure)
+        return (self.endog - L)[:,None] * X
 
     def hessian(self, params):
         """
@@ -674,6 +727,30 @@ class Logit(BinaryModel):
         X = self.exog
         return np.sum(np.log(self.cdf(q*np.dot(X,params))))
 
+    def loglikeobs(self, params):
+        """
+        Log-likelihood of logit model for each observation.
+
+        Parameters
+        -----------
+        params : array-like
+            The parameters of the logit model.
+
+        Returns
+        -------
+        The log-likelihood function of the logit model.  See notes.
+
+        Notes
+        ------
+        .. math:: \\ln L=\\sum_{i}\\ln\\Lambda\\left(q_{i}x_{i}^{\\prime}\\beta\\right)
+
+        Where :math:`q=2y-1`. This simplification comes from the fact that the
+        logistic distribution is symmetric.
+        """
+        q = 2*self.endog - 1
+        X = self.exog
+        return np.log(self.cdf(q*np.dot(X,params)))
+
     def score(self, params):
         """
         Logit model score (gradient) vector of the log-likelihood
@@ -696,6 +773,31 @@ class Logit(BinaryModel):
         X = self.exog
         L = self.cdf(np.dot(X,params))
         return np.dot(y - L,X)
+
+    def jac(self, params):
+        """
+        Logit model Jacobian of the log-likelihood for each observation
+
+        Parameters
+        ----------
+        params: array-like
+            The parameters of the model
+
+        Returns
+        -------
+        jac : ndarray, (nobs, k)
+            The derivative of the loglikelihood evaluated at `params` for each
+            observation
+
+        Notes
+        -----
+        .. math:: \\frac{\\partial\\ln L}{\\partial\\beta}=\\sum_{i=1}^{n}\\left(y_{i}-\\Lambda_{i}\\right)x_{i}
+        """
+
+        y = self.endog
+        X = self.exog
+        L = self.cdf(np.dot(X, params))
+        return (y - L)[:,None] * X
 
     def hessian(self, params):
         """
@@ -806,6 +908,32 @@ class Probit(BinaryModel):
         return np.sum(np.log(np.clip(self.cdf(q*np.dot(X,params)),1e-20,
             1)))
 
+    def loglikeobs(self, params):
+        """
+        Log-likelihood of probit model for each observation
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model.
+
+        Returns
+        -------
+        The log-likelihood evaluated at params
+
+        Notes
+        -----
+        .. math:: \\ln L=\\sum_{i}\\ln\\Phi\\left(q_{i}x_{i}^{\\prime}\\beta\\right)
+
+        Where :math:`q=2y-1`. This simplification comes from the fact that the
+        normal distribution is symmetric.
+        """
+
+        q = 2*self.endog - 1
+        X = self.exog
+        return np.log(np.clip(self.cdf(q*np.dot(X,params)), 1e-20, 1))
+
+
     def score(self, params):
         """
         Probit model score (gradient) vector
@@ -833,6 +961,34 @@ class Probit(BinaryModel):
         # clip to get rid of invalid divide complaint
         L = q*self.pdf(q*XB)/np.clip(self.cdf(q*XB), 1e-20, 1-1e-20)
         return np.dot(L,X)
+
+    def jac(self, params):
+        """
+        Probit model Jacobian for each observation
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model
+
+        Returns
+        -------
+        The score vector of the model evaluated at `params`
+
+        Notes
+        -----
+        .. math:: \\frac{\\partial\\ln L}{\\partial\\beta}=\\sum_{i=1}^{n}\\left[\\frac{q_{i}\\phi\\left(q_{i}x_{i}^{\\prime}\\beta\\right)}{\\Phi\\left(q_{i}x_{i}^{\\prime}\\beta\\right)}\\right]x_{i}
+
+        Where :math:`q=2y-1`. This simplification comes from the fact that the
+        normal distribution is symmetric.
+        """
+        y = self.endog
+        X = self.exog
+        XB = np.dot(X,params)
+        q = 2*y - 1
+        # clip to get rid of invalid divide complaint
+        L = q*self.pdf(q*XB)/np.clip(self.cdf(q*XB), 1e-20, 1-1e-20)
+        return L[:,None] * X
 
     def hessian(self, params):
         """
@@ -955,6 +1111,31 @@ class MNLogit(MultinomialModel):
         logprob = np.log(self.cdf(np.dot(self.exog,params)))
         return np.sum(d * logprob)
 
+    def loglikeobs(self, params):
+        """
+        Log-likelihood of the multinomial logit model for each observation.
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the multinomial logit model.
+
+        Returns
+        -------
+        The log-likelihood function of the logit model.  See notes.
+
+        Notes
+        ------
+        .. math:: \\ln L=\\sum_{i=1}^{n}\\sum_{j=0}^{J}d_{ij}\\ln\\left(\\frac{\\exp\\left(\\beta_{j}^{\\prime}x_{i}\\right)}{\\sum_{k=0}^{J}\\exp\\left(\\beta_{k}^{\\prime}x_{i}\\right)}\\right)
+
+        where :math:`d_{ij}=1` if individual `i` chose alternative `j` and 0
+        if not.
+        """
+        params = params.reshape(self.K, -1, order='F')
+        d = self.wendog
+        logprob = np.log(self.cdf(np.dot(self.exog,params)))
+        return d * logprob
+
     def score(self, params):
         """
         Score matrix for multinomial logit model log-likelihood
@@ -983,6 +1164,35 @@ class MNLogit(MultinomialModel):
                                                   params))[:,1:]
         #NOTE: might need to switch terms if params is reshaped
         return np.dot(firstterm.T, self.exog).flatten()
+
+    def jac(self, params):
+        """
+        Jabobian matrix for multinomial logit model log-likelihood
+
+        Parameters
+        ----------
+        params : array
+            The parameters of the multinomial logit model.
+
+        Returns
+        --------
+        The 2-d score vector of the multinomial logit model evaluated at
+        `params`.
+
+        Notes
+        -----
+        .. math:: \\frac{\\partial\\ln L}{\\partial\\beta_{j}}=\\sum_{i}\\left(d_{ij}-\\frac{\\exp\\left(\\beta_{j}^{\\prime}x_{i}\\right)}{\\sum_{k=0}^{J}\\exp\\left(\\beta_{k}^{\\prime}x_{i}\\right)}\\right)x_{i}
+
+        for :math:`j=1,...,J`
+
+        In the multinomial model ths score matrix is K x J-1 but is returned
+        as a flattened array to work with the solvers.
+        """
+        params = params.reshape(self.K, -1, order='F')
+        firstterm = self.wendog[:,1:] - self.cdf(np.dot(self.exog,
+                                                  params))[:,1:]
+        #NOTE: might need to switch terms if params is reshaped
+        return (firstterm[:,:,None] * self.exog[:,None,:]).reshape(self.exog.shape[0], -1)
 
     def hessian(self, params):
         """
@@ -1120,6 +1330,25 @@ class NBin(CountModel):
         llf = np.sum(J+pdf)
         return llf
 
+    def loglikeobs(self, params):
+        """
+        Loglikelihood for negative binomial model
+
+        Notes
+        -----
+        The ancillary parameter is assumed to be the last element of
+        the params vector
+        """
+        lnalpha = params[-1]
+        params = params[:-1]
+        a1 = np.exp(lnalpha)**-1
+        y = self.endog
+        J = special.gammaln(y+a1) - special.gammaln(a1) - special.gammaln(y+1)
+        mu = np.exp(np.dot(self.exog,params))
+        pdf = a1*np.log(a1/(a1+mu)) + y*np.log(mu/(mu+a1))
+        llf = J + pdf
+        return llf
+
     def score(self, params, full=False):
         """
         Score vector for NB2 model
@@ -1141,6 +1370,7 @@ class NBin(CountModel):
         #multiply above by constant outside of the sum to reduce rounding error
         if full:
             return np.column_stack([dparams, dalpha])
+        #JP: what's full, and why is there no da1?
 
         return np.r_[dparams.sum(0), da1*dalpha.sum()]
 
