@@ -913,7 +913,8 @@ class LikelihoodModelResults(Results):
     def pvalues(self):
         return stats.norm.sf(np.abs(self.tvalues)) * 2
 
-    def cov_params(self, r_matrix=None, column=None, scale=None, other=None):
+    def cov_params(self, r_matrix=None, column=None, scale=None, cov_p=None,
+                   other=None):
         """
         Returns the variance/covariance matrix.
 
@@ -957,7 +958,7 @@ class LikelihoodModelResults(Results):
         (scale) * (X.T X)^(-1)[column][:,column] if column is 1d
 
         """
-        if self.normalized_cov_params is None:
+        if cov_p is None and self.normalized_cov_params is None:
             raise ValueError('need covariance of parameters for computing '
                              '(unnormalized) covariances')
         if column is not None and (r_matrix is not None or other is not None):
@@ -965,14 +966,19 @@ class LikelihoodModelResults(Results):
                              'arguments.')
         if other is not None and r_matrix is None:
             raise ValueError('other can only be specified with r_matrix')
-        if scale is None:
-            scale = self.scale
+
+        if cov_p is None:
+            if scale is None:
+                scale = self.scale
+            cov_p = self.normalized_cov_params * scale
+
         if column is not None:
             column = np.asarray(column)
             if column.shape == ():
-                return self.normalized_cov_params[column, column] * scale
+                return cov_p[column, column]
             else:
-                return self.normalized_cov_params[column][:, column] * scale
+                #return cov_p[column][:, column]
+                return cov_p[column[:, None], column]
         elif r_matrix is not None:
             r_matrix = np.asarray(r_matrix)
             if r_matrix.shape == ():
@@ -981,14 +987,13 @@ class LikelihoodModelResults(Results):
                 other = r_matrix
             else:
                 other = np.asarray(other)
-            tmp = np.dot(r_matrix, np.dot(self.normalized_cov_params,
-                np.transpose(other)))
-            return tmp * scale
-        if r_matrix is None and column is None:
-            return self.normalized_cov_params * scale
+            tmp = np.dot(r_matrix, np.dot(cov_p, np.transpose(other)))
+            return tmp
+        else:  #if r_matrix is None and column is None:
+            return cov_p
 
     #TODO: make sure this works as needed for GLMs
-    def t_test(self, r_matrix, q_matrix=None, scale=None):
+    def t_test(self, r_matrix, q_matrix=None, cov_p=None, scale=None):
         """
         Compute a tcontrast/t-test for a row vector array of the form Rb = q
 
@@ -1042,7 +1047,7 @@ class LikelihoodModelResults(Results):
         num_ttests = r_matrix.shape[0]
         num_params = r_matrix.shape[1]
 
-        if self.normalized_cov_params is None:
+        if cov_p is None and self.normalized_cov_params is None:
             raise ValueError('Need covariance of parameters for computing '
                              'T statistics')
         if num_params != self.params.shape[0]:
@@ -1060,15 +1065,17 @@ class LikelihoodModelResults(Results):
 
         _effect = np.dot(r_matrix, self.params)
         if num_ttests > 1:
-            _sd = np.sqrt(np.diag(self.cov_params(r_matrix=r_matrix)))
+            _sd = np.sqrt(np.diag(self.cov_params(r_matrix=r_matrix,
+                                                  cov_p=cov_p)))
         else:
-            _sd = np.sqrt(self.cov_params(r_matrix=r_matrix))
+            _sd = np.sqrt(self.cov_params(r_matrix=r_matrix, cov_p=cov_p))
         _t = (_effect - q_matrix) * recipr(_sd)
         return ContrastResults(effect=_effect, t=_t, sd=_sd,
                                df_denom=self.model.df_resid)
 
     #TODO: untested for GLMs?
-    def f_test(self, r_matrix, q_matrix=None, scale=1.0, invcov=None):
+    def f_test(self, r_matrix, q_matrix=None, cov_p=None, scale=1.0,
+               invcov=None):
         """
         Compute an Fcontrast/F-test for a contrast matrix.
 
@@ -1139,7 +1146,8 @@ class LikelihoodModelResults(Results):
         r_matrix = np.asarray(r_matrix)
         r_matrix = np.atleast_2d(r_matrix)
 
-        if self.normalized_cov_params is None:
+        if (self.normalized_cov_params is None and cov_p is None and
+            invcov is None):
             raise ValueError('need covariance of parameters for computing '
                              'F statistics')
 
@@ -1156,7 +1164,8 @@ class LikelihoodModelResults(Results):
                                  "number of rows")
         Rbq = cparams - q_matrix
         if invcov is None:
-            invcov = np.linalg.inv(self.cov_params(r_matrix=r_matrix))
+            invcov = np.linalg.inv(self.cov_params(r_matrix=r_matrix,
+                                                   cov_p=cov_p))
         F = np.dot(np.dot(Rbq.T, invcov), Rbq) / J
         return ContrastResults(F=F, df_denom=self.model.df_resid,
                     df_num=invcov.shape[0])
