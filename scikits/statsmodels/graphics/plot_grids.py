@@ -118,7 +118,7 @@ def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
             if np.isscalar(level):
                 level = [level]
             for alpha in level:
-                make_ellipse(dmean[idx], dcov[idx[:,None], idx], ax, level=alpha,
+                _make_ellipse(dmean[idx], dcov[idx[:,None], idx], ax, level=alpha,
                          **ell_kwds_)
 
             if add_titles:
