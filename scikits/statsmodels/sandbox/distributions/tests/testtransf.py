@@ -131,10 +131,9 @@ class Test_Transf2(object):
                                 err_msg='stats '+d1.name+d2.name)
 
     def test_equivalent_negsq(self):
-        '''special case negsquarenormalg
+        #special case negsquarenormalg
+        #negsquarenormalg.cdf(x) == stats.chi2(1).cdf(-x), for x<=0
 
-        negsquarenormalg.cdf(x) == stats.chi2(1).cdf(-x), for x<=0
-        '''
         xx, nxx, ppfq = self.xx, self.nxx, self.ppfq
         d1,d2 = (negsquarenormalg, stats.chi2(1))
         #print d1.name

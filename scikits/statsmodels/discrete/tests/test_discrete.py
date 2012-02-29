@@ -19,6 +19,7 @@ from scikits.statsmodels.tools.sm_exceptions import PerfectSeparationError
 
 DECIMAL_14 = 14
 DECIMAL_10 = 10
+DECIMAL_9 = 9
 DECIMAL_4 = 4
 DECIMAL_3 = 3
 DECIMAL_2 = 2
@@ -98,7 +99,7 @@ class CheckModelResults(object):
         #basic cross check
         jacsum = self.res1.model.jac(self.res1.params).sum(0)
         score = self.res1.model.score(self.res1.params)
-        assert_almost_equal(jacsum, score, DECIMAL_10) #Poisson has low precision ?
+        assert_almost_equal(jacsum, score, DECIMAL_9) #Poisson has low precision ?
 
 
 class CheckMargEff(object):
