@@ -197,7 +197,7 @@ if __name__ == "__main__":
     write_version_py()
     setup(configuration = configuration,
         #name = DISTNAME,
-          install_requires = ['pandas >= 0.3.0'],
+          install_requires = ['pandas >= 0.7.0'],
           namespace_packages = ['scikits'],
           packages = setuptools.find_packages(),
           include_package_data = True,
