@@ -724,11 +724,7 @@ def summary_return(tables, return_fmt='text'):
             table.extend(part)
         return table.as_latex_tabular()
     elif return_fmt == 'html':
-        import copy
-        table = copy.deepcopy(tables[0])
-        for part in tables[1:]:
-            table.extend(part)
-        return table.as_html()
+        return "\n".join(table.as_html() for table in tables)
     else:
         raise ValueError('available output formats are text, csv, latex, html')
 
