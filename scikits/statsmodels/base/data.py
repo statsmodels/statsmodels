@@ -268,14 +268,10 @@ def _make_exog_names(exog):
         # assumes one constant in first or last position
         # avoid exception if more than one constant
         const_idx = exog_var.argmin()
-        if const_idx == exog.shape[1] - 1:
-            exog_names = ['x%d' % i for i in range(1,exog.shape[1])]
-            exog_names += ['const']
-        else:
-            exog_names = ['x%d' % i for i in range(exog.shape[1])]
-            exog_names[const_idx] = 'const'
+        exog_names = ['x%d' % i for i in range(1,exog.shape[1])]
+        exog_names.insert(const_idx, 'const')
     else:
-        exog_names = ['x%d' % i for i in range(exog.shape[1])]
+        exog_names = ['x%d' % i for i in range(1,exog.shape[1]+1)]
 
     return exog_names
 
