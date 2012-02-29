@@ -40,7 +40,7 @@ class ModelData(object):
         endog = self._orig_endog
         ynames = self._get_names(endog)
         if not ynames:
-            ynames = _make_endog_names(endog)
+            ynames = _make_endog_names(self.endog)
 
         if len(ynames) == 1:
             return ynames[0]
@@ -53,7 +53,7 @@ class ModelData(object):
         if exog is not None:
             xnames = self._get_names(exog)
             if not xnames:
-                xnames = _make_exog_names(exog)
+                xnames = _make_exog_names(self.exog)
             return list(xnames)
         return None
 
