@@ -53,8 +53,13 @@ def make_wrapper(func, how):
     formatted = inspect.formatargspec(argspec.args, varargs=argspec.varargs,
                                       defaults=argspec.defaults)
 
-##    wrapper.__doc__ = "%s%s\n%s" % (func.im_func.func_name, formatted,
-##                                    wrapper.__doc__)
+    try:
+        func_name = func.im_func.func_name
+    except AttributeError:
+        #Python 3
+        func_name = func.__name__
+
+    wrapper.__doc__ = "%s%s\n%s" % (func_name, formatted, wrapper.__doc__)
 
     return wrapper
 
