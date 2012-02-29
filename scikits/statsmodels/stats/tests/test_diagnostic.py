@@ -251,7 +251,7 @@ class TestDiagnosticG(object):
         at4 = smsdia.het_arch(self.res.resid, maxlag=4)
         at12 = smsdia.het_arch(self.res.resid, maxlag=12)
         compare_t_est(at4[:2], archtest_4, decimal=(12, 13))
-        compare_t_est(at12[:2], archtest_12, decimal=(13, 14))
+        compare_t_est(at12[:2], archtest_12, decimal=(12, 13))
 
     def test_acorr_breush_godfrey(self):
         res = self.res
@@ -548,11 +548,11 @@ class TestDiagnosticG(object):
                     parameters=(), distr='-')
 
         ad1 = smsdia.normal_ad(res.resid)
-        compare_t_est(ad1, adr1, decimal=(14, 18))
+        compare_t_est(ad1, adr1, decimal=(12, 15))
         ad2 = smsdia.normal_ad(res.resid**2)
         assert_(np.isinf(ad2[0]))
         ad3 = smsdia.normal_ad(res.resid[:20])
-        compare_t_est(ad3, adr3, decimal=(14, 14))
+        compare_t_est(ad3, adr3, decimal=(13, 13))
 
 
     def test_influence(self):
