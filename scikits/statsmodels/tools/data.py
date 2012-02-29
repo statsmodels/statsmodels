@@ -46,7 +46,7 @@ def interpret_data(data, colnames=None, rownames=None):
     (values, colnames, rownames) : (homogeneous ndarray, list)
     """
     if isinstance(data, np.ndarray):
-        if is_structured_ndarray(data):
+        if _is_structured_ndarray(data):
             if colnames is None:
                 colnames = data.dtype.names
             values = struct_to_ndarray(data)
