@@ -1699,7 +1699,7 @@ if __name__ == '__main__':
     import pandas as pn
     df = pn.DataFrame.fromRecords(mdata)
     df = np.log(df.reindex(columns=names))
-    df = (df - df.shift(1)).dropIncompleteRows()
+    df = (df - df.shift(1)).dropna()
 
     model = VAR(df)
     est = model.fit(maxlags=2)
