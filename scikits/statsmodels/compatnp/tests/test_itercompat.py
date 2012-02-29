@@ -8,7 +8,7 @@ Author: Josef Perktold
 
 from numpy.testing import assert_
 
-from scikits.statsmodels.compatnp.iter_compat import zip_longest
+from scikits.statsmodels.compatnp.iter_compat import zip_longest, combinations
 
 def test_zip_longest():
     lili = [['a0', 'b0', 'c0', 'd0'],
@@ -25,5 +25,19 @@ def test_zip_longest():
     assert_(list(zip_longest(*lili)) == transposed, '%r not equal %r' % (
                             zip_longest(*lili), transposed))
 
+def test_combinations():
+    actual = list(combinations('ABCD', 2))
+    desired = [('A', 'B'), ('A', 'C'), ('A', 'D'), ('B', 'C'), ('B', 'D'),
+               ('C', 'D')]
+    assert_(actual == desired, '%r not equal %r' % (actual, desired))
+
+    actual = list(combinations(range(4), 3))
+    desired = [(0, 1, 2), (0, 1, 3), (0, 2, 3), (1, 2, 3)]
+    assert_(actual == desired, '%r not equal %r' % (actual, desired))
+
+
+
+
 if __name__ == '__main__':
     test_zip_longest()
+    test_combinations()
