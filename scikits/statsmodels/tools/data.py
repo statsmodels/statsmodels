@@ -57,7 +57,7 @@ def interpret_data(data, colnames=None, rownames=None):
             colnames = ['Y_%d' % i for i in range(values.shape[1])]
     elif is_data_frame(data):
         # XXX: hack
-        data = data.dropIncompleteRows()
+        data = data.dropna()
         values = data.values
         colnames = data.columns
         rownames = data.index
