@@ -93,7 +93,7 @@ if not release:
         # must be a source distribution, use existing version file
         try:
             from scikits.statsmodels.version import git_revision as GIT_REVISION
-            print "debug import success GIT_REVISION", GIT_REVISION
+            #print "debug import success GIT_REVISION", GIT_REVISION
         except ImportError:
             dowrite = False
             #changed: if we are not in a git repository then don't update version.py
@@ -116,6 +116,13 @@ if not release:
                            'isrelease': str(ISRELEASED)})
         finally:
             a.close()
+
+try:
+    from distutils.command.build_py import build_py_2to3 as build_py
+except ImportError:
+    # 2.x
+    from distutils.command.build_py import build_py
+
 
 def configuration(parent_package='', top_path=None, package_name=DISTNAME):
     #if os.path.fexists('MANIFEST'): os.remove('MANIFEST')
@@ -204,4 +211,5 @@ if __name__ == "__main__":
           test_suite="nose.collector",
           zip_safe = False, # the package can not run out of an .egg file bc of
           # nose tests
-          classifiers = classifiers)
+          classifiers = classifiers,
+          cmdclass={'build_py': build_py})

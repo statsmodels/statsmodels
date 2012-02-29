@@ -84,8 +84,12 @@ Potential problems for Python 3
 """
 from __future__ import division, with_statement
 import logging
+
+from scikits.statsmodels.compatnp.iter_compat import zip_longest as izip_longest
+
 try: #plan for Python 3
-    from itertools import izip_longest, izip as zip
+    #from itertools import izip_longest, izip as zip
+    from itertools import izip as zip
     pass   # accommodate 2to3 tool
 except ImportError:
     pass
