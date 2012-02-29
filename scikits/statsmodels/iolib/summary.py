@@ -728,7 +728,7 @@ def summary_return(tables, return_fmt='text'):
         table = copy.deepcopy(tables[0])
         for part in tables[1:]:
             table.extend(part)
-        return table.as_html
+        return table.as_html()
     else:
         raise ValueError('available output formats are text, csv, latex, html')
 
@@ -759,6 +759,10 @@ class Summary(object):
     def __repr__(self):
         #return '<' + str(type(self)) + '>\n"""\n' + self.__str__() + '\n"""'
         return str(type(self)) + '\n"""\n' + self.__str__() + '\n"""'
+    
+    def _repr_html_(self):
+        '''Display as HTML in IPython notebook.'''
+        return self.as_html()
 
     def add_table_2cols(self, res,  title=None, gleft=None, gright=None,
                             yname=None, xname=None):
@@ -876,11 +880,22 @@ class Summary(object):
 
         Returns
         -------
-        latex : string
+        csv : string
             concatenated summary tables in comma delimited format
 
         '''
         return summary_return(self.tables, return_fmt='csv')
+    
+    def as_html(self):
+        '''return tables as string
+
+        Returns
+        -------
+        html : string
+            concatenated summary tables in HTML format
+
+        '''
+        return summary_return(self.tables, return_fmt='html')
 
 
 if __name__ == "__main__":
