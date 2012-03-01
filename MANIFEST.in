@@ -25,6 +25,8 @@ include docs/Makefile
 #include docs mak*
 #include docs GLM*
 
+recursive-include examples *
+
 #missed files:  .npz, .npy
 include scikits/statsmodels/tsa/vector_ar/tests/results/vars_results.npz
 include scikits/statsmodels/iolib/tests/results/*
