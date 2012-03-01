@@ -158,6 +158,7 @@ def configuration(parent_package='', top_path=None, package_name=DISTNAME):
     config.add_data_files('scikits/statsmodels/sandbox/panel/test_data.txt')
     config.add_data_files('scikits/statsmodels/stats/tests/results/influence_lsdiag_R.json')
     config.add_data_files('scikits/statsmodels/stats/tests/results/influence_measures_R.csv')
+    config.add_data_files('scikits/statsmodels/regression/tests/results/leverage_influence_ols_nostars.txt')
     config.add_data_dir('scikits/statsmodels/nonparametric/tests')
     vardatafiles = [os.path.join(r,d) for r,ds,f in \
                     os.walk('scikits/statsmodels/tsa/vector_ar/data')

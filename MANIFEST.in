@@ -31,5 +31,6 @@ include scikits/statsmodels/iolib/tests/results/*
 include scikits/statsmodels/stats/tests/results/influence_lsdiag_R.json
 include scikits/statsmodels/sandbox/panel/test_data.txt
 include scikits/statsmodels/stats/tests/results/influence_measures_R.csv
+include scikits/statsmodels/regression/tests/results/leverage_influence_ols_nostars.txt
 
 global-exclude *~ *.swp  *.pyc *.bak
