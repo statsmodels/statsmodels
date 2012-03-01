@@ -38,7 +38,7 @@ $COPYRIGHT
 """)
 
 for dataset in datasets:
-    write_pth = join('../scikits/statsmodels/docs/source/datasets/generated',
+    write_pth = join('../docs/source/datasets/generated',
                              dataset+'.rst')
     data_mod = datasets[dataset]
     with open(os.path.realpath(write_pth), 'w') as rst_file:
