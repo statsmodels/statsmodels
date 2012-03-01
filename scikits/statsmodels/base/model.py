@@ -48,7 +48,7 @@ class Model(object):
         """
         raise NotImplementedError
 
-    def predict(self, exog, params=None):
+    def predict(self, params, exog=None, *args, **kwargs):
         """
         After a model has been fit predict returns the fitted values.  If
         the model has not been fit, then fit is called.
@@ -689,6 +689,9 @@ class Results(object):
     def initialize(self, model, params, **kwd):
         self.params = params
         self.model = model
+
+    def predict(self, exog=None, *args, **kwargs):
+        return self.model.predict(self.params, exog, *args, **kwargs)
 
 
 #TODO: public method?
