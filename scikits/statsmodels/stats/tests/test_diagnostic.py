@@ -559,7 +559,7 @@ class TestDiagnosticG(object):
         res = self.res
         #this test is slow
         import json
-        fp = file(os.path.join(cur_dir,"results/influence_lsdiag_R.json"))
+        fp = open(os.path.join(cur_dir,"results/influence_lsdiag_R.json"))
         lsdiag = json.load(fp)
 
         #basic
