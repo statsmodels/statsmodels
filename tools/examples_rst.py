@@ -17,19 +17,14 @@ import hash_funcs
 #----------------------------------------------------
 # these files do not get made into .rst files because of
 # some problems, they may need a simple cleaning up
-exclude_list = ['example_rst.py','run_all.py', 'lagpolynomial.py',
-                'ex_generic_mle_tdist.py', 'ex_generic_mle.py',
-                'es_misc_poisson2.py', 'example_glsar.py',
-                'ex_generic_mle_t.py', 'ex_misc_tmodel.py', 'try_polytrend.py',
-                'example_rpy.py','t_est_rlm.py', 'ar1cholesky.py',
-                'compare_arma.py', 'ex_arma.py', 'ex_coint.py', 'try_ar.py',
-                'ex_var_reorder.py', 'arma_plots.py']
+exclude_list = ['run_all.py']
+]
 
 file_path = os.path.dirname(__file__)
 docs_rst_dir = os.path.realpath(os.path.join(file_path,
-                    '../scikits/statsmodels/docs/source/examples/generated/'))
+                    '../docs/source/examples/generated/'))
 example_dir = os.path.realpath(os.path.join(file_path,
-                    '../scikits/statsmodels/examples/'))
+                    '../examples/'))
 
 
 def parse_docstring(block):
