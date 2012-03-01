@@ -144,7 +144,7 @@ def configuration(parent_package='', top_path=None, package_name=DISTNAME):
     config.add_data_dir('scikits/statsmodels/tests')
     config.add_data_dir('scikits/statsmodels/examples')
     config.add_data_dir('scikits/statsmodels/sandbox/examples')
-    config.add_data_dir('scikits/statsmodels/docs')
+#    config.add_data_dir('docs') #TODO: do we need to install the docs?
     config.add_data_dir('scikits/statsmodels/iolib/tests')
     config.add_data_dir('scikits/statsmodels/discrete/tests')
     config.add_data_dir('scikits/statsmodels/genmod/tests')
@@ -152,7 +152,8 @@ def configuration(parent_package='', top_path=None, package_name=DISTNAME):
     config.add_data_dir('scikits/statsmodels/robust/tests')
     config.add_data_dir('scikits/statsmodels/tsa/vector_ar/tests')
     config.add_data_dir('scikits/statsmodels/tsa/filters/tests')
-    config.add_data_files('scikits/statsmodels/docs/build/htmlhelp/statsmodelsdoc.chm')
+    config.add_data_files('docs/build/htmlhelp/statsmodelsdoc.chm',
+                          'scikits/statsmodels/statsmodelsdoc.chm')
     config.add_data_files('scikits/statsmodels/iolib/tests/results/macrodata.npy')
     config.add_data_files('scikits/statsmodels/sandbox/panel/test_data.txt')
     config.add_data_files('scikits/statsmodels/stats/tests/results/influence_lsdiag_R.json')
