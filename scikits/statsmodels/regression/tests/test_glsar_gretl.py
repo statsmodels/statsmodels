@@ -8,6 +8,8 @@ License: BSD-3
 
 """
 
+import os
+
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal, assert_approx_equal
 
@@ -337,9 +339,15 @@ class TestGLSARGretl(object):
         vif = [1.001, 1.001]
 
         names = 'date   residual        leverage       influence        DFFITS'.split()
-        lev = np.genfromtxt("E:\Josef\eclipsegworkspace\statsmodels-git\statsmodels-josef\scikits\statsmodels\datasets\macrodata\leverage_influence_ols_nostars.txt",
-                            skip_header=3, skip_footer=1,
+        cur_dir = os.path.abspath(os.path.dirname(__file__))
+        fpath = os.path.join(cur_dir, 'results/leverage_influence_ols_nostars.txt')
+        lev = np.genfromtxt(fpath, skip_header=3, skip_footer=1,
                             converters={0:lambda s: s})
+        #either numpy 1.6 or python 3.2 changed behavior
+        if np.isnan(lev[-1]['f1']):
+            lev = np.genfromtxt(fpath, skip_header=3, skip_footer=2,
+                                converters={0:lambda s: s})
+
         lev.dtype.names = names
 
         res = res_ols #for easier copying
