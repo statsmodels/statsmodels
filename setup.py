@@ -142,9 +142,9 @@ def configuration(parent_package='', top_path=None, package_name=DISTNAME):
     config.add_subpackage('scikits')
     config.add_data_files('scikits/__init__.py')
     config.add_data_dir('scikits/statsmodels/tests')
-    config.add_data_dir('scikits/statsmodels/examples')
-    config.add_data_dir('scikits/statsmodels/sandbox/examples')
-#    config.add_data_dir('docs') #TODO: do we need to install the docs?
+    #config.add_data_dir('scikits/statsmodels/examples')
+    #config.add_data_dir('scikits/statsmodels/sandbox/examples')
+    #config.add_data_dir('docs') #TODO: do we need to install the docs?
     config.add_data_dir('scikits/statsmodels/iolib/tests')
     config.add_data_dir('scikits/statsmodels/discrete/tests')
     config.add_data_dir('scikits/statsmodels/genmod/tests')
