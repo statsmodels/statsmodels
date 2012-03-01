@@ -62,8 +62,8 @@ means25 = means.copy()
 means25[0] = stats.scoreatpercentile(data.exog[:,0], 25)
 means75 = means.copy()
 means75[0] = lowinc_75per = stats.scoreatpercentile(data.exog[:,0], 75)
-resp_25 = glm_binom.predict(means25)
-resp_75 = glm_binom.predict(means75)
+resp_25 = binom_results.predict(means25)
+resp_75 = binom_results.predict(means75)
 diff = resp_75 - resp_25
 #.. print """The interquartile first difference for the percentage of low income
 #.. households in a school district is %2.4f %%""" % (diff*100)
@@ -75,8 +75,8 @@ means0 = means.copy()
 means100 = means.copy()
 means0[0] = data.exog[:,0].min()
 means100[0] = data.exog[:,0].max()
-resp_0 = glm_binom.predict(means0)
-resp_100 = glm_binom.predict(means100)
+resp_0 = binom_results.predict(means0)
+resp_100 = binom_results.predict(means100)
 diff_full = resp_100 - resp_0
 print """The full range difference is %2.4f %%""" % (diff_full*100)
 
@@ -92,6 +92,7 @@ fit = lambda x: line_fit[1]+line_fit[0]*x # better way in scipy?
 plt.plot(np.linspace(0,1,nobs), fit(np.linspace(0,1,nobs)))
 plt.title('Model Fit Plot')
 plt.ylabel('Observed values')
+#@savefig glm_fitted.png
 plt.xlabel('Fitted values')
 
 # Plot of yhat vs. Pearson residuals
@@ -100,6 +101,7 @@ plt.scatter(yhat, binom_results.resid_pearson)
 plt.plot([0.0, 1.0],[0.0, 0.0], 'k-')
 plt.title('Residual Dependence Plot')
 plt.ylabel('Pearson Residuals')
+#@savefig glm_resids.png
 plt.xlabel('Fitted values')
 
 # Histogram of standardized deviance residuals
@@ -107,6 +109,7 @@ plt.figure()
 res = binom_results.resid_deviance.copy()
 stdres = (res - res.mean())/res.std()
 plt.hist(stdres, bins=25)
+#@savefig glm_hist_res.png
 plt.title('Histogram of standardized deviance residuals')
 
 # QQ Plot of Deviance Residuals
@@ -124,9 +127,10 @@ plt.plot([y.min(),y.max()],[y.min(),y.max()],'r--')
 plt.title('Normal - Quantile Plot')
 plt.ylabel('Deviance Residuals Quantiles')
 plt.xlabel('Quantiles of N(0,1)')
-#.. in branch *-skipper
-#.. from scikits.statsmodels.sandbox import graphics
-#.. img = graphics.qqplot(res)
+
+from scikits.statsmodels import graphics
+#@savefig glm_qqplot.png
+img = graphics.gofplots.qqplot(res, line='r')
 
 #.. plt.show()
 #.. plt.close('all')
