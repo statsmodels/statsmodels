@@ -284,6 +284,12 @@ def handle_data(endog, exog):
     """
     Given inputs
     """
+    # deal with lists and tuples up-front
+    if isinstance(endog, (list, tuple)):
+        endog = np.asarray(endog)
+    if isinstance(exog, (list, tuple)):
+        exog = np.asarray(exog)
+
     if data_util._is_using_pandas(endog, exog):
         klass = PandasData
     elif data_util._is_using_larry(endog, exog):
@@ -291,8 +297,7 @@ def handle_data(endog, exog):
     elif data_util._is_using_timeseries(endog, exog):
         klass = TimeSeriesData
     # keep this check last
-    elif (data_util._is_using_ndarray(endog, exog) or
-            data_util._is_array_like(endog, exog)):
+    elif data_util._is_using_ndarray(endog, exog):
         klass = ModelData
     else:
         raise ValueError('unrecognized data structures: %s / %s' %
