@@ -48,7 +48,7 @@ Authors
 
 - John D Hunter: orignal author.
 - Fernando Perez: refactoring, documentation, cleanups, port to 0.11.
-- VĂĄclavĹ milauer <eudoxos-AT-arcig.cz>: Prompt generalizations.
+- VáclavŠmilauer <eudoxos-AT-arcig.cz>: Prompt generalizations.
 - Skipper Seabold, refactoring, cleanups, pure python addition
 """
 
@@ -57,12 +57,12 @@ Authors
 #-----------------------------------------------------------------------------
 
 # Stdlib
-import ast
 import cStringIO
 import os
 import re
 import sys
 import tempfile
+import ast
 
 # To keep compatibility with various python versions
 try:
@@ -83,8 +83,6 @@ matplotlib.use('Agg')
 from IPython import Config, InteractiveShell
 from IPython.core.profiledir import ProfileDir
 from IPython.utils import io
-
-from pdb import set_trace
 
 #-----------------------------------------------------------------------------
 # Globals
@@ -147,7 +145,7 @@ def block_parser(part, rgxin, rgxout, fmtin, fmtout):
             lineno, inputline = int(matchin.group(1)), matchin.group(2)
 
             # the ....: continuation string
-            continuation = '   %s:'% ''.join(['.']*(len(str(lineno))+2))
+            continuation = '   %s:'%''.join(['.']*(len(str(lineno))+2))
             Nc = len(continuation)
             # input lines can continue on for more than one line, if
             # we have a '\' line continuation char or a function call
@@ -303,6 +301,10 @@ class EmbeddedSphinxShell(object):
                      decorator.startswith('@savefig')
 
         input_lines = input.split('\n')
+        if len(input_lines) > 1:
+            if input_lines[-1] != "":
+                input_lines.append('') # make sure there's a blank line
+                                       # so splitter buffer gets reset
 
         continuation = '   %s:'%''.join(['.']*(len(str(lineno))+2))
         Nc = len(continuation)
@@ -312,13 +314,10 @@ class EmbeddedSphinxShell(object):
 
         ret = []
         is_semicolon = False
-        store_history = True
 
         for i, line in enumerate(input_lines):
             if line.endswith(';'):
                 is_semicolon = True
-            if is_semicolon or is_suppress:
-                store_history = False
 
             if i==0:
                 # process the first input line
@@ -327,30 +326,30 @@ class EmbeddedSphinxShell(object):
                     self.IP.execution_count += 1 # increment it anyway
                 else:
                     # only submit the line in non-verbatim mode
-                    self.process_input_line(line, store_history=store_history)
+                    self.process_input_line(line, store_history=True)
                 formatted_line = '%s %s'%(input_prompt, line)
             else:
                 # process a continuation line
                 if not is_verbatim:
-                    self.process_input_line(line, store_history=store_history)
+                    self.process_input_line(line, store_history=True)
 
-                formatted_line = '%s%s'%(continuation, line)
+                formatted_line = '%s %s'%(continuation, line)
 
             if not is_suppress:
                 ret.append(formatted_line)
 
-        if not is_suppress:
-            if len(rest.strip()):
-                if is_verbatim:
-                    # the "rest" is the standard output of the
-                    # input, which needs to be added in
-                    # verbatim mode
-                    ret.append(rest)
+        if not is_suppress and len(rest.strip()) and is_verbatim:
+            # the "rest" is the standard output of the
+            # input, which needs to be added in
+            # verbatim mode
+            ret.append(rest)
 
         self.cout.seek(0)
         output = self.cout.read()
         if not is_suppress and not is_semicolon:
             ret.append(output)
+        elif is_semicolon: # get spacing right
+            ret.append('')
 
         self.cout.truncate(0)
         return (ret, input_lines, output, is_doctest, image_file,
@@ -396,8 +395,7 @@ class EmbeddedSphinxShell(object):
         Saves the image file to disk.
         """
         self.ensure_pyplot()
-        command = ('plt.gcf().savefig("%s", bbox_inches="tight", '
-                   'dpi=100)' % image_file)
+        command = 'plt.gcf().savefig("%s")'%image_file
         #print 'SAVEFIG', command  # dbg
         self.process_input_line('bookmark ipy_thisdir', store_history=False)
         self.process_input_line('cd -b ipy_savedir', store_history=False)
@@ -459,85 +457,6 @@ class EmbeddedSphinxShell(object):
         output = []
         savefig = False # keep up with this to clear figure
         multiline = False # to handle line continuation
-        fmtin = self.promptin
-
-        for lineno, line in enumerate(content):
-
-            line_stripped = line.strip()
-
-            if not len(line):
-                output.append(line) # preserve empty lines in output
-                continue
-
-            # handle decorators
-            if line_stripped.startswith('@'):
-                output.extend([line])
-                if 'savefig' in line:
-                    savefig = True # and need to clear figure
-                continue
-
-            # handle comments
-            if line_stripped.startswith('#'):
-                output.extend([line])
-                continue
-
-            # deal with multilines
-            if not multiline: # not currently on a multiline
-
-                if line_stripped.endswith('\\'): # now we are
-                    multiline = True
-                    cont_len = len(str(lineno)) + 2
-                    line_to_process = line.strip('\\')
-                    output.extend([u"%s %s" % (fmtin%lineno,line)])
-                    continue
-                else: # no we're still not
-                    line_to_process = line.strip('\\')
-            else: # we are currently on a multiline
-                line_to_process += line.strip('\\')
-                if line_stripped.endswith('\\'): # and we still are
-                    continuation = '.' * cont_len
-                    output.extend([(u'   %s: '+line_stripped) % continuation])
-                    continue
-                # else go ahead and run this multiline then carry on
-
-            # get output of line
-            self.process_input_line(unicode(line_to_process.strip()),
-                                    store_history=False)
-            out_line = self.cout.getvalue()
-            self.clear_cout()
-
-            # clear current figure if plotted
-            if savefig:
-                self.ensure_pyplot()
-                self.process_input_line('plt.clf()', store_history=False)
-                self.clear_cout()
-                savefig = False
-
-            # line numbers don't actually matter, they're replaced later
-            if not multiline:
-                in_line = u"%s %s" % (fmtin%lineno,line)
-
-                output.extend([in_line])
-            else:
-                output.extend([(u'   %s: '+line_stripped) % continuation])
-                multiline = False
-            if len(out_line):
-                output.extend([out_line])
-            output.extend([u''])
-
-        return output
-
-    def process_pure_python2(self, content):
-        """
-        content is a list of strings. it is unedited directive conent
-
-        This runs it line by line in the InteractiveShell, prepends
-        prompts as needed capturing stderr and stdout, then returns
-        the content as a list as if it were ipython code
-        """
-        output = []
-        savefig = False # keep up with this to clear figure
-        multiline = False # to handle line continuation
         multiline_start = None
         fmtin = self.promptin
 
@@ -562,6 +481,7 @@ class EmbeddedSphinxShell(object):
                 output.extend([line])
                 continue
 
+            # deal with lines checking for multiline
             continuation  = u'   %s:'% ''.join(['.']*(len(str(ct))+2))
             if not multiline:
                 modified = u"%s %s" % (fmtin % ct, line_stripped)
@@ -570,20 +490,31 @@ class EmbeddedSphinxShell(object):
                 try:
                     ast.parse(line_stripped)
                     output.append(u'')
-                except Exception:
+                except Exception: # on a multiline
                     multiline = True
                     multiline_start = lineno
-            else:
+            else: # still on a multiline
                 modified = u'%s %s' % (continuation, line)
                 output.append(modified)
                 try:
-                    ast.parse('\n'.join(content[multiline_start:lineno+1]))
-                    output.append(u'')
-                    multiline = False
+                    mod = ast.parse(
+                            '\n'.join(content[multiline_start:lineno+1]))
+                    if isinstance(mod.body[0], ast.FunctionDef):
+                        # check to see if we have the whole function
+                        for element in mod.body[0].body:
+                            if isinstance(element, ast.Return):
+                                multiline = False
+                    else:
+                        output.append(u'')
+                        multiline = False
                 except Exception:
                     pass
 
-            continue
+            if savefig: # clear figure if plotted
+                self.ensure_pyplot()
+                self.process_input_line('plt.clf()', store_history=False)
+                self.clear_cout()
+                savefig = False
 
         return output
 
@@ -624,6 +555,21 @@ class IpythonDirective(Directive):
         return savefig_dir, source_dir, rgxin, rgxout, promptin, promptout
 
     def setup(self):
+        # reset the execution count if we haven't processed this doc
+        #NOTE: this may be borked if there are multiple seen_doc tmp files
+        #check time stamp?
+        seen_docs = [i for i in os.listdir(tempfile.tempdir)
+            if i.startswith('seen_doc')]
+        if seen_docs:
+            fname = os.path.join(tempfile.tempdir, seen_docs[0])
+            docs = open(fname).read().split('\n')
+            if not self.state.document.current_source in docs:
+                self.shell.IP.history_manager.reset()
+                self.shell.IP.execution_count = 1
+        else: # haven't processed any docs yet
+            docs = []
+
+
         # get config values
         (savefig_dir, source_dir, rgxin,
                 rgxout, promptin, promptout) = self.get_config_options()
@@ -641,6 +587,13 @@ class IpythonDirective(Directive):
         self.shell.process_input_line('bookmark ipy_savedir %s'%savefig_dir,
                                       store_history=False)
         self.shell.clear_cout()
+
+        # write the filename to a tempfile because it's been "seen" now
+        if not self.state.document.current_source in docs:
+            fd, fname = tempfile.mkstemp(prefix="seen_doc", text=True)
+            fout = open(fname, 'a')
+            fout.write(self.state.document.current_source+'\n')
+            fout.close()
 
         return rgxin, rgxout, promptin, promptout
 
@@ -667,7 +620,7 @@ class IpythonDirective(Directive):
         # handle pure python code
         if 'python' in self.arguments:
             content = self.content
-            self.content = self.shell.process_pure_python2(content)
+            self.content = self.shell.process_pure_python(content)
 
         parts = '\n'.join(self.content).split('\n\n')
 
@@ -681,13 +634,7 @@ class IpythonDirective(Directive):
             if len(block):
                 rows, figure = self.shell.process_block(block)
                 for row in rows:
-                    # hack
-                    # if row == '':
-                    #     continue
-
-                    # lines.extend(['   %s'% row.strip()])
-                    lines.extend(['   %s' % line
-                                  for line in re.split('[\n]+', row)])
+                    lines.extend(['   %s'%line for line in row.split('\n')])
 
                 if figure is not None:
                     figures.append(figure)
@@ -715,7 +662,7 @@ class IpythonDirective(Directive):
         #imgnode = nodes.image(figs)
 
         # cleanup
-        self.teardown()
+        #self.teardown() # this gets called on _every_ exit from a block
 
         return []#, imgnode]
 
@@ -808,8 +755,7 @@ In [106]: print x
 jdh
 
 In [109]: for i in range(10):
-   n
-.....:     print i
+   .....:     print i
    .....:
    .....:
 0
