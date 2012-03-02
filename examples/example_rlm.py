@@ -7,7 +7,7 @@ The syntax for the arguments will be shortened to accept string arguments
 in the future.
 """
 
-import statsmodels.api as sm
+import scikits.statsmodels.api as sm
 
 ### Example for using Huber's T norm with the default
 ### median absolute deviation scaling
