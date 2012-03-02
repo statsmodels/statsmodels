@@ -103,6 +103,9 @@ def restify(example_file):
         #hash_funcs.update_hash_dict(filehash, filename)
 
 if __name__ == "__main__":
+    if not os.path.exists(docs_rst_dir):
+        os.makedirs(docs_rst_dir)
+
     if len(sys.argv) > 1: # given a file,files to process, no help flag yet
         for example_file in sys.argv[1:]:
             restify(example_file)
