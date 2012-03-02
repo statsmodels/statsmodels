@@ -8,7 +8,7 @@ uncomment plt.show() to show all plot windows
 
 '''
 
-stop_on_error = False #True
+stop_on_error = True
 
 
 filelist = ['example_glsar.py', 'example_wls.py', 'example_gls.py',
@@ -16,10 +16,13 @@ filelist = ['example_glsar.py', 'example_wls.py', 'example_gls.py',
             'example_ols.py', 'example_ols_minimal.py', 'example_rlm.py',
             'example_discrete.py', 'example_predict.py',
             'example_ols_table.py',
-            'tut_ols.py', 'tut_ols_rlm.py', 'tut_ols_wls.py']
+            'tut_ols.py', 'tut_ols_rlm.py', 'tut_ols_wls.py',
+            # time series
+            'tsa/ex_arma2.py','tsa/ex_dates.py']
 
 if __name__ == "__main__":
     #temporarily disable show
+    import matplotlib.pyplot as plt
     plt_show = plt.show
     def noop(*args):
         pass
