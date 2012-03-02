@@ -36,7 +36,7 @@ def parse_docstring(block):
         start = re.search(ds, block).end()
         end = re.search(ds, block[start:]).start()
     except: #TODO: make more informative
-        raise IOError("File does not have a docstring?")
+        raise IOError("File %s does not have a docstring?")
     docstring = block[start:start+end]
     block = block[start+end+3:]
     return docstring.strip(), block
@@ -94,11 +94,15 @@ def restify(example_file):
     """
     filename = os.path.basename(example_file)
     write_filename = os.path.join(docs_rst_dir,filename[:-2] + 'rst')
+    fname = example_file
     example_file = open(example_file, 'r').read()
     #to_write, filehash = hash_funcs.check_hash(example_file, filename)
     to_write = True
     if to_write:
-        rst_file = parse_file(example_file)
+        try:
+            rst_file = parse_file(example_file)
+        except IOError as err:
+            raise IOError(err.message % fname)
         write_file(rst_file, write_filename)
         #hash_funcs.update_hash_dict(filehash, filename)
 
