@@ -18,7 +18,6 @@ import hash_funcs
 # these files do not get made into .rst files because of
 # some problems, they may need a simple cleaning up
 exclude_list = ['run_all.py']
-]
 
 file_path = os.path.dirname(__file__)
 docs_rst_dir = os.path.realpath(os.path.join(file_path,
