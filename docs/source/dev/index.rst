@@ -31,4 +31,5 @@ Contents
    test_notes
    naming_conventions
    dataset_notes
+   examples
    roadmap_todo
