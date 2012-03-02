@@ -3,6 +3,7 @@
 import os
 import sys
 import re
+import subprocess
 import pickle
 from StringIO import StringIO
 
@@ -25,6 +26,23 @@ docs_rst_dir = os.path.realpath(os.path.join(file_path,
 example_dir = os.path.realpath(os.path.join(file_path,
                     '../examples/'))
 
+def check_scripts(exclude_list, filelist):
+    """
+    Run all the files in filelist from run_all. Add any with problems
+    to exclude_list and return it.
+    """
+
+    for run_file in filelist:
+        # do this to redirect stdout
+        fnull = open(os.devnull, 'w')
+        file_to_run = 'python ' + os.path.join(example_dir, run_file)
+        result = subprocess.call(file_to_run, shell=True,
+                                 stdout=fnull) # don't capture stderr
+        fnull.close()
+        if result != 0: # raised an error
+            print "Not generating reST from %s. An error occurred." % run_file
+            exclude_list.append(os.path.basename(run_file))
+    return exclude_list
 
 def parse_docstring(block):
     """
@@ -107,6 +125,11 @@ def restify(example_file):
         #hash_funcs.update_hash_dict(filehash, filename)
 
 if __name__ == "__main__":
+    sys.path.insert(0, example_dir)
+    from run_all import filelist
+    sys.path.remove(example_dir)
+    exclude_list = check_scripts(exclude_list, filelist)
+
     if not os.path.exists(docs_rst_dir):
         os.makedirs(docs_rst_dir)
 
