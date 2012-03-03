@@ -5,6 +5,13 @@
     :license: BSD
     #}
 {% extends "basic/layout.html" %}
+{% block extrahead %}
+<link rel="stylesheet" href="../../_static/facebox.css" type="text/css" />
+<script type="text/javascript" src="{{pathto('_static/scripts.js', 1) }}">
+</script>
+<script type="text/javascript" src="{{pathto('_static/facebox.js', 1) }}">
+</script>
+{% endblock %}
 {% set reldelim1 = ' |' %}
 
 {% block sidebarlogo %}{% endblock %} {# override to not display, we keep the "logo" at the very top #}
