@@ -71,8 +71,9 @@ def parse_file(block):
     # anything else is fair game to go in an ipython directive
     code_snippet = False
     for line in block:
-        if not len(line):
-            continue
+        #if not len(line):
+        #    continue
+        # preserve blank lines
 
         if line.startswith('#') and not (line.startswith('#%') or
                 line.startswith('#@')):
@@ -81,7 +82,8 @@ def parse_file(block):
                 outfile.append('')
                 code_snippet = False
             line = line.strip()
-            outfile.append(line[1:].strip())
+            line = re.sub("^#+", "", line) # strip multiple hashes
+            outfile.append(line)
         else:
             if not code_snippet: # new code block
                 outfile.append('\n.. ipython:: python\n')
