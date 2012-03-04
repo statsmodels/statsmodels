@@ -27,8 +27,8 @@ function scrapeText(codebox){
         if (this.match(/^In \[\d+]: /)){
             newlines.push(cleanQuotes(this.replace(/^(\s)*In \[\d+]: /,"")));
         }
-        else if (this.match(/^(\s)*...:/)){
-            newlines.push(cleanQuotes(this.replace(/^(\s)*...: /,"")));
+        else if (this.match(/^(\s)*.+:/)){
+            newlines.push(cleanQuotes(this.replace(/^(\s)*.+: /,"")));
         }
 
     }
