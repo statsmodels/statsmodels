@@ -30,7 +30,7 @@ trunk for 0.4.0
 
 Added api.py for importing. So the new convention for importing is::
 
-    import scikits.statsmodels.api as sm
+    import statsmodels.api as sm
 
 Importing from modules directly now avoids unnecessary imports and increases
 the import speed if a library or user only needs specific functions.

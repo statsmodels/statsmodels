@@ -1,8 +1,8 @@
 """Example: scikits.statssm.OLS
 """
 
-from scikits.statsmodels.datasets.longley import load
-import scikits.statsmodels.api as sm
+from statsmodels.datasets.longley import load
+import statsmodels.api as sm
 import numpy as np
 
 data = load()

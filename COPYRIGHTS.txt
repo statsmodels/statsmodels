@@ -1,7 +1,7 @@
 
-The license of scikits.statsmodels can be found in LICENSE.txt
+The license of statsmodels can be found in LICENSE.txt
 
-scikits.statsmodels contains code or derivative code from several other
+statsmodels contains code or derivative code from several other
 packages. Some modules also note the author of individual contributions, or
 author of code that formed the basis for the derived or translated code.
 The copyright statements for the datasets are attached to the individual
@@ -15,11 +15,11 @@ numpy
 scipy
 pandas
 matplotlib
-scikits.learn
+scikit-learn
 
 
 
-numpy (scikits.statsmodels.compatnp contains copy of entire model)
+numpy (statsmodels.compatnp contains copy of entire model)
 ------------------------------------------------------------------
 Copyright (c) 2005-2009, NumPy Developers.
 All rights reserved.
@@ -178,7 +178,7 @@ Licensee agrees to be bound by the terms and conditions of this License
 Agreement.
 --------------------------------------------------------------------------
 
-scikits.learn
+scikits-learn
 -------------
 
 New BSD License

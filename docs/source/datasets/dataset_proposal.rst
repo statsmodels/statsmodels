@@ -2,7 +2,7 @@
 
 .. _dataset_proposal:
 
-Dataset for scikits.statmodels: design proposal
+Dataset for statmodels: design proposal
 ===============================================
 
 One of the thing numpy/scipy is missing now is a set of datasets, available for
@@ -88,7 +88,7 @@ The key goals are:
       from this model.
     - All possible datasets should fit into this model.
 
-For the datasets to be useful in the statsmodels scikits the Dataset object
+For the datasets to be useful in statsmodels the Dataset object
 returned by load has the following conventions and attributes:
 
     - Calling the object itself returns the plain ndarray of the full dataset.

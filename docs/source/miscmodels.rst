@@ -9,7 +9,7 @@
 Other Models :mod:`miscmodels`
 ==============================
 
-:mod:`scikits.statmodels.miscmodels` contains model classes and that do not yet fit into
+:mod:`statsmodels.miscmodels` contains model classes and that do not yet fit into
 any other category, or are basic implementations that are not yet polished and will most
 likely still change. Some of these models were written as examples for the generic
 maximum likelihood framework, and there will be others that might be based on general
