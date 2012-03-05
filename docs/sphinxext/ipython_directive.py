@@ -63,6 +63,7 @@ import re
 import sys
 import tempfile
 import ast
+import time
 
 # To keep compatibility with various python versions
 try:
@@ -460,63 +461,41 @@ class EmbeddedSphinxShell(object):
         multiline_start = None
         fmtin = self.promptin
 
-        ct = 0
+        block = '\n'.join(content)
+        # remove blank lines
+        block = re.sub('\n+', '\n', block)
+        content = block.split('\n')
+        # if any figures, make sure you can handle them and no other figures exist
+        if re.search('^\s*@savefig', block, flags=re.MULTILINE):
+            self.ensure_pyplot()
+            self.process_input_line('plt.clf()', store_history=False)
+            self.clear_cout()
+        # sub out the pseudo-decorators so we can parse
+        block = re.sub('@(?=[savefig|suppress|verbatim|doctest])', '#@', block)
 
+        # this is going to raise an error if there's problems
+        # in the python. if you want errors, make an ipython block
+        parsed_block = ast.parse(block)
+
+        in_lines = [i.lineno for i in parsed_block.body]
+        output = []
+        ct = 1
         for lineno, line in enumerate(content):
-
-            line_stripped = line.strip()
-            if not len(line):
-                output.append(line)
-                continue
-
-            # handle decorators
-            if line_stripped.startswith('@'):
-                output.extend([line])
-                if 'savefig' in line:
-                    savefig = True # and need to clear figure
-                continue
-
-            # handle comments
-            if line_stripped.startswith('#'):
-                output.extend([line])
-                continue
-
-            # deal with lines checking for multiline
-            continuation  = u'   %s:'% ''.join(['.']*(len(str(ct))+2))
-            if not multiline:
+            line_stripped = line.strip('\n')
+            if lineno + 1 in in_lines: # this is an input line
                 modified = u"%s %s" % (fmtin % ct, line_stripped)
-                output.append(modified)
                 ct += 1
-                try:
-                    ast.parse(line_stripped)
-                    output.append(u'')
-                except Exception: # on a multiline
-                    multiline = True
-                    multiline_start = lineno
-            else: # still on a multiline
+            else: # this is something else
+                continuation = u'   %s:'% ''.join(['.']*(len(str(ct))+2))
                 modified = u'%s %s' % (continuation, line)
-                output.append(modified)
-                try:
-                    mod = ast.parse(
-                            '\n'.join(content[multiline_start:lineno+1]))
-                    if isinstance(mod.body[0], ast.FunctionDef):
-                        # check to see if we have the whole function
-                        for element in mod.body[0].body:
-                            if isinstance(element, ast.Return):
-                                multiline = False
-                    else:
-                        output.append(u'')
-                        multiline = False
-                except Exception:
-                    pass
-
-            if savefig: # clear figure if plotted
-                self.ensure_pyplot()
-                self.process_input_line('plt.clf()', store_history=False)
-                self.clear_cout()
-                savefig = False
-
+            output.append(modified)
+        output = re.sub('#@(?=[savefig|suppress|verbatim|doctest])', '@',
+                        '\n'.join(output)).split('\n')
+        # put blank lines after input lines
+        for i in in_lines[1:][::-1]:
+            output.insert(i-1, u'')
         return output
+
 
 class IpythonDirective(Directive):
 
@@ -555,14 +534,21 @@ class IpythonDirective(Directive):
         return savefig_dir, source_dir, rgxin, rgxout, promptin, promptout
 
     def setup(self):
-        # reset the execution count if we haven't processed this doc
-        #NOTE: this may be borked if there are multiple seen_doc tmp files
-        #check time stamp?
-        seen_docs = [i for i in os.listdir(tempfile.tempdir)
-            if i.startswith('seen_doc')]
-        if seen_docs:
-            fname = os.path.join(tempfile.tempdir, seen_docs[0])
-            docs = open(fname).read().split('\n')
+        # make a file in this directory, if there's already one
+        # if it's older than 5 minutes, delete it
+        # this needs a more robust solution
+        cur_dir = os.path.normpath(
+                      os.path.join(self.state.document.settings.env.srcdir,
+                      '..'))
+        tmp_file = os.path.join(cur_dir, 'seen_docs.temp')
+        if os.path.exists(tmp_file):
+            file_t = os.path.getmtime(tmp_file)
+            now_t = time.time()
+            if (now_t - file_t)/60. >= 5:
+                docs = []
+                os.remove(tmp_file)
+            else:
+                docs = open(tmp_file, 'r').read().split('\n')
             if not self.state.document.current_source in docs:
                 self.shell.IP.history_manager.reset()
                 self.shell.IP.execution_count = 1
@@ -590,8 +576,7 @@ class IpythonDirective(Directive):
 
         # write the filename to a tempfile because it's been "seen" now
         if not self.state.document.current_source in docs:
-            fd, fname = tempfile.mkstemp(prefix="seen_doc", text=True)
-            fout = open(fname, 'a')
+            fout = open(tmp_file, 'a')
             fout.write(self.state.document.current_source+'\n')
             fout.close()
 
