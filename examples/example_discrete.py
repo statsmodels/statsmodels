@@ -1,4 +1,4 @@
-"""Example: scikits.statsmodels.discrete.discrete_model
+"""Discrete Models
 """
 
 import numpy as np

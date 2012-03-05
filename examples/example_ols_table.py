@@ -11,8 +11,8 @@ data = load()
 
 data_orig = (data.endog.copy(), data.exog.copy())
 
-#Note: In this example using zscored/standardized variables has no effect on
-#   regression estimates. Are there no numerical problems?
+#.. Note: In this example using zscored/standardized variables has no effect on
+#..   regression estimates. Are there no numerical problems?
 
 rescale = 0
 #0: no rescaling, 1:demean, 2:standardize, 3:standardize and transform back
@@ -70,7 +70,6 @@ nanrep = ' '*(nn-1)
 nanrep = nanrep[:nn//2] + '-' + nanrep[nn//2:]
 
 print 'Longley data - sensitivity to dropping an explanatory variable'
-#print tabl
 print str(tabl).replace(nanstring, nanrep)
 
 
