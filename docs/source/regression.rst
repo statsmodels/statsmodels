@@ -1,4 +1,4 @@
-.. currentmodule:: scikits.statsmodels.regression.linear_model
+.. currentmodule:: statsmodels.regression.linear_model
 
 
 .. _regression:

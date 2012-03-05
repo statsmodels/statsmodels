@@ -20,7 +20,7 @@ Running the Test Suite
 
 You can run all the tests by::
 
-    >>> import scikits.statsmodels.api as sm
+    >>> import statsmodels.api as sm
     >>> sm.test()
 
 You can test submodules by::
@@ -39,7 +39,7 @@ tested. The tests look something like
 .. code-block:: python
 
     from numpy.testing import assert_almost_equal
-    import scikits.statsmodels.api as sm
+    import statsmodels.api as sm
     from results.results_discrete import Spector
 
     class CheckDiscreteResults(object):

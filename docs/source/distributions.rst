@@ -1,4 +1,4 @@
-.. currentmodule:: scikits.statsmodels.sandbox.distributions
+.. currentmodule:: statsmodels.sandbox.distributions
 
 .. _distributions:
 
@@ -22,7 +22,7 @@ Distribution Extras
 -------------------
 
 
-.. currentmodule:: scikits.statsmodels.sandbox.distributions.extras
+.. currentmodule:: statsmodels.sandbox.distributions.extras
 
 *Skew Distributions*
 
@@ -62,7 +62,7 @@ distribution from a monotonic transformation, `TransfTwo_gen` can use hump-shape
 or u-shaped transformation, such as abs or square. The remaining objects are
 special cases.
 
-.. currentmodule:: scikits.statsmodels.sandbox.distributions.transformed
+.. currentmodule:: statsmodels.sandbox.distributions.transformed
 
 .. autosummary::
    :toctree: generated/

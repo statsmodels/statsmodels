@@ -1,4 +1,4 @@
-.. currentmodule:: scikits.statsmodels.tsa
+.. currentmodule:: statsmodels.tsa
 
 
 .. _tsa:
@@ -21,7 +21,7 @@ least-squares, either using Kalman Filter or direct filters.
 
 Currently, functions and classes have to be imported from the corresponding module, but
 the main classes will be made available in the statsmodels.tsa namespace. The module
-structure is within scikits.statsmodels.tsa is
+structure is within statsmodels.tsa is
 
  - stattools : empirical properties and tests, acf, pacf, granger-causality,
    adf unit root test, ljung-box test and others.
@@ -53,7 +53,7 @@ processing where longer time series are available and work more often in the
 frequency domain.
 
 
-.. currentmodule:: scikits.statsmodels.tsa
+.. currentmodule:: statsmodels.tsa
 
 
 Descriptive Statistics and Tests
@@ -79,12 +79,12 @@ Estimation
 """"""""""
 
 The following are the main estimation classes, which can be accessed through
-scikits.statsmodels.tsa.api and their result classes
+statsmodels.tsa.api and their result classes
 
 Univariate Autogressive Processes (AR)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. currentmodule:: scikits.statsmodels.tsa
+.. currentmodule:: statsmodels.tsa
 
 .. autosummary::
    :toctree: generated/
@@ -96,7 +96,7 @@ Univariate Autogressive Processes (AR)
 Autogressive Moving-Average Processes (ARMA) and Kalman Filter
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. currentmodule:: scikits.statsmodels.tsa
+.. currentmodule:: statsmodels.tsa
 
 .. autosummary::
    :toctree: generated/
@@ -117,7 +117,7 @@ Vector Autogressive Processes (VAR)
 
 .. seealso:: :ref:`VAR documentation <var>`
 
-.. currentmodule:: scikits.statsmodels.tsa
+.. currentmodule:: statsmodels.tsa
 
 Vector Autogressive Processes (VAR)
 """""""""""""""""""""""""""""""""""
@@ -163,14 +163,14 @@ process for given lag-polynomials.
    arima_process.lpol_fima
    arima_process.lpol_sdiff
 
-.. currentmodule:: scikits.statsmodels
+.. currentmodule:: statsmodels
 
 .. autosummary::
    :toctree: generated/
 
    sandbox.tsa.fftarma.ArmaFft
 
-.. currentmodule:: scikits.statsmodels.tsa
+.. currentmodule:: statsmodels.tsa
 
 Other Time Series Filters
 """""""""""""""""""""""""

@@ -10,9 +10,9 @@ Using setuptools
 
 To obtain the latest released version of statsmodels using `setuptools <http://pypi.python.org/pypi/setuptools>`__::
 
-    easy_install -U scikits.statsmodels
+    easy_install -U statsmodels
 
-Or follow `this link to our PyPI page <http://pypi.python.org/pypi/scikits.statsmodels>`__.
+Or follow `this link to our PyPI page <http://pypi.python.org/pypi/statsmodels>`__.
 
 Obtaining the Source
 ~~~~~~~~~~~~~~~~~~~~

@@ -1,6 +1,6 @@
 
 
-.. currentmodule:: scikits.statsmodels.miscmodels
+.. currentmodule:: statsmodels.miscmodels
 
 
 .. _miscmodels:
@@ -28,7 +28,7 @@ another example can be seen in the zero inflated Poisson model, miscmodels.count
 Count Models :mod:`count`
 --------------------------
 
-.. currentmodule:: scikits.statsmodels.miscmodels.count
+.. currentmodule:: statsmodels.miscmodels.count
 
 .. autosummary::
    :toctree: generated/
@@ -45,7 +45,7 @@ method for the loglikelihood. All result statistics are inherited from the gener
 likelihood model and result classes. The results have been checked against R for a
 simple case.
 
-.. currentmodule:: scikits.statsmodels.miscmodels.tmodel
+.. currentmodule:: statsmodels.miscmodels.tmodel
 
 .. autosummary::
    :toctree: generated/

@@ -1,4 +1,4 @@
-.. currentmodule:: scikits.statsmodels.regression
+.. currentmodule:: statsmodels.regression
 
 
 .. _regression-techn1:

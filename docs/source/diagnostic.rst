@@ -35,13 +35,13 @@ error variance, i.e. errors are homoscedastic. The tests differ in which kind
 of heteroscedasticity is considered as alternative hypothesis. They also vary
 in the power of the test for different types of heteroscedasticity.
 
-:py:func:`het_breushpagan <scikits.statsmodels.stats.diagnostic.het_breushpagan>`
+:py:func:`het_breushpagan <statsmodels.stats.diagnostic.het_breushpagan>`
     Lagrange Multiplier Heteroscedasticity Test by Breush-Pagan
 
-:py:func:`het_white <scikits.statsmodels.stats.diagnostic.het_white>`
+:py:func:`het_white <statsmodels.stats.diagnostic.het_white>`
     Lagrange Multiplier Heteroscedasticity Test by White
 
-:py:func:`het_goldfeldquandt <scikits.statsmodels.stats.diagnostic.het_goldfeldquandt>`
+:py:func:`het_goldfeldquandt <statsmodels.stats.diagnostic.het_goldfeldquandt>`
     test whether variance is the same in 2 subsamples
 
 
@@ -51,15 +51,15 @@ Autocorrelation Tests
 This group of test whether the regression residuals are not autocorrelated.
 They assume that observations are ordered by time.
 
-:py:func:`durbin_watson <scikits.statsmodels.stats.diagnostic.durbin_watson>`
+:py:func:`durbin_watson <statsmodels.stats.diagnostic.durbin_watson>`
   - Durbin-Watson test for no autocorrelation of residuals
   - printed with summary()
 
-:py:func:`acorr_ljungbox <scikits.statsmodels.stats.diagnostic.acorr_ljungbox>`
+:py:func:`acorr_ljungbox <statsmodels.stats.diagnostic.acorr_ljungbox>`
   - Ljung-Box test for no autocorrelation of residuals
   - also returns Box-Pierce statistic
 
-:py:func:`acorr_breush_godfrey <scikits.statsmodels.stats.diagnostic.acorr_breush_godfrey>`
+:py:func:`acorr_breush_godfrey <statsmodels.stats.diagnostic.acorr_breush_godfrey>`
   - Breush-Pagan test for no autocorrelation of residuals
 
 
@@ -70,15 +70,15 @@ missing
 Non-Linearity Tests
 -------------------
 
-:py:func:`linear_harvey_collier <scikits.statsmodels.stats.diagnostic.linear_harvey_collier>`
+:py:func:`linear_harvey_collier <statsmodels.stats.diagnostic.linear_harvey_collier>`
   - Multiplier test for Null hypothesis that linear specification is
     correct
 
-:py:func:`acorr_linear_rainbow <scikits.statsmodels.stats.diagnostic.acorr_linear_rainbow>`
+:py:func:`acorr_linear_rainbow <statsmodels.stats.diagnostic.acorr_linear_rainbow>`
   - Multiplier test for Null hypothesis that linear specification is
     correct.
 
-:py:func:`acorr_linear_lm <scikits.statsmodels.stats.diagnostic.acorr_linear_lm>`
+:py:func:`acorr_linear_lm <statsmodels.stats.diagnostic.acorr_linear_lm>`
   - Lagrange Multiplier test for Null hypothesis that linear specification is
     correct. This tests against specific functional alternatives.
 
@@ -104,13 +104,13 @@ missing
 Unknown Change Point
 ^^^^^^^^^^^^^^^^^^^^
 
-:py:func:`breaks_cusumolsresid <scikits.statsmodels.stats.diagnostic.breaks_cusumolsresid>`
+:py:func:`breaks_cusumolsresid <statsmodels.stats.diagnostic.breaks_cusumolsresid>`
   - cusum test for parameter stability based on ols residuals
 
-:py:func:`breaks_hansen <scikits.statsmodels.stats.diagnostic.breaks_hansen>`
+:py:func:`breaks_hansen <statsmodels.stats.diagnostic.breaks_hansen>`
   - test for model stability, breaks in parameters for ols, Hansen 1992
 
-:py:func:`recursive_olsresiduals <scikits.statsmodels.stats.diagnostic.recursive_olsresiduals>`
+:py:func:`recursive_olsresiduals <statsmodels.stats.diagnostic.recursive_olsresiduals>`
   Calculate recursive ols with residuals and cusum test statistic. This is
   currently mainly helper function for recursive residual based tests.
   However, since it uses recursive updating and doesn't estimate separate
@@ -125,7 +125,7 @@ missing
 Mutlicollinearity Tests
 --------------------------------
 
-conditionnum (scikits.statsmodels.stattools)
+conditionnum (statsmodels.stattools)
   - -- needs test vs Stata --
   - cf Grene (3rd ed.) pp 57-8
 
@@ -141,21 +141,21 @@ Variance Inflation Factors
 Normality and Distribution Tests
 --------------------------------
 
-:py:func:`jarque_bera <scikits.statsmodels.stats.tools.jarque_bera>`
+:py:func:`jarque_bera <statsmodels.stats.tools.jarque_bera>`
   - printed with summary()
   - test for normal distribution of residuals
 
 Normality tests in scipy stats
   need to find list again
 
-:py:func:`omni_normtest <scikits.statsmodels.stats.tools.omni_normtest>`
+:py:func:`omni_normtest <statsmodels.stats.tools.omni_normtest>`
   - test for normal distribution of residuals
   - printed with summary()
 
-:py:func:`normal_ad <scikits.statsmodels.stats.diagnostic.normal_ad>`
+:py:func:`normal_ad <statsmodels.stats.diagnostic.normal_ad>`
   - Anderson Darling test for normality with estimated mean and variance
 
-:py:func:`kstest_normal <scikits.statsmodels.stats.diagnostic.kstest_normal>` :py:func:`lillifors <scikits.statsmodels.stats.diagnostic.lillifors>`
+:py:func:`kstest_normal <statsmodels.stats.diagnostic.kstest_normal>` :py:func:`lillifors <statsmodels.stats.diagnostic.lillifors>`
   Lillifors test for normality, this is a Kolmogorov-Smirnov tes with for
   normality with estimated mean and variance. lillifors is an alias for
   kstest_normal
@@ -183,7 +183,7 @@ individual outliers and might not be able to identify groups of outliers.
 robust regression results RLM
     example from example_rlm.py ::
 
-        import scikits.statsmodels.api as sm
+        import statsmodels.api as sm
 
         ### Example for using Huber's T norm with the default
         ### median absolute deviation scaling
@@ -197,7 +197,7 @@ robust regression results RLM
     And the weights give an idea of how much a particular observation is
     down-weighted according to the scaling asked for.
 
-:py:class:`Influence <scikits.statsmodels.stats.outliers_influence.Influence>`
+:py:class:`Influence <statsmodels.stats.outliers_influence.Influence>`
    Class in stats.outliers_influence, most standard measures for outliers
    and influence are available as methods or attributes given a fitted
    OLS model. This is mainly written for OLS, some but not all measures
@@ -224,7 +224,7 @@ robust regression results RLM
 Unit Root Tests
 ---------------
 
-:py:func:`unitroot_adf <scikits.statsmodels.stats.diagnostic.unitroot_adf>`
+:py:func:`unitroot_adf <statsmodels.stats.diagnostic.unitroot_adf>`
   - same as adfuller but with different signature
 
 

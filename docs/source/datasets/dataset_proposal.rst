@@ -35,7 +35,7 @@ package (e.g. has the __init__.py file). Each package is expected to define the
 function load, returning the corresponding data. For example, to access datasets
 data1, you should be able to do::
 
-  >>> from scikits.statsmodels.datasets.data1 import load
+  >>> from statsmodels.datasets.data1 import load
   >>> d = load() # -> d is a Dataset object, see below
 
 The `load` function is expected to return the `Dataset` object, which has certain
@@ -75,7 +75,7 @@ See this `Reference <http://code.activestate.com/recipes/52308-the-simple-but-ha
 
 In practice, you can use ::
 
-  >>> from scikits.statsmodels.datasets import Dataset
+  >>> from statsmodels.datasets import Dataset
 
 as the default collector as in `datasets/data_template.py`.
 
@@ -119,7 +119,7 @@ Example Usage
 
 ::
 
-  >>> from scikits.statsmodels import datasets
+  >>> from statsmodels import datasets
   >>> data = datasets.longley.load()
 
 

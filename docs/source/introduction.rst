@@ -1,4 +1,4 @@
-.. currentmodule:: scikits.statsmodels
+.. currentmodule:: statsmodels
 
 ************
 Introduction
@@ -60,7 +60,7 @@ easy to add more datasets.
 Python 3
 --------
 
-scikits.statsmodels has been ported and tested for Python 3.2. Python 3
+statsmodels has been ported and tested for Python 3.2. Python 3
 version of the code can be obtained by running 2to3.py over the entire
 statsmodels source. The numerical core of statsmodels worked almost without
 changes, however there can be problems with data input and plotting.
@@ -161,7 +161,7 @@ Financial Support
 -----------------
 
 We are grateful for the financial support that we obtained for the
-developement of scikits.statsmodels:
+developement of statsmodels:
 
  Google `www.google.com <http://www.google.com/>`_ : two Google Summer of Code,
  GSOC 2009 and GSOC 2010

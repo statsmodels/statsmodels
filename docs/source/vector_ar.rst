@@ -1,6 +1,6 @@
 :orphan:
 
-.. currentmodule:: scikits.statsmodels.tsa.vector_ar.var_model
+.. currentmodule:: statsmodels.tsa.vector_ar.var_model
 
 .. _var:
 
@@ -33,7 +33,7 @@ Model fitting
 .. note::
 
     The classes referenced below are accessible via the
-    :mod:`scikits.statsmodels.tsa.api` module.
+    :mod:`statsmodels.tsa.api` module.
 
 To estimate a VAR model, one must first create the model using an `ndarray` of
 homogeneous or structured dtype. When using a structured or record array, the
@@ -451,7 +451,7 @@ The forecasts can be visualized using `plot_forecast`:
 Class Reference
 ---------------
 
-.. currentmodule:: scikits.statsmodels.tsa.vector_ar
+.. currentmodule:: statsmodels.tsa.vector_ar
 
 .. autosummary::
    :toctree: generated/
