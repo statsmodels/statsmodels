@@ -18,7 +18,11 @@ import hash_funcs
 #----------------------------------------------------
 # these files do not get made into .rst files because of
 # some problems, they may need a simple cleaning up
-exclude_list = ['run_all.py']
+exclude_list = ['run_all.py',
+                # these need to be cleaned up
+                'example_ols_tftest.py',
+                'example_glsar.py',
+                'example_ols_table.py']
 
 file_path = os.path.dirname(__file__)
 docs_rst_dir = os.path.realpath(os.path.join(file_path,
@@ -26,23 +30,24 @@ docs_rst_dir = os.path.realpath(os.path.join(file_path,
 example_dir = os.path.realpath(os.path.join(file_path,
                     '../examples/'))
 
-def check_scripts(exclude_list, filelist):
+def check_script(filename):
     """
     Run all the files in filelist from run_all. Add any with problems
     to exclude_list and return it.
     """
 
-    for run_file in filelist:
-        # do this to redirect stdout
-        fnull = open(os.devnull, 'w')
-        file_to_run = 'python ' + os.path.join(example_dir, run_file)
-        result = subprocess.call(file_to_run, shell=True,
-                                 stdout=fnull) # don't capture stderr
-        fnull.close()
-        if result != 0: # raised an error
-            print "Not generating reST from %s. An error occurred." % run_file
-            exclude_list.append(os.path.basename(run_file))
-    return exclude_list
+    # do this to redirect stdout
+    fnull = open(os.devnull, 'w')
+    file_to_run = "python -c\"import warnings; "
+    file_to_run += "warnings.simplefilter('ignore'); execfile('%s')\"" %\
+                        os.path.join(example_dir, filename)
+    result = subprocess.call(file_to_run, shell=True,
+                             stdout=fnull) # don't capture stderr
+    fnull.close()
+    if result != 0: # raised an error
+        print "Not generating reST from %s. An error occurred." % filename
+        return False
+    return True
 
 def parse_docstring(block):
     """
@@ -64,6 +69,8 @@ def parse_file(block):
     Block is a raw string file.
     """
     docstring, block = parse_docstring(block)
+    # just get the first line from the docstring
+    docstring = docstring.split('\n')[0] or docstring.split('\n')[1]
     outfile = [docstring,'='*len(docstring),'']
     block = block.split('\n')
 
@@ -82,6 +89,10 @@ def parse_file(block):
                 outfile.append('')
                 code_snippet = False
             line = line.strip()
+            # try to remove lines like # hello -> #hello
+            line = re.sub("(?<=#) (?!\s)", "", line)
+            # make sure commented out things have a space
+            line = re.sub("#\.\.(?!\s)", "#.. ", line)
             line = re.sub("^#+", "", line) # strip multiple hashes
             outfile.append(line)
         else:
@@ -130,7 +141,6 @@ if __name__ == "__main__":
     sys.path.insert(0, example_dir)
     from run_all import filelist
     sys.path.remove(example_dir)
-    exclude_list = check_scripts(exclude_list, filelist)
 
     if not os.path.exists(docs_rst_dir):
         os.makedirs(docs_rst_dir)
@@ -142,7 +152,8 @@ if __name__ == "__main__":
     else: # process the whole directory
         for root, dirnames, filenames in os.walk(example_dir):
             for example in filenames:
-                if (not example.endswith('.py') or example in exclude_list):
+                example_file = os.path.join(root, example)
+                if (not example.endswith('.py') or example in exclude_list
+                    or not check_script(example_file)):
                     continue
-                example_file = os.path.join(root,example)
                 restify(example_file)
