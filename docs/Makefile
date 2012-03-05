@@ -38,6 +38,7 @@ help:
 clean:
 	-rm -rf $(BUILDDIR)/*
 	-rm -rf source/generated/
+	-rm source/examples/generated/*
 
 html:
 	# generate the examples rst files
