@@ -19,7 +19,7 @@ curdir = os.path.abspath(os.path.dirname(__file__))
 README = open(os.path.join(curdir, "README.txt")).read()
 CHANGES = open(os.path.join(curdir, "CHANGES.txt")).read()
 
-DISTNAME = 'scikits.statsmodels'
+DISTNAME = 'statsmodels'
 DESCRIPTION = 'Statistical computations and models for use with SciPy'
 LONG_DESCRIPTION = README + '\n\n' + CHANGES
 MAINTAINER = 'Skipper Seabold, Josef Perktold'
@@ -71,7 +71,7 @@ def git_version():
 
     return GIT_REVISION
 
-def write_version_py(filename='scikits/statsmodels/version.py'):
+def write_version_py(filename='statsmodels/version.py'):
     cnt = """
 # THIS FILE IS GENERATED FROM SETUP.PY
 short_version = '%(version)s'
@@ -92,13 +92,13 @@ if not release:
     elif os.path.exists(filename):
         # must be a source distribution, use existing version file
         try:
-            from scikits.statsmodels.version import git_revision as GIT_REVISION
+            from statsmodels.version import git_revision as GIT_REVISION
             #print "debug import success GIT_REVISION", GIT_REVISION
         except ImportError:
             dowrite = False
             #changed: if we are not in a git repository then don't update version.py
 ##            raise ImportError("Unable to import git_revision. Try removing " \
-##                              "scikits/statsmodels/version.py and the build directory " \
+##                              "statsmodels/version.py and the build directory " \
 ##                              "before building.")
     else:
         GIT_REVISION = "Unknown"
@@ -134,13 +134,14 @@ def configuration(parent_package='', top_path=None, package_name=DISTNAME):
 
     config.add_subpackage('scikits')
     config.add_subpackage(DISTNAME)
+    config.add_subpackage('scikits.statsmodels')
     config.add_data_files('scikits/__init__.py')
     config.add_data_files('docs/build/htmlhelp/statsmodelsdoc.chm',
-                          'scikits/statsmodels/statsmodelsdoc.chm')
+                          'statsmodels/statsmodelsdoc.chm')
 
     if compile_cython:
         config.add_extension('tsa/kalmanf/kalman_loglike',
-                sources = ['scikits/statsmodels/tsa/kalmanf/kalman_loglike.c'],
+                sources = ['statsmodels/tsa/kalmanf/kalman_loglike.c'],
                 include_dirs=[numpy.get_include()])
 
     config.set_options(
