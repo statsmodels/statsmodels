@@ -1,6 +1,6 @@
 .. _related:
 
-.. currentmodule:: scikits.statsmodels
+.. currentmodule:: statsmodels
 
 
 Related Packages

@@ -9,7 +9,7 @@
 #}
 {%- if prev %}
   <h4>{{ _('Previous topic') }}</h4>
-  {%- if prev.title[:19] == "scikits.statsmodels" %}
+  {%- if prev.title[:19] == "statsmodels" %}
   <p class="topless"><a href="{{ prev.link|e }}"
                         title="{{ _('previous chapter') }}">{{ "sm." ~ prev.title[20:] }}</a></p> 
   {%- else %}
@@ -21,7 +21,7 @@
 
 {%- if next %}
   <h4>{{ _('Next topic') }}</h4>
-  {%- if next.title[:19] == "scikits.statsmodels" %}
+  {%- if next.title[:19] == "statsmodels" %}
   <p class="topless"><a href="{{ next.link|e }}"
                         title="{{ _('next chapter') }}">{{ "sm." ~ next.title[20:] }}</a></p>
   {%- else %}

@@ -1,4 +1,4 @@
-.. currentmodule:: scikits.statsmodels.discrete.discrete_model
+.. currentmodule:: statsmodels.discrete.discrete_model
 
 
 .. _discretemod:

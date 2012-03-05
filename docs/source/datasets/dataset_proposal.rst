@@ -2,7 +2,7 @@
 
 .. _dataset_proposal:
 
-Dataset for scikits.statmodels: design proposal
+Dataset for statmodels: design proposal
 ===============================================
 
 One of the thing numpy/scipy is missing now is a set of datasets, available for
@@ -35,7 +35,7 @@ package (e.g. has the __init__.py file). Each package is expected to define the
 function load, returning the corresponding data. For example, to access datasets
 data1, you should be able to do::
 
-  >>> from scikits.statsmodels.datasets.data1 import load
+  >>> from statsmodels.datasets.data1 import load
   >>> d = load() # -> d is a Dataset object, see below
 
 The `load` function is expected to return the `Dataset` object, which has certain
@@ -75,7 +75,7 @@ See this `Reference <http://code.activestate.com/recipes/52308-the-simple-but-ha
 
 In practice, you can use ::
 
-  >>> from scikits.statsmodels.datasets import Dataset
+  >>> from statsmodels.datasets import Dataset
 
 as the default collector as in `datasets/data_template.py`.
 
@@ -88,7 +88,7 @@ The key goals are:
       from this model.
     - All possible datasets should fit into this model.
 
-For the datasets to be useful in the statsmodels scikits the Dataset object
+For the datasets to be useful in statsmodels the Dataset object
 returned by load has the following conventions and attributes:
 
     - Calling the object itself returns the plain ndarray of the full dataset.
@@ -119,7 +119,7 @@ Example Usage
 
 ::
 
-  >>> from scikits.statsmodels import datasets
+  >>> from statsmodels import datasets
   >>> data = datasets.longley.load()
 
 

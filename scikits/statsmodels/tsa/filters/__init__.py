@@ -1,4 +1,4 @@
-from .bk_filter import bkfilter
-from .hp_filter import hpfilter
-from .cf_filter import cffilter
-from .filtertools import miso_lfilter, arfilter
+import warnings
+warnings.warn('scikits.statsmodels namespace is deprecated and will be '
+              'removed in 0.5, please use statsmodels instead')
+from statsmodels.tsa.filters import *

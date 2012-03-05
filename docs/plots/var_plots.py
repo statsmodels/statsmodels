@@ -1,7 +1,7 @@
 import numpy as np
 
-from scikits.statsmodels.tsa.api import VAR
-from scikits.statsmodels.api import datasets as ds
+from statsmodels.tsa.api import VAR
+from statsmodels.api import datasets as ds
 
 mdata = ds.macrodata.load().data[['realgdp', 'realcons', 'realinv']]
 names = mdata.dtype.names

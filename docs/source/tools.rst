@@ -1,4 +1,4 @@
-.. currentmodule:: scikits.statsmodels.tools.tools
+.. currentmodule:: statsmodels.tools.tools
 
 
 .. _tools:

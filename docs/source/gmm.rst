@@ -1,4 +1,4 @@
-.. currentmodule:: scikits.statsmodels.sandbox.regression.gmm
+.. currentmodule:: statsmodels.sandbox.regression.gmm
 
 
 .. _gmm:
@@ -7,7 +7,7 @@
 Generalized Method of Moments :mod:`gmm`
 ========================================
 
-:mod:`scikits.statmodels.gmm` contains model classes and functions that are based on
+:mod:`statsmodels.gmm` contains model classes and functions that are based on
 estimation with Generalized Method of Moments.
 Currently the general non-linear case is implemented. An example class for the standard
 linear instrumental variable model is included. This has been introduced as a test case, it
@@ -21,7 +21,7 @@ the optimal weighting matrix and estimating the parameters. Implementing models 
 different moment conditions is done by subclassing GMM. In the minimal implementation
 only the moment conditions, `momcond` have to be defined.
 
-.. currentmodule:: scikits.statsmodels.sandbox.regression.gmm
+.. currentmodule:: statsmodels.sandbox.regression.gmm
 
 
 Module Reference

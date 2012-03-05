@@ -32,7 +32,7 @@ http://peak.telecommunity.com/DevCenter/EasyInstall
 
 Then you can do (with proper permissions)
 
-easy_install -U scikits.statsmodels
+easy_install -U statsmodels
 
 Ubuntu/Debian
 -------------
@@ -49,7 +49,7 @@ Installing from Source
 
 Download and extract the source distribution from PyPI or github
 
-PyPI: http://pypi.python.org/pypi/scikits.statsmodels
+PyPI: http://pypi.python.org/pypi/statsmodels
 Github: https://github.com/statsmodels/statsmodels/archives/master
 
 Or clone the bleeding edge code from our repository on github at

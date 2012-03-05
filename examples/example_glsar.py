@@ -1,5 +1,5 @@
 '''
-Example: scikits.statsmodels.GLSAR
+Example: statsmodels.GLSAR
 
 6 examples for GLSAR with artificial data
 
@@ -12,8 +12,8 @@ written, and GLSAR is still being worked on.
 import numpy as np
 import numpy.testing as npt
 from scipy import signal
-import scikits.statsmodels.api as sm
-from scikits.statsmodels.regression.linear_model import GLSAR, yule_walker
+import statsmodels.api as sm
+from statsmodels.regression.linear_model import GLSAR, yule_walker
 
 examples_all = range(10) + ['test_copy']
 

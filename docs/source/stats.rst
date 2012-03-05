@@ -1,4 +1,4 @@
-.. currentmodule:: scikits.statsmodels.stats
+.. currentmodule:: statsmodels.stats
 
 .. _stats:
 
@@ -24,7 +24,7 @@ and might still be moved around.
 Residual Diagnostics and Specification Tests
 --------------------------------------------
 
-.. currentmodule:: scikits.statsmodels.stats.stattools
+.. currentmodule:: statsmodels.stats.stattools
 
 .. autosummary::
    :toctree: generated/
@@ -33,7 +33,7 @@ Residual Diagnostics and Specification Tests
    jarque_bera
    omni_normtest
 
-.. currentmodule:: scikits.statsmodels.stats.diagnostic
+.. currentmodule:: statsmodels.stats.diagnostic
 
 .. autosummary::
    :toctree: generated/
@@ -75,7 +75,7 @@ Goodness of Fit Tests and Measures
 
  some tests for goodness of fit for univariate distributions
 
-.. currentmodule:: scikits.statsmodels.stats.gof
+.. currentmodule:: statsmodels.stats.gof
 
 .. autosummary::
    :toctree: generated/
@@ -84,7 +84,7 @@ Goodness of Fit Tests and Measures
    gof_chisquare_discrete
    gof_binning_discrete
 
-.. currentmodule:: scikits.statsmodels.stats.diagnostic
+.. currentmodule:: statsmodels.stats.diagnostic
 
 .. autosummary::
    :toctree: generated/
@@ -96,7 +96,7 @@ Goodness of Fit Tests and Measures
 Non-Parametric Tests
 --------------------
 
-.. currentmodule:: scikits.statsmodels.sandbox.stats.runs
+.. currentmodule:: statsmodels.sandbox.stats.runs
 
 .. autosummary::
    :toctree: generated/
@@ -119,7 +119,7 @@ These three functions are verified.
 GroupsStats and MultiComparison are convenience classes to multiple comparisons similar
 to one way ANOVA, but still in developement
 
-.. currentmodule:: scikits.statsmodels.sandbox.stats.multicomp
+.. currentmodule:: statsmodels.sandbox.stats.multicomp
 
 .. autosummary::
    :toctree: generated/
@@ -133,7 +133,7 @@ to one way ANOVA, but still in developement
 
 The following functions are not (yet) public (here for my own benefit, JP)
 
-.. currentmodule:: scikits.statsmodels.sandbox.stats.multicomp
+.. currentmodule:: statsmodels.sandbox.stats.multicomp
 
 .. autosummary::
    :toctree: generated/
@@ -167,7 +167,7 @@ The following functions are not (yet) public (here for my own benefit, JP)
 Basic Statistics and t-Tests with frequency weights
 ---------------------------------------------------
 
-.. currentmodule:: scikits.statsmodels.stats.weightstats
+.. currentmodule:: statsmodels.stats.weightstats
 
 .. autosummary::
    :toctree: generated/
@@ -183,7 +183,7 @@ Moment Helpers
 These are utility functions to convert between central and non-central moments, skew,
 kurtosis and cummulants.
 
-.. currentmodule:: scikits.statsmodels.stats.moment_helpers
+.. currentmodule:: statsmodels.stats.moment_helpers
 
 .. autosummary::
    :toctree: generated/

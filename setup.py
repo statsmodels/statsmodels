@@ -19,7 +19,7 @@ curdir = os.path.abspath(os.path.dirname(__file__))
 README = open(os.path.join(curdir, "README.txt")).read()
 CHANGES = open(os.path.join(curdir, "CHANGES.txt")).read()
 
-DISTNAME = 'scikits.statsmodels'
+DISTNAME = 'statsmodels'
 DESCRIPTION = 'Statistical computations and models for use with SciPy'
 LONG_DESCRIPTION = README + '\n\n' + CHANGES
 MAINTAINER = 'Skipper Seabold, Josef Perktold'
@@ -71,7 +71,7 @@ def git_version():
 
     return GIT_REVISION
 
-def write_version_py(filename='scikits/statsmodels/version.py'):
+def write_version_py(filename='statsmodels/version.py'):
     cnt = """
 # THIS FILE IS GENERATED FROM SETUP.PY
 short_version = '%(version)s'
@@ -92,13 +92,13 @@ if not release:
     elif os.path.exists(filename):
         # must be a source distribution, use existing version file
         try:
-            from scikits.statsmodels.version import git_revision as GIT_REVISION
+            from statsmodels.version import git_revision as GIT_REVISION
             #print "debug import success GIT_REVISION", GIT_REVISION
         except ImportError:
             dowrite = False
             #changed: if we are not in a git repository then don't update version.py
 ##            raise ImportError("Unable to import git_revision. Try removing " \
-##                              "scikits/statsmodels/version.py and the build directory " \
+##                              "statsmodels/version.py and the build directory " \
 ##                              "before building.")
     else:
         GIT_REVISION = "Unknown"
@@ -125,76 +125,24 @@ except ImportError:
 
 
 def configuration(parent_package='', top_path=None, package_name=DISTNAME):
-    #if os.path.fexists('MANIFEST'): os.remove('MANIFEST')
+    if os.path.exists('MANIFEST'):
+        os.remove('MANIFEST')
 
     from numpy.distutils.misc_util import Configuration
     config = Configuration(None, parent_package, top_path,
-                           namespace_packages = ['scikits'],
-                           name = DISTNAME,
-                           version = VERSION,
-                           maintainer  = MAINTAINER,
-                           maintainer_email = MAINTAINER_EMAIL,
-                           description = DESCRIPTION,
-                           license = LICENSE,
-                           url = URL,
-                           download_url = DOWNLOAD_URL,
-                           long_description = LONG_DESCRIPTION)
-    config.add_subpackage('scikits')
-    config.add_data_files('scikits/__init__.py')
-    config.add_data_dir('scikits/statsmodels/tests')
-    #config.add_data_dir('scikits/statsmodels/examples')
-    #config.add_data_dir('scikits/statsmodels/sandbox/examples')
-    #config.add_data_dir('docs') #TODO: do we need to install the docs?
-    config.add_data_dir('scikits/statsmodels/iolib/tests')
-    config.add_data_dir('scikits/statsmodels/discrete/tests')
-    config.add_data_dir('scikits/statsmodels/genmod/tests')
-    config.add_data_dir('scikits/statsmodels/regression/tests')
-    config.add_data_dir('scikits/statsmodels/robust/tests')
-    config.add_data_dir('scikits/statsmodels/tsa/vector_ar/tests')
-    config.add_data_dir('scikits/statsmodels/tsa/filters/tests')
-    config.add_data_files('docs/build/htmlhelp/statsmodelsdoc.chm',
-                          'scikits/statsmodels/statsmodelsdoc.chm')
-    config.add_data_files('scikits/statsmodels/iolib/tests/results/macrodata.npy')
-    config.add_data_files('scikits/statsmodels/sandbox/panel/test_data.txt')
-    config.add_data_files('scikits/statsmodels/stats/tests/results/influence_lsdiag_R.json')
-    config.add_data_files('scikits/statsmodels/stats/tests/results/influence_measures_R.csv')
-    config.add_data_files('scikits/statsmodels/regression/tests/results/leverage_influence_ols_nostars.txt')
-    config.add_data_dir('scikits/statsmodels/nonparametric/tests')
-    vardatafiles = [os.path.join(r,d) for r,ds,f in \
-                    os.walk('scikits/statsmodels/tsa/vector_ar/data')
-                    for d in f if not os.path.splitext(d)[1] in ['.py',
-                    '.pyc']]
-    for f in vardatafiles:
-        config.add_data_files(f)
-    extradatafiles = [os.path.join(r,d) for r,ds,f in \
-                      os.walk('scikits/statsmodels/datasets')
-                      for d in f if not os.path.splitext(d)[1] in
-                      ['.py', '.pyc']]
-    for f in extradatafiles:
-        config.add_data_files(f)
-    tsaresultsfiles = [os.path.join(r,d) for r,ds,f in \
-                       os.walk('scikits/statsmodels/tsa/tests/results') for \
-                       d in f if not os.path.splitext(d)[1] in ['.py',
-                           '.do', '.pyc', '.swp']]
-    for f in tsaresultsfiles:
-        config.add_data_files(f)
-    kderesultsfiles = [os.path.join(r,d) for r,ds,f in \
-                os.walk('scikits/statsmodels/nonparametric/tests/results') for \
-                       d in f if not os.path.splitext(d)[1] in ['.py',
-                           '.do', '.pyc', '.swp']]
-    for f in kderesultsfiles:
-        config.add_data_files(f)
+                           namespace_packages = ['scikits'])
 
+    config.add_subpackage('scikits')
+    config.add_subpackage(DISTNAME)
+    config.add_subpackage('scikits.statsmodels')
+    config.add_data_files('scikits/__init__.py')
+    config.add_data_files('docs/build/htmlhelp/statsmodelsdoc.chm',
+                          'statsmodels/statsmodelsdoc.chm')
 
     if compile_cython:
         config.add_extension('tsa/kalmanf/kalman_loglike',
-                sources = ['scikits/statsmodels/tsa/kalmanf/kalman_loglike.c'],
+                sources = ['statsmodels/tsa/kalmanf/kalman_loglike.c'],
                 include_dirs=[numpy.get_include()])
-
-    #config.add_subpackage(DISTNAME)
-    #config.add_subpackage('scikits/statsmodels/examples')
-    #config.add_subpackage('scikits/statsmodels/tests')
-
 
     config.set_options(
             ignore_setup_xxx_py = True,
@@ -207,8 +155,17 @@ def configuration(parent_package='', top_path=None, package_name=DISTNAME):
 
 if __name__ == "__main__":
     write_version_py()
-    setup(configuration = configuration,
-        #name = DISTNAME,
+    setup(
+          name = DISTNAME,
+          version = VERSION,
+          maintainer  = MAINTAINER,
+          maintainer_email = MAINTAINER_EMAIL,
+          description = DESCRIPTION,
+          license = LICENSE,
+          url = URL,
+          download_url = DOWNLOAD_URL,
+          long_description = LONG_DESCRIPTION,
+          configuration = configuration,
           install_requires = ['pandas >= 0.7.0'],
           namespace_packages = ['scikits'],
           packages = setuptools.find_packages(),

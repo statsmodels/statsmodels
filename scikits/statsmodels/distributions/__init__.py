@@ -1,1 +1,4 @@
-from empirical_distribution import ECDF, monotone_fn_inverter, StepFunction
+import warnings
+warnings.warn('scikits.statsmodels namespace is deprecated and will be '
+              'removed in 0.5, please use statsmodels instead')
+from statsmodels.distributions import *

@@ -1,4 +1,4 @@
-.. currentmodule:: scikits.statsmodels.rlm
+.. currentmodule:: statsmodels.rlm
 
 
 .. _rlm_techn1:

@@ -8,7 +8,7 @@ Note: uncomment plt.show() to display graphs
 """
 
 import numpy as np
-import scikits.statsmodels.api as sm
+import statsmodels.api as sm
 
 # create some data set
 

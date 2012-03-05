@@ -5,7 +5,7 @@ on the meta-information from the datasets of the currently installed version.
 Ie., it imports the datasets package to scrape the meta-information.
 """
 
-import scikits.statsmodels.api as sm
+import statsmodels.api as sm
 import os
 from os.path import join
 import inspect

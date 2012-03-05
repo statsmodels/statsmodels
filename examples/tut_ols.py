@@ -5,11 +5,11 @@ Note: uncomment plt.show() to display graphs
 
 import numpy as np
 #from scipy import stats
-import scikits.statsmodels.api as sm
+import statsmodels.api as sm
 import matplotlib
 #matplotlib.use('Qt4Agg')#, warn=True)   #for Spyder
 import matplotlib.pyplot as plt
-from scikits.statsmodels.sandbox.regression.predstd import wls_prediction_std
+from statsmodels.sandbox.regression.predstd import wls_prediction_std
 
 #fix a seed for these examples
 np.random.seed(9876789)

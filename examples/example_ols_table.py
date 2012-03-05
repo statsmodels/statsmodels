@@ -1,9 +1,9 @@
-"""Example: scikits.statsmodels.OLS
+"""Example: statsmodels.OLS
 """
 
-from scikits.statsmodels.datasets.longley import load
-import scikits.statsmodels.api as sm
-from scikits.statsmodels.iolib.table import (SimpleTable, default_txt_fmt,
+from statsmodels.datasets.longley import load
+import statsmodels.api as sm
+from statsmodels.iolib.table import (SimpleTable, default_txt_fmt,
                         default_latex_fmt, default_html_fmt)
 import numpy as np
 

@@ -122,7 +122,7 @@ def install_branch(branch):
     sitepack = os.path.join(virtual_dir,'lib','python'+ver, 'site-packages')
     dir_list = os.listdir(sitepack)
     for f in dir_list:
-        if 'scikits.statsmodels' in f:
+        if 'statsmodels' in f:
             shutil.rmtree(os.path.join(sitepack, f))
 
     # checkout the branch
@@ -151,7 +151,7 @@ def build_docs(branch):
     Changes into gitdname and builds the docs using sphinx in the
     BUILDENV virtualenv
     """
-    os.chdir(os.path.join(gitdname,'scikits','statsmodels','docs'))
+    os.chdir(os.path.join(gitdname,'statsmodels','docs'))
     sphinx_dir = os.path.join(virtual_dir,'bin')
     #NOTE: don't use make.py, just use make and specify which sphinx
     #    retcode = subprocess.call([virtual_python,'make.py','html',
@@ -169,7 +169,7 @@ def build_pdf(branch):
     Changes into new_branch_dir and builds the docs using sphinx in the
     BUILDENV virtualenv
     """
-    os.chdir(os.path.join(gitdname,'scikits','statsmodels','docs'))
+    os.chdir(os.path.join(gitdname,'statsmodels','docs'))
     sphinx_dir = os.path.join(virtual_dir,'bin')
     retcode = subprocess.call(" ".join(['make','latexpdf',
         'SPHINXBUILD='+sphinx_dir+'/sphinx-build']), shell=True)
@@ -185,7 +185,7 @@ def upload_docs(branch):
     else:
         remote_dir = ''
     #    old_cwd = os.getcwd()
-    os.chdir(os.path.join(gitdname,'scikits','statsmodels','docs'))
+    os.chdir(os.path.join(gitdname,'statsmodels','docs'))
     retcode = subprocess.call(['rsync', '-avPr' ,'-e ssh', 'build/html/',
         'jseabold,statsmodels@web.sourceforge.net:htdocs/'+remote_dir])
     if retcode != 0:
@@ -200,7 +200,7 @@ def upload_pdf(branch):
         remote_dir = 'devel'
     else:
         remote_dir = ''
-    os.chdir(os.path.join(dname, new_branch_dir,'scikits','statsmodels','docs'))
+    os.chdir(os.path.join(dname, new_branch_dir, 'statsmodels','docs'))
     retcode = subprocess.call(['rsync', '-avPr', '-e ssh',
         'build/latex/statsmodels.pdf',
         'jseabold,statsmodels@web.sourceforge.net:htdocs/'+remote_dir+'pdf/'])
