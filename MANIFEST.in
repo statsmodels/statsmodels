@@ -7,19 +7,19 @@ recursive-exclude build *
 recursive-exclude dist *
 recursive-exclude tools *
 
-graft scikits/statsmodels/datasets
-graft scikits/statsmodels/tests
-graft scikits/statsmodels/sandbox/regression/data
-graft scikits/statsmodels/sandbox/tests
-graft scikits/statsmodels/sandbox/tsa/examples
-graft scikits/statsmodels/tsa/vector_ar/data
+graft statsmodels/datasets
+graft statsmodels/tests
+graft statsmodels/sandbox/regression/data
+graft statsmodels/sandbox/tests
+graft statsmodels/sandbox/tsa/examples
+graft statsmodels/tsa/vector_ar/data
 recursive-include docs/source *
 exclude docs/source/generated/*
 recursive-include docs/sphinxext *
 recursive-exclude docs/build *
 #recursive-include docs/build/html *
 recursive-exclude docs/build/htmlhelp *
-include scikits/statsmodels/statsmodelsdoc.chm
+include statsmodels/statsmodelsdoc.chm
 include docs/make.bat
 include docs/Makefile
 #include docs mak*
@@ -28,11 +28,11 @@ include docs/Makefile
 recursive-include examples *
 
 #missed files:  .npz, .npy
-include scikits/statsmodels/tsa/vector_ar/tests/results/vars_results.npz
-include scikits/statsmodels/iolib/tests/results/*
-include scikits/statsmodels/stats/tests/results/influence_lsdiag_R.json
-include scikits/statsmodels/sandbox/panel/test_data.txt
-include scikits/statsmodels/stats/tests/results/influence_measures_R.csv
-include scikits/statsmodels/regression/tests/results/leverage_influence_ols_nostars.txt
+include statsmodels/tsa/vector_ar/tests/results/vars_results.npz
+include statsmodels/iolib/tests/results/*
+include statsmodels/stats/tests/results/influence_lsdiag_R.json
+include statsmodels/sandbox/panel/test_data.txt
+include statsmodels/stats/tests/results/influence_measures_R.csv
+include statsmodels/regression/tests/results/leverage_influence_ols_nostars.txt
 
 global-exclude *~ *.swp  *.pyc *.bak
