@@ -267,7 +267,7 @@ class GLM(base.LikelihoodModel):
             mu is the mean response estimate
 
         Returns
-        --------
+        -------
         Estimate of scale
 
         Notes
