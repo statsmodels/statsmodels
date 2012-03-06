@@ -45,6 +45,7 @@ class BasePolySmoother(object):
         self.x = x = np.linspace(lb, ub, nobs)
         self.exog = exog = x[:,None]**np.arange(order+1)
         y_true = exog.sum(1)
+        np.random.seed(987567)
         self.y = y = y_true + sigma_noise * np.random.randn(nobs)
 
 
@@ -104,3 +105,4 @@ if __name__ == '__main__':
 
     t3 = TestPolySmoother3()
     t3.test_predict()
+
