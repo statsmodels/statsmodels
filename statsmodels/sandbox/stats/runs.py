@@ -237,7 +237,10 @@ def runstest_2samp(x, y=None, groups=None):
         xindicator = groups[xargsort]
         return Runs(xindicator).runs_test()
 
-from scipy import comb
+try:
+    from scipy import comb
+except ImportError:
+    from scipy.misc import comb
 
 class TotalRunsProb(object):
     '''class for the probability distribution of total runs
