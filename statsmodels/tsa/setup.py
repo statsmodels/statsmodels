@@ -9,7 +9,7 @@ def configuration(parent_package='', top_path=None):
                             get_numpy_include_dirs)
     config = Configuration('tsa', parent_package, top_path)
 
-    #config.add_subpackage('kalmanf')
+    config.add_subpackage('kalmanf')
 
     config.add_data_files('vector_ar/data/*.dat')
 
