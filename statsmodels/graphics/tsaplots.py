@@ -38,8 +38,8 @@ def plotacf(corr, ax=None, lags=None, use_vlines=True, **kwargs):
 
     See Also
     --------
-    :func:`~matplotlib.pyplot.xcorr`
-    :func:`~matplotlib.pyplot.acorr`
+    matplotlib.pyplot.xcorr
+    matplotlib.pyplot.acorr
     mpl_examples/pylab_examples/xcorr_demo.py
 
     Notes
