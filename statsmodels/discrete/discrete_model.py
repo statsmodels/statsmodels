@@ -1552,6 +1552,7 @@ class DiscreteResults(base.LikelihoodModelResults):
         ----------
         at : str, optional
             Options are:
+
             - 'overall', The average of the marginal effects at each
               observation.
             - 'mean', The marginal effects at the mean of each regressor.
@@ -1563,6 +1564,8 @@ class DiscreteResults(base.LikelihoodModelResults):
             variables not specified by `exog` are calculated using the `at`
             option.
         method : str, optional
+            Options are:
+
             - 'dydx' - dy/dx - No transformation is made and marginal effects
               are returned.  This is the default.
             - 'eyex' - estimate elasticities of variables in `exog` --
