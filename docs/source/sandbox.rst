@@ -164,17 +164,6 @@ Tools: Principal Component Analysis
    pcasvd
 
 
-
-Graphics
-""""""""
-
-.. currentmodule:: statsmodels.sandbox
-
-.. autosummary::
-   :toctree: generated/
-
-   graphics.qqplot
-
 Descriptive Statistics Printing
 """""""""""""""""""""""""""""""
 

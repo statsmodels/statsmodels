@@ -62,6 +62,7 @@ Table of Contents
    dev/internal
    gmm
    distributions
+   graphics
    datasets/index
    sandbox
 
