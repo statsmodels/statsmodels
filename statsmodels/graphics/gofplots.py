@@ -42,15 +42,18 @@ def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
         from the standardized data, after subtracting the fitted loc
         and dividing by the fitted scale.
     line : str {'45', 's', 'r', q'} or None
-        Options for the reference line to which the data is compared.
-        '45' - 45-degree line
-        's' - standardized line, the expected order statistics are scaled by the
-              standard deviation of the given sample and have the mean added to them
-        'r' - A regression line is fit
-        'q' - A line is fit through the quartiles.
-        None = by default no reference line is added to the plot.
-        If True a reference line is drawn on the graph. The default is to
-        fit a line via OLS regression.
+        Options for the reference line to which the data is compared.:
+
+        - '45' - 45-degree line
+        - 's' - standardized line, the expected order statistics are scaled
+          by the standard deviation of the given sample and have the mean
+          added to them
+        - 'r' - A regression line is fit
+        - 'q' - A line is fit through the quartiles.
+        - None - by default no reference line is added to the plot.
+        - If True a reference line is drawn on the graph. The default is to
+          fit a line via OLS regression.
+
     ax : Matplotlib AxesSubplot instance, optional
         If given, this subplot is used to plot in instead of a new figure being
         created.
@@ -151,13 +154,14 @@ def qqline(ax, line, x=None, y=None, dist=None, fmt='r-'):
     ax : matplotlib axes instance
         The axes on which to plot the line
     line : str {'45','r','s','q'}
-        Options for the reference line to which the data is compared.
-        '45' - 45-degree line
-        's'  - standardized line, the expected order statistics are scaled by the
-               standard deviation of the given sample and have the mean added to them
-        'r'  - A regression line is fit
-        'q'  - A line is fit through the quartiles.
-        None - By default no reference line is added to the plot.
+        Options for the reference line to which the data is compared.:
+
+        - '45' - 45-degree line
+        - 's'  - standardized line, the expected order statistics are scaled by          the standard deviation of the given sample and have the mean added
+          to them
+        - 'r'  - A regression line is fit
+        - 'q'  - A line is fit through the quartiles.
+        - None - By default no reference line is added to the plot.
     x : array
         X data for plot. Not needed if line is '45'.
     y : array
