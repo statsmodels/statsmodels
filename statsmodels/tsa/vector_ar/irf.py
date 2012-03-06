@@ -301,10 +301,10 @@ class IRAnalysis(BaseIRAnalysis):
         component : neqs x neqs array, default to largest for each
             Index of column of eigenvector/value to use for each error band
             Note: period of impulse (t=0) is not included when computing
-                  principle component
+            principle component
 
-        Reference
-        ---------
+        References
+        ----------
         Sims, Christopher A., and Tao Zha. 1999. "Error Bands for Impulse
         Response". Econometrica 67: 1113-1155.
         """
@@ -346,7 +346,10 @@ class IRAnalysis(BaseIRAnalysis):
     def err_band_sz2(self, orth=False, repl=1000, signif=0.05,
                      seed=None, burn=100, component=None):
         """
-        IRF Sims-Zha error band method 2. Does not assume symmetric error bands around mean.
+        IRF Sims-Zha error band method 2.
+
+        This method Does not assume symmetric error bands around mean.
+
         Parameters
         ----------
         orth : bool, default False
@@ -362,10 +365,10 @@ class IRAnalysis(BaseIRAnalysis):
         component : neqs x neqs array, default to largest for each
             Index of column of eigenvector/value to use for each error band
             Note: period of impulse (t=0) is not included when computing
-                  principle component
+            principle component
 
-        Reference
-        ---------
+        References
+        ----------
         Sims, Christopher A., and Tao Zha. 1999. "Error Bands for Impulse
         Response". Econometrica 67: 1113-1155.
         """
@@ -429,10 +432,10 @@ class IRAnalysis(BaseIRAnalysis):
         component : vector length neqs, default to largest for each
             Index of column of eigenvector/value to use for each error band
             Note: period of impulse (t=0) is not included when computing
-                  principle component
+            principle component
 
-        Reference
-        ---------
+        References
+        ----------
         Sims, Christopher A., and Tao Zha. 1999. "Error Bands for Impulse
         Response". Econometrica 67: 1113-1155.
         """
