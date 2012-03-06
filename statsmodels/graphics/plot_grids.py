@@ -69,8 +69,8 @@ def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
         If given, this figure is simply returned.  Otherwise a new figure is
         created.
 
-    Return
-    ------
+    Returns
+    -------
     fig : Matplotlib figure instance
         If `fig` is None, the created figure.  Otherwise `fig` itself.
 

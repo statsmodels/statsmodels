@@ -193,8 +193,8 @@ def plot_partregress_ax(endog, exog_i, exog_others, varname='',
         If given, this subplot is used to plot in instead of a new figure being
         created.
 
-    Return
-    ------
+    Returns
+    -------
     fig : Matplotlib figure instance
         If `ax` is None, the created figure.  Otherwise the figure to which
         `ax` is connected.
@@ -236,8 +236,8 @@ def plot_partregress(endog, exog, exog_idx=None, grid=None, fig=None):
         If given, this figure is simply returned.  Otherwise a new figure is
         created.
 
-    Return
-    ------
+    Returns
+    -------
     fig : Matplotlib figure instance
         If `fig` is None, the created figure.  Otherwise `fig` itself.
 
@@ -303,8 +303,8 @@ def plot_ccpr_ax(res, exog_idx=None, ax=None):
         If given, this subplot is used to plot in instead of a new figure being
         created.
 
-    Return
-    ------
+    Returns
+    -------
     fig : Matplotlib figure instance
         If `ax` is None, the created figure.  Otherwise the figure to which
         `ax` is connected.
@@ -350,8 +350,8 @@ def plot_ccpr(res, exog_idx=None, grid=None, fig=None):
         If given, this figure is simply returned.  Otherwise a new figure is
         created.
 
-    Return
-    ------
+    Returns
+    -------
     fig : Matplotlib figure instance
         If `ax` is None, the created figure.  Otherwise the figure to which
         `ax` is connected.
