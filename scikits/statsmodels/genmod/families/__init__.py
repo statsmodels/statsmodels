@@ -1,16 +1,4 @@
-'''
-This module contains the one-parameter exponential families used
-for fitting GLMs and GAMs.
-
-These families are described in
-
-   P. McCullagh and J. A. Nelder.  "Generalized linear models."
-   Monographs on Statistics and Applied Probability.
-   Chapman & Hall, London, 1983.
-
-'''
-
-#from scikits.statsmodels.family.family import Gaussian, Family, Poisson, Gamma, \
-#    InverseGaussian, Binomial, NegativeBinomial
-from family import Gaussian, Family, Poisson, Gamma, \
-    InverseGaussian, Binomial, NegativeBinomial
+import warnings
+warnings.warn('scikits.statsmodels namespace is deprecated and will be '
+              'removed in 0.5, please use statsmodels instead')
+from statsmodels.genmod.families import *

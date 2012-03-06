@@ -1,6 +1,4 @@
-from kde import KDE
-#from lowess import lowess #don't do that, shadowing the module
-import bandwidths
-
-from scikits.statsmodels import NoseWrapper as Tester
-test = Tester().test
+import warnings
+warnings.warn('scikits.statsmodels namespace is deprecated and will be '
+              'removed in 0.5, please use statsmodels instead')
+from statsmodels.nonparametric import *

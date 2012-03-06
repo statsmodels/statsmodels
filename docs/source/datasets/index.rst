@@ -32,7 +32,7 @@ To load a dataset do the following
 
 .. ipython:: python
 
-   import scikits.statsmodels.api as sm
+   import statsmodels.api as sm
    data = sm.datasets.longley.load()
 
 The `Dataset` object follows the bunch pattern as explain in the

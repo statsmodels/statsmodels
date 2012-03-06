@@ -1,4 +1,4 @@
-.. currentmodule:: scikits.statsmodels.genmod.generalized_linear_model
+.. currentmodule:: statsmodels.genmod.generalized_linear_model
 
 
 .. _glm:
@@ -10,12 +10,12 @@ Generalized Linear Models
 Introduction
 ------------
 
-.. automodule:: scikits.statsmodels.genmod.generalized_linear_model
+.. automodule:: statsmodels.genmod.generalized_linear_model
 
 
 Examples
 --------
-    >>> import scikits.statsmodels.api as sm
+    >>> import statsmodels.api as sm
     >>> data = sm.datasets.scotland.load()
     >>> data.exog = sm.add_constant(data.exog)
 
@@ -52,7 +52,7 @@ Families
 
 The distribution families currently implemented are
 
-.. currentmodule:: scikits.statsmodels.genmod.families.family
+.. currentmodule:: statsmodels.genmod.families.family
 
 .. autosummary::
    :toctree: generated/
@@ -78,7 +78,7 @@ available link functions can be obtained by
 
     >>> sm.families.family.<familyname>.links
 
-.. currentmodule:: scikits.statsmodels.genmod.families.links
+.. currentmodule:: statsmodels.genmod.families.links
 
 .. autosummary::
    :toctree: generated/

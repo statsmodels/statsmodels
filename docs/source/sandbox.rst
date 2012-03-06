@@ -1,4 +1,4 @@
-.. currentmodule:: scikits.statsmodels.sandbox
+.. currentmodule:: statsmodels.sandbox
 
 
 .. _sandbox:
@@ -23,7 +23,7 @@ not yet part of the core of statsmodels. The quality and testing of the
 sandbox code varies widely.
 
 
-.. automodule:: scikits.statsmodels.sandbox
+.. automodule:: statsmodels.sandbox
 
 
 Examples
@@ -46,7 +46,7 @@ series analysis. Most of the models and function have been moved to
 `sandbox.tsa`.
 
 
-.. currentmodule:: scikits.statsmodels.sandbox
+.. currentmodule:: statsmodels.sandbox
 
 
 
@@ -68,7 +68,7 @@ Moving Window Statistics
 Regression and ANOVA
 ^^^^^^^^^^^^^^^^^^^^
 
-.. currentmodule:: scikits.statsmodels.sandbox.regression.anova_nistcertified
+.. currentmodule:: statsmodels.sandbox.regression.anova_nistcertified
 
 The following two ANOVA functions are fully tested against the NIST test data
 for balanced one-way ANOVA. ``anova_oneway`` follows the same pattern as the
@@ -91,7 +91,7 @@ generating ANOVA results with OLS. They are best considered as recipes since
 they were written with a specific use in mind. These function will eventually
 be rewritten or reorganized.
 
-.. currentmodule:: scikits.statsmodels.sandbox.regression
+.. currentmodule:: statsmodels.sandbox.regression
 
 .. autosummary::
    :toctree: generated/
@@ -133,7 +133,7 @@ parameters have been verified as accurate, this code is still very
 experimental, and the usage of the models will very likely change significantly
 before they are added to the main codebase.
 
-.. currentmodule:: scikits.statsmodels.sandbox.sysreg
+.. currentmodule:: statsmodels.sandbox.sysreg
 
 .. autosummary::
    :toctree: generated/
@@ -143,7 +143,7 @@ before they are added to the main codebase.
 
 Miscellaneous
 ^^^^^^^^^^^^^
- .. currentmodule:: scikits.statsmodels.sandbox.tools.tools_tsa
+ .. currentmodule:: statsmodels.sandbox.tools.tools_tsa
 
 
 Tools for Time Series Analysis
@@ -155,7 +155,7 @@ nothing left in here
 Tools: Principal Component Analysis
 """""""""""""""""""""""""""""""""""
 
-.. currentmodule:: scikits.statsmodels.sandbox.tools.tools_pca
+.. currentmodule:: statsmodels.sandbox.tools.tools_pca
 
 .. autosummary::
    :toctree: generated/
@@ -168,7 +168,7 @@ Tools: Principal Component Analysis
 Graphics
 """"""""
 
-.. currentmodule:: scikits.statsmodels.sandbox
+.. currentmodule:: statsmodels.sandbox
 
 .. autosummary::
    :toctree: generated/
@@ -178,7 +178,7 @@ Graphics
 Descriptive Statistics Printing
 """""""""""""""""""""""""""""""
 
-.. currentmodule:: scikits.statsmodels.sandbox
+.. currentmodule:: statsmodels.sandbox
 
 .. autosummary::
    :toctree: generated/
@@ -197,19 +197,19 @@ mixed.
 
 **Mixed Effects Model with Repeated Measures using an EM Algorithm**
 
-:mod:`scikits.statsmodels.sandbox.mixed`
+:mod:`statsmodels.sandbox.mixed`
 
 
 **Cox Proportional Hazards Model**
 
-:mod:`scikits.statsmodels.sandbox.cox`
+:mod:`statsmodels.sandbox.cox`
 
 **Generalized Additive Models**
 
-:mod:`scikits.statsmodels.sandbox.gam`
+:mod:`statsmodels.sandbox.gam`
 
 **Formula**
 
-:mod:`scikits.statsmodels.sandbox.formula`
+:mod:`statsmodels.sandbox.formula`
 
 

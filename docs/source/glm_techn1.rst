@@ -1,4 +1,4 @@
-.. currentmodule:: scikits.statsmodels.glm
+.. currentmodule:: statsmodels.glm
 
 
 .. _glm_techn1:

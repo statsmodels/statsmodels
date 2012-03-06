@@ -1,9 +1,9 @@
-'''Examples: scikits.statsmodels.GLM
+'''Examples: statsmodels.GLM
 
 Note: uncomment plt.show() to display graphs
 '''
 import numpy as np
-import scikits.statsmodels.api as sm
+import statsmodels.api as sm
 from scipy import stats
 from matplotlib import pyplot as plt
 
@@ -121,7 +121,7 @@ plt.title('Normal - Quantile Plot')
 plt.ylabel('Deviance Residuals Quantiles')
 plt.xlabel('Quantiles of N(0,1)')
 # in branch *-skipper
-#from scikits.statsmodels.sandbox import graphics
+#from statsmodels.sandbox import graphics
 #img = graphics.qqplot(res)
 
 #plt.show()

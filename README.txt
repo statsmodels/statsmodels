@@ -44,7 +44,7 @@ https://sourceforge.net/projects/statsmodels/
 
 or
 
-PyPi: http://pypi.python.org/pypi/scikits.statsmodels/
+PyPi: http://pypi.python.org/pypi/statsmodels/
 
 
 Installation from sources
@@ -87,7 +87,7 @@ Windows Help
 The source distribution for Windows includes a htmlhelp file (statsmodels.chm).
 This can be opened from the python interpreter ::
 
->>> import scikits.statsmodels.api as sm
+>>> import statsmodels.api as sm
 >>> sm.open_help()
 
 
@@ -111,7 +111,7 @@ for the scipy-dev/user list.
 Python 3
 ========
 
-scikits.statsmodels has been ported and tested for Python 3.2. Python 3
+statsmodels has been ported and tested for Python 3.2. Python 3
 version of the code can be obtained by running 2to3.py over the entire
 statsmodels source. The numerical core of statsmodels worked almost without
 changes, however there can be problems with data input and plotting.

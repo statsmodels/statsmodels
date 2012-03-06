@@ -1,8 +1,4 @@
-"""
-Robust statistical models
-"""
-import norms
-from .scale import mad, stand_mad, Huber, HuberScale, hubers_scale
-
-from scikits.statsmodels import NoseWrapper as Tester
-test = Tester().test
+import warnings
+warnings.warn('scikits.statsmodels namespace is deprecated and will be '
+              'removed in 0.5, please use statsmodels instead')
+from statsmodels.robust import *

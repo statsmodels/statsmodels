@@ -61,7 +61,7 @@ autoclass_content = 'class'
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
-from scikits.statsmodels.version import version, full_version
+from statsmodels.version import version, full_version
 release = version
 # The full version, including dev tag.
 version = full_version

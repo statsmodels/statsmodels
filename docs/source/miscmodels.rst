@@ -1,6 +1,6 @@
 
 
-.. currentmodule:: scikits.statsmodels.miscmodels
+.. currentmodule:: statsmodels.miscmodels
 
 
 .. _miscmodels:
@@ -9,7 +9,7 @@
 Other Models :mod:`miscmodels`
 ==============================
 
-:mod:`scikits.statmodels.miscmodels` contains model classes and that do not yet fit into
+:mod:`statsmodels.miscmodels` contains model classes and that do not yet fit into
 any other category, or are basic implementations that are not yet polished and will most
 likely still change. Some of these models were written as examples for the generic
 maximum likelihood framework, and there will be others that might be based on general
@@ -28,7 +28,7 @@ another example can be seen in the zero inflated Poisson model, miscmodels.count
 Count Models :mod:`count`
 --------------------------
 
-.. currentmodule:: scikits.statsmodels.miscmodels.count
+.. currentmodule:: statsmodels.miscmodels.count
 
 .. autosummary::
    :toctree: generated/
@@ -45,7 +45,7 @@ method for the loglikelihood. All result statistics are inherited from the gener
 likelihood model and result classes. The results have been checked against R for a
 simple case.
 
-.. currentmodule:: scikits.statsmodels.miscmodels.tmodel
+.. currentmodule:: statsmodels.miscmodels.tmodel
 
 .. autosummary::
    :toctree: generated/

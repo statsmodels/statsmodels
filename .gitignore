@@ -36,4 +36,4 @@ marks.bzr
 help
 
 # Project specific
-scikits/statsmodels/version.py
+statsmodels/version.py

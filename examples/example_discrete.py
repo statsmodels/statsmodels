@@ -1,8 +1,8 @@
-"""Example: scikits.statsmodels.discretemod
+"""Example: statsmodels.discretemod
 """
 
 import numpy as np
-import scikits.statsmodels.api as sm
+import statsmodels.api as sm
 
 # load the data from Spector and Mazzeo (1980)
 # Examples follow Greene's Econometric Analysis Ch. 21 (5th Edition).

@@ -1,4 +1,4 @@
-import scikits.statsmodels.api as sm
+import statsmodels.api as sm
 import numpy as np
 import pandas
 

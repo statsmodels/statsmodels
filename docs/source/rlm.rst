@@ -1,4 +1,4 @@
-.. currentmodule:: scikits.statsmodels.robust
+.. currentmodule:: statsmodels.robust
 
 
 .. _rlm:
@@ -10,7 +10,7 @@ Introduction
 ------------
 
 
-.. automodule:: scikits.statsmodels.robust.robust_linear_model
+.. automodule:: statsmodels.robust.robust_linear_model
 
 
 Examples
@@ -18,7 +18,7 @@ Examples
 
 ::
 
-    import scikits.statsmodels.api as sm
+    import statsmodels.api as sm
     data = sm.datasets.stackloss.load()
     data.exog = sm.add_constant(data.exog)
     rlm_model = sm.RLM(data.endog, data.exog, M=sm.robust.norms.HuberT())
@@ -45,7 +45,7 @@ Model and Result Classes
 Norms
 ^^^^^
 
-.. currentmodule:: scikits.statsmodels.robust.norms
+.. currentmodule:: statsmodels.robust.norms
 
 .. autosummary::
    :toctree: generated/
@@ -61,7 +61,7 @@ Norms
    estimate_location
 
 
-.. currentmodule:: scikits.statsmodels.robust.scale
+.. currentmodule:: statsmodels.robust.scale
 
 Scale
 ^^^^^

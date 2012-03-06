@@ -1,12 +1,12 @@
 """
-Example: scikits.statsmodels.WLS
+Example: statsmodels.WLS
 
 example is extended to look at the meaning of rsquared in WLS,
 at outliers, compares with RLM and a short bootstrap
 
 """
 import numpy as np
-import scikits.statsmodels.api as sm
+import statsmodels.api as sm
 import matplotlib.pyplot as plt
 
 data = sm.datasets.ccard.load()

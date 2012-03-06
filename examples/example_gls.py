@@ -2,7 +2,7 @@
 Example: scikis.statsmodels.GLS
 """
 
-import scikits.statsmodels.api as sm
+import statsmodels.api as sm
 import numpy as np
 data = sm.datasets.longley.load()
 data.exog = sm.add_constant(data.exog)
