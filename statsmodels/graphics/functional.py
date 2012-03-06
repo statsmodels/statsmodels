@@ -348,11 +348,11 @@ def banddepth(data, method='MBD'):
 
     References
     ----------
-    [1] S. Lopez-Pintado and J. Romo, "On the Concept of Depth for Functional
-        Data", Journal of the American Statistical Association, vol.  104, pp.
-        718-734, 2009.
-    [2] Y. Sun and M.G. Genton, "Functional Boxplots", Journal of Computational
-        and Graphical Statistics, vol. 20, pp. 1-19, 2011.
+    .. [1] S. Lopez-Pintado and J. Romo, "On the Concept of Depth for
+           Functional Data", Journal of the American Statistical Association,
+           vol.  104, pp. 718-734, 2009.
+    .. [2] Y. Sun and M.G. Genton, "Functional Boxplots", Journal of
+           Computational and Graphical Statistics, vol. 20, pp. 1-19, 2011.
 
     """
     def _band2(x1, x2, curve):
