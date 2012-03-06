@@ -70,8 +70,8 @@ def anderson_statistic(x, dist='norm', fit=True, params=(), axis=0):
 def normal_ad(x, axis=0):
     '''Anderson-Darling test for normal distribution unknown mean and variance
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     x : array_like
         data array, currently only 1d
 
