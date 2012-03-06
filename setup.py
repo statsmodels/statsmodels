@@ -139,10 +139,10 @@ def configuration(parent_package='', top_path=None, package_name=DISTNAME):
     config.add_data_files('docs/build/htmlhelp/statsmodelsdoc.chm',
                           'statsmodels/statsmodelsdoc.chm')
 
-    if compile_cython:
-        config.add_extension('tsa/kalmanf/kalman_loglike',
-                sources = ['statsmodels/tsa/kalmanf/kalman_loglike.c'],
-                include_dirs=[numpy.get_include()])
+    #if compile_cython:
+    #    config.add_extension('tsa/kalmanf/kalman_loglike',
+    #            sources = ['statsmodels/tsa/kalmanf/kalman_loglike.c'],
+    #            include_dirs=[numpy.get_include()])
 
     config.set_options(
             ignore_setup_xxx_py = True,
