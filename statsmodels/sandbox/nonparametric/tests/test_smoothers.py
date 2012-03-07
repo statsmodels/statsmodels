@@ -17,9 +17,9 @@ class CheckSmoother(object):
 
     def test_predict(self):
         assert_almost_equal(self.res_ps.predict(self.x),
-                            self.res2.fittedvalues, decimal=14)
+                            self.res2.fittedvalues, decimal=13)
         assert_almost_equal(self.res_ps.predict(self.x[:10]),
-                            self.res2.fittedvalues[:10], decimal=14)
+                            self.res2.fittedvalues[:10], decimal=13)
 
     def test_coef(self):
         #TODO: check dim of coef
