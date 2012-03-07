@@ -38,9 +38,9 @@ def check_script(filename):
 
     # do this to redirect stdout
     fnull = open(os.devnull, 'w')
-    file_to_run = "python -c\"import warnings; "
-    file_to_run += "warnings.simplefilter('ignore'); execfile('%s')\"" %\
-                        os.path.join(example_dir, filename)
+    file_to_run = r"""python -c"import warnings; """
+    file_to_run += r"""warnings.simplefilter('ignore'); execfile('%s')"
+                    """ % filename
     result = subprocess.call(file_to_run, shell=True,
                              stdout=fnull) # don't capture stderr
     fnull.close()
