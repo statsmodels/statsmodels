@@ -146,9 +146,9 @@ class TestRecarrays(TestArrays):
     @classmethod
     def setupClass(cls):
         super(TestRecarrays, cls).setupClass()
-        cls.endog = np.random.random(10).astype([('y_1',
+        cls.endog = np.random.random(9).view([('y_1',
                                          'f8')]).view(np.recarray)
-        exog = np.random.random(10).astype([('const', 'f8'),('x_1', 'f8'),
+        exog = np.random.random(9*3).view([('const', 'f8'),('x_1', 'f8'),
                                 ('x_2', 'f8')]).view(np.recarray)
         exog['const'] = 1
         cls.exog = exog
@@ -165,9 +165,9 @@ class TestStructarrays(TestArrays):
     @classmethod
     def setupClass(cls):
         super(TestStructarrays, cls).setupClass()
-        cls.endog = np.random.random(10).astype([('y_1',
+        cls.endog = np.random.random(9).view([('y_1',
                                          'f8')]).view(np.recarray)
-        exog = np.random.random(10).astype([('const', 'f8'),('x_1', 'f8'),
+        exog = np.random.random(9*3).view([('const', 'f8'),('x_1', 'f8'),
                                 ('x_2', 'f8')]).view(np.recarray)
         exog['const'] = 1
         cls.exog = exog

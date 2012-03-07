@@ -14,7 +14,7 @@ def test_missing_data_pandas():
     np.testing.assert_equal(rnames, [0,2,3,4,5,6,7,8,9])
 
 def test_structarray():
-    X = np.random.random((10,)).astype([('var1', 'f8'),
+    X = np.random.random((9,)).view([('var1', 'f8'),
                                         ('var2', 'f8'),
                                         ('var3', 'f8')])
     vals, cnames, rnames = data.interpret_data(X)
@@ -23,7 +23,7 @@ def test_structarray():
     np.testing.assert_equal(rnames, None)
 
 def test_recarray():
-    X = np.random.random((10,)).astype([('var1', 'f8'),
+    X = np.random.random((9,)).view([('var1', 'f8'),
                                         ('var2', 'f8'),
                                         ('var3', 'f8')])
     vals, cnames, rnames = data.interpret_data(X.view(np.recarray))
