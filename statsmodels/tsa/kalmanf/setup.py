@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-from statsmodels.tools._build import cython
+from statsmodels.tools._build import cython, has_c_compiler
 
 import os.path
 
@@ -14,9 +14,10 @@ def configuration(parent_package='', top_path=None):
 
     # This function tries to create C files from the given .pyx files.  If
     # it fails, we build the checked-in .c files.
-    cython(['kalman_loglike.pyx'], working_path=cur_dir)
+    if has_c_compiler():
+        cython(['kalman_loglike.pyx'], working_path=cur_dir)
 
-    config.add_extension('kalman_loglike',
+        config.add_extension('kalman_loglike',
                          sources=['kalman_loglike.c'],
                          include_dirs=[get_numpy_include_dirs()])
 

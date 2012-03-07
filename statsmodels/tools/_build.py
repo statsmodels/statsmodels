@@ -7,6 +7,29 @@ import os
 import shutil
 import subprocess
 import platform
+from distutils.dist import Distribution
+from distutils.command.config import config as distutils_config
+from distutils import log
+
+dummy_c_text = r'''
+/* This file is generated from statsmodels/tools/_build.py to */
+void do_nothing(void);
+int main(void) {
+    do_nothing();
+    return 0;
+}
+'''
+
+def has_c_compiler():
+    c = distutils_config(Distribution())
+    try:
+        success = c.try_compile(dummy_c_text)
+        return True
+    except:
+        log.info("No C compiler detected. Not installing Cython version "
+                 "of files.")
+        return False
+
 
 def cython(pyx_files, working_path=''):
     """Use Cython to convert the given files to C.
