@@ -61,6 +61,7 @@ resp_75 = binom_results.predict(means75)
 diff = resp_75 - resp_25
 #.. print """The interquartile first difference for the percentage of low income
 #.. households in a school district is %2.4f %%""" % (diff*100)
+
 #The interquartile first difference for the percentage of low income
 #households in a school district is
 print diff*100
