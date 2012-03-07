@@ -1,5 +1,4 @@
-"""
-Example: scikis.statsmodels.GLS
+"""Generalized Least Squares
 """
 
 import statsmodels.api as sm
@@ -36,13 +35,12 @@ rho = resid_fit.params[0]
 
 from scipy.linalg import toeplitz
 
-# # for example
-# >>> toeplitz(range(5))
-# array([[0, 1, 2, 3, 4],
-#       [1, 0, 1, 2, 3],
-#       [2, 1, 0, 1, 2],
-#       [3, 2, 1, 0, 1],
-#       [4, 3, 2, 1, 0]])
+toeplitz(range(5))
+#.. array([[0, 1, 2, 3, 4],
+#..       [1, 0, 1, 2, 3],
+#..       [2, 1, 0, 1, 2],
+#..       [3, 2, 1, 0, 1],
+#..       [4, 3, 2, 1, 0]])
 
 order = toeplitz(range(len(ols_resid)))
 

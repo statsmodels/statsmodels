@@ -1,4 +1,4 @@
-'''Examples: comparing OLS and WLS
+'''Compare OLS and WLS
 
 Note: uncomment plt.show() to display graphs
 '''
@@ -8,9 +8,6 @@ from scipy import stats
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
 from statsmodels.sandbox.regression.predstd import wls_prediction_std
-
-
-#
 
 nsample = 50
 x1 = np.linspace(0, 20, nsample)
@@ -40,14 +37,15 @@ plt.plot(x1, res2.fittedvalues, 'r--')
 # * two groups for error variance, low and high variance groups
 
 
-#np.random.seed(123456789)
-np.random.seed(0)#9876789) #9876543)
+#..np.random.seed(123456789)
+np.random.seed(0)
+#..9876789) #9876543)
 beta = [0.5, -0.01, 5.]
 y_true2 = np.dot(X, beta)
 w = np.ones(nsample)
 w[nsample*6/10:] = 3
-#y2[:nsample*6/10] = y_true2[:nsample*6/10] + sig*1. * np.random.normal(size=nsample*6/10)
-#y2[nsample*6/10:] = y_true2[nsample*6/10:] + sig*4. * np.random.normal(size=nsample*4/10)
+#..y2[:nsample*6/10] = y_true2[:nsample*6/10] + sig*1. * np.random.normal(size=nsample*6/10)
+#..y2[nsample*6/10:] = y_true2[nsample*6/10:] + sig*4. * np.random.normal(size=nsample*4/10)
 y2 = y_true2 + sig*w* np.random.normal(size=nsample)
 X2 = X[:,[0,2]]
 
@@ -107,19 +105,19 @@ plt.plot(x1, res2.fittedvalues + tppf * predstd, 'r--')
 plt.plot(x1, res2.fittedvalues - tppf * predstd, 'r--')
 
 
-#Prediction Interval for WLS
-#---------------------------
-#covb = res3.cov_params()
-## full covariance:
-##predvar = res3.mse_resid + np.diag(np.dot(X2,np.dot(covb,X2.T)))
-## predication variance only
-#predvar = res3.mse_resid*w + (X2 * np.dot(covb,X2.T).T).sum(1)
-#predstd = np.sqrt(predvar)
-#tppf = stats.t.ppf(0.975, res3.df_resid)
-#plt.plot(x1, res3.fittedvalues, 'g--.')
-#plt.plot(x1, res3.fittedvalues + tppf * predstd, 'g--')
-#plt.plot(x1, res3.fittedvalues - tppf * predstd, 'g--')
-#plt.title('blue: true, red: OLS, green: WLS')
+#..Prediction Interval for WLS
+#..---------------------------
+#..covb = res3.cov_params()
+##.. full covariance:
+##..predvar = res3.mse_resid + np.diag(np.dot(X2,np.dot(covb,X2.T)))
+##.. predication variance only
+#..predvar = res3.mse_resid*w + (X2 * np.dot(covb,X2.T).T).sum(1)
+#..predstd = np.sqrt(predvar)
+#..tppf = stats.t.ppf(0.975, res3.df_resid)
+#..plt.plot(x1, res3.fittedvalues, 'g--.')
+#..plt.plot(x1, res3.fittedvalues + tppf * predstd, 'g--')
+#..plt.plot(x1, res3.fittedvalues - tppf * predstd, 'g--')
+#..plt.title('blue: true, red: OLS, green: WLS')
 
 prstd, iv_l, iv_u = wls_prediction_std(res3)
 plt.plot(x1, res3.fittedvalues, 'g--.')
@@ -145,4 +143,4 @@ print 'feasible WLS stddev of beta'
 print res3.bse
 
 
-#plt.show()
+#..plt.show()

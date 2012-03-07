@@ -1,5 +1,4 @@
-"""Example: minimal OLS
-
+"""Minimal Ordinary Least Squares Examples
 """
 
 import numpy as np
