@@ -151,7 +151,7 @@ def build_docs(branch):
     Changes into gitdname and builds the docs using sphinx in the
     BUILDENV virtualenv
     """
-    os.chdir(os.path.join(gitdname,'statsmodels','docs'))
+    os.chdir(os.path.join(gitdname, 'docs'))
     sphinx_dir = os.path.join(virtual_dir,'bin')
     #NOTE: don't use make.py, just use make and specify which sphinx
     #    retcode = subprocess.call([virtual_python,'make.py','html',
@@ -185,7 +185,7 @@ def upload_docs(branch):
     else:
         remote_dir = ''
     #    old_cwd = os.getcwd()
-    os.chdir(os.path.join(gitdname,'statsmodels','docs'))
+    os.chdir(os.path.join(gitdname, 'docs'))
     retcode = subprocess.call(['rsync', '-avPr' ,'-e ssh', 'build/html/',
         'jseabold,statsmodels@web.sourceforge.net:htdocs/'+remote_dir])
     if retcode != 0:
@@ -252,7 +252,8 @@ def main():
     #        build_pdf(new_branch_dir)
     #        upload_pdf(branch, new_branch_dir)
         except Exception as status:
-            msg += status.args[0] + '\n'
+            import pdb; pdb.set_trace()
+            msg += str(status) + '\n'
 
     if msg == '': # if it doesn't something went wrong and was caught above
         email_me()
