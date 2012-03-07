@@ -1,13 +1,11 @@
-'''Examples OLS
-
-Note: uncomment plt.show() to display graphs
+'''OLS Example with joint significance tests
 '''
 
 import numpy as np
 #from scipy import stats
 import statsmodels.api as sm
 import matplotlib
-#matplotlib.use('Qt4Agg')#, warn=True)   #for Spyder
+#..matplotlib.use('Qt4Agg')#, warn=True)   #for Spyder
 import matplotlib.pyplot as plt
 from statsmodels.sandbox.regression.predstd import wls_prediction_std
 
@@ -31,8 +29,7 @@ plt.plot(x1, y, 'o', x1, y_true, 'b-')
 res = sm.OLS(y, X).fit()
 print res.params
 print res.bse
-#current bug predict requires call to model.results
-#print res.model.predict
+print res.predict()
 prstd, iv_l, iv_u = wls_prediction_std(res)
 plt.plot(x1, res.fittedvalues, 'r--.')
 plt.plot(x1, iv_u, 'r--')
@@ -65,15 +62,14 @@ plt.plot(x1, y, 'o', x1, y_true, 'b-')
 res2 = sm.OLS(y, X).fit()
 print res2.params
 print res2.bse
-#current bug predict requires call to model.results
-#print res.model.predict
+print res.predict()
 prstd, iv_l, iv_u = wls_prediction_std(res2)
 plt.plot(x1, res2.fittedvalues, 'r--.')
 plt.plot(x1, iv_u, 'r--')
 plt.plot(x1, iv_l, 'r--')
 plt.title('blue: true,   red: OLS')
 
-#print res.summary()
+print res.summary()
 
 R = [[0, 1, 0, 0],
      [0, 0, 1, 0]]
@@ -82,14 +78,14 @@ R = [[0, 1, 0, 0],
 # i.e. coefficient on both dummy variables equal zero
 print res2.f_test(R)
 # strongly rejected Null of identical constant in 3 groups
-#<F test: F=124.19050615860911, p=2.87411973729e-019, df_denom=46, df_num=2>
-# see also: help(res2.f_test)
+#..<F test: F=124.19050615860911, p=2.87411973729e-019, df_denom=46, df_num=2>
+help(res2.f_test)
 
 # t test for Null hypothesis effects of 2nd and 3rd group add to zero
 R = [0, 1, -1, 0]
 print res2.t_test(R)
 # don't reject Null at 5% confidence level (note one sided p-value)
-#<T test: effect=1.0363792917100714, sd=0.52675137730463362, t=1.9674923243925513, p=0.027586676754860262, df_denom=46>
+#..<T test: effect=1.0363792917100714, sd=0.52675137730463362, t=1.9674923243925513, p=0.027586676754860262, df_denom=46>
 
 
 # OLS with small group effects
@@ -100,8 +96,8 @@ y = y_true + sig * np.random.normal(size=nsample)
 res3 = sm.OLS(y, X).fit()
 print res3.f_test(R)
 # don't reject Null of identical constant in 3 groups
-#<F test: F=1.9715385826285652, p=0.15083366806, df_denom=46, df_num=2>
+#..<F test: F=1.9715385826285652, p=0.15083366806, df_denom=46, df_num=2>
 
 
-#plt.draw()
-#plt.show()
+#..plt.draw()
+#..plt.show()

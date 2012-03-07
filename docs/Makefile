@@ -6,6 +6,8 @@ SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build
 PAPER         =
 BUILDDIR      = build
+TOOLSPATH	  = ../tools/
+EXAMPLEBUILD  = examples_rst.py
 
 # Internal variables.
 PAPEROPT_a4     = -D latex_paper_size=a4
@@ -36,8 +38,12 @@ help:
 clean:
 	-rm -rf $(BUILDDIR)/*
 	-rm -rf source/generated/
+	-rm source/examples/generated/*
 
 html:
+	# generate the examples rst files
+	@echo "Generating reST from examples folder"
+	$(TOOLSPATH)$(EXAMPLEBUILD)
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."

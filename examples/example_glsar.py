@@ -1,13 +1,12 @@
 '''
-Example: statsmodels.GLSAR
+Generalized Least Squares with AR Errors
 
 6 examples for GLSAR with artificial data
-
-Notes
-------
-These examples were written mostly to cross-check results.  It is still being
-written, and GLSAR is still being worked on.
 '''
+
+#.. note: These examples were written mostly to cross-check results.  It is still being
+#    written, and GLSAR is still being worked on.
+
 
 import numpy as np
 import numpy.testing as npt
@@ -53,9 +52,9 @@ x = np.arange(nsample)
 X1 = sm.add_constant(x)
 
 wnoise = noiseratio * np.random.randn(nsample+nlags)
-#noise = noise[1:] + rhotrue*noise[:-1] # wrong this is not AR
+#.. noise = noise[1:] + rhotrue*noise[:-1] # wrong this is not AR
 
-#find my drafts for univariate ARMA functions
+#.. find my drafts for univariate ARMA functions
 # generate AR(p)
 if np.size(rhotrue) == 1:
     # replace with scipy.signal.lfilter, keep for testing

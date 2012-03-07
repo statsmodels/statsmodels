@@ -1,5 +1,5 @@
 """
-Example: statsmodels.tsa.ARMA
+Autoregressive Moving Average (ARMA) Model
 """
 import numpy as np
 import statsmodels.api as sm

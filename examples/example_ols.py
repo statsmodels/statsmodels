@@ -1,4 +1,4 @@
-"""Example: scikits.statssm.OLS
+"""Ordinary Least Squares
 """
 
 from statsmodels.datasets.longley import load
