@@ -1,5 +1,5 @@
 """
-This code was adapted from scikits-image (http://scikits-image.org/)
+The cython function was adapted from scikits-image (http://scikits-image.org/)
 """
 
 import sys
