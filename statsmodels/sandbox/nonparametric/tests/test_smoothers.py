@@ -17,9 +17,9 @@ class CheckSmoother(object):
 
     def test_predict(self):
         assert_almost_equal(self.res_ps.predict(self.x),
-                            self.res2.fittedvalues, decimal=14)
+                            self.res2.fittedvalues, decimal=13)
         assert_almost_equal(self.res_ps.predict(self.x[:10]),
-                            self.res2.fittedvalues[:10], decimal=14)
+                            self.res2.fittedvalues[:10], decimal=13)
 
     def test_coef(self):
         #TODO: check dim of coef
@@ -45,6 +45,7 @@ class BasePolySmoother(object):
         self.x = x = np.linspace(lb, ub, nobs)
         self.exog = exog = x[:,None]**np.arange(order+1)
         y_true = exog.sum(1)
+        np.random.seed(987567)
         self.y = y = y_true + sigma_noise * np.random.randn(nobs)
 
 
@@ -104,3 +105,4 @@ if __name__ == '__main__':
 
     t3 = TestPolySmoother3()
     t3.test_predict()
+
