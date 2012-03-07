@@ -485,6 +485,8 @@ class EmbeddedSphinxShell(object):
             if lineno + 1 in in_lines: # this is an input line
                 modified = u"%s %s" % (fmtin % ct, line_stripped)
                 ct += 1
+            elif line.startswith('@'): # is it a decorator?
+                modified = line
             else: # this is something else
                 continuation = u'   %s:'% ''.join(['.']*(len(str(ct))+2))
                 modified = u'%s %s' % (continuation, line)
@@ -494,6 +496,15 @@ class EmbeddedSphinxShell(object):
         # put blank lines after input lines
         for i in in_lines[1:][::-1]:
             output.insert(i-1, u'')
+        # fix the spacing for decorators
+        # might be a cleaner regex for
+        # \n@savefig name.png\n\n -> \n\n@savefig name.png\n
+
+        decpat1 = '(?<=@[savefig|suppress|verbatim|doctest])(?P<options>.+)\n\n'
+        output = re.sub(decpat1, '\g<options>\n','\n'.join(output))
+        decpat2 = '\n(?=@[savefig|suppress|verbatim|doctest])'
+        output = re.sub(decpat2, '\n\n', output).split('\n')
+
         return output
 
 
