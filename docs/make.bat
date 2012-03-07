@@ -6,6 +6,8 @@ if "%SPHINXBUILD%" == "" (
 	set SPHINXBUILD=sphinx-build
 )
 set BUILDDIR=build
+set TOOLSPATH=../tools
+set EXAMPLEBUILD=examples_rst.py
 set ALLSPHINXOPTS=-d %BUILDDIR%/doctrees %SPHINXOPTS% source
 if NOT "%PAPER%" == "" (
 	set ALLSPHINXOPTS=-D latex_paper_size=%PAPER% %ALLSPHINXOPTS%
@@ -41,6 +43,7 @@ if "%1" == "clean" (
 )
 
 if "%1" == "html" (
+	python %TOOLSPATH%/%EXAMPLEBUILD%
 	%SPHINXBUILD% -b html %ALLSPHINXOPTS% %BUILDDIR%/html
 	if errorlevel 1 exit /b 1
 	echo.
