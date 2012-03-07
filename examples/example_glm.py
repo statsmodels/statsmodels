@@ -122,7 +122,7 @@ plt.title('Normal - Quantile Plot')
 plt.ylabel('Deviance Residuals Quantiles')
 plt.xlabel('Quantiles of N(0,1)')
 
-from scikits.statsmodels import graphics
+from statsmodels import graphics
 #@savefig glm_qqplot.png
 img = graphics.gofplots.qqplot(res, line='r')
 

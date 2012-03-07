@@ -2,7 +2,6 @@
 Using dates with timeseries models
 """
 import statsmodels.api as sm
-import scikits.statsmodels.api as sm
 import numpy as np
 import pandas
 
