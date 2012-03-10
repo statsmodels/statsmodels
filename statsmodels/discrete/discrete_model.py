@@ -1655,6 +1655,29 @@ class DiscreteResults(base.LikelihoodModelResults):
         self.margfx = effects
         return effects
 
+    def remove_data(self):
+        '''remove attached data arrays to shrink instance for pickling
+
+        no parameters (maybe some options later)
+        no returns, modifies instance
+
+        '''
+        #TODO: don't assign to non-existing attributes
+        self.model.endog = None
+        self.model.wendog = None
+        self.model.exog = None
+        self.model.wexog = None
+        self.model._data._orig_endog = None
+        self.model._data._orig_exog = None
+        self.model._data.endog = None
+        self.model._data.exog = None
+        self.model.fittedvalues = None
+        self.model.resid = None
+        self.model.wresid = None
+
+        #TODO: temporary to enable pickling
+        self.mle_settings['callback'] = None
+
     def summary(self, yname=None, xname=None, title=None, alpha=.05,
                 yname_list=None):
         """Summarize the Regression Results
@@ -1801,6 +1824,7 @@ class MultinomialResults(DiscreteResults):
         confint = super(DiscreteResults, self).conf_int(alpha=alpha,
                                                             cols=cols)
         return confint.transpose(2,0,1)
+
 
 #### Results Wrappers ####
 
