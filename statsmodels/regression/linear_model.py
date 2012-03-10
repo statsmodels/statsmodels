@@ -147,6 +147,10 @@ Should be of length %s, if sigma is a 1d array" % nobs)
                     self.sigma)).T
         super(GLS, self).__init__(endog, exog)
 
+        #store attribute names for data arrays
+        self._data_attr.extend(['sigma', 'cholsigmainv', 'pinv_wexog',
+                               'wendog', 'wexog'])
+
     def initialize(self):
         #print "calling initialize, now whitening"  #for debugging
         self.wexog = self.whiten(self.exog)
@@ -1173,7 +1177,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
         return lrstat, lr_pvalue, lrdf
 
-    def remove_data(self):
+    def remove_data_(self):
         self.model.endog = None
         self.model.wendog = None
         self.model.exog = None

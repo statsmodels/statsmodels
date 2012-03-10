@@ -33,6 +33,9 @@ class Model(object):
         self._data = handle_data(endog, exog)
         self.exog = self._data.exog
         self.endog = self._data.endog
+        self._data_attr = []
+        self._data_attr.extend(['exog', 'endog', '_data.exog', '_data.endog',
+                                '_data._orig_endog', '_data._orig_exog'])
 
     @property
     def endog_names(self):
@@ -686,6 +689,7 @@ class Results(object):
     def __init__(self, model, params, **kwd):
         self.__dict__.update(kwd)
         self.initialize(model, params, **kwd)
+        self._data_attr = []
 
     def initialize(self, model, params, **kwd):
         self.params = params
@@ -1242,6 +1246,24 @@ class LikelihoodModelResults(Results):
     @cache_readonly
     def llf(self):
         return self.model.loglike(self.params)
+
+    def remove_data(self):
+        def wipe(obj, att):
+            #get to last element in attribute path
+            p = att.split('.')
+            att_ = p.pop(-1)
+            obj_ = reduce(getattr, [obj] + p)
+
+            #print repr(obj), repr(att)
+            #print hasattr(obj_, att_)
+            if hasattr(obj_, att_):
+                #print 'removing3', att_
+                setattr(obj_, att_, None)
+
+        model_attr = ['model.'+ i for i in self.model._data_attr]
+        for att in self._data_attr + model_attr:
+            #print 'removing', att
+            wipe(self, att)
 
 
 class LikelihoodResultsWrapper(wrap.ResultsWrapper):
