@@ -1177,20 +1177,15 @@ class RegressionResults(base.LikelihoodModelResults):
 
         return lrstat, lr_pvalue, lrdf
 
-    def remove_data_(self):
-        self.model.endog = None
-        self.model.wendog = None
-        self.model.exog = None
-        self.model.wexog = None
-        self.model._data._orig_endog = None
-        self.model._data._orig_exog = None
-        self.model._data.endog = None
-        self.model._data.exog = None
-        self.model.fittedvalues = None
-        self.model.resid = None
-        self.model.wresid = None
-        #extra
-        self.model.pinv_wexog = None
+    def remove_data(self):
+        super(self.__class__, self).remove_data()
+        data_in_cache = ['fittedvalues', 'resid', 'wresid']
+        for key in data_in_cache:
+            try:
+                self._cache[key] = None
+            except AttributeError:
+                pass
+
 
     def summary(self, yname=None, xname=None, title=None, alpha=.05):
         """Summarize the Regression Results
