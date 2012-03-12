@@ -1265,6 +1265,13 @@ class LikelihoodModelResults(Results):
             #print 'removing', att
             wipe(self, att)
 
+        data_in_cache = ['fittedvalues', 'resid', 'wresid']
+        for key in data_in_cache:
+            try:
+                self._cache[key] = None
+            except AttributeError:
+                pass
+
 
 class LikelihoodResultsWrapper(wrap.ResultsWrapper):
     _attrs = {

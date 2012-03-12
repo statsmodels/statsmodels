@@ -1179,12 +1179,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
     def remove_data(self):
         super(self.__class__, self).remove_data()
-        data_in_cache = ['fittedvalues', 'resid', 'wresid']
-        for key in data_in_cache:
-            try:
-                self._cache[key] = None
-            except AttributeError:
-                pass
+
 
 
     def summary(self, yname=None, xname=None, title=None, alpha=.05):
