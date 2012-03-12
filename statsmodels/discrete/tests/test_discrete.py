@@ -354,6 +354,14 @@ def test_perfect_prediction():
     mod = Logit(y,X)
     assert_raises(PerfectSeparationError, mod.fit)
 
+def test_poisson_predict():
+    #GH: 175, make sure poisson predict works without offset and exposure
+    data = sm.datasets.randhie.load()
+    exog = sm.add_constant(data.exog)
+    res = sm.Poisson(data.endog, exog).fit(method='newton', disp=0)
+    pred1 = res.predict()
+    pred2 = res.predict(exog)
+    assert_almost_equal(pred1, pred2)
 
 
 if __name__ == "__main__":

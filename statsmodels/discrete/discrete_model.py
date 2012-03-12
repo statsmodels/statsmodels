@@ -397,6 +397,8 @@ class CountModel(DiscreteModel):
                 exposure = 0
             else:
                 exposure = np.log(exposure)
+            if offset is None:
+                offset = 0
 
         if not linear:
             return np.exp(np.dot(exog, params) + exposure + offset) # not cdf
