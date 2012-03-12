@@ -363,6 +363,18 @@ def test_poisson_predict():
     pred2 = res.predict(exog)
     assert_almost_equal(pred1, pred2)
 
+def test_poisson_newton():
+    #GH: 24, Newton doesn't work well sometimes
+    nobs = 10000
+    np.random.seed(987689)
+    x = np.random.randn(nobs, 3)
+    x = sm.add_constant(x, prepend=True)
+    y_count = np.random.poisson(np.exp(x.sum(1)))
+    mod = sm.Poisson(y_count, x)
+    res = mod.fit(start_params=-np.ones(4), method='newton', disp=0)
+    assert_(not res.mle_retvals['Converged'])
+
+
 
 if __name__ == "__main__":
     import nose
