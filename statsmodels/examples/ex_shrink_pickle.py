@@ -49,6 +49,8 @@ y_count = np.random.poisson(np.exp(x.sum(1)-x.mean()))
 model = sm.Poisson(y_count, x)#, exposure=np.ones(nobs), offset=np.zeros(nobs)) #bug with default
 results = model.fit(method='bfgs')
 
+results.summary()
+
 print results.model.predict(results.params, xf, exposure=1, offset=0)
 
 if shrinkit:
@@ -67,3 +69,22 @@ results3 = pickle.load(fh)
 fh.close()
 print results3.predict(xf, exposure=1, offset=0)
 print results3.model.predict(results.params, xf, exposure=1, offset=0)
+
+def check_pickle(obj):
+    import StringIO
+    fh = StringIO.StringIO()
+    pickle.dump(obj, fh)
+    plen = fh.pos
+    fh.seek(0,0)
+    res = pickle.load(fh)
+    fh.close()
+    return res, plen
+
+def test_remove_data_pickle(results, xf):
+    res, l = check_pickle(results)
+    np.testing.assert_(l < 10000, msg='pickle length not %d < %d' % (l, 1000))
+    pred1 = results.predict(xf, exposure=1, offset=0)
+    pred2 = res.predict(xf, exposure=1, offset=0)
+    np.testing.assert_equal(pred2, pred1)
+
+test_remove_data_pickle(results._results, xf)
