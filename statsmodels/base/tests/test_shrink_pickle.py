@@ -121,7 +121,7 @@ class TestRemoveDataPickleLogit(RemoveDataPickle):
 
 if __name__ == '__main__':
     for cls in [TestRemoveDataPickleOLS, TestRemoveDataPicklePoisson,
-        TestRemoveDataPickleLogit]:
+                TestRemoveDataPickleLogit]:
         cls.setupclass()
         tt = cls()
 

@@ -1269,7 +1269,7 @@ class LikelihoodModelResults(Results):
         for key in data_in_cache:
             try:
                 self._cache[key] = None
-            except AttributeError:
+            except (AttributeError, KeyError):
                 pass
 
 
