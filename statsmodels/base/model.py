@@ -286,7 +286,7 @@ def _fit_mle_newton(f, score, start_params, fargs, kwargs, disp=True,
     newparams = np.asarray(start_params)
     if retall:
         history = [oldparams, newparams]
-    while (iterations < maxiter and np.all(np.abs(newparams -
+    while (iterations < maxiter and np.any(np.abs(newparams -
             oldparams) > tol)):
         H = hess(newparams)
         oldparams = newparams
