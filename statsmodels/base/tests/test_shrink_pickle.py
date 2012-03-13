@@ -117,11 +117,20 @@ class TestRemoveDataPickleLogit(RemoveDataPickle):
         #TODO: needs to go into pickle save
         self.results.mle_settings['callback'] = None
 
+class TestRemoveDataPickleRLM(RemoveDataPickle):
+
+    def __init__(self):
+        super(self.__class__, self).__init__()
+        #fit for each test, because results will be changed by test
+        x = self.exog
+        np.random.seed(987689)
+        y = x.sum(1) + np.random.randn(x.shape[0])
+        self.results = sm.RLM(y, self.exog).fit()
 
 
 if __name__ == '__main__':
     for cls in [TestRemoveDataPickleOLS, TestRemoveDataPicklePoisson,
-                TestRemoveDataPickleLogit]:
+                TestRemoveDataPickleLogit, TestRemoveDataPickleRLM]:
         cls.setupclass()
         tt = cls()
 
