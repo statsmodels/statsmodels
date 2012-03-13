@@ -1265,7 +1265,8 @@ class LikelihoodModelResults(Results):
             #print 'removing', att
             wipe(self, att)
 
-        data_in_cache = ['fittedvalues', 'resid', 'wresid']
+        data_in_cache = getattr(self, 'data_in_cache', [])
+        data_in_cache += ['fittedvalues', 'resid', 'wresid']
         for key in data_in_cache:
             try:
                 self._cache[key] = None

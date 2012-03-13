@@ -117,6 +117,8 @@ class RLM(base.LikelihoodModel):
         self.M = M
         super(base.LikelihoodModel, self).__init__(endog, exog)
         self._initialize()
+        #things to remove_data
+        self._data_attr.extend(['weights', 'pinv_wexog'])
 
     def _initialize(self):
         """
@@ -160,6 +162,7 @@ class RLM(base.LikelihoodModel):
         if exog is None:
             exog = self.exog
         return np.dot(exog, params)
+
     def loglike(self, params):
         raise NotImplementedError
 
@@ -391,6 +394,8 @@ class RLMResults(base.LikelihoodModelResults):
         self.df_resid = model.df_resid
         self.nobs = model.nobs
         self._cache = resettable_cache()
+        #for remove_data
+        self.data_in_cache = ['sresid']
 
         #TODO: "pvals" should come from chisq on bse?
 
@@ -464,6 +469,11 @@ class RLMResults(base.LikelihoodModelResults):
     @cache_readonly
     def chisq(self):
         return (self.params/self.bse)**2
+
+    def remove_data(self):
+        super(self.__class__, self).remove_data()
+        self.model.history['sresid'] = None
+        self.model.history['weights'] = None
 
     def summary(self, yname=None, xname=None, title=0, alpha=.05,
                 return_fmt='text'):
