@@ -456,10 +456,12 @@ class ARMA(tsbase.TimeSeriesModel):
         if method in ['mle','css-mle']:
             loglike = lambda params: -self.loglike_kalman(params)
             self.loglike = self.loglike_kalman
-        if method == 'css':
+        elif method == 'css':
             loglike = lambda params: -self.loglike_css(params)
             self.loglike = self.loglike_css
             self.nobs = len(self.endog) - self.k_ar #excludes pre-sample
+        else:
+            raise ValueError("Fit method %s not understood" % method)
         return loglike
 
 
