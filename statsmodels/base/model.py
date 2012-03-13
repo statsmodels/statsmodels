@@ -1248,17 +1248,32 @@ class LikelihoodModelResults(Results):
         return self.model.loglike(self.params)
 
     def remove_data(self):
+        '''remove data arrays, all nobs arrays from result and model
+
+        This reduces the size of the instance, so it can be pickled with less
+        memory. Currently tested for use with predict from an unpickled
+        results and model instance.
+
+        Warning: Since data and some intermediate results have been removed
+        calculating new statistics that require them will raise exceptions.
+        The exception will occur the first time an attribute is accessed that
+        has been set to None.
+
+        '''
         def wipe(obj, att):
             #get to last element in attribute path
             p = att.split('.')
             att_ = p.pop(-1)
-            obj_ = reduce(getattr, [obj] + p)
+            try:
+                obj_ = reduce(getattr, [obj] + p)
 
-            #print repr(obj), repr(att)
-            #print hasattr(obj_, att_)
-            if hasattr(obj_, att_):
-                #print 'removing3', att_
-                setattr(obj_, att_, None)
+                #print repr(obj), repr(att)
+                #print hasattr(obj_, att_)
+                if hasattr(obj_, att_):
+                    #print 'removing3', att_
+                    setattr(obj_, att_, None)
+            except AttributeError:
+                pass
 
         model_attr = ['model.'+ i for i in self.model._data_attr]
         for att in self._data_attr + model_attr:
