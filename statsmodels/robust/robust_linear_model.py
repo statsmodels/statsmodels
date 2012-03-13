@@ -243,8 +243,6 @@ class RLM(base.LikelihoodModel):
         while (np.all(np.fabs(criterion[self.iteration]-\
                 criterion[self.iteration-1]) > tol) and \
                 self.iteration < maxiter):
-#            self.weights = self.M.weights((self.endog - \
-#                    wls_results.fittedvalues)/self.scale)
             self.weights = self.M.weights(wls_results.resid/self.scale)
             wls_results = lm.WLS(self.endog, self.exog,
                                  weights=self.weights).fit()
