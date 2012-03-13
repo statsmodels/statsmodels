@@ -137,6 +137,29 @@ class RLM(base.LikelihoodModel):
     def information(self, params):
         raise NotImplementedError
 
+    def predict(self, params, exog=None):
+        """
+        Return linear predicted values from a design matrix.
+
+        Parameters
+        ----------
+        params : array-like, optional after fit has been called
+            Parameters of a linear model
+        exog : array-like, optional.
+            Design / exogenous data. Model exog is used if None.
+
+        Returns
+        -------
+        An array of fitted values
+
+        Notes
+        -----
+        If the model as not yet been fit, params is not optional.
+        """
+        #copied from linear_model
+        if exog is None:
+            exog = self.exog
+        return np.dot(exog, params)
     def loglike(self, params):
         raise NotImplementedError
 
