@@ -27,6 +27,10 @@ import statsmodels.base.wrapper as wrap
 
 __all__ = ['RLM']
 
+def _check_convergence(criterion, iteration, tol, maxiter):
+    return not (np.all(np.fabs(criterion[iteration] -
+                criterion[iteration-1]) > tol) and iteration < maxiter)
+
 class RLM(base.LikelihoodModel):
     """
     Robust Linear Models
@@ -231,7 +235,7 @@ class RLM(base.LikelihoodModel):
         if not init:
             self.scale = self._estimate_scale(wls_results.resid)
         self._update_history(wls_results)
-        self.iteration = 1
+        iteration = 1
         if conv == 'coefs':
             criterion = self.history['params']
         elif conv == 'dev':
@@ -240,16 +244,18 @@ class RLM(base.LikelihoodModel):
             criterion = self.history['sresid']
         elif conv == 'weights':
             criterion = self.history['weights']
-        while (np.all(np.fabs(criterion[self.iteration]-\
-                criterion[self.iteration-1]) > tol) and \
-                self.iteration < maxiter):
+
+
+        converged = 0
+        while not converged:
             self.weights = self.M.weights(wls_results.resid/self.scale)
             wls_results = lm.WLS(self.endog, self.exog,
                                  weights=self.weights).fit()
             if update_scale is True:
                 self.scale = self._estimate_scale(wls_results.resid)
             self._update_history(wls_results)
-            self.iteration += 1
+            iteration += 1
+            converged = _check_convergence(criterion, iteration, tol, maxiter)
         results = RLMResults(self, wls_results.params,
                             self.normalized_cov_params, self.scale)
 
