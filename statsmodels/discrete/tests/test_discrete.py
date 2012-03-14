@@ -372,7 +372,7 @@ def test_poisson_newton():
     y_count = np.random.poisson(np.exp(x.sum(1)))
     mod = sm.Poisson(y_count, x)
     res = mod.fit(start_params=-np.ones(4), method='newton', disp=0)
-    assert_(not res.mle_retvals['Converged'])
+    assert_(not res.mle_retvals['converged'])
 
 
 
