@@ -28,7 +28,7 @@ import statsmodels.base.wrapper as wrap
 __all__ = ['RLM']
 
 def _check_convergence(criterion, iteration, tol, maxiter):
-    return not (np.all(np.fabs(criterion[iteration] -
+    return not (np.any(np.fabs(criterion[iteration] -
                 criterion[iteration-1]) > tol) and iteration < maxiter)
 
 class RLM(base.LikelihoodModel):
