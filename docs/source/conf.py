@@ -118,7 +118,13 @@ pygments_style = 'sphinx'
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #html_theme = 'default'
-html_theme = 'statsmodels'
+
+if 'htmlhelp' in sys.argv:
+    #html_theme = 'statsmodels_htmlhelp'  #doesn't look nice yet
+    html_theme = 'default'
+    print '################# using statsmodels_htmlhelp ############'
+else:
+    html_theme = 'statsmodels'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
