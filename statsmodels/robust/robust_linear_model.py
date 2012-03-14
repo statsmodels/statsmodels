@@ -72,9 +72,6 @@ class RLM(base.LikelihoodModel):
         See above.  Note that endog is a reference to the data so that if
         data is already an array and it is changed, then `endog` changes
         as well.
-    history : dict
-        Contains information about the iterations. Its keys are `fittedvalues`,
-        `deviance`, and `params`.
     M : statsmodels.robust.norms.RobustNorm
          See above.  Robust estimator instance instantiated.
     nobs : float
@@ -318,6 +315,12 @@ class RLMResults(base.LikelihoodModelResults):
         See RLM.df_model
     df_resid
         See RLM.df_resid
+    fit_history : dict
+        Contains information about the iterations. Its keys are `deviance`,
+        `params`, and the convergence criteria specified in `RLM.fit`, if
+        different.
+    fit_options : dict
+        Contains the options given to fit.
     fittedvalues : array
         The linear predicted values.  dot(exog, params)
     model : statsmodels.rlm.RLM
