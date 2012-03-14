@@ -265,6 +265,7 @@ class RLM(base.LikelihoodModel):
         results = RLMResults(self, wls_results.params,
                             self.normalized_cov_params, self.scale)
 
+        results.fit_history = history
         results.fit_options = dict(cov=cov.upper(), scale_est=scale_est,
                                    norm=self.M.__class__.__name__, conv=conv)
         #norm is not changed in fit, no old state
