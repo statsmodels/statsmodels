@@ -72,9 +72,6 @@ class RLM(base.LikelihoodModel):
         See above.  Note that endog is a reference to the data so that if
         data is already an array and it is changed, then `endog` changes
         as well.
-    history : dict
-        Contains information about the iterations. Its keys are `fittedvalues`,
-        `deviance`, and `params`.
     M : statsmodels.robust.norms.RobustNorm
          See above.  Robust estimator instance instantiated.
     nobs : float
@@ -127,9 +124,6 @@ class RLM(base.LikelihoodModel):
 
         Resets the history and number of iterations.
         """
-        self.history = {'deviance' : [np.inf], 'params' : [np.inf],
-            'weights' : [np.inf], 'sresid' : [np.inf], 'scale' : []}
-        self.iteration = 0
         self.pinv_wexog = np.linalg.pinv(self.exog)
         self.normalized_cov_params = np.dot(self.pinv_wexog,
                                         np.transpose(self.pinv_wexog))
@@ -153,12 +147,16 @@ class RLM(base.LikelihoodModel):
         return self.M((self.endog - tmp_results.fittedvalues) /
                           tmp_results.scale).sum()
 
-    def _update_history(self, tmp_results):
-        self.history['deviance'].append(self.deviance(tmp_results))
-        self.history['params'].append(tmp_results.params)
-        self.history['scale'].append(tmp_results.scale)
-        self.history['sresid'].append(tmp_results.resid/tmp_results.scale)
-        self.history['weights'].append(tmp_results.model.weights)
+    def _update_history(self, tmp_results, history, conv):
+        history['params'].append(tmp_results.params)
+        history['scale'].append(tmp_results.scale)
+        if conv == 'dev':
+            history['deviance'].append(self.deviance(tmp_results))
+        elif conv == 'sresid':
+            history['sresid'].append(tmp_results.resid/tmp_results.scale)
+        elif conv == 'weights':
+            history['weights'].append(tmp_results.model.weights)
+        return history
 
     def _estimate_scale(self, resid):
         """
@@ -234,18 +232,23 @@ class RLM(base.LikelihoodModel):
         wls_results = lm.WLS(self.endog, self.exog).fit()
         if not init:
             self.scale = self._estimate_scale(wls_results.resid)
-        self._update_history(wls_results)
-        iteration = 1
+
+        history = dict(params = [np.inf], scale = [])
         if conv == 'coefs':
-            criterion = self.history['params']
+            criterion = history['params']
         elif conv == 'dev':
-            criterion = self.history['deviance']
+            history.update(dict(deviance = [np.inf]))
+            criterion = history['deviance']
         elif conv == 'resid':
-            criterion = self.history['sresid']
+            history.update(dict(sresid = [np.inf]))
+            criterion = history['sresid']
         elif conv == 'weights':
-            criterion = self.history['weights']
+            history.update(dict(weights = [np.inf]))
+            criterion = history['weights']
 
-
+        # done one iteration so update
+        history = self._update_history(wls_results, history, conv)
+        iteration = 1
         converged = 0
         while not converged:
             self.weights = self.M.weights(wls_results.resid/self.scale)
@@ -253,12 +256,13 @@ class RLM(base.LikelihoodModel):
                                  weights=self.weights).fit()
             if update_scale is True:
                 self.scale = self._estimate_scale(wls_results.resid)
-            self._update_history(wls_results)
+            history = self._update_history(wls_results, history, conv)
             iteration += 1
             converged = _check_convergence(criterion, iteration, tol, maxiter)
         results = RLMResults(self, wls_results.params,
                             self.normalized_cov_params, self.scale)
 
+        results.fit_history = history
         results.fit_options = dict(cov=cov.upper(), scale_est=scale_est,
                                    norm=self.M.__class__.__name__, conv=conv)
         #norm is not changed in fit, no old state
@@ -311,6 +315,12 @@ class RLMResults(base.LikelihoodModelResults):
         See RLM.df_model
     df_resid
         See RLM.df_resid
+    fit_history : dict
+        Contains information about the iterations. Its keys are `deviance`,
+        `params`, and the convergence criteria specified in `RLM.fit`, if
+        different.
+    fit_options : dict
+        Contains the options given to fit.
     fittedvalues : array
         The linear predicted values.  dot(exog, params)
     model : statsmodels.rlm.RLM
