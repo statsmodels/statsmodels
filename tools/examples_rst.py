@@ -37,8 +37,9 @@ def check_script(filename):
     """
 
     file_to_run = "python -c\"import warnings; "
-    file_to_run += "warnings.simplefilter('ignore'); execfile(r'%s')\"" %\
-                        os.path.join(example_dir, filename)
+    file_to_run += "warnings.simplefilter('ignore'); "
+    file_to_run += "from matplotlib import use; use('Agg'); "
+    file_to_run += "execfile(r'%s')\"" % os.path.join(example_dir, filename)
     proc = subprocess.Popen(file_to_run, shell=True, stdout=subprocess.PIPE,
             stderr=subprocess.PIPE)
     #NOTE: use communicate to wait for process termination
@@ -46,7 +47,7 @@ def check_script(filename):
     result = proc.returncode
     if result != 0: # raised an error
         msg = "Not generating reST from %s. An error occurred.\n" % filename
-        msg += stderr + '\n'
+        msg += stderr
         print msg
         return False
     return True
