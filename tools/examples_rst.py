@@ -36,16 +36,18 @@ def check_script(filename):
     to exclude_list and return it.
     """
 
-    # do this to redirect stdout
-    fnull = open(os.devnull, 'w')
     file_to_run = "python -c\"import warnings; "
     file_to_run += "warnings.simplefilter('ignore'); execfile(r'%s')\"" %\
                         os.path.join(example_dir, filename)
-    result = subprocess.call(file_to_run, shell=True,
-                             stdout=fnull) # don't capture stderr
-    fnull.close()
+    proc = subprocess.Popen(file_to_run, shell=True, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE)
+    #NOTE: use communicate to wait for process termination
+    stdout, stderr = proc.communicate()
+    result = proc.returncode
     if result != 0: # raised an error
-        print "Not generating reST from %s. An error occurred." % filename
+        msg = "Not generating reST from %s. An error occurred.\n" % filename
+        msg += stderr + '\n'
+        print msg
         return False
     return True
 
