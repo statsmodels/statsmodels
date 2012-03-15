@@ -318,8 +318,8 @@ class RLMResults(base.LikelihoodModelResults):
         See RLM.df_resid
     fit_history : dict
         Contains information about the iterations. Its keys are `deviance`,
-        `params`, and the convergence criteria specified in `RLM.fit`, if
-        different.
+        `params`, `iteration` and the convergence criteria specified in
+        `RLM.fit`, if different from `deviance` or `params`.
     fit_options : dict
         Contains the options given to fit.
     fittedvalues : array
