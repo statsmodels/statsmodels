@@ -262,6 +262,7 @@ class RLM(base.LikelihoodModel):
         results = RLMResults(self, wls_results.params,
                             self.normalized_cov_params, self.scale)
 
+        history['iteration'] = iteration
         results.fit_history = history
         results.fit_options = dict(cov=cov.upper(), scale_est=scale_est,
                                    norm=self.M.__class__.__name__, conv=conv)
@@ -467,7 +468,7 @@ class RLMResults(base.LikelihoodModelResults):
                     ('Cov Type:', [self.fit_options['cov']]),
                     ('Date:', None),
                     ('Time:', None),
-                    ('No. Iterations:', ["%d" % self.model.iteration]), #stale state?
+                    ('No. Iterations:', ["%d" % self.fit_history['iteration']])
                     ]
         top_right = [('No. Observations:', None),
                      ('Df Residuals:', None),
