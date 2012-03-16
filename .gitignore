@@ -3,6 +3,11 @@
 build
 # setup.py dist directory
 ./dist
+#docs build and others
+#generated  #not yet? generated for dataset not rebuild
+docs/source/generated
+docs/source/dev/generated
+docs/source/examples/generated
 
 # repository directories for bzr-git
 .bzr

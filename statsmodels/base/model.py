@@ -33,6 +33,9 @@ class Model(object):
         self._data = handle_data(endog, exog)
         self.exog = self._data.exog
         self.endog = self._data.endog
+        self._data_attr = []
+        self._data_attr.extend(['exog', 'endog', '_data.exog', '_data.endog',
+                                '_data._orig_endog', '_data._orig_exog'])
 
     @property
     def endog_names(self):
@@ -686,6 +689,7 @@ class Results(object):
     def __init__(self, model, params, **kwd):
         self.__dict__.update(kwd)
         self.initialize(model, params, **kwd)
+        self._data_attr = []
 
     def initialize(self, model, params, **kwd):
         self.params = params
@@ -1242,6 +1246,50 @@ class LikelihoodModelResults(Results):
     @cache_readonly
     def llf(self):
         return self.model.loglike(self.params)
+
+    def remove_data(self):
+        '''remove data arrays, all nobs arrays from result and model
+
+        This reduces the size of the instance, so it can be pickled with less
+        memory. Currently tested for use with predict from an unpickled
+        results and model instance.
+
+        .. warning:: Since data and some intermediate results have been removed
+        calculating new statistics that require them will raise exceptions.
+        The exception will occur the first time an attribute is accessed that
+        has been set to None.
+
+        not tested for time series models, tsa, and might not delete too much
+        or not enough.
+
+        '''
+        def wipe(obj, att):
+            #get to last element in attribute path
+            p = att.split('.')
+            att_ = p.pop(-1)
+            try:
+                obj_ = reduce(getattr, [obj] + p)
+
+                #print repr(obj), repr(att)
+                #print hasattr(obj_, att_)
+                if hasattr(obj_, att_):
+                    #print 'removing3', att_
+                    setattr(obj_, att_, None)
+            except AttributeError:
+                pass
+
+        model_attr = ['model.'+ i for i in self.model._data_attr]
+        for att in self._data_attr + model_attr:
+            #print 'removing', att
+            wipe(self, att)
+
+        data_in_cache = getattr(self, 'data_in_cache', [])
+        data_in_cache += ['fittedvalues', 'resid', 'wresid']
+        for key in data_in_cache:
+            try:
+                self._cache[key] = None
+            except (AttributeError, KeyError):
+                pass
 
 
 class LikelihoodResultsWrapper(wrap.ResultsWrapper):
