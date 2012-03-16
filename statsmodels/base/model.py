@@ -1254,10 +1254,13 @@ class LikelihoodModelResults(Results):
         memory. Currently tested for use with predict from an unpickled
         results and model instance.
 
-        Warning: Since data and some intermediate results have been removed
+        .. warning:: Since data and some intermediate results have been removed
         calculating new statistics that require them will raise exceptions.
         The exception will occur the first time an attribute is accessed that
         has been set to None.
+
+        not tested for time series models, tsa, and might not delete too much
+        or not enough.
 
         '''
         def wipe(obj, att):

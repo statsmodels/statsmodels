@@ -70,6 +70,9 @@ class RemoveDataPickle(object):
         pred3 = results.predict(xf, **pred_kwds)
         np.testing.assert_equal(pred3, pred1)
 
+    def test_remove_data_docstring(self):
+        assert_(self.results.remove_data.__doc__ is not None)
+
 
 
 class TestRemoveDataPickleOLS(RemoveDataPickle):
@@ -156,6 +159,8 @@ if __name__ == '__main__':
         cls.setupclass()
         tt = cls()
         tt.test_remove_data_pickle()
+        tt.test_remove_data_docstring()
+        print tt.results.remove_data.__doc__ is None
 
     raise
 
