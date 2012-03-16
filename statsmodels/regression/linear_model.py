@@ -149,7 +149,7 @@ Should be of length %s, if sigma is a 1d array" % nobs)
 
         #store attribute names for data arrays
         self._data_attr.extend(['sigma', 'cholsigmainv', 'pinv_wexog',
-                               'wendog', 'wexog'])
+                               'wendog', 'wexog', 'weights'])
 
     def initialize(self):
         #print "calling initialize, now whitening"  #for debugging
