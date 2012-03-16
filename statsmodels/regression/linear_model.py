@@ -1177,10 +1177,6 @@ class RegressionResults(base.LikelihoodModelResults):
 
         return lrstat, lr_pvalue, lrdf
 
-    def remove_data(self):
-        super(self.__class__, self).remove_data()
-
-
 
     def summary(self, yname=None, xname=None, title=None, alpha=.05):
         """Summarize the Regression Results
