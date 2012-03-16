@@ -82,7 +82,8 @@ def check_pickle(obj):
 
 def test_remove_data_pickle(results, xf):
     res, l = check_pickle(results)
-    np.testing.assert_(l < 10000, msg='pickle length not %d < %d' % (l, 1000))
+    #Note: 10000 is just a guess for the limit on the length of the pickle
+    np.testing.assert_(l < 10000, msg='pickle length not %d < %d' % (l, 10000))
     pred1 = results.predict(xf, exposure=1, offset=0)
     pred2 = res.predict(xf, exposure=1, offset=0)
     np.testing.assert_equal(pred2, pred1)
