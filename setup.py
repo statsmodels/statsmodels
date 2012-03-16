@@ -6,6 +6,7 @@ please download and install it from http://pypi.python.org/pypi/setuptools
 import os
 import sys
 import subprocess
+import re
 import setuptools
 from numpy.distutils.core import setup
 import numpy
@@ -22,6 +23,47 @@ MAINTAINER_EMAIL ='pystatsmodels@googlegroups.com'
 URL = 'http://statsmodels.sourceforge.net/'
 LICENSE = 'BSD License'
 DOWNLOAD_URL = ''
+
+
+def check_dependency_versions(min_versions):
+    """
+    Don't let setuptools do this. It's rude.
+
+    Just makes sure it can import the packages and if not, stops the build
+    process.
+    """
+    from distutils.version import StrictVersion
+    try:
+        from numpy.version import short_version as npversion
+    except ImportError as err:
+        raise ImportError("statsmodels requires numpy")
+    try:
+        from scipy.version import short_version as spversion
+    except ImportError as err:
+        raise ImportError("statsmodels requires scipy")
+    try:
+        from pandas.version import version as pversion
+    except:
+        raise ImportError("statsmodels requires pandas")
+    try:
+        assert StrictVersion(npversion) >= min_versions['numpy']
+    except AssertionError as err:
+        raise ImportError("Numpy version is %s. Requires >= %s" %
+                (npversion, min_versions['numpy']))
+    try:
+        assert StrictVersion(spversion) >= min_versions['scipy']
+    except AssertionError as err:
+        raise ImportError("Scipy version is %s. Requires >= %s" %
+                (spversion, min_versions['scipy']))
+    try:
+        #NOTE: not sure how robust this regex is but it at least allows
+        # double digit version numbering
+        pversion = re.match("\d*\.\d*\.\d*", pversion).group()
+        assert StrictVersion(pversion) >= min_versions['pandas']
+    except AssertionError as err:
+        raise ImportError("Pandas version is %s. Requires >= %s" %
+                (pversion, min_versions['pandas']))
+
 
 MAJ = 0
 MIN = 4
@@ -144,6 +186,13 @@ def configuration(parent_package='', top_path=None, package_name=DISTNAME):
     return config
 
 if __name__ == "__main__":
+    min_versions = {
+        'numpy' : '1.4.0',
+        'scipy' : '0.7.0',
+        'pandas' : '0.7.1',
+                   }
+
+    check_dependency_versions(min_versions)
     write_version_py()
     setup(
           name = DISTNAME,
@@ -156,7 +205,6 @@ if __name__ == "__main__":
           download_url = DOWNLOAD_URL,
           long_description = LONG_DESCRIPTION,
           configuration = configuration,
-          install_requires = ['pandas >= 0.7.0'],
           namespace_packages = ['scikits'],
           packages = setuptools.find_packages(),
           include_package_data = True,
