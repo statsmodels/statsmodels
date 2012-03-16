@@ -25,20 +25,22 @@ int main(void) {
 def has_c_compiler():
     c = distutils_config(Distribution())
     if platform.system() == "Windows": # HACK
+        # this doesn't matter because mingw won't be given at install step
         # check if mingw was given in compiler options
-        parser = optparse.OptionParser()
-        parser.add_option('-c', '--compiler', dest='compiler')
-        options, args = parser.parse_args()
-        if options.compiler and 'mingw' in options.compiler:
-            return True
+        #parser = optparse.OptionParser()
+        #parser.add_option('-c', '--compiler', dest='compiler')
+        #options, args = parser.parse_args()
+        #if options.compiler and 'mingw' in options.compiler:
+        #    return True
+
         # if not, then check to see if compiler is set in disutils.cfg
-    try: # Josef's code to check the distutils.cfg file
-        c.distribution.parse_config_files(c.distribution.find_config_files())
-        # this will raise a key error if there's not one
-        c.distribution.command_options['build']['compiler'][1]
-        return True
-    except:
-        pass
+        try: # Josef's code to check the distutils.cfg file
+            c.distribution.parse_config_files(c.distribution.find_config_files())
+            # this will raise a key error if there's not one
+            c.distribution.command_options['build']['compiler'][1]
+            return True
+        except:
+            pass
     # just see if there's a system compiler
     try:
         success = c.try_compile(dummy_c_text)
