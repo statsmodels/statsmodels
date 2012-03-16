@@ -1,10 +1,15 @@
 #! /usr/bin/env python
 
-from statsmodels.tools._build import cython, has_c_compiler
-
 import os.path
 
 cur_dir = os.path.abspath(os.path.dirname(__file__))
+
+import sys
+sys.path.insert(0, os.path.normpath(os.path.join(cur_dir,
+                                        '..', '..', '..', 'tools')))
+from _build import cython, has_c_compiler
+sys.path.pop(0)
+del sys
 
 def configuration(parent_package='', top_path=None):
     from numpy.distutils.misc_util import (Configuration,
