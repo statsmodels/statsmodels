@@ -10,6 +10,7 @@ import platform
 from distutils.dist import Distribution
 from distutils.command.config import config as distutils_config
 from distutils import log
+import optparse # deprecated in 2.7 for argparse
 
 dummy_c_text = r'''
 /* This file is generated from statsmodels/tools/_build.py to */
@@ -20,8 +21,25 @@ int main(void) {
 }
 '''
 
+
 def has_c_compiler():
     c = distutils_config(Distribution())
+    if platform.system() == "Windows": # HACK
+        # check if mingw was given in compiler options
+        parser = optparse.OptionParser()
+        parser.add_option('-c', '--compiler', dest='compiler')
+        options, args = parser.parse_args()
+        if options.compiler and 'mingw' in options.compiler:
+            return True
+        # if not, then check to see if compiler is set in disutils.cfg
+    try: # Josef's code to check the distutils.cfg file
+        c.distribution.parse_config_files(c.distribution.find_config_files())
+        # this will raise a key error if there's not one
+        c.distribution.command_options['build']['compiler'][1]
+        return True
+    except:
+        pass
+    # just see if there's a system compiler
     try:
         success = c.try_compile(dummy_c_text)
         return True
