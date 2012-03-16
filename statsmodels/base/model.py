@@ -50,8 +50,9 @@ class Model(object):
 
     def predict(self, params, exog=None, *args, **kwargs):
         """
-        After a model has been fit predict returns the fitted values.  If
-        the model has not been fit, then fit is called.
+        After a model has been fit predict returns the fitted values.
+
+        This is a placeholder intended to be overwritten by individual models.
         """
         raise NotImplementedError
 
