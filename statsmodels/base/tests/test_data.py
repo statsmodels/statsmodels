@@ -54,7 +54,9 @@ class TestArrays(object):
         np.testing.assert_equal(data.ynames, self.ynames)
 
     def test_labels(self):
-        np.testing.assert_equal(self.data.row_labels, self.row_labels)
+        #HACK: because numpy master after NA stuff assert_equal fails on
+        # pandas indices
+        np.testing.assert_(np.all(self.data.row_labels == self.row_labels))
 
 
 class TestArrays2dEndog(TestArrays):
