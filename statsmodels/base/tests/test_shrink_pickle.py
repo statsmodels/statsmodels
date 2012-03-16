@@ -82,6 +82,16 @@ class TestRemoveDataPickleOLS(RemoveDataPickle):
         y = x.sum(1) + np.random.randn(x.shape[0])
         self.results = sm.OLS(y, self.exog).fit()
 
+class TestRemoveDataPickleWLS(RemoveDataPickle):
+
+    def __init__(self):
+        super(self.__class__, self).__init__()
+        #fit for each test, because results will be changed by test
+        x = self.exog
+        np.random.seed(987689)
+        y = x.sum(1) + np.random.randn(x.shape[0])
+        self.results = sm.WLS(y, self.exog, weights=np.ones(len(y))).fit()
+
 class TestRemoveDataPicklePoisson(RemoveDataPickle):
 
     def __init__(self):
@@ -138,12 +148,13 @@ class TestRemoveDataPickleGLM(RemoveDataPickle):
         self.results = sm.GLM(y, self.exog).fit()
 
 if __name__ == '__main__':
-    for cls in [TestRemoveDataPickleOLS, TestRemoveDataPicklePoisson,
+    for cls in [TestRemoveDataPickleOLS, TestRemoveDataPickleWLS,
+                TestRemoveDataPicklePoisson,
                 TestRemoveDataPickleLogit, TestRemoveDataPickleRLM,
                 TestRemoveDataPickleGLM]:
+        print cls
         cls.setupclass()
         tt = cls()
-
         tt.test_remove_data_pickle()
 
     raise
