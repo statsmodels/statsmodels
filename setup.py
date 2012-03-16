@@ -10,11 +10,6 @@ import setuptools
 from numpy.distutils.core import setup
 import numpy
 
-compile_cython = 0
-if "--with-cython" in sys.argv:
-    compile_cython = 1
-    sys.argv.remove('--with-cython')
-
 curdir = os.path.abspath(os.path.dirname(__file__))
 README = open(os.path.join(curdir, "README.txt")).read()
 CHANGES = open(os.path.join(curdir, "CHANGES.txt")).read()
@@ -138,11 +133,6 @@ def configuration(parent_package='', top_path=None, package_name=DISTNAME):
     config.add_data_files('scikits/__init__.py')
     config.add_data_files('docs/build/htmlhelp/statsmodelsdoc.chm',
                           'statsmodels/statsmodelsdoc.chm')
-
-    if compile_cython:
-        config.add_extension('tsa/kalmanf/kalman_loglike',
-                sources = ['statsmodels/tsa/kalmanf/kalman_loglike.c'],
-                include_dirs=[numpy.get_include()])
 
     config.set_options(
             ignore_setup_xxx_py = True,
