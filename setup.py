@@ -10,11 +10,6 @@ import setuptools
 from numpy.distutils.core import setup
 import numpy
 
-compile_cython = 0
-if "--with-cython" in sys.argv:
-    compile_cython = 1
-    sys.argv.remove('--with-cython')
-
 curdir = os.path.abspath(os.path.dirname(__file__))
 README = open(os.path.join(curdir, "README.txt")).read()
 CHANGES = open(os.path.join(curdir, "CHANGES.txt")).read()
