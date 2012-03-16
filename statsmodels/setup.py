@@ -5,20 +5,15 @@ def configuration(parent_package='', top_path=None):
 
     config = Configuration('statsmodels', parent_package, top_path)
 
-    # this are subpackages because they have Cython code
+    # these are subpackages because they have Cython code
     config.add_subpackage('nonparametric')
+    config.add_subpackage('tsa')
 
     #TODO: delegate the non-test stuff to subpackages
     config.add_data_files('sandbox/panel/test_data.txt')
 
     curdir = os.path.abspath(os.path.dirname(__file__))
-    vardatafiles = [os.path.relpath(os.path.join(r,d), start=curdir)
-                    for r,ds,f in os.walk(os.path.join(curdir,
-                        'tsa/vector_ar/data'))
-                    for d in f if not os.path.splitext(d)[1] in ['.py',
-                        '.pyc']]
-    for f in vardatafiles:
-        config.add_data_files(f)
+
     extradatafiles = [os.path.relpath(os.path.join(r,d),start=curdir)
                       for r,ds,f in os.walk(os.path.join(curdir, 'datasets'))
                       for d in f if not os.path.splitext(d)[1] in
