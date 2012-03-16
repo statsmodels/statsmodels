@@ -475,6 +475,8 @@ class RLMResults(base.LikelihoodModelResults):
         self.model.history['sresid'] = None
         self.model.history['weights'] = None
 
+    remove_data.__doc__ = base.LikelihoodModelResults.remove_data.__doc__
+
     def summary(self, yname=None, xname=None, title=0, alpha=.05,
                 return_fmt='text'):
         """
