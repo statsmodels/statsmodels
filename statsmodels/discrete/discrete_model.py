@@ -1491,19 +1491,11 @@ class DiscreteResults(base.LikelihoodModelResults):
 
     def __getstate__(self):
         try:
+            #remove unpicklable callback
             self.mle_settings['callback'] = None
         except (AttributeError, KeyError):
             pass
         return self.__dict__
-
-#    def __setstate__(self, dict_):
-#        print dict_
-#        import statsmodels.base.wrapper as wrap
-#        if isinstance(self, wrap.ResultsWrapper):
-#            self._results = dict_["_results"]
-#        else:
-#            self.__dict__.update(dict_)
-
 
     @cache_readonly
     def prsquared(self):
