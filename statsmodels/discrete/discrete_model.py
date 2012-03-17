@@ -1489,6 +1489,22 @@ class DiscreteResults(base.LikelihoodModelResults):
         self.nobs = model.exog.shape[0]
         self.__dict__.update(mlefit.__dict__)
 
+    def __getstate__(self):
+        try:
+            self.mle_settings['callback'] = None
+        except (AttributeError, KeyError):
+            pass
+        return self.__dict__
+
+#    def __setstate__(self, dict_):
+#        print dict_
+#        import statsmodels.base.wrapper as wrap
+#        if isinstance(self, wrap.ResultsWrapper):
+#            self._results = dict_["_results"]
+#        else:
+#            self.__dict__.update(dict_)
+
+
     @cache_readonly
     def prsquared(self):
         return 1 - self.llf/self.llnull
