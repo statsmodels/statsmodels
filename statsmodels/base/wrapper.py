@@ -20,8 +20,22 @@ class ResultsWrapper(object):
         return [x for x in dir(self._results)]
 
     def __getattribute__(self, attr):
+        #print 'attr', attr
         get = lambda name: object.__getattribute__(self, name)
-        results = get('_results')
+
+#        if attr == '__getstate__':
+#            print 'pickling wrapper', self.__dict__
+#            return lambda : self.__dict__
+#        elif attr == '_results':
+#            pass
+
+        try:
+            results = get('_results')
+        except AttributeError:
+            #print 'getting _results', self.__dict__
+#            self._results = None
+#            return self.__dict__.get('_results', None)
+            pass
 
         try:
             return get(attr)
@@ -35,6 +49,18 @@ class ResultsWrapper(object):
             obj = data.wrap_output(obj, how=how)
 
         return obj
+
+    def __getstate__(self):
+        print 'pickling wrapper', self.__dict__
+        return self.__dict__
+
+    def __setstate__(self, dict_):
+        print dict_
+        import statsmodels.base.wrapper as wrap
+        if isinstance(self, wrap.ResultsWrapper):
+            self._results = dict_["_results"]
+        else:
+            self.__dict__.update(dict_)
 
 def union_dicts(*dicts):
     result = {}
