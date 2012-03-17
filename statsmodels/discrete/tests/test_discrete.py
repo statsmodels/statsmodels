@@ -353,6 +353,9 @@ def test_perfect_prediction():
     X = sm.add_constant(X, prepend=True)
     mod = Logit(y,X)
     assert_raises(PerfectSeparationError, mod.fit)
+    #turn off raise PerfectSeparationError
+    mod.raise_on_perfect_prediction = False
+    mod.fit()  #should not raise
 
 def test_poisson_predict():
     #GH: 175, make sure poisson predict works without offset and exposure
@@ -362,6 +365,13 @@ def test_poisson_predict():
     pred1 = res.predict()
     pred2 = res.predict(exog)
     assert_almost_equal(pred1, pred2)
+    #exta options
+    pred3 = res.predict(exog, offset=0, exposure=1)
+    assert_almost_equal(pred1, pred3)
+    pred3 = res.predict(exog, offset=0, exposure=2)
+    assert_almost_equal(2*pred1, pred3)
+    pred3 = res.predict(exog, offset=np.log(2), exposure=1)
+    assert_almost_equal(2*pred1, pred3)
 
 def test_poisson_newton():
     #GH: 24, Newton doesn't work well sometimes
