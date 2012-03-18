@@ -1,3 +1,6 @@
+
+from statsmodels.iolib.pickle import save_pickle, load_pickle
+
 def test_pickle():
     import tempfile
     from numpy.testing import assert_equal

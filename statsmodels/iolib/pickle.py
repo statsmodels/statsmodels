@@ -41,8 +41,3 @@ def load_pickle(fname):
     fin = _get_file_obj(fname, 'rb')
     return pickle.load(fin)
 
-
-
-
-if __name__ == '__main__':
-    test_pickle()
