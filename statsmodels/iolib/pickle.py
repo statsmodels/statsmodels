@@ -50,12 +50,16 @@ def test_pickle():
     b = load_pickle(tmpdir+'/res.pkl')
     assert_equal(a, b)
 
-    #cleanup tested on Windows
-    import os
-    os.remove(tmpdir+'/res.pkl')
-    os.rmdir(tmpdir)
+    #cleanup, tested on Windows
+    try:
+        import os
+        os.remove(tmpdir+'/res.pkl')
+        os.rmdir(tmpdir)
+    except (OSError, IOError):
+        pass
     assert not os.path.exists(tmpdir)
 
+    #test with file handle
     import StringIO
     fh = StringIO.StringIO()
     save_pickle(a, fh)
