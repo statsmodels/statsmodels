@@ -107,8 +107,6 @@ class TestRemoveDataPicklePoisson(RemoveDataPickle):
 
         #TODO: temporary, fixed in master
         self.predict_kwds = dict(exposure=1, offset=0)
-        #TODO: needs to go into pickle save
-        self.results.mle_settings['callback'] = None
 
 class TestRemoveDataPickleLogit(RemoveDataPickle):
 
@@ -122,9 +120,6 @@ class TestRemoveDataPickleLogit(RemoveDataPickle):
         #use start_params to converge faster
         start_params = np.array([-0.73403806, -1.00901514, -0.97754543, -0.95648212])
         self.results = model.fit(start_params=start_params, method='bfgs')
-
-        #TODO: needs to go into pickle save
-        self.results.mle_settings['callback'] = None
 
 class TestRemoveDataPickleRLM(RemoveDataPickle):
 
