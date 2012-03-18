@@ -30,7 +30,7 @@ class RemoveDataPickle(object):
         self.predict_kwds = {}
 
     @classmethod
-    def setupclass(self):
+    def setup_class(self):
 
         nobs = 10000
         np.random.seed(987689)
@@ -77,8 +77,7 @@ class RemoveDataPickle(object):
 
 class TestRemoveDataPickleOLS(RemoveDataPickle):
 
-    def __init__(self):
-        super(self.__class__, self).__init__()
+    def setup(self):
         #fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
@@ -87,8 +86,7 @@ class TestRemoveDataPickleOLS(RemoveDataPickle):
 
 class TestRemoveDataPickleWLS(RemoveDataPickle):
 
-    def __init__(self):
-        super(self.__class__, self).__init__()
+    def setup(self):
         #fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
@@ -97,8 +95,7 @@ class TestRemoveDataPickleWLS(RemoveDataPickle):
 
 class TestRemoveDataPicklePoisson(RemoveDataPickle):
 
-    def __init__(self):
-        super(self.__class__, self).__init__()
+    def setup(self):
         #fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
@@ -115,8 +112,7 @@ class TestRemoveDataPicklePoisson(RemoveDataPickle):
 
 class TestRemoveDataPickleLogit(RemoveDataPickle):
 
-    def __init__(self):
-        super(self.__class__, self).__init__()
+    def setup(self):
         #fit for each test, because results will be changed by test
         x = self.exog
         nobs = x.shape[0]
@@ -132,8 +128,7 @@ class TestRemoveDataPickleLogit(RemoveDataPickle):
 
 class TestRemoveDataPickleRLM(RemoveDataPickle):
 
-    def __init__(self):
-        super(self.__class__, self).__init__()
+    def setup(self):
         #fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
@@ -142,8 +137,7 @@ class TestRemoveDataPickleRLM(RemoveDataPickle):
 
 class TestRemoveDataPickleGLM(RemoveDataPickle):
 
-    def __init__(self):
-        super(self.__class__, self).__init__()
+    def setup(self):
         #fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)

@@ -472,8 +472,8 @@ class RLMResults(base.LikelihoodModelResults):
 
     def remove_data(self):
         super(self.__class__, self).remove_data()
-        self.model.history['sresid'] = None
-        self.model.history['weights'] = None
+        #self.model.history['sresid'] = None
+        #self.model.history['weights'] = None
 
     remove_data.__doc__ = base.LikelihoodModelResults.remove_data.__doc__
 
