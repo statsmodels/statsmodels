@@ -191,6 +191,9 @@ class GLM(base.LikelihoodModel):
     def __init__(self, endog, exog, family=None, offset=None, exposure=None):
         super(GLM, self).__init__(endog, exog)
         self._sanitize_inputs(family, offset, exposure)
+        #things to remove_data
+        self._data_attr.extend(['weights', 'pinv_wexog', 'mu', 'data_weights',
+                                ])
 
     def initialize(self):
         """
@@ -595,6 +598,20 @@ class GLMResults(base.LikelihoodModelResults):
     @cache_readonly
     def bic(self):
         return self.deviance - self.df_resid*np.log(self.nobs)
+
+    def remove_data(self):
+        #GLM has alias/reference in result instance
+        self._data_attr.extend([i for i in self.model._data_attr
+                                           if not '_data.' in i])
+        super(self.__class__, self).remove_data()
+        self.model.history['fittedvalues'] = None
+
+        #TODO: what are these in results?
+        self._endog = None
+        self._data_weights = None
+
+    remove_data.__doc__ = base.LikelihoodModelResults.remove_data.__doc__
+
 
     def summary(self, yname=None, xname=None, title=None, alpha=.05):
         """Summarize the Regression Results

@@ -117,6 +117,8 @@ class RLM(base.LikelihoodModel):
         self.M = M
         super(base.LikelihoodModel, self).__init__(endog, exog)
         self._initialize()
+        #things to remove_data
+        self._data_attr.extend(['weights', 'pinv_wexog'])
 
     def _initialize(self):
         """
@@ -136,6 +138,30 @@ class RLM(base.LikelihoodModel):
 
     def information(self, params):
         raise NotImplementedError
+
+    def predict(self, params, exog=None):
+        """
+        Return linear predicted values from a design matrix.
+
+        Parameters
+        ----------
+        params : array-like, optional after fit has been called
+            Parameters of a linear model
+        exog : array-like, optional.
+            Design / exogenous data. Model exog is used if None.
+
+        Returns
+        -------
+        An array of fitted values
+
+        Notes
+        -----
+        If the model as not yet been fit, params is not optional.
+        """
+        #copied from linear_model
+        if exog is None:
+            exog = self.exog
+        return np.dot(exog, params)
 
     def loglike(self, params):
         raise NotImplementedError
@@ -368,6 +394,8 @@ class RLMResults(base.LikelihoodModelResults):
         self.df_resid = model.df_resid
         self.nobs = model.nobs
         self._cache = resettable_cache()
+        #for remove_data
+        self.data_in_cache = ['sresid']
 
         #TODO: "pvals" should come from chisq on bse?
 
@@ -441,6 +469,13 @@ class RLMResults(base.LikelihoodModelResults):
     @cache_readonly
     def chisq(self):
         return (self.params/self.bse)**2
+
+    def remove_data(self):
+        super(self.__class__, self).remove_data()
+        self.model.history['sresid'] = None
+        self.model.history['weights'] = None
+
+    remove_data.__doc__ = base.LikelihoodModelResults.remove_data.__doc__
 
     def summary(self, yname=None, xname=None, title=0, alpha=.05,
                 return_fmt='text'):

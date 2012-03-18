@@ -1655,6 +1655,7 @@ class DiscreteResults(base.LikelihoodModelResults):
         self.margfx = effects
         return effects
 
+
     def summary(self, yname=None, xname=None, title=None, alpha=.05,
                 yname_list=None):
         """Summarize the Regression Results
@@ -1801,6 +1802,7 @@ class MultinomialResults(DiscreteResults):
         confint = super(DiscreteResults, self).conf_int(alpha=alpha,
                                                             cols=cols)
         return confint.transpose(2,0,1)
+
 
 #### Results Wrappers ####
 
