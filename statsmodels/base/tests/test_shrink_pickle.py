@@ -75,7 +75,7 @@ class RemoveDataPickle(object):
 
     def test_pickle_wrapper(self):
 
-        from statsmodels.iolib.pickle import save_pickle, load_pickle
+        from statsmodels.iolib.smpickle import save_pickle, load_pickle
 
         fh = StringIO.StringIO()
         save_pickle(self.results, fh)

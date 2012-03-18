@@ -1,5 +1,5 @@
 
-from statsmodels.iolib.pickle import save_pickle, load_pickle
+from statsmodels.iolib.smpickle import save_pickle, load_pickle
 
 def test_pickle():
     import tempfile

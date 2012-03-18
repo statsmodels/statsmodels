@@ -21,7 +21,7 @@ def save_pickle(obj, fname):
     """
     import cPickle as pickle
     fout = _get_file_obj(fname, 'wb')
-    pickle.dump(obj, fout, protocol=-1)
+    pickle.dump(obj, fout, protocol=2)
 
 
 def load_pickle(fname):
