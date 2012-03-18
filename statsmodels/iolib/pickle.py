@@ -10,7 +10,7 @@ def _get_file_obj(fname, mode):
         fh = fname
     return fh
 
-def save_pickle(self, fname):
+def save_pickle(obj, fname):
     """
     Save the object to file via pickling.
 
@@ -21,7 +21,7 @@ def save_pickle(self, fname):
     """
     import cPickle as pickle
     fout = _get_file_obj(fname, 'wb')
-    pickle.dump(self, fout, protocol=-1)
+    pickle.dump(obj, fout, protocol=-1)
 
 
 def load_pickle(fname):

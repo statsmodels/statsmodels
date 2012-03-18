@@ -6,7 +6,7 @@ Created on Fri Mar 09 16:00:27 2012
 Author: Josef Perktold
 """
 
-import pickle
+import pickle, StringIO
 import numpy as np
 import statsmodels.api as sm
 
@@ -73,7 +73,17 @@ class RemoveDataPickle(object):
     def test_remove_data_docstring(self):
         assert_(self.results.remove_data.__doc__ is not None)
 
+    def test_pickle_wrapper(self):
 
+        from statsmodels.iolib.pickle import save_pickle, load_pickle
+
+        fh = StringIO.StringIO()
+        save_pickle(self.results, fh)
+        fh.seek(0,0)
+        res_unpickled = load_pickle(fh)
+        fh.close()
+        print type(res_unpickled)
+        assert_(type(res_unpickled) is type(self.results))
 
 class TestRemoveDataPickleOLS(RemoveDataPickle):
 
@@ -145,7 +155,9 @@ if __name__ == '__main__':
                 TestRemoveDataPickleLogit, TestRemoveDataPickleRLM,
                 TestRemoveDataPickleGLM]:
         print cls
-        cls.setupclass()
+        cls.setup_class()
         tt = cls()
+        tt.setup()
         tt.test_remove_data_pickle()
         tt.test_remove_data_docstring()
+        tt.test_pickle_wrapper()
