@@ -78,6 +78,15 @@ class RemoveDataPickle(object):
         from statsmodels.iolib.smpickle import save_pickle, load_pickle
 
         fh = StringIO.StringIO()
+
+        #test unwrapped results load save pickle
+        self.results._results.save(fh)
+        fh.seek(0,0)
+        res_unpickled = self.results._results.__class__.load(fh)
+        assert_(type(res_unpickled) is type(self.results._results))
+
+        #test wrapped results load save
+        fh.seek(0,0)
         #save_pickle(self.results, fh)
         self.results.save(fh)
         fh.seek(0,0)
