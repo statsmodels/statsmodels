@@ -78,9 +78,11 @@ class RemoveDataPickle(object):
         from statsmodels.iolib.smpickle import save_pickle, load_pickle
 
         fh = StringIO.StringIO()
-        save_pickle(self.results, fh)
+        #save_pickle(self.results, fh)
+        self.results.save(fh)
         fh.seek(0,0)
-        res_unpickled = load_pickle(fh)
+        #res_unpickled = load_pickle(fh)
+        res_unpickled = self.results.__class__.load(fh)
         fh.close()
         print type(res_unpickled)
         assert_(type(res_unpickled) is type(self.results))

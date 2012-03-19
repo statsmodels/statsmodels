@@ -48,6 +48,33 @@ class ResultsWrapper(object):
         #print 'unpickling wrapper', dict_
         self.__dict__.update(dict_)
 
+    def save(self, fname, remove_data=False):
+        '''save a pickle of this instance
+
+        Parameters
+        ----------
+        fname : string or filehandle
+            fname can be a string to a file path or filename, or a filehandle.
+        remove_data : bool
+            If False (default), then the instance is pickled without changes.
+            If True, then all arrays with length nobs are set to None before
+            pickling. See the remove_data method.
+            In some cases not all arrays will be set to None.
+
+        '''
+        from statsmodels.iolib.smpickle import save_pickle
+
+        if remove_data:
+            self.remove_data()
+
+        save_pickle(self, fname)
+
+    @classmethod
+    def load(cls, fname):
+        from statsmodels.iolib.smpickle import load_pickle
+        return load_pickle(fname)
+
+
 def union_dicts(*dicts):
     result = {}
     for d in dicts:
