@@ -21,7 +21,11 @@ class ResultsWrapper(object):
 
     def __getattribute__(self, attr):
         get = lambda name: object.__getattribute__(self, name)
-        results = get('_results')
+
+        try:
+            results = get('_results')
+        except AttributeError:
+            pass
 
         try:
             return get(attr)
@@ -35,6 +39,41 @@ class ResultsWrapper(object):
             obj = data.wrap_output(obj, how=how)
 
         return obj
+
+    def __getstate__(self):
+        #print 'pickling wrapper', self.__dict__
+        return self.__dict__
+
+    def __setstate__(self, dict_):
+        #print 'unpickling wrapper', dict_
+        self.__dict__.update(dict_)
+
+    def save(self, fname, remove_data=False):
+        '''save a pickle of this instance
+
+        Parameters
+        ----------
+        fname : string or filehandle
+            fname can be a string to a file path or filename, or a filehandle.
+        remove_data : bool
+            If False (default), then the instance is pickled without changes.
+            If True, then all arrays with length nobs are set to None before
+            pickling. See the remove_data method.
+            In some cases not all arrays will be set to None.
+
+        '''
+        from statsmodels.iolib.smpickle import save_pickle
+
+        if remove_data:
+            self.remove_data()
+
+        save_pickle(self, fname)
+
+    @classmethod
+    def load(cls, fname):
+        from statsmodels.iolib.smpickle import load_pickle
+        return load_pickle(fname)
+
 
 def union_dicts(*dicts):
     result = {}

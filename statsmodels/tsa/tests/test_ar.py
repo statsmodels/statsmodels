@@ -3,7 +3,8 @@ Test AR Model
 """
 import statsmodels.api as sm
 from statsmodels.tsa.ar_model import AR
-from numpy.testing import assert_almost_equal, assert_equal, assert_allclose
+from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
+                           assert_)
 from results import results_ar
 import numpy as np
 import numpy.testing as npt
@@ -27,6 +28,15 @@ class CheckAR(object):
 
     def test_fpe(self):
         assert_almost_equal(self.res1.fpe, self.res2.fpe, DECIMAL_6)
+
+    def test_pickle(self):
+        import StringIO
+        fh = StringIO.StringIO()
+        #test unwrapped results load save pickle
+        self.res1.save(fh)
+        fh.seek(0,0)
+        res_unpickled = self.res1.__class__.load(fh)
+        assert_(type(res_unpickled) is type(self.res1))
 
 class TestAROLSConstant(CheckAR):
     """

@@ -6,7 +6,7 @@ Created on Fri Mar 09 16:00:27 2012
 Author: Josef Perktold
 """
 
-import pickle
+import pickle, StringIO
 import numpy as np
 import statsmodels.api as sm
 
@@ -73,6 +73,44 @@ class RemoveDataPickle(object):
     def test_remove_data_docstring(self):
         assert_(self.results.remove_data.__doc__ is not None)
 
+    def test_pickle_wrapper(self):
+
+        from statsmodels.iolib.smpickle import save_pickle, load_pickle
+
+        fh = StringIO.StringIO()
+
+        #test unwrapped results load save pickle
+        self.results._results.save(fh)
+        fh.seek(0,0)
+        res_unpickled = self.results._results.__class__.load(fh)
+        assert_(type(res_unpickled) is type(self.results._results))
+
+        #test wrapped results load save
+        fh.seek(0,0)
+        #save_pickle(self.results, fh)
+        self.results.save(fh)
+        fh.seek(0,0)
+        #res_unpickled = load_pickle(fh)
+        res_unpickled = self.results.__class__.load(fh)
+        fh.close()
+        print type(res_unpickled)
+        assert_(type(res_unpickled) is type(self.results))
+
+        before = sorted(self.results.__dict__.keys())
+        after = sorted(res_unpickled.__dict__.keys())
+        assert_(before == after, msg='not equal %r and %r' % (before, after))
+
+        before = sorted(self.results._results.__dict__.keys())
+        after = sorted(res_unpickled._results.__dict__.keys())
+        assert_(before == after, msg='not equal %r and %r' % (before, after))
+
+        before = sorted(self.results.model.__dict__.keys())
+        after = sorted(res_unpickled.model.__dict__.keys())
+        assert_(before == after, msg='not equal %r and %r' % (before, after))
+
+        before = sorted(self.results._cache.keys())
+        after = sorted(res_unpickled._cache.keys())
+        assert_(before == after, msg='not equal %r and %r' % (before, after))
 
 
 class TestRemoveDataPickleOLS(RemoveDataPickle):
@@ -107,8 +145,6 @@ class TestRemoveDataPicklePoisson(RemoveDataPickle):
 
         #TODO: temporary, fixed in master
         self.predict_kwds = dict(exposure=1, offset=0)
-        #TODO: needs to go into pickle save
-        self.results.mle_settings['callback'] = None
 
 class TestRemoveDataPickleLogit(RemoveDataPickle):
 
@@ -122,9 +158,6 @@ class TestRemoveDataPickleLogit(RemoveDataPickle):
         #use start_params to converge faster
         start_params = np.array([-0.73403806, -1.00901514, -0.97754543, -0.95648212])
         self.results = model.fit(start_params=start_params, method='bfgs')
-
-        #TODO: needs to go into pickle save
-        self.results.mle_settings['callback'] = None
 
 class TestRemoveDataPickleRLM(RemoveDataPickle):
 
@@ -150,7 +183,9 @@ if __name__ == '__main__':
                 TestRemoveDataPickleLogit, TestRemoveDataPickleRLM,
                 TestRemoveDataPickleGLM]:
         print cls
-        cls.setupclass()
+        cls.setup_class()
         tt = cls()
+        tt.setup()
         tt.test_remove_data_pickle()
         tt.test_remove_data_docstring()
+        tt.test_pickle_wrapper()
