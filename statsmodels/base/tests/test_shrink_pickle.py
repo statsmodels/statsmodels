@@ -85,6 +85,23 @@ class RemoveDataPickle(object):
         print type(res_unpickled)
         assert_(type(res_unpickled) is type(self.results))
 
+        before = sorted(self.results.__dict__.keys())
+        after = sorted(res_unpickled.__dict__.keys())
+        assert_(before == after, msg='not equal %r and %r' % (before, after))
+
+        before = sorted(self.results._results.__dict__.keys())
+        after = sorted(res_unpickled._results.__dict__.keys())
+        assert_(before == after, msg='not equal %r and %r' % (before, after))
+
+        before = sorted(self.results.model.__dict__.keys())
+        after = sorted(res_unpickled.model.__dict__.keys())
+        assert_(before == after, msg='not equal %r and %r' % (before, after))
+
+        before = sorted(self.results._cache.keys())
+        after = sorted(res_unpickled._cache.keys())
+        assert_(before == after, msg='not equal %r and %r' % (before, after))
+
+
 class TestRemoveDataPickleOLS(RemoveDataPickle):
 
     def setup(self):
