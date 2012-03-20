@@ -32,7 +32,7 @@ class CheckAR(object):
     def test_pickle(self):
         import StringIO
         fh = StringIO.StringIO()
-        #test unwrapped results load save pickle
+        #test wrapped results load save pickle
         self.res1.save(fh)
         fh.seek(0,0)
         res_unpickled = self.res1.__class__.load(fh)
