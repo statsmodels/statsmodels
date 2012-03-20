@@ -211,7 +211,7 @@ class RLM(base.LikelihoodModel):
         conv : string
             Indicates the convergence criteria.
             Available options are "coefs" (the coefficients), "weights" (the
-            weights in the iteration), "resids" (the standardized residuals),
+            weights in the iteration), "sresid" (the standardized residuals),
             and "dev" (the un-normalized log-likelihood for the M
             estimator).  The default is "dev".
         cov : string, optional
@@ -251,7 +251,7 @@ class RLM(base.LikelihoodModel):
         else:
             self.cov = cov.upper()
         conv = conv.lower()
-        if not conv in ["weights","coefs","dev","resid"]:
+        if not conv in ["weights","coefs","dev","sresid"]:
             raise ValueError("Convergence argument %s not understood" \
                 % conv)
         self.scale_est = scale_est
@@ -265,7 +265,7 @@ class RLM(base.LikelihoodModel):
         elif conv == 'dev':
             history.update(dict(deviance = [np.inf]))
             criterion = history['deviance']
-        elif conv == 'resid':
+        elif conv == 'sresid':
             history.update(dict(sresid = [np.inf]))
             criterion = history['sresid']
         elif conv == 'weights':
