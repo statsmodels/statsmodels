@@ -260,5 +260,33 @@ class TestRlmAndrewsHuber(TestRlm):
         from results.results_rlm import AndrewsHuber
         self.res2 = AndrewsHuber()
 
+class TestRlmSresid(CheckRlmResults):
+    #Check GH:187
+    from statsmodels.datasets.stackloss import load
+    data = load()   # class attributes for subclasses
+    data.exog = sm.add_constant(data.exog)
+    def __init__(self):
+        # Test precisions
+        self.decimal_standarderrors = DECIMAL_1
+        self.decimal_scale = DECIMAL_3
+
+        results = RLM(self.data.endog, self.data.exog,\
+                    M=sm.robust.norms.HuberT()).fit(conv='sresid') # default M
+        h2 = RLM(self.data.endog, self.data.exog,\
+                    M=sm.robust.norms.HuberT()).fit(cov="H2").bcov_scaled
+        h3 = RLM(self.data.endog, self.data.exog,\
+                    M=sm.robust.norms.HuberT()).fit(cov="H3").bcov_scaled
+        self.res1 = results
+        self.res1.h2 = h2
+        self.res1.h3 = h3
+
+
+    def setup(self):
+#        r.library('MASS')
+#        self.res2 = RModel(self.data.endog, self.data.exog,
+#                        r.rlm, psi="psi.huber")
+        from results.results_rlm import Huber
+        self.res2 = Huber()
+
 if __name__=="__main__":
     run_module_suite()
