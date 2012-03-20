@@ -1,5 +1,5 @@
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_equal
+from numpy.testing import assert_almost_equal, assert_equal, assert_
 import statsmodels.sandbox.tsa.fftarma as fa
 from statsmodels.tsa.descriptivestats import TsaDescriptive
 from statsmodels.tsa.arma_mle import Arma
@@ -148,6 +148,15 @@ class Test_Y_ARMA11_NoConst(CheckArmaResults, CheckForecast):
         (cls.res1.forecast_res, cls.res1.forecast_err,
                 confint) = cls.res1.forecast(10)
         cls.res2 = results_arma.Y_arma11()
+
+    def test_pickle(self):
+        import StringIO
+        fh = StringIO.StringIO()
+        #test wrapped results load save pickle
+        self.res1.save(fh)
+        fh.seek(0,0)
+        res_unpickled = self.res1.__class__.load(fh)
+        assert_(type(res_unpickled) is type(self.res1))
 
 #NOTE: Ok
 class Test_Y_ARMA14_NoConst(CheckArmaResults):

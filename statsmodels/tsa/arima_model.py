@@ -416,6 +416,21 @@ class ARMA(tsbase.TimeSeriesModel):
                 out_of_sample, resid, exog)
         return predictedvalues
 
+    def loglike(self, params):
+        """
+        Compute the log-likelihood for ARMA(p,q) model
+
+        Notes
+        -----
+        Likelihood used depends on the method set in fit
+        """
+        method = self.method
+        if method in ['mle', 'css-mle']:
+            return self.loglike_kalman(params)
+        elif method == 'css':
+            return self.loglike_css(params)
+        else:
+            raise ValueError("Method %s not understood" % method)
 
     def loglike_kalman(self, params):
         """
@@ -451,19 +466,6 @@ class ARMA(tsbase.TimeSeriesModel):
         self.sigma2 = sigma2
         llf = -nobs/2.*(log(2*pi) + log(sigma2)) - ssr/(2*sigma2)
         return llf
-
-    def _set_loglike(self, method):
-        if method in ['mle','css-mle']:
-            loglike = lambda params: -self.loglike_kalman(params)
-            self.loglike = self.loglike_kalman
-        elif method == 'css':
-            loglike = lambda params: -self.loglike_css(params)
-            self.loglike = self.loglike_css
-            self.nobs = len(self.endog) - self.k_ar #excludes pre-sample
-        else:
-            raise ValueError("Fit method %s not understood" % method)
-        return loglike
-
 
     def fit(self, order, start_params=None, trend='c', method = "css-mle",
             transparams=True, solver=None, maxiter=35, full_output=1,
@@ -566,8 +568,10 @@ class ARMA(tsbase.TimeSeriesModel):
 
         # choose objective function
         method = method.lower()
-        # this sets self.loglike based on method, and adjusts self.nobs for css
-        loglike = self._set_loglike(method)
+        # adjust nobs for css
+        if method == 'css':
+            self.nobs = len(self.endog) - self.k_ar
+        loglike = lambda params: -self.loglike(params)
 
         if start_params is not None:
             start_params = np.asarray(start_params)

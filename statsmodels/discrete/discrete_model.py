@@ -1489,6 +1489,14 @@ class DiscreteResults(base.LikelihoodModelResults):
         self.nobs = model.exog.shape[0]
         self.__dict__.update(mlefit.__dict__)
 
+    def __getstate__(self):
+        try:
+            #remove unpicklable callback
+            self.mle_settings['callback'] = None
+        except (AttributeError, KeyError):
+            pass
+        return self.__dict__
+
     @cache_readonly
     def prsquared(self):
         return 1 - self.llf/self.llnull
