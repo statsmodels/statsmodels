@@ -1247,6 +1247,32 @@ class LikelihoodModelResults(Results):
     def llf(self):
         return self.model.loglike(self.params)
 
+    def save(self, fname, remove_data=False):
+        '''save a pickle of this instance
+
+        Parameters
+        ----------
+        fname : string or filehandle
+            fname can be a string to a file path or filename, or a filehandle.
+        remove_data : bool
+            If False (default), then the instance is pickled without changes.
+            If True, then all arrays with length nobs are set to None before
+            pickling. See the remove_data method.
+            In some cases not all arrays will be set to None.
+
+        '''
+        from statsmodels.iolib.smpickle import save_pickle
+
+        if remove_data:
+            self.remove_data()
+
+        save_pickle(self, fname)
+
+    @classmethod
+    def load(cls, fname):
+        from statsmodels.iolib.smpickle import load_pickle
+        return load_pickle(fname)
+
     def remove_data(self):
         '''remove data arrays, all nobs arrays from result and model
 
@@ -1261,6 +1287,10 @@ class LikelihoodModelResults(Results):
 
         not tested for time series models, tsa, and might not delete too much
         or not enough.
+
+        The list of arrays to delete is maintained as an attribute of the
+        result and model instance, except for cached values. These lists could
+        be changed before calling remove_data.
 
         '''
         def wipe(obj, att):

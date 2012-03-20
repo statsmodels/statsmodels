@@ -49,13 +49,23 @@ class ResettableCache(dict):
 
     def __setitem__(self, key, value):
         dict.__setitem__(self, key, value)
-        for mustreset in self._resetdict.get(key, []):
-            self[mustreset] = None
+        #if hasattr needed for unpickling with protocol=2
+        if hasattr(self, '_resetdict'):
+            for mustreset in self._resetdict.get(key, []):
+                self[mustreset] = None
 
     def __delitem__(self, key):
         dict.__delitem__(self, key)
         for mustreset in self._resetdict.get(key, []):
             del(self[mustreset])
+
+#    def __getstate__(self):
+#        print 'pickling wrapper', self.__dict__
+#        return self.__dict__
+#
+#    def __setstate__(self, dict_):
+#        print 'unpickling wrapper', dict_
+#        self.__dict__.update(dict_)
 
 resettable_cache = ResettableCache
 

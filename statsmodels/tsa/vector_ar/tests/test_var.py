@@ -20,7 +20,7 @@ import statsmodels.tools.data as data_util
 #reload(model)
 from statsmodels.tsa.vector_ar.var_model import VAR
 
-from numpy.testing import assert_almost_equal, assert_equal
+from numpy.testing import assert_almost_equal, assert_equal, assert_
 
 DECIMAL_12 = 12
 DECIMAL_6 = 6
@@ -440,6 +440,16 @@ class TestVARResults(CheckIRF, CheckFEVD):
         assert_almost_equal(res2.sigma_u, res3.sigma_u)
         assert_almost_equal(res2.bic, res3.bic)
         assert_almost_equal(res2.stderr, res3.stderr)
+
+    def test_pickle(self):
+        import StringIO
+        fh = StringIO.StringIO()
+        #test wrapped results load save pickle
+        self.res.save(fh)
+        fh.seek(0,0)
+        res_unpickled = self.res.__class__.load(fh)
+        assert_(type(res_unpickled) is type(self.res))
+
 
 class E1_Results(object):
     """
