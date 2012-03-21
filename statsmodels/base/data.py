@@ -290,7 +290,9 @@ def handle_data(endog, exog):
     if isinstance(exog, (list, tuple)):
         exog = np.asarray(exog)
 
-    if data_util._is_using_pandas(endog, exog):
+    if data_util._is_using_ndarray_type(endog, exog):
+        klass = ModelData
+    elif data_util._is_using_pandas(endog, exog):
         klass = PandasData
     elif data_util._is_using_larry(endog, exog):
         klass = LarryData

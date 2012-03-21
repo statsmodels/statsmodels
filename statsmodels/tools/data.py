@@ -81,6 +81,10 @@ def interpret_data(data, colnames=None, rownames=None):
 def struct_to_ndarray(arr):
     return arr.view((float, len(arr.dtype.names)))
 
+def _is_using_ndarray_type(endog, exog):
+    return (type(endog) is np.ndarray and
+            (type(exog) is np.ndarray or exog is None))
+
 def _is_using_ndarray(endog, exog):
     return (isinstance(endog, np.ndarray) and
             (isinstance(exog, np.ndarray) or exog is None))
