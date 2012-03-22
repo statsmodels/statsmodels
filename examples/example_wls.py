@@ -10,7 +10,7 @@ import statsmodels.api as sm
 import matplotlib.pyplot as plt
 
 data = sm.datasets.ccard.load()
-data.exog = sm.add_constant(data.exog)
+data.exog = sm.add_constant(data.exog, prepend=False)
 ols_fit = sm.OLS(data.endog, data.exog).fit()
 
 # perhaps the residuals from this fit depend on the square of income
@@ -58,12 +58,12 @@ wls_fit3 = sm.WLS(data.endog, data.exog[:,(0,1,3,4)], weights=1/incomesq).fit()
 print wls_fit3.summary()
 print 'corrected rsquared',
 print (wls_fit3.uncentered_tss - wls_fit3.ssr)/wls_fit3.uncentered_tss
-plt.figure()
-plt.title('WLS dropping heteroscedasticity variable from regressors')
-plt.plot(data.endog, wls_fit3.fittedvalues, 'o')
-plt.xlim([0,2000])
+plt.figure();
+plt.title('WLS dropping heteroscedasticity variable from regressors');
+plt.plot(data.endog, wls_fit3.fittedvalues, 'o');
+plt.xlim([0,2000]);
 #@savefig wls_drop_het.png
-plt.ylim([0,2000])
+plt.ylim([0,2000]);
 print 'raw correlation of endog and fittedvalues'
 print np.corrcoef(data.endog, wls_fit.fittedvalues)
 print 'raw correlation coefficient of endog and fittedvalues squared'
@@ -72,12 +72,12 @@ print np.corrcoef(data.endog, wls_fit.fittedvalues)[0,1]**2
 # compare with robust regression,
 # heteroscedasticity correction downweights the outliers
 rlm_fit = sm.RLM(data.endog, data.exog).fit()
-plt.figure()
-plt.title('using robust for comparison')
-plt.plot(data.endog, rlm_fit.fittedvalues, 'o')
-plt.xlim([0,2000])
+plt.figure();
+plt.title('using robust for comparison');
+plt.plot(data.endog, rlm_fit.fittedvalues, 'o');
+plt.xlim([0,2000]);
 #@savefig wls_robust_compare.png
-plt.ylim([0,2000])
+plt.ylim([0,2000]);
 
 #What is going on? A more systematic look at the data
 #----------------------------------------------------
