@@ -1248,7 +1248,8 @@ class LikelihoodModelResults(Results):
         return self.model.loglike(self.params)
 
     def save(self, fname, remove_data=False):
-        '''save a pickle of this instance
+        '''
+        save a pickle of this instance
 
         Parameters
         ----------
@@ -1260,7 +1261,13 @@ class LikelihoodModelResults(Results):
             pickling. See the remove_data method.
             In some cases not all arrays will be set to None.
 
+        Notes
+        -----
+        If remove_data is true and the model result does not implement a
+        remove_data method then this will raise an exception.
+
         '''
+
         from statsmodels.iolib.smpickle import save_pickle
 
         if remove_data:
@@ -1270,6 +1277,20 @@ class LikelihoodModelResults(Results):
 
     @classmethod
     def load(cls, fname):
+        '''
+        load a pickle, (class method)
+
+        Parameters
+        ----------
+        fname : string or filehandle
+            fname can be a string to a file path or filename, or a filehandle.
+
+        Returns
+        -------
+        unpickled instance
+
+        '''
+
         from statsmodels.iolib.smpickle import load_pickle
         return load_pickle(fname)
 
@@ -1281,12 +1302,12 @@ class LikelihoodModelResults(Results):
         results and model instance.
 
         .. warning:: Since data and some intermediate results have been removed
-        calculating new statistics that require them will raise exceptions.
-        The exception will occur the first time an attribute is accessed that
-        has been set to None.
+           calculating new statistics that require them will raise exceptions.
+           The exception will occur the first time an attribute is accessed that
+           has been set to None.
 
-        not tested for time series models, tsa, and might not delete too much
-        or not enough.
+        Not fully tested for time series models, tsa, and might delete too much
+        for prediction or not all that would be possible.
 
         The list of arrays to delete is maintained as an attribute of the
         result and model instance, except for cached values. These lists could
