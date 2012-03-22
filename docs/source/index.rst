@@ -3,12 +3,17 @@
 Welcome to Statsmodels's Documentation
 ======================================
 
-:mod:`statsmodels` is a Python module that provides classes and functions for the estimation
+:mod:`statsmodels` is a Python module that provides classes and functions for the estimation 
 of many different statistical models, as well as for conducting statistical tests, and statistical
 data exploration. An extensive list of result statistics are avalable for each estimator.
 The results are tested against existing statistical packages to ensure that they are correct. The
 package is released under the open source Simplied BSD (2-clause) license. The online documentation
 is hosted at `sourceforge <http://statsmodels.sourceforge.net/>`__.
+
+Google Summer of Code 2012
+--------------------------
+
+Statsmodels is participating for the fourth time in `GSoC <http://www.google-melange.com/gsoc/homepage/google/gsoc2012>`__  under the umbrella of the `Python Software Foundation <http://python.org/psf/>`__. We have set up a `wiki page <https://github.com/statsmodels/statsmodels/wiki/GSoC-Ideas>`__ with ideas for projects. Feel free to contribute to the ideas page or contact the mailing list if you are interested in applying so we can coordinate on developing your application and project - the earlier the better.
 
 Getting Started
 ---------------
