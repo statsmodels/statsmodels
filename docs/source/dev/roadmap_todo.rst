@@ -4,7 +4,7 @@ Get Involved
 Google Summer of Code 2012
 --------------------------
 
-We have set up a `wiki page <https://github.com/statsmodels/statsmodels/wiki/GSoC-Ideas>`__ with `Google Summer of Code <http://www.google-melange.com/gsoc/homepage/google/gsoc2012>`__ ideas. Feel free to contribute to the ideas page or contact the mailing list if you are interested in applying so we can coordinate on developing your project - the earlier the better.
+Statsmodels is participating for the fourth time in `GSoC <http://www.google-melange.com/gsoc/homepage/google/gsoc2012>`__  under the umbrella of the `Python Software Foundation <http://python.org/psf/>`__. We have set up a `wiki page <https://github.com/statsmodels/statsmodels/wiki/GSoC-Ideas>`__ with ideas for projects. Feel free to contribute to the ideas page or contact the mailing list if you are interested in applying so we can coordinate on developing your application and project - the earlier the better.
 
 Where to Start?
 ---------------
