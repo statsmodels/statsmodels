@@ -1,6 +1,3 @@
-"""
-This is the VAR class refactored from pymaclab.
-"""
 from __future__ import division
 import numpy as np
 from numpy import (dot, identity, atleast_2d, atleast_1d, zeros)
