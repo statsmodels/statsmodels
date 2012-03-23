@@ -86,11 +86,13 @@ def cython(pyx_files, working_path=''):
             print(cmd)
 
             if platform.system() == 'Windows':
+                script_path = os.path.join(os.path.dirname(sys.executable),
+                                  'Scripts', 'cython-script.py')
+                if not os.path.exitst(script_path):
+                    script_path = os.path.join(os.path.dirname(sys.executable),
+                                  'Scripts', 'cython.py')
                 status = subprocess.call(
-                    [sys.executable,
-                     os.path.join(os.path.dirname(sys.executable),
-                                  'Scripts', 'cython.py'),
-                     '-o', c_file, pyxfile],
-                    shell=True)
+                           [sys.executable, script_path, '-o', c_file, pyxfile],
+                           shell=True)
             else:
                 status = subprocess.call(['cython', '-o', c_file, pyxfile])
