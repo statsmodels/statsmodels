@@ -1,4 +1,20 @@
 import os
+try:
+    from os.path import relpath
+except: # python 2.5
+
+    def relpath(path, start=os.curdir):
+        """Return a relative version of a path"""
+        if not path:
+            raise ValueError("no path specified")
+        start_list = os.path.abspath(start).split(os.path.sep)
+        path_list = os.path.abspath(path).split(os.path.sep)
+        # Work out how much of the filepath is shared by start and path.
+        i = len(os.path.commonprefix([start_list, path_list]))
+        rel_list = [os.path.pardir] * (len(start_list)-i) + path_list[i:]
+        if not rel_list:
+            return os.curdir
+        return os.path.join(*rel_list)
 
 def configuration(parent_package='', top_path=None):
     from numpy.distutils.misc_util import Configuration
@@ -14,7 +30,7 @@ def configuration(parent_package='', top_path=None):
 
     curdir = os.path.abspath(os.path.dirname(__file__))
 
-    extradatafiles = [os.path.relpath(os.path.join(r,d),start=curdir)
+    extradatafiles = [relpath(os.path.join(r,d),start=curdir)
                       for r,ds,f in os.walk(os.path.join(curdir, 'datasets'))
                       for d in f if not os.path.splitext(d)[1] in
                           ['.py', '.pyc']]
@@ -25,7 +41,7 @@ def configuration(parent_package='', top_path=None):
     for root, dirnames, filenames in os.walk(curdir):
         for dir_name in dirnames:
             if dir_name in ['tests', 'results'] and root != 'sandbox':
-                config.add_data_dir(os.path.relpath(
+                config.add_data_dir(relpath(
                                     os.path.join(root, dir_name),
                                     start = curdir)
                                     )
