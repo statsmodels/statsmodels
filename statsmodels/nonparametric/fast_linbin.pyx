@@ -14,8 +14,7 @@ ctypedef np.int_t INT
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-def linbin(np.ndarray[DOUBLE, ndim=1] X, double a, double b, int M,
-           int trunc=1):
+def linbin(np.ndarray[DOUBLE] X, double a, double b, int M, int trunc=1):
     """
     Linear Binning as described in Fan and Marron (1994)
     """
@@ -23,10 +22,10 @@ def linbin(np.ndarray[DOUBLE, ndim=1] X, double a, double b, int M,
         Py_ssize_t i, li_i
         int nobs = X.shape[0]
         double delta = (b - a)/(M - 1)
-        np.ndarray[DOUBLE, ndim=1] gcnts = np.zeros(M, np.float)
-        np.ndarray[DOUBLE, ndim=1] lxi = (X - a)/delta
-        np.ndarray[INT, ndim=1] li = lxi.astype(int)
-        np.ndarray[DOUBLE, ndim=1] rem = lxi - li
+        np.ndarray[DOUBLE] gcnts = np.zeros(M, np.float)
+        np.ndarray[DOUBLE] lxi = (X - a)/delta
+        np.ndarray[INT] li = lxi.astype(int)
+        np.ndarray[DOUBLE] rem = lxi - li
 
 
     for i in range(nobs):
