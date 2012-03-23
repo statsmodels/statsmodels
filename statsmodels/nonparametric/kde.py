@@ -17,7 +17,11 @@ from statsmodels.sandbox.nonparametric import kernels
 from statsmodels.tools.decorators import (cache_readonly,
                                                     resettable_cache)
 import bandwidths
-from kdetools import (forrt, revrt, silverman_transform, linbin, counts)
+from kdetools import (forrt, revrt, silverman_transform, counts)
+try:
+    from fast_linbin import linbin
+except ImportError:
+    from kdetools import linbin
 
 #### Kernels Switch for estimators ####
 
