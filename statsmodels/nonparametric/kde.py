@@ -67,7 +67,7 @@ class KDE(object):
             - "biw" for biweight
             - "cos" for cosine
             - "epa" for Epanechnikov
-            - "gauss" for Gaussian.
+            - "gau" for Gaussian.
             - "tri" for triangular
             - "triw" for triweight
             - "uni" for uniform
@@ -225,7 +225,7 @@ class KDE(object):
 
 #### Kernel Density Estimator Functions ####
 
-def kdensity(X, kernel="gauss", bw="scott", weights=None, gridsize=None,
+def kdensity(X, kernel="gau", bw="scott", weights=None, gridsize=None,
              adjust=1, clip=(-np.inf,np.inf), cut=3, retgrid=True):
     """
     Rosenblatz-Parzen univariate kernel desnity estimator
@@ -239,7 +239,7 @@ def kdensity(X, kernel="gauss", bw="scott", weights=None, gridsize=None,
         - "biw" for biweight
         - "cos" for cosine
         - "epa" for Epanechnikov
-        - "gauss" for Gaussian.
+        - "gau" for Gaussian.
         - "tri" for triangular
         - "triw" for triweight
         - "uni" for uniform
@@ -461,8 +461,8 @@ if __name__ == "__main__":
     import numpy as np
     np.random.seed(12345)
     xi = np.random.randn(100)
-    f,grid, bw1 = kdensity(xi, kernel="gauss", bw=.372735, retgrid=True)
-    f2, bw2 = kdensityfft(xi, kernel="gauss", bw="silverman",retgrid=False)
+    f,grid, bw1 = kdensity(xi, kernel="gau", bw=.372735, retgrid=True)
+    f2, bw2 = kdensityfft(xi, kernel="gau", bw="silverman",retgrid=False)
 
 # do some checking vs. silverman algo.
 # you need denes.f, http://lib.stat.cmu.edu/apstat/176
