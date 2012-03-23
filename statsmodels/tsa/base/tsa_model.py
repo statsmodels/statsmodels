@@ -96,7 +96,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                 dtstart = self._str_to_date(start)
                 self._data.predict_start = dtstart
                 start = dates.indexMap[dtstart] # NOTE: are these consistent?
-            except ImportError as err: # make sure timeseries isn't the prob
+            except ImportError, err: # make sure timeseries isn't the prob
                                        #TODO: can remove eventually
                 raise ImportError(err)
             except:
@@ -132,9 +132,9 @@ class TimeSeriesModel(base.LikelihoodModel):
                 dtend = self._str_to_date(end)
                 self._data.predict_end = dtend
                 end = dates.indexMap[dtend]
-            except ImportError as err: # make sure timeseries isn't the prob
+            except ImportError, err: # make sure timeseries isn't the prob
                 raise ImportError(err)
-            except KeyError as err: # end is greater than dates[-1]...probably
+            except KeyError, err: # end is greater than dates[-1]...probably
                 if dtend > self._data.dates[-1]:
                     end = len(self.endog) - 1
                     freq = self._data.freq
@@ -147,7 +147,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         elif isinstance(end, int) and dates is not None:
             try:
                 self._data.predict_end = dates[end]
-            except IndexError as err:
+            except IndexError, err:
                 nobs = len(self.endog) - 1 # as an index
                 out_of_sample = end - nobs
                 end = nobs
