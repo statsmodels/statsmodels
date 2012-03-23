@@ -95,7 +95,7 @@ class RemoveDataPickle(object):
         #res_unpickled = load_pickle(fh)
         res_unpickled = self.results.__class__.load(fh)
         fh.close()
-        print type(res_unpickled)
+        #print type(res_unpickled)
         assert_(type(res_unpickled) is type(self.results))
 
         before = sorted(self.results.__dict__.keys())
@@ -143,7 +143,8 @@ class TestRemoveDataPicklePoisson(RemoveDataPickle):
         model = sm.Poisson(y_count, x)#, exposure=np.ones(nobs), offset=np.zeros(nobs)) #bug with default
         #use start_params to converge faster
         start_params = np.array([ 0.75334818,  0.99425553,  1.00494724,  1.00247112])
-        self.results = model.fit(start_params=start_params, method='bfgs')
+        self.results = model.fit(start_params=start_params, method='bfgs',
+                                 disp=0)
 
         #TODO: temporary, fixed in master
         self.predict_kwds = dict(exposure=1, offset=0)
@@ -159,7 +160,8 @@ class TestRemoveDataPickleLogit(RemoveDataPickle):
         model = sm.Logit(y_bin, x)#, exposure=np.ones(nobs), offset=np.zeros(nobs)) #bug with default
         #use start_params to converge faster
         start_params = np.array([-0.73403806, -1.00901514, -0.97754543, -0.95648212])
-        self.results = model.fit(start_params=start_params, method='bfgs')
+        self.results = model.fit(start_params=start_params, method='bfgs',
+                disp=0)
 
 class TestRemoveDataPickleRLM(RemoveDataPickle):
 
