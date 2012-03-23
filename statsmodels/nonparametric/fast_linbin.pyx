@@ -19,14 +19,14 @@ def linbin(np.ndarray[DOUBLE, ndim=1] X, double a, double b, int M,
     """
     Linear Binning as described in Fan and Marron (1994)
     """
-    cdef int i, li_i
-    cdef int nobs = X.shape[0]
-    cdef double delta = (b - a)/(M - 1)
-
-    cdef np.ndarray[DOUBLE, ndim=1] gcnts = np.zeros(M, np.float)
-    cdef np.ndarray[DOUBLE, ndim=1] lxi = (X - a)/delta
-    cdef np.ndarray[INT, ndim=1] li = lxi.astype(int)
-    cdef np.ndarray[DOUBLE, ndim=1] rem = lxi - li
+    cdef:
+        Py_ssize_t i, li_i
+        int nobs = X.shape[0]
+        double delta = (b - a)/(M - 1)
+        np.ndarray[DOUBLE, ndim=1] gcnts = np.zeros(M, np.float)
+        np.ndarray[DOUBLE, ndim=1] lxi = (X - a)/delta
+        np.ndarray[INT, ndim=1] li = lxi.astype(int)
+        np.ndarray[DOUBLE, ndim=1] rem = lxi - li
 
 
     for i in range(nobs):
