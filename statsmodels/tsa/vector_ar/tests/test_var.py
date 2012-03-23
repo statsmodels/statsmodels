@@ -442,8 +442,8 @@ class TestVARResults(CheckIRF, CheckFEVD):
         assert_almost_equal(res2.stderr, res3.stderr)
 
     def test_pickle(self):
-        import StringIO
-        fh = StringIO.StringIO()
+        from statsmodels.compatnp.py3k import BytesIO
+        fh = BytesIO()
         #test wrapped results load save pickle
         self.res.save(fh)
         fh.seek(0,0)
