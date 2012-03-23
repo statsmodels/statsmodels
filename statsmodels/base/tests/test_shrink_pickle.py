@@ -14,10 +14,10 @@ from numpy.testing import assert_, assert_almost_equal, assert_equal
 
 
 def check_pickle(obj):
-    import StringIO
-    fh = StringIO.StringIO()
+    from statsmodels.compatnp.py3k import BytesIO
+    fh = BytesIO()
     pickle.dump(obj, fh)
-    plen = fh.pos
+    plen = fh.tell()
     fh.seek(0,0)
     res = pickle.load(fh)
     fh.close()
@@ -77,7 +77,9 @@ class RemoveDataPickle(object):
 
         from statsmodels.iolib.smpickle import save_pickle, load_pickle
 
-        fh = StringIO.StringIO()
+        from statsmodels.compatnp.py3k import BytesIO
+
+        fh = BytesIO()  #use cPickle with binary content
 
         #test unwrapped results load save pickle
         self.results._results.save(fh)
