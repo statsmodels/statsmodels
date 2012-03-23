@@ -252,7 +252,30 @@ exogenous variables.  Got length %s" % len(sys))
         return sur_fit
 
     def predict(self, design):
-        pass
+        """
+        design : list
+        design = [design1,...,designM]
+
+        Return
+        ------
+        list [predict1,...,predictM]
+
+        Notes
+        -----
+        We can also use only one (big, block diagonal, sparse?) matrix to store the design,
+        but I my opinions it's easier to have a design for each equation.
+        """
+        M = self._M # number of equations
+        p = design[0].shape[0] if (len(design[0].shape) == 1) else design[0].shape[1] # number of variables, probably not the best way
+
+        predictions = []
+        params = self.fit().params # it's seems that we can acces params if fit() has been previously called
+
+        for i in range(M):
+            pred = np.dot(design[i],params[i*p:i*p+p])
+            predictions.append(pred)
+
+        return predictions
 
 #TODO: Should just have a general 2SLS estimator to subclass
 # for IV, FGLS, etc.
