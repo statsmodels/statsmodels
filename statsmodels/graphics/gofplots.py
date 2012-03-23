@@ -111,7 +111,7 @@ def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
         loc = fit_params[-2]
         scale = fit_params[-1]
         if len(fit_params)>2:
-            dist = dist(*fit_params[:-2], loc = 0, scale = 1)
+            dist = dist(*fit_params[:-2], **dict(loc = 0, scale = 1))
         else:
             dist = dist(loc=0, scale=1)
     elif distargs or loc != 0 or scale != 1:
