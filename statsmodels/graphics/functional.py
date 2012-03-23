@@ -1,6 +1,6 @@
 """Module for functional boxplots."""
 
-import itertools
+from statsmodels.compatnp.iter_compat import combinations
 
 import numpy as np
 from scipy import stats
@@ -382,7 +382,7 @@ def banddepth(data, method='MBD'):
     depth = []
     for ii in range(num):
         res = 0
-        for ix1, ix2 in itertools.combinations(ix, 2):
+        for ix1, ix2 in combinations(ix, 2):
             res += band(data[ix1, :], data[ix2, :], data[ii, :])
 
         # Normalize by number of combinations to get band depth

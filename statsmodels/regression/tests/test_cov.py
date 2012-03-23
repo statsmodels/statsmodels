@@ -35,5 +35,5 @@ def test_HC_use():
     slopes = results.params[:-1]
     idx = np.array([0,1])
     cov_slopes = results.cov_HC0[idx[:,None], idx]
-    fval = np.dot(slopes, np.linalg.inv(cov_slopes).dot(slopes))/len(idx)
+    fval = np.dot(slopes, np.dot(np.linalg.inv(cov_slopes), slopes))/len(idx)
     assert_almost_equal(ftest.fvalue, fval, decimal=12)

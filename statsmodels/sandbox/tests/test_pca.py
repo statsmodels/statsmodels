@@ -31,7 +31,7 @@ def check_pca_svd(pcares, pcasvdres):
     msign = (evecs/evecs_svd)[0]
     assert_array_almost_equal(msign*evecs_svd, evecs, 14)
     assert_array_almost_equal(msign*factors_svd, factors, 13)
-    assert_array_almost_equal(xred_svd, xreduced, 14)
+    assert_array_almost_equal(xred_svd, xreduced, 13)
 
 
 xf = data.xo/1000.

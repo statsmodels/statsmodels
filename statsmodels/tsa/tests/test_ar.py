@@ -3,7 +3,7 @@ Test AR Model
 """
 import statsmodels.api as sm
 from statsmodels.tsa.ar_model import AR
-from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
+from numpy.testing import (assert_almost_equal, assert_equal, #assert_allclose,
                            assert_)
 from results import results_ar
 import numpy as np
