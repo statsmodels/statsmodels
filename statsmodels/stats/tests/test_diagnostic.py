@@ -527,7 +527,7 @@ class TestDiagnosticG(object):
         lf2 = smsdia.lillifors(res.resid**2)
         lf3 = smsdia.lillifors(res.resid[:20])
 
-        compare_t_est(lf1, lillifors1, decimal=(15, 15))
+        compare_t_est(lf1, lillifors1, decimal=(15, 14))
         compare_t_est(lf2, lillifors2, decimal=(15, 15)) #pvalue very small
         assert_approx_equal(lf2[1], lillifors2['pvalue'], significant=10)
         compare_t_est(lf3, lillifors3, decimal=(15, 1))
