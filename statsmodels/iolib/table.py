@@ -111,7 +111,7 @@ def csv2st(csvfile, headers=False, stubs=False, title=None):
         if headers is True:
             try:
                 headers = next(reader)
-            except AttributeError: #must be Python 2.5 or earlier
+            except NameError: #must be Python 2.5 or earlier
                 headers = reader.next()
         elif headers is False:
             headers=()
@@ -260,7 +260,7 @@ class SimpleTable(list):
         """
         header_rows = [header.split('\n') for header in headers]
         #rows in reverse order
-        rows = list(izip_longest(*header_rows, fillvalue=''))
+        rows = list(izip_longest(*header_rows, **dict(fillvalue='')))
         rows.reverse()
         for i, row in enumerate(rows):
             self.insert(rownum, row, datatype='header')
@@ -282,7 +282,7 @@ class SimpleTable(list):
             else:
                 try:
                     row.insert_stub(loc, next(stubs))
-                except AttributeError: #Python 2.5 or earlier
+                except NameError: #Python 2.5 or earlier
                     row.insert_stub(loc, stubs.next())
                 except StopIteration:
                     raise ValueError('length of stubs must match table length')
@@ -300,7 +300,7 @@ class SimpleTable(list):
             for cell in newrow:
                 try:
                     cell.datatype = next(dtypes)
-                except AttributeError: #Python 2.5 or earlier
+                except NameError: #Python 2.5 or earlier
                     cell.datatype = dtypes.next()
                 cell.row = newrow  #a cell knows its row
             rows.append(newrow)
