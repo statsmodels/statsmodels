@@ -280,7 +280,7 @@ def _HCCM2(results, scale):
         scale = scale[:,None]
 
     xxi = results.normalized_cov_params
-    H = np.dot(xxi, scale).dot(xxi.T)
+    H = np.dot(np.dot(xxi, scale), xxi.T)
     return H
 
 #TODO: other kernels, move ?
