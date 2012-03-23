@@ -35,11 +35,11 @@ def check_dependency_versions(min_versions):
     from distutils.version import StrictVersion
     try:
         from numpy.version import short_version as npversion
-    except ImportError as err:
+    except ImportError, err:
         raise ImportError("statsmodels requires numpy")
     try:
         from scipy.version import short_version as spversion
-    except ImportError as err:
+    except ImportError, err:
         raise ImportError("statsmodels requires scipy")
     try:
         from pandas.version import version as pversion
@@ -47,12 +47,12 @@ def check_dependency_versions(min_versions):
         raise ImportError("statsmodels requires pandas")
     try:
         assert StrictVersion(npversion) >= min_versions['numpy']
-    except AssertionError as err:
+    except AssertionError, err:
         raise ImportError("Numpy version is %s. Requires >= %s" %
                 (npversion, min_versions['numpy']))
     try:
         assert StrictVersion(spversion) >= min_versions['scipy']
-    except AssertionError as err:
+    except AssertionError, err:
         raise ImportError("Scipy version is %s. Requires >= %s" %
                 (spversion, min_versions['scipy']))
     try:
@@ -60,7 +60,7 @@ def check_dependency_versions(min_versions):
         # double digit version numbering
         pversion = re.match("\d*\.\d*\.\d*", pversion).group()
         assert StrictVersion(pversion) >= min_versions['pandas']
-    except AssertionError as err:
+    except AssertionError, err:
         raise ImportError("Pandas version is %s. Requires >= %s" %
                 (pversion, min_versions['pandas']))
 
