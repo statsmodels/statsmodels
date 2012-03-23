@@ -20,8 +20,8 @@ def test_pickle():
     assert not os.path.exists(tmpdir)
 
     #test with file handle
-    import StringIO
-    fh = StringIO.StringIO()
+    from statsmodels.compatnp.py3k import BytesIO
+    fh = BytesIO()
     save_pickle(a, fh)
     fh.seek(0,0)
     c = load_pickle(fh)

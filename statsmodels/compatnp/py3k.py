@@ -27,6 +27,7 @@ if sys.version_info[0] >= 3:
     def open_latin1(filename, mode='r'):
         return open(filename, mode=mode, encoding='iso-8859-1')
     strchar = 'U'
+    from io import BytesIO, StringIO  #statsmodels
 else:
     bytes = str
     unicode = unicode
@@ -41,6 +42,8 @@ else:
         return s.decode('ascii')
     def open_latin1(filename, mode='r'):
         return open(filename, mode=mode)
+    from StringIO import StringIO
+    BytesIO = StringIO
 
 def getexception():
     return sys.exc_info()[1]

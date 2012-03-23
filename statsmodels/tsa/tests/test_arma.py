@@ -150,8 +150,8 @@ class Test_Y_ARMA11_NoConst(CheckArmaResults, CheckForecast):
         cls.res2 = results_arma.Y_arma11()
 
     def test_pickle(self):
-        import StringIO
-        fh = StringIO.StringIO()
+        from statsmodels.compatnp.py3k import BytesIO
+        fh = BytesIO()
         #test wrapped results load save pickle
         self.res1.save(fh)
         fh.seek(0,0)
