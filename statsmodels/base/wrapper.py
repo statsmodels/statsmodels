@@ -89,8 +89,8 @@ def make_wrapper(func, how):
         return data.wrap_output(func(results, *args, **kwargs), how)
 
     argspec = inspect.getargspec(func)
-    formatted = inspect.formatargspec(argspec.args, varargs=argspec.varargs,
-                                      defaults=argspec.defaults)
+    formatted = inspect.formatargspec(argspec[0], varargs=argspec[1],
+                                      defaults=argspec[3])
 
     try:
         func_name = func.im_func.func_name
