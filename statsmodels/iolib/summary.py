@@ -1,6 +1,7 @@
 
 
 import numpy as np
+from statsmodels.compatnp.iter_compat import zip_longest
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.iolib.tableformatting import (gen_fmt, fmt_2,
                                                 fmt_params, fmt_base, fmt_2cols)
@@ -118,8 +119,6 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
     df_model = self.df_model
     df_resid = self.df_resid
 
-
-
     #General part of the summary table, Applicable to all? models
     #------------------------------------------------------------
     #TODO: define this generically, overwrite in model classes
@@ -130,7 +129,7 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
                   ('Dependent Variable:', yname), #What happens with multiple names?
                   ('df model', [df_model])
                   ]
-    gen_stubs_left, gen_data_left = map(None, *gen_left) #transpose row col
+    gen_stubs_left, gen_data_left = zip_longest(*gen_left) #transpose row col
 
     gen_title = title
     gen_header = None
@@ -375,8 +374,7 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
         #padding in SimpleTable doesn't work like I want
         #force extra spacing and exact string length in right table
         gen_right = [('%-21s' % ('  '+k), v) for k,v in gen_right]
-
-        gen_stubs_right, gen_data_right = map(None, *gen_right) #transpose row col
+        gen_stubs_right, gen_data_right = zip_longest(*gen_right) #transpose row col
         gen_table_right = SimpleTable(gen_data_right,
                                       gen_header,
                                       gen_stubs_right,
@@ -389,7 +387,7 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
 
     #moved below so that we can pad if needed to match length of gen_right
     #transpose rows and columns, `unzip`
-    gen_stubs_left, gen_data_left = map(None, *gen_left)
+    gen_stubs_left, gen_data_left = zip_longest(*gen_left) #transpose row col
 
     gen_table_left = SimpleTable(gen_data_left,
                                  gen_header,
@@ -397,7 +395,6 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
                                  title = gen_title,
                                  txt_fmt = fmt_2cols
                                  )
-
 
     gen_table_left.extend_right(gen_table_right)
     general_table = gen_table_left
@@ -469,7 +466,6 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
     params_stubs = xname
 
     exog_idx = xrange(len(xname))
-
 
     #center confidence intervals if they are unequal lengths
 #    confint = ["(%#6.3g, %#6.3g)" % tuple(conf_int[i]) for i in \
@@ -755,7 +751,7 @@ class Summary(object):
     def __repr__(self):
         #return '<' + str(type(self)) + '>\n"""\n' + self.__str__() + '\n"""'
         return str(type(self)) + '\n"""\n' + self.__str__() + '\n"""'
-    
+
     def _repr_html_(self):
         '''Display as HTML in IPython notebook.'''
         return self.as_html()
@@ -881,7 +877,7 @@ class Summary(object):
 
         '''
         return summary_return(self.tables, return_fmt='csv')
-    
+
     def as_html(self):
         '''return tables as string
 
