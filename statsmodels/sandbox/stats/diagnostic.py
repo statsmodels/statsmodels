@@ -1322,7 +1322,7 @@ def breaks_cusumolsresid(olsresidual, ddof=0):
     nobs = len(resid)
     nobssigma2 = (resid**2).sum()
     if ddof > 0:
-        print 'ddof', ddof, 1. / (nobs - ddof) * nobs
+        #print 'ddof', ddof, 1. / (nobs - ddof) * nobs
         nobssigma2 = nobssigma2 / (nobs - ddof) * nobs
     #B is asymptotically a Brownian Bridge
     B = resid.cumsum()/np.sqrt(nobssigma2) # use T*sigma directly
