@@ -79,4 +79,6 @@ def test_hac_simple():
     assert_almost_equal(cov2, cov2_r, decimal=14)
 
 if __name__ == '__main__':
-    test_hac_simple()
+    import nose
+    nose.runmodule(argv=[__file__, '-vvs', '-x'], exit=False)
+    #test_hac_simple()
