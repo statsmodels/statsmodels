@@ -16,7 +16,7 @@ Warning: The algorithm does not converge.  Roundoff error is detected
 array(2981.0032380193438)
 """
 
-
+import warnings # for silencing, see above...
 import numpy as np
 from numpy.testing import assert_almost_equal
 from scipy import stats, special
@@ -121,8 +121,15 @@ class Test_Transf2(object):
             assert_almost_equal(d1.moment(3), d2mom,
                                 DECIMAL,
                                 err_msg='moment '+d1.name+d2.name)
-            s1 = d1.stats(moments='mvsk')
-            s2 = d2.stats(moments='mvsk')
+            # silence warnings in scipy, works for versions
+            # after print changed to warning in scipy
+            orig_filter = warnings.filters[:]
+            warnings.simplefilter('ignore')
+            try:
+                s1 = d1.stats(moments='mvsk')
+                s2 = d2.stats(moments='mvsk')
+            finally:
+                warnings.filters = orig_filter
             #stats(moments='k') prints warning for lognormalg
             assert_almost_equal(s1[:2], s2[:2],
                                 err_msg='stats '+d1.name+d2.name)
