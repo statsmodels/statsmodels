@@ -627,18 +627,20 @@ def grangertest():
                        df=(198,193))
 
 if __name__ == '__main__':
+    import nose
+    nose.runmodule(argv=[__file__, '-vvs', '-x'], exit=False)
 
-    t = TestDiagnosticG()
-    t.test_basic()
-    t.test_hac()
-    t.test_acorr_breush_godfrey()
-    t.test_acorr_ljung_box()
-    t.test_het_goldfeldquandt()
-    t.test_het_breush_pagan()
-    t.test_het_white()
-    t.test_compare_lr()
-    t.test_compare_nonnested()
-    t.test_influence()
+    #t = TestDiagnosticG()
+    #t.test_basic()
+    #t.test_hac()
+    #t.test_acorr_breush_godfrey()
+    #t.test_acorr_ljung_box()
+    #t.test_het_goldfeldquandt()
+    #t.test_het_breush_pagan()
+    #t.test_het_white()
+    #t.test_compare_lr()
+    #t.test_compare_nonnested()
+    #t.test_influence()
 
 
     ##################################################
