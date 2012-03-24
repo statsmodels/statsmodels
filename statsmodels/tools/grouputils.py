@@ -43,7 +43,7 @@ def combine_indices(groups, prefix='', sep='.', return_labels=False):
         groups = np.asarray(groups)
 
     dt = groups.dtype
-    print dt
+    #print dt
 
     is2d = (groups.ndim == 2) #need to store
 
