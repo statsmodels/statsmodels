@@ -51,7 +51,7 @@ for further use ::
 
 
 However, when we want to hold on to two different estimation results, then it
-is recommended to create two separate model instances.
+is recommended to create two separate model instances. ::
 
   mod1 = RLM(endog, exog)
   res1 = mod1.fit(scale_est='mad')

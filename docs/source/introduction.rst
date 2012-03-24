@@ -14,8 +14,8 @@ enhanced and released as a new package. Since then we have continued to
 improve the existing models and added new statistical methods.
 
 
-Current Status
---------------
+Main Features and Current Status
+--------------------------------
 
 statsmodels 0.4 is a pure python package, with one optional cython based
 extension that provides a considerable speed improvement for ARIMA estimation.
@@ -23,20 +23,32 @@ Future releases will depend on cython generated extensions.
 
 statsmodels includes:
 
-  * regression: mainly OLS and generalized least squares, GLS
-    including weighted least squares and least squares with AR
-    errors.
-  * glm: generalized linear models
-  * rlm: robust linear models
-  * discretemod: regression with discrete dependent variables, Logit, Probit,
-    MNLogit, Poisson, based on maximum likelihood estimators
-  * datasets: for examples and tests
-  * univariate time series analysis: AR, ARIMA
-  * vector autoregressive models, VAR and structural VAR
-  * descriptive statistics and process models for time series analysis
-  * diagnostics and specification tests
-  * additional statistical tests and functions for multiple testing
-  * miscellaneous models
+* regression: Generalized least squares (including weighted least squares and
+  least squares with autoregressive errors), ordinary least squares.
+* glm: Generalized linear models with support for all of the one-parameter
+  exponential family distributions.
+* discrete: regression with discrete dependent variables, including Logit, Probit,
+  MNLogit, Poisson, based on maximum likelihood estimators
+* rlm: Robust linear models with support for several M-estimators.
+* tsa: models for time series analysis
+
+  - univariate time series analysis: AR, ARIMA
+  - vector autoregressive models, VAR and structural VAR
+  - descriptive statistics and process models for time series analysis
+
+* nonparametric : (Univariate) kernel density estimators
+* datasets: Datasets to be distributed and used for examples and in testing.
+* stats: a wide range of statistical tests
+
+  - diagnostics and specification tests
+  - goodness-of-fit and normality tests
+  - functions for multiple testing
+  - various additional statistical tests
+
+* iolib: Tools for reading Stata .dta files into numpy arrays. (not yet ported to Python 3)
+* iolob: printing table output to ascii, latex, and html
+
+* miscellaneous models
 
 statsmodels contains a sandbox folder, which includes some of the original
 stats.models code that has not yet been rewritten and tested. The sandbox also
@@ -63,12 +75,10 @@ Python 3
 statsmodels has been ported and tested for Python 3.2. Python 3
 version of the code is automatically created during setup by running 2to3.py
 over the statsmodels source (excluding examples).
-The numerical core of statsmodels worked almost without
-changes, however there can be problems with data input and plotting.
 The STATA file reader and writer in iolib.foreign has not been ported yet.
 A recent development version of matplotlib for Python 3 runs without problems
 with our examples and tests.
-Running the test suite with Python 3.2 shows some only an errors related to
+Running the test suite with Python 3.2 shows only one errors related to
 unported STATA file reader.
 
 Testing
@@ -79,7 +89,7 @@ Stata or SAS. The guiding principal for the initial rewrite and for continued
 development is that all numbers have to be verified. Some statistical
 methods are tested with Monte Carlo studies. While we strife to follow this
 test driven approach, there is no guarantee that the code is bug-free and
-always works. Some auxilliary function are still insufficiently tested, some
+always works. Some auxiliary function are still insufficiently tested, some
 edge cases might not be correctly taken into account, and the possibility of
 numerical problems is inherent to many of the statistical models. We
 especially appreciate any help and reports for these kind of problems so we
@@ -112,7 +122,7 @@ cases, reviewing or improving the code would be very appreciated.
 Planned Extensions
 ~~~~~~~~~~~~~~~~~~
 
-Two big changes that are planned for the next release will improve the
+Big changes that are planned for the next release will improve the
 usability of statsmodels especially for interactive work.
 
 * Metainformation about data and models: Currently the models essentially
@@ -154,9 +164,9 @@ will be necessary.
 In 0.3 we reorganized the internal location of the code and
 import paths which will make future enhancements less interruptive. In 0.4
 most models obtained a wrapper that stores and returns additional information
-from richer data structures like Pandas and structured arrays. In 0.4 also
-prediction has been improved in many cases and made more consistent across
-models.
+from richer data structures like data structures in Pandas and structured
+arrays. In 0.4 also prediction has been improved in many cases and made more
+consistent across models.
 
 Although there is no guarantee yet on API stability, we try to keep changes
 that require adjustments by existing users to a minimal level.
