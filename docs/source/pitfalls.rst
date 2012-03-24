@@ -51,7 +51,7 @@ for further use ::
 
 
 However, when we want to hold on to two different estimation results, then it
-is recommended to create two separate model instances.
+is recommended to create two separate model instances. ::
 
   mod1 = RLM(endog, exog)
   res1 = mod1.fit(scale_est='mad')
@@ -81,12 +81,12 @@ As often with numerical optimization routines, it is possible that for some
 datasets, finding the solution might have problems. One example for this is
 complete (quasi-)separation in models with binary endogenous variable, for
 example, discrete Logit and Probit models. In these cases, the maximum likelihood
-estimator might not exist, parameters might be infinite or not unique. Depending 
-on the settings for the optimization, the optimization might stop without 
-convergence, which will be printed to the screen in the default setting. 
+estimator might not exist, parameters might be infinite or not unique. Depending
+on the settings for the optimization, the optimization might stop without
+convergence, which will be printed to the screen in the default setting.
 However, it is possible to have convergence criteria that
-indicate convergence, for example the value of the objective function converged, 
-even if parameters did not converged. In general, a user needs to verify 
+indicate convergence, for example the value of the objective function converged,
+even if parameters did not converged. In general, a user needs to verify
 convergence.
 
 For the case of the binary models, Logit and Probit, statsmodels will raise
@@ -105,6 +105,6 @@ datasets or for data with small groups in categorical variables. In these
 cases, the results might not be identified or some hidden problems might occur.
 
 The only currently known case is a perfect fit in robust linear model estimation.
-For RLM, if residuals are equal to zero, then it does not cause an exception, 
-but having this perfect fit can produce NaNs in some results (scale=0 and 0/0 
+For RLM, if residuals are equal to zero, then it does not cause an exception,
+but having this perfect fit can produce NaNs in some results (scale=0 and 0/0
 division) (issue #55).

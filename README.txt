@@ -12,20 +12,31 @@ Main Features
   least squares with autoregressive errors), ordinary least squares.
 * glm: Generalized linear models with support for all of the one-parameter
   exponential family distributions.
-* discrete choice models: Poisson, probit, logit, multinomial logit
+* discrete: regression with discrete dependent variables, including Logit, Probit,
+    MNLogit, Poisson, based on maximum likelihood estimators
 * rlm: Robust linear models with support for several M-estimators.
-* tsa: Time series analysis models, including ARMA, AR, VAR
+* tsa: models for time series analysis
+  - univariate time series analysis: AR, ARIMA
+  - vector autoregressive models, VAR and structural VAR
+  - descriptive statistics and process models for time series analysis
 * nonparametric : (Univariate) kernel density estimators
 * datasets: Datasets to be distributed and used for examples and in testing.
-* PyDTA: Tools for reading Stata .dta files into numpy arrays.
 * stats: a wide range of statistical tests
-* sandbox: There is also a sandbox which contains code for generalized additive 
-  models (untested), mixed effects models, cox proportional hazards model (both
-  are untested and still dependent on the nipy formula framework), generating
-  descriptive statistics, and printing table output to ascii, latex, and html.
-  There is also experimental code for systems of equations regression,
-  time series models, panel data estimators and information theoretic measures.  
-  None of this code is considered "production ready".
+  - diagnostics and specification tests
+  - goodness-of-fit and normality tests
+  - functions for multiple testing
+  - various additional statistical tests
+
+* iolib: Tools for reading Stata .dta files into numpy arrays. (not yet ported to Python 3)
+* iolob: printing table output to ascii, latex, and html
+
+* miscellaneous models
+
+* sandbox: statsmodels contains a sandbox folder with code in various stages of
+  developement and testing which is not considered "production ready".
+  This covers among others Mixed (repeated measures) Models, GARCH models, general method
+  of moments (GMM) estimators, kernel regression, various extensions to scipy.stats.distributions,
+  panel data models, generalized additive models and information theoretic measures.
 
 
 Where to get it
@@ -33,7 +44,7 @@ Where to get it
 
 Development branches will be on Github. This is where to go to get the most
 up to date code in the trunk branch. Experimental code is hosted here
-in branches and in developer forks. This code is merged to master often. We 
+in branches and in developer forks. This code is merged to master often. We
 try to make sure that the master branch is always stable.
 
 https://www.github.com/statsmodels/statsmodels
