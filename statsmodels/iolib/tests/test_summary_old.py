@@ -1,6 +1,4 @@
-
-
-
+import warnings
 
 def test_regression_summary():
     #little luck getting this test to pass (It should?), can be used for
@@ -49,7 +47,13 @@ def test_regression_summary():
     aregression = TestOLS()
     TestOLS.setupClass()
     results = aregression.res1
-    r_summary = str(results.summary_old())
+    # be quiet!
+    original_filters = warnings.filters[:] # copy original
+    warnings.simplefilter("ignore")
+    try:
+        r_summary = str(results.summary_old())
+    finally:
+        warnings.filters = original_filters # restore filters
 
 ##    print('###')
 ##    print(r_summary)
