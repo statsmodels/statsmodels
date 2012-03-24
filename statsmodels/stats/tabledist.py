@@ -18,6 +18,7 @@ check: instead of bound checking I could use the fill-value of the interpolators
 
 import numpy as np
 from scipy.interpolate import interp1d, interp2d, Rbf
+from statsmodels.tools.decorators import cache_readonly
 
 
 class TableDist(object):
@@ -49,20 +50,30 @@ class TableDist(object):
         self.crit_table = np.asarray(crit_table)
 
         self.n_alpha = len(alpha)
-
-        self.polyn = [interp1d(size, self.crit_table[:,i]) for i in range(self.n_alpha)]
         self.signcrit = np.sign(np.diff(self.crit_table, 1).mean())
         if self.signcrit > 0: #increasing
             self.critv_bounds = self.crit_table[:,[0,1]]
         else:
             self.critv_bounds = self.crit_table[:,[1,0]]
 
+    @cache_readonly
+    def polyn(self):
+        polyn = [interp1d(self.size, self.crit_table[:,i])
+                               for i in range(self.n_alpha)]
+        return polyn
+
+    @cache_readonly
+    def poly2d(self):
         #check for monotonicity ?
         #fix this, interp needs increasing
-        self.poly2d = interp2d(size, alpha, crit_table)
-        xs, xa = np.meshgrid(self.size.astype(float), self.alpha)
-        self.polyrbf = Rbf(xs.ravel(), xa.ravel(), self.crit_table.T.ravel(),function='linear')
+        poly2d = interp2d(self.size, self.alpha, self.crit_table)
+        return poly2d
 
+    @cache_readonly
+    def polyrbf(self):
+        xs, xa = np.meshgrid(self.size.astype(float), self.alpha)
+        polyrbf = Rbf(xs.ravel(), xa.ravel(), self.crit_table.T.ravel(),function='linear')
+        return polyrbf
 
     def _critvals(self, n):
         '''rows of the table, linearly interpolated for given sample size
@@ -278,25 +289,25 @@ if __name__ == '__main__':
     lf = TableDist(alpha, size, crit_lf)
     print lf.prob(0.166, 20), 'should be:', 0.15
     print
-    print lf.crit(0.15, 20), 'should be:', 0.166, 'interp2d bad'
-    print lf.crit2(0.15, 20), 'should be:', 0.166, 'two 1d'
+    print lf.crit2(0.15, 20), 'should be:', 0.166, 'interp2d bad'
+    print lf.crit(0.15, 20), 'should be:', 0.166, 'two 1d'
     print lf.crit3(0.15, 20), 'should be:', 0.166, 'Rbf'
     print
-    print lf.crit(0.17, 20), 'should be in:', (.159, .166), 'interp2d bad'
-    print lf.crit2(0.17, 20), 'should be in:', (.159, .166), 'two 1d'
+    print lf.crit2(0.17, 20), 'should be in:', (.159, .166), 'interp2d bad'
+    print lf.crit(0.17, 20), 'should be in:', (.159, .166), 'two 1d'
     print lf.crit3(0.17, 20), 'should be in:', (.159, .166), 'Rbf'
     print
-    print lf.crit(0.19, 20), 'should be in:', (.159, .166), 'interp2d bad'
-    print lf.crit2(0.19, 20), 'should be in:', (.159, .166), 'two 1d'
+    print lf.crit2(0.19, 20), 'should be in:', (.159, .166), 'interp2d bad'
+    print lf.crit(0.19, 20), 'should be in:', (.159, .166), 'two 1d'
     print lf.crit3(0.19, 20), 'should be in:', (.159, .166), 'Rbf'
     print
-    print lf.crit(0.199, 20), 'should be in:', (.159, .166), 'interp2d bad'
-    print lf.crit2(0.199, 20), 'should be in:', (.159, .166), 'two 1d'
+    print lf.crit2(0.199, 20), 'should be in:', (.159, .166), 'interp2d bad'
+    print lf.crit(0.199, 20), 'should be in:', (.159, .166), 'two 1d'
     print lf.crit3(0.199, 20), 'should be in:', (.159, .166), 'Rbf'
     #testing
     print np.max(np.abs(np.array([lf.prob(c, size[i]) for i in range(len(size)) for c in crit_lf[i]]).reshape(-1,lf.n_alpha) - lf.alpha))
     #1.6653345369377348e-16
-    print np.max(np.abs(np.array([lf.crit2(c, size[i]) for i in range(len(size)) for c in lf.alpha]).reshape(-1,lf.n_alpha) - crit_lf))
+    print np.max(np.abs(np.array([lf.crit(c, size[i]) for i in range(len(size)) for c in lf.alpha]).reshape(-1,lf.n_alpha) - crit_lf))
     #6.9388939039072284e-18
     print np.max(np.abs(np.array([lf.crit3(c, size[i]) for i in range(len(size)) for c in lf.alpha]).reshape(-1,lf.n_alpha) - crit_lf))
     #4.0615705243496336e-12
