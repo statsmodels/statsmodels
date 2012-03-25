@@ -96,9 +96,6 @@ class TimeSeriesModel(base.LikelihoodModel):
                 dtstart = self._str_to_date(start)
                 self._data.predict_start = dtstart
                 start = dates.indexMap[dtstart] # NOTE: are these consistent?
-            except ImportError, err: # make sure timeseries isn't the prob
-                                       #TODO: can remove eventually
-                raise ImportError(err)
             except:
                 raise ValueError("Start must be in dates. Got %s | %s" %
                         (str(start), str(dtstart)))
