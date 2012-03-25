@@ -192,7 +192,6 @@ class Influence(object):
         '''(cached attribute) studentized residuals using variance from OLS
 
         this uses sigma from original estimate
-
         does not require leave one out loop
         '''
         return self.get_resid_studentized_external(sigma=None)
@@ -200,7 +199,7 @@ class Influence(object):
 
     @cache_readonly
     def resid_studentized_external(self):
-        '''cached attribute) studentized residuals using LOOO variance
+        '''(cached attribute) studentized residuals using LOOO variance
 
         this uses sigma from leave-one-out estimates
 
@@ -213,6 +212,8 @@ class Influence(object):
 
     def get_resid_studentized_external(self, sigma=None):
         '''calculate studentized residuals
+
+        uses results from leave-one-observation-out loop
 
         Parameters
         ----------
@@ -246,6 +247,12 @@ class Influence(object):
 
     @cache_readonly
     def dffits_internal(self):
+        '''(cached attribute) dffits
+
+        based on resid_studentized_internal
+        uses original results, no nobs loop
+
+        '''
         #TODO: do I want to use different sigma estimate in
         #      resid_studentized_external
         # -> move definition of sigma_error to the __init__
@@ -256,6 +263,12 @@ class Influence(object):
 
     @cache_readonly
     def dffits(self):
+        '''(cached attribute) dffits
+
+        based on resid_studentized_external
+        uses results from leave-one-observation-out loop
+
+        '''
         #TODO: do I want to use different sigma estimate in
         #      resid_studentized_external
         # -> move definition of sigma_error to the __init__
@@ -264,7 +277,22 @@ class Influence(object):
         dffits_threshold = 2 * np.sqrt(self.k_vars * 1. / self.nobs)
         return dffits_, dffits_threshold
 
+    @cache_readonly
+    def dfbetas(self):
+
+        self._get_all_obs() #call to LOO0 loop, will use cache if available
+        dfbetas = self.results.params - self.params_not_obsi#[None,:]
+        dfbetas /= np.sqrt(self.sigma2_not_obsi[:,None])
+        dfbetas /=  np.sqrt(np.diag(self.results.normalized_cov_params))
+        return dfbetas
+
+    @cache_readonly
     def cooks_distance(self):
+        '''Cooks distance
+
+        uses original results, no nobs loop
+
+        '''
         hii = self.hat_matrix_diag
         #Eubank p.93, 94
         cooks_d2 = self.resid_studentized_internal**2 / self.k_vars
@@ -278,8 +306,24 @@ class Influence(object):
         return cooks_d2, pvals
 
     @cache_readonly
+    def cov_ratio(self):
+        '''(cached attribute) covariance ratio between LOOO and original
+
+        This uses determinant of the estimate of the parameter covariance
+        from leave-one-out estimates.
+        requires leave one out loop for observations
+
+        '''
+        #don't use inplace division / because then we change original
+        cov_ratio = (self.det_cov_params_not_obsi
+                            / np.linalg.det(self.results.cov_params()))
+        return cov_ratio
+
+    @cache_readonly
     def resid_var(self):
-        '''estimate of variance of the residuals ::
+        '''(cached attribute) estimate of variance of the residuals
+
+        ::
 
            sigma2 = sigma2_OLS * (1 - hii)
 
@@ -291,7 +335,7 @@ class Influence(object):
 
     @cache_readonly
     def resid_std(self):
-        '''estimate of standard deviation of the residuals
+        '''(cached attribute) estimate of standard deviation of the residuals
         '''
         return np.sqrt(self.resid_var)
 
@@ -406,6 +450,9 @@ class Influence(object):
     def _get_all_obs(self):
         '''collect required results from the LOOO loop
 
+        all results will be attached.
+        currently only 'params', 'mse_resid', 'det_cov_params' are stored
+
         '''
         if hasattr(self, 'sigma2_not_obsi'):
             #we already ran this
@@ -422,14 +469,6 @@ class Influence(object):
         #this is not stored in linear model
         #self.xpx = np.dot(self.exog.T, self.exog)
 
-        #don't use inplace division / because then we change original
-        self.cov_ratio = (self.det_cov_params_not_obsi
-                            / np.linalg.det(self.results.cov_params()))
-
-        dfbetas = self.results.params - self.params_not_obsi#[None,:]
-        dfbetas /= np.sqrt(self.sigma2_not_obsi[:,None])
-        dfbetas /=  np.sqrt(np.diag(self.results.normalized_cov_params))
-        self.dfbetas = dfbetas
 
     def summary_obs(self):
         '''create a summary table with all influence and outlier measures
