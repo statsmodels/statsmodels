@@ -205,8 +205,6 @@ class Influence(object):
 
         requires leave one out loop for observations
         '''
-        #call self.summary to get all loo obs attributes
-        self._get_all_obs()
         sigma_looo = np.sqrt(self.sigma2_not_obsi)
         return self.get_resid_studentized_external(sigma=sigma_looo)
 
@@ -279,12 +277,39 @@ class Influence(object):
 
     @cache_readonly
     def dfbetas(self):
+        '''(cached attribute) dfbetas
 
-        self._get_all_obs() #call to LOO0 loop, will use cache if available
+        uses results from leave-one-observation-out loop
+        '''
         dfbetas = self.results.params - self.params_not_obsi#[None,:]
         dfbetas /= np.sqrt(self.sigma2_not_obsi[:,None])
         dfbetas /=  np.sqrt(np.diag(self.results.normalized_cov_params))
         return dfbetas
+
+    @cache_readonly
+    def sigma2_not_obsi(self):
+        '''(cached attribute) dffits
+
+        based on resid_studentized_external
+        uses results from leave-one-observation-out loop
+        '''
+        return np.asarray(self._res_looo['mse_resid'])
+
+    @cache_readonly
+    def params_not_obsi(self):
+        '''(cached attribute) parameter estimates for all LOOO regressions
+
+        uses results from leave-one-observation-out loop
+        '''
+        return np.asarray(self._res_looo['params'])
+
+    @cache_readonly
+    def det_cov_params_not_obsi(self):
+        '''(cached attribute) determinant of cov_params of all LOOO regressions
+
+        uses results from leave-one-observation-out loop
+        '''
+        return np.asarray(self._res_looo['det_cov_params'])
 
     @cache_readonly
     def cooks_distance(self):
@@ -447,28 +472,22 @@ class Influence(object):
 
         return res_loo
 
-    def _get_all_obs(self):
+    @cache_readonly
+    def _res_looo(self):
         '''collect required results from the LOOO loop
 
         all results will be attached.
         currently only 'params', 'mse_resid', 'det_cov_params' are stored
 
         '''
-        if hasattr(self, 'sigma2_not_obsi'):
-            #we already ran this
-            return
-        #this might not be the most efficient
+
         get_det_cov_params = lambda res: np.linalg.det(res.cov_params())
         attributes = ['params', 'mse_resid', ('det_cov_params', get_det_cov_params)]
         res = self._get_drop_obs(attributes)
-
-        self.sigma2_not_obsi = np.asarray(res['mse_resid'])
-        self.params_not_obsi = np.asarray(res['params'])
-        self.det_cov_params_not_obsi = np.asarray(res['det_cov_params'])
+        return res
 
         #this is not stored in linear model
         #self.xpx = np.dot(self.exog.T, self.exog)
-
 
     def summary_obs(self):
         '''create a summary table with all influence and outlier measures
@@ -499,7 +518,7 @@ class Influence(object):
         table_raw = [ ('obs', np.arange(self.nobs)),
                       ('endog', self.endog),
                       ('fitted\nvalue', self.results.fittedvalues),
-                      ("Cook's\nd", self.cooks_distance()[0]),
+                      ("Cook's\nd", self.cooks_distance[0]),
                       ("student.\nresidual", self.resid_studentized_internal),
                       ('hat diag', self.hat_matrix_diag),
                       ('dffits \ninternal', self.dffits_internal[0]),
@@ -576,7 +595,7 @@ def summary_obs(res, alpha=0.05):
                                   res.resid,
                                   resid_se,
                                   infl.resid_studentized_internal,
-                                  infl.cooks_distance()[0]
+                                  infl.cooks_distance[0]
                                   ])
 
 
