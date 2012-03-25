@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
+"""Influence and Outlier Measures
 
 Created on Sun Jan 29 11:16:09 2012
 
@@ -81,9 +81,7 @@ def variance_inflation_factor(exog, exog_idx):
 
     Notes
     -----
-    This function does not save the auxilliary regression. If we are
-    interested also in other diagnostic measures, then using xxx will avoid
-    repeated calculations
+    This function does not save the auxiliary regression.
 
     See Also
     --------
@@ -105,6 +103,31 @@ def variance_inflation_factor(exog, exog_idx):
 
 class Influence(object):
     '''class to calculate outlier and influence measures for OLS result
+
+    Parameter
+    ---------
+    results : Regression Results instance
+        currently assumes the results are from an OLS regression
+
+    Notes
+    -----
+    One part of the results can be calculated without any auxiliary regression
+    (some of which have the `_internal` postfix in the name. Other statistics
+    require leave-one-observation-out (LOOO) auxiliary regression, and will be
+    slower (mainly results with `_external` postfix in the name).
+    The auxiliary LOOO regression only the required results are stored.
+
+    Using the LOO measures is currently only recommended if the data set
+    is not too large. One possible approach for LOOO measures would be to
+    identify possible problem observations with the _internal measures, and
+    then run the leave-one-observation-out only with observations that are
+    possible outliers. (However, this is not yet available in an automized way.)
+
+    This should be extended to general least squares.
+
+    The leave-one-variable-out (LOVO) auxiliary regression are currently not
+    used.
+
     '''
 
     def __init__(self, results):
@@ -122,31 +145,37 @@ class Influence(object):
 
     @cache_readonly
     def hat_matrix_diag(self):
-        '''OLS only currently
-        #temporary, should go to model class
+        '''(cached attribute) diagonal of the hat_matrix for OLS
+
+        Notes
+        -----
+        temporary attached here, this should go to model class
         '''
         return (self.exog * self.results.model.pinv_wexog.T).sum(1)
 
     @cache_readonly
     def resid_press(self):
-        '''
+        '''(cached attribute) PRESS residuals
         '''
         hii = self.hat_matrix_diag
         return self.results.resid / (1 - hii)
 
     @cache_readonly
     def influence(self):
-        '''
-        matches the influence measure that gretl repors
+        '''(cached attribute) influence measure
+
+        matches the influence measure that gretl reports
         u * h / (1 - h)
+        where u are the residuals and h is the diagonal of the hat_matrix
         '''
         hii = self.hat_matrix_diag
         return self.results.resid * hii / (1 - hii)
 
     @cache_readonly
     def hat_diag_factor(self):
-        '''
-        this might be useful for internal reus
+        '''(cached attribute) factor of diagonal of hat_matrix as in influence
+
+        this might be useful for internal reuse
         h / (1 - h)
         '''
         hii = self.hat_matrix_diag
@@ -154,13 +183,15 @@ class Influence(object):
 
     @cache_readonly
     def ess_press(self):
-        '''
+        '''(cached attribute) error sum of squares of PRESS residuals
         '''
         return np.dot(self.resid_press, self.resid_press)
 
     @cache_readonly
     def resid_studentized_internal(self):
-        '''this uses sigma from original estimate
+        '''(cached attribute) studentized residuals using variance from OLS
+
+        this uses sigma from original estimate
 
         does not require leave one out loop
         '''
@@ -169,17 +200,41 @@ class Influence(object):
 
     @cache_readonly
     def resid_studentized_external(self):
-        '''this uses sigma from leave-one-out estimates
+        '''cached attribute) studentized residuals using LOOO variance
+
+        this uses sigma from leave-one-out estimates
 
         requires leave one out loop for observations
         '''
         #call self.summary to get all loo obs attributes
-        self.get_all_obs()
+        self._get_all_obs()
         sigma_looo = np.sqrt(self.sigma2_not_obsi)
         return self.get_resid_studentized_external(sigma=sigma_looo)
 
     def get_resid_studentized_external(self, sigma=None):
-        '''method
+        '''calculate studentized residuals
+
+        Parameters
+        ----------
+        sigma : None or float
+            estimate of the standard deviation of the residuals. If None, then
+            the estimate from the regression results is used.
+
+        Returns
+        -------
+        stzd_resid : ndarray
+            studentized residuals
+
+        Notes
+        -----
+        studentized residuals are defined as ::
+
+           resid / sigma / np.sqrt(1 - hii)
+
+        where resid are the residuals from the regression, sigma is an
+        estimate of the standard deviation of the residuals, and hii is the
+        diagonal of the hat_matrix.
+
         '''
         hii = self.hat_matrix_diag
         if sigma is None:
@@ -224,24 +279,47 @@ class Influence(object):
 
     @cache_readonly
     def resid_var(self):
+        '''estimate of variance of the residuals ::
+
+           sigma2 = sigma2_OLS * (1 - hii)
+
+        where hii is the diagonal of the hat matrix
+
+        '''
         #TODO:check if correct outside of ols
         return self.results.mse_resid * (1 - self.hat_matrix_diag)
 
     @cache_readonly
     def resid_std(self):
+        '''estimate of standard deviation of the residuals
+        '''
         return np.sqrt(self.resid_var)
 
 
-    def ols_xnoti(self, drop_idx, endog_idx='endog', store=True):
-        '''
+    def _ols_xnoti(self, drop_idx, endog_idx='endog', store=True):
+        '''regression results from LOVO auxiliary regression with cache
 
-        there are too many combinations to store them all, except for small
-        problems
+
+        The result instances are stored, which could use a large amount of
+        memory if the datasets are large. There are too many combinations to
+        store them all, except for small problems.
+
+        Parameters
+        ----------
+        drop_idx : int
+            index of exog that is dropped from the regression
+        endog_idx : 'endog' or int
+            If 'endog', then the endogenous variable of the result instance
+            is regressed on the exogenous variables, excluding the one at
+            drop_idx. If endog_idx is an integer, then the exog with that
+            index is regressed with OLS on all other exogenous variables.
+            (The latter is the auxiliary regression for the variance inflation
+            factor.)
 
         this needs more thought, memory versus speed
-
-        reverse the structure, access store, if fail calculate ?
+        not yet used in any other parts, not sufficiently tested
         '''
+        #reverse the structure, access store, if fail calculate ?
         #this creates keys in store even if store = false ! bug
         if endog_idx == 'endog':
             stored = self.aux_regression_endog
@@ -269,11 +347,18 @@ class Influence(object):
 
         return res
 
-    def get_drop_var(self, attributes):
+    def _get_drop_vari(self, attributes):
         '''regress endog on exog without one of the variables
 
-        this uses a k_vars loop
+        This uses a k_vars loop, only attributes of the OLS instance are stored.
 
+        Parameters
+        ----------
+        attributes : list of strings
+           These are the names of the attributes of the auxiliary OLS results
+           instance that are stored and returned.
+
+        not yet used
         '''
         from statsmodels.sandbox.tools.cross_val import LeaveOneOut
 
@@ -289,10 +374,17 @@ class Influence(object):
 
         return res_loo
 
-    def get_drop_obs(self, attributes):
+    def _get_drop_obs(self, attributes):
         '''regress endog on exog dropping one observation at a time
 
-        this uses a nobs loop
+        this uses a nobs loop, only attributes of the OLS instance are stored.
+
+        Parameters
+        ----------
+        attributes : list of strings
+           These are the names of the attributes of the auxiliary OLS results
+           instance that are stored and returned.
+
         '''
         from statsmodels.sandbox.tools.cross_val import LeaveOneOut
 
@@ -311,11 +403,17 @@ class Influence(object):
 
         return res_loo
 
-    def get_all_obs(self):
+    def _get_all_obs(self):
+        '''collect required results from the LOOO loop
+
+        '''
+        if hasattr(self, 'sigma2_not_obsi'):
+            #we already ran this
+            return
         #this might not be the most efficient
         get_det_cov_params = lambda res: np.linalg.det(res.cov_params())
         attributes = ['params', 'mse_resid', ('det_cov_params', get_det_cov_params)]
-        res = self.get_drop_obs(attributes)
+        res = self._get_drop_obs(attributes)
 
         self.sigma2_not_obsi = np.asarray(res['mse_resid'])
         self.params_not_obsi = np.asarray(res['params'])
@@ -334,6 +432,18 @@ class Influence(object):
         self.dfbetas = dfbetas
 
     def summary_obs(self):
+        '''create a summary table with all influence and outlier measures
+
+        This does currently not distinguish between statistics that can be
+        calculated from the original regression results and for which a
+        leave-one-observation-out loop is needed
+
+        Returns
+        -------
+        res : SimpleTable instance
+           SimpleTable instance with the results, can be printed
+
+        '''
         #print self.dfbetas
 
 #        table_raw = [ np.arange(self.nobs),
@@ -375,6 +485,23 @@ class Influence(object):
 
 
 def summary_obs(res, alpha=0.05):
+    '''generate summary table of outlier and influence similar to SAS
+
+    Parameters
+    ----------
+    alpha : float
+       significance level for confidence interval
+
+    Returns
+    -------
+    st : SimpleTable instance
+       table with results that can be printed
+    data : ndarray
+       calculated measures and statistics for the table
+    ss2 : list of strings
+       column_names for table (Note: rows of table are observations)
+
+    '''
 
     from scipy import stats
     from statsmodels.sandbox.regression.predstd import wls_prediction_std
@@ -420,7 +547,7 @@ def summary_obs(res, alpha=0.05):
     colnames = ss2
     #self.table_data = data
     #data = np.column_stack(data)
-    data = np.round(data,4)
+    data_ = np.round(data, 4)
     #self.table = data
     from statsmodels.iolib.table import SimpleTable, default_html_fmt
     from statsmodels.iolib.tableformatting import fmt_base
@@ -429,7 +556,7 @@ def summary_obs(res, alpha=0.05):
     fmt_html = deepcopy(default_html_fmt)
     fmt['data_fmts'] = ["%4d"] + ["%6.3f"] * (data.shape[1] - 1)
     #fmt_html['data_fmts'] = fmt['data_fmts']
-    st = SimpleTable(data, headers=colnames, txt_fmt=fmt,
+    st = SimpleTable(data_, headers=colnames, txt_fmt=fmt,
                        html_fmt=fmt_html)
 
     return st, data, ss2
@@ -532,7 +659,8 @@ if __name__ == '__main__':
     infl = Influence(res_ols)
     print infl.resid_studentized_external
     print infl.resid_studentized_internal
-    infl.summary_obs()
+    print infl.summary_obs()
+    print summary_obs(res, alpha=0.05)[0]
 
 '''
 >>> res.resid
