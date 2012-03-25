@@ -184,8 +184,9 @@ class DiscreteModel(base.LikelihoodModel):
     call signature expected of child classes in addition to those of
     statsmodels.model.LikelihoodModel.
     """
-    def __init___(self, endog, exog):
+    def __init__(self, endog, exog):
         super(DiscreteModel, self).__init__(endog, exog)
+        self.raise_on_perfect_prediction = True
 
     def initialize(self):
         """
@@ -211,7 +212,8 @@ class DiscreteModel(base.LikelihoodModel):
     def _check_perfect_pred(self, params):
         endog = self.endog
         fittedvalues = self.cdf(np.dot(self.exog, params))
-        if np.allclose(fittedvalues - endog, 0):
+        if (self.raise_on_perfect_prediction and 
+                np.allclose(fittedvalues - endog, 0)):
             msg = "Perfect separation detected, results not available"
             raise PerfectSeparationError(msg)
 
