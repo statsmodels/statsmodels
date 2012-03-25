@@ -570,7 +570,7 @@ class TestDiagnosticG(object):
 
         infl = oi.Influence(res)
 
-        c0, c1 = infl.cooks_distance() #TODO: what's c1
+        c0, c1 = infl.cooks_distance #TODO: what's c1
 
 
         assert_almost_equal(c0, lsdiag['cooks'], decimal=14)
@@ -579,7 +579,7 @@ class TestDiagnosticG(object):
                             lsdiag['std.res'], decimal=14)
 
         #slow:
-        infl.get_all_obs()  #slow, nobs estimation loop
+        #infl._get_all_obs()  #slow, nobs estimation loop, called implicitly
         dffits, dffth = infl.dffits
         assert_almost_equal(dffits, lsdiag['dfits'], decimal=14)
         assert_almost_equal(infl.resid_studentized_external,
