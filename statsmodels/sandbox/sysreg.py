@@ -253,11 +253,19 @@ exogenous variables.  Got length %s" % len(sys))
 
     def predict(self, params, exog=None):
         """
-        exog : array-like, formated like SUR.exog
+        exog : ndarray, formated like SUR.exog
 
         Return
         ------
-        predictions : array-like, formated like SUR.endog
+        predictions : ndarray, formated like SUR.endog
+        
+        Note
+        ----
+        This method is needed because the inherite version (which returns np.dot(exog,params))
+        does not work here, because exog is not formatted in a right way. 
+        However we can expect from the user to format himself exog in a
+        "block diagonal" way, and in this case self.sp_exog is used as default,
+        and this method would be useless.
         """
         if exog is None:
             exog = self.exog
@@ -271,8 +279,10 @@ exogenous variables.  Got length %s" % len(sys))
             designs.append(self.exog[:,cur_ind:cur_ind+ps[i]])
             cur_ind += ps[i]
 
-        aggr_design = linalg.block_diag(*designs) # replace with sparse matrix?
+        aggr_design = linalg.block_diag(*designs)
+        # replace with sparse matrix? need scipy >= 0.11.dev to have sparse.block_diag
         return np.dot(aggr_design,params).reshape(self.endog.shape)
+
 
 #TODO: Should just have a general 2SLS estimator to subclass
 # for IV, FGLS, etc.
