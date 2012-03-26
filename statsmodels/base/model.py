@@ -7,6 +7,7 @@ from statsmodels.tools.decorators import (resettable_cache,
                                                   cache_readonly)
 import statsmodels.base.wrapper as wrap
 from statsmodels.sandbox.regression.numdiff import approx_fprime1
+from statsmodels.formula import handle_formula_data
 
 
 class Model(object):
@@ -29,7 +30,11 @@ class Model(object):
     will change as well.
     """
 
-    def __init__(self, endog, exog=None):
+    def __init__(self, endog, exog=None, formula=None):
+        if formula:
+            self.formula_str = formula
+            endog, exog, self.formula = handle_formula_data(endog, exog,
+                                                        formula)
         self._data = handle_data(endog, exog)
         self.exog = self._data.exog
         self.endog = self._data.endog
@@ -65,8 +70,8 @@ class LikelihoodModel(Model):
     Likelihood model is a subclass of Model.
     """
 
-    def __init__(self, endog, exog=None):
-        super(LikelihoodModel, self).__init__(endog, exog)
+    def __init__(self, endog, exog=None, formula=None):
+        super(LikelihoodModel, self).__init__(endog, exog, formula)
         self.initialize()
 
     def initialize(self):
