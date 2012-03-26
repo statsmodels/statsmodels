@@ -2,7 +2,7 @@ from statsmodels.regression.linear_model import GLS
 import numpy as np
 import statsmodels.tools.tools as tools
 from statsmodels.base.model import LikelihoodModelResults
-from scipy import sparse
+from scipy import sparse, linalg
 
 #http://www.irisa.fr/aladin/wg-statlin/WORKSHOPS/RENNES02/SLIDES/Foschi.pdf
 
@@ -251,31 +251,28 @@ exogenous variables.  Got length %s" % len(sys))
         sur_fit = SysResults(self, beta, self.normalized_cov_params)
         return sur_fit
 
-    def predict(self, design):
+    def predict(self, params, exog=None):
         """
-        design : list
-        design = [design1,...,designM]
+        exog : array-like, formated like SUR.exog
 
         Return
         ------
-        list [predict1,...,predictM]
-
-        Notes
-        -----
-        We can also use only one (big, block diagonal, sparse?) matrix to store the design,
-        but I my opinions it's easier to have a design for each equation.
+        predictions : array-like, formated like SUR.endog
         """
+        if exog is None:
+            exog = self.exog
+        
         M = self._M # number of equations
-        p = design[0].shape[0] if (len(design[0].shape) == 1) else design[0].shape[1] # number of variables, probably not the best way
-
-        predictions = []
-        params = self.fit().params # it's seems that we can acces params if fit() has been previously called
-
+        ps = self.df_model + 1 # we include the intercept
+        
+        designs = [] # list of individual design (ie X_{i})
+        cur_ind = 0
         for i in range(M):
-            pred = np.dot(design[i],params[i*p:i*p+p])
-            predictions.append(pred)
+            designs.append(self.exog[:,cur_ind:cur_ind+ps[i]])
+            cur_ind += ps[i]
 
-        return predictions
+        aggr_design = linalg.block_diag(*designs) # replace with sparse matrix?
+        return np.dot(aggr_design,params).reshape(self.endog.shape)
 
 #TODO: Should just have a general 2SLS estimator to subclass
 # for IV, FGLS, etc.
