@@ -9,6 +9,11 @@ docs/source/generated
 docs/source/dev/generated
 docs/source/examples/generated
 
+# generated c source and built extensions
+*.c
+*.so
+*.pyd
+
 # repository directories for bzr-git
 .bzr
 .git
