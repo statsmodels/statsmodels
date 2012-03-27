@@ -7,7 +7,7 @@ Welcome to Statsmodels's Documentation
 of many different statistical models, as well as for conducting statistical tests, and statistical
 data exploration. An extensive list of result statistics are avalable for each estimator.
 The results are tested against existing statistical packages to ensure that they are correct. The
-package is released under the open source Simplied BSD (2-clause) license. The online documentation
+package is released under the open source Simplied BSD (3-clause) license. The online documentation
 is hosted at `sourceforge <http://statsmodels.sourceforge.net/>`__.
 
 Google Summer of Code 2012
@@ -52,6 +52,7 @@ Table of Contents
    introduction
    related
    dev/index
+   pitfalls
 
 .. toctree::
    :maxdepth: 2

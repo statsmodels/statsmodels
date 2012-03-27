@@ -10,7 +10,7 @@ import statsmodels.api as sm
 import matplotlib.pyplot as plt
 
 data = sm.datasets.ccard.load()
-data.exog = sm.add_constant(data.exog)
+data.exog = sm.add_constant(data.exog, prepend=False)
 ols_fit = sm.OLS(data.endog, data.exog).fit()
 
 # perhaps the residuals from this fit depend on the square of income
@@ -58,12 +58,12 @@ wls_fit3 = sm.WLS(data.endog, data.exog[:,(0,1,3,4)], weights=1/incomesq).fit()
 print wls_fit3.summary()
 print 'corrected rsquared',
 print (wls_fit3.uncentered_tss - wls_fit3.ssr)/wls_fit3.uncentered_tss
-plt.figure()
-plt.title('WLS dropping heteroscedasticity variable from regressors')
-plt.plot(data.endog, wls_fit3.fittedvalues, 'o')
-plt.xlim([0,2000])
+plt.figure();
+plt.title('WLS dropping heteroscedasticity variable from regressors');
+plt.plot(data.endog, wls_fit3.fittedvalues, 'o');
+plt.xlim([0,2000]);
 #@savefig wls_drop_het.png
-plt.ylim([0,2000])
+plt.ylim([0,2000]);
 print 'raw correlation of endog and fittedvalues'
 print np.corrcoef(data.endog, wls_fit.fittedvalues)
 print 'raw correlation coefficient of endog and fittedvalues squared'
@@ -72,12 +72,12 @@ print np.corrcoef(data.endog, wls_fit.fittedvalues)[0,1]**2
 # compare with robust regression,
 # heteroscedasticity correction downweights the outliers
 rlm_fit = sm.RLM(data.endog, data.exog).fit()
-plt.figure()
-plt.title('using robust for comparison')
-plt.plot(data.endog, rlm_fit.fittedvalues, 'o')
-plt.xlim([0,2000])
+plt.figure();
+plt.title('using robust for comparison');
+plt.plot(data.endog, rlm_fit.fittedvalues, 'o');
+plt.xlim([0,2000]);
 #@savefig wls_robust_compare.png
-plt.ylim([0,2000])
+plt.ylim([0,2000]);
 
 #What is going on? A more systematic look at the data
 #----------------------------------------------------
@@ -246,6 +246,8 @@ print np.column_stack([getattr(ols_fit, se, None) for se in ['HC0_se', 'HC1_se',
 #
 #(I didn't check whether this is fully correct statistically)
 
+#**With OLS on full sample**
+
 nobs, nvar = data.exog.shape
 niter = 2000
 bootres = np.zeros((niter, nvar*2))
@@ -278,6 +280,8 @@ for i in range(4):
 #@savefig wls_bootstrap.png
 plt.figtext(0.5, 0.935,  'OLS Bootstrap',
                ha='center', color='black', weight='bold', size='large')
+
+#**With WLS on sample with outliers removed**
 
 data_endog = data.endog[olskeep]
 data_exog = data.exog[olskeep,:]
@@ -320,77 +324,77 @@ plt.figtext(0.5, 0.935,  'WLS rm2 Bootstrap',
 #..plt.show()
 #..plt.close('all')
 
-'''
-The following a random variables not fixed by a seed
-
-Bootstrap Results of parameters and parameter standard deviation
-OLS
-
-Parameter estimates
-median [  -3.26216383  228.52546429  -14.57239967   34.27155426 -227.02816597]
-mean   [  -2.89855173  234.37139359  -14.98726881   27.96375666 -243.18361746]
-std    [   3.78704907   97.35797802    9.16316538   94.65031973  221.79444244]
-
-Standard deviation of parameter estimates
-median [   5.44701033   81.96921398    7.58642431   80.64906783  200.19167735]
-mean   [   5.44840542   86.02554883    8.56750041   80.41864084  201.81196849]
-std    [   1.43425083   29.74806562    4.22063268   19.14973277   55.34848348]
-
-Bootstrap Results of parameters and parameter standard deviation
-WLS removed 2 outliers from sample
-
-Parameter estimates
-median [  -3.95876112  137.10419042   -9.29131131   88.40265447  -44.21091869]
-mean   [  -3.67485724  135.42681207   -8.7499235    89.74703443  -46.38622848]
-std    [   2.96908679   56.36648967    7.03870751   48.51201918  106.92466097]
-
-Standard deviation of parameter estimates
-median [   2.89349748   59.19454402    6.70583332   45.40987953  119.05241283]
-mean   [   2.97600894   60.14540249    6.92102065   45.66077486  121.35519673]
-std    [   0.55378808   11.77831934    1.69289179    7.4911526    23.72821085]
-
-
-
-Conclusion: problem with outliers and possibly heteroscedasticity
------------------------------------------------------------------
-
-in bootstrap results
-* bse in OLS underestimates the standard deviation of the parameters
-  compared to standard deviation in bootstrap
-* OLS heteroscedasticity corrected standard errors for the original
-  data (above) are close to bootstrap std
-* using WLS with 2 outliers removed has a relatively good match between
-  the mean or median bse and the std of the parameter estimates in the
-  bootstrap
-
-We could also include rsquared in bootstrap, and do it also for RLM.
-The problems could also mean that the linearity assumption is violated,
-e.g. try non-linear transformation of exog variables, but linear
-in parameters.
-
-
-for statsmodels
- * In this case rsquared for original data looks less random/arbitrary.
- * Don't change definition of rsquared from centered tss to uncentered
-   tss when calculating rsquared in WLS if the original exog contains
-   a constant. The increase in rsquared because of a change in definition
-   will be very misleading.
- * Whether there is a constant in the transformed exog, wexog, or not,
-   might affect also the degrees of freedom calculation, but I haven't
-   checked this. I would guess that the df_model should stay the same,
-   but needs to be verified with a textbook.
- * df_model has to be adjusted if the original data does not have a
-   constant, e.g. when regressing an endog on a single exog variable
-   without constant. This case might require also a redefinition of
-   the rsquare and f statistic for the regression anova to use the
-   uncentered tss.
-   This can be done through keyword parameter to model.__init__ or
-   through autodedection with hasconst = (exog.var(0)<1e-10).any()
-   I'm not sure about fixed effects with a full dummy set but
-   without a constant. In this case autodedection wouldn't work this
-   way. Also, I'm not sure whether a ddof keyword parameter can also
-   handle the hasconst case.
-
-
-'''
+#::
+#
+#    The following a random variables not fixed by a seed
+#
+#    Bootstrap Results of parameters and parameter standard deviation
+#    OLS
+#
+#    Parameter estimates
+#    median [  -3.26216383  228.52546429  -14.57239967   34.27155426 -227.02816597]
+#    mean   [  -2.89855173  234.37139359  -14.98726881   27.96375666 -243.18361746]
+#    std    [   3.78704907   97.35797802    9.16316538   94.65031973  221.79444244]
+#
+#    Standard deviation of parameter estimates
+#    median [   5.44701033   81.96921398    7.58642431   80.64906783  200.19167735]
+#    mean   [   5.44840542   86.02554883    8.56750041   80.41864084  201.81196849]
+#    std    [   1.43425083   29.74806562    4.22063268   19.14973277   55.34848348]
+#
+#    Bootstrap Results of parameters and parameter standard deviation
+#    WLS removed 2 outliers from sample
+#
+#    Parameter estimates
+#    median [  -3.95876112  137.10419042   -9.29131131   88.40265447  -44.21091869]
+#    mean   [  -3.67485724  135.42681207   -8.7499235    89.74703443  -46.38622848]
+#    std    [   2.96908679   56.36648967    7.03870751   48.51201918  106.92466097]
+#
+#    Standard deviation of parameter estimates
+#    median [   2.89349748   59.19454402    6.70583332   45.40987953  119.05241283]
+#    mean   [   2.97600894   60.14540249    6.92102065   45.66077486  121.35519673]
+#    std    [   0.55378808   11.77831934    1.69289179    7.4911526    23.72821085]
+#
+#
+#
+#Conclusion: problem with outliers and possibly heteroscedasticity
+#-----------------------------------------------------------------
+#
+#in bootstrap results
+#
+#* bse in OLS underestimates the standard deviation of the parameters
+#  compared to standard deviation in bootstrap
+#* OLS heteroscedasticity corrected standard errors for the original
+#  data (above) are close to bootstrap std
+#* using WLS with 2 outliers removed has a relatively good match between
+#  the mean or median bse and the std of the parameter estimates in the
+#  bootstrap
+#
+#We could also include rsquared in bootstrap, and do it also for RLM.
+#The problems could also mean that the linearity assumption is violated,
+#e.g. try non-linear transformation of exog variables, but linear
+#in parameters.
+#
+#
+#for statsmodels
+#
+# * In this case rsquared for original data looks less random/arbitrary.
+# * Don't change definition of rsquared from centered tss to uncentered
+#   tss when calculating rsquared in WLS if the original exog contains
+#   a constant. The increase in rsquared because of a change in definition
+#   will be very misleading.
+# * Whether there is a constant in the transformed exog, wexog, or not,
+#   might affect also the degrees of freedom calculation, but I haven't
+#   checked this. I would guess that the df_model should stay the same,
+#   but needs to be verified with a textbook.
+# * df_model has to be adjusted if the original data does not have a
+#   constant, e.g. when regressing an endog on a single exog variable
+#   without constant. This case might require also a redefinition of
+#   the rsquare and f statistic for the regression anova to use the
+#   uncentered tss.
+#   This can be done through keyword parameter to model.__init__ or
+#   through autodedection with hasconst = (exog.var(0)<1e-10).any()
+#   I'm not sure about fixed effects with a full dummy set but
+#   without a constant. In this case autodedection wouldn't work this
+#   way. Also, I'm not sure whether a ddof keyword parameter can also
+#   handle the hasconst case.
 
