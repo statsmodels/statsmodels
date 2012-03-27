@@ -132,7 +132,7 @@ class Influence(object):
 
     def __init__(self, results):
         #check which model is allowed
-        self.results = results
+        self.results = results._results
         self.nobs, self.k_vars = results.model.exog.shape
         self.endog = results.model.endog
         self.exog = results.model.exog

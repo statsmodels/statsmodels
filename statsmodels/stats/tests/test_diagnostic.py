@@ -18,7 +18,7 @@ from numpy.testing import (assert_, assert_almost_equal, assert_equal,
 
 from statsmodels.regression.linear_model import OLS, GLSAR
 from statsmodels.tools.tools import add_constant
-from statsmodels.datasets import macrodata
+from statsmodels.datasets import macrodata, longley
 
 import statsmodels.sandbox.panel.sandwich_covariance as sw
 import statsmodels.stats.diagnostic as smsdia
@@ -625,6 +625,19 @@ def grangertest():
 
     grangertest = dict(fvalue=1.589672703015157, pvalue=0.178717196987075,
                        df=(198,193))
+
+def test_influence_wrapped():
+    # Smoke test to see that dffits doesn't raise an error
+    dta = longley.load_pandas().data
+    dta['const'] = 1
+    res = OLS(dta['TOTEMP'], dta[['const','GNPDEFL', 'GNP', 'UNEMP', 'ARMED',
+                                     'POP', 'YEAR']]).fit()
+
+    from statsmodels.stats import outliers_influence
+
+    infl = outliers_influence.Influence(res)
+    infl.dffits
+
 
 if __name__ == '__main__':
     import nose
