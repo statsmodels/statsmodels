@@ -7,10 +7,10 @@ import statsmodels.api as sm
 # Load the data from Spector and Mazzeo (1980). Examples follow Greene's
 # Econometric Analysis Ch. 21 (5th Edition).
 spector_data = sm.datasets.spector.load()
-spector_data.exog = sm.add_constant(spector_data.exog)
+spector_data.exog = sm.add_constant(spector_data.exog, prepend=False)
 
 # Linear Probability Model using OLS
-lpm_mod = sm.OLS(spector_data.endog,spector_data.exog)
+lpm_mod = sm.OLS(spector_data.endog, spector_data.exog)
 lpm_res = lpm_mod.fit()
 
 # Logit Model
@@ -44,7 +44,7 @@ anes_data = sm.datasets.anes96.load()
 anes_exog = anes_data.exog
 anes_exog[:,0] = np.log(anes_exog[:,0] + .1)
 anes_exog = np.column_stack((anes_exog[:,0],anes_exog[:,2],anes_exog[:,5:8]))
-anes_exog = sm.add_constant(anes_exog)
+anes_exog = sm.add_constant(anes_exog, prepend=False)
 mlogit_mod = sm.MNLogit(anes_data.endog, anes_exog)
 mlogit_res = mlogit_mod.fit()
 
@@ -60,7 +60,7 @@ mlogit_res = mlogit_mod.fit(method='bfgs', maxiter=100)
 # however, the data differs slightly from theirs
 rand_data = sm.datasets.randhie.load()
 rand_exog = rand_data.exog.view(float).reshape(len(rand_data.exog), -1)
-rand_exog = sm.add_constant(rand_exog)
+rand_exog = sm.add_constant(rand_exog, prepend=False)
 poisson_mod = sm.Poisson(rand_data.endog, rand_exog)
 poisson_res = poisson_mod.fit(method="newton")
 

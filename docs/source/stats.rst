@@ -66,6 +66,16 @@ Residual Diagnostics and Specification Tests
    kstest_normal
    lillifors
 
+**outliers and influence measures
+
+.. currentmodule:: statsmodels.stats.outliers_influence
+
+.. autosummary::
+   :toctree: generated/
+
+   Influence
+   variance_inflation_factor
+
 See also the notes on :ref:`notes on regression diagnostics <diagnostics>`
 
 
