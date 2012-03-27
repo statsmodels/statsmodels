@@ -25,7 +25,7 @@ def reset_ramsey(res, degree=5):
 
     Notes
     -----
-    The test fits an auxilliary OLS regression where the design matrix, exog,
+    The test fits an auxiliary OLS regression where the design matrix, exog,
     is augmented by powers 2 to degree of the fitted values. Then it performs
     an F-test whether these additional terms are significant.
 
@@ -149,7 +149,7 @@ class Influence(object):
 
         Notes
         -----
-        temporary attached here, this should go to model class
+        temporarily calculated here, this should go to model class
         '''
         return (self.exog * self.results.model.pinv_wexog.T).sum(1)
 
@@ -173,7 +173,7 @@ class Influence(object):
 
     @cache_readonly
     def hat_diag_factor(self):
-        '''(cached attribute) factor of diagonal of hat_matrix as in influence
+        '''(cached attribute) factor of diagonal of hat_matrix used in influence
 
         this might be useful for internal reuse
         h / (1 - h)
@@ -211,8 +211,6 @@ class Influence(object):
     def get_resid_studentized_external(self, sigma=None):
         '''calculate studentized residuals
 
-        uses results from leave-one-observation-out loop
-
         Parameters
         ----------
         sigma : None or float
@@ -245,7 +243,7 @@ class Influence(object):
 
     @cache_readonly
     def dffits_internal(self):
-        '''(cached attribute) dffits
+        '''(cached attribute) dffits measure for influence of an observation
 
         based on resid_studentized_internal
         uses original results, no nobs loop
@@ -261,10 +259,23 @@ class Influence(object):
 
     @cache_readonly
     def dffits(self):
-        '''(cached attribute) dffits
+        '''(cached attribute) dffits measure for influence of an observation
 
-        based on resid_studentized_external
+        based on resid_studentized_external,
         uses results from leave-one-observation-out loop
+
+        It is recommended that observations with dffits large than a
+        threshold of 2 sqrt{k / n} where k is the number of parameters, should
+        be investigated.
+
+        Returns
+        -------
+        dffits: float
+        dffits_threshold : float
+
+        References
+        ----------
+        `Wikipedia <http://en.wikipedia.org/wiki/DFFITS>`_
 
         '''
         #TODO: do I want to use different sigma estimate in
@@ -288,9 +299,10 @@ class Influence(object):
 
     @cache_readonly
     def sigma2_not_obsi(self):
-        '''(cached attribute) dffits
+        '''(cached attribute) error variance for all LOOO regressions
 
-        based on resid_studentized_external
+        This is 'mse_resid' from each auxiliary regression.
+
         uses results from leave-one-observation-out loop
         '''
         return np.asarray(self._res_looo['mse_resid'])
@@ -313,7 +325,7 @@ class Influence(object):
 
     @cache_readonly
     def cooks_distance(self):
-        '''Cooks distance
+        '''(cached attribute) Cooks distance
 
         uses original results, no nobs loop
 
@@ -361,6 +373,11 @@ class Influence(object):
     @cache_readonly
     def resid_std(self):
         '''(cached attribute) estimate of standard deviation of the residuals
+
+        See Also
+        --------
+        resid_var
+
         '''
         return np.sqrt(self.resid_var)
 
@@ -489,7 +506,7 @@ class Influence(object):
         #this is not stored in linear model
         #self.xpx = np.dot(self.exog.T, self.exog)
 
-    def summary_obs(self):
+    def summary_obs(self, float_fmt="%6.3f"):
         '''create a summary table with all influence and outlier measures
 
         This does currently not distinguish between statistics that can be
@@ -500,6 +517,12 @@ class Influence(object):
         -------
         res : SimpleTable instance
            SimpleTable instance with the results, can be printed
+
+        Notes
+        -----
+        This also attaches table_data to the instance.
+
+
 
         '''
         #print self.dfbetas
@@ -527,16 +550,14 @@ class Influence(object):
                       ('dfbeta\nslope', self.dfbetas[:,1]) #skip needs to partially unravel
                       ]
         colnames, data = zip(*table_raw) #unzip
-        self.table_data = data
         data = np.column_stack(data)
-        data = np.round(data,4)
-        self.table = data
+        self.table_data = data
         from statsmodels.iolib.table import SimpleTable, default_html_fmt
         from statsmodels.iolib.tableformatting import fmt_base
         from copy import deepcopy
         fmt = deepcopy(fmt_base)
         fmt_html = deepcopy(default_html_fmt)
-        fmt['data_fmts'] = ["%4d"] + ["%6.3f"] * (data.shape[1] - 1)
+        fmt['data_fmts'] = ["%4d"] + [float_fmt] * (data.shape[1] - 1)
         #fmt_html['data_fmts'] = fmt['data_fmts']
         return SimpleTable(data, headers=colnames, txt_fmt=fmt,
                            html_fmt=fmt_html)
@@ -605,8 +626,6 @@ def summary_obs(res, alpha=0.05):
     colnames = ss2
     #self.table_data = data
     #data = np.column_stack(data)
-    data_ = np.round(data, 4)
-    #self.table = data
     from statsmodels.iolib.table import SimpleTable, default_html_fmt
     from statsmodels.iolib.tableformatting import fmt_base
     from copy import deepcopy
@@ -614,7 +633,7 @@ def summary_obs(res, alpha=0.05):
     fmt_html = deepcopy(default_html_fmt)
     fmt['data_fmts'] = ["%4d"] + ["%6.3f"] * (data.shape[1] - 1)
     #fmt_html['data_fmts'] = fmt['data_fmts']
-    st = SimpleTable(data_, headers=colnames, txt_fmt=fmt,
+    st = SimpleTable(data, headers=colnames, txt_fmt=fmt,
                        html_fmt=fmt_html)
 
     return st, data, ss2
