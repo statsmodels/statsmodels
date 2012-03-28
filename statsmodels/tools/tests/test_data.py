@@ -11,7 +11,7 @@ def test_missing_data_pandas():
     X[1,2] = np.nan
     df = pandas.DataFrame(X)
     vals, cnames, rnames = data.interpret_data(df)
-    np.testing.assert_equal(rnames, [0,2,3,4,5,6,7,8,9])
+    np.testing.assert_equal(rnames.tolist(), [0,2,3,4,5,6,7,8,9])
 
 def test_structarray():
     X = np.random.random((9,)).view([('var1', 'f8'),
@@ -37,5 +37,5 @@ def test_dataframe():
     df = pandas.DataFrame(X)
     vals, cnames, rnames = data.interpret_data(df)
     np.testing.assert_equal(vals, df.values)
-    np.testing.assert_equal(rnames, df.index)
-    np.testing.assert_equal(cnames, df.columns)
+    np.testing.assert_equal(rnames.tolist(), df.index.tolist())
+    np.testing.assert_equal(cnames, df.columns.tolist())
