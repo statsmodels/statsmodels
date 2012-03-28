@@ -132,7 +132,10 @@ class Influence(object):
 
     def __init__(self, results):
         #check which model is allowed
-        self.results = results
+        try:
+            self.results = results._results # don't use wrapped results
+        except: # we got unwrapped results
+            self.results = results
         self.nobs, self.k_vars = results.model.exog.shape
         self.endog = results.model.endog
         self.exog = results.model.exog
@@ -505,6 +508,38 @@ class Influence(object):
 
         #this is not stored in linear model
         #self.xpx = np.dot(self.exog.T, self.exog)
+
+    def summary_frame(self):
+        """
+        Creates a DataFrame with all available influence results.
+
+        Returns
+        -------
+        frame : DataFrame
+            A DataFrame with all results.
+        """
+        from pandas import DataFrame
+
+        # row and column labels
+        data = self.results.model._data
+        row_labels = data.row_labels
+        beta_labels = ['dfb_' + i for i in data.xnames]
+
+        # grab the results
+        summary_data = DataFrame(dict(
+                            cook_d = self.cooks_distance[0],
+                            student_resid = self.resid_studentized_internal,
+                            hat_diag = self.hat_matrix_diag,
+                            dffits_internal = self.dffits_internal[0],
+                            student_resid_ext = self.resid_studentized_external,
+                            dffits = self.dffits[0],
+                                        ),
+                            index = row_labels)
+        #NOTE: if we don't give columns, order of above will be arbitrary
+        dfbeta = DataFrame(self.dfbetas, columns=beta_labels,
+                            index=row_labels)
+
+        return dfbeta.join(summary_data)
 
     def summary_obs(self, float_fmt="%6.3f"):
         '''create a summary table with all influence and outlier measures
