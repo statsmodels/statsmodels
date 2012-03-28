@@ -104,8 +104,8 @@ def variance_inflation_factor(exog, exog_idx):
 class Influence(object):
     '''class to calculate outlier and influence measures for OLS result
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     results : Regression Results instance
         currently assumes the results are from an OLS regression
 
@@ -132,7 +132,10 @@ class Influence(object):
 
     def __init__(self, results):
         #check which model is allowed
-        self.results = results
+        try:
+            self.results = results._results # don't use wrapped results
+        except: # we got unwrapped results
+            self.results = results
         self.nobs, self.k_vars = results.model.exog.shape
         self.endog = results.model.endog
         self.exog = results.model.exog
@@ -456,36 +459,7 @@ class Influence(object):
         for inidx, outidx in cv_iter:
             for att in attributes:
                 res_i = self.model_class(endog, exog[:,inidx]).fit()
-            res_loo[att].append(getattr(res_i, att))
-
-        return res_loo
-
-    def _get_drop_obs(self, attributes):
-        '''regress endog on exog dropping one observation at a time
-
-        this uses a nobs loop, only attributes of the OLS instance are stored.
-
-        Parameters
-        ----------
-        attributes : list of strings
-           These are the names of the attributes of the auxiliary OLS results
-           instance that are stored and returned.
-
-        '''
-        from statsmodels.sandbox.tools.cross_val import LeaveOneOut
-
-        endog = self.results.model.endog
-        exog = self.exog
-
-        cv_iter = LeaveOneOut(self.nobs)
-        res_loo = defaultdict(list)
-        for inidx, outidx in cv_iter:
-            for att in attributes:
-                res_i = self.model_class(endog[inidx], exog[inidx,:]).fit()
-                if isinstance(att, tuple): #hasattr(att, '__call__'): #callable:
-                    res_loo[att[0]].append(att[1](res_i))
-                else:
-                    res_loo[att].append(getattr(res_i, att))
+                res_loo[att].append(getattr(res_i, att))
 
         return res_loo
 
@@ -496,17 +470,80 @@ class Influence(object):
         all results will be attached.
         currently only 'params', 'mse_resid', 'det_cov_params' are stored
 
+        regresses endog on exog dropping one observation at a time
+
+        this uses a nobs loop, only attributes of the OLS instance are stored.
         '''
-
+        from statsmodels.sandbox.tools.cross_val import LeaveOneOut
         get_det_cov_params = lambda res: np.linalg.det(res.cov_params())
-        attributes = ['params', 'mse_resid', ('det_cov_params', get_det_cov_params)]
-        res = self._get_drop_obs(attributes)
-        return res
 
-        #this is not stored in linear model
-        #self.xpx = np.dot(self.exog.T, self.exog)
+        endog = self.endog
+        exog = self.exog
 
-    def summary_obs(self, float_fmt="%6.3f"):
+        params = np.zeros_like(exog)
+        mse_resid = np.zeros_like(endog)
+        det_cov_params = np.zeros_like(endog)
+
+        cv_iter = LeaveOneOut(self.nobs)
+        for inidx, outidx in cv_iter:
+            res_i = self.model_class(endog[inidx], exog[inidx]).fit()
+            params[outidx] = res_i.params
+            mse_resid[outidx] = res_i.mse_resid
+            det_cov_params[outidx] = get_det_cov_params(res_i)
+
+        return dict(params=params, mse_resid=mse_resid,
+                       det_cov_params=det_cov_params)
+
+    def summary_frame(self):
+        """
+        Creates a DataFrame with all available influence results.
+
+        Returns
+        -------
+        frame : DataFrame
+            A DataFrame with all results.
+
+        Notes
+        -----
+        The resultant DataFrame contains six variables in addition to the
+        DFBETAS. These are:
+
+        * cooks_d : Cook's Distance defined in `Influence.cooks_distance`
+        * standard_resid : Standardized residuals defined in
+          `Influence.resid_studentized_internal`
+        * hat_diag : The diagonal of the projection, or hat, matrix defined in
+          `Influence.hat_matrix_diag`
+        * dffits_internal : DFFITS statistics using internally Studentized
+          residuals defined in `Influence.dffits_internal`
+        * dffits : DFFITS statistics using externally Studentized residuals
+          defined in `Influence.dffits`
+        * student_resid : Externally Studentized residuals defined in
+          `Influence.resid_studentized_external`
+        """
+        from pandas import DataFrame
+
+        # row and column labels
+        data = self.results.model._data
+        row_labels = data.row_labels
+        beta_labels = ['dfb_' + i for i in data.xnames]
+
+        # grab the results
+        summary_data = DataFrame(dict(
+                            cooks_d = self.cooks_distance[0],
+                            standard_resid = self.resid_studentized_internal,
+                            hat_diag = self.hat_matrix_diag,
+                            dffits_internal = self.dffits_internal[0],
+                            student_resid = self.resid_studentized_external,
+                            dffits = self.dffits[0],
+                                        ),
+                            index = row_labels)
+        #NOTE: if we don't give columns, order of above will be arbitrary
+        dfbeta = DataFrame(self.dfbetas, columns=beta_labels,
+                            index=row_labels)
+
+        return dfbeta.join(summary_data)
+
+    def summary_table(self, float_fmt="%6.3f"):
         '''create a summary table with all influence and outlier measures
 
         This does currently not distinguish between statistics that can be
@@ -563,7 +600,7 @@ class Influence(object):
                            html_fmt=fmt_html)
 
 
-def summary_obs(res, alpha=0.05):
+def summary_table(res, alpha=0.05):
     '''generate summary table of outlier and influence similar to SAS
 
     Parameters
@@ -736,8 +773,8 @@ if __name__ == '__main__':
     infl = Influence(res_ols)
     print infl.resid_studentized_external
     print infl.resid_studentized_internal
-    print infl.summary_obs()
-    print summary_obs(res, alpha=0.05)[0]
+    print infl.summary_table()
+    print summary_table(res, alpha=0.05)[0]
 
 '''
 >>> res.resid
