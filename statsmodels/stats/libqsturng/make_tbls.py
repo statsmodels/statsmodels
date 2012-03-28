@@ -6,7 +6,7 @@ import scipy.stats
 from scipy.optimize import leastsq
 
 import numpy as np
-from collections import OrderedDict
+from statsmodels.compatnp.collections import OrderedDict
 from numpy.random import random
 
 # The values for p in [.5, .75, .9, .95, .975, .99, .995, .999]
