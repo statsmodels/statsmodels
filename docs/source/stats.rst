@@ -66,7 +66,8 @@ Residual Diagnostics and Specification Tests
    kstest_normal
    lillifors
 
-**outliers and influence measures
+Outliers and influence measures
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. currentmodule:: statsmodels.stats.outliers_influence
 
