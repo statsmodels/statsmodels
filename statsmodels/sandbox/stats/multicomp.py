@@ -327,11 +327,7 @@ def maxzerodown(x):
         maxz = None
     return maxz, allzeros
 
-def ecdf(x):
-    '''no frills empirical cdf used in fdrcorrection
-    '''
-    nobs = len(x)
-    return np.arange(1,nobs+1)/float(nobs)
+
 
 def rejectionline(n, alpha=0.5):
     '''reference line for rejection in multiple tests
