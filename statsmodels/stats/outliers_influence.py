@@ -463,35 +463,6 @@ class Influence(object):
 
         return res_loo
 
-    def _get_drop_obs(self, attributes):
-        '''regress endog on exog dropping one observation at a time
-
-        this uses a nobs loop, only attributes of the OLS instance are stored.
-
-        Parameters
-        ----------
-        attributes : list of strings
-           These are the names of the attributes of the auxiliary OLS results
-           instance that are stored and returned.
-
-        '''
-        from statsmodels.sandbox.tools.cross_val import LeaveOneOut
-
-        endog = self.results.model.endog
-        exog = self.exog
-
-        cv_iter = LeaveOneOut(self.nobs)
-        res_loo = defaultdict(list)
-        for inidx, outidx in cv_iter:
-            for att in attributes:
-                res_i = self.model_class(endog[inidx], exog[inidx,:]).fit()
-                if isinstance(att, tuple): #hasattr(att, '__call__'): #callable:
-                    res_loo[att[0]].append(att[1](res_i))
-                else:
-                    res_loo[att].append(getattr(res_i, att))
-
-        return res_loo
-
     @cache_readonly
     def _res_looo(self):
         '''collect required results from the LOOO loop
@@ -499,15 +470,29 @@ class Influence(object):
         all results will be attached.
         currently only 'params', 'mse_resid', 'det_cov_params' are stored
 
+        regresses endog on exog dropping one observation at a time
+
+        this uses a nobs loop, only attributes of the OLS instance are stored.
         '''
-
+        from statsmodels.sandbox.tools.cross_val import LeaveOneOut
         get_det_cov_params = lambda res: np.linalg.det(res.cov_params())
-        attributes = ['params', 'mse_resid', ('det_cov_params', get_det_cov_params)]
-        res = self._get_drop_obs(attributes)
-        return res
 
-        #this is not stored in linear model
-        #self.xpx = np.dot(self.exog.T, self.exog)
+        endog = self.endog
+        exog = self.exog
+
+        params = np.zeros_like(exog)
+        mse_resid = np.zeros_like(endog)
+        det_cov_params = np.zeros_like(endog)
+
+        cv_iter = LeaveOneOut(self.nobs)
+        for inidx, outidx in cv_iter:
+            res_i = self.model_class(endog[inidx], exog[inidx]).fit()
+            params[outidx] = res_i.params
+            mse_resid[outidx] = res_i.mse_resid
+            det_cov_params[outidx] = get_det_cov_params(res_i)
+
+        return dict(params=params, mse_resid=mse_resid,
+                       det_cov_params=det_cov_params)
 
     def summary_frame(self):
         """
