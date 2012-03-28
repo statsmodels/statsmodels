@@ -104,8 +104,8 @@ def variance_inflation_factor(exog, exog_idx):
 class Influence(object):
     '''class to calculate outlier and influence measures for OLS result
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     results : Regression Results instance
         currently assumes the results are from an OLS regression
 
@@ -502,6 +502,23 @@ class Influence(object):
         -------
         frame : DataFrame
             A DataFrame with all results.
+
+        Notes
+        -----
+        The resultant DataFrame contains six variables in addition to the
+        DFBETAS. These are:
+
+        * cooks_d : Cook's Distance defined in `Influence.cooks_distance`
+        * standard_resid : Standardized residuals defined in
+          `Influence.resid_studentized_internal`
+        * hat_diag : The diagonal of the projection, or hat, matrix defined in
+          `Influence.hat_matrix_diag`
+        * dffits_internal : DFFITS statistics using internally Studentized
+          residuals defined in `Influence.dffits_internal`
+        * dffits : DFFITS statistics using externally Studentized residuals
+          defined in `Influence.dffits`
+        * student_resid : Externally Studentized residuals defined in
+          `Influence.resid_studentized_external`
         """
         from pandas import DataFrame
 
@@ -512,11 +529,11 @@ class Influence(object):
 
         # grab the results
         summary_data = DataFrame(dict(
-                            cook_d = self.cooks_distance[0],
-                            student_resid = self.resid_studentized_internal,
+                            cooks_d = self.cooks_distance[0],
+                            standard_resid = self.resid_studentized_internal,
                             hat_diag = self.hat_matrix_diag,
                             dffits_internal = self.dffits_internal[0],
-                            student_resid_ext = self.resid_studentized_external,
+                            student_resid = self.resid_studentized_external,
                             dffits = self.dffits[0],
                                         ),
                             index = row_labels)
