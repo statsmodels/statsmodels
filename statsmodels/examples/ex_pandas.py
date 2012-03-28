@@ -27,6 +27,9 @@ print results.summary()
 print results.params
 print results.cov_params()
 
+infl = results.get_outlier_influence()
+print infl.summary_obs()
+
 raise
 
 #Example RLM
