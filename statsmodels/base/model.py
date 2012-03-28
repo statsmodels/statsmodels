@@ -32,7 +32,7 @@ class Model(object):
 
     def __init__(self, endog, exog=None, formula=None):
         if formula:
-            self.formula_str = formula
+            self.formula_str = formula # only works if formula is a str
             endog, exog, self.formula = handle_formula_data(endog, exog,
                                                         formula)
         self._data = handle_data(endog, exog)
@@ -41,6 +41,35 @@ class Model(object):
         self._data_attr = []
         self._data_attr.extend(['exog', 'endog', '_data.exog', '_data.endog',
                                 '_data._orig_endog', '_data._orig_exog'])
+
+    @classmethod
+    def from_formula(cls, formula, df, *args, **kwargs):
+        """
+        Create a Model from a formula and dataframe.
+
+        Parameters
+        ----------
+        formula : str or generic Formula object
+            The formula specifying the model
+        df : array-like
+            The data for the model.
+
+        Returns
+        -------
+        model : Model instance
+
+        Notes
+        ------
+        df must define __getitem__ with the keys in the formula terms
+        args and kwargs are passed on to the model instantiation.
+        """
+        cls.formula_str = formula # only works if formula is a str
+        endog, exog, cls.formula = handle_formula_data(df, None, formula)
+        mod = cls(endog, exog, formula=None, *args, **kwargs)
+        # since we got a dataframe, attach the original
+        mod._data.frame = df
+        return mod
+
 
     @property
     def endog_names(self):
