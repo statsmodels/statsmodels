@@ -628,7 +628,7 @@ def grangertest():
 
 
 def test_influence_wrapped():
-    from pandas import DataFrame, Series
+    from pandas import DataFrame
     from pandas.util.testing import assert_series_equal
 
     d = macrodata.load_pandas().data
@@ -665,16 +665,16 @@ def test_influence_wrapped():
 
 
     #NOTE: we get a hard-cored 5 decimals with pandas testing
-    assert_series_equal(c0, Series(lsdiag['cooks']))
-    assert_series_equal(infl.hat_matrix_diag, Series(lsdiag['hat']))
+    assert_almost_equal(c0, lsdiag['cooks'], 14)
+    assert_almost_equal(infl.hat_matrix_diag, (lsdiag['hat']), 14)
     assert_almost_equal(infl.resid_studentized_internal,
-                        Series(lsdiag['std.res']))
+                        lsdiag['std.res'], 14)
 
     #slow:
     dffits, dffth = infl.dffits
-    assert_almost_equal(dffits, Series(lsdiag['dfits']))
+    assert_almost_equal(dffits, lsdiag['dfits'], 14)
     assert_almost_equal(infl.resid_studentized_external,
-                        Series(lsdiag['stud.res']))
+                        lsdiag['stud.res'], 14)
 
     import pandas
     fn = os.path.join(cur_dir,"results/influence_measures_R.csv")
@@ -688,6 +688,10 @@ def test_influence_wrapped():
     #TODO: finish wrapping this stuff
     assert_almost_equal(infl.dfbetas, infl_r2[:,:3], decimal=13)
     assert_almost_equal(infl.cov_ratio, infl_r2[:,4], decimal=14)
+
+    # smoke test just to make sure it works, results are already tested
+    df = infl.summary_frame()
+    assert_(isinstance(df, DataFrame))
 
 
 if __name__ == '__main__':
