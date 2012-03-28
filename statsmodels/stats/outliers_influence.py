@@ -543,7 +543,7 @@ class Influence(object):
 
         return dfbeta.join(summary_data)
 
-    def summary_obs(self, float_fmt="%6.3f"):
+    def summary_table(self, float_fmt="%6.3f"):
         '''create a summary table with all influence and outlier measures
 
         This does currently not distinguish between statistics that can be
@@ -600,7 +600,7 @@ class Influence(object):
                            html_fmt=fmt_html)
 
 
-def summary_obs(res, alpha=0.05):
+def summary_table(res, alpha=0.05):
     '''generate summary table of outlier and influence similar to SAS
 
     Parameters
@@ -773,8 +773,8 @@ if __name__ == '__main__':
     infl = Influence(res_ols)
     print infl.resid_studentized_external
     print infl.resid_studentized_internal
-    print infl.summary_obs()
-    print summary_obs(res, alpha=0.05)[0]
+    print infl.summary_table()
+    print summary_table(res, alpha=0.05)[0]
 
 '''
 >>> res.resid
