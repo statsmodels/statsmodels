@@ -626,6 +626,70 @@ def grangertest():
     grangertest = dict(fvalue=1.589672703015157, pvalue=0.178717196987075,
                        df=(198,193))
 
+
+def test_influence_wrapped():
+    from pandas import DataFrame, Series
+    from pandas.util.testing import assert_series_equal
+
+    d = macrodata.load_pandas().data
+    #growth rates
+    gs_l_realinv = 400 * np.log(d['realinv']).diff().dropna()
+    gs_l_realgdp = 400 * np.log(d['realgdp']).diff().dropna()
+    lint = d['realint'][:-1]
+
+    # re-index these because they won't conform to lint
+    gs_l_realgdp.index = lint.index
+    gs_l_realinv.index = lint.index
+
+    data = dict(const=np.ones_like(lint), lint=lint, lrealgdp=gs_l_realgdp)
+    #order is important
+    exog = DataFrame(data, columns=['const','lrealgdp','lint'])
+
+    res = OLS(gs_l_realinv, exog).fit()
+
+    #this test is slow
+    import json
+    fp = open(os.path.join(cur_dir,"results/influence_lsdiag_R.json"))
+    lsdiag = json.load(fp)
+
+    #basic
+    # already tested
+    #assert_almost_equal(lsdiag['cov.scaled'],
+    #                    res.cov_params().values.ravel(), decimal=14)
+    #assert_almost_equal(lsdiag['cov.unscaled'],
+    #                    res.normalized_cov_params.values.ravel(), decimal=14)
+
+    infl = oi.Influence(res)
+
+    c0, c1 = infl.cooks_distance #TODO: what's c1, it's pvalues? -ss
+
+
+    #NOTE: we get a hard-cored 5 decimals with pandas testing
+    assert_series_equal(c0, Series(lsdiag['cooks']))
+    assert_series_equal(infl.hat_matrix_diag, Series(lsdiag['hat']))
+    assert_almost_equal(infl.resid_studentized_internal,
+                        Series(lsdiag['std.res']))
+
+    #slow:
+    dffits, dffth = infl.dffits
+    assert_almost_equal(dffits, Series(lsdiag['dfits']))
+    assert_almost_equal(infl.resid_studentized_external,
+                        Series(lsdiag['stud.res']))
+
+    import pandas
+    fn = os.path.join(cur_dir,"results/influence_measures_R.csv")
+    infl_r = pandas.read_csv(fn, index_col=0)
+    conv = lambda s: 1 if s=='TRUE' else 0
+    fn = os.path.join(cur_dir,"results/influence_measures_bool_R.csv")
+    #not used yet:
+    #infl_bool_r  = pandas.read_csv(fn, index_col=0,
+    #                                converters=dict(zip(range(7),[conv]*7)))
+    infl_r2 = np.asarray(infl_r)
+    #TODO: finish wrapping this stuff
+    assert_almost_equal(infl.dfbetas, infl_r2[:,:3], decimal=13)
+    assert_almost_equal(infl.cov_ratio, infl_r2[:,4], decimal=14)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule(argv=[__file__, '-vvs', '-x'], exit=False)
