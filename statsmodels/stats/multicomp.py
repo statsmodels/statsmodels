@@ -1,13 +1,21 @@
+
+
+
+
+import numpy as np
+
 #collect some imports of verified (at least one example) functions
-from statsmodels.sandbox.stats.multicomp import \
-             multipletests, fdrcorrection0, fdrcorrection_twostage, tukeyhsd
+from statsmodels.sandbox.stats.multicomp import tukeyhsd
+#TODO: tukeyhsd not moved yet
+
+
 #==============================================
 #
 # Part 1: Multiple Tests and P-Value Correction
 #
 #==============================================
 
-def ecdf(x):
+def _ecdf(x):
     '''no frills empirical cdf used in fdrcorrection
     '''
     nobs = len(x)
@@ -132,11 +140,11 @@ def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
 
     elif method.lower() in ['fdr_bh', 'fdr_i', 'fdr_p', 'fdri', 'fdrp']:
         #delegate, call with sorted pvals
-        reject, pvals_corrected = fdrcorrection0(pvals, alpha=alpha,
+        reject, pvals_corrected = fdrcorrection(pvals, alpha=alpha,
                                                  method='indep')
     elif method.lower() in ['fdr_by', 'fdr_n', 'fdr_c', 'fdrn', 'fdrcorr']:
         #delegate, call with sorted pvals
-        reject, pvals_corrected = fdrcorrection0(pvals, alpha=alpha,
+        reject, pvals_corrected = fdrcorrection(pvals, alpha=alpha,
                                                  method='n')
 
     elif method.lower() in ['fdr_gbs']:
@@ -168,7 +176,7 @@ def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
             return reject[sortrevind], pvals_corrected[sortrevind], alphacSidak, alphacBonf
 
 #TODO: rename drop 0 at end
-def fdrcorrection0(pvals, alpha=0.05, method='indep'):
+def fdrcorrection(pvals, alpha=0.05, method='indep'):
     '''pvalue correction for false discovery rate
 
     This covers Benjamini/Hochberg for independent or positively correlated and
@@ -214,10 +222,10 @@ def fdrcorrection0(pvals, alpha=0.05, method='indep'):
     sortrevind = pvals_sortind.argsort()
 
     if method in ['i', 'indep', 'p', 'poscorr']:
-        ecdffactor = ecdf(pvals_sorted)
+        ecdffactor = _ecdf(pvals_sorted)
     elif method in ['n', 'negcorr']:
         cm = np.sum(1./np.arange(1, len(pvals_sorted)+1))   #corrected this
-        ecdffactor = ecdf(pvals_sorted) / cm
+        ecdffactor = _ecdf(pvals_sorted) / cm
 ##    elif method in ['n', 'negcorr']:
 ##        cm = np.sum(np.arange(len(pvals)))
 ##        ecdffactor = ecdf(pvals_sorted)/cm
@@ -275,7 +283,7 @@ def fdrcorrection_twostage(pvals, alpha=0.05, iter=False):
     '''
     ntests = len(pvals)
     alpha_prime = alpha/(1+alpha)
-    rej, pvalscorr = fdrcorrection0(pvals, alpha=alpha_prime, method='indep')
+    rej, pvalscorr = fdrcorrection(pvals, alpha=alpha_prime, method='indep')
     r1 = rej.sum()
     if (r1 == 0) or (r1 == ntests):
         return rej, pvalscorr, ntests - r1
@@ -286,7 +294,7 @@ def fdrcorrection_twostage(pvals, alpha=0.05, iter=False):
         alpha_star = alpha_prime * ntests / ntests0
         alpha_stages.append(alpha_star)
         #print ntests0, alpha_star
-        rej, pvalscorr = fdrcorrection0(pvals, alpha=alpha_star, method='indep')
+        rej, pvalscorr = fdrcorrection(pvals, alpha=alpha_star, method='indep')
         ri = rej.sum()
         if (not iter) or ri == ri_old:
             break
