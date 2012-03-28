@@ -161,3 +161,132 @@ def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
             return reject[sortrevind], pvals_corrected, alphacSidak, alphacBonf
         else:
             return reject[sortrevind], pvals_corrected[sortrevind], alphacSidak, alphacBonf
+
+#TODO: rename drop 0 at end
+def fdrcorrection0(pvals, alpha=0.05, method='indep'):
+    '''pvalue correction for false discovery rate
+
+    This covers Benjamini/Hochberg for independent or positively correlated and
+    Benjamini/Yekutieli for general or negatively correlated tests. Both are
+    available in the function multipletests, as method=`fdr_bh`, resp. `fdr_by`.
+
+    Parameters
+    ----------
+    pvals : array_like
+        set of p-values of the individual tests.
+    alpha : float
+        error rate
+    method : {'indep', 'negcorr')
+
+    Returns
+    -------
+    rejected : array, bool
+        True if a hypothesis is rejected, False if not
+    pvalue-corrected : array
+        pvalues adjusted for multiple hypothesis testing to limit FDR
+
+    Notes
+    -----
+
+    If there is prior information on the fraction of true hypothesis, then alpha
+    should be set to alpha * m/m_0 where m is the number of tests,
+    given by the p-values, and m_0 is an estimate of the true hypothesis.
+    (see Benjamini, Krieger and Yekuteli)
+
+    The two-step method of Benjamini, Krieger and Yekutiel that estimates the number
+    of false hypotheses will be available (soon).
+
+    Method names can be abbreviated to first letter, 'i' or 'p' for fdr_bh and 'n' for
+    fdr_by.
+
+
+
+    '''
+    pvals = np.asarray(pvals)
+
+    pvals_sortind = np.argsort(pvals)
+    pvals_sorted = pvals[pvals_sortind]
+    sortrevind = pvals_sortind.argsort()
+
+    if method in ['i', 'indep', 'p', 'poscorr']:
+        ecdffactor = ecdf(pvals_sorted)
+    elif method in ['n', 'negcorr']:
+        cm = np.sum(1./np.arange(1, len(pvals_sorted)+1))   #corrected this
+        ecdffactor = ecdf(pvals_sorted) / cm
+##    elif method in ['n', 'negcorr']:
+##        cm = np.sum(np.arange(len(pvals)))
+##        ecdffactor = ecdf(pvals_sorted)/cm
+    else:
+        raise ValueError('only indep and necorr implemented')
+    reject = pvals_sorted < ecdffactor*alpha
+    if reject.any():
+        rejectmax = max(np.nonzero(reject)[0])
+    else:
+        rejectmax = 0
+    reject[:rejectmax] = True
+
+    pvals_corrected_raw = pvals_sorted / ecdffactor
+    pvals_corrected = np.minimum.accumulate(pvals_corrected_raw[::-1])[::-1]
+    pvals_corrected[pvals_corrected>1] = 1
+    return reject[sortrevind], pvals_corrected[sortrevind]
+    #return reject[pvals_sortind.argsort()]
+
+def fdrcorrection_twostage(pvals, alpha=0.05, iter=False):
+    '''(iterated) two stage linear step-up procedure with estimation of number of true
+    hypotheses
+
+    Benjamini, Krieger and Yekuteli, procedure in Definition 6
+
+    Parameters
+    ----------
+    pvals : array_like
+        set of p-values of the individual tests.
+    alpha : float
+        error rate
+    method : {'indep', 'negcorr')
+
+    Returns
+    -------
+    rejected : array, bool
+        True if a hypothesis is rejected, False if not
+    pvalue-corrected : array
+        pvalues adjusted for multiple hypotheses testing to limit FDR
+    m0 : int
+        ntest - rej, estimated number of true hypotheses
+    alpha_stages : list of floats
+        A list of alphas that have been used at each stage
+
+    Notes
+    -----
+    The returned corrected p-values, are from the last stage of the fdr_bh linear step-up
+    procedure (fdrcorrection0 with method='indep')
+
+    BKY described several other multi-stage methods, which would be easy to implement.
+    However, in their simulation the simple two-stage method (with iter=False) was the
+    most robust to the presence of positive correlation
+
+    TODO: What should be returned?
+
+    '''
+    ntests = len(pvals)
+    alpha_prime = alpha/(1+alpha)
+    rej, pvalscorr = fdrcorrection0(pvals, alpha=alpha_prime, method='indep')
+    r1 = rej.sum()
+    if (r1 == 0) or (r1 == ntests):
+        return rej, pvalscorr, ntests - r1
+    ri_old = r1
+    alpha_stages = [alpha_prime]
+    while 1:
+        ntests0 = ntests - ri_old
+        alpha_star = alpha_prime * ntests / ntests0
+        alpha_stages.append(alpha_star)
+        #print ntests0, alpha_star
+        rej, pvalscorr = fdrcorrection0(pvals, alpha=alpha_star, method='indep')
+        ri = rej.sum()
+        if (not iter) or ri == ri_old:
+            break
+        elif ri < ri_old:
+            raise RuntimeError(" oops - shouldn't be here")
+        ri_old = ri
+
+    return rej, pvalscorr, ntests - ri, alpha_stages
