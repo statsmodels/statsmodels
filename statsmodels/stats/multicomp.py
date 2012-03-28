@@ -7,6 +7,11 @@ from statsmodels.sandbox.stats.multicomp import \
 #
 #==============================================
 
+def ecdf(x):
+    '''no frills empirical cdf used in fdrcorrection
+    '''
+    nobs = len(x)
+    return np.arange(1,nobs+1)/float(nobs)
 
 def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
     '''test results and p-value correction for multiple tests
