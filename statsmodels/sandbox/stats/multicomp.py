@@ -88,6 +88,9 @@ import copy
 from scipy import stats
 from statsmodels.iolib.table import SimpleTable
 from numpy.testing import assert_almost_equal, assert_equal
+#temporary circular import
+from statsmodels.stats.multicomp import multipletests
+
 
 
 qcrit = '''
@@ -146,7 +149,29 @@ def get_tukeyQcrit(k, df, alpha=0.05):
         intp = interpolate.interp1d(crows, cv005[:,k-2])
     elif alpha == 0.01:
         intp = interpolate.interp1d(crows, cv001[:,k-2])
+    else:
+        raise ValueError('only implemented for alpha equal to 0.01 and 0.05')
     return intp(df)
+
+def get_tukeyQcrit2(k, df, alpha=0.05):
+    '''
+    return critical values for Tukey's HSD (Q)
+
+    Parameters
+    ----------
+    k : int in {2, ..., 10}
+        number of tests
+    df : int
+        degrees of freedom of error term
+    alpha : {0.05, 0.01}
+        type 1 error, 1-confidence level
+
+
+
+    not enough error checking for limitations
+    '''
+    from statsmodels.stats.libqsturng import qsturng
+    return qsturng(1-alpha, k, df)
 
 
 def Tukeythreegene(first,second,third):
@@ -556,7 +581,7 @@ class GroupsStats(object):
         return np.bincount(self.intlab, weights=xtmp**2)
 
     def groupvarwithin(self):
-        return self.groupsswithin()/(self.groupnobs-1).sum()
+        return self.groupsswithin()/(self.groupnobs-1) #.sum()
 
 
 class MultiComparison(object):
@@ -697,8 +722,8 @@ class MultiComparison(object):
         means = self.groupstats.groupmean
         nobs = self.groupstats.groupnobs
         #var_ = self.groupstats.groupvarwithin() #possibly an error in varcorrection in this case
-        var_ = np.var(self.groupstats.groupdemean())
-        res = tukeyhsd(means, nobs, var_, df=None, alpha=0.05, q_crit=None)
+        var_ = np.var(self.groupstats.groupdemean(), ddof=len(means))
+        res = tukeyhsd(means, nobs, var_, df=None, alpha=alpha, q_crit=None)
 
         resarr = np.array(zip(res[0][0], res[0][1],
                                   np.round(res[2],4),
@@ -711,7 +736,7 @@ class MultiComparison(object):
                               ('lower',float),
                               ('upper',float),
                               ('reject', np.bool8)])
-        summtab = sm.iolib.SimpleTable(resarr, headers=resarr.dtype.names)
+        summtab = SimpleTable(resarr, headers=resarr.dtype.names)
         summtab.title = 'Multiple Comparison of Means - Tukey HSD, FWER=%4.2f' % alpha
 
         return summtab, res
@@ -1008,7 +1033,7 @@ def tukeyhsd(mean_all, nobs_all, var_all, df=None, alpha=0.05, q_crit=None):
 
     df_total_ = max(df_total, 5)  #TODO: smallest df in table
     if q_crit is None:
-        q_crit = get_tukeyQcrit(n_means, df_total, alpha=alpha)
+        q_crit = get_tukeyQcrit2(n_means, df_total, alpha=alpha)
 
     reject = st_range > q_crit
     crit_int = std_pairs * q_crit

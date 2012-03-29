@@ -1,12 +1,14 @@
+'''Multiple Testing and P-Value Correction
 
+
+Author: Josef Perktold
+License: BSD-3
+
+'''
 
 
 
 import numpy as np
-
-#collect some imports of verified (at least one example) functions
-from statsmodels.sandbox.stats.multicomp import tukeyhsd
-#TODO: tukeyhsd not moved yet
 
 
 #==============================================
