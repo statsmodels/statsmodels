@@ -8,6 +8,7 @@ Author: Josef Perktold
 
 import StringIO
 import numpy as np
+from numpy.testing import assert_almost_equal, assert_equal
 
 from statsmodels.stats.libqsturng import qsturng
 
@@ -111,6 +112,17 @@ from statsmodels.sandbox.stats.multicomp import tukeyhsd
 import statsmodels.sandbox.stats.multicomp as multi
 #print tukeyhsd(dta['Brand'], dta['Rust'])
 
+def get_thsd(mci):
+    var_ = np.var(mci.groupstats.groupdemean(), ddof=len(mci.groupsunique))
+    means = mci.groupstats.groupmean
+    nobs = mci.groupstats.groupnobs
+    resi = tukeyhsd(means, nobs, var_, df=None, alpha=0.05, q_crit=qsturng(0.95, len(means), (nobs-1).sum()))
+    print resi[4]
+    var2 = (mci.groupstats.groupvarwithin() * (nobs - 1)).sum() \
+                                                        / (nobs - 1).sum()
+    assert_almost_equal(var_, var2, decimal=14)
+    return resi
+
 mc = multi.MultiComparison(dta['Rust'], dta['Brand'])
 res = mc.tukeyhsd()
 print res[0]
@@ -122,18 +134,17 @@ print res2[0]
 mc2s = multi.MultiComparison(dta2['StressReduction'][3:29], dta2['Treatment'][3:29])
 res2s = mc2s.tukeyhsd()
 print res2s[0]
-print mc2s.tukeyhsd(alpha=0.01)
+res2s_001 = mc2s.tukeyhsd(alpha=0.01)
+#R result
+tukeyhsd2s = np.array([1.888889,0.8888889,-1,0.2658549,-0.5908785,-2.587133,3.511923,2.368656,0.5871331,0.002837638,0.150456,0.1266072]).reshape(3,4, order='F')
+assert_almost_equal(res2s_001[1][4], tukeyhsd2s[:,1:3], decimal=3)
 
 mc3 = multi.MultiComparison(dta3['Relief'], dta3['Brand'])
 res3 = mc3.tukeyhsd()
 print res3[0]
 
 for mci in [mc, mc2, mc3]:
-    var_ = np.var(mci.groupstats.groupdemean(), ddof=len(mci.groupsunique))
-    means = mci.groupstats.groupmean
-    nobs = mci.groupstats.groupnobs
-    resi = tukeyhsd(means, nobs, var_, df=None, alpha=0.05, q_crit=qsturng(0.95, len(means), (nobs-1).sum()))
-    print resi[4]
+    get_thsd(mci)
 
 from scipy import stats
 print mc2.allpairtest(stats.ttest_ind, method='b')[0]
@@ -174,3 +185,14 @@ ss5 = '''\
 1 - 3	-0.260	-3.909	3.389	'''
 
 dta5 = np.recfromtxt(StringIO.StringIO(ss5), names = ('pair', 'mean', 'lower', 'upper', 'sig'), delimiter='\t')
+
+sas_ = dta5[[1,3,2]]
+confint1 = res3[1][4]
+confint2 = sas_[['lower','upper']].view(float).reshape((3,2))
+assert_almost_equal(confint1, confint2, decimal=2)
+reject1 = res3[1][1]
+reject2 = sas_['sig'] == '***'
+assert_equal(reject1, reject2)
+meandiff1 = res3[1][2]
+meandiff2 = sas_['mean']
+assert_almost_equal(meandiff1, meandiff2, decimal=14)
