@@ -74,7 +74,7 @@ Outliers and influence measures
 .. autosummary::
    :toctree: generated/
 
-   Influence
+   OLSInfluence
    variance_inflation_factor
 
 See also the notes on :ref:`notes on regression diagnostics <diagnostics>`

@@ -101,7 +101,7 @@ def variance_inflation_factor(exog, exog_idx):
     return vif
 
 
-class Influence(object):
+class OLSInfluence(object):
     '''class to calculate outlier and influence measures for OLS result
 
     Parameters

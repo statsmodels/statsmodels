@@ -1520,8 +1520,8 @@ class OLSResults(RegressionResults):
             outlier measures for the OLS regression
 
         '''
-        from statsmodels.stats.outliers_influence import Influence
-        return Influence(self)
+        from statsmodels.stats.outliers_influence import OLSInfluence
+        return OLSInfluence(self)
 
 class RegressionResultsWrapper(wrap.ResultsWrapper):
 

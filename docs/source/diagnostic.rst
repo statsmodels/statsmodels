@@ -197,7 +197,7 @@ robust regression results RLM
     And the weights give an idea of how much a particular observation is
     down-weighted according to the scaling asked for.
 
-:py:class:`Influence <statsmodels.stats.outliers_influence.Influence>`
+:py:class:`Influence <statsmodels.stats.outliers_influence.OLSInfluence>`
    Class in stats.outliers_influence, most standard measures for outliers
    and influence are available as methods or attributes given a fitted
    OLS model. This is mainly written for OLS, some but not all measures
