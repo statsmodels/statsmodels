@@ -1510,7 +1510,7 @@ strong multicollinearity or other numerical problems.''' % condno
 
 class OLSResults(RegressionResults):
 
-    def get_outlier_influence(self):
+    def get_influence(self):
         '''get an instance of Influence with influence and outlier measures
 
         Returns
