@@ -1510,7 +1510,7 @@ strong multicollinearity or other numerical problems.''' % condno
 
 class OLSResults(RegressionResults):
 
-    def get_outlier_influence(self):
+    def get_influence(self):
         '''get an instance of Influence with influence and outlier measures
 
         Returns
@@ -1520,8 +1520,8 @@ class OLSResults(RegressionResults):
             outlier measures for the OLS regression
 
         '''
-        from statsmodels.stats.outliers_influence import Influence
-        return Influence(self)
+        from statsmodels.stats.outliers_influence import OLSInfluence
+        return OLSInfluence(self)
 
 class RegressionResultsWrapper(wrap.ResultsWrapper):
 

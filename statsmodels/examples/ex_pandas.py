@@ -27,7 +27,7 @@ print results.summary()
 print results.params
 print results.cov_params()
 
-infl = results.get_outlier_influence()
+infl = results.get_influence()
 print infl.summary_obs()
 
 raise
