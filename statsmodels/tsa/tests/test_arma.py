@@ -243,6 +243,7 @@ class Test_Y_ARMA41_Const(CheckArmaResults, CheckForecast):
         cls.decimal_cov_params = DECIMAL_3
         cls.decimal_fittedvalues = DECIMAL_3
         cls.decimal_resid = DECIMAL_3
+        cls.decimal_params = DECIMAL_3
         if fast_kalman:
             cls.decimal_cov_params -= 2
             cls.decimal_bse -= 1
