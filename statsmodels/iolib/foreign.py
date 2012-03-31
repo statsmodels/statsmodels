@@ -16,6 +16,13 @@ import numpy as np
 from numpy.lib._iotools import _is_string_like, easy_dtype
 
 
+def is_py3():
+    import sys
+    if sys.version_info[0] == 3:
+        return True
+    return False
+PY3 = is_py3()
+
 ### Helper classes for StataReader ###
 
 class _StataMissingValue(object):
@@ -111,10 +118,12 @@ class StataReader(object):
     ----------
     file : file-like
         A file-like object representing a Stata .dta file.
-
     missing_values : bool
         If missing_values is True, parse missing_values and return a
         Missing Values object instead of None.
+    encoding : string, optional
+        Used for Python 3 only. Encoding to use when reading the .dta file.
+        Defaults to `locale.getpreferredencoding`
 
     See also
     --------
@@ -159,7 +168,12 @@ class StataReader(object):
             (-2147483647, 2147483620), 'f': (-1.701e+38, +1.701e+38), 'd':
             (-1.798e+308, +8.988e+307) }
 
-    def __init__(self, fname, missing_values=False):
+    def __init__(self, fname, missing_values=False, encoding=None):
+        if encoding == None:
+            import locale
+            self._encoding = locale.getpreferredencoding()
+        else:
+            self._encoding = encoding
         self._missing_values = missing_values
         self._parse_header(fname)
 
@@ -281,14 +295,24 @@ class StataReader(object):
 
     ### Private methods
 
-    def _null_terminate(self, s):
-        try:
-            return s.lstrip('\x00')[:s.index('\x00')]
-        except Exception:
-            return s
+    def _null_terminate(self, s, encoding):
+        if PY3: # have bytes not strings, so must decode
+            null_byte = b'\x00'
+            try:
+                s = s.lstrip(null_byte)[:s.index(null_byte)]
+            except:
+                pass
+            return s.decode(encoding)
+        else:
+            null_byte = '\x00'
+            try:
+                s = s.lstrip(null_byte)[:s.index(null_byte)]
+            except:
+                return s
 
     def _parse_header(self, file_object):
         self._file = file_object
+        encoding = self._encoding
 
         # parse headers
         self._header['ds_format'] = unpack('b', self._file.read(1))[0]
@@ -307,29 +331,31 @@ incorrect." % self._header['ds_format'])
             self._header['nobs'] = unpack(byteorder+'i', self._file.read(4))[0]
         else:
             self._header['nobs'] = unpack(byteorder+'i', self._file.read(4))[0]
-        self._header['data_label'] = self._null_terminate(self._file.read(81))
-        self._header['time_stamp'] = self._null_terminate(self._file.read(18))
+        self._header['data_label'] = self._null_terminate(self._file.read(81),
+                                                            encoding)
+        self._header['time_stamp'] = self._null_terminate(self._file.read(18),
+                                                            encoding)
 
         # parse descriptors
         typlist =[ord(self._file.read(1)) for i in range(nvar)]
         self._header['typlist'] = [self.TYPE_MAP[typ] for typ in typlist]
         self._header['dtyplist'] = [self.DTYPE_MAP[typ] for typ in typlist]
-        self._header['varlist'] = [self._null_terminate(self._file.read(33)) \
-                for i in range(nvar)]
+        self._header['varlist'] = [self._null_terminate(self._file.read(33),
+                                    encoding) for i in range(nvar)]
         self._header['srtlist'] = unpack(byteorder+('h'*(nvar+1)),
                 self._file.read(2*(nvar+1)))[:-1]
         if self._header['ds_format'] <= 113:
             self._header['fmtlist'] = \
-                    [self._null_terminate(self._file.read(12)) \
+                    [self._null_terminate(self._file.read(12), encoding) \
                     for i in range(nvar)]
         else:
             self._header['fmtlist'] = \
-                    [self._null_terminate(self._file.read(49)) \
+                    [self._null_terminate(self._file.read(49), encoding) \
                     for i in range(nvar)]
-        self._header['lbllist'] = [self._null_terminate(self._file.read(33)) \
-                for i in range(nvar)]
-        self._header['vlblist'] = [self._null_terminate(self._file.read(81)) \
-                for i in range(nvar)]
+        self._header['lbllist'] = [self._null_terminate(self._file.read(33),
+                                encoding) for i in range(nvar)]
+        self._header['vlblist'] = [self._null_terminate(self._file.read(81),
+                                encoding) for i in range(nvar)]
 
         # ignore expansion fields
 # When reading, read five bytes; the last four bytes now tell you the size of
@@ -382,7 +408,8 @@ incorrect." % self._header['ds_format'])
             data = [None]*self._header['nvar']
             for i in range(len(data)):
                 if type(typlist[i]) is int:
-                    data[i] = self._null_terminate(self._file.read(typlist[i]))
+                    data[i] = self._null_terminate(self._file.read(typlist[i]),
+                                self._encoding)
                 else:
                     data[i] = self._unpack(typlist[i],
                             self._file.read(self._col_size(i)))
@@ -392,7 +419,7 @@ incorrect." % self._header['ds_format'])
                 self._file.read(self._col_size(i))),
                 range(self._header['nvar']))
 
-def genfromdta(fname, missing_flt=-999., missing_str=""):
+def genfromdta(fname, missing_flt=-999., missing_str="", encoding=None):
     """
     Returns an ndarray from a Stata .dta file.
 
@@ -405,6 +432,9 @@ def genfromdta(fname, missing_flt=-999., missing_str=""):
         any numeric value.
     missing_str : str
         The string to replace missing values with for string variables.
+    encoding : string, optional
+        Used for Python 3 only. Encoding to use when reading the .dta file.
+        Defaults to `locale.getpreferredencoding`
 
     Notes
     ------
@@ -412,12 +442,13 @@ def genfromdta(fname, missing_flt=-999., missing_str=""):
     parser is not written yet.
     """
     if isinstance(fname, basestring):
-        fhd = StataReader(open(fname, 'rb'), missing_values=False)
+        fhd = StataReader(open(fname, 'rb'), missing_values=False,
+                encoding=encoding)
     elif not hasattr(fname, 'read'):
         raise TypeError("The input should be a string or a filehandle. "\
                 "(got %s instead)" % type(fname))
     else:
-        fhd = StataReader(fname, missing_values=False)
+        fhd = StataReader(fname, missing_values=False, encoding=encoding)
 #    validate_names = np.lib._iotools.NameValidator(excludelist=excludelist,
 #                                    deletechars=deletechars,
 #                                    case_sensitive=case_sensitive)
@@ -595,3 +626,8 @@ def savetxt(fname, X, names=None, fmt='%.18e', delimiter=' '):
 
     for row in X:
         fh.write(format % tuple(row) + '\n')
+
+if __name__ == "__main__":
+    import os
+    curdir = os.path.dirname(os.path.abspath(__file__))
+    res1 = genfromdta(curdir+'/../../datasets/macrodata/macrodata.dta')
