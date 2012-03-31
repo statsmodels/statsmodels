@@ -222,7 +222,7 @@ class TestTuckeyHSD3(CheckTuckeyHSD):
 
         self.meandiff2 = sas_['mean']
         self.confint2 = sas_[['lower','upper']].view(float).reshape((3,2))
-        self.reject2 = sas_['sig'] == '***'
+        self.reject2 = sas_['sig'] == asbytes('***')
 
 if __name__ == '__main__':
     import statsmodels.sandbox.stats.multicomp as multi #incomplete refactoring
