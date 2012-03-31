@@ -89,7 +89,7 @@ from scipy import stats
 from statsmodels.iolib.table import SimpleTable
 from numpy.testing import assert_almost_equal, assert_equal
 #temporary circular import
-from statsmodels.stats.multitest import multipletests
+from statsmodels.stats.multitest import multipletests, _ecdf as ecdf, fdrcorrection as fdrcorrection0, fdrcorrection_twostage
 
 
 
