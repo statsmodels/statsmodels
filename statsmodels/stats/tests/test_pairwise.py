@@ -118,50 +118,71 @@ dta3 = np.recfromtxt(StringIO.StringIO(ss3), names = ("Brand", "Relief"))
 dta5 = np.recfromtxt(StringIO.StringIO(ss5), names = ('pair', 'mean', 'lower', 'upper', 'sig'), delimiter='\t')
 sas_ = dta5[[1,3,2]]
 
-from statsmodels.sandbox.stats.multicomp import tukeyhsd
-import statsmodels.sandbox.stats.multicomp as multi
+from statsmodels.stats.multicomp import (tukeyhsd, pairwise_tukeyhsd,
+                                         MultiComparison)
+#import statsmodels.sandbox.stats.multicomp as multi
 #print tukeyhsd(dta['Brand'], dta['Rust'])
 
 def get_thsd(mci, alpha=0.05):
     var_ = np.var(mci.groupstats.groupdemean(), ddof=len(mci.groupsunique))
     means = mci.groupstats.groupmean
     nobs = mci.groupstats.groupnobs
-    resi = tukeyhsd(means, nobs, var_, df=None, alpha=alpha, 
+    resi = tukeyhsd(means, nobs, var_, df=None, alpha=alpha,
                     q_crit=qsturng(1-alpha, len(means), (nobs-1).sum()))
     #print resi[4]
     var2 = (mci.groupstats.groupvarwithin() * (nobs - 1)).sum() \
                                                         / (nobs - 1).sum()
     assert_almost_equal(var_, var2, decimal=14)
     return resi
-    
+
 class CheckTuckeyHSD(object):
-    
+
     @classmethod
     def setup_class_(self):
-        self.mc = multi.MultiComparison(self.endog, self.groups)
+        self.mc = MultiComparison(self.endog, self.groups)
         self.res = self.mc.tukeyhsd(alpha=self.alpha)
-        
+
     def test_multicomptukey(self):
         meandiff1 = self.res[1][2]
         assert_almost_equal(meandiff1, self.meandiff2, decimal=14)
-    
+
         confint1 = self.res[1][4]
         assert_almost_equal(confint1, self.confint2, decimal=2)
-        
+
         reject1 = self.res[1][1]
         assert_equal(reject1, self.reject2)
-        
+
     def test_group_tukey(self):
         res_t = get_thsd(self.mc,alpha=self.alpha)
         assert_almost_equal(res_t[4], self.confint2, decimal=2)
 
+    def test_shortcut_function(self):
+        #check wrapper function
+        res = pairwise_tukeyhsd(self.endog, self.groups, alpha=self.alpha)
+        assert_almost_equal(res[1][4], self.res[1][4], decimal=14)
 
 
-    
-    
-    
+
+class TestTuckeyHSD2(CheckTuckeyHSD):
+
+    @classmethod
+    def setup_class(self):
+        #balanced case
+        self.endog = dta2['StressReduction']
+        self.groups = dta2['Treatment']
+        self.alpha = 0.05
+        self.setup_class_() #in super
+
+        #from R
+        tukeyhsd2s = tukeyhsd = np.array([1.5,1,-0.5,0.3214915,-0.1785085,-1.678509,2.678509,2.178509,0.6785085,0.01056279,0.1079035,0.5513904]).reshape(3,4, order='F')
+        self.meandiff2 = tukeyhsd2s[:, 0]
+        self.confint2 = tukeyhsd2s[:, 1:3]
+        pvals = tukeyhsd2s[:, 3]
+        self.reject2 = pvals < 0.05
+
+
 class TestTuckeyHSD2s(CheckTuckeyHSD):
-    
+
     @classmethod
     def setup_class(self):
         #unbalanced case
@@ -169,9 +190,7 @@ class TestTuckeyHSD2s(CheckTuckeyHSD):
         self.groups = dta2['Treatment'][3:29]
         self.alpha = 0.01
         self.setup_class_()
-        #super(self.__class__).setup_class()
-        #CheckTuckeyHSD.setup_class_()
-        
+
         #from R
         tukeyhsd2s = np.array([1.8888888888888889,0.888888888888889,-1,0.2658549,-0.5908785,
                                -2.587133,3.511923,2.368656,0.5871331,
@@ -184,7 +203,7 @@ class TestTuckeyHSD2s(CheckTuckeyHSD):
 
 
 class TestTuckeyHSD3(CheckTuckeyHSD):
-    
+
     @classmethod
     def setup_class(self):
         #SAS case
@@ -194,20 +213,22 @@ class TestTuckeyHSD3(CheckTuckeyHSD):
         self.setup_class_()
         #super(self, self).setup_class_()
         #CheckTuckeyHSD.setup_class_()
-        
+
         self.meandiff2 = sas_['mean']
         self.confint2 = sas_[['lower','upper']].view(float).reshape((3,2))
         self.reject2 = sas_['sig'] == '***'
-        
+
 if __name__ == '__main__':
+    import statsmodels.sandbox.stats.multicomp as multi #incomplete refactoring
+
     mc = multi.MultiComparison(dta['Rust'], dta['Brand'])
     res = mc.tukeyhsd()
     print res[0]
-    
+
     mc2 = multi.MultiComparison(dta2['StressReduction'], dta2['Treatment'])
     res2 = mc2.tukeyhsd()
     print res2[0]
-    
+
     mc2s = multi.MultiComparison(dta2['StressReduction'][3:29], dta2['Treatment'][3:29])
     res2s = mc2s.tukeyhsd()
     print res2s[0]
@@ -215,17 +236,17 @@ if __name__ == '__main__':
     #R result
     tukeyhsd2s = np.array([1.888889,0.8888889,-1,0.2658549,-0.5908785,-2.587133,3.511923,2.368656,0.5871331,0.002837638,0.150456,0.1266072]).reshape(3,4, order='F')
     assert_almost_equal(res2s_001[1][4], tukeyhsd2s[:,1:3], decimal=3)
-    
+
     mc3 = multi.MultiComparison(dta3['Relief'], dta3['Brand'])
     res3 = mc3.tukeyhsd()
     print res3[0]
-    
+
     for mci in [mc, mc2, mc3]:
         get_thsd(mci)
-    
+
     from scipy import stats
     print mc2.allpairtest(stats.ttest_ind, method='b')[0]
-    
+
     '''same as SAS:
     >>> np.var(mci.groupstats.groupdemean(), ddof=3)
     4.6773333333333351
@@ -239,7 +260,7 @@ if __name__ == '__main__':
            [-3.38901492,  3.90901492],
            [-7.98901492, -0.69098508]])
     '''
-    
+
     ss5 = '''\
     Comparisons significant at the 0.05 level are indicated by ***.
     BRAND
@@ -252,7 +273,7 @@ if __name__ == '__main__':
     3 - 1	0.260	-3.389	3.909	 -
     1 - 2	-4.600	-8.249	-0.951	***
     1 - 3	-0.260	-3.909	3.389	'''
-    
+
     ss5 = '''\
     2 - 3	4.340	0.691	7.989	***
     2 - 1	4.600	0.951	8.249	***
@@ -260,9 +281,9 @@ if __name__ == '__main__':
     3 - 1	0.260	-3.389	3.909	 -
     1 - 2	-4.600	-8.249	-0.951	***
     1 - 3	-0.260	-3.909	3.389	'''
-    
+
     dta5 = np.recfromtxt(StringIO.StringIO(ss5), names = ('pair', 'mean', 'lower', 'upper', 'sig'), delimiter='\t')
-    
+
     sas_ = dta5[[1,3,2]]
     confint1 = res3[1][4]
     confint2 = sas_[['lower','upper']].view(float).reshape((3,2))
