@@ -415,7 +415,7 @@ T = OrderedDict([(0.100, OrderedDict([(float(L.split()[0]),
 R = OrderedDict(zip([2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,
                      17,18,19,20,30,40,60,80,100], range(24)))
 
-inf = float('inf')
+inf = np.inf
 # we will need a tinv function
 _tinv = lambda p, df : scipy.stats.t.isf(p, df)
 _phi = lambda p : scipy.stats.norm.isf(p)
