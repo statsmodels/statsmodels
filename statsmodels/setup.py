@@ -27,6 +27,9 @@ def configuration(parent_package='', top_path=None):
 
     #TODO: delegate the non-test stuff to subpackages
     config.add_data_files('sandbox/panel/test_data.txt')
+    config.add_data_files('stats/libqsturng/tests/bootleg.dat')
+    config.add_data_files('stats/libqsturng/CH.r')
+    config.add_data_files('stats/libqsturng/LICENSE.txt')
 
     curdir = os.path.abspath(os.path.dirname(__file__))
 
