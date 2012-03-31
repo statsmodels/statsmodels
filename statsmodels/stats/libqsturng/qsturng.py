@@ -682,6 +682,11 @@ def _qsturng(p, r, v):
             raise ValueError('v must be > 1 when p >= .9')
 
     # The easy case. A tabled value is requested.
+
+    #numpy 1.4.1: TypeError: unhashable type: 'numpy.ndarray' :
+    p = float(p)
+    if isinstance(v, np.ndarray):
+        v = v.item()
     if A.has_key((p,v)):
         y = _func(A[(p,v)], p, r, v) + 1.
 

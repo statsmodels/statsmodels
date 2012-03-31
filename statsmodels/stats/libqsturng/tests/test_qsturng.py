@@ -5,6 +5,8 @@
 @dec.slow are empirical (test within error limits) and intended to more
 extensively ensure the stability and accuracy of the functions"""
 
+from __future__ import with_statement
+
 from numpy.testing import TestCase, rand, assert_, assert_equal, \
     assert_almost_equal, assert_array_almost_equal, assert_array_equal, \
     assert_approx_equal, assert_raises, run_module_suite, dec
@@ -45,7 +47,7 @@ class test_qsturng(TestCase):
         # p >= .9, v = 0
         assert_raises(ValueError, qsturng, .9,5,0)
         # r < 2
-        assert_raises(ValueError, qsturng, .9,1,2)
+        assert_raises((ValueError, OverflowError), qsturng, .9,1,2)
 
     def test_handful_to_tbl(self):
         cases = [(0.75, 30.0, 12.0, 5.01973488482),
@@ -145,7 +147,7 @@ class test_psturng(TestCase):
         # q < .1
         assert_raises(ValueError, psturng, -.1,5,6)
         # r < 2
-        assert_raises(ValueError, psturng, .9,1,2)
+        assert_raises((ValueError, OverflowError), psturng, .9,1,2)
 
     def test_handful_to_known_values(self):
         cases = [(0.71499578726111435, 67, 956.70742488392386, 5.0517658443070692),
