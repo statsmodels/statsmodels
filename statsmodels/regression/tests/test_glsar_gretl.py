@@ -393,7 +393,7 @@ class TestGLSARGretl(object):
 
         vif2 = [oi.variance_inflation_factor(res.model.exog, k) for k in [1,2]]
 
-        infl = oi.Influence(res_ols)
+        infl = oi.OLSInfluence(res_ols)
         #print np.max(np.abs(lev['DFFITS'] - infl.dffits[0]))
         #print np.max(np.abs(lev['leverage'] - infl.hat_matrix_diag))
         #print np.max(np.abs(lev['influence'] - infl.influence))  #just added this based on Gretl

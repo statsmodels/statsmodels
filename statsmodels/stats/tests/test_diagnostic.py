@@ -568,7 +568,7 @@ class TestDiagnosticG(object):
         assert_almost_equal(lsdiag['cov.unscaled'],
                             res.normalized_cov_params.ravel(), decimal=14)
 
-        infl = oi.Influence(res)
+        infl = oi.OLSInfluence(res)
 
         c0, c1 = infl.cooks_distance #TODO: what's c1
 
@@ -659,7 +659,7 @@ def test_influence_wrapped():
     #assert_almost_equal(lsdiag['cov.unscaled'],
     #                    res.normalized_cov_params.values.ravel(), decimal=14)
 
-    infl = oi.Influence(res)
+    infl = oi.OLSInfluence(res)
 
     c0, c1 = infl.cooks_distance #TODO: what's c1, it's pvalues? -ss
 
