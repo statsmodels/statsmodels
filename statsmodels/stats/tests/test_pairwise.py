@@ -6,7 +6,7 @@ Created on Wed Mar 28 15:34:18 2012
 Author: Josef Perktold
 """
 
-import StringIO
+from statsmodels.compatnp.py3k import BytesIO, asbytes
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
 
@@ -112,10 +112,16 @@ ss5 = '''\
 1 - 2	-4.600	-8.249	-0.951	***
 1 - 3	-0.260	-3.909	3.389	'''
 
-dta = np.recfromtxt(StringIO.StringIO(ss), names=("Rust","Brand","Replication"))
-dta2 = np.recfromtxt(StringIO.StringIO(ss2), names = ("idx", "Treatment", "StressReduction"))
-dta3 = np.recfromtxt(StringIO.StringIO(ss3), names = ("Brand", "Relief"))
-dta5 = np.recfromtxt(StringIO.StringIO(ss5), names = ('pair', 'mean', 'lower', 'upper', 'sig'), delimiter='\t')
+#accommodate recfromtxt for python 3.2, requires bytes
+ss = asbytes(ss)
+ss2 = asbytes(ss2)
+ss3 = asbytes(ss3)
+ss5 = asbytes(ss5)
+
+dta = np.recfromtxt(BytesIO(ss), names=("Rust","Brand","Replication"))
+dta2 = np.recfromtxt(BytesIO(ss2), names = ("idx", "Treatment", "StressReduction"))
+dta3 = np.recfromtxt(BytesIO(ss3), names = ("Brand", "Relief"))
+dta5 = np.recfromtxt(BytesIO(ss5), names = ('pair', 'mean', 'lower', 'upper', 'sig'), delimiter='\t')
 sas_ = dta5[[1,3,2]]
 
 from statsmodels.stats.multicomp import (tukeyhsd, pairwise_tukeyhsd,
