@@ -2,8 +2,9 @@
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
 
-from statsmodels.sandbox.stats.multicomp import \
-             multipletests, fdrcorrection0, fdrcorrection_twostage, tukeyhsd
+from statsmodels.stats.multitest import (multipletests, fdrcorrection,
+                                         fdrcorrection_twostage)
+from statsmodels.stats.multicomp import tukeyhsd
 
 pval0 = np.array([0.838541367553 , 0.642193923795 , 0.680845947633 ,
         0.967833824309 , 0.71626938238 , 0.177096952723 , 5.23656777208e-005 ,
@@ -65,9 +66,9 @@ def test_multi_pvalcorrection():
             pvalscorr = multipletests(pval0, alpha=0.1, method=v[1])[1][r_sortindex]
             assert_almost_equal(pvalscorr, res_multtest[:,v[0]], 15)
 
-    pvalscorr = np.sort(fdrcorrection0(pval0, method='n')[1])
+    pvalscorr = np.sort(fdrcorrection(pval0, method='n')[1])
     assert_almost_equal(pvalscorr, res_multtest[:,7], 15)
-    pvalscorr = np.sort(fdrcorrection0(pval0, method='i')[1])
+    pvalscorr = np.sort(fdrcorrection(pval0, method='i')[1])
     assert_almost_equal(pvalscorr, res_multtest[:,6], 15)
 
 def test_hommel():
