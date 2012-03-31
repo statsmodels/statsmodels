@@ -15,6 +15,7 @@ import numpy as np
 
 from numpy.testing import (assert_, assert_almost_equal, assert_equal,
                            assert_approx_equal)
+from nose import SkipTest
 
 from statsmodels.regression.linear_model import OLS, GLSAR
 from statsmodels.tools.tools import add_constant
@@ -557,8 +558,15 @@ class TestDiagnosticG(object):
 
     def test_influence(self):
         res = self.res
+
         #this test is slow
-        import json
+        infl = oi.OLSInfluence(res)
+
+        try:
+            import json
+        except ImportError:
+            raise SkipTest
+
         fp = open(os.path.join(cur_dir,"results/influence_lsdiag_R.json"))
         lsdiag = json.load(fp)
 
@@ -567,8 +575,6 @@ class TestDiagnosticG(object):
                             res.cov_params().ravel(), decimal=14)
         assert_almost_equal(lsdiag['cov.unscaled'],
                             res.normalized_cov_params.ravel(), decimal=14)
-
-        infl = oi.OLSInfluence(res)
 
         c0, c1 = infl.cooks_distance #TODO: what's c1
 
@@ -647,11 +653,6 @@ def test_influence_wrapped():
 
     res = OLS(gs_l_realinv, exog).fit()
 
-    #this test is slow
-    import json
-    fp = open(os.path.join(cur_dir,"results/influence_lsdiag_R.json"))
-    lsdiag = json.load(fp)
-
     #basic
     # already tested
     #assert_almost_equal(lsdiag['cov.scaled'],
@@ -660,6 +661,18 @@ def test_influence_wrapped():
     #                    res.normalized_cov_params.values.ravel(), decimal=14)
 
     infl = oi.OLSInfluence(res)
+
+    # smoke test just to make sure it works, results separately tested
+    df = infl.summary_frame()
+    assert_(isinstance(df, DataFrame))
+
+    #this test is slow
+    try:
+        import json
+    except ImportError:
+        raise SkipTest
+    fp = open(os.path.join(cur_dir,"results/influence_lsdiag_R.json"))
+    lsdiag = json.load(fp)
 
     c0, c1 = infl.cooks_distance #TODO: what's c1, it's pvalues? -ss
 
@@ -688,10 +701,6 @@ def test_influence_wrapped():
     #TODO: finish wrapping this stuff
     assert_almost_equal(infl.dfbetas, infl_r2[:,:3], decimal=13)
     assert_almost_equal(infl.cov_ratio, infl_r2[:,4], decimal=14)
-
-    # smoke test just to make sure it works, results are already tested
-    df = infl.summary_frame()
-    assert_(isinstance(df, DataFrame))
 
 
 if __name__ == '__main__':

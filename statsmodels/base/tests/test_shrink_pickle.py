@@ -12,6 +12,13 @@ import statsmodels.api as sm
 
 from numpy.testing import assert_, assert_almost_equal, assert_equal
 
+from nose import SkipTest
+import platform
+iswin = platform.system() == 'Windows'
+npversionless15 = np.__version__ < '1.5'
+winoldnp = iswin & npversionless15
+
+
 
 def check_pickle(obj):
     from statsmodels.compatnp.py3k import BytesIO
@@ -41,6 +48,8 @@ class RemoveDataPickle(object):
 
 
     def test_remove_data_pickle(self):
+        if winoldnp:
+            raise SkipTest
         results = self.results
         xf = self.xf
 
