@@ -68,10 +68,6 @@ class GLM(base.LikelihoodModel):
         See Parameters.
     exog : array
         See Parameters.
-    history : dict
-        Contains params and deviance information for the iterations.
-    iteration : int
-        The number of iterations that fit has run.  Initialized at 0.
     family : family class instance
         A pointer to the distribution family of the model.
     mu : array
