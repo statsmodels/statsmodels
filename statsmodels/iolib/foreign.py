@@ -14,6 +14,7 @@ from struct import unpack, calcsize
 import sys
 import numpy as np
 from numpy.lib._iotools import _is_string_like, easy_dtype
+from statsmodels.compatnp.py3k import asbytes
 
 
 def is_py3():
@@ -297,14 +298,14 @@ class StataReader(object):
 
     def _null_terminate(self, s, encoding):
         if PY3: # have bytes not strings, so must decode
-            null_byte = b'\x00'
+            null_byte = asbytes('\x00')
             try:
                 s = s.lstrip(null_byte)[:s.index(null_byte)]
             except:
                 pass
             return s.decode(encoding)
         else:
-            null_byte = '\x00'
+            null_byte = asbytes('\x00')
             try:
                 return s.lstrip(null_byte)[:s.index(null_byte)]
             except:
