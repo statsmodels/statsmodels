@@ -285,11 +285,6 @@ class GLM(base.LikelihoodModel):
         if not self.scaletype:
             if isinstance(self.family, (families.Binomial, families.Poisson)):
                 return 1.
-            #make it so you can run from source tree
-#            famstring = self.family.__str__().lower()
-#            if 'poisson' in famstring or \
-#                ('binomial' in famstring and 'negative' not in famstring):
-#                return 1.
             else:
                 resid = self.endog - mu
                 return ((np.power(resid, 2) / self.family.variance(mu)).sum() \
@@ -374,9 +369,9 @@ class GLM(base.LikelihoodModel):
                     np.ones((endog.shape[0]))
         self.scaletype = scale
         if isinstance(self.family, families.Binomial):
-# this checks what kind of data is given for Binomial.
-# family will need a reference to endog if this is to be removed from the
-# preprocessing
+        # this checks what kind of data is given for Binomial.
+        # family will need a reference to endog if this is to be removed from
+        # preprocessing
             self.endog = self.family.initialize(self.endog)
 
         if hasattr(self, 'offset'):
@@ -393,8 +388,9 @@ class GLM(base.LikelihoodModel):
         self.iteration += 1
         dev = self.family.deviance(self.endog, mu)
         if np.isnan(dev):
-            raise ValueError("The first guess on the deviance function \
-returned a nan.  This could be a boundary problem and should be reported.")
+            raise ValueError("The first guess on the deviance function "
+                             "returned a nan.  This could be a boundary "
+                             " problem and should be reported.")
         else:
             self.history['deviance'].append(dev)
             # first guess on the deviance is assumed to be scaled by 1.
@@ -502,7 +498,6 @@ class GLMResults(base.LikelihoodModelResults):
     --------
     statsmodels.LikelihoodModelResults
     '''
-#TODO: add a z value function to LLMResults
 
     def __init__(self, model, params, normalized_cov_params, scale):
         super(GLMResults, self).__init__(model, params,
@@ -516,7 +511,8 @@ class GLMResults(base.LikelihoodModelResults):
         self.df_model = model.df_model
         self.pinv_wexog = model.pinv_wexog
         self._cache = resettable_cache()
-# are these intermediate results needed or can we just call the model's attributes?
+        # are these intermediate results needed or can we just
+        # call the model's attributes?
 
     @cache_readonly
     def resid_response(self):
