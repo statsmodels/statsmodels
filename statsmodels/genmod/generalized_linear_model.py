@@ -33,6 +33,10 @@ from statsmodels.tools.sm_exceptions import PerfectSeparationError
 
 __all__ = ['GLM']
 
+def _check_convergence(criterion, iteration, tol, maxiter):
+    return not ((np.fabs(criterion[iteration] - criterion[iteration-1]) > tol)
+            and iteration <= maxiter)
+
 class GLM(base.LikelihoodModel):
     '''
     Generalized Linear Models class
@@ -65,7 +69,7 @@ class GLM(base.LikelihoodModel):
     exog : array
         See Parameters.
     history : dict
-        Contains information about the iterations.
+        Contains params and deviance information for the iterations.
     iteration : int
         The number of iterations that fit has run.  Initialized at 0.
     family : family class instance
@@ -149,9 +153,6 @@ class GLM(base.LikelihoodModel):
         See above.  Note that endog is a reference to the data so that if
         data is already an array and it is changed, then `endog` changes
         as well.
-    history : dict
-        Contains information about the iterations. Its keys are `fittedvalues`,
-        `deviance`, and `params`.
     iteration : int
         The number of iterations that fit has run.  Initialized at 0.
     family : family class instance
@@ -204,7 +205,6 @@ class GLM(base.LikelihoodModel):
                         'params' : [np.inf],
                         'deviance' : [np.inf]}
 
-        self.iteration = 0
         self.pinv_wexog = np.linalg.pinv(self.exog)
         self.normalized_cov_params = np.dot(self.pinv_wexog,
                                         np.transpose(self.pinv_wexog))
@@ -250,13 +250,13 @@ class GLM(base.LikelihoodModel):
         """
         raise NotImplementedError
 
-    def _update_history(self, tmp_result, mu):
+    def _update_history(self, tmp_result, mu, history):
         """
         Helper method to update history during iterative fit.
         """
-        self.history['params'].append(tmp_result.params)
-        self.history['fittedvalues'].append(tmp_result.fittedvalues)
-        self.history['deviance'].append(self.family.deviance(self.endog, mu))
+        history['params'].append(tmp_result.params)
+        history['deviance'].append(self.family.deviance(self.endog, mu))
+        return history
 
     def estimate_scale(self, mu):
         """
@@ -385,34 +385,40 @@ class GLM(base.LikelihoodModel):
         mu = self.family.starting_mu(self.endog)
         wlsexog = self.exog
         eta = self.family.predict(mu)
-        self.iteration += 1
         dev = self.family.deviance(self.endog, mu)
         if np.isnan(dev):
             raise ValueError("The first guess on the deviance function "
                              "returned a nan.  This could be a boundary "
                              " problem and should be reported.")
-        else:
-            self.history['deviance'].append(dev)
-            # first guess on the deviance is assumed to be scaled by 1.
-        while((np.fabs(self.history['deviance'][self.iteration]-\
-                    self.history['deviance'][self.iteration-1])) > tol and \
-                    self.iteration < maxiter):
+
+
+        # first guess on the deviance is assumed to be scaled by 1.
+        # params are none to start, so they line up with the deviance
+        history = dict(params = [None, None], deviance=[np.inf,dev])
+        iteration = 0
+        converged = 0
+        criterion = history['deviance']
+        while not converged:
             self.weights = data_weights*self.family.weights(mu)
             wlsendog = eta + self.family.link.deriv(mu) * (self.endog-mu) \
                 - offset
             wls_results = lm.WLS(wlsendog, wlsexog, self.weights).fit()
             eta = np.dot(self.exog, wls_results.params) + offset
             mu = self.family.fitted(eta)
-            self._update_history(wls_results, mu)
+            history = self._update_history(wls_results, mu, history)
             self.scale = self.estimate_scale(mu)
-            self.iteration += 1
+            iteration += 1
             if endog.squeeze().ndim == 1 and np.allclose(mu - endog, 0):
                 msg = "Perfect separation detected, results not available"
                 raise PerfectSeparationError(msg)
+            converged = _check_convergence(criterion, iteration, tol,
+                                            maxiter)
         self.mu = mu
         glm_results = GLMResults(self, wls_results.params,
                                  wls_results.normalized_cov_params,
                                  self.scale)
+        history['iteration'] = iteration
+        glm_results.fit_history = history
         return GLMResultsWrapper(glm_results)
 
 class GLMResults(base.LikelihoodModelResults):
@@ -442,6 +448,9 @@ class GLMResults(base.LikelihoodModelResults):
         See GLM.df_model
     df_resid : float
         See GLM.df_resid
+    fit_history : dict
+        Contains information about the iterations. Its keys are `iterations`,
+        `deviance` and `params`.
     fittedvalues : array
         Linear predicted values for the fitted model.
         dot(exog, params)
@@ -600,7 +609,6 @@ class GLMResults(base.LikelihoodModelResults):
         self._data_attr.extend([i for i in self.model._data_attr
                                            if not '_data.' in i])
         super(self.__class__, self).remove_data()
-        self.model.history['fittedvalues'] = None
 
         #TODO: what are these in results?
         self._endog = None
@@ -638,14 +646,14 @@ class GLMResults(base.LikelihoodModelResults):
         """
 
         top_left = [('Dep. Variable:', None),
-                    ('Model:', None),
-                    ('Model Family:', [self.family.__class__.__name__]),
-                    ('Link Function:', [self.family.link.__class__.__name__]),
-                    ('Method:', ['IRLS']),
-                    ('Date:', None),
-                    ('Time:', None),
-                    ('No. Iterations:', ["%d" % self.model.iteration]),
-                    ]
+                  ('Model:', None),
+                  ('Model Family:', [self.family.__class__.__name__]),
+                  ('Link Function:', [self.family.link.__class__.__name__]),
+                  ('Method:', ['IRLS']),
+                  ('Date:', None),
+                  ('Time:', None),
+                  ('No. Iterations:', ["%d" % self.fit_history['iteration']]),
+                  ]
 
         top_right = [('No. Observations:', None),
                      ('Df Residuals:', None),
@@ -668,9 +676,9 @@ class GLMResults(base.LikelihoodModelResults):
                              use_t=True)
 
         #diagnostic table is not used yet:
-#        smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
-#                          yname=yname, xname=xname,
-#                          title="")
+        #smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
+        #                  yname=yname, xname=xname,
+        #                  title="")
 
         return smry
 
@@ -752,9 +760,9 @@ class GLMResults(base.LikelihoodModelResults):
         nobs = self.nobs
         params = self.params
         scale = self.scale
-#TODO   #stand_errors = self.stand_errors
+        #TODO   #stand_errors = self.stand_errors
         stand_errors = self.bse  #[' ' for x in range(len(self.params))]
-#Added note about conf_int
+        #Added note about conf_int
         conf_int = self.conf_int()
         #f_test() = self.f_test()
         t = self.tvalues
@@ -864,15 +872,15 @@ class GLMResults(base.LikelihoodModelResults):
                             txt_fmt = table_1r_fmt)
 
         ########  summary table 2   #######
-#TODO add % range to confidance interval column header
+        #TODO add % range to confidance interval column header
         table_2header = ('coefficient', 'stand errors', 't-statistic',
         'Conf. Interval')
         table_2stubs = xname
         table_2data = zip(["%#6.4f" % (params[i]) for i in range(len(xname))],
-                          ["%#6.4f" % stand_errors[i] for i in range(len(xname))],
-                          ["%#6.4f" % (t[i]) for i in range(len(xname))],
-                          [""" [%#6.3f, %#6.3f]""" % tuple(conf_int[i]) for i in
-                                                             range(len(xname))])
+                      ["%#6.4f" % stand_errors[i] for i in range(len(xname))],
+                      ["%#6.4f" % (t[i]) for i in range(len(xname))],
+                      [""" [%#6.3f, %#6.3f]""" % tuple(conf_int[i]) for i in
+                                                          range(len(xname))])
 
 
         #dfmt={'data_fmt':["%#12.6g","%#12.6g","%#10.4g","%#5.4g"]}
