@@ -876,11 +876,13 @@ class GLMResults(base.LikelihoodModelResults):
         table_2header = ('coefficient', 'stand errors', 't-statistic',
         'Conf. Interval')
         table_2stubs = xname
-        table_2data = zip(["%#6.4f" % (params[i]) for i in range(len(xname))],
+        table_2data = zip(
+                      ["%#6.4f" % (params[i]) for i in range(len(xname))],
                       ["%#6.4f" % stand_errors[i] for i in range(len(xname))],
                       ["%#6.4f" % (t[i]) for i in range(len(xname))],
                       [""" [%#6.3f, %#6.3f]""" % tuple(conf_int[i]) for i in
-                                                          range(len(xname))])
+                                                          range(len(xname))]
+                      )
 
 
         #dfmt={'data_fmt':["%#12.6g","%#12.6g","%#10.4g","%#5.4g"]}
