@@ -1,70 +1,103 @@
 Dependencies
 ------------
 
-Python >= 2.5
-NumPy >= 1.4.0 
-SciPy >= 0.7
+python >= 2.5
+
+    www.python.org
+
+numpy >= 1.4.0
+
+    www.numpy.org
+
+scipy >= 0.7
+    
+    www.scipy.org
+
+pandas >= 0.7.1
+
+    pydata.pandas.org
+
 
 Optional Dependencies
 ---------------------
 
-Matplotlib is needed for plotting functionality and running many of the examples
+cython >= 0.15.1
 
-http://matplotlib.sourceforge.net/
+    http://cython.org/
 
-To build the documentation you will need Sphinx
+    If Cython is available during installation from source faster functions 
+    will be installed in some places provided you have a C compiler. It is 
+    recommended to install from source with Cython available, as this will not
+    be optional in the 0.5 release.
 
-http://sphinx.pocoo.org/
+matplotlib >= 1.0.0
 
-The documentation is available online as mentioned below.
+    http://matplotlib.sf.net/
 
-To run the test suite you will need nose
+    Matplotlib is needed for plotting functionality and running many of the 
+    examples.
 
-http://somethingaboutorange.com/mrl/projects/nose/
+sphinx >= 1.0.0
+
+    http://sphinx.pocoo.org/
+
+    Sphinx is used to build the documentation.
+
+nose >= 1.0.0
+
+    http://readthedocs.org/docs/nose/en/latest/
+
+    Nose is needed to run the tests.
 
 
 Easy Install
 ------------
 
-To get the latest release using easy_install you need setuptools (easy_install)
+To get the latest release using easy_install you need setuptools (easy_install):
 
-http://peak.telecommunity.com/DevCenter/EasyInstall
+    http://peak.telecommunity.com/DevCenter/EasyInstall
 
-Then you can do (with proper permissions)
+Then you can do (with proper permissions):
 
-easy_install -U statsmodels
+    easy_install -U statsmodels
+
 
 Ubuntu/Debian
 -------------
 
-On (X)ubuntu you can get dependencies through
+On Ubuntu you can get dependencies through:
 
-sudo apt-get install python python-setuptools python-numpy python-scipy
+    sudo apt-get install python python-dev python-setuptools python-numpy python-scipy
+    easy_install -U pandas 
+    easy_install -U cython
 
-You may install with easy_install, from source as mentioned below, or 
-from the NeuroDebian repository: http://neuro.debian.net
+Alternatively, you can install from the NeuroDebian repository:
+    
+    http://neuro.debian.net
+
 
 Installing from Source
 ----------------------
 
 Download and extract the source distribution from PyPI or github
 
-PyPI: http://pypi.python.org/pypi/statsmodels
-Github: https://github.com/statsmodels/statsmodels/archives/master
+    http://pypi.python.org/pypi/statsmodels
+    https://github.com/statsmodels/statsmodels/tags
 
 Or clone the bleeding edge code from our repository on github at
 
-https://github.com/statsmodels/statsmodels
+    git clone git://github.com/statsmodels/statsmodels.git
 
 In the statsmodels directory do (with proper permissions)
 
-python setup.py install
+    python setup.py install
 
-For the 0.3.0 release, there is some code written using Cython. If you have
-a C compiler, you can do
 
-python setup.py --with-cython
-python setup.py install
+Installing from Source on Windows
+---------------------------------
+
+See http://statsmodels.sf.net/devel/install.html#windows.
+
 
 Documentation
 -------------
@@ -72,4 +105,4 @@ Documentation
 You may find more information about the project and installation in our 
 documentation
 
-http://statsmodels.sourceforge.net/
+http://statsmodels.sf.net/devel/install.html
