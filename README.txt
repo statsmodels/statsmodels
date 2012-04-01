@@ -61,7 +61,7 @@ See INSTALL.txt for requirements or see the documentation
 License
 =======
 
-Simplified BSD
+Modified BSD (3-clause)
 
 
 Documentation
