@@ -4,14 +4,33 @@ Release History
 trunk for 0.4.0
 ---------------
 
+* Added pandas dependency.
+* Cython source is built automatically if cython and compiler are present
+* Support use of dates in timeseries models
+* Improved plots
+  - Violin plots
+  - Bean Plots
+  - QQ Plots
+* Added lowess function
+* Support for pandas Series and DataFrame objects. Results instances return
+  pandas objects if the models are fit using pandas objects.
+* Fully Python 3 compatible
 * Fix bugs in genfromdta. Convert Stata .dta format to structured array 
   preserving all types. Conversion is also much faster now.
+* Improved documentation
+* Models and results are pickleable via save/load, optionally saving the model 
+  data.
+* Kernel Density Estimation now uses Cython and is considerable faster.
+* Numerous bug fixes
 
 *Changes that break backwards compatibility*
 
+* Deprecated scikits namespace. The recommended import is now::
+
+  from statsmodels.api import sm
+
 * For consistency with other multi-equation models, the parameters of MNLogit
   are now transposed.
-
 * tools.tools.ECDF -> distributions.ECDF
 * tools.tools.monotone_fn_inverter -> distributions.monotone_fn_inverter
 * tools.tools.StepFunction -> distributions.StepFunction
