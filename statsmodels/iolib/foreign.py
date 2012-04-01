@@ -306,7 +306,7 @@ class StataReader(object):
         else:
             null_byte = '\x00'
             try:
-                s = s.lstrip(null_byte)[:s.index(null_byte)]
+                return s.lstrip(null_byte)[:s.index(null_byte)]
             except:
                 return s
 
