@@ -1,8 +1,10 @@
 Release History
 ===============
 
-trunk for 0.4.0
----------------
+0.4.0
+-----
+
+*Main Changes and Additions*
 
 * Added pandas dependency.
 * Cython source is built automatically if cython and compiler are present
@@ -14,14 +16,18 @@ trunk for 0.4.0
 * Added lowess function
 * Support for pandas Series and DataFrame objects. Results instances return
   pandas objects if the models are fit using pandas objects.
-* Fully Python 3 compatible
+* Full Python 3 compatibility
 * Fix bugs in genfromdta. Convert Stata .dta format to structured array 
-  preserving all types. Conversion is also much faster now.
+  preserving all types. Conversion is much faster now.
 * Improved documentation
 * Models and results are pickleable via save/load, optionally saving the model 
   data.
-* Kernel Density Estimation now uses Cython and is considerable faster.
+* Kernel Density Estimation now uses Cython and is considerably faster.
+* Diagnostics for outlier and influence statistics in OLS
+* Added El Nino Sea Surface Temperatures dataset
 * Numerous bug fixes
+* Internal code refactoring
+* Improved documentation including examples as part of HTML
 
 *Changes that break backwards compatibility*
 
@@ -29,6 +35,8 @@ trunk for 0.4.0
 
   from statsmodels.api import sm
 
+* model.predict methods signature is now (params, exog, ...) where before
+  it assumed that the model had been fit and omitted the params argument.
 * For consistency with other multi-equation models, the parameters of MNLogit
   are now transposed.
 * tools.tools.ECDF -> distributions.ECDF
