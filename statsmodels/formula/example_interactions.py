@@ -1,6 +1,7 @@
 from urllib2 import urlopen
 
 import statsmodels.api as sm
+from statsmodels.formula.api import ols
 import pandas
 import matplotlib.pyplot as plt
 from matplotlib import figure
@@ -173,7 +174,7 @@ plt.show()
 
 
 formula = 'S ~ categorical(E) + categorical(M) + X'
-lm = sm.OLS.from_formula(formula, salary_table).fit()
+lm = ols(formula, salary_table).fit()
 print lm.summary()
 
 # Have a look at the created design matrix
@@ -214,7 +215,7 @@ plt.show()
 
 # now we will test some interactions using anova or f_test
 
-interX_lm = sm.OLS.from_formula("S ~ categorical(E) * X + categorical(M)",
+interX_lm = ols("S ~ categorical(E) * X + categorical(M)",
                     salary_table).fit()
 print interX_lm.summary()
 
@@ -224,7 +225,7 @@ print interX_lm.summary()
 table1 = anova_lm(lm, interX_lm)
 print table1
 
-interM_lm = sm.OLS.from_formula("S ~ X + categorical(E)*categorical(M)",
+interM_lm = ols("S ~ X + categorical(E)*categorical(M)",
                                  df=salary_table).fit()
 print interM_lm.summary()
 
@@ -260,12 +261,12 @@ plt.show()
 drop_idx = abs(resid).argmax()
 print drop_idx # zero-based index
 
-lm32 = sm.OLS.from_formula('S ~ categorical(E) + X + categorical(M)',
+lm32 = ols('S ~ categorical(E) + X + categorical(M)',
             df = salary_table.drop([drop_idx])).fit()
 
 print lm32.summary()
 
-interX_lm32 = sm.OLS.from_formula('S ~ categorical(E) * X + categorical(M)',
+interX_lm32 = ols('S ~ categorical(E) * X + categorical(M)',
             df = salary_table.drop([drop_idx])).fit()
 
 print interX_lm32.summary()
@@ -273,7 +274,7 @@ print interX_lm32.summary()
 table3 = anova_lm(lm32, interX_lm32)
 print table3
 
-interM_lm32 = sm.OLS.from_formula('S ~ X + categorical(E) * categorical(M)',
+interM_lm32 = ols('S ~ X + categorical(E) * categorical(M)',
             df = salary_table.drop([drop_idx])).fit()
 
 table4 = anova_lm(lm32, interM_lm32)
@@ -299,7 +300,7 @@ plt.show()
 
 # Plot the fitted values
 
-lm_final = sm.OLS.from_formula('S ~ X + categorical(E)*categorical(M)',
+lm_final = ols('S ~ X + categorical(E)*categorical(M)',
                     df = salary_table.drop([drop_idx])).fit()
 mf = lm_final.model._data._orig_exog
 lstyle = ['-','--']
@@ -491,7 +492,7 @@ for factor, group in factor_group:
 
 plt.show()
 
-min_lm = sm.OLS.from_formula('JPERF ~ TEST', df=minority_table).fit()
+min_lm = ols('JPERF ~ TEST', df=minority_table).fit()
 print min_lm.summary()
 
 fig = plt.figure()
@@ -573,7 +574,7 @@ def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
 abline_plot(model_results = min_lm, ax=ax)
 plt.show()
 
-min_lm2 = sm.OLS.from_formula('JPERF ~ TEST + TEST:ETHN',
+min_lm2 = ols('JPERF ~ TEST + TEST:ETHN',
         df=minority_table).fit()
 
 print min_lm2.summary()
@@ -592,7 +593,7 @@ ax = abline_plot(intercept = min_lm2.params['const'],
 plt.show()
 
 
-min_lm3 = sm.OLS.from_formula('JPERF ~ TEST + ETHN', df = minority_table).fit()
+min_lm3 = ols('JPERF ~ TEST + ETHN', df = minority_table).fit()
 print min_lm3.summary()
 
 fig = plt.figure()
@@ -608,7 +609,7 @@ ax = abline_plot(intercept = min_lm3.params['const'] + min_lm3.params['ETHN'],
 plt.show()
 
 
-min_lm4 = sm.OLS.from_formula('JPERF ~ TEST * ETHN', df = minority_table).fit()
+min_lm4 = ols('JPERF ~ TEST * ETHN', df = minority_table).fit()
 print min_lm4.summary()
 
 fig = plt.figure()
@@ -649,7 +650,7 @@ rehab_table = pandas.read_csv('rehab.table')
 ax = rehab_table.boxplot('Time', 'Fitness')
 plt.show()
 
-rehab_lm = sm.OLS.from_formula('Time ~ categorical(Fitness)',
+rehab_lm = ols('Time ~ categorical(Fitness)',
                 df=rehab_table).fit()
 table9 = anova_lm(rehab_lm)
 print table9
@@ -676,8 +677,7 @@ plt.show()
 #I thought we could use the numpy namespace in charlton?
 from charlton.builtins import builtins
 builtins['np'] = np
-kidney_lm = sm.OLS.from_formula(
-        'np.log(Days+1) ~ categorical(Duration) * categorical(Weight)',
+kidney_lm = ols('np.log(Days+1) ~ categorical(Duration) * categorical(Weight)',
         df=kt).fit()
 
 table10 = anova_lm(kidney_lm)
