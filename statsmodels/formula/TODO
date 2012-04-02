@@ -1,0 +1,19 @@
+-What's going to need formula information after fitting?
+    -predict might need a stateful transform
+
+Provide a layer on top of the current models? So if a formula is given
+you get back an object where predict takes non-transformed data, transforms it,
+then calls regular predict. Some kind of FormulaWrapper class?
+
+- Summary needs to be able to take Formula
+- Charlton could infer more type information for a DataFrame
+  - What's the status of categorical factors in Pandas?
+
+
+
+Charlton - terms_info should contain an assign and terms in addition to or
+instead of terms_to_columns.
+
+If not, given Term, column_info, will column_info always be successive? Ie.,
+    (2,4) -> 2 to 4 not (2, 5, 6) -> 2 and 5 and 6?
+Could we use an ordereddict for term info so we iterate through in terms of main effects -> higher order terms. (If we have assign and raw_terms this might not be necessary).
