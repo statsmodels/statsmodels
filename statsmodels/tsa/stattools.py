@@ -353,7 +353,7 @@ def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False):
 
     Notes
     -----
-    The acf at lag 0 (ie., 1) is *not* returned.
+    The acf at lag 0 (ie., 1) is returned.
 
     This is based np.correlate which does full convolution. For very long time
     series it is recommended to use fft convolution instead.
