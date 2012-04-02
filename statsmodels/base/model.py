@@ -43,7 +43,7 @@ class Model(object):
                                 '_data._orig_endog', '_data._orig_exog'])
 
     @classmethod
-    def from_formula(cls, formula, df, *args, **kwargs):
+    def from_formula(cls, formula, df, subset=None, *args, **kwargs):
         """
         Create a Model from a formula and dataframe.
 
@@ -53,6 +53,14 @@ class Model(object):
             The formula specifying the model
         df : array-like
             The data for the model.
+        subset : array-like
+            An array-like object of booleans, integers, or index values that
+            indicate the subset of df to use in the model. Assumes df is a
+            `pandas.DataFrame`
+        args : extra arguments
+            These are passed to the model
+        kwargs : extra keyword arguments
+            These are passed to the model.
 
         Returns
         -------
@@ -63,6 +71,10 @@ class Model(object):
         df must define __getitem__ with the keys in the formula terms
         args and kwargs are passed on to the model instantiation.
         """
+        #TODO: provide a template for args/kwargs from child models
+        #TODO: only accept DataFrames?
+        if subset is not None:
+            df= df.ix[subset]
         cls.formula_str = formula # only works if formula is a str
         endog, exog, cls.formula = handle_formula_data(df, None, formula)
         mod = cls(endog, exog, formula=None, *args, **kwargs)
