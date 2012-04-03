@@ -7,6 +7,7 @@ import statsmodels.api as sm
 # Generate some data from an ARMA process
 from statsmodels.tsa.arima_process import arma_generate_sample
 
+np.random.seed(12345)
 arparams = np.array([.75, -.25])
 maparams = np.array([.65, .35])
 
