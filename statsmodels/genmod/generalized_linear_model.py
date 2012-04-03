@@ -185,9 +185,8 @@ class GLM(base.LikelihoodModel):
 
     '''
 
-    def __init__(self, endog, exog, family=None, offset=None, exposure=None,
-                 formula=None):
-        super(GLM, self).__init__(endog, exog, formula)
+    def __init__(self, endog, exog, family=None, offset=None, exposure=None):
+        super(GLM, self).__init__(endog, exog)
         self._sanitize_inputs(family, offset, exposure)
         #things to remove_data
         self._data_attr.extend(['weights', 'pinv_wexog', 'mu', 'data_weights',

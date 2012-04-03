@@ -121,7 +121,7 @@ class GLS(base.LikelihoodModel):
 
     """
 
-    def __init__(self, endog, exog, sigma=None, formula=None):
+    def __init__(self, endog, exog, sigma=None):
 #TODO: add options igls, for iterative fgls if sigma is None
 #TODO: default is sigma is none should be two-step GLS
         if sigma is not None:
@@ -151,7 +151,7 @@ Should be of length %s, if sigma is a 1d array" % nobs)
             #TODO: avoid cholesky pinv for diag sigma
             self.cholsigmainv = np.linalg.cholesky(np.linalg.pinv(\
                     self.sigma)).T
-        super(GLS, self).__init__(endog, exog, formula)
+        super(GLS, self).__init__(endog, exog)
 
         #store attribute names for data arrays
         self._data_attr.extend(['sigma', 'cholsigmainv', 'pinv_wexog',
@@ -385,7 +385,7 @@ class WLS(GLS):
 #mse_model is calculated incorrectly according to R
 #same fixed used for WLS in the tests doesn't work
 #mse_resid is good
-    def __init__(self, endog, exog, weights=1., formula=None):
+    def __init__(self, endog, exog, weights=1.):
         weights = np.array(weights)
         if weights.shape == ():
             self.weights = weights
@@ -396,7 +396,7 @@ class WLS(GLS):
                 raise ValueError(\
                     'Weights must be scalar or same length as design')
             self.weights = weights.reshape(design_rows)
-        super(WLS, self).__init__(endog, exog, formula)
+        super(WLS, self).__init__(endog, exog)
 
     def whiten(self, X):
         """
@@ -502,8 +502,8 @@ class OLS(WLS):
     OLS, as the other models, assumes that the design matrix contains a constant.
     """
 #TODO: change example to use datasets.  This was the point of datasets!
-    def __init__(self, endog, exog=None, formula=None):
-        super(OLS, self).__init__(endog, exog, formula)
+    def __init__(self, endog, exog=None):
+        super(OLS, self).__init__(endog, exog)
 
     def loglike(self, params):
         '''

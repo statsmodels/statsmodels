@@ -30,11 +30,7 @@ class Model(object):
     will change as well.
     """
 
-    def __init__(self, endog, exog=None, formula=None):
-        if formula:
-            self.formula_str = formula # only works if formula is a str
-            endog, exog, self.formula = handle_formula_data(endog, exog,
-                                                        formula)
+    def __init__(self, endog, exog=None):
         self._data = handle_data(endog, exog)
         self.exog = self._data.exog
         self.endog = self._data.endog
@@ -75,7 +71,7 @@ class Model(object):
         #TODO: only accept DataFrames?
         if subset is not None:
             df= df.ix[subset]
-        cls.formula_str = formula # only works if formula is a str
+        cls.formula_str = formula # assumes str, could be any object
         endog, exog, cls.formula = handle_formula_data(df, None, formula)
         mod = cls(endog, exog, formula=None, *args, **kwargs)
         # since we got a dataframe, attach the original
