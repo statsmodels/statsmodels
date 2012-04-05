@@ -73,7 +73,7 @@ class Model(object):
             df= df.ix[subset]
         cls.formula_str = formula # assumes str, could be any object
         endog, exog, cls.formula = handle_formula_data(df, None, formula)
-        mod = cls(endog, exog, formula=None, *args, **kwargs)
+        mod = cls(endog, exog, *args, **kwargs)
         # since we got a dataframe, attach the original
         mod._data.frame = df
         return mod
