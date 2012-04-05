@@ -107,8 +107,8 @@ class LikelihoodModel(Model):
     Likelihood model is a subclass of Model.
     """
 
-    def __init__(self, endog, exog=None, formula=None):
-        super(LikelihoodModel, self).__init__(endog, exog, formula)
+    def __init__(self, endog, exog=None):
+        super(LikelihoodModel, self).__init__(endog, exog)
         self.initialize()
 
     def initialize(self):
