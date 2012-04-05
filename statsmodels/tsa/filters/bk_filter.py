@@ -49,7 +49,7 @@ def bkfilter(X, low=6, high=32, K=12):
     >>> import statsmodels.api as sm
     >>> dta = sm.datasets.macrodata.load()
     >>> X = dta.data['realinv']
-    >>> Y = sm.tsa.filters.baxter_king(X, 6, 24, 12)
+    >>> Y = sm.tsa.filters.bkfilter(X, 6, 24, 12)
     """
 #TODO: change the docstring to ..math::?
 #TODO: allow windowing functions to correct for Gibb's Phenomenon?
