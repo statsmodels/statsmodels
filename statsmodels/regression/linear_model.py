@@ -116,7 +116,8 @@ class GLS(base.LikelihoodModel):
     data.
 
     >>> gls_model = sm.GLS(data.endog, data.exog, sigma=sigma)
-    >>> gls_results = gls_model.results
+    >>> gls_results = gls_model.fit()
+    >>> print gls_results.summary()
 
     """
 
@@ -482,7 +483,6 @@ class OLS(WLS):
     >>>
     >>> model = sm.OLS(Y,X)
     >>> results = model.fit()
-    >>> # or results = model.results
     >>> results.params
     array([ 0.25      ,  2.14285714])
     >>> results.tvales
