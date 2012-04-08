@@ -2,7 +2,7 @@
 import numpy as np
 from scipy import stats
 import statsmodels.api as sm
-from statsmodels.model import GenericLikelihoodModel
+from statsmodels.base.model import GenericLikelihoodModel
 
 
 data = sm.datasets.spector.load()
