@@ -11,8 +11,8 @@ from scipy import stats
 from numpy.testing import assert_almost_equal
 import statsmodels.api as sm
 from statsmodels.sandbox.regression.onewaygls import OneWayLS
-from statsmodels.sandbox.stats.diagnostic import (recursive_olsresiduals,
-                                                          recursive_olsresiduals2)
+from statsmodels.stats.diagnostic import recursive_olsresiduals
+from statsmodels.sandbox.stats.diagnostic import _recursive_olsresiduals2 as recursive_olsresiduals2
 
 #examples from ex_onewaygls.py
 #choose example
