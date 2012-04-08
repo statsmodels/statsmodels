@@ -223,6 +223,7 @@ class MyPareto(GenericLikelihoodModel):
         originally published on stackoverflow
 
         '''
+        self.nobs = self.endog.shape[0]
         rvs = np.sort(self.endog)
         rvsmin = rvs.min()
 

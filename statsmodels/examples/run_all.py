@@ -26,9 +26,7 @@ if use_glob:
 
 print zip(range(len(filelist)), filelist)
 
-for fname in ['run_all.py', 'example_rpy.py',
-              'ex_generic_mle_tdist.py', #bug AttributeError: 'MyPareto' object has no attribute 'nobs'
-              ]:
+for fname in ['run_all.py', 'example_rpy.py']:
     filelist.remove(fname)
 
 #filelist = filelist[15:]
