@@ -1,6 +1,6 @@
 import numpy as np
 import scikits.statsmodels.api as sm
-from scikits.statsmodels.miscmodels.nonlinls import NonlinearLS
+from statsmodels.miscmodels.nonlinls import NonlinearLS
 
 class Myfunc(NonlinearLS):
 

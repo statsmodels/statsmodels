@@ -1,8 +1,8 @@
 import sys
 sys.path.insert(0, r'E:\Josef\eclipsegworkspace\statsmodels-git\statsmodels-josef')
 import numpy as np
-import scikits.statsmodels.api as sm
-from scikits.statsmodels.miscmodels.nonlinls import NonlinearLS
+import statsmodels.api as sm
+from statsmodels.miscmodels.nonlinls import NonlinearLS
 
 from numpy.testing import assert_almost_equal, assert_
 
