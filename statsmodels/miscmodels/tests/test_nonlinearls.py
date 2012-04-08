@@ -62,41 +62,41 @@ class TestNonlinearLS(object):
         res = self.res
         res2 = self.res2
 
-        print ''
+        #print ''
 
         for att in ['params', 'bse', 'resid', 'wresid', 'tvalues', 'pvalues',
                     'fittedvalues', 'mse_resid', 'mse_total', 'mse_model',
                     'rsquared', 'rsquared_adj', 'df_resid', 'df_model',
                     'f_pvalue', 'ess', 'centered_tss', 'uncentered_tss']:
             #fail: 'mse_model', 'f_pvalue' #ok if assumes constant
-            print 'testing', att
+            #print 'testing', att
             assert_almost_equal(getattr(res, att), getattr(res2, att),
                                 decimal=6)
 
         for att in ['wexog']:
-            print 'testing', att
+            #print 'testing', att
             assert_almost_equal(getattr(res.model, att), getattr(res2.model, att),
                                 decimal=6)
 
         for att in ['cov_params']: #, 'predict']: #ENH/BUG
-            print 'testing', att
+            #print 'testing', att
             assert_almost_equal(getattr(res, att)(), getattr(res2, att)(),
                                 decimal=6)
 
         for att in []: #['predict']:  #BUG
-            print 'testing', att
+            #print 'testing', att
             assert_almost_equal(getattr(res.model, att)(res.params),
                                 getattr(res2.model, att)(res2.params),
                                 decimal=6)
 
-        print 'testing f_test'
+        #print 'testing f_test'
         rmat = np.ones(len(res.params))
         assert_almost_equal(res.f_test(rmat).fvalue, res.f_test(rmat).fvalue,
                             decimal=6)
         assert_almost_equal(res.f_test(rmat).pvalue, res.f_test(rmat).pvalue,
                             decimal=6)
 
-        print 'testing t_test'
+        #print 'testing t_test'
         assert_almost_equal(res.t_test(rmat).tvalue, res.t_test(rmat).tvalue,
                             decimal=6)
         assert_almost_equal(res.t_test(rmat).pvalue, res.t_test(rmat).pvalue,
@@ -138,7 +138,7 @@ class TestNonlinearLS0(TestNonlinearLS):
 
     def _est_summary(self):
         #this raises in scipy.stats, math domain error, sample too short ?
-        print 'testing summary'
+        #print 'testing summary'
         txt = self.res.summary(yname='y', xname=['const', 'x0', 'x1'])
         txtw = self.res2.summary(yname='y', xname=['const', 'x0', 'x1'])
         assert_(txt[txt.find('#'):] == txtw[txtw.find('#'):])
