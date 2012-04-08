@@ -191,7 +191,14 @@ class TestNonlinearLS3(TestNonlinearLS):
         #print 'testing summary'
         txt = self.res.summary(yname='y', xname=['const', 'x0', 'x1'])
         txtw = self.res2.summary(yname='y', xname=['const', 'x0', 'x1'])
-        assert_(txt[txt.find('#'):] == txtw[txtw.find('#'):])
+        txt = str(txt)
+        txtw = str(txtw)
+        #skip up to model and time
+        begin_idx = txt.find('Adj. R-squared')
+        before_idx = txt.find('Time')
+        after_idx = txt.find('Log-Likelihood')
+        assert_(txt[begin_idx:before_idx] == txtw[begin_idx:before_idx])
+        assert_(txt[after_idx:] == txtw[after_idx:])
 
 
 def print_summarydiff(res1, res2):

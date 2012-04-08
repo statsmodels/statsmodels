@@ -46,4 +46,6 @@ print resw.summary(yname='y', xname=['const', 'x0', 'x1'])
 
 txt = res.summary(yname='y', xname=['const', 'x0', 'x1'])
 txtw = resw.summary(yname='y', xname=['const', 'x0', 'x1'])
-print txt[txt.find('#'):] == txtw[txtw.find('#'):]
+txt = str(txt)
+txtw = str(txtw)
+print txt[txt.find('No. Observations'):] == txtw[txtw.find('No. Observations'):]
