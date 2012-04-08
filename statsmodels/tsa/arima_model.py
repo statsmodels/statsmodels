@@ -841,7 +841,7 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
             If the model is an ARMAX and out-of-sample forecasting is
             requestion, exog must be given.
         """
-        self.model.predict(self.params, start, end, exog)
+        return self.model.predict(self.params, start, end, exog)
 
     def forecast(self, steps=1, exog=None, alpha=.05):
         """
