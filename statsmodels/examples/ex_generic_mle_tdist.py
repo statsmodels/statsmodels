@@ -10,7 +10,7 @@ import numpy as np
 
 from scipy import stats, special, optimize
 import statsmodels.api as sm
-from statsmodels.model import GenericLikelihoodModel
+from statsmodels.base.model import GenericLikelihoodModel
 
 #redefine some shortcuts
 np_log = np.log
@@ -159,7 +159,7 @@ print pp.max(0)
 
 #import for kstest based estimation
 #should be replace
-import statsmodels.sandbox.stats.distributions_patch
+import statsmodels.sandbox.distributions.sppatch
 
 class MyPareto(GenericLikelihoodModel):
     '''Maximum Likelihood Estimation pareto distribution
@@ -223,6 +223,7 @@ class MyPareto(GenericLikelihoodModel):
         originally published on stackoverflow
 
         '''
+        self.nobs = self.endog.shape[0]
         rvs = np.sort(self.endog)
         rvsmin = rvs.min()
 

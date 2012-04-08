@@ -444,7 +444,7 @@ class TestDiagnosticG(object):
 
         bh = smsdia.breaks_hansen(self.res)
         assert_almost_equal(bh[0], breaks_nyblom_hansen['statistic'],
-                            decimal=14)
+                            decimal=13)
         #TODO: breaks_hansen doesn't return pvalues
 
 
