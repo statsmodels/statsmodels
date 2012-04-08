@@ -138,7 +138,10 @@ class NonlinearLS(Model):  #or subclass a model
             else:
                 raise ValueError('correlated errors are not handled yet')
         else:
-            self.weights = weights
+            if weights is None:
+                self.weights = 1
+            else:
+                self.weights = weights
 
     #copied from WLS, for univariate y the argument X is always 1d
     def whiten(self, X):
@@ -293,7 +296,7 @@ class NonlinearLS(Model):  #or subclass a model
 ##        if not weights is None
 ##            fitres.wexogw = self.weights * self.jacpredict(popt)
 
-        from statsmodels.regression import RegressionResults
+        from statsmodels.regression.linear_model import RegressionResults
         #results = RegressionResults
 
         beta = popt
