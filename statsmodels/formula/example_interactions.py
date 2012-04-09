@@ -9,11 +9,14 @@ from matplotlib import figure
 
 from anova import anova_lm
 
-#url = 'http://stats191.stanford.edu/data/salary.table'
-#fh = urlopen(url)
+try:
+    salary_table = pandas.read_csv('salary.table')
+except: # pandas master should be able to read URL with my patch
+    url = 'http://stats191.stanford.edu/data/salary.table'
+    fh = urlopen(url)
+    salary_table = pandas.read_table(fh)
+    salary_table.to_csv('salary.table')
 
-#salary_table = pandas.read_table(fh)
-salary_table = pandas.read_csv('salary.table')
 #salary_table.attach() # require my pandas df-attach branch
 #PR rejected but I still think this could be useful...
 E = salary_table.E
@@ -198,8 +201,15 @@ plt.show()
 # Minority Employment Data
 # ------------------------
 
-url = 'http://stats191.stanford.edu/data/minority.table'
-minority_table = pandas.read_table(url)
+try:
+    minority_table = pandas.read_table('minority.table')
+except: # don't have data already
+    url = 'http://stats191.stanford.edu/data/minority.table'
+    try:
+        minority_table = pandas.read_table(url)
+    except: # don't have recent pandas
+        fh = urlopen(url)
+        minority_table = pandas.read_table(fh)
 
 factor_group = minority_table.groupby(['ETHN'])
 
@@ -306,9 +316,9 @@ for factor, group in factor_group:
     ax.scatter(group['TEST'], group['JPERF'], color=colors[factor],
                 marker=markers[factor], s=12**2)
 
-ax = abline_plot(intercept = min_lm2.params['const'],
+ax = abline_plot(intercept = min_lm2.params['Intercept'],
                  slope = min_lm2.params['TEST'], ax=ax, color='purple')
-ax = abline_plot(intercept = min_lm2.params['const'],
+ax = abline_plot(intercept = min_lm2.params['Intercept'],
         slope = min_lm2.params['TEST'] + min_lm2.params['TEST:ETHN'],
         ax=ax, color='green')
 plt.show()
@@ -323,9 +333,9 @@ for factor, group in factor_group:
     ax.scatter(group['TEST'], group['JPERF'], color=colors[factor],
                 marker=markers[factor], s=12**2)
 
-ax = abline_plot(intercept = min_lm3.params['const'],
+ax = abline_plot(intercept = min_lm3.params['Intercept'],
                  slope = min_lm3.params['TEST'], ax=ax, color='purple')
-ax = abline_plot(intercept = min_lm3.params['const'] + min_lm3.params['ETHN'],
+ax = abline_plot(intercept = min_lm3.params['Intercept'] + min_lm3.params['ETHN'],
         slope = min_lm3.params['TEST'], ax=ax, color='green')
 plt.show()
 
@@ -339,9 +349,9 @@ for factor, group in factor_group:
     ax.scatter(group['TEST'], group['JPERF'], color=colors[factor],
                 marker=markers[factor], s=12**2)
 
-ax = abline_plot(intercept = min_lm4.params['const'],
+ax = abline_plot(intercept = min_lm4.params['Intercept'],
                  slope = min_lm4.params['TEST'], ax=ax, color='purple')
-ax = abline_plot(intercept = min_lm4.params['const'] + min_lm4.params['ETHN'],
+ax = abline_plot(intercept = min_lm4.params['Intercept'] + min_lm4.params['ETHN'],
         slope = min_lm4.params['TEST'] + min_lm4.params['TEST:ETHN'],
         ax=ax, color='green')
 plt.show()
@@ -363,10 +373,16 @@ print table8
 # One-way ANOVA
 # -------------
 
-#url = 'http://stats191.stanford.edu/data/rehab.csv'
-#rehab_table = pandas.read_table(url, delimiter=",")
-#rehab_table.save('rehab.table') # save to debug boxplot
-rehab_table = pandas.read_csv('rehab.table')
+
+try:
+    rehab_table = pandas.read_csv('rehab.table')
+except:
+    url = 'http://stats191.stanford.edu/data/rehab.csv'
+    try:
+        rehab_table = pandas.read_table(url, delimiter=",")
+    except:
+        rehab_table = pandas.read_table(urlopen(url), delimiter=",")
+    rehab_table.to_csv('rehab.table')
 
 ax = rehab_table.boxplot('Time', 'Fitness')
 plt.show()
@@ -433,9 +449,9 @@ anova_lm(sum_lm, type=3)
 
 nosum_lm = ols('np.log(Days+1) ~ C(Duration, Sum) * C(Weight, Sum)',
             df=kt).fit()
-anova(nosum_lm)
-anova(nosum_lm, type=2)
-anova(nosum_lm, type=3)
+anova_lm(nosum_lm)
+anova_lm(nosum_lm, type=2)
+anova_lm(nosum_lm, type=3)
 
 # R code for this.
 #sum.lm = lm(logDays ~ Duration * Weight, contrasts=list(Duration=contr.sum, Weight=contr.sum))
