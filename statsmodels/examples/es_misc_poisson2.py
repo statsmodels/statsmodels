@@ -23,7 +23,7 @@ xbeta = 1 + 0.1*rvs.sum(1)
 data_endog = np.random.poisson(np.exp(xbeta))
 
 #estimate discretemod.Poisson as benchmark
-from statsmodels.discretemod import Poisson
+from statsmodels.discrete.discrete_model import Poisson
 res_discrete = Poisson(data_endog, data_exog).fit()
 
 mod_glm = sm.GLM(data_endog, data_exog, family=sm.families.Poisson())

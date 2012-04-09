@@ -131,6 +131,16 @@ print "for the second equation"
 print correct_params
 print "Compare to output of R script statsmodels/sandbox/tests/macrodata.s"
 
+print '\nUsing IV2SLS'
+from statsmodels.sandbox.regression.gmm import IV2SLS
+miv = IV2SLS(macro_sys[0], macro_sys[1], instruments)
+resiv = miv.fit()
+print "equation 1"
+print resiv.params
+miv2 = IV2SLS(macro_sys[2], macro_sys[3], instruments)
+resiv2 = miv2.fit()
+print "equation 2"
+print resiv2.params
 
 ### Below is the same example using Greene's data ###
 
