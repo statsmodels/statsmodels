@@ -1,6 +1,8 @@
 import numpy as np
 from scipy import stats
 from pandas import DataFrame, Index
+from charlton.desc import INTERCEPT # these are not formula independent..
+                                    # what could a null term evaluate to?
 
 #NOTE: these need to take into account weights !
 
@@ -51,6 +53,7 @@ def anova_single(model, typ, **kwargs):
 
     endog = model.model.endog
     exog = model.model.exog
+    nobs = exog.shape[0]
 
     response_name = model.model.endog_names
     model_formula = []
@@ -61,19 +64,11 @@ def anova_single(model, typ, **kwargs):
     pr_test = "PR(>%s)" % test
     names = ['df', 'sum_sq', 'mean_sq', test, pr_test]
 
-    #maybe we should rethink using pinv > qr in OLS/linear models?
-    #NOTE: to get the full q,r the same as R use scipy.linalg.qr with
-    # pivoting
-    q,r = np.linalg.qr(exog)
-    effects = np.dot(q.T,endog)
-
     table = DataFrame(np.empty((n_rows, 5)), columns = names)
 
-    index = []
-    col_order = []
     if typ in [1,"I"]:
-        return anova1_lm_single(model, terms_info, table, n_rows, test,
-                               pr_test)
+        return anova1_lm_single(model, endog, exog, nobs, terms_info, table,
+                                n_rows, test, pr_test)
     elif typ in [2, "II"]:
         return anova2_lm_single(model, terms_info, table, n_rows, test,
                                pr_test)
@@ -84,7 +79,8 @@ def anova_single(model, typ, **kwargs):
     else:
         raise ValueError("Type %s not understood" % str(typ))
 
-def anova1_lm_single(model, terms_info, table, n_rows, test, pr_test):
+def anova1_lm_single(model, endog, exog, nobs, terms_info, table, n_rows, test,
+                     pr_test):
     """
     ANOVA table for one fitted linear model.
 
@@ -105,10 +101,17 @@ def anova1_lm_single(model, terms_info, table, n_rows, test, pr_test):
     -----
     Use of this function is discouraged. Use anova_lm instead.
     """
-    from charlton.desc import INTERCEPT
+    #maybe we should rethink using pinv > qr in OLS/linear models?
+    #NOTE: to get the full q,r the same as R use scipy.linalg.qr with
+    # pivoting
+    q,r = np.linalg.qr(exog)
+    effects = np.dot(q.T,endog)
 
     if INTERCEPT in terms_info:
         terms_info.pop(INTERCEPT)
+
+    index = []
+    col_order = []
     for i, (term, cols) in enumerate(terms_info.iteritems()):
         table.ix[i]['sum_sq'] = np.sum(effects[cols[0]:cols[1]]**2)
         table.ix[i]['df'] = cols[1]-cols[0]
@@ -129,6 +132,7 @@ def anova1_lm_single(model, terms_info, table, n_rows, test, pr_test):
                                 model.df_resid)
     return table
 
+#NOTE: the below is not agnostic about formula...
 def anova2_lm_single(model, terms_info, table, n_rows, test, pr_test):
     """
     ANOVA type II table for one fitted linear model.
@@ -240,6 +244,7 @@ def anova_lm(*args, **kwargs):
     ### Farm Out Single model ANOVA Type I, II, III, and IV ###
 
     if len(args) == 1:
+        model = args[0]
         return anova_single(model, typ, **kwargs)
 
     try:
