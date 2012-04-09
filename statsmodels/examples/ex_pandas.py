@@ -28,9 +28,9 @@ print results.params
 print results.cov_params()
 
 infl = results.get_influence()
-print infl.summary_obs()
+print infl.summary_table()
 
-raise
+#raise
 
 #Example RLM
 huber_t = sm.RLM(Y, X, M=sm.robust.norms.HuberT())

@@ -10,7 +10,7 @@ import numpy as np
 
 from scipy import stats, special
 import statsmodels.api as sm
-from statsmodels.model import GenericLikelihoodModel
+from statsmodels.base.model import GenericLikelihoodModel
 
 #redefine some shortcuts
 np_log = np.log
