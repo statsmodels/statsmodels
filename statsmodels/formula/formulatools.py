@@ -1,6 +1,6 @@
 import statsmodels.tools.data as data_util
 
-from charlton.spec import ModelSpec
+from charlton.api import model_spec_and_matrices
 from charlton.model_matrix import ModelMatrixColumnInfo
 from numpy import c_ as concat
 
@@ -65,9 +65,8 @@ def handle_formula_data_pandas(Y, X, formula):
     else:
         df = Y
     df.column_info = ModelMatrixColumnInfo(df.columns.tolist())
-    model_spec = ModelSpec.from_desc_and_data(formula, df)
-    matrices = model_spec.make_matrices(df)
-    endog, exog = matrices
+    # depth=1 means resolve formula in caller's namespace
+    model_spec, endog, exog = model_spec_and_matrices(formula, df, depth=1)
     # preserve the meta-information from Charlton but pass back pandas
     # charlton should just let these types pass through as-is...
     endog_ci = endog.column_info
@@ -94,6 +93,6 @@ def handle_formula_data_ndarray(Y, X, formula):
     #TODO: make this duplication unnecessary
     names = ['x%d'] * nvars % map(str, range(nvars))
     df.column_info = ModelMatrixColumnInfo(names)
-    model_spec = ModelSpec.from_desc_and_data(formula, df)
+    model_spec, endog, exog = model_spec_and_matrices(formula, df, depth=1)
     endog, exog = model_spec.make_matrices(df)
     return endog, exog, model_spec
