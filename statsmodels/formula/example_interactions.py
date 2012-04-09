@@ -1,147 +1,13 @@
 from urllib2 import urlopen
 
+import numpy as np
 import statsmodels.api as sm
 from statsmodels.formula.api import ols
 import pandas
 import matplotlib.pyplot as plt
 from matplotlib import figure
 
-#################### UTILITY FUNCTIONS ########################
-
-
-from pandas import DataFrame, Index
-import numpy as np
-from scipy import stats
-
-#NOTE: these need to take into account weights !
-
-def anova_lm_single(model, **kwargs):
-    """
-    ANOVA table for one fitted linear model.
-
-    Parameters
-    ----------
-    model : fitted linear model results instance
-        A fitted linear model
-
-    **kwargs**
-
-    scale : float
-        Estimate of variance, If None, will be estimated from the largest
-    model. Default is None.
-        test : str {"F", "Chisq", "Cp"} or None
-        Test statistics to provide. Default is "F".
-
-    Notes
-    -----
-    Use of this function is discouraged. Use anova_lm instead.
-    """
-    from charlton.desc import INTERCEPT
-
-    test = kwargs.get("test", "F")
-    scale = kwargs.get("scale", None)
-
-    endog = model.model.endog
-    exog = model.model.exog
-
-    response_name = model.model.endog_names
-    model_formula = []
-    terms_info = model.model._data._orig_exog.column_info.term_to_columns
-    exog_names = model.model.exog_names
-    n_rows = len(terms_info) - (INTERCEPT in terms_info) + 1 # for resids
-
-    pr_test = "PR(>%s)" % test
-    names = ['df', 'sum_sq', 'mean_sq', test, pr_test]
-
-    #maybe we should rethink using pinv > qr in OLS/linear models?
-    #NOTE: to get the full q,r the same as R use scipy.linalg.qr with
-    # pivoting
-    q,r = np.linalg.qr(exog)
-    effects = np.dot(q.T,endog)
-
-    table = DataFrame(np.empty((n_rows, 5)), columns = names)
-
-    index = []
-    col_order = []
-    if INTERCEPT in terms_info:
-        terms_info.pop(INTERCEPT)
-    for i, (term, cols) in enumerate(terms_info.iteritems()):
-        table.ix[i]['sum_sq'] = np.sum(effects[cols[0]:cols[1]]**2)
-        table.ix[i]['df'] = cols[1]-cols[0]
-        col_order.append(cols[0])
-        index.append(term.name())
-    table.index = Index(index + ['Residual'])
-    # fill in residual
-    table.ix['Residual'][['sum_sq','df']] = model.ssr, model.df_resid
-
-    table = table.ix[np.argsort(col_order + [exog.shape[1]+1])]
-    table['mean_sq'] = table['sum_sq'] / table['df']
-    if test == 'F':
-        table[:n_rows][test] = ((table['sum_sq']/table['df'])/
-                                (model.ssr/model.df_resid))
-        table[:n_rows][pr_test] = stats.f.sf(table["F"], table["df"],
-                                model.df_resid)
-    table.ix['Residual'][[test,pr_test]] = np.nan
-    return table
-
-
-def anova_lm(*args, **kwargs):
-    """
-    ANOVA table for one or more fitted linear models.
-
-    Parmeters
-    ---------
-    args : fitted linear model results instance
-        One or more fitted linear models
-
-    **kwargs**
-
-    scale : float
-        Estimate of variance, If None, will be estimated from the largest
-    model. Default is None.
-        test : str {"F", "Chisq", "Cp"} or None
-        Test statistics to provide. Default is "F".
-
-    Returns
-    -------
-    anova : DataFrame
-    A DataFrame containing.
-
-    Notes
-    -----
-    Model statistics are given in the order of args. Models must have
-    a formula_str attribute.
-
-    See Also
-    --------
-    model_results.compare_f_test, model_results.compare_lm_test
-    """
-    if len(args) == 1:
-        return anova_lm_single(*args, **kwargs)
-    test = kwargs.get("test", "F")
-    scale = kwargs.get("scale", None)
-    n_models = len(args)
-
-    model_formula = []
-    pr_test = "PR(>%s)" % test
-    names = ['df_resid', 'ssr', 'df_diff', 'ss_diff', test, pr_test]
-    table = DataFrame(np.empty((n_models, 6)), columns = names)
-
-    if not scale: # assume biggest model is last
-        scale = args[-1].scale
-
-    table["ssr"] = map(getattr, args, ["ssr"]*n_models)
-    table["df_resid"] = map(getattr, args, ["df_resid"]*n_models)
-    table.ix[1:]["df_diff"] = np.diff(map(getattr, args, ["df_model"]*n_models))
-    table["ss_diff"] = -table["ssr"].diff()
-    if test == "F":
-        table["F"] = table["ss_diff"] / table["df_diff"] / scale
-        table[pr_test] = stats.f.sf(table["F"], table["df_diff"],
-                             table["df_resid"])
-
-    return table
-
-################## END UTILITY FUNCTIONS #####################
+from anova import anova_lm
 
 #url = 'http://stats191.stanford.edu/data/salary.table'
 #fh = urlopen(url)
@@ -323,152 +189,7 @@ plt.show()
 
 U = S - X * interX_lm32.params['X']
 
-def rainbow(n):
-    """
-    Returns a list of colors sampled at equal intervals over the spectrum.
-
-    Parameters
-    ----------
-    n : int
-        The number of colors to return
-
-    Returns
-    -------
-    R : (n,3) array
-        An of rows of RGB color values
-
-    Notes
-    -----
-    Converts from HSV coordinates (0, 1, 1) to (1, 1, 1) to RGB. Based on
-    the Sage function of the same name.
-    """
-    from matplotlib import colors
-    R = np.ones((1,n,3))
-    R[0,:,0] = np.linspace(0, 1, n, endpoint=False)
-    #Note: could iterate and use colorsys.hsv_to_rgb
-    return colors.hsv_to_rgb(R).squeeze()
-
-import numpy as np
-def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
-                     xlabel=None, ylabel=None, colors = [], markers = [],
-                     linestyles = [], legendloc='best', legendtitle=None,
-                     **kwargs):
-    """
-    Parameters
-    ----------
-    x : array-like
-        The `x` factor levels are the x-axis
-    trace : array-like
-        The `trace` factor levels will form the trace
-    response : array-like
-        The reponse variable
-    func : function
-        Anything accepted by `pandas.DataFrame.aggregate`. This is applied to
-        the response variable grouped by the trace levels.
-    plottype : str {'line', 'scatter', 'both'}, optional
-        The type of plot to return. Can be 'l', 's', or 'b'
-    ax : axes, optional
-        Matplotlib axes instance
-    xlabel : str, optional
-        Label to use for `x`. Default is 'X'. If `x` is a `pandas.Series` it
-        will use the series names.
-    ylabel : str, optional
-        Label to use for `response`. Default is 'func of response'. If
-        `response` is a `pandas.Series` it will use the series names.
-    colors : list, optional
-    linestyles : list, optional
-    markers : list, optional
-        `colors`, `linestyles`, and `markers` must be lists of the same
-        length as the number of unique trace elements. If you want to control
-        the overall plotting options, use kwargs.
-    kwargs
-        These will be passed to the plot command used either plot or scatter.
-    """
-    from pandas import DataFrame
-    if ax is None:
-        import matplotlib.pyplot as plt
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-    else:
-        fig = ax.figure
-
-    if ylabel is None:
-        try: # did we get a pandas.Series
-            response_name = response.name
-        except:
-            response_name = 'response'
-        # py3 compatible?
-        ylabel = '%s of %s' % (func.func_name, response_name)
-
-    if xlabel is None:
-        try:
-            x_name = x.name
-        except:
-            x_name = 'X'
-
-    if legendtitle is None:
-        try:
-            legendtitle = trace.name
-        except:
-            pass
-
-    ax.set_ylabel(ylabel)
-    ax.set_xlabel(x_name)
-
-
-    data = DataFrame(dict(x=x, trace=trace, response=response))
-    plot_data = data.groupby(['trace', 'x']).aggregate(func).reset_index()
-
-    # check plot args
-    n_trace = len(plot_data['trace'].unique())
-    if linestyles:
-        try:
-            assert len(linestyles) == n_trace
-        except AssertionError, err:
-            raise ValueError("Must be a linestyle for each trace level")
-    else: # set a default
-        linestyles = ['-'] * n_trace
-    if markers:
-        try:
-            assert len(markers) == n_trace
-        except AssertionError, err:
-            raise ValueError("Must be a linestyle for each trace level")
-    else: # set a default
-        markers = ['.'] * n_trace
-    if colors:
-        try:
-            assert len(colors) == n_trace
-        except AssertionError, err:
-            raise ValueError("Must be a linestyle for each trace level")
-    else: # set a default
-        #TODO: how to get n_trace different colors?
-        colors = rainbow(n_trace)
-
-    if plottype == 'both' or plottype == 'b':
-        for i, (values, group) in enumerate(plot_data.groupby(['trace'])):
-            # trace label
-            label = str(group['trace'].values[0])
-            ax.plot(group['x'], group['response'], color=colors[i],
-                    marker=markers[i], label=label,
-                    linestyle=linestyles[i], **kwargs)
-    elif plottype == 'line' or plottype == 'l':
-        for i, (values, group) in enumerate(plot_data.groupby(['trace'])):
-            # trace label
-            label = str(group['trace'].values[0])
-            ax.plot(group['x'], group['response'], color=colors[i],
-                    label=label, linestyle=linestyles[i], **kwargs)
-    elif plottype == 'scatter' or plottype == 's':
-        for i, (values, group) in enumerate(plot_data.groupby(['trace'])):
-            # trace label
-            label = str(group['trace'].values[0])
-            ax.scatter(group['x'], group['response'], color=colors[i],
-                    label=label, marker=markers[i], **kwargs)
-
-    else:
-        raise ValueError("Plot type %s not understood" % plottype)
-    ax.legend(loc=legendloc, title=legendtitle)
-    ax.margins(.1)
-    return ax
+from plotting import interaction_plot
 
 ax = interaction_plot(E, M, U, colors=['red','blue'], markers=['^','D'],
         markersize=10)
@@ -677,7 +398,59 @@ plt.show()
 #I thought we could use the numpy namespace in charlton?
 from charlton.builtins import builtins
 builtins['np'] = np
-kidney_lm = ols('np.log(Days+1) ~ categorical(Duration) * categorical(Weight)',
+kidney_lm = ols('np.log(Days+1) ~ C(Duration) * C(Weight)',
         df=kt).fit()
 
 table10 = anova_lm(kidney_lm)
+
+print anova_lm(ols('np.log(Days+1) ~ C(Duration) + C(Weight)',
+                df=kt).fit(), kidney_lm)
+print anova_lm(ols('np.log(Days+1) ~ C(Duration)', df=kt).fit(),
+               ols('np.log(Days+1) ~ C(Duration) + C(Weight, Sum)',
+                   df=kt).fit())
+print anova_lm(ols('np.log(Days+1) ~ C(Weight)', df=kt).fit(),
+               ols('np.log(Days+1) ~ C(Duration) + C(Weight, Sum)',
+                   df=kt).fit())
+
+# Sum of squares
+# --------------
+#
+# Illustrates the use of different types of sums of squares (I,II,II)
+# and how the Sum contrast can be used to produce the same output between
+# the 3.
+
+# Types I and II are equivalent under a balanced design.
+
+# Don't use Type III with non-orthogonal contrast - ie., Treatment
+# Why exactly?
+
+sum_lm = ols('np.log(Days+1) ~ C(Duration, Sum) * C(Weight, Sum)',
+            df=kt).fit()
+
+anova_lm(sum_lm)
+anova_lm(sum_lm, type=2)
+anova_lm(sum_lm, type=3)
+
+nosum_lm = ols('np.log(Days+1) ~ C(Duration, Sum) * C(Weight, Sum)',
+            df=kt).fit()
+anova(nosum_lm)
+anova(nosum_lm, type=2)
+anova(nosum_lm, type=3)
+
+# R code for this.
+#sum.lm = lm(logDays ~ Duration * Weight, contrasts=list(Duration=contr.sum, Weight=contr.sum))
+#library(car)
+#
+#model.matrix
+#
+#anova(sum.lm)
+#Anova(sum.lm, type='II')
+#Anova(sum.lm, type='III')
+#
+## these sums of squares are different if you use the default
+## contrast codings, i.e. contr.treatment
+#nosum.lm = lm(logDays ~ Duration * Weight, contrasts=list(Duration=contr.treatment, Weight=contr.treatment))
+#
+#anova(nosum.lm)
+#Anova(nosum.lm, type='II')
+#Anova(nosum.lm, type='III')
