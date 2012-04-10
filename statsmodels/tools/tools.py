@@ -286,9 +286,19 @@ def add_constant(data, prepend=False):
        code.
     '''
     if not prepend:
-        import warnings
-        warnings.warn("The default of `prepend` will be changed to True in the "
-                  "next release, use explicit prepend", FutureWarning)
+        import inspect
+        frame = inspect.currentframe().f_back
+        info = inspect.getframeinfo(frame)
+        try:
+            to_warn = '\n'.join(info.code_context)
+        except: # python 2.5 compatibility
+            to_warn = '\n'.join(info[3])
+        if to_warn:
+            import warnings
+            warnings.warn("The default of `prepend` will be changed to True "
+                          "in 0.5.0, use explicit prepend",
+                          FutureWarning)
+
     if _is_using_pandas(data, None):
         # work on a copy
         return _pandas_add_constant(data.copy(), prepend)
