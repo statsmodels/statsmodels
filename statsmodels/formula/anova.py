@@ -70,8 +70,7 @@ def anova_single(model, typ, **kwargs):
         return anova1_lm_single(model, endog, exog, nobs, terms_info, table,
                                 n_rows, test, pr_test)
     elif typ in [2, "II"]:
-        return anova2_lm_single(model, terms_info, table, n_rows, test,
-                               pr_test)
+        return anova2_lm_single(model, terms_info, n_rows, test, pr_test)
     elif typ in [3, "III"]:
         return anova3_lm_single
     elif typ in [4, "IV"]:
@@ -133,7 +132,7 @@ def anova1_lm_single(model, endog, exog, nobs, terms_info, table, n_rows, test,
     return table
 
 #NOTE: the below is not agnostic about formula...
-def anova2_lm_single(model, terms_info, table, n_rows, test, pr_test):
+def anova2_lm_single(model, terms_info, n_rows, test, pr_test):
     """
     ANOVA type II table for one fitted linear model.
 
@@ -163,44 +162,60 @@ def anova2_lm_single(model, terms_info, table, n_rows, test, pr_test):
         intercept = 1
     else:
         intercept = 0
-    assign = {}
+    names = ['sum_sq', 'df', test, pr_test]
+
+    table = DataFrame(np.empty((n_rows, 4)), columns = names)
+    cov = np.asarray(model.cov_params())
+    col_order = []
+    index = []
     for i, (term, cols) in enumerate(terms_info.iteritems()):
-        # grab all effects except interaction effects that contain term
-        subset_effect = 0 # anything without term
+        # grab all varaibles except interaction effects that contain term
+        # need two hypotheses matrices L1 is most restrictive, ie., term==0
+        # L2 is everything except term==0
+        L1 = range(cols[0], cols[1])
+        L2 = []
         term_set = set(term.factors)
-        for t,col in terms_info.iteritems():
+        for t,col in terms_info.iteritems(): # for the term you have
             other_set = set(t.factors)
             if term_set.issubset(other_set) and not term_set == other_set:
-                continue
-            elif term_set == other_set:
-                main_effect = np.sum(effects[col[0]:col[1]]**2)
-            subset_effect += np.sum(effects[col[0]:col[1]]**2)
+                # on a higher order term containing current `term`
+                L1.extend(range(col[0], col[1]))
+                L2.extend(range(col[0], col[1]))
 
-        ssr_woutterm = [(col[0], col[1]) for t,col in terms_info.iteritems()
-                        if not term.factor in t.factors]
-        ssr_wterm = ssrwoutterm + np.sum(effects[cols[0]:cols[1]]**2)
+        L1 = np.eye(model.model.exog.shape[1])[L1]
+        L2 = np.eye(model.model.exog.shape[1])[L2]
 
-        # need to do a full pass over the terms to determine what we need
-        #assign.extend(
+        if L2.size:
+            LVL = np.dot(np.dot(L1,cov),L2.T)
+            from scipy import linalg
+            orth_compl,_ = linalg.qr(LVL)
+            r = L1.shape[0] - L2.shape[0]
+            # L1|2
+            # use the non-unique orthogonal completion since L12 is rank r
+            L12 = np.dot(orth_compl[:,-r:].T, L1)
+        else:
+            L12 = L1
+            r = L1.shape[0]
+        if test == 'F':
+            f = model.f_test(L12)
+            table.ix[i][test] = test_value = f.fvalue
+            table.ix[i][pr_test] = f.pvalue
 
-        #table.ix[i]['sum_sq'] = np.sum(effects[cols[0]:cols[1]]**2)
-        #table.ix[i]['df'] = cols[1]-cols[0]
-        #col_order.append(cols[0])
-        #index.append(term.name())
-        #assign.extend([])
+        # need to back out SSR from f_test, not quite sure how
+        table.ix[i]['df'] = r
+        col_order.append(cols[0])
+        index.append(term.name())
+
     table.index = Index(index + ['Residual'])
+    table = table.ix[np.argsort(col_order + [model.model.exog.shape[1]+1])]
+    # back out sum of squares from f_test
+    ssr = table[test] * table['df'] * model.ssr/model.df_resid
+    table['sum_sq'] = ssr
     # fill in residual
     table.ix['Residual'][['sum_sq','df', test, pr_test]] = (model.ssr,
                                                             model.df_resid,
                                                             np.nan, np.nan)
 
-    table = table.ix[np.argsort(col_order + [exog.shape[1]+1])]
-    table['mean_sq'] = table['sum_sq'] / table['df']
-    if test == 'F':
-        table[:n_rows][test] = ((table['sum_sq']/table['df'])/
-                                (model.ssr/model.df_resid))
-        table[:n_rows][pr_test] = stats.f.sf(table["F"], table["df"],
-                                model.df_resid)
     return table
 
 def anova_lm(*args, **kwargs):
@@ -245,7 +260,7 @@ def anova_lm(*args, **kwargs):
 
     if len(args) == 1:
         model = args[0]
-        return anova_single(model, typ, **kwargs)
+        return anova_single(model, **kwargs)
 
     try:
         assert typ in [1,"II"]
@@ -288,7 +303,10 @@ def anova_lm(*args, **kwargs):
 if __name__ == "__main__":
     import pandas
     from statsmodels.formula.api import ols
-    moore = pandas.read_table('moore.csv', delimiter=" ", skiprows=1,
+    # in R
+    #library(car)
+    #write.csv(Moore, "moore.csv", row.names=FALSE)
+    moore = pandas.read_table('moore.csv', delimiter=",", skiprows=1,
                                 names=['partner_status','conformity',
                                     'fcategory','fscore'])
     moore_lm = ols('conformity ~ C(fcategory, Sum)*C(partner_status, Sum)',
@@ -296,19 +314,13 @@ if __name__ == "__main__":
 
     mooreB = ols('conformity ~ C(partner_status, Sum)', df=moore).fit()
 
-    # try to estimate the residuals using projections
+    # for each term you just want to test vs the model without its
+    # higher-order terms
 
+    # using Monette-Fox slides and Marden class notes for linear algebra /
+    # orthogonal complement
+    # https://netfiles.uiuc.edu/jimarden/www/Classes/STAT324/
 
+    table = anova_lm(moore_lm, typ=2)
 
-    from statsmodels.stats.contrast import Contrast
-    exog = moore_lm.model.exog
-    endog = moore_lm.model.endog
-    c = np.atleast_2d(Contrast(exog[:,[3]], exog).contrast_matrix)
-    c = np.r_[c,np.zeros((5,6))]
-    C0 = np.eye(6) - np.dot(c,np.linalg.pinv(c))
-    X0 = np.dot(exog, C0)
-    R0 = np.eye(45) - np.dot(X0, np.linalg.pinv(X0))
-    R = np.eye(45) - np.dot(exog, moore_lm.model.pinv_wexog)
-    M = R0 - R
-    ssr = np.dot(np.dot(M,endog),np.dot(M,endog))
 
