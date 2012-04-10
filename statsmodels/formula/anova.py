@@ -25,7 +25,7 @@ def _orthogonal_complement(X, subset):
     """
     return np.linalg.qr
 
-def anova_single(model, typ, **kwargs):
+def anova_single(model, **kwargs):
     """
     ANOVA table for one fitted linear model.
 
@@ -50,6 +50,7 @@ def anova_single(model, typ, **kwargs):
     """
     test = kwargs.get("test", "F")
     scale = kwargs.get("scale", None)
+    typ = kwargs.get("typ", 1)
 
     endog = model.model.endog
     exog = model.model.exog
