@@ -2,7 +2,11 @@
 
 import numpy as np
 import numpy.linalg as la
-import matplotlib.pyplot as plt
+try:
+    import matplotlib.pyplot as plt
+except ImportError:
+    plt = None
+
 from scipy import stats
 
 from statsmodels.iolib.table import SimpleTable
