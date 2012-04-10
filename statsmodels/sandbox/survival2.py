@@ -663,6 +663,9 @@ class CoxPH(LikelihoodModel):
 
     def __init__(self, surv, exog, data=None, ties="efron", strata=None,
                  names=None):
+        if names is None:
+            #TODO: list or array
+            names = ['var%2d'% i for i in range(exog.shape[1])]
         self.names = names
         self.surv = surv
         self.ties = ties
@@ -784,7 +787,8 @@ class CoxPH(LikelihoodModel):
         stratas = np.asarray(stratas)
         exog = self.exog
         strata = exog[:,stratas]
-        names = self.names[:,stratas]
+        #keep only non-strata names
+        names = [v for i,v in enumerate(self.names) if not i in stratas]
         #exog = exog.compress(stratas, axis=1)
         if strata.ndim == 1:
             groups = np.unique(strata)

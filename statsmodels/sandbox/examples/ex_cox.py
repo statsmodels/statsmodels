@@ -104,3 +104,16 @@ print results2.params
 ##quick summary method
 ##Residuals and diagnostic plots
 ##Hypothesis tests against restricted models
+
+print results2.summary()
+results2.diagnostics()
+do_plots = True
+if do_plots:
+    import matplotlib.pyplot as plt
+    plt.figure()
+    results2.martingale_plot(1)
+    plt.title('martingale plot')
+    plt.figure()
+    results2.deviance_plot()
+    plt.title('deviance plot')
+    plt.show()
