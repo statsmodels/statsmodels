@@ -3,8 +3,8 @@
 #An example for the CoxPH class
 
 import numpy as np
-from scikits.statsmodels.sandbox.survival2 import CoxPH, Survival, CoxResults
-from scikits.statsmodels.datasets import ovarian_cancer
+from statsmodels.sandbox.survival2 import CoxPH, Survival, CoxResults
+from statsmodels.datasets import ovarian_cancer
 from scipy import stats
 
 ##Get the data

@@ -37,7 +37,7 @@ Variable name definitions:
 """
 
 from numpy import recfromtxt, column_stack, array, genfromtxt, r_
-from scikits.statsmodels.datasets import Dataset
+from statsmodels.tools import Dataset
 from os.path import dirname, abspath
 
 def load():
