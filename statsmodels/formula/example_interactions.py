@@ -443,15 +443,15 @@ print anova_lm(ols('np.log(Days+1) ~ C(Weight)', df=kt).fit(),
 sum_lm = ols('np.log(Days+1) ~ C(Duration, Sum) * C(Weight, Sum)',
             df=kt).fit()
 
-anova_lm(sum_lm)
-anova_lm(sum_lm, type=2)
-anova_lm(sum_lm, type=3)
+print anova_lm(sum_lm)
+print anova_lm(sum_lm, typ=2)
+#anova_lm(sum_lm, type=3)
 
-nosum_lm = ols('np.log(Days+1) ~ C(Duration, Sum) * C(Weight, Sum)',
+nosum_lm = ols('np.log(Days+1) ~ C(Duration, Treatment) * C(Weight, Treatment)',
             df=kt).fit()
-anova_lm(nosum_lm)
-anova_lm(nosum_lm, type=2)
-anova_lm(nosum_lm, type=3)
+print anova_lm(nosum_lm)
+print anova_lm(nosum_lm, typ=2)
+#anova_lm(nosum_lm, type=3)
 
 # R code for this.
 #sum.lm = lm(logDays ~ Duration * Weight, contrasts=list(Duration=contr.sum, Weight=contr.sum))
