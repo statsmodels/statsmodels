@@ -13,13 +13,13 @@ data = sm.datasets.sunspots.load()
 # Right now an annual date series must be datetimes at the end of the year.
 
 from datetime import datetime
-dates = sm.tsa.datetools.date_from_range('1700', length=len(data.endog))
+dates = sm.tsa.datetools.dates_from_range('1700', length=len(data.endog))
 
 # Using Pandas
 # ------------
 
 # Make a pandas TimeSeries or DataFrame
-endog = pandas.TimeSeries(data.endog, index=dt_dates)
+endog = pandas.TimeSeries(data.endog, index=dates)
 
 # and instantiate the model
 ar_model = sm.tsa.AR(endog, freq='A')
@@ -32,7 +32,7 @@ print pred
 # Using explicit dates
 # --------------------
 
-ar_model = sm.tsa.AR(data.endog, dates=dt_dates, freq='A')
+ar_model = sm.tsa.AR(data.endog, dates=dates, freq='A')
 ar_res = ar_model.fit(maxlag=9, method='mle', disp=-1)
 pred = ar_res.predict(start='2005', end='2015')
 print pred
