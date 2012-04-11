@@ -78,10 +78,10 @@ class Survival(object):
             if censoring is None:
                 self.censoring = None
             else:
-                self.censoring = (data[:,censoring]).astype(int)
+                self.censoring = (data[:,censoring]).astype(float) #(int)
             if time2 is None:
                 self.type = "exact"
-                self.times = (data[:,time1]).astype(int)
+                self.times = (data[:,time1]).astype(float).astype(int) #string in example
             else:
                 self.type = "interval"
                 self.start = data[:,time1].astype(int)
@@ -97,7 +97,7 @@ class Survival(object):
                 self.type = "exact"
                 self.times = time1
             if censoring is None:
-                self.censoring == None
+                self.censoring = None
             else:
                 self.censoring = (np.asarray(censoring)).astype(int)
 
@@ -264,7 +264,7 @@ class KaplanMeier(object):
               dtype='|S4')
         >>> km4 = KaplanMeier(dta,0,exog=1,censoring=2)
         >>> results4 = km4.fit()
-        
+
     """
 
     ##Add stratification
@@ -272,7 +272,8 @@ class KaplanMeier(object):
     ##update usage with Survival for changes to Survival
 
     def __init__(self, surv, exog=None, data=None):
-        censoring = surv.censoring
+        censoring = self.censoring = surv.censoring
+        #Todo: is the censoring handling now completely in Survival
         ttype  = surv.type
         self.ttype = ttype
         if ttype == 'exact':
@@ -297,6 +298,7 @@ class KaplanMeier(object):
                 del(data)
             else:
                 self.times = times[~np.isnan(times)]
+                self.censoring = None
         elif exog.dtype == float or exog.dtype == int:
             if censoring != None:
                 data = np.c_[times,censoring,exog]
@@ -306,6 +308,7 @@ class KaplanMeier(object):
                 self.exog = data[:,2:]
             else:
                 data = np.c_[times,exog]
+                #data = np.column_stack([times,exog])
                 data = data[~np.isnan(data).any(1)]
                 self.times = (data[:,0]).astype(int)
                 self.exog = data[:,1:]
@@ -662,7 +665,7 @@ class CoxPH(LikelihoodModel):
         D. R. Cox. "Regression Models and Life-Tables",
             Journal of the Royal Statistical Society. Series B (Methodological)
             Vol. 34, No. 2 (1972), pp. 187-220
-        
+
     """
 
     def __init__(self, surv, exog, data=None, ties="efron", strata=None,
@@ -785,7 +788,7 @@ class CoxPH(LikelihoodModel):
             Lisa Borsi, Marc Lickes & Lovro Soldo. "The Stratified Cox Procedure",
                 http://stat.ethz.ch/education/semesters/ss2011/seminar/contents/presentation_5.pdf
                 2011
-            
+
         """
 
         stratas = np.asarray(stratas)
@@ -880,7 +883,7 @@ class CoxPH(LikelihoodModel):
         """
 
         loglike(b)
-        
+
             Calculate the value of the log-likelihood at estimates of the
             parameters for all strata
 
@@ -903,7 +906,7 @@ class CoxPH(LikelihoodModel):
         """
 
         score(b)
-        
+
             Calculate the value of the score function at estimates of the
             parameters for all strata
 
@@ -926,7 +929,7 @@ class CoxPH(LikelihoodModel):
         """
 
         hessian(b)
-        
+
             Calculate the value of the hessian at estimates of the
             parameters for all strata
 
@@ -949,7 +952,7 @@ class CoxPH(LikelihoodModel):
         """
 
         _loglike_proc(b)
-        
+
             Calculate the value of the log-likelihood at estimates of the
             parameters for a single strata
 
@@ -1024,12 +1027,12 @@ class CoxPH(LikelihoodModel):
                                             (t[0] >= times[:,0])
                                             ).astype(bool)].sum())))
         return logL
-    
+
     def _score_proc(self, b):
         """
 
         _score_proc(b)
-        
+
             Calculate the score vector of the log-likelihood at estimates of the
             parameters for a single strata
 
@@ -1124,7 +1127,7 @@ class CoxPH(LikelihoodModel):
         """
 
         _hessian_proc(b)
-        
+
             Calculate the hessian matrix of the log-likelihood at estimates of the
             parameters for a single strata
 
@@ -1139,7 +1142,7 @@ class CoxPH(LikelihoodModel):
             value of hessian for strata as 2d array
 
         """
-        
+
         ttype = self.ttype
         ties = self.ties
         exog = self._str_exog
@@ -1324,7 +1327,7 @@ class KMResults(LikelihoodModelResults):
         """
 
         test_diff(self, groups, rho=None, weight=None)
-        
+
             Test for difference between survival curves
 
             Parameters
@@ -1420,7 +1423,7 @@ class KMResults(LikelihoodModelResults):
                 self.cen = censoring
             else:
                 censoring = None
-            del(ind)
+            #del(ind)
             tind = np.unique(t)
             NK = []
             N = []
@@ -1446,10 +1449,10 @@ class KMResults(LikelihoodModelResults):
                 for g in groups:
                     n = len(t)
                     if pooled.ndim == 1:
-                        exog_idx = exog == g
+                        exog_idx = exog[ind] == g
                     else:
                         ##use .any(1)? no need all along axis=1
-                        exog_idx = (np.product(exog == g, axis=1)).astype(bool)
+                        exog_idx = (np.product(exog[ind] == g, axis=1)).astype(bool)
                     dk = np.bincount(t[exog_idx])
                     ##Save d (same for all?)
                     d = np.bincount(t)
@@ -1482,7 +1485,7 @@ class KMResults(LikelihoodModelResults):
                         exog_idx = exog == g
                     else:
                         exog_idx = (np.product(exog == g, axis=1)).astype(bool)
-                    reverseCensoring = -1*(censoring - 1) 
+                    reverseCensoring = -1*(censoring - 1)
                     censored = np.bincount(t,reverseCensoring)
                     ck = np.bincount(t[exog_idx],
                                      reverseCensoring[exog_idx])
@@ -1825,18 +1828,18 @@ class CoxResults(LikelihoodModelResults):
         else:
             baseline = baseline.results[0][0]
             return baseline
-        
+
     def predict(self, X, t):
 
         ##As function of t?
         ##t='all' and matrix?
         ##t= arbitrary array of times?
         ##Remove coerce_0_1
-        
+
         """
 
         predict(X, t, coerce_0_1=True)
-        
+
             estimate the hazard with a given vector of covariates
 
             Parameters
@@ -1873,13 +1876,13 @@ class CoxResults(LikelihoodModelResults):
         else:
             return (-np.log(baseline[baseline[:,0] <= t][-1][0])
                     * np.exp(np.dot(X, self.params)))
-        
+
     def plot(self, vector='mean', CI_band=False):
 
         ##Add CI bands
         ##Adjust CI bands for coeff variance
         ##Update with predict
-        
+
         """
 
         plot(vector='mean', CI_band=False, coerce_0_1=True)
@@ -1954,7 +1957,7 @@ class CoxResults(LikelihoodModelResults):
         """
 
         return KaplanMeier(self.model.surv)
-        
+
     def test_coefficients(self):
         """
 
@@ -2061,7 +2064,7 @@ class CoxResults(LikelihoodModelResults):
             the first column gives the lower confidence limit
             and the second column gives the upper confidence
             limit
-        
+
         """
 
         CI = super(CoxResults, self).conf_int(alpha, cols, method)

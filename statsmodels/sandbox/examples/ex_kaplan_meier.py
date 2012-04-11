@@ -2,7 +2,7 @@
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
 import numpy as np
-from statsmodels.sandbox.survival2 import KaplanMeier
+from statsmodels.sandbox.survival2 import KaplanMeier, Survival
 
 #Getting the strike data as an array
 dta = sm.datasets.strikes.load()
@@ -14,45 +14,47 @@ print '\n'
 
 #Create the KaplanMeier object and fit the model
 
-km = KaplanMeier(dta,0)
-km.fit()
+dtas = Survival(0, censoring=None, data=dta)
+km = KaplanMeier(dtas)
+km_res = km.fit()
 
 #show the results
 
-km.plot()
+km_res.plot()
 print 'basic  model'
 print '\n'
-km.summary()
+print km_res.summary()
 print '\n'
 
 #Mutiple survival curves
 
-km2 = KaplanMeier(dta,0,exog=1)
-km2.fit()
+km2 = KaplanMeier(dtas,exog=dta[:,1])
+km_res2 = km2.fit()
 print 'more than one curve'
 print '\n'
-km2.summary()
+print km_res2.summary()
 print '\n'
-km2.plot()
+km_res2.plot()
 
 #with censoring
 
 censoring = np.ones_like(dta[:,0])
 censoring[dta[:,0] > 80] = 0
 dta = np.c_[dta,censoring]
+dtas = Survival(0, censoring=None, data=dta)
 print 'with censoring'
 print '\n'
 print dta[range(5),:]
 print '\n'
-km3 = KaplanMeier(dta,0,exog=1,censoring=2)
-km3.fit()
-km3.summary()
+km3 = KaplanMeier(dtas,exog=dta[:,1][:,None]) #,censoring=2)
+km_res3 = km3.fit()
+print km_res3.summary()
 print '\n'
-km3.plot()
+km_res3.plot()
 
 #Test for difference of survival curves
 
-log_rank = km3.test_diff([0.0645,-0.03957])
+log_rank = km_res3.test_diff([0.0645,-0.03957])
 print 'log rank test'
 print '\n'
 print log_rank
@@ -63,7 +65,7 @@ print '\n'
 #and exog = -0.03957, the index one element is the degrees of freedom for
 #the test, and the index two element is the p-value for the test
 
-wilcoxon = km3.test_diff([0.0645,-0.03957], rho=1)
+wilcoxon = km_res3.test_diff([0.0645,-0.03957], rho=1)
 print 'Wilcoxon'
 print '\n'
 print wilcoxon
@@ -82,8 +84,9 @@ print '\n'
 
 def weights(t):
     #must accept one arguement, even though it is not used here
-    s = KaplanMeier(dta,0,censoring=2)
-    s.fit()
+    dtas_ = Survival(0, censoring=2, data=dta)
+    s = KaplanMeier(dtas_)
+    res = s.fit()
     s = s.results[0][0]
     s = s * (1 - s)
     return s
@@ -91,7 +94,7 @@ def weights(t):
 #KaplanMeier provides an array of times to the weighting function
 #internally, so the weighting function must accept one arguement
 
-test = km3.test_diff([0.0645,-0.03957], weight=weights)
+test = km_res3.test_diff([0.0645,-0.03957], weight=weights)
 print 'user specified weights'
 print '\n'
 print test
@@ -111,11 +114,14 @@ print 'with nan group names'
 print '\n'
 print dta[range(5),:]
 print '\n'
-km4 = KaplanMeier(dta,0,exog=1,censoring=2)
-km4.fit()
-km4.summary()
+dtas2 = Survival(0, censoring=2, data=dta)
+#convert to int
+u = np.unique(dta[:,1], return_inverse=True)
+km4 = KaplanMeier(dtas2, exog=u[1])
+km_res4 = km4.fit()
+print km_res4.summary()
 print '\n'
-km4.plot()
+km_res4.plot()
 
 #show all the plots
 
