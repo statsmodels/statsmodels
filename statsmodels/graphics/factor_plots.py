@@ -1,6 +1,7 @@
 import numpy as np
 
 from statsmodels.graphics.plottools import rainbow
+import utils
 
 def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
                      xlabel=None, ylabel=None, colors = [], markers = [],
@@ -60,12 +61,7 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
     >>> plt.show()
     """
     from pandas import DataFrame
-    if ax is None:
-        import matplotlib.pyplot as plt
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-    else:
-        fig = ax.figure
+    _, ax = utils.create_mpl_ax(ax)
 
     if ylabel is None:
         try: # did we get a pandas.Series
