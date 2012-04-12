@@ -416,8 +416,8 @@ def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
 
     Returns
     -------
-    axes : Axes
-        The axes given by `axes` or a new instance.
+    fig : Figure
+        The figure given by `ax.figure` or a new instance.
 
     Examples
     --------
@@ -433,7 +433,7 @@ def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
     >>> import matplotlib.pyplot as plt
     >>> plt.show()
     """
-    _,ax = utils.create_mpl_ax(ax)
+    fig,ax = utils.create_mpl_ax(ax)
 
     if model_results:
         intercept, slope = model_results.params
@@ -476,7 +476,7 @@ def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
         ax.hline(horiz)
     if vert:
         ax.vline(vert)
-    return ax
+    return fig
 
 if __name__ == '__main__':
     import numpy as np

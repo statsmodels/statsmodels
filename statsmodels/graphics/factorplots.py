@@ -45,8 +45,8 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
 
     Returns
     -------
-    axes : Axes
-        The axes given by `axes` or a new instance.
+    fig : Figure
+        The figure given by `ax.figure` or a new instance.
 
     Examples
     --------
@@ -61,7 +61,7 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
     >>> plt.show()
     """
     from pandas import DataFrame
-    _, ax = utils.create_mpl_ax(ax)
+    fig, ax = utils.create_mpl_ax(ax)
 
     if ylabel is None:
         try: # did we get a pandas.Series
@@ -139,4 +139,4 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
         raise ValueError("Plot type %s not understood" % plottype)
     ax.legend(loc=legendloc, title=legendtitle)
     ax.margins(.1)
-    return ax
+    return fig
