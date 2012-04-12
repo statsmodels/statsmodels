@@ -393,6 +393,91 @@ def plot_ccpr(res, exog_idx=None, grid=None, fig=None):
 
     return fig
 
+def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
+                model_results=None, ax=None, **kwargs):
+    """
+    Plots a line given an intercept and slope.
+
+    intercept : float
+        The intercept of the line
+    slope : float
+        The slope of the line
+    horiz : float or array-like
+        Data for horizontal lines on the y-axis
+    vert : array-like
+        Data for verterical lines on the x-axis
+    model_results : statsmodels results instance
+        Any object that has a two-value `params` attribute. Assumed that it
+        is (intercept, slope)
+    ax : axes, optional
+        Matplotlib axes instance
+    kwargs
+        Options passed to matplotlib.pyplot.plt
+
+    Returns
+    -------
+    fig : Figure
+        The figure given by `ax.figure` or a new instance.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import statsmodels.api as sm
+    >>> np.random.seed(12345)
+    >>> X = sm.add_constant(np.random.normal(0, 20, size=30), prepend=True)
+    >>> y = np.dot(X, [25, 3.5]) + np.random.normal(0, 30, size=30)
+    >>> mod = sm.OLS(y,X).fit()
+    >>> fig = abline_plot(model_results=mod)
+    >>> ax = fig.axes
+    >>> ax.scatter(X[:,1], y)
+    >>> ax.margins(.1)
+    >>> import matplotlib.pyplot as plt
+    >>> plt.show()
+    """
+    fig,ax = utils.create_mpl_ax(ax)
+
+    if model_results:
+        intercept, slope = model_results.params
+        x = [model_results.model.exog[:,1].min(),
+             model_results.model.exog[:,1].max()]
+    else:
+        x = None
+        if not (intercept is not None and slope is not None):
+            raise ValueError("specify slope and intercepty or model_results")
+
+    if not x: # can't infer x limits
+        x = ax.get_xlim()
+
+    y = [x[0]*slope+intercept, x[1]*slope+intercept]
+    ax.set_xlim(x)
+    ax.set_ylim(y)
+
+    from matplotlib.lines import Line2D
+
+    class ABLine2D(Line2D):
+
+        def update_datalim(self, ax):
+            ax.set_autoscale_on(False)
+
+            children = ax.get_children()
+            abline = [children[i] for i in range(len(children))
+                       if isinstance(children[i], ABLine2D)][0]
+            x = ax.get_xlim()
+            y = [x[0]*slope+intercept, x[1]*slope+intercept]
+            abline.set_data(x,y)
+            ax.figure.canvas.draw()
+
+    line = ABLine2D(x, y, **kwargs)
+    ax.add_line(line)
+    ax.callbacks.connect('xlim_changed', line.update_datalim)
+    ax.callbacks.connect('ylim_changed', line.update_datalim)
+
+
+    if horiz:
+        ax.hline(horiz)
+    if vert:
+        ax.vline(vert)
+    return fig
 
 if __name__ == '__main__':
     import numpy as np
