@@ -433,6 +433,7 @@ def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
     >>> import matplotlib.pyplot as plt
     >>> plt.show()
     """
+    _,ax = utils.create_mpl_ax(ax)
 
     if model_results:
         intercept, slope = model_results.params
@@ -443,16 +444,7 @@ def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
         if not (intercept is not None and slope is not None):
             raise ValueError("specify slope and intercepty or model_results")
 
-
-    # do this after so as not to overwrite xlim and ylim
-    if ax is None:
-        import matplotlib.pyplot as plt
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        if not x: # can't infer x limits
-            x = ax.get_xlim()
-    else:
-        fig = ax.figure
+    if not x: # can't infer x limits
         x = ax.get_xlim()
 
     y = [x[0]*slope+intercept, x[1]*slope+intercept]
