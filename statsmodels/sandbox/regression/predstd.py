@@ -8,7 +8,6 @@ A: josef pktd
 
 import numpy as np
 from scipy import stats
-import statsmodels.api as sm
 
 def atleast_2dcol(x):
     ''' convert array_like to 2d from 1d or 0d
@@ -98,6 +97,7 @@ def wls_prediction_std(res, exog=None, weights=None, alpha=0.05):
 
 
 if __name__ == '__main__':
+    import statsmodels.api as sm
 
     # generate dataset
     nsample = 50
