@@ -81,7 +81,7 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
         try:
             legendtitle = trace.name
         except:
-            pass
+            legentitle = 'Trace'
 
     ax.set_ylabel(ylabel)
     ax.set_xlabel(x_name)
