@@ -42,6 +42,11 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
         These will be passed to the plot command used either plot or scatter.
         If you want to control the overall plotting options, use kwargs.
 
+    Returns
+    -------
+    axes : Axes
+        The axes given by `axes` or a new instance.
+
     Examples
     --------
     >>> import numpy as np
