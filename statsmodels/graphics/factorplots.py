@@ -55,7 +55,7 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
     >>> weight = np.random.randint(1,4,size=60)
     >>> duration = np.random.randint(1,3,size=60)
     >>> days = np.log(np.random.randint(1,30, size=60))
-    >>> ax = interaction_plot(weight, duration, days,
+    >>> fig = interaction_plot(weight, duration, days,
     ...             colors=['red','blue'], markers=['D','^'], ms=10)
     >>> import matplotlib.pyplot as plt
     >>> plt.show()
