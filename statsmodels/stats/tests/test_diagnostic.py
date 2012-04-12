@@ -130,7 +130,7 @@ class TestDiagnosticG(object):
         params = np.array([-9.48167277465485, 4.3742216647032,
                            -0.613996969478989])
 
-        assert_almost_equal(self.res.params, params, decimal=14)
+        assert_almost_equal(self.res.params, params, decimal=12)
 
     def test_hac(self):
         res = self.res
@@ -222,7 +222,7 @@ class TestDiagnosticG(object):
                       parameters=(2,), distr='f')
 
         bp = smsdia.het_breushpagan(res.resid, res.model.exog)
-        compare_t_est(bp, bptest, decimal=(13, 13))
+        compare_t_est(bp, bptest, decimal=(12, 12))
 
 
 
@@ -371,15 +371,15 @@ class TestDiagnosticG(object):
                       chi2value=4.66794408358942, pvalue=0.03073069384028677,
                       df=(4,3,1))
         lrt = res.compare_lr_test(res3)
-        assert_almost_equal(lrt[0], lrtest['chi2value'], decimal=14)
-        assert_almost_equal(lrt[1], lrtest['pvalue'], decimal=14)
+        assert_almost_equal(lrt[0], lrtest['chi2value'], decimal=12)
+        assert_almost_equal(lrt[1], lrtest['pvalue'], decimal=12)
 
         waldtest = dict(fvalue=4.65216373312492, pvalue=0.03221346195239025,
                         df=(199,200,1))
 
         wt = res.compare_f_test(res3)
-        assert_almost_equal(wt[0], waldtest['fvalue'], decimal=13)
-        assert_almost_equal(wt[1], waldtest['pvalue'], decimal=14)
+        assert_almost_equal(wt[0], waldtest['fvalue'], decimal=12)
+        assert_almost_equal(wt[1], waldtest['pvalue'], decimal=12)
 
 
     def test_compare_nonnested(self):
