@@ -290,9 +290,9 @@ def add_constant(data, prepend=False):
         frame = inspect.currentframe().f_back
         info = inspect.getframeinfo(frame)
         try:
-            to_warn = '\n'.join(info.code_context)
+            to_warn = 'prepend' not in '\n'.join(info.code_context)
         except: # python 2.5 compatibility
-            to_warn = '\n'.join(info[3])
+            to_warn = 'prepend' not in '\n'.join(info[3])
         if to_warn:
             import warnings
             warnings.warn("The default of `prepend` will be changed to True "
