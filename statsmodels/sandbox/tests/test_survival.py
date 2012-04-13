@@ -1,4 +1,8 @@
+'''Tests for Survival models: KaplanMeier and CoxPH
 
+currently just smoke tests to check which attributes and methods raise
+exceptions
+'''
 
 
 import numpy as np
@@ -131,9 +135,131 @@ class TestCoxPHStrata(CheckCoxPH):
         cls.has_strata = True
         cls.results = model.fit()
 
+
+class CheckKaplanMeier(object):
+
+    def test_smoke_model(self):
+        #smoke test to check status and for refactoring
+        model = self.model
+        results = self.results
+
+        #results._plotting_proc()  #arguments ?
+        #results._summary_proc()  #arguments ?
+        results.conf_int()
+        results.cov_params()
+        #results.f_test(np.ones(results.params.shape)) #BUG
+        #results.initialize()
+        #results.load()
+        results.plot()
+        #results.predict()   #TODO: missing in model? inherited
+        #results.remove_data()  #TODO
+        #results.save()
+        results.summary()
+        #results.t()   #BUG  cov_p is 1-dim
+        #results.t_test(np.ones(results.params.shape)) #BUG
+        #results.test_diff() #check availability of groups
+
+        #results._cache
+        #results._data_attr #TODO: for remove data not abailable
+        results.bse
+        results.censoring
+        results.censorings
+        results.event
+        results.exog
+        results.groups
+        results.model
+        results.normalized_cov_params
+        results.params
+        results.pvalues
+        results.results
+        results.scale
+        results.times
+        results.ts
+        results.tvalues
+
+
+        model.censoring
+        model.censorings
+        model.df_resid
+        model.event
+        model.exog
+        model.groups
+        model.normalized_cov_params
+        model.params
+        model.results
+        model.times
+        model.ts
+        model.ttype
+
+    def test_isolate_curve(self):
+        #separate to get isolated failure
+        model = self.model
+        results = self.results
+        if self.has_exog and model.groups is not None:
+            results.isolate_curve(model.groups[0])
+            #requires exog in model
+            #BUG ? typo and needs groups, fixed typo
+            #needs censoring ? line 1587
+            print "isolate success"
+
+class TestKaplanMeier1(CheckKaplanMeier):
+    #no exog
+
+    @classmethod
+    def setup_class(cls):
+        from statsmodels.datasets import strikes
+        dta = strikes.load()
+        dta = dta.values()[-1]
+
+        dtas = Survival(0, censoring=None, data=dta)
+        cls.model = model = KaplanMeier(dtas)
+        cls.results = model.fit()
+
+        cls.has_exog = False
+
+class TestKaplanMeier2(CheckKaplanMeier):
+    #no exog
+
+    @classmethod
+    def setup_class(cls):
+        from statsmodels.datasets import strikes
+        dta = strikes.load()
+        dta = dta.values()[-1]
+
+        dtas = Survival(0, censoring=None, data=dta)
+        cls.model = model = KaplanMeier(dtas, exog=dta[:,1])
+        cls.results = model.fit()
+        cls.has_exog = True
+
+
+
+class TestKaplanMeier3(CheckKaplanMeier):
+    #with censoring #and exog
+
+    @classmethod
+    def setup_class(cls):
+
+        from statsmodels.datasets import strikes
+        dta = strikes.load()
+        dta = dta.values()[-1]
+        censoring = np.ones_like(dta[:,0])
+        censoring[dta[:,0] > 80] = 0
+        dta = np.c_[dta, censoring]
+        print '*********************', dta.shape
+
+        dtas = Survival(0, censoring=2, data=dta)
+        cls.model = model = KaplanMeier(dtas, exog=dta[:,1][:,None]) #,censoring=2)
+        cls.results = model.fit()
+
+        cls.has_exog = True
+
+
+
+
 if __name__ == '__main__':
     import nose
-    tt = TestCoxPH1()
+    #tt = TestCoxPH1()
+    tt = TestKaplanMeier3()
     tt.setup_class()
     tt.test_smoke_model()
-    nose.runmodule(argv=[__file__,'-s'], exit=False)
+    nose.runmodule(argv=[__file__,'-s', '-v'], exit=False)

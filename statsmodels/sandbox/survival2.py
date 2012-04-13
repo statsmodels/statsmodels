@@ -1578,10 +1578,10 @@ class KMResults(LikelihoodModelResults):
         """
 
         exogs = self.exog
-        if exog is None:
+        if exog is None:  #TODO: should this be exogs
             raise ValueError("Already a single curve")
         else:
-            ind = (list((self.model).groups)).index(exog)
+            ind = list(self.model.groups).index(exog)
             results = self.results[ind]
             ts = self.ts[ind]
             censoring = self.censoring[exogs == exog]
@@ -1997,6 +1997,7 @@ class CoxResults(LikelihoodModelResults):
         """
 
         if restricted is None:
+            #TODO: using start_params as alternative, restriction looks fragile
             restricted = self.model.start_params
         params = self.params
         model = self.model
