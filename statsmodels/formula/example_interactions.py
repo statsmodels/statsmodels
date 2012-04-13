@@ -2,11 +2,12 @@ from urllib2 import urlopen
 
 import numpy as np
 import statsmodels.api as sm
-from statsmodels.formula.api import ols
 import pandas
 import matplotlib.pyplot as plt
 from matplotlib import figure
 
+from statsmodels.formula.api import ols
+from statsmodels.graphics.api import interaction_plot, abline_plot
 from anova import anova_lm
 
 try:
@@ -59,7 +60,7 @@ lm.model._data._orig_exog
 lm.model._data.frame
 
 # Get influence statistics
-infl = lm.get_outlier_influence()
+infl = lm.get_influence()
 
 print infl.summary_table()
 
@@ -110,7 +111,7 @@ interM_lm.model.exog_names
 try:
     infl = interM_lm.get_influence()
 except: # there was a rename in master
-    infl = interM_lm.get_outlier_influence()
+    infl = interM_lm.get_influence()
 resid = infl.resid_studentized_internal
 
 fig = plt.figure()
@@ -153,7 +154,7 @@ print table4
 try:
     resid = interM_lm32.get_influence().summary_frame()['standard_resid']
 except:
-    resid = interM_lm32.get_outlier_influence().summary_frame()['standard_resid']
+    resid = interM_lm32.get_influence().summary_frame()['standard_resid']
 
 fig = plt.figure()
 ax = fig.add_subplot(111, xlabel='X[~[32]]', ylabel='standardized resids')
@@ -191,8 +192,6 @@ plt.show()
 #From our first look at the data, the difference between Master's and PhD in the management group is different than in the non-management group. This is an interaction between the two qualitative variables management,M and education,E. We can visualize this by first removing the effect of experience, then plotting the means within each of the 6 groups using interaction.plot.
 
 U = S - X * interX_lm32.params['X']
-
-from plotting import interaction_plot
 
 ax = interaction_plot(E, M, U, colors=['red','blue'], markers=['^','D'],
         markersize=10)
@@ -232,76 +231,6 @@ for factor, group in factor_group:
     ax.scatter(group['TEST'], group['JPERF'], color=colors[factor],
                 marker=markers[factor], s=12**2)
 
-def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
-                model_results=None, ax=None, **kwargs):
-    """
-    Plots a line given an intercept and slope.
-
-    intercept : float
-        The intercept of the line
-    slope : float
-        The slope of the line
-    horiz : float or array-like
-        Data for horizontal lines on the y-axis
-    vert : array-like
-        Data for verterical lines on the x-axis
-    model_results : statsmodels results instance
-        Any object that has a two-value `params` attribute. Assumed that it
-        is (intercept, slope)
-    ax : axes, optional
-        Matplotlib axes instance
-    kwargs
-        Options passed to matplotlib.pyplot.plt
-
-    Returns
-    -------
-    axes : Axes
-        The axes given by `axes` or a new instance.
-    """
-    if ax is None:
-        import matplotlib.pyplot as plt
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-    else:
-        fig = ax.figure
-
-    if model_results:
-        intercept, slope = model_results.params
-    else:
-        if not (intercept is not None and slope is not None):
-            raise ValueError("specify slope and intercepty or model_results")
-
-    origin = [intercept, 0]
-    x = ax.get_xlim()
-    y = [x[0]*slope+intercept, x[1]*slope+intercept]
-
-    from matplotlib.lines import Line2D
-
-    class ABLine2D(Line2D):
-
-        def update_datalim(self, ax):
-            ax.set_autoscale_on(False)
-
-            children = ax.get_children()
-            abline = [children[i] for i in range(len(children))
-                       if isinstance(children[i], ABLine2D)][0]
-            x = ax.get_xlim()
-            y = [x[0]*slope+intercept, x[1]*slope+intercept]
-            abline.set_data(x,y)
-            ax.figure.canvas.draw()
-
-    line = ABLine2D(x, y, **kwargs)
-    ax.add_line(line)
-    ax.callbacks.connect('xlim_changed', line.update_datalim)
-    ax.callbacks.connect('ylim_changed', line.update_datalim)
-
-
-    if horiz:
-        ax.hline(horiz)
-    if vert:
-        ax.vline(vert)
-    return ax
-
 abline_plot(model_results = min_lm, ax=ax)
 plt.show()
 
@@ -316,9 +245,10 @@ for factor, group in factor_group:
     ax.scatter(group['TEST'], group['JPERF'], color=colors[factor],
                 marker=markers[factor], s=12**2)
 
-ax = abline_plot(intercept = min_lm2.params['Intercept'],
+fig = abline_plot(intercept = min_lm2.params['Intercept'],
                  slope = min_lm2.params['TEST'], ax=ax, color='purple')
-ax = abline_plot(intercept = min_lm2.params['Intercept'],
+ax = fig.axes[0]
+fig = abline_plot(intercept = min_lm2.params['Intercept'],
         slope = min_lm2.params['TEST'] + min_lm2.params['TEST:ETHN'],
         ax=ax, color='green')
 plt.show()
@@ -333,9 +263,10 @@ for factor, group in factor_group:
     ax.scatter(group['TEST'], group['JPERF'], color=colors[factor],
                 marker=markers[factor], s=12**2)
 
-ax = abline_plot(intercept = min_lm3.params['Intercept'],
+fig = abline_plot(intercept = min_lm3.params['Intercept'],
                  slope = min_lm3.params['TEST'], ax=ax, color='purple')
-ax = abline_plot(intercept = min_lm3.params['Intercept'] + min_lm3.params['ETHN'],
+ax = fig.axes[0]
+fig = abline_plot(intercept = min_lm3.params['Intercept'] + min_lm3.params['ETHN'],
         slope = min_lm3.params['TEST'], ax=ax, color='green')
 plt.show()
 
@@ -349,9 +280,10 @@ for factor, group in factor_group:
     ax.scatter(group['TEST'], group['JPERF'], color=colors[factor],
                 marker=markers[factor], s=12**2)
 
-ax = abline_plot(intercept = min_lm4.params['Intercept'],
+fig = abline_plot(intercept = min_lm4.params['Intercept'],
                  slope = min_lm4.params['TEST'], ax=ax, color='purple')
-ax = abline_plot(intercept = min_lm4.params['Intercept'] + min_lm4.params['ETHN'],
+ax = fig.axes[0]
+fig = abline_plot(intercept = min_lm4.params['Intercept'] + min_lm4.params['ETHN'],
         slope = min_lm4.params['TEST'] + min_lm4.params['TEST:ETHN'],
         ax=ax, color='green')
 plt.show()
