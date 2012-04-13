@@ -7,7 +7,7 @@ import nose
 
 import statsmodels.api as sm
 from statsmodels.graphics.regressionplots import (plot_fit, plot_ccpr,
-                  plot_partregress, plot_regress_exog )
+                  plot_partregress, plot_regress_exog, abline_plot )
 
 try:
     import matplotlib.pyplot as plt  #makes plt available for test functions
@@ -74,3 +74,43 @@ class TestPlot(object):
 
         plt.close('all')
 
+
+class TestABLine(object):
+
+    @classmethod
+    def setupClass(cls):
+        np.random.seed(12345)
+        X = sm.add_constant(np.random.normal(0, 20, size=30), prepend=True)
+        y = np.dot(X, [25, 3.5]) + np.random.normal(0, 30, size=30)
+        mod = sm.OLS(y,X).fit()
+        cls.X = X
+        cls.y = y
+        cls.mod = mod
+
+    def test_abline_model(self):
+        fig = abline_plot(model_results=self.mod)
+        ax = fig.axes[0]
+        ax.scatter(self.X[:,1], self.y)
+        plt.close(fig)
+
+    def test_abline_model_ax(self):
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.scatter(self.X[:,1], self.y)
+        fig = abline_plot(model_results=self.mod, ax=ax)
+        plt.close(fig)
+
+    def test_abline_ab(self):
+        mod = self.mod
+        intercept, slope = mod.params
+        fig = abline_plot(intercept=intercept, slope=slope)
+        plt.close(fig)
+
+    def test_abline_ab_ax(self):
+        mod = self.mod
+        intercept, slope = mod.params
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.scatter(self.X[:,1], self.y)
+        fig = abline_plot(intercept=intercept, slope=slope, ax=ax)
+        plt.close(fig)
