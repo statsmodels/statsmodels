@@ -1716,7 +1716,7 @@ class KMResults(LikelihoodModelResults):
             table = SimpleTable(table, headers=['Time','Survival','Std. Err',
                                                 'Lower 95% CI', 'Upper 95% CI'],
                                 title = myTitle)
-        print(table)
+        return table
 
 class CoxResults(LikelihoodModelResults):
 
@@ -1788,6 +1788,7 @@ class CoxResults(LikelihoodModelResults):
         print(coeffs)
         print(CI)
         print(tests)
+        #TODO: make print into return
 
     def baseline(self, return_times=False):
 
@@ -1830,7 +1831,7 @@ class CoxResults(LikelihoodModelResults):
             return baseline
 
     def predict(self, X, t):
-
+        #TODO: for consistency move to models with params as argument
         ##As function of t?
         ##t='all' and matrix?
         ##t= arbitrary array of times?
@@ -1870,6 +1871,7 @@ class CoxResults(LikelihoodModelResults):
             baseline = self.baseline(t != 'all')
             baseline = np.repeat(baseline, times, axis=0)
         else:
+            #TODO: rett not defined
             baseline = self.baseline(rett)
         if t == 'all':
             return -np.log(baseline) * np.exp(np.dot(X, self.params))
