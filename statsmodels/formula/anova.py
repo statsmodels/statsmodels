@@ -4,26 +4,12 @@ from pandas import DataFrame, Index
 from charlton.desc import INTERCEPT # these are not formula independent..
                                     # what could a null term evaluate to?
 
+def _remove_intercept_charlton(terms):
+    if INTERCEPT in terms:
+        del terms[INTERCEPT]
+    return terms
+
 #NOTE: these need to take into account weights !
-
-def _orthogonal_complement(X, subset):
-    """
-    Returns the orthgonal complement to the projection matrix M0 that spans
-    a `subset` of the columns in X where `subset` is a column index for X.
-
-    The idea is that given a projection matrix Ma that spans the columns of X.
-    For a null hypothesis M0 that spans a subset of X, Xa, and that is itself
-    a subset of Ma. The sum of squared residuals can be obtained from Ma0, the
-    set of vectors in Ma that are orthgonal to M0. Ie., it's the projectsion
-    of y onto the *marginal* contribution of Ma0 = Ma - M0 is what is in Ma
-    and not M0 that helps
-    explain y.
-
-    See Lecture Notes Chapter 5 here [1] for details.
-
-    [1] https://netfiles.uiuc.edu/jimarden/www/Classes/STAT324/
-    """
-    return np.linalg.qr
 
 def anova_single(model, **kwargs):
     """
@@ -56,11 +42,13 @@ def anova_single(model, **kwargs):
     exog = model.model.exog
     nobs = exog.shape[0]
 
+
     response_name = model.model.endog_names
     model_formula = []
     terms_info = model.model._data._orig_exog.column_info.term_to_columns
+    terms_info = _remove_intercept_charlton(terms_info)
     exog_names = model.model.exog_names
-    n_rows = len(terms_info) - (INTERCEPT in terms_info) + 1 # for resids
+    n_rows = len(terms_info) + 1 # for resids
 
     pr_test = "PR(>%s)" % test
     names = ['df', 'sum_sq', 'mean_sq', test, pr_test]
@@ -107,8 +95,7 @@ def anova1_lm_single(model, endog, exog, nobs, terms_info, table, n_rows, test,
     q,r = np.linalg.qr(exog)
     effects = np.dot(q.T,endog)
 
-    if INTERCEPT in terms_info:
-        terms_info.pop(INTERCEPT)
+    terms_info = _remove_intercept_charlton(terms_info)
 
     index = []
     col_order = []
@@ -158,11 +145,8 @@ def anova2_lm_single(model, terms_info, n_rows, test, pr_test):
     Sum of Squares compares marginal contribution of terms. Thus, it is
     not particularly useful for models with significant interaction terms.
     """
-    if INTERCEPT in terms_info:
-        terms_info.pop(INTERCEPT)
-        intercept = 1
-    else:
-        intercept = 0
+    terms_info = _remove_intercept_charlton(terms_info)
+
     names = ['sum_sq', 'df', test, pr_test]
 
     table = DataFrame(np.empty((n_rows, 4)), columns = names)
@@ -323,5 +307,3 @@ if __name__ == "__main__":
     # https://netfiles.uiuc.edu/jimarden/www/Classes/STAT324/
 
     table = anova_lm(moore_lm, typ=2)
-
-
