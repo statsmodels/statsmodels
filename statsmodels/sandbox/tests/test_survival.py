@@ -245,7 +245,6 @@ class TestKaplanMeier3(CheckKaplanMeier):
         censoring = np.ones_like(dta[:,0])
         censoring[dta[:,0] > 80] = 0
         dta = np.c_[dta, censoring]
-        print '*********************', dta.shape
 
         dtas = Survival(0, censoring=2, data=dta)
         cls.model = model = KaplanMeier(dtas, exog=dta[:,1][:,None]) #,censoring=2)

@@ -23,7 +23,7 @@ class Survival(object):
 
     Parameters
     -----------
-    time1: int or array-like
+    time1 : int or array-like
         if time2=None, index of column containing the
         duration that the subject survivals and remains
         uncensored (e.g. observed survival time), if
@@ -31,23 +31,23 @@ class Survival(object):
         a column containing start times for the
         observation of each subject(e.g. oberved survival
         time is end time minus start time)
-    time2: None, int or array-like
+    time2 : None, int or array-like
         index of column containing end times for each observation
-    censoring: int or array-like
+    censoring : int or array-like
         index of the column containing an indicator
         of whether an observation is an event, or a censored
         observation, with 0 for censored, and 1 for an event
-    data: array-like
+    data : array-like
         An array, with observations in each row, and
         variables in the columns
 
     Attributes
     -----------
-    times: array
+    times : array
         vector of survival times
-    censoring: array
+    censoring : array
         vector of censoring indicators
-    ttype: str
+    ttype : str
         indicator of what type of censoring occurs
 
     Examples
@@ -100,17 +100,17 @@ class KaplanMeier(object):
 
     Parameters
     ----------
-    data: array-like
+    data : array-like
         An array, with observations in each row, and
         variables in the columns
-    surv: Survival object
+    surv : Survival object
         Survival object containing desire times and censoring
-    endog: int or array-like
+    endog : int or array-like
         index (starting at zero) of the column
         containing the endogenous variable (time),
         or if endog is an array, an array of times
         (in this case, data should be none)
-    exog: int or array-like
+    exog : int or array-like
         index of the column containing the exogenous
         variable (must be catagorical). If exog = None, this
         is equivalent to a single survival curve. Alternatively,
@@ -118,7 +118,7 @@ class KaplanMeier(object):
         manner as data provided either from data or surv
         or if exog is an array, an array of exogenous variables
         (in this case, data should be none)
-    censoring: int or array-like
+    censoring : int or array-like
         index of the column containing an indicator
         of whether an observation is an event, or a censored
         observation, with 0 for censored, and 1 for an event
@@ -127,22 +127,22 @@ class KaplanMeier(object):
 
     Attributes
     -----------
-    censorings: array
+    censorings : array
         List of censorings associated with each unique
         time, at each value of exog
-    events: array
+    events : array
         List of the number of events at each unique time
         for each value of exog
-    results: array
+    results : array
         List of arrays containing estimates of the value
         value of the survival function and its standard error
         at each unique time, for each value of exog
-    ts: array
+    ts : array
         List of unique times for each value of exog
 
     Methods
     -------
-    fit: Calcuate the Kaplan-Meier estimates of the survival
+    fit : Calcuate the Kaplan-Meier estimates of the survival
         function and its standard error at each time, for each
         value of exog
 
@@ -321,12 +321,12 @@ class KaplanMeier(object):
 
         Parameters
         ----------
-        CI_transform: string. Either "log" or "log-log"
+        CI_transform : string, "log" or "log-log"
             The type of transformation used to keep the
             confidence interval in the interval [0,1].
             "log" applies the natural logarithm,
             "log-log" applies log(-log(x))
-        force_CI_0_1: logical
+        force_CI_0_1 : bool
             indicator of whether confidence interval values
             that fall outside of [0,1] should be forced to
             one of the endpoints
@@ -396,16 +396,16 @@ class KaplanMeier(object):
 
         Parameters
         ----------
-        t: array
+        t : array
             vector of times (for one group only)
-        censoring: array
+        censoring : array
             vector of censoring indicators (for one group only)
-        CI_transform: string. Either "log" or "log-log"
+        CI_transform : string, "log" or "log-log"
             The type of transformation used to keep the
             confidence interval in the interval [0,1].
             "log" applies the natural logarithm,
             "log-log" applies log(-log(x))
-        force_CI_0_1: logical
+        force_CI_0_1 : bool
             indicator of whether confidence interval values
             that fall outside of [0,1] should be forced to
             one of the endpoints
@@ -473,27 +473,27 @@ def get_td(data, ntd, td, td_times, censoring=None, times=None,
 
     Parameters
     ----------
-    data: array
+    data : array
         array containing the all variables to be used
-    ntd: list
-        list of indicies in data of the non-time-dependent
+    ntd : list
+        list of indices in data of the non-time-dependent
         covariates
-    td: list
-        list of indicies of the time-dependent covariate in data.
+    td : list
+        list of indices of the time-dependent covariate in data.
         Each column identified in data is interpreted as the value
         of the covariate at a secific time (specified by td_times)
-    td_times: array
+    td_times : array
         array of times associated with each column identified by td
-    censoring: int
+    censoring : int
         index of the censoring indicator in data
-    times: int
+    times : int
         only need if censoring is not none. Index of times for
         the original observations that occur in data
-    ntd_names: array
+    ntd_names : array
         array of names for the non-time-dependent variables.
         This is useful, since the ordering of the variables
         is not preserved
-    td_name: array (containing only one element)
+    td_name : array (containing only one element)
         array containing the name of the newly created time-dependent
         variable
 
@@ -551,34 +551,34 @@ class CoxPH(LikelihoodModel):
 
     Parameters
     ----------
-    surv: Survival object
-            Survival object with the desired times and censoring
-    exog: int or array-like
-            if data is not None, index or list of indicies of data
-            for the columns of the desired exogenous variables
-            if data is None, then a 2d array of the desired
-            exogenous variables
-    data: array-like
-            optional array from which the exogenous variables will
-            be selected from the indicies given as exog
-    ties: string
-            A string indicating the method used to handle ties
-    strata: array-like
-            optional, if a stratified cox model is desired.
-            list of indicies of columns of the matrix of exogenous
-            variables that are to be included as strata. All other
-            columns will be included as unstratified variables
-            (see documentation for statify method)
+    surv : Survival object
+        Survival object with the desired times and censoring
+    exog : int or array-like
+        if data is not None, index or list of indicies of data
+        for the columns of the desired exogenous variables
+        if data is None, then a 2d array of the desired
+        exogenous variables
+    data : array-like
+        optional array from which the exogenous variables will
+        be selected from the indicies given as exog
+    ties : string
+        A string indicating the method used to handle ties
+    strata : array-like
+        optional, if a stratified cox model is desired.
+        list of indicies of columns of the matrix of exogenous
+        variables that are to be included as strata. All other
+        columns will be included as unstratified variables
+        (see documentation for statify method)
 
     Attributes:
     -----------
-    surv: The initial survival object given to CoxPH
-    ties: String indicating how to handle ties
-    censoring: Vector of censoring indicators
-    ttype: String indicating the type of censoring
-    exog: The 2d array of exogenous variables
-    strata: Indicator of how, if at all, the model is stratified
-    d:  For exact times, a 2d array, whose first column is the
+    surv : The initial survival object given to CoxPH
+    ties : String indicating how to handle ties
+    censoring : Vector of censoring indicators
+    ttype : String indicating the type of censoring
+    exog : The 2d array of exogenous variables
+    strata : Indicator of how, if at all, the model is stratified
+    d :  For exact times, a 2d array, whose first column is the
         unique times, and whose second column is the number of ties
         at that time. For interval times, a 2d array where each
         row is one of the unique intervals
@@ -697,19 +697,20 @@ class CoxPH(LikelihoodModel):
 
         Parameters
         ----------
-        stratas: list of indicies of columns of the matrix
-        of exogenous variables that are to be included as
-        strata. All other columns will be included as unstratified
-        variables
-
-        copy: logical value indicating whether a new CoxPH object sould be
-        returned, or if the current object should be overwritten
+        stratas: list
+            list of indicies of columns of the matrix
+            of exogenous variables that are to be included as
+            strata. All other columns will be included as unstratified
+            variables
+        copy: bool
+            If true then a new CoxPH object will be returned. If false, then
+            the current object will be overwritten.
 
         Returns
         -------
-
-        if copy is true, returns an object of class CoxPH, if copy is False
-        modifies existing cox model, and returns nothing
+        cox/None : CoxPH instance or None
+            If copy is true, returns an instance of class CoxPH, if copy is
+            False modifies existing cox model, and returns nothing
 
         Examples
         --------
@@ -722,6 +723,7 @@ class CoxPH(LikelihoodModel):
             2011
 
         """
+        #TODO: should this return self if copy=True?
 
         stratas = np.asarray(stratas)
         exog = self.exog
@@ -756,10 +758,10 @@ class CoxPH(LikelihoodModel):
 
         Parameters
         ----------
-        b: array-like
+        b : array-like
             vector of parameters at which the function is to be evaluated
-        f: function
-            the function to evaluate the parameters at Either loglike,
+        f : function
+            the function to evaluate the parameters at; either loglike,
             score, or hessian
 
         Returns
@@ -810,7 +812,7 @@ class CoxPH(LikelihoodModel):
 
         Parameters
         ----------
-        b: vector of parameter estimates
+        b : vector of parameter estimates
 
         Returns
         -------
@@ -827,7 +829,7 @@ class CoxPH(LikelihoodModel):
 
         Parameters
         ----------
-        b: vector of parameter estimates
+        b : vector of parameter estimates
 
         Returns
         -------
@@ -844,7 +846,7 @@ class CoxPH(LikelihoodModel):
 
         Parameters:
         ------------
-        b: vector of parameter estimates
+        b : vector of parameter estimates
 
         Returns
         -------
@@ -861,7 +863,7 @@ class CoxPH(LikelihoodModel):
 
         Parameters:
         ------------
-        b: vector of parameter estimates
+        b : vector of parameter estimates
 
         Returns
         -------
@@ -936,7 +938,7 @@ class CoxPH(LikelihoodModel):
 
         Parameters
         ----------
-        b: vector of parameter estimates
+        b : vector of parameter estimates
 
         Returns
         -------
@@ -1025,7 +1027,7 @@ class CoxPH(LikelihoodModel):
 
         Parameters:
         ------------
-        b: vector of parameter estimates
+        b : vector of parameter estimates
 
         Returns
         -------
@@ -1130,7 +1132,7 @@ class CoxPH(LikelihoodModel):
 
         Parameters
         ----------
-        b: estimates of the model parameters
+        b : estimates of the model parameters
 
         Returns
         -------
@@ -1148,7 +1150,7 @@ class CoxPH(LikelihoodModel):
         Parameters
         ----------
 
-        b: estimates of the model parameters
+        b : estimates of the model parameters
 
         Returns
         -------
@@ -1182,6 +1184,9 @@ class KMResults(LikelihoodModelResults):
 
     test_diff: Test for difference between survival curves
 
+    TODO: drop methods from docstring,
+    TODO: what is results attribute? document attributes
+
     """
 
     ##Add handling for stratification
@@ -1205,26 +1210,27 @@ class KMResults(LikelihoodModelResults):
 
         Parameters
         ----------
-        groups: list
+        groups : list
             A list of the values for exog to test for difference.
             tests the null hypothesis that the survival curves for all
             values of exog in groups are equal
-        rho: int in [0,1]
+        rho : int in [0,1]
             compute the test statistic with weight S(t)^rho, where
             S(t) is the pooled estimate for the Kaplan-Meier survival function.
             If rho = 0, this is the logrank test, if rho = 0, this is the
             Peto and Peto modification to the Gehan-Wilcoxon test.
-        weight: function
+        weight : function
             User specified function that accepts as its sole arguement
             an array of times, and returns an array of weights for each time
             to be used in the test
 
         Returns
         -------
-        An array whose zeroth element is the chi-square test statistic for
-        the global null hypothesis, that all survival curves are equal,
-        the index one element is degrees of freedom for the test, and the
-        index two element is the p-value for the test.
+        res : ndarray
+            An array whose zeroth element is the chi-square test statistic for
+            the global null hypothesis, that all survival curves are equal,
+            the index one element is degrees of freedom for the test, and the
+            index two element is the p-value for the test.
 
         Examples
         --------
@@ -1434,13 +1440,14 @@ class KMResults(LikelihoodModelResults):
 
         Parameters
         ----------
-        exog: float or int
+        exog : float or int
             The value of that exogenous variable for the curve to be
             isolated.
 
         Returns
         -------
-        A SurvivalResults object for the isolated curve
+        kmres : KMResults instance
+            A KMResults instance for the isolated curve
 
         """
 
@@ -1476,7 +1483,7 @@ class KMResults(LikelihoodModelResults):
 
         Parameters
         ----------
-        confidence_band: logical
+        confidence_band : bool
             indicator of whether confidence bands should be plotted
 
         Notes
@@ -1513,19 +1520,15 @@ class KMResults(LikelihoodModelResults):
 
     def _plotting_proc(self, g, confidence_band):
         """
+        plot the survival curve for a given group
 
-        _plotting_proc(self, g, confidence_band)
+        Parameters
+        ----------
+        g : int
+            index of the group whose curve is to be plotted
 
-            plot the survival curve for a given group
-
-            Parameters
-            ----------
-
-            g: int
-                index of the group whose curve is to be plotted
-
-            confidence_band: logical
-                indicator of whether confidence bands should be plotted
+        confidence_band : bool
+            If true, then the confidence bands will also be plotted.
 
         """
         survival = self.results[g][0]
@@ -1566,7 +1569,7 @@ class KMResults(LikelihoodModelResults):
 
         Parameters
         ----------
-        g: int
+        g : int
             index of the group to be summarized
 
         """
@@ -1593,17 +1596,17 @@ class CoxResults(LikelihoodModelResults):
 
     Attributes
     ----------
-    model: CoxPH instance
+    model : CoxPH instance
         the model that was fit
-    params: array
+    params : array
         estimate of the parameters
-    normalized_cov_params: array
+    normalized_cov_params : array
         variance-covariance matrix evaluated at params
-    scale: float
+    scale : float
         see LikelihoodModelResults
-    exog_mean: array
+    exog_mean : array
         mean vector of the exogenous variables
-    names: array
+    names : array
         array of names for the exogenous variables
     """
 
@@ -1647,18 +1650,12 @@ class CoxResults(LikelihoodModelResults):
         #TODO: make print into return
 
     def baseline(self, return_times=False):
-
-        ##As function of t?
-        ##Save baseline after first use? and check in other methods
-        ##with hasattr?
-        #TODO: do we need return_times argument?
-
         """
         estimate the baseline survival function
 
         Parameters
         ----------
-        return_times: logical
+        return_times : bool
             indicator of whether times should also be returned
 
         Returns
@@ -1672,6 +1669,11 @@ class CoxResults(LikelihoodModelResults):
 
         """
 
+        ##As function of t?
+        ##Save baseline after first use? and check in other methods
+        ##with hasattr?
+        #TODO: do we need return_times argument?
+
         model = self.model
         baseline = KaplanMeier(model.surv)
         baseline = baseline.fit()
@@ -1684,6 +1686,25 @@ class CoxResults(LikelihoodModelResults):
             return baseline
 
     def predict(self, X, t):
+        """
+        estimate the hazard with a given vector of covariates
+
+        Parameters
+        ----------
+        X : array-like
+            matrix of covariate vectors. If t='all', must be
+            only a single vector, or 'all'. If 'all' predict
+            with the entire design matrix.
+        t : non-negative int or "all"
+            time(s) at which to predict. If t="all", then
+            predict at all the observed times
+
+        Returns
+        -------
+        probs : ndarray
+            array of predicted survival probabilities
+
+        """
         #TODO: for consistency move to models with params as argument
         #defaults ?
         ##As function of t?
@@ -1691,24 +1712,6 @@ class CoxResults(LikelihoodModelResults):
         ##t= arbitrary array of times?
         ##Remove coerce_0_1
 
-        """
-        estimate the hazard with a given vector of covariates
-
-        Parameters
-        ----------
-        X: array-like
-            matrix of covariate vectors. If t='all', must be
-            only a single vector, or 'all'. If 'all' predict
-            with the entire design matrix.
-        t: non-negative int or "all"
-            time(s) at which to predict. If t="all", then
-            predict at all the observed times
-
-        Returns
-        -------
-        array of predicted survival probabilities
-
-        """
 
         if X == 'all':
             X = self.model.exog
@@ -1733,15 +1736,15 @@ class CoxResults(LikelihoodModelResults):
 
         Parameters
         ----------
-        vector: array-like or 'mean'
+        vector : array-like or 'mean'
             A vector of covariates. vector='mean' will use the mean
             vector
-        CI_band: logical
-            indicator of whether to plot confidence bands for the survival
-            curve
-        coerce_0_1: logical
-            indicator of whether the values for the survival curve should
-            be coerced to fit in the interval [0,1]
+        CI_band : bool
+            If true, then confidence bands for the survival curve are also
+            plotted
+        coerce_0_1 : bool
+            If true, then the values for the survival curve be coerced to fit 
+            in the interval [0,1]
 
         Notes
         -----
@@ -1767,12 +1770,12 @@ class CoxResults(LikelihoodModelResults):
 
         Parameters
         ----------
-        vector: array-like or 'mean'
+        vector : array-like or 'mean'
             A vector of covariates. vector='mean' will use the mean
             vector
-        CI_band: logical
-            indicator of whether to plot confidence bands for the survival
-            curve
+        CI_band : bool
+            If true, then confidence bands for the survival curve are also
+            plotted.
 
         Notes
         -----
@@ -1791,7 +1794,7 @@ class CoxResults(LikelihoodModelResults):
 
         Returns
         -------
-        KaplanMeier instance
+        mod : KaplanMeier instance
 
         """
 
@@ -1804,10 +1807,11 @@ class CoxResults(LikelihoodModelResults):
 
         Returns
         -------
-        An array, where each row represents a coefficient.
-        The first column is the coefficient, the second is
-        the standard error of the coefficient, the third
-        is the z-score, and the fourth is the p-value.
+        res : ndarray
+            An array, where each row represents a coefficient.
+            The first column is the coefficient, the second is
+            the standard error of the coefficient, the third
+            is the z-score, and the fourth is the p-value.
 
         """
 
@@ -1826,13 +1830,13 @@ class CoxResults(LikelihoodModelResults):
 
         Parameters
         ----------
-        restricted: None or array_like
+        restricted : None or array_like
             values of the parameter under the Null hypothesis. If restricted
             is None, then the starting values are uses for the Null.
 
         Returns
         -------
-        stat : flot
+        stat : float
             test statistic
 
         TODO: add pvalue, what's the distribution?
@@ -1854,13 +1858,13 @@ class CoxResults(LikelihoodModelResults):
 
         Parameters
         ----------
-        restricted: None or array_like
+        restricted : None or array_like
             values of the parameter under the Null hypothesis. If restricted
             is None, then the starting values are uses for the Null.
 
         Returns
         -------
-        stat : flot
+        stat : float
             test statistic
 
 
@@ -1882,13 +1886,13 @@ class CoxResults(LikelihoodModelResults):
 
         Parameters
         ----------
-        restricted: None or array_like
+        restricted : None or array_like
             values of the parameter under the Null hypothesis. If restricted
             is None, then the starting values are uses for the Null.
 
         Returns
         -------
-        stat : flot
+        stat : float
             test statistic
 
 
@@ -1912,7 +1916,7 @@ class CoxResults(LikelihoodModelResults):
 
         Parameters
         ----------
-        exp: logical value, indicating whether the confidence
+        exp : logical value, indicating whether the confidence
             intervals for the exponentiated parameters
 
         see documentation for LikelihoodModel for other
@@ -1920,7 +1924,7 @@ class CoxResults(LikelihoodModelResults):
 
         Returns
         -------
-        confint: array
+        confint : ndarray
             An array, each row representing a parameter, where
             the first column gives the lower confidence limit
             and the second column gives the upper confidence
@@ -1982,7 +1986,7 @@ class CoxResults(LikelihoodModelResults):
 
         Parameters
         ----------
-        covariate: int
+        covariate : int
             index of the covariate to be plotted
 
         Notes
