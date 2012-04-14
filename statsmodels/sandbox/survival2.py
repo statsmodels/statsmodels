@@ -1451,8 +1451,12 @@ class KMResults(LikelihoodModelResults):
             ind = list(self.model.groups).index(exog)
             results = self.results[ind]
             ts = self.ts[ind]
-            censoring = self.censoring[exogs == exog]
-            censorings = self.censorings[ind]
+            if self.censoring is not None:
+                censoring = self.censoring[exogs == exog]
+                censorings = self.censorings[ind]
+            else:
+                censoring = None
+                censorings = []
             event = self.event[ind]
             r = KMResults(self.model, results[0], results[1])
             r.results = results
