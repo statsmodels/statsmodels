@@ -87,6 +87,7 @@ class Anes():
             [-0.0253747, 0.0065094], [0.1433769, 0.5004745], [0.0593053,
             0.1584829], [-14.1832200, -10.0282800]]]
         self.conf_int = np.asarray(conf_int)
+        self.pred_table='Only implemented for Bivariate Logit and Probit'
 
 class Spector():
     """
@@ -244,6 +245,9 @@ class Spector():
         # for below GPA at mean, tuce = 21, psi = 0
         self.margeff_dummy_atexog2 = [.25105129214546,.00845311433473,
                 .44265645632553]
+        #The test for the prediction table was taken from Gretl
+        #Gretl Output matched the Stata output here for params and SE
+        self.pred_table=np.array([[18,3],[3,8]])
 
     def probit(self):
         self.params = [1.62581025407, .051728948442, 1.42633236818,
@@ -313,6 +317,7 @@ class Spector():
                       -.3575735, .447951, -.7988633, -1.939208, .6021435,
                       1.196623, .9407793, -.8927477, .59048, .3128364,
                       -1.246147, 2.045071]
+        self.pred_table=np.array([[18,3],[3,8]])
 
 
 class RandHIE():
@@ -354,3 +359,4 @@ class RandHIE():
                 [0.6784745, 0.7222313]]
         self.pvalues = [3.84415e-74, 8.4800e-120, 5.18652e-83, 5.8116e-102,
                 3.4028e-109, 0, .1719830562, .0004142808, 4.39014e-15, 0]
+        self.pred_table='Only implemented for Bivariate Logit and Probit'
