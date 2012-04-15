@@ -1560,20 +1560,6 @@ class DiscreteResults(base.LikelihoodModelResults):
             yname_list = self.model.endog_names
         return yname, yname_list
 
-    @cache_readonly
-    def pred_table(self):
-        name=self.model.__class__.__name__
-        if name is not 'Logit' and name is not 'Probit':
-            raise ValueError ('Only implemented for Bivariate Logit and Probit')
-        model=self.model
-        actual=model.endog
-        pred=model.predict(self.params).round()
-        # In form: actual_predicted
-        suc_suc=sum(actual*pred)
-        fail_suc=sum(abs((actual-1)*pred))
-        suc_fail=sum(abs(actual*(pred-1)))
-        fail_fail=self.nobs-(suc_suc+suc_fail+fail_suc)
-        return np.array([[fail_fail, fail_suc],[suc_fail, suc_suc]])
             
 
     def margeff(self, at='overall', method='dydx', atexog=None, dummy=False,
@@ -1761,6 +1747,19 @@ class OrderedResults(DiscreteResults):
     pass
 
 class BinaryResults(DiscreteResults):
+
+    @cache_readonly
+    def pred_table(self):
+        model = self.model
+        actual = model.endog
+        pred = model.predict(self.params).round()
+        # In form: actual_predicted
+        suc_suc = np.sum(actual * pred)
+        fail_suc = np.sum(abs((actual - 1) * pred))
+        suc_fail = np.sum(abs(actual * (pred - 1)))
+        fail_fail = self.nobs - (suc_suc + suc_fail + fail_suc)
+        return np.array([[fail_fail, fail_suc], [suc_fail, suc_suc]])
+
     def summary(self, yname=None, xname=None, title=None, alpha=.05,
                 yname_list=None):
         smry = super(BinaryResults, self).summary(yname, xname, title, alpha,
