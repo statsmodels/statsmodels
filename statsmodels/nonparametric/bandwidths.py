@@ -5,7 +5,19 @@ import KernelFunctions as kf
 
 kernel_func=dict(ordered=kf.WangRyzin, unordered=kf.AitchisonAitken,
                  continuous=kf.Epanechnikov)
-                 
+# NOTE: Here we don't care so much about the kernel as we do about the
+#   type of the variable (ordered, unordered, continuous). This is due to
+#   Racine who argues that:
+#   "It turns out that a range of kernel functions
+#   result in estimators having similar relative efficiencies so one could
+#   choose the kernel based on computational considerations...Unlike choosing
+#   a kernel function, however, choosing an appropriate bandwidth is a
+#   curcial aspect of sound nonparametric analysis."
+#   See Racine, J. Nonparametric Econometrics: A primer (2008).
+#   Foundations and Trends in Econometrics Vol.3, No.1, 1-88
+
+
+#   
 #from scipy.stats import norm
 
 def _select_sigma(X):
@@ -57,7 +69,7 @@ class LeaveOneOut(object):
             yield X[index]
 
 
-def likelihood_cv(h,x,var_type):
+def likelihood_cv(h,X,var_type):
     """
     Returns the leave one out log likelihood
 
@@ -80,18 +92,19 @@ def likelihood_cv(h,x,var_type):
     Nonparametric econometrics : theory and practice / Qi Li and Jeffrey Scott Racine.
      (p.16)
     """
+
+    #TODO: Extend this to handle the categorical kernels
     var_type=var_type.lower()
     mykern=kernel_func[var_type]
 
-    n=len(x)
+    n=len(X)
     LOO=LeaveOneOut(X)
     L=0
     i=0
     for X_j in LOO:
-        f_i=sum(mykern(h,X_j,X[i]))*1/((n-1)*h)
-        
-        i+=1
-        L+=np.log(f_i)
+        f_i = sum(mykern(h,-X_j,-X[i]))*1/((n-1)*h)    
+        i += 1
+        L += np.log(f_i)
     return -L
 
 from scipy.optimize import fmin

@@ -22,8 +22,8 @@ def AitchisonAitken(h,Xi,x,c):
     ----------
     h : float
         The bandwidth used to estimate the value of the kernel function
-    Xi : int
-        The value of a training point
+    Xi : array like
+        The the training set
     x: int
         The value at which the kernel density is being estimated
     c: int
@@ -31,7 +31,7 @@ def AitchisonAitken(h,Xi,x,c):
     
     Returns
     -------
-    kernel_value : float
+    kernel_value : array like float
         The value of the kernel function
         
     References
@@ -39,10 +39,11 @@ def AitchisonAitken(h,Xi,x,c):
     Nonparametric econometrics : theory and practice / Qi Li and Jeffrey Scott Racine.
     
     """
-    if Xi == x:
-        kernel_value = 1-h
-    else:
-        kernel_value = h/(c-1)
+    Xi=np.asarray(Xi)
+    kernel_value = np.empty(Xi.shape)
+    kernel_value.fill(h/(c-1))
+    kernel_value[Xi==x] = 1-h
+    
     return kernel_value
 
 
@@ -74,12 +75,10 @@ def WangRyzin (h, Xi, x, c):
     
     """
     h=float(h)
-    
-    if Xi == x:
-        kernel_value = 1-h
-    else:
-        kernel_value =  0.5*(1-h)*h**abs(Xi-x)
-
+    Xi=np.asarray(Xi)
+    kernel_value = np.empty(Xi.shape)
+    kernel_value.fill(0.5*(1-h)*h**abs(Xi-x))
+    kernel_value[Xi==x] = 1-h
     return kernel_value
 
 def Epanechnikov (h, Xi, x):
@@ -112,5 +111,9 @@ def Epanechnikov (h, Xi, x):
     z = (Xi - x)/h
     InDom = (-np.sqrt(5) <= z) * (z <= np.sqrt(5))
     kernel_value = InDom*(0.75*(1-0.2*z**2)*(1/np.sqrt(5)))
- 
+
+    # NOTE: There is a slight discrepancy between this formulation of the Epanechnikov kernel and
+    #       the one in kernels.py.
+    # TODO: Check Silverman and reconcile the discrepancy
+
     return kernel_value
