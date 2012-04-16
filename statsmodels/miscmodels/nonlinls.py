@@ -1,7 +1,5 @@
 '''Non-linear least squares
 
-
-
 Author: Josef Perktold based on scipy.optimize.curve_fit
 
 '''
@@ -12,63 +10,33 @@ from statsmodels.base.model import Model
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.regression.linear_model import RegressionResults
 
-class NonLinearLSResults(RegressionResults):
-    '''just a dummy placeholder for now
-    most results from RegressionResults can be used here
+class NonLinearModel(Model):
+    '''Base class for a Nonlinear Model
+       The objective is to be serve as base class from which other nonlinear models, namely 
+       nonlinear least squares, robust nonlinear and generalized 
+       nonlinear model classes are derived.
+            
+    15/04/2012
+    Presently it will serve as a base class for NonlinearLS which fits data
+    using 'nonlinear least squares method'.'scipy.optimize.leastsq' is used for 
+    calculation of the parameters
+      
     '''
+    def expr(self, params=None, exog=None):
+        '''User provides the nonlinear expression with the parameters here.
+    
+        The derived classes are subclassed and the nonlinear function, the data is
+        to be fitted to, is added here.
+    
 
-    @cache_readonly
-    def wresid(self):
-        return self.resid * np.sqrt(self.model.weights)
-        return self.model.geterrors(self, self.params)#, weights=None)
-#        return self.model.wendog - self.model.predict(self.model.wexog,
-#                self.params)
-
-    #included here because of changes to predict as in circular branch
-    #TODO: both resid and fittedvalues can be deleted again later
-    @cache_readonly
-    def resid(self):
-        return self.model.endog - self.model.predict(self.params,
-                                                     self.model.exog)
-    @cache_readonly
-    def fittedvalues(self):
-        return self.model.predict(self.params, self.model.exog)
+        15/04/2012
+        The function will equate to NonlinearLS._predict.
+        '''
+        raise NotImplementedError
+    
 
 
-##def getjaccov(retval, n):
-##    '''calculate something and raw covariance matrix from return of optimize.leastsq
-##
-##    I cannot figure out how to recover the Jacobian, or whether it is even
-##    possible
-##
-##    this is a partial copy of scipy.optimize.leastsq
-##    '''
-##    info = retval[-1]
-##    #n = len(x0)  #nparams, where do I get this
-##    cov_x = None
-##    if info in [1,2,3,4]:
-##        from numpy.dual import inv
-##        from numpy.linalg import LinAlgError
-##        perm = np.take(np.eye(n), retval[1]['ipvt']-1,0)
-##        r = np.triu(np.transpose(retval[1]['fjac'])[:n,:])
-##        R = np.dot(r, perm)
-##        try:
-##            cov_x = inv(np.dot(np.transpose(R),R))
-##        except LinAlgError:
-##            print 'cov_x not available'
-##            pass
-##        return r, R, cov_x
-##
-##def _general_function(params, xdata, ydata, function):
-##    return function(xdata, *params) - ydata
-##
-##def _weighted_general_function(params, xdata, ydata, function, weights):
-##    return weights * (function(xdata, *params) - ydata)
-##
-
-
-
-class NonlinearLS(Model):  #or subclass a model
+class NonlinearLS(NonLinearModel):  #or subclass a model
     '''Base class for estimation of a non-linear model with least squares
 
     This class is supposed to be subclassed, and the subclass has to provide a method
@@ -130,6 +98,8 @@ class NonlinearLS(Model):  #or subclass a model
         self.endog = endog
         self.exog = exog
         self.nobs = len(endog) #check
+        self._predict = self.expr #db#Keeping it that way to keep away from
+                                     #mixing up things
         if not sigma is None:
             sigma = np.asarray(sigma)
             if sigma.ndim < 2:
@@ -213,8 +183,8 @@ class NonlinearLS(Model):  #or subclass a model
         #use concentrated likelihood instead
         return llf.sum()
 
-    def _predict(self, params, exog):
-        pass
+#    def _predict(self, params, exog):
+#        pass
 
     def start_value(self):
         return None
@@ -252,9 +222,12 @@ class NonlinearLS(Model):  #or subclass a model
             else:
                 raise ValueError('need information about start values for' +
                              'optimization')
-
+         
         func = self.geterrors
-        res = optimize.leastsq(func, p0, full_output=1, **kw)
+        eps = 2.2204460492503131e-016
+        res = optimize.leastsq(func, p0, args=(), Dfun=self.approx_jac_predict,
+                               full_output=1, col_deriv=0, ftol=1.49012e-08, 
+        xtol=1.49012e-08, gtol=0.0, maxfev=0, epsfcn=0.0, factor=100, diag=None)
         (popt, pcov, infodict, errmsg, ier) = res
 
         if ier not in [1,2,3,4]:
@@ -348,6 +321,27 @@ class NonlinearLS(Model):  #or subclass a model
         jaccs_err = approx_fprime_cs(params, self._predict)
         return jaccs_err
 
+    def approx_jac_predict(self, params):
+        '''approximate jacobian estimation
+        
+        Objective is to implement a better method for calculation of derivatives 
+        than forward differences approach.
+        eg- Automatic derivative, n-point numerical derivative
+        
+        We would like to give the user the option to give the jacobian of the
+        function. scipy.optimize based on minpack encourages to do so.
+        
+
+        15/04/2012
+        Providing an approximate of jacobian to leastsq using numdiff module in sandbox
+        
+        '''
+        from statsmodels.sandbox.regression.numdiff \
+             import approx_fprime1
+
+        jacob = approx_fprime1(params, self._predict)
+        return jacob
+
 
 class Myfunc(NonlinearLS):
 
@@ -375,7 +369,27 @@ class Myfunc(NonlinearLS):
         return a*np.exp(-b*x) + c
 
 
+class NonLinearLSResults(RegressionResults):
+    '''just a dummy placeholder for now
+    most results from RegressionResults can be used here
+    '''
 
+    @cache_readonly
+    def wresid(self):
+        return self.resid * np.sqrt(self.model.weights)
+        return self.model.geterrors(self, self.params)#, weights=None)
+#        return self.model.wendog - self.model.predict(self.model.wexog,
+#                self.params)
+
+    #included here because of changes to predict as in circular branch
+    #TODO: both resid and fittedvalues can be deleted again later
+    @cache_readonly
+    def resid(self):
+        return self.model.endog - self.model.predict(self.params,
+                                                     self.model.exog)
+    @cache_readonly
+    def fittedvalues(self):
+        return self.model.predict(self.params, self.model.exog)
 
 
 if __name__ == '__main__':

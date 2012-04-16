@@ -1,10 +1,10 @@
 import numpy as np
-import scikits.statsmodels.api as sm
-from statsmodels.miscmodels.nonlinls import NonlinearLS
+import statsmodels.api as sm
+from statsmodels.miscmodels.nonlinls_div import *
 
 class Myfunc(NonlinearLS):
 
-    def _predict(self, params, exog=None):
+    def expr(self, params, exog=None):
         if exog is None:
             x = self.exog
         else:
@@ -14,8 +14,6 @@ class Myfunc(NonlinearLS):
         a, b, c = params
         return a + b*x0 + c*x1
 
-
-
 x = np.arange(5.).repeat(2)  #[:,None] BUG
 y = np.array([1, -2, 1, -2, 1.]).repeat(2)
 sigma = np.array([1,  2, 1,  2, 1.]).repeat(2)
@@ -24,7 +22,6 @@ x = np.column_stack((x,0.1*x**2))
 mod = Myfunc(y, x, sigma=sigma**2)
 res = mod.fit(start_value=(0.042, 0.42,0.2))
 res.df_model = 2. #subtract constant to agree with WLS
-
 print res.params
 print res.bse
 
