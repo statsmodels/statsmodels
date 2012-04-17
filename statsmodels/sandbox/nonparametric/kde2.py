@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-import kernel as kernels
-import bandwidths as bw
+import kernels as kernels
+import statsmodels.nonparametric.bandwidths as bw
 
 #TODO: should this be a function?
 class KDE(object):
@@ -52,7 +52,7 @@ if __name__ == "__main__":
     PLOT = True
     from numpy import random
     import matplotlib.pyplot as plt
-    import bandwidths as bw
+    import statsmodels.nonparametric.bandwidths as bw
 
     # 1 D case
     random.seed(142)
@@ -74,16 +74,36 @@ if __name__ == "__main__":
         ax.plot(Xs, kde(Xs), "-")
         ax.set_ylim(-10, 10)
         ax.set_ylim(0,0.4)
-        plt.show()
+        #plt.show()
 
     # 2 D case
-#    from statsmodels.sandbox.nonparametric.testdata import kdetest
-#    x = zip(kdetest.faithfulData["eruptions"], kdetest.faithfulData["waiting"])
-#    x = np.array(x)
-#    H = kdetest.Hpi
-#    kern = kernel.NdKernel( 2 )
-#    kde = KernelEstimate( x, kern )
-#    print kde.density( np.matrix( [1,2 ]).T )
+    from statsmodels.sandbox.nonparametric.testdata import kdetest
+    x = zip(kdetest.faithfulData["eruptions"], kdetest.faithfulData["waiting"])
+    x = np.array(x)
+    x = (x - x.mean(0))/x.std(0)
+    nobs = x.shape[0]
+    H = kdetest.Hpi
+    kern = kernels.NdKernel( 2 )
+    kde = KDE( x, kern )
+    print kde.density( np.matrix( [1,2 ])) #.T )
+    plt.figure()
+    plt.plot(x[:,0], x[:,1], 'o')
+
+
+    n_grid = 50
+    xsp = np.linspace(x.min(0)[0], x.max(0)[0], n_grid)
+    ysp = np.linspace(x.min(0)[1], x.max(0)[1], n_grid)
+#    xsorted = np.sort(x)
+#    xlow = xsorted[nobs/4]
+#    xupp = xsorted[3*nobs/4]
+#    xsp = np.linspace(xlow[0], xupp[0], n_grid)
+#    ysp = np.linspace(xlow[1], xupp[1], n_grid)
+    xr, yr = np.meshgrid(xsp, ysp)
+    kde_vals = np.array([kde.density( np.matrix( [xi, yi ]) ) for xi, yi in
+               zip(xr.ravel(), yr.ravel())])
+    plt.contour(xsp, ysp, kde_vals.reshape(n_grid, n_grid))
+
+    plt.show()
 
 
     # 5 D case
