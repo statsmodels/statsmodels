@@ -14,9 +14,8 @@ endog = dta["NABOVE"]/(dta["NABOVE"] + dta.pop("NBELOW"))
 del dta["NABOVE"]
 dta["SUCCESS"] = endog
 
-endog = dta.pop("SUCCESS")
-exog = dta
-mod = sm.GLM(endog, exog, formula=formula, family=sm.families.Binomial()).fit()
+mod = sm.GLM.from_formula(formula=formula, df=dta,
+                          family=sm.families.Binomial()).fit()
 
 # try passing a formula object, using user-injected code
 
@@ -32,4 +31,5 @@ builtins['double_it'] = double_it
 formula = 'SUCCESS ~ double_it(LOWINC) + PERASIAN + PERBLACK + PERHISP + '
 formula += 'PCTCHRT '
 formula += '+ PCTYRRND + PERMINTE*AVYRSEXP*AVSALK + PERSPENK*PTRATIO*PCTAF'
-mod2 = sm.GLM(endog, exog, formula=formula, family=sm.families.Binomial()).fit()
+mod2 = sm.GLM.from_formula(formula=formula, df=dta,
+                           family=sm.families.Binomial()).fit()
