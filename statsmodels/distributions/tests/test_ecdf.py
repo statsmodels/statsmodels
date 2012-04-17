@@ -1,6 +1,6 @@
 import numpy as np
 import numpy.testing as npt
-from statsmodels.distributions import StepFunction
+from statsmodels.distributions import StepFunction, monotone_fn_inverter
 
 class TestDistributions(npt.TestCase):
 
@@ -33,3 +33,11 @@ class TestDistributions(npt.TestCase):
         npt.assert_almost_equal(f([1, 2, 3, 4, 5]), [0, 7, 10, 13, 14])
         f2 = StepFunction(x, y, side='right')
         npt.assert_almost_equal(f2([1, 2, 3, 4, 5]), [7, 10, 13, 14, 15])
+
+    def test_monotone_fn_inverter(self):
+        x = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+        fn = lambda x : 1./x
+        f = monotone_fn_inverter(fn, x)
+        npt.assert_array_equal(f.y, x[::1])
+        npt.assert_array_equal(f.x, y[::-1])
+
