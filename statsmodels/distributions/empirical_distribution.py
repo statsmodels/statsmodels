@@ -2,6 +2,7 @@
 Empirical CDF Functions
 """
 import numpy as np
+from scipy.interpolate import interp1d
 
 def _conf_set(F, alpha=.05):
     r"""
@@ -139,8 +140,7 @@ class ECDF(StepFunction):
             y = np.linspace(1./nobs,1,nobs)
             super(ECDF, self).__init__(x, y, side=side, sorted=True)
         else:
-            from scipy import interpolate
-            return interpolate.interp1d(x,y,drop_errors=False,fill_values=ival)
+            return interp1d(x,y,drop_errors=False,fill_values=ival)
 
 def monotone_fn_inverter(fn, x, vectorized=True, **keywords):
     """
@@ -148,7 +148,7 @@ def monotone_fn_inverter(fn, x, vectorized=True, **keywords):
     and a set of x values, return an linearly interpolated approximation
     to its inverse from its values on x.
     """
-
+    x = np.asarray(x)
     if vectorized:
         y = fn(x, **keywords)
     else:
