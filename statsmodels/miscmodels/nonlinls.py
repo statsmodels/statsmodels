@@ -100,6 +100,8 @@ class NonlinearLS(NonLinearModel):  #or subclass a model
         self.nobs = len(endog) #check
         self._predict = self.expr #db#Keeping it that way to keep away from
                                      #mixing up things
+        self.params_iter = None
+
         if not sigma is None:
             sigma = np.asarray(sigma)
             if sigma.ndim < 2:
@@ -209,7 +211,7 @@ class NonlinearLS(NonLinearModel):  #or subclass a model
         #if hasattr(self, 'start_value'):
         #I added start_value even if it's empty, not sure about it
         #but it makes a visible placeholder
-
+        
         if not start_value is None:
             p0 = start_value
         else:
@@ -224,11 +226,13 @@ class NonlinearLS(NonLinearModel):  #or subclass a model
                              'optimization')
          
         func = self.geterrors
-        eps = 2.2204460492503131e-016
+        #eps = 2.2204460492503131e-016
+        
         res = optimize.leastsq(func, p0, args=(), Dfun=self.approx_jac_predict,
                                full_output=1, col_deriv=0, ftol=1.49012e-08, 
         xtol=1.49012e-08, gtol=0.0, maxfev=0, epsfcn=0.0, factor=100, diag=None)
-        (popt, pcov, infodict, errmsg, ier) = res
+        
+	(popt, pcov, infodict, errmsg, ier) = res
 
         if ier not in [1,2,3,4]:
             msg = "Optimal parameters not found: " + errmsg
@@ -281,6 +285,9 @@ class NonlinearLS(NonLinearModel):  #or subclass a model
 
 #        lfit.fitres = fitres   #mainly for testing
         self._results = lfit
+        #storing parameter iterations 
+        lfit._get_params_iter(self.params_iter)
+
         return lfit
 
     def fit_minimal(self, start_value):
@@ -335,13 +342,37 @@ class NonlinearLS(NonLinearModel):  #or subclass a model
         15/04/2012
         Providing an approximate of jacobian to leastsq using numdiff module in sandbox
         
+        16/04/2012
+        Wrote a simple code snippet for jacobian calculation based on the one in numdiff.py 
+        Keeping it here for any future debugging.
         '''
-        from statsmodels.sandbox.regression.numdiff \
-             import approx_fprime1
+        #Storing the parameters
+        self._store_params(params)
 
-        jacob = approx_fprime1(params, self._predict)
+        #Calculating the jacobian
+        func = self.geterrors
+        x = np.asarray(params)
+        fx = func(x)
+        jacob = np.zeros((len(np.atleast_1d(fx)),len(x)), float)
+        inf = np.zeros((len(x),), float)
+        h = 1e-12
+        for i in range(len(x)):
+            inf[i] = h
+            jacob[:,i] = (func((x+inf)) - fx)/h
+            inf[i] = 0.0
         return jacob
 
+    def _store_params(self, params):
+        ''' The parameter values calculated at each iteration of LM algorithm is 
+            stored for keeping in regression results
+        '''
+        params = np.array(params)
+        if self.params_iter==None:
+            self.params_iter=[params]
+        else:
+            self.params_iter.append(params)
+        #print self.params_iter
+   
 
 class Myfunc(NonlinearLS):
 
@@ -372,7 +403,41 @@ class Myfunc(NonlinearLS):
 class NonLinearLSResults(RegressionResults):
     '''just a dummy placeholder for now
     most results from RegressionResults can be used here
+
+    16/04/2012
+    Introducing _get_params_iter and view_iter for showing the parameter values at
+    each iteration
+    
+    The code may require some refactoring when the __init__ function for this class 
+    is written
     '''
+    
+    def _get_params_iter(self,params_iter):
+        self.params_iter = params_iter
+
+    def view_iter(self):
+        '''
+
+        Returns
+        -------
+        Parameter Estimate Table
+
+        '''
+        k = range(len(self.params_iter))
+        col = len(self.params_iter[0])
+        s = '\n'+' '*30 + 'Parameter Estimates' + ' '*30 + '\n'
+        s += '='*80
+        s += '\nIteration No'
+        for j in range(col):
+            s += str('0'+str(j+1)).center(20)
+        s += '\n'+'='*80+'\n'
+        for i in k:
+            s += str(i+1) + ' '*7
+            for j in range(col):
+                s += str(self.params_iter[i][j]).rjust(20)
+            s += '\n'
+        return s
+
 
     @cache_readonly
     def wresid(self):
