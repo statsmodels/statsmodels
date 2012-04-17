@@ -2,7 +2,8 @@ import statsmodels.tools.data as data_util
 
 from charlton.api import model_spec_and_matrices
 from charlton.model_matrix import ModelMatrixColumnInfo
-from numpy import c_ as concat
+from charlton.desc import INTERCEPT
+from numpy import array, argsort, zeros, c_ as concat
 
 
 # if users want to pass in a different formula framework, they can
@@ -96,3 +97,39 @@ def handle_formula_data_ndarray(Y, X, formula):
     model_spec, endog, exog = model_spec_and_matrices(formula, df, depth=1)
     endog, exog = model_spec.make_matrices(df)
     return endog, exog, model_spec
+
+def _remove_intercept_charlton(terms):
+    """
+    Remove intercept from Charlton terms.
+    """
+    if INTERCEPT in terms:
+        del terms[INTERCEPT]
+    return terms
+
+def _assign(column_info, intercept=False):
+    """
+    column_info is the ModelMatrixColumnInfo object. If intercept is True, it
+    is kept in the returned results. Otherwise, it is removed.
+
+    This returns an array assign and a list index. assign is a mapping from
+    the column of a design matrix to the term in index
+    """
+    k_vars = len(column_info.column_names)
+    col_order = []
+    index = []
+    terms_info = column_info.term_to_columns
+    for term, cols in terms_info.iteritems():
+        col_order.append(cols[0])
+        index.append(term.name())
+
+    index = array(index)[argsort(col_order)].tolist()
+    assign = zeros(k_vars, dtype=int)
+    for term, cols in terms_info.iteritems():
+        assign[cols[0]:cols[1]] = index.index(term.name())
+
+    if '1' in index and not intercept:
+        assign = assign[~(assign == index.index('1'))]
+        index.remove('1')
+
+    return assign, index
+

@@ -1,13 +1,13 @@
 import numpy as np
 from scipy import stats
 from pandas import DataFrame, Index
-from charlton.desc import INTERCEPT # these are not formula independent..
-                                    # what could a null term evaluate to?
+from statsmodels.formula.formulatools import (_remove_intercept_charlton,
+                                              _assign)
 
-def _remove_intercept_charlton(terms):
-    if INTERCEPT in terms:
-        del terms[INTERCEPT]
-    return terms
+#TODO: remove when possible
+def has_intercept(column_info):
+    from charlton.desc import INTERCEPT
+    return INTERCEPT in column_info.term_to_columns
 
 #NOTE: these need to take into account weights !
 
@@ -42,13 +42,11 @@ def anova_single(model, **kwargs):
     exog = model.model.exog
     nobs = exog.shape[0]
 
-
     response_name = model.model.endog_names
-    model_formula = []
-    terms_info = model.model._data._orig_exog.column_info.term_to_columns
-    terms_info = _remove_intercept_charlton(terms_info)
+    column_info = model.model._data._orig_exog.column_info
     exog_names = model.model.exog_names
-    n_rows = len(terms_info) + 1 # for resids
+    n_rows = (len(column_info.term_to_columns) - has_intercept(column_info)
+              + 1) #+1 for resids
 
     pr_test = "PR(>%s)" % test
     names = ['df', 'sum_sq', 'mean_sq', test, pr_test]
@@ -56,10 +54,10 @@ def anova_single(model, **kwargs):
     table = DataFrame(np.empty((n_rows, 5)), columns = names)
 
     if typ in [1,"I"]:
-        return anova1_lm_single(model, endog, exog, nobs, terms_info, table,
+        return anova1_lm_single(model, endog, exog, nobs, column_info, table,
                                 n_rows, test, pr_test)
     elif typ in [2, "II"]:
-        return anova2_lm_single(model, terms_info, n_rows, test, pr_test)
+        return anova2_lm_single(model, column_info, n_rows, test, pr_test)
     elif typ in [3, "III"]:
         return anova3_lm_single
     elif typ in [4, "IV"]:
@@ -67,7 +65,7 @@ def anova_single(model, **kwargs):
     else:
         raise ValueError("Type %s not understood" % str(typ))
 
-def anova1_lm_single(model, endog, exog, nobs, terms_info, table, n_rows, test,
+def anova1_lm_single(model, endog, exog, nobs, column_info, table, n_rows, test,
                      pr_test):
     """
     ANOVA table for one fitted linear model.
@@ -90,27 +88,25 @@ def anova1_lm_single(model, endog, exog, nobs, terms_info, table, n_rows, test,
     Use of this function is discouraged. Use anova_lm instead.
     """
     #maybe we should rethink using pinv > qr in OLS/linear models?
-    #NOTE: to get the full q,r the same as R use scipy.linalg.qr with
-    # pivoting
     q,r = np.linalg.qr(exog)
-    effects = np.dot(q.T,endog)
+    effects = np.dot(q.T, endog)
 
-    terms_info = _remove_intercept_charlton(terms_info)
+    assign, term_names = _assign(column_info, intercept=True) #keep intercept
 
-    index = []
-    col_order = []
-    for i, (term, cols) in enumerate(terms_info.iteritems()):
-        table.ix[i]['sum_sq'] = np.sum(effects[cols[0]:cols[1]]**2)
-        table.ix[i]['df'] = cols[1]-cols[0]
-        col_order.append(cols[0])
-        index.append(term.name())
-    table.index = Index(index + ['Residual'])
+    arr = np.zeros((len(term_names), len(assign)))
+    arr[assign, range(len(assign))] = 1
+    sum_sq = np.dot(arr, effects**2)
+    #NOTE: assumes intercept is first column
+    intercept = has_intercept(column_info)
+    sum_sq = sum_sq[intercept:]
+    term_names = term_names[intercept:]
+
+    table.index = Index(term_names + ['Residual'])
     # fill in residual
     table.ix['Residual'][['sum_sq','df', test, pr_test]] = (model.ssr,
                                                             model.df_resid,
                                                             np.nan, np.nan)
     # sort in order of the way the terms appear in Formula with resid last
-    table = table.ix[np.argsort(col_order + [exog.shape[1]+1])]
     table['mean_sq'] = table['sum_sq'] / table['df']
     if test == 'F':
         table[:n_rows][test] = ((table['sum_sq']/table['df'])/
@@ -120,7 +116,7 @@ def anova1_lm_single(model, endog, exog, nobs, terms_info, table, n_rows, test,
     return table
 
 #NOTE: the below is not agnostic about formula...
-def anova2_lm_single(model, terms_info, n_rows, test, pr_test):
+def anova2_lm_single(model, column_info, n_rows, test, pr_test):
     """
     ANOVA type II table for one fitted linear model.
 
@@ -145,6 +141,7 @@ def anova2_lm_single(model, terms_info, n_rows, test, pr_test):
     Sum of Squares compares marginal contribution of terms. Thus, it is
     not particularly useful for models with significant interaction terms.
     """
+    terms_info = column_info.term_to_columns.copy()
     terms_info = _remove_intercept_charlton(terms_info)
 
     names = ['sum_sq', 'df', test, pr_test]
