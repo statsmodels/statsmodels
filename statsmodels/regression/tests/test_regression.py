@@ -7,6 +7,7 @@ from scipy.linalg import toeplitz
 from statsmodels.tools.tools import add_constant
 from statsmodels.regression.linear_model import (OLS, GLSAR, WLS, GLS,
         yule_walker)
+from statsmodels.regression.nonlinear_model import (NonlinearLS)
 from statsmodels.datasets import longley
 #from check_for_rpy import skip_rpy
 from nose import SkipTest
@@ -588,6 +589,12 @@ class TestNxNxOne(TestDataDimensions):
         cls.mod2 = OLS(cls.endog_n_, cls.exog_n_one)
         cls.mod2.df_model += 1
         cls.res2 = cls.mod2.fit()
+        
+class TestNonlinearLS(TestDataDimensions):
+    @classmethod
+    def setupClass(cls):
+        super(TestNonlinearLS, cls).setupClass()
+        
 
 def test_bad_size():
     np.random.seed(54321)
