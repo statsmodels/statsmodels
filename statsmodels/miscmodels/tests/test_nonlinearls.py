@@ -10,7 +10,7 @@ from numpy.testing import assert_almost_equal, assert_
 
 class Myfunc(NonlinearLS):
 
-    def _predict(self, params, exog=None):
+    def expr(self, params, exog=None):
         if exog is None:
             x = self.exog
         else:
@@ -21,7 +21,7 @@ class Myfunc(NonlinearLS):
 
 class Myfunc0(NonlinearLS):
 
-    def _predict(self, params, exog=None):
+    def expr(self, params, exog=None):
         if exog is None:
             x = self.exog
         else:
@@ -32,7 +32,7 @@ class Myfunc0(NonlinearLS):
 
 class Myfunc3(NonlinearLS):
 
-    def _predict(self, params, exog=None):
+    def expr(self, params, exog=None):
         if exog is None:
             x = self.exog
         else:
@@ -89,6 +89,7 @@ class TestNonlinearLS(object):
                                 getattr(res2.model, att)(res2.params),
                                 decimal=6)
 
+
         #print 'testing f_test'
         rmat = np.ones(len(res.params))
         assert_almost_equal(res.f_test(rmat).fvalue, res.f_test(rmat).fvalue,
@@ -131,7 +132,7 @@ class TestNonlinearLS0(TestNonlinearLS):
         sigma = np.array([1,  2, 1,  2, 1.])
 
         mod = Myfunc0(y, x, sigma=sigma**2)
-        self.res = mod.fit(start_value=([0.042])) #requires [0.042], needs len()
+        self.res = mod.fit(start_value=(0.042,)) #requires [0.042], needs len()
 
         self.res2 = sm.WLS(y, x,
                            weights=1./sigma**2).fit()

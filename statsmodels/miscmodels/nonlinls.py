@@ -355,7 +355,7 @@ class NonlinearLS(NonLinearModel):  #or subclass a model
         fx = func(x)
         jacob = np.zeros((len(np.atleast_1d(fx)),len(x)), float)
         inf = np.zeros((len(x),), float)
-        h = 1e-12
+        h = 1e-10#seems to be the best value after running the test suite
         for i in range(len(x)):
             inf[i] = h
             jacob[:,i] = (func((x+inf)) - fx)/h
