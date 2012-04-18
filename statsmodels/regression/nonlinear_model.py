@@ -848,8 +848,8 @@ strong multicollinearity or other numerical problems.''' % condno
         diags = np.diag(self.cov_params())
         if any(diags < 0):
             wstr = \
-'''There were negative variance estimates. This might indicate problems
-with the model.'''
+'''There were negative variance estimates, which have been set to 0. This 
+might indicate problems with the model.'''
             etext.append(wstr)
 
         if etext:
