@@ -14,6 +14,24 @@ class Myfunc(NonlinearLS):
         a, b, c = params
         return a + b*x0 + c*x1
 
+    def jacobian(self,params, exog=None):
+        if exog is None:
+            x = self.exog
+        else:
+            x = exog
+
+        #keeping it here to let view_iter work fine
+        self._store_params(params)
+
+        x0, x1 = x[:,0], x[:,1]
+        a, b, c = params
+        a1 = (-1)*np.ones(len(x0),)
+        b1 = (-1)*x0
+        c1 = (-1)*x1
+        jacob = np.column_stack((a1,b1,c1))
+        print jacob
+        return jacob
+
 x = np.arange(5.).repeat(2)  #[:,None] BUG
 y = np.array([1, -2, 1, -2, 1.]).repeat(2)
 sigma = np.array([1,  2, 1,  2, 1.]).repeat(2)
@@ -25,7 +43,7 @@ res.df_model = 2. #subtract constant to agree with WLS
 #print res.params
 #print res.bse
 
-#resw = sm.WLS(y, sm.add_constant(x, prepend=True), weights=1./sigma**2).fit()
+resw = sm.WLS(y, sm.add_constant(x, prepend=True), weights=1./sigma**2).fit()
 #print resw.params
 #print resw.bse
 
@@ -42,8 +60,8 @@ print res.view_iter()
 #print '\n\n\n'
 #print resw.summary(yname='y', xname=['const', 'x0', 'x1'])
 
-#txt = res.summary(yname='y', xname=['const', 'x0', 'x1'])
-#txtw = resw.summary(yname='y', xname=['const', 'x0', 'x1'])
-#txt = str(txt)
-#txtw = str(txtw)
-#print txt[txt.find('No. Observations'):] == txtw[txtw.find('No. Observations'):]
+txt = res.summary(yname='y', xname=['const', 'x0', 'x1'])
+txtw = resw.summary(yname='y', xname=['const', 'x0', 'x1'])
+txt = str(txt)
+txtw = str(txtw)
+print txt[txt.find('No. Observations'):] == txtw[txtw.find('No. Observations'):]
