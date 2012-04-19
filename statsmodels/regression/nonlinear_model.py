@@ -203,7 +203,7 @@ Should be of length %s, if sigma is a 1d array" % nobs)
                 
             self.Dfun = dfun_wrapper
         
-        beta, self.normalized_cov_params = curve_fit(self.f, exog.T, endog)#, Dfun=self.Dfun)
+        beta, self.normalized_cov_params = curve_fit(self.f, exog.T, endog, Dfun=self.Dfun)
 
         self._data.xnames = ["x%s" % i for i in range(1, len(beta) + 1)]
         
