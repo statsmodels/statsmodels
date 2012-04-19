@@ -29,7 +29,6 @@ class Myfunc(NonlinearLS):
         b1 = (-1)*x0
         c1 = (-1)*x1
         jacob = np.column_stack((a1,b1,c1))
-        print jacob
         return jacob
 
 x = np.arange(5.).repeat(2)  #[:,None] BUG
