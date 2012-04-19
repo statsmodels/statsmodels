@@ -116,9 +116,12 @@ class NonlinearLS(base.LikelihoodModel):
 
     """
 
-    def __init__(self, f, endog, exog, Dfun=None, sigma=None):
+    def __init__(self, f, endog, exog, Dfun=None, p0=None, maxfev=None, sigma=None):
         self.f = f
         self.Dfun = Dfun
+        self.p0 = p0
+        if maxfev: self.maxfev = maxfev
+        else: self.maxfev = np.array(exog).shape[1] * 100
 
         if sigma is not None:
             self.sigma = np.asarray(sigma)
@@ -203,7 +206,8 @@ Should be of length %s, if sigma is a 1d array" % nobs)
                 
             self.Dfun = dfun_wrapper
         
-        beta, self.normalized_cov_params = curve_fit(self.f, exog.T, endog, Dfun=self.Dfun)
+        beta, self.normalized_cov_params = curve_fit(self.f, exog.T, endog, sigma=self.sigma,
+                                                     Dfun=self.Dfun, p0=self.p0, maxfev=self.maxfev)
 
         self._data.xnames = ["x%s" % i for i in range(1, len(beta) + 1)]
         
