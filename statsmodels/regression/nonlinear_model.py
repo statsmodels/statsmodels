@@ -116,8 +116,9 @@ class NonlinearLS(base.LikelihoodModel):
 
     """
 
-    def __init__(self, f, endog, exog, sigma=None):
+    def __init__(self, f, endog, exog, Dfun=None, sigma=None):
         self.f = f
+        self.Dfun = Dfun
 
         if sigma is not None:
             self.sigma = np.asarray(sigma)
@@ -195,11 +196,14 @@ Should be of length %s, if sigma is a 1d array" % nobs)
         exog = self.wexog
         endog = self.wendog
         
-        #(beta, self.normalized_cov_params,infodict,msg,ier) = curve_fit(self.f, exog.T, endog, maxfev=10000, full_output=True, warning=True)
-        #print infodict
-        #if not ier in (1,2,3,4):
-        #    raise Exception(msg)
-        beta, self.normalized_cov_params = curve_fit(self.f, exog.T, endog)
+        if self.Dfun:
+            dfun = self.Dfun
+            def dfun_wrapper(var, xs, ys, f):
+                return dfun(xs, *var)
+                
+            self.Dfun = dfun_wrapper
+        
+        beta, self.normalized_cov_params = curve_fit(self.f, exog.T, endog)#, Dfun=self.Dfun)
 
         self._data.xnames = ["x%s" % i for i in range(1, len(beta) + 1)]
         
@@ -228,10 +232,10 @@ Should be of length %s, if sigma is a 1d array" % nobs)
         If the model as not yet been fit, params is not optional.
         """
         if exog is None:
-            exog = self.exog
+            exog = self.wexog
         if params is None:
             params = self.params
-        return np.array([self.f(x, *params) for x in exog])
+        return np.array(self.f(exog.T, *params))
 
     def loglike(self, params):
         """
@@ -262,7 +266,7 @@ Should be of length %s, if sigma is a 1d array" % nobs)
         """
 #TODO: combine this with OLS/WLS loglike and add _det_sigma argument
         nobs2 = self.nobs / 2.0
-        SSR = ss(self.wendog - np.array([self.f(x, *params) for x in self.wexog]))
+        SSR = ss(self.wendog - np.array(self.f(self.wexog.T, *params)))
         llf = -np.log(SSR) * nobs2      # concentrated likelihood
         llf -= (1+np.log(np.pi/nobs2))*nobs2  # with likelihood constant
         if np.any(self.sigma) and self.sigma.ndim == 2:
@@ -551,8 +555,7 @@ class RegressionResults(base.LikelihoodModelResults):
     def bse(self):
         diags = np.diag(self.cov_params())
         return np.sqrt([n if n > 0 else 0
-                        for n in np.diag(self.cov_params())
-                        ])
+                        for n in diags])
 
     @cache_readonly
     def pvalues(self):
