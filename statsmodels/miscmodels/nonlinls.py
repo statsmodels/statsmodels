@@ -34,6 +34,17 @@ class NonLinearModel(Model):
         '''
         raise NotImplementedError
     
+    def jacobian(self, params=None, exog=None):
+        '''Any differentiable function will have an exact formula for its jacobian
+        calculation. This expression can be supplied here.
+        If the user does not provide it forward differences method is used.
+
+        Returns
+        ----------
+        The jacobian matrix for the given params.
+        '''
+        raise NotImplementedError
+    
 
 
 class NonlinearLS(NonLinearModel):  #or subclass a model
@@ -227,8 +238,7 @@ class NonlinearLS(NonLinearModel):  #or subclass a model
          
         func = self.geterrors
         #eps = 2.2204460492503131e-016
-        
-        res = optimize.leastsq(func, p0, args=(), Dfun=self.approx_jac_predict,
+        res = optimize.leastsq(func, p0, args=(), Dfun=self.jacobian,
                                full_output=1, col_deriv=0, ftol=1.49012e-08, 
         xtol=1.49012e-08, gtol=0.0, maxfev=0, epsfcn=0.0, factor=100, diag=None)
         
@@ -328,7 +338,7 @@ class NonlinearLS(NonLinearModel):  #or subclass a model
         jaccs_err = approx_fprime_cs(params, self._predict)
         return jaccs_err
 
-    def approx_jac_predict(self, params):
+    def jacobian(self, params):
         '''approximate jacobian estimation
         
         Objective is to implement a better method for calculation of derivatives 
@@ -345,6 +355,10 @@ class NonlinearLS(NonLinearModel):  #or subclass a model
         16/04/2012
         Wrote a simple code snippet for jacobian calculation based on the one in numdiff.py 
         Keeping it here for any future debugging.
+
+        18/04/2012
+        If the user does not supply the jacobian calculating expression than it uses 
+        the below approximate differences method
         '''
         #Storing the parameters
         self._store_params(params)
