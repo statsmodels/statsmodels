@@ -31,6 +31,19 @@ def _clean_formula(code):
         hypotheses[i] = ' = '.join(expr)
     return '&'.join(hypotheses)
 
+def _check_recursively(tree, unary_ops):
+    # check that each hypothesis is well-formed
+    if not isinstance(tree.args[1], ParseNode): # always maybe a single node
+        tree.args[1] = ParseNode(unary_ops["="], tree.args[1],
+                                 tree.args[1].origin)
+    if isinstance(tree.args[0], ParseNode) and tree.args[0].op.token == '&':
+        tree.args[0] = _check_recursively(tree.args[0], unary_ops)
+    elif not isinstance(tree.args[0], ParseNode):
+        tree.args[0] = ParseNode(unary_ops["="], tree.args[0],
+                                 tree.args[0].origin)
+    return tree
+
+
 #NOTE: the only difference between this and charlton.parse.parse is that
 # our default operators are different and we return None for an empty code
 # parse.parse could be made to be extensible?
@@ -78,9 +91,12 @@ def parse(code, extra_operators=[]):
 
     assert len(c.noun_stack) == 1
     tree = c.noun_stack.pop()
+    #from IPython.core.debugger import Pdb; Pdb().set_trace()
     if not isinstance(tree, ParseNode) or tree.op.token not in ["=", "&"]:
     # & has a lower precedence than = because it can be multiple tests
         tree = ParseNode(unary_ops["="], [tree], tree.origin)
+    elif tree.op.token in '&': # make sure each part is well-formed
+        tree = _check_recursively(tree, unary_ops)
     return tree
 
 
@@ -92,6 +108,7 @@ _stat_operators = [
     Operator("+", 2, 100),
     Operator("-", 2, 100),
     Operator("*", 2, 200),
+    Operator("/", 2, 200),
     Operator(":", 2, 300),
     Operator("**", 2, 500),
 
@@ -102,7 +119,17 @@ _stat_operators = [
 
 ###### TESTS #########
 
-from charlton.parse import _compare_trees
+def _compare_trees(got, expected):
+    if isinstance(got, ParseNode):
+        assert got.op.token == expected[0]
+        if isinstance(got.args, str):
+            gotargs = [got.args]
+        else:
+            gotargs = got.args
+        for arg, expected_arg in zip(gotargs, expected[1:]):
+            _compare_trees(arg, expected_arg)
+    else:
+        assert got == expected
 
 def _do_parse_test(test_cases, extra_operators):
     for code, expected in test_cases.iteritems():
@@ -138,6 +165,14 @@ _parser_tests = {
     "(x2 = 0) & (x3 = 0) & (x4 = 0)" : ["&", ["&", ["=", "x2", "0"],
                                                    ["=", "x3", "0"]],
                                               ["=", "x4", "0"]],
+    # check that all hypotheses get well-formed
+    '(x1 + x6 = x2 - 5) & x5' : ['&', ['=', ['+', 'x1', 'x6'],
+                                            ['-', 'x2', '5']],
+                                      ['=', 'x5']],
+    'x5 & (x1 + x6 = x2 - 5)' : ['&', ['=', 'x5'],
+                                      ['=', ['+', 'x1', 'x6'],
+                                            ['-', 'x2', '5']]],
+    'x1 & x2 & x3' : ['&', ['&', ['=', 'x1'], ['=', 'x2'], ['=', 'x3']]],
     # Tests in a Multiple Equation Environment
     "x2[2] = 0" : ["=", "x2[2]", "0"], # x2 in 2nd equation = 0
 

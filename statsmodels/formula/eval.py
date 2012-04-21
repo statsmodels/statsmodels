@@ -8,6 +8,14 @@ from charlton.eval import EvalEnvironment
 from charlton.parse import ParseNode
 from parser import parse
 
+def _is_a_float(v):
+    try:
+        float(v)
+    except ValueError:
+        return False
+    else:
+        return True
+
 def _maybe_simplify_rhs(rhs):
     if not rhs:
         rhs = (None, 0.0)
@@ -94,11 +102,17 @@ def _eval_binary_minus(evaluator, tree):
     return [left_expr, right_expr]
 
 def _eval_binary_prod(evaluator, tree):
-    exprs = [evaluator.eval(arg) for arg in tree.args]
-    return IntermediateExpr(False, None, False,
-                            exprs[0].terms
-                            + exprs[1].terms
-                            + _interaction(*exprs).terms)
+    # assuming here that we only get a linear predictor not a nonlinear
+    # hypothesis
+    which_float = map(_is_a_float, tree.args)
+    try:
+        assert any(which_float)
+    except AssertionError, err:
+        raise ValueError("Non-linear hypotheses not handled: %s" %
+                         tree.origin.code)
+    # what if we get something like 2*(x1 + x3) ? we shouldn't but ...
+    return (tree.args[which_float.index(False)],
+            float(tree.args[which_float.index(True)]))
 
 def _eval_binary_div(evaluator, tree):
     left_expr = evaluator.eval(tree.args[0])
@@ -249,12 +263,15 @@ _test_eval = {
             },
 
         # test multiplication (still linear hypotheses)
+        '(2*x2 = 0) & (3.5*x3 - 1)' : {0 : [('x2', 2),(None, 0)],
+                                       1 : [('x3', 3.5), (None, -1)] }
 
     }
 
 # this should actually be a parser error
 _test_eval_errors = [
         '1 = 1',
+        'x1*x2 = 3'
         ]
 
 if __name__ == "__main__":
