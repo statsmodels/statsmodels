@@ -33,8 +33,6 @@ def _maybe_rearrange_terms(exprs):
     lhs = []
     rhs = []
 
-    #from IPython.core.debugger import Pdb; Pdb().set_trace()
-
     # do LHS
     if isinstance(exprs[0], list):
         for term in exprs[0]: #TODO:  is the tuple check right
@@ -53,11 +51,12 @@ def _maybe_rearrange_terms(exprs):
 
     if len(lhs) == 1: # to be consistent with other single term LHS
         lhs = lhs[0]
+
     # do RHS
     if isinstance(exprs[1], list):
         for term in exprs[1]:
-            if not isinstance(term, tuple) and Evaluator._is_a(float, term):
-                rhs += [(term[0], term[1] * -1)]
+            if term[0] is None and Evaluator._is_a(float, term[1]):
+                rhs += [term]
             else:
                 lhs += [(term[0], term[1] * -1)]
     elif exprs[1][0] is not None: # it's a term
@@ -70,12 +69,20 @@ def _maybe_rearrange_terms(exprs):
 
     return [lhs, rhs]
 
+def _unnest(lists):
+    new_list = []
+    # the inner-most list should have a tuple as item 1
+    while lists and isinstance(lists[1], list):
+        new_list.insert(0, lists.pop(1))
+        lists = lists[0]
+    # grab the last one
+    new_list.insert(0, lists)
+    return new_list
+
 def _eval_binary_ampersand(evaluator, tree):
     exprs = [evaluator.eval(arg) for arg in tree.args]
-    tests = {}
-    for i in range(len(exprs)):
-        tests.update({ i : exprs[i]})
-    return tests
+    exprs = _unnest(exprs)
+    return dict(zip(range(len(exprs)), exprs))
 
 def _eval_any_equals(evaluator, tree):
     exprs = [evaluator.eval(arg) for arg in tree.args]
@@ -115,44 +122,38 @@ def _eval_binary_prod(evaluator, tree):
             float(tree.args[which_float.index(True)]))
 
 def _eval_binary_div(evaluator, tree):
-    left_expr = evaluator.eval(tree.args[0])
-    right_expr = evaluator.eval(tree.args[1])
-    terms = list(left_expr.terms)
-    _check_interactable(left_expr)
-    # Build a single giant combined term for everything on the left:
-    left_factors = []
-    for term in left_expr.terms:
-        left_factors += list(term.factors)
-    left_combined_expr = IntermediateExpr(False, None, False,
-                                          [Term(left_factors)])
-    # Then interact it with everything on the right:
-    terms += list(_interaction(left_combined_expr, right_expr).terms)
-    return IntermediateExpr(False, None, False, terms)
-
-def _eval_binary_power(evaluator, tree):
-    left_expr = evaluator.eval(tree.args[0])
-    _check_interactable(left_expr)
-    power = -1
+    which_float = map(_is_a_float, tree.args)
     try:
-        power = int(tree.args[1])
-    except (ValueError, TypeError):
-        pass
-    if power < 1:
-        raise CharltonError("'**' requires a positive integer", tree.args[1])
-    all_terms = left_expr.terms
-    big_expr = left_expr
-    # Small optimization: (a + b)**100 is just the same as (a + b)**2.
-    power = min(len(left_expr.terms), power)
-    for i in xrange(1, power):
-        big_expr = _interaction(left_expr, big_expr)
-        all_terms = all_terms + big_expr.terms
-    return IntermediateExpr(False, None, False, all_terms)
+        assert any(which_float)
+    except AssertionError, err:
+        raise ValueError("Non-linear hypotheses not handled: %s" %
+                         tree.origin.code)
+    return (tree.args[which_float.index(False)],
+            1/float(tree.args[which_float.index(True)]))
+
+#def _eval_binary_power(evaluator, tree):
+#    left_expr = evaluator.eval(tree.args[0])
+#    _check_interactable(left_expr)
+#    power = -1
+#    try:
+#        power = int(tree.args[1])
+#    except (ValueError, TypeError):
+#        pass
+#    if power < 1:
+#        raise CharltonError("'**' requires a positive integer", tree.args[1])
+#    all_terms = left_expr.terms
+#    big_expr = left_expr
+#    # Small optimization: (a + b)**100 is just the same as (a + b)**2.
+#    power = min(len(left_expr.terms), power)
+#    for i in xrange(1, power):
+#        big_expr = _interaction(left_expr, big_expr)
+#        all_terms = all_terms + big_expr.terms
+#    return IntermediateExpr(False, None, False, all_terms)
 
 def _eval_unary_plus(evaluator, tree):
-    return evaluator.eval(tree.args[0])
+    return evaluator.eval(tree.args[0]), 1
 
 def _eval_unary_minus(evaluator, tree):
-    #from IPython.core.debugger import Pdb; Pdb().set_trace()
     expr = evaluator.eval(tree.args[0])
     expr = expr[0], expr[1] * -1
     return expr
@@ -170,7 +171,7 @@ class Evaluator(object):
         self.add_op("-", 2, _eval_binary_minus)
         self.add_op("*", 2, _eval_binary_prod)
         self.add_op("/", 2, _eval_binary_div)
-        self.add_op("**", 2, _eval_binary_power)
+        #self.add_op("**", 2, _eval_binary_power)
 
         self.add_op("+", 1, _eval_unary_plus)
         self.add_op("-", 1, _eval_unary_minus)
@@ -194,23 +195,31 @@ class Evaluator(object):
 
     def eval(self, tree):
         result = None
+
         if isinstance(tree, str):
             if self._is_a(int, tree) or self._is_a(float, tree):
+                # this is a RHS variable
                 result = None, float(tree)
             else:
                 # Guess it's a parameter with unitary coefficient
-                result = tree, 1 # don't convert to string? use origin anywhere?
+                result = tree, 1
         elif isinstance(tree, tuple): # got a param, coeff pair
             result = tree
         else:
             assert isinstance(tree, ParseNode)
             key = (tree.op.token, len(tree.args))
+
             if key not in self._evaluators:
                 raise CharltonError("I don't know how to evaluate "
-                                    "this '%s' operator" % (tree.op.token,),
-                                    tree.op)
+                                "this '%s' operator" % (tree.op.token,),                                        tree.op)
             result = self._evaluators[key](self, tree)
         return result
+
+def _get_R(lhs, names):
+    arr = np.zeros_like(names)
+    for term in lhs:
+        arr[names.index(term[0])] = term[1]
+    return arr
 
 def make_hypotheses_matrices(model_results, code, depth=0):
     tree = parse(code)
@@ -218,27 +227,36 @@ def make_hypotheses_matrices(model_results, code, depth=0):
     #eval_env.add_outer_namespace(charlton.builtins.builtins)
     #do we even need an eval environment?
     test_desc = Evaluator({}).eval(tree)
-    lhs = test_desc[0]
-    rhs = test_desc[1]
-    exog_names = model_results.model
+    exog_names = model_results.model.exog_names
+    if isinstance(test_desc, list):
+        lhs, rhs = test_desc
+        Q = rhs[1]
+        R = _get_R(lhs, exog_names)
+    elif isinstance(test_desc, dict):
+        n_tests = len(test_desc)
+        R, Q = [], []
+        for i in range(n_tests):
+            lhs, rhs = test_desc[i]
 
-    #desc = evaluate_tree(tree, eval_env)
-    R,Q = make_hypotheses(desc)
+            Q.append(rhs[1])
+            R.append(_get_R(lhs, exog_names))
+
     return R,Q
 
-def _do_eval_test(test_cases):
-    for code, expected in test_cases.iteritems():
-        tree = parse(code)
-        actual = Evaluator({}).eval(tree)
-        length = len(actual)
-        if length > 1:
-            for i in range(length):
-                assert actual[i] == expected[i]
-        else:
-            assert actual == expected
+def _do_eval_test(actual, expected):
+    length = len(actual)
+    if isinstance(actual, dict):
+        for i in range(length):
+            _do_eval_test(actual[i], expected[i])
+            #assert actual[i] == expected[i]
+    else:
+        assert actual == expected
 
 def test_eval():
-    _do_eval_test(_test_eval)
+    for code, expected in _test_eval.iteritems():
+        tree = parse(code)
+        actual = Evaluator({}).eval(tree)
+        _do_eval_test(actual, expected)
 
 _test_eval = {
         # some basic tests
@@ -251,7 +269,7 @@ _test_eval = {
         'x1 - x2 = 0' : [[('x1', 1), ('x2', -1)], (None, 0)],
         '-x2 = 1' : [('x2', -1), (None, 1)],
         'x1 + x2 = x3' : [[('x1', 1), ('x2', 1), ('x3', -1)], (None, 0)],
-        # next takes advantage of sympy
+        # takes advantage of sympy
         '-(x1 + x2) = 1' : [[('x1', -1), ('x2', -1)], (None, 1)],
         'x1 + x2 = x3 + x4' : [[('x1', 1), ('x2', 1),
                                 ('x3', -1), ('x4', -1)], (None, 0)],
@@ -264,15 +282,53 @@ _test_eval = {
 
         # test multiplication (still linear hypotheses)
         '(2*x2 = 0) & (3.5*x3 - 1)' : {0 : [('x2', 2),(None, 0)],
-                                       1 : [('x3', 3.5), (None, -1)] }
+                                       1 : [('x3', 3.5), (None, -1)] },
+        # division
+        '(2*x2 = 0) & (x3/3 - 1)' : {0 : [('x2', 2),(None, 0)],
+                                       1 : [('x3', 1/3.), (None, -1)] },
+        # how to deal with powers? is this still a linear hypothesis?
+
+        # some more complicated ones
+        '(2*x1 = 1) & (x2=3) & (x1 + x6 = x2 - 5)' : {
+            0 : [('x1', 2), (None, 1)],
+            1 : [('x2', 1), (None, 3)],
+            2 : [[('x1', 1),('x6', 1),('x2', -1)], (None, -5)],
+            }
 
     }
 
 # this should actually be a parser error
 _test_eval_errors = [
         '1 = 1',
-        'x1*x2 = 3'
+        'x1*x2 = 3',
+        'x1 ** 2 = 3', #?
+        '((x1 = 3) & ((x2 = 3) & (x3 = 3))' # error?
         ]
+
+class Bunch(dict):
+    def __init__(self, **kw):
+        dict.__init__(self,kw)
+        self.__dict__ = self
+
+def _do_test_make_matrices(code, result):
+    # simulate a model
+    model_results = Bunch(model=Bunch(exog_names=result[0]))
+    Q, R = make_hypotheses_matrices(model_results, code)
+    assert all(Q == result[1][0])
+    assert all(R == result[1][1])
+
+#def test_make_matrices():
+#    for code, result in _test_make_matrices.iteritems():
+#        _do_test_make_matrices(code, result)
+
+
+_test_make_matrices = {
+        # code : names, result
+        '(2*x1 = 1) & (x2=3) & (x1 + x6 = x2 - 5)' :
+                (['const', 'x1', 'x2', 'x3', 'x4', 'x5', 'x6'],
+                 ([[0, 2, 0, 0, 0, 0, 0],[0,0,1,0,0,0,0],[0,1,-1,0,0,0,1]],
+                   [1,3,-5]))
+        }
 
 if __name__ == "__main__":
     from parser import parse
