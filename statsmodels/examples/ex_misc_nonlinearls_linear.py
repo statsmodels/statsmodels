@@ -20,9 +20,6 @@ class Myfunc(NonlinearLS):
         else:
             x = exog
 
-        #keeping it here to let view_iter work fine
-        self._store_params(params)
-
         x0, x1 = x[:,0], x[:,1]
         a, b, c = params
         a1 = (-1)*np.ones(len(x0),)

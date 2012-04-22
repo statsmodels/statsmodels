@@ -48,7 +48,8 @@ class Myfunc4(NonlinearLS):
             x = self.exog
         else:
             x = exog
-        x0, x1 = x.T
+
+        x0, x1 = x[:,0], x[:,1]
         a, b, c = params
         return a + b*x0 + c*x1
 
@@ -57,9 +58,6 @@ class Myfunc4(NonlinearLS):
             x = self.exog
         else:
             x = exog
-
-        #keeping it here to let view_iter work fine
-        self._store_params(params)
 
         x0, x1 = x[:,0], x[:,1]
         a, b, c = params
@@ -159,7 +157,7 @@ class TestNonlinearLS0(TestNonlinearLS):
         sigma = np.array([1,  2, 1,  2, 1.])
 
         mod = Myfunc0(y, x, sigma=sigma**2)
-        self.res = mod.fit(start_value=(0.042,)) #requires [0.042], needs len()
+        self.res = mod.fit(start_value=[0.042]) #requires [0.042], needs len()
 
         self.res2 = sm.WLS(y, x,
                            weights=1./sigma**2).fit()
@@ -190,9 +188,9 @@ class TestNonlinearLS2(TestNonlinearLS):
 
     def _est_summary(self):
         #this fails because of different almost zero, 1e-7 vs.1e-17
-        print 'testing summary'
-        print txt
-        print txtw
+        #print 'testing summary'
+        #print txt
+        #print txtw
         txt = self.res.summary(yname='y', xname=['const', 'x0'])
         txtw = self.res2.summary(yname='y', xname=['const', 'x0'])
         assert_(txt[txt.find('#'):] == txtw[txtw.find('#'):])

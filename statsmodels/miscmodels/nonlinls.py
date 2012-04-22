@@ -238,7 +238,7 @@ class NonlinearLS(NonLinearModel):  #or subclass a model
          
         func = self.geterrors
         #eps = 2.2204460492503131e-016
-        res = optimize.leastsq(func, p0, args=(), Dfun=self.jacobian,
+        res = optimize.leastsq(func, p0, args=(), Dfun=self.getjacobian,
                                full_output=1, col_deriv=0, ftol=1.49012e-08, 
         xtol=1.49012e-08, gtol=0.0, maxfev=0, epsfcn=0.0, factor=100, diag=None)
         
@@ -338,7 +338,7 @@ class NonlinearLS(NonLinearModel):  #or subclass a model
         jaccs_err = approx_fprime_cs(params, self._predict)
         return jaccs_err
 
-    def jacobian(self, params):
+    def approx_jac_predict(self, params):
         '''approximate jacobian estimation
         
         Objective is to implement a better method for calculation of derivatives 
@@ -361,7 +361,7 @@ class NonlinearLS(NonLinearModel):  #or subclass a model
         the below approximate differences method
         '''
         #Storing the parameters
-        self._store_params(params)
+        #self._store_params(params)
 
         #Calculating the jacobian
         func = self.geterrors
@@ -374,6 +374,7 @@ class NonlinearLS(NonLinearModel):  #or subclass a model
             inf[i] = h
             jacob[:,i] = (func((x+inf)) - fx)/h
             inf[i] = 0.0
+        print jacob
         return jacob
 
     def _store_params(self, params):
@@ -386,7 +387,19 @@ class NonlinearLS(NonLinearModel):  #or subclass a model
         else:
             self.params_iter.append(params)
         #print self.params_iter
-   
+
+    def getjacobian(self,params):
+        '''The function to select the jacobian calculating function and return
+        jacobian matrix received
+        '''
+
+        self._store_params(params)
+        try:
+            jac_func = self.jacobian(params)
+            jac_func = self.whiten(jac_func)
+        except NotImplementedError:
+            jac_func = self.approx_jac_predict(params)
+        return jac_func
 
 class Myfunc(NonlinearLS):
 
