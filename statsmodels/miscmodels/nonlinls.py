@@ -395,8 +395,7 @@ class NonlinearLS(NonLinearModel):  #or subclass a model
 
         self._store_params(params)
         try:
-            jac_func = self.jacobian(params)
-            jac_func = self.whiten(jac_func)
+            jac_func = -self.whiten(self.jacobian(params))
         except NotImplementedError:
             jac_func = self.approx_jac_predict(params)
         return jac_func
