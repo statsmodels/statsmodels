@@ -116,12 +116,8 @@ class NonlinearLS(base.LikelihoodModel):
 
     """
 
-    def __init__(self, f, endog, exog, Dfun=None, p0=None, maxfev=None, sigma=None):
+    def __init__(self, f, endog, exog, sigma=None):
         self.f = f
-        self.Dfun = Dfun
-        self.p0 = p0
-        if maxfev: self.maxfev = maxfev
-        else: self.maxfev = np.array(exog).shape[1] * 100
 
         if sigma is not None:
             self.sigma = np.asarray(sigma)
@@ -199,15 +195,15 @@ Should be of length %s, if sigma is a 1d array" % nobs)
         exog = self.wexog
         endog = self.wendog
         
-        if self.Dfun:
-            dfun = self.Dfun
+        if "Dfun" in kwargs:
+            dfun = kwargs["Dfun"]
             def dfun_wrapper(var, xs, ys, f):
                 return dfun(xs, *var)
                 
-            self.Dfun = dfun_wrapper
+            kwargs["Dfun"] = dfun_wrapper
         
         beta, self.normalized_cov_params = curve_fit(self.f, exog.T, endog, sigma=self.sigma,
-                                                     Dfun=self.Dfun, p0=self.p0, maxfev=self.maxfev)
+                                                     **kwargs)
 
         self._data.xnames = ["x%s" % i for i in range(1, len(beta) + 1)]
         
@@ -385,8 +381,7 @@ class RegressionResults(base.LikelihoodModelResults):
     normalized_cov_params
         See specific model class docstring
     params
-        The linear coefficients that minimize the least squares criterion.  This
-        is usually called Beta for the classical linear model.
+        The parameter values that minimize the least squares criterion.
     pvalues
         The two-tailed p values for the t-stats of the params.
     resid
@@ -1011,7 +1006,7 @@ might indicate problems with the model.'''
                         [self.bse[i] for i in range(len(xname))],
                         [self.tvalues[i] for i in range(len(xname))],
                         [self.pvalues[i] for i in range(len(xname))])
-        part2header = ('coefficient', 'std. error', 't-statistic', 'prob.')
+        part2header = ('parameter', 'std. error', 't-statistic', 'prob.')
         part2stubs = xname
         #dfmt={'data_fmt':["%#12.6g","%#12.6g","%#10.4g","%#5.4g"]}
         part2 = SimpleTable(part2data,
