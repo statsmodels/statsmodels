@@ -1,7 +1,7 @@
 """
 It occured to me that I may have just rewritten some of sympy for this...
 """
-
+from numpy import zeros_like
 from charlton.util import to_unique_tuple
 import charlton.builtins
 from charlton.eval import EvalEnvironment
@@ -47,10 +47,7 @@ def _maybe_rearrange_terms(exprs):
         # should be caught earlier though...
         return _maybe_rearrange_terms(exprs[::-1])
     else: # single term on LHS not a scalar
-        lhs = exprs[0]
-
-    if len(lhs) == 1: # to be consistent with other single term LHS
-        lhs = lhs[0]
+        lhs = [exprs[0]]
 
     # do RHS
     if isinstance(exprs[1], list):
@@ -63,6 +60,9 @@ def _maybe_rearrange_terms(exprs):
         lhs += [(exprs[1][0], exprs[1][1] * -1)]
     else:
         rhs += [exprs[1]]
+
+    if len(lhs) == 1: # to be consistent with other single term LHS
+        lhs = lhs[0]
 
     #from IPython.core.debugger import Pdb; Pdb().set_trace()
     rhs = _maybe_simplify_rhs(rhs)
@@ -80,9 +80,8 @@ def _unnest(lists):
     return new_list
 
 def _eval_binary_ampersand(evaluator, tree):
-    exprs = [evaluator.eval(arg) for arg in tree.args]
-    exprs = _unnest(exprs)
-    return dict(zip(range(len(exprs)), exprs))
+    exprs = [evaluator.eval(arg, dirty=True) for arg in tree.args]
+    return exprs
 
 def _eval_any_equals(evaluator, tree):
     exprs = [evaluator.eval(arg) for arg in tree.args]
@@ -193,7 +192,13 @@ class Evaluator(object):
         else:
             return True
 
-    def eval(self, tree):
+    def eval(self, tree, dirty=False):
+        """
+        The dirty keyword is used to indicate that eval is being called
+        in an multiple hypothesis context. If dirty is True, we are not on
+        the 'main' call to eval. In this case, eval is being called by
+        _eval_binary_ampersand.
+        """
         result = None
 
         if isinstance(tree, str):
@@ -207,22 +212,47 @@ class Evaluator(object):
             result = tree
         else:
             assert isinstance(tree, ParseNode)
+            # sometimes args for unary operators are just ParseNodes
+            if not isinstance(tree.args, list):
+                tree.args = [tree.args]
             key = (tree.op.token, len(tree.args))
 
             if key not in self._evaluators:
                 raise CharltonError("I don't know how to evaluate "
                                 "this '%s' operator" % (tree.op.token,),                                        tree.op)
             result = self._evaluators[key](self, tree)
+            if tree.op.token == '&' and not dirty:
+                # if more than 1 &, got a nested result
+                result = _unnest(result)
+                result = dict(zip(range(len(result)), result))
         return result
 
+## Where to put the below?
+
 def _get_R(lhs, names):
-    arr = np.zeros_like(names)
+    arr = zeros_like(names, dtype=float)
+    if not isinstance(lhs, list):
+        lhs = [lhs]
     for term in lhs:
         arr[names.index(term[0])] = term[1]
     return arr
 
-def make_hypotheses_matrices(model_results, code, depth=0):
-    tree = parse(code)
+def make_hypotheses_matrices(model_results, test_formula, depth=0):
+    """
+    Makes matrices for Wald tests of linear hypotheses about the parameters.
+
+    Parameters
+    ----------
+    model_results : Results instance
+        A model results instance.
+    test_formula : str
+        A string for a test formula.
+
+    Notes
+    -----
+    .. todo:: Extended notes on the testing syntax.
+    """
+    tree = parse(test_formula)
     #we shouldn't need any of the builtins for testing
     #eval_env.add_outer_namespace(charlton.builtins.builtins)
     #do we even need an eval environment?
@@ -237,7 +267,6 @@ def make_hypotheses_matrices(model_results, code, depth=0):
         R, Q = [], []
         for i in range(n_tests):
             lhs, rhs = test_desc[i]
-
             Q.append(rhs[1])
             R.append(_get_R(lhs, exog_names))
 
@@ -258,6 +287,7 @@ def test_eval():
         actual = Evaluator({}).eval(tree)
         _do_eval_test(actual, expected)
 
+#TODO: avoid this list / no-list difference for single-term hypotheses
 _test_eval = {
         # some basic tests
 
@@ -265,6 +295,7 @@ _test_eval = {
         'x2 = 0' : [('x2', 1), (None, 0)],
         '0 = x2' : [('x2', 1), (None, 0)],
         'x1 + x2 = 0' : [[('x1', 1), ('x2', 1)], (None, 0)],
+        'x1 = x2' : [[('x1', 1), ('x2', -1)], (None, 0)],
         '0 = x1 + x2' : [[('x1', 1), ('x2', 1)], (None, 0)],
         'x1 - x2 = 0' : [[('x1', 1), ('x2', -1)], (None, 0)],
         '-x2 = 1' : [('x2', -1), (None, 1)],
@@ -276,6 +307,13 @@ _test_eval = {
         'x1 + 5 = 3' : [('x1', 1), (None, -2)],
         'x1 + 3 - 2' : [('x1', 1), (None, -1)],
         # multiple hypotheses
+        'x1 & x2 & x3 & x4 & x5' : {
+                0 : [('x1', 1), (None, 0)],
+                1 : [('x2', 1), (None, 0)],
+                2 : [('x3', 1), (None, 0)],
+                3 : [('x4', 1), (None, 0)],
+                4 : [('x5', 1), (None, 0)],
+            },
         '(x2 = 0) & (x3 = 0)' : {0 : [('x2', 1), (None, 0)],
                                  1 : [('x3', 1), (None, 0)]
             },
@@ -293,7 +331,12 @@ _test_eval = {
             0 : [('x1', 2), (None, 1)],
             1 : [('x2', 1), (None, 3)],
             2 : [[('x1', 1),('x6', 1),('x2', -1)], (None, -5)],
-            }
+            },
+        '(x1 = x2) & (x4 = 2) & (x5/5 = 1)' : {
+            0 : [[('x1', 1), ('x2', -1)], (None, 0)],
+            1 : [('x4', 1), (None, 2)],
+            2 : [('x5', 1/5.), (None, 1)],
+                                        }
 
     }
 
