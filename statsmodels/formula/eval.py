@@ -1,7 +1,8 @@
 """
-It occured to me that I may have just rewritten some of sympy for this...
+Takes a test syntax tree from parser.parse and evaluates it. This file also
+includes some helper function for making linear matrix hypotheses.
 """
-from numpy import zeros_like
+from numpy import zeros_like, asarray
 from charlton.util import to_unique_tuple
 import charlton.builtins
 from charlton.eval import EvalEnvironment
@@ -35,15 +36,14 @@ def _maybe_rearrange_terms(exprs):
 
     # do LHS
     if isinstance(exprs[0], list):
-        for term in exprs[0]: #TODO:  is the tuple check right
-            #if not isinstance(term, tuple) and Evaluator._is_a(float, term):
+        for term in exprs[0]: #TODO:
             if term[0] is None and Evaluator._is_a(float, term[1]):
                 rhs += [(term[0], term[1] * -1)]
             else:
                 lhs += [term]
     elif exprs[0][0] is None:
         # then we know it's a scalar only on LHS, flip the expression
-        # and start over, careful for infinute recursion if two scalars only
+        # and start over, careful for infinite recursion if two scalars only
         # should be caught earlier though...
         return _maybe_rearrange_terms(exprs[::-1])
     else: # single term on LHS not a scalar
@@ -64,7 +64,6 @@ def _maybe_rearrange_terms(exprs):
     if len(lhs) == 1: # to be consistent with other single term LHS
         lhs = lhs[0]
 
-    #from IPython.core.debugger import Pdb; Pdb().set_trace()
     rhs = _maybe_simplify_rhs(rhs)
 
     return [lhs, rhs]
@@ -270,7 +269,7 @@ def make_hypotheses_matrices(model_results, test_formula, depth=0):
             Q.append(rhs[1])
             R.append(_get_R(lhs, exog_names))
 
-    return R,Q
+    return asarray(R), asarray(Q)
 
 def _do_eval_test(actual, expected):
     length = len(actual)
@@ -353,16 +352,17 @@ class Bunch(dict):
         dict.__init__(self,kw)
         self.__dict__ = self
 
+import numpy.testing as npt
 def _do_test_make_matrices(code, result):
     # simulate a model
     model_results = Bunch(model=Bunch(exog_names=result[0]))
     Q, R = make_hypotheses_matrices(model_results, code)
-    assert all(Q == result[1][0])
-    assert all(R == result[1][1])
+    npt.assert_almost_equal(Q, result[1][0])
+    npt.assert_almost_equal(R, result[1][1])
 
-#def test_make_matrices():
-#    for code, result in _test_make_matrices.iteritems():
-#        _do_test_make_matrices(code, result)
+def test_make_matrices():
+    for code, result in _test_make_matrices.iteritems():
+        _do_test_make_matrices(code, result)
 
 
 _test_make_matrices = {
