@@ -1,9 +1,9 @@
 import numpy as np
-import scikits.statsmodels.base.model as base
-import scikits.statsmodels.base.wrapper as wrap
-from scikits.statsmodels.tools.decorators import (cache_readonly, transform2,
+import statsmodels.base.model as base
+import statsmodels.base.wrapper as wrap
+from statsmodels.tools.decorators import (cache_readonly, transform2,
             set_transform, unset_transform)
-from scikits.statsmodels.sandbox.regression.numdiff import (approx_hess_cs,
+from statsmodels.sandbox.regression.numdiff import (approx_hess_cs,
     approx_fprime_cs, approx_hess, approx_fprime)
 from scipy.stats import norm
 
@@ -817,7 +817,7 @@ def webuse(data, baseurl='http://www.stata-press.com/data/r11/'):
     """
     # lazy imports
     import pandas
-    from scikits.statsmodels.iolib import genfromdta
+    from statsmodels.iolib import genfromdta
     from urllib2 import urlopen
     from urlparse import urljoin
     from StringIO import StringIO
@@ -829,7 +829,7 @@ def webuse(data, baseurl='http://www.stata-press.com/data/r11/'):
 
 if __name__ == "__main__":
     import pandas
-    import scikits.statsmodels.api as sm
+    import statsmodels.api as sm
     #dta = webuse('auto')
     #df = pandas.DataFrame.from_records(dta)
     #df['rep78'] = df['rep78'].astype(float)
