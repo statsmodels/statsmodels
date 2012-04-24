@@ -1,9 +1,9 @@
 import numpy as np
-import scikits.statsmodels.base.model as base
-import scikits.statsmodels.base.wrapper as wrap
-from scikits.statsmodels.tools.decorators import (cache_readonly, transform2,
+import statsmodels.base.model as base
+import statsmodels.base.wrapper as wrap
+from statsmodels.tools.decorators import (cache_readonly, transform2,
             set_transform, unset_transform)
-from scikits.statsmodels.sandbox.regression.numdiff import (approx_hess_cs,
+from statsmodels.sandbox.regression.numdiff import (approx_hess_cs,
     approx_fprime_cs, approx_hess, approx_fprime)
 from scipy.stats import norm
 
@@ -52,7 +52,7 @@ def inverse_mills_above(X):
     ----------
     X : array
         Argument to inverse Mills ratio
-        
+
     Returns
     -------
     imr : array
@@ -68,7 +68,7 @@ def inverse_mills_below(X):
     ----------
     X : array
         Argument to inverse Mills ratio
-        
+
     Returns
     -------
     imr : array
@@ -169,17 +169,17 @@ def _predict_ystar(model, ab_args, params, sigma, exog):
     a,b = ab_args
     e = _predict_e(model, ab_args, params, sigma, exog)
     pr = _predict_pr(model, ab_args, params, sigma, exog)
-    if np.isfinite(a) and np.isfinite(b): 
+    if np.isfinite(a) and np.isfinite(b):
         pra = _predict_pr(model, (-np.inf,a), params, sigma, exog)
         return pr * e + pra * a + (1 - pr - pra) * b
     elif np.isfinite(a):
         return e*pr + (1-pr) * a
     elif np.isfinite(b):
         return e*pr + (1-pr) * b
-    else:    
+    else:
         return _predict_xb(model, (), params, sigma, exog)
 
-_predict_funcs = dict(xb    = _predict_xb, 
+_predict_funcs = dict(xb    = _predict_xb,
                       pr    = _predict_pr,
                       e     = _predict_e,
                       ystar = _predict_ystar)
@@ -541,7 +541,7 @@ class Tobit(base.LikelihoodModel):
     right : bool or float
         If True, censoring is assumed to be at the highest value of endog.
         If False, no censoring in the right tail of the distribution.
-        If a floating point value is given, this is the censoring level on 
+        If a floating point value is given, this is the censoring level on
         the right.
 
     Notes
@@ -685,7 +685,7 @@ class Tobit(base.LikelihoodModel):
         Parameters
         ----------
         params : array
-            The parameters of the model and sigma. The last number in params 
+            The parameters of the model and sigma. The last number in params
             should be sigma, the standard deviation of the model.
         exog : array, optional
             The exogenous variables at which to predict. The default is the
@@ -694,18 +694,18 @@ class Tobit(base.LikelihoodModel):
             The type of prediction to make.
             'xb'         - linear prediction
             'pr(a,b)'    - Probability that a < y < b. Where y is the latent
-                           unobserved variable. a and b may be replaced 
+                           unobserved variable. a and b may be replaced
                            by floats in the string. a and b may be replaced by
-                           -inf or inf, respectively. If (a,b) is omitted 
+                           -inf or inf, respectively. If (a,b) is omitted
                            entirely, they are inferred from the model.
             'e(a,b)'     - The expectation of y given a < y < b. Where y is the
-                           latent unobserved variable. a and b may be replaced 
+                           latent unobserved variable. a and b may be replaced
                            by floats in the string. a and b may be replaced by
-                           -inf or inf, respectively. If (a,b) is omitted 
+                           -inf or inf, respectively. If (a,b) is omitted
                            entirely, they are inferred from the model.
             'ystar(a,b)' - Expectation of the observed variable ystar where
                            ystar = max(a, min(y,b)). a and b may be replaced by
-                           -inf or inf, respectively. If (a,b) is omitted 
+                           -inf or inf, respectively. If (a,b) is omitted
                            entirely, they are inferred from the model.
         """
         typ, ab_args = _clean_type(typ)
@@ -817,7 +817,7 @@ def webuse(data, baseurl='http://www.stata-press.com/data/r11/'):
     """
     # lazy imports
     import pandas
-    from scikits.statsmodels.iolib import genfromdta
+    from statsmodels.iolib import genfromdta
     from urllib2 import urlopen
     from urlparse import urljoin
     from StringIO import StringIO
@@ -829,7 +829,7 @@ def webuse(data, baseurl='http://www.stata-press.com/data/r11/'):
 
 if __name__ == "__main__":
     import pandas
-    import scikits.statsmodels.api as sm
+    import statsmodels.api as sm
     #dta = webuse('auto')
     #df = pandas.DataFrame.from_records(dta)
     #df['rep78'] = df['rep78'].astype(float)
