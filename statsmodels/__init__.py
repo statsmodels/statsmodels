@@ -75,3 +75,8 @@ class NoseWrapper(Tester):
             t = NumpyTestProgram(argv=argv, exit=False, plugins=plugins)
         return t.result
 test = NoseWrapper().test
+
+try:
+	from .version import version as __version__
+except ImportError:
+	__version__ = 'not-yet-built'
