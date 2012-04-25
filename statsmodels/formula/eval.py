@@ -55,7 +55,7 @@ def _is_a_float(v):
         return True
 
 def _maybe_simplify_rhs(rhs):
-    if not rhs: # assume we got an empty RHS, LHS should be caught before?
+    if not rhs:
         rhs = (None, 0.0)
     else:
         add_scalars = lambda x, y: (None, x[1]+y[1])
