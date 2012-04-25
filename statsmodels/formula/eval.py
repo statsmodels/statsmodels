@@ -9,6 +9,43 @@ from charlton.eval import EvalEnvironment
 from charlton.parse import ParseNode
 from parser import parse
 
+def _flatten_lists(lists):
+    """
+    Flattens pure lists.
+
+    Examples
+    --------
+    >>> v = [[[1, 2], 3], 4]
+    >>> _flatten_lists(v)
+    [1, 2, 3, 4]
+    >>> v = [1, [2,3], 4]
+    >>> _flatten_lists(v)
+    [1, 2, 3, 4]
+    >>>: v = [1, [[2,3],4], 5]
+    >>> _flatten_lists(v)
+    [1, 2, 3, 4, 5]
+    """
+    new_list = []
+    for item in lists:
+        if isinstance(item, list):
+            new_list.extend(_flatten_lists(item))
+        else:
+            new_list.append(item)
+    return new_list
+
+def _unnest(lists):
+    """
+    Used to unnest compound hypotheses. Used in Evaluator.eval only.
+    """
+    new_list = []
+    # the inner-most list should have a tuple as item 1
+    while lists and isinstance(lists[1], list):
+        new_list.insert(0, lists.pop(1))
+        lists = lists[0]
+    # grab the last one
+    new_list.insert(0, lists)
+    return new_list
+
 def _is_a_float(v):
     try:
         float(v)
@@ -18,13 +55,32 @@ def _is_a_float(v):
         return True
 
 def _maybe_simplify_rhs(rhs):
-    if not rhs:
+    if not rhs: # assume we got an empty RHS, LHS should be caught before?
         rhs = (None, 0.0)
     else:
         add_scalars = lambda x, y: (None, x[1]+y[1])
         if isinstance(rhs, list):
             rhs = reduce(add_scalars, rhs)
     return rhs
+
+def _add_like_terms(x, y=None):
+    if y is None:
+        return tuple(x)
+    return (x[0], x[1] + y[1])
+
+def _maybe_simplify_lhs(lhs):
+    # need this for deterministic tests
+    # might be able to rewrite tests and just get rid of sorting
+    if isinstance(lhs, list):
+        new_lhs = []
+        #TODO: is there a lighter way to do this?
+        unique_terms = sorted(list(set(i[0] for i in lhs)))
+        terms = asarray([i[0] for i in lhs])
+        lhs_arr = asarray(lhs, dtype='O')
+        for term in unique_terms:
+            new_lhs.append(_add_like_terms(*tuple(lhs_arr[term==terms])))
+        lhs = new_lhs
+    return lhs
 
 def _maybe_rearrange_terms(exprs):
     """
@@ -33,10 +89,11 @@ def _maybe_rearrange_terms(exprs):
     """
     lhs = []
     rhs = []
+    #from IPython.core.debugger import Pdb; Pdb().set_trace()
 
     # do LHS
     if isinstance(exprs[0], list):
-        for term in exprs[0]: #TODO:
+        for term in exprs[0]:
             if term[0] is None and Evaluator._is_a(float, term[1]):
                 rhs += [(term[0], term[1] * -1)]
             else:
@@ -57,26 +114,24 @@ def _maybe_rearrange_terms(exprs):
             else:
                 lhs += [(term[0], term[1] * -1)]
     elif exprs[1][0] is not None: # it's a term
+        #from IPython.core.debugger import Pdb; Pdb().set_trace()
         lhs += [(exprs[1][0], exprs[1][1] * -1)]
     else:
         rhs += [exprs[1]]
 
+    #from IPython.core.debugger import Pdb; Pdb().set_trace()
+
+    rhs = _maybe_simplify_rhs(rhs)
+    # make sure you give this a flattened list
+    # things like 'x1 + 2*x2 + x3' get nested
+    # likely treates the symptom and not the problem though
+    lhs = _maybe_simplify_lhs(_flatten_lists(lhs))
+
+    #TODO: maybe remove?
     if len(lhs) == 1: # to be consistent with other single term LHS
         lhs = lhs[0]
 
-    rhs = _maybe_simplify_rhs(rhs)
-
     return [lhs, rhs]
-
-def _unnest(lists):
-    new_list = []
-    # the inner-most list should have a tuple as item 1
-    while lists and isinstance(lists[1], list):
-        new_list.insert(0, lists.pop(1))
-        lists = lists[0]
-    # grab the last one
-    new_list.insert(0, lists)
-    return new_list
 
 def _eval_binary_ampersand(evaluator, tree):
     exprs = [evaluator.eval(arg, dirty=True) for arg in tree.args]
@@ -218,7 +273,8 @@ class Evaluator(object):
 
             if key not in self._evaluators:
                 raise CharltonError("I don't know how to evaluate "
-                                "this '%s' operator" % (tree.op.token,),                                        tree.op)
+                                "this '%s' operator" % (tree.op.token,),
+                                tree.op)
             result = self._evaluators[key](self, tree)
             if tree.op.token == '&' and not dirty:
                 # if more than 1 &, got a nested result
@@ -299,12 +355,17 @@ _test_eval = {
         'x1 - x2 = 0' : [[('x1', 1), ('x2', -1)], (None, 0)],
         '-x2 = 1' : [('x2', -1), (None, 1)],
         'x1 + x2 = x3' : [[('x1', 1), ('x2', 1), ('x3', -1)], (None, 0)],
+        'x1 + 2*x2 +x3 = 0' : [[('x1', 1), ('x2', 2), ('x3', 1)], (None, 0)],
         # takes advantage of sympy
         '-(x1 + x2) = 1' : [[('x1', -1), ('x2', -1)], (None, 1)],
+        # needs rhs -> lhs
         'x1 + x2 = x3 + x4' : [[('x1', 1), ('x2', 1),
                                 ('x3', -1), ('x4', -1)], (None, 0)],
+        'x1 + 2*x2 = x3 - 3*x4' : [[('x1', 1), ('x2', 2),
+                                ('x3', -1), ('x4', 3)], (None, 0)],
         'x1 + 5 = 3' : [('x1', 1), (None, -2)],
         'x1 + 3 - 2' : [('x1', 1), (None, -1)],
+        #TODO: check that sympy can simply LHS and RHS
         # multiple hypotheses
         'x1 & x2 & x3 & x4 & x5' : {
                 0 : [('x1', 1), (None, 0)],
@@ -329,13 +390,20 @@ _test_eval = {
         '(2*x1 = 1) & (x2=3) & (x1 + x6 = x2 - 5)' : {
             0 : [('x1', 2), (None, 1)],
             1 : [('x2', 1), (None, 3)],
-            2 : [[('x1', 1),('x6', 1),('x2', -1)], (None, -5)],
+            2 : [[('x1', 1),('x2', -1),('x6', 1)], (None, -5)],
             },
         '(x1 = x2) & (x4 = 2) & (x5/5 = 1)' : {
             0 : [[('x1', 1), ('x2', -1)], (None, 0)],
             1 : [('x4', 1), (None, 2)],
             2 : [('x5', 1/5.), (None, 1)],
-                                        }
+                                        },
+        # RHS -> LHS simplification bugs pointed out by Josef
+        '(2*x1 = x1)' : [('x1', 1), (None, 0)],
+        'x1 + x2 = 2*x2' : [[('x1', 1), ('x2', -1)], (None, 0)],
+        'x1 + 2*x2 = x2' : [[('x1', 1), ('x2', 1)], (None, 0)],
+        'x1 + 2*x2 = -x2' : [[('x1', 1), ('x2', 3)], (None, 0)],
+        # notice the term order of the formula (arbitrary for the result)
+        'x1 + 2*x2 + x3 = -x2' : [[('x1', 1), ('x2', 3), ('x3', 1)], (None, 0)],
 
     }
 
@@ -344,7 +412,8 @@ _test_eval_errors = [
         '1 = 1',
         'x1*x2 = 3',
         'x1 ** 2 = 3', #?
-        '((x1 = 3) & ((x2 = 3) & (x3 = 3))' # error?
+        '((x1 = 3) & ((x2 = 3) & (x3 = 3))', # error?
+        ' = 1' # empty LHS
         ]
 
 class Bunch(dict):
