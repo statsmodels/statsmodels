@@ -61,9 +61,9 @@ class Myfunc4(NonlinearLS):
 
         x0, x1 = x[:,0], x[:,1]
         a, b, c = params
-        a1 = (-1)*np.ones(len(x0),)
-        b1 = (-1)*x0
-        c1 = (-1)*x1
+        a1 = np.ones(len(x0),)
+        b1 = x0
+        c1 = x1
         jacob = np.column_stack((a1,b1,c1))
         return jacob
 

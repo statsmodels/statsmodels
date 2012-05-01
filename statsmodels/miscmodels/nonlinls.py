@@ -374,7 +374,6 @@ class NonlinearLS(NonLinearModel):  #or subclass a model
             inf[i] = h
             jacob[:,i] = (func((x+inf)) - fx)/h
             inf[i] = 0.0
-        print jacob
         return jacob
 
     def _store_params(self, params):
