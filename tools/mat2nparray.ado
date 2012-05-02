@@ -1,6 +1,6 @@
-capture program drop mat2array
-program define mat2array 
-    version 11.2
+capture program drop mat2nparray
+program define mat2nparray 
+    version 11.0
     syntax namelist(min=1), SAVing(str) [ Format(str) APPend REPlace ]
     if "`format'"=="" local format "%16.0g"
     local saving: subinstr local saving "." ".", count(local ext)
@@ -12,6 +12,15 @@ program define mat2array
     foreach mat of local namelist {
         mkarray `mat' `myfile' `format'
     }
+    file write `myfile' "class Bunch(dict):" _n
+    file write `myfile' "    def __init__(self, **kw):" _n
+    file write `myfile' "        dict.__init__(self, kw)" _n
+    file write `myfile' "        self.__dict__  = self" _n _n _n
+    file write `myfile' "results = Bunch("
+    foreach mat of local namelist {
+        file write `myfile' "`mat'=`mat', "
+    }
+    file write `myfile' ")" _n _n
 file close `myfile'
 end
 
