@@ -95,4 +95,17 @@ def cython(pyx_files, working_path=''):
                            [sys.executable, script_path, '-o', c_file, pyxfile],
                            shell=True)
             else:
-                status = subprocess.call(['cython', '-o', c_file, pyxfile])
+                try:
+                    status = subprocess.call(['cython', '-o', c_file, pyxfile])
+                except OSError, err:
+                    # Above is reported to fail on Mac OS X 10.6.8
+                    # because cython is a shell alias in the terminal only
+                    pkg_path = os.path.abspath(os.path.join(
+                                       os.path.dirname(Cython.__file__), '..'))
+                    script_path = os.path.join(pkg_path, 'cython.py')
+                    if not os.path.exists(script_path):
+                        script_path = os.path.join(pkg_path,
+                                                   'cython-script.py')
+                    status = subprocess.call([sys.executable, script_path,
+                                                    '-o', c_file, pyxfile])
+
