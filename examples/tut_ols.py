@@ -34,6 +34,7 @@ prstd, iv_l, iv_u = wls_prediction_std(res)
 plt.plot(x1, res.fittedvalues, 'r--.')
 plt.plot(x1, iv_u, 'r--')
 plt.plot(x1, iv_l, 'r--')
+#@savefig tut_ols_0.png
 plt.title('blue: true,   red: OLS')
 
 print res.summary()
@@ -67,6 +68,7 @@ prstd, iv_l, iv_u = wls_prediction_std(res2)
 plt.plot(x1, res2.fittedvalues, 'r--.')
 plt.plot(x1, iv_u, 'r--')
 plt.plot(x1, iv_l, 'r--')
+#@savefig tut_ols_1.png
 plt.title('blue: true,   red: OLS')
 
 print res.summary()

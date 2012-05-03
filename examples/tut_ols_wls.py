@@ -25,6 +25,7 @@ res2 = sm.OLS(y2, X).fit()
 print res2.params
 print res2.bse
 #print res.predict
+#@savefig tut_ols_wls_0.png
 plt.plot(x1, res2.fittedvalues, 'r--')
 
 # Example WLS: Heteroscedasticity 2 groups
@@ -123,6 +124,7 @@ prstd, iv_l, iv_u = wls_prediction_std(res3)
 plt.plot(x1, res3.fittedvalues, 'g--.')
 plt.plot(x1, iv_u, 'g--')
 plt.plot(x1, iv_l, 'g--')
+#@savefig tut_ols_wls_1.png
 plt.title('blue: true, red: OLS, green: WLS')
 
 

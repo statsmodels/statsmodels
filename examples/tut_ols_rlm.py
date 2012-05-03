@@ -45,6 +45,7 @@ resrlm = sm.RLM(y2, X).fit()
 print resrlm.params
 print resrlm.bse
 plt.plot(x1, resrlm.fittedvalues, 'g.-')
+#@savefig tut_ols_rlm_0.png
 plt.title('blue: true,   red: OLS,   green: RLM')
 
 
@@ -72,6 +73,7 @@ resrlm2 = sm.RLM(y2, X2).fit()
 print resrlm2.params
 print resrlm2.bse
 plt.plot(x1, resrlm2.fittedvalues, 'g.-')
+#@savefig tut_ols_rlm_1.png
 plt.title('blue: true,   red: OLS,   green: RLM')
 
 
