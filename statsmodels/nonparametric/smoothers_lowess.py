@@ -48,7 +48,7 @@ def lowess(endog, exog, frac = 2./3, it = 3):
     estimating the true y_i by taking the frac*N closest points
     to (x_i,y_i) based on their x values and estimating y_i
     using a weighted linear regression. The weight for (x_j,y_j)
-    is _lowess_tricube function applied to |x_i-x_j|.
+    is _lowess_tricube function applied to `|x_i-x_j|`.
 
     If iter>0, then further weighted local linear regressions
     are performed, where the weights are the same as above

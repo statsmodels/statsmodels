@@ -67,7 +67,8 @@ class KDE(object):
         Parameters
         ----------
         kernel : str
-            The Kernel to be used. Choices are
+            The Kernel to be used. Choices are:
+
             - "biw" for biweight
             - "cos" for cosine
             - "epa" for Epanechnikov
@@ -75,12 +76,16 @@ class KDE(object):
             - "tri" for triangular
             - "triw" for triweight
             - "uni" for uniform
+
         bw : str, float
-            "scott" - 1.059 * A * nobs ** (-1/5.), where A is
-                    min(std(X),IQR/1.34)
-            "silverman" - .9 * A * nobs ** (-1/5.), where A is
-                    min(std(X),IQR/1.34)
-            If a float is given, it is the bandwidth.
+            The bandwidth to use. Choices are:
+
+            - "scott" - 1.059 * A * nobs ** (-1/5.), where A is
+              `min(std(X),IQR/1.34)`
+            - "silverman" - .9 * A * nobs ** (-1/5.), where A is
+              `min(std(X),IQR/1.34)`
+            - If a float is given, it is the bandwidth.
+
         fft : bool
             Whether or not to use FFT. FFT implementation is more
             computationally efficient. However, only the Gaussian kernel
