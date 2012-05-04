@@ -1,10 +1,9 @@
-.. currentmodule:: statsmodels.nonparametric.api
+.. currentmodule:: statsmodels.iolib
 
-.. _nonparametric:
-
+.. _iolib:
 
 Input-Output :mod:`iolib`
-==================================
+=========================
 
 Introduction
 ------------
@@ -14,13 +13,16 @@ Some functions for input and output.
 Module Reference
 ----------------
 
-The specific mode
+This contains a reader for STATA files, a class for generating tables for
+printing in several formats and two helper functions for pickling.
 
 .. autosummary::
    :toctree: generated/
 
-   StataReader
-   genfromdta
-   savetxt
-   SimpleTable
-   csv2st
+   foreign.StataReader
+   foreign.genfromdta
+   foreign.savetxt
+   table.SimpleTable
+   table.csv2st
+   smpickle.save_pickle
+   smpickle.load_pickle
