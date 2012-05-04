@@ -205,7 +205,7 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
         #search for lag length with highest information criteria
         #Note: use the same number of observations to have comparable IC
         icbest, bestlag = _autolag(OLS, xdshort, fullRHS, startlag,
-                maxlag, autolag)
+                startlag+maxlag, autolag)
 
         #rerun ols with best autolag
         xdall = lagmat(xdiff[:,None], bestlag, trim='both', original='in')
