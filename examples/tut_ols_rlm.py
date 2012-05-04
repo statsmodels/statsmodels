@@ -38,7 +38,6 @@ print resrlm.bse
 
 plt.figure()
 plt.plot(x1, y2, 'o', x1, y_true2, 'b-')
-#plt.plot(x1, res.fittedvalues, 'r--')
 prstd, iv_l, iv_u = wls_prediction_std(res)
 plt.plot(x1, res.fittedvalues, 'r-')
 plt.plot(x1, iv_u, 'r--')
