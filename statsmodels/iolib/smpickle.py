@@ -15,7 +15,7 @@ def save_pickle(obj, fname):
     Save the object to file via pickling.
 
     Parameters
-    ---------
+    ----------
     fname : str
         Filename to pickle to
     """

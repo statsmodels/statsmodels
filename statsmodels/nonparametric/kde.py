@@ -219,8 +219,8 @@ class KDE(object):
         """
         Evaluate density at a single point.
 
-        Paramters
-        ---------
+        Parameters
+        ----------
         point : float
             Point at which to evaluate the density.
         """
