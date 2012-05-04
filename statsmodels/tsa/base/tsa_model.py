@@ -95,8 +95,13 @@ class TimeSeriesModel(base.LikelihoodModel):
             try:
                 dtstart = self._str_to_date(start)
                 self._data.predict_start = dtstart
-                start = dates.indexMap[dtstart] # NOTE: are these consistent?
-            except:
+                # for pandas 0.7.x vs 0.8.x
+                if hasattr(dates, 'indexMap'): # 0.7.x
+                    start = dates.indexMap[dtstart]
+                else:
+                    start = dates.get_loc(dtstart)
+            except: # this catches all errors in the above..
+                    #FIXME to be less greedy
                 raise ValueError("Start must be in dates. Got %s | %s" %
                         (str(start), str(dtstart)))
 
@@ -128,9 +133,11 @@ class TimeSeriesModel(base.LikelihoodModel):
             try:
                 dtend = self._str_to_date(end)
                 self._data.predict_end = dtend
-                end = dates.indexMap[dtend]
-            except ImportError, err: # make sure timeseries isn't the prob
-                raise ImportError(err)
+                # for pandas 0.7.x vs 0.8.x
+                if hasattr(dates, 'indexMap'): # 0.7.x
+                    end = dates.indexMap[dtend]
+                else:
+                    end = dates.get_loc(dtend)
             except KeyError, err: # end is greater than dates[-1]...probably
                 if dtend > self._data.dates[-1]:
                     end = len(self.endog) - 1
