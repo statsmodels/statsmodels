@@ -120,6 +120,8 @@ def violinplot(data, ax=None, labels=None, positions=None, side='both',
     >>> ax.set_ylabel("Age")
     >>> plt.show()
 
+    .. plot:: plots/graphics_boxplot_violinplot.py
+
     """
     fig, ax = utils.create_mpl_ax(ax)
 
@@ -313,6 +315,8 @@ def beanplot(data, ax=None, labels=None, positions=None, side='both',
     >>> ax.set_xlabel("Party identification of respondent.")
     >>> ax.set_ylabel("Age")
     >>> plt.show()
+
+    .. plot:: plots/graphics_boxplot_beanplot.py
 
     """
     fig, ax = utils.create_mpl_ax(ax)

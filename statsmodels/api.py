@@ -8,7 +8,7 @@ import robust
 from .robust.robust_linear_model import RLM
 from .discrete.discrete_model import Poisson, Logit, Probit, MNLogit
 from .tsa import api as tsa
-import nonparametric
+from .nonparametric import api as nonparametric
 import distributions
 from __init__ import test
 from . import version
