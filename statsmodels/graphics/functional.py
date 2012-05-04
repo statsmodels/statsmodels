@@ -127,6 +127,8 @@ def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
 
     >>> plt.show()
 
+    .. plot:: plots/graphics_functional_fboxplot.py
+
     """
     fig, ax = utils.create_mpl_ax(ax)
 
@@ -271,6 +273,8 @@ def rainbowplot(data, xdata=None, depth=None, method='MBD', ax=None,
     >>> ax.set_xticklabels(["", "Mar", "Jun", "Sep", "Dec"])
     >>> ax.set_xlim([-0.2, 11.2])
     >>> plt.show()
+
+    .. plot:: plots/graphics_functional_rainbowplot.py
 
     """
     fig, ax = utils.create_mpl_ax(ax)
