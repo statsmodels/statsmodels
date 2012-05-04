@@ -56,15 +56,17 @@ beta = [1., 3, -3, 10]
 y_true = np.dot(X, beta)
 y = y_true + sig * np.random.normal(size=nsample)
 
-plt.figure()
-plt.plot(x1, y, 'o', x1, y_true, 'b-')
-plt.figure()
-plt.plot(x1, y, 'o', x1, y_true, 'b-')
+
 res2 = sm.OLS(y, X).fit()
 print res2.params
 print res2.bse
 print res.predict()
 prstd, iv_l, iv_u = wls_prediction_std(res2)
+
+plt.figure()
+plt.plot(x1, y, 'o', x1, y_true, 'b-')
+plt.figure()
+plt.plot(x1, y, 'o', x1, y_true, 'b-')
 plt.plot(x1, res2.fittedvalues, 'r--.')
 plt.plot(x1, iv_u, 'r--')
 plt.plot(x1, iv_l, 'r--')

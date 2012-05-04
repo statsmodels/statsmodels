@@ -18,13 +18,12 @@ beta = [0.5, -0.0, 5.]
 y_true2 = np.dot(X, beta)
 y2 = y_true2 + sig*1. * np.random.normal(size=nsample)
 
-plt.figure()
-plt.plot(x1, y2, 'o', x1, y_true2, 'b-')
-
 res2 = sm.OLS(y2, X).fit()
 print res2.params
 print res2.bse
 #print res.predict
+plt.figure()
+plt.plot(x1, y2, 'o', x1, y_true2, 'b-')
 #@savefig tut_ols_wls_0.png
 plt.plot(x1, res2.fittedvalues, 'r--')
 
@@ -55,8 +54,6 @@ X2 = X[:,[0,2]]
 # unbiased parameter estimated, biased parameter covariance, standard errors
 
 print 'OLS'
-plt.figure()
-plt.plot(x1, y2, 'o', x1, y_true2, 'b-')
 res2 = sm.OLS(y2, X[:,[0,2]]).fit()
 print 'OLS beta estimates'
 print res2.params
@@ -101,9 +98,7 @@ covb = res2.cov_params()
 predvar = res2.mse_resid + (X2 * np.dot(covb,X2.T).T).sum(1)
 predstd = np.sqrt(predvar)
 tppf = stats.t.ppf(0.975, res2.df_resid)
-plt.plot(x1, res2.fittedvalues, 'r--')
-plt.plot(x1, res2.fittedvalues + tppf * predstd, 'r--')
-plt.plot(x1, res2.fittedvalues - tppf * predstd, 'r--')
+
 
 
 #..Prediction Interval for WLS
@@ -121,6 +116,12 @@ plt.plot(x1, res2.fittedvalues - tppf * predstd, 'r--')
 #..plt.title('blue: true, red: OLS, green: WLS')
 
 prstd, iv_l, iv_u = wls_prediction_std(res3)
+
+plt.figure()
+plt.plot(x1, y2, 'o', x1, y_true2, 'b-')
+plt.plot(x1, res2.fittedvalues, 'r--')
+plt.plot(x1, res2.fittedvalues + tppf * predstd, 'r--')
+plt.plot(x1, res2.fittedvalues - tppf * predstd, 'r--')
 plt.plot(x1, res3.fittedvalues, 'g--.')
 plt.plot(x1, iv_u, 'g--')
 plt.plot(x1, iv_l, 'g--')
