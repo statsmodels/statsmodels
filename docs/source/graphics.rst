@@ -63,3 +63,11 @@ Time Series Plots
    :toctree: generated/
 
    tsaplots.plotacf
+
+Other Plots
+-----------
+
+.. autosummary::
+   :toctree: generated/
+
+   factorplots.interaction_plot
