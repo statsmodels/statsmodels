@@ -42,10 +42,20 @@ program define mkarray
                 }
             }
             if `i' < `nrows' | `j' < `ncols' {
-                file write `myfile' `fmt' (`mat'[`i',`j']) ", " _n
+                if `mat'[`i',`j'] == . {
+                    file write `myfile' "np.nan" ", " _n
+                }
+                else {
+                    file write `myfile' `fmt' (`mat'[`i',`j']) ", " _n
+                }
             }
             else {
-                file write `myfile' `fmt' (`mat'[`i',`j'])
+                if `mat'[`i',`j'] == . {
+                    file write `myfile' "np.nan"
+                }
+                else {
+                    file write `myfile' `fmt' (`mat'[`i',`j'])
+                }
             }
         }
     } 
