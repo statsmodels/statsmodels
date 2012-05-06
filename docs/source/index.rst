@@ -63,12 +63,14 @@ Table of Contents
    discretemod
    tsa
    stats
+   nonparametric
    tools
    miscmodels
    dev/internal
    gmm
    distributions
    graphics
+   iolib
    datasets/index
    sandbox
 

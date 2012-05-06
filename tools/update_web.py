@@ -156,8 +156,15 @@ def build_docs(branch):
     #NOTE: don't use make.py, just use make and specify which sphinx
     #    retcode = subprocess.call([virtual_python,'make.py','html',
     #        '--sphinx_dir='+sphinx_dir])
+    retcode = subprocess.call("make clean", shell=True)
+    if retcode != 0:
+        os.chdir(dname)
+        msg = """Could not clean the html docs for branch %s""" % branch
+        raise Exception(msg)
     retcode = subprocess.call(" ".join(['make','html',
-        'SPHINXBUILD='+sphinx_dir+'/sphinx-build']), shell=True)
+        'SPHINXBUILD='+sphinx_dir+'/sphinx-build']), shell=True,
+        env = {'MATPLOTLIBRC' : # put this in the environment to use local rc
+               '/home/skipper/statsmodels/statsmodels/tools/'})
     if retcode != 0:
         os.chdir(dname)
         msg = """Could not build the html docs for branch %s""" % branch

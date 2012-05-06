@@ -33,7 +33,7 @@ Release History
 
 * Deprecated scikits namespace. The recommended import is now::
 
-  from statsmodels.api import sm
+      import statsmodels.api as sm
 
 * model.predict methods signature is now (params, exog, ...) where before
   it assumed that the model had been fit and omitted the params argument.
