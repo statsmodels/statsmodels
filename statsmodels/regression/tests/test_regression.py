@@ -595,6 +595,23 @@ class TestNonlinearLS(TestDataDimensions):
     def setupClass(cls):
         super(TestNonlinearLS, cls).setupClass()
         
+        data = longley.load()
+
+        def model_func(x, b0, b1, b2, b3, b4, b5, b6):
+            b = (b0,b1,b2,b3,b4,b5,b6)
+            return np.array([sum([b[i]*x[i][n] for i in range(len(b))])
+                             for n in range(x.shape[1])])
+
+        cls.mod1 = NonlinearLS(model_func, data.endog, add_constant(data.exog, prepend=True))
+        cls.mod2 = OLS(data.endog, add_constant(data.exog, prepend=True))
+        cls.res1 = cls.mod1.fit()
+        cls.res2 = cls.mod2.fit()                
+        
+    def test_linear(self):
+        assert_almost_equal(self.res1.rsquared, self.res2.rsquared, DECIMAL_4)
+        assert_almost_equal(self.res1.fvalue, self.res2.fvalue, DECIMAL_4)
+        assert_almost_equal(self.res1.params, self.res2.params, -2)
+        
 
 def test_bad_size():
     np.random.seed(54321)
