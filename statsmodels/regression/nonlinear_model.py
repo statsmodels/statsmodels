@@ -208,10 +208,10 @@ Should be of length %s, if sigma is a 1d array" % nobs)
         self._data.xnames = ["x%s" % i for i in range(1, len(beta) + 1)]
         
         lfit = RegressionResults(self, beta,
-                       normalized_cov_params=self.normalized_cov_params)
+                                 normalized_cov_params=self.normalized_cov_params)
         
         return RegressionResultsWrapper(lfit)
-
+        
     def predict(self, params=None, exog=None):
         """
         Return linear predicted values from a design matrix.
@@ -552,7 +552,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def bse(self):
-        diags = np.diag(self.cov_params())
+        diags = np.diag(self.normalized_cov_params)
         return np.sqrt([n if n > 0 else 0
                         for n in diags])
 
@@ -847,7 +847,7 @@ strong multicollinearity problems or that the design matrix is singular.''' \
 strong multicollinearity or other numerical problems.''' % condno
             etext.append(wstr)
         
-        diags = np.diag(self.cov_params())
+        diags = np.diag(self.normalized_cov_params)
         if any(diags < 0):
             wstr = \
 '''There were negative variance estimates, which have been set to 0. This 
