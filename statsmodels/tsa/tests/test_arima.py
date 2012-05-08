@@ -3,8 +3,8 @@ from numpy.testing import assert_almost_equal, assert_equal, assert_
 import statsmodels.sandbox.tsa.fftarma as fa
 from statsmodels.tsa.descriptivestats import TsaDescriptive
 from statsmodels.tsa.arma_mle import Arma
-from statsmodels.tsa.arima_model import ARMA
-from results import results_arma
+from statsmodels.tsa.arima_model import ARMA, ARIMA
+from results import results_arma, results_arima
 import os
 from statsmodels.tsa.base import datetools
 import pandas
@@ -138,6 +138,22 @@ class CheckForecast(object):
     def test_forecasterr(self):
         assert_almost_equal(self.res1.forecast_err, self.res2.forecasterr,
                 DECIMAL_4)
+
+class CheckArimaResults(CheckArmaResults):
+    def test_order(self):
+        assert self.res1.k_diff == self.res2.k_diff
+        assert self.res1.k_ar == self.res2.k_ar
+        assert self.res1.k_ma == self.res2.k_ma
+
+    def test_predict_levels(self):
+        assert_almost_equal(self.res1.predict(typ='levels'), self.res2.linear)
+
+    def test_forecast(self):
+        fc, fcerr, conf_int = self.res1.forecast(20)
+        assert_almost_equal(fc, self.res2.forecast)
+        assert_almost_equal(fcerr, self.res2.fcerr)
+        assert_almost_equal(conf_int[:,0], self.res2.fc_conf_int[:,0])
+        assert_almost_equal(conf_int[:,1], self.res2.fc_conf_int[:,1])
 
 #NOTE: Ok
 class Test_Y_ARMA11_NoConst(CheckArmaResults, CheckForecast):
@@ -495,6 +511,33 @@ def test_start_params_bug():
     1062, 1183, 1404, 1391, 1419, 1497, 1267, 963, 682, 777, 906, 1149, 1439,
     1600, 1876, 1885, 1962, 2280, 2711, 2591, 2411])
     res = ARMA(data).fit(order=(4,1), disp=-1)
+
+class Test_ARIMA101(CheckArmaResults):
+    # just make sure this works
+    @classmethod
+    def setupClass(cls):
+        endog = y_arma[:,6]
+        cls.res1 = ARIMA(endog).fit(order=(1,0,1), trend="c", disp=-1)
+        (cls.res1.forecast_res, cls.res1.forecast_err,
+                confint) = cls.res1.forecast(10)
+        cls.res2 = results_arma.Y_arma11c()
+        cls.res2.k_diff = 0
+        cls.res2.k_ar = 1
+        cls.res2.k_ma = 1
+
+class Test_ARIMA111(CheckArmaResults):
+    @classmethod
+    def setupClass(cls):
+        from statsmodels.datasets.macrodata import load
+
+        cpi = load().data['cpi']
+        cls.res1 = ARIMA(cpi).fit(order=(1,1,1), disp=-1)
+        cls.res2 = results_arima.ARIMA111()
+        # make sure endog names changes to D.cpi
+        cls.decimal_llf = 3
+        cls.decimal_aic = 3
+        cls.decimal_bic = 3
+
 
 if __name__ == "__main__":
     import nose

@@ -608,6 +608,147 @@ class ARMA(tsbase.TimeSeriesModel):
 
     fit.__doc__ += base.LikelihoodModel.fit.__doc__
 
+class ARIMA(ARMA):
+    """
+    Autoregressive Integrated Moving Average ARIMA(p,d,q) Model
+    """ + '\n'.join(ARMA.__doc__.split('\n')[2:])
+
+    def fit(self, order, start_params=None, trend='c', method = "css-mle",
+            transparams=True, solver=None, maxiter=35, full_output=1,
+            disp=5, callback=None, **kwargs):
+        """
+        Fits ARIMA(p,d,q) model by exact maximum likelihood via Kalman filter.
+
+        Parameters
+        ----------
+        start_params : array-like, optional
+            Starting parameters for ARMA(p,q).  If None, the default is given
+            by ARMA._fit_start_params.  See there for more information.
+        transparams : bool, optional
+            Whehter or not to transform the parameters to ensure stationarity.
+            Uses the transformation suggested in Jones (1980).  If False,
+            no checking for stationarity or invertibility is done.
+        method : str {'css-mle','mle','css'}
+            This is the loglikelihood to maximize.  If "css-mle", the
+            conditional sum of squares likelihood is maximized and its values
+            are used as starting values for the computation of the exact
+            likelihood via the Kalman filter.  If "mle", the exact likelihood
+            is maximized via the Kalman Filter.  If "css" the conditional sum
+            of squares likelihood is maximized.  All three methods use
+            `start_params` as starting parameters.  See above for more
+            information.
+        trend : str {'c','nc'}
+            Whehter to include a constant or not.  'c' includes constant,
+            'nc' no constant.
+        solver : str or None, optional
+            Solver to be used.  The default is 'l_bfgs' (limited memory Broyden-
+            Fletcher-Goldfarb-Shanno).  Other choices are 'bfgs', 'newton'
+            (Newton-Raphson), 'nm' (Nelder-Mead), 'cg' - (conjugate gradient),
+            'ncg' (non-conjugate gradient), and 'powell'.
+            The limited memory BFGS uses m=30 to approximate the Hessian,
+            projected gradient tolerance of 1e-7 and factr = 1e3.  These
+            cannot currently be changed for l_bfgs.  See notes for more
+            information.
+        maxiter : int, optional
+            The maximum number of function evaluations. Default is 35.
+        tol : float
+            The convergence tolerance.  Default is 1e-08.
+        full_output : bool, optional
+            If True, all output from solver will be available in
+            the Results object's mle_retvals attribute.  Output is dependent
+            on the solver.  See Notes for more information.
+        disp : bool, optional
+            If True, convergence information is printed.  For the default
+            l_bfgs_b solver, disp controls the frequency of the output during
+            the iterations. disp < 0 means no output in this case.
+        callback : function, optional
+            Called after each iteration as callback(xk) where xk is the current
+            parameter vector.
+        kwargs
+            See Notes for keyword arguments that can be passed to fit.
+
+        Returns
+        -------
+        `statsmodels.tsa.arima.ARMAResults` class
+
+        See also
+        --------
+        statsmodels.model.LikelihoodModel.fit for more information
+        on using the solvers.
+
+        Notes
+        ------
+        If fit by 'mle', it is assumed for the Kalman Filter that the initial
+        unkown state is zero, and that the inital variance is
+        P = dot(inv(identity(m**2)-kron(T,T)),dot(R,R.T).ravel('F')).reshape(r,
+        r, order = 'F')
+
+        The below is the docstring from
+        `statsmodels.LikelihoodModel.fit`
+        """
+        p,d,q = order
+        self.k_diff = d
+        order = (p,q)
+        self.endog = np.diff(self.endog, n=d)
+        # what about exog, etc.?
+        # set it back to undifferenced?
+        arima_fit = super(ARIMA, self).fit(order, start_params, trend, method,
+                               transparams, solver, maxiter, full_output,
+                               disp, callback, **kwargs)
+        if d == 0: #TODO: what do to here? Overide results methods or just
+                   # return ARMA?
+            return arima_fit
+        normalized_cov_params = None #TODO: fix this
+        arima_fit = ARIMAResults(self, arima_fit._results.params,
+                                       normalized_cov_params)
+        arima_fit.k_diff = d
+        return ARIMAResultsWrapper(arima_fit)
+
+    def predict(self, params, start=None, end=None, exog=None, typ='linear'):
+        """
+        ARIMA model prediction
+
+        Parameters
+        ----------
+        params : array
+            The parameters of the model
+        start : int, str, or datetime
+            Zero-indexed observation number at which to start forecasting, ie.,
+            the first forecast is start. Can also be a date string to
+            parse or a datetime type.
+        end : int, str, or datetime
+            Zero-indexed observation number at which to end forecasting, ie.,
+            the first forecast is start. Can also be a date string to
+            parse or a datetime type.
+        exog : array-like, optional
+            If the model is an ARMAX and out-of-sample forecasting is
+            requestion, exog must be given.
+        typ : str {'linear', 'levels'}
+            - 'linear' : Linear prediction in terms of the differenced
+              endogenous variables.
+            - 'levels' : Predict the levels of the original endogenous
+              variables.
+
+        Returns
+        -------
+        predict : array
+            The predicted values.
+        """
+        if typ == 'linear':
+            return super(ARIMA, self).predict(params, start, end, exog)
+        elif typ == 'levels':
+            predict = super(ARIMA, self).predict(params, start, end, exog)
+            # need to add the lagged levels back in
+            endog = self._data.endog
+            start = self._get_predict_start(start)
+            end, out_of_sample = self._get_predict_end(end)
+            fv = predict[:end-2] + endog[start:end+2]
+            if out_of_sample:
+                fv = np.r_[fv, endog[-1] + np.cumsum(predict[end-3:])]
+            return fv
+        else:
+            raise ValueError("typ %s not understood" % typ)
+
 class ARMAResults(tsbase.TimeSeriesModelResults):
     """
     Class to hold results from fitting an ARMA model.
@@ -896,6 +1037,85 @@ class ARMAResultsWrapper(wrap.ResultsWrapper):
                         _methods)
 wrap.populate_wrapper(ARMAResultsWrapper, ARMAResults)
 
+class ARIMAResults(ARMAResults):
+    def predict(self, start=None, end=None, exog=None, typ='linear'):
+        """
+        ARIMA model in-sample and out-of-sample prediction
+
+        Parameters
+        ----------
+        start : int, str, or datetime
+            Zero-indexed observation number at which to start forecasting, ie.,
+            the first forecast is start. Can also be a date string to
+            parse or a datetime type.
+        end : int, str, or datetime
+            Zero-indexed observation number at which to end forecasting, ie.,
+            the first forecast is start. Can also be a date string to
+            parse or a datetime type.
+        exog : array-like, optional
+            If the model is an ARMAX and out-of-sample forecasting is
+            requestion, exog must be given.
+        typ : str {'linear', 'levels'}
+            - 'linear' : Linear prediction in terms of the differenced
+              endogenous variables.
+            - 'levels' : Predict the levels of the original endogenous
+              variables.
+
+        Returns
+        -------
+        predict : array
+            The predicted values.
+        """
+        return self.model.predict(self.params, start, end, exog, typ)
+
+    def forecast(self,  steps=1, exog=None, alpha=.05):
+        """
+        Out-of-sample forecasts
+
+        Parameters
+        ----------
+        steps : int
+            The number of out of sample forecasts from the end of the
+            sample.
+        exog : array
+            If the model is an ARIMAX, you must provide out of sample
+            values for the exogenous variables. This should not include
+            the constant.
+        alpha : float
+            The confidence intervals for the forecasts are (1 - alpha) %
+
+        Returns
+        -------
+        forecast : array
+            Array of out of sample forecasts
+        stderr : array
+            Array of the standard error of the forecasts.
+        conf_int : array
+            2d array of the confidence interval for the forecast
+
+        Notes
+        -----
+        Prediction is done in the levels of the original endogenous variable.
+        If you would like prediction of differences in levels use `predict`.
+        """
+        forecast = self.model._predict_out_of_sample(self.params, steps,
+                                                         self.resid, exog)
+        forecast = self.model._data.endog[-1] + np.cumsum(forecast)
+        # get forecast errors
+        arparams = self.arparams
+        maparams = self.maparams
+        sigma2 = self.sigma2
+        ma_rep = arma2ma(np.r_[1, -arparams], np.r_[1, maparams], nobs=steps)
+        fcerr = np.sqrt(np.cumsum(np.cumsum(ma_rep)**2)*sigma2)
+        const = norm.ppf(1 - alpha/2.)
+        conf_int = np.c_[forecast - const*fcerr, forecast + const*fcerr]
+        return forecast, fcerr, conf_int
+
+class ARIMAResultsWrapper(ARMAResultsWrapper):
+    pass
+wrap.populate_wrapper(ARIMAResultsWrapper, ARIMAResults)
+
+
 if __name__ == "__main__":
     import numpy as np
     import statsmodels.api as sm
@@ -941,3 +1161,10 @@ if __name__ == "__main__":
                     nsample=1000)
     arma14css = ARMA(y_arma14)
     res14css = arma14css.fit(order=(4,1), trend='nc', method='css')
+
+    # ARIMA Model
+    from statsmodels.tools.tools import webuse
+    dta = webuse('wpi1')
+    wpi = dta['wpi']
+
+    mod = ARIMA(wpi).fit(order=(1,1,1))
