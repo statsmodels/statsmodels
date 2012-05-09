@@ -1,8 +1,16 @@
+# -*- coding: utf-8 -*-
+"""Examples for Regression Plots
+
+Author: Josef Perktold
+
+"""
+
 import numpy as np
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
 
 from statsmodels.sandbox.regression.predstd import wls_prediction_std
+import statsmodels.graphics.regressionplots as smrp
 
 #example from tut.ols with changes
 #fix a seed for these examples
@@ -31,7 +39,7 @@ res = sm.OLS(y, exog0).fit()
 #print res.bse
 
 
-plot_old = 0 #True
+plot_old = 1 #True
 if plot_old:
 
     #current bug predict requires call to model.results
@@ -106,13 +114,14 @@ if plot_old:
 
 doplots = 1
 if doplots:
-    plot_fit(res, 0, y_true=None)
-    plot_fit(res, 1, y_true=None)
-    plot_partregress(y, exog0, exog_idx=[0,1])
-    plot_regress_exog(res, exog_idx=[0])
-    plot_ccpr(res, exog_idx=[0])
-    plot_ccpr(res, exog_idx=[0,1])
+    smrp.plot_fit(res, 0, y_true=None)
+    smrp.plot_fit(res, 1, y_true=None)
+    smrp.plot_partregress(y, exog0, exog_idx=[0,1])
+    smrp.plot_regress_exog(res, exog_idx=0)
+    smrp.plot_ccpr(res, exog_idx=[0])
+    smrp.plot_ccpr(res, exog_idx=[0,1])
 
+from statsmodels.graphics.tests.test_regressionplots import TestPlot
 tp = TestPlot()
 tp.test_plot_fit()
 
