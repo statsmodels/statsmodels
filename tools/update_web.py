@@ -32,10 +32,10 @@ os.chdir(dname)
 # hard-coded git branch names
 repo = 'git://github.com/statsmodels/statsmodels.git'
 stable_trunk = 'master'
-last_release = 'v0.3.1'
-#branches = [stable_trunk, last_release]
-#NOTE: just update the releases by hand
+last_release = 'v0.4.0'
 branches = [stable_trunk]
+# change last_release above and uncomment the below to update for a release
+#branches = [stable_trunk, last_release]
 
 # virtual environment directory
 virtual_dir = 'BUILDENV'
@@ -54,7 +54,8 @@ email_name ='statsmodels.dev' + 'AT' + 'gmail' +'.com'
 email_name = email_name.replace('AT','@')
 gmail_pwd= gmail_pwd
 to_email = [email_name, ('josef.pktd' + 'AT' + 'gmail' + '.com').replace('AT',
-'@')]
+    '@')]
+#to_email = [email_name]
 
 
 ########### FUNCTIONS ###############
@@ -81,12 +82,10 @@ def create_update_gitdir():
         if retcode != 0:
             msg = """There was a problem cloning the repo"""
             raise Exception(msg)
-    else:
-        os.chdir(gitdname)
-        retcode = subprocess.call('git pull', shell=True)
-        if retcode != 0:
-            msg = """There was a problem pulling from the repo."""
-            raise Exception(msg)
+    else: # directory exists, can't pull if you're not on a branch
+          # just delete it and clone again. Lazy but clean solution.
+        shutil.rmtree(gitdname)
+        create_update_gitdir()
 
 def getdirs():
     """
@@ -190,7 +189,7 @@ def upload_docs(branch):
     if branch == 'master':
         remote_dir = 'devel'
     else:
-        remote_dir = ''
+        remote_dir = 'stable'
     #    old_cwd = os.getcwd()
     os.chdir(os.path.join(gitdname, 'docs'))
     retcode = subprocess.call(['rsync', '-avPr' ,'-e ssh', 'build/html/',
@@ -206,7 +205,7 @@ def upload_pdf(branch):
     if branch == 'master':
         remote_dir = 'devel'
     else:
-        remote_dir = ''
+        remote_dir = 'stable'
     os.chdir(os.path.join(dname, new_branch_dir, 'statsmodels','docs'))
     retcode = subprocess.call(['rsync', '-avPr', '-e ssh',
         'build/latex/statsmodels.pdf',
@@ -250,7 +249,7 @@ def main():
     msg = ''
     for branch in branches:
         try:
-            #create virtualenv
+            create virtualenv
             create_virtualenv()
             create_update_gitdir()
             install_branch(branch)
@@ -259,7 +258,7 @@ def main():
     #        build_pdf(new_branch_dir)
     #        upload_pdf(branch, new_branch_dir)
         except Exception as status:
-            import pdb; pdb.set_trace()
+            #import pdb; pdb.set_trace()
             msg += str(status) + '\n'
 
     if msg == '': # if it doesn't something went wrong and was caught above
