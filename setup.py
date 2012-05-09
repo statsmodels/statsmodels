@@ -25,6 +25,9 @@ LICENSE = 'BSD License'
 DOWNLOAD_URL = ''
 
 
+def strip_rc(version):
+    return re.sub(r"rc\d+$", "", version)
+
 def check_dependency_versions(min_versions):
     """
     Don't let setuptools do this. It's rude.
@@ -46,12 +49,12 @@ def check_dependency_versions(min_versions):
     except:
         raise ImportError("statsmodels requires pandas")
     try:
-        assert StrictVersion(npversion) >= min_versions['numpy']
+        assert StrictVersion(strip_rc(npversion)) >= min_versions['numpy']
     except AssertionError:
         raise ImportError("Numpy version is %s. Requires >= %s" %
                 (npversion, min_versions['numpy']))
     try:
-        assert StrictVersion(spversion) >= min_versions['scipy']
+        assert StrictVersion(strip_rc(spversion)) >= min_versions['scipy']
     except AssertionError:
         raise ImportError("Scipy version is %s. Requires >= %s" %
                 (spversion, min_versions['scipy']))
