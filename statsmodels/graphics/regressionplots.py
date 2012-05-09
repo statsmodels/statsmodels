@@ -479,5 +479,3 @@ def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
         ax.vline(vert)
     return fig
 
-if __name__ == '__main__':
-
