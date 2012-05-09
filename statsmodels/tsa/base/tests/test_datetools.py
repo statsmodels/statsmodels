@@ -60,17 +60,18 @@ def test_infer_freq():
     a = DateRange(d1, d2, offset=_freq_to_pandas['A']).values
     q = DateRange(d1, d2, offset=_freq_to_pandas['Q']).values
 
-    npt.assert_string_equal(_infer_freq(b), 'B')
-    npt.assert_string_equal(_infer_freq(d), 'D')
-    npt.assert_string_equal(_infer_freq(w), 'W')
-    npt.assert_string_equal(_infer_freq(m), 'M')
-    npt.assert_string_equal(_infer_freq(a), 'A')
-    npt.assert_string_equal(_infer_freq(q), 'Q')
-    npt.assert_string_equal(_infer_freq(b[2:4]), 'B')
-    npt.assert_string_equal(_infer_freq(b[:2]), 'D')
-    npt.assert_string_equal(_infer_freq(d[:2]), 'D')
-    npt.assert_string_equal(_infer_freq(w[:2]), 'W')
-    npt.assert_string_equal(_infer_freq(m[:2]), 'M')
-    npt.assert_string_equal(_infer_freq(a[:2]), 'A')
-    npt.assert_string_equal(_infer_freq(q[:2]), 'Q')
+    assert _infer_freq(b[2:5]) == 'B'
+    assert _infer_freq(b[:3]) == 'D'
+
+    assert _infer_freq(b) == 'B'
+    assert _infer_freq(d) == 'D'
+    assert _infer_freq(w) == 'W'
+    assert _infer_freq(m) == 'M'
+    assert _infer_freq(a) == 'A'
+    assert _infer_freq(q) == 'Q'
+    assert _infer_freq(d[:3]) == 'D'
+    assert _infer_freq(w[:3]) == 'W'
+    assert _infer_freq(m[:3]) == 'M'
+    assert _infer_freq(a[:3]) == 'A'
+    assert _infer_freq(q[:3]) == 'Q'
 
