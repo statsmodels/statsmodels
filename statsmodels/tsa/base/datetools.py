@@ -218,6 +218,13 @@ def _add_datetimes(dates):
     return reduce(lambda x, y: y+x, dates)
 
 def _infer_freq(dates):
+    try:
+        from pandas.tseries.api import infer_freq
+        freq = infer_freq(dates)
+        return _pandas_mapping.get(freq, freq)
+    except ImportError:
+        pass
+
     timedelta = datetime.timedelta
     nobs = min(len(dates), 6)
     if nobs == 1:
@@ -239,3 +246,10 @@ def _infer_freq(dates):
         return 'A'
     else:
         return
+
+_pandas_mapping = {
+    'A-DEC': 'A',
+    'Q-DEC': 'Q',
+    'W-SUN': 'W'
+}
+
