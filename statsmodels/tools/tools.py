@@ -289,8 +289,9 @@ def add_constant(data, prepend=False):
         import inspect
         frame = inspect.currentframe().f_back
         info = inspect.getframeinfo(frame)
-        try:
-            to_warn = 'prepend' not in '\n'.join(info.code_context)
+        try: # info.code_context is None on python 2.6? Why?
+            to_warn = (info.code_context is not None and
+                       'prepend' not in '\n'.join(info.code_context))
         except: # python 2.5 compatibility
             to_warn = 'prepend' not in '\n'.join(info[3])
         if to_warn:
