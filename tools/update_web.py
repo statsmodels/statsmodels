@@ -249,7 +249,6 @@ def main():
     msg = ''
     for branch in branches:
         try:
-            create virtualenv
             create_virtualenv()
             create_update_gitdir()
             install_branch(branch)
