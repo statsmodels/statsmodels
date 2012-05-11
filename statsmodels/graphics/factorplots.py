@@ -8,6 +8,11 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
                      linestyles = [], legendloc='best', legendtitle=None,
                      **kwargs):
     """
+    Interaction plot for factor level statistics
+
+    uses pandas.DataFrame to calculate an `aggregate` statistic for each
+    level of the factor or group given by `trace`.
+
     Parameters
     ----------
     x : array-like
