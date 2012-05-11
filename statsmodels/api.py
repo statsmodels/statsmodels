@@ -15,6 +15,7 @@ from . import version
 from info import __doc__
 from graphics.gofplots import qqplot
 from .graphics import api as graphics
+from .stats import api as stats
 
 import os
 

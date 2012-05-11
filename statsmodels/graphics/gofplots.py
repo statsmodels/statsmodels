@@ -93,6 +93,10 @@ def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
     >>> fig = sm.qqplot(res, stats.t, fit=True, line='45')
     >>> plt.show()
 
+    The following plot displays some options, follow the link to see the code.
+
+    .. plot:: plots/graphics_gofplots_qqplot.py
+
     Notes
     -----
     Depends on matplotlib. If `fit` is True then the parameters are fit using
