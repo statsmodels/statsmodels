@@ -39,7 +39,7 @@ res = sm.OLS(y, exog0).fit()
 #print res.bse
 
 
-plot_old = 1 #True
+plot_old = 0 #True
 if plot_old:
 
     #current bug predict requires call to model.results
@@ -114,7 +114,7 @@ if plot_old:
 
 doplots = 1
 if doplots:
-    smrp.plot_fit(res, 0, y_true=None)
+    fig1 = smrp.plot_fit(res, 0, y_true=None)
     smrp.plot_fit(res, 1, y_true=None)
     smrp.plot_partregress(y, exog0, exog_idx=[0,1])
     smrp.plot_regress_exog(res, exog_idx=0)
@@ -124,5 +124,18 @@ if doplots:
 from statsmodels.graphics.tests.test_regressionplots import TestPlot
 tp = TestPlot()
 tp.test_plot_fit()
+
+fig1 = smrp.plot_partregress(y, exog0, exog_idx=[0,1])
+#add lowess
+ax = fig1.axes[0]
+y0 = ax.get_lines()[0]._y
+x0 = ax.get_lines()[0]._x
+lres = sm.nonparametric.lowess(y0, x0, frac=0.2)
+ax.plot(lres[:,0], lres[:,1], 'r', lw=1.5)
+ax = fig1.axes[1]
+y0 = ax.get_lines()[0]._y
+x0 = ax.get_lines()[0]._x
+lres = sm.nonparametric.lowess(y0, x0, frac=0.2)
+ax.plot(lres[:,0], lres[:,1], 'r', lw=1.5)
 
 #plt.show()
