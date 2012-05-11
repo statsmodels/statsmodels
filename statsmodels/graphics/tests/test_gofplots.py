@@ -2,8 +2,7 @@ import numpy as np
 from numpy.testing import dec
 
 import statsmodels.api as sm
-from statsmodels.graphics.tsaplots import plotacf
-import statsmodels.tsa.arima_process as tsp
+from statsmodels.graphics.gofplots import qqplot
 
 
 try:
@@ -14,16 +13,12 @@ except:
 
 
 @dec.skipif(not have_matplotlib)
-def test_plotacf():
-    # Just test that it runs.
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-
-    ar = np.r_[1., -0.9]
-    ma = np.r_[1.,  0.9]
-    armaprocess = tsp.ArmaProcess(ar, ma)
-    acf = armaprocess.acf(20)[:20]
-    plotacf(acf, ax=ax)
+def test_qqplot():
+    #just test that it runs
+    data = sm.datasets.longley.load()
+    data.exog = sm.add_constant(data.exog)
+    mod_fit = sm.OLS(data.endog, data.exog).fit()
+    res = mod_fit.resid
+    fig = sm.qqplot(res)
 
     plt.close(fig)
-
