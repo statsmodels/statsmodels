@@ -24,8 +24,8 @@ def bw_scott(x):
     """
     Scott's Rule of Thumb
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     x : array-like
         Array for which to get the bandwidth
 
@@ -36,27 +36,27 @@ def bw_scott(x):
 
     Notes
     -----
-    Returns 1.059 * A * n ** (-1/5.)
+    Returns 1.059 * A * n ** (-1/5.) where ::
 
-    A = min(std(x, ddof=1), IQR/1.349)
-    IQR = np.subtract.reduce(np.percentile(x, [75,25]))
+       A = min(std(x, ddof=1), IQR/1.349)
+       IQR = np.subtract.reduce(np.percentile(x, [75,25]))
 
     References
-    ---------- ::
+    ----------
 
-    Scott, D.W. (1992) `Multivariate Density Estimation: Theory, Practice, and
-        Visualization.`
+    Scott, D.W. (1992) Multivariate Density Estimation: Theory, Practice, and
+        Visualization.
     """
     A = _select_sigma(x)
     n = len(x)
     return 1.059 * A * n ** -.2
 
 def bw_silverman(x):
-    """f
+    """
     Silverman's Rule of Thumb
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     x : array-like
         Array for which to get the bandwidth
 
@@ -67,13 +67,13 @@ def bw_silverman(x):
 
     Notes
     -----
-    Returns .9 * A * n ** (-1/5.)
+    Returns .9 * A * n ** (-1/5.) where ::
 
-    A = min(std(x, ddof=1), IQR/1.349)
-    IQR = np.subtract.reduce(np.percentile(x, [75,25]))
+       A = min(std(x, ddof=1), IQR/1.349)
+       IQR = np.subtract.reduce(np.percentile(x, [75,25]))
 
     References
-    ---------- ::
+    ----------
 
     Silverman, B.W. (1986) `Density Estimation.`
     """
@@ -89,16 +89,33 @@ def bw_silverman(x):
 
 bandwidth_funcs = dict(scott=bw_scott,silverman=bw_silverman)
 
-def select_bandwidth(X, bw, kernel):
+def select_bandwidth(x, bw, kernel):
     """
-    Selects bandwidth
+    Selects bandwidth for a selection rule bw
+
+    this is a wrapper around existing bandwidth selection rules
+
+    Parameters
+    ----------
+    x : array-like
+        Array for which to get the bandwidth
+    bw : string
+        name of bandwidth selection rule, currently "scott" and "silverman"
+        are supported
+    kernel : not used yet
+
+    Returns
+    -------
+    bw : float
+        The estimate of the bandwidth
+
     """
     bw = bw.lower()
     if bw not in ["scott","silverman"]:
         raise ValueError("Bandwidth %s not understood" % bw)
 #TODO: uncomment checks when we have non-rule of thumb bandwidths for diff. kernels
 #    if kernel == "gauss":
-    return bandwidth_funcs[bw](X)
+    return bandwidth_funcs[bw](x)
 #    else:
 #        raise ValueError("Only Gaussian Kernels are currently supported")
 
