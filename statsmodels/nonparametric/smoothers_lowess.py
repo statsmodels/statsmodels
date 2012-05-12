@@ -259,8 +259,8 @@ def _lowess_robustify_fit(x_copy, y_copy, fitted, weights, k, n):
 
     for i in xrange(n):
 
-        total_weights = weights[i,:] * residual_weights[nn_indices[0]:
-                                                        nn_indices[1]]
+        total_weights = weights[i,:] * np.sqrt(residual_weights[nn_indices[0]:
+                                                        nn_indices[1]])
 
         X[:,1] = x_copy[nn_indices[0]:nn_indices[1]]
         y_i = total_weights * y_copy[nn_indices[0]:nn_indices[1]]
