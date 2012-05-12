@@ -1,4 +1,4 @@
-.. currentmodule:: statsmodels.nonparametric.api
+.. currentmodule:: statsmodels.nonparametric
 
 .. _nonparametric:
 
@@ -28,9 +28,15 @@ Currently, the public functions and classes are
 .. autosummary::
    :toctree: generated/
 
-   lowess
-   KDE
-   bandwidths
+   smoothers_lowess.lowess
+   kde.KDE
 
+helper functions for kernel bandwidths
 
+.. autosummary::
+   :toctree: generated/
+
+   bandwidths.bw_scott
+   bandwidths.bw_silverman
+   bandwidths.select_bandwidth
 

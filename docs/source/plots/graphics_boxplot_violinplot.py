@@ -3,6 +3,8 @@
 
 Created on Fri May 04 00:11:32 2012
 
+Author: Ralf Gommers
+
 """
 import numpy as np
 import matplotlib.pyplot as plt
@@ -23,3 +25,5 @@ sm.graphics.violinplot(age, ax=ax, labels=labels,
                                   'label_rotation':30})
 ax.set_xlabel("Party identification of respondent.")
 ax.set_ylabel("Age")
+
+#plt.show()

@@ -3,7 +3,8 @@
 
 Created on Fri May 04 00:22:40 2012
 
-Author: Josef Perktold
+Author: Ralf Gommers
+
 """
 
 import numpy as np
@@ -25,3 +26,5 @@ sm.graphics.beanplot(age, ax=ax, labels=labels,
                                 'label_rotation':30})
 ax.set_xlabel("Party identification of respondent.")
 ax.set_ylabel("Age")
+
+#plt.show()
