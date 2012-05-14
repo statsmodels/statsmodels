@@ -359,4 +359,3 @@ def _lowess_bisquare(t):
     t[:] = np.negative(t) #, out=t)
     t += 1
     t *= t
-
