@@ -11,7 +11,8 @@ available in R's MASS package.
 
 import os
 import numpy as np
-from numpy.testing import assert_almost_equal
+from numpy.testing import assert_almost_equal, assert_
+import statsmodels.api as sm
 from statsmodels.nonparametric.smoothers_lowess import lowess
 
 # Number of decimals to test equality with. 
@@ -20,7 +21,20 @@ testdec = 7
 curdir = os.path.dirname(os.path.abspath(__file__))
 rpath = os.path.join(curdir, 'results')
 
+
+
 class  TestLowess(object):
+    
+    def test_import(self):
+        #this doesn't work
+        #from statsmodels.api.nonparametric import lowess as lowess1
+        import statsmodels.api as sm
+        lowess1 = sm.nonparametric.lowess
+        assert_(lowess is lowess1)
+        #backwards compatible for 0.4
+        from statsmodels.nonparametric.lowess import lowess as lowess2
+        assert_(lowess is lowess2)
+
      
     def test_simple(self):
         rfile = os.path.join(rpath, 'test_lowess_simple.csv')
