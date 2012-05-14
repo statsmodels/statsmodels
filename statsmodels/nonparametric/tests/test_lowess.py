@@ -12,7 +12,7 @@ available in R's MASS package.
 import os
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_
-import statsmodels.api as sm
+#import statsmodels.api as sm
 from statsmodels.nonparametric.smoothers_lowess import lowess
 
 # Number of decimals to test equality with. 
