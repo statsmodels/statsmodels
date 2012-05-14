@@ -84,5 +84,5 @@ class  TestLowess(object):
 
 if __name__ == "__main__":
     import nose
-    nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb', '--noexe'], exit=False)
+    nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'], exit=False)
 
