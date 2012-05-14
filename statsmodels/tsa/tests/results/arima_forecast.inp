@@ -1,0 +1,27 @@
+open \
+  /home/skipper/statsmodels/statsmodels/statsmodels/datasets/macrodata/macrodata.csv
+setobs 4 1959:1 --time-series
+dataset addobs 25
+
+# (1,1,1)
+arima 1 1 1 ; cpi --nc
+fcast 2000:1 2015:04 fc111nc
+fcast 2000:1 2015:04 fc111ncdyn --dynamic
+
+arima 1 1 1 ; cpi
+fcast 2000:1 2015:04 fc111c
+fcast 2000:1 2015:04 fc111cdyn --dynamic
+
+
+# (2,1,1)
+arima 2 1 1 ; cpi --nc
+fcast 2000:1 2015:04 fc211nc
+fcast 2000:1 2015:04 fc211ncdyn --dynamic
+
+arima 2 1 1 ; cpi
+fcast 2000:1 2015:04 fc211c
+fcast 2000:1 2015:04 fc211cdyn --dynamic
+
+smpl 2000:1 2015:04
+
+store '/home/skipper/statsmodels/statsmodels-skipper/statsmodels/tsa/tests/results/results_arima_forecasts.csv' fc111nc fc111ncdyn fc111c fc111cdyn fc211nc fc211ncdyn fc211c fc211cdyn --omit-obs

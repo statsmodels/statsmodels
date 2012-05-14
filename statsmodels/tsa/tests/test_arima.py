@@ -139,6 +139,17 @@ class CheckForecast(object):
         assert_almost_equal(self.res1.forecast_err, self.res2.forecasterr,
                 DECIMAL_4)
 
+class CheckDynamicForecast(object):
+    def test_forecast(self):
+        assert_almost_equal(self.res1.forecast_res_dyn, self.res2.forecast_dyn,
+                            DECIMAL_4)
+
+    def test_forecasterr(self):
+        assert_almost_equal(self.res1.forecast_err_dyn,
+                            self.res2.forecasterr_dyn,
+                            DECIMAL_4)
+
+
 class CheckArimaResults(CheckArmaResults):
     def test_order(self):
         assert self.res1.k_diff == self.res2.k_diff
@@ -525,7 +536,7 @@ class Test_ARIMA101(CheckArmaResults):
         cls.res2.k_ar = 1
         cls.res2.k_ma = 1
 
-class Test_ARIMA111(CheckArmaResults):
+class Test_ARIMA111(CheckArmaResults, CheckForecast):
     @classmethod
     def setupClass(cls):
         from statsmodels.datasets.macrodata import load
@@ -537,6 +548,9 @@ class Test_ARIMA111(CheckArmaResults):
         cls.decimal_llf = 3
         cls.decimal_aic = 3
         cls.decimal_bic = 3
+        (cls.res1.forecast_res,
+         cls.res1.forecast_err,
+         conf_int)              = cls.res1.forecast(25)
 
 
 if __name__ == "__main__":
