@@ -56,11 +56,11 @@ The idea is to be able to access the commonly used models and functions of
 statsmodels from "sm" (statsmodels.api) directly or within one level. We add
 one level so the `sm` namespace does not get too crowded.
 
-.. Note:: The `api` modules contain the main public functionality of
-   statsmodels. However, it is possible that some public functions have been
-   overlooked and not been added to the `api`. Functions that are not in the
-   `api's` are not clearly marked in whether they are considered public or
-   private. (This remains to be done in future releases.)
+The `api` modules contain the main public functionality of statsmodels.
+Functions that are not in the `api's` are not clearly marked as to whether they
+are considered public or private. If you find something that should be
+added to the api, then please file an issue on github or report it to the
+mailing list.
 
 **Detail**
 
@@ -71,11 +71,6 @@ into statsmodels api, for example ::
      from .nonparametric import api as nonparametric
 
 Users do not need to load the `subpackage/api.py` modules directly.
-
-
-But I don't think we went trough everything yet to check specifically
-whether or how far this is consistently done yet. (And I don't know if
-we have any unit tests for the statsmodels.api import paths.)
 
 
 Direct Imports - File and Directory Structure
@@ -141,5 +136,3 @@ importing modules with alias ::
 
 We do not have currently a convention for aliases of submodules.
 
-.. Note:: In future we will add a leading underscore to file and module names
-   that are explicitely considered as private.
