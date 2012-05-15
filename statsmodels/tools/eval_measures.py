@@ -13,48 +13,248 @@ import numpy as np
 
 def mse(x1, x2, axis=0):
     '''mean squared error
+
+    Parameters
+    ----------
+    x1, x2 : array_like
+       The performance measure depends on the difference between these two
+       arrays.
+    axis : int
+       axis along which the summary statistic is calculated
+
+    Returns
+    -------
+    mse : ndarray or float
+       mean squared error along given axis.
+
+    Notes
+    -----
+    If ``x1`` and ``x2`` have different shapes, then they need to broadcast.
+    This uses ``numpy.asanyarray`` to convert the input. Whether this is the
+    desired result or not depends on the array subclass, for example
+    numpy matrices will silently produce an incorrect result.
+
     '''
+    x1 = np.asanyarray(x1)
+    x2 = np.asanyarray(x2)
     return np.mean((x1-x2)**2, axis=axis)
 
 def rmse(x1, x2, axis=0):
     '''root mean squared error
+
+    Parameters
+    ----------
+    x1, x2 : array_like
+       The performance measure depends on the difference between these two
+       arrays.
+    axis : int
+       axis along which the summary statistic is calculated
+
+    Returns
+    -------
+    rmse : ndarray or float
+       root mean squared error along given axis.
+
+    Notes
+    -----
+    If ``x1`` and ``x2`` have different shapes, then they need to broadcast.
+    This uses ``numpy.asanyarray`` to convert the input. Whether this is the
+    desired result or not depends on the array subclass, for example
+    numpy matrices will silently produce an incorrect result.
+
     '''
+    x1 = np.asanyarray(x1)
+    x2 = np.asanyarray(x2)
     return np.sqrt(mse(x1, x2, axis=axis))
 
 def maxabs(x1, x2, axis=0):
     '''maximum absolute error
+
+    Parameters
+    ----------
+    x1, x2 : array_like
+       The performance measure depends on the difference between these two
+       arrays.
+    axis : int
+       axis along which the summary statistic is calculated
+
+    Returns
+    -------
+    maxabs : ndarray or float
+       maximum absolute difference along given axis.
+
+    Notes
+    -----
+    If ``x1`` and ``x2`` have different shapes, then they need to broadcast.
+    This uses ``numpy.asanyarray`` to convert the input. Whether this is the
+    desired result or not depends on the array subclass.
+
     '''
+    x1 = np.asanyarray(x1)
+    x2 = np.asanyarray(x2)
     return np.max(np.abs(x1-x2), axis=axis)
 
 def meanabs(x1, x2, axis=0):
     '''mean absolute error
+
+    Parameters
+    ----------
+    x1, x2 : array_like
+       The performance measure depends on the difference between these two
+       arrays.
+    axis : int
+       axis along which the summary statistic is calculated
+
+    Returns
+    -------
+    meanabs : ndarray or float
+       mean absolute difference along given axis.
+
+    Notes
+    -----
+    If ``x1`` and ``x2`` have different shapes, then they need to broadcast.
+    This uses ``numpy.asanyarray`` to convert the input. Whether this is the
+    desired result or not depends on the array subclass.
+
     '''
+    x1 = np.asanyarray(x1)
+    x2 = np.asanyarray(x2)
     return np.mean(np.abs(x1-x2), axis=axis)
 
 def medianabs(x1, x2, axis=0):
     '''median absolute error
+
+    Parameters
+    ----------
+    x1, x2 : array_like
+       The performance measure depends on the difference between these two
+       arrays.
+    axis : int
+       axis along which the summary statistic is calculated
+
+    Returns
+    -------
+    medianabs : ndarray or float
+       median absolute difference along given axis.
+
+    Notes
+    -----
+    If ``x1`` and ``x2`` have different shapes, then they need to broadcast.
+    This uses ``numpy.asanyarray`` to convert the input. Whether this is the
+    desired result or not depends on the array subclass.
+
     '''
+    x1 = np.asanyarray(x1)
+    x2 = np.asanyarray(x2)
     return np.median(np.abs(x1-x2), axis=axis)
 
 def bias(x1, x2, axis=0):
     '''bias, mean error
+
+    Parameters
+    ----------
+    x1, x2 : array_like
+       The performance measure depends on the difference between these two
+       arrays.
+    axis : int
+       axis along which the summary statistic is calculated
+
+    Returns
+    -------
+    bias : ndarray or float
+       bias, or mean difference along given axis.
+
+    Notes
+    -----
+    If ``x1`` and ``x2`` have different shapes, then they need to broadcast.
+    This uses ``numpy.asanyarray`` to convert the input. Whether this is the
+    desired result or not depends on the array subclass.
+
     '''
+    x1 = np.asanyarray(x1)
+    x2 = np.asanyarray(x2)
     return np.mean(x1-x2, axis=axis)
 
 def medianbias(x1, x2, axis=0):
     '''median bias, median error
+
+    Parameters
+    ----------
+    x1, x2 : array_like
+       The performance measure depends on the difference between these two
+       arrays.
+    axis : int
+       axis along which the summary statistic is calculated
+
+    Returns
+    -------
+    medianbias : ndarray or float
+       median bias, or median difference along given axis.
+
+    Notes
+    -----
+    If ``x1`` and ``x2`` have different shapes, then they need to broadcast.
+    This uses ``numpy.asanyarray`` to convert the input. Whether this is the
+    desired result or not depends on the array subclass.
+
     '''
+    x1 = np.asanyarray(x1)
+    x2 = np.asanyarray(x2)
     return np.median(x1-x2, axis=axis)
 
 def vare(x1, x2, ddof=0, axis=0):
     '''variance of error
+
+    Parameters
+    ----------
+    x1, x2 : array_like
+       The performance measure depends on the difference between these two
+       arrays.
+    axis : int
+       axis along which the summary statistic is calculated
+
+    Returns
+    -------
+    vare : ndarray or float
+       variance of difference along given axis.
+
+    Notes
+    -----
+    If ``x1`` and ``x2`` have different shapes, then they need to broadcast.
+    This uses ``numpy.asanyarray`` to convert the input. Whether this is the
+    desired result or not depends on the array subclass.
+
     '''
-    return np.var(x1-x2, ddof=0, axis=axis)
+    x1 = np.asanyarray(x1)
+    x2 = np.asanyarray(x2)
+    return np.var(x1-x2, ddof=ddof, axis=axis)
 
 def stde(x1, x2, ddof=0, axis=0):
-    '''variance of error
+    '''standard deviation of error
+
+    Parameters
+    ----------
+    x1, x2 : array_like
+       The performance measure depends on the difference between these two
+       arrays.
+    axis : int
+       axis along which the summary statistic is calculated
+
+    Returns
+    -------
+    stde : ndarray or float
+       standard deviation of difference along given axis.
+
+    Notes
+    -----
+    If ``x1`` and ``x2`` have different shapes, then they need to broadcast.
+    This uses ``numpy.asanyarray`` to convert the input. Whether this is the
+    desired result or not depends on the array subclass.
+
     '''
-    return np.std(x1-x2, ddof=0, axis=axis)
+    x1 = np.asanyarray(x1)
+    x2 = np.asanyarray(x2)
+    return np.std(x1-x2, ddof=ddof, axis=axis)
 
 def iqr(x1, x2, axis=0):
     '''interquartile range of error
@@ -62,7 +262,30 @@ def iqr(x1, x2, axis=0):
     rounded index, no interpolations
 
     this could use newer numpy function instead
+
+    Parameters
+    ----------
+    x1, x2 : array_like
+       The performance measure depends on the difference between these two
+       arrays.
+    axis : int
+       axis along which the summary statistic is calculated
+
+    Returns
+    -------
+    mse : ndarray or float
+       mean squared error along given axis.
+
+    Notes
+    -----
+    If ``x1`` and ``x2`` have different shapes, then they need to broadcast.
+
+    This uses ``numpy.asarray`` to convert the input, in contrast to the other
+    functions in this category.
+
     '''
+    x1 = np.asarray(x1)
+    x2 = np.asarray(x2)
     if axis is None:
         x1 = np.ravel(x1)
         x2 = np.ravel(x2)
@@ -210,21 +433,25 @@ def aic_sigma(sigma2, nobs, df_modelwc, islog=False):
 
     For example, AIC is defined in terms of the loglikelihood as
 
-    -2 llf + 2 k
+    :math:`-2 llf + 2 k`
 
-    in terms of sigma_hat
+    in terms of :math:`\hat{\sigma}^2`
 
-    log(sigma_hat^2) + 2 k / n
+    :math:`log(\hat{\sigma}^2) + 2 k / n`
 
-    in terms of the determinant of Sigma_hat
+    in terms of the determinant of :math:`\hat{\Sigma}`
 
-    log(|sigma_hat|) + 2 k / n
+    :math:`log(\|\hat{\Sigma}\|) + 2 k / n`
 
     Note: In our definition we do not divide by n in the log-likelihood
     version.
 
     TODO: Latex math
+
     reference for example lecture notes by Herman Bierens
+
+    See Also
+    --------
 
     References
     ----------

@@ -11,9 +11,8 @@ the purpose on hand.
 The API Import
 --------------
 
-importing statsmodels.api will load most of the public parts of statsmodels
+Importing `statsmodels.api` will load most of the public parts of statsmodels
 and make functions and classes available within one or two levels.
-or directly from a module (long path) to get minimal imports
 
 For interactive use the recommended import is
 
@@ -21,7 +20,7 @@ For interactive use the recommended import is
 
 The following illustrates what is currently available (and changes as new
 functionality is added). Instead of using dir(xxx), we can get the same
-information by tab completion in most python editors, for example Ipython and
+information by tab completion in most Python editors, for example Ipython and
 Spyder, or IDLE.
 
 >>> dir(sm)
