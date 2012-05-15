@@ -140,14 +140,14 @@ class CheckForecast(object):
                 DECIMAL_4)
 
 class CheckDynamicForecast(object):
-    def test_forecast(self):
+    def test_dynamic_forecast(self):
         assert_almost_equal(self.res1.forecast_res_dyn, self.res2.forecast_dyn,
                             DECIMAL_4)
 
-    def test_forecasterr(self):
-        assert_almost_equal(self.res1.forecast_err_dyn,
-                            self.res2.forecasterr_dyn,
-                            DECIMAL_4)
+    #def test_forecasterr(self):
+    #    assert_almost_equal(self.res1.forecast_err_dyn,
+    #                        self.res2.forecasterr_dyn,
+    #                        DECIMAL_4)
 
 
 class CheckArimaResults(CheckArmaResults):
@@ -536,11 +536,10 @@ class Test_ARIMA101(CheckArmaResults):
         cls.res2.k_ar = 1
         cls.res2.k_ma = 1
 
-class Test_ARIMA111(CheckArmaResults, CheckForecast):
+class Test_ARIMA111(CheckArmaResults, CheckForecast, CheckDynamicForecast):
     @classmethod
     def setupClass(cls):
         from statsmodels.datasets.macrodata import load
-
         cpi = load().data['cpi']
         cls.res1 = ARIMA(cpi).fit(order=(1,1,1), disp=-1)
         cls.res2 = results_arima.ARIMA111()
@@ -551,6 +550,32 @@ class Test_ARIMA111(CheckArmaResults, CheckForecast):
         (cls.res1.forecast_res,
          cls.res1.forecast_err,
          conf_int)              = cls.res1.forecast(25)
+        #cls.res1.forecast_res_dyn = cls.res1.predict(start=164, end=226, typ='levels', dynamic=True)
+        #TODO: fix the indexing for the end here, I don't think this is right
+        # if we're going to treat it like indexing
+        # the forecast from 2005Q1 through 2009Q4 is indices
+        # 184 through 227 not 226
+        # note that the first one counts in the count so 164 + 64 is 65
+        # predictions
+        cls.res1.forecast_res_dyn = self.predict(start=164, end=164+63, typ='levels', dynamic=True)
+
+#class Test_ARIMADates(CheckArmaResults, CheckForecast, CheckDynamicForecast):
+#    @classmethod
+#    def setupClass(cls):
+#        from statsmodels.datasets.macrodata import load
+#        from statsmodels.tsa.datetools import dates_from_range
+#
+#        cpi = load().data['cpi']
+#        dates = dates_from_range('1959q1', length=203)
+#        cls.res1 = ARIMA(cpi, dates=dates, freq='Q').fit(order=(1,1,1), disp=-1)
+#        cls.res2 = results_arima.ARIMA111()
+#        # make sure endog names changes to D.cpi
+#        cls.decimal_llf = 3
+#        cls.decimal_aic = 3
+#        cls.decimal_bic = 3
+#        (cls.res1.forecast_res,
+#         cls.res1.forecast_err,
+#         conf_int)              = cls.res1.forecast(25)
 
 
 if __name__ == "__main__":

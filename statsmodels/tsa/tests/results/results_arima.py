@@ -45,8 +45,8 @@ class ARIMA111(object):
             # from gretl
             self.forecast = forecast_results['fc111c'][-25:]
             self.forecasterr = forecast_results['fc111cse'][-25:]
-            self.forecast_dyn = forecast_results['fc111cdyn'][-25:]
-            self.forecasterr_dyn = forecast_results['fc111cdynse'][-25:]
+            self.forecast_dyn = forecast_results['fc111cdyn']
+            self.forecasterr_dyn = forecast_results['fc111cdynse']
         else:
             pass
 
