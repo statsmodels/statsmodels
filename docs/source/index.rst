@@ -53,6 +53,7 @@ Table of Contents
    related
    dev/index
    pitfalls
+   importpaths
 
 .. toctree::
    :maxdepth: 2
