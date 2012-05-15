@@ -308,7 +308,16 @@ class ARMA(tsbase.TimeSeriesModel):
             errors = e[0][k_ar:]
         return errors.squeeze()
 
-    def _predict_out_of_sample(self, params, steps, errors, exog=None):
+    def _predict_out_of_sample(self, params, steps, errors, exog=None,
+                               start=0):
+        """
+        The start parameter determines whether we are doing in-sample
+        dynamic prediction or not. If start == 0, then we are doing
+        dynamic out-of-sample. If start > 0, we are doing dynamic in-sample.
+        The start parameter indicates the *negative* index for start
+        in endog. Ie., if y = [1,2,3,4,5,6,7,8,9] and you want the first
+        forecast to be at index 7, then you should pass start = 2.
+        """
         p = self.k_ar
         q = self.k_ma
         k_exog = self.k_exog
@@ -317,13 +326,13 @@ class ARMA(tsbase.TimeSeriesModel):
          arparams, maparams) = _unpack_params(params, (p,q), k_trend,
                                     k_exog, reverse=True)
 
-        if exog is None and k_exog > 0:
-            raise ValueError("You must provide exog for ARMAX")
-
         if q:
             i = 0 # in case q == steps == 1
             resid = np.zeros(2*q)
-            resid[:q] = errors[-q:] #only need last q
+            if start: # make sure start index is right
+                resid[:q] = errors[-q-start:-start]
+            else:
+                resid[:q] = errors[-q:] #only need last q
         else:
             i = -1 # since we don't run first loop below
 
@@ -339,7 +348,9 @@ class ARMA(tsbase.TimeSeriesModel):
             mu += np.dot(exparams, exog)
 
         endog = np.zeros(p+steps-1)
-        if p:
+        if p and start:
+            endog[:p] = y[-p-start:-start] #only need p
+        elif p:
             endog[:p] = y[-p:] #only need p
 
         forecast = np.zeros(steps)
@@ -358,7 +369,7 @@ class ARMA(tsbase.TimeSeriesModel):
         forecast[-1] = mu[-1] + np.dot(arparams,endog[steps-1:])
         return forecast
 
-    def predict(self, params, start=None, end=None, exog=None):
+    def predict(self, params, start=None, end=None, exog=None, dynamic=False):
         """
         In-sample and out-of-sample prediction.
 
@@ -392,12 +403,25 @@ class ARMA(tsbase.TimeSeriesModel):
             raise ValueError("end is before start")
         if end == start + out_of_sample:
             return np.array([])
+        if out_of_sample and (exog is None and self.k_exog > 0):
+            raise ValueError("You must provide exog for ARMAX")
 
-        k_ar = self.k_ar
-
-        predictedvalues = np.zeros(end+1-start + out_of_sample)
         endog = self.endog
         resid = self.geterrors(params)
+        k_ar = self.k_ar
+
+        if dynamic:
+            #TODO: now that predict does dynamic in-sample it should
+            # also return error estimates and confidence intervals
+            # but how?
+            # len(enog) is not tot_obs
+            start = len(endog) + k_ar - start
+            out_of_sample += start
+            return self._predict_out_of_sample(params, out_of_sample, resid,
+                    exog, start)
+
+
+        predictedvalues = np.zeros(end+1-start + out_of_sample)
         # this does pre- and in-sample fitting
         fittedvalues = endog - resid #get them all then trim
 
@@ -704,7 +728,8 @@ class ARIMA(ARMA):
         arima_fit.k_diff = d
         return ARIMAResultsWrapper(arima_fit)
 
-    def predict(self, params, start=None, end=None, exog=None, typ='linear'):
+    def predict(self, params, start=None, end=None, exog=None, typ='linear',
+                dynamic=False):
         """
         ARIMA model prediction
 
@@ -723,11 +748,17 @@ class ARIMA(ARMA):
         exog : array-like, optional
             If the model is an ARMAX and out-of-sample forecasting is
             requestion, exog must be given.
-        typ : str {'linear', 'levels'}
+        typ : str {'linear', 'levels'}, optional
             - 'linear' : Linear prediction in terms of the differenced
               endogenous variables.
             - 'levels' : Predict the levels of the original endogenous
               variables.
+        dynamic : bool, optional
+            The `dynamic` keyword affects in-sample prediction. If dynamic
+            is False, then the in-sample lagged values are used for
+            prediction. If `dynamic` is True, then in-sample forecasts are
+            used in place of lagged dependent variables. The first forecasted
+            value is `start`.
 
         Returns
         -------
@@ -735,17 +766,23 @@ class ARIMA(ARMA):
             The predicted values.
         """
         if typ == 'linear':
-            return super(ARIMA, self).predict(params, start, end, exog)
+            return super(ARIMA, self).predict(params, start, end, exog,
+                                              dynamic)
         elif typ == 'levels':
-            predict = super(ARIMA, self).predict(params, start, end, exog)
+            predict = super(ARIMA, self).predict(params, start, end, exog,
+                                                 dynamic)
             # need to add the lagged levels back in
             endog = self._data.endog
             start = self._get_predict_start(start)
             end, out_of_sample = self._get_predict_end(end)
-            fv = predict[:end-2] + endog[start:end+2]
-            if out_of_sample:
-                fv = np.r_[fv, endog[-1] + np.cumsum(predict[end-3:])]
+            if not dynamic: #TODO: these indices need more testing
+                fv = predict[:end-2] + endog[start:end+2]
+                if out_of_sample:
+                    fv = np.r_[fv, endog[-1] + np.cumsum(predict[end-3:])]
+            else: # use obs before start to make levels
+                return endog[start-1] + np.cumsum(predict)
             return fv
+
         else:
             raise ValueError("typ %s not understood" % typ)
 
@@ -1038,7 +1075,8 @@ class ARMAResultsWrapper(wrap.ResultsWrapper):
 wrap.populate_wrapper(ARMAResultsWrapper, ARMAResults)
 
 class ARIMAResults(ARMAResults):
-    def predict(self, start=None, end=None, exog=None, typ='linear'):
+    def predict(self, start=None, end=None, exog=None, typ='linear',
+                dynamic=False):
         """
         ARIMA model in-sample and out-of-sample prediction
 
@@ -1066,7 +1104,7 @@ class ARIMAResults(ARMAResults):
         predict : array
             The predicted values.
         """
-        return self.model.predict(self.params, start, end, exog, typ)
+        return self.model.predict(self.params, start, end, exog, typ, dynamic)
 
     def forecast(self,  steps=1, exog=None, alpha=.05):
         """
