@@ -43,7 +43,7 @@ analysis. The submodules that can be import heavy contain an empty __init__.py, 
 code for running tests for the submodules. The namespace to be imported in in `api.py`. That way, we
 can import selectively and not have to import a lot of code that we don't need. Helper functions are
 usually put in files named `tools.py` and statistical functions, such as statistical tests are placed 
-in `stattools.py`. Everything has directores for :ref:`tests <testing>`.
+in `stattools.py`. Everything has directories for :ref:`tests <testing>`.
 
 Variable Names
 ~~~~~~~~~~~~~~
