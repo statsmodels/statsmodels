@@ -147,7 +147,7 @@ if __name__ == '__main__':
     #heteroscedasticity robust doesn't help
     mod.res_pooled.HC1_se
     #compare with cluster robust se
-    import statsmodels.sandbox.panel.sandwich_covariance as sw
+    import statsmodels.stats.sandwich_covariance as sw
     print sw.cov_cluster(mod.res_pooled, dgp.groups.astype(int))[1]
     #not bad, pretty close to panel estimator
     #and with Newey-West Hac
