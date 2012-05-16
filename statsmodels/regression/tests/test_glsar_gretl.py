@@ -17,7 +17,7 @@ from statsmodels.regression.linear_model import OLS, GLSAR
 from statsmodels.tools.tools import add_constant
 from statsmodels.datasets import macrodata
 
-import statsmodels.sandbox.panel.sandwich_covariance as sw
+import statsmodels.stats.sandwich_covariance as sw
 import statsmodels.stats.diagnostic as smsdia
 #import statsmodels.sandbox.stats.diagnostic as smsdia
 import statsmodels.stats.outliers_influence as oi

@@ -10,7 +10,7 @@ from numpy.testing import assert_almost_equal
 
 from statsmodels.regression.linear_model import OLS, GLSAR
 from statsmodels.tools.tools import add_constant
-import statsmodels.sandbox.panel.sandwich_covariance as sw
+import statsmodels.stats.sandwich_covariance as sw
 #import statsmodels.sandbox.panel.sandwich_covariance_generic as swg
 
 def test_cov_cluster_2groups():

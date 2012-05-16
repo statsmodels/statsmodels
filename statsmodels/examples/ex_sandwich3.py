@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
+"""Cluster Robust Standard Errors with Two Clusters
 
 Created on Sat Dec 17 08:39:16 2011
 
@@ -10,8 +10,7 @@ from numpy.testing import assert_almost_equal
 
 import statsmodels.api as sm
 
-import statsmodels.sandbox.panel.sandwich_covariance as sw
-import statsmodels.sandbox.panel.sandwich_covariance_generic as swg
+import statsmodels.stats.sandwich_covariance as sw
 
 #requires Petersen's test_data
 #http://www.kellogg.northwestern.edu/faculty/petersen/htm/papers/se/test_data.txt

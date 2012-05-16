@@ -10,8 +10,8 @@ from numpy.testing import assert_almost_equal
 
 import statsmodels.api as sm
 
-import statsmodels.sandbox.panel.sandwich_covariance as sw
-import statsmodels.sandbox.panel.sandwich_covariance_generic as swg
+import statsmodels.stats.sandwich_covariance as sw
+#import statsmodels.sandbox.panel.sandwich_covariance_generic as swg
 
 
 nobs = 100
