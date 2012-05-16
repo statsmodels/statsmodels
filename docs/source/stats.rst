@@ -79,6 +79,37 @@ Outliers and influence measures
 
 See also the notes on :ref:`notes on regression diagnostics <diagnostics>`
 
+Sandwich Robust Covariances
+---------------------------
+
+The following functions calculate covariance matrices and standard errors for
+the parameter estimates that are robust to heteroscedasticity and
+autocorrelation in the errors. Similar to the methods that are available
+for the LinearModelResults, these methods are designed for use with OLS.
+
+.. currentmodule:: statsmodels.stats
+
+.. autosummary::
+   :toctree: generated/
+
+   sandwich_covariance.cov_hac
+   sandwich_covariance.cov_nw_panel
+   sandwich_covariance.cov_cluster
+   sandwich_covariance.cov_cluster_2groups
+   sandwich_covariance.cov_white_simple
+
+The following are standalone versions of the heteroscedasticity robust
+standard errors attached to LinearModelResults
+
+.. autosummary::
+   :toctree: generated/
+
+   sandwich_covariance.cov_hc0
+   sandwich_covariance.cov_hc1
+   sandwich_covariance.cov_hc2
+   sandwich_covariance.cov_hc3
+
+   sandwich_covariance.se_cov
 
 
 Goodness of Fit Tests and Measures
