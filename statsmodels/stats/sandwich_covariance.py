@@ -103,9 +103,13 @@ Statistics 90, no. 3 (2008): 414–427.
 """
 
 import numpy as np
-from numpy.testing import assert_almost_equal
 
 from statsmodels.tools.grouputils import Group
+
+__all__ = ['cov_cluster', 'cov_cluster_2groups', 'cov_hac', 'cov_nw_panel',
+           'cov_white_simple',
+           'cov_hc0', 'cov_hc1', 'cov_hc2', 'cov_hc3',
+           'se_cov']
 
 
 def se_cov(cov):
@@ -659,6 +663,8 @@ def cov_hac_simple(results, nlags=None, weights_func=weights_bartlett,
 
     return cov_hac, bse_hac
 
+cov_hac = cov_hac_simple   #alias for users
+
 #---------------------- use time lags corrected for groups
 #the following were copied from a different experimental script,
 #groupidx is tuple, observations assumed to be stacked by group member and
@@ -722,3 +728,4 @@ def cov_nw_panel(results, nlags, groupidx, use_correction=True):
 #assert_almost_equal(np.sqrt(np.diag(c)), results.HC0_se, decimal=14)
 
 #------------------------
+
