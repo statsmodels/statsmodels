@@ -466,9 +466,8 @@ def cov_crosssection_0(results, group):
     #TODO: currently used version of groupsums requires 2d resid
     scale = S_crosssection(results.resid[:,None], group)
     scale = np.squeeze(scale)
-    c = _HCCM1(results, scale)
-    bse = np.sqrt(np.diag(c))
-    return c, bse
+    cov = _HCCM1(results, scale)
+    return cov
 
 def cov_cluster(results, group, use_correction=True):
     '''cluster robust covariance matrix
@@ -488,8 +487,6 @@ def cov_cluster(results, group, use_correction=True):
     -------
     cov : ndarray, (k_vars, k_vars)
         cluster robust covariance matrix for parameter estimates
-    bse : ndarray, (k_vars,)
-        standard errors, this will be dropped
 
     Notes
     -----
@@ -508,8 +505,7 @@ def cov_cluster(results, group, use_correction=True):
     if use_correction:
         cov_c *= n_groups / (n_groups - 1.) * ((nobs-1.) / float(nobs - k_vars))
 
-    bse_c = np.sqrt(np.diag(cov_c))
-    return cov_c, bse_c
+    return cov_c
 
 def cov_cluster_2groups(results, group, group2=None, use_correction=True):
     '''cluster robust covariance matrix for two groups/clusters
@@ -552,15 +548,15 @@ def cov_cluster_2groups(results, group, group2=None, use_correction=True):
         group = (group0, group1)
 
 
-    cov0 = cov_cluster(results, group0, use_correction=use_correction)[0]
+    cov0 = cov_cluster(results, group0, use_correction=use_correction)
     #[0] because we get still also returns bse
-    cov1 = cov_cluster(results, group1, use_correction=use_correction)[0]
+    cov1 = cov_cluster(results, group1, use_correction=use_correction)
 
     group_intersection = Group(group)
     #cov of cluster formed by intersection of two groups
     cov01 = cov_cluster(results,
                         group_intersection.group_int,
-                        use_correction=use_correction)[0]
+                        use_correction=use_correction)
 
     #robust cov matrix for union of groups
     cov_both = cov0 + cov1 - cov01
@@ -583,8 +579,6 @@ def cov_white_simple(results, use_correction=True):
     -------
     cov : ndarray, (k_vars, k_vars)
         heteroscedasticity robust covariance matrix for parameter estimates
-    bse : ndarray, (k_vars,)
-        standard errors, this will be dropped
 
     Notes
     -----
@@ -608,9 +602,7 @@ def cov_white_simple(results, use_correction=True):
         nobs, k_vars = results.model.exog.shape
         cov_w *= nobs / float(nobs - k_vars)
 
-    bse_w = np.sqrt(np.diag(cov_w))
-
-    return cov_w, bse_w
+    return cov_w
 
 
 def cov_hac_simple(results, nlags=None, weights_func=weights_bartlett,
@@ -638,9 +630,6 @@ def cov_hac_simple(results, nlags=None, weights_func=weights_bartlett,
     -------
     cov : ndarray, (k_vars, k_vars)
         HAC robust covariance matrix for parameter estimates
-    bse : ndarray, (k_vars,)
-        standard errors, this will be dropped
-
 
     Notes
     -----
@@ -659,9 +648,7 @@ def cov_hac_simple(results, nlags=None, weights_func=weights_bartlett,
         nobs, k_vars = results.model.exog.shape
         cov_hac *= nobs / float(nobs - k_vars)
 
-    bse_hac = np.sqrt(np.diag(cov_hac))
-
-    return cov_hac, bse_hac
+    return cov_hac
 
 cov_hac = cov_hac_simple   #alias for users
 

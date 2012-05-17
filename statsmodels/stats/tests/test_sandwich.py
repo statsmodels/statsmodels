@@ -73,8 +73,10 @@ def test_hac_simple():
              [ -0.3133096102522685,  0.108101169035130618,  0.000389440793564339],
              [ -0.0597207976835705,  0.000389440793564336,  0.086211852740503622]]
 
-    cov1, se1 = sw.cov_hac_simple(res_olsg, nlags=4, use_correction=True)
-    cov2, se2 = sw.cov_hac_simple(res_olsg, nlags=4, use_correction=False)
+    cov1 = sw.cov_hac_simple(res_olsg, nlags=4, use_correction=True)
+    se1 =  sw.se_cov(cov1)
+    cov2 = sw.cov_hac_simple(res_olsg, nlags=4, use_correction=False)
+    se2 =  sw.se_cov(cov2)
     assert_almost_equal(cov1, cov1_r, decimal=14)
     assert_almost_equal(cov2, cov2_r, decimal=14)
 

@@ -51,7 +51,8 @@ print 'bse_OLS   ', res_srs.bse
 
 #get cluster robust standard errors and compare with STATA
 
-bse_cr = sw.cov_cluster(res_srs, group.astype(int))[1]
+cov_cr = sw.cov_cluster(res_srs, group.astype(int))
+bse_cr = sw.se_cov(cov_cr)
 print 'bse_rob   ', bse_cr
 
 res_stata = np.rec.array(
@@ -68,4 +69,4 @@ assert_almost_equal(bse_cr, res_stata.bse, decimal=6)
 
 #We see that in this case the robust standard errors of the parameter estimates
 #are larger than those of OLS by 8 to 35 %
-print bse_cr/res_srs.bse - 1
+print 'reldiff to OLS', bse_cr/res_srs.bse - 1
