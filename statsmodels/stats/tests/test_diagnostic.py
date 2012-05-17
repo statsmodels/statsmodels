@@ -149,11 +149,13 @@ class TestDiagnosticG(object):
             0.0003896205316866944, -0.03958300024627578, 0.0003896205316866961,
             0.0985539340694839]).reshape(3,3, order='F')
 
-        cov, bse_hac = sw.cov_hac_simple(res, nlags=4, use_correction=False)
+        cov = sw.cov_hac_simple(res, nlags=4, use_correction=False)
+        bse_hac = sw.se_cov(cov)
         assert_almost_equal(cov, cov_hac_4, decimal=14)
         assert_almost_equal(bse_hac, np.sqrt(np.diag(cov)), decimal=14)
 
-        cov, bse_hac = sw.cov_hac_simple(res, nlags=10, use_correction=False)
+        cov = sw.cov_hac_simple(res, nlags=10, use_correction=False)
+        bse_hac = sw.se_cov(cov)
         assert_almost_equal(cov, cov_hac_10, decimal=14)
         assert_almost_equal(bse_hac, np.sqrt(np.diag(cov)), decimal=14)
 

@@ -352,7 +352,8 @@ class TestGLSARGretl(object):
 
         res = res_ols #for easier copying
 
-        cov_hac, bse_hac = sw.cov_hac_simple(res, nlags=4, use_correction=False)
+        cov_hac = sw.cov_hac_simple(res, nlags=4, use_correction=False)
+        bse_hac =  sw.se_cov(cov_hac)
 
         assert_almost_equal(res.params, partable[:,0], 5)
         assert_almost_equal(bse_hac, partable[:,1], 5)

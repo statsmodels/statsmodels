@@ -148,7 +148,7 @@ if __name__ == '__main__':
     mod.res_pooled.HC1_se
     #compare with cluster robust se
     import statsmodels.stats.sandwich_covariance as sw
-    print sw.cov_cluster(mod.res_pooled, dgp.groups.astype(int))[1]
+    print sw.se_cov(sw.cov_cluster(mod.res_pooled, dgp.groups.astype(int)))
     #not bad, pretty close to panel estimator
     #and with Newey-West Hac
     print sw.se_cov(sw.cov_nw_panel(mod.res_pooled, 5, mod.group.groupidx))
