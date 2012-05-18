@@ -4,8 +4,20 @@
 Created on Fri May 18 13:05:47 2012
 
 Author: Josef Perktold
+
+moved example from main of random_panel
 """
 
+import numpy as np
+from statsmodels.sandbox.panel.panel_short import ShortPanelGLS, ShortPanelGLS2
+from statsmodels.sandbox.panel.random_panel import PanelSample
+import statsmodels.sandbox.panel.correlation_structures as cs
+
+
+examples = ['ex1']
+
+
+if 'ex1' in examples:
     nobs = 1000
     nobs_i = 5
     n_groups = nobs // nobs_i
@@ -23,7 +35,6 @@ Author: Josef Perktold
     print np.corrcoef(y.reshape(-1,n_groups, order='F'))
     print np.corrcoef(noise.reshape(-1,n_groups, order='F'))
 
-    from panel_short import ShortPanelGLS, ShortPanelGLS2
     mod = ShortPanelGLS2(y, dgp.exog, dgp.groups)
     res = mod.fit()
     print res.params
