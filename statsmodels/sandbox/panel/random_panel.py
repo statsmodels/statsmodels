@@ -166,11 +166,11 @@ if __name__ == '__main__':
     assert_almost_equal(res.bse, res2.bse, decimal=14)
     mod5 = ShortPanelGLS(y, dgp.exog, dgp.groups)
     res5 = mod5.fit_iterative(5)
-    print res2.params
-    print res2.bse
+    print res5.params
+    print res5.bse
     #fitting once is the same as OLS
     mod1 = ShortPanelGLS(y, dgp.exog, dgp.groups)
-    res1 = mod5.fit_iterative(1)
+    res1 = mod1.fit_iterative(1)
     res_ols = mod1._fit_ols()
     assert_almost_equal(res1.params, res_ols.params, decimal=14)
     assert_almost_equal(res1.bse, res_ols.bse, decimal=14)
