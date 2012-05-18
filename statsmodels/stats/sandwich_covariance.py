@@ -667,9 +667,12 @@ def lagged_groups(x, lag, groupidx):
     out0 = []
     out_lagged = []
     for l,u in groupidx:
-        out0.append(x[l+lag:u])
-        out_lagged.append(x[l:u-lag])
+        if l+lag < u: #group is longer than lag
+            out0.append(x[l+lag:u])
+            out_lagged.append(x[l:u-lag])
 
+    if out0 == []:
+        raise ValueError('all groups are empty taking lags')
     #return out0, out_lagged
     return np.vstack(out0), np.vstack(out_lagged)
 
@@ -682,7 +685,7 @@ def S_nw_panel(xw, weights, groupidx):
 
     no reference for this, just accounting for time indices
     '''
-    nlags = len(weights)
+    nlags = len(weights)-1
 
     S = weights[0] * np.dot(xw.T, xw)  #weights just for completeness
     for lag in range(1, nlags+1):
