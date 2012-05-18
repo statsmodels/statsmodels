@@ -110,7 +110,7 @@ class PanelSample(object):
 
 if __name__ == '__main__':
 
-    nobs = 10000
+    nobs = 1000
     nobs_i = 5
     n_groups = nobs // nobs_i
     k_vars = 3
@@ -151,7 +151,7 @@ if __name__ == '__main__':
     print sw.se_cov(sw.cov_cluster(mod.res_pooled, dgp.groups.astype(int)))
     #not bad, pretty close to panel estimator
     #and with Newey-West Hac
-    print sw.se_cov(sw.cov_nw_panel(mod.res_pooled, 5, mod.group.groupidx))
+    print sw.se_cov(sw.cov_nw_panel(mod.res_pooled, 4, mod.group.groupidx))
     #too small, assuming no bugs,
     #see Peterson assuming it refers to same kind of model
     print dgp.cov
@@ -169,8 +169,29 @@ if __name__ == '__main__':
     print res5.params
     print res5.bse
     #fitting once is the same as OLS
+    #note: I need to create new instance, otherwise it continuous fitting
     mod1 = ShortPanelGLS(y, dgp.exog, dgp.groups)
     res1 = mod1.fit_iterative(1)
     res_ols = mod1._fit_ols()
     assert_almost_equal(res1.params, res_ols.params, decimal=14)
     assert_almost_equal(res1.bse, res_ols.bse, decimal=14)
+
+    import pandas as pa
+    #pandas.DataFrame doesn't do inplace append
+    se = pa.DataFrame(res_ols.bse[None,:], index=['OLS'])
+    se = se.append(pa.DataFrame(res5.bse[None,:], index=['PGLSit5']))
+    clbse = sw.se_cov(sw.cov_cluster(mod.res_pooled, dgp.groups.astype(int)))
+    se = se.append(pa.DataFrame(clbse[None,:], index=['OLSclu']))
+    pnwse = sw.se_cov(sw.cov_nw_panel(mod.res_pooled, 4, mod.group.groupidx))
+    se = se.append(pa.DataFrame(pnwse[None,:], index=['OLSpnw']))
+    print se
+    #list(se.index)
+    from statsmodels.iolib.table import SimpleTable
+    headers = [str(i) for i in se.columns]
+    stubs=list(se.index)
+#    print SimpleTable(np.round(np.asarray(se), 4),
+#                      headers=headers,
+#                      stubs=stubs)
+    print SimpleTable(np.asarray(se), headers=headers, stubs=stubs,
+                      txt_fmt=dict(data_fmts=['%10.4f']),
+                      title='Standard Errors')
