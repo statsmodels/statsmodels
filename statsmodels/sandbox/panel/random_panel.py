@@ -88,7 +88,7 @@ class PanelSample(object):
 
         use_balanced = True
         if use_balanced: #much faster for balanced case
-            noise = np.random.multivariate_normal(np.zeros(nobs_i),
+            noise = self.random_state.multivariate_normal(np.zeros(nobs_i),
                                                   self.cov,
                                                   size=n_groups).ravel()
             #need to add self.group_means
@@ -101,7 +101,7 @@ class PanelSample(object):
                 idx, idxupp = self.group_indices[ii:ii+2]
                 #print idx, idxupp
                 mean_i = self.group_means[ii]
-                noise[idx:idxupp] = random.multivariate_normal(
+                noise[idx:idxupp] = self.random_state.multivariate_normal(
                                         mean_i * np.ones(self.nobs_i), self.cov)
 
         endog = self.y_true + noise
