@@ -18,7 +18,7 @@ examples = ['ex1']
 
 
 if 'ex1' in examples:
-    nobs = 1000
+    nobs = 100
     nobs_i = 5
     n_groups = nobs // nobs_i
     k_vars = 3
@@ -28,7 +28,7 @@ if 'ex1' in examples:
 #    dgp = PanelSample(nobs, k_vars, n_groups, corr_structure=cs.corr_ar,
 #                      corr_args=([1, -0.95],))
     dgp = PanelSample(nobs, k_vars, n_groups, corr_structure=cs.corr_arma,
-                      corr_args=([1], [1., -0.9],))
+                      corr_args=([1], [1., -0.9],), seed=377769)
     print 'seed', dgp.seed
     y = dgp.generate_panel()
     noise = y - dgp.y_true
