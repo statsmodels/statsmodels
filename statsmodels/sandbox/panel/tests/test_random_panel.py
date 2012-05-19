@@ -106,8 +106,8 @@ def test_short_panel():
     #make sure it's different
     npt.assert_(em.maxabs(res5.bse, res2.bse) > 0.009)
 
-
-    clubse = se_cov(sw.cov_cluster(mod2.res_pooled, dgp.groups.astype(int)))
+    cov_clu = sw.cov_cluster(mod2.res_pooled, dgp.groups.astype(int))
+    clubse = se_cov(cov_clu)
     pnwbse = se_cov(sw.cov_nw_panel(mod2.res_pooled, 4, mod2.group.groupidx))
     bser = np.vstack((res2.bse, res5.bse, clubse, pnwbse))
     bser_mean = np.mean(bser, axis=0)
@@ -120,3 +120,23 @@ def test_short_panel():
     npt.assert_array_less(pnwbse / bser_mean - 1, 0.1)
     #OLS underestimates bse, robust at least 60% larger
     npt.assert_array_less(0.6, bser_mean / res_ols.bse  - 1)
+
+    #cov_hac_panel with uniform_kernel is the same as cov_cluster for balanced
+    #panel with full length kernel
+    #I fixe default correction to be equal
+    cov_uni = sw.cov_nw_panel(mod2.res_pooled, 4, mod2.group.groupidx,
+                              weights_func=sw.weights_uniform)
+    assert_almost_equal(cov_uni, cov_clu, decimal=13)
+
+    #without correction
+    cov_clu2 = sw.cov_cluster(mod2.res_pooled, dgp.groups.astype(int),
+                              use_correction=False)
+    cov_uni2 = sw.cov_nw_panel(mod2.res_pooled, 4, mod2.group.groupidx,
+                              weights_func=sw.weights_uniform,
+                              use_correction=False)
+    assert_almost_equal(cov_uni2, cov_clu2, decimal=13)
+
+    cov_white = sw.cov_white_simple(mod2.res_pooled)
+    cov_pnw0 = sw.cov_nw_panel(mod2.res_pooled, 0, mod2.group.groupidx,
+                              use_correction='hac')
+    assert_almost_equal(cov_pnw0, cov_white, decimal=13)
