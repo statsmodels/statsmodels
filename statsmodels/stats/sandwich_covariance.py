@@ -175,9 +175,9 @@ def cov_hc0(results):
     """
 
     het_scale = results.resid**2 # or whitened residuals? only OLS?
-    cov_hc0_ = _HCCM(results, het_scale)
+    cov_hc0 = _HCCM(results, het_scale)
 
-    return cov_hc0_
+    return cov_hc0
 
 def cov_hc1(results):
     """
@@ -185,8 +185,8 @@ def cov_hc1(results):
     """
 
     het_scale = results.nobs/(results.df_resid)*(results.resid**2)
-    cov_hc1_ = _HCCM(results, het_scale)
-    return cov_hc1_
+    cov_hc1 = _HCCM(results, het_scale)
+    return cov_hc1
 
 def cov_hc2(results):
     """
@@ -281,7 +281,7 @@ def weights_bartlett(nlags):
     Parameters
     ----------
     nlags : int
-       highest lag in the kernel window
+       highest lag in the kernel window, this does not include the zero lag
 
     Returns
     -------
@@ -293,6 +293,25 @@ def weights_bartlett(nlags):
     #with lag zero
     return 1 - np.arange(nlags+1)/(nlags+1.)
 
+def weights_uniform(nlags):
+    '''uniform weights for HAC
+
+    this will be moved to another module
+
+    Parameters
+    ----------
+    nlags : int
+       highest lag in the kernel window, this does not include the zero lag
+
+    Returns
+    -------
+    kernel : ndarray, (nlags+1,)
+        weights for uniform kernel
+
+    '''
+
+    #with lag zero
+    return np.ones(nlags+1.)
 
 def S_hac_simple(x, nlags=None, weights_func=weights_bartlett):
     '''inner covariance matrix for HAC (Newey, West) sandwich
@@ -680,15 +699,61 @@ def S_nw_panel(xw, weights, groupidx):
     return S
 
 
-def cov_nw_panel(results, nlags, groupidx, use_correction=True):
-    '''
+def cov_nw_panel(results, nlags, groupidx, weights_func=weights_bartlett,
+                 use_correction='cluster'):
+    '''Panel HAC robust covariance matrix
 
-    groupidx is list of tuple
+    Assumes we have a panel of time series with consecutive, equal spaced time
+    periods. Data is assumed to be in long format with time series of each
+    individual stacked into one array. Panel can be unbalanced.
+
+    Parameters
+    ----------
+    results : result instance
+       result of a regression, uses results.model.exog and results.resid
+       TODO: this should use wexog instead
+    nlags : int or None
+        Highest lag to include in kernel window. Currently, no default
+        because the optimal length will depend on the number of observations
+        per cross-sectional unit.
+    groupidx : list of tuple
+        each tuple should contain the start and end index for an individual.
+        (groupidx might change in future).
+    weights_func : callable
+        weights_func is called with nlags as argument to get the kernel
+        weights. default are Bartlett weights
+    use_correction : 'cluster' or 'hac' or False
+        If False, then no small sample correction is used.
+        If 'cluster' (default), then the same correction as in cov_cluster is
+        used.
+        If 'hac', then the same correction as in single time series, cov_hac
+        is used.
+
+
+    Returns
+    -------
+    cov : ndarray, (k_vars, k_vars)
+        HAC robust covariance matrix for parameter estimates
+
+    Notes
+    -----
+    For nlags=0, this is just White covariance, cov_white.
+    If kernel is uniform, `weights_uniform`, with nlags equal to the number
+    of observations per unit in a balance panel, then cov_cluster and
+    cov_hac_panel are identical.
+
+    Verified with respect to the above equivalence, not with other packages.
+
+    Options might change when other kernels besides Bartlett and uniform are
+    available.
+
     '''
     if nlags == 0: #so we can reproduce HC0 White
         weights = [1, 0]  #to avoid the scalar check in hac_nw
     else:
-        weights = weights_bartlett(nlags)
+        weights = weights_func(nlags)
+
+
 
     xw = (results.model.exog * results.resid[:,None])
 
@@ -696,8 +761,15 @@ def cov_nw_panel(results, nlags, groupidx, use_correction=True):
     cov_hac = _HCCM2(results, S_hac)
     if use_correction:
         nobs, k_vars = results.model.exog.shape
-        cov_hac *= nobs / float(nobs - k_vars)
+        if use_correction == 'hac':
+            cov_hac *= nobs / float(nobs - k_vars)
+        elif use_correction in ['c', 'cluster']:
+            n_groups = len(groupidx)
+            cov_hac *= n_groups / (n_groups - 1.)
+            cov_hac *= ((nobs-1.) / float(nobs - k_vars))
+
     return cov_hac
+
 
 #c = cov_nw_panel(results, 0, groupidx)
 #assert_almost_equal(np.sqrt(np.diag(c)), results.HC0_se, decimal=14)
