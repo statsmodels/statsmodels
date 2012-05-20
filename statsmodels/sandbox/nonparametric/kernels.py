@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-#
+
 """
 This models contains the Kernels for Kernel smoothing.
 
@@ -19,10 +19,10 @@ http://fedc.wiwi.hu-berlin.de/xplore/ebooks/html/anr/anrhtmlframe62.html
 # pylint: disable-msg=E1101
 # pylint: disable-msg=E0611
 
-import math
 import numpy as np
 import scipy.integrate
 from numpy import exp, multiply, square, divide, subtract, inf
+
 
 class NdKernel(object):
     """Generic N-dimensial kernel
@@ -70,7 +70,10 @@ class NdKernel(object):
         #xs = self.inDomain( xs, xs, x )[0]
 
         if len(xs)>0:  ## Need to do product of marginal distributions
-            w = np.sum([self(self._Hrootinv * (xx-x) ) for xx in xs])/n
+            #w = np.sum([self(self._Hrootinv * (xx-x).T ) for xx in xs])/n
+            #vectorized doesn't work:
+            w = np.mean(self((xs-x) * self._Hrootinv )) #transposed
+            #w = np.mean([self(xd) for xd in ((xs-x) * self._Hrootinv)] ) #transposed
             return w
         else:
             return np.nan
@@ -79,8 +82,21 @@ class NdKernel(object):
         """returns the kernel weight for the independent multivariate kernel"""
         if isinstance( self._kernels, CustomKernel ):
             ## Radial case
-            d = math.sqrt( x.T * x )
-            return self._kernels( d )
+            #d = x.T * x
+            #x is matrix, 2d, element wise sqrt looks wrong
+            #d = np.sqrt( x.T * x )
+            x = np.asarray(x)
+            #d = np.sqrt( (x * x).sum(-1) )
+            d = (x * x).sum(-1)
+            return self._kernels( np.asarray(d) )
+
+    def __call__(self, x):
+        """
+        This simply returns the value of the kernel function at x
+
+        Does the same as weight if the function is normalised
+        """
+        return self._kernweight(x)
 
 
 class CustomKernel(object):
