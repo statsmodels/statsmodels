@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-#
+
 """
 This models contains the Kernels for Kernel smoothing.
 
@@ -19,10 +19,10 @@ http://fedc.wiwi.hu-berlin.de/xplore/ebooks/html/anr/anrhtmlframe62.html
 # pylint: disable-msg=E1101
 # pylint: disable-msg=E0611
 
-#import math
 import numpy as np
 import scipy.integrate
 from numpy import exp, multiply, square, divide, subtract, inf
+
 
 class NdKernel(object):
     """Generic N-dimensial kernel
@@ -77,7 +77,6 @@ class NdKernel(object):
             return w
         else:
             return np.nan
-            raise
 
     def _kernweight(self, x ):
         """returns the kernel weight for the independent multivariate kernel"""

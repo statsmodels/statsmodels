@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-import kernels as kernels
-import statsmodels.nonparametric.bandwidths as bw
+import kernels
+
 
 #TODO: should this be a function?
 class KDE(object):
@@ -18,43 +18,42 @@ class KDE(object):
 
     """
     #TODO: amend docs for Nd case?
-    def __init__(self, x, kernel = None):
-
+    def __init__(self, x, kernel=None):
         x = np.asarray(x)
-
         if x.ndim == 1:
             x = x[:,None]
 
         nobs, n_series = x.shape
-#        print "%s dimensions" % n_series
 
         if kernel is None:
-            kernel = kernels.Gaussian() # no meaningful bandwidth yet
+            kernel = kernels.Gaussian()  # no meaningful bandwidth yet
 
         if n_series > 1:
             if isinstance( kernel, kernels.CustomKernel ):
                 kernel = kernels.NdKernel(n_series, kernels = kernel)
+
         self.kernel = kernel
-        self.n = n_series # TODO change attribute
+        self.n = n_series  #TODO change attribute
         self.x = x
 
     def density(self, x):
         return self.kernel.density(self.x, x)
 
-    def __call__(self, x, h = "scott"):
+    def __call__(self, x, h="scott"):
         return np.array([self.density(xx) for xx in x])
 
-    def evaluate(self, x, h = "silverman"):
+    def evaluate(self, x, h="silverman"):
         density = self.kernel.density
         return np.array([density(xx) for xx in x])
 
+
 if __name__ == "__main__":
-    PLOT = True
     from numpy import random
     import matplotlib.pyplot as plt
     import statsmodels.nonparametric.bandwidths as bw
+    from statsmodels.sandbox.nonparametric.testdata import kdetest
 
-    # 1 D case
+    # 1-D case
     random.seed(142)
     x = random.standard_t(4.2, size = 50)
     h = bw.bw_silverman(x)
@@ -68,16 +67,14 @@ if __name__ == "__main__":
     print 0.2034675
     Xs = np.arange(-10,10,0.1)
 
-    if PLOT:
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ax.plot(Xs, kde(Xs), "-")
-        ax.set_ylim(-10, 10)
-        ax.set_ylim(0,0.4)
-        #plt.show()
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.plot(Xs, kde(Xs), "-")
+    ax.set_ylim(-10, 10)
+    ax.set_ylim(0,0.4)
 
-    # 2 D case
-    from statsmodels.sandbox.nonparametric.testdata import kdetest
+
+    # 2-D case
     x = zip(kdetest.faithfulData["eruptions"], kdetest.faithfulData["waiting"])
     x = np.array(x)
     x = (x - x.mean(0))/x.std(0)
