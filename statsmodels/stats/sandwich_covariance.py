@@ -401,6 +401,7 @@ def group_sums(x, group):
     #TODO: remove this, already copied to tools/grouputils
     '''
 
+    #TODO: transpose return in grou_sum, need test coverage first
     return np.array([np.bincount(group, weights=x[:,col])
                             for col in range(x.shape[1])])
 
@@ -445,7 +446,7 @@ def S_hac_groupsum(x, time, nlags=None, weights_func=weights_bartlett):
     '''
     #needs groupsums
 
-    x_group_sums = group_sums(x, time)
+    x_group_sums = group_sums(x, time).T #TODO: transpose return in grou_sum
 
     return S_hac_simple(x_group_sums, nlags=nlags, weights_func=weights_func)
 
@@ -683,7 +684,7 @@ def lagged_groups(x, lag, groupidx):
 
 
 def S_nw_panel(xw, weights, groupidx):
-    '''HAC for panel data
+    '''inner covariance matrix for HAC for panel data
 
     no denominator nobs used
 
@@ -742,7 +743,7 @@ def cov_nw_panel(results, nlags, groupidx, weights_func=weights_bartlett,
     of observations per unit in a balance panel, then cov_cluster and
     cov_hac_panel are identical.
 
-    Verified with respect to the above equivalence, not with other packages.
+    Verified with respect to the above equivalences, not with other packages.
 
     Options might change when other kernels besides Bartlett and uniform are
     available.
@@ -752,8 +753,6 @@ def cov_nw_panel(results, nlags, groupidx, weights_func=weights_bartlett,
         weights = [1, 0]  #to avoid the scalar check in hac_nw
     else:
         weights = weights_func(nlags)
-
-
 
     xw = (results.model.exog * results.resid[:,None])
 
@@ -770,8 +769,77 @@ def cov_nw_panel(results, nlags, groupidx, weights_func=weights_bartlett,
 
     return cov_hac
 
+def cov_nw_groupsum(results, nlags, time, weights_func=weights_bartlett,
+                 use_correction='hac'):
+    '''Panel HAC robust covariance matrix
 
-#c = cov_nw_panel(results, 0, groupidx)
-#assert_almost_equal(np.sqrt(np.diag(c)), results.HC0_se, decimal=14)
+    Assumes we have a panel of time series where the time index is available.
+    The time index is assumed to represent equal spaced periods. At least one
+    observation per period is required.
 
-#------------------------
+    see warning in Notes
+
+    Parameters
+    ----------
+    results : result instance
+       result of a regression, uses results.model.exog and results.resid
+       TODO: this should use wexog instead
+    nlags : int or None
+        Highest lag to include in kernel window. Currently, no default
+        because the optimal length will depend on the number of observations
+        per cross-sectional unit.
+    time : ndarray of int
+        this should contain the coding for the time period of each observation.
+        time periods should be integers in range(maxT) where maxT is obs of i
+    weights_func : callable
+        weights_func is called with nlags as argument to get the kernel
+        weights. default are Bartlett weights
+    use_correction : 'cluster' or 'hac' or False
+        If False, then no small sample correction is used.
+        If 'hac' (default), then the same correction as in single time series, cov_hac
+        is used.
+        If 'cluster', then the same correction as in cov_cluster is
+        used.
+
+
+
+    Returns
+    -------
+    cov : ndarray, (k_vars, k_vars)
+        HAC robust covariance matrix for parameter estimates
+
+    Notes
+    -----
+    This first averages relevant variables for each time period over all
+    individuals/groups, and then applies the same kernel weighted averaging
+    over time as in HAC.
+
+    Warning: not verified with other package
+    In the example with a short panel (few time periods and many individuals)
+    this estimator does not produce reasonable results.
+    I don't see anything wrong with the implementation. This might only
+    be useful in long panels, large number of time periods and relatively
+    few individuals or groups.
+
+    Options might change when other kernels besides Bartlett and uniform are
+    available.
+
+    '''
+
+    xw = (results.model.exog * results.resid[:,None])
+
+    #S_hac = S_nw_panel(xw, weights, groupidx)
+    S_hac = S_hac_groupsum(xw, time, nlags=nlags, weights_func=weights_func)
+    cov_hac = _HCCM2(results, S_hac)
+    if use_correction:
+        nobs, k_vars = results.model.exog.shape
+        if use_correction == 'hac':
+            cov_hac *= nobs / float(nobs - k_vars)
+        elif use_correction in ['c', 'cluster']:
+            n_groups = len(np.unique(time))
+            cov_hac *= n_groups / (n_groups - 1.)
+            cov_hac *= ((nobs-1.) / float(nobs - k_vars))
+
+    return cov_hac
+
+
