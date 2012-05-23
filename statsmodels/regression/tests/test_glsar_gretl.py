@@ -17,7 +17,7 @@ from statsmodels.regression.linear_model import OLS, GLSAR
 from statsmodels.tools.tools import add_constant
 from statsmodels.datasets import macrodata
 
-import statsmodels.sandbox.panel.sandwich_covariance as sw
+import statsmodels.stats.sandwich_covariance as sw
 import statsmodels.stats.diagnostic as smsdia
 #import statsmodels.sandbox.stats.diagnostic as smsdia
 import statsmodels.stats.outliers_influence as oi
@@ -352,7 +352,8 @@ class TestGLSARGretl(object):
 
         res = res_ols #for easier copying
 
-        cov_hac, bse_hac = sw.cov_hac_simple(res, nlags=4, use_correction=False)
+        cov_hac = sw.cov_hac_simple(res, nlags=4, use_correction=False)
+        bse_hac =  sw.se_cov(cov_hac)
 
         assert_almost_equal(res.params, partable[:,0], 5)
         assert_almost_equal(bse_hac, partable[:,1], 5)

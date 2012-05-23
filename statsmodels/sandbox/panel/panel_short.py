@@ -120,7 +120,7 @@ class ShortPanelGLS2(object):
         self.cholsigmainv_i = np.linalg.cholesky(np.linalg.pinv(sigma_i)).T
         wendog = self.whiten_groups(self.endog, self.cholsigmainv_i)
         wexog = self.whiten_groups(self.exog, self.cholsigmainv_i)
-        print wendog.shape, wexog.shape
+        #print wendog.shape, wexog.shape
         self.res1 = OLS(wendog, wexog).fit()
         return self.res1
 
@@ -172,7 +172,6 @@ class ShortPanelGLS(GLS):
         self.cholsigmainv_i = np.linalg.cholesky(np.linalg.pinv(sigma_i)).T
         wendog = self.whiten_groups(self.endog, self.cholsigmainv_i)
         wexog = self.whiten_groups(self.exog, self.cholsigmainv_i)
-        print wendog.shape, wexog.shape
         self.res1 = OLS(wendog, wexog).fit()
         return self.res1
 

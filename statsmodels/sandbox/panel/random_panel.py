@@ -24,9 +24,43 @@ class PanelSample(object):
 
     allows various within correlation structures, but no random intercept yet
 
+    Parameters
+    ----------
+    nobs : int
+        total number of observations
+    k_vars : int
+        number of explanatory variables to create in exog, including constant
+    n_groups int
+        number of groups in balanced sample
+    exog : None or ndarray
+        default is None, in which case a exog is created
+    within : bool
+        If True (default), then the exog vary within a group. If False, then
+        only variation across groups is used.
+        TODO: this option needs more work
+    corr_structure : ndarray or ??
+        Default is np.eye.
+    corr_args : tuple
+        arguments for the corr_structure
+    scale : float
+        scale of noise, standard deviation of normal distribution
+    seed : None or int
+        If seed is given, then this is used to create the random numbers for
+        the sample.
+
+    Notes
+    -----
+    The behavior for panel robust covariance estimators seems to differ by
+    a large amount by whether exog have mostly within group or across group
+    variation. I do not understand why this should be the case from the theory,
+    and this would warrant more investigation.
+
+    This is just used in one example so far and needs more usage to see what
+    will be useful to add.
+
     '''
 
-    def __init__(self, nobs, k_vars, n_groups, exog=None,
+    def __init__(self, nobs, k_vars, n_groups, exog=None, within=True,
                  corr_structure=np.eye, corr_args=(), scale=1, seed=None):
 
 
@@ -42,7 +76,17 @@ class PanelSample(object):
         self.group_indices = np.arange(n_groups+1) * nobs_i #check +1
 
         if exog is None:
-            t = np.repeat(np.linspace(-1,1,nobs_i), n_groups)
+            if within:
+                #t = np.tile(np.linspace(-1,1,nobs_i), n_groups)
+                t = np.tile(np.linspace(0, 2, nobs_i), n_groups)
+                #rs2 = np.random.RandomState(9876)
+                #t = 1 + 0.3 * rs2.randn(nobs_i * n_groups)
+                #mix within and across variation
+                #t += np.repeat(np.linspace(-1,1,nobs_i), n_groups)
+            else:
+                #no within group variation,
+                t = np.repeat(np.linspace(-1,1,nobs_i), n_groups)
+
             exog = t[:,None]**np.arange(k_vars)
 
         self.exog = exog
@@ -88,7 +132,7 @@ class PanelSample(object):
 
         use_balanced = True
         if use_balanced: #much faster for balanced case
-            noise = np.random.multivariate_normal(np.zeros(nobs_i),
+            noise = self.random_state.multivariate_normal(np.zeros(nobs_i),
                                                   self.cov,
                                                   size=n_groups).ravel()
             #need to add self.group_means
@@ -101,7 +145,7 @@ class PanelSample(object):
                 idx, idxupp = self.group_indices[ii:ii+2]
                 #print idx, idxupp
                 mean_i = self.group_means[ii]
-                noise[idx:idxupp] = random.multivariate_normal(
+                noise[idx:idxupp] = self.random_state.multivariate_normal(
                                         mean_i * np.ones(self.nobs_i), self.cov)
 
         endog = self.y_true + noise
@@ -109,68 +153,5 @@ class PanelSample(object):
 
 
 if __name__ == '__main__':
+    pass
 
-    nobs = 10000
-    nobs_i = 5
-    n_groups = nobs // nobs_i
-    k_vars = 3
-
-#    dgp = PanelSample(nobs, k_vars, n_groups, corr_structure=cs.corr_equi,
-#                      corr_args=(0.6,))
-#    dgp = PanelSample(nobs, k_vars, n_groups, corr_structure=cs.corr_ar,
-#                      corr_args=([1, -0.95],))
-    dgp = PanelSample(nobs, k_vars, n_groups, corr_structure=cs.corr_arma,
-                      corr_args=([1], [1., -0.9],))
-    print 'seed', dgp.seed
-    y = dgp.generate_panel()
-    noise = y - dgp.y_true
-    print np.corrcoef(y.reshape(-1,n_groups, order='F'))
-    print np.corrcoef(noise.reshape(-1,n_groups, order='F'))
-
-    from panel_short import ShortPanelGLS, ShortPanelGLS2
-    mod = ShortPanelGLS2(y, dgp.exog, dgp.groups)
-    res = mod.fit()
-    print res.params
-    print res.bse
-    #Now what?
-    #res.resid is of transformed model
-    #np.corrcoef(res.resid.reshape(-1,n_groups, order='F'))
-    y_pred = np.dot(mod.exog, res.params)
-    resid = y - y_pred
-    print np.corrcoef(resid.reshape(-1,n_groups, order='F'))
-    print resid.std()
-    err = y_pred - dgp.y_true
-    print err.std()
-    #OLS standard errors are too small
-    mod.res_pooled.params
-    mod.res_pooled.bse
-    #heteroscedasticity robust doesn't help
-    mod.res_pooled.HC1_se
-    #compare with cluster robust se
-    import statsmodels.sandbox.panel.sandwich_covariance as sw
-    print sw.cov_cluster(mod.res_pooled, dgp.groups.astype(int))[1]
-    #not bad, pretty close to panel estimator
-    #and with Newey-West Hac
-    print sw.se_cov(sw.cov_nw_panel(mod.res_pooled, 5, mod.group.groupidx))
-    #too small, assuming no bugs,
-    #see Peterson assuming it refers to same kind of model
-    print dgp.cov
-
-    mod2 = ShortPanelGLS(y, dgp.exog, dgp.groups)
-    res2 = mod2.fit_iterative(2)
-    print res2.params
-    print res2.bse
-    #both implementations produce the same results:
-    from numpy.testing import assert_almost_equal
-    assert_almost_equal(res.params, res2.params, decimal=14)
-    assert_almost_equal(res.bse, res2.bse, decimal=14)
-    mod5 = ShortPanelGLS(y, dgp.exog, dgp.groups)
-    res5 = mod5.fit_iterative(5)
-    print res2.params
-    print res2.bse
-    #fitting once is the same as OLS
-    mod1 = ShortPanelGLS(y, dgp.exog, dgp.groups)
-    res1 = mod5.fit_iterative(1)
-    res_ols = mod1._fit_ols()
-    assert_almost_equal(res1.params, res_ols.params, decimal=14)
-    assert_almost_equal(res1.bse, res_ols.bse, decimal=14)

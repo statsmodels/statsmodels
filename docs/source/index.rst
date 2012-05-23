@@ -53,6 +53,7 @@ Table of Contents
    related
    dev/index
    pitfalls
+   importpaths
 
 .. toctree::
    :maxdepth: 2
@@ -63,12 +64,14 @@ Table of Contents
    discretemod
    tsa
    stats
+   nonparametric
    tools
    miscmodels
    dev/internal
    gmm
    distributions
    graphics
+   iolib
    datasets/index
    sandbox
 

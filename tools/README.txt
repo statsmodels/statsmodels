@@ -1,11 +1,10 @@
-This directory is only of interest to developers.  It contains files needed to build the docs
-automatically and to do code maintenance.
+This directory is only of interest to developers.  It contains files needed to build the docs automatically and to do code maintenance. The below is just a reminder of the commands to update things. It may not necessarily reflect the current workflow.
 
 How to update the main entry page
 ---------------------------------
 
-If you want to update the main docs page from the most recent release then from the docs directory 
-run the following (with your credentials).
+If you want to update the main docs page from the statsmodels-website then
+run the following (with your credentials)
 
 make clean
 make html
@@ -17,7 +16,7 @@ Note that this is done automatically with the update_web.py script except for
 new releases.  They should be done by hand if there are any backported changes.
 
 Important: Make sure you have the version installed for which you are building 
-the documentation.
+the documentation if done by hand.
 
 To update devel branch (from the master branch)
 
@@ -30,13 +29,12 @@ rsync -avPr -e ssh build/html/* jseabold,statsmodels@web.sourceforge.net:htdocs/
 
 How to add a new directory
 ---------------------------
-If you want to create a new directory on the sourceforge site.  
-This can be done on linux as follows
+If you want to create a new directory on the sourceforge site. This can be done on linux as follows
 
 sftp jseabold,statsmodels@web.sourceforge.net
 <enter password>
 
-mkdir 0.2release
+mkdir 0.2
 bye
 
 Then make sure you have the release installed, cd to the docs directory and run
@@ -44,4 +42,4 @@ Then make sure you have the release installed, cd to the docs directory and run
 make clean
 make html
 
-rsync -avPr -e ssh build/html/* jseabold,statsmodels@web.sourceforge.net:htdocs/0.2release
+rsync -avPr -e ssh build/html/* jseabold,statsmodels@web.sourceforge.net:htdocs/0.2

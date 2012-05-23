@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
-"""
+"""Tests for sandwich robust covariance estimation
+
+see also in regression for cov_hac compared to Gretl and
+sandbox.panel test_random_panel for comparing cov_cluster, cov_hac_panel and
+cov_white
 
 Created on Sat Dec 17 08:39:16 2011
 
@@ -10,7 +14,7 @@ from numpy.testing import assert_almost_equal
 
 from statsmodels.regression.linear_model import OLS, GLSAR
 from statsmodels.tools.tools import add_constant
-import statsmodels.sandbox.panel.sandwich_covariance as sw
+import statsmodels.stats.sandwich_covariance as sw
 #import statsmodels.sandbox.panel.sandwich_covariance_generic as swg
 
 def test_cov_cluster_2groups():
@@ -73,8 +77,10 @@ def test_hac_simple():
              [ -0.3133096102522685,  0.108101169035130618,  0.000389440793564339],
              [ -0.0597207976835705,  0.000389440793564336,  0.086211852740503622]]
 
-    cov1, se1 = sw.cov_hac_simple(res_olsg, nlags=4, use_correction=True)
-    cov2, se2 = sw.cov_hac_simple(res_olsg, nlags=4, use_correction=False)
+    cov1 = sw.cov_hac_simple(res_olsg, nlags=4, use_correction=True)
+    se1 =  sw.se_cov(cov1)
+    cov2 = sw.cov_hac_simple(res_olsg, nlags=4, use_correction=False)
+    se2 =  sw.se_cov(cov2)
     assert_almost_equal(cov1, cov1_r, decimal=14)
     assert_almost_equal(cov2, cov2_r, decimal=14)
 

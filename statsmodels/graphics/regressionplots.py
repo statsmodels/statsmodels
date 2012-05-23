@@ -393,125 +393,89 @@ def plot_ccpr(res, exog_idx=None, grid=None, fig=None):
 
     return fig
 
+def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
+                model_results=None, ax=None, **kwargs):
+    """
+    Plots a line given an intercept and slope.
 
-if __name__ == '__main__':
-    import numpy as np
-    import statsmodels.api as sm
-    import matplotlib.pyplot as plt
+    intercept : float
+        The intercept of the line
+    slope : float
+        The slope of the line
+    horiz : float or array-like
+        Data for horizontal lines on the y-axis
+    vert : array-like
+        Data for verterical lines on the x-axis
+    model_results : statsmodels results instance
+        Any object that has a two-value `params` attribute. Assumed that it
+        is (intercept, slope)
+    ax : axes, optional
+        Matplotlib axes instance
+    kwargs
+        Options passed to matplotlib.pyplot.plt
 
-    from statsmodels.sandbox.regression.predstd import wls_prediction_std
+    Returns
+    -------
+    fig : Figure
+        The figure given by `ax.figure` or a new instance.
 
-    #example from tut.ols with changes
-    #fix a seed for these examples
-    np.random.seed(9876789)
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import statsmodels.api as sm
+    >>> np.random.seed(12345)
+    >>> X = sm.add_constant(np.random.normal(0, 20, size=30), prepend=True)
+    >>> y = np.dot(X, [25, 3.5]) + np.random.normal(0, 30, size=30)
+    >>> mod = sm.OLS(y,X).fit()
+    >>> fig = abline_plot(model_results=mod)
+    >>> ax = fig.axes
+    >>> ax.scatter(X[:,1], y)
+    >>> ax.margins(.1)
+    >>> import matplotlib.pyplot as plt
+    >>> plt.show()
+    """
+    fig,ax = utils.create_mpl_ax(ax)
 
-    # OLS non-linear curve but linear in parameters
-    # ---------------------------------------------
+    if model_results:
+        intercept, slope = model_results.params
+        x = [model_results.model.exog[:,1].min(),
+             model_results.model.exog[:,1].max()]
+    else:
+        x = None
+        if not (intercept is not None and slope is not None):
+            raise ValueError("specify slope and intercepty or model_results")
 
-    nsample = 100
-    sig = 0.5
-    x1 = np.linspace(0, 20, nsample)
-    x2 = 5 + 3* np.random.randn(nsample)
-    X = np.c_[x1, x2, np.sin(0.5*x1), (x2-5)**2, np.ones(nsample)]
-    beta = [0.5, 0.5, 1, -0.04, 5.]
-    y_true = np.dot(X, beta)
-    y = y_true + sig * np.random.normal(size=nsample)
+    if not x: # can't infer x limits
+        x = ax.get_xlim()
 
-    #estimate only linear function, misspecified because of non-linear terms
-    exog0 = sm.add_constant(np.c_[x1, x2], prepend=False)
+    y = [x[0]*slope+intercept, x[1]*slope+intercept]
+    ax.set_xlim(x)
+    ax.set_ylim(y)
 
-#    plt.figure()
-#    plt.plot(x1, y, 'o', x1, y_true, 'b-')
+    from matplotlib.lines import Line2D
 
-    res = sm.OLS(y, exog0).fit()
-    #print res.params
-    #print res.bse
+    class ABLine2D(Line2D):
 
+        def update_datalim(self, ax):
+            ax.set_autoscale_on(False)
 
-    plot_old = 0 #True
-    if plot_old:
+            children = ax.get_children()
+            abline = [children[i] for i in range(len(children))
+                       if isinstance(children[i], ABLine2D)][0]
+            x = ax.get_xlim()
+            y = [x[0]*slope+intercept, x[1]*slope+intercept]
+            abline.set_data(x,y)
+            ax.figure.canvas.draw()
 
-        #current bug predict requires call to model.results
-        #print res.model.predict
-        prstd, iv_l, iv_u = wls_prediction_std(res)
-        plt.plot(x1, res.fittedvalues, 'r-o')
-        plt.plot(x1, iv_u, 'r--')
-        plt.plot(x1, iv_l, 'r--')
-        plt.title('blue: true,   red: OLS')
-
-        plt.figure()
-        plt.plot(res.resid, 'o')
-        plt.title('Residuals')
-
-        fig2 = plt.figure()
-        ax = fig2.add_subplot(2,1,1)
-        #namestr = ' for %s' % self.name if self.name else ''
-        plt.plot(x1, res.resid, 'o')
-        ax.set_title('residuals versus exog')# + namestr)
-        ax = fig2.add_subplot(2,1,2)
-        plt.plot(x2, res.resid, 'o')
-
-        fig3 = plt.figure()
-        ax = fig3.add_subplot(2,1,1)
-        #namestr = ' for %s' % self.name if self.name else ''
-        plt.plot(x1, res.fittedvalues, 'o')
-        ax.set_title('Fitted values versus exog')# + namestr)
-        ax = fig3.add_subplot(2,1,2)
-        plt.plot(x2, res.fittedvalues, 'o')
-
-        fig4 = plt.figure()
-        ax = fig4.add_subplot(2,1,1)
-        #namestr = ' for %s' % self.name if self.name else ''
-        plt.plot(x1, res.fittedvalues + res.resid, 'o')
-        ax.set_title('Fitted values plus residuals versus exog')# + namestr)
-        ax = fig4.add_subplot(2,1,2)
-        plt.plot(x2, res.fittedvalues + res.resid, 'o')
-
-        # see http://www.itl.nist.gov/div898/software/dataplot/refman1/auxillar/partregr.htm
-        fig5 = plt.figure()
-        ax = fig5.add_subplot(2,1,1)
-        #namestr = ' for %s' % self.name if self.name else ''
-        res1a = sm.OLS(y, exog0[:,[0,2]]).fit()
-        res1b = sm.OLS(x1, exog0[:,[0,2]]).fit()
-        plt.plot(res1b.resid, res1a.resid, 'o')
-        res1c = sm.OLS(res1a.resid, res1b.resid).fit()
-        plt.plot(res1b.resid, res1c.fittedvalues, '-')
-        ax.set_title('Partial Regression plot')# + namestr)
-        ax = fig5.add_subplot(2,1,2)
-        #plt.plot(x2, res.fittedvalues + res.resid, 'o')
-        res2a = sm.OLS(y, exog0[:,[0,1]]).fit()
-        res2b = sm.OLS(x2, exog0[:,[0,1]]).fit()
-        plt.plot(res2b.resid, res2a.resid, 'o')
-        res2c = sm.OLS(res2a.resid, res2b.resid).fit()
-        plt.plot(res2b.resid, res2c.fittedvalues, '-')
-
-        # see http://www.itl.nist.gov/div898/software/dataplot/refman1/auxillar/ccpr.htm
-        fig6 = plt.figure()
-        ax = fig6.add_subplot(2,1,1)
-        #namestr = ' for %s' % self.name if self.name else ''
-        x1beta = x1*res.params[1]
-        x2beta = x2*res.params[2]
-        plt.plot(x1, x1beta + res.resid, 'o')
-        plt.plot(x1, x1beta, '-')
-        ax.set_title('X_i beta_i plus residuals versus exog (CCPR)')# + namestr)
-        ax = fig6.add_subplot(2,1,2)
-        plt.plot(x2, x2beta + res.resid, 'o')
-        plt.plot(x2, x2beta, '-')
+    line = ABLine2D(x, y, **kwargs)
+    ax.add_line(line)
+    ax.callbacks.connect('xlim_changed', line.update_datalim)
+    ax.callbacks.connect('ylim_changed', line.update_datalim)
 
 
-        #print res.summary()
-
-    doplots = 1
-    if doplots:
-        plot_fit(res, 0, y_true=None)
-        plot_fit(res, 1, y_true=None)
-        plot_partregress(y, exog0, exog_idx=[0,1])
-        plot_regress_exog(res, exog_idx=[0])
-        plot_ccpr(res, exog_idx=[0])
-        plot_ccpr(res, exog_idx=[0,1])
-
-    tp = TestPlot()
-    tp.test_plot_fit()
-
-    #plt.show()
+    if horiz:
+        ax.hline(horiz)
+    if vert:
+        ax.vline(vert)
+    return fig
 

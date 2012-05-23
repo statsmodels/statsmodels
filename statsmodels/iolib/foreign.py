@@ -208,7 +208,7 @@ class StataReader(object):
         Returns the dataset's label.
 
         Returns
-        ------
+        -------
         out: string
         """
         return self._header['data_label']

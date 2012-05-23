@@ -1,5 +1,5 @@
 from kde import KDE
-#from lowess import lowess #don't do that, shadowing the module
+#from smoothers_lowess import lowess
 import bandwidths
 
 from statsmodels import NoseWrapper as Tester
