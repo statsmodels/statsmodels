@@ -94,6 +94,7 @@ for the LinearModelResults, these methods are designed for use with OLS.
 
    sandwich_covariance.cov_hac
    sandwich_covariance.cov_nw_panel
+   sandwich_covariance.cov_nw_groupsum
    sandwich_covariance.cov_cluster
    sandwich_covariance.cov_cluster_2groups
    sandwich_covariance.cov_white_simple
