@@ -435,9 +435,6 @@ def S_hac_groupsum(x, time, nlags=None, weights_func=weights_bartlett):
     S : ndarray, (k_vars, k_vars)
         inner covariance matrix for sandwich
 
-
-    not verified
-
     Reference
     ---------
     Daniel Hoechle, xtscc paper
@@ -701,7 +698,7 @@ def S_nw_panel(xw, weights, groupidx):
 
 
 def cov_nw_panel(results, nlags, groupidx, weights_func=weights_bartlett,
-                 use_correction='cluster'):
+                 use_correction='hac'):
     '''Panel HAC robust covariance matrix
 
     Assumes we have a panel of time series with consecutive, equal spaced time
@@ -743,7 +740,7 @@ def cov_nw_panel(results, nlags, groupidx, weights_func=weights_bartlett,
     of observations per unit in a balance panel, then cov_cluster and
     cov_hac_panel are identical.
 
-    Verified with respect to the above equivalences, not with other packages.
+    Tested against STATA `newey` command with same defaults.
 
     Options might change when other kernels besides Bartlett and uniform are
     available.
@@ -762,7 +759,7 @@ def cov_nw_panel(results, nlags, groupidx, weights_func=weights_bartlett,
         nobs, k_vars = results.model.exog.shape
         if use_correction == 'hac':
             cov_hac *= nobs / float(nobs - k_vars)
-        elif use_correction in ['c', 'cluster']:
+        elif use_correction in ['c', 'clu', 'cluster']:
             n_groups = len(groupidx)
             cov_hac *= n_groups / (n_groups - 1.)
             cov_hac *= ((nobs-1.) / float(nobs - k_vars))
@@ -770,14 +767,14 @@ def cov_nw_panel(results, nlags, groupidx, weights_func=weights_bartlett,
     return cov_hac
 
 def cov_nw_groupsum(results, nlags, time, weights_func=weights_bartlett,
-                 use_correction='hac'):
-    '''Panel HAC robust covariance matrix
+                 use_correction=0):
+    '''Driscoll and Kraay Panel robust covariance matrix
+
+    Robust covariance matrix for panel data of Driscoll and Kraay.
 
     Assumes we have a panel of time series where the time index is available.
     The time index is assumed to represent equal spaced periods. At least one
     observation per period is required.
-
-    see warning in Notes
 
     Parameters
     ----------
@@ -801,8 +798,6 @@ def cov_nw_groupsum(results, nlags, time, weights_func=weights_bartlett,
         If 'cluster', then the same correction as in cov_cluster is
         used.
 
-
-
     Returns
     -------
     cov : ndarray, (k_vars, k_vars)
@@ -810,19 +805,24 @@ def cov_nw_groupsum(results, nlags, time, weights_func=weights_bartlett,
 
     Notes
     -----
+    Tested against STATA xtscc package, which uses no small sample correction
+
     This first averages relevant variables for each time period over all
     individuals/groups, and then applies the same kernel weighted averaging
     over time as in HAC.
 
-    Warning: not verified with other package
+    Warning:
     In the example with a short panel (few time periods and many individuals)
-    this estimator does not produce reasonable results.
-    I don't see anything wrong with the implementation. This might only
-    be useful in long panels, large number of time periods and relatively
-    few individuals or groups.
+    with mainly across individual variation this estimator did not produce
+    reasonable results.
 
     Options might change when other kernels besides Bartlett and uniform are
     available.
+
+    Reference
+    ---------
+    Daniel Hoechle, xtscc paper
+    Driscoll and Kraay
 
     '''
 
