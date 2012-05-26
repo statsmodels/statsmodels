@@ -1,3 +1,5 @@
+# References:
+# Li and Racine Text
 # This module adds to kernels that are able to handle
 # categorical variables (both ordered and unordered)
 
