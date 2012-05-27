@@ -1,5 +1,5 @@
 capture program drop mat2nparray
-program define mat2nparray 
+program define mat2nparray
     version 11.0
     syntax namelist(min=1), SAVing(str) [ Format(str) APPend REPlace ]
     if "`format'"=="" local format "%16.0g"
@@ -58,7 +58,7 @@ program define mkarray
                 }
             }
         }
-    } 
+    }
 
     if `nrows' == 1 | `ncols' == 1 {
         file write `myfile' "])" _n _n
