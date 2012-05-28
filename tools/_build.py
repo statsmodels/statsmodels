@@ -97,7 +97,7 @@ def cython(pyx_files, working_path=''):
             else:
                 try:
                     status = subprocess.call(['cython', '-o', c_file, pyxfile])
-                except OSError, err:
+                except OSError:
                     # Above is reported to fail on Mac OS X 10.6.8
                     # because cython is a shell alias in the terminal only
                     pkg_path = os.path.abspath(os.path.join(
