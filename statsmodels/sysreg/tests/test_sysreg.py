@@ -14,7 +14,7 @@ class TestSUR(CheckSysregResults):
    def setupClass(cls):
       from results.results_sysreg import GrunfeldSUR
       res2 = GrunfeldSUR()
-
+      
       # No Python 3 compat (see example_sysreg.py if needed)
       grun_data = sm.datasets.grunfeld.load()
       firms = ['Chrysler', 'General Electric', 'General Motors',
