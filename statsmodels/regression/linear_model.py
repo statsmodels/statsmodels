@@ -639,14 +639,14 @@ class GLSAR(GLS):
         _X = X.copy()
         #dimension handling is not DRY
         # I think previous code worked for 2d because of single index rows in np
-        if X.ndim == 1:
+        if X.ndim >= 1:
             for i in range(self.order):
                 _X[(i+1):] = _X[(i+1):] - self.rho[i] * X[0:-(i+1)]
             return _X[self.order:]
-        elif X.ndim == 2:
-            for i in range(self.order):
-                _X[(i+1):,:] = _X[(i+1):,:] - self.rho[i] * X[0:-(i+1),:]
-                return _X[self.order:,:]
+#        elif X.ndim == 2:
+#            for i in range(self.order):
+#                _X[(i+1):,:] = _X[(i+1):,:] - self.rho[i] * X[0:-(i+1),:]
+#            return _X[self.order:,:]
 
 def yule_walker(X, order=1, method="unbiased", df=None, inv=False, demean=True):
     """
