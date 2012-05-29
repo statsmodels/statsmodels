@@ -623,30 +623,27 @@ class GLSAR(GLS):
     def whiten(self, X):
         """
         Whiten a series of columns according to an AR(p)
-        covariance structure.
+        covariance structure. This drops initial p observations.
 
         Parameters
         ----------
         X : array-like
-            The data to be whitened
+            The data to be whitened,
 
         Returns
         -------
-        TODO
+        whitened array
+
         """
-#TODO: notation for AR process
+        #TODO: notation for AR process
         X = np.asarray(X, np.float64)
         _X = X.copy()
-        #dimension handling is not DRY
-        # I think previous code worked for 2d because of single index rows in np
-        if X.ndim >= 1:
-            for i in range(self.order):
-                _X[(i+1):] = _X[(i+1):] - self.rho[i] * X[0:-(i+1)]
-            return _X[self.order:]
-#        elif X.ndim == 2:
-#            for i in range(self.order):
-#                _X[(i+1):,:] = _X[(i+1):,:] - self.rho[i] * X[0:-(i+1),:]
-#            return _X[self.order:,:]
+
+        #the following loops over the first axis,  works for 1d and nd
+        for i in range(self.order):
+            _X[(i+1):] = _X[(i+1):] - self.rho[i] * X[0:-(i+1)]
+        return _X[self.order:]
+
 
 def yule_walker(X, order=1, method="unbiased", df=None, inv=False, demean=True):
     """
