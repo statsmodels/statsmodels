@@ -5,6 +5,9 @@ from statsmodels.graphics.factorplots import interaction_plot
 
 try:
     import matplotlib.pyplot as plt
+    import matplotlib
+    if matplotlib.__version__ < '1':
+        raise
     have_matplotlib = True
 except:
     have_matplotlib = False
