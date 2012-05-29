@@ -1,3 +1,8 @@
+'''
+This file will be soon deprecated because this
+example was converted to a unit-test
+'''
+
 """Example: statsmodels.sandbox.sysreg
 """
 #TODO: this is going to change significantly once we have a panel data structure
