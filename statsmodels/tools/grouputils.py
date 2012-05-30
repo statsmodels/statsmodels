@@ -32,6 +32,7 @@ need more efficient loop if groups are sorted -> see GroupSorted.group_iter
 """
 
 import numpy as np
+from statsmodels.compatnp.np_compat import npc_unique
 
 def combine_indices(groups, prefix='', sep='.', return_labels=False):
     '''use np.unique to get integer group indices for product, intersection
@@ -56,7 +57,7 @@ def combine_indices(groups, prefix='', sep='.', return_labels=False):
     else:
         groups_ = groups
 
-    uni, uni_idx, uni_inv = np.unique(groups_, return_index=True,
+    uni, uni_idx, uni_inv = npc_unique(groups_, return_index=True,
                                       return_inverse=True)
 
     if is2d:
