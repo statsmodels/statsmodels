@@ -11,6 +11,12 @@
 * make namelist optional
 * add estimation results from e(), e(scalars) and e(macros), not the matrices in e
 * make estimation result optional
+* add aliases for params_table
+* don't split col or row names if only 1 - changed my mind: always list
+
+* Issues
+* ------
+* row and colum names if only a single row or column - list or string
 
 capture program drop estmat2nparray
 program define estmat2nparray
@@ -47,7 +53,13 @@ program define estmat2nparray
     file write `myfile' "class Bunch(dict):" _n
     file write `myfile' "    def __init__(self, **kw):" _n
     file write `myfile' "        dict.__init__(self, kw)" _n
-    file write `myfile' "        self.__dict__  = self" _n _n _n
+    file write `myfile' "        self.__dict__  = self" _n _n
+
+	if "`noest'" == "" {
+		file write `myfile' "        for i,att in enumerate(['params', 'bse', 'tvalues', 'pvalues']):" _n
+		file write `myfile' "            self[att] = self.params_table[:,i]" _n _n
+	}
+	file write `myfile' "" _n
     file write `myfile' "results = Bunch(" _n
     foreach mat of local namelist {
         file write `myfile' "                `mat'=`mat', " _n
@@ -106,11 +118,24 @@ program define mkarray
     }
 	capture drop colnms
 	local colnms: coln `mat'
-	*gen str `col_names' = "`colnms'"
-	*file write `myfile' "# " `col_names' _n _n
-	capture file write `myfile' "`mat'_colnames = '" "`colnms'" "'.split()" _n _n
+	capture file write `myfile' "`mat'_colnames = '" "`colnms'" "'"
+	* always split -> return list for single column
+	* set > 1 to avoid list for single column
+	if `ncols' > 0 {
+        file write `myfile' ".split()" _n _n
+    }
+    else {
+		file write `myfile' _n _n
+    }
 
-	capture drop colnms
+	capture drop rownms
 	local rownms: rown `mat'
-	capture file write `myfile' "`mat'_rownames = '" "`rownms'" "'.split()" _n _n
+	capture file write `myfile' "`mat'_rownames = '" "`rownms'" "'"
+	* always split -> return list for single row
+	if `nrows' > 0 {
+        file write `myfile' ".split()" _n _n
+    }
+    else {
+		file write `myfile' _n _n
+	}
 end
