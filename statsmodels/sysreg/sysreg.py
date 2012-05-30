@@ -2,7 +2,7 @@ from statsmodels.regression.linear_model import GLS
 import numpy as np
 import statsmodels.tools.tools as tools
 from statsmodels.base.model import LikelihoodModelResults
-from scipy import sparse
+from scipy import sparse, linalg
 
 #http://www.irisa.fr/aladin/wg-statlin/WORKSHOPS/RENNES02/SLIDES/Foschi.pdf
 
@@ -252,8 +252,19 @@ exogenous variables.  Got length %s" % len(sys))
         sur_fit = SysResults(self, beta, self.normalized_cov_params)
         return sur_fit
 
-    def predict(self, design):
-        pass
+    def predict(self, params, exog=None):
+        if exog is None:
+            exog = self.exog
+
+        designs = [] # list of individual design (one for each eq)
+        cur_col = 0
+        for eq in range(self._M):
+            designs.append(exog[:,cur_col:cur_col+self.df_model[eq]+1])
+            cur_col += self.df_model[eq]+1
+
+        aggr_design = linalg.block_diag(*designs)
+        return np.dot(aggr_design, params)
+
 
 #TODO: Should just have a general 2SLS estimator to subclass
 # for IV, FGLS, etc.

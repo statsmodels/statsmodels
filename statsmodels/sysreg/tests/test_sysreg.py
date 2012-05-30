@@ -2,12 +2,14 @@ import numpy as np
 from numpy.testing import *
 
 import statsmodels.api as sm
-from statsmodels.sandbox.sysreg import *
+from statsmodels.sysreg.sysreg import *
 
 class CheckSysregResults(object):
    decimal_params = 4
    def test_params(self):
-      assert_almost_equal(self.res1.params, self.res2.params, self.decimal_params)
+       assert_almost_equal(self.res1.params, self.res2.params, self.decimal_params)
+   def test_fittedvalues(self):
+       assert_almost_equal(self.res1.predict(), self.res2.fittedvalues, 3) # fail with decimal error >= 4
 
 class TestSUR(CheckSysregResults):
    @classmethod
