@@ -89,6 +89,7 @@ class SUR(object):
     Zellner (1962), Greene (2003)
     """
 #TODO: Does each equation need nobs to be the same?
+# --> see Greene 10.2 p292 footnote 3
     def __init__(self, sys, sigma=None, dfk=None):
         if len(sys) % 2 != 0:
             raise ValueError("sys must be a list of pairs of endogenous and \
