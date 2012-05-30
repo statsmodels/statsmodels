@@ -4,7 +4,7 @@
 
 import numpy as np
 import statsmodels.api as sm
-from statsmodels.sandbox.sysreg import *
+from statsmodels.sysreg.sysreg import *
 
 #for Python 3 compatibility
 from statsmodels.compatnp.py3k import asbytes
@@ -39,9 +39,9 @@ for i in firms:
 # Note that the results in Greene (5th edition) uses a slightly different
 # version of the Grunfeld data. To reproduce Table 14.1 the following changes
 # are necessary.
-grun_sys[-2][5] = 261.6
-grun_sys[-2][-3] = 645.2
-grun_sys[-1][11,2] = 232.6
+#grun_sys[-2][5] = 261.6
+#grun_sys[-2][-3] = 645.2
+#grun_sys[-1][11,2] = 232.6
 
 grun_mod = SUR(grun_sys)
 grun_res = grun_mod.fit()
