@@ -18,7 +18,7 @@ class ResultsStore(object):
         return self._str
 
 def _autolag(mod, endog, exog, startlag, maxlag, method, modargs=(),
-        fitargs=()):
+        fitargs=(), regresults=False):
     """
     Returns the results for the lag length that maximimizes the info criterion.
 
@@ -60,19 +60,20 @@ def _autolag(mod, endog, exog, startlag, maxlag, method, modargs=(),
 
     results = {}
     method = method.lower()
-    for lag in range(startlag,maxlag+1):
+    #print 'startlag, maxlag', startlag, maxlag, exog.shape
+    for lag in range(startlag, startlag+maxlag+1):
         mod_instance = mod(endog, exog[:,:lag], *modargs)
         results[lag] = mod_instance.fit()
 
     if method == "aic":
-        icbest, bestlag = max((v.aic,k) for k,v in results.iteritems())
+        icbest, bestlag = min((v.aic,k) for k,v in results.iteritems())
     elif method == "bic":
-        icbest, bestlag = max((v.bic,k) for k,v in results.iteritems())
+        icbest, bestlag = min((v.bic,k) for k,v in results.iteritems())
     elif method == "t-stat":
         lags = sorted(results.keys())[::-1]
 #        stop = stats.norm.ppf(.95)
         stop = 1.6448536269514722
-        for lag in range(maxlag,startlag-1,-1):
+        for lag in range(startlag + maxlag, startlag - 1, -1):
             icbest = np.abs(results[lag].tvalues[-1])
             if np.abs(icbest) >= stop:
                 bestlag = lag
@@ -80,7 +81,11 @@ def _autolag(mod, endog, exog, startlag, maxlag, method, modargs=(),
                 break
     else:
         raise ValueError("Information Criterion %s not understood.") % method
-    return icbest, bestlag
+
+    if not regresults:
+        return icbest, bestlag
+    else:
+        return icbest, bestlag, results
 
 #this needs to be converted to a class like HetGoldfeldQuandt, 3 different returns are a mess
 # See:
@@ -153,6 +158,8 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
     If the p-value is close to significant, then the critical values should be
     used to judge whether to accept or reject the null.
 
+    The autolag option and maxlag for it are described in Greene.
+
     Examples
     --------
     see example script
@@ -172,7 +179,12 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
     MacKinnon, J.G. 2010. "Critical Values for Cointegration Tests."  Queen's
     University, Dept of Economics, Working Papers.  Available at
     http://ideas.repec.org/p/qed/wpaper/1227.html
+
     '''
+
+    if regresults:
+        store = True
+
     trenddict = {None:'nc', 0:'c', 1:'ct', 2:'ctt'}
     if regression is None or isinstance(regression, int):
         regression = trenddict[regression]
@@ -186,6 +198,7 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
         #from Greene referencing Schwert 1989
         maxlag = int(round(12. * np.power(nobs/100., 1/4.)))
 
+    #print 'maxlag', maxlag
     xdiff = np.diff(x)
     xdall = lagmat(xdiff[:,None], maxlag, trim='both', original='in')
     nobs = xdall.shape[0]
@@ -201,11 +214,19 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
         else:
             fullRHS = xdall
         startlag = fullRHS.shape[1] - xdall.shape[1] + 1 # 1 for level
-
+        #print 'startlag', startlag, xdall.shape, fullRHS.shape
         #search for lag length with highest information criteria
         #Note: use the same number of observations to have comparable IC
-        icbest, bestlag = _autolag(OLS, xdshort, fullRHS, startlag,
-                startlag+maxlag, autolag)
+
+        if not regresults:
+            icbest, bestlag = _autolag(OLS, xdshort, fullRHS, startlag,
+                                       maxlag, autolag)
+        else:
+            icbest, bestlag, alres = _autolag(OLS, xdshort, fullRHS, startlag,
+                                        maxlag, autolag, regresults=regresults)
+            resstore.autolag_results = alres
+
+        bestlag -= startlag  #convert to lag not column index
 
         #rerun ols with best autolag
         xdall = lagmat(xdiff[:,None], bestlag, trim='both', original='in')
@@ -220,6 +241,7 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
         resols = OLS(xdshort, add_trend(xdall[:,:usedlag+1], regression)).fit()
     else:
         resols = OLS(xdshort, xdall[:,:usedlag+1]).fit()
+
     adfstat = resols.tvalues[0]
 #    adfstat = (resols.params[0]-1.0)/resols.bse[0]
     # the "asymptotically correct" z statistic is obtained as
