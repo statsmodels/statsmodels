@@ -60,7 +60,6 @@ def _autolag(mod, endog, exog, startlag, maxlag, method, modargs=(),
 
     results = {}
     method = method.lower()
-    #print 'startlag, maxlag', startlag, maxlag, exog.shape
     for lag in range(startlag, startlag+maxlag+1):
         mod_instance = mod(endog, exog[:,:lag], *modargs)
         results[lag] = mod_instance.fit()
@@ -198,7 +197,6 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
         #from Greene referencing Schwert 1989
         maxlag = int(round(12. * np.power(nobs/100., 1/4.)))
 
-    #print 'maxlag', maxlag
     xdiff = np.diff(x)
     xdall = lagmat(xdiff[:,None], maxlag, trim='both', original='in')
     nobs = xdall.shape[0]
@@ -214,9 +212,9 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
         else:
             fullRHS = xdall
         startlag = fullRHS.shape[1] - xdall.shape[1] + 1 # 1 for level
-        #print 'startlag', startlag, xdall.shape, fullRHS.shape
-        #search for lag length with highest information criteria
+        #search for lag length with smallest information criteria
         #Note: use the same number of observations to have comparable IC
+        #aic and bic: smaller is better
 
         if not regresults:
             icbest, bestlag = _autolag(OLS, xdshort, fullRHS, startlag,
@@ -256,12 +254,13 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
             "10%" : critvalues[2]}
     if store:
         resstore.resols = resols
+        resstore.maxlag = maxlag
         resstore.usedlag = usedlag
         resstore.adfstat = adfstat
         resstore.critvalues = critvalues
         resstore.nobs = nobs
-        resstore.H0 = "The coefficient on the lagged level equals 1"
-        resstore.HA = "The coefficient on the lagged level < 1"
+        resstore.H0 = "The coefficient on the lagged level equals 1 - unit root"
+        resstore.HA = "The coefficient on the lagged level < 1 - stationary"
         resstore.icbest = icbest
         return adfstat, pvalue, critvalues, resstore
     else:
