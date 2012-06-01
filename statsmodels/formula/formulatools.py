@@ -130,7 +130,6 @@ def handle_formula_dict(Y, X, formula, depth):
     model_spec, endog, exog = design_and_matrices(formula, df, eval_env=depth+3)
     return endog, exog, model_spec
 
-
 def _remove_intercept_charlton(terms):
     """
     Remove intercept from Charlton terms.
@@ -138,3 +137,11 @@ def _remove_intercept_charlton(terms):
     if INTERCEPT in terms:
         terms.remove(INTERCEPT)
     return terms
+
+def make_hypotheses_matrices(model_results, test_formula):
+    """
+    """
+    from charlton.constraint import linear_constraint
+    exog_names = model_results.model.exog_names
+    LC = linear_constraint(test_formula, column_names)
+    return LC
