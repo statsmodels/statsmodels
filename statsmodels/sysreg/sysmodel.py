@@ -129,6 +129,32 @@ class SysGLS(SysModel):
         beta = np.dot(self.pinv_wexog, self.wendog)
         return SysResults(self, beta, self.normalized_cov_params)
 
+class SysWLS(SysGLS):
+    '''
+    Parameters
+    ----------
+    weights : array-like, optional
+        1d array of weights or scalar
+    '''
+    def __init__(self, sys, weights=1.0):
+        weights = np.asarray(weights)
+        neqs = len(sys)
+
+        # weights = scalar
+        if weights.shape == ():
+            sigma = np.diag(np.ones(neqs)*weights)
+        # weights = 1d vector
+        elif weights.ndim == 1 and weights.size == neqs:
+            sigma = np.diag(weights)
+        else:
+            raise ValueError("weights is not correctly specified")
+
+        super(SysWLS, self).__init__(sys, sigma=sigma)
+
+class SysOLS(SysWLS):
+    def __init__(self, sys):
+        super(SysWLS, self).__init__(sys)
+
 class SysResults(LikelihoodModelResults):
     """
     Not implemented yet.
@@ -163,4 +189,6 @@ if __name__ == '__main__':
     s2 = SUR([y1,x1,y2,x2])
 
     s3 = SysGLS(sys, sigma=s2.sigma)
+    s4 = SysWLS(sys, weights=3.0)
+    s5 = SysOLS(sys)
 
