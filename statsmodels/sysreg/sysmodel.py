@@ -20,9 +20,10 @@ class SysModel(object):
     sys : list of dict
         [eq_1,...,eq_G]
     
-    eq_i['endog'] : array-like (N x 1)
-    eq_i['exog'] : array-like (N x K_i)
-    #eq_i['instruments'] : list of array-like
+    eq_i['endog'] : ndarray (N x 1)
+    eq_i['exog'] : ndarray (N x K_i)
+    # For SEM classes
+    eq_i['instruments'] : ndarray (N x L_i)
 
     Attributes
     ----------
@@ -30,30 +31,22 @@ class SysModel(object):
         Number of equations
     nobs : int
         Number of observations
-    endog : array (G x N)
+    endog : ndarray (G x N)
         LHS variables for each equation stacked next to each other in row.
-    exog : array (N x sum(K_i))
+    exog : ndarray (N x sum(K_i))
         RHS variables for each equation stacked next to each other in column.
-    sp_exog : CSR sparse matrix
+    sp_exog : sparse matrix
         Contains a block diagonal sparse matrix of the design so that
-        eq_i['exog']  are on the diagonal.
+        eq_i['exog'] are on the diagonal.
     '''
-
     def __init__(self, sys):
         # TODO : check sys is correctly specified
-
-        neqs = len(sys)
-        nobs = len(sys[0]['endog']) # TODO : check nobs is the same for each eq
-        endog = np.column_stack((np.asarray(eq['endog']) for eq in sys)).T
-        exog = np.column_stack((np.asarray(eq['exog']) for eq in sys))
-        # TODO : convert to a sparse matrix
-        sp_exog = block_diag(*(np.asarray(eq['exog']) for eq in sys))
-
-        self.neqs = neqs
-        self.nobs = nobs
-        self.endog = endog
-        self.exog = exog
-        self.sp_exog = sp_exog
+        self.neqs = len(sys)
+        self.nobs = len(sys[0]['endog']) # TODO : check nobs is the same for each eq
+        self.endog = np.column_stack((np.asarray(eq['endog']) for eq in sys)).T
+        self.exog = np.column_stack((np.asarray(eq['exog']) for eq in sys))
+        # TODO : convert to a sparse matrix (need scipy >= 0.11dev for sp.block_diag)
+        self.sp_exog = block_diag(*(np.asarray(eq['exog']) for eq in sys))
 
     def fit(self):
         raise NotImplementedError
@@ -65,23 +58,24 @@ class SysGLS(SysModel):
     '''
     Parameters
     ----------
+    sys : list of dict
+        cf. SysModel
     sigma : scalar or array
-           `sigma` is the weighting matrix of the contemporaneous covariance.
-           The default is None for no scaling.  If `sigma` is a scalar, it is
-           assumed that `sigma` is an G x G diagonal matrix with the given
-           scalar, `sigma` as the value of each diagonal element.  If `sigma`
-           is an G-length vector, then `sigma` is assumed to be a diagonal
-           matrix with the given `sigma` on the diagonal.  This should be the
-           same as WLS.
+        `sigma` the contemporaneous matrix covariance.
+        The default is None for no scaling (<=> OLS).  If `sigma` is a scalar, it is
+        assumed that `sigma` is an G x G diagonal matrix with the given
+        scalar, `sigma` as the value of each diagonal element.  If `sigma`
+        is an G-length vector, then `sigma` is assumed to be a diagonal
+        matrix with the given `sigma` on the diagonal (<=> WLS).
 
     Attributes
     ----------
     cholsigmainv : array
         The transpose of the Cholesky decomposition of the pseudoinverse of
-        the contemporaneous covariance sigma.
-    wendog : array ((G*N) x 1)
+        the contemporaneous covariance matrix.
+    wendog : ndarray (G*N) x 1
         endogenous variables whitened by cholsigmainv and stacked into a single column.
-    wexog : sparse matrix
+    wexog : matrix (is sparse?)
         whitened exogenous variables sp_exog.
     pinv_wexog : array
         `pinv_wexog` is the Moore-Penrose pseudoinverse of `wexog`.
@@ -104,37 +98,36 @@ class SysGLS(SysModel):
             self.sigma = sigma
         else:
             raise ValueError("sigma is not correctly specified")
-        self.cholsigmainv = np.linalg.cholesky(np.linalg.pinv(self.sigma)).T
-        self.initialize()
 
-    def initialize(self):
+        self.cholsigmainv = np.linalg.cholesky(np.linalg.pinv(self.sigma)).T
         self.wexog = self.whiten(self.sp_exog)
         self.wendog = self.whiten(self.endog.reshape(-1,1))
         self.pinv_wexog = np.linalg.pinv(self.wexog)
-        self.normalized_cov_params = np.dot(self.pinv_wexog,
-                np.transpose(self.pinv_wexog))
-     
+             
     def whiten(self, X):
         '''
         SysGLS whiten method
 
-        Paramaters
+        Parameters
         ----------
-        X : array
+        X : ndarray
             Data to be whitened
         '''
         return np.dot(np.kron(self.cholsigmainv,np.eye(self.nobs)), X)
 
     def fit(self):
         beta = np.dot(self.pinv_wexog, self.wendog)
-        return SysResults(self, beta, self.normalized_cov_params)
+        normalized_cov_params = np.dot(self.pinv_wexog, \
+                np.transpose(self.pinv_wexog))
+        return SysResults(self, beta, normalized_cov_params)
 
 class SysWLS(SysGLS):
     '''
     Parameters
     ----------
-    weights : array-like, optional
-        1d array of weights or scalar
+    weights : 1d array or scalar, optional
+        Variances of each equation. If weights is a scalar then homoscedasticity
+        is assumed. Default is no scaling.
     '''
     def __init__(self, sys, weights=1.0):
         weights = np.asarray(weights)
@@ -162,10 +155,6 @@ class SysResults(LikelihoodModelResults):
     def __init__(self, model, params, normalized_cov_params=None, scale=1.):
         super(SysResults, self).__init__(model, params,
                 normalized_cov_params, scale)
-        self._get_results()
-
-    def _get_results(self):
-        pass
 
 # Testing/Debugging
 if __name__ == '__main__':
