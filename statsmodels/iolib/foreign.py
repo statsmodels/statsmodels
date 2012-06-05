@@ -132,9 +132,10 @@ class StataReader(object):
 
     Notes
     -----
-    This is known only to work on file formats 113 (Stata 8/9) and 114
-    (Stata 10/11).  Needs to be tested on older versions.
-    Known not to work on format 104, 108.
+    This is known only to work on file formats 113 (Stata 8/9), 114
+    (Stata 10/11), and 115 (Stata 12).  Needs to be tested on older versions.
+    Known not to work on format 104, 108. If you have the documentation for
+    older formats, please contact the developers.
 
     For more information about the .dta format see
     http://www.stata.com/help.cgi?dta
@@ -200,6 +201,7 @@ class StataReader(object):
         -----
         Format 113: Stata 8/9
         Format 114: Stata 10/11
+        Format 115: Stata 12
         """
         return self._header['ds_format']
 
@@ -318,20 +320,18 @@ class StataReader(object):
         # parse headers
         self._header['ds_format'] = unpack('b', self._file.read(1))[0]
 
-        if self._header['ds_format'] not in [113,114]:
-            raise ValueError("Only file formats 113 and 114 (Stata 9, 10, 11)\
- are supported.  Got format %s.  Please report if you think this error is \
-incorrect." % self._header['ds_format'])
+        if self._header['ds_format'] not in [113, 114, 115]:
+            raise ValueError("Only file formats >= 113 (Stata >= 9)"
+                             " are supported.  Got format %s.  Please report "
+                             "if you think this error is incorrect." %
+                             self._header['ds_format'])
         byteorder = self._header['byteorder'] = unpack('b',
                 self._file.read(1))[0]==0x1 and '>' or '<'
         self._header['filetype'] = unpack('b', self._file.read(1))[0]
         self._file.read(1)
         nvar = self._header['nvar'] = unpack(byteorder+'h',
                 self._file.read(2))[0]
-        if self._header['ds_format'] < 114:
-            self._header['nobs'] = unpack(byteorder+'i', self._file.read(4))[0]
-        else:
-            self._header['nobs'] = unpack(byteorder+'i', self._file.read(4))[0]
+        self._header['nobs'] = unpack(byteorder+'i', self._file.read(4))[0]
         self._header['data_label'] = self._null_terminate(self._file.read(81),
                                                             encoding)
         self._header['time_stamp'] = self._null_terminate(self._file.read(18),
