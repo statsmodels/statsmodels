@@ -468,14 +468,10 @@ class CDFLink(Logit):
 
         Notes
         -----
-        g'(`p`) = 1./ `dbn`.pdf(`p`)
+        g'(`p`) = 1./ `dbn`.pdf(`dbn`.ppf(`p`))
         """
-# Or is it
-#        g'(`p`) = 1/`dbn`.pdf(`dbn`.ppf(`p`))
-#TODO: make sure this is correct.
-#can we just have a numerical approximation?
         p = self._clean(p)
-        return 1. / self.dbn.pdf(p)
+        return 1. / self.dbn.pdf(self.dbn.ppf(p))
 
 #probit = CDFLink()
 class probit(CDFLink):
