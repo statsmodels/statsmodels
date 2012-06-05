@@ -53,8 +53,16 @@ for (ii in c(1:length(dimnames(mat)))) {
 cat(paste(prefix, dimn[[ii]], sep=""))
 cat (" = [");
 for (dname in dimnames(mat)[[ii]]) {
-cat(dname); cat(", ")
+cat("'"); cat(dname); cat("', ")
 }
 cat("]\n")
 }
+}
+
+write_header <-function() {
+cat("import numpy as np\n\n")
+cat("class Bunch(dict):\n")
+cat("    def __init__(self, **kw):\n")
+cat("        dict.__init__(self, kw)\n")
+cat("        self.__dict__  = self\n\n")
 }
