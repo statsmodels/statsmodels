@@ -226,7 +226,7 @@ exogenous variables.  Got length %s" % len(sys))
         """
 
         if not np.any(self.sigma):
-            self.sigma = self._compute_sigma(self.endog, self.exog)
+            self.sigma = self._compute_sigma(self.endog, self.exog) # _compute_sigma takes one argument?
         M = self._M
         beta = np.dot(self.pinv_wexog, self.wendog)
         self._update_history(beta)
