@@ -1,7 +1,7 @@
 import numpy as np
-from statsmodels.base.model import LikelihoodModel, LikelihoodModelResults
 from scipy.linalg import block_diag
 import statsmodels.tools.tools as tools 
+from statsmodels.base.model import LikelihoodModel, LikelihoodModelResults
 from statsmodels.regression.linear_model import OLS
 
 class SysModel(object):
@@ -67,11 +67,6 @@ class SysModel(object):
             df_resid.append(self.nobs - rank)
         (self.df_model, self.df_resid) = (np.asarray(df_model), np.asarray(df_resid))
 
-    def fit(self):
-        raise NotImplementedError
-
-    def predict(self, params, exog=None, *args, **kwargs):
-        raise NotImplementedError
 
 class SysGLS(SysModel):
     '''
@@ -161,11 +156,11 @@ class SysWLS(SysGLS):
         else:
             raise ValueError("weights is not correctly specified")
 
-        super(SysWLS, self).__init__(sys, sigma=sigma)
+        super(SysWLS, self).__init__(sys, sigma)
 
 class SysOLS(SysWLS):
     def __init__(self, sys):
-        super(SysWLS, self).__init__(sys)
+        super(SysOLS, self).__init__(sys)
 
 class SysSUR(SysGLS):
     def __init__(self, sys):
