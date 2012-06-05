@@ -2,6 +2,7 @@ import numpy as np
 from statsmodels.base.model import LikelihoodModel, LikelihoodModelResults
 from scipy.linalg import block_diag
 import statsmodels.tools.tools as tools 
+from statsmodels.regression.linear_model import OLS
 
 class SysModel(object):
     '''
@@ -50,6 +51,7 @@ class SysModel(object):
 
     def __init__(self, sys):
         # TODO : check sys is correctly specified
+        self.sys = sys
         self.neqs = len(sys)
         self.nobs = len(sys[0]['endog']) # TODO : check nobs is the same for each eq
         self.endog = np.column_stack((np.asarray(eq['endog']) for eq in sys)).T
@@ -165,6 +167,29 @@ class SysOLS(SysWLS):
     def __init__(self, sys):
         super(SysWLS, self).__init__(sys)
 
+class SysSUR(SysGLS):
+    def __init__(self, sys):
+        # Compute sigma
+        ## OLS equation by equation
+        resids = []
+        for eq in sys:
+            res = OLS(eq['endog'], eq['exog']).fit()
+            resids.append(res.resid)
+        resids = np.column_stack(resids)
+        sigma = self._compute_sigma(resids)
+
+        super(SysSUR, self).__init__(sys, sigma)
+
+    def _compute_sigma(self, resids):
+        '''
+        Parameters
+        ----------
+        resids : ndarray (N x G)
+            OLS residuals for each equation stacked in column.
+        '''
+        nobs = resids.shape[0] # nobs should already be accessible by self.nobs
+        return (np.dot(resids.T, resids) / nobs)
+
 class SysResults(LikelihoodModelResults):
     """
     Not implemented yet.
@@ -189,12 +214,8 @@ if __name__ == '__main__':
     eq2['exog'] = x2
     
     sys = [eq1, eq2]
-    s1 = SysGLS(sys)
 
     from statsmodels.sysreg.sysreg import SUR
-    s2 = SUR([y1,x1,y2,x2])
-
-    s3 = SysGLS(sys, sigma=s2.sigma)
-    s4 = SysWLS(sys, weights=3.0)
-    s5 = SysOLS(sys)
+    s1 = SUR([y1,x1,y2,x2])
+    s2 = SysSUR(sys)
 
