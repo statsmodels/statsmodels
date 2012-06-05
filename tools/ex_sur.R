@@ -11,6 +11,8 @@ f <- fitted(SUR)
 ff <- c(f[,'Chrysler'],f[,'General.Electric'],f[,'General.Motors'],f[,'US.Steel'],f[,'Westinghouse'])
 
 # save results to python module
+#load functions, (windows path separators)
+source("E:\\path_to_repo\\tools\\R2nparray\\R\\R2nparray.R")
 source("E:\\path_to_repo\\tools\\topy.R")
 
 #translation table for names  (could be dict in python)
@@ -27,7 +29,7 @@ append = FALSE #TRUE
 
 #redirect output to file
 sink(file=fname, append=append)
-
+write_header()
 cat("\nsur = Bunch()\n")
 
 cat_items(SUR, prefix="sur.", blacklist=c("eq", "control"), trans=translate)
