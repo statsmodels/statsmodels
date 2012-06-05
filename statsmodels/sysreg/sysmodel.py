@@ -1,6 +1,7 @@
 import numpy as np
 from statsmodels.base.model import LikelihoodModel, LikelihoodModelResults
 from scipy.linalg import block_diag
+import statsmodels.tools.tools as tools 
 
 class SysModel(object):
     '''
@@ -38,7 +39,15 @@ class SysModel(object):
     sp_exog : sparse matrix
         Contains a block diagonal sparse matrix of the design so that
         eq_i['exog'] are on the diagonal.
+    df_model : ndarray (G x 1)
+        Model degrees of freedom of each equation. K_i - 1 where K_i is
+        the number of regressors for equation i and one is subtracted
+        for the constant.
+    df_resid : ndarray (G x 1)
+        Residual degrees of freedom of each equation. Number of observations
+        less the number of parameters.
     '''
+
     def __init__(self, sys):
         # TODO : check sys is correctly specified
         self.neqs = len(sys)
@@ -47,6 +56,14 @@ class SysModel(object):
         self.exog = np.column_stack((np.asarray(eq['exog']) for eq in sys))
         # TODO : convert to a sparse matrix (need scipy >= 0.11dev for sp.block_diag)
         self.sp_exog = block_diag(*(np.asarray(eq['exog']) for eq in sys))
+
+        # Degrees of Freedom
+        (df_model, df_resid) = ([], [])
+        for eq in sys:
+            rank = tools.rank(eq['exog'])
+            df_model.append(rank - 1)
+            df_resid.append(self.nobs - rank)
+        (self.df_model, self.df_resid) = (np.asarray(df_model), np.asarray(df_resid))
 
     def fit(self):
         raise NotImplementedError
