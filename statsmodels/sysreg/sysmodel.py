@@ -72,7 +72,6 @@ class SysModel(object):
     def initialize(self):
         pass
 
-
 class SysGLS(SysModel):
     '''
     Parameters
@@ -222,7 +221,7 @@ class SysResults(LikelihoodModelResults):
 if __name__ == '__main__':
     from statsmodels.tools import add_constant
     
-    nobs = 10
+    nobs = 100
     (y1,y2) = (np.random.rand(nobs), np.random.rand(nobs))
     (x1,x2) = (np.random.rand(nobs,3), np.random.rand(nobs,4))
     (x1,x2) = (add_constant(x1,prepend=True),add_constant(x2,prepend=True))
@@ -238,4 +237,5 @@ if __name__ == '__main__':
     from statsmodels.sysreg.sysreg import SUR
     s1 = SUR([y1,x1,y2,x2])
     s2 = SysSUR(sys)
+    rs1, rs2 = s1.fit(), s2.fit()
 
