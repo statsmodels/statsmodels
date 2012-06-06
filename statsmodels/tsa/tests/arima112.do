@@ -4,7 +4,7 @@ gen qtrdate=yq(year,quarter)
 format qtrdate %tq
 tsset qtrdate
 
-arima cpi, arima(2,1,1)
+arima cpi, arima(1,1,2)
 
 mat llf=e(ll)
 mat nobs=e(N)
@@ -39,18 +39,20 @@ mkmat mse mse
 mkmat stdp stdp
 mkmat resid resid
 
-mat2nparray llf nobs k k_exog sigma chi2 df_model k_ar k_ma params cov_params xb y resid yr mse stdp icstats, saving("/home/skipper/statsmodels/statsmodels-skipper/statsmodels/tsa/tests/results/arima211_results.py") format("%16.0g") replace
+mat2nparray llf nobs k k_exog sigma chi2 df_model k_ar k_ma params cov_params xb y resid yr mse stdp icstats, saving("/home/skipper/statsmodels/statsmodels-skipper/statsmodels/tsa/tests/results/arima112_results.py") format("%16.0g") replace
+
+/* Do it with no constant */
 
 clear
 
-/* do it with no constant */
 insheet using "/home/skipper/statsmodels/statsmodels-skipper/statsmodels/datasets/macrodata/macrodata.csv"
 
 gen qtrdate=yq(year,quarter)
 format qtrdate %tq
 tsset qtrdate
 
-arima cpi, arima(2,1,1) noconstant
+
+arima cpi, arima(1,1,2) noconstant
 
 mat llf=e(ll)
 mat nobs=e(N)
@@ -74,8 +76,7 @@ predict y, y
 predict resid, resid
 predict yr, yr
 predict mse, mse
-/* can't do stdp without a constant
-predict stdp, stdp */
+/*predict stdp, stdp*/
 estat ic
 
 mat icstats=r(S)
@@ -86,21 +87,19 @@ mkmat mse mse
 /*mkmat stdp stdp*/
 mkmat resid resid
 
-mat2nparray llf nobs k k_exog sigma chi2 df_model k_ar k_ma params cov_params xb y resid yr mse icstats, saving("/home/skipper/statsmodels/statsmodels-skipper/statsmodels/tsa/tests/results/arima211nc_results.py") format("%16.0g") replace
+mat2nparray llf nobs k k_exog sigma chi2 df_model k_ar k_ma params cov_params xb y resid yr mse icstats, saving("/home/skipper/statsmodels/statsmodels-skipper/statsmodels/tsa/tests/results/arima112nc_results.py") format("%16.0g") replace
 
+clear
 
 /* now do conditional */
-
-clear
-
-
 insheet using "/home/skipper/statsmodels/statsmodels-skipper/statsmodels/datasets/macrodata/macrodata.csv"
 
 gen qtrdate=yq(year,quarter)
 format qtrdate %tq
 tsset qtrdate
 
-arima cpi, arima(2,1,1) condition
+/* still converges to different than x-12-arima */
+arima cpi, arima(1,1,2) condition from(.905322 -.692425 1.07366 0.172024 0.682072819129, copy) gtolerance(.0001) vce(oim)
 
 mat llf=e(ll)
 mat nobs=e(N)
@@ -135,9 +134,10 @@ mkmat mse mse
 mkmat stdp stdp
 mkmat resid resid
 
-mat2nparray llf nobs k k_exog sigma chi2 df_model k_ar k_ma params cov_params xb y resid yr mse stdp icstats, saving("/home/skipper/statsmodels/statsmodels-skipper/statsmodels/tsa/tests/results/arima211_css_results.py") format("%16.0g") replace
+mat2nparray llf nobs k k_exog sigma chi2 df_model k_ar k_ma params cov_params xb y resid yr mse stdp icstats, saving("/home/skipper/statsmodels/statsmodels-skipper/statsmodels/tsa/tests/results/arima112_css_results.py") format("%16.0g") replace
 
-/* do it with no constant */
+/* Do it with no constant */
+
 clear
 
 insheet using "/home/skipper/statsmodels/statsmodels-skipper/statsmodels/datasets/macrodata/macrodata.csv"
@@ -146,7 +146,8 @@ gen qtrdate=yq(year,quarter)
 format qtrdate %tq
 tsset qtrdate
 
-arima cpi, arima(2,1,1) condition noconstant
+
+arima cpi, arima(1,1,2) noconstant condition
 
 mat llf=e(ll)
 mat nobs=e(N)
@@ -181,4 +182,4 @@ mkmat mse mse
 mkmat stdp stdp
 mkmat resid resid
 
-mat2nparray llf nobs k k_exog sigma chi2 df_model k_ar k_ma params cov_params xb y resid yr mse stdp icstats, saving("/home/skipper/statsmodels/statsmodels-skipper/statsmodels/tsa/tests/results/arima211nc_css_results.py") format("%16.0g") replace
+mat2nparray llf nobs k k_exog sigma chi2 df_model k_ar k_ma params cov_params xb y resid yr mse stdp icstats, saving("/home/skipper/statsmodels/statsmodels-skipper/statsmodels/tsa/tests/results/arima112nc_css_results.py") format("%16.0g") replace
