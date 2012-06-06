@@ -1,4 +1,4 @@
-data <- read.csv('/Users/alexandre/Documents/soc2012/code/statsmodels/datasets/grunfeld/grunfeld.csv')
+data <- read.csv('datasets/grunfeld/grunfeld.csv')
 data <- data[data$firm %in% c('General Motors','Chrysler','General Electric','Westinghouse','US Steel'),]
 attach(data)
 library('plm')
