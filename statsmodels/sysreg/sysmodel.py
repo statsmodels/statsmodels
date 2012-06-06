@@ -188,6 +188,28 @@ class SysSUR(SysGLS):
         nobs = resids.shape[0] # nobs should already be accessible by self.nobs
         return (np.dot(resids.T, resids) / nobs)
 
+class SysSURI(SysOLS):
+    '''
+    SUR estimation with identical regressors in each equation.
+    It's equivalent to an OLS equation-by-equation.
+
+    Parameters
+    ----------
+    endogs : list of array
+        List endog variable for each equation.
+    exog : ndarray
+        Common exog variables in each equation.
+    '''
+    def __init__(self, endogs, exog):
+        # Build the corresponding system
+        sys = []
+        for endog in endogs:
+            eq = {}
+            eq['endog'] = endog
+            eq['exog'] = exog
+            sys.append(eq)
+        super(SysSURI, self).__init__(sys)
+
 class SysResults(LikelihoodModelResults):
     """
     Not implemented yet.
