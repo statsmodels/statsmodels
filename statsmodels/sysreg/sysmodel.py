@@ -67,6 +67,11 @@ class SysModel(object):
             df_resid.append(self.nobs - rank)
         (self.df_model, self.df_resid) = (np.asarray(df_model), np.asarray(df_resid))
 
+        self.initialize()
+
+    def initialize(self):
+        pass
+
 
 class SysGLS(SysModel):
     '''
@@ -97,27 +102,28 @@ class SysGLS(SysModel):
     '''
 
     def __init__(self, sys, sigma=None):
-        super(SysGLS, self).__init__(sys)
-        
+        neqs = len(sys)
         if sigma is None:
-            self.sigma = np.diag(np.ones(self.neqs))
+            self.sigma = np.diag(np.ones(neqs))
         # sigma = scalar
         elif sigma.shape == ():
-            self.sigma = np.diag(np.ones(self.neqs)*sigma)
+            self.sigma = np.diag(np.ones(neqs)*sigma)
         # sigma = 1d vector
-        elif (sigma.ndim == 1) and sigma.size == self.neqs:
+        elif (sigma.ndim == 1) and sigma.size == neqs:
             self.sigma = np.diag(sigma)
         # sigma = GxG matrix
-        elif sigma.shape == (self.neqs,self.neqs):
+        elif sigma.shape == (neqs,neqs):
             self.sigma = sigma
         else:
             raise ValueError("sigma is not correctly specified")
+        super(SysGLS, self).__init__(sys)
 
+    def initialize(self):
         self.cholsigmainv = np.linalg.cholesky(np.linalg.pinv(self.sigma)).T
         self.wexog = self.whiten(self.sp_exog)
         self.wendog = self.whiten(self.endog.reshape(-1,1))
         self.pinv_wexog = np.linalg.pinv(self.wexog)
-             
+
     def whiten(self, X):
         '''
         SysGLS whiten method
@@ -144,9 +150,8 @@ class SysWLS(SysGLS):
         is assumed. Default is no scaling.
     '''
     def __init__(self, sys, weights=1.0):
-        weights = np.asarray(weights)
         neqs = len(sys)
-
+        weights = np.asarray(weights)
         # weights = scalar
         if weights.shape == ():
             sigma = np.diag(np.ones(neqs)*weights)
@@ -155,7 +160,6 @@ class SysWLS(SysGLS):
             sigma = np.diag(weights)
         else:
             raise ValueError("weights is not correctly specified")
-
         super(SysWLS, self).__init__(sys, sigma)
 
 class SysOLS(SysWLS):
@@ -172,7 +176,6 @@ class SysSUR(SysGLS):
             resids.append(res.resid)
         resids = np.column_stack(resids)
         sigma = self._compute_sigma(resids)
-
         super(SysSUR, self).__init__(sys, sigma)
 
     def _compute_sigma(self, resids):
