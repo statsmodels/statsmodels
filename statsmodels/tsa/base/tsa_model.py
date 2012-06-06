@@ -111,7 +111,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                 raise ValueError("Start must be <= len(endog)")
             self._data.predict_start = dates[start]
 
-        if start >= len(self.endog):
+        if start > len(self._data.endog):
             raise ValueError("Start must be <= len(endog)")
 
         return start
@@ -124,8 +124,8 @@ class TimeSeriesModel(base.LikelihoodModel):
         """
 
         out_of_sample = 0 # will be overwritten if needed
-        if end is None:
-            end = len(self.endog) - 1
+        if end is None: # use data for ARIMA - endog changes
+            end = len(self._data.endog) - 1
 
         dates = self._data.dates
         if isinstance(end, str):
@@ -153,7 +153,7 @@ class TimeSeriesModel(base.LikelihoodModel):
             try:
                 self._data.predict_end = dates[end]
             except IndexError, err:
-                nobs = len(self.endog) - 1 # as an index
+                nobs = len(self._data.endog) - 1 # as an index
                 out_of_sample = end - nobs
                 end = nobs
                 freq = self._data.freq
@@ -162,7 +162,7 @@ class TimeSeriesModel(base.LikelihoodModel):
             self._make_predict_dates()
 
         elif isinstance(end, int):
-            nobs = len(self.endog) - 1 # is an index
+            nobs = len(self._data.endog) - 1 # is an index
             if end > nobs:
                 out_of_sample = end - nobs
                 end = nobs
