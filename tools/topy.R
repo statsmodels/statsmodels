@@ -1,7 +1,19 @@
 
 cat_items <- function(object, prefix="", blacklist=NULL, trans=list())    {
-#print items into python expression for defining variables
-#example cat_items(names(object), blacklist=c("eq"))
+#print content (names) of object into python expressions for defining variables
+#
+#Parameters
+#----------
+#object : object with names attribute
+#   names(object) will be written as python assignments
+#prefix : string
+#   string that is prepended to the variable names
+#blacklist : list of strings
+#   names that are in the blacklist are ignored
+#trans : named list (dict_like)
+#   names that are in trans will be replaced by the corresponding value
+#
+#example cat_items(fitresult, blacklist=c("eq"))
 #
 #currently limited type inference, mainly numerical
 
@@ -15,18 +27,18 @@ for (name in items) {
 	#Skipper's sanitize name
 	name_ <- gsub("\\.", "_", name) # make name pythonic
       #translate name
-	newname = trans[[name]]
+	newname = trans[[name_]]   #translation table on sanitized names
       if (!is.null(newname)) {
           name_ = newname}
 	name_ = paste(prefix, name_, sep="")
 
 	if (is.numeric(item)) {
 		if (!is.null(names(item))) {    #named list, class numeric ?
-               mkarray(as.matrix(item), name_); cat("\n")
+               mkarray(as.matrix(item), name_);
                   if (!is.null(dimnames(item))) write_dimnames(item, prefix=name_)
 		}
 		else if (class(item) == 'matrix') {
-               mkarray(item, name_); cat("\n")
+               mkarray(item, name_);
                   if (!is.null(dimnames(item))) write_dimnames(item, prefix=name_)
 		}
             else if (class(item) == 'numeric') {   #scalar
@@ -65,4 +77,26 @@ cat("class Bunch(dict):\n")
 cat("    def __init__(self, **kw):\n")
 cat("        dict.__init__(self, kw)\n")
 cat("        self.__dict__  = self\n\n")
+}
+
+
+mkhtest <- function(ht, name, distr="f") {
+	#function to write results of a statistical test of class htest to a python dict
+	#
+	#Parameters
+	#----------
+	#ht : instance of ht
+	#   return of many statistical tests
+	#name : string
+	#   name of variable that holds results dict
+	#distr : string
+	#   distribution of the test statistic
+	#
+    cat(name); cat(" = dict(");
+    cat("statistic="); cat(ht$statistic); cat(", ");
+    cat("pvalue="); cat(ht$p.value); cat(", ");
+    cat("parameters=("); cat(ht$parameter, sep=","); cat(",), ");
+    cat("distr='"); cat(distr); cat("'");
+    cat(")");
+    cat("\n\n")
 }
