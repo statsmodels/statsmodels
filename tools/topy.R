@@ -35,11 +35,11 @@ cat_items <- function(object, prefix="", blacklist=NULL, trans=list())    {
 
         if (is.numeric(item)) {
             if (!is.null(names(item))) {    #named list, class numeric ?
-                mkarray(as.matrix(item), name_);
+               mkarray2(as.matrix(item), name_);
                 if (!is.null(dimnames(item))) write_dimnames(item, prefix=name_)
             }
             else if (class(item) == 'matrix') {
-                mkarray(item, name_);
+               mkarray2(item, name_);
                 if (!is.null(dimnames(item))) write_dimnames(item, prefix=name_)
             }
             else if (class(item) == 'numeric') {   #scalar
@@ -100,4 +100,15 @@ mkhtest <- function(ht, name, distr="f") {
     cat("distr='"); cat(distr); cat("'");
     cat(")");
     cat("\n\n")
+}
+
+mkarray2 <- function(X, name) {
+    indent = "    "
+    cat(name); cat(" = np.array([\n"); cat(X, sep=", ", fill=76, labels=indent); cat(indent); cat("])")
+    if (is.matrix(X)) {
+        i <- as.character(nrow(X))
+        j <- as.character(ncol(X))
+        cat(".reshape("); cat(i); cat(","); cat(j); cat(", order='F')")
+    }
+    cat("\n")
 }

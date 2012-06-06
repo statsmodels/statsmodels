@@ -21,6 +21,8 @@ translate = list(coefficients="params",
                  residCovEst="resid_cov_est",
                  residCov="resid_cov",
                  df_residual="df_resid",
+                 df_residual_sys="df_resid_sys",
+                 #nCoef="k_vars",    #not sure about this
                  fitted_values="fittedvalues"
                  )
 
@@ -36,8 +38,8 @@ cat_items(SUR, prefix="sur.", blacklist=c("eq", "control"), trans=translate)
 
 equations = SUR[["eq"]]
 for (ii in c(1:length(equations))) {
-equ_name = paste("\nsur.equ", ii, sep="")
-cat(equ_name); cat(" = Bunch()\n")
+equ_name = paste("sur.equ", ii, sep="")
+cat("\n\n", equ_name, sep=""); cat(" = Bunch()\n")
 cat_items(equations[[ii]], prefix=paste(equ_name, ".", sep=""), trans=translate)
 }
 
