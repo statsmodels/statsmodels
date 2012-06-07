@@ -697,7 +697,7 @@ if __name__ == '__main__':
     tmp = [bootstrap(NewNorm(), args=(0,1), nobs=nobs, nrep=1,
                      value=0.576/ (1 + 4./nobs - 25./nobs**2),
                      batch_size=10) for _ in range(10)]
-    resu3 = np.array(resu).mean()
+    resu3 = np.array(tmp).mean()
     from numpy.testing import assert_almost_equal, assert_array_almost_equal
     assert_array_almost_equal(resu1, resu2, 15)
     assert_array_almost_equal(resu2, resu3, 15)
