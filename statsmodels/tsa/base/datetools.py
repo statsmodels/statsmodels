@@ -229,6 +229,8 @@ def _infer_freq(dates):
     nobs = min(len(dates), 6)
     if nobs == 1:
         raise ValueError("Cannot infer frequency from one date")
+    if hasattr(dates, 'values'):
+        dates = dates.values # can't do a diff on a DateIndex
     diff = np.diff(dates[:nobs])
     delta = _add_datetimes(diff)
     nobs -= 1 # after diff
