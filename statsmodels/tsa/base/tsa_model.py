@@ -107,7 +107,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                         (str(start), str(dtstart)))
 
         if isinstance(start, int) and dates is not None:
-            if start >= len(dates):
+            if start > len(dates):
                 raise ValueError("Start must be <= len(endog)")
             self._data.predict_start = dates[start]
 
