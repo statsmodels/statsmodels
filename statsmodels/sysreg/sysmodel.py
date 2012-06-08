@@ -190,11 +190,10 @@ class SysOLS(SysWLS):
 
 class SysSUR(SysGLS):
     def __init__(self, sys, dfk=None):
-        super(SysSUR, self).__init__(sys, None)
+        super(SysSUR, self).__init__(sys, sigma=None)
         # TODO : check dfk in {None, dfk1, dfk2}
         self.dfk = dfk
-        # Compute sigma
-        ## OLS equation by equation
+        # Compute sigma OLS equation by equation
         resids = []
         for eq in sys:
             res = OLS(eq['endog'], eq['exog']).fit()
@@ -211,20 +210,19 @@ class SysSUR(SysGLS):
         resids : ndarray (N x G)
             OLS residuals for each equation stacked in column.
         '''
-        nobs = resids.shape[0] # nobs should already be accessible by self.nobs
         if self.dfk is None:
-            div = nobs
+            div = self.nobs
         elif self.dfk.lower() == 'dfk1':
             div = np.zeros((self.neqs, self.neqs))
             for i in range(self.neqs):
                 for j in range(self.neqs):
-                    div[i,j] = (self.df_model[i]+1)*(self.df_model[j]+1)**(1/2)
+                    div[i,j] = (self.df_model[i] + 1)*(self.df_model[j] + 1) ** (1/2)
         else:
             div = np.zeros((self.neqs, self.neqs))
             for i in range(self.neqs):
                 for j in range(self.neqs):
-                    div[i,j] = nobs - np.max((self.df_model[i]+1, 
-                                             self.df_model[j]+1))
+                    div[i,j] = self.nobs - np.max((self.df_model[i] + 1, 
+                                                   self.df_model[j] + 1))
         return (np.dot(resids.T, resids) / div)
 
 class SysSURI(SysOLS):
@@ -278,4 +276,4 @@ if __name__ == '__main__':
     from statsmodels.sysreg.sysreg import SUR
     s,s1,s2 = SysSUR(sys), SysSUR(sys, dfk='dfk1'), SysSUR(sys, dfk='dfk2')
     #p,p1,p2 = SUR(old_sys), SUR(old_sys, dfk='dfk1'), SUR(old_sys, dfk='dfk2') # Bug
-
+    p = SUR(old_sys)
