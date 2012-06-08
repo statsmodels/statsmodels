@@ -157,6 +157,80 @@ class GOF(object):
 
 
 
+class GOFUniform(gofn.GOF):
+
+    def __init__(self, rvs):
+        if np.min(rvs) < 0 or np.max(rvs) > 1:
+            raise ValueError('some values are out of bounds')
+
+        vals = np.sort(rvs)
+        cdfvals = vals
+        self.nobs = len(vals)
+        self.vals_sorted = vals
+        self.cdfvals = cdfvals
+
+class GOFNormal(GOFUniform):
+
+    def __init__(self, rvs, ddof=1):
+        rvs = np.asarray(rvs)
+        vals = stats.norm.cdf((rvs - rvs.mean()) / rvs.std(ddof=ddof))
+        super(GOFNormal, self).__init__(vals)
+
+    def get_test(self, testid='a2', pvals='davisstephens89upp'):
+        '''get p-value for a test
+
+        uses Stephens approximation formula for 'w2', 'u2', 'a2' and
+        interpolated table for 'd', 'v'
+
+        '''
+
+        stat = getattr(self, testid.replace('2', 'squ'))
+        stat_modified = modify_normal[testid](stat, self.nobs)
+        if (testid in ['w2', 'u2', 'a2']) and pvals == 'davisstephens89upp':
+            pval = pvalue_normal(stat_modified, testid)
+        elif (testid in ['d', 'v']) or pvals == 'interpolated':
+            pval = pvalue_interp(stat_modified, test=testid, dist='normal')
+        else:
+            raise NotImplementedError
+        return stat, pval, stat_modified
+
+class GOFExpon(GOFUniform):
+    '''Goodness-of-fit tests for exponential distribution with estimated scale
+
+
+    available tests
+
+    "d" Kolmogorov-Smirnov
+    "v" Kuiper
+    "w2" Cramer-Von Mises
+    "u2" Watson U^2 statistic, a modified W^2 test statistic
+    "a2" Anderson-Darling A^2
+
+    In genral "a2" is recommended as the most powerful test of the above.
+
+
+    '''
+
+    def __init__(self, rvs):
+        rvs = np.asarray(rvs)
+        vals = 1 - np.exp(-rvs / rvs.mean())
+        super(GOFExpon, self).__init__(vals)
+
+    def get_test(self, testid='a2', pvals='davisstephens89upp'):
+        '''get p-value for a test
+
+        '''
+        #mostly copy paste from normal, not DRY
+        stat = getattr(self, testid.replace('2', 'squ'))
+        stat_modified = modify_expon[testid](stat, self.nobs)
+        if (testid in ['w2', 'u2', 'a2']) and pvals == 'davisstephens89upp':
+            pval = pvalue_expon(stat_modified, testid)
+        elif (testid in ['d', 'v']) or pvals == 'interpolated':
+            pval = pvalue_interp(stat_modified, test=testid, dist='expon')
+        else:
+            raise NotImplementedError
+        return stat, pval, stat_modified
+
 
 
 
