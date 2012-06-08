@@ -194,7 +194,7 @@ crit_expon_a2 = [0.916, 1.062, 1.321, 1.591, 1.959]
 
 
 #I didn't look what this is used for
-#test statistics are inherited from gof_new, i.e. Stephens' 1970 paper
+#test statistics are inherited from gof_new, i.e. Stephens' 1974 paper
 tmp = (0.01, 0.05, 0.1, 0.11, 0.12, 0.155, 0.16, 0.2, 0.24)
 pt01, pt05, pt1, pt11, pt12, pt155, pt16, pt2, pt24 = tmp
 tmp = (0.26, 0.3, 0.35, 0.4, 0.5, 0.6, 0.75, 0.8, 0.82, 0.85)
@@ -389,6 +389,21 @@ class GOFNormal(GOFUniform):
         return stat, pval, stat_modified
 
 class GOFExpon(GOFUniform):
+    '''Goodness-of-fit tests for exponential distribution with estimated scale
+
+
+    available tests
+
+    "d" Kolmogorov-Smirnov
+    "v" Kuiper
+    "w2" Cramer-Von Mises
+    "u2" Watson U^2 statistic, a modified W^2 test statistic
+    "a2" Anderson-Darling A^2
+
+    In genral "a2" is recommended as the most powerful test of the above.
+
+
+    '''
 
     def __init__(self, rvs):
         rvs = np.asarray(rvs)
@@ -446,7 +461,7 @@ for b in b_list:
         oth = ge2.get_test(ti)
         #check pvalues
         if oth[1] == 0.15:  #upper boundary for pval of d and v
-            if not ti == 'v':  #skip for Kuiper
+            if not (ti == 'v' and b in [0.5]):  #skip one test for Kuiper
                 assert_array_less(0.11, ad[1])
         elif oth[1] == 0.01:  #upper boundary for pval of d and v
             #if not ti == 'v':  #skip for Kuiper
@@ -457,3 +472,15 @@ for b in b_list:
             #assert_array_less(np.abs(oth[1] - ad[1]) / ad[1]**2, 1)
             assert_array_less(np.abs(ad[1] - oth[1]), 0.01 + 0.6 * oth[1]) #25)
 
+#b in rows, ti in columns
+res_r = np.array([0.1564240118194638, 0.09436760924796966, 0.6314329797982694,
+                  0.1793511287764876, 0.1506515020772339, 0.887774219046726,
+                  0.184369741403067, 0.1697126047249459, 0.978323412566048,
+                  0.2055857239850029, 0.225018414134194, 1.247031661161905,
+                  0.285678730877463, 0.510830687544145, 2.808327043589259]
+                  ) #.reshape(-1,3)
+
+
+res_gof = [ GOFExpon(x + b * x**2).get_test(ti)[0] for b in b_list for ti in ['d', 'w2', 'a2']]
+
+assert_almost_equal(res_gof, res_r, 7)
