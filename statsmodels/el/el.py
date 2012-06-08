@@ -2,7 +2,7 @@
 Empirical Likelihood Implementation
 
 Start: 21 May 2012
-Last Updated: 28 May 2012
+Last Updated: 7 June 2012
 
 General References:
 
@@ -130,7 +130,7 @@ class OptFuncts(ElModel):
         return -2 * np.sum(np.log(self.nobs * new_weights)) - \
             self.r0
 
-    def opt_var(self, nuisance_mu):
+    def opt_var(self, nuisance_mu, pval=False):
         """
 
         This is the function to be optimized over a nuisance mean parameter
@@ -154,6 +154,8 @@ class OptFuncts(ElModel):
         denom = 1 + np.dot(eta_star, self.est_vect.T)
         self.new_weights = 1 / self.nobs * 1 / denom
         llr = np.sum(np.log(self.nobs * self.new_weights))
+        if pval:
+            return 1 - chi2.cdf(-2 * llr, 2)
         return -2 * llr
 
     def  ci_limits_var(self, var_test):
@@ -215,7 +217,7 @@ class DescStat(OptFuncts):
         else:
             return 1 - chi2.cdf(llr, 1), llr
 
-    def ci_mean(self, sig=.95, method='nested-brent', epsilon=10 ** -6,
+    def ci_mean(self, sig=.05, method='nested-brent', epsilon=10 ** -6,
                  gamma_low=-10 ** 10, gamma_high=10 ** 10, \
                  tol=10 ** -6):
 
@@ -224,7 +226,7 @@ class DescStat(OptFuncts):
 
         Parameters
         ----------
-        sig: Significance level | default=.95
+        sig: Significance level | default=.05
 
         Optional
         --------
@@ -273,6 +275,7 @@ class DescStat(OptFuncts):
 
         """
 
+        sig = 1 - sig
         if method == 'nested-brent':
             self.r0 = chi2.ppf(sig, 1)
             middle = np.mean(self.endog)
@@ -359,7 +362,7 @@ class DescStat(OptFuncts):
         else:
             return p_val, llr
 
-    def ci_var(self, ll, ul, sig=.95):
+    def ci_var(self, ll, ul, sig=.05):
         """
 
         Returns the confidence interval for the variance.
@@ -377,7 +380,7 @@ class DescStat(OptFuncts):
             1 - significance level.
 
         sig: The significance level for the conficence interval.
-        default | .95
+        default | .05
 
 
         Example
@@ -397,12 +400,13 @@ class DescStat(OptFuncts):
 
         """
 
+        sig = 1 - sig
         self.r0 = chi2.ppf(sig, 1)
         ll = optimize.brentq(self.ci_limits_var, ll, self.endog.var())
         ul = optimize.brentq(self.ci_limits_var, self.endog.var(), ul)
         return   ll, ul
 
-    def var_p_plot(self, lower, upper, step, sig=.95):
+    def var_p_plot(self, lower, upper, step, sig=.05):
         """
 
         Plots the p-values of the maximum el estimate for the variance
@@ -417,13 +421,13 @@ class DescStat(OptFuncts):
         step: Interval between each plot point.
 
 
-        sig: Will draw a horizontal line at 1- sig. default | .95
+        sig: Will draw a horizontal line at 1- sig. default | .05
 
         This function can be helpful when trying to determine limits
          in the ci_var function.
 
         """
-
+        sig = 1 - sig
         p_vals = []
         for test in np.arange(lower, upper, step):
             p_vals.append(self.hy_test_var(test)[0])
@@ -532,4 +536,47 @@ class DescStat(OptFuncts):
         plt.clabel(fig)
         if plot_dta:
             plt.plot(self.endog[:, 0], self.endog[:, 1], 'bo')
+        return 'Type plt.show to see the figure'
+
+    def mean_var_contour(self, mu_l, mu_h, var_l, var_h, mu_step,
+                        var_step,
+                        levs=[.2, .1, .05, .01, .001]):
+        """
+
+        Returns a plot of the confidence region for a univariate
+        mean and variance.
+
+        Parameters
+        ----------
+
+        mu_l: Lowest value of the mean to plot
+
+        mu_h: Highest value of the mean to plot
+
+        var_l: Lowest value of the variance to plot
+
+        var_h: Highest value of the variance to plot
+
+        mu_step: Increments to evaluate the mean
+
+        var_step: Increments to evaluate the mean
+
+        Optional
+        --------
+
+        At Which values of significance the contour lines will be drawn.
+        default | [.2, .1, .05, .01, .001]
+
+        """
+
+        mu_vect = list(np.arange(mu_l, mu_h, mu_step))
+        var_vect = list(np.arange(var_l, var_h, var_step))
+        z = []
+        for sig0 in var_vect:
+            self.sig2_0 = sig0
+            for mu0 in mu_vect:
+                z.append(self.opt_var(mu0, pval=True))
+        z = np.asarray(z).reshape(len(var_vect), len(mu_vect))
+        fig = plt.contour(mu_vect, var_vect, z, levels=levs)
+        plt.clabel(fig)
         return 'Type plt.show to see the figure'
