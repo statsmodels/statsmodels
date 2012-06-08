@@ -139,6 +139,26 @@ class SysGLS(SysModel):
         normalized_cov_params = np.dot(self.pinv_wexog, self.pinv_wexog.T)
         return SysResults(self, beta, normalized_cov_params)
 
+    def predict(self, params, exog=None):
+        '''
+        Parameters
+        ----------
+        exog : None or list of ndarray
+            List of individual design (one for each equation)
+        '''
+        if exog is None:
+            sp_exog = self.sp_exog
+        else:
+            designs = []
+            cur_col = 0
+            for eq in range(self.neqs):
+                designs.append(exog[:,cur_col:cur_col+self.df_model[eq]+1])
+                cur_col += self.df_model[eq]+1
+            sp_exog = block_diag(*designs)
+
+        return np.dot(sp_exog, params)
+
+
 class SysWLS(SysGLS):
     '''
     Parameters

@@ -8,8 +8,8 @@ class CheckSysregResults(object):
     decimal_params = 3
     def test_params(self):
         assert_almost_equal(self.res1.params, self.res2.params, self.decimal_params)
-    #def test_fittedvalues(self):
-        #assert_almost_equal(self.res1.predict(), self.res2.fittedvalues, 3) # fail with decimal error >= 4
+    def test_fittedvalues(self):
+        assert_almost_equal(self.res1.predict(), self.res2.fittedvalues, 3) # fail with decimal error >= 4
     def test_normalized_cov_params(self):
         assert_almost_equal(self.res1.normalized_cov_params, self.res2.cov_params, 2) # fail with decimal error >= 3
 
