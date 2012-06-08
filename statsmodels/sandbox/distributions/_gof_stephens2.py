@@ -8,6 +8,9 @@ License : BSD-3
 
 """
 
+import numpy as np
+from scipy import interpolate
+
 
 #The following implements parts of
 #Algorithm AS 248: Empirical Distribution Function Goodness-of-Fit Tests
@@ -16,6 +19,7 @@ License : BSD-3
 #Published by: Blackwell Publishing for the Royal Statistical Society
 #Stable URL: http://www.jstor.org/stable/2347751 .
 
+alpha = [0.15, 0.10, 0.05, 0.025, 0.01]
 #F(x) completely specified
 def modify_fs_d(stat, nobs):
     return stat * (np.sqrt(nobs) + 0.12 + 0.11 / np.sqrt(nobs))
