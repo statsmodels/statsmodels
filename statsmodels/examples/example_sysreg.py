@@ -35,7 +35,7 @@ for f in firms:
     sys.append(eq_f)
 
 # SUR estimation
-grun_mod = SysSUR(sys)
+grun_mod = SysSUR(sys, dfk='dfk2')
 grun_res = grun_mod.fit()
 
 

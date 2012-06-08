@@ -176,8 +176,8 @@ exogenous variables.  Got length %s" % len(sys))
             div = np.zeros(M**2)
             for i in range(M):
                 for j in range(M):
-                    div[i+j] = nobs - np.max(self.df_model[i]+1,
-                        self.df_model[j]+1)
+                    div[i+j] = nobs - np.max((self.df_model[i]+1,
+                        self.df_model[j]+1))
             div.reshape(M,M)
 # doesn't handle (#,)
         self.cholsigmainv = np.linalg.cholesky(np.linalg.pinv(sig/div)).T
