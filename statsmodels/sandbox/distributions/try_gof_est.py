@@ -193,6 +193,8 @@ def modify_expon_a2(stat, nobs):
 crit_expon_a2 = [0.916, 1.062, 1.321, 1.591, 1.959]
 
 
+#I didn't look what this is used for
+#test statistics are inherited from gof_new, i.e. Stephens' 1970 paper
 tmp = (0.01, 0.05, 0.1, 0.11, 0.12, 0.155, 0.16, 0.2, 0.24)
 pt01, pt05, pt1, pt11, pt12, pt155, pt16, pt2, pt24 = tmp
 tmp = (0.26, 0.3, 0.35, 0.4, 0.5, 0.6, 0.75, 0.8, 0.82, 0.85)
@@ -253,6 +255,13 @@ for test_ in 'w2 u2 a2'.split():
     cutoff_normal.setdefault(test_, locals()["cutoff_" + distr + "_" + test_])
     coef_normal.setdefault(test_, locals()["coef_" + distr + "_" + test_])
 
+modify_fs = {}
+crit_fs = {}
+distr = 'fs'
+for test_ in 'd v w2 u2 a2'.split():
+    modify_fs.setdefault(test_, locals()["modify_" + distr + "_" + test_])
+    crit_fs.setdefault(test_, locals()["crit_" + distr + "_" + test_])
+
 
 
 
@@ -264,11 +273,7 @@ t = 0.01#1.32 #0.724 #1.959
 def pvalue_st(t, cutoff, coef):
     #vectorized
     i = 3 * np.ones(np.shape(t), int)
-    #use searchsorted
-#    for j in range(3):
-#        if t < cutoff[j]: i = i - 1
     i = np.searchsorted(cutoff, t)
-#    assert i == i2
     pval = np.exp(coef[i,0] + t * (coef[i,1] + t * coef[i,2]))
     if pval.shape == ():
         if i < 2:
@@ -277,11 +282,43 @@ def pvalue_st(t, cutoff, coef):
         pval[i<2] = 1 - pval[i<2]
     return i, pval
 
-def pvalue_expon(t, test='d'):
+def pvalue_expon(t, test='a2'):
     return pvalue_st(t, cutoff_expon[test], coef_expon[test])[1]
 
-def pvalue_normal(t, test='d'):
+def pvalue_normal(t, test='a2'):
     return pvalue_st(t, cutoff_normal[test], coef_normal[test])[1]
+
+def pvalue_interp(t, test='a2', dist='normal'):
+    #vectorized
+    if np.shape(t) == ():
+        scalar = True
+    t = np.atleast_1d(t)
+    print dist
+    if dist == 'normal':
+        crit = crit_normal[test]
+    elif dist == 'expon':
+        crit = crit_expon[test]
+    elif dist == 'fs':
+        crit = crit_fs[test]
+    else:
+        raise NotImplementedError('currently only normal, exponential and' + \
+                                  'fully specified are supported')
+
+    interp = interpolate.interp1d(crit, alpha)
+    if not np.all(np.diff(crit) > 0): #check for increasing
+        raise NotImplementedError('please call us and tell np.diff(crit)<=0')
+
+    tlow = t < crit[0]
+    tupp = t > crit[-1]
+    mask = (~tlow) & (~tupp)
+    pval = np.empty(t.shape, float)
+    pval.fill(np.nan)
+    pval[tlow] = alpha[0]
+    pval[tupp] = alpha[-1]
+    pval[mask] = interp(t[mask])
+    if scalar:
+        pval = np.squeeze(pval)[()]  #return scalar
+    return pval
 
 print pvalue_st(t, cutoff, coef)
 
@@ -337,12 +374,17 @@ class GOFNormal(GOFUniform):
     def get_test(self, testid='a2', pvals='davisstephens89upp'):
         '''get p-value for a test
 
+        uses Stephens approximation formula for 'w2', 'u2', 'a2' and
+        interpolated table for 'd', 'v'
+
         '''
-        #print gof_pvals[pvals][testid]
+
         stat = getattr(self, testid.replace('2', 'squ'))
         stat_modified = modify_normal[testid](stat, self.nobs)
-        if pvals == 'davisstephens89upp':
+        if (testid in ['w2', 'u2', 'a2']) and pvals == 'davisstephens89upp':
             pval = pvalue_normal(stat_modified, testid)
+        elif (testid in ['d', 'v']) or pvals == 'interpolated':
+            pval = pvalue_interp(stat_modified, test=testid, dist='normal')
         else:
             raise NotImplementedError
         return stat, pval, stat_modified
@@ -357,12 +399,14 @@ class GOFExpon(GOFUniform):
     def get_test(self, testid='a2', pvals='davisstephens89upp'):
         '''get p-value for a test
 
-'''
-        #print gof_pvals[pvals][testid]
-        stat = getattr(self, testid.replace('2', 'squ')) #different notation
+        '''
+        #mostly copy paste from normal, not DRY
+        stat = getattr(self, testid.replace('2', 'squ'))
         stat_modified = modify_expon[testid](stat, self.nobs)
-        if pvals == 'davisstephens89upp':
+        if (testid in ['w2', 'u2', 'a2']) and pvals == 'davisstephens89upp':
             pval = pvalue_expon(stat_modified, testid)
+        elif (testid in ['d', 'v']) or pvals == 'interpolated':
+            pval = pvalue_interp(stat_modified, test=testid, dist='expon')
         else:
             raise NotImplementedError
         return stat, pval, stat_modified
@@ -374,7 +418,12 @@ print ge.get_test('u2')
 rvsn = np.random.randn(50)
 print GOFExpon(rvsn**2).get_test()
 
-rvsm = (np.random.randn(50, 2) * [1, 2]).sum(1)
+#rvsm = (np.random.randn(50, 2) * [1, 2]).sum(1)
 rvsm = (np.random.randn(50, 2) * [1, 2]).ravel()
-print GOFNormal(rvsm).get_test()
+gn = GOFNormal(rvsm)
+print gn.get_test()
+from statsmodels.stats import diagnostic as dia
 print dia.normal_ad(rvsm)
+print gn.get_test('d')
+print dia.lillifors(rvsm)
+
