@@ -6,6 +6,8 @@ Created on Wed Jun 06 11:53:07 2012
 Author: Josef Perktold
 """
 
+from numpy.testing import assert_equal, assert_almost_equal
+
 import numpy as np
 from scipy import stats
 from statsmodels.stats.lilliefors import ksstat
@@ -86,7 +88,7 @@ p, st, res = gof_mc(rvs, stats.expon, ksstat, fit_func=fit_func)
 import time
 t0 = time.time()
 mcres = []
-for _ in xrange(1000):
+for _ in xrange(1):  #1000
     rvs = stats.expon.rvs(loc=0, scale=5, size=200)
     p, st, res = gof_mc(rvs, stats.expon, ksstat, fit_func=fit_func)
     mcres.append([p, st])
@@ -123,4 +125,256 @@ time for mc 234.578000069
 [ 0.  0.098  0.2    0.32   0.395  0.486  0.599  0.707  0.795  0.895
   0.988]
 
+third run
+time for mc 257.38499999
+0.048
+[ 0.   0.1  0.2  0.3  0.4  0.5  0.6  0.7  0.8  0.9  1. ]
+[ 0.     0.097  0.191  0.291  0.378  0.494  0.595  0.691  0.779  0.878
+  0.995]
+
 '''
+
+#The following implements parts of
+#Algorithm AS 248: Empirical Distribution Function Goodness-of-Fit Tests
+#Author(s): Charles S. Davis and Michael A. Stephens
+#Source: Journal of the Royal Statistical Society. Series C (Applied Statistics), Vol. 38, No. 3(1989), pp. 535-543
+#Published by: Blackwell Publishing for the Royal Statistical Society
+#Stable URL: http://www.jstor.org/stable/2347751 .
+
+#F(x) completely specified
+def modify_fs_d(stat, nobs):
+    return stat * (np.sqrt(nobs) + 0.12 + 0.11 / np.sqrt(nobs))
+crit_fs_d = [1.138, 1.224, 1.358, 1.480, 1.628]
+def modify_fs_v(stat, nobs):
+    return stat * (np.sqrt(nobs) + 0.155 + 0.24 / np.sqrt(nobs))
+crit_fs_v = [1.537, 1.620, 1.747, 1.862, 2.001]
+def modify_fs_w2(stat, nobs):
+    return (stat -0.4 / nobs + 0.6 / nobs**2) * (1.0 + 1.0 / nobs)
+crit_fs_w2 = [0.284, 0.347, 0.461, 0.581, 0.743]
+def modify_fs_u2(stat, nobs):
+    return (stat -0.1 / nobs + 0.1 / nobs**2) * (1.0 + 0.8 / nobs)
+crit_fs_u2 = [0.131, 0.152, 0.187, 0.222, 0.268]
+def modify_fs_a2(stat, nobs):
+    return stat  #unmodified (for all nobs > 5)
+crit_fs_a2 = [1.610, 1.933, 2.492, 3.070, 3.857]
+
+#F(x) is the normal distribution, mu and sigma^2 unspecified
+def modify_normal_d(stat, nobs):
+    return stat * (np.sqrt(nobs) - 0.01 + 0.85 / np.sqrt(nobs))
+crit_normal_d = [0.775, 0.819, 0.895, 0.955, 1.035]
+def modify_normal_v(stat, nobs):
+    return stat * (np.sqrt(nobs) + 0.05 + 0.82 / np.sqrt(nobs))
+crit_normal_v = [1.320, 1.386, 1.489, 1.585, 1.693]
+def modify_normal_w2(stat, nobs):
+    return stat * (1.0 + 0.5 / nobs)
+crit_normal_w2 = [0.091, 0.104, 0.126, 0.148, 0.179]
+def modify_normal_u2(stat, nobs):
+    return stat * (1.0 + 0.5 / nobs)
+crit_normal_u2 = [0.085, 0.096, 0.117, 0.136, 0.164]
+def modify_normal_a2(stat, nobs):
+    return stat * (1.0 + 0.75 / nobs + 2.25 / nobs**2)
+crit_normal_a2 = [0.561, 0.631, 0.752, 0.873, 1.035]
+
+#F(x) is the exponential distribution, 0 unspecified
+def modify_expon_d(stat, nobs):
+    return (stat - 0.2 / nobs) * (np.sqrt(nobs) + 0.26 + 0.5 / np.sqrt(nobs))
+crit_expon_d = [0.926, 0.995, 1.094, 1.184, 1.298]
+def modify_expon_v(stat, nobs):
+    return (stat - 0.2 / nobs) * (np.sqrt(nobs) + 0.24 + 0.35 / np.sqrt(nobs))
+crit_expon_v = [1.445, 1.527, 1.655, 1.774, 1.910]
+def modify_expon_w2(stat, nobs):
+    return stat * (1.0 + 0.16 / nobs)
+crit_expon_w2 = [0.148, 0.175, 0.222, 0.271, 0.338]
+def modify_expon_u2(stat, nobs):
+    return stat * (1.0 + 0.16 / nobs)
+crit_expon_u2 = [0.112, 0.129, 0.159, 0.189, 0.230]
+def modify_expon_a2(stat, nobs):
+    return stat * (1.0 + 0.6 / nobs)
+crit_expon_a2 = [0.916, 1.062, 1.321, 1.591, 1.959]
+
+
+tmp = (0.01, 0.05, 0.1, 0.11, 0.12, 0.155, 0.16, 0.2, 0.24)
+pt01, pt05, pt1, pt11, pt12, pt155, pt16, pt2, pt24 = tmp
+tmp = (0.26, 0.3, 0.35, 0.4, 0.5, 0.6, 0.75, 0.8, 0.82, 0.85)
+pt26, pt3, pt35, pt4, pt5, pt6, pt75, pt8, pt82, pt85 = tmp
+
+#A2
+#pvalue_st(A2, acut3, acoef3)
+#wcut2 = wcut3 = ucut2 = ucut3 = acut2 = acut3
+cut = np.array([0.0275, 0.051, 0.092, 0.035, 0.074, 0.160, 0.0262, 0.048, 0.094,
+         0.029, 0.062, 0.120, 0.200, 0.340, 0.600, 0.260, 0.510, 0.950]).reshape(-1,3)
+wcut2, wcut3, ucut2, ucut3, acut2, acut3 = cut
+cutoff_normal_w2, cutoff_normal_u2, cutoff_normal_a2 = cut[::2]
+cutoff_expon_w2, cutoff_expon_u2, cutoff_expon_a2 = cut[1::2]
+
+acut3 = cut[-1]
+
+coef_normal_w2 = wcoef2 = np.array([-13.953, 775.5, -12542.61, -5.903, 179.546, -1515.29,
+                   0.886, -31.62, 10.897, 1.111, -34.242, 12.832]
+                   ).reshape(4, 3, order='c')
+coef_expon_w2 = wcoef3 = np.array([-11.334, 459.098, -5652.1, -5.779, 132.89, -866.58, 0.586,
+                   -17.87, 7.417, 0.447, -16.592, 4.849]
+                   ).reshape(4, 3, order='c')
+coef_normal_u2 = ucoef2 = np.array([-13.642, 766.31, -12432.74, -6.3328, 214.57, -2022.28,
+                   0.8510, -32.006, -3.45, 1.325, -38.918, 16.45]
+                   ).reshape(4, 3, order='c')
+coef_expon_u2 = ucoef3 = np.array([-11.703, 542.5, -7574.59, -6.3288, 178.1, -1399.49, 0.8071,
+                   -25.166, 8.44, 0.7663, -24.359, 4.539]
+                   ).reshape(4, 3, order='c')
+coef_normal_a2 = acoef2 = np.array([-13.436, 101.14, -223.73, -8.318, 42.796, -59.938, 0.9177,
+                   -4.279, -1.38, 1.2937, -5.709, 0.0186]
+                   ).reshape(4, 3, order='c')
+coef_expon_a2 = acoef3 = np.array([-12.2204, 67.459, -110.3, -6.1327, 20.218, -18.663, 0.9209, -3.353,
+          0.300, 0.731, -3.009, 0.15]).reshape(4, 3, order='c')
+
+
+modify_expon = {}
+crit_expon = {}
+coef_expon = {}
+cutoff_expon = {}
+distr = 'expon'
+for test_ in 'd v w2 u2 a2'.split():
+    modify_expon.setdefault(test_, locals()["modify_" + distr + "_" + test_])
+    crit_expon.setdefault(test_, locals()["crit_" + distr + "_" + test_])
+for test_ in 'w2 u2 a2'.split():
+    cutoff_expon.setdefault(test_, locals()["cutoff_" + distr + "_" + test_])
+    coef_expon.setdefault(test_, locals()["coef_" + distr + "_" + test_])
+
+modify_normal = {}
+crit_normal = {}
+coef_normal = {}
+cutoff_normal = {}
+distr = 'normal'
+for test_ in 'd v w2 u2 a2'.split():
+    modify_normal.setdefault(test_, locals()["modify_" + distr + "_" + test_])
+    crit_normal.setdefault(test_, locals()["crit_" + distr + "_" + test_])
+
+for test_ in 'w2 u2 a2'.split():
+    cutoff_normal.setdefault(test_, locals()["cutoff_" + distr + "_" + test_])
+    coef_normal.setdefault(test_, locals()["coef_" + distr + "_" + test_])
+
+
+
+
+cutoff = acut3
+coef = acoef3
+
+t = 0.01#1.32 #0.724 #1.959
+
+def pvalue_st(t, cutoff, coef):
+    #vectorized
+    i = 3 * np.ones(np.shape(t), int)
+    #use searchsorted
+#    for j in range(3):
+#        if t < cutoff[j]: i = i - 1
+    i = np.searchsorted(cutoff, t)
+#    assert i == i2
+    pval = np.exp(coef[i,0] + t * (coef[i,1] + t * coef[i,2]))
+    if pval.shape == ():
+        if i < 2:
+            pval = 1 - pval
+    else:
+        pval[i<2] = 1 - pval[i<2]
+    return i, pval
+
+def pvalue_expon(t, test='d'):
+    return pvalue_st(t, cutoff_expon[test], coef_expon[test])[1]
+
+def pvalue_normal(t, test='d'):
+    return pvalue_st(t, cutoff_normal[test], coef_normal[test])[1]
+
+print pvalue_st(t, cutoff, coef)
+
+alpha = [0.15, 0.10, 0.05, 0.025, 0.01]
+a2_exp = [0.916, 1.062, 1.321, 1.591, 1.959]
+
+for t, aa in zip(a2_exp, alpha):
+    print pvalue_st(t, cutoff, coef), aa
+
+for t, aa in zip(crit_normal_a2, alpha):
+    print pvalue_st(t, acut2, acoef2), aa
+
+#compare with linear interpolation
+from scipy import interpolate
+nu2 = interpolate.interp1d(crit_normal_u2, alpha)
+#check
+assert_equal(nu2(crit_normal_u2), alpha)
+
+for b in np.linspace(0, 1, 11):
+    z = crit_normal_u2[:-1] + b * np.diff(crit_normal_u2)
+    print (nu2(z) - [pvalue_st(zz, ucut2, ucoef2)[1] for zz in z])
+    assert_almost_equal(nu2(z),
+                        [pvalue_st(zz, ucut2, ucoef2)[1] for zz in z],
+                        decimal=2)
+
+for te in ['w2', 'u2', 'a2']:
+    assert_almost_equal([pvalue_expon(z, te) for z in crit_expon[te]],
+                         alpha, decimal=2)
+    assert_almost_equal([pvalue_normal(z, te) for z in crit_normal[te]],
+                         alpha, decimal=2)
+
+from statsmodels.sandbox.distributions import gof_new as gofn
+
+class GOFUniform(gofn.GOF):
+
+    def __init__(self, rvs):
+        if np.min(rvs) < 0 or np.max(rvs) > 1:
+            raise ValueError('some values are out of bounds')
+
+        vals = np.sort(rvs)
+        cdfvals = vals
+        self.nobs = len(vals)
+        self.vals_sorted = vals
+        self.cdfvals = cdfvals
+
+class GOFNormal(GOFUniform):
+
+    def __init__(self, rvs, ddof=1):
+        rvs = np.asarray(rvs)
+        vals = stats.norm.cdf((rvs - rvs.mean()) / rvs.std(ddof=ddof))
+        super(GOFNormal, self).__init__(vals)
+
+    def get_test(self, testid='a2', pvals='davisstephens89upp'):
+        '''get p-value for a test
+
+        '''
+        #print gof_pvals[pvals][testid]
+        stat = getattr(self, testid.replace('2', 'squ'))
+        stat_modified = modify_normal[testid](stat, self.nobs)
+        if pvals == 'davisstephens89upp':
+            pval = pvalue_normal(stat_modified, testid)
+        else:
+            raise NotImplementedError
+        return stat, pval, stat_modified
+
+class GOFExpon(GOFUniform):
+
+    def __init__(self, rvs):
+        rvs = np.asarray(rvs)
+        vals = 1 - np.exp(-rvs / rvs.mean())
+        super(GOFExpon, self).__init__(vals)
+
+    def get_test(self, testid='a2', pvals='davisstephens89upp'):
+        '''get p-value for a test
+
+'''
+        #print gof_pvals[pvals][testid]
+        stat = getattr(self, testid.replace('2', 'squ')) #different notation
+        stat_modified = modify_expon[testid](stat, self.nobs)
+        if pvals == 'davisstephens89upp':
+            pval = pvalue_expon(stat_modified, testid)
+        else:
+            raise NotImplementedError
+        return stat, pval, stat_modified
+
+ge = GOFExpon(rvs)
+print ge.get_test()  #default is 'a2'
+print ge.get_test('w2')
+print ge.get_test('u2')
+rvsn = np.random.randn(50)
+print GOFExpon(rvsn**2).get_test()
+
+rvsm = (np.random.randn(50, 2) * [1, 2]).sum(1)
+rvsm = (np.random.randn(50, 2) * [1, 2]).ravel()
+print GOFNormal(rvsm).get_test()
+print dia.normal_ad(rvsm)
