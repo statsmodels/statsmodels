@@ -20,9 +20,14 @@ References
 
 import numpy as np
 
-from scipy.stats import distributions
+from scipy import stats
+#from scipy.stats import distributions
 
 from statsmodels.tools.decorators import cache_readonly
+
+from _gof_stephens2 import (pvalue_normal, pvalue_expon, pvalue_interp,
+                            modify_normal, modify_expon)
+from _gof_stephens70 import gof_pvals
 
 
 
@@ -157,7 +162,7 @@ class GOF(object):
 
 
 
-class GOFUniform(gofn.GOF):
+class GOFUniform(GOF):
 
     def __init__(self, rvs):
         if np.min(rvs) < 0 or np.max(rvs) > 1:
@@ -239,6 +244,7 @@ class GOFExpon(GOFUniform):
 def gof_mc(randfn, distr, nobs=100):
     #print '\nIs it correctly sized?'
     from collections import defaultdict
+    all_gofs = ['d', 'd_plus', 'd_minus', 'v', 'wsqu', 'usqu', 'a']
 
     results = defaultdict(list)
     for i in xrange(1000):

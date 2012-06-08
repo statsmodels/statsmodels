@@ -8,6 +8,7 @@ License : BSD-3
 
 """
 
+import numpy as np
 
 
 #TODO: split into modification and pvalue functions separately ?
@@ -81,6 +82,7 @@ gof_pvals['stephens70upp'] = {
     'a' : a_st70_upp }
 
 def pval_kstest_approx(D, N):
+    from scipy.stats import distributions
     pval_two = distributions.kstwobign.sf(D*np.sqrt(N))
     if N > 2666 or pval_two > 0.80 - N*0.3/1000.0 :
         return D, distributions.kstwobign.sf(D*np.sqrt(N)), np.nan

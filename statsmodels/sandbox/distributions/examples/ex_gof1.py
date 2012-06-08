@@ -6,6 +6,11 @@ Created on Fri Jun 08 16:13:47 2012
 Author: Josef Perktold
 """
 
+import numpy as np
+from scipy import stats
+from statsmodels.sandbox.distributions.gof_one_sample import (
+                      GOF, gof_mc, bootstrap, NewNorm)
+
 
 
 if __name__ == '__main__':
@@ -13,7 +18,7 @@ if __name__ == '__main__':
     #rvs = np.random.randn(1000)
     rvs = stats.t.rvs(3, size=200)
     print 'scipy kstest'
-    print kstest(rvs, 'norm')
+    #print kstest(rvs, 'norm')
     goft = GOF(rvs, 'norm')
     print goft.get_test()
 
