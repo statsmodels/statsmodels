@@ -28,8 +28,8 @@ class ElModel(object):
         self.endog = endog
         self.nobs = float(endog.shape[0])
         self.weights = np.ones(self.nobs) / float(self.nobs)
-        self.endog = self.endog.reshape(self.nobs, 1)
-        self.max_iter = 50  # More iters usually mean problems elsewhere
+        if endog.ndim == 1:
+            self.endog = self.endog.reshape(self.nobs, 1)
         # For now, self. weights should always be a vector of 1's and a
         # variable "new weights" should be created everytime weights are
         # changed.
@@ -84,12 +84,13 @@ class OptFuncts(ElModel):
         See Owen pg. 64
 
         """
-        params = x0.reshape(1, 2)
+        params = x0.reshape(1, self.est_vect.shape[1])
         diff = 1
         while diff > 10 ** (-10):
             new_J = np.copy(self.get_j_y(params)[0])
             new_y = np.copy(self.get_j_y(params)[1])
-            inc = np.dot(np.linalg.pinv(new_J), new_y).reshape(1, 2)
+            inc = np.dot(np.linalg.pinv(new_J), \
+                         new_y).reshape(1, self.est_vect.shape[1])
             new_params = np.copy(params + inc)
             diff = np.sum(np.abs(params - new_params))
             params = np.copy(new_params)
@@ -351,7 +352,7 @@ class DescStat(OptFuncts):
         mu_min = min(self.endog)
         llr = optimize.fminbound(self.opt_var, mu_min, mu_max, \
                                  full_output=1)[1]
-        p_val = 1 - chi2.cdf(llr, 1)
+        p_val = 1 - chi2.cdf(llr, 2)
         if print_weights:
             return p_val, llr, self.new_weights
         else:
@@ -403,7 +404,7 @@ class DescStat(OptFuncts):
     def var_p_plot(self, lower, upper, step, sig=.95):
         """
 
-        Plots the p-values of the maximum el estimate for the variace
+        Plots the p-values of the maximum el estimate for the variance
 
         Parameters
         ----------
@@ -430,3 +431,39 @@ class DescStat(OptFuncts):
         plt.plot(np.arange(lower, upper, step), (1 - sig) * \
                  np.ones(len(p_vals)))
         return 'Type plt.show to see plot'
+
+    def mv_hy_test_mean(self, mu_array, print_weights=False):
+
+        """
+        Returns the -2 * log likelihood and the p_value
+        for a multivariate hypothesis test of the mean
+
+        Parameters
+        ----------
+        mu_array : 1d array of hypothesized values for the mean
+
+        Optional
+        --------
+
+        print_weights: If True, returns the weights that maximize the
+            likelihood of mu_array default | False.
+
+        """
+
+        if len(mu_array) != self.endog.shape[1]:
+            raise Exception('mu_array must have the same number of \
+                           elements as the columns of the data.')
+        mu_array = mu_array.reshape(1, self.endog[1])
+        means = np.ones((self.endog.shape[0], self.endog.shape[1]))
+        means = mu_array * means
+        self.est_vect = self.endog - means
+        start_vals = 1 / self.nobs * np.ones(self.endog.shape[1])
+        eta_star = self.modif_newton(start_vals)
+        denom = 1 + np.dot(eta_star, self.est_vect.T)
+        self.new_weights = 1 / self.nobs * 1 / denom
+        llr = np.sum(np.log(self.nobs * self.new_weights))
+        p_val = 1 - chi2.cdf(-2 * llr, len(mu_array))
+        if print_weights:
+            return p_val, -2 * llr, self.new_weights
+        else:
+            return p_val, -2 * llr
