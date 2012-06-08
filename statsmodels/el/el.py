@@ -15,6 +15,7 @@ import numpy as np
 from scipy import optimize
 from scipy.stats import chi2
 from matplotlib import pyplot as plt
+import itertools
 
 
 class ElModel(object):
@@ -430,7 +431,7 @@ class DescStat(OptFuncts):
         plt.plot(np.arange(lower, upper, step), p_vals)
         plt.plot(np.arange(lower, upper, step), (1 - sig) * \
                  np.ones(len(p_vals)))
-        return 'Type plt.show to see plot'
+        return  'Type plt.show to see the figure'
 
     def mv_hy_test_mean(self, mu_array, print_weights=False):
 
@@ -467,3 +468,68 @@ class DescStat(OptFuncts):
             return p_val, -2 * llr, self.new_weights
         else:
             return p_val, -2 * llr
+
+    def mv_mean_contour(self, mu1_l, mu1_u, mu2_l, mu2_u, step1, step2,
+                        levs=[.2, .1, .05, .01, .001], plot_dta=False):
+        """
+
+        Creates confidence region plot for the mean of bivariate data
+
+        Parameters
+        ----------
+
+        m1_l: Minimum value of the mean for variable 1
+
+        m1_u: Maximum value of the mean for variable 1
+
+        mu2_l: Minimum value of the mean for variable 2
+
+        mu2_u: Maximum value of the mean for variable 2
+
+        step1: Increment of evaluations for variable 1
+
+        step2: Increment of evaluations for variable 2
+
+
+        Optional
+        --------
+        levs: Levels to be drawn on the contour plot.
+        default | [.2, .1 .05, .01, .001]
+
+        plot_dta: If True, makes a scatter plot of the data on
+        top of the contour plot. defauls | False.
+
+        Notes
+        -----
+        The smaller the step size, the more accurate the intervals
+        will be.
+
+        Example
+        -------
+
+        two_rvs = np.random.standard_normal((20,2))
+        el_analysis = el.DescStat(two_rvs)
+        contourp = el_analysis.mv_mean_contour(-2, 2, -2, 2, .1, .1)
+        contourp
+        >>>Type plt.show() to see plot
+        plt.show()
+
+
+        """
+
+        if self.endog.shape[1] != 2:
+            raise Exception('Data must contain exactly two variables')
+        x = (np.arange(mu1_l, mu1_u, step1))
+        y = (np.arange(mu2_l, mu2_u, step2))
+        pairs = itertools.product(x, y)
+        z = []
+        for i in pairs:
+            z.append(self.mv_hy_test_mean(np.asarray(i))[0])
+        X, Y = np.meshgrid(x, y)
+        z = np.asarray(z)
+        z = z.reshape(X.shape[1], Y.shape[0])
+        fig = plt.contour(x, y, z.T, levels=levs)
+        plt.clabel(fig)
+        if plot_dta:
+            plt.plot(self.endog[:, 0], self.endog[:, 1], 'bo')
+        return 'Type plt.show to see the figure'
