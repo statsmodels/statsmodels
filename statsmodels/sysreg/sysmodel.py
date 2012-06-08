@@ -4,7 +4,7 @@ import statsmodels.tools.tools as tools
 from statsmodels.base.model import LikelihoodModel, LikelihoodModelResults
 from statsmodels.regression.linear_model import OLS
 
-class SysModel(object):
+class SysModel(LikelihoodModel):
     '''
     A multiple regressions model. The class SysModel itself is not to be used.
 
@@ -136,8 +136,7 @@ class SysGLS(SysModel):
 
     def fit(self):
         beta = np.dot(self.pinv_wexog, self.wendog)
-        normalized_cov_params = np.dot(self.pinv_wexog, \
-                np.transpose(self.pinv_wexog))
+        normalized_cov_params = np.dot(self.pinv_wexog, self.pinv_wexog.T)
         return SysResults(self, beta, normalized_cov_params)
 
 class SysWLS(SysGLS):
