@@ -293,7 +293,6 @@ def pvalue_interp(t, test='a2', dist='normal'):
     if np.shape(t) == ():
         scalar = True
     t = np.atleast_1d(t)
-    print dist
     if dist == 'normal':
         crit = crit_normal[test]
     elif dist == 'expon':
@@ -426,4 +425,35 @@ from statsmodels.stats import diagnostic as dia
 print dia.normal_ad(rvsm)
 print gn.get_test('d')
 print dia.lillifors(rvsm)
+
+#created for copying to R with
+#np.random.seed(9768)
+#xx = np.round(1000 * stats.expon.rvs(size=20), 3).astype(int)
+xx = np.array([1580,  179, 1471,  328,  492, 1008, 1412, 4820, 2840,  559,
+               223, 871,  791,  837, 1722, 1247,  985, 4378,  620,  530])
+x = xx / 1000.
+
+ge = GOFExpon(x)
+
+b_list = [0, 0.3, 0.35, 0.5, 2]  #chosen to get a good spread of pvalues
+
+#the following doesn't work well because for some case the tests differ too
+#much
+for b in b_list:
+    ge2 = GOFExpon(x + b * x**2)
+    ad = ge2.get_test('a2')
+    for ti in ['d', 'v', 'w2', 'u2']:
+        oth = ge2.get_test(ti)
+        #check pvalues
+        if oth[1] == 0.15:  #upper boundary for pval of d and v
+            if not ti == 'v':  #skip for Kuiper
+                assert_array_less(0.11, ad[1])
+        elif oth[1] == 0.01:  #upper boundary for pval of d and v
+            #if not ti == 'v':  #skip for Kuiper
+            assert_array_less(ad[1], 0.01)
+        else:
+            #assert_almost_equal(ad[1], oth[1], 1)
+            #assert_array_less(np.abs(ad[1] / oth[1] - 1), 0.6) #25)
+            #assert_array_less(np.abs(oth[1] - ad[1]) / ad[1]**2, 1)
+            assert_array_less(np.abs(ad[1] - oth[1]), 0.01 + 0.6 * oth[1]) #25)
 
