@@ -12,8 +12,10 @@ from statsmodels.sysreg.sysmodel import *
 
 grun_data = sm.datasets.grunfeld.load()
 
+# Lexical order as R
 firms = ['General Motors', 'Chrysler', 'General Electric', 'Westinghouse',
         'US Steel']
+firms.sort()
 
 #for Python 3 compatibility
 firms = lmap(asbytes, firms)
