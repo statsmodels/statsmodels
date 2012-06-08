@@ -85,6 +85,10 @@ class SysGLS(SysModel):
         scalar, `sigma` as the value of each diagonal element.  If `sigma`
         is an G-length vector, then `sigma` is assumed to be a diagonal
         matrix with the given `sigma` on the diagonal (<=> WLS).
+    dfk : None, 'dfk1', or 'dfk2'
+        Default is None.  Correction for the degrees of freedom
+        should be specified for small samples.  See the notes for more
+        information.
 
     Attributes
     ----------
@@ -185,7 +189,10 @@ class SysOLS(SysWLS):
         super(SysOLS, self).__init__(sys)
 
 class SysSUR(SysGLS):
-    def __init__(self, sys):
+    def __init__(self, sys, dfk=None):
+        super(SysSUR, self).__init__(sys, None)
+        # TODO : check dfk in {None, dfk1, dfk2}
+        self.dfk = dfk
         # Compute sigma
         ## OLS equation by equation
         resids = []
@@ -193,8 +200,9 @@ class SysSUR(SysGLS):
             res = OLS(eq['endog'], eq['exog']).fit()
             resids.append(res.resid)
         resids = np.column_stack(resids)
-        sigma = self._compute_sigma(resids)
-        super(SysSUR, self).__init__(sys, sigma)
+        
+        self.sigma = self._compute_sigma(resids)
+        self.initialize()
 
     def _compute_sigma(self, resids):
         '''
@@ -204,7 +212,20 @@ class SysSUR(SysGLS):
             OLS residuals for each equation stacked in column.
         '''
         nobs = resids.shape[0] # nobs should already be accessible by self.nobs
-        return (np.dot(resids.T, resids) / nobs)
+        if self.dfk is None:
+            div = nobs
+        elif self.dfk.lower() == 'dfk1':
+            div = np.zeros((self.neqs, self.neqs))
+            for i in range(self.neqs):
+                for j in range(self.neqs):
+                    div[i,j] = (self.df_model[i]+1)*(self.df_model[j]+1)**(1/2)
+        else:
+            div = np.zeros((self.neqs, self.neqs))
+            for i in range(self.neqs):
+                for j in range(self.neqs):
+                    div[i,j] = nobs - np.max((self.df_model[i]+1, 
+                                             self.df_model[j]+1))
+        return (np.dot(resids.T, resids) / div)
 
 class SysSURI(SysOLS):
     '''
@@ -252,9 +273,9 @@ if __name__ == '__main__':
     eq2['exog'] = x2
     
     sys = [eq1, eq2]
+    old_sys = [y1,x1,y2,x2]
 
     from statsmodels.sysreg.sysreg import SUR
-    s1 = SUR([y1,x1,y2,x2])
-    s2 = SysSUR(sys)
-    rs1, rs2 = s1.fit(), s2.fit()
+    s,s1,s2 = SysSUR(sys), SysSUR(sys, dfk='dfk1'), SysSUR(sys, dfk='dfk2')
+    #p,p1,p2 = SUR(old_sys), SUR(old_sys, dfk='dfk1'), SUR(old_sys, dfk='dfk2') # Bug
 
