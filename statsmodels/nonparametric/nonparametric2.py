@@ -110,7 +110,7 @@ def GPKE(bw, tdat, edat, var_type, ckertype = 'gaussian', okertype = 'wangryzin'
 class Generic_KDE ():
     # Generic KDE class with methods shared by both conditional and unconditional kernel density estimators
     
-    def compute_bw(self, bw, bwmethod):
+    def compute_bw(self, bw):
         """
         Returns the bandwidth of the data
 
@@ -127,17 +127,15 @@ class Generic_KDE ():
         The default values for bw and bwmethod are None. The user must specify either a value for bw
         or bwmethod but not both. 
         """
-#TODO: Combine into only one parameter bw: array-like, str
+
         
         self.bw_func = dict(normal_reference = self._normal_reference, cv_ml = self._cv_ml)
-        assert (bw != None or bwmethod != None) # either bw or bwmethod should be input by the user
         
-        if bw != None:
+        
+        if type(bw) != str:  # The user provided an actual bandwidth estimate
             return np.asarray(bw)
-        if bwmethod != None:
-            self.bwmethod = bwmethod
-            bwfunc = self.bw_func[bwmethod]
-            
+        else: # The user specified a bandwidth selection method e.g. 'normal-reference'
+            bwfunc = self.bw_func[bw]
             return bwfunc()
     
     def _normal_reference(self):
@@ -208,14 +206,14 @@ class UKDE(Generic_KDE):
 
     print "The bandwdith is: ", dens_u.bw
     """
-    def __init__(self, tdat, var_type, bw = None, bwmethod = None):
+    def __init__(self, tdat, var_type, bw):
         
         self.tdat = np.concatenate(tdat, axis=1)
         self.all_vars = self.tdat
         self.N,self.K = np.shape(self.tdat)
         self.var_type = var_type
         
-        self.bw = self.compute_bw(bw, bwmethod)
+        self.bw = self.compute_bw(bw)
              
 
     def loo_likelihood(self,bw):
@@ -300,7 +298,7 @@ class CKDE(Generic_KDE):
     print "The bandwdith is: ", dens_c.bw
     """
 
-    def __init__ (self, tydat, txdat, dep_type, indep_type, bw = None, bwmethod = None):
+    def __init__ (self, tydat, txdat, dep_type, indep_type, bw):
             
         self.tydat = np.concatenate(tydat, axis = 1)
         self.txdat = np.concatenate(txdat, axis = 1)
@@ -308,14 +306,12 @@ class CKDE(Generic_KDE):
         self.K_indep = np.shape(self.txdat)[1]
         self.all_vars = np.concatenate((self.tydat, self.txdat), axis = 1)
         self.dep_type = dep_type; self.indep_type = indep_type
+        self.bw = self.compute_bw(bw)
         
-        self.bw=self.compute_bw(bw, bwmethod)
     def loo_likelihood(self, bw):
         """
         Returns the leave-one-out likelihood for the data
         """
-       
-        
         yLOO = LeaveOneOut(self.all_vars)
         xLOO = LeaveOneOut(self.txdat).__iter__()
         i = 0

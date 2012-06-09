@@ -20,15 +20,15 @@ c2=np.random.normal(2,1,size=(N,1))
 c3=np.random.normal(3,2,size=(N,1))
 
 
-dens_c=nparam.CKDE(tydat=[c1,c3],txdat=[c2], dep_type='cc',indep_type='c',bwmethod='normal_reference')
-dens_u=nparam.UKDE(tdat=[c1,c2],var_type='cc',bwmethod='normal_reference')
+dens_c=nparam.CKDE(tydat=[c1,c3],txdat=[c2], dep_type='cc',indep_type='c',bw='normal_reference')
+dens_u=nparam.UKDE(tdat=[c1,c2],var_type='cc',bw='cv_ml')
 #dens2=nparam.generic_kde(tdat=[wage,lwage],var_type='cc',bwmethod='normal_reference')
 
 D={"S1": robjects.FloatVector(c1),"S2":robjects.FloatVector(c2),"S3":robjects.FloatVector(c3)}
 df=robjects.DataFrame(D)
 formula=r('~S1+S2')
 #r_bw=NP.npudensbw(formula, data=df, bwmethod='cv.ml')  #obtain R's estimate of the
-r_bw=NP.npudensbw(formula, data=df, bwmethod='normal-reference')
+r_bw=NP.npudensbw(formula, data=df, bwmethod='cv.ml')
 
 
 
