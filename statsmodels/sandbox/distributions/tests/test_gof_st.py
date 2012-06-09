@@ -8,13 +8,50 @@ License : BSD-3
 
 """
 
+import numpy as np
+from numpy.testing import assert_equal, assert_almost_equal, assert_array_less
+
+import statsmodels.sandbox.distributions._gof_stephens2 as gs2
 from statsmodels.sandbox.distributions._gof_stephens2 import (
                             pvalue_st,
                             pvalue_normal, pvalue_expon, pvalue_interp,
                             modify_normal, modify_expon,
-                            crit_normal, crit_expon)
+                            crit_normal, crit_expon, crit_fs)
 
-def test_gof_stephens2():
+from statsmodels.sandbox.distributions.gof_one_sample import GOFExpon
+
+dist_all = ['fs', 'normal', 'expon']
+ti_all = ['d', 'v', 'w2', 'u2', 'a2']
+dist_pv = dist_all[1:]
+ti_pv = ti_all[2:]
+
+def check_compare(ti, dist):
+    #compare interpolated and approximate pvalues on grid
+    for b in np.linspace(0, 1, 11):
+        crit = getattr(gs2, 'crit_'+dist)[ti]
+        z = crit[:-1] + b * np.diff(crit)
+        pval_i = pvalue_interp(crit, ti, dist)
+        pval_a = getattr(gs2, 'pvalue_'+dist)(crit, ti)
+        assert_almost_equal(pval_i, pval_a, decimal=2)
+
+
+def test_gof_stephens2_0():
+    #interp at defined points
+    alpha = [0.15, 0.10, 0.05, 0.025, 0.01]
+    for dist in dist_all:
+        for ti in ti_all:
+            pval = pvalue_interp(getattr(gs2, 'crit_'+dist)[ti], ti, dist)
+            assert_almost_equal(pval, alpha, decimal=13) #decimal=17
+
+    #compare interpolated with approximate pvalues, includes table points
+    for dist in dist_pv:
+        for ti in ti_pv:
+            check_interp(ti, dist)
+
+
+
+
+def t_est_gof_stephens2():  #obsolete
     #not corrected yet
     print pvalue_st(t, cutoff, coef)
 
@@ -33,6 +70,12 @@ def test_gof_stephens2():
     #check
     assert_equal(nu2(crit_normal_u2), alpha)
 
+    #interp at defined points
+    for dist in dist_all:
+        for ti in ti_all:
+            pval = pvalue_interp(getattr(gs2, 'crit_'+dist)[ti], ti, dist)
+            assert_equal(pval, alpha)
+
     for b in np.linspace(0, 1, 11):
         z = crit_normal_u2[:-1] + b * np.diff(crit_normal_u2)
         print (nu2(z) - [pvalue_st(zz, ucut2, ucoef2)[1] for zz in z])
@@ -46,6 +89,8 @@ def test_gof_stephens2():
         assert_almost_equal([pvalue_normal(z, te) for z in crit_normal[te]],
                              alpha, decimal=2)
 
+
+def test_gof_stephens2_expon():
 
     #created for copying to R with
     #np.random.seed(9768)
