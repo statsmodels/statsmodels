@@ -171,6 +171,8 @@ def pvalue_interp(t, test='a2', dist='normal'):
     #vectorized
     if np.shape(t) == ():
         scalar = True
+    else:
+        scalar = False
     t = np.atleast_1d(t)
     if dist == 'normal':
         crit = crit_normal[test]
