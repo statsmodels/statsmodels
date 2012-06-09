@@ -5,6 +5,7 @@ import statsmodels.sandbox.tsa.fftarma as fa
 from statsmodels.tsa.descriptivestats import TsaDescriptive
 from statsmodels.tsa.arma_mle import Arma
 from statsmodels.tsa.arima_model import ARMA, ARIMA
+from statsmodels.tsa.base.datetools import dates_from_range
 from results import results_arma, results_arima
 import os
 from statsmodels.tsa.base import datetools
@@ -27,6 +28,7 @@ current_path = os.path.dirname(os.path.abspath(__file__))
 y_arma = np.genfromtxt(open(current_path + '/results/y_arma_data.csv', "rb"),
         delimiter=",", skip_header=1, dtype=float)
 
+cpi_dates = dates_from_range('1959Q1', '2009Q3')
 
 def test_compare_arma():
     #this is a preliminary test to compare arma_kf, arma_cond_ls and arma_cond_mle
@@ -126,7 +128,8 @@ class CheckArmaResults(object):
 
     decimal_t = DECIMAL_2 # only 2 decimal places in gretl output
     def test_tvalues(self):
-        assert_almost_equal(self.res1.tvalues, self.res2.tvalues, self.decimal_t)
+        assert_almost_equal(self.res1.tvalues, self.res2.tvalues,
+                            self.decimal_t)
 
     decimal_sigma2 = DECIMAL_4
     def test_sigma2(self):
@@ -809,7 +812,7 @@ def _check_end(model, given, end_expect, out_of_sample_expect):
 def test_arima_predict_indices():
     from statsmodels.datasets.macrodata import load
     cpi = load().data['cpi']
-    model = ARIMA(cpi)
+    model = ARIMA(cpi, dates=cpi_dates, freq='Q')
     model.method = 'mle'
     model.k_diff = 1
     model.k_ar = 4
@@ -820,18 +823,24 @@ def test_arima_predict_indices():
     # raises - pre-sample + dynamic
     assert_raises(ValueError, model._get_predict_start, *(0, True))
     assert_raises(ValueError, model._get_predict_start, *(4, True))
+    assert_raises(ValueError, model._get_predict_start, *('1959Q1', True))
+    assert_raises(ValueError, model._get_predict_start, *('1960Q1', True))
 
     # raises - index differenced away
     assert_raises(ValueError, model._get_predict_start, *(0, False))
+    assert_raises(ValueError, model._get_predict_start, *('1959Q1', False))
 
     # raises - start out of sample
     assert_raises(ValueError, model._get_predict_start, *(204, True))
     assert_raises(ValueError, model._get_predict_start, *(204, False))
+    assert_raises(ValueError, model._get_predict_start, *('2010Q1', True))
+    assert_raises(ValueError, model._get_predict_start, *('2010Q1', False))
 
     # works - in-sample
     # None
                   # given, expected, dynamic
-    start_test_cases = [(None, 4, True),
+    start_test_cases = [
+                  (None, 4, True),
                   # all start get moved back by k_diff
                   (5, 4, True),
                   (6, 5, True),
@@ -840,7 +849,17 @@ def test_arima_predict_indices():
                   (203, 202, True),
                   (1, 0, False),
                   (4, 3, False),
-                  (5, 4, False)]
+                  (5, 4, False),
+                  # all start get moved back by k_diff
+                  ('1960Q2', 4, True),
+                  ('1960Q3', 5, True),
+                  # what about end of sample start - last value is first
+                  # forecast
+                  ('2009Q4', 202, True),
+                  ('1959Q2', 0, False),
+                  ('1960Q1', 3, False),
+                  ('1960Q2', 4, False),
+                  ]
 
     for case in start_test_cases:
         _check_start(*((model,) + case))
@@ -857,7 +876,15 @@ def test_arima_predict_indices():
                       (203, 201, 1),
                       (204, 201, 2),
                       (51, 50, 0),
-                      (164+63, 201, 25)]
+                      (164+63, 201, 25),
+
+                      ('2009Q2', 200, 0),
+                      ('2009Q3', 201, 0),
+                      ('2009Q4', 201, 1),
+                      ('2010Q1', 201, 2),
+                      ('1971Q4', 50, 0),
+                      ('2015Q4', 201, 25),
+                      ]
 
     for case in end_test_cases:
         _check_end(*((model,)+case))
@@ -868,9 +895,12 @@ def test_arima_predict_indices():
     # raises - pre-sample + dynamic
     assert_raises(ValueError, model._get_predict_start, *(0, True))
     assert_raises(ValueError, model._get_predict_start, *(5, True))
+    assert_raises(ValueError, model._get_predict_start, *('1959Q1', True))
+    assert_raises(ValueError, model._get_predict_start, *('1960Q2', True))
 
     # raises - index differenced away
     assert_raises(ValueError, model._get_predict_start, *(1, False))
+    assert_raises(ValueError, model._get_predict_start, *('1959Q2', False))
 
     start_test_cases = [(None, 4, True),
                   # all start get moved back by k_diff
@@ -880,7 +910,16 @@ def test_arima_predict_indices():
                   (203, 201, True),
                   (2, 0, False),
                   (4, 2, False),
-                  (5, 3, False)]
+                  (5, 3, False),
+                  ('1960Q3', 4, True),
+                  # what about end of sample start - last value is first
+                  # forecast
+                  ('2009Q4', 201, True),
+                  ('1959Q3', 0, False),
+                  ('1960Q1', 2, False),
+                  ('1960Q2', 3, False),
+
+                  ]
 
     for case in start_test_cases:
         _check_start(*((model,)+case))
