@@ -26,13 +26,13 @@ dens_u=nparam.UKDE(tdat=[c1,c2],var_type='cc',bwmethod='normal_reference')
 
 D={"S1": robjects.FloatVector(c1),"S2":robjects.FloatVector(c2),"S3":robjects.FloatVector(c3)}
 df=robjects.DataFrame(D)
-formula=r('S1+S3~S2')
+formula=r('~S1+S2')
 #r_bw=NP.npudensbw(formula, data=df, bwmethod='cv.ml')  #obtain R's estimate of the
-r_bw=NP.npcdensbw(formula, data=df, bwmethod='normal-reference')
+r_bw=NP.npudensbw(formula, data=df, bwmethod='normal-reference')
 
 
 
 print "------------------------"*4
-print 'the estimate by R is: ', r_bw[1],r_bw[0], '||||||', 'the estimate by SM is: ', dens_c.bw
+print 'the estimate by R is: ', r_bw[1],r_bw[0], '||||||', 'the estimate by SM is: ', dens_u.bw
 
 #print dens.pdf()

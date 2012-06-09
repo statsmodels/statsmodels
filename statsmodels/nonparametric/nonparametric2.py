@@ -46,14 +46,14 @@ class LeaveOneOut(object):
 
     def __iter__(self):
         X = self.X
-        N,K = np.shape(X)
+        N, K = np.shape(X)
+
         for i in xrange(N):
-            index = np.ones([N, K], dtype=np.bool)
-            index[i, :] = False
-            yield X[index].reshape([N - 1,K])
+            index = np.ones(N, dtype = np.bool)
+            index[i] = False
+            yield X[index, :]
 
-
-def GPKE(bw,tdat,edat,var_type,ckertype='gaussian',okertype='wangryzin',ukertype='aitchisonaitken'):
+def GPKE(bw, tdat, edat, var_type, ckertype = 'gaussian', okertype = 'wangryzin', ukertype = 'aitchisonaitken'):
     """
     Returns the non-normalized Generalized Product Kernel Estimator
     
@@ -76,16 +76,16 @@ def GPKE(bw,tdat,edat,var_type,ckertype='gaussian',okertype='wangryzin',ukertype
         
     """
     var_type = np.asarray(list(var_type))
-    iscontinuous = np.where(var_type=='c')[0]
+    iscontinuous = np.where(var_type == 'c')[0]
     isordered = np.where(var_type == 'o')[0]
     isunordered = np.where(var_type == 'u')[0]
     
     if tdat.ndim > 1:
-        N,K = np.shape(tdat)
+        N, K = np.shape(tdat)
     else:
         K = 1
         N = np.shape(tdat)[0]
-        tdat = tdat.reshape([N,K])
+        tdat = tdat.reshape([N, K])
     
     if edat.ndim > 1:
         N_edat = np.shape(edat)[0]
@@ -104,13 +104,13 @@ def GPKE(bw,tdat,edat,var_type,ckertype='gaussian',okertype='wangryzin',ukertype
         kernel_func[ukertype](bw[isunordered], tdat[:, isunordered], edat[i, isunordered])
         ), axis=1)
         
-        dens[i] = np.sum(np.prod(Kval,axis=1))*1./(np.prod(bw[iscontinuous]))
+        dens[i] = np.sum(np.prod(Kval, axis = 1))*1./(np.prod(bw[iscontinuous]))
     return dens
 
 class Generic_KDE ():
     # Generic KDE class with methods shared by both conditional and unconditional kernel density estimators
     
-    def get_bw(self,bw,bwmethod):
+    def compute_bw(self, bw, bwmethod):
         """
         Returns the bandwidth of the data
 
@@ -124,41 +124,41 @@ class Generic_KDE ():
             normal_reference: normal reference rule of thumb
         Notes
         ----------
-        The default values for bw and bwmethod are False. The user must specify either a value for bw
+        The default values for bw and bwmethod are None. The user must specify either a value for bw
         or bwmethod but not both. 
         """
 #TODO: Combine into only one parameter bw: array-like, str
         
-        self.bw_func = dict(normal_reference = self.normal_reference, cv_ml = self.cv_ml)
-        assert (bw != False or bwmethod != False) # either bw or bwmethod should be input by the user
+        self.bw_func = dict(normal_reference = self._normal_reference, cv_ml = self._cv_ml)
+        assert (bw != None or bwmethod != None) # either bw or bwmethod should be input by the user
         
-        if bw != False:
+        if bw != None:
             return np.asarray(bw)
-        if bwmethod != False:
+        if bwmethod != None:
             self.bwmethod = bwmethod
             bwfunc = self.bw_func[bwmethod]
             
             return bwfunc()
     
-    def normal_reference(self):
+    def _normal_reference(self):
         """
-        Returns the normal reference rule of thumb bandwidth parameter
+        Returns Scott's normal reference rule of thumb bandwidth parameter
         """
         c = 1.06        
         X = np.std(self.all_vars, axis=0)       
         return c*X*self.N**(-1./(4+np.size(self.all_vars, axis=1)))
     
-    def cv_ml (self):
+    def _cv_ml (self):
         """
         Returns the cross validation maximum likelihood bandwidth parameter
         """
         
-        h0 = self.normal_reference() # the initial value for the optimization is the normal_reference
+        h0 = self._normal_reference() # the initial value for the optimization is the normal_reference
         bw = opt.fmin(self.loo_likelihood, x0 = h0, maxiter = 1e3, maxfun = 1e3,disp = 0)
         return bw
 
 #TODO: Add the least squares cross validation bandwidth method
-    def cv_ls (self):
+    def _cv_ls (self):
         pass
     
     def loo_likelihood(self):
@@ -208,17 +208,14 @@ class UKDE(Generic_KDE):
 
     print "The bandwdith is: ", dens_u.bw
     """
-    def __init__(self, tdat, var_type, bw = False, bwmethod = False):
-        for var in tdat:
-            var = np.asarray(var)
-            var = var.reshape([len(var), 1])
+    def __init__(self, tdat, var_type, bw = None, bwmethod = None):
         
         self.tdat = np.concatenate(tdat, axis=1)
         self.all_vars = self.tdat
         self.N,self.K = np.shape(self.tdat)
         self.var_type = var_type
         
-        self.bw = self.get_bw(bw, bwmethod)
+        self.bw = self.compute_bw(bw, bwmethod)
              
 
     def loo_likelihood(self,bw):
@@ -233,12 +230,12 @@ class UKDE(Generic_KDE):
         i = 0
         L = 0
         for X_j in LOO:
-            f_i = GPKE(bw, tdat = -X_j, edat = -self.tdat[i, :], var_type=self.var_type)/(self.N-1)           
+            f_i = GPKE(bw, tdat = -X_j, edat = -self.tdat[i, :], var_type = self.var_type)/(self.N-1)           
             i += 1
             L += np.log(f_i)       
         return -L
     
-    def pdf(self,edat=False):
+    def pdf(self, edat = None):
         """
         Returns the probability density function
 
@@ -248,13 +245,17 @@ class UKDE(Generic_KDE):
             Evaluation data.
             If unspecified, the training data is used
         """
-        if edat==False: edat = self.tdat
-        return GPKE(self.bw,tdat=self.tdat,edat=edat,var_type=self.var_type)/self.N
+        if edat == None: edat = self.tdat
+        return GPKE(self.bw, tdat = self.tdat, edat = edat, var_type = self.var_type)/self.N
 
 class CKDE(Generic_KDE):
     """
     Conditional Kernel Density Estimator
+    Calculates P(X_1,X_2,...X_n | Y_1,Y_2...Y_m) = P(X_1, X_2,...X_n, Y_1, Y_2,..., Y_m)/P(Y_1, Y_2,..., Y_m)
+    The conditional density is by definition the ratio of the two unconditional densities
+    http://en.wikipedia.org/wiki/Conditional_probability_distribution
 
+    
     Parameters
     ----------
     tydat: list
@@ -299,23 +300,17 @@ class CKDE(Generic_KDE):
     print "The bandwdith is: ", dens_c.bw
     """
 
-    def __init__ (self, tydat, txdat, dep_type, indep_type, bw=False, bwmethod=False):
-        for var in tydat:
-            var = np.asarray(var)
-            var = var.reshape([len(var), 1])
-        for var in txdat:
-            var = np.asarray(var)
-            var = var.reshape([len(var), 1])
+    def __init__ (self, tydat, txdat, dep_type, indep_type, bw = None, bwmethod = None):
             
-        self.tydat = np.concatenate(tydat,axis=1)
-        self.txdat = np.concatenate(txdat,axis=1)
+        self.tydat = np.concatenate(tydat, axis = 1)
+        self.txdat = np.concatenate(txdat, axis = 1)
         self.N,self.K_dep = np.shape(self.tydat)
         self.K_indep = np.shape(self.txdat)[1]
-        self.all_vars = np.concatenate((self.tydat,self.txdat),axis=1)
+        self.all_vars = np.concatenate((self.tydat, self.txdat), axis = 1)
         self.dep_type = dep_type; self.indep_type = indep_type
         
-        self.bw=self.get_bw(bw,bwmethod)
-    def loo_likelihood(self,bw):
+        self.bw=self.compute_bw(bw, bwmethod)
+    def loo_likelihood(self, bw):
         """
         Returns the leave-one-out likelihood for the data
         """
@@ -328,13 +323,13 @@ class CKDE(Generic_KDE):
         for Y_j in yLOO:
             X_j = xLOO.next()
             f_yx = GPKE(bw, tdat = -Y_j, edat=-self.all_vars[i,:], var_type = (self.dep_type + self.indep_type))
-            f_x = GPKE(bw[self.K_dep::], tdat = -X_j, edat=-self.txdat[i,:], var_type = self.indep_type)
+            f_x = GPKE(bw[self.K_dep::], tdat = -X_j, edat=-self.txdat[i, :], var_type = self.indep_type)
             f_i = f_yx/f_x
             i += 1
             L += np.log(f_i)       
         return -L
     
-    def pdf(self,eydat=False,exdat=False):
+    def pdf(self,eydat = None, exdat = None):
         """
         Returns the probability density function
 
@@ -347,10 +342,10 @@ class CKDE(Generic_KDE):
             Evaluation data for the independent variables
         """
 
-        if eydat==False: eydat = self.all_vars
-        if exdat==False: exdat = self.txdat
+        if eydat == None: eydat = self.all_vars
+        if exdat == None: exdat = self.txdat
         
-        f_yx = GPKE(self.bw,tdat=np.concatenate((self.tydat, self.txdat), axis=1), edat = eydat, var_type=(self.dep_type + self.indep_type))
+        f_yx = GPKE(self.bw,tdat=np.concatenate((self.tydat, self.txdat), axis=1), edat = eydat, var_type = (self.dep_type + self.indep_type))
         f_x = GPKE(self.bw[self.K_dep::], tdat = self.txdat, edat = exdat, var_type = self.indep_type)
         return (f_yx/f_x)
 
