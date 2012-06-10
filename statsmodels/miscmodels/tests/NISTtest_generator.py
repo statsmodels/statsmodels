@@ -12,20 +12,20 @@ in this module
 '''
 
 
-__PROLOGUE__ = '''
+__PROLOGUE__1 = '''
 #Output from test_generator.py using NIST data and results
 #It is advised that no changes are done in this file.
 #Any desired modification should be generalised and added
 #in test_generator.py
- 
 import numpy as np
 import statsmodels.api as sm
 from statsmodels.miscmodels.nonlinls import NonlinearLS
+
+'''
+__PROLOGUE__2 = '''
+import numpy as np
+import statsmodels.api as sm
 from numpy.testing import assert_almost_equal, assert_
-
-class TestNonlinearLS(object):
-    pass
-
 '''
 
 def create_Modelclass(cfgfile):
@@ -39,15 +39,22 @@ def create_Modelclass(cfgfile):
             model_func = line[1].strip()
             model_jacob = line[2].strip()
             NIST_results = read_NISTdata(model_name)
-            s = __PROLOGUE__
-            s += Create_Nonlinls(model_name, 
+            s = __PROLOGUE__1
+            s += Create_Nonlinls_class(model_name, 
                  model_func, model_jacob, NIST_results)
-            s += Create_Nonlinls_test(model_name, NIST_results)
+            s += Create_test_class(model_name,NIST_results)
+            filename = model_name+'_testclass.py'            
+            with open(filename,'w') as fname:
+                fname.write(s)            
+            s = __PROLOGUE__2
+            s += 'from '+model_name+'_testclass import TestNonlinearLS\n'
+            s += Create_Nonlinls_test(model_name)
             filename = 'test_'+model_name+'.py'
             with open(filename,'w') as fname:
                 fname.write(s)
 
-def Create_Nonlinls(model_name, model_func, model_jacob, NIST_results):
+def Create_Nonlinls_class(model_name, model_func, model_jacob,
+                          NIST_results):
     s = 'class func'+model_name+'(NonlinearLS):\n'
     s += '\n    def expr(self, params, exog=None):\n'
     s += '        if exog is None:\n'
@@ -63,7 +70,21 @@ def Create_Nonlinls(model_name, model_func, model_jacob, NIST_results):
             s += ', '+'b'+str(i+1)
     s += ' = params\n'
     s += '        return '+model_func+'\n'
-
+    s += '\nclass func'+model_name+'_J(NonlinearLS):\n'
+    s += '\n    def expr(self, params, exog=None):\n'
+    s += '        if exog is None:\n'
+    s += '            x = self.exog\n'
+    s += '        else:\n'
+    s += '            x = exog\n'
+    s += '        '
+    nparams = int(NIST_results['nparams'])
+    for i in range(nparams):
+        if i == 0:
+            s += 'b'+str(i+1)
+        elif i > 0:
+            s += ', '+'b'+str(i+1)
+    s += ' = params\n'
+    s += '        return '+model_func+'\n'
     s += '\n    def jacobian(self, params, exog=None):\n'
     s += '        if exog is None:\n'
     s += '            x = self.exog\n'
@@ -80,30 +101,43 @@ def Create_Nonlinls(model_name, model_func, model_jacob, NIST_results):
     s += '        return '+model_jacob+'\n\n'
     return s
 
-def Create_Nonlinls_test(model_name, NIST_results):
-    s = 'class Test'+model_name+'(TestNonlinearLS):\n'
+def Create_test_class(model_name,NIST_results):
+    s = 'class TestNonlinearLS(object):'
     s += '\n    def setup(self):\n'
     x = str('        x = np.array('+str(NIST_results['x'])+
         ')\n').replace(',',str(',\n'+' '*18))
     y = str('        y = np.array('+str(NIST_results['y'])+
         ')\n').replace(',',str(',\n'+' '*18))
     s += x + y
+    for k in NIST_results.keys():
+        if k in list(['x','y']):
+            continue
+        else:
+           s += '        self.'+str(k)+'='+str(NIST_results[k])+'\n'
+    s += '\n'
     s += '        mod1 = func'+model_name+'(y, x)\n'
-    s += str('        self.res_start1 = mod1.fit(start_value='+
-         str(NIST_results['start_value1'])+')\n')
+    s += '        self.res_start1 = mod1.fit(self.start_value1)\n'
     s += '        mod2 = func'+model_name+'(y, x)\n'
-    s += str('        self.res_start2 = mod2.fit(start_value='+
-         str(NIST_results['start_value2'])+')\n')
+    s += '        self.res_start2 = mod2.fit(self.start_value2)\n'
+    s += '        mod1_J = func'+model_name+'_J(y, x)\n'
+    s += '        self.resJ_start1 = mod1_J.fit(self.start_value1)\n'
+    s += '        mod2_J = func'+model_name+'_J(y, x)\n'
+    s += '        self.resJ_start2 = mod2_J.fit(self.start_value2)\n'
+    return s
 
+def Create_Nonlinls_test(model_name):
+    s = '\nclass Test'+model_name+'(TestNonlinearLS):\n'
     s += '\n    def test_basic(self):\n'
     s += '        res1 = self.res_start1\n'
     s += '        res2 = self.res_start2\n'
-    s += str('        assert_almost_equal(res1.params,'+
-         str(NIST_results['Cert_parameters'])+',decimal=3)\n')
-    s += str('        assert_almost_equal(res2.params,'+
-         str(NIST_results['Cert_parameters'])+',decimal=3)\n')
+    s += '        res1J = self.resJ_start1\n'
+    s += '        res2J = self.resJ_start2\n'
+    s += '        certified = self.Cert_parameters\n'    
+    s += '        assert_almost_equal(res1.params,certified)\n'
+    s += '        assert_almost_equal(res2.params,certified)\n'
+    s += '        assert_almost_equal(res1J.params,certified)\n'
+    s += '        assert_almost_equal(res2J.params,certified)\n'
     return s
-
 
 def read_NISTdata(Model):
     with open (str(Model)+'.dat') as f:

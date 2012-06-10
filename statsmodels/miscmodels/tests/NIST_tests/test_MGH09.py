@@ -2,9 +2,9 @@
 import numpy as np
 import statsmodels.api as sm
 from numpy.testing import assert_almost_equal, assert_
-from Chwirut2_testclass import TestNonlinearLS
+from MGH09_testclass import TestNonlinearLS
 
-class TestChwirut2(TestNonlinearLS):
+class TestMGH09(TestNonlinearLS):
 
     def test_basic(self):
         res1 = self.res_start1
