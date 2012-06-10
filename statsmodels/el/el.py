@@ -95,6 +95,10 @@ class OptFuncts(ElModel):
             new_params = np.copy(params + inc)
             diff = np.sum(np.abs(params - new_params))
             params = np.copy(new_params)
+            print params
+            if np.any(params > 10 ** 10) \
+              or np.any(params < - (10 ** 10)):
+                raise Exception('Optimization Failed')
         return params
 
     def find_eta(self, eta):
@@ -154,8 +158,8 @@ class OptFuncts(ElModel):
         denom = 1 + np.dot(eta_star, self.est_vect.T)
         self.new_weights = 1 / self.nobs * 1 / denom
         llr = np.sum(np.log(self.nobs * self.new_weights))
-        if pval:
-            return 1 - chi2.cdf(-2 * llr, 2)
+        if pval:  # Used for contour plotting
+            return 1 - chi2.cdf(-2 * llr, 1)
         return -2 * llr
 
     def  ci_limits_var(self, var_test):
@@ -168,6 +172,21 @@ class OptFuncts(ElModel):
         """
 
         return self.hy_test_var(var_test)[1] - self.r0
+
+    def opt_skew(self, nuis_params):
+        mu_data = self.endog - nuis_params[0]
+        sig_data = ((self.endog - nuis_params[0]) ** 2) - nuis_params[1]
+        skew_data = ((((self.endog - nuis_params[0]) ** 3) / \
+                    (nuis_params[1] ** 1.5))) - self.skew0
+        self.est_vect = np.concatenate((mu_data, sig_data, skew_data), \
+                                       axis=1)
+        eta_star = self.modif_newton(np.array([1 / self.nobs,
+                                               1 / self.nobs,
+                                               1 / self.nobs]))
+        denom = 1 + np.dot(eta_star, self.est_vect.T)
+        self.new_weights = 1 / self.nobs * 1 / denom
+        llr = np.sum(np.log(self.nobs * self.new_weights))
+        return -2 * llr
 
 
 class DescStat(OptFuncts):
@@ -356,13 +375,13 @@ class DescStat(OptFuncts):
         mu_min = min(self.endog)
         llr = optimize.fminbound(self.opt_var, mu_min, mu_max, \
                                  full_output=1)[1]
-        p_val = 1 - chi2.cdf(llr, 2)
+        p_val = 1 - chi2.cdf(llr, 1)
         if print_weights:
             return p_val, llr, self.new_weights
         else:
             return p_val, llr
 
-    def ci_var(self, ll, ul, sig=.05):
+    def ci_var(self, lower_bound=None, upper_bound=None, sig=.05):
         """
 
         Returns the confidence interval for the variance.
@@ -370,14 +389,17 @@ class DescStat(OptFuncts):
         Parameters
         ----------
 
-        ll: The minimum value the lower confidence interval can take on.
-            The p-value from hy_test_var(lower_l) must be lower than
-            1 - significance level.
+        lower_bound: The minimum value the lower confidence interval can
+        take on. The p-value from hy_test_var(lower_l) must be lower
+        than 1 - significance level. default | calibrated at the .01
+        significance level, asusming normality.
 
 
-        ul: The maximum value the upper confidence interval can take.
-            The p-value from hy_test_var(upper_h) must be lower than
-            1 - significance level.
+        upper_bound: The maximum value the upper confidence interval
+        can take. The p-value from hy_test_var(upper_h) must be lower
+        than 1 - significance level.  default | calibrated at the .01
+        significance level, asusming normality.
+
 
         sig: The significance level for the conficence interval.
         default | .05
@@ -388,18 +410,36 @@ class DescStat(OptFuncts):
         random_numbers = np.random.standard_normal(100)
         el_analysis = el.DescStat(random_numbers)
         # Initialize El
+        el_analysis.ci_var()
+        >>>f(a) and f(b) must have different signs
         el_analysis.ci_var(.5, 2)
-        # Searches for confidence limits where the lower limit .5 and the
-        # upper limit <2.
+        # Searches for confidence limits where the lower limit > .5
+        # and the upper limit <2.
 
         Troubleshooting Tips
         --------------------
 
         If the function returns the error f(a) and f(b) must have
-        different signs, consider lowering ll and raising ul.
+        different signs, consider lowering lower_bound and raising
+        upper_bound.
+
+        If function returns 'Optimization Failed', consider narrowing the
+        search area.
 
         """
 
+        if upper_bound is not None:
+            ul = upper_bound
+        else:
+            ul = ((self.nobs - 1) * self.endog.var()) / \
+              (chi2.ppf(.0001, self.nobs - 1))
+            print 'ul is', ul
+        if lower_bound is not None:
+            ll = lower_bound
+        else:
+            ll = ((self.nobs - 1) * self.endog.var()) / \
+              (chi2.ppf(.9999, self.nobs - 1))
+            print 'll is', ll
         sig = 1 - sig
         self.r0 = chi2.ppf(sig, 1)
         ll = optimize.brentq(self.ci_limits_var, ll, self.endog.var())
@@ -580,3 +620,70 @@ class DescStat(OptFuncts):
         fig = plt.contour(mu_vect, var_vect, z, levels=levs)
         plt.clabel(fig)
         return 'Type plt.show to see the figure'
+
+    ## TODO: Use gradient and Hessian to optimize over nuisance params
+    ## TODO: Use non-nested optimization to optimize over nuisance
+    ## parameters.  See Owen pgs 234- 241
+
+    def hy_test_skew(self, skew0, nuis0=None, mu_min=None,
+                     mu_max=None, var_min=None, var_max=None,
+                     print_weights=False):
+        """
+
+        Returns the p_value and -2 * log_likelihood for the hypothesized
+        skewness.
+
+        Parameters
+        ----------
+        skew0: Skewness value to be tested
+
+        Optional
+        --------
+
+        mu_min, mu_max, var_min, var_max: Minimum and maximum values
+        of the nuisance parameters to be optimized over.  If None,
+        the function computes the 95% confidence interval for
+        the mean and variance and uses the resulting values.
+
+        print_weights: If True, function also returns the weights that
+        maximize the likelihood ratio. default | False.
+
+        """
+
+        self.skew0 = skew0
+        if nuis0 is not None:
+            start_nuisance = nuis0
+        else:
+            start_nuisance = np.array([self.endog.mean(),
+                                       self.endog.var()])
+        if mu_min is not None:
+            mu_lb = mu_min
+        else:
+            mu_lb = self.ci_mean()[0]
+
+        if mu_max is not None:
+            mu_ub = mu_max
+        else:
+            mu_ub = self.ci_mean()[1]
+
+        if var_min is None or var_max is None:
+            var_ci = self.ci_var()
+
+        if var_min is not None:
+            var_lb = var_min
+        else:
+            var_lb = var_ci[0]
+
+        if var_max is not None:
+            var_ub = var_max
+        else:
+            var_ub = var_ci[1]
+
+        llr = optimize.fmin_l_bfgs_b(self.opt_skew, start_nuisance,
+                                     approx_grad=1,
+                                     bounds=[(mu_lb, mu_ub),
+                                              (var_lb, var_ub)])[1]
+        p_val = 1 - chi2.cdf(llr, 1)
+        if print_weights:
+            return p_val, llr, self.new_weights
+        return p_val, llr
