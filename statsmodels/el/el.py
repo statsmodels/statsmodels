@@ -13,7 +13,7 @@ Owen, A. (2001). "Empirical Likelihood." Chapman and Hall
 """
 import numpy as np
 from scipy import optimize
-from scipy.stats import chi2
+from scipy.stats import chi2, skew, kurtosis
 from matplotlib import pyplot as plt
 import itertools
 
@@ -214,6 +214,12 @@ class OptFuncts(ElModel):
         self.new_weights = 1 / self.nobs * 1 / denom
         llr = np.sum(np.log(self.nobs * self.new_weights))
         return -2 * llr
+
+    def ci_limits_skew(self, skew0):
+        return self.hy_test_skew(skew0, var_min=self.var_l,
+                                 var_max=self.var_u,
+                                 mu_min=self.mu_l,
+                                 mu_max=self.mu_u)[1] - self.r0
 
 
 class DescStat(OptFuncts):
@@ -460,15 +466,12 @@ class DescStat(OptFuncts):
         else:
             ul = ((self.nobs - 1) * self.endog.var()) / \
               (chi2.ppf(.0001, self.nobs - 1))
-            print 'ul is', ul
         if lower_bound is not None:
             ll = lower_bound
         else:
             ll = ((self.nobs - 1) * self.endog.var()) / \
               (chi2.ppf(.9999, self.nobs - 1))
-            print 'll is', ll
-        sig = 1 - sig
-        self.r0 = chi2.ppf(sig, 1)
+        self.r0 = chi2.ppf(1 - sig, 1)
         ll = optimize.brentq(self.ci_limits_var, ll, self.endog.var())
         ul = optimize.brentq(self.ci_limits_var, self.endog.var(), ul)
         return   ll, ul
@@ -777,3 +780,87 @@ class DescStat(OptFuncts):
         if print_weights:
             return p_val, llr, self.new_weights
         return p_val, llr
+
+    def ci_skew(self, sig=.05, upper_bound=None, lower_bound=None,
+                var_min=None, var_max=None, mu_min=None, mu_max=None):
+        """
+
+        Returns the confidence interval for skewness.
+
+        Optional Parameters
+        -------------------
+        sig: The significance level.  default | .05
+
+        upper_bound: Maximum Vale of Skewness the upper limit can be.
+        default|.99 confidence assuming normality.
+
+        lower_bound: Minimum value of skewness the lower limit can be.
+        default| .99 confidence level assuming normality.
+
+        var_min, var_max, mu_min, mu_max: Minimum Value of the nuisance
+        variance and mean. | default .95 confidence limits
+
+        Tips
+        ----
+
+        For large n (approx >25), the default parameters should provide
+        successful optimization.  DUe to multiple nested optimization
+        this function may take minutes to compute even for modest
+        levels of n (>200).
+
+        For small n, var_min and var_max will likely be provided by the
+        user.
+
+        If parameters are left at the default and the optimization
+        fails, the function will alert as to which parameter it failed
+        to compute.
+
+
+        """
+
+        if upper_bound is not None:
+            ul = upper_bound
+        else:
+            ul = skew(self.endog) + \
+            2.5 * ((6 * self.nobs * (self.nobs - 1)) / \
+              ((self.nobs - 2) * (self.nobs + 1) * \
+               (self.nobs + 3))) ** .5
+        if lower_bound is not None:
+            ll = lower_bound
+        else:
+            ll = skew(self.endog) - \
+            2.5 * ((6 * self.nobs * (self.nobs - 1)) / \
+              ((self.nobs - 2) * (self.nobs + 1) * \
+               (self.nobs + 3))) ** .5
+        # Need to calculate variance and mu limits here to avoid
+        # recalculating at every iteration in the maximization.
+        if (var_max is None) or (var_min is None):
+            print 'Finding CI for the variance'
+            var_lims = self.ci_var()
+        if (mu_max is None) or (mu_max is None):
+            print 'Finding CI for the mean'
+            mu_lims = self.ci_mean()
+        if var_min is not None:
+            self.var_l = var_min
+        else:
+            self.var_l = var_lims[0]
+        if var_max is not None:
+            self.var_u = var_max
+        else:
+            self.var_u = var_lims[1]
+        if mu_min is not None:
+            self.mu_l = mu_min
+        else:
+            self.mu_l = mu_lims[0]
+        if mu_max is not None:
+            self.mu_u = mu_max
+        else:
+            self.mu_u = mu_lims[1]
+        self.r0 = chi2.ppf(1 - sig, 1)
+        print 'Finding the lower bound for skewness'
+        ll = optimize.brentq(self.ci_limits_skew, ll, skew(self.endog))
+        print 'Finding the upper bound for skewness'
+        ul = optimize.brentq(self.ci_limits_skew, skew(self.endog), ul)
+        return   ll, ul
+
+    
