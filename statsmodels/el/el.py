@@ -220,6 +220,12 @@ class OptFuncts(ElModel):
                                  mu_min=self.mu_l,
                                  mu_max=self.mu_u)[1] - self.r0
 
+    def ci_limits_kurt(self, kurt0):
+        return self.hy_test_kurt(kurt0, var_min=self.var_l,
+                                 var_max=self.var_u,
+                                 mu_min=self.mu_l,
+                                 mu_max=self.mu_u)[1] - self.r0
+
 
 class DescStat(OptFuncts):
     """
@@ -833,10 +839,10 @@ class DescStat(OptFuncts):
         # recalculating at every iteration in the maximization.
         if (var_max is None) or (var_min is None):
             print 'Finding CI for the variance'
-            var_lims = self.ci_var()
+            var_lims = self.ci_var(sig=sig)
         if (mu_max is None) or (mu_max is None):
             print 'Finding CI for the mean'
-            mu_lims = self.ci_mean()
+            mu_lims = self.ci_mean(sig=sig)
         if var_min is not None:
             self.var_l = var_min
         else:
@@ -858,4 +864,90 @@ class DescStat(OptFuncts):
         ll = optimize.brentq(self.ci_limits_skew, ll, skew(self.endog))
         print 'Finding the upper bound for skewness'
         ul = optimize.brentq(self.ci_limits_skew, skew(self.endog), ul)
+        return   ll, ul
+
+    def ci_kurt(self, sig=.05, upper_bound=None, lower_bound=None,
+                var_min=None, var_max=None, mu_min=None, mu_max=None):
+        """
+
+        Returns the confidence interval for skewness.
+
+        Optional Parameters
+        -------------------
+        sig: The significance level.  default | .05
+
+        upper_bound: Maximum Vale of Kurtosis the upper limit can be.
+        default|.99 confidence assuming normality.
+
+        lower_bound: Minimum value of Kurtosis the lower limit can be.
+        default| .99 confidence level assuming normality.
+
+        var_min, var_max, mu_min, mu_max: Minimum Value of the nuisance
+        variance and mean. | default .95 confidence limits
+
+        Tips
+        ----
+
+        For large n (approx >25), the default parameters should provide
+        successful optimization.
+
+        For small n, var_min and var_max will likely be provided by the
+        user.
+
+        If parameters are left at the default and the optimization
+        fails, the function will alert as to which parameter it failed
+        to compute.
+
+
+        """
+
+        if upper_bound is not None:
+            ul = upper_bound
+        else:
+            ul = kurtosis(self.endog) + \
+            (2.5 * (2 * ((6 * self.nobs * (self.nobs - 1)) / \
+              ((self.nobs - 2) * (self.nobs + 1) * \
+               (self.nobs + 3))) ** .5) * \
+               (((self.nobs ** 2) - 1) / ((self.nobs - 3) *\
+                 (self.nobs + 5))) ** .5)
+        if lower_bound is not None:
+            ll = lower_bound
+        else:
+            ll = kurtosis(self.endog) - \
+            (2.5 * (2 * ((6 * self.nobs * (self.nobs - 1)) / \
+              ((self.nobs - 2) * (self.nobs + 1) * \
+               (self.nobs + 3))) ** .5) * \
+               (((self.nobs ** 2) - 1) / ((self.nobs - 3) *\
+                 (self.nobs + 5))) ** .5)
+        # Need to calculate variance and mu limits here to avoid
+        # recalculating at every iteration in the maximization.
+        if (var_max is None) or (var_min is None):
+            print 'Finding CI for the variance'
+            var_lims = self.ci_var(sig=sig)
+        if (mu_max is None) or (mu_min is None):
+            print 'Finding CI for the mean'
+            mu_lims = self.ci_mean(sig=sig)
+        if var_min is not None:
+            self.var_l = var_min
+        else:
+            self.var_l = var_lims[0]
+        if var_max is not None:
+            self.var_u = var_max
+        else:
+            self.var_u = var_lims[1]
+        if mu_min is not None:
+            self.mu_l = mu_min
+        else:
+            self.mu_l = mu_lims[0]
+        if mu_max is not None:
+            self.mu_u = mu_max
+        else:
+            self.mu_u = mu_lims[1]
+        self.r0 = chi2.ppf(1 - sig, 1)
+        print 'Finding the lower bound for kurtosis'
+        ll = optimize.brentq(self.ci_limits_kurt, ll, \
+                             kurtosis(self.endog))
+        print 'Finding the upper bound for kurtosis'
+        ul = optimize.brentq(self.ci_limits_kurt, kurtosis(self.endog), \
+                             ul)
         return   ll, ul
