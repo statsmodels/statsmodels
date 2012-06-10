@@ -107,9 +107,6 @@ def GPKE(bw, tdat, edat, var_type, ckertype = 'gaussian', okertype = 'wangryzin'
         dens[i] = np.sum(np.prod(Kval, axis = 1))*1./(np.prod(bw[iscontinuous]))
     return dens
 
-def Convolve (v, kertype = "Gaussian"):
-    if kertype == "Gaussian":
-        return np.exp(-v**2/4.)/(4*np.pi)**0.5
 
 
 class Generic_KDE ():
@@ -252,12 +249,6 @@ class UKDE(Generic_KDE):
         """
         if edat is None: edat = self.tdat
         return GPKE(self.bw, tdat = self.tdat, edat = edat, var_type = self.var_type)/self.N
-    def cdf(self, edat):
-        """
-        Returns the cumulative probability density function
-        Estimated by integrating the probability density function over the domain of the variables
-        """
-        pass
     
 class CKDE(Generic_KDE):
     """
