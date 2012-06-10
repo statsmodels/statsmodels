@@ -95,7 +95,6 @@ class OptFuncts(ElModel):
             new_params = np.copy(params + inc)
             diff = np.sum(np.abs(params - new_params))
             params = np.copy(new_params)
-            print params
             if np.any(params > 10 ** 10) \
               or np.any(params < - (10 ** 10)):
                 raise Exception('Optimization Failed')
@@ -804,9 +803,7 @@ class DescStat(OptFuncts):
         ----
 
         For large n (approx >25), the default parameters should provide
-        successful optimization.  DUe to multiple nested optimization
-        this function may take minutes to compute even for modest
-        levels of n (>200).
+        successful optimization.
 
         For small n, var_min and var_max will likely be provided by the
         user.
@@ -862,5 +859,3 @@ class DescStat(OptFuncts):
         print 'Finding the upper bound for skewness'
         ul = optimize.brentq(self.ci_limits_skew, skew(self.endog), ul)
         return   ll, ul
-
-    
