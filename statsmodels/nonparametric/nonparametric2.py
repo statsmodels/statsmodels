@@ -107,10 +107,15 @@ def GPKE(bw, tdat, edat, var_type, ckertype = 'gaussian', okertype = 'wangryzin'
         dens[i] = np.sum(np.prod(Kval, axis = 1))*1./(np.prod(bw[iscontinuous]))
     return dens
 
+def Convolve (v, kertype = "Gaussian"):
+    if kertype == "Gaussian":
+        return np.exp(-v**2/4.)/(4*np.pi)**0.5
+
+
 class Generic_KDE ():
     # Generic KDE class with methods shared by both conditional and unconditional kernel density estimators
     
-    def compute_bw(self, bw):
+    def compute_bw(self, bw = None):
         """
         Returns the bandwidth of the data
 
@@ -131,9 +136,11 @@ class Generic_KDE ():
         
         self.bw_func = dict(normal_reference = self._normal_reference, cv_ml = self._cv_ml)
         
-        
         if type(bw) != str:  # The user provided an actual bandwidth estimate
             return np.asarray(bw)
+        elif bw is None:
+            bwfunc = self.bw_func['normal_reference']
+            return bwfunc()
         else: # The user specified a bandwidth selection method e.g. 'normal-reference'
             bwfunc = self.bw_func[bw]
             return bwfunc()
@@ -243,9 +250,15 @@ class UKDE(Generic_KDE):
             Evaluation data.
             If unspecified, the training data is used
         """
-        if edat == None: edat = self.tdat
+        if edat is None: edat = self.tdat
         return GPKE(self.bw, tdat = self.tdat, edat = edat, var_type = self.var_type)/self.N
-
+    def cdf(self, edat):
+        """
+        Returns the cumulative probability density function
+        Estimated by integrating the probability density function over the domain of the variables
+        """
+        pass
+    
 class CKDE(Generic_KDE):
     """
     Conditional Kernel Density Estimator
@@ -338,8 +351,8 @@ class CKDE(Generic_KDE):
             Evaluation data for the independent variables
         """
 
-        if eydat == None: eydat = self.all_vars
-        if exdat == None: exdat = self.txdat
+        if eydat is None: eydat = self.all_vars
+        if exdat is None: exdat = self.txdat
         
         f_yx = GPKE(self.bw,tdat=np.concatenate((self.tydat, self.txdat), axis=1), edat = eydat, var_type = (self.dep_type + self.indep_type))
         f_x = GPKE(self.bw[self.K_dep::], tdat = self.txdat, edat = exdat, var_type = self.indep_type)
