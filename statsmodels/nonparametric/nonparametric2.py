@@ -12,100 +12,8 @@ Racine, Jeff. (2008) "Nonparametric Econometrics: A Primer," Foundation and
 
 import numpy as np
 from scipy import integrate, stats
-import KernelFunctions as kf
+import np_tools as tools
 import scipy.optimize as opt
-
-kernel_func=dict(wangryzin = kf.WangRyzin, aitchisonaitken = kf.AitchisonAitken,
-                 epanechnikov = kf.Epanechnikov, gaussian = kf.Gaussian)
-
-
-class LeaveOneOut(object):
-    # Written by Skipper
-    """
-    Generator to give leave one out views on X
-
-    Parameters
-    ----------
-    X : array-like
-        2d array
-
-    Examples
-    --------
-    >>> X = np.random.normal(0,1,[10,2])
-    >>> loo = LeaveOneOut(X)
-    >>> for x in loo:
-    ...    print x
-
-    Notes
-    -----
-    A little lighter weight than sklearn LOO. We don't need test index.
-    Also passes views on X, not the index.
-    """
-    def __init__(self, X):
-        self.X = np.asarray(X)
-
-    def __iter__(self):
-        X = self.X
-        N, K = np.shape(X)
-
-        for i in xrange(N):
-            index = np.ones(N, dtype = np.bool)
-            index[i] = False
-            yield X[index, :]
-
-def GPKE(bw, tdat, edat, var_type, ckertype = 'gaussian', okertype = 'wangryzin', ukertype = 'aitchisonaitken'):
-    """
-    Returns the non-normalized Generalized Product Kernel Estimator
-    
-    Parameters
-    ----------
-    bw: array-like
-        The user-specified bandwdith parameters
-    tdat: 1D or 2d array
-        The training data
-    edat: 1d array
-        The evaluation points at which the kernel estimation is performed
-    var_type: str
-        The variable type (continuous, ordered, unordered)
-    ckertype: str
-        The kernel used for the continuous variables
-    okertype: str
-        The kernel used for the ordered discrete variables
-    ukertype: str
-        The kernel used for the unordered discrete variables
-        
-    """
-    var_type = np.asarray(list(var_type))
-    iscontinuous = np.where(var_type == 'c')[0]
-    isordered = np.where(var_type == 'o')[0]
-    isunordered = np.where(var_type == 'u')[0]
-    
-    if tdat.ndim > 1:
-        N, K = np.shape(tdat)
-    else:
-        K = 1
-        N = np.shape(tdat)[0]
-        tdat = tdat.reshape([N, K])
-    
-    if edat.ndim > 1:
-        N_edat = np.shape(edat)[0]
-    else:
-        N_edat = 1
-        edat = edat.reshape([N_edat, K])
-    
-    bw = np.reshape(np.asarray(bw), (K,))  #must remain 1-D for indexing to work
-    dens = np.empty([N_edat, 1])
-       
-    for i in xrange(N_edat):
-        
-        Kval = np.concatenate((
-        kernel_func[ckertype](bw[iscontinuous], tdat[:, iscontinuous], edat[i, iscontinuous]),
-        kernel_func[okertype](bw[isordered], tdat[:, isordered],edat[i, isordered]),
-        kernel_func[ukertype](bw[isunordered], tdat[:, isunordered], edat[i, isunordered])
-        ), axis=1)
-        
-        dens[i] = np.sum(np.prod(Kval, axis = 1))*1./(np.prod(bw[iscontinuous]))
-    return dens
 
 
 
@@ -131,7 +39,7 @@ class Generic_KDE ():
         """
 
         
-        self.bw_func = dict(normal_reference = self._normal_reference, cv_ml = self._cv_ml)
+        self.bw_func = dict(normal_reference = self._normal_reference, cv_ml = self._cv_ml, cv_ls = self._cv_ls)
         
         if type(bw) != str:  # The user provided an actual bandwidth estimate
             return np.asarray(bw)
@@ -156,12 +64,14 @@ class Generic_KDE ():
         """
         
         h0 = self._normal_reference() # the initial value for the optimization is the normal_reference
-        bw = opt.fmin(self.loo_likelihood, x0 = h0, maxiter = 1e3, maxfun = 1e3,disp = 0)
+        bw = opt.fmin(self.loo_likelihood, x0 = h0, args = (np.log,), maxiter = 1e3, maxfun = 1e3,disp = 0)
         return bw
 
 #TODO: Add the least squares cross validation bandwidth method
     def _cv_ls (self):
-        pass
+        h0 = self._normal_reference()
+        bw = opt.fmin(self.IMSE, x0 = h0, maxiter = 1e3, maxfun = 1e3,disp = 0)
+        return np.abs(bw)  # Getting correct but negative values for bw. from time to time . Why? 
     
     def loo_likelihood(self):
         pass
@@ -212,15 +122,15 @@ class UKDE(Generic_KDE):
     """
     def __init__(self, tdat, var_type, bw):
         
-        self.tdat = np.concatenate(tdat, axis=1)
+        self.tdat = np.column_stack(tdat)
         self.all_vars = self.tdat
         self.N,self.K = np.shape(self.tdat)
         self.var_type = var_type
-        
+        assert self.K == len(self.var_type)
         self.bw = self.compute_bw(bw)
              
 
-    def loo_likelihood(self,bw):
+    def loo_likelihood(self, bw, func = lambda x:x):
         """
         Returns the leave-one-out likelihood for the data
         Parameters
@@ -228,13 +138,13 @@ class UKDE(Generic_KDE):
         bw: array-like
             The value for the bandwdith parameters
         """
-        LOO = LeaveOneOut(self.tdat)
+        LOO = tools.LeaveOneOut(self.tdat)
         i = 0
         L = 0
         for X_j in LOO:
-            f_i = GPKE(bw, tdat = -X_j, edat = -self.tdat[i, :], var_type = self.var_type)/(self.N-1)           
+            f_i = tools.GPKE(bw, tdat = -X_j, edat = -self.tdat[i, :], var_type = self.var_type)          
             i += 1
-            L += np.log(f_i)       
+            L += func(f_i)       
         return -L
     
     def pdf(self, edat = None):
@@ -248,8 +158,19 @@ class UKDE(Generic_KDE):
             If unspecified, the training data is used
         """
         if edat is None: edat = self.tdat
-        return GPKE(self.bw, tdat = self.tdat, edat = edat, var_type = self.var_type)/self.N
+        return tools.GPKE(self.bw, tdat = self.tdat, edat = edat, var_type = self.var_type)/self.N
     
+    def IMSE(self, bw):
+        """
+        Returns the First term from the Integrated Mean Square Error
+        Integrate [ f_hat(x) - f(x)]^2 dx
+        """
+        F=0
+        for i in range(self.N):
+            k_bar_sum = tools.Convolution_GPKE (bw, tdat = -self.tdat, edat = -self.tdat[i, :], var_type = self.var_type)
+            F += k_bar_sum
+        return -(F/(self.N**2) + self.loo_likelihood(bw)*2/((self.N)*(self.N - 1)))  # there is a + because loo_likelihood returns the negative
+        
 class CKDE(Generic_KDE):
     """
     Conditional Kernel Density Estimator
@@ -304,29 +225,32 @@ class CKDE(Generic_KDE):
 
     def __init__ (self, tydat, txdat, dep_type, indep_type, bw):
             
-        self.tydat = np.concatenate(tydat, axis = 1)
-        self.txdat = np.concatenate(txdat, axis = 1)
+        self.tydat = np.column_stack(tydat)
+        self.txdat = np.column_stack(txdat)
         self.N,self.K_dep = np.shape(self.tydat)
         self.K_indep = np.shape(self.txdat)[1]
         self.all_vars = np.concatenate((self.tydat, self.txdat), axis = 1)
         self.dep_type = dep_type; self.indep_type = indep_type
+        assert len(self.dep_type) == self.K_dep
+        assert len(self.indep_type) == self.K_indep
+        
         self.bw = self.compute_bw(bw)
         
-    def loo_likelihood(self, bw):
+    def loo_likelihood(self, bw, func = lambda x:x):
         """
         Returns the leave-one-out likelihood for the data
         """
-        yLOO = LeaveOneOut(self.all_vars)
-        xLOO = LeaveOneOut(self.txdat).__iter__()
+        yLOO = tools.LeaveOneOut(self.all_vars)
+        xLOO = tools.LeaveOneOut(self.txdat).__iter__()
         i = 0
         L = 0
         for Y_j in yLOO:
             X_j = xLOO.next()
-            f_yx = GPKE(bw, tdat = -Y_j, edat=-self.all_vars[i,:], var_type = (self.dep_type + self.indep_type))
-            f_x = GPKE(bw[self.K_dep::], tdat = -X_j, edat=-self.txdat[i, :], var_type = self.indep_type)
+            f_yx = tools.GPKE(bw, tdat = -Y_j, edat=-self.all_vars[i,:], var_type = (self.dep_type + self.indep_type))
+            f_x = tools.GPKE(bw[self.K_dep::], tdat = -X_j, edat=-self.txdat[i, :], var_type = self.indep_type)
             f_i = f_yx/f_x
             i += 1
-            L += np.log(f_i)       
+            L += func(f_i)       
         return -L
     
     def pdf(self,eydat = None, exdat = None):
@@ -345,7 +269,7 @@ class CKDE(Generic_KDE):
         if eydat is None: eydat = self.all_vars
         if exdat is None: exdat = self.txdat
         
-        f_yx = GPKE(self.bw,tdat=np.concatenate((self.tydat, self.txdat), axis=1), edat = eydat, var_type = (self.dep_type + self.indep_type))
-        f_x = GPKE(self.bw[self.K_dep::], tdat = self.txdat, edat = exdat, var_type = self.indep_type)
+        f_yx = tools.GPKE(self.bw,tdat=np.concatenate((self.tydat, self.txdat), axis=1), edat = eydat, var_type = (self.dep_type + self.indep_type))
+        f_x = tools.GPKE(self.bw[self.K_dep::], tdat = self.txdat, edat = exdat, var_type = self.indep_type)
         return (f_yx/f_x)
 

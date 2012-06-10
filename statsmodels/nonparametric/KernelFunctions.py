@@ -1,5 +1,3 @@
-# References:
-# Li and Racine Text
 # This module adds to kernels that are able to handle
 # categorical variables (both ordered and unordered)
 
@@ -167,6 +165,27 @@ def Gaussian(h,Xi,x):
         K=1
     if K==0: return Xi
     z = (Xi - x)/h
-    kernel_value=(1./np.sqrt(2*np.pi))*np.e**(-z**2/2.)
+    kernel_value=(1./np.sqrt(2*np.pi))*np.exp(-z**2/2.)
+    kernel_value=kernel_value.reshape([N, K])
+    return kernel_value
+
+
+def Gaussian_Convolution(h,Xi,x):
+    """
+    Calculates the Gaussian Convolution Kernel
+    """
+    
+    Xi=np.asarray(Xi)
+    x=np.asarray(x)
+    h = np.asarray(h,dtype=float)
+    
+    N = np.shape(Xi)[0]
+    if Xi.ndim>1:
+        K=np.shape(Xi)[1]
+    else:
+        K=1
+    if K==0: return Xi
+    z = (Xi - x)/h
+    kernel_value=(1./np.sqrt(4*np.pi))*np.exp(-z**2/4.)
     kernel_value=kernel_value.reshape([N,K])
     return kernel_value
