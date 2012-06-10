@@ -3,9 +3,10 @@ import KernelFunctions as kf
 import scipy.optimize as opt
 
 kernel_func=dict(wangryzin = kf.WangRyzin, aitchisonaitken = kf.AitchisonAitken,
-                 epanechnikov = kf.Epanechnikov, gaussian = kf.Gaussian)
+                 epanechnikov = kf.Epanechnikov, gaussian = kf.Gaussian,
+                 gauss_convolution = kf.Gaussian_Convolution, wangryzin_convolution = kf.WangRyzin_Convolution)
 
-Convolution_Kernels = dict (gaussian = kf.Gaussian_Convolution)
+Convolution_Kernels = dict (gauss_convolution = kf.Gaussian_Convolution, wangryzin_convolution = kf.WangRyzin_Convolution)
 
 class LeaveOneOut(object):
     # Written by Skipper
@@ -96,38 +97,7 @@ def GPKE(bw, tdat, edat, var_type, ckertype = 'gaussian', okertype = 'wangryzin'
     return dens
 
 
-def Convolution_GPKE(bw, tdat, edat, var_type, ckertype = 'gaussian'):
-    var_type = np.asarray(list(var_type))
-    iscontinuous = np.where(var_type == 'c')[0]
-    isordered = np.where(var_type == 'o')[0]
-    isunordered = np.where(var_type == 'u')[0]
-    
-    if tdat.ndim > 1:
-        N, K = np.shape(tdat)
-    else:
-        K = 1
-        N = np.shape(tdat)[0]
-        tdat = tdat.reshape([N, K])
-    
-    if edat.ndim > 1:
-        N_edat = np.shape(edat)[0]
-    else:
-        N_edat = 1
-        edat = edat.reshape([N_edat, K])
-    
-    bw = np.reshape(np.asarray(bw), (K,))  #must remain 1-D for indexing to work
-    dens = np.empty([N_edat, 1])
-       
-    for i in xrange(N_edat):
-        
-        Kval = np.concatenate((
-        Convolution_Kernels[ckertype](bw[iscontinuous], tdat[:, iscontinuous], edat[i, iscontinuous]),
-#        Convolution_Kernels[okertype](bw[isordered], tdat[:, isordered],edat[i, isordered]),
-#        Convolution_Kernels[ukertype](bw[isunordered], tdat[:, isunordered], edat[i, isunordered])
-        ), axis=1)
-        
-        dens[i] = np.sum(np.prod(Kval, axis = 1))*1./(np.prod(bw[iscontinuous]))
-    return dens
+
 
 
  

@@ -20,7 +20,7 @@ import scipy.optimize as opt
 class Generic_KDE ():
     # Generic KDE class with methods shared by both conditional and unconditional kernel density estimators
     
-    def compute_bw(self, bw = None):
+    def compute_bw(self, bw):
         """
         Returns the bandwidth of the data
 
@@ -40,12 +40,12 @@ class Generic_KDE ():
 
         
         self.bw_func = dict(normal_reference = self._normal_reference, cv_ml = self._cv_ml, cv_ls = self._cv_ls)
-        
-        if type(bw) != str:  # The user provided an actual bandwidth estimate
-            return np.asarray(bw)
-        elif bw is None:
+        if bw is None:
             bwfunc = self.bw_func['normal_reference']
             return bwfunc()
+         
+        if type(bw) != str:  # The user provided an actual bandwidth estimate
+            return np.asarray(bw)
         else: # The user specified a bandwidth selection method e.g. 'normal-reference'
             bwfunc = self.bw_func[bw]
             return bwfunc()
@@ -120,7 +120,7 @@ class UKDE(Generic_KDE):
 
     print "The bandwdith is: ", dens_u.bw
     """
-    def __init__(self, tdat, var_type, bw):
+    def __init__(self, tdat, var_type, bw = None):
         
         self.tdat = np.column_stack(tdat)
         self.all_vars = self.tdat
@@ -167,9 +167,10 @@ class UKDE(Generic_KDE):
         """
         F=0
         for i in range(self.N):
-            k_bar_sum = tools.Convolution_GPKE (bw, tdat = -self.tdat, edat = -self.tdat[i, :], var_type = self.var_type)
+            k_bar_sum = tools.GPKE (bw, tdat = -self.tdat, edat = -self.tdat[i, :],
+                                    var_type = self.var_type, ckertype = 'gauss_convolution', okertype = 'wangryzin_convolution')
             F += k_bar_sum
-        return -(F/(self.N**2) + self.loo_likelihood(bw)*2/((self.N)*(self.N - 1)))  # there is a + because loo_likelihood returns the negative
+        return (F/(self.N**2) + self.loo_likelihood(bw)*2/((self.N)*(self.N - 1)))  # there is a + because loo_likelihood returns the negative
         
 class CKDE(Generic_KDE):
     """

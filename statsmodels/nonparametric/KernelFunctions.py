@@ -85,13 +85,18 @@ def WangRyzin (h, Xi, x):
     Nonparametric econometrics : theory and practice / Qi Li and Jeffrey Scott Racine.
     
     """
-    Xi=np.asarray(Xi,dtype=int)
-    x=np.asarray(x,dtype=int)
-    N = np.shape(Xi)[0]
+    Xi = np.abs(np.asarray(Xi,dtype=int))
+    x = np.abs(np.asarray(x,dtype=int))
+    
     if Xi.ndim>1:
         K=np.shape(Xi)[1]
-    else:
+        N = np.shape(Xi)[0]
+    elif Xi.ndim == 1:
         K=1
+        N = np.shape(Xi)[0]
+    else: # ndim ==0 so Xi is a single point (number)
+        K=1
+        N=1
     
     if K==0: return Xi
     
@@ -100,10 +105,11 @@ def WangRyzin (h, Xi, x):
     Xi=Xi.reshape([N,K])
     
     kernel_value=(0.5*(1-h)*(h**abs(Xi-x)))
-    
-    inDom=(Xi==x) *( 1-h)
-    kernel_value[Xi==x]=inDom[Xi==x]
     kernel_value=kernel_value.reshape([N,K])
+    inDom=(Xi==x) *( 1-h)
+    
+    kernel_value[Xi==x]=inDom[Xi==x]
+    
     return kernel_value
 
 def Epanechnikov (h, Xi, x):
@@ -189,3 +195,40 @@ def Gaussian_Convolution(h,Xi,x):
     kernel_value=(1./np.sqrt(4*np.pi))*np.exp(-z**2/4.)
     kernel_value=kernel_value.reshape([N,K])
     return kernel_value
+
+def WangRyzin_Convolution (h, Xi, Xj):
+    # This is the equivalent of the convolution case with the Gaussian Kernel
+    # However it is not exactly convolution. Think of a better name
+    # References http://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=4&ved=0CGUQFjAD&url=http%3A%2F%2Feconweb.tamu.edu%2Fli%2FUncond1.pdf&ei=2THUT5i7IIOu8QSvmrXlAw&usg=AFQjCNH4aGzQbKT22sLBbZqHtPOyeFXNIQ
+    Xi = np.abs(np.asarray(Xi, dtype = int))
+    Xj = np.abs(np.asarray(Xj, dtype = int))
+    h = np.asarray(h,dtype=float)
+    
+    
+    if Xi.ndim > 1:
+        K=np.shape(Xi)[1]
+        N = np.shape(Xi)[0]
+    elif Xi.ndim == 1:
+        K=1
+        N = np.shape(Xi)[0]
+    else: # ndim ==0 so Xi is a single point (number)
+        K=1
+        N=1
+ 
+    
+    if K == 0:
+        return Xi
+    Xi = Xi.reshape([N, K])
+    Xj = Xj.reshape((K, ))
+    h = h.reshape((K, ))
+    Dom_x = [np.unique(Xi[:,i]) for i in range(K)]
+    
+    Ordered = np.empty([N,K])
+    for i in range(K):
+        Sigma_x = 0
+        
+        for x in Dom_x[i]:
+            Sigma_x += WangRyzin (h[i], Xi[:, i], int(x))*WangRyzin(h[i], Xj[i], int(x))          
+        Ordered[:,i] = Sigma_x[:,0]
+    return Ordered
+        
