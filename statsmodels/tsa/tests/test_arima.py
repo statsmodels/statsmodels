@@ -653,6 +653,56 @@ class Test_ARIMA112CSS(CheckArimaResults):
 #         cls.res1.forecast_err,
 #         conf_int)              = cls.res1.forecast(25)
 
+def test_arima_predict_mle_dates():
+    from statsmodels.datasets.macrodata import load
+    cpi = load().data['cpi']
+    res1 = ARIMA(cpi, dates=cpi_dates, freq='Q').fit(order=(4,1,1), disp=-1)
+
+    arima_forecasts = np.genfromtxt(open(
+        current_path + '/results/results_arima_forecasts_all_mle.csv', "rb"),
+                    delimiter=",", skip_header=1, dtype=float)
+
+    fc = arima_forecasts[:,0]
+
+    start, end = 2, 51
+    fv = res1.predict('1959Q3', '1971Q4', typ='levels')
+    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_equal(res1._data.predict_dates, cpi_dates[start:end+1])
+
+    start, end = 202, 227
+    fv = res1.predict('2009Q3', '2015Q4', typ='levels')
+    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_equal(res1._data.predict_dates, dates_from_range('2009Q3','2015Q4'))
+
+def test_arima_predict_css_dates():
+    from statsmodels.datasets.macrodata import load
+    cpi = load().data['cpi']
+    res1 = ARIMA(cpi, dates=cpi_dates, freq='Q').fit(order=(4,1,1), disp=-1,
+            method='css', trend='nc')
+
+    params = np.array([ 1.231272508473910,
+                       -0.282516097759915,
+                        0.170052755782440,
+                       -0.118203728504945,
+                       -0.938783134717947])
+
+    arima_forecasts = np.genfromtxt(open(
+        current_path + '/results/results_arima_forecasts_all_css.csv', "rb"),
+                    delimiter=",", skip_header=1, dtype=float)
+
+    fc = arima_forecasts[:,0]
+
+    start, end = 5, 51
+    fv = res1.model.predict(params, '1960Q2', '1971Q4', typ='levels')
+    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_equal(res1._data.predict_dates, cpi_dates[start:end+1])
+
+    start, end = 202, 227
+    fv = res1.model.predict(params, '2009Q3', '2015Q4', typ='levels')
+    assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
+    assert_equal(res1._data.predict_dates, dates_from_range('2009Q3','2015Q4'))
+
+
 def test_arima_predict_mle():
     from statsmodels.datasets.macrodata import load
     cpi = load().data['cpi']
@@ -896,7 +946,7 @@ def test_arima_predict_indices():
     assert_raises(ValueError, model._get_predict_start, *(0, True))
     assert_raises(ValueError, model._get_predict_start, *(5, True))
     assert_raises(ValueError, model._get_predict_start, *('1959Q1', True))
-    assert_raises(ValueError, model._get_predict_start, *('1960Q2', True))
+    assert_raises(ValueError, model._get_predict_start, *('1960Q1', True))
 
     # raises - index differenced away
     assert_raises(ValueError, model._get_predict_start, *(1, False))
@@ -915,14 +965,33 @@ def test_arima_predict_indices():
                   # what about end of sample start - last value is first
                   # forecast
                   ('2009Q4', 201, True),
+                  ('2009Q4', 201, True),
                   ('1959Q3', 0, False),
                   ('1960Q1', 2, False),
                   ('1960Q2', 3, False),
-
                   ]
 
     for case in start_test_cases:
         _check_start(*((model,)+case))
+
+    end_test_cases = [(None, 200, 0),
+                      (201, 199, 0),
+                      (202, 200, 0),
+                      (203, 200, 1),
+                      (204, 200, 2),
+                      (51, 49, 0),
+                      (164+63, 200, 25),
+
+                      ('2009Q2', 199, 0),
+                      ('2009Q3', 200, 0),
+                      ('2009Q4', 200, 1),
+                      ('2010Q1', 200, 2),
+                      ('1971Q4', 49, 0),
+                      ('2015Q4', 200, 25),
+                      ]
+
+    for case in end_test_cases:
+        _check_end(*((model,)+case))
 
 def test_arima_predict_indices_css():
     from statsmodels.datasets.macrodata import load
@@ -940,9 +1009,6 @@ def test_arima_predict_indices_css():
     assert_raises(ValueError, model._get_predict_start, *(0, True))
     assert_raises(ValueError, model._get_predict_start, *(2, False))
     assert_raises(ValueError, model._get_predict_start, *(2, True))
-
-
-
 
 def test_arima_predict_css():
     from statsmodels.datasets.macrodata import load
@@ -1081,7 +1147,6 @@ def test_arima_predict_css():
     start, end = None, None
     fv = res1.model.predict(params, start, end, dynamic=True, typ='levels')
     assert_almost_equal(fv, fcdyn[5:203], DECIMAL_4)
-
 
 def test_arima_predict_css_diffs():
 
@@ -1227,7 +1292,7 @@ def test_arima_predict_css_diffs():
     fv = res1.model.predict(params, start, end, dynamic=True)
     assert_almost_equal(fv, fcdyn[5:203], DECIMAL_4)
 
-def test_arima_predict_css_diffs():
+def test_arima_predict_mle_diffs():
 
     from statsmodels.datasets.macrodata import load
     cpi = load().data['cpi']
