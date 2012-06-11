@@ -30,6 +30,107 @@ try:
 except:
     fast_kalman = 0
 
+def _check_arima_start(start, k_ar, k_diff, method, dynamic):
+    if start < 0:
+        raise ValueError("The start index %d of the original series "
+                             "has been differenced away" % start)
+    elif (dynamic or 'mle' not in method) and start < k_ar:
+        raise ValueError("Start must be >= k_ar for conditional MLE "
+                "or dynamic forecast. Got %d" % start)
+
+def _get_predict_out_of_sample(endog, p, q, k_trend, k_exog, start, errors,
+                               trendparam, exparams, arparams, maparams, steps,
+                               method):
+    """
+    Returns endog, resid, mu of appropriate length for out of sample
+    prediction.
+    """
+    if q:
+        resid = np.zeros(q)
+        if start and 'mle' in method or start == p:
+            resid[:q] = errors[start-q:start]
+        elif start:
+            resid[:q] = errors[start-q-p:start-p]
+        else:
+            resid[:q] = errors[-q:]
+    else:
+        resid = None
+
+    y = endog
+    if k_trend == 1:
+        # use expectation not constant
+        mu = trendparam * (1 - arparams.sum())
+        mu = np.array([mu]*steps)
+    else:
+        mu = np.zeros(steps)
+
+    if k_exog > 0:
+        mu += np.dot(exparams, self.exog)
+
+    endog = np.zeros(p + steps - 1)
+
+    if p and start:
+        endog[:p] = y[start-p:start]
+    elif p:
+        endog[:p] = y[-p:]
+
+    return endog, resid, mu
+
+def _arma_predict_out_of_sample(params, steps, errors, p, q, k_trend, k_exog,
+                                endog, exog=None, start=0, method='mle'):
+    (trendparam, exparams,
+     arparams, maparams) = _unpack_params(params, (p,q), k_trend,
+                                k_exog, reverse=True)
+    endog, resid, mu = _get_predict_out_of_sample(endog, p, q, k_trend, k_exog,
+                                                   start, errors, trendparam,
+                                                   exparams, arparams,
+                                                   maparams, steps, method)
+
+    forecast = np.zeros(steps)
+    if steps == 1:
+        if q:
+            return mu[0] + np.dot(arparams, endog[:p]) + np.dot(maparams,
+                                                                resid[:q])
+        else:
+            return mu[0] + np.dot(arparams, endog[:p])
+
+    if q:
+        i = 0 # if q == 1
+    else:
+        i = -1
+
+    for i in range(min(q,steps-1)):
+        fcast = mu[i] + np.dot(arparams,endog[i:i+p]) + \
+                      np.dot(maparams,resid[i:i+q])
+        forecast[i] = fcast
+        endog[i+p] = fcast
+
+    for i in range(i+1,steps-1):
+        fcast = mu[i] + np.dot(arparams,endog[i:i+p])
+        forecast[i] = fcast
+        endog[i+p] = fcast
+
+    #need to do one more without updating endog
+    forecast[-1] = mu[-1] + np.dot(arparams,endog[steps-1:])
+    return forecast
+
+def _arma_predict_in_sample(start, end, endog, resid, k_ar,
+                            method):
+    """
+    Pre- and in-sample fitting for ARMA.
+    """
+    if 'mle' in method:
+        fittedvalues = endog - resid #get them all then trim
+    elif k_ar > 0:
+        fittedvalues = endog[k_ar:] - resid
+
+    fv_start = start
+    if 'mle' not in method:
+        fv_start -= k_ar # start is in terms of endog index
+    predictedvalues = np.zeros(end + 1 - fv_start)
+    fv_end = min(len(fittedvalues), end + 1)
+    return fittedvalues[fv_start:fv_end]
+
 def _index_date(date, dates):
     if isinstance(date, basestring):
         date = date_parser(date)
@@ -40,14 +141,17 @@ def _index_date(date, dates):
         # we can start prediction at the end of endog
         if _idx_from_dates(dates[-1], date, freq) == 1:
             return len(dates)
+
         raise ValueError("date %s not in date index" % date)
 
-def _validate(start, k_ar, k_diff, dates): # see what I did there?
+def _validate(start, k_ar, k_diff, dates, method):
     if isinstance(start, (basestring, datetime)):
+        start_date = start
         start = _index_date(start, dates)
-    if start < k_ar:
+        start -= k_diff
+    if 'mle' not in method and start < k_ar - k_diff:
         raise ValueError("Start must be >= k_ar for conditional "
-                                 "MLE or dynamic forecast")
+                         "MLE or dynamic forecast. Got %s" % start_date)
 
     return start
 
@@ -97,7 +201,6 @@ def _make_arma_exog(endog, exog, trend):
     if trend == 'nc':
         k_trend = 0
     return k_trend, exog
-
 
 class ARMA(tsbase.TimeSeriesModel):
     """
@@ -279,12 +382,14 @@ class ARMA(tsbase.TimeSeriesModel):
                 start = 0
             else:
                 start = self.k_ar
-
-        if 'mle' not in method or dynamic:
+        elif isinstance(start, int):
+            start = super(ARMA, self)._get_predict_start(start)
+        elif 'mle' not in method or dynamic: # should be on a date
             k_diff = getattr(self, "k_diff", 0)
-            start = _validate(start, self.k_ar, self.k_diff, self._data.dates)
-
-        return super(ARMA, self)._get_predict_start(start)
+            start = _validate(start, self.k_ar, self.k_diff, self._data.dates,
+                              method)
+            start = super(ARMA, self)._get_predict_start(start)
+        return start
 
     def geterrors(self, params):
         """
@@ -336,92 +441,6 @@ class ARMA(tsbase.TimeSeriesModel):
             errors = e[0][k_ar:]
         return errors.squeeze()
 
-    def _get_predict_out_of_sample(self, p, q, start, errors, trendparam,
-                                   exparams, arparams, maparams, steps):
-        """
-        Returns endog, resid, mu of appropriate length for out of sample
-        prediction.
-        """
-        if q:
-            resid = np.zeros(q)
-            if start and 'mle' in self.method or start == p:
-                resid[:q] = errors[start-q:start]
-            elif start:
-                resid[:q] = errors[start-q-p:start-p]
-            else:
-                resid[:q] = errors[-q:]
-        else:
-            resid = None
-
-        y = self.endog
-        if self.k_trend == 1:
-            # use expectation not constant
-            mu = trendparam * (1 - arparams.sum())
-            mu = np.array([mu]*steps)
-        else:
-            mu = np.zeros(steps)
-
-        if self.k_exog > 0:
-            mu += np.dot(exparams, self.exog)
-
-        endog = np.zeros(p + steps - 1)
-
-        if p and start:
-            endog[:p] = y[start-p:start]
-        elif p:
-            endog[:p] = y[-p:]
-
-        return endog, resid, mu
-
-    def _predict_out_of_sample(self, params, steps, errors, exog=None,
-                               start=0):
-        """
-        The start parameter determines whether we are doing in-sample
-        dynamic prediction or not. If start == 0, then we are doing
-        dynamic out-of-sample. If start > 0, we are doing dynamic in-sample.
-        The start parameter indicates the *negative* index for start
-        in endog. Ie., if y = [1,2,3,4,5,6,7,8,9] and you want the first
-        forecast to be at index 7, then you should pass start = 2.
-        """
-        p = self.k_ar
-        q = self.k_ma
-        (trendparam, exparams,
-         arparams, maparams) = _unpack_params(params, (p,q), self.k_trend,
-                                    self.k_exog, reverse=True)
-        endog, resid, mu = self._get_predict_out_of_sample(p, q, start,
-                                                           errors, trendparam,
-                                                           exparams, arparams,
-                                                           maparams, steps)
-
-        forecast = np.zeros(steps)
-        if steps == 1:
-            if q:
-                return mu[0] + np.dot(arparams, endog[:p]) + np.dot(maparams,
-                                                                    resid[:q])
-            else:
-                return mu[0] + np.dot(arparams, endog[:p])
-
-        if q:
-            i = 0 # if q == 1
-        else:
-            i = -1
-
-        #from IPython.core.debugger import Pdb; Pdb().set_trace()
-        for i in range(min(q,steps-1)):
-            fcast = mu[i] + np.dot(arparams,endog[i:i+p]) + \
-                          np.dot(maparams,resid[i:i+q])
-            forecast[i] = fcast
-            endog[i+p] = fcast
-
-        for i in range(i+1,steps-1):
-            fcast = mu[i] + np.dot(arparams,endog[i:i+p])
-            forecast[i] = fcast
-            endog[i+p] = fcast
-
-        #need to do one more without updating endog
-        forecast[-1] = mu[-1] + np.dot(arparams,endog[steps-1:])
-        return forecast
-
     def predict(self, params, start=None, end=None, exog=None, dynamic=False):
         """
         In-sample and out-of-sample prediction.
@@ -452,11 +471,6 @@ class ARMA(tsbase.TimeSeriesModel):
         # will return an index of a date
         start = self._get_predict_start(start, dynamic)
         end, out_of_sample = self._get_predict_end(end, dynamic)
-
-        #if end < start and not out_of_sample:
-        #    raise ValueError("end is before start")
-        #elif out_of_sample and end < start - 1: # can start fcast 1 out
-        #    raise ValueError("end is before start")
         if out_of_sample and (exog is None and self.k_exog > 0):
             raise ValueError("You must provide exog for ARMAX")
 
@@ -469,30 +483,18 @@ class ARMA(tsbase.TimeSeriesModel):
             # also return error estimates and confidence intervals
             # but how? len(endog) is not tot_obs
             out_of_sample += end - start + 1
-            return self._predict_out_of_sample(params, out_of_sample, resid,
-                    exog, start)
+            return _arma_predict_out_of_sample(params, out_of_sample, resid,
+                    k_ar, self.k_ma, self.k_trend, self.k_exog, endog, exog,
+                    start, method)
 
-        # this does pre- and in-sample fitting
-        if 'mle' in method:
-            fittedvalues = endog - resid #get them all then trim
-        elif k_ar > 0:
-            fittedvalues = endog[k_ar:] - resid
-
-        fv_start = start
-        if 'mle' not in method:
-            fv_start -= k_ar # start is in terms of endog index
-        predictedvalues = np.zeros(end + 1 - fv_start + out_of_sample)
-        pv_end = min(len(predictedvalues), len(fittedvalues) - fv_start)
-        fv_end = min(len(fittedvalues), end + 1)
-
-        #from IPython.core.debugger import Pdb; Pdb().set_trace()
-        predictedvalues[:pv_end] = fittedvalues[fv_start:fv_end]
-        if out_of_sample == 0:
-            return predictedvalues
-
-        # do out of sample fitting
-        predictedvalues[pv_end:] = self._predict_out_of_sample(params,
-                out_of_sample, resid, exog)
+        predictedvalues = _arma_predict_in_sample(start, end, endog, resid,
+                            k_ar, method)
+        if out_of_sample:
+            forecastvalues = _arma_predict_out_of_sample(params, out_of_sample,
+                                        resid, k_ar, self.k_ma, self.k_trend,
+                                        self.k_exog, endog, exog,
+                                        method=method)
+            predictedvalues = np.r_[predictedvalues, forecastvalues]
         return predictedvalues
 
     def loglike(self, params):
@@ -702,33 +704,27 @@ class ARIMA(ARMA):
         # class constructor
         k_diff = getattr(self, 'k_diff', 0)
         method = getattr(self, 'method', 'mle')
+        k_ar = getattr(self, 'k_ar', 0)
         if start is None:
             if 'mle' in method and not dynamic:
                 start = 0
             else:
-                start = self.k_ar
-        else:
-            if isinstance(start, int):
+                start = k_ar
+        elif isinstance(start, int):
                 start -= k_diff
-                try:
+                try: # catch when given an integer outside of dates index
                     start = super(ARIMA, self)._get_predict_start(start,
                                                                   dynamic)
-                except IndexError as err: #likely you've got dates and you
-                                          # gave it
-                                   # one outside of dates
+                except IndexError as err:
                     raise ValueError("start must be in series. "
                                      "got %d" % (start + k_diff))
-            else:
-                start = _validate(start, self.k_ar, self.k_ma, self._data.dates)
-                start = super(ARIMA, self)._get_predict_start(start, dynamic)
-                start -= k_diff
-                #TODO: oh dear god don't call me twice here
-                #REFACTOR!
-                #start = super(ARIMA, self)._get_predict_start(start, dynamic)
-            if start < 0:
-            #TODO: clarify for dates
-                raise ValueError("The start index %d of the original series "
-                                 "has been differenced away" % start)
+        else: # received a date
+            start = _validate(start, k_ar, k_diff, self._data.dates,
+                              method)
+            start = super(ARIMA, self)._get_predict_start(start, dynamic)
+        _check_arima_start(start, k_ar, k_diff, method, dynamic)
+        # reset date for k_diff adjustment
+        self._set_predict_start_date(start + k_diff)
         return start
 
     def _get_predict_end(self, end, dynamic=False):
@@ -767,7 +763,7 @@ class ARIMA(ARMA):
             `start_params` as starting parameters.  See above for more
             information.
         trend : str {'c','nc'}
-            Whehter to include a constant or not.  'c' includes constant,
+            Whether to include a constant or not.  'c' includes constant,
             'nc' no constant.
         solver : str or None, optional
             Solver to be used.  The default is 'l_bfgs' (limited memory Broyden-
@@ -910,9 +906,6 @@ class ARIMA(ARMA):
         elif typ == 'levels':
             endog = self._data.endog
             if not dynamic:
-
-                # end is in terms of the differenced array
-                # so add in k_diff when using
                 predict = super(ARIMA, self).predict(params, start, end,
                                                      dynamic)
 
@@ -927,7 +920,6 @@ class ARIMA(ARMA):
                     else:
                         fv = predict + endog[start:end + 1]
                 else:
-                    #from IPython.core.debugger import Pdb; Pdb().set_trace()
                     k_ar = self.k_ar
                     if out_of_sample:
                         fv = (predict[:-out_of_sample] +
@@ -939,7 +931,6 @@ class ARIMA(ARMA):
             else:
                 #IFF we need to use pre-sample values assume pre-sample
                 # residuals are zero, do this by a hack
-                #TODO: make predict, etc. completely generic
                 if start == self.k_ar + self.k_diff or start is None:
                     # do the first k_diff+1 separately
                     p = self.k_ar
@@ -968,7 +959,6 @@ class ARIMA(ARMA):
                     y = self.endog
                     if self.k_trend == 1:
                         mu = trendparam * (1-arparams.sum()) # use expectation
-                                                     # not constant
                         mu = np.array([mu]*(k_diff)) # repeat for slicing
                     else:
                         mu = np.zeros(k_diff)
@@ -982,8 +972,6 @@ class ARIMA(ARMA):
                     return np.r_[first_d,
                                  endog[start-1] + np.cumsum(predict)]
                 else:
-                    #from IPython.core.debugger import Pdb
-                    #Pdb().set_trace()
                     predict = super(ARIMA, self).predict(params, start, end,
                                                          exog, dynamic)
                     return endog[start-1] + np.cumsum(predict)
@@ -1012,7 +1000,7 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
     **Attributes**
 
     aic : float
-        Akaikie Information Criterion
+        Akaike Information Criterion
         :math:`-2*llf+2*(df_model+1)`
     arparams : array
         The parameters associated with the AR coefficients in the model.
@@ -1255,8 +1243,9 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
 
         arparams = self.arparams
         maparams = self.maparams
-        forecast = self.model._predict_out_of_sample(self.params,
-                steps, self.resid, exog)
+        forecast = _arma_predict_out_of_sample(self.params,
+                steps, self.resid, self.k_ar, self.k_ma, self.k_trend,
+                self.k_exog, self.model.endog, exog, method=self.model.method)
         # compute the standard errors
         sigma2 = self.sigma2
         ma_rep = arma2ma(np.r_[1,-arparams],
@@ -1342,8 +1331,10 @@ class ARIMAResults(ARMAResults):
         Prediction is done in the levels of the original endogenous variable.
         If you would like prediction of differences in levels use `predict`.
         """
-        forecast = self.model._predict_out_of_sample(self.params, steps,
-                                                         self.resid, exog)
+        forecast = _arma_predict_out_of_sample(self.params, steps, self.resid,
+                                        self.k_ar, self.k_ma, self.k_trend,
+                                        self.k_exog, self.model.endog,
+                                        exog, method=self.model.method)
         forecast = self.model._data.endog[-1] + np.cumsum(forecast)
         # get forecast errors
         arparams = self.arparams
