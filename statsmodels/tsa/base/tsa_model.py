@@ -82,6 +82,20 @@ class TimeSeriesModel(base.LikelihoodModel):
         """
         return datetools.date_parser(date)
 
+    def _set_predict_start_date(self, start):
+        dates = self._data.dates
+        if dates is None:
+            return
+        if start > len(dates):
+            raise ValueError("Start must be <= len(endog)")
+        if start == len(dates):
+            self._data.predict_start = datetools._date_from_idx(dates[-1],
+                                                    start, self._data.freq)
+        elif start < len(dates):
+            self._data.predict_start = dates[start]
+        else:
+            raise ValueError("Start must be <= len(dates)")
+
     def _get_predict_start(self, start):
         """
         Returns the index of the given start date. Subclasses should define
@@ -106,14 +120,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                 raise ValueError("Start must be in dates. Got %s | %s" %
                         (str(start), str(dtstart)))
 
-        if isinstance(start, int) and dates is not None:
-            if start > len(dates):
-                raise ValueError("Start must be <= len(endog)")
-            self._data.predict_start = dates[start]
-
-        if start > len(self._data.endog):
-            raise ValueError("Start must be <= len(endog)")
-
+        self._set_predict_start_date(start)
         return start
 
 
@@ -141,7 +148,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                     end = dates.get_loc(dtend)
             except KeyError, err: # end is greater than dates[-1]...probably
                 if dtend > self._data.dates[-1]:
-                    end = len(self.endog) - 1
+                    end = len(self._data.endog) - 1
                     freq = self._data.freq
                     out_of_sample = datetools._idx_from_dates(dates[-1], dtend,
                                             freq)
