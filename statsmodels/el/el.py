@@ -2,13 +2,14 @@
 Empirical Likelihood Implementation
 
 Start: 21 May 2012
-Last Updated: 7 June 2012
+Last Updated: 10 June 2012
 
 General References:
 
 Owen, A. (2001). "Empirical Likelihood." Chapman and Hall
 
-
+TODO (Long-term)  Create a dict that forms estimating functions given
+a user input.  Then all tests can be combined into one function.
 
 """
 import numpy as np
@@ -225,6 +226,32 @@ class OptFuncts(ElModel):
                                  var_max=self.var_u,
                                  mu_min=self.mu_l,
                                  mu_max=self.mu_u)[1] - self.r0
+
+    def opt_correl(self, nuis_params):
+        self.mu1_data = (self.endog[:, 0] - nuis_params[0])
+        sig1_data = ((self.endog[:, 0] - nuis_params[0]) ** 2) - \
+          nuis_params[1]
+        mu2_data = self.endog[:, 1] - nuis_params[2]
+        sig2_data = ((self.endog[:, 1] - nuis_params[2]) ** 2) -\
+           nuis_params[3]
+        correl_data = ((self.endog[:, 0] - nuis_params[0]) * \
+                      (self.endog[:, 1] - nuis_params[2])) - \
+                      (self.corr0 * (nuis_params[1] ** .5) \
+                       * (nuis_params[3] ** .5))
+        self.est_vect = np.concatenate((self.mu1_data, sig1_data,
+                                       mu2_data,
+                                       sig2_data, correl_data),
+                                       axis=1).reshape(5, self.nobs)
+        self.est_vect = self.est_vect.T
+        eta_star = self.modif_newton(np.array([1 / self.nobs,
+                                               1 / self.nobs,
+                                               1 / self.nobs,
+                                               1 / self.nobs,
+                                               1 / self.nobs]))
+        denom = 1 + np.dot(eta_star, self.est_vect.T)
+        self.new_weights = 1 / self.nobs * 1 / denom
+        llr = np.sum(np.log(self.nobs * self.new_weights))
+        return -2 * llr
 
 
 class DescStat(OptFuncts):
@@ -803,7 +830,7 @@ class DescStat(OptFuncts):
         default| .99 confidence level assuming normality.
 
         var_min, var_max, mu_min, mu_max: Minimum Value of the nuisance
-        variance and mean. | default .95 confidence limits
+        variance and mean. | default sig confidence limits
 
         Tips
         ----
@@ -825,16 +852,16 @@ class DescStat(OptFuncts):
             ul = upper_bound
         else:
             ul = skew(self.endog) + \
-            2.5 * ((6 * self.nobs * (self.nobs - 1)) / \
-              ((self.nobs - 2) * (self.nobs + 1) * \
-               (self.nobs + 3))) ** .5
+            2.5 * ((6. * self.nobs * (self.nobs - 1.)) / \
+              ((self.nobs - 2.) * (self.nobs + 1.) * \
+               (self.nobs + 3.))) ** .5
         if lower_bound is not None:
             ll = lower_bound
         else:
             ll = skew(self.endog) - \
-            2.5 * ((6 * self.nobs * (self.nobs - 1)) / \
-              ((self.nobs - 2) * (self.nobs + 1) * \
-               (self.nobs + 3))) ** .5
+            2.5 * ((6. * self.nobs * (self.nobs - 1.)) / \
+              ((self.nobs - 2.) * (self.nobs + 1.) * \
+               (self.nobs + 3.))) ** .5
         # Need to calculate variance and mu limits here to avoid
         # recalculating at every iteration in the maximization.
         if (var_max is None) or (var_min is None):
@@ -883,7 +910,7 @@ class DescStat(OptFuncts):
         default| .99 confidence level assuming normality.
 
         var_min, var_max, mu_min, mu_max: Minimum Value of the nuisance
-        variance and mean. | default .95 confidence limits
+        variance and mean. | default  sig confidence limits
 
         Tips
         ----
@@ -905,20 +932,20 @@ class DescStat(OptFuncts):
             ul = upper_bound
         else:
             ul = kurtosis(self.endog) + \
-            (2.5 * (2 * ((6 * self.nobs * (self.nobs - 1)) / \
-              ((self.nobs - 2) * (self.nobs + 1) * \
-               (self.nobs + 3))) ** .5) * \
-               (((self.nobs ** 2) - 1) / ((self.nobs - 3) *\
-                 (self.nobs + 5))) ** .5)
+            (2.5 * (2. * ((6. * self.nobs * (self.nobs - 1.)) / \
+              ((self.nobs - 2.) * (self.nobs + 1.) * \
+               (self.nobs + 3.))) ** .5) * \
+               (((self.nobs ** 2.) - 1.) / ((self.nobs - 3.) *\
+                 (self.nobs + 5.))) ** .5)
         if lower_bound is not None:
             ll = lower_bound
         else:
             ll = kurtosis(self.endog) - \
-            (2.5 * (2 * ((6 * self.nobs * (self.nobs - 1)) / \
-              ((self.nobs - 2) * (self.nobs + 1) * \
-               (self.nobs + 3))) ** .5) * \
-               (((self.nobs ** 2) - 1) / ((self.nobs - 3) *\
-                 (self.nobs + 5))) ** .5)
+            (2.5 * (2. * ((6. * self.nobs * (self.nobs - 1.)) / \
+              ((self.nobs - 2.) * (self.nobs + 1.) * \
+               (self.nobs + 3.))) ** .5) * \
+               (((self.nobs ** 2.) - 1.) / ((self.nobs - 3.) *\
+                 (self.nobs + 5.))) ** .5)
         # Need to calculate variance and mu limits here to avoid
         # recalculating at every iteration in the maximization.
         if (var_max is None) or (var_min is None):
@@ -951,3 +978,116 @@ class DescStat(OptFuncts):
         ul = optimize.brentq(self.ci_limits_kurt, kurtosis(self.endog), \
                              ul)
         return   ll, ul
+
+    def hy_test_correl(self, corr0, nuis0=None, mu1_min=None,
+                       mu1_max=None, mu2_min=None, mu2_max=None,
+                       var1_min=None, var1_max=None,
+                       var2_min=None, var2_max=None, print_weights=0):
+        """
+
+        Returns the p-value and -2 * log-likelihood ratio for the
+        correlation coefficient between 2 variables.
+
+        Parameters
+        ---------
+        corr0: Hypothesized value to be tested
+
+        Optional
+        --------
+        nuis0: Starting value for nuisance parameters. default |
+        sample estimate of each Parameters
+
+        mu1_max through var2_max: Limits of nuisance Parameters
+        to maximize over.  default | 95% confidence limits assuming
+        normality
+
+        print_weights: If true, returns the weights that maximize
+        the log-likelihood at the hypothesized value.
+
+        Notes
+        -----
+
+        In practice, when optimizing over the nuisance parameters,
+        the optimal nuisance parameters are often very close to their
+        sample estimate and rarely close to their 95% confidence level.
+        Therefore, if the function returns 'Optimization Fails',
+        consider narrowing the intervals of the nuisance parameters.
+
+        Also, for very unlikely hypothesized values (ratio > 1000), the
+        function may also not be able to optimize successfully.
+
+        """
+
+        if self.endog.shape[1] != 2:
+            raise Exception('Correlation matrix not yet implemented')
+
+        self.corr0 = corr0
+
+        if nuis0 is not None:
+            start_nuisance = nuis0
+        else:
+            start_nuisance = np.array([self.endog[:, 0].mean(),
+                                       self.endog[:, 0].var(),
+                                       self.endog[:, 1].mean(),
+                                       self.endog[:, 1].var()])
+
+        if mu1_min is not None:
+            mu1_lb = mu1_min
+        else:
+            mu1_lb = self.endog[:, 0].mean() - ((1.96 * \
+              (self.endog[:, 0].var()) / self.nobs)) ** .5
+            print mu1_lb
+
+        if mu1_max is not None:
+            mu1_ub = mu1_max
+        else:
+            mu1_ub = self.endog[:, 0].mean() + (1.96 * \
+              (((self.endog[:, 0].var()) / self.nobs)) ** .5)
+            print mu1_ub
+        if mu2_min is not None:
+            mu2_lb = mu2_min
+        else:
+            mu2_lb = self.endog[:, 1].mean() - (1.96 * \
+              (((self.endog[:, 1].var()) / self.nobs)) ** .5)
+            print mu2_lb
+        if mu2_max is not None:
+            mu2_ub = mu2_max
+        else:
+            mu2_ub = self.endog[:, 1].mean() + (1.96 * \
+              (((self.endog[:, 1].var()) / self.nobs)) ** .5)
+            print mu2_ub
+        if var1_min is not None:
+            var1_lb = var1_min
+        else:
+            var1_lb = (self.endog[:, 0].var() * (self.nobs - 1)) / \
+              chi2.ppf(.975, self.nobs)
+            print var1_lb
+        if var1_max is not None:
+            var1_ub = var1_max
+        else:
+            var1_ub = (self.endog[:, 0].var() * (self.nobs - 1)) / \
+              chi2.ppf(.025, self.nobs)
+            print var1_ub
+        if var2_min is not None:
+            var2_lb = var2_min
+        else:
+            var2_lb = (self.endog[:, 1].var() * (self.nobs - 1)) / \
+              chi2.ppf(.975, self.nobs)
+            print var2_lb
+        if var2_max is not None:
+            var2_ub = var2_max
+        else:
+            var2_ub = (self.endog[:, 1].var() * (self.nobs - 1)) / \
+              chi2.ppf(.025, self.nobs)
+            print var2_ub
+      ## TODO: IS there a way to condense the above default Parameters?
+        llr = optimize.fmin_l_bfgs_b(self.opt_correl, start_nuisance,
+                                     approx_grad=1,
+                                     bounds=[(mu1_lb, mu1_ub),
+                                              (var1_lb, var1_ub),
+                                              (mu2_lb, mu2_ub),
+                                              (var2_lb, var2_ub)])[1]
+        p_val = 1 - chi2.cdf(llr, 1)
+        if print_weights:
+            return p_val, llr, self.new_weights
+        return p_val, llr
