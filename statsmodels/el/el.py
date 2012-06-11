@@ -253,6 +253,14 @@ class OptFuncts(ElModel):
         llr = np.sum(np.log(self.nobs * self.new_weights))
         return -2 * llr
 
+    def ci_limits_corr(self, corr0):
+        return self.hy_test_corr(corr0, nuis0=None, mu1_min=self.mu1_lb,
+                       mu1_max=self.mu1_ub, mu2_min=self.mu2_lb,
+                       mu2_max=self.mu2_ub,
+                       var1_min=self.var1_lb, var1_max=self.var1_ub,
+                       var2_min=self.var2_lb, var2_max=self.var2_ub,
+                       print_weights=0)[1] - self.r0
+
 
 class DescStat(OptFuncts):
     """
@@ -979,7 +987,7 @@ class DescStat(OptFuncts):
                              ul)
         return   ll, ul
 
-    def hy_test_correl(self, corr0, nuis0=None, mu1_min=None,
+    def hy_test_corr(self, corr0, nuis0=None, mu1_min=None,
                        mu1_max=None, mu2_min=None, mu2_max=None,
                        var1_min=None, var1_max=None,
                        var2_min=None, var2_max=None, print_weights=0):
@@ -997,7 +1005,7 @@ class DescStat(OptFuncts):
         nuis0: Starting value for nuisance parameters. default |
         sample estimate of each Parameters
 
-        mu1_max through var2_max: Limits of nuisance Parameters
+        mu1_max through var2_max: Limits of nuisance parameters
         to maximize over.  default | 95% confidence limits assuming
         normality
 
@@ -1091,3 +1099,99 @@ class DescStat(OptFuncts):
         if print_weights:
             return p_val, llr, self.new_weights
         return p_val, llr
+
+    def ci_corr(self, sig=.05, upper_bound=None, lower_bound=None,
+                       mu1_min=None,
+                       mu1_max=None, mu2_min=None, mu2_max=None,
+                       var1_min=None, var1_max=None,
+                       var2_min=None, var2_max=None):
+        """
+
+        Returns the confidence intervals for the correlation coefficient.
+
+        Parameters
+        ----------
+        upper_bound: Maximum value the upper confidence limit can be.
+        default | 99% confidence assuming normality.
+
+        lower_bound: Minimum value the lower condidence limit can be.
+        default | 99% confidence assuming normality.
+
+        mu1_max through var2_max: Limits of nuisance parameters
+        to maximize over.  default | 95% confidence limits assuming
+        normality
+
+
+        """
+
+        self.r0 = chi2.ppf(1 - sig, 1)
+        point_est = np.corrcoef(self.endog[:, 0], self.endog[:, 1])[0, 1]
+
+        if upper_bound is not None:
+            ul = upper_bound
+        else:
+            ul = min(.999, point_est + \
+                          2.5 * ((1. - point_est ** 2.) / \
+                          (self.nobs - 2.)) ** .5)
+
+        if lower_bound is not None:
+            ll = lower_bound
+        else:
+            ll = max(- .999, point_est - \
+                          2.5 * (((1. - point_est ** 2.) / \
+                          (self.nobs - 2.)) ** .5))
+
+        if mu1_min is not None:
+            self.mu1_lb = mu1_min
+        else:
+            self.mu1_lb = self.endog[:, 0].mean() - ((1.96 * \
+              (self.endog[:, 0].var()) / self.nobs)) ** .5
+
+        if mu1_max is not None:
+            self.mu1_ub = mu1_max
+        else:
+            self.mu1_ub = self.endog[:, 0].mean() + (1.96 * \
+              (((self.endog[:, 0].var()) / self.nobs)) ** .5)
+
+        if mu2_min is not None:
+            self.mu2_lb = mu2_min
+        else:
+            self.mu2_lb = self.endog[:, 1].mean() - (1.96 * \
+              (((self.endog[:, 1].var()) / self.nobs)) ** .5)
+
+        if mu2_max is not None:
+            self.mu2_ub = mu2_max
+        else:
+            self.mu2_ub = self.endog[:, 1].mean() + (1.96 * \
+              (((self.endog[:, 1].var()) / self.nobs)) ** .5)
+
+        if var1_min is not None:
+            self.var1_lb = var1_min
+        else:
+            self.var1_lb = (self.endog[:, 0].var() * (self.nobs - 1)) / \
+              chi2.ppf(.975, self.nobs)
+
+        if var1_max is not None:
+            self.var1_ub = var1_max
+        else:
+            self.var1_ub = (self.endog[:, 0].var() * (self.nobs - 1)) / \
+              chi2.ppf(.025, self.nobs)
+
+        if var2_min is not None:
+            self.var2_lb = var2_min
+        else:
+            self.var2_lb = (self.endog[:, 1].var() * (self.nobs - 1)) / \
+              chi2.ppf(.975, self.nobs)
+
+        if var2_max is not None:
+            self.var2_ub = var2_max
+        else:
+            self.var2_ub = (self.endog[:, 1].var() * (self.nobs - 1)) / \
+              chi2.ppf(.025, self.nobs)
+        print 'Finding the lower bound for correlation'
+
+        ll = optimize.brentq(self.ci_limits_corr, ll, point_est)
+        print 'Finding the upper bound for correlation'
+        ul = optimize.brentq(self.ci_limits_corr,
+                             point_est, ul)
+        return ll, ul
