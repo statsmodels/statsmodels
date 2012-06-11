@@ -1432,6 +1432,18 @@ def test_arima_predict_mle_diffs():
     fv = res1.model.predict(params, start, end, dynamic=True)
     assert_almost_equal(fv, fcdyn[5:203], DECIMAL_4)
 
+def test_arima_wrapper():
+    from statsmodels.datasets.macrodata import load_pandas
+
+    cpi = load_pandas().data['cpi']
+    cpi.index = pandas.Index(cpi_dates)
+    res = ARIMA(cpi, freq='Q').fit(order=(4,1,1), disp=-1)
+    assert_equal(res.params.index, ['const', 'ar.L1.D.cpi', 'ar.L2.D.cpi',
+                                    'ar.L3.D.cpi', 'ar.L4.D.cpi',
+                                    'ma.L1.D.cpi'])
+    assert_equal(res.model.endog_names, 'D.cpi')
+
+
 if __name__ == "__main__":
     import nose
     nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'], exit=False)
