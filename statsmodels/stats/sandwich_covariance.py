@@ -103,28 +103,17 @@ Statistics 90, no. 3 (2008): 414–427.
 """
 
 import numpy as np
-from numpy.testing import assert_almost_equal
 
 from statsmodels.tools.grouputils import Group
+from statsmodels.stats.moment_helpers import se_cov
+
+__all__ = ['cov_cluster', 'cov_cluster_2groups', 'cov_hac', 'cov_nw_panel',
+           'cov_white_simple',
+           'cov_hc0', 'cov_hc1', 'cov_hc2', 'cov_hc3',
+           'se_cov']
 
 
-def se_cov(cov):
-    '''get standard deviation from covariance matrix
 
-    just a shorthand function np.sqrt(np.diag(cov))
-
-    Parameters
-    ----------
-    cov : array_like, square
-        covariance matrix
-
-    Returns
-    -------
-    std : ndarray
-        standard deviation from diagonal of cov
-
-    '''
-    return np.sqrt(np.diag(cov))
 
 #----------- from linear_model.RegressionResults
 '''
@@ -186,9 +175,9 @@ def cov_hc0(results):
     """
 
     het_scale = results.resid**2 # or whitened residuals? only OLS?
-    cov_hc0_ = _HCCM(results, het_scale)
+    cov_hc0 = _HCCM(results, het_scale)
 
-    return cov_hc0_
+    return cov_hc0
 
 def cov_hc1(results):
     """
@@ -196,8 +185,8 @@ def cov_hc1(results):
     """
 
     het_scale = results.nobs/(results.df_resid)*(results.resid**2)
-    cov_hc1_ = _HCCM(results, het_scale)
-    return cov_hc1_
+    cov_hc1 = _HCCM(results, het_scale)
+    return cov_hc1
 
 def cov_hc2(results):
     """
@@ -292,7 +281,7 @@ def weights_bartlett(nlags):
     Parameters
     ----------
     nlags : int
-       highest lag in the kernel window
+       highest lag in the kernel window, this does not include the zero lag
 
     Returns
     -------
@@ -304,6 +293,25 @@ def weights_bartlett(nlags):
     #with lag zero
     return 1 - np.arange(nlags+1)/(nlags+1.)
 
+def weights_uniform(nlags):
+    '''uniform weights for HAC
+
+    this will be moved to another module
+
+    Parameters
+    ----------
+    nlags : int
+       highest lag in the kernel window, this does not include the zero lag
+
+    Returns
+    -------
+    kernel : ndarray, (nlags+1,)
+        weights for uniform kernel
+
+    '''
+
+    #with lag zero
+    return np.ones(nlags+1.)
 
 def S_hac_simple(x, nlags=None, weights_func=weights_bartlett):
     '''inner covariance matrix for HAC (Newey, West) sandwich
@@ -393,6 +401,7 @@ def group_sums(x, group):
     #TODO: remove this, already copied to tools/grouputils
     '''
 
+    #TODO: transpose return in grou_sum, need test coverage first
     return np.array([np.bincount(group, weights=x[:,col])
                             for col in range(x.shape[1])])
 
@@ -426,9 +435,6 @@ def S_hac_groupsum(x, time, nlags=None, weights_func=weights_bartlett):
     S : ndarray, (k_vars, k_vars)
         inner covariance matrix for sandwich
 
-
-    not verified
-
     Reference
     ---------
     Daniel Hoechle, xtscc paper
@@ -437,7 +443,7 @@ def S_hac_groupsum(x, time, nlags=None, weights_func=weights_bartlett):
     '''
     #needs groupsums
 
-    x_group_sums = group_sums(x, time)
+    x_group_sums = group_sums(x, time).T #TODO: transpose return in grou_sum
 
     return S_hac_simple(x_group_sums, nlags=nlags, weights_func=weights_func)
 
@@ -462,9 +468,8 @@ def cov_crosssection_0(results, group):
     #TODO: currently used version of groupsums requires 2d resid
     scale = S_crosssection(results.resid[:,None], group)
     scale = np.squeeze(scale)
-    c = _HCCM1(results, scale)
-    bse = np.sqrt(np.diag(c))
-    return c, bse
+    cov = _HCCM1(results, scale)
+    return cov
 
 def cov_cluster(results, group, use_correction=True):
     '''cluster robust covariance matrix
@@ -484,8 +489,6 @@ def cov_cluster(results, group, use_correction=True):
     -------
     cov : ndarray, (k_vars, k_vars)
         cluster robust covariance matrix for parameter estimates
-    bse : ndarray, (k_vars,)
-        standard errors, this will be dropped
 
     Notes
     -----
@@ -504,8 +507,7 @@ def cov_cluster(results, group, use_correction=True):
     if use_correction:
         cov_c *= n_groups / (n_groups - 1.) * ((nobs-1.) / float(nobs - k_vars))
 
-    bse_c = np.sqrt(np.diag(cov_c))
-    return cov_c, bse_c
+    return cov_c
 
 def cov_cluster_2groups(results, group, group2=None, use_correction=True):
     '''cluster robust covariance matrix for two groups/clusters
@@ -548,15 +550,15 @@ def cov_cluster_2groups(results, group, group2=None, use_correction=True):
         group = (group0, group1)
 
 
-    cov0 = cov_cluster(results, group0, use_correction=use_correction)[0]
+    cov0 = cov_cluster(results, group0, use_correction=use_correction)
     #[0] because we get still also returns bse
-    cov1 = cov_cluster(results, group1, use_correction=use_correction)[0]
+    cov1 = cov_cluster(results, group1, use_correction=use_correction)
 
     group_intersection = Group(group)
     #cov of cluster formed by intersection of two groups
     cov01 = cov_cluster(results,
                         group_intersection.group_int,
-                        use_correction=use_correction)[0]
+                        use_correction=use_correction)
 
     #robust cov matrix for union of groups
     cov_both = cov0 + cov1 - cov01
@@ -579,8 +581,6 @@ def cov_white_simple(results, use_correction=True):
     -------
     cov : ndarray, (k_vars, k_vars)
         heteroscedasticity robust covariance matrix for parameter estimates
-    bse : ndarray, (k_vars,)
-        standard errors, this will be dropped
 
     Notes
     -----
@@ -604,9 +604,7 @@ def cov_white_simple(results, use_correction=True):
         nobs, k_vars = results.model.exog.shape
         cov_w *= nobs / float(nobs - k_vars)
 
-    bse_w = np.sqrt(np.diag(cov_w))
-
-    return cov_w, bse_w
+    return cov_w
 
 
 def cov_hac_simple(results, nlags=None, weights_func=weights_bartlett,
@@ -634,9 +632,6 @@ def cov_hac_simple(results, nlags=None, weights_func=weights_bartlett,
     -------
     cov : ndarray, (k_vars, k_vars)
         HAC robust covariance matrix for parameter estimates
-    bse : ndarray, (k_vars,)
-        standard errors, this will be dropped
-
 
     Notes
     -----
@@ -655,9 +650,9 @@ def cov_hac_simple(results, nlags=None, weights_func=weights_bartlett,
         nobs, k_vars = results.model.exog.shape
         cov_hac *= nobs / float(nobs - k_vars)
 
-    bse_hac = np.sqrt(np.diag(cov_hac))
+    return cov_hac
 
-    return cov_hac, bse_hac
+cov_hac = cov_hac_simple   #alias for users
 
 #---------------------- use time lags corrected for groups
 #the following were copied from a different experimental script,
@@ -674,22 +669,25 @@ def lagged_groups(x, lag, groupidx):
     out0 = []
     out_lagged = []
     for l,u in groupidx:
-        out0.append(x[l+lag:u])
-        out_lagged.append(x[l:u-lag])
+        if l+lag < u: #group is longer than lag
+            out0.append(x[l+lag:u])
+            out_lagged.append(x[l:u-lag])
 
+    if out0 == []:
+        raise ValueError('all groups are empty taking lags')
     #return out0, out_lagged
     return np.vstack(out0), np.vstack(out_lagged)
 
 
 
 def S_nw_panel(xw, weights, groupidx):
-    '''HAC for panel data
+    '''inner covariance matrix for HAC for panel data
 
     no denominator nobs used
 
     no reference for this, just accounting for time indices
     '''
-    nlags = len(weights)
+    nlags = len(weights)-1
 
     S = weights[0] * np.dot(xw.T, xw)  #weights just for completeness
     for lag in range(1, nlags+1):
@@ -699,15 +697,59 @@ def S_nw_panel(xw, weights, groupidx):
     return S
 
 
-def cov_nw_panel(results, nlags, groupidx, use_correction=True):
-    '''
+def cov_nw_panel(results, nlags, groupidx, weights_func=weights_bartlett,
+                 use_correction='hac'):
+    '''Panel HAC robust covariance matrix
 
-    groupidx is list of tuple
+    Assumes we have a panel of time series with consecutive, equal spaced time
+    periods. Data is assumed to be in long format with time series of each
+    individual stacked into one array. Panel can be unbalanced.
+
+    Parameters
+    ----------
+    results : result instance
+       result of a regression, uses results.model.exog and results.resid
+       TODO: this should use wexog instead
+    nlags : int or None
+        Highest lag to include in kernel window. Currently, no default
+        because the optimal length will depend on the number of observations
+        per cross-sectional unit.
+    groupidx : list of tuple
+        each tuple should contain the start and end index for an individual.
+        (groupidx might change in future).
+    weights_func : callable
+        weights_func is called with nlags as argument to get the kernel
+        weights. default are Bartlett weights
+    use_correction : 'cluster' or 'hac' or False
+        If False, then no small sample correction is used.
+        If 'cluster' (default), then the same correction as in cov_cluster is
+        used.
+        If 'hac', then the same correction as in single time series, cov_hac
+        is used.
+
+
+    Returns
+    -------
+    cov : ndarray, (k_vars, k_vars)
+        HAC robust covariance matrix for parameter estimates
+
+    Notes
+    -----
+    For nlags=0, this is just White covariance, cov_white.
+    If kernel is uniform, `weights_uniform`, with nlags equal to the number
+    of observations per unit in a balance panel, then cov_cluster and
+    cov_hac_panel are identical.
+
+    Tested against STATA `newey` command with same defaults.
+
+    Options might change when other kernels besides Bartlett and uniform are
+    available.
+
     '''
     if nlags == 0: #so we can reproduce HC0 White
         weights = [1, 0]  #to avoid the scalar check in hac_nw
     else:
-        weights = weights_bartlett(nlags)
+        weights = weights_func(nlags)
 
     xw = (results.model.exog * results.resid[:,None])
 
@@ -715,10 +757,89 @@ def cov_nw_panel(results, nlags, groupidx, use_correction=True):
     cov_hac = _HCCM2(results, S_hac)
     if use_correction:
         nobs, k_vars = results.model.exog.shape
-        cov_hac *= nobs / float(nobs - k_vars)
+        if use_correction == 'hac':
+            cov_hac *= nobs / float(nobs - k_vars)
+        elif use_correction in ['c', 'clu', 'cluster']:
+            n_groups = len(groupidx)
+            cov_hac *= n_groups / (n_groups - 1.)
+            cov_hac *= ((nobs-1.) / float(nobs - k_vars))
+
     return cov_hac
 
-#c = cov_nw_panel(results, 0, groupidx)
-#assert_almost_equal(np.sqrt(np.diag(c)), results.HC0_se, decimal=14)
+def cov_nw_groupsum(results, nlags, time, weights_func=weights_bartlett,
+                 use_correction=0):
+    '''Driscoll and Kraay Panel robust covariance matrix
 
-#------------------------
+    Robust covariance matrix for panel data of Driscoll and Kraay.
+
+    Assumes we have a panel of time series where the time index is available.
+    The time index is assumed to represent equal spaced periods. At least one
+    observation per period is required.
+
+    Parameters
+    ----------
+    results : result instance
+       result of a regression, uses results.model.exog and results.resid
+       TODO: this should use wexog instead
+    nlags : int or None
+        Highest lag to include in kernel window. Currently, no default
+        because the optimal length will depend on the number of observations
+        per cross-sectional unit.
+    time : ndarray of int
+        this should contain the coding for the time period of each observation.
+        time periods should be integers in range(maxT) where maxT is obs of i
+    weights_func : callable
+        weights_func is called with nlags as argument to get the kernel
+        weights. default are Bartlett weights
+    use_correction : 'cluster' or 'hac' or False
+        If False, then no small sample correction is used.
+        If 'hac' (default), then the same correction as in single time series, cov_hac
+        is used.
+        If 'cluster', then the same correction as in cov_cluster is
+        used.
+
+    Returns
+    -------
+    cov : ndarray, (k_vars, k_vars)
+        HAC robust covariance matrix for parameter estimates
+
+    Notes
+    -----
+    Tested against STATA xtscc package, which uses no small sample correction
+
+    This first averages relevant variables for each time period over all
+    individuals/groups, and then applies the same kernel weighted averaging
+    over time as in HAC.
+
+    Warning:
+    In the example with a short panel (few time periods and many individuals)
+    with mainly across individual variation this estimator did not produce
+    reasonable results.
+
+    Options might change when other kernels besides Bartlett and uniform are
+    available.
+
+    Reference
+    ---------
+    Daniel Hoechle, xtscc paper
+    Driscoll and Kraay
+
+    '''
+
+    xw = (results.model.exog * results.resid[:,None])
+
+    #S_hac = S_nw_panel(xw, weights, groupidx)
+    S_hac = S_hac_groupsum(xw, time, nlags=nlags, weights_func=weights_func)
+    cov_hac = _HCCM2(results, S_hac)
+    if use_correction:
+        nobs, k_vars = results.model.exog.shape
+        if use_correction == 'hac':
+            cov_hac *= nobs / float(nobs - k_vars)
+        elif use_correction in ['c', 'cluster']:
+            n_groups = len(np.unique(time))
+            cov_hac *= n_groups / (n_groups - 1.)
+            cov_hac *= ((nobs-1.) / float(nobs - k_vars))
+
+    return cov_hac
+
+

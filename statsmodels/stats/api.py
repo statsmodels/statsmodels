@@ -19,6 +19,14 @@ from .gof import powerdiscrepancy, gof_chisquare_discrete
 import stattools
 from .stattools import durbin_watson, omni_normtest, jarque_bera
 
+import sandwich_covariance
+from .sandwich_covariance import (
+            cov_cluster, cov_cluster_2groups, cov_nw_panel,
+            cov_hac, cov_white_simple,
+            cov_hc0, cov_hc1, cov_hc2, cov_hc3,
+            se_cov
+            )
+
 from weightstats import DescrStatsW
 
 from descriptivestats import Describe
