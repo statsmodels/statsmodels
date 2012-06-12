@@ -135,6 +135,10 @@ class ModelData(object):
     def attach_dates(self, result):
         return result
 
+class CharltonData(ModelData):
+    def _get_names(self, arr):
+        return arr.column_info.column_names
+
 class PandasData(ModelData):
     """
     Data handling class which knows how to reattach pandas metadata to model
@@ -306,6 +310,8 @@ def handle_data(endog, exog):
         klass = LarryData
     elif data_util._is_using_timeseries(endog, exog):
         klass = TimeSeriesData
+    elif data_util._is_using_charlton(endog, exog):
+        klass = CharltonData
     # keep this check last
     elif data_util._is_using_ndarray(endog, exog):
         klass = ModelData
