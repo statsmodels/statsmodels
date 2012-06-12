@@ -59,6 +59,13 @@ grun_imod = SUR(grun_sys)
 grun_ires = grun_imod.fit(igls=True)
 print grun_ires.params
 
+### <Alexandre>
+# Tests of SUR.predict
+grun_fitted1 = grun_mod.predict(grun_res.params,exog=None) # low-level call
+grun_fitted2 = grun_res.predict(exog=None) # high-level call
+# it's similar to grun_mod.endog
+### </Alexandre>
+
 # Two-Stage Least Squares for Simultaneous Equations
 #TODO: we are going to need *some kind* of formula framework
 

@@ -2,7 +2,7 @@ from statsmodels.regression.linear_model import GLS
 import numpy as np
 import statsmodels.tools.tools as tools
 from statsmodels.base.model import LikelihoodModelResults
-from scipy import sparse
+from scipy import sparse, linalg
 
 #http://www.irisa.fr/aladin/wg-statlin/WORKSHOPS/RENNES02/SLIDES/Foschi.pdf
 
@@ -251,8 +251,38 @@ exogenous variables.  Got length %s" % len(sys))
         sur_fit = SysResults(self, beta, self.normalized_cov_params)
         return sur_fit
 
-    def predict(self, design):
-        pass
+    def predict(self, params, exog=None):
+        """
+        exog : ndarray, formated like SUR.exog
+
+        Return
+        ------
+        predictions : ndarray, formated like SUR.endog
+        
+        Note
+        ----
+        This method is needed because the inherite version (which returns np.dot(exog,params))
+        does not work here, because exog is not formatted in a right way. 
+        However we can expect from the user to format himself exog in a
+        "block diagonal" way, and in this case self.sp_exog is used as default,
+        and this method would be useless.
+        """
+        if exog is None:
+            exog = self.exog
+        
+        M = self._M # number of equations
+        ps = self.df_model + 1 # we include the intercept
+        
+        designs = [] # list of individual design (ie X_{i})
+        cur_ind = 0
+        for i in range(M):
+            designs.append(self.exog[:,cur_ind:cur_ind+ps[i]])
+            cur_ind += ps[i]
+
+        aggr_design = linalg.block_diag(*designs)
+        # replace with sparse matrix? need scipy >= 0.11.dev to have sparse.block_diag
+        return np.dot(aggr_design,params).reshape(self.endog.shape)
+
 
 #TODO: Should just have a general 2SLS estimator to subclass
 # for IV, FGLS, etc.
