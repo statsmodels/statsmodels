@@ -385,6 +385,28 @@ class TestSeriesSeries(TestDataFrames):
         np.testing.assert_equal(self.data.endog, self.endog.values.squeeze())
         np.testing.assert_equal(self.data.exog, self.exog.values[:,None])
 
+def test_alignment():
+    """
+    Fix Issue #206
+    """
+    from statsmodels.regression.linear_model import OLS
+    from statsmodels.datasets.macrodata import load_pandas
+
+    d = load_pandas().data
+    #growth rates
+    gs_l_realinv = 400 * np.log(d['realinv']).diff().dropna()
+    gs_l_realgdp = 400 * np.log(d['realgdp']).diff().dropna()
+    lint = d['realint'][:-1] # incorrect indexing for test purposes
+
+    endog = gs_l_realinv
+
+    # re-index because they won't conform to lint
+    realgdp = gs_l_realgdp.reindex(lint.index, method='bfill')
+    data = dict(const=np.ones_like(lint), lrealgdp=realgdp, lint=lint)
+    exog = pandas.DataFrame(data)
+
+    # which index do we get??
+    np.testing.assert_raises(ValueError, OLS, *(endog, exog))
 
 class TestMultipleEqsArrays(TestArrays):
     @classmethod
