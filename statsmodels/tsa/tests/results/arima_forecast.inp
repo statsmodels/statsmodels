@@ -1,5 +1,4 @@
-open \
-  /home/skipper/statsmodels/statsmodels/statsmodels/datasets/macrodata/macrodata.csv
+open /home/skipper/statsmodels/statsmodels/statsmodels/datasets/macrodata/macrodata.csv
 setobs 4 1959:1 --time-series
 dataset addobs 25
 
