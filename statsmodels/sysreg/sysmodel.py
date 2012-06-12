@@ -208,7 +208,19 @@ class SysSUR(SysGLS):
             res = OLS(eq['endog'], eq['exog']).fit()
             resids.append(res.resid)
         resids = np.column_stack(resids)
-        
+       
+        # Compute DoF corrections
+        div_dfk1 = np.zeros((self.neqs, self.neqs))
+        div_dfk2 = np.zeros((self.neqs, self.neqs))
+        for i in range(self.neqs):
+            for j in range(self.neqs):
+                div_dfk1[i,j] = (self.df_model[i] + 1)*(self.df_model[j] + 1) \
+                                ** (1/2)
+                div_dfk2[i,j] = self.nobs - np.max((self.df_model[i] + 1, 
+                                                    self.df_model[j] + 1))
+ 
+        self.div_dfk1 = div_dfk1
+        self.div_dfk2 = div_dfk2
         self.sigma = self._compute_sigma(resids)
         self.initialize()
 
@@ -219,20 +231,16 @@ class SysSUR(SysGLS):
         resids : ndarray (N x G)
             OLS residuals for each equation stacked in column.
         '''
+        s = np.dot(resids.T, resids)
         if self.dfk is None:
-            div = self.nobs
+            return s / self.nobs
         elif self.dfk == 'dfk1':
-            div = np.zeros((self.neqs, self.neqs))
-            for i in range(self.neqs):
-                for j in range(self.neqs):
-                    div[i,j] = (self.df_model[i] + 1)*(self.df_model[j] + 1) ** (1/2)
+            return s / self.div_dfk1
         else:
-            div = np.zeros((self.neqs, self.neqs))
-            for i in range(self.neqs):
-                for j in range(self.neqs):
-                    div[i,j] = self.nobs - np.max((self.df_model[i] + 1, 
-                                                   self.df_model[j] + 1))
-        return (np.dot(resids.T, resids) / div)
+            return s / self.div_dfk2
+
+    #def fit(self, igls=False, tol=1e-5, maxiter=100):
+        #pass
 
 class SysSURI(SysOLS):
     '''
