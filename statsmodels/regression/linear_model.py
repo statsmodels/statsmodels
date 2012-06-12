@@ -128,6 +128,8 @@ class GLS(base.LikelihoodModel):
             self.sigma = np.asarray(sigma)
         else:
             self.sigma = sigma
+
+        #check for correct shape of sigma for 1d and 2d
         if self.sigma is not None and not self.sigma.shape == (): #greedy logic
             nobs = int(endog.shape[0])
             if self.sigma.ndim == 1 or np.squeeze(self.sigma).ndim == 1:
@@ -138,12 +140,15 @@ Should be of length %s, if sigma is a 1d array" % nobs)
                     self.sigma.shape[1] != nobs:
                 raise ValueError("expected an %s x %s array for sigma" % \
                         (nobs, nobs))
+
+        #convert to 2d sigma and get cholsigmainv
         if self.sigma is not None:
             nobs = int(endog.shape[0])
             if self.sigma.shape == ():
                 self.sigma = np.diag(np.ones(nobs)*self.sigma)
             if np.squeeze(self.sigma).ndim == 1:
                 self.sigma = np.diag(np.squeeze(self.sigma))
+            #TODO: avoid cholesky pinv for diag sigma
             self.cholsigmainv = np.linalg.cholesky(np.linalg.pinv(\
                     self.sigma)).T
         super(GLS, self).__init__(endog, exog)
@@ -180,7 +185,7 @@ Should be of length %s, if sigma is a 1d array" % nobs)
         regression.GLS
         """
         X = np.asarray(X)
-        if np.any(self.sigma) and not self.sigma==():
+        if np.any(self.sigma) and not self.sigma.shape == ():
             return np.dot(self.cholsigmainv, X)
         else:
             return X
