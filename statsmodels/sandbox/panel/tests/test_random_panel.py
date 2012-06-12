@@ -128,7 +128,8 @@ def test_short_panel():
     #panel with full length kernel
     #I fixe default correction to be equal
     cov_uni = sw.cov_nw_panel(mod2.res_pooled, 4, mod2.group.groupidx,
-                              weights_func=sw.weights_uniform)
+                              weights_func=sw.weights_uniform,
+                              use_correction='c')
     assert_almost_equal(cov_uni, cov_clu, decimal=13)
 
     #without correction
