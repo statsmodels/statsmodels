@@ -208,7 +208,7 @@ class SysSUR(SysGLS):
             res = OLS(eq['endog'], eq['exog']).fit()
             resids.append(res.resid)
         resids = np.column_stack(resids)
-       
+        
         # Compute DoF corrections
         div_dfk1 = np.zeros((self.neqs, self.neqs))
         div_dfk2 = np.zeros((self.neqs, self.neqs))
@@ -239,8 +239,29 @@ class SysSUR(SysGLS):
         else:
             return s / self.div_dfk2
 
-    #def fit(self, igls=False, tol=1e-5, maxiter=100):
-        #pass
+    def fit(self, igls=False, tol=1e-5, maxiter=100):
+        if not(igls):
+            return super(SysSUR, self).fit()
+
+        betas = [np.dot(self.pinv_wexog, self.wendog), np.inf]
+        iterations = 1
+        
+        while np.any(np.abs(betas[0] - betas[1]) > tol) \
+                and iterations < maxiter:
+            # Update sigma
+            fittedvalues = np.dot(self.sp_exog,betas[0]).reshape(self.neqs,-1).T
+            resids = self.endog.T - fittedvalues
+            self.sigma = self._compute_sigma(resids)
+            # Update attributes
+            self.initialize()
+            # Next iteration
+            betas = [np.dot(self.pinv_wexog, self.wendog), betas[0]]
+            iterations += 1
+       
+        self.iterations = iterations
+        beta = betas[0]
+        normalized_cov_params = np.dot(self.pinv_wexog, self.pinv_wexog.T)
+        return SysResults(self, beta, normalized_cov_params)
 
 class SysSURI(SysOLS):
     '''
@@ -291,6 +312,6 @@ if __name__ == '__main__':
     old_sys = [y1,x1,y2,x2]
 
     from statsmodels.sysreg.sysreg import SUR
-    s,s1,s2 = SysSUR(sys), SysSUR(sys, dfk='dfk1'), SysSUR(sys, dfk='dfk2')
-    #p,p1,p2 = SUR(old_sys), SUR(old_sys, dfk='dfk1'), SUR(old_sys, dfk='dfk2') # Bug
-    p = SUR(old_sys)
+    s,p = SysSUR(sys),SUR(old_sys)
+    rs,rp = s.fit(igls=True), p.fit(igls=True)
+

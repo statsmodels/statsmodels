@@ -32,3 +32,7 @@ for f in firms:
 grun_mod = SysSUR(sys, dfk='dfk2')
 grun_res = grun_mod.fit()
 
+# Iterated SUR estimation
+grun_imod = SysSUR(sys)
+grun_ires = grun_imod.fit(igls=True)
+
