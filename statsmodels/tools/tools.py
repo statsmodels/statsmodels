@@ -132,8 +132,14 @@ def categorical(data, col=None, dictnames=False, drop=False, ):
 
     >>> design2 = sm.tools.categorical(struct_ar, col='str_instr', drop=True)
     '''
+    if isinstance(col, (list, tuple)):
+        try:
+            assert len(col) == 1
+            col = col[0]
+        except:
+            raise ValueError("Can only convert one column at a time")
 
-#TODO: add a NameValidator function
+    #TODO: add a NameValidator function
     # catch recarrays and structured arrays
     if data.dtype.names or data.__class__ is np.recarray:
         if not col and np.squeeze(data).ndim > 1:
@@ -154,10 +160,10 @@ def categorical(data, col=None, dictnames=False, drop=False, ):
         if _swap:
             tmp_dummy = np.squeeze(tmp_dummy).swapaxes(1,0)
 
-        if not tmp_arr.dtype.names:
-            tmp_arr = np.squeeze(tmp_arr).astype('str').tolist()
+        if not tmp_arr.dtype.names: # how do we get to this code path?
+            tmp_arr = [str(item) for item in np.squeeze(tmp_arr)]
         elif tmp_arr.dtype.names:
-            tmp_arr = np.squeeze(tmp_arr.tolist()).astype('str').tolist()
+            tmp_arr = [str(item) for item in np.squeeze(tmp_arr.tolist())]
 
 # prepend the varname and underscore, if col is numeric attribute lookup
 # is lost for recarrays...
@@ -172,8 +178,6 @@ def categorical(data, col=None, dictnames=False, drop=False, ):
 #TODO: test this for rec and structured arrays!!!
 
         if drop is True:
-            # if len(data.dtype) is 1 then we have a 1 column array
-#            if len(data.dtype) == 1:
             if len(data.dtype) <= 1:
                 if tmp_dummy.shape[0] < tmp_dummy.shape[1]:
                     tmp_dummy = np.squeeze(tmp_dummy).swapaxes(1,0)
