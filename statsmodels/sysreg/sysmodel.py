@@ -139,6 +139,13 @@ class SysGLS(SysModel):
         return np.dot(np.kron(self.cholsigmainv,np.eye(self.nobs)), X)
 
     def fit(self):
+        '''
+        Notes
+        -----
+        This is a naive implementation that does not exploit the block
+        diagonal structure. See [1] for better algorithms.
+        [1] http://www.irisa.fr/aladin/wg-statlin/WORKSHOPS/RENNES02/SLIDES/Foschi.pdf
+        '''
         beta = np.dot(self.pinv_wexog, self.wendog)
         normalized_cov_params = np.dot(self.pinv_wexog, self.pinv_wexog.T)
         return SysResults(self, beta, normalized_cov_params)
@@ -161,7 +168,6 @@ class SysGLS(SysModel):
             sp_exog = block_diag(*designs)
 
         return np.dot(sp_exog, params)
-
 
 class SysWLS(SysGLS):
     '''
@@ -190,10 +196,13 @@ class SysOLS(SysWLS):
 
 class SysSUR(SysGLS):
     def __init__(self, sys, dfk=None):
+        if not(dfk in (None, 'dfk1', 'dfk2')):
+            raise ValueError("dfk is not correctly specified")
+
         super(SysSUR, self).__init__(sys, sigma=None)
-        # TODO : check dfk in {None, dfk1, dfk2}
         self.dfk = dfk
-        # Compute sigma OLS equation by equation
+
+        # Compute sigma by OLS equation by equation
         resids = []
         for eq in sys:
             res = OLS(eq['endog'], eq['exog']).fit()
@@ -212,7 +221,7 @@ class SysSUR(SysGLS):
         '''
         if self.dfk is None:
             div = self.nobs
-        elif self.dfk.lower() == 'dfk1':
+        elif self.dfk == 'dfk1':
             div = np.zeros((self.neqs, self.neqs))
             for i in range(self.neqs):
                 for j in range(self.neqs):
