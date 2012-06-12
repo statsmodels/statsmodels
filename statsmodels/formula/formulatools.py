@@ -1,7 +1,6 @@
 import statsmodels.tools.data as data_util
 
-from charlton.api import model_spec_and_matrices
-from charlton.model_matrix import ModelMatrixColumnInfo
+from charlton import design_and_matrices, DesignMatrixColumnInfo
 from charlton.desc import INTERCEPT
 from numpy import array, argsort, zeros, c_ as concat
 
@@ -65,9 +64,8 @@ def handle_formula_data_pandas(Y, X, formula):
         df = X.join(Y)
     else:
         df = Y
-    df.column_info = ModelMatrixColumnInfo(df.columns.tolist())
-    # depth=1 means resolve formula in caller's namespace
-    model_spec, endog, exog = model_spec_and_matrices(formula, df, depth=1)
+    # eval_env=1 means resolve formula in caller's namespace
+    model_spec, endog, exog = design_and_matrices(formula, df, eval_env=1)
     # preserve the meta-information from Charlton but pass back pandas
     # charlton should just let these types pass through as-is...
     endog_ci = endog.column_info
@@ -93,9 +91,9 @@ def handle_formula_data_ndarray(Y, X, formula):
     #NOTE: will be overwritten later anyway
     #TODO: make this duplication unnecessary
     names = ['x%d'] * nvars % map(str, range(nvars))
-    df.column_info = ModelMatrixColumnInfo(names)
-    model_spec, endog, exog = model_spec_and_matrices(formula, df, depth=1)
-    endog, exog = model_spec.make_matrices(df)
+    df.column_info = DesignMatrixColumnInfo(names)
+    model_spec, endog, exog = design_and_matrices(formula, df, eval_env=1)
+    #endog, exog = model_spec.make_matrices(df)
     return endog, exog, model_spec
 
 def _remove_intercept_charlton(terms):
