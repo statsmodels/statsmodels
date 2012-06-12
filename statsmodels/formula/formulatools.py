@@ -51,7 +51,11 @@ def handle_formula_data(Y, X, formula):
     if data_util._is_using_pandas(Y, X):
         (endog, exog,
          model_spec) = handle_formula_data_pandas(Y, X, formula)
-    else: # just assume ndarrays for now
+    elif isinstance(Y, dict) and (X is None or
+                                  (X is not None and isinstance(X, dict))):
+        (endog, exog,
+         model_spec) = handle_formula_dict(Y, X, formula)
+    else: # just assume ndarrays for now, support other objects as needed
         (endog, exog,
          model_spec) = handle_formula_data_ndarray(Y, X, formula)
     return endog, exog, model_spec
@@ -95,6 +99,21 @@ def handle_formula_data_ndarray(Y, X, formula):
     model_spec, endog, exog = design_and_matrices(formula, df, eval_env=1)
     #endog, exog = model_spec.make_matrices(df)
     return endog, exog, model_spec
+
+def handle_formula_dict(Y, X, formula):
+    if X is not None:
+        try:
+            overlap = set(Y).intersection(set(X))
+            assert not len(overlap)
+        except:
+            raise ValueError("The keys of Y and X overlap: %s" % list(overlap))
+        df = Y.update(X)
+    else:
+        df = Y
+
+    model_spec, endog, exog = design_and_matrices(formula, df, eval_env=1)
+    return endog, exog, model_spec
+
 
 def _remove_intercept_charlton(terms):
     """
