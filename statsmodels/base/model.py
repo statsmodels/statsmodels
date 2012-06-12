@@ -48,7 +48,7 @@ class Model(object):
         formula : str or generic Formula object
             The formula specifying the model
         df : array-like
-            The data for the model.
+            The data for the model. See Notes.
         subset : array-like
             An array-like object of booleans, integers, or index values that
             indicate the subset of df to use in the model. Assumes df is a
@@ -65,7 +65,8 @@ class Model(object):
         Notes
         ------
         df must define __getitem__ with the keys in the formula terms
-        args and kwargs are passed on to the model instantiation.
+        args and kwargs are passed on to the model instantiation. E.g.,
+        a numpy structured or rec array, a dictionary, or a pandas DataFrame.
         """
         #TODO: provide a template for args/kwargs from child models
         #TODO: only accept DataFrames?
