@@ -8,7 +8,7 @@ from matplotlib import figure
 
 from statsmodels.formula.api import ols
 from statsmodels.graphics.api import interaction_plot, abline_plot
-from anova import anova_lm
+from statsmodels.stats.anova import anova_lm
 
 try:
     salary_table = pandas.read_csv('salary.table')
