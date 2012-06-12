@@ -2,14 +2,14 @@ import statsmodels.tools.data as data_util
 
 from charlton import design_and_matrices, DesignMatrixColumnInfo
 from charlton.desc import INTERCEPT
-from numpy import array, argsort, zeros, c_ as concat
+from numpy import array, argsort, zeros, dtype, c_ as concat
+from numpy.lib.recfunctions import append_fields
 
 
 # if users want to pass in a different formula framework, they can
 # add their handler here. how to do it interactively?
 
-# this is a mutable object, so editing it should show up in the
-# below
+# this is a mutable object, so editing it should show up in the below
 formula_handler = {}
 
 def handle_formula_data(Y, X, formula):
@@ -56,8 +56,12 @@ def handle_formula_data(Y, X, formula):
         (endog, exog,
          model_spec) = handle_formula_dict(Y, X, formula)
     else: # just assume ndarrays for now, support other objects as needed
-        (endog, exog,
-         model_spec) = handle_formula_data_ndarray(Y, X, formula)
+        if Y.dtype.names is not None:
+            (endog, exog,
+            model_spec) = handle_formula_data_recarray(Y, X, formula)
+        else: # this actually won't ever be called for from_formula
+            (endog, exog,
+             model_spec) = handle_formula_data_ndarray(Y, X, formula)
     return endog, exog, model_spec
 
 def handle_formula_data_pandas(Y, X, formula):
@@ -74,15 +78,32 @@ def handle_formula_data_pandas(Y, X, formula):
     # charlton should just let these types pass through as-is...
     endog_ci = endog.column_info
     #NOTE: univariate endog only right now
-    endog = Series(endog.squeeze(), index=df.index, name=endog_ci.column_names)
+    endog = Series(endog.squeeze(), index=df.index,
+                           name=endog_ci.column_names[0])
     endog.column_info = endog_ci
     exog_ci = exog.column_info
     exog = DataFrame(exog, index=df.index, columns=exog_ci.column_names)
     exog.column_info = exog_ci
     return endog, exog, model_spec
 
+def handle_formula_data_recarray(Y, X, formula):
+    """
+    Notes
+    -----
+    This returns a charlton.DesignMatrix, but they're caught at the model level
+    """
+    if X is not None:
+        df = append_fields(Y, X.dtype.names,
+                           X.view((float, len(X.dtype.names))).T, usemask=False)
+    else:
+        df = Y
+    nvars = len(df.dtype.names)
+    model_spec, endog, exog = design_and_matrices(formula, df, eval_env=1)
+    return endog, exog, model_spec
 
 def handle_formula_data_ndarray(Y, X, formula):
+    raise NotImplementedError("You must use a data structure that defines "
+                              "__getitem__ for the names in the formula")
     if X is not None:
         df = concat[Y, X]
     else:
@@ -92,12 +113,7 @@ def handle_formula_data_ndarray(Y, X, formula):
     # way to specify a formula, ie., we have to assume Y contains y and X
     # contains x1, x2, x3, etc. if they're given as arrays
 
-    #NOTE: will be overwritten later anyway
-    #TODO: make this duplication unnecessary
-    names = ['x%d'] * nvars % map(str, range(nvars))
-    df.column_info = DesignMatrixColumnInfo(names)
     model_spec, endog, exog = design_and_matrices(formula, df, eval_env=1)
-    #endog, exog = model_spec.make_matrices(df)
     return endog, exog, model_spec
 
 def handle_formula_dict(Y, X, formula):
