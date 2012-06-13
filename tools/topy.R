@@ -110,9 +110,12 @@ mkhtest <- function(ht, name, distr="f") {
     cat("\n\n")
 }
 
-mkarray2 <- function(X, name) {
+mkarray2 <- function(X, name, sanitize=FALSE) {
     indent = "    "
-    cat(sanitize_name(name)); cat(" = np.array([\n"); cat(X, sep=", ", fill=76, labels=indent); cat(indent); cat("])")
+    if (sanitize) {
+    cat(sanitize_name(name)); cat(" = np.array([\n"); cat(X, sep=", ", fill=76, labels=indent); cat(indent); cat("])") }
+    else{
+    cat(name); cat(" = np.array([\n"); cat(X, sep=", ", fill=76, labels=indent); cat(indent); cat("])") }
     if (is.matrix(X)) {
         i <- as.character(nrow(X))
         j <- as.character(ncol(X))
