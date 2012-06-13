@@ -140,6 +140,16 @@ class PandasData(ModelData):
     Data handling class which knows how to reattach pandas metadata to model
     results
     """
+    def _check_integrity(self):
+        try:
+            endog, exog = self._orig_endog, self._orig_exog
+            # exog can be None and we could be upcasting one or the other
+            if exog is not None and (hasattr(endog, 'index') and
+                    hasattr(exog, 'index')):
+                assert self._orig_endog.index.equals(self._orig_exog.index)
+        except AssertionError:
+            raise ValueError("The indices for endog and exog are not aligned")
+        super(PandasData, self)._check_integrity()
 
     def _get_row_labels(self, arr):
         try:
