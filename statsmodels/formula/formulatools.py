@@ -12,7 +12,7 @@ from numpy.lib.recfunctions import append_fields
 # this is a mutable object, so editing it should show up in the below
 formula_handler = {}
 
-def handle_formula_data(Y, X, formula):
+def handle_formula_data(Y, X, formula, depth=0):
     """
     Returns endog, exog, and the model specification from arrays and formula
 
@@ -50,21 +50,21 @@ def handle_formula_data(Y, X, formula):
     # I think we can rely on endog-only models not using a formula
     if data_util._is_using_pandas(Y, X):
         (endog, exog,
-         model_spec) = handle_formula_data_pandas(Y, X, formula)
+         model_spec) = handle_formula_data_pandas(Y, X, formula, depth)
     elif isinstance(Y, dict) and (X is None or
                                   (X is not None and isinstance(X, dict))):
         (endog, exog,
-         model_spec) = handle_formula_dict(Y, X, formula)
+         model_spec) = handle_formula_dict(Y, X, formula, depth)
     else: # just assume ndarrays for now, support other objects as needed
         if Y.dtype.names is not None:
             (endog, exog,
-            model_spec) = handle_formula_data_recarray(Y, X, formula)
+            model_spec) = handle_formula_data_recarray(Y, X, formula, depth)
         else: # this actually won't ever be called for from_formula
             (endog, exog,
-             model_spec) = handle_formula_data_ndarray(Y, X, formula)
+             model_spec) = handle_formula_data_ndarray(Y, X, formula, depth)
     return endog, exog, model_spec
 
-def handle_formula_data_pandas(Y, X, formula):
+def handle_formula_data_pandas(Y, X, formula, depth):
     from pandas import Series, DataFrame
     #NOTE: assumes exog is a DataFrame which might not be the case
     # not important probably because this won't be the API
@@ -86,7 +86,7 @@ def handle_formula_data_pandas(Y, X, formula):
     exog.column_info = exog_ci
     return endog, exog, model_spec
 
-def handle_formula_data_recarray(Y, X, formula):
+def handle_formula_data_recarray(Y, X, formula, depth):
     """
     Notes
     -----
@@ -98,10 +98,10 @@ def handle_formula_data_recarray(Y, X, formula):
     else:
         df = Y
     nvars = len(df.dtype.names)
-    model_spec, endog, exog = design_and_matrices(formula, df, eval_env=3)
+    model_spec, endog, exog = design_and_matrices(formula, df, eval_env=depth+3)
     return endog, exog, model_spec
 
-def handle_formula_data_ndarray(Y, X, formula):
+def handle_formula_data_ndarray(Y, X, formula, depth):
     raise NotImplementedError("You must use a data structure that defines "
                               "__getitem__ for the names in the formula")
     if X is not None:
@@ -113,10 +113,10 @@ def handle_formula_data_ndarray(Y, X, formula):
     # way to specify a formula, ie., we have to assume Y contains y and X
     # contains x1, x2, x3, etc. if they're given as arrays
 
-    model_spec, endog, exog = design_and_matrices(formula, df, eval_env=3)
+    model_spec, endog, exog = design_and_matrices(formula, df, eval_env=depth+3)
     return endog, exog, model_spec
 
-def handle_formula_dict(Y, X, formula):
+def handle_formula_dict(Y, X, formula, depth):
     if X is not None:
         try:
             overlap = set(Y).intersection(set(X))
@@ -127,7 +127,7 @@ def handle_formula_dict(Y, X, formula):
     else:
         df = Y
 
-    model_spec, endog, exog = design_and_matrices(formula, df, eval_env=3)
+    model_spec, endog, exog = design_and_matrices(formula, df, eval_env=depth+3)
     return endog, exog, model_spec
 
 
@@ -136,5 +136,5 @@ def _remove_intercept_charlton(terms):
     Remove intercept from Charlton terms.
     """
     if INTERCEPT in terms:
-        del terms[INTERCEPT]
+        terms.remove(INTERCEPT)
     return terms
