@@ -73,7 +73,7 @@ def handle_formula_data_pandas(Y, X, formula):
     else:
         df = Y
     # eval_env=1 means resolve formula in caller's namespace
-    model_spec, endog, exog = design_and_matrices(formula, df, eval_env=1)
+    model_spec, endog, exog = design_and_matrices(formula, df, eval_env=3)
     # preserve the meta-information from Charlton but pass back pandas
     # charlton should just let these types pass through as-is...
     endog_ci = endog.column_info
@@ -98,7 +98,7 @@ def handle_formula_data_recarray(Y, X, formula):
     else:
         df = Y
     nvars = len(df.dtype.names)
-    model_spec, endog, exog = design_and_matrices(formula, df, eval_env=1)
+    model_spec, endog, exog = design_and_matrices(formula, df, eval_env=3)
     return endog, exog, model_spec
 
 def handle_formula_data_ndarray(Y, X, formula):
@@ -113,7 +113,7 @@ def handle_formula_data_ndarray(Y, X, formula):
     # way to specify a formula, ie., we have to assume Y contains y and X
     # contains x1, x2, x3, etc. if they're given as arrays
 
-    model_spec, endog, exog = design_and_matrices(formula, df, eval_env=1)
+    model_spec, endog, exog = design_and_matrices(formula, df, eval_env=3)
     return endog, exog, model_spec
 
 def handle_formula_dict(Y, X, formula):
@@ -127,7 +127,7 @@ def handle_formula_dict(Y, X, formula):
     else:
         df = Y
 
-    model_spec, endog, exog = design_and_matrices(formula, df, eval_env=1)
+    model_spec, endog, exog = design_and_matrices(formula, df, eval_env=3)
     return endog, exog, model_spec
 
 
@@ -138,31 +138,3 @@ def _remove_intercept_charlton(terms):
     if INTERCEPT in terms:
         del terms[INTERCEPT]
     return terms
-
-def _assign(column_info, intercept=False):
-    """
-    column_info is the ModelMatrixColumnInfo object. If intercept is True, it
-    is kept in the returned results. Otherwise, it is removed.
-
-    This returns an array assign and a list index. assign is a mapping from
-    the column of a design matrix to the term in index
-    """
-    k_vars = len(column_info.column_names)
-    col_order = []
-    index = []
-    terms_info = column_info.term_to_columns
-    for term, cols in terms_info.iteritems():
-        col_order.append(cols[0])
-        index.append(term.name())
-
-    index = array(index)[argsort(col_order)].tolist()
-    assign = zeros(k_vars, dtype=int)
-    for term, cols in terms_info.iteritems():
-        assign[cols[0]:cols[1]] = index.index(term.name())
-
-    if '1' in index and not intercept:
-        assign = assign[~(assign == index.index('1'))]
-        index.remove('1')
-
-    return assign, index
-
