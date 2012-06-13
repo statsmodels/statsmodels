@@ -16,7 +16,7 @@ from statsmodels.datasets import macrodata
 
 def assert_allclose(actual, desired, rtol=1e-7, atol=0,
                     err_msg='', verbose=True):
-    assert_(np.allclose(actual, desired, rtol=0.04, atol=0))
+    assert_(np.allclose(actual, desired, rtol=rtol, atol=atol))
 
 
 class CheckStataResults(object):
@@ -28,7 +28,7 @@ class CheckStataResults(object):
         assert_almost_equal(res.bse, results.bse, 3)
         #assert_almost_equal(res.tvalues, results.tvalues, 3) 0.0003
         assert_allclose(res.tvalues, results.tvalues, atol=0, rtol=0.004)
-        assert_allclose(res.pvalues, results.pvalues, atol=0, rtol=0.004)
+        assert_allclose(res.pvalues, results.pvalues, atol=1e-7, rtol=0.004)
 
 class CheckStataResultsP(CheckStataResults):
 
@@ -36,7 +36,7 @@ class CheckStataResultsP(CheckStataResults):
         res, results = self.res, self.results
         assert_allclose(res.fittedvalues, results.fittedvalues, rtol=0.002)
         predicted = res.predict(res.model.exog) #should be equal
-        assert_allclose(predicted, results.fittedvalues, rtol=1e-13)
+        assert_allclose(predicted, results.fittedvalues, rtol=0.0016)
         #not yet
         #assert_almost_equal(res.fittedvalues_se, results.fittedvalues_se, 4)
 
