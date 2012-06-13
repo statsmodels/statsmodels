@@ -22,6 +22,13 @@ if sys.version_info[0] >= 3:
         if isinstance(s, str):
             return s
         return s.decode('latin1')
+    def asstr2(s):  #added JP, not in numpy version
+        if isinstance(s, str):
+            return s
+        elif isinstance(s, bytes):
+            return s.decode('latin1')
+        else:
+            return str(s)
     def isfileobj(f):
         return isinstance(f, io.FileIO)
     def open_latin1(filename, mode='r'):
@@ -33,6 +40,7 @@ else:
     unicode = unicode
     asbytes = str
     asstr = str
+    asstr2 = str
     strchar = 'S'
     def isfileobj(f):
         return isinstance(f, file)

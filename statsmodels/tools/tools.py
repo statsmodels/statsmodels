@@ -10,6 +10,7 @@ from scipy.linalg import svdvals
 from statsmodels.distributions import (ECDF, monotone_fn_inverter,
                                                StepFunction)
 from statsmodels.tools.data import _is_using_pandas
+from statsmodels.compatnp.py3k import asstr2
 from pandas import DataFrame
 
 def _make_dictnames(tmp_arr, offset=0):
@@ -161,9 +162,9 @@ def categorical(data, col=None, dictnames=False, drop=False, ):
             tmp_dummy = np.squeeze(tmp_dummy).swapaxes(1,0)
 
         if not tmp_arr.dtype.names: # how do we get to this code path?
-            tmp_arr = [str(item) for item in np.squeeze(tmp_arr)]
+            tmp_arr = [asstr2(item) for item in np.squeeze(tmp_arr)]
         elif tmp_arr.dtype.names:
-            tmp_arr = [str(item) for item in np.squeeze(tmp_arr.tolist())]
+            tmp_arr = [asstr2(item) for item in np.squeeze(tmp_arr.tolist())]
 
 # prepend the varname and underscore, if col is numeric attribute lookup
 # is lost for recarrays...
