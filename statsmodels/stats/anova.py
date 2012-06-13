@@ -1,13 +1,36 @@
 import numpy as np
 from scipy import stats
 from pandas import DataFrame, Index
-from statsmodels.formula.formulatools import (_remove_intercept_charlton,
-                                              _assign)
+from statsmodels.formula.formulatools import _remove_intercept_charlton
 
-#TODO: remove when possible
 def has_intercept(column_info):
     from charlton.desc import INTERCEPT
-    return INTERCEPT in column_info.term_to_columns
+    return INTERCEPT in column_info.terms
+
+def intercept_idx(column_info):
+    """
+    Returns boolean array index indicating which column holds the intercept
+    """
+    from charlton.desc import INTERCEPT
+    return np.array([INTERCEPT == i for i in column_info.terms])
+
+def _get_covariance(model, robust):
+    if robust is None:
+        return model.cov_params()
+    elif robust == "hc0":
+        se = model.HC0_se
+        return model.cov_HC0
+    elif robust == "hc1":
+        se = model.HC1_se
+        return model.cov_HC1
+    elif robust == "hc2":
+        se = model.HC2_se
+        return model.cov_HC2
+    elif robust == "hc3":
+        se = model.HC3_se
+        return model.cov_HC3
+    else: # pragma: no cover
+        raise ValueError("robust options %s not understood" % robust)
 
 #NOTE: these need to take into account weights !
 
@@ -37,6 +60,9 @@ def anova_single(model, **kwargs):
     test = kwargs.get("test", "F")
     scale = kwargs.get("scale", None)
     typ = kwargs.get("typ", 1)
+    robust = kwargs.get("robust", None)
+    if robust:
+        robust = robust.lower()
 
     endog = model.model.endog
     exog = model.model.exog
@@ -45,8 +71,8 @@ def anova_single(model, **kwargs):
     response_name = model.model.endog_names
     column_info = model.model._data._orig_exog.column_info
     exog_names = model.model.exog_names
-    n_rows = (len(column_info.term_to_columns) - has_intercept(column_info)
-              + 1) #+1 for resids
+    # +1 for resids
+    n_rows = (len(column_info.terms) - has_intercept(column_info) + 1)
 
     pr_test = "PR(>%s)" % test
     names = ['df', 'sum_sq', 'mean_sq', test, pr_test]
@@ -55,18 +81,20 @@ def anova_single(model, **kwargs):
 
     if typ in [1,"I"]:
         return anova1_lm_single(model, endog, exog, nobs, column_info, table,
-                                n_rows, test, pr_test)
+                                n_rows, test, pr_test, robust)
     elif typ in [2, "II"]:
-        return anova2_lm_single(model, column_info, n_rows, test, pr_test)
+        return anova2_lm_single(model, column_info, n_rows, test, pr_test,
+                robust)
     elif typ in [3, "III"]:
-        return anova3_lm_single
+        return anova3_lm_single(model, column_info, n_rows, test, pr_test,
+                robust)
     elif typ in [4, "IV"]:
         raise NotImplemented("Type IV not yet implemented")
-    else:
+    else: # pragma: no cover
         raise ValueError("Type %s not understood" % str(typ))
 
 def anova1_lm_single(model, endog, exog, nobs, column_info, table, n_rows, test,
-                     pr_test):
+                     pr_test, robust):
     """
     ANOVA table for one fitted linear model.
 
@@ -91,32 +119,36 @@ def anova1_lm_single(model, endog, exog, nobs, column_info, table, n_rows, test,
     q,r = np.linalg.qr(exog)
     effects = np.dot(q.T, endog)
 
-    assign, term_names = _assign(column_info, intercept=True) #keep intercept
+    arr = np.zeros((len(column_info.terms), len(column_info.column_names)))
+    slices = [column_info.slice(name) for name in column_info.term_names]
+    for i,slice_ in enumerate(slices):
+        arr[i, slice_] = 1
 
-    arr = np.zeros((len(term_names), len(assign)))
-    arr[assign, range(len(assign))] = 1
     sum_sq = np.dot(arr, effects**2)
     #NOTE: assumes intercept is first column
-    intercept = has_intercept(column_info)
-    sum_sq = sum_sq[intercept:]
-    term_names = term_names[intercept:]
+    idx = intercept_idx(column_info)
+    sum_sq = sum_sq[~idx]
+    term_names = np.array(column_info.term_names) # want boolean indexing
+    term_names = term_names[~idx]
 
-    table.index = Index(term_names + ['Residual'])
-    # fill in residual
-    table.ix['Residual'][['sum_sq','df', test, pr_test]] = (model.ssr,
-                                                            model.df_resid,
-                                                            np.nan, np.nan)
-    # sort in order of the way the terms appear in Formula with resid last
-    table['mean_sq'] = table['sum_sq'] / table['df']
+    index = term_names.tolist()
+    table.index = Index(index + ['Residual'])
+    table.ix[index, ['df', 'sum_sq']] = np.c_[arr[~idx].sum(1), sum_sq]
     if test == 'F':
         table[:n_rows][test] = ((table['sum_sq']/table['df'])/
                                 (model.ssr/model.df_resid))
         table[:n_rows][pr_test] = stats.f.sf(table["F"], table["df"],
                                 model.df_resid)
+
+    # fill in residual
+    table.ix[['Residual'], ['sum_sq','df', test, pr_test]] = (model.ssr,
+                                                            model.df_resid,
+                                                            np.nan, np.nan)
+    table['mean_sq'] = table['sum_sq'] / table['df']
     return table
 
 #NOTE: the below is not agnostic about formula...
-def anova2_lm_single(model, column_info, n_rows, test, pr_test):
+def anova2_lm_single(model, column_info, n_rows, test, pr_test, robust):
     """
     ANOVA type II table for one fitted linear model.
 
@@ -141,34 +173,37 @@ def anova2_lm_single(model, column_info, n_rows, test, pr_test):
     Sum of Squares compares marginal contribution of terms. Thus, it is
     not particularly useful for models with significant interaction terms.
     """
-    terms_info = column_info.term_to_columns.copy()
+    terms_info = column_info.terms[:] # copy
     terms_info = _remove_intercept_charlton(terms_info)
 
     names = ['sum_sq', 'df', test, pr_test]
 
     table = DataFrame(np.empty((n_rows, 4)), columns = names)
-    cov = np.asarray(model.cov_params())
+    cov = _get_covariance(model, None)
+    robust_cov = _get_covariance(model, robust)
     col_order = []
     index = []
-    for i, (term, cols) in enumerate(terms_info.iteritems()):
+    for i, term in enumerate(terms_info):
         # grab all varaibles except interaction effects that contain term
         # need two hypotheses matrices L1 is most restrictive, ie., term==0
         # L2 is everything except term==0
-        L1 = range(cols[0], cols[1])
+        cols = column_info.slice(term)
+        L1 = range(cols.start, cols.stop)
         L2 = []
         term_set = set(term.factors)
-        for t,col in terms_info.iteritems(): # for the term you have
+        for t in terms_info: # for the term you have
             other_set = set(t.factors)
             if term_set.issubset(other_set) and not term_set == other_set:
+                col = column_info.slice(t)
                 # on a higher order term containing current `term`
-                L1.extend(range(col[0], col[1]))
-                L2.extend(range(col[0], col[1]))
+                L1.extend(range(col.start, col.stop))
+                L2.extend(range(col.start, col.stop))
 
         L1 = np.eye(model.model.exog.shape[1])[L1]
         L2 = np.eye(model.model.exog.shape[1])[L2]
 
         if L2.size:
-            LVL = np.dot(np.dot(L1,cov),L2.T)
+            LVL = np.dot(np.dot(L1,robust_cov),L2.T)
             from scipy import linalg
             orth_compl,_ = linalg.qr(LVL)
             r = L1.shape[0] - L2.shape[0]
@@ -178,14 +213,15 @@ def anova2_lm_single(model, column_info, n_rows, test, pr_test):
         else:
             L12 = L1
             r = L1.shape[0]
+        #from IPython.core.debugger import Pdb; Pdb().set_trace()
         if test == 'F':
-            f = model.f_test(L12)
+            f = model.f_test(L12, cov_p=robust_cov)
             table.ix[i][test] = test_value = f.fvalue
             table.ix[i][pr_test] = f.pvalue
 
-        # need to back out SSR from f_test, not quite sure how
+        # need to back out SSR from f_test
         table.ix[i]['df'] = r
-        col_order.append(cols[0])
+        col_order.append(cols.start)
         index.append(term.name())
 
     table.index = Index(index + ['Residual'])
@@ -198,6 +234,45 @@ def anova2_lm_single(model, column_info, n_rows, test, pr_test):
                                                             model.df_resid,
                                                             np.nan, np.nan)
 
+    return table
+
+def anova3_lm_single(model, column_info, n_rows, test, pr_test, robust):
+    n_rows += has_intercept(column_info)
+    terms_info = column_info.terms
+
+    names = ['sum_sq', 'df', test, pr_test]
+
+    table = DataFrame(np.empty((n_rows, 4)), columns = names)
+    cov = _get_covariance(model, robust)
+    col_order = []
+    index = []
+    for i, term in enumerate(terms_info):
+        # grab term, hypothesis is that term == 0
+        cols = column_info.slice(term)
+        L1 = np.eye(model.model.exog.shape[1])[cols]
+        L12 = L1
+        r = L1.shape[0]
+
+        if test == 'F':
+            f = model.f_test(L12, cov_p=cov)
+            table.ix[i][test] = test_value = f.fvalue
+            table.ix[i][pr_test] = f.pvalue
+
+        # need to back out SSR from f_test
+        table.ix[i]['df'] = r
+        #col_order.append(cols.start)
+        index.append(term.name())
+
+    table.index = Index(index + ['Residual'])
+    #NOTE: Don't need to sort because terms are an ordered dict now
+    #table = table.ix[np.argsort(col_order + [model.model.exog.shape[1]+1])]
+    # back out sum of squares from f_test
+    ssr = table[test] * table['df'] * model.ssr/model.df_resid
+    table['sum_sq'] = ssr
+    # fill in residual
+    table.ix['Residual'][['sum_sq','df', test, pr_test]] = (model.ssr,
+                                                            model.df_resid,
+                                                            np.nan, np.nan)
     return table
 
 def anova_lm(*args, **kwargs):
@@ -213,12 +288,12 @@ def anova_lm(*args, **kwargs):
 
     scale : float
         Estimate of variance, If None, will be estimated from the largest
-    model. Default is None.
-        test : str {"F", "Chisq", "Cp"} or None
+        model. Default is None.
+    test : str {"F", "Chisq", "Cp"} or None
         Test statistics to provide. Default is "F".
     typ : str or int {"I","II","III"} or {1,2,3}
         The type of ANOVA test to perform. See notes.
-    robust : {None, "hc1", "hc2", "hc3", "hc4"}
+    robust : {None, "hc0", "hc1", "hc2", "hc3"}
         Use heteroscedasticity-corrected coefficient covariance matrix.
         If robust covariance is desired, it is recommended to use `hc3`.
 
@@ -245,7 +320,7 @@ def anova_lm(*args, **kwargs):
         return anova_single(model, **kwargs)
 
     try:
-        assert typ in [1,"II"]
+        assert typ in [1,"I"]
     except:
         raise ValueError("Multiple models only supported for type I. "
                          "Got type %s" % str(typ))
@@ -263,7 +338,7 @@ def anova_lm(*args, **kwargs):
     n_models = len(args)
 
     model_formula = []
-    pr_test = "PR(>%s)" % test
+    pr_test = "Pr(>%s)" % test
     names = ['df_resid', 'ssr', 'df_diff', 'ss_diff', test, pr_test]
     table = DataFrame(np.empty((n_models, 6)), columns = names)
 
