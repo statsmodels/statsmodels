@@ -43,7 +43,7 @@ plt.show()
 # Fit a linear model
 
 
-formula = 'S ~ categorical(E) + categorical(M) + X'
+formula = 'S ~ C(E) + C(M) + X'
 lm = ols(formula, salary_table).fit()
 print lm.summary()
 
@@ -85,7 +85,7 @@ plt.show()
 
 # now we will test some interactions using anova or f_test
 
-interX_lm = ols("S ~ categorical(E) * X + categorical(M)",
+interX_lm = ols("S ~ C(E) * X + C(M)",
                     salary_table).fit()
 print interX_lm.summary()
 
@@ -95,7 +95,7 @@ print interX_lm.summary()
 table1 = anova_lm(lm, interX_lm)
 print table1
 
-interM_lm = ols("S ~ X + categorical(E)*categorical(M)",
+interM_lm = ols("S ~ X + C(E)*C(M)",
                                  df=salary_table).fit()
 print interM_lm.summary()
 
@@ -131,12 +131,12 @@ plt.show()
 drop_idx = abs(resid).argmax()
 print drop_idx # zero-based index
 
-lm32 = ols('S ~ categorical(E) + X + categorical(M)',
+lm32 = ols('S ~ C(E) + X + C(M)',
             df = salary_table.drop([drop_idx])).fit()
 
 print lm32.summary()
 
-interX_lm32 = ols('S ~ categorical(E) * X + categorical(M)',
+interX_lm32 = ols('S ~ C(E) * X + C(M)',
             df = salary_table.drop([drop_idx])).fit()
 
 print interX_lm32.summary()
@@ -144,7 +144,7 @@ print interX_lm32.summary()
 table3 = anova_lm(lm32, interX_lm32)
 print table3
 
-interM_lm32 = ols('S ~ X + categorical(E) * categorical(M)',
+interM_lm32 = ols('S ~ X + C(E) * C(M)',
             df = salary_table.drop([drop_idx])).fit()
 
 table4 = anova_lm(lm32, interM_lm32)
@@ -170,7 +170,7 @@ plt.show()
 
 # Plot the fitted values
 
-lm_final = ols('S ~ X + categorical(E)*categorical(M)',
+lm_final = ols('S ~ X + C(E)*C(M)',
                     df = salary_table.drop([drop_idx])).fit()
 mf = lm_final.model._data._orig_exog
 lstyle = ['-','--']
@@ -319,7 +319,7 @@ except:
 ax = rehab_table.boxplot('Time', 'Fitness')
 plt.show()
 
-rehab_lm = ols('Time ~ categorical(Fitness)',
+rehab_lm = ols('Time ~ C(Fitness)',
                 df=rehab_table).fit()
 table9 = anova_lm(rehab_lm)
 print table9
@@ -338,13 +338,18 @@ url = 'http://stats191.stanford.edu/data/kidney.table'
 kidney_table = np.genfromtxt(urlopen(url), names=True)
 kidney_table = pandas.DataFrame.from_records(kidney_table)
 
+# Explore the dataset
+kidney_table.groupby(['Weight', 'Duration']).size()
+# balanced panel
+
+
 kt = kidney_table
 interaction_plot(kt['Weight'], kt['Duration'], np.log(kt['Days']+1),
         colors=['red', 'blue'], markers=['D','^'], ms=10)
 plt.show()
 
 #I thought we could use the numpy namespace in charlton?
-from charlton.builtins import builtins
+from charlton.desc import _builtins_dict as builtins
 builtins['np'] = np
 kidney_lm = ols('np.log(Days+1) ~ C(Duration) * C(Weight)',
         df=kt).fit()
