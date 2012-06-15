@@ -46,11 +46,12 @@ class TimeSeriesModel(base.LikelihoodModel):
         if dates is not None:
             try:
                 from scikits.timeseries import Date
+                if not isinstance(dates[0], (datetime.datetime,Date)):
+                    raise ValueError("dates must be of type datetime or "
+                                     "scikits.timeseries.Date")
             except ImportError:
-                Date = None
-            if not isinstance(dates[0], (datetime.datetime,Date)):
-                raise ValueError("dates must be of type datetime or "
-                                 "scikits.timeseries.Date")
+                if not isinstance(dates[0], (datetime.datetime)):
+                    raise ValueError("dates must be of type datetime")
             if not freq:
                 #if isinstance(dates, DateRange):
                 #    freq = datetools.inferTimeRule(dates)
