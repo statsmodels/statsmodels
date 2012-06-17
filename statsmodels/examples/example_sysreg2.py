@@ -8,11 +8,11 @@
 
 import numpy as np
 import statsmodels.api as sm
-from statsmodels.sysreg.sysreg import *
+from statsmodels.sysreg.sysmodel import *
 
 munnell_data = sm.datasets.munnell.load()
 
-groups = {'GF' : ['AL','FL','LA','MS'],
+regions = {'GF' : ['AL','FL','LA','MS'],
           'MW' : ['IL','IN','KY','MI','MN','OH','WI'],
           'MA' : ['DE','MD','NJ','NY','PA','VA'],
           'MT' : ['CO','ID','MT','ND','SD','WY'],
@@ -24,20 +24,29 @@ groups = {'GF' : ['AL','FL','LA','MS'],
 
 munnell_sys = []
 
-for m in groups:
-    endog = np.zeros(17) # 17 obs for each state
-    for state in groups[m]:
-        index = munnell_data.exog['state'] == state
-        
-        # endog
-        endog += munnell_data.endog[index]
-        # exog
-        regs = ['pc','hwy','water','util','emp']
+for m in regions:
+    eq_m = {}
+    eq_m['endog'] = np.zeros(17)
+    pc, hwy, water, util, emp, unemp = (np.zeros(17) for i in range(6))
 
-        
+    for state in regions[m]:
+        state_index = munnell_data.data['state'] == state
+        eq_m['endog'] += munnell_data.endog[state_index]
+        pc += munnell_data.data['pc'][state_index]
+        hwy += munnell_data.data['hwy'][state_index]
+        water +=munnell_data.data['water'][state_index]
+        util += munnell_data.data['util'][state_index]
+        emp += munnell_data.data['emp'][state_index]
+    for state in regions[m]:
+        state_index = munnell_data.data['state'] == state
+        weights = munnell_data.data['emp'][state_index] / emp
+        unemp += weights*munnell_data.data['unemp'][state_index]
+    
+    eq_m['endog'] = np.log(eq_m['endog'])
+    eq_m['exog'] = np.column_stack((np.ones(17),np.log(pc), np.log(hwy), 
+        np.log(water), np.log(util), np.log(emp), unemp))
+    #eq_m['exog'] = sm.add_constant(eq_m['exog'], prepend=True) # Doesn't work (without np.ones)
+    munnell_sys.append(eq_m)
 
-    # add eq to system
-    munnell_sys.append(endog)
-    exog = sm.add_constant(exog)
-    munnell_sys.append(exog)
+munnell_mod = SysSUR(munnell_sys)
 
