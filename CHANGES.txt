@@ -1,6 +1,29 @@
 Release History
 ===============
 
+0.4.1
+-----
+
+This is a backwards compatible (according to our test suite) release with
+bug fixes and code cleanup.
+
+*Bug Fixes*
+
+* build and distribution fixes
+* lowess correct distance calculation
+* genmod correction CDFlink derivative
+* adfuller _autolag correct calculation of optimal lag
+* het_arch, het_lm : fix autolag and store options
+* GLSAR: incorrect whitening for lag>1
+
+*Other Changes*
+
+* add lowess and other functions to api and documentation
+* rename lowess module (old import path will be removed at next release)
+* new robust sandwich covariance estimators, moved out of sandbox
+* compatibility with pandas 0.8
+
+
 0.4.0
 -----
 
