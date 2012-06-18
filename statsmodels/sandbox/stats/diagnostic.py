@@ -301,7 +301,7 @@ def acorr_ljungbox(x, lags=None, boxpierce=False):
         pvalbp = stats.chi2.sf(qboxpierce, lags)
         return qljungbox, pval, qboxpierce, pvalbp
 
-def acorr_lm(x, maxlag=None, autolag='AIC', store=False):
+def acorr_lm(x, maxlag=None, autolag='AIC', store=False, regresults=False):
     '''Lagrange Multiplier tests for autocorrelation
 
     This is a generic Lagrange Multiplier test for autocorrelation. I don't
@@ -343,6 +343,9 @@ def acorr_lm(x, maxlag=None, autolag='AIC', store=False):
 
     '''
 
+    if regresults:
+        store = True
+
     x = np.asarray(x)
     nobs = x.shape[0]
     if maxlag is None:
@@ -363,7 +366,7 @@ def acorr_lm(x, maxlag=None, autolag='AIC', store=False):
         #search for lag length with highest information criteria
         #Note: I use the same number of observations to have comparable IC
         results = {}
-        for mlag in range(1,maxlag):
+        for mlag in range(1, maxlag+1):
             results[mlag] = OLS(xshort, xdall[:,:mlag+1]).fit()
 
         if autolag.lower() == 'aic':
@@ -374,11 +377,13 @@ def acorr_lm(x, maxlag=None, autolag='AIC', store=False):
             raise ValueError("autolag can only be None, 'AIC' or 'BIC'")
 
         #rerun ols with best ic
-        xdall = lagmat(x[:,None], icbestlag, trim='forward')
+        xdall = lagmat(x[:,None], icbestlag, trim='both')
         nobs = xdall.shape[0]
         xdall = np.c_[np.ones((nobs,1)), xdall]
         xshort = x[-nobs:]
         usedlag = icbestlag
+        if regresults:
+            resstore.results = results
     else:
         usedlag = maxlag
 
@@ -393,11 +398,12 @@ def acorr_lm(x, maxlag=None, autolag='AIC', store=False):
     if store:
         resstore.resols = resols
         resstore.usedlag = usedlag
-        return fval, fpval, lm, lmpval, resstore
+        return lm, lmpval, fval, fpval, resstore
     else:
         return lm, lmpval, fval, fpval
 
-def het_arch(resid, maxlag=None, autolag=None, store=False, ddof=0):
+def het_arch(resid, maxlag=None, autolag=None, store=False, regresults=False,
+             ddof=0):
     '''Enlge's Test for Autoregressive Conditional Heteroscedasticity (ARCH)
 
     Parameters
@@ -438,7 +444,8 @@ def het_arch(resid, maxlag=None, autolag=None, store=False, ddof=0):
 
     '''
 
-    return acorr_lm(resid**2, maxlag=maxlag, autolag=autolag, store=False)
+    return acorr_lm(resid**2, maxlag=maxlag, autolag=autolag, store=store,
+                    regresults=regresults)
 
 
 def acorr_breush_godfrey(results, nlags=None, store=False):
