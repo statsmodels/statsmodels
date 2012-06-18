@@ -350,7 +350,7 @@ def acorr_lm(x, maxlag=None, autolag='AIC', store=False, regresults=False):
     nobs = x.shape[0]
     if maxlag is None:
         #for adf from Greene referencing Schwert 1989
-        maxlag = int(ceil(12. * np.power(nobs/100., 1/4.)))#nobs//4  #TODO: check default, or do AIC/BIC
+        maxlag = int(np.ceil(12. * np.power(nobs/100., 1/4.)))#nobs//4  #TODO: check default, or do AIC/BIC
 
 
     xdiff = np.diff(x)

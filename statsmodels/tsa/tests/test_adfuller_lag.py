@@ -25,7 +25,7 @@ def test_adf_autolag():
                               regression=tr, store=True, regresults=True)
         st2 = adf3[-1]
 
-        assert_equal(len(st2.autolag_results), 14 + 1)  #+1 for lagged level
+        assert_equal(len(st2.autolag_results), 15 + 1)  #+1 for lagged level
         for l, res in sorted(st2.autolag_results.iteritems())[:5]:
             lag = l-k_trend
             #assert correct design matrices in _autolag

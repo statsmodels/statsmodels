@@ -195,7 +195,7 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
 
     if maxlag is None:
         #from Greene referencing Schwert 1989
-        maxlag = int(ceil(12. * np.power(nobs/100., 1/4.)))
+        maxlag = int(np.ceil(12. * np.power(nobs/100., 1/4.)))
 
     xdiff = np.diff(x)
     xdall = lagmat(xdiff[:,None], maxlag, trim='both', original='in')
