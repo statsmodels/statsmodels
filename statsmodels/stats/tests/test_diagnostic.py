@@ -231,13 +231,14 @@ class TestDiagnosticG(object):
     def test_het_white(self):
         res = self.res
 
-        #TODO: regressiontest compare with Greene or Gretl or Stata
+        #TODO: regressiontest, compare with Greene or Gretl or Stata
         hw = smsdia.het_white(res.resid, res.model.exog)
         hw_values = (33.503722896538441, 2.9887960597830259e-06,
                      7.7945101228430946, 1.0354575277704231e-06)
         assert_almost_equal(hw, hw_values)
 
     def test_het_arch(self):
+        #test het_arch and indirectly het_lm against R
         #> library(FinTS)
         #> at = ArchTest(residuals(fm), lags=4)
         #> mkhtest(at, 'archtest_4', 'chi2')
@@ -255,6 +256,24 @@ class TestDiagnosticG(object):
         at12 = smsdia.het_arch(self.res.resid, maxlag=12)
         compare_t_est(at4[:2], archtest_4, decimal=(12, 13))
         compare_t_est(at12[:2], archtest_12, decimal=(12, 13))
+
+    def test_het_arch2(self):
+        #test autolag options, this also test het_lm
+        #unfortunately optimal lag=1 for this data
+        resid = self.res.resid
+
+        res1 = smsdia.het_arch(resid, maxlag=1, autolag=None, store=True)
+        rs1 = res1[-1]
+
+        res2 = smsdia.het_arch(resid, maxlag=5, autolag='aic', store=True)
+        rs2 = res2[-1]
+
+        assert_almost_equal(rs2.resols.params, rs1.resols.params, decimal=13)
+        assert_almost_equal(res2[:4], res1[:4], decimal=13)
+
+        #test that smallest lag, maxlag=1 works
+        res3 = smsdia.het_arch(resid, maxlag=1, autolag='aic')
+        assert_almost_equal(res3[:4], res1[:4], decimal=13)
 
     def test_acorr_breush_godfrey(self):
         res = self.res

@@ -195,7 +195,7 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
 
     if maxlag is None:
         #from Greene referencing Schwert 1989
-        maxlag = int(round(12. * np.power(nobs/100., 1/4.)))
+        maxlag = int(ceil(12. * np.power(nobs/100., 1/4.)))
 
     xdiff = np.diff(x)
     xdall = lagmat(xdiff[:,None], maxlag, trim='both', original='in')
@@ -693,10 +693,10 @@ def levinson_durbin(s, nlags=10, isacov=False):
 
 
 def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
-    '''four tests for granger causality of 2 timeseries
+    '''four tests for granger non causality of 2 timeseries
 
     all four tests give similar results
-    `params_ftest` and `ssr_ftest` are equivalent based of F test which is
+    `params_ftest` and `ssr_ftest` are equivalent based on F test which is
     identical to lmtest:grangertest in R
 
     Parameters
@@ -724,15 +724,24 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
     TODO: convert to class and attach results properly
 
     The Null hypothesis for grangercausalitytests is that the time series in
-    the second column, x2, Granger causes the time series in the first column,
-    x1. This means that past values of x2 have a statistically significant
-    effect on the current value of x1, taking also past values of x1 into
-    account, as regressors. We reject the null hypothesis of x2 Granger
-    causing x1 if the pvalues are below a desired size of the test.
+    the second column, x2, does NOT Granger cause the time series in the first
+    column, x1. Grange causality means that past values of x2 have a
+    statistically significant effect on the current value of x1, taking past
+    values of x1 into account as regressors. We reject the null hypothesis
+    that x2 does not Granger cause x1 if the pvalues are below a desired size
+    of the test.
 
-    'params_ftest', 'ssr_ftest' are based on F test
+    The null hypothesis for all four test is that the coefficients
+    corresponding to past values of the second time series are zero.
 
-    'ssr_chi2test', 'lrtest' are based on chi-square test
+    'params_ftest', 'ssr_ftest' are based on F distribution
+
+    'ssr_chi2test', 'lrtest' are based on chi-square distribution
+
+    References
+    ----------
+    http://en.wikipedia.org/wiki/Granger_causality
+    Greene: Econometric Analysis
 
     '''
     from scipy import stats # lazy import
