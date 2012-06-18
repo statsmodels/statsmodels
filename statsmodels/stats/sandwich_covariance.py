@@ -435,8 +435,8 @@ def S_hac_groupsum(x, time, nlags=None, weights_func=weights_bartlett):
     S : ndarray, (k_vars, k_vars)
         inner covariance matrix for sandwich
 
-    Reference
-    ---------
+    References
+    ----------
     Daniel Hoechle, xtscc paper
     Driscoll and Kraay
 
@@ -819,8 +819,8 @@ def cov_nw_groupsum(results, nlags, time, weights_func=weights_bartlett,
     Options might change when other kernels besides Bartlett and uniform are
     available.
 
-    Reference
-    ---------
+    References
+    ----------
     Daniel Hoechle, xtscc paper
     Driscoll and Kraay
 
