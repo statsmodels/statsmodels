@@ -347,7 +347,7 @@ def acorr_lm(x, maxlag=None, autolag='AIC', store=False):
     nobs = x.shape[0]
     if maxlag is None:
         #for adf from Greene referencing Schwert 1989
-        maxlag = 12. * np.power(nobs/100., 1/4.)#nobs//4  #TODO: check default, or do AIC/BIC
+        maxlag = int(ceil(12. * np.power(nobs/100., 1/4.)))#nobs//4  #TODO: check default, or do AIC/BIC
 
 
     xdiff = np.diff(x)
@@ -367,9 +367,9 @@ def acorr_lm(x, maxlag=None, autolag='AIC', store=False):
             results[mlag] = OLS(xshort, xdall[:,:mlag+1]).fit()
 
         if autolag.lower() == 'aic':
-            bestic, icbestlag = max((v.aic,k) for k,v in results.iteritems())
+            bestic, icbestlag = min((v.aic,k) for k,v in results.iteritems())
         elif autolag.lower() == 'bic':
-            icbest, icbestlag = max((v.bic,k) for k,v in results.iteritems())
+            icbest, icbestlag = min((v.bic,k) for k,v in results.iteritems())
         else:
             raise ValueError("autolag can only be None, 'AIC' or 'BIC'")
 
