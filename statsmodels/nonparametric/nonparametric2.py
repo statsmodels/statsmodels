@@ -113,14 +113,18 @@ class UKDE(Generic_KDE):
 
     Example
     --------
-    import numpy as np
-    N=300
-    c1=np.random.normal(size=(N,1))
-    c2=np.random.normal(2,1,size=(N,1))
+    >>> from statsmodels.nonparametric import UKDE
+    >>> N = 300
+    >>> np.random.seed(1234)  # Seed random generator
+    >>> c1 = np.random.normal(size=(N,1))
+    >>> c2 = np.random.normal(2, 1, size=(N,1))
 
-    dens_u=UKDE(tdat=[c1,c2],var_type='cc',bwmethod='normal_reference')
+    Estimate a bivariate distribution and display the bandwidth found:
 
-    print "The bandwdith is: ", dens_u.bw
+    >>> dens_u = UKDE(tdat=[c1,c2], var_type='cc', bw='normal_reference')
+    >>> dens_u.bw
+    array([ 0.39967419,  0.38423292])
+
     """
     def __init__(self, tdat, var_type, bw = None):
 
