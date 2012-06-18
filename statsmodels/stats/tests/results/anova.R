@@ -69,3 +69,24 @@ for(name in names(anova.iii.dropped)) {
     mkarray2(anova.iii.dropped[[name]], name, TRUE)
         }; cat("\n")
 
+
+anova.ii.dropped <- Anova(sum.lm.dropped, type='II', white="hc0")
+for(name in names(anova.ii.dropped)) {
+    mkarray2(anova.ii.dropped[[name]], name, TRUE)
+        }; cat("\n")
+
+anova.ii.dropped <- Anova(sum.lm.dropped, type='II', white="hc1")
+for(name in names(anova.ii.dropped)) {
+    mkarray2(anova.ii.dropped[[name]], name, TRUE)
+        }; cat("\n")
+
+anova.ii.dropped <- Anova(sum.lm.dropped, type='II', white="hc2")
+for(name in names(anova.ii.dropped)) {
+    mkarray2(anova.ii.dropped[[name]], name, TRUE)
+        }; cat("\n")
+
+anova.ii.dropped <- Anova(sum.lm.dropped, type='II', white="hc3")
+for(name in names(anova.ii.dropped)) {
+    mkarray2(anova.ii.dropped[[name]], name, TRUE)
+        }; cat("\n")
+
