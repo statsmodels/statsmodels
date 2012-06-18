@@ -19,6 +19,7 @@ graft statsmodels/tsa/vector_ar/data
 recursive-include docs/source *
 exclude docs/source/generated/*
 recursive-include docs/sphinxext *
+recursive-include docs/themes *
 recursive-exclude docs/build *
 #recursive-include docs/build/html *
 recursive-exclude docs/build/htmlhelp *
