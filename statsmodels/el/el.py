@@ -6,7 +6,7 @@ Last Updated: 10 June 2012
 
 General References:
 
-Owen, A. (2001). "Empirical Likelihood." Chapman and Hall 
+Owen, A. (2001). "Empirical Likelihood." Chapman and Hall
 
 TODO (Long-term)  Create a dict that forms estimating functions given
 a user input.  Then all tests can be combined into one function.
@@ -101,8 +101,8 @@ class OptFuncts(ElModel):
             new_params = np.copy(params + inc)
             diff = np.sum(np.abs(params - new_params))
             params = np.copy(new_params)
-            if np.any(params > 10 ** 10) \
-              or np.any(params < - (10 ** 10)):
+            if np.any(params > 10 ** 3) \
+              or np.any(params < - (10 ** 3)):
                 raise Exception('Optimization Failed')
         return params
 
@@ -582,7 +582,7 @@ class DescStat(OptFuncts):
         denom = 1 + np.dot(eta_star, self.est_vect.T)
         self.new_weights = 1 / self.nobs * 1 / denom
         llr = np.sum(np.log(self.nobs * self.new_weights))
-        p_val = 1 - chi2.cdf(-2 * llr, len(mu_array))
+        p_val = 1 - chi2.cdf(-2 * llr, mu_array.shape[1])
         if print_weights:
             return p_val, -2 * llr, self.new_weights
         else:
@@ -646,7 +646,10 @@ class DescStat(OptFuncts):
         pairs = itertools.product(x, y)
         z = []
         for i in pairs:
-            z.append(self.mv_hy_test_mean(np.asarray(i))[0])
+            try:  # Error means LLR close to infinity
+                z.append(self.mv_hy_test_mean(np.asarray(i))[0])
+            except Exception:
+                z.append(0)
         X, Y = np.meshgrid(x, y)
         z = np.asarray(z)
         z = z.reshape(X.shape[1], Y.shape[0])
@@ -763,7 +766,7 @@ class DescStat(OptFuncts):
                                               (var_lb, var_ub)])[1]
         p_val = 1 - chi2.cdf(llr, 1)
         if print_weights:
-            return p_val, llr, self.new_weights
+            return p_val, llr, self.new_weights.T
         return p_val, llr
 
     def hy_test_kurt(self, kurt0, nuis0=None, mu_min=None,
@@ -826,7 +829,7 @@ class DescStat(OptFuncts):
                                               (var_lb, var_ub)])[1]
         p_val = 1 - chi2.cdf(llr, 1)
         if print_weights:
-            return p_val, llr, self.new_weights
+            return p_val, llr, self.new_weights.T
         return p_val, llr
 
     def ci_skew(self, sig=.05, upper_bound=None, lower_bound=None,
@@ -1105,7 +1108,7 @@ class DescStat(OptFuncts):
                                               (var2_lb, var2_ub)])[1]
         p_val = 1 - chi2.cdf(llr, 1)
         if print_weights:
-            return p_val, llr, self.new_weights
+            return p_val, llr, self.new_weights.T
         return p_val, llr
 
     def ci_corr(self, sig=.05, upper_bound=None, lower_bound=None,
