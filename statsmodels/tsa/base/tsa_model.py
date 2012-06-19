@@ -65,8 +65,11 @@ class TimeSeriesModel(base.LikelihoodModel):
                 #    freq = datetools.inferTimeRule(dates)
                 #elif isinstance(dates, TimeSeries):
                 #    freq = dates.freqstr
-                raise ValueError("Currently, you need to give freq if dates "
-                        "are used.")
+                try:
+                    freq = datetools._infer_freq(dates)
+                except:
+                    raise ValueError("Frequency inference failed. Use `freq` "
+                            "keyword.")
             dates = Index(dates)
         self._data.dates = dates
         self._data.freq = _check_freq(freq) #TODO: drop if can get info from dates
