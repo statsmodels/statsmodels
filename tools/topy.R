@@ -1,3 +1,11 @@
+sanitize_name <- function(name) {
+    #"[%s]" % "]|[".join(map(re.escape, list(string.punctuation.replace("_","")
+    punctuation <-  '[\\!]|[\\"]|[\\#]|[\\$]|[\\%]|[\\&]|[\\\']|[\\(]|[\\)]|[\\*]|[\\+]|[\\,]|[\\-]|[\\.]|[\\/]|[\\:]|[\\;]|[\\<]|[\\=]|[\\>]|[\\?]|[\\@]|[\\[]|[\\\\]|[\\]]|[\\^]|[\\`]|[\\{]|[\\|]|[\\}]|[\\~]'
+    # handle spaces,tabs,etc. and periods specially
+    name <- gsub("[[:blank:]\\.]", "_", name)
+    name <- gsub(punctuation, "", name)
+    return(name)
+}
 
 cat_items <- function(object, prefix="", blacklist=NULL, trans=list())    {
     #print content (names) of object into python expressions for defining variables
@@ -102,9 +110,12 @@ mkhtest <- function(ht, name, distr="f") {
     cat("\n\n")
 }
 
-mkarray2 <- function(X, name) {
+mkarray2 <- function(X, name, sanitize=FALSE) {
     indent = "    "
-    cat(name); cat(" = np.array([\n"); cat(X, sep=", ", fill=76, labels=indent); cat(indent); cat("])")
+    if (sanitize) {
+    cat(sanitize_name(name)); cat(" = np.array([\n"); cat(X, sep=", ", fill=76, labels=indent); cat(indent); cat("])") }
+    else{
+    cat(name); cat(" = np.array([\n"); cat(X, sep=", ", fill=76, labels=indent); cat(indent); cat("])") }
     if (is.matrix(X)) {
         i <- as.character(nrow(X))
         j <- as.character(ncol(X))
