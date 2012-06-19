@@ -6,10 +6,15 @@ Last Updated: 10 June 2012
 
 General References:
 
-Owen, A. (2001). "Empirical Likelihood." Chapman and Hall
+Owen, A. (2001). "Empirical Likelihood." Chapman and Hall 
 
 TODO (Long-term)  Create a dict that forms estimating functions given
 a user input.  Then all tests can be combined into one function.
+
+TODO (Medium-term): Write functions for estimationg equations instead
+                    of generating the data every time a hypothesis
+                    test is called.
+
 
 """
 import numpy as np
@@ -309,9 +314,9 @@ class DescStat(OptFuncts):
         else:
             return 1 - chi2.cdf(llr, 1), llr
 
-    def ci_mean(self, sig=.05, method='nested-brent', epsilon=10 ** -6,
+    def ci_mean(self, sig=.05, method='nested-brent', epsilon=10 ** -8,
                  gamma_low=-10 ** 10, gamma_high=10 ** 10, \
-                 tol=10 ** -6):
+                 tol=10 ** -8):
 
         """
         Returns the confidence interval for the mean.
@@ -450,7 +455,7 @@ class DescStat(OptFuncts):
                                  full_output=1)[1]
         p_val = 1 - chi2.cdf(llr, 1)
         if print_weights:
-            return p_val, llr, self.new_weights
+            return p_val, llr, self.new_weights.T
         else:
             return p_val, llr
 
@@ -617,6 +622,9 @@ class DescStat(OptFuncts):
         -----
         The smaller the step size, the more accurate the intervals
         will be.
+
+        If the function returns optimization failed, consider narrowing
+        the boundaries of the plot.
 
         Example
         -------
