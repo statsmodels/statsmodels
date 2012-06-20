@@ -536,7 +536,7 @@ class Test_ARIMA101(CheckArmaResults):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,6]
-        cls.res1 = ARIMA(endog).fit(order=(1,0,1), trend="c", disp=-1)
+        cls.res1 = ARIMA(endog, (1,0,1)).fit(trend="c", disp=-1)
         (cls.res1.forecast_res, cls.res1.forecast_err,
                 confint) = cls.res1.forecast(10)
         cls.res2 = results_arma.Y_arma11c()
@@ -549,7 +549,7 @@ class Test_ARIMA111(CheckArimaResults, CheckForecast, CheckDynamicForecast):
     def setupClass(cls):
         from statsmodels.datasets.macrodata import load
         cpi = load().data['cpi']
-        cls.res1 = ARIMA(cpi).fit(order=(1,1,1), disp=-1)
+        cls.res1 = ARIMA(cpi, (1,1,1)).fit(disp=-1)
         cls.res2 = results_arima.ARIMA111()
         # make sure endog names changes to D.cpi
         cls.decimal_llf = 3
@@ -575,7 +575,7 @@ class Test_ARIMA111CSS(CheckArimaResults, CheckForecast, CheckDynamicForecast):
     def setupClass(cls):
         from statsmodels.datasets.macrodata import load
         cpi = load().data['cpi']
-        cls.res1 = ARIMA(cpi).fit(order=(1,1,1), disp=-1, method='css')
+        cls.res1 = ARIMA(cpi, (1,1,1)).fit(disp=-1, method='css')
         cls.res2 = results_arima.ARIMA111(method='css')
         cls.res2.fittedvalues = - cpi[1:-1] + cls.res2.linear
         # make sure endog names changes to D.cpi
@@ -607,7 +607,7 @@ class Test_ARIMA112CSS(CheckArimaResults):
     def setupClass(cls):
         from statsmodels.datasets.macrodata import load
         cpi = load().data['cpi']
-        cls.res1 = ARIMA(cpi).fit(order=(1,1,2), disp=-1, method='css',
+        cls.res1 = ARIMA(cpi, (1,1,2)).fit(disp=-1, method='css',
                                 start_params = [.905322, -.692425, 1.07366,
                                                 0.172024])
         cls.res2 = results_arima.ARIMA112(method='css')
@@ -657,7 +657,7 @@ class Test_ARIMA112CSS(CheckArimaResults):
 def test_arima_predict_mle_dates():
     from statsmodels.datasets.macrodata import load
     cpi = load().data['cpi']
-    res1 = ARIMA(cpi, dates=cpi_dates, freq='Q').fit(order=(4,1,1), disp=-1)
+    res1 = ARIMA(cpi, (4,1,1), dates=cpi_dates, freq='Q').fit(disp=-1)
 
     arima_forecasts = np.genfromtxt(open(
         current_path + '/results/results_arima_forecasts_all_mle.csv', "rb"),
@@ -697,7 +697,7 @@ def test_arma_predict_mle_dates():
 def test_arima_predict_css_dates():
     from statsmodels.datasets.macrodata import load
     cpi = load().data['cpi']
-    res1 = ARIMA(cpi, dates=cpi_dates, freq='Q').fit(order=(4,1,1), disp=-1,
+    res1 = ARIMA(cpi, (4,1,1), dates=cpi_dates, freq='Q').fit(disp=-1,
             method='css', trend='nc')
 
     params = np.array([ 1.231272508473910,
@@ -728,7 +728,7 @@ def test_arma_predict_css_dates():
 def test_arima_predict_mle():
     from statsmodels.datasets.macrodata import load
     cpi = load().data['cpi']
-    res1 = ARIMA(cpi).fit(order=(4,1,1), disp=-1)
+    res1 = ARIMA(cpi, (4,1,1)).fit(disp=-1)
     # fit the model so that we get correct endog length but use
 
     arima_forecasts = np.genfromtxt(open(
@@ -955,11 +955,8 @@ def test_arma_predict_indices():
 def test_arima_predict_indices():
     from statsmodels.datasets.macrodata import load
     cpi = load().data['cpi']
-    model = ARIMA(cpi, dates=cpi_dates, freq='Q')
+    model = ARIMA(cpi, (4,1,1), dates=cpi_dates, freq='Q')
     model.method = 'mle'
-    model.k_diff = 1
-    model.k_ar = 4
-    model.k_ma = 1
 
     # starting indices
 
@@ -1092,11 +1089,8 @@ def test_arima_predict_indices_css():
     #NOTE: Doing no-constant for now to kick the conditional exogenous
     #issue 274 down the road
     # go ahead and git the model to set up necessary variables
-    model = ARIMA(cpi)
+    model = ARIMA(cpi, (4,1,1))
     model.method = 'css'
-    model.k_ar = 4
-    model.k_diff = 1
-    model.k_ma = 1
 
     assert_raises(ValueError, model._get_predict_start, *(0, False))
     assert_raises(ValueError, model._get_predict_start, *(0, True))
@@ -1109,7 +1103,7 @@ def test_arima_predict_css():
     #NOTE: Doing no-constant for now to kick the conditional exogenous
     #issue 274 down the road
     # go ahead and git the model to set up necessary variables
-    res1 = ARIMA(cpi).fit(order=(4,1,1), disp=-1, method="css",
+    res1 = ARIMA(cpi, (4,1,1)).fit(disp=-1, method="css",
                             trend="nc")
     # but use gretl parameters to predict to avoid precision problems
     params = np.array([ 1.231272508473910,
@@ -1248,7 +1242,7 @@ def test_arima_predict_css_diffs():
     #NOTE: Doing no-constant for now to kick the conditional exogenous
     #issue 274 down the road
     # go ahead and git the model to set up necessary variables
-    res1 = ARIMA(cpi).fit(order=(4,1,1), disp=-1, method="css",
+    res1 = ARIMA(cpi, (4,1,1)).fit(disp=-1, method="css",
                             trend="c")
     # but use gretl parameters to predict to avoid precision problems
     params = np.array([0.78349893861244,
@@ -1392,7 +1386,7 @@ def test_arima_predict_mle_diffs():
     #NOTE: Doing no-constant for now to kick the conditional exogenous
     #issue 274 down the road
     # go ahead and git the model to set up necessary variables
-    res1 = ARIMA(cpi).fit(order=(4,1,1), disp=-1, trend="c")
+    res1 = ARIMA(cpi, (4,1,1)).fit(disp=-1, trend="c")
     # but use gretl parameters to predict to avoid precision problems
     params = np.array([0.926875951549299,
         -0.555862621524846,
@@ -1530,7 +1524,7 @@ def test_arima_wrapper():
 
     cpi = load_pandas().data['cpi']
     cpi.index = pandas.Index(cpi_dates)
-    res = ARIMA(cpi, freq='Q').fit(order=(4,1,1), disp=-1)
+    res = ARIMA(cpi, (4,1,1), freq='Q').fit(disp=-1)
     assert_equal(res.params.index, ['const', 'ar.L1.D.cpi', 'ar.L2.D.cpi',
                                     'ar.L3.D.cpi', 'ar.L4.D.cpi',
                                     'ma.L1.D.cpi'])

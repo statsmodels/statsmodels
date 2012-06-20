@@ -695,6 +695,16 @@ class ARIMA(ARMA):
     """
     Autoregressive Integrated Moving Average ARIMA(p,d,q) Model
     """ + '\n'.join(ARMA.__doc__.split('\n')[2:])
+    def __init__(self, endog, order, exog=None, dates=None, freq=None):
+        super(ARIMA, self).__init__(endog, exog, dates, freq)
+        p,d,q = order
+        self.k_diff = d
+        self.k_ar = p
+        self.k_ma = q
+        self.endog = np.diff(self.endog, n=d)
+        self._data.ynames = 'D.' + self.endog_names
+        # what about exog, should we difference it automatically before
+        # super call?
 
     def _get_predict_start(self, start, dynamic):
         """
@@ -736,7 +746,7 @@ class ARIMA(ARMA):
 
         return end - self.k_diff, out_of_sample
 
-    def fit(self, order, start_params=None, trend='c', method = "css-mle",
+    def fit(self, start_params=None, trend='c', method = "css-mle",
             transparams=True, solver=None, maxiter=35, full_output=1,
             disp=5, callback=None, **kwargs):
         """
@@ -809,23 +819,17 @@ class ARIMA(ARMA):
         The below is the docstring from
         `statsmodels.LikelihoodModel.fit`
         """
-        p,d,q = order
-        self.k_diff = d
-        order = (p,q)
-        self.endog = np.diff(self.endog, n=d)
-        self._data.ynames = 'D.' + self.endog_names
-        # what about exog, etc.?
-        # set it back to undifferenced?
-        arima_fit = super(ARIMA, self).fit(order, start_params, trend, method,
+        arima_fit = super(ARIMA, self).fit((self.k_ar, self.k_ma),
+                               start_params, trend, method,
                                transparams, solver, maxiter, full_output,
                                disp, callback, **kwargs)
-        if d == 0: #TODO: what do to here? Overide results methods or just
-                   # return ARMA?
+        if self.k_diff == 0:#TODO: what do to here?
+            #Overide results methods or just return ARMA?
             return arima_fit
-        normalized_cov_params = None #TODO: fix this
+        normalized_cov_params = None #TODO: fix this?
         arima_fit = ARIMAResults(self, arima_fit._results.params,
                                        normalized_cov_params)
-        arima_fit.k_diff = d
+        arima_fit.k_diff = self.k_diff
         return ARIMAResultsWrapper(arima_fit)
 
     def predict(self, params, start=None, end=None, exog=None, typ='linear',
@@ -1407,4 +1411,4 @@ if __name__ == "__main__":
     dta = webuse('wpi1')
     wpi = dta['wpi']
 
-    mod = ARIMA(wpi).fit(order=(1,1,1))
+    mod = ARIMA(wpi, (1,1,1)).fit()
