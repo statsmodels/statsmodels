@@ -1,4 +1,5 @@
 from __future__ import division
+
 import numpy as np
 from numpy import (dot, identity, atleast_2d, atleast_1d, zeros)
 from numpy.linalg import inv
@@ -18,9 +19,46 @@ from statsmodels.sandbox.regression.numdiff import (approx_hess,
 from statsmodels.tsa.kalmanf.kalmanfilter import KalmanFilter
 import statsmodels.base.wrapper as wrap
 from statsmodels.tsa.vector_ar import util
+from statsmodels.tsa.base.datetools import _index_date
 
 
 __all__ = ['AR']
+
+def _check_ar_start(start, k_ar, method, dynamic):
+    if (method == 'cmle' or dynamic) and start < k_ar:
+        raise ValueError("Start must be >= k_ar for conditional MLE "
+                "or dynamic forecast. Got %d" % start)
+
+def _validate(start, k_ar, dates, method):
+    """
+    Checks the date and then returns an integer
+    """
+    from datetime import datetime
+    if isinstance(start, (basestring, datetime)):
+        start_date = start
+        start = _index_date(start, dates)
+    if 'mle' not in method and start < k_ar:
+        raise ValueError("Start must be >= k_ar for conditional MLE or "
+                "dynamic forecast. Got %s" % start_date)
+
+def _ar_predict_out_of_sample(y, params, p, k_trend, steps, start=0):
+    mu = params[:k_trend] or 0 # only have to worry about constant
+    arparams = params[k_trend:][::-1] # reverse for dot
+
+    # dynamic endogenous variable
+    endog = np.zeros(p + steps) # this is one too big but doesn't matter
+    if start:
+        endog[:p] = y[start-p:start]
+    else:
+        endog[:p] = y[-p:]
+
+    forecast = np.zeros(steps)
+    for i in range(steps):
+        fcast = mu + np.dot(arparams, endog[i:i+p])
+        forecast[i] = fcast
+        endog[i + p] = fcast
+
+    return forecast
 
 
 
@@ -106,23 +144,25 @@ class AR(tsbase.TimeSeriesModel):
             if i >= start-1: #only record if we ask for it
                 predictedvalues[i+1-start] = dot(Z_mat,alpha)
 
-    def _get_predict_start(self, start):
+    def _get_predict_start(self, start, dynamic):
+        method = getattr(self, 'method', 'mle')
+        k_ar = getattr(self, 'k_ar', 0)
         if start is None:
-            if self.method == 'mle':
+            if method == 'mle' and not dynamic:
                 start = 0
-            else: # can't do presample fit for cmle
-                start = self.k_ar
+            else: # can't do presample fit for cmle or dynamic
+                start = k_ar
+        elif isinstance(start, int):
+            start = super(AR, self)._get_predict_start(start)
+        else: # should be a date
+            start = _validate(start, k_ar, self._data.dates, method)
+            start = super(ARMA, self)._get_predict_start(start)
+        _check_ar_start(start, k_ar, method, dynamic)
+        return start
 
-        if self.method == 'cmle':
-            if start < self.k_ar:
-                raise ValueError("Start must be >= k_ar")
-
-        return super(AR, self)._get_predict_start(start)
-
-
-    def predict(self, params, start=None, end=None, method='static'):
+    def predict(self, params, start=None, end=None, dynamic=False):
         """
-        Returns in-sample prediction or forecasts.
+        Returns in-sample and out-of-sample prediction.
 
         Parameters
         ----------
@@ -136,10 +176,12 @@ class AR(tsbase.TimeSeriesModel):
             Zero-indexed observation number at which to end forecasting, ie.,
             the first forecast is start. Can also be a date string to
             parse or a datetime type.
-        method : string {'dynamic', 'static'}
-            If method is 'dynamic', then fitted values are used in place of
-            observed 'endog' to make forecasts.  If 'static', observed 'endog'
-            are used. Only 'static' is currently implemented.
+        dynamic : bool
+            The `dynamic` keyword affects in-sample prediction. If dynamic
+            is False, then the in-sample lagged values are used for
+            prediction. If `dynamic` is True, then in-sample forecasts are
+            used in place of lagged dependent variables. The first forecasted
+            value is `start`.
 
         Returns
         -------
@@ -151,22 +193,25 @@ class AR(tsbase.TimeSeriesModel):
         values. The exact initial Kalman Filter is used. See Durbin and Koopman
         in the references for more information.
         """
-        start = self._get_predict_start(start) # will be an index of a date
+        # will return an index of a date
+        start = self._get_predict_start(start, dynamic)
         end, out_of_sample = self._get_predict_end(end)
 
-        if end < start:
+        if start - end > 1:
             raise ValueError("end is before start")
-        if end == start + out_of_sample:
-            return np.array([])
 
         k_ar = self.k_ar
-        y = self.endog[:k_ar]
-        nobs = int(self.endog.shape[0])
         k_trend = self.k_trend
         method = self.method
+        endog = self.endog.squeeze()
+
+        if dynamic:
+            out_of_sample += end - start + 1
+            return _ar_predict_out_of_sample(endog, params, k_ar,
+                    k_trend, out_of_sample, start)
 
 
-        predictedvalues = np.zeros(end+1-start + out_of_sample)
+        predictedvalues = np.zeros(end+1-start)
 
         # fit pre-sample
         if method == 'mle': # use Kalman Filter to get initial values
@@ -176,37 +221,24 @@ class AR(tsbase.TimeSeriesModel):
             # modifies predictedvalues in place
             if start < k_ar:
                 self._presample_fit(params, start, k_ar, min(k_ar-1, end),
-                        y-mu, predictedvalues)
+                        endog[:k_ar]-mu, predictedvalues)
                 predictedvalues[:k_ar-start] += mu
 
         if end < k_ar:
             return predictedvalues
 
-        # fit in-sample
-        # just do the whole thing and then truncate
+        # just do the whole thing and truncate
         fittedvalues = dot(self.X, params)
 
         pv_start = max(k_ar - start, 0)
         fv_start = max(start - k_ar, 0)
-        pv_end = min(len(predictedvalues), len(fittedvalues) - fv_start)
-        #fv_end = min(len(fittedvalues), len(fittedvalues) - end)
         fv_end = min(len(fittedvalues), end-k_ar+1)
-        predictedvalues[pv_start:pv_end+pv_start] = fittedvalues[fv_start:fv_end]
+        predictedvalues[pv_start:] = fittedvalues[fv_start:fv_end]
 
-        if not out_of_sample:
-            return predictedvalues
-
-        # fit out of sample
-        endog = np.r_[self.endog[-k_ar:], [[0]]*out_of_sample]
-        params = params.copy()
-        mu = params[:k_trend] or 0
-        params = params[k_trend:][::-1]
-
-
-        for i in range(out_of_sample):
-            fcast = mu + np.dot(params, endog[i:i+k_ar])
-            predictedvalues[-out_of_sample+i] = fcast
-            endog[i+k_ar] = fcast
+        if out_of_sample:
+            forecastvalues = _ar_predict_out_of_sample(endog, params,
+                                        k_ar, k_trend, out_of_sample)
+            predictedvalues = np.r_[predictedvalues, forecastvalues]
 
         return predictedvalues
 
@@ -770,9 +802,9 @@ class ARResults(tsbase.TimeSeriesModelResults):
     def fittedvalues(self):
         return self.model.predict(self.params)
 
-    def predict(self, start=None, end=None, method='static'):
+    def predict(self, start=None, end=None, dynamic=False):
         params = self.params
-        predictedvalues =  self.model.predict(params, start, end, method)
+        predictedvalues =  self.model.predict(params, start, end, dynamic)
         return predictedvalues
 
         #start = self.model._get_predict_start(start)
