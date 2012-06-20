@@ -351,9 +351,11 @@ def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False):
        If True, then denominators for autocovariance are n-k, otherwise n
     nlags: int, optional
         Number of lags to return autocorrelation for.
-    confint : float or None, optional
-        If True, the confidence intervals for the given level are returned.
-        For instance if confint=95, 95 % confidence intervals are returned.
+    confint : scalar, optional
+        If a number is given, the confidence intervals for the given level are
+        returned. For instance if confint=95, 95 % confidence intervals are
+        returned where the standard deviation is computed according to
+        Bartlett's formula.
     qstat : bool, optional
         If True, returns the Ljung-Box q statistic for each autocorrelation
         coefficient.  See q_stat for more information.
@@ -494,16 +496,24 @@ def pacf(x, nlags=40, method='ywunbiased'):
         largest lag for which pacf is returned
     method : 'ywunbiased' (default) or 'ywmle' or 'ols'
         specifies which method for the calculations to use,
-        - yw or ywunbiased : yule walker with bias correction in denominator for acovf
+        - yw or ywunbiased : yule walker with bias correction in denominator
+          for acovf
         - ywm or ywmle : yule walker without bias correction
         - ols - regression of time series on lags of it and on constant
         - ld or ldunbiased : Levinson-Durbin recursion with bias correction
         - ldb or ldbiased : Levinson-Durbin recursion without bias correction
+    confint : scalar, optional
+        If a number is given, the confidence intervals for the given level are
+        returned. For instance if confint=95, 95 % confidence intervals are
+        returned where the standard deviation is computed according to
+        1/sqrt(len(x))
 
     Returns
     -------
     pacf : 1d array
         partial autocorrelations, nlags elements, including lag zero
+    confint : array, optional
+        Confidence intervals for the PACF. Returned if confint is not None.
 
     Notes
     -----
@@ -512,22 +522,29 @@ def pacf(x, nlags=40, method='ywunbiased'):
     '''
 
     if method == 'ols':
-        return pacf_ols(x, nlags=nlags)
+        ret = pacf_ols(x, nlags=nlags)
     elif method in ['yw', 'ywu', 'ywunbiased', 'yw_unbiased']:
-        return pacf_yw(x, nlags=nlags, method='unbiased')
+        ret = pacf_yw(x, nlags=nlags, method='unbiased')
     elif method in ['ywm', 'ywmle', 'yw_mle']:
-        return pacf_yw(x, nlags=nlags, method='mle')
+        ret = pacf_yw(x, nlags=nlags, method='mle')
     elif method in ['ld', 'ldu', 'ldunbiase', 'ld_unbiased']:
         acv = acovf(x, unbiased=True)
         ld_ = levinson_durbin(acv, nlags=nlags, isacov=True)
         #print 'ld', ld_
-        return ld_[2]
+        ret = ld_[2]
     elif method in ['ldb', 'ldbiased', 'ld_biased']: #inconsistent naming with ywmle
         acv = acovf(x, unbiased=False)
         ld_ = levinson_durbin(acv, nlags=nlags, isacov=True)
-        return ld_[2]
+        ret = ld_[2]
     else:
         raise ValueError('method not available')
+    if confint is not None:
+        varacf = 1./len(x)
+        interval = stats.norm.ppf(100. - (1 - confint)/200.) * np.sqrt(varacf)
+        confint = (ret-interval, ret+interval)
+        return ret, confint
+    else:
+        return ret
 
 
 
