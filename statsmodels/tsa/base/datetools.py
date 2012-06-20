@@ -11,6 +11,27 @@ _freq_to_pandas = {'B' : pandas_datetools.BDay(1),
                    'A' : pandas_datetools.yearEnd,
                    'Q' : pandas_datetools.quarterEnd}
 
+def _index_date(date, dates):
+    """
+    Gets the index number of a date in a date index.
+
+    Works in-sample and will return one past the end of the dates since
+    prediction can start one out.
+
+    Currently used to validate prediction start dates.
+    """
+    if isinstance(date, basestring):
+        date = date_parser(date)
+    try:
+        return dates.get_loc(date)
+    except KeyError as err:
+        freq = _infer_freq(dates)
+        # we can start prediction at the end of endog
+        if _idx_from_dates(dates[-1], date, freq) == 1:
+            return len(dates)
+
+        raise ValueError("date %s not in date index" % date)
+
 def _date_from_idx(d1, idx, freq):
     """
     Returns the date from an index beyond the end of a date series.

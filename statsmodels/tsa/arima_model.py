@@ -21,8 +21,7 @@ from statsmodels.tsa.ar_model import AR
 from statsmodels.tsa.arima_process import arma2ma
 from statsmodels.sandbox.regression.numdiff import (approx_fprime,
         approx_fprime_cs, approx_hess, approx_hess_cs)
-from statsmodels.tsa.base.datetools import (date_parser, _idx_from_dates,
-                                            _infer_freq)
+from statsmodels.tsa.base.datetools import _index_date
 from statsmodels.tsa.kalmanf import KalmanFilter
 try:
     from kalmanf import kalman_loglike
@@ -130,19 +129,6 @@ def _arma_predict_in_sample(start, end, endog, resid, k_ar,
     predictedvalues = np.zeros(end + 1 - fv_start)
     fv_end = min(len(fittedvalues), end + 1)
     return fittedvalues[fv_start:fv_end]
-
-def _index_date(date, dates):
-    if isinstance(date, basestring):
-        date = date_parser(date)
-    try:
-        return dates.get_loc(date)
-    except KeyError as err:
-        freq = _infer_freq(dates)
-        # we can start prediction at the end of endog
-        if _idx_from_dates(dates[-1], date, freq) == 1:
-            return len(dates)
-
-        raise ValueError("date %s not in date index" % date)
 
 def _validate(start, k_ar, k_diff, dates, method):
     if isinstance(start, (basestring, datetime)):
@@ -903,7 +889,6 @@ class ARIMA(ARMA):
         if typ == 'linear':
             if not dynamic or (start != self.k_ar + self.k_diff and
                                                     start is not None):
-                #from IPython.core.debugger import Pdb; Pdb().set_trace()
                 return super(ARIMA, self).predict(params, start, end, exog,
                                               dynamic)
             else:
