@@ -901,6 +901,7 @@ class ARIMA(ARMA):
             else:
                 # need to assume pre-sample residuals are zero
                 # do this by a hack
+                start += k_diff
                 q = self.k_ma
                 self.k_ma = 0
                 predictedvalues = super(ARIMA, self).predict(params, start,
@@ -948,34 +949,16 @@ class ARIMA(ARMA):
                                                           k_trend,
                                                           k_exog,
                                                           reverse=True)
-                    # start gets moved up by k_diff, because we're predicting
-                    # k_diff less (we're handling the pre-sample here
-                    if start:
-                        start += k_diff
-                    else:
-                        start = self._get_predict_start(start, dynamic)
-                        start += k_diff * 2
                     # this is the hack
                     self.k_ma = 0
+
                     predict = super(ARIMA, self).predict(params, start, end,
                                                          exog, dynamic)
+                    if not start:
+                        start = self._get_predict_start(start, dynamic)
+                        start += k_diff
                     self.k_ma = q
-                    first_d = np.zeros(k_diff)
-                    y = self.endog
-                    if self.k_trend == 1:
-                        mu = trendparam * (1-arparams.sum()) # use expectation
-                        mu = np.array([mu]*(k_diff)) # repeat for slicing
-                    else:
-                        mu = np.zeros(k_diff)
-
-                    if k_exog > 0: # add exogenous process to constant
-                        mu += np.dot(exparams, exog)
-
-                    for i in range(k_diff):
-                        first_d[i] = endog[p+i] + np.dot(arparams,
-                                                      y[i:i+p]) + mu[i]
-                    return np.r_[first_d,
-                                 endog[start-1] + np.cumsum(predict)]
+                    return endog[start-1] + np.cumsum(predict)
                 else:
                     predict = super(ARIMA, self).predict(params, start, end,
                                                          exog, dynamic)
