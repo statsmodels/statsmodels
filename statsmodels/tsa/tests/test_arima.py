@@ -664,6 +664,8 @@ def test_arima_predict_mle_dates():
                     delimiter=",", skip_header=1, dtype=float)
 
     fc = arima_forecasts[:,0]
+    fcdyn = arima_forecasts[:,1]
+    fcdyn2 = arima_forecasts[:,2]
 
     start, end = 2, 51
     fv = res1.predict('1959Q3', '1971Q4', typ='levels')
@@ -675,6 +677,16 @@ def test_arima_predict_mle_dates():
     assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
     assert_equal(res1._data.predict_dates, dates_from_range('2009Q3','2015Q4'))
 
+    # make sure dynamic works
+
+    start, end = '1960q2', '1971q4'
+    fv = res1.predict(start, end, dynamic=True, typ='levels')
+    assert_almost_equal(fv, fcdyn[5:51+1], DECIMAL_4)
+
+    start, end = '1965q1', '2015q4'
+    fv = res1.predict(start, end, dynamic=True, typ='levels')
+    assert_almost_equal(fv, fcdyn2[24:227+1], DECIMAL_4)
+
 def test_arma_predict_mle_dates():
     from statsmodels.datasets.sunspots import load
     sunspots = load().data['SUNACTIVITY']
@@ -682,6 +694,8 @@ def test_arma_predict_mle_dates():
     mod.k_ar = 9
     mod.k_ma = 0
     mod.method = 'mle'
+
+    assert_raises(ValueError, mod._get_predict_start, *('1701', True))
 
     start, end = 2, 51
     _ = mod._get_predict_start('1702', False)
@@ -711,6 +725,8 @@ def test_arima_predict_css_dates():
                     delimiter=",", skip_header=1, dtype=float)
 
     fc = arima_forecasts[:,0]
+    fcdyn = arima_forecasts[:,1]
+    fcdyn2 = arima_forecasts[:,2]
 
     start, end = 5, 51
     fv = res1.model.predict(params, '1960Q2', '1971Q4', typ='levels')
@@ -722,8 +738,25 @@ def test_arima_predict_css_dates():
     assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
     assert_equal(res1._data.predict_dates, dates_from_range('2009Q3','2015Q4'))
 
+    # make sure dynamic works
+    start, end = 5, 51
+    fv = res1.model.predict(params, '1960Q2', '1971Q4', typ='levels',
+                                                        dynamic=True)
+    assert_almost_equal(fv, fcdyn[start:end+1], DECIMAL_4)
+
+    start, end = '1965q1', '2015q4'
+    fv = res1.model.predict(params, start, end, dynamic=True, typ='levels')
+    assert_almost_equal(fv, fcdyn2[24:227+1], DECIMAL_4)
+
+
 def test_arma_predict_css_dates():
-    pass
+    from statsmodels.datasets.sunspots import load
+    sunspots = load().data['SUNACTIVITY']
+    mod = ARMA(sunspots, dates=sun_dates, freq='A')
+    mod.k_ar = 9
+    mod.k_ma = 0
+    mod.method = 'css'
+    assert_raises(ValueError, mod._get_predict_start, *('1701', False))
 
 def test_arima_predict_mle():
     from statsmodels.datasets.macrodata import load
