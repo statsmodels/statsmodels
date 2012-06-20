@@ -146,6 +146,63 @@ class TestARMLEConstant(object):
         assert_almost_equal(model.predict(params, start=2, end=7),
                 self.res2.FVMLEstart2end7, DECIMAL_4)
 
+    def test_dynamic_predict(self):
+        res1 = self.res1
+        res2 = self.res2
+
+        # assert_raises pre-sample
+
+        # 9, 51
+        start, end = 9, 51
+        fv = res1.predict(start, end, dynamic=True)
+        assert_almost_equal(fv, res2.fcdyn[start:end+1], DECIMAL_4)
+
+        # 9, 308
+        start, end = 9, 308
+        fv = res1.predict(start, end, dynamic=True)
+        assert_almost_equal(fv, res2.fcdyn[start:end+1], DECIMAL_4)
+
+        # 9, 333
+        start, end = 9, 333
+        fv = res1.predict(start, end, dynamic=True)
+        assert_almost_equal(fv, res2.fcdyn[start:end+1], DECIMAL_4)
+
+        # 100, 151
+        start, end = 100, 151
+        fv = res1.predict(start, end, dynamic=True)
+        assert_almost_equal(fv, res2.fcdyn2[start:end+1], DECIMAL_4)
+
+        # 100, 308
+        start, end = 100, 308
+        fv = res1.predict(start, end, dynamic=True)
+        assert_almost_equal(fv, res2.fcdyn2[start:end+1], DECIMAL_4)
+
+        # 100, 333
+        start, end = 100, 333
+        fv = res1.predict(start, end, dynamic=True)
+        assert_almost_equal(fv, res2.fcdyn2[start:end+1], DECIMAL_4)
+
+        # 308, 308
+        start, end = 308, 308
+        fv = res1.predict(start, end, dynamic=True)
+        assert_almost_equal(fv, res2.fcdyn3[start:end+1], DECIMAL_4)
+
+        # 308, 333
+        start, end = 308, 333
+        fv = res1.predict(start, end, dynamic=True)
+        assert_almost_equal(fv, res2.fcdyn3[start:end+1], DECIMAL_4)
+
+        # 309, 333
+        start, end = 309, 333
+        fv = res1.predict(start, end, dynamic=True)
+        assert_almost_equal(fv, res2.fcdyn4[start:end+1], DECIMAL_4)
+
+        # None, None
+        start, end = None, None
+        fv = res1.predict(dynamic=True)
+        assert_almost_equal(fv, res2.fcdyn[9:309], DECIMAL_4)
+
+
 class TestAutolagAR(object):
     @classmethod
     def setupClass(cls):
