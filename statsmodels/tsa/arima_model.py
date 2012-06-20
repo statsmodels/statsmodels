@@ -377,19 +377,26 @@ class ARMA(tsbase.TimeSeriesModel):
     def _get_predict_start(self, start, dynamic):
         # do some defaults
         method = getattr(self, 'method', 'mle')
+        k_ar = getattr(self, 'k_ar', 0)
+        k_diff = getattr(self, 'k_diff', 0)
         if start is None:
-            if 'mle' in method:
+            if 'mle' in method and not dynamic:
                 start = 0
             else:
-                start = self.k_ar
+                start = k_ar
         elif isinstance(start, int):
             start = super(ARMA, self)._get_predict_start(start)
-        elif 'mle' not in method or dynamic: # should be on a date
-            k_diff = getattr(self, "k_diff", 0)
-            start = _validate(start, self.k_ar, self.k_diff, self._data.dates,
+        else: # should be on a date
+            #elif 'mle' not in method or dynamic: # should be on a date
+            start = _validate(start, k_ar, k_diff, self._data.dates,
                               method)
             start = super(ARMA, self)._get_predict_start(start)
+        _check_arima_start(start, k_ar, k_diff, method, dynamic)
         return start
+
+    def _get_predict_end(self, start, dynamic=False):
+        # pass through so predict works for ARIMA and ARMA
+        return super(ARMA, self)._get_predict_end(start)
 
     def geterrors(self, params):
         """
@@ -459,7 +466,13 @@ class ARMA(tsbase.TimeSeriesModel):
             parse or a datetime type.
         exog : array-like, optional
             If the model is an ARMAX and out-of-sample forecasting is
-            requestion, exog must be given.
+            requested, exog must be given.
+        dynamic : bool, optional
+            The `dynamic` keyword affects in-sample prediction. If dynamic
+            is False, then the in-sample lagged values are used for
+            prediction. If `dynamic` is True, then in-sample forecasts are
+            used in place of lagged dependent variables. The first forecasted
+            value is `start`.
 
         Notes
         ------
@@ -722,7 +735,6 @@ class ARIMA(ARMA):
             start = _validate(start, k_ar, k_diff, self._data.dates,
                               method)
             start = super(ARIMA, self)._get_predict_start(start, dynamic)
-        _check_arima_start(start, k_ar, k_diff, method, dynamic)
         # reset date for k_diff adjustment
         self._set_predict_start_date(start + k_diff)
         return start
@@ -732,7 +744,7 @@ class ARIMA(ARMA):
         Returns last index to be forecast of the differenced array.
         Handling of inclusiveness should be done in the predict function.
         """
-        end, out_of_sample = super(ARIMA, self)._get_predict_end(end)
+        end, out_of_sample = super(ARIMA, self)._get_predict_end(end, dynamic)
         if 'mle' not in self.method and not dynamic:
             end -= self.k_ar
 
@@ -1196,7 +1208,7 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         df_resid = self.df_resid
         return t.sf(np.abs(self.tvalues), df_resid) * 2
 
-    def predict(self, start=None, end=None, exog=None):
+    def predict(self, start=None, end=None, exog=None, dynamic=False):
         """
         In-sample and out-of-sample prediction.
 
@@ -1213,8 +1225,15 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         exog : array-like, optional
             If the model is an ARMAX and out-of-sample forecasting is
             requestion, exog must be given.
+        dynamic : bool, optional
+            The `dynamic` keyword affects in-sample prediction. If dynamic
+            is False, then the in-sample lagged values are used for
+            prediction. If `dynamic` is True, then in-sample forecasts are
+            used in place of lagged dependent variables. The first forecasted
+            value is `start`.
+
         """
-        return self.model.predict(self.params, start, end, exog)
+        return self.model.predict(self.params, start, end, exog, dynamic)
 
     def forecast(self, steps=1, exog=None, alpha=.05):
         """

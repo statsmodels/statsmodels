@@ -29,6 +29,7 @@ y_arma = np.genfromtxt(open(current_path + '/results/y_arma_data.csv', "rb"),
         delimiter=",", skip_header=1, dtype=float)
 
 cpi_dates = dates_from_range('1959Q1', '2009Q3')
+sun_dates = dates_from_range('1700', '2008')
 
 def test_compare_arma():
     #this is a preliminary test to compare arma_kf, arma_cond_ls and arma_cond_mle
@@ -674,6 +675,25 @@ def test_arima_predict_mle_dates():
     assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
     assert_equal(res1._data.predict_dates, dates_from_range('2009Q3','2015Q4'))
 
+def test_arma_predict_mle_dates():
+    from statsmodels.datasets.sunspots import load
+    sunspots = load().data['SUNACTIVITY']
+    mod = ARMA(sunspots, dates=sun_dates, freq='A')
+    mod.k_ar = 9
+    mod.k_ma = 0
+    mod.method = 'mle'
+
+    start, end = 2, 51
+    _ = mod._get_predict_start('1702', False)
+    _ = mod._get_predict_end('1751')
+    assert_equal(mod._data.predict_dates, sun_dates[start:end+1])
+
+    start, end = 308, 333
+    _ = mod._get_predict_start('2008', False)
+    _ = mod._get_predict_end('2033')
+    assert_equal(mod._data.predict_dates, dates_from_range('2008', '2033'))
+
+
 def test_arima_predict_css_dates():
     from statsmodels.datasets.macrodata import load
     cpi = load().data['cpi']
@@ -702,6 +722,8 @@ def test_arima_predict_css_dates():
     assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
     assert_equal(res1._data.predict_dates, dates_from_range('2009Q3','2015Q4'))
 
+def test_arma_predict_css_dates():
+    pass
 
 def test_arima_predict_mle():
     from statsmodels.datasets.macrodata import load
@@ -858,6 +880,77 @@ def _check_start(model, given, expected, dynamic):
 def _check_end(model, given, end_expect, out_of_sample_expect):
     end, out_of_sample = model._get_predict_end(given)
     assert_equal((end, out_of_sample), (end_expect, out_of_sample_expect))
+
+def test_arma_predict_indices():
+    from statsmodels.datasets.sunspots import load
+    sunspots = load().data['SUNACTIVITY']
+    model = ARMA(sunspots, dates=sun_dates, freq='A')
+    model.method = 'mle'
+    model.k_ar = 9
+    model.k_ma = 0
+
+    # raises - pre-sample + dynamic
+    assert_raises(ValueError, model._get_predict_start, *(0, True))
+    assert_raises(ValueError, model._get_predict_start, *(8, True))
+    assert_raises(ValueError, model._get_predict_start, *('1700', True))
+    assert_raises(ValueError, model._get_predict_start, *('1708', True))
+
+    # raises - start out of sample
+    assert_raises(ValueError, model._get_predict_start, *(311, True))
+    assert_raises(ValueError, model._get_predict_start, *(311, False))
+    assert_raises(ValueError, model._get_predict_start, *('2010', True))
+    assert_raises(ValueError, model._get_predict_start, *('2010', False))
+
+    # works - in-sample
+    # None
+                  # given, expected, dynamic
+    start_test_cases = [
+                  (None, 9, True),
+                  # all start get moved back by k_diff
+                  (9, 9, True),
+                  (10, 10, True),
+                  # what about end of sample start - last value is first
+                  # forecast
+                  (309, 309, True),
+                  (308, 308, True),
+                  (0, 0, False),
+                  (1, 1, False),
+                  (4, 4, False),
+
+                  # all start get moved back by k_diff
+                  ('1709', 9, True),
+                  ('1710', 10, True),
+                  # what about end of sample start - last value is first
+                  # forecast
+                  ('2008', 308, True),
+                  ('2009', 309, True),
+                  ('1700', 0, False),
+                  ('1708', 8, False),
+                  ('1709', 9, False),
+                  ]
+
+    for case in start_test_cases:
+        _check_start(*((model,) + case))
+
+    # the length of sunspot is 309, so last index is 208
+    end_test_cases = [(None, 308, 0),
+                      (307, 307, 0),
+                      (308, 308, 0),
+                      (309, 308, 1),
+                      (312, 308, 4),
+                      (51, 51, 0),
+                      (333, 308, 25),
+
+                      ('2007', 307, 0),
+                      ('2008', 308, 0),
+                      ('2009', 308, 1),
+                      ('2012', 308, 4),
+                      ('1815', 115, 0),
+                      ('2033', 308, 25),
+                      ]
+
+    for case in end_test_cases:
+        _check_end(*((model,)+case))
 
 def test_arima_predict_indices():
     from statsmodels.datasets.macrodata import load
