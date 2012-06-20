@@ -137,7 +137,7 @@ def _validate(start, k_ar, k_diff, dates, method):
         start -= k_diff
     if 'mle' not in method and start < k_ar - k_diff:
         raise ValueError("Start must be >= k_ar for conditional "
-                         "MLE or dynamic forecast. Got %s" % start_date)
+                         "MLE or dynamic forecast. Got %s" % start)
 
     return start
 
@@ -890,6 +890,9 @@ class ARIMA(ARMA):
         using exact MLE) is index 1. In the differenced series this is index
         0, but we refer to it as 1 from the original series.
         """
+        # go ahead and convert to an index for easier checking
+        if isinstance(start, (basestring, datetime)):
+            start = _index_date(start, self._data.dates)
         if typ == 'linear':
             if not dynamic or (start != self.k_ar + self.k_diff and
                                                     start is not None):
@@ -979,7 +982,7 @@ class ARIMA(ARMA):
                     return endog[start-1] + np.cumsum(predict)
             return fv
 
-        else:
+        else: # pragma : no cover
             raise ValueError("typ %s not understood" % typ)
 
 class ARMAResults(tsbase.TimeSeriesModelResults):
