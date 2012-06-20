@@ -584,7 +584,7 @@ class DescStat(OptFuncts):
         llr = np.sum(np.log(self.nobs * self.new_weights))
         p_val = 1 - chi2.cdf(-2 * llr, mu_array.shape[1])
         if print_weights:
-            return p_val, -2 * llr, self.new_weights
+            return p_val, -2 * llr, self.new_weights.T
         else:
             return p_val, -2 * llr
 
@@ -916,7 +916,7 @@ class DescStat(OptFuncts):
                 var_min=None, var_max=None, mu_min=None, mu_max=None):
         """
 
-        Returns the confidence interval for skewness.
+        Returns the confidence interval for kurtosis.
 
         Optional Parameters
         -------------------
@@ -937,8 +937,9 @@ class DescStat(OptFuncts):
         For large n (approx >25), the default parameters should provide
         successful optimization.
 
-        For small n, var_min and var_max will likely be provided by the
-        user.
+        For small n, upper_bound and lower_bound will likely have to be
+        provided.  Consider using hy_test_kurt to find values close to
+        the desired significance level.
 
         If parameters are left at the default and the optimization
         fails, the function will alert as to which parameter it failed
