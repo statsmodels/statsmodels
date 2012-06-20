@@ -1056,38 +1056,37 @@ class DescStat(OptFuncts):
         else:
             mu1_lb = self.endog[:, 0].mean() - ((1.96 * \
               (self.endog[:, 0].var()) / self.nobs)) ** .5
-            print mu1_lb
 
         if mu1_max is not None:
             mu1_ub = mu1_max
         else:
             mu1_ub = self.endog[:, 0].mean() + (1.96 * \
               (((self.endog[:, 0].var()) / self.nobs)) ** .5)
-            print mu1_ub
+
         if mu2_min is not None:
             mu2_lb = mu2_min
         else:
             mu2_lb = self.endog[:, 1].mean() - (1.96 * \
               (((self.endog[:, 1].var()) / self.nobs)) ** .5)
-            print mu2_lb
+
         if mu2_max is not None:
             mu2_ub = mu2_max
         else:
             mu2_ub = self.endog[:, 1].mean() + (1.96 * \
               (((self.endog[:, 1].var()) / self.nobs)) ** .5)
-            print mu2_ub
+
         if var1_min is not None:
             var1_lb = var1_min
         else:
             var1_lb = (self.endog[:, 0].var() * (self.nobs - 1)) / \
               chi2.ppf(.975, self.nobs)
-            print var1_lb
+
         if var1_max is not None:
             var1_ub = var1_max
         else:
             var1_ub = (self.endog[:, 0].var() * (self.nobs - 1)) / \
               chi2.ppf(.025, self.nobs)
-            print var1_ub
+
         if var2_min is not None:
             var2_lb = var2_min
         else:
@@ -1099,7 +1098,7 @@ class DescStat(OptFuncts):
         else:
             var2_ub = (self.endog[:, 1].var() * (self.nobs - 1)) / \
               chi2.ppf(.025, self.nobs)
-            print var2_ub
+
       ## TODO: IS there a way to condense the above default Parameters?
         llr = optimize.fmin_l_bfgs_b(self.opt_correl, start_nuisance,
                                      approx_grad=1,
