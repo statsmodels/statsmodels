@@ -123,14 +123,14 @@ class CoxPH(model.LikelihoodModel):
         for t in self.failures.keys():
             if self.time_dependent:
                 d = np.array([s(self.formula, time=t)
-                             for s in self.subjects]).astype('<f8')[:,None]
+                             for s in self.subjects]).astype(float)[:,None]
                 dshape = d.shape
                 dfile = file(tempfile.mkstemp(dir=self.cachedir)[1], 'w')
                 d.tofile(dfile)
                 dfile.close()
                 del(d)
                 self.design[t] = np.memmap(dfile.name,
-                                          dtype=np.dtype('<f8'),
+                                          dtype=np.dtype(float),
                                           shape=dshape)
             elif first:
                 d = np.array([s(self.formula, time=t)
