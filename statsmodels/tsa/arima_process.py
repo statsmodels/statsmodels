@@ -214,8 +214,8 @@ def arma_generate_sample(ar, ma, nsample, sigma=1, distrvs=np.random.randn, burn
 
     Returns
     -------
-    acovf : array
-        autocovariance of ARMA process given by ar, ma
+    sample : array
+        sample of ARMA process given by ar, ma of length nsample
 
 
     '''
@@ -232,6 +232,8 @@ def arma_acovf(ar, ma, nobs=10):
         coefficient for autoregressive lag polynomial, including zero lag
     ma : array_like, 1d
         coefficient for moving-average lag polynomial, including zero lag
+    nobs : int
+        number of terms (lags plus zero lag) to include in returned acovf
 
     Returns
     -------
@@ -270,7 +272,7 @@ def arma_acovf(ar, ma, nobs=10):
     return acovf[:nobs]
 
 def arma_acf(ar, ma, nobs=10):
-    '''theoretical autocovariance function of ARMA process
+    '''theoretical autocorrelation function of an ARMA process
 
     Parameters
     ----------
@@ -278,11 +280,13 @@ def arma_acf(ar, ma, nobs=10):
         coefficient for autoregressive lag polynomial, including zero lag
     ma : array_like, 1d
         coefficient for moving-average lag polynomial, including zero lag
+    nobs : int
+        number of terms (lags plus zero lag) to include in returned acf
 
     Returns
     -------
-    acovf : array
-        autocovariance of ARMA process given by ar, ma
+    acf : array
+        autocorrelation of ARMA process given by ar, ma
 
 
     See Also
@@ -297,6 +301,20 @@ def arma_acf(ar, ma, nobs=10):
 
 def arma_pacf(ar, ma, nobs=10):
     '''partial autocorrelation function of an ARMA process
+
+    Parameters
+    ----------
+    ar : array_like, 1d
+        coefficient for autoregressive lag polynomial, including zero lag
+    ma : array_like, 1d
+        coefficient for moving-average lag polynomial, including zero lag
+    nobs : int
+        number of terms (lags plus zero lag) to include in returned pacf
+
+    Returns
+    -------
+    pacf : array
+        partial autocorrelation of ARMA process given by ar, ma
 
     Notes
     -----
