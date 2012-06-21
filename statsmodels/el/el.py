@@ -1290,25 +1290,25 @@ class DescStat(OptFuncts):
             mu1_lb = mu1_min
         else:
             mu1_lb = self.endog[:, 0].mean() - ((1.96 * \
-              (self.endog[:, 0].var()) / self.nobs)) ** .5
+              np.sqrt((self.endog[:, 0].var()) / self.nobs)))
 
         if mu1_max is not None:
             mu1_ub = mu1_max
         else:
             mu1_ub = self.endog[:, 0].mean() + (1.96 * \
-              (((self.endog[:, 0].var()) / self.nobs)) ** .5)
+              np.sqrt((((self.endog[:, 0].var()) / self.nobs))))
 
         if mu2_min is not None:
             mu2_lb = mu2_min
         else:
             mu2_lb = self.endog[:, 1].mean() - (1.96 * \
-              (((self.endog[:, 1].var()) / self.nobs)) ** .5)
+              np.sqrt((((self.endog[:, 1].var()) / self.nobs))))
 
         if mu2_max is not None:
             mu2_ub = mu2_max
         else:
             mu2_ub = self.endog[:, 1].mean() + (1.96 * \
-              (((self.endog[:, 1].var()) / self.nobs)) ** .5)
+              np.sqrt((((self.endog[:, 1].var()) / self.nobs))))
 
         if var1_min is not None:
             var1_lb = var1_min
@@ -1390,32 +1390,32 @@ class DescStat(OptFuncts):
             ll = lower_bound
         else:
             ll = max(- .999, point_est - \
-                          2.5 * (((1. - point_est ** 2.) / \
-                          (self.nobs - 2.)) ** .5))
+                          2.5 * (np.sqrt((1. - point_est ** 2.) / \
+                          (self.nobs - 2.))))
 
         if mu1_min is not None:
             self.mu1_lb = mu1_min
         else:
-            self.mu1_lb = self.endog[:, 0].mean() - ((1.96 * \
-              (self.endog[:, 0].var()) / self.nobs)) ** .5
+            self.mu1_lb = self.endog[:, 0].mean() - np.sqrt((1.96 * \
+              (self.endog[:, 0].var()) / self.nobs))
 
         if mu1_max is not None:
             self.mu1_ub = mu1_max
         else:
             self.mu1_ub = self.endog[:, 0].mean() + (1.96 * \
-              (((self.endog[:, 0].var()) / self.nobs)) ** .5)
+              np.sqrt(((self.endog[:, 0].var()) / self.nobs)))
 
         if mu2_min is not None:
             self.mu2_lb = mu2_min
         else:
             self.mu2_lb = self.endog[:, 1].mean() - (1.96 * \
-              (((self.endog[:, 1].var()) / self.nobs)) ** .5)
+              np.sqrt(((self.endog[:, 1].var()) / self.nobs)))
 
         if mu2_max is not None:
             self.mu2_ub = mu2_max
         else:
             self.mu2_ub = self.endog[:, 1].mean() + (1.96 * \
-              (((self.endog[:, 1].var()) / self.nobs)) ** .5)
+              np.sqrt(((self.endog[:, 1].var()) / self.nobs)))
 
         if var1_min is not None:
             self.var1_lb = var1_min
