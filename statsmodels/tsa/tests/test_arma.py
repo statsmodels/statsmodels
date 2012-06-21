@@ -32,7 +32,7 @@ def test_compare_arma():
     #the results returned by the fit methods are incomplete
     #for now without random.seed
 
-    #np.random.seed(9876565)
+    np.random.seed(9876565)
     x = fa.ArmaFft([1, -0.5], [1., 0.4], 40).generate_sample(size=200,
             burnin=1000)
 
@@ -60,6 +60,7 @@ def test_compare_arma():
 
     #assert_almost_equal(np.abs(rescm.params[:-1] / d.params), np.ones(d.params.shape), decimal=1)
     assert_almost_equal(rescm.params[:-1] / dres.params, np.ones(dres.params.shape), decimal=1)
+    print rescm.params[:-1] / dres.params, np.ones(dres.params.shape)
     #return resls[0], d.params, rescm.params
 
 
