@@ -1254,6 +1254,65 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
 
         return forecast, fcasterr, conf_int
 
+    def summary(self, alpha=.05):
+        """Summarize the Model
+
+        Parameters
+        ----------
+        alpha : float, optional
+            Significance level for the confidence intervals.
+
+        Returns
+        -------
+        smry : Summary instance
+            This holds the summary table and text, which can be printed or
+            converted to various output formats.
+
+        See Also
+        --------
+        statsmodels.iolib.summary.Summary
+        """
+        from statsmodels.iolib.summary import Summary
+        model = self.model
+        title = model.__class__.__name__ + ' Model Results'
+        method = model.method
+        # get sample TODO: make better sample machinery for estimation
+        k_diff = getattr(self, 'k_diff', 0)
+        if 'mle' in method:
+            start = k_diff
+        else:
+            start = k_diff + self.k_ar
+        if self._data.dates is not None:
+            dates = self._data.dates
+            sample = dates[start].strftime('%m-%d-%Y')
+            sample += ' - ' + dates[-1].strftime('%m-%d-%Y')
+        else:
+            sample = str(start) + ' - ' + str(len(self._data._orig_endog))
+
+        top_left = [('Dep. Variable:', None),
+                    ('Model:', None),
+                    ('Method:', [method]),
+                    ('Date:', None),
+                    ('Time:', None),
+                    ('Sample:', [sample]),
+                    ]
+
+        top_right = [
+                     ('No. Observations:', [str(len(self.model.endog))]),
+                     ('Log Likelihood', ["%#5.3f" % self.llf]),
+                     ('S.D. of innovations', ["%#5.3f" % self.sigma2**.5]),
+                     ('AIC', ["%#5.3f" % self.aic]),
+                     ('BIC', ["%#5.3f" % self.bic]),
+                     ('HQIC', ["%#5.3f" % self.hqic])]
+
+        smry = Summary()
+        smry.add_table_2cols(self, gleft=top_left, gright=top_right,
+                                   title=title)
+        smry.add_table_params(self, alpha=alpha, use_t=False)
+        return smry
+        #smry.tables.append(roots)
+
+
 class ARMAResultsWrapper(wrap.ResultsWrapper):
     _attrs = {}
     _wrap_attrs = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_attrs,
