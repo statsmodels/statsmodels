@@ -281,8 +281,8 @@ class CKDE(Generic_KDE):
         return (f_yx/f_x)
 
 
-    def IMSE(self, bw):
-        #print "Starting"
+    def IMSE_slow(self, bw):
+        print "Starting"
         # Still runs very slow. Try to vectorize.
         zLOO = tools.LeaveOneOut(self.all_vars)
         l = 0
@@ -310,3 +310,36 @@ class CKDE(Generic_KDE):
             CV += (G/m_x**2) - 2*(f_X_Y/m_x) 
         return CV/float(self.N)
     
+    def IMSE(self, bw):
+        print "Starting"
+        # Still runs very slow. Try to vectorize.
+        zLOO = tools.LeaveOneOut(self.all_vars)
+        l = 0
+        
+        CV = 0
+        for Z in zLOO:
+            
+            X = Z[:,self.K_dep::]
+            Y = Z[:,0:self.K_dep]
+            
+            Expander = np.ones((self.N-1,1))
+            Ye_L = np.kron(Y,Expander)
+            Ye_R = np.kron(Expander,Y)
+
+            Xe_L = np.kron(X,Expander)
+            Xe_R = np.kron(Expander,X)            
+            
+                
+                
+            K_Xi_Xl = tools.GPKE3(bw[self.K_dep::], tdat = Xe_L, edat = self.txdat[l, :], var_type = self.indep_type)
+            K_Xj_Xl = tools.GPKE3(bw[self.K_dep::], tdat = Xe_R, edat = self.txdat[l, :], var_type = self.indep_type)
+            K2_Yi_Yj = tools.GPKE3(bw[0:self.K_dep], tdat = Ye_L, edat = Ye_R, var_type = self.dep_type,
+                             ckertype = 'gauss_convolution', okertype = 'wangryzin_convolution')
+            G = np.sum(K_Xi_Xl * K_Xj_Xl * K2_Yi_Yj)
+            G = G/self.N**2
+            f_X_Y = tools.GPKE(bw, tdat = -Z, edat = -self.all_vars[l,:], var_type = (self.dep_type + self.indep_type))/float(self.N)
+            m_x = tools.GPKE(bw[self.K_dep::], tdat = -X, edat = -self.txdat[l, :], var_type = self.indep_type)/float(self.N)
+            
+            l += 1
+            CV += (G/m_x**2) - 2*(f_X_Y/m_x) 
+        return CV/float(self.N)
