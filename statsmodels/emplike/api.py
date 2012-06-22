@@ -3,4 +3,4 @@ api for empirical likelihood
 
 """
 
-from .el import DescStat
+from .descriptive import DescStat
