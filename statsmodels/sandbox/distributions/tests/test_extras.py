@@ -6,7 +6,7 @@ Created on Sun Apr 17 22:13:36 2011
 """
 
 import numpy as np
-from numpy.testing import assert_
+from numpy.testing import assert_, assert_almost_equal
 
 from statsmodels.sandbox.distributions.extras import (skewnorm,
                 skewnorm2, ACSkewT_gen)
@@ -33,10 +33,19 @@ def test_skewnorm():
                       3.172551743055357e-02, 6.826894921370859e-01,
                       9.544997361036416e-01])
     cdf_sn = skewnorm.cdf([-2,-1,0,1,2], 10)
-    assert_(np.allclose(cdf_sn, cdf_r, rtol=1e-13, atol=1e-25))
+    maxabs = np.max(np.abs(cdf_sn - cdf_r))
+    maxrel = np.max(np.abs(cdf_sn - cdf_r)/(cdf_r+1e-50))
+    msg = "maxabs=%15.13g, maxrel=%15.13g\n%r\n%r" % (maxabs, maxrel, cdf_sn,
+                                                       cdf_r)
+    #assert_(np.allclose(cdf_sn, cdf_r, rtol=1e-13, atol=1e-25), msg=msg)
+    assert_almost_equal(cdf_sn, cdf_r, decimal=10)
 
     cdf_sn2 = skewnorm2.cdf([-2,-1,0,1,2], 10)
-    assert_(np.allclose(cdf_sn2, cdf_r, rtol=1e-13, atol=1e-25))
+    maxabs = np.max(np.abs(cdf_sn2 - cdf_r))
+    maxrel = np.max(np.abs(cdf_sn2 - cdf_r)/(cdf_r+1e-50))
+    msg = "maxabs=%15.13g, maxrel=%15.13g" % (maxabs, maxrel)
+    #assert_(np.allclose(cdf_sn2, cdf_r, rtol=1e-13, atol=1e-25), msg=msg)
+    assert_almost_equal(cdf_sn2, cdf_r, decimal=10, err_msg=msg)
 
 
 def test_skewt():
