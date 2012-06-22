@@ -2,16 +2,15 @@
 Empirical Likelihood Implementation
 
 Start: 21 May 2012
-Last Updated: 18 June 2012
+Last Updated: 21 June 2012
 
 General References:
+------------------
 
 Owen, A. (2001). "Empirical Likelihood." Chapman and Hall
 
-TODO (Long-term)  Create a dict that forms estimating functions given
-a user input.  Then all tests can be combined into one function.
 
-TODO (Medium-term): Write functions for estimationg equations instead
+TODO: Write functions for estimationg equations instead
                     of generating the data every time a hypothesis
                     test is called.
 
@@ -53,15 +52,15 @@ class OptFuncts(ElModel):
     def __init__(self, endog):
         super(OptFuncts, self).__init__(endog)
 
-    def get_j_y(self, eta1):
+    def _get_j_y(self, eta1):
         """
         Calculates J and y via the log*' and log*''.
 
         Maximizing log* is done via sequential regression of
         y on J.
 
-        Parameter
-        --------
+        Parameters
+        ----------
 
         eta1: 1xm array.
 
@@ -102,20 +101,20 @@ class OptFuncts(ElModel):
         y = data_star_prime / ((- 1 * data_star_doub_prime) ** .5)
         return J, y
 
-    def modif_newton(self,  x0):
+    def _modif_newton(self,  x0):
         """
         Modified Newton's method for maximizing the log* equation.
 
         Parameters
         ----------
         x0: 1x m array
-            Initial guess for the lagrangian multiplier
+            Iitial guess for the lagrangian multiplier
 
         Returns
         -------
         params: 1xm array
             Lagragian multiplier that maximize the log-likelihood given
-            parameter values.
+            `x0`.
 
 
         See Owen pg. 64
@@ -124,8 +123,8 @@ class OptFuncts(ElModel):
         params = x0.reshape(1, self.est_vect.shape[1])
         diff = 1
         while diff > 10 ** (-10):
-            new_J = np.copy(self.get_j_y(params)[0])
-            new_y = np.copy(self.get_j_y(params)[1])
+            new_J = np.copy(self._get_j_y(params)[0])
+            new_y = np.copy(self._get_j_y(params)[1])
             inc = np.dot(np.linalg.pinv(new_J), \
                          new_y).reshape(1, self.est_vect.shape[1])
             new_params = np.copy(params + inc)
@@ -136,11 +135,11 @@ class OptFuncts(ElModel):
                 diff = 0
         return params
 
-    def find_eta(self, eta):
+    def _find_eta(self, eta):
 
         """
         Finding the root of sum(xi-h0)/(1+eta(xi-mu)) solves for
-        eta when computing ELR for univariate mean.
+       `eta` when computing ELR for univariate mean.
 
         Parameters
         ----------
@@ -151,7 +150,8 @@ class OptFuncts(ElModel):
         Returns
         -------
 
-        n * Log likelihood value for a given value of eta
+        llr: float
+            n times the Log likelihood value for a given value of eta
 
         See Owen (2001) pg 22.  (eta is his lambda to avoid confusion
         with the built-in lambda).
@@ -162,7 +162,7 @@ class OptFuncts(ElModel):
         return np.sum((self.data - self.mu0) / \
               (1. + eta * (self.data - self.mu0)))
 
-    def ci_limits_mu(self, mu_test):
+    def _ci_limits_mu(self, mu_test):
         """
 
         Parameters
@@ -174,15 +174,15 @@ class OptFuncts(ElModel):
         Returns
         -------
 
-        The difference between the log likelihood value of mu0 and
-        a specified value.
+        diff: float
+            The difference between the log likelihood value of mu0 and
+            a specified value.
 
-        Not intended for end user
 
         """
         return self.hy_test_mean(mu_test)[1] - self.r0
 
-    def find_gamma(self, gamma):
+    def _find_gamma(self, gamma):
 
         """
         Finds gamma that satisfies
@@ -190,19 +190,19 @@ class OptFuncts(ElModel):
 
         Used for confidence intervals for the mean.
 
-        Parameter
-        --------
+        Parameters
+        ----------
 
         gamma: float
             LaGrangian multiplier when computing confidence interval
 
         Returns
-        ------
+        -------
 
-        The difference between the log-liklihood when the Lagrangian
-        multiplier is gamma and a pre-specified value.
+        diff: float
+            The difference between the log-liklihood when the Lagrangian
+            multiplier is gamma and a pre-specified value.
 
-        Not intended for end user.
 
         See Owen (2001) pg. 23.
 
@@ -213,7 +213,7 @@ class OptFuncts(ElModel):
         return -2 * np.sum(np.log(self.nobs * new_weights)) - \
             self.r0
 
-    def opt_var(self, nuisance_mu, pval=False):
+    def _opt_var(self, nuisance_mu, pval=False):
         """
 
         This is the function to be optimized over a nuisance mean parameter
@@ -232,10 +232,10 @@ class OptFuncts(ElModel):
         Returns
         -------
 
-        Log likelihood of a pre-specified variance holding the nuisance
-        parameter constant.
+        llr: float:
+            Log likelihood of a pre-specified variance holding the nuisance
+            parameter constant.
 
-        Not intended for end user.
 
         """
 
@@ -243,7 +243,7 @@ class OptFuncts(ElModel):
                     - self.sig2_0)
         mu_data = (self.endog - nuisance_mu)
         self.est_vect = np.concatenate((mu_data, sig_data), axis=1)
-        eta_star = self.modif_newton(np.array([1 / self.nobs,
+        eta_star = self._modif_newton(np.array([1 / self.nobs,
                                                1 / self.nobs]))
 
         denom = 1 + np.dot(eta_star, self.est_vect.T)
@@ -253,7 +253,7 @@ class OptFuncts(ElModel):
             return 1 - chi2.cdf(-2 * llr, 1)
         return -2 * llr
 
-    def  ci_limits_var(self, var_test):
+    def  _ci_limits_var(self, var_test):
         """
 
         Used to determine the confidence intervals for the variance.
@@ -268,34 +268,33 @@ class OptFuncts(ElModel):
         Returns
         -------
 
-        The difference between the log likelihood ratio at var_test and a
-        pre-specified value.
+        diff: float
+            The difference between the log likelihood ratio at var_test and a
+            pre-specified value.
 
-        Not intended for end user.
 
         """
 
         return self.hy_test_var(var_test)[1] - self.r0
 
-    def opt_skew(self, nuis_params):
+    def _opt_skew(self, nuis_params):
         """
 
         Called by hy_test_skew.  This function is optimized over
         nuisance parameters mu and sigma
 
         Parameters
-        ---------
+        ----------
 
         nuis_params: 1x2 array
             A nuisance mean and variance parameter
 
         Returns
-        ------
+        -------
 
-        The log likelihood ratio of a prespeified skewness holding the nuisance
-        parameters constant.
-
-        Not intended for end user.
+        llr: float
+            The log likelihood ratio of a prespeified skewness holding
+            the nuisance parameters constant.
 
         """
         mu_data = self.endog - nuis_params[0]
@@ -304,7 +303,7 @@ class OptFuncts(ElModel):
                     (nuis_params[1] ** 1.5))) - self.skew0
         self.est_vect = np.concatenate((mu_data, sig_data, skew_data), \
                                        axis=1)
-        eta_star = self.modif_newton(np.array([1 / self.nobs,
+        eta_star = self._modif_newton(np.array([1 / self.nobs,
                                                1 / self.nobs,
                                                1 / self.nobs]))
         denom = 1 + np.dot(eta_star, self.est_vect.T)
@@ -312,14 +311,14 @@ class OptFuncts(ElModel):
         llr = np.sum(np.log(self.nobs * self.new_weights))
         return -2 * llr
 
-    def opt_kurt(self, nuis_params):
+    def _opt_kurt(self, nuis_params):
         """
 
         Called by hy_test_kurt.  This function is optimized over
         nuisance parameters mu and sigma
 
         Parameters
-        ---------
+        -----------
 
         nuis_params: 1x2 array
             A nuisance mean and variance parameter
@@ -327,10 +326,10 @@ class OptFuncts(ElModel):
         Returns
         ------
 
-        The log likelihood ratio of a pre-speified kurtosis holding the
-        nuisance parameters constant.
+        llr: float
+            The log likelihood ratio of a pre-speified kurtosis holding the
+            nuisance parameters constant.
 
-        Not intended for end user.
 
         """
         mu_data = self.endog - nuis_params[0]
@@ -339,7 +338,7 @@ class OptFuncts(ElModel):
                     (nuis_params[1] ** 2))) - 3) - self.kurt0
         self.est_vect = np.concatenate((mu_data, sig_data, kurt_data), \
                                        axis=1)
-        eta_star = self.modif_newton(np.array([1 / self.nobs,
+        eta_star = self._modif_newton(np.array([1 / self.nobs,
                                                1 / self.nobs,
                                                1 / self.nobs]))
         denom = 1 + np.dot(eta_star, self.est_vect.T)
@@ -347,7 +346,7 @@ class OptFuncts(ElModel):
         llr = np.sum(np.log(self.nobs * self.new_weights))
         return -2 * llr
 
-    def ci_limits_skew(self, skew0):
+    def _ci_limits_skew(self, skew0):
         """
 
         Parameters
@@ -357,20 +356,19 @@ class OptFuncts(ElModel):
 
         Returns
         -------
-         The difference between the log likelihood ratio at skew0 and a
-        pre-specified value.
-
-        Not intended for end user.
+        diff: float
+            The difference between the log likelihood ratio at skew0 and a
+            pre-specified value.
 
         """
-
         return self.hy_test_skew(skew0, var_min=self.var_l,
                                  var_max=self.var_u,
                                  mu_min=self.mu_l,
                                  mu_max=self.mu_u)[1] - self.r0
 
-    def ci_limits_kurt(self, kurt0):
+    def _ci_limits_kurt(self, kurt0):
         """
+
         Parameters
         ---------
         skew0: float
@@ -378,8 +376,9 @@ class OptFuncts(ElModel):
 
         Returns
         -------
-        The difference between the log likelihood ratio at kurt0 and a
-        pre-specified value.
+        diff: float
+            The difference between the log likelihood ratio at kurt0 and a
+            pre-specified value.
 
         """
 
@@ -388,7 +387,7 @@ class OptFuncts(ElModel):
                                  mu_min=self.mu_l,
                                  mu_max=self.mu_u)[1] - self.r0
 
-    def opt_correl(self, nuis_params):
+    def _opt_correl(self, nuis_params):
         """
 
         Parameters
@@ -400,10 +399,11 @@ class OptFuncts(ElModel):
         Returns
         -------
 
-        The log-likelihood of the correlation coefficient holding nuisance
-        parameters constant
+        llr: float
+            The log-likelihood of the correlation coefficient holding nuisance
+            parameters constant
 
-        Not intended for end user
+
 
         """
 
@@ -422,7 +422,7 @@ class OptFuncts(ElModel):
                                        sig2_data, correl_data),
                                        axis=1).reshape(5, self.nobs)
         self.est_vect = self.est_vect.T
-        eta_star = self.modif_newton(np.array([1 / self.nobs,
+        eta_star = self._modif_newton(np.array([1 / self.nobs,
                                                1 / self.nobs,
                                                1 / self.nobs,
                                                1 / self.nobs,
@@ -432,10 +432,10 @@ class OptFuncts(ElModel):
         llr = np.sum(np.log(self.nobs * self.new_weights))
         return -2 * llr
 
-    def ci_limits_corr(self, corr0):
+    def _ci_limits_corr(self, corr0):
         """
 
-        Parameter
+        Parameters
         ---------
 
         corr0: float
@@ -444,10 +444,10 @@ class OptFuncts(ElModel):
         Returns
         -------
 
-        Difference between log-likelihood of corr0 and a pre-specified
-        value.
+        diff: float
+            Difference between log-likelihood of corr0 and a pre-specified
+            value.
 
-        Not intended for end user.
 
         """
         return self.hy_test_corr(corr0, nuis0=None, mu1_min=self.mu1_lb,
@@ -469,6 +469,11 @@ class DescStat(OptFuncts):
     ----------
     endog: nxm array
         Data to be analyzed
+
+    See Also
+    --------
+
+    Method docstring for explicit instructions and uses.
     """
 
     def __init__(self, endog):
@@ -485,10 +490,16 @@ class DescStat(OptFuncts):
         mu0: float
             Mean under the null hypothesis
 
-        print_weights: bool
-            If print_weights = True the funtion returns
-            the weight of the observations under the null hypothesis
-            | default = False
+        print_weights: bool, optional
+            If print_weights is True the funtion returns
+            the weight of the observations under the null hypothesis.
+            Default = False
+
+        Returns
+        -------
+
+        test_results: tuple
+            The p_value and log-likelihood ratio of `mu0`
 
         """
         self.mu0 = mu0
@@ -498,7 +509,7 @@ class DescStat(OptFuncts):
             self.data = trans_data
         eta_min = (1 - (1 / self.nobs)) / (self.mu0 - max(self.data))
         eta_max = (1 - (1 / self.nobs)) / (self.mu0 - min(self.data))
-        eta_star = optimize.brentq(self.find_eta, eta_min, eta_max)
+        eta_star = optimize.brentq(self._find_eta, eta_min, eta_max)
         new_weights = (1 / self.nobs) * \
             1. / (1 + eta_star * (self.data - self.mu0))
         llr = -2 * np.sum(np.log(self.nobs * new_weights))
@@ -517,13 +528,13 @@ class DescStat(OptFuncts):
         Parameters
         ----------
         sig: float
-            Significance level | default=.05
+            Significance level. Default=.05
 
         Optional
         --------
 
-        method: Root finding method,  Can be 'nested-brent or gamma'.
-            default | gamma
+        method: Root finding method,  Can be 'nested-brent' ' gamma'.
+            or 'bisect.' Default= 'gamma'
 
             'gamma' Tries to solve for the gamma parameter in the
             Lagrangian (see Owen pg 22) and then determine the weights.
@@ -539,30 +550,40 @@ class DescStat(OptFuncts):
             converge, try expanding the gamma_high and gamma_low
             variable.
 
-        gamma_low: lower bound for gamma when finding lower limit.
+        gamma_low: float
+            lower bound for gamma when finding lower limit.
             If function returns f(a) and f(b) must have different signs,
-            consider lowering gamma_low. default | gamma_low =-(10**10)
+            consider lowering gamma_low. Default =-(10``**``10)
 
-        gamma_high: upper bound for gamma when finding upper limit.
+        gamma_high: float
+            upper bound for gamma when finding upper limit.
             If function returns f(a) and f(b) must have different signs,
-            consider raising gamma_high. default |gamma_high=10**10
+            consider raising gamma_high. Default=10``**``10
 
-        epsilon: When using 'nested-brent', amount to decrease (increase)
+        epsilon: float
+            When using 'nested-brent', amount to decrease (increase)
             from the maximum (minimum) of the data when
             starting the search.  This is to protect against the
             likelihood ratio being zero at the maximum (minimum)
             value of the data.  If data is very small in absolute value
-            (<10 ** -6) consider shrinking epsilon
+            (<10 ``**`` -6) consider shrinking epsilon
 
             When using 'gamma' amount to decrease (increase) the
             minimum (maximum) by to start the search for gamma.
             If fucntion returns f(a) and f(b) must have differnt signs,
             consider lowering epsilon.
 
-            default| epsilon=10**-6
+            Default=10``**``-6
 
-        tol: Tolerance for the likelihood ratio in the bisect method.
-            default | tol=10**-6
+        tol: float
+            Tolerance for the likelihood ratio in the bisect method.
+            Default=10``**``-6
+
+        Returns
+        ------
+
+        Interval: tuple
+            Lower and Upper confidence limit
 
         """
 
@@ -572,17 +593,17 @@ class DescStat(OptFuncts):
             middle = np.mean(self.endog)
             epsilon_u = (max(self.endog) - np.mean(self.endog)) * epsilon
             epsilon_l = (np.mean(self.endog) - min(self.endog)) * epsilon
-            ul = optimize.brentq(self.ci_limits_mu, middle,
+            ul = optimize.brentq(self._ci_limits_mu, middle,
                 max(self.endog) - epsilon_u)
-            ll = optimize.brentq(self.ci_limits_mu, middle,
+            ll = optimize.brentq(self._ci_limits_mu, middle,
                 min(self.endog) + epsilon_l)
             return  ll, ul
 
         if method == 'gamma':
             self.r0 = chi2.ppf(sig, 1)
-            gamma_star_l = optimize.brentq(self.find_gamma, gamma_low,
+            gamma_star_l = optimize.brentq(self._find_gamma, gamma_low,
                 min(self.endog) - epsilon)
-            gamma_star_u = optimize.brentq(self.find_gamma, \
+            gamma_star_u = optimize.brentq(self._find_gamma, \
                          max(self.endog) + epsilon, gamma_high)
             weights_low = ((self.endog - gamma_star_l) ** -1) / \
                 np.sum((self.endog - gamma_star_l) ** -1)
@@ -618,7 +639,7 @@ class DescStat(OptFuncts):
     def hy_test_var(self, sig2_0, print_weights=False):
         """
 
-        Returns the p-value and -2 * log-likelihoog ratio for the
+        Returns the p-value and -2 ``*`` log-likelihoog ratio for the
             hypothesized variance.
 
         Parameters
@@ -632,8 +653,13 @@ class DescStat(OptFuncts):
 
         print_weights: bool
             If True, returns the weights that maximize the
-            likelihood of observing sig2_0. default | False.
+            likelihood of observing sig2_0. Default= False.
 
+        Returns
+        --------
+
+        test_results: tuple
+            The p_value and log-likelihood ratio of `sig2_0`
 
         Example
         -------
@@ -642,12 +668,13 @@ class DescStat(OptFuncts):
         hyp_test = el_analysis.hy_test_var(9500)
 
 
+
         """
 
         self.sig2_0 = sig2_0
         mu_max = max(self.endog)
         mu_min = min(self.endog)
-        llr = optimize.fminbound(self.opt_var, mu_min, mu_max, \
+        llr = optimize.fminbound(self._opt_var, mu_min, mu_max, \
                                  full_output=1)[1]
         p_val = 1 - chi2.cdf(llr, 1)
         if print_weights:
@@ -666,20 +693,26 @@ class DescStat(OptFuncts):
         lower_bound: float
             The minimum value the lower confidence interval can
             take on. The p-value from hy_test_var(lower_l) must be lower
-            than 1 - significance level. default | calibrated at the .01
+            than 1 - significance level. Default is calibrated at the .01
             significance level, asusming normality.
 
 
         upper_bound: float
             The maximum value the upper confidence interval
             can take. The p-value from hy_test_var(upper_h) must be lower
-            than 1 - significance level.  default | calibrated at the .01
+            than 1 - significance level.  Default is calibrated at the .01
             significance level, asusming normality.
 
 
         sig: float
             The significance level for the conficence interval.
-            default | .05
+            Default= .05
+
+        Returns
+        --------
+
+        Interval: tuple
+            Lower and Upper confidence limit
 
 
         Example
@@ -700,9 +733,6 @@ class DescStat(OptFuncts):
         different signs, consider lowering lower_bound and raising
         upper_bound.
 
-        If function returns 'Optimization Failed', consider narrowing the
-        search area.
-
         """
 
         if upper_bound is not None:
@@ -716,8 +746,8 @@ class DescStat(OptFuncts):
             ll = ((self.nobs - 1) * self.endog.var()) / \
               (chi2.ppf(.9999, self.nobs - 1))
         self.r0 = chi2.ppf(1 - sig, 1)
-        ll = optimize.brentq(self.ci_limits_var, ll, self.endog.var())
-        ul = optimize.brentq(self.ci_limits_var, self.endog.var(), ul)
+        ll = optimize.brentq(self._ci_limits_var, ll, self.endog.var())
+        ul = optimize.brentq(self._ci_limits_var, self.endog.var(), ul)
         return   ll, ul
 
     def var_p_plot(self, lower, upper, step, sig=.05):
@@ -739,7 +769,7 @@ class DescStat(OptFuncts):
 
 
         sig: float
-            Will draw a horizontal line at 1- sig. default | .05
+            Will draw a horizontal line at 1- sig. Default= .05
 
         This function can be helpful when trying to determine limits
          in the ci_var function.
@@ -758,7 +788,7 @@ class DescStat(OptFuncts):
     def mv_hy_test_mean(self, mu_array, print_weights=False):
 
         """
-        Returns the -2 * log likelihood and the p_value
+        Returns the -2 ``*`` log likelihood and the p_value
         for a multivariate hypothesis test of the mean
 
         Parameters
@@ -771,7 +801,13 @@ class DescStat(OptFuncts):
 
         print_weights: bool
             If True, returns the weights that maximize the
-            likelihood of mu_array default | False.
+            likelihood of mu_array Default= False.
+
+        Returns
+        -------
+
+        test_results: tuple
+            The p_value and log-likelihood ratio of `mu_array`
 
         """
 
@@ -783,7 +819,7 @@ class DescStat(OptFuncts):
         means = mu_array * means
         self.est_vect = self.endog - means
         start_vals = 1 / self.nobs * np.ones(self.endog.shape[1])
-        eta_star = self.modif_newton(start_vals)
+        eta_star = self._modif_newton(start_vals)
         denom = 1 + np.dot(eta_star, self.est_vect.T)
         self.new_weights = 1 / self.nobs * 1 / denom
         llr = np.sum(np.log(self.nobs * self.new_weights))
@@ -825,11 +861,11 @@ class DescStat(OptFuncts):
         --------
         levs: list
             Levels to be drawn on the contour plot.
-            default | [.2, .1 .05, .01, .001]
+            Default =  [.2, .1 .05, .01, .001]
 
         plot_dta: bool
             If True, makes a scatter plot of the data on
-            top of the contour plot. defauls | False.
+            top of the contour plot. Default =  False.
 
         Notes
         -----
@@ -903,7 +939,7 @@ class DescStat(OptFuncts):
 
         levs list
             At Which values of significance the contour lines will be drawn.
-            default | [.2, .1, .05, .01, .001]
+            Default: [.2, .1, .05, .01, .001]
 
         """
 
@@ -913,7 +949,7 @@ class DescStat(OptFuncts):
         for sig0 in var_vect:
             self.sig2_0 = sig0
             for mu0 in mu_vect:
-                z.append(self.opt_var(mu0, pval=True))
+                z.append(self._opt_var(mu0, pval=True))
         z = np.asarray(z).reshape(len(var_vect), len(mu_vect))
         fig = plt.contour(mu_vect, var_vect, z, levels=levs)
         plt.clabel(fig)
@@ -928,7 +964,7 @@ class DescStat(OptFuncts):
                      print_weights=False):
         """
 
-        Returns the p_value and -2 * log_likelihood for the hypothesized
+        Returns the p_value and -2 ``*`` log_likelihood for the hypothesized
         skewness.
 
         Parameters
@@ -947,7 +983,13 @@ class DescStat(OptFuncts):
 
         print_weights: bool
             If True, function also returns the weights that
-            maximize the likelihood ratio. default | False.
+            maximize the likelihood ratio. Default = False.
+
+        Returns
+        --------
+
+        test_results: tuple
+            The p_value and log-likelihood ratio of `skew0`
 
         """
 
@@ -980,7 +1022,7 @@ class DescStat(OptFuncts):
         else:
             var_ub = var_ci[1]
 
-        llr = optimize.fmin_l_bfgs_b(self.opt_skew, start_nuisance,
+        llr = optimize.fmin_l_bfgs_b(self._opt_skew, start_nuisance,
                                      approx_grad=1,
                                      bounds=[(mu_lb, mu_ub),
                                               (var_lb, var_ub)])[1]
@@ -994,7 +1036,7 @@ class DescStat(OptFuncts):
                      print_weights=False):
         """
 
-        Returns the p_value and -2 * log_likelihood for the hypothesized
+        Returns the p_value and -2 ``*`` log_likelihood for the hypothesized
         kurtosis.
 
         Parameters
@@ -1013,7 +1055,14 @@ class DescStat(OptFuncts):
 
         print_weights: bool
             If True, function also returns the weights that
-            maximize the likelihood ratio. default | False.
+            maximize the likelihood ratio. Default = False.
+
+        Returns
+        --------
+
+        test_results: tuple
+            The p_value and log-likelihood ratio of `kurt0`
+
 
         """
 
@@ -1046,7 +1095,7 @@ class DescStat(OptFuncts):
         else:
             var_ub = var_ci[1]
 
-        llr = optimize.fmin_l_bfgs_b(self.opt_kurt, start_nuisance,
+        llr = optimize.fmin_l_bfgs_b(self._opt_kurt, start_nuisance,
                                      approx_grad=1,
                                      bounds=[(mu_lb, mu_ub),
                                               (var_lb, var_ub)])[1]
@@ -1061,22 +1110,29 @@ class DescStat(OptFuncts):
 
         Returns the confidence interval for skewness.
 
-        Optional Parameters
-        -------------------
+        Optional 
+        ----------
+        
         sig: float
-            The significance level.  default | .05
+            The significance level.  Default = .05
 
         upper_bound: float
             Maximum Vale of Skewness the upper limit can be.
-            default|.99 confidence assuming normality.
+            Default: .99 confidence assuming normality.
 
         lower_bound: float
             Minimum value of skewness the lower limit can be.
-            default| .99 confidence level assuming normality.
+            Default: .99 confidence level assuming normality.
 
         var_min, var_max, mu_min, mu_max: float
             Minimum Value of the nuisance
-            variance and mean. | default sig confidence limits
+            variance and mean. Default:  sig confidence limits
+
+        Returns
+        ------
+
+        Interval: tuple
+            Lower and Upper confidence limit
 
         Tips
         ----
@@ -1090,6 +1146,9 @@ class DescStat(OptFuncts):
         If parameters are left at the default and the optimization
         fails, the function will alert as to which parameter it failed
         to compute.
+
+        If function returns f(a) and f(b) must have different signs, consider
+        expanding lower and upper bound.
 
 
         """
@@ -1134,9 +1193,9 @@ class DescStat(OptFuncts):
             self.mu_u = mu_lims[1]
         self.r0 = chi2.ppf(1 - sig, 1)
         print 'Finding the lower bound for skewness'
-        ll = optimize.brentq(self.ci_limits_skew, ll, skew(self.endog))
+        ll = optimize.brentq(self._ci_limits_skew, ll, skew(self.endog))
         print 'Finding the upper bound for skewness'
-        ul = optimize.brentq(self.ci_limits_skew, skew(self.endog), ul)
+        ul = optimize.brentq(self._ci_limits_skew, skew(self.endog), ul)
         return   ll, ul
 
     def ci_kurt(self, sig=.05, upper_bound=None, lower_bound=None,
@@ -1145,22 +1204,29 @@ class DescStat(OptFuncts):
 
         Returns the confidence interval for kurtosis.
 
-        Optional Parameters
-        -------------------
+        Optional
+        --------
+        
         sig: float
-            The significance level.  default | .05
+            The significance level.  Default = .05
 
         upper_bound: float
             Maximum Vale of Kurtosis the upper limit can be.
-            default|.99 confidence assuming normality.
+            Default: .99 confidence assuming normality.
 
         lower_bound: float
             Minimum value of Kurtosis the lower limit can be.
-            default| .99 confidence level assuming normality.
+            Default: .99 confidence level assuming normality.
 
         var_min, var_max, mu_min, mu_max: float
             Minimum Value of the nuisance
-            variance and mean. | default  sig confidence limits
+            variance and mean. Default:  sig confidence limits
+
+        Returns
+        --------
+
+        Interval: tuple
+            Lower and Upper confidence limit
 
         Tips
         ----
@@ -1175,6 +1241,9 @@ class DescStat(OptFuncts):
         If parameters are left at the default and the optimization
         fails, the function will alert as to which parameter it failed
         to compute.
+
+        If function returns f(a) and f(b) must have different signs, consider
+        expanding lower and upper bound.
 
 
         """
@@ -1223,10 +1292,10 @@ class DescStat(OptFuncts):
             self.mu_u = mu_lims[1]
         self.r0 = chi2.ppf(1 - sig, 1)
         print 'Finding the lower bound for kurtosis'
-        ll = optimize.brentq(self.ci_limits_kurt, ll, \
+        ll = optimize.brentq(self._ci_limits_kurt, ll, \
                              kurtosis(self.endog))
         print 'Finding the upper bound for kurtosis'
-        ul = optimize.brentq(self.ci_limits_kurt, kurtosis(self.endog), \
+        ul = optimize.brentq(self._ci_limits_kurt, kurtosis(self.endog), \
                              ul)
         return   ll, ul
 
@@ -1335,7 +1404,7 @@ class DescStat(OptFuncts):
               chi2.ppf(.025, self.nobs)
 
       ## TODO: IS there a way to condense the above default Parameters?
-        llr = optimize.fmin_l_bfgs_b(self.opt_correl, start_nuisance,
+        llr = optimize.fmin_l_bfgs_b(self._opt_correl, start_nuisance,
                                      approx_grad=1,
                                      bounds=[(mu1_lb, mu1_ub),
                                               (var1_lb, var1_ub),
@@ -1358,20 +1427,26 @@ class DescStat(OptFuncts):
         Parameters
         ----------
         sig: float
-            The significance level.  default | .05
+            The significance level.  Default= .05
 
         upper_bound: float
             Maximum value the upper confidence limit can be.
-            default | 99% confidence assuming normality.
+            Default: 99% confidence assuming normality.
 
         lower_bound: float
             Minimum value the lower condidence limit can be.
-            default | 99% confidence assuming normality.
+            Default: 99% confidence assuming normality.
 
         mu1_max through var2_max: float
             Limits of nuisance parameters
-            to maximize over.  default | 95% confidence limits assuming
+            to maximize over.  Default:  95% confidence limits assuming
             normality
+
+        Returns
+        --------
+
+        Interval: tuple
+            Lower and Upper confidence limit
 
 
         """
@@ -1442,8 +1517,8 @@ class DescStat(OptFuncts):
               chi2.ppf(.025, self.nobs)
         print 'Finding the lower bound for correlation'
 
-        ll = optimize.brentq(self.ci_limits_corr, ll, point_est)
+        ll = optimize.brentq(self._ci_limits_corr, ll, point_est)
         print 'Finding the upper bound for correlation'
-        ul = optimize.brentq(self.ci_limits_corr,
+        ul = optimize.brentq(self._ci_limits_corr,
                              point_est, ul)
         return ll, ul
