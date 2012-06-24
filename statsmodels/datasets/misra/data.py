@@ -48,6 +48,6 @@ def load():
 
 def _get_data():
     filepath = dirname(abspath(__file__))
-    data = recfromtxt(open(filepath + '/Misra.csv', 'rb'), delimiter=",",
+    data = recfromtxt(open(filepath + '/misra.csv', 'rb'), delimiter=",",
             names=True, dtype=float)
     return data
