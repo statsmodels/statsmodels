@@ -10,7 +10,7 @@ spector_data = sm.datasets.spector.load()
 spector_data.exog = sm.add_constant(spector_data.exog, prepend=False)
 
 # Linear Probability Model (OLS)
---------------------------------
+#-------------------------------
 lpm_mod = sm.OLS(spector_data.endog, spector_data.exog)
 lpm_res = lpm_mod.fit()
 print lpm_res.params[:-1]
@@ -65,7 +65,7 @@ print poisson_res.summary()
 #Alternative solvers
 #-------------------
 
-# The default method for the fit in discrete data MLE models is Newton-Raphson.
+# The default method for fitting discrete data MLE models is Newton-Raphson.
 # You can use other solvers by using the ``method`` argument: 
 mlogit_res = mlogit_mod.fit(method='bfgs', maxiter=100)
 
