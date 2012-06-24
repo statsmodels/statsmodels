@@ -9,6 +9,10 @@ import statsmodels.api as sm
 spector_data = sm.datasets.spector.load()
 spector_data.exog = sm.add_constant(spector_data.exog, prepend=False)
 
+# Inspect the data:
+spector_data.exog[:5,:]
+spector_data.endog[:5]
+
 # Linear Probability Model (OLS)
 #-------------------------------
 lpm_mod = sm.OLS(spector_data.endog, spector_data.exog)
@@ -43,9 +47,14 @@ anes_exog[:,0] = np.log(anes_exog[:,0] + .1)
 anes_exog = np.column_stack((anes_exog[:,0],anes_exog[:,2],anes_exog[:,5:8]))
 anes_exog = sm.add_constant(anes_exog, prepend=False)
 
+# Inspect the data: 
+anes_data.exog[:5,:]
+anes_data.endog[:5]
+
 # Fit MNL model
 mlogit_mod = sm.MNLogit(anes_data.endog, anes_exog)
 mlogit_res = mlogit_mod.fit()
+mlogit_res.params
 
 #Poisson model
 #-------------
