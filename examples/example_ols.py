@@ -151,7 +151,10 @@ print res3.f_test(R)
 
 #Data
 #^^^^
-# The Longley dataset is well known to have high multicollinearity. 
+# The Longley dataset is well known to have high multicollinearity, that is,
+# the exogenous predictors are highly correlated. This is problematic because
+# it can affect the stability of our coefficient estimates as we make minor
+# changes to model specification. 
 from statsmodels.datasets.longley import load
 y = load().endog
 X = load().exog
