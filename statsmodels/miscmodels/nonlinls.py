@@ -235,7 +235,9 @@ class NonlinearLS(NonLinearModel):  #or subclass a model
             else:
                 raise ValueError('need information about start values for' +
                              'optimization')
-         
+
+        self.nparams = len(p0)
+ 
         func = self.geterrors
         #eps = 2.2204460492503131e-016
         res = optimize.leastsq(func, p0, args=(), Dfun=self.getjacobian,
@@ -399,7 +401,7 @@ class NonlinearLS(NonLinearModel):  #or subclass a model
             jac_func = self.approx_jac_predict(params)
         return jac_func
 
-class Myfunc(NonlinearLS):
+#class Myfunc(NonlinearLS):
 
     #predict model.Model has a different signature
 ##    def predict(self, params, exog=None):
@@ -410,19 +412,19 @@ class Myfunc(NonlinearLS):
 ##        a, b, c = params
 ##        return a*np.exp(-b*x) + c
 
-    def _predict(self, params, exog=None):
-        '''this needs exog for predict with new values, unfortunately
-
-        make exog required - not now - I would need args in jac and leastsq
-        '''
-        #needs boilerplate, self.exog, for now
-        if exog is None:
-            x = self.exog
-        else:
-            x = exog
-
-        a, b, c = params
-        return a*np.exp(-b*x) + c
+#    def _predict(self, params, exog=None):
+#        '''this needs exog for predict with new values, unfortunately
+#
+#        make exog required - not now - I would need args in jac and leastsq
+#        '''
+#        #needs boilerplate, self.exog, for now
+#        if exog is None:
+#            x = self.exog
+#        else:
+#            x = exog
+#
+#        a, b, c = params
+#        return a*np.exp(-b*x) + c
 
 
 class NonLinearLSResults(RegressionResults):
@@ -436,7 +438,6 @@ class NonLinearLSResults(RegressionResults):
     The code may require some refactoring when the __init__ function for this class 
     is written
     '''
-    
     def _get_params_iter(self,params_iter):
         self.params_iter = params_iter
 
@@ -481,39 +482,49 @@ class NonLinearLSResults(RegressionResults):
     def fittedvalues(self):
         return self.model.predict(self.params, self.model.exog)
 
+    @cache_readonly
+    def hqc(self):
+        n = self.model.nobs
+        return -2*self.llf + 2*self.model.nparams*np.log(np.log(n))
 
-if __name__ == '__main__':
-    def func0(x, a, b, c):
-        return a*np.exp(-b*x) + c
-
-    def func(params, x):
-        a, b, c = params
-        return a*np.exp(-b*x) + c
-
-    def error(params, x, y):
-        return y - func(params, x)
-
-    def error2(params, x, y):
-        return (y - func(params, x))**2
-
-
-    from scipy import optimize
-
-    x = np.linspace(0,4,50)
-    params = np.array([2.5, 1.3, 0.5])
-    y0 = func(params, x)
-    y = y0 + 0.2*np.random.normal(size=len(x))
-
-    res = optimize.leastsq(error, params, args=(x, y), full_output=True)
+    @cache_readonly
+    def ser(self):
+        '''
+        Residual Standard Deviation
+        '''
+        return np.sqrt(self.mse_resid)
+#if __name__ == '__main__':
+#    def func0(x, a, b, c):
+#        return a*np.exp(-b*x) + c
+#
+#    def func(params, x):
+#        a, b, c = params
+#        return a*np.exp(-b*x) + c
+#
+#    def error(params, x, y):
+#        return y - func(params, x)
+#
+#    def error2(params, x, y):
+#        return (y - func(params, x))**2
+#
+#
+#    from scipy import optimize
+#
+#    x = np.linspace(0,4,50)
+#    params = np.array([2.5, 1.3, 0.5])
+#    y0 = func(params, x)
+#    y = y0 + 0.2*np.random.normal(size=len(x))
+#
+#    res = optimize.leastsq(error, params, args=(x, y), full_output=True)
 ##    r, R, c = getjaccov(res[1:], 3)
-
-    mod = Myfunc(y, x)
-    resmy = mod.fit(nparams=3)
-
-    cf_params, cf_pcov = optimize.curve_fit(func0, x, y)
-    cf_bse = np.sqrt(np.diag(cf_pcov))
-    print res[0]
-    print cf_params
-    print resmy.params
-    print cf_bse
-    print resmy.bse
+#
+#    mod = Myfunc(y, x)
+#    resmy = mod.fit(nparams=3)
+#
+#    cf_params, cf_pcov = optimize.curve_fit(func0, x, y)
+#    cf_bse = np.sqrt(np.diag(cf_pcov))
+#    print res[0]
+#    print cf_params
+#    print resmy.params
+#    print cf_bse
+#    print resmy.bse

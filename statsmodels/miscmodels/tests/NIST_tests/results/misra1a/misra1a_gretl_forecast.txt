@@ -1,0 +1,31 @@
+ For 95% confidence intervals, t(12, 0.025) = 2.179
+
+     Obs            y    prediction    std. error        95% interval
+
+       1         10.07         9.99        0.103         9.76 -    10.21
+       2         14.73        14.64        0.104        14.41 -    14.86
+       3         17.94        17.85        0.105        17.62 -    18.08
+       4         23.93        23.81        0.106        23.58 -    24.04
+       5         29.61        29.54        0.107        29.31 -    29.78
+       6         35.18        35.12        0.108        34.89 -    35.36
+       7         40.02        39.98        0.107        39.74 -    40.21
+       8         44.82        44.91        0.107        44.67 -    45.14
+       9         50.76        50.83        0.106        50.60 -    51.07
+      10         55.05        55.18        0.106        54.95 -    55.41
+      11         61.01        61.10        0.106        60.87 -    61.33
+      12         66.40        66.52        0.108        66.29 -    66.76
+      13         75.47        75.39        0.115        75.14 -    75.64
+      14         81.78        81.65        0.124        81.38 -    81.92
+
+  Forecast evaluation statistics
+
+  Mean Error                        0.018156
+  Mean Squared Error                0.0088965
+  Root Mean Squared Error           0.094321
+  Mean Absolute Error               0.09053
+  Mean Percentage Error             0.16578
+  Mean Absolute Percentage Error    0.29623
+  Theil's U                         0.019153
+  Bias proportion, UM               0.037053
+  Regression proportion, UR         0.14352
+  Disturbance proportion, UD        0.81943
