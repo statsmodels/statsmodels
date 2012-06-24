@@ -11,7 +11,7 @@ from .tsa import api as tsa
 import nonparametric
 import distributions
 from __init__ import test
-#from . import version
+from . import version
 from info import __doc__
 from graphics.gofplots import qqplot
 from .graphics import api as graphics
