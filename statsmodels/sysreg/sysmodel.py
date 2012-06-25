@@ -290,8 +290,14 @@ class SysResults(LikelihoodModelResults):
     Not implemented yet.
     """
     def __init__(self, model, params, normalized_cov_params=None, scale=1.):
-        super(SysResults, self).__init__(model, params,
-                normalized_cov_params, scale)
+        #self.params = params
+        #self.normalized_cov_params = normalized_cov_params
+        super(SysResults, self).__init__(model, params, normalized_cov_params, scale)
+        #self.cov_resids_est = model.sigma
+        #self.fittedvalues = np.dot(model.sp_exog, params).reshape(model.neqs,-1).T
+        #self.resids = model.endog.T - self.fittedvalues
+        # Compute sigma with final residuals
+        #self.cov_resids = model._compute_sigma(self.resids)
 
 # Testing/Debugging
 if __name__ == '__main__':
