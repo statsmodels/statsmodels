@@ -7,11 +7,30 @@ from statsmodels.sysreg.sysmodel import *
 class CheckSysregResults(object):
     decimal_params = 3
     def test_params(self):
-        assert_almost_equal(self.res1.params, self.res2.params, self.decimal_params)
+        assert_almost_equal(self.res1.params, self.res2.params, 
+                self.decimal_params)
+
+    decimal_fittedvalues = 3    
     def test_fittedvalues(self):
-        assert_almost_equal(self.res1.predict(), self.res2.fittedvalues, 3) # fail with decimal error >= 4
+        fv = np.concatenate([self.res2.equ1.fittedvalues, 
+            self.res2.equ2.fittedvalues, self.res2.equ3.fittedvalues,
+            self.res2.equ4.fittedvalues, self.res2.equ5.fittedvalues])
+        assert_almost_equal(self.res1.predict(), fv, self.decimal_fittedvalues)
+
+    decimal_normalized_cov_params = 2 
     def test_normalized_cov_params(self):
-        assert_almost_equal(self.res1.normalized_cov_params, self.res2.cov_params, 2) # fail with decimal error >= 3
+        assert_almost_equal(self.res1.normalized_cov_params,
+                self.res2.cov_params, self.decimal_normalized_cov_params)
+
+    decimal_cov_resids_est = 3
+    def test_cov_resids_est(self):
+        assert_almost_equal(self.res1.cov_resids_est, self.res2.cov_resids_est, 
+                self.decimal_cov_resids_est)
+
+    decimal_cov_resids = 3
+    def test_cov_resids(self):
+        assert_almost_equal(self.res1.cov_resids, self.res2.cov_resids,
+                self.decimal_cov_resids)
 
 class TestSUR(CheckSysregResults):
     @classmethod

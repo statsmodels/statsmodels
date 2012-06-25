@@ -60,22 +60,22 @@ sur.cov_params = np.array([
     ]).reshape(15,15, order='F')
 sur.cov_params_rownames = ['Chrysler_(Intercept)', 'Chrysler_value', 'Chrysler_capital', 'General.Electric_(Intercept)', 'General.Electric_value', 'General.Electric_capital', 'General.Motors_(Intercept)', 'General.Motors_value', 'General.Motors_capital', 'US.Steel_(Intercept)', 'US.Steel_value', 'US.Steel_capital', 'Westinghouse_(Intercept)', 'Westinghouse_value', 'Westinghouse_capital', ]
 sur.cov_params_colnames = ['Chrysler_(Intercept)', 'Chrysler_value', 'Chrysler_capital', 'General.Electric_(Intercept)', 'General.Electric_value', 'General.Electric_capital', 'General.Motors_(Intercept)', 'General.Motors_value', 'General.Motors_capital', 'US.Steel_(Intercept)', 'US.Steel_value', 'US.Steel_capital', 'Westinghouse_(Intercept)', 'Westinghouse_value', 'Westinghouse_capital', ]
-sur.resid_cov_est = np.array([
+sur.cov_resids_est = np.array([
      149.8722, -21.37565, -282.7564, 367.8402, 13.30695, -21.37565, 
      660.8294, 607.5331, 978.4503, 176.4491, -282.7564, 607.5331, 7160.294, 
      -1967.046, 126.1762, 367.8402, 978.4503, -1967.046, 7904.663, 
      511.4995, 13.30695, 176.4491, 126.1762, 511.4995, 88.6617
     ]).reshape(5,5, order='F')
-sur.resid_cov_est_rownames = ['Chrysler', 'General.Electric', 'General.Motors', 'US.Steel', 'Westinghouse', ]
-sur.resid_cov_est_colnames = ['Chrysler', 'General.Electric', 'General.Motors', 'US.Steel', 'Westinghouse', ]
-sur.resid_cov = np.array([
+sur.cov_resids_est_rownames = ['Chrysler', 'General.Electric', 'General.Motors', 'US.Steel', 'Westinghouse', ]
+sur.cov_resids_est_colnames = ['Chrysler', 'General.Electric', 'General.Motors', 'US.Steel', 'Westinghouse', ]
+sur.cov_resids = np.array([
      153.2369, 3.147771, -315.6107, 414.5298, 16.64749, 3.147771, 704.729, 
      601.6316, 1298.695, 201.4385, -315.6107, 601.6316, 7222.22, -2446.317, 
      129.7644, 414.5298, 1298.695, -2446.317, 8174.28, 613.9925, 16.64749, 
      201.4385, 129.7644, 613.9925, 94.90675
     ]).reshape(5,5, order='F')
-sur.resid_cov_rownames = ['Chrysler', 'General.Electric', 'General.Motors', 'US.Steel', 'Westinghouse', ]
-sur.resid_cov_colnames = ['Chrysler', 'General.Electric', 'General.Motors', 'US.Steel', 'Westinghouse', ]
+sur.cov_resids_rownames = ['Chrysler', 'General.Electric', 'General.Motors', 'US.Steel', 'Westinghouse', ]
+sur.cov_resids_colnames = ['Chrysler', 'General.Electric', 'General.Motors', 'US.Steel', 'Westinghouse', ]
 sur.method = 'SUR'
 sur.rank = 15
 sur.df_resid = 85
@@ -241,7 +241,3 @@ sur.equ5.rank_sys = 15
 sur.equ5.df_resid = 17
 sur.equ5.df_resid_sys = 85
 sur.equ5.model = '''structure(list(Westinghouse_invest = c(12.93, 25.9, 35.05, 22.89,  18.84, 28.57, 48.51, 43.34, 37.02, 37.81, 39.27, 53.46, 55.56,  49.56, 32.04, 32.24, 54.38, 71.78, 90.08, 68.6), Westinghouse_value = c(191.5,  516, 729, 560.4, 519.9, 628.5, 537.1, 561.2, 617.2, 626.7, 737.2,  760.5, 581.4, 662.3, 583.8, 635.2, 723.8, 864.1, 1193.5, 1188.9 ), Westinghouse_capital = c(1.8, 0.8, 7.4, 18.1, 23.5, 26.5,  36.2, 60.8, 84.4, 91.2, 92.4, 86, 111.1, 130.6, 141.8, 136.7,  129.7, 145.5, 174.8, 213.5)), .Names = c("Westinghouse_invest",  "Westinghouse_value", "Westinghouse_capital"), class = "data.frame", row.names = c("X1935",  "X1936", "X1937", "X1938", "X1939", "X1940", "X1941", "X1942",  "X1943", "X1944", "X1945", "X1946", "X1947", "X1948", "X1949",  "X1950", "X1951", "X1952", "X1953", "X1954"), terms = Westinghouse_invest ~      Westinghouse_value + Westinghouse_capital)'''
-sur.fittedvalues = np.concatenate((sur.equ1.fittedvalues,sur.equ2.fittedvalues,
-                                sur.equ3.fittedvalues,sur.equ4.fittedvalues,
-                                sur.equ5.fittedvalues))
-

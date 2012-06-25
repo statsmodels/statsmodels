@@ -286,18 +286,21 @@ class SysSURI(SysOLS):
         super(SysSURI, self).__init__(sys)
 
 class SysResults(LikelihoodModelResults):
-    """
-    Not implemented yet.
-    """
+    '''
+    Attributes
+    ----------
+    cov_resids_est : ndarray
+        Residual covariance matrix used for estimation.
+    cov_resids : ndarray
+        Estimated residual covariance matrix with final residuals.
+    '''
     def __init__(self, model, params, normalized_cov_params=None, scale=1.):
-        #self.params = params
-        #self.normalized_cov_params = normalized_cov_params
         super(SysResults, self).__init__(model, params, normalized_cov_params, scale)
-        #self.cov_resids_est = model.sigma
-        #self.fittedvalues = np.dot(model.sp_exog, params).reshape(model.neqs,-1).T
-        #self.resids = model.endog.T - self.fittedvalues
+        self.cov_resids_est = model.sigma
         # Compute sigma with final residuals
-        #self.cov_resids = model._compute_sigma(self.resids)
+        fittedvalues = np.dot(model.sp_exog, params).reshape(model.neqs,-1).T
+        resids = model.endog.T - fittedvalues
+        self.cov_resids = model._compute_sigma(resids)
 
 # Testing/Debugging
 if __name__ == '__main__':
