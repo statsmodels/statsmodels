@@ -902,7 +902,6 @@ class ARIMA(ARMA):
             else:
                 # need to assume pre-sample residuals are zero
                 # do this by a hack
-                start += k_diff
                 q = self.k_ma
                 self.k_ma = 0
                 predictedvalues = super(ARIMA, self).predict(params, start,
