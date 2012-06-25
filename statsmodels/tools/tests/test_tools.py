@@ -310,15 +310,15 @@ def test_rec_issue302():
     arr = np.rec.fromrecords([[10], [11]], names='group')
     actual = tools.categorical(arr)
     expected = np.rec.array([(10, 1.0, 0.0), (11, 0.0, 1.0)],
-        dtype=[('group', int), ('group_10', '<f8'), ('group_11', '<f8')])
+        dtype=[('group', int), ('group_10', float), ('group_11', float)])
     assert_array_equal(actual, expected)
 
 def test_issue302():
     arr = np.rec.fromrecords([[10, 12], [11, 13]], names=['group', 'whatever'])
     actual = tools.categorical(arr, col=['group'])
     expected = np.rec.array([(10, 12, 1.0, 0.0), (11, 13, 0.0, 1.0)],
-        dtype=[('group', int), ('whatever', int), ('group_10', '<f8'),
-               ('group_11', '<f8')])
+        dtype=[('group', int), ('whatever', int), ('group_10', float),
+               ('group_11', float)])
     assert_array_equal(actual, expected)
 
 def test_pandas_const_series():
