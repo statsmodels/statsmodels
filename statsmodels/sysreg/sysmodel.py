@@ -66,6 +66,19 @@ class SysModel(LikelihoodModel):
             df_model.append(rank - 1)
             df_resid.append(self.nobs - rank)
         (self.df_model, self.df_resid) = (np.asarray(df_model), np.asarray(df_resid))
+        
+        # Compute DoF corrections
+        div_dfk1 = np.zeros((self.neqs, self.neqs))
+        div_dfk2 = np.zeros((self.neqs, self.neqs))
+        for i in range(self.neqs):
+            for j in range(self.neqs):
+                div_dfk1[i,j] = (self.df_model[i] + 1)*(self.df_model[j] + 1) \
+                                ** (1/2)
+                div_dfk2[i,j] = self.nobs - np.max((self.df_model[i] + 1, 
+                                                    self.df_model[j] + 1))
+ 
+        self.div_dfk1 = div_dfk1
+        self.div_dfk2 = div_dfk2
 
         self.initialize()
 
@@ -127,6 +140,21 @@ class SysGLS(SysModel):
         self.wendog = self.whiten(self.endog.reshape(-1,1))
         self.pinv_wexog = np.linalg.pinv(self.wexog)
 
+    def _compute_sigma(self, resids):
+        '''
+        Parameters
+        ----------
+        resids : ndarray (N x G)
+            OLS residuals for each equation stacked in column.
+        '''
+        s = np.dot(resids.T, resids)
+        if self.dfk is None:
+            return s / self.nobs
+        elif self.dfk == 'dfk1':
+            return s / self.div_dfk1
+        else:
+            return s / self.div_dfk2
+
     def whiten(self, X):
         '''
         SysGLS whiten method
@@ -173,21 +201,37 @@ class SysWLS(SysGLS):
     '''
     Parameters
     ----------
-    weights : 1d array or scalar, optional
+    weights : 1d array or scalar, None by default
         Variances of each equation. If weights is a scalar then homoscedasticity
-        is assumed. Default is no scaling.
+        is assumed. Default is None and uses a feasible WLS.
     '''
-    def __init__(self, sys, weights=1.0):
+    def __init__(self, sys, weights=None, dfk=None):
+        if not(dfk in (None, 'dfk1', 'dfk2')):
+            raise ValueError('dfk is not correctly specified')
+
+        self.dfk = dfk
+        self.nobs = sys[0]['endog'].shape[0]
         neqs = len(sys)
-        weights = np.asarray(weights)
-        # weights = scalar
-        if weights.shape == ():
-            sigma = np.diag(np.ones(neqs)*weights)
-        # weights = 1d vector
-        elif weights.ndim == 1 and weights.size == neqs:
-            sigma = np.diag(weights)
+        
+        if weights is None:
+            # Compute sigma by OLS equation by equation
+            resids = []
+            for eq in sys:
+                res = OLS(eq['endog'], eq['exog']).fit()
+                resids.append(res.resid)
+            resids = np.column_stack(resids)
+            sigma = np.diag(np.diag(self._compute_sigma(resids)))
         else:
-            raise ValueError("weights is not correctly specified")
+            weights = np.asarray(weights)
+            # weights = scalar
+            if weights.shape == ():
+                sigma = np.diag(np.ones(neqs)*weights)
+            # weights = 1d vector
+            elif weights.ndim == 1 and weights.size == neqs:
+                sigma = np.diag(weights)
+            else:
+                raise ValueError("weights is not correctly specified")
+
         super(SysWLS, self).__init__(sys, sigma)
 
 class SysOLS(SysWLS):
@@ -209,36 +253,10 @@ class SysSUR(SysGLS):
             resids.append(res.resid)
         resids = np.column_stack(resids)
         
-        # Compute DoF corrections
-        div_dfk1 = np.zeros((self.neqs, self.neqs))
-        div_dfk2 = np.zeros((self.neqs, self.neqs))
-        for i in range(self.neqs):
-            for j in range(self.neqs):
-                div_dfk1[i,j] = (self.df_model[i] + 1)*(self.df_model[j] + 1) \
-                                ** (1/2)
-                div_dfk2[i,j] = self.nobs - np.max((self.df_model[i] + 1, 
-                                                    self.df_model[j] + 1))
- 
-        self.div_dfk1 = div_dfk1
-        self.div_dfk2 = div_dfk2
         self.sigma = self._compute_sigma(resids)
         self.initialize()
 
-    def _compute_sigma(self, resids):
-        '''
-        Parameters
-        ----------
-        resids : ndarray (N x G)
-            OLS residuals for each equation stacked in column.
-        '''
-        s = np.dot(resids.T, resids)
-        if self.dfk is None:
-            return s / self.nobs
-        elif self.dfk == 'dfk1':
-            return s / self.div_dfk1
-        else:
-            return s / self.div_dfk2
-
+    
     def fit(self, igls=False, tol=1e-5, maxiter=100):
         if not(igls):
             return super(SysSUR, self).fit()
