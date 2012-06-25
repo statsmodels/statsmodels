@@ -461,7 +461,7 @@ for p in T:
         else:
             A[(p,v)] = list(a1)
 
-
+raise Exception("we don't want to import this")
 # uncomment the lines below to repr-ize A
 ##import pprint
 ##pprint.pprint(A, width=160)

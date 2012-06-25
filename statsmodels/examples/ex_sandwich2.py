@@ -60,9 +60,9 @@ res_stata = np.rec.array(
        ('emer', '|', -5.4449319999999997, 0.72939690000000001, -7.46, 0.0, -6.8839379999999997, -4.0059269999999998),
        ('yr_rnd', '|', -51.075690000000002, 22.83615, -2.2400000000000002, 0.027, -96.128439999999998, -6.0229350000000004),
        ('_cons', '|', 740.3981, 13.460760000000001, 55.0, 0.0, 713.84180000000003, 766.95439999999996)],
-      dtype=[('exogname', '|S6'), ('del', '|S1'), ('params', '<f8'),
-             ('bse', '<f8'), ('tvalues', '<f8'), ('pvalues', '<f8'),
-             ('cilow', '<f8'), ('ciupp', '<f8')])
+      dtype=[('exogname', '|S6'), ('del', '|S1'), ('params', 'float'),
+             ('bse', 'float'), ('tvalues', 'float'), ('pvalues', 'float'),
+             ('cilow', 'float'), ('ciupp', 'float')])
 
 print 'diff Stata', bse_cr - res_stata.bse
 assert_almost_equal(bse_cr, res_stata.bse, decimal=6)

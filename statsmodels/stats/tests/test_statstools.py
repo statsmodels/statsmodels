@@ -56,21 +56,22 @@ def test_omni_normtest():
     assert_almost_equal(st, st_pv_R[:,1], 14)
 
     kt = stats.kurtosistest(x)
-    assert_almost_equal(kt, st_pv_R[:,2], 14)
+    assert_almost_equal(kt, st_pv_R[:,2], 12)
 
     st_pv_R = np.array(
               [[34.523210399523926,  4.429509162503833,  3.860396220444025],
                [3.186985686465249e-08, 9.444780064482572e-06, 1.132033129378485e-04]])
 
     x2 = x**2
+    #TODO: fix precision in these test with relative tolerance
     nt = omni_normtest(x2)
-    assert_almost_equal(nt, st_pv_R[:,0], 14)
+    assert_almost_equal(nt, st_pv_R[:,0], 12)
 
     st = stats.skewtest(x2)
-    assert_almost_equal(st, st_pv_R[:,1], 14)
+    assert_almost_equal(st, st_pv_R[:,1], 12)
 
     kt = stats.kurtosistest(x2)
-    assert_almost_equal(kt, st_pv_R[:,2], 14)
+    assert_almost_equal(kt, st_pv_R[:,2], 12)
 
 def test_jarque_bera():
     #tests against R fBasics
@@ -102,43 +103,43 @@ def test_shapiro():
     #st is ok -7.15e-06, pval agrees at -3.05e-10
     st_pv_R = np.array([5.799574255943298e-01, 1.838456834681376e-06 * 1e4])
     sh = shapiro(x**2)*np.array([1,1e4])
-    assert_almost_equal(sh, st_pv_R, 6)
+    assert_almost_equal(sh, st_pv_R, 5)
 
     st_pv_R = np.array([0.91730442643165588, 0.08793704167882448 ])
     sh = shapiro(np.log(x**2))
-    assert_almost_equal(sh, st_pv_R, 6)
+    assert_almost_equal(sh, st_pv_R, 5)
 
     #diff is [  9.38773155e-07,   5.48221246e-08]
     st_pv_R = np.array([0.818361863493919373, 0.001644620895206969 ])
     sh = shapiro(np.exp(-x**2))
-    assert_almost_equal(sh, st_pv_R, 6)
+    assert_almost_equal(sh, st_pv_R, 5)
 
 def test_adnorm():
     #tests against R fBasics
     st_pv = []
     st_pv_R = np.array([0.5867235358882148, 0.1115380760041617])
     ad = normal_ad(x)
-    assert_almost_equal(ad, st_pv_R, 14)
+    assert_almost_equal(ad, st_pv_R, 12)
     st_pv.append(st_pv_R)
 
     st_pv_R = np.array([2.976266267594575e+00, 8.753003709960645e-08])
     ad = normal_ad(x**2)
-    assert_almost_equal(ad, st_pv_R, 13)
+    assert_almost_equal(ad, st_pv_R, 12)
     st_pv.append(st_pv_R)
 
     st_pv_R = np.array([0.4892557856308528, 0.1968040759316307])
     ad = normal_ad(np.log(x**2))
-    assert_almost_equal(ad, st_pv_R, 14)
+    assert_almost_equal(ad, st_pv_R, 12)
     st_pv.append(st_pv_R)
 
     st_pv_R = np.array([1.4599014654282669312, 0.0006380009232897535])
     ad = normal_ad(np.exp(-x**2))
-    assert_almost_equal(ad, st_pv_R, 14)
+    assert_almost_equal(ad, st_pv_R, 12)
     st_pv.append(st_pv_R)
 
     ad = normal_ad(np.column_stack((x,x**2, np.log(x**2),np.exp(-x**2))).T,
                    axis=1)
-    assert_almost_equal(ad, np.column_stack(st_pv), 14)
+    assert_almost_equal(ad, np.column_stack(st_pv), 12)
 
 
 if __name__ == '__main__':
