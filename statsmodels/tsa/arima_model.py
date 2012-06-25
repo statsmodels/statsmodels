@@ -4,7 +4,8 @@ import numpy as np
 from scipy import optimize
 from scipy.stats import t, norm
 from scipy.signal import lfilter
-from numpy import dot, identity, kron, log, zeros, pi, exp, eye, abs, empty
+from numpy import (dot, identity, kron, log, zeros, pi, exp, eye, abs, empty,
+                   zeros_like)
 from numpy.linalg import inv, pinv
 
 from statsmodels.tools.decorators import (cache_readonly,
@@ -1101,14 +1102,21 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
     def maroots(self):
         return np.roots(np.r_[1,self.maparams])**-1
 
-    #@cache_readonly
-    #def arfreq(self):
-    #    return (np.log(arroots/abs(arroots))/(2j*pi)).real
+    @cache_readonly
+    def arfreq(self):
+        z = self.arroots
+        r = np.abs(z)
+        func = lambda x : (r*np.exp(2j*pi*np.array(x))) - z
+        return optimize.broyden1(func, zeros_like(z, dtype=float)+.1,
+                f_tol=1e-8).real
 
-    #NOTE: why don't root finding functions work well?
-    #@cache_readonly
-    #def mafreq(eslf):
-    #    return
+    @cache_readonly
+    def mafreq(self):
+        z = self.maroots
+        r = np.abs(z)
+        func = lambda x : (r*np.exp(2j*pi*np.array(x))) - z
+        return optimize.broyden1(func, zeros_like(z, dtype=float)+.1,
+                f_tol=1e-8).real
 
 
     @cache_readonly
@@ -1284,8 +1292,8 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
             start = k_diff + self.k_ar
         if self._data.dates is not None:
             dates = self._data.dates
-            sample = dates[start].strftime('%m-%d-%Y')
-            sample += ' - ' + dates[-1].strftime('%m-%d-%Y')
+            sample = [dates[start].strftime('%m-%d-%Y')]
+            sample += ['- ' + dates[-1].strftime('%m-%d-%Y')]
         else:
             sample = str(start) + ' - ' + str(len(self._data._orig_endog))
 
@@ -1294,7 +1302,8 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
                     ('Method:', [method]),
                     ('Date:', None),
                     ('Time:', None),
-                    ('Sample:', [sample]),
+                    ('Sample:', [sample[0]]),
+                    ('', [sample[1]])
                     ]
 
         top_right = [
@@ -1309,8 +1318,30 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         smry.add_table_2cols(self, gleft=top_left, gright=top_right,
                                    title=title)
         smry.add_table_params(self, alpha=alpha, use_t=False)
+
+        # Make the roots table
+        from statsmodels.iolib.table import SimpleTable
+        arroots = self.arroots
+        arfreq = self.arfreq
+        maroots = self.maroots
+        mafreq = self.mafreq
+        arstubs = ["AR.%d" % i for i in range(1, self.k_ar + 1)]
+        mastubs = ["MA.%d" % i for i in range(1, self.k_ma + 1)]
+        stubs = arstubs + mastubs
+
+        roots = np.r_[arroots, maroots]
+        modulus = np.abs(roots)
+        freq = np.r_[arfreq, mafreq]
+        data = np.column_stack((roots.real, roots.imag, modulus, freq))
+        roots_table = SimpleTable(data,
+                headers=['           Real', '         Imaginary',
+                        '         Modulus', '        Frequency'],
+                title="Roots",
+                stubs=stubs, data_fmts=["%17.4f", "%+17.4fj", "%17.4f",
+                    "%17.4f"])
+
+        smry.tables.append(roots_table)
         return smry
-        #smry.tables.append(roots)
 
 
 class ARMAResultsWrapper(wrap.ResultsWrapper):
