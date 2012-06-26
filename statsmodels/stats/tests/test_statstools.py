@@ -56,7 +56,7 @@ def test_omni_normtest():
     assert_almost_equal(st, st_pv_R[:,1], 14)
 
     kt = stats.kurtosistest(x)
-    assert_almost_equal(kt, st_pv_R[:,2], 12)
+    assert_almost_equal(kt, st_pv_R[:,2], 11)
 
     st_pv_R = np.array(
               [[34.523210399523926,  4.429509162503833,  3.860396220444025],
@@ -124,7 +124,7 @@ def test_adnorm():
 
     st_pv_R = np.array([2.976266267594575e+00, 8.753003709960645e-08])
     ad = normal_ad(x**2)
-    assert_almost_equal(ad, st_pv_R, 12)
+    assert_almost_equal(ad, st_pv_R, 11)
     st_pv.append(st_pv_R)
 
     st_pv_R = np.array([0.4892557856308528, 0.1968040759316307])
@@ -139,7 +139,7 @@ def test_adnorm():
 
     ad = normal_ad(np.column_stack((x,x**2, np.log(x**2),np.exp(-x**2))).T,
                    axis=1)
-    assert_almost_equal(ad, np.column_stack(st_pv), 12)
+    assert_almost_equal(ad, np.column_stack(st_pv), 11)
 
 
 if __name__ == '__main__':
