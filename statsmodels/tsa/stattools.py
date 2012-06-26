@@ -402,15 +402,11 @@ def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False):
         acf = np.real(acf[:nlags+1])   #keep lag 0
     if not (confint or qstat):
         return acf
-# Based on Bartlett's formula for MA(q) processes
-#NOTE: not sure if this is correct, or needs to be centered or what.
-
     if not confint is None:
         varacf = np.ones(nlags+1)/nobs
-        #varacf[1:] *= 1 + 2*np.cumsum(acf[1:-1]**2)
-        #TODO: test this, are my changes correct
         varacf[0] = 0
-        varacf[1:] *= 1 + 2*np.cumsum(acf[1:]**2)
+        varacf[1] = 1./nobs
+        varacf[2:] *= 1 + 2*np.cumsum(acf[1:-1]**2)
         interval = stats.norm.ppf(1-(100-confint)/200.)*np.sqrt(varacf)
         confint = np.array(zip(acf-interval, acf+interval))
         if not qstat:
@@ -485,7 +481,7 @@ def pacf_ols(x, nlags=40):
         pacf.append(res.params[-1])
     return np.array(pacf)
 
-def pacf(x, nlags=40, method='ywunbiased'):
+def pacf(x, nlags=40, method='ywunbiased', alpha=None):
     '''Partial autocorrelation estimated
 
     Parameters
@@ -502,9 +498,9 @@ def pacf(x, nlags=40, method='ywunbiased'):
         - ols - regression of time series on lags of it and on constant
         - ld or ldunbiased : Levinson-Durbin recursion with bias correction
         - ldb or ldbiased : Levinson-Durbin recursion without bias correction
-    confint : scalar, optional
+    alpha : scalar, optional
         If a number is given, the confidence intervals for the given level are
-        returned. For instance if confint=95, 95 % confidence intervals are
+        returned. For instance if alpha=.05, 95 % confidence intervals are
         returned where the standard deviation is computed according to
         1/sqrt(len(x))
 
@@ -538,9 +534,9 @@ def pacf(x, nlags=40, method='ywunbiased'):
         ret = ld_[2]
     else:
         raise ValueError('method not available')
-    if confint is not None:
+    if alpha is not None:
         varacf = 1./len(x)
-        interval = stats.norm.ppf(100. - (1 - confint)/200.) * np.sqrt(varacf)
+        interval = stats.norm.ppf(1. - alpha * np.sqrt(varacf))
         confint = (ret-interval, ret+interval)
         return ret, confint
     else:
