@@ -176,9 +176,12 @@ class ARResultsMLE(object):
             # NOTE: Stata's estimated parameters differ from gretl
             filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                 "ARMLEConstantPredict.csv")
+            filename2 = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                    'results_ar_forecast_mle_dynamic.csv')
             predictresults = np.loadtxt(filename, delimiter=",")
             year = predictresults[:,0]
             pv = predictresults[:,1]
+            dynamicpv = np.genfromtxt(filename2, delimiter=",", skiprows=1)
 
             # cases - in sample predict
             # start = 0 (fitted values)
@@ -201,6 +204,11 @@ class ARResultsMLE(object):
             self.FVMLEstart4end312 = pv[4:313]
             # end = 7, start = 2
             self.FVMLEstart2end7 = pv[2:8]
+
+            self.fcdyn = dynamicpv[:,0]
+            self.fcdyn2 = dynamicpv[:,1]
+            self.fcdyn3 = dynamicpv[:,2]
+            self.fcdyn4 = dynamicpv[:,3]
 
 
         else:
