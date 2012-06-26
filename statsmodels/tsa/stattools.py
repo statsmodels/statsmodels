@@ -367,7 +367,7 @@ def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False,
         If a number is given, the confidence intervals for the given level are
         returned. For instance if alpha=.05, 95 % confidence intervals are
         returned where the standard deviation is computed according to
-        1/sqrt(len(x))
+        Bartlett's formula.
 
     Returns
     -------
@@ -444,7 +444,7 @@ def pacf_yw(x, nlags=40, method='unbiased'):
     ----------
     x : 1d array
         observations of time series for which pacf is calculated
-    maxlag : int
+    nlags : int
         largest lag for which pacf is returned
     method : 'unbiased' (default) or 'mle'
         method for the autocovariance calculations in yule walker
@@ -507,7 +507,7 @@ def pacf(x, nlags=40, method='ywunbiased', alpha=None):
     ----------
     x : 1d array
         observations of time series for which pacf is calculated
-    maxlag : int
+    nlags : int
         largest lag for which pacf is returned
     method : 'ywunbiased' (default) or 'ywmle' or 'ols'
         specifies which method for the calculations to use,
