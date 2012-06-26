@@ -407,7 +407,7 @@ def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False,
         acf /= acf[0]
         #acf = np.take(np.real(acf), range(1,nlags+1))
         acf = np.real(acf[:nlags+1])   #keep lag 0
-    if not (confint or qstat):
+    if not (confint or qstat or alpha):
         return acf
     if not confint is None:
         import warnings
@@ -432,7 +432,7 @@ def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False,
             return acf, confint
     if qstat:
         qstat, pvalue = q_stat(acf[1:], nobs=nobs)  #drop lag 0
-        if confint is not None:
+        if (confint is not None or alpha is not None):
             return acf, confint, qstat, pvalue
         else:
             return acf, qstat
