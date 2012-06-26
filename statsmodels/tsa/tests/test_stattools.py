@@ -125,17 +125,19 @@ class TestACF(CheckCorrGram):
         self.acf = self.results['acvar']
         #self.acf = np.concatenate(([1.], self.acf))
         self.qstat = self.results['Q1']
-        self.res1 = acf(self.x, nlags=40, qstat=True)
+        self.res1 = acf(self.x, nlags=40, qstat=True, confint=95)
+        self.confint_res = self.results[['acvar_lb','acvar_ub']].view((float,
+                                                                            2))
 
     def test_acf(self):
         assert_almost_equal(self.res1[0][1:41], self.acf, DECIMAL_8)
 
-#    def test_confint(self):
-#        pass
-#NOTE: need to figure out how to center confidence intervals
+    def test_confint(self):
+        centered = self.res1[1] - self.res1[1].mean(1)[:,None]
+        assert_almost_equal(centered[1:41], self.confint_res, DECIMAL_8)
 
     def test_qstat(self):
-        assert_almost_equal(self.res1[1][:40], self.qstat, DECIMAL_3)
+        assert_almost_equal(self.res1[2][:40], self.qstat, DECIMAL_3)
         # 3 decimal places because of stata rounding
 
 #    def pvalue(self):
