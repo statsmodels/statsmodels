@@ -158,4 +158,4 @@ if __name__ == "__main__":
                 elif (not example.endswith('.py') or example in exclude_list or
                       not check_script(example_file)):
                     continue
-                restify(whole_file, filehash, example_file)
+                restify(whole_file, filehash, example)
