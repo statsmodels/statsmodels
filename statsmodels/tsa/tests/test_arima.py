@@ -137,6 +137,10 @@ class CheckArmaResults(object):
         assert_almost_equal(self.res1.sigma2, self.res2.sigma2,
                 self.decimal_sigma2)
 
+    def test_summary(self):
+        # smoke tests
+        table = self.res1.summary()
+
 class CheckForecast(object):
     decimal_forecast = DECIMAL_4
     def test_forecast(self):
@@ -570,6 +574,10 @@ class Test_ARIMA111(CheckArimaResults, CheckForecast, CheckDynamicForecast):
         cls.res1.forecast_res_dyn = cls.res1.predict(start=164, end=164+63,
                                             typ='levels', dynamic=True)
 
+    def test_freq(self):
+        assert_almost_equal(self.res1.arfreq, [0.0000], 4)
+        assert_almost_equal(self.res1.mafreq, [0.0000], 4)
+
 class Test_ARIMA111CSS(CheckArimaResults, CheckForecast, CheckDynamicForecast):
     @classmethod
     def setupClass(cls):
@@ -635,6 +643,10 @@ class Test_ARIMA112CSS(CheckArimaResults):
         cls.decimal_resid = 2
         cls.decimal_fittedvalues = 3
         cls.decimal_predict_levels = DECIMAL_3
+
+    def test_freq(self):
+        assert_almost_equal(self.res1.arfreq, [0.5000], 4)
+        assert_almost_equal(self.res1.mafreq, [0.5000, 0.5000], 4)
 
 #class Test_ARIMADates(CheckArmaResults, CheckForecast, CheckDynamicForecast):
 #    @classmethod
