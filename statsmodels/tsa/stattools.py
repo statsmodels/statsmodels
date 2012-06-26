@@ -339,7 +339,8 @@ def q_stat(x,nobs, type="ljungbox"):
 #NOTE: Changed unbiased to False
 #see for example
 # http://www.itl.nist.gov/div898/handbook/eda/section3/autocopl.htm
-def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False):
+def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False,
+        alpha=None):
     '''
     Autocorrelation function for 1d arrays.
 
@@ -352,6 +353,7 @@ def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False):
     nlags: int, optional
         Number of lags to return autocorrelation for.
     confint : scalar, optional
+        The use of confint is deprecated. See `alpha'.
         If a number is given, the confidence intervals for the given level are
         returned. For instance if confint=95, 95 % confidence intervals are
         returned where the standard deviation is computed according to
@@ -361,6 +363,11 @@ def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False):
         coefficient.  See q_stat for more information.
     fft : bool, optional
         If True, computes the ACF via FFT.
+    alpha : scalar, optional
+        If a number is given, the confidence intervals for the given level are
+        returned. For instance if alpha=.05, 95 % confidence intervals are
+        returned where the standard deviation is computed according to
+        1/sqrt(len(x))
 
     Returns
     -------
@@ -403,11 +410,23 @@ def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False):
     if not (confint or qstat):
         return acf
     if not confint is None:
+        import warnings
+        warnings.warn("confint is deprecated. Please use the alpha keyword",
+                      FutureWarning)
         varacf = np.ones(nlags+1)/nobs
         varacf[0] = 0
         varacf[1] = 1./nobs
         varacf[2:] *= 1 + 2*np.cumsum(acf[1:-1]**2)
         interval = stats.norm.ppf(1-(100-confint)/200.)*np.sqrt(varacf)
+        confint = np.array(zip(acf-interval, acf+interval))
+        if not qstat:
+            return acf, confint
+    if alpha is not None:
+        varacf = np.ones(nlags+1)/nobs
+        varacf[0] = 0
+        varacf[1] = 1./nobs
+        varacf[2:] *= 1 + 2*np.cumsum(acf[1:-1]**2)
+        interval = stats.norm.ppf(1-alpha/2.)*np.sqrt(varacf)
         confint = np.array(zip(acf-interval, acf+interval))
         if not qstat:
             return acf, confint
@@ -536,8 +555,8 @@ def pacf(x, nlags=40, method='ywunbiased', alpha=None):
         raise ValueError('method not available')
     if alpha is not None:
         varacf = 1./len(x)
-        interval = stats.norm.ppf(1. - alpha * np.sqrt(varacf))
-        confint = (ret-interval, ret+interval)
+        interval = stats.norm.ppf(1. - alpha/2.) * np.sqrt(varacf)
+        confint = np.array(zip(ret-interval, ret+interval))
         return ret, confint
     else:
         return ret
