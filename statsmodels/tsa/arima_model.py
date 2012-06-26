@@ -1311,7 +1311,7 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         else:
             order = str((k_ar, k_diff, k_ma))
         top_left = [('Dep. Variable:', None),
-                    ('Model:', model.__class__.__name__ + order),
+                    ('Model:', [model.__class__.__name__ + order]),
                     ('Method:', [method]),
                     ('Date:', None),
                     ('Time:', None),
