@@ -1103,20 +1103,29 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
 
     @cache_readonly
     def arfreq(self):
+        """
+        Returns the frequency of the AR roots.
+
+        This is the solution, x, to z = |z|*exp(2j*np.pi*x) where z are the
+        roots.
+        """
         z = self.arroots
-        r = np.abs(z)
-        func = lambda x : (r*np.exp(2j*pi*np.array(x))) - z
-        return optimize.broyden1(func, zeros_like(z, dtype=float)+.1,
-                f_tol=1e-8).real
+        if not z.size:
+            return
+        return np.arctan2(z.imag, z.real) / (2*pi)
 
     @cache_readonly
     def mafreq(self):
-        z = self.maroots
-        r = np.abs(z)
-        func = lambda x : (r*np.exp(2j*pi*np.array(x))) - z
-        return optimize.broyden1(func, zeros_like(z, dtype=float)+.1,
-                f_tol=1e-8).real
+        """
+        Returns the frequency of the MA roots.
 
+        This is the solution, x, to z = |z|*exp(2j*np.pi*x) where z are the
+        roots.
+        """
+        z = self.maroots
+        if not z.size:
+            return
+        return np.arctan2(z.imag, z.real) / (2*pi)
 
     @cache_readonly
     def arparams(self):
@@ -1296,8 +1305,13 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         else:
             sample = str(start) + ' - ' + str(len(self._data._orig_endog))
 
+        k_ar, k_ma = self.k_ar, self.k_ma
+        if not k_diff:
+            order = str((k_ar, k_ma))
+        else:
+            order = str((k_ar, k_diff, k_ma))
         top_left = [('Dep. Variable:', None),
-                    ('Model:', None),
+                    ('Model:', model.__class__.__name__ + order),
                     ('Method:', [method]),
                     ('Date:', None),
                     ('Time:', None),
@@ -1320,17 +1334,24 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
 
         # Make the roots table
         from statsmodels.iolib.table import SimpleTable
-        arroots = self.arroots
-        arfreq = self.arfreq
-        maroots = self.maroots
-        mafreq = self.mafreq
-        arstubs = ["AR.%d" % i for i in range(1, self.k_ar + 1)]
-        mastubs = ["MA.%d" % i for i in range(1, self.k_ma + 1)]
-        stubs = arstubs + mastubs
 
-        roots = np.r_[arroots, maroots]
+        if k_ma and k_ar:
+            arstubs = ["AR.%d" % i for i in range(1, k_ar + 1)]
+            mastubs = ["MA.%d" % i for i in range(1, k_ma + 1)]
+            stubs = arstubs + mastubs
+            roots = np.r_[self.arroots, self.maroots]
+            freq = np.r_[self.arfreq, self.mafreq]
+        elif k_ma:
+            mastubs = ["MA.%d" % i for i in range(1, k_ma + 1)]
+            stubs = mastubs
+            roots = self.maroots
+            freq = self.mafreq
+        elif k_ar:
+            arstubs = ["AR.%d" % i for i in range(1, k_ar + 1)]
+            stubs = arstubs
+            roots = self.arroots
+            freq = self.arfreq
         modulus = np.abs(roots)
-        freq = np.r_[arfreq, mafreq]
         data = np.column_stack((roots.real, roots.imag, modulus, freq))
         roots_table = SimpleTable(data,
                 headers=['           Real', '         Imaginary',
