@@ -125,7 +125,7 @@ class TestACF(CheckCorrGram):
         self.acf = self.results['acvar']
         #self.acf = np.concatenate(([1.], self.acf))
         self.qstat = self.results['Q1']
-        self.res1 = acf(self.x, nlags=40, qstat=True, confint=95)
+        self.res1 = acf(self.x, nlags=40, qstat=True, alpha=.05)
         self.confint_res = self.results[['acvar_lb','acvar_ub']].view((float,
                                                                             2))
 
@@ -168,8 +168,13 @@ class TestPACF(CheckCorrGram):
         self.pacfyw = self.results['PACYW']
 
     def test_ols(self):
-        pacfols = pacf_ols(self.x, nlags=40)
+        pacfols, confint = pacf(self.x, nlags=40, alpha=.05, method="ols")
         assert_almost_equal(pacfols[1:], self.pacfols, DECIMAL_6)
+        centered = confint - confint.mean(1)[:,None]
+        # from edited Stata ado file
+        res = [[-.1375625, .1375625]] * 40
+        assert_almost_equal(centered[1:41], res, DECIMAL_6)
+
 
     def test_yw(self):
         pacfyw = pacf_yw(self.x, nlags=40, method="mle")
