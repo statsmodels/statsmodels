@@ -102,6 +102,11 @@ class SysGLS(SysModel):
         Default is None.  Correction for the degrees of freedom
         should be specified for small samples.  See the notes for more
         information.
+    restrictMatrix : matrix (M x sum(K_i))
+        The restriction matrix on parameters. M represents the number of linear
+        constraints on parameters. See Notes.
+    restrictVect : column vector (M x 1)
+        The RHS restriction vector. See Notes.
 
     Attributes
     ----------
@@ -109,16 +114,24 @@ class SysGLS(SysModel):
         The transpose of the Cholesky decomposition of the pseudoinverse of
         the contemporaneous covariance matrix.
     wendog : ndarray (G*N) x 1
-        endogenous variables whitened by cholsigmainv and stacked into a single column.
+        endogenous variables whitened by cholsigmainv and stacked into a singlei
+        column.
     wexog : matrix (is sparse?)
         whitened exogenous variables sp_exog.
     pinv_wexog : array
         `pinv_wexog` is the Moore-Penrose pseudoinverse of `wexog`.
     normalized_cov_params : array
+
+    Notes
+    -----
+    Linear restrictions on parameters are specified with the following equation:
+        restrictMatrix * beta = restrictVect
     '''
 
-    def __init__(self, sys, sigma=None):
+    def __init__(self, sys, sigma=None, restrictMatrix=None, restrictVect=None):
         neqs = len(sys)
+
+        ## Handle sigma
         if sigma is None:
             self.sigma = np.diag(np.ones(neqs))
         # sigma = scalar
@@ -132,6 +145,16 @@ class SysGLS(SysModel):
             self.sigma = sigma
         else:
             raise ValueError("sigma is not correctly specified")
+
+        ## Handle restrictions
+        self.isrestricted = not(restrictMatrix == None and restrictVect == None)
+        # TODO: check shapes of restrictMatrix and restrictVect
+        if self.isrestricted:
+            self.restrictMatrix = restrictMatrix
+            self.restrictVect = restrictVect
+            self.nconstraints = restrictVect.shape[0]
+            self.ncoeffs = restrictMatrix.shape[1]
+
         super(SysGLS, self).__init__(sys)
 
     def initialize(self):
@@ -174,8 +197,29 @@ class SysGLS(SysModel):
         diagonal structure. See [1] for better algorithms.
         [1] http://www.irisa.fr/aladin/wg-statlin/WORKSHOPS/RENNES02/SLIDES/Foschi.pdf
         '''
-        beta = np.dot(self.pinv_wexog, self.wendog)
-        normalized_cov_params = np.dot(self.pinv_wexog, self.pinv_wexog.T)
+        if self.isrestricted:
+            rwendog = np.zeros((self.ncoeffs + self.nconstraints,))
+            rwendog[:self.ncoeffs] = np.dot(self.wexog.T, self.wendog)
+            rwendog[self.ncoeffs:] = self.restrictVect
+
+            rwexog = np.zeros((self.ncoeffs + self.nconstraints,
+                self.ncoeffs + self.nconstraints))
+            rwexog[:self.ncoeffs, :self.ncoeffs] = np.dot(self.wexog.T, 
+                    self.wexog)
+            rwexog[:self.ncoeffs, self.ncoeffs:] = self.restrictMatrix.T
+            rwexog[self.ncoeffs:, :self.ncoeffs] = self.restrictMatrix
+            rwexog[self.ncoeffs:, self.ncoeffs:] = np.zeros((self.nconstraints,
+                self.nconstraints))
+
+            pinv_rwexog = np.linalg.pinv(rwexog)
+
+            betaLambda = np.dot(pinv_rwexog, rwendog)
+            beta = betaLambda[:self.ncoeffs]
+            normalized_cov_params = pinv_rwexog[:self.ncoeffs, :self.ncoeffs]
+        else:
+            beta = np.dot(self.pinv_wexog, self.wendog)
+            normalized_cov_params = np.dot(self.pinv_wexog, self.pinv_wexog.T)
+            
         return SysResults(self, beta, normalized_cov_params)
 
     def predict(self, params, exog=None):
@@ -205,7 +249,8 @@ class SysWLS(SysGLS):
         Variances of each equation. If weights is a scalar then homoscedasticity
         is assumed. Default is None and uses a feasible WLS.
     '''
-    def __init__(self, sys, weights=None, dfk=None):
+    def __init__(self, sys, weights=None, dfk=None, restrictMatrix=None,
+            restrictVect=None):
         if not(dfk in (None, 'dfk1', 'dfk2')):
             raise ValueError('dfk is not correctly specified')
 
@@ -232,11 +277,13 @@ class SysWLS(SysGLS):
             else:
                 raise ValueError("weights is not correctly specified")
 
-        super(SysWLS, self).__init__(sys, sigma)
+        super(SysWLS, self).__init__(sys, sigma, restrictMatrix = restrictMatrix,
+                restrictVect = restrictVect)
 
 class SysOLS(SysWLS):
-    def __init__(self, sys):
-        super(SysOLS, self).__init__(sys)
+    def __init__(self, sys, restrictMatrix=None, restrictVect=None):
+        super(SysOLS, self).__init__(sys, weights=1.0, dfk=None,
+                restrictMatrix = restrictMatrix, restrictVect = restrictVect)
 
 class SysSUR(SysGLS):
     def __init__(self, sys, dfk=None):
