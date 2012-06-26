@@ -199,7 +199,7 @@ class SysGLS(SysModel):
         '''
         if self.isrestricted:
             rwendog = np.zeros((self.ncoeffs + self.nconstraints,))
-            rwendog[:self.ncoeffs] = np.dot(self.wexog.T, self.wendog)
+            rwendog[:self.ncoeffs] = np.squeeze(np.dot(self.wexog.T, self.wendog))
             rwendog[self.ncoeffs:] = self.restrictVect
 
             rwexog = np.zeros((self.ncoeffs + self.nconstraints,
@@ -281,8 +281,8 @@ class SysWLS(SysGLS):
                 restrictVect = restrictVect)
 
 class SysOLS(SysWLS):
-    def __init__(self, sys, restrictMatrix=None, restrictVect=None):
-        super(SysOLS, self).__init__(sys, weights=1.0, dfk=None,
+    def __init__(self, sys, dfk=None, restrictMatrix=None, restrictVect=None):
+        super(SysOLS, self).__init__(sys, weights=1.0, dfk=dfk,
                 restrictMatrix = restrictMatrix, restrictVect = restrictVect)
 
 class SysSUR(SysGLS):
