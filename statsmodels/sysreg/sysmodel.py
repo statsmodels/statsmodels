@@ -286,11 +286,12 @@ class SysOLS(SysWLS):
                 restrictMatrix = restrictMatrix, restrictVect = restrictVect)
 
 class SysSUR(SysGLS):
-    def __init__(self, sys, dfk=None):
+    def __init__(self, sys, dfk=None, restrictMatrix=None, restrictVect=None):
         if not(dfk in (None, 'dfk1', 'dfk2')):
             raise ValueError("dfk is not correctly specified")
 
-        super(SysSUR, self).__init__(sys, sigma=None)
+        super(SysSUR, self).__init__(sys, sigma=None, 
+                restrictMatrix=restrictMatrix, restrictVect=restrictVect)
         self.dfk = dfk
 
         # Compute sigma by OLS equation by equation
@@ -307,7 +308,8 @@ class SysSUR(SysGLS):
     def fit(self, igls=False, tol=1e-5, maxiter=100):
         if not(igls):
             return super(SysSUR, self).fit()
-
+        
+        # TODO : add support for iterated restricted SUR
         betas = [np.dot(self.pinv_wexog, self.wendog), np.inf]
         iterations = 1
         
