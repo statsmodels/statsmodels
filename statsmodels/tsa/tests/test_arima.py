@@ -29,7 +29,20 @@ y_arma = np.genfromtxt(open(current_path + '/results/y_arma_data.csv', "rb"),
         delimiter=",", skip_header=1, dtype=float)
 
 cpi_dates = dates_from_range('1959Q1', '2009Q3')
+cpi_predict_dates = dates_from_range('2009Q3', '2015Q4')
 sun_dates = dates_from_range('1700', '2008')
+sun_predict_dates = dates_from_range('2008', '2033')
+
+try:
+    from pandas import DatetimeIndex
+    cpi_dates = DatetimeIndex(cpi_dates, freq='infer')
+    sun_dates = DatetimeIndex(sun_dates, freq='infer')
+    cpi_predict_dates = DatetimeIndex(cpi_predict_dates, freq='infer')
+    sun_predict_dates = DatetimeIndex(sun_predict_dates, freq='infer')
+except ImportError as err:
+    pass
+
+
 
 def test_compare_arma():
     #this is a preliminary test to compare arma_kf, arma_cond_ls and arma_cond_mle
@@ -687,7 +700,7 @@ def test_arima_predict_mle_dates():
     start, end = 202, 227
     fv = res1.predict('2009Q3', '2015Q4', typ='levels')
     assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
-    assert_equal(res1._data.predict_dates, dates_from_range('2009Q3','2015Q4'))
+    assert_equal(res1._data.predict_dates, cpi_predict_dates)
 
     # make sure dynamic works
 
@@ -717,7 +730,7 @@ def test_arma_predict_mle_dates():
     start, end = 308, 333
     _ = mod._get_predict_start('2008', False)
     _ = mod._get_predict_end('2033')
-    assert_equal(mod._data.predict_dates, dates_from_range('2008', '2033'))
+    assert_equal(mod._data.predict_dates, sun_predict_dates)
 
 
 def test_arima_predict_css_dates():
@@ -748,7 +761,7 @@ def test_arima_predict_css_dates():
     start, end = 202, 227
     fv = res1.model.predict(params, '2009Q3', '2015Q4', typ='levels')
     assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
-    assert_equal(res1._data.predict_dates, dates_from_range('2009Q3','2015Q4'))
+    assert_equal(res1._data.predict_dates, cpi_predict_dates)
 
     # make sure dynamic works
     start, end = 5, 51
