@@ -27,7 +27,7 @@ y_arma = np.genfromtxt(open(current_path + '/results/y_arma_data.csv', "rb"),
         delimiter=",", skip_header=1, dtype=float)
 
 
-def test_compare_arma():
+def xest_compare_arma():
     #this is a preliminary test to compare arma_kf, arma_cond_ls and arma_cond_mle
     #the results returned by the fit methods are incomplete
     #for now without random.seed
