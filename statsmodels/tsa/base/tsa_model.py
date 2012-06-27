@@ -16,25 +16,33 @@ def _check_freq(freq):
         raise ValueError("freq %s not understood" % freq)
     return freq
 
+_tsa_doc = """
+%(model)s
+
+Parameters
+----------
+%(params)s
+dates : array-like of datetime, optional
+    An array-like object of datetime objects. If a pandas object is given
+    for endog or exog, it is assumed to have a DateIndex.
+freq : str, {'B', 'D', 'W', 'M', 'A', 'Q'}, optional
+    The frequency of the time-series. This is not optional if dates are given
+    but this will soon be unnecessary.
+%(extra)s
+"""
+
+_model_doc = "Timeseries model base class"
+
+_generic_params = """endog
+exog
+"""
+
 #REPLACE frequencies with either timeseries or pandas conventions
 class TimeSeriesModel(base.LikelihoodModel):
-    """
-    Timeseries model base class
 
-    Parameters
-    ----------
-    endog
-    exog
-    dates
-    freq : str {'B','D','W','M','A', 'Q'}
-        'B' - business day, ie., Mon. - Fri.
-        'D' - daily
-        'W' - weekly
-        'M' - monthly
-        'A' - annual
-        'Q' - quarterly
+    __doc__ = _tsa_doc % {"model" : _model_doc, "params" : _generic_params,
+                          "extra" : ""}
 
-    """
     def __init__(self, endog, exog=None, dates=None, freq=None):
         super(TimeSeriesModel, self).__init__(endog, exog)
         self._init_dates(dates, freq)
@@ -82,6 +90,20 @@ class TimeSeriesModel(base.LikelihoodModel):
         """
         return datetools.date_parser(date)
 
+    def _set_predict_start_date(self, start):
+        dates = self._data.dates
+        if dates is None:
+            return
+        if start > len(dates):
+            raise ValueError("Start must be <= len(endog)")
+        if start == len(dates):
+            self._data.predict_start = datetools._date_from_idx(dates[-1],
+                                                    start, self._data.freq)
+        elif start < len(dates):
+            self._data.predict_start = dates[start]
+        else:
+            raise ValueError("Start must be <= len(dates)")
+
     def _get_predict_start(self, start):
         """
         Returns the index of the given start date. Subclasses should define
@@ -106,14 +128,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                 raise ValueError("Start must be in dates. Got %s | %s" %
                         (str(start), str(dtstart)))
 
-        if isinstance(start, int) and dates is not None:
-            if start >= len(dates):
-                raise ValueError("Start must be <= len(endog)")
-            self._data.predict_start = dates[start]
-
-        if start >= len(self.endog):
-            raise ValueError("Start must be <= len(endog)")
-
+        self._set_predict_start_date(start)
         return start
 
 
@@ -124,8 +139,8 @@ class TimeSeriesModel(base.LikelihoodModel):
         """
 
         out_of_sample = 0 # will be overwritten if needed
-        if end is None:
-            end = len(self.endog) - 1
+        if end is None: # use data for ARIMA - endog changes
+            end = len(self._data.endog) - 1
 
         dates = self._data.dates
         if isinstance(end, str):
@@ -141,7 +156,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                     end = dates.get_loc(dtend)
             except KeyError, err: # end is greater than dates[-1]...probably
                 if dtend > self._data.dates[-1]:
-                    end = len(self.endog) - 1
+                    end = len(self._data.endog) - 1
                     freq = self._data.freq
                     out_of_sample = datetools._idx_from_dates(dates[-1], dtend,
                                             freq)
@@ -153,7 +168,7 @@ class TimeSeriesModel(base.LikelihoodModel):
             try:
                 self._data.predict_end = dates[end]
             except IndexError, err:
-                nobs = len(self.endog) - 1 # as an index
+                nobs = len(self._data.endog) - 1 # as an index
                 out_of_sample = end - nobs
                 end = nobs
                 freq = self._data.freq
@@ -162,7 +177,7 @@ class TimeSeriesModel(base.LikelihoodModel):
             self._make_predict_dates()
 
         elif isinstance(end, int):
-            nobs = len(self.endog) - 1 # is an index
+            nobs = len(self._data.endog) - 1 # is an index
             if end > nobs:
                 out_of_sample = end - nobs
                 end = nobs

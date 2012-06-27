@@ -59,14 +59,21 @@ def hpfilter(X, lamb=1600):
         Filter for the Frequency of Observations." `The Review of Economics and
         Statistics`, 84(2), 371-80.
     """
-    X = np.asarray(X)
+    X = np.asarray(X, float)
     if X.ndim > 1:
         X = X.squeeze()
     nobs = len(X)
     I = speye(nobs,nobs)
     offsets = np.array([0,1,2])
-    data = np.repeat([[1],[-2],[1]], nobs, axis=1)
+    data = np.repeat([[1.],[-2.],[1.]], nobs, axis=1)
     K = dia_matrix((data, offsets), shape=(nobs-2,nobs))
-    trend = spsolve(I+lamb*K.T.dot(K), X)
+
+    if X.dtype != np.dtype('<f8'):
+        #scipy umfpack bug on Big Endian machines
+        use_umfpack = False
+    else:
+        use_umfpack = True
+
+    trend = spsolve(I+lamb*K.T.dot(K), X, use_umfpack=use_umfpack)
     cycle = X-trend
     return cycle, trend

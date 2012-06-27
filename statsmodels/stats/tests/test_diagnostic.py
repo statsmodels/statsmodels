@@ -392,15 +392,15 @@ class TestDiagnosticG(object):
                       chi2value=4.66794408358942, pvalue=0.03073069384028677,
                       df=(4,3,1))
         lrt = res.compare_lr_test(res3)
-        assert_almost_equal(lrt[0], lrtest['chi2value'], decimal=12)
-        assert_almost_equal(lrt[1], lrtest['pvalue'], decimal=12)
+        assert_almost_equal(lrt[0], lrtest['chi2value'], decimal=11)
+        assert_almost_equal(lrt[1], lrtest['pvalue'], decimal=11)
 
         waldtest = dict(fvalue=4.65216373312492, pvalue=0.03221346195239025,
                         df=(199,200,1))
 
         wt = res.compare_f_test(res3)
-        assert_almost_equal(wt[0], waldtest['fvalue'], decimal=12)
-        assert_almost_equal(wt[1], waldtest['pvalue'], decimal=12)
+        assert_almost_equal(wt[0], waldtest['fvalue'], decimal=11)
+        assert_almost_equal(wt[1], waldtest['pvalue'], decimal=11)
 
 
     def test_compare_nonnested(self):
@@ -570,11 +570,11 @@ class TestDiagnosticG(object):
                     parameters=(), distr='-')
 
         ad1 = smsdia.normal_ad(res.resid)
-        compare_t_est(ad1, adr1, decimal=(12, 15))
+        compare_t_est(ad1, adr1, decimal=(11, 13))
         ad2 = smsdia.normal_ad(res.resid**2)
         assert_(np.isinf(ad2[0]))
         ad3 = smsdia.normal_ad(res.resid[:20])
-        compare_t_est(ad3, adr3, decimal=(13, 13))
+        compare_t_est(ad3, adr3, decimal=(11, 12))
 
 
     def test_influence(self):
