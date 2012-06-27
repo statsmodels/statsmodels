@@ -1,5 +1,5 @@
 from .ar_model import AR
-from .arima_model import ARMA
+from .arima_model import ARMA, ARIMA
 import vector_ar as var
 from .vector_ar.var_model import VAR
 from .vector_ar.svar_model import SVAR
