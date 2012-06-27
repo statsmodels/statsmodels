@@ -146,7 +146,12 @@ def parse_lutkepohl_data(path): # pragma: no cover
     start_date = offset.rollforward(datetime(year, 1, 1)) + inc
 
     offset = offsets[freq]
-    date_range = pandas.DateRange(start_date, offset=offset, periods=n)
+    try:
+        from pandas import DatetimeIndex
+        date_range = DatetimeIndex(start=start_date, freq=offset, periods=n)
+    except ImportError as err:
+        from pandas import DateRange
+        date_range = DateRange(start_date, offset=offset, periods=n)
 
     return data, date_range
 
@@ -208,7 +213,7 @@ def eigval_decomp(sym_array):
     Returns
     -------
     W: array of eigenvectors
-    eigva: list of eigenvalues 
+    eigva: list of eigenvalues
     k: largest eigenvector
     """
     #check if symmetric, do not include shock period

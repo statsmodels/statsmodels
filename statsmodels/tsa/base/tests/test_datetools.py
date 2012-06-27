@@ -48,17 +48,34 @@ def test_regex_matching_quarter():
     npt.assert_equal(date_parser(t3), result)
     npt.assert_equal(date_parser(t4), result)
 
-def test_infer_freq():
-    from pandas import DateRange
+try:
+    from pandas import DatetimeIndex
+    _pandas_08x = True
+except ImportError as err:
+    _pandas_08x = False
     d1 = datetime(2008, 12, 31)
     d2 = datetime(2012, 9, 30)
 
-    b = DateRange(d1, d2, offset=_freq_to_pandas['B']).values
-    d = DateRange(d1, d2, offset=_freq_to_pandas['D']).values
-    w = DateRange(d1, d2, offset=_freq_to_pandas['W']).values
-    m = DateRange(d1, d2, offset=_freq_to_pandas['M']).values
-    a = DateRange(d1, d2, offset=_freq_to_pandas['A']).values
-    q = DateRange(d1, d2, offset=_freq_to_pandas['Q']).values
+def test_infer_freq():
+    d1 = datetime(2008, 12, 31)
+    d2 = datetime(2012, 9, 30)
+
+    if _pandas_08x:
+        b = DatetimeIndex(start=d1, end=d2, freq=_freq_to_pandas['B']).values
+        d = DatetimeIndex(start=d1, end=d2, freq=_freq_to_pandas['D']).values
+        w = DatetimeIndex(start=d1, end=d2, freq=_freq_to_pandas['W']).values
+        m = DatetimeIndex(start=d1, end=d2, freq=_freq_to_pandas['M']).values
+        a = DatetimeIndex(start=d1, end=d2, freq=_freq_to_pandas['A']).values
+        q = DatetimeIndex(start=d1, end=d2, freq=_freq_to_pandas['Q']).values
+    else:
+        from pandas import DateRange
+
+        b = DateRange(d1, d2, offset=_freq_to_pandas['B']).values
+        d = DateRange(d1, d2, offset=_freq_to_pandas['D']).values
+        w = DateRange(d1, d2, offset=_freq_to_pandas['W']).values
+        m = DateRange(d1, d2, offset=_freq_to_pandas['M']).values
+        a = DateRange(d1, d2, offset=_freq_to_pandas['A']).values
+        q = DateRange(d1, d2, offset=_freq_to_pandas['Q']).values
 
     assert _infer_freq(b[2:5]) == 'B'
     assert _infer_freq(b[:3]) == 'D'
