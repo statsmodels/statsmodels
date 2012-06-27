@@ -98,7 +98,7 @@ def test_shapiro():
 
     st_pv_R = np.array([0.939984787255526, 0.239621898000460])
     sh = shapiro(x)
-    assert_almost_equal(sh, st_pv_R, 6)
+    assert_almost_equal(sh, st_pv_R, 4)
 
     #st is ok -7.15e-06, pval agrees at -3.05e-10
     st_pv_R = np.array([5.799574255943298e-01, 1.838456834681376e-06 * 1e4])
