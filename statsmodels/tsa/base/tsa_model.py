@@ -16,25 +16,33 @@ def _check_freq(freq):
         raise ValueError("freq %s not understood" % freq)
     return freq
 
+_tsa_doc = """
+%(model)s
+
+Parameters
+----------
+%(params)s
+dates : array-like of datetime, optional
+    An array-like object of datetime objects. If a pandas object is given
+    for endog or exog, it is assumed to have a DateIndex.
+freq : str, {'B', 'D', 'W', 'M', 'A', 'Q'}, optional
+    The frequency of the time-series. This is not optional if dates are given
+    but this will soon be unnecessary.
+%(extra)s
+"""
+
+_model_doc = "Timeseries model base class"
+
+_generic_params = """endog
+exog
+"""
+
 #REPLACE frequencies with either timeseries or pandas conventions
 class TimeSeriesModel(base.LikelihoodModel):
-    """
-    Timeseries model base class
 
-    Parameters
-    ----------
-    endog
-    exog
-    dates
-    freq : str {'B','D','W','M','A', 'Q'}
-        'B' - business day, ie., Mon. - Fri.
-        'D' - daily
-        'W' - weekly
-        'M' - monthly
-        'A' - annual
-        'Q' - quarterly
+    __doc__ = _tsa_doc % {"model" : _model_doc, "params" : _generic_params,
+                          "extra" : ""}
 
-    """
     def __init__(self, endog, exog=None, dates=None, freq=None):
         super(TimeSeriesModel, self).__init__(endog, exog)
         self._init_dates(dates, freq)

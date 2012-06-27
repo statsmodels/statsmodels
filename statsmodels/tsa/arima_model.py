@@ -30,6 +30,25 @@ try:
 except:
     fast_kalman = 0
 
+_arma_params = """endog : array-like
+    The endogenous variable.
+exog : array-like, optional
+    An optional arry of exogenous variables. This should *not* include a
+    constant or trend. You can specify this in the `fit` method."""
+
+_arma_model = "Autoregressive Moving Average ARMA(p,q) Model"
+
+_arima_model = "Autoregressive Integrated Moving Average ARIMA(p,d,q) Model"
+
+_arima_params = """endog : array-like
+    The endogenous variable.
+order : iterable
+    The (p,d,q) order of the model for the number of AR parameters,
+    differences, and MA parameters to use.
+exog : array-like, optional
+    An optional arry of exogenous variables. This should *not* include a
+    constant or trend. You can specify this in the `fit` method."""
+
 def _check_arima_start(start, k_ar, k_diff, method, dynamic):
     if start < 0:
         raise ValueError("The start index %d of the original series "
@@ -190,17 +209,10 @@ def _make_arma_exog(endog, exog, trend):
     return k_trend, exog
 
 class ARMA(tsbase.TimeSeriesModel):
-    """
-    Autoregressive Moving Average ARMA(p,q) Model
 
-    Parameters
-    ----------
-    endog : array-like
-        The endogenous variable.
-    exog : array-like, optional
-        An optional arry of exogenous variables. This should *not* include a
-        constant or trend. You can specify this in the `fit` method.
-    """
+    __doc__ = tsbase._tsa_doc % {"model" : _arma_model,
+                    "params" : _arma_params, "extra" : ""}
+
     def __init__(self, endog, exog=None, dates=None, freq=None):
         super(ARMA, self).__init__(endog, exog, dates, freq)
         if exog is not None:
@@ -693,9 +705,10 @@ class ARMA(tsbase.TimeSeriesModel):
 #so model methods are not the same on unfit models as fit ones
 #starting to think that order of model should be put in instantiation...
 class ARIMA(ARMA):
-    """
-    Autoregressive Integrated Moving Average ARIMA(p,d,q) Model
-    """ + '\n'.join(ARMA.__doc__.split('\n')[2:])
+
+    __doc__ = tsbase._tsa_doc % {"model" : _arima_model,
+            "params" : _arima_params, "extra" : ""}
+
     def __init__(self, endog, order, exog=None, dates=None, freq=None):
         super(ARIMA, self).__init__(endog, exog, dates, freq)
         p,d,q = order
