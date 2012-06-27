@@ -162,22 +162,26 @@ class SysGLS(SysModel):
         self.wexog = self.whiten(self.sp_exog)
         self.wendog = self.whiten(self.endog.reshape(-1,1))
         self.pinv_wexog = np.linalg.pinv(self.wexog)
+        
+        if self.isrestricted:
+            rwendog = np.zeros((self.ncoeffs + self.nconstraints,))
+            rwendog[:self.ncoeffs] = np.squeeze(np.dot(self.wexog.T, self.wendog))
+            rwendog[self.ncoeffs:] = self.restrictVect
+            self.rwendog = rwendog
 
-    def _compute_sigma(self, resids):
-        '''
-        Parameters
-        ----------
-        resids : ndarray (N x G)
-            OLS residuals for each equation stacked in column.
-        '''
-        s = np.dot(resids.T, resids)
-        if self.dfk is None:
-            return s / self.nobs
-        elif self.dfk == 'dfk1':
-            return s / self.div_dfk1
-        else:
-            return s / self.div_dfk2
+            rwexog = np.zeros((self.ncoeffs + self.nconstraints,
+                self.ncoeffs + self.nconstraints))
+            rwexog[:self.ncoeffs, :self.ncoeffs] = np.dot(self.wexog.T, 
+                    self.wexog)
+            rwexog[:self.ncoeffs, self.ncoeffs:] = self.restrictMatrix.T
+            rwexog[self.ncoeffs:, :self.ncoeffs] = self.restrictMatrix
+            rwexog[self.ncoeffs:, self.ncoeffs:] = np.zeros((self.nconstraints,
+                self.nconstraints))
+            self.rwexog = rwexog
 
+            pinv_rwexog = np.linalg.pinv(rwexog)
+            self.pinv_rwexog = pinv_rwexog
+    
     def whiten(self, X):
         '''
         SysGLS whiten method
@@ -189,7 +193,7 @@ class SysGLS(SysModel):
         '''
         return np.dot(np.kron(self.cholsigmainv,np.eye(self.nobs)), X)
 
-    def fit(self):
+    def _compute_res(self):
         '''
         Notes
         -----
@@ -198,28 +202,40 @@ class SysGLS(SysModel):
         [1] http://www.irisa.fr/aladin/wg-statlin/WORKSHOPS/RENNES02/SLIDES/Foschi.pdf
         '''
         if self.isrestricted:
-            rwendog = np.zeros((self.ncoeffs + self.nconstraints,))
-            rwendog[:self.ncoeffs] = np.squeeze(np.dot(self.wexog.T, self.wendog))
-            rwendog[self.ncoeffs:] = self.restrictVect
-
-            rwexog = np.zeros((self.ncoeffs + self.nconstraints,
-                self.ncoeffs + self.nconstraints))
-            rwexog[:self.ncoeffs, :self.ncoeffs] = np.dot(self.wexog.T, 
-                    self.wexog)
-            rwexog[:self.ncoeffs, self.ncoeffs:] = self.restrictMatrix.T
-            rwexog[self.ncoeffs:, :self.ncoeffs] = self.restrictMatrix
-            rwexog[self.ncoeffs:, self.ncoeffs:] = np.zeros((self.nconstraints,
-                self.nconstraints))
-
-            pinv_rwexog = np.linalg.pinv(rwexog)
-
-            betaLambda = np.dot(pinv_rwexog, rwendog)
+            betaLambda = np.dot(self.pinv_rwexog, self.rwendog)
             beta = betaLambda[:self.ncoeffs]
-            normalized_cov_params = pinv_rwexog[:self.ncoeffs, :self.ncoeffs]
+            normalized_cov_params = self.pinv_rwexog[:self.ncoeffs, :self.ncoeffs]
         else:
-            beta = np.dot(self.pinv_wexog, self.wendog)
+            beta = np.squeeze(np.dot(self.pinv_wexog, self.wendog))
             normalized_cov_params = np.dot(self.pinv_wexog, self.pinv_wexog.T)
             
+        return (beta, normalized_cov_params)
+
+    def fit(self, igls=False, tol=1e-5, maxiter=100):
+        res = self._compute_res()
+        if not(igls):
+            return SysResults(self, res[0], res[1])
+        
+        # TODO : add support for iterated restricted SUR
+        betas = [res[0], np.inf]
+        iterations = 1
+        
+        while np.any(np.abs(betas[0] - betas[1]) > tol) \
+                and iterations < maxiter:
+            # Update sigma
+            fittedvalues = np.dot(self.sp_exog,betas[0]).reshape(self.neqs,-1).T
+            resids = self.endog.T - fittedvalues
+            self.sigma = self._compute_sigma(resids)
+            # Update attributes
+            self.initialize()
+            # Next iteration
+            res = self._compute_res()
+            betas = [res[0], betas[0]]
+            iterations += 1
+       
+        self.iterations = iterations
+        beta = betas[0]
+        normalized_cov_params = self._compute_res()[1]
         return SysResults(self, beta, normalized_cov_params)
 
     def predict(self, params, exog=None):
@@ -280,6 +296,21 @@ class SysWLS(SysGLS):
         super(SysWLS, self).__init__(sys, sigma, restrictMatrix = restrictMatrix,
                 restrictVect = restrictVect)
 
+    def _compute_sigma(self, resids):
+        '''
+        Parameters
+        ----------
+        resids : ndarray (N x G)
+            Residuals for each equation stacked in column.
+        '''
+        s = np.diag(np.diag(np.dot(resids.T, resids)))
+        if self.dfk is None:
+            return s / self.nobs
+        elif self.dfk == 'dfk1':
+            return s / self.div_dfk1
+        else:
+            return s / self.div_dfk2
+
 class SysOLS(SysWLS):
     def __init__(self, sys, dfk=None, restrictMatrix=None, restrictVect=None):
         super(SysOLS, self).__init__(sys, weights=1.0, dfk=dfk,
@@ -304,31 +335,20 @@ class SysSUR(SysGLS):
         self.sigma = self._compute_sigma(resids)
         self.initialize()
 
-    
-    def fit(self, igls=False, tol=1e-5, maxiter=100):
-        if not(igls):
-            return super(SysSUR, self).fit()
-        
-        # TODO : add support for iterated restricted SUR
-        betas = [np.dot(self.pinv_wexog, self.wendog), np.inf]
-        iterations = 1
-        
-        while np.any(np.abs(betas[0] - betas[1]) > tol) \
-                and iterations < maxiter:
-            # Update sigma
-            fittedvalues = np.dot(self.sp_exog,betas[0]).reshape(self.neqs,-1).T
-            resids = self.endog.T - fittedvalues
-            self.sigma = self._compute_sigma(resids)
-            # Update attributes
-            self.initialize()
-            # Next iteration
-            betas = [np.dot(self.pinv_wexog, self.wendog), betas[0]]
-            iterations += 1
-       
-        self.iterations = iterations
-        beta = betas[0]
-        normalized_cov_params = np.dot(self.pinv_wexog, self.pinv_wexog.T)
-        return SysResults(self, beta, normalized_cov_params)
+    def _compute_sigma(self, resids):
+        '''
+        Parameters
+        ----------
+        resids : ndarray (N x G)
+            Residuals for each equation stacked in column.
+        '''
+        s = np.dot(resids.T, resids)
+        if self.dfk is None:
+            return s / self.nobs
+        elif self.dfk == 'dfk1':
+            return s / self.div_dfk1
+        else:
+            return s / self.div_dfk2
 
 class SysSURI(SysOLS):
     '''
@@ -385,9 +405,8 @@ if __name__ == '__main__':
     eq2['exog'] = x2
     
     sys = [eq1, eq2]
-    old_sys = [y1,x1,y2,x2]
-
-    from statsmodels.sysreg.sysreg import SUR
-    s,p = SysSUR(sys),SUR(old_sys)
-    rs,rp = s.fit(igls=True), p.fit(igls=True)
+    resSUR = SysSUR(sys).fit()
+    resSURi = SysSUR(sys).fit(igls=True)
+    resWLS = SysWLS(sys).fit()
+    resWLSi = SysWLS(sys).fit(igls=True)
 

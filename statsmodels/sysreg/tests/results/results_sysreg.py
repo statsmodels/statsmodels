@@ -8,11 +8,11 @@ class Bunch(dict):
 
 sur = Bunch()
 sur.call = '''systemfit(formula = formula, method = "SUR", data = panel, methodResidCov = "noDfCor")'''
-sur.params = np.array([
+sur.params = np.squeeze(np.array([
      0.9979992, 0.06886083, 0.3083878, -21.1374, 0.03705313, 0.1286866, 
      -168.1134, 0.1219063, 0.3821666, 62.25631, 0.1214024, 0.3691114, 
      1.407487, 0.05635611, 0.04290209
-    ]).reshape(15,1, order='F')
+    ]).reshape(15,1, order='F'))
 sur.cov_params = np.array([
      133.7852, -0.1840371, 0.01059675, -31.21063, 0.01337293, 0.01044742, 
      -161.6206, 0.0343593, -0.002197769, 158.6378, -0.06916984, 
@@ -101,11 +101,11 @@ sur.equ1.cov_params = np.array([
     ]).reshape(3,3, order='F')
 sur.equ1.cov_params_rownames = ['(Intercept)', 'value', 'capital', ]
 sur.equ1.cov_params_colnames = ['(Intercept)', 'value', 'capital', ]
-sur.equ1.fittedvalues = np.array([
+sur.equ1.fittedvalues = np.squeeze(np.array([
      32.98547, 61.83516, 72.56515, 47.12665, 67.63205, 71.80774, 68.5076, 
      51.31181, 62.20854, 67.74787, 76.11978, 88.6971, 70.72036, 82.81307, 
      87.10292, 99.08188, 119.4633, 140.6773, 176.6952, 177.371
-    ]).reshape(20,1, order='F')
+    ]).reshape(20,1, order='F'))
 sur.equ1.terms = '''Chrysler_invest ~ Chrysler_value + Chrysler_capital'''
 sur.equ1.rank = 3
 sur.equ1.nCoef_sys = 15
@@ -133,11 +133,11 @@ sur.equ2.cov_params = np.array([
     ]).reshape(3,3, order='F')
 sur.equ2.cov_params_rownames = ['(Intercept)', 'value', 'capital', ]
 sur.equ2.cov_params_colnames = ['(Intercept)', 'value', 'capital', ]
-sur.equ2.fittedvalues = np.array([
+sur.equ2.fittedvalues = np.squeeze(np.array([
      34.82255, 66.98919, 97.91866, 74.54072, 84.67318, 81.88021, 75.24862, 
      74.73898, 84.85019, 82.72565, 94.38241, 105.2126, 98.98109, 108.2389, 
      111.4822, 121.8484, 132.6644, 149.3613, 169.7257, 195.5151
-    ]).reshape(20,1, order='F')
+    ]).reshape(20,1, order='F'))
 sur.equ2.terms = '''General.Electric_invest ~ General.Electric_value + General.Electric_capital'''
 sur.equ2.rank = 3
 sur.equ2.nCoef_sys = 15
@@ -165,11 +165,11 @@ sur.equ3.cov_params = np.array([
     ]).reshape(3,3, order='F')
 sur.equ3.cov_params_rownames = ['(Intercept)', 'value', 'capital', ]
 sur.equ3.cov_params_colnames = ['(Intercept)', 'value', 'capital', ]
-sur.equ3.fittedvalues = np.array([
+sur.equ3.fittedvalues = np.squeeze(np.array([
      208.2453, 420.2794, 548.5702, 252.2227, 435.4257, 477.1924, 484.2357, 
      343.427, 426.9885, 442.7958, 523.2972, 583.0448, 552.8092, 581.1657, 
      672.8126, 709.7192, 882.6026, 978.9525, 1272.014, 1364.599
-    ]).reshape(20,1, order='F')
+    ]).reshape(20,1, order='F'))
 sur.equ3.terms = '''General.Motors_invest ~ General.Motors_value + General.Motors_capital'''
 sur.equ3.rank = 3
 sur.equ3.nCoef_sys = 15
@@ -197,11 +197,11 @@ sur.equ4.cov_params = np.array([
     ]).reshape(3,3, order='F')
 sur.equ4.cov_params_rownames = ['(Intercept)', 'value', 'capital', ]
 sur.equ4.cov_params_colnames = ['(Intercept)', 'value', 'capital', ]
-sur.equ4.fittedvalues = np.array([
+sur.equ4.fittedvalues = np.squeeze(np.array([
      247.5132, 300.2828, 430.7577, 377.0541, 415.2984, 423.5218, 447.7405, 
      435.7832, 414.6501, 385.4872, 365.7911, 362.2243, 378.1208, 372.9127, 
      394.2292, 397.9648, 466.4802, 488.372, 539.0389, 566.277
-    ]).reshape(20,1, order='F')
+    ]).reshape(20,1, order='F'))
 sur.equ4.terms = '''US.Steel_invest ~ US.Steel_value + US.Steel_capital'''
 sur.equ4.rank = 3
 sur.equ4.nCoef_sys = 15
@@ -229,11 +229,11 @@ sur.equ5.cov_params = np.array([
     ]).reshape(3,3, order='F')
 sur.equ5.cov_params_rownames = ['(Intercept)', 'value', 'capital', ]
 sur.equ5.cov_params_colnames = ['(Intercept)', 'value', 'capital', ]
-sur.equ5.fittedvalues = np.array([
+sur.equ5.fittedvalues = np.squeeze(np.array([
      12.27691, 30.52156, 42.80857, 33.76598, 31.71523, 37.96421, 33.22941, 
      35.64298, 39.81141, 40.63853, 46.91736, 47.95589, 38.93935, 44.33515, 
      40.3917, 43.0696, 47.76244, 56.34706, 76.16779, 77.56886
-    ]).reshape(20,1, order='F')
+    ]).reshape(20,1, order='F'))
 sur.equ5.terms = '''Westinghouse_invest ~ Westinghouse_value + Westinghouse_capital'''
 sur.equ5.rank = 3
 sur.equ5.nCoef_sys = 15
