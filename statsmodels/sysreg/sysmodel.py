@@ -216,7 +216,6 @@ class SysGLS(SysModel):
         if not(igls):
             return SysResults(self, res[0], res[1])
         
-        # TODO : add support for iterated restricted SUR
         betas = [res[0], np.inf]
         iterations = 1
         
