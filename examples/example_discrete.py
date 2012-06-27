@@ -40,7 +40,11 @@ print probit_res.margeff()
 #Multinomial Logit
 #-----------------
 
-# Load data from the American National Election Studies:
+# Load data from the American National Election Studies.  We regress Partisan
+# Identification (scale from 0 to 6) on population size, age, expected vote,
+# political leanings, and the respondent's perception of Bill Clinton and Bob
+# Dole's political leanings. You can find a description of the dataset's
+# variables by typing ``print sm.datasets.anes96.NOTE``:
 anes_data = sm.datasets.anes96.load()
 anes_exog = anes_data.exog
 anes_exog[:,0] = np.log(anes_exog[:,0] + .1)
