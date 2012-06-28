@@ -611,6 +611,15 @@ def summary_params_2dflat(result, endog_names=None, exog_names=None, alpha=0.95,
     '''
 
     res = result
+    params = res.params
+    if params.ndim == 2: # we've got multiple equations
+        n_equ = params.shape[1]
+        if not len(endog_names) == params.shape[1]:
+            raise ValueError('endog_names has wrong length')
+    else:
+        if not len(endog_names) == len(params):
+            raise ValueError('endog_names has wrong length')
+        n_equ = 1
 
     #VAR doesn't have conf_int
     #params = res.params.T # this is a convention for multi-eq models
@@ -625,14 +634,11 @@ def summary_params_2dflat(result, endog_names=None, exog_names=None, alpha=0.95,
         endog_names = res.model.endog_names[1:]
 
     #check if we have the right length of names
-    if not len(endog_names) == res.params.shape[0]:
-        raise ValueError('endog_names has wrong length')
 
-    n_equ = res.params.shape[1]
     tables = []
     for eq in range(n_equ):
         restup = (res, res.params[:,eq], res.bse[:,eq], res.tvalues[:,eq],
-                  res.pvalues[:,eq], res.conf_int(alpha)[:,eq])
+                  res.pvalues[:,eq], res.conf_int(alpha)[eq])
 
         #not used anymore in current version
 #        if skip_headers2:
