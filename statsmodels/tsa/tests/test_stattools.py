@@ -125,17 +125,19 @@ class TestACF(CheckCorrGram):
         self.acf = self.results['acvar']
         #self.acf = np.concatenate(([1.], self.acf))
         self.qstat = self.results['Q1']
-        self.res1 = acf(self.x, nlags=40, qstat=True)
+        self.res1 = acf(self.x, nlags=40, qstat=True, alpha=.05)
+        self.confint_res = self.results[['acvar_lb','acvar_ub']].view((float,
+                                                                            2))
 
     def test_acf(self):
         assert_almost_equal(self.res1[0][1:41], self.acf, DECIMAL_8)
 
-#    def test_confint(self):
-#        pass
-#NOTE: need to figure out how to center confidence intervals
+    def test_confint(self):
+        centered = self.res1[1] - self.res1[1].mean(1)[:,None]
+        assert_almost_equal(centered[1:41], self.confint_res, DECIMAL_8)
 
     def test_qstat(self):
-        assert_almost_equal(self.res1[1][:40], self.qstat, DECIMAL_3)
+        assert_almost_equal(self.res1[2][:40], self.qstat, DECIMAL_3)
         # 3 decimal places because of stata rounding
 
 #    def pvalue(self):
@@ -166,8 +168,13 @@ class TestPACF(CheckCorrGram):
         self.pacfyw = self.results['PACYW']
 
     def test_ols(self):
-        pacfols = pacf_ols(self.x, nlags=40)
+        pacfols, confint = pacf(self.x, nlags=40, alpha=.05, method="ols")
         assert_almost_equal(pacfols[1:], self.pacfols, DECIMAL_6)
+        centered = confint - confint.mean(1)[:,None]
+        # from edited Stata ado file
+        res = [[-.1375625, .1375625]] * 40
+        assert_almost_equal(centered[1:41], res, DECIMAL_6)
+
 
     def test_yw(self):
         pacfyw = pacf_yw(self.x, nlags=40, method="mle")

@@ -339,7 +339,8 @@ def q_stat(x,nobs, type="ljungbox"):
 #NOTE: Changed unbiased to False
 #see for example
 # http://www.itl.nist.gov/div898/handbook/eda/section3/autocopl.htm
-def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False):
+def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False,
+        alpha=None):
     '''
     Autocorrelation function for 1d arrays.
 
@@ -351,14 +352,22 @@ def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False):
        If True, then denominators for autocovariance are n-k, otherwise n
     nlags: int, optional
         Number of lags to return autocorrelation for.
-    confint : float or None, optional
-        If True, the confidence intervals for the given level are returned.
-        For instance if confint=95, 95 % confidence intervals are returned.
+    confint : scalar, optional
+        The use of confint is deprecated. See `alpha'.
+        If a number is given, the confidence intervals for the given level are
+        returned. For instance if confint=95, 95 % confidence intervals are
+        returned where the standard deviation is computed according to
+        Bartlett's formula.
     qstat : bool, optional
         If True, returns the Ljung-Box q statistic for each autocorrelation
         coefficient.  See q_stat for more information.
     fft : bool, optional
         If True, computes the ACF via FFT.
+    alpha : scalar, optional
+        If a number is given, the confidence intervals for the given level are
+        returned. For instance if alpha=.05, 95 % confidence intervals are
+        returned where the standard deviation is computed according to
+        Bartlett's formula.
 
     Returns
     -------
@@ -398,24 +407,32 @@ def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False):
         acf /= acf[0]
         #acf = np.take(np.real(acf), range(1,nlags+1))
         acf = np.real(acf[:nlags+1])   #keep lag 0
-    if not (confint or qstat):
+    if not (confint or qstat or alpha):
         return acf
-# Based on Bartlett's formula for MA(q) processes
-#NOTE: not sure if this is correct, or needs to be centered or what.
-
     if not confint is None:
+        import warnings
+        warnings.warn("confint is deprecated. Please use the alpha keyword",
+                      FutureWarning)
         varacf = np.ones(nlags+1)/nobs
-        #varacf[1:] *= 1 + 2*np.cumsum(acf[1:-1]**2)
-        #TODO: test this, are my changes correct
         varacf[0] = 0
-        varacf[1:] *= 1 + 2*np.cumsum(acf[1:]**2)
+        varacf[1] = 1./nobs
+        varacf[2:] *= 1 + 2*np.cumsum(acf[1:-1]**2)
         interval = stats.norm.ppf(1-(100-confint)/200.)*np.sqrt(varacf)
+        confint = np.array(zip(acf-interval, acf+interval))
+        if not qstat:
+            return acf, confint
+    if alpha is not None:
+        varacf = np.ones(nlags+1)/nobs
+        varacf[0] = 0
+        varacf[1] = 1./nobs
+        varacf[2:] *= 1 + 2*np.cumsum(acf[1:-1]**2)
+        interval = stats.norm.ppf(1-alpha/2.)*np.sqrt(varacf)
         confint = np.array(zip(acf-interval, acf+interval))
         if not qstat:
             return acf, confint
     if qstat:
         qstat, pvalue = q_stat(acf[1:], nobs=nobs)  #drop lag 0
-        if confint is not None:
+        if (confint is not None or alpha is not None):
             return acf, confint, qstat, pvalue
         else:
             return acf, qstat
@@ -427,7 +444,7 @@ def pacf_yw(x, nlags=40, method='unbiased'):
     ----------
     x : 1d array
         observations of time series for which pacf is calculated
-    maxlag : int
+    nlags : int
         largest lag for which pacf is returned
     method : 'unbiased' (default) or 'mle'
         method for the autocovariance calculations in yule walker
@@ -483,27 +500,35 @@ def pacf_ols(x, nlags=40):
         pacf.append(res.params[-1])
     return np.array(pacf)
 
-def pacf(x, nlags=40, method='ywunbiased'):
+def pacf(x, nlags=40, method='ywunbiased', alpha=None):
     '''Partial autocorrelation estimated
 
     Parameters
     ----------
     x : 1d array
         observations of time series for which pacf is calculated
-    maxlag : int
+    nlags : int
         largest lag for which pacf is returned
     method : 'ywunbiased' (default) or 'ywmle' or 'ols'
         specifies which method for the calculations to use,
-        - yw or ywunbiased : yule walker with bias correction in denominator for acovf
+        - yw or ywunbiased : yule walker with bias correction in denominator
+          for acovf
         - ywm or ywmle : yule walker without bias correction
         - ols - regression of time series on lags of it and on constant
         - ld or ldunbiased : Levinson-Durbin recursion with bias correction
         - ldb or ldbiased : Levinson-Durbin recursion without bias correction
+    alpha : scalar, optional
+        If a number is given, the confidence intervals for the given level are
+        returned. For instance if alpha=.05, 95 % confidence intervals are
+        returned where the standard deviation is computed according to
+        1/sqrt(len(x))
 
     Returns
     -------
     pacf : 1d array
         partial autocorrelations, nlags elements, including lag zero
+    confint : array, optional
+        Confidence intervals for the PACF. Returned if confint is not None.
 
     Notes
     -----
@@ -512,22 +537,29 @@ def pacf(x, nlags=40, method='ywunbiased'):
     '''
 
     if method == 'ols':
-        return pacf_ols(x, nlags=nlags)
+        ret = pacf_ols(x, nlags=nlags)
     elif method in ['yw', 'ywu', 'ywunbiased', 'yw_unbiased']:
-        return pacf_yw(x, nlags=nlags, method='unbiased')
+        ret = pacf_yw(x, nlags=nlags, method='unbiased')
     elif method in ['ywm', 'ywmle', 'yw_mle']:
-        return pacf_yw(x, nlags=nlags, method='mle')
+        ret = pacf_yw(x, nlags=nlags, method='mle')
     elif method in ['ld', 'ldu', 'ldunbiase', 'ld_unbiased']:
         acv = acovf(x, unbiased=True)
         ld_ = levinson_durbin(acv, nlags=nlags, isacov=True)
         #print 'ld', ld_
-        return ld_[2]
+        ret = ld_[2]
     elif method in ['ldb', 'ldbiased', 'ld_biased']: #inconsistent naming with ywmle
         acv = acovf(x, unbiased=False)
         ld_ = levinson_durbin(acv, nlags=nlags, isacov=True)
-        return ld_[2]
+        ret = ld_[2]
     else:
         raise ValueError('method not available')
+    if alpha is not None:
+        varacf = 1./len(x)
+        interval = stats.norm.ppf(1. - alpha/2.) * np.sqrt(varacf)
+        confint = np.array(zip(ret-interval, ret+interval))
+        return ret, confint
+    else:
+        return ret
 
 
 
