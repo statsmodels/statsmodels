@@ -384,7 +384,20 @@ def test_poisson_newton():
     res = mod.fit(start_params=-np.ones(4), method='newton', disp=0)
     assert_(not res.mle_retvals['converged'])
 
-
+def test_issue_339():
+    # make sure MNLogit summary works for J != K.
+    data = sm.datasets.anes96.load()
+    exog = data.exog
+    exog[:,0] = np.log(exog[:,0] + .1)
+    # leave out last exog column
+    exog = np.column_stack((exog[:,0],exog[:,2],
+        exog[:,5:7]))
+    exog = sm.add_constant(exog, prepend=True)
+    res1 = sm.MNLogit(data.endog, exog).fit(method="newton", disp=0)
+    # strip the header from the test
+    smry = "\n".join(res1.summary().as_text().split('\n')[9:])
+    test_case = open('./results/mn_logit_summary.txt', 'r').read()
+    assert smry == test_case[:-1]
 
 if __name__ == "__main__":
     import nose
