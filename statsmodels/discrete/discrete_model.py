@@ -1760,15 +1760,9 @@ class BinaryResults(DiscreteResults):
         the model predicted "j". Correct predictions are along the diagonal.
         """
         model = self.model
-        actual = model.endog == 1
-        pred = self.predict() > threshold
-
-        # In form: actual_predicted
-        suc_suc = np.sum(actual & pred)
-        fail_suc = np.sum(~actual & pred)
-        suc_fail = np.sum(actual & ~pred)
-        fail_fail = np.sum(~actual & ~pred)
-        return np.array([[fail_fail, fail_suc], [suc_fail, suc_suc]])
+        actual = model.endog
+        pred = np.array(self.predict() > threshold, dtype=float)
+        return np.histogram2d(actual, pred, bins=2)[0]
 
     def summary(self, yname=None, xname=None, title=None, alpha=.05,
                 yname_list=None):
@@ -1834,12 +1828,10 @@ class MultinomialResults(DiscreteResults):
         the model predicted "j". Correct predictions are along the diagonal.
         """
         J = self.model.J
-        pred_table = np.zeros((J, J))
         # these are the actual, predicted indices
         idx = zip(self.model.endog, self.predict().argmax(1))
-        for row in idx: #TODO: move to Cython? how else to get this?
-            pred_table[row] += 1
-        return pred_table
+        return np.histogram2d(self.model.endog, self.predict().argmax(1),
+                              bins=J)[0]
 
     @cache_readonly
     def bse(self):
