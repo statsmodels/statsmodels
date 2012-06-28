@@ -76,6 +76,7 @@ class SysModel(LikelihoodModel):
         self.sys = sys
         self.neqs = len(sys)
         self.nobs = sys[0]['endog'].shape[0]
+        self.nexogs = sum([eq['exog'].shape[1] for eq in sys])
         self.endog = np.column_stack((np.asarray(eq['endog']) for eq in sys)).T
         self.exog = np.column_stack((np.asarray(eq['exog']) for eq in sys))
         # TODO : convert to a sparse matrix (need scipy >= 0.11dev for sp.block_diag)
@@ -165,12 +166,16 @@ class SysGLS(SysModel):
 
         ## Handle restrictions
         self.isrestricted = not(restrictMatrix == None and restrictVect == None)
-        # TODO: check shapes of restrictMatrix and restrictVect
         if self.isrestricted:
+            if not(restrictVect.shape[0] == restrictMatrix.shape[0]):
+                raise ValueError('restrictVect and restrictMatrix must have the \
+                    same number of rows')
+            self.nconstraints = restrictVect.shape[0]
+            if self.nconstraints >= self.nexogs:
+                raise ValueError('total number of regressors must be greater than \
+                    the number of constraints')
             self.restrictMatrix = restrictMatrix
             self.restrictVect = restrictVect
-            self.nconstraints = restrictVect.shape[0]
-            self.ncoeffs = restrictMatrix.shape[1]
 
         self.initialize()
 
@@ -181,18 +186,18 @@ class SysGLS(SysModel):
         self.pinv_wexog = np.linalg.pinv(self.wexog)
         
         if self.isrestricted:
-            rwendog = np.zeros((self.ncoeffs + self.nconstraints,))
-            rwendog[:self.ncoeffs] = np.squeeze(np.dot(self.wexog.T, self.wendog))
-            rwendog[self.ncoeffs:] = self.restrictVect
+            rwendog = np.zeros((self.nexogs + self.nconstraints,))
+            rwendog[:self.nexogs] = np.squeeze(np.dot(self.wexog.T, self.wendog))
+            rwendog[self.nexogs:] = self.restrictVect
             self.rwendog = rwendog
 
-            rwexog = np.zeros((self.ncoeffs + self.nconstraints,
-                self.ncoeffs + self.nconstraints))
-            rwexog[:self.ncoeffs, :self.ncoeffs] = np.dot(self.wexog.T, 
+            rwexog = np.zeros((self.nexogs + self.nconstraints,
+                self.nexogs + self.nconstraints))
+            rwexog[:self.nexogss, :self.nexogs] = np.dot(self.wexog.T, 
                     self.wexog)
-            rwexog[:self.ncoeffs, self.ncoeffs:] = self.restrictMatrix.T
-            rwexog[self.ncoeffs:, :self.ncoeffs] = self.restrictMatrix
-            rwexog[self.ncoeffs:, self.ncoeffs:] = np.zeros((self.nconstraints,
+            rwexog[:self.nexogs, self.nexogs:] = self.restrictMatrix.T
+            rwexog[self.nexogs:, :self.nexogs] = self.restrictMatrix
+            rwexog[self.nexogs:, self.nexogs:] = np.zeros((self.nconstraints,
                 self.nconstraints))
             self.rwexog = rwexog
 
@@ -220,8 +225,8 @@ class SysGLS(SysModel):
         '''
         if self.isrestricted:
             betaLambda = np.dot(self.pinv_rwexog, self.rwendog)
-            beta = betaLambda[:self.ncoeffs]
-            normalized_cov_params = self.pinv_rwexog[:self.ncoeffs, :self.ncoeffs]
+            beta = betaLambda[:self.nexogs]
+            normalized_cov_params = self.pinv_rwexog[:self.nexogs, :self.nexogs]
         else:
             beta = np.squeeze(np.dot(self.pinv_wexog, self.wendog))
             normalized_cov_params = np.dot(self.pinv_wexog, self.pinv_wexog.T)
