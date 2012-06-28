@@ -101,10 +101,10 @@ class CheckModelResults(object):
         score = self.res1.model.score(self.res1.params)
         assert_almost_equal(jacsum, score, DECIMAL_9) #Poisson has low precision ?
 
+
+class CheckBinaryResults(CheckModelResults):
     def test_pred_table(self):
-        name = self.res1.model.__class__.__name__
-        if name is 'Logit' or name is 'Probit': #Not yet implemented for MNLogit
-            assert_array_equal(self.res1.pred_table, self.res2.pred_table)
+        assert_array_equal(self.res1.pred_table(), self.res2.pred_table)
 
 class CheckMargEff(object):
     """
@@ -191,7 +191,7 @@ class CheckMargEff(object):
         assert_almost_equal(self.res1.margeff(at='mean', method='eydx',
             dummy=True), self.res2.margeff_dummy_eydxmean, DECIMAL_4)
 
-class TestProbitNewton(CheckModelResults):
+class TestProbitNewton(CheckBinaryResults):
 
     @classmethod
     def setupClass(cls):
@@ -210,7 +210,7 @@ class TestProbitNewton(CheckModelResults):
         assert_almost_equal(self.res1.resid, self.res2.resid, DECIMAL_4)
 
 
-class TestProbitBFGS(CheckModelResults):
+class TestProbitBFGS(CheckBinaryResults):
 
     @classmethod
     def setupClass(cls):
@@ -223,7 +223,7 @@ class TestProbitBFGS(CheckModelResults):
         cls.res2 = res2
 
 
-class TestProbitNM(CheckModelResults):
+class TestProbitNM(CheckBinaryResults):
     @classmethod
     def setupClass(cls):
         data = sm.datasets.spector.load()
@@ -234,7 +234,7 @@ class TestProbitNM(CheckModelResults):
         cls.res1 = Probit(data.endog, data.exog).fit(method="nm",
             disp=0, maxiter=500)
 
-class TestProbitPowell(CheckModelResults):
+class TestProbitPowell(CheckBinaryResults):
     @classmethod
     def setupClass(cls):
         data = sm.datasets.spector.load()
@@ -245,7 +245,7 @@ class TestProbitPowell(CheckModelResults):
         cls.res1 = Probit(data.endog, data.exog).fit(method="powell",
             disp=0, ftol=1e-8)
 
-class TestProbitCG(CheckModelResults):
+class TestProbitCG(CheckBinaryResults):
     @classmethod
     def setupClass(cls):
         if iswindows:   # does this work with classmethod?
@@ -258,7 +258,7 @@ class TestProbitCG(CheckModelResults):
         cls.res1 = Probit(data.endog, data.exog).fit(method="cg",
             disp=0, maxiter=500)
 
-class TestProbitNCG(CheckModelResults):
+class TestProbitNCG(CheckBinaryResults):
     @classmethod
     def setupClass(cls):
         data = sm.datasets.spector.load()
@@ -269,7 +269,7 @@ class TestProbitNCG(CheckModelResults):
         cls.res1 = Probit(data.endog, data.exog).fit(method="ncg",
             disp=0, avextol=1e-8)
 
-class TestLogitNewton(CheckModelResults, CheckMargEff):
+class TestLogitNewton(CheckBinaryResults, CheckMargEff):
     @classmethod
     def setupClass(cls):
         data = sm.datasets.spector.load()
@@ -287,7 +287,7 @@ class TestLogitNewton(CheckModelResults, CheckMargEff):
         assert_almost_equal(self.res1.margeff(atexog={1 : 21., 2 : 0}, at='mean'),
                 self.res2.margeff_nodummy_atexog2, DECIMAL_4)
 
-class TestLogitBFGS(CheckModelResults, CheckMargEff):
+class TestLogitBFGS(CheckBinaryResults, CheckMargEff):
     @classmethod
     def setupClass(cls):
 #        import scipy

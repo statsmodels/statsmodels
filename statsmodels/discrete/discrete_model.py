@@ -212,7 +212,7 @@ class DiscreteModel(base.LikelihoodModel):
     def _check_perfect_pred(self, params):
         endog = self.endog
         fittedvalues = self.cdf(np.dot(self.exog, params))
-        if (self.raise_on_perfect_prediction and 
+        if (self.raise_on_perfect_prediction and
                 np.allclose(fittedvalues - endog, 0)):
             msg = "Perfect separation detected, results not available"
             raise PerfectSeparationError(msg)
@@ -1479,10 +1479,6 @@ class DiscreteResults(base.LikelihoodModelResults):
         with degrees of freedom `df_model`.
     prsquared : float
         McFadden's pseudo-R-squared. 1 - (`llf`/`llnull`)
-    pred_table: 2x2 array
-        Returns the prediction table.  pred_table[i,j] refers to the
-        number of times "i" was observed and the model predicted "j".
-        Correct predictions are along the diagonal.  
     """
 
     def __init__(self, model, mlefit):
@@ -1560,7 +1556,7 @@ class DiscreteResults(base.LikelihoodModelResults):
             yname_list = self.model.endog_names
         return yname, yname_list
 
-            
+
 
     def margeff(self, at='overall', method='dydx', atexog=None, dummy=False,
             count=False):
@@ -1748,16 +1744,30 @@ class OrderedResults(DiscreteResults):
 
 class BinaryResults(DiscreteResults):
 
-    @cache_readonly
-    def pred_table(self):
+    def pred_table(self, threshold=.5):
+        """
+        Prediction table
+
+        Parameters
+        ----------
+        threshold : scalar
+            Number between 0 and 1. Threshold above which a prediction is
+            considered 1 and below which a prediction is considered 0.
+
+        Notes
+        ------
+        pred_table[i,j] refers to the number of times "i" was observed and
+        the model predicted "j". Correct predictions are along the diagonal.
+        """
         model = self.model
-        actual = model.endog
-        pred = model.predict(self.params).round()
+        actual = model.endog == 1
+        pred = self.predict() > threshold
+
         # In form: actual_predicted
-        suc_suc = np.sum(actual * pred)
-        fail_suc = np.sum(abs((actual - 1) * pred))
-        suc_fail = np.sum(abs(actual * (pred - 1)))
-        fail_fail = self.nobs - (suc_suc + suc_fail + fail_suc)
+        suc_suc = np.sum(actual & pred)
+        fail_suc = np.sum(~actual & pred)
+        suc_fail = np.sum(actual & ~pred)
+        fail_fail = np.sum(~actual & ~pred)
         return np.array([[fail_fail, fail_suc], [suc_fail, suc_suc]])
 
     def summary(self, yname=None, xname=None, title=None, alpha=.05,
