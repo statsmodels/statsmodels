@@ -1,5 +1,5 @@
 * Stata do file for getting test results
-insheet using "/home/skipper/statsmodels/statsmodels-skipper/scikits/statsmodels/datasets/macrodata/macrodata.csv", double clear
+insheet using "/home/skipper/statsmodels/statsmodels-skipper/statsmodels/datasets/macrodata/macrodata.csv", double clear
 gen qtrdate=yq(year,quarter)
 format qtrdate %tq
 tsset qtrdate
