@@ -50,10 +50,28 @@ class SysModel(LikelihoodModel):
     '''
 
     def __init__(self, sys):
-        # TODO : check sys is correctly specified
+        # Check if sys is correctly specified
+        issystem = isinstance(sys, (list, tuple)) and 
+            all([isinstance(eq, dict) for eq in sys])
+        if not issystem:
+            raise ValueError('systems must be list (or tuple) of dict')
+
+        isregression = all(['endog' in eq for eq in sys]) and 
+            all(['exog' in eq for eq in sys])
+        if not isregression:
+            raise ValueError('each equation of a system must have endog and exog
+                keys')
+        
+        allnobs = [eq['endog'].shape[0] for eq in sys] + 
+            [eq['exog'].shape[0] for eq in sys]
+        isidnobs = len(set(allnobs)) == 1
+        if not isidnobs:
+            raise ValueError('each equation must have number of observations be
+                identical')
+
         self.sys = sys
         self.neqs = len(sys)
-        self.nobs = len(sys[0]['endog']) # TODO : check nobs is the same for each eq
+        self.nobs = sys[0]['endog'].shape[0]
         self.endog = np.column_stack((np.asarray(eq['endog']) for eq in sys)).T
         self.exog = np.column_stack((np.asarray(eq['exog']) for eq in sys))
         # TODO : convert to a sparse matrix (need scipy >= 0.11dev for sp.block_diag)
