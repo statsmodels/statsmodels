@@ -101,6 +101,10 @@ class CheckModelResults(object):
         score = self.res1.model.score(self.res1.params)
         assert_almost_equal(jacsum, score, DECIMAL_9) #Poisson has low precision ?
 
+    def test_pred_table(self):
+        name = self.res1.model.__class__.__name__
+        if name is 'Logit' or name is 'Probit': #Not yet implemented for MNLogit
+            assert_array_equal(self.res1.pred_table, self.res2.pred_table)
 
 class CheckMargEff(object):
     """
