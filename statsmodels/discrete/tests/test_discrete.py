@@ -102,6 +102,10 @@ class CheckModelResults(object):
         assert_almost_equal(jacsum, score, DECIMAL_9) #Poisson has low precision ?
 
 
+class CheckBinaryResults(CheckModelResults):
+    def test_pred_table(self):
+        assert_array_equal(self.res1.pred_table(), self.res2.pred_table)
+
 class CheckMargEff(object):
     """
     Test marginal effects (margeff) and its options
@@ -187,7 +191,7 @@ class CheckMargEff(object):
         assert_almost_equal(self.res1.margeff(at='mean', method='eydx',
             dummy=True), self.res2.margeff_dummy_eydxmean, DECIMAL_4)
 
-class TestProbitNewton(CheckModelResults):
+class TestProbitNewton(CheckBinaryResults):
 
     @classmethod
     def setupClass(cls):
@@ -206,7 +210,7 @@ class TestProbitNewton(CheckModelResults):
         assert_almost_equal(self.res1.resid, self.res2.resid, DECIMAL_4)
 
 
-class TestProbitBFGS(CheckModelResults):
+class TestProbitBFGS(CheckBinaryResults):
 
     @classmethod
     def setupClass(cls):
@@ -219,7 +223,7 @@ class TestProbitBFGS(CheckModelResults):
         cls.res2 = res2
 
 
-class TestProbitNM(CheckModelResults):
+class TestProbitNM(CheckBinaryResults):
     @classmethod
     def setupClass(cls):
         data = sm.datasets.spector.load()
@@ -230,7 +234,7 @@ class TestProbitNM(CheckModelResults):
         cls.res1 = Probit(data.endog, data.exog).fit(method="nm",
             disp=0, maxiter=500)
 
-class TestProbitPowell(CheckModelResults):
+class TestProbitPowell(CheckBinaryResults):
     @classmethod
     def setupClass(cls):
         data = sm.datasets.spector.load()
@@ -241,7 +245,7 @@ class TestProbitPowell(CheckModelResults):
         cls.res1 = Probit(data.endog, data.exog).fit(method="powell",
             disp=0, ftol=1e-8)
 
-class TestProbitCG(CheckModelResults):
+class TestProbitCG(CheckBinaryResults):
     @classmethod
     def setupClass(cls):
         if iswindows:   # does this work with classmethod?
@@ -254,7 +258,7 @@ class TestProbitCG(CheckModelResults):
         cls.res1 = Probit(data.endog, data.exog).fit(method="cg",
             disp=0, maxiter=500)
 
-class TestProbitNCG(CheckModelResults):
+class TestProbitNCG(CheckBinaryResults):
     @classmethod
     def setupClass(cls):
         data = sm.datasets.spector.load()
@@ -265,7 +269,7 @@ class TestProbitNCG(CheckModelResults):
         cls.res1 = Probit(data.endog, data.exog).fit(method="ncg",
             disp=0, avextol=1e-8)
 
-class TestLogitNewton(CheckModelResults, CheckMargEff):
+class TestLogitNewton(CheckBinaryResults, CheckMargEff):
     @classmethod
     def setupClass(cls):
         data = sm.datasets.spector.load()
@@ -283,7 +287,7 @@ class TestLogitNewton(CheckModelResults, CheckMargEff):
         assert_almost_equal(self.res1.margeff(atexog={1 : 21., 2 : 0}, at='mean'),
                 self.res2.margeff_nodummy_atexog2, DECIMAL_4)
 
-class TestLogitBFGS(CheckModelResults, CheckMargEff):
+class TestLogitBFGS(CheckBinaryResults, CheckMargEff):
     @classmethod
     def setupClass(cls):
 #        import scipy
@@ -339,6 +343,68 @@ class TestMNLogitNewtonBaseZero(CheckModelResults):
         assert_equal(self.res1._get_endog_name(None,None)[1],
                      ['y=1', 'y=2', 'y=3', 'y=4', 'y=5', 'y=6'])
 
+    def test_pred_table(self):
+        # fitted results taken from gretl
+        pred = [6, 1, 1, 1, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 6, 0, 1, 6, 0, 0,
+                1, 1, 6, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 6, 0, 0, 6, 6, 0, 0, 1,
+                1, 6, 1, 6, 0, 0, 0, 1, 0, 1, 0, 0, 0, 6, 0, 0, 6, 0, 0, 0, 1,
+                1, 0, 0, 6, 6, 6, 6, 1, 0, 5, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0,
+                6, 0, 6, 6, 1, 0, 1, 1, 6, 5, 1, 0, 0, 0, 5, 0, 0, 6, 0, 1, 0,
+                0, 0, 0, 0, 1, 1, 0, 6, 6, 6, 6, 5, 0, 1, 1, 0, 1, 0, 6, 6, 0,
+                0, 0, 6, 0, 0, 0, 6, 6, 0, 5, 1, 0, 0, 0, 0, 6, 0, 5, 6, 6, 0,
+                0, 0, 0, 6, 1, 0, 0, 1, 0, 1, 6, 1, 1, 1, 1, 1, 0, 0, 0, 6, 0,
+                5, 1, 0, 6, 6, 6, 0, 0, 0, 0, 1, 6, 6, 0, 0, 0, 1, 1, 5, 6, 0,
+                6, 1, 0, 0, 1, 6, 0, 0, 1, 0, 6, 6, 0, 5, 6, 6, 0, 0, 6, 1, 0,
+                6, 0, 1, 0, 1, 6, 0, 1, 1, 1, 6, 0, 5, 0, 0, 6, 1, 0, 6, 5, 5,
+                0, 6, 1, 1, 1, 0, 0, 6, 0, 0, 5, 0, 0, 6, 6, 6, 6, 6, 0, 1, 0,
+                0, 6, 6, 0, 0, 1, 6, 0, 0, 6, 1, 6, 1, 1, 1, 0, 1, 6, 5, 0, 0,
+                1, 5, 0, 1, 6, 6, 1, 0, 0, 1, 6, 1, 5, 6, 1, 0, 0, 1, 1, 0, 6,
+                1, 6, 0, 1, 1, 5, 6, 6, 5, 1, 1, 1, 0, 6, 1, 6, 1, 0, 1, 0, 0,
+                1, 5, 0, 1, 1, 0, 5, 6, 0, 5, 1, 1, 6, 5, 0, 6, 0, 0, 0, 0, 0,
+                0, 1, 6, 1, 0, 5, 1, 0, 0, 1, 6, 0, 0, 6, 6, 6, 0, 2, 1, 6, 5,
+                6, 1, 1, 0, 5, 1, 1, 1, 6, 1, 6, 6, 5, 6, 0, 1, 0, 1, 6, 0, 6,
+                1, 6, 0, 0, 6, 1, 0, 6, 1, 0, 0, 0, 0, 6, 6, 6, 6, 5, 6, 6, 0,
+                0, 6, 1, 1, 6, 0, 0, 6, 6, 0, 6, 6, 0, 0, 6, 0, 0, 6, 6, 6, 1,
+                0, 6, 0, 0, 0, 6, 1, 1, 0, 1, 5, 0, 0, 5, 0, 0, 0, 1, 1, 6, 1,
+                0, 0, 0, 6, 6, 1, 1, 6, 5, 5, 0, 6, 6, 0, 1, 1, 0, 6, 6, 0, 6,
+                5, 5, 6, 5, 1, 0, 6, 0, 6, 1, 0, 1, 6, 6, 6, 1, 0, 6, 0, 5, 6,
+                6, 5, 0, 5, 1, 0, 6, 0, 6, 1, 5, 5, 0, 1, 5, 5, 2, 6, 6, 6, 5,
+                0, 0, 1, 6, 1, 0, 1, 6, 1, 0, 0, 1, 5, 6, 6, 0, 0, 0, 5, 6, 6,
+                6, 1, 5, 6, 1, 0, 0, 6, 5, 0, 1, 1, 1, 6, 6, 0, 1, 0, 0, 0, 5,
+                0, 0, 6, 1, 6, 0, 6, 1, 5, 5, 6, 5, 0, 0, 0, 0, 1, 1, 0, 5, 5,
+                0, 0, 0, 0, 1, 0, 6, 6, 1, 1, 6, 6, 0, 5, 5, 0, 0, 0, 6, 6, 1,
+                6, 0, 0, 5, 0, 1, 6, 5, 6, 6, 5, 5, 6, 6, 1, 0, 1, 6, 6, 1, 6,
+                0, 6, 0, 6, 5, 0, 6, 6, 0, 5, 6, 0, 6, 6, 5, 0, 1, 6, 6, 1, 0,
+                1, 0, 6, 6, 1, 0, 6, 6, 6, 0, 1, 6, 0, 1, 5, 1, 1, 5, 6, 6, 0,
+                1, 6, 6, 1, 5, 0, 5, 0, 6, 0, 1, 6, 1, 0, 6, 1, 6, 0, 6, 1, 0,
+                0, 0, 6, 6, 0, 1, 1, 6, 6, 6, 1, 6, 0, 5, 6, 0, 5, 6, 6, 5, 5,
+                5, 6, 0, 6, 0, 0, 0, 5, 0, 6, 1, 2, 6, 6, 6, 5, 1, 6, 0, 6, 0,
+                0, 0, 0, 6, 5, 0, 5, 1, 6, 5, 1, 6, 5, 1, 1, 0, 0, 6, 1, 1, 5,
+                6, 6, 0, 5, 2, 5, 5, 0, 5, 5, 5, 6, 5, 6, 6, 5, 2, 6, 5, 6, 0,
+                0, 6, 5, 0, 6, 0, 0, 6, 6, 6, 0, 5, 1, 1, 6, 6, 5, 2, 1, 6, 5,
+                6, 0, 6, 6, 1, 1, 5, 1, 6, 6, 6, 0, 0, 6, 1, 0, 5, 5, 1, 5, 6,
+                1, 6, 0, 1, 6, 5, 0, 0, 6, 1, 5, 1, 0, 6, 0, 6, 6, 5, 5, 6, 6,
+                6, 6, 2, 6, 6, 6, 5, 5, 5, 0, 1, 0, 0, 0, 6, 6, 1, 0, 6, 6, 6,
+                6, 6, 1, 0, 6, 1, 5, 5, 6, 6, 6, 6, 6, 5, 6, 1, 6, 2, 5, 5, 6,
+                5, 6, 6, 5, 6, 6, 5, 5, 6, 1, 5, 1, 6, 0, 2, 5, 0, 5, 0, 2, 1,
+                6, 0, 0, 6, 6, 1, 6, 0, 5, 5, 6, 6, 1, 6, 6, 6, 5, 6, 6, 1, 6,
+                5, 6, 1, 1, 0, 6, 6, 5, 1, 0, 0, 6, 6, 5, 6, 0, 1, 6, 0, 5, 6,
+                5, 2, 5, 2, 0, 0, 1, 6, 6, 1, 5, 6, 6, 0, 6, 6, 6, 6, 6, 5]
+        assert_array_equal(self.res1.predict().argmax(1), pred)
+
+        # the rows should add up for pred table
+        assert_array_equal(self.res1.pred_table().sum(0), np.bincount(pred))
+
+        # note this is just a regression test, gretl doesn't have a prediction
+        # table
+        pred = [[ 126.,   41.,    2.,    0.,    0.,   12.,   19.],
+                [  77.,   73.,    3.,    0.,    0.,   15.,   12.],
+                [  37.,   43.,    2.,    0.,    0.,   19.,    7.],
+                [  12.,    9.,    1.,    0.,    0.,    9.,    6.],
+                [  19.,   10.,    2.,    0.,    0.,   20.,   43.],
+                [  22.,   25.,    1.,    0.,    0.,   31.,   71.],
+                [   9.,    7.,    1.,    0.,    0.,   18.,  140.]]
+        assert_array_equal(self.res1.pred_table(), pred)
 
 def test_perfect_prediction():
     cur_dir = os.path.dirname(os.path.abspath(__file__))
