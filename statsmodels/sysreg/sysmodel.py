@@ -49,7 +49,7 @@ class SysModel(LikelihoodModel):
         less the number of parameters.
     '''
 
-    def __init__(self, sys):
+    def __init__(self, sys, dfk=None):
         # Check if sys is correctly specified
         issystem = isinstance(sys, (list, tuple)) and \
             all([isinstance(eq, dict) for eq in sys])
@@ -68,6 +68,10 @@ class SysModel(LikelihoodModel):
         if not isidnobs:
             raise ValueError('each equation must have number of observations \
                 be identical')
+
+        # Others checks
+        if not(dfk in (None, 'dfk1', 'dfk2')):
+            raise ValueError('dfk is not correctly specified')
 
         self.sys = sys
         self.neqs = len(sys)
@@ -95,8 +99,8 @@ class SysModel(LikelihoodModel):
                 div_dfk2[i,j] = self.nobs - np.max((self.df_model[i] + 1, 
                                                     self.df_model[j] + 1))
  
-        self.div_dfk1 = div_dfk1
-        self.div_dfk2 = div_dfk2
+        self._div_dfk1 = div_dfk1
+        self._div_dfk2 = div_dfk2
 
 class SysGLS(SysModel):
     '''
@@ -279,11 +283,8 @@ class SysWLS(SysGLS):
     '''
     def __init__(self, sys, weights=None, dfk=None, restrictMatrix=None,
             restrictVect=None):
-        if not(dfk in (None, 'dfk1', 'dfk2')):
-            raise ValueError('dfk is not correctly specified')
-
-        super(SysWLS, self).__init__(sys, sigma=None, restrictMatrix = 
-                restrictMatrix, restrictVect = restrictVect)
+        super(SysWLS, self).__init__(sys, sigma=None, restrictMatrix=
+                restrictMatrix, restrictVect=restrictVect)
 
         self.dfk = dfk
         
@@ -320,9 +321,9 @@ class SysWLS(SysGLS):
         if self.dfk is None:
             return s / self.nobs
         elif self.dfk == 'dfk1':
-            return s / self.div_dfk1
+            return s / self._div_dfk1
         else:
-            return s / self.div_dfk2
+            return s / self._div_dfk2
 
 class SysOLS(SysWLS):
     def __init__(self, sys, dfk=None, restrictMatrix=None, restrictVect=None):
@@ -331,9 +332,6 @@ class SysOLS(SysWLS):
 
 class SysSUR(SysGLS):
     def __init__(self, sys, dfk=None, restrictMatrix=None, restrictVect=None):
-        if not(dfk in (None, 'dfk1', 'dfk2')):
-            raise ValueError("dfk is not correctly specified")
-
         super(SysSUR, self).__init__(sys, sigma=None, 
                 restrictMatrix=restrictMatrix, restrictVect=restrictVect)
 
@@ -361,9 +359,9 @@ class SysSUR(SysGLS):
         if self.dfk is None:
             return s / self.nobs
         elif self.dfk == 'dfk1':
-            return s / self.div_dfk1
+            return s / self._div_dfk1
         else:
-            return s / self.div_dfk2
+            return s / self._div_dfk2
 
 class SysSURI(SysOLS):
     '''
