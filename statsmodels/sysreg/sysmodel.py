@@ -51,23 +51,23 @@ class SysModel(LikelihoodModel):
 
     def __init__(self, sys):
         # Check if sys is correctly specified
-        issystem = isinstance(sys, (list, tuple)) and 
+        issystem = isinstance(sys, (list, tuple)) and \
             all([isinstance(eq, dict) for eq in sys])
         if not issystem:
             raise ValueError('systems must be list (or tuple) of dict')
 
-        isregression = all(['endog' in eq for eq in sys]) and 
+        isregression = all(['endog' in eq for eq in sys]) and \
             all(['exog' in eq for eq in sys])
         if not isregression:
-            raise ValueError('each equation of a system must have endog and exog
-                keys')
+            raise ValueError('each equation of a system must have endog and \
+                exog keys') 
         
-        allnobs = [eq['endog'].shape[0] for eq in sys] + 
+        allnobs = [eq['endog'].shape[0] for eq in sys] + \
             [eq['exog'].shape[0] for eq in sys]
         isidnobs = len(set(allnobs)) == 1
         if not isidnobs:
-            raise ValueError('each equation must have number of observations be
-                identical')
+            raise ValueError('each equation must have number of observations \
+                be identical')
 
         self.sys = sys
         self.neqs = len(sys)
@@ -97,11 +97,6 @@ class SysModel(LikelihoodModel):
  
         self.div_dfk1 = div_dfk1
         self.div_dfk2 = div_dfk2
-
-        self.initialize()
-
-    def initialize(self):
-        pass
 
 class SysGLS(SysModel):
     '''
@@ -147,19 +142,19 @@ class SysGLS(SysModel):
     '''
 
     def __init__(self, sys, sigma=None, restrictMatrix=None, restrictVect=None):
-        neqs = len(sys)
+        super(SysGLS, self).__init__(sys)
 
         ## Handle sigma
         if sigma is None:
-            self.sigma = np.diag(np.ones(neqs))
+            self.sigma = np.diag(np.ones(self.neqs))
         # sigma = scalar
         elif sigma.shape == ():
-            self.sigma = np.diag(np.ones(neqs)*sigma)
+            self.sigma = np.diag(np.ones(self.neqs)*sigma)
         # sigma = 1d vector
-        elif (sigma.ndim == 1) and sigma.size == neqs:
+        elif (sigma.ndim == 1) and sigma.size == self.neqs:
             self.sigma = np.diag(sigma)
         # sigma = GxG matrix
-        elif sigma.shape == (neqs,neqs):
+        elif sigma.shape == (self.neqs,self.neqs):
             self.sigma = sigma
         else:
             raise ValueError("sigma is not correctly specified")
@@ -173,7 +168,7 @@ class SysGLS(SysModel):
             self.nconstraints = restrictVect.shape[0]
             self.ncoeffs = restrictMatrix.shape[1]
 
-        super(SysGLS, self).__init__(sys)
+        self.initialize()
 
     def initialize(self):
         self.cholsigmainv = np.linalg.cholesky(np.linalg.pinv(self.sigma)).T
@@ -287,9 +282,10 @@ class SysWLS(SysGLS):
         if not(dfk in (None, 'dfk1', 'dfk2')):
             raise ValueError('dfk is not correctly specified')
 
+        super(SysWLS, self).__init__(sys, sigma=None, restrictMatrix = 
+                restrictMatrix, restrictVect = restrictVect)
+
         self.dfk = dfk
-        self.nobs = sys[0]['endog'].shape[0]
-        neqs = len(sys)
         
         if weights is None:
             # Compute sigma by OLS equation by equation
@@ -298,20 +294,20 @@ class SysWLS(SysGLS):
                 res = OLS(eq['endog'], eq['exog']).fit()
                 resids.append(res.resid)
             resids = np.column_stack(resids)
-            sigma = np.diag(np.diag(self._compute_sigma(resids)))
+            sigma = self._compute_sigma(resids)
         else:
             weights = np.asarray(weights)
             # weights = scalar
             if weights.shape == ():
-                sigma = np.diag(np.ones(neqs)*weights)
+                sigma = np.diag(np.ones(self.neqs)*weights)
             # weights = 1d vector
-            elif weights.ndim == 1 and weights.size == neqs:
+            elif weights.ndim == 1 and weights.size == self.neqs:
                 sigma = np.diag(weights)
             else:
                 raise ValueError("weights is not correctly specified")
 
-        super(SysWLS, self).__init__(sys, sigma, restrictMatrix = restrictMatrix,
-                restrictVect = restrictVect)
+        self.sigma = sigma
+        self.initialize()
 
     def _compute_sigma(self, resids):
         '''
@@ -331,7 +327,7 @@ class SysWLS(SysGLS):
 class SysOLS(SysWLS):
     def __init__(self, sys, dfk=None, restrictMatrix=None, restrictVect=None):
         super(SysOLS, self).__init__(sys, weights=1.0, dfk=dfk,
-                restrictMatrix = restrictMatrix, restrictVect = restrictVect)
+                restrictMatrix=restrictMatrix, restrictVect=restrictVect)
 
 class SysSUR(SysGLS):
     def __init__(self, sys, dfk=None, restrictMatrix=None, restrictVect=None):
@@ -340,6 +336,7 @@ class SysSUR(SysGLS):
 
         super(SysSUR, self).__init__(sys, sigma=None, 
                 restrictMatrix=restrictMatrix, restrictVect=restrictVect)
+
         self.dfk = dfk
 
         # Compute sigma by OLS equation by equation
@@ -348,8 +345,9 @@ class SysSUR(SysGLS):
             res = OLS(eq['endog'], eq['exog']).fit()
             resids.append(res.resid)
         resids = np.column_stack(resids)
-        
-        self.sigma = self._compute_sigma(resids)
+        sigma = self._compute_sigma(resids)
+
+        self.sigma = sigma
         self.initialize()
 
     def _compute_sigma(self, resids):
@@ -410,7 +408,7 @@ class SysResults(LikelihoodModelResults):
 if __name__ == '__main__':
     from statsmodels.tools import add_constant
     
-    nobs = 100
+    nobs = 10
     (y1,y2) = (np.random.rand(nobs), np.random.rand(nobs))
     (x1,x2) = (np.random.rand(nobs,3), np.random.rand(nobs,4))
     (x1,x2) = (add_constant(x1,prepend=True),add_constant(x2,prepend=True))
