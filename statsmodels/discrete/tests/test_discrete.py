@@ -397,7 +397,7 @@ def test_issue_339():
     # strip the header from the test
     smry = "\n".join(res1.summary().as_text().split('\n')[9:])
     test_case = open('./results/mn_logit_summary.txt', 'r').read()
-    assert smry == test_case[:-1]
+    np.testing.assert_(smry == test_case[:-1])
 
 if __name__ == "__main__":
     import nose
