@@ -1824,6 +1824,23 @@ class MultinomialResults(DiscreteResults):
             yname_list = ynames[1:] # assumes first variable is dropped
         return yname, yname_list
 
+    def pred_table(self):
+        """
+        Returns the J x J prediction table.
+
+        Notes
+        -----
+        pred_table[i,j] refers to the number of times "i" was observed and
+        the model predicted "j". Correct predictions are along the diagonal.
+        """
+        J = self.model.J
+        pred_table = np.zeros((J, J))
+        # these are the actual, predicted indices
+        idx = zip(self.model.endog, self.predict().argmax(1))
+        for row in idx: #TODO: move to Cython? how else to get this?
+            pred_table[row] += 1
+        return pred_table
+
     @cache_readonly
     def bse(self):
         bse = np.sqrt(np.diag(self.cov_params()))
