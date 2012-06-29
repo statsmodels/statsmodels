@@ -326,7 +326,10 @@ class MultinomialModel(BinaryModel):
             order returned from the model.
         exog : array-like
             1d or 2d array of exogenous values.  If not supplied, the
-            whole exog attribute of the model is used.
+            whole exog attribute of the model is used. If a 1d array is given
+            it assumed to be 1 row of exogenous variables. If you only have
+            one regressor and would like to do prediction, you must provide
+            a 2d array with shape[1] == 1.
         linear : bool, optional
             If True, returns the linear predictor dot(exog,params).  Else,
             returns the value of the cdf at the linear predictor.
