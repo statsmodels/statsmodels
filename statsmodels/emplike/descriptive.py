@@ -462,7 +462,7 @@ class DescStat(OptFuncts):
     """
 
 
-    A class for confidence intervals and hypothesis tests invovling mean,
+    A class for confidence intervals and hypothesis tests involving mean,
     variance and covariance.
 
     Parameters
@@ -794,7 +794,8 @@ class DescStat(OptFuncts):
         Parameters
         ----------
         mu_array : 1d array
-            hypothesized values for the mean
+            hypothesized values for the mean.  Must have same number of
+            elements as columns in endog.
 
         Optional
         --------
@@ -1110,9 +1111,9 @@ class DescStat(OptFuncts):
 
         Returns the confidence interval for skewness.
 
-        Optional 
+        Optional
         ----------
-        
+
         sig: float
             The significance level.  Default = .05
 
@@ -1206,7 +1207,7 @@ class DescStat(OptFuncts):
 
         Optional
         --------
-        
+
         sig: float
             The significance level.  Default = .05
 
