@@ -10,10 +10,6 @@ The results are tested against existing statistical packages to ensure that they
 package is released under the open source Modified BSD (3-clause) license. The online documentation
 is hosted at `sourceforge <http://statsmodels.sourceforge.net/>`__.
 
-Google Summer of Code 2012
---------------------------
-
-Statsmodels is participating for the fourth time in `GSoC <http://www.google-melange.com/gsoc/homepage/google/gsoc2012>`__  under the umbrella of the `Python Software Foundation <http://python.org/psf/>`__. We have set up a `wiki page <https://github.com/statsmodels/statsmodels/wiki/GSoC-Ideas>`__ with ideas for projects. Feel free to contribute to the ideas page or contact the mailing list if you are interested in applying so we can coordinate on developing your application and project - the earlier the better.
 
 Getting Started
 ---------------
