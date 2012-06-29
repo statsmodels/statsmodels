@@ -4,12 +4,20 @@ from pandas import datetools as pandas_datetools
 import numpy as np
 
 #NOTE: All of these frequencies assume end of period (except wrt time)
-_freq_to_pandas = {'B' : pandas_datetools.BDay(1),
-                   'D' : pandas_datetools.day,
-                   'W' : pandas_datetools.Week(weekday=6),
-                   'M' : pandas_datetools.monthEnd,
-                   'A' : pandas_datetools.yearEnd,
-                   'Q' : pandas_datetools.quarterEnd}
+try:
+    from pandas.tseries.frequencies import get_offset
+    class _freq_to_pandas_class(object):
+        # being lazy, don't want to replace dictionary below
+        def __getitem__(self, key):
+            return get_offset(key)
+    _freq_to_pandas = _freq_to_pandas_class()
+except ImportError as err:
+    _freq_to_pandas = {'B' : pandas_datetools.BDay(1),
+                       'D' : pandas_datetools.day,
+                       'W' : pandas_datetools.Week(weekday=6),
+                       'M' : pandas_datetools.monthEnd,
+                       'A' : pandas_datetools.yearEnd,
+                       'Q' : pandas_datetools.quarterEnd}
 
 def _index_date(date, dates):
     """
@@ -57,8 +65,13 @@ def _idx_from_dates(d1, d2, freq):
     Does not check the start date to see whether it is on the offest but
     assumes that it is.
     """
-    from pandas import DateRange
-    return len(DateRange(d1, d2, offset = _freq_to_pandas[freq])) - 1
+    try: # pandas 0.8.x
+        from pandas import DatetimeIndex
+        return len(DatetimeIndex(start=d1, end=d2,
+                                 freq = _freq_to_pandas[freq])) - 1
+    except ImportError as err:
+        from pandas import DateRange
+        return len(DateRange(d1, d2, offset = _freq_to_pandas[freq])) - 1
 
 _quarter_to_day = {
         "1" : (3, 31),
