@@ -399,6 +399,20 @@ def test_issue_339():
     test_case = open('./results/mn_logit_summary.txt', 'r').read()
     np.testing.assert_(smry == test_case[:-1])
 
+def test_issue_341():
+    data = sm.datasets.anes96.load()
+    exog = data.exog
+    exog[:,0] = np.log(exog[:,0] + .1)
+    # leave out last exog column
+    exog = np.column_stack((exog[:,0],exog[:,2],
+        exog[:,5:7]))
+    exog = sm.add_constant(exog, prepend=True)
+    res1 = sm.MNLogit(data.endog, exog).fit(method="newton", disp=0)
+    x = exog[0]
+    np.testing.assert_equal(res1.predict(x).shape, (1,7))
+    np.testing.assert_equal(res1.predict(x[None]).shape, (1,7))
+
+
 if __name__ == "__main__":
     import nose
     nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'],
