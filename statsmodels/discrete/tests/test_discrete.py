@@ -462,7 +462,9 @@ def test_issue_339():
     res1 = sm.MNLogit(data.endog, exog).fit(method="newton", disp=0)
     # strip the header from the test
     smry = "\n".join(res1.summary().as_text().split('\n')[9:])
-    test_case = open('./results/mn_logit_summary.txt', 'r').read()
+    cur_dir = os.path.dirname(os.path.abspath(__file__))
+    test_case_file = os.path.join(cur_dir, 'results', 'mn_logit_summary.txt')
+    test_case = open(test_case_file, 'r').read()
     np.testing.assert_(smry == test_case[:-1])
 
 def test_issue_341():
