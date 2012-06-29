@@ -494,6 +494,42 @@ class NonLinearLSResults(RegressionResults):
         '''
         return np.sqrt(self.scale)
 
+
+    @cache_readonly
+    def hatmatrix(self):
+        jacob = self.model.jac_predict(self.params)
+        return np.dot(jacob,np.dot(self.normalized_cov_params,
+               np.transpose(jacob)))
+
+    def forecasts(self,alpha=0.05):
+        from scipy import stats
+        t = stats.t.isf(alpha/2,self.df_resid)
+        stddev_mean = self.ser*np.sqrt(np.diag(self.hatmatrix))
+        conf_int_mean = np.column_stack([self.fittedvalues-t*stddev_mean,
+                                         self.fittedvalues+t*stddev_mean])
+        stddev_ind = self.ser*np.sqrt(1+np.diag(self.hatmatrix))
+        conf_int_ind = np.column_stack([self.fittedvalues-t*stddev_ind,
+                                         self.fittedvalues+t*stddev_ind])
+#        stddev_resid = self.ser*np.sqrt(1-np.diag(self.hatmatrix))
+#        conf_int_resid = np.column_stack([self.resid-t*stddev_resid,
+#                                         self.resid+t*stddev_resid])
+        return np.column_stack([self.model.endog,self.fittedvalues,
+                                self.resid,stddev_mean,conf_int_mean,
+                                stddev_ind,conf_int_ind])#,conf_int_resid])
+
+    def prediction_table(self,alpha=0.05):
+        from statsmodels.iolib.table import SimpleTable
+        headers = ('Endog Values','Prediction','Residuals',
+                   'SEMean','LMean','Hmean','SEInd','LInd', 'HInd')
+        stubs = [n for n in range(1,self.model.nobs+1)]
+        title = 'PREDICTION TABLE'
+        data_fmts=['% 0.2f' for i in range(len(headers))]
+        data_fmts[3] = '% 0.3f'
+        data_fmts[6] = '% 0.3f'
+        tbl = SimpleTable(self.forecasts(alpha),headers,stubs,title,
+              data_fmts=data_fmts)
+        return tbl
+
 #if __name__ == '__main__':
 #    def func0(x, a, b, c):
 #        return a*np.exp(-b*x) + c
