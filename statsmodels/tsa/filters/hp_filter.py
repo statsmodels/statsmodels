@@ -68,12 +68,18 @@ def hpfilter(X, lamb=1600):
     data = np.repeat([[1.],[-2.],[1.]], nobs, axis=1)
     K = dia_matrix((data, offsets), shape=(nobs-2,nobs))
 
-    if X.dtype != np.dtype('<f8'):
-        #scipy umfpack bug on Big Endian machines
+    if (X.dtype != np.dtype('<f8') and
+            int(scipy.__version__[:3].split('.')[1]) < 11):
+        #scipy umfpack bug on Big Endian machines, will be fixed in 0.11
         use_umfpack = False
     else:
         use_umfpack = True
 
-    trend = spsolve(I+lamb*K.T.dot(K), X, use_umfpack=use_umfpack)
+    if scipy.__version__[:3] == '0.7':
+        #doesn't have use_umfpack option
+        #will be broken on big-endian machines with scipy 0.7 and umfpack
+        trend = spsolve(I+lamb*K.T.dot(K), X)
+    else:
+        trend = spsolve(I+lamb*K.T.dot(K), X, use_umfpack=use_umfpack)
     cycle = X-trend
     return cycle, trend
