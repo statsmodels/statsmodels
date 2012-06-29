@@ -68,6 +68,7 @@ def hpfilter(X, lamb=1600):
     data = np.repeat([[1.],[-2.],[1.]], nobs, axis=1)
     K = dia_matrix((data, offsets), shape=(nobs-2,nobs))
 
+    import scipy
     if (X.dtype != np.dtype('<f8') and
             int(scipy.__version__[:3].split('.')[1]) < 11):
         #scipy umfpack bug on Big Endian machines, will be fixed in 0.11
