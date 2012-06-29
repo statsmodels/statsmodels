@@ -494,13 +494,13 @@ class NonLinearLSResults(RegressionResults):
         '''
         return np.sqrt(self.scale)
 
-
     @cache_readonly
     def hatmatrix(self):
         jacob = self.model.jac_predict(self.params)
         return np.dot(jacob,np.dot(self.normalized_cov_params,
                np.transpose(jacob)))
 
+    #need to check for weighted version
     def forecasts(self,alpha=0.05):
         from scipy import stats
         t = stats.t.isf(alpha/2,self.df_resid)
@@ -510,6 +510,8 @@ class NonLinearLSResults(RegressionResults):
         stddev_ind = self.ser*np.sqrt(1+np.diag(self.hatmatrix))
         conf_int_ind = np.column_stack([self.fittedvalues-t*stddev_ind,
                                          self.fittedvalues+t*stddev_ind])
+
+#        what to show resid or wresid???
 #        stddev_resid = self.ser*np.sqrt(1-np.diag(self.hatmatrix))
 #        conf_int_resid = np.column_stack([self.resid-t*stddev_resid,
 #                                         self.resid+t*stddev_resid])
