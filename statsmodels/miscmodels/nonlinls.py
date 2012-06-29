@@ -492,7 +492,8 @@ class NonLinearLSResults(RegressionResults):
         '''
         Residual Standard Deviation
         '''
-        return np.sqrt(self.mse_resid)
+        return np.sqrt(self.scale)
+
 #if __name__ == '__main__':
 #    def func0(x, a, b, c):
 #        return a*np.exp(-b*x) + c
