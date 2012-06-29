@@ -339,7 +339,7 @@ class MultinomialModel(BinaryModel):
         if exog is None: # do here to accomodate user-given exog
             exog = self.exog
         if exog.ndim == 1:
-            exog = exog[]
+            exog = exog[None]
         pred = super(MultinomialModel, self).predict(params, exog, linear)
         if linear:
             pred = np.column_stack((np.zeros(len(exog)), pred))
