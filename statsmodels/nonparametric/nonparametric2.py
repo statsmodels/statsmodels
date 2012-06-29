@@ -304,34 +304,6 @@ class CKDE(Generic_KDE):
                          edat=exdat, var_type=self.indep_type)
         return (f_yx / f_x)
 
-    def IMSE_slow(self, bw):
-        print "Starting"
-        # Still runs very slow. Try to vectorize.
-        zLOO = tools.LeaveOneOut(self.all_vars)
-        l = 0
-        CV = 0
-        for Z in zLOO:
-            X = Z[:, self.K_dep::]
-            Y = Z[:, 0:self.K_dep]
-            G = 0
-            for i in range(self.N - 1):
-                K_Xi_Xl = tools.GPKE2(bw[self.K_dep::], tdat=-X[i, :],
-                                      edat=-self.txdat[l, :], var_type=self.indep_type)
-                K_Xj_Xl = tools.GPKE2(bw[self.K_dep::], tdat=-X,
-                                      edat=-self.txdat[l, :], var_type=self.indep_type)
-                K2_Yi_Yj = tools.GPKE2(bw[0:self.K_dep], tdat=-Y,
-                                       edat=-Y[i, :], var_type=self.dep_type,
-                             ckertype='gauss_convolution', okertype='wangryzin_convolution',
-                                       ukertype='aitchisonaitken_convolution')
-                G += np.sum(K_Xi_Xl * K_Xj_Xl * K2_Yi_Yj)
-            G = G / self.N ** 2
-            f_X_Y = tools.GPKE(bw, tdat=-Z, edat=-self.all_vars[l, :],
-                               var_type=(self.dep_type + self.indep_type)) / float(self.N)
-            m_x = tools.GPKE(bw[self.K_dep::], tdat=-X, edat=-self.txdat[l, :],
-                             var_type=self.indep_type) / float(self.N)
-            l += 1
-            CV += (G / m_x ** 2) - 2 * (f_X_Y / m_x)
-        return CV / float(self.N)
 
     def IMSE(self, bw):
         print "Starting"

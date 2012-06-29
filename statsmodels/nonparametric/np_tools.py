@@ -136,66 +136,6 @@ def GPKE(bw, tdat, edat, var_type, ckertype='gaussian',
     return dens
 
 
-def GPKE2(bw, tdat, edat, var_type, ckertype='gaussian',
-          okertype='wangryzin', ukertype='aitchisonaitken'):
-    """
-    Returns the non-normalized Generalized Product Kernel Estimator
-
-    Parameters
-    ----------
-    bw: array-like
-        The user-specified bandwdith parameters
-    tdat: 1D or 2d array
-        The training data
-    edat: 1d array
-        The evaluation points at which the kernel estimation is performed
-    var_type: str
-        The variable type (continuous, ordered, unordered)
-    ckertype: str
-        The kernel used for the continuous variables
-    okertype: str
-        The kernel used for the ordered discrete variables
-    ukertype: str
-        The kernel used for the unordered discrete variables
-
-    """
-    var_type = np.asarray(list(var_type))
-    iscontinuous = np.where(var_type == 'c')[0]
-    isordered = np.where(var_type == 'o')[0]
-    isunordered = np.where(var_type == 'u')[0]
-    K = len(var_type)
-    if tdat.ndim == 1 and K == 1:  # one variable many observations
-        N = np.size(tdat)
-        #N_edat = np.size(edat)
-    elif tdat.ndim == 1 and K > 1:
-        N = 1
-
-    else:
-        N, K = np.shape(tdat)
-    tdat = tdat.reshape([N, K])
-    if edat.ndim == 1 and K > 1:  # one obs many vars
-        N_edat = 1
-    elif edat.ndim == 1 and K == 1:  # one obs one var
-        N_edat = np.size(edat)
-
-    else:
-        N_edat = np.shape(edat)[0]  # ndim >1 so many obs many vars
-        assert np.shape(edat)[1] == K
-
-    edat = edat.reshape([N_edat, K])
-
-    bw = np.reshape(np.asarray(bw), (K, ))  # must remain 1-D for indexing to work
-    # dens = np.empty([N, 1])
-    for i in xrange(N_edat):
-
-        Kval = np.concatenate((
-        kernel_func[ckertype](bw[iscontinuous], tdat[:, iscontinuous], edat[i, iscontinuous]),
-        kernel_func[okertype](bw[isordered], tdat[:, isordered], edat[i, isordered]),
-        kernel_func[ukertype](bw[isunordered], tdat[:, isunordered], edat[i, isunordered])
-        ), axis=1)
-
-        dens = np.prod(Kval, axis=1) * 1. / (np.prod(bw[iscontinuous]))
-    return dens
 
 
 def GPKE3(bw, tdat, edat, var_type, ckertype='gaussian',
