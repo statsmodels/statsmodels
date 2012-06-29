@@ -74,8 +74,10 @@ The official documentation is hosted on SourceForge
 
 Windows Help
 ============
-The source distribution for Windows includes a htmlhelp file (statsmodels.chm).
-This can be opened from the python interpreter ::
+We are providing a Windows htmlhelp file (statsmodels.chm) that is now separately
+distributed. It can be copied or moved to the installation directory of
+statsmodels (site-packages\statsmodels in a typical installation), and can then
+be opened from the python interpreter ::
 
     >>> import statsmodels.api as sm
     >>> sm.open_help()
