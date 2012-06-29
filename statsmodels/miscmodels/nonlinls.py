@@ -362,9 +362,6 @@ class NonlinearLS(NonLinearModel):  #or subclass a model
         If the user does not supply the jacobian calculating expression than it uses 
         the below approximate differences method
         '''
-        #Storing the parameters
-        #self._store_params(params)
-
         #Calculating the jacobian
         func = self.geterrors
         x = np.asarray(params)
@@ -441,29 +438,29 @@ class NonLinearLSResults(RegressionResults):
     def _get_params_iter(self,params_iter):
         self.params_iter = params_iter
 
-    def view_iter(self):
+    def view_iter(self,parameters=None):
         '''
 
         Returns
         -------
-        Parameter Estimate Table
+        Iteration details table
 
         '''
-        k = range(len(self.params_iter))
-        col = len(self.params_iter[0])
-        s = '\n'+' '*30 + 'Parameter Estimates' + ' '*30 + '\n'
-        s += '='*80
-        s += '\nIteration No'
-        for j in range(col):
-            s += str('0'+str(j+1)).center(20)
-        s += '\n'+'='*80+'\n'
-        for i in k:
-            s += str(i+1) + ' '*7
-            for j in range(col):
-                s += str(self.params_iter[i][j]).rjust(20)
-            s += '\n'
-        return s
-
+        from statsmodels.iolib.table import SimpleTable
+        if parameters == None:
+            headers = ['b'+str(i) for i in range(1,len(self.params)+1)]
+        else:
+            if len(parameters) == len(self.params):
+                headers = parameters
+            else:
+                raise ValueError('Number of parameter names provided are not'+
+                                 ' equal to number of parameters estimated')
+        stubs = [n for n in range(1,len(self.params_iter)+1)]
+        title = 'ITERATION DETAILS'
+        data_fmts=['% 0.5f' for i in range(len(headers))]
+        tbl = SimpleTable(self.params_iter,headers,stubs,title,
+              data_fmts=data_fmts)
+        return tbl
 
     @cache_readonly
     def wresid(self):
