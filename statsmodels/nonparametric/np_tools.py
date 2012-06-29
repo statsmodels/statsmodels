@@ -84,19 +84,42 @@ def GPKE(bw, tdat, edat, var_type, ckertype='gaussian',
     iscontinuous = np.where(var_type == 'c')[0]
     isordered = np.where(var_type == 'o')[0]
     isunordered = np.where(var_type == 'u')[0]
+    edat = np.asarray(edat)
+    edat = np.squeeze(edat)
 
-    if tdat.ndim > 1:
+##    if tdat.ndim > 1:
+##        N, K = np.shape(tdat)
+##    else:
+##        K = 1
+##        N = np.shape(tdat)[0]
+##        tdat = tdat.reshape([N, K])
+##
+##    if edat.ndim > 1:
+##        N_edat = np.shape(edat)[0]
+##    else:
+##        N_edat = 1
+##        edat = edat.reshape([N_edat, K])
+
+    K = len(var_type)
+    if tdat.ndim == 1 and K == 1:  # one variable many observations
+        N = np.size(tdat)
+        #N_edat = np.size(edat)
+    elif tdat.ndim == 1 and K > 1:
+        N = 1
+
+    else:
         N, K = np.shape(tdat)
-    else:
-        K = 1
-        N = np.shape(tdat)[0]
-        tdat = tdat.reshape([N, K])
-
-    if edat.ndim > 1:
-        N_edat = np.shape(edat)[0]
-    else:
+    tdat = tdat.reshape([N, K])
+    if edat.ndim == 1 and K > 1:  # one obs many vars
         N_edat = 1
-        edat = edat.reshape([N_edat, K])
+    elif edat.ndim == 1 and K == 1:  # one obs one var
+        N_edat = np.size(edat)
+
+    else:
+        N_edat = np.shape(edat)[0]  # ndim >1 so many obs many vars
+        assert np.shape(edat)[1] == K
+
+    edat = edat.reshape([N_edat, K])
 
     bw = np.reshape(np.asarray(bw), (K,))  # must remain 1-D for indexing to work
     dens = np.empty([N_edat, 1])
