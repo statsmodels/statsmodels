@@ -420,9 +420,10 @@ class StataReader(object):
                 self._file.read(self._col_size(i))),
                 range(self._header['nvar']))
 
-def genfromdta(fname, missing_flt=-999., missing_str="", encoding=None):
+def genfromdta(fname, missing_flt=-999., missing_str="", encoding=None,
+                pandas=False):
     """
-    Returns an ndarray from a Stata .dta file.
+    Returns an ndarray or DataFrame from a Stata .dta file.
 
     Parameters
     ----------
@@ -436,6 +437,8 @@ def genfromdta(fname, missing_flt=-999., missing_str="", encoding=None):
     encoding : string, optional
         Used for Python 3 only. Encoding to use when reading the .dta file.
         Defaults to `locale.getpreferredencoding`
+    pandas : bool
+        Optionally return a DataFrame instead of an ndarray
 
     Notes
     ------
@@ -484,6 +487,9 @@ def genfromdta(fname, missing_flt=-999., missing_str="", encoding=None):
         data[rownum] = tuple(line)
 
     #TODO: make it possible to return plain array if all 'f8' for example
+    if pandas:
+        from pandas import DataFrame
+        return DataFrame.from_records(data)
     return data
 
 def savetxt(fname, X, names=None, fmt='%.18e', delimiter=' '):
