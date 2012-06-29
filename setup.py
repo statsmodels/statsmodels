@@ -176,8 +176,6 @@ def configuration(parent_package='', top_path=None, package_name=DISTNAME):
     config.add_subpackage(DISTNAME)
     config.add_subpackage('scikits.statsmodels')
     config.add_data_files('scikits/__init__.py')
-    config.add_data_files('docs/build/htmlhelp/statsmodelsdoc.chm',
-                          'statsmodels/statsmodelsdoc.chm')
 
     config.set_options(
             ignore_setup_xxx_py = True,
