@@ -156,7 +156,7 @@ class AR(tsbase.TimeSeriesModel):
             start = super(AR, self)._get_predict_start(start)
         else: # should be a date
             start = _validate(start, k_ar, self._data.dates, method)
-            start = super(ARMA, self)._get_predict_start(start)
+            start = super(AR, self)._get_predict_start(start)
         _check_ar_start(start, k_ar, method, dynamic)
         return start
 
