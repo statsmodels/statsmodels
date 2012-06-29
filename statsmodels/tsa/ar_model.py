@@ -40,6 +40,7 @@ def _validate(start, k_ar, dates, method):
     if 'mle' not in method and start < k_ar:
         raise ValueError("Start must be >= k_ar for conditional MLE or "
                 "dynamic forecast. Got %s" % start_date)
+    return start
 
 def _ar_predict_out_of_sample(y, params, p, k_trend, steps, start=0):
     mu = params[:k_trend] or 0 # only have to worry about constant
