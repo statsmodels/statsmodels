@@ -219,6 +219,23 @@ class TestAutolagAR(object):
     def test_ic(self):
         npt.assert_almost_equal(self.res1, self.res2, DECIMAL_6)
 
+def test_ar_dates():
+    # just make sure they work
+    data = sm.datasets.sunspots.load()
+    dates = sm.tsa.datetools.dates_from_range('1700', length=len(data.endog))
+    from pandas import Series
+    endog = Series(data.endog, index=dates)
+    ar_model = sm.tsa.AR(endog, freq='A').fit(maxlag=9, method='mle', disp=-1)
+    pred = ar_model.predict(start='2005', end='2015')
+    predict_dates = sm.tsa.datetools.dates_from_range('2005', '2015')
+    try:
+        from pandas import DatetimeIndex
+        predict_dates = DatetimeIndex(predict_dates, freq='infer')
+    except:
+        pass
+    assert_equal(ar_model._data.predict_dates, predict_dates)
+    assert_equal(pred.index, predict_dates)
+
 #TODO: likelihood for ARX model?
 #class TestAutolagARX(object):
 #    def setup(self):
