@@ -185,13 +185,18 @@ class TimeSeriesModel(base.LikelihoodModel):
         return end, out_of_sample
 
     def _make_predict_dates(self):
-        from pandas import DateRange
         data = self._data
         dtstart = data.predict_start
         dtend = data.predict_end
         freq = data.freq
         pandas_freq = _freq_to_pandas[freq]
-        dates = DateRange(dtstart, dtend, offset = pandas_freq).values
+        try:
+            from pandas import DatetimeIndex
+            dates = DatetimeIndex(start=dtstart, end=dtend,
+                                    freq=pandas_freq)
+        except ImportError as err:
+            from pandas import DateRange
+            dates = DateRange(dtstart, dtend, offset = pandas_freq).values
         self._data.predict_dates = dates
 
 class TimeSeriesModelResults(base.LikelihoodModelResults):
