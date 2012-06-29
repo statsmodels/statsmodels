@@ -22,7 +22,9 @@ exclude_list = ['run_all.py',
                 # these need to be cleaned up
                 'example_ols_tftest.py',
                 'example_glsar.py',
-                'example_ols_table.py']
+                'example_ols_table.py',
+                #not finished yet
+                'example_arima.py']
 
 file_path = os.path.dirname(__file__)
 docs_rst_dir = os.path.realpath(os.path.join(file_path,
