@@ -4,11 +4,13 @@ import statsmodels.api as sm
 from numpy.testing import (assert_almost_equal, assert_, assert_equal,
                           assert_approx_equal)
 from statsmodels.datasets import misra
-from results.misra1a.Misra1a import funcMisra1a,funcMisra1a_J,Misra1a
+from results.misra1a.Misra1a import (funcMisra1a,funcMisra1a_J,Misra1a,
+                                    Misra1aWNLS)
 
 DECIMAL_2 = 2
 DECIMAL_3 = 3
 DECIMAL_4 = 4
+DECIMAL_8 = 8
 
 class CheckNLSresults(object):
 
