@@ -185,18 +185,16 @@ class UKDE(Generic_KDE):
         return (F / (self.N ** 2) + self.loo_likelihood(bw) * 2 / ((self.N) * (self.N - 1)))
 
     def cdf(self, val):
-        val = np.squeeze(val)
+
 
         if self.K == 1:
             func = tools.IntegrateSingle
             n_edat = np.size(val)
         elif self.K == 2:
             func = tools.IntegrateDbl
+        elif self.K == 3:
+            func = tools.IntegrateTrpl
         return func(val, self.pdf)
-##        res=[]
-##        for i in val:
-##            res.append( func(val))
-##        return res
 
 
 class CKDE(Generic_KDE):

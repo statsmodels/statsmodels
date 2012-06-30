@@ -15,14 +15,18 @@ Convolution_Kernels = dict(gauss_convolution=kf.Gaussian_Convolution,
 
 
 def IntegrateSingle(val, pdf):
-    f1 = lambda x: pdf(edat=np.asarray(x))
+    f1 = lambda x: pdf(edat=np.asarray([x]))
     return quad(f1, -np.Inf, val)[0]
 
 
 def IntegrateDbl(val, pdf):
-    f2 = lambda x, y: pdf(edat=np.asarray([y, x]))
+    f2 = lambda y, x: pdf(edat=np.asarray([x, y]))
     return dblquad(f2, -np.Inf, val[0], lambda x: -np.Inf, lambda x: val[1])[0]
 
+def IntegrateTrpl(val, pdf):
+    f3 = lambda z, y, x: pdf(edat=np.asarray([x,y,z]))
+    return tplquad(f3, -np.Inf, val[0], lambda x: -np.Inf, lambda x: val[1],
+                   lambda x, y: -np.Inf, lambda x, y: val[2])[0]
 
 class LeaveOneOut(object):
     # Written by Skipper
@@ -85,7 +89,7 @@ def GPKE(bw, tdat, edat, var_type, ckertype='gaussian',
     isordered = np.where(var_type == 'o')[0]
     isunordered = np.where(var_type == 'u')[0]
     edat = np.asarray(edat)
-    edat = np.squeeze(edat)
+    #edat = np.squeeze(edat)
 
 ##    if tdat.ndim > 1:
 ##        N, K = np.shape(tdat)
