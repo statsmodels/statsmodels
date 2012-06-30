@@ -166,6 +166,7 @@ class UKDE(Generic_KDE):
         """
         if edat is None:
             edat = self.tdat
+        
         return tools.GPKE(self.bw, tdat=self.tdat, edat=edat,
                           var_type=self.var_type) / self.N
 

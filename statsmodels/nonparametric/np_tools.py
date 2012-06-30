@@ -88,15 +88,22 @@ def GPKE(bw, tdat, edat, var_type, ckertype='gaussian',
     iscontinuous = np.where(var_type == 'c')[0]
     isordered = np.where(var_type == 'o')[0]
     isunordered = np.where(var_type == 'u')[0]
+<<<<<<< HEAD
     edat = np.asarray(edat)
     #edat = np.squeeze(edat)
 
+=======
+    K = len(var_type)
+    edat = np.asarray(edat)
+    edat = np.squeeze(edat)
+>>>>>>> 2ccbae0fd936607c7d3d28b305eb65cb565378ca
 ##    if tdat.ndim > 1:
 ##        N, K = np.shape(tdat)
 ##    else:
 ##        K = 1
 ##        N = np.shape(tdat)[0]
 ##        tdat = tdat.reshape([N, K])
+<<<<<<< HEAD
 ##
 ##    if edat.ndim > 1:
 ##        N_edat = np.shape(edat)[0]
@@ -104,7 +111,81 @@ def GPKE(bw, tdat, edat, var_type, ckertype='gaussian',
 ##        N_edat = 1
 ##        edat = edat.reshape([N_edat, K])
 
+=======
+
+    if tdat.ndim == 1 and K == 1:  # one variable many observations
+        N = np.size(tdat)
+        #N_edat = np.size(edat)
+    elif tdat.ndim == 1 and K > 1:
+        N = 1
+
+    else:
+        N, K = np.shape(tdat)
+    tdat = tdat.reshape([N, K])
+
+##    if edat.ndim > 1:
+##        N_edat = np.shape(edat)[0]
+##    else:
+##        N_edat = 1
+##        edat = edat.reshape([N_edat, K])
+    if edat.ndim == 1 and K > 1:  # one obs many vars
+        N_edat = 1
+    elif edat.ndim == 1 and K == 1:  # one obs one var
+        N_edat = np.size(edat)
+
+    else:
+        N_edat = np.shape(edat)[0]  # ndim >1 so many obs many vars
+        assert np.shape(edat)[1] == K
+
+    edat = edat.reshape([N_edat, K])
+
+    bw = np.reshape(np.asarray(bw), (K,))  # must remain 1-D for indexing to work
+    dens = np.empty([N_edat, 1])
+
+    for i in xrange(N_edat):
+
+        Kval = np.concatenate((
+        kernel_func[ckertype](bw[iscontinuous], tdat[:, iscontinuous], edat[i, iscontinuous]),
+        kernel_func[okertype](bw[isordered], tdat[:, isordered], edat[i, isordered]),
+        kernel_func[ukertype](bw[isunordered], tdat[:, isunordered], edat[i, isunordered])
+        ), axis=1)
+
+        dens[i] = np.sum(np.prod(Kval, axis=1)) * 1. / (np.prod(bw[iscontinuous]))
+    return dens
+
+
+def GPKE2(bw, tdat, edat, var_type, ckertype='gaussian',
+          okertype='wangryzin', ukertype='aitchisonaitken'):
+    """
+    Returns the non-normalized Generalized Product Kernel Estimator
+
+    Parameters
+    ----------
+    bw: array-like
+        The user-specified bandwdith parameters
+    tdat: 1D or 2d array
+        The training data
+    edat: 1d array
+        The evaluation points at which the kernel estimation is performed
+    var_type: str
+        The variable type (continuous, ordered, unordered)
+    ckertype: str
+        The kernel used for the continuous variables
+    okertype: str
+        The kernel used for the ordered discrete variables
+    ukertype: str
+        The kernel used for the unordered discrete variables
+
+    """
+    var_type = np.asarray(list(var_type))
+    iscontinuous = np.where(var_type == 'c')[0]
+    isordered = np.where(var_type == 'o')[0]
+    isunordered = np.where(var_type == 'u')[0]
+>>>>>>> 2ccbae0fd936607c7d3d28b305eb65cb565378ca
     K = len(var_type)
+    edat = np.asarray(edat)
+    edat = np.squeeze(edat)
+
     if tdat.ndim == 1 and K == 1:  # one variable many observations
         N = np.size(tdat)
         #N_edat = np.size(edat)
@@ -151,6 +232,9 @@ def GPKE3(bw, tdat, edat, var_type, ckertype='gaussian',
     isordered = np.where(var_type == 'o')[0]
     isunordered = np.where(var_type == 'u')[0]
     K = len(var_type)
+    edat = np.asarray(edat)
+    edat = np.squeeze(edat)
+
     if tdat.ndim == 1 and K == 1:  # one variable many observations
         N = np.size(tdat)
         #N_edat = np.size(edat)
