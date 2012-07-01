@@ -543,11 +543,11 @@ class CKDE(Generic_KDE):
             Ye_R = np.kron(Expander, Y)
             Xe_L = np.kron(X, Expander)
             Xe_R = np.kron(Expander, X)            
-            K_Xi_Xl = tools.GPKE3(bw[self.K_dep::], tdat=Xe_L,
+            K_Xi_Xl = tools.PKE(bw[self.K_dep::], tdat=Xe_L,
                                   edat=self.txdat[l, :], var_type=self.indep_type)
-            K_Xj_Xl = tools.GPKE3(bw[self.K_dep::], tdat=Xe_R,
+            K_Xj_Xl = tools.PKE(bw[self.K_dep::], tdat=Xe_R,
                                   edat=self.txdat[l, :], var_type=self.indep_type)
-            K2_Yi_Yj = tools.GPKE3(bw[0:self.K_dep], tdat=Ye_L,
+            K2_Yi_Yj = tools.PKE(bw[0:self.K_dep], tdat=Ye_L,
                                    edat=Ye_R, var_type=self.dep_type,
                              ckertype='gauss_convolution', okertype='wangryzin_convolution',
                                    ukertype='aitchisonaitken_convolution')

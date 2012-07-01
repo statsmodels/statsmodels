@@ -83,6 +83,23 @@ def GPKE(bw, tdat, edat, var_type, ckertype='gaussian',
         The kernel used for the ordered discrete variables
     ukertype: str
         The kernel used for the unordered discrete variables
+
+    Returns
+    -------
+    dens: array-like
+        The dens estimator
+
+    Notes
+    -----
+
+    The formula for the multivariate kernel estimator for the pdf is:
+
+    .. math:: f(x)=\frac{1}{nh_{1}...h_{q}}\sum_{i=1}^{n}K\left(\frac{X_{i}-x}{h}\right)
+
+    where
+    
+    .. math:: K\left(\frac{X_{i}-x}{h}\right)=k\left(\frac{X_{i1}-x_{1}}{h_{1}}\right)\times k\left(\frac{X_{i2}-x_{2}}{h_{2}}\right)\times...\times k\left(\frac{X_{iq}-x_{q}}{h_{q}}\right)
+    
     """
     var_type = np.asarray(list(var_type))
     iscontinuous = np.where(var_type == 'c')[0]
@@ -143,10 +160,41 @@ def GPKE(bw, tdat, edat, var_type, ckertype='gaussian',
 
 
 
-def GPKE3(bw, tdat, edat, var_type, ckertype='gaussian',
+def PKE(bw, tdat, edat, var_type, ckertype='gaussian',
           okertype='wangryzin', ukertype='aitchisonaitken'):
-    # Rename !
+    """
+    The product of appropriate kernels
 
+    Used in the calculation of IMSE for the conditional KDE
+
+    Parameters
+    ----------
+    bw: array-like
+        The user-specified bandwdith parameters
+    tdat: 1D or 2d array
+        The training data
+    edat: 1d array
+        The evaluation points at which the kernel estimation is performed
+    var_type: str
+        The variable type (continuous, ordered, unordered)
+    ckertype: str
+        The kernel used for the continuous variables
+    okertype: str
+        The kernel used for the ordered discrete variables
+    ukertype: str
+        The kernel used for the unordered discrete variables
+
+    Returns
+    -------
+    dens: array-like
+        The dens estimator
+    Notes
+    -----
+    This is similar to GPKE but adapted specifically for the CKDE
+    cross-validation least squares. It also doesn't sum across the kernel
+    values
+    """
+    # TODO: See if you can substitute instead of the GPKE method
     var_type = np.asarray(list(var_type))
     iscontinuous = np.where(var_type == 'c')[0]
     isordered = np.where(var_type == 'o')[0]

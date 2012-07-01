@@ -27,12 +27,34 @@ def AitchisonAitken(h, Xi, x, num_levels=False):
         The value of the training set
     x: 1D array of length K
         The value at which the kernel density is being estimated
-    c: 1D array of length K
-        The number of possible values that each variable can take
+    num_levels: Boolean
+        Gives the user the option to specify the number of levels for the RV
+        If False then the number of levels for the RV are calculated
+        from the data
     Returns
     -------
     kernel_value : K-dimensional array
-    The value of the kernel function at each training point for each var        
+    The value of the kernel function at each training point for each var
+
+    Notes
+    -----
+
+    see [2] p.18 for details
+
+    The value of the kernel L if
+    
+    .. math::`X_{i}=x`
+
+    is:
+
+    .. math:: 1-\lambda
+
+    else:
+
+    \frac{\lambda}{c-1}
+
+    where :math:`c` is the number of levels plus one of the RV
+ 
     References
     ----------
     Nonparametric econometrics : theory and practice / Qi Li and Jeffrey Scott Racine.
@@ -92,7 +114,22 @@ def WangRyzin(h, Xi, x):
     -------
     kernel_value : float
         The value of the kernel function
-        
+
+    Notes
+    -----
+    See p. 19 in [2]
+    
+    The value of the kernel L if
+    
+    .. math::`X_{i}=x`
+
+    is:
+
+    .. math:: 1-\lambda
+
+    else:
+
+    \frac{1-\lambda}{2}\lambda^{|X_{i}-x|}        
     References
     ----------
     Nonparametric econometrics : theory and practice / Qi Li and Jeffrey Scott Racine.
