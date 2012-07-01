@@ -271,14 +271,29 @@ class UKDE(Generic_KDE):
 
     def IMSE(self, bw):
         """
-        Returns the Integrated Mean Square Error
-        Integrate [ f_hat(x) - f(x)]^2 dx
+        Returns the Integrated Mean Square Error for the unconditional UKDE
 
+        Parameters
+        ----------
+        bw: array-like
+            The bandwidth parameter(s)
+        Returns
+        ------
+        CV: float
+            The cross-validation objective function
+        
         Notes
         -----
-        The
-        .. math:: p(x) =  
+        See p. 27 in [1]
+        For details on how to handle the multivariate estimation with mixed data types see p.6 in [3]
+
+        The formula for the cross-validation objective function is:
+        
+        .. math:: CV=\frac{1}{n^{2}}\sum_{i=1}^{n}\sum_{j=1}^{N}\bar{K}_{h}(X_{i},X_{j})-\frac{2}{n(n-1)}\sum_{i=1}^{n}\sum_{j=1,j\neq i}^{N}K_{h}(X_{i},X_{j})
+
+        Where :math:`\bar{K}_{h}` is the multivariate product convolution kernel (consult [3] for mixed data types)
         """
+        
         print "running..."
         F = 0
         for i in range(self.N):
@@ -290,6 +305,26 @@ class UKDE(Generic_KDE):
         return (F / (self.N ** 2) + self.loo_likelihood(bw) * 2 / ((self.N) * (self.N - 1)))
 
     def cdf(self, val):
+        """
+        Returns the cumulative distribution function evaluated at val
+
+        Currently only works with up to three continuous variables
+
+        Parameters
+        ----------
+        val: list of floats
+            The values at which the cdf is estimated
+            
+        Returns
+        -------
+        cdf: array
+            The estimate of the the cdf evaluated at the values specified in val
+            
+        """
+        # TODO: 1)Include option to fix certain variables
+        #       2)Handle ordered variables
+        #       3)Handle more than 3 continuous (with warning for speed)
+        #       4)Hande unordered variables by fixing
 
 
         if self.K == 1:
@@ -332,10 +367,10 @@ class CKDE(Generic_KDE):
         o: Ordered (Discrete)
     indep_type: str
         The type of the independent variables
+        same as dep_type
 
     bw: array-like
-        User-specified bandwidth.
-    bwmethod: str
+        Either a user-specified bandwidth.
         The method for bandwidth selection.
         cv_ml: cross validation maximum likelihood
         normal_reference: normal reference rule of thumb
@@ -377,7 +412,23 @@ class CKDE(Generic_KDE):
 
     def loo_likelihood(self, bw, func=lambda x: x):
         """
-        Returns the leave-one-out likelihood for the data
+        Returns the leave-one-out function for the data
+
+        Parameters
+        ----------
+        bw: array-like
+            The bandwidth parameter(s)
+        func: function
+            Should be np.log for the log likelihood
+
+        Returns
+        -------
+        L: float
+            The value of the leave-one-out function for the data
+
+        Notes
+        -----
+        Similar to the loo_likelihood in Generic_KDE but substitute for f(x), f(x|y)=f(x,y)/f(y)
         """
         yLOO = tools.LeaveOneOut(self.all_vars)
         xLOO = tools.LeaveOneOut(self.txdat).__iter__()
@@ -405,7 +456,25 @@ class CKDE(Generic_KDE):
             If unspecified, the training data is used
         exdat: array-like
             Evaluation data for the independent variables
+
+        Returns
+        -------
+        pdf: array-like
+            The value of the probability density at eydat and exdat
+
+        Notes
+        -----
+        The formula for the conditional probability density is:
+
+        .. math:: f(X|Y)=\frac{f(X,Y)}{f(Y)}
+
+        with
+
+        .. math:: f(X)=\prod_{s=1}^{q}h_{s}^{-1}k\left(\frac{X_{is}-X_{js}}{h_{s}}\right)
+
+        where :math:`k` is the appropriate kernel for each variable
         """
+
         if eydat is None:
             eydat = self.all_vars
         if exdat is None:
@@ -417,8 +486,43 @@ class CKDE(Generic_KDE):
         return (f_yx / f_x)
 
     def IMSE(self, bw):
+        """
+        The integrated mean square error for the conditional KDE
+
+        Parameters
+        ----------
+        bw: array-like
+            The bandwidth parameter(s)
+
+        Returns
+        -------
+        CV: float
+            The cross-validation objective function
+
+        Notes
+        -----
+
+        For more details see pp. 156-166 in [1]
+        For details on how to handel the mixed variable types see [3]
+
+        The formula for the cross-validation objective function for mixed variable types is:
+
+        .. math:: CV(h,\lambda)=\frac{1}{n}\sum_{l=1}^{n}\frac{G_{-l}(X_{l})}{\left[\mu_{-l}(X_{l})\right]^{2}}-\frac{2}{n}\sum_{l=1}^{n}\frac{f_{-l}(X_{l},Y_{l})}{\mu_{-l}(X_{l})}
+
+        where
+
+        .. math:: G_{-l}(X_{l})=n^{-2}\sum_{i\neq l}\sum_{j\neq l}K_{X_{i},X_{l}}K_{X_{j},X_{l}}K_{Y_{i},Y_{j}}^{(2)}
+
+        where :math:`K_{X_{i},X_{l}}` is the multivariate product kernel and :math:`\mu_{-l}(X_{l})` is
+        the leave-one-out estimator of the pdf
+
+        :math:`K_{Y_{i},Y_{j}}^{(2)}` is the convolution kernel
+
+        The value of the function is minimized by _cv_ls method of the Generic_KDE class to return the bw estimates that minimize
+        the distance between the estimated and "true" probability density
+        
+        """
         print "Starting"
-        # Still runs very slow. Try to vectorize.
         zLOO = tools.LeaveOneOut(self.all_vars)
         l = 0
         CV = 0
