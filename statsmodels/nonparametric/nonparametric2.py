@@ -28,16 +28,26 @@ class Generic_KDE ():
 
         Parameters
         ----------
+        #FIXME
         bw: array-like
             User-specified bandwidth.
         bwmethod: str
             The method for bandwidth selection.
             cv_ml: cross validation maximum likelihood
             normal_reference: normal reference rule of thumb
+<<<<<<< HEAD
         Notes
         ----------
         The default values for bw and bwmethod are None. The user must specify either a value for bw
         or bwmethod but not both.
+=======
+
+        Notes
+        -----
+        The default values for bw and bwmethod are None. The user must specify
+        either a value for bw or bwmethod but not both.
+
+>>>>>>> 08eaa00bd8630f2dc7f7cf6ef1714cd88f392001
         """
         self.bw_func = dict(normal_reference=self._normal_reference,
                             cv_ml=self._cv_ml, cv_ls=self._cv_ls)
@@ -48,8 +58,19 @@ class Generic_KDE ():
         if type(bw) != str:  # The user provided an actual bandwidth estimate
             return np.asarray(bw)
         else:  # The user specified a bandwidth selection method e.g. 'normal-reference'
+            res = bwfunc()
+        if not isinstance(bw, basestring):
+            # The user provided an actual bandwidth estimate
+            # TODO: would be good if the user could provide a function here
+            # that uses tdat/N/K, instead of just a result.
+            self._bw_method = "user-specified"
+            res = np.asarray(bw)
+        else:
+            # The user specified a bandwidth selection method e.g. 'normal-reference'
+            self._bw_method = bw
             bwfunc = self.bw_func[bw]
-            return bwfunc()
+            res = bwfunc()
+        return res
 
     def _normal_reference(self):
         """
@@ -68,9 +89,7 @@ class Generic_KDE ():
         bw = opt.fmin(self.loo_likelihood, x0=h0, args=(np.log, ),
                       maxiter=1e3, maxfun=1e3, disp=0)
         return bw
-
-#TODO: Add the least squares cross validation bandwidth method
-    def _cv_ls(self):
+    def _cv_ls (self):
         h0 = self._normal_reference()
         bw = opt.fmin(self.IMSE, x0=h0, maxiter=1e3,
                       maxfun=1e3, disp=0)
@@ -112,7 +131,7 @@ class UKDE(Generic_KDE):
     -------
     pdf(): the probability density function
 
-    Example
+    Examples
     --------
     >>> from statsmodels.nonparametric import UKDE
     >>> N = 300
@@ -160,7 +179,7 @@ class UKDE(Generic_KDE):
 
         Parameters
         ----------
-        edat: array-like
+        edat: array_like
             Evaluation data.
             If unspecified, the training data is used
         """
@@ -197,10 +216,19 @@ class UKDE(Generic_KDE):
             func = tools.IntegrateTrpl
         return func(val, self.pdf)
 
+    def __repr__(self):
+        """Provide something sane to print."""
+        repr = "UKDE instance\n"
+        repr += "Number of variables: K = " + str(self.K) + "\n"
+        repr += "Number of samples:   N = " + str(self.N) + "\n"
+        repr += "Variable types:      " + self.var_type + "\n"
+        repr += "BW selection method: " + self._bw_method + "\n"
+        return repr
 
 class CKDE(Generic_KDE):
     """
     Conditional Kernel Density Estimator
+
     Calculates P(X_1,X_2,...X_n | Y_1,Y_2...Y_m) = P(X_1, X_2,...X_n, Y_1, Y_2,..., Y_m)/P(Y_1, Y_2,..., Y_m)
     The conditional density is by definition the ratio of the two unconditional densities
     http://en.wikipedia.org/wiki/Conditional_probability_distribution
@@ -303,7 +331,6 @@ class CKDE(Generic_KDE):
                          edat=exdat, var_type=self.indep_type)
         return (f_yx / f_x)
 
-
     def IMSE(self, bw):
         print "Starting"
         # Still runs very slow. Try to vectorize.
@@ -335,3 +362,4 @@ class CKDE(Generic_KDE):
             l += 1
             CV += (G / m_x ** 2) - 2 * (f_X_Y / m_x)
         return CV / float(self.N)
+
