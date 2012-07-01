@@ -2,7 +2,7 @@ import numpy as np
 import numpy.testing as npt
 import matplotlib.pyplot as plt
 import scipy.stats as stats
-import nonparametric2 as nparam
+import statsmodels.nonparametric as nparam
 
 class MyTest(object):
     def setUp(self):
