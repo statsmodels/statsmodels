@@ -55,10 +55,10 @@ class Generic_KDE ():
             bwfunc = self.bw_func['normal_reference']
             return bwfunc()
 
-        if type(bw) != str:  # The user provided an actual bandwidth estimate
-            return np.asarray(bw)
-        else:  # The user specified a bandwidth selection method e.g. 'normal-reference'
-            res = bwfunc()
+##        if type(bw) != str:  # The user provided an actual bandwidth estimate
+##            return np.asarray(bw)
+##        else:  # The user specified a bandwidth selection method e.g. 'normal-reference'
+##            res = bwfunc()
         if not isinstance(bw, basestring):
             # The user provided an actual bandwidth estimate
             # TODO: would be good if the user could provide a function here

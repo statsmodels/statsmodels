@@ -92,7 +92,7 @@ def GPKE(bw, tdat, edat, var_type, ckertype='gaussian',
     #edat = np.squeeze(edat)
     K = len(var_type)
     edat = np.asarray(edat)
-    edat = np.squeeze(edat)
+    #edat = np.squeeze(edat)
 ##    if tdat.ndim > 1:
 ##        N, K = np.shape(tdat)
 ##    else:
