@@ -4,9 +4,15 @@ with Mixed Data Types
 
 References
 ----------
-Racine, Jeff. (2008) "Nonparametric Econometrics: A Primer," Foundation and
-    Trends in Econometrics: Vol 3: No 1, pp1-88.
+[1] Racine, J., Li, Q. Nonparametric econometrics: theory and practice. Princeton
+    University Press. (2007)
+[2] Racine, Jeff. "Nonparametric Econometrics: A Primer," Foundation and
+    Trends in Econometrics: Vol 3: No 1, pp1-88. (2008)
     http://dx.doi.org/10.1561/0800000009
+[3] Racine, J., Li, Q. "Nonparametric Estimation of Distributions with Categorical
+    and Continuous Data." Working Paper. (2000)
+[4] Racine, J. Li, Q. "Kernel Estimation of Multivariate Conditional Distributions
+    Annals of Economics and Finance 5, 211-235 (2004)
 
 """
 
@@ -20,35 +26,29 @@ __all__ = ['UKDE', 'CKDE']
 
 
 class Generic_KDE ():
-    # Generic KDE class with methods shared by both conditional and unconditional kernel density estimators
-
+    """
+    Generic KDE class with methods shared by both UKDE and CKDE
+    
+    
+    """
     def compute_bw(self, bw):
         """
-        Returns the bandwidth of the data
+        Computes the bandwidth of the data
 
         Parameters
         ----------
-        #FIXME
-        bw: array-like
-            User-specified bandwidth.
-        bwmethod: str
-            The method for bandwidth selection.
+        bw: array-like or string
+            If array-like: user-specified bandwidth.
+            If string:
             cv_ml: cross validation maximum likelihood
             normal_reference: normal reference rule of thumb
-<<<<<<< HEAD
+            cv_ls: cross validation least squares
+
         Notes
         ----------
-        The default values for bw and bwmethod are None. The user must specify either a value for bw
-        or bwmethod but not both.
-=======
-
-        Notes
-        -----
-        The default values for bw and bwmethod are None. The user must specify
-        either a value for bw or bwmethod but not both.
-
->>>>>>> 08eaa00bd8630f2dc7f7cf6ef1714cd88f392001
+        The default values for bw is 'normal_reference'.
         """
+
         self.bw_func = dict(normal_reference=self._normal_reference,
                             cv_ml=self._cv_ml, cv_ls=self._cv_ls)
         if bw is None:
@@ -75,6 +75,19 @@ class Generic_KDE ():
     def _normal_reference(self):
         """
         Returns Scott's normal reference rule of thumb bandwidth parameter
+
+        Notes
+        -----
+        See p.13 in [2] for en example and discussion
+
+        The formula for the bandwidth is
+        
+        .. math:: h = 1.06n^{-1/(4+q)}
+        
+        where :math:`n` is the number of observations and :math:`q` is the number of
+        variables
+
+        
         """
         c = 1.06
         X = np.std(self.all_vars, axis=0)
@@ -83,13 +96,47 @@ class Generic_KDE ():
     def _cv_ml(self):
         """
         Returns the cross validation maximum likelihood bandwidth parameter
-        """
 
+        Notes
+        -----
+        For more details see p.16, 18, 27 in [1]
+        
+        Returns the bandwidth estimate that maximizes the leave-out-out likelihood
+        The leave-one-out log likelihood function is:
+
+        .. math:: \ln L=\sum_{i=1}^{n}\ln f_{-i}(X_{i})
+
+        The leave-one-out kernel estimator of :math:`f_{-i}` is:
+        
+        .. math:: f_{-i}(X_{i})=\frac{1}{(n-1)h}\sum_{j=1,j\neq i}K_{h}(X_{i},X_{j})
+
+        where :math:`K_{h}` represents the Generalized product kernel estimator:
+
+        .. math:: K_{h}(X_{i},X_{j})=\prod_{s=1}^{q}h_{s}^{-1}k\left(\frac{X_{is}-X_{js}}{h_{s}}\right)
+        
+        """
         h0 = self._normal_reference()  # the initial value for the optimization is the normal_reference
         bw = opt.fmin(self.loo_likelihood, x0=h0, args=(np.log, ),
                       maxiter=1e3, maxfun=1e3, disp=0)
         return bw
     def _cv_ls (self):
+        """
+        Returns the cross-validation least squares bandwidth parameter(s)
+
+        Notes
+        -----
+        For more details see pp. 16, 27 in [1]
+
+        Returns the value of the bandwidth that maximizes the integrated mean square error
+        between the estimated and actual distribution.
+        The integrated mean square error is given by:
+        
+        .. math:: \int\left[\hat{f}(x)-f(x)\right]^{2}dx
+
+        This is the general formula for the IMSE. The IMSE differes for conditional (CKDE) and
+        unconditional (UKDE) kernel density estimation.
+        
+        """
         h0 = self._normal_reference()
         bw = opt.fmin(self.IMSE, x0=h0, maxiter=1e3,
                       maxfun=1e3, disp=0)
@@ -107,7 +154,8 @@ class UKDE(Generic_KDE):
     ----------
     tdat: list
         The training data for the Kernel Density Estimation. Each element of the list
-        is a seperate variable
+        is an array-like seperate variable
+
     var_type: str
         The type of the variables
         c: Continuous
@@ -115,8 +163,7 @@ class UKDE(Generic_KDE):
         o: Ordered (Discrete)
 
     bw: array-like
-        User-specified bandwidth.
-    bwmethod: str
+        Either a user-specified bandwidth.
         The method for bandwidth selection.
         cv_ml: cross validation maximum likelihood
         normal_reference: normal reference rule of thumb
@@ -125,11 +172,15 @@ class UKDE(Generic_KDE):
     Attributes
     ---------
     bw: array-like
-        The bandwidth parameters
+        The bandwidth parameters.
 
     Methods
     -------
     pdf(): the probability density function
+    cdf(): the cumulative distribution function
+    IMSE(): the integrated mean square error
+    loo_likelihood(): the leave one out likelihood
+    
 
     Examples
     --------
@@ -153,15 +204,32 @@ class UKDE(Generic_KDE):
         self.N, self.K = np.shape(self.tdat)
         self.var_type = var_type
         assert self.K == len(self.var_type)
+        assert self.N > self.K  # Num of obs must be > than num of vars
         self.bw = self.compute_bw(bw)
 
     def loo_likelihood(self, bw, func=lambda x: x):
         """
-        Returns the leave-one-out likelihood for the data
+        Returns the leave-one-out likelihood function
+
+        The leave-one-out likelihood function for the unconditional KDE
+        
         Parameters
         ----------
         bw: array-like
-            The value for the bandwdith parameters
+            The value for the bandwdith parameter(s)
+        func: function
+            For the log likelihood should be numpy.log           
+
+        Notes
+        -----
+        The leave-one-out kernel estimator of :math:`f_{-i}` is:
+        
+        .. math:: f_{-i}(X_{i})=\frac{1}{(n-1)h}\sum_{j=1,j\neq i}K_{h}(X_{i},X_{j})
+
+        where :math:`K_{h}` represents the Generalized product kernel estimator:
+
+        .. math:: K_{h}(X_{i},X_{j})=\prod_{s=1}^{q}h_{s}^{-1}k\left(\frac{X_{is}-X_{js}}{h_{s}}\right)
+        
         """
         LOO = tools.LeaveOneOut(self.tdat)
         i = 0
@@ -175,13 +243,25 @@ class UKDE(Generic_KDE):
 
     def pdf(self, edat=None):
         """
-        Returns the probability density function
+        Probability density function at edat
 
         Parameters
         ----------
-        edat: array_like
+        edat: array-like
             Evaluation data.
             If unspecified, the training data is used
+
+        Returns
+        -----------
+        pdf: array-like
+            Probability density function evaluated at edat
+
+        Notes
+        -----
+        The probability density is given by the generalized product kernel estimator
+        
+        .. math:: K_{h}(X_{i},X_{j})=\prod_{s=1}^{q}h_{s}^{-1}k\left(\frac{X_{is}-X_{js}}{h_{s}}\right)
+        
         """
         if edat is None:
             edat = self.tdat
@@ -191,8 +271,13 @@ class UKDE(Generic_KDE):
 
     def IMSE(self, bw):
         """
-        Returns the First term from the Integrated Mean Square Error
+        Returns the Integrated Mean Square Error
         Integrate [ f_hat(x) - f(x)]^2 dx
+
+        Notes
+        -----
+        The
+        .. math:: p(x) =  
         """
         print "running..."
         F = 0
