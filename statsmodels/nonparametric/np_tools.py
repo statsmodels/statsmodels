@@ -153,7 +153,7 @@ def GPKE3(bw, tdat, edat, var_type, ckertype='gaussian',
     isunordered = np.where(var_type == 'u')[0]
     K = len(var_type)
     edat = np.asarray(edat)
-    edat = np.squeeze(edat)
+    #edat = np.squeeze(edat)
 
     if tdat.ndim == 1 and K == 1:  # one variable many observations
         N = np.size(tdat)

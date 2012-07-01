@@ -241,7 +241,7 @@ class UKDE(Generic_KDE):
             L += func(f_i)
         return -L
 
-    def pdf(self, edat=None):
+    def pdf(self, edat=None, issorted=False):
         """
         Probability density function at edat
 
@@ -250,12 +250,15 @@ class UKDE(Generic_KDE):
         edat: array-like
             Evaluation data.
             If unspecified, the training data is used
+        issorted: Boolean
+            User specifies whether to return a sorted array of the pdf
 
         Returns
         -----------
-        pdf: array-like
+        pdf_est: array-like
             Probability density function evaluated at edat
-
+        ix: array-like, optional
+            The index of sorting if issorted=True
         Notes
         -----
         The probability density is given by the generalized product kernel estimator
@@ -266,9 +269,15 @@ class UKDE(Generic_KDE):
         if edat is None:
             edat = self.tdat
         
-        return tools.GPKE(self.bw, tdat=self.tdat, edat=edat,
+        pdf_est = tools.GPKE(self.bw, tdat=self.tdat, edat=edat,
                           var_type=self.var_type) / self.N
-
+        pdf_est = np.squeeze(pdf_est)
+##        if issorted:
+##            ix = np.argsort(np.squeeze(edat))
+##            pdf_est = pdf_est[ix]
+##            return pdf_est, ix
+        
+        return pdf_est
     def IMSE(self, bw):
         """
         Returns the Integrated Mean Square Error for the unconditional UKDE
@@ -294,7 +303,7 @@ class UKDE(Generic_KDE):
         Where :math:`\bar{K}_{h}` is the multivariate product convolution kernel (consult [3] for mixed data types)
         """
         
-        print "running..."
+        #print "running..."
         F = 0
         for i in range(self.N):
             k_bar_sum = tools.GPKE(bw, tdat=-self.tdat, edat=-self.tdat[i, :],
@@ -522,7 +531,7 @@ class CKDE(Generic_KDE):
         the distance between the estimated and "true" probability density
         
         """
-        print "Starting"
+        #print "Starting"
         zLOO = tools.LeaveOneOut(self.all_vars)
         l = 0
         CV = 0

@@ -243,7 +243,8 @@ class TestCKDE(MyTest):
     def test_unordered_CV_LS (self):
         dens_ls = nparam.CKDE(tydat=[self.oecd],txdat=[self.growth],
                                            dep_type='u',indep_type='c',bw='cv_ls')
-        
+        print dens_ls.pdf()
+        print "Test completed"
         #not a good match. needs more work
         
 

@@ -249,7 +249,7 @@ def AitchisonAitken_Convolution(h, Xi, Xj):
     if K == 0:
         return Xi
     Xi = Xi.reshape([N, K])
-    Xj = Xj.reshape((K, ))
+#    Xj = Xj.reshape((K, ))
     h = h.reshape((K, ))
     Dom_x = [np.unique(Xi[:, i]) for i in range(K)]
     Ordered = np.empty([N, K])
