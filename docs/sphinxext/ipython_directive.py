@@ -167,7 +167,11 @@ def block_parser(part, rgxin, rgxout, fmtin, fmtout):
                 if matchout or nextline.startswith('#'):
                     break
                 elif nextline.startswith(continuation):
-                    inputline += '\n' + nextline[Nc:]
+                    #handle try/except blocks. only catch outer except
+                    if re.match(continuation + '\sexcept:', nextline):
+                        inputline += '\n' + nextline[Nc+1:]
+                    else:
+                        inputline += '\n' + nextline[Nc:]
                 else:
                     rest.append(nextline)
                 i+= 1
