@@ -1,3 +1,7 @@
+"""Interactions and ANOVA
+"""
+#NOTE: This script is based heavily on Jonathan Taylor's class notes
+#http://www.stanford.edu/class/stats191/interactions.html
 from urllib2 import urlopen
 
 import numpy as np
@@ -12,14 +16,12 @@ from statsmodels.stats.anova import anova_lm
 
 try:
     salary_table = pandas.read_csv('salary.table')
-except: # pandas master should be able to read URL with my patch
+except: # recent pandas should be able to read URL
     url = 'http://stats191.stanford.edu/data/salary.table'
     fh = urlopen(url)
     salary_table = pandas.read_table(fh)
     salary_table.to_csv('salary.table')
 
-#salary_table.attach() # require my pandas df-attach branch
-#PR rejected but I still think this could be useful...
 E = salary_table.E
 M = salary_table.M
 X = salary_table.X
@@ -68,7 +70,6 @@ print infl.summary_table()
 df_infl = infl.summary_frame()
 
 #Now plot the reiduals within the groups separately
-#there's probably some nice DataFrame trickery for this
 resid = lm.resid
 
 fig = plt.figure()
@@ -85,12 +86,11 @@ plt.show()
 
 # now we will test some interactions using anova or f_test
 
-interX_lm = ols("S ~ C(E) * X + C(M)",
-                    salary_table).fit()
+interX_lm = ols("S ~ C(E) * X + C(M)", salary_table).fit()
 print interX_lm.summary()
 
-# Do an ANOVA check using https://gist.github.com/2245820
-# Will be in statsmodels soon
+# Do an ANOVA check
+from statsmodels.stats.api import anova_lm
 
 table1 = anova_lm(lm, interX_lm)
 print table1
@@ -108,10 +108,7 @@ interM_lm.model._data._orig_exog
 interM_lm.model.exog
 interM_lm.model.exog_names
 
-try:
-    infl = interM_lm.get_influence()
-except: # there was a rename in master
-    infl = interM_lm.get_influence()
+infl = interM_lm.get_influence()
 resid = infl.resid_studentized_internal
 
 fig = plt.figure()
@@ -130,22 +127,20 @@ plt.show()
 
 drop_idx = abs(resid).argmax()
 print drop_idx # zero-based index
+idx = salary_table.index.drop(drop_idx)
 
-lm32 = ols('S ~ C(E) + X + C(M)',
-            df = salary_table.drop([drop_idx])).fit()
+lm32 = ols('S ~ C(E) + X + C(M)', df=salary_table, subset=idx).fit()
 
 print lm32.summary()
 
-interX_lm32 = ols('S ~ C(E) * X + C(M)',
-            df = salary_table.drop([drop_idx])).fit()
+interX_lm32 = ols('S ~ C(E) * X + C(M)', df=salary_table, subset=idx).fit()
 
 print interX_lm32.summary()
 
 table3 = anova_lm(lm32, interX_lm32)
 print table3
 
-interM_lm32 = ols('S ~ X + C(E) * C(M)',
-            df = salary_table.drop([drop_idx])).fit()
+interM_lm32 = ols('S ~ X + C(E) * C(M)', df=salary_table, subset=idx).fit()
 
 table4 = anova_lm(lm32, interM_lm32)
 print table4
@@ -331,26 +326,24 @@ print rehab_lm.summary()
 # Two-way ANOVA
 # -------------
 
-url = 'http://stats191.stanford.edu/data/kidney.table'
 # pandas fails on this table
-#kidney_table = pandas.read_table(url, delimiter=" ", converters=converters)
-
-kidney_table = np.genfromtxt(urlopen(url), names=True)
-kidney_table = pandas.DataFrame.from_records(kidney_table)
+try:
+    kidney_table = pandas.read_table('./kidney.table')
+except:
+    url = 'http://stats191.stanford.edu/data/kidney.table'
+    kidney_table = pandas.read_table(url, delimiter=" *")
 
 # Explore the dataset
 kidney_table.groupby(['Weight', 'Duration']).size()
 # balanced panel
-
 
 kt = kidney_table
 interaction_plot(kt['Weight'], kt['Duration'], np.log(kt['Days']+1),
         colors=['red', 'blue'], markers=['D','^'], ms=10)
 plt.show()
 
-#I thought we could use the numpy namespace in charlton?
-from charlton.desc import _builtins_dict as builtins
-builtins['np'] = np
+# You have things available in the calling namespace available
+# in the formula evaluation namespace
 kidney_lm = ols('np.log(Days+1) ~ C(Duration) * C(Weight)',
         df=kt).fit()
 
@@ -375,35 +368,16 @@ print anova_lm(ols('np.log(Days+1) ~ C(Weight)', df=kt).fit(),
 # Types I and II are equivalent under a balanced design.
 
 # Don't use Type III with non-orthogonal contrast - ie., Treatment
-# Why exactly?
 
 sum_lm = ols('np.log(Days+1) ~ C(Duration, Sum) * C(Weight, Sum)',
             df=kt).fit()
 
 print anova_lm(sum_lm)
 print anova_lm(sum_lm, typ=2)
-#anova_lm(sum_lm, type=3)
+print anova_lm(sum_lm, typ=3)
 
 nosum_lm = ols('np.log(Days+1) ~ C(Duration, Treatment) * C(Weight, Treatment)',
             df=kt).fit()
 print anova_lm(nosum_lm)
 print anova_lm(nosum_lm, typ=2)
-#anova_lm(nosum_lm, type=3)
-
-# R code for this.
-#sum.lm = lm(logDays ~ Duration * Weight, contrasts=list(Duration=contr.sum, Weight=contr.sum))
-#library(car)
-#
-#model.matrix
-#
-#anova(sum.lm)
-#Anova(sum.lm, type='II')
-#Anova(sum.lm, type='III')
-#
-## these sums of squares are different if you use the default
-## contrast codings, i.e. contr.treatment
-#nosum.lm = lm(logDays ~ Duration * Weight, contrasts=list(Duration=contr.treatment, Weight=contr.treatment))
-#
-#anova(nosum.lm)
-#Anova(nosum.lm, type='II')
-#Anova(nosum.lm, type='III')
+print anova_lm(nosum_lm, typ=3)
