@@ -6,14 +6,14 @@ class Bunch(dict):
         self.__dict__  = self
 
 
-sur = Bunch()
-sur.call = '''systemfit(formula = formula, method = "SUR", data = panel, methodResidCov = "noDfCor")'''
-sur.params = np.squeeze(np.array([
+RSUR = Bunch()
+RSUR.call = '''systemfit(formula = formula, method = "SUR", data = panel, methodResidCov = "noDfCor")'''
+RSUR.params = np.squeeze(np.array([
      0.9979992, 0.06886083, 0.3083878, -21.1374, 0.03705313, 0.1286866, 
      -168.1134, 0.1219063, 0.3821666, 62.25631, 0.1214024, 0.3691114, 
      1.407487, 0.05635611, 0.04290209
     ]).reshape(15,1, order='F'))
-sur.cov_params = np.array([
+RSUR.cov_params = np.array([
      133.7852, -0.1840371, 0.01059675, -31.21063, 0.01337293, 0.01044742, 
      -161.6206, 0.0343593, -0.002197769, 158.6378, -0.06916984, 
      -0.01307428, 0.03036482, 6.95277e-05, 0.006869873, -0.1840371, 
@@ -58,186 +58,353 @@ sur.cov_params = np.array([
      0.0004461934, 0.3741887, -0.0001219727, 0.0002381459, 1.054605, 
      -0.0007249087, 0.001271094, 0.0689298, -0.0003235898, 0.001730147
     ]).reshape(15,15, order='F')
-sur.cov_params_rownames = ['Chrysler_(Intercept)', 'Chrysler_value', 'Chrysler_capital', 'General.Electric_(Intercept)', 'General.Electric_value', 'General.Electric_capital', 'General.Motors_(Intercept)', 'General.Motors_value', 'General.Motors_capital', 'US.Steel_(Intercept)', 'US.Steel_value', 'US.Steel_capital', 'Westinghouse_(Intercept)', 'Westinghouse_value', 'Westinghouse_capital', ]
-sur.cov_params_colnames = ['Chrysler_(Intercept)', 'Chrysler_value', 'Chrysler_capital', 'General.Electric_(Intercept)', 'General.Electric_value', 'General.Electric_capital', 'General.Motors_(Intercept)', 'General.Motors_value', 'General.Motors_capital', 'US.Steel_(Intercept)', 'US.Steel_value', 'US.Steel_capital', 'Westinghouse_(Intercept)', 'Westinghouse_value', 'Westinghouse_capital', ]
-sur.cov_resids_est = np.array([
+RSUR.cov_params_rownames = ['Chrysler_(Intercept)', 'Chrysler_value', 'Chrysler_capital', 'General.Electric_(Intercept)', 'General.Electric_value', 'General.Electric_capital', 'General.Motors_(Intercept)', 'General.Motors_value', 'General.Motors_capital', 'US.Steel_(Intercept)', 'US.Steel_value', 'US.Steel_capital', 'Westinghouse_(Intercept)', 'Westinghouse_value', 'Westinghouse_capital', ]
+RSUR.cov_params_colnames = ['Chrysler_(Intercept)', 'Chrysler_value', 'Chrysler_capital', 'General.Electric_(Intercept)', 'General.Electric_value', 'General.Electric_capital', 'General.Motors_(Intercept)', 'General.Motors_value', 'General.Motors_capital', 'US.Steel_(Intercept)', 'US.Steel_value', 'US.Steel_capital', 'Westinghouse_(Intercept)', 'Westinghouse_value', 'Westinghouse_capital', ]
+RSUR.cov_resids_est = np.array([
      149.8722, -21.37565, -282.7564, 367.8402, 13.30695, -21.37565, 
      660.8294, 607.5331, 978.4503, 176.4491, -282.7564, 607.5331, 7160.294, 
      -1967.046, 126.1762, 367.8402, 978.4503, -1967.046, 7904.663, 
      511.4995, 13.30695, 176.4491, 126.1762, 511.4995, 88.6617
     ]).reshape(5,5, order='F')
-sur.cov_resids_est_rownames = ['Chrysler', 'General.Electric', 'General.Motors', 'US.Steel', 'Westinghouse', ]
-sur.cov_resids_est_colnames = ['Chrysler', 'General.Electric', 'General.Motors', 'US.Steel', 'Westinghouse', ]
-sur.cov_resids = np.array([
+RSUR.cov_resids_est_rownames = ['Chrysler', 'General.Electric', 'General.Motors', 'US.Steel', 'Westinghouse', ]
+RSUR.cov_resids_est_colnames = ['Chrysler', 'General.Electric', 'General.Motors', 'US.Steel', 'Westinghouse', ]
+RSUR.cov_resids = np.array([
      153.2369, 3.147771, -315.6107, 414.5298, 16.64749, 3.147771, 704.729, 
      601.6316, 1298.695, 201.4385, -315.6107, 601.6316, 7222.22, -2446.317, 
      129.7644, 414.5298, 1298.695, -2446.317, 8174.28, 613.9925, 16.64749, 
      201.4385, 129.7644, 613.9925, 94.90675
     ]).reshape(5,5, order='F')
-sur.cov_resids_rownames = ['Chrysler', 'General.Electric', 'General.Motors', 'US.Steel', 'Westinghouse', ]
-sur.cov_resids_colnames = ['Chrysler', 'General.Electric', 'General.Motors', 'US.Steel', 'Westinghouse', ]
-sur.method = 'SUR'
-sur.rank = 15
-sur.df_resid = 85
-sur.iter = 1
-sur.panelLike = '''TRUE'''
-
-
-sur.equ1 = Bunch()
-sur.equ1.eqnLabel = 'Chrysler'
-sur.equ1.method = 'SUR'
-sur.equ1.residuals = np.array([
-     7.304531, 10.92484, -6.305147, 4.473352, -15.22205, -2.397737, 
-     -0.1575964, -4.511807, -14.80854, -8.177869, 12.66022, -14.5771, 
-     -8.040364, 6.546927, -8.122915, 1.578119, 41.15666, 4.322671, 
-     -1.765152, -4.881048
-    ]).reshape(20,1, order='F')
-sur.equ1.params = np.array([
-     0.9979992, 0.06886083, 0.3083878
-    ]).reshape(3,1, order='F')
-sur.equ1.cov_params = np.array([
-     133.7852, -0.1840371, 0.01059675, -0.1840371, 0.0002886686, 
-     -0.0001325481, 0.01059675, -0.0001325481, 0.0006704354
-    ]).reshape(3,3, order='F')
-sur.equ1.cov_params_rownames = ['(Intercept)', 'value', 'capital', ]
-sur.equ1.cov_params_colnames = ['(Intercept)', 'value', 'capital', ]
-sur.equ1.fittedvalues = np.squeeze(np.array([
+RSUR.cov_resids_rownames = ['Chrysler', 'General.Electric', 'General.Motors', 'US.Steel', 'Westinghouse', ]
+RSUR.cov_resids_colnames = ['Chrysler', 'General.Electric', 'General.Motors', 'US.Steel', 'Westinghouse', ]
+RSUR.method = 'SUR'
+RSUR.rank = 15
+RSUR.df_resid = 85
+RSUR.iter = 1
+RSUR.panelLike = '''TRUE'''
+RSUR.fittedvalues = np.array([
      32.98547, 61.83516, 72.56515, 47.12665, 67.63205, 71.80774, 68.5076, 
      51.31181, 62.20854, 67.74787, 76.11978, 88.6971, 70.72036, 82.81307, 
-     87.10292, 99.08188, 119.4633, 140.6773, 176.6952, 177.371
-    ]).reshape(20,1, order='F'))
-sur.equ1.terms = '''Chrysler_invest ~ Chrysler_value + Chrysler_capital'''
-sur.equ1.rank = 3
-sur.equ1.nCoef_sys = 15
-sur.equ1.rank_sys = 15
-sur.equ1.df_resid = 17
-sur.equ1.df_resid_sys = 85
-sur.equ1.model = '''structure(list(Chrysler_invest = c(40.29, 72.76, 66.26, 51.6,  52.41, 69.41, 68.35, 46.8, 47.4, 59.57, 88.78, 74.12, 62.68,  89.36, 78.98, 100.66, 160.62, 145, 174.93, 172.49), Chrysler_value = c(417.5,  837.8, 883.9, 437.9, 679.7, 727.8, 643.6, 410.9, 588.4, 698.4,  846.4, 893.8, 579, 694.6, 590.3, 693.5, 809, 727, 1001.5, 703.2 ), Chrysler_capital = c(10.5, 10.2, 34.7, 51.8, 64.3, 67.1, 75.2,  71.4, 67.1, 60.5, 54.6, 84.8, 96.8, 110.2, 147.4, 163.2, 203.5,  290.6, 346.1, 414.9)), .Names = c("Chrysler_invest", "Chrysler_value",  "Chrysler_capital"), class = "data.frame", row.names = c("X1935",  "X1936", "X1937", "X1938", "X1939", "X1940", "X1941", "X1942",  "X1943", "X1944", "X1945", "X1946", "X1947", "X1948", "X1949",  "X1950", "X1951", "X1952", "X1953", "X1954"), terms = Chrysler_invest ~      Chrysler_value + Chrysler_capital)'''
+     87.10292, 99.08188, 119.4633, 140.6773, 176.6952, 177.371, 34.82255, 
+     66.98919, 97.91866, 74.54072, 84.67318, 81.88021, 75.24862, 74.73898, 
+     84.85019, 82.72565, 94.38241, 105.2126, 98.98109, 108.2389, 111.4822, 
+     121.8484, 132.6644, 149.3613, 169.7257, 195.5151, 208.2453, 420.2794, 
+     548.5702, 252.2227, 435.4257, 477.1924, 484.2357, 343.427, 426.9885, 
+     442.7958, 523.2972, 583.0448, 552.8092, 581.1657, 672.8126, 709.7192, 
+     882.6026, 978.9525, 1272.014, 1364.599, 247.5132, 300.2828, 430.7577, 
+     377.0541, 415.2984, 423.5218, 447.7405, 435.7832, 414.6501, 385.4872, 
+     365.7911, 362.2243, 378.1208, 372.9127, 394.2292, 397.9648, 466.4802, 
+     488.372, 539.0389, 566.277, 12.27691, 30.52156, 42.80857, 33.76598, 
+     31.71523, 37.96421, 33.22941, 35.64298, 39.81141, 40.63853, 46.91736, 
+     47.95589, 38.93935, 44.33515, 40.3917, 43.0696, 47.76244, 56.34706, 
+     76.16779, 77.56886
+    ])
 
 
-sur.equ2 = Bunch()
-sur.equ2.eqnLabel = 'General.Electric'
-sur.equ2.method = 'SUR'
-sur.equ2.residuals = np.array([
-     -1.722547, -21.98919, -20.71866, -29.94072, -36.57318, -7.480208, 
-     37.75138, 17.16102, -23.55019, -25.92565, -0.7824099, 54.68741, 
-     48.21891, 38.06106, -13.1822, -28.34837, 2.535621, 7.938665, 9.774311, 
-     -5.915052
-    ]).reshape(20,1, order='F')
-sur.equ2.params = np.array([
-     -21.1374, 0.03705313, 0.1286866
-    ]).reshape(3,1, order='F')
-sur.equ2.cov_params = np.array([
-     635.1519, -0.2770547, -0.160579, -0.2770547, 0.0001458083, 
-     -1.501036e-05, -0.160579, -1.501036e-05, 0.0004741078
-    ]).reshape(3,3, order='F')
-sur.equ2.cov_params_rownames = ['(Intercept)', 'value', 'capital', ]
-sur.equ2.cov_params_colnames = ['(Intercept)', 'value', 'capital', ]
-sur.equ2.fittedvalues = np.squeeze(np.array([
-     34.82255, 66.98919, 97.91866, 74.54072, 84.67318, 81.88021, 75.24862, 
-     74.73898, 84.85019, 82.72565, 94.38241, 105.2126, 98.98109, 108.2389, 
-     111.4822, 121.8484, 132.6644, 149.3613, 169.7257, 195.5151
-    ]).reshape(20,1, order='F'))
-sur.equ2.terms = '''General.Electric_invest ~ General.Electric_value + General.Electric_capital'''
-sur.equ2.rank = 3
-sur.equ2.nCoef_sys = 15
-sur.equ2.rank_sys = 15
-sur.equ2.df_resid = 17
-sur.equ2.df_resid_sys = 85
-sur.equ2.model = '''structure(list(General.Electric_invest = c(33.1, 45, 77.2, 44.6,  48.1, 74.4, 113, 91.9, 61.3, 56.8, 93.6, 159.9, 147.2, 146.3,  98.3, 93.5, 135.2, 157.3, 179.5, 189.6), General.Electric_value = c(1170.6,  2015.8, 2803.3, 2039.7, 2256.2, 2132.2, 1834.1, 1588, 1749.4,  1687.2, 2007.7, 2208.3, 1656.7, 1604.4, 1431.8, 1610.5, 1819.4,  2079.7, 2371.6, 2759.9), General.Electric_capital = c(97.8, 104.4,  118, 156.2, 172.6, 186.6, 220.9, 287.8, 319.9, 321.3, 319.6,  346, 456.4, 543.4, 618.3, 647.4, 671.3, 726.1, 800.3, 888.9)), .Names = c("General.Electric_invest",  "General.Electric_value", "General.Electric_capital"), class = "data.frame", row.names = c("X1935",  "X1936", "X1937", "X1938", "X1939", "X1940", "X1941", "X1942",  "X1943", "X1944", "X1945", "X1946", "X1947", "X1948", "X1949",  "X1950", "X1951", "X1952", "X1953", "X1954"), terms = General.Electric_invest ~      General.Electric_value + General.Electric_capital)'''
+
+RSURI = Bunch()
+RSURI.call = '''systemfit(formula = formula, method = "SUR", data = panel, methodResidCov = "noDfCor",      maxiter = 100, tol = 1e-04)'''
+RSURI.params = np.squeeze(np.array([
+     3.297673, 0.06622757, 0.3044762, -14.84538, 0.03669229, 0.1147134, 
+     -184.4875, 0.1246316, 0.3892042, 113.5387, 0.1072072, 0.2901168, 
+     4.711002, 0.05316157, 0.02935392
+    ]).reshape(15,1, order='F'))
+RSURI.cov_params = np.array([
+     135.806, -0.1870255, 0.01359519, -24.56835, 0.01068199, 0.01128718, 
+     -151.2304, 0.03113382, -0.0008632869, 123.4479, -0.05306735, 
+     0.01009713, -2.477967, 0.004861604, 0.002005951, -0.1870255, 
+     0.0002940712, -0.0001387899, 0.03599721, -1.627649e-05, -1.099374e-05, 
+     0.1819934, -4.756747e-05, 3.725371e-05, -0.111641, 8.024094e-05, 
+     -0.0001579762, 0.006331891, -9.018468e-06, -3.284802e-06, 0.01359519, 
+     -0.0001387899, 0.0006813917, 0.002476567, 4.957162e-06, -3.023798e-05, 
+     0.06771159, 1.517941e-05, -0.0002058754, -0.2001869, -2.10852e-05, 
+     0.0008199392, -0.007883554, 1.146512e-05, 2.236023e-06, -24.56835, 
+     0.03599721, 0.002476567, 598.7282, -0.2537373, -0.1714835, 621.5064, 
+     -0.1324206, -0.03202797, 708.2716, -0.2273152, -0.6334507, 96.90064, 
+     -0.148434, 0.1611069, 0.01068199, -1.627649e-05, 4.957162e-06, 
+     -0.2537373, 0.0001317226, -4.946012e-06, -0.2761304, 6.746938e-05, 
+     -2.509346e-05, -0.3128512, 0.0001360914, 0.0001509308, -0.03530109, 
+     7.383013e-05, -0.0001661873, 0.01128718, -1.099374e-05, -3.023798e-05, 
+     -0.1714835, -4.946012e-06, 0.0004525323, -0.1464408, 3.600144e-06, 
+     0.0002017756, -0.06911249, -9.216937e-05, 0.0008507719, -0.04312718, 
+     1.275923e-05, 0.0004036301, -151.2304, 0.1819934, 0.06771159, 
+     621.5064, -0.2761304, -0.1464408, 7051.173, -1.602906, 0.4053973, 
+     -1545.723, 0.7425596, -0.1876437, 138.2049, -0.2472585, 0.3901838, 
+     0.03113382, -4.756747e-05, 1.517941e-05, -0.1324206, 6.746938e-05, 
+     3.600144e-06, -1.602906, 0.0004067335, -0.0002464614, 0.3156405, 
+     -0.0001902247, 0.0002016226, -0.02968487, 6.106473e-05, -0.0001317617, 
+     -0.0008632869, 3.725371e-05, -0.0002058754, -0.03202797, 
+     -2.509346e-05, 0.0002017756, 0.4053973, -0.0002464614, 0.001022042, 
+     0.06312597, 0.0001262192, -0.001058175, -0.005896077, -2.681322e-05, 
+     0.0002789039, 123.4479, -0.111641, -0.2001869, 708.2716, -0.3128512, 
+     -0.06911249, -1545.723, 0.3156405, 0.06312597, 7924.038, -3.466568, 
+     -2.231136, 239.5488, -0.4153939, 0.8602673, -0.05306735, 8.024094e-05, 
+     -2.10852e-05, -0.2273152, 0.0001360914, -9.216937e-05, 0.7425596, 
+     -0.0001902247, 0.0001262192, -3.466568, 0.001833114, -0.000501981, 
+     -0.06757416, 0.0001784036, -0.000608578, 0.01009713, -0.0001579762, 
+     0.0008199392, -0.6334507, 0.0001509308, 0.0008507719, -0.1876437, 
+     0.0002016226, -0.001058175, -2.231136, -0.000501981, 0.01092386, 
+     -0.2434222, 0.000215744, 0.001152234, -2.477967, 0.006331891, 
+     -0.007883554, 96.90064, -0.03530109, -0.04312718, 138.2049, 
+     -0.02968487, -0.005896077, 239.5488, -0.06757416, -0.2434222, 
+     35.79084, -0.05138861, 0.04478089, 0.004861604, -9.018468e-06, 
+     1.146512e-05, -0.148434, 7.383013e-05, 1.275923e-05, -0.2472585, 
+     6.106473e-05, -2.681322e-05, -0.4153939, 0.0001784036, 0.000215744, 
+     -0.05138861, 0.0001078233, -0.0002446421, 0.002005951, -3.284802e-06, 
+     2.236023e-06, 0.1611069, -0.0001661873, 0.0004036301, 0.3901838, 
+     -0.0001317617, 0.0002789039, 0.8602673, -0.000608578, 0.001152234, 
+     0.04478089, -0.0002446421, 0.001393647
+    ]).reshape(15,15, order='F')
+RSURI.cov_params_rownames = ['Chrysler_(Intercept)', 'Chrysler_value', 'Chrysler_capital', 'General.Electric_(Intercept)', 'General.Electric_value', 'General.Electric_capital', 'General.Motors_(Intercept)', 'General.Motors_value', 'General.Motors_capital', 'US.Steel_(Intercept)', 'US.Steel_value', 'US.Steel_capital', 'Westinghouse_(Intercept)', 'Westinghouse_value', 'Westinghouse_capital', ]
+RSURI.cov_params_colnames = ['Chrysler_(Intercept)', 'Chrysler_value', 'Chrysler_capital', 'General.Electric_(Intercept)', 'General.Electric_value', 'General.Electric_capital', 'General.Motors_(Intercept)', 'General.Motors_value', 'General.Motors_capital', 'US.Steel_(Intercept)', 'US.Steel_value', 'US.Steel_capital', 'Westinghouse_(Intercept)', 'Westinghouse_value', 'Westinghouse_capital', ]
+RSURI.cov_resids_est = np.array([
+     156.1276, 13.71096, -337.2209, 435.7109, 19.11043, 13.71096, 750.4185, 
+     536.9561, 1465.394, 222.2396, -337.2209, 536.9561, 7346.038, 
+     -2737.062, 114.6409, 435.7109, 1465.394, -2737.062, 8614.219, 
+     690.6026, 19.11043, 222.2396, 114.6409, 690.6026, 102.9749
+    ]).reshape(5,5, order='F')
+RSURI.cov_resids_est_rownames = ['Chrysler', 'General.Electric', 'General.Motors', 'US.Steel', 'Westinghouse', ]
+RSURI.cov_resids_est_colnames = ['Chrysler', 'General.Electric', 'General.Motors', 'US.Steel', 'Westinghouse', ]
+RSURI.cov_resids = np.array([
+     156.1279, 13.71222, -337.2252, 435.7136, 19.11137, 13.71222, 750.4247, 
+     536.921, 1465.436, 222.2453, -337.2252, 536.921, 7346.091, -2737.188, 
+     114.6317, 435.7136, 1465.436, -2737.188, 8614.442, 690.6373, 19.11137, 
+     222.2453, 114.6317, 690.6373, 102.9786
+    ]).reshape(5,5, order='F')
+RSURI.cov_resids_rownames = ['Chrysler', 'General.Electric', 'General.Motors', 'US.Steel', 'Westinghouse', ]
+RSURI.cov_resids_colnames = ['Chrysler', 'General.Electric', 'General.Motors', 'US.Steel', 'Westinghouse', ]
+RSURI.method = 'SUR'
+RSURI.rank = 15
+RSURI.df_resid = 85
+RSURI.iter = 11
+RSURI.panelLike = '''TRUE'''
+RSURI.fittedvalues = np.array([
+     34.14468, 61.88879, 72.40155, 48.07059, 67.89037, 71.92845, 68.81835, 
+     52.25018, 62.69633, 67.97182, 75.97709, 88.31145, 71.11673, 82.85262, 
+     87.27159, 98.917, 118.8367, 139.9259, 175.0038, 176.1961, 39.32559, 
+     71.09502, 101.5503, 77.91412, 87.7393, 84.79545, 77.79214, 76.4365, 
+     86.04093, 83.91927, 95.48414, 105.873, 98.29794, 106.359, 108.6179, 
+     118.513, 128.9197, 144.757, 163.9792, 188.3904, 200.2805, 416.9796, 
+     547.9813, 244.9303, 432.2375, 474.9321, 482.0606, 338.0311, 423.5203, 
+     439.775, 521.9805, 582.8572, 551.4047, 580.1528, 673.7014, 711.3142, 
+     887.8988, 986.0671, 1285.158, 1379.137, 275.2061, 321.9238, 434.7202, 
+     382.2038, 414.095, 423.4532, 444.5821, 432.6862, 413.913, 388.9735, 
+     373.9205, 373.6806, 382.9809, 376.8731, 394.1132, 397.1719, 458.2386, 
+     473.9119, 512.2256, 534.6268, 14.94428, 32.16585, 43.683, 35.03405, 
+     33.03952, 38.90093, 34.32669, 36.32999, 39.99979, 40.70443, 46.61401, 
+     47.66481, 38.88036, 43.75353, 39.90911, 42.49191, 46.99655, 54.91891, 
+     73.2904, 74.18185
+    ])
 
 
-sur.equ3 = Bunch()
-sur.equ3.eqnLabel = 'General.Motors'
-sur.equ3.method = 'SUR'
-sur.equ3.residuals = np.array([
-     109.3547, -28.47935, -137.9702, 5.477267, -104.6257, -15.99238, 
-     27.76434, 104.573, 72.61146, 104.7042, 37.90284, 105.0552, 16.09081, 
-     -51.96565, -117.7126, -66.81917, -126.7026, -87.7525, 32.38584, 
-     122.1005
-    ]).reshape(20,1, order='F')
-sur.equ3.params = np.array([
-     -168.1134, 0.1219063, 0.3821666
-    ]).reshape(3,1, order='F')
-sur.equ3.cov_params = np.array([
-     8026.788, -1.849853, 0.5369888, -1.849853, 0.0004695548, 
-     -0.0002854946, 0.5369888, -0.0002854946, 0.001079986
-    ]).reshape(3,3, order='F')
-sur.equ3.cov_params_rownames = ['(Intercept)', 'value', 'capital', ]
-sur.equ3.cov_params_colnames = ['(Intercept)', 'value', 'capital', ]
-sur.equ3.fittedvalues = np.squeeze(np.array([
-     208.2453, 420.2794, 548.5702, 252.2227, 435.4257, 477.1924, 484.2357, 
-     343.427, 426.9885, 442.7958, 523.2972, 583.0448, 552.8092, 581.1657, 
-     672.8126, 709.7192, 882.6026, 978.9525, 1272.014, 1364.599
-    ]).reshape(20,1, order='F'))
-sur.equ3.terms = '''General.Motors_invest ~ General.Motors_value + General.Motors_capital'''
-sur.equ3.rank = 3
-sur.equ3.nCoef_sys = 15
-sur.equ3.rank_sys = 15
-sur.equ3.df_resid = 17
-sur.equ3.df_resid_sys = 85
-sur.equ3.model = '''structure(list(General.Motors_invest = c(317.6, 391.8, 410.6,  257.7, 330.8, 461.2, 512, 448, 499.6, 547.5, 561.2, 688.1, 568.9,  529.2, 555.1, 642.9, 755.9, 891.2, 1304.4, 1486.7), General.Motors_value = c(3078.5,  4661.7, 5387.1, 2792.2, 4313.2, 4643.9, 4551.2, 3244.1, 4053.7,  4379.3, 4840.9, 4900.9, 3526.5, 3254.7, 3700.2, 3755.6, 4833,  4924.9, 6241.7, 5593.6), General.Motors_capital = c(2.8, 52.6,  156.9, 209.2, 203.4, 207.2, 255.2, 303.7, 264.1, 201.6, 265,  402.2, 761.5, 922.4, 1020.1, 1099, 1207.7, 1430.5, 1777.3, 2226.3 )), .Names = c("General.Motors_invest", "General.Motors_value",  "General.Motors_capital"), class = "data.frame", row.names = c("X1935",  "X1936", "X1937", "X1938", "X1939", "X1940", "X1941", "X1942",  "X1943", "X1944", "X1945", "X1946", "X1947", "X1948", "X1949",  "X1950", "X1951", "X1952", "X1953", "X1954"), terms = General.Motors_invest ~      General.Motors_value + General.Motors_capital)'''
+RSURR = Bunch()
+RSURR.call = '''systemfit(formula = formula, method = "SUR", data = panel, restrict.matrix = R,      restrict.rhs = q, methodResidCov = "noDfCor", residCovRestricted = FALSE)'''
+RSURR.params = np.squeeze(np.array([
+     2.497993, 0.06620317, 0.3114482, -3.418123, 0.02952898, 0.1230083, 
+     -136.5368, 0.1152541, 0.3804054, -2.823228, 0.1537366, 0.3704575, 
+     3.10905, 0.05401286, 0.04309126
+    ]).reshape(15,1, order='F'))
+RSURR.cov_params = np.array([
+     116.6885, -0.1607777, 0.008893081, -116.8489, 0.05114275, 0.02946246, 
+     -189.0883, 0.03981355, 0.00305605, -116.7351, 0.04779686, 0.08978693, 
+     -16.19571, 0.02767244, -0.0382318, -0.1607777, 0.000256699, 
+     -0.0001286929, 0.1611173, -7.288199e-05, -3.249216e-05, 0.2526184, 
+     -6.230035e-05, 2.897008e-05, 0.1607962, -3.225758e-05, -0.0002670715, 
+     0.02451648, -3.924989e-05, 4.619488e-05, 0.008893081, -0.0001286929, 
+     0.0006630121, -0.009594562, 1.415432e-05, -4.852414e-05, -0.001613841, 
+     2.767038e-05, -0.0001885367, -0.00864026, -0.0001207471, 0.0008504262, 
+     -0.01019167, 1.192106e-05, 2.355799e-05, -116.8489, 0.1611173, 
+     -0.009594562, 117.0214, -0.05107893, -0.03029763, 190.3932, 
+     -0.0401395, -0.002889117, 116.8832, -0.04615003, -0.1017246, 16.38142, 
+     -0.027784, 0.03678611, 0.05114275, -7.288199e-05, 1.415432e-05, 
+     -0.05107893, 4.719203e-05, -7.14715e-05, -0.09877716, 2.990113e-05, 
+     -3.735875e-05, -0.05134758, 5.023719e-05, -8.063886e-05, -0.002148651, 
+     2.427744e-05, -0.0001242798, 0.02946246, -3.249216e-05, -4.852414e-05, 
+     -0.03029763, -7.14715e-05, 0.0004391937, 0.03376507, -3.535705e-05, 
+     0.0001932636, -0.02854966, -8.688085e-05, 0.0007066882, -0.01988079, 
+     -2.943246e-05, 0.0004834217, -189.0883, 0.2526184, -0.001613841, 
+     190.3932, -0.09877716, 0.03376507, 7254.421, -1.686944, 0.5778943, 
+     192.552, -0.1259064, -0.03771701, 75.75118, -0.1580825, 0.3958046, 
+     0.03981355, -6.230035e-05, 2.767038e-05, -0.0401395, 2.990113e-05, 
+     -3.535705e-05, -1.686944, 0.0004351866, -0.0002940425, -0.04056322, 
+     -4.48323e-06, 0.0001438971, -0.01598111, 4.09037e-05, -0.0001274974, 
+     0.00305605, 2.897008e-05, -0.0001885367, -0.002889117, -3.735875e-05, 
+     0.0001932636, 0.5778943, -0.0002940425, 0.001076924, -0.003340983, 
+     0.0001404415, -0.0009211138, -0.001476289, -2.870005e-05, 
+     0.0002478117, -116.7351, 0.1607962, -0.00864026, 116.8832, 
+     -0.05134758, -0.02854966, 192.552, -0.04056322, -0.003340983, 
+     116.7983, -0.04986001, -0.07641557, 16.08592, -0.02777806, 0.04031809, 
+     0.04779686, -3.225758e-05, -0.0001207471, -0.04615003, 5.023719e-05, 
+     -8.688085e-05, -0.1259064, -4.48323e-06, 0.0001404415, -0.04986001, 
+     0.0003859509, -0.001806915, 0.0181502, 2.412733e-05, -0.0002789518, 
+     0.08978693, -0.0002670715, 0.0008504262, -0.1017246, -8.063886e-05, 
+     0.0007066882, -0.03771701, 0.0001438971, -0.0009211138, -0.07641557, 
+     -0.001806915, 0.01270267, -0.1337993, 1.223985e-05, 0.001575897, 
+     -16.19571, 0.02451648, -0.01019167, 16.38142, -0.002148651, 
+     -0.01988079, 75.75118, -0.01598111, -0.001476289, 16.08592, 0.0181502, 
+     -0.1337993, 23.74444, -0.0344561, 0.02702128, 0.02767244, 
+     -3.924989e-05, 1.192106e-05, -0.027784, 2.427744e-05, -2.943246e-05, 
+     -0.1580825, 4.09037e-05, -2.870005e-05, -0.02777806, 2.412733e-05, 
+     1.223985e-05, -0.0344561, 8.711157e-05, -0.0002505189, -0.0382318, 
+     4.619488e-05, 2.355799e-05, 0.03678611, -0.0001242798, 0.0004834217, 
+     0.3958046, -0.0001274974, 0.0002478117, 0.04031809, -0.0002789518, 
+     0.001575897, 0.02702128, -0.0002505189, 0.001599014
+    ]).reshape(15,15, order='F')
+RSURR.cov_params_rownames = ['Chrysler_(Intercept)', 'Chrysler_value', 'Chrysler_capital', 'General.Electric_(Intercept)', 'General.Electric_value', 'General.Electric_capital', 'General.Motors_(Intercept)', 'General.Motors_value', 'General.Motors_capital', 'US.Steel_(Intercept)', 'US.Steel_value', 'US.Steel_capital', 'Westinghouse_(Intercept)', 'Westinghouse_value', 'Westinghouse_capital', ]
+RSURR.cov_params_colnames = ['Chrysler_(Intercept)', 'Chrysler_value', 'Chrysler_capital', 'General.Electric_(Intercept)', 'General.Electric_value', 'General.Electric_capital', 'General.Motors_(Intercept)', 'General.Motors_value', 'General.Motors_capital', 'US.Steel_(Intercept)', 'US.Steel_value', 'US.Steel_capital', 'Westinghouse_(Intercept)', 'Westinghouse_value', 'Westinghouse_capital', ]
+RSURR.cov_resids_est = np.array([
+     149.8722, -21.37565, -282.7564, 367.8402, 13.30695, -21.37565, 
+     660.8294, 607.5331, 978.4503, 176.4491, -282.7564, 607.5331, 7160.294, 
+     -1967.046, 126.1762, 367.8402, 978.4503, -1967.046, 7904.663, 
+     511.4995, 13.30695, 176.4491, 126.1762, 511.4995, 88.6617
+    ]).reshape(5,5, order='F')
+RSURR.cov_resids_est_rownames = ['Chrysler', 'General.Electric', 'General.Motors', 'US.Steel', 'Westinghouse', ]
+RSURR.cov_resids_est_colnames = ['Chrysler', 'General.Electric', 'General.Motors', 'US.Steel', 'Westinghouse', ]
+RSURR.cov_resids = np.array([
+     154.0011, -0.3068137, -320.1221, 418.4464, 15.92695, -0.3068137, 
+     710.0874, 587.5187, 1275.618, 202.6887, -320.1221, 587.5187, 7188.833, 
+     -2181.402, 143.2504, 418.4464, 1275.618, -2181.402, 7957.594, 
+     604.9715, 15.92695, 202.6887, 143.2504, 604.9715, 96.62241
+    ]).reshape(5,5, order='F')
+RSURR.cov_resids_rownames = ['Chrysler', 'General.Electric', 'General.Motors', 'US.Steel', 'Westinghouse', ]
+RSURR.cov_resids_colnames = ['Chrysler', 'General.Electric', 'General.Motors', 'US.Steel', 'Westinghouse', ]
+RSURR.method = 'SUR'
+RSURR.rank = 13
+RSURR.df_resid = 87
+RSURR.iter = 1
+RSURR.restrict_matrix = np.array([
+     1, 2, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 3, 1, 1, 0, 1, 0, 1, 1, 
+     0, 0, 0, 1, 1, 0, 0
+    ]).reshape(2,15, order='F')
+RSURR.restrict_matrix_rownames = ['Chrysler_((Intercept)  + General.Electric_(Intercept)  + General.Motors_value  + General.Motors_capital  + US.Steel_capital  + Westinghouse_value = 0', '2 Chrysler_((Intercept)  + Chrysler_capital  + General.Electric_(Intercept)  + 3 General.Motors_value  + General.Motors_capital  + US.Steel_(Intercept)  + US.Steel_value  + Westinghouse_value = 0', ]
+RSURR.restrict_matrix_colnames = ['Chrysler_(Intercept)', 'Chrysler_value', 'Chrysler_capital', 'General.Electric_(Intercept)', 'General.Electric_value', 'General.Electric_capital', 'General.Motors_(Intercept)', 'General.Motors_value', 'General.Motors_capital', 'US.Steel_(Intercept)', 'US.Steel_value', 'US.Steel_capital', 'Westinghouse_(Intercept)', 'Westinghouse_value', 'Westinghouse_capital', ]
+RSURR.restrict_rhs = np.array([
+     0, 0
+    ]).reshape(2,1, order='F')
+RSURR.restrict_rhs_rownames = ['Chrysler_((Intercept)  + General.Electric_(Intercept)  + General.Motors_value  + General.Motors_capital  + US.Steel_capital  + Westinghouse_value = 0', '2 Chrysler_((Intercept)  + Chrysler_capital  + General.Electric_(Intercept)  + 3 General.Motors_value  + General.Motors_capital  + US.Steel_(Intercept)  + US.Steel_value  + Westinghouse_value = 0', ]
+RSURR.restrict_rhs_colnames = ['*rhs*', ]
+RSURR.panelLike = '''TRUE'''
+RSURR.fittedvalues = np.array([
+     33.40802, 61.13978, 71.82223, 47.62138, 67.52241, 71.57884, 68.52726, 
+     51.93828, 62.35012, 67.57691, 75.53743, 88.0812, 70.97782, 82.80431, 
+     87.48519, 99.23824, 119.4361, 141.1345, 176.5927, 178.2719, 43.17871, 
+     68.94846, 93.87545, 76.02603, 84.43639, 82.49692, 77.91351, 78.87568, 
+     87.59022, 85.92573, 95.18066, 104.3516, 101.6435, 110.8009, 114.9175, 
+     123.7739, 132.8824, 147.3096, 165.0563, 187.421, 219.338, 420.7525, 
+     544.0341, 264.8565, 437.9516, 477.5117, 485.0871, 352.8881, 431.1338, 
+     444.8852, 522.2042, 581.3111, 559.5855, 589.4667, 677.978, 714.377, 
+     879.9019, 975.2481, 1258.939, 1355.045, 226.5581, 293.7022, 452.373, 
+     370.5877, 413.9274, 430.0133, 459.9843, 441.2255, 414.1633, 379.4342, 
+     360.824, 364.1805, 371.4924, 360.8151, 383.5233, 387.6042, 475.8902, 
+     493.7127, 540.4792, 570.5019, 13.53008, 31.01416, 42.8033, 34.15781, 
+     32.20298, 38.19805, 33.67926, 36.04101, 40.08269, 40.88883, 46.90896, 
+     47.89167, 39.29956, 44.50948, 40.7521, 43.30859, 47.79249, 56.05134, 
+     75.10574, 76.52492
+    ])
 
 
-sur.equ4 = Bunch()
-sur.equ4.eqnLabel = 'US.Steel'
-sur.equ4.method = 'SUR'
-sur.equ4.residuals = np.array([
-     -37.61318, 55.01723, 39.1423, -114.7541, -184.8984, -61.92184, 
-     25.05948, 9.816803, -53.0501, -97.28717, -107.0911, 58.07571, 
-     42.37924, 121.5873, 10.87083, 20.8352, 121.7198, 157.128, 101.9611, 
-     -106.977
-    ]).reshape(20,1, order='F')
-sur.equ4.params = np.array([
-     62.25631, 0.1214024, 0.3691114
-    ]).reshape(3,1, order='F')
-sur.equ4.cov_params = np.array([
-     11369.52, -5.187909, -2.525447, -5.187909, 0.002739435, -0.0007250238, 
-     -2.525447, -0.0007250238, 0.0134136
-    ]).reshape(3,3, order='F')
-sur.equ4.cov_params_rownames = ['(Intercept)', 'value', 'capital', ]
-sur.equ4.cov_params_colnames = ['(Intercept)', 'value', 'capital', ]
-sur.equ4.fittedvalues = np.squeeze(np.array([
-     247.5132, 300.2828, 430.7577, 377.0541, 415.2984, 423.5218, 447.7405, 
-     435.7832, 414.6501, 385.4872, 365.7911, 362.2243, 378.1208, 372.9127, 
-     394.2292, 397.9648, 466.4802, 488.372, 539.0389, 566.277
-    ]).reshape(20,1, order='F'))
-sur.equ4.terms = '''US.Steel_invest ~ US.Steel_value + US.Steel_capital'''
-sur.equ4.rank = 3
-sur.equ4.nCoef_sys = 15
-sur.equ4.rank_sys = 15
-sur.equ4.df_resid = 17
-sur.equ4.df_resid_sys = 85
-sur.equ4.model = '''structure(list(US.Steel_invest = c(209.9, 355.3, 469.9, 262.3,  230.4, 361.6, 472.8, 445.6, 361.6, 288.2, 258.7, 420.3, 420.5,  494.5, 405.1, 418.8, 588.2, 645.5, 641, 459.3), US.Steel_value = c(1362.4,  1807.1, 2676.3, 1801.9, 1957.3, 2202.9, 2380.5, 2168.6, 1985.1,  1813.9, 1850.2, 2067.7, 1796.7, 1625.8, 1667, 1677.4, 2289.5,  2159.4, 2031.3, 2115.5), US.Steel_capital = c(53.8, 50.5, 118.1,  260.2, 312.7, 254.2, 261.4, 298.7, 301.8, 279.1, 213.8, 132.6,  264.8, 306.9, 351.1, 357.8, 342.1, 444.2, 623.6, 669.7)), .Names = c("US.Steel_invest",  "US.Steel_value", "US.Steel_capital"), class = "data.frame", row.names = c("X1935",  "X1936", "X1937", "X1938", "X1939", "X1940", "X1941", "X1942",  "X1943", "X1944", "X1945", "X1946", "X1947", "X1948", "X1949",  "X1950", "X1951", "X1952", "X1953", "X1954"), terms = US.Steel_invest ~      US.Steel_value + US.Steel_capital)'''
 
 
-sur.equ5 = Bunch()
-sur.equ5.eqnLabel = 'Westinghouse'
-sur.equ5.method = 'SUR'
-sur.equ5.residuals = np.array([
-     0.6530944, -4.621561, -7.758567, -10.87598, -12.87523, -9.394208, 
-     15.28059, 7.697017, -2.791415, -2.828532, -7.647365, 5.504111, 
-     16.62065, 5.224848, -8.351701, -10.8296, 6.617559, 15.43294, 13.91221, 
-     -8.968863
-    ]).reshape(20,1, order='F')
-sur.equ5.params = np.array([
-     1.407487, 0.05635611, 0.04290209
-    ]).reshape(3,1, order='F')
-sur.equ5.cov_params = np.array([
-     39.2104, -0.06063476, 0.0689298, -0.06063476, 0.0001316823, 
-     -0.0003235898, 0.0689298, -0.0003235898, 0.001730147
-    ]).reshape(3,3, order='F')
-sur.equ5.cov_params_rownames = ['(Intercept)', 'value', 'capital', ]
-sur.equ5.cov_params_colnames = ['(Intercept)', 'value', 'capital', ]
-sur.equ5.fittedvalues = np.squeeze(np.array([
-     12.27691, 30.52156, 42.80857, 33.76598, 31.71523, 37.96421, 33.22941, 
-     35.64298, 39.81141, 40.63853, 46.91736, 47.95589, 38.93935, 44.33515, 
-     40.3917, 43.0696, 47.76244, 56.34706, 76.16779, 77.56886
-    ]).reshape(20,1, order='F'))
-sur.equ5.terms = '''Westinghouse_invest ~ Westinghouse_value + Westinghouse_capital'''
-sur.equ5.rank = 3
-sur.equ5.nCoef_sys = 15
-sur.equ5.rank_sys = 15
-sur.equ5.df_resid = 17
-sur.equ5.df_resid_sys = 85
-sur.equ5.model = '''structure(list(Westinghouse_invest = c(12.93, 25.9, 35.05, 22.89,  18.84, 28.57, 48.51, 43.34, 37.02, 37.81, 39.27, 53.46, 55.56,  49.56, 32.04, 32.24, 54.38, 71.78, 90.08, 68.6), Westinghouse_value = c(191.5,  516, 729, 560.4, 519.9, 628.5, 537.1, 561.2, 617.2, 626.7, 737.2,  760.5, 581.4, 662.3, 583.8, 635.2, 723.8, 864.1, 1193.5, 1188.9 ), Westinghouse_capital = c(1.8, 0.8, 7.4, 18.1, 23.5, 26.5,  36.2, 60.8, 84.4, 91.2, 92.4, 86, 111.1, 130.6, 141.8, 136.7,  129.7, 145.5, 174.8, 213.5)), .Names = c("Westinghouse_invest",  "Westinghouse_value", "Westinghouse_capital"), class = "data.frame", row.names = c("X1935",  "X1936", "X1937", "X1938", "X1939", "X1940", "X1941", "X1942",  "X1943", "X1944", "X1945", "X1946", "X1947", "X1948", "X1949",  "X1950", "X1951", "X1952", "X1953", "X1954"), terms = Westinghouse_invest ~      Westinghouse_value + Westinghouse_capital)'''
+RSURIR = Bunch()
+RSURIR.call = '''systemfit(formula = formula, method = "SUR", data = panel, restrict.matrix = R,      restrict.rhs = q, methodResidCov = "noDfCor", residCovRestricted = FALSE,      maxiter = 100, tol = 1e-05)'''
+RSURIR.params = np.squeeze(np.array([
+     3.788072, 0.06451802, 0.3093206, -4.659783, 0.0329214, 0.1086593, 
+     -136.9399, 0.1151543, 0.3828372, -4.170676, 0.1613182, 0.3183434, 
+     4.038426, 0.05537583, 0.0195867
+    ]).reshape(15,1, order='F'))
+RSURIR.cov_params = np.array([
+     116.1575, -0.1609867, 0.01379564, -116.3625, 0.04990122, 0.03448678, 
+     -198.9251, 0.0419263, 0.001961945, -116.1674, 0.04085423, 0.1286802, 
+     -19.81814, 0.03241735, -0.03709723, -0.1609867, 0.0002591606, 
+     -0.000137621, 0.1613813, -6.976074e-05, -4.388515e-05, 0.2644264, 
+     -6.595494e-05, 3.38017e-05, 0.160961, -2.220296e-05, -0.000317525, 
+     0.02910747, -4.489786e-05, 4.447831e-05, 0.01379564, -0.000137621, 
+     0.0006758005, -0.01447052, 1.155564e-05, -2.075026e-05, -0.006634625, 
+     3.158313e-05, -0.0002078687, -0.01357653, -0.0001156762, 0.0008424012, 
+     -0.007424204, 8.760713e-06, 2.062643e-05, -116.3625, 0.1613813, 
+     -0.01447052, 116.5773, -0.04984426, -0.03543428, 200.3026, -0.0422736, 
+     -0.001759976, 116.3629, -0.03960747, -0.1382309, 20.01065, 
+     -0.03254706, 0.03565069, 0.04990122, -6.976074e-05, 1.155564e-05, 
+     -0.04984426, 4.657077e-05, -6.629991e-05, -0.102658, 3.030917e-05, 
+     -3.673272e-05, -0.05010295, 5.33222e-05, -7.623441e-05, -0.002403103, 
+     2.569573e-05, -0.0001221452, 0.03448678, -4.388515e-05, -2.075026e-05, 
+     -0.03543428, -6.629991e-05, 0.0004319834, 0.01939053, -3.102241e-05, 
+     0.0001868287, -0.0334952, -9.680353e-05, 0.0008119816, -0.02442963, 
+     -2.02929e-05, 0.0004733478, -198.9251, 0.2644264, -0.006634625, 
+     200.3026, -0.102658, 0.01939053, 6493.043, -1.502443, 0.5060838, 
+     201.8861, -0.1174624, -0.1679896, 105.6492, -0.2131625, 0.4867688, 
+     0.0419263, -6.595494e-05, 3.158313e-05, -0.0422736, 3.030917e-05, 
+     -3.102241e-05, -1.502443, 0.0003897633, -0.0002716213, -0.04255393, 
+     -7.692167e-06, 0.0001757924, -0.02211164, 5.335769e-05, -0.0001525708, 
+     0.001961945, 3.38017e-05, -0.0002078687, -0.001759976, -3.673272e-05, 
+     0.0001868287, 0.5060838, -0.0002716213, 0.001038604, -0.002291693, 
+     0.0001419983, -0.0009388608, -0.003690073, -3.009006e-05, 
+     0.0002834275, -116.1674, 0.160961, -0.01357653, 116.3629, -0.05010295, 
+     -0.0334952, 201.8861, -0.04255393, -0.002291693, 116.1903, 
+     -0.04245087, -0.1181819, 19.71516, -0.03253043, 0.03918412, 
+     0.04085423, -2.220296e-05, -0.0001156762, -0.03960747, 5.33222e-05, 
+     -9.680353e-05, -0.1174624, -7.692167e-06, 0.0001419983, -0.04245087, 
+     0.000319687, -0.001408009, 0.01822586, 2.693823e-05, -0.0002741997, 
+     0.1286802, -0.000317525, 0.0008424012, -0.1382309, -7.623441e-05, 
+     0.0008119816, -0.1679896, 0.0001757924, -0.0009388608, -0.1181819, 
+     -0.001408009, 0.01028438, -0.1363983, 2.933427e-05, 0.001528169, 
+     -19.81814, 0.02910747, -0.007424204, 20.01065, -0.002403103, 
+     -0.02442963, 105.6492, -0.02211164, -0.003690073, 19.71516, 
+     0.01822586, -0.1363983, 22.29315, -0.03031501, 0.01508015, 0.03241735, 
+     -4.489786e-05, 8.760713e-06, -0.03254706, 2.569573e-05, -2.02929e-05, 
+     -0.2131625, 5.335769e-05, -3.009006e-05, -0.03253043, 2.693823e-05, 
+     2.933427e-05, -0.03031501, 7.709927e-05, -0.0002124803, -0.03709723, 
+     4.447831e-05, 2.062643e-05, 0.03565069, -0.0001221452, 0.0004733478, 
+     0.4867688, -0.0001525708, 0.0002834275, 0.03918412, -0.0002741997, 
+     0.001528169, 0.01508015, -0.0002124803, 0.001432967
+    ]).reshape(15,15, order='F')
+RSURIR.cov_params_rownames = ['Chrysler_(Intercept)', 'Chrysler_value', 'Chrysler_capital', 'General.Electric_(Intercept)', 'General.Electric_value', 'General.Electric_capital', 'General.Motors_(Intercept)', 'General.Motors_value', 'General.Motors_capital', 'US.Steel_(Intercept)', 'US.Steel_value', 'US.Steel_capital', 'Westinghouse_(Intercept)', 'Westinghouse_value', 'Westinghouse_capital', ]
+RSURIR.cov_params_colnames = ['Chrysler_(Intercept)', 'Chrysler_value', 'Chrysler_capital', 'General.Electric_(Intercept)', 'General.Electric_value', 'General.Electric_capital', 'General.Motors_(Intercept)', 'General.Motors_value', 'General.Motors_capital', 'US.Steel_(Intercept)', 'US.Steel_value', 'US.Steel_capital', 'Westinghouse_(Intercept)', 'Westinghouse_value', 'Westinghouse_capital', ]
+RSURIR.cov_resids_est = np.array([
+     155.6989, 11.87667, -326.8144, 425.3603, 18.0422, 11.87667, 771.7343, 
+     563.8665, 1452.61, 228.8926, -326.8144, 563.8665, 7205.937, -2165.033, 
+     143.2497, 425.3603, 1452.61, -2165.033, 8058.607, 659.5488, 18.0422, 
+     228.8926, 143.2497, 659.5488, 104.9542
+    ]).reshape(5,5, order='F')
+RSURIR.cov_resids_est_rownames = ['Chrysler', 'General.Electric', 'General.Motors', 'US.Steel', 'Westinghouse', ]
+RSURIR.cov_resids_est_colnames = ['Chrysler', 'General.Electric', 'General.Motors', 'US.Steel', 'Westinghouse', ]
+RSURIR.cov_resids = np.array([
+     155.699, 11.87852, -326.8148, 425.3608, 18.04255, 11.87852, 771.746, 
+     563.8616, 1452.641, 228.8972, -326.8148, 563.8616, 7205.94, -2165.033, 
+     143.2494, 425.3608, 1452.641, -2165.033, 8058.63, 659.5582, 18.04255, 
+     228.8972, 143.2494, 659.5582, 104.9557
+    ]).reshape(5,5, order='F')
+RSURIR.cov_resids_rownames = ['Chrysler', 'General.Electric', 'General.Motors', 'US.Steel', 'Westinghouse', ]
+RSURIR.cov_resids_colnames = ['Chrysler', 'General.Electric', 'General.Motors', 'US.Steel', 'Westinghouse', ]
+RSURIR.method = 'SUR'
+RSURIR.rank = 13
+RSURIR.df_resid = 87
+RSURIR.iter = 11
+RSURIR.restrict_matrix = np.array([
+     1, 2, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 3, 1, 1, 0, 1, 0, 1, 1, 
+     0, 0, 0, 1, 1, 0, 0
+    ]).reshape(2,15, order='F')
+RSURIR.restrict_matrix_rownames = ['Chrysler_((Intercept)  + General.Electric_(Intercept)  + General.Motors_value  + General.Motors_capital  + US.Steel_capital  + Westinghouse_value = 0', '2 Chrysler_((Intercept)  + Chrysler_capital  + General.Electric_(Intercept)  + 3 General.Motors_value  + General.Motors_capital  + US.Steel_(Intercept)  + US.Steel_value  + Westinghouse_value = 0', ]
+RSURIR.restrict_matrix_colnames = ['Chrysler_(Intercept)', 'Chrysler_value', 'Chrysler_capital', 'General.Electric_(Intercept)', 'General.Electric_value', 'General.Electric_capital', 'General.Motors_(Intercept)', 'General.Motors_value', 'General.Motors_capital', 'US.Steel_(Intercept)', 'US.Steel_value', 'US.Steel_capital', 'Westinghouse_(Intercept)', 'Westinghouse_value', 'Westinghouse_capital', ]
+RSURIR.restrict_rhs = np.array([
+     0, 0
+    ]).reshape(2,1, order='F')
+RSURIR.restrict_rhs_rownames = ['Chrysler_((Intercept)  + General.Electric_(Intercept)  + General.Motors_value  + General.Motors_capital  + US.Steel_capital  + Westinghouse_value = 0', '2 Chrysler_((Intercept)  + Chrysler_capital  + General.Electric_(Intercept)  + 3 General.Motors_value  + General.Motors_capital  + US.Steel_(Intercept)  + US.Steel_value  + Westinghouse_value = 0', ]
+RSURIR.restrict_rhs_colnames = ['*rhs*', ]
+RSURIR.panelLike = '''TRUE'''
+RSURIR.fittedvalues = np.array([
+     33.97221, 60.99634, 71.54898, 48.06332, 67.53029, 71.4997, 68.57278, 
+     52.38402, 62.50589, 67.56136, 75.28503, 87.68467, 71.08624, 82.68942, 
+     87.46692, 99.01244, 118.9299, 140.5812, 175.4587, 177.4943, 44.50489, 
+     73.04721, 100.4506, 79.46258, 88.37208, 85.81106, 79.7242, 78.89154, 
+     87.69302, 85.79743, 96.16402, 105.6367, 99.4732, 107.2048, 109.6611, 
+     118.7061, 128.1804, 142.7044, 160.3766, 182.7872, 218.6347, 420.0123, 
+     543.4752, 264.6836, 437.6129, 477.1492, 484.8506, 352.9, 430.9686, 
+     444.5355, 521.9626, 581.3971, 560.6824, 590.982, 679.6864, 716.2718, 
+     881.9535, 977.8324, 1262.236, 1359.498, 232.7361, 303.4237, 465.1615, 
+     369.3415, 411.1234, 432.12, 463.0622, 440.7531, 412.1381, 377.294, 
+     362.362, 371.5993, 369.967, 355.8, 376.5171, 380.3277, 474.0726, 
+     485.5879, 522.0339, 550.2925, 14.67815, 32.62802, 44.55235, 35.42556, 
+     33.28861, 39.36118, 34.48982, 36.30621, 39.86951, 40.52877, 46.6713, 
+     47.8362, 38.41002, 43.27186, 39.14423, 41.89066, 46.65985, 54.73855, 
+     73.55324, 74.05651
+    ])
