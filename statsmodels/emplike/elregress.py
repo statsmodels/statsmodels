@@ -20,7 +20,7 @@ from scipy import optimize
 from descriptive import OptFuncts
 
 
-class El_Reg_Setup(OptFuncts):
+class ElRegSetup(OptFuncts):
     """
 
     Empirical Likelihood is a method of inference, not estimation.  Therefore,
@@ -29,7 +29,7 @@ class El_Reg_Setup(OptFuncts):
     estimates.
 
     This class fits the data using OLS and initializes the OLS results that are
-    the same when using EMpirical Likelihood.  Note that estimates are
+    the same when using Empirical Likelihood.  Note that estimates are
     different when the regression is forced through the origin.
 
     See Also
@@ -56,7 +56,7 @@ class El_Reg_Setup(OptFuncts):
         #All of the above are the same when using EL or OLS
 
 
-class El_Reg_Opts(El_Reg_Setup):
+class ElRegOpts(ElRegSetup):
     """
 
     A class that holds functions to be optimized over when conducting
@@ -64,7 +64,7 @@ class El_Reg_Opts(El_Reg_Setup):
 
     """
     def __init__(self, endog, exog):
-            super(El_Reg_Opts, self).__init__(endog, exog)
+            super(ElRegOpts, self).__init__(endog, exog)
 
     def _opt_nuis_regress(self, params):
         """
@@ -89,14 +89,18 @@ class El_Reg_Opts(El_Reg_Setup):
         params[self.param_nums] = self.b0_vals
         params = params.reshape(self.nvar, 1)
         self.est_vect = self.exog * (self.endog - np.dot(self.exog, params))
-        eta_star = self._modif_newton(np.ones(self.nvar)* 1. / self.nobs)
+        eta_star = self._modif_newton(np.ones(self.nvar) * 1. / self.nobs)
         denom = 1. + np.dot(eta_star, self.est_vect.T)
         self.new_weights = 1. / self.nobs * 1. / denom
         llr = np.sum(np.log(self.nobs * self.new_weights))
         return -2 * llr
 
+    def _ci_limits_beta(self, beta):
+        self.b0_vals = beta
+        return self.hy_test_beta([beta], [self.param_nums])[1] - self.r0
 
-class El_Lin_Reg(El_Reg_Opts):
+
+class ElLinReg(ElRegOpts):
 
     """
     Class that conducts hyptheses tests and calculates confidence intervals
@@ -115,9 +119,9 @@ class El_Lin_Reg(El_Reg_Opts):
 
     """
     def __init__(self, endog, exog):
-        super(El_Lin_Reg, self).__init__(endog, exog)
+        super(ElLinReg, self).__init__(endog, exog)
 
-    def hy_test_beta(self, param_nums, b0_vals):
+    def hy_test_beta(self, b0_vals, param_nums):
         """
         Tests single or joint hypotheses of the regression parameters
 
@@ -149,7 +153,7 @@ class El_Lin_Reg(El_Reg_Opts):
         #   parameter after the incercept is 0
         el_analysis.hy_test_beta([1], [0])
         >>> (0.2224473814889133, 1.4885126021160364)
-        # Test the hypothesis that the second parameter after the intercept 
+        # Test the hypothesis that the second parameter after the intercept
         # is 12000 and the third regression parameter is 50
         el_analysis.hy_test_beta([2, 3], [12000,50])
         >>> (0.0, 105.64623449375982)
@@ -161,3 +165,44 @@ class El_Lin_Reg(El_Reg_Opts):
                                  full_output=1)[1]
         pval = 1 - chi2.cdf(llr, len(param_nums))
         return pval, llr
+
+    def ci_beta(self, param_num, sig=.05, upper_bound=None, lower_bound=None):
+        """
+
+        Computes the confidence interval for the parameter given by param_num
+
+        Parameters
+        ---------
+
+        param_num: float
+            The parameter thats confidence interval is desired
+
+        sig: float
+            The significance level.  Default is .05
+
+        Returns
+        -------
+
+        ci: tuple
+            The confidence interval
+
+        """
+
+        self.r0 = chi2.ppf(1 - sig, 1)
+        self.param_nums = param_num
+        if upper_bound is not None:
+            beta_high = upper_bound
+        else:
+            beta_high = self.ols_fit.conf_int(.001)[self.param_nums][1]
+        if lower_bound is not None:
+            beta_low = lower_bound
+        else:
+            beta_low = self.ols_fit.conf_int(.001)[self.param_nums][0]
+        print 'Finding Lower Limit'
+        ll = optimize.brentq(self._ci_limits_beta, beta_low,
+                             self.params[self.param_nums], full_output=0)
+        print 'Finding Upper Limit'
+        ul = optimize.brentq(self._ci_limits_beta,
+                             self.params[self.param_nums], beta_high,
+                             full_output=0)
+        return (ll, ul)
