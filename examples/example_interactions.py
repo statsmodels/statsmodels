@@ -40,7 +40,6 @@ for values, group in factor_groups:
     ax.scatter(group['X'], group['S'], marker=symbols[j], color=colors[i-1],
                s=144)
 ax.axis('tight')
-plt.show()
 
 # Fit a linear model
 
@@ -82,7 +81,6 @@ for values, group in factor_groups:
             s=144, edgecolors='black')
 
 ax.axis('tight')
-plt.show()
 
 # now we will test some interactions using anova or f_test
 
@@ -120,7 +118,6 @@ for values, group in factor_groups:
     ax.scatter(X[idx], resid[idx], marker=symbols[j], color=colors[i-1],
             s=144, edgecolors='black')
 ax.axis('tight')
-plt.show()
 
 # Looks like one observation is an outlier.
 #TODO: do we have Bonferonni outlier test?
@@ -160,7 +157,6 @@ for values, group in factor_groups:
     ax.scatter(X[idx], resid[idx], marker=symbols[j], color=colors[i-1],
             s=144, edgecolors='black')
 ax.axis('tight')
-plt.show()
 
 
 # Plot the fitted values
@@ -182,7 +178,6 @@ for values, group in factor_groups:
     ax.plot(mf.X[idx].dropna(), lm_final.fittedvalues[idx].dropna(),
             ls=lstyle[j], color=colors[i-1])
 ax.axis('tight')
-plt.show()
 
 #From our first look at the data, the difference between Master's and PhD in the management group is different than in the non-management group. This is an interaction between the two qualitative variables management,M and education,E. We can visualize this by first removing the effect of experience, then plotting the means within each of the 6 groups using interaction.plot.
 
@@ -190,7 +185,6 @@ U = S - X * interX_lm32.params['X']
 
 ax = interaction_plot(E, M, U, colors=['red','blue'], markers=['^','D'],
         markersize=10)
-plt.show()
 
 # Minority Employment Data
 # ------------------------
@@ -215,7 +209,6 @@ for factor, group in factor_group:
     ax.scatter(group['TEST'], group['JPERF'], color=colors[factor],
                 marker=markers[factor], s=12**2)
 
-plt.show()
 
 min_lm = ols('JPERF ~ TEST', df=minority_table).fit()
 print min_lm.summary()
@@ -227,7 +220,6 @@ for factor, group in factor_group:
                 marker=markers[factor], s=12**2)
 
 abline_plot(model_results = min_lm, ax=ax)
-plt.show()
 
 min_lm2 = ols('JPERF ~ TEST + TEST:ETHN',
         df=minority_table).fit()
@@ -246,7 +238,6 @@ ax = fig.axes[0]
 fig = abline_plot(intercept = min_lm2.params['Intercept'],
         slope = min_lm2.params['TEST'] + min_lm2.params['TEST:ETHN'],
         ax=ax, color='green')
-plt.show()
 
 
 min_lm3 = ols('JPERF ~ TEST + ETHN', df = minority_table).fit()
@@ -263,7 +254,6 @@ fig = abline_plot(intercept = min_lm3.params['Intercept'],
 ax = fig.axes[0]
 fig = abline_plot(intercept = min_lm3.params['Intercept'] + min_lm3.params['ETHN'],
         slope = min_lm3.params['TEST'], ax=ax, color='green')
-plt.show()
 
 
 min_lm4 = ols('JPERF ~ TEST * ETHN', df = minority_table).fit()
@@ -281,7 +271,6 @@ ax = fig.axes[0]
 fig = abline_plot(intercept = min_lm4.params['Intercept'] + min_lm4.params['ETHN'],
         slope = min_lm4.params['TEST'] + min_lm4.params['TEST:ETHN'],
         ax=ax, color='green')
-plt.show()
 
 # is there any effect of ETHN on slope or intercept
 table5 = anova_lm(min_lm, min_lm4)
@@ -312,7 +301,6 @@ except:
     rehab_table.to_csv('rehab.table')
 
 ax = rehab_table.boxplot('Time', 'Fitness')
-plt.show()
 
 rehab_lm = ols('Time ~ C(Fitness)',
                 df=rehab_table).fit()
@@ -340,7 +328,6 @@ kidney_table.groupby(['Weight', 'Duration']).size()
 kt = kidney_table
 interaction_plot(kt['Weight'], kt['Duration'], np.log(kt['Days']+1),
         colors=['red', 'blue'], markers=['D','^'], ms=10)
-plt.show()
 
 # You have things available in the calling namespace available
 # in the formula evaluation namespace
