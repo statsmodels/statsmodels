@@ -1,6 +1,7 @@
 import numpy as np
-from scipy.linalg import block_diag
 import statsmodels.tools.tools as tools 
+import scipy.sparse as sparse
+from scipy.linalg import block_diag
 from statsmodels.base.model import LikelihoodModel, LikelihoodModelResults
 from statsmodels.regression.linear_model import OLS
 
@@ -72,15 +73,11 @@ class SysModel(LikelihoodModel):
         # Others checks
         if not(dfk in (None, 'dfk1', 'dfk2')):
             raise ValueError('dfk is not correctly specified')
-
+        
         self.sys = sys
         self.neqs = len(sys)
         self.nobs = sys[0]['endog'].shape[0]
         self.nexogs = sum([eq['exog'].shape[1] for eq in sys])
-        self.endog = np.column_stack((np.asarray(eq['endog']) for eq in sys)).T
-        self.exog = np.column_stack((np.asarray(eq['exog']) for eq in sys))
-        # TODO : convert to a sparse matrix (need scipy >= 0.11dev for sp.block_diag)
-        self.sp_exog = block_diag(*(np.asarray(eq['exog']) for eq in sys))
 
         # Degrees of Freedom
         (df_model, df_resid) = ([], [])
@@ -89,7 +86,12 @@ class SysModel(LikelihoodModel):
             df_model.append(rank - 1)
             df_resid.append(self.nobs - rank)
         (self.df_model, self.df_resid) = (np.asarray(df_model), np.asarray(df_resid))
-        
+ 
+        self.endog = np.column_stack((np.asarray(eq['endog']) for eq in sys)).T
+        self.exog = np.column_stack((np.asarray(eq['exog']) for eq in sys))
+        self.sp_exog = self._compute_sp_exog([np.asarray(eq['exog']) 
+            for eq in sys])
+
         # Compute DoF corrections
         div_dfk1 = np.zeros((self.neqs, self.neqs))
         div_dfk2 = np.zeros((self.neqs, self.neqs))
@@ -102,6 +104,21 @@ class SysModel(LikelihoodModel):
  
         self._div_dfk1 = div_dfk1
         self._div_dfk2 = div_dfk2
+
+    def _compute_sp_exog(self, designs):
+        '''
+        Parameters
+        ----------
+        designs : list
+            exog design for each equation
+        '''
+        sp_exog = sparse.lil_matrix((int(self.nobs * self.neqs),
+            int(np.sum(self.df_model + 1)))) # linked lists to build
+        cols = np.cumsum(np.hstack((0, self.df_model+1)))
+        for i in range(self.neqs):
+            sp_exog[i*self.nobs:(i+1)*self.nobs, cols[i]:cols[i+1]] = designs[i]
+        sp_exog = sp_exog.tobsr() # cast to compressed for efficiency
+        return sp_exog
 
 class SysGLS(SysModel):
     '''
@@ -187,13 +204,13 @@ class SysGLS(SysModel):
         
         if self.isrestricted:
             rwendog = np.zeros((self.nexogs + self.nconstraints,))
-            rwendog[:self.nexogs] = np.squeeze(np.dot(self.wexog.T, self.wendog))
+            rwendog[:self.nexogs] = np.squeeze(np.dot(self.wexog.T,self.wendog))
             rwendog[self.nexogs:] = self.restrictVect
             self.rwendog = rwendog
 
             rwexog = np.zeros((self.nexogs + self.nconstraints,
                 self.nexogs + self.nconstraints))
-            rwexog[:self.nexogss, :self.nexogs] = np.dot(self.wexog.T, 
+            rwexog[:self.nexogs, :self.nexogs] = np.dot(self.wexog.T, 
                     self.wexog)
             rwexog[:self.nexogs, self.nexogs:] = self.restrictMatrix.T
             rwexog[self.nexogs:, :self.nexogs] = self.restrictMatrix
@@ -213,7 +230,11 @@ class SysGLS(SysModel):
         X : ndarray
             Data to be whitened
         '''
-        return np.dot(np.kron(self.cholsigmainv,np.eye(self.nobs)), X)
+        if sparse.issparse(X):
+            return (sparse.kron(self.cholsigmainv, sparse.eye(self.nobs,
+                self.nobs))*X).todense() # seems that wexog is not sparse
+        else:
+            return np.dot(np.kron(self.cholsigmainv,np.eye(self.nobs)), X)
 
     def _compute_res(self):
         '''
@@ -228,9 +249,9 @@ class SysGLS(SysModel):
             beta = betaLambda[:self.nexogs]
             normalized_cov_params = self.pinv_rwexog[:self.nexogs, :self.nexogs]
         else:
-            beta = np.squeeze(np.dot(self.pinv_wexog, self.wendog))
+            beta = np.squeeze(np.asarray(np.dot(self.pinv_wexog, self.wendog)))
             normalized_cov_params = np.dot(self.pinv_wexog, self.pinv_wexog.T)
-            
+        
         return (beta, normalized_cov_params)
 
     def fit(self, igls=False, tol=1e-5, maxiter=100):
@@ -244,7 +265,7 @@ class SysGLS(SysModel):
         while np.any(np.abs(betas[0] - betas[1]) > tol) \
                 and iterations < maxiter:
             # Update sigma
-            fittedvalues = np.dot(self.sp_exog,betas[0]).reshape(self.neqs,-1).T
+            fittedvalues = (self.sp_exog*betas[0]).reshape(self.neqs,-1).T
             resids = self.endog.T - fittedvalues
             self.sigma = self._compute_sigma(resids)
             # Update attributes
@@ -274,9 +295,9 @@ class SysGLS(SysModel):
             for eq in range(self.neqs):
                 designs.append(exog[:,cur_col:cur_col+self.df_model[eq]+1])
                 cur_col += self.df_model[eq]+1
-            sp_exog = block_diag(*designs)
-
-        return np.dot(sp_exog, params)
+            sp_exog = self._compute_sp_exog(designs)
+        
+        return sp_exog * params
 
 class SysWLS(SysGLS):
     '''
@@ -403,7 +424,7 @@ class SysResults(LikelihoodModelResults):
         super(SysResults, self).__init__(model, params, normalized_cov_params, scale)
         self.cov_resids_est = model.sigma
         # Compute sigma with final residuals
-        fittedvalues = np.dot(model.sp_exog, params).reshape(model.neqs,-1).T
+        fittedvalues = (model.sp_exog*params).reshape(model.neqs,-1).T
         resids = model.endog.T - fittedvalues
         self.cov_resids = model._compute_sigma(resids)
 
@@ -423,8 +444,11 @@ if __name__ == '__main__':
     eq2['exog'] = x2
     
     sys = [eq1, eq2]
-    resSUR = SysSUR(sys).fit()
-    resSURi = SysSUR(sys).fit(igls=True)
-    resWLS = SysWLS(sys).fit()
-    resWLSi = SysWLS(sys).fit(igls=True)
+    mod = SysSUR(sys)
+    res = mod.fit()
+
+    R = np.asarray([[0,1,2,0,0,1,3,0,0],[0,1,0,3,1,2,0,1,0]])
+    q = np.asarray([0,1]) 
+    modr = SysSUR(sys, restrictMatrix=R, restrictVect=q)
+    resr = modr.fit()
 
