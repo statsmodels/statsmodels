@@ -144,5 +144,5 @@ def make_hypotheses_matrices(model_results, test_formula):
     """
     from charlton.constraint import linear_constraint
     exog_names = model_results.model.exog_names
-    LC = linear_constraint(test_formula, column_names)
+    LC = linear_constraint(test_formula, exog_names)
     return LC
