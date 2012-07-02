@@ -59,7 +59,8 @@ def handle_formula_data(Y, X, formula, depth=0):
         if Y.dtype.names is not None:
             (endog, exog,
             model_spec) = handle_formula_data_recarray(Y, X, formula, depth)
-        else: # this actually won't ever be called for from_formula
+        else: # pragma : no cover
+            # this actually won't ever be called for from_formula
             (endog, exog,
              model_spec) = handle_formula_data_ndarray(Y, X, formula, depth)
     return endog, exog, model_spec
@@ -101,20 +102,20 @@ def handle_formula_data_recarray(Y, X, formula, depth):
     model_spec, endog, exog = design_and_matrices(formula, df, eval_env=depth+3)
     return endog, exog, model_spec
 
-def handle_formula_data_ndarray(Y, X, formula, depth):
+def handle_formula_data_ndarray(Y, X, formula, depth): # pragma : no cover
     raise NotImplementedError("You must use a data structure that defines "
                               "__getitem__ for the names in the formula")
-    if X is not None:
-        df = concat[Y, X]
-    else:
-        df = Y
-    nvars = df.shape[1]
-    #NOTE: if only Y is given and it isn't a structured array there's no
-    # way to specify a formula, ie., we have to assume Y contains y and X
-    # contains x1, x2, x3, etc. if they're given as arrays
-
-    model_spec, endog, exog = design_and_matrices(formula, df, eval_env=depth+3)
-    return endog, exog, model_spec
+    #if X is not None:
+    #    df = concat[Y, X]
+    #else:
+    #    df = Y
+    #nvars = df.shape[1]
+    ##NOTE: if only Y is given and it isn't a structured array there's no
+    ## way to specify a formula, ie., we have to assume Y contains y and X
+    ## contains x1, x2, x3, etc. if they're given as arrays
+    #
+    #model_spec, endog, exog = design_and_matrices(formula, df, eval_env=depth+3)
+    #return endog, exog, model_spec
 
 def handle_formula_dict(Y, X, formula, depth):
     if X is not None:
