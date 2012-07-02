@@ -64,7 +64,8 @@ def create_virtualenv():
     # make a virtualenv for installation if it doesn't exist
     # and easy_install sphinx
     if not os.path.exists(virtual_dir):
-        retcode = subprocess.call(['/usr/local/bin/virtualenv', virtual_dir])
+        retcode = subprocess.call(['/usr/local/bin/virtualenv',
+                                   "--system-site-packages", virtual_dir])
         if retcode != 0:
             msg = """There was a problem creating the virtualenv"""
             raise Exception(msg)
@@ -160,8 +161,10 @@ def build_docs(branch):
         os.chdir(dname)
         msg = """Could not clean the html docs for branch %s""" % branch
         raise Exception(msg)
+    #retcode = subprocess.call(" ".join(['make','html',
+    #    'SPHINXBUILD='+sphinx_dir+'/sphinx-build']), shell=True,
     retcode = subprocess.call(" ".join(['make','html',
-        'SPHINXBUILD='+sphinx_dir+'/sphinx-build']), shell=True,
+        'SPHINXBUILD=/usr/local/bin/sphinx-build']), shell=True,
         env = {'MATPLOTLIBRC' : # put this in the environment to use local rc
                '/home/skipper/statsmodels/statsmodels/tools/'})
     if retcode != 0:
