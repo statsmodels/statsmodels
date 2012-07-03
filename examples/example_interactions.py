@@ -323,9 +323,10 @@ kidney_table.groupby(['Weight', 'Duration']).size()
 # balanced panel
 
 kt = kidney_table
+plt.figure(figsize=(6,6))
 #@savefig kidney_interactiong.png align=center
 interaction_plot(kt['Weight'], kt['Duration'], np.log(kt['Days']+1),
-        colors=['red', 'blue'], markers=['D','^'], ms=10);
+        colors=['red', 'blue'], markers=['D','^'], ms=10, ax=plt.gca());
 
 # You have things available in the calling namespace available
 # in the formula evaluation namespace
