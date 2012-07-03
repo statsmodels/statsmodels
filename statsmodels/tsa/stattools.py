@@ -353,11 +353,11 @@ def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False,
     nlags: int, optional
         Number of lags to return autocorrelation for.
     confint : scalar, optional
-        The use of confint is deprecated. See `alpha'.
+        The use of confint is deprecated. See `alpha`.
         If a number is given, the confidence intervals for the given level are
         returned. For instance if confint=95, 95 % confidence intervals are
         returned where the standard deviation is computed according to
-        Bartlett's formula.
+        Bartlett\'s formula.
     qstat : bool, optional
         If True, returns the Ljung-Box q statistic for each autocorrelation
         coefficient.  See q_stat for more information.
@@ -367,7 +367,7 @@ def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False,
         If a number is given, the confidence intervals for the given level are
         returned. For instance if alpha=.05, 95 % confidence intervals are
         returned where the standard deviation is computed according to
-        Bartlett's formula.
+        Bartlett\'s formula.
 
     Returns
     -------
@@ -510,13 +510,15 @@ def pacf(x, nlags=40, method='ywunbiased', alpha=None):
     nlags : int
         largest lag for which pacf is returned
     method : 'ywunbiased' (default) or 'ywmle' or 'ols'
-        specifies which method for the calculations to use,
+        specifies which method for the calculations to use:
+
         - yw or ywunbiased : yule walker with bias correction in denominator
           for acovf
         - ywm or ywmle : yule walker without bias correction
         - ols - regression of time series on lags of it and on constant
         - ld or ldunbiased : Levinson-Durbin recursion with bias correction
         - ldb or ldbiased : Levinson-Durbin recursion without bias correction
+
     alpha : scalar, optional
         If a number is given, the confidence intervals for the given level are
         returned. For instance if alpha=.05, 95 % confidence intervals are
