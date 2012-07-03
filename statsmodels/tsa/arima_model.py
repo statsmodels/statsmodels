@@ -1116,10 +1116,10 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
 
     @cache_readonly
     def arfreq(self):
-        """
+        r"""
         Returns the frequency of the AR roots.
 
-        This is the solution, x, to z = |z|*exp(2j*np.pi*x) where z are the
+        This is the solution, x, to z = abs(z)*exp(2j*np.pi*x) where z are the
         roots.
         """
         z = self.arroots
@@ -1129,10 +1129,10 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
 
     @cache_readonly
     def mafreq(self):
-        """
+        r"""
         Returns the frequency of the MA roots.
 
-        This is the solution, x, to z = |z|*exp(2j*np.pi*x) where z are the
+        This is the solution, x, to z = abs(z)*exp(2j*np.pi*x) where z are the
         roots.
         """
         z = self.maroots
