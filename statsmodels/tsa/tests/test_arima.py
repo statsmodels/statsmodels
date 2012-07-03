@@ -58,10 +58,10 @@ def test_compare_arma():
 #    d.fit((1,1), trend='nc')
 #    dres = d.res
 
-    modkf = ARMA(x)
+    modkf = ARMA(x, (1,1))
     ##rkf = mkf.fit((1,1))
     ##rkf.params
-    reskf = modkf.fit((1,1), trend='nc', disp=-1)
+    reskf = modkf.fit(trend='nc', disp=-1)
     dres = reskf
 
     modc = Arma(x)
@@ -193,7 +193,7 @@ class Test_Y_ARMA11_NoConst(CheckArmaResults, CheckForecast):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,0]
-        cls.res1 = ARMA(endog).fit(order=(1,1), trend='nc', disp=-1)
+        cls.res1 = ARMA(endog, order=(1,1)).fit(trend='nc', disp=-1)
         (cls.res1.forecast_res, cls.res1.forecast_err,
                 confint) = cls.res1.forecast(10)
         cls.res2 = results_arma.Y_arma11()
@@ -212,7 +212,7 @@ class Test_Y_ARMA14_NoConst(CheckArmaResults):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,1]
-        cls.res1 = ARMA(endog).fit(order=(1,4), trend='nc', disp=-1)
+        cls.res1 = ARMA(endog, order=(1,4)).fit(trend='nc', disp=-1)
         cls.res2 = results_arma.Y_arma14()
         if fast_kalman:
             cls.decimal_t = 0
@@ -225,7 +225,7 @@ class Test_Y_ARMA41_NoConst(CheckArmaResults, CheckForecast):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,2]
-        cls.res1 = ARMA(endog).fit(order=(4,1), trend='nc', disp=-1)
+        cls.res1 = ARMA(endog, order=(4,1)).fit(trend='nc', disp=-1)
         (cls.res1.forecast_res, cls.res1.forecast_err,
                 confint) = cls.res1.forecast(10)
         cls.res2 = results_arma.Y_arma41()
@@ -236,7 +236,7 @@ class Test_Y_ARMA22_NoConst(CheckArmaResults):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,3]
-        cls.res1 = ARMA(endog).fit(order=(2,2), trend='nc', disp=-1)
+        cls.res1 = ARMA(endog, order=(2,2)).fit(trend='nc', disp=-1)
         cls.res2 = results_arma.Y_arma22()
         if fast_kalman:
             cls.decimal_t -= 1
@@ -246,7 +246,7 @@ class Test_Y_ARMA50_NoConst(CheckArmaResults, CheckForecast):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,4]
-        cls.res1 = ARMA(endog).fit(order=(5,0), trend='nc', disp=-1)
+        cls.res1 = ARMA(endog, order=(5,0)).fit(trend='nc', disp=-1)
         (cls.res1.forecast_res, cls.res1.forecast_err,
                 confint) = cls.res1.forecast(10)
         cls.res2 = results_arma.Y_arma50()
@@ -256,7 +256,7 @@ class Test_Y_ARMA02_NoConst(CheckArmaResults):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,5]
-        cls.res1 = ARMA(endog).fit(order=(0,2), trend='nc', disp=-1)
+        cls.res1 = ARMA(endog, order=(0,2)).fit(trend='nc', disp=-1)
         cls.res2 = results_arma.Y_arma02()
         if fast_kalman:
             cls.decimal_t -= 1
@@ -266,7 +266,7 @@ class Test_Y_ARMA11_Const(CheckArmaResults, CheckForecast):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,6]
-        cls.res1 = ARMA(endog).fit(order=(1,1), trend="c", disp=-1)
+        cls.res1 = ARMA(endog, order=(1,1)).fit(trend="c", disp=-1)
         (cls.res1.forecast_res, cls.res1.forecast_err,
                 confint) = cls.res1.forecast(10)
         cls.res2 = results_arma.Y_arma11c()
@@ -276,7 +276,7 @@ class Test_Y_ARMA14_Const(CheckArmaResults):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,7]
-        cls.res1 = ARMA(endog).fit(order=(1,4), trend="c", disp=-1)
+        cls.res1 = ARMA(endog, order=(1,4)).fit(trend="c", disp=-1)
         cls.res2 = results_arma.Y_arma14c()
         if fast_kalman:
             cls.decimal_t = 0
@@ -288,7 +288,7 @@ class Test_Y_ARMA41_Const(CheckArmaResults, CheckForecast):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,8]
-        cls.res1 = ARMA(endog).fit(order=(4,1), trend="c", disp=-1)
+        cls.res1 = ARMA(endog, order=(4,1)).fit(trend="c", disp=-1)
         (cls.res1.forecast_res, cls.res1.forecast_err,
                 confint) = cls.res1.forecast(10)
         cls.res2 = results_arma.Y_arma41c()
@@ -305,7 +305,7 @@ class Test_Y_ARMA22_Const(CheckArmaResults):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,9]
-        cls.res1 = ARMA(endog).fit(order=(2,2), trend="c", disp=-1)
+        cls.res1 = ARMA(endog, order=(2,2)).fit(trend="c", disp=-1)
         cls.res2 = results_arma.Y_arma22c()
         if fast_kalman:
             cls.decimal_t = 0
@@ -315,7 +315,7 @@ class Test_Y_ARMA50_Const(CheckArmaResults, CheckForecast):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,10]
-        cls.res1 = ARMA(endog).fit(order=(5,0), trend="c", disp=-1)
+        cls.res1 = ARMA(endog, order=(5,0)).fit(trend="c", disp=-1)
         (cls.res1.forecast_res, cls.res1.forecast_err,
                 confint) = cls.res1.forecast(10)
         cls.res2 = results_arma.Y_arma50c()
@@ -325,7 +325,7 @@ class Test_Y_ARMA02_Const(CheckArmaResults):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,11]
-        cls.res1 = ARMA(endog).fit(order=(0,2), trend="c", disp=-1)
+        cls.res1 = ARMA(endog, order=(0,2)).fit(trend="c", disp=-1)
         cls.res2 = results_arma.Y_arma02c()
         if fast_kalman:
             cls.decimal_t -= 1
@@ -336,7 +336,7 @@ class Test_Y_ARMA11_NoConst_CSS(CheckArmaResults):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,0]
-        cls.res1 = ARMA(endog).fit(order=(1,1), method="css", trend='nc',
+        cls.res1 = ARMA(endog, order=(1,1)).fit(method="css", trend='nc',
                             disp=-1)
         cls.res2 = results_arma.Y_arma11("css")
         cls.decimal_t = DECIMAL_1
@@ -346,7 +346,7 @@ class Test_Y_ARMA14_NoConst_CSS(CheckArmaResults):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,1]
-        cls.res1 = ARMA(endog).fit(order=(1,4), method="css", trend='nc',
+        cls.res1 = ARMA(endog, order=(1,4)).fit(method="css", trend='nc',
                             disp=-1)
         cls.res2 = results_arma.Y_arma14("css")
         cls.decimal_fittedvalues = DECIMAL_3
@@ -361,7 +361,7 @@ class Test_Y_ARMA41_NoConst_CSS(CheckArmaResults):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,2]
-        cls.res1 = ARMA(endog).fit(order=(4,1), method="css", trend='nc',
+        cls.res1 = ARMA(endog, order=(4,1)).fit(method="css", trend='nc',
                         disp=-1)
         cls.res2 = results_arma.Y_arma41("css")
         cls.decimal_t = DECIMAL_1
@@ -375,7 +375,7 @@ class Test_Y_ARMA22_NoConst_CSS(CheckArmaResults):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,3]
-        cls.res1 = ARMA(endog).fit(order=(2,2), method="css", trend='nc',
+        cls.res1 = ARMA(endog, order=(2,2)).fit(method="css", trend='nc',
                             disp=-1)
         cls.res2 = results_arma.Y_arma22("css")
         cls.decimal_t = DECIMAL_1
@@ -394,7 +394,7 @@ class Test_Y_ARMA50_NoConst_CSS(CheckArmaResults):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,4]
-        cls.res1 = ARMA(endog).fit(order=(5,0), method="css", trend='nc',
+        cls.res1 = ARMA(endog, order=(5,0)).fit(method="css", trend='nc',
                             disp=-1)
         cls.res2 = results_arma.Y_arma50("css")
         cls.decimal_t = 0
@@ -405,7 +405,7 @@ class Test_Y_ARMA02_NoConst_CSS(CheckArmaResults):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,5]
-        cls.res1 = ARMA(endog).fit(order=(0,2), method="css", trend='nc',
+        cls.res1 = ARMA(endog, order=(0,2)).fit(method="css", trend='nc',
                             disp=-1)
         cls.res2 = results_arma.Y_arma02("css")
 
@@ -415,7 +415,7 @@ class Test_Y_ARMA11_Const_CSS(CheckArmaResults):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,6]
-        cls.res1 = ARMA(endog).fit(order=(1,1), trend="c", method="css",
+        cls.res1 = ARMA(endog, order=(1,1)).fit(trend="c", method="css",
                         disp=-1)
         cls.res2 = results_arma.Y_arma11c("css")
         cls.decimal_params = DECIMAL_3
@@ -427,7 +427,7 @@ class Test_Y_ARMA14_Const_CSS(CheckArmaResults):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,7]
-        cls.res1 = ARMA(endog).fit(order=(1,4), trend="c", method="css",
+        cls.res1 = ARMA(endog, order=(1,4)).fit(trend="c", method="css",
                         disp=-1)
         cls.res2 = results_arma.Y_arma14c("css")
         cls.decimal_t = DECIMAL_1
@@ -438,7 +438,7 @@ class Test_Y_ARMA41_Const_CSS(CheckArmaResults):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,8]
-        cls.res1 = ARMA(endog).fit(order=(4,1), trend="c", method="css",
+        cls.res1 = ARMA(endog, order=(4,1)).fit(trend="c", method="css",
                         disp=-1)
         cls.res2 = results_arma.Y_arma41c("css")
         cls.decimal_t = DECIMAL_1
@@ -451,7 +451,7 @@ class Test_Y_ARMA22_Const_CSS(CheckArmaResults):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,9]
-        cls.res1 = ARMA(endog).fit(order=(2,2), trend="c", method="css",
+        cls.res1 = ARMA(endog, order=(2,2)).fit(trend="c", method="css",
                         disp=-1)
         cls.res2 = results_arma.Y_arma22c("css")
         cls.decimal_t = 0
@@ -462,7 +462,7 @@ class Test_Y_ARMA50_Const_CSS(CheckArmaResults):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,10]
-        cls.res1 = ARMA(endog).fit(order=(5,0), trend="c", method="css",
+        cls.res1 = ARMA(endog, order=(5,0)).fit(trend="c", method="css",
                         disp=-1)
         cls.res2 = results_arma.Y_arma50c("css")
         cls.decimal_t = DECIMAL_1
@@ -474,15 +474,15 @@ class Test_Y_ARMA02_Const_CSS(CheckArmaResults):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,11]
-        cls.res1 = ARMA(endog).fit(order=(0,2), trend="c", method="css",
+        cls.res1 = ARMA(endog, order=(0,2)).fit(trend="c", method="css",
                         disp=-1)
         cls.res2 = results_arma.Y_arma02c("css")
 
 def test_reset_trend():
     endog = y_arma[:,0]
-    mod = ARMA(endog)
-    res1 = mod.fit(order=(1,1), trend="c", disp=-1)
-    res2 = mod.fit(order=(1,1), trend="nc", disp=-1)
+    mod = ARMA(endog, order=(1,1))
+    res1 = mod.fit(trend="c", disp=-1)
+    res2 = mod.fit(trend="nc", disp=-1)
     assert_equal(len(res1.params), len(res2.params)+1)
 
 #@dec.slow
@@ -547,7 +547,7 @@ def test_start_params_bug():
     383, 332, 276, 224, 144, 101, 232, 429, 597, 750, 908, 960, 1076, 951,
     1062, 1183, 1404, 1391, 1419, 1497, 1267, 963, 682, 777, 906, 1149, 1439,
     1600, 1876, 1885, 1962, 2280, 2711, 2591, 2411])
-    res = ARMA(data).fit(order=(4,1), disp=-1)
+    res = ARMA(data, order=(4,1)).fit(disp=-1)
 
 class Test_ARIMA101(CheckArmaResults):
     # just make sure this works
@@ -716,9 +716,7 @@ def test_arima_predict_mle_dates():
 def test_arma_predict_mle_dates():
     from statsmodels.datasets.sunspots import load
     sunspots = load().data['SUNACTIVITY']
-    mod = ARMA(sunspots, dates=sun_dates, freq='A')
-    mod.k_ar = 9
-    mod.k_ma = 0
+    mod = ARMA(sunspots, (9,0), dates=sun_dates, freq='A')
     mod.method = 'mle'
 
     assert_raises(ValueError, mod._get_predict_start, *('1701', True))
@@ -778,9 +776,7 @@ def test_arima_predict_css_dates():
 def test_arma_predict_css_dates():
     from statsmodels.datasets.sunspots import load
     sunspots = load().data['SUNACTIVITY']
-    mod = ARMA(sunspots, dates=sun_dates, freq='A')
-    mod.k_ar = 9
-    mod.k_ma = 0
+    mod = ARMA(sunspots, (9,0), dates=sun_dates, freq='A')
     mod.method = 'css'
     assert_raises(ValueError, mod._get_predict_start, *('1701', False))
 
@@ -943,10 +939,8 @@ def _check_end(model, given, end_expect, out_of_sample_expect):
 def test_arma_predict_indices():
     from statsmodels.datasets.sunspots import load
     sunspots = load().data['SUNACTIVITY']
-    model = ARMA(sunspots, dates=sun_dates, freq='A')
+    model = ARMA(sunspots, (9,0), dates=sun_dates, freq='A')
     model.method = 'mle'
-    model.k_ar = 9
-    model.k_ma = 0
 
     # raises - pre-sample + dynamic
     assert_raises(ValueError, model._get_predict_start, *(0, True))
