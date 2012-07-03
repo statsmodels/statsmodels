@@ -300,8 +300,7 @@ plt.figure(figsize=(6,6))
 #@savefig plot_boxplot.png align=center
 rehab_table.boxplot('Time', 'Fitness', ax=plt.gca())
 
-rehab_lm = ols('Time ~ C(Fitness)',
-                df=rehab_table).fit()
+rehab_lm = ols('Time ~ C(Fitness)', df=rehab_table).fit()
 table9 = anova_lm(rehab_lm)
 print table9
 
@@ -330,8 +329,7 @@ interaction_plot(kt['Weight'], kt['Duration'], np.log(kt['Days']+1),
 
 # You have things available in the calling namespace available
 # in the formula evaluation namespace
-kidney_lm = ols('np.log(Days+1) ~ C(Duration) * C(Weight)',
-        df=kt).fit()
+kidney_lm = ols('np.log(Days+1) ~ C(Duration) * C(Weight)', df=kt).fit()
 
 table10 = anova_lm(kidney_lm)
 
