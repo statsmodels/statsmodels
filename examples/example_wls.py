@@ -72,7 +72,7 @@ plt.plot(x, res_ols.fittedvalues - tppf * prediction_std, 'r--')
 plt.plot(x, res_wls.fittedvalues, 'g--.')
 plt.plot(x, iv_u, 'g--')
 plt.plot(x, iv_l, 'g--')
-#@savefig tut_ols_wls_1.png
+#@savefig wls_ols_0.png
 plt.title('blue: true, red: OLS, green: WLS')
 
 # Feasible Weighted Least Squares (2-stage FWLS)

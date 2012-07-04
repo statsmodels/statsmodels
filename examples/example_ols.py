@@ -71,6 +71,7 @@ prstd, iv_l, iv_u = wls_prediction_std(res)
 plt.plot(x, res.fittedvalues, 'r--.')
 plt.plot(x, iv_u, 'r--')
 plt.plot(x, iv_l, 'r--')
+#@savefig ols_predict_0.png
 plt.title('blue: true,   red: OLS')
 
 #OLS with dummy variables
@@ -113,6 +114,7 @@ plt.plot(x, y, 'o', x, y_true, 'b-')
 plt.plot(x, res2.fittedvalues, 'r--.')
 plt.plot(x, iv_u, 'r--')
 plt.plot(x, iv_l, 'r--')
+#@savefig ols_predict_1.png
 plt.title('blue: true,   red: OLS')
 
 #Joint hypothesis tests
