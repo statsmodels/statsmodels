@@ -75,7 +75,7 @@ plt.plot(x1, res.fittedvalues, 'r-')
 plt.plot(x1, iv_u, 'r--')
 plt.plot(x1, iv_l, 'r--')
 plt.plot(x1, resrlm.fittedvalues, 'g.-')
-#@savefig tut_ols_rlm_0.png
+#@savefig rlm_ols_0.png
 plt.title('blue: true,   red: OLS,   green: RLM')
 
 #Example: linear function with linear truth
@@ -99,6 +99,6 @@ plt.plot(x1, res2.fittedvalues, 'r-')
 plt.plot(x1, iv_u, 'r--')
 plt.plot(x1, iv_l, 'r--')
 plt.plot(x1, resrlm2.fittedvalues, 'g.-')
-#@savefig tut_ols_rlm_1.png
+#@savefig rlm_ols_1.png
 plt.title('blue: true,   red: OLS,   green: RLM')
 
