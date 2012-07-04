@@ -29,8 +29,8 @@ print data.exog[:2,:]
 #Fit and summary
 #^^^^^^^^^^^^^^^
 glm_binom = sm.GLM(data.endog, data.exog, family=sm.families.Binomial())
-binom_results = glm_binom.fit()
-print binom_results.summary()
+res = glm_binom.fit()
+print res.summary()
 
 #Quantities of interest
 #^^^^^^^^^^^^^^^^^^^^^^
@@ -38,10 +38,10 @@ print binom_results.summary()
 print data.endog[0].sum()
 
 # Parameter estimates:
-print binom_results.params
+print res.params
 
 # The corresponding t-values:
-print binom_results.tvalues
+print res.tvalues
 
 # First differences: We hold all explanatory variables constant at their means
 # and manipulate the percentage of low income households to assess its impact
@@ -51,8 +51,8 @@ means25 = means.copy()
 means25[0] = stats.scoreatpercentile(data.exog[:,0], 25)
 means75 = means.copy()
 means75[0] = lowinc_75per = stats.scoreatpercentile(data.exog[:,0], 75)
-resp_25 = binom_results.predict(means25)
-resp_75 = binom_results.predict(means75)
+resp_25 = res.predict(means25)
+resp_75 = res.predict(means75)
 diff = resp_75 - resp_25
 
 # The interquartile first difference for the percentage of low income
@@ -63,9 +63,9 @@ print "%2.4f%%" % (diff*100)
 #^^^^^
 
 # We extract information that will be used to draw some interesting plots: 
-nobs = binom_results.nobs
+nobs = res.nobs
 y = data.endog[:,0]/data.endog.sum(1)
-yhat = binom_results.mu
+yhat = res.mu
 
 # Plot yhat vs y:
 plt.figure()
@@ -80,7 +80,7 @@ plt.xlabel('Fitted values')
 
 # Plot yhat vs. Pearson residuals:
 plt.figure()
-plt.scatter(yhat, binom_results.resid_pearson)
+plt.scatter(yhat, res.resid_pearson)
 plt.plot([0.0, 1.0],[0.0, 0.0], 'k-')
 plt.title('Residual Dependence Plot')
 plt.ylabel('Pearson Residuals')
@@ -89,31 +89,16 @@ plt.xlabel('Fitted values')
 
 #Histogram of standardized deviance residuals
 plt.figure()
-res = binom_results.resid_deviance.copy()
-stdres = (res - res.mean())/res.std()
-plt.hist(stdres, bins=25)
+resid = res.resid_deviance.copy()
+resid_std = (resid - resid.mean())/resid.std()
+plt.hist(resid_std, bins=25)
 #@savefig glm_hist_res.png
 plt.title('Histogram of standardized deviance residuals')
 
 #QQ Plot of Deviance Residuals
-plt.figure()
-res.sort()
-p = np.linspace(0 + 1./(nobs-1), 1-1./(nobs-1), nobs)
-quants = np.zeros_like(res)
-for i in range(nobs):
-    quants[i] = stats.scoreatpercentile(res, p[i]*100)
-mu = res.mean()
-sigma = res.std()
-y = stats.norm.ppf(p, loc=mu, scale=sigma)
-plt.scatter(y, quants)
-plt.plot([y.min(),y.max()],[y.min(),y.max()],'r--')
-plt.title('Normal - Quantile Plot')
-plt.ylabel('Deviance Residuals Quantiles')
-plt.xlabel('Quantiles of N(0,1)')
-
 from statsmodels import graphics
 #@savefig glm_qqplot.png
-img = graphics.gofplots.qqplot(res, line='r')
+graphics.gofplots.qqplot(resid, line='r')
 
 #GLM: Gamma for proportional count response
 #------------------------------------------
