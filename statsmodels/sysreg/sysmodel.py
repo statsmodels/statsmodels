@@ -111,6 +111,11 @@ class SysModel(LikelihoodModel):
         ----------
         designs : list
             exog design for each equation
+
+        Returns
+        -------
+        sp_exog : sparse matrix (BSR format)
+            block diagonal sparse matrix of exog for each equation
         '''
         sp_exog = sparse.lil_matrix((int(self.nobs * self.neqs),
             int(np.sum(self.df_model + 1)))) # linked lists to build
@@ -231,8 +236,8 @@ class SysGLS(SysModel):
             Data to be whitened
         '''
         if sparse.issparse(X):
-            return (sparse.kron(self.cholsigmainv, sparse.eye(self.nobs,
-                self.nobs))*X).todense() # seems that wexog is not sparse
+            return np.asarray((sparse.kron(self.cholsigmainv, 
+                sparse.eye(self.nobs, self.nobs))*X).todense())
         else:
             return np.dot(np.kron(self.cholsigmainv,np.eye(self.nobs)), X)
 
@@ -246,13 +251,13 @@ class SysGLS(SysModel):
         '''
         if self.isrestricted:
             betaLambda = np.dot(self.pinv_rwexog, self.rwendog)
-            beta = betaLambda[:self.nexogs]
+            params = betaLambda[:self.nexogs]
             normalized_cov_params = self.pinv_rwexog[:self.nexogs, :self.nexogs]
         else:
-            beta = np.squeeze(np.asarray(np.dot(self.pinv_wexog, self.wendog)))
+            params = np.squeeze(np.dot(self.pinv_wexog, self.wendog))
             normalized_cov_params = np.dot(self.pinv_wexog, self.pinv_wexog.T)
         
-        return (beta, normalized_cov_params)
+        return (params, normalized_cov_params)
 
     def fit(self, igls=False, tol=1e-5, maxiter=100):
         res = self._compute_res()
