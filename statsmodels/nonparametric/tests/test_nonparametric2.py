@@ -2,8 +2,9 @@ import numpy as np
 import numpy.testing as npt
 import matplotlib.pyplot as plt
 import scipy.stats as stats
-import statsmodels.nonparametric as nparam
-
+#import statsmodels.nonparametric as nparam
+import nonparametric2 as nparam
+reload(nparam)
 class MyTest(object):
     def setUp(self):
         N = 60
@@ -13,6 +14,8 @@ class MyTest(object):
         self.c1 = np.random.normal(size=(N, 1))
         self.c2 = np.random.normal(10, 1, size=(N, 1))
         self.c3 = np.random.normal(10, 2, size=(N, 1))
+        self.noise = np.random.normal(size=(N,1))
+        self.c4 = 0.3 + 1.2 * self.c1 + 3.7 * self.c2 + self.noise
 
         # Italy data from R's np package (the first 50 obs) R>> data (Italy)
 
@@ -248,7 +251,7 @@ class TestCKDE(MyTest):
         #not a good match. needs more work
         
 
-    def test_pdf_continuous (self):
+    def test_pdf_continuous(self):
         dens = nparam.CKDE (tydat = [self.growth], txdat = [self.Italy_gdp],
                             dep_type ='c', indep_type ='c', bw='cv_ml')
         sm_result = np.squeeze(dens.pdf()[0:5])
@@ -256,7 +259,7 @@ class TestCKDE(MyTest):
         npt.assert_allclose(sm_result, R_result, atol = 1e-3)
         
     
-    def test_pdf_mixeddata (self):
+    def test_pdf_mixeddata(self):
         dens = nparam.CKDE(tydat=[self.Italy_gdp],txdat=[self.Italy_year],
                                            dep_type='c',indep_type='o',bw='cv_ls')
         sm_result = np.squeeze(dens.pdf()[0:5])
@@ -271,7 +274,7 @@ class TestCKDE(MyTest):
         ## fhat[1:5]
         npt.assert_allclose(sm_result, R_result, atol = 1e-3)
 
-    def test_continuous_normal_ref (self):
+    def test_continuous_normal_ref(self):
         # test for normal reference rule of thumb with continuous data
         
         dens_nm = nparam.CKDE(tydat=[self.Italy_gdp],txdat=[self.growth],
@@ -281,3 +284,16 @@ class TestCKDE(MyTest):
         npt.assert_allclose(sm_result, R_result, atol = 1e-1)  # Here we need a smaller tolerance.check!
         
 
+class TestReg(MyTest):
+    def test_ordered_CV_LC(self):
+        model = nparam.Reg(tydat=[self.Italy_gdp], txdat=[self.Italy_year],
+                           var_type='o', bw='cv_lc')
+        sm_result = model.bw
+        R_result = 0.1390096
+        ## CODE TO REPRODUCE IN R
+        ## library(np)
+        ## data(Italy)
+        ## bw <- npregbw(fomulra=gdp[1:50]~ordered(year[1:50]))
+        npt.assert_allclose(sm_result,R_result, atol = 1e-2)
+        
+    

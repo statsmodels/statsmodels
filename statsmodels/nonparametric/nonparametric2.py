@@ -561,3 +561,64 @@ class CKDE(Generic_KDE):
             CV += (G / m_x ** 2) - 2 * (f_X_Y / m_x)
         return CV / float(self.N)
 
+class Reg (object):
+    def __init__(self, tydat, txdat, var_type, bw):
+
+        self.tydat = np.column_stack(tydat)
+        
+        self.txdat = np.column_stack(txdat)
+
+        self.N, self.K = np.shape(self.txdat)
+        self.var_type = var_type
+        self.bw_func = dict(cv_lc=self.CV_LC, aic=self.AIC_Hurvich)
+        self.bw = self.compute_bw(bw)
+        
+    def Cond_Mean(self, edat=None):
+        if edat is None:
+            edat = self.txdat
+        # The numerator in the formula is:
+        G_numer = np.sum(self.tydat * tools.GPKE_Reg(bw, tdat=self.txdat, edat=edat, var_type=self.var_type))
+        # The denominator in the formula is:
+        G_denom = np.sum(tools.GPKE_Reg(bw, tdat=self.txdat, edat=edat, var_type=self.var_type))
+        # The conditional mean is:
+        G = G_numer / G_denom
+        return G
+    
+    def CV_LC(self, bw):
+        LOO_X = tools.LeaveOneOut(self.txdat)
+        LOO_Y = tools.LeaveOneOut(self.tydat).__iter__()
+        i = 0
+        L = 0
+        for X_j in LOO_X:
+            #print "running"
+            Y = LOO_Y.next()
+            G_numer = np.sum(Y * tools.GPKE_Reg(bw, tdat=-X_j, edat=-self.txdat[i, :],
+                             var_type=self.var_type))
+            G_denom = np.sum(tools.GPKE_Reg(bw, tdat=-X_j, edat=-self.txdat[i, :],
+                             var_type=self.var_type))
+            G = G_numer / G_denom
+            L += (self.tydat[i] - G)**2
+            i += 1
+        # Note: There might be a way to vectorize this. See p.72 in [1]
+        return L / self.N     
+    def AIC_Hurvich(self, bw):
+        pass
+    
+    def compute_bw(self,bw):
+        if not isinstance(bw, basestring):
+            # The user provided an actual bandwidth estimate
+            # TODO: would be good if the user could provide a function here
+            # that uses tdat/N/K, instead of just a result.
+            self._bw_method = "user-specified"
+            res = np.asarray(bw)
+        else:
+            # The user specified a bandwidth selection method e.g. 'normal-reference'
+            self._bw_method = bw
+            bwfunc = self.bw_func[bw]
+            X = np.std(self.txdat, axis=0)
+            h0 = 1.06 * X * self.N ** (- 1. / (4 + np.size(self.txdat, axis=1)))
+            res = bwfunc
+        return opt.fmin(res, x0=h0, maxiter=1e3,
+                      maxfun=1e3, disp=0)
+       
+    
