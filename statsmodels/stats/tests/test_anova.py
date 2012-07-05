@@ -397,3 +397,6 @@ class TestAnova3HC3(TestAnovaLM):
         np.testing.assert_almost_equal(results['F'].values, F, 4)
         np.testing.assert_almost_equal(results['PR(>F)'].values, PrF)
 
+if __name__ == "__main__":
+    import nose
+    nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb-failure'], exit=False)
