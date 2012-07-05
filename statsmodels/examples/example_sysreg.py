@@ -43,3 +43,8 @@ q = np.array([0, 0])
 grun_rimod = SysSUR(sys, restrictMatrix=R, restrictVect=q)
 grun_rires = grun_rimod.fit(igls=True)
 
+# Regression results
+params_names = ['f%d_%s'%(fn,en) for fn in range(4) 
+        for en in ['const', 'value', 'capital']]
+print grun_res.summary(xname=params_names)
+

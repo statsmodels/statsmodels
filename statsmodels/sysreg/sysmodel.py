@@ -429,6 +429,26 @@ class SysResults(LikelihoodModelResults):
         resids = model.endog.T - self.fittedvalues.reshape(model.neqs,-1).T
         self.cov_resids = model._compute_sigma(resids)
 
+        self.nobs = model.nobs
+        self.df_resid = model.df_resid
+        self.df_model = model.df_model
+
+    def summary(self, yname=None, xname=None, title=None):
+        mod_names = {'SysGLS' : 'System GLS', 'SysWLS' : 'System WLS',
+                     'SysOLS' : 'System OLS', 'SysSUR' : 'System SUR',
+                     'SysSURI' : 'Multivariate FGLS'}
+        if title is None:
+            title = mod_names[self.model.__class__.__name__] + ' ' + 'Regression Results'
+
+        #create summary table instance
+        from statsmodels.iolib.summary import Summary
+        smry = Summary()
+        smry.add_table_params(self, yname=yname, xname=xname, alpha=.05,
+                             use_t=True)
+        
+        return smry
+    
+
 # Testing/Debugging
 if __name__ == '__main__':
     from statsmodels.tools import add_constant
