@@ -39,7 +39,7 @@ try:
     sun_dates = DatetimeIndex(sun_dates, freq='infer')
     cpi_predict_dates = DatetimeIndex(cpi_predict_dates, freq='infer')
     sun_predict_dates = DatetimeIndex(sun_predict_dates, freq='infer')
-except ImportError as err:
+except ImportError, err:
     pass
 
 
@@ -219,7 +219,8 @@ class Test_Y_ARMA14_NoConst(CheckArmaResults):
 
 
 #NOTE: Ok
-@dec.slow
+#can't use class decorators in 2.5....
+#@dec.slow
 class Test_Y_ARMA41_NoConst(CheckArmaResults, CheckForecast):
     @classmethod
     def setupClass(cls):
@@ -282,7 +283,7 @@ class Test_Y_ARMA14_Const(CheckArmaResults):
             cls.decimal_cov_params -= 1
 
 #NOTE: Ok
-@dec.slow
+#@dec.slow
 class Test_Y_ARMA41_Const(CheckArmaResults, CheckForecast):
     @classmethod
     def setupClass(cls):
@@ -484,7 +485,7 @@ def test_reset_trend():
     res2 = mod.fit(order=(1,1), trend="nc", disp=-1)
     assert_equal(len(res1.params), len(res2.params)+1)
 
-@dec.slow
+#@dec.slow
 def test_start_params_bug():
     data = np.array([1368., 1187, 1090, 1439, 2362, 2783, 2869, 2512, 1804,
     1544, 1028, 869, 1737, 2055, 1947, 1618, 1196, 867, 997, 1862, 2525,
