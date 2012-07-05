@@ -1,8 +1,8 @@
 import numpy as np
-from numpy.testing import *
+from numpy.testing import assert_allclose
 
 import statsmodels.api as sm
-from statsmodels.sysreg.sysmodel import *
+from statsmodels.sysreg.sysmodel import SysSUR 
 
 class CheckSysregResults(object):
     # TODO : adjust better rtol/atol

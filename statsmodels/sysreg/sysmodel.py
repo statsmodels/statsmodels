@@ -295,12 +295,7 @@ class SysGLS(SysModel):
         if exog is None:
             sp_exog = self.sp_exog
         else:
-            designs = []
-            cur_col = 0
-            for eq in range(self.neqs):
-                designs.append(exog[:,cur_col:cur_col+self.df_model[eq]+1])
-                cur_col += self.df_model[eq]+1
-            sp_exog = self._compute_sp_exog(designs)
+            sp_exog = self._compute_sp_exog(exog)
         
         return sp_exog * params
 
@@ -426,11 +421,12 @@ class SysResults(LikelihoodModelResults):
         Estimated residual covariance matrix with final residuals.
     '''
     def __init__(self, model, params, normalized_cov_params=None, scale=1.):
-        super(SysResults, self).__init__(model, params, normalized_cov_params, scale)
+        super(SysResults, self).__init__(model, params, normalized_cov_params, 
+                scale)
         self.cov_resids_est = model.sigma
         # Compute sigma with final residuals
-        fittedvalues = (model.sp_exog*params).reshape(model.neqs,-1).T
-        resids = model.endog.T - fittedvalues
+        self.fittedvalues = model.predict(params=params, exog=None)
+        resids = model.endog.T - self.fittedvalues.reshape(model.neqs,-1).T
         self.cov_resids = model._compute_sigma(resids)
 
 # Testing/Debugging
