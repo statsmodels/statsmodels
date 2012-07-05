@@ -77,7 +77,7 @@ def anova_single(model, **kwargs):
     pr_test = "PR(>%s)" % test
     names = ['df', 'sum_sq', 'mean_sq', test, pr_test]
 
-    table = DataFrame(np.empty((n_rows, 5)), columns = names)
+    table = DataFrame(np.zeros((n_rows, 5)), columns = names)
 
     if typ in [1,"I"]:
         return anova1_lm_single(model, endog, exog, nobs, column_info, table,
@@ -178,7 +178,7 @@ def anova2_lm_single(model, column_info, n_rows, test, pr_test, robust):
 
     names = ['sum_sq', 'df', test, pr_test]
 
-    table = DataFrame(np.empty((n_rows, 4)), columns = names)
+    table = DataFrame(np.zeros((n_rows, 4)), columns = names)
     cov = _get_covariance(model, None)
     robust_cov = _get_covariance(model, robust)
     col_order = []
@@ -242,7 +242,7 @@ def anova3_lm_single(model, column_info, n_rows, test, pr_test, robust):
 
     names = ['sum_sq', 'df', test, pr_test]
 
-    table = DataFrame(np.empty((n_rows, 4)), columns = names)
+    table = DataFrame(np.zeros((n_rows, 4)), columns = names)
     cov = _get_covariance(model, robust)
     col_order = []
     index = []
@@ -340,7 +340,7 @@ def anova_lm(*args, **kwargs):
     model_formula = []
     pr_test = "Pr(>%s)" % test
     names = ['df_resid', 'ssr', 'df_diff', 'ss_diff', test, pr_test]
-    table = DataFrame(np.empty((n_models, 6)), columns = names)
+    table = DataFrame(np.zeros((n_models, 6)), columns = names)
 
     if not scale: # assume biggest model is last
         scale = args[-1].scale
