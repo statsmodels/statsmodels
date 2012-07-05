@@ -109,19 +109,24 @@ class SysModel(LikelihoodModel):
         '''
         Parameters
         ----------
-        designs : list
+        designs : list of ndarray
             exog design for each equation
 
         Returns
         -------
         sp_exog : sparse matrix (BSR format)
             block diagonal sparse matrix of exog for each equation
+
+        Notes
+        -----
+        designs[i].shape[0] need to be the same for each i
         '''
-        sp_exog = sparse.lil_matrix((int(self.nobs * self.neqs),
+        nobs = designs[0].shape[0]
+        sp_exog = sparse.lil_matrix((int(nobs * self.neqs),
             int(np.sum(self.df_model + 1)))) # linked lists to build
         cols = np.cumsum(np.hstack((0, self.df_model+1)))
         for i in range(self.neqs):
-            sp_exog[i*self.nobs:(i+1)*self.nobs, cols[i]:cols[i+1]] = designs[i]
+            sp_exog[i*nobs:(i+1)*nobs, cols[i]:cols[i+1]] = designs[i]
         sp_exog = sp_exog.tobsr() # cast to compressed for efficiency
         return sp_exog
 
