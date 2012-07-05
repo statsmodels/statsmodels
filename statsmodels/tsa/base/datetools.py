@@ -11,7 +11,7 @@ try:
         def __getitem__(self, key):
             return get_offset(key)
     _freq_to_pandas = _freq_to_pandas_class()
-except ImportError as err:
+except ImportError, err:
     _freq_to_pandas = {'B' : pandas_datetools.BDay(1),
                        'D' : pandas_datetools.day,
                        'W' : pandas_datetools.Week(weekday=6),
@@ -32,7 +32,7 @@ def _index_date(date, dates):
         date = date_parser(date)
     try:
         return dates.get_loc(date)
-    except KeyError as err:
+    except KeyError, err:
         freq = _infer_freq(dates)
         # we can start prediction at the end of endog
         if _idx_from_dates(dates[-1], date, freq) == 1:
@@ -69,7 +69,7 @@ def _idx_from_dates(d1, d2, freq):
         from pandas import DatetimeIndex
         return len(DatetimeIndex(start=d1, end=d2,
                                  freq = _freq_to_pandas[freq])) - 1
-    except ImportError as err:
+    except ImportError, err:
         from pandas import DateRange
         return len(DateRange(d1, d2, offset = _freq_to_pandas[freq])) - 1
 
