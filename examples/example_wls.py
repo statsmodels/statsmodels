@@ -15,6 +15,7 @@ np.random.seed(1024)
 #Artificial data: Heteroscedasticity 2 groups 
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 #Model assumptions:
+#
 # * Misspecificaion: true model is quadratic, estimate only linear
 # * Independent noise/error term
 # * Two groups for error variance, low and high variance groups
