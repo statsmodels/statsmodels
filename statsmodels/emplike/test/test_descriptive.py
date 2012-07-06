@@ -13,9 +13,9 @@ class GenRes(object):
         data = sm.datasets.star98.load()
         desc_stat_data = data.exog[:50, 5]
         mv_desc_stat_data = data.exog[:50, 5:7]  # mv = multivariate
-        self.res1 = sm.el.DescStat(desc_stat_data)
+        self.res1 = sm.emplike.DescStat(desc_stat_data)
         self.res2 = DescStatRes()
-        self.mvres1 = sm.el.DescStat(mv_desc_stat_data)
+        self.mvres1 = sm.emplike.DescStat(mv_desc_stat_data)
 
 
 class Test_DescriptiveStatistics(GenRes):
