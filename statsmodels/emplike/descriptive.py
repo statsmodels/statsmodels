@@ -20,7 +20,10 @@ import numpy as np
 from scipy import optimize
 from scipy.stats import chi2, skew, kurtosis
 from matplotlib import pyplot as plt
+from statsmodels.base.model import _fit_mle_newton
 import itertools
+import sys
+sys.path.append('/home/justin/statsmodels-j-grana6/statsmodels/base')
 
 
 class ElModel(object):
@@ -80,14 +83,13 @@ class OptFuncts(ElModel):
         See Owen pg. 63
 
         """
-
         data = np.copy(self.est_vect.T)
         data_star_prime = (1 + np.dot(eta1, data))
         data_star_doub_prime = np.copy((1 + np.dot(eta1, data)))
         for elem in range(int(self.nobs)):
             if data_star_prime[0, elem] <= 1 / self.nobs:
                 data_star_prime[0, elem] = 2 * self.nobs - \
-                  (self.nobs) ** 2 * data_star_prime[0, elem]
+                (self.nobs) ** 2 * data_star_prime[0, elem]
             else:
                 data_star_prime[0, elem] = 1. / data_star_prime[0, elem]
             if data_star_doub_prime[0, elem] <= 1 / self.nobs:
@@ -99,7 +101,19 @@ class OptFuncts(ElModel):
         data_star_doub_prime = data_star_doub_prime.reshape(self.nobs, 1)
         J = ((- 1 * data_star_doub_prime) ** .5) * self.est_vect
         y = data_star_prime / ((- 1 * data_star_doub_prime) ** .5)
-        return J, y
+        return np.mat(J), np.mat(y)
+
+    def log_star(self, eta1):
+        data = np.copy(self.est_vect.T)
+        data_star = (1 + np.dot(eta1, data))
+        for elem in range(int(self.nobs)):
+            if data_star[0, elem] < 1. / self.nobs:
+                data_star[0, elem] = np.log(1 / self.nobs) - 1.5 +\
+                  2 * self.nobs * data_star[0, elem] -\
+                  ((self.nobs * data_star[0, elem]) ** 2.) / 2.
+            else:
+                data_star[0, elem] = np.log(data_star[0, elem])
+        return data_star
 
     def _modif_newton(self,  x0):
         """
@@ -120,20 +134,15 @@ class OptFuncts(ElModel):
         See Owen pg. 64
 
         """
-        params = x0.reshape(1, self.est_vect.shape[1])
-        diff = 1
-        while diff > 10 ** (-10):
-            new_J = np.copy(self._get_j_y(params)[0])
-            new_y = np.copy(self._get_j_y(params)[1])
-            inc = np.dot(np.linalg.pinv(new_J), \
-                         new_y).reshape(1, self.est_vect.shape[1])
-            new_params = np.copy(params + inc)
-            diff = np.sum(np.abs(params - new_params))
-            params = np.copy(new_params)
-            if np.any(params > 10 ** 3) \
-              or np.any(params < - (10 ** 3)):
-                diff = 0
-        return params
+        x0 = x0.reshape(self.est_vect.shape[1], 1)
+        f = lambda x0: np.sum(self.log_star(x0.T))
+        grad = lambda x0: - (self._get_j_y(x0.T)[0]).T * \
+                              (self._get_j_y(x0.T)[1])
+        hess = lambda x0: (self._get_j_y(x0.T)[0]).T * (self._get_j_y(x0.T)[0])
+        kwds = {'tol': 1e-8}
+        res = _fit_mle_newton(f, grad, x0, (), kwds, hess=hess, maxiter=50, \
+                              disp=0)
+        return res[0].T
 
     def _find_eta(self, eta):
 
