@@ -16,7 +16,7 @@ return codebox;
 
 function cleanQuotes(text){
     /// Replace all single and double quotes with one escaped backslash
-    return text.replace(/["|']/g, "\\'");
+    return text.replace(/(["'])/g, "\\\1");
 }
 
 function scrapeText(codebox){
@@ -27,8 +27,8 @@ function scrapeText(codebox){
         if (this.match(/^In \[\d+]: /)){
             newlines.push(cleanQuotes(this.replace(/^(\s)*In \[\d+]: /,"")));
         }
-        else if (this.match(/^(\s)*.+:/)){
-            newlines.push(cleanQuotes(this.replace(/^(\s)*.+: /,"")));
+        else if (this.match(/^(\s)*\.+:/)){
+            newlines.push(cleanQuotes(this.replace(/^(\s)*\.+: /,"")));
         }
 
     }
