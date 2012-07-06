@@ -15,10 +15,10 @@ Owen, A.B.(2001). Empirical Likelihood. Chapman and Hall
 """
 import numpy as np
 from scipy.stats import chi2
-from scipy.linalg import pinv
 from statsmodels.regression.linear_model import OLS
 from scipy import optimize
 from descriptive import OptFuncts
+from statsmodels.tools.tools import add_constant
 
 
 class ElRegSetup(OptFuncts):
@@ -96,7 +96,7 @@ class ElRegOpts(ElRegSetup):
         self.est_vect = self.exog * (self.endog - np.dot(self.exog,
                                                          self.new_params))
         eta_star = self._modif_newton(self.start_lbda)
-        self.eta_star=eta_star
+        self.eta_star = eta_star
         denom = 1. + np.dot(eta_star, self.est_vect.T)
         self.new_weights = 1. / self.nobs * 1. / denom
         llr = np.sum(np.log(self.nobs * self.new_weights))
@@ -106,7 +106,7 @@ class ElRegOpts(ElRegSetup):
         self.b0_vals = beta
         return self.hy_test_beta([beta], [self.param_nums],
                                  method=self.method,
-                                 start_int_params= self.start_eta)[1] - self.r0
+                                 start_int_params=self.start_eta)[1] - self.r0
 
 
 class ElLinReg(ElRegOpts):
@@ -131,7 +131,7 @@ class ElLinReg(ElRegOpts):
         super(ElLinReg, self).__init__(endog, exog)
 
     def hy_test_beta(self, b0_vals, param_nums, print_weights=0,
-                     ret_params=0, method= 'nm', start_int_params= None):
+                     ret_params=0, method='nm', start_int_params=None):
         """
         Tests single or joint hypotheses of the regression parameters
 
@@ -193,12 +193,16 @@ class ElLinReg(ElRegOpts):
 
         self.param_nums = np.asarray(param_nums)
         self.b0_vals = np.asarray(b0_vals)
+        if len(param_nums) == len(self.params):
+            llr = self._opt_nuis_regress(self.b0_vals)
+            pval = 1 - chi2.cdf(llr, len(param_nums))
+            return (pval, llr)
         x0 = np.delete(self.params, self.param_nums)
         if method == 'nm':
             llr = optimize.fmin(self._opt_nuis_regress, x0, maxfun=10000,
                                  maxiter=10000, full_output=1)[1]
         if method == 'powell':
-             llr = optimize.fmin_powell(self._opt_nuis_regress, x0,
+            llr = optimize.fmin_powell(self._opt_nuis_regress, x0,
                                  full_output=1)[1]
         pval = 1 - chi2.cdf(llr, len(param_nums))
         if ret_params:   # Used only for origin regress
@@ -208,9 +212,8 @@ class ElLinReg(ElRegOpts):
         else:
             return pval, llr
 
-
     def ci_beta(self, param_num, sig=.05, upper_bound=None, lower_bound=None,
-                method = 'nm', start_int_params=None):
+                method='nm', start_int_params=None):
         """
 
         Computes the confidence interval for the parameter given by param_num
@@ -336,17 +339,3 @@ class ElLinReg(ElRegOpts):
         ul = optimize.brentq(self._ci_limits_beta,
                              self.params[self.param_nums], beta_high)
         return (ll, ul)
-
-
-class ElOriginRegresss(ElLinReg):
-    def __init__(self, endog, exog):
-        self.nobs = float(endog.shape[0])
-        self.nvar = float(exog.shape[1])
-        self.endog = endog
-        self.exog = exog
-
-    def origin_regress_params(self):
-        self.new_exog = sm.add_constant(self.exog, prepend=1)
-        new_fit = ElLinReg(self.endog, self.new_exog)
-        params = new_fit.hy_test_beta([0],[0], print_weights=1, ret_params=1)[3]
-        return params
