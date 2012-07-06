@@ -194,7 +194,7 @@ class TimeSeriesModel(base.LikelihoodModel):
             from pandas import DatetimeIndex
             dates = DatetimeIndex(start=dtstart, end=dtend,
                                     freq=pandas_freq)
-        except ImportError as err:
+        except ImportError, err:
             from pandas import DateRange
             dates = DateRange(dtstart, dtend, offset = pandas_freq).values
         self._data.predict_dates = dates
