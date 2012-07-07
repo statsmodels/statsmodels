@@ -2,9 +2,8 @@ import numpy as np
 import numpy.testing as npt
 import matplotlib.pyplot as plt
 import scipy.stats as stats
-#import statsmodels.nonparametric as nparam
-import nonparametric2 as nparam
-reload(nparam)
+import statsmodels.nonparametric as nparam
+
 class MyTest(object):
     def setUp(self):
         N = 60
@@ -229,7 +228,20 @@ class TestUKDE(MyTest):
         plt.title("Nonparametric Estimation of the Density of Poisson Distributed Random Variable")
         plt.legend(('Actual','Scott','CV_LS','CV_ML'))
         plt.show()
-        
+    def test_continuous_cdf(self,edat=None):
+        dens = nparam.UKDE (tdat = [self.Italy_gdp, self.growth], var_type = 'cc',
+                            bw = 'cv_ml')
+        sm_result = dens.cdf()[0:5]
+        R_result = [0.192180770,0.299505196,0.557303666,
+                    0.513387712, 0.210985350]
+        npt.assert_allclose(sm_result, R_result, atol = 1e-3)
+    def test_mixeddata_cdf(self, edat=None):
+        dens = nparam.UKDE(tdat = [self.Italy_gdp, self.oecd], var_type='cu',
+                           bw='cv_ml')
+        sm_result = dens.cdf()[0:5]
+        R_result =  [0.54700010, 0.65907039, 0.89676865, 0.74132941, 0.25291361]
+        npt.assert_allclose(sm_result, R_result, atol = 1e-3)
+         
 
 class TestCKDE(MyTest):
     def test_mixeddata_CV_LS (self):

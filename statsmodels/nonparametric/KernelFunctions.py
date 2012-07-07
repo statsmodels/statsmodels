@@ -12,6 +12,7 @@
 # NOTE: As it is, this module does not interact with the existing API
 
 import numpy as np
+from scipy.special import erf
 
 
 def AitchisonAitken(h, Xi, x, num_levels=False):
@@ -59,15 +60,6 @@ def AitchisonAitken(h, Xi, x, num_levels=False):
     ----------
     Nonparametric econometrics : theory and practice / Qi Li and Jeffrey Scott Racine.
     """
-##    Xi=np.asarray(Xi)
-##    N = np.shape(Xi)[0]
-##    if Xi.ndim>1:
-##        K=np.shape(Xi)[1]
-##    else:
-##        K=1
-##
-##    if K==0: return Xi
-##    h = np.asarray(h, dtype = float)
     Xi = np.abs(np.asarray(Xi, dtype=int))
     x = np.abs(np.asarray(x, dtype=int))
     
@@ -296,5 +288,87 @@ def AitchisonAitken_Convolution(h, Xi, Xj):
         for x in Dom_x[i]:
             Sigma_x += AitchisonAitken (h[i], Xi[:, i], int(x),
                                         num_levels=len(Dom_x[i])) * AitchisonAitken(h[i], Xj[i], int(x), num_levels=len(Dom_x[i]))       
-        Ordered[:, i] = Sigma_x[:, 0]
+            Ordered[:, i] = Sigma_x[:, 0]
     return Ordered
+
+def Gaussian_cdf(h, Xi, x):
+    Xi = np.asarray(Xi)
+    x = np.asarray(x)
+    h = np.asarray(h, dtype=float)
+    N = np.shape(Xi)[0]
+    if Xi.ndim > 1:
+        K = np.shape(Xi)[1]
+    else:
+        K = 1
+    if K == 0:
+        return Xi
+    cdf = 0.5 * h * (1 + erf((x - Xi) / (h * np.sqrt(2))))
+    cdf = cdf.reshape([N, K])
+    return cdf
+    
+def AitchisonAitken_cdf(h, Xi, x_u):
+    Xi = np.abs(np.asarray(Xi, dtype=int))
+    #x_u = np.abs(np.asarray(x, dtype=int))
+    
+    if Xi.ndim > 1:
+        K = np.shape(Xi)[1]
+        N = np.shape(Xi)[0]
+    elif Xi.ndim == 1:
+        K = 1
+        N = np.shape(Xi)[0]
+    else:  # ndim ==0 so Xi is a single point (number)
+        K = 1
+        N = 1    
+    if K == 0:
+        return Xi
+    
+    h = np.asarray(h, dtype=float)
+    Xi = Xi.reshape([N, K])
+    Dom_x = [np.unique(Xi[:, i]) for i in range(K)]
+    Ordered = np.empty([N, K])
+    for i in range(K):
+        Sigma_x = 0
+        # TODO: This can be vectorized
+        for x in Dom_x[i]:
+            if x <= x_u:
+                Sigma_x += AitchisonAitken (h[i], Xi[:, i], int(x),
+                                            num_levels=len(Dom_x[i])) 
+                Ordered[:, i] = Sigma_x[:, 0]
+    return Ordered
+
+    if num_levels:
+        c = num_levels
+    kernel_value = np.empty(Xi.shape)
+    kernel_value.fill(h / (c - 1))
+    inDom = (Xi == x) * (1 - h)
+    kernel_value[Xi == x] = inDom[Xi == x]
+    kernel_value = kernel_value.reshape([N, K])
+    return kernel_value
+
+def WangRyzin_cdf(h, Xi, x_u):
+    Xi = np.abs(np.asarray(Xi, dtype=int))
+    h = np.asarray(h, dtype=float)
+    if Xi.ndim > 1:
+        K = np.shape(Xi)[1]
+        N = np.shape(Xi)[0]
+    elif Xi.ndim == 1:
+        K = 1
+        N = np.shape(Xi)[0]
+    else:  # ndim ==0 so Xi is a single point (number)
+        K = 1
+        N = 1
+    if K == 0:
+        return Xi
+    Xi = Xi.reshape([N, K])
+    h = h.reshape((K, ))
+    Dom_x = [np.unique(Xi[:, i]) for i in range(K)]
+    Ordered = np.empty([N, K])
+    for i in range(K):
+        Sigma_x = 0
+        # TODO: Think about vectorizing this for optimal performance
+        for x in Dom_x[i]:
+            if x <= x_u:
+                Sigma_x += WangRyzin(h[i], Xi[:, i], int(x))
+                Ordered[:, i] = Sigma_x[:, 0]
+    return Ordered
+

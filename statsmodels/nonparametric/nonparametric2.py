@@ -20,6 +20,7 @@ import numpy as np
 from scipy import integrate, stats
 import np_tools as tools
 import scipy.optimize as opt
+import KernelFunctions as kf
 
 
 __all__ = ['UKDE', 'CKDE']
@@ -313,7 +314,7 @@ class UKDE(Generic_KDE):
         # there is a + because loo_likelihood returns the negative
         return (F / (self.N ** 2) + self.loo_likelihood(bw) * 2 / ((self.N) * (self.N - 1)))
 
-    def cdf(self, val):
+    def cdf2(self, val):
         """
         Returns the cumulative distribution function evaluated at val
 
@@ -344,6 +345,18 @@ class UKDE(Generic_KDE):
         elif self.K == 3:
             func = tools.IntegrateTrpl
         return func(val, self.pdf)
+    def cdf(self, edat=None):
+        
+        if edat is None:
+            edat = self.tdat
+        
+        cdf_est = tools.GPKE(self.bw, tdat=self.tdat, edat=edat,var_type=self.var_type,
+                             ckertype = "gaussian_cdf", ukertype="aitchisonaitken_cdf",
+                             okertype='wangryzin_cdf') / self.N
+        cdf_est = np.squeeze(cdf_est)
+
+        return cdf_est
+        
 
     def __repr__(self):
         """Provide something sane to print."""

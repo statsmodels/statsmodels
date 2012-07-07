@@ -8,7 +8,10 @@ kernel_func = dict(wangryzin=kf.WangRyzin, aitchisonaitken=kf.AitchisonAitken,
                  epanechnikov=kf.Epanechnikov, gaussian=kf.Gaussian,
                  gauss_convolution=kf.Gaussian_Convolution,
                  wangryzin_convolution=kf.WangRyzin_Convolution,
-                 aitchisonaitken_convolution=kf.AitchisonAitken_Convolution)
+                 aitchisonaitken_convolution=kf.AitchisonAitken_Convolution,
+                   gaussian_cdf=kf.Gaussian_cdf,
+                   aitchisonaitken_cdf=kf.AitchisonAitken_cdf,
+                   wangryzin_cdf=kf.WangRyzin_cdf)
 
 Convolution_Kernels = dict(gauss_convolution=kf.Gaussian_Convolution,
                            wangryzin_convolution=kf.WangRyzin_Convolution)
@@ -280,5 +283,5 @@ def GPKE_Reg(bw, tdat, edat, var_type, ckertype='gaussian',
         kernel_func[ukertype](bw[isunordered], tdat[:, isunordered], edat[i, isunordered])
         ), axis=1)
 
-        dens[:,i] = np.prod(Kval, axis=1) #* 1. / (np.prod(bw[iscontinuous]))
+        dens[:,i] = np.prod(Kval, axis=1) * 1. / (np.prod(bw[iscontinuous]))
     return dens
