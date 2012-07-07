@@ -279,6 +279,8 @@ class UKDE(Generic_KDE):
 ##            return pdf_est, ix
         
         return pdf_est
+
+
     def IMSE(self, bw):
         """
         Returns the Integrated Mean Square Error for the unconditional UKDE
@@ -506,6 +508,29 @@ class CKDE(Generic_KDE):
         f_x = tools.GPKE(self.bw[self.K_dep::], tdat=self.txdat,
                          edat=exdat, var_type=self.indep_type)
         return (f_yx / f_x)
+    def cdf(self, eydat=None, exdat=None):
+        # First attempt at conditional cdf
+        # TODO. Docstrings + clean up + fix so that only one GPKE
+        # References Racine/Li chapter 6
+        
+        if eydat is None:
+            eydat = self.tydat
+        if exdat is None:
+            exdat = self.txdat
+        mu_x = tools.GPKE(self.bw[self.K_dep::], tdat=self.txdat,
+                         edat=exdat, var_type=self.indep_type) / self.N
+        mu_x = np.squeeze(mu_x)
+        G_y = tools.GPKE_cond_cdf(self.bw[0:self.K_dep], tdat=self.tydat,
+                                  edat = eydat, var_type=self.dep_type,
+                                  ckertype = "gaussian_cdf", ukertype="aitchisonaitken_cdf",
+                             okertype='wangryzin_cdf')
+
+        W_x = tools.GPKE_cond_cdf(self.bw[self.K_dep::], tdat=self.txdat,
+                         edat=exdat, var_type=self.indep_type)
+        S = np.sum(G_y * W_x, axis=0)
+        
+        return S / (self.N * mu_x)
+        
 
     def IMSE(self, bw):
         """

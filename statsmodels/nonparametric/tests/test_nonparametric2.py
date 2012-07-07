@@ -3,7 +3,6 @@ import numpy.testing as npt
 import matplotlib.pyplot as plt
 import scipy.stats as stats
 import statsmodels.nonparametric as nparam
-
 class MyTest(object):
     def setUp(self):
         N = 60
@@ -258,7 +257,7 @@ class TestCKDE(MyTest):
     def test_unordered_CV_LS (self):
         dens_ls = nparam.CKDE(tydat=[self.oecd],txdat=[self.growth],
                                            dep_type='u',indep_type='c',bw='cv_ls')
-        print dens_ls.pdf()
+        print dens_ls.bw
         print "Test completed"
         #not a good match. needs more work
         
@@ -294,8 +293,21 @@ class TestCKDE(MyTest):
         sm_result = dens_nm.bw
         R_result = [1.283532,0.01535401]
         npt.assert_allclose(sm_result, R_result, atol = 1e-1)  # Here we need a smaller tolerance.check!
-        
 
+    def test_continuous_cdf(self):
+        dens_nm = nparam.CKDE(tydat=[self.Italy_gdp],
+                              txdat=[self.growth], dep_type='c',indep_type='c',bw='normal_reference')
+        sm_result = dens_nm.cdf()[0:5]
+        R_result = [0.81304920, 0.95046942, 0.86878727, 0.71961748, 0.38685423]
+        npt.assert_allclose(sm_result, R_result, atol = 1e-3)
+        
+    def test_mixeddata_cdf(self):
+        dens = nparam.CKDE(tydat=[self.Italy_gdp],txdat=[self.Italy_year],
+                                           dep_type='c',indep_type='o',bw='cv_ls')
+        sm_result = dens.cdf()[0:5]
+        R_result = [0.8118257, 0.9724863, 0.8843773, 0.7720359, 0.4361867]
+        npt.assert_allclose(sm_result, R_result, atol = 1e-3)
+        
 class TestReg(MyTest):
     def test_ordered_CV_LC(self):
         model = nparam.Reg(tydat=[self.Italy_gdp], txdat=[self.Italy_year],
