@@ -22,8 +22,7 @@ from scipy.stats import chi2, skew, kurtosis
 from matplotlib import pyplot as plt
 from statsmodels.base.model import _fit_mle_newton
 import itertools
-import sys
-sys.path.append('/home/justin/statsmodels-j-grana6/statsmodels/base')
+
 
 
 class ElModel(object):
