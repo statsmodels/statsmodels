@@ -131,7 +131,7 @@ class ElLinReg(ElRegOpts):
         super(ElLinReg, self).__init__(endog, exog)
 
     def hy_test_beta(self, b0_vals, param_nums, print_weights=0,
-                     ret_params=0, method='nm', start_int_params=None):
+                     ret_params=0, method='powell', start_int_params=None):
         """
         Tests single or joint hypotheses of the regression parameters
 
@@ -213,7 +213,7 @@ class ElLinReg(ElRegOpts):
             return pval, llr
 
     def ci_beta(self, param_num, sig=.05, upper_bound=None, lower_bound=None,
-                method='nm', start_int_params=None):
+                method='powell', start_int_params=None):
         """
 
         Computes the confidence interval for the parameter given by param_num
