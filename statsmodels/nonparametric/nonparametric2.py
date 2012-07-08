@@ -623,6 +623,8 @@ class Reg (object):
         return G
     
     def CV_LC(self, bw):
+        # The bandwidth method for the local constant estimator
+        # TODO: Include the Local Linear Estimator
         LOO_X = tools.LeaveOneOut(self.txdat)
         LOO_Y = tools.LeaveOneOut(self.tydat).__iter__()
         i = 0
@@ -640,6 +642,7 @@ class Reg (object):
         # Note: There might be a way to vectorize this. See p.72 in [1]
         return L / self.N     
     def AIC_Hurvich(self, bw):
+        # The Hurvich bandwidth estimator
         pass
     
     def compute_bw(self,bw):
@@ -659,4 +662,29 @@ class Reg (object):
         return opt.fmin(res, x0=h0, maxiter=1e3,
                       maxfun=1e3, disp=0)
        
+    def R_Squared(self):
+        # The R-Squared
+        # References [2] chapter 4
+        
+        Y = self.tydat
+        Yhat = self.Cond_Mean()
+        Y_bar = np.mean(Yhat)
+        R2_numer = np.sum(((Y - Y_bar) * (Yhat - Y_bar))**2, axis=0)
+        R2_denom = np.sum((Y - Y_bar)**2, axis=0) * \
+                   np.sum((Yhat - Ybar)**2, axis=0)
+        return R2_numer / R2_denom
+
+    def mfx(self, x):
+        # Produces the marginal effects at x. Only for continuous covariates
+        # References: see p. 37 in [2]
+        mx = self.Cond_Mean(edat=[x])
+        fx = tools.GPKE(self.bw, tdat=self.txdat, edat=[x], var_type=self.var_type)
+        
+        d_mx = None # Code the derivative of the kernel. Code in KernelFunctions.py
+        d_fx =  None # Same as d_mx
+        return d_mx / fx - mx * d_fx / fx
+    def Significance(self):
+        # Significance tests 
+        pass
     
+        
