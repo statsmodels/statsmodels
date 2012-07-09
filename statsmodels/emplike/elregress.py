@@ -19,6 +19,7 @@ from statsmodels.regression.linear_model import OLS
 from scipy import optimize
 from descriptive import OptFuncts
 from statsmodels.tools.tools import add_constant
+from statsmodels.regression.linear_model import RegressionResults
 
 
 class ElRegSetup(OptFuncts):
@@ -339,3 +340,32 @@ class ElLinReg(ElRegOpts):
         ul = optimize.brentq(self._ci_limits_beta,
                              self.params[self.param_nums], beta_high)
         return (ll, ul)
+
+
+class ElOriginRegresss(ElLinReg):
+    def __init__(self, endog, exog):
+        self.nobs = float(endog.shape[0])
+        self.nvar = float(exog.shape[1])
+        self.endog = endog
+        self.exog = exog
+
+    def params(self):
+        """
+
+        Returns the Empirical Likelihood parameters of a regression model
+        that is forced through the origin.
+
+        In regular OLS, the errors do not sum to 0.  However, in EL the maximum
+        empirical likelihood estimate of the paramaters solves the estimating
+        equation equation:
+        X'_1 (y-X*beta) = 0 where X'_1 is a vector of ones.
+
+        See Owen, page 82.
+
+        """
+
+        self.new_exog = add_constant(self.exog, prepend=1)
+        new_fit = ElLinReg(self.endog, self.new_exog)
+        params = new_fit.hy_test_beta([0], [0], print_weights=1,
+                                      ret_params=1)[3]
+        return params
