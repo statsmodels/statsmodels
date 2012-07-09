@@ -18,7 +18,7 @@ class GenRes(object):
         self.mvres1 = sm.emplike.DescStat(mv_desc_stat_data)
 
 
-class Test_DescriptiveStatistics(GenRes):
+class TestDescriptiveStatistics(GenRes):
     def __init__(self):
         super(Test_DescriptiveStatistics, self).__init__()
 
