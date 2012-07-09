@@ -438,7 +438,7 @@ class NonLinearLSResults(RegressionResults):
     def _get_params_iter(self,params_iter):
         self.params_iter = params_iter
 
-    def view_iter(self,parameters=None):
+    def view_iter(self,params_names=None):
         '''
 
         Returns
@@ -447,11 +447,11 @@ class NonLinearLSResults(RegressionResults):
 
         '''
         from statsmodels.iolib.table import SimpleTable
-        if parameters == None:
+        if params_names is None:
             headers = ['b'+str(i) for i in range(1,len(self.params)+1)]
         else:
-            if len(parameters) == len(self.params):
-                headers = parameters
+            if len(params_names) == len(self.params):
+                headers = params_names
             else:
                 raise ValueError('Number of parameter names provided are not'+
                                  ' equal to number of parameters estimated')
