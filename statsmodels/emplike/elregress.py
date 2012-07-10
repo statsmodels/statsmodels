@@ -22,7 +22,7 @@ from statsmodels.tools.tools import add_constant
 from statsmodels.regression.linear_model import RegressionResults
 
 
-class ElRegSetup(OptFuncts):
+class _ElRegSetup(OptFuncts):
     """
 
     Empirical Likelihood is a method of inference, not estimation.  Therefore,
@@ -34,9 +34,23 @@ class ElRegSetup(OptFuncts):
     the same when using Empirical Likelihood.  Note that estimates are
     different when the regression is forced through the origin.
 
+    Attributes
+    ----------
+    exog
+    nobs
+    nvar
+    endog
+    params
+    fittedvalues
+    mse_model
+    mse_resid
+    mse_total
+    resid
+    rsquared
+    rsquared_adj
+
     See Also
     --------
-
     OLS documentation
     El_Origin_Regress
 
@@ -58,7 +72,7 @@ class ElRegSetup(OptFuncts):
         #All of the above are the same when using EL or OLS
 
 
-class ElRegOpts(ElRegSetup):
+class _ElRegOpts(_ElRegSetup):
     """
 
     A class that holds functions to be optimized over when conducting
@@ -66,7 +80,7 @@ class ElRegOpts(ElRegSetup):
 
     """
     def __init__(self, endog, exog):
-            super(ElRegOpts, self).__init__(endog, exog)
+            super(_ElRegOpts, self).__init__(endog, exog)
 
     def _opt_nuis_regress(self, nuisance_params):
         """
@@ -110,7 +124,7 @@ class ElRegOpts(ElRegSetup):
                                  start_int_params=self.start_eta)[1] - self.r0
 
 
-class ElLinReg(ElRegOpts):
+class ElLinReg(_ElRegOpts):
 
     """
     Class that conducts hyptheses tests and calculates confidence intervals
@@ -342,7 +356,7 @@ class ElLinReg(ElRegOpts):
         return (ll, ul)
 
 
-class ElOriginRegresssSetup(ElLinReg):
+class _ElOriginRegresssSetup(ElLinReg):
     """
     This class is used to find the parameters of a linear regression model
     with a 0 intercept term
@@ -353,7 +367,7 @@ class ElOriginRegresssSetup(ElLinReg):
         Response Variable
 
     exog: nxk array
-        Exogenous variables.  Assumed to NOT have an array of 1's.
+        Exogenous variables.  Assumed to NOT have an array of 1's
 
     """
     def __init__(self, endog, exog):
@@ -362,15 +376,15 @@ class ElOriginRegresssSetup(ElLinReg):
         self.endog = endog
         self.exog = exog
 
-    def orig_params(self):
+    def _orig_params(self):
         """
 
         Returns the Empirical Likelihood parameters of a regression model
         that is forced through the origin.
 
         In regular OLS, the errors do not sum to 0.  However, in EL the maximum
-        empirical likelihood estimate of the paramaters solves the estimating
-        equation equation:
+        empirical likelihood estimate of the parameters solves the estimating
+        equation:
         X'_1 (y-X*beta) = 0 where X'_1 is a vector of ones.
 
         See Owen, page 82.
@@ -378,18 +392,98 @@ class ElOriginRegresssSetup(ElLinReg):
         """
 
         self.new_exog = add_constant(self.exog, prepend=1)
-        new_fit = ElLinReg(self.endog, self.new_exog)
-        params = new_fit.hy_test_beta([0], [0], print_weights=1,
+        self.new_fit = ElLinReg(self.endog, self.new_exog)
+        params = self.new_fit.hy_test_beta([0], [0], print_weights=1,
                                       ret_params=1)[3]
         return params
 
 
-class ElOriginRegresss(ElOriginRegresssSetup):
+class ElOriginRegresss(_ElOriginRegresssSetup):
+    """
+    Empirical Likelihood inference AND estimation for linear regression
+    through the origin.
+
+    Parameters
+    ---------
+
+    endog: nx1 array
+        Array of response variables
+
+    exog: nxk array
+        Array of exogenous variables.  Assumes no array of ones.
+
+    Methods
+    -------
+
+    fit:
+        Fits the model and adds fitted attributes
+
+    origin_test_beta:
+        Test a hypothesis about one parameter value.
+
+    """
     def __init__(self, endog, exog):
-        super(ElOriginRegresssSetup, self).__init__(endog, exog)
-        self.params = self.orig_params()
-        # Should there be a fit attribute instead of fitting the parameters immediately?
-        # Should there be different model statistics since parameters changed?
+        super(ElOriginRegresss, self).__init__(endog, exog)
+
+    def fit(self):
+        """
+
+        Fits the model and provides regression results.  Results become
+        attributes of ElOriginRegress instance.
+
+        Attributes Added
+        ----------------
+        fittedvalues
+        mse_model
+        mse_resid
+        mse_total
+        rsquared
+        rsquared_adj
+
+        See Also
+        --------
+
+        RegressionResults
+
+        Example
+        -------
+
+        data = sm.datasets.stackloss.load()
+        el_model = ElOriginRegress(data.endog, data.exog)
+        el_model.fit()
+            Optimization terminated successfully.
+             Current function value: 16.055419
+             Iterations: 23
+             Function evaluations: 955
+        el_model.params
+        >>>array([[ 0.        ],
+                  [ 0.50630858],
+                  [ 1.89804086],
+                  [-0.60254578]])
+        el_model.rsquared
+        >>>0.81907913157749168
+
+
+        Notes
+        -----
+        Since EL estimation does not drop the intercept parameter but instead
+        estimates the slope parameters conditional on the slope parameter being
+        0, the first element for fitted.params will be the intercept
+        parameter (0).
+
+
+        """
+
+        self.params = self._orig_params()
+        ols_model = OLS(self.endog, self.new_exog)
+        results = RegressionResults(ols_model,
+                                    self.params.reshape(self.nvar + 1,))
+        self.fittedvalues = results.fittedvalues
+        self.mse_model = results.mse_model
+        self.mse_resid = results.mse_resid
+        self.mse_total = results.mse_total
+        self.rsquared = results.rsquared
+        self.rsquared_adj = results.rsquared_adj
 
     def origin_test_beta(self, value, param_num):
         """
@@ -414,13 +508,13 @@ class ElOriginRegresss(ElOriginRegresssSetup):
         res: tuple
             pvalue and likelihood ratio
 
+
         """
 
-        self.new_exog = add_constant(self.exog, prepend=1)
-        new_fit = ElLinReg(self.endog, self.new_exog)
-        llr_beta_hat = new_fit.hy_test_beta([0, float(self.params[param_num])],
-                                         [0, param_num])[1]
-        llr_beta0 = new_fit.hy_test_beta([0, value], [0, param_num])[1]
+        llr_beta_hat = self.new_fit.hy_test_beta([0,
+                                float(self.params[param_num])],
+                                [0, param_num])[1]
+        llr_beta0 = self.new_fit.hy_test_beta([0, value], [0, param_num])[1]
         llr = llr_beta0 - llr_beta_hat
         pval = 1 - chi2.cdf(llr, 1)
         return pval, llr
