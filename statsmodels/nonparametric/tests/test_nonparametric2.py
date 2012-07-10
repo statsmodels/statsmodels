@@ -3,6 +3,8 @@ import numpy.testing as npt
 import matplotlib.pyplot as plt
 import scipy.stats as stats
 import statsmodels.nonparametric as nparam
+
+
 class MyTest(object):
     def setUp(self):
         N = 60
@@ -13,7 +15,8 @@ class MyTest(object):
         self.c2 = np.random.normal(10, 1, size=(N, 1))
         self.c3 = np.random.normal(10, 2, size=(N, 1))
         self.noise = np.random.normal(size=(N,1))
-        self.c4 = 0.3 + 1.2 * self.c1 + 3.7 * self.c2 + self.noise
+        b0 = 0.3; b1 =  1.2; b2 = 3.7 # regression coefficients
+        self.y = b0 + b1 * self.c1 + b2 * self.c2 + self.noise
 
         # Italy data from R's np package (the first 50 obs) R>> data (Italy)
 
@@ -309,15 +312,42 @@ class TestCKDE(MyTest):
         npt.assert_allclose(sm_result, R_result, atol = 1e-3)
         
 class TestReg(MyTest):
-    def test_ordered_CV_LC(self):
+    def test_ordered_CVLC(self):
         model = nparam.Reg(tydat=[self.Italy_gdp], txdat=[self.Italy_year],
                            var_type='o', bw='cv_lc')
-        sm_result = model.bw
-        R_result = 0.1390096
+        sm_bw = model.bw
+        R_bw = 0.1390096
+
+        sm_mean = model.Cond_Mean()[0]
+        R_mean = 6.190486
+
+        sm_R2 = model.R2()
+        R_R2 = 0.1435323
+        
+        
         ## CODE TO REPRODUCE IN R
         ## library(np)
         ## data(Italy)
-        ## bw <- npregbw(fomulra=gdp[1:50]~ordered(year[1:50]))
-        npt.assert_allclose(sm_result,R_result, atol = 1e-2)
+        ## attach(Italy)
+        ## bw <- npregbw(formula=gdp[1:50]~ordered(year[1:50]))
+        npt.assert_allclose(sm_bw, R_bw, atol = 1e-2)
+        npt.assert_allclose(sm_mean, R_mean, atol = 1e-2)
+        npt.assert_allclose(sm_R2, R_R2, atol = 1e-2)
+    def test_continuousdata_CVLC(self):
+        model = nparam.Reg(tydat=[self.y], txdat=[self.c1,self.c2],
+                           var_type='cc', bw='cv_lc')
+        # Bandwidth
+        sm_bw = model.bw
+        R_bw = [0.6163835, 0.1649656]
+        # Conditional Mean
+        sm_mean = model.Cond_Mean()[0:5]
+        R_mean = [31.49157, 37.29536, 43.72332, 40.58997, 36.80711]
+        # R-Squared
+        sm_R2 = model.R2()
+        R_R2 = 0.956381720885
+        
+        npt.assert_allclose(sm_bw, R_bw, atol = 1e-2)
+        npt.assert_allclose(sm_mean, R_mean, atol = 1e-2)
+        npt.assert_allclose(sm_R2, R_R2, atol = 1e-2)
         
     

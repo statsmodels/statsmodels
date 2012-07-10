@@ -615,9 +615,10 @@ class Reg (object):
         if edat is None:
             edat = self.txdat
         # The numerator in the formula is:
-        G_numer = np.sum(self.tydat * tools.GPKE_Reg(bw, tdat=self.txdat, edat=edat, var_type=self.var_type))
+        G_numer = np.sum(self.tydat * tools.GPKE_Reg(self.bw, tdat=self.txdat, edat=edat, var_type=self.var_type),axis=0)
+
         # The denominator in the formula is:
-        G_denom = np.sum(tools.GPKE_Reg(bw, tdat=self.txdat, edat=edat, var_type=self.var_type))
+        G_denom = np.sum(tools.GPKE_Reg(self.bw, tdat=self.txdat, edat=edat, var_type=self.var_type),axis=0)
         # The conditional mean is:
         G = G_numer / G_denom
         return G
@@ -662,16 +663,19 @@ class Reg (object):
         return opt.fmin(res, x0=h0, maxiter=1e3,
                       maxfun=1e3, disp=0)
        
-    def R_Squared(self):
+    def R2(self):
         # The R-Squared
-        # References [2] chapter 4
+        # References [2] chapter 4 p.45
         
-        Y = self.tydat
+        Y = np.squeeze(self.tydat)
         Yhat = self.Cond_Mean()
         Y_bar = np.mean(Yhat)
-        R2_numer = np.sum(((Y - Y_bar) * (Yhat - Y_bar))**2, axis=0)
+        
+        R2_numer = (np.sum((Y - Y_bar) * (Yhat - Y_bar))**2)
+        
         R2_denom = np.sum((Y - Y_bar)**2, axis=0) * \
-                   np.sum((Yhat - Ybar)**2, axis=0)
+                   np.sum((Yhat - Y_bar)**2, axis=0)
+        
         return R2_numer / R2_denom
 
     def mfx(self, x):

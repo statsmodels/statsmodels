@@ -322,7 +322,7 @@ def GPKE_Reg(bw, tdat, edat, var_type, ckertype='gaussian',
     
     bw = np.reshape(np.asarray(bw), (K,))  # must remain 1-D for indexing to work
     dens = np.empty([N, N_edat])
-
+    
     for i in xrange(N_edat):
 
         Kval = np.concatenate((
