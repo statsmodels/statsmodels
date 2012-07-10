@@ -342,14 +342,27 @@ class ElLinReg(ElRegOpts):
         return (ll, ul)
 
 
-class ElOriginRegresss(ElLinReg):
+class ElOriginRegresssSetup(ElLinReg):
+    """
+    This class is used to find the parameters of a linear regression model
+    with a 0 intercept term
+
+    Parameters
+    ----------
+    endog: nx1 array
+        Response Variable
+
+    exog: nxk array
+        Exogenous variables.  Assumed to NOT have an array of 1's.
+
+    """
     def __init__(self, endog, exog):
         self.nobs = float(endog.shape[0])
         self.nvar = float(exog.shape[1])
         self.endog = endog
         self.exog = exog
 
-    def params(self):
+    def orig_params(self):
         """
 
         Returns the Empirical Likelihood parameters of a regression model
@@ -369,3 +382,45 @@ class ElOriginRegresss(ElLinReg):
         params = new_fit.hy_test_beta([0], [0], print_weights=1,
                                       ret_params=1)[3]
         return params
+
+
+class ElOriginRegresss(ElOriginRegresssSetup):
+    def __init__(self, endog, exog):
+        super(ElOriginRegresssSetup, self).__init__(endog, exog)
+        self.params = self.orig_params()
+        # Should there be a fit attribute instead of fitting the parameters immediately?
+        # Should there be different model statistics since parameters changed?
+
+    def origin_test_beta(self, value, param_num):
+        """
+
+        Returns the pvalue and the llr for a hypothesized parameter value
+        for a regression that goes through the origin.
+
+        Note, must call orig_params first.
+
+        Parameters
+        ----------
+
+        value: float
+            The hypothesized value to be tested
+
+        param_num: float
+            Which parameter to test.
+
+        Returns
+        -------
+
+        res: tuple
+            pvalue and likelihood ratio
+
+        """
+
+        self.new_exog = add_constant(self.exog, prepend=1)
+        new_fit = ElLinReg(self.endog, self.new_exog)
+        llr_beta_hat = new_fit.hy_test_beta([0, float(self.params[param_num])],
+                                         [0, param_num])[1]
+        llr_beta0 = new_fit.hy_test_beta([0, value], [0, param_num])[1]
+        llr = llr_beta0 - llr_beta_hat
+        pval = 1 - chi2.cdf(llr, 1)
+        return pval, llr
