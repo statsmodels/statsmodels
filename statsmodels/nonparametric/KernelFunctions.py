@@ -372,3 +372,18 @@ def WangRyzin_cdf(h, Xi, x_u):
         Ordered[:, i] = Sigma_x[:, 0]
     return Ordered
 
+def D_Gaussian(h, Xi, x):
+    # The derivative of the Gaussian Kernel
+    Xi = np.asarray(Xi)
+    x = np.asarray(x)
+    h = np.asarray(h, dtype=float)
+    N = np.shape(Xi)[0]
+    if Xi.ndim > 1:
+        K = np.shape(Xi)[1]
+    else:
+        K = 1
+    if K == 0:
+        return Xi
+    z = (Xi - x) / h
+    value = np.exp(-z**2/2.) * (Xi - x) / (np.sqrt(2 * np.pi) * h**2)
+    return value
