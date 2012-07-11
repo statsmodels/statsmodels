@@ -432,7 +432,7 @@ class SysResults(LikelihoodModelResults):
         # Compute sigma with final residuals
         self.fittedvalues = model.predict(params=params, exog=None)
         resids = model.endog.T - self.fittedvalues.reshape(model.neqs,-1).T
-        self.cov_resids = model._compute_sigma(resids)
+        self.cov_resids = self._compute_sigma(resids)
 
         self.nobs = model.nobs
         self.df_resid = model.df_resid
@@ -453,6 +453,20 @@ class SysResults(LikelihoodModelResults):
         
         return smry
     
+    def _compute_sigma(self, resids):
+        '''
+        Parameters
+        ----------
+        resids : ndarray (N x G)
+            Residuals for each equation stacked in column.
+        '''
+        s = np.dot(resids.T, resids)
+        if self.model.dfk is None:
+            return s / self.model.nobs
+        elif self.model.dfk == 'dfk1':
+            return s / self.model._div_dfk1
+        else:
+            return s / self.model._div_dfk2
 
 # Testing/Debugging
 if __name__ == '__main__':
