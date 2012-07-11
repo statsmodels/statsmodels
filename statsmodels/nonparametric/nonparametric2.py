@@ -520,13 +520,13 @@ class CKDE(Generic_KDE):
         mu_x = tools.GPKE(self.bw[self.K_dep::], tdat=self.txdat,
                          edat=exdat, var_type=self.indep_type) / self.N
         mu_x = np.squeeze(mu_x)
-        G_y = tools.GPKE_cond_cdf(self.bw[0:self.K_dep], tdat=self.tydat,
+        G_y = tools.GPKE(self.bw[0:self.K_dep], tdat=self.tydat,
                                   edat = eydat, var_type=self.dep_type,
                                   ckertype = "gaussian_cdf", ukertype="aitchisonaitken_cdf",
-                             okertype='wangryzin_cdf')
+                             okertype='wangryzin_cdf', tosum=False)
 
-        W_x = tools.GPKE_cond_cdf(self.bw[self.K_dep::], tdat=self.txdat,
-                         edat=exdat, var_type=self.indep_type)
+        W_x = tools.GPKE(self.bw[self.K_dep::], tdat=self.txdat,
+                         edat=exdat, var_type=self.indep_type, tosum=False)
         S = np.sum(G_y * W_x, axis=0)
         
         return S / (self.N * mu_x)
@@ -615,10 +615,10 @@ class Reg (object):
         if edat is None:
             edat = self.txdat
         # The numerator in the formula is:
-        G_numer = np.sum(self.tydat * tools.GPKE_Reg(self.bw, tdat=self.txdat, edat=edat, var_type=self.var_type),axis=0)
+        G_numer = np.sum(self.tydat * tools.GPKE(self.bw, tdat=self.txdat, edat=edat, var_type=self.var_type, tosum=False),axis=0)
 
         # The denominator in the formula is:
-        G_denom = np.sum(tools.GPKE_Reg(self.bw, tdat=self.txdat, edat=edat, var_type=self.var_type),axis=0)
+        G_denom = np.sum(tools.GPKE(self.bw, tdat=self.txdat, edat=edat, var_type=self.var_type, tosum=False),axis=0)
         # The conditional mean is:
         G = G_numer / G_denom
         return G
@@ -633,10 +633,10 @@ class Reg (object):
         for X_j in LOO_X:
             #print "running"
             Y = LOO_Y.next()
-            G_numer = np.sum(Y * tools.GPKE_Reg(bw, tdat=-X_j, edat=-self.txdat[i, :],
-                             var_type=self.var_type))
-            G_denom = np.sum(tools.GPKE_Reg(bw, tdat=-X_j, edat=-self.txdat[i, :],
-                             var_type=self.var_type))
+            G_numer = np.sum(Y * tools.GPKE(bw, tdat=-X_j, edat=-self.txdat[i, :],
+                             var_type=self.var_type, tosum=False))
+            G_denom = np.sum(tools.GPKE(bw, tdat=-X_j, edat=-self.txdat[i, :],
+                             var_type=self.var_type, tosum=False))
             G = G_numer / G_denom
             L += (self.tydat[i] - G)**2
             i += 1

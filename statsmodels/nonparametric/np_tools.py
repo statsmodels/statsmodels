@@ -51,9 +51,17 @@ class LeaveOneOut(object):
             index = np.ones(N, dtype=np.bool)
             index[i] = False
             yield X[index, :]
+            
+def _get_type_pos(var_type):
+    var_type = np.asarray(list(var_type))
+    iscontinuous = np.where(var_type == 'c')[0]
+    isordered = np.where(var_type == 'o')[0]
+    isunordered = np.where(var_type == 'u')[0]
+    return iscontinuous, isordered, isunordered
 
+    
 def GPKE(bw, tdat, edat, var_type, ckertype='gaussian',
-         okertype='wangryzin', ukertype='aitchisonaitken'):
+         okertype='wangryzin', ukertype='aitchisonaitken', tosum=True):
     """
     Returns the non-normalized Generalized Product Kernel Estimator
 
@@ -119,54 +127,6 @@ def GPKE(bw, tdat, edat, var_type, ckertype='gaussian',
     edat = edat.reshape([N_edat, K])
 
     bw = np.reshape(np.asarray(bw), (K,))  # must remain 1-D for indexing to work
-    dens = np.empty([N_edat, 1])
-
-    for i in xrange(N_edat):
-
-        Kval = np.concatenate((
-        kernel_func[ckertype](bw[iscontinuous], tdat[:, iscontinuous], edat[i, iscontinuous]),
-        kernel_func[okertype](bw[isordered], tdat[:, isordered], edat[i, isordered]),
-        kernel_func[ukertype](bw[isunordered], tdat[:, isunordered], edat[i, isunordered])
-        ), axis=1)
-
-        dens[i] = np.sum(np.prod(Kval, axis=1)) * 1. / (np.prod(bw[iscontinuous]))
-    return dens
-
-
-def GPKE_cond_cdf(bw, tdat, edat, var_type, ckertype='gaussian',
-         okertype='wangryzin', ukertype='aitchisonaitken', tosum=False):
-    # This function is just for testing the conditional cdf
-    # It can be reworked and incorporated in the GPKE. TODO
-    # The difference from GPKE is that it doesn't sum the products
-    
-    var_type = np.asarray(list(var_type))
-    iscontinuous = np.where(var_type == 'c')[0]
-    isordered = np.where(var_type == 'o')[0]
-    isunordered = np.where(var_type == 'u')[0]
-    edat = np.asarray(edat)
-    K = len(var_type)
-    edat = np.asarray(edat)
-    if tdat.ndim == 1 and K == 1:  # one variable many observations
-        N = np.size(tdat)
-    elif tdat.ndim == 1 and K > 1:
-        N = 1
-
-    else:
-        N, K = np.shape(tdat)
-    tdat = tdat.reshape([N, K])
-
-    if edat.ndim == 1 and K > 1:  # one obs many vars
-        N_edat = 1
-    elif edat.ndim == 1 and K == 1:  # one obs one var
-        N_edat = np.size(edat)
-
-    else:
-        N_edat = np.shape(edat)[0]  # ndim >1 so many obs many vars
-        assert np.shape(edat)[1] == K
-
-    edat = edat.reshape([N_edat, K])
-
-    bw = np.reshape(np.asarray(bw), (K,))  # must remain 1-D for indexing to work
     dens = np.empty([N, N_edat])
 
     for i in xrange(N_edat):
@@ -182,7 +142,6 @@ def GPKE_cond_cdf(bw, tdat, edat, var_type, ckertype='gaussian',
         return np.sum(dens, axis=0)
     else:
         return dens
-
 
 def PKE(bw, tdat, edat, var_type, ckertype='gaussian',
           okertype='wangryzin', ukertype='aitchisonaitken'):
@@ -256,49 +215,3 @@ def PKE(bw, tdat, edat, var_type, ckertype='gaussian',
     dens = np.prod(Kval, axis=1) * 1. / (np.prod(bw[iscontinuous]))
     return dens
 
-def GPKE_Reg(bw, tdat, edat, var_type, ckertype='gaussian',
-         okertype='wangryzin', ukertype='aitchisonaitken'):
-    """
-   
-    """
-    var_type = np.asarray(list(var_type))
-    iscontinuous = np.where(var_type == 'c')[0]
-    isordered = np.where(var_type == 'o')[0]
-    isunordered = np.where(var_type == 'u')[0]
-    edat = np.asarray(edat)
-    K = len(var_type)
-    edat = np.asarray(edat)
-
-    if tdat.ndim == 1 and K == 1:  # one variable many observations
-        N = np.size(tdat)
-    elif tdat.ndim == 1 and K > 1:
-        N = 1
-
-    else:
-        N, K = np.shape(tdat)
-    tdat = tdat.reshape([N, K])
-
-    if edat.ndim == 1 and K > 1:  # one obs many vars
-        N_edat = 1
-    elif edat.ndim == 1 and K == 1:  # one obs one var
-        N_edat = np.size(edat)
-
-    else:
-        N_edat = np.shape(edat)[0]  # ndim >1 so many obs many vars
-        assert np.shape(edat)[1] == K
-
-    edat = edat.reshape([N_edat, K])
-    
-    bw = np.reshape(np.asarray(bw), (K,))  # must remain 1-D for indexing to work
-    dens = np.empty([N, N_edat])
-    
-    for i in xrange(N_edat):
-
-        Kval = np.concatenate((
-        kernel_func[ckertype](bw[iscontinuous], tdat[:, iscontinuous], edat[i, iscontinuous]),
-        kernel_func[okertype](bw[isordered], tdat[:, isordered], edat[i, isordered]),
-        kernel_func[ukertype](bw[isunordered], tdat[:, isunordered], edat[i, isunordered])
-        ), axis=1)
-
-        dens[:,i] = np.prod(Kval, axis=1) * 1. / (np.prod(bw[iscontinuous]))
-    return dens
