@@ -3,6 +3,7 @@ import statsmodels.nonparametric as nparam
 import scipy.stats as stats
 import numpy as np
 import matplotlib.pyplot as plt
+
 """
 This example tests the nonparametric estimator
 for several popular univariate distributions with the different
@@ -18,6 +19,7 @@ Produces six different plots for each distribution
 
 author: George Panterov
 """
+np.random.seed(123456)
 
 # Beta distribution
 
