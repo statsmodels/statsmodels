@@ -59,6 +59,27 @@ def _get_type_pos(var_type):
     isunordered = np.where(var_type == 'u')[0]
     return iscontinuous, isordered, isunordered
 
+def _get_shape(tdat, edat, var_type):
+    var_type = np.asarray(list(var_type))
+    K = len(var_type)
+    if tdat.ndim == 1 and K == 1:  # one variable many observations
+        N = np.size(tdat)
+    elif tdat.ndim == 1 and K > 1:
+        N = 1
+    else:
+        N, k = np.shape(tdat)
+        assert K == k
+
+    if edat.ndim == 1 and K > 1:  # one obs many vars
+        N_edat = 1
+    elif edat.ndim == 1 and K == 1:  # one obs one var
+        N_edat = np.size(edat)
+    else:
+        N_edat = np.shape(edat)[0]  # ndim >1 so many obs many vars
+        assert np.shape(edat)[1] == K
+    return K, N, N_edat
+    
+
     
 def GPKE(bw, tdat, edat, var_type, ckertype='gaussian',
          okertype='wangryzin', ukertype='aitchisonaitken', tosum=True):
@@ -99,31 +120,13 @@ def GPKE(bw, tdat, edat, var_type, ckertype='gaussian',
     .. math:: K\left(\frac{X_{i}-x}{h}\right)=k\left(\frac{X_{i1}-x_{1}}{h_{1}}\right)\times k\left(\frac{X_{i2}-x_{2}}{h_{2}}\right)\times...\times k\left(\frac{X_{iq}-x_{q}}{h_{q}}\right)
     
     """
-    var_type = np.asarray(list(var_type))
-    iscontinuous = np.where(var_type == 'c')[0]
-    isordered = np.where(var_type == 'o')[0]
-    isunordered = np.where(var_type == 'u')[0]
+    iscontinuous, isordered, isunordered = _get_type_pos(var_type)
+    tdat = np.asarray(tdat)
     edat = np.asarray(edat)
-    K = len(var_type)
-    edat = np.asarray(edat)
-    if tdat.ndim == 1 and K == 1:  # one variable many observations
-        N = np.size(tdat)
-    elif tdat.ndim == 1 and K > 1:
-        N = 1
 
-    else:
-        N, K = np.shape(tdat)
+    K, N, N_edat = _get_shape(tdat, edat, var_type)
+
     tdat = tdat.reshape([N, K])
-
-    if edat.ndim == 1 and K > 1:  # one obs many vars
-        N_edat = 1
-    elif edat.ndim == 1 and K == 1:  # one obs one var
-        N_edat = np.size(edat)
-
-    else:
-        N_edat = np.shape(edat)[0]  # ndim >1 so many obs many vars
-        assert np.shape(edat)[1] == K
-
     edat = edat.reshape([N_edat, K])
 
     bw = np.reshape(np.asarray(bw), (K,))  # must remain 1-D for indexing to work
@@ -178,34 +181,17 @@ def PKE(bw, tdat, edat, var_type, ckertype='gaussian',
     values
     """
     # TODO: See if you can substitute instead of the GPKE method
-    var_type = np.asarray(list(var_type))
-    iscontinuous = np.where(var_type == 'c')[0]
-    isordered = np.where(var_type == 'o')[0]
-    isunordered = np.where(var_type == 'u')[0]
-    K = len(var_type)
+    iscontinuous, isordered, isunordered = _get_type_pos(var_type)
+    tdat = np.asarray(tdat)
     edat = np.asarray(edat)
 
-    if tdat.ndim == 1 and K == 1:  # one variable many observations
-        N = np.size(tdat)
-    elif tdat.ndim == 1 and K > 1:
-        N = 1
-
-    else:
-        N, K = np.shape(tdat)
+    K, N, N_edat = _get_shape(tdat, edat, var_type)
 
     tdat = tdat.reshape([N, K])
-
-    if edat.ndim == 1 and K > 1:  # one obs many vars
-        N_edat = 1
-    elif edat.ndim == 1 and K == 1:  # one obs one var
-        N_edat = np.size(edat)
-    else:
-        N_edat = np.shape(edat)[0]  # ndim >1 so many obs many vars
-        assert np.shape(edat)[1] == K
-
     edat = edat.reshape([N_edat, K])
 
-    bw = np.reshape(np.asarray(bw), (K, ))  # must remain 1-D for indexing to work
+    bw = np.reshape(np.asarray(bw), (K,))  # must remain 1-D for indexing to work
+
     Kval = np.concatenate((
     kernel_func[ckertype](bw[iscontinuous], tdat[:, iscontinuous], edat[:, iscontinuous]),
     kernel_func[okertype](bw[isordered], tdat[:, isordered], edat[:, isordered]),
