@@ -16,20 +16,7 @@ kernel_func = dict(wangryzin=kf.WangRyzin, aitchisonaitken=kf.AitchisonAitken,
 Convolution_Kernels = dict(gauss_convolution=kf.Gaussian_Convolution,
                            wangryzin_convolution=kf.WangRyzin_Convolution)
 
-
-def IntegrateSingle(val, pdf):
-    f1 = lambda x: pdf(edat=np.asarray([x]))
-    return quad(f1, -np.Inf, val)[0]
-
-
-def IntegrateDbl(val, pdf):
-    f2 = lambda y, x: pdf(edat=np.asarray([x, y]))
-    return dblquad(f2, -np.Inf, val[0], lambda x: -np.Inf, lambda x: val[1])[0]
-
-def IntegrateTrpl(val, pdf):
-    f3 = lambda z, y, x: pdf(edat=np.asarray([x,y,z]))
-    return tplquad(f3, -np.Inf, val[0], lambda x: -np.Inf, lambda x: val[1],
-                   lambda x, y: -np.Inf, lambda x, y: val[2])[0]
+  
 
 class LeaveOneOut(object):
     # Written by Skipper
@@ -109,26 +96,10 @@ def GPKE(bw, tdat, edat, var_type, ckertype='gaussian',
     isordered = np.where(var_type == 'o')[0]
     isunordered = np.where(var_type == 'u')[0]
     edat = np.asarray(edat)
-    #edat = np.squeeze(edat)
     K = len(var_type)
     edat = np.asarray(edat)
-    #edat = np.squeeze(edat)
-##    if tdat.ndim > 1:
-##        N, K = np.shape(tdat)
-##    else:
-##        K = 1
-##        N = np.shape(tdat)[0]
-##        tdat = tdat.reshape([N, K])
-##
-##    if edat.ndim > 1:
-##        N_edat = np.shape(edat)[0]
-##    else:
-##        N_edat = 1
-##        edat = edat.reshape([N_edat, K])
-
     if tdat.ndim == 1 and K == 1:  # one variable many observations
         N = np.size(tdat)
-        #N_edat = np.size(edat)
     elif tdat.ndim == 1 and K > 1:
         N = 1
 
@@ -163,7 +134,7 @@ def GPKE(bw, tdat, edat, var_type, ckertype='gaussian',
 
 
 def GPKE_cond_cdf(bw, tdat, edat, var_type, ckertype='gaussian',
-         okertype='wangryzin', ukertype='aitchisonaitken'):
+         okertype='wangryzin', ukertype='aitchisonaitken', tosum=False):
     # This function is just for testing the conditional cdf
     # It can be reworked and incorporated in the GPKE. TODO
     # The difference from GPKE is that it doesn't sum the products
@@ -177,7 +148,6 @@ def GPKE_cond_cdf(bw, tdat, edat, var_type, ckertype='gaussian',
     edat = np.asarray(edat)
     if tdat.ndim == 1 and K == 1:  # one variable many observations
         N = np.size(tdat)
-        #N_edat = np.size(edat)
     elif tdat.ndim == 1 and K > 1:
         N = 1
 
@@ -208,7 +178,10 @@ def GPKE_cond_cdf(bw, tdat, edat, var_type, ckertype='gaussian',
         ), axis=1)
 
         dens[:,i] = np.prod(Kval, axis=1) * 1. / (np.prod(bw[iscontinuous]))
-    return dens
+    if tosum:
+        return np.sum(dens, axis=0)
+    else:
+        return dens
 
 
 def PKE(bw, tdat, edat, var_type, ckertype='gaussian',
@@ -252,11 +225,9 @@ def PKE(bw, tdat, edat, var_type, ckertype='gaussian',
     isunordered = np.where(var_type == 'u')[0]
     K = len(var_type)
     edat = np.asarray(edat)
-    #edat = np.squeeze(edat)
 
     if tdat.ndim == 1 and K == 1:  # one variable many observations
         N = np.size(tdat)
-        #N_edat = np.size(edat)
     elif tdat.ndim == 1 and K > 1:
         N = 1
 
@@ -276,7 +247,6 @@ def PKE(bw, tdat, edat, var_type, ckertype='gaussian',
     edat = edat.reshape([N_edat, K])
 
     bw = np.reshape(np.asarray(bw), (K, ))  # must remain 1-D for indexing to work
-    # dens = np.empty([N, 1])
     Kval = np.concatenate((
     kernel_func[ckertype](bw[iscontinuous], tdat[:, iscontinuous], edat[:, iscontinuous]),
     kernel_func[okertype](bw[isordered], tdat[:, isordered], edat[:, isordered]),
@@ -301,7 +271,6 @@ def GPKE_Reg(bw, tdat, edat, var_type, ckertype='gaussian',
 
     if tdat.ndim == 1 and K == 1:  # one variable many observations
         N = np.size(tdat)
-        #N_edat = np.size(edat)
     elif tdat.ndim == 1 and K > 1:
         N = 1
 

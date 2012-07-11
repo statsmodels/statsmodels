@@ -15,6 +15,27 @@ import numpy as np
 from scipy.special import erf
 
 
+def _get_shape_and_transform(h, Xi, x = None):
+    """
+    Returns the transformed arrays and shape parameters
+    To be used with the kernel functions in KernelFunctions.py
+    """
+    x = np.asarray(x)
+    h = np.asarray(h, dtype=float)
+    Xi = np.asarray(Xi)
+    if Xi.ndim > 1: # More than one variable with more than one observations
+        K = np.shape(Xi)[1]
+        N = np.shape(Xi)[0]
+    elif Xi.ndim == 1: # One variable with many observations
+        K = 1
+        N = np.shape(Xi)[0]
+    else:  # ndim ==0 so Xi is a single point (number)
+        K = 1
+        N = 1
+    assert N >= K  # Need more observations than variables
+    Xi = Xi.reshape([N, K])
+    return h, Xi, x, N, K
+
 def AitchisonAitken(h, Xi, x, num_levels=False):
     """
     Returns the value of the Aitchison and Aitken's (1976) Kernel. Used for
@@ -60,23 +81,12 @@ def AitchisonAitken(h, Xi, x, num_levels=False):
     ----------
     Nonparametric econometrics : theory and practice / Qi Li and Jeffrey Scott Racine.
     """
+    h, Xi, x, N, K = _get_shape_and_transform(h,Xi,x)
     Xi = np.abs(np.asarray(Xi, dtype=int))
     x = np.abs(np.asarray(x, dtype=int))
     
-    if Xi.ndim > 1:
-        K = np.shape(Xi)[1]
-        N = np.shape(Xi)[0]
-    elif Xi.ndim == 1:
-        K = 1
-        N = np.shape(Xi)[0]
-    else:  # ndim ==0 so Xi is a single point (number)
-        K = 1
-        N = 1    
     if K == 0:
         return Xi
-    
-    h = np.asarray(h, dtype=float)
-    Xi = Xi.reshape([N, K])
     c = np.asarray([len(np.unique(Xi[:, i])) for i in range(K)],
                    dtype=int)
     if num_levels:
@@ -127,21 +137,11 @@ def WangRyzin(h, Xi, x):
     Nonparametric econometrics : theory and practice / Qi Li and Jeffrey Scott Racine.
     
     """
+    h, Xi, x, N, K = _get_shape_and_transform(h,Xi,x)
     Xi = np.abs(np.asarray(Xi, dtype=int))
     x = np.abs(np.asarray(x, dtype=int))
-    if Xi.ndim > 1:
-        K = np.shape(Xi)[1]
-        N = np.shape(Xi)[0]
-    elif Xi.ndim == 1:
-        K = 1
-        N = np.shape(Xi)[0]
-    else:  # ndim ==0 so Xi is a single point (number)
-        K = 1
-        N = 1
     if K == 0:
         return Xi
-    h = np.asarray(h, dtype=float)
-    Xi = Xi.reshape([N, K])
     kernel_value = (0.5 * (1 - h) * (h ** abs(Xi - x)))
     kernel_value = kernel_value.reshape([N, K])
     inDom = (Xi == x) * (1 - h)
@@ -171,14 +171,7 @@ def Epanechnikov(h, Xi, x):
     ----------
     Racine, J. "Nonparametric econometrics: A Primer" : Foundations and Trends in Econometrics.
     """    
-    Xi = np.asarray(Xi)
-    x = np.asarray(x)
-    h = np.asarray(h, dtype=float)
-    N = np.shape(Xi)[0]
-    if Xi.ndim > 1:
-        K = np.shape(Xi)[1]
-    else:
-        K = 1
+    h, Xi, x, N, K = _get_shape_and_transform(h,Xi,x)
     if K == 0:
         return Xi
     z = (Xi - x) / h
@@ -193,14 +186,7 @@ def Epanechnikov(h, Xi, x):
 
 
 def Gaussian(h, Xi, x):
-    Xi = np.asarray(Xi)
-    x = np.asarray(x)
-    h = np.asarray(h, dtype=float)
-    N = np.shape(Xi)[0]
-    if Xi.ndim > 1:
-        K = np.shape(Xi)[1]
-    else:
-        K = 1
+    h, Xi, x, N, K = _get_shape_and_transform(h,Xi,x)
     if K == 0:
         return Xi
     z = (Xi - x) / h
@@ -213,14 +199,7 @@ def Gaussian_Convolution(h, Xi, x):
     """
     Calculates the Gaussian Convolution Kernel
     """
-    Xi = np.asarray(Xi)
-    x = np.asarray(x)
-    h = np.asarray(h, dtype=float)
-    N = np.shape(Xi)[0]
-    if Xi.ndim > 1:
-        K = np.shape(Xi)[1]
-    else:
-        K = 1
+    h, Xi, x, N, K = _get_shape_and_transform(h,Xi,x)
     if K == 0:
         return Xi
     z = (Xi - x) / h
@@ -233,18 +212,9 @@ def WangRyzin_Convolution(h, Xi, Xj):
     # This is the equivalent of the convolution case with the Gaussian Kernel
     # However it is not exactly convolution. Think of a better name
     # References http://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=4&ved=0CGUQFjAD&url=http%3A%2F%2Feconweb.tamu.edu%2Fli%2FUncond1.pdf&ei=2THUT5i7IIOu8QSvmrXlAw&usg=AFQjCNH4aGzQbKT22sLBbZqHtPOyeFXNIQ
+    h, Xi, x, N, K = _get_shape_and_transform(h,Xi)
     Xi = np.abs(np.asarray(Xi, dtype=int))
     Xj = np.abs(np.asarray(Xj, dtype=int))
-    h = np.asarray(h, dtype=float)
-    if Xi.ndim > 1:
-        K = np.shape(Xi)[1]
-        N = np.shape(Xi)[0]
-    elif Xi.ndim == 1:
-        K = 1
-        N = np.shape(Xi)[0]
-    else:  # ndim ==0 so Xi is a single point (number)
-        K = 1
-        N = 1
     if K == 0:
         return Xi
     Xi = Xi.reshape([N, K])
@@ -263,18 +233,9 @@ def WangRyzin_Convolution(h, Xi, Xj):
 
 
 def AitchisonAitken_Convolution(h, Xi, Xj):
+    h, Xi, x, N, K = _get_shape_and_transform(h,Xi)
     Xi = np.abs(np.asarray(Xi, dtype=int))
     Xj = np.abs(np.asarray(Xj, dtype=int))
-    h = np.asarray(h, dtype=float)
-    if Xi.ndim > 1:
-        K = np.shape(Xi)[1]
-        N = np.shape(Xi)[0]
-    elif Xi.ndim == 1:
-        K = 1
-        N = np.shape(Xi)[0]
-    else:  # ndim ==0 so Xi is a single point (number)
-        K = 1
-        N = 1   
     if K == 0:
         return Xi
     Xi = Xi.reshape([N, K])
@@ -292,14 +253,7 @@ def AitchisonAitken_Convolution(h, Xi, Xj):
     return Ordered
 
 def Gaussian_cdf(h, Xi, x):
-    Xi = np.asarray(Xi)
-    x = np.asarray(x)
-    h = np.asarray(h, dtype=float)
-    N = np.shape(Xi)[0]
-    if Xi.ndim > 1:
-        K = np.shape(Xi)[1]
-    else:
-        K = 1
+    h, Xi, x, N, K = _get_shape_and_transform(h,Xi,x)
     if K == 0:
         return Xi
     cdf = 0.5 * h * (1 + erf((x - Xi) / (h * np.sqrt(2))))
