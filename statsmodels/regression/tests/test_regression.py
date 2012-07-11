@@ -2,7 +2,8 @@
 Test functions for models.regression
 """
 import numpy as np
-from numpy.testing import *
+from numpy.testing import (assert_almost_equal, assert_, assert_approx_equal,
+                            assert_raises, assert_equal)
 from scipy.linalg import toeplitz
 from statsmodels.tools.tools import add_constant
 from statsmodels.regression.linear_model import (OLS, GLSAR, WLS, GLS,
@@ -306,12 +307,17 @@ class TestTtest(object):
         cls.res1 = OLS(data.endog, data.exog).fit()
         R = np.identity(7)
         cls.Ttest = cls.res1.t_test(R)
+        hyp = 'x1 = 0, x2 = 0, x3 = 0, x4 = 0, x5 = 0, x6 = 0, const = 0'
+        cls.NewTTest = cls.res1.new_t_test(hyp)
 
 #    def setup(self):
 #        if skipR:
 #            raise SkipTest, "Rpy not installed"
 #        else:
 #        self.R_Results = RModel(data.endog, data.exog, r.lm).robj
+
+    def test_new_tvalue(self):
+        assert_equal(self.NewTTest.tvalue, self.Ttest.tvalue)
 
     def test_tvalue(self):
         assert_almost_equal(self.Ttest.tvalue, self.res1.tvalues, DECIMAL_4)

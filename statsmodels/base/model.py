@@ -1044,6 +1044,36 @@ class LikelihoodModelResults(Results):
         else:  #if r_matrix is None and column is None:
             return cov_p
 
+    def new_t_test(self, constraints, cov_p=None, scale=None):
+        """
+        Compute a t-test for linear hypotheses.
+
+        Parameters
+        ----------
+        constraints : str, tuple
+            A string can contain an arbitrary number of linear hypothesis
+            tests separated by a comma. If a tuple is given, it should
+            contain arrays (R, q) for the form Rb = q qhere b is the
+            parameter vector. See examples.
+
+        Examples
+        --------
+        This would test the (silly) three joint hypothese given by the
+        `hypotheses` variable.
+
+        >>> from statsmodels.datasets import longley
+        >>> from statsmodels.formula.api import ols
+        >>> dta = longley.load_pandas().data
+        >>> formula = 'TOTEMP ~ GNPDEFL + GNP + UNEMP + ARMED + POP + YEAR'
+        >>> results = ols(formula, dta).fit()
+        >>> hypotheses = '(GNPDEFL = GNP), (UNEMP = 2), (YEAR/1829 = 1)'
+        >>> t_test = results.new_t_test(hypotheses)
+        >>> print t_test
+        """
+        from patsy.constraint import linear_constraint
+        LC = linear_constraint(constraints, self.model.exog_names)
+        return self.t_test(LC.coefs, LC.constants, cov_p, scale)
+
     #TODO: make sure this works as needed for GLMs
     def t_test(self, r_matrix, q_matrix=None, cov_p=None, scale=None):
         """
@@ -1057,6 +1087,9 @@ class LikelihoodModelResults(Results):
             A length p row vector specifying the linear restrictions.
         q_matrix : array-like or scalar, optional
             Either a scalar or a length p row vector.
+        cov_p : array-like, optional
+            An alternative estimate for the parameter covariance matrix.
+            If None is given, self.normalized_cov_params is used.
         scale : float, optional
             An optional `scale` to use.  Default is the scale specified
             by the model fit.
@@ -1095,6 +1128,9 @@ class LikelihoodModelResults(Results):
         f_test : for f tests
 
         """
+        from warnings import warn
+        warn("Use new_t_test instead. The behavior of this function will be "
+             "changed to that of new_t_test in 0.6.0", FutureWarning)
         r_matrix = np.atleast_2d(np.asarray(r_matrix))
         num_ttests = r_matrix.shape[0]
         num_params = r_matrix.shape[1]
@@ -1108,6 +1144,7 @@ class LikelihoodModelResults(Results):
             q_matrix = np.zeros(num_ttests)
         else:
             q_matrix = np.asarray(q_matrix)
+            q_matrix = q_matrix.squeeze()
         if q_matrix.size > 1:
             if q_matrix.shape[0] != num_ttests:
                 raise ValueError("r_matrix and q_matrix must have the same "
