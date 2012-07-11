@@ -227,6 +227,11 @@ class TestFTest2(object):
         res1 = OLS(data.endog, data.exog).fit()
         R2 = [[0,1,-1,0,0,0,0],[0, 0, 0, 0, 1, -1, 0]]
         cls.Ftest1 = res1.f_test(R2)
+        hyp = 'x2 = x3, x5 = x6'
+        cls.NewFtest1 = res1.new_f_test(hyp)
+
+    def test_new_ftest(self):
+        assert_equal(self.NewFtest1.fvalue, self.Ftest1.fvalue)
 
     def test_fvalue(self):
         assert_almost_equal(self.Ftest1.fvalue, 9.7404618732968196, DECIMAL_4)

@@ -1046,7 +1046,7 @@ class LikelihoodModelResults(Results):
 
     def new_t_test(self, constraints, cov_p=None, scale=None):
         """
-        Compute a t-test for linear hypotheses.
+        Compute a t-test for joint linear hypotheses.
 
         Parameters
         ----------
@@ -1162,6 +1162,35 @@ class LikelihoodModelResults(Results):
         return ContrastResults(effect=_effect, t=_t, sd=_sd,
                                df_denom=self.model.df_resid)
 
+    def new_f_test(self, constraints, cov_p=None, scale=1., invcov=None):
+        """
+        Compute an F-test for join linear-hypotheses.
+        Parameters
+        ----------
+        constraints : str, tuple
+            A string can contain an arbitrary number of linear hypothesis
+            tests separated by a comma. If a tuple is given, it should
+            contain arrays (R, q) for the form Rb = q qhere b is the
+            parameter vector. See examples.
+
+        Examples
+        --------
+        This would test the (silly) three joint hypothese given by the
+        `hypotheses` variable.
+
+        >>> from statsmodels.datasets import longley
+        >>> from statsmodels.formula.api import ols
+        >>> dta = longley.load_pandas().data
+        >>> formula = 'TOTEMP ~ GNPDEFL + GNP + UNEMP + ARMED + POP + YEAR'
+        >>> results = ols(formula, dta).fit()
+        >>> hypotheses = '(GNPDEFL = GNP), (UNEMP = 2), (YEAR/1829 = 1)'
+        >>> f_test = results.new_f_test(hypotheses)
+        >>> print f_test
+        """
+        from patsy.constraint import linear_constraint
+        LC = linear_constraint(constraints, self.model.exog_names)
+        return self.f_test(LC.coefs, LC.constants, cov_p, scale, invcov)
+
     #TODO: untested for GLMs?
     def f_test(self, r_matrix, q_matrix=None, cov_p=None, scale=1.0,
                invcov=None):
@@ -1232,6 +1261,9 @@ class LikelihoodModelResults(Results):
         statsmodels.model.t_test
 
         """
+        from warnings import warn
+        warn("Use new_t_test instead. The behavior of this function will be "
+             "changed to that of new_t_test in 0.6.0", FutureWarning)
         r_matrix = np.asarray(r_matrix)
         r_matrix = np.atleast_2d(r_matrix)
 
