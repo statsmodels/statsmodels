@@ -2,7 +2,7 @@
 import statsmodels.nonparametric as nparam
 import scipy.stats as stats
 import numpy as np
-
+import matplotlib.pyplot as plt
 """
 This example tests the nonparametric estimator
 for several popular univariate distributions with the different
