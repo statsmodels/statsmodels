@@ -32,6 +32,10 @@ except:
 
 _arma_params = """endog : array-like
     The endogenous variable.
+order : iterable
+    The (p,q) order of the model for the number of AR parameters,
+    differences, and MA parameters to use. Though optional, the order
+    keyword in fit is deprecated and it is recommended to give order here.
 exog : array-like, optional
     An optional arry of exogenous variables. This should *not* include a
     constant or trend. You can specify this in the `fit` method."""
@@ -213,8 +217,16 @@ class ARMA(tsbase.TimeSeriesModel):
     __doc__ = tsbase._tsa_doc % {"model" : _arma_model,
                     "params" : _arma_params, "extra" : ""}
 
-    def __init__(self, endog, exog=None, dates=None, freq=None):
+    def __init__(self, endog, order=None, exog=None, dates=None, freq=None):
         super(ARMA, self).__init__(endog, exog, dates, freq)
+        if order is None:
+            import warnings
+            warnings.warn("In the next release order will not be optional "
+                    "in the model constructor.", FutureWarning)
+        else:
+            self.k_ar = k_ar = order[0]
+            self.k_ma = k_ma = order[1]
+            self.k_lags = k_lags = max(k_ar,k_ma+1)
         if exog is not None:
             k_exog = exog.shape[1]  # number of exog. variables excl. const
         else:
@@ -560,7 +572,7 @@ class ARMA(tsbase.TimeSeriesModel):
         llf = -nobs/2.*(log(2*pi) + log(sigma2)) - ssr/(2*sigma2)
         return llf
 
-    def fit(self, order, start_params=None, trend='c', method = "css-mle",
+    def fit(self, order=None, start_params=None, trend='c', method = "css-mle",
             transparams=True, solver=None, maxiter=35, full_output=1,
             disp=5, callback=None, **kwargs):
         """
@@ -633,15 +645,32 @@ class ARMA(tsbase.TimeSeriesModel):
         The below is the docstring from
         `statsmodels.LikelihoodModel.fit`
         """
+        if order is not None:
+            import warnings
+            warnings.warn("The order argument to fit is deprecated. "
+                    "Please use the model constructor argument order. "
+                    "This will overwrite any order given in the model "
+                    "constructor.", FutureWarning)
+
+            # get model order and constants
+            self.k_ar = k_ar = int(order[0])
+            self.k_ma = k_ma = int(order[1])
+            self.k_lags = max(k_ar,k_ma+1)
+        else:
+            try:
+                assert hasattr(self, "k_ar")
+                assert hasattr(self, "k_ma")
+            except:
+                raise ValueError("Please give order to the model constructor "
+                        "before calling fit.")
+            k_ar = self.k_ar
+            k_ma = self.k_ma
+
         # enforce invertibility
         self.transparams = transparams
 
         self.method = method.lower()
 
-        # get model order and constants
-        self.k_ar = k_ar = int(order[0])
-        self.k_ma = k_ma = int(order[1])
-        self.k_lags = k_lags = max(k_ar,k_ma+1)
         endog, exog = self.endog, self.exog
         k_exog = self.k_exog
         self.nobs = len(endog) # this is overwritten if method is 'css'
@@ -654,8 +683,7 @@ class ARMA(tsbase.TimeSeriesModel):
         self.exog = exog    # overwrites original exog from __init__
 
         # (re)set names for this model
-        self.exog_names = _make_arma_names(self._data, k_trend, order)
-
+        self.exog_names = _make_arma_names(self._data, k_trend, (k_ar, k_ma))
         k = k_trend + k_exog
 
 
@@ -663,7 +691,7 @@ class ARMA(tsbase.TimeSeriesModel):
         method = method.lower()
         # adjust nobs for css
         if method == 'css':
-            self.nobs = len(self.endog) - self.k_ar
+            self.nobs = len(self.endog) - k_ar
         loglike = lambda params: -self.loglike(params)
 
         if start_params is not None:
@@ -710,11 +738,9 @@ class ARIMA(ARMA):
             "params" : _arima_params, "extra" : ""}
 
     def __init__(self, endog, order, exog=None, dates=None, freq=None):
-        super(ARIMA, self).__init__(endog, exog, dates, freq)
         p,d,q = order
+        super(ARIMA, self).__init__(endog, (p,q), exog, dates, freq)
         self.k_diff = d
-        self.k_ar = p
-        self.k_ma = q
         self.endog = np.diff(self.endog, n=d)
         self._data.ynames = 'D.' + self.endog_names
         # what about exog, should we difference it automatically before
@@ -833,7 +859,7 @@ class ARIMA(ARMA):
         The below is the docstring from
         `statsmodels.LikelihoodModel.fit`
         """
-        arima_fit = super(ARIMA, self).fit((self.k_ar, self.k_ma),
+        arima_fit = super(ARIMA, self).fit(None,
                                start_params, trend, method,
                                transparams, solver, maxiter, full_output,
                                disp, callback, **kwargs)
