@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import scipy.stats as stats
 import statsmodels.nonparametric as nparam
 
-
 class MyTest(object):
     def setUp(self):
         N = 60
@@ -85,8 +84,6 @@ class TestUKDE(MyTest):
         dens_ml = nparam.UKDE(tdat=[self.c1, self.o, self.c2], var_type='coc',
                              bw='cv_ml')
         
-        
-        
     def test_pdf_continuous(self):
         # Test for only continuous data
         
@@ -120,116 +117,6 @@ class TestUKDE(MyTest):
         npt.assert_allclose(dens.bw, R_result, atol = 1e-2)
         
 
-    def test_beta(self, a=2, b=5, N=250):
-        support = np.random.beta(a,b, size = N)
-        rv = stats.beta(a,b)
-        ix = np.argsort(support)
-        
-        dens_normal = nparam.UKDE(tdat=[support], var_type='c', bw='normal_reference')
-        dens_cvls = nparam.UKDE(tdat=[support], var_type='c', bw='cv_ls')
-        dens_cvml = nparam.UKDE(tdat=[support], var_type='c', bw='cv_ml')
-        plt.plot(support[ix],rv.pdf(support[ix]), label='Actual')
-        plt.plot(support[ix],dens_normal.pdf()[ix],label='Scott')
-        plt.plot(support[ix],dens_cvls.pdf()[ix], label='CV_LS')
-        plt.plot(support[ix],dens_cvml.pdf()[ix], label='CV_ML')
-        plt.title("Nonparametric Estimation of the Density of Beta Distributed Random Variable")
-        plt.legend(('Actual','Scott','CV_LS','CV_ML'))
-        plt.show()
-        
-    def test_f(self, df=100, dn=100, N=250):
-        support = np.random.f(dn,df, size = N)
-        rv = stats.f(df,dn)
-        ix = np.argsort(support)
-        
-        dens_normal = nparam.UKDE(tdat=[support], var_type='c', bw='normal_reference')
-        dens_cvls = nparam.UKDE(tdat=[support], var_type='c', bw='cv_ls')
-        dens_cvml = nparam.UKDE(tdat=[support], var_type='c', bw='cv_ml')
-        plt.plot(support[ix],rv.pdf(support[ix]), label='Actual')
-        plt.plot(support[ix],dens_normal.pdf()[ix],label='Scott')
-        plt.plot(support[ix],dens_cvls.pdf()[ix], label='CV_LS')
-        plt.plot(support[ix],dens_cvml.pdf()[ix], label='CV_ML')
-        plt.title("Nonparametric Estimation of the Density of f Distributed Random Variable")
-        plt.legend(('Actual','Scott','CV_LS','CV_ML'))
-        plt.show()
-    def test_pareto(self, a=2, N=150):
-        support = np.random.pareto(a, size = N)
-        rv = stats.pareto(a)
-        ix = np.argsort(support)
-        
-        dens_normal = nparam.UKDE(tdat=[support], var_type='c', bw='normal_reference')
-        dens_cvls = nparam.UKDE(tdat=[support], var_type='c', bw='cv_ls')
-        dens_cvml = nparam.UKDE(tdat=[support], var_type='c', bw='cv_ml')
-        plt.plot(support[ix],rv.pdf(support[ix]), label='Actual')
-        plt.plot(support[ix],dens_normal.pdf()[ix],label='Scott')
-        plt.plot(support[ix],dens_cvls.pdf()[ix], label='CV_LS')
-        plt.plot(support[ix],dens_cvml.pdf()[ix], label='CV_ML')
-        plt.title("Nonparametric Estimation of the Density of Pareto Distributed Random Variable")
-        plt.legend(('Actual','Scott','CV_LS','CV_ML'))
-        plt.show()
-        
-    def test_laplace(self, mu=0, s=1, N=250):
-        support = np.random.laplace(mu, s, size = N)
-        rv = stats.laplace(mu, s)
-        ix = np.argsort(support)
-        
-        dens_normal = nparam.UKDE(tdat=[support], var_type='c', bw='normal_reference')
-        dens_cvls = nparam.UKDE(tdat=[support], var_type='c', bw='cv_ls')
-        dens_cvml = nparam.UKDE(tdat=[support], var_type='c', bw='cv_ml')
-        plt.plot(support[ix],rv.pdf(support[ix]), label='Actual')
-        plt.plot(support[ix],dens_normal.pdf()[ix],label='Scott')
-        plt.plot(support[ix],dens_cvls.pdf()[ix], label='CV_LS')
-        plt.plot(support[ix],dens_cvml.pdf()[ix], label='CV_ML')
-        plt.title("Nonparametric Estimation of the Density of Laplace Distributed Random Variable")
-        plt.legend(('Actual','Scott','CV_LS','CV_ML'))
-        plt.show()
-        
-    def test_weibull(self, a=1, N=250):
-        support = np.random.weibull(a, size = N)
-        rv = stats.weibull_min(a)
-        
-        ix = np.argsort(support)
-        dens_normal = nparam.UKDE(tdat=[support], var_type='c', bw='normal_reference')
-        dens_cvls = nparam.UKDE(tdat=[support], var_type='c', bw='cv_ls')
-        dens_cvml = nparam.UKDE(tdat=[support], var_type='c', bw='cv_ml')
-        plt.plot(support[ix],rv.pdf(support[ix]), label='Actual')
-        plt.plot(support[ix],dens_normal.pdf()[ix],label='Scott')
-        plt.plot(support[ix],dens_cvls.pdf()[ix], label='CV_LS')
-        plt.plot(support[ix],dens_cvml.pdf()[ix], label='CV_ML')
-        plt.title("Nonparametric Estimation of the Density of Laplace Distributed Random Variable")
-        plt.legend(('Actual','Scott','CV_LS','CV_ML'))
-        plt.show()
-
-    def test_power(self, a=0.7, N=250):
-        support = np.random.power(a, size = N)
-        rv = stats.powerlaw(a)
-        
-        ix = np.argsort(support)
-        dens_normal = nparam.UKDE(tdat=[support], var_type='c', bw='normal_reference')
-        dens_cvls = nparam.UKDE(tdat=[support], var_type='c', bw='cv_ls')
-        dens_cvml = nparam.UKDE(tdat=[support], var_type='c', bw='cv_ml')
-        plt.plot(support[ix],rv.pdf(support[ix]), label='Actual')
-        plt.plot(support[ix],dens_normal.pdf()[ix],label='Scott')
-        plt.plot(support[ix],dens_cvls.pdf()[ix], label='CV_LS')
-        plt.plot(support[ix],dens_cvml.pdf()[ix], label='CV_ML')
-        plt.title("Nonparametric Estimation of the Density of Power-law Distributed Random Variable")
-        plt.legend(('Actual','Scott','CV_LS','CV_ML'))
-        plt.show()
-                
-    def test_poisson(self, a=2, N=250):
-        support = np.random.poisson(a, size = N)
-        rv = stats.poisson(a)
-        
-        ix = np.argsort(support)
-        dens_normal = nparam.UKDE(tdat=[support], var_type='o', bw='normal_reference')
-        dens_cvls = nparam.UKDE(tdat=[support], var_type='o', bw='cv_ls')
-        dens_cvml = nparam.UKDE(tdat=[support], var_type='o', bw='cv_ml')
-        plt.plot(support[ix],rv.pmf(support[ix]), label='Actual')
-        plt.plot(support[ix],dens_normal.pdf()[ix],label='Scott')
-        plt.plot(support[ix],dens_cvls.pdf()[ix], label='CV_LS')
-        plt.plot(support[ix],dens_cvml.pdf()[ix], label='CV_ML')
-        plt.title("Nonparametric Estimation of the Density of Poisson Distributed Random Variable")
-        plt.legend(('Actual','Scott','CV_LS','CV_ML'))
-        plt.show()
     def test_continuous_cdf(self,edat=None):
         dens = nparam.UKDE (tdat = [self.Italy_gdp, self.growth], var_type = 'cc',
                             bw = 'cv_ml')
@@ -262,7 +149,7 @@ class TestCKDE(MyTest):
                                            dep_type='u',indep_type='c',bw='cv_ls')
         print dens_ls.bw
         print "Test completed"
-        #not a good match. needs more work
+        
         
 
     def test_pdf_continuous(self):
