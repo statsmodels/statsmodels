@@ -72,11 +72,9 @@ class Model(object):
         #TODO: only accept DataFrames?
         if subset is not None:
             df= df.ix[subset]
-        endog, exog, formula_handled = handle_formula_data(df, None, formula)
+        endog, exog = handle_formula_data(df, None, formula)
         mod = cls(endog, exog, *args, **kwargs)
-        if hasattr(formula_handled, 'desc'):
-            mod.formula_str = formula_handled.desc.describe()
-        mod.formula = formula_handled
+        mod.formula = formula
 
         # since we got a dataframe, attach the original
         mod._data.frame = df

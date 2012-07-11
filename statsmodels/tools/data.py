@@ -19,9 +19,9 @@ def have_pandas():
     except Exception:
         return False
 
-def have_charlton():
+def have_patsy():
     try:
-        import charlton
+        import patsy
         return True
     except ImportError:
         return False
@@ -37,10 +37,10 @@ def is_data_frame(obj):
     return isinstance(obj, pn.DataFrame)
 
 def is_design_matrix(obj):
-    if not have_charlton():
+    if not have_patsy():
         return False
 
-    from charlton import DesignMatrix
+    from patsy import DesignMatrix
     return isinstance(obj, DesignMatrix)
 
 def _is_structured_ndarray(obj):
@@ -131,7 +131,7 @@ def _is_array_like(endog, exog):
     except:
         return False
 
-def _is_using_charlton(endog, exog):
+def _is_using_patsy(endog, exog):
     # we get this when a structured array is passed through a formula
     return is_design_matrix(endog) and is_design_matrix(exog)
 

@@ -1,18 +1,8 @@
 import numpy as np
 from scipy import stats
 from pandas import DataFrame, Index
-from statsmodels.formula.formulatools import _remove_intercept_charlton
-
-def has_intercept(column_info):
-    from charlton.desc import INTERCEPT
-    return INTERCEPT in column_info.terms
-
-def intercept_idx(column_info):
-    """
-    Returns boolean array index indicating which column holds the intercept
-    """
-    from charlton.desc import INTERCEPT
-    return np.array([INTERCEPT == i for i in column_info.terms])
+from statsmodels.formula.formulatools import (_remove_intercept_patsy,
+                                    _has_intercept, _intercept_idx)
 
 def _get_covariance(model, robust):
     if robust is None:
@@ -69,10 +59,10 @@ def anova_single(model, **kwargs):
     nobs = exog.shape[0]
 
     response_name = model.model.endog_names
-    column_info = model.model._data._orig_exog.column_info
+    design_info = model.model._data._orig_exog.design_info
     exog_names = model.model.exog_names
     # +1 for resids
-    n_rows = (len(column_info.terms) - has_intercept(column_info) + 1)
+    n_rows = (len(design_info.terms) - _has_intercept(design_info) + 1)
 
     pr_test = "PR(>%s)" % test
     names = ['df', 'sum_sq', 'mean_sq', test, pr_test]
@@ -80,20 +70,20 @@ def anova_single(model, **kwargs):
     table = DataFrame(np.zeros((n_rows, 5)), columns = names)
 
     if typ in [1,"I"]:
-        return anova1_lm_single(model, endog, exog, nobs, column_info, table,
+        return anova1_lm_single(model, endog, exog, nobs, design_info, table,
                                 n_rows, test, pr_test, robust)
     elif typ in [2, "II"]:
-        return anova2_lm_single(model, column_info, n_rows, test, pr_test,
+        return anova2_lm_single(model, design_info, n_rows, test, pr_test,
                 robust)
     elif typ in [3, "III"]:
-        return anova3_lm_single(model, column_info, n_rows, test, pr_test,
+        return anova3_lm_single(model, design_info, n_rows, test, pr_test,
                 robust)
     elif typ in [4, "IV"]:
         raise NotImplemented("Type IV not yet implemented")
     else: # pragma: no cover
         raise ValueError("Type %s not understood" % str(typ))
 
-def anova1_lm_single(model, endog, exog, nobs, column_info, table, n_rows, test,
+def anova1_lm_single(model, endog, exog, nobs, design_info, table, n_rows, test,
                      pr_test, robust):
     """
     ANOVA table for one fitted linear model.
@@ -119,16 +109,16 @@ def anova1_lm_single(model, endog, exog, nobs, column_info, table, n_rows, test,
     q,r = np.linalg.qr(exog)
     effects = np.dot(q.T, endog)
 
-    arr = np.zeros((len(column_info.terms), len(column_info.column_names)))
-    slices = [column_info.slice(name) for name in column_info.term_names]
+    arr = np.zeros((len(design_info.terms), len(design_info.column_names)))
+    slices = [design_info.slice(name) for name in design_info.term_names]
     for i,slice_ in enumerate(slices):
         arr[i, slice_] = 1
 
     sum_sq = np.dot(arr, effects**2)
     #NOTE: assumes intercept is first column
-    idx = intercept_idx(column_info)
+    idx = _intercept_idx(design_info)
     sum_sq = sum_sq[~idx]
-    term_names = np.array(column_info.term_names) # want boolean indexing
+    term_names = np.array(design_info.term_names) # want boolean indexing
     term_names = term_names[~idx]
 
     index = term_names.tolist()
@@ -148,7 +138,7 @@ def anova1_lm_single(model, endog, exog, nobs, column_info, table, n_rows, test,
     return table
 
 #NOTE: the below is not agnostic about formula...
-def anova2_lm_single(model, column_info, n_rows, test, pr_test, robust):
+def anova2_lm_single(model, design_info, n_rows, test, pr_test, robust):
     """
     ANOVA type II table for one fitted linear model.
 
@@ -173,8 +163,8 @@ def anova2_lm_single(model, column_info, n_rows, test, pr_test, robust):
     Sum of Squares compares marginal contribution of terms. Thus, it is
     not particularly useful for models with significant interaction terms.
     """
-    terms_info = column_info.terms[:] # copy
-    terms_info = _remove_intercept_charlton(terms_info)
+    terms_info = design_info.terms[:] # copy
+    terms_info = _remove_intercept_patsy(terms_info)
 
     names = ['sum_sq', 'df', test, pr_test]
 
@@ -187,14 +177,14 @@ def anova2_lm_single(model, column_info, n_rows, test, pr_test, robust):
         # grab all varaibles except interaction effects that contain term
         # need two hypotheses matrices L1 is most restrictive, ie., term==0
         # L2 is everything except term==0
-        cols = column_info.slice(term)
+        cols = design_info.slice(term)
         L1 = range(cols.start, cols.stop)
         L2 = []
         term_set = set(term.factors)
         for t in terms_info: # for the term you have
             other_set = set(t.factors)
             if term_set.issubset(other_set) and not term_set == other_set:
-                col = column_info.slice(t)
+                col = design_info.slice(t)
                 # on a higher order term containing current `term`
                 L1.extend(range(col.start, col.stop))
                 L2.extend(range(col.start, col.stop))
@@ -236,9 +226,9 @@ def anova2_lm_single(model, column_info, n_rows, test, pr_test, robust):
 
     return table
 
-def anova3_lm_single(model, column_info, n_rows, test, pr_test, robust):
-    n_rows += has_intercept(column_info)
-    terms_info = column_info.terms
+def anova3_lm_single(model, design_info, n_rows, test, pr_test, robust):
+    n_rows += _has_intercept(design_info)
+    terms_info = design_info.terms
 
     names = ['sum_sq', 'df', test, pr_test]
 
@@ -248,7 +238,7 @@ def anova3_lm_single(model, column_info, n_rows, test, pr_test, robust):
     index = []
     for i, term in enumerate(terms_info):
         # grab term, hypothesis is that term == 0
-        cols = column_info.slice(term)
+        cols = design_info.slice(term)
         L1 = np.eye(model.model.exog.shape[1])[cols]
         L12 = L1
         r = L1.shape[0]
