@@ -63,3 +63,14 @@ def test_tests():
                                [0, 0 , 0, 1, 0, 0, 0],
                                [0, 0, 0, 0, 0, 0, 1./1829]], 8)
     npt.assert_array_equal(Q, [[0],[2],[1]])
+
+def test_formula_labels():
+    # make sure labels pass through patsy as expected
+    # data(Duncan) from car in R
+    from StringIO import StringIO
+    dta = StringIO(""""type" "income" "education" "prestige"\n"accountant" "prof" 62 86 82\n"pilot" "prof" 72 76 83\n"architect" "prof" 75 92 90\n"author" "prof" 55 90 76\n"chemist" "prof" 64 86 90\n"minister" "prof" 21 84 87\n"professor" "prof" 64 93 93\n"dentist" "prof" 80 100 90\n"reporter" "wc" 67 87 52\n"engineer" "prof" 72 86 88\n"undertaker" "prof" 42 74 57\n"lawyer" "prof" 76 98 89\n"physician" "prof" 76 97 97\n"welfare.worker" "prof" 41 84 59\n"teacher" "prof" 48 91 73\n"conductor" "wc" 76 34 38\n"contractor" "prof" 53 45 76\n"factory.owner" "prof" 60 56 81\n"store.manager" "prof" 42 44 45\n"banker" "prof" 78 82 92\n"bookkeeper" "wc" 29 72 39\n"mail.carrier" "wc" 48 55 34\n"insurance.agent" "wc" 55 71 41\n"store.clerk" "wc" 29 50 16\n"carpenter" "bc" 21 23 33\n"electrician" "bc" 47 39 53\n"RR.engineer" "bc" 81 28 67\n"machinist" "bc" 36 32 57\n"auto.repairman" "bc" 22 22 26\n"plumber" "bc" 44 25 29\n"gas.stn.attendant" "bc" 15 29 10\n"coal.miner" "bc" 7 7 15\n"streetcar.motorman" "bc" 42 26 19\n"taxi.driver" "bc" 9 19 10\n"truck.driver" "bc" 21 15 13\n"machine.operator" "bc" 21 20 24\n"barber" "bc" 16 26 20\n"bartender" "bc" 16 28 7\n"shoe.shiner" "bc" 9 17 3\n"cook" "bc" 14 22 16\n"soda.clerk" "bc" 12 30 6\n"watchman" "bc" 17 25 11\n"janitor" "bc" 7 20 8\n"policeman" "bc" 34 47 41\n"waiter" "bc" 8 32 10""")
+    from pandas import read_table
+    dta = read_table(dta, sep=" ")
+    model = ols("prestige ~ income + education", dta).fit()
+    npt.assert_equal(model.fittedvalues.index, dta.index)
+
