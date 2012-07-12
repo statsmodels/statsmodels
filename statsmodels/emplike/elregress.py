@@ -132,7 +132,9 @@ class _ElRegOpts(_ElRegSetup):
         self.b0_vals = beta
         return self.hy_test_beta([beta], [self.param_nums],
                                  method=self.method,
-                                 start_int_params=self.start_eta)[1] - self.r0
+                                 start_int_params=self.start_eta,
+                                 stochastic_exog=self._stochastic_exog)[1]\
+                                  - self.r0
 
     def _ci_limits_beta_origin(self, beta):
         return self.hy_test_beta_origin(beta, self.param_nums,
@@ -265,7 +267,7 @@ class ElLinReg(_ElRegOpts):
             return pval, llr
 
     def ci_beta(self, param_num, sig=.05, upper_bound=None, lower_bound=None,
-                method='powell', start_int_params=None):
+                method='powell', start_int_params=None, stochastic_exog=1):
         """
 
         Computes the confidence interval for the parameter given by param_num
@@ -376,6 +378,7 @@ class ElLinReg(_ElRegOpts):
         self.method = method
         self.r0 = chi2.ppf(1 - sig, 1)
         self.param_nums = param_num
+        self._stochastic_exog = stochastic_exog
         if upper_bound is not None:
             beta_high = upper_bound
         else:
