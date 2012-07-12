@@ -4,19 +4,20 @@ with Mixed Data Types
 
 References
 ----------
-[1] Racine, J., Li, Q. Nonparametric econometrics: theory and practice. Princeton
-    University Press. (2007)
-[2] Racine, Jeff. "Nonparametric Econometrics: A Primer," Foundation and
-    Trends in Econometrics: Vol 3: No 1, pp1-88. (2008)
+[1] Racine, J., Li, Q. Nonparametric econometrics: theory and practice.
+    Princeton University Press. (2007)
+[2] Racine, Jeff. "Nonparametric Econometrics: A Primer," Foundation
+    and Trends in Econometrics: Vol 3: No 1, pp1-88. (2008)
     http://dx.doi.org/10.1561/0800000009
-[3] Racine, J., Li, Q. "Nonparametric Estimation of Distributions with Categorical
-    and Continuous Data." Working Paper. (2000)
-[4] Racine, J. Li, Q. "Kernel Estimation of Multivariate Conditional Distributions
-    Annals of Economics and Finance 5, 211-235 (2004)
+[3] Racine, J., Li, Q. "Nonparametric Estimation of Distributions
+    with Categorical and Continuous Data." Working Paper. (2000)
+[4] Racine, J. Li, Q. "Kernel Estimation of Multivariate Conditional
+    Distributions Annals of Economics and Finance 5, 211-235 (2004)
 [5] Liu, R., Yang, L. "Kernel estimation of multivariate
-    cumulative distribution function." Journal of Nonparametric Statistics (2008)
-[6] Li, R., Ju, G. "Nonparametric Estimation of Multivariate CDF with Categorical
-    and Continuous Data." Working Paper. 
+    cumulative distribution function."
+    Journal of Nonparametric Statistics (2008)
+[6] Li, R., Ju, G. "Nonparametric Estimation of Multivariate CDF
+    with Categorical and Continuous Data." Working Paper
 """
 
 import numpy as np
@@ -25,15 +26,12 @@ import np_tools as tools
 import scipy.optimize as opt
 import KernelFunctions as kf
 
-
 __all__ = ['UKDE', 'CKDE', 'Reg']
 
 
 class Generic_KDE ():
     """
     Generic KDE class with methods shared by both UKDE and CKDE
-    
-    
     """
     def compute_bw(self, bw):
         """
@@ -59,18 +57,12 @@ class Generic_KDE ():
             bwfunc = self.bw_func['normal_reference']
             return bwfunc()
 
-##        if type(bw) != str:  # The user provided an actual bandwidth estimate
-##            return np.asarray(bw)
-##        else:  # The user specified a bandwidth selection method e.g. 'normal-reference'
-##            res = bwfunc()
         if not isinstance(bw, basestring):
-            # The user provided an actual bandwidth estimate
-            # TODO: would be good if the user could provide a function here
-            # that uses tdat/N/K, instead of just a result.
             self._bw_method = "user-specified"
             res = np.asarray(bw)
         else:
-            # The user specified a bandwidth selection method e.g. 'normal-reference'
+            # The user specified a bandwidth selection
+            # method e.g. 'normal-reference'
             self._bw_method = bw
             bwfunc = self.bw_func[bw]
             res = bwfunc()
@@ -85,13 +77,12 @@ class Generic_KDE ():
         See p.13 in [2] for en example and discussion
 
         The formula for the bandwidth is
-        
-        .. math:: h = 1.06n^{-1/(4+q)}
-        
-        where :math:`n` is the number of observations and :math:`q` is the number of
-        variables
 
-        
+        .. math:: h = 1.06n^{-1/(4+q)}
+
+        where :math:`n` is the number of observations and :math:`q`
+        is the number of variables
+
         """
         c = 1.06
         X = np.std(self.all_vars, axis=0)
@@ -104,26 +95,31 @@ class Generic_KDE ():
         Notes
         -----
         For more details see p.16, 18, 27 in [1]
-        
-        Returns the bandwidth estimate that maximizes the leave-out-out likelihood
+
+        Returns the bandwidth estimate that maximizes the
+        leave-out-out likelihood
         The leave-one-out log likelihood function is:
 
         .. math:: \ln L=\sum_{i=1}^{n}\ln f_{-i}(X_{i})
 
         The leave-one-out kernel estimator of :math:`f_{-i}` is:
-        
-        .. math:: f_{-i}(X_{i})=\frac{1}{(n-1)h}\sum_{j=1,j\neq i}K_{h}(X_{i},X_{j})
 
-        where :math:`K_{h}` represents the Generalized product kernel estimator:
+        .. math:: f_{-i}(X_{i})=\frac{1}{(n-1)h}
+            \sum_{j=1,j\neq i}K_{h}(X_{i},X_{j})
 
-        .. math:: K_{h}(X_{i},X_{j})=\prod_{s=1}^{q}h_{s}^{-1}k\left(\frac{X_{is}-X_{js}}{h_{s}}\right)
-        
+        where :math:`K_{h}` represents the Generalized product kernel
+        estimator:
+
+        .. math:: K_{h}(X_{i},X_{j})=\prod_{s=1}^
+        {q}h_{s}^{-1}k\left(\frac{X_{is}-X_{js}}{h_{s}}\right)
         """
-        h0 = self._normal_reference()  # the initial value for the optimization is the normal_reference
+        # the initial value for the optimization is the normal_reference
+        h0 = self._normal_reference()
         bw = opt.fmin(self.loo_likelihood, x0=h0, args=(np.log, ),
                       maxiter=1e3, maxfun=1e3, disp=0)
         return bw
-    def _cv_ls (self):
+
+    def _cv_ls(self):
         """
         Returns the cross-validation least squares bandwidth parameter(s)
 
@@ -131,20 +127,21 @@ class Generic_KDE ():
         -----
         For more details see pp. 16, 27 in [1]
 
-        Returns the value of the bandwidth that maximizes the integrated mean square error
+        Returns the value of the bandwidth that maximizes
+        the integrated mean square error
         between the estimated and actual distribution.
         The integrated mean square error is given by:
-        
+
         .. math:: \int\left[\hat{f}(x)-f(x)\right]^{2}dx
 
-        This is the general formula for the IMSE. The IMSE differes for conditional (CKDE) and
+        This is the general formula for the IMSE.
+        The IMSE differes for conditional (CKDE) and
         unconditional (UKDE) kernel density estimation.
-        
         """
         h0 = self._normal_reference()
         bw = opt.fmin(self.IMSE, x0=h0, maxiter=1e3,
                       maxfun=1e3, disp=0)
-        return np.abs(bw)  # Getting correct but negative values for bw. from time to time . Why?
+        return np.abs(bw)
 
     def loo_likelihood(self):
         pass
@@ -157,7 +154,8 @@ class UKDE(Generic_KDE):
     Parameters
     ----------
     tdat: list
-        The training data for the Kernel Density Estimation. Each element of the list
+        The training data for the Kernel Density Estimation.
+        Each element of the list
         is an array-like seperate variable
 
     var_type: str
@@ -174,7 +172,7 @@ class UKDE(Generic_KDE):
         cv_ls: cross validation least squares
 
     Attributes
-    ---------
+    ----------
     bw: array-like
         The bandwidth parameters.
 
@@ -184,7 +182,6 @@ class UKDE(Generic_KDE):
     cdf(): the cumulative distribution function
     IMSE(): the integrated mean square error
     loo_likelihood(): the leave one out likelihood
-    
 
     Examples
     --------
@@ -199,8 +196,8 @@ class UKDE(Generic_KDE):
     >>> dens_u = UKDE(tdat=[c1,c2], var_type='cc', bw='normal_reference')
     >>> dens_u.bw
     array([ 0.39967419,  0.38423292])
-
     """
+
     def __init__(self, tdat, var_type, bw=None):
 
         self.tdat = np.column_stack(tdat)
@@ -225,25 +222,28 @@ class UKDE(Generic_KDE):
         Returns the leave-one-out likelihood function
 
         The leave-one-out likelihood function for the unconditional KDE
-        
+
         Parameters
         ----------
         bw: array-like
             The value for the bandwdith parameter(s)
         func: function
-            For the log likelihood should be numpy.log           
+            For the log likelihood should be numpy.log
 
         Notes
         -----
         The leave-one-out kernel estimator of :math:`f_{-i}` is:
-        
-        .. math:: f_{-i}(X_{i})=\frac{1}{(n-1)h}\sum_{j=1,j\neq i}K_{h}(X_{i},X_{j})
 
-        where :math:`K_{h}` represents the Generalized product kernel estimator:
+        .. math:: f_{-i}(X_{i})=\frac{1}{(n-1)h}
+        \sum_{j=1,j\neq i}K_{h}(X_{i},X_{j})
 
-        .. math:: K_{h}(X_{i},X_{j})=\prod_{s=1}^{q}h_{s}^{-1}k\left(\frac{X_{is}-X_{js}}{h_{s}}\right)
-        
+        where :math:`K_{h}` represents the
+        Generalized product kernel estimator:
+
+        .. math:: K_{h}(X_{i},X_{j})=
+        \prod_{s=1}^{q}h_{s}^{-1}k\left(\frac{X_{is}-X_{js}}{h_{s}}\right)
         """
+
         LOO = tools.LeaveOneOut(self.tdat)
         i = 0
         L = 0
@@ -272,17 +272,17 @@ class UKDE(Generic_KDE):
             The index of sorting if issorted=True
         Notes
         -----
-        The probability density is given by the generalized product kernel estimator
-        
-        .. math:: K_{h}(X_{i},X_{j})=\prod_{s=1}^{q}h_{s}^{-1}k\left(\frac{X_{is}-X_{js}}{h_{s}}\right)
-        
+        The probability density is given by the generalized
+        product kernel estimator:
+
+        .. math:: K_{h}(X_{i},X_{j})=
+        \prod_{s=1}^{q}h_{s}^{-1}k\left(\frac{X_{is}-X_{js}}{h_{s}}\right)
         """
         if edat is None:
             edat = self.tdat
-        
         pdf_est = tools.GPKE(self.bw, tdat=self.tdat, edat=edat,
                           var_type=self.var_type) / self.N
-        pdf_est = np.squeeze(pdf_est)        
+        pdf_est = np.squeeze(pdf_est)
         return pdf_est
 
     def cdf(self, edat=None):
@@ -305,22 +305,24 @@ class UKDE(Generic_KDE):
         See http://en.wikipedia.org/wiki/Cumulative_distribution_function
         For more details on the estimation see [5]
 
-        The multivariate CDF for mixed data (continuous and ordered/unordered discrete) is
-        estimated by:
+        The multivariate CDF for mixed data
+        (continuous and ordered/unordered discrete) is estimated by:
 
-        ..math:: F(x^{c},x^{d})=n^{-1}\sum_{i=1}^{n}\left[G(\frac{x^{c}-X_{i}}{h})\sum_{u\leq x^{d}}L(X_{i}^{d},x_{i}^{d},\lambda)\right]
+        ..math:: F(x^{c},x^{d})=n^{-1}\sum_{i=1}^{n}\left[G(
+        \frac{x^{c}-X_{i}}{h})\sum_{u\leq x^{d}}L(X_{i}^{d},x_{i}^{d},
+        \lambda)\right]
 
         where G() is the product kernel CDF estimator for the continuous
         variables and L() is for the discrete
         """
         if edat is None:
             edat = self.tdat
-        
-        cdf_est = tools.GPKE(self.bw, tdat=self.tdat, edat=edat,var_type=self.var_type,
-                             ckertype = "gaussian_cdf", ukertype="aitchisonaitken_cdf",
+        cdf_est = tools.GPKE(self.bw, tdat=self.tdat,
+                             edat=edat, var_type=self.var_type,
+                             ckertype="gaussian_cdf",
+                             ukertype="aitchisonaitken_cdf",
                              okertype='wangryzin_cdf') / self.N
         cdf_est = np.squeeze(cdf_est)
-
         return cdf_est
 
     def IMSE(self, bw):
@@ -335,43 +337,52 @@ class UKDE(Generic_KDE):
         ------
         CV: float
             The cross-validation objective function
-        
+
         Notes
         -----
         See p. 27 in [1]
-        For details on how to handle the multivariate estimation with mixed data types see p.6 in [3]
+        For details on how to handle the multivariate
+        estimation with mixed data types see p.6 in [3]
 
         The formula for the cross-validation objective function is:
-        
-        .. math:: CV=\frac{1}{n^{2}}\sum_{i=1}^{n}\sum_{j=1}^{N}\bar{K}_{h}(X_{i},X_{j})-\frac{2}{n(n-1)}\sum_{i=1}^{n}\sum_{j=1,j\neq i}^{N}K_{h}(X_{i},X_{j})
 
-        Where :math:`\bar{K}_{h}` is the multivariate product convolution kernel (consult [3] for mixed data types)
+        .. math:: CV=\frac{1}{n^{2}}\sum_{i=1}^{n}\sum_{j=1}^{N}
+        \bar{K}_{h}(X_{i},X_{j})-\frac{2}{n(n-1)}\sum_{i=1}^{n}
+        \sum_{j=1,j\neq i}^{N}K_{h}(X_{i},X_{j})
+
+        Where :math:`\bar{K}_{h}` is the multivariate
+        product convolution kernel
+        (consult [3] for mixed data types)
         """
-        
-        #print "running..."
+
         F = 0
         for i in range(self.N):
             k_bar_sum = tools.GPKE(bw, tdat=-self.tdat, edat=-self.tdat[i, :],
-                                    var_type=self.var_type, ckertype='gauss_convolution', okertype='wangryzin_convolution',
+                                    var_type=self.var_type,
+                                   ckertype='gauss_convolution',
+                                   okertype='wangryzin_convolution',
                                     ukertype='aitchisonaitken_convolution')
             F += k_bar_sum
         # there is a + because loo_likelihood returns the negative
-        return (F / (self.N ** 2) + self.loo_likelihood(bw) * 2 / ((self.N) * (self.N - 1)))
+        return (F / (self.N ** 2) + self.loo_likelihood(bw) *\
+                2 / ((self.N) * (self.N - 1)))
 
 
 class CKDE(Generic_KDE):
     """
     Conditional Kernel Density Estimator
 
-    Calculates P(X_1,X_2,...X_n | Y_1,Y_2...Y_m) = P(X_1, X_2,...X_n, Y_1, Y_2,..., Y_m)/P(Y_1, Y_2,..., Y_m)
-    The conditional density is by definition the ratio of the two unconditional densities
+    Calculates P(X_1,X_2,...X_n | Y_1,Y_2...Y_m) =
+    P(X_1, X_2,...X_n, Y_1, Y_2,..., Y_m)/P(Y_1, Y_2,..., Y_m)
+    The conditional density is by definition the ratio of
+    the two unconditional densities
     http://en.wikipedia.org/wiki/Conditional_probability_distribution
 
     Parameters
     ----------
     tydat: list
-        The training data for the dependent variable. Each element of the list
-        is a seperate variable
+        The training data for the dependent variable.
+        Each element of the list is a seperate variable
     txdat: list
         The training data for the independent variable
     dep_type: str
@@ -406,7 +417,8 @@ class CKDE(Generic_KDE):
     c1=np.random.normal(size=(N,1))
     c2=np.random.normal(2,1,size=(N,1))
 
-    dens_c=UKDE(tydat=[c1],txdat=[c2],dep_type='c',indep_type='c',bwmethod='normal_reference')
+    dens_c=UKDE(tydat=[c1],txdat=[c2],dep_type='c',
+    indep_type='c',bwmethod='normal_reference')
 
     print "The bandwdith is: ", dens_c.bw
     """
@@ -455,7 +467,8 @@ class CKDE(Generic_KDE):
 
         Notes
         -----
-        Similar to the loo_likelihood in Generic_KDE but substitute for f(x), f(x|y)=f(x,y)/f(y)
+        Similar to the loo_likelihood in Generic_KDE but
+        substitute for f(x), f(x|y)=f(x,y)/f(y)
         """
         yLOO = tools.LeaveOneOut(self.all_vars)
         xLOO = tools.LeaveOneOut(self.txdat).__iter__()
@@ -497,7 +510,8 @@ class CKDE(Generic_KDE):
 
         with
 
-        .. math:: f(X)=\prod_{s=1}^{q}h_{s}^{-1}k\left(\frac{X_{is}-X_{js}}{h_{s}}\right)
+        .. math:: f(X)=\prod_{s=1}^{q}h_{s}^{-1}k\left
+        (\frac{X_{is}-X_{js}}{h_{s}}\right)
 
         where :math:`k` is the appropriate kernel for each variable
         """
@@ -506,11 +520,13 @@ class CKDE(Generic_KDE):
             eydat = self.all_vars
         if exdat is None:
             exdat = self.txdat
-        f_yx = tools.GPKE(self.bw, tdat=np.concatenate((self.tydat, self.txdat), axis=1),
-                          edat=eydat, var_type=(self.dep_type + self.indep_type))
+
+        f_yx = tools.GPKE(self.bw, tdat=self.all_vars, edat=eydat,
+                          var_type=(self.dep_type + self.indep_type))
         f_x = tools.GPKE(self.bw[self.K_dep::], tdat=self.txdat,
                          edat=exdat, var_type=self.indep_type)
         return (f_yx / f_x)
+
     def cdf(self, eydat=None, exdat=None):
         """
         Cumulative distribution function for
@@ -526,7 +542,7 @@ class CKDE(Generic_KDE):
             The evaluation independent variables at which the cdf is estimated
             If not specified the default value is the training independent
             variables
-        
+
         Returns
         -------
         cdf_est: array_like
@@ -540,11 +556,14 @@ class CKDE(Generic_KDE):
         The multivariate conditional CDF for mixed data
         (continuous and ordered/unordered discrete) is estimated by:
 
-        ..math:: F(y|x)=\frac{n^{-1}\sum_{i=1}^{n}G(\frac{y-Y_{i}}{h_{0}})W_{h}(X_{i},x)}{\widehat{\mu}(x)}
- 
-        where G() is the product kernel CDF estimator for the dependent (y) variable
-        and W() is the product kernel CDF estimator for the independent variable(s)
-        """        
+        ..math:: F(y|x)=\frac{n^{-1}\sum_{i=1}^{n}G(\frac{y-Y_{i}}{h_{0}})
+        W_{h}(X_{i},x)}{\widehat{\mu}(x)}
+
+        where G() is the product kernel CDF
+        estimator for the dependent (y) variable
+        and W() is the product kernel CDF estimator
+        for the independent variable(s)
+        """
         if eydat is None:
             eydat = self.tydat
         if exdat is None:
@@ -553,8 +572,9 @@ class CKDE(Generic_KDE):
                          edat=exdat, var_type=self.indep_type) / self.N
         mu_x = np.squeeze(mu_x)
         G_y = tools.GPKE(self.bw[0:self.K_dep], tdat=self.tydat,
-                                  edat = eydat, var_type=self.dep_type,
-                                  ckertype = "gaussian_cdf", ukertype="aitchisonaitken_cdf",
+                                  edat=eydat, var_type=self.dep_type,
+                                  ckertype="gaussian_cdf",
+                         ukertype="aitchisonaitken_cdf",
                              okertype='wangryzin_cdf', tosum=False)
 
         W_x = tools.GPKE(self.bw[self.K_dep::], tdat=self.txdat,
@@ -583,24 +603,30 @@ class CKDE(Generic_KDE):
         For more details see pp. 156-166 in [1]
         For details on how to handel the mixed variable types see [3]
 
-        The formula for the cross-validation objective function for mixed variable types is:
+        The formula for the cross-validation objective
+        function for mixed variable types is:
 
-        .. math:: CV(h,\lambda)=\frac{1}{n}\sum_{l=1}^{n}\frac{G_{-l}(X_{l})}{\left[\mu_{-l}(X_{l})\right]^{2}}-\frac{2}{n}\sum_{l=1}^{n}\frac{f_{-l}(X_{l},Y_{l})}{\mu_{-l}(X_{l})}
+        .. math:: CV(h,\lambda)=\frac{1}{n}\sum_{l=1}^{n}
+        \frac{G_{-l}(X_{l})}{\left[\mu_{-l}(X_{l})\right]^{2}}-
+        \frac{2}{n}\sum_{l=1}^{n}\frac{f_{-l}(X_{l},Y_{l})}{\mu_{-l}(X_{l})}
 
         where
 
-        .. math:: G_{-l}(X_{l})=n^{-2}\sum_{i\neq l}\sum_{j\neq l}K_{X_{i},X_{l}}K_{X_{j},X_{l}}K_{Y_{i},Y_{j}}^{(2)}
+        .. math:: G_{-l}(X_{l})=
+        n^{-2}\sum_{i\neq l}\sum_{j\neq l}K_{X_{i},X_{l}}
+        K_{X_{j},X_{l}}K_{Y_{i},Y_{j}}^{(2)}
 
-        where :math:`K_{X_{i},X_{l}}` is the multivariate product kernel and :math:`\mu_{-l}(X_{l})` is
+        where :math:`K_{X_{i},X_{l}}` is the multivariate product kernel
+        and :math:`\mu_{-l}(X_{l})` is
         the leave-one-out estimator of the pdf
 
         :math:`K_{Y_{i},Y_{j}}^{(2)}` is the convolution kernel
 
-        The value of the function is minimized by _cv_ls method of the Generic_KDE class to return the bw estimates that minimize
+        The value of the function is minimized by _cv_ls method of the
+        Generic_KDE class to return the bw estimates that minimize
         the distance between the estimated and "true" probability density
-        
         """
-        #print "Starting"
+
         zLOO = tools.LeaveOneOut(self.all_vars)
         l = 0
         CV = 0
@@ -611,24 +637,29 @@ class CKDE(Generic_KDE):
             Ye_L = np.kron(Y, Expander)
             Ye_R = np.kron(Expander, Y)
             Xe_L = np.kron(X, Expander)
-            Xe_R = np.kron(Expander, X)            
+            Xe_R = np.kron(Expander, X)
             K_Xi_Xl = tools.PKE(bw[self.K_dep::], tdat=Xe_L,
-                                  edat=self.txdat[l, :], var_type=self.indep_type)
+                                  edat=self.txdat[l, :],
+                                var_type=self.indep_type)
             K_Xj_Xl = tools.PKE(bw[self.K_dep::], tdat=Xe_R,
-                                  edat=self.txdat[l, :], var_type=self.indep_type)
+                                  edat=self.txdat[l, :],
+                                var_type=self.indep_type)
             K2_Yi_Yj = tools.PKE(bw[0:self.K_dep], tdat=Ye_L,
                                    edat=Ye_R, var_type=self.dep_type,
-                             ckertype='gauss_convolution', okertype='wangryzin_convolution',
+                             ckertype='gauss_convolution',
+                                 okertype='wangryzin_convolution',
                                    ukertype='aitchisonaitken_convolution')
             G = np.sum(K_Xi_Xl * K_Xj_Xl * K2_Yi_Yj)
             G = G / self.N ** 2
             f_X_Y = tools.GPKE(bw, tdat=-Z, edat=-self.all_vars[l, :],
-                               var_type=(self.dep_type + self.indep_type)) / float(self.N)
+                               var_type=(self.dep_type +
+                                         self.indep_type)) / float(self.N)
             m_x = tools.GPKE(bw[self.K_dep::], tdat=-X, edat=-self.txdat[l, :],
                              var_type=self.indep_type) / float(self.N)
             l += 1
             CV += (G / m_x ** 2) - 2 * (f_X_Y / m_x)
         return CV / float(self.N)
+
 
 class Reg (object):
     """
@@ -639,7 +670,7 @@ class Reg (object):
     Parameters
     ----------
     tydat: list with one element which is array_like
-        This is the dependent variable. 
+        This is the dependent variable.
     txdat: list
         The training data for the independent variable(s)
         Each element in the list is a separate variable
@@ -662,20 +693,18 @@ class Reg (object):
     -------
     R2(): Calculates the R-Squared for the model
     Cond_Mean(): Calculates the conditiona mean
-
     """
 
     def __init__(self, tydat, txdat, var_type, bw):
 
         self.tydat = np.column_stack(tydat)
-        
         self.txdat = np.column_stack(txdat)
 
         self.N, self.K = np.shape(self.txdat)
         self.var_type = var_type
-        self.bw_func = dict(cv_lc=self.CV_LC, aic=self.AIC_Hurvich)
+        self.bw_func = dict(cv_lc=self.CV_LC, aic=self.aic_hurvich)
         self.bw = self.compute_bw(bw)
-        
+
     def Cond_Mean(self, edat=None):
         """
         The conditional mean for the nonparametric regression
@@ -696,25 +725,31 @@ class Reg (object):
         Notes
         -----
         For more details see p.33 in [2]
-        
-        Returns the conditional mean estimate E[y|X] 
 
-        .. math:: g(X)=\int y\frac{f(y,x)}{f(x)}dy=\frac{\sum_{i=1}^{n}Y_{i}K(\frac{X_{i}-x}{h_{x}})}{\sum_{i=1}^{n}K(\frac{X_{i}-x}{h_{x}})}
+        Returns the conditional mean estimate E[y|X]
+
+        .. math:: g(X)=\int y\frac{f(y,x)}{f(x)}dy=\frac{\sum_{i=1}^
+        {n}Y_{i}K(\frac{X_{i}-x}{h_{x}})}{\sum_{i=1}^{n}
+        K(\frac{X_{i}-x}{h_{x}})}
 
         where K() is the generalized product kernel estimator
         """
-        
+
         if edat is None:
             edat = self.txdat
         # The numerator in the formula is:
-        G_numer = np.sum(self.tydat * tools.GPKE(self.bw, tdat=self.txdat, edat=edat, var_type=self.var_type, tosum=False),axis=0)
+        KX = tools.GPKE(self.bw, tdat=self.txdat, edat=edat,
+                        var_type=self.var_type, tosum=False)
+        G_numer = np.sum(self.tydat * KX, axis=0)
 
         # The denominator in the formula is:
-        G_denom = np.sum(tools.GPKE(self.bw, tdat=self.txdat, edat=edat, var_type=self.var_type, tosum=False),axis=0)
+        G_denom = np.sum(tools.GPKE(self.bw, tdat=self.txdat, edat=edat,
+                                    var_type=self.var_type,
+                                    tosum=False), axis=0)
         # The conditional mean is:
         G = G_numer / G_denom
         return G
-    
+
     def CV_LC(self, bw):
         """
         Returns the cross-validation least-squares
@@ -753,20 +788,23 @@ class Reg (object):
         for X_j in LOO_X:
             #print "running"
             Y = LOO_Y.next()
-            G_numer = np.sum(Y * tools.GPKE(bw, tdat=-X_j, edat=-self.txdat[i, :],
+            G_numer = np.sum(Y * tools.GPKE(bw, tdat=-X_j,
+                                            edat=-self.txdat[i, :],
                              var_type=self.var_type, tosum=False))
-            G_denom = np.sum(tools.GPKE(bw, tdat=-X_j, edat=-self.txdat[i, :],
+            G_denom = np.sum(tools.GPKE(bw, tdat=-X_j,
+                                        edat=-self.txdat[i, :],
                              var_type=self.var_type, tosum=False))
             G = G_numer / G_denom
-            L += (self.tydat[i] - G)**2
+            L += (self.tydat[i] - G) ** 2
             i += 1
         # Note: There might be a way to vectorize this. See p.72 in [1]
-        return L / self.N     
-    def AIC_Hurvich(self, bw):
+        return L / self.N
+
+    def aic_hurvich(self, bw):
         # The Hurvich bandwidth estimator
         pass
-    
-    def compute_bw(self,bw):
+
+    def compute_bw(self, bw):
         """
         Returns the bandwidth for the model
         """
@@ -777,11 +815,13 @@ class Reg (object):
             self._bw_method = "user-specified"
             res = np.asarray(bw)
         else:
-            # The user specified a bandwidth selection method e.g. 'normal-reference'
+            # The user specified a bandwidth selection method e.g.
+            # 'normal-reference'
             self._bw_method = bw
             bwfunc = self.bw_func[bw]
             X = np.std(self.txdat, axis=0)
-            h0 = 1.06 * X * self.N ** (- 1. / (4 + np.size(self.txdat, axis=1)))
+            h0 = 1.06 * X * \
+                 self.N ** (- 1. / (4 + np.size(self.txdat, axis=1)))
             res = bwfunc
         return opt.fmin(res, x0=h0, maxiter=1e3,
                       maxfun=1e3, disp=0)
@@ -794,36 +834,33 @@ class Reg (object):
         -----
         For more details see p.45 in [2]
         The R-Squared is calculated by:
-        .. math:: R^{2}=\frac{\left[\sum_{i=1}^{n}(Y_{i}-\bar{y})(\hat{Y_{i}}-\bar{y}\right]^{2}}{\sum_{i=1}^{n}(Y_{i}-\bar{y})^{2}\sum_{i=1}^{n}(\hat{Y_{i}}-\bar{y})^{2}}
+        .. math:: R^{2}=\frac{\left[\sum_{i=1}^{n}
+        (Y_{i}-\bar{y})(\hat{Y_{i}}-\bar{y}\right]^{2}}{\sum_{i=1}^{n}
+        (Y_{i}-\bar{y})^{2}\sum_{i=1}^{n}(\hat{Y_{i}}-\bar{y})^{2}}
 
-        where :math:`\hat{Y_{i}}` are the fitted values calculated in self.Cond_Mean()
-
+        where :math:`\hat{Y_{i}}` are the
+        fitted values calculated in self.Cond_Mean()
         """
-        # The R-Squared
-        # References [2] chapter 4 p.45
-        
         Y = np.squeeze(self.tydat)
         Yhat = self.Cond_Mean()
         Y_bar = np.mean(Yhat)
-        
-        R2_numer = (np.sum((Y - Y_bar) * (Yhat - Y_bar))**2)
-        
-        R2_denom = np.sum((Y - Y_bar)**2, axis=0) * \
-                   np.sum((Yhat - Y_bar)**2, axis=0)
-        
+        R2_numer = (np.sum((Y - Y_bar) * (Yhat - Y_bar)) ** 2)
+        R2_denom = np.sum((Y - Y_bar) ** 2, axis=0) * \
+                   np.sum((Yhat - Y_bar) ** 2, axis=0)
         return R2_numer / R2_denom
 
     def mfx(self, x):
         # Produces the marginal effects at x. Only for continuous covariates
         # References: see p. 37 in [2]
         mx = self.Cond_Mean(edat=[x])
-        fx = tools.GPKE(self.bw, tdat=self.txdat, edat=[x], var_type=self.var_type)
-        
-        d_mx = None # Code the derivative of the kernel. Code in KernelFunctions.py
-        d_fx =  None # Same as d_mx
+        fx = tools.GPKE(self.bw, tdat=self.txdat, edat=[x],
+                        var_type=self.var_type)
+
+        d_mx = None  # Code the derivative of the kernel.
+                     # Code in KernelFunctions.py
+        d_fx = None  # Same as d_mx
         return d_mx / fx - mx * d_fx / fx
+
     def Significance(self):
-        # Significance tests 
+        # Significance tests
         pass
-    
-        
