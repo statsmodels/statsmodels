@@ -526,7 +526,7 @@ class DescStat(OptFuncts):
         else:
             return 1 - chi2.cdf(llr, 1), llr
 
-    def ci_mean(self, sig=.05, method='nested-brent', epsilon=10 ** -8,
+    def ci_mean(self, sig=.05, method='gamma', epsilon=10 ** -8,
                  gamma_low=-10 ** 10, gamma_high=10 ** 10, \
                  tol=10 ** -8):
 
