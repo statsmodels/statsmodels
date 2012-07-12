@@ -39,6 +39,7 @@ clean:
 	-rm -rf $(BUILDDIR)/*
 	-rm -rf source/generated/
 	-rm source/examples/generated/*
+	-rm -rf ../tools/hash_dict.pickle
 
 html:
 	# generate the examples rst files
