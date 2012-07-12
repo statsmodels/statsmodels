@@ -123,6 +123,12 @@ class _ElRegOpts(_ElRegSetup):
                                  method=self.method,
                                  start_int_params=self.start_eta)[1] - self.r0
 
+    def _ci_limits_beta_origin(self, beta):
+        return self.hy_test_beta_origin(beta, self.param_nums,
+                             method=self.method,
+                             start_int_params=self.start_eta, only_h0=1) - \
+                             self.llr - self.r0
+
 
 class ElLinReg(_ElRegOpts):
 
@@ -140,6 +146,15 @@ class ElLinReg(_ElRegOpts):
         X matrix of independent variables.  El_Lin_Reg assumes that there is a
         constant included in X.  For regression through the origin, see
         El_Origin_Regress
+
+    Methods
+    -------
+
+    hy_test_beta:
+        Conducts hypothesis tests for regression parameters
+
+    ci_veta:
+        Finds confidence intervals for regression parameters
 
     """
     def __init__(self, endog, exog):
@@ -369,6 +384,10 @@ class _ElOriginRegresssSetup(ElLinReg):
     exog: nxk array
         Exogenous variables.  Assumed to NOT have an array of 1's
 
+    Methods
+    -------
+    _orig_params:
+        Estimates the parameters for regression through the origin
     """
     def __init__(self, endog, exog):
         self.nobs = float(endog.shape[0])
@@ -393,13 +412,14 @@ class _ElOriginRegresssSetup(ElLinReg):
 
         self.new_exog = add_constant(self.exog, prepend=1)
         self.new_fit = ElLinReg(self.endog, self.new_exog)
-        params = self.new_fit.hy_test_beta([0], [0], print_weights=1,
-                                      ret_params=1)[3]
-        return params
+        results = self.new_fit.hy_test_beta([0], [0], print_weights=1,
+                                      ret_params=1)
+        return results
 
 
 class ElOriginRegresss(_ElOriginRegresssSetup):
     """
+
     Empirical Likelihood inference AND estimation for linear regression
     through the origin.
 
@@ -418,8 +438,14 @@ class ElOriginRegresss(_ElOriginRegresssSetup):
     fit:
         Fits the model and adds fitted attributes
 
-    origin_test_beta:
-        Test a hypothesis about one parameter value.
+    hy_test_beta_origin:
+        Conducts a hypothesis test for a regression parameter when the
+        regression is forced through the origin.
+
+    ci_beta_origin:
+        Computes the confidence interval for a regression parameter when
+        the regression is forced through the origin.
+
 
     """
     def __init__(self, endog, exog):
@@ -473,8 +499,9 @@ class ElOriginRegresss(_ElOriginRegresssSetup):
 
 
         """
-
-        self.params = self._orig_params()
+        fit_results = self._orig_params()
+        self.params = fit_results[3]
+        self.llr = fit_results[1]
         ols_model = OLS(self.endog, self.new_exog)
         results = RegressionResults(ols_model,
                                     self.params.reshape(self.nvar + 1,))
@@ -485,7 +512,9 @@ class ElOriginRegresss(_ElOriginRegresssSetup):
         self.rsquared = results.rsquared
         self.rsquared_adj = results.rsquared_adj
 
-    def origin_test_beta(self, value, param_num):
+    def hy_test_beta_origin(self, value, param_num, method='powell',
+                            only_h0=False,
+                            start_int_params=None):
         """
 
         Returns the pvalue and the llr for a hypothesized parameter value
@@ -500,7 +529,8 @@ class ElOriginRegresss(_ElOriginRegresssSetup):
             The hypothesized value to be tested
 
         param_num: float
-            Which parameter to test.
+            Which parameter to test.  Note this uses python
+            indexing but the '0' parameter refers to the intercept term.
 
         Returns
         -------
@@ -510,11 +540,76 @@ class ElOriginRegresss(_ElOriginRegresssSetup):
 
 
         """
+        llr_beta0 = self.new_fit.hy_test_beta([0, value], [0, param_num],
+                                              method=method)[1]
 
-        llr_beta_hat = self.new_fit.hy_test_beta([0,
+        if only_h0:  # Used for confidence intervals
+            return llr_beta0
+        else:
+            llr_beta_hat = self.new_fit.hy_test_beta([0,
                                 float(self.params[param_num])],
-                                [0, param_num])[1]
-        llr_beta0 = self.new_fit.hy_test_beta([0, value], [0, param_num])[1]
-        llr = llr_beta0 - llr_beta_hat
-        pval = 1 - chi2.cdf(llr, 1)
-        return pval, llr
+                                [0, param_num], method=method)[1]
+            llr = llr_beta0 - llr_beta_hat
+            pval = 1 - chi2.cdf(llr, 1)
+            return pval, llr
+
+    def ci_beta_origin(self, param_num, upper_bound,
+                       lower_bound, sig=.05, method='powell',
+                       start_int_params=None):
+        """
+
+        Returns the confidence interval for a regression parameter when the
+        regression is forced through the origin.
+
+        Parameters
+        ----------
+
+        param_num: int
+            The parameter number to be tested.  Note this uses python
+            indexing but the '0' parameter refers to the intercept term.
+
+        upper_bound: float
+            The maximum value the upper confidence limit can be.  The
+            closer this is to the confidence limit, the quicker the
+            computation.
+
+        lower_bound: float
+            The minimum value the lower confidence limit can be.
+
+        sig: float, optional
+            The significance level.  Default .05
+
+        method: str, optional
+            Algorithm to optimize of nuisance params.  Can be 'nm' or
+            'powell'.  Default is 'powell'.
+
+        start_int_params: n x k array, optional
+            starting array of parameters that optimize the log star equation.
+            See also, ElLinReg.ci_beta.
+
+        Returns
+        -------
+
+        CI: tuple
+            The confidence interval for the parameter 'param_num'
+
+        See Also
+        -------
+
+        ElLinReg.ci_beta for tips and examples of successful
+        optimization
+
+        """
+        self.start_eta = start_int_params
+        self.method = method
+        self.r0 = chi2.ppf(1 - sig, 1)
+        self.param_nums = param_num
+        beta_high = upper_bound
+        beta_low = lower_bound
+        print 'Finding Lower Limit'
+        ll = optimize.brentq(self._ci_limits_beta_origin, beta_low,
+        self.params[self.param_nums])
+        print 'Finding Upper Limit'
+        ul = optimize.brentq(self._ci_limits_beta_origin,
+                             self.params[self.param_nums], beta_high)
+        return (ll, ul)
