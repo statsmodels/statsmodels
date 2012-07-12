@@ -18,17 +18,3 @@ from statsmodels.discrete.discrete_model import Probit
 probit = Probit.from_formula
 from statsmodels.discrete.discrete_model import Poisson
 poisson = Poisson.from_formula
-from statsmodels.discrete.discrete_model import NBin
-nbin = NBin.from_formula
-from statsmodels.discrete.discrete_model import NbReg
-nbreg = NbReg.from_formula
-from statsmodels.tsa.ar_model import AR
-ar = AR.from_formula
-from statsmodels.tsa.arima_model import ARMA
-arma = ARMA.from_formula
-from statsmodels.tsa.arima_model import ARIMA
-arima = ARIMA.from_formula
-from statsmodels.tsa.vector_ar.var_model import VAR
-var = VAR.from_formula
-from statsmodels.tsa.vector_ar.svar_model import SVAR
-svar = SVAR.from_formula

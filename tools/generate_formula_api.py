@@ -46,7 +46,10 @@ def write_formula_api(directory):
                       'LikelihoodModel', 'GenericLikelihoodModel',
                       'TimeSeriesModel',
                       # this class should really be deleted
-                      'ARIMAProcess']
+                      'ARIMAProcess',
+                      # these need some more work, so don't expose them
+                      'ARIMA', 'VAR', 'SVAR', 'AR', 'NBin', 'NbReg', 'ARMA',
+                      ]
 
     fout = open(os.path.join(directory, 'statsmodels', 'formula', 'api.py'),
                                         'w')
