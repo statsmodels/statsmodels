@@ -740,6 +740,10 @@ class Results(object):
         self.model = model
 
     def predict(self, exog=None, *args, **kwargs):
+        if hasattr(self.model, 'formula') and exog is not None:
+            from patsy import dmatrix
+            exog = dmatrix(self.model._data._orig_exog.design_info.describe(),
+                    exog, eval_env=1)
         return self.model.predict(self.params, exog, *args, **kwargs)
 
 
