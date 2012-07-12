@@ -64,7 +64,7 @@ Dummy coding is likely the most well known coding scheme. It compares each level
    contrast = Treatment(reference=0).code_without_intercept(levels)
    print contrast.matrix
 
-Here we used `base=0`, which implies that the first level, Hispanic, is the reference category against which the other level effects are measured. As mentioned above, the columns do not sum to zero and are thus not independent of the intercept. To be explicit, let's look at how this would encode the `race` variable.
+Here we used `reference=0`, which implies that the first level, Hispanic, is the reference category against which the other level effects are measured. As mentioned above, the columns do not sum to zero and are thus not independent of the intercept. To be explicit, let's look at how this would encode the `race` variable.
 
 .. ipython:: python
 
