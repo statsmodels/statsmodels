@@ -148,43 +148,6 @@ def WangRyzin(h, Xi, x):
     kernel_value[Xi == x] = inDom[Xi == x]
     return kernel_value
 
-
-def Epanechnikov(h, Xi, x):
-    """
-    Returns the value of the Epanechnikov (1969) Kernel. Used for
-    continuous random variables
-    
-    Parameters
-    ----------
-    h : K dimensional array
-        The bandwidths used to estimate the value of the kernel function
-    Xi : K dimensional array
-    The value of the training set
-    x: 1D array of length K
-        The value at which the kernel density is being estimated
-    Returns
-    -------
-    kernel_value : 1D array
-        The value of the kernel function
-        
-    References
-    ----------
-    Racine, J. "Nonparametric econometrics: A Primer" : Foundations and Trends in Econometrics.
-    """    
-    h, Xi, x, N, K = _get_shape_and_transform(h,Xi,x)
-    if K == 0:
-        return Xi
-    z = (Xi - x) / h
-    InDom = (-np.sqrt(5) <= z) * (z <= np.sqrt(5))
-    kernel_value = InDom * (0.75 * (1 - 0.2 * z ** 2) * (1 / np.sqrt(5)))
-    kernel_value = kernel_value.reshape([N, K])
-    # NOTE: There is a slight discrepancy between this
-    # formulation of the Epanechnikov kernel and
-    # the one in kernels.py.
-    # TODO: Check Silverman and reconcile the discrepancy
-    return kernel_value
-
-
 def Gaussian(h, Xi, x):
     h, Xi, x, N, K = _get_shape_and_transform(h,Xi,x)
     if K == 0:

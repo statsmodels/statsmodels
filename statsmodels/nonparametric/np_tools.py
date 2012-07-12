@@ -5,18 +5,12 @@ from scipy.integrate import *
 
 
 kernel_func = dict(wangryzin=kf.WangRyzin, aitchisonaitken=kf.AitchisonAitken,
-                 epanechnikov=kf.Epanechnikov, gaussian=kf.Gaussian,
-                 gauss_convolution=kf.Gaussian_Convolution,
+                 gaussian=kf.Gaussian, gauss_convolution=kf.Gaussian_Convolution,
                  wangryzin_convolution=kf.WangRyzin_Convolution,
                  aitchisonaitken_convolution=kf.AitchisonAitken_Convolution,
                    gaussian_cdf=kf.Gaussian_cdf,
                    aitchisonaitken_cdf=kf.AitchisonAitken_cdf,
                    wangryzin_cdf=kf.WangRyzin_cdf)
-
-Convolution_Kernels = dict(gauss_convolution=kf.Gaussian_Convolution,
-                           wangryzin_convolution=kf.WangRyzin_Convolution)
-
-  
 
 class LeaveOneOut(object):
     # Written by Skipper
@@ -75,7 +69,10 @@ def _get_shape(tdat, edat, var_type):
     elif edat.ndim == 1 and K == 1:  # one obs one var
         N_edat = np.size(edat)
     else:
-        N_edat = np.shape(edat)[0]  # ndim >1 so many obs many vars
+        if np.shape(edat)[0]==K:
+            N_edat = np.shape(edat)[1]
+        else:
+            N_edat = np.shape(edat)[0]  # ndim >1 so many obs many vars
         assert np.shape(edat)[1] == K
     return K, N, N_edat
     
