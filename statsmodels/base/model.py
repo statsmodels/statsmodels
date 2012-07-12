@@ -1111,6 +1111,7 @@ class LikelihoodModelResults(Results):
         ---------
         tvalues : individual t statistics
         f_test : for F tests
+        patsy.DesignInfo.linear_constraint
         """
         from patsy import DesignInfo
         if q_matrix is not None:
@@ -1229,6 +1230,7 @@ class LikelihoodModelResults(Results):
         --------
         statsmodels.contrasts
         statsmodels.model.t_test
+        patsy.DesignInfo.linear_constraint
 
         Notes
         -----
