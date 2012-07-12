@@ -661,7 +661,7 @@ class CKDE(GenericKDE):
         return CV / float(self.N)
 
 
-class Reg (object):
+class Reg(object):
     """
     Nonparametric Regression
 
@@ -679,11 +679,16 @@ class Reg (object):
         c: Continuous
         u: Unordered (Discrete)
         o: Ordered (Discrete)
+    reg_type: str
+        Type of regression estimator
+        lc: Local Constant Estimator
+        ll: Local Linear Estimator
     bw: array-like
         Either a user-specified bandwidth or
         the method for bandwidth selection.
-        cv_lc: cross-validaton least squares for
-                the local constant estimator
+        cv_ls: cross-validaton least squares
+        aic: AIC Hurvich Estimator
+
     Attributes
     ---------
     bw: array-like
@@ -691,79 +696,131 @@ class Reg (object):
 
     Methods
     -------
-    R2(): Calculates the R-Squared for the model
-    Cond_Mean(): Calculates the conditiona mean
+    r-squared(): Calculates the R-Squared for the model
+    mean(): Calculates the conditiona mean
     """
 
-    def __init__(self, tydat, txdat, var_type, bw):
+    def __init__(self, tydat, txdat, var_type, reg_type, bw='cv_ls'):
 
         self.tydat = np.column_stack(tydat)
         self.txdat = np.column_stack(txdat)
 
         self.N, self.K = np.shape(self.txdat)
         self.var_type = var_type
-        self.bw_func = dict(cv_lc=self.CV_LC, aic=self.aic_hurvich)
+        self.reg_type = reg_type
+        self.bw_func = dict(cv_ls=self.cv_loo, aic=self.aic_hurvich)
+        self.est = dict(lc=self.g_lc, ll=self.g_ll)
         self.bw = self.compute_bw(bw)
 
-    def Cond_Mean(self, edat=None):
+    def g_ll(self, bw, tydat, txdat, edat):
         """
-        The conditional mean for the nonparametric regression
-
-        Calculates E[y|X] = g(X) where g(X) is the kernel estimate of
-        the probability density of X
-
-        Parameters
-        ----------
-        edat: array_like
-            The evaluation data. Defaults to the training data txdat
-
-        Returns
-        -------
-        G: array_like
-            The conditional mean evaluated at edat
-
-        Notes
-        -----
-        For more details see p.33 in [2]
-
-        Returns the conditional mean estimate E[y|X]
-
-        .. math:: g(X)=\int y\frac{f(y,x)}{f(x)}dy=\frac{\sum_{i=1}^
-        {n}Y_{i}K(\frac{X_{i}-x}{h_{x}})}{\sum_{i=1}^{n}
-        K(\frac{X_{i}-x}{h_{x}})}
-
-        where K() is the generalized product kernel estimator
-        """
-
-        if edat is None:
-            edat = self.txdat
-        # The numerator in the formula is:
-        KX = tools.gpke(self.bw, tdat=self.txdat, edat=edat,
-                        var_type=self.var_type, tosum=False)
-        G_numer = np.sum(self.tydat * KX, axis=0)
-
-        # The denominator in the formula is:
-        G_denom = np.sum(tools.gpke(self.bw, tdat=self.txdat, edat=edat,
-                                    var_type=self.var_type,
-                                    tosum=False), axis=0)
-        # The conditional mean is:
-        G = G_numer / G_denom
-        return G
-
-    def CV_LC(self, bw):
-        """
-        Returns the cross-validation least-squares
-        function for the localc constant estimator
+        Local linear estimator of g(x) in the regression
+        y = g(x) + e
 
         Parameters
         ----------
         bw: array_like
-            The values for the bandwidth for each variable
+            Vector of bandwidth value(s)
+        tydat: 1D array_like
+            The dependent variable
+        txdat: 1D or 2D array_like
+            The independent variable(s)
+        edat: 1D array_like of length K, where K is
+            the number of variables. The point at which
+            the density is estimated
+
+        Returns
+        -------
+        D_x: array_like
+            The value of the conditional mean at edat
+
+        Notes
+        -----
+        See p. 81 in [1] and p.38 in [2] for the formulas
+        Unlike other methods, this one requires that edat be 1D
+        """
+        edat = np.asarray(edat)
+        if edat.ndim == 1 and self.K > 1:  # one obs many vars
+            N_edat = 1
+        elif edat.ndim == 1 and self.K == 1:  # one obs one var
+            N_edat = np.size(edat)
+        else:
+            if np.shape(edat)[0] == self.K:
+                N_edat = np.shape(edat)[1]
+            else:
+                N_edat = np.shape(edat)[0]  # ndim >1 so many obs many vars
+        edat = np.reshape(edat, (N_edat, self.K))
+        D_x = []
+        B_x = []
+        for i in range(N_edat):
+            x = edat[i, :]
+            Y = tydat
+            n = len(Y)
+            q = self.K
+            X = (txdat - x)
+            X = np.column_stack((np.ones(n), X))
+            Kx = tools.gpke(bw, tdat=txdat, edat=x,
+                            var_type=self.var_type, tosum=False)
+            Kx = np.diag(np.squeeze(Kx))
+            xtk = np.dot(X.T, Kx)
+            a1 = np.linalg.pinv(np.dot(xtk, X))
+            a2 = np.dot(xtk, Y)
+            d_x = np.dot(a1, a2)
+            D_x.append(d_x[0])
+            B_x.append(d_x[1::])
+        return np.squeeze(np.asarray(D_x))
+
+    def g_lc(self, bw, tydat, txdat, edat):
+        """
+        Local constant estimator of g(x) in the regression
+        y = g(x) + e
+
+        Parameters
+        ----------
+        bw: array_like
+            Vector of bandwidth value(s)
+        tydat: 1D array_like
+            The dependent variable
+        txdat: 1D or 2D array_like
+            The independent variable(s)
+        edat: 1D or 2D array_like
+            The point(s) at which
+            the density is estimated
+
+        Returns
+        -------
+        G: array_like
+            The value of the conditional mean at edat
+
+        """
+        KX = tools.gpke(bw, tdat=txdat, edat=edat,
+                        var_type=self.var_type, tosum=False)
+        G_numer = np.sum(tydat * KX, axis=0)
+        G_denom = np.sum(tools.gpke(bw, tdat=txdat, edat=edat,
+                                    var_type=self.var_type,
+                                    tosum=False), axis=0)
+        return G_numer / G_denom
+
+    def aic_hurvich(self):
+        pass
+
+    def cv_loo(self, bw, func):
+        """
+        The cross-validation function with leave-one-out
+        estimator
+
+        Parameters
+        ----------
+        bw: array_like
+            Vector of bandwidth values
+        func: callable function
+            Returns the estimator of g(x).
+            Can be either g_lc(local constant) or g_ll(local_linear)
 
         Returns
         -------
         L: float
-            The value of the function at bw
+            The value of the CV function
 
         Notes
         -----
@@ -779,54 +836,41 @@ class Reg (object):
         and :math:`h` is the vector of bandwidths
 
         """
-        # The bandwidth method for the local constant estimator
-        # TODO: Include the Local Linear Estimator
         LOO_X = tools.LeaveOneOut(self.txdat)
         LOO_Y = tools.LeaveOneOut(self.tydat).__iter__()
         i = 0
         L = 0
         for X_j in LOO_X:
-            #print "running"
             Y = LOO_Y.next()
-            G_numer = np.sum(Y * tools.gpke(bw, tdat=-X_j,
-                                            edat=-self.txdat[i, :],
-                             var_type=self.var_type, tosum=False))
-            G_denom = np.sum(tools.gpke(bw, tdat=-X_j,
-                                        edat=-self.txdat[i, :],
-                             var_type=self.var_type, tosum=False))
-            G = G_numer / G_denom
+            G = func(bw, tydat=Y, txdat=-X_j, edat=-self.txdat[i, :])
             L += (self.tydat[i] - G) ** 2
             i += 1
         # Note: There might be a way to vectorize this. See p.72 in [1]
         return L / self.N
 
-    def aic_hurvich(self, bw):
-        # The Hurvich bandwidth estimator
-        pass
-
     def compute_bw(self, bw):
-        """
-        Returns the bandwidth for the model
-        """
         if not isinstance(bw, basestring):
-            # The user provided an actual bandwidth estimate
-            # TODO: would be good if the user could provide a function here
-            # that uses tdat/N/K, instead of just a result.
             self._bw_method = "user-specified"
-            res = np.asarray(bw)
+            return np.asarray(bw)
         else:
-            # The user specified a bandwidth selection method e.g.
-            # 'normal-reference'
+            # The user specified a bandwidth selection
+            # method e.g. 'cv_ls'
             self._bw_method = bw
-            bwfunc = self.bw_func[bw]
+            res = self.bw_func[bw]
             X = np.std(self.txdat, axis=0)
             h0 = 1.06 * X * \
                  self.N ** (- 1. / (4 + np.size(self.txdat, axis=1)))
-            res = bwfunc
-        return opt.fmin(res, x0=h0, maxiter=1e3,
+        func = self.est[self.reg_type]
+        return opt.fmin(res, x0=h0, args=(func, ), maxiter=1e3,
                       maxfun=1e3, disp=0)
 
-    def R2(self):
+    def mean(self, edat=None):
+        func = self.est[self.reg_type]
+        if edat is None:
+            edat = self.txdat
+        return func(self.bw, self.tydat, self.txdat, edat=edat)
+
+    def r_squared(self):
         """
         Returns the R-Squared for the nonparametric regression
 
@@ -839,28 +883,12 @@ class Reg (object):
         (Y_{i}-\bar{y})^{2}\sum_{i=1}^{n}(\hat{Y_{i}}-\bar{y})^{2}}
 
         where :math:`\hat{Y_{i}}` are the
-        fitted values calculated in self.Cond_Mean()
+        fitted values calculated in self.mean()
         """
         Y = np.squeeze(self.tydat)
-        Yhat = self.Cond_Mean()
+        Yhat = self.mean()
         Y_bar = np.mean(Yhat)
         R2_numer = (np.sum((Y - Y_bar) * (Yhat - Y_bar)) ** 2)
         R2_denom = np.sum((Y - Y_bar) ** 2, axis=0) * \
                    np.sum((Yhat - Y_bar) ** 2, axis=0)
         return R2_numer / R2_denom
-
-    def mfx(self, x):
-        # Produces the marginal effects at x. Only for continuous covariates
-        # References: see p. 37 in [2]
-        mx = self.Cond_Mean(edat=[x])
-        fx = tools.gpke(self.bw, tdat=self.txdat, edat=[x],
-                        var_type=self.var_type)
-
-        d_mx = None  # Code the derivative of the kernel.
-                     # Code in KernelFunctions.py
-        d_fx = None  # Same as d_mx
-        return d_mx / fx - mx * d_fx / fx
-
-    def Significance(self):
-        # Significance tests
-        pass

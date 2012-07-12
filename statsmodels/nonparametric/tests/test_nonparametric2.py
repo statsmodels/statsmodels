@@ -216,16 +216,16 @@ class TestCKDE(MyTest):
 
 
 class TestReg(MyTest):
-    def test_ordered_CVLC(self):
+    def test_ordered_lc_cvls(self):
         model = nparam.Reg(tydat=[self.Italy_gdp], txdat=[self.Italy_year],
-                           var_type='o', bw='cv_lc')
+                           reg_type='lc', var_type='o', bw='cv_ls')
         sm_bw = model.bw
         R_bw = 0.1390096
 
-        sm_mean = model.Cond_Mean()[0]
+        sm_mean = model.mean()[0]
         R_mean = 6.190486
 
-        sm_R2 = model.R2()
+        sm_R2 = model.r_squared()
         R_R2 = 0.1435323
 
         ## CODE TO REPRODUCE IN R
@@ -237,18 +237,35 @@ class TestReg(MyTest):
         npt.assert_allclose(sm_mean, R_mean, atol=1e-2)
         npt.assert_allclose(sm_R2, R_R2, atol=1e-2)
 
-    def test_continuousdata_CVLC(self):
+    def test_continuousdata_lc_cvls(self):
         model = nparam.Reg(tydat=[self.y], txdat=[self.c1, self.c2],
-                           var_type='cc', bw='cv_lc')
+                           reg_type='lc', var_type='cc', bw='cv_ls')
         # Bandwidth
         sm_bw = model.bw
         R_bw = [0.6163835, 0.1649656]
         # Conditional Mean
-        sm_mean = model.Cond_Mean()[0:5]
+        sm_mean = model.mean()[0:5]
         R_mean = [31.49157, 37.29536, 43.72332, 40.58997, 36.80711]
         # R-Squared
-        sm_R2 = model.R2()
+        sm_R2 = model.r_squared()
         R_R2 = 0.956381720885
+
+        npt.assert_allclose(sm_bw, R_bw, atol=1e-2)
+        npt.assert_allclose(sm_mean, R_mean, atol=1e-2)
+        npt.assert_allclose(sm_R2, R_R2, atol=1e-2)
+
+    def test_continuousdata_ll_cvls(self):
+        model = nparam.Reg(tydat=[self.y], txdat=[self.c1, self.c2],
+                           reg_type='ll', var_type='cc', bw='cv_ls')
+
+        sm_bw = model.bw
+        R_bw = [1.717891, 2.449415]
+
+        sm_mean = model.mean()[0:5]
+        R_mean = [31.16003, 37.30323, 44.49870, 40.73704, 36.19083]
+
+        sm_R2 = model.r_squared()
+        R_R2 = 0.9336019
 
         npt.assert_allclose(sm_bw, R_bw, atol=1e-2)
         npt.assert_allclose(sm_mean, R_mean, atol=1e-2)
