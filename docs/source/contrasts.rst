@@ -9,18 +9,42 @@ In fact, the dummy coding is not technically a contrast coding. This is because 
 
 To have a look at the contrast matrices in Patsy, we will use data from UCLA ATS. First let's load the data.
 
+.. ipython:: python
+   :suppress:
+   
+   import numpy as np
+   np.set_printoptions(precision=4, suppress=True)
+
+   from patsy.contrasts import ContrastMatrix
+
+   def _name_levels(prefix, levels):
+       return ["[%s%s]" % (prefix, level) for level in levels]
+
+   class Simple(object):
+       def _simple_contrast(self, levels):
+           nlevels = len(levels)
+           contr = -1./nlevels * np.ones((nlevels, nlevels-1))
+           contr[1:][np.diag_indices(nlevels-1)] = (nlevels-1.)/nlevels
+           return contr
+
+       def code_with_intercept(self, levels):
+           contrast = np.column_stack((np.ones(len(levels)),
+                                       self._simple_contrast(levels)))
+           return ContrastMatrix(contrast, _name_levels("Simp.", levels))
+
+       def code_without_intercept(self, levels):
+           contrast = self._simple_contrast(levels)
+           return ContrastMatrix(contrast, _name_levels("Simp.", levels[:-1]))
+
+
 Example Data
 ------------
 
 .. ipython:: python
 
-   import pandas # requires current master for URL
+   import pandas
    url = 'http://www.ats.ucla.edu/stat/R/notes/hsb2_nolabel.csv'
-   try:
-       hsb2 = pandas.read_table(url, delimiter=",")
-   except:
-       from urllib2 import urlopen
-       hsb2 = pandas.read_table(urlopen(url), delimiter=",")
+   hsb2 = pandas.read_table(url, delimiter=",")
 
 It will be instructive to look at the mean of the dependent variable, write, for each level of race ((1 = Hispanic, 2 = Asian, 3 = African American and 4 = Caucasian)).
 
@@ -37,14 +61,14 @@ Dummy coding is likely the most well known coding scheme. It compares each level
 
    from patsy.contrasts import Treatment
    levels = [1,2,3,4]
-   contrast = Treatment(base=0).code_without_intercept(levels)
+   contrast = Treatment(reference=0).code_without_intercept(levels)
    print contrast.matrix
 
 Here we used `base=0`, which implies that the first level, Hispanic, is the reference category against which the other level effects are measured. As mentioned above, the columns do not sum to zero and are thus not independent of the intercept. To be explicit, let's look at how this would encode the `race` variable.
 
 .. ipython:: python
 
-   contrast.matrix[hsb2.race-1, :]
+   contrast.matrix[hsb2.race-1, :][:20]
 
 This is a bit of a trick, as the `race` category conveniently maps to zero-based indices. If it does not, this conversion happens under the hood, so this won't work in general but nonetheless is a useful exercise to fix ideas. The below illustrates the output using the three contrasts above
 
@@ -60,11 +84,11 @@ We explicitly gave the contrast for race; however, since Treatment is the defaul
 Simple Coding
 -------------
 
-Like Treatment Coding, Simple Coding compares each level to a fixed reference level. However, with simple coding, the intercept is the grand mean of all the levels of the factors.
+Like Treatment Coding, Simple Coding compares each level to a fixed reference level. However, with simple coding, the intercept is the grand mean of all the levels of the factors. See :ref:`user-defined` for how to implement the Simple contrast.
+
 
 .. ipython:: python
 
-   from patsy.contrasts import Simple
    contrast = Simple().code_without_intercept(levels)
    print contrast.matrix
 
@@ -100,11 +124,11 @@ In backward difference coding, the mean of the dependent variable for a level is
 
 .. ipython:: python
 
-   from patsy.contrasts import BDiff
-   contrast = BDiff().code_without_intercept(levels)
+   from patsy.contrasts import Diff
+   contrast = Diff().code_without_intercept(levels)
    print contrast.matrix
 
-   mod = ols("write ~ C(race, BDiff)", df=hsb2)
+   mod = ols("write ~ C(race, Diff)", df=hsb2)
    res = mod.fit()
    print res.summary()
 
@@ -112,7 +136,7 @@ For example, here the coefficient on level 1 is the mean of `write` at level 2 c
 
 .. ipython:: python
 
-   res.params["C(race, BDiff)[D.1]"]
+   res.params["C(race, Diff)[D.1]"]
    hsb2.groupby('race').mean()["write"][2] - \
         hsb2.groupby('race').mean()["write"][1]
 
@@ -176,16 +200,35 @@ The coefficients taken on by polynomial coding for `k=4` levels are the linear, 
 
 As you can see, readcat has a significant linear effect on the dependent variable `write` but not a significant quadratic or cubic effect.
 
+.. _user-defined:
+
 User-Defined Coding
 -------------------
 
-Right now, if you want to use your own coding, you must do so by writing a coding class that contains a code_with_intercept and a code_without_intercept method that return a patsy.contrast.ContrastMatrix instance. To use this custom coding you would do
+If you want to use your own coding, you must do so by writing a coding class that contains a code_with_intercept and a code_without_intercept method that return a `patsy.contrast.ContrastMatrix` instance.
 
+.. ipython:: python
 
-.. code:: python
+   from patsy.contrasts import ContrastMatrix
 
-   from patsy.state import builtin_stateful_transforms
-   builtin_stateful_transforms["MyContrast"] = MyContrast
+   def _name_levels(prefix, levels):
+       return ["[%s%s]" % (prefix, level) for level in levels]
 
-   mod = ols("write ~ C(race, MyContrast)", df=hsb2)
+   class Simple(object):
+       def _simple_contrast(self, levels):
+           nlevels = len(levels)
+           contr = -1./nlevels * np.ones((nlevels, nlevels-1))
+           contr[1:][np.diag_indices(nlevels-1)] = (nlevels-1.)/nlevels
+           return contr
+
+       def code_with_intercept(self, levels):
+           contrast = np.column_stack((np.ones(len(levels)),
+                                       self._simple_contrast(levels)))
+           return ContrastMatrix(contrast, _name_levels("Simp.", levels))
+
+       def code_without_intercept(self, levels):
+           contrast = self._simple_contrast(levels)
+           return ContrastMatrix(contrast, _name_levels("Simp.", levels[:-1]))
+
+   mod = ols("write ~ C(race, Simple)", df=hsb2)
    res = mod.fit()
