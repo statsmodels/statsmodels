@@ -1,4 +1,4 @@
-Charlton: Contrast Coding Systems for categorical variables
+Patsy: Contrast Coding Systems for categorical variables
 ===========================================================
 
 .. note:: This document is based heavily on `this excellent resource from UCLA <http://www.ats.ucla.edu/stat/r/library/contrast_coding.htm>__`.
@@ -7,7 +7,7 @@ A categorical variable of K categories, or levels, usually enters a regression a
 
 In fact, the dummy coding is not technically a contrast coding. This is because the dummy variables add to one and are not functionally independent of the model's intercept. On the other hand, a set of *contrasts* for a categorical variable with `k` levels is a set of `k-1` functionally independent linear combinations of the factor level means that are also independent of the sum of the dummy variables. The dummy coding isn't wrong *per se*. It captures all of the coefficients, but it complicates matters when the model assumes independence of the coefficients such as in ANOVA. Linear regression models do not assume independence of the coefficients and thus dummy coding is often the only coding that is taught in this context.
 
-To have a look at the contrast matrices in Charlton, we will use data from UCLA ATS. First let's load the data.
+To have a look at the contrast matrices in Patsy, we will use data from UCLA ATS. First let's load the data.
 
 Example Data
 ------------
@@ -31,11 +31,11 @@ It will be instructive to look at the mean of the dependent variable, write, for
 Treatment (Dummy) Coding
 ------------------------
 
-Dummy coding is likely the most well known coding scheme. It compares each level of the categorical variable to a base reference level. The base reference level is the value of the intercept. It is the default contrast in Charlton for unordered categorical factors. The Treatment contrast matrix for race would be
+Dummy coding is likely the most well known coding scheme. It compares each level of the categorical variable to a base reference level. The base reference level is the value of the intercept. It is the default contrast in Patsy for unordered categorical factors. The Treatment contrast matrix for race would be
 
 .. ipython:: python
 
-   from charlton.contrasts import Treatment
+   from patsy.contrasts import Treatment
    levels = [1,2,3,4]
    contrast = Treatment(base=0).code_without_intercept(levels)
    print contrast.matrix
@@ -64,7 +64,7 @@ Like Treatment Coding, Simple Coding compares each level to a fixed reference le
 
 .. ipython:: python
 
-   from charlton.contrasts import Simple
+   from patsy.contrasts import Simple
    contrast = Simple().code_without_intercept(levels)
    print contrast.matrix
 
@@ -79,7 +79,7 @@ Sum coding compares the mean of the dependent variable for a given level to the 
 
 .. ipython:: python
 
-   from charlton.contrasts import Sum
+   from patsy.contrasts import Sum
    contrast = Sum().code_without_intercept(levels)
    print contrast.matrix
 
@@ -100,7 +100,7 @@ In backward difference coding, the mean of the dependent variable for a level is
 
 .. ipython:: python
 
-   from charlton.contrasts import BDiff
+   from patsy.contrasts import BDiff
    contrast = BDiff().code_without_intercept(levels)
    print contrast.matrix
 
@@ -123,7 +123,7 @@ Our version of Helmert coding is sometimes referred to as Reverse Helmert Coding
 
 .. ipython:: python
 
-   from charlton.contrasts import Helmert
+   from patsy.contrasts import Helmert
    contrast = Helmert().code_without_intercept(levels)
    print contrast.matrix
 
@@ -165,7 +165,7 @@ The coefficients taken on by polynomial coding for `k=4` levels are the linear, 
 
 .. ipython:: python
 
-   from charlton.contrasts import Poly
+   from patsy.contrasts import Poly
    levels = hsb2.readcat.unique().tolist()
    contrast = Poly().code_without_intercept(levels)
    print contrast.matrix
@@ -179,12 +179,12 @@ As you can see, readcat has a significant linear effect on the dependent variabl
 User-Defined Coding
 -------------------
 
-Right now, if you want to use your own coding, you must do so by writing a coding class that contains a code_with_intercept and a code_without_intercept method that return a charlton.contrast.ContrastMatrix instance. To use this custom coding you would do
+Right now, if you want to use your own coding, you must do so by writing a coding class that contains a code_with_intercept and a code_without_intercept method that return a patsy.contrast.ContrastMatrix instance. To use this custom coding you would do
 
 
 .. code:: python
 
-   from charlton.state import builtin_stateful_transforms
+   from patsy.state import builtin_stateful_transforms
    builtin_stateful_transforms["MyContrast"] = MyContrast
 
    mod = ols("write ~ C(race, MyContrast)", df=hsb2)
