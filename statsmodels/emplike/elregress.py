@@ -449,7 +449,7 @@ class ElOriginRegress(_ElOriginRegresssSetup):
 
     """
     def __init__(self, endog, exog):
-        super(ElOriginRegresss, self).__init__(endog, exog)
+        super(ElOriginRegress, self).__init__(endog, exog)
 
     def fit(self):
         """
