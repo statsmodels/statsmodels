@@ -110,6 +110,17 @@ class _ElRegOpts(_ElRegSetup):
         self.new_params = params.reshape(self.nvar, 1)
         self.est_vect = self.exog * (self.endog - np.dot(self.exog,
                                                          self.new_params))
+        if not self._stochastic_exog:
+            exog_means = np.mean(self.exog, axis=0)[1:]
+            exog_mom2 = (np.sum(self.exog * self.exog, axis=0))[1:]\
+                          / self.nobs
+            mean_est_vect = self.exog[:, 1:] - exog_means
+            mom2_est_vect = (self.exog * self.exog)[:, 1:] - exog_mom2
+            regressor_est_vect = np.concatenate((mean_est_vect, mom2_est_vect),
+                                                axis=1)
+            self.est_vect = np.concatenate((self.est_vect, regressor_est_vect),
+                                           axis=1)
+
         eta_star = self._modif_newton(self.start_lbda)
         self.eta_star = eta_star
         denom = 1. + np.dot(eta_star, self.est_vect.T)
@@ -161,7 +172,8 @@ class ElLinReg(_ElRegOpts):
         super(ElLinReg, self).__init__(endog, exog)
 
     def hy_test_beta(self, b0_vals, param_nums, print_weights=0,
-                     ret_params=0, method='powell', start_int_params=None):
+                     ret_params=0, method='powell', start_int_params=None,
+                     stochastic_exog=1):
         """
         Tests single or joint hypotheses of the regression parameters
 
@@ -191,6 +203,13 @@ class ElLinReg(_ElRegOpts):
             The starting values for the interior minimization.  The starting
             values of lambda as in Owen pg. 63. Default is an array of 0.
 
+        stochastic_exog: bool, optional
+            When TRUE, the exogenous variables are assumed to be stochastic.
+            When the regressors are nonstochastic, moment conditions are
+            placed on the exogenous variables.  Confidence intervals for
+            stochastic regressors are at least as large as non-stochastic
+            regressors.  Default = TRUE
+
         Returns
         -------
 
@@ -218,9 +237,12 @@ class ElLinReg(_ElRegOpts):
 
         if start_int_params is not None:
             self.start_lbda = start_int_params
-        else:
+        elif stochastic_exog:
             self.start_lbda = np.zeros(self.nvar)
-
+        else:
+            self.start_lbda = np.zeros(self.nvar +
+                                       2 * (self.exog.shape[1] - 1))
+        self._stochastic_exog = stochastic_exog
         self.param_nums = np.asarray(param_nums)
         self.b0_vals = np.asarray(b0_vals)
         if len(param_nums) == len(self.params):
@@ -412,6 +434,10 @@ class _ElOriginRegresssSetup(ElLinReg):
 
         self.new_exog = add_constant(self.exog, prepend=1)
         self.new_fit = ElLinReg(self.endog, self.new_exog)
+        # new fit is what all of the inference is drawn on.  it includes
+        # a vector of 1's but the coefficient of the ones is restricted
+        # to be 0. self.endog does not contain 1's but self.new_fit.endog does.
+        # The user should not be concerned with self.new_fit
         results = self.new_fit.hy_test_beta([0], [0], print_weights=1,
                                       ret_params=1)
         return results
