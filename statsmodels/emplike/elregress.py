@@ -29,6 +29,15 @@ class _ELRegOpts(_OptFuncts):
     OLSResults : Results instance
         A fitted OLS result
 
+    Methods
+    -------
+
+    hy_test_beta:
+        Conducts hypothesis tests for regression parameters
+
+    ci_veta:
+        Finds confidence intervals for regression parameters
+
     """
     def __init__(self):
         pass
