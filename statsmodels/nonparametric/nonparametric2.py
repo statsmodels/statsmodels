@@ -29,7 +29,7 @@ import KernelFunctions as kf
 __all__ = ['UKDE', 'CKDE', 'Reg']
 
 
-class Generic_KDE ():
+class GenericKDE (object):
     """
     Generic KDE class with methods shared by both UKDE and CKDE
     """
@@ -134,12 +134,12 @@ class Generic_KDE ():
 
         .. math:: \int\left[\hat{f}(x)-f(x)\right]^{2}dx
 
-        This is the general formula for the IMSE.
-        The IMSE differes for conditional (CKDE) and
+        This is the general formula for the imse.
+        The imse differes for conditional (CKDE) and
         unconditional (UKDE) kernel density estimation.
         """
         h0 = self._normal_reference()
-        bw = opt.fmin(self.IMSE, x0=h0, maxiter=1e3,
+        bw = opt.fmin(self.imse, x0=h0, maxiter=1e3,
                       maxfun=1e3, disp=0)
         return np.abs(bw)
 
@@ -147,7 +147,7 @@ class Generic_KDE ():
         pass
 
 
-class UKDE(Generic_KDE):
+class UKDE(GenericKDE):
     """
     Unconditional Kernel Density Estimator
 
@@ -180,7 +180,7 @@ class UKDE(Generic_KDE):
     -------
     pdf(): the probability density function
     cdf(): the cumulative distribution function
-    IMSE(): the integrated mean square error
+    imse(): the integrated mean square error
     loo_likelihood(): the leave one out likelihood
 
     Examples
@@ -248,7 +248,7 @@ class UKDE(Generic_KDE):
         i = 0
         L = 0
         for X_j in LOO:
-            f_i = tools.GPKE(bw, tdat=-X_j, edat=-self.tdat[i, :],
+            f_i = tools.gpke(bw, tdat=-X_j, edat=-self.tdat[i, :],
                              var_type=self.var_type)
             i += 1
             L += func(f_i)
@@ -280,7 +280,7 @@ class UKDE(Generic_KDE):
         """
         if edat is None:
             edat = self.tdat
-        pdf_est = tools.GPKE(self.bw, tdat=self.tdat, edat=edat,
+        pdf_est = tools.gpke(self.bw, tdat=self.tdat, edat=edat,
                           var_type=self.var_type) / self.N
         pdf_est = np.squeeze(pdf_est)
         return pdf_est
@@ -317,7 +317,7 @@ class UKDE(Generic_KDE):
         """
         if edat is None:
             edat = self.tdat
-        cdf_est = tools.GPKE(self.bw, tdat=self.tdat,
+        cdf_est = tools.gpke(self.bw, tdat=self.tdat,
                              edat=edat, var_type=self.var_type,
                              ckertype="gaussian_cdf",
                              ukertype="aitchisonaitken_cdf",
@@ -325,7 +325,7 @@ class UKDE(Generic_KDE):
         cdf_est = np.squeeze(cdf_est)
         return cdf_est
 
-    def IMSE(self, bw):
+    def imse(self, bw):
         """
         Returns the Integrated Mean Square Error for the unconditional UKDE
 
@@ -357,7 +357,7 @@ class UKDE(Generic_KDE):
 
         F = 0
         for i in range(self.N):
-            k_bar_sum = tools.GPKE(bw, tdat=-self.tdat, edat=-self.tdat[i, :],
+            k_bar_sum = tools.gpke(bw, tdat=-self.tdat, edat=-self.tdat[i, :],
                                     var_type=self.var_type,
                                    ckertype='gauss_convolution',
                                    okertype='wangryzin_convolution',
@@ -368,7 +368,7 @@ class UKDE(Generic_KDE):
                 2 / ((self.N) * (self.N - 1)))
 
 
-class CKDE(Generic_KDE):
+class CKDE(GenericKDE):
     """
     Conditional Kernel Density Estimator
 
@@ -467,7 +467,7 @@ class CKDE(Generic_KDE):
 
         Notes
         -----
-        Similar to the loo_likelihood in Generic_KDE but
+        Similar to the loo_likelihood in GenericKDE but
         substitute for f(x), f(x|y)=f(x,y)/f(y)
         """
         yLOO = tools.LeaveOneOut(self.all_vars)
@@ -476,9 +476,9 @@ class CKDE(Generic_KDE):
         L = 0
         for Y_j in yLOO:
             X_j = xLOO.next()
-            f_yx = tools.GPKE(bw, tdat=-Y_j, edat=-self.all_vars[i, :],
+            f_yx = tools.gpke(bw, tdat=-Y_j, edat=-self.all_vars[i, :],
                               var_type=(self.dep_type + self.indep_type))
-            f_x = tools.GPKE(bw[self.K_dep::], tdat=-X_j,
+            f_x = tools.gpke(bw[self.K_dep::], tdat=-X_j,
                              edat=-self.txdat[i, :], var_type=self.indep_type)
             f_i = f_yx / f_x
             i += 1
@@ -521,9 +521,9 @@ class CKDE(Generic_KDE):
         if exdat is None:
             exdat = self.txdat
 
-        f_yx = tools.GPKE(self.bw, tdat=self.all_vars, edat=eydat,
+        f_yx = tools.gpke(self.bw, tdat=self.all_vars, edat=eydat,
                           var_type=(self.dep_type + self.indep_type))
-        f_x = tools.GPKE(self.bw[self.K_dep::], tdat=self.txdat,
+        f_x = tools.gpke(self.bw[self.K_dep::], tdat=self.txdat,
                          edat=exdat, var_type=self.indep_type)
         return (f_yx / f_x)
 
@@ -568,22 +568,22 @@ class CKDE(Generic_KDE):
             eydat = self.tydat
         if exdat is None:
             exdat = self.txdat
-        mu_x = tools.GPKE(self.bw[self.K_dep::], tdat=self.txdat,
+        mu_x = tools.gpke(self.bw[self.K_dep::], tdat=self.txdat,
                          edat=exdat, var_type=self.indep_type) / self.N
         mu_x = np.squeeze(mu_x)
-        G_y = tools.GPKE(self.bw[0:self.K_dep], tdat=self.tydat,
+        G_y = tools.gpke(self.bw[0:self.K_dep], tdat=self.tydat,
                                   edat=eydat, var_type=self.dep_type,
                                   ckertype="gaussian_cdf",
                          ukertype="aitchisonaitken_cdf",
                              okertype='wangryzin_cdf', tosum=False)
 
-        W_x = tools.GPKE(self.bw[self.K_dep::], tdat=self.txdat,
+        W_x = tools.gpke(self.bw[self.K_dep::], tdat=self.txdat,
                          edat=exdat, var_type=self.indep_type, tosum=False)
         S = np.sum(G_y * W_x, axis=0)
         cdf_est = S / (self.N * mu_x)
         return cdf_est
 
-    def IMSE(self, bw):
+    def imse(self, bw):
         """
         The integrated mean square error for the conditional KDE
 
@@ -623,7 +623,7 @@ class CKDE(Generic_KDE):
         :math:`K_{Y_{i},Y_{j}}^{(2)}` is the convolution kernel
 
         The value of the function is minimized by _cv_ls method of the
-        Generic_KDE class to return the bw estimates that minimize
+        GenericKDE class to return the bw estimates that minimize
         the distance between the estimated and "true" probability density
         """
 
@@ -638,23 +638,23 @@ class CKDE(Generic_KDE):
             Ye_R = np.kron(Expander, Y)
             Xe_L = np.kron(X, Expander)
             Xe_R = np.kron(Expander, X)
-            K_Xi_Xl = tools.PKE(bw[self.K_dep::], tdat=Xe_L,
+            K_Xi_Xl = tools.pke(bw[self.K_dep::], tdat=Xe_L,
                                   edat=self.txdat[l, :],
                                 var_type=self.indep_type)
-            K_Xj_Xl = tools.PKE(bw[self.K_dep::], tdat=Xe_R,
+            K_Xj_Xl = tools.pke(bw[self.K_dep::], tdat=Xe_R,
                                   edat=self.txdat[l, :],
                                 var_type=self.indep_type)
-            K2_Yi_Yj = tools.PKE(bw[0:self.K_dep], tdat=Ye_L,
+            K2_Yi_Yj = tools.pke(bw[0:self.K_dep], tdat=Ye_L,
                                    edat=Ye_R, var_type=self.dep_type,
                              ckertype='gauss_convolution',
                                  okertype='wangryzin_convolution',
                                    ukertype='aitchisonaitken_convolution')
             G = np.sum(K_Xi_Xl * K_Xj_Xl * K2_Yi_Yj)
             G = G / self.N ** 2
-            f_X_Y = tools.GPKE(bw, tdat=-Z, edat=-self.all_vars[l, :],
+            f_X_Y = tools.gpke(bw, tdat=-Z, edat=-self.all_vars[l, :],
                                var_type=(self.dep_type +
                                          self.indep_type)) / float(self.N)
-            m_x = tools.GPKE(bw[self.K_dep::], tdat=-X, edat=-self.txdat[l, :],
+            m_x = tools.gpke(bw[self.K_dep::], tdat=-X, edat=-self.txdat[l, :],
                              var_type=self.indep_type) / float(self.N)
             l += 1
             CV += (G / m_x ** 2) - 2 * (f_X_Y / m_x)
@@ -738,12 +738,12 @@ class Reg (object):
         if edat is None:
             edat = self.txdat
         # The numerator in the formula is:
-        KX = tools.GPKE(self.bw, tdat=self.txdat, edat=edat,
+        KX = tools.gpke(self.bw, tdat=self.txdat, edat=edat,
                         var_type=self.var_type, tosum=False)
         G_numer = np.sum(self.tydat * KX, axis=0)
 
         # The denominator in the formula is:
-        G_denom = np.sum(tools.GPKE(self.bw, tdat=self.txdat, edat=edat,
+        G_denom = np.sum(tools.gpke(self.bw, tdat=self.txdat, edat=edat,
                                     var_type=self.var_type,
                                     tosum=False), axis=0)
         # The conditional mean is:
@@ -788,10 +788,10 @@ class Reg (object):
         for X_j in LOO_X:
             #print "running"
             Y = LOO_Y.next()
-            G_numer = np.sum(Y * tools.GPKE(bw, tdat=-X_j,
+            G_numer = np.sum(Y * tools.gpke(bw, tdat=-X_j,
                                             edat=-self.txdat[i, :],
                              var_type=self.var_type, tosum=False))
-            G_denom = np.sum(tools.GPKE(bw, tdat=-X_j,
+            G_denom = np.sum(tools.gpke(bw, tdat=-X_j,
                                         edat=-self.txdat[i, :],
                              var_type=self.var_type, tosum=False))
             G = G_numer / G_denom
@@ -853,7 +853,7 @@ class Reg (object):
         # Produces the marginal effects at x. Only for continuous covariates
         # References: see p. 37 in [2]
         mx = self.Cond_Mean(edat=[x])
-        fx = tools.GPKE(self.bw, tdat=self.txdat, edat=[x],
+        fx = tools.gpke(self.bw, tdat=self.txdat, edat=[x],
                         var_type=self.var_type)
 
         d_mx = None  # Code the derivative of the kernel.

@@ -81,7 +81,7 @@ def _get_shape(tdat, edat, var_type):
     return K, N, N_edat
 
 
-def GPKE(bw, tdat, edat, var_type, ckertype='gaussian',
+def gpke(bw, tdat, edat, var_type, ckertype='gaussian',
          okertype='wangryzin', ukertype='aitchisonaitken', tosum=True):
     """
     Returns the non-normalized Generalized Product Kernel Estimator
@@ -154,12 +154,12 @@ def GPKE(bw, tdat, edat, var_type, ckertype='gaussian',
         return dens
 
 
-def PKE(bw, tdat, edat, var_type, ckertype='gaussian',
+def pke(bw, tdat, edat, var_type, ckertype='gaussian',
           okertype='wangryzin', ukertype='aitchisonaitken'):
     """
     The product of appropriate kernels
 
-    Used in the calculation of IMSE for the conditional KDE
+    Used in the calculation of imse for the conditional KDE
 
     Parameters
     ----------
@@ -184,11 +184,11 @@ def PKE(bw, tdat, edat, var_type, ckertype='gaussian',
         The dens estimator
     Notes
     -----
-    This is similar to GPKE but adapted specifically for the CKDE
+    This is similar to gpke but adapted specifically for the CKDE
     cross-validation least squares. It also doesn't sum across the kernel
     values
     """
-    # TODO: See if you can substitute instead of the GPKE method
+    # TODO: See if you can substitute instead of the gpke method
     iscontinuous, isordered, isunordered = _get_type_pos(var_type)
     tdat = np.asarray(tdat)
     edat = np.asarray(edat)
