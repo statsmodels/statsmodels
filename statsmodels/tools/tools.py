@@ -455,12 +455,16 @@ def chain_dot(*arrs):
     """
     return reduce(lambda x, y: np.dot(y, x), arrs[::-1])
 
-def webuse(data, baseurl='http://www.stata-press.com/data/r11/'):
+def webuse(data, baseurl='http://www.stata-press.com/data/r11/', as_df=True):
     """
     Parameters
     ----------
     data : str
         Name of dataset to fetch.
+    baseurl : str
+        The base URL to the stata datasets.
+    as_df : bool
+        If True, returns a `pandas.DataFrame`
 
     Returns
     -------
@@ -477,7 +481,6 @@ def webuse(data, baseurl='http://www.stata-press.com/data/r11/'):
     error checking in response URLs.
     """
     # lazy imports
-    import pandas
     from statsmodels.iolib import genfromdta
     from urllib2 import urlopen
     from urlparse import urljoin
@@ -485,5 +488,10 @@ def webuse(data, baseurl='http://www.stata-press.com/data/r11/'):
 
     url = urljoin(baseurl, data+'.dta')
     dta = urlopen(url)
+    #TODO: this isn't Python 3 compatibile since urlopen returns bytes?
     dta = StringIO(dta.read()) # make it truly file-like
-    return genfromdta(dta)
+    if as_df: # could make this faster if we don't process dta twice?
+        from pandas import DataFrame
+        return DataFrame.from_records(genfromdta(dta))
+    else:
+        return genfromdta(dta)

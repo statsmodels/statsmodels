@@ -58,7 +58,7 @@ from scipy import signal, optimize, linalg
 from statsmodels.base.model import LikelihoodModel
 
 #this has been copied to new arma_mle.py - keep temporarily for easier lookup
-class ARIMA(LikelihoodModel):
+class ARIMAProcess(LikelihoodModel):
     '''currently ARMA only, no differencing used - no I
 
     parameterized as
@@ -68,7 +68,7 @@ class ARIMA(LikelihoodModel):
     be created for different examples
     '''
     def __init__(self, endog, exog=None):
-        super(ARIMA, self).__init__(endog, exog)
+        super(ARIMAProcess, self).__init__(endog, exog)
         if endog.ndim == 1:
             endog = endog[:,None]
         elif endog.ndim > 1 and endog.shape[1] != 1:
@@ -918,7 +918,7 @@ if __name__ == '__main__':
     yar1 = signal.lfilter(ar, ma, eta)
 
     print "\nExample 0"
-    arest = ARIMA(yar1)
+    arest = ARIMAProcess(yar1)
     rhohat, cov_x, infodict, mesg, ier = arest.fit((1,0,1))
     print rhohat
     print cov_x
@@ -927,7 +927,7 @@ if __name__ == '__main__':
     ar = [1.0,  -0.8]
     ma = [1.0,  0.5]
     y1 = arest.generate_sample(ar,ma,1000,0.1)
-    arest = ARIMA(y1)
+    arest = ARIMAProcess(y1)
     rhohat1, cov_x1, infodict, mesg, ier = arest.fit((1,0,1))
     print rhohat1
     print cov_x1
@@ -941,7 +941,7 @@ if __name__ == '__main__':
     ar = [1.0, -0.6, -0.1]
     ma = [1.0,  0.3,  0.2]
     y2 = ARIMA.generate_sample(ar,ma,nsample,0.1)
-    arest2 = ARIMA(y2)
+    arest2 = ARIMAProcess(y2)
     rhohat2, cov_x2, infodict, mesg, ier = arest2.fit((1,0,2))
     print rhohat2
     print cov_x2
@@ -970,7 +970,7 @@ if __name__ == '__main__':
     ar = [1.0]#, -0.8, -0.4]
     ma = [1.0,  0.5,  0.2]
     y3 = ARIMA.generate_sample(ar,ma,nsample,0.01)
-    arest20 = ARIMA(y3)
+    arest20 = ARIMAProcess(y3)
     rhohat3, cov_x3, infodict, mesg, ier = arest20.fit((2,0,0))
     print rhohat3
     print cov_x3
@@ -1002,7 +1002,7 @@ if __name__ == '__main__':
     ar = [1.0, -0.8, 0.4] #-0.8, -0.4]
     ma = [1.0]#,  0.8,  0.4]
     y4 = ARIMA.generate_sample(ar,ma,nsample)
-    arest02 = ARIMA(y4)
+    arest02 = ARIMAProcess(y4)
     rhohat4, cov_x4, infodict, mesg, ier = arest02.fit((2,0,0))
     print rhohat4
     print cov_x4
