@@ -139,7 +139,8 @@ class _ElRegOpts(_ElRegSetup):
     def _ci_limits_beta_origin(self, beta):
         return self.hy_test_beta_origin(beta, self.param_nums,
                              method=self.method,
-                             start_int_params=self.start_eta, only_h0=1) - \
+                             start_int_params=self.start_eta, only_h0=1,
+                             stochastic_exog=self._stochastic_exog) - \
                              self.llr - self.r0
 
 
@@ -543,6 +544,7 @@ class ElOriginRegress(_ElOriginRegresssSetup):
 
     def hy_test_beta_origin(self, value, param_num, method='powell',
                             only_h0=False,
+                            stochastic_exog=1,
                             start_int_params=None):
         """
 
@@ -569,21 +571,26 @@ class ElOriginRegress(_ElOriginRegresssSetup):
 
 
         """
+
         llr_beta0 = self.new_fit.hy_test_beta([0, value], [0, param_num],
-                                              method=method)[1]
+                                              method=method,
+                                         stochastic_exog=stochastic_exog)[1]
 
         if only_h0:  # Used for confidence intervals
             return llr_beta0
         else:
             llr_beta_hat = self.new_fit.hy_test_beta([0,
                                 float(self.params[param_num])],
-                                [0, param_num], method=method)[1]
+                                [0, param_num], method=method,
+                                start_int_params=start_int_params,
+                                stochastic_exog=stochastic_exog)[1]
             llr = llr_beta0 - llr_beta_hat
             pval = 1 - chi2.cdf(llr, 1)
             return pval, llr
 
     def ci_beta_origin(self, param_num, upper_bound,
                        lower_bound, sig=.05, method='powell',
+                       stochastic_exog=1,
                        start_int_params=None):
         """
 
@@ -633,6 +640,7 @@ class ElOriginRegress(_ElOriginRegresssSetup):
         self.method = method
         self.r0 = chi2.ppf(1 - sig, 1)
         self.param_nums = param_num
+        self._stochastic_exog = stochastic_exog
         beta_high = upper_bound
         beta_low = lower_bound
         print 'Finding Lower Limit'
