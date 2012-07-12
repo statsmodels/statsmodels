@@ -139,7 +139,7 @@ class OptFuncts(ElModel):
                               (self._get_j_y(x0.T)[1])
         hess = lambda x0: (self._get_j_y(x0.T)[0]).T * (self._get_j_y(x0.T)[0])
         kwds = {'tol': 1e-10}
-        res = _fit_mle_newton(f, grad, x0, (), kwds, hess=hess, maxiter=20, \
+        res = _fit_mle_newton(f, grad, x0, (), kwds, hess=hess, maxiter=50, \
                               disp=0)
         return res[0].T
 
