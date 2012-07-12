@@ -6,16 +6,18 @@
 # This is a slight deviation from the current approach in statsmodels.
 # nonparametric.kernels where each kernel is a class object
 
-# Having kernel functions rather than classes makes extension to a multivariate
+# Having kernel functions rather than classes
+# makes extension to a multivariate
 # kernel density estimation much easier
 
-# NOTE: As it is, this module does not interact with the existing API
+# NOTE: As it is, this module does not interact
+# with the existing API
 
 import numpy as np
 from scipy.special import erf
 
 
-def _get_shape_and_transform(h, Xi, x = None):
+def _get_shape_and_transform(h, Xi, x=None):
     """
     Returns the transformed arrays and shape parameters
     To be used with the kernel functions in KernelFunctions.py
@@ -23,10 +25,11 @@ def _get_shape_and_transform(h, Xi, x = None):
     x = np.asarray(x)
     h = np.asarray(h, dtype=float)
     Xi = np.asarray(Xi)
-    if Xi.ndim > 1: # More than one variable with more than one observations
+    # More than one variable with more than one observations
+    if Xi.ndim > 1:
         K = np.shape(Xi)[1]
         N = np.shape(Xi)[0]
-    elif Xi.ndim == 1: # One variable with many observations
+    elif Xi.ndim == 1:  # One variable with many observations
         K = 1
         N = np.shape(Xi)[0]
     else:  # ndim ==0 so Xi is a single point (number)
@@ -36,21 +39,24 @@ def _get_shape_and_transform(h, Xi, x = None):
     Xi = Xi.reshape([N, K])
     return h, Xi, x, N, K
 
+
 def AitchisonAitken(h, Xi, x, num_levels=False):
     """
-    Returns the value of the Aitchison and Aitken's (1976) Kernel. Used for
-    unordered discrete random variable
+    Returns the value of the Aitchison and Aitken's (1976)
+    Kernel. Used for unordered discrete random variable
 
     Parameters
     ----------
     h : 1D array of length K
-        The bandwidths used to estimate the value of the kernel function
-    Xi : 2D array with shape (N,K) array 
+        The bandwidths used to estimate the value of the
+        kernel function
+    Xi : 2D array with shape (N,K) array
         The value of the training set
     x: 1D array of length K
         The value at which the kernel density is being estimated
     num_levels: Boolean
-        Gives the user the option to specify the number of levels for the RV
+        Gives the user the option to specify the number of
+        levels for the RV
         If False then the number of levels for the RV are calculated
         from the data
     Returns
@@ -64,7 +70,7 @@ def AitchisonAitken(h, Xi, x, num_levels=False):
     see [2] p.18 for details
 
     The value of the kernel L if
-    
+
     .. math::`X_{i}=x`
 
     is:
@@ -76,15 +82,16 @@ def AitchisonAitken(h, Xi, x, num_levels=False):
     \frac{\lambda}{c-1}
 
     where :math:`c` is the number of levels plus one of the RV
- 
+
     References
     ----------
-    Nonparametric econometrics : theory and practice / Qi Li and Jeffrey Scott Racine.
+    Nonparametric econometrics : theory and practice /
+    Qi Li and Jeffrey Scott Racine.
     """
-    h, Xi, x, N, K = _get_shape_and_transform(h,Xi,x)
+    h, Xi, x, N, K = _get_shape_and_transform(h, Xi, x)
     Xi = np.abs(np.asarray(Xi, dtype=int))
     x = np.abs(np.asarray(x, dtype=int))
-    
+
     if K == 0:
         return Xi
     c = np.asarray([len(np.unique(Xi[:, i])) for i in range(K)],
@@ -99,16 +106,16 @@ def AitchisonAitken(h, Xi, x, num_levels=False):
     return kernel_value
 
 
-def WangRyzin(h, Xi, x):    
+def WangRyzin(h, Xi, x):
     """
     Returns the value of the Wang and van Ryzin's (1981) Kernel. Used for
     ordered discrete random variable
-    
+
     Parameters
     ----------
     h : K dimensional array
         The bandwidths used to estimate the value of the kernel function
-    Xi : K dimensional array 
+    Xi : K dimensional array
         The value of the training set
     x: 1D array of length K
         The value at which the kernel density is being estimated
@@ -120,9 +127,9 @@ def WangRyzin(h, Xi, x):
     Notes
     -----
     See p. 19 in [2]
-    
+
     The value of the kernel L if
-    
+
     .. math::`X_{i}=x`
 
     is:
@@ -131,13 +138,13 @@ def WangRyzin(h, Xi, x):
 
     else:
 
-    \frac{1-\lambda}{2}\lambda^{|X_{i}-x|}        
+    \frac{1-\lambda}{2}\lambda^{|X_{i}-x|}
     References
     ----------
-    Nonparametric econometrics : theory and practice / Qi Li and Jeffrey Scott Racine.
-    
+    Nonparametric econometrics : theory and practice
+    / Qi Li and Jeffrey Scott Racine.
     """
-    h, Xi, x, N, K = _get_shape_and_transform(h,Xi,x)
+    h, Xi, x, N, K = _get_shape_and_transform(h, Xi, x)
     Xi = np.abs(np.asarray(Xi, dtype=int))
     x = np.abs(np.asarray(x, dtype=int))
     if K == 0:
@@ -148,8 +155,9 @@ def WangRyzin(h, Xi, x):
     kernel_value[Xi == x] = inDom[Xi == x]
     return kernel_value
 
+
 def Gaussian(h, Xi, x):
-    h, Xi, x, N, K = _get_shape_and_transform(h,Xi,x)
+    h, Xi, x, N, K = _get_shape_and_transform(h, Xi, x)
     if K == 0:
         return Xi
     z = (Xi - x) / h
@@ -162,7 +170,7 @@ def Gaussian_Convolution(h, Xi, x):
     """
     Calculates the Gaussian Convolution Kernel
     """
-    h, Xi, x, N, K = _get_shape_and_transform(h,Xi,x)
+    h, Xi, x, N, K = _get_shape_and_transform(h, Xi, x)
     if K == 0:
         return Xi
     z = (Xi - x) / h
@@ -172,10 +180,11 @@ def Gaussian_Convolution(h, Xi, x):
 
 
 def WangRyzin_Convolution(h, Xi, Xj):
-    # This is the equivalent of the convolution case with the Gaussian Kernel
+    # This is the equivalent of the convolution case
+    # with the Gaussian Kernel
     # However it is not exactly convolution. Think of a better name
-    # References http://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=4&ved=0CGUQFjAD&url=http%3A%2F%2Feconweb.tamu.edu%2Fli%2FUncond1.pdf&ei=2THUT5i7IIOu8QSvmrXlAw&usg=AFQjCNH4aGzQbKT22sLBbZqHtPOyeFXNIQ
-    h, Xi, x, N, K = _get_shape_and_transform(h,Xi)
+    # References
+    h, Xi, x, N, K = _get_shape_and_transform(h, Xi)
     Xi = np.abs(np.asarray(Xi, dtype=int))
     Xj = np.abs(np.asarray(Xj, dtype=int))
     if K == 0:
@@ -196,13 +205,12 @@ def WangRyzin_Convolution(h, Xi, Xj):
 
 
 def AitchisonAitken_Convolution(h, Xi, Xj):
-    h, Xi, x, N, K = _get_shape_and_transform(h,Xi)
+    h, Xi, x, N, K = _get_shape_and_transform(h, Xi)
     Xi = np.abs(np.asarray(Xi, dtype=int))
     Xj = np.abs(np.asarray(Xj, dtype=int))
     if K == 0:
         return Xi
     Xi = Xi.reshape([N, K])
-#    Xj = Xj.reshape((K, ))
     h = h.reshape((K, ))
     Dom_x = [np.unique(Xi[:, i]) for i in range(K)]
     Ordered = np.empty([N, K])
@@ -210,23 +218,24 @@ def AitchisonAitken_Convolution(h, Xi, Xj):
         Sigma_x = 0
         # TODO: This can be vectorized
         for x in Dom_x[i]:
-            Sigma_x += AitchisonAitken (h[i], Xi[:, i], int(x),
-                                        num_levels=len(Dom_x[i])) * AitchisonAitken(h[i], Xj[i], int(x), num_levels=len(Dom_x[i]))       
+            Sigma_x += AitchisonAitken(h[i], Xi[:, i], int(x),
+                                        num_levels=len(Dom_x[i])) * \
+            AitchisonAitken(h[i], Xj[i], int(x), num_levels=len(Dom_x[i]))
         Ordered[:, i] = Sigma_x[:, 0]
     return Ordered
 
+
 def Gaussian_cdf(h, Xi, x):
-    h, Xi, x, N, K = _get_shape_and_transform(h,Xi,x)
+    h, Xi, x, N, K = _get_shape_and_transform(h, Xi, x)
     if K == 0:
         return Xi
     cdf = 0.5 * h * (1 + erf((x - Xi) / (h * np.sqrt(2))))
     cdf = cdf.reshape([N, K])
     return cdf
-    
+
+
 def AitchisonAitken_cdf(h, Xi, x_u):
     Xi = np.abs(np.asarray(Xi, dtype=int))
-    #x_u = np.abs(np.asarray(x, dtype=int))
-    
     if Xi.ndim > 1:
         K = np.shape(Xi)[1]
         N = np.shape(Xi)[0]
@@ -235,10 +244,10 @@ def AitchisonAitken_cdf(h, Xi, x_u):
         N = np.shape(Xi)[0]
     else:  # ndim ==0 so Xi is a single point (number)
         K = 1
-        N = 1    
+        N = 1
     if K == 0:
         return Xi
-    
+
     h = np.asarray(h, dtype=float)
     Xi = Xi.reshape([N, K])
     Dom_x = [np.unique(Xi[:, i]) for i in range(K)]
@@ -248,8 +257,8 @@ def AitchisonAitken_cdf(h, Xi, x_u):
         # TODO: This can be vectorized
         for x in Dom_x[i]:
             if x <= x_u:
-                Sigma_x += AitchisonAitken (h[i], Xi[:, i], int(x),
-                                            num_levels=len(Dom_x[i])) 
+                Sigma_x += AitchisonAitken(h[i], Xi[:, i], int(x),
+                                            num_levels=len(Dom_x[i]))
         Ordered[:, i] = Sigma_x[:, 0]
     return Ordered
 
@@ -261,6 +270,7 @@ def AitchisonAitken_cdf(h, Xi, x_u):
     kernel_value[Xi == x] = inDom[Xi == x]
     kernel_value = kernel_value.reshape([N, K])
     return kernel_value
+
 
 def WangRyzin_cdf(h, Xi, x_u):
     Xi = np.abs(np.asarray(Xi, dtype=int))
@@ -289,6 +299,7 @@ def WangRyzin_cdf(h, Xi, x_u):
         Ordered[:, i] = Sigma_x[:, 0]
     return Ordered
 
+
 def D_Gaussian(h, Xi, x):
     # The derivative of the Gaussian Kernel
     Xi = np.asarray(Xi)
@@ -302,5 +313,5 @@ def D_Gaussian(h, Xi, x):
     if K == 0:
         return Xi
     z = (Xi - x) / h
-    value = np.exp(-z**2/2.) * (Xi - x) / (np.sqrt(2 * np.pi) * h**2)
+    value = np.exp(-z ** 2 / 2.) * (Xi - x) / (np.sqrt(2 * np.pi) * h ** 2)
     return value
