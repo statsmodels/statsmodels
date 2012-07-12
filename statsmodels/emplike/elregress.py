@@ -417,7 +417,7 @@ class _ElOriginRegresssSetup(ElLinReg):
         return results
 
 
-class ElOriginRegresss(_ElOriginRegresssSetup):
+class ElOriginRegress(_ElOriginRegresssSetup):
     """
 
     Empirical Likelihood inference AND estimation for linear regression
