@@ -228,7 +228,7 @@ class TestFTest2(object):
         R2 = [[0,1,-1,0,0,0,0],[0, 0, 0, 0, 1, -1, 0]]
         cls.Ftest1 = res1.f_test(R2)
         hyp = 'x2 = x3, x5 = x6'
-        cls.NewFtest1 = res1.new_f_test(hyp)
+        cls.NewFtest1 = res1.f_test(hyp)
 
     def test_new_ftest(self):
         assert_equal(self.NewFtest1.fvalue, self.Ftest1.fvalue)
@@ -262,7 +262,7 @@ class TestFtestQ(object):
               [0,0,0,0,1,0,0],
               [0,0,0,0,0,1,0]])
         q = np.array([0,0,0,1,0])
-        cls.Ftest1 = res1.f_test(R,q)
+        cls.Ftest1 = res1.f_test((R,q))
 
     def test_fvalue(self):
         assert_almost_equal(self.Ftest1.fvalue, 70.115557, 5)
@@ -291,7 +291,7 @@ class TestTtest(object):
         R = np.identity(7)
         cls.Ttest = cls.res1.t_test(R)
         hyp = 'x1 = 0, x2 = 0, x3 = 0, x4 = 0, x5 = 0, x6 = 0, const = 0'
-        cls.NewTTest = cls.res1.new_t_test(hyp)
+        cls.NewTTest = cls.res1.t_test(hyp)
 
     def test_new_tvalue(self):
         assert_equal(self.NewTTest.tvalue, self.Ttest.tvalue)

@@ -1044,49 +1044,25 @@ class LikelihoodModelResults(Results):
         else:  #if r_matrix is None and column is None:
             return cov_p
 
-    def new_t_test(self, constraints, cov_p=None, scale=None):
-        """
-        Compute a t-test for joint linear hypotheses.
-
-        Parameters
-        ----------
-        constraints : str, tuple
-            A string can contain an arbitrary number of linear hypothesis
-            tests separated by a comma. If a tuple is given, it should
-            contain arrays (R, q) for the form Rb = q qhere b is the
-            parameter vector. See examples.
-
-        Examples
-        --------
-        This would test the (silly) three joint hypothese given by the
-        `hypotheses` variable.
-
-        >>> from statsmodels.datasets import longley
-        >>> from statsmodels.formula.api import ols
-        >>> dta = longley.load_pandas().data
-        >>> formula = 'TOTEMP ~ GNPDEFL + GNP + UNEMP + ARMED + POP + YEAR'
-        >>> results = ols(formula, dta).fit()
-        >>> hypotheses = '(GNPDEFL = GNP), (UNEMP = 2), (YEAR/1829 = 1)'
-        >>> t_test = results.new_t_test(hypotheses)
-        >>> print t_test
-        """
-        from patsy.constraint import linear_constraint
-        LC = linear_constraint(constraints, self.model.exog_names)
-        return self.t_test(LC.coefs, LC.constants, cov_p, scale)
-
     #TODO: make sure this works as needed for GLMs
     def t_test(self, r_matrix, q_matrix=None, cov_p=None, scale=None):
         """
-        Compute a tcontrast/t-test for a row vector array of the form Rb = q
-
-        where R is r_matrix, b = the parameter vector, and q is q_matrix.
+        Compute a t-test for a joint linear hypothesis of the form Rb = q
 
         Parameters
         ----------
-        r_matrix : array-like
-            A length p row vector specifying the linear restrictions.
+        r_matrix : array-like, str, tuple
+            - array : If an array is given, a p x k 2d array or length k 1d
+              array specifying the linear restrictions.
+            - str : The full hypotheses to test can be given as a string.
+              See the examples.
+            - tuple : A tuple of arrays in the form (R, q), since q_matrix is
+              deprecated.
         q_matrix : array-like or scalar, optional
-            Either a scalar or a length p row vector.
+            This is deprecated. See `r_matrix` and the examples for more
+            information on new usage. Can be either a scalar or a length p
+            row vector. If omitted and r_matrix is an array, `q_matrix` is
+            assumed to be a conformable array of zeros.
         cov_p : array-like, optional
             An alternative estimate for the parameter covariance matrix.
             If None is given, self.normalized_cov_params is used.
@@ -1122,16 +1098,29 @@ class LikelihoodModelResults(Results):
         >>> T_test.p
         0.0015163772380899498
 
+        Alternatively, you can specify the hypothesis tests using a string
+
+        >>> dta = sm.datasets.longley.load_pandas().data
+        >>> formula = 'TOTEMP ~ GNPDEFL + GNP + UNEMP + ARMED + POP + YEAR'
+        >>> results = ols(formula, dta).fit()
+        >>> hypotheses = 'GNPDEFL = GNP, UNEMP = 2, YEAR/1829 = 1'
+        >>> t_test = results.new_t_test(hypotheses)
+        >>> print t_test
+
         See also
         ---------
-        t : method to get simpler t values
-        f_test : for f tests
-
+        tvalues : individual t statistics
+        f_test : for F tests
         """
-        from warnings import warn
-        warn("Use new_t_test instead. The behavior of this function will be "
-             "changed to that of new_t_test in 0.6.0", FutureWarning)
-        r_matrix = np.atleast_2d(np.asarray(r_matrix))
+        from patsy import DesignInfo
+        if q_matrix is not None:
+            from warnings import warn
+            warn("The `q_matrix` keyword is deprecated and will be removed "
+                 "in 0.6.0. See the documentation for the new API",
+                 FutureWarning)
+            r_matrix = (r_matrix, q_matrix)
+        LC = DesignInfo(self.model.exog_names).linear_constraint(r_matrix)
+        r_matrix, q_matrix = LC.coefs, LC.constants
         num_ttests = r_matrix.shape[0]
         num_params = r_matrix.shape[1]
 
@@ -1162,64 +1151,34 @@ class LikelihoodModelResults(Results):
         return ContrastResults(effect=_effect, t=_t, sd=_sd,
                                df_denom=self.model.df_resid)
 
-    def new_f_test(self, constraints, cov_p=None, scale=1., invcov=None):
-        """
-        Compute an F-test for join linear-hypotheses.
-        Parameters
-        ----------
-        constraints : str, tuple
-            A string can contain an arbitrary number of linear hypothesis
-            tests separated by a comma. If a tuple is given, it should
-            contain arrays (R, q) for the form Rb = q qhere b is the
-            parameter vector. See examples.
-
-        Examples
-        --------
-        This would test the (silly) three joint hypothese given by the
-        `hypotheses` variable.
-
-        >>> from statsmodels.datasets import longley
-        >>> from statsmodels.formula.api import ols
-        >>> dta = longley.load_pandas().data
-        >>> formula = 'TOTEMP ~ GNPDEFL + GNP + UNEMP + ARMED + POP + YEAR'
-        >>> results = ols(formula, dta).fit()
-        >>> hypotheses = '(GNPDEFL = GNP), (UNEMP = 2), (YEAR/1829 = 1)'
-        >>> f_test = results.new_f_test(hypotheses)
-        >>> print f_test
-        """
-        from patsy.constraint import linear_constraint
-        LC = linear_constraint(constraints, self.model.exog_names)
-        return self.f_test(LC.coefs, LC.constants, cov_p, scale, invcov)
-
     #TODO: untested for GLMs?
     def f_test(self, r_matrix, q_matrix=None, cov_p=None, scale=1.0,
                invcov=None):
         """
-        Compute an Fcontrast/F-test for a contrast matrix.
-
-        Here, matrix `r_matrix` is assumed to be non-singular. More precisely,
-
-        r_matrix (pX pX.T) r_matrix.T
-
-        is assumed invertible. Here, pX is the generalized inverse of the
-        design matrix of the model. There can be problems in non-OLS models
-        where the rank of the covariance of the noise is not full.
+        Compute an F-test for a joint linear hypothesis.
 
         Parameters
         ----------
-        r_matrix : array-like
-            q x p array where q is the number of restrictions to test and
-            p is the number of regressors in the full model fit.
-            If q is 1 then f_test(r_matrix).fvalue is equivalent to
-            the square of t_test(r_matrix).t
+        r_matrix : array-like, str, or tuple
+            - array : An r x k array where r is the number of restrictions to
+              test and k is the number of regressors.
+            - str : The full hypotheses to test can be given as a string.
+              See the examples.
+            - tuple : A tuple of arrays in the form (R, q), since q_matrix is
+              deprecated.
         q_matrix : array-like
-            q x 1 array, that represents the sum of each linear restriction.
-            Default is all zeros for each restriction.
+            This is deprecated. See `r_matrix` and the examples for more
+            information on new usage. Can be either a scalar or a length p
+            row vector. If omitted and r_matrix is an array, `q_matrix` is
+            assumed to be a conformable array of zeros.
+        cov_p : array-like, optional
+            An alternative estimate for the parameter covariance matrix.
+            If None is given, self.normalized_cov_params is used.
         scale : float, optional
             Default is 1.0 for no scaling.
         invcov : array-like, optional
-            A qxq matrix to specify an inverse covariance
-            matrix based on a restrictions matrix.
+            A q x q array to specify an inverse covariance matrix based on a
+            restrictions matrix.
 
         Examples
         --------
@@ -1255,17 +1214,41 @@ class LikelihoodModelResults(Results):
         <F contrast: F=9.740461873303655, p=0.00560528853174, df_denom=9,
          df_num=2>
 
+        Alternatively, you can specify the hypothesis tests using a string
+
+        >>> from statsmodels.datasets import longley
+        >>> from statsmodels.formula.api import ols
+        >>> dta = longley.load_pandas().data
+        >>> formula = 'TOTEMP ~ GNPDEFL + GNP + UNEMP + ARMED + POP + YEAR'
+        >>> results = ols(formula, dta).fit()
+        >>> hypotheses = '(GNPDEFL = GNP), (UNEMP = 2), (YEAR/1829 = 1)'
+        >>> f_test = results.new_f_test(hypotheses)
+        >>> print f_test
+
         See also
         --------
         statsmodels.contrasts
         statsmodels.model.t_test
 
+        Notes
+        -----
+        The matrix `r_matrix` is assumed to be non-singular. More precisely,
+
+        r_matrix (pX pX.T) r_matrix.T
+
+        is assumed invertible. Here, pX is the generalized inverse of the
+        design matrix of the model. There can be problems in non-OLS models
+        where the rank of the covariance of the noise is not full.
         """
-        from warnings import warn
-        warn("Use new_t_test instead. The behavior of this function will be "
-             "changed to that of new_t_test in 0.6.0", FutureWarning)
-        r_matrix = np.asarray(r_matrix)
-        r_matrix = np.atleast_2d(r_matrix)
+        from patsy import DesignInfo
+        if q_matrix is not None:
+            from warnings import warn
+            warn("The `q_matrix` keyword is deprecated and will be removed "
+                 "in 0.6.0. See the documentation for the new API",
+                 FutureWarning)
+            r_matrix = (r_matrix, q_matrix)
+        LC = DesignInfo(self.model.exog_names).linear_constraint(r_matrix)
+        r_matrix, q_matrix = LC.coefs, LC.constants
 
         if (self.normalized_cov_params is None and cov_p is None and
             invcov is None):
