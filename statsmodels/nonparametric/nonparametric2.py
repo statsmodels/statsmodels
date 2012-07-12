@@ -13,7 +13,10 @@ References
     and Continuous Data." Working Paper. (2000)
 [4] Racine, J. Li, Q. "Kernel Estimation of Multivariate Conditional Distributions
     Annals of Economics and Finance 5, 211-235 (2004)
-
+[5] Liu, R., Yang, L. "Kernel estimation of multivariate
+    cumulative distribution function." Journal of Nonparametric Statistics (2008)
+[6] Li, R., Ju, G. "Nonparametric Estimation of Multivariate CDF with Categorical
+    and Continuous Data." Working Paper. 
 """
 
 import numpy as np
@@ -23,7 +26,7 @@ import scipy.optimize as opt
 import KernelFunctions as kf
 
 
-__all__ = ['UKDE', 'CKDE']
+__all__ = ['UKDE', 'CKDE', 'Reg']
 
 
 class Generic_KDE ():
@@ -208,6 +211,15 @@ class UKDE(Generic_KDE):
         assert self.N > self.K  # Num of obs must be > than num of vars
         self.bw = self.compute_bw(bw)
 
+    def __repr__(self):
+        """Provide something sane to print."""
+        repr = "UKDE instance\n"
+        repr += "Number of variables: K = " + str(self.K) + "\n"
+        repr += "Number of samples:   N = " + str(self.N) + "\n"
+        repr += "Variable types:      " + self.var_type + "\n"
+        repr += "BW selection method: " + self._bw_method + "\n"
+        return repr
+
     def loo_likelihood(self, bw, func=lambda x: x):
         """
         Returns the leave-one-out likelihood function
@@ -242,7 +254,7 @@ class UKDE(Generic_KDE):
             L += func(f_i)
         return -L
 
-    def pdf(self, edat=None, issorted=False):
+    def pdf(self, edat=None):
         """
         Probability density function at edat
 
@@ -251,8 +263,6 @@ class UKDE(Generic_KDE):
         edat: array-like
             Evaluation data.
             If unspecified, the training data is used
-        issorted: Boolean
-            User specifies whether to return a sorted array of the pdf
 
         Returns
         -----------
@@ -272,14 +282,46 @@ class UKDE(Generic_KDE):
         
         pdf_est = tools.GPKE(self.bw, tdat=self.tdat, edat=edat,
                           var_type=self.var_type) / self.N
-        pdf_est = np.squeeze(pdf_est)
-##        if issorted:
-##            ix = np.argsort(np.squeeze(edat))
-##            pdf_est = pdf_est[ix]
-##            return pdf_est, ix
-        
+        pdf_est = np.squeeze(pdf_est)        
         return pdf_est
 
+    def cdf(self, edat=None):
+        """
+        Cumulative distribution function
+
+        Parameters
+        ----------
+        edat: array_like
+            The evaluation points at which the cdf is estimated
+            If not specified the default value is the training
+            data tdat
+        Returns
+        -------
+        cdf_est: array_like
+            The estimate of the cdf
+
+        Notes
+        -----
+        See http://en.wikipedia.org/wiki/Cumulative_distribution_function
+        For more details on the estimation see [5]
+
+        The multivariate CDF for mixed data (continuous and ordered/unordered discrete) is
+        estimated by:
+
+        ..math:: F(x^{c},x^{d})=n^{-1}\sum_{i=1}^{n}\left[G(\frac{x^{c}-X_{i}}{h})\sum_{u\leq x^{d}}L(X_{i}^{d},x_{i}^{d},\lambda)\right]
+
+        where G() is the product kernel CDF estimator for the continuous
+        variables and L() is for the discrete
+        """
+        if edat is None:
+            edat = self.tdat
+        
+        cdf_est = tools.GPKE(self.bw, tdat=self.tdat, edat=edat,var_type=self.var_type,
+                             ckertype = "gaussian_cdf", ukertype="aitchisonaitken_cdf",
+                             okertype='wangryzin_cdf') / self.N
+        cdf_est = np.squeeze(cdf_est)
+
+        return cdf_est
 
     def IMSE(self, bw):
         """
@@ -316,58 +358,6 @@ class UKDE(Generic_KDE):
         # there is a + because loo_likelihood returns the negative
         return (F / (self.N ** 2) + self.loo_likelihood(bw) * 2 / ((self.N) * (self.N - 1)))
 
-    def cdf2(self, val):
-        """
-        Returns the cumulative distribution function evaluated at val
-
-        Currently only works with up to three continuous variables
-
-        Parameters
-        ----------
-        val: list of floats
-            The values at which the cdf is estimated
-            
-        Returns
-        -------
-        cdf: array
-            The estimate of the the cdf evaluated at the values specified in val
-            
-        """
-        # TODO: 1)Include option to fix certain variables
-        #       2)Handle ordered variables
-        #       3)Handle more than 3 continuous (with warning for speed)
-        #       4)Hande unordered variables by fixing
-
-
-        if self.K == 1:
-            func = tools.IntegrateSingle
-            n_edat = np.size(val)
-        elif self.K == 2:
-            func = tools.IntegrateDbl
-        elif self.K == 3:
-            func = tools.IntegrateTrpl
-        return func(val, self.pdf)
-    def cdf(self, edat=None):
-        
-        if edat is None:
-            edat = self.tdat
-        
-        cdf_est = tools.GPKE(self.bw, tdat=self.tdat, edat=edat,var_type=self.var_type,
-                             ckertype = "gaussian_cdf", ukertype="aitchisonaitken_cdf",
-                             okertype='wangryzin_cdf') / self.N
-        cdf_est = np.squeeze(cdf_est)
-
-        return cdf_est
-        
-
-    def __repr__(self):
-        """Provide something sane to print."""
-        repr = "UKDE instance\n"
-        repr += "Number of variables: K = " + str(self.K) + "\n"
-        repr += "Number of samples:   N = " + str(self.N) + "\n"
-        repr += "Variable types:      " + self.var_type + "\n"
-        repr += "BW selection method: " + self._bw_method + "\n"
-        return repr
 
 class CKDE(Generic_KDE):
     """
@@ -433,6 +423,19 @@ class CKDE(Generic_KDE):
         assert len(self.dep_type) == self.K_dep
         assert len(self.indep_type) == self.K_indep
         self.bw = self.compute_bw(bw)
+
+    def __repr__(self):
+        """Provide something sane to print."""
+        repr = "CKDE instance\n"
+        repr += "Number of independent variables: K_indep = " + \
+                str(self.K_indep) + "\n"
+        repr += "Number of dependent variables: K_dep = " + \
+                str(self.K_dep) + "\n"
+        repr += "Number of obs:ervation   N = " + str(self.N) + "\n"
+        repr += "Independent variable types:      " + self.indep_type + "\n"
+        repr += "Dependent variable types:      " + self.dep_type + "\n"
+        repr += "BW selection method: " + self._bw_method + "\n"
+        return repr
 
     def loo_likelihood(self, bw, func=lambda x: x):
         """
@@ -509,10 +512,39 @@ class CKDE(Generic_KDE):
                          edat=exdat, var_type=self.indep_type)
         return (f_yx / f_x)
     def cdf(self, eydat=None, exdat=None):
-        # First attempt at conditional cdf
-        # TODO. Docstrings + clean up + fix so that only one GPKE
-        # References Racine/Li chapter 6
+        """
+        Cumulative distribution function for
+        the conditional density
+
+        Parameters
+        ----------
+        eydat: array_like
+            The evaluation dependent variables at which the cdf is estimated
+            If not specified the default value is the training dependent
+            variables
+        exdat: array_like
+            The evaluation independent variables at which the cdf is estimated
+            If not specified the default value is the training independent
+            variables
         
+        Returns
+        -------
+        cdf_est: array_like
+            The estimate of the cdf
+
+        Notes
+        -----
+        See http://en.wikipedia.org/wiki/Cumulative_distribution_function
+        For more details on the estimation see [5] and p.181 in [1]
+
+        The multivariate conditional CDF for mixed data
+        (continuous and ordered/unordered discrete) is estimated by:
+
+        ..math:: F(y|x)=\frac{n^{-1}\sum_{i=1}^{n}G(\frac{y-Y_{i}}{h_{0}})W_{h}(X_{i},x)}{\widehat{\mu}(x)}
+ 
+        where G() is the product kernel CDF estimator for the dependent (y) variable
+        and W() is the product kernel CDF estimator for the independent variable(s)
+        """        
         if eydat is None:
             eydat = self.tydat
         if exdat is None:
@@ -528,9 +560,8 @@ class CKDE(Generic_KDE):
         W_x = tools.GPKE(self.bw[self.K_dep::], tdat=self.txdat,
                          edat=exdat, var_type=self.indep_type, tosum=False)
         S = np.sum(G_y * W_x, axis=0)
-        
-        return S / (self.N * mu_x)
-        
+        cdf_est = S / (self.N * mu_x)
+        return cdf_est
 
     def IMSE(self, bw):
         """
@@ -600,6 +631,40 @@ class CKDE(Generic_KDE):
         return CV / float(self.N)
 
 class Reg (object):
+    """
+    Nonparametric Regression
+
+    Calculates the condtional mean E[y|X] where y = g(X) + e
+
+    Parameters
+    ----------
+    tydat: list with one element which is array_like
+        This is the dependent variable. 
+    txdat: list
+        The training data for the independent variable(s)
+        Each element in the list is a separate variable
+    dep_type: str
+        The type of the dependent variable(s)
+        c: Continuous
+        u: Unordered (Discrete)
+        o: Ordered (Discrete)
+    bw: array-like
+        Either a user-specified bandwidth or
+        the method for bandwidth selection.
+        cv_lc: cross-validaton least squares for
+                the local constant estimator
+    Attributes
+    ---------
+    bw: array-like
+        The bandwidth parameters
+
+    Methods
+    -------
+    R2(): Calculates the R-Squared for the model
+    Cond_Mean(): Calculates the conditiona mean
+
+    """
+
     def __init__(self, tydat, txdat, var_type, bw):
 
         self.tydat = np.column_stack(tydat)
@@ -612,6 +677,33 @@ class Reg (object):
         self.bw = self.compute_bw(bw)
         
     def Cond_Mean(self, edat=None):
+        """
+        The conditional mean for the nonparametric regression
+
+        Calculates E[y|X] = g(X) where g(X) is the kernel estimate of
+        the probability density of X
+
+        Parameters
+        ----------
+        edat: array_like
+            The evaluation data. Defaults to the training data txdat
+
+        Returns
+        -------
+        G: array_like
+            The conditional mean evaluated at edat
+
+        Notes
+        -----
+        For more details see p.33 in [2]
+        
+        Returns the conditional mean estimate E[y|X] 
+
+        .. math:: g(X)=\int y\frac{f(y,x)}{f(x)}dy=\frac{\sum_{i=1}^{n}Y_{i}K(\frac{X_{i}-x}{h_{x}})}{\sum_{i=1}^{n}K(\frac{X_{i}-x}{h_{x}})}
+
+        where K() is the generalized product kernel estimator
+        """
+        
         if edat is None:
             edat = self.txdat
         # The numerator in the formula is:
@@ -624,6 +716,34 @@ class Reg (object):
         return G
     
     def CV_LC(self, bw):
+        """
+        Returns the cross-validation least-squares
+        function for the localc constant estimator
+
+        Parameters
+        ----------
+        bw: array_like
+            The values for the bandwidth for each variable
+
+        Returns
+        -------
+        L: float
+            The value of the function at bw
+
+        Notes
+        -----
+        Calculates the cross-validation least-squares
+        function. This function is minimized by compute_bw
+        to calculate the optimal value of bw
+
+        For details see p.35 in [2]
+
+        ..math:: CV(h)=n^{-1}\sum_{i=1}^{n}(Y_{i}-g_{-i}(X_{i}))^{2}
+
+        where :math:`g_{-i}(X_{i})` is the leave-one-out estimator of g(X)
+        and :math:`h` is the vector of bandwidths
+
+        """
         # The bandwidth method for the local constant estimator
         # TODO: Include the Local Linear Estimator
         LOO_X = tools.LeaveOneOut(self.txdat)
@@ -647,6 +767,9 @@ class Reg (object):
         pass
     
     def compute_bw(self,bw):
+        """
+        Returns the bandwidth for the model
+        """
         if not isinstance(bw, basestring):
             # The user provided an actual bandwidth estimate
             # TODO: would be good if the user could provide a function here
@@ -662,8 +785,20 @@ class Reg (object):
             res = bwfunc
         return opt.fmin(res, x0=h0, maxiter=1e3,
                       maxfun=1e3, disp=0)
-       
+
     def R2(self):
+        """
+        Returns the R-Squared for the nonparametric regression
+
+        Notes
+        -----
+        For more details see p.45 in [2]
+        The R-Squared is calculated by:
+        .. math:: R^{2}=\frac{\left[\sum_{i=1}^{n}(Y_{i}-\bar{y})(\hat{Y_{i}}-\bar{y}\right]^{2}}{\sum_{i=1}^{n}(Y_{i}-\bar{y})^{2}\sum_{i=1}^{n}(\hat{Y_{i}}-\bar{y})^{2}}
+
+        where :math:`\hat{Y_{i}}` are the fitted values calculated in self.Cond_Mean()
+
+        """
         # The R-Squared
         # References [2] chapter 4 p.45
         
