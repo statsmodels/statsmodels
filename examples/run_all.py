@@ -13,10 +13,9 @@ stop_on_error = True
 
 filelist = ['example_glsar.py', 'example_wls.py', 'example_gls.py',
             'example_glm.py', 'example_ols_tftest.py', #'example_rpy.py',
-            'example_ols.py', 'example_ols_minimal.py', 'example_rlm.py',
+            'example_ols.py', 'example_rlm.py',
             'example_discrete.py', 'example_predict.py',
             'example_ols_table.py',
-            'tut_ols.py', 'tut_ols_rlm.py', 'tut_ols_wls.py',
             # time series
             'tsa/ex_arma2.py','tsa/ex_dates.py']
 
