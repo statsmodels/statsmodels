@@ -1405,7 +1405,6 @@ class DescStat(OptFuncts):
         else:
             var2_lb = (self.endog[:, 1].var() * (self.nobs - 1)) / \
               chi2.ppf(.975, self.nobs)
-            print var2_lb
         if var2_max is not None:
             var2_ub = var2_max
         else:
