@@ -529,7 +529,7 @@ class CKDE(GenericKDE):
         else:
             exdat = tools.adjust_shape(exdat, self.K_indep)
 
-        edat = np.concatenate((eydat,exdat),axis=1)
+        edat = np.concatenate((eydat, exdat), axis=1)
         f_yx = tools.gpke(self.bw, tdat=self.all_vars, edat=edat,
                           var_type=(self.dep_type + self.indep_type))
         f_x = tools.gpke(self.bw[self.K_dep::], tdat=self.txdat,
@@ -576,7 +576,7 @@ class CKDE(GenericKDE):
         if eydat is None:
             eydat = self.tydat
         else:
-            eydat = tools.adjust_shape(eydat, self.K_dep)  
+            eydat = tools.adjust_shape(eydat, self.K_dep)
         if exdat is None:
             exdat = self.txdat
         else:
@@ -724,6 +724,16 @@ class Reg(object):
         self.bw_func = dict(cv_ls=self.cv_loo, aic=self.aic_hurvich)
         self.est = dict(lc=self.g_lc, ll=self.g_ll)
         self.bw = self.compute_bw(bw)
+
+    def __repr__(self):
+        """Provide something sane to print."""
+        repr = "Reg instance\n"
+        repr += "Number of variables: K = " + str(self.K) + "\n"
+        repr += "Number of samples:   N = " + str(self.N) + "\n"
+        repr += "Variable types:      " + self.var_type + "\n"
+        repr += "BW selection method: " + self._bw_method + "\n"
+        repr += "Estimator type: " + self.reg_type + "\n"
+        return repr
 
     def g_ll(self, bw, tydat, txdat, edat):
         """

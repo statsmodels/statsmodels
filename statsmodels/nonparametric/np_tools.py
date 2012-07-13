@@ -57,7 +57,7 @@ def _get_type_pos(var_type):
     return iscontinuous, isordered, isunordered
 
 
-def adjust_shape(dat,K):
+def adjust_shape(dat, K):
     """
     Returns NxK array so that it can be used
     with gpke()
@@ -124,7 +124,6 @@ def gpke(bw, tdat, edat, var_type, ckertype='gaussian',
     edat = adjust_shape(edat, K)
     N = np.shape(tdat)[0]
     N_edat = np.shape(edat)[0]
-    
     # must remain 1-D for indexing to work
     bw = np.reshape(np.asarray(bw), (K,))
     dens = np.empty([N, N_edat])
