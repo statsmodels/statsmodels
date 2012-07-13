@@ -761,8 +761,8 @@ class Results(object):
         """
         if transform and hasattr(self.model, 'formula') and exog is not None:
             from patsy import dmatrix
-            exog = dmatrix(self.model._data._orig_exog.design_info.describe(),
-                    exog, eval_env=1)
+            exog = dmatrix(self.model._data._orig_exog.design_info.builder,
+                    exog)
         return self.model.predict(self.params, exog, *args, **kwargs)
 
 #TODO: public method?
