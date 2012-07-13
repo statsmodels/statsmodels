@@ -20,7 +20,7 @@ class GenRes(object):
 
 class Test_DescriptiveStatistics(GenRes):
     def __init__(self):
-        super(Test_DescriptiveStatistics, self).__init__()
+        super(TestDescriptiveStatistics, self).__init__()
 
     def test_hy_test_mean(self):
         assert_almost_equal(self.res1.hy_test_mean(14),
@@ -96,6 +96,10 @@ class Test_DescriptiveStatistics(GenRes):
         ll_pval = self.res1.hy_test_kurt(lower_lim)[0]
         assert_almost_equal(ul_pval, .050000, 4)
         assert_almost_equal(ll_pval, .050000, 4)
+
+    def test_joint_skew_kurt(self):
+        assert_almost_equal(self.res1.hy_test_joint_skew_kurt(0, 0),
+                            self.res2.hy_test_joint_skew_kurt, 4)
 
     def test_hy_test_corr(self):
         assert_almost_equal(self.mvres1.hy_test_corr(.5),
