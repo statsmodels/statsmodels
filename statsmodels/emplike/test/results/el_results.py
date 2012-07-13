@@ -281,3 +281,4 @@ class DescStatRes(object):
                                               [0.019823],
                                               [0.02005],
                                               [0.019497]])
+        self.hy_test_joint_skew_kurt = (.012563, 8.753952)
