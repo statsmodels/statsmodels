@@ -24,7 +24,6 @@ from statsmodels.base.model import _fit_mle_newton
 import itertools
 
 
-
 class ElModel(object):
     """
 
@@ -347,6 +346,44 @@ class OptFuncts(ElModel):
         self.est_vect = np.concatenate((mu_data, sig_data, kurt_data), \
                                        axis=1)
         eta_star = self._modif_newton(np.array([1 / self.nobs,
+                                               1 / self.nobs,
+                                               1 / self.nobs]))
+        denom = 1 + np.dot(eta_star, self.est_vect.T)
+        self.new_weights = 1 / self.nobs * 1 / denom
+        llr = np.sum(np.log(self.nobs * self.new_weights))
+        return -2 * llr
+
+    def _opt_skew_kurt(self, nuis_params):
+        """
+
+        Called by hy_test_joint_skew_kurt.  This function is optimized over
+        nuisance parameters mu and sigma
+
+        Parameters
+        -----------
+
+        nuis_params: 1x2 array
+            A nuisance mean and variance parameter
+
+        Returns
+        ------
+
+        llr: float
+            The log likelihood ratio of a pre-speified skewness and
+            kurtosis holding the nuisance parameters constant.
+
+
+        """
+        mu_data = self.endog - nuis_params[0]
+        sig_data = ((self.endog - nuis_params[0]) ** 2) - nuis_params[1]
+        skew_data = ((((self.endog - nuis_params[0]) ** 3) / \
+                    (nuis_params[1] ** 1.5))) - self.skew0
+        kurt_data = (((((self.endog - nuis_params[0]) ** 4) / \
+                    (nuis_params[1] ** 2))) - 3) - self.kurt0
+        self.est_vect = np.concatenate((mu_data, sig_data, skew_data,\
+                                        kurt_data), axis=1)
+        eta_star = self._modif_newton(np.array([1 / self.nobs,
+                                               1 / self.nobs,
                                                1 / self.nobs,
                                                1 / self.nobs]))
         denom = 1 + np.dot(eta_star, self.est_vect.T)
@@ -1109,6 +1146,82 @@ class DescStat(OptFuncts):
                                      bounds=[(mu_lb, mu_ub),
                                               (var_lb, var_ub)])[1]
         p_val = 1 - chi2.cdf(llr, 1)
+        if print_weights:
+            return p_val, llr, self.new_weights.T
+        return p_val, llr
+
+    def hy_test_joint_skew_kurt(self, skew0, kurt0, nuis0=None, mu_min=None,
+                     mu_max=None, var_min=None, var_max=None,
+                     print_weights=False):
+        """
+
+        Returns the p_value and -2 ``*`` log_likelihood for the joint
+        hypothesesis test for skewness and kurtosis
+
+        Parameters
+        ----------
+        skew0: float
+            skewness value to be tested
+        kurt0: float
+            kurtosis value to be tested
+
+        Optional
+        --------
+
+        mu_min, mu_max, var_min, var_max: float
+            Minimum and maximum values
+            of the nuisance parameters to be optimized over.  If None,
+            the function computes the 95% confidence interval for
+            the mean and variance and uses the resulting values.
+
+        print_weights: bool
+            If True, function also returns the weights that
+            maximize the likelihood ratio. Default = False.
+
+        Returns
+        --------
+
+        test_results: tuple
+            The p_value and log-likelihood ratio of the joint hypothesis test.
+
+
+        """
+
+        self.kurt0 = kurt0
+        self.skew0 = skew0
+        if nuis0 is not None:
+            start_nuisance = nuis0
+        else:
+            start_nuisance = np.array([self.endog.mean(),
+                                       self.endog.var()])
+        if mu_min is not None:
+            mu_lb = mu_min
+        else:
+            mu_lb = self.ci_mean()[0]
+
+        if mu_max is not None:
+            mu_ub = mu_max
+        else:
+            mu_ub = self.ci_mean()[1]
+
+        if var_min is None or var_max is None:
+            var_ci = self.ci_var()
+
+        if var_min is not None:
+            var_lb = var_min
+        else:
+            var_lb = var_ci[0]
+
+        if var_max is not None:
+            var_ub = var_max
+        else:
+            var_ub = var_ci[1]
+
+        llr = optimize.fmin_l_bfgs_b(self._opt_skew_kurt, start_nuisance,
+                                     approx_grad=1,
+                                     bounds=[(mu_lb, mu_ub),
+                                              (var_lb, var_ub)])[1]
+        p_val = 1 - chi2.cdf(llr, 2)
         if print_weights:
             return p_val, llr, self.new_weights.T
         return p_val, llr
