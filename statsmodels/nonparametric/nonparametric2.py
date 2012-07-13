@@ -280,6 +280,8 @@ class UKDE(GenericKDE):
         """
         if edat is None:
             edat = self.tdat
+        else:
+            edat = tools.adjust_shape(edat, self.K)
         pdf_est = tools.gpke(self.bw, tdat=self.tdat, edat=edat,
                           var_type=self.var_type) / self.N
         pdf_est = np.squeeze(pdf_est)
@@ -317,6 +319,8 @@ class UKDE(GenericKDE):
         """
         if edat is None:
             edat = self.tdat
+        else:
+            edat = tools.adjust_shape(edat, self.K)
         cdf_est = tools.gpke(self.bw, tdat=self.tdat,
                              edat=edat, var_type=self.var_type,
                              ckertype="gaussian_cdf",
@@ -517,11 +521,16 @@ class CKDE(GenericKDE):
         """
 
         if eydat is None:
-            eydat = self.all_vars
+            eydat = self.tydat
+        else:
+            eydat = tools.adjust_shape(eydat, self.K_dep)
         if exdat is None:
             exdat = self.txdat
+        else:
+            exdat = tools.adjust_shape(exdat, self.K_indep)
 
-        f_yx = tools.gpke(self.bw, tdat=self.all_vars, edat=eydat,
+        edat = np.concatenate((eydat,exdat),axis=1)
+        f_yx = tools.gpke(self.bw, tdat=self.all_vars, edat=edat,
                           var_type=(self.dep_type + self.indep_type))
         f_x = tools.gpke(self.bw[self.K_dep::], tdat=self.txdat,
                          edat=exdat, var_type=self.indep_type)
@@ -566,8 +575,12 @@ class CKDE(GenericKDE):
         """
         if eydat is None:
             eydat = self.tydat
+        else:
+            eydat = tools.adjust_shape(eydat, self.K_dep)  
         if exdat is None:
             exdat = self.txdat
+        else:
+            exdat = tools.adjust_shape(exdat, self.K_indep)
         mu_x = tools.gpke(self.bw[self.K_dep::], tdat=self.txdat,
                          edat=exdat, var_type=self.indep_type) / self.N
         mu_x = np.squeeze(mu_x)
@@ -739,17 +752,8 @@ class Reg(object):
         See p. 81 in [1] and p.38 in [2] for the formulas
         Unlike other methods, this one requires that edat be 1D
         """
-        edat = np.asarray(edat)
-        if edat.ndim == 1 and self.K > 1:  # one obs many vars
-            N_edat = 1
-        elif edat.ndim == 1 and self.K == 1:  # one obs one var
-            N_edat = np.size(edat)
-        else:
-            if np.shape(edat)[0] == self.K:
-                N_edat = np.shape(edat)[1]
-            else:
-                N_edat = np.shape(edat)[0]  # ndim >1 so many obs many vars
-        edat = np.reshape(edat, (N_edat, self.K))
+        edat = tools.adjust_shape(edat, self.K)
+        N_edat = np.shape(edat)[0]
         D_x = []
         B_x = []
         for i in range(N_edat):
