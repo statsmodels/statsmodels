@@ -1583,6 +1583,13 @@ def test_arima_wrapper():
                                     'ma.L1.D.cpi'])
     assert_equal(res.model.endog_names, 'D.cpi')
 
+def test_1dexog():
+    # smoke test, this will raise an error if broken
+    from statsmodels.datasets.macrodata import load_pandas
+    dta = load_pandas().data
+    endog = dta['realcons'].values
+    exog = dta['m1'].values.squeeze()
+    mod = ARMA(endog, (1,1), exog).fit(disp=-1)
 
 if __name__ == "__main__":
     import nose

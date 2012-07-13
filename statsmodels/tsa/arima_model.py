@@ -219,6 +219,7 @@ class ARMA(tsbase.TimeSeriesModel):
 
     def __init__(self, endog, order=None, exog=None, dates=None, freq=None):
         super(ARMA, self).__init__(endog, exog, dates, freq)
+        exog = self._data.exog # get it after it's gone through processing
         if order is None:
             import warnings
             warnings.warn("In the next release order will not be optional "
@@ -228,6 +229,8 @@ class ARMA(tsbase.TimeSeriesModel):
             self.k_ma = k_ma = order[1]
             self.k_lags = k_lags = max(k_ar,k_ma+1)
         if exog is not None:
+            if exog.ndim == 1:
+                exog = exog[:,None]
             k_exog = exog.shape[1]  # number of exog. variables excl. const
         else:
             k_exog = 0
