@@ -10,7 +10,7 @@ from numpy.testing import assert_almost_equal, assert_
 
 class Myfunc(NonlinearLS):
 
-    def _predict(self, params, exog=None):
+    def expr(self, params, exog=None):
         if exog is None:
             x = self.exog
         else:
@@ -21,7 +21,7 @@ class Myfunc(NonlinearLS):
 
 class Myfunc0(NonlinearLS):
 
-    def _predict(self, params, exog=None):
+    def expr(self, params, exog=None):
         if exog is None:
             x = self.exog
         else:
@@ -32,7 +32,7 @@ class Myfunc0(NonlinearLS):
 
 class Myfunc3(NonlinearLS):
 
-    def _predict(self, params, exog=None):
+    def expr(self, params, exog=None):
         if exog is None:
             x = self.exog
         else:
@@ -41,6 +41,31 @@ class Myfunc3(NonlinearLS):
         a, b, c = params
         return a + b*x0 + c*x1
 
+class Myfunc4(NonlinearLS):
+
+    def expr(self, params, exog=None):
+        if exog is None:
+            x = self.exog
+        else:
+            x = exog
+
+        x0, x1 = x[:,0], x[:,1]
+        a, b, c = params
+        return a + b*x0 + c*x1
+
+    def jacobian(self,params, exog=None):
+        if exog is None:
+            x = self.exog
+        else:
+            x = exog
+
+        x0, x1 = x[:,0], x[:,1]
+        a, b, c = params
+        a1 = np.ones(len(x0),)
+        b1 = x0
+        c1 = x1
+        jacob = np.column_stack((a1,b1,c1))
+        return jacob
 
 class TestNonlinearLS(object):
     #summary method has problems
@@ -89,6 +114,7 @@ class TestNonlinearLS(object):
                                 getattr(res2.model, att)(res2.params),
                                 decimal=6)
 
+
         #print 'testing f_test'
         rmat = np.ones(len(res.params))
         assert_almost_equal(res.f_test(rmat).fvalue, res.f_test(rmat).fvalue,
@@ -131,7 +157,7 @@ class TestNonlinearLS0(TestNonlinearLS):
         sigma = np.array([1,  2, 1,  2, 1.])
 
         mod = Myfunc0(y, x, sigma=sigma**2)
-        self.res = mod.fit(start_value=([0.042])) #requires [0.042], needs len()
+        self.res = mod.fit(start_value=[0.042]) #requires [0.042], needs len()
 
         self.res2 = sm.WLS(y, x,
                            weights=1./sigma**2).fit()
@@ -162,9 +188,9 @@ class TestNonlinearLS2(TestNonlinearLS):
 
     def _est_summary(self):
         #this fails because of different almost zero, 1e-7 vs.1e-17
-        print 'testing summary'
-        print txt
-        print txtw
+        #print 'testing summary'
+        #print txt
+        #print txtw
         txt = self.res.summary(yname='y', xname=['const', 'x0'])
         txtw = self.res2.summary(yname='y', xname=['const', 'x0'])
         assert_(txt[txt.find('#'):] == txtw[txtw.find('#'):])
@@ -200,6 +226,34 @@ class TestNonlinearLS3(TestNonlinearLS):
         assert_(txt[begin_idx:before_idx] == txtw[begin_idx:before_idx])
         assert_(txt[after_idx:] == txtw[after_idx:])
 
+class TestNonlinearLS4(TestNonlinearLS):
+    #summary method has problems
+    #example has a 1d exog (nobs,)
+    #bug in call to leastsq if exog is column array (nobs,1)
+
+    def setup(self):
+        x = np.arange(5.).repeat(2)
+        x = np.column_stack((x,0.1*x**2))
+        y = np.array([1, -2, 1, -2, 1.]).repeat(2)
+        sigma = np.array([1,  2, 1,  2, 1.]).repeat(2)
+
+        mod = Myfunc4(y, x, sigma=sigma**2)
+        self.res = mod.fit(start_value=(0.042, 0.42, 0.2))
+        self.res2 = sm.WLS(y, sm.add_constant(x, prepend=True),
+                           weights=1./sigma**2).fit()
+
+    def test_summary(self):
+        #print 'testing summary'
+        txt = self.res.summary(yname='y', xname=['const', 'x0', 'x1'])
+        txtw = self.res2.summary(yname='y', xname=['const', 'x0', 'x1'])
+        txt = str(txt)
+        txtw = str(txtw)
+        #skip up to model and time
+        begin_idx = txt.find('Adj. R-squared')
+        before_idx = txt.find('Time')
+        after_idx = txt.find('Log-Likelihood')
+        assert_(txt[begin_idx:before_idx] == txtw[begin_idx:before_idx])
+        assert_(txt[after_idx:] == txtw[after_idx:])
 
 def print_summarydiff(res1, res2):
     txt1 = res1.summary(yname='y', xname=['const', 'x0', 'x1'][len(res1.params)])

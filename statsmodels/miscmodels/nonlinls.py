@@ -1,7 +1,5 @@
 '''Non-linear least squares
 
-
-
 Author: Josef Perktold based on scipy.optimize.curve_fit
 
 '''
@@ -12,63 +10,44 @@ from statsmodels.base.model import Model
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.regression.linear_model import RegressionResults
 
-class NonLinearLSResults(RegressionResults):
-    '''just a dummy placeholder for now
-    most results from RegressionResults can be used here
+class NonLinearModel(Model):
+    '''Base class for a Nonlinear Model
+       The objective is to be serve as base class from which other nonlinear models, namely 
+       nonlinear least squares, robust nonlinear and generalized 
+       nonlinear model classes are derived.
+            
+    15/04/2012
+    Presently it will serve as a base class for NonlinearLS which fits data
+    using 'nonlinear least squares method'.'scipy.optimize.leastsq' is used for 
+    calculation of the parameters
+      
     '''
+    def expr(self, params=None, exog=None):
+        '''User provides the nonlinear expression with the parameters here.
+    
+        The derived classes are subclassed and the nonlinear function, the data is
+        to be fitted to, is added here.
+    
 
-    @cache_readonly
-    def wresid(self):
-        return self.resid * np.sqrt(self.model.weights)
-        return self.model.geterrors(self, self.params)#, weights=None)
-#        return self.model.wendog - self.model.predict(self.model.wexog,
-#                self.params)
+        15/04/2012
+        The function will equate to NonlinearLS._predict.
+        '''
+        raise NotImplementedError
+    
+    def jacobian(self, params=None, exog=None):
+        '''Any differentiable function will have an exact formula for its jacobian
+        calculation. This expression can be supplied here.
+        If the user does not provide it forward differences method is used.
 
-    #included here because of changes to predict as in circular branch
-    #TODO: both resid and fittedvalues can be deleted again later
-    @cache_readonly
-    def resid(self):
-        return self.model.endog - self.model.predict(self.params,
-                                                     self.model.exog)
-    @cache_readonly
-    def fittedvalues(self):
-        return self.model.predict(self.params, self.model.exog)
-
-
-##def getjaccov(retval, n):
-##    '''calculate something and raw covariance matrix from return of optimize.leastsq
-##
-##    I cannot figure out how to recover the Jacobian, or whether it is even
-##    possible
-##
-##    this is a partial copy of scipy.optimize.leastsq
-##    '''
-##    info = retval[-1]
-##    #n = len(x0)  #nparams, where do I get this
-##    cov_x = None
-##    if info in [1,2,3,4]:
-##        from numpy.dual import inv
-##        from numpy.linalg import LinAlgError
-##        perm = np.take(np.eye(n), retval[1]['ipvt']-1,0)
-##        r = np.triu(np.transpose(retval[1]['fjac'])[:n,:])
-##        R = np.dot(r, perm)
-##        try:
-##            cov_x = inv(np.dot(np.transpose(R),R))
-##        except LinAlgError:
-##            print 'cov_x not available'
-##            pass
-##        return r, R, cov_x
-##
-##def _general_function(params, xdata, ydata, function):
-##    return function(xdata, *params) - ydata
-##
-##def _weighted_general_function(params, xdata, ydata, function, weights):
-##    return weights * (function(xdata, *params) - ydata)
-##
+        Returns
+        ----------
+        The jacobian matrix for the given params.
+        '''
+        raise NotImplementedError
+    
 
 
-
-class NonlinearLS(Model):  #or subclass a model
+class NonlinearLS(NonLinearModel):  #or subclass a model
     '''Base class for estimation of a non-linear model with least squares
 
     This class is supposed to be subclassed, and the subclass has to provide a method
@@ -130,6 +109,10 @@ class NonlinearLS(Model):  #or subclass a model
         self.endog = endog
         self.exog = exog
         self.nobs = len(endog) #check
+        self._predict = self.expr #db#Keeping it that way to keep away from
+                                     #mixing up things
+        self.params_iter = None
+
         if not sigma is None:
             sigma = np.asarray(sigma)
             if sigma.ndim < 2:
@@ -213,8 +196,8 @@ class NonlinearLS(Model):  #or subclass a model
         #use concentrated likelihood instead
         return llf.sum()
 
-    def _predict(self, params, exog):
-        pass
+#    def _predict(self, params, exog):
+#        pass
 
     def start_value(self):
         return None
@@ -239,7 +222,7 @@ class NonlinearLS(Model):  #or subclass a model
         #if hasattr(self, 'start_value'):
         #I added start_value even if it's empty, not sure about it
         #but it makes a visible placeholder
-
+        
         if not start_value is None:
             p0 = start_value
         else:
@@ -253,9 +236,15 @@ class NonlinearLS(Model):  #or subclass a model
                 raise ValueError('need information about start values for' +
                              'optimization')
 
+        self.nparams = len(p0)
+ 
         func = self.geterrors
-        res = optimize.leastsq(func, p0, full_output=1, **kw)
-        (popt, pcov, infodict, errmsg, ier) = res
+        #eps = 2.2204460492503131e-016
+        res = optimize.leastsq(func, p0, args=(), Dfun=self.getjacobian,
+                               full_output=1, col_deriv=0, ftol=1.49012e-08, 
+        xtol=1.49012e-08, gtol=0.0, maxfev=0, epsfcn=0.0, factor=100, diag=None)
+        
+	(popt, pcov, infodict, errmsg, ier) = res
 
         if ier not in [1,2,3,4]:
             msg = "Optimal parameters not found: " + errmsg
@@ -308,6 +297,9 @@ class NonlinearLS(Model):  #or subclass a model
 
 #        lfit.fitres = fitres   #mainly for testing
         self._results = lfit
+        #storing parameter iterations 
+        lfit._get_params_iter(self.params_iter)
+
         return lfit
 
     def fit_minimal(self, start_value):
@@ -348,8 +340,65 @@ class NonlinearLS(Model):  #or subclass a model
         jaccs_err = approx_fprime_cs(params, self._predict)
         return jaccs_err
 
+    def approx_jac_predict(self, params):
+        '''approximate jacobian estimation
+        
+        Objective is to implement a better method for calculation of derivatives 
+        than forward differences approach.
+        eg- Automatic derivative, n-point numerical derivative
+        
+        We would like to give the user the option to give the jacobian of the
+        function. scipy.optimize based on minpack encourages to do so.
+        
 
-class Myfunc(NonlinearLS):
+        15/04/2012
+        Providing an approximate of jacobian to leastsq using numdiff module in sandbox
+        
+        16/04/2012
+        Wrote a simple code snippet for jacobian calculation based on the one in numdiff.py 
+        Keeping it here for any future debugging.
+
+        18/04/2012
+        If the user does not supply the jacobian calculating expression than it uses 
+        the below approximate differences method
+        '''
+        #Calculating the jacobian
+        func = self.geterrors
+        x = np.asarray(params)
+        fx = func(x)
+        jacob = np.zeros((len(np.atleast_1d(fx)),len(x)), float)
+        inf = np.zeros((len(x),), float)
+        h = 1e-10#seems to be the best value after running the test suite
+        for i in range(len(x)):
+            inf[i] = h
+            jacob[:,i] = (func((x+inf)) - fx)/h
+            inf[i] = 0.0
+        return jacob
+
+    def _store_params(self, params):
+        ''' The parameter values calculated at each iteration of LM algorithm is 
+            stored for keeping in regression results
+        '''
+        params = np.array(params)
+        if self.params_iter==None:
+            self.params_iter=[params]
+        else:
+            self.params_iter.append(params)
+        #print self.params_iter
+
+    def getjacobian(self,params):
+        '''The function to select the jacobian calculating function and return
+        jacobian matrix received
+        '''
+
+        self._store_params(params)
+        try:
+            jac_func = -self.whiten(self.jacobian(params))
+        except NotImplementedError:
+            jac_func = self.approx_jac_predict(params)
+        return jac_func
+
+#class Myfunc(NonlinearLS):
 
     #predict model.Model has a different signature
 ##    def predict(self, params, exog=None):
@@ -360,56 +409,158 @@ class Myfunc(NonlinearLS):
 ##        a, b, c = params
 ##        return a*np.exp(-b*x) + c
 
-    def _predict(self, params, exog=None):
-        '''this needs exog for predict with new values, unfortunately
+#    def _predict(self, params, exog=None):
+#        '''this needs exog for predict with new values, unfortunately
+#
+#        make exog required - not now - I would need args in jac and leastsq
+#        '''
+#        #needs boilerplate, self.exog, for now
+#        if exog is None:
+#            x = self.exog
+#        else:
+#            x = exog
+#
+#        a, b, c = params
+#        return a*np.exp(-b*x) + c
 
-        make exog required - not now - I would need args in jac and leastsq
+
+class NonLinearLSResults(RegressionResults):
+    '''just a dummy placeholder for now
+    most results from RegressionResults can be used here
+
+    16/04/2012
+    Introducing _get_params_iter and view_iter for showing the parameter values at
+    each iteration
+    
+    The code may require some refactoring when the __init__ function for this class 
+    is written
+    '''
+    def _get_params_iter(self,params_iter):
+        self.params_iter = params_iter
+
+    def view_iter(self,params_names=None):
         '''
-        #needs boilerplate, self.exog, for now
-        if exog is None:
-            x = self.exog
+
+        Returns
+        -------
+        Iteration details table
+
+        '''
+        from statsmodels.iolib.table import SimpleTable
+        if params_names is None:
+            headers = ['b'+str(i) for i in range(1,len(self.params)+1)]
         else:
-            x = exog
+            if len(params_names) == len(self.params):
+                headers = params_names
+            else:
+                raise ValueError('Number of parameter names provided are not'+
+                                 ' equal to number of parameters estimated')
+        stubs = [n for n in range(1,len(self.params_iter)+1)]
+        title = 'ITERATION DETAILS'
+        data_fmts=['% 0.5f' for i in range(len(headers))]
+        tbl = SimpleTable(self.params_iter,headers,stubs,title,
+              data_fmts=data_fmts)
+        return tbl
 
-        a, b, c = params
-        return a*np.exp(-b*x) + c
+    @cache_readonly
+    def wresid(self):
+        return self.resid * np.sqrt(self.model.weights)
+        return self.model.geterrors(self, self.params)#, weights=None)
+#        return self.model.wendog - self.model.predict(self.model.wexog,
+#                self.params)
 
+    #included here because of changes to predict as in circular branch
+    #TODO: both resid and fittedvalues can be deleted again later
+    @cache_readonly
+    def resid(self):
+        return self.model.endog - self.model.predict(self.params,
+                                                     self.model.exog)
+    @cache_readonly
+    def fittedvalues(self):
+        return self.model.predict(self.params, self.model.exog)
 
+    @cache_readonly
+    def hqc(self):
+        n = self.model.nobs
+        return -2*self.llf + 2*self.model.nparams*np.log(np.log(n))
 
+    @cache_readonly
+    def ser(self):
+        '''
+        Residual Standard Deviation
+        '''
+        return np.sqrt(self.scale)
 
+    @cache_readonly
+    def hatmatrix(self):
+        jacob = self.model.jac_predict(self.params)
+        return np.dot(jacob,np.dot(self.normalized_cov_params,
+               np.transpose(jacob)))
 
-if __name__ == '__main__':
-    def func0(x, a, b, c):
-        return a*np.exp(-b*x) + c
+    #need to check for weighted version
+    def forecasts(self,alpha=0.05):
+        from scipy import stats
+        t = stats.t.isf(alpha/2,self.df_resid)
+        stddev_mean = self.ser*np.sqrt(np.diag(self.hatmatrix))
+        conf_int_mean = np.column_stack([self.fittedvalues-t*stddev_mean,
+                                         self.fittedvalues+t*stddev_mean])
+        stddev_ind = self.ser*np.sqrt(1+np.diag(self.hatmatrix))
+        conf_int_ind = np.column_stack([self.fittedvalues-t*stddev_ind,
+                                         self.fittedvalues+t*stddev_ind])
 
-    def func(params, x):
-        a, b, c = params
-        return a*np.exp(-b*x) + c
+#        what to show resid or wresid???
+#        stddev_resid = self.ser*np.sqrt(1-np.diag(self.hatmatrix))
+#        conf_int_resid = np.column_stack([self.resid-t*stddev_resid,
+#                                         self.resid+t*stddev_resid])
+        return np.column_stack([self.model.endog,self.fittedvalues,
+                                self.resid,stddev_mean,conf_int_mean,
+                                stddev_ind,conf_int_ind])#,conf_int_resid])
 
-    def error(params, x, y):
-        return y - func(params, x)
+    def prediction_table(self,alpha=0.05):
+        from statsmodels.iolib.table import SimpleTable
+        headers = ('Endog Values','Prediction','Residuals',
+                   'SEMean','LMean','Hmean','SEInd','LInd', 'HInd')
+        stubs = [n for n in range(1,self.model.nobs+1)]
+        title = 'PREDICTION TABLE'
+        data_fmts=['% 0.2f' for i in range(len(headers))]
+        data_fmts[3] = '% 0.3f'
+        data_fmts[6] = '% 0.3f'
+        tbl = SimpleTable(self.forecasts(alpha),headers,stubs,title,
+              data_fmts=data_fmts)
+        return tbl
 
-    def error2(params, x, y):
-        return (y - func(params, x))**2
-
-
-    from scipy import optimize
-
-    x = np.linspace(0,4,50)
-    params = np.array([2.5, 1.3, 0.5])
-    y0 = func(params, x)
-    y = y0 + 0.2*np.random.normal(size=len(x))
-
-    res = optimize.leastsq(error, params, args=(x, y), full_output=True)
+#if __name__ == '__main__':
+#    def func0(x, a, b, c):
+#        return a*np.exp(-b*x) + c
+#
+#    def func(params, x):
+#        a, b, c = params
+#        return a*np.exp(-b*x) + c
+#
+#    def error(params, x, y):
+#        return y - func(params, x)
+#
+#    def error2(params, x, y):
+#        return (y - func(params, x))**2
+#
+#
+#    from scipy import optimize
+#
+#    x = np.linspace(0,4,50)
+#    params = np.array([2.5, 1.3, 0.5])
+#    y0 = func(params, x)
+#    y = y0 + 0.2*np.random.normal(size=len(x))
+#
+#    res = optimize.leastsq(error, params, args=(x, y), full_output=True)
 ##    r, R, c = getjaccov(res[1:], 3)
-
-    mod = Myfunc(y, x)
-    resmy = mod.fit(nparams=3)
-
-    cf_params, cf_pcov = optimize.curve_fit(func0, x, y)
-    cf_bse = np.sqrt(np.diag(cf_pcov))
-    print res[0]
-    print cf_params
-    print resmy.params
-    print cf_bse
-    print resmy.bse
+#
+#    mod = Myfunc(y, x)
+#    resmy = mod.fit(nparams=3)
+#
+#    cf_params, cf_pcov = optimize.curve_fit(func0, x, y)
+#    cf_bse = np.sqrt(np.diag(cf_pcov))
+#    print res[0]
+#    print cf_params
+#    print resmy.params
+#    print cf_bse
+#    print resmy.bse
