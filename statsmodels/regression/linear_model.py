@@ -1559,8 +1559,8 @@ class OLSResults(RegressionResults):
         The unadjusted p-value is stats.t.sf(abs(resid), df) where
         df = df_resid - 1.
         """
-        return statsmodels.stats.outliers_influence.outlier_test(self, method,
-                alpha)
+        from statsmodels.stats.outliers_influence import outlier_test
+        return outlier_test(self, method, alpha)
 
 class RegressionResultsWrapper(wrap.ResultsWrapper):
 
