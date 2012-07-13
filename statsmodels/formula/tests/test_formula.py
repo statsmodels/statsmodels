@@ -74,3 +74,11 @@ def test_formula_labels():
     model = ols("prestige ~ income + education", dta).fit()
     npt.assert_equal(model.fittedvalues.index, dta.index)
 
+def test_formula_predict():
+    from numpy import log
+    formula = """TOTEMP ~ log(GNPDEFL) + log(GNP) + UNEMP + ARMED +
+                    POP + YEAR"""
+    data = load_pandas()
+    dta = load_pandas().data
+    results = ols(formula, dta).fit()
+    npt.assert_equal(results.fittedvalues, results.predict(data.exog))
