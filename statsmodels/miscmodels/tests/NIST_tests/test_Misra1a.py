@@ -112,7 +112,7 @@ class TestMisra1a01(CheckNLSresults):
     def setupClass(cls):
         #Loading the dataset
         data = misra.load()
-        x = data.exog
+        x = np.array(data.exog.flat)
         y = data.endog
 
         #Loading the results
@@ -130,7 +130,7 @@ class TestMisra1a02(CheckNLSresults):
     def setupClass(cls):
         #Loading the dataset
         data = misra.load()
-        x = data.exog
+        x = np.array(data.exog.flat)
         y = data.endog
 
         #Loading the results
@@ -152,7 +152,7 @@ class TestMisra1a03(CheckNLSresults):
     def setupClass(cls):
         #Loading the dataset
         data = misra.load()
-        x = data.exog
+        x = np.array(data.exog.flat)
         y = data.endog
 
         #Loading the results
@@ -170,7 +170,7 @@ class TestMisra1a04(CheckNLSresults):
     def setupClass(cls):
         #Loading the dataset
         data = misra.load()
-        x = data.exog
+        x = np.array(data.exog.flat)
         y = data.endog
 
         #Loading the results
@@ -189,7 +189,7 @@ class TestMisra1aWNLS(object):
     def setupClass(cls):
         #Loading the dataset
         data = misra.load()
-        x = data.exog
+        x = np.array(data.exog.flat)
         y = data.endog
 
         #Loading the results

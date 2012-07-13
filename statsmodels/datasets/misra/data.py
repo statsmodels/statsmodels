@@ -44,7 +44,7 @@ def load():
     """
     
     data = _get_data()
-    return du.process_recarray(data, endog_idx=0,stack =False, dtype=float)
+    return du.process_recarray(data, endog_idx=0, dtype=float)
 
 def _get_data():
     filepath = dirname(abspath(__file__))
