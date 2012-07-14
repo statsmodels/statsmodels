@@ -650,3 +650,89 @@ class ElOriginRegress(_ElOriginRegresssSetup):
         ul = optimize.brentq(self._ci_limits_beta_origin,
                              self.params[self.param_nums], beta_high)
         return (ll, ul)
+
+
+class _ANOVAOpt(OptFuncts):
+    """
+
+    Class containing functions that are optimized over when
+    conducting ANOVA
+
+    """
+    def _opt_common_mu(self, mu):
+        empt_array = np.zeros((self.nobs, self.num_groups))
+        obs_num = 0
+        for arr_num in range(len(self.data)):
+            new_obs_num = obs_num + len(self.data[arr_num])
+            empt_array[obs_num: new_obs_num, arr_num] = self.data[arr_num] - \
+              mu
+            obs_num = new_obs_num
+        self.est_vect = empt_array
+        eta_star = self._modif_newton(np.zeros(self.num_groups))
+        self.eta_star = eta_star
+        denom = 1. + np.dot(eta_star, self.est_vect.T)
+        self.new_weights = 1. / self.nobs * 1. / denom
+        llr = np.sum(np.log(self.nobs * self.new_weights))
+        return -2 * llr
+
+
+class ANOVA(_ANOVAOpt):
+    """
+
+    A class for ANOVA and comparing means.
+
+    Parameters
+    ---------
+
+    data: list of arrays
+        data should be a list containing 1 dimensional arrays.  Each array
+        is the data collected from a certain group.
+
+
+    """
+
+    def __init__(self, data):
+        self.data = data
+        self.num_groups = len(self.data)
+        self.nobs = 0
+        for i in self.data:
+            self.nobs = self.nobs + len(i)
+
+    def compute_ANOVA(self, mu=None, print_weights=0):
+
+        """
+
+        Returns -2 log likelihood, the pvalue and the maximum likelihood
+        estimate for a common mean.
+
+        Parameters
+        ----------
+
+        mu: float, optional
+            If a mu is specified, ANOVA is conducted with mu as the
+            common mean.  Otherwise, the common mean is the maximum
+            empirical likelihood estimate of the common mean.
+            Default is None.
+
+        print_weights: bool, optional
+            if TRUE, returns the weights on observations that maximize the
+            likelihood.  Default is FALSE
+
+        """
+
+        if mu is not None:
+            llr = self._opt_common_mu(mu)
+            pval = 1 - chi2.cdf(llr, self.num_groups - 1)
+            if print_weights:
+                return pval, llr, mu, self.new_weights
+            else:
+                return pval, llr, mu
+        else:
+            res = optimize.fmin_bfgs(self._opt_common_mu, 0, full_output=1)
+            llr = res[1]
+            mu_common = res[0]
+            pval = 1 - chi2.cdf(llr, self.num_groups - 1)
+            if print_weights:
+                return pval, llr, mu_common, self.new_weights
+            else:
+                return pval, llr, mu_common
