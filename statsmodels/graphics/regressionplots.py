@@ -448,23 +448,28 @@ def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
     >>> import matplotlib.pyplot as plt
     >>> plt.show()
     """
+    if ax is not None: # get axis limits first thing, don't change these
+        x = ax.get_xlim()
+        y = ax.get_ylim()
+    else:
+        x = None
+
     fig,ax = utils.create_mpl_ax(ax)
 
     if model_results:
         intercept, slope = model_results.params
-        x = [model_results.model.exog[:,1].min(),
-             model_results.model.exog[:,1].max()]
+        if x is None:
+            x = [model_results.model.exog[:,1].min(),
+                 model_results.model.exog[:,1].max()]
     else:
-        x = None
         if not (intercept is not None and slope is not None):
             raise ValueError("specify slope and intercepty or model_results")
+        if x is None:
+            x = ax.get_xlim()
 
-    if not x: # can't infer x limits
-        x = ax.get_xlim()
-
-    y = [x[0]*slope+intercept, x[1]*slope+intercept]
+    data_y = [x[0]*slope+intercept, x[1]*slope+intercept]
     ax.set_xlim(x)
-    ax.set_ylim(y)
+    #ax.set_ylim(y)
 
     from matplotlib.lines import Line2D
 
@@ -481,7 +486,7 @@ def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
             abline.set_data(x,y)
             ax.figure.canvas.draw()
 
-    line = ABLine2D(x, y, **kwargs)
+    line = ABLine2D(x, data_y, **kwargs)
     ax.add_line(line)
     ax.callbacks.connect('xlim_changed', line.update_datalim)
     ax.callbacks.connect('ylim_changed', line.update_datalim)
