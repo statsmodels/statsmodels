@@ -49,7 +49,7 @@ See the original paper for more details.
 """
 
 import numpy as np
-from scikits.statsmodels.tools import datautils as du
+from statsmodels.tools import datautils as du
 from os.path import dirname, abspath
 
 def load():
