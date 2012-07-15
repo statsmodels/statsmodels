@@ -98,9 +98,8 @@ def AitchisonAitken(h, Xi, x, num_levels=False):
                    dtype=int)
     if num_levels:
         c = num_levels
-    kernel_value = np.empty(Xi.shape)
-    kernel_value.fill(h / (c - 1))
-    inDom = (Xi == x) * (1 - h)
+    kernel_value = np.tile(h / (c - 1), (N, 1))
+    inDom = (Xi == x) * (1 - h)  #FIXME: only works for scalar `x`
     kernel_value[Xi == x] = inDom[Xi == x]
     kernel_value = kernel_value.reshape([N, K])
     return kernel_value
@@ -149,9 +148,10 @@ def WangRyzin(h, Xi, x):
     x = np.abs(np.asarray(x, dtype=int))
     if K == 0:
         return Xi
+
     kernel_value = (0.5 * (1 - h) * (h ** abs(Xi - x)))
     kernel_value = kernel_value.reshape([N, K])
-    inDom = (Xi == x) * (1 - h)
+    inDom = (Xi == x) * (1 - h)  #FIXME: only works for scalar `x`
     kernel_value[Xi == x] = inDom[Xi == x]
     return kernel_value
 
@@ -262,10 +262,10 @@ def AitchisonAitken_cdf(h, Xi, x_u):
         Ordered[:, i] = Sigma_x[:, 0]
     return Ordered
 
+    # FIXME: return statement above, so everything below is unused!
     if num_levels:
         c = num_levels
-    kernel_value = np.empty(Xi.shape)
-    kernel_value.fill(h / (c - 1))
+    kernel_value = np.tile(h / (c - 1), Xi.shape)
     inDom = (Xi == x) * (1 - h)
     kernel_value[Xi == x] = inDom[Xi == x]
     kernel_value = kernel_value.reshape([N, K])
