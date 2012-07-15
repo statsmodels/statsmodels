@@ -286,6 +286,7 @@ def _infer_freq(dates):
 _pandas_mapping = {
     'A-DEC': 'A',
     'Q-DEC': 'Q',
-    'W-SUN': 'W'
+    'W-SUN': 'W',
+    'Q-MAR' : 'Q'
 }
 
