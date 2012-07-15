@@ -30,7 +30,7 @@ Variable name definitions:
     age             : Age
     yrs_married     : No. years married. Interval approximations. See
                       original paper for detailed explanation.
-    children        : No. childrend
+    children        : No. children
     religious       : How relgious, 1 = not, 2 = mildly, 3 = fairly,
                       4 = strongly
     educ            : Level of education, 9 = grade school, 12 = high school,
