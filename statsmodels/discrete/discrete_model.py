@@ -58,7 +58,7 @@ def _check_discrete_args(at, method):
 
 def _isdummy(X):
     """
-    Given an array X, returns a boolean column index for the dummy variables.
+    Given an array X, returns the column indices for the dummy variables.
 
     Parameters
     ----------
@@ -1659,12 +1659,16 @@ class DiscreteResults(base.LikelihoodModelResults):
         effects = _effects_at(effects, at, ind)
 
         if dummy == True:
+            if np.any(~ind):
+                const_idx = np.where(~ind)[0]
+                dummy_ind[const_idx:] -= 1
             effects = _get_dummy_effects(effects, exog, dummy_ind, method,
                                          model, params)
 
         if count == True:
-            if np.any(ind):
-                count_ind -= 1 # adjust back for constant because
+            if np.any(~ind):
+                const_idx = np.where(~ind)[0]
+                count_ind[const_idx:] -= 1 # adjust back for constant because
                                # effects doesn't have one
             effects = _get_count_effects(effects, exog, count_ind, method,
                                          model, params)
