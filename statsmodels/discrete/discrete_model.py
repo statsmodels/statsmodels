@@ -86,7 +86,7 @@ def _isdummy(X):
 
 def _iscount(X):
     """
-    Given an array X, returns a boolean column index for count variables.
+    Given an array X, returns the column indices for count variables.
 
     Parameters
     ----------
@@ -106,7 +106,7 @@ def _iscount(X):
                                X.var(0) != 0)
     dummy = _isdummy(X)
     remainder -= dummy
-    return remainder
+    return np.where(remainder)[0]
 
 def _get_margeff_exog(exog, at, atexog, ind):
     if atexog is not None: # user supplied
@@ -125,27 +125,26 @@ def _get_margeff_exog(exog, at, atexog, ind):
     return exog
 
 def _get_count_effects(effects, exog, count_ind, method, model, params):
-    for i, tf in enumerate(count_ind):
-        if tf == True:
-            exog0 = exog.copy()
-            effect0 = model.predict(params, exog0)
-            wf1 = model.predict
-            exog0[:,i] += 1
-            effect1 = model.predict(params, exog0)
-    #TODO: compute discrete elasticity correctly
-    #Stata doesn't use the midpoint method or a weighted average.
-    #Check elsewhere
-            if 'ey' in method:
-                pass
-                ##TODO: don't know if this is theoretically correct
-                #fittedvalues0 = np.dot(exog0,params)
-                #fittedvalues1 = np.dot(exog1,params)
-                #weight1 = model.exog[:,i].mean()
-                #weight0 = 1 - weight1
-                #wfv = (.5*model.cdf(fittedvalues1) + \
-                        #        .5*model.cdf(fittedvalues0))
-                #effects[i] = ((effect1 - effect0)/wfv).mean()
-            effects[i] = (effect1 - effect0).mean()
+    for i in count_ind:
+        exog0 = exog.copy()
+        effect0 = model.predict(params, exog0)
+        wf1 = model.predict
+        exog0[:,i] += 1
+        effect1 = model.predict(params, exog0)
+#TODO: compute discrete elasticity correctly
+#Stata doesn't use the midpoint method or a weighted average.
+#Check elsewhere
+        if 'ey' in method:
+            pass
+            ##TODO: don't know if this is theoretically correct
+            #fittedvalues0 = np.dot(exog0,params)
+            #fittedvalues1 = np.dot(exog1,params)
+            #weight1 = model.exog[:,i].mean()
+            #weight0 = 1 - weight1
+            #wfv = (.5*model.cdf(fittedvalues1) + \
+                    #        .5*model.cdf(fittedvalues0))
+            #effects[i] = ((effect1 - effect0)/wfv).mean()
+        effects[i] = (effect1 - effect0).mean()
     return effects
 
 
@@ -1664,6 +1663,9 @@ class DiscreteResults(base.LikelihoodModelResults):
                                          model, params)
 
         if count == True:
+            if np.any(ind):
+                count_ind -= 1 # adjust back for constant because
+                               # effects doesn't have one
             effects = _get_count_effects(effects, exog, count_ind, method,
                                          model, params)
 
