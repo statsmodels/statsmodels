@@ -1,6 +1,6 @@
 from scipy import stats
 import numpy as np
-from statsmodels.sandbox.distributions.mixture_rvs import mixture_rvs
+from statsmodels.distributions.mixture_rvs import mixture_rvs
 from statsmodels.nonparametric.kde import (kdensity, kdensityfft)
 import matplotlib.pyplot as plt
 
