@@ -1591,6 +1591,13 @@ def test_1dexog():
     exog = dta['m1'].values.squeeze()
     mod = ARMA(endog, (1,1), exog).fit(disp=-1)
 
+def arima_predict_bug():
+    #predict_start_date wasn't getting set on start = None
+    dta = sm.datasets.sunspots.load_pandas().data
+    dta.index = pandas.Index(sm.tsa.datetools.dates_from_range('1700', '2008'))
+    arma_mod20 = sm.tsa.ARMA(dta, (2,0)).fit(disp=-1)
+    arma_mod20.predict(None, None)
+
 if __name__ == "__main__":
     import nose
     nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'], exit=False)

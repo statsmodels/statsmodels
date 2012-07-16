@@ -398,6 +398,7 @@ class ARMA(tsbase.TimeSeriesModel):
                 start = 0
             else:
                 start = k_ar
+            self._set_predict_start_date(start) # else it's done in super
         elif isinstance(start, int):
             start = super(ARMA, self)._get_predict_start(start)
         else: # should be on a date
@@ -408,9 +409,9 @@ class ARMA(tsbase.TimeSeriesModel):
         _check_arima_start(start, k_ar, k_diff, method, dynamic)
         return start
 
-    def _get_predict_end(self, start, dynamic=False):
+    def _get_predict_end(self, end, dynamic=False):
         # pass through so predict works for ARIMA and ARMA
-        return super(ARMA, self)._get_predict_end(start)
+        return super(ARMA, self)._get_predict_end(end)
 
     def geterrors(self, params):
         """
@@ -1550,3 +1551,4 @@ if __name__ == "__main__":
     wpi = dta['wpi']
 
     mod = ARIMA(wpi, (1,1,1)).fit()
+
