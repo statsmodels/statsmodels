@@ -435,7 +435,7 @@ def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False,
         if (confint is not None or alpha is not None):
             return acf, confint, qstat, pvalue
         else:
-            return acf, qstat
+            return acf, qstat, pvalue
 
 def pacf_yw(x, nlags=40, method='unbiased'):
     '''Partial autocorrelation estimated with non-recursive yule_walker
