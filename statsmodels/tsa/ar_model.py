@@ -402,7 +402,7 @@ class AR(tsbase.TimeSeriesModel):
         self.k_trend = k_trend
         return X
 
-    def select_order(self, maxlag, ic):
+    def select_order(self, maxlag, ic, trend='c', method='mle'):
         """
         Select the lag order according to the information criterion.
 
@@ -410,9 +410,12 @@ class AR(tsbase.TimeSeriesModel):
         ----------
         maxlag : int
             The highest lag length tried. See `AR.fit`.
-        ic : str {'aic','bic','hic','t-stat'}
+        ic : str {'aic','bic','hqic','t-stat'}
             Criterion used for selecting the optimal lag length.
             See `AR.fit`.
+        trend : str {'c','nc'}
+            Whether to include a constant or not. 'c' - include constant.
+            'nc' - no constant.
 
         Returns
         -------
@@ -420,14 +423,12 @@ class AR(tsbase.TimeSeriesModel):
             Best lag according to IC.
         """
         endog = self.endog
-        trend = self.trend
 
         # make Y and X with same nobs to compare ICs
         Y = endog[maxlag:]
         self.Y = Y  # attach to get correct fit stats
         X = self._stackX(maxlag, trend) # sets k_trend
         self.X = X
-        method = self.method
         k = self.k_trend # k_trend set in _stackX
         k = max(1,k) # handle if startlag is 0
         results = {}
@@ -448,8 +449,8 @@ class AR(tsbase.TimeSeriesModel):
                 # have to reinstantiate the model to keep comparable models
                 endog_tmp = endog[maxlag-lag:]
                 fit = AR(endog_tmp).fit(maxlag=lag, method=method,
-                        full_output=full_output, trend=trend,
-                        maxiter=maxiter, disp=disp)
+                        full_output=0, trend=trend,
+                        maxiter=35, disp=-1)
 
                 if np.abs(fit.tvalues[-1]) >= stop:
                     bestlag = lag
@@ -478,7 +479,7 @@ class AR(tsbase.TimeSeriesModel):
             aic - Akaike Information Criterion
             bic - Bayes Information Criterion
             t-stat - Based on last lag
-            hq - Hannan-Quinn Information Criterion
+            hqic - Hannan-Quinn Information Criterion
             If any of the information criteria are selected, the lag length
             which results in the lowest value is selected.  If t-stat, the
             model starts with maxlag and drops a lag until the highest lag
@@ -553,7 +554,7 @@ class AR(tsbase.TimeSeriesModel):
             ic = ic.lower()
             if ic not in ['aic','bic','hqic','t-stat']:
                 raise ValueError("ic option %s not understood" % ic)
-            k_ar = self.select_order(k_ar, ic)
+            k_ar = self.select_order(k_ar, ic, trend, method)
 
         self.k_ar = k_ar # change to what was chosen by ic
 
