@@ -1103,6 +1103,9 @@ class MNLogit(MultinomialModel):
     See developer notes for further information on `MNLogit` internals.
     """ % {'extra_params' : base._missing_param_doc}
 
+    def fit_L1(self):
+        print "Fitting"
+
     def pdf(self, eXB):
         """
         NotImplemented
