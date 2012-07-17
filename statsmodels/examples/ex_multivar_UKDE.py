@@ -26,34 +26,30 @@ mu2 = [6, 1]
 cov1 = np.asarray([[1, 0.7], [0.7, 1]])
 cov2 = np.asarray([[1, -0.7], [-0.7, 1]])
 
-
-A = np.random.multivariate_normal(mu1, cov1, size=N)
-B = np.random.multivariate_normal(mu2, cov2, size=N)
-V = np.empty((N, 2))
-#generate the bimodal distribution
-for i in range(N):
-    if np.random.uniform() > 0.5:
-        V[i, :] = A[i, :]
-    else:
-        V[i, :] = B[i, :]
+ix = np.random.uniform(size=N) > 0.5
+V = np.random.multivariate_normal(mu1, cov1, size=N)
+V[ix, :] = np.random.multivariate_normal(mu2, cov2, size=N)[ix, :]
 
 x = V[:, 0]
 y = V[:, 1]
+
 dens = nparam.UKDE(tdat=[x, y], var_type='cc', bw=BW)
 
 supportx = np.linspace(min(x), max(x), 60)
 supporty = np.linspace(min(y), max(y), 60)
 X, Y = np.meshgrid(supportx, supporty)
-Z = np.empty(np.shape(X))
-for i in range(np.shape(X)[0]):
-    Z[i, :] = dens.pdf(edat=[X[i], Y[i]])
+
+edat = np.column_stack([X.ravel(), Y.ravel()])
+Z = dens.pdf(edat).reshape(X.shape)
 
 # plot
 fig = plt.figure(1)
 ax = fig.gca(projection='3d')
 surf = ax.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap=cm.jet,
         linewidth=0, antialiased=False)
-ax.zaxis.set_major_locator(LinearLocator(10))
-ax.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))
+
 fig.colorbar(surf, shrink=0.5, aspect=5)
+plt.figure(2)
+plt.imshow(Z)
+
 plt.show()
