@@ -1068,6 +1068,9 @@ class MNLogit(MultinomialModel):
     -----
     See developer notes for further information on `MNLogit` internals.
     """
+    def fit_L1(self):
+        print "Fitting"
+
     def pdf(self, eXB):
         """
         NotImplemented
