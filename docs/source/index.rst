@@ -12,7 +12,6 @@ package is released under the open source Modified BSD (3-clause) license. The o
 Documentation highlights: 
 
 * `Introduction <introduction.html>`_
-* `Installation <install.html>`_
 * `Getting Started <gettingstarted.html>`_ 
 * `Related Projects <related.html>`_
 * `Developer Page <dev/index.html>`_
