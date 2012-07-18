@@ -6,9 +6,6 @@
 Distributions
 =============
 
-Introduction
-------------
-
 This section collects various additional functions and methods for statistical
 distributions.
 

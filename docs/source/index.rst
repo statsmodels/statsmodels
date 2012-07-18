@@ -7,11 +7,11 @@ Welcome to Statsmodels's Documentation
 of many different statistical models, as well as for conducting statistical tests, and statistical
 data exploration. An extensive list of result statistics are avalable for each estimator.
 The results are tested against existing statistical packages to ensure that they are correct. The
-package is released under the open source Modified BSD (3-clause) license. The online documentation
-is hosted at `sourceforge <http://statsmodels.sourceforge.net/>`__.
+package is released under the open source Modified BSD (3-clause) license. 
+The online documentation is hosted at `sourceforge <http://statsmodels.sourceforge.net/>`__.
 
 
-Getting Started
+Minimal Example
 ---------------
 
 Get the data, run the estimation, and look at the results.
@@ -38,18 +38,17 @@ For example, here is a minimal ordinary least squares example
 Have a look at `dir(results)` to see available results. Attributes are
 described in `results.__doc__` and results methods have their own docstrings.
 
+Basic Documentation:
+
+* `Introduction <introduction.html>`_
+* `Installation <install.html>`_
+* `Getting Started <gettingstarted.html>`_
+* `Related Projects <related.html>`_
+* `Developer Page <dev/index.html>`_
+
 
 Table of Contents
 -----------------
-
-.. toctree::
-   :maxdepth: 1
-
-   introduction
-   related
-   dev/index
-   pitfalls
-   importpaths
 
 .. toctree::
    :maxdepth: 2
@@ -61,22 +60,27 @@ Table of Contents
    tsa
    stats
    nonparametric
-   tools
-   miscmodels
-   dev/internal
    gmm
    emplike
+   miscmodels
    distributions
    graphics
    iolib
+   tools
    datasets/index
    sandbox
 
 
-Related Projects
-----------------
+.. toctree::
+   :maxdepth: 1
 
-See our :ref:`related projects page <related>`.
+   introduction
+   gettingstarted
+   related
+   dev/index
+   dev/internal
+   importpaths
+   pitfalls
 
 Indices and tables
 ------------------

@@ -5,9 +5,6 @@
 Input-Output :mod:`iolib`
 =========================
 
-Introduction
-------------
-
 Some functions for input and output.
 
 Module Reference
