@@ -41,7 +41,6 @@ described in `results.__doc__` and results methods have their own docstrings.
 Basic Documentation:
 
 * `Introduction <introduction.html>`_
-* `Installation <install.html>`_
 * `Getting Started <gettingstarted.html>`_
 * `Related Projects <related.html>`_
 * `Developer Page <dev/index.html>`_
