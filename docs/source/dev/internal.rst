@@ -5,9 +5,6 @@
 Internal Classes
 ================
 
-Introduction
-------------
-
 The following summarizes classes and functions that are not intended to be
 directly used, but of interest only for internal use or for a developer who
 wants to extend on existing model classes.
