@@ -10,7 +10,8 @@ dependencies.
 Loading modules and functions
 -----------------------------
 
-After `installing statsmodels and its dependencies <install.html>`_, we load a few modules and functions:
+After `installing statsmodels and its dependencies <install.html>`_, we load a
+few modules and functions:
 
 .. ipython:: python
 
@@ -19,8 +20,15 @@ After `installing statsmodels and its dependencies <install.html>`_, we load a f
     from pandas import read_csv
     from patsy import dmatrices
 
-* `pandas <http://pandas.pydata.org/>`_ builds on ``numpy`` arrays to provide rich data structures and data analysis tools. The ``pandas.DataFrame`` function provides labelled arrays of (potentially heterogenous) data, similar to the ``R`` "data.frame". The ``pandas.read_csv`` function can be used to convert a comma-separated values file to a ``DataFrame`` object.
-* `patsy <https://github.com/pydata/patsy>`_ is a Python library for describing satistical models and building `Design Matrices <http://en.wikipedia.org/wiki/Design_matrix>`_ using ``R``-like formulas.   
+`pandas <http://pandas.pydata.org/>`_ builds on ``numpy`` arrays to provide
+rich data structures and data analysis tools. The ``pandas.DataFrame`` function
+provides labelled arrays of (potentially heterogenous) data, similar to the
+``R`` "data.frame". The ``pandas.read_csv`` function can be used to convert a
+comma-separated values file to a ``DataFrame`` object.
+
+`patsy <https://github.com/pydata/patsy>`_ is a Python library for describing
+satistical models and building `Design Matrices
+<http://en.wikipedia.org/wiki/Design_matrix>`_ using ``R``-like formulas.   
 
 Data
 ----
@@ -64,7 +72,7 @@ Substantive motivation and model
 We want to know whether literacy rates in the 86 French departments are
 associated with per capita wagers on the Royal Lottery in the 1820s. We need to
 control for the level of wealth in each department, and we also want to include
-a series of dummy variables on the right-hand of our regression equation to
+a series of dummy variables on the right-hand side of our regression equation to
 control for unobserved heterogeneity due to regional effects. The model is
 estimated using ordinary least squares regression (OLS).  
 
@@ -130,7 +138,8 @@ For OLS, this is achieved by:
     print res.summary()   # Summarize model
    
 
-The ``res`` object has many useful attributes. For example, we can extract parameter estimates and r-squared by typing: 
+The ``res`` object has many useful attributes. For example, we can extract
+parameter estimates and r-squared by typing: 
 
 
 .. ipython:: python
@@ -149,15 +158,16 @@ Diagnostics and specification tests
 and specification tests
 <stats.html#residual-diagnostics-and-specification-tests>`_.  For instance,
 apply the Rainbow test for linearity (the null hypothesis is that the
-relationship is properly modelled as linear: 
+relationship is properly modelled as linear): 
 
 .. ipython:: python
 
     sm.stats.linear_rainbow(res)
 
 Admittedly, the output produced above is not very verbose, but we know from
-reading the `docstring <generated/statsmodels.stats.diagnostic.linear_rainbow.html#statsmodels.stats.diagnostic.linear_rainbow>`_ (also, ``print sm.stats.linear_rainbow.__doc__``) that the
-first number is an F-stat and that the second is the p-value. 
+reading the `docstring <generated/statsmodels.stats.diagnostic.linear_rainbow.html>`_ 
+(also, ``print sm.stats.linear_rainbow.__doc__``) that the
+first number is an F-statistic and that the second is the p-value. 
 
 ``statsmodels`` also provides graphics functions. For example, we can draw a
 plot of partial regression for a set of regressors by: 
@@ -171,4 +181,6 @@ plot of partial regression for a set of regressors by:
 More
 ----
 
-Congratulations! You're ready to move on to other topics in the `Table of Contents <index.html#table-of-contents>`_
+Congratulations! You're ready to move on to other topics in the 
+`Table of Contents <index.html#table-of-contents>`_
+
