@@ -7,7 +7,6 @@ data = sm.datasets.kmenta.load().data
 y = data['consump']
 x1 = np.column_stack((data['price'], data['income']))
 x2 = np.column_stack((data['price'], data['farmPrice'], data['trend']))
-x2 = np.column_stack((x2, data['income'])) # for tests
 x1 = sm.add_constant(x1, prepend=True)
 x2 = sm.add_constant(x2, prepend=True)
 
@@ -15,6 +14,6 @@ eq1 = {'endog' : y, 'exog' : x1, 'indep_endog' : [1]}
 eq2 = {'endog' : y, 'exog' : x2, 'indep_endog' : [1]}
 sys = [eq1, eq2]
 
-mod = SysSEM(sys, instruments=np.random.normal(size=(20, 2)))
-mod.fullexog # instruments design
+mod = Sys2SLS(sys)
+print mod.fit() # parameters estimates, same as systemfit
 

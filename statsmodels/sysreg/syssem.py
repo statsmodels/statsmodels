@@ -1,4 +1,5 @@
 import numpy as np
+import scipy as sp
 from statsmodels.sysreg.sysmodel import SysModel, SysResults
 
 def unique_rows(a):
@@ -19,6 +20,8 @@ class SysSEM(SysModel):
         of the column numbers of the independent endogenous regressors.
     instruments : array
         Array of the exogenous independent variables.
+    dkf :
+    sigma : 
 
     Notes
     -----
@@ -27,9 +30,10 @@ class SysSEM(SysModel):
     provided in 'instruments' parameters. 
     """
 
-    def __init__(self, sys, instruments=None, dfk=None):
+    def __init__(self, sys, instruments=None, dfk=None, sigma=None):
         super(SysSEM, self).__init__(sys, dfk)
         self.instruments = instruments
+        self.sigma = sigma
         self.initialize()
 
     def initialize(self):
@@ -48,6 +52,24 @@ class SysSEM(SysModel):
         # Delete reoccuring cols
         self.fullexog = unique_cols(fullexog)
 
+    def fit(self):
+        z = self.fullexog
+        ztzinv = np.linalg.inv(np.dot(z.T, z))
+        Pz = np.dot(np.dot(z, ztzinv), z.T)
+        
+        xhats = (np.dot(Pz, eq['exog']) for eq in self.sys)
+        xhat = x = sp.linalg.block_diag(*xhats) #TODO: sparse
+
+        omegainv = np.kron(np.linalg.inv(self.sigma), np.identity(self.nobs))
+        xtomegainv = np.dot(x.T, omegainv)
+        w = np.linalg.inv(np.dot(xtomegainv, x))
+        ww = np.dot(w, xtomegainv)
+        params = np.squeeze(np.dot(ww, self.endog.reshape(-1, 1)))
+        return params
+
 class Sys2SLS(SysSEM):
-    pass
+    def __init__(self, sys, instruments=None, dfk=None):
+        neqs = len(sys)
+        super(Sys2SLS, self).__init__(sys, instruments=instruments,
+                sigma=np.identity(neqs), dfk=dfk)
 
