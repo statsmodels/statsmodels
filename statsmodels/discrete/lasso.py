@@ -112,68 +112,6 @@ def trim_params(results, full_output, K, func, fargs, acc, offset):
     else:
         return x
 
-def xxx_fit_lasso(f, score, start_params, fargs, kwargs, disp=None, maxiter=100, 
-        callback=None, retall=False, full_output=False, hess=None):
-    """
-    """
-
-    if callback:
-        print "Callback will be ignored with lasso"
-
-    #### Extract values
-    ## The start point
-    #x0 = np.append(start_params, np.fabs(start_params[offset:]))
-    #fargs += (f,score) 
-    ## P is total number of covariates, possibly including a leading constant.
-    #K = len(start_params)  
-    #fargs += (K,)
-    ## offset determines which parts of x are used for the dummy variables 'u'
-    #offset = 0
-    #if 'constant' in kwargs:
-    #    if kwargs['constant']:
-    #        offset = 1
-    #fargs += (offset,)
-    ## alpha is the regularization parameter
-    #alpha = kwargs['alpha']
-    #fargs += (alpha,)
-    ## Epsilon is used for approximating derivatives
-    #epsilon = kwargs.setdefault('epsilon', None)
-    ## Convert display parameters to scipy.optimize form
-    if disp or retall:
-        if disp:
-            disp_slsqp = 1
-        if retall:
-            disp_slsqp = 2
-    else:
-        disp_slsqp = 0
-
-    #results = fmin_slsqp(func, x0, f_ieqcons=f_ieqcons, fprime=fprime, 
-    #        args=fargs, iter=maxiter, disp=disp_slsqp, full_output=full_output, 
-    #        epsilon=epsilon)
-    # TODO Added tol
-    tol = 1e-8
-    epsilon = 1.49e-8
-    results = fmin_slsqp(f, start_params, fprime=score, acc=tol, epsilon=epsilon,
-            args=fargs, iter=maxiter, disp=disp_slsqp, full_output=full_output)
-
-    ### The return values for statsmodels optimizers
-    if full_output:
-        x, fx, its, imode, smode = results
-        #xopt = np.array(x[:K])
-        xopt = np.array(x)
-        fopt = fx
-        converged = smode
-        iterations = its
-        # TODO Should gopt be changed to accomidate the regularization term?
-        gopt = score(xopt)  
-        hopt = hess(xopt)
-        retvals = {'fopt':fopt, 'converged':converged, 'iterations':iterations, 
-                'gopt':gopt, 'hopt':hopt}
-        return xopt, retvals
-    else:
-        xopt = np.array(results)
-        return xopt
-
 def func(x, *fargs):
     """
     The regularized objective function
