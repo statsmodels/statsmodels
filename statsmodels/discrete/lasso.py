@@ -45,6 +45,10 @@ def _fit_lasso(f, score, start_params, fargs, kwargs, disp=None, maxiter=100,
             args=fargs, iter=maxiter, disp=disp_slsqp, full_output=full_output, 
             fprime_ieqcons=fprime_ieqcons, epsilon=epsilon)
 
+    ### Post-process 
+    #QA_results(x, params, K, constant, acc) 
+    if kwargs.get('trim_params'):
+        results = trim_params(results, full_output, K, func, fargs, acc, offset)
 
     ### Pack up return values for statsmodels optimizers
     if full_output:
@@ -63,10 +67,6 @@ def _fit_lasso(f, score, start_params, fargs, kwargs, disp=None, maxiter=100,
         x = np.array(results)
         params = x[:K]
 
-    ### Post-process 
-    QA_results(x, params, K, constant, acc) 
-    if kwargs.get('trim_params'):
-        trim_params(params, acc, constant)
 
     if full_output:
         return params, retvals
@@ -82,19 +82,35 @@ def QA_results(x, params, K, constant, acc):
     u = x[K:]
     decimal = min(int(-np.log10(10*acc)), 10)
     offset = 1 if constant else 0
-    np.testing.assert_array_almost_equal(np.fabs(params[offset:]), u, decimal=decimal)
+    abs_params = np.fabs(params[offset:])
+    try:
+        np.testing.assert_array_almost_equal(abs_params, u, decimal=decimal)
+    except AssertionError:
+        print "abs_params = \n%s\nu = %s"%(abs_params, u)
+        raise
 
-def trim_params(params, acc, constant):
+def trim_params(results, full_output, K, func, fargs, acc, offset):
     """
     Trims params that are within max(10*acc, 1e-10) of zero.
     """
-    trim_tol = max(10*acc, 1e-10)
-    small_param_idx = params < trim_tol
+    ## Extract params from the results
+    trim_tol = min(max(100*acc, 1e-10), 1e-3)
+    if full_output:
+        x, fx, its, imode, smode = results
+    else:
+        x = results
+    ## Trim the small params
     # If we have a constant column, then don't trim the constant param,
     # since this param was not meant to be regularized.
-    if constant:
-        small_param_idx[0] = False
-    params[params < trim_tol] = 0.0
+    for i in xrange(offset, len(x)):
+        if abs(x[i]) < trim_tol:
+            x[i] = 0.0
+    ## Recompute things
+    if full_output:
+        fx = func(np.array(x), *fargs)
+        return x, fx, its, imode, smode
+    else:
+        return x
 
 def xxx_fit_lasso(f, score, start_params, fargs, kwargs, disp=None, maxiter=100, 
         callback=None, retall=False, full_output=False, hess=None):
