@@ -9,7 +9,7 @@ import statsmodels.base.wrapper as wrap
 from statsmodels.tools.numdiff import approx_fprime
 from statsmodels.formula import handle_formula_data
 
-import statsmodels.discrete.lasso as lasso
+import statsmodels.discrete.l1 as l1
 import pdb  # pdb.set_trace
 
 
@@ -261,7 +261,7 @@ class LikelihoodModel(Model):
                     Initial direction set.
                 """
         Hinv = None  # JP error if full_output=0, Hinv not defined
-        methods = ['newton', 'nm', 'bfgs', 'powell', 'cg', 'ncg', 'lasso']
+        methods = ['newton', 'nm', 'bfgs', 'powell', 'cg', 'ncg', 'l1']
         if start_params is None:
             if hasattr(self, 'start_params'):
                 start_params = self.start_params
@@ -294,7 +294,7 @@ class LikelihoodModel(Model):
             'cg': _fit_mle_cg,
             'ncg': _fit_mle_ncg,
             'powell': _fit_mle_powell,
-            'lasso': lasso._fit_lasso
+            'l1': l1._fit_l1
         }
 
         if method == 'newton':
