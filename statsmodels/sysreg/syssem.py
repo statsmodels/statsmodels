@@ -57,12 +57,12 @@ class SysSEM(SysModel):
         ztzinv = np.linalg.inv(np.dot(z.T, z))
         Pz = np.dot(np.dot(z, ztzinv), z.T)
         
-        xhats = (np.dot(Pz, eq['exog']) for eq in self.sys)
-        xhat = x = sp.linalg.block_diag(*xhats) #TODO: sparse
+        xhats = [np.dot(Pz, eq['exog']) for eq in self.sys]
+        xhat = x = self._compute_sp_exog(xhats)
 
         omegainv = np.kron(np.linalg.inv(self.sigma), np.identity(self.nobs))
-        xtomegainv = np.dot(x.T, omegainv)
-        w = np.linalg.inv(np.dot(xtomegainv, x))
+        xtomegainv = x.T * omegainv
+        w = np.linalg.inv(xtomegainv * x)
         ww = np.dot(w, xtomegainv)
         params = np.squeeze(np.dot(ww, self.endog.reshape(-1, 1)))
         return params
