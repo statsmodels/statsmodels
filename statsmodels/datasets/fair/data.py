@@ -15,7 +15,7 @@ The data is available at http://fairmodel.econ.yale.edu/rayfair/pdf/2011b.htm
 
 DESCRSHORT  = """Extramarital affair data."""
 
-DESCRLONG   = """Extramartial affair data used to explain the allocation
+DESCRLONG   = """Extramarital affair data used to explain the allocation
 of an individual's time among work, time spent with a spouse, and time
 spent with a paramour. The data is used as an example of regression
 with censored data."""
