@@ -720,7 +720,7 @@ def levinson_durbin(s, nlags=10, isacov=False):
 
     sigma_v = sig[-1]
     arcoefs = phi[1:,-1]
-    pacf_ = np.diag(phi)
+    pacf_ = np.diag(phi).copy()
     pacf_[0] = 1.
     return sigma_v, arcoefs, pacf_, sig, phi  #return everything
 
