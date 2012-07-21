@@ -67,6 +67,20 @@ class SysSEM(SysModel):
         params = np.squeeze(np.dot(ww, self.endog.reshape(-1, 1)))
         return params
 
+    def predict(self, params, exog=None):
+        '''
+        Parameters
+        ----------
+        exog : None or list of ndarray
+            List of individual design (one for each equation)
+        '''
+        if exog is None:
+            sp_exog = self.sp_exog
+        else:
+            sp_exog = self._compute_sp_exog(exog)
+
+        return sp_exog * params
+
 class Sys2SLS(SysSEM):
     def __init__(self, sys, instruments=None, dfk=None):
         neqs = len(sys)
