@@ -13,38 +13,51 @@ from . import utils
 
 
 def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
-              ax=None):
+              ax=None, cmap='RdYlBu_r'):
     """Plot correlation of many variables in a tight color grid.
-
-    This creates a new figure
 
     Parameters
     ----------
     dcorr : ndarray
-        correlation matrix
-    xnames : None or list of strings
-        labels for x axis. If None, then the matplotlib defaults are used. If
-        it is an empty list, [], then not ticks and labels are added.
-    ynames : None or list of strings
-        labels for y axis. If None, then the matplotlib defaults are used. If
-        it is an empty list, [], then not ticks and labels are added.
-    title : None or string
-        title for figure. If None, then default is added. If title='', then no
-        title is added
-    normcolor : bool
-        If false (default), then the color coding range corresponds to the
-        lowest and highest correlation (automatic choice by matplotlib).
-        If true, then the color range is normalized to (-1, 1). If this is a
-        tuple of two numbers, then they define the range for the color bar.
+        Correlation matrix, square 2-D array.
+    xnames : list of str, optional
+        Labels for the horizontal axis.  If not given (None), then the
+        matplotlib defaults (integers) are used.  If it is an empty list, [],
+        then no ticks and labels are added.
+    ynames : list of str, optional
+        Labels for the vertical axis.  Works the same way as `xnames`.
+        If not given, the same names as for `xnames` are re-used.
+    title : str, optional
+        The figure title. If None, the default ('Correlation Matrix') is used.
+        If ``title=''``, then no title is added.
+    normcolor : bool or tuple of scalars, optional
+        If False (default), then the color coding range corresponds to the
+        range of `dcorr`.  If True, then the color range is normalized to
+        (-1, 1).  If this is a tuple of two numbers, then they define the range
+        for the color bar.
     ax : Matplotlib AxesSubplot instance, optional
         If `ax` is None, then a figure is created. If an axis instance is
         given, then only the main plot but not the colorbar is created.
+    cmap : str or Matplotlib Colormap instance, optional
+        The colormap for the plot.  Can be any valid Matplotlib Colormap
+        instance or name.
 
     Returns
     -------
     fig : Matplotlib figure instance
         If `ax` is None, the created figure.  Otherwise the figure to which
         `ax` is connected.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import matplotlib.pyplot as plt
+    >>> import statsmodels.api as sm
+
+    >>> hie_data = sm.datasets.randhie.load_pandas()
+    >>> corr_matrix = np.corrcoef(hie_data.data.T)
+    >>> sm.graphics.plot_corr(corr_matrix, xnames=hie_data.names)
+    >>> plt.show()
 
     """
     if ax is None:
@@ -53,8 +66,8 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
         create_colorbar = False
 
     fig, ax = utils.create_mpl_ax(ax)
+    import matplotlib as mpl
     from matplotlib import cm
-    from matplotlib.artist import setp
 
     nvars = dcorr.shape[0]
 
@@ -69,31 +82,44 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
     else:
         vmin, vmax = None, None
 
-    axim = ax.imshow(dcorr, cmap=cm.jet, interpolation='nearest',
-                     extent=(0,30,0,30), vmin=vmin, vmax=vmax)
+    axim = ax.imshow(dcorr, cmap=cmap, interpolation='nearest',
+                     extent=(0,nvars,0,nvars), vmin=vmin, vmax=vmax)
+
+    # create list of label positions
+    labelPos = np.arange(0, nvars) + 0.5
+
     if ynames:
-        ax.set_yticks(np.arange(nvars)+0.5)
-        ax.set_yticklabels(ynames[::-1], minor=True, fontsize='small',
+        ax.set_yticks(labelPos)
+        ax.set_yticks(labelPos[:-1]+0.5, minor=True)
+        ax.set_yticklabels(ynames[::-1], fontsize='small',
                            horizontalalignment='right')
     elif ynames == []:
         ax.set_yticks([])
 
     if xnames:
-        ax.set_xticks(np.arange(nvars)+0.5)
-        ax.set_xticklabels(xnames, minor=True, fontsize='small', rotation=45,
+        ax.set_xticks(labelPos)
+        ax.set_xticks(labelPos[:-1]+0.5, minor=True)
+        ax.set_xticklabels(xnames, fontsize='small', rotation=45,
                            horizontalalignment='right')
-        #some keywords don't work in previous line ?
-        #TODO: check if this is redundant
-        setp(ax.get_xticklabels(), fontsize='small', rotation=45,
-             horizontalalignment='right')
     elif xnames == []:
         ax.set_xticks([])
 
     if not title == '':
         ax.set_title(title)
 
-    if create_colorbar:
-        fig.colorbar(axim)
+    if mpl.__version__ >= '1.1':
+        # The tight_layout feature is not available before version 1.1
+        # It automatically pads the figure so labels do not get clipped.
+        if create_colorbar:
+            fig.colorbar(axim, use_gridspec=True)
+        fig.tight_layout()
+    else:
+        if create_colorbar:
+            fig.colorbar(axim)
+
+    ax.tick_params(which='minor', length=0)
+    ax.tick_params(direction='out')
+    ax.grid(True, which='minor', ls='-', color='w', lw=1)
 
     return fig
 
