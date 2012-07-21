@@ -130,6 +130,20 @@ class SysModel(LikelihoodModel):
         sp_exog = sp_exog.tobsr() # cast to compressed for efficiency
         return sp_exog
 
+    def predict(self, params, exog=None):
+        '''
+        Parameters
+        ----------
+        exog : None or list of ndarray
+            List of individual design (one for each equation)
+        '''
+        if exog is None:
+            sp_exog = self.sp_exog
+        else:
+            sp_exog = self._compute_sp_exog(exog)
+        
+        return sp_exog * params
+
 class SysGLS(SysModel):
     '''
     Parameters
@@ -289,21 +303,7 @@ class SysGLS(SysModel):
         beta = betas[0]
         normalized_cov_params = self._compute_res()[1]
         return SysResults(self, beta, normalized_cov_params)
-
-    def predict(self, params, exog=None):
-        '''
-        Parameters
-        ----------
-        exog : None or list of ndarray
-            List of individual design (one for each equation)
-        '''
-        if exog is None:
-            sp_exog = self.sp_exog
-        else:
-            sp_exog = self._compute_sp_exog(exog)
-        
-        return sp_exog * params
-
+ 
 class SysWLS(SysGLS):
     '''
     Parameters
