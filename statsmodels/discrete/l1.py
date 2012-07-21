@@ -1,5 +1,5 @@
 """
-Holds files for the lasso regularization
+Holds files for the l1 regularization
 """
 import numpy as np
 from scipy.optimize import fmin_slsqp
@@ -7,13 +7,13 @@ import pdb
 # pdb.set_trace
 
 
-def _fit_lasso(f, score, start_params, fargs, kwargs, disp=None, maxiter=100, 
+def _fit_l1(f, score, start_params, fargs, kwargs, disp=None, maxiter=100, 
         callback=None, retall=False, full_output=False, hess=None):
     """
     """
 
     if callback:
-        print "Callback will be ignored with lasso"
+        print "Callback will be ignored with l1"
 
     ### Extract values
     fargs += (f,score) 
@@ -39,8 +39,10 @@ def _fit_lasso(f, score, start_params, fargs, kwargs, disp=None, maxiter=100,
             disp_slsqp = 2
     else:
         disp_slsqp = 0
-
+    # Set/retrieve the desired accuracy
     acc = kwargs.setdefault('acc', 1e-6)
+
+    ### Call the optimization
     results = fmin_slsqp(func, x0, f_ieqcons=f_ieqcons, fprime=fprime, acc=acc,
             args=fargs, iter=maxiter, disp=disp_slsqp, full_output=full_output, 
             fprime_ieqcons=fprime_ieqcons, epsilon=epsilon)
@@ -67,7 +69,7 @@ def _fit_lasso(f, score, start_params, fargs, kwargs, disp=None, maxiter=100,
         x = np.array(results)
         params = x[:K]
 
-
+    ### Return results
     if full_output:
         return params, retvals
     else:
@@ -162,3 +164,29 @@ def fprime_ieqcons(x, *fargs):
     elif offset == 1:
         one_column = np.zeros((2*K-2, 1))
         return np.concatenate((one_column, C), axis=1)
+
+def get_bic(results, model, constant):
+    """
+    Replacement for the "call" results.bic 
+        (in discrete_model.py:MultinomialResults).  This version takes into
+        account that some parameters are equal to zero, and therefore the 
+        model degrees of freedom have been reduced.
+    The original call uses model.df_model, which is set first in 
+        DiscreteModel.initialize() with  
+            self.df_model = float(tools.rank(self.exog) - 1) 
+        and then in MultinomialModel.__init__ with 
+            self.df_model *= (self.J-1)
+    """
+    number_nonzero_params = \
+            len(np.nonzero(np.fabs(results.params.ravel())>0)[0]) 
+    if constant:
+        modified_df_model = number_nonzero_params - (model.J - 1)
+    else:
+        modified_df_model = number_nonzero_params 
+
+    return -2*results.llf + np.log(results.nobs)*(modified_df_model+model.J-1)
+
+
+
+
+
