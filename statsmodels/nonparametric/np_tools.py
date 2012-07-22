@@ -65,6 +65,8 @@ def adjust_shape(dat, K):
     with gpke()
     """
     dat = np.asarray(dat)
+    if dat.ndim > 2:
+        dat = np.squeeze(dat)
     if dat.ndim == 1 and K > 1:  # one obs many vars
         N = 1
     elif dat.ndim == 1 and K == 1:  # one obs one var
