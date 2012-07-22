@@ -1,23 +1,17 @@
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_
-#import statsmodels.api as sm
 from statsmodels.nonparametric.smoothers_lowess import lowess
 
 
 class  TestLowess(object):
 
     def test_import(self):
-        #this doesn't work
-        #from statsmodels.api.nonparametric import lowess as lowess1
+        # this test exists because smoothers_lowess.py used to be lowess.py
         import statsmodels.api as sm
         lowess1 = sm.nonparametric.lowess
         assert_(lowess is lowess1)
-        #backwards compatible for 0.4
-        from statsmodels.nonparametric.lowess import lowess as lowess2
-        assert_(lowess is lowess2)
 
     def test_simple(self):
-
         x = np.arange(20, dtype='float32')
         #standard normal noise
         noise = np.array([-0.76741118, -0.30754369,
@@ -46,7 +40,6 @@ class  TestLowess(object):
         assert_almost_equal(expected_lowess, actual_lowess)
 
     def test_iter(self):
-
         x = np.arange(20, dtype='float32')
         #cauchy noise
         noise = np.array([ 1.86299605, -0.10816866,  1.87761229,
@@ -85,7 +78,6 @@ class  TestLowess(object):
         assert_almost_equal(expected_lowess_3_iter, actual_lowess_3_iter)
 
     def test_frac(self):
-
         #linspace from -2*pi to 2*pi with 30 points
         x = np.array([-6.28318531, -5.84986218,
                         -5.41653906, -4.98321593, -4.54989281,
