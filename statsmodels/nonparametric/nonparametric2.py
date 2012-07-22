@@ -200,10 +200,12 @@ class UKDE(GenericKDE):
 
     def __init__(self, tdat, var_type, bw=None):
 
-        self.tdat = np.column_stack(tdat)
+        #self.tdat = np.column_stack(tdat)
+        self.var_type = var_type
+        self.K = len(self.var_type)
+        self.tdat = tools.adjust_shape(tdat, self.K)
         self.all_vars = self.tdat
         self.N, self.K = np.shape(self.tdat)
-        self.var_type = var_type
         assert self.K == len(self.var_type)
         assert self.N > self.K  # Num of obs must be > than num of vars
         self.bw = self.compute_bw(bw)
@@ -282,8 +284,11 @@ class UKDE(GenericKDE):
             edat = self.tdat
         else:
             edat = tools.adjust_shape(edat, self.K)
-        pdf_est = tools.gpke(self.bw, tdat=self.tdat, edat=edat,
-                          var_type=self.var_type) / self.N
+        pdf_est = []
+        N_edat = np.shape(edat)[0]
+        for i in xrange(N_edat):
+            pdf_est.append(tools.gpke(self.bw, tdat=self.tdat, edat=edat[i, :],
+                          var_type=self.var_type) / self.N)
         pdf_est = np.squeeze(pdf_est)
         return pdf_est
 
@@ -321,11 +326,14 @@ class UKDE(GenericKDE):
             edat = self.tdat
         else:
             edat = tools.adjust_shape(edat, self.K)
-        cdf_est = tools.gpke(self.bw, tdat=self.tdat,
-                             edat=edat, var_type=self.var_type,
+        N_edat = np.shape(edat)[0]
+        cdf_est = []
+        for i in xrange(N_edat):
+            cdf_est.append(tools.gpke(self.bw, tdat=self.tdat,
+                             edat=edat[i, :], var_type=self.var_type,
                              ckertype="gaussian_cdf",
                              ukertype="aitchisonaitken_cdf",
-                             okertype='wangryzin_cdf') / self.N
+                             okertype='wangryzin_cdf') / self.N)
         cdf_est = np.squeeze(cdf_est)
         return cdf_est
 
@@ -429,15 +437,18 @@ class CKDE(GenericKDE):
 
     def __init__(self, tydat, txdat, dep_type, indep_type, bw):
 
-        self.tydat = np.column_stack(tydat)
-        self.txdat = np.column_stack(txdat)
-        self.N, self.K_dep = np.shape(self.tydat)
-        self.K_indep = np.shape(self.txdat)[1]
-        self.all_vars = np.concatenate((self.tydat, self.txdat), axis=1)
+#        self.tydat = np.column_stack(tydat)
+#        self.txdat = np.column_stack(txdat)
         self.dep_type = dep_type
         self.indep_type = indep_type
+        self.K_dep = len(self.dep_type)
+        self.K_indep = len(self.indep_type)
+        self.tydat = tools.adjust_shape(tydat, self.K_dep)
+        self.txdat = tools.adjust_shape(txdat, self.K_indep)
+        self.N, self.K_dep = np.shape(self.tydat)
+        self.all_vars = np.concatenate((self.tydat, self.txdat), axis=1)
         assert len(self.dep_type) == self.K_dep
-        assert len(self.indep_type) == self.K_indep
+        assert len(self.indep_type) == np.shape(self.txdat)[1]
         self.bw = self.compute_bw(bw)
 
     def __repr__(self):
@@ -528,13 +539,17 @@ class CKDE(GenericKDE):
             exdat = self.txdat
         else:
             exdat = tools.adjust_shape(exdat, self.K_indep)
-
+        pdf_est = []
         edat = np.concatenate((eydat, exdat), axis=1)
-        f_yx = tools.gpke(self.bw, tdat=self.all_vars, edat=edat,
+        N_edat = np.shape(edat)[0]
+        for i in xrange(N_edat):
+            f_yx = tools.gpke(self.bw, tdat=self.all_vars, edat=edat[i, :],
                           var_type=(self.dep_type + self.indep_type))
-        f_x = tools.gpke(self.bw[self.K_dep::], tdat=self.txdat,
-                         edat=exdat, var_type=self.indep_type)
-        return (f_yx / f_x)
+            f_x = tools.gpke(self.bw[self.K_dep::], tdat=self.txdat,
+                         edat=exdat[i, :], var_type=self.indep_type)
+            pdf_est.append(f_yx / f_x)
+           
+        return np.squeeze(pdf_est)
 
     def cdf(self, eydat=None, exdat=None):
         """
@@ -581,19 +596,22 @@ class CKDE(GenericKDE):
             exdat = self.txdat
         else:
             exdat = tools.adjust_shape(exdat, self.K_indep)
-        mu_x = tools.gpke(self.bw[self.K_dep::], tdat=self.txdat,
-                         edat=exdat, var_type=self.indep_type) / self.N
-        mu_x = np.squeeze(mu_x)
-        G_y = tools.gpke(self.bw[0:self.K_dep], tdat=self.tydat,
-                                  edat=eydat, var_type=self.dep_type,
+        N_edat = np.shape(exdat)[0]
+        cdf_est = np.empty(N_edat)
+        for i in xrange(N_edat):
+            mu_x = tools.gpke(self.bw[self.K_dep::], tdat=self.txdat,
+                         edat=exdat[i, :], var_type=self.indep_type) / self.N
+            mu_x = np.squeeze(mu_x)
+            G_y = tools.gpke(self.bw[0:self.K_dep], tdat=self.tydat,
+                                  edat=eydat[i, :], var_type=self.dep_type,
                                   ckertype="gaussian_cdf",
                          ukertype="aitchisonaitken_cdf",
                              okertype='wangryzin_cdf', tosum=False)
 
-        W_x = tools.gpke(self.bw[self.K_dep::], tdat=self.txdat,
-                         edat=exdat, var_type=self.indep_type, tosum=False)
-        S = np.sum(G_y * W_x, axis=0)
-        cdf_est = S / (self.N * mu_x)
+            W_x = tools.gpke(self.bw[self.K_dep::], tdat=self.txdat,
+                         edat=exdat[i, :], var_type=self.indep_type, tosum=False)
+            S = np.sum(G_y * W_x, axis=0)
+            cdf_est[i] = S / (self.N * mu_x)
         return cdf_est
 
     def imse(self, bw):
@@ -651,17 +669,18 @@ class CKDE(GenericKDE):
             Ye_R = np.kron(Expander, Y)
             Xe_L = np.kron(X, Expander)
             Xe_R = np.kron(Expander, X)
-            K_Xi_Xl = tools.pke(bw[self.K_dep::], tdat=Xe_L,
+            K_Xi_Xl = tools.gpke(bw[self.K_dep::], tdat=Xe_L,
                                   edat=self.txdat[l, :],
-                                var_type=self.indep_type)
-            K_Xj_Xl = tools.pke(bw[self.K_dep::], tdat=Xe_R,
+                                var_type=self.indep_type, tosum=False)
+            K_Xj_Xl = tools.gpke(bw[self.K_dep::], tdat=Xe_R,
                                   edat=self.txdat[l, :],
-                                var_type=self.indep_type)
-            K2_Yi_Yj = tools.pke(bw[0:self.K_dep], tdat=Ye_L,
+                                var_type=self.indep_type, tosum=False)
+            K2_Yi_Yj = tools.gpke(bw[0:self.K_dep], tdat=Ye_L,
                                    edat=Ye_R, var_type=self.dep_type,
                              ckertype='gauss_convolution',
                                  okertype='wangryzin_convolution',
-                                   ukertype='aitchisonaitken_convolution')
+                                   ukertype='aitchisonaitken_convolution',
+                                            tosum=False)
             G = np.sum(K_Xi_Xl * K_Xj_Xl * K2_Yi_Yj)
             G = G / self.N ** 2
             f_X_Y = tools.gpke(bw, tdat=-Z, edat=-self.all_vars[l, :],
@@ -774,7 +793,9 @@ class Reg(object):
             X = (txdat - x)
             X = np.column_stack((np.ones(n), X))
             Kx = tools.gpke(bw, tdat=txdat, edat=x,
-                            var_type=self.var_type, tosum=False)
+                            var_type=self.var_type, 
+                            ukertype='aitchison_aitken_reg',
+                            okertype='wangryzin_reg', tosum=False)
             Kx = np.diag(np.squeeze(Kx))
             xtk = np.dot(X.T, Kx)
             a1 = np.linalg.pinv(np.dot(xtk, X))
@@ -782,7 +803,7 @@ class Reg(object):
             d_x = np.dot(a1, a2)
             D_x.append(d_x[0])
             B_x.append(d_x[1::])
-        return np.squeeze(np.asarray(D_x))
+        return np.squeeze(np.asarray(D_x)), np.squeeze(np.asarray(B_x))
 
     def g_lc(self, bw, tydat, txdat, edat):
         """
@@ -808,12 +829,17 @@ class Reg(object):
 
         """
         KX = tools.gpke(bw, tdat=txdat, edat=edat,
-                        var_type=self.var_type, tosum=False)
+                        var_type=self.var_type,
+                            ukertype='aitchison_aitken_reg',
+                            okertype='wangryzin_reg', tosum=False)
         G_numer = np.sum(tydat * KX, axis=0)
         G_denom = np.sum(tools.gpke(bw, tdat=txdat, edat=edat,
                                     var_type=self.var_type,
-                                    tosum=False), axis=0)
-        return G_numer / G_denom
+                            ukertype='aitchison_aitken_reg',
+                            okertype='wangryzin_reg', tosum=False), axis=0)
+        G = G_numer / G_denom
+        B_x = []
+        return G, B_x
 
     def aic_hurvich(self):
         pass
@@ -856,7 +882,7 @@ class Reg(object):
         L = 0
         for X_j in LOO_X:
             Y = LOO_Y.next()
-            G = func(bw, tydat=Y, txdat=-X_j, edat=-self.txdat[i, :])
+            G = func(bw, tydat=Y, txdat=-X_j, edat=-self.txdat[i, :])[0]
             L += (self.tydat[i] - G) ** 2
             i += 1
         # Note: There might be a way to vectorize this. See p.72 in [1]
@@ -878,12 +904,6 @@ class Reg(object):
         return opt.fmin(res, x0=h0, args=(func, ), maxiter=1e3,
                       maxfun=1e3, disp=0)
 
-    def mean(self, edat=None):
-        func = self.est[self.reg_type]
-        if edat is None:
-            edat = self.txdat
-        return func(self.bw, self.tydat, self.txdat, edat=edat)
-
     def r_squared(self):
         """
         Returns the R-Squared for the nonparametric regression
@@ -900,9 +920,20 @@ class Reg(object):
         fitted values calculated in self.mean()
         """
         Y = np.squeeze(self.tydat)
-        Yhat = self.mean()
+        Yhat = self.fit()[0]
         Y_bar = np.mean(Yhat)
         R2_numer = (np.sum((Y - Y_bar) * (Yhat - Y_bar)) ** 2)
         R2_denom = np.sum((Y - Y_bar) ** 2, axis=0) * \
                    np.sum((Yhat - Y_bar) ** 2, axis=0)
         return R2_numer / R2_denom
+
+    def fit(self, edat=None):
+        """
+        Returns the marginal effects at the edat points
+        """
+        func = self.est[self.reg_type]
+        if edat is None:
+            edat = self.txdat
+        mean, mfx = func(self.bw, self.tydat, self.txdat, edat=edat)
+        return mean, mfx
+
