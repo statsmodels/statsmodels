@@ -126,16 +126,18 @@ def gpke(bw, tdat, edat, var_type, ckertype='gaussian',
     """
     iscontinuous, isordered, isunordered = _get_type_pos(var_type)
     K = len(var_type)
+    tdat = adjust_shape(tdat, K)
+    edat = adjust_shape(edat, K)
     N = np.shape(tdat)[0]
     # must remain 1-D for indexing to work
     bw = np.reshape(np.asarray(bw), (K,))
     Kval = np.concatenate((
         kernel_func[ckertype](bw[iscontinuous],
-                            tdat[:, iscontinuous], edat[iscontinuous]),
+                            tdat[:, iscontinuous], edat[:, iscontinuous]),
         kernel_func[okertype](bw[isordered], tdat[:, isordered],
-                            edat[isordered]),
+                            edat[:, isordered]),
         kernel_func[ukertype](bw[isunordered], tdat[:, isunordered],
-                            edat[isunordered])), axis=1)
+                            edat[:, isunordered])), axis=1)
 
     dens = np.prod(Kval, axis=1) * 1. / (np.prod(bw[iscontinuous]))
     if tosum:

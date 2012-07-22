@@ -680,7 +680,7 @@ class CKDE(GenericKDE):
                              ckertype='gauss_convolution',
                                  okertype='wangryzin_convolution',
                                    ukertype='aitchisonaitken_convolution',
-                                            tosum=False)
+                                             tosum=False)
             G = np.sum(K_Xi_Xl * K_Xj_Xl * K2_Yi_Yj)
             G = G / self.N ** 2
             f_X_Y = tools.gpke(bw, tdat=-Z, edat=-self.all_vars[l, :],
