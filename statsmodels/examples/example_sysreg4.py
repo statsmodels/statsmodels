@@ -13,6 +13,7 @@ from statsmodels.sysreg.syssem import *
 # demand: y_{t} = c_{t} + I_{t} + g_{t}
 
 # See Greene's Econometric Analysis for more information
+# See sysreg/tests/results/macrodata.R
 
 macrodata = sm.datasets.macrodata.load().data
 
