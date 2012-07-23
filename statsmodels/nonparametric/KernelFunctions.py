@@ -165,35 +165,6 @@ def Gaussian(h, Xi, x):
     return kernel_value
 
 
-def aitchison_aitken_reg(h, Xi, x):
-    """
-    A version for the atichison_aitken kernel for
-    nonparametric regression
-    Suggested by Li and Rcine
-    """
-    h, Xi, x, N, K = _get_shape_and_transform(h, Xi, x)
-    if K == 0:
-        return Xi
-    kernel_value = np.ones((N,K))
-    inDom = (Xi == x) * h
-    kernel_value[Xi == x] = inDom[Xi == x]
-    return kernel_value
-
-
-def wangryzin_reg(h, Xi, x):
-    """
-    A version for the wangryzin kernel for 
-    nonparametric regression
-    Suggested by Li and Rcine in [1] ch.4
-    """
-    h, Xi, x, N, K = _get_shape_and_transform(h, Xi, x)
-    if K == 0:
-        return Xi
-    kernel_value = h ** abs(Xi - x)
-    kenrel_value = kernel_value.reshape([N,K])
-    return kernel_value
-
-
 def Gaussian_Convolution(h, Xi, x):
     """
     Calculates the Gaussian Convolution Kernel
@@ -312,20 +283,3 @@ def WangRyzin_cdf(h, Xi, x_u):
                 Sigma_x += WangRyzin(h[i], Xi[:, i], int(x))
         Ordered[:, i] = Sigma_x[:, 0]
     return Ordered
-
-
-def D_Gaussian(h, Xi, x):
-    # The derivative of the Gaussian Kernel
-    Xi = np.asarray(Xi)
-    x = np.asarray(x)
-    h = np.asarray(h, dtype=float)
-    N = np.shape(Xi)[0]
-    if Xi.ndim > 1:
-        K = np.shape(Xi)[1]
-    else:
-        K = 1
-    if K == 0:
-        return Xi
-    z = (Xi - x) / h
-    value = np.exp(-z ** 2 / 2.) * (Xi - x) / (np.sqrt(2 * np.pi) * h ** 2)
-    return value

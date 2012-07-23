@@ -26,7 +26,7 @@ import np_tools as tools
 import scipy.optimize as opt
 import KernelFunctions as kf
 
-__all__ = ['UKDE', 'CKDE', 'Reg']
+__all__ = ['UKDE', 'CKDE']
 
 
 class GenericKDE (object):
