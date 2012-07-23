@@ -15,5 +15,6 @@ eq2 = {'endog' : y, 'exog' : x2, 'indep_endog' : [1]}
 sys = [eq1, eq2]
 
 mod = Sys2SLS(sys)
-print mod.fit() # parameters estimates, same as systemfit
+res = mod.fit()
+print res.summary()
 
