@@ -142,6 +142,3 @@ def gpke(bw, tdat, edat, var_type, ckertype='gaussian',
         return np.sum(dens, axis=0)
     else:
         return dens
-
-
-

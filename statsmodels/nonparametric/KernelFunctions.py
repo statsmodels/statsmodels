@@ -150,7 +150,7 @@ def WangRyzin(h, Xi, x):
 
     kernel_value = (0.5 * (1 - h) * (h ** abs(Xi - x)))
     kernel_value = kernel_value.reshape([N, K])
-    inDom = (Xi == x) * (1 - h)  
+    inDom = (Xi == x) * (1 - h)
     kernel_value[Xi == x] = inDom[Xi == x]
     return kernel_value
 

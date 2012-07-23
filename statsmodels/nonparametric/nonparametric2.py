@@ -548,7 +548,6 @@ class CKDE(GenericKDE):
             f_x = tools.gpke(self.bw[self.K_dep::], tdat=self.txdat,
                          edat=exdat[i, :], var_type=self.indep_type)
             pdf_est.append(f_yx / f_x)
-           
         return np.squeeze(pdf_est)
 
     def cdf(self, eydat=None, exdat=None):
@@ -609,7 +608,8 @@ class CKDE(GenericKDE):
                              okertype='wangryzin_cdf', tosum=False)
 
             W_x = tools.gpke(self.bw[self.K_dep::], tdat=self.txdat,
-                         edat=exdat[i, :], var_type=self.indep_type, tosum=False)
+                         edat=exdat[i, :], var_type=self.indep_type,
+                         tosum=False)
             S = np.sum(G_y * W_x, axis=0)
             cdf_est[i] = S / (self.N * mu_x)
         return cdf_est
@@ -793,7 +793,7 @@ class Reg(object):
             X = (txdat - x)
             X = np.column_stack((np.ones(n), X))
             Kx = tools.gpke(bw, tdat=txdat, edat=x,
-                            var_type=self.var_type, 
+                            var_type=self.var_type,
                             ukertype='aitchison_aitken_reg',
                             okertype='wangryzin_reg', tosum=False)
             Kx = np.diag(np.squeeze(Kx))
@@ -936,4 +936,3 @@ class Reg(object):
             edat = self.txdat
         mean, mfx = func(self.bw, self.tydat, self.txdat, edat=edat)
         return mean, mfx
-
