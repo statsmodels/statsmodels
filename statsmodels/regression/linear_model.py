@@ -48,11 +48,11 @@ class GLS(base.LikelihoodModel):
     Parameters
     ----------
     endog : array-like
-           endog is a 1-d vector that contains the response/independent variable
+           endog is a 1-d vector that contains the response/dependent variable
     exog : array-like
-           exog is a n x p vector where n is the number of observations and p is
-           the number of regressors/dependent variables including the intercept
-           if one is included in the data.
+           exog is a n x p vector where n is the number of observations and p
+           is the number of regressors/independent variables including the
+           intercept if one is included in the data.
     sigma : scalar or array
            `sigma` is the weighting matrix of the covariance.
            The default is None for no scaling.  If `sigma` is a scalar, it is
