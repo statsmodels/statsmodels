@@ -1662,15 +1662,16 @@ class DiscreteResults(base.LikelihoodModelResults):
         if dummy == True:
             if np.any(~ind):
                 const_idx = np.where(~ind)[0]
-                dummy_ind[const_idx:] -= 1
+                # adjust back for constant because effects doesn't have one
+                dummy_ind[dummy_ind > const_idx] -= 1
             effects = _get_dummy_effects(effects, exog, dummy_ind, method,
                                          model, params)
 
         if count == True:
             if np.any(~ind):
                 const_idx = np.where(~ind)[0]
-                count_ind[const_idx:] -= 1 # adjust back for constant because
-                               # effects doesn't have one
+                # adjust back for constant because effects doesn't have one
+                count_ind[count_ind > const_idx] -= 1
             effects = _get_count_effects(effects, exog, count_ind, method,
                                          model, params)
 
