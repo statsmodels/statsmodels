@@ -91,7 +91,6 @@ def AitchisonAitken(h, Xi, x, num_levels=False):
     h, Xi, x, N, K = _get_shape_and_transform(h, Xi, x)
     Xi = np.abs(np.asarray(Xi, dtype=int))
     x = np.abs(np.asarray(x, dtype=int))
-
     if K == 0:
         return Xi
     c = np.asarray([len(np.unique(Xi[:, i])) for i in range(K)],
@@ -99,7 +98,7 @@ def AitchisonAitken(h, Xi, x, num_levels=False):
     if num_levels:
         c = num_levels
     kernel_value = np.tile(h / (c - 1), (N, 1))
-    inDom = (Xi == x) * (1 - h)  #FIXME: only works for scalar `x`
+    inDom = (Xi == x) * (1 - h)
     kernel_value[Xi == x] = inDom[Xi == x]
     kernel_value = kernel_value.reshape([N, K])
     return kernel_value
@@ -151,7 +150,7 @@ def WangRyzin(h, Xi, x):
 
     kernel_value = (0.5 * (1 - h) * (h ** abs(Xi - x)))
     kernel_value = kernel_value.reshape([N, K])
-    inDom = (Xi == x) * (1 - h)  #FIXME: only works for scalar `x`
+    inDom = (Xi == x) * (1 - h)  
     kernel_value[Xi == x] = inDom[Xi == x]
     return kernel_value
 
@@ -225,7 +224,6 @@ def WangRyzin_Convolution(h, Xi, Xj):
     Ordered = np.empty([N, K])
     for i in range(K):
         Sigma_x = 0
-        # TODO: Think about vectorizing this for optimal performance
         for x in Dom_x[i]:
             Sigma_x += WangRyzin(h[i], Xi[:, i],
                                   int(x)) * WangRyzin(h[i], Xj[i], int(x))
@@ -245,7 +243,6 @@ def AitchisonAitken_Convolution(h, Xi, Xj):
     Ordered = np.empty([N, K])
     for i in range(K):
         Sigma_x = 0
-        # TODO: This can be vectorized
         for x in Dom_x[i]:
             Sigma_x += AitchisonAitken(h[i], Xi[:, i], int(x),
                                         num_levels=len(Dom_x[i])) * \
@@ -276,14 +273,12 @@ def AitchisonAitken_cdf(h, Xi, x_u):
         N = 1
     if K == 0:
         return Xi
-
     h = np.asarray(h, dtype=float)
     Xi = Xi.reshape([N, K])
     Dom_x = [np.unique(Xi[:, i]) for i in range(K)]
     Ordered = np.empty([N, K])
     for i in range(K):
         Sigma_x = 0
-        # TODO: This can be vectorized
         for x in Dom_x[i]:
             if x <= x_u:
                 Sigma_x += AitchisonAitken(h[i], Xi[:, i], int(x),
@@ -312,7 +307,6 @@ def WangRyzin_cdf(h, Xi, x_u):
     Ordered = np.empty([N, K])
     for i in range(K):
         Sigma_x = 0
-        # TODO: Think about vectorizing this for optimal performance
         for x in Dom_x[i]:
             if x <= x_u:
                 Sigma_x += WangRyzin(h[i], Xi[:, i], int(x))
