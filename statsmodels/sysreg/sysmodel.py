@@ -78,6 +78,7 @@ class SysModel(LikelihoodModel):
         self.neqs = len(sys)
         self.nobs = sys[0]['endog'].shape[0]
         self.nexogs = sum([eq['exog'].shape[1] for eq in sys])
+        self.dfk = dfk
 
         # Degrees of Freedom
         (df_model, df_resid) = ([], [])
@@ -143,6 +144,21 @@ class SysModel(LikelihoodModel):
             sp_exog = self._compute_sp_exog(exog)
         
         return sp_exog * params
+
+    def _compute_sigma(self, resids):
+        '''
+        Parameters
+        ----------
+        resids : ndarray (N x G)
+            Residuals for each equation stacked in column.
+        '''
+        s = np.dot(resids.T, resids)
+        if self.dfk is None:
+            return s / self.nobs
+        elif self.dfk == 'dfk1':
+            return s / self._div_dfk1
+        else:
+            return s / self._div_dfk2
 
 class SysGLS(SysModel):
     '''
@@ -378,22 +394,7 @@ class SysSUR(SysGLS):
 
         self.sigma = sigma
         self.initialize()
-
-    def _compute_sigma(self, resids):
-        '''
-        Parameters
-        ----------
-        resids : ndarray (N x G)
-            Residuals for each equation stacked in column.
-        '''
-        s = np.dot(resids.T, resids)
-        if self.dfk is None:
-            return s / self.nobs
-        elif self.dfk == 'dfk1':
-            return s / self._div_dfk1
-        else:
-            return s / self._div_dfk2
-
+ 
 class SysSURI(SysOLS):
     '''
     SUR estimation with identical regressors in each equation.
@@ -441,7 +442,7 @@ class SysResults(LikelihoodModelResults):
     def summary(self, yname=None, xname=None, title=None):
         mod_names = {'SysGLS' : 'System GLS', 'SysWLS' : 'System WLS',
                      'SysOLS' : 'System OLS', 'SysSUR' : 'System SUR',
-                     'SysSURI' : 'Multivariate FGLS'}
+                     'SysSURI' : 'Multivariate FGLS', 'Sys2SLS' : 'System Two Stage Least Square'}
         if title is None:
             title = mod_names[self.model.__class__.__name__] + ' ' + 'Regression Results'
 

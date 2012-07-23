@@ -60,12 +60,21 @@ class SysSEM(SysModel):
         xhats = [np.dot(Pz, eq['exog']) for eq in self.sys]
         xhat = x = self._compute_sp_exog(xhats)
 
+        # Parameters
         omegainv = np.kron(np.linalg.inv(self.sigma), np.identity(self.nobs))
         xtomegainv = x.T * omegainv
         w = np.linalg.inv(xtomegainv * x)
         ww = np.dot(w, xtomegainv)
         params = np.squeeze(np.dot(ww, self.endog.reshape(-1, 1)))
-        return params
+
+        # Covariance matrix of the parameters
+        fittedvalues = self.predict(params=params, exog=None)
+        resids = self.endog.T - fittedvalues.reshape(self.neqs,-1).T
+        cov_resids = self._compute_sigma(resids)
+        omegainv = np.kron(np.linalg.inv(cov_resids), np.identity(self.nobs))
+        normalized_cov_params = np.linalg.inv((xhat.T * omegainv) * xhat)
+
+        return SysResults(self, params, normalized_cov_params)
 
     def predict(self, params, exog=None):
         '''
