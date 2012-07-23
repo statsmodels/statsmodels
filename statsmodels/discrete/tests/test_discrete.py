@@ -10,7 +10,8 @@ tests.
 import os
 import numpy as np
 from numpy.testing import *
-from statsmodels.discrete.discrete_model import *
+from statsmodels.discrete.discrete_model import (Logit, Probit, MNLogit,
+                                                 Poisson, _iscount, _isdummy)
 import statsmodels.api as sm
 from sys import platform
 from nose import SkipTest
@@ -60,10 +61,6 @@ class CheckModelResults(object):
     def test_llr_pvalue(self):
         assert_almost_equal(self.res1.llr_pvalue, self.res2.llr_pvalue,
                 DECIMAL_4)
-
-    def test_margeff(self):
-        pass
-    # this probably needs it's own test class?
 
     def test_normalized_cov_params(self):
         pass
@@ -190,6 +187,10 @@ class CheckMargEff(object):
     def test_dummy_eydxmean(self):
         assert_almost_equal(self.res1.margeff(at='mean', method='eydx',
             dummy=True), self.res2.margeff_dummy_eydxmean, DECIMAL_4)
+
+    def test_count_dydxoverall(self):
+        pass
+
 
 class TestProbitNewton(CheckBinaryResults):
 
@@ -479,6 +480,24 @@ def test_issue_341():
     x = exog[0]
     np.testing.assert_equal(res1.predict(x).shape, (1,7))
     np.testing.assert_equal(res1.predict(x[None]).shape, (1,7))
+
+def test_iscount():
+    X = np.random.random((50, 10))
+    X[:,2] = np.random.randint(1, 10, size=50)
+    X[:,6] = np.random.randint(1, 10, size=50)
+    X[:,4] = np.random.randint(0, 2, size=50)
+    X[:,1] = np.random.randint(-10, 10, size=50) # not integers
+    count_ind = _iscount(X)
+    assert_equal(count_ind, [2, 6])
+
+def test_isdummy():
+    X = np.random.random((50, 10))
+    X[:,2] = np.random.randint(1, 10, size=50)
+    X[:,6] = np.random.randint(0, 2, size=50)
+    X[:,4] = np.random.randint(0, 2, size=50)
+    X[:,1] = np.random.randint(-10, 10, size=50) # not integers
+    count_ind = _isdummy(X)
+    assert_equal(count_ind, [4, 6])
 
 
 if __name__ == "__main__":
