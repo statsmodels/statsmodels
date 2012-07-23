@@ -2,6 +2,8 @@ import numpy as np
 import statsmodels.api as sm
 from statsmodels.sysreg.syssem import *
 
+# See sysreg/tests/results/kmenta.R
+
 data = sm.datasets.kmenta.load().data
 
 y = data['consump']
