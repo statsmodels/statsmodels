@@ -126,8 +126,8 @@ def gpke(bw, tdat, edat, var_type, ckertype='gaussian',
     """
     iscontinuous, isordered, isunordered = _get_type_pos(var_type)
     K = len(var_type)
-    tdat = adjust_shape(tdat, K)
-    edat = adjust_shape(edat, K)
+    #tdat = adjust_shape(tdat, K)
+    #edat = adjust_shape(edat, K)
     N = np.shape(tdat)[0]
     # must remain 1-D for indexing to work
     bw = np.reshape(np.asarray(bw), (K,))
@@ -146,57 +146,4 @@ def gpke(bw, tdat, edat, var_type, ckertype='gaussian',
         return dens
 
 
-def pke(bw, tdat, edat, var_type, ckertype='gaussian',
-          okertype='wangryzin', ukertype='aitchisonaitken'):
-    """
-    The product of appropriate kernels
 
-    Used in the calculation of imse for the conditional KDE
-
-    Parameters
-    ----------
-    bw: array-like
-        The user-specified bandwdith parameters
-    tdat: 1D or 2d array
-        The training data
-    edat: 1d array
-        The evaluation points at which the kernel estimation is performed
-    var_type: str
-        The variable type (continuous, ordered, unordered)
-    ckertype: str
-        The kernel used for the continuous variables
-    okertype: str
-        The kernel used for the ordered discrete variables
-    ukertype: str
-        The kernel used for the unordered discrete variables
-
-    Returns
-    -------
-    dens: array-like
-        The dens estimator
-    Notes
-    -----
-    This is similar to gpke but adapted specifically for the CKDE
-    cross-validation least squares. It also doesn't sum across the kernel
-    values
-    """
-    # TODO: See if you can substitute instead of the gpke method
-    iscontinuous, isordered, isunordered = _get_type_pos(var_type)
-    K = len(var_type)
-    tdat = adjust_shape(tdat, K)
-    edat = adjust_shape(edat, K)
-    N = np.shape(tdat)[0]
-    N_edat = np.shape(edat)[0]
-    # must remain 1-D for indexing to work
-    bw = np.reshape(np.asarray(bw), (K,))
-
-    Kval = np.concatenate((
-    kernel_func[ckertype](bw[iscontinuous], tdat[:, iscontinuous],
-                          edat[:, iscontinuous]),
-    kernel_func[okertype](bw[isordered], tdat[:, isordered],
-                          edat[:, isordered]),
-    kernel_func[ukertype](bw[isunordered], tdat[:, isunordered],
-                          edat[:, isunordered])), axis=1)
-
-    dens = np.prod(Kval, axis=1) * 1. / (np.prod(bw[iscontinuous]))
-    return dens
