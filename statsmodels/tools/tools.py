@@ -328,18 +328,47 @@ def add_constant(data, prepend=False):
                     usemask=False, asrecarray = return_rec)
     return data
 
+
 def isestimable(C, D):
+    """ True if (Q, P) contrast `C` is estimable for (N, P) design `D`
+
+    From an Q x P contrast matrix `C` and an N x P design matrix `D`, checks if
+    the contrast `C` is estimable by looking at the rank of ``vstack([C,D])``
+    and verifying it is the same as the rank of `D`.
+
+    Parameters
+    ----------
+    C : (Q, P) array-like
+        contrast matrix. If `C` has is 1 dimensional assume shape (1, P)
+    D: (N, P) array-like
+        design matrix
+
+    Returns
+    -------
+    tf : bool
+        True if the contrast `C` is estimable on design `D`
+
+    Examples
+    --------
+    >>> D = np.array([[1, 1, 1, 0, 0, 0],
+    ...               [0, 0, 0, 1, 1, 1],
+    ...               [1, 1, 1, 1, 1, 1]]).T
+    >>> isestimable([1, 0, 0], D)
+    False
+    >>> isestimable([1, -1, 0], D)
+    True
     """
-    From an q x p contrast matrix C and an n x p design matrix D, checks
-    if the contrast C is estimable by looking at the rank of vstack([C,D]) and
-    verifying it is the same as the rank of D.
-    """
+    C = np.asarray(C)
+    D = np.asarray(D)
     if C.ndim == 1:
-        C.shape = (C.shape[0], 1)
+        C = C[None, :]
+    if C.shape[1] != D.shape[1]:
+        raise ValueError('Contrast should have %d columns' % D.shape[1])
     new = np.vstack([C, D])
     if rank(new) != rank(D):
         return False
     return True
+
 
 def recipr(X):
     """
