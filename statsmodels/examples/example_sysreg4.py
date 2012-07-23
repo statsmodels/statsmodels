@@ -35,5 +35,6 @@ sys = [eq1, eq2]
 # y_{t-1} needs to be specified as additional instrument
 instruments = np.column_stack((macrodata['realgovt'][1:], y[:-1]))
 mod = Sys2SLS(sys, instruments=instruments)
-print mod.fit() # identical to those in systemfit. See sandbox/test/macrodata.s
+res = mod.fit()
+print res.summary()
 

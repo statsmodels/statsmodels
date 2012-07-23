@@ -59,6 +59,7 @@ class SysSEM(SysModel):
         
         xhats = [np.dot(Pz, eq['exog']) for eq in self.sys]
         xhat = x = self._compute_sp_exog(xhats)
+        self.xhat = xhat # DEBUG
 
         # Parameters
         omegainv = np.kron(np.linalg.inv(self.sigma), np.identity(self.nobs))
@@ -95,4 +96,19 @@ class Sys2SLS(SysSEM):
         neqs = len(sys)
         super(Sys2SLS, self).__init__(sys, instruments=instruments,
                 sigma=np.identity(neqs), dfk=dfk)
+
+    def _compute_sigma(self, resids):
+        '''
+        Parameters
+        ----------
+        resids : ndarray (N x G)
+            Residuals for each equation stacked in column.
+        '''
+        s = np.diag(np.diag(np.dot(resids.T, resids)))
+        if self.dfk is None:
+            return s / self.nobs
+        elif self.dfk == 'dfk1':
+            return s / self._div_dfk1
+        else:
+            return s / self._div_dfk2
 

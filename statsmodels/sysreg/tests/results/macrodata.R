@@ -12,6 +12,7 @@ system <- list( Consumption = eqConsump, Investment = eqInvest)
 instruments <- ~ realgovt[-1] + tbilrate[-1] + c.1 + y.1
 # 2SLS
 greene2sls <- systemfit( system, "2SLS", inst = instruments, methodResidCov = "noDfCor" )
+#greene2sls <- systemfit(system,"2SLS", inst=instruments, methodResidCov='noDfCor', singleEqSigma=FALSE)
 print(summary(greene2sls))
 
 greene3sls <- systemfit( system, "3SLS", inst = instruments, methodResidCov = "noDfCor" )
