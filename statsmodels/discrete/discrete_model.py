@@ -127,15 +127,16 @@ def _get_margeff_exog(exog, at, atexog, ind):
     return exog
 
 def _get_count_effects(effects, exog, count_ind, method, model, params):
-    for i in count_ind:
+    # this is the index for the effect and the index for count col in exog
+    for i_count, i_exog in count_ind:
         exog0 = exog.copy()
         effect0 = model.predict(params, exog0)
         wf1 = model.predict
-        exog0[:,i] += 1
+        exog0[:,i_exog] += 1
         effect1 = model.predict(params, exog0)
-#TODO: compute discrete elasticity correctly
-#Stata doesn't use the midpoint method or a weighted average.
-#Check elsewhere
+        #TODO: compute discrete elasticity correctly
+        #Stata doesn't use the midpoint method or a weighted average.
+        #Check elsewhere
         if 'ey' in method:
             pass
             ##TODO: don't know if this is theoretically correct
@@ -146,22 +147,23 @@ def _get_count_effects(effects, exog, count_ind, method, model, params):
             #wfv = (.5*model.cdf(fittedvalues1) + \
                     #        .5*model.cdf(fittedvalues0))
             #effects[i] = ((effect1 - effect0)/wfv).mean()
-        effects[i] = (effect1 - effect0).mean()
+        effects[i_count] = (effect1 - effect0).mean()
     return effects
 
 
 def _get_dummy_effects(effects, exog, dummy_ind, method, model, params):
-    for i in dummy_ind:
+    # this is the index for the effect and the index for dummy col in exog
+    for i_dummy, i_exog in dummy_ind:
         exog0 = exog.copy() # only copy once, can we avoid a copy?
-        exog0[:,i] = 0
+        exog0[:,i_exog] = 0
         effect0 = model.predict(params, exog0)
         #fittedvalues0 = np.dot(exog0,params)
-        exog0[:,i] = 1
+        exog0[:,i_exog] = 1
         effect1 = model.predict(params, exog0)
         if 'ey' in method:
             effect0 = np.log(effect0)
             effect1 = np.log(effect1)
-        effects[i] = (effect1 - effect0).mean() # mean for overall
+        effects[i_dummy] = (effect1 - effect0).mean() # mean for overall
     return effects
 
 def _effects_at(effects, at, ind):
@@ -1662,18 +1664,22 @@ class DiscreteResults(base.LikelihoodModelResults):
         if dummy == True:
             if np.any(~ind):
                 const_idx = np.where(~ind)[0]
+                exog_ind = dummy_ind.copy()
                 # adjust back for constant because effects doesn't have one
                 dummy_ind[dummy_ind > const_idx] -= 1
-            effects = _get_dummy_effects(effects, exog, dummy_ind, method,
-                                         model, params)
+            effects = _get_dummy_effects(effects, exog,
+                                         zip(dummy_ind, exog_ind),
+                                         method, model, params)
 
         if count == True:
             if np.any(~ind):
                 const_idx = np.where(~ind)[0]
+                exog_ind = count_ind.copy()
                 # adjust back for constant because effects doesn't have one
                 count_ind[count_ind > const_idx] -= 1
-            effects = _get_count_effects(effects, exog, count_ind, method,
-                                         model, params)
+            effects = _get_count_effects(effects, exog,
+                                        zip(count_ind, exog_ind),
+                                        method, model, params)
 
         # Set standard error of the marginal effects by Delta method.
         self.margfx_se = None
