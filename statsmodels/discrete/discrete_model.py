@@ -102,11 +102,13 @@ def _iscount(X):
     array([ True, False, False,  True,  True], dtype=bool)
     """
     X = np.asarray(X)
-    remainder = np.logical_and(np.all(X % 1. == 0, axis = 0),
-                               X.var(0) != 0)
+    remainder = np.logical_and(np.logical_and(np.all(X % 1. == 0, axis = 0),
+                               X.var(0) != 0), np.all(X >= 0, axis=0))
     dummy = _isdummy(X)
-    remainder -= dummy
-    return np.where(remainder)[0]
+    remainder = np.where(remainder)[0].tolist()
+    for idx in dummy:
+        remainder.remove(idx)
+    return np.array(remainder)
 
 def _get_margeff_exog(exog, at, atexog, ind):
     if atexog is not None: # user supplied
