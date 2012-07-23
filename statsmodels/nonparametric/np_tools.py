@@ -6,8 +6,6 @@ from scipy.integrate import *
 
 kernel_func = dict(wangryzin=kf.WangRyzin, aitchisonaitken=kf.AitchisonAitken,
                  gaussian=kf.Gaussian,
-                 aitchison_aitken_reg = kf.aitchison_aitken_reg,
-                 wangryzin_reg = kf.wangryzin_reg,
                    gauss_convolution=kf.Gaussian_Convolution,
                  wangryzin_convolution=kf.WangRyzin_Convolution,
                  aitchisonaitken_convolution=kf.AitchisonAitken_Convolution,
