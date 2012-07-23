@@ -1,9 +1,13 @@
+import warnings
+
 from statsmodels.formula.api import ols
 from statsmodels.formula.formulatools import make_hypotheses_matrices
 from statsmodels.tools import add_constant
 from statsmodels.datasets.longley import load, load_pandas
 
 import numpy.testing as npt
+from numpy.testing.utils import WarningManager
+
 
 longley_formula = 'TOTEMP ~ GNPDEFL + GNP + UNEMP + ARMED + POP + YEAR'
 
@@ -28,7 +32,15 @@ class CheckFormulaOLS(object):
 
     def test_summary(self):
         # smoke test
-        summary = self.model.fit().summary()
+        warn_ctx = WarningManager()
+        warn_ctx.__enter__()
+        try:
+            warnings.filterwarnings("ignore",
+                                    "kurtosistest only valid for n>=20")
+            summary = self.model.fit().summary()
+        finally:
+            warn_ctx.__exit__()
+
 
 class TestFormulaPandas(CheckFormulaOLS):
     @classmethod
