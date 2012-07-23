@@ -165,26 +165,51 @@ def fprime_ieqcons(x, *fargs):
         one_column = np.zeros((2*K-2, 1))
         return np.concatenate((one_column, C), axis=1)
 
-def get_bic(results, model, constant):
+def nnz_params(results):
+    return len(np.nonzero(np.fabs(results.params.ravel())>0)[0]) 
+
+def modified_df_model(results, model, constant):
     """
-    Replacement for the "call" results.bic 
-        (in discrete_model.py:MultinomialResults).  This version takes into
-        account that some parameters are equal to zero, and therefore the 
-        model degrees of freedom have been reduced.
-    The original call uses model.df_model, which is set first in 
+    In statsmodels, df_model is set first in 
         DiscreteModel.initialize() with  
             self.df_model = float(tools.rank(self.exog) - 1) 
         and then in MultinomialModel.__init__ with 
             self.df_model *= (self.J-1)
     """
-    number_nonzero_params = \
-            len(np.nonzero(np.fabs(results.params.ravel())>0)[0]) 
-    if constant:
-        modified_df_model = number_nonzero_params - (model.J - 1)
-    else:
-        modified_df_model = number_nonzero_params 
+    number_nonzero_params = nnz_params(results)
 
-    return -2*results.llf + np.log(results.nobs)*(modified_df_model+model.J-1)
+    if constant:
+        df_model = number_nonzero_params - (model.J - 1)
+    else:
+        df_model = number_nonzero_params 
+
+    return df_model
+
+def modified_bic(results, model, constant):
+    """
+    Replacement for the "call" results.bic 
+        (in discrete_model.py:MultinomialResults).  This version uses 
+        modified_df_model rather than the built in df_model.
+    """
+    df_model = modified_df_model(results, model, constant)
+    return -2*results.llf + np.log(results.nobs)*(df_model+model.J-1)
+
+
+def modified_aic(results, model, constant):
+    """
+    Replacement for the "call" results.aic 
+        (in discrete_model.py:MultinomialResults).  This version uses 
+        modified_df_model rather than the built in df_model.
+    """
+    df_model = modified_df_model(results, model, constant)
+    return -2*(results.llf - (df_model+model.J-1))
+
+
+
+
+
+
+
 
 
 
