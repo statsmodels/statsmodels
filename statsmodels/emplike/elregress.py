@@ -740,7 +740,8 @@ class ANOVA(_ANOVAOpt):
             else:
                 return pval, llr, mu
         else:
-            res = optimize.fmin_powell(self._opt_common_mu, mu_start, full_output=1)
+            res = optimize.fmin_powell(self._opt_common_mu, mu_start,
+                                       full_output=1)
             llr = res[1]
             mu_common = res[0]
             pval = 1 - chi2.cdf(llr, self.num_groups - 1)
