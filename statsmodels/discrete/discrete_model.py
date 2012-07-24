@@ -112,11 +112,23 @@ def _iscount(X):
 
 def _get_margeff_exog(exog, at, atexog, ind):
     if atexog is not None: # user supplied
-        if not isinstance(atexog, dict):
-            raise ValueError("atexog should be a dict not %s"\
-                    % type(atexog))
-        for key in atexog:
-            exog[:,key] = atexog[key]
+        if isinstance(atexog, dict):
+            # assumes values are singular or of len(exog)
+            for key in atexog:
+                exog[:,key] = atexog[key]
+        elif isinstance(atexog, np.ndarray): #TODO: handle DataFrames
+            if atexog.ndim == 1:
+                nvars = len(atexog)
+            else:
+                nvars = atexog.shape[1]
+            try:
+                assert nvars == exog.shape[1]
+            except:
+                raise ValueError("atexog does not have the same number "
+                        "of variables as exog")
+            exog = atexog
+
+    #NOTE: we should fill in atexog after we process at
     if at == 'mean':
         exog = np.atleast_2d(exog.mean(0))
     elif at == 'median':
@@ -127,11 +139,15 @@ def _get_margeff_exog(exog, at, atexog, ind):
     return exog
 
 def _get_count_effects(effects, exog, count_ind, method, model, params):
+    """
+    If there's a count variable, the predicted difference is taken by
+    subtracting one and adding one to exog then averaging the difference
+    """
     # this is the index for the effect and the index for count col in exog
     for i_count, i_exog in count_ind:
         exog0 = exog.copy()
+        exog0[:,i_exog] -= 1
         effect0 = model.predict(params, exog0)
-        wf1 = model.predict
         exog0[:,i_exog] += 1
         effect1 = model.predict(params, exog0)
         #TODO: compute discrete elasticity correctly
@@ -147,11 +163,14 @@ def _get_count_effects(effects, exog, count_ind, method, model, params):
             #wfv = (.5*model.cdf(fittedvalues1) + \
                     #        .5*model.cdf(fittedvalues0))
             #effects[i] = ((effect1 - effect0)/wfv).mean()
-        effects[i_count] = (effect1 - effect0).mean()
+        effects[i_count] = ((effect1 - effect0) / 2.).mean() # mean for overall
     return effects
 
-
 def _get_dummy_effects(effects, exog, dummy_ind, method, model, params):
+    """
+    If there's a dummy variable, the predicted difference is taken at
+    0 and 1
+    """
     # this is the index for the effect and the index for dummy col in exog
     for i_dummy, i_exog in dummy_ind:
         exog0 = exog.copy() # only copy once, can we avoid a copy?
