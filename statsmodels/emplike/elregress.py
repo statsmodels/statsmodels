@@ -698,7 +698,7 @@ class ANOVA(_ANOVAOpt):
         for i in self.data:
             self.nobs = self.nobs + len(i)
 
-    def compute_ANOVA(self, mu=None, print_weights=0):
+    def compute_ANOVA(self, mu=None, mu_start=0, print_weights=0):
 
         """
 
@@ -714,9 +714,21 @@ class ANOVA(_ANOVAOpt):
             empirical likelihood estimate of the common mean.
             Default is None.
 
+        mu_start: float, optional
+            Starting value for commean mean if specific mu is not specified.
+            Default = 0
+
         print_weights: bool, optional
             if TRUE, returns the weights on observations that maximize the
             likelihood.  Default is FALSE
+
+        Returns
+        -------
+
+        res: tuple
+            The p-vale, log-likelihood and estimate for the common mean.
+
+
 
         """
 
@@ -728,7 +740,7 @@ class ANOVA(_ANOVAOpt):
             else:
                 return pval, llr, mu
         else:
-            res = optimize.fmin_bfgs(self._opt_common_mu, 0, full_output=1)
+            res = optimize.fmin_powell(self._opt_common_mu, mu_start, full_output=1)
             llr = res[1]
             mu_common = res[0]
             pval = 1 - chi2.cdf(llr, self.num_groups - 1)
