@@ -2,7 +2,7 @@
 Empirical Likelihood Implementation
 
 Start: 21 May 2012
-Last Updated: 21 June 2012
+Last Updated: 25 July 2012
 
 General References:
 ------------------
@@ -1088,10 +1088,6 @@ class DescStatUV(_OptFuncts):
         For small n, var_min and var_max will likely be provided by the
         user.
 
-        If parameters are left at the default and the optimization
-        fails, the function will alert as to which parameter it failed
-        to compute.
-
         If function returns f(a) and f(b) must have different signs, consider
         expanding lower and upper bound.
         """
@@ -1115,10 +1111,8 @@ class DescStatUV(_OptFuncts):
         # Need to calculate variance and mu limits here to avoid
         # recalculating at every iteration in the maximization.
         if (var_max is None) or (var_min is None):
-            print 'Finding CI for the variance'
             var_lims = self.ci_var(sig=sig)
         if (mu_max is None) or (mu_max is None):
-            print 'Finding CI for the mean'
             mu_lims = self.ci_mean(sig=sig)
         if var_min is not None:
             self.var_l = var_min
@@ -1137,9 +1131,7 @@ class DescStatUV(_OptFuncts):
         else:
             self.mu_u = mu_lims[1]
         self.r0 = chi2.ppf(1 - sig, 1)
-        print 'Finding the lower bound for skewness'
         ll = optimize.brentq(self._ci_limits_skew, ll, skew(endog))
-        print 'Finding the upper bound for skewness'
         ul = optimize.brentq(self._ci_limits_skew, skew(endog), ul)
         return   ll, ul
 
@@ -1182,10 +1174,6 @@ class DescStatUV(_OptFuncts):
         provided.  Consider using hy_test_kurt to find values close to
         the desired significance level.
 
-        If parameters are left at the default and the optimization
-        fails, the function will alert as to which parameter it failed
-        to compute.
-
         If function returns f(a) and f(b) must have different signs, consider
         expanding lower and upper bound.
         """
@@ -1212,10 +1200,8 @@ class DescStatUV(_OptFuncts):
         # Need to calculate variance and mu limits here to avoid
         # recalculating at every iteration in the maximization.
         if (var_max is None) or (var_min is None):
-            print 'Finding CI for the variance'
             var_lims = self.ci_var(sig=sig)
         if (mu_max is None) or (mu_min is None):
-            print 'Finding CI for the mean'
             mu_lims = self.ci_mean(sig=sig)
         if var_min is not None:
             self.var_l = var_min
@@ -1234,10 +1220,8 @@ class DescStatUV(_OptFuncts):
         else:
             self.mu_u = mu_lims[1]
         self.r0 = chi2.ppf(1 - sig, 1)
-        print 'Finding the lower bound for kurtosis'
         ll = optimize.brentq(self._ci_limits_kurt, ll, \
                              kurtosis(endog))
-        print 'Finding the upper bound for kurtosis'
         ul = optimize.brentq(self._ci_limits_kurt, kurtosis(endog), \
                              ul)
         return   ll, ul
@@ -1592,10 +1576,7 @@ class DescStatMV(_OptFuncts):
         else:
             self.var2_ub = (endog[:, 1].var() * (nobs - 1)) / \
               chi2.ppf(.025, nobs)
-        print 'Finding the lower bound for correlation'
-
         ll = optimize.brentq(self._ci_limits_corr, ll, point_est)
-        print 'Finding the upper bound for correlation'
         ul = optimize.brentq(self._ci_limits_corr,
                              point_est, ul)
         return ll, ul
