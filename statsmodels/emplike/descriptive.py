@@ -81,7 +81,7 @@ class _OptFuncts(ELModel):
         See Owen pg. 63
 
         """
-        data = np.copy(self.est_vect.T)
+        data = self.est_vect.T
         data_star_prime = (1 + np.dot(eta1, data))
         data_star_doub_prime = np.copy((1 + np.dot(eta1, data)))
         for elem in range(int(self.nobs)):
