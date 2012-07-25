@@ -53,6 +53,8 @@ Module Reference
 Model Classes
 ^^^^^^^^^^^^^
 
+.. currentmodule:: statsmodels.robust.robust_linear_model
+
 .. autosummary::
    :toctree: generated/
 
@@ -86,10 +88,11 @@ Norms
    TukeyBiweight
    estimate_location
 
-.. currentmodule:: statsmodels.robust.scale
 
 Scale
 ^^^^^
+
+.. currentmodule:: statsmodels.robust.scale
 
 .. autosummary::
    :toctree: generated/
