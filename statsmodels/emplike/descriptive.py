@@ -73,9 +73,29 @@ class _OptFuncts(ELModel):
 
         See Owen pg. 63
         """
+        nobs = self.nobs
         data = self.est_vect.T
         data_star_prime = (1. + np.dot(eta1, data))
         data_star_doub_prime = np.copy(1. + np.dot(eta1, data))
+
+        # Method 1
+
+
+        # idx = data_star_prime < 1. / nobs
+        # not_idx = ~idx
+        # data_star_prime[idx] = 2. * nobs - (nobs) ** 2 * data_star_prime[idx]
+        # data_star_prime[not_idx] = 1. / data_star_prime[not_idx]
+        # data_star_doub_prime[idx] = - nobs ** 2
+        # data_star_doub_prime[not_idx] = - (data_star_doub_prime[not_idx]) ** -2
+        # data_star_prime = data_star_prime.reshape(nobs, 1)
+        # data_star_doub_prime = data_star_doub_prime.reshape(nobs, 1)
+        # root_star = np.sqrt(- 1 * data_star_doub_prime).reshape(nobs,1)
+        # JJ = root_star * self.est_vect
+        # yy = data_star_prime /  root_star
+        # return np.mat(JJ), np.mat(yy)
+
+        # Method 2
+
         for elem in range(int(self.nobs)):
             if data_star_prime[0, elem] <= 1. / self.nobs:
                 data_star_prime[0, elem] = 2. * self.nobs - \
