@@ -146,7 +146,7 @@ def _get_count_effects(effects, exog, count_ind, method, model, params):
     # this is the index for the effect and the index for count col in exog
     for i_count, i_exog in count_ind:
         exog0 = exog.copy()
-        exog0[:,i_exog] -= 1
+        #exog0[:,i_exog] -= 1
         effect0 = model.predict(params, exog0)
         exog0[:,i_exog] += 1
         effect1 = model.predict(params, exog0)
@@ -1582,6 +1582,9 @@ class DiscreteResults(base.LikelihoodModelResults):
             yname_list = self.model.endog_names
         return yname, yname_list
 
+    def margeff(self, at='overall', method='dydx', atexog=None, dummy=False,
+            count=False):
+        pass
 
 
     def margeff(self, at='overall', method='dydx', atexog=None, dummy=False,
@@ -1648,6 +1651,10 @@ class DiscreteResults(base.LikelihoodModelResults):
         #    If a factor variable is present (it must be an integer, though
         #    of type float), then `factor` may be a dict with the zero-indexed
         #    column of the factor and the value should be the base-outcome.
+        import warnings
+        warnings.warn("This method is deprecated and will be removed in 0.6.0."
+                " Use get_margeff instead", FutureWarning)
+        from statsmodels.discrete.discrete_margins import margeff_cov_with_se
 
         # get local variables
         model = self.model
@@ -1663,9 +1670,13 @@ class DiscreteResults(base.LikelihoodModelResults):
         if dummy:
             _check_discrete_args(at, method)
             dummy_ind = _isdummy(exog)
+        else:
+            dummy_ind = None
         if count:
             _check_discrete_args(at, method)
             count_ind = _iscount(exog)
+        else:
+            count_ind = None
 
         # get the exogenous variables
         exog = _get_margeff_exog(exog, at, atexog, ind)
@@ -1701,7 +1712,13 @@ class DiscreteResults(base.LikelihoodModelResults):
                                         method, model, params)
 
         # Set standard error of the marginal effects by Delta method.
-        self.margfx_se = None
+        margeff_cov, margeff_se = margeff_cov_with_se(params, exog,
+                                                self.cov_params(), at,
+                                                self.model._derivative_exog,
+                                                dummy_ind, count_ind)
+        # don't care about at constant
+        self.margeff_cov = margeff_cov[ind][:, ind]
+        self.margeff_se = margeff_se[ind]
         self.margfx = effects
         return effects
 
