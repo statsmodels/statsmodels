@@ -5,7 +5,8 @@
 Generalized Linear Models
 =========================
 
-Generalized linear models currently supports estimation using the one-parameter exponential families
+Generalized linear models currently supports estimation using the one-parameter
+exponential families
 
 See `Module Reference`_ for commands and arguments.
 
