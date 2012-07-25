@@ -74,15 +74,15 @@ class _OptFuncts(ELModel):
         See Owen pg. 63
         """
         data = self.est_vect.T
-        data_star_prime = (1 + np.dot(eta1, data))
-        data_star_doub_prime = np.copy((1 + np.dot(eta1, data)))
+        data_star_prime = (1. + np.dot(eta1, data))
+        data_star_doub_prime = np.copy((1. + np.dot(eta1, data)))
         for elem in range(int(self.nobs)):
-            if data_star_prime[0, elem] <= 1 / self.nobs:
-                data_star_prime[0, elem] = 2 * self.nobs - \
+            if data_star_prime[0, elem] <= 1. / self.nobs:
+                data_star_prime[0, elem] = 2. * self.nobs - \
                 (self.nobs) ** 2 * data_star_prime[0, elem]
             else:
                 data_star_prime[0, elem] = 1. / data_star_prime[0, elem]
-            if data_star_doub_prime[0, elem] <= 1 / self.nobs:
+            if data_star_doub_prime[0, elem] <= 1. / self.nobs:
                 data_star_doub_prime[0, elem] = - self.nobs ** 2
             else:
                 data_star_doub_prime[0, elem] = \
@@ -106,7 +106,7 @@ class _OptFuncts(ELModel):
         data_star: array
             The logstar of the estimting equations
         """
-        data = np.copy(self.est_vect.T)
+        data = self.est_vect.T
         data_star = (1 + np.dot(eta1, data))
         for elem in range(int(self.nobs)):
             if data_star[0, elem] < 1. / self.nobs:
