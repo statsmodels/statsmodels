@@ -42,7 +42,7 @@ class ELModel(object):
         # changed.
 
 
-class OptFuncts(ELModel):
+class _OptFuncts(ELModel):
     """
 
 
@@ -51,7 +51,7 @@ class OptFuncts(ELModel):
     """
 
     def __init__(self, endog):
-        super(OptFuncts, self).__init__(endog)
+        super(_OptFuncts, self).__init__(endog)
 
     def _get_j_y(self, eta1):
         """
@@ -101,7 +101,7 @@ class OptFuncts(ELModel):
         y = data_star_prime / ((- 1 * data_star_doub_prime) ** .5)
         return np.mat(J), np.mat(y)
 
-    def log_star(self, eta1):
+    def _log_star(self, eta1):
         data = np.copy(self.est_vect.T)
         data_star = (1 + np.dot(eta1, data))
         for elem in range(int(self.nobs)):
