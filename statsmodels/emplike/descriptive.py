@@ -466,14 +466,14 @@ class _OptFuncts(ELModel):
                        print_weights=0)[1] - self.r0
 
 
-class DescStat(_OptFuncts):
+class DescStatUV(_OptFuncts):
     """
     A class for confidence intervals and hypothesis tests involving mean,
-    variance and covariance.
+    variance, kurtosis and skewness of a univariate random variable.
 
     Parameters
     ----------
-    endog: nxm array
+    endog: nx1 array
         Data to be analyzed
 
     See Also
@@ -483,7 +483,7 @@ class DescStat(_OptFuncts):
     """
 
     def __init__(self, endog):
-        super(DescStat, self).__init__(endog)
+        super(DescStatUV, self).__init__(endog)
 
     def hy_test_mean(self, mu0,  trans_data=None, print_weights=False):
         """
@@ -775,120 +775,6 @@ class DescStat(_OptFuncts):
         plt.plot(np.arange(lower, upper, step), (1 - sig) * \
                  np.ones(len(p_vals)))
         return  'Type plt.show to see the figure'
-
-    def mv_hy_test_mean(self, mu_array, print_weights=False):
-        """
-        Returns the -2 ``*`` log likelihood and the p_value
-        for a multivariate hypothesis test of the mean
-
-        Parameters
-        ----------
-        mu_array : 1d array
-            hypothesized values for the mean.  Must have same number of
-            elements as columns in endog.
-
-        Optional
-        --------
-
-        print_weights: bool
-            If True, returns the weights that maximize the
-            likelihood of mu_array Default= False.
-
-        Returns
-        -------
-
-        test_results: tuple
-            The p_value and log-likelihood ratio of `mu_array`
-        """
-        if len(mu_array) != self.endog.shape[1]:
-            raise Exception('mu_array must have the same number of \
-                           elements as the columns of the data.')
-        mu_array = mu_array.reshape(1, self.endog.shape[1])
-        means = np.ones((self.endog.shape[0], self.endog.shape[1]))
-        means = mu_array * means
-        self.est_vect = self.endog - means
-        start_vals = 1 / self.nobs * np.ones(self.endog.shape[1])
-        eta_star = self._modif_newton(start_vals)
-        denom = 1 + np.dot(eta_star, self.est_vect.T)
-        self.new_weights = 1 / self.nobs * 1 / denom
-        llr = np.sum(np.log(self.nobs * self.new_weights))
-        p_val = 1 - chi2.cdf(-2 * llr, mu_array.shape[1])
-        if print_weights:
-            return p_val, -2 * llr, self.new_weights.T
-        else:
-            return p_val, -2 * llr
-
-    def mv_mean_contour(self, mu1_l, mu1_u, mu2_l, mu2_u, step1, step2,
-                        levs=[.2, .1, .05, .01, .001], plot_dta=False):
-        """
-        Creates confidence region plot for the mean of bivariate data
-
-        Parameters
-        ----------
-
-        m1_l: float
-            Minimum value of the mean for variable 1
-
-        m1_u: float
-            Maximum value of the mean for variable 1
-
-        mu2_l: float
-            Minimum value of the mean for variable 2
-
-        mu2_u: float
-            Maximum value of the mean for variable 2
-
-        step1: float
-            Increment of evaluations for variable 1
-
-        step2: float
-            Increment of evaluations for variable 2
-
-
-        Optional
-        --------
-        levs: list
-            Levels to be drawn on the contour plot.
-            Default =  [.2, .1 .05, .01, .001]
-
-        plot_dta: bool
-            If True, makes a scatter plot of the data on
-            top of the contour plot. Default =  False.
-
-        Notes
-        -----
-        The smaller the step size, the more accurate the intervals
-        will be.
-
-        If the function returns optimization failed, consider narrowing
-        the boundaries of the plot.
-
-        Example
-        -------
-
-        two_rvs = np.random.standard_normal((20,2))
-        el_analysis = el.DescStat(two_rvs)
-        contourp = el_analysis.mv_mean_contour(-2, 2, -2, 2, .1, .1)
-        contourp
-        >>>Type plt.show() to see plot
-        plt.show()
-        """
-        if self.endog.shape[1] != 2:
-            raise Exception('Data must contain exactly two variables')
-        x = (np.arange(mu1_l, mu1_u, step1))
-        y = (np.arange(mu2_l, mu2_u, step2))
-        pairs = itertools.product(x, y)
-        z = []
-        for i in pairs:
-            z.append(self.mv_hy_test_mean(np.asarray(i))[0])
-        X, Y = np.meshgrid(x, y)
-        z = np.asarray(z)
-        z = z.reshape(X.shape[1], Y.shape[0])
-        fig = plt.contour(x, y, z.T, levels=levs)
-        plt.clabel(fig)
-        if plot_dta:
-            plt.plot(self.endog[:, 0], self.endog[:, 1], 'bo')
-        return 'Type plt.show to see the figure'
 
     def mean_var_contour(self, mu_l, mu_h, var_l, var_h, mu_step,
                         var_step,
@@ -1337,6 +1223,140 @@ class DescStat(_OptFuncts):
         ul = optimize.brentq(self._ci_limits_kurt, kurtosis(self.endog), \
                              ul)
         return   ll, ul
+
+
+class DescStatMV(_OptFuncts):
+    """
+    A class for conducting inference on multivariate means and
+    correlation
+
+    Parameters
+    ----------
+    endog: nxk array
+        Data to be analyzed
+
+    See Also
+    --------
+
+    Method docstring for explicit instructions and uses.
+    """
+
+    def __init__(self, endog):
+        super(DescStatMV, self).__init__(endog)
+
+    def mv_hy_test_mean(self, mu_array, print_weights=False):
+        """
+        Returns the -2 ``*`` log likelihood and the p_value
+        for a multivariate hypothesis test of the mean
+
+        Parameters
+        ----------
+        mu_array : 1d array
+            hypothesized values for the mean.  Must have same number of
+            elements as columns in endog.
+
+        Optional
+        --------
+
+        print_weights: bool
+            If True, returns the weights that maximize the
+            likelihood of mu_array Default= False.
+
+        Returns
+        -------
+
+        test_results: tuple
+            The p_value and log-likelihood ratio of `mu_array`
+        """
+        if len(mu_array) != self.endog.shape[1]:
+            raise Exception('mu_array must have the same number of \
+                           elements as the columns of the data.')
+        mu_array = mu_array.reshape(1, self.endog.shape[1])
+        means = np.ones((self.endog.shape[0], self.endog.shape[1]))
+        means = mu_array * means
+        self.est_vect = self.endog - means
+        start_vals = 1 / self.nobs * np.ones(self.endog.shape[1])
+        eta_star = self._modif_newton(start_vals)
+        denom = 1 + np.dot(eta_star, self.est_vect.T)
+        self.new_weights = 1 / self.nobs * 1 / denom
+        llr = np.sum(np.log(self.nobs * self.new_weights))
+        p_val = 1 - chi2.cdf(-2 * llr, mu_array.shape[1])
+        if print_weights:
+            return p_val, -2 * llr, self.new_weights.T
+        else:
+            return p_val, -2 * llr
+
+    def mv_mean_contour(self, mu1_l, mu1_u, mu2_l, mu2_u, step1, step2,
+                        levs=[.2, .1, .05, .01, .001], plot_dta=False):
+        """
+        Creates confidence region plot for the mean of bivariate data
+
+        Parameters
+        ----------
+
+        m1_l: float
+            Minimum value of the mean for variable 1
+
+        m1_u: float
+            Maximum value of the mean for variable 1
+
+        mu2_l: float
+            Minimum value of the mean for variable 2
+
+        mu2_u: float
+            Maximum value of the mean for variable 2
+
+        step1: float
+            Increment of evaluations for variable 1
+
+        step2: float
+            Increment of evaluations for variable 2
+
+
+        Optional
+        --------
+        levs: list
+            Levels to be drawn on the contour plot.
+            Default =  [.2, .1 .05, .01, .001]
+
+        plot_dta: bool
+            If True, makes a scatter plot of the data on
+            top of the contour plot. Default =  False.
+
+        Notes
+        -----
+        The smaller the step size, the more accurate the intervals
+        will be.
+
+        If the function returns optimization failed, consider narrowing
+        the boundaries of the plot.
+
+        Example
+        -------
+
+        two_rvs = np.random.standard_normal((20,2))
+        el_analysis = el.DescStat(two_rvs)
+        contourp = el_analysis.mv_mean_contour(-2, 2, -2, 2, .1, .1)
+        contourp
+        >>>Type plt.show() to see plot
+        plt.show()
+        """
+        if self.endog.shape[1] != 2:
+            raise Exception('Data must contain exactly two variables')
+        x = (np.arange(mu1_l, mu1_u, step1))
+        y = (np.arange(mu2_l, mu2_u, step2))
+        pairs = itertools.product(x, y)
+        z = []
+        for i in pairs:
+            z.append(self.mv_hy_test_mean(np.asarray(i))[0])
+        X, Y = np.meshgrid(x, y)
+        z = np.asarray(z)
+        z = z.reshape(X.shape[1], Y.shape[0])
+        fig = plt.contour(x, y, z.T, levels=levs)
+        plt.clabel(fig)
+        if plot_dta:
+            plt.plot(self.endog[:, 0], self.endog[:, 1], 'bo')
+        return 'Type plt.show to see the figure'
 
     def hy_test_corr(self, corr0, nuis0=None, mu1_min=None,
                        mu1_max=None, mu2_min=None, mu2_max=None,
