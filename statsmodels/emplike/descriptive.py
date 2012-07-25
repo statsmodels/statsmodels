@@ -24,7 +24,7 @@ from statsmodels.base.model import _fit_mle_newton
 import itertools
 
 
-class ElModel(object):
+class ELModel(object):
     """
 
 
@@ -42,7 +42,7 @@ class ElModel(object):
         # changed.
 
 
-class OptFuncts(ElModel):
+class OptFuncts(ELModel):
     """
 
 
