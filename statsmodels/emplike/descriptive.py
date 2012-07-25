@@ -75,7 +75,7 @@ class _OptFuncts(ELModel):
         """
         data = self.est_vect.T
         data_star_prime = (1. + np.dot(eta1, data))
-        data_star_doub_prime = np.copy((1. + np.dot(eta1, data)))
+        data_star_doub_prime = np.copy(1. + np.dot(eta1, data))
         for elem in range(int(self.nobs)):
             if data_star_prime[0, elem] <= 1. / self.nobs:
                 data_star_prime[0, elem] = 2. * self.nobs - \
@@ -804,7 +804,7 @@ class DescStat(_OptFuncts):
         if len(mu_array) != self.endog.shape[1]:
             raise Exception('mu_array must have the same number of \
                            elements as the columns of the data.')
-        mu_array = mu_array.reshape(1, self.endog[1])
+        mu_array = mu_array.reshape(1, self.endog.shape[1])
         means = np.ones((self.endog.shape[0], self.endog.shape[1]))
         means = mu_array * means
         self.est_vect = self.endog - means
