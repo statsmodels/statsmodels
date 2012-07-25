@@ -109,13 +109,15 @@ def plot_pacf(x, ax=None, lags=None, alpha=.05, method='ywm',
         returned where the standard deviation is computed according to
         1/sqrt(len(x))
     method : 'ywunbiased' (default) or 'ywmle' or 'ols'
-        specifies which method for the calculations to use,
+        specifies which method for the calculations to use:
+
         - yw or ywunbiased : yule walker with bias correction in denominator
           for acovf
         - ywm or ywmle : yule walker without bias correction
         - ols - regression of time series on lags of it and on constant
         - ld or ldunbiased : Levinson-Durbin recursion with bias correction
         - ldb or ldbiased : Levinson-Durbin recursion without bias correction
+
     use_vlines : bool, optional
         If True, vertical lines and markers are plotted.
         If False, only markers are plotted.  The default marker is 'o'; it can
