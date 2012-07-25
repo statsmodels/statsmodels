@@ -6,7 +6,11 @@
 Linear Regression
 =================
 
-Linear models with independently and identically distributed errors, and for errors with heteroscedasticity or autocorrelation. This module allows estimation by ordinary least squares (OLS), weighted least squares (WLS), generalized least squares (GLS), and feasible generalized least squares with autocorrelated AR(p) errors. 
+Linear models with independently and identically distributed errors, and for
+errors with heteroscedasticity or autocorrelation. This module allows
+estimation by ordinary least squares (OLS), weighted least squares (WLS),
+generalized least squares (GLS), and feasible generalized least squares with
+autocorrelated AR(p) errors. 
 
 See `Module Reference`_ for commands and arguments.
 

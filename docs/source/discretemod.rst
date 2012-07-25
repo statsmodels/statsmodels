@@ -6,8 +6,6 @@
 Regression with Discrete Dependent Variable
 ===========================================
 
-.. These models have just been moved out of the sandbox. Large parts of the statistical results are verified and tested, but this module has not seen muchuse yet and we can still expect some changes.
-
 Regression models for limited and qualitative dependent variables. The module
 currently allows the estimation of models with binary (Logit, Probit), nominal 
 (MNLogit), or count (Poisson) data.  
