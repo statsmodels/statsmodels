@@ -24,7 +24,7 @@ exclude_list = ['run_all.py',
                 'example_glsar.py',
                 'example_ols_table.py',
                 #not finished yet
-                'example_arima.py'
+                'example_arima.py',
                 'try_wls.py']
 
 file_path = os.path.dirname(__file__)
