@@ -86,9 +86,9 @@ class _OptFuncts(ELModel):
         data_star_doub_prime[not_idx] = - (data_star_doub_prime[not_idx]) ** -2
         data_star_prime = data_star_prime.reshape(nobs, 1)
         data_star_doub_prime = data_star_doub_prime.reshape(nobs, 1)
-        root_star = np.sqrt(- 1 * data_star_doub_prime).reshape(nobs,1)
+        root_star = np.sqrt(- 1 * data_star_doub_prime).reshape(nobs, 1)
         JJ = root_star * self.est_vect
-        yy = data_star_prime /  root_star
+        yy = data_star_prime / root_star
         return JJ, yy
 
     def _log_star(self, eta1):
@@ -136,7 +136,7 @@ class _OptFuncts(ELModel):
         f = lambda x0: np.sum(self._log_star(x0.T))
         grad = lambda x0: - np.dot((self._get_j_y(x0.T)[0]).T, \
                               (self._get_j_y(x0.T)[1]))
-        hess = lambda x0: np.dot((self._get_j_y(x0.T)[0]).T ,
+        hess = lambda x0: np.dot((self._get_j_y(x0.T)[0]).T,
                                  (self._get_j_y(x0.T)[0]))
         kwds = {'tol': 1e-8}
         res = _fit_mle_newton(f, grad, x0, (), kwds, hess=hess, maxiter=50, \
