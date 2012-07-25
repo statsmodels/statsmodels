@@ -73,45 +73,23 @@ class _OptFuncts(ELModel):
 
         See Owen pg. 63
         """
+
         nobs = self.nobs
         data = self.est_vect.T
         data_star_prime = (1. + np.dot(eta1, data))
         data_star_doub_prime = np.copy(1. + np.dot(eta1, data))
-
-        # Method 1
-
-
-        # idx = data_star_prime < 1. / nobs
-        # not_idx = ~idx
-        # data_star_prime[idx] = 2. * nobs - (nobs) ** 2 * data_star_prime[idx]
-        # data_star_prime[not_idx] = 1. / data_star_prime[not_idx]
-        # data_star_doub_prime[idx] = - nobs ** 2
-        # data_star_doub_prime[not_idx] = - (data_star_doub_prime[not_idx]) ** -2
-        # data_star_prime = data_star_prime.reshape(nobs, 1)
-        # data_star_doub_prime = data_star_doub_prime.reshape(nobs, 1)
-        # root_star = np.sqrt(- 1 * data_star_doub_prime).reshape(nobs,1)
-        # JJ = root_star * self.est_vect
-        # yy = data_star_prime /  root_star
-        # return np.mat(JJ), np.mat(yy)
-
-        # Method 2
-
-        for elem in range(int(self.nobs)):
-            if data_star_prime[0, elem] <= 1. / self.nobs:
-                data_star_prime[0, elem] = 2. * self.nobs - \
-                (self.nobs) ** 2 * data_star_prime[0, elem]
-            else:
-                data_star_prime[0, elem] = 1. / data_star_prime[0, elem]
-            if data_star_doub_prime[0, elem] <= 1. / self.nobs:
-                data_star_doub_prime[0, elem] = - self.nobs ** 2
-            else:
-                data_star_doub_prime[0, elem] = \
-                  - (data_star_doub_prime[0, elem]) ** -2
-        data_star_prime = data_star_prime.reshape(self.nobs, 1)
-        data_star_doub_prime = data_star_doub_prime.reshape(self.nobs, 1)
-        J = ((- 1 * data_star_doub_prime) ** .5) * self.est_vect
-        y = data_star_prime / ((- 1 * data_star_doub_prime) ** .5)
-        return np.mat(J), np.mat(y)
+        idx = data_star_prime < 1. / nobs
+        not_idx = ~idx
+        data_star_prime[idx] = 2. * nobs - (nobs) ** 2 * data_star_prime[idx]
+        data_star_prime[not_idx] = 1. / data_star_prime[not_idx]
+        data_star_doub_prime[idx] = - nobs ** 2
+        data_star_doub_prime[not_idx] = - (data_star_doub_prime[not_idx]) ** -2
+        data_star_prime = data_star_prime.reshape(nobs, 1)
+        data_star_doub_prime = data_star_doub_prime.reshape(nobs, 1)
+        root_star = np.sqrt(- 1 * data_star_doub_prime).reshape(nobs,1)
+        JJ = root_star * self.est_vect
+        yy = data_star_prime /  root_star
+        return JJ, yy
 
     def _log_star(self, eta1):
         """
@@ -126,15 +104,15 @@ class _OptFuncts(ELModel):
         data_star: array
             The logstar of the estimting equations
         """
+        nobs = self.nobs
         data = self.est_vect.T
         data_star = (1 + np.dot(eta1, data))
-        for elem in range(int(self.nobs)):
-            if data_star[0, elem] < 1. / self.nobs:
-                data_star[0, elem] = np.log(1 / self.nobs) - 1.5 +\
-                  2 * self.nobs * data_star[0, elem] -\
-                  ((self.nobs * data_star[0, elem]) ** 2.) / 2.
-            else:
-                data_star[0, elem] = np.log(data_star[0, elem])
+        idx = data_star < 1. / nobs
+        not_idx = ~idx
+        data_star[idx] = np.log(1 / nobs) - 1.5 +\
+                  2. * nobs * data_star[idx] -\
+                  ((nobs * data_star[idx]) ** 2.) / 2
+        data_star[not_idx] = np.log(data_star[not_idx])
         return data_star
 
     def _modif_newton(self,  x0):
@@ -156,9 +134,10 @@ class _OptFuncts(ELModel):
         """
         x0 = x0.reshape(self.est_vect.shape[1], 1)
         f = lambda x0: np.sum(self._log_star(x0.T))
-        grad = lambda x0: - (self._get_j_y(x0.T)[0]).T * \
-                              (self._get_j_y(x0.T)[1])
-        hess = lambda x0: (self._get_j_y(x0.T)[0]).T * (self._get_j_y(x0.T)[0])
+        grad = lambda x0: - np.dot((self._get_j_y(x0.T)[0]).T, \
+                              (self._get_j_y(x0.T)[1]))
+        hess = lambda x0: np.dot((self._get_j_y(x0.T)[0]).T ,
+                                 (self._get_j_y(x0.T)[0]))
         kwds = {'tol': 1e-8}
         res = _fit_mle_newton(f, grad, x0, (), kwds, hess=hess, maxiter=50, \
                               disp=0)
