@@ -419,7 +419,7 @@ class _OptFuncts(ELModel):
             The log-likelihood of the correlation coefficient holding nuisance
             parameters constant
         """
-        self.mu1_data = (self.endog[:, 0] - nuis_params[0])
+        mu1_data = (self.endog[:, 0] - nuis_params[0])
         sig1_data = ((self.endog[:, 0] - nuis_params[0]) ** 2) - \
           nuis_params[1]
         mu2_data = self.endog[:, 1] - nuis_params[2]
@@ -429,10 +429,9 @@ class _OptFuncts(ELModel):
                       (self.endog[:, 1] - nuis_params[2])) - \
                       (self.corr0 * (nuis_params[1] ** .5) \
                        * (nuis_params[3] ** .5))
-        self.est_vect = np.concatenate((self.mu1_data, sig1_data,
+        self.est_vect = np.vstack((mu1_data, sig1_data,
                                        mu2_data,
-                                       sig2_data, correl_data),
-                                       axis=1).reshape(5, self.nobs)
+                                       sig2_data, correl_data))
         self.est_vect = self.est_vect.T
         eta_star = self._modif_newton(np.array([1 / self.nobs,
                                                1 / self.nobs,
