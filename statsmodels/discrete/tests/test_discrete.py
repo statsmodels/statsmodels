@@ -11,7 +11,8 @@ import os
 import numpy as np
 from numpy.testing import *
 from statsmodels.discrete.discrete_model import (Logit, Probit, MNLogit,
-                                                 Poisson, _iscount, _isdummy)
+                                                 Poisson)
+from statsmodels.discrete.discrete_margins import _iscount, _isdummy
 import statsmodels.api as sm
 from sys import platform
 from nose import SkipTest
@@ -109,88 +110,172 @@ class CheckMargEff(object):
     """
 
     def test_nodummy_dydxoverall(self):
-        assert_almost_equal(self.res1.margeff(),
+        me = self.res1.get_margeff()
+        assert_almost_equal(me.margeff,
                 self.res2.margeff_nodummy_dydx, DECIMAL_4)
+        assert_almost_equal(me.margeff_se,
+                self.res2.margeff_nodummy_dydx_se, DECIMAL_4)
 
     def test_nodummy_dydxmean(self):
-        assert_almost_equal(self.res1.margeff(at='mean'),
+        me = self.res1.get_margeff(at='mean')
+        assert_almost_equal(me.margeff,
                 self.res2.margeff_nodummy_dydxmean, DECIMAL_4)
+        assert_almost_equal(me.margeff_se,
+                self.res2.margeff_nodummy_dydxmean_se, DECIMAL_4)
 
     def test_nodummy_dydxmedian(self):
-        assert_almost_equal(self.res1.margeff(at='median'),
+        me = self.res1.get_margeff(at='median')
+        assert_almost_equal(me.margeff,
                 self.res2.margeff_nodummy_dydxmedian, DECIMAL_4)
+        assert_almost_equal(me.margeff_se,
+                self.res2.margeff_nodummy_dydxmedian_se, DECIMAL_4)
 
     def test_nodummy_dydxzero(self):
-        assert_almost_equal(self.res1.margeff(at='zero'),
+        me = self.res1.get_margeff(at='zero')
+        assert_almost_equal(me.margeff,
+                self.res2.margeff_nodummy_dydxzero, DECIMAL_4)
+        assert_almost_equal(me.margeff_se,
                 self.res2.margeff_nodummy_dydxzero, DECIMAL_4)
 
     def test_nodummy_dyexoverall(self):
-        assert_almost_equal(self.res1.margeff(method='dyex'),
+        me = self.res1.get_margeff(method='dyex')
+        assert_almost_equal(me.margeff,
                 self.res2.margeff_nodummy_dyex, DECIMAL_4)
+        assert_almost_equal(me.margeff_se,
+                self.res2.margeff_nodummy_dyex_se, DECIMAL_4)
 
     def test_nodummy_dyexmean(self):
-        assert_almost_equal(self.res1.margeff(at='mean', method='dyex'),
+        me = self.res1.get_margeff(at='mean', method='dyex')
+        assert_almost_equal(me.margeff,
                 self.res2.margeff_nodummy_dyexmean, DECIMAL_4)
+        assert_almost_equal(me.margeff_se,
+                self.res2.margeff_nodummy_dyexmean_se, DECIMAL_4)
 
     def test_nodummy_dyexmedian(self):
-        assert_almost_equal(self.res1.margeff(at='median', method='dyex'),
+        me = self.res1.get_margeff(at='median', method='dyex')
+        assert_almost_equal(me.margeff,
                 self.res2.margeff_nodummy_dyexmedian, DECIMAL_4)
+        assert_almost_equal(me.margeff_se,
+                self.res2.margeff_nodummy_dyexmedian_se, DECIMAL_4)
 
     def test_nodummy_dyexzero(self):
-        assert_almost_equal(self.res1.margeff(at='zero', method='dyex'),
+        me = self.res1.get_margeff(at='zero', method='dyex')
+        assert_almost_equal(me.margeff,
                 self.res2.margeff_nodummy_dyexzero, DECIMAL_4)
+        assert_almost_equal(me.margeff_se,
+                self.res2.margeff_nodummy_dyexzero_se, DECIMAL_4)
 
     def test_nodummy_eydxoverall(self):
-        assert_almost_equal(self.res1.margeff(method='eydx'),
+        me = self.res1.get_margeff(method='eydx')
+        assert_almost_equal(me.margeff,
                 self.res2.margeff_nodummy_eydx, DECIMAL_4)
+        assert_almost_equal(me.margeff_se,
+                self.res2.margeff_nodummy_eydx_se, DECIMAL_4)
 
     def test_nodummy_eydxmean(self):
-        assert_almost_equal(self.res1.margeff(at='mean', method='eydx'),
+        me = self.res1.get_margeff(at='mean', method='eydx')
+        assert_almost_equal(me.margeff,
                 self.res2.margeff_nodummy_eydxmean, DECIMAL_4)
+        assert_almost_equal(me.margeff_se,
+                self.res2.margeff_nodummy_eydxmean_se, DECIMAL_4)
 
     def test_nodummy_eydxmedian(self):
-        assert_almost_equal(self.res1.margeff(at='median', method='eydx'),
+        me = self.res1.get_margeff(at='median', method='eydx')
+        assert_almost_equal(me.margeff,
                 self.res2.margeff_nodummy_eydxmedian, DECIMAL_4)
+        assert_almost_equal(me.margeff_se,
+                self.res2.margeff_nodummy_eydxmedian_se, DECIMAL_4)
 
     def test_nodummy_eydxzero(self):
-        assert_almost_equal(self.res1.margeff(at='zero', method='eydx'),
+        me = self.res1.get_margeff(at='zero', method='eydx')
+        assert_almost_equal(me.margeff,
                 self.res2.margeff_nodummy_eydxzero, DECIMAL_4)
+        assert_almost_equal(me.margeff_se,
+                self.res2.margeff_nodummy_eydxzero_se, DECIMAL_4)
 
     def test_nodummy_eyexoverall(self):
-        assert_almost_equal(self.res1.margeff(method='eyex'),
+        me = self.res1.get_margeff(method='eyex')
+        assert_almost_equal(me.margeff,
                 self.res2.margeff_nodummy_eyex, DECIMAL_4)
+        assert_almost_equal(me.margeff_se,
+                self.res2.margeff_nodummy_eyex_se, DECIMAL_4)
 
     def test_nodummy_eyexmean(self):
-        assert_almost_equal(self.res1.margeff(at='mean', method='eyex'),
+        me = self.res1.get_margeff(at='mean', method='eyex')
+        assert_almost_equal(me.margeff,
                 self.res2.margeff_nodummy_eyexmean, DECIMAL_4)
+        assert_almost_equal(me.margeff_se,
+                self.res2.margeff_nodummy_eyexmean_se, DECIMAL_4)
 
     def test_nodummy_eyexmedian(self):
-        assert_almost_equal(self.res1.margeff(at='median', method='eyex'),
+        me = self.res1.get_margeff(at='median', method='eyex')
+        assert_almost_equal(me.margeff,
                 self.res2.margeff_nodummy_eyexmedian, DECIMAL_4)
+        assert_almost_equal(me.margeff_se,
+                self.res2.margeff_nodummy_eyexmedian_se, DECIMAL_4)
 
     def test_nodummy_eyexzero(self):
-        assert_almost_equal(self.res1.margeff(at='zero', method='eyex'),
+        me = self.res1.get_margeff(at='zero', method='eyex')
+        assert_almost_equal(me.margeff,
                 self.res2.margeff_nodummy_eyexzero, DECIMAL_4)
+        assert_almost_equal(me.margeff_se,
+                self.res2.margeff_nodummy_eyexzero_se, DECIMAL_4)
 
     def test_dummy_dydxoverall(self):
-        assert_almost_equal(self.res1.margeff(dummy=True),
+        me = self.res1.get_margeff(dummy=True)
+        assert_almost_equal(me.margeff,
                 self.res2.margeff_dummy_dydx, DECIMAL_4)
+        assert_almost_equal(me.margeff_se,
+                self.res2.margeff_dummy_dydx_se, DECIMAL_4)
 
     def test_dummy_dydxmean(self):
-        assert_almost_equal(self.res1.margeff(at='mean', dummy=True),
+        me = self.res1.get_margeff(at='mean', dummy=True)
+        assert_almost_equal(me.margeff,
                 self.res2.margeff_dummy_dydxmean, DECIMAL_4)
+        assert_almost_equal(me.margeff_se,
+                self.res2.margeff_dummy_dydxmean_se, DECIMAL_4)
 
     def test_dummy_eydxoverall(self):
-        assert_almost_equal(self.res1.margeff(method='eydx', dummy=True),
+        me = self.res1.get_margeff(method='eydx', dummy=True)
+        assert_almost_equal(me.margeff,
                 self.res2.margeff_dummy_eydx, DECIMAL_4)
+        assert_almost_equal(me.margeff_se,
+                self.res2.margeff_dummy_eydx_se, DECIMAL_4)
 
     def test_dummy_eydxmean(self):
-        assert_almost_equal(self.res1.margeff(at='mean', method='eydx',
-            dummy=True), self.res2.margeff_dummy_eydxmean, DECIMAL_4)
+        me = self.res1.get_margeff(at='mean', method='eydx', dummy=True)
+        assert_almost_equal(me.margeff,
+                self.res2.margeff_dummy_eydxmean, DECIMAL_4)
+        assert_almost_equal(me.margeff_se,
+                self.res2.margeff_dummy_eydxmean_se, DECIMAL_4)
 
     def test_count_dydxoverall(self):
-        pass
+        me = self.res1.get_margeff(count=True)
+        assert_almost_equal(me.margeff,
+                self.res2.margeff_count_dydx, DECIMAL_4)
+        assert_almost_equal(me.margeff_se,
+                self.res2.margeff_count_dydx_se, DECIMAL_4)
 
+    def test_count_dydxmean(self):
+        me = self.res1.get_margeff(count=True, at='mean')
+        assert_almost_equal(me.margeff,
+                self.res2.margeff_count_dydxmean, DECIMAL_4)
+        assert_almost_equal(me.margeff_se,
+                self.res2.margeff_count_dydxmean_se, DECIMAL_4)
+
+    def test_count_dummy_dydxoverall(self):
+        me = self.res1.get_margeff(count=True, dummy=True)
+        assert_almost_equal(me.margeff,
+                self.res2.margeff_count_dummy_dydxoverall, DECIMAL_4)
+        assert_almost_equal(me.margeff_se,
+                self.res2.margeff_count_dummy_dydxoverall_se, DECIMAL_4)
+
+    def test_count_dummy_dydxmean(self):
+        me = self.res1.get_margeff(count=True, dummy=True, at='mean')
+        assert_almost_equal(me.margeff,
+                self.res2.margeff_count_dummy_dydxmean, DECIMAL_4)
+        assert_almost_equal(me.margeff_se,
+                self.res2.margeff_count_dummy_dydxmean_se, DECIMAL_4)
 
 class TestProbitNewton(CheckBinaryResults):
 
@@ -281,12 +366,33 @@ class TestLogitNewton(CheckBinaryResults, CheckMargEff):
         cls.res2 = res2
 
     def test_nodummy_exog1(self):
-        assert_almost_equal(self.res1.margeff(atexog={0 : 2.0, 2 : 1.}),
+        me = self.res1.get_margeff(atexog={0 : 2.0, 2 : 1.})
+        assert_almost_equal(me.margeff,
                 self.res2.margeff_nodummy_atexog1, DECIMAL_4)
+        assert_almost_equal(me.margeff_se,
+                self.res2.margeff_nodummy_atexog1_se, DECIMAL_4)
 
     def test_nodummy_exog2(self):
-        assert_almost_equal(self.res1.margeff(atexog={1 : 21., 2 : 0}, at='mean'),
+        me = self.res1.get_margeff(atexog={1 : 21., 2 : 0}, at='mean')
+        assert_almost_equal(me.margeff,
                 self.res2.margeff_nodummy_atexog2, DECIMAL_4)
+        assert_almost_equal(me.margeff_se,
+                self.res2.margeff_nodummy_atexog2_se, DECIMAL_4)
+
+    def test_dummy_exog1(self):
+        me = self.res1.get_margeff(atexog={0 : 2.0, 2 : 1.}, dummy=True)
+        assert_almost_equal(me.margeff,
+                self.res2.margeff_dummy_atexog1, DECIMAL_4)
+        assert_almost_equal(me.margeff_se,
+                self.res2.margeff_dummy_atexog1_se, DECIMAL_4)
+
+    def test_dummy_exog2(self):
+        me = self.res1.get_margeff(atexog={1 : 21., 2 : 0}, at='mean',
+                dummy=True)
+        assert_almost_equal(me.margeff,
+                self.res2.margeff_dummy_atexog2, DECIMAL_4)
+        assert_almost_equal(me.margeff_se,
+                self.res2.margeff_dummy_atexog2_se, DECIMAL_4)
 
 class TestLogitBFGS(CheckBinaryResults, CheckMargEff):
     @classmethod
