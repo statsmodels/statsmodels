@@ -16,8 +16,7 @@ few modules and functions:
 .. ipython:: python
 
     import statsmodels.api as sm
-    from pandas import DataFrame 
-    from pandas import read_csv
+    import pandas
     from patsy import dmatrices
 
 `pandas <http://pandas.pydata.org/>`_ builds on ``numpy`` arrays to provide
@@ -45,7 +44,7 @@ We could download the file locally and then load it using ``read_csv``, but
 .. ipython:: python
 
     url = "http://vincentarelbundock.github.com/Rdatasets/csv/Guerry.csv"
-    df = read_csv(url)
+    df = pandas.read_csv(url)
 
 The `Input/Output doc page <iolib.html>`_ shows how to import from various
 other formats. 
