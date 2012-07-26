@@ -159,7 +159,7 @@ def _effects_at(effects, at, ind):
 def margeff_cov_params_dummy(model, cov_margins, params, exog, dummy_ind,
         method):
     """
-    For discrete variables the marginal effect is
+    For discrete regressors the marginal effect is
 
     \Delta F = cdf(XB) | d = 1 - cdf(XB) | d = 0
 
