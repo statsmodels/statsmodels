@@ -118,7 +118,8 @@ class LTS(object):
 
         ii2 = np.ones(nobs, bool)
         ii2[idx3] = False
-        return res_trimmed, ii2
+        ssr_new = np.dot(r*r, ii2)
+        return res_trimmed, ii2, ssr_new
 
     def refine(self, iin, k_accept, max_nrefine=2):
         '''
@@ -131,7 +132,7 @@ class LTS(object):
 
         for ib in range(max_nrefine):
             #print tuple(np.nonzero(iin)[0])
-            res_trimmed, ii2 = self._refine_step(iin, k_accept)
+            res_trimmed, ii2, ssr_new = self._refine_step(iin, k_accept)
             #print ib, tuple(np.nonzero(ii2)[0])
             if (ii2 == iin).all():
                 converged = True
@@ -157,7 +158,7 @@ class LTS(object):
             converged = False
 
         self.temp.n_refine_steps.append(ib)
-        return res_trimmed, ii2, converged
+        return res_trimmed, ii2, ssr_new, converged
 
 
     def fit_random(self, k_trimmed, max_nstarts=10, k_start=None, n_keep=10):
@@ -181,12 +182,14 @@ class LTS(object):
 
         for ii in iterator:
             iin = ii.copy()   #TODO: do I still need a copy
-            res_trimmed, ii2, converged = self.refine(iin, k_accept, max_nrefine=2)
-            if res_trimmed.ssr < ssr_keep[n_keep-1]:
-                best_stage1.append((res_trimmed.ssr, ii2))
+            res_trimmed, ii2, ssr_new, converged = self.refine(iin, k_accept, max_nrefine=1)
+            #if res_trimmed.ssr < ssr_keep[n_keep-1]:
+                #best_stage1.append((res_trimmed.ssr, ii2))
+            if ssr_new < ssr_keep[n_keep-1]:
+                best_stage1.append((ssr_new, ii2))
                 #update minkeep, shouldn't grow longer than n_keep
                 #we don't drop extra indices in best_stage1
-                ssr_keep.append(res_trimmed.ssr)
+                ssr_keep.append(ssr_new)
                 ssr_keep.sort()  #inplace python sort
                 del ssr_keep[n_keep:]   #remove extra
 
@@ -194,7 +197,7 @@ class LTS(object):
         ssr_best = np.inf
         for (ssr, start_mask) in best_stage1:
             if ssr > ssr_keep[n_keep-1]: continue
-            res_trimmed, ii2, converged = self.refine(start_mask, k_accept,
+            res_trimmed, ii2, ssr_new, converged = self.refine(start_mask, k_accept,
                                                       max_nrefine=100)
             if not converged:
                 #warning ?
