@@ -171,12 +171,9 @@ def margeff_cov_params_dummy(model, cov_margins, params, exog, dummy_ind,
         exog0 = exog.copy()
         exog1 = exog.copy()
         exog0[:,i_exog] = 0
-        dfdb0 = model.pdf(np.dot(exog0, params))[:,None] * exog0
         exog1[:,i_exog] = 1
-        dfdb1 = model.pdf(np.dot(exog1, params))[:,None] * exog1
-        if 'ey' in method:
-            dfdb0 /= model.cdf(np.dot(exog0, params))[:,None]
-            dfdb1 /= model.cdf(np.dot(exog1, params))[:,None]
+        dfdb0 = model._derivative_predict(params, exog0, method)
+        dfdb1 = model._derivative_predict(params, exog1, method)
         dfdb = (dfdb1 - dfdb0)
         if dfdb.ndim == 2: # for overall
             dfdb = dfdb.mean(0)
@@ -197,14 +194,9 @@ def margeff_cov_params_count(model, cov_margins, params, exog, count_ind,
     for i_dummy, i_exog in count_ind:
         exog0 = exog.copy()
         exog0[:,i_exog] -= 1
-        dfdb0 = model.pdf(np.dot(exog0, params))[:,None] * exog0
+        dfdb0 = model._derivative_predict(params, exog0, method)
         exog0[:,i_exog] += 2
-        dfdb1 = model.pdf(np.dot(exog0, params))[:,None] * exog0
-        #NOTE: done by analogy with dummy effects but untested bc
-        # stata doesn't handle both count and eydx anywhere
-        if 'ey' in method:
-            dfdb0 /= model.cdf(np.dot(exog0, params))[:,None]
-            dfdb1 /= model.cdf(np.dot(exog1, params))[:,None]
+        dfdb1 = model._derivative_predict(params, exog0, method)
         dfdb = (dfdb1 - dfdb0)
         if dfdb.ndim == 2: # for overall
             dfdb = dfdb.mean(0) / 2

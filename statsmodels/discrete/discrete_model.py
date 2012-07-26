@@ -146,9 +146,28 @@ class BinaryModel(DiscreteModel):
         return BinaryResultsWrapper(discretefit)
     fit.__doc__ = DiscreteModel.fit.__doc__
 
+    def _derivative_predict(self, params, exog=None, transform='dydx'):
+        """
+        For computing marginal effects standard errors.
+
+        This is used only in the case of discrete and count regressors to
+        get the variance-covariance of the marginal effects. It returns
+        [d F / d params] where F is the predict.
+
+        Transform can be 'dydx' or 'eydx'. Checking is done in margeff
+        computations for appropriate transform.
+        """
+        if exog is None:
+            exog = self.exog
+        dF = self.pdf(np.dot(exog, params))[:,None] * exog
+        if 'ey' in transform:
+            dF /= self.predict(params, exog)[:,None]
+        return dF
+
     def _derivative_exog(self, params, exog=None, transform='dydx'):
         """
-        For computing marginal effects.
+        For computing marginal effects returns dF(XB) / dX where F(.) is
+        the predicted probabilities
 
         transform can be 'dydx', 'dyex', 'eydx', or 'eyex'.
 
@@ -285,8 +304,36 @@ class CountModel(DiscreteModel):
             return np.dot(exog, params) + exposure + offset
             return super(CountModel, self).predict(params, exog, linear)
 
+    def _derivative_predict(self, params, exog=None, transform='dydx'):
+        """
+        For computing marginal effects standard errors.
+
+        This is used only in the case of discrete and count regressors to
+        get the variance-covariance of the marginal effects. It returns
+        [d F / d params] where F is the predict.
+
+        Transform can be 'dydx' or 'eydx'. Checking is done in margeff
+        computations for appropriate transform.
+        """
+        if exog is None:
+            exog = self.exog
+        #NOTE: this handles offset and exposure
+        dF = self.predict(params, exog)[:,None] * exog
+        if 'ey' in transform:
+            dF /= self.predict(params, exog)[:,None]
+        return dF
+
     def _derivative_exog(self, params, exog=None, transform="dydx"):
         """
+        For computing marginal effects. These are the marginal effects
+        d F(XB) / dX
+        For the Poisson model F(XB) is the predicted counts rather than
+        the probabilities.
+
+        transform can be 'dydx', 'dyex', 'eydx', or 'eyex'.
+
+        Not all of these make sense in the presence of discrete regressors,
+        but checks are done in the results in get_margeff.
         """
         # group 3 poisson, nbreg, zip, zinb
         if exog == None:
