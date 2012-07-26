@@ -513,7 +513,7 @@ class DescStatUV(_OptFuncts):
         -------
 
         test_results: tuple
-            The p_value and log-likelihood ratio of `mu0`
+            The log-likelihood ratio and p-value of `mu0`
         """
         self.mu0 = mu0
         endog = self.endog
@@ -647,7 +647,7 @@ class DescStatUV(_OptFuncts):
 
     def test_var(self, sig2_0, print_weights=False):
         """
-        Returns the p-value and -2 ``*`` log-likelihoog ratio for the
+        Returns  -2 ``*`` log-likelihoog ratio and the p-value for the
             hypothesized variance.
 
         Parameters
@@ -667,7 +667,7 @@ class DescStatUV(_OptFuncts):
         --------
 
         test_results: tuple
-            The p_value and log-likelihood ratio of `sig2_0`
+            The  log-likelihood ratio and the p_value  of `sig2_0`
 
         Example
         -------
@@ -840,7 +840,7 @@ class DescStatUV(_OptFuncts):
                      mu_max=None, var_min=None, var_max=None,
                      print_weights=False):
         """
-        Returns the p_value and -2 ``*`` log_likelihood for the hypothesized
+        Returns  -2 ``*`` log_likelihood and p_value for the hypothesized
         skewness.
 
         Parameters
@@ -865,7 +865,7 @@ class DescStatUV(_OptFuncts):
         --------
 
         test_results: tuple
-            The p_value and log-likelihood ratio of `skew0`
+            The log-likelihood ratio and p_value  of `skew0`
         """
         self.skew0 = skew0
         if nuis0 is not None:
@@ -909,7 +909,7 @@ class DescStatUV(_OptFuncts):
                      mu_max=None, var_min=None, var_max=None,
                      print_weights=False):
         """
-        Returns the p_value and -2 ``*`` log_likelihood for the hypothesized
+        Returns -2 ``*`` log_likelihood and the p_value for the hypothesized
         kurtosis.
 
         Parameters
@@ -934,7 +934,7 @@ class DescStatUV(_OptFuncts):
         --------
 
         test_results: tuple
-            The p_value and log-likelihood ratio of `kurt0`
+            The log-likelihood ratio and p_value of `kurt0`
         """
         self.kurt0 = kurt0
         if nuis0 is not None:
@@ -978,7 +978,7 @@ class DescStatUV(_OptFuncts):
                      mu_max=None, var_min=None, var_max=None,
                      print_weights=False):
         """
-        Returns the p_value and -2 ``*`` log_likelihood for the joint
+        Returns -2 ``*`` log_likelihood and the p_value  for the joint
         hypothesesis test for skewness and kurtosis
 
         Parameters
@@ -1005,7 +1005,7 @@ class DescStatUV(_OptFuncts):
         --------
 
         test_results: tuple
-            The p_value and log-likelihood ratio of the joint hypothesis test.
+            The  log-likelihood ratio and p_value  of the joint hypothesis test.
         """
         self.kurt0 = kurt0
         self.skew0 = skew0
@@ -1264,7 +1264,7 @@ class DescStatMV(_OptFuncts):
         -------
 
         test_results: tuple
-            The p_value and log-likelihood ratio of `mu_array`
+            The log-likelihood ratio and p_value for `mu_array`
         """
         endog = self.endog
         nobs = self.nobs
@@ -1363,7 +1363,7 @@ class DescStatMV(_OptFuncts):
                        var1_min=None, var1_max=None,
                        var2_min=None, var2_max=None, print_weights=0):
         """
-        Returns the p-value and -2 * log-likelihood ratio for the
+        Returns the -2 * log-likelihood ratio and  p-value for the
         correlation coefficient between 2 variables.
 
         Parameters
