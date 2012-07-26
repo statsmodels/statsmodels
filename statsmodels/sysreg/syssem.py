@@ -1,6 +1,7 @@
 import numpy as np
 import scipy as sp
 from statsmodels.sysreg.sysmodel import SysModel, SysResults
+from statsmodels.compatnp.sparse import block_diag as sp_block_diag
 
 def unique_rows(a):
     unique_a = np.unique(a.view([('', a.dtype)]*a.shape[1]))
@@ -58,7 +59,7 @@ class SysSEM(SysModel):
         Pz = np.dot(np.dot(z, ztzinv), z.T)
         
         xhats = [np.dot(Pz, eq['exog']) for eq in self.sys]
-        xhat = x = self._compute_sp_exog(xhats)
+        xhat = x = sp_block_diag(xhats)
         self.xhat = xhat # DEBUG
 
         # Parameters
@@ -87,7 +88,7 @@ class SysSEM(SysModel):
         if exog is None:
             sp_exog = self.sp_exog
         else:
-            sp_exog = self._compute_sp_exog(exog)
+            sp_exog = sp_block_diag(exog)
 
         return sp_exog * params
 

@@ -4,6 +4,7 @@ import scipy.sparse as sparse
 from scipy.linalg import block_diag
 from statsmodels.base.model import LikelihoodModel, LikelihoodModelResults
 from statsmodels.regression.linear_model import OLS
+from statsmodels.compatnp.sparse import block_diag as sp_block_diag
 
 class SysModel(LikelihoodModel):
     '''
@@ -90,7 +91,7 @@ class SysModel(LikelihoodModel):
  
         self.endog = np.column_stack((np.asarray(eq['endog']) for eq in sys)).T
         self.exog = np.column_stack((np.asarray(eq['exog']) for eq in sys))
-        self.sp_exog = self._compute_sp_exog([np.asarray(eq['exog']) 
+        self.sp_exog = sp_block_diag([np.asarray(eq['exog']) 
             for eq in sys])
 
         # Compute DoF corrections
@@ -106,31 +107,6 @@ class SysModel(LikelihoodModel):
         self._div_dfk1 = div_dfk1
         self._div_dfk2 = div_dfk2
 
-    def _compute_sp_exog(self, designs):
-        '''
-        Parameters
-        ----------
-        designs : list of ndarray
-            exog design for each equation
-
-        Returns
-        -------
-        sp_exog : sparse matrix (BSR format)
-            block diagonal sparse matrix of exog for each equation
-
-        Notes
-        -----
-        designs[i].shape[0] need to be the same for each i
-        '''
-        nobs = designs[0].shape[0]
-        sp_exog = sparse.lil_matrix((int(nobs * self.neqs),
-            int(np.sum(self.df_model + 1)))) # linked lists to build
-        cols = np.cumsum(np.hstack((0, self.df_model+1)))
-        for i in range(self.neqs):
-            sp_exog[i*nobs:(i+1)*nobs, cols[i]:cols[i+1]] = designs[i]
-        sp_exog = sp_exog.tobsr() # cast to compressed for efficiency
-        return sp_exog
-
     def predict(self, params, exog=None):
         '''
         Parameters
@@ -141,7 +117,7 @@ class SysModel(LikelihoodModel):
         if exog is None:
             sp_exog = self.sp_exog
         else:
-            sp_exog = self._compute_sp_exog(exog)
+            sp_exog = sp_block_diag(exog)
         
         return sp_exog * params
 
