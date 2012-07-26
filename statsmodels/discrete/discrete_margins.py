@@ -175,7 +175,7 @@ def margeff_cov_params_dummy(model, cov_margins, params, exog, dummy_ind,
         dfdb0 = model._derivative_predict(params, exog0, method)
         dfdb1 = model._derivative_predict(params, exog1, method)
         dfdb = (dfdb1 - dfdb0)
-        if dfdb.ndim == 2: # for overall
+        if dfdb.ndim >= 2: # for overall
             dfdb = dfdb.mean(0)
         cov_margins[i_exog, :] = dfdb # how each F changes with change in B
     return cov_margins
@@ -198,7 +198,7 @@ def margeff_cov_params_count(model, cov_margins, params, exog, count_ind,
         exog0[:,i_exog] += 2
         dfdb1 = model._derivative_predict(params, exog0, method)
         dfdb = (dfdb1 - dfdb0)
-        if dfdb.ndim == 2: # for overall
+        if dfdb.ndim >= 2: # for overall
             dfdb = dfdb.mean(0) / 2
         cov_margins[i_exog, :] = dfdb # how each F changes with change in B
     return cov_margins
@@ -256,6 +256,7 @@ def margeff_cov_params(model, params, exog, cov_params, at, derivative,
     """
     if callable(derivative):
         from statsmodels.sandbox.regression.numdiff import approx_fprime_cs
+        params = params.ravel(order='F') # for Multinomial
         jacobian_mat = approx_fprime_cs(params, derivative, args=(exog,method))
         if at == 'overall':
             jacobian_mat = np.mean(jacobian_mat, axis=1)
@@ -501,6 +502,8 @@ class DiscreteMargins(object):
         # get base marginal effects, handled by sub-classes
         effects = model._derivative_exog(params, exog, method)
 
+        J = getattr(model, 'J', 1)
+        ind = np.tile(ind, J) # adjust for multi-equation.
         effects = _effects_at(effects, at, ind)
 
         if dummy:
@@ -517,8 +520,17 @@ class DiscreteMargins(object):
                                                 model._derivative_exog,
                                                 dummy_ind, count_ind,
                                                 method)
-        # don't care about at constant
-        self.margeff_cov = margeff_cov[ind][:, ind]
-        self.margeff_se = margeff_se[ind]
-        self.margeff = effects
+
+        # reshape for multi-equation
+        if J > 1:
+            K = model.K - np.any(ind) # subtract constant
+            self.margeff = effects.reshape(J, K, order='F')
+            self.margeff_se = margeff_se[ind].reshape(J, K, order='F')
+            self.margeff_cov = margeff_cov[ind][:, ind]
+        else:
+
+            # don't care about at constant
+            self.margeff_cov = margeff_cov[ind][:, ind]
+            self.margeff_se = margeff_se[ind]
+            self.margeff = effects
 

@@ -255,6 +255,49 @@ class MultinomialModel(BinaryModel):
         return MultinomialResultsWrapper(mnfit)
     fit.__doc__ = DiscreteModel.fit.__doc__
 
+    def _derivative_exog(self, params, exog=None, transform='dydx',
+                         flatten=False):
+        """
+        For computing marginal effects returns dF(XB) / dX where F(.) is
+        the predicted probabilities
+
+        transform can be 'dydx', 'dyex', 'eydx', or 'eyex'.
+
+        Not all of these make sense in the presence of discrete regressors,
+        but checks are done in the results in get_margeff.
+
+        For Multinomial models the marginal effects are
+
+        P[j] * (params[j] - sum_k P[k]*params[k])
+
+        It is returned unshaped, so that each row contains each of the J
+        equations. This makes it easier to take derivatives of this for
+        standard errors. If you want average marginal effects you can do
+        margeff.reshape(nobs, K, J, order='F).mean(0) and the marginal effects
+        for choice J are in column J
+        """
+        J = int(self.J) # number of alternative choices
+        K = int(self.K) # number of variables
+        #note, this form should be appropriate for
+        ## group 1 probit, logit, logistic, cloglog, heckprob, xtprobit
+        if exog == None:
+            exog = self.exog
+        if params.ndim == 1: # will get flatted from approx_fprime
+            params = params.reshape(K, J-1, order='F')
+        zeroparams = np.c_[np.zeros(K), params] # add base in
+
+        cdf = self.cdf(np.dot(exog, params))
+        margeff = np.array([cdf[:,[j]]* (zeroparams[:,j]-np.array([cdf[:,[i]]*
+            zeroparams[:,i] for i in range(int(J))]).sum(0))
+                          for j in range(J)])
+        margeff = np.transpose(margeff, (1,2,0))
+        # swap the axes to make sure margeff are in order nobs, K, J
+        if 'ex' in transform:
+            margeff *= exog
+        if 'ey' in transform:
+            margeff /= self.predict(params, exog)[:,:,None]
+        return margeff.reshape(len(exog), -1, order='F')
+
 class CountModel(DiscreteModel):
     def __init__(self, endog, exog, offset=None, exposure=None):
         super(CountModel, self).__init__(endog, exog)
@@ -1823,6 +1866,9 @@ class MultinomialResults(DiscreteResults):
         confint = super(DiscreteResults, self).conf_int(alpha=alpha,
                                                             cols=cols)
         return confint.transpose(2,0,1)
+
+    def margeff(self):
+        raise NotImplementedError("Use get_margeff instead")
 
 
 #### Results Wrappers ####
