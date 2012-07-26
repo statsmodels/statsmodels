@@ -183,7 +183,7 @@ class _OptFuncts(ELModel):
             The difference between the log likelihood value of mu0 and
             a specified value.
         """
-        return self.test_mean(mu_test)[1] - self.r0
+        return self.test_mean(mu_test)[0] - self.r0
 
     def _find_gamma(self, gamma):
         """
@@ -247,7 +247,7 @@ class _OptFuncts(ELModel):
         self.new_weights = 1. / nobs * 1. / denom
         llr = np.sum(np.log(nobs * self.new_weights))
         if pval:  # Used for contour plotting
-            return 1 - chi2.cdf(-2 * llr, 1)
+            return chi2.sf(-2 * llr, 1)
         return -2 * llr
 
     def  _ci_limits_var(self, var_test):
@@ -268,7 +268,7 @@ class _OptFuncts(ELModel):
             The difference between the log likelihood ratio at var_test and a
             pre-specified value.
         """
-        return self.test_var(var_test)[1] - self.r0
+        return self.test_var(var_test)[0] - self.r0
 
     def _opt_skew(self, nuis_params):
         """
@@ -391,7 +391,7 @@ class _OptFuncts(ELModel):
         return self.test_skew(skew0, var_min=self.var_l,
                                  var_max=self.var_u,
                                  mu_min=self.mu_l,
-                                 mu_max=self.mu_u)[1] - self.r0
+                                 mu_max=self.mu_u)[0] - self.r0
 
     def _ci_limits_kurt(self, kurt0):
         """
@@ -409,7 +409,7 @@ class _OptFuncts(ELModel):
         return self.test_kurt(kurt0, var_min=self.var_l,
                                  var_max=self.var_u,
                                  mu_min=self.mu_l,
-                                 mu_max=self.mu_u)[1] - self.r0
+                                 mu_max=self.mu_u)[0] - self.r0
 
     def _opt_correl(self, nuis_params):
         """
@@ -472,7 +472,7 @@ class _OptFuncts(ELModel):
                        mu2_max=self.mu2_ub,
                        var1_min=self.var1_lb, var1_max=self.var1_ub,
                        var2_min=self.var2_lb, var2_max=self.var2_ub,
-                       print_weights=0)[1] - self.r0
+                       print_weights=0)[0] - self.r0
 
 
 class DescStatUV(_OptFuncts):
@@ -496,7 +496,7 @@ class DescStatUV(_OptFuncts):
 
     def test_mean(self, mu0, print_weights=False):
         """
-        Returns the p-value, -2 * log-likelihood ratio and weights
+        Returns -2 * log-likelihood ratio, p-value and weights
         for a hypothesis test of the means.
 
         Parameters
@@ -525,9 +525,9 @@ class DescStatUV(_OptFuncts):
             1. / (1. + eta_star * (endog - self.mu0))
         llr = -2 * np.sum(np.log(nobs * new_weights))
         if print_weights:
-            return 1 - chi2.cdf(llr, 1), llr, new_weights
+            return llr, chi2.sf(llr, 1), new_weights
         else:
-            return 1 - chi2.cdf(llr, 1), llr
+            return llr, chi2.sf(llr, 1)
 
     def ci_mean(self, sig=.05, method='gamma', epsilon=10 ** -8,
                  gamma_low=-10 ** 10, gamma_high=10 ** 10, \
@@ -680,11 +680,11 @@ class DescStatUV(_OptFuncts):
         mu_min = min(self.endog)
         llr = optimize.fminbound(self._opt_var, mu_min, mu_max, \
                                  full_output=1)[1]
-        p_val = 1 - chi2.cdf(llr, 1)
+        p_val = chi2.sf(llr, 1)
         if print_weights:
-            return p_val, llr, self.new_weights.T
+            return llr, p_val, self.new_weights.T
         else:
-            return p_val, llr
+            return  llr, p_val
 
     def ci_var(self, lower_bound=None, upper_bound=None, sig=.05):
         """
@@ -900,10 +900,10 @@ class DescStatUV(_OptFuncts):
                                      approx_grad=1,
                                      bounds=[(mu_lb, mu_ub),
                                               (var_lb, var_ub)])[1]
-        p_val = 1 - chi2.cdf(llr, 1)
+        p_val = chi2.sf(llr, 1)
         if print_weights:
-            return p_val, llr, self.new_weights.T
-        return p_val, llr
+            return llr, p_val,  self.new_weights.T
+        return llr, p_val
 
     def test_kurt(self, kurt0, nuis0=None, mu_min=None,
                      mu_max=None, var_min=None, var_max=None,
@@ -969,10 +969,10 @@ class DescStatUV(_OptFuncts):
                                      approx_grad=1,
                                      bounds=[(mu_lb, mu_ub),
                                               (var_lb, var_ub)])[1]
-        p_val = 1 - chi2.cdf(llr, 1)
+        p_val = chi2.sf(llr, 1)
         if print_weights:
-            return p_val, llr, self.new_weights.T
-        return p_val, llr
+            return  llr, p_val, self.new_weights.T
+        return llr, p_val
 
     def test_joint_skew_kurt(self, skew0, kurt0, nuis0=None, mu_min=None,
                      mu_max=None, var_min=None, var_max=None,
@@ -1041,10 +1041,10 @@ class DescStatUV(_OptFuncts):
                                      approx_grad=1,
                                      bounds=[(mu_lb, mu_ub),
                                               (var_lb, var_ub)])[1]
-        p_val = 1 - chi2.cdf(llr, 2)
+        p_val = chi2.sf(llr, 2)
         if print_weights:
-            return p_val, llr, self.new_weights.T
-        return p_val, llr
+            return llr, p_val, self.new_weights.T
+        return llr, p_val
 
     def ci_skew(self, sig=.05, upper_bound=None, lower_bound=None,
                 var_min=None, var_max=None, mu_min=None, mu_max=None):
@@ -1279,12 +1279,12 @@ class DescStatMV(_OptFuncts):
         eta_star = self._modif_newton(start_vals)
         denom = 1 + np.dot(eta_star, self.est_vect.T)
         self.new_weights = 1 / nobs * 1 / denom
-        llr = np.sum(np.log(nobs * self.new_weights))
-        p_val = 1 - chi2.cdf(-2 * llr, mu_array.shape[1])
+        llr = -2 * np.sum(np.log(nobs * self.new_weights))
+        p_val = chi2.sf(llr, mu_array.shape[1])
         if print_weights:
-            return p_val, -2 * llr, self.new_weights.T
+            return llr, p_val,  self.new_weights.T
         else:
-            return p_val, -2 * llr
+            return llr, p_val
 
     def mv_mean_contour(self, mu1_l, mu1_u, mu2_l, mu2_u, step1, step2,
                         levs=[.2, .1, .05, .01, .001], plot_dta=False):
@@ -1467,10 +1467,10 @@ class DescStatMV(_OptFuncts):
                                               (var1_lb, var1_ub),
                                               (mu2_lb, mu2_ub),
                                               (var2_lb, var2_ub)])[1]
-        p_val = 1 - chi2.cdf(llr, 1)
+        p_val = chi2.sf(llr, 1)
         if print_weights:
-            return p_val, llr, self.new_weights.T
-        return p_val, llr
+            return llr, p_val, self.new_weights.T
+        return llr, p_val
 
     def ci_corr(self, sig=.05, upper_bound=None, lower_bound=None,
                        mu1_min=None,
