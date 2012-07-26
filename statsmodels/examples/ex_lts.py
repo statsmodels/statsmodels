@@ -11,7 +11,7 @@ import numpy as np
 from statsmodels.regression.linear_model import OLS
 from statsmodels.robust.robust_linear_model import RLM
 from statsmodels import robust
-from statsmodels.robust.least_trimmed_squares import lts, subsample
+from statsmodels.robust.least_trimmed_squares import lts, LTS, subsample
 #from statsmodels.tools.tools import add_constant
 
 from statsmodels.robust.tests.results.results_lts import (
@@ -118,3 +118,6 @@ print (0, 2, 3, 5, 10, 12, 14, 19, 20).__hash__()
 
 bestw = lts(endog_wood, exog_wood, k_trimmed=None, max_nstarts=100, max_nrefine=20, max_exact=0)
 print bestw[0], np.nonzero(bestw[-1])[0] + 1
+
+bestw2 = LTS(endog_wood, exog_wood).fit()
+print bestw2[0], np.nonzero(bestw2[-1])[0] + 1
