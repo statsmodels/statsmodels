@@ -285,13 +285,18 @@ class CountModel(DiscreteModel):
             return np.dot(exog, params) + exposure + offset
             return super(CountModel, self).predict(params, exog, linear)
 
-    def _derivative_exog(self, params, exog=None):
+    def _derivative_exog(self, params, exog=None, transform="dydx"):
         """
         """
         # group 3 poisson, nbreg, zip, zinb
         if exog == None:
             exog = self.exog
-        return self.predict(params, exog)[:,None] * params[None,:]
+        margeff = self.predict(params, exog)[:,None] * params[None,:]
+        if 'ex' in transform:
+            margeff *= exog
+        if 'ey' in transform:
+            margeff /= self.predict(params, exog)[:,None]
+        return margeff
 
     def fit(self, start_params=None, method='newton', maxiter=35,
             full_output=1, disp=1, callback=None, **kwargs):
