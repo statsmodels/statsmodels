@@ -47,7 +47,7 @@ class _OptFuncts(ELModel):
     def __init__(self, endog):
         super(_OptFuncts, self).__init__(endog)
 
-    def _get_j_y(self, eta1):
+    def _get_j_y(self, eta1, est_vect):
         """
         Calculates J and y via the log*' and log*''.
 
@@ -75,7 +75,7 @@ class _OptFuncts(ELModel):
         """
 
         nobs = self.nobs
-        data = self.est_vect.T
+        data = est_vect.T
         data_star_prime = (1. + np.dot(eta1, data))
         data_star_doub_prime = np.copy(1. + np.dot(eta1, data))
         idx = data_star_prime < 1. / nobs
@@ -87,11 +87,11 @@ class _OptFuncts(ELModel):
         data_star_prime = data_star_prime.reshape(nobs, 1)
         data_star_doub_prime = data_star_doub_prime.reshape(nobs, 1)
         root_star = np.sqrt(- 1 * data_star_doub_prime).reshape(nobs, 1)
-        JJ = root_star * self.est_vect
+        JJ = root_star * est_vect
         yy = data_star_prime / root_star
         return JJ, yy
 
-    def _log_star(self, eta1):
+    def _log_star(self, eta1, est_vect):
         """
         Parameters
         ---------
@@ -105,7 +105,7 @@ class _OptFuncts(ELModel):
             The logstar of the estimting equations
         """
         nobs = self.nobs
-        data = self.est_vect.T
+        data = est_vect.T
         data_star = (1 + np.dot(eta1, data))
         idx = data_star < 1. / nobs
         not_idx = ~idx
@@ -115,7 +115,7 @@ class _OptFuncts(ELModel):
         data_star[not_idx] = np.log(data_star[not_idx])
         return data_star
 
-    def _modif_newton(self,  x0):
+    def _modif_newton(self,  x0, est_vect):
         """
         Modified Newton's method for maximizing the log* equation.
 
@@ -132,12 +132,12 @@ class _OptFuncts(ELModel):
 
         See Owen pg. 64
         """
-        x0 = x0.reshape(self.est_vect.shape[1], 1)
-        f = lambda x0: np.sum(self._log_star(x0.T))
-        grad = lambda x0: - np.dot((self._get_j_y(x0.T)[0]).T, \
-                              (self._get_j_y(x0.T)[1]))
-        hess = lambda x0: np.dot((self._get_j_y(x0.T)[0]).T,
-                                 (self._get_j_y(x0.T)[0]))
+        x0 = x0.reshape(est_vect.shape[1], 1)
+        f = lambda x0: np.sum(self._log_star(x0.T, est_vect))
+        grad = lambda x0: - np.dot((self._get_j_y(x0.T, est_vect)[0]).T, \
+                              (self._get_j_y(x0.T, est_vect)[1]))
+        hess = lambda x0: np.dot((self._get_j_y(x0.T, est_vect)[0]).T,
+                                 (self._get_j_y(x0.T, est_vect)[0]))
         kwds = {'tol': 1e-8}
         res = _fit_mle_newton(f, grad, x0, (), kwds, hess=hess, maxiter=50, \
                               disp=0)
@@ -239,11 +239,11 @@ class _OptFuncts(ELModel):
         sig_data = ((endog - nuisance_mu) ** 2 \
                     - self.sig2_0)
         mu_data = (endog - nuisance_mu)
-        self.est_vect = np.concatenate((mu_data, sig_data), axis=1)
+        est_vect = np.concatenate((mu_data, sig_data), axis=1)
         eta_star = self._modif_newton(np.array([1. / nobs,
-                                               1. / nobs]))
+                                               1. / nobs]), est_vect)
 
-        denom = 1 + np.dot(eta_star, self.est_vect.T)
+        denom = 1 + np.dot(eta_star, est_vect.T)
         self.new_weights = 1. / nobs * 1. / denom
         llr = np.sum(np.log(nobs * self.new_weights))
         if pval:  # Used for contour plotting
@@ -294,12 +294,12 @@ class _OptFuncts(ELModel):
         sig_data = ((endog - nuis_params[0]) ** 2) - nuis_params[1]
         skew_data = ((((endog - nuis_params[0]) ** 3) / \
                     (nuis_params[1] ** 1.5))) - self.skew0
-        self.est_vect = np.concatenate((mu_data, sig_data, skew_data), \
+        est_vect = np.concatenate((mu_data, sig_data, skew_data), \
                                        axis=1)
         eta_star = self._modif_newton(np.array([1. / nobs,
                                                1. / nobs,
-                                               1. / nobs]))
-        denom = 1. + np.dot(eta_star, self.est_vect.T)
+                                               1. / nobs]), est_vect)
+        denom = 1. + np.dot(eta_star, est_vect.T)
         self.new_weights = 1. / nobs * 1. / denom
         llr = np.sum(np.log(nobs * self.new_weights))
         return -2 * llr
@@ -328,12 +328,12 @@ class _OptFuncts(ELModel):
         sig_data = ((endog - nuis_params[0]) ** 2) - nuis_params[1]
         kurt_data = (((((endog - nuis_params[0]) ** 4) / \
                     (nuis_params[1] ** 2))) - 3) - self.kurt0
-        self.est_vect = np.concatenate((mu_data, sig_data, kurt_data), \
+        est_vect = np.concatenate((mu_data, sig_data, kurt_data), \
                                        axis=1)
         eta_star = self._modif_newton(np.array([1. / nobs,
                                                1. / nobs,
-                                               1. / nobs]))
-        denom = 1 + np.dot(eta_star, self.est_vect.T)
+                                               1. / nobs]), est_vect)
+        denom = 1 + np.dot(eta_star, est_vect.T)
         self.new_weights = 1. / nobs * 1. / denom
         llr = np.sum(np.log(nobs * self.new_weights))
         return -2 * llr
@@ -364,13 +364,13 @@ class _OptFuncts(ELModel):
                     (nuis_params[1] ** 1.5))) - self.skew0
         kurt_data = (((((endog - nuis_params[0]) ** 4) / \
                     (nuis_params[1] ** 2))) - 3) - self.kurt0
-        self.est_vect = np.concatenate((mu_data, sig_data, skew_data,\
+        est_vect = np.concatenate((mu_data, sig_data, skew_data,\
                                         kurt_data), axis=1)
         eta_star = self._modif_newton(np.array([1. / nobs,
                                                1. / nobs,
                                                1. / nobs,
-                                               1. / nobs]))
-        denom = 1. + np.dot(eta_star, self.est_vect.T)
+                                               1. / nobs]), est_vect)
+        denom = 1. + np.dot(eta_star, est_vect.T)
         self.new_weights = 1. / nobs * 1. / denom
         llr = np.sum(np.log(nobs * self.new_weights))
         return -2 * llr
@@ -438,16 +438,16 @@ class _OptFuncts(ELModel):
                       (endog[:, 1] - nuis_params[2])) - \
                       (self.corr0 * (nuis_params[1] ** .5) \
                        * (nuis_params[3] ** .5))
-        self.est_vect = np.vstack((mu1_data, sig1_data,
+        est_vect = np.vstack((mu1_data, sig1_data,
                                        mu2_data,
                                        sig2_data, correl_data))
-        self.est_vect = self.est_vect.T
+        est_vect = est_vect.T
         eta_star = self._modif_newton(np.array([1. / nobs,
                                                1. / nobs,
                                                1. / nobs,
                                                1. / nobs,
-                                               1. / nobs]))
-        denom = 1. + np.dot(eta_star, self.est_vect.T)
+                                               1. / nobs]), est_vect)
+        denom = 1. + np.dot(eta_star, est_vect.T)
         self.new_weights = 1. / nobs * 1. / denom
         llr = np.sum(np.log(nobs * self.new_weights))
         return -2 * llr
@@ -1005,7 +1005,7 @@ class DescStatUV(_OptFuncts):
         --------
 
         test_results: tuple
-            The  log-likelihood ratio and p_value  of the joint hypothesis test.
+            The log-likelihood ratio and p_value  of the joint hypothesis test.
         """
         self.kurt0 = kurt0
         self.skew0 = skew0
@@ -1274,10 +1274,10 @@ class DescStatMV(_OptFuncts):
         mu_array = mu_array.reshape(1, endog.shape[1])
         means = np.ones((endog.shape[0], endog.shape[1]))
         means = mu_array * means
-        self.est_vect = endog - means
+        est_vect = endog - means
         start_vals = 1 / nobs * np.ones(endog.shape[1])
-        eta_star = self._modif_newton(start_vals)
-        denom = 1 + np.dot(eta_star, self.est_vect.T)
+        eta_star = self._modif_newton(start_vals, est_vect)
+        denom = 1 + np.dot(eta_star, est_vect.T)
         self.new_weights = 1 / nobs * 1 / denom
         llr = -2 * np.sum(np.log(nobs * self.new_weights))
         p_val = chi2.sf(llr, mu_array.shape[1])
