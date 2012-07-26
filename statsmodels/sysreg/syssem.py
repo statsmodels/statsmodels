@@ -2,6 +2,7 @@ import numpy as np
 import scipy as sp
 from statsmodels.sysreg.sysmodel import SysModel, SysResults
 from statsmodels.compatnp.sparse import block_diag as sp_block_diag
+import statsmodels.tools.tools as tools
 
 def unique_rows(a):
     unique_a = np.unique(a.view([('', a.dtype)]*a.shape[1]))
@@ -60,7 +61,12 @@ class SysSEM(SysModel):
 
         xhats = [np.dot(Pz, eq['exog']) for eq in self.sys]
         xhat = x = sp_block_diag(xhats)
-        self.xhat = xhat # DEBUG
+
+        # Identification conditions
+        xhats_ranks = [tools.rank(cur_xhat) for cur_xhat in xhats]
+        nexogs = [eq['exog'].shape[1] for eq in self.sys]
+        if not(xhats_ranks == nexogs):
+            raise ValueError('identification conditions are not statisfied')
 
         # Parameters
         omegainv = np.kron(np.linalg.inv(self.sigma), np.identity(self.nobs))
