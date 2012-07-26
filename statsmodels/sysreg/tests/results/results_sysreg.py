@@ -408,3 +408,42 @@ RSURIR.fittedvalues = np.array([
      47.8362, 38.41002, 43.27186, 39.14423, 41.89066, 46.65985, 54.73855, 
      73.55324, 74.05651
     ])
+
+
+
+# 2SLS tests based on sysreg/tests/results/kmenta.R
+R2SLS = Bunch()
+R2SLS.call = '''systemfit(formula = system, method = "2SLS", inst = inst, data = Kmenta,      methodResidCov = "noDfCor")'''
+R2SLS.params = np.squeeze(np.array([
+     94.6333, -0.2435565, 0.3139918, 49.53244, 0.2400758, 0.2556057, 
+     0.2529242
+    ]).reshape(7,1, order='F'))
+R2SLS.cov_params = np.array([
+     53.32873, -0.5724084, 0.04190637, 0, 0, 0, 0, -0.5724084, 0.007912836, 
+     -0.002245614, 0, 0, 0, 0, 0.04190637, -0.002245614, 0.001873151, 0, 0, 
+     0, 0, 0, 0, 0, 115.4022, -0.8763283, -0.2590548, -0.236183, 0, 0, 0, 
+     -0.8763283, 0.00798942, 0.0007489774, 0.0004632555, 0, 0, 0, 
+     -0.2590548, 0.0007489774, 0.001786055, 0.001101445, 0, 0, 0, 
+     -0.236183, 0.0004632555, 0.001101445, 0.007944909
+    ]).reshape(7,7, order='F')
+R2SLS.cov_params_rownames = ['demand_(Intercept)', 'demand_price', 'demand_income', 'supply_(Intercept)', 'supply_price', 'supply_farmPrice', 'supply_trend', ]
+R2SLS.cov_params_colnames = ['demand_(Intercept)', 'demand_price', 'demand_income', 'supply_(Intercept)', 'supply_price', 'supply_farmPrice', 'supply_trend', ]
+R2SLS.cov_resids = np.array([
+     3.286454, 3.593237, 3.593237, 4.831662
+    ]).reshape(2,2, order='F')
+R2SLS.cov_resids_rownames = ['demand', 'supply', ]
+R2SLS.cov_resids_colnames = ['demand', 'supply', ]
+R2SLS.method = '2SLS'
+R2SLS.rank = 7
+R2SLS.df_resid = 33
+R2SLS.panelLike = '''FALSE'''
+R2SLS.fittedvalues = np.array([
+     97.64186, 99.88472, 99.80404, 100.0142, 102.1009, 101.9663, 102.422, 
+     102.9659, 101.4749, 100.328, 95.54263, 94.71564, 96.13309, 99.02829, 
+     103.839, 103.6555, 103.835, 102.0803, 103.6315, 106.9004, 98.91985, 
+     100.4001, 100.454, 100.7084, 102.6458, 102.5835, 102.5584, 104.7724, 
+     102.7475, 99.67725, 95.36613, 93.82181, 95.64862, 97.58861, 102.3105, 
+     104.0535, 102.8427, 102.7003, 102.5562, 105.6085
+    ])
+R2SLS.cov_resids_est = np.identity(2)
+

@@ -3,6 +3,7 @@ from numpy.testing import assert_allclose
 
 import statsmodels.api as sm
 from statsmodels.sysreg.sysmodel import SysSUR 
+from statsmodels.sysreg.syssem import Sys2SLS
 
 class CheckSysregResults(object):
     # TODO : adjust better rtol/atol
@@ -26,14 +27,14 @@ class CheckSysregResults(object):
         assert_allclose(self.res1.cov_resids, self.res2.cov_resids, 
                 rtol=self.rtol)
 
-
+## SUR tests
 # Build system
 grun_data = sm.datasets.grunfeld.load()
 firms = ['Chrysler', 'General Electric', 'General Motors',
          'US Steel', 'Westinghouse']
 grun_exog = grun_data.exog
 grun_endog = grun_data.endog
-sys = []
+grun_sys = []
 for f in firms:
     eq_f = {}
     index_f = grun_exog['firm'] == f
@@ -41,14 +42,14 @@ for f in firms:
     exog = (grun_exog[index_f][var] for var in ['value', 'capital'])
     eq_f['exog'] = np.column_stack(exog)
     eq_f['exog'] = sm.add_constant(eq_f['exog'], prepend=True)
-    sys.append(eq_f)
+    grun_sys.append(eq_f)
 
 class TestSUR(CheckSysregResults):
     @classmethod
     def setupClass(cls):
         from results.results_sysreg import RSUR
         res2 = RSUR
-        res1 = SysSUR(sys).fit()
+        res1 = SysSUR(grun_sys).fit()
         cls.res1 = res1
         cls.res2 = res2
 
@@ -57,7 +58,7 @@ class TestSURI(CheckSysregResults):
     def setupClass(cls):
         from results.results_sysreg import RSURI
         res2 = RSURI
-        res1 = SysSUR(sys).fit(igls=True)
+        res1 = SysSUR(grun_sys).fit(igls=True)
         cls.res1 = res1
         cls.res2 = res2
 
@@ -70,7 +71,7 @@ class TestSURR(CheckSysregResults):
         R = np.array([[1, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 0, 1, 0],
                       [2, 0, 1, 1, 0, 0, 0, 3, 1, 1, 1, 0, 0, 1, 0]])
         q = np.array([0, 0])
-        res1 = SysSUR(sys, restrictMatrix=R, restrictVect=q).fit()
+        res1 = SysSUR(grun_sys, restrictMatrix=R, restrictVect=q).fit()
 
         cls.res1 = res1
         cls.res2 = res2
@@ -84,8 +85,33 @@ class TestSURIR(CheckSysregResults):
         R = np.array([[1, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 0, 1, 0],
                       [2, 0, 1, 1, 0, 0, 0, 3, 1, 1, 1, 0, 0, 1, 0]])
         q = np.array([0, 0])
-        res1 = SysSUR(sys, restrictMatrix=R, restrictVect=q).fit(igls=True)
+        res1 = SysSUR(grun_sys, restrictMatrix=R, restrictVect=q).fit(igls=True)
 
+        cls.res1 = res1
+        cls.res2 = res2
+
+## 2SLS tests based on example/example_sysreg3.py
+# Build system
+# See sysreg/tests/results/kmenta.R
+
+kmenta_data = sm.datasets.kmenta.load().data
+
+y = kmenta_data['consump']
+x1 = np.column_stack((kmenta_data['price'], kmenta_data['income']))
+x2 = np.column_stack((kmenta_data['price'], kmenta_data['farmPrice'], kmenta_data['trend']))
+x1 = sm.add_constant(x1, prepend=True)
+x2 = sm.add_constant(x2, prepend=True)
+
+kmenta_eq1 = {'endog' : y, 'exog' : x1, 'indep_endog' : [1]}
+kmenta_eq2 = {'endog' : y, 'exog' : x2, 'indep_endog' : [1]}
+kmenta_sys = [kmenta_eq1, kmenta_eq2]
+
+class Test2SLS(CheckSysregResults):
+    @classmethod
+    def setupClass(cls):
+        from results.results_sysreg import R2SLS
+        res2 = R2SLS
+        res1 = Sys2SLS(kmenta_sys).fit()
         cls.res1 = res1
         cls.res2 = res2
 
