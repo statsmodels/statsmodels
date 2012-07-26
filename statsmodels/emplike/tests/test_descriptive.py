@@ -70,8 +70,8 @@ class TestDescriptiveStatistics(GenRes):
         skew_ci = self.res1.ci_skew()
         lower_lim = skew_ci[0]
         upper_lim = skew_ci[1]
-        ul_pval = self.res1.test_skew(lower_lim)[0]
-        ll_pval = self.res1.test_skew(upper_lim)[0]
+        ul_pval = self.res1.test_skew(lower_lim)[1]
+        ll_pval = self.res1.test_skew(upper_lim)[1]
         assert_almost_equal(ul_pval, .050000, 4)
         assert_almost_equal(ll_pval, .050000, 4)
 
@@ -92,8 +92,8 @@ class TestDescriptiveStatistics(GenRes):
         kurt_ci = self.res1.ci_kurt(upper_bound=.5, lower_bound=-1.5)
         lower_lim = kurt_ci[0]
         upper_lim = kurt_ci[1]
-        ul_pval = self.res1.test_kurt(upper_lim)[0]
-        ll_pval = self.res1.test_kurt(lower_lim)[0]
+        ul_pval = self.res1.test_kurt(upper_lim)[1]
+        ll_pval = self.res1.test_kurt(lower_lim)[1]
         assert_almost_equal(ul_pval, .050000, 4)
         assert_almost_equal(ll_pval, .050000, 4)
 
@@ -109,8 +109,8 @@ class TestDescriptiveStatistics(GenRes):
         corr_ci = self.mvres1.ci_corr()
         lower_lim = corr_ci[0]
         upper_lim = corr_ci[1]
-        ul_pval = self.mvres1.test_corr(upper_lim)[0]
-        ll_pval = self.mvres1.test_corr(lower_lim)[0]
+        ul_pval = self.mvres1.test_corr(upper_lim)[1]
+        ll_pval = self.mvres1.test_corr(lower_lim)[1]
         assert_almost_equal(ul_pval, .050000, 4)
         assert_almost_equal(ll_pval, .050000, 4)
 

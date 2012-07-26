@@ -24,7 +24,7 @@ class DescStatRes(object):
 
     def __init__(self):
         self.ci_mean = (13.556709, 14.559394)
-        self.test_mean_14 = (.776385, .080675)
+        self.test_mean_14 = (.080675, .776385)
         self.test_mean_weights = np.array([[0.01969213],
                                              [0.01911859],
                                              [0.01973982],
@@ -75,7 +75,7 @@ class DescStatRes(object):
                                              [0.02189933],
                                              [0.02077078],
                                              [0.02082612]])
-        self.test_var_3 = (.655218, .199385)
+        self.test_var_3 = (.199385, .655218)
         self.ci_var = (2.290077, 4.423634)
         self.test_var_weights = np.array([[0.020965],
                                              [0.019686],
@@ -127,7 +127,7 @@ class DescStatRes(object):
                                              [0.016259],
                                              [0.019939],
                                              [0.019793]])
-        self.mv_test_mean = (.7045943, .7002663)
+        self.mv_test_mean = (.7002663, .7045943)
         self.mv_test_mean_wts = np.array([[0.01877015],
                                              [0.01895746],
                                              [0.01817092],
@@ -178,7 +178,7 @@ class DescStatRes(object):
                                              [0.01961964],
                                              [0.02023756],
                                              [0.01774807]])
-        self.test_skew = (.113961, 2.498418)
+        self.test_skew = (2.498418, .113961)
         self.test_skew_wts = np.array([[0.016698],
                                         [0.01564],
                                         [0.01701],
@@ -229,8 +229,8 @@ class DescStatRes(object):
                                         [0.014739],
                                         [0.028112],
                                         [0.02842]])
-        self.test_kurt_0 = (.167601, 1.904269)
-        self.test_corr = (.912680, .012025)
+        self.test_kurt_0 = (1.904269, .167601)
+        self.test_corr = (.012025, .912680,)
         self.test_corr_weights = np.array([[0.020037],
                                               [0.020108],
                                               [0.020024],
@@ -281,4 +281,4 @@ class DescStatRes(object):
                                               [0.019823],
                                               [0.02005],
                                               [0.019497]])
-        self.test_joint_skew_kurt = (.012563, 8.753952)
+        self.test_joint_skew_kurt = (8.753952, .012563)
