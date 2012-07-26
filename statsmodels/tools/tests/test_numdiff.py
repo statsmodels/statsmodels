@@ -94,9 +94,6 @@ class TestGradMNLogit(CheckGradLoglike):
         #from results.results_discrete import Anes
         data = sm.datasets.anes96.load()
         exog = data.exog
-        exog[:,0] = np.log(exog[:,0] + .1)
-        exog = np.column_stack((exog[:,0],exog[:,2],
-            exog[:,5:8]))
         exog = sm.add_constant(exog)
         self.mod = sm.MNLogit(data.endog, exog)
 
@@ -356,9 +353,6 @@ if __name__ == '__main__':
 
     data = sm.datasets.anes96.load()
     exog = data.exog
-    exog[:,0] = np.log(exog[:,0] + .1)
-    exog = np.column_stack((exog[:,0],exog[:,2],
-        exog[:,5:8]))
     exog = sm.add_constant(exog)
     res1 = sm.MNLogit(data.endog, exog).fit(method="newton", disp=0)
 

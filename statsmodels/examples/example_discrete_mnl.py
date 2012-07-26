@@ -6,8 +6,6 @@ import statsmodels.api as sm
 
 anes_data = sm.datasets.anes96.load()
 anes_exog = anes_data.exog
-anes_exog[:,0] = np.log(anes_exog[:,0] + .1)
-anes_exog = np.column_stack((anes_exog[:,0],anes_exog[:,2],anes_exog[:,5:8]))
 anes_exog = sm.add_constant(anes_exog, prepend=False)
 mlogit_mod = sm.MNLogit(anes_data.endog, anes_exog)
 mlogit_res = mlogit_mod.fit()

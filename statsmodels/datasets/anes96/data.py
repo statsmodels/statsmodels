@@ -83,7 +83,7 @@ Variables name definitions::
             from "Left" to "Right".
 """
 
-from numpy import recfromtxt, column_stack, array
+from numpy import recfromtxt, column_stack, array, log
 import statsmodels.tools.datautils as du
 from os.path import dirname, abspath
 
@@ -96,7 +96,8 @@ def load():
         See DATASET_PROPOSAL.txt for more information.
     """
     data = _get_data()
-    return du.process_recarray(data, endog_idx=5, dtype=float)
+    return du.process_recarray(data, endog_idx=5, exog_idx=[0,2,6,7,8],
+            dtype=float)
 
 def load_pandas():
     """Load the anes96 data and returns a Dataset class.
@@ -107,10 +108,12 @@ def load_pandas():
         See DATASET_PROPOSAL.txt for more information.
     """
     data = _get_data()
-    return du.process_recarray_pandas(data, endog_idx=5, dtype=float)
+    return du.process_recarray_pandas(data, endog_idx=5, exog_idx=[0,2,6,7,8],
+            dtype=float)
 
 def _get_data():
     filepath = dirname(abspath(__file__))
     data = recfromtxt(open(filepath + '/anes96.csv',"rb"), delimiter="\t",
             names = True, dtype=float)
+    data['popul'] = log(data['popul'] + .1)
     return data

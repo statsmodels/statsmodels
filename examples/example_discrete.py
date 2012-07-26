@@ -30,7 +30,7 @@ print logit_res.margeff()
 # summary of results:
 print logit_res.summary()
 
-#Probit Model 
+#Probit Model
 #------------
 probit_mod = sm.Probit(spector_data.endog, spector_data.exog)
 probit_res = probit_mod.fit()
@@ -43,11 +43,9 @@ print probit_res.margeff()
 # Load data from the American National Election Studies:
 anes_data = sm.datasets.anes96.load()
 anes_exog = anes_data.exog
-anes_exog[:,0] = np.log(anes_exog[:,0] + .1)
-anes_exog = np.column_stack((anes_exog[:,0],anes_exog[:,2],anes_exog[:,5:8]))
 anes_exog = sm.add_constant(anes_exog, prepend=False)
 
-# Inspect the data: 
+# Inspect the data:
 anes_data.exog[:5,:]
 anes_data.endog[:5]
 
@@ -61,12 +59,12 @@ mlogit_res.params
 
 # Load the Rand data. Note that this example is similar to Cameron and
 # Trivedi's `Microeconometrics` Table 20.5, but it is slightly different
-# because of minor changes in the data. 
+# because of minor changes in the data.
 rand_data = sm.datasets.randhie.load()
 rand_exog = rand_data.exog.view(float).reshape(len(rand_data.exog), -1)
 rand_exog = sm.add_constant(rand_exog, prepend=False)
 
-# Fit Poisson model: 
+# Fit Poisson model:
 poisson_mod = sm.Poisson(rand_data.endog, rand_exog)
 poisson_res = poisson_mod.fit(method="newton")
 print poisson_res.summary()
@@ -75,7 +73,7 @@ print poisson_res.summary()
 #-------------------
 
 # The default method for fitting discrete data MLE models is Newton-Raphson.
-# You can use other solvers by using the ``method`` argument: 
+# You can use other solvers by using the ``method`` argument:
 mlogit_res = mlogit_mod.fit(method='bfgs', maxiter=100)
 
 #.. The below needs a lot of iterations to get it right?
