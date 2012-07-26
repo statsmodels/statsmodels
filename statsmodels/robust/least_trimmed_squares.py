@@ -99,6 +99,7 @@ class LTS(object):
         self.all_dict = {} #store tried outliers
         self.temp = Holder()
         self.temp.n_est_calls = 0
+        self.temp.n_refine_steps = []
 
     def _refine_step(self, iin, k_accept):
         endog, exog = self.endog, self.exog
@@ -113,7 +114,7 @@ class LTS(object):
         #values
         #TODO: another version: use resid_se and outlier test to determin
         #k_outliers
-        idx3 = np.argsort(np.abs(r))[k_accept:]
+        idx3 = np.argsort(np.abs(r))[k_accept:] #idx of outliers
 
         ii2 = np.ones(nobs, bool)
         ii2[idx3] = False
@@ -129,12 +130,14 @@ class LTS(object):
         #all_dict = self.all_dict
 
         for ib in range(max_nrefine):
+            #print tuple(np.nonzero(iin)[0])
             res_trimmed, ii2 = self._refine_step(iin, k_accept)
+            #print ib, tuple(np.nonzero(ii2)[0])
             if (ii2 == iin).all():
                 converged = True
                 break
             else:
-                iin = ii2
+                iin = ii2.copy()
                 #for debugging
                 outl = tuple(np.nonzero(iin)[0])
                 all_dict = self.all_dict
@@ -153,6 +156,7 @@ class LTS(object):
             #max_nrefine reached
             converged = False
 
+        self.temp.n_refine_steps.append(ib)
         return res_trimmed, ii2, converged
 
 
@@ -208,7 +212,7 @@ class LTS(object):
         nobs, k_vars = self.nobs, self.k_vars
 
         if k_trimmed is None:
-            k_trimmed = nobs - int(np.trunc(nobs + k_vars + 1)//2)
+            k_trimmed = nobs - int(np.trunc(nobs + k_vars)//2)
 
         self.k_accept = k_accept = nobs - k_trimmed
 
