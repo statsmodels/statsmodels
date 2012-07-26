@@ -18,6 +18,8 @@ References
     Journal of Nonparametric Statistics (2008)
 [6] Li, R., Ju, G. "Nonparametric Estimation of Multivariate CDF
     with Categorical and Continuous Data." Working Paper
+[7] Li, Q., Racine, J. "Cross-validated local linear nonparametric
+    regression" Statistica Sinica 14(2004), pp. 485-512
 """
 
 import numpy as np
@@ -734,12 +736,14 @@ class Reg(object):
 
     def __init__(self, tydat, txdat, var_type, reg_type, bw='cv_ls'):
 
-        self.tydat = np.column_stack(tydat)
-        self.txdat = np.column_stack(txdat)
-
-        self.N, self.K = np.shape(self.txdat)
+        #self.tydat = np.column_stack(tydat)
+        #self.txdat = np.column_stack(txdat)
         self.var_type = var_type
         self.reg_type = reg_type
+        self.K = len(self.var_type)
+        self.tydat = tools.adjust_shape(tydat, 1)
+        self.txdat = tools.adjust_shape(txdat, self.K)
+        self.N = np.shape(self.txdat)[0] 
         self.bw_func = dict(cv_ls=self.cv_loo, aic=self.aic_hurvich)
         self.est = dict(lc=self.g_lc, ll=self.g_ll)
         self.bw = self.compute_bw(bw)
@@ -754,7 +758,80 @@ class Reg(object):
         repr += "Estimator type: " + self.reg_type + "\n"
         return repr
 
+    def g_ll_slow_v1(self, bw, tydat, txdat, edat):
+        Ker = tools.gpke(bw, tdat=txdat, edat=edat, var_type=self.var_type,
+                            #ukertype='aitchison_aitken_reg',
+                            #okertype='wangryzin_reg', 
+                            tosum=False)
+        # Create the matrix on p.492 in [7], after the multiplication w/ K_h,ij
+        # See also p. 38 in [2]
+        iscontinuous = tools._get_type_pos(self.var_type)[0]
+        Ker = np.reshape(Ker, np.shape(tydat))  # FIXME: try to remove for speed
+        N, Qc = np.shape(txdat[:, iscontinuous])
+        Ker = Ker / float(N)
+        L = 0
+        R = 0
+        for i in xrange(N):
+            M12 = (txdat[i, iscontinuous] - edat[:, iscontinuous])
+            M12 = np.reshape(M12, (1, Qc))
+            M21 = M12.T
+            M22 = np.dot(M12.T, M12)
+            M22 = np.reshape(M22, (Qc, Qc))
+            M11 = np.ones((1,1))
+            M_1 = np.concatenate((M11, M12), axis=1)
+            M_2 = np.concatenate((M21, M22), axis=1)
+            M = np.concatenate((M_1, M_2), axis=0)
+            V1 = np.ones((1,1))
+            V2 = (txdat[i, iscontinuous] - edat[:, iscontinuous])
+            V2 = np.reshape(V2, (Qc, 1))
+            V = np.concatenate((V1, V2), axis=0)
+            assert np.shape(M) == (Qc + 1, Qc + 1)
+            assert np.shape(V) == (Qc + 1, 1)
+            L += M * Ker[i, :]
+            R += V * Ker[i, :] * tydat[i, :]
+        mean_mfx = np.dot(np.linalg.pinv(L), R)
+        mean = mean_mfx[0]
+        mfx = mean_mfx[1::, :]
+        return mean, mfx
     def g_ll(self, bw, tydat, txdat, edat):
+        Ker = tools.gpke(bw, tdat=txdat, edat=edat, var_type=self.var_type,
+                            ukertype='aitchison_aitken_reg',
+                            okertype='wangryzin_reg', 
+                            tosum=False)
+        # Create the matrix on p.492 in [7], after the multiplication w/ K_h,ij
+        # See also p. 38 in [2]
+        iscontinuous = tools._get_type_pos(self.var_type)[0]
+        Ker = np.reshape(Ker, np.shape(tydat))  # FIXME: try to remove for speed
+        N, Qc = np.shape(txdat[:, iscontinuous])
+        Ker = Ker / float(N)
+        L = 0
+        R = 0
+        M12 = (txdat[:, iscontinuous] - edat[:, iscontinuous])
+        M22 = np.dot(M12.T, M12 * Ker)
+        M22 = np.reshape(M22, (Qc, Qc))
+        M12 = np.sum(M12 * Ker , axis=0)
+        M12 = np.reshape(M12, (1, Qc))
+        M21 = M12.T
+        M11 = np.sum(np.ones((N,1)) * Ker, axis=0)
+        M11 = np.reshape(M11, (1,1))
+        M_1 = np.concatenate((M11, M12), axis=1)
+        M_2 = np.concatenate((M21, M22), axis=1)
+        M = np.concatenate((M_1, M_2), axis=0)
+        V1 = np.sum(np.ones((N,1)) * Ker * tydat, axis=0)
+        V2 = (txdat[:, iscontinuous] - edat[:, iscontinuous])
+        V2 = np.sum(V2 * Ker * tydat , axis=0)
+        V1 = np.reshape(V1, (1,1))
+        V2 = np.reshape(V2, (Qc, 1))
+
+        V = np.concatenate((V1, V2), axis=0)
+        assert np.shape(M) == (Qc + 1, Qc + 1)
+        assert np.shape(V) == (Qc + 1, 1)
+        mean_mfx = np.dot(np.linalg.pinv(M), V)
+        mean = mean_mfx[0]
+        mfx = mean_mfx[1::, :]
+        return mean, mfx
+
+    def g_ll_(self, bw, tydat, txdat, edat):
         """
         Local linear estimator of g(x) in the regression
         y = g(x) + e
@@ -794,8 +871,9 @@ class Reg(object):
             X = np.column_stack((np.ones(n), X))
             Kx = tools.gpke(bw, tdat=txdat, edat=x,
                             var_type=self.var_type, 
-                            ukertype='aitchison_aitken_reg',
-                            okertype='wangryzin_reg', tosum=False)
+                            #ukertype='aitchison_aitken_reg',
+                            #okertype='wangryzin_reg', 
+                            tosum=False)
             Kx = np.diag(np.squeeze(Kx))
             xtk = np.dot(X.T, Kx)
             a1 = np.linalg.pinv(np.dot(xtk, X))
@@ -830,15 +908,18 @@ class Reg(object):
         """
         KX = tools.gpke(bw, tdat=txdat, edat=edat,
                         var_type=self.var_type,
-                            ukertype='aitchison_aitken_reg',
-                            okertype='wangryzin_reg', tosum=False)
+                            #ukertype='aitchison_aitken_reg',
+                            #okertype='wangryzin_reg', 
+                            tosum=False)
+        KX = np.reshape(KX, np.shape(tydat))
         G_numer = np.sum(tydat * KX, axis=0)
         G_denom = np.sum(tools.gpke(bw, tdat=txdat, edat=edat,
                                     var_type=self.var_type,
-                            ukertype='aitchison_aitken_reg',
-                            okertype='wangryzin_reg', tosum=False), axis=0)
+                            #ukertype='aitchison_aitken_reg',
+                            #okertype='wangryzin_reg', 
+                            tosum=False), axis=0)
         G = G_numer / G_denom
-        B_x = []
+        B_x = np.ones((self.K))
         return G, B_x
 
     def aic_hurvich(self):
@@ -876,6 +957,7 @@ class Reg(object):
         and :math:`h` is the vector of bandwidths
 
         """
+        print "Running"
         LOO_X = tools.LeaveOneOut(self.txdat)
         LOO_Y = tools.LeaveOneOut(self.tydat).__iter__()
         i = 0
@@ -934,6 +1016,15 @@ class Reg(object):
         func = self.est[self.reg_type]
         if edat is None:
             edat = self.txdat
-        mean, mfx = func(self.bw, self.tydat, self.txdat, edat=edat)
+        else:
+            edat = tools.adjust_shape(edat, self.K)
+        N_edat = np.shape(edat)[0]
+        mean = np.empty((N_edat,))
+        Qc = len(tools._get_type_pos(self.var_type)[0])
+        mfx = np.empty((N_edat, Qc))
+        for i in xrange(N_edat):
+            mean_mfx = func(self.bw, self.tydat, self.txdat, edat=edat[i, :])
+            mean[i] = mean_mfx[0]
+            mfx[i, :] = np.squeeze(mean_mfx[1])
         return mean, mfx
 

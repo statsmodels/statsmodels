@@ -175,8 +175,8 @@ def aitchison_aitken_reg(h, Xi, x):
     if K == 0:
         return Xi
     kernel_value = np.ones((N,K))
-    inDom = (Xi == x) * h
-    kernel_value[Xi == x] = inDom[Xi == x]
+    inDom = (Xi != x) * h
+    kernel_value[Xi != x] = inDom[Xi != x]
     return kernel_value
 
 
