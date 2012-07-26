@@ -518,10 +518,6 @@ class DescStatUV(_OptFuncts):
         self.mu0 = mu0
         endog = self.endog
         nobs = self.nobs
-        # if trans_data  is None:
-        #     self.data = self.endog
-        # else:
-        #     self.data = trans_data
         eta_min = (1. - (1. / nobs)) / (self.mu0 - max(endog))
         eta_max = (1. - (1. / nobs)) / (self.mu0 - min(endog))
         eta_star = optimize.brentq(self._find_eta, eta_min, eta_max)
