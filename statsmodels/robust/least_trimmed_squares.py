@@ -35,6 +35,7 @@ def lts(endog, exog, k_trimmed=None, max_nstarts=5, max_nrefine=20, max_exact=10
     k_accept = nobs - k_trimmed
     best = (np.inf, np.zeros(exog.shape[1]), np.nan * np.zeros(nobs))
     all_dict = {}
+    n_est_calls = 0
     if comb(nobs, k_accept) <= max_exact:
         #index array
         iterator = itertools.combinations(range(nobs), k_accept)
@@ -50,6 +51,7 @@ def lts(endog, exog, k_trimmed=None, max_nstarts=5, max_nrefine=20, max_exact=10
             iin = ii.copy()
         for ib in range(max_nrefine):
             res_t_ols = OLS(endog[iin], exog[iin]).fit()
+            n_est_calls += 1
             #print np.nonzero(~iin)[0] + 1, res_t_ols.params, res_t_ols.ssr
             r = endog - res_t_ols.predict(exog)
             #ii2 = np.argsort(np.argsort(np.abs(r))) < k_accept
@@ -59,7 +61,7 @@ def lts(endog, exog, k_trimmed=None, max_nstarts=5, max_nrefine=20, max_exact=10
             if (ii2 == iin).all():
                 if res_t_ols.ssr < best[0]:
                     #update best result so far
-                    res_t_ols.all_dict = all_dict
+
                     best = (res_t_ols.ssr, res_t_ols, ~ii2)
                 break
             else:
@@ -73,6 +75,8 @@ def lts(endog, exog, k_trimmed=None, max_nstarts=5, max_nrefine=20, max_exact=10
         else:
             print "maxiter 20 reached"
 
+    best[1].all_dict = all_dict
+    best[1].n_est_calls = n_est_calls
     return best
 
 
@@ -94,12 +98,14 @@ class LTS(object):
         #TODO: all_dict might not be useful anymore with new algorithm
         self.all_dict = {} #store tried outliers
         self.temp = Holder()
+        self.temp.n_est_calls = 0
 
     def _refine_step(self, iin, k_accept):
         endog, exog = self.endog, self.exog
         nobs = self.nobs
 
         res_trimmed = self.est_model(endog[iin], exog[iin]).fit()
+        self.temp.n_est_calls += 1
         #print np.nonzero(~iin)[0] + 1, res_t_ols.params, res_t_ols.ssr
         r = endog - res_trimmed.predict(exog)
         #ii2 = np.argsort(np.argsort(np.abs(r))) < k_accept
@@ -129,6 +135,13 @@ class LTS(object):
                 break
             else:
                 iin = ii2
+                #for debugging
+                outl = tuple(np.nonzero(iin)[0])
+                all_dict = self.all_dict
+                if outl in all_dict:
+                    all_dict[outl] += 1
+                else:
+                    all_dict[outl] = 1
                  #remove stopping on already evaluated (seen before)
 #                outl = tuple(np.nonzero(iin)[0])
 #                if outl in all_dict:
@@ -166,7 +179,7 @@ class LTS(object):
             iin = ii.copy()   #TODO: do I still need a copy
             res_trimmed, ii2, converged = self.refine(iin, k_accept, max_nrefine=2)
             if res_trimmed.ssr < ssr_keep[n_keep-1]:
-                best_stage1.append(ii2)
+                best_stage1.append((res_trimmed.ssr, ii2))
                 #update minkeep, shouldn't grow longer than n_keep
                 #we don't drop extra indices in best_stage1
                 ssr_keep.append(res_trimmed.ssr)
@@ -175,8 +188,9 @@ class LTS(object):
 
         #stage 2 : refine best_stage1 to convergence
         ssr_best = np.inf
-        for start_mask in best_stage1:
-            res_trimmed, ii2, converged = self.refine(iin, k_accept,
+        for (ssr, start_mask) in best_stage1:
+            if ssr > ssr_keep[n_keep-1]: continue
+            res_trimmed, ii2, converged = self.refine(start_mask, k_accept,
                                                       max_nrefine=100)
             if not converged:
                 #warning ?
