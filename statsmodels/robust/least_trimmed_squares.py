@@ -82,7 +82,18 @@ def lts(endog, exog, k_trimmed=None, max_nstarts=5, max_nrefine=20, max_exact=10
 
 
 class LTS(object):
-    '''
+    '''Least Trimmed Squares Estimation
+
+
+    Parameters
+    ----------
+    endog : ndarray
+        Y-variable, dependent variable
+    exog : ndarray
+        X-variable, independent, explanatory variables (regressors)
+    est_model : model class
+        default is OLS, needs to have fit and predict methods and attribute
+        ssr
 
 
     TODO: variation: trim based on likelihood contribution, loglike_obs,
@@ -162,6 +173,75 @@ class LTS(object):
 
 
     def fit_random(self, k_trimmed, max_nstarts=10, k_start=None, n_keep=10):
+        '''find k_trimmed outliers with a 2-stage random search
+
+        Parameters
+        ----------
+        k_trimmed : int
+            number of observations to trim, i.e. number of outliers that are
+            removed from the data for estimation
+        max_nstarts : int
+            number of random draws of outliers indices used in first stage
+        k_start : int
+            number of observations to include in the initial estimation in
+            the first stage. Default is k_start = k_vars + 1 where k_vars is
+            the number of explanatory (exog) variables.
+        n_keep : int
+            number of first stage results to use for the second stage, the
+            concentration or refinement.
+
+        Returns
+        -------
+        res_trimmed : results instance
+            The best, lowest ssr, instance of the estimation results class
+        ii2 : ndarray
+            index of inliers, observations used in the best regression.
+
+        Notes
+        -----
+        The heuristic for the random search follows approximately the algorithm
+        of Rousseuw and van Driessen. In the first stage, a large number of
+        random starts are evaluated. The best of those are used in a second
+        stage until convergence.
+        The first stage depends on three parameters, k_start, max_nstarts and
+        max_nrefine_st1.
+        The second stage depends only on n_keep, and an additional safeguard
+        max_nrefine_st2.
+        TODO: add max_nrefine to function arguments
+
+        The number of estimations used is approximately
+        max_nstarts * max_nrefine_st1 + n_keep * ave_refine_st2
+
+        ave_refine_st2 is the average number of refinement steps needed until
+        convergence and depends on the problem. In the test cases, it is very
+        low for n_keep that are not large relative to max_nstarts (30%).
+
+        TODO: renaming
+        k_start -> nobs_start ?
+        max_nstarts n_repl_starts ?
+            max is not correct, it's always exactly max_nstarts
+
+        The search itself, for fixed tuning parameter, does not increase much
+        with nobs and k_trimmed. This does not include the increase in time for
+        an estimation as nobs increases.
+
+        n_keep : If n_keep is too low, for example 10 as in Rousseuw and Van Driessen,
+            then the random search does not find the best solution for one of the
+            test datasets (aircraft).
+
+        k_start : some papers recommend k_start=k_vars for an exactly identified
+            estimation problem, but that didn't work so well in my preliminary
+            tests for OLS. (exactly identified cases might not work correctly
+            for all models.)
+
+        Currently, there is no check for a singular design matrix, exog. This
+        could be the case if there are categorical variables.
+        My guess is that it doesn't matter for the search process with OLS, but
+        the final result could have a singular design matrix if the trimming
+        is large enough.
+
+        '''
+
         #currently random only,
         #TODO: where does exact, full enumeration go
         endog, exog = self.endog, self.exog
@@ -212,6 +292,34 @@ class LTS(object):
         return res_best
 
     def fit(self, k_trimmed=None, max_exact=100, random_search_options=None):
+        '''find k_trimmed outliers with a 2-stage random search
+
+        Parameters
+        ----------
+        k_trimmed : int
+            number of observations to trim, i.e. number of outliers that are
+            removed from the data for estimation
+        max_exact : int
+            If the number of estimations for the exact case, i.e. full
+            enumeration of all possible outlier constellations, is below
+            max_exact, then the exact method is used. If it is larger, then
+            then fit_random is used.
+            NotImplemented yet
+        random_search_options : dict
+            options that are used in fit_random, see fit_random for details
+
+        Returns
+        -------
+        res_trimmed : results instance
+            The best, lowest ssr, instance of the estimation results class
+        ii2 : ndarray
+            index of inliers, observations used in the best regression.
+
+        Notes
+        -----
+        see fit_random
+
+        '''
         nobs, k_vars = self.nobs, self.k_vars
 
         if k_trimmed is None:
