@@ -425,6 +425,20 @@ class TestPoissonNewton(CheckModelResults):
         res2.poisson()
         cls.res2 = res2
 
+    def test_margeff_overall(self):
+        me = self.res1.get_margeff()
+        assert_almost_equal(me.margeff,
+                self.res2.margeff_nodummy_overall, DECIMAL_4)
+        assert_almost_equal(me.margeff_se,
+                self.res2.margeff_nodummy_overall_se, DECIMAL_4)
+
+    def test_margeff_dummy_overall(self):
+        me = self.res1.get_margeff(dummy=True)
+        assert_almost_equal(me.margeff,
+                self.res2.margeff_dummy_overall, DECIMAL_4)
+        assert_almost_equal(me.margeff_se,
+                self.res2.margeff_dummy_overall_se, DECIMAL_4)
+
 class TestMNLogitNewtonBaseZero(CheckModelResults):
     @classmethod
     def setupClass(cls):
