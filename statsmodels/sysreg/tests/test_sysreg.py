@@ -1,5 +1,5 @@
 import numpy as np
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, assert_array_equal
 
 import statsmodels.api as sm
 from statsmodels.sysreg.sysmodel import SysSUR 
@@ -26,6 +26,12 @@ class CheckSysregResults(object):
     def test_cov_resids(self):
         assert_allclose(self.res1.cov_resids, self.res2.cov_resids, 
                 rtol=self.rtol)
+
+    def test_df_model(self):
+        assert_array_equal(self.res1.df_model, self.res2.df_model)
+
+    def test_df_resid(self):
+        assert_array_equal(self.res1.df_resid, self.res2.df_resid)
 
 ## SUR tests
 # Build system

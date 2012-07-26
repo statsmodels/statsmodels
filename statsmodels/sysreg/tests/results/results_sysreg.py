@@ -98,7 +98,8 @@ RSUR.fittedvalues = np.array([
      47.95589, 38.93935, 44.33515, 40.3917, 43.0696, 47.76244, 56.34706, 
      76.16779, 77.56886
     ])
-
+RSUR.df_model = np.array([2, 2, 2, 2, 2])
+RSUR.df_resid = np.array([17, 17, 17, 17, 17])
 
 
 RSURI = Bunch()
@@ -194,7 +195,8 @@ RSURI.fittedvalues = np.array([
      47.66481, 38.88036, 43.75353, 39.90911, 42.49191, 46.99655, 54.91891, 
      73.2904, 74.18185
     ])
-
+RSURI.df_model = np.array([2, 2, 2, 2, 2]) 
+RSURI.df_resid = np.array([17, 17, 17, 17, 17])
 
 RSURR = Bunch()
 RSURR.call = '''systemfit(formula = formula, method = "SUR", data = panel, restrict.matrix = R,      restrict.rhs = q, methodResidCov = "noDfCor", residCovRestricted = FALSE)'''
@@ -300,8 +302,8 @@ RSURR.fittedvalues = np.array([
      47.89167, 39.29956, 44.50948, 40.7521, 43.30859, 47.79249, 56.05134, 
      75.10574, 76.52492
     ])
-
-
+RSURR.df_model = np.array([2, 2, 2, 2, 2])
+RSURR.df_resid = np.array([17, 17, 17, 17, 17])
 
 
 RSURIR = Bunch()
@@ -408,7 +410,8 @@ RSURIR.fittedvalues = np.array([
      47.8362, 38.41002, 43.27186, 39.14423, 41.89066, 46.65985, 54.73855, 
      73.55324, 74.05651
     ])
-
+RSURIR.df_model = np.array([2, 2, 2, 2, 2])
+RSURIR.df_resid = np.array([17, 17, 17, 17, 17])
 
 
 # 2SLS tests based on sysreg/tests/results/kmenta.R
@@ -446,4 +449,6 @@ R2SLS.fittedvalues = np.array([
      104.0535, 102.8427, 102.7003, 102.5562, 105.6085
     ])
 R2SLS.cov_resids_est = np.identity(2)
+R2SLS.df_model = np.array([2, 3])
+R2SLS.df_resid = np.array([17, 16])
 
